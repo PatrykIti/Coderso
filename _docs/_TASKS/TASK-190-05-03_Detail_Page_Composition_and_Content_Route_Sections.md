@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Public Runtime + Page Sections
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-190-05-01, TASK-190-05-02
-**Status:** In Progress (2026-05-07)
+**Status:** In Progress (2026-05-08)
 
 ---
 
@@ -41,8 +41,13 @@ Current slice note:
   `detailPageId` now render composed detail-page blocks through the existing
   page runtime shell, while unlinked routes stay on the legacy entry-detail
   renderer.
-- Preview/cache, reviewed action adapters, and the remaining route/admin leaves
-  stay open in the later slices.
+- `TASK-190-05-03-04` is landed: `preview_tokens.context` now stores strict
+  detail-page sample-entry context, the shared preview contract distinguishes
+  expired vs missing tokens, dedicated `type=detail-page` preview renders
+  `current_document`, and canonical content-route updates reuse shared
+  list/detail cache invalidation.
+- Reviewed action adapters and the remaining route/admin leaves stay open in
+  the later slices.
 
 This unlocks proper Mabudo-like/product/service/portfolio detail pages instead
 of generic entry detail output.

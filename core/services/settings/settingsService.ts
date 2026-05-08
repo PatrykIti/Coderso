@@ -1,6 +1,7 @@
 import { eq, inArray } from "drizzle-orm";
 import { db } from "../../db/client";
 import { settings } from "../../db/schema";
+import { invalidateContentRouteCacheTransition } from "../../site/cache/siteCache";
 import { assertTokenOverrides } from "../theme/tokenValidation";
 import type { DesignTokenOverrides } from "../theme/tokenTypes";
 import {
@@ -672,6 +673,10 @@ export async function setSetting(key: string, value: unknown) {
   await ensureLegacyAssistantSettingsMigrated();
   const normalizedKey = resolveSettingKey(key);
   const typedValue = validateSettingValue(normalizedKey, value);
+  const previousContentRoutes =
+    normalizedKey === "site.contentRoutes"
+      ? (((await getSetting("site.contentRoutes")) as ContentRouteSetting[]) ?? [])
+      : null;
   if (isAssistantSettingKey(normalizedKey)) {
     const current = await listSettings();
     const next = {
@@ -691,6 +696,21 @@ export async function setSetting(key: string, value: unknown) {
     })
     .returning();
 
+  if (normalizedKey === "site.contentRoutes" && previousContentRoutes) {
+    const nextContentRoutes = typedValue as ContentRouteSetting[];
+    const touchedTypes = new Set([
+      ...previousContentRoutes.map((entry) => entry.type),
+      ...nextContentRoutes.map((entry) => entry.type),
+    ]);
+    for (const typeSlug of touchedTypes) {
+      invalidateContentRouteCacheTransition({
+        previousRoutes: previousContentRoutes,
+        nextRoutes: nextContentRoutes,
+        typeSlug,
+      });
+    }
+  }
+
   return row;
 }
 
@@ -703,6 +723,11 @@ export async function setSettings(values: Record<string, unknown>) {
   const entries = Object.entries(values);
   const now = new Date();
   const usedKeys = new Set<SettingKey>();
+  const previousContentRoutes = entries.some(
+    ([rawKey]) => resolveSettingKey(rawKey) === "site.contentRoutes"
+  )
+    ? (((await getSetting("site.contentRoutes")) as ContentRouteSetting[]) ?? [])
+    : null;
   const validated = entries.map(([rawKey, value]) => {
     const normalizedKey = resolveSettingKey(rawKey);
     if (usedKeys.has(normalizedKey)) {
@@ -734,13 +759,45 @@ export async function setSettings(values: Record<string, unknown>) {
     }
   });
 
+  if (previousContentRoutes) {
+    const nextContentRoutes =
+      (validated.find((entry) => entry.key === "site.contentRoutes")?.value as
+        | ContentRouteSetting[]
+        | undefined) ?? previousContentRoutes;
+    const touchedTypes = new Set([
+      ...previousContentRoutes.map((entry) => entry.type),
+      ...nextContentRoutes.map((entry) => entry.type),
+    ]);
+    for (const typeSlug of touchedTypes) {
+      invalidateContentRouteCacheTransition({
+        previousRoutes: previousContentRoutes,
+        nextRoutes: nextContentRoutes,
+        typeSlug,
+      });
+    }
+  }
+
   return listSettings();
 }
 
 export async function deleteSetting(key: string) {
   await ensureLegacyAssistantSettingsMigrated();
   const normalizedKey = resolveSettingKey(key);
+  const previousContentRoutes =
+    normalizedKey === "site.contentRoutes"
+      ? (((await getSetting("site.contentRoutes")) as ContentRouteSetting[]) ?? [])
+      : null;
   const [row] = await db.delete(settings).where(eq(settings.key, normalizedKey)).returning();
+
+  if (normalizedKey === "site.contentRoutes" && previousContentRoutes) {
+    for (const typeSlug of new Set(previousContentRoutes.map((entry) => entry.type))) {
+      invalidateContentRouteCacheTransition({
+        previousRoutes: previousContentRoutes,
+        nextRoutes: [],
+        typeSlug,
+      });
+    }
+  }
 
   return row ?? null;
 }

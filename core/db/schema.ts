@@ -336,6 +336,10 @@ export const previewTokens = pgTable(
     targetType: text("target_type").notNull(),
     targetId: uuid("target_id").notNull(),
     tokenHash: text("token_hash").notNull(),
+    context: jsonb("context").$type<null | {
+      kind: "detail-page";
+      sampleEntryId: string;
+    }>(),
     expiresAt: timestamp("expires_at").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },

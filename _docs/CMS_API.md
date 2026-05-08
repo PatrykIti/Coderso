@@ -1603,12 +1603,17 @@ Publiczne renderowanie stron działa bez `/admin`.
 
 - `GET /` oraz `GET /:slug` → published pages
 - `GET /preview?type=page&token=...` → podgląd draftu strony (token)
-- `GET /preview?type=content&token=...` → podgląd draftu wpisu (token)
+- `GET /preview?type=content&token=...&detailPageId=...` → podgląd wpisu, z
+  opcjonalnym published detail-page override (token)
+- `GET /preview?type=detail-page&token=...` → podgląd draft/current
+  detail-page document z server-side sample-entry context (token)
 - `GET /preview?type=widget-template&token=...` → podgląd runtime template widgetów (token)
 - `GET <content list route>` → lista wpisów dla danego content type
 - `GET <content detail route>` → pojedynczy wpis (slug)
 
-Uwaga: podgląd wymaga ważnego tokena z `/pages/:id/preview`.
+Uwaga: podgląd wymaga ważnego tokena z odpowiedniego owner seam; route zwraca
+`410` tylko dla wygaslych tokenow, a `404` dla disabled preview, missing target,
+lub invalid/mismatched detail-page overrides.
 Uwaga: trasy list/detail są konfigurowane przez `site.contentRoutes` (Settings).
 
 ---
@@ -2101,6 +2106,10 @@ Preview response (example):
 ```
 
 `previewUrl` w odpowiedzi moze byc relatywny albo absolutny, zgodnie z policy wyzej.
+Shared preview URL builders wspieraja tez `detailPageId` dla `type=content`
+oraz `type=detail-page` dla dedykowanego detail-template preview. Dedicated
+detail-page preview przechowuje `sampleEntryId` server-side w
+`preview_tokens.context`; runtime nie ufa surowym sample-entry query params.
 
 Metadata update payload (example):
 
@@ -2742,8 +2751,11 @@ Response:
   canonical detail-page document; omitted preserves the current link, `null`
   clears it, and a string replaces it through the same settings/action seam.
   Published content routes with a linked `detailPageId` render composed
-  detail-page blocks through the existing page runtime shell; routes without the
-  link stay on the legacy entry-detail renderer.
+  detail-page blocks through the existing page runtime shell; content preview
+  moze reuse ten canonical link albo jawny `detailPageId` override, ale tylko
+  dla published detail-page document zgodnego z previewed content type. Route
+  updates reuse the shared site-cache invalidation seam for cached list/detail
+  HTML; routes without the link stay on the legacy entry-detail renderer.
 - `assistant.*` klucze sterują globalną konfiguracją Doc Navigatora i opcjonalnego trybu LLM.
 - `assistant.launcher.avatar*` sterują floating launcher surface w admin UI.
 - Official assistant corpus jest sourced z root `docs/` i seedowany do DB.

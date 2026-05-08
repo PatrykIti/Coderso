@@ -123,7 +123,7 @@ bunVi!.mock("../../../core/services/content/detailPageBindingResolver", () => ({
   resolveDetailPageBlocks,
 }));
 
-const { resolvePublishedDetailPageRuntime } =
+const { resolvePreviewDetailPageRuntime, resolvePublishedDetailPageRuntime } =
   await import("../../../core/services/content/detailPageRuntimeResolver");
 
 beforeEach(() => {
@@ -175,6 +175,57 @@ test("resolvePublishedDetailPageRuntime resolves published matching detail-page 
       }),
     }),
   ]);
+});
+
+test("resolvePreviewDetailPageRuntime can render current documents in preview mode", async () => {
+  const publishedDocument = createDocument({
+    blocks: [
+      {
+        id: "hero",
+        type: "hero",
+        variant: "centered",
+        data: {
+          headline: "Published detail headline",
+        },
+      },
+    ],
+  });
+  const currentDocument = createDocument({
+    blocks: [
+      {
+        id: "hero",
+        type: "hero",
+        variant: "centered",
+        data: {
+          headline: "Draft detail headline",
+        },
+      },
+    ],
+  });
+  currentRecords = [
+    {
+      id: publishedDocument.id,
+      contentTypeId: contentType.id,
+      status: "draft",
+      currentDocument,
+      publishedDocument,
+    },
+  ];
+
+  const result = await resolvePreviewDetailPageRuntime({
+    detailPageId: publishedDocument.id,
+    documentSource: "current",
+    entry,
+    contentType,
+    contentRoutes: [],
+  });
+
+  expect(result).not.toBeNull();
+  expect(resolveDetailPageBlocks).toHaveBeenCalledWith(
+    expect.objectContaining({
+      preview: true,
+    })
+  );
 });
 
 test("resolvePublishedDetailPageRuntime fails closed for unpublished or mismatched records", async () => {

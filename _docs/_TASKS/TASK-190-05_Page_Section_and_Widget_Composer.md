@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Page Builder + Widgets
 **Estimated Effort:** Large
 **Dependencies:** TASK-190-03, TASK-190-04
-**Status:** In Progress (2026-05-07)
+**Status:** In Progress (2026-05-08)
 
 ---
 
@@ -50,6 +50,10 @@ Current slice note:
   `detailPageId` now resolve and hydrate composed detail-page blocks through
   the existing page runtime shell, while unlinked routes stay on the legacy
   entry-detail renderer.
+- `TASK-190-05-03-04` is landed: preview tokens now carry strict detail-page
+  sample-entry context, content/detail preview routes reuse one shared
+  preview-token contract, and canonical content-route updates reuse a shared
+  site-cache invalidation seam.
 - The later detail-page binding/runtime/action/admin waves remain open.
 
 ## Sub-Tasks

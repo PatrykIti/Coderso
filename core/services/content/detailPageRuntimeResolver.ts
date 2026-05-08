@@ -10,12 +10,16 @@ import {
 } from "./detailPageBindingResolver";
 import { normalizeDetailPageDocument } from "./detailPageSchema";
 
-export async function resolvePublishedDetailPageRuntime(input: {
+type ResolveDetailPageRuntimeInput = {
   detailPageId: string;
   entry: DetailPageBindingResolverEntry;
   contentType: DetailPageBindingResolverContentType;
   contentRoutes: ContentRouteSetting[];
-}) {
+  preview: boolean;
+  documentSource: "current" | "published";
+};
+
+async function resolveDetailPageRuntime(input: ResolveDetailPageRuntimeInput) {
   const [record] = await db
     .select({
       id: detailPageDocuments.id,
@@ -28,10 +32,14 @@ export async function resolvePublishedDetailPageRuntime(input: {
     .where(eq(detailPageDocuments.id, input.detailPageId))
     .limit(1);
 
-  if (!record || record.status !== "published") return null;
+  if (!record) return null;
+  if (input.documentSource === "published" && record.status !== "published") return null;
   if (record.contentTypeId !== input.contentType.id) return null;
 
-  const sourceDocument = record.publishedDocument ?? record.currentDocument;
+  const sourceDocument =
+    input.documentSource === "current"
+      ? record.currentDocument
+      : (record.publishedDocument ?? record.currentDocument);
   if (!sourceDocument) return null;
 
   try {
@@ -42,7 +50,7 @@ export async function resolvePublishedDetailPageRuntime(input: {
       document,
       entry: input.entry,
       contentType: input.contentType,
-      preview: false,
+      preview: input.preview,
       contentRoutes: input.contentRoutes,
     });
 
@@ -53,4 +61,30 @@ export async function resolvePublishedDetailPageRuntime(input: {
   } catch {
     return null;
   }
+}
+
+export async function resolvePublishedDetailPageRuntime(input: {
+  detailPageId: string;
+  entry: DetailPageBindingResolverEntry;
+  contentType: DetailPageBindingResolverContentType;
+  contentRoutes: ContentRouteSetting[];
+}) {
+  return resolveDetailPageRuntime({
+    ...input,
+    preview: false,
+    documentSource: "published",
+  });
+}
+
+export async function resolvePreviewDetailPageRuntime(input: {
+  detailPageId: string;
+  entry: DetailPageBindingResolverEntry;
+  contentType: DetailPageBindingResolverContentType;
+  contentRoutes: ContentRouteSetting[];
+  documentSource: "current" | "published";
+}) {
+  return resolveDetailPageRuntime({
+    ...input,
+    preview: true,
+  });
 }

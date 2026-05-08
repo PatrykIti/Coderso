@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 804 | 2026-05-08 | TASK-190 detail-page preview and cache invalidation | Assistant/Core |
 | 803 | 2026-05-08 | TASK-190 detail-page runtime route rendering | Assistant/Core |
 | 802 | 2026-05-08 | TASK-190 detailPageId content-route round-trip | Assistant/Core |
 | 801 | 2026-05-08 | TASK-190 detail page binding resolver | Assistant/Core |

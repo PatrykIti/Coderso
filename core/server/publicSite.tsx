@@ -26,7 +26,10 @@ import {
   POST_CONTENT_TYPE_SLUG,
 } from "../services/content/postsService";
 import { resolveContentListRuntimeData } from "../services/content/contentListResolver";
-import { resolvePublishedDetailPageRuntime } from "../services/content/detailPageRuntimeResolver";
+import {
+  resolvePreviewDetailPageRuntime,
+  resolvePublishedDetailPageRuntime,
+} from "../services/content/detailPageRuntimeResolver";
 import { resolvePostsFeedRuntimeData } from "../services/content/postsFeedResolver";
 import { resolveEntryTeaserRuntimeData } from "../services/content/entryTeaserResolver";
 import {
@@ -548,8 +551,22 @@ const resolvePreviewTargetType = (value: string | null): PreviewTargetType | nul
   if (value === "page") return "page";
   if (value === "content") return "content";
   if (value === "widget-template") return "widget-template";
+  if (value === "detail-page") return "detail-page";
   return null;
 };
+
+const previewDetailPageIdPattern =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const normalizePreviewDetailPageId = (value: string | null) => {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim().toLowerCase();
+  if (!previewDetailPageIdPattern.test(normalized)) return null;
+  return normalized;
+};
+
+const resolveLinkedDetailPageId = (typeSlug: string, contentRoutes: ContentRouteSetting[]) =>
+  contentRoutes.find((entry) => entry.enabled && entry.type === typeSlug)?.detailPageId ?? null;
 
 const resolvePreviewDevice = (value: string | null): DeviceTarget | null => {
   if (value === "desktop") return "desktop";
@@ -665,6 +682,7 @@ const renderEntryDetailHtml = async (
   routeValue: string,
   options?: {
     preview?: boolean;
+    previewDevice?: DeviceTarget;
     themeName?: string;
     preferGenericEntry?: boolean;
     routeParam?: "slug" | "id";
@@ -729,30 +747,60 @@ const renderEntryDetailHtml = async (
     slug: contentType.slug,
     schema: contentType.schema as ContentSchema,
   };
-  if (!options?.preview && options?.detailPageId) {
-    const detailPage = await resolvePublishedDetailPageRuntime({
-      detailPageId: options.detailPageId,
-      entry: {
-        id: entryDetail.id,
-        typeId: entryDetail.typeId,
-        title: entryDetail.title,
-        slug: entryDetail.slug,
-        status: entryDetail.status,
-        tags: entryDetail.tags ?? [],
-        data: entryDetail.data ?? {},
-        publishedAt: entryDetail.publishedAt ?? null,
-        scheduledAt: entryDetail.scheduledAt ?? null,
-        createdAt: entryDetail.createdAt ?? null,
-        updatedAt: entryDetail.updatedAt ?? null,
-        author: entryDetail.author ?? null,
-      },
-      contentType: {
-        id: contentType.id,
-        slug: contentType.slug,
-        schema: contentType.schema as ContentSchema,
-      },
-      contentRoutes: options.contentRoutes ?? [],
-    });
+  const contentRoutes = options?.contentRoutes ?? [];
+  const activeDetailPageId =
+    options?.detailPageId ??
+    (options?.preview ? resolveLinkedDetailPageId(contentType.slug, contentRoutes) : null);
+
+  if (activeDetailPageId) {
+    const detailPage = options?.preview
+      ? await resolvePreviewDetailPageRuntime({
+          detailPageId: activeDetailPageId,
+          documentSource: "published",
+          entry: {
+            id: entryDetail.id,
+            typeId: entryDetail.typeId,
+            title: entryDetail.title,
+            slug: entryDetail.slug,
+            status: entryDetail.status,
+            tags: entryDetail.tags ?? [],
+            data: entryDetail.data ?? {},
+            publishedAt: entryDetail.publishedAt ?? null,
+            scheduledAt: entryDetail.scheduledAt ?? null,
+            createdAt: entryDetail.createdAt ?? null,
+            updatedAt: entryDetail.updatedAt ?? null,
+            author: entryDetail.author ?? null,
+          },
+          contentType: {
+            id: contentType.id,
+            slug: contentType.slug,
+            schema: contentType.schema as ContentSchema,
+          },
+          contentRoutes,
+        })
+      : await resolvePublishedDetailPageRuntime({
+          detailPageId: activeDetailPageId,
+          entry: {
+            id: entryDetail.id,
+            typeId: entryDetail.typeId,
+            title: entryDetail.title,
+            slug: entryDetail.slug,
+            status: entryDetail.status,
+            tags: entryDetail.tags ?? [],
+            data: entryDetail.data ?? {},
+            publishedAt: entryDetail.publishedAt ?? null,
+            scheduledAt: entryDetail.scheduledAt ?? null,
+            createdAt: entryDetail.createdAt ?? null,
+            updatedAt: entryDetail.updatedAt ?? null,
+            author: entryDetail.author ?? null,
+          },
+          contentType: {
+            id: contentType.id,
+            slug: contentType.slug,
+            schema: contentType.schema as ContentSchema,
+          },
+          contentRoutes,
+        });
     if (!detailPage) return null;
 
     const metaDescription =
@@ -762,20 +810,21 @@ const renderEntryDetailHtml = async (
     return renderPublicPageRuntimeHtml({
       title: entryDetail.title ?? contentType.name,
       blocks: await hydrateRuntimeBlocks(detailPage.blocks, {
-        preview: false,
-        contentRoutes: options.contentRoutes ?? [],
-        runtimeSearchParams: options.runtimeSearchParams,
+        preview: options?.preview ?? false,
+        contentRoutes,
+        runtimeSearchParams: options?.runtimeSearchParams,
         runtimeCache: {},
       }),
       cssHref,
       inlineCss,
       devModuleScripts,
-      isPreview: false,
+      isPreview: options?.preview ?? false,
+      previewDevice: options?.previewDevice,
       layoutSettings: detailPage.document.settings.layout,
       metaDescription,
       canonicalUrl:
         "seo" in entryDetail && entryDetail.seo ? (entryDetail.seo.canonicalUrl ?? null) : null,
-      themeName: options.themeName ?? (await resolvePublicThemeName()),
+      themeName: options?.themeName ?? (await resolvePublicThemeName()),
       templateKey: detailPage.document.settings.template,
     });
   }
@@ -795,6 +844,73 @@ const renderEntryDetailHtml = async (
         : resolvePostRuntimeMetaDescription(entryDetail.data),
     canonicalUrl:
       "seo" in entryDetail && entryDetail.seo ? (entryDetail.seo.canonicalUrl ?? null) : null,
+  });
+};
+
+const renderDetailPagePreviewHtml = async (input: {
+  detailPageId: string;
+  sampleEntryId: string;
+  previewDevice: DeviceTarget;
+  runtimeSearchParams: URLSearchParams;
+}) => {
+  const entryDetail = await getEntry(input.sampleEntryId);
+  if (!entryDetail || !isEntryPublished(entryDetail)) return null;
+
+  const contentType = await getContentType(entryDetail.typeId);
+  if (!contentType) return null;
+
+  const contentRoutes = (await getSetting("site.contentRoutes")) as ContentRouteSetting[];
+  const detailPage = await resolvePreviewDetailPageRuntime({
+    detailPageId: input.detailPageId,
+    documentSource: "current",
+    entry: {
+      id: entryDetail.id,
+      typeId: entryDetail.typeId,
+      title: entryDetail.title,
+      slug: entryDetail.slug,
+      status: entryDetail.status,
+      tags: entryDetail.tags ?? [],
+      data: entryDetail.data ?? {},
+      publishedAt: entryDetail.publishedAt ?? null,
+      scheduledAt: entryDetail.scheduledAt ?? null,
+      createdAt: entryDetail.createdAt ?? null,
+      updatedAt: entryDetail.updatedAt ?? null,
+      author: entryDetail.author ?? null,
+    },
+    contentType: {
+      id: contentType.id,
+      slug: contentType.slug,
+      schema: contentType.schema as ContentSchema,
+    },
+    contentRoutes,
+  });
+  if (!detailPage) return null;
+
+  const { inlineCss, cssHref, devModuleScripts } = await resolvePublicStyles();
+  const metaDescription =
+    "seo" in entryDetail && entryDetail.seo
+      ? (entryDetail.seo.description ?? resolvePostRuntimeMetaDescription(entryDetail.data))
+      : resolvePostRuntimeMetaDescription(entryDetail.data);
+
+  return renderPublicPageRuntimeHtml({
+    title: entryDetail.title ?? contentType.name,
+    blocks: await hydrateRuntimeBlocks(detailPage.blocks, {
+      preview: true,
+      contentRoutes,
+      runtimeSearchParams: input.runtimeSearchParams,
+      runtimeCache: {},
+    }),
+    cssHref,
+    inlineCss,
+    devModuleScripts,
+    isPreview: true,
+    previewDevice: input.previewDevice,
+    layoutSettings: detailPage.document.settings.layout,
+    metaDescription,
+    canonicalUrl:
+      "seo" in entryDetail && entryDetail.seo ? (entryDetail.seo.canonicalUrl ?? null) : null,
+    themeName: await resolvePublicThemeName(),
+    templateKey: detailPage.document.settings.template,
   });
 };
 
@@ -866,10 +982,15 @@ export async function handlePublicRequest(req: Request) {
     if (!previewEnabled) return new Response("Not Found", { status: 404 });
 
     const preview = await validatePreviewToken(token, targetType);
-    if (!preview) return new Response("Preview expired", { status: 410 });
+    if (preview.status === "expired") {
+      return new Response("Preview expired", { status: 410 });
+    }
+    if (preview.status !== "valid") {
+      return new Response("Not Found", { status: 404 });
+    }
 
-    if (preview.targetType === "page") {
-      const page = await getPage(preview.targetId);
+    if (preview.token.targetType === "page") {
+      const page = await getPage(preview.token.targetId);
       if (!page) return new Response("Not Found", { status: 404 });
       const html = await renderPublicPageHtmlInternal(page as PublicPageData, {
         preview: true,
@@ -879,31 +1000,56 @@ export async function handlePublicRequest(req: Request) {
       return buildHtmlResponse(html);
     }
 
-    if (preview.targetType === "content") {
-      const post = await getPost(preview.targetId);
+    if (preview.token.targetType === "content") {
+      const post = await getPost(preview.token.targetId);
       if (post) {
         const html = await renderEntryDetailHtml(POST_CONTENT_TYPE_SLUG, post.slug, {
           preview: true,
+          previewDevice,
         });
         if (!html) return new Response("Not Found", { status: 404 });
         return buildHtmlResponse(html);
       }
 
-      const entry = await getEntry(preview.targetId);
+      const entry = await getEntry(preview.token.targetId);
       if (!entry) return new Response("Not Found", { status: 404 });
       const contentType = await getContentType(entry.typeId);
       if (!contentType) return new Response("Not Found", { status: 404 });
+      const contentRoutes = (await getSetting("site.contentRoutes")) as ContentRouteSetting[];
+      const requestedDetailPageId = url.searchParams.get("detailPageId");
+      const normalizedDetailPageId = normalizePreviewDetailPageId(requestedDetailPageId);
+      if (requestedDetailPageId !== null && !normalizedDetailPageId) {
+        return new Response("Not Found", { status: 404 });
+      }
       const html = await renderEntryDetailHtml(contentType.slug, entry.slug, {
         preview: true,
+        previewDevice,
         preferGenericEntry: true,
+        detailPageId: normalizedDetailPageId,
+        contentRoutes,
+        runtimeSearchParams: url.searchParams,
       });
       if (!html) return new Response("Not Found", { status: 404 });
       return buildHtmlResponse(html);
     }
 
-    if (preview.targetType === "widget-template") {
+    if (preview.token.targetType === "detail-page") {
+      const sampleEntryId =
+        preview.token.context?.kind === "detail-page" ? preview.token.context.sampleEntryId : null;
+      if (!sampleEntryId) return new Response("Not Found", { status: 404 });
+      const html = await renderDetailPagePreviewHtml({
+        detailPageId: preview.token.targetId,
+        sampleEntryId,
+        previewDevice,
+        runtimeSearchParams: url.searchParams,
+      });
+      if (!html) return new Response("Not Found", { status: 404 });
+      return buildHtmlResponse(html);
+    }
+
+    if (preview.token.targetType === "widget-template") {
       try {
-        const html = await renderWidgetTemplatePreviewHtml(preview.targetId, previewDevice);
+        const html = await renderWidgetTemplatePreviewHtml(preview.token.targetId, previewDevice);
         return buildHtmlResponse(html);
       } catch (error) {
         if (error instanceof Error && error.message === "widget_template_not_found") {

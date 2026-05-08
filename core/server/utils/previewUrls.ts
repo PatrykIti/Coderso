@@ -1,9 +1,5 @@
 import type { PreviewTargetType } from "../../services/pages/previewService";
-import {
-  buildAbsolutePublicUrl,
-  resolvePublicBaseUrl,
-  type PublicUrlContext,
-} from "./baseUrl";
+import { buildAbsolutePublicUrl, resolvePublicBaseUrl, type PublicUrlContext } from "./baseUrl";
 
 type BuildPreviewPathInput = {
   targetType: PreviewTargetType;
@@ -11,6 +7,7 @@ type BuildPreviewPathInput = {
   path?: string;
   contentType?: string;
   slug?: string;
+  detailPageId?: string;
 };
 
 export function buildPreviewPath(input: BuildPreviewPathInput) {
@@ -23,6 +20,7 @@ export function buildPreviewPath(input: BuildPreviewPathInput) {
   if (input.targetType === "content") {
     if (input.contentType) params.set("contentType", input.contentType);
     if (input.slug) params.set("slug", input.slug);
+    if (input.detailPageId) params.set("detailPageId", input.detailPageId);
   }
   return `/preview?${params.toString()}`;
 }
@@ -42,10 +40,7 @@ export function createPublicUrlContextFromHeaders(
   };
 }
 
-export async function resolvePreviewUrl(
-  input: BuildPreviewPathInput,
-  context?: PublicUrlContext
-) {
+export async function resolvePreviewUrl(input: BuildPreviewPathInput, context?: PublicUrlContext) {
   const previewPath = buildPreviewPath(input);
   const baseUrl = await resolvePublicBaseUrl(context);
   return buildAbsolutePublicUrl(baseUrl, previewPath);

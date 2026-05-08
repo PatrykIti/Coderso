@@ -52,13 +52,17 @@ Dotyczy:
 ## Preview URL contract
 
 - `GET /preview?type=page&token=<token>`
-- `GET /preview?type=content&token=<token>`
+- `GET /preview?type=content&token=<token>&detailPageId=<detail-page-id>`
+- `GET /preview?type=detail-page&token=<token>`
 - `GET /preview?type=widget-template&token=<token>`
 
 Uwaga: `site.contentRoutes` moze teraz przenosic opcjonalne `detailPageId`
-jako structural link do canonical detail-page document. Ten round-trip jest
-wlascicielem tylko metadata route link; dedykowany detail-page preview target i
-draft/current document preview pozostaja w kolejnych detail-page leaves.
+jako structural link do canonical detail-page document. `type=content` preview
+moze uzyc tego linku albo jawnego `detailPageId`, ale tylko dla published
+detail-page document zgodnego z previewed content type. Dedykowany
+`type=detail-page` preview czyta `current_document` i wybiera sample entry
+wylacznie z server-side `preview_tokens.context.sampleEntryId`; runtime nie ufa
+surowym `sampleEntryId` query params.
 
 Resolver policy dla `previewUrl` zwracanego przez Admin API:
 1. `settings["site.publicBaseUrl"]`

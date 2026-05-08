@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 62 tasks
+- **To Do:** 61 tasks
 - **In Progress:** 12 tasks
-- **Done:** 1479 tasks
+- **Done:** 1480 tasks
 
 ---
 
@@ -38,7 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-190-05-03-04 | Detail Page Preview, Cache, and Invalidation | High | Medium | Technical leaf: preview token flow plus entry/detail cache invalidation |
 | TASK-190-05-03-05 | Detail Page Action Schema and Executor Adapter | High | Large | Technical leaf: strict typed detail-page upsert action and executor integration |
 | TASK-190-05-03-06 | Detail Page Composer Fixtures and Runtime Acceptance | High | Medium | Technical leaf: fixture matrix and Bun public runtime acceptance coverage |
 | TASK-190-05-03-07-01 | Detail Page Internal CRUD, Revisions, and Preview Routes | High | Large | Technical program: internal CRUD/read, preview/lifecycle, and revision route subwaves |
@@ -80,8 +79,8 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-190 | Blueprint Composer Foundation | High | Very Large | In progress: capability manifest/registry, candidate planning, provider/shadow safety layer, deterministic composition graph/conflicts, initial action assembly, schema/listing merge, and page-upsert collection-link persistence are landed; supported mixed-capability and primary-plus-gated setup requests now stay on the composed path before provider drafting can bypass them, while detail-page, workspace, review metadata, and no-duplicate closure waves remain |
 | TASK-190-03 | Composition Graph and Conflict Policy | High | Large | In progress: deterministic graph fragments plus typed route/resource/field conflicts and blocking gated-domain surfacing are landed for the current capability packs, while broader media/permission needs-input families remain open |
 | TASK-190-03-02 | Conflict Resolver, Stable Keys, and Needs Input | High | Large | In progress: duplicate-action merge keys now classify route/resource/field conflicts and blocking gated domains into a closed typed conflict contract consumed by the assembler/planner needs-input path, while broader media/permission surfacing remains open |
-| TASK-190-05 | Page Section and Widget Composer | High | Large | In progress: section alias/slot vocabulary, deterministic widget/pack mapping, page-upsert collection-link persistence, plus the first detail-page storage/schema, binding, route-link metadata, and published runtime slices are landed, while the remaining detail-page wave stays open |
-| TASK-190-05-03 | Detail Page Composition and Content Route Sections | High | Very Large | In progress: persisted detail-page document/revision storage, strict schema normalization, deterministic UUID-compatible ids, the `content_type_has_detail_pages` guard, the first binding resolver slice, structural `detailPageId` route metadata, and published runtime rendering are landed; preview/action/admin leaves remain |
+| TASK-190-05 | Page Section and Widget Composer | High | Large | In progress: section alias/slot vocabulary, deterministic widget/pack mapping, page-upsert collection-link persistence, plus the first detail-page storage/schema, binding, route-link metadata, published runtime, and preview/cache slices are landed, while the remaining detail-page wave stays open |
+| TASK-190-05-03 | Detail Page Composition and Content Route Sections | High | Very Large | In progress: persisted detail-page document/revision storage, strict schema normalization, deterministic UUID-compatible ids, the `content_type_has_detail_pages` guard, binding resolution, structural `detailPageId` route metadata, published runtime rendering, and preview/cache invalidation are landed; action/admin leaves remain |
 | TASK-190-05-03-07 | Detail Page Route Linking and Internal Admin API | High | Large | In progress: the `detailPageId` settings/action/UI/matcher round-trip is landed, while CRUD/revision/preview routes and admin client/cache parity remain open |
 | TASK-190-07 | Action Assembly, Execution, and No-Duplicate Safety | High | Large | In progress: internal typed-action assembly is landed for the current fragments; supported mixed-capability and primary-plus-gated setup requests now stay on the composed path before provider drafting can bypass them, while DB-backed no-duplicate checks, review metadata, and deeper cutover remain |
 | TASK-190-07-01 | Composition Action Assembler | High | Large | In progress: current fragments assemble deterministically in tests, supported mixed-capability and primary-plus-gated setup requests now stay on the composed path before provider drafting can bypass them, listing projection fields now widen for merged filter/card needs, and blocking graph conflicts downgrade into typed needs-input/gated plans while detail/media dependency work remains deferred |
@@ -112,6 +111,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-190-05-03-01 | Detail Page Model and Schema Contract | High | Large | Done: strict detail-page document/revision storage, deterministic UUID-compatible ids, and the blocking `content_type_has_detail_pages` dependency now exist under the content-domain owner seam |
 | TASK-190-05-03-02 | Detail Page Bindings and Field Resolver | High | Large | Done: detail-page blocks now resolve strict entry-field/meta/computed bindings through shared safe dot-path helpers, bounded form runtime context, and the existing collection/listing runtime seams |
 | TASK-190-05-03-03 | Detail Page Runtime Renderer and Route Resolution | High | Large | Done: published content routes with linked `detailPageId` now resolve composed detail-page blocks through the existing page runtime shell, while unlinked routes stay on the legacy entry-detail renderer |
+| TASK-190-05-03-04 | Detail Page Preview, Cache, and Invalidation | High | Medium | Done: preview tokens now carry strict detail-page sample-entry context, public preview distinguishes expired vs missing tokens, dedicated `type=detail-page` preview reads `current_document`, and canonical content-route writes invalidate cached list/detail HTML through one shared seam |
 | TASK-190-05-03-07-02 | DetailPageId Content Route Round-Trip and Matcher Metadata | High | Medium | Done: canonical content routes now round-trip optional `detailPageId` through settings, assistant actions, Site Settings client/form types, and matcher metadata without adding a second route registry |
 | TASK-251 | Custom Screens Workspace Preview and Builder Interaction Hardening | High | Large | Done: preview is record-backed and cache-aware, list canvas reorders in-header, and Data uses widget-owned prop contracts |
 | TASK-251-01 | Workspace Preview Parity and Record-Backed Editor Preview | High | Large | Done: builder canvas and preview dialog now share cached-first first-record ownership plus a wider Pages-like preview shell |

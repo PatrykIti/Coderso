@@ -1,5 +1,6 @@
 import type { ContentRouteSetting } from "../../services/settings/settingsService";
 import { getSetting } from "../../services/settings/settingsService";
+import { matchContentRoute } from "../contentRouteMatcher";
 
 export const DEFAULT_SITE_CACHE_TTL_SECONDS = 30;
 export const SITE_CACHE_MAX_ENTRIES = 200;
@@ -66,16 +67,13 @@ class LruCache {
 let cache = new LruCache(SITE_CACHE_MAX_ENTRIES);
 let cachedTtlSeconds = DEFAULT_SITE_CACHE_TTL_SECONDS;
 
-export const buildSiteCacheKey = (profileId: string, path: string) =>
-  `${profileId}|${path}`;
+export const buildSiteCacheKey = (profileId: string, path: string) => `${profileId}|${path}`;
 
 export const normalizeSitePath = (value: string) => {
   const trimmed = value.trim();
   if (!trimmed) return "/";
   const prefixed = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
-  return prefixed.length > 1 && prefixed.endsWith("/")
-    ? prefixed.slice(0, -1)
-    : prefixed;
+  return prefixed.length > 1 && prefixed.endsWith("/") ? prefixed.slice(0, -1) : prefixed;
 };
 
 export const configureSiteCache = (ttlSeconds: number) => {
@@ -86,15 +84,9 @@ export const configureSiteCache = (ttlSeconds: number) => {
   return cachedTtlSeconds;
 };
 
-export const getSiteCacheEntry = (key: string, now?: number) =>
-  cache.get(key, now);
+export const getSiteCacheEntry = (key: string, now?: number) => cache.get(key, now);
 
-export const setSiteCacheEntry = (
-  key: string,
-  value: string,
-  ttlSeconds: number,
-  now?: number
-) => {
+export const setSiteCacheEntry = (key: string, value: string, ttlSeconds: number, now?: number) => {
   cache.set(key, value, ttlSeconds, now);
 };
 
@@ -109,6 +101,40 @@ export const invalidateSiteCachePath = (path: string) => {
     if (key.endsWith(suffix)) {
       cache.delete(key);
     }
+  }
+};
+
+export const invalidateContentRouteCache = (route: ContentRouteSetting) => {
+  for (const key of cache.keys()) {
+    const separatorIndex = key.indexOf("|");
+    const path = separatorIndex >= 0 ? key.slice(separatorIndex + 1) : key;
+    if (matchContentRoute(path, [route])) {
+      cache.delete(key);
+    }
+  }
+};
+
+export const invalidateContentRouteCacheTransition = (options: {
+  previousRoutes: ContentRouteSetting[];
+  nextRoutes: ContentRouteSetting[];
+  typeSlug: string;
+}) => {
+  const previous = options.previousRoutes.find((entry) => entry.type === options.typeSlug) ?? null;
+  const next = options.nextRoutes.find((entry) => entry.type === options.typeSlug) ?? null;
+
+  if (previous) {
+    invalidateContentRouteCache(previous);
+  }
+
+  if (
+    next &&
+    (!previous ||
+      previous.listPath !== next.listPath ||
+      previous.detailPath !== next.detailPath ||
+      previous.enabled !== next.enabled ||
+      (previous.detailPageId ?? null) !== (next.detailPageId ?? null))
+  ) {
+    invalidateContentRouteCache(next);
   }
 };
 
@@ -142,8 +168,7 @@ export async function invalidateContentEntryCache(options: {
   routes?: ContentRouteSetting[];
 }) {
   const routes =
-    options.routes ??
-    ((await getSetting("site.contentRoutes")) as ContentRouteSetting[]);
+    options.routes ?? ((await getSetting("site.contentRoutes")) as ContentRouteSetting[]);
   const paths = resolveContentEntryPaths({
     routes,
     typeSlug: options.typeSlug,
