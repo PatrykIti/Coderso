@@ -3902,6 +3902,107 @@ test("executeAssistantActionPlan resolves supporting page collection-link listin
   });
 });
 
+test("executeAssistantActionPlan accepts supporting page collection-link ids without name locators", async () => {
+  const deps = createDeps();
+  const contentType = await deps.createContentType({
+    name: "Products",
+    slug: "products",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {},
+    },
+  });
+  const query = await deps.createListingQuery({
+    name: "Products Query",
+    description: "Products listing",
+    query: {
+      source: "entries",
+      sourceConfig: {
+        contentTypeId: contentType.id,
+      },
+      filters: [],
+      sort: [],
+      pagination: { limit: 12, offset: 0 },
+      fields: ["title"],
+    },
+  });
+  const template = await deps.createListingTemplate({
+    name: "Products Grid",
+    slug: "products-grid",
+    description: "Products template",
+    layout: "grid",
+    config: { fields: [] },
+  });
+
+  const plan: AssistantActionPlan = {
+    id: "plan-supporting-page-collection-link-ids",
+    status: "ready",
+    intentId: "supporting-page-collection-link-ids",
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+    title: "Create supporting page",
+    answer: "I can create a supporting products page.",
+    summary: "Supporting page with persisted collection-link ids.",
+    confidence: 0.82,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "page-products-comparison",
+        type: "page.upsert",
+        title: "Create products comparison page",
+        description: "Create a supporting page linked to the products collection.",
+        input: {
+          title: "Compare Products",
+          slug: "/compare-products",
+          status: "draft",
+          introTitle: "Compare products",
+          introBody: "Pick the right model.",
+          blocks: [
+            {
+              id: "hero-1",
+              type: "hero",
+              variant: "centered",
+              data: {
+                headline: "Compare products",
+              },
+            },
+          ],
+          collectionLink: {
+            contentTypeId: contentType.id,
+            pageRole: "supporting-page",
+            compositionKey: "comparison",
+            listingQueryId: query.id,
+            listingTemplateId: template.id,
+          },
+        },
+      },
+    ],
+  };
+
+  const result = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-supporting-page-collection-link-ids",
+    },
+    deps
+  );
+
+  expect(result.summary.failed).toBe(0);
+  expect(
+    (deps.__state.pages[0]?.currentData.settings as { collectionLink?: Record<string, unknown> })
+      ?.collectionLink
+  ).toMatchObject({
+    contentTypeId: contentType.id,
+    pageRole: "supporting-page",
+    compositionKey: "comparison",
+    listingQueryId: query.id,
+    listingTemplateId: template.id,
+  });
+});
+
 test("dryRunAssistantActionPlan flags conflicting supporting page collection-link locators", async () => {
   const deps = createDeps();
   await deps.createContentType({
