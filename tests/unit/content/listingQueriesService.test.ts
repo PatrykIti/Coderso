@@ -1,4 +1,4 @@
-import { afterAll, expect, test } from "bun:test";
+import { afterAll, afterEach, expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 
@@ -10,11 +10,24 @@ import {
   listListingQueries,
   updateListingQuery,
 } from "../../../core/services/content/listingQueriesService";
+import {
+  getSetting,
+  setSetting,
+  type ContentRouteSetting,
+} from "../../../core/services/settings/settingsService";
+import {
+  buildSiteCacheKey,
+  clearSiteCache,
+  configureSiteCache,
+  getSiteCacheEntry,
+  setSiteCacheEntry,
+} from "../../../core/site/cache/siteCache";
 
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
 const testIfDb = hasDb ? test : test.skip;
 
 const createdIds = new Set<string>();
+let originalContentRoutes: ContentRouteSetting[] | null = null;
 
 async function canConnect() {
   try {
@@ -45,11 +58,45 @@ async function ensureListingQueriesTable() {
 }
 
 afterAll(async () => {
+  clearSiteCache();
+  if (originalContentRoutes) {
+    await setSetting("site.contentRoutes", originalContentRoutes);
+    originalContentRoutes = null;
+  }
   if (!hasDb || createdIds.size === 0) return;
   for (const id of createdIds) {
     await db.delete(listingQueries).where(eq(listingQueries.id, id));
   }
 });
+
+afterEach(async () => {
+  clearSiteCache();
+  if (originalContentRoutes) {
+    await setSetting("site.contentRoutes", originalContentRoutes);
+    originalContentRoutes = null;
+  }
+});
+
+const enableLinkedDetailRouteCache = async () => {
+  originalContentRoutes =
+    originalContentRoutes ??
+    ((await getSetting("site.contentRoutes")) as ContentRouteSetting[]) ??
+    [];
+  await setSetting("site.contentRoutes", [
+    {
+      type: "products",
+      listPath: "/products",
+      detailPath: "/products/:slug",
+      enabled: true,
+      detailPageId: "14d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+    } satisfies ContentRouteSetting,
+  ]);
+  configureSiteCache(300);
+  const key = buildSiteCacheKey("profile-1", "/products/example");
+  setSiteCacheEntry(key, "<html>cached</html>", 300, 0);
+  expect(getSiteCacheEntry(key, 1)).toBe("<html>cached</html>");
+  return key;
+};
 
 testIfDb("listing query CRUD flow", async () => {
   await ensureListingQueriesTable();
@@ -93,3 +140,35 @@ testIfDb("listing query CRUD flow", async () => {
   expect(removed?.id).toBe(created.id);
   createdIds.delete(created.id);
 });
+
+testIfDb(
+  "listing query owner seam invalidates linked detail-route cache on update and delete",
+  async () => {
+    await ensureListingQueriesTable();
+    const cacheKey = await enableLinkedDetailRouteCache();
+    const created = await createListingQuery({
+      name: `Cached query ${randomUUID()}`,
+      query: {
+        source: "users",
+        sourceConfig: {},
+        filters: [],
+        sort: [{ field: "updatedAt", dir: "desc" }],
+        pagination: { limit: 10, offset: 0 },
+        fields: ["id", "name"],
+      },
+    });
+    createdIds.add(created.id);
+
+    await updateListingQuery(created.id, {
+      name: `${created.name} Updated`,
+    });
+    expect(getSiteCacheEntry(cacheKey, 1)).toBeNull();
+
+    setSiteCacheEntry(cacheKey, "<html>cached</html>", 300, 0);
+    expect(getSiteCacheEntry(cacheKey, 1)).toBe("<html>cached</html>");
+
+    await deleteListingQuery(created.id);
+    expect(getSiteCacheEntry(cacheKey, 1)).toBeNull();
+    createdIds.delete(created.id);
+  }
+);

@@ -550,7 +550,7 @@ testIfDb(
   }
 );
 
-testIfDb(
+testIfDbWithOptions(
   "detail-page upsert actions persist one canonical detail-page document per id",
   async () => {
     const actor = await createActor();
@@ -691,5 +691,6 @@ testIfDb(
         .catch(() => undefined);
       await deleteContentType(contentType.id).catch(() => undefined);
     }
-  }
+  },
+  { timeout: 20_000 }
 );

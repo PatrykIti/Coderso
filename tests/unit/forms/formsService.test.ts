@@ -1,4 +1,4 @@
-import { afterAll, beforeEach, expect, test } from "bun:test";
+import { afterAll, afterEach, beforeEach, expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 
@@ -20,9 +20,22 @@ import {
   setFormFields,
   updateForm,
 } from "../../../core/services/forms/formsService";
+import {
+  getSetting,
+  setSetting,
+  type ContentRouteSetting,
+} from "../../../core/services/settings/settingsService";
+import {
+  buildSiteCacheKey,
+  clearSiteCache,
+  configureSiteCache,
+  getSiteCacheEntry,
+  setSiteCacheEntry,
+} from "../../../core/site/cache/siteCache";
 
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
 const testIfDb = hasDb ? test : test.skip;
+let originalContentRoutes: ContentRouteSetting[] | null = null;
 
 async function canConnect() {
   try {
@@ -35,6 +48,11 @@ async function canConnect() {
 
 const cleanup = async () => {
   if (!hasDb) return;
+  clearSiteCache();
+  if (originalContentRoutes) {
+    await setSetting("site.contentRoutes", originalContentRoutes);
+    originalContentRoutes = null;
+  }
   await db.delete(formActionRuns);
   await db.delete(formActions);
   await db.delete(formSubmissions);
@@ -46,9 +64,34 @@ beforeEach(async () => {
   await cleanup();
 });
 
+afterEach(async () => {
+  await cleanup();
+});
+
 afterAll(async () => {
   await cleanup();
 });
+
+const enableLinkedDetailRouteCache = async () => {
+  originalContentRoutes =
+    originalContentRoutes ??
+    ((await getSetting("site.contentRoutes")) as ContentRouteSetting[]) ??
+    [];
+  await setSetting("site.contentRoutes", [
+    {
+      type: "products",
+      listPath: "/products",
+      detailPath: "/products/:slug",
+      enabled: true,
+      detailPageId: "14d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+    } satisfies ContentRouteSetting,
+  ]);
+  configureSiteCache(300);
+  const key = buildSiteCacheKey("profile-1", "/products/example");
+  setSiteCacheEntry(key, "<html>cached</html>", 300, 0);
+  expect(getSiteCacheEntry(key, 1)).toBe("<html>cached</html>");
+  return key;
+};
 
 testIfDb("create/update/delete form", async () => {
   const name = `Contact ${randomUUID()}`;
@@ -107,9 +150,7 @@ testIfDb("create/update/delete form", async () => {
 testIfDb("form slug must be unique", async () => {
   const slug = `contact-${randomUUID()}`;
   await createForm({ name: "Contact", slug });
-  await expect(createForm({ name: "Contact 2", slug })).rejects.toThrow(
-    "form_slug_exists"
-  );
+  await expect(createForm({ name: "Contact 2", slug })).rejects.toThrow("form_slug_exists");
 });
 
 testIfDb("retained submissions block hard delete with stable domain error", async () => {
@@ -146,9 +187,7 @@ testIfDb("retained action runs block hard delete with stable domain error", asyn
 
 testIfDb("setFormFields replaces existing fields", async () => {
   const form = await createForm({ name: "Feedback" });
-  await setFormFields(form.id, [
-    { type: "text", label: "Name", name: "name", required: true },
-  ]);
+  await setFormFields(form.id, [{ type: "text", label: "Name", name: "name", required: true }]);
 
   let fields = await listFormFields(form.id);
   expect(fields.length).toBe(1);
@@ -169,4 +208,18 @@ testIfDb("listForms returns latest updates first", async () => {
 
   const list = await listForms();
   expect(list.length).toBe(2);
+});
+
+testIfDb("form owner seams invalidate linked detail-route cache on update and delete", async () => {
+  const cacheKey = await enableLinkedDetailRouteCache();
+  const form = await createForm({ name: `Cached Form ${randomUUID()}` });
+
+  await updateForm(form.id, { name: `${form.name} Updated` });
+  expect(getSiteCacheEntry(cacheKey, 1)).toBeNull();
+
+  setSiteCacheEntry(cacheKey, "<html>cached</html>", 300, 0);
+  expect(getSiteCacheEntry(cacheKey, 1)).toBe("<html>cached</html>");
+
+  await deleteForm(form.id);
+  expect(getSiteCacheEntry(cacheKey, 1)).toBeNull();
 });

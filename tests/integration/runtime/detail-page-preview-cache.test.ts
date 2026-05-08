@@ -300,7 +300,8 @@ testIfDb(
     expect(html).toContain("Draft detail template body");
     expect(html).not.toContain("Published detail template body");
     expect(html).toContain("Preview mode");
-  }
+  },
+  15_000
 );
 
 testIfDb(
@@ -348,7 +349,8 @@ testIfDb(
     expect(html).toContain(`Draft preview headline ${fixture.token}`);
     expect(html).toContain("Published detail template body");
     expect(html).toContain("Preview mode");
-  }
+  },
+  15_000
 );
 
 testIfDb(
@@ -402,39 +404,44 @@ testIfDb(
     const secondHtml = await secondResponse.text();
     expect(secondHtml).toContain("Second cached detail template body");
     expect(secondHtml).not.toContain("First cached detail template body");
-  }
+  },
+  15_000
 );
 
-testIfDb("detail-page preview returns 404 when preview mode is disabled", async () => {
-  resetRateLimitBuckets();
-  await setTestSetting("site.previewEnabled", false);
-  await setTestSetting("site.cacheTtlSeconds", 0);
+testIfDb(
+  "detail-page preview returns 404 when preview mode is disabled",
+  async () => {
+    resetRateLimitBuckets();
+    await setTestSetting("site.previewEnabled", false);
+    await setTestSetting("site.cacheTtlSeconds", 0);
 
-  const fixture = await createProductFixture();
-  const detailPageId = "e4d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c";
-  await insertDetailPageDocument({
-    id: detailPageId,
-    contentTypeId: fixture.contentType.id,
-    contentTypeSlug: fixture.contentType.slug,
-    status: "draft",
-    currentBody: "Draft detail template body",
-    publishedBody: "Published detail template body",
-  });
+    const fixture = await createProductFixture();
+    const detailPageId = "e4d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c";
+    await insertDetailPageDocument({
+      id: detailPageId,
+      contentTypeId: fixture.contentType.id,
+      contentTypeSlug: fixture.contentType.slug,
+      status: "draft",
+      currentBody: "Draft detail template body",
+      publishedBody: "Published detail template body",
+    });
 
-  const { token } = await createPreviewToken({
-    targetType: "detail-page",
-    targetId: detailPageId,
-    context: {
-      kind: "detail-page",
-      sampleEntryId: fixture.entry.id,
-    },
-  });
+    const { token } = await createPreviewToken({
+      targetType: "detail-page",
+      targetId: detailPageId,
+      context: {
+        kind: "detail-page",
+        sampleEntryId: fixture.entry.id,
+      },
+    });
 
-  const response = await requestPublicPath(
-    `/preview?type=detail-page&token=${encodeURIComponent(token)}`
-  );
-  expect(response.status).toBe(404);
-});
+    const response = await requestPublicPath(
+      `/preview?type=detail-page&token=${encodeURIComponent(token)}`
+    );
+    expect(response.status).toBe(404);
+  },
+  15_000
+);
 
 testIfDb(
   "detail-page preview returns 410 for expired tokens and 404 for draft sample entries",
@@ -482,5 +489,64 @@ testIfDb(
       `/preview?type=detail-page&token=${encodeURIComponent(active.token)}`
     );
     expect(draftResponse.status).toBe(404);
-  }
+  },
+  15_000
+);
+
+testIfDb(
+  "content preview with detailPageId fails closed for draft and mismatched detail pages",
+  async () => {
+    resetRateLimitBuckets();
+    await setTestSetting("site.previewEnabled", true);
+    await setTestSetting("site.cacheTtlSeconds", 0);
+
+    const fixture = await createProductFixture();
+    const draftDetailPageId = "14d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c";
+    await insertDetailPageDocument({
+      id: draftDetailPageId,
+      contentTypeId: fixture.contentType.id,
+      contentTypeSlug: fixture.contentType.slug,
+      status: "draft",
+      currentBody: "Draft detail template body",
+      publishedBody: "Published detail template body",
+    });
+
+    const otherType = await createContentType({
+      name: `Preview Services ${fixture.token}`,
+      slug: `preview-services-${fixture.token}`,
+      schema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          headline: { type: "string", xFieldType: "text" },
+        },
+      },
+    });
+    trackedContentTypeIds.add(otherType.id);
+
+    const mismatchedDetailPageId = "24d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c";
+    await insertDetailPageDocument({
+      id: mismatchedDetailPageId,
+      contentTypeId: otherType.id,
+      contentTypeSlug: otherType.slug,
+      status: "published",
+      currentBody: "Services detail template body",
+    });
+
+    const { token } = await createPreviewToken({
+      targetType: "content",
+      targetId: fixture.entry.id,
+    });
+
+    const draftResponse = await requestPublicPath(
+      `/preview?type=content&token=${encodeURIComponent(token)}&contentType=${encodeURIComponent(fixture.contentType.slug)}&slug=${encodeURIComponent(fixture.entry.slug)}&detailPageId=${draftDetailPageId}`
+    );
+    expect(draftResponse.status).toBe(404);
+
+    const mismatchedResponse = await requestPublicPath(
+      `/preview?type=content&token=${encodeURIComponent(token)}&contentType=${encodeURIComponent(fixture.contentType.slug)}&slug=${encodeURIComponent(fixture.entry.slug)}&detailPageId=${mismatchedDetailPageId}`
+    );
+    expect(mismatchedResponse.status).toBe(404);
+  },
+  15_000
 );

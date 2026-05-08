@@ -4982,6 +4982,93 @@ test("executeAssistantActionPlan fails detail-page upserts that reuse an id acro
   expect(result.results[0]?.errorCode).toBe("detail_page_content_type_mismatch");
 });
 
+test("executeAssistantActionPlan fails detail-page upserts with stale expectedExistingId", async () => {
+  const deps = createDeps();
+  deps.__state.contentTypes.push({
+    id: "64d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+    name: "Products",
+    slug: "products",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        headline: { type: "string", xFieldType: "text" },
+      },
+    },
+    createdAt: new Date("2026-04-10T12:00:00.000Z"),
+    updatedAt: new Date("2026-04-10T12:00:00.000Z"),
+  });
+
+  const result = await executeAssistantActionPlan(
+    {
+      plan: {
+        id: "plan-detail-page-execute-conflict",
+        status: "ready",
+        intentId: "detail-page-execute-conflict",
+        promptKind: "setup_request",
+        intentFamily: "product_catalog",
+        title: "Create detail template",
+        answer: "I can create the detail template.",
+        summary: "Create a detail template with a stale expectedExistingId.",
+        confidence: 0.91,
+        assumptions: [],
+        questions: [],
+        actions: [
+          {
+            id: "detail-page-products",
+            type: "detail-page.upsert",
+            title: "Create products detail template",
+            description: "Create a products detail template.",
+            input: {
+              expectedExistingId: "94d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+              document: {
+                schemaVersion: 1,
+                id: "34d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+                name: "Products detail template",
+                contentTypeId: "64d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+                contentTypeSlug: "products",
+                status: "draft",
+                titlePattern: "{{ title }}",
+                settings: {
+                  template: "detail",
+                  layout: {
+                    wrapper: {
+                      container: "default",
+                      padding: { top: "md", bottom: "lg" },
+                      background: {
+                        color: "#ffffff",
+                        image: null,
+                        media: { type: "none", source: "external", src: null },
+                      },
+                    },
+                    sections: {
+                      gap: "lg",
+                      defaults: {
+                        container: "default",
+                        padding: { top: "xl", bottom: "xl" },
+                        margin: { top: "none", bottom: "none" },
+                      },
+                    },
+                    applyDefaultsToNewBlocks: false,
+                  },
+                },
+                blocks: [{ id: "hero-1", type: "hero", variant: "centered", data: {} }],
+                bindings: [],
+              },
+            },
+          },
+        ],
+      },
+      actorId: "user-1",
+      idempotencyKey: "assistant-detail-page-execute-conflict",
+    },
+    deps
+  );
+
+  expect(result.summary.failed).toBe(1);
+  expect(result.results[0]?.errorCode).toBe("detail_page_conflict");
+});
+
 test("executeAssistantActionPlan resolves renamed listing resources from existing page state", async () => {
   const deps = createDeps();
   const initialPlan = buildHouseProjectsCatalogPlan();

@@ -1552,7 +1552,7 @@ resolved intentionally with `Copy of ...` style suffixes.
 
 ## Detail pages (Internal Admin API)
 
-Permissions: `content:read`, `content:write`
+Permissions: `content:read`, `content:write`, `content:publish`
 
 - `GET /detail-pages`
 - `GET /detail-pages/:id`
