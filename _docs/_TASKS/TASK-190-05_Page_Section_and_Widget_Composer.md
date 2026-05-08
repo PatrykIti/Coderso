@@ -54,6 +54,10 @@ Current slice note:
   sample-entry context, content/detail preview routes reuse one shared
   preview-token contract, and canonical content-route updates reuse a shared
   site-cache invalidation seam.
+- `TASK-190-05-03-05` is landed: `detail-page.upsert` now executes through the
+  content-domain owner seam with strict schema/contract validation, while
+  route-link ownership and internal admin CRUD stay deferred to the later
+  detail-page admin waves.
 - The later detail-page binding/runtime/action/admin waves remain open.
 
 ## Sub-Tasks

@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Typed Actions
 **Estimated Effort:** Large
 **Dependencies:** TASK-190-05-03-01, TASK-190-05-03-02, TASK-190-05-03-03, TASK-190-05-03-04
-**Status:** To Do
+**Status:** Done (2026-05-08)
 
 ---
 
@@ -14,6 +14,19 @@
 Promote detail page documents into strict typed assistant actions. The composer
 must be able to assemble reviewed plans that create or update detail page
 documents through existing dry-run/review/execute flow.
+
+Current slice note:
+- `detail-page.upsert` is now part of the strict executable assistant action
+  registry, action family contracts, and action plan schema.
+- `actionExecutorService.ts` now dry-runs and executes detail-page upserts
+  through `core/services/content/detailPageDocumentService.ts` instead of
+  writing directly from the planner/executor layer into the DB tables.
+- Execute refreshes advisory `contentTypeSlug` from the canonical linked
+  content type, respects `DetailPageDocument.status` as the only publish-state
+  owner, and keeps route-link ownership deferred to
+  `setting.content-route.upsert`.
+- Review/result UI now labels `detail-page.upsert` as `Detail Template`, and
+  executor/DB coverage now proves one canonical detail-page document per id.
 
 ## Sub-Tasks
 

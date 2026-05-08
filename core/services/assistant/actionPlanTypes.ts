@@ -18,6 +18,7 @@ import type {
   AssistantTemplateSectionReferenceSummary,
 } from "./adminContextTypes";
 import { isAssistantActionPlanStrict } from "./actionPlanSchema";
+import type { DetailPageDocument } from "../content/detailPageTypes";
 
 export type AssistantActionPlanStatus = "ready" | "needs_input";
 export type AssistantPromptKind =
@@ -766,6 +767,17 @@ export type AssistantPageUpsertAction = {
   };
 };
 
+export type AssistantDetailPageUpsertAction = {
+  id: string;
+  type: "detail-page.upsert";
+  title: string;
+  description: string;
+  input: {
+    document: DetailPageDocument;
+    expectedExistingId?: string | null;
+  };
+};
+
 export type AssistantPageUpdateAction = {
   id: string;
   type: "page.update";
@@ -919,6 +931,7 @@ export type AssistantPlannedAction =
   | AssistantPageWidgetPatchAction
   | AssistantFormAutomationUpsertAction
   | AssistantPageUpsertAction
+  | AssistantDetailPageUpsertAction
   | AssistantPageUpdateAction
   | AssistantPageDeleteAction
   | AssistantWidgetTemplateDeleteAction
@@ -938,6 +951,7 @@ export type AssistantActionContractFamily =
   | "custom-screen"
   | "listing"
   | "form"
+  | "detail-page"
   | "page"
   | "site-kit"
   | "entry"

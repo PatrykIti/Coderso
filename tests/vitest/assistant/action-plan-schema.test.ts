@@ -975,6 +975,159 @@ test("normalizeAssistantActionPlan accepts page upsert blocks that reference tru
   });
 });
 
+test("normalizeAssistantActionPlan accepts detail-page upsert documents", () => {
+  const normalized = normalizeAssistantActionPlan({
+    id: "plan-detail-page-upsert",
+    status: "ready",
+    intentId: "detail-page-upsert",
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+    title: "Create detail template",
+    answer: "I can create the detail template.",
+    summary: "Create a products detail template.",
+    confidence: 0.91,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "detail-page-products",
+        type: "detail-page.upsert",
+        title: "Create products detail template",
+        description: "Create a products detail template.",
+        input: {
+          document: {
+            schemaVersion: 1,
+            id: "44d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+            name: "Products detail template",
+            contentTypeId: "4fd7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+            contentTypeSlug: "products",
+            status: "published",
+            titlePattern: "{{ title }}",
+            settings: {
+              template: "detail",
+              layout: {
+                wrapper: {
+                  container: "default",
+                  padding: { top: "md", bottom: "lg" },
+                  background: {
+                    color: "#ffffff",
+                    image: null,
+                    media: {
+                      type: "none",
+                      source: "external",
+                      src: null,
+                    },
+                  },
+                },
+                sections: {
+                  gap: "lg",
+                  defaults: {
+                    container: "default",
+                    padding: { top: "xl", bottom: "xl" },
+                    margin: { top: "none", bottom: "none" },
+                  },
+                },
+                applyDefaultsToNewBlocks: false,
+              },
+            },
+            blocks: [
+              {
+                id: "hero-1",
+                type: "hero",
+                variant: "centered",
+                data: {
+                  headline: "Products detail",
+                },
+              },
+            ],
+            bindings: [],
+          },
+          expectedExistingId: "44d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+        },
+      },
+    ],
+  });
+
+  expect(normalized.actions[0]).toMatchObject({
+    type: "detail-page.upsert",
+    input: {
+      expectedExistingId: "44d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+      document: {
+        id: "44d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+        contentTypeSlug: "products",
+        status: "published",
+      },
+    },
+  });
+});
+
+test("normalizeAssistantActionPlan rejects top-level detail-page status outside document", () => {
+  expect(() =>
+    normalizeAssistantActionPlan({
+      id: "plan-detail-page-upsert-invalid",
+      status: "ready",
+      intentId: "detail-page-upsert-invalid",
+      promptKind: "setup_request",
+      intentFamily: "product_catalog",
+      title: "Create detail template",
+      answer: "I can create the detail template.",
+      summary: "Create a products detail template.",
+      confidence: 0.91,
+      assumptions: [],
+      questions: [],
+      actions: [
+        {
+          id: "detail-page-products",
+          type: "detail-page.upsert",
+          title: "Create products detail template",
+          description: "Create a products detail template.",
+          input: {
+            status: "published",
+            document: {
+              schemaVersion: 1,
+              id: "54d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+              name: "Products detail template",
+              contentTypeId: "5fd7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+              contentTypeSlug: "products",
+              status: "published",
+              titlePattern: "{{ title }}",
+              settings: {
+                template: "detail",
+                layout: {
+                  wrapper: {
+                    container: "default",
+                    padding: { top: "md", bottom: "lg" },
+                    background: {
+                      color: "#ffffff",
+                      image: null,
+                      media: {
+                        type: "none",
+                        source: "external",
+                        src: null,
+                      },
+                    },
+                  },
+                  sections: {
+                    gap: "lg",
+                    defaults: {
+                      container: "default",
+                      padding: { top: "xl", bottom: "xl" },
+                      margin: { top: "none", bottom: "none" },
+                    },
+                  },
+                  applyDefaultsToNewBlocks: false,
+                },
+              },
+              blocks: [],
+              bindings: [],
+            },
+          },
+        },
+      ],
+    })
+  ).toThrow();
+});
+
 test("normalizeAssistantActionPlan accepts widget template update and block patch actions", () => {
   const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
     promptKind: "setup_request",

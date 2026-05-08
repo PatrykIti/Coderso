@@ -1,7 +1,4 @@
-import type {
-  AssistantExecutableActionType,
-  AssistantPlannedAction,
-} from "./actionPlanTypes";
+import type { AssistantExecutableActionType, AssistantPlannedAction } from "./actionPlanTypes";
 
 export const assistantActionTypes = [
   "setting.content-route.upsert",
@@ -36,6 +33,7 @@ export const assistantActionTypes = [
   "page.widget.patch",
   "form.automation.upsert",
   "page.upsert",
+  "detail-page.upsert",
   "page.update",
   "page.delete",
   "widget-template.delete",

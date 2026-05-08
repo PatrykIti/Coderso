@@ -61,6 +61,7 @@ const actionOrder: Record<AssistantPlannedAction["type"], number> = {
   "page.widget.patch": 90,
   "form.automation.upsert": 90,
   "page.upsert": 70,
+  "detail-page.upsert": 75,
   "setting.content-route.upsert": 80,
   "page.update": 90,
   "page.delete": 90,

@@ -30,6 +30,7 @@ import type {
   AssistantPlannedAction,
 } from "../../../core/services/assistant/actionPlanTypes";
 import type { AssistantUndoManifestItem } from "../../../core/services/assistant/actionUndoManifest";
+import type { DetailPageDocument } from "../../../core/services/content/detailPageTypes";
 import type { CustomScreenBinding } from "../../../core/services/customScreens/customScreenSchemas";
 import type { ContentRouteSetting } from "../../../core/services/settings/settingsService";
 import type { WidgetBlock } from "../../../core/widgets/types";
@@ -173,6 +174,17 @@ const createDeps = () => {
     createdAt: Date;
     updatedAt: Date;
   }> = [];
+  const detailPages: Array<{
+    id: string;
+    name: string;
+    contentTypeId: string;
+    status: "draft" | "published";
+    currentDocument: DetailPageDocument;
+    publishedDocument: DetailPageDocument | null;
+    createdAt: Date;
+    updatedAt: Date;
+    publishedAt: Date | null;
+  }> = [];
   const formFields = new Map<string, Array<Record<string, unknown>>>();
   const deps = {
     getSetting: async (key: string) => {
@@ -185,8 +197,80 @@ const createDeps = () => {
       }
       return { key, value, updatedAt: new Date("2026-04-10T12:00:00.000Z") };
     },
+    getContentType: async (id: string) => contentTypes.find((entry) => entry.id === id) ?? null,
     getContentTypeBySlug: async (slug: string) =>
       contentTypes.find((entry) => entry.slug === slug) ?? null,
+    getDetailPageDocument: async (id: string) =>
+      detailPages.find((entry) => entry.id === id) ?? null,
+    prepareDetailPageDocumentUpsert: async (input: {
+      document: DetailPageDocument;
+      expectedExistingId?: string | null;
+    }) => {
+      if (input.expectedExistingId && input.expectedExistingId !== input.document.id) {
+        throw new Error("detail_page_conflict");
+      }
+      const contentType =
+        contentTypes.find((entry) => entry.id === input.document.contentTypeId) ?? null;
+      if (!contentType) {
+        throw new Error("detail_page_invalid");
+      }
+      const existing = detailPages.find((entry) => entry.id === input.document.id) ?? null;
+      if (existing && existing.contentTypeId !== contentType.id) {
+        throw new Error("detail_page_content_type_mismatch");
+      }
+      return {
+        contentType,
+        existing,
+        document: {
+          ...input.document,
+          contentTypeSlug: contentType.slug,
+        },
+      };
+    },
+    upsertDetailPageDocument: async (input: {
+      document: DetailPageDocument;
+      expectedExistingId?: string | null;
+    }) => {
+      const contentType =
+        contentTypes.find((entry) => entry.id === input.document.contentTypeId) ?? null;
+      if (!contentType) {
+        throw new Error("detail_page_invalid");
+      }
+      if (input.expectedExistingId && input.expectedExistingId !== input.document.id) {
+        throw new Error("detail_page_conflict");
+      }
+      const existingIndex = detailPages.findIndex((entry) => entry.id === input.document.id);
+      const now = new Date("2026-04-10T12:00:00.000Z");
+      const record = {
+        id: input.document.id,
+        name: input.document.name,
+        contentTypeId: input.document.contentTypeId,
+        status: input.document.status,
+        currentDocument: {
+          ...input.document,
+          contentTypeSlug: contentType.slug,
+        },
+        publishedDocument:
+          input.document.status === "published"
+            ? {
+                ...input.document,
+                contentTypeSlug: contentType.slug,
+              }
+            : null,
+        createdAt: existingIndex >= 0 ? detailPages[existingIndex]!.createdAt : now,
+        updatedAt: now,
+        publishedAt: input.document.status === "published" ? now : null,
+      };
+      if (existingIndex >= 0) {
+        detailPages[existingIndex] = record;
+      } else {
+        detailPages.push(record);
+      }
+      return {
+        record,
+        contentType,
+      };
+    },
     createContentType: async (input: { name: string; slug: string; schema: unknown }) => {
       const now = new Date("2026-04-10T12:00:00.000Z");
       const record = {
@@ -882,6 +966,7 @@ const createDeps = () => {
       seoDocuments,
       mediaAssets,
       widgetTemplates,
+      detailPages,
       formFields,
     },
   });
@@ -4387,6 +4472,226 @@ test("executeAssistantActionPlan rejects stale supporting page collection-link l
 
   expect(executed.summary.failed).toBe(1);
   expect(executed.results[0]?.errorCode).toBe("assistant_action_dependency_missing");
+});
+
+test("dryRunAssistantActionPlan flags detail-page upserts whose content type does not exist", async () => {
+  const deps = createDeps();
+
+  const plan: AssistantActionPlan = {
+    id: "plan-detail-page-missing-content-type",
+    status: "ready",
+    intentId: "detail-page-missing-content-type",
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+    title: "Create detail template",
+    answer: "I can preview the detail template.",
+    summary: "Preview a detail template with a missing content type.",
+    confidence: 0.84,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "detail-page-products",
+        type: "detail-page.upsert",
+        title: "Create products detail template",
+        description: "Create a products detail template.",
+        input: {
+          document: {
+            schemaVersion: 1,
+            id: "24d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+            name: "Products detail template",
+            contentTypeId: "94d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+            contentTypeSlug: "products",
+            status: "draft",
+            titlePattern: "{{ title }}",
+            settings: {
+              template: "detail",
+              layout: {
+                wrapper: {
+                  container: "default",
+                  padding: { top: "md", bottom: "lg" },
+                  background: {
+                    color: "#ffffff",
+                    image: null,
+                    media: {
+                      type: "none",
+                      source: "external",
+                      src: null,
+                    },
+                  },
+                },
+                sections: {
+                  gap: "lg",
+                  defaults: {
+                    container: "default",
+                    padding: { top: "xl", bottom: "xl" },
+                    margin: { top: "none", bottom: "none" },
+                  },
+                },
+                applyDefaultsToNewBlocks: false,
+              },
+            },
+            blocks: [
+              {
+                id: "hero-1",
+                type: "hero",
+                variant: "centered",
+                data: {
+                  headline: "Products detail",
+                },
+              },
+            ],
+            bindings: [],
+          },
+        },
+      },
+    ],
+  };
+
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+
+  expect(preview.changes[0]?.conflicts[0]?.code).toBe("detail_page_invalid");
+});
+
+test("executeAssistantActionPlan upserts detail-page documents through the content-domain seam", async () => {
+  const deps = createDeps();
+  const contentType = {
+    id: "64d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+    name: "Products",
+    slug: "products",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        headline: { type: "string", xFieldType: "text" },
+      },
+    },
+    createdAt: new Date("2026-04-10T12:00:00.000Z"),
+    updatedAt: new Date("2026-04-10T12:00:00.000Z"),
+  };
+  deps.__state.contentTypes.push(contentType);
+
+  const plan: AssistantActionPlan = {
+    id: "plan-detail-page-upsert",
+    status: "ready",
+    intentId: "detail-page-upsert",
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+    title: "Create detail template",
+    answer: "I can create the detail template.",
+    summary: "Create a products detail template.",
+    confidence: 0.91,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "detail-page-products",
+        type: "detail-page.upsert",
+        title: "Create products detail template",
+        description: "Create a products detail template.",
+        input: {
+          document: {
+            schemaVersion: 1,
+            id: "34d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+            name: "Products detail template",
+            contentTypeId: contentType.id,
+            contentTypeSlug: "stale-products-slug",
+            status: "published",
+            titlePattern: "{{ title }}",
+            settings: {
+              template: "detail",
+              layout: {
+                wrapper: {
+                  container: "default",
+                  padding: { top: "md", bottom: "lg" },
+                  background: {
+                    color: "#ffffff",
+                    image: null,
+                    media: {
+                      type: "none",
+                      source: "external",
+                      src: null,
+                    },
+                  },
+                },
+                sections: {
+                  gap: "lg",
+                  defaults: {
+                    container: "default",
+                    padding: { top: "xl", bottom: "xl" },
+                    margin: { top: "none", bottom: "none" },
+                  },
+                },
+                applyDefaultsToNewBlocks: false,
+              },
+            },
+            blocks: [
+              {
+                id: "hero-1",
+                type: "hero",
+                variant: "centered",
+                data: {
+                  headline: "Products detail",
+                },
+              },
+            ],
+            bindings: [],
+          },
+        },
+      },
+    ],
+  };
+
+  const first = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-detail-page-upsert-1",
+    },
+    deps
+  );
+
+  expect(first.summary.failed).toBe(0);
+  expect(first.summary.create).toBe(1);
+  expect(deps.__state.detailPages).toHaveLength(1);
+  expect(deps.__state.detailPages[0]?.currentDocument.contentTypeSlug).toBe("products");
+  expect(deps.__state.detailPages[0]?.publishedDocument?.contentTypeSlug).toBe("products");
+
+  const detailAction = plan.actions[0];
+  if (!detailAction || detailAction.type !== "detail-page.upsert") {
+    throw new Error("missing_detail_page_action");
+  }
+
+  const second = await executeAssistantActionPlan(
+    {
+      plan: {
+        ...plan,
+        actions: [
+          {
+            ...detailAction,
+            input: {
+              ...detailAction.input,
+              document: {
+                ...detailAction.input.document,
+                name: "Products detail template updated",
+                status: "draft",
+              },
+            },
+          },
+        ],
+      },
+      actorId: "user-1",
+      idempotencyKey: "assistant-detail-page-upsert-2",
+    },
+    deps
+  );
+
+  expect(second.summary.failed).toBe(0);
+  expect(second.summary.update).toBe(1);
+  expect(deps.__state.detailPages).toHaveLength(1);
+  expect(deps.__state.detailPages[0]?.name).toBe("Products detail template updated");
+  expect(deps.__state.detailPages[0]?.status).toBe("draft");
+  expect(deps.__state.detailPages[0]?.publishedDocument).toBeNull();
 });
 
 test("executeAssistantActionPlan resolves renamed listing resources from existing page state", async () => {

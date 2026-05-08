@@ -1,6 +1,7 @@
 import { getSetting, setSetting, type ContentRouteSetting } from "../settings/settingsService";
 import {
   createContentType,
+  getContentType,
   deleteContentType,
   getContentTypeBySlug,
   updateContentType,
@@ -28,6 +29,12 @@ import {
   listListingTemplates,
   updateListingTemplate,
 } from "../content/listingTemplatesService";
+import {
+  getDetailPageDocument,
+  prepareDetailPageDocumentUpsert,
+  upsertDetailPageDocument,
+} from "../content/detailPageDocumentService";
+import type { DetailPageDocument } from "../content/detailPageTypes";
 import {
   createEntry,
   deleteEntry,
@@ -107,6 +114,7 @@ import type {
   AssistantFormArchiveAction,
   AssistantFormUpdateAction,
   AssistantFormAutomationUpsertAction,
+  AssistantDetailPageUpsertAction,
   AssistantListingQueryFiltersPatchAction,
   AssistantListingQueryDeleteAction,
   AssistantListingQueryUpdateAction,
@@ -546,7 +554,11 @@ const resolveAssistantPageCollectionLink = async (input: {
 type ActionExecutorDeps = {
   getSetting: typeof getSetting;
   setSetting: typeof setSetting;
+  getContentType: typeof getContentType;
   getContentTypeBySlug: (slug: string) => Promise<ContentTypeRecord | null>;
+  getDetailPageDocument: typeof getDetailPageDocument;
+  prepareDetailPageDocumentUpsert: typeof prepareDetailPageDocumentUpsert;
+  upsertDetailPageDocument: typeof upsertDetailPageDocument;
   createContentType: (input: CreateContentTypeInput) => Promise<ContentTypeRecord>;
   deleteContentType: (id: string) => Promise<ContentTypeRecord | null>;
   updateContentType: (
@@ -613,7 +625,11 @@ type ActionExecutorDeps = {
 const defaultDeps: ActionExecutorDeps = {
   getSetting,
   setSetting,
+  getContentType,
   getContentTypeBySlug,
+  getDetailPageDocument,
+  prepareDetailPageDocumentUpsert,
+  upsertDetailPageDocument,
   createContentType,
   deleteContentType,
   updateContentType,
@@ -2426,6 +2442,90 @@ const buildPagePreview = async (action: AssistantPageUpsertAction, deps: ActionE
       : null,
     nextValue,
   });
+};
+
+const summarizeDetailPageDocument = (document: DetailPageDocument) => ({
+  id: document.id,
+  name: document.name,
+  status: document.status,
+  contentTypeId: document.contentTypeId,
+  contentTypeSlug: document.contentTypeSlug,
+  titlePattern: document.titlePattern,
+  blocksCount: document.blocks.length,
+  bindingsCount: document.bindings.length,
+  relatedCount: document.related?.length ?? 0,
+  publicImpact:
+    document.status === "published" ? "published-detail-template" : "draft-detail-template",
+});
+
+const buildDetailPagePreview = async (
+  action: AssistantDetailPageUpsertAction,
+  deps: ActionExecutorDeps
+) => {
+  const targetKey = action.input.document.id;
+
+  try {
+    const prepared = await deps.prepareDetailPageDocumentUpsert({
+      document: action.input.document,
+      expectedExistingId: action.input.expectedExistingId,
+    });
+
+    return createPreviewChange({
+      action,
+      targetType: "detail-page",
+      targetKey,
+      summary: `${prepared.existing ? "Update" : "Create"} detail template ${prepared.document.name}`,
+      dependencies: [
+        {
+          actionId: null,
+          targetType: "content-type",
+          targetKey: prepared.contentType.id,
+          optional: false,
+        },
+      ],
+      beforeValue: prepared.existing
+        ? summarizeDetailPageDocument(prepared.existing.currentDocument)
+        : null,
+      nextValue: summarizeDetailPageDocument(prepared.document),
+    });
+  } catch (error) {
+    const code =
+      error instanceof Error &&
+      (error.message === "detail_page_conflict" ||
+        error.message === "detail_page_content_type_mismatch")
+        ? error.message
+        : "detail_page_invalid";
+    const message =
+      code === "detail_page_conflict"
+        ? "expectedExistingId does not match the detail template id being upserted."
+        : code === "detail_page_content_type_mismatch"
+          ? "The existing detail template id belongs to a different content type."
+          : "The detail template document or its linked content type is invalid.";
+
+    return createPreviewChange({
+      action,
+      targetType: "detail-page",
+      targetKey,
+      summary: `Create/update detail template ${action.input.document.name}`,
+      conflicts: [
+        {
+          code,
+          severity: "error",
+          message,
+        },
+      ],
+      dependencies: [
+        {
+          actionId: null,
+          targetType: "content-type",
+          targetKey: action.input.document.contentTypeId,
+          optional: false,
+        },
+      ],
+      beforeValue: null,
+      nextValue: summarizeDetailPageDocument(action.input.document),
+    });
+  }
 };
 
 const applyPageUpdatePatch = (
@@ -4301,6 +4401,49 @@ const executePageAction = async (
   };
 };
 
+const executeDetailPageAction = async (
+  action: AssistantDetailPageUpsertAction,
+  preview: AssistantActionPreviewChange,
+  deps: ActionExecutorDeps
+): Promise<AssistantActionExecutionItem> => {
+  const prepared = await deps.prepareDetailPageDocumentUpsert({
+    document: action.input.document,
+    expectedExistingId: action.input.expectedExistingId,
+  });
+  const targetKey = `${prepared.contentType.slug}/${prepared.document.id}`;
+  const beforeRecord = prepared.existing;
+  const record =
+    preview.operation === "noop"
+      ? prepared.existing
+      : (
+          await deps.upsertDetailPageDocument({
+            document: prepared.document,
+            expectedExistingId: action.input.expectedExistingId,
+          })
+        ).record;
+
+  const finalRecord = record ?? beforeRecord;
+  if (!finalRecord) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+
+  return {
+    actionId: action.id,
+    type: action.type,
+    targetType: "detail-page",
+    targetKey,
+    operation: preview.operation,
+    status: "success",
+    resourceId: finalRecord.id,
+    adminHref: null,
+    publicHref: null,
+    message:
+      preview.operation === "noop"
+        ? "Detail template already matched the planned document."
+        : `Detail template "${finalRecord.name}" is ready for ${prepared.contentType.slug}.`,
+  };
+};
+
 const executePageUpdateAction = async (
   action: AssistantPageUpdateAction,
   preview: AssistantActionPreviewChange,
@@ -4937,6 +5080,16 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
     execute: (action, preview, ctx) =>
       action.type === "page.upsert"
         ? executePageAction(action, preview, ctx.actorId, ctx.deps)
+        : unexpectedAction(),
+  },
+  "detail-page.upsert": {
+    preview: (action, ctx) =>
+      action.type === "detail-page.upsert"
+        ? buildDetailPagePreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "detail-page.upsert"
+        ? executeDetailPageAction(action, preview, ctx.deps)
         : unexpectedAction(),
   },
   "page.update": {

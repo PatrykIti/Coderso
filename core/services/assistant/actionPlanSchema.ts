@@ -17,6 +17,7 @@ import {
   type FormActionInput,
   type FormActionType,
 } from "../forms/formActionsContract";
+import { normalizeDetailPageDocument } from "../content/detailPageSchema";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -1074,6 +1075,16 @@ const normalizePageInput = (input: JsonRecord) => {
   };
 };
 
+const normalizeDetailPageUpsertInput = (input: JsonRecord) => {
+  assertKeys(input, new Set(["document", "expectedExistingId"]));
+  return {
+    document: normalizeDetailPageDocument(input.document),
+    ...(input.expectedExistingId !== undefined
+      ? { expectedExistingId: readOptionalText(input.expectedExistingId) }
+      : {}),
+  };
+};
+
 const normalizePageUpdateSettingsPatch = (value: unknown) => {
   const input = assertRecord(value);
   assertKeys(input, new Set(["template", "showInNav", "revisionRetention", "seo"]));
@@ -1353,6 +1364,8 @@ const normalizeActionInput = (type: AssistantPlannedAction["type"], input: unkno
       return normalizeFormAutomationUpsertInput(record);
     case "page.upsert":
       return normalizePageInput(record);
+    case "detail-page.upsert":
+      return normalizeDetailPageUpsertInput(record);
     case "page.update":
       return normalizePageUpdateInput(record);
     case "page.delete":

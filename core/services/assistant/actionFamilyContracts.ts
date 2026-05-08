@@ -14,8 +14,7 @@ export const assistantContractOnlyActionTypes = [
   "menu.structure.patch",
 ] as const;
 
-export type AssistantContractOnlyActionType =
-  (typeof assistantContractOnlyActionTypes)[number];
+export type AssistantContractOnlyActionType = (typeof assistantContractOnlyActionTypes)[number];
 export type AssistantKnownActionContractType =
   | AssistantExecutableActionType
   | AssistantContractOnlyActionType;
@@ -34,11 +33,7 @@ export const isAssistantKnownActionContractType = (
   isAssistantActionType(value) || isAssistantContractOnlyActionType(value);
 
 const baseReadPermissions = ["settings:read", "content:read"] as const;
-const baseExecutePermissions = [
-  "settings:write",
-  "content:write",
-  "content:publish",
-] as const;
+const baseExecutePermissions = ["settings:write", "content:write", "content:publish"] as const;
 
 const baseAntiAbuse = [
   "internal-admin-endpoint-only",
@@ -143,12 +138,11 @@ export const assistantActionFamilyContracts = [
     "core/services/settings/settingsService.ts",
     ["typeSlug", "listPath", "detailPath", "enabled"]
   ),
-  executableContract(
-    "content-type.upsert",
-    "content",
-    "core/services/content/typeService.ts",
-    ["slug", "name", "schema"]
-  ),
+  executableContract("content-type.upsert", "content", "core/services/content/typeService.ts", [
+    "slug",
+    "name",
+    "schema",
+  ]),
   executableContract(
     "content-type.delete",
     "content",
@@ -196,7 +190,9 @@ export const assistantActionFamilyContracts = [
         dryRun: ["content:read"],
         execute: ["content:write"],
       },
-      notes: ["Updates custom screen metadata/sidebar/binding mode while preserving unrelated config."],
+      notes: [
+        "Updates custom screen metadata/sidebar/binding mode while preserving unrelated config.",
+      ],
     }
   ),
   executableContract(
@@ -210,7 +206,9 @@ export const assistantActionFamilyContracts = [
         dryRun: ["content:read"],
         execute: ["content:write"],
       },
-      notes: ["Patches one existing custom screen widget block data path and preserves unrelated blocks."],
+      notes: [
+        "Patches one existing custom screen widget block data path and preserves unrelated blocks.",
+      ],
     }
   ),
   executableContract(
@@ -230,9 +228,7 @@ export const assistantActionFamilyContracts = [
         dryRun: ["content:read"],
         execute: ["content:write"],
       },
-      notes: [
-        "Deletes one exact listing query after page/widget references are checked.",
-      ],
+      notes: ["Deletes one exact listing query after page/widget references are checked."],
     }
   ),
   executableContract(
@@ -246,7 +242,9 @@ export const assistantActionFamilyContracts = [
         dryRun: ["content:read"],
         execute: ["content:write"],
       },
-      notes: ["Updates listing query metadata and bounded runtime query settings while preserving unrelated query config."],
+      notes: [
+        "Updates listing query metadata and bounded runtime query settings while preserving unrelated query config.",
+      ],
     }
   ),
   executableContract(
@@ -266,9 +264,7 @@ export const assistantActionFamilyContracts = [
         dryRun: ["content:read"],
         execute: ["content:write"],
       },
-      notes: [
-        "Deletes one exact listing template after page/widget references are checked.",
-      ],
+      notes: ["Deletes one exact listing template after page/widget references are checked."],
     }
   ),
   executableContract(
@@ -282,15 +278,18 @@ export const assistantActionFamilyContracts = [
         dryRun: ["content:read"],
         execute: ["content:write"],
       },
-      notes: ["Updates listing template metadata/layout/card config while preserving unrelated template config."],
+      notes: [
+        "Updates listing template metadata/layout/card config while preserving unrelated template config.",
+      ],
     }
   ),
-  executableContract(
-    "form.upsert",
-    "form",
-    "core/services/forms/formsService.ts",
-    ["name", "slug", "status", "submissionAccess", "fields"]
-  ),
+  executableContract("form.upsert", "form", "core/services/forms/formsService.ts", [
+    "name",
+    "slug",
+    "status",
+    "submissionAccess",
+    "fields",
+  ]),
   executableContract(
     "form.delete",
     "form",
@@ -302,9 +301,7 @@ export const assistantActionFamilyContracts = [
         dryRun: ["forms:read"],
         execute: ["forms:write"],
       },
-      notes: [
-        "Deletes one exact form only when the form has zero submissions.",
-      ],
+      notes: ["Deletes one exact form only when the form has zero submissions."],
     }
   ),
   executableContract(
@@ -318,9 +315,7 @@ export const assistantActionFamilyContracts = [
         dryRun: ["forms:read"],
         execute: ["forms:write"],
       },
-      notes: [
-        "Archives one exact form without exposing submission payloads.",
-      ],
+      notes: ["Archives one exact form without exposing submission payloads."],
     }
   ),
   executableContract(
@@ -351,20 +346,14 @@ export const assistantActionFamilyContracts = [
       notes: ["Draft-only entry upsert; publishing requires a separate explicit action."],
     }
   ),
-  executableContract(
-    "entry.delete",
-    "entry",
-    "core/services/content/entryService.ts",
-    ["id"],
-    {
-      permissions: {
-        plan: ["content:read"],
-        dryRun: ["content:read"],
-        execute: ["content:write", "content:publish"],
-      },
-      notes: ["Deletes one exact entry after active context/catalog target resolution."],
-    }
-  ),
+  executableContract("entry.delete", "entry", "core/services/content/entryService.ts", ["id"], {
+    permissions: {
+      plan: ["content:read"],
+      dryRun: ["content:read"],
+      execute: ["content:write", "content:publish"],
+    },
+    notes: ["Deletes one exact entry after active context/catalog target resolution."],
+  }),
   executableContract(
     "entry.update",
     "entry",
@@ -376,7 +365,9 @@ export const assistantActionFamilyContracts = [
         dryRun: ["content:read"],
         execute: ["content:write", "content:publish"],
       },
-      notes: ["Updates one exact entry through content services and preserves unrelated data fields."],
+      notes: [
+        "Updates one exact entry through content services and preserves unrelated data fields.",
+      ],
     }
   ),
   executableContract(
@@ -420,7 +411,9 @@ export const assistantActionFamilyContracts = [
         dryRun: ["menus:read"],
         execute: ["menus:write"],
       },
-      notes: ["Updates one exact menu item through the menu tree service and preserves unrelated menu items."],
+      notes: [
+        "Updates one exact menu item through the menu tree service and preserves unrelated menu items.",
+      ],
     }
   ),
   executableContract(
@@ -476,7 +469,9 @@ export const assistantActionFamilyContracts = [
         dryRun: ["media:read", "content:read"],
         execute: ["media:read", "content:write"],
       },
-      notes: ["References existing media on entry targets only; raw upload bytes are never accepted."],
+      notes: [
+        "References existing media on entry targets only; raw upload bytes are never accepted.",
+      ],
     }
   ),
   executableContract(
@@ -539,11 +534,28 @@ export const assistantActionFamilyContracts = [
       ],
     }
   ),
+  executableContract("page.upsert", "page", "core/services/pages/pageService.ts", [
+    "title",
+    "slug",
+    "status",
+    "listingQueryName",
+    "listingTemplateSlug",
+  ]),
   executableContract(
-    "page.upsert",
-    "page",
-    "core/services/pages/pageService.ts",
-    ["title", "slug", "status", "listingQueryName", "listingTemplateSlug"]
+    "detail-page.upsert",
+    "detail-page",
+    "core/services/content/detailPageDocumentService.ts",
+    ["document"],
+    {
+      permissions: {
+        plan: ["content:read"],
+        dryRun: ["content:read"],
+        execute: ["content:write", "content:publish"],
+      },
+      notes: [
+        "DetailPageDocument.status owns publish state; expectedExistingId only guards deterministic upserts for the same detail template id.",
+      ],
+    }
   ),
   executableContract(
     "page.update",
@@ -556,9 +568,7 @@ export const assistantActionFamilyContracts = [
         dryRun: ["content:read"],
         execute: ["content:write", "content:publish"],
       },
-      notes: [
-        "Updates page metadata/settings only and preserves unrelated page data.",
-      ],
+      notes: ["Updates page metadata/settings only and preserves unrelated page data."],
     }
   ),
   executableContract(
@@ -604,9 +614,7 @@ export const assistantActionFamilyContracts = [
         dryRun: ["widgets:read"],
         execute: ["widgets:write"],
       },
-      notes: [
-        "Updates reusable widget template metadata/settings and preserves unrelated blocks.",
-      ],
+      notes: ["Updates reusable widget template metadata/settings and preserves unrelated blocks."],
     }
   ),
   executableContract(
@@ -713,9 +721,10 @@ export const assistantActionFamilyContracts = [
   ),
 ] as const satisfies readonly AssistantActionFamilyContract<AssistantKnownActionContractType>[];
 
-const actionFamilyContractMap = new Map<AssistantKnownActionContractType, AssistantActionFamilyContract>(
-  assistantActionFamilyContracts.map((item) => [item.type, item])
-);
+const actionFamilyContractMap = new Map<
+  AssistantKnownActionContractType,
+  AssistantActionFamilyContract
+>(assistantActionFamilyContracts.map((item) => [item.type, item]));
 
 export const getAssistantActionFamilyContract = (
   type: AssistantKnownActionContractType
@@ -736,8 +745,7 @@ const fail = (): never => {
   throw new Error("assistant_action_contract_invalid");
 };
 
-const assertRecord = (value: unknown): JsonRecord =>
-  isRecord(value) ? value : fail();
+const assertRecord = (value: unknown): JsonRecord => (isRecord(value) ? value : fail());
 
 const readText = (value: unknown) => {
   if (typeof value === "string") {
@@ -748,8 +756,7 @@ const readText = (value: unknown) => {
   return fail();
 };
 
-const readTextArray = (value: unknown) =>
-  Array.isArray(value) ? value.map(readText) : fail();
+const readTextArray = (value: unknown) => (Array.isArray(value) ? value.map(readText) : fail());
 
 const assertKeys = (value: JsonRecord, allowed: Set<string>) => {
   for (const key of Object.keys(value)) {
@@ -822,9 +829,7 @@ const readPublicWrite = (value: unknown): AssistantActionFamilyContract["publicW
   return fail();
 };
 
-const readKnownActionContractType = (
-  value: unknown
-): AssistantKnownActionContractType => {
+const readKnownActionContractType = (value: unknown): AssistantKnownActionContractType => {
   const type = readText(value);
   if (isAssistantKnownActionContractType(type)) return type;
   return fail();

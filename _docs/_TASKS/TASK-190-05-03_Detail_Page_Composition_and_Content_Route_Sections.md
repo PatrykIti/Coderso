@@ -46,8 +46,11 @@ Current slice note:
   expired vs missing tokens, dedicated `type=detail-page` preview renders
   `current_document`, and canonical content-route updates reuse shared
   list/detail cache invalidation.
-- Reviewed action adapters and the remaining route/admin leaves stay open in
-  the later slices.
+- `TASK-190-05-03-05` is landed: `detail-page.upsert` now integrates with the
+  strict assistant action registry/schema/executor path through one
+  content-domain service seam, without introducing a second route-owner or
+  generic provider-side mutation path.
+- The remaining route/admin leaves stay open in the later slices.
 
 This unlocks proper Mabudo-like/product/service/portfolio detail pages instead
 of generic entry detail output.

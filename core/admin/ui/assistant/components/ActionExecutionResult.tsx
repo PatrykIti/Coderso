@@ -43,6 +43,7 @@ const actionTypeLabels: Record<string, string> = {
   "page.widget.patch": "Page widget",
   "form.automation.upsert": "Form automation",
   "page.upsert": "Page",
+  "detail-page.upsert": "Detail Template",
   "page.update": "Page",
   "page.delete": "Page",
   "widget-template.delete": "Widget template",
@@ -59,12 +60,9 @@ const resolveActionTypeLabel = (type: string) =>
 const secretLikeTextPattern =
   /(token|secret|password|api[-_]?key|credential|cookie|csrf|authorization|bearer)/i;
 
-const redactUiText = (value: string) =>
-  secretLikeTextPattern.test(value) ? "[redacted]" : value;
+const redactUiText = (value: string) => (secretLikeTextPattern.test(value) ? "[redacted]" : value);
 
-const resolveResultOperation = (
-  item: AssistantActionExecuteResponse["results"][number]
-) => {
+const resolveResultOperation = (item: AssistantActionExecuteResponse["results"][number]) => {
   if (item.type.endsWith(".archive")) return "archive";
   if (item.type.includes(".delete")) return "delete";
   if (item.type.includes(".detach")) return "detach";
@@ -121,9 +119,9 @@ export function ActionExecutionResult({ result }: ActionExecutionResultProps) {
             <AlertTitle>Some actions need attention</AlertTitle>
             <AlertDescription>
               <p>
-                {successCount(result)} action(s) succeeded and {failed.length} action(s)
-                failed. Review the failed steps, run a fresh dry-run, then execute again
-                with a new confirmation.
+                {successCount(result)} action(s) succeeded and {failed.length} action(s) failed.
+                Review the failed steps, run a fresh dry-run, then execute again with a new
+                confirmation.
               </p>
               <ul className="ml-5 mt-2 list-disc space-y-1">
                 {failed.map((item) => (
@@ -139,10 +137,7 @@ export function ActionExecutionResult({ result }: ActionExecutionResultProps) {
         ) : null}
 
         {result.results.map((item) => (
-          <div
-            key={item.actionId}
-            className="rounded-xl border bg-background px-3 py-3 text-sm"
-          >
+          <div key={item.actionId} className="rounded-xl border bg-background px-3 py-3 text-sm">
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant={item.status === "success" ? "secondary" : "destructive"}>
                 {item.status === "success" ? (
