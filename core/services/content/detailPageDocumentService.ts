@@ -1,13 +1,14 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray, max } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 
 import { db } from "../../db/client";
-import { detailPageDocuments } from "../../db/schema";
+import { detailPageDocuments, detailPageRevisions } from "../../db/schema";
 import { invalidateContentRouteCache } from "../../site/cache/siteCache";
+import { areRevisionSnapshotsEqual } from "./revisionSnapshot";
 import { getSetting, type ContentRouteSetting } from "../settings/settingsService";
 import { getContentType, type ContentTypeRecord } from "./typeService";
 import { normalizeDetailPageDocument } from "./detailPageSchema";
-import type { DetailPageDocument } from "./detailPageTypes";
+import type { DetailPageDocument, DetailPageRevisionKind } from "./detailPageTypes";
 
 export type DetailPageDocumentRecord = Omit<
   typeof detailPageDocuments.$inferSelect,
@@ -15,6 +16,22 @@ export type DetailPageDocumentRecord = Omit<
 > & {
   currentDocument: DetailPageDocument;
   publishedDocument: DetailPageDocument | null;
+};
+
+export type DetailPageRevisionRecord = {
+  id: string;
+  detailPageId: string;
+  version: number;
+  kind: DetailPageRevisionKind;
+  document: DetailPageDocument;
+  createdAt: Date;
+  createdBy: string | null;
+};
+
+export type DetailPageAutosaveResult = {
+  revision: DetailPageRevisionRecord;
+  reusedRevision: boolean;
+  savedAt: string;
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -78,6 +95,106 @@ const normalizeDocumentWithResolvedId = (value: unknown, resolvedId?: string) =>
   } catch {
     throw new Error("detail_page_invalid");
   }
+};
+
+const mapDetailPageRevisionRow = (
+  row: typeof detailPageRevisions.$inferSelect
+): DetailPageRevisionRecord => ({
+  id: row.id,
+  detailPageId: row.detailPageId,
+  version: row.version,
+  kind: (row.kind === "autosave" ? "autosave" : "publish") as DetailPageRevisionKind,
+  document: normalizeDetailPageDocument(row.document),
+  createdAt: row.createdAt,
+  createdBy: row.createdBy ?? null,
+});
+
+const nextDetailPageRevisionVersion = async (
+  tx: typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0],
+  detailPageId: string
+) => {
+  const [{ value }] = await tx
+    .select({ value: max(detailPageRevisions.version) })
+    .from(detailPageRevisions)
+    .where(eq(detailPageRevisions.detailPageId, detailPageId));
+
+  return (value ?? 0) + 1;
+};
+
+const createDetailPageRevisionTx = async (
+  tx: typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0],
+  detailPageId: string,
+  document: DetailPageDocument,
+  userId: string,
+  kind: DetailPageRevisionKind
+) => {
+  const nextVersion = await nextDetailPageRevisionVersion(tx, detailPageId);
+  const [revision] = await tx
+    .insert(detailPageRevisions)
+    .values({
+      detailPageId,
+      version: nextVersion,
+      kind,
+      document,
+      createdBy: userId,
+    })
+    .returning();
+
+  if (!revision) {
+    throw new Error("detail_page_invalid");
+  }
+
+  return mapDetailPageRevisionRow(revision);
+};
+
+const createOrReplaceDetailPageAutosaveRevisionTx = async (
+  tx: typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0],
+  detailPageId: string,
+  document: DetailPageDocument,
+  userId: string
+): Promise<{
+  revision: DetailPageRevisionRecord;
+  reusedRevision: boolean;
+}> => {
+  const existingAutosaves = await tx
+    .select()
+    .from(detailPageRevisions)
+    .where(
+      and(
+        eq(detailPageRevisions.detailPageId, detailPageId),
+        eq(detailPageRevisions.kind, "autosave")
+      )
+    )
+    .orderBy(desc(detailPageRevisions.version));
+
+  const latest = existingAutosaves[0];
+  if (latest) {
+    if (areRevisionSnapshotsEqual(normalizeDetailPageDocument(latest.document), document)) {
+      const staleAutosaveIds = existingAutosaves.slice(1).map((row) => row.id);
+      if (staleAutosaveIds.length > 0) {
+        await tx
+          .delete(detailPageRevisions)
+          .where(inArray(detailPageRevisions.id, staleAutosaveIds));
+      }
+
+      return {
+        revision: mapDetailPageRevisionRow(latest),
+        reusedRevision: true,
+      };
+    }
+  }
+
+  const created = await createDetailPageRevisionTx(tx, detailPageId, document, userId, "autosave");
+
+  const staleAutosaveIds = existingAutosaves.map((row) => row.id);
+  if (staleAutosaveIds.length > 0) {
+    await tx.delete(detailPageRevisions).where(inArray(detailPageRevisions.id, staleAutosaveIds));
+  }
+
+  return {
+    revision: created,
+    reusedRevision: false,
+  };
 };
 
 export async function getDetailPageDocument(id: string): Promise<DetailPageDocumentRecord | null> {
@@ -253,4 +370,115 @@ export async function deleteDetailPageDocument(id: string) {
 
   await invalidateLinkedDetailPageCaches(id, existing.currentDocument.contentTypeSlug);
   return mapDetailPageRow(row);
+}
+
+export async function publishDetailPageDocument(id: string, userId: string) {
+  const existing = await getDetailPageDocument(id);
+  if (!existing) {
+    throw new Error("detail_page_not_found");
+  }
+
+  const contentType = await getContentType(existing.contentTypeId);
+  if (!contentType) {
+    throw new Error("detail_page_invalid");
+  }
+
+  const publishedDocument = normalizeDetailPageDocument({
+    ...existing.currentDocument,
+    contentTypeSlug: contentType.slug,
+    status: "published",
+  });
+
+  const [row] = await db.transaction(async (tx) => {
+    await createDetailPageRevisionTx(tx, id, publishedDocument, userId, "publish");
+    const [updated] = await tx
+      .update(detailPageDocuments)
+      .set({
+        name: publishedDocument.name,
+        status: "published",
+        currentDocument: publishedDocument,
+        publishedDocument,
+        updatedAt: new Date(),
+        publishedAt: new Date(),
+      })
+      .where(eq(detailPageDocuments.id, id))
+      .returning();
+
+    return [updated];
+  });
+
+  if (!row) {
+    throw new Error("detail_page_not_found");
+  }
+
+  await invalidateLinkedDetailPageCaches(id, contentType.slug);
+  return mapDetailPageRow(row);
+}
+
+export async function unpublishDetailPageDocument(id: string) {
+  const existing = await getDetailPageDocument(id);
+  if (!existing) {
+    throw new Error("detail_page_not_found");
+  }
+
+  const contentType = await getContentType(existing.contentTypeId);
+  if (!contentType) {
+    throw new Error("detail_page_invalid");
+  }
+
+  const draftDocument = normalizeDetailPageDocument({
+    ...existing.currentDocument,
+    contentTypeSlug: contentType.slug,
+    status: "draft",
+  });
+
+  const [row] = await db
+    .update(detailPageDocuments)
+    .set({
+      name: draftDocument.name,
+      status: "draft",
+      currentDocument: draftDocument,
+      publishedDocument: null,
+      updatedAt: new Date(),
+      publishedAt: null,
+    })
+    .where(eq(detailPageDocuments.id, id))
+    .returning();
+
+  if (!row) {
+    throw new Error("detail_page_not_found");
+  }
+
+  await invalidateLinkedDetailPageCaches(id, contentType.slug);
+  return mapDetailPageRow(row);
+}
+
+export async function autosaveDetailPageDocument(
+  id: string,
+  input: {
+    document: unknown;
+  },
+  userId: string
+): Promise<DetailPageAutosaveResult> {
+  const document = normalizeDocumentWithResolvedId(input.document, id);
+  if (document.id !== id) {
+    throw new Error("detail_page_conflict");
+  }
+
+  const prepared = await prepareDetailPageDocumentUpsert({
+    document,
+    expectedExistingId: id,
+  });
+  if (!prepared.existing) {
+    throw new Error("detail_page_not_found");
+  }
+
+  const result = await db.transaction(async (tx) =>
+    createOrReplaceDetailPageAutosaveRevisionTx(tx, id, prepared.document, userId)
+  );
+
+  return {
+    ...result,
+    savedAt: new Date().toISOString(),
+  };
 }

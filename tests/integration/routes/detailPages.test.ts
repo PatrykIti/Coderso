@@ -3,7 +3,13 @@ import { randomUUID } from "node:crypto";
 import { eq, inArray, sql } from "drizzle-orm";
 
 import { db } from "../../../core/db/client";
-import { contentTypes, detailPageDocuments } from "../../../core/db/schema";
+import {
+  contentEntries,
+  contentTypes,
+  detailPageDocuments,
+  previewTokens,
+  users,
+} from "../../../core/db/schema";
 import type { RouteContext } from "../../../core/server/router";
 import {
   mapDetailPageError,
@@ -52,6 +58,8 @@ async function canConnect() {
 
 const trackedDetailPageIds = new Set<string>();
 const trackedContentTypeIds = new Set<string>();
+const trackedEntryIds = new Set<string>();
+const trackedUserIds = new Set<string>();
 const settingSnapshots = new Map<string, { exists: boolean; value: unknown }>();
 
 const rememberSetting = async (key: string) => {
@@ -77,9 +85,16 @@ const restoreSettings = async () => {
 const cleanupTrackedRows = async () => {
   const detailPageIds = [...trackedDetailPageIds];
   const contentTypeIds = [...trackedContentTypeIds];
+  const entryIds = [...trackedEntryIds];
+  const userIds = [...trackedUserIds];
 
   if (detailPageIds.length > 0) {
+    await db.delete(previewTokens).where(inArray(previewTokens.targetId, detailPageIds));
     await db.delete(detailPageDocuments).where(inArray(detailPageDocuments.id, detailPageIds));
+  }
+
+  if (entryIds.length > 0) {
+    await db.delete(contentEntries).where(inArray(contentEntries.id, entryIds));
   }
 
   for (const contentTypeId of contentTypeIds) {
@@ -93,8 +108,17 @@ const cleanupTrackedRows = async () => {
       .catch(() => undefined);
   }
 
+  if (userIds.length > 0) {
+    await db
+      .delete(users)
+      .where(inArray(users.id, userIds))
+      .catch(() => undefined);
+  }
+
   trackedDetailPageIds.clear();
   trackedContentTypeIds.clear();
+  trackedEntryIds.clear();
+  trackedUserIds.clear();
 };
 
 afterEach(async () => {
@@ -161,6 +185,20 @@ const buildDetailPageDocumentInput = (contentTypeId: string, contentTypeSlug: st
   ],
 });
 
+const createRouteActor = async () => {
+  const [actor] = await db
+    .insert(users)
+    .values({
+      email: `detail-page-route-${randomUUID()}@example.com`,
+      passwordHash: "test",
+      status: "active",
+    })
+    .returning();
+  if (!actor?.id) throw new Error("missing_detail_page_route_actor");
+  trackedUserIds.add(actor.id);
+  return actor;
+};
+
 test("registerDetailPageRoutes wires endpoints and permissions", () => {
   const { router, routes } = makeRouter();
   const requestedPermissions: string[] = [];
@@ -181,6 +219,10 @@ test("registerDetailPageRoutes wires endpoints and permissions", () => {
       "POST /detail-pages",
       "PATCH /detail-pages/:id",
       "DELETE /detail-pages/:id",
+      "POST /detail-pages/:id/preview",
+      "POST /detail-pages/:id/publish",
+      "POST /detail-pages/:id/unpublish",
+      "POST /detail-pages/:id/autosave",
     ])
   );
   expect(requestedPermissions).toEqual([
@@ -188,6 +230,10 @@ test("registerDetailPageRoutes wires endpoints and permissions", () => {
     "content:read",
     "content:write",
     "content:write",
+    "content:write",
+    "content:read",
+    "content:publish",
+    "content:publish",
     "content:write",
   ]);
 });
@@ -232,86 +278,202 @@ test("detail page routes validate list and write payloads before service work", 
     })
   ).rejects.toThrow("validation_stop");
 
+  await expect(
+    runRoute(routes, "POST", "/detail-pages/:id/preview", {
+      params: { id: "detail-1" },
+      body: { extra: true },
+    })
+  ).rejects.toThrow("validation_stop");
+
+  await expect(
+    runRoute(routes, "POST", "/detail-pages/:id/autosave", {
+      params: { id: "detail-1" },
+      body: { extra: true },
+    })
+  ).rejects.toThrow("validation_stop");
+
   expect(validateCalls.map((entry) => entry.payload)).toEqual([
     { contentTypeId: "bad" },
+    { extra: true },
+    { extra: true },
     { extra: true },
     { extra: true },
   ]);
 });
 
-testIfDb("detail page routes create, list, read, update, and delete documents", async () => {
+test("detail page autosave and publish require an authenticated actor after validation", async () => {
   const { router, routes } = makeRouter();
+
   registerDetailPageRoutes(router, {
     requirePermission: () => async () => undefined,
     validate: () => undefined,
   });
 
-  const contentType = await createContentType({
-    name: `Products ${randomUUID()}`,
-    slug: `products-${randomUUID()}`,
-    schema: {
-      type: "object",
-      additionalProperties: false,
-      properties: {
-        headline: { type: "string", xFieldType: "text" },
+  await expect(
+    runRoute(routes, "POST", "/detail-pages/:id/autosave", {
+      params: { id: randomUUID() },
+      body: {
+        document: {
+          ...buildDetailPageDocumentInput(randomUUID(), "products"),
+          id: randomUUID(),
+        },
       },
-    },
-  });
-  trackedContentTypeIds.add(contentType.id);
-
-  const created = (await runRoute(routes, "POST", "/detail-pages", {
-    body: {
-      document: buildDetailPageDocumentInput(contentType.id, "stale-products"),
-    },
-  })) as { id: string; currentDocument: { contentTypeSlug: string } };
-  trackedDetailPageIds.add(created.id);
-
-  expect(created.currentDocument.contentTypeSlug).toBe(contentType.slug);
-
-  const listed = (await runRoute(routes, "GET", "/detail-pages", {
-    query: { contentTypeId: contentType.id },
-  })) as { items: Array<{ id: string }> };
-  expect(listed.items).toHaveLength(1);
-  expect(listed.items[0]?.id).toBe(created.id);
-
-  const detail = (await runRoute(routes, "GET", "/detail-pages/:id", {
-    params: { id: created.id },
-  })) as { id: string };
-  expect(detail.id).toBe(created.id);
-
-  const updated = (await runRoute(routes, "PATCH", "/detail-pages/:id", {
-    params: { id: created.id },
-    body: {
-      document: {
-        ...buildDetailPageDocumentInput(contentType.id, "stale-products-updated"),
-        name: "Products detail template updated",
-        status: "published",
-      },
-    },
-  })) as {
-    name: string;
-    status: string;
-    publishedDocument: { contentTypeSlug: string } | null;
-  };
-  expect(updated.name).toBe("Products detail template updated");
-  expect(updated.status).toBe("published");
-  expect(updated.publishedDocument?.contentTypeSlug).toBe(contentType.slug);
-
-  const deleted = (await runRoute(routes, "DELETE", "/detail-pages/:id", {
-    params: { id: created.id },
-  })) as { ok: true };
-  expect(deleted.ok).toBe(true);
-  trackedDetailPageIds.delete(created.id);
+    })
+  ).rejects.toThrow("auth_required");
 
   await expect(
-    runRoute(routes, "GET", "/detail-pages/:id", {
-      params: { id: created.id },
+    runRoute(routes, "POST", "/detail-pages/:id/publish", {
+      params: { id: randomUUID() },
+      body: {},
     })
-  ).rejects.toMatchObject({
-    code: "detail_page_not_found",
-    status: 404,
-  });
+  ).rejects.toThrow("auth_required");
 });
+
+testIfDb(
+  "detail page routes cover create, list, read, update, preview, autosave, publish, unpublish, and delete",
+  async () => {
+    const { router, routes } = makeRouter();
+    registerDetailPageRoutes(router, {
+      requirePermission: () => async () => undefined,
+      validate: () => undefined,
+    });
+
+    const actor = await createRouteActor();
+    const contentType = await createContentType({
+      name: `Products ${randomUUID()}`,
+      slug: `products-${randomUUID()}`,
+      schema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          headline: { type: "string", xFieldType: "text" },
+        },
+      },
+    });
+    trackedContentTypeIds.add(contentType.id);
+
+    const [entry] = await db
+      .insert(contentEntries)
+      .values({
+        typeId: contentType.id,
+        slug: `product-${randomUUID()}`,
+        title: "Preview product",
+        status: "published",
+        data: { headline: "Preview product" },
+        publishedAt: new Date(),
+      })
+      .returning();
+    if (!entry?.id) throw new Error("missing_detail_page_route_entry");
+    trackedEntryIds.add(entry.id);
+
+    const created = (await runRoute(routes, "POST", "/detail-pages", {
+      body: {
+        document: buildDetailPageDocumentInput(contentType.id, "stale-products"),
+      },
+    })) as { id: string; currentDocument: { contentTypeSlug: string } };
+    trackedDetailPageIds.add(created.id);
+
+    expect(created.currentDocument.contentTypeSlug).toBe(contentType.slug);
+
+    const listed = (await runRoute(routes, "GET", "/detail-pages", {
+      query: { contentTypeId: contentType.id },
+    })) as { items: Array<{ id: string }> };
+    expect(listed.items).toHaveLength(1);
+    expect(listed.items[0]?.id).toBe(created.id);
+
+    const detail = (await runRoute(routes, "GET", "/detail-pages/:id", {
+      params: { id: created.id },
+    })) as { id: string };
+    expect(detail.id).toBe(created.id);
+
+    const updated = (await runRoute(routes, "PATCH", "/detail-pages/:id", {
+      params: { id: created.id },
+      body: {
+        document: {
+          ...buildDetailPageDocumentInput(contentType.id, "stale-products-updated"),
+          name: "Products detail template updated",
+          status: "published",
+        },
+      },
+    })) as {
+      name: string;
+      status: string;
+      publishedDocument: { contentTypeSlug: string } | null;
+    };
+    expect(updated.name).toBe("Products detail template updated");
+    expect(updated.status).toBe("published");
+    expect(updated.publishedDocument?.contentTypeSlug).toBe(contentType.slug);
+
+    const preview = (await runRoute(routes, "POST", "/detail-pages/:id/preview", {
+      params: { id: created.id },
+      headers: {
+        host: "localhost:8787",
+        "x-forwarded-host": "cms.example.test",
+        "x-forwarded-proto": "https",
+      },
+      body: { sampleEntryId: entry.id, ttlMinutes: 5 },
+    })) as { token: string; previewUrl: string; expiresAt: Date };
+    expect(typeof preview.token).toBe("string");
+    expect(preview.previewUrl).toContain("/preview?");
+    expect(preview.previewUrl).toContain("type=detail-page");
+    expect(preview.expiresAt).toBeInstanceOf(Date);
+
+    const autosave = (await runRoute(routes, "POST", "/detail-pages/:id/autosave", {
+      params: { id: created.id },
+      user: { id: actor.id },
+      body: {
+        document: {
+          ...buildDetailPageDocumentInput(contentType.id, contentType.slug),
+          id: created.id,
+          name: "Products detail autosave",
+        },
+      },
+    })) as { revision: { kind: string }; reusedRevision: boolean };
+    expect(autosave.revision.kind).toBe("autosave");
+    expect(autosave.reusedRevision).toBe(false);
+
+    const publish = await runRoute(routes, "POST", "/detail-pages/:id/publish", {
+      params: { id: created.id },
+      user: { id: actor.id },
+      body: {},
+    });
+    expect(publish).toEqual({ ok: true });
+
+    const afterPublish = (await runRoute(routes, "GET", "/detail-pages/:id", {
+      params: { id: created.id },
+    })) as { status: string; publishedDocument: object | null };
+    expect(afterPublish.status).toBe("published");
+    expect(afterPublish.publishedDocument).not.toBeNull();
+
+    const unpublish = await runRoute(routes, "POST", "/detail-pages/:id/unpublish", {
+      params: { id: created.id },
+      body: {},
+    });
+    expect(unpublish).toEqual({ ok: true });
+
+    const afterUnpublish = (await runRoute(routes, "GET", "/detail-pages/:id", {
+      params: { id: created.id },
+    })) as { status: string; publishedDocument: object | null };
+    expect(afterUnpublish.status).toBe("draft");
+    expect(afterUnpublish.publishedDocument).toBeNull();
+
+    const deleted = (await runRoute(routes, "DELETE", "/detail-pages/:id", {
+      params: { id: created.id },
+    })) as { ok: true };
+    expect(deleted.ok).toBe(true);
+    trackedDetailPageIds.delete(created.id);
+
+    await expect(
+      runRoute(routes, "GET", "/detail-pages/:id", {
+        params: { id: created.id },
+      })
+    ).rejects.toMatchObject({
+      code: "detail_page_not_found",
+      status: 404,
+    });
+  },
+  15_000
+);
 
 testIfDb(
   "detail page delete route rejects documents that are still linked from content routes",

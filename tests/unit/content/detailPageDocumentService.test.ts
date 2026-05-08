@@ -1,14 +1,22 @@
-import { afterAll, expect, test } from "bun:test";
+import { afterEach, expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 
 import { db } from "../../../core/db/client";
-import { detailPageDocuments, contentTypes } from "../../../core/db/schema";
 import {
+  detailPageDocuments,
+  detailPageRevisions,
+  contentTypes,
+  users,
+} from "../../../core/db/schema";
+import {
+  autosaveDetailPageDocument,
   createDetailPageDocument,
   deleteDetailPageDocument,
   getDetailPageDocument,
   listDetailPageDocuments,
+  publishDetailPageDocument,
+  unpublishDetailPageDocument,
   updateDetailPageDocument,
 } from "../../../core/services/content/detailPageDocumentService";
 import { createContentType, deleteContentType } from "../../../core/services/content/typeService";
@@ -32,13 +40,15 @@ async function canConnect() {
 
 const cleanupDetailPageIds = new Set<string>();
 const cleanupContentTypeIds = new Set<string>();
+const cleanupUserIds = new Set<string>();
 let originalContentRoutes: ContentRouteSetting[] | null = null;
 
-afterAll(async () => {
+afterEach(async () => {
   if (!hasDb) return;
 
   if (originalContentRoutes) {
     await setSetting("site.contentRoutes", originalContentRoutes);
+    originalContentRoutes = null;
   }
 
   for (const detailPageId of cleanupDetailPageIds) {
@@ -62,6 +72,14 @@ afterAll(async () => {
     });
   }
   cleanupContentTypeIds.clear();
+
+  for (const userId of cleanupUserIds) {
+    await db
+      .delete(users)
+      .where(eq(users.id, userId))
+      .catch(() => undefined);
+  }
+  cleanupUserIds.clear();
 });
 
 const createSchema = () => ({
@@ -103,6 +121,20 @@ const buildDetailPageDocumentInput = (contentTypeId: string, contentTypeSlug: st
     },
   ],
 });
+
+const createLifecycleActor = async () => {
+  const [actor] = await db
+    .insert(users)
+    .values({
+      email: `detail-page-lifecycle-${randomUUID()}@example.com`,
+      passwordHash: "test",
+      status: "active",
+    })
+    .returning();
+  if (!actor?.id) throw new Error("missing_detail_page_lifecycle_actor");
+  cleanupUserIds.add(actor.id);
+  return actor;
+};
 
 testIfDb(
   "detail page document service creates, filters, updates, and deletes documents",
@@ -186,5 +218,52 @@ testIfDb(
     );
 
     await setSetting("site.contentRoutes", originalContentRoutes);
+  }
+);
+
+testIfDb(
+  "detail page document service publishes, autosaves, and unpublishes through lifecycle helpers",
+  async () => {
+    const actor = await createLifecycleActor();
+    const contentType = await createContentType({
+      name: `Lifecycle Products ${randomUUID()}`,
+      slug: `lifecycle-products-${randomUUID()}`,
+      schema: createSchema(),
+    });
+    cleanupContentTypeIds.add(contentType.id);
+
+    const created = await createDetailPageDocument({
+      document: buildDetailPageDocumentInput(contentType.id, contentType.slug),
+    });
+    cleanupDetailPageIds.add(created.record.id);
+
+    const published = await publishDetailPageDocument(created.record.id, actor.id);
+    expect(published.status).toBe("published");
+    expect(published.publishedDocument?.status).toBe("published");
+
+    const autosave = await autosaveDetailPageDocument(
+      created.record.id,
+      {
+        document: {
+          ...buildDetailPageDocumentInput(contentType.id, contentType.slug),
+          id: created.record.id,
+          name: "Lifecycle products autosave",
+        },
+      },
+      actor.id
+    );
+    expect(autosave.revision.kind).toBe("autosave");
+    expect(autosave.reusedRevision).toBe(false);
+
+    const revisions = await db
+      .select()
+      .from(detailPageRevisions)
+      .where(eq(detailPageRevisions.detailPageId, created.record.id));
+    expect(revisions.some((row) => row.kind === "publish")).toBe(true);
+    expect(revisions.some((row) => row.kind === "autosave")).toBe(true);
+
+    const unpublished = await unpublishDetailPageDocument(created.record.id);
+    expect(unpublished.status).toBe("draft");
+    expect(unpublished.publishedDocument).toBeNull();
   }
 );

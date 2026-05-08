@@ -1559,6 +1559,10 @@ Permissions: `content:read`, `content:write`
 - `POST /detail-pages`
 - `PATCH /detail-pages/:id`
 - `DELETE /detail-pages/:id`
+- `POST /detail-pages/:id/preview`
+- `POST /detail-pages/:id/publish`
+- `POST /detail-pages/:id/unpublish`
+- `POST /detail-pages/:id/autosave`
 
 List response:
 
@@ -1600,6 +1604,17 @@ Rules:
   conflicting body id returns `detail_page_conflict`.
 - `DELETE /detail-pages/:id` returns `detail_page_route_conflict` (HTTP 409)
   while the document is still referenced by `site.contentRoutes.detailPageId`.
+- `POST /detail-pages/:id/preview` accepts `{ sampleEntryId, ttlMinutes? }`,
+  issues only the dedicated `type=detail-page` preview token, and stores
+  `sampleEntryId` server-side in `preview_tokens.context`.
+- `POST /detail-pages/:id/publish` promotes the saved `current_document` into
+  `published_document`, records a `publish` revision, and keeps public runtime
+  behind the existing canonical route link.
+- `POST /detail-pages/:id/autosave` accepts `{ document }`, records or reuses a
+  single latest `autosave` revision snapshot for recovery, and does not mutate
+  canonical route linkage.
+- `POST /detail-pages/:id/unpublish` clears `published_document` and keeps the
+  draft/current document under the same detail-page owner seam.
 - This CRUD family manages documents only; canonical route linking remains owned
   by `setting.content-route.upsert`.
 

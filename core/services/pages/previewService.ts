@@ -316,6 +316,22 @@ export async function createPreviewToken(input: CreatePreviewInput) {
   return { token, expiresAt };
 }
 
+export async function createDetailPagePreviewToken(input: {
+  detailPageId: string;
+  sampleEntryId: string;
+  ttlMinutes?: number;
+}) {
+  return createPreviewToken({
+    targetType: "detail-page",
+    targetId: input.detailPageId,
+    ttlMinutes: input.ttlMinutes,
+    context: {
+      kind: "detail-page",
+      sampleEntryId: input.sampleEntryId,
+    },
+  });
+}
+
 export async function validatePreviewToken(
   token: string,
   targetType?: PreviewTargetType

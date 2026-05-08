@@ -5,7 +5,7 @@
 **Category:** CMS/Admin API + Preview + Lifecycle
 **Estimated Effort:** Medium
 **Dependencies:** TASK-190-05-03-01, TASK-190-05-03-04, TASK-190-05-03-07-01-01
-**Status:** To Do
+**Status:** Done (2026-05-08)
 
 ---
 
@@ -13,6 +13,18 @@
 
 Implement the internal preview/publish/unpublish/autosave lifecycle routes for
 detail pages on top of the shared preview-token contract.
+
+Current slice note:
+- `detailPageRoutes.ts` now exposes the internal `preview`, `publish`,
+  `unpublish`, and `autosave` endpoints behind the existing admin permission
+  seams.
+- `previewService.ts` now provides a dedicated `detail-page` preview-token
+  helper that persists `sampleEntryId` in `preview_tokens.context`.
+- `detailPageDocumentService.ts` now owns publish/unpublish/autosave lifecycle
+  semantics, including `publish` / `autosave` revision writes and preserving
+  canonical route ownership outside the detail-page CRUD seam.
+- Route tests now prove dedicated `type=detail-page` preview URL issuance plus
+  publish/autosave/unpublish behavior through the internal route boundary.
 
 ## Sub-Tasks
 

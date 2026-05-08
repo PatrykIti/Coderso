@@ -32,6 +32,7 @@ Dotyczy:
 - Page editor
 - Content entry editor
 - Widget template editor
+- Detail page editor / internal detail-page preview route
 
 ## Runtime token flow
 
@@ -48,6 +49,15 @@ Dotyczy:
 7. Runtime route `/preview` waliduje token i target type.
 8. Render korzysta z tego samego pipeline co public site, ale dla stron preview
    czyta `currentData`; publiczny runtime bez tokena czyta `publishedData`.
+
+Detail-page variant:
+- `POST /admin/api/detail-pages/:id/preview` issue only the dedicated
+  `type=detail-page` preview token.
+- Request body must include `sampleEntryId`; runtime preview stores that value
+  server-side in `preview_tokens.context` and does not trust raw query params.
+- `type=detail-page` preview renders `current_document`; published
+  `type=content&detailPageId=...` preview remains the separate path for
+  previewing a specific entry against a published detail template.
 
 ## Preview URL contract
 

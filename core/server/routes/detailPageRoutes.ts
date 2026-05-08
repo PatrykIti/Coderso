@@ -1,17 +1,26 @@
 import type { RouteContext } from "../router";
 import { ApiError } from "../errorHandler";
 import {
+  autosaveDetailPageDocument,
   createDetailPageDocument,
   deleteDetailPageDocument,
   getDetailPageDocument,
   listDetailPageDocuments,
+  publishDetailPageDocument,
+  unpublishDetailPageDocument,
   updateDetailPageDocument,
 } from "../../services/content/detailPageDocumentService";
 import {
+  detailPageAutosaveSchema,
   detailPageCreateSchema,
+  detailPageEmptyLifecycleSchema,
   detailPageListQuerySchema,
+  detailPagePreviewSchema,
   detailPageUpdateSchema,
 } from "../validation/detailPageSchemas";
+import { getEntry } from "../../services/content/entryService";
+import { createDetailPagePreviewToken } from "../../services/pages/previewService";
+import { createPublicUrlContextFromHeaders, resolvePreviewUrl } from "../utils/previewUrls";
 
 export type DetailPageRouteHandler = (ctx: RouteContext) => Promise<unknown> | unknown;
 
@@ -112,6 +121,75 @@ export function registerDetailPageRoutes(router: Router, deps: DetailPageRouteDe
     return withDetailPageErrors(async () => {
       await deleteDetailPageDocument(ctx.params.id);
       return { ok: true };
+    });
+  });
+
+  router.post("/detail-pages/:id/preview", requirePermission("content:read"), async (ctx) => {
+    return withDetailPageErrors(async () => {
+      validate(detailPagePreviewSchema, ctx.body);
+      const detailPage = await getDetailPageDocument(ctx.params.id);
+      if (!detailPage) throw new Error("detail_page_not_found");
+
+      const body = ctx.body as { sampleEntryId: string; ttlMinutes?: number };
+      const entry = await getEntry(body.sampleEntryId);
+      if (!entry) throw new Error("detail_page_invalid");
+      if (entry.typeId !== detailPage.contentTypeId) {
+        throw new Error("detail_page_content_type_mismatch");
+      }
+      if (entry.status !== "published") {
+        throw new Error("detail_page_invalid");
+      }
+
+      const { token, expiresAt } = await createDetailPagePreviewToken({
+        detailPageId: detailPage.id,
+        sampleEntryId: body.sampleEntryId,
+        ttlMinutes: body.ttlMinutes,
+      });
+      const previewUrl = await resolvePreviewUrl(
+        {
+          targetType: "detail-page",
+          token,
+        },
+        createPublicUrlContextFromHeaders(ctx.headers)
+      );
+
+      return {
+        token,
+        previewUrl,
+        expiresAt,
+      };
+    });
+  });
+
+  router.post("/detail-pages/:id/publish", requirePermission("content:publish"), async (ctx) => {
+    return withDetailPageErrors(async () => {
+      validate(detailPageEmptyLifecycleSchema, ctx.body ?? {});
+      if (!ctx.user?.id) throw new Error("auth_required");
+      await publishDetailPageDocument(ctx.params.id, ctx.user.id);
+      return { ok: true };
+    });
+  });
+
+  router.post("/detail-pages/:id/unpublish", requirePermission("content:publish"), async (ctx) => {
+    return withDetailPageErrors(async () => {
+      validate(detailPageEmptyLifecycleSchema, ctx.body ?? {});
+      await unpublishDetailPageDocument(ctx.params.id);
+      return { ok: true };
+    });
+  });
+
+  router.post("/detail-pages/:id/autosave", requirePermission("content:write"), async (ctx) => {
+    return withDetailPageErrors(async () => {
+      validate(detailPageAutosaveSchema, ctx.body);
+      if (!ctx.user?.id) throw new Error("auth_required");
+      const body = ctx.body as { document: unknown };
+      return autosaveDetailPageDocument(
+        ctx.params.id,
+        {
+          document: body.document,
+        },
+        ctx.user.id
+      );
     });
   });
 }

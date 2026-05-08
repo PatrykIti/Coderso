@@ -24,3 +24,24 @@ const detailPageDocumentEnvelopeSchema = {
 
 export const detailPageCreateSchema = detailPageDocumentEnvelopeSchema;
 export const detailPageUpdateSchema = detailPageDocumentEnvelopeSchema;
+
+export const detailPagePreviewSchema = {
+  type: "object",
+  required: ["sampleEntryId"],
+  additionalProperties: false,
+  properties: {
+    sampleEntryId: {
+      type: "string",
+      pattern: uuidPattern,
+    },
+    ttlMinutes: { type: "number", minimum: 1, maximum: 120 },
+  },
+};
+
+export const detailPageAutosaveSchema = detailPageDocumentEnvelopeSchema;
+
+export const detailPageEmptyLifecycleSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {},
+};

@@ -31,8 +31,11 @@ Current slice note:
   exists through `detailPageRoutes.ts` plus `detailPageDocumentService.ts`,
   including stable `contentTypeId` list filtering, canonical slug refresh on
   write, and linked-route delete conflicts.
-- Preview/publish/autosave and revisions/restore remain open in the later
-  subleaves.
+- `TASK-190-05-03-07-01-02` is landed: dedicated preview token issuance plus
+  publish/unpublish/autosave lifecycle routes now reuse the shared preview
+  contract and write publish/autosave revisions through the content-domain
+  owner seam.
+- Revisions/restore remain open in the later subleaf.
 
 ## Sub-Tasks
 
