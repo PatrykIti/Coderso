@@ -281,7 +281,8 @@ testIfDb(
 
     expect(response.status).toBe(200);
     const html = await response.text();
-    expect(html).toContain(`"headline": "Bound detail headline ${fixture.token}"`);
+    expect(html).toContain('data-template="content-detail"');
+    expect(html).toContain(`Bound detail headline ${fixture.token}`);
     expect(html).not.toContain("Composed detail template body");
   }
 );
