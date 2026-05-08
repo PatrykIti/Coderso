@@ -11,10 +11,7 @@ import {
   normalizePageTemplateKey,
   resolvePageTemplatePath,
 } from "../services/pages/pageTemplateService";
-import {
-  DefaultRuntimePageShell,
-  type PageTemplateProps,
-} from "./pageRuntime";
+import { DefaultRuntimePageShell, type PageTemplateProps } from "./pageRuntime";
 
 export type PublicPageRenderOptions = {
   title: string;
@@ -25,6 +22,7 @@ export type PublicPageRenderOptions = {
   isPreview?: boolean;
   previewDevice?: DeviceTarget;
   metaDescription?: string | null;
+  canonicalUrl?: string | null;
   layoutSettings?: PageLayoutSettings;
 };
 
@@ -35,9 +33,7 @@ export type PublicPageRuntimeRenderOptions = PublicPageRenderOptions & {
 
 type TemplateComponent<Props> = (props: Props) => ReactNode;
 
-const loadTemplateComponent = async <Props extends PageTemplateProps>(
-  templatePath: string
-) => {
+const loadTemplateComponent = async <Props extends PageTemplateProps>(templatePath: string) => {
   try {
     const mod = await import(pathToFileURL(templatePath).href);
     if (typeof mod.default === "function") {
@@ -55,23 +51,22 @@ const renderDocument = (
   cssHref?: string | null,
   inlineCss?: string | null,
   metaDescription?: string | null,
+  canonicalUrl?: string | null,
   devModuleScripts?: string[] | null,
   isPreview?: boolean
 ) => {
   const headTags: ReactNode[] = [
     <meta key="charset" charSet="utf-8" />,
-    <meta
-      key="viewport"
-      name="viewport"
-      content="width=device-width, initial-scale=1"
-    />,
+    <meta key="viewport" name="viewport" content="width=device-width, initial-scale=1" />,
     <title key="title">{title}</title>,
   ];
 
   if (metaDescription) {
-    headTags.push(
-      <meta key="description" name="description" content={metaDescription} />
-    );
+    headTags.push(<meta key="description" name="description" content={metaDescription} />);
+  }
+
+  if (canonicalUrl) {
+    headTags.push(<link key="canonical" rel="canonical" href={canonicalUrl} />);
   }
 
   if (inlineCss) {
@@ -84,26 +79,21 @@ const renderDocument = (
       <script
         key="preview-show"
         dangerouslySetInnerHTML={{
-          __html:
-            "window.addEventListener(\"load\",()=>{document.body.style.opacity=\"1\";});",
+          __html: 'window.addEventListener("load",()=>{document.body.style.opacity="1";});',
         }}
       />
     );
   }
 
   if (cssHref) {
-    headTags.push(
-      <link key="css-preload" rel="preload" as="style" href={cssHref} />
-    );
+    headTags.push(<link key="css-preload" rel="preload" as="style" href={cssHref} />);
     headTags.push(<link key="css" rel="stylesheet" href={cssHref} />);
   }
 
   if (Array.isArray(devModuleScripts)) {
     for (const [index, src] of devModuleScripts.entries()) {
       if (!src) continue;
-      headTags.push(
-        <script key={`dev-module-${index}`} type="module" src={src}></script>
-      );
+      headTags.push(<script key={`dev-module-${index}`} type="module" src={src}></script>);
     }
   }
 
@@ -147,6 +137,7 @@ export function renderPublicPageHtml(options: PublicPageRenderOptions) {
     isPreview,
     previewDevice,
     metaDescription,
+    canonicalUrl,
     layoutSettings: rawLayoutSettings,
   } = options;
 
@@ -165,12 +156,19 @@ export function renderPublicPageHtml(options: PublicPageRenderOptions) {
     </PageRuntimeRoot>
   );
 
-  return renderDocument(title, body, cssHref, inlineCss, metaDescription, devModuleScripts, isPreview);
+  return renderDocument(
+    title,
+    body,
+    cssHref,
+    inlineCss,
+    metaDescription,
+    canonicalUrl,
+    devModuleScripts,
+    isPreview
+  );
 }
 
-export async function renderPublicPageRuntimeHtml(
-  options: PublicPageRuntimeRenderOptions
-) {
+export async function renderPublicPageRuntimeHtml(options: PublicPageRuntimeRenderOptions) {
   const {
     title,
     blocks,
@@ -180,6 +178,7 @@ export async function renderPublicPageRuntimeHtml(
     isPreview,
     previewDevice,
     metaDescription,
+    canonicalUrl,
     layoutSettings: rawLayoutSettings,
     themeName,
     templateKey,
@@ -211,5 +210,14 @@ export async function renderPublicPageRuntimeHtml(
     </PageRuntimeRoot>
   );
 
-  return renderDocument(title, body, cssHref, inlineCss, metaDescription, devModuleScripts, isPreview);
+  return renderDocument(
+    title,
+    body,
+    cssHref,
+    inlineCss,
+    metaDescription,
+    canonicalUrl,
+    devModuleScripts,
+    isPreview
+  );
 }

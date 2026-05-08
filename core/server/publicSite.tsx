@@ -662,17 +662,21 @@ const renderEntryListHtml = async (
 
 const renderEntryDetailHtml = async (
   typeSlug: string,
-  slug: string,
+  routeValue: string,
   options?: {
     preview?: boolean;
     themeName?: string;
     preferGenericEntry?: boolean;
+    routeParam?: "slug" | "id";
     detailPageId?: string | null;
     contentRoutes?: ContentRouteSetting[];
+    runtimeSearchParams?: URLSearchParams;
   }
 ) => {
+  const routeParam = options?.routeParam ?? "slug";
+
   if (!options?.preferGenericEntry && isPostContentTypeSlug(typeSlug)) {
-    const post = await getPostBySlug(slug);
+    const post = routeParam === "id" ? await getPost(routeValue) : await getPostBySlug(routeValue);
     if (!post) return null;
     if (!options?.preview && !isEntryPublished(post)) {
       return null;
@@ -701,14 +705,22 @@ const renderEntryDetailHtml = async (
   const contentType = await getContentTypeBySlug(typeSlug);
   if (!contentType) return null;
 
-  const entry = await getEntryBySlug(contentType.id, slug);
-  if (!entry) return null;
-  if (!options?.preview && !isEntryPublished(entry)) {
+  const entryDetail =
+    routeParam === "id"
+      ? await getEntry(routeValue)
+      : await (async () => {
+          const entry = await getEntryBySlug(contentType.id, routeValue);
+          if (!entry) return null;
+          if (!options?.preview && !isEntryPublished(entry)) {
+            return null;
+          }
+          return getEntry(entry.id);
+        })();
+  if (!entryDetail) return null;
+  if (entryDetail.typeId !== contentType.id) return null;
+  if (!options?.preview && !isEntryPublished(entryDetail)) {
     return null;
   }
-
-  const entryDetail = await getEntry(entry.id);
-  if (!entryDetail) return null;
 
   const { inlineCss, cssHref, devModuleScripts } = await resolvePublicStyles();
   const contentTypeSnapshot = {
@@ -752,6 +764,7 @@ const renderEntryDetailHtml = async (
       blocks: await hydrateRuntimeBlocks(detailPage.blocks, {
         preview: false,
         contentRoutes: options.contentRoutes ?? [],
+        runtimeSearchParams: options.runtimeSearchParams,
         runtimeCache: {},
       }),
       cssHref,
@@ -760,6 +773,8 @@ const renderEntryDetailHtml = async (
       isPreview: false,
       layoutSettings: detailPage.document.settings.layout,
       metaDescription,
+      canonicalUrl:
+        "seo" in entryDetail && entryDetail.seo ? (entryDetail.seo.canonicalUrl ?? null) : null,
       themeName: options.themeName ?? (await resolvePublicThemeName()),
       templateKey: detailPage.document.settings.template,
     });
@@ -951,8 +966,10 @@ export async function handlePublicRequest(req: Request) {
     if (!slug) return new Response("Not Found", { status: 404 });
     const html = await renderEntryDetailHtml(match.type, slug, {
       themeName,
+      routeParam: match.params.slug ? "slug" : "id",
       detailPageId: match.detailPageId,
       contentRoutes,
+      runtimeSearchParams: url.searchParams,
     });
     if (!html) return new Response("Not Found", { status: 404 });
     if (shouldUseCache) {
