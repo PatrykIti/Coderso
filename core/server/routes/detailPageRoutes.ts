@@ -2,13 +2,14 @@ import type { RouteContext } from "../router";
 import { ApiError } from "../errorHandler";
 import {
   autosaveDetailPageDocument,
-  createDetailPageDocument,
+  createDetailPageDraftDocument,
   deleteDetailPageDocument,
   getDetailPageDocument,
+  issueDetailPagePreview,
   listDetailPageDocuments,
   publishDetailPageDocument,
   unpublishDetailPageDocument,
-  updateDetailPageDocument,
+  updateDetailPageDraftDocument,
 } from "../../services/content/detailPageDocumentService";
 import {
   detailPageAutosaveSchema,
@@ -18,8 +19,6 @@ import {
   detailPagePreviewSchema,
   detailPageUpdateSchema,
 } from "../validation/detailPageSchemas";
-import { getEntry } from "../../services/content/entryService";
-import { createDetailPagePreviewToken } from "../../services/pages/previewService";
 import { createPublicUrlContextFromHeaders, resolvePreviewUrl } from "../utils/previewUrls";
 
 export type DetailPageRouteHandler = (ctx: RouteContext) => Promise<unknown> | unknown;
@@ -55,6 +54,12 @@ export const mapDetailPageError = (error: unknown) => {
       return new ApiError(
         "detail_page_content_type_mismatch",
         "Detail page content type does not match the existing document.",
+        409
+      );
+    case "detail_page_status_requires_lifecycle":
+      return new ApiError(
+        "detail_page_status_requires_lifecycle",
+        "Detail page CRUD routes accept draft documents only. Use lifecycle routes to publish or unpublish.",
         409
       );
     default:
@@ -98,7 +103,7 @@ export function registerDetailPageRoutes(router: Router, deps: DetailPageRouteDe
       validate(detailPageCreateSchema, ctx.body);
       const body = ctx.body as { document: unknown };
       return (
-        await createDetailPageDocument({
+        await createDetailPageDraftDocument({
           document: body.document,
         })
       ).record;
@@ -110,7 +115,7 @@ export function registerDetailPageRoutes(router: Router, deps: DetailPageRouteDe
       validate(detailPageUpdateSchema, ctx.body);
       const body = ctx.body as { document: unknown };
       return (
-        await updateDetailPageDocument(ctx.params.id, {
+        await updateDetailPageDraftDocument(ctx.params.id, {
           document: body.document,
         })
       ).record;
@@ -127,21 +132,9 @@ export function registerDetailPageRoutes(router: Router, deps: DetailPageRouteDe
   router.post("/detail-pages/:id/preview", requirePermission("content:read"), async (ctx) => {
     return withDetailPageErrors(async () => {
       validate(detailPagePreviewSchema, ctx.body);
-      const detailPage = await getDetailPageDocument(ctx.params.id);
-      if (!detailPage) throw new Error("detail_page_not_found");
-
       const body = ctx.body as { sampleEntryId: string; ttlMinutes?: number };
-      const entry = await getEntry(body.sampleEntryId);
-      if (!entry) throw new Error("detail_page_invalid");
-      if (entry.typeId !== detailPage.contentTypeId) {
-        throw new Error("detail_page_content_type_mismatch");
-      }
-      if (entry.status !== "published") {
-        throw new Error("detail_page_invalid");
-      }
-
-      const { token, expiresAt } = await createDetailPagePreviewToken({
-        detailPageId: detailPage.id,
+      const { token, expiresAt } = await issueDetailPagePreview({
+        detailPageId: ctx.params.id,
         sampleEntryId: body.sampleEntryId,
         ttlMinutes: body.ttlMinutes,
       });

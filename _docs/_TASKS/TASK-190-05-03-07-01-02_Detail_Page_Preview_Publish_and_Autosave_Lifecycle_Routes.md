@@ -20,11 +20,15 @@ Current slice note:
   seams.
 - `previewService.ts` now provides a dedicated `detail-page` preview-token
   helper that persists `sampleEntryId` in `preview_tokens.context`.
-- `detailPageDocumentService.ts` now owns publish/unpublish/autosave lifecycle
-  semantics, including `publish` / `autosave` revision writes and preserving
-  canonical route ownership outside the detail-page CRUD seam.
-- Route tests now prove dedicated `type=detail-page` preview URL issuance plus
-  publish/autosave/unpublish behavior through the internal route boundary.
+- `detailPageDocumentService.ts` now owns preview sample-entry validation plus
+  publish/unpublish/autosave lifecycle semantics, including `publish` /
+  `autosave` revision writes and preserving canonical route ownership outside
+  the detail-page CRUD seam.
+- CRUD saves now stay draft-only at the admin route boundary, so public state
+  changes flow only through the dedicated lifecycle endpoints.
+- Route tests now prove dedicated `type=detail-page` preview URL issuance,
+  fail-closed preview guards, and publish/autosave/unpublish behavior through
+  the internal route boundary.
 
 ## Sub-Tasks
 

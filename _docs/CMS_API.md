@@ -964,7 +964,7 @@ Runtime rendering contract (posts):
 
 ## Coderso Listings (v1 beta)
 
-Permissions: `content:read`, `content:write`
+Permissions: `content:read`, `content:write`, `content:publish`
 
 Saved queries:
 - `GET /listings/queries`
@@ -1592,6 +1592,12 @@ Create/update payload (summary):
   }
 }
 ```
+
+Create/update keep the editable `currentDocument` in draft mode only. Public
+state changes move through:
+
+- `POST /detail-pages/:id/publish`
+- `POST /detail-pages/:id/unpublish`
 
 Rules:
 

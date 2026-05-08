@@ -244,6 +244,7 @@ test("mapDetailPageError maps known domain failures", () => {
   expect(mapDetailPageError(new Error("detail_page_conflict"))?.status).toBe(409);
   expect(mapDetailPageError(new Error("detail_page_route_conflict"))?.status).toBe(409);
   expect(mapDetailPageError(new Error("detail_page_content_type_mismatch"))?.status).toBe(409);
+  expect(mapDetailPageError(new Error("detail_page_status_requires_lifecycle"))?.status).toBe(409);
   expect(mapDetailPageError(new Error("other_error"))).toBeNull();
 });
 
@@ -392,7 +393,7 @@ testIfDb(
         document: {
           ...buildDetailPageDocumentInput(contentType.id, "stale-products-updated"),
           name: "Products detail template updated",
-          status: "published",
+          status: "draft",
         },
       },
     })) as {
@@ -401,8 +402,8 @@ testIfDb(
       publishedDocument: { contentTypeSlug: string } | null;
     };
     expect(updated.name).toBe("Products detail template updated");
-    expect(updated.status).toBe("published");
-    expect(updated.publishedDocument?.contentTypeSlug).toBe(contentType.slug);
+    expect(updated.status).toBe("draft");
+    expect(updated.publishedDocument).toBeNull();
 
     const preview = (await runRoute(routes, "POST", "/detail-pages/:id/preview", {
       params: { id: created.id },
@@ -441,9 +442,38 @@ testIfDb(
 
     const afterPublish = (await runRoute(routes, "GET", "/detail-pages/:id", {
       params: { id: created.id },
-    })) as { status: string; publishedDocument: object | null };
+    })) as {
+      status: string;
+      currentDocument: { name: string; status: string };
+      publishedDocument: { name: string; status: string } | null;
+    };
     expect(afterPublish.status).toBe("published");
     expect(afterPublish.publishedDocument).not.toBeNull();
+
+    const editedDraft = (await runRoute(routes, "PATCH", "/detail-pages/:id", {
+      params: { id: created.id },
+      body: {
+        document: {
+          ...buildDetailPageDocumentInput(contentType.id, contentType.slug),
+          id: created.id,
+          name: "Products detail draft edit",
+          status: "draft",
+        },
+      },
+    })) as {
+      status: string;
+      currentDocument: { name: string; status: string };
+      publishedDocument: { name: string; status: string } | null;
+    };
+    expect(editedDraft.status).toBe("published");
+    expect(editedDraft.currentDocument).toMatchObject({
+      name: "Products detail draft edit",
+      status: "draft",
+    });
+    expect(editedDraft.publishedDocument).toMatchObject({
+      name: "Products detail template updated",
+      status: "published",
+    });
 
     const unpublish = await runRoute(routes, "POST", "/detail-pages/:id/unpublish", {
       params: { id: created.id },
@@ -473,6 +503,168 @@ testIfDb(
     });
   },
   15_000
+);
+
+testIfDb(
+  "detail page preview route rejects mismatched, draft, and missing sample entries",
+  async () => {
+    const { router, routes } = makeRouter();
+    registerDetailPageRoutes(router, {
+      requirePermission: () => async () => undefined,
+      validate: () => undefined,
+    });
+
+    const contentType = await createContentType({
+      name: `Preview Products ${randomUUID()}`,
+      slug: `preview-products-${randomUUID()}`,
+      schema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          headline: { type: "string", xFieldType: "text" },
+        },
+      },
+    });
+    trackedContentTypeIds.add(contentType.id);
+
+    const otherContentType = await createContentType({
+      name: `Preview Services ${randomUUID()}`,
+      slug: `preview-services-${randomUUID()}`,
+      schema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          headline: { type: "string", xFieldType: "text" },
+        },
+      },
+    });
+    trackedContentTypeIds.add(otherContentType.id);
+
+    const created = (await runRoute(routes, "POST", "/detail-pages", {
+      body: {
+        document: buildDetailPageDocumentInput(contentType.id, contentType.slug),
+      },
+    })) as { id: string };
+    trackedDetailPageIds.add(created.id);
+
+    const [mismatchedEntry] = await db
+      .insert(contentEntries)
+      .values({
+        typeId: otherContentType.id,
+        slug: `preview-service-${randomUUID()}`,
+        title: "Preview service",
+        status: "published",
+        data: { headline: "Preview service" },
+        publishedAt: new Date(),
+      })
+      .returning();
+    if (!mismatchedEntry?.id) throw new Error("missing_detail_page_preview_mismatched_entry");
+    trackedEntryIds.add(mismatchedEntry.id);
+
+    await expect(
+      runRoute(routes, "POST", "/detail-pages/:id/preview", {
+        params: { id: created.id },
+        body: { sampleEntryId: mismatchedEntry.id },
+      })
+    ).rejects.toMatchObject({
+      code: "detail_page_content_type_mismatch",
+      status: 409,
+    });
+
+    const [draftEntry] = await db
+      .insert(contentEntries)
+      .values({
+        typeId: contentType.id,
+        slug: `preview-draft-${randomUUID()}`,
+        title: "Preview draft",
+        status: "draft",
+        data: { headline: "Preview draft" },
+      })
+      .returning();
+    if (!draftEntry?.id) throw new Error("missing_detail_page_preview_draft_entry");
+    trackedEntryIds.add(draftEntry.id);
+
+    await expect(
+      runRoute(routes, "POST", "/detail-pages/:id/preview", {
+        params: { id: created.id },
+        body: { sampleEntryId: draftEntry.id },
+      })
+    ).rejects.toMatchObject({
+      code: "detail_page_invalid",
+      status: 400,
+    });
+
+    await expect(
+      runRoute(routes, "POST", "/detail-pages/:id/preview", {
+        params: { id: created.id },
+        body: { sampleEntryId: randomUUID() },
+      })
+    ).rejects.toMatchObject({
+      code: "detail_page_invalid",
+      status: 400,
+    });
+  }
+);
+
+testIfDb(
+  "detail page CRUD routes reject published documents and require lifecycle routes for public state changes",
+  async () => {
+    const { router, routes } = makeRouter();
+    registerDetailPageRoutes(router, {
+      requirePermission: () => async () => undefined,
+      validate: () => undefined,
+    });
+
+    const contentType = await createContentType({
+      name: `Draft Products ${randomUUID()}`,
+      slug: `draft-products-${randomUUID()}`,
+      schema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          headline: { type: "string", xFieldType: "text" },
+        },
+      },
+    });
+    trackedContentTypeIds.add(contentType.id);
+
+    await expect(
+      runRoute(routes, "POST", "/detail-pages", {
+        body: {
+          document: {
+            ...buildDetailPageDocumentInput(contentType.id, contentType.slug),
+            status: "published",
+          },
+        },
+      })
+    ).rejects.toMatchObject({
+      code: "detail_page_status_requires_lifecycle",
+      status: 409,
+    });
+
+    const created = (await runRoute(routes, "POST", "/detail-pages", {
+      body: {
+        document: buildDetailPageDocumentInput(contentType.id, contentType.slug),
+      },
+    })) as { id: string };
+    trackedDetailPageIds.add(created.id);
+
+    await expect(
+      runRoute(routes, "PATCH", "/detail-pages/:id", {
+        params: { id: created.id },
+        body: {
+          document: {
+            ...buildDetailPageDocumentInput(contentType.id, contentType.slug),
+            id: created.id,
+            status: "published",
+          },
+        },
+      })
+    ).rejects.toMatchObject({
+      code: "detail_page_status_requires_lifecycle",
+      status: 409,
+    });
+  }
 );
 
 testIfDb(

@@ -267,3 +267,71 @@ testIfDb(
     expect(unpublished.publishedDocument).toBeNull();
   }
 );
+
+testIfDb(
+  "detail page autosave reuses identical snapshots and prunes stale autosave revisions",
+  async () => {
+    const actor = await createLifecycleActor();
+    const contentType = await createContentType({
+      name: `Autosave Products ${randomUUID()}`,
+      slug: `autosave-products-${randomUUID()}`,
+      schema: createSchema(),
+    });
+    cleanupContentTypeIds.add(contentType.id);
+
+    const created = await createDetailPageDocument({
+      document: buildDetailPageDocumentInput(contentType.id, contentType.slug),
+    });
+    cleanupDetailPageIds.add(created.record.id);
+
+    const first = await autosaveDetailPageDocument(
+      created.record.id,
+      {
+        document: {
+          ...buildDetailPageDocumentInput(contentType.id, contentType.slug),
+          id: created.record.id,
+          name: "Autosave A",
+        },
+      },
+      actor.id
+    );
+    expect(first.reusedRevision).toBe(false);
+
+    const second = await autosaveDetailPageDocument(
+      created.record.id,
+      {
+        document: {
+          ...buildDetailPageDocumentInput(contentType.id, contentType.slug),
+          id: created.record.id,
+          name: "Autosave A",
+        },
+      },
+      actor.id
+    );
+    expect(second.reusedRevision).toBe(true);
+    expect(second.revision.id).toBe(first.revision.id);
+
+    const third = await autosaveDetailPageDocument(
+      created.record.id,
+      {
+        document: {
+          ...buildDetailPageDocumentInput(contentType.id, contentType.slug),
+          id: created.record.id,
+          name: "Autosave B",
+        },
+      },
+      actor.id
+    );
+    expect(third.reusedRevision).toBe(false);
+    expect(third.revision.id).not.toBe(first.revision.id);
+
+    const autosaves = await db
+      .select()
+      .from(detailPageRevisions)
+      .where(eq(detailPageRevisions.detailPageId, created.record.id));
+
+    const autosaveRows = autosaves.filter((row) => row.kind === "autosave");
+    expect(autosaveRows).toHaveLength(1);
+    expect(autosaveRows[0]?.id).toBe(third.revision.id);
+  }
+);

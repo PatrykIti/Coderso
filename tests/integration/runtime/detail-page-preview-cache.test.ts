@@ -404,3 +404,83 @@ testIfDb(
     expect(secondHtml).not.toContain("First cached detail template body");
   }
 );
+
+testIfDb("detail-page preview returns 404 when preview mode is disabled", async () => {
+  resetRateLimitBuckets();
+  await setTestSetting("site.previewEnabled", false);
+  await setTestSetting("site.cacheTtlSeconds", 0);
+
+  const fixture = await createProductFixture();
+  const detailPageId = "e4d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c";
+  await insertDetailPageDocument({
+    id: detailPageId,
+    contentTypeId: fixture.contentType.id,
+    contentTypeSlug: fixture.contentType.slug,
+    status: "draft",
+    currentBody: "Draft detail template body",
+    publishedBody: "Published detail template body",
+  });
+
+  const { token } = await createPreviewToken({
+    targetType: "detail-page",
+    targetId: detailPageId,
+    context: {
+      kind: "detail-page",
+      sampleEntryId: fixture.entry.id,
+    },
+  });
+
+  const response = await requestPublicPath(
+    `/preview?type=detail-page&token=${encodeURIComponent(token)}`
+  );
+  expect(response.status).toBe(404);
+});
+
+testIfDb(
+  "detail-page preview returns 410 for expired tokens and 404 for draft sample entries",
+  async () => {
+    resetRateLimitBuckets();
+    await setTestSetting("site.previewEnabled", true);
+    await setTestSetting("site.cacheTtlSeconds", 0);
+
+    const fixture = await createProductFixture();
+    const detailPageId = "f4d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c";
+    await insertDetailPageDocument({
+      id: detailPageId,
+      contentTypeId: fixture.contentType.id,
+      contentTypeSlug: fixture.contentType.slug,
+      status: "draft",
+      currentBody: "Draft detail template body",
+      publishedBody: "Published detail template body",
+    });
+
+    const expired = await createPreviewToken({
+      targetType: "detail-page",
+      targetId: detailPageId,
+      ttlMinutes: -1,
+      context: {
+        kind: "detail-page",
+        sampleEntryId: fixture.entry.id,
+      },
+    });
+    const expiredResponse = await requestPublicPath(
+      `/preview?type=detail-page&token=${encodeURIComponent(expired.token)}`
+    );
+    expect(expiredResponse.status).toBe(410);
+
+    await updateEntryMetadata(fixture.entry.id, { status: "draft" }, fixture.actor.id);
+
+    const active = await createPreviewToken({
+      targetType: "detail-page",
+      targetId: detailPageId,
+      context: {
+        kind: "detail-page",
+        sampleEntryId: fixture.entry.id,
+      },
+    });
+    const draftResponse = await requestPublicPath(
+      `/preview?type=detail-page&token=${encodeURIComponent(active.token)}`
+    );
+    expect(draftResponse.status).toBe(404);
+  }
+);

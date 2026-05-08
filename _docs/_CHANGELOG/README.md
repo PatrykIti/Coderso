@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 808 | 2026-05-08 | TASK-190 detail-page drift hardening | Assistant/Core |
 | 807 | 2026-05-08 | TASK-190 detail-page lifecycle routes | Assistant/Core |
 | 806 | 2026-05-08 | TASK-190 detail-page CRUD and read routes | Assistant/Core |
 | 805 | 2026-05-08 | TASK-190 detail-page action adapter | Assistant/Core |

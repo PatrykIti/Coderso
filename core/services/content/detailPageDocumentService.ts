@@ -9,6 +9,8 @@ import { getSetting, type ContentRouteSetting } from "../settings/settingsServic
 import { getContentType, type ContentTypeRecord } from "./typeService";
 import { normalizeDetailPageDocument } from "./detailPageSchema";
 import type { DetailPageDocument, DetailPageRevisionKind } from "./detailPageTypes";
+import { getEntry } from "./entryService";
+import { createDetailPagePreviewToken } from "../pages/previewService";
 
 export type DetailPageDocumentRecord = Omit<
   typeof detailPageDocuments.$inferSelect,
@@ -32,6 +34,11 @@ export type DetailPageAutosaveResult = {
   revision: DetailPageRevisionRecord;
   reusedRevision: boolean;
   savedAt: string;
+};
+
+export type DetailPagePreviewResult = {
+  token: string;
+  expiresAt: Date;
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -95,6 +102,13 @@ const normalizeDocumentWithResolvedId = (value: unknown, resolvedId?: string) =>
   } catch {
     throw new Error("detail_page_invalid");
   }
+};
+
+const ensureDraftCrudDocument = (document: DetailPageDocument) => {
+  if (document.status !== "draft") {
+    throw new Error("detail_page_status_requires_lifecycle");
+  }
+  return document;
 };
 
 const mapDetailPageRevisionRow = (
@@ -269,6 +283,25 @@ export async function createDetailPageDocument(input: { document: unknown }): Pr
   });
 }
 
+export async function createDetailPageDraftDocument(input: { document: unknown }): Promise<{
+  record: DetailPageDocumentRecord;
+  contentType: ContentTypeRecord;
+}> {
+  const document = ensureDraftCrudDocument(
+    normalizeDocumentWithResolvedId(input.document, randomUUID())
+  );
+  const prepared = await prepareDetailPageDocumentUpsert({
+    document,
+  });
+  if (prepared.existing) {
+    throw new Error("detail_page_conflict");
+  }
+
+  return upsertDetailPageDraftDocument({
+    document: prepared.document,
+  });
+}
+
 export async function updateDetailPageDocument(
   id: string,
   input: {
@@ -291,6 +324,33 @@ export async function updateDetailPageDocument(
   }
 
   return upsertDetailPageDocument({
+    document: prepared.document,
+    expectedExistingId: id,
+  });
+}
+
+export async function updateDetailPageDraftDocument(
+  id: string,
+  input: {
+    document: unknown;
+  }
+): Promise<{
+  record: DetailPageDocumentRecord;
+  contentType: ContentTypeRecord;
+}> {
+  const document = ensureDraftCrudDocument(normalizeDocumentWithResolvedId(input.document, id));
+  if (document.id !== id) {
+    throw new Error("detail_page_conflict");
+  }
+
+  const prepared = await prepareDetailPageDocumentUpsert({
+    document,
+  });
+  if (!prepared.existing) {
+    throw new Error("detail_page_not_found");
+  }
+
+  return upsertDetailPageDraftDocument({
     document: prepared.document,
     expectedExistingId: id,
   });
@@ -348,6 +408,61 @@ export async function upsertDetailPageDocument(input: {
   };
 }
 
+async function upsertDetailPageDraftDocument(input: {
+  document: DetailPageDocument;
+  expectedExistingId?: string | null;
+}): Promise<{
+  record: DetailPageDocumentRecord;
+  contentType: ContentTypeRecord;
+}> {
+  const prepared = await prepareDetailPageDocumentUpsert(input);
+  const now = new Date();
+  const keepPublishedState =
+    prepared.existing?.status === "published" && prepared.existing.publishedDocument !== null;
+  const nextPublishedDocument = keepPublishedState ? prepared.existing!.publishedDocument : null;
+  const nextPublishedAt = keepPublishedState ? prepared.existing!.publishedAt : null;
+  const nextStatus = keepPublishedState ? "published" : "draft";
+
+  const [row] = prepared.existing
+    ? await db
+        .update(detailPageDocuments)
+        .set({
+          name: prepared.document.name,
+          status: nextStatus,
+          currentDocument: prepared.document,
+          publishedDocument: nextPublishedDocument,
+          publishedAt: nextPublishedAt,
+          updatedAt: now,
+        })
+        .where(eq(detailPageDocuments.id, prepared.document.id))
+        .returning()
+    : await db
+        .insert(detailPageDocuments)
+        .values({
+          id: prepared.document.id,
+          name: prepared.document.name,
+          contentTypeId: prepared.contentType.id,
+          status: "draft",
+          currentDocument: prepared.document,
+          publishedDocument: null,
+          createdAt: now,
+          updatedAt: now,
+          publishedAt: null,
+        })
+        .returning();
+
+  if (!row) {
+    throw new Error("detail_page_invalid");
+  }
+
+  await invalidateLinkedDetailPageCaches(row.id, prepared.contentType.slug);
+
+  return {
+    record: mapDetailPageRow(row),
+    contentType: prepared.contentType,
+  };
+}
+
 export async function deleteDetailPageDocument(id: string) {
   const existing = await getDetailPageDocument(id);
   if (!existing) {
@@ -370,6 +485,34 @@ export async function deleteDetailPageDocument(id: string) {
 
   await invalidateLinkedDetailPageCaches(id, existing.currentDocument.contentTypeSlug);
   return mapDetailPageRow(row);
+}
+
+export async function issueDetailPagePreview(input: {
+  detailPageId: string;
+  sampleEntryId: string;
+  ttlMinutes?: number;
+}): Promise<DetailPagePreviewResult> {
+  const detailPage = await getDetailPageDocument(input.detailPageId);
+  if (!detailPage) {
+    throw new Error("detail_page_not_found");
+  }
+
+  const entry = await getEntry(input.sampleEntryId);
+  if (!entry) {
+    throw new Error("detail_page_invalid");
+  }
+  if (entry.typeId !== detailPage.contentTypeId) {
+    throw new Error("detail_page_content_type_mismatch");
+  }
+  if (entry.status !== "published") {
+    throw new Error("detail_page_invalid");
+  }
+
+  return createDetailPagePreviewToken({
+    detailPageId: detailPage.id,
+    sampleEntryId: input.sampleEntryId,
+    ttlMinutes: input.ttlMinutes,
+  });
 }
 
 export async function publishDetailPageDocument(id: string, userId: string) {

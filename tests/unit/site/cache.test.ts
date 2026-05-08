@@ -5,6 +5,7 @@ import {
   clearSiteCache,
   configureSiteCache,
   getSiteCacheEntry,
+  invalidateLinkedDetailPageRouteCaches,
   invalidateSiteCachePath,
   resolveContentEntryPaths,
   setSiteCacheEntry,
@@ -59,4 +60,37 @@ test("resolveContentEntryPaths builds list and detail paths", () => {
 
   expect(paths?.listPath).toBe("/blog");
   expect(paths?.detailPath).toBe("/blog/hello");
+});
+
+test("invalidateLinkedDetailPageRouteCaches clears only linked detail routes", async () => {
+  clearSiteCache();
+  configureSiteCache(10);
+
+  const linkedList = buildSiteCacheKey("profile-1", "/products");
+  const linkedDetail = buildSiteCacheKey("profile-1", "/products/example");
+  const unlinkedList = buildSiteCacheKey("profile-1", "/blog");
+
+  setSiteCacheEntry(linkedList, "linked-list", 10, 0);
+  setSiteCacheEntry(linkedDetail, "linked-detail", 10, 0);
+  setSiteCacheEntry(unlinkedList, "unlinked-list", 10, 0);
+
+  await invalidateLinkedDetailPageRouteCaches([
+    {
+      type: "products",
+      listPath: "/products",
+      detailPath: "/products/:slug",
+      enabled: true,
+      detailPageId: "detail-page-1",
+    },
+    {
+      type: "blog",
+      listPath: "/blog",
+      detailPath: "/blog/:slug",
+      enabled: true,
+    },
+  ]);
+
+  expect(getSiteCacheEntry(linkedList, 1)).toBe(null);
+  expect(getSiteCacheEntry(linkedDetail, 1)).toBe(null);
+  expect(getSiteCacheEntry(unlinkedList, 1)).toBe("unlinked-list");
 });

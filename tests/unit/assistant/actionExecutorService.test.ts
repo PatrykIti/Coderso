@@ -4055,6 +4055,73 @@ test("executeAssistantActionPlan resolves supporting page collection links from 
   });
 });
 
+test("executeAssistantActionPlan preserves trusted media asset ids in page.upsert blocks", async () => {
+  const deps = createDeps();
+
+  const result = await executeAssistantActionPlan(
+    {
+      plan: {
+        id: "plan-page-upsert-media-asset",
+        status: "ready",
+        intentId: "page-upsert-media-asset",
+        promptKind: "setup_request",
+        intentFamily: "product_catalog",
+        title: "Create landing page",
+        answer: "I can create the landing page.",
+        summary: "Create a page that references an existing media-library asset.",
+        confidence: 0.84,
+        assumptions: [],
+        questions: [],
+        actions: [
+          {
+            id: "page-media-landing",
+            type: "page.upsert",
+            title: "Create media landing page",
+            description: "Create a landing page with a trusted hero background asset.",
+            input: {
+              title: "Media Landing",
+              slug: "/media-landing",
+              status: "draft",
+              introTitle: "Media landing",
+              introBody: "Showcase the trusted hero asset.",
+              blocks: [
+                {
+                  id: "hero-1",
+                  type: "hero",
+                  variant: "centered",
+                  data: {
+                    headline: "Media landing",
+                    background: {
+                      media: {
+                        type: "image",
+                        source: "library",
+                        assetId: "media-hero",
+                        src: "/media/hero.jpg",
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+      actorId: "user-1",
+      idempotencyKey: "assistant-page-upsert-media-asset",
+    },
+    deps
+  );
+
+  expect(result.summary.failed).toBe(0);
+  expect(
+    (
+      deps.__state.pages[0]?.currentData.blocks as Array<{
+        data?: { background?: { media?: { assetId?: string } } };
+      }>
+    )?.[0]?.data?.background?.media?.assetId
+  ).toBe("media-hero");
+});
+
 test("executeAssistantActionPlan resolves supporting page collection-link listing locators into persisted ids", async () => {
   const deps = createDeps();
   const plan = buildProductInquiryCatalogPlan();
@@ -4553,6 +4620,90 @@ test("dryRunAssistantActionPlan flags detail-page upserts whose content type doe
   expect(preview.changes[0]?.conflicts[0]?.code).toBe("detail_page_invalid");
 });
 
+test("dryRunAssistantActionPlan flags detail-page expectedExistingId mismatches", async () => {
+  const deps = createDeps();
+  deps.__state.contentTypes.push({
+    id: "64d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+    name: "Products",
+    slug: "products",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        headline: { type: "string", xFieldType: "text" },
+      },
+    },
+    createdAt: new Date("2026-04-10T12:00:00.000Z"),
+    updatedAt: new Date("2026-04-10T12:00:00.000Z"),
+  });
+
+  const preview = await dryRunAssistantActionPlan(
+    {
+      plan: {
+        id: "plan-detail-page-conflict",
+        status: "ready",
+        intentId: "detail-page-conflict",
+        promptKind: "setup_request",
+        intentFamily: "product_catalog",
+        title: "Create detail template",
+        answer: "I can preview the detail template.",
+        summary: "Preview a detail template with a stale expectedExistingId.",
+        confidence: 0.84,
+        assumptions: [],
+        questions: [],
+        actions: [
+          {
+            id: "detail-page-products",
+            type: "detail-page.upsert",
+            title: "Create products detail template",
+            description: "Create a products detail template.",
+            input: {
+              expectedExistingId: "94d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+              document: {
+                schemaVersion: 1,
+                id: "24d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+                name: "Products detail template",
+                contentTypeId: "64d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+                contentTypeSlug: "products",
+                status: "draft",
+                titlePattern: "{{ title }}",
+                settings: {
+                  template: "detail",
+                  layout: {
+                    wrapper: {
+                      container: "default",
+                      padding: { top: "md", bottom: "lg" },
+                      background: {
+                        color: "#ffffff",
+                        image: null,
+                        media: { type: "none", source: "external", src: null },
+                      },
+                    },
+                    sections: {
+                      gap: "lg",
+                      defaults: {
+                        container: "default",
+                        padding: { top: "xl", bottom: "xl" },
+                        margin: { top: "none", bottom: "none" },
+                      },
+                    },
+                    applyDefaultsToNewBlocks: false,
+                  },
+                },
+                blocks: [{ id: "hero-1", type: "hero", variant: "centered", data: {} }],
+                bindings: [],
+              },
+            },
+          },
+        ],
+      },
+    },
+    deps
+  );
+
+  expect(preview.changes[0]?.conflicts[0]?.code).toBe("detail_page_conflict");
+});
+
 test("executeAssistantActionPlan upserts detail-page documents through the content-domain seam", async () => {
   const deps = createDeps();
   const contentType = {
@@ -4692,6 +4843,143 @@ test("executeAssistantActionPlan upserts detail-page documents through the conte
   expect(deps.__state.detailPages[0]?.name).toBe("Products detail template updated");
   expect(deps.__state.detailPages[0]?.status).toBe("draft");
   expect(deps.__state.detailPages[0]?.publishedDocument).toBeNull();
+});
+
+test("executeAssistantActionPlan fails detail-page upserts that reuse an id across content types", async () => {
+  const deps = createDeps();
+  const productType = {
+    id: "64d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+    name: "Products",
+    slug: "products",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        headline: { type: "string", xFieldType: "text" },
+      },
+    },
+    createdAt: new Date("2026-04-10T12:00:00.000Z"),
+    updatedAt: new Date("2026-04-10T12:00:00.000Z"),
+  };
+  const servicesType = {
+    ...productType,
+    id: "74d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+    name: "Services",
+    slug: "services",
+  };
+  deps.__state.contentTypes.push(productType, servicesType);
+  deps.__state.detailPages.push({
+    id: "34d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+    name: "Services detail template",
+    contentTypeId: servicesType.id,
+    status: "draft",
+    currentDocument: {
+      schemaVersion: 1,
+      id: "34d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+      name: "Services detail template",
+      contentTypeId: servicesType.id,
+      contentTypeSlug: servicesType.slug,
+      status: "draft",
+      titlePattern: "{{ title }}",
+      settings: {
+        template: "detail",
+        layout: {
+          wrapper: {
+            container: "default",
+            padding: { top: "md", bottom: "lg" },
+            background: {
+              color: "#ffffff",
+              image: null,
+              media: { type: "none", source: "external", src: null },
+            },
+          },
+          sections: {
+            gap: "lg",
+            defaults: {
+              container: "default",
+              padding: { top: "xl", bottom: "xl" },
+              margin: { top: "none", bottom: "none" },
+            },
+          },
+          applyDefaultsToNewBlocks: false,
+        },
+      },
+      blocks: [{ id: "hero-1", type: "hero", variant: "centered", data: {} }],
+      bindings: [],
+    },
+    publishedDocument: null,
+    createdAt: new Date("2026-04-10T12:00:00.000Z"),
+    updatedAt: new Date("2026-04-10T12:00:00.000Z"),
+    publishedAt: null,
+  });
+
+  const result = await executeAssistantActionPlan(
+    {
+      plan: {
+        id: "plan-detail-page-content-type-mismatch",
+        status: "ready",
+        intentId: "detail-page-content-type-mismatch",
+        promptKind: "setup_request",
+        intentFamily: "product_catalog",
+        title: "Create detail template",
+        answer: "I can create the detail template.",
+        summary: "Create a products detail template with a conflicting id.",
+        confidence: 0.91,
+        assumptions: [],
+        questions: [],
+        actions: [
+          {
+            id: "detail-page-products",
+            type: "detail-page.upsert",
+            title: "Create products detail template",
+            description: "Create a products detail template.",
+            input: {
+              document: {
+                schemaVersion: 1,
+                id: "34d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+                name: "Products detail template",
+                contentTypeId: productType.id,
+                contentTypeSlug: productType.slug,
+                status: "draft",
+                titlePattern: "{{ title }}",
+                settings: {
+                  template: "detail",
+                  layout: {
+                    wrapper: {
+                      container: "default",
+                      padding: { top: "md", bottom: "lg" },
+                      background: {
+                        color: "#ffffff",
+                        image: null,
+                        media: { type: "none", source: "external", src: null },
+                      },
+                    },
+                    sections: {
+                      gap: "lg",
+                      defaults: {
+                        container: "default",
+                        padding: { top: "xl", bottom: "xl" },
+                        margin: { top: "none", bottom: "none" },
+                      },
+                    },
+                    applyDefaultsToNewBlocks: false,
+                  },
+                },
+                blocks: [{ id: "hero-1", type: "hero", variant: "centered", data: {} }],
+                bindings: [],
+              },
+            },
+          },
+        ],
+      },
+      actorId: "user-1",
+      idempotencyKey: "assistant-detail-page-content-type-mismatch",
+    },
+    deps
+  );
+
+  expect(result.summary.failed).toBe(1);
+  expect(result.results[0]?.errorCode).toBe("detail_page_content_type_mismatch");
 });
 
 test("executeAssistantActionPlan resolves renamed listing resources from existing page state", async () => {

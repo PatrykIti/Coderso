@@ -2,6 +2,7 @@ import { and, desc, eq, ne } from "drizzle-orm";
 
 import { db } from "../../db/client";
 import { listingTemplates } from "../../db/schema";
+import { invalidateLinkedDetailPageRouteCaches } from "../../site/cache/siteCache";
 import {
   normalizeListingTemplateConfig,
   type ListingActionKind,
@@ -199,12 +200,19 @@ export async function updateListingTemplate(id: string, input: ListingTemplateUp
     .where(eq(listingTemplates.id, id))
     .returning();
 
+  if (row) {
+    await invalidateLinkedDetailPageRouteCaches();
+  }
+
   if (!row) return null;
   return mapRow(row);
 }
 
 export async function deleteListingTemplate(id: string) {
   const [row] = await db.delete(listingTemplates).where(eq(listingTemplates.id, id)).returning();
+  if (row) {
+    await invalidateLinkedDetailPageRouteCaches();
+  }
   if (!row) return null;
   return mapRow(row);
 }

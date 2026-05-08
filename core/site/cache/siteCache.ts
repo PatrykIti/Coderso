@@ -138,6 +138,17 @@ export const invalidateContentRouteCacheTransition = (options: {
   }
 };
 
+export async function invalidateLinkedDetailPageRouteCaches(routes?: ContentRouteSetting[]) {
+  const resolvedRoutes =
+    routes ?? ((await getSetting("site.contentRoutes")) as ContentRouteSetting[] | null) ?? [];
+
+  for (const route of resolvedRoutes) {
+    if (!route.enabled) continue;
+    if (!route.detailPageId) continue;
+    invalidateContentRouteCache(route);
+  }
+}
+
 export const resolveContentEntryPaths = (options: {
   routes: ContentRouteSetting[];
   typeSlug: string;
