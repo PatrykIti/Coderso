@@ -26,5 +26,6 @@
 
 - `bun run test:vitest -- tests/vitest/content/detailPageBindingResolver.test.ts` - passed.
 - `bun run test:vitest -- tests/vitest/customScreens/bindingResolver.test.ts` - passed.
+- `bun run scan:security:strict` - passed.
 - `bun --cwd core lint` - passed.
 - `bun --cwd core lint:types` - passed.

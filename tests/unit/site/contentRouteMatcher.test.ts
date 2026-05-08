@@ -30,3 +30,29 @@ test("matchContentRoute ignores disabled routes", () => {
   const match = matchContentRoute("/blog", [{ ...routes[0], enabled: false }]);
   expect(match).toBe(null);
 });
+
+test("matchContentRoute prefers exact list routes over generic detail routes", () => {
+  const match = matchContentRoute("/products", [
+    {
+      type: "generic",
+      listPath: "/generic",
+      detailPath: "/:slug",
+      enabled: true,
+    },
+    {
+      type: "products",
+      listPath: "/products",
+      detailPath: "/products/:slug",
+      enabled: true,
+    },
+  ]);
+
+  expect(match).toEqual({
+    type: "products",
+    mode: "list",
+    params: {},
+    listPath: "/products",
+    detailPath: "/products/:slug",
+    detailPageId: null,
+  });
+});

@@ -40,3 +40,37 @@ test("normalizeContentRoutes rejects invalid detailPageId values", () => {
     ])
   ).toThrow();
 });
+
+test("normalizeContentRoutes rejects unsupported detail path parameter names", () => {
+  expect(() =>
+    normalizeContentRoutes([
+      {
+        type: "blog",
+        listPath: "/blog",
+        detailPath: "/blog/:record",
+      },
+    ])
+  ).toThrow();
+});
+
+test("normalizeContentRoutes rejects mixed or non-terminal detail params", () => {
+  expect(() =>
+    normalizeContentRoutes([
+      {
+        type: "blog",
+        listPath: "/blog",
+        detailPath: "/blog/:slug-:id",
+      },
+    ])
+  ).toThrow();
+
+  expect(() =>
+    normalizeContentRoutes([
+      {
+        type: "blog",
+        listPath: "/blog",
+        detailPath: "/:slug/blog",
+      },
+    ])
+  ).toThrow();
+});

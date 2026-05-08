@@ -182,6 +182,42 @@ test("resolveDetailPageBlocks binds entry meta and detail href through the curre
   });
 });
 
+test("resolveDetailPageBlocks uses entry ids for detailHref when the content route is id-based", async () => {
+  const document = createDocument({
+    bindings: [
+      {
+        id: "binding-href",
+        blockId: "hero",
+        propPath: "cta.href",
+        source: {
+          kind: "computed",
+          resolver: "detailHref",
+        },
+        transform: "text",
+      },
+    ],
+  });
+
+  const resolved = await resolveDetailPageBlocks({
+    document,
+    entry: createEntry(),
+    contentType,
+    preview: false,
+    contentRoutes: [
+      {
+        type: contentType.slug,
+        listPath: "/products",
+        detailPath: "/products/:id",
+        enabled: true,
+      },
+    ],
+  });
+
+  expect(resolved[0]?.data).toMatchObject({
+    cta: { href: "/products/entry-1" },
+  });
+});
+
 test("resolveDetailPageBlocks returns a machine-readable error for missing required bindings", async () => {
   const document = createDocument({
     bindings: [

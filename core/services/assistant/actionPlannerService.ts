@@ -747,7 +747,8 @@ const tryPlanProviderCmsOperationDraft = (
   input: AssistantProviderDraftPlanInput,
   draft: unknown
 ) => {
-  const context = buildAssistantAdminContext(input.context);
+  const trustedContext = sanitizeAssistantPlanningContext(input.context);
+  const context = buildAssistantAdminContext(trustedContext);
   try {
     const operationDraft = applyPromptImpliedDraftHintsWithPolicy(
       input.prompt,
@@ -1046,17 +1047,22 @@ const buildPreferredBlueprintSetupPlan = (input: {
 };
 
 export const planAssistantActions = (input: AssistantActionPlanInput): AssistantActionPlan => {
-  const context = buildAssistantAdminContext(input.context);
-  if (input.context?.siteKit) {
-    return normalizeAssistantActionPlan(buildSiteKitActionPlan(input.context.siteKit));
+  const trustedContext = sanitizeAssistantPlanningContext(input.context);
+  const normalizedInput = {
+    ...input,
+    context: trustedContext,
+  } satisfies AssistantActionPlanInput;
+  const context = buildAssistantAdminContext(trustedContext);
+  if (trustedContext?.siteKit) {
+    return normalizeAssistantActionPlan(buildSiteKitActionPlan(trustedContext.siteKit));
   }
 
-  const routedClassification = buildRoutedClassification(input.prompt, context, input.context);
+  const routedClassification = buildRoutedClassification(input.prompt, context, trustedContext);
   const intentFamily = routedClassification.intentFamily;
   const classification = routedClassification;
   if (!classification.normalizedPrompt) {
     return finalizeAssistantPlan(
-      input,
+      normalizedInput,
       context,
       routedClassification,
       buildClarifyingPlan(input.prompt, context, routedClassification)
@@ -1066,10 +1072,20 @@ export const planAssistantActions = (input: AssistantActionPlanInput): Assistant
   if (classification.promptKind !== "setup_request") {
     const planningStatePlan = buildGenericCmsPlanningStateFollowUpPlan(input.prompt, context);
     if (planningStatePlan)
-      return finalizeAssistantPlan(input, context, routedClassification, planningStatePlan);
+      return finalizeAssistantPlan(
+        normalizedInput,
+        context,
+        routedClassification,
+        planningStatePlan
+      );
     const genericInspectionPlan = buildGenericCmsInspectionOperationPlan(input.prompt, context);
     if (genericInspectionPlan) {
-      return finalizeAssistantPlan(input, context, routedClassification, genericInspectionPlan);
+      return finalizeAssistantPlan(
+        normalizedInput,
+        context,
+        routedClassification,
+        genericInspectionPlan
+      );
     }
     const draft = buildCmsOperationDraftFromPrompt(input.prompt, context);
     const preferBlueprintRefinement =
@@ -1080,13 +1096,18 @@ export const planAssistantActions = (input: AssistantActionPlanInput): Assistant
     if (!preferBlueprintRefinement) {
       const genericMutationPlan = buildLocalPolicyOperationPlan(input.prompt, context);
       if (genericMutationPlan) {
-        return finalizeAssistantPlan(input, context, routedClassification, genericMutationPlan);
+        return finalizeAssistantPlan(
+          normalizedInput,
+          context,
+          routedClassification,
+          genericMutationPlan
+        );
       }
     }
   }
   if (classification.promptKind === "docs_question") {
     return finalizeAssistantPlan(
-      input,
+      normalizedInput,
       context,
       routedClassification,
       buildDocsGuidancePlan(input.prompt, context)
@@ -1094,26 +1115,26 @@ export const planAssistantActions = (input: AssistantActionPlanInput): Assistant
   }
   const setupPolicyPlan = buildLocalPolicyOperationPlan(input.prompt, context);
   if (setupPolicyPlan)
-    return finalizeAssistantPlan(input, context, routedClassification, setupPolicyPlan);
+    return finalizeAssistantPlan(normalizedInput, context, routedClassification, setupPolicyPlan);
 
   if (classification.promptKind === "setup_request" && intentFamily !== "unknown") {
     const composedPlan = buildBlueprintComposerSetupPlan({
       prompt: input.prompt,
       context: {
-        ...input.context,
-        page: context.route ?? input.context?.page,
-        locale: context.locale ?? input.context?.locale,
-        resourceCatalog: context.resourceCatalog ?? input.context?.resourceCatalog,
-        runtimeSnapshot: context.runtimeSnapshot ?? input.context?.runtimeSnapshot,
-        activeSurface: context.activeSurface ?? input.context?.activeSurface,
-        planningState: context.planningState ?? input.context?.planningState,
+        ...trustedContext,
+        page: context.route ?? trustedContext?.page,
+        locale: context.locale ?? trustedContext?.locale,
+        resourceCatalog: context.resourceCatalog ?? trustedContext?.resourceCatalog,
+        runtimeSnapshot: context.runtimeSnapshot ?? trustedContext?.runtimeSnapshot,
+        activeSurface: context.activeSurface ?? trustedContext?.activeSurface,
+        planningState: context.planningState ?? trustedContext?.planningState,
       },
       promptKind: classification.promptKind,
       intentFamily,
       normalizedPrompt: classification.normalizedPrompt,
     });
     if (composedPlan) {
-      return finalizeAssistantPlan(input, context, routedClassification, composedPlan);
+      return finalizeAssistantPlan(normalizedInput, context, routedClassification, composedPlan);
     }
 
     const readyPlan = buildReadyPlanForIntentFamily(intentFamily, {
@@ -1121,7 +1142,8 @@ export const planAssistantActions = (input: AssistantActionPlanInput): Assistant
       intentFamily,
       normalizedPrompt: classification.normalizedPrompt,
     });
-    if (readyPlan) return finalizeAssistantPlan(input, context, routedClassification, readyPlan);
+    if (readyPlan)
+      return finalizeAssistantPlan(normalizedInput, context, routedClassification, readyPlan);
   }
 
   if (classification.promptKind === "refinement_request" && intentFamily !== "unknown") {
@@ -1130,11 +1152,11 @@ export const planAssistantActions = (input: AssistantActionPlanInput): Assistant
       intentFamily,
     });
     if (refinementPlan)
-      return finalizeAssistantPlan(input, context, routedClassification, refinementPlan);
+      return finalizeAssistantPlan(normalizedInput, context, routedClassification, refinementPlan);
   }
 
   return finalizeAssistantPlan(
-    input,
+    normalizedInput,
     context,
     routedClassification,
     buildClarifyingPlan(input.prompt, context, routedClassification)

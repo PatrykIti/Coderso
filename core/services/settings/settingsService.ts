@@ -3,6 +3,10 @@ import { db } from "../../db/client";
 import { settings } from "../../db/schema";
 import { assertTokenOverrides } from "../theme/tokenValidation";
 import type { DesignTokenOverrides } from "../theme/tokenTypes";
+import {
+  normalizeContentRouteDetailPath,
+  normalizeContentRouteListPath,
+} from "./contentRoutePaths";
 
 type WidgetTemplateCategorySetting = {
   id: string;
@@ -299,19 +303,6 @@ const normalizeOptionalDetailPageId = (value: unknown) => {
   return trimmed;
 };
 
-const normalizeRoutePath = (value: unknown, allowRoot = false) => {
-  if (typeof value !== "string") {
-    throw new Error("settings_value_invalid");
-  }
-  const trimmed = value.trim();
-  if (!trimmed) {
-    throw new Error("settings_value_invalid");
-  }
-  if (allowRoot && trimmed === "/") return "/";
-  const prefixed = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
-  return prefixed.endsWith("/") && prefixed.length > 1 ? prefixed.slice(0, -1) : prefixed;
-};
-
 export const normalizeContentRoutes = (value: unknown): ContentRouteSetting[] => {
   if (!Array.isArray(value)) {
     throw new Error("settings_value_invalid");
@@ -339,8 +330,8 @@ export const normalizeContentRoutes = (value: unknown): ContentRouteSetting[] =>
       throw new Error("settings_value_invalid");
     }
     seenTypes.add(type);
-    const listPath = normalizeRoutePath(record.listPath, true);
-    const detailPath = normalizeRoutePath(record.detailPath, false);
+    const listPath = normalizeContentRouteListPath(record.listPath);
+    const detailPath = normalizeContentRouteDetailPath(record.detailPath);
     if (record.enabled !== undefined && typeof record.enabled !== "boolean") {
       throw new Error("settings_value_invalid");
     }

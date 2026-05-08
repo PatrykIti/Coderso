@@ -95,13 +95,9 @@ vi.mock("@/components/ui/select", () => ({
     </select>
   ),
   SelectContent: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  SelectItem: ({
-    children,
-    value,
-  }: {
-    children: React.ReactNode;
-    value: string;
-  }) => <option value={value}>{children}</option>,
+  SelectItem: ({ children, value }: { children: React.ReactNode; value: string }) => (
+    <option value={value}>{children}</option>
+  ),
   SelectTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   SelectValue: () => null,
 }));
@@ -132,21 +128,13 @@ vi.mock("@/components/ui/switch", () => ({
 vi.mock("@/components/ui/table", () => ({
   Table: ({ children }: { children: React.ReactNode }) => <table>{children}</table>,
   TableBody: ({ children }: { children: React.ReactNode }) => <tbody>{children}</tbody>,
-  TableCell: ({
-    children,
-    className,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-  }) => <td className={className}>{children}</td>,
+  TableCell: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <td className={className}>{children}</td>
+  ),
   TableHead: ({ children }: { children: React.ReactNode }) => <th>{children}</th>,
-  TableHeader: ({
-    children,
-    className,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-  }) => <thead className={className}>{children}</thead>,
+  TableHeader: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <thead className={className}>{children}</thead>
+  ),
   TableRow: ({
     children,
     className,
@@ -163,8 +151,7 @@ vi.mock("@/components/ui/table", () => ({
 }));
 
 vi.mock("@/lib/utils", () => ({
-  cn: (...values: Array<string | boolean | null | undefined>) =>
-    values.filter(Boolean).join(" "),
+  cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
 }));
 
 vi.mock("@/utils/adminPaths", () => ({
@@ -194,10 +181,7 @@ const mount = (node: React.ReactNode) => {
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
   descriptor?.set?.call(element, value);
   element.dispatchEvent(new Event("input", { bubbles: true }));
   element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -205,10 +189,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
   descriptor?.set?.call(element, value);
   element.dispatchEvent(new Event("change", { bubbles: true }));
 };
@@ -379,6 +360,7 @@ test("SiteRouteEditor renders missing state and forwards route updates", () => {
       errors={{
         listPath: "List path is required",
         detailPath: "Detail path must include :slug",
+        detailPageId: "Detail page ID must be a valid UUID.",
       }}
       missing
       onChange={onChange}
@@ -390,17 +372,21 @@ test("SiteRouteEditor renders missing state and forwards route updates", () => {
     expect(view.container.textContent).toContain("Missing type");
     expect(view.container.textContent).toContain("List path is required");
     expect(view.container.textContent).toContain("Detail path must include :slug");
+    expect(view.container.textContent).toContain("Detail page ID must be a valid UUID.");
 
     const toggle = view.container.querySelector("input[type='checkbox']");
-    const inputs = Array.from(view.container.querySelectorAll("input")).slice(1);
+    const listPathInput = view.container.querySelector("#list-articles");
+    const detailPathInput = view.container.querySelector("#detail-articles");
+    const detailPageIdInput = view.container.querySelector("#detail-page-id-articles");
     const button = Array.from(view.container.querySelectorAll("button")).find((item) =>
       item.textContent?.includes("Use suggested")
     );
 
     act(() => {
       (toggle as HTMLInputElement | null)?.click();
-      setInputValue(inputs[0], "/news");
-      setInputValue(inputs[1], "/news/:slug");
+      setInputValue(listPathInput, "/news");
+      setInputValue(detailPathInput, "/news/:slug");
+      setInputValue(detailPageIdInput, "4dd7f4d4-48d8-53f7-a9e6-0d01f6b89e6c");
       button?.click();
     });
 
@@ -421,6 +407,13 @@ test("SiteRouteEditor renders missing state and forwards route updates", () => {
       enabled: true,
       listPath: "/articles",
       detailPath: "/news/:slug",
+    });
+    expect(onChange).toHaveBeenCalledWith({
+      type: "articles",
+      enabled: true,
+      listPath: "/articles",
+      detailPath: "/articles/:slug",
+      detailPageId: "4dd7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
     });
     expect(onUseSuggested).toHaveBeenCalledOnce();
   } finally {

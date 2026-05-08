@@ -142,7 +142,7 @@ const createCatalogCapability = (
           kind: "detail-page",
           label: `${preset.contentTypeName} detail template`,
           reason:
-            "Detail-page document/runtime/admin flows are documented for later TASK-190 slices and stay latent in the registry for now.",
+            "Detail-page route/runtime linkage is available, but assistant CRUD, workspace, and admin editing flows remain deferred to later TASK-190 slices.",
           blocking: false,
         },
       ],

@@ -14,7 +14,6 @@ test("buildBlueprintProviderContext exposes bounded capability summaries without
   });
   expect(JSON.stringify(context)).not.toContain('"actions"');
   expect(context.warnings).toContain("blueprint_capabilities_truncated");
-  expect(context.warnings).toContain("detail_pages_unavailable");
 });
 
 test("normalizeProviderBlueprintCompositionDraft accepts known capability ids only", () => {

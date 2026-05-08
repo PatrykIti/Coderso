@@ -43,7 +43,6 @@ export const buildBlueprintProviderContext = (options?: {
   const maxCapabilities = Math.max(1, Math.floor(options?.maxCapabilities ?? 24));
   const capabilities = listBlueprintCapabilities();
   if (capabilities.length > maxCapabilities) warnings.push("blueprint_capabilities_truncated");
-  warnings.push("detail_pages_unavailable");
 
   return {
     schemaVersion: 1,

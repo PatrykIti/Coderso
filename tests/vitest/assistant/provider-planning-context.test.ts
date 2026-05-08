@@ -266,7 +266,6 @@ test("buildProviderPlanningPromptPackage creates bounded deterministic context",
   expect(prompt.resources?.solutionKits).toHaveLength(1);
   expect(prompt.blueprints.capabilities).toHaveLength(1);
   expect(prompt.blueprints.capabilities[0]?.id).toBe("house-projects-catalog");
-  expect(prompt.blueprints.warnings).toContain("detail_pages_unavailable");
   expect(prompt.activeSurface).toBeNull();
   expect(prompt.warnings).toEqual([
     "docs_truncated",

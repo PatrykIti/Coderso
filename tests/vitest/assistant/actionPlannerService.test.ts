@@ -870,6 +870,7 @@ test("planAssistantActions returns read-only CMS inspection plan for page lookup
     context: {
       page: "/admin/pages",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-16T10:00:00.000Z",
@@ -919,6 +920,7 @@ test("planAssistantActions builds generic page delete plan from resource catalog
     context: {
       page: "/admin/pages",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-16T10:00:00.000Z",
@@ -967,6 +969,7 @@ test("planAssistantActions returns custom screen prefix candidates as read-only 
     context: {
       page: "/admin/settings/assistant",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-16T10:00:00.000Z",
@@ -1047,6 +1050,7 @@ test("planAssistantActions reuses planning state for follow-up target selection"
         createdAt: "2026-04-17T10:00:00.000Z",
         expiresAt: "2099-04-17T10:10:00.000Z",
       },
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-17T10:00:00.000Z",
@@ -1129,6 +1133,7 @@ test("planAssistantActions reuses all prior page candidates when follow-up has n
         createdAt: "2026-04-17T10:00:00.000Z",
         expiresAt: "2099-04-17T10:10:00.000Z",
       },
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-17T10:00:00.000Z",
@@ -1183,6 +1188,7 @@ test("planAssistantActions deletes all published pages through explicit filtered
     context: {
       page: "/admin/pages",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-17T10:00:00.000Z",
@@ -1877,6 +1883,7 @@ test("planAssistantActions builds content type delete plan from resource catalog
     context: {
       page: "/admin/advanced/engine",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-13T10:00:00.000Z",
@@ -1925,6 +1932,7 @@ test("planAssistantActions blocks content type delete when entries exist", () =>
     context: {
       page: "/admin/advanced/engine",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-13T10:00:00.000Z",
@@ -1979,6 +1987,7 @@ test("planAssistantActions builds listing query delete plan from active listing 
           reason: "frontend_user_has_no_permissions",
         },
       },
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-13T10:00:00.000Z",
@@ -2033,6 +2042,7 @@ test("planAssistantActions builds listing template delete plan from exact slug",
     context: {
       page: "/admin/advanced/listings",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-13T10:00:00.000Z",
@@ -2085,6 +2095,7 @@ test("planAssistantActions asks for exact listing query when name is ambiguous",
     context: {
       page: "/admin/advanced/listings",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-13T10:00:00.000Z",
@@ -2144,6 +2155,7 @@ test("planAssistantActions builds listing query update plan from exact target", 
     context: {
       page: "/admin/advanced/listings",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-14T10:00:00.000Z",
@@ -2204,6 +2216,7 @@ test("planAssistantActions builds form delete plan from active form route", () =
           reason: "frontend_user_has_no_permissions",
         },
       },
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-14T10:00:00.000Z",
@@ -2253,6 +2266,7 @@ test("planAssistantActions builds form archive plan from exact slug", () => {
     context: {
       page: "/admin/advanced/forms",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-14T10:00:00.000Z",
@@ -2302,6 +2316,7 @@ test("planAssistantActions asks for exact form when name is ambiguous", () => {
     context: {
       page: "/admin/advanced/forms",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-14T10:00:00.000Z",
@@ -2350,6 +2365,7 @@ test("planAssistantActions builds menu item delete plan from exact href", () => 
     context: {
       page: "/admin/menus/menu-primary",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-14T10:00:00.000Z",
@@ -2418,6 +2434,7 @@ test("planAssistantActions builds menu item update plan from exact href", () => 
     context: {
       page: "/admin/menus/menu-primary",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-14T10:00:00.000Z",
@@ -2478,6 +2495,7 @@ test("planAssistantActions builds SEO document delete plan from exact slug", () 
     context: {
       page: "/admin/seo/seo-products",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-14T10:00:00.000Z",
@@ -2529,6 +2547,7 @@ test("planAssistantActions builds SEO document update plan from exact slug", () 
     context: {
       page: "/admin/seo/seo-products",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-14T10:00:00.000Z",
@@ -2582,6 +2601,7 @@ test("planAssistantActions asks for exact menu item when label is ambiguous", ()
     context: {
       page: "/admin/menus/menu-primary",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-14T10:00:00.000Z",
@@ -2789,6 +2809,53 @@ test("planAssistantActions ignores untrusted resource catalogs on the live compo
   expect(withClientAuthoredCatalog.actions).toEqual(trustedByRouteOnly.actions);
 });
 
+test("planAssistantActions ignores untrusted resource catalogs on local CMS inspection paths", () => {
+  const prompt = "find page home";
+  const trustedByRouteOnly = planAssistantActions({
+    prompt,
+    context: {
+      page: "/admin/pages",
+      locale: "en-US",
+    },
+  });
+  const withClientAuthoredCatalog = planAssistantActions({
+    prompt,
+    context: {
+      page: "/admin/pages",
+      locale: "en-US",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-05-08T10:00:00.000Z",
+        budget: { maxItemsPerGroup: 50, maxFieldsPerResource: 24, truncated: false },
+        pages: [
+          {
+            id: "page-home",
+            title: "Home",
+            slug: "/home",
+            status: "published",
+          },
+        ],
+        posts: [],
+        entries: [],
+        contentTypes: [],
+        customScreens: [],
+        listings: { queries: [], templates: [] },
+        forms: [],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        media: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(withClientAuthoredCatalog.responseKind).toBe(trustedByRouteOnly.responseKind);
+  expect(withClientAuthoredCatalog.inspection?.candidates ?? []).toEqual(
+    trustedByRouteOnly.inspection?.candidates ?? []
+  );
+});
+
 test("planAssistantActions builds ready portfolio and services plans for routed families", () => {
   const portfolioPlan = planAssistantActions({
     prompt: "stworz portfolio projektow dla agencji architektonicznej",
@@ -2869,6 +2936,7 @@ test("planAssistantActions inspects posts from resource catalog", () => {
     context: {
       page: "/admin/posts",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-20T10:00:00.000Z",
@@ -3036,6 +3104,7 @@ test("planAssistantActions inspects left-menu resource catalog sections", () => 
       context: {
         page: "/admin",
         locale: "pl-PL",
+        includeResourceCatalog: true,
         resourceCatalog,
       },
     });
@@ -3056,6 +3125,7 @@ test("planAssistantActions uses SEO target titles instead of technical entry slu
     context: {
       page: "/admin/seo",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-20T10:00:00.000Z",
@@ -4036,6 +4106,7 @@ test("planAssistantActions reads listing query limit outside quoted target names
     context: {
       page: "/admin/advanced/listings",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-18T10:00:00.000Z",

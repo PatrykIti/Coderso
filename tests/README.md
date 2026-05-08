@@ -7,6 +7,12 @@ This repository uses a hybrid testing model aligned with the product architectur
 - Bun owns runtime-kernel validation:
   - `tests/integration/routes/*`
   - `tests/integration/runtime/*`
+    - `tests/integration/runtime/detail-page-runtime-lite.test.ts` keeps the
+      public detail-page route contract executable even when local DB fixtures
+      are unavailable.
+    - `tests/integration/runtime/detail-page-runtime.test.ts` extends that same
+      contract with DB-backed content-type/detail-page fixture coverage when
+      `DATABASE_URL` is reachable.
   - `tests/integration/server/*`
   - `tests/integration/store/*`
   - `tests/integration/plugins/*`
