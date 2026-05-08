@@ -5,7 +5,7 @@
 **Category:** CMS/Admin API + Detail Pages
 **Estimated Effort:** Medium
 **Dependencies:** TASK-190-05-03-01
-**Status:** To Do
+**Status:** Done (2026-05-08)
 
 ---
 
@@ -13,6 +13,18 @@
 
 Implement the internal list/detail/create/update/delete route family for detail
 pages plus the document-service boundary those routes consume.
+
+Current slice note:
+- `detailPageRoutes.ts` now registers the internal list/detail/create/update/
+  delete endpoints behind the existing `content:read` / `content:write`
+  permission seams.
+- `detailPageDocumentService.ts` now owns list/read/create/update/delete
+  persistence orchestration, UUID generation for manual create, canonical
+  `contentTypeSlug` refresh on write, and linked-route delete conflicts through
+  `detail_page_route_conflict`.
+- `detailPageSchemas.ts` now validates the stable `contentTypeId` list filter
+  plus strict top-level create/update envelopes, while document normalization
+  remains owned by the content-domain detail-page schema/service seam.
 
 ## Sub-Tasks
 

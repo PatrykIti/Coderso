@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 806 | 2026-05-08 | TASK-190 detail-page CRUD and read routes | Assistant/Core |
 | 805 | 2026-05-08 | TASK-190 detail-page action adapter | Assistant/Core |
 | 804 | 2026-05-08 | TASK-190 detail-page preview and cache invalidation | Assistant/Core |
 | 803 | 2026-05-08 | TASK-190 detail-page runtime route rendering | Assistant/Core |

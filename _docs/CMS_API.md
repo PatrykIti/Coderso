@@ -1550,6 +1550,61 @@ resolved intentionally with `Copy of ...` style suffixes.
 
 ---
 
+## Detail pages (Internal Admin API)
+
+Permissions: `content:read`, `content:write`
+
+- `GET /detail-pages`
+- `GET /detail-pages/:id`
+- `POST /detail-pages`
+- `PATCH /detail-pages/:id`
+- `DELETE /detail-pages/:id`
+
+List response:
+
+```json
+{
+  "items": []
+}
+```
+
+Create/update payload (summary):
+
+```json
+{
+  "document": {
+    "id": "optional-uuid",
+    "name": "Products detail template",
+    "contentTypeId": "content-type-uuid",
+    "contentTypeSlug": "products",
+    "status": "draft",
+    "titlePattern": "{{ title }}",
+    "settings": {
+      "template": "detail",
+      "layout": {}
+    },
+    "blocks": [],
+    "bindings": []
+  }
+}
+```
+
+Rules:
+
+- `GET /detail-pages?contentTypeId=<uuid>` filters by stable `contentTypeId`;
+  `contentTypeSlug` remains advisory response data and is refreshed from the
+  canonical content type on write.
+- `POST /detail-pages` may omit `document.id` for manual admin create; the
+  service generates a UUID-compatible id and returns the normalized record.
+- `PATCH /detail-pages/:id` keeps route param identity authoritative; a
+  conflicting body id returns `detail_page_conflict`.
+- `DELETE /detail-pages/:id` returns `detail_page_route_conflict` (HTTP 409)
+  while the document is still referenced by `site.contentRoutes.detailPageId`.
+- This CRUD family manages documents only; canonical route linking remains owned
+  by `setting.content-route.upsert`.
+
+---
+
 ## Custom screens (Coderso)
 
 Permissions: `content:read`, `content:write`

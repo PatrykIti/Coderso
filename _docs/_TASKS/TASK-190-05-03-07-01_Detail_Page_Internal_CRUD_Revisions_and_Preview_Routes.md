@@ -5,7 +5,7 @@
 **Category:** CMS/Admin API + Detail Pages
 **Estimated Effort:** Large
 **Dependencies:** TASK-190-05-03-01, TASK-190-05-03-04
-**Status:** To Do
+**Status:** In Progress (2026-05-08)
 
 ---
 
@@ -25,6 +25,14 @@ do not mix:
 into one oversized slice. It does not
 own `detailPageId` route linking in `site.contentRoutes`; that round-trip stays
 with `TASK-190-05-03-07-02`.
+
+Current slice note:
+- `TASK-190-05-03-07-01-01` is landed: the internal CRUD/read route family now
+  exists through `detailPageRoutes.ts` plus `detailPageDocumentService.ts`,
+  including stable `contentTypeId` list filtering, canonical slug refresh on
+  write, and linked-route delete conflicts.
+- Preview/publish/autosave and revisions/restore remain open in the later
+  subleaves.
 
 ## Sub-Tasks
 

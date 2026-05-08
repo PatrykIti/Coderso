@@ -29,6 +29,9 @@ API, but the work is split so we do not mix:
 into one oversized slice.
 
 Current slice note:
+- `TASK-190-05-03-07-01-01` is landed: internal detail-page list/detail/create/
+  update/delete routes now exist behind a dedicated route/service boundary with
+  stable `contentTypeId` filtering and linked-route delete conflicts.
 - `TASK-190-05-03-07-02` is landed: `site.contentRoutes` now round-trips
   optional `detailPageId` through settings normalization, assistant
   `setting.content-route.upsert`, Site Settings client/form types, and matcher

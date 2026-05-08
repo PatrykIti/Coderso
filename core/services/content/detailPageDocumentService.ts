@@ -1,4 +1,5 @@
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
+import { randomUUID } from "node:crypto";
 
 import { db } from "../../db/client";
 import { detailPageDocuments } from "../../db/schema";
@@ -15,6 +16,9 @@ export type DetailPageDocumentRecord = Omit<
   currentDocument: DetailPageDocument;
   publishedDocument: DetailPageDocument | null;
 };
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  Boolean(value) && typeof value === "object" && !Array.isArray(value);
 
 const mapDetailPageRow = (
   row: typeof detailPageDocuments.$inferSelect
@@ -51,11 +55,50 @@ const invalidateLinkedDetailPageCaches = async (detailPageId: string, contentTyp
   }
 };
 
+const findLinkedRoute = async (detailPageId: string) => {
+  const contentRoutes = ((await getSetting("site.contentRoutes")) as ContentRouteSetting[]) ?? [];
+  return contentRoutes.find((route) => (route.detailPageId ?? null) === detailPageId) ?? null;
+};
+
+const normalizeDocumentWithResolvedId = (value: unknown, resolvedId?: string) => {
+  if (!isRecord(value)) {
+    throw new Error("detail_page_invalid");
+  }
+
+  const inputWithId =
+    resolvedId === undefined
+      ? value
+      : {
+          ...value,
+          id: value.id ?? resolvedId,
+        };
+
+  try {
+    return normalizeDetailPageDocument(inputWithId);
+  } catch {
+    throw new Error("detail_page_invalid");
+  }
+};
+
 export async function getDetailPageDocument(id: string): Promise<DetailPageDocumentRecord | null> {
   const [row] = await db.select().from(detailPageDocuments).where(eq(detailPageDocuments.id, id));
 
   if (!row) return null;
   return mapDetailPageRow(row);
+}
+
+export async function listDetailPageDocuments(input?: {
+  contentTypeId?: string | null;
+}): Promise<DetailPageDocumentRecord[]> {
+  const rows = input?.contentTypeId
+    ? await db
+        .select()
+        .from(detailPageDocuments)
+        .where(eq(detailPageDocuments.contentTypeId, input.contentTypeId))
+        .orderBy(desc(detailPageDocuments.updatedAt))
+    : await db.select().from(detailPageDocuments).orderBy(desc(detailPageDocuments.updatedAt));
+
+  return rows.map(mapDetailPageRow);
 }
 
 export async function prepareDetailPageDocumentUpsert(input: {
@@ -90,6 +133,50 @@ export async function prepareDetailPageDocumentUpsert(input: {
     existing,
     document: refreshedDocument,
   };
+}
+
+export async function createDetailPageDocument(input: { document: unknown }): Promise<{
+  record: DetailPageDocumentRecord;
+  contentType: ContentTypeRecord;
+}> {
+  const document = normalizeDocumentWithResolvedId(input.document, randomUUID());
+  const prepared = await prepareDetailPageDocumentUpsert({
+    document,
+  });
+  if (prepared.existing) {
+    throw new Error("detail_page_conflict");
+  }
+
+  return upsertDetailPageDocument({
+    document: prepared.document,
+  });
+}
+
+export async function updateDetailPageDocument(
+  id: string,
+  input: {
+    document: unknown;
+  }
+): Promise<{
+  record: DetailPageDocumentRecord;
+  contentType: ContentTypeRecord;
+}> {
+  const document = normalizeDocumentWithResolvedId(input.document, id);
+  if (document.id !== id) {
+    throw new Error("detail_page_conflict");
+  }
+
+  const prepared = await prepareDetailPageDocumentUpsert({
+    document,
+  });
+  if (!prepared.existing) {
+    throw new Error("detail_page_not_found");
+  }
+
+  return upsertDetailPageDocument({
+    document: prepared.document,
+    expectedExistingId: id,
+  });
 }
 
 export async function upsertDetailPageDocument(input: {
@@ -142,4 +229,28 @@ export async function upsertDetailPageDocument(input: {
     record: mapDetailPageRow(row),
     contentType: prepared.contentType,
   };
+}
+
+export async function deleteDetailPageDocument(id: string) {
+  const existing = await getDetailPageDocument(id);
+  if (!existing) {
+    throw new Error("detail_page_not_found");
+  }
+
+  const linkedRoute = await findLinkedRoute(id);
+  if (linkedRoute) {
+    throw new Error("detail_page_route_conflict");
+  }
+
+  const [row] = await db
+    .delete(detailPageDocuments)
+    .where(eq(detailPageDocuments.id, id))
+    .returning();
+
+  if (!row) {
+    throw new Error("detail_page_not_found");
+  }
+
+  await invalidateLinkedDetailPageCaches(id, existing.currentDocument.contentTypeSlug);
+  return mapDetailPageRow(row);
 }
