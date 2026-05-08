@@ -35,12 +35,14 @@ Current slice note:
 - `TASK-190-05-03-07-01-02` is landed: internal preview/publish/unpublish/
   autosave lifecycle routes now issue dedicated `type=detail-page` preview
   tokens and persist publish/autosave state through the detail-page owner seam.
+- `TASK-190-05-03-07-01-03` is landed: revision list/restore/discard now flow
+  through a dedicated revision owner seam, and restore only rewrites
+  `current_document` instead of becoming a second publish path.
 - `TASK-190-05-03-07-02` is landed: `site.contentRoutes` now round-trips
   optional `detailPageId` through settings normalization, assistant
   `setting.content-route.upsert`, Site Settings client/form types, and matcher
   metadata.
-- Revisions/restore routes and admin client/cache parity remain open in the
-  remaining subleaves.
+- Admin client/cache parity remains open in the remaining subleaf.
 
 ## Sub-Tasks
 

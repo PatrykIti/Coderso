@@ -12,6 +12,11 @@ import {
   updateDetailPageDraftDocument,
 } from "../../services/content/detailPageDocumentService";
 import {
+  discardDetailPageAutosaveRevision,
+  listDetailPageRevisions,
+  restoreDetailPageRevision,
+} from "../../services/content/detailPageRevisionService";
+import {
   detailPageAutosaveSchema,
   detailPageCreateSchema,
   detailPageEmptyLifecycleSchema,
@@ -60,6 +65,14 @@ export const mapDetailPageError = (error: unknown) => {
       return new ApiError(
         "detail_page_status_requires_lifecycle",
         "Detail page CRUD routes accept draft documents only. Use lifecycle routes to publish or unpublish.",
+        409
+      );
+    case "detail_page_revision_not_found":
+      return new ApiError("detail_page_revision_not_found", "Detail page revision not found.", 404);
+    case "detail_page_revision_delete_forbidden":
+      return new ApiError(
+        "detail_page_revision_delete_forbidden",
+        "Only autosave detail page revisions can be discarded.",
         409
       );
     default:
@@ -185,4 +198,30 @@ export function registerDetailPageRoutes(router: Router, deps: DetailPageRouteDe
       );
     });
   });
+
+  router.get("/detail-pages/:id/revisions", requirePermission("content:read"), async (ctx) => {
+    return withDetailPageErrors(async () => listDetailPageRevisions(ctx.params.id));
+  });
+
+  router.post(
+    "/detail-pages/:id/revisions/:revisionId/restore",
+    requirePermission("content:write"),
+    async (ctx) => {
+      return withDetailPageErrors(async () => {
+        const result = await restoreDetailPageRevision(ctx.params.id, ctx.params.revisionId);
+        return { ok: true, ...result };
+      });
+    }
+  );
+
+  router.delete(
+    "/detail-pages/:id/revisions/:revisionId",
+    requirePermission("content:write"),
+    async (ctx) => {
+      return withDetailPageErrors(async () => {
+        await discardDetailPageAutosaveRevision(ctx.params.id, ctx.params.revisionId);
+        return { ok: true };
+      });
+    }
+  );
 }

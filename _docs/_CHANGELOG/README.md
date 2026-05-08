@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 810 | 2026-05-08 | TASK-190 detail-page revision routes | Assistant/Core |
 | 809 | 2026-05-08 | TASK-190 drift pass runtime and cache verification | Assistant/Core |
 | 808 | 2026-05-08 | TASK-190 detail-page drift hardening | Assistant/Core |
 | 807 | 2026-05-08 | TASK-190 detail-page lifecycle routes | Assistant/Core |

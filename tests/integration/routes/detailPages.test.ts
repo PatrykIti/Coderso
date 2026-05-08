@@ -223,6 +223,9 @@ test("registerDetailPageRoutes wires endpoints and permissions", () => {
       "POST /detail-pages/:id/publish",
       "POST /detail-pages/:id/unpublish",
       "POST /detail-pages/:id/autosave",
+      "GET /detail-pages/:id/revisions",
+      "POST /detail-pages/:id/revisions/:revisionId/restore",
+      "DELETE /detail-pages/:id/revisions/:revisionId",
     ])
   );
   expect(requestedPermissions).toEqual([
@@ -235,6 +238,9 @@ test("registerDetailPageRoutes wires endpoints and permissions", () => {
     "content:publish",
     "content:publish",
     "content:write",
+    "content:read",
+    "content:write",
+    "content:write",
   ]);
 });
 
@@ -245,6 +251,8 @@ test("mapDetailPageError maps known domain failures", () => {
   expect(mapDetailPageError(new Error("detail_page_route_conflict"))?.status).toBe(409);
   expect(mapDetailPageError(new Error("detail_page_content_type_mismatch"))?.status).toBe(409);
   expect(mapDetailPageError(new Error("detail_page_status_requires_lifecycle"))?.status).toBe(409);
+  expect(mapDetailPageError(new Error("detail_page_revision_not_found"))?.status).toBe(404);
+  expect(mapDetailPageError(new Error("detail_page_revision_delete_forbidden"))?.status).toBe(409);
   expect(mapDetailPageError(new Error("other_error"))).toBeNull();
 });
 
@@ -331,7 +339,7 @@ test("detail page autosave and publish require an authenticated actor after vali
 });
 
 testIfDb(
-  "detail page routes cover create, list, read, update, preview, autosave, publish, unpublish, and delete",
+  "detail page routes cover create, list, read, update, preview, autosave, publish, revisions, unpublish, and delete",
   async () => {
     const { router, routes } = makeRouter();
     registerDetailPageRoutes(router, {
@@ -439,6 +447,47 @@ testIfDb(
       body: {},
     });
     expect(publish).toEqual({ ok: true });
+
+    const revisions = (await runRoute(routes, "GET", "/detail-pages/:id/revisions", {
+      params: { id: created.id },
+    })) as Array<{ id: string; kind: string }>;
+    expect(revisions.map((revision) => revision.kind)).toContain("publish");
+    expect(revisions.map((revision) => revision.kind)).toContain("autosave");
+
+    const autosaveRevision = revisions.find((revision) => revision.kind === "autosave");
+    const publishRevision = revisions.find((revision) => revision.kind === "publish");
+    if (!autosaveRevision || !publishRevision) {
+      throw new Error("missing_detail_page_revisions");
+    }
+
+    const restore = (await runRoute(
+      routes,
+      "POST",
+      "/detail-pages/:id/revisions/:revisionId/restore",
+      {
+        params: { id: created.id, revisionId: autosaveRevision.id },
+        body: {},
+      }
+    )) as { ok: boolean; restored: boolean; detailPage: { name: string } };
+    expect(restore.ok).toBe(true);
+    expect(restore.restored).toBe(true);
+    expect(restore.detailPage.name).toBe("Products detail autosave");
+
+    const discard = await runRoute(routes, "DELETE", "/detail-pages/:id/revisions/:revisionId", {
+      params: { id: created.id, revisionId: autosaveRevision.id },
+      body: {},
+    });
+    expect(discard).toEqual({ ok: true });
+
+    await expect(
+      runRoute(routes, "DELETE", "/detail-pages/:id/revisions/:revisionId", {
+        params: { id: created.id, revisionId: publishRevision.id },
+        body: {},
+      })
+    ).rejects.toMatchObject({
+      code: "detail_page_revision_delete_forbidden",
+      status: 409,
+    });
 
     const afterPublish = (await runRoute(routes, "GET", "/detail-pages/:id", {
       params: { id: created.id },

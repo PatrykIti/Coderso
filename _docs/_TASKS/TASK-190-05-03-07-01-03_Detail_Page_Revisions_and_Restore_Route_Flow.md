@@ -5,7 +5,7 @@
 **Category:** CMS/Admin API + Revisions
 **Estimated Effort:** Medium
 **Dependencies:** TASK-190-05-03-01, TASK-190-05-03-07-01-01
-**Status:** To Do
+**Status:** Done (2026-05-08)
 
 ---
 
@@ -13,6 +13,17 @@
 
 Implement revision list/restore/discard routes for detail pages and keep their
 route-level error mapping aligned with the detail-page revision contract.
+
+Current slice note:
+- `detailPageRevisionService.ts` now owns revision listing, restore, and
+  autosave-only discard semantics for detail pages.
+- `detailPageRoutes.ts` now exposes `GET /detail-pages/:id/revisions`,
+  `POST /detail-pages/:id/revisions/:revisionId/restore`, and
+  `DELETE /detail-pages/:id/revisions/:revisionId`.
+- Restore now updates `current_document` only and does not become a second
+  publish path; publish state remains owned by the dedicated lifecycle routes.
+- Route-level error mapping now covers `detail_page_revision_not_found` and
+  `detail_page_revision_delete_forbidden`.
 
 ## Sub-Tasks
 

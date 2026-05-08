@@ -35,7 +35,9 @@ Current slice note:
   publish/unpublish/autosave lifecycle routes now reuse the shared preview
   contract and write publish/autosave revisions through the content-domain
   owner seam.
-- Revisions/restore remain open in the later subleaf.
+- `TASK-190-05-03-07-01-03` is landed: revision list/restore/discard now route
+  through a dedicated revision owner seam, and restore no longer acts as a
+  second publish path.
 
 ## Sub-Tasks
 

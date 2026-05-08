@@ -1563,6 +1563,9 @@ Permissions: `content:read`, `content:write`, `content:publish`
 - `POST /detail-pages/:id/publish`
 - `POST /detail-pages/:id/unpublish`
 - `POST /detail-pages/:id/autosave`
+- `GET /detail-pages/:id/revisions`
+- `POST /detail-pages/:id/revisions/:revisionId/restore`
+- `DELETE /detail-pages/:id/revisions/:revisionId`
 
 List response:
 
@@ -1621,6 +1624,14 @@ Rules:
   canonical route linkage.
 - `POST /detail-pages/:id/unpublish` clears `published_document` and keeps the
   draft/current document under the same detail-page owner seam.
+- `GET /detail-pages/:id/revisions` returns bounded revision metadata ordered by
+  newest version first.
+- `POST /detail-pages/:id/revisions/:revisionId/restore` restores the chosen
+  revision into `current_document` only; it must not become a second publish
+  path outside the dedicated lifecycle routes.
+- `DELETE /detail-pages/:id/revisions/:revisionId` discards only `autosave`
+  revisions; publish revisions fail closed with
+  `detail_page_revision_delete_forbidden`.
 - This CRUD family manages documents only; canonical route linking remains owned
   by `setting.content-route.upsert`.
 
