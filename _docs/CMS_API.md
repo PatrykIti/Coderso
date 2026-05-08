@@ -2696,7 +2696,13 @@ Payloady:
   "posts.editor.mode": "blocks",
   "setup.completed": false,
   "site.contentRoutes": [
-    { "type": "blog", "listPath": "/blog", "detailPath": "/blog/:slug", "enabled": true }
+    {
+      "type": "blog",
+      "listPath": "/blog",
+      "detailPath": "/blog/:slug",
+      "enabled": true,
+      "detailPageId": "4dd7f4d4-48d8-53f7-a9e6-0d01f6b89e6c"
+    }
   ],
   "design.tokens": { "colors": { "primary": "#111111" } },
   "assistant.enabled": true,
@@ -2731,7 +2737,13 @@ Response:
 - Setup Wizard zapisuje `site.*`, `auth.*` i finalnie `setup.completed=true` jednym bulk requestem.
 - `site.contentRoutes` mapuje content types na trasy (list + detail). Settings
   -> Site automatycznie dodaje domyslne wpisy dla content types, a delete
-  content type usuwa wpis odpowiadajacy jego slugowi.
+  content type usuwa wpis odpowiadajacy jego slugowi. Route rows moga tez
+  opcjonalnie przenosic `detailPageId` jako structural link do jednego
+  canonical detail-page document; omitted preserves the current link, `null`
+  clears it, and a string replaces it through the same settings/action seam.
+  Published content routes with a linked `detailPageId` render composed
+  detail-page blocks through the existing page runtime shell; routes without the
+  link stay on the legacy entry-detail renderer.
 - `assistant.*` klucze sterują globalną konfiguracją Doc Navigatora i opcjonalnego trybu LLM.
 - `assistant.launcher.avatar*` sterują floating launcher surface w admin UI.
 - Official assistant corpus jest sourced z root `docs/` i seedowany do DB.
@@ -3055,6 +3067,10 @@ merge server-side against that composed schema owner; when they require extra
 runtime projection fields, the assembler widens `listing-query.upsert.fields`
 automatically. Missing facet/card source paths still fail closed through typed
 `facet_field_missing` needs-input behavior.
+Detail-page binding resolution now lives under the content-domain owner seam in
+`detailPageBindingResolver.ts`: validated documents can bind entry fields, entry
+meta, `detailHref`, `formContext`, and `relatedItems` into widget props without
+minting a second route, form, or related-query contract.
 The generic action mapper must also find an executable action and field mapping
 in `assistantOperationPolicy`; strict action schemas remain the final validator
 for every returned action. Bulk/count and filtered-all destructive behavior is

@@ -3,6 +3,7 @@ export type SiteContentRouteForm = {
   listPath: string;
   detailPath: string;
   enabled: boolean;
+  detailPageId?: string | null;
 };
 
 export type RouteFieldErrors = {
@@ -20,9 +21,7 @@ export const normalizeRouteInput = (value: string, allowRoot: boolean) => {
   if (!trimmed) return null;
   const prefixed = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
   if (!allowRoot && prefixed === "/") return null;
-  return prefixed.length > 1 && prefixed.endsWith("/")
-    ? prefixed.slice(0, -1)
-    : prefixed;
+  return prefixed.length > 1 && prefixed.endsWith("/") ? prefixed.slice(0, -1) : prefixed;
 };
 
 export const buildDefaultRoute = (slug: string): SiteContentRouteForm => ({
@@ -37,28 +36,21 @@ export const mergeContentRoutes = (
   contentTypes: Array<{ slug: string }>
 ) => {
   const existingMap = new Map(existing.map((route) => [route.type, route]));
-  const merged = contentTypes.map((type) =>
-    existingMap.get(type.slug) ?? buildDefaultRoute(type.slug)
+  const merged = contentTypes.map(
+    (type) => existingMap.get(type.slug) ?? buildDefaultRoute(type.slug)
   );
-  const extras = existing.filter(
-    (route) => !contentTypes.some((type) => type.slug === route.type)
-  );
+  const extras = existing.filter((route) => !contentTypes.some((type) => type.slug === route.type));
   return [...merged, ...extras];
 };
 
-const ensureError = (
-  errorsByType: Record<string, RouteFieldErrors>,
-  type: string
-) => {
+const ensureError = (errorsByType: Record<string, RouteFieldErrors>, type: string) => {
   if (!errorsByType[type]) {
     errorsByType[type] = {};
   }
   return errorsByType[type];
 };
 
-export const validateContentRoutes = (
-  routes: SiteContentRouteForm[]
-): RouteValidationResult => {
+export const validateContentRoutes = (routes: SiteContentRouteForm[]): RouteValidationResult => {
   const errorsByType: Record<string, RouteFieldErrors> = {};
   const listMap = new Map<string, string[]>();
   const detailMap = new Map<string, string[]>();
@@ -71,8 +63,7 @@ export const validateContentRoutes = (
     if (!normalizedList) {
       ensureError(errorsByType, route.type).listPath = "List path is required.";
     } else if (normalizedList.includes(":")) {
-      ensureError(errorsByType, route.type).listPath =
-        "List path must be a static URL.";
+      ensureError(errorsByType, route.type).listPath = "List path must be a static URL.";
     } else {
       const listOwners = listMap.get(normalizedList) ?? [];
       listOwners.push(route.type);
@@ -80,14 +71,9 @@ export const validateContentRoutes = (
     }
 
     if (!normalizedDetail) {
-      ensureError(errorsByType, route.type).detailPath =
-        "Detail path is required.";
-    } else if (
-      !normalizedDetail.includes(":slug") &&
-      !normalizedDetail.includes(":id")
-    ) {
-      ensureError(errorsByType, route.type).detailPath =
-        "Detail path must include :slug or :id.";
+      ensureError(errorsByType, route.type).detailPath = "Detail path is required.";
+    } else if (!normalizedDetail.includes(":slug") && !normalizedDetail.includes(":id")) {
+      ensureError(errorsByType, route.type).detailPath = "Detail path must include :slug or :id.";
     } else {
       const detailOwners = detailMap.get(normalizedDetail) ?? [];
       detailOwners.push(route.type);

@@ -5,7 +5,7 @@
 **Category:** Settings + Assistant Contracts + Runtime Routing
 **Estimated Effort:** Medium
 **Dependencies:** TASK-190-05-03-01
-**Status:** To Do
+**Status:** Done (2026-05-08)
 
 ---
 
@@ -13,6 +13,15 @@
 
 Extend the existing `site.contentRoutes` owner seam so one content route can
 link to one canonical detail-page document through `detailPageId`.
+
+Current slice note:
+- `ContentRouteSetting` now round-trips optional `detailPageId` through the
+  current settings owner seam, assistant `setting.content-route.upsert`, and
+  Site Settings client/form types,
+- omitted/null/string semantics are now enforced in the assistant action
+  contract so preserve, clear, and replace behavior stay explicit,
+- `contentRouteMatcher.ts` now surfaces stored `detailPageId` metadata for
+  runtime consumers without adding DB lookups or a second route registry.
 
 This leaf is the single owner for the structural round-trip:
 

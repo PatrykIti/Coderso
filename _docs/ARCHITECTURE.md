@@ -524,6 +524,14 @@ Action family contract registry:
 
 Aktualnie zaimplementowany business setup surface:
 - executable catalog-family packs tworza content type, custom screen, listing query, listing template, public catalog page i public detail routes,
+- canonical content-route ownership stays in `site.contentRoutes`; route rows may
+  now carry optional `detailPageId` metadata as the structural link to one
+  detail-page document, while runtime consumption of that link remains a
+  separate public-runtime owner seam,
+- published content routes that carry `detailPageId` now resolve normalized
+  detail-page documents and render them through the current page-builder
+  runtime shell; missing links continue to fall back to the legacy
+  `renderPublicEntry.tsx` detail renderer,
 - lead capture oraz product inquiry packs moga tworzyc public inquiry forms przez istniejacy Forms runtime,
 - portfolio case-study pack dodaje result/testimonial fields,
 - editorial content hub tworzy public hub page z `posts-feed` bez mutowania post records,

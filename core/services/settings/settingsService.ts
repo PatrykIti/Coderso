@@ -35,6 +35,7 @@ export type ContentRouteSetting = {
   listPath: string;
   detailPath: string;
   enabled: boolean;
+  detailPageId?: string | null;
 };
 
 const DEFAULT_WIDGET_TEMPLATE_CATEGORIES: WidgetTemplateCategorySetting[] = [
@@ -83,10 +84,7 @@ const DEFAULT_SETTINGS = {
 export type SettingKey = keyof typeof DEFAULT_SETTINGS;
 export type SettingValueMap = typeof DEFAULT_SETTINGS;
 
-export type SearchCategoryOverrides = Record<
-  string,
-  { label?: string; hidden?: boolean }
->;
+export type SearchCategoryOverrides = Record<string, { label?: string; hidden?: boolean }>;
 
 const ALLOWED_KEYS = new Set(Object.keys(DEFAULT_SETTINGS));
 const SETTING_KEY_ALIASES = {
@@ -175,10 +173,7 @@ const normalizeAssistantMode = (value: unknown): AssistantMode => {
 };
 
 const normalizeAssistantProvider = (value: unknown): AssistantLlmProvider => {
-  if (
-    typeof value !== "string" ||
-    !assistantProviders.includes(value as AssistantLlmProvider)
-  ) {
+  if (typeof value !== "string" || !assistantProviders.includes(value as AssistantLlmProvider)) {
     throw new Error("settings_value_invalid");
   }
   return value as AssistantLlmProvider;
@@ -204,9 +199,7 @@ const normalizeOptionalAssistantAsset = (value: unknown) => {
   return normalized.length > 0 ? normalized : "";
 };
 
-const pickAssistantSettings = (
-  values: SettingValueMap
-): AssistantGlobalSettings => ({
+const pickAssistantSettings = (values: SettingValueMap): AssistantGlobalSettings => ({
   "assistant.enabled": values["assistant.enabled"],
   "assistant.launcher.avatarEnabled": values["assistant.launcher.avatarEnabled"],
   "assistant.launcher.avatarAsset": values["assistant.launcher.avatarAsset"],
@@ -222,9 +215,7 @@ const pickAssistantSettings = (
   "assistant.quotas.requestsPerDay": values["assistant.quotas.requestsPerDay"],
 });
 
-export function assertAssistantSettingsConsistency(
-  values: AssistantGlobalSettings
-): void {
+export function assertAssistantSettingsConsistency(values: AssistantGlobalSettings): void {
   if (values["assistant.defaultMode"] === "llm-guide") {
     if (!values["assistant.llm.enabled"]) {
       throw new Error("settings_value_invalid");
@@ -267,9 +258,7 @@ const normalizeAdminPathValue = (value: unknown) => {
   if (!trimmed) return "/admin";
   const prefixed = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
   const normalized =
-    prefixed.length > 1 && prefixed.endsWith("/")
-      ? prefixed.slice(0, -1)
-      : prefixed;
+    prefixed.length > 1 && prefixed.endsWith("/") ? prefixed.slice(0, -1) : prefixed;
   if (!/^\/[a-zA-Z0-9_-]+$/.test(normalized)) {
     throw new Error("settings_value_invalid");
   }
@@ -294,6 +283,22 @@ const normalizeOptionalIdValue = (value: unknown) => {
   return trimmed.length > 0 ? trimmed : "";
 };
 
+const detailPageIdPattern =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const normalizeOptionalDetailPageId = (value: unknown) => {
+  if (value === null) return null;
+  if (typeof value !== "string") {
+    throw new Error("settings_value_invalid");
+  }
+  const trimmed = value.trim().toLowerCase();
+  if (!trimmed) return null;
+  if (!detailPageIdPattern.test(trimmed)) {
+    throw new Error("settings_value_invalid");
+  }
+  return trimmed;
+};
+
 const normalizeRoutePath = (value: unknown, allowRoot = false) => {
   if (typeof value !== "string") {
     throw new Error("settings_value_invalid");
@@ -304,14 +309,10 @@ const normalizeRoutePath = (value: unknown, allowRoot = false) => {
   }
   if (allowRoot && trimmed === "/") return "/";
   const prefixed = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
-  return prefixed.endsWith("/") && prefixed.length > 1
-    ? prefixed.slice(0, -1)
-    : prefixed;
+  return prefixed.endsWith("/") && prefixed.length > 1 ? prefixed.slice(0, -1) : prefixed;
 };
 
-export const normalizeContentRoutes = (
-  value: unknown
-): ContentRouteSetting[] => {
+export const normalizeContentRoutes = (value: unknown): ContentRouteSetting[] => {
   if (!Array.isArray(value)) {
     throw new Error("settings_value_invalid");
   }
@@ -325,6 +326,7 @@ export const normalizeContentRoutes = (
       listPath?: unknown;
       detailPath?: unknown;
       enabled?: unknown;
+      detailPageId?: unknown;
     };
     if (typeof record.type !== "string") {
       throw new Error("settings_value_invalid");
@@ -342,12 +344,18 @@ export const normalizeContentRoutes = (
     if (record.enabled !== undefined && typeof record.enabled !== "boolean") {
       throw new Error("settings_value_invalid");
     }
-    return {
+    const normalized = {
       type,
       listPath,
       detailPath,
       enabled: record.enabled ?? true,
     };
+    return Object.prototype.hasOwnProperty.call(record, "detailPageId")
+      ? {
+          ...normalized,
+          detailPageId: normalizeOptionalDetailPageId(record.detailPageId),
+        }
+      : normalized;
   });
 };
 
@@ -404,10 +412,7 @@ function validateSettingValue(key: SettingKey, value: unknown): SettingValueMap[
   }
 
   if (key === "posts.editor.mode") {
-    if (
-      typeof value !== "string" ||
-      !postEditorModes.includes(value as PostEditorMode)
-    ) {
+    if (typeof value !== "string" || !postEditorModes.includes(value as PostEditorMode)) {
       throw new Error("settings_value_invalid");
     }
     return value as PostEditorMode;
@@ -516,9 +521,7 @@ async function ensureLegacyAssistantSettingsMigrated() {
   }
 
   legacyAssistantSettingsMigrationPromise = (async () => {
-    await db
-      .delete(settings)
-      .where(inArray(settings.key, [...LEGACY_ASSISTANT_DOCS_SETTING_KEYS]));
+    await db.delete(settings).where(inArray(settings.key, [...LEGACY_ASSISTANT_DOCS_SETTING_KEYS]));
 
     const [defaultMode] = await db
       .select({ value: settings.value })
@@ -539,10 +542,7 @@ async function ensureLegacyAssistantSettingsMigrated() {
 export async function listSettings(): Promise<SettingValueMap> {
   await ensureLegacyAssistantSettingsMigrated();
   const keys = Object.keys(DEFAULT_SETTINGS) as SettingKey[];
-  const rows = await db
-    .select()
-    .from(settings)
-    .where(inArray(settings.key, keys));
+  const rows = await db.select().from(settings).where(inArray(settings.key, keys));
 
   const merged = { ...DEFAULT_SETTINGS } as SettingValueMap;
   const mergedByKey = merged as Record<SettingKey, SettingValueMap[SettingKey]>;
@@ -632,10 +632,7 @@ export async function listSettings(): Promise<SettingValueMap> {
 export async function getSetting(key: string) {
   await ensureLegacyAssistantSettingsMigrated();
   const normalizedKey = resolveSettingKey(key);
-  const [row] = await db
-    .select()
-    .from(settings)
-    .where(eq(settings.key, normalizedKey));
+  const [row] = await db.select().from(settings).where(eq(settings.key, normalizedKey));
   if (!row) return DEFAULT_SETTINGS[normalizedKey];
   if (isBaseUrlKey(normalizedKey)) {
     return normalizeBaseUrlOutput(row.value);
@@ -676,10 +673,7 @@ export async function getSetting(key: string) {
 export async function getSettingRecord(key: string) {
   await ensureLegacyAssistantSettingsMigrated();
   const normalizedKey = resolveSettingKey(key);
-  const [row] = await db
-    .select()
-    .from(settings)
-    .where(eq(settings.key, normalizedKey));
+  const [row] = await db.select().from(settings).where(eq(settings.key, normalizedKey));
   return row ?? null;
 }
 
@@ -755,10 +749,7 @@ export async function setSettings(values: Record<string, unknown>) {
 export async function deleteSetting(key: string) {
   await ensureLegacyAssistantSettingsMigrated();
   const normalizedKey = resolveSettingKey(key);
-  const [row] = await db
-    .delete(settings)
-    .where(eq(settings.key, normalizedKey))
-    .returning();
+  const [row] = await db.delete(settings).where(eq(settings.key, normalizedKey)).returning();
 
   return row ?? null;
 }

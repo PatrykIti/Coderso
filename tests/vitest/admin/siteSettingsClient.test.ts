@@ -37,6 +37,7 @@ test("getSiteSettings normalizes raw settings payload", async () => {
           listPath: "/blog",
           detailPath: "/blog/:slug",
           enabled: false,
+          detailPageId: "4dd7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
         },
         {
           type: "pages",
@@ -63,6 +64,7 @@ test("getSiteSettings normalizes raw settings payload", async () => {
           listPath: "/blog",
           detailPath: "/blog/:slug",
           enabled: false,
+          detailPageId: "4dd7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
         },
       ],
     });
@@ -97,6 +99,7 @@ test("updateSiteSettings patches normalized payload with csrf token", async () =
           type: "posts",
           listPath: "/news",
           detailPath: "/news/:slug",
+          detailPageId: "4dd7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
         },
       ],
     });
@@ -120,6 +123,7 @@ test("updateSiteSettings patches normalized payload with csrf token", async () =
             listPath: "/news",
             detailPath: "/news/:slug",
             enabled: true,
+            detailPageId: "4dd7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
           },
         ],
       })
@@ -138,15 +142,14 @@ test("updateSiteSettings patches normalized payload with csrf token", async () =
           listPath: "/news",
           detailPath: "/news/:slug",
           enabled: true,
+          detailPageId: "4dd7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
         },
       ],
     });
 
     expect(calls[1]?.input).toBe("/admin/api/settings");
     expect(calls[1]?.init?.method).toBe("PATCH");
-    expect(new Headers(calls[1]?.init?.headers).get("X-CSRF-Token")).toBe(
-      "csrf-token"
-    );
+    expect(new Headers(calls[1]?.init?.headers).get("X-CSRF-Token")).toBe("csrf-token");
     expect(JSON.parse(String(calls[1]?.init?.body))).toEqual({
       "site.publicBaseUrl": "https://public.coderso.test",
       "site.adminBaseUrl": null,
@@ -162,6 +165,7 @@ test("updateSiteSettings patches normalized payload with csrf token", async () =
           listPath: "/news",
           detailPath: "/news/:slug",
           enabled: true,
+          detailPageId: "4dd7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
         },
       ],
     });

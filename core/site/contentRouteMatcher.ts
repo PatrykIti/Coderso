@@ -7,6 +7,7 @@ export type ContentRouteMatch = {
   params: Record<string, string>;
   listPath: string;
   detailPath: string;
+  detailPageId: string | null;
 };
 
 export function matchContentRoute(
@@ -25,6 +26,7 @@ export function matchContentRoute(
         params: detailMatch.params,
         listPath: route.listPath,
         detailPath: route.detailPath,
+        detailPageId: route.detailPageId ?? null,
       };
     }
   }
@@ -38,6 +40,7 @@ export function matchContentRoute(
         params: {},
         listPath: route.listPath,
         detailPath: route.detailPath,
+        detailPageId: route.detailPageId ?? null,
       };
     }
   }

@@ -2906,6 +2906,130 @@ test("executeAssistantActionPlan attaches existing media references to entries",
   expect(deps.__state.entries[0]?.data.heroImage).toBe("media-1");
 });
 
+test("content route actions preserve, clear, and replace detailPageId links", async () => {
+  const deps = createDeps();
+  await deps.setSetting("site.contentRoutes", [
+    {
+      type: "blog",
+      listPath: "/blog",
+      detailPath: "/blog/:slug",
+      enabled: true,
+      detailPageId: "4dd7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+    },
+  ]);
+
+  const preservePlan: AssistantActionPlan = {
+    id: "plan-route-preserve",
+    status: "ready",
+    intentId: "route-preserve",
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+    title: "Preserve route link",
+    answer: "I can preserve the linked detail page.",
+    summary: "Keep the current route link.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "route-blog-preserve",
+        type: "setting.content-route.upsert",
+        title: "Update blog route",
+        description: "Update the route without changing the detail page link.",
+        input: {
+          typeSlug: "blog",
+          listPath: "/blog",
+          detailPath: "/blog/:slug",
+          enabled: true,
+        },
+      },
+    ],
+  };
+
+  const preservePreview = await dryRunAssistantActionPlan({ plan: preservePlan }, deps);
+  expect(preservePreview.changes[0]?.operation).toBe("noop");
+  await executeAssistantActionPlan(
+    {
+      plan: preservePlan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-route-preserve-1",
+    },
+    deps
+  );
+  expect(
+    (((await deps.getSetting("site.contentRoutes")) as ContentRouteSetting[]) ?? [])[0]
+      ?.detailPageId
+  ).toBe("4dd7f4d4-48d8-53f7-a9e6-0d01f6b89e6c");
+
+  const clearPlan: AssistantActionPlan = {
+    ...preservePlan,
+    id: "plan-route-clear",
+    intentId: "route-clear",
+    title: "Clear route link",
+    actions: [
+      {
+        id: "route-blog-clear",
+        type: "setting.content-route.upsert",
+        title: "Clear blog detail page link",
+        description: "Clear the linked detail page.",
+        input: {
+          typeSlug: "blog",
+          listPath: "/blog",
+          detailPath: "/blog/:slug",
+          enabled: true,
+          detailPageId: null,
+        },
+      },
+    ],
+  };
+  await executeAssistantActionPlan(
+    {
+      plan: clearPlan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-route-clear-1",
+    },
+    deps
+  );
+  expect(
+    (((await deps.getSetting("site.contentRoutes")) as ContentRouteSetting[]) ?? [])[0]
+      ?.detailPageId
+  ).toBeNull();
+
+  const replacePlan: AssistantActionPlan = {
+    ...preservePlan,
+    id: "plan-route-replace",
+    intentId: "route-replace",
+    title: "Replace route link",
+    actions: [
+      {
+        id: "route-blog-replace",
+        type: "setting.content-route.upsert",
+        title: "Replace blog detail page link",
+        description: "Set a new linked detail page.",
+        input: {
+          typeSlug: "blog",
+          listPath: "/blog",
+          detailPath: "/blog/:slug",
+          enabled: true,
+          detailPageId: "6dd7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+        },
+      },
+    ],
+  };
+  await executeAssistantActionPlan(
+    {
+      plan: replacePlan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-route-replace-1",
+    },
+    deps
+  );
+  expect(
+    (((await deps.getSetting("site.contentRoutes")) as ContentRouteSetting[]) ?? [])[0]
+      ?.detailPageId
+  ).toBe("6dd7f4d4-48d8-53f7-a9e6-0d01f6b89e6c");
+});
+
 test("executeAssistantActionPlan patches listing query filters without rewriting config", async () => {
   const deps = createDeps();
   const contentType = await deps.createContentType({

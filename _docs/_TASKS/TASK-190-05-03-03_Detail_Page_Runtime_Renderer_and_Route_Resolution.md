@@ -5,7 +5,7 @@
 **Category:** Runtime + Public Pages
 **Estimated Effort:** Large
 **Dependencies:** TASK-190-05-03-01, TASK-190-05-03-02, TASK-190-05-03-07-02
-**Status:** To Do
+**Status:** Done (2026-05-08)
 
 ---
 
@@ -15,6 +15,15 @@ Wire detail page documents into public runtime route resolution. Public detail
 routes should render composed detail page blocks when a detail page document is
 configured, while preserving the existing legacy entry detail renderer as a
 fallback.
+
+Current slice note:
+- published content routes with linked `detailPageId` now resolve normalized
+  detail-page documents through `detailPageRuntimeResolver.ts`,
+- composed detail-page blocks are hydrated through the current public
+  page-builder runtime shell (`hydrateRuntimeBlocks(...)` plus
+  `renderPublicPageRuntimeHtml(...)`) instead of a second widget-runtime stack,
+- when no `detailPageId` is linked, public content detail rendering stays on
+  the current legacy `renderPublicEntry.tsx` fallback seam.
 
 The runtime entry point stays the existing content detail flow, but the current
 repo already has a block-runtime shell for public Pages. This leaf must reuse

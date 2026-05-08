@@ -388,6 +388,10 @@ Rotacja klucza:
   - client-supplied `context.resourceCatalog` i inne unknown context fields sa odrzucane,
   - resource catalog includes bounded page, post, entry, media, commerce, solution-kit, menu, content type, custom screen, listing, form, SEO, and widget summaries, but never raw page/post/entry data payloads,
   - resource catalog nie zawiera form submissions, entry values, post raw data, media signed URLs, commerce payment secrets, provider credentials, API key material ani secret-like config keys,
+  - detail-page binding resolution is read-only and document-driven: it uses safe
+    dot-path access against validated bindings, blocks secret-like entry field
+    paths, and reuses the existing detail-route/content-list/form runtime seams
+    instead of arbitrary object traversal or a parallel public-write contract,
   - generic CMS inspection plans are read-only: they can expose bounded candidate metadata, have `actions: []`, and are not executable through dry-run/execute,
   - `context.runtimeSnapshot` jest advisory-only i nie moze zastapic RBAC w route/domain services,
   - active admin surface context is server-hydrated before planning; page/custom-screen hydration requires `content:read`, widget-template hydration requires `widgets:read`, and missing resources clear the active surface context,

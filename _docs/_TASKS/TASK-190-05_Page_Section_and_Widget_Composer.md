@@ -38,6 +38,18 @@ Current slice note:
 - `TASK-190-05-03-01` is landed: detail-page document/revision storage and the
   blocking `content_type_has_detail_pages` dependency now exist under the
   content-domain owner seam.
+- `TASK-190-05-03-02` is landed: detail-page blocks now resolve strict
+  entry-field/meta/computed bindings through `detailPageBindingResolver.ts`
+  with shared safe dot-path helpers and thin adapters over the existing
+  content/forms runtime seams.
+- `TASK-190-05-03-07-02` is landed: canonical content routes now round-trip
+  structural `detailPageId` linkage through settings, assistant actions, and
+  matcher metadata so the runtime leaf can consume one validated route owner
+  seam.
+- `TASK-190-05-03-03` is landed: published content routes with linked
+  `detailPageId` now resolve and hydrate composed detail-page blocks through
+  the existing page runtime shell, while unlinked routes stay on the legacy
+  entry-detail renderer.
 - The later detail-page binding/runtime/action/admin waves remain open.
 
 ## Sub-Tasks

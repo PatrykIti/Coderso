@@ -687,12 +687,7 @@ const buildContentRoutePreview = async (
 ) => {
   const current = ((await deps.getSetting("site.contentRoutes")) as ContentRouteSetting[]) ?? [];
   const existing = current.find((entry) => entry.type === action.input.typeSlug) ?? null;
-  const nextValue = {
-    type: action.input.typeSlug,
-    listPath: action.input.listPath,
-    detailPath: action.input.detailPath,
-    enabled: action.input.enabled,
-  };
+  const nextValue = buildContentRouteRecord(existing, action.input);
   const warnings =
     action.input.listPath !== normalizeSitePath(action.input.detailPath.replace("/:slug", ""))
       ? [
@@ -2833,18 +2828,29 @@ const mergeContentRoute = (current: ContentRouteSetting[], nextRoute: ContentRou
   return [...filtered, nextRoute].sort((left, right) => left.type.localeCompare(right.type));
 };
 
+const buildContentRouteRecord = (
+  existing: ContentRouteSetting | null,
+  input: AssistantContentRouteUpsertAction["input"]
+): ContentRouteSetting => ({
+  type: input.typeSlug,
+  listPath: input.listPath,
+  detailPath: input.detailPath,
+  enabled: input.enabled,
+  ...(Object.prototype.hasOwnProperty.call(input, "detailPageId")
+    ? { detailPageId: input.detailPageId ?? null }
+    : existing && Object.prototype.hasOwnProperty.call(existing, "detailPageId")
+      ? { detailPageId: existing.detailPageId ?? null }
+      : {}),
+});
+
 const executeContentRouteAction = async (
   action: AssistantContentRouteUpsertAction,
   preview: AssistantActionPreviewChange,
   deps: ActionExecutorDeps
 ): Promise<AssistantActionExecutionItem> => {
   const current = ((await deps.getSetting("site.contentRoutes")) as ContentRouteSetting[]) ?? [];
-  const nextRoute: ContentRouteSetting = {
-    type: action.input.typeSlug,
-    listPath: action.input.listPath,
-    detailPath: action.input.detailPath,
-    enabled: action.input.enabled,
-  };
+  const existing = current.find((entry) => entry.type === action.input.typeSlug) ?? null;
+  const nextRoute = buildContentRouteRecord(existing, action.input);
 
   if (preview.operation !== "noop") {
     await deps.setSetting("site.contentRoutes", mergeContentRoute(current, nextRoute));

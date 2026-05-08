@@ -4,10 +4,7 @@ import path from "node:path";
 import type { DeviceTarget, WidgetBlock } from "../widgets/types";
 import { ensureRuntimeWidgetsRegistered } from "../widgets/runtime";
 import { renderPublicPageHtml, renderPublicPageRuntimeHtml } from "../site/renderPublicPage";
-import {
-  renderPublicEntryDetailHtml,
-  renderPublicEntryListHtml,
-} from "../site/renderPublicEntry";
+import { renderPublicEntryDetailHtml, renderPublicEntryListHtml } from "../site/renderPublicEntry";
 import {
   buildSiteCacheKey,
   configureSiteCache,
@@ -18,15 +15,8 @@ import {
 import { matchContentRoute } from "../site/contentRouteMatcher";
 import { toCssVariables } from "../ui/theme/tokenCss";
 import { getPageBySlug, getPage } from "../services/pages/pageService";
-import {
-  type PreviewTargetType,
-  validatePreviewToken,
-} from "../services/pages/previewService";
-import {
-  getEntry,
-  getEntryBySlug,
-  listEntries,
-} from "../services/content/entryService";
+import { type PreviewTargetType, validatePreviewToken } from "../services/pages/previewService";
+import { getEntry, getEntryBySlug, listEntries } from "../services/content/entryService";
 import {
   DEFAULT_POST_CONTENT_SCHEMA,
   getPost,
@@ -36,6 +26,7 @@ import {
   POST_CONTENT_TYPE_SLUG,
 } from "../services/content/postsService";
 import { resolveContentListRuntimeData } from "../services/content/contentListResolver";
+import { resolvePublishedDetailPageRuntime } from "../services/content/detailPageRuntimeResolver";
 import { resolvePostsFeedRuntimeData } from "../services/content/postsFeedResolver";
 import { resolveEntryTeaserRuntimeData } from "../services/content/entryTeaserResolver";
 import {
@@ -53,25 +44,13 @@ import type { ContentSchema } from "../services/content/validation";
 import { getPageLayoutSettingsFromData } from "../services/pages/layoutSettings";
 import { getWidgetTemplateLayoutSettings } from "../services/widgets/widgetTemplateSettings";
 import { resolveDevAssetUrl } from "./utils/styleUrl";
-import {
-  normalizeContentListData,
-  type ContentListData,
-} from "../widgets/core/contentList";
-import {
-  normalizePostsFeedData,
-  type PostsFeedData,
-} from "../widgets/core/postsFeed";
-import {
-  normalizeEntryTeaserData,
-  type EntryTeaserData,
-} from "../widgets/core/entryTeaser";
+import { normalizeContentListData, type ContentListData } from "../widgets/core/contentList";
+import { normalizePostsFeedData, type PostsFeedData } from "../widgets/core/postsFeed";
+import { normalizeEntryTeaserData, type EntryTeaserData } from "../widgets/core/entryTeaser";
 import { type ProductGalleryData } from "../widgets/core/productGallery";
 import { type ProductCompareData } from "../widgets/core/productCompare";
 import { type ProductTableData } from "../widgets/core/productTable";
-import {
-  normalizeFormEmbedData,
-  type FormEmbedData,
-} from "../widgets/core/formEmbed";
+import { normalizeFormEmbedData, type FormEmbedData } from "../widgets/core/formEmbed";
 import {
   normalizeBookingCalendarData,
   type BookingCalendarData,
@@ -84,10 +63,7 @@ import {
   normalizeListingFiltersData,
   type ListingFiltersData,
 } from "../widgets/core/listingFilters";
-import {
-  normalizeSearchBoxData,
-  type SearchBoxData,
-} from "../widgets/core/searchBox";
+import { normalizeSearchBoxData, type SearchBoxData } from "../widgets/core/searchBox";
 import { resolveNavigationRuntimeData } from "../services/navigation/navigationRuntimeResolver";
 import { resolveTemplateSectionRuntimeData } from "../services/widgets/templateSectionRuntime";
 import { resolveFormRuntimeData } from "../services/forms/formRuntimeResolver";
@@ -115,11 +91,7 @@ export type PublicPageData = {
   currentData?: Record<string, unknown> | null;
 };
 
-const resolveManifestCss = (
-  manifestPath: string,
-  basePath: string,
-  entryHints: string[]
-) => {
+const resolveManifestCss = (manifestPath: string, basePath: string, entryHints: string[]) => {
   if (!fs.existsSync(manifestPath)) return null;
   const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8")) as Record<
     string,
@@ -134,18 +106,18 @@ const resolveManifestCss = (
 };
 
 const resolveSiteCss = () =>
-  resolveManifestCss(
-    path.resolve(process.cwd(), "dist/site/manifest.json"),
-    "/site",
-    ["main.ts", "main.tsx", "site/main.ts", "site/main.tsx"]
-  );
+  resolveManifestCss(path.resolve(process.cwd(), "dist/site/manifest.json"), "/site", [
+    "main.ts",
+    "main.tsx",
+    "site/main.ts",
+    "site/main.tsx",
+  ]);
 
 const resolveAdminCss = () =>
-  resolveManifestCss(
-    path.resolve(process.cwd(), "dist/client/manifest.json"),
-    "/admin",
-    ["admin/main.tsx", "admin/index.html"]
-  );
+  resolveManifestCss(path.resolve(process.cwd(), "dist/client/manifest.json"), "/admin", [
+    "admin/main.tsx",
+    "admin/index.html",
+  ]);
 
 const resolveIp = (req: Request) => {
   const forwarded = req.headers.get("x-forwarded-for");
@@ -183,10 +155,7 @@ const resolvePublicStyles = async () => {
     process.env.VITE_SITE_DEV_SERVER_URL,
     "/site/@vite/client"
   );
-  const siteDevEntry = resolveDevAssetUrl(
-    process.env.VITE_SITE_DEV_SERVER_URL,
-    "/site/main.ts"
-  );
+  const siteDevEntry = resolveDevAssetUrl(process.env.VITE_SITE_DEV_SERVER_URL, "/site/main.ts");
   if (siteDevClient && siteDevEntry) {
     return {
       inlineCss,
@@ -198,14 +167,8 @@ const resolvePublicStyles = async () => {
   const adminCssHref = resolveAdminCss();
   if (adminCssHref) return { inlineCss, cssHref: adminCssHref, devModuleScripts: [] };
 
-  const adminDevClient = resolveDevAssetUrl(
-    process.env.VITE_DEV_SERVER_URL,
-    "/admin/@vite/client"
-  );
-  const adminDevEntry = resolveDevAssetUrl(
-    process.env.VITE_DEV_SERVER_URL,
-    "/admin/main.tsx"
-  );
+  const adminDevClient = resolveDevAssetUrl(process.env.VITE_DEV_SERVER_URL, "/admin/@vite/client");
+  const adminDevEntry = resolveDevAssetUrl(process.env.VITE_DEV_SERVER_URL, "/admin/main.tsx");
   if (adminDevClient && adminDevEntry) {
     return {
       inlineCss,
@@ -252,9 +215,7 @@ const hydrateRuntimeBlock = async (
   let nextBlock: WidgetBlock = block;
 
   if (block.type === "content-list") {
-    const normalizedData = normalizeContentListData(
-      ensureRecord(block.data) as ContentListData
-    );
+    const normalizedData = normalizeContentListData(ensureRecord(block.data) as ContentListData);
     const resolved = await resolveContentListRuntimeData(normalizedData, {
       preview: options.preview,
       contentRoutes: options.contentRoutes,
@@ -269,9 +230,7 @@ const hydrateRuntimeBlock = async (
     };
   }
   if (block.type === "posts-feed") {
-    const normalizedData = normalizePostsFeedData(
-      ensureRecord(block.data) as PostsFeedData
-    );
+    const normalizedData = normalizePostsFeedData(ensureRecord(block.data) as PostsFeedData);
     const resolved = await resolvePostsFeedRuntimeData(normalizedData, {
       preview: options.preview,
       contentRoutes: options.contentRoutes,
@@ -288,14 +247,12 @@ const hydrateRuntimeBlock = async (
     const normalizedData = normalizeListingFiltersData(
       ensureRecord(block.data) as ListingFiltersData
     );
-    const resolved = await resolveListingFiltersRuntimeData(
-      {
-        listingQueryId: normalizedData.listingQueryId,
-        facets: normalizedData.facets,
-        preview: options.preview,
-        runtimeSearchParams: options.runtimeSearchParams,
-      }
-    );
+    const resolved = await resolveListingFiltersRuntimeData({
+      listingQueryId: normalizedData.listingQueryId,
+      facets: normalizedData.facets,
+      preview: options.preview,
+      runtimeSearchParams: options.runtimeSearchParams,
+    });
 
     nextBlock = {
       ...block,
@@ -312,18 +269,11 @@ const hydrateRuntimeBlock = async (
     };
   }
   if (block.type === "search-box") {
-    const normalizedData = normalizeSearchBoxData(
-      ensureRecord(block.data) as SearchBoxData
-    );
+    const normalizedData = normalizeSearchBoxData(ensureRecord(block.data) as SearchBoxData);
     const listingQueryId =
-      normalizedData.mode === "listing"
-        ? normalizedData.listingQueryId?.trim() ?? ""
-        : "";
+      normalizedData.mode === "listing" ? (normalizedData.listingQueryId?.trim() ?? "") : "";
     const runtimeState = listingQueryId
-      ? resolveListingSearchRuntimeState(
-          listingQueryId,
-          options.runtimeSearchParams
-        )
+      ? resolveListingSearchRuntimeState(listingQueryId, options.runtimeSearchParams)
       : { rejectedTokens: [] as string[] };
 
     nextBlock = {
@@ -339,9 +289,7 @@ const hydrateRuntimeBlock = async (
     };
   }
   if (block.type === "entry-teaser") {
-    const normalizedData = normalizeEntryTeaserData(
-      ensureRecord(block.data) as EntryTeaserData
-    );
+    const normalizedData = normalizeEntryTeaserData(ensureRecord(block.data) as EntryTeaserData);
     const resolved = await resolveEntryTeaserRuntimeData(normalizedData, {
       preview: options.preview,
       contentRoutes: options.contentRoutes,
@@ -401,9 +349,7 @@ const hydrateRuntimeBlock = async (
     };
   }
   if (block.type === "form-embed") {
-    const normalizedData = normalizeFormEmbedData(
-      ensureRecord(block.data) as FormEmbedData
-    );
+    const normalizedData = normalizeFormEmbedData(ensureRecord(block.data) as FormEmbedData);
     const resolved = normalizedData.formId
       ? await resolveFormRuntimeData(normalizedData.formId, {
           preview: options.preview,
@@ -717,7 +663,13 @@ const renderEntryListHtml = async (
 const renderEntryDetailHtml = async (
   typeSlug: string,
   slug: string,
-  options?: { preview?: boolean; themeName?: string; preferGenericEntry?: boolean }
+  options?: {
+    preview?: boolean;
+    themeName?: string;
+    preferGenericEntry?: boolean;
+    detailPageId?: string | null;
+    contentRoutes?: ContentRouteSetting[];
+  }
 ) => {
   if (!options?.preferGenericEntry && isPostContentTypeSlug(typeSlug)) {
     const post = await getPostBySlug(slug);
@@ -741,8 +693,7 @@ const renderEntryDetailHtml = async (
       devModuleScripts,
       isPreview: options?.preview ?? false,
       themeName: options?.themeName ?? (await resolvePublicThemeName()),
-      metaDescription:
-        post.seo?.description ?? resolvePostRuntimeMetaDescription(post.data),
+      metaDescription: post.seo?.description ?? resolvePostRuntimeMetaDescription(post.data),
       canonicalUrl: post.seo?.canonicalUrl ?? null,
     });
   }
@@ -760,14 +711,63 @@ const renderEntryDetailHtml = async (
   if (!entryDetail) return null;
 
   const { inlineCss, cssHref, devModuleScripts } = await resolvePublicStyles();
+  const contentTypeSnapshot = {
+    id: contentType.id,
+    name: contentType.name,
+    slug: contentType.slug,
+    schema: contentType.schema as ContentSchema,
+  };
+  if (!options?.preview && options?.detailPageId) {
+    const detailPage = await resolvePublishedDetailPageRuntime({
+      detailPageId: options.detailPageId,
+      entry: {
+        id: entryDetail.id,
+        typeId: entryDetail.typeId,
+        title: entryDetail.title,
+        slug: entryDetail.slug,
+        status: entryDetail.status,
+        tags: entryDetail.tags ?? [],
+        data: entryDetail.data ?? {},
+        publishedAt: entryDetail.publishedAt ?? null,
+        scheduledAt: entryDetail.scheduledAt ?? null,
+        createdAt: entryDetail.createdAt ?? null,
+        updatedAt: entryDetail.updatedAt ?? null,
+        author: entryDetail.author ?? null,
+      },
+      contentType: {
+        id: contentType.id,
+        slug: contentType.slug,
+        schema: contentType.schema as ContentSchema,
+      },
+      contentRoutes: options.contentRoutes ?? [],
+    });
+    if (!detailPage) return null;
+
+    const metaDescription =
+      "seo" in entryDetail && entryDetail.seo
+        ? (entryDetail.seo.description ?? resolvePostRuntimeMetaDescription(entryDetail.data))
+        : resolvePostRuntimeMetaDescription(entryDetail.data);
+    return renderPublicPageRuntimeHtml({
+      title: entryDetail.title ?? contentType.name,
+      blocks: await hydrateRuntimeBlocks(detailPage.blocks, {
+        preview: false,
+        contentRoutes: options.contentRoutes ?? [],
+        runtimeCache: {},
+      }),
+      cssHref,
+      inlineCss,
+      devModuleScripts,
+      isPreview: false,
+      layoutSettings: detailPage.document.settings.layout,
+      metaDescription,
+      themeName: options.themeName ?? (await resolvePublicThemeName()),
+      templateKey: detailPage.document.settings.template,
+    });
+  }
+
   return renderPublicEntryDetailHtml({
     title: entryDetail.title ?? contentType.name,
-    contentType: {
-      id: contentType.id,
-      name: contentType.name,
-      slug: contentType.slug,
-      schema: contentType.schema as ContentSchema,
-    },
+    contentType: contentTypeSnapshot,
     entry: entryDetail,
     cssHref,
     inlineCss,
@@ -776,12 +776,10 @@ const renderEntryDetailHtml = async (
     themeName: options?.themeName ?? (await resolvePublicThemeName()),
     metaDescription:
       "seo" in entryDetail && entryDetail.seo
-        ? entryDetail.seo.description ?? resolvePostRuntimeMetaDescription(entryDetail.data)
+        ? (entryDetail.seo.description ?? resolvePostRuntimeMetaDescription(entryDetail.data))
         : resolvePostRuntimeMetaDescription(entryDetail.data),
     canonicalUrl:
-      "seo" in entryDetail && entryDetail.seo
-        ? entryDetail.seo.canonicalUrl ?? null
-        : null,
+      "seo" in entryDetail && entryDetail.seo ? (entryDetail.seo.canonicalUrl ?? null) : null,
   });
 };
 
@@ -890,10 +888,7 @@ export async function handlePublicRequest(req: Request) {
 
     if (preview.targetType === "widget-template") {
       try {
-        const html = await renderWidgetTemplatePreviewHtml(
-          preview.targetId,
-          previewDevice
-        );
+        const html = await renderWidgetTemplatePreviewHtml(preview.targetId, previewDevice);
         return buildHtmlResponse(html);
       } catch (error) {
         if (error instanceof Error && error.message === "widget_template_not_found") {
@@ -954,7 +949,11 @@ export async function handlePublicRequest(req: Request) {
     }
     const slug = match.params.slug ?? match.params.id ?? "";
     if (!slug) return new Response("Not Found", { status: 404 });
-    const html = await renderEntryDetailHtml(match.type, slug, { themeName });
+    const html = await renderEntryDetailHtml(match.type, slug, {
+      themeName,
+      detailPageId: match.detailPageId,
+      contentRoutes,
+    });
     if (!html) return new Response("Not Found", { status: 404 });
     if (shouldUseCache) {
       setSiteCacheEntry(cacheKey, html, cacheTtlSeconds);

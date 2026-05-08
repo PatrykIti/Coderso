@@ -5,7 +5,7 @@
 **Category:** CMS/Admin API + Detail Pages
 **Estimated Effort:** Large
 **Dependencies:** TASK-190-05-03-01, TASK-190-05-03-04
-**Status:** To Do
+**Status:** In Progress (2026-05-08)
 
 ---
 
@@ -27,6 +27,14 @@ API, but the work is split so we do not mix:
 - admin client/cache/delete parity
 
 into one oversized slice.
+
+Current slice note:
+- `TASK-190-05-03-07-02` is landed: `site.contentRoutes` now round-trips
+  optional `detailPageId` through settings normalization, assistant
+  `setting.content-route.upsert`, Site Settings client/form types, and matcher
+  metadata.
+- Internal detail-page CRUD/revision/preview routes and admin client/cache
+  parity remain open in the remaining subleaves.
 
 ## Sub-Tasks
 

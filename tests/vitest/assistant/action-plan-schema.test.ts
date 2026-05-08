@@ -27,6 +27,63 @@ test("normalizeAssistantActionPlan accepts current catalog family plans", () => 
   ]);
 });
 
+test("normalizeAssistantActionPlan accepts content route actions with explicit detailPageId semantics", () => {
+  const normalized = normalizeAssistantActionPlan({
+    id: "plan-content-route-detail-page-id",
+    status: "ready",
+    intentId: "content-route-detail-page-id",
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+    title: "Update content route",
+    answer: "I can update the content route.",
+    summary: "Update the route metadata.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "route-blog",
+        type: "setting.content-route.upsert",
+        title: "Update blog route",
+        description: "Update the blog route.",
+        input: {
+          typeSlug: "blog",
+          listPath: "/blog",
+          detailPath: "/blog/:slug",
+          enabled: true,
+          detailPageId: "4dd7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+        },
+      },
+      {
+        id: "route-news",
+        type: "setting.content-route.upsert",
+        title: "Clear news route detail page link",
+        description: "Clear the linked detail page.",
+        input: {
+          typeSlug: "news",
+          listPath: "/news",
+          detailPath: "/news/:slug",
+          enabled: true,
+          detailPageId: null,
+        },
+      },
+    ],
+  });
+
+  expect(normalized.actions[0]).toMatchObject({
+    type: "setting.content-route.upsert",
+    input: {
+      detailPageId: "4dd7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+    },
+  });
+  expect(normalized.actions[1]).toMatchObject({
+    type: "setting.content-route.upsert",
+    input: {
+      detailPageId: null,
+    },
+  });
+});
+
 test("normalizeAssistantActionPlan accepts strict planner metadata", () => {
   const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
     promptKind: "setup_request",

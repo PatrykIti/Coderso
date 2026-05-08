@@ -241,6 +241,7 @@ export type AssistantContentRouteUpsertAction = {
     listPath: string;
     detailPath: string;
     enabled: boolean;
+    detailPageId?: string | null;
   };
 };
 

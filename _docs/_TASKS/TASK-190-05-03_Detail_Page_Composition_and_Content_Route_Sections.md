@@ -29,8 +29,20 @@ Current slice note:
   storage, strict schema normalization, deterministic UUID-compatible id rules,
   and the content-type delete guard for `content_type_has_detail_pages` now
   exist under the content-domain owner seam.
-- Binding resolution, runtime rendering, preview/cache, reviewed action
-  adapters, and route/admin round-trip remain open in the later leaves.
+- `TASK-190-05-03-02` is landed: detail-page blocks now resolve strict
+  entry-field/meta/computed bindings through the content-domain owner seam
+  using shared safe dot-path helpers, bounded `formContext`, and the existing
+  collection/listing runtime seams for `detailHref` / `relatedItems`.
+- `TASK-190-05-03-07-02` is landed: `site.contentRoutes` and
+  `contentRouteMatcher.ts` now round-trip structural `detailPageId` metadata
+  without introducing a second route registry, so the runtime leaf can consume
+  validated route linkage next.
+- `TASK-190-05-03-03` is landed: published content routes with linked
+  `detailPageId` now render composed detail-page blocks through the existing
+  page runtime shell, while unlinked routes stay on the legacy entry-detail
+  renderer.
+- Preview/cache, reviewed action adapters, and the remaining route/admin leaves
+  stay open in the later slices.
 
 This unlocks proper Mabudo-like/product/service/portfolio detail pages instead
 of generic entry detail output.

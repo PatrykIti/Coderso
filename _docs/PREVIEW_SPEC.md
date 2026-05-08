@@ -55,6 +55,11 @@ Dotyczy:
 - `GET /preview?type=content&token=<token>`
 - `GET /preview?type=widget-template&token=<token>`
 
+Uwaga: `site.contentRoutes` moze teraz przenosic opcjonalne `detailPageId`
+jako structural link do canonical detail-page document. Ten round-trip jest
+wlascicielem tylko metadata route link; dedykowany detail-page preview target i
+draft/current document preview pozostaja w kolejnych detail-page leaves.
+
 Resolver policy dla `previewUrl` zwracanego przez Admin API:
 1. `settings["site.publicBaseUrl"]`
 2. `PUBLIC_BASE_URL` (ENV fallback)

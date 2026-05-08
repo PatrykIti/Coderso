@@ -270,12 +270,15 @@ const normalizeSort = (value: unknown) =>
   });
 
 const normalizeContentRouteInput = (input: JsonRecord) => {
-  assertKeys(input, new Set(["typeSlug", "listPath", "detailPath", "enabled"]));
+  assertKeys(input, new Set(["typeSlug", "listPath", "detailPath", "enabled", "detailPageId"]));
   return {
     typeSlug: readText(input.typeSlug),
     listPath: readText(input.listPath),
     detailPath: readText(input.detailPath),
     enabled: readBoolean(input.enabled),
+    ...(Object.prototype.hasOwnProperty.call(input, "detailPageId")
+      ? { detailPageId: readOptionalText(input.detailPageId) }
+      : {}),
   };
 };
 
