@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act, forwardRef } from "react";
+import React, { forwardRef } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -13,27 +13,23 @@ vi.mock("@/components/ui/badge", () => ({
 }));
 
 vi.mock("@/components/ui/button", () => ({
-  Button: forwardRef<
-    HTMLButtonElement,
-    React.ButtonHTMLAttributes<HTMLButtonElement>
-  >(function MockButton(
-    { children, onClick, onFocus, disabled, className, ...props },
-    ref
-  ) {
-    return (
-      <button
-        ref={ref}
-        type="button"
-        onClick={onClick}
-        onFocus={onFocus}
-        disabled={disabled}
-        className={className}
-        {...props}
-      >
-        {children}
-      </button>
-    );
-  }),
+  Button: forwardRef<HTMLButtonElement, React.ButtonHTMLAttributes<HTMLButtonElement>>(
+    function MockButton({ children, onClick, onFocus, disabled, className, ...props }, ref) {
+      return (
+        <button
+          ref={ref}
+          type="button"
+          onClick={onClick}
+          onFocus={onFocus}
+          disabled={disabled}
+          className={className}
+          {...props}
+        >
+          {children}
+        </button>
+      );
+    }
+  ),
 }));
 
 vi.mock("@/components/ui/input", () => ({
@@ -53,14 +49,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -75,7 +71,7 @@ const clickByText = (container: HTMLElement, text: string) => {
   if (!(button instanceof HTMLButtonElement)) {
     throw new Error(`Missing button: ${text}`);
   }
-  act(() => {
+  React.act(() => {
     button.click();
   });
 };
@@ -84,7 +80,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) {
     throw new Error(`Missing input for value: ${value}`);
   }
-  act(() => {
+  React.act(() => {
     const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -141,7 +137,7 @@ test("BlockInserter supports keyboard insertion, direct insertion, and disabled 
       throw new Error("Missing listbox");
     }
 
-    act(() => {
+    React.act(() => {
       listbox.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
       listbox.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
     });
@@ -166,7 +162,7 @@ test("BlockInserter supports keyboard insertion, direct insertion, and disabled 
       throw new Error("Missing disabled listbox");
     }
 
-    act(() => {
+    React.act(() => {
       listbox.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
       listbox.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
     });
@@ -184,13 +180,9 @@ test("BlockInserter scopes search copy and results to the active category", () =
   try {
     clickByText(view.container, "Media");
 
-    const mediaSearch = view.container.querySelector(
-      'input[aria-label="Search Media blocks"]'
-    );
+    const mediaSearch = view.container.querySelector('input[aria-label="Search Media blocks"]');
     expect(mediaSearch).toBeInstanceOf(HTMLInputElement);
-    expect((mediaSearch as HTMLInputElement).placeholder).toBe(
-      "Search Media blocks..."
-    );
+    expect((mediaSearch as HTMLInputElement).placeholder).toBe("Search Media blocks...");
 
     setInputValue(mediaSearch, "cta");
     expect(view.container.textContent).toContain("No block matches this search.");

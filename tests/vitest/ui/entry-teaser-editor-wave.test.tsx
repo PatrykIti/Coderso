@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act, useState } from "react";
+import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -265,14 +265,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -281,7 +281,7 @@ const mount = (node: React.ReactNode) => {
 };
 
 const flush = async () => {
-  await act(async () => {
+  await React.act(async () => {
     await Promise.resolve();
     await Promise.resolve();
     await Promise.resolve();
@@ -291,7 +291,7 @@ const flush = async () => {
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
-  act(() => {
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -301,7 +301,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 const setTextareaValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLTextAreaElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
-  act(() => {
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -311,7 +311,7 @@ const setTextareaValue = (element: Element | null | undefined, value: string) =>
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
-  act(() => {
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
   });
@@ -324,14 +324,14 @@ const clickButtonByText = (container: HTMLElement, text: string) => {
   if (!button) {
     throw new Error(`Missing button: ${text}`);
   }
-  act(() => {
+  React.act(() => {
     button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 };
 
 const clickElement = (element: Element | null | undefined) => {
   if (!element) return;
-  act(() => {
+  React.act(() => {
     element.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 };
@@ -811,7 +811,7 @@ test("EntryTeaser editors cover legacy manual mode, style fields, CTA options, a
     expect(view.container.textContent).toContain("Variant and structure");
     expect(view.container.textContent).toContain("Runtime payload snapshot");
 
-    act(() => {
+    React.act(() => {
       setSelectValue(findSelectByOptions(view.container, ["legacy", "listing"]), "legacy");
       setSelectValue(
         findSelectByOptions(view.container, ["latest", "featured", "manual"]),
@@ -820,7 +820,7 @@ test("EntryTeaser editors cover legacy manual mode, style fields, CTA options, a
     });
     await flush();
 
-    act(() => {
+    React.act(() => {
       setSelectValue(
         findSelectByOptions(view.container, ["__no_content_type__", "articles"]),
         "articles"
@@ -828,7 +828,7 @@ test("EntryTeaser editors cover legacy manual mode, style fields, CTA options, a
     });
     await flush();
 
-    act(() => {
+    React.act(() => {
       setSelectValue(findSelectByOptions(view.container, ["__no_entry__", "entry-1"]), "entry-1");
       setSelectValue(
         findSelectByOptions(view.container, ["horizontal", "vertical", "minimal"]),
@@ -838,12 +838,12 @@ test("EntryTeaser editors cover legacy manual mode, style fields, CTA options, a
     });
     await flush();
 
-    act(() => {
+    React.act(() => {
       setSelectValue(findSelectByOptions(view.container, ["auto", "custom"]), "custom");
     });
     await flush();
 
-    act(() => {
+    React.act(() => {
       setInputValue(
         findInputByPlaceholder(view.container, "/blog/entry-slug or https://..."),
         "/custom-entry"
@@ -941,7 +941,7 @@ test("EntryTeaser editors cover listing mode and content/listings loading errors
     await flush();
     expect(errorView.container.textContent).toContain("Types failed");
 
-    act(() => {
+    React.act(() => {
       setSelectValue(findSelectByOptions(errorView.container, ["legacy", "listing"]), "listing");
     });
     await flush();
@@ -956,12 +956,12 @@ test("EntryTeaser editors cover listing mode and content/listings loading errors
   try {
     await flush();
 
-    act(() => {
+    React.act(() => {
       setSelectValue(findSelectByOptions(successView.container, ["legacy", "listing"]), "listing");
     });
     await flush();
 
-    act(() => {
+    React.act(() => {
       setSelectValue(
         findSelectByOptions(successView.container, ["__no_listing_query__", "query-1"]),
         "query-1"

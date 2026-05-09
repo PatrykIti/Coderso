@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act, useState } from "react";
+import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -57,9 +57,7 @@ vi.mock("@/components/ui/select", () => {
       .join("")
       .trim();
 
-  const collectOptions = (
-    value: React.ReactNode
-  ): Array<{ value: string; label: string }> =>
+  const collectOptions = (value: React.ReactNode): Array<{ value: string; label: string }> =>
     React.Children.toArray(value).flatMap((child) => {
       if (!React.isValidElement(child)) return [];
       if (typeof child.props.value === "string") {
@@ -126,14 +124,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -143,10 +141,7 @@ const mount = (node: React.ReactNode) => {
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
   descriptor?.set?.call(element, value);
   element.dispatchEvent(new Event("input", { bubbles: true }));
   element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -154,10 +149,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 
 const setTextareaValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLTextAreaElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLTextAreaElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
   descriptor?.set?.call(element, value);
   element.dispatchEvent(new Event("input", { bubbles: true }));
   element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -165,10 +157,7 @@ const setTextareaValue = (element: Element | null | undefined, value: string) =>
 
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
   descriptor?.set?.call(element, value);
   element.dispatchEvent(new Event("change", { bubbles: true }));
 };
@@ -180,14 +169,14 @@ const clickButtonByText = (container: HTMLElement, text: string) => {
   if (!button) {
     throw new Error(`Missing button: ${text}`);
   }
-  act(() => {
+  React.act(() => {
     button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 };
 
 const clickElement = (element: Element | null | undefined) => {
   if (!element) return;
-  act(() => {
+  React.act(() => {
     element.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 };
@@ -201,8 +190,7 @@ const findInputByPlaceholder = (container: HTMLElement, placeholder: string) =>
 const findTextareaByPlaceholder = (container: HTMLElement, placeholder: string) =>
   Array.from(container.querySelectorAll("textarea")).find(
     (element) =>
-      element instanceof HTMLTextAreaElement &&
-      element.getAttribute("placeholder") === placeholder
+      element instanceof HTMLTextAreaElement && element.getAttribute("placeholder") === placeholder
   );
 
 const findSelectByOptions = (container: ParentNode, values: string[]) =>
@@ -233,9 +221,7 @@ const contentTypeOptions = [
 ];
 
 test("FormActionsPanel adds every action type and exposes matching config editors", async () => {
-  const { FormActionsPanel } = await import(
-    "../../../core/admin/ui/forms/FormActionsPanel"
-  );
+  const { FormActionsPanel } = await import("../../../core/admin/ui/forms/FormActionsPanel");
 
   const onOpenLogs = vi.fn();
   const onChangeSpy = vi.fn();
@@ -284,26 +270,14 @@ test("FormActionsPanel adds every action type and exposes matching config editor
     expect(view.container.textContent).toContain("Redirect");
     expect(view.container.textContent).toContain("Success message");
 
-    expect(
-      findInputByPlaceholder(view.container, "To (e.g. {{submission.email}})")
-    ).toBeTruthy();
-    expect(
-      findInputByPlaceholder(view.container, "https://example.com/webhook")
-    ).toBeTruthy();
+    expect(findInputByPlaceholder(view.container, "To (e.g. {{submission.email}})")).toBeTruthy();
+    expect(findInputByPlaceholder(view.container, "https://example.com/webhook")).toBeTruthy();
     expect(findInputByPlaceholder(view.container, "/thank-you")).toBeTruthy();
-    expect(
-      findTextareaByPlaceholder(view.container, "Thanks for your submission.")
-    ).toBeTruthy();
+    expect(findTextareaByPlaceholder(view.container, "Thanks for your submission.")).toBeTruthy();
 
-    act(() => {
-      setInputValue(
-        findInputByPlaceholder(view.container, "Subject"),
-        "Lead received"
-      );
-      setInputValue(
-        findInputByPlaceholder(view.container, "/thank-you"),
-        "/done"
-      );
+    React.act(() => {
+      setInputValue(findInputByPlaceholder(view.container, "Subject"), "Lead received");
+      setInputValue(findInputByPlaceholder(view.container, "/thank-you"), "/done");
       setTextareaValue(
         findTextareaByPlaceholder(view.container, "Thanks for your submission."),
         "Saved"
@@ -311,24 +285,16 @@ test("FormActionsPanel adds every action type and exposes matching config editor
     });
 
     const editedActions = onChangeSpy.mock.lastCall?.[0] as FormActionInput[];
-    expect(editedActions[0]?.config).toEqual(
-      expect.objectContaining({ subject: "Lead received" })
-    );
-    expect(editedActions[3]?.config).toEqual(
-      expect.objectContaining({ url: "/done" })
-    );
-    expect(editedActions[4]?.config).toEqual(
-      expect.objectContaining({ message: "Saved" })
-    );
+    expect(editedActions[0]?.config).toEqual(expect.objectContaining({ subject: "Lead received" }));
+    expect(editedActions[3]?.config).toEqual(expect.objectContaining({ url: "/done" }));
+    expect(editedActions[4]?.config).toEqual(expect.objectContaining({ message: "Saved" }));
   } finally {
     view.cleanup();
   }
 });
 
 test("FormActionsPanel updates conditions, webhook and entry-sync config, ordering, and removal", async () => {
-  const { FormActionsPanel } = await import(
-    "../../../core/admin/ui/forms/FormActionsPanel"
-  );
+  const { FormActionsPanel } = await import("../../../core/admin/ui/forms/FormActionsPanel");
 
   const onChangeSpy = vi.fn();
   const onOpenLogs = vi.fn();
@@ -385,7 +351,7 @@ test("FormActionsPanel updates conditions, webhook and entry-sync config, orderi
     const sections = () => Array.from(view.container.querySelectorAll("section"));
 
     const webhookSection = sections()[0] as HTMLElement;
-    act(() => {
+    React.act(() => {
       setSelectValue(
         findSelectByOptions(webhookSection, [
           "always",
@@ -396,22 +362,13 @@ test("FormActionsPanel updates conditions, webhook and entry-sync config, orderi
         ]),
         "exists"
       );
-      setInputValue(
-        findInputByPlaceholder(webhookSection, "submission.fieldName"),
-        "email"
-      );
+      setInputValue(findInputByPlaceholder(webhookSection, "submission.fieldName"), "email");
       setInputValue(
         findInputByPlaceholder(webhookSection, "https://example.com/webhook"),
         "https://hooks.test"
       );
-      setSelectValue(
-        findSelectByOptions(webhookSection, ["POST", "PUT", "PATCH"]),
-        "PUT"
-      );
-      setInputValue(
-        findInputByPlaceholder(webhookSection, "Timeout ms"),
-        "12000"
-      );
+      setSelectValue(findSelectByOptions(webhookSection, ["POST", "PUT", "PATCH"]), "PUT");
+      setInputValue(findInputByPlaceholder(webhookSection, "Timeout ms"), "12000");
       setTextareaValue(
         findTextareaByPlaceholder(
           webhookSection,
@@ -421,15 +378,13 @@ test("FormActionsPanel updates conditions, webhook and entry-sync config, orderi
       );
     });
 
-    const webhookCheckboxes = Array.from(
-      webhookSection.querySelectorAll("input[type='checkbox']")
-    );
+    const webhookCheckboxes = Array.from(webhookSection.querySelectorAll("input[type='checkbox']"));
     clickElement(webhookCheckboxes[0]);
     clickElement(webhookCheckboxes[1]);
     clickElement(webhookCheckboxes[2]);
 
     const entrySyncSection = sections()[1] as HTMLElement;
-    act(() => {
+    React.act(() => {
       setSelectValue(
         findSelectByOptions(entrySyncSection, [
           "always",
@@ -440,58 +395,34 @@ test("FormActionsPanel updates conditions, webhook and entry-sync config, orderi
         ]),
         "equals"
       );
-      setInputValue(
-        findInputByPlaceholder(entrySyncSection, "submission.fieldName"),
-        "newsletter"
-      );
-      setInputValue(
-        findInputByPlaceholder(entrySyncSection, "Expected value"),
-        "yes"
-      );
-      setSelectValue(
-        findSelectByOptions(entrySyncSection, ["articles"]),
-        "articles"
-      );
+      setInputValue(findInputByPlaceholder(entrySyncSection, "submission.fieldName"), "newsletter");
+      setInputValue(findInputByPlaceholder(entrySyncSection, "Expected value"), "yes");
+      setSelectValue(findSelectByOptions(entrySyncSection, ["articles"]), "articles");
       setSelectValue(
         findSelectByOptions(entrySyncSection, ["create", "upsert_by_slug"]),
         "upsert_by_slug"
       );
       setInputValue(
-        findInputByPlaceholder(
-          entrySyncSection,
-          "Title template, e.g. {{submission.name}}"
-        ),
+        findInputByPlaceholder(entrySyncSection, "Title template, e.g. {{submission.name}}"),
         "{{submission.email}}"
       );
       setInputValue(
-        findInputByPlaceholder(
-          entrySyncSection,
-          "Slug template, e.g. {{submissionId}}"
-        ),
+        findInputByPlaceholder(entrySyncSection, "Slug template, e.g. {{submissionId}}"),
         "{{submission.slug}}"
       );
     });
 
     clickButtonByText(entrySyncSection, "Add field");
-    act(() => {
-      setInputValue(
-        findInputByPlaceholder(entrySyncSection, "Entry field"),
-        "headline"
-      );
-      setInputValue(
-        findInputByPlaceholder(entrySyncSection, "Template"),
-        "{{submission.name}}"
-      );
+    React.act(() => {
+      setInputValue(findInputByPlaceholder(entrySyncSection, "Entry field"), "headline");
+      setInputValue(findInputByPlaceholder(entrySyncSection, "Template"), "{{submission.name}}");
     });
 
     const entrySyncButtons = Array.from(entrySyncSection.querySelectorAll("button"));
     clickElement(entrySyncButtons[0]);
 
     const movedActions = onChangeSpy.mock.lastCall?.[0] as FormActionInput[];
-    expect(movedActions.map((action) => action.type)).toEqual([
-      "entry_sync",
-      "webhook",
-    ]);
+    expect(movedActions.map((action) => action.type)).toEqual(["entry_sync", "webhook"]);
 
     const firstSectionButtons = Array.from(
       (sections()[0] as HTMLElement).querySelectorAll("button")
@@ -521,9 +452,7 @@ test("FormActionsPanel updates conditions, webhook and entry-sync config, orderi
 });
 
 test("FormActionsPanel supports fallback labels, action relabeling, move-down ordering, and mapping removal", async () => {
-  const { FormActionsPanel } = await import(
-    "../../../core/admin/ui/forms/FormActionsPanel"
-  );
+  const { FormActionsPanel } = await import("../../../core/admin/ui/forms/FormActionsPanel");
 
   const onChangeSpy = vi.fn();
   const initialActions: FormActionInput[] = [
@@ -594,7 +523,7 @@ test("FormActionsPanel supports fallback labels, action relabeling, move-down or
         element.getAttribute("placeholder") === "Action label"
     );
 
-    act(() => {
+    React.act(() => {
       setInputValue(redirectLabelInput, "Redirect renamed");
     });
 
@@ -612,9 +541,7 @@ test("FormActionsPanel supports fallback labels, action relabeling, move-down or
     );
 
     const redirectButtons = Array.from(redirectSection.querySelectorAll("button"));
-    const moveDownButton = redirectButtons.find((button) =>
-      button.textContent?.includes("↓")
-    );
+    const moveDownButton = redirectButtons.find((button) => button.textContent?.includes("↓"));
 
     clickElement(moveDownButton);
 

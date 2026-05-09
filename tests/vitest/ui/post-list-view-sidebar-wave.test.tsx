@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -96,9 +96,7 @@ vi.mock("@/components/ui/tabs", () => ({
     forceMount?: boolean;
     children: React.ReactNode;
   }) =>
-    forceMount || value === tabsState.value ? (
-      <div data-tab-content={value}>{children}</div>
-    ) : null,
+    forceMount || value === tabsState.value ? <div data-tab-content={value}>{children}</div> : null,
 }));
 
 vi.mock("../../../core/admin/ui/posts/editor/outline/PostDocumentOutline", () => ({
@@ -160,14 +158,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -188,7 +186,11 @@ test("PostListViewSidebar routes outline/list view state and child callbacks", (
 
   const view = mount(
     <PostListViewSidebar
-      document={{ version: 1, blocks: [{ id: "block-1", type: "paragraph", attrs: {}, content: "Body" }], meta: {} }}
+      document={{
+        version: 1,
+        blocks: [{ id: "block-1", type: "paragraph", attrs: {}, content: "Body" }],
+        meta: {},
+      }}
       selectedBlockId="block-1"
       onSelectBlock={onSelectBlock}
       onDeleteBlock={onDeleteBlock}
@@ -207,7 +209,7 @@ test("PostListViewSidebar routes outline/list view state and child callbacks", (
     expect(view.container.querySelector("[data-tabs-value='list-view']")).not.toBeNull();
 
     const buttons = Array.from(view.container.querySelectorAll("button"));
-    act(() => {
+    React.act(() => {
       buttons.find((button) => button.textContent === "Outline")?.click();
       buttons.find((button) => button.textContent === "outline-select")?.click();
       buttons.find((button) => button.textContent === "list-select")?.click();
@@ -258,7 +260,7 @@ test("PostListViewSidebar routes outline inserter groups through onInsertBlock",
     expect(view.container.textContent).toContain("Interactive");
 
     const buttons = Array.from(view.container.querySelectorAll("button"));
-    act(() => {
+    React.act(() => {
       buttons.find((button) => button.textContent?.includes("Paragraph"))?.click();
       buttons.find((button) => button.textContent?.includes("Image"))?.click();
       buttons.find((button) => button.textContent?.includes("Button"))?.click();

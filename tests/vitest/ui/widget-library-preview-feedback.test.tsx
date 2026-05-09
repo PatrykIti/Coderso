@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -73,22 +73,21 @@ vi.mock("../../../core/admin/ui/widgets/WidgetLibraryRowActions", () => ({
 import { AdminRouterProvider } from "../../../core/admin/ui/contexts/AdminRouterContext";
 import { WidgetLibraryPage } from "../../../core/admin/ui/widgets/WidgetLibraryPage";
 
-(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT =
-  true;
+(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const mount = (node: React.ReactNode) => {
   const container = document.createElement("div");
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -109,12 +108,12 @@ test("WidgetLibraryPage preview feedback stays toast-only", () => {
   );
 
   try {
-    const preview = Array.from(view.container.querySelectorAll("button")).find(
-      (button) => button.textContent?.includes("Preview")
+    const preview = Array.from(view.container.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("Preview")
     ) as HTMLButtonElement | undefined;
     expect(preview).toBeDefined();
 
-    act(() => {
+    React.act(() => {
       preview?.click();
     });
 

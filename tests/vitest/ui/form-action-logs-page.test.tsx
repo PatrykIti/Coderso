@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -123,9 +123,7 @@ vi.mock("@/components/ui/select", () => {
       .join("")
       .trim();
 
-  const collectOptions = (
-    value: React.ReactNode
-  ): Array<{ value: string; label: string }> =>
+  const collectOptions = (value: React.ReactNode): Array<{ value: string; label: string }> =>
     React.Children.toArray(value).flatMap((child) => {
       if (!React.isValidElement(child)) return [];
       if (typeof child.props.value === "string") {
@@ -176,10 +174,7 @@ vi.mock("@/services/cachePolicy", () => ({
 vi.mock("@/services/formsClient", () => ({
   getForm: vi.fn(async () => actionLogsState.form),
   listFormActionRuns: vi.fn(
-    async (
-      id: string,
-      options: { status?: "success" | "failed" | "skipped"; limit?: number }
-    ) => {
+    async (id: string, options: { status?: "success" | "failed" | "skipped"; limit?: number }) => {
       actionLogsState.listCalls.push({ id, ...options });
       if (actionLogsState.listError) throw actionLogsState.listError;
       if (!options.status) return actionLogsState.runs;
@@ -246,14 +241,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -262,7 +257,7 @@ const mount = (node: React.ReactNode) => {
 };
 
 const flush = async () => {
-  await act(async () => {
+  await React.act(async () => {
     await Promise.resolve();
     await Promise.resolve();
   });
@@ -275,17 +270,14 @@ const clickByText = (container: HTMLElement, text: string) => {
   if (!button) {
     throw new Error(`Missing button: ${text}`);
   }
-  act(() => {
+  React.act(() => {
     button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 };
 
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
   descriptor?.set?.call(element, value);
   element.dispatchEvent(new Event("change", { bubbles: true }));
 };
@@ -297,9 +289,7 @@ afterEach(() => {
 
 test("FormActionLogsPage loads stats, filters runs, retries failures, refreshes from cache bus, and navigates back", async () => {
   window.history.replaceState({}, "", "/admin/forms/form-1/action-runs");
-  const { FormActionLogsPage } = await import(
-    "../../../core/admin/ui/forms/FormActionLogsPage"
-  );
+  const { FormActionLogsPage } = await import("../../../core/admin/ui/forms/FormActionLogsPage");
 
   const view = mount(<FormActionLogsPage />);
 
@@ -319,7 +309,7 @@ test("FormActionLogsPage loads stats, filters runs, retries failures, refreshes 
     });
 
     const select = view.container.querySelector("select");
-    act(() => {
+    React.act(() => {
       setSelectValue(select ?? undefined, "failed");
     });
     await flush();
@@ -337,7 +327,7 @@ test("FormActionLogsPage loads stats, filters runs, retries failures, refreshes 
 
     expect(actionLogsState.retryCalls).toContain("run-failed");
 
-    await act(async () => {
+    await React.act(async () => {
       for (const subscriber of actionLogsState.subscribers) {
         subscriber({ key: "formActionRuns:form-1" });
       }
@@ -360,9 +350,7 @@ test("FormActionLogsPage loads stats, filters runs, retries failures, refreshes 
 
 test("FormActionLogsPage reports api and generic load/retry errors", async () => {
   window.history.replaceState({}, "", "/admin/forms/form-1/action-runs");
-  const { FormActionLogsPage } = await import(
-    "../../../core/admin/ui/forms/FormActionLogsPage"
-  );
+  const { FormActionLogsPage } = await import("../../../core/admin/ui/forms/FormActionLogsPage");
 
   actionLogsState.listError = actionLogsState.apiError("Runs failed");
   const errorView = mount(<FormActionLogsPage />);
@@ -385,9 +373,7 @@ test("FormActionLogsPage reports api and generic load/retry errors", async () =>
   try {
     await flush();
 
-    expect(genericLoadView.container.textContent).toContain(
-      "Failed to load action logs."
-    );
+    expect(genericLoadView.container.textContent).toContain("Failed to load action logs.");
   } finally {
     genericLoadView.cleanup();
   }

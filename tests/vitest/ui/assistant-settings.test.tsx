@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -16,14 +16,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -79,39 +79,33 @@ test("AssistantSettingsPage links OpenAI provider to integrations secrets", () =
   expect(html).toContain("/admin/settings/integrations");
 });
 
-
 test("Run reindex triggers assistant reindex without calling onSave first", async () => {
   const onSave = vi.fn();
-  const reindexSpy = vi
-    .spyOn(assistantClient, "reindexAssistantDocs")
-    .mockResolvedValue({
-      retrievalBackend: "db",
-      builtAt: "2026-03-20T15:40:00.000Z",
-      buildDurationMs: 120,
-      docCount: 40,
-      chunkCount: 220,
-      totalTokens: 4400,
-      actorId: "user-1",
-    });
+  const reindexSpy = vi.spyOn(assistantClient, "reindexAssistantDocs").mockResolvedValue({
+    retrievalBackend: "db",
+    builtAt: "2026-03-20T15:40:00.000Z",
+    buildDurationMs: 120,
+    docCount: 40,
+    chunkCount: 220,
+    totalTokens: 4400,
+    actorId: "user-1",
+  });
 
   const view = mount(
     <AdminRouterProvider initialPath="/admin/settings/assistant">
-      <AssistantSettingsPage
-        values={{ assistantEnabled: true }}
-        onSave={onSave}
-      />
+      <AssistantSettingsPage values={{ assistantEnabled: true }} onSave={onSave} />
     </AdminRouterProvider>
   );
 
-  const reindexButton = Array.from(view.container.querySelectorAll("button")).find(
-    (button) => button.textContent?.includes("Run reindex")
+  const reindexButton = Array.from(view.container.querySelectorAll("button")).find((button) =>
+    button.textContent?.includes("Run reindex")
   );
 
   if (!reindexButton) {
     throw new Error("Missing reindex button");
   }
 
-  await act(async () => {
+  await React.act(async () => {
     reindexButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     await Promise.resolve();
     await Promise.resolve();

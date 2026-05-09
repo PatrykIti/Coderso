@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act, useState } from "react";
+import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -22,13 +22,7 @@ vi.mock("@/components/ui/input", () => ({
     type?: string;
     [key: string]: unknown;
   }) => (
-    <input
-      value={value}
-      onChange={onChange}
-      placeholder={placeholder}
-      type={type}
-      {...props}
-    />
+    <input value={value} onChange={onChange} placeholder={placeholder} type={type} {...props} />
   ),
 }));
 
@@ -67,14 +61,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -84,11 +78,8 @@ const mount = (node: React.ReactNode) => {
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  );
-  act(() => {
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -97,11 +88,8 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 
 const setTextareaValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLTextAreaElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLTextAreaElement.prototype,
-    "value"
-  );
-  act(() => {
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -111,20 +99,20 @@ const setTextareaValue = (element: Element | null | undefined, value: string) =>
 const setCheckboxValue = (element: Element | null | undefined, checked: boolean) => {
   if (!(element instanceof HTMLInputElement)) return;
   if (element.checked === checked) return;
-  act(() => {
+  React.act(() => {
     element.click();
   });
 };
 
 const findLabelInput = (container: ParentNode, text: string) =>
-  Array.from(container.querySelectorAll("label")).find((label) =>
-    label.textContent?.includes(text)
-  )?.querySelector("input");
+  Array.from(container.querySelectorAll("label"))
+    .find((label) => label.textContent?.includes(text))
+    ?.querySelector("input");
 
 const findLabelTextarea = (container: ParentNode, text: string) =>
-  Array.from(container.querySelectorAll("label")).find((label) =>
-    label.textContent?.includes(text)
-  )?.querySelector("textarea");
+  Array.from(container.querySelectorAll("label"))
+    .find((label) => label.textContent?.includes(text))
+    ?.querySelector("textarea");
 
 const findToggleByText = (container: ParentNode, text: string) =>
   Array.from(container.querySelectorAll('input[type="checkbox"]')).find((element) =>
@@ -201,7 +189,9 @@ test("AppointmentForm editors cover normalized defaults, field toggles, copy upd
   const view = mount(<Harness />);
 
   try {
-    expect((findLabelInput(view.container, "Flow key") as HTMLInputElement | null | undefined)?.value).toBe("booking-flow");
+    expect(
+      (findLabelInput(view.container, "Flow key") as HTMLInputElement | null | undefined)?.value
+    ).toBe("booking-flow");
 
     setInputValue(findLabelInput(view.container, "Flow key"), "concierge-flow");
     setInputValue(findLabelInput(view.container, "Title"), "Priority booking");
@@ -328,13 +318,18 @@ test("AppointmentForm editors render safe empty-string fallbacks when normalized
     );
 
     expect(textInputs.every((input) => input.value === "")).toBe(true);
-    expect((findLabelTextarea(view.container, "Description") as HTMLTextAreaElement | null | undefined)?.value).toBe("");
-    expect((findToggleByText(view.container, "Show phone field") as HTMLInputElement | null | undefined)?.checked).toBe(
-      true
-    );
-    expect((findToggleByText(view.container, "Show notes field") as HTMLInputElement | null | undefined)?.checked).toBe(
-      true
-    );
+    expect(
+      (findLabelTextarea(view.container, "Description") as HTMLTextAreaElement | null | undefined)
+        ?.value
+    ).toBe("");
+    expect(
+      (findToggleByText(view.container, "Show phone field") as HTMLInputElement | null | undefined)
+        ?.checked
+    ).toBe(true);
+    expect(
+      (findToggleByText(view.container, "Show notes field") as HTMLInputElement | null | undefined)
+        ?.checked
+    ).toBe(true);
   } finally {
     view.cleanup();
     vi.doUnmock("../../../core/widgets/core/appointmentForm");

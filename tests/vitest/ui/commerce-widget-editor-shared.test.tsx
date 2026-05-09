@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act, useState } from "react";
+import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -75,13 +75,9 @@ vi.mock("@/components/ui/select", () => ({
   SelectTrigger: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
   SelectValue: () => null,
   SelectContent: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
-  SelectItem: ({
-    value,
-    children,
-  }: {
-    value: string;
-    children?: React.ReactNode;
-  }) => <option value={value}>{children}</option>,
+  SelectItem: ({ value, children }: { value: string; children?: React.ReactNode }) => (
+    <option value={value}>{children}</option>
+  ),
 }));
 
 vi.mock("@/services/commerceClient", () => ({
@@ -93,14 +89,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -113,11 +109,8 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
     throw new Error("Expected HTMLInputElement");
   }
 
-  act(() => {
-    const descriptor = Object.getOwnPropertyDescriptor(
-      HTMLInputElement.prototype,
-      "value"
-    );
+  React.act(() => {
+    const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -129,11 +122,8 @@ const setTextareaValue = (element: Element | null | undefined, value: string) =>
     throw new Error("Expected HTMLTextAreaElement");
   }
 
-  act(() => {
-    const descriptor = Object.getOwnPropertyDescriptor(
-      HTMLTextAreaElement.prototype,
-      "value"
-    );
+  React.act(() => {
+    const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -145,11 +135,8 @@ const setSelectValue = (element: Element | null | undefined, value: string) => {
     throw new Error("Expected HTMLSelectElement");
   }
 
-  act(() => {
-    const descriptor = Object.getOwnPropertyDescriptor(
-      HTMLSelectElement.prototype,
-      "value"
-    );
+  React.act(() => {
+    const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
   });
@@ -160,7 +147,7 @@ const toggleCheckbox = (element: Element | null | undefined) => {
     throw new Error("Expected HTMLInputElement");
   }
 
-  act(() => {
+  React.act(() => {
     element.click();
     element.dispatchEvent(new Event("change", { bubbles: true }));
   });
@@ -201,14 +188,14 @@ test("utility helpers normalize csv and source defaults", () => {
 
   expect(
     normalizeSourceForEditor(
-      ({
+      {
         limit: 99,
         search: "  camera  ",
         collectionIds: [" featured ", "", "featured", "sale"],
         status: ["draft", "invalid", "published"],
         sortField: "invalid",
         sortDir: "invalid",
-      } as unknown as NormalizedCommerceWidgetSource),
+      } as unknown as NormalizedCommerceWidgetSource,
       {
         limit: 6,
         sortField: "title",

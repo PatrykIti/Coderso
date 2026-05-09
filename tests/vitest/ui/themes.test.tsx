@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -73,8 +73,8 @@ const themesState = vi.hoisted(() => {
   return {
     templates: [template],
     profiles: [profile],
-    cachedTemplates: [template] as typeof template[] | null,
-    cachedProfiles: [profile] as typeof profile[] | null,
+    cachedTemplates: [template] as (typeof template)[] | null,
+    cachedProfiles: [profile] as (typeof profile)[] | null,
     templateError: null as unknown,
     profileError: null as unknown,
     saveTemplateError: null as unknown,
@@ -141,14 +141,7 @@ vi.mock("@/components/ui/input", () => ({
     onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
     placeholder?: string;
     className?: string;
-  }) => (
-    <input
-      value={value}
-      onChange={onChange}
-      placeholder={placeholder}
-      className={className}
-    />
-  ),
+  }) => <input value={value} onChange={onChange} placeholder={placeholder} className={className} />,
 }));
 
 vi.mock("@/components/ui/separator", () => ({
@@ -330,7 +323,11 @@ vi.mock("../../../core/admin/ui/themes/ThemeTemplateDrawer", () => ({
     template?: { id: string; name: string } | null;
     isSaving?: boolean;
     onOpenChange: (open: boolean) => void;
-    onSave?: (input: { name: string; description: string; tokens: Record<string, unknown> }) => Promise<void> | void;
+    onSave?: (input: {
+      name: string;
+      description: string;
+      tokens: Record<string, unknown>;
+    }) => Promise<void> | void;
   }) => (
     <div>
       <span>{`template-drawer:${open ? "open" : "closed"}`}</span>
@@ -369,7 +366,11 @@ vi.mock("../../../core/admin/ui/themes/ThemeProfileDrawer", () => ({
     templates: Array<{ id: string }>;
     isSaving?: boolean;
     onOpenChange: (open: boolean) => void;
-    onSave: (input: { name: string; description: string; templateId: string }) => Promise<void> | void;
+    onSave: (input: {
+      name: string;
+      description: string;
+      templateId: string;
+    }) => Promise<void> | void;
   }) => (
     <div>
       <span>{`profile-drawer:${open ? "open" : "closed"}`}</span>
@@ -417,14 +418,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -433,7 +434,7 @@ const mount = (node: React.ReactNode) => {
 };
 
 const flush = async () => {
-  await act(async () => {
+  await React.act(async () => {
     await Promise.resolve();
     await Promise.resolve();
     await Promise.resolve();
@@ -442,10 +443,7 @@ const flush = async () => {
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
   descriptor?.set?.call(element, value);
   element.dispatchEvent(new Event("input", { bubbles: true }));
   element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -458,7 +456,7 @@ const clickByText = (container: HTMLElement, text: string) => {
   if (!button) {
     throw new Error(`Missing button: ${text}`);
   }
-  act(() => {
+  React.act(() => {
     button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 };
@@ -483,12 +481,12 @@ test("ThemesPage searches templates, opens dialogs, saves template/profile flows
     expect(themesState.listProfileCalls).toContain(true);
 
     const searchInput = view.container.querySelector("input") as HTMLInputElement;
-    act(() => {
+    React.act(() => {
       setInputValue(searchInput, "missing");
     });
     expect(view.container.textContent).toContain("No templates match your search.");
 
-    act(() => {
+    React.act(() => {
       setInputValue(searchInput, "");
     });
 
@@ -508,9 +506,7 @@ test("ThemesPage searches templates, opens dialogs, saves template/profile flows
       description: "Primary admin theme",
       tokens: { base: { bg: "#111111" } },
     });
-    expect(dispatchSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "theme:updated" })
-    );
+    expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({ type: "theme:updated" }));
 
     clickByText(view.container, "edit-template-card");
     expect(view.container.textContent).toContain("Studio");
@@ -556,7 +552,7 @@ test("ThemesPage searches templates, opens dialogs, saves template/profile flows
 
     expect(themesState.activateCalls).toContain("profile-1");
 
-    await act(async () => {
+    await React.act(async () => {
       for (const subscriber of themesState.subscribers) {
         subscriber({ key: "adminThemeTemplates:list" });
         subscriber({ key: "adminThemeProfiles:list" });
@@ -660,9 +656,7 @@ test("ThemesPage auto-activates the first profile and reports template/profile s
     clickByText(profileErrorView.container, "save-profile-drawer");
     await flush();
 
-    expect(profileErrorView.container.textContent).toContain(
-      "Failed to save theme profile."
-    );
+    expect(profileErrorView.container.textContent).toContain("Failed to save theme profile.");
   } finally {
     profileErrorView.cleanup();
   }

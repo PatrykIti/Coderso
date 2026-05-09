@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 
 import React from "react";
-import { act } from "react";
+
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 import { renderToString } from "react-dom/server";
@@ -27,7 +27,7 @@ test("PostListViewPanel exposes drag-and-drop and keyboard fallback affordances"
   expect(html).toContain("Drag blocks to reorder");
   expect(html).toContain("Alt");
   expect(html).toContain("Arrow keys");
-  expect(html).toContain("draggable=\"true\"");
+  expect(html).toContain('draggable="true"');
   expect(html).toContain("Paragraph");
   expect(html).toContain("Heading");
 });
@@ -46,8 +46,8 @@ test("PostListViewPanel renders delete affordance when delete handler is provide
     />
   );
 
-  expect(html).toContain("aria-label=\"Delete block 1: Paragraph\"");
-  expect(html).toContain("aria-label=\"Delete block 2: Heading\"");
+  expect(html).toContain('aria-label="Delete block 1: Paragraph"');
+  expect(html).toContain('aria-label="Delete block 2: Heading"');
   expect(html).toContain("text-muted-foreground opacity-60 transition");
 });
 
@@ -56,14 +56,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -94,7 +94,7 @@ const dispatchDragEvent = (
   for (const [key, value] of Object.entries(extras)) {
     Object.defineProperty(event, key, { value });
   }
-  act(() => {
+  React.act(() => {
     node.dispatchEvent(event);
   });
   return dataTransfer;
@@ -138,15 +138,14 @@ test("PostListViewPanel handles toc labels, no-hint mode, drag drop markers, and
       throw new Error("missing block buttons");
     }
 
-    act(() => {
+    React.act(() => {
       firstBlock.click();
       firstDelete?.click();
     });
     expect(onSelectBlock).toHaveBeenCalledWith("block-1");
     expect(onDeleteBlock).toHaveBeenCalledWith("block-1");
 
-    firstBlock.getBoundingClientRect = () =>
-      ({ top: 10, height: 20 } as DOMRect);
+    firstBlock.getBoundingClientRect = () => ({ top: 10, height: 20 }) as DOMRect;
 
     const dragTransfer = dispatchDragEvent(firstBlock, "dragstart");
     expect(dragTransfer.getData("text/plain")).toBe("block-1");

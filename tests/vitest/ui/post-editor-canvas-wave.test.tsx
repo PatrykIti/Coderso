@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -79,7 +79,10 @@ vi.mock("@/components/ui/dialog", () => ({
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
   }) => (
-    <div data-dialog-open={String(Boolean(open))} data-has-open-change={String(Boolean(onOpenChange))}>
+    <div
+      data-dialog-open={String(Boolean(open))}
+      data-has-open-change={String(Boolean(onOpenChange))}
+    >
       {open ? (
         <button type="button" onClick={() => onOpenChange?.(false)}>
           dialog-close
@@ -145,9 +148,7 @@ vi.mock("@/components/ui/select", () => {
       .join("")
       .trim();
 
-  const collectOptions = (
-    value: React.ReactNode
-  ): Array<{ value: string; label: string }> =>
+  const collectOptions = (value: React.ReactNode): Array<{ value: string; label: string }> =>
     React.Children.toArray(value).flatMap((child) => {
       if (!React.isValidElement(child)) return [];
       if (typeof child.props.value === "string") {
@@ -292,14 +293,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -314,18 +315,15 @@ const clickByText = (container: HTMLElement, text: string) => {
   if (!button) {
     throw new Error(`Missing button: ${text}`);
   }
-  act(() => {
+  React.act(() => {
     button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 };
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
-  act(() => {
-    const descriptor = Object.getOwnPropertyDescriptor(
-      HTMLInputElement.prototype,
-      "value"
-    );
+  React.act(() => {
+    const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -334,11 +332,8 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 
 const setTextareaValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLTextAreaElement)) return;
-  act(() => {
-    const descriptor = Object.getOwnPropertyDescriptor(
-      HTMLTextAreaElement.prototype,
-      "value"
-    );
+  React.act(() => {
+    const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -347,18 +342,15 @@ const setTextareaValue = (element: Element | null | undefined, value: string) =>
 
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
-  act(() => {
-    const descriptor = Object.getOwnPropertyDescriptor(
-      HTMLSelectElement.prototype,
-      "value"
-    );
+  React.act(() => {
+    const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
   });
 };
 
 const flush = async () => {
-  await act(async () => {
+  await React.act(async () => {
     await Promise.resolve();
     await Promise.resolve();
   });
@@ -366,14 +358,14 @@ const flush = async () => {
 
 const focusElement = (element: HTMLElement | null | undefined) => {
   if (!element) return;
-  act(() => {
+  React.act(() => {
     element.dispatchEvent(new FocusEvent("focus", { bubbles: true }));
   });
 };
 
 const blurElement = (element: HTMLElement | null | undefined) => {
   if (!element) return;
-  act(() => {
+  React.act(() => {
     element.dispatchEvent(new FocusEvent("blur", { bubbles: true }));
     element.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
   });
@@ -385,9 +377,7 @@ afterEach(() => {
 });
 
 test("PostEditorCanvas routes title change, empty-state insertion, and root deselection", async () => {
-  const { PostEditorCanvas } = await import(
-    "../../../core/admin/ui/posts/editor/PostEditorCanvas"
-  );
+  const { PostEditorCanvas } = await import("../../../core/admin/ui/posts/editor/PostEditorCanvas");
 
   const onTitleChange = vi.fn();
   const onSelectBlock = vi.fn();
@@ -429,9 +419,7 @@ test("PostEditorCanvas routes title change, empty-state insertion, and root dese
 });
 
 test("PostEditorCanvas routes writing-canvas adapter callbacks to document update hooks", async () => {
-  const { PostEditorCanvas } = await import(
-    "../../../core/admin/ui/posts/editor/PostEditorCanvas"
-  );
+  const { PostEditorCanvas } = await import("../../../core/admin/ui/posts/editor/PostEditorCanvas");
 
   const onSelectBlock = vi.fn();
   const onUpdateBlockContent = vi.fn();
@@ -508,9 +496,7 @@ test("PostEditorCanvas routes writing-canvas adapter callbacks to document updat
 });
 
 test("PostEditorCanvas routes rich-text block adapter callbacks to paragraph block hooks", async () => {
-  const { PostEditorCanvas } = await import(
-    "../../../core/admin/ui/posts/editor/PostEditorCanvas"
-  );
+  const { PostEditorCanvas } = await import("../../../core/admin/ui/posts/editor/PostEditorCanvas");
 
   const onSelectBlock = vi.fn();
   const onUpdateBlockContent = vi.fn();
@@ -576,9 +562,7 @@ test("PostEditorCanvas routes rich-text block adapter callbacks to paragraph blo
 });
 
 test("PostEditorCanvas previews rich text through sanitized React rendering", async () => {
-  const { PostEditorCanvas } = await import(
-    "../../../core/admin/ui/posts/editor/PostEditorCanvas"
-  );
+  const { PostEditorCanvas } = await import("../../../core/admin/ui/posts/editor/PostEditorCanvas");
 
   const view = mount(
     <PostEditorCanvas
@@ -617,9 +601,7 @@ test("PostEditorCanvas previews rich text through sanitized React rendering", as
 });
 
 test("PostEditorCanvas selected controls update button, embed, list, and code blocks", async () => {
-  const { PostEditorCanvas } = await import(
-    "../../../core/admin/ui/posts/editor/PostEditorCanvas"
-  );
+  const { PostEditorCanvas } = await import("../../../core/admin/ui/posts/editor/PostEditorCanvas");
 
   const onUpdateBlockAttrs = vi.fn();
   const onUpdateBlockContent = vi.fn();
@@ -746,9 +728,7 @@ test("PostEditorCanvas selected controls update button, embed, list, and code bl
 });
 
 test("PostEditorCanvas renders preview fallbacks for toc, list, button, and embed blocks", async () => {
-  const { PostEditorCanvas } = await import(
-    "../../../core/admin/ui/posts/editor/PostEditorCanvas"
-  );
+  const { PostEditorCanvas } = await import("../../../core/admin/ui/posts/editor/PostEditorCanvas");
 
   const view = mount(
     <PostEditorCanvas
@@ -798,9 +778,7 @@ test("PostEditorCanvas renders preview fallbacks for toc, list, button, and embe
 });
 
 test("PostEditorCanvas opens image picker, loads media, applies selected asset, and resolves existing media ids", async () => {
-  const { PostEditorCanvas } = await import(
-    "../../../core/admin/ui/posts/editor/PostEditorCanvas"
-  );
+  const { PostEditorCanvas } = await import("../../../core/admin/ui/posts/editor/PostEditorCanvas");
 
   const onSelectBlock = vi.fn();
   const onUpdateBlockAttrs = vi.fn();
@@ -877,7 +855,7 @@ test("PostEditorCanvas opens image picker, loads media, applies selected asset, 
     await flush();
 
     expect(mediaState.calls).toContain(false);
-    expect(lookupView.container.innerHTML).toContain('/media/media-1.png');
+    expect(lookupView.container.innerHTML).toContain("/media/media-1.png");
     expect(lookupView.container.innerHTML).toContain('alt="Hero alt"');
   } finally {
     lookupView.cleanup();
@@ -885,9 +863,7 @@ test("PostEditorCanvas opens image picker, loads media, applies selected asset, 
 });
 
 test("PostEditorCanvas scopes media picker and patches video, gallery, audio, and file blocks", async () => {
-  const { PostEditorCanvas } = await import(
-    "../../../core/admin/ui/posts/editor/PostEditorCanvas"
-  );
+  const { PostEditorCanvas } = await import("../../../core/admin/ui/posts/editor/PostEditorCanvas");
 
   mediaState.records = [
     {
@@ -1026,9 +1002,7 @@ test("PostEditorCanvas scopes media picker and patches video, gallery, audio, an
 });
 
 test("PostEditorCanvas resets image picker state on close and surfaces media load errors", async () => {
-  const { PostEditorCanvas } = await import(
-    "../../../core/admin/ui/posts/editor/PostEditorCanvas"
-  );
+  const { PostEditorCanvas } = await import("../../../core/admin/ui/posts/editor/PostEditorCanvas");
 
   const view = mount(
     <PostEditorCanvas
@@ -1106,9 +1080,7 @@ test("PostEditorCanvas resets image picker state on close and surfaces media loa
 });
 
 test("PostEditorCanvas skips direct-url lookup, tolerates unresolved lookup failures, and uses bare media patches", async () => {
-  const { PostEditorCanvas } = await import(
-    "../../../core/admin/ui/posts/editor/PostEditorCanvas"
-  );
+  const { PostEditorCanvas } = await import("../../../core/admin/ui/posts/editor/PostEditorCanvas");
 
   mediaState.reset();
   const directUrlView = mount(
@@ -1138,7 +1110,7 @@ test("PostEditorCanvas skips direct-url lookup, tolerates unresolved lookup fail
   try {
     await flush();
     expect(mediaState.calls).not.toContain(false);
-    expect(directUrlView.container.innerHTML).toContain('/media/direct.png');
+    expect(directUrlView.container.innerHTML).toContain("/media/direct.png");
   } finally {
     directUrlView.cleanup();
   }
@@ -1231,9 +1203,7 @@ test("PostEditorCanvas skips direct-url lookup, tolerates unresolved lookup fail
 });
 
 test("PostEditorCanvas schedules focus restoration, cancels pending frames, and surfaces generic picker load errors", async () => {
-  const { PostEditorCanvas } = await import(
-    "../../../core/admin/ui/posts/editor/PostEditorCanvas"
-  );
+  const { PostEditorCanvas } = await import("../../../core/admin/ui/posts/editor/PostEditorCanvas");
 
   const scrollSpy = vi
     .spyOn(HTMLElement.prototype, "scrollIntoView")
@@ -1275,7 +1245,7 @@ test("PostEditorCanvas schedules focus restoration, cancels pending frames, and 
     expect(requestAnimationFrameSpy).toHaveBeenCalledTimes(1);
     expect(focusSpy).not.toHaveBeenCalled();
 
-    act(() => {
+    React.act(() => {
       rafCallback?.(0);
     });
 
@@ -1316,9 +1286,7 @@ test("PostEditorCanvas schedules focus restoration, cancels pending frames, and 
 });
 
 test("PostEditorCanvas title focus clears selection and image toolbar falls back to default control values", async () => {
-  const { PostEditorCanvas } = await import(
-    "../../../core/admin/ui/posts/editor/PostEditorCanvas"
-  );
+  const { PostEditorCanvas } = await import("../../../core/admin/ui/posts/editor/PostEditorCanvas");
 
   mediaState.reset();
   const onSelectBlock = vi.fn();
@@ -1361,7 +1329,7 @@ test("PostEditorCanvas title focus clears selection and image toolbar falls back
     ) as HTMLTextAreaElement | null;
     if (!titleInput) throw new Error("missing title input");
 
-    act(() => {
+    React.act(() => {
       titleInput.dispatchEvent(new Event("focusin", { bubbles: true }));
       titleInput.dispatchEvent(new FocusEvent("focus", { bubbles: false }));
     });
@@ -1378,9 +1346,7 @@ test("PostEditorCanvas title focus clears selection and image toolbar falls back
 });
 
 test("PostEditorCanvas routes delete and replace-image controls without deselecting the canvas shell", async () => {
-  const { PostEditorCanvas } = await import(
-    "../../../core/admin/ui/posts/editor/PostEditorCanvas"
-  );
+  const { PostEditorCanvas } = await import("../../../core/admin/ui/posts/editor/PostEditorCanvas");
 
   mediaState.reset();
   const onDeleteBlock = vi.fn();
@@ -1420,7 +1386,7 @@ test("PostEditorCanvas routes delete and replace-image controls without deselect
       throw new Error("missing delete button");
     }
 
-    act(() => {
+    React.act(() => {
       deleteButton.click();
     });
 
@@ -1444,9 +1410,7 @@ test("PostEditorCanvas routes delete and replace-image controls without deselect
 });
 
 test("PostEditorCanvas previews mixed list content and resolves provider-specific embed URL fallbacks", async () => {
-  const { PostEditorCanvas } = await import(
-    "../../../core/admin/ui/posts/editor/PostEditorCanvas"
-  );
+  const { PostEditorCanvas } = await import("../../../core/admin/ui/posts/editor/PostEditorCanvas");
 
   const view = mount(
     <PostEditorCanvas
@@ -1531,9 +1495,7 @@ test("PostEditorCanvas previews mixed list content and resolves provider-specifi
 });
 
 test("PostEditorCanvas uses document typography for selected callout blocks and renders richer preview defaults", async () => {
-  const { PostEditorCanvas } = await import(
-    "../../../core/admin/ui/posts/editor/PostEditorCanvas"
-  );
+  const { PostEditorCanvas } = await import("../../../core/admin/ui/posts/editor/PostEditorCanvas");
 
   const onTransformBlock = vi.fn();
   const onUpdateBlockAttrs = vi.fn();
@@ -1651,7 +1613,7 @@ test("PostEditorCanvas uses document typography for selected callout blocks and 
     expect(button?.className).toContain("underline-offset-4");
     expect(button?.className).toContain("h-11");
 
-    act(() => {
+    React.act(() => {
       button?.click();
     });
 

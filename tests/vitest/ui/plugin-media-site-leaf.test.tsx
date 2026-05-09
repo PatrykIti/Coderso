@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
@@ -164,14 +164,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -246,7 +246,7 @@ test("PluginDetail forwards switch, policy, and update actions", () => {
       item.textContent?.includes("Run update check")
     );
 
-    act(() => {
+    React.act(() => {
       (toggle as HTMLInputElement | null)?.click();
       setSelectValue(select ?? undefined, "auto-security");
       button?.click();
@@ -286,7 +286,7 @@ test("PluginList renders rows, links, and selection callbacks", () => {
     expect(view.container.innerHTML).toContain("/panel/store/plugins/SEO%20Optimizer");
 
     const row = view.container.querySelector("tbody tr");
-    act(() => {
+    React.act(() => {
       row?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
 
@@ -318,7 +318,7 @@ test("MediaToolbar forwards search, filters, upload preference, and view actions
     const inputs = Array.from(view.container.querySelectorAll("input"));
     const buttons = Array.from(view.container.querySelectorAll("button"));
 
-    act(() => {
+    React.act(() => {
       setInputValue(inputs[0], "gallery");
       (inputs[1] as HTMLInputElement | null | undefined)?.click();
       buttons.find((button) => button.textContent?.includes("All Files"))?.click();
@@ -382,7 +382,7 @@ test("SiteRouteEditor renders missing state and forwards route updates", () => {
       item.textContent?.includes("Use suggested")
     );
 
-    act(() => {
+    React.act(() => {
       (toggle as HTMLInputElement | null)?.click();
       setInputValue(listPathInput, "/news");
       setInputValue(detailPathInput, "/news/:slug");

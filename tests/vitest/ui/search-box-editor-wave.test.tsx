@@ -1,13 +1,10 @@
 // @vitest-environment happy-dom
 
-import React, { act, useState } from "react";
+import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
-import {
-  searchBoxDefaults,
-  type SearchBoxData,
-} from "../../../core/widgets/core/searchBox";
+import { searchBoxDefaults, type SearchBoxData } from "../../../core/widgets/core/searchBox";
 
 const searchBoxState = vi.hoisted(() => ({
   queries: [
@@ -49,13 +46,7 @@ vi.mock("@/components/ui/input", () => ({
     type?: string;
     [key: string]: unknown;
   }) => (
-    <input
-      value={value}
-      onChange={onChange}
-      placeholder={placeholder}
-      type={type}
-      {...props}
-    />
+    <input value={value} onChange={onChange} placeholder={placeholder} type={type} {...props} />
   ),
 }));
 
@@ -147,7 +138,9 @@ vi.mock("@/components/ui/textarea", () => ({
     placeholder?: string;
     rows?: number;
     [key: string]: unknown;
-  }) => <textarea value={value} onChange={onChange} placeholder={placeholder} rows={rows} {...props} />,
+  }) => (
+    <textarea value={value} onChange={onChange} placeholder={placeholder} rows={rows} {...props} />
+  ),
 }));
 
 vi.mock("@/services/apiClient", () => ({
@@ -170,14 +163,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -186,7 +179,7 @@ const mount = (node: React.ReactNode) => {
 };
 
 const flush = async () => {
-  await act(async () => {
+  await React.act(async () => {
     await Promise.resolve();
     await Promise.resolve();
   });
@@ -195,7 +188,7 @@ const flush = async () => {
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
-  act(() => {
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -205,7 +198,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 const setTextareaValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLTextAreaElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
-  act(() => {
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -215,7 +208,7 @@ const setTextareaValue = (element: Element | null | undefined, value: string) =>
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
-  act(() => {
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
   });
@@ -224,7 +217,7 @@ const setSelectValue = (element: Element | null | undefined, value: string) => {
 const setCheckboxValue = (element: Element | null | undefined, checked: boolean) => {
   if (!(element instanceof HTMLInputElement)) return;
   if (element.checked === checked) return;
-  act(() => {
+  React.act(() => {
     element.click();
   });
 };
@@ -244,8 +237,7 @@ const findInputsByPlaceholder = (container: ParentNode, placeholder: string) =>
 const findTextareaByPlaceholder = (container: ParentNode, placeholder: string) =>
   Array.from(container.querySelectorAll("textarea")).find(
     (element) =>
-      element instanceof HTMLTextAreaElement &&
-      element.getAttribute("placeholder") === placeholder
+      element instanceof HTMLTextAreaElement && element.getAttribute("placeholder") === placeholder
   );
 
 const findSelectByOptions = (container: ParentNode, values: string[]) =>
@@ -268,9 +260,8 @@ afterEach(() => {
 });
 
 test("SearchBox wizard editor covers listing mode selection and copy updates", async () => {
-  const { SearchBoxWizardEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/SearchBoxEditors"
-  );
+  const { SearchBoxWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/SearchBoxEditors");
 
   let latestValue: SearchBoxData = {};
   const Harness = () => {
@@ -305,7 +296,9 @@ test("SearchBox wizard editor covers listing mode selection and copy updates", a
     setInputValue(findInputByPlaceholder(view.container, "Type to search..."), "Search catalog");
     setInputValue(findInputsByPlaceholder(view.container, "Search")[1], "Run search");
 
-    const autoApplyToggle = Array.from(view.container.querySelectorAll('input[type="checkbox"]'))[0];
+    const autoApplyToggle = Array.from(
+      view.container.querySelectorAll('input[type="checkbox"]')
+    )[0];
     setCheckboxValue(autoApplyToggle, false);
 
     expect(latestValue).toMatchObject({
@@ -322,9 +315,8 @@ test("SearchBox wizard editor covers listing mode selection and copy updates", a
 });
 
 test("SearchBox visual editor covers global mode endpoint and source toggles", async () => {
-  const { SearchBoxVisualEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/SearchBoxEditors"
-  );
+  const { SearchBoxVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/SearchBoxEditors");
 
   let latestValue: SearchBoxData = { mode: "global", endpoint: " /api/custom-search " };
   const Harness = () => {
@@ -369,9 +361,8 @@ test("SearchBox visual editor covers global mode endpoint and source toggles", a
 test("SearchBox visual editor surfaces listing query API errors and normalizes listing copy fields", async () => {
   searchBoxState.error = makeApiClientError("Listing queries are restricted.");
 
-  const { SearchBoxVisualEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/SearchBoxEditors"
-  );
+  const { SearchBoxVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/SearchBoxEditors");
 
   let latestValue: SearchBoxData = {};
   const Harness = () => {
@@ -396,7 +387,9 @@ test("SearchBox visual editor surfaces listing query API errors and normalizes l
 
     setInputValue(findInputsByPlaceholder(view.container, "Search")[0], "Quick search");
     setInputValue(findInputsByPlaceholder(view.container, "Search")[1], "   ");
-    const autoApplyToggle = Array.from(view.container.querySelectorAll('input[type="checkbox"]'))[0];
+    const autoApplyToggle = Array.from(
+      view.container.querySelectorAll('input[type="checkbox"]')
+    )[0];
     setCheckboxValue(autoApplyToggle, false);
 
     expect(latestValue).toMatchObject({
@@ -412,9 +405,8 @@ test("SearchBox visual editor surfaces listing query API errors and normalizes l
 test("SearchBox advanced editor covers runtime snapshot, global source toggles, and listing-query loading fallback", async () => {
   searchBoxState.error = new Error("boom");
 
-  const { SearchBoxAdvancedEditor, SearchBoxWizardEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/SearchBoxEditors"
-  );
+  const { SearchBoxAdvancedEditor, SearchBoxWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/SearchBoxEditors");
 
   const errorView = mount(
     <SearchBoxWizardEditor
@@ -468,11 +460,9 @@ test("SearchBox advanced editor covers runtime snapshot, global source toggles, 
     expect(view.container.textContent).toContain("Contract");
 
     const toggles = Array.from(view.container.querySelectorAll('input[type="checkbox"]'));
-    expect(toggles.map((toggle) => (toggle instanceof HTMLInputElement ? toggle.checked : false))).toEqual([
-      true,
-      false,
-      true,
-    ]);
+    expect(
+      toggles.map((toggle) => (toggle instanceof HTMLInputElement ? toggle.checked : false))
+    ).toEqual([true, false, true]);
     setCheckboxValue(toggles[0], false);
     setCheckboxValue(toggles[1], true);
     setCheckboxValue(toggles[2], false);
@@ -489,7 +479,7 @@ test("SearchBox advanced editor covers runtime snapshot, global source toggles, 
 
     const snapshot = view.container.querySelector("textarea[readonly]");
     const snapshotValue =
-      snapshot instanceof HTMLTextAreaElement ? snapshot.value : snapshot?.textContent ?? "";
+      snapshot instanceof HTMLTextAreaElement ? snapshot.value : (snapshot?.textContent ?? "");
     expect(snapshotValue).toContain('"query": "launch"');
     expect(snapshotValue).toContain('"rejectedTokens": [');
     expect(snapshotValue).toContain('"__page"');
@@ -501,9 +491,8 @@ test("SearchBox advanced editor covers runtime snapshot, global source toggles, 
 });
 
 test("SearchBox wizard editor covers unknown listing labels, mode switching, and query clearing", async () => {
-  const { SearchBoxWizardEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/SearchBoxEditors"
-  );
+  const { SearchBoxWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/SearchBoxEditors");
 
   let latestValue: SearchBoxData = {
     mode: "listing",
@@ -548,10 +537,7 @@ test("SearchBox wizard editor covers unknown listing labels, mode switching, and
     expect(latestValue.mode).toBe("listing");
     expect(view.container.textContent).toContain("Auto apply on input");
 
-    const querySelect = findSelectByOptions(view.container, [
-      "__no_listing_query__",
-      "query-1",
-    ]);
+    const querySelect = findSelectByOptions(view.container, ["__no_listing_query__", "query-1"]);
     setSelectValue(querySelect, "query-1");
     expect(latestValue.listingQueryId).toBe("query-1");
 

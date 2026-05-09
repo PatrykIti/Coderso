@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act, useState } from "react";
+import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
@@ -99,14 +99,14 @@ const mount = () => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(<Harness />);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -115,7 +115,7 @@ const mount = () => {
 };
 
 const flush = async () => {
-  await act(async () => {
+  await React.act(async () => {
     for (let index = 0; index < 4; index += 1) {
       await Promise.resolve();
     }
@@ -170,7 +170,7 @@ test("preview owner uses cached records first and revalidates on cache events", 
     expect(view.container.textContent).toContain("title:Cached project");
     expect(listEntriesCached).not.toHaveBeenCalled();
 
-    act(() => {
+    React.act(() => {
       cacheListener?.({ key: cacheKeys.entriesList("projects") });
     });
     await flush();
@@ -207,7 +207,7 @@ test("preview owner resets stale state on content-type changes and reports read 
     const clearButton = Array.from(view.container.querySelectorAll("button")).find((button) =>
       button.textContent?.includes("Clear")
     );
-    act(() => {
+    React.act(() => {
       clearButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
     expect(view.container.textContent).toContain("entry:none");
@@ -216,7 +216,7 @@ test("preview owner resets stale state on content-type changes and reports read 
     const articlesButton = Array.from(view.container.querySelectorAll("button")).find((button) =>
       button.textContent?.includes("Articles")
     );
-    act(() => {
+    React.act(() => {
       articlesButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
     expect(view.container.textContent).toContain("loading:true");

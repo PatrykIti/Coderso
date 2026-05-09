@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act, useState } from "react";
+import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -54,14 +54,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -74,11 +74,8 @@ const normalizeText = (value: string | null | undefined) =>
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  );
-  act(() => {
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -87,22 +84,15 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 
 const setTextareaValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLTextAreaElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLTextAreaElement.prototype,
-    "value"
-  );
-  act(() => {
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
     element.dispatchEvent(new Event("change", { bubbles: true }));
   });
 };
 
-const findLabeledField = (
-  container: ParentNode,
-  text: string,
-  selector: "input" | "textarea"
-) =>
+const findLabeledField = (container: ParentNode, text: string, selector: "input" | "textarea") =>
   Array.from(container.querySelectorAll("label"))
     .find((label) => normalizeText(label.textContent).startsWith(normalizeText(text)))
     ?.querySelector(selector);
@@ -197,11 +187,8 @@ test("BookingCalendar wizard editor normalizes defaults and clamps interval chan
         ?.value
     ).toBe(bookingCalendarDefaults.description);
     expect(
-      (
-        findInputByLabel(view.container, "Slot interval (minutes)") as
-          | HTMLInputElement
-          | undefined
-      )?.value
+      (findInputByLabel(view.container, "Slot interval (minutes)") as HTMLInputElement | undefined)
+        ?.value
     ).toBe("180");
 
     setInputValue(findInputByLabel(view.container, "Flow key"), " concierge-flow ");
@@ -262,11 +249,7 @@ test("BookingCalendar visual editor updates status-copy fields from normalized d
       (findInputByLabel(view.container, "No slots") as HTMLInputElement | null | undefined)?.value
     ).toBe(bookingCalendarDefaults.emptySlotsMessage);
     expect(
-      (
-        findInputByLabel(view.container, "Missing selection") as
-          | HTMLInputElement
-          | undefined
-      )?.value
+      (findInputByLabel(view.container, "Missing selection") as HTMLInputElement | undefined)?.value
     ).toBe(bookingCalendarDefaults.missingSelectionMessage);
     expect(
       (findInputByLabel(view.container, "Error") as HTMLInputElement | null | undefined)?.value
@@ -366,34 +349,23 @@ test("BookingCalendar advanced editor normalizes resolved payload and runtime er
       normalizeText("Services: 1 · Resources: 1")
     );
     expect(
-      (findInputByLabel(view.container, "Slots endpoint") as HTMLInputElement | null | undefined)?.value
+      (findInputByLabel(view.container, "Slots endpoint") as HTMLInputElement | null | undefined)
+        ?.value
     ).toBe(bookingCalendarDefaults.slotsEndpoint);
     expect(
-      (
-        findInputByLabel(view.container, "Default service ID") as
-          | HTMLInputElement
-          | undefined
-      )?.value
+      (findInputByLabel(view.container, "Default service ID") as HTMLInputElement | undefined)
+        ?.value
     ).toBe("svc-2");
     expect(
-      (
-        findInputByLabel(view.container, "Default resource ID") as
-          | HTMLInputElement
-          | undefined
-      )?.value
+      (findInputByLabel(view.container, "Default resource ID") as HTMLInputElement | undefined)
+        ?.value
     ).toBe("res-2");
     expect(
-      (
-        findInputByLabel(view.container, "Runtime error flag") as
-          | HTMLInputElement
-          | undefined
-      )?.value
+      (findInputByLabel(view.container, "Runtime error flag") as HTMLInputElement | undefined)
+        ?.value
     ).toBe("resolver-timeout");
 
-    setInputValue(
-      findInputByLabel(view.container, "Slots endpoint"),
-      " /api/proxy/booking/slots "
-    );
+    setInputValue(findInputByLabel(view.container, "Slots endpoint"), " /api/proxy/booking/slots ");
     setInputValue(findInputByLabel(view.container, "Default service ID"), " primary-service ");
     setInputValue(findInputByLabel(view.container, "Default resource ID"), " room-a ");
     setInputValue(findInputByLabel(view.container, "Runtime error flag"), "   ");

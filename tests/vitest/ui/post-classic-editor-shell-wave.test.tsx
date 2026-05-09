@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -164,7 +164,10 @@ vi.mock("@/components/ui/sheet", () => ({
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
   }) => (
-    <div data-sheet-open={String(Boolean(open))} data-has-open-change={String(Boolean(onOpenChange))}>
+    <div
+      data-sheet-open={String(Boolean(open))}
+      data-has-open-change={String(Boolean(onOpenChange))}
+    >
       {children}
     </div>
   ),
@@ -201,9 +204,7 @@ vi.mock("@/services/cachePolicy", () => ({
 
 vi.mock("@/services/postsClient", () => ({
   getCachedPostDetail: (id: string) =>
-    classicState.cachedPost && classicState.cachedPost.id === id
-      ? classicState.cachedPost
-      : null,
+    classicState.cachedPost && classicState.cachedPost.id === id ? classicState.cachedPost : null,
   getPostCached: vi.fn(async (id: string, { force }: { force?: boolean } = {}) => {
     classicState.getPostCalls.push({ id, force });
     if (classicState.nextGetError) {
@@ -241,7 +242,8 @@ vi.mock("@/services/postsClient", () => ({
       classicState.nextUpdateError = null;
       throw error;
     }
-    const current = classicState.fetchedPost ?? classicState.cachedPost ?? classicState.createPost(id);
+    const current =
+      classicState.fetchedPost ?? classicState.cachedPost ?? classicState.createPost(id);
     const next = {
       ...current,
       title: typeof payload.title === "string" ? payload.title : current.title,
@@ -262,7 +264,8 @@ vi.mock("@/services/postsClient", () => ({
       classicState.nextMetadataError = null;
       throw error;
     }
-    const current = classicState.fetchedPost ?? classicState.cachedPost ?? classicState.createPost(id);
+    const current =
+      classicState.fetchedPost ?? classicState.cachedPost ?? classicState.createPost(id);
     const next = {
       ...current,
       status: (payload.status as PostStatus | undefined) ?? current.status,
@@ -416,8 +419,7 @@ vi.mock("@/ui/preview/RuntimePreviewDialog", () => ({
 }));
 
 vi.mock("@/utils/cacheBus", () => ({
-  subscribeCacheEvents: (listener: (event: CacheEvent) => void) =>
-    classicState.subscribe(listener),
+  subscribeCacheEvents: (listener: (event: CacheEvent) => void) => classicState.subscribe(listener),
 }));
 
 const mount = (node: React.ReactNode) => {
@@ -425,14 +427,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -458,7 +460,7 @@ const setTextareaValue = (element: Element | null | undefined, value: string) =>
 
 const flush = async (times = 2) => {
   for (let index = 0; index < times; index += 1) {
-    await act(async () => {
+    await React.act(async () => {
       await Promise.resolve();
     });
   }
@@ -470,9 +472,8 @@ afterEach(() => {
 });
 
 test("PostClassicEditorShell hydrates cached data, saves draft, previews, and applies metadata", async () => {
-  const { PostClassicEditorShell } = await import(
-    "../../../core/admin/ui/posts/editor/PostClassicEditorShell"
-  );
+  const { PostClassicEditorShell } =
+    await import("../../../core/admin/ui/posts/editor/PostClassicEditorShell");
 
   classicState.path = "/admin/posts/post%201?editor=classic";
   classicState.cachedPost = classicState.createPost("post 1");
@@ -495,13 +496,18 @@ test("PostClassicEditorShell hydrates cached data, saves draft, previews, and ap
     const inputs = Array.from(view.container.querySelectorAll("input"));
     const buttons = Array.from(view.container.querySelectorAll("button"));
 
-    act(() => {
+    React.act(() => {
       setTextareaValue(textareas[0], "Updated title");
       buttons.find((button) => button.textContent === "Generate")?.click();
       setTextareaValue(textareas[1], "Updated excerpt");
       setTextareaValue(textareas[2], "Updated body");
-      setInputValue(inputs.find((input) => input.placeholder === "media-id"), "media-2");
-      (inputs.find((input) => input.type === "checkbox") as HTMLInputElement | null | undefined)?.click();
+      setInputValue(
+        inputs.find((input) => input.placeholder === "media-id"),
+        "media-2"
+      );
+      (
+        inputs.find((input) => input.type === "checkbox") as HTMLInputElement | null | undefined
+      )?.click();
       buttons.find((button) => button.textContent === "Save draft")?.click();
     });
     await flush();
@@ -518,7 +524,7 @@ test("PostClassicEditorShell hydrates cached data, saves draft, previews, and ap
     });
     expect((savedPayload.data as Record<string, unknown>).document).toBeTruthy();
 
-    act(() => {
+    React.act(() => {
       buttons.find((button) => button.textContent === "Runtime preview")?.click();
     });
     await flush();
@@ -526,12 +532,12 @@ test("PostClassicEditorShell hydrates cached data, saves draft, previews, and ap
     expect(classicState.previewPostCalls).toContainEqual({ id: "post 1", ttl: 30 });
     expect(view.container.textContent).toContain("preview-url:https://preview.test/post 1");
 
-    act(() => {
+    React.act(() => {
       buttons.find((button) => button.textContent === "set-valid-schedule")?.click();
       buttons.find((button) => button.textContent === "set-seo-description")?.click();
     });
     await flush();
-    act(() => {
+    React.act(() => {
       Array.from(view.container.querySelectorAll("button"))
         .find((button) => button.textContent === "save-metadata")
         ?.click();
@@ -547,28 +553,30 @@ test("PostClassicEditorShell hydrates cached data, saves draft, previews, and ap
       },
     });
 
-    act(() => {
+    React.act(() => {
       Array.from(view.container.querySelectorAll("button"))
         .find((button) => button.textContent === "set-scheduled")
         ?.click();
     });
     await flush();
-    act(() => {
+    React.act(() => {
       Array.from(view.container.querySelectorAll("button"))
         .find((button) => button.textContent === "save-metadata")
         ?.click();
     });
     await flush();
 
-    expect(view.container.textContent).toContain("Schedule date is required for scheduled entries.");
+    expect(view.container.textContent).toContain(
+      "Schedule date is required for scheduled entries."
+    );
 
-    act(() => {
+    React.act(() => {
       Array.from(view.container.querySelectorAll("button"))
         .find((button) => button.textContent === "set-invalid-schedule")
         ?.click();
     });
     await flush();
-    act(() => {
+    React.act(() => {
       Array.from(view.container.querySelectorAll("button"))
         .find((button) => button.textContent === "save-metadata")
         ?.click();
@@ -582,9 +590,8 @@ test("PostClassicEditorShell hydrates cached data, saves draft, previews, and ap
 });
 
 test("PostClassicEditorShell handles publish/update branches, preview failure, and mobile details sheet", async () => {
-  const { PostClassicEditorShell } = await import(
-    "../../../core/admin/ui/posts/editor/PostClassicEditorShell"
-  );
+  const { PostClassicEditorShell } =
+    await import("../../../core/admin/ui/posts/editor/PostClassicEditorShell");
 
   classicState.cachedPost = classicState.createPost("post-2", "published", {
     title: "Published post",
@@ -604,7 +611,7 @@ test("PostClassicEditorShell handles publish/update branches, preview failure, a
 
     const buttons = Array.from(view.container.querySelectorAll("button"));
 
-    act(() => {
+    React.act(() => {
       buttons.find((button) => button.textContent === "Update")?.click();
     });
     await flush();
@@ -612,24 +619,22 @@ test("PostClassicEditorShell handles publish/update branches, preview failure, a
     expect(classicState.publishPostCalls).toEqual([]);
     expect(classicState.updatePostCalls).toHaveLength(1);
 
-    act(() => {
+    React.act(() => {
       buttons.find((button) => button.textContent === "Runtime preview")?.click();
     });
     await flush();
 
     expect(view.container.textContent).toContain("preview-error:Preview failed");
 
-    act(() => {
+    React.act(() => {
       buttons.find((button) => button.textContent === "Details")?.click();
     });
 
     expect(
-      view.container
-        .querySelector("[data-has-open-change='true']")
-        ?.getAttribute("data-sheet-open")
+      view.container.querySelector("[data-has-open-change='true']")?.getAttribute("data-sheet-open")
     ).toBe("true");
 
-    act(() => {
+    React.act(() => {
       buttons.find((button) => button.textContent === "close-preview-dialog")?.click();
     });
     expect(classicState.lastPreviewOpen).toBe(false);
@@ -639,9 +644,8 @@ test("PostClassicEditorShell handles publish/update branches, preview failure, a
 });
 
 test("PostClassicEditorShell surfaces refresh conflicts, publish errors, and metadata save errors", async () => {
-  const { PostClassicEditorShell } = await import(
-    "../../../core/admin/ui/posts/editor/PostClassicEditorShell"
-  );
+  const { PostClassicEditorShell } =
+    await import("../../../core/admin/ui/posts/editor/PostClassicEditorShell");
 
   classicState.cachedPost = classicState.createPost("post-3", "draft");
   classicState.fetchedPost = classicState.createPost("post-3", "draft", {
@@ -658,42 +662,50 @@ test("PostClassicEditorShell surfaces refresh conflicts, publish errors, and met
     const textareas = Array.from(view.container.querySelectorAll("textarea"));
     const buttons = () => Array.from(view.container.querySelectorAll("button"));
 
-    act(() => {
+    React.act(() => {
       setTextareaValue(textareas[0], "Unsaved title");
     });
     await flush();
 
-    act(() => {
+    React.act(() => {
       classicState.trigger("post:post-3");
     });
     await flush();
 
     expect(view.container.textContent).toContain("Updated in another tab");
 
-    act(() => {
-      buttons().find((button) => button.textContent?.includes("Refresh"))?.click();
+    React.act(() => {
+      buttons()
+        .find((button) => button.textContent?.includes("Refresh"))
+        ?.click();
     });
     await flush();
 
     expect(view.container.textContent).toContain("Post three");
 
     classicState.nextPublishError = classicState.apiError("Publish blocked");
-    act(() => {
-      buttons().find((button) => button.textContent === "Publish")?.click();
+    React.act(() => {
+      buttons()
+        .find((button) => button.textContent === "Publish")
+        ?.click();
     });
     await flush();
     expect(view.container.textContent).toContain("Publish blocked");
 
     classicState.nextMetadataError = classicState.apiError("Metadata blocked");
-    act(() => {
-      buttons().find((button) => button.textContent === "set-valid-schedule")?.click();
-      buttons().find((button) => button.textContent === "save-metadata")?.click();
+    React.act(() => {
+      buttons()
+        .find((button) => button.textContent === "set-valid-schedule")
+        ?.click();
+      buttons()
+        .find((button) => button.textContent === "save-metadata")
+        ?.click();
     });
     await flush();
     expect(view.container.textContent).toContain("Metadata blocked");
 
     classicState.nextGetError = classicState.apiError("Refresh failed");
-    act(() => {
+    React.act(() => {
       classicState.trigger("post:post-3");
     });
     await flush();
@@ -704,9 +716,8 @@ test("PostClassicEditorShell surfaces refresh conflicts, publish errors, and met
 });
 
 test("PostClassicEditorShell handles missing post ids, generic preview failures, and manual slug edits", async () => {
-  const { PostClassicEditorShell } = await import(
-    "../../../core/admin/ui/posts/editor/PostClassicEditorShell"
-  );
+  const { PostClassicEditorShell } =
+    await import("../../../core/admin/ui/posts/editor/PostClassicEditorShell");
 
   classicState.path = "/admin/advanced/settings";
 
@@ -716,7 +727,7 @@ test("PostClassicEditorShell handles missing post ids, generic preview failures,
     await flush();
 
     const missingButtons = Array.from(missingIdView.container.querySelectorAll("button"));
-    act(() => {
+    React.act(() => {
       missingButtons.find((button) => button.textContent === "Runtime preview")?.click();
     });
     await flush();
@@ -741,12 +752,10 @@ test("PostClassicEditorShell handles missing post ids, generic preview failures,
   try {
     await flush();
 
-    const slugInput = genericPreviewView.container.querySelector(
-      'input[placeholder="post-slug"]'
-    );
+    const slugInput = genericPreviewView.container.querySelector('input[placeholder="post-slug"]');
     const buttons = Array.from(genericPreviewView.container.querySelectorAll("button"));
 
-    act(() => {
+    React.act(() => {
       setInputValue(slugInput, "manual-slug");
       buttons.find((button) => button.textContent === "Runtime preview")?.click();
     });

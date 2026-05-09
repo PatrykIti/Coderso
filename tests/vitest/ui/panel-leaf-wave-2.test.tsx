@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server";
 import { expect, test, vi } from "vitest";
@@ -42,13 +42,9 @@ vi.mock("@/components/ui/button", () => ({
 }));
 
 vi.mock("@/components/ui/card", () => ({
-  Card: ({
-    children,
-    ...props
-  }: {
-    children: React.ReactNode;
-    [key: string]: unknown;
-  }) => <div {...props}>{children}</div>,
+  Card: ({ children, ...props }: { children: React.ReactNode; [key: string]: unknown }) => (
+    <div {...props}>{children}</div>
+  ),
   CardContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   CardDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
   CardHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -75,13 +71,9 @@ vi.mock("@/components/ui/checkbox", () => ({
 }));
 
 vi.mock("@/components/ui/dialog", () => ({
-  Dialog: ({
-    children,
-    open,
-  }: {
-    children: React.ReactNode;
-    open?: boolean;
-  }) => <div data-dialog-open={String(Boolean(open))}>{children}</div>,
+  Dialog: ({ children, open }: { children: React.ReactNode; open?: boolean }) => (
+    <div data-dialog-open={String(Boolean(open))}>{children}</div>
+  ),
   DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DialogDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -140,9 +132,7 @@ vi.mock("@/components/ui/select", () => {
       .join("")
       .trim();
 
-  const collectOptions = (
-    value: React.ReactNode
-  ): Array<{ value: string; label: string }> =>
+  const collectOptions = (value: React.ReactNode): Array<{ value: string; label: string }> =>
     React.Children.toArray(value).flatMap((child) => {
       if (!React.isValidElement(child)) return [];
       if (typeof child.props.value === "string") {
@@ -219,13 +209,9 @@ vi.mock("@/components/ui/table", () => ({
   ),
   TableHead: ({ children }: { children: React.ReactNode }) => <th>{children}</th>,
   TableHeader: ({ children }: { children: React.ReactNode }) => <thead>{children}</thead>,
-  TableRow: ({
-    children,
-    className,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-  }) => <tr className={className}>{children}</tr>,
+  TableRow: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <tr className={className}>{children}</tr>
+  ),
 }));
 
 vi.mock("@/components/ui/textarea", () => ({
@@ -241,8 +227,7 @@ vi.mock("@/components/ui/textarea", () => ({
 }));
 
 vi.mock("@/lib/utils", () => ({
-  cn: (...values: Array<string | boolean | null | undefined>) =>
-    values.filter(Boolean).join(" "),
+  cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
 }));
 
 vi.mock("../../../core/admin/ui/booking/bookingHelpers", () => ({
@@ -258,14 +243,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -275,10 +260,7 @@ const mount = (node: React.ReactNode) => {
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
   descriptor?.set?.call(element, value);
   element.dispatchEvent(new Event("input", { bubbles: true }));
   element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -286,10 +268,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 
 const setTextareaValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLTextAreaElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLTextAreaElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
   descriptor?.set?.call(element, value);
   element.dispatchEvent(new Event("input", { bubbles: true }));
   element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -297,10 +276,7 @@ const setTextareaValue = (element: Element | null | undefined, value: string) =>
 
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
   descriptor?.set?.call(element, value);
   element.dispatchEvent(new Event("change", { bubbles: true }));
 };
@@ -337,7 +313,7 @@ test("PostEditorSettingsDialog forwards preference changes, reset, and close", (
     const selects = Array.from(view.container.querySelectorAll("select"));
     const buttons = Array.from(view.container.querySelectorAll("button"));
 
-    act(() => {
+    React.act(() => {
       checkboxes[0]?.click();
       checkboxes[1]?.click();
       setSelectValue(selects[0], "block");
@@ -349,27 +325,17 @@ test("PostEditorSettingsDialog forwards preference changes, reset, and close", (
       buttons.find((button) => button.textContent === "Done")?.click();
     });
 
-    expect(onChange).toHaveBeenCalledWith(
-      expect.objectContaining({ focusModeOnOpen: true })
-    );
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ focusModeOnOpen: true }));
     expect(onChange).toHaveBeenCalledWith(
       expect.objectContaining({ restoreLastSidebarsState: false })
     );
     expect(onChange).toHaveBeenCalledWith(
       expect.objectContaining({ defaultInspectorTab: "block" })
     );
-    expect(onChange).toHaveBeenCalledWith(
-      expect.objectContaining({ compactSidePanels: true })
-    );
-    expect(onChange).toHaveBeenCalledWith(
-      expect.objectContaining({ showOutlineHints: false })
-    );
-    expect(onChange).toHaveBeenCalledWith(
-      expect.objectContaining({ showKeyboardHints: false })
-    );
-    expect(onChange).toHaveBeenCalledWith(
-      expect.objectContaining({ editorDensity: "compact" })
-    );
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ compactSidePanels: true }));
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ showOutlineHints: false }));
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ showKeyboardHints: false }));
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ editorDensity: "compact" }));
     expect(onReset).toHaveBeenCalledOnce();
     expect(onOpenChange).toHaveBeenCalledWith(false);
   } finally {
@@ -455,7 +421,7 @@ test("BookingResourcesTab forwards resource list and form actions", () => {
     const selects = Array.from(view.container.querySelectorAll("select"));
     const buttons = Array.from(view.container.querySelectorAll("button"));
 
-    act(() => {
+    React.act(() => {
       buttons.find((button) => button.textContent === "Edit")?.click();
       buttons.find((button) => button.textContent === "Delete")?.click();
       setInputValue(inputs[0], "Bay B");
@@ -552,7 +518,7 @@ test("commerce leaf panels render states and forward changes", () => {
     const textareas = Array.from(view.container.querySelectorAll("textarea"));
     const checkbox = view.container.querySelector("input[type='checkbox']");
 
-    act(() => {
+    React.act(() => {
       (checkbox as HTMLInputElement | null)?.click();
       setInputValue(inputs[1], "media-1, media-2");
       setInputValue(inputs[2], "Villa Nova");
@@ -591,9 +557,9 @@ test("ApiKeysTable and StorageProviderCard handle actions and keyboard selection
   const onRotate = vi.fn();
   const onRevoke = vi.fn();
   const onSelect = vi.fn();
-  const Icon = React.forwardRef<SVGSVGElement, React.ComponentProps<"svg">>(
-    (props, ref) => <svg ref={ref} {...props} />
-  );
+  const Icon = React.forwardRef<SVGSVGElement, React.ComponentProps<"svg">>((props, ref) => (
+    <svg ref={ref} {...props} />
+  ));
 
   const emptyHtml = renderToString(<ApiKeysTable items={[]} isLoading />);
   expect(emptyHtml).toContain("Loading API keys...");
@@ -645,18 +611,16 @@ test("ApiKeysTable and StorageProviderCard handle actions and keyboard selection
     const buttons = Array.from(view.container.querySelectorAll("button"));
     const radio = view.container.querySelector("[role='radio']");
 
-    act(() => {
-      buttons.find((button) => button.getAttribute("aria-label") === "Actions for Primary")?.click();
+    React.act(() => {
+      buttons
+        .find((button) => button.getAttribute("aria-label") === "Actions for Primary")
+        ?.click();
       buttons.find((button) => button.textContent?.includes("Copy key"))?.click();
       buttons.find((button) => button.textContent?.includes("Rotate key"))?.click();
       buttons.find((button) => button.textContent?.includes("Revoke key"))?.click();
       (radio as HTMLDivElement | null)?.click();
-      radio?.dispatchEvent(
-        new KeyboardEvent("keydown", { bubbles: true, key: "Enter" })
-      );
-      radio?.dispatchEvent(
-        new KeyboardEvent("keydown", { bubbles: true, key: " " })
-      );
+      radio?.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "Enter" }));
+      radio?.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: " " }));
     });
 
     expect(onCopy).toHaveBeenCalledWith(expect.objectContaining({ id: "key-1" }));

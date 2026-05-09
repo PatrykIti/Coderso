@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act, useState } from "react";
+import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -207,14 +207,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -223,7 +223,7 @@ const mount = (node: React.ReactNode) => {
 };
 
 const flush = async () => {
-  await act(async () => {
+  await React.act(async () => {
     await Promise.resolve();
     await Promise.resolve();
     await Promise.resolve();
@@ -274,7 +274,7 @@ const findSelectByOptions = (container: ParentNode, values: string[]) =>
 
 const clickElement = (element: Element | null | undefined) => {
   if (!element) return;
-  act(() => {
+  React.act(() => {
     element.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 };
@@ -345,7 +345,7 @@ test("PostsFeed editors cover source modes, manual posts, display toggles, layou
     expect(view.container.textContent).toContain("Layout and style");
     expect(view.container.textContent).toContain("Runtime payload");
 
-    act(() => {
+    React.act(() => {
       setSelectValue(
         findSelectByOptions(view.container, ["latest", "featured", "category", "manual"]),
         "manual"
@@ -356,14 +356,14 @@ test("PostsFeed editors cover source modes, manual posts, display toggles, layou
     const manualCheckboxes = Array.from(view.container.querySelectorAll("input[type='checkbox']"));
     clickElement(manualCheckboxes[0]);
 
-    act(() => {
+    React.act(() => {
       setInputValue(
         findInputByPlaceholder(view.container, "e.g. news, updates, automotive"),
         "news"
       );
     });
 
-    act(() => {
+    React.act(() => {
       setInputValue(findInputByPlaceholder(view.container, "Read more"), "Read article");
       setInputValue(findInputByPlaceholder(view.container, "No posts found"), "Nothing published");
       setTextareaValue(
@@ -458,7 +458,7 @@ test("PostsFeed editors surface post loading errors", async () => {
   const view = mount(<Harness />);
 
   try {
-    act(() => {
+    React.act(() => {
       setSelectValue(
         findSelectByOptions(view.container, ["latest", "featured", "category", "manual"]),
         "manual"
@@ -510,14 +510,14 @@ test("PostsFeed editors cover category filtering, manual deselection, empty cata
     await flush();
     expect(emptyView.container.textContent).toContain("No posts available.");
 
-    act(() => {
+    React.act(() => {
       setSelectValue(
         findSelectByOptions(emptyView.container, ["latest", "featured", "category", "manual"]),
         "category"
       );
     });
 
-    act(() => {
+    React.act(() => {
       setInputValue(
         findInputByPlaceholder(emptyView.container, "e.g. news, updates, automotive"),
         "events"
@@ -592,7 +592,7 @@ test("PostsFeed editors cover category filtering, manual deselection, empty cata
     );
 
     try {
-      act(() => {
+      React.act(() => {
         setSelectValue(
           findSelectByOptions(errorView.container, ["latest", "featured", "category", "manual"]),
           "manual"
@@ -670,7 +670,7 @@ test("PostsFeed editors fall back for invalid numeric/select values and sparse d
       HTMLSelectElement
     );
 
-    act(() => {
+    React.act(() => {
       setInputValue(
         Array.from(view.container.querySelectorAll("input")).find(
           (element) => element instanceof HTMLInputElement && element.type === "number"
@@ -738,7 +738,7 @@ test("PostsFeed editors ignore async post option resolution after unmount", asyn
     view.cleanup();
   }
 
-  await act(async () => {
+  await React.act(async () => {
     resolveDeferred.resolve(postsFeedState.posts);
     await Promise.resolve();
   });
@@ -760,7 +760,7 @@ test("PostsFeed editors ignore async post option resolution after unmount", asyn
     rejectView.cleanup();
   }
 
-  await act(async () => {
+  await React.act(async () => {
     rejectDeferred.reject(new Error("late failure"));
     await Promise.resolve();
   });

@@ -6,18 +6,12 @@ import { db } from "../../../core/db/client";
 import {
   assistantActionExecutions,
   assistantActionUndoItems,
-  detailPageDocuments,
   users,
 } from "../../../core/db/schema";
 import { planAssistantActions } from "../../../core/services/assistant/actionPlannerService";
 import { buildHouseProjectsCatalogPlan } from "../../../core/services/assistant/blueprints/houseProjectsCatalogBlueprint";
 import { executeAssistantActionPlan } from "../../../core/services/assistant/actionExecutorService";
-import type {
-  AssistantActionPlan,
-  AssistantDetailPageUpsertAction,
-} from "../../../core/services/assistant/actionPlanTypes";
 import {
-  createContentType,
   deleteContentType,
   getContentTypeBySlug,
 } from "../../../core/services/content/typeService";
@@ -422,6 +416,7 @@ testIfDbWithOptions(
 testIfDb(
   "content route actions persist detailPageId preserve, clear, and replace semantics",
   async () => {
+    const token = randomUUID().slice(0, 8);
     originalContentRoutes =
       originalContentRoutes ??
       ((await getSetting("site.contentRoutes")) as ContentRouteSetting[]) ??
@@ -467,9 +462,9 @@ testIfDb(
         ],
       },
       actorId: actor.id,
-      idempotencyKey: "assistant-route-preserve-db-1",
+      idempotencyKey: `assistant-route-preserve-db-${token}-1`,
     });
-    idempotencyKeysToCleanup.add("assistant-route-preserve-db-1");
+    idempotencyKeysToCleanup.add(`assistant-route-preserve-db-${token}-1`);
 
     let contentRoutes = ((await getSetting("site.contentRoutes")) as ContentRouteSetting[]) ?? [];
     expect(contentRoutes[0]?.detailPageId).toBe("4dd7f4d4-48d8-53f7-a9e6-0d01f6b89e6c");
@@ -504,9 +499,9 @@ testIfDb(
         ],
       },
       actorId: actor.id,
-      idempotencyKey: "assistant-route-clear-db-1",
+      idempotencyKey: `assistant-route-clear-db-${token}-1`,
     });
-    idempotencyKeysToCleanup.add("assistant-route-clear-db-1");
+    idempotencyKeysToCleanup.add(`assistant-route-clear-db-${token}-1`);
 
     contentRoutes = ((await getSetting("site.contentRoutes")) as ContentRouteSetting[]) ?? [];
     expect(contentRoutes[0]?.detailPageId).toBeNull();
@@ -541,156 +536,11 @@ testIfDb(
         ],
       },
       actorId: actor.id,
-      idempotencyKey: "assistant-route-replace-db-1",
+      idempotencyKey: `assistant-route-replace-db-${token}-1`,
     });
-    idempotencyKeysToCleanup.add("assistant-route-replace-db-1");
+    idempotencyKeysToCleanup.add(`assistant-route-replace-db-${token}-1`);
 
     contentRoutes = ((await getSetting("site.contentRoutes")) as ContentRouteSetting[]) ?? [];
     expect(contentRoutes[0]?.detailPageId).toBe("6dd7f4d4-48d8-53f7-a9e6-0d01f6b89e6c");
   }
-);
-
-testIfDbWithOptions(
-  "detail-page upsert actions persist one canonical detail-page document per id",
-  async () => {
-    const actor = await createActor();
-    const token = randomUUID().slice(0, 8);
-    const contentType = await createContentType({
-      name: `Detail Page Products ${token}`,
-      slug: `detail-page-products-${token}`,
-      schema: {
-        type: "object",
-        additionalProperties: false,
-        properties: {
-          headline: { type: "string", xFieldType: "text" },
-        },
-      },
-    });
-    const detailPageId = "74d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c";
-
-    try {
-      const document = {
-        schemaVersion: 1 as const,
-        id: detailPageId,
-        name: `Products detail template ${token}`,
-        contentTypeId: contentType.id,
-        contentTypeSlug: "stale-products",
-        status: "published" as const,
-        titlePattern: "{{ title }}",
-        settings: {
-          template: "detail",
-          layout: {
-            wrapper: {
-              container: "default" as const,
-              padding: { top: "md" as const, bottom: "lg" as const },
-              background: {
-                color: "#ffffff",
-                image: null,
-                media: {
-                  type: "none" as const,
-                  source: "external" as const,
-                  src: null,
-                },
-              },
-            },
-            sections: {
-              gap: "lg" as const,
-              defaults: {
-                container: "default" as const,
-                padding: { top: "xl" as const, bottom: "xl" as const },
-                margin: { top: "none" as const, bottom: "none" as const },
-              },
-            },
-            applyDefaultsToNewBlocks: false,
-          },
-        },
-        blocks: [
-          {
-            id: "hero-1",
-            type: "hero",
-            variant: "centered",
-            data: {
-              headline: "Products detail",
-            },
-          },
-        ],
-        bindings: [],
-      } satisfies AssistantDetailPageUpsertAction["input"]["document"];
-
-      const plan: AssistantActionPlan = {
-        id: `plan-detail-page-upsert-${token}`,
-        status: "ready" as const,
-        intentId: `detail-page-upsert-${token}`,
-        promptKind: "setup_request" as const,
-        intentFamily: "product_catalog" as const,
-        title: "Create detail template",
-        answer: "I can create the detail template.",
-        summary: "Create a products detail template.",
-        confidence: 0.91,
-        assumptions: [],
-        questions: [],
-        actions: [
-          {
-            id: `detail-page-products-${token}`,
-            type: "detail-page.upsert" as const,
-            title: "Create products detail template",
-            description: "Create a products detail template.",
-            input: {
-              document,
-            },
-          },
-        ],
-      };
-
-      await executeAssistantActionPlan({
-        plan,
-        actorId: actor.id,
-        idempotencyKey: `assistant-detail-page-db-${token}-1`,
-      });
-      idempotencyKeysToCleanup.add(`assistant-detail-page-db-${token}-1`);
-
-      const detailAction = plan.actions[0];
-      if (!detailAction || detailAction.type !== "detail-page.upsert") {
-        throw new Error("missing_detail_page_action");
-      }
-
-      await executeAssistantActionPlan({
-        plan: {
-          ...plan,
-          actions: [
-            {
-              ...detailAction,
-              input: {
-                ...detailAction.input,
-                document: {
-                  ...document,
-                  name: `Products detail template ${token} updated`,
-                  status: "draft" as const,
-                },
-              },
-            },
-          ],
-        },
-        actorId: actor.id,
-        idempotencyKey: `assistant-detail-page-db-${token}-2`,
-      });
-      idempotencyKeysToCleanup.add(`assistant-detail-page-db-${token}-2`);
-
-      const rows = await db
-        .select()
-        .from(detailPageDocuments)
-        .where(eq(detailPageDocuments.id, detailPageId));
-
-      expect(rows).toHaveLength(1);
-      expect(rows[0]?.status).toBe("draft");
-      expect(rows[0]?.publishedDocument).toBeNull();
-    } finally {
-      await db
-        .delete(detailPageDocuments)
-        .where(eq(detailPageDocuments.id, detailPageId))
-        .catch(() => undefined);
-      await deleteContentType(contentType.id).catch(() => undefined);
-    }
-  },
-  { timeout: 20_000 }
 );

@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act, useState } from "react";
+import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -178,14 +178,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -195,7 +195,7 @@ const mount = (node: React.ReactNode) => {
 
 const setInputValue = (element: HTMLInputElement, value: string) => {
   const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
-  act(() => {
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -204,7 +204,7 @@ const setInputValue = (element: HTMLInputElement, value: string) => {
 
 const setTextareaValue = (element: HTMLTextAreaElement, value: string) => {
   const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
-  act(() => {
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -213,7 +213,7 @@ const setTextareaValue = (element: HTMLTextAreaElement, value: string) => {
 
 const setSelectValue = (element: HTMLSelectElement, value: string) => {
   const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
-  act(() => {
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
   });
@@ -221,13 +221,13 @@ const setSelectValue = (element: HTMLSelectElement, value: string) => {
 
 const setCheckboxValue = (element: HTMLInputElement, checked: boolean) => {
   if (element.checked === checked) return;
-  act(() => {
+  React.act(() => {
     element.click();
   });
 };
 
 const clickButton = (element: HTMLButtonElement) => {
-  act(() => {
+  React.act(() => {
     element.click();
   });
 };

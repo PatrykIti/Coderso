@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -412,7 +412,7 @@ const { CustomScreenListPage } =
 
 const flushAsync = async () => {
   await Promise.resolve();
-  await act(async () => {
+  await React.act(async () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
   });
 };
@@ -421,7 +421,7 @@ const renderPage = async () => {
   const container = document.createElement("div");
   document.body.appendChild(container);
   const root = createRoot(container);
-  await act(async () => {
+  await React.act(async () => {
     root.render(<CustomScreenListPage />);
   });
   await flushAsync();
@@ -429,7 +429,7 @@ const renderPage = async () => {
 };
 
 const updateInput = async (input: HTMLInputElement, value: string) => {
-  await act(async () => {
+  await React.act(async () => {
     const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
     setter?.call(input, value);
     input.dispatchEvent(new Event("input", { bubbles: true }));
@@ -437,7 +437,7 @@ const updateInput = async (input: HTMLInputElement, value: string) => {
 };
 
 const updateSelect = async (select: HTMLSelectElement, value: string) => {
-  await act(async () => {
+  await React.act(async () => {
     const setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value")?.set;
     setter?.call(select, value);
     select.dispatchEvent(new Event("change", { bubbles: true }));
@@ -445,7 +445,7 @@ const updateSelect = async (select: HTMLSelectElement, value: string) => {
 };
 
 const clickButton = async (button: HTMLButtonElement) => {
-  await act(async () => {
+  await React.act(async () => {
     button.click();
   });
   await flushAsync();
@@ -502,7 +502,7 @@ test("CustomScreenListPage hydrates cached rows and refreshes content labels fro
   customScreensState.contentTypes = [
     customScreensState.makeContentType({ name: "Product catalog" }),
   ];
-  await act(async () => {
+  await React.act(async () => {
     for (const subscriber of customScreensState.contentTypeSubscribers) {
       subscriber({ key: "contentTypes:list", action: "update" });
     }
@@ -512,7 +512,7 @@ test("CustomScreenListPage hydrates cached rows and refreshes content labels fro
   expect(container.textContent).toContain("Product catalog");
   expect(customScreensState.listContentTypeCalls.at(-1)).toEqual({ force: true });
 
-  await act(async () => root.unmount());
+  await React.act(async () => root.unmount());
 });
 
 test("CustomScreenListPage create drawer submits schema fields and navigates by preference", async () => {
@@ -555,7 +555,7 @@ test("CustomScreenListPage create drawer submits schema fields and navigates by 
   );
   expect(customScreensState.navigateCalls).toEqual(["/advanced/custom-screens/created-screen"]);
 
-  await act(async () => root.unmount());
+  await React.act(async () => root.unmount());
 });
 
 test("CustomScreenListPage status and delete actions use existing contracts and confirmation", async () => {
@@ -581,7 +581,7 @@ test("CustomScreenListPage status and delete actions use existing contracts and 
   expect(customScreensState.deleteCalls).toEqual(["screen-1"]);
   expect(customScreensState.toastSuccess).toHaveBeenCalledWith("Custom screen deleted.");
 
-  await act(async () => root.unmount());
+  await React.act(async () => root.unmount());
 });
 
 test("CustomScreenListPage bulk actions stay scoped to selected visible rows", async () => {
@@ -606,7 +606,7 @@ test("CustomScreenListPage bulk actions stay scoped to selected visible rows", a
   if (!(rowCheckbox instanceof HTMLInputElement)) {
     throw new Error("Missing visible row checkbox");
   }
-  await act(async () => {
+  await React.act(async () => {
     rowCheckbox.click();
   });
   await flushAsync();
@@ -621,5 +621,5 @@ test("CustomScreenListPage bulk actions stay scoped to selected visible rows", a
   expect(customScreensState.updateCalls).toEqual([{ id: "screen-1", input: { status: "draft" } }]);
   expect(customScreensState.toastSuccess).toHaveBeenCalledWith("1 custom screen moved to draft.");
 
-  await act(async () => root.unmount());
+  await React.act(async () => root.unmount());
 });

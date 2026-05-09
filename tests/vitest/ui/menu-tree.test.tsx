@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -54,7 +54,7 @@ const mount = (props?: Partial<React.ComponentProps<typeof MenuTree>>) => {
     onMove: vi.fn(),
   } satisfies React.ComponentProps<typeof MenuTree>;
 
-  act(() => {
+  React.act(() => {
     root.render(<MenuTree {...defaults} {...props} />);
   });
 
@@ -62,7 +62,7 @@ const mount = (props?: Partial<React.ComponentProps<typeof MenuTree>>) => {
     container,
     props: { ...defaults, ...props },
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -136,14 +136,14 @@ test("MenuTree resolves before, after, and child from row drag events", () => {
     expect(rootHandle).not.toBeNull();
     if (!rootHandle) return;
 
-    act(() => {
+    React.act(() => {
       dispatchDragEvent(rootHandle, "dragstart");
     });
     const blogRow = view.container.querySelector('[data-menu-row-id="blog"]');
     expect(blogRow).not.toBeNull();
     if (!blogRow) return;
     mockRect(blogRow, { left: 0, top: 100, height: 40 });
-    act(() => {
+    React.act(() => {
       dispatchDragEvent(blogRow, "dragover", { clientX: 8, clientY: 104 });
     });
 
@@ -153,19 +153,19 @@ test("MenuTree resolves before, after, and child from row drag events", () => {
     expect(beforeMarker?.className).toContain("absolute");
     expect(beforeMarker?.className).toContain("pointer-events-none");
 
-    act(() => {
+    React.act(() => {
       dispatchDragEvent(blogRow, "drop", { clientX: 8, clientY: 104 });
     });
     expect(onMove).toHaveBeenLastCalledWith("root", "blog", "before");
 
-    act(() => {
+    React.act(() => {
       dispatchDragEvent(rootHandle, "dragstart");
     });
     const blogRowAfter = view.container.querySelector('[data-menu-row-id="blog"]');
     expect(blogRowAfter).not.toBeNull();
     if (!blogRowAfter) return;
     mockRect(blogRowAfter, { left: 0, top: 100, height: 40 });
-    act(() => {
+    React.act(() => {
       dispatchDragEvent(blogRowAfter, "dragover", { clientX: 8, clientY: 136 });
     });
     const afterMarker = view.container.querySelector('[data-menu-drop-line="blog:after"]');
@@ -174,22 +174,22 @@ test("MenuTree resolves before, after, and child from row drag events", () => {
     expect(afterMarker?.className).toContain("absolute");
     expect(afterMarker?.className).toContain("pointer-events-none");
 
-    act(() => {
+    React.act(() => {
       dispatchDragEvent(blogRowAfter, "drop", { clientX: 8, clientY: 136 });
     });
     expect(onMove).toHaveBeenLastCalledWith("root", "blog", "after");
 
-    act(() => {
+    React.act(() => {
       dispatchDragEvent(rootHandle, "dragstart");
     });
     const blogRowChild = view.container.querySelector('[data-menu-row-id="blog"]');
     expect(blogRowChild).not.toBeNull();
     if (!blogRowChild) return;
     mockRect(blogRowChild, { left: 0, top: 100, height: 40 });
-    act(() => {
+    React.act(() => {
       dispatchDragEvent(blogRowChild, "dragover", { clientX: 120, clientY: 120 });
     });
-    act(() => {
+    React.act(() => {
       dispatchDragEvent(blogRowChild, "drop", { clientX: 120, clientY: 120 });
     });
     expect(onMove).toHaveBeenLastCalledWith("root", "blog", "child");
@@ -207,7 +207,7 @@ test("MenuTree keeps bottom-band same-level drops from the handle lane", () => {
     expect(rootHandle).not.toBeNull();
     if (!rootHandle) return;
 
-    act(() => {
+    React.act(() => {
       dispatchDragEvent(rootHandle, "dragstart");
     });
     const blogRow = view.container.querySelector('[data-menu-row-id="blog"]');
@@ -215,7 +215,7 @@ test("MenuTree keeps bottom-band same-level drops from the handle lane", () => {
     if (!blogRow) return;
     mockRect(blogRow, { left: 0, top: 100, height: 40 });
 
-    act(() => {
+    React.act(() => {
       dispatchDragEvent(blogRow, "dragover", { clientX: 8, clientY: 136 });
       dispatchDragEvent(blogRow, "drop", { clientX: 8, clientY: 136 });
     });
@@ -235,7 +235,7 @@ test("MenuTree maps the middle row band to child without horizontal bias", () =>
     expect(rootHandle).not.toBeNull();
     if (!rootHandle) return;
 
-    act(() => {
+    React.act(() => {
       dispatchDragEvent(rootHandle, "dragstart");
     });
     const blogRow = view.container.querySelector('[data-menu-row-id="blog"]');
@@ -243,7 +243,7 @@ test("MenuTree maps the middle row band to child without horizontal bias", () =>
     if (!blogRow) return;
     mockRect(blogRow, { left: 0, top: 100, height: 40 });
 
-    act(() => {
+    React.act(() => {
       dispatchDragEvent(blogRow, "dragover", { clientX: 8, clientY: 120 });
       dispatchDragEvent(blogRow, "drop", { clientX: 8, clientY: 120 });
     });
@@ -260,7 +260,7 @@ test("MenuTree exposes keyboard reorder actions without root drop zones", () => 
 
   try {
     const buttons = Array.from(view.container.querySelectorAll("button"));
-    act(() => {
+    React.act(() => {
       buttons.find((button) => button.getAttribute("aria-label") === "Move down Home")?.click();
       buttons.find((button) => button.getAttribute("aria-label") === "Indent Blog")?.click();
       buttons.find((button) => button.getAttribute("aria-label") === "Outdent About")?.click();
@@ -274,7 +274,7 @@ test("MenuTree exposes keyboard reorder actions without root drop zones", () => 
     expect(rootHandle).not.toBeNull();
     if (!rootHandle) return;
 
-    act(() => {
+    React.act(() => {
       dispatchDragEvent(rootHandle, "dragstart");
     });
     expect(view.container.textContent).not.toContain("Drop here to move to top level");

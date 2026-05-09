@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -90,10 +90,10 @@ const bookingPageState = vi.hoisted(() => {
     services: [service],
     reservations: [reservation],
     blackouts: [blackout],
-    cachedResources: [resource] as typeof resource[] | undefined,
-    cachedServices: [service] as typeof service[] | undefined,
-    cachedReservations: [reservation] as typeof reservation[] | undefined,
-    cachedBlackouts: [blackout] as typeof blackout[] | undefined,
+    cachedResources: [resource] as (typeof resource)[] | undefined,
+    cachedServices: [service] as (typeof service)[] | undefined,
+    cachedReservations: [reservation] as (typeof reservation)[] | undefined,
+    cachedBlackouts: [blackout] as (typeof blackout)[] | undefined,
     schedulesByResource: {
       "resource-1": [...schedules],
     } as Record<string, typeof schedules>,
@@ -213,7 +213,9 @@ vi.mock("@/components/ui/tabs", () => ({
   Tabs: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   TabsContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   TabsList: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  TabsTrigger: ({ children }: { children: React.ReactNode }) => <button type="button">{children}</button>,
+  TabsTrigger: ({ children }: { children: React.ReactNode }) => (
+    <button type="button">{children}</button>
+  ),
 }));
 
 vi.mock("@/services/cachePolicy", () => ({
@@ -230,8 +232,10 @@ vi.mock("@/services/bookingClient", () => ({
   getCachedBookingServices: () => bookingPageState.cachedServices,
   getCachedBookingReservations: () => bookingPageState.cachedReservations,
   getCachedBookingBlackouts: () => bookingPageState.cachedBlackouts,
-  resolveBookingSubmissionAccess: (settings: Record<string, unknown> | null | undefined, fallback = "public") =>
-    (settings?.submissionAccess as string | undefined) ?? fallback,
+  resolveBookingSubmissionAccess: (
+    settings: Record<string, unknown> | null | undefined,
+    fallback = "public"
+  ) => (settings?.submissionAccess as string | undefined) ?? fallback,
   withBookingSubmissionAccess: (
     settings: Record<string, unknown> | null | undefined,
     submissionAccess: string
@@ -462,7 +466,11 @@ vi.mock("../../../core/admin/ui/booking/components/ResourcesTab", () => ({
       <button type="button" onClick={onSubmitResource}>
         submit-resource
       </button>
-      <button type="button" onClick={() => onEditResource(resources[0]!)} disabled={resources.length === 0}>
+      <button
+        type="button"
+        onClick={() => onEditResource(resources[0]!)}
+        disabled={resources.length === 0}
+      >
         edit-resource
       </button>
       <button
@@ -559,7 +567,11 @@ vi.mock("../../../core/admin/ui/booking/components/ServicesTab", () => ({
       <button type="button" onClick={onSubmitService}>
         submit-service
       </button>
-      <button type="button" onClick={() => onEditService(services[0]!)} disabled={services.length === 0}>
+      <button
+        type="button"
+        onClick={() => onEditService(services[0]!)}
+        disabled={services.length === 0}
+      >
         edit-service
       </button>
       <button
@@ -869,14 +881,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -885,7 +897,7 @@ const mount = (node: React.ReactNode) => {
 };
 
 const flush = async () => {
-  await act(async () => {
+  await React.act(async () => {
     await Promise.resolve();
     await Promise.resolve();
     await Promise.resolve();
@@ -899,7 +911,7 @@ const clickByText = (container: HTMLElement, text: string) => {
   if (!button) {
     throw new Error(`Missing button: ${text}`);
   }
-  act(() => {
+  React.act(() => {
     button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 };
@@ -1066,7 +1078,7 @@ test("BookingPage drives booking flows across resources, services, availability,
     });
     expect(view.container.textContent).toContain("Found 1 available slots.");
 
-    await act(async () => {
+    await React.act(async () => {
       for (const subscriber of bookingPageState.subscribers) {
         subscriber({ key: "bookingResourcesList" });
         subscriber({ key: "bookingServicesList" });
@@ -1200,9 +1212,7 @@ test("BookingPage reports delete-service/delete-blackout failures and reservatio
     clickByText(view.container, "fill-reservation-invalid-range");
     clickByText(view.container, "create-reservation");
     await flush();
-    expect(view.container.textContent).toContain(
-      "End time must be later than start time."
-    );
+    expect(view.container.textContent).toContain("End time must be later than start time.");
   } finally {
     view.cleanup();
   }

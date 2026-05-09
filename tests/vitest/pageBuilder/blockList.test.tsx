@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 import { renderAdminUi } from "../../utils/adminRouterRender";
@@ -114,9 +114,7 @@ const repeatableDefinition: WidgetDefinition<{ headline: string }> = {
   audience: "advanced",
   module: "layout",
   variants: [{ id: "equal", label: "Equal" }],
-  slots: [
-    { id: "column", label: "Column", kind: "repeatable", minItems: 1, maxItems: 2 },
-  ],
+  slots: [{ id: "column", label: "Column", kind: "repeatable", minItems: 1, maxItems: 2 }],
   schema: {
     type: "object",
     required: ["headline"],
@@ -139,14 +137,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -193,7 +191,7 @@ const dispatchDragEvent = (
 ) => {
   const event = new Event(type, { bubbles: true, cancelable: true });
   Object.defineProperty(event, "dataTransfer", { value: dataTransfer });
-  act(() => {
+  React.act(() => {
     node.dispatchEvent(event);
   });
   return dataTransfer;
@@ -342,10 +340,8 @@ test("BlockList selects from the keyboard and ignores drops from another list to
     expect(heroRow).not.toBeNull();
     expect(newsletterRow).not.toBeNull();
 
-    act(() => {
-      heroRow?.dispatchEvent(
-        new KeyboardEvent("keydown", { key: "Enter", bubbles: true })
-      );
+    React.act(() => {
+      heroRow?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
     });
 
     expect(onSelect).toHaveBeenCalledWith("a");
@@ -357,11 +353,7 @@ test("BlockList selects from the keyboard and ignores drops from another list to
     dispatchDragEvent(newsletterRow!, "dragover");
     expect(newsletterRow?.className).toContain("border-primary/40");
 
-    dispatchDragEvent(
-      newsletterRow!,
-      "drop",
-      createDataTransfer({ "text/plain": "0:default:0" })
-    );
+    dispatchDragEvent(newsletterRow!, "drop", createDataTransfer({ "text/plain": "0:default:0" }));
 
     expect(onMove).not.toHaveBeenCalled();
     expect(newsletterRow?.className).not.toContain("border-primary/40");
@@ -398,21 +390,13 @@ test("BlockList forwards slot insert and move-to-slot drops", () => {
     expect(slotContainer).not.toBeNull();
     expect(normalizeText(slotContainer)).toContain("Add widget to Main");
 
-    dispatchDragEvent(
-      slotContainer!,
-      "drop",
-      createDataTransfer({ "widget-type": "newsletter" })
-    );
+    dispatchDragEvent(slotContainer!, "drop", createDataTransfer({ "widget-type": "newsletter" }));
     expect(onInsert).toHaveBeenCalledWith("slot-parent", "main", "newsletter");
 
-    dispatchDragEvent(
-      slotContainer!,
-      "drop",
-      createDataTransfer({ "block-id": "child-block" })
-    );
+    dispatchDragEvent(slotContainer!, "drop", createDataTransfer({ "block-id": "child-block" }));
     expect(onMoveToSlot).toHaveBeenCalledWith("child-block", "slot-parent", "main");
 
-    act(() => {
+    React.act(() => {
       Array.from(slotContainer!.querySelectorAll("button"))
         .find((button) => normalizeText(button).includes("Add widget to Main"))
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -455,14 +439,14 @@ test("BlockList routes inner select, toolbar actions, slot dragover, and drag re
   try {
     expect(view.container.textContent).toContain("Nested 1");
 
-    const parentSelectButton = Array.from(view.container.querySelectorAll("button")).find((element) =>
-      normalizeText(element).includes("Slot Layout")
+    const parentSelectButton = Array.from(view.container.querySelectorAll("button")).find(
+      (element) => normalizeText(element).includes("Slot Layout")
     );
     if (!(parentSelectButton instanceof HTMLButtonElement)) {
       throw new Error("missing slot layout button");
     }
 
-    act(() => {
+    React.act(() => {
       parentSelectButton.click();
     });
     expect(onSelect).toHaveBeenCalledWith("slot-parent");
@@ -481,7 +465,7 @@ test("BlockList routes inner select, toolbar actions, slot dragover, and drag re
     const toolbarDuplicate = getButtonByText(newsletterRow, "toolbar-duplicate");
     const toolbarDelete = getButtonByText(newsletterRow, "toolbar-delete");
 
-    act(() => {
+    React.act(() => {
       (toolbarUp as HTMLButtonElement | null)?.click();
       (toolbarDown as HTMLButtonElement | null)?.click();
       (toolbarDuplicate as HTMLButtonElement | null)?.click();
@@ -515,7 +499,7 @@ test("BlockList routes inner select, toolbar actions, slot dragover, and drag re
       value: createDataTransfer({ "widget-type": "newsletter" }),
     });
 
-    act(() => {
+    React.act(() => {
       slotContainer.dispatchEvent(dragOverEvent);
     });
 
@@ -551,19 +535,11 @@ test("repeatable slot helpers enforce min and max limits", () => {
   const blockedByMax = addRepeatableSlotInstance(withSecondSlot, "parent", "column");
   expect(blockedByMax[0]?.slots?.["column:3"]).toBeUndefined();
 
-  const removedFirst = removeRepeatableSlotInstance(
-    blockedByMax,
-    "parent",
-    "column:1"
-  );
+  const removedFirst = removeRepeatableSlotInstance(blockedByMax, "parent", "column:1");
   expect(removedFirst[0]?.slots?.["column:1"]).toBeUndefined();
   expect(removedFirst[0]?.slots?.["column:2"]).toEqual([]);
 
-  const blockedByMin = removeRepeatableSlotInstance(
-    removedFirst,
-    "parent",
-    "column:2"
-  );
+  const blockedByMin = removeRepeatableSlotInstance(removedFirst, "parent", "column:2");
   expect(blockedByMin[0]?.slots?.["column:2"]).toEqual([]);
 });
 
@@ -601,10 +577,7 @@ test("flattenBlocks and stripEditor traverse nested slots and legacy children", 
     children: [legacyChild],
   };
 
-  expect(flattenBlocks([parent]).map((block) => block.id)).toEqual([
-    "parent",
-    "slot-child",
-  ]);
+  expect(flattenBlocks([parent]).map((block) => block.id)).toEqual(["parent", "slot-child"]);
 
   const stripped = stripEditor([parent]);
   expect("editor" in stripped[0]).toBe(false);
@@ -624,21 +597,11 @@ test("grid columns supports nested insert and reorder per repeatable column slot
     childB
   );
 
-  const reordered = reorderBlocksAtPath(
-    withChildren,
-    [{ index: 0, slotId: "column:1" }],
-    0,
-    1
-  );
+  const reordered = reorderBlocksAtPath(withChildren, [{ index: 0, slotId: "column:1" }], 0, 1);
   expect(reordered[0]?.slots?.["column:1"]?.[0]?.id).toBe("grid-child-b");
   expect(reordered[0]?.slots?.["column:1"]?.[1]?.id).toBe("grid-child-a");
 
-  const moved = moveBlockIntoSlot(
-    reordered,
-    "grid-child-a",
-    "grid-parent",
-    "column:2"
-  );
+  const moved = moveBlockIntoSlot(reordered, "grid-child-a", "grid-parent", "column:2");
   expect(moved[0]?.slots?.["column:1"]?.[0]?.id).toBe("grid-child-b");
   expect(moved[0]?.slots?.["column:2"]?.[0]?.id).toBe("grid-child-a");
 });

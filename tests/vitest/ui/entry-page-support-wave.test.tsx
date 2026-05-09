@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server";
 import { afterEach, expect, test, vi } from "vitest";
@@ -148,9 +148,7 @@ vi.mock("@/components/ui/select", () => {
       .join("")
       .trim();
 
-  const collectOptions = (
-    value: React.ReactNode
-  ): Array<{ value: string; label: string }> =>
+  const collectOptions = (value: React.ReactNode): Array<{ value: string; label: string }> =>
     React.Children.toArray(value).flatMap((child) => {
       if (!React.isValidElement(child)) return [];
       if (typeof child.props.value === "string") {
@@ -198,7 +196,10 @@ vi.mock("@/components/ui/sheet", () => ({
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
   }) => (
-    <div data-sheet-open={String(Boolean(open))} data-has-open-change={String(Boolean(onOpenChange))}>
+    <div
+      data-sheet-open={String(Boolean(open))}
+      data-has-open-change={String(Boolean(onOpenChange))}
+    >
       {children}
     </div>
   ),
@@ -306,11 +307,7 @@ vi.mock("@/ui/posts/editor/richtext/PostRichTextAdapter", () => ({
     value: string;
     onChange: (value: string) => void;
   }) => (
-    <button
-      type="button"
-      data-richtext-value={value}
-      onClick={() => onChange("Updated body")}
-    >
+    <button type="button" data-richtext-value={value} onClick={() => onChange("Updated body")}>
       richtext-editor
     </button>
   ),
@@ -360,8 +357,7 @@ vi.mock("@/ui/shared/InfoTip", () => ({
 }));
 
 vi.mock("@/lib/utils", () => ({
-  cn: (...values: Array<string | boolean | null | undefined>) =>
-    values.filter(Boolean).join(" "),
+  cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
 }));
 
 const mount = (node: React.ReactNode) => {
@@ -369,19 +365,19 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     rerender: (next: React.ReactNode) => {
-      act(() => {
+      React.act(() => {
         root.render(next);
       });
     },
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -391,10 +387,7 @@ const mount = (node: React.ReactNode) => {
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
   descriptor?.set?.call(element, value);
   element.dispatchEvent(new Event("input", { bubbles: true }));
   element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -402,10 +395,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 
 const setTextareaValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLTextAreaElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLTextAreaElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
   descriptor?.set?.call(element, value);
   element.dispatchEvent(new Event("input", { bubbles: true }));
   element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -413,10 +403,7 @@ const setTextareaValue = (element: Element | null | undefined, value: string) =>
 
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
   descriptor?.set?.call(element, value);
   element.dispatchEvent(new Event("change", { bubbles: true }));
 };
@@ -427,9 +414,7 @@ afterEach(() => {
 });
 
 test("EntryCreateDrawer normalizes create payloads and open-after-create flow", async () => {
-  const { EntryCreateDrawer } = await import(
-    "../../../core/admin/ui/entries/EntryCreateDrawer"
-  );
+  const { EntryCreateDrawer } = await import("../../../core/admin/ui/entries/EntryCreateDrawer");
 
   const onOpenChange = vi.fn();
   const onCreated = vi.fn();
@@ -453,14 +438,12 @@ test("EntryCreateDrawer normalizes create payloads and open-after-create flow", 
     const titleInput = view.container.querySelector(
       'input[placeholder="e.g. Launch announcement"]'
     );
-    const slugInput = view.container.querySelector(
-      'input[placeholder="launch-announcement"]'
-    );
+    const slugInput = view.container.querySelector('input[placeholder="launch-announcement"]');
     const select = view.container.querySelector("select");
     const checkbox = view.container.querySelector("input[type='checkbox']");
     const buttons = Array.from(view.container.querySelectorAll("button"));
 
-    await act(async () => {
+    await React.act(async () => {
       setSelectValue(select ?? undefined, "products");
       setInputValue(titleInput ?? undefined, "New Product");
       setInputValue(slugInput ?? undefined, "new-product");
@@ -489,9 +472,7 @@ test("EntryCreateDrawer normalizes create payloads and open-after-create flow", 
 });
 
 test("EntryCreateDrawer reports rejected create mutations through optional list callback", async () => {
-  const { EntryCreateDrawer } = await import(
-    "../../../core/admin/ui/entries/EntryCreateDrawer"
-  );
+  const { EntryCreateDrawer } = await import("../../../core/admin/ui/entries/EntryCreateDrawer");
 
   const apiError = {
     name: "ApiClientError",
@@ -513,7 +494,7 @@ test("EntryCreateDrawer reports rejected create mutations through optional list 
   );
 
   try {
-    await act(async () => {
+    await React.act(async () => {
       setInputValue(
         view.container.querySelector('input[placeholder="e.g. Launch announcement"]'),
         "Blocked Entry"
@@ -545,7 +526,7 @@ test("EntryCreateDrawer reports rejected create mutations through optional list 
   );
 
   try {
-    await act(async () => {
+    await React.act(async () => {
       setInputValue(
         directView.container.querySelector('input[placeholder="e.g. Launch announcement"]'),
         "Local Only"
@@ -568,9 +549,7 @@ test("EntryCreateDrawer reports rejected create mutations through optional list 
 });
 
 test("EntryTypeSidebar filters types and forwards select/create actions", async () => {
-  const { EntryTypeSidebar } = await import(
-    "../../../core/admin/ui/entries/EntryTypeSidebar"
-  );
+  const { EntryTypeSidebar } = await import("../../../core/admin/ui/entries/EntryTypeSidebar");
 
   const onSelect = vi.fn();
   const onCreateCollection = vi.fn();
@@ -594,13 +573,13 @@ test("EntryTypeSidebar filters types and forwards select/create actions", async 
     const input = view.container.querySelector("input");
     const buttons = Array.from(view.container.querySelectorAll("button"));
 
-    act(() => {
+    React.act(() => {
       setInputValue(input ?? undefined, "prod");
     });
     expect(view.container.textContent).toContain("Products");
     expect(view.container.textContent).not.toContain("Articles");
 
-    act(() => {
+    React.act(() => {
       buttons.find((button) => button.textContent?.includes("Products"))?.click();
       buttons.find((button) => button.textContent?.includes("New Collection"))?.click();
     });
@@ -613,9 +592,7 @@ test("EntryTypeSidebar filters types and forwards select/create actions", async 
 });
 
 test("EntryMetadataPanel handles checklist, seo, taxonomy, and save actions", async () => {
-  const { EntryMetadataPanel } = await import(
-    "../../../core/admin/ui/entries/EntryMetadataPanel"
-  );
+  const { EntryMetadataPanel } = await import("../../../core/admin/ui/entries/EntryMetadataPanel");
 
   const onStatusChange = vi.fn();
   const onScheduledAtChange = vi.fn();
@@ -647,9 +624,7 @@ test("EntryMetadataPanel handles checklist, seo, taxonomy, and save actions", as
       checklist={{
         missingRequiredFields: [],
         blockingIssues: [],
-        items: [
-          { id: "seo", label: "SEO", status: "warning", detail: "Needs work" },
-        ],
+        items: [{ id: "seo", label: "SEO", status: "warning", detail: "Needs work" }],
       }}
       taxonomy={{
         categoryEnabled: true,
@@ -686,7 +661,7 @@ test("EntryMetadataPanel handles checklist, seo, taxonomy, and save actions", as
     const selects = Array.from(view.container.querySelectorAll("select"));
     const buttons = Array.from(view.container.querySelectorAll("button"));
 
-    await act(async () => {
+    await React.act(async () => {
       setSelectValue(selects[0], "draft");
       setInputValue(inputs[0], "2026-03-08T09:00:00Z");
       setTextareaValue(textarea ?? undefined, "Updated meta");
@@ -694,9 +669,7 @@ test("EntryMetadataPanel handles checklist, seo, taxonomy, and save actions", as
       setInputValue(inputs[1], "Fresh category");
       buttons.find((button) => button.textContent === "Add")?.click();
       setInputValue(inputs[2], "Important");
-      inputs[2]?.dispatchEvent(
-        new KeyboardEvent("keydown", { bubbles: true, key: "Enter" })
-      );
+      inputs[2]?.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "Enter" }));
       buttons.find((button) => button.textContent?.includes("Save metadata"))?.click();
       await Promise.resolve();
       await Promise.resolve();
@@ -715,12 +688,8 @@ test("EntryMetadataPanel handles checklist, seo, taxonomy, and save actions", as
 });
 
 test("PageSettingsDrawer and PageRevisionDrawer forward save, autosave, restore, and discard", async () => {
-  const { PageSettingsDrawer } = await import(
-    "../../../core/admin/ui/pages/PageSettingsDrawer"
-  );
-  const { PageRevisionDrawer } = await import(
-    "../../../core/admin/ui/pages/PageRevisionDrawer"
-  );
+  const { PageSettingsDrawer } = await import("../../../core/admin/ui/pages/PageSettingsDrawer");
+  const { PageRevisionDrawer } = await import("../../../core/admin/ui/pages/PageRevisionDrawer");
   const { PageTable } = await import("../../../core/admin/ui/pages/PageTable");
   const { EntryTable } = await import("../../../core/admin/ui/entries/EntryTable");
 
@@ -740,14 +709,16 @@ test("PageSettingsDrawer and PageRevisionDrawer forward save, autosave, restore,
       <PageSettingsDrawer
         open
         onOpenChange={onOpenChange}
-        page={{
-          id: "page-1",
-          title: "Landing",
-          slug: "/landing",
-          status: "draft",
-          currentData: { blocks: [] },
-          updatedAt: "2026-03-06T12:00:00.000Z",
-        } as never}
+        page={
+          {
+            id: "page-1",
+            title: "Landing",
+            slug: "/landing",
+            status: "draft",
+            currentData: { blocks: [] },
+            updatedAt: "2026-03-06T12:00:00.000Z",
+          } as never
+        }
         settings={{
           template: "landing",
           showInNav: true,
@@ -784,19 +755,21 @@ test("PageSettingsDrawer and PageRevisionDrawer forward save, autosave, restore,
       <PageRevisionDrawer
         open
         onOpenChange={onOpenChange}
-        revisions={[
-          {
-            id: "rev-1",
-            pageId: "page-1",
-            version: 1,
-            kind: "autosave",
-            title: "Draft",
-            slug: "/draft",
-            data: { blocks: [] },
-            createdAt: "2026-03-06T12:00:00.000Z",
-            createdBy: { name: "Admin", email: "admin@example.com" },
-          },
-        ] as never}
+        revisions={
+          [
+            {
+              id: "rev-1",
+              pageId: "page-1",
+              version: 1,
+              kind: "autosave",
+              title: "Draft",
+              slug: "/draft",
+              data: { blocks: [] },
+              createdAt: "2026-03-06T12:00:00.000Z",
+              createdBy: { name: "Admin", email: "admin@example.com" },
+            },
+          ] as never
+        }
         isLoading={false}
         error={null}
         onRestore={onRestore}
@@ -812,7 +785,7 @@ test("PageSettingsDrawer and PageRevisionDrawer forward save, autosave, restore,
     const selects = Array.from(view.container.querySelectorAll("select"));
     const buttons = Array.from(view.container.querySelectorAll("button"));
 
-    act(() => {
+    React.act(() => {
       setInputValue(inputs[0], "About us");
       setInputValue(inputs[1], "/about");
       setSelectValue(selects[0], "landing");
@@ -823,25 +796,25 @@ test("PageSettingsDrawer and PageRevisionDrawer forward save, autosave, restore,
       buttons.find((button) => button.textContent === "Discard")?.click();
     });
 
-    act(() => {
+    React.act(() => {
       Array.from(view.container.querySelectorAll("button"))
         .find((button) => button.textContent === "Confirm Discard draft version")
         ?.click();
     });
 
-    act(() => {
+    React.act(() => {
       Array.from(view.container.querySelectorAll("button"))
         .find((button) => button.textContent === "Restore")
         ?.click();
     });
 
-    act(() => {
+    React.act(() => {
       Array.from(view.container.querySelectorAll("button"))
         .find((button) => button.textContent === "Confirm Restore")
         ?.click();
     });
 
-    act(() => {
+    React.act(() => {
       const nextButtons = Array.from(view.container.querySelectorAll("button"));
       nextButtons.find((button) => button.textContent === "Edit")?.click();
       nextButtons.find((button) => button.textContent === "Preview")?.click();
@@ -871,16 +844,18 @@ test("PageTable and EntryTable forward row and selection actions", async () => {
 
   const pageView = mount(
     <PageTable
-      items={[
-        {
-          id: "page-1",
-          title: "Landing",
-          slug: "/landing",
-          status: "draft",
-          updatedAt: "2026-03-06T12:00:00.000Z",
-          author: { id: "author-1", name: "Admin", email: "admin@example.com" },
-        },
-      ] as never}
+      items={
+        [
+          {
+            id: "page-1",
+            title: "Landing",
+            slug: "/landing",
+            status: "draft",
+            updatedAt: "2026-03-06T12:00:00.000Z",
+            author: { id: "author-1", name: "Admin", email: "admin@example.com" },
+          },
+        ] as never
+      }
       onEdit={() => undefined}
       onPreview={() => undefined}
       onPublish={() => undefined}
@@ -898,16 +873,18 @@ test("PageTable and EntryTable forward row and selection actions", async () => {
 
   const entryView = mount(
     <EntryTable
-      entries={[
-        {
-          id: "entry-1",
-          title: "Hello",
-          slug: "hello",
-          status: "draft",
-          updatedAt: "2026-03-06T12:00:00.000Z",
-          author: { id: "author-1", name: "Admin", email: "admin@example.com" },
-        },
-      ] as never}
+      entries={
+        [
+          {
+            id: "entry-1",
+            title: "Hello",
+            slug: "hello",
+            status: "draft",
+            updatedAt: "2026-03-06T12:00:00.000Z",
+            author: { id: "author-1", name: "Admin", email: "admin@example.com" },
+          },
+        ] as never
+      }
       selectedIds={[]}
       onToggleAll={onToggleAll}
       onToggleEntry={onToggleEntry}
@@ -919,16 +896,13 @@ test("PageTable and EntryTable forward row and selection actions", async () => {
 
   try {
     expect(entryView.container.innerHTML).toContain("/entries/posts/entry-1");
-
   } finally {
     entryView.cleanup();
   }
 });
 
 test("FieldRenderer covers primitive, media, relation fallback, and unknown field branches", async () => {
-  const { FieldRenderer } = await import(
-    "../../../core/admin/ui/entries/FieldRenderer"
-  );
+  const { FieldRenderer } = await import("../../../core/admin/ui/entries/FieldRenderer");
 
   const onChange = vi.fn();
   const compactTextField = {
@@ -940,12 +914,7 @@ test("FieldRenderer covers primitive, media, relation fallback, and unknown fiel
   } as const;
 
   const textView = mount(
-    <FieldRenderer
-      field={compactTextField}
-      value="Hello"
-      onChange={onChange}
-      display="compact"
-    />
+    <FieldRenderer field={compactTextField} value="Hello" onChange={onChange} display="compact" />
   );
 
   try {
@@ -953,7 +922,7 @@ test("FieldRenderer covers primitive, media, relation fallback, and unknown fiel
     expect(textView.container.innerHTML).toContain("h-9 text-sm");
 
     const textInput = textView.container.querySelector("input");
-    act(() => {
+    React.act(() => {
       setInputValue(textInput ?? undefined, "Updated headline");
     });
     expect(onChange).toHaveBeenLastCalledWith("Updated headline");
@@ -972,7 +941,7 @@ test("FieldRenderer covers primitive, media, relation fallback, and unknown fiel
     );
     expect(textView.container.textContent).toContain("Long-form content with formatting.");
 
-    act(() => {
+    React.act(() => {
       textView.container
         .querySelector("button[data-richtext-value]")
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -992,11 +961,11 @@ test("FieldRenderer covers primitive, media, relation fallback, and unknown fiel
       />
     );
     const numberInput = textView.container.querySelector("input");
-    act(() => {
+    React.act(() => {
       setInputValue(numberInput ?? undefined, "");
     });
     expect(onChange).toHaveBeenLastCalledWith(null);
-    act(() => {
+    React.act(() => {
       setInputValue(numberInput ?? undefined, "42");
     });
     expect(onChange).toHaveBeenLastCalledWith(42);
@@ -1014,7 +983,7 @@ test("FieldRenderer covers primitive, media, relation fallback, and unknown fiel
       />
     );
     const checkbox = textView.container.querySelector("input[type='checkbox']");
-    act(() => {
+    React.act(() => {
       (checkbox as HTMLInputElement | null)?.click();
     });
     expect(onChange).toHaveBeenLastCalledWith(true);
@@ -1036,7 +1005,7 @@ test("FieldRenderer covers primitive, media, relation fallback, and unknown fiel
       />
     );
     const select = textView.container.querySelector("select");
-    act(() => {
+    React.act(() => {
       setSelectValue(select ?? undefined, "cool");
     });
     expect(onChange).toHaveBeenLastCalledWith("cool");
@@ -1059,7 +1028,7 @@ test("FieldRenderer covers primitive, media, relation fallback, and unknown fiel
       />
     );
     const multiCheckboxes = textView.container.querySelectorAll("input[type='checkbox']");
-    act(() => {
+    React.act(() => {
       (multiCheckboxes[1] as HTMLInputElement | undefined)?.click();
     });
     expect(onChange).toHaveBeenLastCalledWith(["web", "email"]);
@@ -1085,7 +1054,7 @@ test("FieldRenderer covers primitive, media, relation fallback, and unknown fiel
     expect(textView.container.textContent).toContain("media-multiple:true");
     expect(textView.container.textContent).toContain("media-max:3");
     expect(textView.container.textContent).toContain("media-accept:image/png|image/jpeg");
-    act(() => {
+    React.act(() => {
       Array.from(textView.container.querySelectorAll("button"))
         .find((button) => button.textContent === "media-picker")
         ?.click();
@@ -1109,7 +1078,9 @@ test("FieldRenderer covers primitive, media, relation fallback, and unknown fiel
     expect(textView.container.textContent).toContain(
       "Choose a related content type in the Content Type editor to enable picker."
     );
-    expect(textView.container.innerHTML).toContain("Add a relation target in the content type first");
+    expect(textView.container.innerHTML).toContain(
+      "Add a relation target in the content type first"
+    );
 
     textView.rerender(
       <FieldRenderer
@@ -1132,9 +1103,7 @@ test("FieldRenderer covers primitive, media, relation fallback, and unknown fiel
 });
 
 test("FieldRenderer relation picker covers single, multiple, search, empty, and error states", async () => {
-  const { FieldRenderer } = await import(
-    "../../../core/admin/ui/entries/FieldRenderer"
-  );
+  const { FieldRenderer } = await import("../../../core/admin/ui/entries/FieldRenderer");
 
   const onChange = vi.fn();
   entriesState.relationItems = [
@@ -1172,23 +1141,21 @@ test("FieldRenderer relation picker covers single, multiple, search, empty, and 
   );
 
   try {
-    await act(async () => {
+    await React.act(async () => {
       await Promise.resolve();
     });
 
-    expect(view.container.textContent).toContain(
-      "Link this entry to related content."
-    );
+    expect(view.container.textContent).toContain("Link this entry to related content.");
     expect(view.container.textContent).toContain("Linked entry");
 
     const buttons = Array.from(view.container.querySelectorAll("button"));
-    act(() => {
+    React.act(() => {
       buttons.find((button) => button.textContent?.includes("Linked entry"))?.click();
     });
     expect(onChange).toHaveBeenLastCalledWith("related-1");
 
     const searchInput = view.container.querySelector("input");
-    act(() => {
+    React.act(() => {
       setInputValue(searchInput ?? undefined, "missing");
     });
     expect(view.container.textContent).toContain("No matches for");
@@ -1209,13 +1176,13 @@ test("FieldRenderer relation picker covers single, multiple, search, empty, and 
         display="compact"
       />
     );
-    await act(async () => {
+    await React.act(async () => {
       await Promise.resolve();
     });
 
     expect(view.container.textContent).toContain("Use relation help");
     expect(view.container.innerHTML).toContain("h-9 text-sm");
-    act(() => {
+    React.act(() => {
       Array.from(view.container.querySelectorAll("button"))
         .find((button) => button.textContent?.includes("Second reference"))
         ?.click();
@@ -1237,7 +1204,7 @@ test("FieldRenderer relation picker covers single, multiple, search, empty, and 
         relationTargets={[{ slug: "articles-empty", name: "Articles" }]}
       />
     );
-    await act(async () => {
+    await React.act(async () => {
       await Promise.resolve();
     });
     expect(view.container.textContent).toContain("No items found yet.");
@@ -1260,7 +1227,7 @@ test("FieldRenderer relation picker covers single, multiple, search, empty, and 
         relationTargets={[{ slug: "articles-error", name: "Articles" }]}
       />
     );
-    await act(async () => {
+    await React.act(async () => {
       await Promise.resolve();
     });
     expect(view.container.textContent).toContain("Relation lookup failed");

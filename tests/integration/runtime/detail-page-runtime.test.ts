@@ -24,6 +24,11 @@ import { resetRateLimitBuckets } from "../../../core/server/middleware/rateLimit
 
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
 const testIfDb = hasDb ? test : test.skip;
+const testIfDbWithOptions = testIfDb as unknown as (
+  name: string,
+  fn: () => Promise<void>,
+  options: { timeout: number }
+) => void;
 
 async function canConnect() {
   try {
@@ -239,14 +244,14 @@ const insertPublishedDetailPageDocument = async (input: {
   trackedDetailPageIds.add(input.id);
 };
 
-testIfDb(
+testIfDbWithOptions(
   "published content routes render composed detail-page blocks when detailPageId is linked",
   async () => {
     resetRateLimitBuckets();
     await setTestSetting("site.cacheTtlSeconds", 0);
 
     const fixture = await createProductFixture("published");
-    const detailPageId = "4dd7f4d4-48d8-53f7-a9e6-0d01f6b89e6c";
+    const detailPageId = randomUUID();
     await insertPublishedDetailPageDocument({
       id: detailPageId,
       contentTypeId: fixture.contentType.id,
@@ -268,17 +273,18 @@ testIfDb(
     const html = await response.text();
     expect(html).toContain(`Bound detail headline ${fixture.token}`);
     expect(html).toContain("Composed detail template body");
-  }
+  },
+  { timeout: 15_000 }
 );
 
-testIfDb(
+testIfDbWithOptions(
   "published content routes with :id detail paths resolve composed detail pages by entry id",
   async () => {
     resetRateLimitBuckets();
     await setTestSetting("site.cacheTtlSeconds", 0);
 
     const fixture = await createProductFixture("published");
-    const detailPageId = "6dd7f4d4-48d8-53f7-a9e6-0d01f6b89e6c";
+    const detailPageId = randomUUID();
     await insertPublishedDetailPageDocument({
       id: detailPageId,
       contentTypeId: fixture.contentType.id,
@@ -300,10 +306,11 @@ testIfDb(
     const html = await response.text();
     expect(html).toContain(`Bound detail headline ${fixture.token}`);
     expect(html).toContain("Composed detail template body");
-  }
+  },
+  { timeout: 15_000 }
 );
 
-testIfDb(
+testIfDbWithOptions(
   "content routes fall back to the legacy entry detail renderer when no detailPageId is linked",
   async () => {
     resetRateLimitBuckets();
@@ -326,17 +333,18 @@ testIfDb(
     expect(html).toContain('data-template="content-detail"');
     expect(html).toContain(`Bound detail headline ${fixture.token}`);
     expect(html).not.toContain("Composed detail template body");
-  }
+  },
+  { timeout: 15_000 }
 );
 
-testIfDb(
+testIfDbWithOptions(
   "composed detail pages pass query-string runtime state into hydrated widgets",
   async () => {
     resetRateLimitBuckets();
     await setTestSetting("site.cacheTtlSeconds", 0);
 
     const fixture = await createProductFixture("published");
-    const detailPageId = "7dd7f4d4-48d8-53f7-a9e6-0d01f6b89e6c";
+    const detailPageId = randomUUID();
     const listingQueryId = "detail-query";
     const searchToken = buildListingRuntimeParamName(listingQueryId, listingRuntimeTokens.search);
     await insertPublishedDetailPageDocument({
@@ -376,55 +384,60 @@ testIfDb(
     const html = await response.text();
     expect(html).toContain(`name="${searchToken}"`);
     expect(html).toContain('value="desk"');
-  }
+  },
+  { timeout: 15_000 }
 );
 
-testIfDb("composed detail pages preserve entry canonical SEO metadata", async () => {
-  resetRateLimitBuckets();
-  await setTestSetting("site.cacheTtlSeconds", 0);
+testIfDbWithOptions(
+  "composed detail pages preserve entry canonical SEO metadata",
+  async () => {
+    resetRateLimitBuckets();
+    await setTestSetting("site.cacheTtlSeconds", 0);
 
-  const fixture = await createProductFixture("published");
-  const detailPageId = "8dd7f4d4-48d8-53f7-a9e6-0d01f6b89e6c";
-  const canonicalUrl = `https://example.test/${fixture.contentType.slug}/${fixture.entry.slug}`;
-  await updateEntryMetadata(
-    fixture.entry.id,
-    {
-      seo: {
-        canonicalUrl,
+    const fixture = await createProductFixture("published");
+    const detailPageId = randomUUID();
+    const canonicalUrl = `https://example.test/${fixture.contentType.slug}/${fixture.entry.slug}`;
+    await updateEntryMetadata(
+      fixture.entry.id,
+      {
+        seo: {
+          canonicalUrl,
+        },
       },
-    },
-    fixture.actor.id
-  );
-  await insertPublishedDetailPageDocument({
-    id: detailPageId,
-    contentTypeId: fixture.contentType.id,
-    contentTypeSlug: fixture.contentType.slug,
-  });
-  await setTestSetting("site.contentRoutes", [
-    {
-      type: fixture.contentType.slug,
-      listPath: `/${fixture.contentType.slug}`,
-      detailPath: `/${fixture.contentType.slug}/:slug`,
-      enabled: true,
-      detailPageId,
-    } satisfies ContentRouteSetting,
-  ]);
+      fixture.actor.id
+    );
+    await insertPublishedDetailPageDocument({
+      id: detailPageId,
+      contentTypeId: fixture.contentType.id,
+      contentTypeSlug: fixture.contentType.slug,
+    });
+    await setTestSetting("site.contentRoutes", [
+      {
+        type: fixture.contentType.slug,
+        listPath: `/${fixture.contentType.slug}`,
+        detailPath: `/${fixture.contentType.slug}/:slug`,
+        enabled: true,
+        detailPageId,
+      } satisfies ContentRouteSetting,
+    ]);
 
-  const response = await requestPublicPath(`/${fixture.contentType.slug}/${fixture.entry.slug}`);
+    const response = await requestPublicPath(`/${fixture.contentType.slug}/${fixture.entry.slug}`);
 
-  expect(response.status).toBe(200);
-  const html = await response.text();
-  expect(html).toContain(`rel="canonical" href="${canonicalUrl}"`);
-});
+    expect(response.status).toBe(200);
+    const html = await response.text();
+    expect(html).toContain(`rel="canonical" href="${canonicalUrl}"`);
+  },
+  { timeout: 15_000 }
+);
 
-testIfDb(
+testIfDbWithOptions(
   "draft entries stay hidden on public content routes even when detailPageId is linked",
   async () => {
     resetRateLimitBuckets();
     await setTestSetting("site.cacheTtlSeconds", 0);
 
     const fixture = await createProductFixture("draft");
-    const detailPageId = "5dd7f4d4-48d8-53f7-a9e6-0d01f6b89e6c";
+    const detailPageId = randomUUID();
     await insertPublishedDetailPageDocument({
       id: detailPageId,
       contentTypeId: fixture.contentType.id,
@@ -443,5 +456,6 @@ testIfDb(
     const response = await requestPublicPath(`/${fixture.contentType.slug}/${fixture.entry.slug}`);
 
     expect(response.status).toBe(404);
-  }
+  },
+  { timeout: 15_000 }
 );

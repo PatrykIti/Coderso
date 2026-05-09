@@ -217,6 +217,7 @@ bunMock?.module("../../../core/services/content/entryService", () => ({
 
 bunMock?.module("../../../core/services/content/detailPageRuntimeResolver", () => ({
   resolvePublishedDetailPageRuntime: async () => currentResolvedDetailPage,
+  resolvePreviewDetailPageRuntime: async () => currentResolvedDetailPage,
 }));
 
 bunMock?.module("../../../core/services/pages/pageService", () => ({

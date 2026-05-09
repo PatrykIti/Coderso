@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server";
 import { expect, test, vi } from "vitest";
@@ -46,13 +46,8 @@ vi.mock("@/components/ui/checkbox", () => ({
 }));
 
 vi.mock("@/components/ui/dialog", () => ({
-  Dialog: ({
-    children,
-    open,
-  }: {
-    children: React.ReactNode;
-    open?: boolean;
-  }) => (open ? <div>{children}</div> : null),
+  Dialog: ({ children, open }: { children: React.ReactNode; open?: boolean }) =>
+    open ? <div>{children}</div> : null,
   DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DialogDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
   DialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -72,14 +67,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -148,11 +143,11 @@ test("theme leaf cards render state and forward action callbacks", () => {
       Array.from(view.container.querySelectorAll("button")).find(
         (button) => button.getAttribute("aria-label") === label
       );
-    const activateButtons = Array.from(view.container.querySelectorAll("button")).filter(
-      (button) => button.textContent?.includes("Activate")
+    const activateButtons = Array.from(view.container.querySelectorAll("button")).filter((button) =>
+      button.textContent?.includes("Activate")
     );
 
-    act(() => {
+    React.act(() => {
       byLabel("Edit Ocean")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       byLabel("Duplicate Ocean")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       activateButtons[0]?.click();
@@ -186,9 +181,7 @@ test("ThemePreviewPanel renders typography, actions, and warning copy", () => {
 
 test("ThemeExportDialog renders export options and forwards close actions", () => {
   const onOpenChange = vi.fn();
-  const view = mount(
-    <ThemeExportDialog open onOpenChange={onOpenChange} />
-  );
+  const view = mount(<ThemeExportDialog open onOpenChange={onOpenChange} />);
 
   try {
     expect(view.container.textContent).toContain("Export Theme Config");
@@ -206,7 +199,7 @@ test("ThemeExportDialog renders export options and forwards close actions", () =
         button.textContent?.includes(text)
       );
 
-    act(() => {
+    React.act(() => {
       byLabel("Close export dialog")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       byText("Cancel")?.click();
       byText("Export Config")?.click();

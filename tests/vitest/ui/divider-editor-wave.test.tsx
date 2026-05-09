@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act, useState } from "react";
+import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -119,8 +119,7 @@ vi.mock("@/components/ui/select", () => {
 });
 
 vi.mock("@/lib/utils", () => ({
-  cn: (...values: Array<string | boolean | null | undefined>) =>
-    values.filter(Boolean).join(" "),
+  cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
 }));
 
 const mount = (node: React.ReactNode) => {
@@ -128,14 +127,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -145,11 +144,8 @@ const mount = (node: React.ReactNode) => {
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  );
-  act(() => {
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -158,11 +154,8 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value"
-  );
-  act(() => {
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
   });
@@ -175,7 +168,7 @@ const clickByText = (container: ParentNode, text: string, index = 0) => {
   if (!(button instanceof HTMLButtonElement)) {
     throw new Error(`Missing button: ${text} (${index})`);
   }
-  act(() => {
+  React.act(() => {
     button.click();
   });
 };
@@ -221,11 +214,8 @@ afterEach(() => {
 });
 
 test("Divider editors cover variant changes, width modes, spacing tokens, and advanced snapshot updates", async () => {
-  const {
-    DividerAdvancedEditor,
-    DividerVisualEditor,
-    DividerWizardEditor,
-  } = await import("../../../core/admin/ui/widgets/editors/DividerEditors");
+  const { DividerAdvancedEditor, DividerVisualEditor, DividerWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/DividerEditors");
 
   const onChangeSpy = vi.fn();
   let latestValue: DividerData = {
@@ -293,7 +283,16 @@ test("Divider editors cover variant changes, width modes, spacing tokens, and ad
     expect(currentVariant).toBe("label-center");
 
     setInputValue(findInputByPlaceholder(view.container, "Optional label"), "Milestone");
-    const wizardThickness = findSelectsByOptions(view.container, ["1", "2", "3", "4", "5", "6", "7", "8"])[0];
+    const wizardThickness = findSelectsByOptions(view.container, [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+    ])[0];
     setSelectValue(wizardThickness, "4");
 
     expect(latestValue).toMatchObject({
@@ -305,12 +304,28 @@ test("Divider editors cover variant changes, width modes, spacing tokens, and ad
     expect(currentVariant).toBe("dashed");
 
     const lineSection = findSectionByTitle(view.container, "Line style and width");
-    const widthModeSelect = findSelectsByOptions(lineSection as ParentNode, ["full", "container", "custom"])[0];
-    const thicknessSelect = findSelectsByOptions(lineSection as ParentNode, ["1", "2", "3", "4", "5", "6", "7", "8"])[0];
+    const widthModeSelect = findSelectsByOptions(lineSection as ParentNode, [
+      "full",
+      "container",
+      "custom",
+    ])[0];
+    const thicknessSelect = findSelectsByOptions(lineSection as ParentNode, [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+    ])[0];
     setSelectValue(thicknessSelect, "2");
     setSelectValue(widthModeSelect, "custom");
     setInputValue(findInputByPlaceholder(lineSection as ParentNode, "e.g. 320px or 60%"), "60%");
-    setInputValue(findInputByPlaceholder(lineSection as ParentNode, "var(--color-border)"), "#334155");
+    setInputValue(
+      findInputByPlaceholder(lineSection as ParentNode, "var(--color-border)"),
+      "#334155"
+    );
 
     const spacingSection = findSectionByTitle(view.container, "Spacing around divider");
     const spacingSelects = Array.from((spacingSection as ParentNode).querySelectorAll("select"));
@@ -318,7 +333,11 @@ test("Divider editors cover variant changes, width modes, spacing tokens, and ad
     setSelectValue(spacingSelects[1], "8");
 
     const advancedSection = findSectionByTitle(view.container, "Technical divider tokens");
-    const advancedWidthMode = findSelectsByOptions(advancedSection as ParentNode, ["full", "container", "custom"])[0];
+    const advancedWidthMode = findSelectsByOptions(advancedSection as ParentNode, [
+      "full",
+      "container",
+      "custom",
+    ])[0];
     setSelectValue(advancedWidthMode, "container");
 
     expect(onChangeSpy).toHaveBeenCalled();
@@ -342,11 +361,8 @@ test("Divider editors cover variant changes, width modes, spacing tokens, and ad
 });
 
 test("Divider editors cover visual label input, color picker changes, custom spacing text input, and advanced variant no-op", async () => {
-  const {
-    DividerAdvancedEditor,
-    DividerVisualEditor,
-    DividerWizardEditor,
-  } = await import("../../../core/admin/ui/widgets/editors/DividerEditors");
+  const { DividerAdvancedEditor, DividerVisualEditor, DividerWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/DividerEditors");
 
   let latestValue: DividerData = {
     width: "container",
@@ -402,11 +418,21 @@ test("Divider editors cover visual label input, color picker changes, custom spa
 
   try {
     const visualVariant = findSectionByTitle(view.container, "Variant and label");
-    setInputValue(findInputByPlaceholder(visualVariant as ParentNode, "Optional label"), "Chapter break");
+    setInputValue(
+      findInputByPlaceholder(visualVariant as ParentNode, "Optional label"),
+      "Chapter break"
+    );
 
     const lineSection = findSectionByTitle(view.container, "Line style and width");
-    setInputValue(findColorInputForPlaceholder(lineSection as ParentNode, "var(--color-border)"), "#94a3b8");
-    const widthModeSelect = findSelectsByOptions(lineSection as ParentNode, ["full", "container", "custom"])[0];
+    setInputValue(
+      findColorInputForPlaceholder(lineSection as ParentNode, "var(--color-border)"),
+      "#94a3b8"
+    );
+    const widthModeSelect = findSelectsByOptions(lineSection as ParentNode, [
+      "full",
+      "container",
+      "custom",
+    ])[0];
     setSelectValue(widthModeSelect, "custom");
     setInputValue(findInputByPlaceholder(lineSection as ParentNode, "e.g. 320px or 60%"), "55%");
 
@@ -414,7 +440,11 @@ test("Divider editors cover visual label input, color picker changes, custom spa
     setInputValue(findInputByPlaceholder(spacingSection as ParentNode, "e.g. 32px"), "40px");
 
     const advancedSection = findSectionByTitle(view.container, "Technical divider tokens");
-    const variantSelect = findSelectsByOptions(advancedSection as ParentNode, ["line", "dashed", "label-center"])[0];
+    const variantSelect = findSelectsByOptions(advancedSection as ParentNode, [
+      "line",
+      "dashed",
+      "label-center",
+    ])[0];
     setSelectValue(variantSelect, "line");
     const advancedSpacingInputs = Array.from(
       (advancedSection as ParentNode).querySelectorAll("input[placeholder='e.g. 32px']")

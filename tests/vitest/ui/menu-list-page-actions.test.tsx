@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
@@ -116,13 +116,8 @@ vi.mock("@/components/ui/checkbox", () => ({
 }));
 
 vi.mock("@/components/ui/dialog", () => ({
-  Dialog: ({
-    children,
-    open,
-  }: {
-    children: React.ReactNode;
-    open?: boolean;
-  }) => (open ? <div data-dialog-open="true">{children}</div> : null),
+  Dialog: ({ children, open }: { children: React.ReactNode; open?: boolean }) =>
+    open ? <div data-dialog-open="true">{children}</div> : null,
   DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DialogDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
   DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -175,9 +170,7 @@ vi.mock("@/components/ui/select", () => {
       .join("")
       .trim();
 
-  const collectOptions = (
-    value: React.ReactNode
-  ): Array<{ value: string; label: string }> =>
+  const collectOptions = (value: React.ReactNode): Array<{ value: string; label: string }> =>
     React.Children.toArray(value).flatMap((child) => {
       if (!React.isValidElement(child)) return [];
       const props = child.props as { value?: string; children?: React.ReactNode };
@@ -206,9 +199,7 @@ vi.mock("@/components/ui/select", () => {
       </select>
     ),
     SelectContent: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-    SelectItem: ({ children }: { children: React.ReactNode; value: string }) => (
-      <>{children}</>
-    ),
+    SelectItem: ({ children }: { children: React.ReactNode; value: string }) => <>{children}</>,
     SelectTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
     SelectValue: () => null,
   };
@@ -338,19 +329,19 @@ vi.mock("@/utils/cacheRefresh", () => ({
 
 const { MenuListPage } = await import("../../../core/admin/ui/menus/MenuListPage");
 
-const flush = () => act(async () => Promise.resolve());
+const flush = () => React.act(async () => Promise.resolve());
 
 const mount = () => {
   const host = document.createElement("div");
   document.body.appendChild(host);
   const root = createRoot(host);
-  act(() => {
+  React.act(() => {
     root.render(<MenuListPage />);
   });
   return {
     host,
     cleanup: () => {
-      act(() => root.unmount());
+      React.act(() => root.unmount());
       host.remove();
     },
   };
@@ -374,7 +365,7 @@ test("MenuListPage filters rows and bulk publishes only selected visible menus",
     expect(view.host.textContent).toContain("Footer");
 
     const selects = Array.from(view.host.querySelectorAll("select"));
-    await act(async () => {
+    await React.act(async () => {
       selects[0]!.value = "draft";
       selects[0]!.dispatchEvent(new Event("change", { bubbles: true }));
     });
@@ -385,13 +376,13 @@ test("MenuListPage filters rows and bulk publishes only selected visible menus",
     const selectAll = view.host.querySelector(
       'button[aria-label="Select all menus"]'
     ) as HTMLButtonElement;
-    await act(async () => {
+    await React.act(async () => {
       selectAll.click();
       await Promise.resolve();
     });
 
     const bulkSelect = Array.from(view.host.querySelectorAll("select"))[0]!;
-    await act(async () => {
+    await React.act(async () => {
       bulkSelect.value = "publish";
       bulkSelect.dispatchEvent(new Event("change", { bubbles: true }));
     });
@@ -399,7 +390,7 @@ test("MenuListPage filters rows and bulk publishes only selected visible menus",
     const apply = Array.from(view.host.querySelectorAll("button")).find(
       (button) => button.textContent === "Apply"
     );
-    await act(async () => {
+    await React.act(async () => {
       apply?.click();
       await Promise.resolve();
     });
@@ -433,14 +424,14 @@ test("MenuListPage selection is scoped to the paginated visible menus", async ()
     const selectAll = view.host.querySelector(
       'button[aria-label="Select all menus"]'
     ) as HTMLButtonElement;
-    await act(async () => {
+    await React.act(async () => {
       selectAll.click();
       await Promise.resolve();
     });
 
     expect(view.host.textContent).toContain("Selected 10");
 
-    await act(async () => {
+    await React.act(async () => {
       Array.from(view.host.querySelectorAll("button"))
         .find((button) => button.textContent === "Next")
         ?.click();
@@ -463,13 +454,13 @@ test("MenuListPage requires confirmation before bulk delete", async () => {
     const selectAll = view.host.querySelector(
       'button[aria-label="Select all menus"]'
     ) as HTMLButtonElement;
-    await act(async () => {
+    await React.act(async () => {
       selectAll.click();
       await Promise.resolve();
     });
 
     const bulkSelect = Array.from(view.host.querySelectorAll("select"))[0]!;
-    await act(async () => {
+    await React.act(async () => {
       bulkSelect.value = "delete";
       bulkSelect.dispatchEvent(new Event("change", { bubbles: true }));
     });
@@ -477,7 +468,7 @@ test("MenuListPage requires confirmation before bulk delete", async () => {
     const apply = Array.from(view.host.querySelectorAll("button")).find(
       (button) => button.textContent === "Apply"
     );
-    await act(async () => {
+    await React.act(async () => {
       apply?.click();
       await Promise.resolve();
     });
@@ -490,7 +481,7 @@ test("MenuListPage requires confirmation before bulk delete", async () => {
     const cancel = Array.from(view.host.querySelectorAll("button")).find(
       (button) => button.textContent === "Cancel"
     );
-    act(() => {
+    React.act(() => {
       cancel?.click();
     });
 
@@ -507,7 +498,7 @@ test("MenuListPage emits row lifecycle and confirmed delete toasts", async () =>
 
     const buttons = () => Array.from(view.host.querySelectorAll("button"));
 
-    await act(async () => {
+    await React.act(async () => {
       buttons()
         .find((button) => button.textContent === "Move to Draft" && !button.disabled)
         ?.click();
@@ -515,11 +506,9 @@ test("MenuListPage emits row lifecycle and confirmed delete toasts", async () =>
     });
 
     expect(menuListState.draftCalls).toEqual(["menu-1"]);
-    expect(menuListState.toastSuccess).toHaveBeenCalledWith(
-      "Menu moved to draft."
-    );
+    expect(menuListState.toastSuccess).toHaveBeenCalledWith("Menu moved to draft.");
 
-    await act(async () => {
+    await React.act(async () => {
       buttons()
         .find((button) => button.textContent === "Publish" && !button.disabled)
         ?.click();
@@ -529,14 +518,18 @@ test("MenuListPage emits row lifecycle and confirmed delete toasts", async () =>
     expect(menuListState.publishCalls).toEqual(["menu-1"]);
     expect(menuListState.toastSuccess).toHaveBeenCalledWith("Menu published.");
 
-    act(() => {
-      buttons().find((button) => button.textContent === "Delete")?.click();
+    React.act(() => {
+      buttons()
+        .find((button) => button.textContent === "Delete")
+        ?.click();
     });
     expect(view.host.textContent).toContain("Delete menu?");
     expect(menuListState.toastSuccess).not.toHaveBeenCalledWith("Menu deleted.");
 
-    await act(async () => {
-      buttons().find((button) => button.textContent === "Delete menu")?.click();
+    await React.act(async () => {
+      buttons()
+        .find((button) => button.textContent === "Delete menu")
+        ?.click();
       await Promise.resolve();
     });
 
@@ -555,7 +548,7 @@ test("MenuListPage emits row and bulk failure toasts while preserving inline fee
     menuListState.nextPublishError = new Error("publish failed");
     const buttons = () => Array.from(view.host.querySelectorAll("button"));
 
-    await act(async () => {
+    await React.act(async () => {
       buttons()
         .find((button) => button.textContent === "Publish" && !button.disabled)
         ?.click();
@@ -563,36 +556,36 @@ test("MenuListPage emits row and bulk failure toasts while preserving inline fee
     });
 
     expect(view.host.textContent).toContain("Failed to publish menu.");
-    expect(menuListState.toastError).toHaveBeenCalledWith(
-      "Failed to publish menu."
-    );
+    expect(menuListState.toastError).toHaveBeenCalledWith("Failed to publish menu.");
 
     const selectAll = view.host.querySelector(
       'button[aria-label="Select all menus"]'
     ) as HTMLButtonElement;
-    await act(async () => {
+    await React.act(async () => {
       selectAll.click();
       await Promise.resolve();
     });
 
     menuListState.nextDeleteError.set("menu-2", new Error("delete failed"));
     const bulkSelect = Array.from(view.host.querySelectorAll("select"))[0]!;
-    await act(async () => {
+    await React.act(async () => {
       bulkSelect.value = "delete";
       bulkSelect.dispatchEvent(new Event("change", { bubbles: true }));
     });
 
-    await act(async () => {
-      buttons().find((button) => button.textContent === "Apply")?.click();
+    await React.act(async () => {
+      buttons()
+        .find((button) => button.textContent === "Apply")
+        ?.click();
       await Promise.resolve();
-      buttons().find((button) => button.textContent === "Delete selected")?.click();
+      buttons()
+        .find((button) => button.textContent === "Delete selected")
+        ?.click();
       await Promise.resolve();
     });
 
     expect(view.host.textContent).toContain("Deleted 1 menu; failed 1.");
-    expect(menuListState.toastError).toHaveBeenCalledWith(
-      "Deleted 1 menu; failed 1."
-    );
+    expect(menuListState.toastError).toHaveBeenCalledWith("Deleted 1 menu; failed 1.");
   } finally {
     view.cleanup();
   }

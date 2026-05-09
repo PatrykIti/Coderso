@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act, useState } from "react";
+import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test } from "vitest";
 
@@ -118,14 +118,14 @@ const mount = () => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(<Harness />);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -164,7 +164,7 @@ test("list view canvas reorders visible columns in the header and keeps hidden c
     const statusMoveLeft = leftButtons.find(
       (button) => button.getAttribute("aria-label") === "Move Status label left"
     );
-    act(() => {
+    React.act(() => {
       statusMoveLeft?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
 
@@ -176,7 +176,7 @@ test("list view canvas reorders visible columns in the header and keeps hidden c
     expect(view.container.querySelectorAll('button[aria-label^="Move"]').length).toBe(6);
 
     const statusSelect = view.container.querySelector('[data-column-select="statusLabel"]');
-    act(() => {
+    React.act(() => {
       statusSelect?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
     expect(

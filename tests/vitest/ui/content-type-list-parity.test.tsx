@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
@@ -64,13 +64,9 @@ const contentTypeListState = vi.hoisted(() => {
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 vi.mock("@/components/ui/alert", () => ({
-  Alert: ({
-    children,
-    variant,
-  }: {
-    children: React.ReactNode;
-    variant?: string;
-  }) => <div data-alert-variant={variant ?? "default"}>{children}</div>,
+  Alert: ({ children, variant }: { children: React.ReactNode; variant?: string }) => (
+    <div data-alert-variant={variant ?? "default"}>{children}</div>
+  ),
   AlertDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   AlertTitle: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
 }));
@@ -121,13 +117,8 @@ vi.mock("@/components/ui/checkbox", () => ({
 }));
 
 vi.mock("@/components/ui/dialog", () => ({
-  Dialog: ({
-    children,
-    open,
-  }: {
-    children: React.ReactNode;
-    open?: boolean;
-  }) => (open ? <div data-dialog-open="true">{children}</div> : null),
+  Dialog: ({ children, open }: { children: React.ReactNode; open?: boolean }) =>
+    open ? <div data-dialog-open="true">{children}</div> : null,
   DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DialogDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
   DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -180,9 +171,7 @@ vi.mock("@/components/ui/select", () => {
       .join("")
       .trim();
 
-  const collectOptions = (
-    value: React.ReactNode
-  ): Array<{ value: string; label: string }> =>
+  const collectOptions = (value: React.ReactNode): Array<{ value: string; label: string }> =>
     React.Children.toArray(value).flatMap((child) => {
       if (!React.isValidElement(child)) return [];
       const props = child.props as { value?: string; children?: React.ReactNode };
@@ -211,9 +200,7 @@ vi.mock("@/components/ui/select", () => {
       </select>
     ),
     SelectContent: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-    SelectItem: ({ children }: { children: React.ReactNode; value: string }) => (
-      <>{children}</>
-    ),
+    SelectItem: ({ children }: { children: React.ReactNode; value: string }) => <>{children}</>,
     SelectTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
     SelectValue: () => null,
   };
@@ -361,33 +348,28 @@ vi.mock("../../../core/admin/ui/content-types/ContentTypeCreateDrawer", () => ({
         >
           mock create content type
         </button>
-        <button
-          type="button"
-          onClick={() => onCreateError?.(new Error("create failed"))}
-        >
+        <button type="button" onClick={() => onCreateError?.(new Error("create failed"))}>
           mock create content type error
         </button>
       </div>
     ) : null,
 }));
 
-const { ContentTypeList } = await import(
-  "../../../core/admin/ui/content-types/ContentTypeList"
-);
+const { ContentTypeList } = await import("../../../core/admin/ui/content-types/ContentTypeList");
 
-const flush = () => act(async () => Promise.resolve());
+const flush = () => React.act(async () => Promise.resolve());
 
 const mount = () => {
   const host = document.createElement("div");
   document.body.appendChild(host);
   const root = createRoot(host);
-  act(() => {
+  React.act(() => {
     root.render(<ContentTypeList />);
   });
   return {
     host,
     cleanup: () => {
-      act(() => root.unmount());
+      React.act(() => root.unmount());
       host.remove();
     },
   };
@@ -422,7 +404,7 @@ test("ContentTypeList uses shared pagination footer and page-size options", asyn
     expect(view.host.textContent).toContain("Type 10");
     expect(view.host.textContent).not.toContain("Type 11");
 
-    act(() => {
+    React.act(() => {
       Array.from(view.host.querySelectorAll("button"))
         .find((button) => button.textContent === "Next")
         ?.click();
@@ -431,7 +413,7 @@ test("ContentTypeList uses shared pagination footer and page-size options", asyn
     expect(view.host.textContent).toContain("Showing 11-12 of 12 content types");
     expect(view.host.textContent).toContain("Type 11");
 
-    act(() => {
+    React.act(() => {
       setSelectValue(findSelectWithOption(view.host, "20"), "20");
     });
 
@@ -447,7 +429,7 @@ test("ContentTypeList keeps selection page-visible and applies bulk actions thro
   try {
     await flush();
 
-    act(() => {
+    React.act(() => {
       Array.from(view.host.querySelectorAll("button"))
         .find((button) => button.textContent === "Next")
         ?.click();
@@ -456,17 +438,17 @@ test("ContentTypeList keeps selection page-visible and applies bulk actions thro
     const selectAll = view.host.querySelector(
       'button[aria-label="Select all content types"]'
     ) as HTMLButtonElement;
-    act(() => {
+    React.act(() => {
       selectAll.click();
     });
 
     expect(view.host.textContent).toContain("Selected 2");
 
-    act(() => {
+    React.act(() => {
       setSelectValue(findSelectWithOption(view.host, "publish"), "publish");
     });
 
-    await act(async () => {
+    await React.act(async () => {
       Array.from(view.host.querySelectorAll("button"))
         .find((button) => button.textContent === "Apply")
         ?.click();
@@ -477,9 +459,7 @@ test("ContentTypeList keeps selection page-visible and applies bulk actions thro
       { id: "type-11", status: "published" },
       { id: "type-12", status: "published" },
     ]);
-    expect(contentTypeListState.toastSuccess).toHaveBeenCalledWith(
-      "2 content types published."
-    );
+    expect(contentTypeListState.toastSuccess).toHaveBeenCalledWith("2 content types published.");
     expect(view.host.textContent).toContain("Bulk action completed");
     expect(view.host.textContent).not.toContain("Selected 2");
   } finally {
@@ -492,13 +472,13 @@ test("ContentTypeList emits create and confirmed row delete toasts", async () =>
   try {
     await flush();
 
-    act(() => {
+    React.act(() => {
       Array.from(view.host.querySelectorAll("button"))
         .find((button) => button.textContent === "New type")
         ?.click();
     });
 
-    act(() => {
+    React.act(() => {
       Array.from(view.host.querySelectorAll("button"))
         .find((button) => button.textContent === "mock create content type")
         ?.click();
@@ -507,11 +487,9 @@ test("ContentTypeList emits create and confirmed row delete toasts", async () =>
     expect(contentTypeListState.toastSuccess).toHaveBeenCalledWith(
       'Collection "Created Type" created.'
     );
-    expect(contentTypeListState.navigateCalls).toContain(
-      "/content-types/created-type"
-    );
+    expect(contentTypeListState.navigateCalls).toContain("/content-types/created-type");
 
-    act(() => {
+    React.act(() => {
       Array.from(view.host.querySelectorAll("button"))
         .find((button) => button.textContent === "Delete")
         ?.click();
@@ -521,7 +499,7 @@ test("ContentTypeList emits create and confirmed row delete toasts", async () =>
       'Content type "Created Type" deleted.'
     );
 
-    await act(async () => {
+    await React.act(async () => {
       Array.from(view.host.querySelectorAll("button"))
         .find((button) => button.textContent === "Delete type")
         ?.click();
@@ -546,23 +524,21 @@ test("ContentTypeList emits bulk partial-failure toasts and keeps failed ids sel
     const selectAll = view.host.querySelector(
       'button[aria-label="Select all content types"]'
     ) as HTMLButtonElement;
-    act(() => {
+    React.act(() => {
       selectAll.click();
     });
-    act(() => {
+    React.act(() => {
       setSelectValue(findSelectWithOption(view.host, "draft"), "draft");
     });
 
-    await act(async () => {
+    await React.act(async () => {
       Array.from(view.host.querySelectorAll("button"))
         .find((button) => button.textContent === "Apply")
         ?.click();
       await Promise.resolve();
     });
 
-    expect(view.host.textContent).toContain(
-      "Moved 9 content types to draft; failed 1."
-    );
+    expect(view.host.textContent).toContain("Moved 9 content types to draft; failed 1.");
     expect(contentTypeListState.toastError).toHaveBeenCalledWith(
       "Moved 9 content types to draft; failed 1."
     );
@@ -580,14 +556,14 @@ test("ContentTypeList delete confirmation uses token-backed dialog copy", async 
     const selectAll = view.host.querySelector(
       'button[aria-label="Select all content types"]'
     ) as HTMLButtonElement;
-    act(() => {
+    React.act(() => {
       selectAll.click();
     });
-    act(() => {
+    React.act(() => {
       setSelectValue(findSelectWithOption(view.host, "delete"), "delete");
     });
 
-    act(() => {
+    React.act(() => {
       Array.from(view.host.querySelectorAll("button"))
         .find((button) => button.textContent === "Apply")
         ?.click();

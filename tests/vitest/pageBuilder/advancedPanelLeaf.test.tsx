@@ -1,11 +1,15 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
 import { AdvancedPanel } from "../../../core/admin/ui/pages/builder/AdvancedPanel";
-import type { Block, LayoutValue, WidgetDefinition } from "../../../core/admin/ui/pages/builder/types";
+import type {
+  Block,
+  LayoutValue,
+  WidgetDefinition,
+} from "../../../core/admin/ui/pages/builder/types";
 import type { WidgetEditorProps } from "../../../core/widgets/types";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -64,14 +68,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -148,7 +152,7 @@ test("AdvancedPanel wires editor, layout, and visibility callbacks", () => {
         (element) => element.textContent === label
       );
 
-    act(() => {
+    React.act(() => {
       byText("change-data")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       byText("change-variant")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       container
@@ -157,7 +161,7 @@ test("AdvancedPanel wires editor, layout, and visibility callbacks", () => {
     });
 
     const switches = Array.from(container.querySelectorAll("button[data-switch-checked]"));
-    act(() => {
+    React.act(() => {
       switches[0]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       switches[1]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
@@ -239,7 +243,9 @@ test("AdvancedPanel falls back for missing variant, visibility, and invalid layo
     const layoutButton = container.querySelector("button[data-layout-panel='true']");
     expect(layoutButton?.getAttribute("data-layout-container")).toBe("default");
     expect(layoutButton?.getAttribute("data-layout-padding-top")).toBe("md");
-    expect(container.querySelector("[data-variant-fallback]")?.getAttribute("data-variant-fallback")).toBe("");
+    expect(
+      container.querySelector("[data-variant-fallback]")?.getAttribute("data-variant-fallback")
+    ).toBe("");
 
     const switches = Array.from(container.querySelectorAll("button[data-switch-checked]"));
     expect(switches.map((item) => item.getAttribute("data-switch-checked"))).toEqual([
@@ -248,7 +254,7 @@ test("AdvancedPanel falls back for missing variant, visibility, and invalid layo
       "true",
     ]);
 
-    act(() => {
+    React.act(() => {
       switches[2]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
 

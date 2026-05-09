@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act, useState } from "react";
+import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -22,13 +22,7 @@ vi.mock("@/components/ui/input", () => ({
     placeholder?: string;
     [key: string]: unknown;
   }) => (
-    <input
-      value={value}
-      onChange={onChange}
-      type={type}
-      placeholder={placeholder}
-      {...props}
-    />
+    <input value={value} onChange={onChange} type={type} placeholder={placeholder} {...props} />
   ),
 }));
 
@@ -63,13 +57,9 @@ vi.mock("@/components/ui/select", () => ({
   SelectTrigger: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
   SelectValue: () => null,
   SelectContent: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
-  SelectItem: ({
-    value,
-    children,
-  }: {
-    value: string;
-    children?: React.ReactNode;
-  }) => <option value={value}>{children}</option>,
+  SelectItem: ({ value, children }: { value: string; children?: React.ReactNode }) => (
+    <option value={value}>{children}</option>
+  ),
 }));
 
 vi.mock("@/services/commerceClient", () => ({
@@ -81,14 +71,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -101,11 +91,8 @@ const normalizeText = (value: string | null | undefined) =>
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  );
-  act(() => {
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -114,11 +101,8 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value"
-  );
-  act(() => {
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
   });
@@ -126,7 +110,7 @@ const setSelectValue = (element: Element | null | undefined, value: string) => {
 
 const toggleCheckbox = (element: Element | null | undefined) => {
   if (!(element instanceof HTMLInputElement)) return;
-  act(() => {
+  React.act(() => {
     element.click();
   });
 };
@@ -154,11 +138,8 @@ afterEach(() => {
 });
 
 test("ProductTable editors cover source controls, column toggles, label normalization, empty state, and runtime preview", async () => {
-  const {
-    ProductTableAdvancedEditor,
-    ProductTableVisualEditor,
-    ProductTableWizardEditor,
-  } = await import("../../../core/admin/ui/widgets/editors/ProductTableEditors");
+  const { ProductTableAdvancedEditor, ProductTableVisualEditor, ProductTableWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/ProductTableEditors");
 
   const onChangeSpy = vi.fn();
   let latestValue: ProductTableData = {
@@ -234,24 +215,19 @@ test("ProductTable editors cover source controls, column toggles, label normaliz
       (findInputByLabel(view.container, "Limit") as HTMLInputElement | null | undefined)?.value
     ).toBe("12");
     expect(
-      (findSelectByLabel(view.container, "Sort field") as HTMLSelectElement | null | undefined)?.value
+      (findSelectByLabel(view.container, "Sort field") as HTMLSelectElement | null | undefined)
+        ?.value
     ).toBe("updatedAt");
     expect(
-      (
-        findSelectByLabel(view.container, "Sort direction") as
-          | HTMLSelectElement
-          | undefined
-      )?.value
+      (findSelectByLabel(view.container, "Sort direction") as HTMLSelectElement | undefined)?.value
     ).toBe("desc");
     expect(
-      (findInputByLabel(view.container, "Show slug") as HTMLInputElement | null | undefined)?.checked
+      (findInputByLabel(view.container, "Show slug") as HTMLInputElement | null | undefined)
+        ?.checked
     ).toBe(true);
     expect(
-      (
-        findInputByLabel(view.container, "Show compare-at price") as
-          | HTMLInputElement
-          | undefined
-      )?.checked
+      (findInputByLabel(view.container, "Show compare-at price") as HTMLInputElement | undefined)
+        ?.checked
     ).toBe(false);
 
     setInputValue(findInputByLabel(view.container, "Limit"), "52");
@@ -332,21 +308,16 @@ test("ProductTable editors cover source controls, column toggles, label normaliz
       collectionIds: ["summer", "sale"],
     });
     expect(
-      (
-        findInputByLabel(view.container, "Show compare-at price") as
-          | HTMLInputElement
-          | undefined
-      )?.checked
+      (findInputByLabel(view.container, "Show compare-at price") as HTMLInputElement | undefined)
+        ?.checked
     ).toBe(true);
     expect(
-      (findInputByLabel(view.container, "Show slug") as HTMLInputElement | null | undefined)?.checked
+      (findInputByLabel(view.container, "Show slug") as HTMLInputElement | null | undefined)
+        ?.checked
     ).toBe(false);
     expect(
-      (
-        findInputByLabel(view.container, "Runtime error flag") as
-          | HTMLInputElement
-          | undefined
-      )?.value
+      (findInputByLabel(view.container, "Runtime error flag") as HTMLInputElement | undefined)
+        ?.value
     ).toBe("resolver-timeout");
 
     const preview = view.container.querySelector("pre");
@@ -368,9 +339,9 @@ test("ProductTable editors cover source controls, column toggles, label normaliz
 test("ProductTable editors fall back to hardcoded wizard limit and empty runtime counts when normalized data is sparse", async () => {
   vi.resetModules();
   vi.doMock("../../../core/widgets/core/productTable", async () => {
-    const actual = await vi.importActual<
-      typeof import("../../../core/widgets/core/productTable")
-    >("../../../core/widgets/core/productTable");
+    const actual = await vi.importActual<typeof import("../../../core/widgets/core/productTable")>(
+      "../../../core/widgets/core/productTable"
+    );
 
     return {
       ...actual,
@@ -381,10 +352,8 @@ test("ProductTable editors fall back to hardcoded wizard limit and empty runtime
     };
   });
 
-  const {
-    ProductTableAdvancedEditor,
-    ProductTableWizardEditor,
-  } = await import("../../../core/admin/ui/widgets/editors/ProductTableEditors");
+  const { ProductTableAdvancedEditor, ProductTableWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/ProductTableEditors");
 
   const view = mount(
     <>
@@ -411,7 +380,12 @@ test("ProductTable editors fall back to hardcoded wizard limit and empty runtime
       normalizeText("Resolved items: 0 · Total: 0")
     );
     expect(
-      (findInputByLabel(view.container, "Runtime error flag") as HTMLInputElement | null | undefined)?.value
+      (
+        findInputByLabel(view.container, "Runtime error flag") as
+          | HTMLInputElement
+          | null
+          | undefined
+      )?.value
     ).toBe("");
   } finally {
     view.cleanup();
@@ -421,9 +395,8 @@ test("ProductTable editors fall back to hardcoded wizard limit and empty runtime
 });
 
 test("ProductTable visual and advanced editors honor explicit toggle states and sparse runtime fallbacks", async () => {
-  const { ProductTableAdvancedEditor, ProductTableVisualEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/ProductTableEditors"
-  );
+  const { ProductTableAdvancedEditor, ProductTableVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/ProductTableEditors");
 
   const visualView = mount(
     <ProductTableVisualEditor
@@ -443,24 +416,31 @@ test("ProductTable visual and advanced editors honor explicit toggle states and 
   );
 
   try {
-    expect((findInputByLabel(visualView.container, "Show slug") as HTMLInputElement | null | undefined)?.checked).toBe(
-      false
-    );
-    expect((findInputByLabel(visualView.container, "Show status") as HTMLInputElement | null | undefined)?.checked).toBe(
-      false
-    );
-    expect((findInputByLabel(visualView.container, "Show stock") as HTMLInputElement | null | undefined)?.checked).toBe(
-      false
-    );
     expect(
-      (findInputByLabel(visualView.container, "Show compare-at price") as
-        | HTMLInputElement
-        | undefined)?.checked
+      (findInputByLabel(visualView.container, "Show slug") as HTMLInputElement | null | undefined)
+        ?.checked
+    ).toBe(false);
+    expect(
+      (findInputByLabel(visualView.container, "Show status") as HTMLInputElement | null | undefined)
+        ?.checked
+    ).toBe(false);
+    expect(
+      (findInputByLabel(visualView.container, "Show stock") as HTMLInputElement | null | undefined)
+        ?.checked
+    ).toBe(false);
+    expect(
+      (
+        findInputByLabel(visualView.container, "Show compare-at price") as
+          | HTMLInputElement
+          | undefined
+      )?.checked
     ).toBe(true);
     expect(
-      (findInputByLabel(visualView.container, "Show collection count") as
-        | HTMLInputElement
-        | undefined)?.checked
+      (
+        findInputByLabel(visualView.container, "Show collection count") as
+          | HTMLInputElement
+          | undefined
+      )?.checked
     ).toBe(true);
   } finally {
     visualView.cleanup();
@@ -480,9 +460,11 @@ test("ProductTable visual and advanced editors honor explicit toggle states and 
       normalizeText("Resolved items: 0 · Total: 0")
     );
     expect(
-      (findInputByLabel(advancedView.container, "Runtime error flag") as
-        | HTMLInputElement
-        | undefined)?.value
+      (
+        findInputByLabel(advancedView.container, "Runtime error flag") as
+          | HTMLInputElement
+          | undefined
+      )?.value
     ).toBe("");
   } finally {
     advancedView.cleanup();
@@ -490,11 +472,8 @@ test("ProductTable visual and advanced editors honor explicit toggle states and 
 });
 
 test("ProductTable editors restore default labels and empty state when fields are cleared and drop blank runtime errors", async () => {
-  const {
-    ProductTableAdvancedEditor,
-    ProductTableVisualEditor,
-    ProductTableWizardEditor,
-  } = await import("../../../core/admin/ui/widgets/editors/ProductTableEditors");
+  const { ProductTableAdvancedEditor, ProductTableVisualEditor, ProductTableWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/ProductTableEditors");
 
   let latestValue: ProductTableData = {
     source: {
@@ -565,14 +544,12 @@ test("ProductTable editors restore default labels and empty state when fields ar
 
   try {
     expect(
-      (findInputByLabel(view.container, "Show slug") as HTMLInputElement | null | undefined)?.checked
+      (findInputByLabel(view.container, "Show slug") as HTMLInputElement | null | undefined)
+        ?.checked
     ).toBe(false);
     expect(
-      (
-        findInputByLabel(view.container, "Show compare-at price") as
-          | HTMLInputElement
-          | undefined
-      )?.checked
+      (findInputByLabel(view.container, "Show compare-at price") as HTMLInputElement | undefined)
+        ?.checked
     ).toBe(true);
     expect(normalizeText(view.container.textContent)).toContain(
       normalizeText("Resolved items: 0 · Total: 0")
@@ -614,14 +591,12 @@ test("ProductTable editors restore default labels and empty state when fields ar
       (findInputByLabel(view.container, "Title") as HTMLInputElement | null | undefined)?.value
     ).toBe("No products available");
     expect(
-      (findInputByLabel(view.container, "Description") as HTMLInputElement | null | undefined)?.value
+      (findInputByLabel(view.container, "Description") as HTMLInputElement | null | undefined)
+        ?.value
     ).toBe("Publish products or adjust source query.");
     expect(
-      (
-        findInputByLabel(view.container, "Runtime error flag") as
-          | HTMLInputElement
-          | undefined
-      )?.value
+      (findInputByLabel(view.container, "Runtime error flag") as HTMLInputElement | undefined)
+        ?.value
     ).toBe("");
 
     const preview = view.container.querySelector("pre");
@@ -638,9 +613,9 @@ test("ProductTable editors restore default labels and empty state when fields ar
 test("ProductTable advanced editor falls back when normalized resolved summary is sparse", async () => {
   vi.resetModules();
   vi.doMock("../../../core/widgets/core/productTable", async () => {
-    const actual = await vi.importActual<
-      typeof import("../../../core/widgets/core/productTable")
-    >("../../../core/widgets/core/productTable");
+    const actual = await vi.importActual<typeof import("../../../core/widgets/core/productTable")>(
+      "../../../core/widgets/core/productTable"
+    );
 
     return {
       ...actual,
@@ -654,9 +629,8 @@ test("ProductTable advanced editor falls back when normalized resolved summary i
     };
   });
 
-  const { ProductTableAdvancedEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/ProductTableEditors"
-  );
+  const { ProductTableAdvancedEditor } =
+    await import("../../../core/admin/ui/widgets/editors/ProductTableEditors");
 
   const view = mount(
     <ProductTableAdvancedEditor value={{}} onChange={() => undefined} variant="default" />
@@ -667,7 +641,12 @@ test("ProductTable advanced editor falls back when normalized resolved summary i
       normalizeText("Resolved items: 0 · Total: 0")
     );
     expect(
-      (findInputByLabel(view.container, "Runtime error flag") as HTMLInputElement | null | undefined)?.value
+      (
+        findInputByLabel(view.container, "Runtime error flag") as
+          | HTMLInputElement
+          | null
+          | undefined
+      )?.value
     ).toBe("");
   } finally {
     view.cleanup();

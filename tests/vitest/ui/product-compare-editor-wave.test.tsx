@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act, useState } from "react";
+import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -22,13 +22,7 @@ vi.mock("@/components/ui/input", () => ({
     placeholder?: string;
     [key: string]: unknown;
   }) => (
-    <input
-      value={value}
-      onChange={onChange}
-      type={type}
-      placeholder={placeholder}
-      {...props}
-    />
+    <input value={value} onChange={onChange} type={type} placeholder={placeholder} {...props} />
   ),
 }));
 
@@ -63,13 +57,9 @@ vi.mock("@/components/ui/select", () => ({
   SelectTrigger: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
   SelectValue: () => null,
   SelectContent: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
-  SelectItem: ({
-    value,
-    children,
-  }: {
-    value: string;
-    children?: React.ReactNode;
-  }) => <option value={value}>{children}</option>,
+  SelectItem: ({ value, children }: { value: string; children?: React.ReactNode }) => (
+    <option value={value}>{children}</option>
+  ),
 }));
 
 vi.mock("@/services/commerceClient", () => ({
@@ -81,14 +71,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -101,11 +91,8 @@ const normalizeText = (value: string | null | undefined) =>
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  );
-  act(() => {
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -114,11 +101,8 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value"
-  );
-  act(() => {
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
   });
@@ -126,7 +110,7 @@ const setSelectValue = (element: Element | null | undefined, value: string) => {
 
 const toggleCheckbox = (element: Element | null | undefined) => {
   if (!(element instanceof HTMLInputElement)) return;
-  act(() => {
+  React.act(() => {
     element.click();
   });
 };
@@ -153,11 +137,8 @@ afterEach(() => {
 });
 
 test("ProductCompare editors cover source controls, field toggles, label normalization, empty state, and runtime preview", async () => {
-  const {
-    ProductCompareAdvancedEditor,
-    ProductCompareVisualEditor,
-    ProductCompareWizardEditor,
-  } = await import("../../../core/admin/ui/widgets/editors/ProductCompareEditors");
+  const { ProductCompareAdvancedEditor, ProductCompareVisualEditor, ProductCompareWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/ProductCompareEditors");
 
   const onChangeSpy = vi.fn();
   let latestValue: ProductCompareData = {
@@ -294,11 +275,8 @@ test("ProductCompare editors cover source controls, field toggles, label normali
     expect(preview?.textContent).toContain('"archived"');
     expect(preview?.textContent).not.toContain('"published"');
     expect(
-      (
-        findInputByLabel(view.container, "Runtime error flag") as
-          | HTMLInputElement
-          | undefined
-      )?.value
+      (findInputByLabel(view.container, "Runtime error flag") as HTMLInputElement | undefined)
+        ?.value
     ).toBe("resolver-timeout");
   } finally {
     view.cleanup();
@@ -321,10 +299,8 @@ test("ProductCompare editors fall back to hardcoded wizard limit and empty runti
     };
   });
 
-  const {
-    ProductCompareAdvancedEditor,
-    ProductCompareWizardEditor,
-  } = await import("../../../core/admin/ui/widgets/editors/ProductCompareEditors");
+  const { ProductCompareAdvancedEditor, ProductCompareWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/ProductCompareEditors");
 
   const view = mount(
     <>
@@ -349,7 +325,12 @@ test("ProductCompare editors fall back to hardcoded wizard limit and empty runti
       normalizeText("Resolved rows: 0 · Total: 0")
     );
     expect(
-      (findInputByLabel(view.container, "Runtime error flag") as HTMLInputElement | null | undefined)?.value
+      (
+        findInputByLabel(view.container, "Runtime error flag") as
+          | HTMLInputElement
+          | null
+          | undefined
+      )?.value
     ).toBe("");
   } finally {
     view.cleanup();
@@ -377,9 +358,8 @@ test("ProductCompare advanced editor falls back when normalized resolved summary
     };
   });
 
-  const { ProductCompareAdvancedEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/ProductCompareEditors"
-  );
+  const { ProductCompareAdvancedEditor } =
+    await import("../../../core/admin/ui/widgets/editors/ProductCompareEditors");
 
   const view = mount(
     <ProductCompareAdvancedEditor value={{}} onChange={() => undefined} variant="matrix" />
@@ -390,7 +370,12 @@ test("ProductCompare advanced editor falls back when normalized resolved summary
       normalizeText("Resolved rows: 0 · Total: 0")
     );
     expect(
-      (findInputByLabel(view.container, "Runtime error flag") as HTMLInputElement | null | undefined)?.value
+      (
+        findInputByLabel(view.container, "Runtime error flag") as
+          | HTMLInputElement
+          | null
+          | undefined
+      )?.value
     ).toBe("");
   } finally {
     view.cleanup();

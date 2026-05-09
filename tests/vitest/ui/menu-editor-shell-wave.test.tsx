@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
@@ -102,7 +102,7 @@ const mount = (path = "/admin/menus/menu-1") => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(
       <AdminRouterProvider initialPath={path}>
         <MenuEditorPage />
@@ -113,7 +113,7 @@ const mount = (path = "/admin/menus/menu-1") => {
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -122,7 +122,7 @@ const mount = (path = "/admin/menus/menu-1") => {
 };
 
 const flush = async () => {
-  await act(async () => {
+  await React.act(async () => {
     await Promise.resolve();
   });
 };
@@ -240,14 +240,14 @@ test("MenuEditorPage shows success feedback after saving metadata", async () => 
     await flush();
     const nameInput = view.container.querySelector('input[placeholder="Main Menu"]');
 
-    await act(async () => {
+    await React.act(async () => {
       setInputValue(nameInput, "Primary Nav");
     });
 
     expect(view.container.querySelector("header")?.textContent).toContain("Unsaved changes");
     expect(view.container.querySelector("header")?.innerHTML).toContain("bg-rose-100");
 
-    await act(async () => {
+    await React.act(async () => {
       Array.from(view.container.querySelectorAll("button"))
         .find((button) => button.textContent?.includes("Save changes"))
         ?.click();
@@ -271,11 +271,11 @@ test("MenuEditorPage shows failure feedback when save fails", async () => {
     await flush();
     const nameInput = view.container.querySelector('input[placeholder="Main Menu"]');
 
-    await act(async () => {
+    await React.act(async () => {
       setInputValue(nameInput, "Broken Nav");
     });
 
-    await act(async () => {
+    await React.act(async () => {
       Array.from(view.container.querySelectorAll("button"))
         .find((button) => button.textContent?.includes("Save changes"))
         ?.click();
@@ -330,12 +330,12 @@ test("MenuEditorPage publishes after metadata and item changes are saved", async
     await flush();
     const nameInput = view.container.querySelector('input[placeholder="Main Menu"]');
 
-    await act(async () => {
+    await React.act(async () => {
       clickButton(view.container, "Add Item");
       setInputValue(nameInput, "Primary Nav");
     });
 
-    await act(async () => {
+    await React.act(async () => {
       clickButton(view.container, "Publish");
       await Promise.resolve();
     });
@@ -392,12 +392,12 @@ test("MenuEditorPage does not publish when item save fails", async () => {
     await flush();
     const nameInput = view.container.querySelector('input[placeholder="Main Menu"]');
 
-    await act(async () => {
+    await React.act(async () => {
       clickButton(view.container, "Add Item");
       setInputValue(nameInput, "Primary Nav");
     });
 
-    await act(async () => {
+    await React.act(async () => {
       clickButton(view.container, "Publish");
       await Promise.resolve();
     });
@@ -437,7 +437,7 @@ test("MenuEditorPage ignores rapid duplicate publish clicks", async () => {
   try {
     await flush();
 
-    await act(async () => {
+    await React.act(async () => {
       clickButton(view.container, "Publish");
       clickButton(view.container, "Publish");
       await Promise.resolve();
@@ -445,7 +445,7 @@ test("MenuEditorPage ignores rapid duplicate publish clicks", async () => {
 
     expect(updateMenuMock).toHaveBeenCalledTimes(1);
 
-    await act(async () => {
+    await React.act(async () => {
       resolveUpdate({ ...draftMenu.menu, status: "published" });
       await Promise.resolve();
     });
@@ -476,7 +476,7 @@ test("MenuEditorPage ignores own detail cache events during publish", async () =
   try {
     await flush();
 
-    await act(async () => {
+    await React.act(async () => {
       clickButton(view.container, "Publish");
       await Promise.resolve();
     });

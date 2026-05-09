@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act, useState } from "react";
+import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -113,14 +113,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -130,11 +130,8 @@ const mount = (node: React.ReactNode) => {
 
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value"
-  );
-  act(() => {
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
   });
@@ -221,7 +218,9 @@ test("TemplateSection editors cover template selection, draft badge, reset, and 
   const view = mount(<Harness />);
 
   try {
-    expect(view.container.textContent).toContain("Select a widget template to render in this section.");
+    expect(view.container.textContent).toContain(
+      "Select a widget template to render in this section."
+    );
     expect(view.container.textContent).toContain("Runtime behavior");
 
     const selects = Array.from(view.container.querySelectorAll("select"));
@@ -244,7 +243,9 @@ test("TemplateSection editors cover template selection, draft badge, reset, and 
     expect(latestValue.templateId).toBe("");
     expect(latestValue.templateName).toBe("");
     expect(latestValue.resolved?.blocks).toHaveLength(1);
-    expect(view.container.textContent).toContain("Select a widget template to render in this section.");
+    expect(view.container.textContent).toContain(
+      "Select a widget template to render in this section."
+    );
   } finally {
     view.cleanup();
   }
@@ -257,9 +258,8 @@ test("TemplateSection editors surface error state from the template hook while k
     error: "Failed to load templates.",
   };
 
-  const { TemplateSectionWizardEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/TemplateSectionEditors"
-  );
+  const { TemplateSectionWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/TemplateSectionEditors");
 
   const view = mount(
     <TemplateSectionWizardEditor
@@ -273,7 +273,9 @@ test("TemplateSection editors surface error state from the template hook while k
   try {
     expect(view.container.textContent).toContain("Failed to load templates.");
     expect(view.container.textContent).toContain("No template");
-    expect(view.container.textContent).toContain("Select a widget template to render in this section.");
+    expect(view.container.textContent).toContain(
+      "Select a widget template to render in this section."
+    );
   } finally {
     view.cleanup();
   }

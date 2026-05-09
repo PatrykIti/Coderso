@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -49,14 +49,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -71,7 +71,7 @@ const clickByText = (container: HTMLElement, text: string) => {
   if (!(button instanceof HTMLButtonElement)) {
     throw new Error(`Missing button: ${text}`);
   }
-  act(() => {
+  React.act(() => {
     button.click();
   });
 };
@@ -80,7 +80,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) {
     throw new Error(`Missing input for value: ${value}`);
   }
-  act(() => {
+  React.act(() => {
     const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -110,7 +110,7 @@ test("BlockInserter filters by category and search, renders most-used, and respe
     expect(view.container.textContent).toContain("Image");
 
     const buttons = Array.from(view.container.querySelectorAll("button"));
-    act(() => {
+    React.act(() => {
       buttons.find((button) => button.textContent?.includes("Media"))?.click();
     });
 
@@ -121,7 +121,7 @@ test("BlockInserter filters by category and search, renders most-used, and respe
     expect(view.container.textContent).toContain("File");
     expect(view.container.textContent).not.toContain("Paragraph");
 
-    act(() => {
+    React.act(() => {
       buttons.find((button) => button.textContent?.includes("Image"))?.click();
     });
     expect(onInsertBlock).not.toHaveBeenCalled();
@@ -145,7 +145,7 @@ test("BlockInserter supports keyboard insertion from the current active option",
       throw new Error("Missing listbox");
     }
 
-    act(() => {
+    React.act(() => {
       listbox.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
       listbox.dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true }));
     });
@@ -160,10 +160,7 @@ test("BlockInserter supports keyboard insertion from the current active option",
 test("BlockInserter renders header mode and inserts from most-used when enabled", () => {
   const onInsertBlock = vi.fn();
   const view = mount(
-    <BlockInserter
-      onInsertBlock={onInsertBlock}
-      recentlyUsedTypes={["image", "button"]}
-    />
+    <BlockInserter onInsertBlock={onInsertBlock} recentlyUsedTypes={["image", "button"]} />
   );
 
   try {
@@ -209,22 +206,22 @@ test("BlockInserter wraps keyboard navigation, resets active item after filters,
 
     expect(allTab.getAttribute("aria-pressed")).toBe("true");
 
-    act(() => {
+    React.act(() => {
       listbox.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true }));
     });
-    act(() => {
+    React.act(() => {
       listbox.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
     });
 
     expect(onInsertBlock).toHaveBeenCalledWith("embed");
 
-    act(() => {
+    React.act(() => {
       textTab.click();
     });
     expect(textTab.getAttribute("aria-pressed")).toBe("true");
     expect(allTab.getAttribute("aria-pressed")).toBe("false");
 
-    act(() => {
+    React.act(() => {
       listbox.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
     });
 
@@ -233,7 +230,7 @@ test("BlockInserter wraps keyboard navigation, resets active item after filters,
     const input = view.container.querySelector('input[aria-label="Search Text blocks"]');
     setInputValue(input, "zzz");
 
-    act(() => {
+    React.act(() => {
       listbox.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
       listbox.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
     });
@@ -241,7 +238,7 @@ test("BlockInserter wraps keyboard navigation, resets active item after filters,
     expect(onInsertBlock).toHaveBeenCalledTimes(2);
 
     setInputValue(input, "");
-    act(() => {
+    React.act(() => {
       listbox.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
     });
 
@@ -264,7 +261,7 @@ test("BlockInserter ignores keyboard navigation when disabled", () => {
       throw new Error("Missing listbox");
     }
 
-    act(() => {
+    React.act(() => {
       listbox.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
       listbox.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true }));
       listbox.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));

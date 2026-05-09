@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act, useState } from "react";
+import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -48,13 +48,7 @@ vi.mock("@/components/ui/tabs", () => ({
     </TabsContext.Provider>
   ),
   TabsList: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  TabsTrigger: ({
-    children,
-    value,
-  }: {
-    children: React.ReactNode;
-    value: string;
-  }) => {
+  TabsTrigger: ({ children, value }: { children: React.ReactNode; value: string }) => {
     const context = React.useContext(TabsContext);
     return (
       <button type="button" onClick={() => context.onValueChange?.(value)}>
@@ -62,13 +56,7 @@ vi.mock("@/components/ui/tabs", () => ({
       </button>
     );
   },
-  TabsContent: ({
-    children,
-    value,
-  }: {
-    children: React.ReactNode;
-    value: string;
-  }) => {
+  TabsContent: ({ children, value }: { children: React.ReactNode; value: string }) => {
     const context = React.useContext(TabsContext);
     return context.value === value ? <div>{children}</div> : null;
   },
@@ -105,13 +93,7 @@ vi.mock("../../../core/admin/ui/pages/builder/WizardPanel", () => ({
 }));
 
 vi.mock("../../../core/admin/ui/pages/builder/VisualPanel", () => ({
-  VisualPanel: ({
-    block,
-    onChange,
-  }: {
-    block: Block;
-    onChange: (next: Block) => void;
-  }) => (
+  VisualPanel: ({ block, onChange }: { block: Block; onChange: (next: Block) => void }) => (
     <div>
       <span>{`visual:${block.id}`}</span>
       <button
@@ -130,13 +112,7 @@ vi.mock("../../../core/admin/ui/pages/builder/VisualPanel", () => ({
 }));
 
 vi.mock("../../../core/admin/ui/pages/builder/AdvancedPanel", () => ({
-  AdvancedPanel: ({
-    block,
-    onChange,
-  }: {
-    block: Block;
-    onChange: (next: Block) => void;
-  }) => (
+  AdvancedPanel: ({ block, onChange }: { block: Block; onChange: (next: Block) => void }) => (
     <div>
       <span>{`advanced:${block.id}`}</span>
       <button
@@ -177,14 +153,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -199,7 +175,7 @@ const clickByText = (container: HTMLElement, text: string) => {
   if (!button) {
     throw new Error(`Missing button: ${text}`);
   }
-  act(() => {
+  React.act(() => {
     button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 };
@@ -209,9 +185,7 @@ afterEach(() => {
 });
 
 test("BlockSettings renders fallback copy when no block or widget is selected", () => {
-  const view = mount(
-    <BlockSettings block={null} widget={undefined} onChange={() => undefined} />
-  );
+  const view = mount(<BlockSettings block={null} widget={undefined} onChange={() => undefined} />);
 
   try {
     expect(view.container.textContent).toContain("Select a block to edit its settings.");
@@ -362,9 +336,7 @@ test("BlockSettings shows nested-children guidance for child-capable widgets", (
     ],
   };
 
-  const view = mount(
-    <BlockSettings block={block} widget={widget} onChange={() => undefined} />
-  );
+  const view = mount(<BlockSettings block={block} widget={widget} onChange={() => undefined} />);
 
   try {
     expect(view.container.textContent).toContain("Nested blocks: 2.");

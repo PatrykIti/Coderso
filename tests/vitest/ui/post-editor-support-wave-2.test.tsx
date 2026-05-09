@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server";
 import { afterEach, expect, test, vi } from "vitest";
@@ -95,8 +95,7 @@ vi.mock("../../../core/admin/ui/posts/editor/blocks/blockCatalog", () => ({
       },
     ];
     return items.filter((item) => {
-      const matchesQuery =
-        !query || item.label.toLowerCase().includes(query.toLowerCase());
+      const matchesQuery = !query || item.label.toLowerCase().includes(query.toLowerCase());
       const matchesCategory = category === "all" || item.category === category;
       return matchesQuery && matchesCategory;
     });
@@ -118,19 +117,19 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     rerender: (next: React.ReactNode) => {
-      act(() => {
+      React.act(() => {
         root.render(next);
       });
     },
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -140,10 +139,7 @@ const mount = (node: React.ReactNode) => {
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
   descriptor?.set?.call(element, value);
   element.dispatchEvent(new Event("input", { bubbles: true }));
   element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -154,13 +150,8 @@ afterEach(() => {
 });
 
 test("post editor shortcut helpers format labels and dispatch handlers", async () => {
-  const {
-    formatPostEditorShortcutAria,
-    formatPostEditorShortcutLabel,
-    usePostEditorShortcuts,
-  } = await import(
-    "../../../core/admin/ui/posts/editor/hooks/usePostEditorShortcuts"
-  );
+  const { formatPostEditorShortcutAria, formatPostEditorShortcutLabel, usePostEditorShortcuts } =
+    await import("../../../core/admin/ui/posts/editor/hooks/usePostEditorShortcuts");
 
   expect(formatPostEditorShortcutLabel("toggleInserter")).toBe("Mod+Shift+I");
   expect(formatPostEditorShortcutAria("toggleInserter")).toContain("Control+Shift+I");
@@ -184,7 +175,7 @@ test("post editor shortcut helpers format labels and dispatch handlers", async (
   const view = mount(<Harness />);
 
   try {
-    act(() => {
+    React.act(() => {
       window.dispatchEvent(
         new KeyboardEvent("keydown", {
           bubbles: true,
@@ -209,14 +200,12 @@ test("post editor shortcut helpers format labels and dispatch handlers", async (
           shiftKey: true,
         })
       );
-      window.dispatchEvent(
-        new KeyboardEvent("keydown", { bubbles: true, key: "Escape" })
-      );
+      window.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "Escape" }));
     });
 
     const editable = view.container.querySelector("input");
     editable?.focus();
-    act(() => {
+    React.act(() => {
       editable?.dispatchEvent(
         new KeyboardEvent("keydown", {
           bubbles: true,
@@ -237,13 +226,8 @@ test("post editor shortcut helpers format labels and dispatch handlers", async (
 });
 
 test("post editor layout reducer and hook expose secondary/details/focus transitions", async () => {
-  const {
-    createPostEditorLayoutState,
-    postEditorLayoutReducer,
-    usePostEditorLayout,
-  } = await import(
-    "../../../core/admin/ui/posts/editor/hooks/usePostEditorLayout"
-  );
+  const { createPostEditorLayoutState, postEditorLayoutReducer, usePostEditorLayout } =
+    await import("../../../core/admin/ui/posts/editor/hooks/usePostEditorLayout");
 
   expect(
     createPostEditorLayoutState({
@@ -286,7 +270,7 @@ test("post editor layout reducer and hook expose secondary/details/focus transit
   const view = mount(<Harness />);
 
   try {
-    act(() => {
+    React.act(() => {
       layout?.openInserter();
       layout?.toggleListView();
       layout?.openDetails("block");
@@ -305,9 +289,8 @@ test("post editor layout reducer and hook expose secondary/details/focus transit
 });
 
 test("SlashCommandMenu renders query badge, empty state, selection, and close action", async () => {
-  const { SlashCommandMenu } = await import(
-    "../../../core/admin/ui/posts/editor/blocks/SlashCommandMenu"
-  );
+  const { SlashCommandMenu } =
+    await import("../../../core/admin/ui/posts/editor/blocks/SlashCommandMenu");
 
   const onSelect = vi.fn();
   const onClose = vi.fn();
@@ -324,7 +307,7 @@ test("SlashCommandMenu renders query badge, empty state, selection, and close ac
   try {
     expect(emptyView.container.textContent).toContain("/x");
     expect(emptyView.container.textContent).toContain("No matching block type.");
-    act(() => {
+    React.act(() => {
       Array.from(emptyView.container.querySelectorAll("button"))
         .find((button) => button.textContent === "Esc")
         ?.click();
@@ -352,7 +335,7 @@ test("SlashCommandMenu renders query badge, empty state, selection, and close ac
   );
 
   try {
-    act(() => {
+    React.act(() => {
       Array.from(view.container.querySelectorAll("button"))
         .find((button) => button.textContent?.includes("Paragraph"))
         ?.click();
@@ -364,12 +347,10 @@ test("SlashCommandMenu renders query badge, empty state, selection, and close ac
 });
 
 test("BlockInserter and PostListViewPanel handle search/filter, keyboard, insert, selection, and delete", async () => {
-  const { BlockInserter } = await import(
-    "../../../core/admin/ui/posts/editor/blocks/BlockInserter"
-  );
-  const { PostListViewPanel } = await import(
-    "../../../core/admin/ui/posts/editor/blocks/PostListViewPanel"
-  );
+  const { BlockInserter } =
+    await import("../../../core/admin/ui/posts/editor/blocks/BlockInserter");
+  const { PostListViewPanel } =
+    await import("../../../core/admin/ui/posts/editor/blocks/PostListViewPanel");
 
   const onInsertBlock = vi.fn();
   const inserterView = mount(
@@ -383,11 +364,8 @@ test("BlockInserter and PostListViewPanel handle search/filter, keyboard, insert
 
   try {
     expect(inserterView.container.textContent).toContain("Most used");
-    act(() => {
-      setInputValue(
-        inserterView.container.querySelector("input") ?? undefined,
-        "hero"
-      );
+    React.act(() => {
+      setInputValue(inserterView.container.querySelector("input") ?? undefined, "hero");
       Array.from(inserterView.container.querySelectorAll("button"))
         .find((button) => button.textContent === "Layout")
         ?.click();
@@ -395,13 +373,9 @@ test("BlockInserter and PostListViewPanel handle search/filter, keyboard, insert
     expect(inserterView.container.textContent).toContain("Hero");
 
     const listbox = inserterView.container.querySelector("[role='listbox']");
-    act(() => {
-      listbox?.dispatchEvent(
-        new KeyboardEvent("keydown", { bubbles: true, key: "ArrowDown" })
-      );
-      listbox?.dispatchEvent(
-        new KeyboardEvent("keydown", { bubbles: true, key: "Enter" })
-      );
+    React.act(() => {
+      listbox?.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "ArrowDown" }));
+      listbox?.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "Enter" }));
     });
 
     expect(onInsertBlock).toHaveBeenCalled();
@@ -414,10 +388,12 @@ test("BlockInserter and PostListViewPanel handle search/filter, keyboard, insert
   const onMoveBlockToIndex = vi.fn();
   const listView = mount(
     <PostListViewPanel
-      blocks={[
-        { id: "block-1", type: "paragraph" },
-        { id: "block-2", type: "hero" },
-      ] as never}
+      blocks={
+        [
+          { id: "block-1", type: "paragraph" },
+          { id: "block-2", type: "hero" },
+        ] as never
+      }
       selectedBlockId="block-1"
       onSelectBlock={onSelectBlock}
       onDeleteBlock={onDeleteBlock}
@@ -429,9 +405,13 @@ test("BlockInserter and PostListViewPanel handle search/filter, keyboard, insert
   try {
     expect(listView.container.textContent).toContain("Drag blocks to reorder");
     const buttons = Array.from(listView.container.querySelectorAll("button"));
-    act(() => {
-      buttons.find((button) => button.getAttribute("aria-label")?.includes("Select block 1"))?.click();
-      buttons.find((button) => button.getAttribute("aria-label")?.includes("Delete block 1"))?.click();
+    React.act(() => {
+      buttons
+        .find((button) => button.getAttribute("aria-label")?.includes("Select block 1"))
+        ?.click();
+      buttons
+        .find((button) => button.getAttribute("aria-label")?.includes("Delete block 1"))
+        ?.click();
       buttons
         .find((button) => button.getAttribute("aria-label")?.includes("Select block 2"))
         ?.dispatchEvent(

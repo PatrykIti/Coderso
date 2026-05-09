@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
@@ -12,7 +12,9 @@ import type { DesignTokens } from "../../../core/services/theme/tokenTypes";
 vi.mock("@/components/ui/tabs", () => ({
   Tabs: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   TabsList: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  TabsTrigger: ({ children }: { children: React.ReactNode }) => <button type="button">{children}</button>,
+  TabsTrigger: ({ children }: { children: React.ReactNode }) => (
+    <button type="button">{children}</button>
+  ),
   TabsContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
@@ -68,14 +70,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -134,13 +136,13 @@ test("ThemeTokensEditor renders token summary and forwards draft and route chang
     expect(view.container.textContent).toContain("#111111");
     expect(view.container.textContent).toContain("Duplicate route");
 
-    act(() => {
+    React.act(() => {
       view.container
         .querySelector("button[data-textarea-action='change']")
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
 
-    act(() => {
+    React.act(() => {
       Array.from(view.container.querySelectorAll("button"))
         .find((button) => button.textContent === "update-routes")
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));

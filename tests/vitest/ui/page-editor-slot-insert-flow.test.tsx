@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
@@ -102,13 +102,8 @@ vi.mock("@/components/ui/scroll-area", () => ({
 }));
 
 vi.mock("@/components/ui/sheet", () => ({
-  Sheet: ({
-    open,
-    children,
-  }: {
-    open: boolean;
-    children: React.ReactNode;
-  }) => (open ? <div>{children}</div> : null),
+  Sheet: ({ open, children }: { open: boolean; children: React.ReactNode }) =>
+    open ? <div>{children}</div> : null,
   SheetContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   SheetTitle: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   SheetDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -149,13 +144,7 @@ vi.mock("@/components/ui/tabs", () => ({
     );
   },
   TabsList: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  TabsTrigger: ({
-    children,
-    value,
-  }: {
-    children: React.ReactNode;
-    value: string;
-  }) => {
+  TabsTrigger: ({ children, value }: { children: React.ReactNode; value: string }) => {
     const context = React.useContext(TabsContext);
     return (
       <button type="button" onClick={() => context.onValueChange?.(value)}>
@@ -163,13 +152,7 @@ vi.mock("@/components/ui/tabs", () => ({
       </button>
     );
   },
-  TabsContent: ({
-    children,
-    value,
-  }: {
-    children: React.ReactNode;
-    value: string;
-  }) => {
+  TabsContent: ({ children, value }: { children: React.ReactNode; value: string }) => {
     const context = React.useContext(TabsContext);
     return context.value === value ? <div>{children}</div> : null;
   },
@@ -306,14 +289,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -322,7 +305,7 @@ const mount = (node: React.ReactNode) => {
 };
 
 const flush = async () => {
-  await act(async () => {
+  await React.act(async () => {
     await Promise.resolve();
     await Promise.resolve();
   });
@@ -345,7 +328,7 @@ test("PageEditor routes empty-slot CTA into the existing widget library surface 
   try {
     await flush();
 
-    act(() => {
+    React.act(() => {
       Array.from(view.container.querySelectorAll("button"))
         .find((button) => button.textContent?.includes("Add widget to Hero Content"))
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -363,7 +346,7 @@ test("PageEditor routes empty-slot CTA into the existing widget library surface 
         element.className.includes("rounded-lg border bg-background p-3 shadow-sm") &&
         element.textContent?.includes("Feature Grid")
     );
-    act(() => {
+    React.act(() => {
       featureCard
         ?.querySelector("button")
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));

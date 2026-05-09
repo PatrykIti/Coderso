@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act, useState } from "react";
+import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -283,14 +283,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -299,7 +299,7 @@ const mount = (node: React.ReactNode) => {
 };
 
 const flush = async () => {
-  await act(async () => {
+  await React.act(async () => {
     await Promise.resolve();
     await Promise.resolve();
   });
@@ -330,7 +330,7 @@ const setSelectValue = (element: Element | null | undefined, value: string) => {
 
 const clickElement = (element: Element | null | undefined) => {
   if (!element) return;
-  act(() => {
+  React.act(() => {
     element.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 };
@@ -412,7 +412,7 @@ test("ContentList wizard editor normalizes invalid variant, clamps item limit, a
     const variantSelect = findSelectsByOptions(view.container, ["cards", "list", "compact"])[0];
     expect((variantSelect as HTMLSelectElement | null | undefined)?.value).toBe("cards");
 
-    act(() => {
+    React.act(() => {
       setSelectValue(
         findSelectsByOptions(view.container, ["__no_content_type__", "articles"])[0],
         "articles"
@@ -421,7 +421,7 @@ test("ContentList wizard editor normalizes invalid variant, clamps item limit, a
     });
     await flush();
 
-    act(() => {
+    React.act(() => {
       setInputValue(findNumberInputs(view.container)[0], "48");
       setSelectValue(
         findSelectsByOptions(view.container, ["__no_listing_query__", "query-1"])[0],
@@ -483,7 +483,7 @@ test("ContentList visual editor switches between listing and legacy sources, per
   try {
     await flush();
 
-    act(() => {
+    React.act(() => {
       clickElement(findButtonByText(view.container, "Compact"));
       setSelectValue(findSelectsByOptions(view.container, ["1", "2", "3"])[0], "2");
       setSelectValue(findSelectsByOptions(view.container, ["none", "sm", "md", "lg"])[0], "lg");
@@ -496,7 +496,7 @@ test("ContentList visual editor switches between listing and legacy sources, per
     });
     await flush();
 
-    act(() => {
+    React.act(() => {
       setSelectValue(
         findSelectsByOptions(view.container, ["__no_listing_query__", "query-1"])[0],
         "query-1"
@@ -517,7 +517,7 @@ test("ContentList visual editor switches between listing and legacy sources, per
     });
     await flush();
 
-    act(() => {
+    React.act(() => {
       setSelectValue(
         findSelectsByOptions(view.container, ["__no_content_type__", "articles"])[0],
         "__no_content_type__"
@@ -572,7 +572,7 @@ test("ContentList visual editor switches between listing and legacy sources, per
     expect(showMetaToggle).toBeInstanceOf(HTMLInputElement);
     expect(showCtaToggle).toBeInstanceOf(HTMLInputElement);
 
-    act(() => {
+    React.act(() => {
       clickElement(showImageToggle);
       clickElement(showExcerptToggle);
       clickElement(showMetaToggle);
@@ -656,7 +656,7 @@ test("ContentList visual editor tolerates unresolved listing and content type se
       findSelectsByOptions(view.container, ["__no_listing_template__", "template-1"])
     ).toHaveLength(1);
 
-    act(() => {
+    React.act(() => {
       setSelectValue(findSelectsByOptions(view.container, ["legacy", "listing"])[0], "legacy");
     });
     await flush();
@@ -665,7 +665,7 @@ test("ContentList visual editor tolerates unresolved listing and content type se
       1
     );
 
-    act(() => {
+    React.act(() => {
       setSelectValue(
         findSelectsByOptions(view.container, ["__no_content_type__", "articles"])[0],
         "__no_content_type__"
@@ -719,7 +719,7 @@ test("ContentList advanced editor handles listing query controls, disabled filte
   try {
     await flush();
 
-    act(() => {
+    React.act(() => {
       setSelectValue(findSelectsByOptions(view.container, ["legacy", "listing"])[0], "listing");
     });
     await flush();
@@ -741,7 +741,7 @@ test("ContentList advanced editor handles listing query controls, disabled filte
       "Listing mode uses filters and sorting from the selected Listings query."
     );
 
-    act(() => {
+    React.act(() => {
       setInputValue(findNumberInputs(view.container)[0], "99");
       setSelectValue(
         findSelectsByOptions(view.container, ["__no_listing_query__", "query-1"])[0],
@@ -763,7 +763,7 @@ test("ContentList advanced editor handles listing query controls, disabled filte
     expect((searchInput as HTMLInputElement).disabled).toBe(false);
     expect((featuredOnlyToggle as HTMLInputElement).disabled).toBe(false);
 
-    act(() => {
+    React.act(() => {
       setInputValue(authorInput, "author-123");
       setInputValue(searchInput, "launch");
       clickElement(featuredOnlyToggle);
@@ -828,7 +828,7 @@ test("ContentList wizard editor ignores late successful loader results after sou
     await flush();
     expect(view.container.textContent).toContain("Loading content types...");
 
-    act(() => {
+    React.act(() => {
       setSelectValue(findSelectsByOptions(view.container, ["legacy", "listing"])[0], "listing");
     });
     await flush();
@@ -836,7 +836,7 @@ test("ContentList wizard editor ignores late successful loader results after sou
     expect(view.container.textContent).not.toContain("Loading content types...");
     expect(view.container.textContent).toContain("Loading listings options...");
 
-    await act(async () => {
+    await React.act(async () => {
       contentTypesDeferred.resolve(contentListState.contentTypes);
       await Promise.resolve();
     });
@@ -845,14 +845,14 @@ test("ContentList wizard editor ignores late successful loader results after sou
     expect(view.container.textContent).not.toContain("Loading content types...");
     expect(view.container.textContent).toContain("Loading listings options...");
 
-    act(() => {
+    React.act(() => {
       setSelectValue(findSelectsByOptions(view.container, ["legacy", "listing"])[0], "legacy");
     });
     await flush();
 
     expect(view.container.textContent).not.toContain("Loading listings options...");
 
-    await act(async () => {
+    await React.act(async () => {
       listingQueriesDeferred.resolve(contentListState.listingQueries);
       listingTemplatesDeferred.resolve(contentListState.listingTemplates);
       await Promise.resolve();
@@ -895,7 +895,7 @@ test("ContentList wizard editor ignores late loader failures after source-mode t
     await flush();
     expect(view.container.textContent).toContain("Loading content types...");
 
-    act(() => {
+    React.act(() => {
       setSelectValue(findSelectsByOptions(view.container, ["legacy", "listing"])[0], "listing");
     });
     await flush();
@@ -903,7 +903,7 @@ test("ContentList wizard editor ignores late loader failures after source-mode t
     expect(view.container.textContent).not.toContain("Loading content types...");
     expect(view.container.textContent).toContain("Loading listings options...");
 
-    await act(async () => {
+    await React.act(async () => {
       contentTypesDeferred.reject(new Error("Late content types failure"));
       await Promise.resolve();
     });
@@ -911,14 +911,14 @@ test("ContentList wizard editor ignores late loader failures after source-mode t
 
     expect(view.container.textContent).not.toContain("Failed to load content types.");
 
-    act(() => {
+    React.act(() => {
       setSelectValue(findSelectsByOptions(view.container, ["legacy", "listing"])[0], "legacy");
     });
     await flush();
 
     expect(view.container.textContent).not.toContain("Loading listings options...");
 
-    await act(async () => {
+    await React.act(async () => {
       listingQueriesDeferred.reject(new Error("Late listings failure"));
       listingTemplatesDeferred.resolve(contentListState.listingTemplates);
       await Promise.resolve();
@@ -1185,7 +1185,7 @@ test("ContentList editors surface content type and listings loading errors", asy
     await flush();
     expect(view.container.textContent).toContain("Types failed");
 
-    act(() => {
+    React.act(() => {
       setSelectValue(findSelectsByOptions(view.container, ["legacy", "listing"])[0], "listing");
     });
     await flush();
@@ -1214,7 +1214,7 @@ test("ContentList editors fall back to generic loading messages for unexpected e
     await flush();
     expect(view.container.textContent).toContain("Failed to load content types.");
 
-    act(() => {
+    React.act(() => {
       setSelectValue(findSelectsByOptions(view.container, ["legacy", "listing"])[0], "listing");
     });
     await flush();

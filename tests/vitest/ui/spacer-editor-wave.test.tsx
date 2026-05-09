@@ -1,13 +1,10 @@
 // @vitest-environment happy-dom
 
-import React, { act, useState } from "react";
+import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
-import {
-  spacerHeightTokens,
-  type SpacerData,
-} from "../../../core/widgets/core/spacer";
+import { spacerHeightTokens, type SpacerData } from "../../../core/widgets/core/spacer";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -124,8 +121,7 @@ vi.mock("@/components/ui/switch", () => ({
 }));
 
 vi.mock("@/lib/utils", () => ({
-  cn: (...values: Array<string | boolean | null | undefined>) =>
-    values.filter(Boolean).join(" "),
+  cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
 }));
 
 const variantSelectValues = ["responsive", "fixed"];
@@ -136,14 +132,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -153,11 +149,8 @@ const mount = (node: React.ReactNode) => {
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  );
-  act(() => {
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -166,11 +159,8 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value"
-  );
-  act(() => {
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
   });
@@ -179,23 +169,19 @@ const setSelectValue = (element: Element | null | undefined, value: string) => {
 const setCheckboxValue = (element: Element | null | undefined, checked: boolean) => {
   if (!(element instanceof HTMLInputElement)) return;
   if (element.checked === checked) return;
-  act(() => {
+  React.act(() => {
     element.click();
   });
 };
 
 const clickButton = (element: Element | null | undefined) => {
   if (!(element instanceof HTMLButtonElement)) return;
-  act(() => {
+  React.act(() => {
     element.click();
   });
 };
 
-const findInputByPlaceholder = (
-  container: ParentNode,
-  placeholder: string,
-  index = 0
-) => {
+const findInputByPlaceholder = (container: ParentNode, placeholder: string, index = 0) => {
   const input = Array.from(container.querySelectorAll("input")).filter(
     (element): element is HTMLInputElement =>
       element instanceof HTMLInputElement && element.getAttribute("placeholder") === placeholder
@@ -286,11 +272,8 @@ const renderEditor = async ({
   initialValue: SpacerData;
   initialVariant?: string;
 }) => {
-  const {
-    SpacerAdvancedEditor,
-    SpacerVisualEditor,
-    SpacerWizardEditor,
-  } = await import("../../../core/admin/ui/widgets/editors/SpacerEditors");
+  const { SpacerAdvancedEditor, SpacerVisualEditor, SpacerWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/SpacerEditors");
 
   const editorMap = {
     wizard: SpacerWizardEditor,
@@ -464,9 +447,7 @@ test("Spacer visual editor covers fixed-mode fallback, responsive per-breakpoint
       },
       showGuideInEditor: false,
     });
-    expect(findSelectsByOptions(getHeightsSection(), heightSelectValues)[2]?.value).toBe(
-      "custom"
-    );
+    expect(findSelectsByOptions(getHeightsSection(), heightSelectValues)[2]?.value).toBe("custom");
 
     setCheckboxValue(findCheckbox(getSectionByTitle(view.container, "Editor guide")), true);
     expect(view.getValue()).toEqual({
@@ -651,9 +632,7 @@ test("Spacer editors fall back to default height controls when normalized data o
       )
     ).toEqual(["16", "12", "8"]);
     expect(
-      findInputsByPlaceholder(emptyHeightTechnicalSection, "e.g. 48px").map(
-        (input) => input.value
-      )
+      findInputsByPlaceholder(emptyHeightTechnicalSection, "e.g. 48px").map((input) => input.value)
     ).toEqual(["", "", ""]);
     expect(getDiagnosticsSnapshot(advancedEmptyHeightView.container)).toEqual({
       height: {},
@@ -672,9 +651,9 @@ test("Spacer editors fall back to default height controls when normalized data o
     expect(findSelectByOptions(wizardEmptyHeightView.container, variantSelectValues).value).toBe(
       "responsive"
     );
-    expect(findSelectsByOptions(wizardEmptyHeightView.container, heightSelectValues)[0]?.value).toBe(
-      "16"
-    );
+    expect(
+      findSelectsByOptions(wizardEmptyHeightView.container, heightSelectValues)[0]?.value
+    ).toBe("16");
     expect(findInputByPlaceholder(wizardEmptyHeightView.container, "e.g. 48px").value).toBe("");
     expect(findCheckbox(wizardEmptyHeightView.container).checked).toBe(false);
   } finally {

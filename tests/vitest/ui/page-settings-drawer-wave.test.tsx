@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -155,14 +155,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -174,7 +174,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) {
     throw new Error(`Missing input for value: ${value}`);
   }
-  act(() => {
+  React.act(() => {
     const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -186,7 +186,7 @@ const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) {
     throw new Error(`Missing select for value: ${value}`);
   }
-  act(() => {
+  React.act(() => {
     const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -223,17 +223,19 @@ test("PageSettingsDrawer saves trimmed payloads, preserves touched slug, and ski
     const buttons = Array.from(view.container.querySelectorAll("button"));
 
     setInputValue(inputs[0], "  About us  ");
-    expect(inputs[1]?.getAttribute("value") ?? (inputs[1] as HTMLInputElement).value).toBe("/about-us");
+    expect(inputs[1]?.getAttribute("value") ?? (inputs[1] as HTMLInputElement).value).toBe(
+      "/about-us"
+    );
 
     setInputValue(inputs[1], "/team");
     setInputValue(inputs[0], "Company team");
     expect((inputs[1] as HTMLInputElement).value).toBe("/team");
 
     setSelectValue(selects[0], "story");
-    act(() => {
+    React.act(() => {
       buttons.find((button) => button.textContent?.includes("Save settings"))?.click();
     });
-    await act(async () => {
+    await React.act(async () => {
       await Promise.resolve();
     });
 
@@ -247,7 +249,7 @@ test("PageSettingsDrawer saves trimmed payloads, preserves touched slug, and ski
       })
     );
 
-    act(() => {
+    React.act(() => {
       buttons.find((button) => button.textContent === "trigger-close")?.click();
     });
 
@@ -288,12 +290,12 @@ test("PageSettingsDrawer autosaves dirty drafts on close and forwards reopen req
     setInputValue(inputs[0], "Landing page");
     setInputValue(inputs[1], "/landing-page");
 
-    act(() => {
+    React.act(() => {
       buttons.find((button) => button.textContent === "trigger-open")?.click();
       buttons.find((button) => button.textContent === "trigger-close")?.click();
     });
 
-    await act(async () => {
+    await React.act(async () => {
       await Promise.resolve();
     });
 
@@ -335,7 +337,7 @@ test("PageSettingsDrawer disables submit for blank title and slug", async () => 
     }
 
     expect(saveButton.disabled).toBe(true);
-    act(() => {
+    React.act(() => {
       saveButton.click();
     });
 
@@ -379,11 +381,11 @@ test("PageSettingsDrawer disables max width for full container and does not auto
     expect(disabledSelects).toHaveLength(1);
     expect(view.container.textContent).toContain("Available when Page width is not full.");
 
-    act(() => {
+    React.act(() => {
       buttons.find((button) => button.textContent === "trigger-close")?.click();
     });
 
-    await act(async () => {
+    await React.act(async () => {
       await Promise.resolve();
     });
 
@@ -410,7 +412,7 @@ test("PageSettingsDrawer retries template options after failure", async () => {
 
   try {
     const buttons = Array.from(view.container.querySelectorAll("button"));
-    act(() => {
+    React.act(() => {
       buttons.find((button) => button.textContent === "Try again")?.click();
     });
 
@@ -443,13 +445,19 @@ test("PageSettingsDrawer toggles navigation, clamps revision retention, resets l
       throw new Error("Missing navigation toggle");
     }
 
-    act(() => {
+    React.act(() => {
       navToggle.click();
     });
 
-    setInputValue(inputs.find((input) => input.type === "number"), "999");
+    setInputValue(
+      inputs.find((input) => input.type === "number"),
+      "999"
+    );
     setSelectValue(selects[2], "full");
-    setInputValue(inputs.find((input) => input.type === "color"), "#123456");
+    setInputValue(
+      inputs.find((input) => input.type === "color"),
+      "#123456"
+    );
     setInputValue(
       Array.from(view.container.querySelectorAll("input")).find(
         (input) => input.placeholder === "#ffffff or transparent"
@@ -457,17 +465,20 @@ test("PageSettingsDrawer toggles navigation, clamps revision retention, resets l
       "transparent"
     );
 
-    act(() => {
+    React.act(() => {
       buttons.find((button) => button.textContent?.includes("Reset to theme defaults"))?.click();
     });
 
-    setInputValue(inputs.find((input) => input.type === "number"), "0");
+    setInputValue(
+      inputs.find((input) => input.type === "number"),
+      "0"
+    );
 
-    act(() => {
+    React.act(() => {
       buttons.find((button) => button.textContent?.includes("Save settings"))?.click();
     });
 
-    await act(async () => {
+    await React.act(async () => {
       await Promise.resolve();
     });
 
@@ -517,7 +528,7 @@ test("PageSettingsDrawer saves background media URL and default section layout c
       "https://cdn.example.com/background.jpg"
     );
     setSelectValue(selects[4], "narrow");
-    act(() => {
+    React.act(() => {
       toggles.at(-1)?.click();
     });
     setSelectValue(selects[5], "xl");
@@ -525,11 +536,11 @@ test("PageSettingsDrawer saves background media URL and default section layout c
     setSelectValue(selects[7], "lg");
     setSelectValue(selects[8], "xs");
 
-    act(() => {
+    React.act(() => {
       buttons.find((button) => button.textContent?.includes("Save settings"))?.click();
     });
 
-    await act(async () => {
+    await React.act(async () => {
       await Promise.resolve();
     });
 

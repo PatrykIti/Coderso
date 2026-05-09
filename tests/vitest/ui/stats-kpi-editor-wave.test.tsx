@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act, useState } from "react";
+import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -171,14 +171,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -189,7 +189,7 @@ const mount = (node: React.ReactNode) => {
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
-  act(() => {
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -199,7 +199,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 const setTextareaValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLTextAreaElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
-  act(() => {
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -209,7 +209,7 @@ const setTextareaValue = (element: Element | null | undefined, value: string) =>
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
-  act(() => {
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
   });
@@ -222,21 +222,21 @@ const clickByText = (container: HTMLElement, text: string) => {
   if (!button) {
     throw new Error(`Missing button: ${text}`);
   }
-  act(() => {
+  React.act(() => {
     button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 };
 
 const clickButton = (element: Element | null | undefined) => {
   if (!(element instanceof HTMLButtonElement)) return;
-  act(() => {
+  React.act(() => {
     element.click();
   });
 };
 
 const toggleCheckbox = (element: Element | null | undefined) => {
   if (!(element instanceof HTMLInputElement)) return;
-  act(() => {
+  React.act(() => {
     element.checked = !element.checked;
     element.dispatchEvent(new Event("change", { bubbles: true }));
   });
@@ -423,7 +423,7 @@ test("StatsKpi editors cover variant, count, item editing, layout/style controls
     expect(view.container.textContent).toContain("Metrics content and order");
     expect(view.container.textContent).toContain("Raw payload snapshot");
 
-    act(() => {
+    React.act(() => {
       setSelectValue(
         findSelectsByOptions(view.container, ["cards", "inline", "split-highlight"])[0],
         "split-highlight"
@@ -441,7 +441,7 @@ test("StatsKpi editors cover variant, count, item editing, layout/style controls
 
     clickByText(view.container, "Add metric");
 
-    act(() => {
+    React.act(() => {
       setInputValue(findInputByPlaceholder(view.container, "Projects launched"), "Clients won");
       setTextareaValue(
         view.container.querySelector("textarea[placeholder='Optional supporting context.']"),
@@ -453,7 +453,7 @@ test("StatsKpi editors cover variant, count, item editing, layout/style controls
     const colorInputs = Array.from(
       view.container.querySelectorAll("input[placeholder='var(--color-text)']")
     ) as HTMLInputElement[];
-    act(() => {
+    React.act(() => {
       setInputValue(colorInputs[0], "#123456");
       setInputValue(colorInputs[1], "#654321");
       setSelectValue(findSelectsByOptions(view.container, ["start", "center", "end"])[0], "end");
@@ -813,7 +813,7 @@ test("StatsKpi wizard value inputs and visual divider toggle update isolated sta
     if (!(dividerToggle instanceof HTMLInputElement)) {
       throw new Error("Missing divider toggle");
     }
-    act(() => {
+    React.act(() => {
       dividerToggle.click();
     });
 

@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -20,9 +20,7 @@ const widgetEditorState = vi.hoisted(() => ({
       author: null,
     },
   ],
-  contentTypes: [
-    { id: "articles", name: "Articles" },
-  ],
+  contentTypes: [{ id: "articles", name: "Articles" }],
   listingQueries: [
     {
       id: "query-1",
@@ -138,9 +136,7 @@ vi.mock("@/components/ui/select", () => {
       .join("")
       .trim();
 
-  const collectOptions = (
-    value: React.ReactNode
-  ): Array<{ value: string; label: string }> =>
+  const collectOptions = (value: React.ReactNode): Array<{ value: string; label: string }> =>
     React.Children.toArray(value).flatMap((child) => {
       if (!React.isValidElement(child)) return [];
       if (typeof child.props.value === "string") {
@@ -245,14 +241,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -262,10 +258,7 @@ const mount = (node: React.ReactNode) => {
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
   descriptor?.set?.call(element, value);
   element.dispatchEvent(new Event("input", { bubbles: true }));
   element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -273,10 +266,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 
 const setTextareaValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLTextAreaElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLTextAreaElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
   descriptor?.set?.call(element, value);
   element.dispatchEvent(new Event("input", { bubbles: true }));
   element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -284,10 +274,7 @@ const setTextareaValue = (element: Element | null | undefined, value: string) =>
 
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
   descriptor?.set?.call(element, value);
   element.dispatchEvent(new Event("change", { bubbles: true }));
 };
@@ -309,9 +296,7 @@ test("TemplateSection editors cover empty, selected, error, and advanced resolut
     TemplateSectionAdvancedEditor,
     TemplateSectionVisualEditor,
     TemplateSectionWizardEditor,
-  } = await import(
-    "../../../core/admin/ui/widgets/editors/TemplateSectionEditors"
-  );
+  } = await import("../../../core/admin/ui/widgets/editors/TemplateSectionEditors");
 
   const onChange = vi.fn();
 
@@ -336,20 +321,24 @@ test("TemplateSection editors cover empty, selected, error, and advanced resolut
   const view = mount(
     <>
       <TemplateSectionVisualEditor
-        value={{
-          templateId: "widget-tpl-1",
-          templateName: "Hero template",
-          resolved: { blocks: [{ id: "block-1" }] },
-        } as never}
+        value={
+          {
+            templateId: "widget-tpl-1",
+            templateName: "Hero template",
+            resolved: { blocks: [{ id: "block-1" }] },
+          } as never
+        }
         onChange={onChange}
         variant="default"
       />
       <TemplateSectionAdvancedEditor
-        value={{
-          templateId: "widget-tpl-1",
-          templateName: "Hero template",
-          resolved: { blocks: [{ id: "block-1" }] },
-        } as never}
+        value={
+          {
+            templateId: "widget-tpl-1",
+            templateName: "Hero template",
+            resolved: { blocks: [{ id: "block-1" }] },
+          } as never
+        }
         onChange={onChange}
         variant="default"
       />
@@ -362,7 +351,7 @@ test("TemplateSection editors cover empty, selected, error, and advanced resolut
     expect(view.container.textContent).toContain("Resolved payload");
 
     const select = view.container.querySelector("select");
-    act(() => {
+    React.act(() => {
       setSelectValue(select ?? undefined, "__no-template__");
     });
 
@@ -382,9 +371,7 @@ test("AppointmentForm editors update flow, copy, visibility, and advanced runtim
     AppointmentFormAdvancedEditor,
     AppointmentFormVisualEditor,
     AppointmentFormWizardEditor,
-  } = await import(
-    "../../../core/admin/ui/widgets/editors/AppointmentFormEditors"
-  );
+  } = await import("../../../core/admin/ui/widgets/editors/AppointmentFormEditors");
 
   const onChange = vi.fn();
   const view = mount(
@@ -402,7 +389,7 @@ test("AppointmentForm editors update flow, copy, visibility, and advanced runtim
       view.container.querySelectorAll("input[type='checkbox']")
     ) as HTMLInputElement[];
 
-    act(() => {
+    React.act(() => {
       setInputValue(inputs[0], "booking-flow");
       setInputValue(inputs[1], "Intro title");
       setTextareaValue(textareas[0], "Intro description");
@@ -433,22 +420,32 @@ test("AppointmentForm editors update flow, copy, visibility, and advanced runtim
 });
 
 test("PostsFeed editors cover source modes, manual posts, display toggles, and layout options", async () => {
-  const {
-    PostsFeedAdvancedEditor,
-    PostsFeedVisualEditor,
-    PostsFeedWizardEditor,
-  } = await import(
-    "../../../core/admin/ui/widgets/editors/PostsFeedEditors"
-  );
+  const { PostsFeedAdvancedEditor, PostsFeedVisualEditor, PostsFeedWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/PostsFeedEditors");
 
   const onChange = vi.fn();
   const onVariantChange = vi.fn();
 
   const view = mount(
     <>
-      <PostsFeedWizardEditor value={{} as never} onChange={onChange} variant="cards" onVariantChange={onVariantChange} />
-      <PostsFeedVisualEditor value={{} as never} onChange={onChange} variant="cards" onVariantChange={onVariantChange} />
-      <PostsFeedAdvancedEditor value={{} as never} onChange={onChange} variant="cards" onVariantChange={onVariantChange} />
+      <PostsFeedWizardEditor
+        value={{} as never}
+        onChange={onChange}
+        variant="cards"
+        onVariantChange={onVariantChange}
+      />
+      <PostsFeedVisualEditor
+        value={{} as never}
+        onChange={onChange}
+        variant="cards"
+        onVariantChange={onVariantChange}
+      />
+      <PostsFeedAdvancedEditor
+        value={{} as never}
+        onChange={onChange}
+        variant="cards"
+        onVariantChange={onVariantChange}
+      />
     </>
   );
 
@@ -460,13 +457,9 @@ test("PostsFeed editors cover source modes, manual posts, display toggles, and l
     const toggles = Array.from(
       view.container.querySelectorAll("input[type='checkbox']")
     ) as HTMLInputElement[];
-    const variantSelect = findSelectByOptions(view.container, [
-      "cards",
-      "list",
-      "compact",
-    ]);
+    const variantSelect = findSelectByOptions(view.container, ["cards", "list", "compact"]);
 
-    act(() => {
+    React.act(() => {
       setSelectValue(selects[0], "manual");
       toggles[0]?.click();
       setInputValue(inputs[0], "8");
@@ -490,21 +483,31 @@ test("PostsFeed editors cover source modes, manual posts, display toggles, and l
 });
 
 test("ContentList editors cover legacy/listing source modes and visual options", async () => {
-  const {
-    ContentListAdvancedEditor,
-    ContentListVisualEditor,
-    ContentListWizardEditor,
-  } = await import(
-    "../../../core/admin/ui/widgets/editors/ContentListEditors"
-  );
+  const { ContentListAdvancedEditor, ContentListVisualEditor, ContentListWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/ContentListEditors");
 
   const onChange = vi.fn();
   const onVariantChange = vi.fn();
   const view = mount(
     <>
-      <ContentListWizardEditor value={{} as never} onChange={onChange} variant="cards" onVariantChange={onVariantChange} />
-      <ContentListVisualEditor value={{} as never} onChange={onChange} variant="cards" onVariantChange={onVariantChange} />
-      <ContentListAdvancedEditor value={{} as never} onChange={onChange} variant="cards" onVariantChange={onVariantChange} />
+      <ContentListWizardEditor
+        value={{} as never}
+        onChange={onChange}
+        variant="cards"
+        onVariantChange={onVariantChange}
+      />
+      <ContentListVisualEditor
+        value={{} as never}
+        onChange={onChange}
+        variant="cards"
+        onVariantChange={onVariantChange}
+      />
+      <ContentListAdvancedEditor
+        value={{} as never}
+        onChange={onChange}
+        variant="cards"
+        onVariantChange={onVariantChange}
+      />
     </>
   );
 
@@ -516,13 +519,9 @@ test("ContentList editors cover legacy/listing source modes and visual options",
     const toggles = Array.from(
       view.container.querySelectorAll("input[type='checkbox']")
     ) as HTMLInputElement[];
-    const variantSelect = findSelectByOptions(view.container, [
-      "cards",
-      "list",
-      "compact",
-    ]);
+    const variantSelect = findSelectByOptions(view.container, ["cards", "list", "compact"]);
 
-    act(() => {
+    React.act(() => {
       setSelectValue(selects[0], "listing");
       setSelectValue(selects[1], "query-1");
       setSelectValue(selects[2], "tpl-1");

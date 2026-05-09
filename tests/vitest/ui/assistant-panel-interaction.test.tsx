@@ -1,13 +1,16 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
 import * as assistantClient from "../../../core/admin/services/assistantClient";
 import * as userSettingsClient from "../../../core/admin/services/userSettingsClient";
 import type { UserSettings } from "../../../core/admin/services/userSettingsClient";
-import { AssistantPanel, clearAssistantRuntimeStateCache } from "../../../core/admin/ui/assistant/AssistantPanel";
+import {
+  AssistantPanel,
+  clearAssistantRuntimeStateCache,
+} from "../../../core/admin/ui/assistant/AssistantPanel";
 import { clearAssistantConversationState } from "../../../core/admin/ui/assistant/assistantConversationState";
 import { AdminAssistantConfigProvider } from "../../../core/admin/ui/contexts/AdminAssistantConfigContext";
 import { AdminRouterProvider } from "../../../core/admin/ui/contexts/AdminRouterContext";
@@ -19,14 +22,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -46,17 +49,12 @@ const findButton = (container: HTMLElement, text: string) =>
   ) as HTMLButtonElement | null | undefined;
 
 const setTextareaValue = (element: HTMLTextAreaElement, value: string) => {
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLTextAreaElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
   descriptor?.set?.call(element, value);
   element.dispatchEvent(new Event("input", { bubbles: true }));
 };
 
-const makeUserSettings = (
-  overrides: Partial<UserSettings> = {}
-): UserSettings => {
+const makeUserSettings = (overrides: Partial<UserSettings> = {}): UserSettings => {
   const settings: UserSettings = {
     "pages.openAfterCreate": true,
     "customScreens.openAfterCreate": true,
@@ -85,9 +83,7 @@ const makeUserSettings = (
 };
 
 const mockUserSettings = (overrides?: Partial<UserSettings>) =>
-  vi
-    .spyOn(userSettingsClient, "getUserSettings")
-    .mockResolvedValue(makeUserSettings(overrides));
+  vi.spyOn(userSettingsClient, "getUserSettings").mockResolvedValue(makeUserSettings(overrides));
 
 afterEach(() => {
   clearAssistantRuntimeStateCache();
@@ -261,7 +257,7 @@ test("AssistantPanel supports llm-guide prompt -> dry-run -> execute flow", asyn
     const launcher = findButton(view.container, "");
     if (!launcher) throw new Error("missing_launcher");
 
-    await act(async () => {
+    await React.act(async () => {
       launcher.click();
       await flush();
     });
@@ -271,7 +267,7 @@ test("AssistantPanel supports llm-guide prompt -> dry-run -> execute flow", asyn
       throw new Error("missing_textarea");
     }
 
-    await act(async () => {
+    await React.act(async () => {
       setTextareaValue(
         textarea,
         "potrzebuje strony na ktore bede mogl prezentowac swoje produkty czyli projekty domow, caly katalog"
@@ -282,7 +278,7 @@ test("AssistantPanel supports llm-guide prompt -> dry-run -> execute flow", asyn
     const sendButton = findButton(view.container, "Send");
     if (!sendButton) throw new Error("missing_send_button");
 
-    await act(async () => {
+    await React.act(async () => {
       sendButton.click();
       await flush();
     });
@@ -303,7 +299,7 @@ test("AssistantPanel supports llm-guide prompt -> dry-run -> execute flow", asyn
 
     const dryRunButton = findButton(view.container, "Dry-run changes");
     if (!dryRunButton) throw new Error("missing_dry_run_button");
-    await act(async () => {
+    await React.act(async () => {
       dryRunButton.click();
       await flush();
     });
@@ -311,7 +307,7 @@ test("AssistantPanel supports llm-guide prompt -> dry-run -> execute flow", asyn
 
     const executeButton = findButton(view.container, "Execute reviewed actions");
     if (!executeButton) throw new Error("missing_execute_button");
-    await act(async () => {
+    await React.act(async () => {
       executeButton.click();
       await flush();
     });
@@ -376,7 +372,7 @@ test("AssistantPanel renders needs-input guide plan without enabling execution",
     const launcher = findButton(view.container, "");
     if (!launcher) throw new Error("missing_launcher");
 
-    await act(async () => {
+    await React.act(async () => {
       launcher.click();
       await flush();
     });
@@ -386,7 +382,7 @@ test("AssistantPanel renders needs-input guide plan without enabling execution",
       throw new Error("missing_textarea");
     }
 
-    await act(async () => {
+    await React.act(async () => {
       setTextareaValue(textarea, "potrzebuje katalogu");
       await flush();
     });
@@ -394,7 +390,7 @@ test("AssistantPanel renders needs-input guide plan without enabling execution",
     const sendButton = findButton(view.container, "Send");
     if (!sendButton) throw new Error("missing_send_button");
 
-    await act(async () => {
+    await React.act(async () => {
       sendButton.click();
       await flush();
     });
@@ -486,7 +482,7 @@ test("AssistantPanel routes CMS inspection prompts through LLM Guide actions", a
     const launcher = findButton(view.container, "");
     if (!launcher) throw new Error("missing_launcher");
 
-    await act(async () => {
+    await React.act(async () => {
       launcher.click();
       await flush();
     });
@@ -496,7 +492,7 @@ test("AssistantPanel routes CMS inspection prompts through LLM Guide actions", a
       throw new Error("missing_textarea");
     }
 
-    await act(async () => {
+    await React.act(async () => {
       setTextareaValue(
         textarea,
         "sprawdz jakie ekrany w admin ui (customowe) sa widoczne - jak sie nazywaja dokladnie"
@@ -507,7 +503,7 @@ test("AssistantPanel routes CMS inspection prompts through LLM Guide actions", a
     const sendButton = findButton(view.container, "Send");
     if (!sendButton) throw new Error("missing_send_button");
 
-    await act(async () => {
+    await React.act(async () => {
       sendButton.click();
       await flush();
     });
@@ -581,7 +577,7 @@ test("AssistantPanel keeps docs-only mode on assistant chat route", async () => 
     const launcher = findButton(view.container, "");
     if (!launcher) throw new Error("missing_launcher");
 
-    await act(async () => {
+    await React.act(async () => {
       launcher.click();
       await flush();
     });
@@ -591,7 +587,7 @@ test("AssistantPanel keeps docs-only mode on assistant chat route", async () => 
       throw new Error("missing_textarea");
     }
 
-    await act(async () => {
+    await React.act(async () => {
       setTextareaValue(textarea, "gdzie znajde custom screens?");
       await flush();
     });
@@ -599,7 +595,7 @@ test("AssistantPanel keeps docs-only mode on assistant chat route", async () => 
     const sendButton = findButton(view.container, "Send");
     if (!sendButton) throw new Error("missing_send_button");
 
-    await act(async () => {
+    await React.act(async () => {
       sendButton.click();
       await flush();
     });
@@ -661,7 +657,7 @@ test("AssistantPanel renders LLM Guide docs response without action review", asy
     const launcher = findButton(view.container, "");
     if (!launcher) throw new Error("missing_launcher");
 
-    await act(async () => {
+    await React.act(async () => {
       launcher.click();
       await flush();
     });
@@ -671,7 +667,7 @@ test("AssistantPanel renders LLM Guide docs response without action review", asy
       throw new Error("missing_textarea");
     }
 
-    await act(async () => {
+    await React.act(async () => {
       setTextareaValue(textarea, "gdzie zmienie kolory hero widgetu?");
       await flush();
     });
@@ -679,7 +675,7 @@ test("AssistantPanel renders LLM Guide docs response without action review", asy
     const sendButton = findButton(view.container, "Send");
     if (!sendButton) throw new Error("missing_send_button");
 
-    await act(async () => {
+    await React.act(async () => {
       sendButton.click();
       await flush();
     });
@@ -709,7 +705,8 @@ test("AssistantPanel sends prior inspection candidates as planning state", async
     chunkCount: 44,
   });
   mockUserSettings();
-  const planSpy = vi.spyOn(assistantClient, "planAssistantActions")
+  const planSpy = vi
+    .spyOn(assistantClient, "planAssistantActions")
     .mockResolvedValueOnce({
       id: "plan-cms-custom-screen-inspect",
       status: "ready",
@@ -782,7 +779,7 @@ test("AssistantPanel sends prior inspection candidates as planning state", async
     const launcher = findButton(view.container, "");
     if (!launcher) throw new Error("missing_launcher");
 
-    await act(async () => {
+    await React.act(async () => {
       launcher.click();
       await flush();
     });
@@ -792,22 +789,22 @@ test("AssistantPanel sends prior inspection candidates as planning state", async
       throw new Error("missing_textarea");
     }
 
-    await act(async () => {
+    await React.act(async () => {
       setTextareaValue(textarea, "jakie ekrany widzisz z prefixem House Projects?");
       await flush();
     });
     const sendButton = findButton(view.container, "Send");
     if (!sendButton) throw new Error("missing_send_button");
-    await act(async () => {
+    await React.act(async () => {
       sendButton.click();
       await flush();
     });
 
-    await act(async () => {
+    await React.act(async () => {
       setTextareaValue(textarea, "usun pierwszy");
       await flush();
     });
-    await act(async () => {
+    await React.act(async () => {
       sendButton.click();
       await flush();
     });
@@ -874,7 +871,7 @@ test("AssistantPanel starts a new empty conversation from footer action", async 
     const launcher = findButton(view.container, "");
     if (!launcher) throw new Error("missing_launcher");
 
-    await act(async () => {
+    await React.act(async () => {
       launcher.click();
       await flush();
     });
@@ -884,13 +881,13 @@ test("AssistantPanel starts a new empty conversation from footer action", async 
       throw new Error("missing_textarea");
     }
 
-    await act(async () => {
+    await React.act(async () => {
       setTextareaValue(textarea, "gdzie sa ustawienia?");
       await flush();
     });
     const sendButton = findButton(view.container, "Send");
     if (!sendButton) throw new Error("missing_send_button");
-    await act(async () => {
+    await React.act(async () => {
       sendButton.click();
       await flush();
     });
@@ -899,7 +896,7 @@ test("AssistantPanel starts a new empty conversation from footer action", async 
 
     const newButton = findButton(view.container, "New");
     if (!newButton) throw new Error("missing_new_button");
-    await act(async () => {
+    await React.act(async () => {
       newButton.click();
       await flush();
     });
@@ -972,19 +969,19 @@ test("AssistantPanel restores conversation after close and SPA remount", async (
 
   const firstLauncher = findButton(firstView.container, "");
   if (!firstLauncher) throw new Error("missing_first_launcher");
-  await act(async () => {
+  await React.act(async () => {
     firstLauncher.click();
     await flush();
   });
   const textarea = firstView.container.querySelector("textarea");
   if (!(textarea instanceof HTMLTextAreaElement)) throw new Error("missing_textarea");
-  await act(async () => {
+  await React.act(async () => {
     setTextareaValue(textarea, "jakie ekrany widzisz z prefixem House Projects?");
     await flush();
   });
   const sendButton = findButton(firstView.container, "Send");
   if (!sendButton) throw new Error("missing_send_button");
-  await act(async () => {
+  await React.act(async () => {
     sendButton.click();
     await flush();
   });
@@ -1008,7 +1005,7 @@ test("AssistantPanel restores conversation after close and SPA remount", async (
   try {
     const secondLauncher = findButton(secondView.container, "");
     if (!secondLauncher) throw new Error("missing_second_launcher");
-    await act(async () => {
+    await React.act(async () => {
       secondLauncher.click();
       await flush();
     });

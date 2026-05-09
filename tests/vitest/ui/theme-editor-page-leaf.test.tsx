@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
@@ -134,11 +134,9 @@ vi.mock("../../../core/admin/ui/themes/ThemePreviewPanel", () => ({
 }));
 
 vi.mock("../../../core/admin/ui/themes/ThemeExportDialog", () => ({
-  ThemeExportDialog: ({
-    open,
-  }: {
-    open: boolean;
-  }) => <div>{open ? "export:open" : "export:closed"}</div>,
+  ThemeExportDialog: ({ open }: { open: boolean }) => (
+    <div>{open ? "export:open" : "export:closed"}</div>
+  ),
 }));
 
 vi.mock("../../../core/admin/ui/themes/ThemeTokensEditor", () => ({
@@ -155,9 +153,7 @@ vi.mock("../../../core/admin/ui/themes/ThemeTokensEditor", () => ({
     routes: Array<{ id: string; path: string; pageId: string | null }>;
     routesError?: string | null;
     onDraftChange: (value: string) => void;
-    onRoutesChange: (
-      next: Array<{ id: string; path: string; pageId: string | null }>
-    ) => void;
+    onRoutesChange: (next: Array<{ id: string; path: string; pageId: string | null }>) => void;
   }) => (
     <div>
       <span>{draft}</span>
@@ -204,14 +200,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -220,7 +216,7 @@ const mount = (node: React.ReactNode) => {
 };
 
 const flush = async () => {
-  await act(async () => {
+  await React.act(async () => {
     await Promise.resolve();
     await Promise.resolve();
   });
@@ -230,10 +226,7 @@ test("ThemeEditorPage handles invalid draft, reset, export, and save flows", asy
   themeState.reset();
   const dispatchSpy = vi.spyOn(window, "dispatchEvent");
   const view = mount(
-    <ThemeEditorPage
-      profileId="profile-1"
-      initialProfile={themeState.profileResult}
-    />
+    <ThemeEditorPage profileId="profile-1" initialProfile={themeState.profileResult} />
   );
 
   try {
@@ -243,19 +236,19 @@ test("ThemeEditorPage handles invalid draft, reset, export, and save flows", asy
     expect(view.container.textContent).toContain("routes:1");
     expect(view.container.textContent).toContain("export:closed");
 
-    act(() => {
+    React.act(() => {
       Array.from(view.container.querySelectorAll("button"))
         .find((button) => button.textContent === "invalid-draft")
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
 
     expect(view.container.textContent).toContain("Invalid JSON");
-    const saveButton = Array.from(view.container.querySelectorAll("button")).find(
-      (button) => button.textContent?.includes("Save Changes")
+    const saveButton = Array.from(view.container.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("Save Changes")
     );
     expect(saveButton?.hasAttribute("disabled")).toBe(true);
 
-    act(() => {
+    React.act(() => {
       Array.from(view.container.querySelectorAll("button"))
         .find((button) => button.textContent === "valid-draft")
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -267,14 +260,14 @@ test("ThemeEditorPage handles invalid draft, reset, export, and save flows", asy
     expect(view.container.textContent).toContain("routes:2");
     expect(saveButton?.hasAttribute("disabled")).toBe(false);
 
-    act(() => {
+    React.act(() => {
       Array.from(view.container.querySelectorAll("button"))
         .find((button) => button.textContent === "Export")
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
     expect(view.container.textContent).toContain("export:open");
 
-    await act(async () => {
+    await React.act(async () => {
       saveButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       await Promise.resolve();
       await Promise.resolve();
@@ -290,14 +283,14 @@ test("ThemeEditorPage handles invalid draft, reset, export, and save flows", asy
     expect(themeState.getThemeProfile).toHaveBeenCalledWith("profile-1");
     expect(dispatchSpy).toHaveBeenCalled();
 
-    act(() => {
+    React.act(() => {
       Array.from(view.container.querySelectorAll("button"))
         .find((button) => button.textContent === "add-route")
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
     expect(view.container.textContent).toContain("routes:2");
 
-    act(() => {
+    React.act(() => {
       Array.from(view.container.querySelectorAll("button"))
         .find((button) => button.textContent === "Reset")
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));

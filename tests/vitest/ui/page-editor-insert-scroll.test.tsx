@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
@@ -96,18 +96,9 @@ vi.mock("@/components/ui/badge", () => ({
 }));
 
 vi.mock("@/components/ui/sheet", () => ({
-  Sheet: ({
-    open,
-    children,
-  }: {
-    open: boolean;
-    children: React.ReactNode;
-  }) => (open ? <div>{children}</div> : null),
-  SheetContent: ({
-    children,
-  }: {
-    children: React.ReactNode;
-  }) => <div>{children}</div>,
+  Sheet: ({ open, children }: { open: boolean; children: React.ReactNode }) =>
+    open ? <div>{children}</div> : null,
+  SheetContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   SheetTitle: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   SheetDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
@@ -226,8 +217,7 @@ let scrollIntoViewSpy: ReturnType<typeof vi.fn>;
 let elementScrollIntoViewDescriptor: PropertyDescriptor | undefined;
 let htmlElementScrollIntoViewDescriptor: PropertyDescriptor | undefined;
 
-const asRandomUuid = (value: `${string}-${string}-${string}-${string}-${string}`) =>
-  value;
+const asRandomUuid = (value: `${string}-${string}-${string}-${string}-${string}`) => value;
 
 const restoreScrollIntoView = (
   prototype: Element | HTMLElement,
@@ -256,14 +246,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -272,7 +262,7 @@ const mount = (node: React.ReactNode) => {
 };
 
 const flush = async () => {
-  await act(async () => {
+  await React.act(async () => {
     await Promise.resolve();
     await Promise.resolve();
   });
@@ -287,9 +277,7 @@ beforeEach(() => {
   ];
   let randomUuidIndex = 0;
   vi.spyOn(crypto, "randomUUID").mockImplementation(
-    () =>
-      stableUuids[randomUuidIndex++] ??
-      asRandomUuid("dddddddd-dddd-4ddd-addd-dddddddddddd")
+    () => stableUuids[randomUuidIndex++] ?? asRandomUuid("dddddddd-dddd-4ddd-addd-dddddddddddd")
   );
   pageEditorState.cachedPage = createPage();
   pageEditorState.currentPage = createPage();
@@ -329,16 +317,14 @@ test("PageEditor scrolls to and highlights a newly inserted block", async () => 
   try {
     await flush();
 
-    act(() => {
+    React.act(() => {
       Array.from(view.container.querySelectorAll("button"))
         .find((button) => button.textContent === "add-widget")
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
 
     await flush();
-    const rows = Array.from(
-      document.querySelectorAll("[data-block-id]")
-    ) as HTMLDivElement[];
+    const rows = Array.from(document.querySelectorAll("[data-block-id]")) as HTMLDivElement[];
     expect(rows).toHaveLength(2);
     const insertedBlockId = rows[1]?.getAttribute("data-block-id");
     expect(insertedBlockId).toBeTruthy();
@@ -350,7 +336,7 @@ test("PageEditor scrolls to and highlights a newly inserted block", async () => 
       block: "start",
     });
 
-    await act(async () => {
+    await React.act(async () => {
       vi.advanceTimersByTime(2000);
       await Promise.resolve();
     });

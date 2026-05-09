@@ -1,15 +1,12 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test } from "vitest";
 import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { cacheKeys } from "../../../core/admin/services/cachePolicy";
-import {
-  clearMediaCache,
-  type MediaRecord,
-} from "../../../core/admin/services/mediaClient";
+import { clearMediaCache, type MediaRecord } from "../../../core/admin/services/mediaClient";
 import { MediaPicker } from "../../../core/admin/ui/media/MediaPicker";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -45,7 +42,7 @@ const writeMediaCache = (rows: MediaRecord[]) => {
 };
 
 const flushEffects = async () => {
-  await act(async () => {
+  await React.act(async () => {
     await Promise.resolve();
     await Promise.resolve();
   });
@@ -56,14 +53,14 @@ const mountPicker = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -77,17 +74,13 @@ afterEach(() => {
 });
 
 test("MediaPicker renders browse button", () => {
-  const html = renderAdminUi(
-    <MediaPicker value={null} onChange={() => undefined} />
-  );
+  const html = renderAdminUi(<MediaPicker value={null} onChange={() => undefined} />);
 
   expect(html).toContain("Browse media");
 });
 
 test("MediaPicker shows loading state for selected media until assets are resolved", () => {
-  const html = renderAdminUi(
-    <MediaPicker value="asset-1" onChange={() => undefined} />
-  );
+  const html = renderAdminUi(<MediaPicker value="asset-1" onChange={() => undefined} />);
 
   expect(html).toContain("Loading selected media...");
 });
@@ -106,9 +99,7 @@ test("MediaPicker stays idle while closed without a selection", async () => {
     await flushEffects();
 
     expect(view.container.textContent).toContain("No media selected yet.");
-    expect(
-      calls.filter((call) => String(call.input) === "/admin/api/media")
-    ).toHaveLength(0);
+    expect(calls.filter((call) => String(call.input) === "/admin/api/media")).toHaveLength(0);
   } finally {
     view.cleanup();
     globalThis.fetch = originalFetch;
@@ -125,17 +116,13 @@ test("MediaPicker resolves selected media from cache without fetching media", as
     return jsonResponse([mediaRecord({ title: "Network asset" })]);
   };
 
-  const view = mountPicker(
-    <MediaPicker value="asset-1" onChange={() => undefined} />
-  );
+  const view = mountPicker(<MediaPicker value="asset-1" onChange={() => undefined} />);
   try {
     await flushEffects();
 
     expect(view.container.textContent).toContain("Picker cached asset");
     expect(view.container.textContent).not.toContain("Loading selected media");
-    expect(
-      calls.filter((call) => String(call.input) === "/admin/api/media")
-    ).toHaveLength(0);
+    expect(calls.filter((call) => String(call.input) === "/admin/api/media")).toHaveLength(0);
   } finally {
     view.cleanup();
     globalThis.fetch = originalFetch;

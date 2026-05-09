@@ -1,13 +1,10 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
-import {
-  PostEditorPage,
-  resolvePostEditorMode,
-} from "../../../core/admin/ui/posts/PostEditorPage";
+import { PostEditorPage, resolvePostEditorMode } from "../../../core/admin/ui/posts/PostEditorPage";
 
 const postEditorPageState = vi.hoisted(() => ({
   path: "/admin/posts/post-1",
@@ -50,14 +47,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -66,7 +63,7 @@ const mount = (node: React.ReactNode) => {
 };
 
 const flush = async () => {
-  await act(async () => {
+  await React.act(async () => {
     await Promise.resolve();
     await Promise.resolve();
   });
@@ -122,13 +119,7 @@ test("PostEditorPage resolves classic mode from settings and falls back to block
 });
 
 test("resolvePostEditorMode prioritizes query override over settings", () => {
-  expect(resolvePostEditorMode("/admin/posts/post-1?editor=classic", "blocks")).toBe(
-    "classic"
-  );
-  expect(resolvePostEditorMode("/admin/posts/post-1", "classic")).toBe(
-    "classic"
-  );
-  expect(resolvePostEditorMode("/admin/posts/post-1", "invalid")).toBe(
-    "blocks"
-  );
+  expect(resolvePostEditorMode("/admin/posts/post-1?editor=classic", "blocks")).toBe("classic");
+  expect(resolvePostEditorMode("/admin/posts/post-1", "classic")).toBe("classic");
+  expect(resolvePostEditorMode("/admin/posts/post-1", "invalid")).toBe("blocks");
 });

@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -251,13 +251,8 @@ vi.mock("@/components/ui/card", () => ({
 }));
 
 vi.mock("@/components/ui/dialog", () => ({
-  Dialog: ({
-    children,
-    open,
-  }: {
-    children: React.ReactNode;
-    open?: boolean;
-  }) => (open ? <div>{children}</div> : null),
+  Dialog: ({ children, open }: { children: React.ReactNode; open?: boolean }) =>
+    open ? <div>{children}</div> : null,
   DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DialogDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -314,9 +309,7 @@ vi.mock("@/components/ui/select", () => {
       .join("")
       .trim();
 
-  const collectOptions = (
-    value: React.ReactNode
-  ): Array<{ value: string; label: string }> =>
+  const collectOptions = (value: React.ReactNode): Array<{ value: string; label: string }> =>
     React.Children.toArray(value).flatMap((child) => {
       if (!React.isValidElement(child)) return [];
       if (typeof child.props.value === "string") {
@@ -390,21 +383,10 @@ vi.mock("@/components/ui/tabs", () => ({
     tabsMockState.onValueChange = onValueChange;
     return <div>{children}</div>;
   },
-  TabsContent: ({
-    children,
-    value,
-  }: {
-    children: React.ReactNode;
-    value: string;
-  }) => (tabsMockState.currentValue === value ? <div>{children}</div> : null),
+  TabsContent: ({ children, value }: { children: React.ReactNode; value: string }) =>
+    tabsMockState.currentValue === value ? <div>{children}</div> : null,
   TabsList: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  TabsTrigger: ({
-    children,
-    value,
-  }: {
-    children: React.ReactNode;
-    value: string;
-  }) => (
+  TabsTrigger: ({ children, value }: { children: React.ReactNode; value: string }) => (
     <button type="button" onClick={() => tabsMockState.onValueChange?.(value)}>
       {children}
     </button>
@@ -621,10 +603,7 @@ vi.mock("../../../core/admin/ui/listings/components/BindingEditor", () => ({
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
   descriptor?.set?.call(element, value);
   element.dispatchEvent(new Event("input", { bubbles: true }));
   element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -632,10 +611,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 
 const setTextareaValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLTextAreaElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLTextAreaElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
   descriptor?.set?.call(element, value);
   element.dispatchEvent(new Event("input", { bubbles: true }));
   element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -643,10 +619,7 @@ const setTextareaValue = (element: Element | null | undefined, value: string) =>
 
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
   descriptor?.set?.call(element, value);
   element.dispatchEvent(new Event("change", { bubbles: true }));
 };
@@ -656,14 +629,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -672,7 +645,7 @@ const mount = (node: React.ReactNode) => {
 };
 
 const flush = async () => {
-  await act(async () => {
+  await React.act(async () => {
     await Promise.resolve();
     await Promise.resolve();
     await Promise.resolve();
@@ -686,7 +659,7 @@ const clickButtonByText = (container: HTMLElement, text: string) => {
   if (!button) {
     throw new Error(`Missing button: ${text}`);
   }
-  act(() => {
+  React.act(() => {
     button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 };
@@ -706,8 +679,7 @@ const findInputsByPlaceholder = (container: HTMLElement, placeholder: string) =>
 const findTextareaByPlaceholder = (container: HTMLElement, placeholder: string) =>
   Array.from(container.querySelectorAll("textarea")).find(
     (element) =>
-      element instanceof HTMLTextAreaElement &&
-      element.getAttribute("placeholder") === placeholder
+      element instanceof HTMLTextAreaElement && element.getAttribute("placeholder") === placeholder
   );
 
 const findSelectsByOptions = (container: ParentNode, values: string[]) =>
@@ -730,40 +702,30 @@ afterEach(() => {
 });
 
 test("ListingListPage controls template create, edit, delete, and save errors", async () => {
-  const { ListingListPage } = await import(
-    "../../../core/admin/ui/listings/ListingListPage"
-  );
+  const { ListingListPage } = await import("../../../core/admin/ui/listings/ListingListPage");
   const view = mount(<ListingListPage />);
 
   try {
     const buttons = () => Array.from(view.container.querySelectorAll("button"));
 
-    act(() => {
-      buttons().find((button) => button.textContent?.includes("Templates"))?.click();
+    React.act(() => {
+      buttons()
+        .find((button) => button.textContent?.includes("Templates"))
+        ?.click();
     });
     expect(view.container.textContent).toContain("Cards");
 
-    act(() => {
-      buttons().find((button) => button.textContent?.includes("New"))?.click();
+    React.act(() => {
+      buttons()
+        .find((button) => button.textContent?.includes("New"))
+        ?.click();
     });
     expect(view.container.textContent).toContain("New listing template");
-    act(() => {
-      setInputValue(
-        findInputByPlaceholder(view.container, "Homepage cards"),
-        "Homepage cards"
-      );
-      setInputValue(
-        findInputByPlaceholder(view.container, "homepage-cards"),
-        "homepage-cards"
-      );
+    React.act(() => {
+      setInputValue(findInputByPlaceholder(view.container, "Homepage cards"), "Homepage cards");
+      setInputValue(findInputByPlaceholder(view.container, "homepage-cards"), "homepage-cards");
       setSelectValue(
-        findSelectsByOptions(view.container, [
-          "grid",
-          "list",
-          "table",
-          "calendar",
-          "map",
-        ]).at(-1),
+        findSelectsByOptions(view.container, ["grid", "list", "table", "calendar", "map"]).at(-1),
         "list"
       );
       setTextareaValue(
@@ -771,11 +733,15 @@ test("ListingListPage controls template create, edit, delete, and save errors", 
         "Homepage template"
       );
     });
-    act(() => {
-      buttons().find((button) => button.textContent === "add-binding")?.click();
+    React.act(() => {
+      buttons()
+        .find((button) => button.textContent === "add-binding")
+        ?.click();
     });
-    act(() => {
-      buttons().find((button) => button.textContent?.includes("Save template"))?.click();
+    React.act(() => {
+      buttons()
+        .find((button) => button.textContent?.includes("Save template"))
+        ?.click();
     });
     await flush();
 
@@ -792,26 +758,16 @@ test("ListingListPage controls template create, edit, delete, and save errors", 
     );
     expect(listingsState.listTemplateCalls).toContain(true);
 
-    act(() => {
-      buttons().find((button) => button.textContent === "Edit")?.click();
+    React.act(() => {
+      buttons()
+        .find((button) => button.textContent === "Edit")
+        ?.click();
     });
-    act(() => {
-      setInputValue(
-        findInputByPlaceholder(view.container, "Homepage cards"),
-        "Cards updated"
-      );
-      setInputValue(
-        findInputByPlaceholder(view.container, "homepage-cards"),
-        "cards-updated"
-      );
+    React.act(() => {
+      setInputValue(findInputByPlaceholder(view.container, "Homepage cards"), "Cards updated");
+      setInputValue(findInputByPlaceholder(view.container, "homepage-cards"), "cards-updated");
       setSelectValue(
-        findSelectsByOptions(view.container, [
-          "grid",
-          "list",
-          "table",
-          "calendar",
-          "map",
-        ]).at(-1),
+        findSelectsByOptions(view.container, ["grid", "list", "table", "calendar", "map"]).at(-1),
         "grid"
       );
       setTextareaValue(
@@ -819,8 +775,10 @@ test("ListingListPage controls template create, edit, delete, and save errors", 
         "Updated template"
       );
     });
-    act(() => {
-      buttons().find((button) => button.textContent?.includes("Save template"))?.click();
+    React.act(() => {
+      buttons()
+        .find((button) => button.textContent?.includes("Save template"))
+        ?.click();
     });
     await flush();
 
@@ -835,15 +793,16 @@ test("ListingListPage controls template create, edit, delete, and save errors", 
     });
 
     listingsState.saveTemplateError = listingsState.apiError("Template save failed");
-    act(() => {
-      buttons().find((button) => button.textContent?.includes("New"))?.click();
+    React.act(() => {
+      buttons()
+        .find((button) => button.textContent?.includes("New"))
+        ?.click();
     });
-    act(() => {
-      setInputValue(
-        findInputByPlaceholder(view.container, "Homepage cards"),
-        "Broken template"
-      );
-      buttons().find((button) => button.textContent?.includes("Save template"))?.click();
+    React.act(() => {
+      setInputValue(findInputByPlaceholder(view.container, "Homepage cards"), "Broken template");
+      buttons()
+        .find((button) => button.textContent?.includes("Save template"))
+        ?.click();
     });
     await flush();
 
@@ -851,12 +810,16 @@ test("ListingListPage controls template create, edit, delete, and save errors", 
 
     listingsState.saveTemplateError = null;
     listingsState.deleteTemplateError = listingsState.apiError("Template delete failed");
-    act(() => {
-      buttons().find((button) => button.textContent === "Delete")?.click();
+    React.act(() => {
+      buttons()
+        .find((button) => button.textContent === "Delete")
+        ?.click();
     });
     expect(listingsState.deleteTemplateCalls).not.toContain("template-1");
-    act(() => {
-      buttons().find((button) => button.textContent?.includes("Delete template"))?.click();
+    React.act(() => {
+      buttons()
+        .find((button) => button.textContent?.includes("Delete template"))
+        ?.click();
     });
     await flush();
 
@@ -868,9 +831,7 @@ test("ListingListPage controls template create, edit, delete, and save errors", 
 });
 
 test("ListingListPage shows template loading, empty, and load-error states", async () => {
-  const { ListingListPage } = await import(
-    "../../../core/admin/ui/listings/ListingListPage"
-  );
+  const { ListingListPage } = await import("../../../core/admin/ui/listings/ListingListPage");
 
   listingsState.cachedTemplateItems = undefined;
   listingsState.templateItems = [];
@@ -895,9 +856,7 @@ test("ListingListPage shows template loading, empty, and load-error states", asy
   try {
     clickButtonByText(errorView.container, "Templates");
     await flush();
-    expect(errorView.container.textContent).toContain(
-      "Unable to load listing templates"
-    );
+    expect(errorView.container.textContent).toContain("Unable to load listing templates");
     expect(errorView.container.textContent).toContain("Templates load failed");
   } finally {
     errorView.cleanup();
@@ -905,9 +864,8 @@ test("ListingListPage shows template loading, empty, and load-error states", asy
 });
 
 test("ListingFiltersPage extracts listing ids, previews tokens, and applies examples", async () => {
-  const { ListingFiltersPage, extractListingQueryIdFromQueryString } = await import(
-    "../../../core/admin/ui/listings/ListingFiltersPage"
-  );
+  const { ListingFiltersPage, extractListingQueryIdFromQueryString } =
+    await import("../../../core/admin/ui/listings/ListingFiltersPage");
 
   expect(
     extractListingQueryIdFromQueryString(
@@ -915,9 +873,7 @@ test("ListingFiltersPage extracts listing ids, previews tokens, and applies exam
     )
   ).toBe("11111111-1111-4111-8111-111111111111");
   expect(
-    extractListingQueryIdFromQueryString(
-      "?lq.one.status.eq=published&lq.two.status.eq=draft"
-    )
+    extractListingQueryIdFromQueryString("?lq.one.status.eq=published&lq.two.status.eq=draft")
   ).toBeNull();
 
   const view = mount(<ListingFiltersPage />);
@@ -930,18 +886,24 @@ test("ListingFiltersPage extracts listing ids, previews tokens, and applies exam
     const select = () => view.container.querySelector("select");
     const input = () => view.container.querySelector("input");
 
-    act(() => {
-      buttons().find((button) => button.textContent?.includes("Show examples"))?.click();
+    React.act(() => {
+      buttons()
+        .find((button) => button.textContent?.includes("Show examples"))
+        ?.click();
     });
     expect(view.container.textContent).toContain("Combined query");
 
-    act(() => {
-      buttons().find((button) => button.textContent?.includes("Use example"))?.click();
+    React.act(() => {
+      buttons()
+        .find((button) => button.textContent?.includes("Use example"))
+        ?.click();
     });
 
-    await act(async () => {
+    await React.act(async () => {
       setSelectValue(select() ?? undefined, "11111111-1111-4111-8111-111111111111");
-      buttons().find((button) => button.textContent?.includes("Run preview"))?.click();
+      buttons()
+        .find((button) => button.textContent?.includes("Run preview"))
+        ?.click();
     });
 
     expect(listingsState.previewFiltersCalls[0]).toEqual({
@@ -950,16 +912,13 @@ test("ListingFiltersPage extracts listing ids, previews tokens, and applies exam
     });
     expect(view.container.textContent).toContain("Ignored tokens");
     expect(view.container.textContent).toContain("Rows snapshot");
-
   } finally {
     view.cleanup();
   }
 });
 
 test("ListingSearchPage previews selected sources and handles failures", async () => {
-  const { ListingSearchPage } = await import(
-    "../../../core/admin/ui/listings/ListingSearchPage"
-  );
+  const { ListingSearchPage } = await import("../../../core/admin/ui/listings/ListingSearchPage");
   const view = mount(<ListingSearchPage />);
 
   try {
@@ -969,10 +928,12 @@ test("ListingSearchPage previews selected sources and handles failures", async (
     const inputs = () => Array.from(view.container.querySelectorAll("input"));
     const buttons = () => Array.from(view.container.querySelectorAll("button"));
 
-    await act(async () => {
+    await React.act(async () => {
       setInputValue(inputs()[0], "hero");
       setInputValue(inputs()[1], "15");
-      buttons().find((button) => button.textContent?.includes("Run preview"))?.click();
+      buttons()
+        .find((button) => button.textContent?.includes("Run preview"))
+        ?.click();
     });
 
     expect(listingsState.previewSearchCalls[0]).toEqual({
@@ -987,8 +948,10 @@ test("ListingSearchPage previews selected sources and handles failures", async (
       new Error("Search preview failed")
     ) as never;
 
-    await act(async () => {
-      buttons().find((button) => button.textContent?.includes("Run preview"))?.click();
+    await React.act(async () => {
+      buttons()
+        .find((button) => button.textContent?.includes("Run preview"))
+        ?.click();
     });
 
     expect(view.container.textContent).toContain("Search preview failed");
@@ -998,9 +961,7 @@ test("ListingSearchPage previews selected sources and handles failures", async (
 });
 
 test("ListingListPage deletes queries and shows action errors", async () => {
-  const { ListingListPage } = await import(
-    "../../../core/admin/ui/listings/ListingListPage"
-  );
+  const { ListingListPage } = await import("../../../core/admin/ui/listings/ListingListPage");
   const view = mount(<ListingListPage />);
 
   try {
@@ -1008,14 +969,16 @@ test("ListingListPage deletes queries and shows action errors", async () => {
     expect(view.container.textContent).toContain("Article listing");
 
     const buttons = () => Array.from(view.container.querySelectorAll("button"));
-    act(() => {
-      buttons().find((button) => button.textContent === "Delete")?.click();
+    React.act(() => {
+      buttons()
+        .find((button) => button.textContent === "Delete")
+        ?.click();
     });
-    expect(listingsState.deleteQueryCalls).not.toContain(
-      "11111111-1111-4111-8111-111111111111"
-    );
-    act(() => {
-      buttons().find((button) => button.textContent?.includes("Delete query"))?.click();
+    expect(listingsState.deleteQueryCalls).not.toContain("11111111-1111-4111-8111-111111111111");
+    React.act(() => {
+      buttons()
+        .find((button) => button.textContent?.includes("Delete query"))
+        ?.click();
     });
     await flush();
     expect(listingsState.deleteQueryCalls).toContain("11111111-1111-4111-8111-111111111111");
@@ -1026,9 +989,7 @@ test("ListingListPage deletes queries and shows action errors", async () => {
 
 test("ListingEditorPage edits query state, previews normalized payload, discards changes, saves, and refreshes from cache bus", async () => {
   window.history.replaceState({}, "", "/admin/advanced/listings/query-1");
-  const { ListingEditorPage } = await import(
-    "../../../core/admin/ui/listings/ListingEditorPage"
-  );
+  const { ListingEditorPage } = await import("../../../core/admin/ui/listings/ListingEditorPage");
 
   const view = mount(<ListingEditorPage />);
 
@@ -1039,7 +1000,7 @@ test("ListingEditorPage edits query state, previews normalized payload, discards
     expect(view.container.textContent).toContain("Homepage listing");
     expect(listingsState.getDetailCalls).toContainEqual({ id: "query-1", force: true });
 
-    act(() => {
+    React.act(() => {
       setInputValue(
         findInputByPlaceholder(view.container, "Homepage featured cards"),
         "Homepage cards"
@@ -1056,15 +1017,13 @@ test("ListingEditorPage edits query state, previews normalized payload, discards
       "users",
       "taxonomies",
     ]);
-    act(() => {
+    React.act(() => {
       setSelectValue(sourceSelect, "posts");
     });
-    expect(view.container.textContent).toContain(
-      "Uses the default post content type mapping."
-    );
+    expect(view.container.textContent).toContain("Uses the default post content type mapping.");
 
     const includeDraftsSelect = findSelectByOptions(view.container, ["no", "yes"]);
-    act(() => {
+    React.act(() => {
       setSelectValue(includeDraftsSelect, "yes");
     });
 
@@ -1073,19 +1032,15 @@ test("ListingEditorPage edits query state, previews normalized payload, discards
 
     const sortFieldInputs = Array.from(view.container.querySelectorAll("input")).filter(
       (element) =>
-        element instanceof HTMLInputElement &&
-        element.getAttribute("placeholder") === "sort field"
+        element instanceof HTMLInputElement && element.getAttribute("placeholder") === "sort field"
     );
     const numericInputs = Array.from(view.container.querySelectorAll("input")).filter(
       (element) => element instanceof HTMLInputElement && element.getAttribute("type") === "number"
     );
-    const fieldsTextarea = findTextareaByPlaceholder(
-      view.container,
-      "id, title, slug, status"
-    );
+    const fieldsTextarea = findTextareaByPlaceholder(view.container, "id, title, slug, status");
     const templateSelect = findSelectByOptions(view.container, ["__none__", "template-1"]);
 
-    act(() => {
+    React.act(() => {
       setInputValue(
         findInputsByPlaceholder(view.container, "field path (e.g. status)").at(-1),
         "category"
@@ -1107,10 +1062,7 @@ test("ListingEditorPage edits query state, previews normalized payload, discards
         "in"
       );
       setInputValue(sortFieldInputs.at(-1), "title");
-      setSelectValue(
-        findSelectsByOptions(view.container, ["asc", "desc"]).at(-1),
-        "asc"
-      );
+      setSelectValue(findSelectsByOptions(view.container, ["asc", "desc"]).at(-1), "asc");
       setInputValue(numericInputs[0], "24");
       setInputValue(numericInputs[1], "5");
       setTextareaValue(fieldsTextarea, "id, title, slug");
@@ -1118,7 +1070,7 @@ test("ListingEditorPage edits query state, previews normalized payload, discards
     });
     await flush();
 
-    act(() => {
+    React.act(() => {
       setInputValue(
         findInputsByPlaceholder(view.container, "value (comma separated for arrays)").at(-1),
         "featured, news"
@@ -1166,7 +1118,7 @@ test("ListingEditorPage edits query state, previews normalized payload, discards
       description: "Remote cards",
     };
 
-    await act(async () => {
+    await React.act(async () => {
       for (const subscriber of listingsState.subscribers) {
         subscriber({ key: "listingQueryDetail:query-1" });
       }
@@ -1183,9 +1135,7 @@ test("ListingEditorPage edits query state, previews normalized payload, discards
 });
 
 test("ListingEditorPage create mode creates queries and reports preview/load errors", async () => {
-  const { ListingEditorPage } = await import(
-    "../../../core/admin/ui/listings/ListingEditorPage"
-  );
+  const { ListingEditorPage } = await import("../../../core/admin/ui/listings/ListingEditorPage");
 
   window.history.replaceState({}, "", "/admin/advanced/listings/new");
   const createView = mount(<ListingEditorPage />);
@@ -1196,7 +1146,7 @@ test("ListingEditorPage create mode creates queries and reports preview/load err
     expect(createView.container.textContent).toContain("New listing query");
     expect(createView.container.textContent).toContain("No filters yet.");
 
-    act(() => {
+    React.act(() => {
       setInputValue(
         findInputByPlaceholder(createView.container, "Homepage featured cards"),
         "Taxonomy query"
@@ -1207,23 +1157,15 @@ test("ListingEditorPage create mode creates queries and reports preview/load err
       );
     });
 
-    act(() => {
+    React.act(() => {
       setSelectValue(
-        findSelectByOptions(createView.container, [
-          "entries",
-          "posts",
-          "users",
-          "taxonomies",
-        ]),
+        findSelectByOptions(createView.container, ["entries", "posts", "users", "taxonomies"]),
         "taxonomies"
       );
     });
 
-    act(() => {
-      setInputValue(
-        findInputByPlaceholder(createView.container, "taxonomy-id"),
-        "categories"
-      );
+    React.act(() => {
+      setInputValue(findInputByPlaceholder(createView.container, "taxonomy-id"), "categories");
     });
 
     listingsState.previewQueryError = listingsState.apiError("Preview failed");
@@ -1276,9 +1218,7 @@ test("ListingEditorPage create mode creates queries and reports preview/load err
 
 test("ListingEditorPage reports query-not-found and generic preview failures", async () => {
   window.history.replaceState({}, "", "/admin/advanced/listings/query-1");
-  const { ListingEditorPage } = await import(
-    "../../../core/admin/ui/listings/ListingEditorPage"
-  );
+  const { ListingEditorPage } = await import("../../../core/admin/ui/listings/ListingEditorPage");
 
   listingsState.detailResult = null as unknown as typeof listingsState.detailResult;
   const missingView = mount(<ListingEditorPage />);
@@ -1304,9 +1244,7 @@ test("ListingEditorPage reports query-not-found and generic preview failures", a
     clickButtonByText(previewErrorView.container, "Run preview");
     await flush();
 
-    expect(previewErrorView.container.textContent).toContain(
-      "Failed to run listing preview."
-    );
+    expect(previewErrorView.container.textContent).toContain("Failed to run listing preview.");
   } finally {
     previewErrorView.cleanup();
   }

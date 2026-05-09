@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act, useState } from "react";
+import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -287,14 +287,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -303,7 +303,7 @@ const mount = (node: React.ReactNode) => {
 };
 
 const flush = async () => {
-  await act(async () => {
+  await React.act(async () => {
     await Promise.resolve();
     await Promise.resolve();
     await Promise.resolve();
@@ -336,7 +336,7 @@ const setSelectValue = (element: Element | null | undefined, value: string) => {
 
 const clickElement = (element: Element | null | undefined) => {
   if (!element) return;
-  act(() => {
+  React.act(() => {
     element.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 };
@@ -425,7 +425,7 @@ test("HeroWizardEditor applies presets, updates direct content fields, toggles C
   const view = mount(<Harness />);
 
   try {
-    act(() => {
+    React.act(() => {
       setSelectValue(findSelectByOptions(view.container, ["lead", "sales", "info"]), "sales");
     });
 
@@ -442,7 +442,7 @@ test("HeroWizardEditor applies presets, updates direct content fields, toggles C
       })
     );
 
-    act(() => {
+    React.act(() => {
       setInputValue(
         findInputByPlaceholder(view.container, "Build with confidence"),
         "Pipeline-ready hero"
@@ -457,17 +457,17 @@ test("HeroWizardEditor applies presets, updates direct content fields, toggles C
       setInputValue(findInputByPlaceholder(view.container, "/learn"), "/pricing");
     });
 
-    act(() => {
+    React.act(() => {
       setSelectValue(findSelectByOptions(view.container, ["single", "dual"]), "single");
     });
     expect(view.container.textContent).not.toContain("Secondary CTA Label");
 
-    act(() => {
+    React.act(() => {
       setSelectValue(findSelectByOptions(view.container, ["single", "dual"]), "dual");
     });
     expect(view.container.textContent).toContain("Secondary CTA Label");
 
-    act(() => {
+    React.act(() => {
       setInputValue(findInputByPlaceholder(view.container, "Learn more"), "Review pricing");
       setInputValue(findInputByPlaceholder(view.container, "/learn"), "/pricing");
     });
@@ -484,14 +484,14 @@ test("HeroWizardEditor applies presets, updates direct content fields, toggles C
       })
     );
 
-    act(() => {
+    React.act(() => {
       setSelectValue(findSelectByOptions(view.container, ["none", "image", "video"]), "image");
     });
     expect(view.container.textContent).toContain(
       "Centered layout renders the selected image as hero background."
     );
 
-    act(() => {
+    React.act(() => {
       setSelectValue(findSelectByOptions(view.container, ["library", "external"]), "library");
     });
     clickElement(findButtonsByText(findMediaPickers(view.container)[0], "pick-asset-hero")[0]);
@@ -513,14 +513,14 @@ test("HeroWizardEditor applies presets, updates direct content fields, toggles C
       })
     );
 
-    act(() => {
+    React.act(() => {
       setSelectValue(findSelectByOptions(view.container, ["none", "image", "video"]), "video");
     });
     expect(view.container.textContent).toContain(
       "Centered layout does not show inline video. Use Media Right or Media Left to display video content."
     );
 
-    act(() => {
+    React.act(() => {
       setSelectValue(
         findSelectByOptions(view.container, ["centered", "split", "media-left"]),
         "media-left"
@@ -568,16 +568,16 @@ test("HeroWizardEditor validates media URLs and covers unresolved, clear, extern
   const view = mount(<Harness />);
 
   try {
-    act(() => {
+    React.act(() => {
       setSelectValue(findSelectByOptions(view.container, ["none", "image", "video"]), "image");
     });
 
-    act(() => {
+    React.act(() => {
       setInputValue(findInputByPlaceholder(view.container, "https://"), "ftp://asset.invalid");
     });
     expect(view.container.textContent).toContain("Use a relative path or full URL.");
 
-    act(() => {
+    React.act(() => {
       setSelectValue(findSelectByOptions(view.container, ["library", "external"]), "library");
     });
     clickElement(findButtonsByText(findMediaPickers(view.container)[0], "pick-missing-asset")[0]);
@@ -595,7 +595,7 @@ test("HeroWizardEditor validates media URLs and covers unresolved, clear, extern
       })
     );
 
-    act(() => {
+    React.act(() => {
       setSelectValue(findSelectByOptions(view.container, ["library", "external"]), "external");
     });
     expect(latestValue.media).toEqual(
@@ -610,7 +610,7 @@ test("HeroWizardEditor validates media URLs and covers unresolved, clear, extern
       message: "Media lookup failed",
     };
 
-    act(() => {
+    React.act(() => {
       setSelectValue(findSelectByOptions(view.container, ["library", "external"]), "library");
     });
     clickElement(findButtonsByText(findMediaPickers(view.container)[0], "pick-asset-video")[0]);
@@ -721,7 +721,7 @@ test("HeroVisualEditor loads sanitized presets, applies them, validates create f
       })
     );
 
-    act(() => {
+    React.act(() => {
       setInputValue(
         findInputByPlaceholder(view.container, "Build with confidence"),
         "Updated hero"
@@ -734,20 +734,20 @@ test("HeroVisualEditor loads sanitized presets, applies them, validates create f
 
     clickElement(findButtonsByText(view.container, "Add variant preset")[0]);
 
-    act(() => {
+    React.act(() => {
       setInputValue(findInputByPlaceholder(view.container, "Homepage Hero"), "   ");
     });
     clickElement(findButtonsByText(view.container, "Save preset")[0]);
     expect(view.container.textContent).toContain("Preset name is required.");
 
-    act(() => {
+    React.act(() => {
       setInputValue(findInputByPlaceholder(view.container, "Homepage Hero"), "Launch");
     });
     clickElement(findButtonsByText(view.container, "Save preset")[0]);
     expect(view.container.textContent).toContain("Preset name must be unique.");
 
     heroState.savePresetError = new Error("save failed");
-    act(() => {
+    React.act(() => {
       setInputValue(findInputByPlaceholder(view.container, "Homepage Hero"), "Homepage Hero");
     });
     clickElement(findButtonsByText(view.container, "Save preset")[0]);
@@ -840,7 +840,7 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
     expect(colorsSection).toBeTruthy();
     expect(backgroundSection).toBeTruthy();
 
-    act(() => {
+    React.act(() => {
       setInputValue(
         findInputByPlaceholder(view.container, "Build with confidence"),
         "Ship hero updates faster"
@@ -856,10 +856,10 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
       setInputValue(findInputByPlaceholder(view.container, "Get started"), "Start trial");
     });
 
-    act(() => {
+    React.act(() => {
       setSelectValue(findSelectByOptions(view.container, ["single", "dual"]), "dual");
     });
-    act(() => {
+    React.act(() => {
       setInputValue(findInputByPlaceholder(view.container, "/start"), "javascript:alert(1)");
       setInputValue(findInputByPlaceholder(view.container, "Learn more"), "Read case study");
       setInputValue(findInputByPlaceholder(view.container, "/learn"), "ftp://secondary.invalid");
@@ -868,7 +868,7 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
       view.container.textContent?.match(/Use a relative path or full URL\./g)?.length
     ).toBeGreaterThanOrEqual(2);
 
-    act(() => {
+    React.act(() => {
       const ctaSizeSelects = findSelectsByOptions(ctaSection ?? view.container, ["sm", "md", "lg"]);
       expect(
         Array.from((ctaSizeSelects[0] as HTMLSelectElement).options).map((option) => option.value)
@@ -882,21 +882,21 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
     });
     expect(view.container.textContent).not.toContain("Secondary CTA Label");
 
-    act(() => {
+    React.act(() => {
       setSelectValue(findSelectsByOptions(view.container, ["none", "image", "video"])[0], "video");
     });
-    act(() => {
+    React.act(() => {
       setInputValue(findInputByPlaceholder(view.container, "https://"), "ftp://media.invalid");
     });
     expect(view.container.textContent).toContain("Use a relative path or full URL.");
 
-    act(() => {
+    React.act(() => {
       setSelectValue(findSelectsByOptions(view.container, ["library", "external"])[0], "library");
     });
     clickElement(findButtonsByText(findMediaPickers(view.container)[0], "pick-asset-video")[0]);
     await flush();
 
-    act(() => {
+    React.act(() => {
       setInputValue(findInputByPlaceholder(view.container, "Describe the media"), "Intro clip");
       setInputValue(findInputByPlaceholder(view.container, "rgba(0,0,0,0.2)"), "rgba(0,0,0,0.4)");
       setSelectValue(findSelectByOptions(view.container, ["16:9", "4:3", "1:1", "3:4"]), "1:1");
@@ -904,7 +904,7 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
     clickElement(findButtonsByText(findMediaPickers(view.container)[0], "pick-asset-video")[0]);
     await flush();
 
-    act(() => {
+    React.act(() => {
       const typographySelects = findSelectsByOptions(typographySection ?? view.container, [
         "left",
         "center",
@@ -939,7 +939,7 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
       setSelectValue(bodySizeSelect, "lg");
     });
 
-    act(() => {
+    React.act(() => {
       const colorsRoot = colorsSection ?? view.container;
       const textColorInputs = findInputsByPlaceholder(colorsRoot, "var(--color-text)");
       const borderColorInputs = findInputsByPlaceholder(colorsRoot, "var(--color-border)");
@@ -977,10 +977,10 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
       setSelectValue(radiusSelects[1], "3xl");
     });
 
-    act(() => {
+    React.act(() => {
       setSelectValue(findSelectsByOptions(view.container, ["none", "image", "video"])[1], "image");
     });
-    act(() => {
+    React.act(() => {
       setSelectValue(findSelectsByOptions(view.container, ["library", "external"])[1], "library");
     });
     clickElement(
@@ -988,7 +988,7 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
     );
     await flush();
 
-    act(() => {
+    React.act(() => {
       const backgroundRoot = backgroundSection ?? view.container;
       const backgroundColorInputs = backgroundRoot.querySelectorAll(
         'input[type="color"]'
@@ -1003,7 +1003,7 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
       setInputValue(gradientAngle ?? undefined, "45");
     });
 
-    act(() => {
+    React.act(() => {
       setSelectValue(findSelectsByOptions(view.container, ["none", "image", "video"])[1], "none");
     });
 
@@ -1203,7 +1203,7 @@ test("HeroAdvancedEditor covers legacy background media, layout and spacing cont
 
     const backgroundSection = findSectionByTitle(view.container, "Background");
 
-    act(() => {
+    React.act(() => {
       setSelectValue(findSelectByOptions(view.container, ["left", "center", "right"]), "right");
       const maxWidthSelect = findSelectByOptions(view.container, ["sm", "md", "lg", "xl", "2xl"]);
       const contentWidthSelect = findSelectsByOptions(view.container, ["sm", "md", "lg", "xl"])[1];
@@ -1236,7 +1236,7 @@ test("HeroAdvancedEditor covers legacy background media, layout and spacing cont
       setInputValue(backgroundSection?.querySelector('input[type="range"]') ?? undefined, "60");
     });
 
-    act(() => {
+    React.act(() => {
       setSelectValue(findSelectByOptions(view.container, ["library", "external"]), "library");
     });
     clickElement(
@@ -1246,7 +1246,7 @@ test("HeroAdvancedEditor covers legacy background media, layout and spacing cont
 
     clickElement(view.container.querySelector("input[type='checkbox']") ?? undefined);
 
-    act(() => {
+    React.act(() => {
       setSelectValue(findSelectByOptions(view.container, ["none", "image", "video"]), "none");
     });
 

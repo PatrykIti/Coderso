@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -30,13 +30,9 @@ vi.mock("@/components/ui/table", () => ({
 }));
 
 vi.mock("@/components/ui/badge", () => ({
-  Badge: ({
-    children,
-    className,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-  }) => <span data-badge-class={className}>{children}</span>,
+  Badge: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <span data-badge-class={className}>{children}</span>
+  ),
 }));
 
 vi.mock("@/components/ui/checkbox", () => ({
@@ -128,14 +124,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -150,7 +146,7 @@ const clickByText = (container: HTMLElement, text: string) => {
   if (!button) {
     throw new Error(`Missing button: ${text}`);
   }
-  act(() => {
+  React.act(() => {
     button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 };
@@ -160,7 +156,7 @@ const clickCheckbox = (container: HTMLElement, label: string) => {
   if (!(checkbox instanceof HTMLInputElement)) {
     throw new Error(`Missing checkbox: ${label}`);
   }
-  act(() => {
+  React.act(() => {
     checkbox.click();
   });
 };
@@ -191,26 +187,26 @@ test("PostsTable renders empty state and custom message", () => {
 });
 
 test("PostsTable renders fallback status, author, tag, and date values", () => {
-  const dateSpy = vi
-    .spyOn(Date.prototype, "toLocaleDateString")
-    .mockImplementation(() => {
-      throw new Error("date failed");
-    });
+  const dateSpy = vi.spyOn(Date.prototype, "toLocaleDateString").mockImplementation(() => {
+    throw new Error("date failed");
+  });
 
   const view = mount(
     <PostsTable
-      items={[
-        {
-          id: "post-1",
-          title: "Launch",
-          slug: "/launch",
-          status: "custom_status",
-          tags: [],
-          publishedAt: null,
-          updatedAt: "2026-03-06T12:00:00.000Z",
-          author: null,
-        },
-      ] as never}
+      items={
+        [
+          {
+            id: "post-1",
+            title: "Launch",
+            slug: "/launch",
+            status: "custom_status",
+            tags: [],
+            publishedAt: null,
+            updatedAt: "2026-03-06T12:00:00.000Z",
+            author: null,
+          },
+        ] as never
+      }
       onEdit={() => undefined}
       onPreview={() => undefined}
       onPublish={() => undefined}
@@ -372,18 +368,20 @@ test("PostsTable exposes indeterminate header state", () => {
 test("PostsTable omits delete action when onDelete is not provided", () => {
   const view = mount(
     <PostsTable
-      items={[
-        {
-          id: "post-1",
-          title: "Launch",
-          slug: "/launch",
-          status: "published",
-          tags: ["news"],
-          publishedAt: "2026-03-01T12:00:00.000Z",
-          updatedAt: "2026-03-06T12:00:00.000Z",
-          author: { id: "author-1", name: "Admin User", email: "admin@example.com" },
-        },
-      ] as never}
+      items={
+        [
+          {
+            id: "post-1",
+            title: "Launch",
+            slug: "/launch",
+            status: "published",
+            tags: ["news"],
+            publishedAt: "2026-03-01T12:00:00.000Z",
+            updatedAt: "2026-03-06T12:00:00.000Z",
+            author: { id: "author-1", name: "Admin User", email: "admin@example.com" },
+          },
+        ] as never
+      }
       onEdit={() => undefined}
       onPreview={() => undefined}
       onPublish={() => undefined}

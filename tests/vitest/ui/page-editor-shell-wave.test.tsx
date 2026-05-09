@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { beforeEach, expect, test, vi } from "vitest";
 
@@ -549,14 +549,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -565,7 +565,7 @@ const mount = (node: React.ReactNode) => {
 };
 
 const flush = async () => {
-  await act(async () => {
+  await React.act(async () => {
     await Promise.resolve();
     await Promise.resolve();
     await Promise.resolve();
@@ -586,7 +586,7 @@ const clickButton = (
     throw new Error(`Missing button: ${label}`);
   }
 
-  act(() => {
+  React.act(() => {
     button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 };
@@ -646,7 +646,7 @@ test("PageEditor hydrates from cache, surfaces remote updates, and supports shel
       title: "Remote Homepage",
       currentData: { blocks: [createBlock("hero")] },
     });
-    act(() => {
+    React.act(() => {
       pageEditorState.triggerCacheEvent("page-detail:page-1");
     });
     await flush();
@@ -852,7 +852,7 @@ test("PageEditor emits save success toast only after the mutation resolves", asy
       throw new Error("Missing save or publish button");
     }
 
-    act(() => {
+    React.act(() => {
       saveButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       publishButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
@@ -863,7 +863,7 @@ test("PageEditor emits save success toast only after the mutation resolves", asy
     expect((publishButton as HTMLButtonElement).disabled).toBe(true);
     expect(pageEditorToastState.success).not.toHaveBeenCalledWith("Draft saved.");
 
-    await act(async () => {
+    await React.act(async () => {
       resolveSave?.(clonePage(initialPage));
       await Promise.resolve();
     });
@@ -1083,7 +1083,7 @@ test("PageEditor uses image background fallback, starts without selection for em
       }),
       currentData: undefined,
     } as unknown as PageDetail;
-    act(() => {
+    React.act(() => {
       pageEditorState.triggerCacheEvent("page-detail:page-1");
     });
     await flush();
@@ -1180,7 +1180,7 @@ test("PageEditor inserts into slots, mutates selected blocks, and warns before u
     }) as BeforeUnloadEvent & { returnValue: string };
     beforeUnload.returnValue = "keep";
 
-    act(() => {
+    React.act(() => {
       window.dispatchEvent(beforeUnload);
     });
 
@@ -1252,7 +1252,7 @@ test("PageEditor surfaces API client error messages across page, settings, and r
     await flush();
 
     pageEditorState.getPageCached.mockRejectedValueOnce(apiError("Remote refresh denied"));
-    act(() => {
+    React.act(() => {
       pageEditorState.triggerCacheEvent("page-detail:page-1");
     });
     await flush();
@@ -1369,7 +1369,7 @@ test("PageEditor clears unsaved and remote-update flags when publish completes w
       title: "Remote Homepage",
       currentData: { blocks: [createBlock("hero")] },
     });
-    act(() => {
+    React.act(() => {
       pageEditorState.triggerCacheEvent("page-detail:page-1");
     });
     await flush();

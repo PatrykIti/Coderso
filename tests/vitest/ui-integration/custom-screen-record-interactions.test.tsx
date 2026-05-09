@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 
 import React from "react";
-import { act } from "react";
+
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
@@ -190,7 +190,7 @@ const mount = (path: string) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(
       <AdminRouterProvider initialPath={path}>
         <CustomScreenEntryEditor />
@@ -201,7 +201,7 @@ const mount = (path: string) => {
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -210,7 +210,7 @@ const mount = (path: string) => {
 };
 
 const flush = async () => {
-  await act(async () => {
+  await React.act(async () => {
     for (let index = 0; index < 6; index += 1) {
       await Promise.resolve();
     }
@@ -239,7 +239,7 @@ test("record editor keeps child selection scoped and preserves it across refresh
     expect(parent?.getAttribute("data-selected")).toBe("true");
     expect(child?.getAttribute("data-selected")).toBe("false");
 
-    act(() => {
+    React.act(() => {
       child?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
     await flush();
@@ -253,7 +253,7 @@ test("record editor keeps child selection scoped and preserves it across refresh
 
     const childEditButton = child?.querySelector("button");
     expect(childEditButton).not.toBeNull();
-    act(() => {
+    React.act(() => {
       childEditButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
     await flush();
@@ -261,7 +261,7 @@ test("record editor keeps child selection scoped and preserves it across refresh
     expect(document.body.textContent).toContain("Selected Element");
     expect(document.body.textContent).toContain("Screen Field Value");
 
-    await act(async () => {
+    await React.act(async () => {
       cacheListener?.({ key: cacheKeys.customScreenDetail("screen-1") });
       await Promise.resolve();
       await Promise.resolve();

@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test } from "vitest";
 
@@ -13,9 +13,7 @@ import {
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-const mountHook = (
-  options?: Parameters<typeof usePostEditorLayout>[0]
-) => {
+const mountHook = (options?: Parameters<typeof usePostEditorLayout>[0]) => {
   let latest: ReturnType<typeof usePostEditorLayout> | undefined;
 
   const Harness = () => {
@@ -27,7 +25,7 @@ const mountHook = (
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(<Harness />);
   });
 
@@ -39,7 +37,7 @@ const mountHook = (
       return latest;
     },
     cleanup() {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -110,9 +108,9 @@ test("usePostEditorLayout normalizes invalid initial options and reducer handles
     focusRestore: null,
   });
 
-  expect(
-    postEditorLayoutReducer(focusState, { type: "set_focus_mode", value: true })
-  ).toBe(focusState);
+  expect(postEditorLayoutReducer(focusState, { type: "set_focus_mode", value: true })).toBe(
+    focusState
+  );
 
   expect(
     postEditorLayoutReducer(
@@ -160,9 +158,7 @@ test("usePostEditorLayout normalizes invalid initial options and reducer handles
     focusRestore: null,
   });
 
-  expect(
-    postEditorLayoutReducer(focusState, { type: "unknown" } as never)
-  ).toBe(focusState);
+  expect(postEditorLayoutReducer(focusState, { type: "unknown" } as never)).toBe(focusState);
 });
 
 test("usePostEditorLayout exposes derived flags and routes secondary, details, and focus actions", () => {
@@ -180,67 +176,67 @@ test("usePostEditorLayout exposes derived flags and routes secondary, details, a
     expect(hook.value.detailsSidebarOpen).toBe(false);
     expect(hook.value.leftRailMode).toBe("list-view");
 
-    act(() => {
+    React.act(() => {
       hook.value.openListView();
     });
     expect(hook.value.showListView).toBe(true);
     expect(hook.value.showInserter).toBe(false);
 
-    act(() => {
+    React.act(() => {
       hook.value.toggleListView();
     });
     expect(hook.value.secondarySidebarOpen).toBe(false);
 
-    act(() => {
+    React.act(() => {
       hook.value.toggleInserter();
     });
     expect(hook.value.showInserter).toBe(true);
 
-    act(() => {
+    React.act(() => {
       hook.value.closeSecondarySidebar();
       hook.value.openDetailsForSelection(false);
     });
     expect(hook.value.detailsSidebarOpen).toBe(true);
     expect(hook.value.state.detailsTab).toBe("document");
 
-    act(() => {
+    React.act(() => {
       hook.value.toggleDetails("block");
     });
     expect(hook.value.detailsSidebarOpen).toBe(true);
     expect(hook.value.state.detailsTab).toBe("block");
 
-    act(() => {
+    React.act(() => {
       hook.value.setDetailsTab("block");
       hook.value.toggleDetails("block");
     });
     expect(hook.value.detailsSidebarOpen).toBe(false);
 
-    act(() => {
+    React.act(() => {
       hook.value.openDetails();
       hook.value.setLeftRailMode("outline");
     });
     expect(hook.value.detailsSidebarOpen).toBe(true);
     expect(hook.value.leftRailMode).toBe("outline");
 
-    act(() => {
+    React.act(() => {
       hook.value.setFocusMode(true);
     });
     expect(hook.value.focusMode).toBe(true);
     expect(hook.value.secondarySidebarOpen).toBe(false);
     expect(hook.value.detailsSidebarOpen).toBe(false);
 
-    act(() => {
+    React.act(() => {
       hook.value.setFocusMode(false);
     });
     expect(hook.value.focusMode).toBe(false);
     expect(hook.value.detailsSidebarOpen).toBe(true);
 
-    act(() => {
+    React.act(() => {
       hook.value.toggleFocusMode();
     });
     expect(hook.value.focusMode).toBe(true);
 
-    act(() => {
+    React.act(() => {
       hook.value.toggleFocusMode();
       hook.value.closeDetails();
     });

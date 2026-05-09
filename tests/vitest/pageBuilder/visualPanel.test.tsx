@@ -2,7 +2,7 @@
 
 import React from "react";
 import type { ComponentType } from "react";
-import { act } from "react";
+
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 import { renderAdminUi } from "../../utils/adminRouterRender";
@@ -33,38 +33,19 @@ import {
   compareTimelineDefaults,
   createCompareTimelineWidget,
 } from "../../../core/widgets/core/compareTimeline";
-import {
-  createFooterWidget,
-  footerDefaults,
-} from "../../../core/widgets/core/footer";
-import {
-  contactDefaults,
-  createContactWidget,
-} from "../../../core/widgets/core/contact";
-import {
-  createNavigationWidget,
-  navigationDefaults,
-} from "../../../core/widgets/core/navigation";
-import {
-  createNewsletterWidget,
-  newsletterDefaults,
-} from "../../../core/widgets/core/newsletter";
-import {
-  createTimelineWidget,
-  timelineDefaults,
-} from "../../../core/widgets/core/timeline";
-import type {
-  WidgetDefinition,
-  WidgetEditorProps,
-} from "../../../core/widgets/types";
+import { createFooterWidget, footerDefaults } from "../../../core/widgets/core/footer";
+import { contactDefaults, createContactWidget } from "../../../core/widgets/core/contact";
+import { createNavigationWidget, navigationDefaults } from "../../../core/widgets/core/navigation";
+import { createNewsletterWidget, newsletterDefaults } from "../../../core/widgets/core/newsletter";
+import { createTimelineWidget, timelineDefaults } from "../../../core/widgets/core/timeline";
+import type { WidgetDefinition, WidgetEditorProps } from "../../../core/widgets/types";
 
 const StubVisual: ComponentType<WidgetEditorProps<Record<string, unknown>>> = () => (
   <div>Hero visual editor body</div>
 );
 const StubEditor: ComponentType<WidgetEditorProps<Record<string, unknown>>> = () => null;
 
-const asEditor = <T,>() =>
-  StubEditor as unknown as ComponentType<WidgetEditorProps<T>>;
+const asEditor = <T,>() => StubEditor as unknown as ComponentType<WidgetEditorProps<T>>;
 
 const asVisualPanelWidget = <T,>(widget: WidgetDefinition<T>) =>
   widget as unknown as WidgetDefinition;
@@ -82,9 +63,7 @@ const baseBlock: Block = {
   },
 };
 
-function createWidget(
-  capabilities?: WidgetDefinition["editorCapabilities"]
-): WidgetDefinition {
+function createWidget(capabilities?: WidgetDefinition["editorCapabilities"]): WidgetDefinition {
   return {
     type: "hero",
     title: "Hero",
@@ -110,14 +89,14 @@ function mount(node: React.ReactNode) {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -131,11 +110,7 @@ afterEach(() => {
 
 test("VisualPanel keeps generic variant controls by default", () => {
   const html = renderAdminUi(
-    <VisualPanel
-      widget={createWidget()}
-      block={baseBlock}
-      onChange={() => undefined}
-    />
+    <VisualPanel widget={createWidget()} block={baseBlock} onChange={() => undefined} />
   );
 
   expect(html).toContain("Choose a visual style for this widget.");
@@ -174,11 +149,7 @@ test("VisualPanel uses navigation editor variant controls", () => {
   };
 
   const html = renderAdminUi(
-    <VisualPanel
-      widget={asVisualPanelWidget(widget)}
-      block={block}
-      onChange={() => undefined}
-    />
+    <VisualPanel widget={asVisualPanelWidget(widget)} block={block} onChange={() => undefined} />
   );
 
   expect(html).not.toContain("Choose a visual style for this widget.");
@@ -204,11 +175,7 @@ test("VisualPanel uses footer editor variant controls", () => {
   };
 
   const html = renderAdminUi(
-    <VisualPanel
-      widget={asVisualPanelWidget(widget)}
-      block={block}
-      onChange={() => undefined}
-    />
+    <VisualPanel widget={asVisualPanelWidget(widget)} block={block} onChange={() => undefined} />
   );
 
   expect(html).not.toContain("Choose a visual style for this widget.");
@@ -232,11 +199,7 @@ test("VisualPanel uses timeline editor variant controls", () => {
   };
 
   const html = renderAdminUi(
-    <VisualPanel
-      widget={asVisualPanelWidget(widget)}
-      block={block}
-      onChange={() => undefined}
-    />
+    <VisualPanel widget={asVisualPanelWidget(widget)} block={block} onChange={() => undefined} />
   );
 
   expect(html).not.toContain("Choose a visual style for this widget.");
@@ -261,11 +224,7 @@ test("VisualPanel uses compare timeline editor variant controls", () => {
   };
 
   const html = renderAdminUi(
-    <VisualPanel
-      widget={asVisualPanelWidget(widget)}
-      block={block}
-      onChange={() => undefined}
-    />
+    <VisualPanel widget={asVisualPanelWidget(widget)} block={block} onChange={() => undefined} />
   );
 
   expect(html).not.toContain("Choose a visual style for this widget.");
@@ -290,11 +249,7 @@ test("VisualPanel uses newsletter editor variant controls", () => {
   };
 
   const html = renderAdminUi(
-    <VisualPanel
-      widget={asVisualPanelWidget(widget)}
-      block={block}
-      onChange={() => undefined}
-    />
+    <VisualPanel widget={asVisualPanelWidget(widget)} block={block} onChange={() => undefined} />
   );
 
   expect(html).not.toContain("Choose a visual style for this widget.");
@@ -319,11 +274,7 @@ test("VisualPanel uses contact editor variant controls", () => {
   };
 
   const html = renderAdminUi(
-    <VisualPanel
-      widget={asVisualPanelWidget(widget)}
-      block={block}
-      onChange={() => undefined}
-    />
+    <VisualPanel widget={asVisualPanelWidget(widget)} block={block} onChange={() => undefined} />
   );
 
   expect(html).not.toContain("Choose a visual style for this widget.");
@@ -374,10 +325,7 @@ test("VisualPanel forwards generic variant clicks and visual editor callbacks", 
   }) => (
     <div>
       <p data-current-variant={variant}>{String(value.headline)}</p>
-      <button
-        type="button"
-        onClick={() => onValueChange({ headline: "Updated headline" })}
-      >
+      <button type="button" onClick={() => onValueChange({ headline: "Updated headline" })}>
         Editor update data
       </button>
       <button type="button" onClick={() => onVariantChange?.("split")}>
@@ -423,13 +371,13 @@ test("VisualPanel forwards generic variant clicks and visual editor callbacks", 
     throw new Error("Missing editor variant button");
   }
 
-  act(() => {
+  React.act(() => {
     splitVariantButton.click();
   });
   expect(onChange).toHaveBeenLastCalledWith({ ...baseBlock, variant: "split" });
 
   onChange.mockClear();
-  act(() => {
+  React.act(() => {
     dataButton.click();
   });
   expect(onChange).toHaveBeenCalledWith({
@@ -438,7 +386,7 @@ test("VisualPanel forwards generic variant clicks and visual editor callbacks", 
   });
 
   onChange.mockClear();
-  act(() => {
+  React.act(() => {
     variantButton.click();
   });
   expect(onChange).toHaveBeenCalledWith({ ...baseBlock, variant: "split" });

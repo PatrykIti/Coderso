@@ -271,7 +271,7 @@ testIfDb(
     await setTestSetting("site.cacheTtlSeconds", 0);
 
     const fixture = await createProductFixture();
-    const detailPageId = "a4d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c";
+    const detailPageId = randomUUID();
     await insertDetailPageDocument({
       id: detailPageId,
       contentTypeId: fixture.contentType.id,
@@ -312,7 +312,7 @@ testIfDb(
     await setTestSetting("site.cacheTtlSeconds", 0);
 
     const fixture = await createProductFixture();
-    const detailPageId = "b4d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c";
+    const detailPageId = randomUUID();
     await insertDetailPageDocument({
       id: detailPageId,
       contentTypeId: fixture.contentType.id,
@@ -360,8 +360,8 @@ testIfDb(
     await setTestSetting("site.cacheTtlSeconds", 300);
 
     const fixture = await createProductFixture();
-    const firstDetailPageId = "c4d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c";
-    const secondDetailPageId = "d4d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c";
+    const firstDetailPageId = randomUUID();
+    const secondDetailPageId = randomUUID();
     await insertDetailPageDocument({
       id: firstDetailPageId,
       contentTypeId: fixture.contentType.id,
@@ -416,7 +416,7 @@ testIfDb(
     await setTestSetting("site.cacheTtlSeconds", 0);
 
     const fixture = await createProductFixture();
-    const detailPageId = "e4d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c";
+    const detailPageId = randomUUID();
     await insertDetailPageDocument({
       id: detailPageId,
       contentTypeId: fixture.contentType.id,
@@ -451,7 +451,7 @@ testIfDb(
     await setTestSetting("site.cacheTtlSeconds", 0);
 
     const fixture = await createProductFixture();
-    const detailPageId = "f4d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c";
+    const detailPageId = randomUUID();
     await insertDetailPageDocument({
       id: detailPageId,
       contentTypeId: fixture.contentType.id,
