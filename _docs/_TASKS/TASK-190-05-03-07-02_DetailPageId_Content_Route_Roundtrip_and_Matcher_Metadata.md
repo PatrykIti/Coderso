@@ -52,7 +52,7 @@ No child task files.
 - Update `core/admin/ui/site/SiteRouteEditor.tsx`
 - Update `core/admin/ui/site/SiteSettingsPage.tsx`
 - Update `tests/unit/settings/contentRoutesValidation.test.ts`
-- Update `tests/unit/site/contentRouteMatcher.test.ts`
+- Add `tests/vitest/server/contentRouteMatcher.test.ts`
 - Update `tests/unit/assistant/actionExecutorService.test.ts`
 - Update `tests/unit/assistant/actionExecutorService.db.test.ts`
 - Update `tests/vitest/assistant/action-plan-schema.test.ts`
@@ -123,8 +123,9 @@ export function matchContentRoute(pathname, routes) {
 - Settings round-trip preserves `detailPageId`.
 - `setting.content-route.upsert` preserves, clears, and replaces
   `detailPageId` with the documented omitted/null/string semantics.
-- `contentRouteMatcher` returns `detailPageId` on detail matches without adding
-  DB lookups.
+- `contentRouteMatcher` returns `detailPageId` on list/detail matches without
+  adding DB lookups, and its pure matcher coverage stays in the Vitest-owned
+  server-helper lane.
 - Site Settings UI/client round-trips `detailPageId` through the current editor
   flow instead of a route-local shadow store.
 - Runtime consumers can read the widened matcher metadata without a second route

@@ -37,9 +37,7 @@ async function resolveDetailPageRuntime(input: ResolveDetailPageRuntimeInput) {
   if (record.contentTypeId !== input.contentType.id) return null;
 
   const sourceDocument =
-    input.documentSource === "current"
-      ? record.currentDocument
-      : (record.publishedDocument ?? record.currentDocument);
+    input.documentSource === "current" ? record.currentDocument : record.publishedDocument;
   if (!sourceDocument) return null;
 
   try {

@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 56 tasks
-- **In Progress:** 12 tasks
-- **Done:** 1484 tasks
+- **To Do:** 26 tasks
+- **In Progress:** 11 tasks
+- **Done:** 1464 tasks
 
 ---
 
@@ -112,6 +112,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-190-05-03-07-01-02 | Detail Page Preview, Publish, and Autosave Lifecycle Routes | High | Medium | Done: internal lifecycle routes now issue dedicated `type=detail-page` preview tokens, store `sampleEntryId` in `preview_tokens.context`, write publish/autosave revisions through the detail-page owner seam, and keep route linkage outside the lifecycle boundary |
 | TASK-190-05-03-07-01-03 | Detail Page Revisions and Restore Route Flow | High | Medium | Done: revisions now list newest-first through a dedicated revision owner seam, restore rewrites only `current_document`, and revision delete is limited to autosave snapshots through `detail_page_revision_delete_forbidden` |
 | TASK-190-05-03-07-02 | DetailPageId Content Route Round-Trip and Matcher Metadata | High | Medium | Done: canonical content routes now round-trip optional `detailPageId` through settings, assistant actions, Site Settings client/form types, and matcher metadata without adding a second route registry |
+| TASK-190-05-03-07-01 | Detail Page Internal CRUD, Revisions, and Preview Routes | High | Large | Done: the internal detail-page CRUD/read, lifecycle preview/publish/autosave, and revisions/restore/discard route families are all landed through the shared detail-page route and service seams |
 | TASK-251 | Custom Screens Workspace Preview and Builder Interaction Hardening | High | Large | Done: preview is record-backed and cache-aware, list canvas reorders in-header, and Data uses widget-owned prop contracts |
 | TASK-251-01 | Workspace Preview Parity and Record-Backed Editor Preview | High | Large | Done: builder canvas and preview dialog now share cached-first first-record ownership plus a wider Pages-like preview shell |
 | TASK-251-01-02 | First-Record Preview Data for Editor View Canvas | High | Medium | Done: builder/editor preview now hydrates from `entries:list:<typeSlug>` with explicit fallback notes for no-record and read-failed states |

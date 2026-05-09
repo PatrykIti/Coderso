@@ -64,11 +64,6 @@ test("registerAssistantRoutes wires endpoints", () => {
     "settings:read",
     "settings:read",
     "content:read",
-    "settings:read",
-    "content:read",
-    "settings:write",
-    "content:write",
-    "content:publish",
   ]);
 });
 
@@ -1370,6 +1365,79 @@ test("assistant action execute route enforces per-action write permissions", asy
   expect(requestedPermissions).toContain("content:write");
   expect(requestedPermissions).toContain("content:publish");
   expect(requestedPermissions).toContain("widgets:write");
+});
+
+test("assistant action execute preserves the settings-only route-link permission boundary", async () => {
+  const { router, routes } = makeRouter();
+  const requestedPermissions: string[] = [];
+
+  registerAssistantRoutes(router, {
+    requirePermission: (permission) => {
+      requestedPermissions.push(permission);
+      return async () => undefined;
+    },
+    validate: () => undefined,
+    service: {
+      executeActions: async (payload) => ({
+        plan: payload.plan,
+        preview: {
+          plan: payload.plan,
+          changes: [],
+          warnings: [],
+          readyToExecute: true,
+        },
+        results: [],
+        summary: {
+          create: 0,
+          update: 1,
+          noop: 0,
+          failed: 0,
+        },
+      }),
+    },
+  });
+
+  const route = routes.find((item) => item.path === "/assistant/actions/execute");
+  const handler = route?.handlers[route.handlers.length - 1];
+  await handler?.({
+    params: {},
+    query: {},
+    body: {
+      idempotencyKey: "assistant-content-route-execute-1",
+      plan: {
+        id: "plan-content-route-execute",
+        status: "ready",
+        intentId: "content-route-execute",
+        title: "Update content route",
+        answer: "Update content route",
+        summary: "Update content route",
+        confidence: 0.9,
+        assumptions: [],
+        questions: [],
+        actions: [
+          {
+            id: "route-link",
+            type: "setting.content-route.upsert",
+            title: "Update route link",
+            description: "Update route link",
+            input: {
+              typeSlug: "products",
+              listPath: "/products",
+              detailPath: "/products/:slug",
+              enabled: true,
+              detailPageId: "4dd7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+            },
+          },
+        ],
+      },
+    },
+    requestId: "req-content-route-execute",
+    user: { id: "user-1" },
+  });
+
+  expect(requestedPermissions).toContain("settings:write");
+  expect(requestedPermissions).not.toContain("content:write");
+  expect(requestedPermissions).not.toContain("content:publish");
 });
 
 test("assistant action execute route enforces kit permission for site-kit plans", async () => {

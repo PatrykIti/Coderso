@@ -136,7 +136,17 @@ export const assistantActionFamilyContracts = [
     "setting.content-route.upsert",
     "settings",
     "core/services/settings/settingsService.ts",
-    ["typeSlug", "listPath", "detailPath", "enabled"]
+    ["typeSlug", "listPath", "detailPath", "enabled"],
+    {
+      permissions: {
+        plan: ["settings:read"],
+        dryRun: ["settings:read"],
+        execute: ["settings:write"],
+      },
+      notes: [
+        "Preserves, clears, or replaces one canonical content-route link through the existing settings owner seam only.",
+      ],
+    }
   ),
   executableContract("content-type.upsert", "content", "core/services/content/typeService.ts", [
     "slug",

@@ -5,6 +5,10 @@ import {
   normalizeContentRouteDetailPath,
   normalizeContentRouteListPath,
 } from "../../../services/settings/contentRoutePaths";
+import {
+  isDetailPageIdFormat,
+  normalizeDetailPageIdText,
+} from "../../../services/settings/detailPageIdContract";
 
 export type SiteContentRouteForm = {
   type: string;
@@ -42,13 +46,8 @@ export const buildDefaultRoute = (slug: string): SiteContentRouteForm => ({
   enabled: true,
 });
 
-const detailPageIdPattern =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
 export const normalizeDetailPageIdInput = (value: string | null | undefined) => {
-  if (typeof value !== "string") return null;
-  const trimmed = value.trim().toLowerCase();
-  return trimmed.length > 0 ? trimmed : null;
+  return normalizeDetailPageIdText(value);
 };
 
 export const mergeContentRoutes = (
@@ -110,7 +109,7 @@ export const validateContentRoutes = (routes: SiteContentRouteForm[]): RouteVali
     }
 
     const normalizedDetailPageId = normalizeDetailPageIdInput(route.detailPageId);
-    if (normalizedDetailPageId && !detailPageIdPattern.test(normalizedDetailPageId)) {
+    if (normalizedDetailPageId && !isDetailPageIdFormat(normalizedDetailPageId)) {
       ensureError(errorsByType, route.type).detailPageId = "Detail page ID must be a valid UUID.";
     }
   });

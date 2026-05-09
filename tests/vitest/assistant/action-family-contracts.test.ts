@@ -39,6 +39,12 @@ test("entry upsert draft action is executable and stays draft-scoped", () => {
 });
 
 test("menu seo media and surface expansion contracts declare domain permissions", () => {
+  const contentRouteContract = getAssistantActionFamilyContract("setting.content-route.upsert");
+  expect(contentRouteContract.status).toBe("executable");
+  expect(contentRouteContract.permissions.plan).toEqual(["settings:read"]);
+  expect(contentRouteContract.permissions.dryRun).toEqual(["settings:read"]);
+  expect(contentRouteContract.permissions.execute).toEqual(["settings:write"]);
+  expect(contentRouteContract.strictInput.notes.join(" ")).toContain("settings owner seam");
   const menuContract = getAssistantActionFamilyContract("menu.item.upsert");
   expect(menuContract.status).toBe("executable");
   expect(menuContract.permissions.execute).toEqual(["menus:write"]);

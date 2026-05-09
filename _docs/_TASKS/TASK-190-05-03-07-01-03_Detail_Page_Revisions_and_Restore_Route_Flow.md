@@ -37,7 +37,8 @@ No child task files.
 
 ## Contract
 
-- `GET /admin/api/detail-pages/:id/revisions` returns bounded revision metadata,
+- `GET /admin/api/detail-pages/:id/revisions` returns bounded revision metadata
+  without embedding stored document snapshots,
 - `POST /admin/api/detail-pages/:id/revisions/:revisionId/restore` restores the
   chosen revision through the shared detail-page revision contract,
 - `DELETE /admin/api/detail-pages/:id/revisions/:revisionId` only discards

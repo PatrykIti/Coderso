@@ -15,13 +15,16 @@ import {
   discardDetailPageAutosaveRevision,
   listDetailPageRevisions,
   restoreDetailPageRevision,
+  summarizeDetailPageRevisionRecord,
 } from "../../services/content/detailPageRevisionService";
 import {
   detailPageAutosaveSchema,
   detailPageCreateSchema,
   detailPageEmptyLifecycleSchema,
+  detailPageIdParamsSchema,
   detailPageListQuerySchema,
   detailPagePreviewSchema,
+  detailPageRevisionParamsSchema,
   detailPageUpdateSchema,
 } from "../validation/detailPageSchemas";
 import { createPublicUrlContextFromHeaders, resolvePreviewUrl } from "../utils/previewUrls";
@@ -105,6 +108,7 @@ export function registerDetailPageRoutes(router: Router, deps: DetailPageRouteDe
 
   router.get("/detail-pages/:id", requirePermission("content:read"), async (ctx) => {
     return withDetailPageErrors(async () => {
+      validate(detailPageIdParamsSchema, ctx.params);
       const item = await getDetailPageDocument(ctx.params.id);
       if (!item) throw new Error("detail_page_not_found");
       return item;
@@ -125,6 +129,7 @@ export function registerDetailPageRoutes(router: Router, deps: DetailPageRouteDe
 
   router.patch("/detail-pages/:id", requirePermission("content:write"), async (ctx) => {
     return withDetailPageErrors(async () => {
+      validate(detailPageIdParamsSchema, ctx.params);
       validate(detailPageUpdateSchema, ctx.body);
       const body = ctx.body as { document: unknown };
       return (
@@ -137,6 +142,8 @@ export function registerDetailPageRoutes(router: Router, deps: DetailPageRouteDe
 
   router.delete("/detail-pages/:id", requirePermission("content:write"), async (ctx) => {
     return withDetailPageErrors(async () => {
+      validate(detailPageIdParamsSchema, ctx.params);
+      validate(detailPageEmptyLifecycleSchema, ctx.body ?? {});
       await deleteDetailPageDocument(ctx.params.id);
       return { ok: true };
     });
@@ -144,6 +151,7 @@ export function registerDetailPageRoutes(router: Router, deps: DetailPageRouteDe
 
   router.post("/detail-pages/:id/preview", requirePermission("content:read"), async (ctx) => {
     return withDetailPageErrors(async () => {
+      validate(detailPageIdParamsSchema, ctx.params);
       validate(detailPagePreviewSchema, ctx.body);
       const body = ctx.body as { sampleEntryId: string; ttlMinutes?: number };
       const { token, expiresAt } = await issueDetailPagePreview({
@@ -169,6 +177,7 @@ export function registerDetailPageRoutes(router: Router, deps: DetailPageRouteDe
 
   router.post("/detail-pages/:id/publish", requirePermission("content:publish"), async (ctx) => {
     return withDetailPageErrors(async () => {
+      validate(detailPageIdParamsSchema, ctx.params);
       validate(detailPageEmptyLifecycleSchema, ctx.body ?? {});
       if (!ctx.user?.id) throw new Error("auth_required");
       await publishDetailPageDocument(ctx.params.id, ctx.user.id);
@@ -178,6 +187,7 @@ export function registerDetailPageRoutes(router: Router, deps: DetailPageRouteDe
 
   router.post("/detail-pages/:id/unpublish", requirePermission("content:publish"), async (ctx) => {
     return withDetailPageErrors(async () => {
+      validate(detailPageIdParamsSchema, ctx.params);
       validate(detailPageEmptyLifecycleSchema, ctx.body ?? {});
       await unpublishDetailPageDocument(ctx.params.id);
       return { ok: true };
@@ -186,6 +196,7 @@ export function registerDetailPageRoutes(router: Router, deps: DetailPageRouteDe
 
   router.post("/detail-pages/:id/autosave", requirePermission("content:write"), async (ctx) => {
     return withDetailPageErrors(async () => {
+      validate(detailPageIdParamsSchema, ctx.params);
       validate(detailPageAutosaveSchema, ctx.body);
       if (!ctx.user?.id) throw new Error("auth_required");
       const body = ctx.body as { document: unknown };
@@ -200,7 +211,10 @@ export function registerDetailPageRoutes(router: Router, deps: DetailPageRouteDe
   });
 
   router.get("/detail-pages/:id/revisions", requirePermission("content:read"), async (ctx) => {
-    return withDetailPageErrors(async () => listDetailPageRevisions(ctx.params.id));
+    return withDetailPageErrors(async () => {
+      validate(detailPageIdParamsSchema, ctx.params);
+      return listDetailPageRevisions(ctx.params.id);
+    });
   });
 
   router.post(
@@ -208,8 +222,22 @@ export function registerDetailPageRoutes(router: Router, deps: DetailPageRouteDe
     requirePermission("content:write"),
     async (ctx) => {
       return withDetailPageErrors(async () => {
+        validate(detailPageRevisionParamsSchema, ctx.params);
+        validate(detailPageEmptyLifecycleSchema, ctx.body ?? {});
         const result = await restoreDetailPageRevision(ctx.params.id, ctx.params.revisionId);
-        return { ok: true, ...result };
+        return {
+          ok: true,
+          restored: result.restored,
+          revision: summarizeDetailPageRevisionRecord(result.revision),
+          detailPage: {
+            id: result.detailPage.id,
+            contentTypeId: result.detailPage.contentTypeId,
+            name: result.detailPage.name,
+            status: result.detailPage.status,
+            updatedAt: result.detailPage.updatedAt,
+            publishedAt: result.detailPage.publishedAt,
+          },
+        };
       });
     }
   );
@@ -219,6 +247,8 @@ export function registerDetailPageRoutes(router: Router, deps: DetailPageRouteDe
     requirePermission("content:write"),
     async (ctx) => {
       return withDetailPageErrors(async () => {
+        validate(detailPageRevisionParamsSchema, ctx.params);
+        validate(detailPageEmptyLifecycleSchema, ctx.body ?? {});
         await discardDetailPageAutosaveRevision(ctx.params.id, ctx.params.revisionId);
         return { ok: true };
       });

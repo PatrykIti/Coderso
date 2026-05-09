@@ -76,6 +76,10 @@ import {
   resolveListingSearchRuntimeState,
 } from "../services/search/listingRuntimeService";
 import {
+  isDetailPageIdFormat,
+  normalizeDetailPageIdText,
+} from "../services/settings/detailPageIdContract";
+import {
   isPostContentTypeSlug,
   resolvePostRuntimeMetaDescription,
 } from "../services/posts/runtime/postBlockRuntimeMapper";
@@ -555,13 +559,9 @@ const resolvePreviewTargetType = (value: string | null): PreviewTargetType | nul
   return null;
 };
 
-const previewDetailPageIdPattern =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
 const normalizePreviewDetailPageId = (value: string | null) => {
-  if (typeof value !== "string") return null;
-  const normalized = value.trim().toLowerCase();
-  if (!previewDetailPageIdPattern.test(normalized)) return null;
+  const normalized = normalizeDetailPageIdText(value);
+  if (!normalized || !isDetailPageIdFormat(normalized)) return null;
   return normalized;
 };
 

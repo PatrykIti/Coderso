@@ -399,53 +399,42 @@ export function registerAssistantRoutes(router: Router, deps: AssistantRouteDeps
     }
   );
 
-  router.post(
-    "/assistant/actions/dry-run",
-    requirePermission("settings:read"),
-    requirePermission("content:read"),
-    async (ctx) => {
-      validate(assistantActionDryRunRequestSchema, ctx.body ?? {});
-      const body = (ctx.body ?? {}) as { plan: AssistantActionPlan };
-      await requireActionPermissions(ctx, body.plan, "dryRun", requirePermission);
-      if (hasSiteKitActions(body.plan)) {
-        await requirePermission("solution-kits:read")(ctx);
-      }
-      return withAssistantErrors(ctx.requestId, async () => {
-        if (hasSiteKitActions(body.plan)) {
-          await ensureLlmGuideAvailable();
-        }
-        return service.dryRunActions({
-          plan: body.plan,
-        });
-      });
+  router.post("/assistant/actions/dry-run", async (ctx) => {
+    validate(assistantActionDryRunRequestSchema, ctx.body ?? {});
+    const body = (ctx.body ?? {}) as { plan: AssistantActionPlan };
+    await requireActionPermissions(ctx, body.plan, "dryRun", requirePermission);
+    if (hasSiteKitActions(body.plan)) {
+      await requirePermission("solution-kits:read")(ctx);
     }
-  );
+    return withAssistantErrors(ctx.requestId, async () => {
+      if (hasSiteKitActions(body.plan)) {
+        await ensureLlmGuideAvailable();
+      }
+      return service.dryRunActions({
+        plan: body.plan,
+      });
+    });
+  });
 
-  router.post(
-    "/assistant/actions/execute",
-    requirePermission("settings:write"),
-    requirePermission("content:write"),
-    requirePermission("content:publish"),
-    async (ctx) => {
-      validate(assistantActionExecuteRequestSchema, ctx.body ?? {});
-      const body = (ctx.body ?? {}) as {
-        plan: AssistantActionPlan;
-        idempotencyKey: string;
-      };
-      await requireActionPermissions(ctx, body.plan, "execute", requirePermission);
-      if (hasSiteKitActions(body.plan)) {
-        await requirePermission("solution-kits:write")(ctx);
-      }
-      return withAssistantErrors(ctx.requestId, async () => {
-        if (hasSiteKitActions(body.plan)) {
-          await ensureLlmGuideAvailable();
-        }
-        return service.executeActions({
-          plan: body.plan,
-          idempotencyKey: body.idempotencyKey,
-          actorId: ctx.user?.id ?? "",
-        });
-      });
+  router.post("/assistant/actions/execute", async (ctx) => {
+    validate(assistantActionExecuteRequestSchema, ctx.body ?? {});
+    const body = (ctx.body ?? {}) as {
+      plan: AssistantActionPlan;
+      idempotencyKey: string;
+    };
+    await requireActionPermissions(ctx, body.plan, "execute", requirePermission);
+    if (hasSiteKitActions(body.plan)) {
+      await requirePermission("solution-kits:write")(ctx);
     }
-  );
+    return withAssistantErrors(ctx.requestId, async () => {
+      if (hasSiteKitActions(body.plan)) {
+        await ensureLlmGuideAvailable();
+      }
+      return service.executeActions({
+        plan: body.plan,
+        idempotencyKey: body.idempotencyKey,
+        actorId: ctx.user?.id ?? "",
+      });
+    });
+  });
 }

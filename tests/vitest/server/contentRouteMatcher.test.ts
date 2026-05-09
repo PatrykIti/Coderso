@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { expect, test } from "vitest";
 
 import { matchContentRoute } from "../../../core/site/contentRouteMatcher";
 
@@ -28,7 +28,7 @@ test("matchContentRoute matches detail routes and params", () => {
 
 test("matchContentRoute ignores disabled routes", () => {
   const match = matchContentRoute("/blog", [{ ...routes[0], enabled: false }]);
-  expect(match).toBe(null);
+  expect(match).toBeNull();
 });
 
 test("matchContentRoute prefers exact list routes over generic detail routes", () => {

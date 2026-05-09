@@ -1,5 +1,33 @@
 const uuidPattern = "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$";
 
+export const detailPageIdParamsSchema = {
+  type: "object",
+  required: ["id"],
+  additionalProperties: false,
+  properties: {
+    id: {
+      type: "string",
+      pattern: uuidPattern,
+    },
+  },
+};
+
+export const detailPageRevisionParamsSchema = {
+  type: "object",
+  required: ["id", "revisionId"],
+  additionalProperties: false,
+  properties: {
+    id: {
+      type: "string",
+      pattern: uuidPattern,
+    },
+    revisionId: {
+      type: "string",
+      pattern: uuidPattern,
+    },
+  },
+};
+
 export const detailPageListQuerySchema = {
   type: "object",
   additionalProperties: false,

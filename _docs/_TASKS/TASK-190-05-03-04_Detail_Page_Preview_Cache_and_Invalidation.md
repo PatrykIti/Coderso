@@ -174,10 +174,11 @@ Rules:
   validation stays the runtime authority,
 - `detailPageId` is optional; when omitted, runtime may use the active
   published detail document for the entry content type only after
-  `TASK-190-05-03-07` lands the canonical `site.contentRoutes.detailPageId`
-  link. Before that route-link seam exists, omitted-detail-page preview stays
-  on the current legacy preview/runtime fallback instead of adding a second
-  inferred detail-page lookup path.
+  `TASK-190-05-03-07-02` lands the canonical
+  `site.contentRoutes.detailPageId` structural link. Before that route-link
+  seam exists, omitted-detail-page preview stays on the current legacy
+  preview/runtime fallback instead of adding a second inferred detail-page
+  lookup path.
 - When `detailPageId` is provided, runtime may use only a published detail page
   document that belongs to the previewed entry content type.
 - `type=content` preview must never expose `current_document` of a detail-page

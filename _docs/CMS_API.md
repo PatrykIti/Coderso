@@ -1625,7 +1625,7 @@ Rules:
 - `POST /detail-pages/:id/unpublish` clears `published_document` and keeps the
   draft/current document under the same detail-page owner seam.
 - `GET /detail-pages/:id/revisions` returns bounded revision metadata ordered by
-  newest version first.
+  newest version first without embedding stored detail-page document snapshots.
 - `POST /detail-pages/:id/revisions/:revisionId/restore` restores the chosen
   revision into `current_document` only; it must not become a second publish
   path outside the dedicated lifecycle routes.
@@ -2896,8 +2896,10 @@ Przykładowe klucze:
 Permissions:
 - `settings:read` dla `GET /assistant/status` i `POST /assistant/chat`
 - `settings:write` dla `POST /assistant/reindex`
-- `settings:read` + `content:read` dla `POST /assistant/actions/plan` i `POST /assistant/actions/dry-run`
-- `settings:write` + `content:write` + `content:publish` dla `POST /assistant/actions/execute`
+- `settings:read` + `content:read` dla `POST /assistant/actions/plan`
+- `POST /assistant/actions/dry-run` i `POST /assistant/actions/execute`
+  egzekwuja per-action permissions z registry kontraktow zamiast dokladac
+  jeden szerszy wspolny bundle write/read dla wszystkich action families
 - dodatkowo `solution-kits:read` dla `POST /assistant/actions/plan` i `POST /assistant/actions/dry-run`, gdy payload dotyczy `context.siteKit` albo `site-kit.*`
 - dodatkowo `solution-kits:write` dla `POST /assistant/actions/execute`, gdy plan zawiera `site-kit.*`
 
@@ -2920,7 +2922,7 @@ Stara rodzina `/assistant/site-builder/*` jest wycofana. Site-kit planning/execu
 `TASK-170-03-03-02` promuje `listing-template.card.patch` do executable typed action dla patchowania `config.card` na istniejacych listing templates.
 `TASK-170-03-03-03` promuje `page.widget.patch` do executable typed action dla top-level `upsert-block` na istniejacych stronach.
 `TASK-170-03-03-04` promuje `form.automation.upsert` do executable typed action dla bezpiecznych non-webhook form actions; webhook automation pozostaje poza zakresem do czasu jawnej obslugi sekretow.
-`TASK-170-03-04` domyka executor adapter wave: `/assistant/actions/dry-run` i `/assistant/actions/execute` egzekwuja action-specific permissions z registry kontraktow poza bazowymi permissions endpointu.
+`TASK-170-03-04` domyka executor adapter wave: `/assistant/actions/dry-run` i `/assistant/actions/execute` egzekwuja action-specific permissions z registry kontraktow bez dokladania jednego szerszego endpoint-level write bundle ponad sam action family contract.
 `TASK-174-03-01` promuje `custom-screen.delete` do executable typed action dla custom screenow rozwiazanych z server-side resource catalog context; execute ponownie sprawdza id/name/prefix przed usunieciem.
 `TASK-174-03-02` promuje `page.delete` do executable typed action dla aktywnej strony; execute ponownie sprawdza id/title/slug/status przed usunieciem.
 `TASK-174-03-03` promuje `widget-template.delete` do executable typed action dla aktywnego reusable widget template; dry-run ostrzega o blast radius, a execute sprawdza id/name/status/category przed usunieciem.

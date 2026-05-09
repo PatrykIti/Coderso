@@ -61,6 +61,9 @@ const mapDetailPageRow = (
   ) {
     throw new Error("detail_page_invalid");
   }
+  if (row.status === "published" && !publishedDocument) {
+    throw new Error("detail_page_invalid");
+  }
 
   return {
     ...row,

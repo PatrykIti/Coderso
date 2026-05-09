@@ -267,6 +267,25 @@ test("resolvePublishedDetailPageRuntime fails closed for unpublished or mismatch
       contentRoutes: [],
     })
   ).resolves.toBeNull();
+
+  currentRecords = [
+    {
+      id: document.id,
+      contentTypeId: contentType.id,
+      status: "published",
+      currentDocument: document,
+      publishedDocument: null,
+    },
+  ];
+
+  await expect(
+    resolvePublishedDetailPageRuntime({
+      detailPageId: document.id,
+      entry,
+      contentType,
+      contentRoutes: [],
+    })
+  ).resolves.toBeNull();
 });
 
 test("resolvePublishedDetailPageRuntime fails closed when document normalization or binding resolution fails", async () => {

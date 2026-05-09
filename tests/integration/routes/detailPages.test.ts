@@ -259,12 +259,24 @@ test("mapDetailPageError maps known domain failures", () => {
 test("detail page routes validate list and write payloads before service work", async () => {
   const { router, routes } = makeRouter();
   const validateCalls: Array<{ schema: unknown; payload: unknown }> = [];
+  const validId = randomUUID();
+  const validRevisionId = randomUUID();
 
   registerDetailPageRoutes(router, {
     requirePermission: () => async () => undefined,
     validate: (schema, payload) => {
       validateCalls.push({ schema, payload });
-      throw new Error("validation_stop");
+      if (
+        payload &&
+        typeof payload === "object" &&
+        !Array.isArray(payload) &&
+        (("extra" in payload && payload.extra === true) ||
+          ("contentTypeId" in payload && payload.contentTypeId === "bad") ||
+          ("id" in payload && payload.id === "not-a-uuid") ||
+          ("revisionId" in payload && payload.revisionId === "not-a-uuid"))
+      ) {
+        throw new Error("validation_stop");
+      }
     },
   });
 
@@ -282,21 +294,55 @@ test("detail page routes validate list and write payloads before service work", 
 
   await expect(
     runRoute(routes, "PATCH", "/detail-pages/:id", {
-      params: { id: "detail-1" },
+      params: { id: validId },
       body: { extra: true },
     })
   ).rejects.toThrow("validation_stop");
 
   await expect(
     runRoute(routes, "POST", "/detail-pages/:id/preview", {
-      params: { id: "detail-1" },
+      params: { id: validId },
       body: { extra: true },
     })
   ).rejects.toThrow("validation_stop");
 
   await expect(
     runRoute(routes, "POST", "/detail-pages/:id/autosave", {
-      params: { id: "detail-1" },
+      params: { id: validId },
+      body: { extra: true },
+    })
+  ).rejects.toThrow("validation_stop");
+
+  await expect(
+    runRoute(routes, "DELETE", "/detail-pages/:id", {
+      params: { id: validId },
+      body: { extra: true },
+    })
+  ).rejects.toThrow("validation_stop");
+
+  await expect(
+    runRoute(routes, "POST", "/detail-pages/:id/publish", {
+      params: { id: validId },
+      body: { extra: true },
+    })
+  ).rejects.toThrow("validation_stop");
+
+  await expect(
+    runRoute(routes, "GET", "/detail-pages/:id/revisions", {
+      params: { id: "not-a-uuid" },
+    })
+  ).rejects.toThrow("validation_stop");
+
+  await expect(
+    runRoute(routes, "POST", "/detail-pages/:id/revisions/:revisionId/restore", {
+      params: { id: validId, revisionId: validRevisionId },
+      body: { extra: true },
+    })
+  ).rejects.toThrow("validation_stop");
+
+  await expect(
+    runRoute(routes, "DELETE", "/detail-pages/:id/revisions/:revisionId", {
+      params: { id: validId, revisionId: validRevisionId },
       body: { extra: true },
     })
   ).rejects.toThrow("validation_stop");
@@ -304,8 +350,20 @@ test("detail page routes validate list and write payloads before service work", 
   expect(validateCalls.map((entry) => entry.payload)).toEqual([
     { contentTypeId: "bad" },
     { extra: true },
+    { id: validId },
     { extra: true },
+    { id: validId },
     { extra: true },
+    { id: validId },
+    { extra: true },
+    { id: validId },
+    { extra: true },
+    { id: validId },
+    { extra: true },
+    { id: "not-a-uuid" },
+    { id: validId, revisionId: validRevisionId },
+    { extra: true },
+    { id: validId, revisionId: validRevisionId },
     { extra: true },
   ]);
 });
@@ -450,9 +508,10 @@ testIfDb(
 
     const revisions = (await runRoute(routes, "GET", "/detail-pages/:id/revisions", {
       params: { id: created.id },
-    })) as Array<{ id: string; kind: string }>;
+    })) as Array<{ id: string; kind: string; document?: unknown }>;
     expect(revisions.map((revision) => revision.kind)).toContain("publish");
     expect(revisions.map((revision) => revision.kind)).toContain("autosave");
+    expect(revisions.every((revision) => !("document" in revision))).toBe(true);
 
     const autosaveRevision = revisions.find((revision) => revision.kind === "autosave");
     const publishRevision = revisions.find((revision) => revision.kind === "publish");
@@ -472,6 +531,10 @@ testIfDb(
     expect(restore.ok).toBe(true);
     expect(restore.restored).toBe(true);
     expect(restore.detailPage.name).toBe("Products detail autosave");
+    expect("document" in (restore as { revision?: { document?: unknown } }).revision!).toBe(false);
+    expect(
+      "currentDocument" in (restore as { detailPage?: { currentDocument?: unknown } }).detailPage!
+    ).toBe(false);
 
     const discard = await runRoute(routes, "DELETE", "/detail-pages/:id/revisions/:revisionId", {
       params: { id: created.id, revisionId: autosaveRevision.id },

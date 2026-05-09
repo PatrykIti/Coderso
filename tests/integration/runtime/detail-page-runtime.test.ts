@@ -245,6 +245,40 @@ const insertPublishedDetailPageDocument = async (input: {
 };
 
 testIfDbWithOptions(
+  "content route list pages still render the list view when detailPageId is linked",
+  async () => {
+    resetRateLimitBuckets();
+    await setTestSetting("site.cacheTtlSeconds", 0);
+
+    const fixture = await createProductFixture("published");
+    const detailPageId = randomUUID();
+    await insertPublishedDetailPageDocument({
+      id: detailPageId,
+      contentTypeId: fixture.contentType.id,
+      contentTypeSlug: fixture.contentType.slug,
+    });
+    await setTestSetting("site.contentRoutes", [
+      {
+        type: fixture.contentType.slug,
+        listPath: `/${fixture.contentType.slug}`,
+        detailPath: `/${fixture.contentType.slug}/:slug`,
+        enabled: true,
+        detailPageId,
+      } satisfies ContentRouteSetting,
+    ]);
+
+    const response = await requestPublicPath(`/${fixture.contentType.slug}`);
+
+    expect(response.status).toBe(200);
+    const html = await response.text();
+    expect(html).toContain(`/${fixture.contentType.slug}/${fixture.entry.slug}`);
+    expect(html).toContain(`Runtime product ${fixture.token}`);
+    expect(html).not.toContain("Composed detail template body");
+  },
+  { timeout: 15_000 }
+);
+
+testIfDbWithOptions(
   "published content routes render composed detail-page blocks when detailPageId is linked",
   async () => {
     resetRateLimitBuckets();

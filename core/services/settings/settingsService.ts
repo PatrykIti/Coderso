@@ -8,6 +8,7 @@ import {
   normalizeContentRouteDetailPath,
   normalizeContentRouteListPath,
 } from "./contentRoutePaths";
+import { normalizeOptionalDetailPageId } from "./detailPageIdContract";
 
 type WidgetTemplateCategorySetting = {
   id: string;
@@ -286,22 +287,6 @@ const normalizeOptionalIdValue = (value: unknown) => {
   }
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : "";
-};
-
-const detailPageIdPattern =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-const normalizeOptionalDetailPageId = (value: unknown) => {
-  if (value === null) return null;
-  if (typeof value !== "string") {
-    throw new Error("settings_value_invalid");
-  }
-  const trimmed = value.trim().toLowerCase();
-  if (!trimmed) return null;
-  if (!detailPageIdPattern.test(trimmed)) {
-    throw new Error("settings_value_invalid");
-  }
-  return trimmed;
 };
 
 export const normalizeContentRoutes = (value: unknown): ContentRouteSetting[] => {

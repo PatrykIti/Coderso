@@ -66,8 +66,12 @@ persist `PageData.settings.collectionLink` through the existing page owner seam
 instead of leaving canonical collection linkage implicit. The first
 detail-page storage/schema slice is also landed through
 `detail_page_documents` / `detail_page_revisions` plus the
-`content_type_has_detail_pages` delete guard, while the later
-detail-page runtime/admin/workspace/no-duplicate slices remain deferred.
+`content_type_has_detail_pages` delete guard. The later open detail-page scope
+is now narrower: admin client/cache parity, generic assistant resource
+packaging, collection workspace/editor surfaces, and no-duplicate DB reuse
+remain deferred, while the published runtime, shared preview path, typed
+`detail-page.upsert` execution, and internal admin route family are already
+landed.
 
 This task is not limited to theme templates or a narrow detail-template editor.
 The business target remains full assistant-composed setup of a site/service

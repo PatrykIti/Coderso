@@ -17,6 +17,26 @@ export type DetailPageRevisionRecord = {
   createdBy: string | null;
 };
 
+export type DetailPageRevisionSummaryRecord = {
+  id: string;
+  detailPageId: string;
+  version: number;
+  kind: DetailPageRevisionKind;
+  createdAt: Date;
+  createdBy: string | null;
+};
+
+export const summarizeDetailPageRevisionRecord = (
+  record: DetailPageRevisionSummaryRecord | DetailPageRevisionRecord
+): DetailPageRevisionSummaryRecord => ({
+  id: record.id,
+  detailPageId: record.detailPageId,
+  version: record.version,
+  kind: record.kind,
+  createdAt: record.createdAt,
+  createdBy: record.createdBy,
+});
+
 export type DetailPageRevisionRestoreResult = {
   restored: boolean;
   revision: DetailPageRevisionRecord;
@@ -35,6 +55,20 @@ const mapDetailPageRevisionRow = (
   createdBy: row.createdBy ?? null,
 });
 
+const mapDetailPageRevisionSummaryRow = (
+  row: Pick<
+    typeof detailPageRevisions.$inferSelect,
+    "id" | "detailPageId" | "version" | "kind" | "createdAt" | "createdBy"
+  >
+): DetailPageRevisionSummaryRecord => ({
+  id: row.id,
+  detailPageId: row.detailPageId,
+  version: row.version,
+  kind: (row.kind === "autosave" ? "autosave" : "publish") as DetailPageRevisionKind,
+  createdAt: row.createdAt,
+  createdBy: row.createdBy ?? null,
+});
+
 const normalizeRestoredDocumentForLifecycle = (
   existing: typeof detailPageDocuments.$inferSelect,
   revisionDocument: DetailPageDocument
@@ -47,14 +81,21 @@ const normalizeRestoredDocumentForLifecycle = (
 
 export async function listDetailPageRevisions(
   detailPageId: string
-): Promise<DetailPageRevisionRecord[]> {
+): Promise<DetailPageRevisionSummaryRecord[]> {
   const rows = await db
-    .select()
+    .select({
+      id: detailPageRevisions.id,
+      detailPageId: detailPageRevisions.detailPageId,
+      version: detailPageRevisions.version,
+      kind: detailPageRevisions.kind,
+      createdAt: detailPageRevisions.createdAt,
+      createdBy: detailPageRevisions.createdBy,
+    })
     .from(detailPageRevisions)
     .where(eq(detailPageRevisions.detailPageId, detailPageId))
     .orderBy(desc(detailPageRevisions.version));
 
-  return rows.map(mapDetailPageRevisionRow);
+  return rows.map(mapDetailPageRevisionSummaryRow);
 }
 
 export async function discardDetailPageAutosaveRevision(
