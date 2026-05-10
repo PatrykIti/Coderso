@@ -74,6 +74,7 @@ function normalizeGalleryMosaicData(data: GalleryMosaicData): GalleryMosaicData 
   return {
     header: normalizeGalleryMosaicHeader(data.header),
     items: normalizeGalleryMosaicItems(data.items),
+    options: normalizeGalleryMosaicOptions(data.options),
     style: normalizeGalleryMosaicStyle(data.style),
   };
 }
@@ -83,7 +84,21 @@ function normalizeGalleryMosaicItem(item: GalleryMosaicItem, index: number): Gal
     ...item,
     id: normalizeStableItemId(item.id, `gallery-mosaic-${index + 1}`),
     altText: normalizeGalleryMosaicAltText(item.altText, item.caption),
+    caption: normalizeGalleryMosaicCaption(item.caption),
+    showCaption: normalizeGalleryMosaicShowCaption(item.showCaption),
   };
+}
+
+function renderGalleryMosaicItem(item: GalleryMosaicItem, index: number, options: GalleryMosaicOptions) {
+  const alt = normalizeGalleryMosaicAltText(item.altText, item.caption);
+  return (
+    <figure data-gallery-item={String(index + 1)}>
+      <img src={item.image} alt={alt} loading="lazy" />
+      {options.showCaptions && item.showCaption !== false && item.caption ? (
+        <figcaption>{item.caption}</figcaption>
+      ) : null}
+    </figure>
+  );
 }
 
 function GalleryMosaicVisualEditor(props: WidgetEditorProps<GalleryMosaicData>) {
@@ -97,6 +112,9 @@ function GalleryMosaicVisualEditor(props: WidgetEditorProps<GalleryMosaicData>) 
           <WidgetControlRow id={`gallery-mosaic.items.${index}.altText`} label="Alt text" data-widget-control={`gallery-mosaic.items.${index}.altText`}>
             <Input value={item.altText ?? ""} onChange={(altText) => props.onChange(updateGalleryMosaicItem(props.value, index, { altText }))} />
           </WidgetControlRow>
+          <WidgetControlRow id={`gallery-mosaic.items.${index}.showCaption`} label="Show caption" data-widget-control={`gallery-mosaic.items.${index}.showCaption`}>
+            <Switch checked={item.showCaption !== false} onCheckedChange={(showCaption) => props.onChange(updateGalleryMosaicItem(props.value, index, { showCaption }))} />
+          </WidgetControlRow>
         </Fragment>
       ))}
     </WidgetEditorSection>
@@ -109,6 +127,10 @@ Implementation checklist:
 - Read `_docs/_WIDGETS/tmp/gallery-mosaic/MATRIX.md` before changing the schema or editor.
 - Extend or reorganize `core/widgets/core/galleryMosaic.tsx` schema/defaults/normalizer/rendering
   only for fields approved by the research decisions above.
+- Add explicit `altText`, `showCaption`, and global caption-visibility
+  schema/default/render/editor/test coverage. Runtime must render `<img alt>`
+  from `altText` with a deterministic fallback, and captions must be optional
+  without becoming overlay text/lightbox/hover/manual-span scope.
 - Refactor `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.

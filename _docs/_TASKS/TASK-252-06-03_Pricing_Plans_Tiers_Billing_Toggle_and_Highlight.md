@@ -90,8 +90,11 @@ type PricingPlanItem = {
   features?: string[];
   ctaLabel?: string;
   ctaHref?: string;
+  featureMarker?: PricingPlanFeatureMarker;
   highlighted?: boolean;
 };
+
+type PricingPlanFeatureMarker = "bullet" | "check" | "icon";
 
 function normalizePricingPlansData(data: PricingPlansData): PricingPlansData {
   return {
@@ -116,6 +119,7 @@ function normalizePricingPlanItem(item: PricingPlanItem, index: number): Pricing
       annual: item.prices?.annual,
     }),
     customPriceLabel: normalizePricingPlanCustomPriceLabel(item.customPriceLabel),
+    featureMarker: normalizePricingPlanFeatureMarker(item.featureMarker ?? data.style?.featureMarker),
     highlighted: normalizeSingleHighlightedPlan(item.highlighted, index),
   };
 }
@@ -142,6 +146,9 @@ function PricingPlansVisualEditor(props: WidgetEditorProps<PricingPlansData>) {
       <WidgetControlRow id="pricing-plans.billing.enabled" label="Billing toggle" data-widget-control="pricing-plans.billing.enabled">
         <Switch checked={props.value.billingToggle?.enabled ?? false} onCheckedChange={(enabled) => props.onChange(updatePricingBillingToggle(props.value, { enabled }))} />
       </WidgetControlRow>
+      <WidgetControlRow id="pricing-plans.style.featureMarker" label="Feature marker" data-widget-control="pricing-plans.style.featureMarker">
+        <SegmentedControl value={props.value.style?.featureMarker ?? "bullet"} onChange={(featureMarker) => props.onChange(updatePricingStyle(props.value, { featureMarker }))} />
+      </WidgetControlRow>
     </WidgetEditorSection>
   );
 }
@@ -158,6 +165,9 @@ Implementation checklist:
 - Extend `pricingPlansSchema` and `pricingPlansDefaults` for `billingToggle`,
   `plans[].prices`, and `plans[].customPriceLabel`; add validator coverage for
   reject-unknown fields and the single highlighted-plan normalization path.
+- Add a bounded `featureMarker` enum in schema/defaults/normalizer/render/editor
+  tests so feature rows can use bullet/check/icon markers without adding
+  Adapt-only feature groups or discount badges.
 - Refactor `core/admin/ui/widgets/editors/PricingPlansEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.

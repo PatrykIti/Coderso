@@ -74,6 +74,8 @@ type ContactStateCopy = {
   errorMessage: string;
 };
 
+type ContactValidationCopy = Partial<Record<ContactFieldId, string>>;
+
 function normalizeContactData(data: ContactData): ContactData {
   return {
     form: normalizeContactForm({
@@ -81,6 +83,7 @@ function normalizeContactData(data: ContactData): ContactData {
       required: data.form?.required,
       submitLabel: data.form?.submitLabel,
     }),
+    validationCopy: normalizeContactValidationCopy(data.validationCopy),
     stateCopy: normalizeContactStateCopy(data.stateCopy),
     contact: normalizeContactContact(data.contact),
     map: preserveExistingContactMap(data.map),
@@ -101,6 +104,9 @@ function ContactVisualEditor(props: WidgetEditorProps<ContactData>) {
       <WidgetControlRow id="contact.form.required" label="Required fields" data-widget-control="contact.form.required">
         <FieldMultiSelect value={value.form?.required ?? ["name", "email", "message"]} onChange={(required) => props.onChange(updateContactForm(value, { required }))} />
       </WidgetControlRow>
+      <WidgetControlRow id="contact.validationCopy.email" label="Email required copy" data-widget-control="contact.validationCopy.email">
+        <Input value={value.validationCopy?.email ?? ""} onChange={(email) => props.onChange(updateContactValidationCopy(value, { email }))} />
+      </WidgetControlRow>
     </WidgetEditorSection>
   );
 }
@@ -115,6 +121,9 @@ Implementation checklist:
   success, and error copy; keep field visibility on the current
   `form.fields`/`form.required` shape rather than introducing ad hoc
   `showPhone` flags.
+- Add `validationCopy` schema/default/render/editor/test ownership keyed by the
+  existing `ContactFieldId` values so required-field messages stay deterministic
+  and do not create a backend routing/security option surface.
 - Refactor `core/admin/ui/widgets/editors/ContactEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.
