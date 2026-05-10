@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 813 | 2026-05-10 | Security strict dependency advisory closure | Security/Dependencies |
 | 812 | 2026-05-09 | TASK-190 detail-page route contract hardening | Assistant/Core |
 | 811 | 2026-05-09 | Test runner and wave act stabilization | QA/Tooling |
 | 810 | 2026-05-08 | TASK-190 detail-page revision routes | Assistant/Core |
