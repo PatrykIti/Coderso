@@ -61,16 +61,16 @@ when the license permits it and the license/source are recorded.
 
 ## Sub-Tasks
 
-- [ ] Create `_docs/_WIDGETS/tmp/README.md` with archive rules and copy policy.
-- [ ] Create one `_docs/_WIDGETS/tmp/<widget>/` folder for each
+- [x] Create `_docs/_WIDGETS/tmp/README.md` with archive rules and copy policy.
+- [x] Create one `_docs/_WIDGETS/tmp/<widget>/` folder for each
   Pages-publishable widget from TASK-252.
-- [ ] Capture at least ten research cards per widget or a widget-local
+- [x] Capture at least ten research cards per widget or a widget-local
   `SHORTFALL.md` with the documented search and exclusion rationale.
-- [ ] Produce a per-widget matrix that maps research patterns to Coderso-owned
+- [x] Produce a per-widget matrix that maps research patterns to Coderso-owned
   fields, modes, editor sections, and tests.
-- [ ] Mark every candidate option as `Keep`, `Adapt`, or `Reject` so later
+- [x] Mark every candidate option as `Keep`, `Adapt`, or `Reject` so later
   implementation leaves do not rediscover the same product decisions.
-- [ ] Audit the archive for license/source metadata before implementation uses
+- [x] Audit the archive for license/source metadata before implementation uses
   the findings.
 
 ## Research Sources
