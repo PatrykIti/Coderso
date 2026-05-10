@@ -47,6 +47,8 @@ and Reject decisions.
 
 - `core/widgets/core/productCompare.tsx`
 - `core/widgets/core/commerceWidgetShared.ts`
+- `core/services/commerce/commerceWidgetRuntime.ts`
+- `core/services/commerce/commerceQueryService.ts`
 - `core/admin/ui/widgets/editors/ProductCompareEditors.tsx`
 - Bun-owned route/security suites when public endpoint behavior changes.
 - `tests/unit/widgets/validator.test.ts` when schema validation changes.
@@ -68,6 +70,32 @@ type ProductCompareAttributeRow = {
   label: string;
   visible: boolean;
 };
+
+type CommerceWidgetQueryInput = {
+  pagination: { limit: number; offset: number };
+  sort: Array<{ field: string; dir: "asc" | "desc" }>;
+  search?: string;
+  collectionIds?: string[];
+  status?: string[];
+  productIds?: string[];
+  manualOrderIds?: string[];
+};
+
+type CommerceWidgetQueryOptions = {
+  manualOrderIds?: string[];
+};
+
+function buildCommerceWidgetQueryInput(
+  source: CommerceWidgetSource,
+  options: CommerceWidgetQueryOptions = {}
+): CommerceWidgetQueryInput {
+  const normalized = normalizeCommerceWidgetSource(source);
+  return {
+    ...normalizedSourceToQueryInput(normalized),
+    productIds: normalizeCommerceWidgetProductIds(normalized.productIds),
+    manualOrderIds: normalizeCommerceWidgetProductIds(options.manualOrderIds),
+  };
+}
 
 function normalizeProductCompareData(data: ProductCompareData): ProductCompareData {
   const selectedProductIds = normalizeProductCompareSelectedProductIds(data.selectedProductIds);
@@ -100,6 +128,12 @@ function buildProductCompareQueryInput(data: ProductCompareData): CommerceWidget
   );
 }
 
+async function resolveProductCompareRows(data: ProductCompareData, deps: CommerceWidgetRuntimeDeps) {
+  const query = buildProductCompareQueryInput(data);
+  const result = await deps.executeCommerceQuery(query);
+  return applyManualProductOrder(result.rows, query.manualOrderIds ?? []);
+}
+
 function ProductCompareVisualEditor(props: WidgetEditorProps<ProductCompareData>) {
   const value = props.value;
   return (
@@ -130,6 +164,15 @@ Implementation checklist:
 - Extend the shared commerce query/source owner so selected product IDs resolve
   through backend-owned product lookup and preserve manual order; cover that in
   `tests/unit/commerce/commerceWidgetRuntime.test.ts`.
+- Extend `CommerceWidgetSource`, `NormalizedCommerceWidgetSource`, and the
+  shared query-input builder in `core/widgets/core/commerceWidgetShared.ts`
+  with bounded `productIds`, then map them into
+  `core/services/commerce/commerceQueryService.ts` as an allowlisted product-id
+  filter. `commerceWidgetRuntime.ts` must use the shared builder and apply
+  `manualOrderIds` after query execution; the editor must not synthesize rows
+  client-side.
+- Add query-service coverage for product-id filtering and runtime coverage for
+  selected-product manual ordering plus empty/missing selected products.
 - Refactor `core/admin/ui/widgets/editors/ProductCompareEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.

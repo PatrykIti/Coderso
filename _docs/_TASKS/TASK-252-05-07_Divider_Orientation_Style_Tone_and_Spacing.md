@@ -72,7 +72,7 @@ function normalizeDividerData(data: DividerData): DividerData {
   return {
     orientation: normalizeDividerOrientation(data.orientation ?? "horizontal"),
     semanticRole: normalizeDividerSemanticRole(data.semanticRole ?? "decorative"),
-    label: preserveExistingDividerLabel(data.label),
+    label: preserveLegacyDividerLabel(data.label),
     thickness: normalizeDividerThickness(data.thickness),
     color: normalizeDividerColor(data.color),
     width: normalizeDividerWidth(data.width),
@@ -107,6 +107,8 @@ Implementation checklist:
   tips, or metadata.
 - Keep legacy payloads non-destructive: missing new fields must normalize to the
   current rendered behavior.
+- Keep legacy label payloads through `preserveLegacyDividerLabel`; do not add a
+  vague legacy alias or expose label controls in this Keep leaf.
 - Do not expose optional label editor controls in this leaf; preserve existing
   label payloads only as legacy renderer data until label support is promoted
   from Adapt scope.

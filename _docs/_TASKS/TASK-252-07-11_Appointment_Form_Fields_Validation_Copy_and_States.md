@@ -87,6 +87,11 @@ type AppointmentFormValidationCopy = {
   slotRequired: string;
 };
 
+type AppointmentFormFieldVisibility = {
+  phone: boolean;
+  notes: boolean;
+};
+
 function normalizeAppointmentFormData(data: AppointmentFormData): AppointmentFormData {
   return {
     flowId: normalizeAppointmentFormFlowId(data.flowId),
@@ -109,8 +114,11 @@ function normalizeAppointmentFormData(data: AppointmentFormData): AppointmentFor
       noSelectionMessage: data.noSelectionMessage,
     }),
     validationCopy: normalizeAppointmentFormValidationCopy(data.validationCopy),
-    showPhone: normalizeAppointmentFormShowPhone(data.showPhone),
-    showNotes: normalizeAppointmentFormShowNotes(data.showNotes),
+    fieldVisibility: normalizeAppointmentFormFieldVisibility({
+      ...data.fieldVisibility,
+      phone: data.showPhone,
+      notes: data.showNotes,
+    }),
     style: normalizeAppointmentFormStyle(data.style),
     resolved: normalizeAppointmentFormResolved(data.resolved),
   };
@@ -133,6 +141,12 @@ function AppointmentFormVisualEditor(props: WidgetEditorProps<AppointmentFormDat
       <WidgetControlRow id="appointment-form.validationCopy.customerEmailRequired" label="Email required copy" data-widget-control="appointment-form.validationCopy.customerEmailRequired">
         <Input value={value.validationCopy?.customerEmailRequired ?? ""} onChange={handleControlChange} />
       </WidgetControlRow>
+      <WidgetControlRow id="appointment-form.fieldVisibility.phone" label="Phone field" data-widget-control="appointment-form.fieldVisibility.phone">
+        <Switch checked={value.fieldVisibility?.phone !== false} onCheckedChange={(phone) => props.onChange(updateAppointmentFormFieldVisibility(value, { phone }))} />
+      </WidgetControlRow>
+      <WidgetControlRow id="appointment-form.fieldVisibility.notes" label="Notes field" data-widget-control="appointment-form.fieldVisibility.notes">
+        <Switch checked={value.fieldVisibility?.notes !== false} onCheckedChange={(notes) => props.onChange(updateAppointmentFormFieldVisibility(value, { notes }))} />
+      </WidgetControlRow>
     </WidgetEditorSection>
   );
 }
@@ -147,6 +161,9 @@ Implementation checklist:
   labels/placeholders, validation copy, and loading/success/error/no-selection
   state copy; map known reservation errors to these copy fields in runtime
   tests without exposing nonce/CAPTCHA settings as widget data.
+- Migrate legacy `showPhone`/`showNotes` booleans into the
+  `fieldVisibility` normalizer and render contract; do not add new ad hoc
+  top-level field booleans or keep them as author-facing editor controls.
 - Refactor `core/admin/ui/widgets/editors/AppointmentFormEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.

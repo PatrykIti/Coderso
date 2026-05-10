@@ -30,7 +30,9 @@ than dense.
   - visual tone/style;
   - placement compatible with centered, split, and media-left variants.
 - Keep existing Hero content, CTA, media, background, typography, color, border,
-  preset, and responsive features backward compatible.
+  preset, and responsive payloads backward compatible. New background media,
+  overlay, and motion controls are not part of this umbrella unless a later
+  Adapt leaf promotes them with schema/default/editor/runtime/test ownership.
 - Reorganize the Hero editor using TASK-252-01 shared IA:
   - `Wizard`: goal, hero layout, headline/subhead, CTA count, primary media.
   - `Visual`: Variant and presets; Badge and headline; CTA; Media; Surface;
@@ -167,5 +169,6 @@ control metadata:
 - Old Hero payloads and presets still render and can be edited.
 - Hero Visual mode is sectioned into readable groups with one-line controls
   where practical.
-- Playwright CLI can identify badge, CTA, media, background, typography, and
-  color controls by accessible name or `data-widget-control`.
+- Playwright CLI can identify badge, CTA, media, typography, color, and existing
+  no-regression surface controls by accessible name or `data-widget-control`;
+  background-specific expansion remains outside this Keep leaf.

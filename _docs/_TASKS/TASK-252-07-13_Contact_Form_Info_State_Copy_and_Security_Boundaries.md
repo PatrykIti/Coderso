@@ -86,7 +86,7 @@ function normalizeContactData(data: ContactData): ContactData {
     validationCopy: normalizeContactValidationCopy(data.validationCopy),
     stateCopy: normalizeContactStateCopy(data.stateCopy),
     contact: normalizeContactContact(data.contact),
-    map: preserveExistingContactMap(data.map),
+    map: preserveLegacyContactMapForRendering(data.map),
     style: normalizeContactStyle(data.style),
   };
 }

@@ -95,7 +95,7 @@ function normalizeNewsletterData(data: NewsletterData): NewsletterData {
       ...data.stateCopy,
       successMessage: data.submit?.successMessage,
     }),
-    integration: preserveExistingNewsletterIntegration(data.integration),
+    integration: preserveBackendOwnedNewsletterIntegrationReference(data.integration),
     style: normalizeNewsletterStyle({
       ...data.style,
       width: normalizeNewsletterWidth(data.style?.width),

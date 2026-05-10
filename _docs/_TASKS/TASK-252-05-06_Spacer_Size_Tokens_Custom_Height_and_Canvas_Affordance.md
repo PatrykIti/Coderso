@@ -97,8 +97,19 @@ function SpacerVisualEditor(props: WidgetEditorProps<SpacerData>) {
   const value = props.value;
   return (
     <WidgetEditorSection id="spacer.height" title="Height">
-      <WidgetControlRow id="spacer.height.desktop" label="Desktop height" data-widget-control="spacer.height.desktop">
-        <Input value={value.height?.desktop ?? "16"} onChange={handleControlChange} />
+      {(["desktop", "tablet", "mobile"] as const).map((breakpoint) => (
+        <WidgetControlRow key={breakpoint} id={`spacer.height.${breakpoint}`} label={`${breakpoint} height`} data-widget-control={`spacer.height.${breakpoint}`}>
+          <SpacerHeightControl
+            value={value.height?.[breakpoint] ?? "md"}
+            tokens={SPACER_HEIGHT_TOKENS}
+            minPx={SPACER_CUSTOM_HEIGHT_MIN_PX}
+            maxPx={SPACER_CUSTOM_HEIGHT_MAX_PX}
+            onChange={(height) => props.onChange(updateSpacerHeight(value, breakpoint, height))}
+          />
+        </WidgetControlRow>
+      ))}
+      <WidgetControlRow id="spacer.showGuideInEditor" label="Show canvas guide" data-widget-control="spacer.showGuideInEditor">
+        <Switch checked={value.showGuideInEditor !== false} onCheckedChange={(showGuideInEditor) => props.onChange(updateSpacerGuide(value, showGuideInEditor))} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -112,6 +123,10 @@ Implementation checklist:
   only for fields approved by the research decisions above.
 - Keep custom height bounded in the shared normalizer for desktop/tablet/mobile
   values; do not let raw arbitrary CSS lengths survive validation.
+- The visual editor must offer token choices plus bounded custom px values for
+  desktop, tablet, and mobile; a free text CSS height input is not acceptable.
+- Keep a strong canvas affordance through `showGuideInEditor` and editor-wave
+  coverage so empty spacers remain selectable and visible while authoring.
 - Refactor `core/admin/ui/widgets/editors/SpacerEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.

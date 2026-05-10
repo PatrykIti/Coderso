@@ -149,9 +149,11 @@ Implementation checklist:
   backward-compatible rendering.
 - Keep `spotlight` compatibility on the existing widget variant prop/registry
   path, not as a new `TeamData` schema field.
-- If current editor/runtime code exposes a `spotlight` variant selector, keep it
-  as legacy rendering compatibility only or move it behind a future Adapt leaf;
-  TASK-252-06-09 does not add new spotlight configuration.
+- If current editor/runtime code exposes a `spotlight` variant selector, remove
+  or hide that option from `TeamEditors` for new TASK-252 selections. Preserve
+  existing saved `spotlight` pages through the widget variant registry and
+  renderer compatibility only; TASK-252-06-09 does not add new spotlight
+  configuration.
 - Add or update runtime/widget tests and editor-wave tests in the files listed
   above.
 

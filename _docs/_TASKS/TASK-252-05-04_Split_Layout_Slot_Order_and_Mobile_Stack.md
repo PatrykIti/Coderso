@@ -76,7 +76,7 @@ function normalizeSplitLayoutData(data: SplitLayoutData): SplitLayoutData {
     mediaPosition: normalizeSplitLayoutMediaPosition(data.mediaPosition ?? legacyReverseToMediaPosition(data.reverse)),
     reverse: normalizeSplitLayoutReverse(data.reverse),
     orientation: normalizeSplitLayoutOrientation(data.orientation ?? data.mediaPosition),
-    ratio: normalizeExistingSplitLayoutRatio(data.ratio),
+    ratio: normalizeSplitLayoutRatioPreservingLegacyValues(data.ratio),
     mobileStack: normalizeSplitLayoutMobileStack(data.mobileStack ?? legacyCollapseMobileToMobileStack(data.collapseMobile)),
     mobileOrder: normalizeSplitLayoutMobileOrder(data.mobileOrder ?? legacyReverseOnMobileToMobileOrder(data.reverseOnMobile)),
     gap: normalizeSplitLayoutGap(data.gap),
@@ -115,6 +115,9 @@ Implementation checklist:
   tips, or metadata.
 - Keep legacy payloads non-destructive: missing new fields must normalize to the
   current rendered behavior.
+- Keep the old ratio payload compatibility inside
+  `normalizeSplitLayoutRatioPreservingLegacyValues`; do not introduce a vague
+  legacy type alias or duplicate ratio parser in the editor.
 - Add or update runtime/widget tests and editor-wave tests in the files listed
   above.
 

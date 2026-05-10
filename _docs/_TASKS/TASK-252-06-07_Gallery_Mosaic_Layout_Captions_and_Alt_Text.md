@@ -140,6 +140,10 @@ Implementation checklist:
 - Bind layout presets to the existing `GalleryMosaicVariantId` widget variant
   list and bounded `style.gap`/`style.ratio` controls; do not add an undefined
   `options` bucket or arbitrary per-image span controls.
+- Remove or hide `captionPosition: "hover"` and overlay color editor controls
+  from the TASK-252 Keep editor path. Preserve legacy overlay and caption
+  placement payloads for rendering/backward-compatibility tests only; do not
+  expose them as new author-facing controls in this leaf.
 - Refactor `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.

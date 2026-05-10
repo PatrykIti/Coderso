@@ -24,9 +24,11 @@ and Reject decisions.
 - Keep one `hero` widget type and preserve all existing layout, media, CTA, typography, background, border, preset, and responsive payloads.
 - Add an optional badge/announcement model with label, optional prefix/icon text, safe href, tone/style, and placement that works for centered, split, and media-led variants.
 - Preserve `widgets.hero.presets`: old presets must still apply, and new presets may include badge data without breaking older records.
-- Expose badge/headline, CTA, media, background, typography, colors, borders,
-  and advanced responsive controls through the shared TASK-252 rows/sections and
-  metadata; proof rows and motion remain Adapt-only.
+- Expose badge/headline, CTA, media, typography, colors, borders, and currently
+  supported responsive controls through the shared TASK-252 rows/sections and
+  metadata. Existing background payloads remain render-compatible, but new
+  background media, overlay, and motion controls stay Adapt-only for a separate
+  leaf; proof rows and motion remain Adapt-only.
 
 ## Research Decisions
 
@@ -113,7 +115,7 @@ function normalizeHeroData(data: HeroData): HeroData {
     layout: normalizeHeroLayout(data.layout),
     spacing: normalizeHeroSpacing(data.spacing),
     style: normalizeHeroStyle(data.style),
-    background: normalizeHeroBackground(data.background),
+    background: preserveLegacyHeroBackground(data.background),
     responsive: normalizeHeroResponsive(data.responsive),
     badge: normalizeHeroBadge(data.badge),
   };
@@ -163,6 +165,10 @@ Implementation checklist:
 - Add `badge` to `HeroData`, `heroSchema`, defaults/presets, the render path,
   and editor state together; existing presets without badge data must normalize
   to the previous rendered output.
+- Do not add or expand background media, background overlay, or motion editor
+  controls in this leaf. If the current editor already renders those controls,
+  keep them as no-regression compatibility only and cover that old payloads
+  still render through `preserveLegacyHeroBackground`.
 - Extend the existing `HeroData` type in `core/widgets/core/hero.tsx` directly;
   do not introduce a parallel badge-only data type or editor-only local state.
 - The `currentHeroSchema` and `currentHeroDefaults` pseudocode names refer to
