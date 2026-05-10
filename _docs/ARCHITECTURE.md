@@ -538,9 +538,11 @@ Aktualnie zaimplementowany business setup surface:
 - Engine collection workspace reads begin at
   `GET /admin/api/content-types/:id/collection-workspace`. The server-owned
   summary is bounded and separates `canonical`, `linkedSecondary`,
-  `unresolved`, and `candidates` buckets so later workspace/editor leaves can
-  resolve links deterministically without browser-only state or slug/title
-  guessing,
+  `unresolved`, and `candidates` buckets. Canonical content route, route-linked
+  detail template, explicit canonical list page, page-linked listing query /
+  template, and canonical admin screen now resolve from their current owner
+  seams; missing/ambiguous links stay unresolved with bounded candidates, and
+  `settings:read` gates route-derived canonical data,
 - published content routes that carry `detailPageId` now resolve normalized
   detail-page documents and render them through the current page-builder
   runtime shell; missing links continue to fall back to the legacy

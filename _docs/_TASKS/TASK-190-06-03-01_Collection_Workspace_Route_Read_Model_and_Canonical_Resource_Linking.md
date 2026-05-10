@@ -34,7 +34,9 @@ into one oversized slice.
 - `TASK-190-06-03-01-01_Collection_Workspace_Route_and_Server_Read_Model.md` -
   done: internal collection workspace route/read model is registered and returns
   bounded canonical/unresolved/candidate buckets.
-- `TASK-190-06-03-01-02_Collection_Workspace_Canonical_Resolution_and_Read_Permissions.md`
+- `TASK-190-06-03-01-02_Collection_Workspace_Canonical_Resolution_and_Read_Permissions.md` -
+  done: canonical route/detail/list/listing/admin-screen links now resolve from
+  owner seams with unresolved candidates and owner-read redaction.
 - `TASK-190-06-03-01-03_Collection_Workspace_Client_Cache_Prefetch_and_UI_Shell.md`
 
 ## Files to Change

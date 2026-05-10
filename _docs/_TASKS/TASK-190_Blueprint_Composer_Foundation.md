@@ -75,8 +75,9 @@ internal admin route family, admin client/cache parity, fixture/runtime
 acceptance, first admin-screen layout composer, and custom-screen
 binding/collection-link metadata safety are already landed. Collection
 workspace/editor work has started with the internal Engine route and bounded
-server read model; deterministic canonical resolution, cache/prefetch/UI shell,
-and detail-template editor seams remain deferred.
+server read model plus deterministic canonical resource resolution/read
+redaction; cache/prefetch/UI shell and detail-template editor seams remain
+deferred.
 
 This task is not limited to theme templates or a narrow detail-template editor.
 The business target remains full assistant-composed setup of a site/service

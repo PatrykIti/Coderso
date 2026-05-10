@@ -5,7 +5,7 @@
 **Category:** Collections + Resolution Policy + RBAC
 **Estimated Effort:** Medium
 **Dependencies:** TASK-190-06-03-01-01
-**Status:** To Do
+**Status:** Done (2026-05-10)
 
 ---
 
@@ -13,6 +13,12 @@
 
 Define the deterministic canonical-resolution algorithm and owner-read redaction
 rules for the server-owned collection workspace summary.
+
+Done: the collection workspace summary now resolves canonical content route,
+route-linked detail template, explicit canonical list page, page-linked listing
+query/template, and canonical admin screen from current owner seams. Missing or
+ambiguous links stay in `unresolved` with bounded `candidates`, and
+`settings:read` gates route-derived canonical data.
 
 ## Sub-Tasks
 
@@ -78,6 +84,14 @@ export const resolveCollectionWorkspaceSummary = async (contentTypeId, actor, de
 - page/listing/detail/custom-screen/media/form slices respect owner-read
   redaction rules,
 - no browser-only metadata becomes canonical ownership.
+
+## Validation
+
+- `bun --cwd core lint:types`
+- `set -a && source .env && set +a && bun test --parallel=1 tests/integration/routes/contentTypes.test.ts`
+  - sandbox lane: 4 passed / 7 skipped because the sandbox could not reach the
+    configured DB
+  - outside sandbox: 11 passed
 
 ## Documentation Updates Required
 

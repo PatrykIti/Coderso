@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 821 | 2026-05-10 | TASK-190 collection workspace canonical resolution | Assistant/Core |
 | 820 | 2026-05-10 | TASK-190 collection workspace route read model | Assistant/Core |
 | 819 | 2026-05-10 | TASK-190 admin bindings metadata safety | Assistant/Core |
 | 818 | 2026-05-10 | TASK-190 admin screen layout composer | Assistant/Core |

@@ -9,8 +9,8 @@ import {
 } from "../settings/settingsService";
 import { normalizePageCollectionLink } from "../pages/pageCollectionLink";
 import { listDetailPageDocuments } from "./detailPageDocumentService";
-import { listListingQueries } from "./listingQueriesService";
-import { listListingTemplates } from "./listingTemplatesService";
+import { listListingQueries, type ListingQueryRecord } from "./listingQueriesService";
+import { listListingTemplates, type ListingTemplateRecord } from "./listingTemplatesService";
 import { getContentType, type ContentTypeRecord } from "./typeService";
 
 const candidateLimit = 8;
@@ -25,7 +25,12 @@ export type CollectionWorkspaceResourceKind =
 
 export type CollectionWorkspaceUnresolved = {
   resource: CollectionWorkspaceResourceKind;
-  reason: "missing_content_route" | "canonical_resolution_deferred" | "explicit_link_missing";
+  reason:
+    | "missing_content_route"
+    | "canonical_resolution_deferred"
+    | "explicit_link_missing"
+    | "ambiguous_candidates"
+    | "permission_missing";
 };
 
 export type CollectionWorkspaceRouteSummary = ContentRouteSetting;
@@ -51,11 +56,11 @@ export type CollectionWorkspaceSummary = {
   };
   canonical: {
     contentRoute: CollectionWorkspaceRouteSummary | null;
-    detailPage: null;
-    listPage: null;
-    listingQuery: null;
-    listingTemplate: null;
-    adminScreen: null;
+    detailPage: CollectionWorkspaceCandidate | null;
+    listPage: CollectionWorkspaceCandidate | null;
+    listingQuery: CollectionWorkspaceCandidate | null;
+    listingTemplate: CollectionWorkspaceCandidate | null;
+    adminScreen: CollectionWorkspaceCandidate | null;
   };
   linkedSecondary: {
     pages: CollectionWorkspaceCandidate[];
@@ -69,6 +74,15 @@ export type CollectionWorkspaceSummary = {
     listingTemplates: CollectionWorkspaceCandidate[];
     adminScreens: CollectionWorkspaceCandidate[];
   };
+};
+
+export type CollectionWorkspaceSummaryOptions = {
+  permissions?: readonly string[];
+};
+
+type PageWorkspaceCandidate = CollectionWorkspaceCandidate & {
+  listingQueryId: string | null;
+  listingTemplateId: string | null;
 };
 
 const toIso = (value: Date | string | null | undefined) => {
@@ -89,6 +103,15 @@ const fieldCountFor = (contentType: ContentTypeRecord) => {
 
 const limitCandidates = (items: CollectionWorkspaceCandidate[]) => items.slice(0, candidateLimit);
 
+const hasPermission = (permissions: readonly string[], permission: string) =>
+  permissions.includes("*") || permissions.includes(permission);
+
+const toPublicPageCandidate = ({
+  listingQueryId: _listingQueryId,
+  listingTemplateId: _listingTemplateId,
+  ...candidate
+}: PageWorkspaceCandidate): CollectionWorkspaceCandidate => candidate;
+
 const findContentRoute = async (contentType: ContentTypeRecord) => {
   const rawRoutes = await getSetting("site.contentRoutes");
   const contentRoutes = normalizeContentRoutes(rawRoutes);
@@ -108,8 +131,8 @@ const listPageCandidates = async (contentTypeId: string) => {
     .from(pages)
     .orderBy(desc(pages.updatedAt));
 
-  const candidates: CollectionWorkspaceCandidate[] = [];
-  const linkedSecondary: CollectionWorkspaceCandidate[] = [];
+  const canonicalCandidates: PageWorkspaceCandidate[] = [];
+  const linkedSecondary: PageWorkspaceCandidate[] = [];
   const listingQueryIds = new Set<string>();
   const listingTemplateIds = new Set<string>();
 
@@ -119,13 +142,15 @@ const listPageCandidates = async (contentTypeId: string) => {
     const collectionLink = normalizePageCollectionLink(settings.collectionLink);
     if (!collectionLink || collectionLink.contentTypeId !== contentTypeId) continue;
 
-    const candidate = {
+    const candidate: PageWorkspaceCandidate = {
       id: row.id,
       label: row.title,
       slug: row.slug,
       status: row.status,
       role: collectionLink.pageRole,
       compositionKey: collectionLink.compositionKey ?? null,
+      listingQueryId: collectionLink.listingQueryId ?? null,
+      listingTemplateId: collectionLink.listingTemplateId ?? null,
       updatedAt: toIso(row.updatedAt),
     };
     if (collectionLink.listingQueryId) listingQueryIds.add(collectionLink.listingQueryId);
@@ -136,13 +161,14 @@ const listPageCandidates = async (contentTypeId: string) => {
     if (collectionLink.pageRole === "supporting-page") {
       linkedSecondary.push(candidate);
     } else {
-      candidates.push(candidate);
+      canonicalCandidates.push(candidate);
     }
   }
 
   return {
-    candidates: limitCandidates(candidates),
-    linkedSecondary: limitCandidates(linkedSecondary),
+    canonicalCandidates,
+    candidates: limitCandidates(canonicalCandidates.map(toPublicPageCandidate)),
+    linkedSecondary: limitCandidates(linkedSecondary.map(toPublicPageCandidate)),
     listingQueryIds,
     listingTemplateIds,
   };
@@ -158,8 +184,14 @@ const listDetailPageCandidates = async (contentTypeId: string) =>
     }))
   );
 
+const toListingQueryCandidate = (query: ListingQueryRecord): CollectionWorkspaceCandidate => ({
+  id: query.id,
+  label: query.name,
+  updatedAt: toIso(query.updatedAt),
+});
+
 const toListingQueryCandidates = (
-  queries: Awaited<ReturnType<typeof listListingQueries>>,
+  queries: ListingQueryRecord[],
   contentTypeId: string,
   explicitIds: Set<string>
 ) =>
@@ -171,25 +203,26 @@ const toListingQueryCandidates = (
             query.query.sourceConfig.contentTypeId === contentTypeId) ||
           explicitIds.has(query.id)
       )
-      .map((query) => ({
-        id: query.id,
-        label: query.name,
-        updatedAt: toIso(query.updatedAt),
-      }))
+      .map(toListingQueryCandidate)
   );
 
-const listListingTemplateCandidates = async (referencedIds: Set<string>) => {
+const toListingTemplateCandidate = (
+  template: ListingTemplateRecord
+): CollectionWorkspaceCandidate => ({
+  id: template.id,
+  label: template.name,
+  slug: template.slug,
+  updatedAt: toIso(template.updatedAt),
+});
+
+const toListingTemplateCandidates = (
+  templates: ListingTemplateRecord[],
+  referencedIds: Set<string>
+) => {
   if (referencedIds.size === 0) return [];
 
   return limitCandidates(
-    (await listListingTemplates())
-      .filter((template) => referencedIds.has(template.id))
-      .map((template) => ({
-        id: template.id,
-        label: template.name,
-        slug: template.slug,
-        updatedAt: toIso(template.updatedAt),
-      }))
+    templates.filter((template) => referencedIds.has(template.id)).map(toListingTemplateCandidate)
   );
 };
 
@@ -209,6 +242,7 @@ const listAdminScreenCandidates = async (contentTypeId: string) => {
 
   const candidates: CollectionWorkspaceCandidate[] = [];
   const linkedSecondary: CollectionWorkspaceCandidate[] = [];
+  const canonicalCandidates: CollectionWorkspaceCandidate[] = [];
 
   for (const row of rows) {
     const candidate = {
@@ -224,48 +258,147 @@ const listAdminScreenCandidates = async (contentTypeId: string) => {
       linkedSecondary.push(candidate);
     } else {
       candidates.push(candidate);
+      if (row.collectionRole === "canonical-admin-screen") {
+        canonicalCandidates.push(candidate);
+      }
     }
   }
 
   return {
+    canonicalCandidates,
     candidates: limitCandidates(candidates),
     linkedSecondary: limitCandidates(linkedSecondary),
   };
 };
 
-const buildUnresolved = (
-  contentRoute: CollectionWorkspaceRouteSummary | null
-): CollectionWorkspaceUnresolved[] => [
-  ...(contentRoute
-    ? []
-    : [{ resource: "contentRoute" as const, reason: "missing_content_route" as const }]),
-  { resource: "detailPage", reason: "canonical_resolution_deferred" },
-  { resource: "listPage", reason: "canonical_resolution_deferred" },
-  { resource: "listingQuery", reason: "canonical_resolution_deferred" },
-  { resource: "listingTemplate", reason: "canonical_resolution_deferred" },
-  { resource: "adminScreen", reason: "canonical_resolution_deferred" },
-];
+const emptyPageResult = {
+  canonicalCandidates: [] as PageWorkspaceCandidate[],
+  candidates: [] as CollectionWorkspaceCandidate[],
+  linkedSecondary: [] as CollectionWorkspaceCandidate[],
+  listingQueryIds: new Set<string>(),
+  listingTemplateIds: new Set<string>(),
+};
+
+const emptyAdminScreenResult = {
+  canonicalCandidates: [] as CollectionWorkspaceCandidate[],
+  candidates: [] as CollectionWorkspaceCandidate[],
+  linkedSecondary: [] as CollectionWorkspaceCandidate[],
+};
+
+const addUnresolved = (
+  unresolved: CollectionWorkspaceUnresolved[],
+  resource: CollectionWorkspaceResourceKind,
+  reason: CollectionWorkspaceUnresolved["reason"]
+) => {
+  unresolved.push({ resource, reason });
+};
 
 export async function getCollectionWorkspaceSummary(
-  contentTypeId: string
+  contentTypeId: string,
+  options: CollectionWorkspaceSummaryOptions = {}
 ): Promise<CollectionWorkspaceSummary> {
   const contentType = await getContentType(contentTypeId);
   if (!contentType) throw new Error("content_type_not_found");
 
-  const [contentRoute, detailPages, pageResult, adminScreenResult, listingQueries] =
+  const permissions = options.permissions ?? ["content:read"];
+  const canReadContent = hasPermission(permissions, "content:read");
+  const canReadSettings = hasPermission(permissions, "settings:read");
+
+  const [contentRoute, detailPages, pageResult, adminScreenResult, listingQueries, templates] =
     await Promise.all([
-      findContentRoute(contentType),
-      listDetailPageCandidates(contentType.id),
-      listPageCandidates(contentType.id),
-      listAdminScreenCandidates(contentType.id),
-      listListingQueries(),
+      canReadSettings ? findContentRoute(contentType) : Promise.resolve(null),
+      canReadContent ? listDetailPageCandidates(contentType.id) : Promise.resolve([]),
+      canReadContent ? listPageCandidates(contentType.id) : Promise.resolve(emptyPageResult),
+      canReadContent
+        ? listAdminScreenCandidates(contentType.id)
+        : Promise.resolve(emptyAdminScreenResult),
+      canReadContent ? listListingQueries() : Promise.resolve([]),
+      canReadContent ? listListingTemplates() : Promise.resolve([]),
     ]);
   const listingQueryCandidates = toListingQueryCandidates(
     listingQueries,
     contentType.id,
     pageResult.listingQueryIds
   );
-  const listingTemplates = await listListingTemplateCandidates(pageResult.listingTemplateIds);
+  const listingTemplates = toListingTemplateCandidates(templates, pageResult.listingTemplateIds);
+
+  const unresolved: CollectionWorkspaceUnresolved[] = [];
+  if (!canReadSettings) {
+    addUnresolved(unresolved, "contentRoute", "permission_missing");
+  } else if (!contentRoute) {
+    addUnresolved(unresolved, "contentRoute", "missing_content_route");
+  }
+
+  let canonicalDetailPage: CollectionWorkspaceCandidate | null = null;
+  if (!canReadContent || !canReadSettings) {
+    addUnresolved(unresolved, "detailPage", "permission_missing");
+  } else if (!contentRoute?.detailPageId) {
+    addUnresolved(unresolved, "detailPage", "explicit_link_missing");
+  } else {
+    canonicalDetailPage =
+      detailPages.find((detailPage) => detailPage.id === contentRoute.detailPageId) ?? null;
+    if (!canonicalDetailPage) {
+      addUnresolved(unresolved, "detailPage", "explicit_link_missing");
+    }
+  }
+
+  let canonicalListPage: PageWorkspaceCandidate | null = null;
+  if (!canReadContent) {
+    addUnresolved(unresolved, "listPage", "permission_missing");
+  } else if (pageResult.canonicalCandidates.length === 1) {
+    canonicalListPage = pageResult.canonicalCandidates[0] ?? null;
+  } else {
+    addUnresolved(
+      unresolved,
+      "listPage",
+      pageResult.canonicalCandidates.length > 1 ? "ambiguous_candidates" : "explicit_link_missing"
+    );
+  }
+
+  let canonicalListingQuery: CollectionWorkspaceCandidate | null = null;
+  if (!canReadContent) {
+    addUnresolved(unresolved, "listingQuery", "permission_missing");
+  } else if (!canonicalListPage) {
+    addUnresolved(unresolved, "listingQuery", "canonical_resolution_deferred");
+  } else if (!canonicalListPage.listingQueryId) {
+    addUnresolved(unresolved, "listingQuery", "explicit_link_missing");
+  } else {
+    const query = listingQueries.find((item) => item.id === canonicalListPage?.listingQueryId);
+    canonicalListingQuery = query ? toListingQueryCandidate(query) : null;
+    if (!canonicalListingQuery) {
+      addUnresolved(unresolved, "listingQuery", "explicit_link_missing");
+    }
+  }
+
+  let canonicalListingTemplate: CollectionWorkspaceCandidate | null = null;
+  if (!canReadContent) {
+    addUnresolved(unresolved, "listingTemplate", "permission_missing");
+  } else if (!canonicalListPage) {
+    addUnresolved(unresolved, "listingTemplate", "canonical_resolution_deferred");
+  } else if (!canonicalListPage.listingTemplateId) {
+    addUnresolved(unresolved, "listingTemplate", "explicit_link_missing");
+  } else {
+    const template = templates.find((item) => item.id === canonicalListPage?.listingTemplateId);
+    canonicalListingTemplate = template ? toListingTemplateCandidate(template) : null;
+    if (!canonicalListingTemplate) {
+      addUnresolved(unresolved, "listingTemplate", "explicit_link_missing");
+    }
+  }
+
+  let canonicalAdminScreen: CollectionWorkspaceCandidate | null = null;
+  if (!canReadContent) {
+    addUnresolved(unresolved, "adminScreen", "permission_missing");
+  } else if (adminScreenResult.canonicalCandidates.length === 1) {
+    canonicalAdminScreen = adminScreenResult.canonicalCandidates[0] ?? null;
+  } else {
+    addUnresolved(
+      unresolved,
+      "adminScreen",
+      adminScreenResult.canonicalCandidates.length > 1
+        ? "ambiguous_candidates"
+        : "explicit_link_missing"
+    );
+  }
 
   return {
     contentType: {
@@ -278,17 +411,17 @@ export async function getCollectionWorkspaceSummary(
     },
     canonical: {
       contentRoute,
-      detailPage: null,
-      listPage: null,
-      listingQuery: null,
-      listingTemplate: null,
-      adminScreen: null,
+      detailPage: canonicalDetailPage,
+      listPage: canonicalListPage ? toPublicPageCandidate(canonicalListPage) : null,
+      listingQuery: canonicalListingQuery,
+      listingTemplate: canonicalListingTemplate,
+      adminScreen: canonicalAdminScreen,
     },
     linkedSecondary: {
       pages: pageResult.linkedSecondary,
       adminScreens: adminScreenResult.linkedSecondary,
     },
-    unresolved: buildUnresolved(contentRoute),
+    unresolved,
     candidates: {
       detailPages,
       pages: pageResult.candidates,

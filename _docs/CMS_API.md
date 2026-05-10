@@ -2071,9 +2071,11 @@ creates a unique `Copy of ...` draft and copies schema only, never entries.
 read model for one collection root. It requires `content:read` and returns a
 bounded server-owned summary with `canonical`, `linkedSecondary`, `unresolved`,
 and `candidates` buckets. It does not expose preview tokens, raw custom-screen
-bindings, signed media URLs, or browser-owned canonical-link state. Full
-deterministic canonical selection and owner-read redaction are handled by the
-follow-up workspace leaves.
+bindings, signed media URLs, or browser-owned canonical-link state. Canonical
+route/detail/list/listing/admin-screen links resolve from `site.contentRoutes`,
+`PageData.settings.collectionLink`, listing services, and custom-screen
+`collectionRole` metadata; ambiguous or missing links remain unresolved with
+bounded candidates, and route-derived canonical data requires `settings:read`.
 
 Delete returns `{ "ok": true }` only after the content type dependency guard
 passes. Known conflicts are mapped to HTTP 409:
