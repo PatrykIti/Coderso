@@ -43,7 +43,7 @@ Summary-only archive for TASK-252. Do not copy third-party code from these sourc
 - Access type: docs-example
 - License/terms summary: Verify block terms before reuse.
 - Observed UX pattern: compact trust logo grids in landing-page sections.
-- Useful Coderso fields/options: `style.gap`, `surface`, existing `variant`.
+- Useful Coderso fields/options: `style.gap`, existing `variant`; dark/surface treatment stays Adapt-only.
 - Decision: Keep
 - Copy policy: Summary only.
 

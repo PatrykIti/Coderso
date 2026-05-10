@@ -88,6 +88,6 @@ Summary-only archive for TASK-252. Do not copy third-party code from these sourc
 - Access type: docs-example
 - License/terms summary: Flowbite React is open-source; examples remain reference material.
 - Observed UX pattern: grouped primary/secondary button hierarchy.
-- Useful Coderso fields/options: `ctaGroup`, `buttonSize`, `buttonTone`.
+- Useful Coderso fields/options: `actions.primaryCta`, `actions.secondaryCta`, button style tokens.
 - Decision: Keep
 - Copy policy: Use interaction idea only.

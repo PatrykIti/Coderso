@@ -34,8 +34,8 @@ Summary-only archive for TASK-252. Do not copy third-party code from these sourc
 - Access type: premium-reference
 - License/terms summary: Paid/proprietary; reference-only.
 - Observed UX pattern: stats in cards, bands, or beside copy/media.
-- Useful Coderso fields/options: `mode: grid|strip|split`, `media`, `backgroundTone`.
-- Decision: Adapt
+- Useful Coderso fields/options: `mode: grid|strip`, `style.spacing`; media split stays Adapt-only.
+- Decision: Keep
 - Copy policy: Reference-only.
 
 ## Card 5 - shadcn.io blocks

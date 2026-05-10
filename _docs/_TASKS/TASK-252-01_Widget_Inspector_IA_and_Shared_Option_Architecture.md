@@ -172,6 +172,8 @@ context so `section` can display Regions with its own content.
 - `_docs/_TASKS/TASK-252*.md` status notes.
 - Widget docs touched by the first migration wave if visible editor behavior
   changes.
+- `_docs/_CHANGELOG/README.md` and a new changelog entry listing
+  `TASK-252-01` when this leaf is marked `Done`.
 
 ## Acceptance Criteria
 

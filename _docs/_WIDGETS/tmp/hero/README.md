@@ -25,7 +25,7 @@ Summary-only archive for TASK-252. Do not copy third-party code from these sourc
 - Access type: docs-example
 - License/terms summary: Flowbite block availability varies by free/pro; treat source as reference unless a compatible license is confirmed.
 - Observed UX pattern: responsive headline with optional form/search row and CTA grouping.
-- Useful Coderso fields/options: `mode`, `formSlot`, `ctaGroup`, `stackOnMobile`.
+- Useful Coderso fields/options: `layout`, optional slot composition, `primaryCta`, `secondaryCta`, mobile stacking.
 - Decision: Adapt
 - Copy policy: Summarize; no source copy.
 
@@ -70,7 +70,7 @@ Summary-only archive for TASK-252. Do not copy third-party code from these sourc
 - Access type: docs-example
 - License/terms summary: Origin UI publishes examples with site-specific terms; verify license before any reuse.
 - Observed UX pattern: compact conversion heroes with badges, social proof, and product preview.
-- Useful Coderso fields/options: `socialProof`, `badge`, `previewMedia`, `density`.
+- Useful Coderso fields/options: `badge`; social proof and preview media map to Adapt rows in the matrix.
 - Decision: Keep
 - Copy policy: Pattern summary only.
 

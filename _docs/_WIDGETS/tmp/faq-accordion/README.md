@@ -88,6 +88,6 @@ Summary-only archive for TASK-252. Do not copy third-party code from these sourc
 - Access type: docs-example
 - License/terms summary: Verify ReUI terms before reuse.
 - Observed UX pattern: SaaS FAQ with contact/support CTA below the accordion.
-- Useful Coderso fields/options: `footerCta`, `supportText`, `layout`.
+- Useful Coderso fields/options: `supportCta`, `supportText`, `layout`.
 - Decision: Keep
 - Copy policy: Summarize only.
