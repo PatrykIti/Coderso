@@ -50,8 +50,8 @@ timeline modes while preserving existing payloads and editor tests.
     orientation, step count, and starter labels.
   - `Visual`: Mode and layout; Items and dates; Axis and markers;
     Colors; Typography and spacing.
-  - `Advanced`: data normalization, IDs, reduced-motion/debug options, raw
-    diagnostics only if needed.
+  - `Advanced`: data normalization, IDs, legacy variant mapping, and raw
+    technical diagnostics only if needed.
 
 ## Sub-Tasks
 
@@ -209,5 +209,5 @@ function attachTimelineReveal(root: HTMLElement) {
 - Scroll/feed behavior is absent unless the Adapt slice is explicitly
   implemented; if implemented, it is accessible, reduced-motion-safe, and
   replayable only when configured.
-- Timeline editor groups structure, items, motion, styling, and advanced
+- Timeline editor groups structure, items, styling, and advanced
   normalization in predictable sections.

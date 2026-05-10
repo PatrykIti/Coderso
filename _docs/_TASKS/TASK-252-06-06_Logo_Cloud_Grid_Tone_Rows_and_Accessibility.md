@@ -40,7 +40,7 @@ and Reject decisions.
 
 - `Wizard`: first-run setup for the safest useful defaults for `logo-cloud`.
 - `Visual`: `Layout`, `Logos`, `Tone`, `Rows`, `Accessibility`.
-- `Advanced`: `Legacy logo mapping`, `Adapt-only marquee diagnostics`.
+- `Advanced`: `Legacy logo mapping`, `Alt text validation diagnostics`.
 
 ## Sub-Tasks
 

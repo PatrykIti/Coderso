@@ -44,7 +44,7 @@ and Reject decisions.
 
 - `Wizard`: first-run setup for the safest useful defaults for `timeline`.
 - `Visual`: `Mode and layout`, `Items and dates`, `Axis and markers`, `Colors`, `Typography and spacing`.
-- `Advanced`: `Legacy variant mapping`, `Reduced-motion diagnostics`, `Stable item IDs`.
+- `Advanced`: `Legacy variant mapping`, `Stable item IDs`, `Normalization diagnostics`.
 
 ## Sub-Tasks
 

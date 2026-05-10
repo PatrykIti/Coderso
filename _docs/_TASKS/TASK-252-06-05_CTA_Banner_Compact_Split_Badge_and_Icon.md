@@ -37,7 +37,7 @@ and Reject decisions.
 
 - `Wizard`: first-run setup for the safest useful defaults for `cta-banner`.
 - `Visual`: `Mode`, `Copy`, `CTA buttons`, `Badge and icon`, `Tone`.
-- `Advanced`: `Legacy layout mapping`, `Media diagnostics`.
+- `Advanced`: `Legacy layout mapping`, `Safe-link diagnostics`.
 
 ## Sub-Tasks
 
