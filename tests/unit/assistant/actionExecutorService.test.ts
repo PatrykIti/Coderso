@@ -3,6 +3,7 @@ import { expect, test } from "bun:test";
 import { planAssistantActions } from "../../../core/services/assistant/actionPlannerService";
 import { buildCatalogFamilyPlan } from "../../../core/services/assistant/blueprints/catalogFamilyBlueprint";
 import { PRODUCT_CATALOG_PRESET } from "../../../core/services/assistant/blueprints/catalogFamilyPresets";
+import { matchExistingCompositionResources } from "../../../core/services/assistant/blueprints/blueprintExistingResourceMatcher";
 import { buildHouseProjectsCatalogPlan } from "../../../core/services/assistant/blueprints/houseProjectsCatalogBlueprint";
 import { buildLeadCaptureSitePlan } from "../../../core/services/assistant/blueprints/leadCaptureBlueprint";
 import { buildProductInquiryCatalogPlan } from "../../../core/services/assistant/blueprints/productInquiryBlueprint";
@@ -4864,6 +4865,188 @@ test("executeAssistantActionPlan upserts detail-page documents through the conte
   expect(deps.__state.detailPages[0]?.name).toBe("Products detail template updated");
   expect(deps.__state.detailPages[0]?.status).toBe("draft");
   expect(deps.__state.detailPages[0]?.publishedDocument).toBeNull();
+});
+
+test("executeAssistantActionPlan consumes matched existing detail-page ids without creating duplicates", async () => {
+  const deps = createDeps();
+  const contentType = {
+    id: "64d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+    name: "Products",
+    slug: "products",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        headline: { type: "string", xFieldType: "text" },
+      },
+    },
+    createdAt: new Date("2026-04-10T12:00:00.000Z"),
+    updatedAt: new Date("2026-04-10T12:00:00.000Z"),
+  };
+  deps.__state.contentTypes.push(contentType);
+  const existingDetailPageId = "34d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c";
+  const plannedDetailPageId = "44d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c";
+  const existingDocument: DetailPageDocument = {
+    schemaVersion: 1,
+    id: existingDetailPageId,
+    name: "Products detail template",
+    contentTypeId: contentType.id,
+    contentTypeSlug: "products",
+    status: "published",
+    titlePattern: "{{ title }}",
+    settings: {
+      template: "detail",
+      layout: {
+        wrapper: {
+          container: "default",
+          padding: { top: "md", bottom: "lg" },
+          background: {
+            color: "#ffffff",
+            image: null,
+            media: { type: "none", source: "external", src: null },
+          },
+        },
+        sections: {
+          gap: "lg",
+          defaults: {
+            container: "default",
+            padding: { top: "xl", bottom: "xl" },
+            margin: { top: "none", bottom: "none" },
+          },
+        },
+        applyDefaultsToNewBlocks: false,
+      },
+    },
+    blocks: [{ id: "hero-1", type: "hero", variant: "centered", data: {} }],
+    bindings: [],
+  };
+  deps.__state.detailPages.push({
+    id: existingDetailPageId,
+    name: existingDocument.name,
+    contentTypeId: contentType.id,
+    status: "published",
+    currentDocument: existingDocument,
+    publishedDocument: existingDocument,
+    createdAt: new Date("2026-04-10T12:00:00.000Z"),
+    updatedAt: new Date("2026-04-10T12:00:00.000Z"),
+    publishedAt: new Date("2026-04-10T12:00:00.000Z"),
+  });
+  deps.__state.contentRoutes.push({
+    type: "products",
+    listPath: "/products",
+    detailPath: "/products/:slug",
+    enabled: true,
+    detailPageId: existingDetailPageId,
+  });
+
+  const plannedDocument: DetailPageDocument = {
+    ...existingDocument,
+    id: plannedDetailPageId,
+    name: "Products detail template updated",
+    status: "draft",
+  };
+  const matched = matchExistingCompositionResources({
+    actions: [
+      {
+        id: "detail-page-products",
+        type: "detail-page.upsert",
+        title: "Update products detail template",
+        description: "Update the linked products detail template.",
+        input: {
+          document: plannedDocument,
+        },
+      },
+      {
+        id: "route-products",
+        type: "setting.content-route.upsert",
+        title: "Link products route",
+        description: "Link the products route.",
+        input: {
+          typeSlug: "products",
+          listPath: "/products",
+          detailPath: "/products/:slug",
+          enabled: true,
+          detailPageId: plannedDetailPageId,
+        },
+      },
+    ],
+    catalog: {
+      schemaVersion: 1,
+      generatedAt: "2026-05-10T10:00:00.000Z",
+      budget: { maxItemsPerGroup: 50, maxFieldsPerResource: 24, truncated: false },
+      pages: [],
+      posts: [],
+      entries: [],
+      contentTypes: [
+        {
+          id: contentType.id,
+          slug: contentType.slug,
+          name: contentType.name,
+          entryCount: 0,
+          fields: [],
+        },
+      ],
+      customScreens: [],
+      detailPages: [
+        {
+          id: existingDetailPageId,
+          name: existingDocument.name,
+          status: "published",
+          contentTypeId: contentType.id,
+          contentTypeSlug: "products",
+          linkedRouteType: "products",
+          updatedAt: "2026-04-10T12:00:00.000Z",
+          blockCount: 1,
+          bindingCount: 0,
+        },
+      ],
+      listings: { queries: [], templates: [] },
+      forms: [],
+      menus: [],
+      seoDocuments: [],
+      widgets: [],
+      media: [],
+      commerce: { products: [], collections: [] },
+      solutionKits: [],
+      warnings: [],
+    },
+  });
+
+  expect(matched.conflicts).toHaveLength(0);
+  expect(matched.matches[0]).toMatchObject({
+    existingId: existingDetailPageId,
+    reason: "canonical_link",
+  });
+
+  const result = await executeAssistantActionPlan(
+    {
+      plan: {
+        id: "plan-detail-page-existing-resource-match",
+        status: "ready",
+        intentId: "detail-page-existing-resource-match",
+        promptKind: "setup_request",
+        intentFamily: "product_catalog",
+        title: "Update detail template",
+        answer: "I can update the existing detail template.",
+        summary: "Update a route-linked products detail template.",
+        confidence: 0.91,
+        assumptions: [],
+        questions: [],
+        actions: matched.actions,
+      },
+      actorId: "user-1",
+      idempotencyKey: "assistant-detail-page-existing-resource-match-1",
+    },
+    deps
+  );
+
+  expect(result.summary.failed).toBe(0);
+  expect(result.summary.update).toBe(1);
+  expect(result.summary.noop).toBe(1);
+  expect(deps.__state.detailPages).toHaveLength(1);
+  expect(deps.__state.detailPages[0]?.id).toBe(existingDetailPageId);
+  expect(deps.__state.detailPages[0]?.name).toBe("Products detail template updated");
+  expect(deps.__state.contentRoutes[0]?.detailPageId).toBe(existingDetailPageId);
 });
 
 test("executeAssistantActionPlan fails detail-page upserts that reuse an id across content types", async () => {

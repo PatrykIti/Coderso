@@ -2967,6 +2967,7 @@ Stara rodzina `/assistant/site-builder/*` jest wycofana. Site-kit planning/execu
 `TASK-190-06-02` przenosi binding composition do `blueprintBindingComposer` i rozszerza obecny custom-screen owner seam o top-level `collectionRole` / `compositionKey`; `custom-screen.upsert` oraz `custom-screen.update` moga przenosic te pola przez strict action schema, executor i `customScreenService` bez assistant-only metadata store.
 `TASK-174-04-05` promuje `entry.update`, `form.update`, `listing-query.update`, `listing-template.update`, `menu.item.update` i `seo.document.update` do executable typed actions; wszystkie mutacje ida przez istniejace domain services i zachowuja unrelated fields/config.
 `TASK-190-05-03-05` promuje `detail-page.upsert` do executable typed action dla strict detail-page documents; execute przechodzi przez content-domain owner seam, odswieza `contentTypeSlug` z canonical content type, respektuje `DetailPageDocument.status` jako jedyny owner publish state, i nie przejmuje route-link ownership od `setting.content-route.upsert`.
+`TASK-190-07-02` dodaje catalog-backed no-duplicate matcher przed handoffem do strict executor path: bounded resource catalog zawiera bezpieczne detail-page summaries, page `collectionLink` metadata, custom-screen `collectionRole` / `compositionKey`, media summaries bez raw/signed payloadow, a matcher przepisuje wspierane create-like akcje na istniejace stable ids albo zwraca blocking conflict dla niejednoznacznych query/screen/media kandydatow.
 `TASK-174-05-01` dodaje read-only active page template-section inspection: refy sa deduplikowane server-side, referenced widget templates sa streszczane bez raw config values/secrets, a aktywna strona z template inspection wymaga `widgets:read` poza `content:read`.
 `TASK-174-05-02` dodaje konserwatywne target resolution dla template-backed page edits: ambiguous prompt zwraca `needs_input`, page-instance prompt idzie do `page.widget.patch`, a template-wide prompt idzie do `widget-template.block.patch` tylko przy jednoznacznym zhydratowanym nested block target.
 `TASK-174-06-01` aktualizuje admin review/result UI dla resource operations: preview pokazuje operation badges, destructive/blocked states i warningi, execute pokazuje partial counts i redaguje secret-like dynamic text.
@@ -3177,7 +3178,7 @@ corpus.
 ```
 
 `includeResourceCatalog=true` enrichuje server-side planning context o bounded/redacted snapshot admin resources dla `LLM Guide`.
-Snapshot obejmuje pages, content types, custom screens, listings, forms, menus, SEO documents i widgets/templates.
+Snapshot obejmuje pages, detail pages, content types, custom screens, listings, forms, menus, SEO documents, media, commerce, solution kits i widgets/templates.
 Nie jest przyjmowany jako client-supplied `resourceCatalog`; unknown context fields sa odrzucane.
 Collection workspace follow-up uses the same boundary: the browser may send only
 `context.collectionWorkspaceHint` with `contentTypeId` plus optional

@@ -54,9 +54,8 @@ The current delivered slice remains foundation-first. Capability manifests,
 candidate ranking, graph fragments, and assembler helpers now drive the local
 setup planner for supported mixed-capability and primary-plus-gated setup
 requests, but single-pack setup/refinement routing plus generic detail-page
-resource packaging, media reuse, and no-duplicate cutover stay deferred until
-the later rollout leaves
-close.
+resource packaging and review diagnostics stay deferred until the later rollout
+leaves close.
 Compatible `content-type.upsert` fragments can now also merge into one
 validator-backed content schema action. Compatible listing facet/card fragments
 can now also merge through schema-backed listing owners and widen
@@ -68,8 +67,8 @@ instead of leaving canonical collection linkage implicit. The first
 detail-page storage/schema slice is also landed through
 `detail_page_documents` / `detail_page_revisions` plus the
 `content_type_has_detail_pages` delete guard. The later open detail-page scope
-is now narrower: generic assistant resource packaging and no-duplicate DB reuse
-remain deferred, while the published runtime, shared preview path, typed
+is now narrower: generic assistant resource packaging and review diagnostics
+remain deferred, while no-duplicate DB reuse, the published runtime, shared preview path, typed
 `detail-page.upsert` execution, internal admin route family, admin client/cache
 parity, fixture/runtime acceptance, first admin-screen layout composer,
 custom-screen binding/collection-link metadata safety, collection workspace,
@@ -81,6 +80,10 @@ Engine prefetch, first route shell, the
 `/advanced/engine/:contentTypeId/collection/detail-template/:detailPageId`
 editor surface that reuses existing page-builder seams, and server-owned
 assistant context hydration for the workspace/detail-page follow-up flow.
+The no-duplicate slice now also adds bounded detail-page resource catalog
+summaries and the catalog-backed `blueprintExistingResourceMatcher.ts` seam so
+supported create-like actions can reuse existing detail pages/pages/resources
+through current owner metadata before the existing executor validates them.
 
 This task is not limited to theme templates or a narrow detail-template editor.
 The business target remains full assistant-composed setup of a site/service

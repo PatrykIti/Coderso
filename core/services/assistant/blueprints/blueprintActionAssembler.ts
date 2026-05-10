@@ -8,6 +8,7 @@ import type {
   AssistantPlannedAction,
   AssistantPromptKind,
 } from "../actionPlanTypes";
+import type { AssistantResourceCatalogSnapshot } from "../adminContextTypes";
 import { normalizeAssistantActionPlan } from "../actionPlanSchema";
 import {
   normalizeBlueprintConflict,
@@ -26,6 +27,7 @@ import {
   validateListingCardConfigAgainstSchema,
 } from "./blueprintCardConfigMerger";
 import { mergeBlueprintSchemas } from "./blueprintSchemaMerger";
+import { matchExistingCompositionResources } from "./blueprintExistingResourceMatcher";
 
 const unique = <T>(items: T[]) => Array.from(new Set(items));
 
@@ -620,7 +622,10 @@ export const mergeBlueprintActions = (
   }
 };
 
-export const assembleBlueprintActions = (graph: BlueprintCompositionGraph) => {
+export const assembleBlueprintActions = (
+  graph: BlueprintCompositionGraph,
+  catalog?: AssistantResourceCatalogSnapshot | null
+) => {
   const mergedActions: AssistantPlannedAction[] = [];
   const conflicts: BlueprintConflict[] = [...graph.conflicts];
 
@@ -651,12 +656,19 @@ export const assembleBlueprintActions = (graph: BlueprintCompositionGraph) => {
 
   const listingFinalize = finalizeListingComposition(mergedActions);
   conflicts.push(...listingFinalize.conflicts);
+  const existingResourceMatches = matchExistingCompositionResources({
+    actions: listingFinalize.actions,
+    catalog,
+    resources: graph.resources,
+  });
+  conflicts.push(...existingResourceMatches.conflicts);
 
   return {
-    actions: [...listingFinalize.actions].sort(
+    actions: [...existingResourceMatches.actions].sort(
       (left, right) => actionOrder[left.type] - actionOrder[right.type]
     ),
     conflicts: dedupeConflicts(conflicts),
+    existingResourceMatches: existingResourceMatches.matches,
   };
 };
 
@@ -781,9 +793,10 @@ export const assembleComposedBlueprintPlan = (input: {
   promptKind: AssistantPromptKind;
   intentFamily: AssistantIntentFamily;
   graph: BlueprintCompositionGraph;
+  resourceCatalog?: AssistantResourceCatalogSnapshot | null;
 }): AssistantActionPlan | null => {
   if (!input.graph.primary) return null;
-  const assembled = assembleBlueprintActions(input.graph);
+  const assembled = assembleBlueprintActions(input.graph, input.resourceCatalog);
   const fatalConflicts = assembled.conflicts.filter((conflict) => conflict.severity === "error");
   if (fatalConflicts.length > 0) {
     return buildBlueprintConflictNeedsInputPlan({

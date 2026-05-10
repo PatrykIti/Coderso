@@ -11,7 +11,18 @@ test("normalizeAssistantResourceCatalog summarizes resource schemas deterministi
           title: "Products",
           slug: "/products",
           status: "published",
-          currentData: { secretToken: "never expose" },
+          currentData: {
+            settings: {
+              collectionLink: {
+                contentTypeId: "ct-products",
+                pageRole: "canonical-list-page",
+                compositionKey: "product-catalog",
+                listingQueryId: "query-products",
+                listingTemplateId: "template-products",
+              },
+            },
+            secretToken: "never expose",
+          },
         },
       ],
       posts: [
@@ -70,6 +81,22 @@ test("normalizeAssistantResourceCatalog summarizes resource schemas deterministi
               mode: "readwrite",
             },
           ],
+        },
+      ],
+      detailPages: [
+        {
+          id: "detail-page-products",
+          name: "Products Detail",
+          status: "published",
+          contentTypeId: "ct-products",
+          contentTypeSlug: "products",
+          linkedRouteType: "products",
+          updatedAt: "2026-04-20T11:00:00.000Z",
+          currentDocument: {
+            blocks: [{ id: "hero-1" }, { id: "content-1" }],
+            bindings: [{ id: "title" }],
+            previewToken: "never expose",
+          },
         },
       ],
       listingQueries: [
@@ -269,6 +296,13 @@ test("normalizeAssistantResourceCatalog summarizes resource schemas deterministi
         title: "Products",
         slug: "/products",
         status: "published",
+        collectionLink: {
+          contentTypeId: "ct-products",
+          pageRole: "canonical-list-page",
+          compositionKey: "product-catalog",
+          listingQueryId: "query-products",
+          listingTemplateId: "template-products",
+        },
       },
     ],
     posts: [
@@ -297,6 +331,19 @@ test("normalizeAssistantResourceCatalog summarizes resource schemas deterministi
         showInSidebar: true,
         sidebarLabel: "Products",
         writableBindingFields: ["title"],
+      },
+    ],
+    detailPages: [
+      {
+        id: "detail-page-products",
+        name: "Products Detail",
+        status: "published",
+        contentTypeId: "ct-products",
+        contentTypeSlug: "products",
+        linkedRouteType: "products",
+        updatedAt: "2026-04-20T11:00:00.000Z",
+        blockCount: 2,
+        bindingCount: 1,
       },
     ],
     listings: {
@@ -396,15 +443,9 @@ test("normalizeAssistantResourceCatalog summarizes resource schemas deterministi
       },
     ],
   });
-  expect(snapshot.contentTypes[0]?.fields.map((field) => field.name)).toEqual([
-    "price",
-    "title",
-  ]);
+  expect(snapshot.contentTypes[0]?.fields.map((field) => field.name)).toEqual(["price", "title"]);
   expect(snapshot.forms[0]?.fields.map((field) => field.name)).toEqual(["email"]);
-  expect(snapshot.menus[0]?.items.map((item) => item.label)).toEqual([
-    "Products",
-    "Featured",
-  ]);
+  expect(snapshot.menus[0]?.items.map((item) => item.label)).toEqual(["Products", "Featured"]);
   expect(snapshot.widgets[0]?.slots).toEqual([
     {
       id: "header",

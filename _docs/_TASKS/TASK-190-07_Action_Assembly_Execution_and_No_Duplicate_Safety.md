@@ -32,12 +32,13 @@ Current slice note:
   listing facets or listing-template card bindings need additional runtime
   fields, while schema-backed missing-field drift falls back to typed
   `facet_field_missing`,
-- DB-backed no-duplicate checks, broader review metadata, generic detail-page
-  resource packaging, and media reuse remain deferred.
+- DB-backed no-duplicate checks and existing-resource reuse are landed through
+  the bounded resource catalog plus `blueprintExistingResourceMatcher.ts`;
+  broader review metadata and generic detail-page resource packaging remain
+  deferred.
 - The base assembler may remain In Progress while `TASK-190-06` workspace/editor
-  leaves are still To Do; `TASK-190-06` is a full-closure dependency for
-  generated-resource editability, not a blocker for the current assembler
-  foundation slice.
+  leaves are complete; `TASK-190-07-03` remains the open closure slice for
+  review metadata/diagnostics before the umbrella can close.
 
 ## Sub-Tasks
 

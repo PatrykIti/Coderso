@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Execution Safety
 **Estimated Effort:** Large
 **Dependencies:** TASK-190-05-02, TASK-190-05-03-07, TASK-190-06-02, TASK-190-07-01
-**Status:** To Do
+**Status:** Done (2026-05-10)
 
 ---
 
@@ -219,6 +219,28 @@ Matcher rules:
   entry vs page/widget references.
 - Idempotency replay tests.
 - Conflict when existing resource is incompatible.
+
+## Completion Notes
+
+- Added bounded `detailPages` summaries to the assistant resource catalog
+  builder/normalizer with stable `contentTypeId`, advisory `contentTypeSlug`,
+  linked route type, update timestamp, and block/binding counts only.
+- Preserved catalog breadth for pages, posts, entries, content types, custom
+  screens, listings, forms, menus, SEO, widgets, media, commerce, and solution
+  kits while adding the new detail-page group.
+- Added `blueprintExistingResourceMatcher.ts` and wired it into the current
+  `blueprintActionAssembler.ts` path. The matcher consumes current
+  resource-catalog summaries, rewrites supported create-like actions to reuse
+  existing resources, and returns blocking conflicts for ambiguous/non-unique
+  matches before `actionExecutorService` executes anything.
+- Reuse remains owner-seam based: pages use persisted
+  `PageData.settings.collectionLink`, custom screens use
+  `collectionRole` / `compositionKey`, detail pages use stable ids and canonical
+  linked summaries, listing query names are only safe when unique, and media
+  reuse is exact-id only.
+- Generic provider/policy/target-resolver exposure for `detail-page` remains
+  deferred to `TASK-190-05-03-08`; this leaf keeps the new behavior inside the
+  bounded catalog, matcher, assembler, and executor validation paths.
 
 ## Documentation Updates Required
 

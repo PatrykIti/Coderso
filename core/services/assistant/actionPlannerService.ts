@@ -388,6 +388,7 @@ const buildBlueprintComposerSetupPlan = (input: {
     promptKind: input.promptKind,
     intentFamily: input.intentFamily,
     graph,
+    resourceCatalog: trustedContext?.resourceCatalog ?? null,
   });
 };
 

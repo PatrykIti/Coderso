@@ -20,11 +20,20 @@ export type AssistantContentTypeSummary = {
   fields: AssistantResourceFieldSummary[];
 };
 
+export type AssistantPageCollectionLinkSummary = {
+  contentTypeId: string;
+  pageRole: "canonical-list-page" | "supporting-page";
+  compositionKey: string | null;
+  listingQueryId: string | null;
+  listingTemplateId: string | null;
+};
+
 export type AssistantPageSummary = {
   id: string;
   title: string;
   slug: string;
   status: string;
+  collectionLink?: AssistantPageCollectionLinkSummary | null;
 };
 
 export type AssistantPostSummary = {
@@ -64,6 +73,18 @@ export type AssistantCustomScreenSummary = {
   sidebarLabel: string | null;
   writableBindingFields: string[];
   bindings: AssistantCustomScreenBindingSummary[];
+};
+
+export type AssistantDetailPageSummary = {
+  id: string;
+  name: string;
+  status: "draft" | "published";
+  contentTypeId: string;
+  contentTypeSlug: string;
+  linkedRouteType: string | null;
+  updatedAt: string | null;
+  blockCount: number;
+  bindingCount: number;
 };
 
 export type AssistantListingSortSummary = {
@@ -238,6 +259,7 @@ export type AssistantResourceCatalogSnapshot = {
   entries?: AssistantEntrySummary[];
   contentTypes: AssistantContentTypeSummary[];
   customScreens: AssistantCustomScreenSummary[];
+  detailPages?: AssistantDetailPageSummary[];
   listings: {
     queries: AssistantListingQuerySummary[];
     templates: AssistantListingTemplateSummary[];
