@@ -91,7 +91,7 @@ function FormEmbedVisualEditor(props: WidgetEditorProps<FormEmbedData>) {
   return (
     <WidgetEditorSection id="form-embed.form-embed" title="Form picker">
       <WidgetControlRow id="form-embed.formId" label="Form" data-widget-control="form-embed.formId">
-        <FormPicker value={value.formId ?? ""} onChange={handleControlChange} />
+        <FormPicker value={value.formId ?? ""} showAccessWarning onChange={handleControlChange} />
       </WidgetControlRow>
       <WidgetControlRow id="form-embed.stateCopy.errorMessage" label="Error message" data-widget-control="form-embed.stateCopy.errorMessage">
         <Input value={value.stateCopy?.errorMessage ?? ""} onChange={handleControlChange} />
@@ -109,6 +109,8 @@ Implementation checklist:
 - Add explicit schema/default/render/editor ownership for success and known
   error copy; map `resolved.error` and submission failures to the normalized
   error copy without allowing raw provider scripts or secret fields.
+- Preserve the existing form-picker access warning for internal/non-public
+  forms and keep editor-wave coverage around that warning.
 - Refactor `core/admin/ui/widgets/editors/FormEmbedEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.

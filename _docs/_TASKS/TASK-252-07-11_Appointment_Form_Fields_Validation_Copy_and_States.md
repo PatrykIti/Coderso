@@ -157,6 +157,9 @@ Implementation checklist:
 - Remove the existing editable `submissionEndpoint` input from
   `AppointmentFormEditors.tsx`; rendering and runtime script metadata must use
   `resolveAppointmentFormSubmissionAction()` instead of widget data.
+- Remove or convert the current editable `resolved.submissionNonce` advanced
+  control into a read-only server-injected diagnostic; widget data must not
+  allow authors to set nonce/CAPTCHA values.
 - Add or update runtime/widget tests and editor-wave tests in the files listed
   above.
 
@@ -203,6 +206,7 @@ Implementation checklist:
 - `bun test tests/unit/widgets/validator.test.ts` when schema validation, slot normalization, or widget validation changes.
 - `bun run test:vitest -- tests/vitest/widgets/appointmentForm.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/appointment-form-editor-wave.test.tsx`
+  must assert submission nonce is not editable widget data.
 - `bun test tests/unit/server/publicBookingApi.test.ts` when
   `/api/booking/reservations` submission behavior changes.
 - `bun test tests/security/codersoSecurityGate.test.ts` when booking nonce,

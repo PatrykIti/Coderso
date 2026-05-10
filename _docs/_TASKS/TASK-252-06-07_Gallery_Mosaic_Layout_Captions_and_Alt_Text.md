@@ -70,11 +70,17 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
+type GalleryMosaicStyle = {
+  ratio?: "1:1" | "4:3" | "16:9" | "3:4";
+  gap?: "none" | "sm" | "md" | "lg";
+  radius?: "none" | "md" | "lg" | "xl";
+  showCaptions?: boolean;
+};
+
 function normalizeGalleryMosaicData(data: GalleryMosaicData): GalleryMosaicData {
   return {
     header: normalizeGalleryMosaicHeader(data.header),
     items: normalizeGalleryMosaicItems(data.items),
-    options: normalizeGalleryMosaicOptions(data.options),
     style: normalizeGalleryMosaicStyle(data.style),
   };
 }
@@ -89,12 +95,12 @@ function normalizeGalleryMosaicItem(item: GalleryMosaicItem, index: number): Gal
   };
 }
 
-function renderGalleryMosaicItem(item: GalleryMosaicItem, index: number, options: GalleryMosaicOptions) {
+function renderGalleryMosaicItem(item: GalleryMosaicItem, index: number, style: GalleryMosaicStyle) {
   const alt = normalizeGalleryMosaicAltText(item.altText, item.caption);
   return (
     <figure data-gallery-item={String(index + 1)}>
       <img src={item.image} alt={alt} loading="lazy" />
-      {options.showCaptions && item.showCaption !== false && item.caption ? (
+      {style.showCaptions !== false && item.showCaption !== false && item.caption ? (
         <figcaption>{item.caption}</figcaption>
       ) : null}
     </figure>
@@ -131,6 +137,9 @@ Implementation checklist:
   schema/default/render/editor/test coverage. Runtime must render `<img alt>`
   from `altText` with a deterministic fallback, and captions must be optional
   without becoming overlay text/lightbox/hover/manual-span scope.
+- Bind layout presets to the existing `GalleryMosaicVariantId` widget variant
+  list and bounded `style.gap`/`style.ratio` controls; do not add an undefined
+  `options` bucket or arbitrary per-image span controls.
 - Refactor `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.

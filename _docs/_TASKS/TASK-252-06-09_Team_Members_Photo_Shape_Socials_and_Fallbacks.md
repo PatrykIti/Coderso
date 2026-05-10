@@ -87,7 +87,6 @@ function normalizeTeamData(data: TeamData): TeamData {
     members: normalizeTeamMembers(data.members),
     photoShape: normalizeTeamPhotoShape(data.photoShape),
     style: normalizeTeamStyle(data.style),
-    variant: preserveExistingTeamVariant(data.variant),
   };
 }
 
@@ -148,6 +147,8 @@ Implementation checklist:
 - Do not expose selected-featured, leadership, or `spotlight` layout editor
   controls in this leaf; only preserve existing `spotlight` payloads for
   backward-compatible rendering.
+- Keep `spotlight` compatibility on the existing widget variant prop/registry
+  path, not as a new `TeamData` schema field.
 - If current editor/runtime code exposes a `spotlight` variant selector, keep it
   as legacy rendering compatibility only or move it behind a future Adapt leaf;
   TASK-252-06-09 does not add new spotlight configuration.

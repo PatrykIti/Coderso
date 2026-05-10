@@ -85,16 +85,25 @@ type PricingPlanItem = {
   name?: string;
   price?: string;
   period?: string;
+  badge?: string;
   prices?: PricingPlanCyclePrices;
   customPriceLabel?: string;
   features?: string[];
   ctaLabel?: string;
   ctaHref?: string;
-  featureMarker?: PricingPlanFeatureMarker;
   highlighted?: boolean;
 };
 
 type PricingPlanFeatureMarker = "bullet" | "check" | "icon";
+
+type PricingPlansStyle = {
+  cardSurface?: string;
+  cardBorder?: string;
+  highlightRing?: string;
+  spacing?: "none" | "sm" | "md" | "lg";
+  radius?: "none" | "md" | "lg" | "xl";
+  featureMarker?: PricingPlanFeatureMarker;
+};
 
 function normalizePricingPlansData(data: PricingPlansData): PricingPlansData {
   return {
@@ -114,12 +123,12 @@ function normalizePricingPlanItem(item: PricingPlanItem, index: number): Pricing
     id: normalizeStableItemId(item.id, `pricing-plans-${index + 1}`),
     price: normalizePricingPlanPrice(item.price),
     period: normalizePricingPlanPeriod(item.period),
+    badge: normalizePricingPlanBadge(item.badge),
     prices: normalizePricingPlanCyclePrices(item.prices, {
       monthly: item.price,
       annual: item.prices?.annual,
     }),
     customPriceLabel: normalizePricingPlanCustomPriceLabel(item.customPriceLabel),
-    featureMarker: normalizePricingPlanFeatureMarker(item.featureMarker ?? data.style?.featureMarker),
     highlighted: normalizeSingleHighlightedPlan(item.highlighted, index),
   };
 }
@@ -165,9 +174,12 @@ Implementation checklist:
 - Extend `pricingPlansSchema` and `pricingPlansDefaults` for `billingToggle`,
   `plans[].prices`, and `plans[].customPriceLabel`; add validator coverage for
   reject-unknown fields and the single highlighted-plan normalization path.
-- Add a bounded `featureMarker` enum in schema/defaults/normalizer/render/editor
-  tests so feature rows can use bullet/check/icon markers without adding
-  Adapt-only feature groups or discount badges.
+- Preserve the current `plans[].badge` popular-label field as legacy/current
+  display copy; do not expand it into discount-badge pricing math.
+- Add a bounded style-owned `style.featureMarker` enum in schema/defaults/
+  normalizer/render/editor tests so feature rows can use bullet/check/icon
+  markers without adding per-plan markers, Adapt-only feature groups, or
+  discount badges.
 - Refactor `core/admin/ui/widgets/editors/PricingPlansEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.

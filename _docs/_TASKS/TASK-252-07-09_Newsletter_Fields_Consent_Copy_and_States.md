@@ -74,19 +74,32 @@ type NewsletterStateCopy = {
   errorMessage: string;
 };
 
+type NewsletterStyle = {
+  spacing?: "none" | "sm" | "md" | "lg" | "xl";
+  alignment?: "start" | "center" | "end";
+  background?: string;
+  width?: "narrow" | "default" | "wide";
+};
+
 function normalizeNewsletterData(data: NewsletterData): NewsletterData {
   return {
     title: normalizeNewsletterTitle(data.title),
     description: normalizeNewsletterDescription(data.description),
     placeholder: normalizeNewsletterPlaceholder(data.placeholder),
-    consent: normalizeNewsletterConsent(data.consent),
+    consent: normalizeNewsletterConsent({
+      ...data.consent,
+      privacyNote: data.consent?.privacyNote,
+    }),
     submit: normalizeNewsletterSubmit(data.submit),
     stateCopy: normalizeNewsletterStateCopy({
       ...data.stateCopy,
       successMessage: data.submit?.successMessage,
     }),
     integration: preserveExistingNewsletterIntegration(data.integration),
-    style: normalizeNewsletterStyle(data.style),
+    style: normalizeNewsletterStyle({
+      ...data.style,
+      width: normalizeNewsletterWidth(data.style?.width),
+    }),
   };
 }
 
@@ -96,6 +109,12 @@ function NewsletterVisualEditor(props: WidgetEditorProps<NewsletterData>) {
     <WidgetEditorSection id="newsletter.newsletter" title="Copy and consent">
       <WidgetControlRow id="newsletter.placeholder" label="Email placeholder" data-widget-control="newsletter.placeholder">
         <Input value={value.placeholder ?? ""} onChange={handleControlChange} />
+      </WidgetControlRow>
+      <WidgetControlRow id="newsletter.consent.privacyNote" label="Privacy note" data-widget-control="newsletter.consent.privacyNote">
+        <Textarea value={value.consent?.privacyNote ?? ""} onChange={handleControlChange} />
+      </WidgetControlRow>
+      <WidgetControlRow id="newsletter.style.width" label="Width" data-widget-control="newsletter.style.width">
+        <SegmentedControl value={value.style?.width ?? "default"} onChange={(width) => props.onChange(updateNewsletterStyle(value, { width }))} />
       </WidgetControlRow>
       <WidgetControlRow id="newsletter.stateCopy.errorMessage" label="Error message" data-widget-control="newsletter.stateCopy.errorMessage">
         <Input value={value.stateCopy?.errorMessage ?? ""} onChange={handleControlChange} />
@@ -116,6 +135,9 @@ Implementation checklist:
 - Add explicit schema/default/render/editor ownership for loading, success, and
   provider-error copy; keep provider secrets/config backend-only and map known
   runtime errors to `stateCopy.errorMessage`.
+- Add bounded `style.width` plus `consent.privacyNote` schema/default/render/
+  editor/test ownership; keep consent/provider security separate from provider
+  configuration.
 - Refactor `core/admin/ui/widgets/editors/NewsletterEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.
