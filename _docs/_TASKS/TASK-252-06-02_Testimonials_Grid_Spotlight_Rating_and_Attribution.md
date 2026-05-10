@@ -12,7 +12,9 @@
 
 ## Overview
 
-Give testimonials grid/spotlight/rating/avatar/company controls while keeping carousel behavior opt-in and reduced-motion safe.
+Give testimonials grid, spotlight, rating, and avatar-shape controls first.
+Company/logo attribution and carousel behavior stay Adapt-only unless the
+implementation moves schema/defaults/normalizer/render/editor/tests together.
 
 This is an execution leaf under `TASK-252-06`. It must not re-open the
 research phase; use `_docs/_WIDGETS/tmp/testimonials/MATRIX.md` and the widget README under
@@ -29,13 +31,14 @@ and Reject decisions.
 ## Research Decisions
 
 - Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/testimonials/MATRIX.md`; for this leaf, start from the current owner fields `header`, `testimonials`, `style` and add only the schema fields that the matrix explicitly keeps.
-- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat spotlight/carousel behavior, company/logo attribution, and avatar-shape variants as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Keep: quote card grid, single spotlight quote, ratings, avatar shape, and concise author metadata from `_docs/_WIDGETS/tmp/testimonials/MATRIX.md`; add schema-owned mode/featured/rating/avatar-shape fields in `core/widgets/core/testimonials.tsx`.
+- Adapt: company/logo metadata, masonry, and carousel behavior remain conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: separate one-off widgets, raw HTML/script embeds, and unbounded visual/CSS controls.
 
 ## Editor Mode Ownership
 
 - `Wizard`: first-run setup for the safest useful defaults for `testimonials`.
-- `Visual`: `Layout`, `Quotes`, `Attribution`, `Rating`, `Avatar and logo`.
+- `Visual`: `Layout`, `Quotes`, `Attribution`, `Rating`, `Avatar shape`.
 - `Advanced`: `Motion diagnostics`, `Legacy item mapping`.
 
 ## Sub-Tasks
@@ -63,7 +66,7 @@ and Reject decisions.
 function normalizeTestimonialsData(data: TestimonialsData): TestimonialsData {
   return {
     header: normalizeTestimonialsHeader(data.header),
-    testimonials: normalizeTestimonialsTestimonials(data.testimonials),
+    testimonials: normalizeTestimonialItems(data.testimonials),
     style: normalizeTestimonialsStyle(data.style),
   };
 }
@@ -80,7 +83,10 @@ function TestimonialsVisualEditor(props: WidgetEditorProps<TestimonialsData>) {
     <WidgetEditorSection id="testimonials.testimonials" title="Testimonials">
       {props.value.testimonials.map((item, index) => (
         <WidgetControlRow key={item.id ?? index} id={`testimonials.testimonials.${index}.quote`} label="Quote" data-widget-control={`testimonials.testimonials.${index}.quote`}>
-          <Input value={item.quote ?? ""} onChange={...} />
+          <Input
+            value={item.quote ?? ""}
+            onChange={(quote) => props.onChange(updateTestimonialItem(props.value, index, { quote }))}
+          />
         </WidgetControlRow>
       ))}
     </WidgetEditorSection>

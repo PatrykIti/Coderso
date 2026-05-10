@@ -29,7 +29,9 @@ those modes and around the right inspector:
 - `hero` is powerful but too dense in a few large sections and needs a badge
   surface;
 - `timeline` has enough controls but does not yet feel like a true timeline
-  widget or provide scroll/chronology-oriented modes;
+  widget or provide chronology-oriented modes; scroll/reveal behavior remains
+  Adapt-only until the dedicated implementation moves schema, render, editor,
+  reduced-motion fallback, and tests together;
 - Playwright CLI and automated agents need stable accessible labels and HTML
   metadata for each visible control.
 
@@ -282,10 +284,11 @@ Use these as current research seeds, not as unlicensed source imports:
   - presentational/external form widgets must not be described as already
     nonce/HMAC protected unless they use a Coderso-owned public-write endpoint;
   - any TASK-252-07 leaf that adds or changes a Coderso-owned public-write
-    endpoint must keep nonce + signature/HMAC ownership in
-    `core/services/forms/submissionNonce.ts`, optional reCAPTCHA policy,
-    existing public rate-limit buckets, strict reject-unknown validation, and
-    endpoint/security tests.
+    endpoint must keep the endpoint-specific nonce + signature/HMAC owner
+    (`core/services/booking/bookingSubmissionNonce.ts` for booking/
+    appointment reservations, `core/services/forms/submissionNonce.ts` for
+    forms), optional reCAPTCHA policy, existing public rate-limit buckets,
+    strict reject-unknown validation, and endpoint/security tests.
 - Third-party research:
   - do not copy third-party code into `_docs/_WIDGETS/tmp/**` or runtime source
     unless the license permits it and the source/license are recorded.
@@ -307,10 +310,10 @@ Use these as current research seeds, not as unlicensed source imports:
     is affected.
   - `tests/vitest/widgets/renderer.test.tsx` when renderer/slot output changes.
 - Registry/contract:
-  - `tests/unit/widgets/registry.test.ts`
-  - `tests/unit/widgets/runtimeRegistry.test.ts`
-  - `tests/unit/widgets/validator.test.ts`
-  - `tests/unit/widgets/modulePackMatrix.test.ts`
+  - `bun test tests/unit/widgets/registry.test.ts`
+  - `bun test tests/unit/widgets/runtimeRegistry.test.ts`
+  - `bun test tests/unit/widgets/validator.test.ts`
+  - `bun test tests/unit/widgets/modulePackMatrix.test.ts`
 - Dynamic/runtime widgets:
   - existing Bun-owned suites named in TASK-252-07 where content, posts,
     commerce, booking, forms, listing, or search runtime behavior is touched.
@@ -341,8 +344,9 @@ Use these as current research seeds, not as unlicensed source imports:
   consume the permanent top area of the right panel.
 - Hero supports a badge/announcement surface and exposes it through schema,
   defaults, normalizer, renderer, editor, tests, and docs.
-- Timeline supports true timeline modes, date-capable steps, and an accessible
-  scroll/reveal behavior with reduced-motion support.
+- Timeline supports true timeline modes and date-capable steps; scroll/reveal
+  behavior is present only when the Adapt slice is explicitly implemented with
+  reduced-motion-safe tests.
 - Every Pages-publishable widget has a research-backed editor IA and contract.
 - Missing `_docs/_WIDGETS` pages are created for the ten uncovered widgets.
 - Playwright CLI can identify controls by accessible name or stable

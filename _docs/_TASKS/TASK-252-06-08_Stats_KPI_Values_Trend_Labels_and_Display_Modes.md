@@ -12,7 +12,9 @@
 
 ## Overview
 
-Give stats-kpi prefix/suffix/icon/trend label and grid/strip/split modes while rejecting animated counters for this stage.
+Give stats-kpi prefix/suffix, icon, and grid/strip display modes while keeping
+trend labels and media split presentation Adapt-only and rejecting animated
+counters for this stage.
 
 This is an execution leaf under `TASK-252-06`. It must not re-open the
 research phase; use `_docs/_WIDGETS/tmp/stats-kpi/MATRIX.md` and the widget README under
@@ -29,13 +31,14 @@ and Reject decisions.
 ## Research Decisions
 
 - Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/stats-kpi/MATRIX.md`; for this leaf, start from the current owner fields `header`, `items`, `style` and add only the schema fields that the matrix explicitly keeps.
-- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat trend labels and split-highlight presentation as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Keep: stat grid, prefix/suffix, icon per KPI, and stable grid/strip modes from `_docs/_WIDGETS/tmp/stats-kpi/MATRIX.md`; add schema-owned prefix/suffix/mode fields in `core/widgets/core/statsKpi.tsx`.
+- Adapt: trend label/direction and media split presentation remain conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: separate one-off widgets, raw HTML/script embeds, and unbounded visual/CSS controls.
 
 ## Editor Mode Ownership
 
 - `Wizard`: first-run setup for the safest useful defaults for `stats-kpi`.
-- `Visual`: `Stats`, `Display mode`, `Trend labels`, `Icons`, `Tone`.
+- `Visual`: `Stats`, `Display mode`, `Icons`, `Tone`.
 - `Advanced`: `Legacy value mapping`, `No-animation diagnostics`.
 
 ## Sub-Tasks
@@ -80,7 +83,10 @@ function StatsKpiVisualEditor(props: WidgetEditorProps<StatsKpiData>) {
     <WidgetEditorSection id="stats-kpi.items" title="KPI items">
       {props.value.items.map((item, index) => (
         <WidgetControlRow key={item.id ?? index} id={`stats-kpi.items.${index}.value`} label="Value" data-widget-control={`stats-kpi.items.${index}.value`}>
-          <Input value={item.value ?? ""} onChange={...} />
+          <Input
+            value={item.value ?? ""}
+            onChange={(value) => props.onChange(updateStatsKpiItem(props.value, index, { value }))}
+          />
         </WidgetControlRow>
       ))}
     </WidgetEditorSection>

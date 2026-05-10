@@ -73,7 +73,7 @@ function ToggleBlockVisualEditor(props: WidgetEditorProps<ToggleBlockData>) {
   return (
     <WidgetEditorSection id="toggle-block.options" title="State labels">
       <WidgetControlRow id="toggle-block.options.defaultState" label="Default state" data-widget-control="toggle-block.options.defaultState">
-        <SegmentedControl value={value.options?.defaultState ?? "primary"} onChange={...} />
+        <SegmentedControl value={value.options?.defaultState ?? "primary"} onChange={handleControlChange} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -119,6 +119,7 @@ Implementation checklist:
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
+- `bun test tests/unit/widgets/validator.test.ts` when schema validation, slot normalization, or widget validation changes.
 - `bun run test:vitest -- tests/vitest/widgets/toggleBlock.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/toggle-block-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

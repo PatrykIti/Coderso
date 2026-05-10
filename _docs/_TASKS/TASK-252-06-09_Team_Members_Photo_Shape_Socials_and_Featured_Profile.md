@@ -29,7 +29,8 @@ and Reject decisions.
 ## Research Decisions
 
 - Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/team/MATRIX.md`; for this leaf, start from the current owner fields `header`, `members`, `style` and add only the schema fields that the matrix explicitly keeps.
-- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat featured member/profile treatment and photo-shape controls as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Keep: team member grid, social links, photo shape, and image alt/fallback behavior from `_docs/_WIDGETS/tmp/team/MATRIX.md`; add schema-owned `photoShape` and fallback initials behavior in `core/widgets/core/team.tsx`.
+- Adapt: profile links, featured/leadership mode, department labels, and hover overlays remain conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: separate one-off widgets, raw HTML/script embeds, and unbounded visual/CSS controls.
 
 ## Editor Mode Ownership
@@ -80,7 +81,7 @@ function TeamVisualEditor(props: WidgetEditorProps<TeamData>) {
     <WidgetEditorSection id="team.members" title="Members">
       {props.value.members.map((item, index) => (
         <WidgetControlRow key={item.id ?? index} id={`team.members.${index}.name`} label="Name" data-widget-control={`team.members.${index}.name`}>
-          <Input value={item.name ?? ""} onChange={...} />
+          <Input value={item.name ?? ""} onChange={handleControlChange} />
         </WidgetControlRow>
       ))}
     </WidgetEditorSection>

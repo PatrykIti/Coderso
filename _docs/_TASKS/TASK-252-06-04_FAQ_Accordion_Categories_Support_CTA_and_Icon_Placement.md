@@ -12,9 +12,10 @@
 
 ## Overview
 
-Improve FAQ Accordion from the question/answer contract first; categories,
-support CTA, icon placement, and search stay Adapt-only unless the implementation
-extends schema/defaults/normalizer/render/editor/tests together.
+Improve FAQ Accordion from the question/answer contract first, then add the
+research-backed support CTA, icon placement, and disclosure defaults. Categories
+and search stay Adapt-only unless the implementation extends schema/defaults/
+normalizer/render/editor/tests together.
 
 This is an execution leaf under `TASK-252-06`. It must not re-open the
 research phase; use `_docs/_WIDGETS/tmp/faq-accordion/MATRIX.md` and the widget README under
@@ -31,13 +32,14 @@ and Reject decisions.
 ## Research Decisions
 
 - Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/faq-accordion/MATRIX.md`; for this leaf, start from the current owner fields `header`, `items`, `options`, `style` and add only the schema fields that the matrix explicitly keeps.
-- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat categories, support CTA, and icon placement as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Keep: question/answer rows, single/multiple/default-open behavior, support/contact CTA, and constrained icon placement/style from `_docs/_WIDGETS/tmp/faq-accordion/MATRIX.md`.
+- Adapt: categories and search remain conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: separate one-off widgets, raw HTML/script embeds, and unbounded visual/CSS controls.
 
 ## Editor Mode Ownership
 
 - `Wizard`: first-run setup for the safest useful defaults for `faq-accordion`.
-- `Visual`: `Questions`, `Categories`, `Support CTA`, `Icon placement`, `Panel style`.
+- `Visual`: `Questions`, `Support CTA`, `Icon placement`, `Disclosure defaults`, `Panel style`.
 - `Advanced`: `A11y diagnostics`, `Legacy answer mapping`.
 
 ## Sub-Tasks
@@ -83,7 +85,10 @@ function FaqAccordionVisualEditor(props: WidgetEditorProps<FaqAccordionData>) {
     <WidgetEditorSection id="faq-accordion.items" title="FAQ items">
       {props.value.items.map((item, index) => (
         <WidgetControlRow key={item.id ?? index} id={`faq-accordion.items.${index}.question`} label="Question" data-widget-control={`faq-accordion.items.${index}.question`}>
-          <Input value={item.question ?? ""} onChange={...} />
+          <Input
+            value={item.question ?? ""}
+            onChange={(question) => props.onChange(updateFaqAccordionItem(props.value, index, { question }))}
+          />
         </WidgetControlRow>
       ))}
     </WidgetEditorSection>

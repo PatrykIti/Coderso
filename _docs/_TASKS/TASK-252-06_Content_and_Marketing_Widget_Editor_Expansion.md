@@ -46,23 +46,28 @@ inside the editor instead of duplicate widget types.
 - Use research from TASK-252-02 to decide mode/preset expansion:
   - `feature-grid`: keep icon-card/row basics and optional links; treat bento,
     badges/categories, hover, and rich media rows as Adapt-only.
-  - `testimonials`: keep grid/spotlight/rating/avatar/company basics; keep
-    carousel/motion opt-in and reduced-motion safe.
+  - `testimonials`: keep grid/spotlight/rating/avatar-shape basics; company/
+    logo metadata and carousel/motion remain Adapt-only.
   - `pricing-plans`: keep tiers, highlight, custom price, and billing toggle;
     treat comparison rows as Adapt-only.
-  - `faq-accordion`: keep question/answer basics; treat categories, support
-    CTA, icon placement, and search as Adapt-only.
-  - `cta-banner`: keep compact/split/high-contrast basics; treat background
-    media, icon emphasis, and countdown as Adapt-only.
+  - `faq-accordion`: keep question/answer, support/contact CTA, icon
+    placement, and single/multiple/default-open behavior; categories and
+    search remain Adapt-only.
+  - `cta-banner`: keep compact/split/high-contrast plus badge/icon CTA strip;
+    background media and named animation presets stay Adapt-only, while
+    countdown urgency is rejected for this widget.
   - `logo-cloud`: keep grid/intro/tone/rows; treat marquee as Adapt-only with
     reduced-motion fallback.
   - `gallery-mosaic`: layout presets, captions, overlay controls, media
     selection clarity.
-  - `stats-kpi`: cards/strip modes, prefix/suffix, trend labels.
-  - `team`: card/list/profile modes, social links, photo shape.
-  - `rich-text-section`: keep prose/width basics; treat badge, CTA, quote/media,
-    and editorial layout additions as Adapt-only.
-  - `compare-timeline`: clearer track/segment editor, current/highlight states.
+  - `stats-kpi`: cards/strip modes, prefix/suffix, and icons; trend labels stay
+    Adapt-only.
+  - `team`: member grid, social links, and photo shape; profile/featured modes
+    stay Adapt-only.
+  - `rich-text-section`: keep prose/width plus badge/eyebrow and CTA; quote/
+    media and editorial layout additions stay Adapt-only.
+  - `compare-timeline`: two-side comparison, dated segments, track labels, and
+    current/highlight states; scroll narrative/progress stays Adapt-only.
 - Do not widen widgets into unrelated features. If a requested capability is a
   new product surface, create a separate task instead of overloading the widget.
 
@@ -138,7 +143,7 @@ items.map((item, index) => (
     title={`Item ${index + 1}`}
   >
     <WidgetControlRow id={`feature-grid.items.${index}.title`} label="Title">
-      <Input value={item.title} onChange={...} />
+      <Input value={item.title} onChange={handleControlChange} />
     </WidgetControlRow>
   </WidgetEditorSection>
 ));

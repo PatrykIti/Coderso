@@ -13,8 +13,9 @@
 ## Overview
 
 Treat template-section as a reusable template reference with metadata and preview
-state first. Category/version hints are Adapt-only, and sync/detach controls are
-out of scope unless a reusable-template service/runtime owner is added first.
+state first. Category, preview label, and version metadata are Keep scope from
+the matrix; sync/detach controls remain out of scope unless a reusable-template
+service/runtime owner is added first.
 
 This is an execution leaf under `TASK-252-05`. It must not re-open the
 research phase; use `_docs/_WIDGETS/tmp/template-section/MATRIX.md` and the widget README under
@@ -30,11 +31,12 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/template-section/MATRIX.md`; for this leaf, start from the current owner fields `templateId`, `templateName`, `resolved` and add only the schema fields that the matrix explicitly keeps.
-- Adapt: rows marked `Adapt` are conditional scope, not required scope. Keep
-  preview/category/version metadata as editor-only/read-model hints unless a
-  reusable-template service contract owns them; implement only when
-  schema/defaults/normalizer/render/editor/tests move together.
+- Keep: template id, category, preview label, version metadata, and typed block
+  data from `_docs/_WIDGETS/tmp/template-section/MATRIX.md`; start from
+  `templateId`, `templateName`, and `resolved`, then add schema-owned metadata
+  fields in `core/widgets/core/templateSection.tsx`.
+- Adapt: gallery previews and AI prompt hints remain conditional; implement
+  only when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: separate widgets per pattern and unconditional sync/detach state before runtime/service ownership exists.
 
 ## Editor Mode Ownership
@@ -69,6 +71,7 @@ function normalizeTemplateSectionData(data: TemplateSectionData): TemplateSectio
   return {
     templateId: normalizeTemplateId(data.templateId),
     templateName: normalizeTemplateName(data.templateName),
+    metadata: normalizeTemplateMetadata(data.metadata),
     resolved: normalizeTemplateResolution(data.resolved),
   };
 }
@@ -78,7 +81,10 @@ function TemplateSectionVisualEditor(props: WidgetEditorProps<TemplateSectionDat
   return (
     <WidgetEditorSection id="template-section.template" title="Template">
       <WidgetControlRow id="template-section.templateId" label="Template" data-widget-control="template-section.templateId">
-        <TemplatePicker value={value.templateId ?? ""} onChange={...} />
+        <TemplatePicker
+          value={value.templateId ?? ""}
+          onChange={(templateId) => props.onChange({ ...value, templateId })}
+        />
       </WidgetControlRow>
       <TemplatePreview templateId={value.templateId} resolved={value.resolved} />
     </WidgetEditorSection>
@@ -127,6 +133,7 @@ Implementation checklist:
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
+- `bun test tests/unit/widgets/validator.test.ts` when schema validation, slot normalization, or widget validation changes.
 - `bun run test:vitest -- tests/vitest/widgets/templateSection.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/template-section-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

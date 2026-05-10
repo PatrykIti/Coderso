@@ -80,7 +80,7 @@ function GalleryMosaicVisualEditor(props: WidgetEditorProps<GalleryMosaicData>) 
     <WidgetEditorSection id="gallery-mosaic.items" title="Media items">
       {props.value.items.map((item, index) => (
         <WidgetControlRow key={item.id ?? index} id={`gallery-mosaic.items.${index}.caption`} label="Caption" data-widget-control={`gallery-mosaic.items.${index}.caption`}>
-          <Input value={item.caption ?? ""} onChange={...} />
+          <Input value={item.caption ?? ""} onChange={handleControlChange} />
         </WidgetControlRow>
       ))}
     </WidgetEditorSection>

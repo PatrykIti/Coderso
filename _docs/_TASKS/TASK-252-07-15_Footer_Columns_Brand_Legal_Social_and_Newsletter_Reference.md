@@ -75,7 +75,7 @@ function FooterVisualEditor(props: WidgetEditorProps<FooterData>) {
   return (
     <WidgetEditorSection id="footer.0" title="Footer columns">
       <WidgetControlRow id="footer.columns.0.title" label="Column title" data-widget-control="footer.columns.0.title">
-        <Input value={value.columns?.[0]?.title ?? ""} onChange={...} />
+        <Input value={value.columns?.[0]?.title ?? ""} onChange={handleControlChange} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -121,6 +121,7 @@ Implementation checklist:
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
+- `bun test tests/unit/widgets/validator.test.ts` when schema validation, slot normalization, or widget validation changes.
 - `bun run test:vitest -- tests/vitest/widgets/footer.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/footer-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

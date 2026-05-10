@@ -87,9 +87,10 @@ Build a final widget proof matrix.
 Then close statuses only after validation:
 
 ```ts
-const taskIds = ["TASK-252", "TASK-252-01", "..."];
+const taskIds = collectTaskBoardRows((id) => id === "TASK-252" || id.startsWith("TASK-252-"));
+const completedOn = readTaskStatusDate("TASK-252-08");
 for (const id of taskIds) {
-  markTaskDone(id, "2026-??-??");
+  markTaskDone(id, completedOn);
   moveReadmeRow(id, "To Do", "Done");
 }
 updateStats({ todo: -taskIds.length, done: +taskIds.length });
@@ -116,8 +117,10 @@ addChangelogEntry({ taskId: "TASK-252", validation });
     misdocumented as Coderso-owned public-write endpoints;
   - closure must verify any Coderso-owned public-write endpoint touched by
     TASK-252 keeps nonce + signature/HMAC via
-    `core/services/forms/submissionNonce.ts`, optional reCAPTCHA policy,
-    existing public rate-limit buckets, strict reject-unknown validation, and
+    the endpoint-specific nonce bridge (`core/services/booking/bookingSubmissionNonce.ts`
+    for `/api/booking/reservations`, `core/services/forms/submissionNonce.ts`
+    for form submission routes), optional reCAPTCHA policy, existing public
+    rate-limit buckets, strict reject-unknown validation, and
     `tests/security/codersoSecurityGate.test.ts`.
 - Third-party artifacts:
   - closure must verify no proprietary source was committed into research
@@ -134,10 +137,10 @@ addChangelogEntry({ taskId: "TASK-252", validation });
   - content/posts/commerce/booking/forms/search/listing owner suites named in
     TASK-252-07.
 - Run registry/contract suites:
-  - `tests/unit/widgets/registry.test.ts`
-  - `tests/unit/widgets/runtimeRegistry.test.ts`
-  - `tests/unit/widgets/validator.test.ts`
-  - `tests/unit/widgets/modulePackMatrix.test.ts`
+  - `bun test tests/unit/widgets/registry.test.ts`
+  - `bun test tests/unit/widgets/runtimeRegistry.test.ts`
+  - `bun test tests/unit/widgets/validator.test.ts`
+  - `bun test tests/unit/widgets/modulePackMatrix.test.ts`
 - Run `bun run gates:coderso` before closure or document the exact blocker.
 - If DB-backed tests are required and `DATABASE_URL` is available, load env with
   `set -a && source .env && set +a` before the command.

@@ -73,7 +73,7 @@ function GridColumnsVisualEditor(props: WidgetEditorProps<GridColumnsData>) {
   return (
     <WidgetEditorSection id="grid-columns.columns" title="Columns and mobile stack">
       <WidgetControlRow id="grid-columns.columns.count" label="Column preset" data-widget-control="grid-columns.columns.count">
-        <Select value={String(value.columns?.length ?? 2)} onChange={...} />
+        <Select value={String(value.columns?.length ?? 2)} onChange={handleControlChange} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -119,6 +119,7 @@ Implementation checklist:
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
+- `bun test tests/unit/widgets/validator.test.ts` when schema validation, slot normalization, or widget validation changes.
 - `bun run test:vitest -- tests/vitest/widgets/gridColumns.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/grid-columns-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

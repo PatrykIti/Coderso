@@ -12,9 +12,7 @@
 
 ## Overview
 
-Make product-compare editor own selected products and attribute rows first;
-sticky/pinned behavior and highlighted product treatment stay Adapt-only while
-generic editable tables remain rejected.
+Make product-compare editor own selected products, attribute rows, and highlighted product first; sticky/pinned behavior stays Adapt-only while generic editable tables remain rejected.
 
 This is an execution leaf under `TASK-252-07`. It must not re-open the
 research phase; use `_docs/_WIDGETS/tmp/product-compare/MATRIX.md` and the widget README under
@@ -31,7 +29,8 @@ and Reject decisions.
 ## Research Decisions
 
 - Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/product-compare/MATRIX.md`; for this leaf, start from the current owner fields `source`, `fields`, `labels`, `emptyState`, `style`, `resolved` and add only the schema fields that the matrix explicitly keeps.
-- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat sticky/pinned behavior and highlighted product treatment as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Keep: selected product set, attribute rows, and highlighted product from `_docs/_WIDGETS/tmp/product-compare/MATRIX.md`; add schema-owned highlight product fallback in `core/widgets/core/productCompare.tsx`.
+- Adapt: sticky headers/pinned first column remain conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: arbitrary operators, client-owned provider/index config, raw scripts, and privileged settings in widget data.
 
 ## Editor Mode Ownership
@@ -79,7 +78,7 @@ function ProductCompareVisualEditor(props: WidgetEditorProps<ProductCompareData>
   return (
     <WidgetEditorSection id="product-compare.source" title="Compare source">
       <WidgetControlRow id="product-compare.source.mode" label="Source mode" data-widget-control="product-compare.source.mode">
-        <Select value={value.source?.mode ?? "manual"} onChange={...} />
+        <Select value={value.source?.mode ?? "manual"} onChange={handleControlChange} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -125,6 +124,7 @@ Implementation checklist:
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
+- `bun test tests/unit/widgets/validator.test.ts` when schema validation, slot normalization, or widget validation changes.
 - `bun run test:vitest -- tests/vitest/widgets/productCompare.test.tsx`
 - `bun test tests/unit/commerce/commerceWidgetRuntime.test.ts`
 - `bun run test:vitest -- tests/vitest/ui/product-compare-editor-wave.test.tsx`

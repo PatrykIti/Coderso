@@ -76,7 +76,7 @@ function ContentListVisualEditor(props: WidgetEditorProps<ContentListData>) {
   return (
     <WidgetEditorSection id="content-list.source" title="Source">
       <WidgetControlRow id="content-list.source.type" label="Source type" data-widget-control="content-list.source.type">
-        <Select value={value.source?.type ?? "manual"} onChange={...} />
+        <Select value={value.source?.type ?? "manual"} onChange={handleControlChange} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -122,6 +122,7 @@ Implementation checklist:
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
+- `bun test tests/unit/widgets/validator.test.ts` when schema validation, slot normalization, or widget validation changes.
 - `bun test tests/unit/widgets/contentList.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/content-list-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

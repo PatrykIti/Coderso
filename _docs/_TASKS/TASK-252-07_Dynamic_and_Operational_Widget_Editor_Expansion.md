@@ -65,19 +65,23 @@ more flexible, but implementation must not weaken runtime contracts.
     action-url mode and current `contact` form rendering, are not Coderso-owned
     public-write endpoints and must not be documented as nonce/HMAC protected;
   - any leaf that introduces or changes a Coderso-owned public-write endpoint
-    must use the shared nonce + signature/HMAC owner in
-    `core/services/forms/submissionNonce.ts`, optional reCAPTCHA policy, strict
-    reject-unknown validation, existing public rate-limit buckets, and
-    endpoint/security tests;
+    must use the endpoint-specific nonce bridge
+    (`core/services/booking/bookingSubmissionNonce.ts` for
+    `/api/booking/reservations`, `core/services/forms/submissionNonce.ts` for
+    form submission routes), optional reCAPTCHA policy, strict reject-unknown
+    validation, existing public rate-limit buckets, and endpoint/security tests;
   - widget editor changes must not add a weaker public submission route.
 - Make dynamic widget flexibility product-focused:
   - `content-list`: card/list/grid modes, field visibility, empty/error states.
-  - `posts-feed`: latest/featured/category/manual source clarity, card density.
+  - `posts-feed`: latest/featured/category/manual source clarity, card/list/
+    editorial density, and author/date/category toggles; reading time stays
+    Adapt-only.
   - `entry-teaser`: source selection, fallback behavior, CTA/card mode.
   - Commerce widgets: gallery/table/compare display modes, empty states,
     selected product/catalog source, action labels.
   - `listing-filters`: facet layout, query binding, reset/apply behavior.
-  - `search-box`: placeholder/results behavior, compact/full modes.
+  - `search-box`: accessible copy, compact/full modes, target route, and query
+    parameter binding; suggestions/autocomplete stay Adapt-only.
   - Forms/booking/contact/newsletter: field visibility, success/error copy,
     integration/source clarity, submit label, layout mode.
   - `navigation`/`footer`: source/manual links, CTA/social/logo grouping,
@@ -139,19 +143,19 @@ Keep editor grouping separate from runtime source resolution.
 ```tsx
 <WidgetEditorSection id="source" title="Source">
   <WidgetControlRow id="content-list.source.type" label="Source type">
-    <Select value={value.source?.type} onValueChange={...} />
+    <Select value={value.source?.type} onValueChange={handleControlChange} />
   </WidgetControlRow>
 </WidgetEditorSection>
 
 <WidgetEditorSection id="display" title="Display">
   <WidgetControlRow id="content-list.display.mode" label="Display mode">
-    <SegmentedControl value={value.display?.mode} onChange={...} />
+    <SegmentedControl value={value.display?.mode} onChange={handleControlChange} />
   </WidgetControlRow>
 </WidgetEditorSection>
 
 <WidgetEditorSection id="runtime" title="Runtime" advanced>
   <WidgetControlRow id="content-list.runtime.emptyMessage" label="Empty message">
-    <Input value={value.runtime?.emptyMessage} onChange={...} />
+    <Input value={value.runtime?.emptyMessage} onChange={handleControlChange} />
   </WidgetControlRow>
 </WidgetEditorSection>
 ```
@@ -186,8 +190,10 @@ function normalizeContactWidgetData(raw: unknown): ContactData {
 - CSRF:
   - admin writes keep existing CSRF handling;
   - public writes do not use admin CSRF; Coderso-owned public-write endpoints
-    must require nonce + signature/HMAC via
-    `core/services/forms/submissionNonce.ts`.
+    must require the endpoint-specific nonce bridge
+    (`core/services/booking/bookingSubmissionNonce.ts` for
+    `/api/booking/reservations`, `core/services/forms/submissionNonce.ts` for
+    form submission routes).
 - Rate-limit bucket:
   - unchanged admin write buckets;
   - unchanged public form/booking/search/listing buckets unless the specific

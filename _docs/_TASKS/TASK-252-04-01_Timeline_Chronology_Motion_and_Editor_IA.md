@@ -31,7 +31,10 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/timeline/MATRIX.md`; for this leaf, start from the current owner fields `current `TimelineData` fields plus schema-owned date/status/link additions` and add only the schema fields that the matrix explicitly keeps.
+- Keep: vertical dated axis, alternating layout, icon/status indicators, and
+  per-item CTA from `_docs/_WIDGETS/tmp/timeline/MATRIX.md`; start from the
+  current `TimelineData` owner and add schema-owned date/status/link fields
+  only in `core/widgets/core/timeline.tsx`.
 - Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat feed/activity presentation and motion/reveal behavior as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: always-on motion without reduced-motion fallback, nested arbitrary timelines, and raw HTML step content.
 
@@ -64,7 +67,9 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
-type TimelineMode = "process" | "axis" | "chronology" | "alternating" | "feed";
+type TimelineMode = "process" | "axis" | "chronology" | "alternating";
+// Adapt-only. Do not expose this until motion schema, render, editor, and
+// reduced-motion tests are implemented together.
 type TimelineReveal = "none" | "scroll-sequence" | "connector-progress";
 
 type TimelineItem = {
@@ -78,16 +83,19 @@ type TimelineItem = {
 };
 
 function normalizeTimelineData(raw: unknown): TimelineData {
+  const input = coerceTimelineInput(raw);
+  const legacy = normalizeLegacyTimelinePayload(raw);
   return {
-    mode: normalizeTimelineMode(raw.mode, raw.variant),
-    items: normalizeTimelineItems(raw.items ?? raw.steps),
-    motion: normalizeTimelineMotion(raw.motion),
+    ...legacy,
+    mode: normalizeTimelineMode(input.mode, legacy.variant),
+    items: normalizeTimelineItems(input.items ?? legacy.items),
+    ...(isTimelineMotionAdaptEnabled(input) ? { motion: normalizeTimelineMotion(input.motion) } : {}),
   };
 }
 
 function renderTimeline(data: TimelineData) {
   return (
-    <ol data-timeline-mode={data.mode} data-timeline-reveal={data.motion.reveal ?? "none"}>
+    <ol data-timeline-mode={data.mode} {...resolveTimelineMotionDataAttributes(data.motion)}>
       {data.items.map((item) => <TimelineItemView key={item.id} item={item} />)}
     </ol>
   );
@@ -155,9 +163,12 @@ Implementation checklist:
 
 ## Acceptance Criteria
 
-- Timeline renders process, axis, chronology, alternating/feed, and current-highlight patterns from one schema.
+- Timeline renders process, axis, chronology, and alternating patterns from one
+  schema; feed/activity mode stays Adapt-only unless implemented with full
+  schema/render/editor/test ownership.
 - Legacy timeline variants continue to render and edit safely.
-- Optional reveal respects reduced motion and has focused runtime/UI test proof.
+- If the Adapt reveal slice is implemented, it respects reduced motion and has
+  focused runtime/UI test proof.
 - Documentation names the research decisions that explain both added and
   rejected options.
 - Validation commands and any skipped suites are recorded before marking this

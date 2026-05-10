@@ -75,7 +75,7 @@ function StackVisualEditor(props: WidgetEditorProps<StackData>) {
   return (
     <WidgetEditorSection id="stack.direction" title="Responsive flow">
       <WidgetControlRow id="stack.direction.desktop" label="Desktop direction" data-widget-control="stack.direction.desktop">
-        <SegmentedControl value={value.direction?.desktop ?? "column"} onChange={...} />
+        <SegmentedControl value={value.direction?.desktop ?? "column"} onChange={handleControlChange} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -121,6 +121,7 @@ Implementation checklist:
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
+- `bun test tests/unit/widgets/validator.test.ts` when schema validation, slot normalization, or widget validation changes.
 - `bun run test:vitest -- tests/vitest/widgets/stack.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/stack-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

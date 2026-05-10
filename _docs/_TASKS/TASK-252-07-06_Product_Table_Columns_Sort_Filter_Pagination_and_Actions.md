@@ -77,7 +77,7 @@ function ProductTableVisualEditor(props: WidgetEditorProps<ProductTableData>) {
   return (
     <WidgetEditorSection id="product-table.source" title="Table source">
       <WidgetControlRow id="product-table.source.mode" label="Source mode" data-widget-control="product-table.source.mode">
-        <Select value={value.source?.mode ?? "catalog"} onChange={...} />
+        <Select value={value.source?.mode ?? "catalog"} onChange={handleControlChange} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -123,6 +123,7 @@ Implementation checklist:
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
+- `bun test tests/unit/widgets/validator.test.ts` when schema validation, slot normalization, or widget validation changes.
 - `bun run test:vitest -- tests/vitest/widgets/productTable.test.tsx`
 - `bun test tests/unit/commerce/commerceWidgetRuntime.test.ts`
 - `bun run test:vitest -- tests/vitest/ui/product-table-editor-wave.test.tsx`

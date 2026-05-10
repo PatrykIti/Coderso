@@ -29,7 +29,8 @@ and Reject decisions.
 ## Research Decisions
 
 - Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/pricing-plans/MATRIX.md`; for this leaf, start from the current owner fields `header`, `plans`, `style` and add only the schema fields that the matrix explicitly keeps.
-- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat billing toggle and comparison rows as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Keep: tier cards, highlighted plan, monthly/annual billing toggle, enterprise/custom price, and feature icon/checkmark style from `_docs/_WIDGETS/tmp/pricing-plans/MATRIX.md`; add schema-owned billing labels/price fields in `core/widgets/core/pricingPlans.tsx`.
+- Adapt: discount badges, comparison rows, and feature groups remain conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: separate one-off widgets, raw HTML/script embeds, and unbounded visual/CSS controls.
 
 ## Editor Mode Ownership
@@ -80,7 +81,7 @@ function PricingPlansVisualEditor(props: WidgetEditorProps<PricingPlansData>) {
     <WidgetEditorSection id="pricing-plans.plans" title="Plans">
       {props.value.plans.map((item, index) => (
         <WidgetControlRow key={item.id ?? index} id={`pricing-plans.plans.${index}.name`} label="Name" data-widget-control={`pricing-plans.plans.${index}.name`}>
-          <Input value={item.name ?? ""} onChange={...} />
+          <Input value={item.name ?? ""} onChange={handleControlChange} />
         </WidgetControlRow>
       ))}
     </WidgetEditorSection>

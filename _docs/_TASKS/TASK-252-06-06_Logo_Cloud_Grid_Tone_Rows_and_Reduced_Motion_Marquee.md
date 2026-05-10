@@ -12,8 +12,7 @@
 
 ## Overview
 
-Add logo-cloud grid/intro/tone controls first; row grouping and marquee remain
-Adapt-only and marquee must include a reduced-motion fallback if implemented.
+Add logo-cloud grid, intro, tone, and multi-row layout controls first; marquee remains Adapt-only and must include a reduced-motion fallback if implemented.
 
 This is an execution leaf under `TASK-252-06`. It must not re-open the
 research phase; use `_docs/_WIDGETS/tmp/logo-cloud/MATRIX.md` and the widget README under
@@ -30,7 +29,8 @@ and Reject decisions.
 ## Research Decisions
 
 - Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/logo-cloud/MATRIX.md`; for this leaf, start from the current owner fields `header`, `logos`, `style` and add only the schema fields that the matrix explicitly keeps.
-- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat marquee and row grouping with reduced-motion fallback as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Keep: static responsive grid, intro text, grayscale/muted tone, and multi-row cloud behavior from `_docs/_WIDGETS/tmp/logo-cloud/MATRIX.md`; add schema-owned row/wrap controls in `core/widgets/core/logoCloud.tsx`.
+- Adapt: dark/surface variants and marquee mode remain conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: separate one-off widgets, raw HTML/script embeds, and unbounded visual/CSS controls.
 
 ## Editor Mode Ownership
@@ -81,7 +81,7 @@ function LogoCloudVisualEditor(props: WidgetEditorProps<LogoCloudData>) {
     <WidgetEditorSection id="logo-cloud.logos" title="Logos">
       {props.value.logos.map((item, index) => (
         <WidgetControlRow key={item.id ?? index} id={`logo-cloud.logos.${index}.name`} label="Name" data-widget-control={`logo-cloud.logos.${index}.name`}>
-          <Input value={item.name ?? ""} onChange={...} />
+          <Input value={item.name ?? ""} onChange={handleControlChange} />
         </WidgetControlRow>
       ))}
     </WidgetEditorSection>

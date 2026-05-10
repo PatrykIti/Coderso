@@ -12,7 +12,8 @@
 
 ## Overview
 
-Define compare-timeline as a two-track dated comparison with segments, status/current highlight, and no multi-track matrix expansion yet.
+Define compare-timeline as a two-track dated comparison with segments,
+track labels, status/current highlight, and no multi-track matrix expansion yet.
 
 This is an execution leaf under `TASK-252-06`. It must not re-open the
 research phase; use `_docs/_WIDGETS/tmp/compare-timeline/MATRIX.md` and the widget README under
@@ -28,8 +29,15 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/compare-timeline/MATRIX.md`; for this leaf, start from the current owner fields `axis`, `tracks`, `guides`, `layout`, `highlight`, `style` and add only the schema fields that the matrix explicitly keeps.
-- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat status/current labels and richer segment styling within the two-track limit as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Keep: alternating two-side layout, dated event segments, track labels, and
+  status/current highlight from `_docs/_WIDGETS/tmp/compare-timeline/MATRIX.md`.
+  Start from the current owner fields `axis`, `tracks`, `guides`, `layout`,
+  `highlight`, and `style`, then add schema-owned segment date/body/state/side
+  fields in `core/widgets/core/compareTimeline.tsx` when the live data model
+  lacks them.
+- Adapt: scroll narrative, progress indicator, and per-item CTA remain
+  conditional; implement only when schema/defaults/normalizer/render/editor/
+  tests move together.
 - Reject: separate one-off widgets, raw HTML/script embeds, and unbounded visual/CSS controls.
 
 ## Editor Mode Ownership
@@ -63,7 +71,7 @@ and Reject decisions.
 function normalizeCompareTimelineData(data: CompareTimelineData): CompareTimelineData {
   return {
     axis: normalizeCompareTimelineAxis(data.axis),
-    tracks: normalizeCompareTimelineTracks(data.tracks),
+    tracks: normalizeCompareTimelineTracks(data.tracks, data.axis?.steps?.length ?? 0),
     guides: normalizeCompareTimelineGuides(data.guides),
     layout: normalizeCompareTimelineLayout(data.layout),
     highlight: normalizeCompareTimelineHighlight(data.highlight),
@@ -71,10 +79,35 @@ function normalizeCompareTimelineData(data: CompareTimelineData): CompareTimelin
   };
 }
 
-function normalizeCompareTrack(item: CompareTrack, index: number): CompareTrack {
+function normalizeCompareTrack(item: CompareTrack, index: number, stepCount: number): CompareTrack {
   return {
     ...item,
     id: normalizeStableItemId(item.id, `compare-timeline-${index + 1}`),
+    segments: item.segments.map((segment) => normalizeCompareTrackSegment(segment, stepCount)),
+  };
+}
+
+type CompareTimelineSegmentState = "past" | "current" | "future";
+
+type CompareTimelineSegmentExtension = {
+  date?: string;
+  body?: string;
+  side?: "left" | "right";
+  state?: CompareTimelineSegmentState;
+};
+
+function normalizeCompareTrackSegment(
+  segment: CompareTrackSegment & CompareTimelineSegmentExtension,
+  stepCount: number
+): CompareTrackSegment & CompareTimelineSegmentExtension {
+  return {
+    ...segment,
+    from: clampCompareTimelineStep(segment.from, stepCount),
+    to: clampCompareTimelineStep(segment.to, stepCount),
+    date: normalizeOptionalDateLabel(segment.date),
+    body: normalizeOptionalPlainText(segment.body),
+    side: normalizeTwoSide(segment.side),
+    state: normalizeCompareSegmentState(segment.state),
   };
 }
 
@@ -83,7 +116,10 @@ function CompareTimelineVisualEditor(props: WidgetEditorProps<CompareTimelineDat
     <WidgetEditorSection id="compare-timeline.tracks" title="Tracks">
       {props.value.tracks.map((item, index) => (
         <WidgetControlRow key={item.id ?? index} id={`compare-timeline.tracks.${index}.label`} label="Label" data-widget-control={`compare-timeline.tracks.${index}.label`}>
-          <Input value={item.label ?? ""} onChange={...} />
+          <Input
+            value={item.label ?? ""}
+            onChange={(label) => props.onChange(updateCompareTimelineTrack(props.value, index, { label }))}
+          />
         </WidgetControlRow>
       ))}
     </WidgetEditorSection>

@@ -13,7 +13,9 @@
 ## Overview
 
 Expand the Timeline widget so it can represent both process steps and true
-chronological timelines, including scroll-aware reveal behavior.
+chronological timelines. Scroll/feed behavior stays Adapt-only and must not be
+implemented as required scope unless the leaf extends schema, renderer, editor,
+and tests together.
 
 The current Timeline widget exposes useful controls, but its horizontal
 three-item form does not always read as a timeline. TASK-252-04 should add real
@@ -32,7 +34,8 @@ timeline modes while preserving existing payloads and editor tests.
   - vertical chronological mode;
   - alternating event cards mode;
   - current/active milestone highlighting where appropriate.
-- Add scroll-aware animation as progressive enhancement:
+- Leave feed/activity and scroll-aware animation outside required scope. They
+  are Adapt-only progressive enhancements:
   - sequence left/middle/right or top-to-bottom reveal;
   - moving marker/connector progression;
   - reset when the widget leaves the viewport and replay on re-entry;
@@ -43,7 +46,7 @@ timeline modes while preserving existing payloads and editor tests.
   - `<time>` when a date is present;
   - accessible labels for decorative connectors/markers.
 - Reorganize editor modes:
-  - `Wizard`: choose timeline purpose (`process`, `chronology`, `roadmap`),
+  - `Wizard`: choose timeline purpose (`process`, `chronology`, `alternating`),
     orientation, step count, and starter labels.
   - `Visual`: Mode and layout; Items and dates; Motion; Axis and markers;
     Colors; Typography and spacing.
@@ -79,9 +82,10 @@ type TimelineDisplayMode =
   | "process"
   | "axis"
   | "chronology"
-  | "alternating"
-  | "roadmap";
+  | "alternating";
 
+// Adapt-only. Do not expose this until motion schema, render, editor, and
+// reduced-motion tests are implemented together.
 type TimelineMotion = {
   reveal?: "none" | "scroll-sequence" | "connector-progress";
   resetOnExit?: boolean;
@@ -100,23 +104,21 @@ type TimelineStep = {
 };
 
 function normalizeTimelineData(raw: unknown): TimelineData {
+  const input = coerceTimelineInput(raw);
   return {
     ...legacyCompatibleFields,
-    mode: normalizeDisplayMode(raw.mode, raw.variant),
-    steps: normalizeTimelineSteps(raw.steps),
-    motion: normalizeTimelineMotion(raw.motion),
+    mode: normalizeDisplayMode(input.mode, input.variant),
+    steps: normalizeTimelineSteps(input.steps),
+    ...(isTimelineMotionAdaptEnabled(input) ? { motion: normalizeTimelineMotion(input.motion) } : {}),
   };
 }
 ```
 
-Render motion with data attributes and CSS-first behavior.
+Render core timeline state with semantic markup. Add motion data attributes only
+when the Adapt motion slice is implemented.
 
 ```tsx
-<ol
-  data-timeline-mode={mode}
-  data-timeline-reveal={motion.reveal ?? "none"}
-  data-timeline-reset-on-exit={motion.resetOnExit ? "true" : "false"}
->
+<ol data-timeline-mode={mode} {...resolveTimelineMotionDataAttributes(motion)}>
   {steps.map((step) => (
     <li data-timeline-step={step.id}>
       {step.date ? <time dateTime={step.date}>{step.dateLabel ?? step.date}</time> : null}
@@ -126,7 +128,8 @@ Render motion with data attributes and CSS-first behavior.
 </ol>
 ```
 
-If JavaScript is needed for replay-on-scroll, keep it narrow and deterministic:
+If the Adapt motion slice needs JavaScript for replay-on-scroll, keep it narrow
+and deterministic:
 
 ```ts
 function attachTimelineReveal(root: HTMLElement) {
@@ -194,10 +197,12 @@ function attachTimelineReveal(root: HTMLElement) {
 
 ## Acceptance Criteria
 
-- Timeline can render process, horizontal axis, vertical chronology, alternating
-  cards, and roadmap/current milestone patterns from one schema.
+- Timeline can render process, horizontal axis, vertical chronology, and
+  alternating cards from one schema, with current/status highlighting where the
+  Keep matrix requires it.
 - Existing timeline payloads remain editable and render safely.
-- Scroll reveal is optional, accessible, reduced-motion-safe, and replayable
-  when configured.
+- Scroll/feed behavior is absent unless the Adapt slice is explicitly
+  implemented; if implemented, it is accessible, reduced-motion-safe, and
+  replayable only when configured.
 - Timeline editor groups structure, items, motion, styling, and advanced
   normalization in predictable sections.

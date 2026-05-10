@@ -80,7 +80,7 @@ function NavigationVisualEditor(props: WidgetEditorProps<NavigationData>) {
   return (
     <WidgetEditorSection id="navigation.navigation" title="Links source">
       <WidgetControlRow id="navigation.linksSource" label="Links source" data-widget-control="navigation.linksSource">
-        <Select value={value.linksSource ?? "manual"} onChange={...} />
+        <Select value={value.linksSource ?? "manual"} onChange={handleControlChange} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -126,6 +126,7 @@ Implementation checklist:
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
+- `bun test tests/unit/widgets/validator.test.ts` when schema validation, slot normalization, or widget validation changes.
 - `bun run test:vitest -- tests/vitest/widgets/navigation.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/navigation-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

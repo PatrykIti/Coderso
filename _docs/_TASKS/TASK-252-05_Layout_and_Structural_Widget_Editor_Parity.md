@@ -50,9 +50,15 @@ simple widgets intentionally simple through research-backed decisions.
   Keep/Adapt/Reject matrix before finalizing its option list.
 - Expand structural widgets only where it improves real page-building
   flexibility:
-  - `grid-columns`: column count, gap, column width, equal height, mobile order.
-  - `split-layout`: ratio, media/content orientation, mobile collapse, reverse.
-  - `stack`: flow direction, gap, alignment, nested child spacing.
+  - `template-section`: template reference plus category, preview label, and
+    version metadata; sync/detach remains conditional on a reusable-template
+    runtime/service owner.
+  - `grid-columns`: simple column presets, gaps, and mobile stacking; advanced
+    span/offset work is conditional.
+  - `split-layout`: two slots, media/content orientation, and mobile stack
+    order; ratio/span systems stay conditional.
+  - `stack`: flow direction, gap, alignment, and responsive direction; nested
+    layout expansion stays conditional.
   - `tabs`: horizontal/vertical mode, default tab, panel styling, keyboard
     semantics.
   - `accordion`: single/multiple open, default open item, panel style.
@@ -188,8 +194,8 @@ For missing docs, add contract pages that follow existing widget docs:
   - `tests/vitest/widgets/toggleBlock.test.tsx`
   - `tests/vitest/ui/toggle-block-editor-wave.test.tsx`
 - `tests/vitest/widgets/renderer.test.tsx` when slot/children rendering changes.
-- `tests/unit/widgets/validator.test.ts` when slot normalization or widget
-  validation changes.
+- `bun test tests/unit/widgets/validator.test.ts` when slot normalization or
+  widget validation changes.
 
 ## Documentation Updates Required
 

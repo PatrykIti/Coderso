@@ -113,7 +113,7 @@ control metadata:
 ```tsx
 <WidgetEditorSection id="badge-headline" title="Badge and headline">
   <WidgetControlRow id="hero-badge-label" label="Badge label">
-    <Input value={badge.label} onChange={...} />
+    <Input value={badge.label} onChange={handleControlChange} />
   </WidgetControlRow>
 </WidgetEditorSection>
 ```

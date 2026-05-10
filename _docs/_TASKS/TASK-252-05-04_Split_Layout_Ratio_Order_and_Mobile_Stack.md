@@ -12,9 +12,9 @@
 
 ## Overview
 
-Keep Split Layout as a two-slot layout primitive with mobile stacking rules;
-ratio and media/content order presets stay bounded Adapt scope and runtime
-resize handles stay rejected.
+Keep Split Layout as a two-slot layout primitive with media/content order and
+mobile stacking rules. Ratio presets stay bounded Adapt scope and runtime resize
+handles stay rejected.
 
 This is an execution leaf under `TASK-252-05`. It must not re-open the
 research phase; use `_docs/_WIDGETS/tmp/split-layout/MATRIX.md` and the widget README under
@@ -30,9 +30,11 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/split-layout/MATRIX.md`; for this leaf, start from the current owner fields `ratio`, `collapseMobile`, `reverseOnMobile`, `gap`, `verticalAlign` and add only the schema fields that the matrix explicitly keeps.
-- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat
-  ratio presets and media/content ordering as bounded layout presets; implement
+- Keep: two named slots, media/content orientation, and mobile stack order from
+  `_docs/_WIDGETS/tmp/split-layout/MATRIX.md`; map them to `collapseMobile`,
+  `reverseOnMobile`, and any new `mobileOrder`/slot-label fields owned in
+  `core/widgets/core/splitLayout.tsx`.
+- Adapt: ratio presets and marketing split polish remain conditional; implement
   only when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: runtime resize handles and arbitrary grid/CSS controls.
 
@@ -79,7 +81,7 @@ function SplitLayoutVisualEditor(props: WidgetEditorProps<SplitLayoutData>) {
   return (
     <WidgetEditorSection id="split-layout.ratio" title="Ratio and order">
       <WidgetControlRow id="split-layout.ratio.desktop" label="Desktop ratio" data-widget-control="split-layout.ratio.desktop">
-        <SegmentedControl value={value.ratio?.desktop ?? "50-50"} onChange={...} />
+        <SegmentedControl value={value.ratio?.desktop ?? "50-50"} onChange={handleControlChange} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -125,6 +127,7 @@ Implementation checklist:
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
+- `bun test tests/unit/widgets/validator.test.ts` when schema validation, slot normalization, or widget validation changes.
 - `bun run test:vitest -- tests/vitest/widgets/splitLayout.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/split-layout-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

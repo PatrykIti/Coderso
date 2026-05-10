@@ -29,7 +29,8 @@ and Reject decisions.
 ## Research Decisions
 
 - Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/search-box/MATRIX.md`; for this leaf, start from the current owner fields `mode`, `listingQueryId`, `endpoint`, `sources`, `autoApply`, `style`, `resolved` and add only the schema fields that the matrix explicitly keeps.
-- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat compact/full display and target-route/query-param helpers as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Keep: accessible copy controls, compact/full modes, and result route/query binding from `_docs/_WIDGETS/tmp/search-box/MATRIX.md`; add schema-owned target route/query-param fields in `core/widgets/core/searchBox.tsx` and keep runtime normalization in `core/widgets/core/listingRuntimeScript.ts`.
+- Adapt: suggestions/autocomplete remain conditional and backend-owned; implement only when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: arbitrary operators, client-owned provider/index config, raw scripts, and privileged settings in widget data.
 
 ## Editor Mode Ownership
@@ -46,6 +47,8 @@ and Reject decisions.
 
 - `core/widgets/core/searchBox.tsx`
 - `core/widgets/core/listingRuntimeScript.ts` when query/reset/apply/query-param runtime behavior changes.
+- `core/server/publicSite.tsx` when the public `/api/search` route or
+  `public_read` handling changes.
 - `core/admin/ui/widgets/editors/SearchBoxEditors.tsx`
 - Bun-owned route/security suites when public endpoint behavior changes.
 - `tests/unit/widgets/validator.test.ts` when schema validation changes.
@@ -82,7 +85,7 @@ function SearchBoxVisualEditor(props: WidgetEditorProps<SearchBoxData>) {
   return (
     <WidgetEditorSection id="search-box.search-box" title="Search target">
       <WidgetControlRow id="search-box.mode" label="Mode" data-widget-control="search-box.mode">
-        <SegmentedControl value={value.mode ?? "listing"} onChange={...} />
+        <SegmentedControl value={value.mode ?? "listing"} onChange={handleControlChange} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -109,33 +112,45 @@ Implementation checklist:
   - rendered `search-box` output is public page/runtime output.
 - Auth model:
   - no new endpoint is introduced by this leaf;
+  - global search mode uses the existing public `GET /api/search` route in
+    `core/server/publicSite.tsx`;
+  - listing mode keeps route/query synchronization in
+    `getListingRuntimeClientScript`;
   - edits persist through existing authenticated admin page/template save flows.
 - RBAC:
   - unchanged page/template/widget-template write permissions.
 - CSRF:
   - unchanged admin write CSRF handling.
 - Rate-limit bucket:
-  - unchanged admin write buckets.
+  - unchanged admin write buckets;
+  - existing `/api/search` public reads stay on the `public_read` bucket.
 - Reject-unknown validation:
   - changed `search-box` schema fields must reject unknown fields and
     normalize legacy payloads through `core/widgets/core/searchBox.tsx`.
 - Anti-abuse:
-  - target route/query param must be sanitized and bounded
-  - provider secrets must not enter widget data
+  - target route/query param must be sanitized and bounded;
+  - `/api/search` limits/sources stay clamped by the public route owner;
+  - provider secrets must not enter widget data.
 
 ## Testing Requirements
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
+- `bun test tests/unit/widgets/validator.test.ts` when schema validation, slot normalization, or widget validation changes.
 - `bun run test:vitest -- tests/vitest/widgets/searchBox.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/search-box-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/search/searchIndexService.test.ts` when
+  public search source/query behavior changes.
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,
   slot, or shared output behavior changes.
 - `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` if
   token/clear/default adjacency changes.
-- Add or update a regression around `getListingRuntimeClientScript` when query/reset/apply/query-param behavior changes.
-- Add Bun-owned route/security tests when endpoint behavior, public writes,
+- Add or update a regression around `getListingRuntimeClientScript` when query/
+  reset/apply/query-param behavior changes.
+- `bun test tests/unit/security/rateLimit.test.ts` when `public_read` bucket
+  behavior changes.
+- Add Bun-owned route/security tests when `/api/search` endpoint behavior,
   provider fetches, or runtime-kernel scripts change.
 
 ## Documentation Updates Required
@@ -152,7 +167,7 @@ Implementation checklist:
 
 - `search-box` editor exposes research-backed source/display/state controls with stable metadata.
 - Runtime/data source ownership remains in the existing backend or widget owner seam.
-- Public-write/provider-secret boundaries are explicitly preserved in tests/docs when touched.
+- Public-read/provider-secret boundaries are explicitly preserved in tests/docs when touched.
 - Documentation names the research decisions that explain both added and
   rejected options.
 - Validation commands and any skipped suites are recorded before marking this

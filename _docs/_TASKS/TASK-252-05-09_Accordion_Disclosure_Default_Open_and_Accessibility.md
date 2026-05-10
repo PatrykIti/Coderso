@@ -28,8 +28,13 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/accordion/MATRIX.md`; for this leaf, start from the current owner fields `items`, `options.initiallyOpenId`, `options.allowMultiple`, `style` plus the existing `accordionItemSlot` and add only the schema fields that the matrix explicitly keeps.
-- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat panel style changes and multiple-open behavior as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Keep: repeatable items, single/multiple open behavior, default open item(s),
+  collapsible semantics, and accessibility behavior from
+  `_docs/_WIDGETS/tmp/accordion/MATRIX.md`; map them to `items`,
+  `options.initiallyOpenId`, `options.allowMultiple`, any new
+  `options.collapsible`, and the existing `accordionItemSlot`.
+- Adapt: panel style changes and visual variants remain conditional; implement
+  only when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: nested accordions by default and arbitrary disclosure scripting.
 
 ## Editor Mode Ownership
@@ -73,7 +78,7 @@ function AccordionVisualEditor(props: WidgetEditorProps<AccordionData>) {
   return (
     <WidgetEditorSection id="accordion.options" title="Disclosure behavior">
       <WidgetControlRow id="accordion.options.initiallyOpenId" label="Default open item" data-widget-control="accordion.options.initiallyOpenId">
-        <Select value={value.options?.initiallyOpenId ?? ""} onChange={...} />
+        <Select value={value.options?.initiallyOpenId ?? ""} onChange={handleControlChange} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -119,6 +124,7 @@ Implementation checklist:
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
+- `bun test tests/unit/widgets/validator.test.ts` when schema validation, slot normalization, or widget validation changes.
 - `bun run test:vitest -- tests/vitest/widgets/accordionWidget.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/accordion-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

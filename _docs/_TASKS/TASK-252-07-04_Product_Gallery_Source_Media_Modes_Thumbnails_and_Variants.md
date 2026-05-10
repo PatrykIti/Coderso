@@ -78,7 +78,7 @@ function ProductGalleryVisualEditor(props: WidgetEditorProps<ProductGalleryData>
   return (
     <WidgetEditorSection id="product-gallery.source" title="Product source">
       <WidgetControlRow id="product-gallery.source.mode" label="Source mode" data-widget-control="product-gallery.source.mode">
-        <Select value={value.source?.mode ?? "manual"} onChange={...} />
+        <Select value={value.source?.mode ?? "manual"} onChange={handleControlChange} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -124,6 +124,7 @@ Implementation checklist:
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
+- `bun test tests/unit/widgets/validator.test.ts` when schema validation, slot normalization, or widget validation changes.
 - `bun run test:vitest -- tests/vitest/widgets/productGallery.test.tsx`
 - `bun test tests/unit/commerce/commerceWidgetRuntime.test.ts`
 - `bun run test:vitest -- tests/vitest/ui/product-gallery-editor-wave.test.tsx`

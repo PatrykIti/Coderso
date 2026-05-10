@@ -82,7 +82,7 @@ function FeatureGridVisualEditor(props: WidgetEditorProps<FeatureGridData>) {
     <WidgetEditorSection id="feature-grid.items" title="Feature items">
       {props.value.items.map((item, index) => (
         <WidgetControlRow key={item.id ?? index} id={`feature-grid.items.${index}.title`} label="Title" data-widget-control={`feature-grid.items.${index}.title`}>
-          <Input value={item.title ?? ""} onChange={...} />
+          <Input value={item.title ?? ""} onChange={handleControlChange} />
         </WidgetControlRow>
       ))}
     </WidgetEditorSection>

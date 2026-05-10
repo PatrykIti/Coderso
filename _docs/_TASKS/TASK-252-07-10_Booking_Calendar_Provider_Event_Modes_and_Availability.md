@@ -79,7 +79,7 @@ function BookingCalendarVisualEditor(props: WidgetEditorProps<BookingCalendarDat
   return (
     <WidgetEditorSection id="booking-calendar.booking-calendar" title="Booking flow">
       <WidgetControlRow id="booking-calendar.flowId" label="Flow" data-widget-control="booking-calendar.flowId">
-        <BookingFlowPicker value={value.flowId ?? ""} onChange={...} />
+        <BookingFlowPicker value={value.flowId ?? ""} onChange={handleControlChange} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -121,15 +121,16 @@ Implementation checklist:
   - provider secrets and privileged booking config must not enter widget data
   - if this leaf adds or changes a Coderso-owned public booking write, the
     endpoint must use nonce + signature/HMAC via
-    `core/services/forms/submissionNonce.ts`, optional reCAPTCHA policy,
-    existing public rate-limit buckets, strict reject-unknown validation, and
-    `tests/security/codersoSecurityGate.test.ts`
+    `core/services/booking/bookingSubmissionNonce.ts`, optional reCAPTCHA
+    policy, existing public rate-limit buckets, strict reject-unknown
+    validation, and `tests/security/codersoSecurityGate.test.ts`
 
 ## Testing Requirements
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
+- `bun test tests/unit/widgets/validator.test.ts` when schema validation, slot normalization, or widget validation changes.
 - `bun run test:vitest -- tests/vitest/widgets/bookingCalendar.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/booking-calendar-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

@@ -29,7 +29,8 @@ and Reject decisions.
 ## Research Decisions
 
 - Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/posts-feed/MATRIX.md`; for this leaf, start from the current owner fields `source`, `fields`, `emptyState`, `style`, `resolved` and add only the schema fields that the matrix explicitly keeps.
-- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat manual/featured source helpers and density presets as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Keep: latest/category/featured/manual source modes, card/list/editorial density, and author/date/category toggles from `_docs/_WIDGETS/tmp/posts-feed/MATRIX.md`; add schema-owned source and density controls in `core/widgets/core/postsFeed.tsx`.
+- Adapt: reading time remains conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: arbitrary operators, client-owned provider/index config, raw scripts, and privileged settings in widget data.
 
 ## Editor Mode Ownership
@@ -75,7 +76,7 @@ function PostsFeedVisualEditor(props: WidgetEditorProps<PostsFeedData>) {
   return (
     <WidgetEditorSection id="posts-feed.source" title="Source">
       <WidgetControlRow id="posts-feed.source.mode" label="Source mode" data-widget-control="posts-feed.source.mode">
-        <Select value={value.source?.mode ?? "latest"} onChange={...} />
+        <Select value={value.source?.mode ?? "latest"} onChange={handleControlChange} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -121,6 +122,7 @@ Implementation checklist:
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
+- `bun test tests/unit/widgets/validator.test.ts` when schema validation, slot normalization, or widget validation changes.
 - `bun test tests/unit/widgets/postsFeedWidget.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/posts-feed-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

@@ -79,7 +79,7 @@ function FormEmbedVisualEditor(props: WidgetEditorProps<FormEmbedData>) {
   return (
     <WidgetEditorSection id="form-embed.form-embed" title="Form picker">
       <WidgetControlRow id="form-embed.formId" label="Form" data-widget-control="form-embed.formId">
-        <FormPicker value={value.formId ?? ""} onChange={...} />
+        <FormPicker value={value.formId ?? ""} onChange={handleControlChange} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -130,6 +130,7 @@ Implementation checklist:
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
+- `bun test tests/unit/widgets/validator.test.ts` when schema validation, slot normalization, or widget validation changes.
 - `bun run test:vitest -- tests/vitest/widgets/formEmbed.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/form-embed-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

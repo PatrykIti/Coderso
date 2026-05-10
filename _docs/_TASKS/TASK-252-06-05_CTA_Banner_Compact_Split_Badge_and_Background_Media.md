@@ -12,8 +12,7 @@
 
 ## Overview
 
-Shape CTA Banner around compact/split/high-contrast modes first; badge/icon and
-background media stay bounded Adapt scope.
+Shape CTA Banner around centered/compact, split, high-contrast, and badge/icon CTA strip patterns first; background media stays bounded Adapt scope and countdown stays rejected.
 
 This is an execution leaf under `TASK-252-06`. It must not re-open the
 research phase; use `_docs/_WIDGETS/tmp/cta-banner/MATRIX.md` and the widget README under
@@ -30,7 +29,8 @@ and Reject decisions.
 ## Research Decisions
 
 - Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/cta-banner/MATRIX.md`; for this leaf, start from the current owner fields `content`, `actions`, `style` and add only the schema fields that the matrix explicitly keeps.
-- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat background media and icon/badge emphasis as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Keep: centered CTA, split CTA layout, high-contrast band, and badge/icon CTA strip from `_docs/_WIDGETS/tmp/cta-banner/MATRIX.md`; add schema-owned badge/icon fields in `core/widgets/core/ctaBanner.tsx`.
+- Adapt: background media/overlay, app-store style button groups, and reduced-motion-safe named animation presets remain conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: separate one-off widgets, raw HTML/script embeds, and unbounded visual/CSS controls.
 
 ## Editor Mode Ownership
@@ -74,7 +74,7 @@ function CtaBannerVisualEditor(props: WidgetEditorProps<CtaBannerData>) {
   return (
     <WidgetEditorSection id="cta-banner.content" title="Content and actions">
       <WidgetControlRow id="cta-banner.content.badge" label="Badge" data-widget-control="cta-banner.content.badge">
-        <Input value={value.content?.badge ?? ""} onChange={...} />
+        <Input value={value.content?.badge ?? ""} onChange={handleControlChange} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );

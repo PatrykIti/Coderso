@@ -80,7 +80,7 @@ function ListingFiltersVisualEditor(props: WidgetEditorProps<ListingFiltersData>
   return (
     <WidgetEditorSection id="listing-filters.listing-filters" title="Facet source">
       <WidgetControlRow id="listing-filters.listingQueryId" label="Listing query" data-widget-control="listing-filters.listingQueryId">
-        <ListingQueryPicker value={value.listingQueryId ?? ""} onChange={...} />
+        <ListingQueryPicker value={value.listingQueryId ?? ""} onChange={handleControlChange} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -126,6 +126,7 @@ Implementation checklist:
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
+- `bun test tests/unit/widgets/validator.test.ts` when schema validation, slot normalization, or widget validation changes.
 - `bun run test:vitest -- tests/vitest/widgets/listingFilters.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/listing-filters-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

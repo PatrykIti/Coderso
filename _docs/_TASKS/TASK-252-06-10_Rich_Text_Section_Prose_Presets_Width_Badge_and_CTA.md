@@ -12,8 +12,7 @@
 
 ## Overview
 
-Improve rich-text-section with safe prose presets and width first; badge, CTA,
-quote/media, and editorial layouts stay Adapt-only with no raw HTML expansion.
+Improve rich-text-section with safe prose presets, width, heading/body/CTA, and badge/eyebrow first; quote/media and editorial layouts stay Adapt-only with no raw HTML expansion.
 
 This is an execution leaf under `TASK-252-06`. It must not re-open the
 research phase; use `_docs/_WIDGETS/tmp/rich-text-section/MATRIX.md` and the widget README under
@@ -30,7 +29,8 @@ and Reject decisions.
 ## Research Decisions
 
 - Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/rich-text-section/MATRIX.md`; for this leaf, start from the current owner fields `titleBlock`, `body`, `options`, `style` and add only the schema fields that the matrix explicitly keeps.
-- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat badge, CTA, quote/media support, and editorial two-column treatments as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Keep: safe prose presets, heading/body/CTA section, constrained article width, and badge/eyebrow from `_docs/_WIDGETS/tmp/rich-text-section/MATRIX.md`; add schema-owned CTA and badge/eyebrow fields in `core/widgets/core/richTextSection.tsx`.
+- Adapt: media-adjacent content, multi-column prose, and pull quote remain conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: separate one-off widgets, raw HTML/script embeds, and unbounded visual/CSS controls.
 
 ## Editor Mode Ownership
@@ -75,7 +75,7 @@ function RichTextSectionVisualEditor(props: WidgetEditorProps<RichTextSectionDat
   return (
     <WidgetEditorSection id="rich-text-section.options" title="Prose and width">
       <WidgetControlRow id="rich-text-section.options.maxWidth" label="Max width" data-widget-control="rich-text-section.options.maxWidth">
-        <Select value={value.options?.maxWidth ?? "lg"} onChange={...} />
+        <Select value={value.options?.maxWidth ?? "lg"} onChange={handleControlChange} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );

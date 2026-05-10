@@ -12,9 +12,10 @@
 
 ## Overview
 
-Add appointment-form fields, validation copy, and state copy first; provider/embed
-mode stays Adapt-only when a backend-owned submission flow exists, and CAPTCHA/
-nonce remain backend policy rather than widget options.
+Add appointment-form fields, validation copy, and state copy first while keeping
+the existing booking-owned public submission endpoint intact. Provider/embed
+mode stays Adapt-only, and CAPTCHA/nonce remain backend policy rather than
+widget options.
 
 This is an execution leaf under `TASK-252-07`. It must not re-open the
 research phase; use `_docs/_WIDGETS/tmp/appointment-form/MATRIX.md` and the widget README under
@@ -50,6 +51,10 @@ and Reject decisions.
 
 - `core/widgets/core/appointmentForm.tsx`
 - `core/admin/ui/widgets/editors/AppointmentFormEditors.tsx`
+- `core/server/publicBookingApi.ts` only when `/api/booking/reservations`
+  submission behavior changes.
+- `core/services/booking/bookingSubmissionNonce.ts` only when booking nonce
+  behavior changes.
 - Bun-owned route/security suites when public endpoint behavior changes.
 - `tests/unit/widgets/validator.test.ts` when schema validation changes.
 - `tests/vitest/widgets/appointmentForm.test.tsx`
@@ -83,7 +88,7 @@ function AppointmentFormVisualEditor(props: WidgetEditorProps<AppointmentFormDat
   return (
     <WidgetEditorSection id="appointment-form.appointment-form" title="Fields and copy">
       <WidgetControlRow id="appointment-form.customerEmailLabel" label="Email label" data-widget-control="appointment-form.customerEmailLabel">
-        <Input value={value.customerEmailLabel ?? ""} onChange={...} />
+        <Input value={value.customerEmailLabel ?? ""} onChange={handleControlChange} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -110,22 +115,28 @@ Implementation checklist:
   - rendered `appointment-form` output is public page/runtime output.
 - Auth model:
   - no new endpoint is introduced by this leaf;
+  - rendered appointment forms continue to submit to the existing
+    `POST /api/booking/reservations` endpoint by default;
   - edits persist through existing authenticated admin page/template save flows.
 - RBAC:
   - unchanged page/template/widget-template write permissions.
 - CSRF:
-  - unchanged admin write CSRF handling.
+  - unchanged admin write CSRF handling;
+  - public reservation writes do not use admin CSRF and must keep the booking
+    nonce/signature boundary.
 - Rate-limit bucket:
-  - unchanged admin write buckets.
+  - unchanged admin write buckets;
+  - existing reservation submissions stay on the `public_write` bucket.
 - Reject-unknown validation:
   - changed `appointment-form` schema fields must reject unknown fields and
     normalize legacy payloads through `core/widgets/core/appointmentForm.tsx`.
 - Anti-abuse:
   - CAPTCHA, nonce, and provider-secret settings are not widget-data options
-  - if `submissionEndpoint` becomes a Coderso-owned public write, the endpoint
-    must use nonce + signature/HMAC via
-    `core/services/forms/submissionNonce.ts`, optional reCAPTCHA policy,
-    existing public rate-limit buckets, strict reject-unknown validation, and
+  - the existing Coderso-owned reservation write must keep nonce + signature/
+    HMAC via `core/services/booking/bookingSubmissionNonce.ts` and
+    `assertBookingSubmissionNonce`, optional reCAPTCHA policy, existing
+    `public_write` rate-limit handling, strict reject-unknown validation,
+    `tests/unit/server/publicBookingApi.test.ts`, and
     `tests/security/codersoSecurityGate.test.ts`
   - raw provider scripts and secrets are rejected
 
@@ -134,8 +145,13 @@ Implementation checklist:
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
+- `bun test tests/unit/widgets/validator.test.ts` when schema validation, slot normalization, or widget validation changes.
 - `bun run test:vitest -- tests/vitest/widgets/appointmentForm.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/appointment-form-editor-wave.test.tsx`
+- `bun test tests/unit/server/publicBookingApi.test.ts` when
+  `/api/booking/reservations` submission behavior changes.
+- `bun test tests/security/codersoSecurityGate.test.ts` when booking nonce,
+  bot-protection, or public-write hardening changes.
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,
   slot, or shared output behavior changes.
 - `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` if
