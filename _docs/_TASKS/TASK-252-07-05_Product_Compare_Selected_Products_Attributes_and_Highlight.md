@@ -54,6 +54,7 @@ and Reject decisions.
 - `tests/unit/widgets/validator.test.ts` when schema validation changes.
 - `tests/vitest/widgets/productCompare.test.tsx`
 - `tests/unit/commerce/commerceWidgetRuntime.test.ts`
+- `tests/unit/commerce/commerceQueryService.test.ts`
 - `tests/vitest/ui/product-compare-editor-wave.test.tsx`
 - `_docs/WIDGETS.md`
 - `_docs/_WIDGETS/PRODUCT_COMPARE.md`
@@ -210,6 +211,7 @@ Implementation checklist:
 - `bun test tests/unit/widgets/validator.test.ts` when schema validation, slot normalization, or widget validation changes.
 - `bun run test:vitest -- tests/vitest/widgets/productCompare.test.tsx`
 - `bun test tests/unit/commerce/commerceWidgetRuntime.test.ts`
+- `bun test tests/unit/commerce/commerceQueryService.test.ts`
 - `bun run test:vitest -- tests/vitest/ui/product-compare-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,
   slot, or shared output behavior changes.

@@ -206,7 +206,9 @@ Implementation checklist:
   - changed `pricing-plans` schema fields must reject unknown fields and
     normalize legacy payloads through `core/widgets/core/pricingPlans.tsx`.
 - Anti-abuse:
-  - Link and media fields must keep existing safe URL/media validation.
+  - Link fields introduced or touched by this leaf must normalize through the
+    widget safe-href helper before render; media fields must stay on the
+    existing media-picker/storage ownership path.
   - No raw HTML, script embed, or unbounded class-name field is introduced.
 
 ## Testing Requirements

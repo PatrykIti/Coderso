@@ -27,7 +27,9 @@ and Reject decisions.
 - Use `_docs/_WIDGETS/tmp/gallery-mosaic/MATRIX.md` to justify the final option list before changing schema or editor controls.
 - Keep one widget type and express variation through bounded modes, presets, and item-level fields.
 - Use shared TASK-252 editor sections/rows/metadata and keep repeated item controls accessible and stable for Playwright CLI.
-- Preserve strict schemas, safe links/media, and backward-compatible render output for existing pages.
+- Preserve strict schemas and backward-compatible render output for existing
+  pages, and add explicit safe-href normalization for gallery item links instead
+  of assuming the current owner already validates them.
 
 ## Research Decisions
 
@@ -89,6 +91,7 @@ function normalizeGalleryMosaicItem(item: GalleryMosaicItem, index: number): Gal
   return {
     ...item,
     id: normalizeStableItemId(item.id, `gallery-mosaic-${index + 1}`),
+    href: normalizeSafeHref(item.href),
     altText: normalizeGalleryMosaicAltText(item.altText, item.caption),
     caption: normalizeGalleryMosaicCaption(item.caption),
     showCaption: normalizeGalleryMosaicShowCaption(item.showCaption),
@@ -97,9 +100,10 @@ function normalizeGalleryMosaicItem(item: GalleryMosaicItem, index: number): Gal
 
 function renderGalleryMosaicItem(item: GalleryMosaicItem, index: number, style: GalleryMosaicStyle) {
   const alt = normalizeGalleryMosaicAltText(item.altText, item.caption);
+  const href = normalizeSafeHref(item.href);
   return (
     <figure data-gallery-item={String(index + 1)}>
-      <img src={item.image} alt={alt} loading="lazy" />
+      {href ? <a href={href}><img src={item.image} alt={alt} loading="lazy" /></a> : <img src={item.image} alt={alt} loading="lazy" />}
       {style.showCaptions !== false && item.showCaption !== false && item.caption ? (
         <figcaption>{item.caption}</figcaption>
       ) : null}
@@ -137,6 +141,9 @@ Implementation checklist:
   schema/default/render/editor/test coverage. Runtime must render `<img alt>`
   from `altText` with a deterministic fallback, and captions must be optional
   without becoming overlay text/lightbox/hover/manual-span scope.
+- Add explicit safe-href normalization for `items[].href` in
+  `core/widgets/core/galleryMosaic.tsx`; unsafe `javascript:` or malformed hrefs
+  must normalize away and be covered by `tests/vitest/widgets/galleryMosaic.test.tsx`.
 - Bind layout presets to the existing `GalleryMosaicVariantId` widget variant
   list and bounded `style.gap`/`style.ratio` controls; do not add an undefined
   `options` bucket or arbitrary per-image span controls.
@@ -170,7 +177,10 @@ Implementation checklist:
   - changed `gallery-mosaic` schema fields must reject unknown fields and
     normalize legacy payloads through `core/widgets/core/galleryMosaic.tsx`.
 - Anti-abuse:
-  - Link and media fields must keep existing safe URL/media validation.
+  - Link fields must use the new safe-href normalizer in this leaf; do not
+    claim the current raw `href` path is already safe.
+  - Media fields must continue through the existing media-picker/storage
+    ownership and must not accept raw script/embed HTML.
   - No raw HTML, script embed, or unbounded class-name field is introduced.
 
 ## Testing Requirements

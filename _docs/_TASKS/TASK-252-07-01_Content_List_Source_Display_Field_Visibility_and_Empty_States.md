@@ -71,7 +71,6 @@ function normalizeContentListData(data: ContentListData): ContentListData {
     source: normalizeContentListSource(data.source),
     filters: normalizeContentListFilters(data.filters),
     fields: normalizeContentListFields(data.fields),
-    display: normalizeContentListDisplay(data.display ?? data.style),
     emptyState: normalizeContentListEmptyState(data.emptyState),
     style: normalizeContentListStyle(data.style),
     resolved: normalizeContentListResolved(data.resolved),
@@ -82,11 +81,14 @@ function ContentListVisualEditor(props: WidgetEditorProps<ContentListData>) {
   const value = props.value;
   return (
     <WidgetEditorSection id="content-list.source" title="Source">
-      <WidgetControlRow id="content-list.source.type" label="Source type" data-widget-control="content-list.source.type">
-        <Select value={value.source?.type ?? "manual"} onChange={handleControlChange} />
+      <WidgetControlRow id="content-list.source.mode" label="Source mode" data-widget-control="content-list.source.mode">
+        <Select value={value.source?.mode ?? "legacy"} onChange={(mode) => props.onChange(updateContentListSource(value, { mode }))} />
       </WidgetControlRow>
-      <WidgetControlRow id="content-list.fields.meta" label="Show meta" data-widget-control="content-list.fields.meta">
-        <Switch checked={value.fields?.meta ?? true} onCheckedChange={(meta) => props.onChange(updateContentListFields(value, { meta }))} />
+      <WidgetControlRow id="content-list.fields.showMeta" label="Show meta" data-widget-control="content-list.fields.showMeta">
+        <Switch checked={value.fields?.showMeta ?? true} onCheckedChange={(showMeta) => props.onChange(updateContentListFields(value, { showMeta }))} />
+      </WidgetControlRow>
+      <WidgetControlRow id="content-list.emptyState.title" label="Empty title" data-widget-control="content-list.emptyState.title">
+        <Input value={value.emptyState?.title ?? ""} onChange={(title) => props.onChange(updateContentListEmptyState(value, { title }))} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );

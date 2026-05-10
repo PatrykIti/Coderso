@@ -67,12 +67,7 @@ and Reject decisions.
 function normalizeGridColumnsData(data: GridColumnsData): GridColumnsData {
   return {
     columns: normalizeGridColumnsColumns(data.columns),
-    layout: normalizeGridColumnsLayout({
-      ...data.layout,
-      gapX: data.layout?.gapX ?? data.layout?.columnGap,
-      gapY: data.layout?.gapY ?? data.layout?.rowGap,
-      mobileStack: data.layout?.mobileStack ?? inferGridColumnsMobileStack(data.columns),
-    }),
+    layout: normalizeGridColumnsLayout(data.layout),
     style: normalizeGridColumnsStyle(data.style),
   };
 }
@@ -90,8 +85,8 @@ function GridColumnsVisualEditor(props: WidgetEditorProps<GridColumnsData>) {
       <WidgetControlRow id="grid-columns.layout.gapY" label="Row gap" data-widget-control="grid-columns.layout.gapY">
         <Select value={value.layout?.gapY ?? "6"} onChange={(gapY) => props.onChange(updateGridColumnsLayout(value, { gapY }))} />
       </WidgetControlRow>
-      <WidgetControlRow id="grid-columns.layout.mobileStack" label="Mobile stack" data-widget-control="grid-columns.layout.mobileStack">
-        <Switch checked={value.layout?.mobileStack ?? true} onCheckedChange={(mobileStack) => props.onChange(updateGridColumnsLayout(value, { mobileStack }))} />
+      <WidgetControlRow id="grid-columns.columns.mobileSpan" label="Stack on mobile" data-widget-control="grid-columns.columns.mobileSpan">
+        <Switch checked={areGridColumnsStackedOnMobile(value.columns)} onCheckedChange={(stacked) => props.onChange(updateGridColumnsMobileSpans(value, stacked ? "12" : "6"))} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );

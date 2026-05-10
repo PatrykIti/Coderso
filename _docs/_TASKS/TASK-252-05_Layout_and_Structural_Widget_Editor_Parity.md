@@ -121,9 +121,9 @@ This parent is now executed through physical per-widget leaves. Do not implement
 Use the shared editor sections from TASK-252-01.
 
 ```tsx
-const SECTION_VARIANTS = [
-  { id: "default", label: "Default" },
-  { id: "contained", label: "Contained" },
+const SECTION_ELEMENTS = [
+  { id: "section", label: "Section" },
+  { id: "div", label: "Generic region" },
 ];
 
 function SectionVisualEditor(props: WidgetEditorProps<SectionData>) {
@@ -131,17 +131,17 @@ function SectionVisualEditor(props: WidgetEditorProps<SectionData>) {
 
   return (
     <>
-      <WidgetEditorSection id="section.variant-structure" title="Variant and structure">
-        {SECTION_VARIANTS.map((variant) => (
-          <WidgetVariantCard
-            key={variant.id}
-            value={variant.id}
-            label={variant.label}
-            selected={value.variant === variant.id}
-            onSelect={() => props.onChange(updateSectionVariant(value, variant.id))}
-            data-widget-control={`section.variant.${variant.id}`}
+      <WidgetEditorSection id="section.semantics" title="Semantics and anchor">
+        <WidgetControlRow id="section.semantics.element" label="Element" data-widget-control="section.semantics.element">
+          <SegmentedControl
+            options={SECTION_ELEMENTS}
+            value={value.semantics?.element ?? "section"}
+            onChange={(element) => props.onChange(updateSectionSemantics(value, { element }))}
           />
-        ))}
+        </WidgetControlRow>
+        <WidgetControlRow id="section.semantics.anchorId" label="Anchor" data-widget-control="section.semantics.anchorId">
+          <Input value={value.semantics?.anchorId ?? ""} onChange={(anchorId) => props.onChange(updateSectionSemantics(value, { anchorId }))} />
+        </WidgetControlRow>
       </WidgetEditorSection>
       <WidgetEditorSection id="section.regions" title="Regions">
         <WidgetRepeatableSlotControls

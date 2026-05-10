@@ -31,10 +31,12 @@ and Reject decisions.
 ## Research Decisions
 
 - Keep: orientation, line style, tone, thickness, spacing, semantic vs
-  decorative behavior, and the existing color/width spacing fields from
-  `_docs/_WIDGETS/tmp/divider/MATRIX.md`; add schema-owned `orientation` and
-  `semanticRole` fields in `core/widgets/core/divider.tsx` while preserving
-  legacy horizontal visual-only payloads.
+  decorative behavior, current `line`/`dashed` variant behavior, and the
+  existing color/width spacing fields from
+  `_docs/_WIDGETS/tmp/divider/MATRIX.md`; add schema-owned `orientation`,
+  `semanticRole`, and bounded `lineStyle` fields in
+  `core/widgets/core/divider.tsx` while preserving legacy horizontal visual-only
+  payloads.
 - Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat
   optional labels as bounded style additions; implement only when schema/
   defaults/normalizer/render/editor/tests move together.
@@ -68,10 +70,11 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
-function normalizeDividerData(data: DividerData): DividerData {
+function normalizeDividerData(data: DividerData, blockVariant: DividerVariantId = "line"): DividerData {
   return {
     orientation: normalizeDividerOrientation(data.orientation ?? "horizontal"),
     semanticRole: normalizeDividerSemanticRole(data.semanticRole ?? "decorative"),
+    lineStyle: normalizeDividerLineStyle(data.lineStyle ?? legacyDividerVariantToLineStyle(blockVariant)),
     label: preserveLegacyDividerLabel(data.label),
     thickness: normalizeDividerThickness(data.thickness),
     color: normalizeDividerColor(data.color),
@@ -88,6 +91,9 @@ function DividerVisualEditor(props: WidgetEditorProps<DividerData>) {
     <WidgetEditorSection id="divider.divider" title="Line and spacing">
       <WidgetControlRow id="divider.orientation" label="Orientation" data-widget-control="divider.orientation">
         <SegmentedControl value={value.orientation ?? "horizontal"} onChange={(orientation) => props.onChange(updateDividerOrientation(value, orientation))} />
+      </WidgetControlRow>
+      <WidgetControlRow id="divider.lineStyle" label="Line style" data-widget-control="divider.lineStyle">
+        <SegmentedControl value={value.lineStyle ?? legacyDividerVariantToLineStyle(props.variant)} onChange={(lineStyle) => props.onChange(updateDividerLineStyle(value, lineStyle))} />
       </WidgetControlRow>
       <WidgetControlRow id="divider.semanticRole" label="Semantic role" data-widget-control="divider.semanticRole">
         <SegmentedControl value={value.semanticRole ?? "decorative"} onChange={(semanticRole) => props.onChange(updateDividerRole(value, semanticRole))} />
@@ -109,6 +115,11 @@ Implementation checklist:
   current rendered behavior.
 - Keep legacy label payloads through `preserveLegacyDividerLabel`; do not add a
   vague legacy alias or expose label controls in this Keep leaf.
+- Preserve saved `block.variant` values explicitly: `line` maps to
+  `lineStyle: "solid"`, `dashed` maps to `lineStyle: "dashed"`, and
+  `label-center` remains render-only compatibility unless a later Adapt leaf
+  promotes label editing. Tests must cover saved `line`, `dashed`, and
+  `label-center` payload rendering after the schema-owned line-style change.
 - Do not expose optional label editor controls in this leaf; preserve existing
   label payloads only as legacy renderer data until label support is promoted
   from Adapt scope.

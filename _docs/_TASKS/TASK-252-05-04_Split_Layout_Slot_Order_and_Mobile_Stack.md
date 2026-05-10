@@ -30,17 +30,19 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: two named slots, media/content presentation order, `mediaPosition`,
-  `reverse`, `mobileStack`, and `mobileOrder` from
-  `_docs/_WIDGETS/tmp/split-layout/MATRIX.md`; preserve fixed `left`/`right`
-  slot IDs in the widget-definition/page-model slot contract and map only
-  legacy data fields such as `collapseMobile` and `reverseOnMobile` into the
-  newer mobile behavior fields in `core/widgets/core/splitLayout.tsx`.
-- Adapt: ratio presets and marketing split polish remain conditional; implement
-  only when schema/defaults/normalizer/render/editor/tests move together.
-- Preserve the current `ratio` field through normalization and rendering only
-  as existing backward-compatible data. Do not add new ratio presets or span
-  controls in this leaf unless the ratio Adapt row is promoted in a later task.
+- Keep: two named slots, the current bounded ratio variant contract
+  (`50-50`, `40-60`, `60-40`), current `ratio.desktop`/`ratio.tablet`,
+  media/content presentation order, mobile stacking/order, gap, and alignment
+  from `_docs/_WIDGETS/tmp/split-layout/MATRIX.md`; preserve fixed
+  `left`/`right` slot IDs in the widget-definition/page-model slot contract and
+  map legacy data fields such as `collapseMobile` and `reverseOnMobile` into
+  the newer mobile behavior fields in `core/widgets/core/splitLayout.tsx`.
+- Adapt: additional ratio presets, drag/span controls, and marketing split
+  polish remain conditional; implement only when schema/defaults/normalizer/
+  render/editor/tests move together.
+- Preserve current `block.variant` values and current `ratio` fields as public,
+  bounded ratio presets. Do not hide the existing ratio variants or invent new
+  arbitrary spans in this leaf.
 - Reject: runtime resize handles and arbitrary grid/CSS controls.
 
 ## Editor Mode Ownership
@@ -71,12 +73,12 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
-function normalizeSplitLayoutData(data: SplitLayoutData): SplitLayoutData {
+function normalizeSplitLayoutData(data: SplitLayoutData, blockVariant: SplitLayoutVariantId = "50-50"): SplitLayoutData {
   return {
     mediaPosition: normalizeSplitLayoutMediaPosition(data.mediaPosition ?? legacyReverseToMediaPosition(data.reverse)),
     reverse: normalizeSplitLayoutReverse(data.reverse),
     orientation: normalizeSplitLayoutOrientation(data.orientation ?? data.mediaPosition),
-    ratio: normalizeSplitLayoutRatioPreservingLegacyValues(data.ratio),
+    ratio: normalizeSplitLayoutRatioPreservingCurrentVariant(data.ratio, blockVariant),
     mobileStack: normalizeSplitLayoutMobileStack(data.mobileStack ?? legacyCollapseMobileToMobileStack(data.collapseMobile)),
     mobileOrder: normalizeSplitLayoutMobileOrder(data.mobileOrder ?? legacyReverseOnMobileToMobileOrder(data.reverseOnMobile)),
     gap: normalizeSplitLayoutGap(data.gap),
@@ -88,6 +90,9 @@ function SplitLayoutVisualEditor(props: WidgetEditorProps<SplitLayoutData>) {
   const value = props.value;
   return (
     <WidgetEditorSection id="split-layout.order" title="Slot order and mobile stack">
+      <WidgetControlRow id="split-layout.variant" label="Pane ratio" data-widget-control="split-layout.variant">
+        <VariantCards value={props.variant ?? "50-50"} onChange={props.onVariantChange} options={SPLIT_LAYOUT_RATIO_VARIANTS} />
+      </WidgetControlRow>
       <WidgetControlRow id="split-layout.mediaPosition" label="Media position" data-widget-control="split-layout.mediaPosition">
         <SegmentedControl value={value.mediaPosition ?? "right"} onChange={(mediaPosition) => props.onChange(updateSplitLayoutMediaPosition(value, mediaPosition))} />
       </WidgetControlRow>
@@ -116,8 +121,12 @@ Implementation checklist:
 - Keep legacy payloads non-destructive: missing new fields must normalize to the
   current rendered behavior.
 - Keep the old ratio payload compatibility inside
-  `normalizeSplitLayoutRatioPreservingLegacyValues`; do not introduce a vague
+  `normalizeSplitLayoutRatioPreservingCurrentVariant`; do not introduce a vague
   legacy type alias or duplicate ratio parser in the editor.
+- Preserve saved `block.variant` values (`50-50`, `40-60`, `60-40`) as the
+  canonical public ratio preset UI. If `data.ratio.desktop/tablet` is edited,
+  keep values bounded to `splitLayoutRatioTokens` and cover both saved
+  `block.variant` and saved `data.ratio` rendering in widget/editor tests.
 - Add or update runtime/widget tests and editor-wave tests in the files listed
   above.
 

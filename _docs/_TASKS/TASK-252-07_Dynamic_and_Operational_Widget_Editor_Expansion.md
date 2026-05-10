@@ -143,20 +143,20 @@ Keep editor grouping separate from runtime source resolution.
 
 ```tsx
 <WidgetEditorSection id="source" title="Source">
-  <WidgetControlRow id="content-list.source.type" label="Source type">
-    <Select value={value.source?.type} onValueChange={handleControlChange} />
+  <WidgetControlRow id="content-list.source.mode" label="Source mode">
+    <Select value={value.source?.mode ?? "legacy"} onValueChange={(mode) => updateSource({ mode })} />
   </WidgetControlRow>
 </WidgetEditorSection>
 
 <WidgetEditorSection id="display" title="Display">
-  <WidgetControlRow id="content-list.display.mode" label="Display mode">
-    <SegmentedControl value={value.display?.mode} onChange={handleControlChange} />
+  <WidgetControlRow id="content-list.style.cardStyle" label="Card style">
+    <SegmentedControl value={value.style?.cardStyle ?? "outlined"} onChange={(cardStyle) => updateStyle({ cardStyle })} />
   </WidgetControlRow>
 </WidgetEditorSection>
 
 <WidgetEditorSection id="runtime" title="Runtime" advanced>
-  <WidgetControlRow id="content-list.runtime.emptyMessage" label="Empty message">
-    <Input value={value.runtime?.emptyMessage} onChange={handleControlChange} />
+  <WidgetControlRow id="content-list.emptyState.title" label="Empty title">
+    <Input value={value.emptyState?.title ?? ""} onChange={(title) => updateEmptyState({ title })} />
   </WidgetControlRow>
 </WidgetEditorSection>
 ```
