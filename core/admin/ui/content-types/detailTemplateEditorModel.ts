@@ -151,6 +151,7 @@ export const buildDetailTemplateDocumentUpdate = (
   return {
     ...current,
     name: normalizeText(draft.name, current.name),
+    status: "draft",
     titlePattern: normalizeText(draft.titlePattern, current.titlePattern),
     blocks: draft.blocks,
   };

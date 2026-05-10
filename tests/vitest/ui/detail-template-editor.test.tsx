@@ -340,6 +340,7 @@ import {
   getActiveAssistantSurfaceContext,
 } from "../../../core/admin/ui/assistant/activeSurfaceContext";
 import { DetailTemplateEditorPage } from "../../../core/admin/ui/content-types/DetailTemplateEditorPage";
+import { buildDetailTemplateDocumentUpdate } from "../../../core/admin/ui/content-types/detailTemplateEditorModel";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -549,6 +550,56 @@ test("detail template editor saves shared builder blocks and previews with selec
   } finally {
     view.cleanup();
   }
+});
+
+test("detail template editor saves published templates through draft payloads", async () => {
+  const publishedDocument = createDocument({ status: "published" });
+  detailTemplateState.cachedRecord = createRecord({
+    status: "published",
+    currentDocument: publishedDocument,
+    publishedDocument,
+    publishedAt: "2026-05-10T11:00:00.000Z",
+  });
+  detailTemplateState.remoteRecord = createRecord({
+    status: "published",
+    currentDocument: publishedDocument,
+    publishedDocument,
+    publishedAt: "2026-05-10T11:00:00.000Z",
+  });
+  const view = mount(
+    "/admin/advanced/engine/ct-products/collection/detail-template/detail-products"
+  );
+
+  try {
+    await flush();
+    clickButton(view.container, "add-widget");
+    clickButton(view.container, "Save draft");
+    await flush();
+
+    const savedDocument = detailTemplateState.updateDetailPage.mock.calls.at(-1)?.[1];
+    expect(savedDocument?.status).toBe("draft");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("buildDetailTemplateDocumentUpdate downgrades published records to draft updates", () => {
+  const publishedDocument = createDocument({ status: "published" });
+  const document = buildDetailTemplateDocumentUpdate(
+    createRecord({
+      status: "published",
+      currentDocument: publishedDocument,
+      publishedDocument,
+      publishedAt: "2026-05-10T11:00:00.000Z",
+    }),
+    {
+      name: "Product detail template edited",
+      titlePattern: "{title}",
+      blocks: publishedDocument.blocks,
+    }
+  );
+
+  expect(document.status).toBe("draft");
 });
 
 test("detail template editor publishes through detail pages lifecycle", async () => {

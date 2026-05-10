@@ -622,6 +622,8 @@ type ActionExecutorDeps = {
   saveExecutionResult?: typeof saveAssistantActionExecutionResult;
 };
 
+type CustomScreenRecord = Awaited<ReturnType<ActionExecutorDeps["listCustomScreens"]>>[number];
+
 const defaultDeps: ActionExecutorDeps = {
   getSetting,
   setSetting,
@@ -688,6 +690,50 @@ const defaultDeps: ActionExecutorDeps = {
   validateSiteKitRun: validateGuidedSiteBuilderRun,
   getExecutionResult: getAssistantActionExecutionByIdempotencyKey,
   saveExecutionResult: saveAssistantActionExecutionResult,
+};
+
+const findExistingCustomScreenForUpsert = async (
+  action: AssistantCustomScreenUpsertAction,
+  deps: ActionExecutorDeps
+): Promise<{
+  contentType: ContentTypeRecord | null;
+  existing: CustomScreenRecord | null;
+  conflicts: AssistantActionPreviewChange["conflicts"];
+}> => {
+  const contentType = await deps.getContentTypeBySlug(action.input.contentTypeSlug);
+  if (!contentType) {
+    return { contentType: null, existing: null, conflicts: [] };
+  }
+
+  const role = action.input.collectionRole ?? null;
+  const compositionKey = action.input.compositionKey ?? null;
+  const candidates = (await deps.listCustomScreens()).filter(
+    (entry) =>
+      entry.contentTypeId === contentType.id &&
+      (role
+        ? entry.collectionRole === role && (entry.compositionKey ?? null) === compositionKey
+        : entry.name === action.input.name)
+  );
+
+  if (candidates.length > 1) {
+    return {
+      contentType,
+      existing: null,
+      conflicts: [
+        {
+          code: "assistant_action_dependency_conflict",
+          severity: "error",
+          message: `Custom screen target for "${action.input.name}" is ambiguous; choose the exact collection screen before composing an update.`,
+        },
+      ],
+    };
+  }
+
+  return {
+    contentType,
+    existing: candidates[0] ?? null,
+    conflicts: [],
+  };
 };
 
 const assertAssistantActionPlan = (value: unknown): AssistantActionPlan => {
@@ -787,12 +833,10 @@ const buildCustomScreenPreview = async (
   action: AssistantCustomScreenUpsertAction,
   deps: ActionExecutorDeps
 ) => {
-  const contentType = await deps.getContentTypeBySlug(action.input.contentTypeSlug);
-  const existing = contentType
-    ? ((await deps.listCustomScreens()).find(
-        (entry) => entry.contentTypeId === contentType.id && entry.name === action.input.name
-      ) ?? null)
-    : null;
+  const { contentType, existing, conflicts } = await findExistingCustomScreenForUpsert(
+    action,
+    deps
+  );
   const comparableExisting = existing
     ? {
         name: existing.name,
@@ -832,6 +876,7 @@ const buildCustomScreenPreview = async (
     warnings: contentType
       ? []
       : ["The content type does not exist yet and will be created earlier in the plan."],
+    conflicts,
     beforeValue: comparableExisting,
     nextValue,
   });
@@ -3054,15 +3099,16 @@ const executeCustomScreenAction = async (
   preview: AssistantActionPreviewChange,
   deps: ActionExecutorDeps
 ) => {
-  const contentType = await deps.getContentTypeBySlug(action.input.contentTypeSlug);
+  const { contentType, existing, conflicts } = await findExistingCustomScreenForUpsert(
+    action,
+    deps
+  );
   if (!contentType) {
     throw new Error("assistant_action_dependency_missing");
   }
-
-  const existing =
-    (await deps.listCustomScreens()).find(
-      (entry) => entry.contentTypeId === contentType.id && entry.name === action.input.name
-    ) ?? null;
+  if (conflicts.length > 0) {
+    throw new Error("assistant_action_dependency_conflict");
+  }
 
   const record =
     preview.operation === "create"
@@ -4452,7 +4498,9 @@ const executeDetailPageAction = async (
     operation: preview.operation,
     status: "success",
     resourceId: finalRecord.id,
-    adminHref: null,
+    adminHref: `/admin/advanced/engine/${encodeURIComponent(
+      prepared.contentType.id
+    )}/collection/detail-template/${encodeURIComponent(finalRecord.id)}`,
     publicHref: null,
     message:
       preview.operation === "noop"

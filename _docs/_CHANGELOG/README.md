@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 831 | 2026-05-10 | TASK-190 post-review drift fixes | Assistant/Core |
 | 830 | 2026-05-10 | TASK-190 blueprint composer closure | Documentation/Assistant |
 | 829 | 2026-05-10 | TASK-190 blueprint composer guide | Documentation/Assistant |
 | 828 | 2026-05-10 | TASK-190 composition fixture matrix | Assistant/QA |

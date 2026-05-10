@@ -40,11 +40,12 @@ Closure sequencing rule:
 
 ## Security Contract
 
-- Visibility: docs/QA only.
-- Auth model: no runtime change.
-- RBAC: docs preserve permission boundaries.
+- Visibility: docs/QA plus internal diagnostics redaction hardening.
+- Auth model: no public or API route behavior change.
+- RBAC: docs preserve permission boundaries; diagnostics remain internal
+  observability helpers.
 - CSRF: no runtime change.
-- Rate-limit bucket: no runtime change.
+- Rate-limit bucket: no public or API route behavior change.
 - Reject-unknown validation: docs state provider composition drafts are strict.
 - Anti-abuse: docs preserve review/dry-run/execute requirement.
 - Secret handling: no secrets in docs/changelog.
@@ -83,3 +84,14 @@ Closure sequencing rule:
   sandbox with `.env` loaded (`755` tests, `2913` assertions), and
   `bun run scan:security:strict` clean. The container image scan remained
   intentionally skipped because `SECURITY_SCAN_IMAGE` was not set.
+- 2026-05-10: Post-closure review fixes landed for published detail-template
+  draft saves, metadata-backed custom-screen reuse, detail-page editor
+  `adminHref`, acceptance-matrix wording, and security-contract precision.
+  Follow-up validation passed targeted Vitest detail-template/diagnostics/fixture
+  suites (`3` files, `26` tests), targeted Bun action executor coverage (`62`
+  tests, `292` assertions), `bun --cwd core lint`, `bun --cwd core lint:types`,
+  `bun run lint`, full `bun run test:vitest` (`582` files, `2611` tests), full
+  DB/runtime `bun run test:bun` outside the sandbox with `.env` loaded (`756`
+  tests, `2921` assertions), and `bun run scan:security:strict` clean. The
+  container image scan remained intentionally skipped because
+  `SECURITY_SCAN_IMAGE` was not set.
