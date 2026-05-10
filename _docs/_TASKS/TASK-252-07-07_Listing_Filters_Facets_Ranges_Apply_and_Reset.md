@@ -34,7 +34,8 @@ and Reject decisions.
   `_docs/_WIDGETS/tmp/listing-filters/MATRIX.md`; start from the current owner
   fields `listingQueryId`, `autoApply`, `showSearch`, `facets`, `style`, and
   `resolved`; preserve current `searchLabel` and `searchPlaceholder` copy
-  fields as non-destructive top-level search-label fallbacks.
+  fields as non-destructive top-level search-label fallbacks. Counts remain
+  runtime-resolved display data, not persisted facet configuration.
 - Keep: reset behavior means explicit schema/default/render/editor/runtime
   ownership for `behavior.resetLabel`, `behavior.applyLabel`, and reset binding.
   Reset must clear the current `lq.<queryId>.*` filter/search params and refresh
@@ -125,6 +126,14 @@ Implementation checklist:
 - Read `_docs/_WIDGETS/tmp/listing-filters/MATRIX.md` before changing the schema or editor.
 - Extend or reorganize `core/widgets/core/listingFilters.tsx` schema/defaults/normalizer/rendering
   only for fields approved by the research decisions above.
+- Keep facet counts runtime-owned: render counts from resolved listing runtime
+  data when available, but do not add persisted count values, count-visibility,
+  or per-facet limit controls in this leaf. Count visibility and limits remain
+  Adapt-only until schema/runtime owners move together.
+- Restrict operator controls by source and facet kind before exposing them in
+  `ListingFiltersEditors.tsx`; never persist arbitrary operator strings from
+  the browser. Add validator/editor tests for rejected operators and legacy
+  allowed operator fallbacks.
 - Add explicit reset/apply schema and rendering for `behavior.resetLabel` and
   `behavior.applyLabel`; wire a stable reset control that
   `getListingRuntimeClientScript` can bind without DOM-string guessing.

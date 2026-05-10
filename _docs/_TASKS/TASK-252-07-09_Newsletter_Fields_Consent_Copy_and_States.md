@@ -141,12 +141,14 @@ Implementation checklist:
   tips, or metadata.
 - Keep legacy payloads non-destructive: missing new fields must normalize to the
   current rendered behavior.
-- Do not expose provider-reference or integration-config editor controls in
-  this leaf; provider/audience ownership remains backend-only.
-- Remove existing integration mode/action URL/webhook editor controls from
-  `NewsletterEditors.tsx` or convert them to non-editable diagnostics; legacy
-  `integration` payloads may render safely but must not become new provider
-  configuration UI.
+- Preserve existing safe `integration.mode`, `integration.actionUrl`, and
+  `integration.webhookId` compatibility controls unless the same implementation
+  includes an explicit migration/read-only diagnostics step with tests. This
+  leaf must not remove currently schema-owned safe action/webhook references
+  while adding copy/consent controls.
+- Do not add provider secrets, audience tokens, API keys, or privileged provider
+  configuration to widget data or browser-visible editor state; those remain
+  backend-owned integration settings.
 - Add or update runtime/widget tests and editor-wave tests in the files listed
   above.
 

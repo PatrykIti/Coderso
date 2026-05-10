@@ -31,6 +31,11 @@ and Reject decisions.
 ## Research Decisions
 
 - Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/feature-grid/MATRIX.md`; for this leaf, start from the current owner fields `header`, `items`, `style` and add only the schema fields that the matrix explicitly keeps.
+- Keep: icon-card grids, optional per-item links, and alternating feature rows
+  require explicit `style.layout` and `style.mediaPosition` ownership in
+  `core/widgets/core/featureGrid.tsx`. Row rendering must use the existing
+  `items[].image` seam; do not infer row mode from arbitrary classes or create
+  a separate rich-media feature widget in this leaf.
 - Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat bento, badges/categories, hover animation, and rich media rows as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: separate one-off widgets, raw HTML/script embeds, and unbounded visual/CSS controls.
 
@@ -62,11 +67,18 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
+type FeatureGridLayout = "cards" | "rows";
+type FeatureGridMediaPosition = "left" | "right" | "alternate";
+
 function normalizeFeatureGridData(data: FeatureGridData): FeatureGridData {
   return {
     header: normalizeFeatureGridHeader(data.header),
     items: normalizeFeatureGridItems(data.items),
-    style: normalizeFeatureGridStyle(data.style),
+    style: normalizeFeatureGridStyle({
+      ...data.style,
+      layout: normalizeFeatureGridLayout(data.style?.layout),
+      mediaPosition: normalizeFeatureGridMediaPosition(data.style?.mediaPosition),
+    }),
   };
 }
 
@@ -80,6 +92,12 @@ function normalizeFeatureGridItem(item: FeatureGridItem, index: number): Feature
 function FeatureGridVisualEditor(props: WidgetEditorProps<FeatureGridData>) {
   return (
     <WidgetEditorSection id="feature-grid.items" title="Feature items">
+      <WidgetControlRow id="feature-grid.style.layout" label="Layout" data-widget-control="feature-grid.style.layout">
+        <SegmentedControl value={props.value.style?.layout ?? "cards"} onChange={(layout) => props.onChange(updateFeatureGridStyle(props.value, { layout }))} />
+      </WidgetControlRow>
+      <WidgetControlRow id="feature-grid.style.mediaPosition" label="Media position" data-widget-control="feature-grid.style.mediaPosition">
+        <SegmentedControl value={props.value.style?.mediaPosition ?? "alternate"} onChange={(mediaPosition) => props.onChange(updateFeatureGridStyle(props.value, { mediaPosition }))} />
+      </WidgetControlRow>
       {props.value.items.map((item, index) => (
         <WidgetControlRow key={item.id ?? index} id={`feature-grid.items.${index}.title`} label="Title" data-widget-control={`feature-grid.items.${index}.title`}>
           <Input value={item.title ?? ""} onChange={handleControlChange} />
@@ -95,6 +113,12 @@ Implementation checklist:
 - Read `_docs/_WIDGETS/tmp/feature-grid/MATRIX.md` before changing the schema or editor.
 - Extend or reorganize `core/widgets/core/featureGrid.tsx` schema/defaults/normalizer/rendering
   only for fields approved by the research decisions above.
+- Add bounded `style.layout: "cards" | "rows"` and
+  `style.mediaPosition: "left" | "right" | "alternate"` schema/default/
+  normalizer/render/editor/tests for alternating feature rows. Row mode must
+  render through existing `items[].image` and safe link fields; if media cannot
+  render safely in the implementation slice, move alternating rows to Adapt in
+  the matrix/task rather than leaving a Keep requirement without an owner.
 - Refactor `core/admin/ui/widgets/editors/FeatureGridEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.

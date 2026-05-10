@@ -83,7 +83,7 @@ function normalizeProductGalleryData(data: ProductGalleryData): ProductGalleryDa
       sortField: "updatedAt",
       sortDir: "desc",
     }),
-    media: normalizeProductGalleryMedia(data.media ?? data.style),
+    media: normalizeProductGalleryMedia(data.media),
     fields: normalizeProductGalleryFields(data.fields),
     emptyState: normalizeProductGalleryEmptyState(data.emptyState),
     style: normalizeProductGalleryStyle(data.style),
@@ -125,6 +125,9 @@ Implementation checklist:
   `commerceWidgetRuntime.ts`; if the resolver does not supply URL/alt metadata,
   the implementation must either add that resolver contract with tests or defer
   thumbnail rendering.
+- Treat `media` as a new schema-owned field for this leaf. Do not coerce
+  existing `style` fields into `media`; legacy payloads without `media` should
+  normalize to the current rendered behavior.
 - Keep aspect-ratio controls out of required scope for this leaf unless the same
   implementation adds schema/defaults/normalizer/render/editor/tests and updates
   the matrix to promote the field from Adapt.
