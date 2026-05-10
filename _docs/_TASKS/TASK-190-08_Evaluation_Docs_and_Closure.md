@@ -81,6 +81,7 @@ Owner files:
 ## Progress Notes
 
 - 2026-05-10: `TASK-190-08-01` landed the deterministic fixture/red-team corpus
-  and live-provider composition matrix. Remaining closure work is the authoring
-  guide/observability leaf (`TASK-190-08-03`) and final docs/changelog/gates
-  leaf (`TASK-190-08-02`).
+  and live-provider composition matrix.
+- 2026-05-10: `TASK-190-08-03` landed `_docs/BLUEPRINT_COMPOSER.md`, docs index
+  updates, and redacted composition diagnostics serialization. Remaining closure
+  work is the final docs/changelog/gates leaf (`TASK-190-08-02`).

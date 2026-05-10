@@ -103,6 +103,10 @@ Current implemented guide blueprint:
     ownership, existing-resource reuse matches, resolved/unresolved conflicts,
     and redacted deterministic candidate scores are available to review UI/tests
     without exposing raw provider output
+  - `blueprintCompositionDiagnostics.ts` provides an internal/test-only support
+    payload for prompt hashes, selected/gated capability ids, action assembly
+    type/count traces, conflict snapshots, no-duplicate matcher decisions, and
+    redacted provider-draft shape without raw prompt/provider snippets
   - provider prompt packaging now carries bounded capability summaries for setup/composer evaluation, while generic provider planning still uses the current `cms_operation_draft` response contract
   - candidate shadow diagnostics can be exposed only through a local/test env gate; they remain metadata-only even though the bounded mixed-setup cutover is now live
 
@@ -163,6 +167,7 @@ Core domain service:
   - `core/services/assistant/blueprints/blueprintPageSectionComposer.ts`
   - `core/services/assistant/blueprints/blueprintActionAssembler.ts`
   - `core/services/assistant/blueprints/blueprintCompositionMetadata.ts`
+  - `core/services/assistant/blueprints/blueprintCompositionDiagnostics.ts`
   - `core/services/assistant/blueprints/blueprintProviderContext.ts`
   - `core/services/assistant/blueprints/blueprintCompositionDraftSchema.ts`
   - `core/services/assistant/blueprints/blueprintComposerShadow.ts`

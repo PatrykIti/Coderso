@@ -5,7 +5,7 @@
 **Category:** Docs + Developer Experience + Observability
 **Estimated Effort:** Medium
 **Dependencies:** TASK-190-08-01
-**Status:** To Do
+**Status:** Done (2026-05-10)
 
 ---
 
@@ -106,3 +106,17 @@ export const buildBlueprintCompositionDiagnostics = (input) => ({
 - `_docs/ASSISTANT_SITE_BUILDER.md`
 - `_docs/TESTING_STRATEGY.md`
 - `_docs/_TASKS/README.md`
+
+## Completion Notes
+
+- Added `_docs/BLUEPRINT_COMPOSER.md` as the capability authoring and
+  diagnostics guide for stable capability ids, resource keys,
+  `provides`/`requires`, merge policy, gated domains, fixture expectations,
+  security rules, and changelog/task closure.
+- Added `core/services/assistant/blueprints/blueprintCompositionDiagnostics.ts`
+  plus Vitest coverage for prompt hashing, selected/gated capability
+  serialization, action assembly traces, no-duplicate matcher summaries, and
+  redacted provider-draft diagnostics.
+- Updated the docs index, assistant site-builder contract, architecture docs,
+  and testing strategy to point at the authoring guide and diagnostics owner
+  seam.

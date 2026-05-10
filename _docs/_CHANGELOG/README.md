@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 829 | 2026-05-10 | TASK-190 blueprint composer guide | Documentation/Assistant |
 | 828 | 2026-05-10 | TASK-190 composition fixture matrix | Assistant/QA |
 | 827 | 2026-05-10 | TASK-190 detail-page generic resource integration | Assistant/Core |
 | 826 | 2026-05-10 | TASK-190 composition review metadata | Assistant/Core |

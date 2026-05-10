@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 18 tasks
+- **To Do:** 17 tasks
 - **In Progress:** 6 tasks
-- **Done:** 1487 tasks
+- **Done:** 1488 tasks
 
 ---
 
@@ -48,7 +48,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-252-07 | Dynamic and Operational Widget Editor Expansion | High | Large | Dynamic, commerce, listing/search, forms, booking, navigation, and footer editor parity |
 | TASK-252-08 | QA, Docs, Changelog, and Board Closure | Medium | Medium | Final validation matrix, missing widget docs, changelog, and board sync |
 | TASK-190-08-02 | Docs, Changelog, and Closure | High | Medium | Technical leaf: final docs, changelog, board, and gates |
-| TASK-190-08-03 | Capability Authoring Guide and Observability | High | Medium | Technical leaf: authoring guide plus redacted composer diagnostics/observability |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
 | TASK-240 | Coderso Multilingual and i18n Umbrella | High | Very Large | Execution-ready locale/translation/runtime routing program superseding TASK-054-21 |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |
@@ -64,7 +63,7 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-190 | Blueprint Composer Foundation | High | Very Large | In progress: capability manifest/registry, candidate planning, provider/shadow safety layer, deterministic composition graph/conflicts, action assembly/review metadata, schema/listing merge, page-upsert collection-link persistence, detail-page foundation, collection workspace/editor context, and catalog-backed no-duplicate reuse are landed; supported mixed-capability and primary-plus-gated setup requests now stay on the composed path before provider drafting can bypass them, while later evaluation/closure leaves remain |
-| TASK-190-08 | Evaluation, Docs, and Closure | High | Large | In progress: deterministic fixture/red-team corpus and live-provider composition matrix are landed; authoring guide/observability and final closure remain |
+| TASK-190-08 | Evaluation, Docs, and Closure | High | Large | In progress: deterministic fixture/red-team corpus, live-provider composition matrix, authoring guide, and redacted diagnostics serialization are landed; final closure remains |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
@@ -76,6 +75,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-190-08-03 | Capability Authoring Guide and Observability | High | Medium | Done: `_docs/BLUEPRINT_COMPOSER.md`, docs index updates, architecture/testing/site-builder references, and redacted composition diagnostics serialization are landed |
 | TASK-190-08-01 | Composition Fixture Matrix and Red-Team Corpus | High | Medium | Done: single-pack regressions, mixed-capability composition, gated booking/checkout, Mabudo-like tier-A parity, catalog reuse, provider red-team safety, media safety, LLM-unavailable gate, and live-provider composition matrix are covered |
 | TASK-190-05 | Page Section and Widget Composer | High | Large | Done: section alias/slot vocabulary, deterministic widget/pack mapping, page-upsert collection-link persistence, detail-page storage/schema/bindings/runtime/preview/admin/API/cache/fixture acceptance, and generic detail-page resource integration are landed |
 | TASK-190-05-03 | Detail Page Composition and Content Route Sections | High | Very Large | Done: persisted detail-page documents/revisions, route linkage, runtime/preview/cache, typed `detail-page.upsert`, admin route/client/cache parity, fixture/runtime acceptance, and generic policy/provider/target-resolver integration are landed |
