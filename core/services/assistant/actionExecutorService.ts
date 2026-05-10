@@ -717,7 +717,35 @@ const findExistingCustomScreenForUpsert = async (
       )
     : [];
   const nameCandidates = screens.filter((entry) => entry.name === action.input.name);
-  const candidates = metadataCandidates.length > 0 ? metadataCandidates : nameCandidates;
+  const legacyNameCandidates = role
+    ? nameCandidates.filter(
+        (entry) => entry.collectionRole === null && (entry.compositionKey ?? null) === null
+      )
+    : nameCandidates;
+  const hasConflictingMetadataName =
+    role &&
+    metadataCandidates.length === 0 &&
+    nameCandidates.length !== legacyNameCandidates.length;
+  const candidates =
+    metadataCandidates.length > 0
+      ? metadataCandidates
+      : hasConflictingMetadataName
+        ? []
+        : legacyNameCandidates;
+
+  if (hasConflictingMetadataName) {
+    return {
+      contentType,
+      existing: null,
+      conflicts: [
+        {
+          code: "assistant_action_dependency_conflict",
+          severity: "error",
+          message: `Custom screen "${action.input.name}" already belongs to another composition; choose the exact collection screen before composing an update.`,
+        },
+      ],
+    };
+  }
 
   if (candidates.length > 1) {
     return {
