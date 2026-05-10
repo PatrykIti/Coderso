@@ -437,6 +437,11 @@ Rotacja klucza:
     matcher state, rejects unknown fields, and redacts secret-like diagnostic
     strings before returning primary/adjunct/gated choices or reuse/conflict
     summaries to the admin UI,
+  - blueprint composition diagnostics serialize only prompt hashes, selected
+    capability ids, action type/count traces, conflict summaries, no-duplicate
+    decisions, candidate scores, and provider-draft shape; raw prompts,
+    provider snippets, secret-like keys, signed URLs, and provider-authored
+    executable payloads stay redacted/non-executable,
   - assistant redaction treats signed-url-like metadata keys as sensitive,
   - `execute` wymaga `idempotencyKey`,
   - idempotency jest persystowane w tabeli `assistant_action_executions` i scope’owane przez actor/plan/hash,

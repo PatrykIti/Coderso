@@ -12,6 +12,11 @@ const secretLikeTextPattern =
 const credentialValuePattern =
   /\b(?:sk-[a-z0-9_-]+|sk-or-v1-[a-z0-9_-]+|bearer\s+[a-z0-9._-]+)\b/gi;
 
+const isSecretLikeText = (value: string) => {
+  secretLikeTextPattern.lastIndex = 0;
+  return secretLikeTextPattern.test(value);
+};
+
 const normalizeText = (value: string) =>
   value
     .trim()
@@ -57,9 +62,8 @@ const summarizeProviderDraft = (draft: unknown) => {
   }
   const record = draft as Record<string, unknown>;
   const keys = Object.keys(record).map((key) =>
-    secretLikeTextPattern.test(key) ? "[redacted-key]" : normalizeText(key)
+    isSecretLikeText(key) ? "[redacted-key]" : normalizeText(key)
   );
-  secretLikeTextPattern.lastIndex = 0;
   const operation = typeof record.operation === "string" ? normalizeText(record.operation) : null;
   const resourceKind =
     typeof record.resourceKind === "string" ? normalizeText(record.resourceKind) : null;

@@ -21,6 +21,9 @@ Coverage states:
 
 These rows are not route-coverage rows. They record opt-in OpenAI/OpenRouter
 fixture coverage for TASK-190 mixed blueprint composition.
+TASK-190-08-02 closes the documentation/changelog/task-board side of this
+matrix; future live rows should stay opt-in and continue to report provider
+gating without trusting provider-authored executable actions.
 
 | Matrix | Coverage | Test | Task | Notes |
 |---|---|---|---|---|

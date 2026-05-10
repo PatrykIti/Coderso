@@ -2084,6 +2084,12 @@ bounded candidates, and route-derived canonical data requires `settings:read`.
 The canonical detail-page candidate links to the manual detail-template editor
 under the same Engine workspace route family; hover/focus prefetch warms the
 workspace summary, detail-page record, and sample entries with cached reads.
+TASK-190 blueprint composition consumes this same workspace/detail-page read
+model for supported mixed setup follow-ups. The assistant may request
+server-derived resource catalog inclusion, but clients cannot submit trusted
+`resourceCatalog` payloads, and detail-page writes still execute only through
+the typed `detail-page.upsert` action plus the detail-page route/service owner
+seams.
 
 Delete returns `{ "ok": true }` only after the content type dependency guard
 passes. Known conflicts are mapped to HTTP 409:

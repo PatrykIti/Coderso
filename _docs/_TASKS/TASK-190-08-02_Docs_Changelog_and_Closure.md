@@ -5,7 +5,7 @@
 **Category:** Docs + QA Closure
 **Estimated Effort:** Medium
 **Dependencies:** TASK-190-08-01, TASK-190-08-03
-**Status:** To Do
+**Status:** Done (2026-05-10)
 
 ---
 
@@ -69,3 +69,17 @@ Closure sequencing rule:
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
 - New changelog entries for completed TASK-190 leaves and umbrella closure.
+
+## Progress Notes
+
+- 2026-05-10: Final closure pass synchronized the architecture/API/site-builder
+  docs, acceptance/live matrices, security notes, task board, and changelog for
+  the complete TASK-190 blueprint composer foundation.
+- 2026-05-10: Validation completed with targeted TASK-190 Vitest
+  diagnostics/fixtures/live-matrix coverage (`3` files, `22` tests), Bun
+  live-matrix smoke (`1` test, `24` assertions), `bun --cwd core lint`,
+  `bun --cwd core lint:types`, `bun run lint`, full `bun run test:vitest`
+  (`582` files, `2609` tests), full DB/runtime `bun run test:bun` outside the
+  sandbox with `.env` loaded (`755` tests, `2913` assertions), and
+  `bun run scan:security:strict` clean. The container image scan remained
+  intentionally skipped because `SECURITY_SCAN_IMAGE` was not set.

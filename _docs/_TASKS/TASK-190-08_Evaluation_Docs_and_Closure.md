@@ -5,7 +5,7 @@
 **Category:** QA + Docs + Assistant Evaluation
 **Estimated Effort:** Large
 **Dependencies:** TASK-190-01, TASK-190-02, TASK-190-03, TASK-190-04, TASK-190-05, TASK-190-06, TASK-190-07
-**Status:** In Progress (2026-05-10)
+**Status:** Done (2026-05-10)
 
 ---
 
@@ -85,3 +85,6 @@ Owner files:
 - 2026-05-10: `TASK-190-08-03` landed `_docs/BLUEPRINT_COMPOSER.md`, docs index
   updates, and redacted composition diagnostics serialization. Remaining closure
   work is the final docs/changelog/gates leaf (`TASK-190-08-02`).
+- 2026-05-10: `TASK-190-08-02` synchronized source-of-truth docs, task board,
+  changelog, and final validation notes; the TASK-190 evaluation/docs closure is
+  complete.

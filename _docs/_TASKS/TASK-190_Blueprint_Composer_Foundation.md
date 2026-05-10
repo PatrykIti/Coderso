@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Product Architecture + Blueprint Planning
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-172, TASK-178, TASK-188, TASK-189
-**Status:** In Progress (2026-05-10)
+**Status:** Done (2026-05-10)
 
 ---
 
@@ -50,12 +50,13 @@ The goal is foundation first. Do not start by expanding individual presets such
 as Mabudo-like house projects. Preset-specific enrichment comes after the
 composer exists and can consume richer capabilities safely.
 
-The current delivered slice remains foundation-first. Capability manifests,
+The delivered foundation remains composition-first. Capability manifests,
 candidate ranking, graph fragments, assembler helpers, no-duplicate reuse,
-composition review metadata, and generic detail-page resource packaging now
-drive the local setup planner/resource layer for supported mixed-capability and
-primary-plus-gated setup requests, while single-pack setup/refinement routing
-still stays deferred until the later rollout leaves close.
+composition review metadata, diagnostics, fixture/live matrices, authoring docs,
+and generic detail-page resource packaging now drive the local setup
+planner/resource layer for supported mixed-capability and primary-plus-gated
+setup requests. Single-pack setup/refinement continues to use the existing
+legacy pack builders outside this foundation's bounded mixed-setup cutover.
 Compatible `content-type.upsert` fragments can now also merge into one
 validator-backed content schema action. Compatible listing facet/card fragments
 can now also merge through schema-backed listing owners and widen
@@ -514,3 +515,9 @@ Technical leaf tasks:
     Listing, Form, SEO, and route editors where possible.
 14. Detail page route linking, internal admin APIs, action registry/cache/UI
     labels, and capability manifests are explicit for `detail-page`.
+
+## Progress Notes
+
+- 2026-05-10: TASK-190 closed after the evaluation/docs leaf synchronized the
+  source-of-truth docs, task board, changelog, fixture/live matrices, redacted
+  diagnostics, and full local validation gates.

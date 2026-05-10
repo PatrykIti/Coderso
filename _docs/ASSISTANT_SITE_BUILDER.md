@@ -74,7 +74,7 @@ Current implemented guide blueprint:
   - current packs and adjunct/gated modules now register through a strict capability manifest and registry layer
   - mixed setup prompts can now be analyzed into primary + adjunct capability candidates inside the foundation layer
   - composed graph/assembler helpers still reuse the current strict typed action families; no parallel blueprint executor was introduced
-  - supported mixed-capability and primary-plus-gated setup prompts now route through the composed planner path, while single-pack setup/refinement still remains on later leaves
+  - supported mixed-capability and primary-plus-gated setup prompts now route through the composed planner path; single-pack setup/refinement still uses the existing legacy pack builders outside this bounded mixed-setup cutover
   - compatible `content-type.upsert` fragments now merge server-side through `blueprintSchemaMerger.ts` plus the existing content schema validator, so additive field/enum extensions stay in one strict action instead of surfacing as duplicate-resource drift
   - compatible listing facet/card fragments now merge through schema-backed listing owners, and the assembler widens `listing-query.upsert.fields` automatically so merged filters/card bindings keep the runtime projection fields they need
   - assistant-facing page section aliases and merge slots now resolve through a deterministic library over the current page-builder widget registry and alias-specific `modulePackMatrix` helper mappings; unsupported aliases stay gated instead of inventing a second section catalog
@@ -83,7 +83,8 @@ Current implemented guide blueprint:
     gates plus manifest permission gaps, so media and privileged boundaries
     return `needs_input`/`gated` before executable action assembly instead of
     silently becoming partial plans
-  - canonical collection pages now compose listing/filter/form sections through `blueprintPageSectionComposer.ts`, and `page.upsert` persists `PageData.settings.collectionLink` through the existing page owner seam so later workspace/no-duplicate slices can stop relying on route heuristics; assistant transport locators resolve back into those persisted ids before page writes land
+  - canonical collection pages now compose listing/filter/form sections through `blueprintPageSectionComposer.ts`, and `page.upsert` persists `PageData.settings.collectionLink` through the existing page owner seam so workspace/no-duplicate slices resolve canonical links from owner metadata instead of route heuristics; assistant transport locators resolve back into those persisted ids before page writes land
+  - final TASK-190 closure is documented through `_docs/BLUEPRINT_COMPOSER.md`, the fixture/live matrices, redacted diagnostics helpers, task board, and changelog; future pack enrichment must extend those owner seams instead of adding a parallel composer path
   - catalog admin review screens now compose their `screen-*` custom-screen
     blocks through `blueprintAdminSurfaceComposer.ts`; the helper merges admin
     groups deterministically, validates referenced content schema fields,

@@ -80,6 +80,8 @@ test("buildBlueprintCompositionDiagnostics redacts provider draft and prompt sec
       operation: "create",
       resourceKind: "entry",
       apiKey: "sk-or-v1-red-team-secret",
+      csrfToken: "csrf-red-team-secret",
+      sessionCookie: "session-red-team-secret",
       actions: [{ type: "database.drop", input: { password: "secret-value" } }],
     },
     generatedAt: "2026-05-10T12:00:00.000Z",
@@ -92,6 +94,7 @@ test("buildBlueprintCompositionDiagnostics redacts provider draft and prompt sec
     hasActionsArray: true,
     keys: expect.arrayContaining(["[redacted-key]", "actions", "operation", "resourceKind"]),
   });
+  expect(diagnostics.providerDraft?.keys).not.toContain("[redacted]");
   expect(serialized).not.toContain("sk-or-v1-red-team-secret");
   expect(serialized).not.toContain("secret-value");
   expect(serialized).not.toContain("database.drop");
