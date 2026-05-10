@@ -41,7 +41,10 @@ than dense.
     diagnostics only if needed.
 - Preserve Hero presets stored in `widgets.hero.presets`. Presets must include
   badge data after the model is added, but old presets must still apply.
-- Ensure href validation remains user-safe: relative URLs or full URLs only.
+- Ensure href validation remains user-safe for every public Hero link, not only
+  the new badge link: existing `primaryCta.href` / `secondaryCta.href` and the
+  new `badge.href` must share the same core-owned safe href normalizer before
+  render.
 - Do not add a production fallback only for tests; update schema/defaults/
   normalizer/rendering consistently.
 

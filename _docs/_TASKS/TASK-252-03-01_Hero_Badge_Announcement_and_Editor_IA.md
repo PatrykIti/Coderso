@@ -136,6 +136,10 @@ function normalizeHeroBadge(value: unknown): HeroBadge | undefined {
 }
 
 function normalizeHeroBadgeHref(value: unknown): string | undefined {
+  return normalizeHeroHref(value);
+}
+
+function normalizeHeroHref(value: unknown): string | undefined {
   return normalizeWidgetSafeHref(value, {
     allowRelative: true,
     allowHash: true,
@@ -143,6 +147,16 @@ function normalizeHeroBadgeHref(value: unknown): string | undefined {
     rejectProtocols: ["javascript:", "data:", "vbscript:"],
     rejectProtocolRelative: true,
   });
+}
+
+function normalizeHeroCta(value: unknown): HeroCta | undefined {
+  if (!isRecord(value)) return undefined;
+  const label = readTrimmedString(value.label);
+  if (!label) return undefined;
+  return {
+    label,
+    href: normalizeHeroHref(value.href),
+  };
 }
 
 function HeroBlock(props: WidgetRenderProps<HeroData>) {
@@ -184,10 +198,12 @@ Implementation checklist:
 - The `currentHeroSchema` and `currentHeroDefaults` pseudocode names refer to
   the existing `heroSchema` and defaults in `core/widgets/core/hero.tsx`; update
   those owners in place.
-- Add `normalizeHeroBadgeHref` in the Hero owner module, or extract a small
-  widget-safe href helper and import it from Hero. Do not reuse the current
-  editor-local `isValidHref` as the security boundary; core normalization must
-  reject `javascript:`, `data:`, `vbscript:`, protocol-relative URLs such as
+- Add a core-owned `normalizeHeroHref` helper in the Hero owner module, or
+  extract a small widget-safe href helper and import it from Hero. Apply it to
+  both existing CTA links (`primaryCta.href` / `secondaryCta.href`) and the new
+  `badge.href`; do not leave the current public CTA anchors relying only on the
+  editor-local `isValidHref` warning. Core normalization must reject
+  `javascript:`, `data:`, `vbscript:`, protocol-relative URLs such as
   `//example.com`, and other non-HTTP protocols before render.
 - Refactor `core/admin/ui/widgets/editors/HeroEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
@@ -216,10 +232,11 @@ Implementation checklist:
     normalize legacy payloads through `core/widgets/core/hero.tsx`.
 - Anti-abuse:
   - Badge text/prefix are text-only, not raw HTML.
-  - Badge href must pass core-owned safe href normalization before render:
-    relative paths, hash links, and HTTP(S) URLs are allowed; `javascript:`,
-    `data:`, `vbscript:`, protocol-relative URLs, and unknown protocols are
-    rejected or normalized away.
+  - Every public Hero href must pass core-owned safe href normalization before
+    render, including existing primary/secondary CTA hrefs and the new badge
+    href: relative paths, hash links, and HTTP(S) URLs are allowed;
+    `javascript:`, `data:`, `vbscript:`, protocol-relative URLs, and unknown
+    protocols are rejected or normalized away.
 
 ## Testing Requirements
 
@@ -229,7 +246,7 @@ Implementation checklist:
 - `bun run test:vitest -- tests/vitest/widgets/hero.test.tsx tests/vitest/widgets/heroEditors.test.tsx`
 - `bun test tests/unit/widgets/validator.test.ts` when schema validation changes.
 - `bun run test:vitest -- tests/vitest/ui/hero-editor-wave.test.tsx`
-- Add Hero widget assertions that unsafe badge href payloads such as
+- Add Hero widget assertions that unsafe badge and CTA href payloads such as
   `javascript:alert(1)`, `data:text/html,...`, and `//evil.example` do not
   survive normalization or render as links.
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

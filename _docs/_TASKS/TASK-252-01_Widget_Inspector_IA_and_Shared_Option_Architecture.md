@@ -156,10 +156,31 @@ function resolveBuilderSlotMap(block: Block): Record<string, Block[]> {
   return Array.isArray(block.children) ? { default: block.children } : {};
 }
 
-function WidgetSlotControls({ widget, block, onChange }: WidgetSlotControlsProps) {
+type WidgetSlotControlsProps = {
+  widget: WidgetDefinition;
+  block: Block;
+  onChange: (next: Block) => void;
+  includeSlotIds?: string[];
+  sectionId?: string;
+  title?: string;
+};
+
+type BuilderSlotControlProps = Pick<WidgetSlotControlsProps, "widget" | "block" | "onChange">;
+
+function WidgetSlotControls({
+  widget,
+  block,
+  onChange,
+  includeSlotIds,
+  sectionId = "slots",
+  title = "Slots",
+}: WidgetSlotControlsProps) {
   const slotMap = resolveBuilderSlotMap(block);
-  const slotDefinitions = widget.slots ?? [];
-  const slotTargets = resolveWidgetSlotTargets(widget.slots ?? [], slotMap);
+  const includeSlotSet = includeSlotIds ? new Set(includeSlotIds) : undefined;
+  const slotDefinitions = (widget.slots ?? []).filter(
+    (slot) => !includeSlotSet || includeSlotSet.has(slot.id),
+  );
+  const slotTargets = resolveWidgetSlotTargets(slotDefinitions, slotMap);
   if (slotTargets.length === 0) return null;
 
   const isAtRepeatableSlotMaximum = (definition: WidgetSlotDefinition, count: number) =>
@@ -196,7 +217,7 @@ function WidgetSlotControls({ widget, block, onChange }: WidgetSlotControlsProps
   }
 
   return (
-    <WidgetEditorSection id="slots" title="Slots" info="Manage nested widget regions.">
+    <WidgetEditorSection id={sectionId} title={title} info="Manage nested widget regions.">
       {/* Render slotTargets plus addRepeatableSlot/removeRepeatableSlot controls. */}
     </WidgetEditorSection>
   );

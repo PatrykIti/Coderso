@@ -32,10 +32,11 @@ and Reject decisions.
 - Keep: multi-column link groups, menu/policy sources, safe manual links,
   logo/brand/copyright, and social links from
   `_docs/_WIDGETS/tmp/footer/MATRIX.md`; start from the current owner fields
-  `columns`, `legal`, `social`, `layout`, and `style`. This leaf must either
-  add an explicit `brand` schema/default/normalizer/render/editor/test contract
-  or derive brand copy from existing footer columns/legal fields; do not imply
-  `brand` already exists in `FooterData`.
+  `columns`, `legal`, `social`, `layout`, and `style`, plus the existing
+  builder-owned slots `column-1`, `column-2`, `column-3`, and `bottom`. This
+  leaf must either add an explicit `brand` schema/default/normalizer/render/
+  editor/test contract or derive brand copy from existing footer columns/legal
+  fields; do not imply `brand` already exists in `FooterData`.
 - Adapt: newsletter references and dense commerce locale/currency controls
   remain conditional; implement only when schema/defaults/normalizer/render/
   editor/tests move together.
@@ -44,7 +45,7 @@ and Reject decisions.
 ## Editor Mode Ownership
 
 - `Wizard`: first-run setup for the safest useful defaults for `footer`.
-- `Visual`: `Columns`, `Brand`, `Legal/social`, `Surface`.
+- `Visual`: `Columns`, `Brand`, `Legal/social`, `Surface`, `Footer slots`.
 - `Advanced`: `Link diagnostics`, `Legacy column mapping`.
 
 ## Sub-Tasks
@@ -93,6 +94,19 @@ function FooterVisualEditor(props: WidgetEditorProps<FooterData>) {
     </WidgetEditorSection>
   );
 }
+
+function FooterSlotControls(props: BuilderSlotControlProps) {
+  return (
+    <WidgetSlotControls
+      widget={props.widget}
+      block={props.block}
+      onChange={props.onChange}
+      includeSlotIds={["column-1", "column-2", "column-3", "bottom"]}
+      sectionId="footer.slots"
+      title="Footer slots"
+    />
+  );
+}
 ```
 
 Implementation checklist:
@@ -108,6 +122,11 @@ Implementation checklist:
 - Refactor `core/admin/ui/widgets/editors/FooterEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.
+- Preserve the existing footer slots (`column-1`, `column-2`, `column-3`,
+  `bottom`) as builder-owned slot surfaces. Do not move them into `FooterData`,
+  do not remove them from the widget definition, and do not duplicate slot
+  add/remove logic in `FooterEditors.tsx`; route them through the shared
+  TASK-252-01 `WidgetSlotControls` flow with stable `footer.slots` metadata.
 - Keep legacy payloads non-destructive: missing new fields must normalize to the
   current rendered behavior.
 - Add or update runtime/widget tests and editor-wave tests in the files listed

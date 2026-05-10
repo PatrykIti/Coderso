@@ -36,7 +36,8 @@ and Reject decisions.
   mobile menu behavior from
   `_docs/_WIDGETS/tmp/navigation/MATRIX.md`; start from the current owner fields
   `logo`, `items`, `cta`, `linksSource`, `menuKey`, `behavior`, `layout`, and
-  `style`. Map research terms `collapse`/`offcanvas` onto the existing
+  `style`, plus the existing `right` slot (`Right Actions`) exposed by the
+  widget definition. Map research terms `collapse`/`offcanvas` onto the existing
   `behavior.mobileMode` enum (`expanded`, `drawer`, `minimal`) instead of
   adding a duplicate top-level field.
 - Adapt: dropdown/mega groups and new sticky/transparent behavior expansion
@@ -49,7 +50,7 @@ and Reject decisions.
 ## Editor Mode Ownership
 
 - `Wizard`: first-run setup for the safest useful defaults for `navigation`.
-- `Visual`: `Source`, `Links`, `Mobile menu`, `CTA/logo`.
+- `Visual`: `Source`, `Links`, `Mobile menu`, `CTA/logo`, `Right Actions slot`.
 - `Advanced`: `Route diagnostics`, `Legacy link mapping`.
 
 ## Sub-Tasks
@@ -103,6 +104,19 @@ function NavigationVisualEditor(props: WidgetEditorProps<NavigationData>) {
     </WidgetEditorSection>
   );
 }
+
+function NavigationSlotControls(props: BuilderSlotControlProps) {
+  return (
+    <WidgetSlotControls
+      widget={props.widget}
+      block={props.block}
+      onChange={props.onChange}
+      includeSlotIds={["right"]}
+      sectionId="navigation.slots"
+      title="Right Actions slot"
+    />
+  );
+}
 ```
 
 Implementation checklist:
@@ -115,6 +129,11 @@ Implementation checklist:
   tips, or metadata.
 - Keep legacy payloads non-destructive: missing new fields must normalize to the
   current rendered behavior.
+- Preserve the existing `right` slot (`Right Actions`) as a builder-owned slot
+  surface. Do not move it into `NavigationData`, do not remove it from the
+  widget definition, and do not duplicate slot add/remove logic in
+  `NavigationEditors.tsx`; route it through the shared TASK-252-01
+  `WidgetSlotControls` flow with stable `navigation.slots` metadata.
 - Keep mobile behavior under `behavior.mobileMode`; valid values remain
   `expanded`, `drawer`, and `minimal`. Do not persist top-level `mobileMode` or
   invalid `collapse`/`offcanvas` values unless a schema migration updates
