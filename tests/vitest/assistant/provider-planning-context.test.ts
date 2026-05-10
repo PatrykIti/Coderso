@@ -575,6 +575,69 @@ test("buildProviderPlanningPromptPackage includes referenced template target con
   expect(JSON.stringify(prompt)).not.toContain("apiKey");
 });
 
+test("buildProviderPlanningPromptPackage includes only hydrated collection workspace context", () => {
+  const prompt = buildProviderPlanningPromptPackage({
+    prompt: "Continue the product detail template",
+    context: {
+      page: "/admin/advanced/engine/ct-products/collection",
+      collectionWorkspaceHint: {
+        contentTypeId: "ct-products",
+        activeDetailPageId: "detail-page-products",
+      },
+      collectionWorkspace: {
+        contentType: {
+          id: "ct-products",
+          name: "Products",
+          slug: "products",
+          status: "published",
+          fieldCount: 3,
+          updatedAt: "2026-05-10T10:00:00.000Z",
+        },
+        canonical: {
+          contentRoute: null,
+          detailPage: {
+            id: "detail-page-products",
+            label: "Product Detail",
+            status: "draft",
+          },
+          listPage: null,
+          listingQuery: null,
+          listingTemplate: null,
+          adminScreen: null,
+        },
+        linkedSecondary: {
+          pages: [],
+          adminScreens: [],
+        },
+        unresolved: [],
+        candidates: {
+          detailPages: [
+            {
+              id: "detail-page-products",
+              label: "Product Detail",
+              status: "draft",
+            },
+          ],
+          pages: [],
+          listingQueries: [],
+          listingTemplates: [],
+          adminScreens: [],
+        },
+        activeDetailPageId: "detail-page-products",
+      },
+    },
+  });
+
+  expect(prompt.collectionWorkspace).toMatchObject({
+    contentType: {
+      id: "ct-products",
+      slug: "products",
+    },
+    activeDetailPageId: "detail-page-products",
+  });
+  expect(JSON.stringify(prompt)).not.toContain("collectionWorkspaceHint");
+});
+
 test("buildProviderPlanningPromptPackage redacts secret-like prompt data", () => {
   const prompt = buildProviderPlanningPromptPackage({
     prompt: "Use apiKey sk-or-v1-1234567890abcdef",

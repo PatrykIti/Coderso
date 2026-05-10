@@ -20,6 +20,7 @@ import type {
 import type { CustomScreenCollectionRole } from "../customScreens/customScreenSchemas";
 import { isAssistantActionPlanStrict } from "./actionPlanSchema";
 import type { DetailPageDocument } from "../content/detailPageTypes";
+import type { CollectionWorkspaceSummary } from "../content/collectionWorkspaceService";
 
 export type AssistantActionPlanStatus = "ready" | "needs_input";
 export type AssistantPromptKind =
@@ -79,6 +80,8 @@ export type AssistantActionContext = {
   resourceCatalog?: AssistantResourceCatalogSnapshot;
   runtimeSnapshot?: AssistantActionRuntimeSnapshot;
   activeSurface?: AssistantActiveSurfaceContext | null;
+  collectionWorkspaceHint?: AssistantCollectionWorkspaceHint | null;
+  collectionWorkspace?: AssistantCollectionWorkspaceSummary | null;
   planningState?: AssistantPlanningState | null;
 };
 
@@ -200,10 +203,38 @@ export type AssistantActiveCustomScreenSurfaceContext = {
   warnings: string[];
 };
 
+export type AssistantCollectionWorkspaceHint = {
+  contentTypeId: string;
+  activeDetailPageId?: string | null;
+};
+
+export type AssistantCollectionWorkspaceSummary = CollectionWorkspaceSummary & {
+  activeDetailPageId: string | null;
+};
+
+export type AssistantActiveDetailPageSurfaceContext = {
+  kind: "detail-page";
+  detailPage: {
+    id: string;
+    name: string;
+    status: string;
+    contentTypeId: string;
+    contentTypeSlug: string;
+    titlePattern: string;
+  };
+  sampleEntryId: string | null;
+  selectedBlockId: string | null;
+  blocks: AssistantActiveSurfaceBlockSummary[];
+  templateReferences?: AssistantTemplateSectionReferenceSummary[];
+  referencedTemplates?: AssistantReferencedWidgetTemplateSummary[];
+  warnings: string[];
+};
+
 export type AssistantActiveSurfaceContext =
   | AssistantActivePageSurfaceContext
   | AssistantActiveWidgetTemplateSurfaceContext
-  | AssistantActiveCustomScreenSurfaceContext;
+  | AssistantActiveCustomScreenSurfaceContext
+  | AssistantActiveDetailPageSurfaceContext;
 
 export type AssistantAdminContext = {
   route: string | null;
@@ -211,6 +242,8 @@ export type AssistantAdminContext = {
   resourceCatalog: AssistantResourceCatalogSnapshot | null;
   runtimeSnapshot: AssistantAdminRuntimeSnapshot | null;
   activeSurface: AssistantActiveSurfaceContext | null;
+  collectionWorkspaceHint: AssistantCollectionWorkspaceHint | null;
+  collectionWorkspace: AssistantCollectionWorkspaceSummary | null;
   planningState: AssistantPlanningState | null;
   area: "dashboard" | "pages" | "posts" | "advanced" | "settings" | "other";
   advancedModule:

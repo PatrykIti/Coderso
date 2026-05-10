@@ -335,6 +335,10 @@ vi.mock("../../../core/widgets/validator", () => ({
 }));
 
 import { cacheKeys } from "../../../core/admin/services/cachePolicy";
+import {
+  clearActiveAssistantSurfaceContext,
+  getActiveAssistantSurfaceContext,
+} from "../../../core/admin/ui/assistant/activeSurfaceContext";
 import { DetailTemplateEditorPage } from "../../../core/admin/ui/content-types/DetailTemplateEditorPage";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -431,6 +435,7 @@ const createRevision = (
 });
 
 beforeEach(() => {
+  clearActiveAssistantSurfaceContext();
   detailTemplateState.reset();
   detailTemplateState.cachedRecord = createRecord();
   detailTemplateState.remoteRecord = createRecord();
@@ -502,6 +507,16 @@ test("detail template editor hydrates cached detail page and bounded sample entr
       force: true,
     });
     expect(detailTemplateState.listEntriesCached).toHaveBeenCalledWith("products");
+    expect(getActiveAssistantSurfaceContext()).toMatchObject({
+      kind: "detail-page",
+      detailPage: {
+        id: "detail-products",
+        contentTypeId: "ct-products",
+        contentTypeSlug: "products",
+      },
+      sampleEntryId: "entry-product-1",
+      selectedBlockId: "block-hero",
+    });
   } finally {
     view.cleanup();
   }

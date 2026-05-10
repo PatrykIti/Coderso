@@ -393,7 +393,7 @@ Zamiast tego:
 - `core/services/assistant/blueprints/bookingServiceBlueprint.ts` registers a gated booking pack (`requires-prerequisite`) that returns typed questions instead of creating booking resources until booking action adapters exist.
 - `core/services/assistant/blueprints/productInquiryBlueprint.ts` provides an executable product inquiry catalog pack and a gated checkout/payment needs-input path.
 - `core/services/assistant/blueprints/editorialContentHubBlueprint.ts` provides an editorial hub page with a posts-feed widget and does not create or mutate post records.
-- The current composition cutover is intentionally bounded to existing packs/modules. Capability manifests may already describe latent `detail-page` intent, and the landed `TASK-190` slices already cover persisted detail-page storage, published runtime rendering, shared preview handling, typed `detail-page.upsert`, the internal detail-page admin route family, admin client/cache parity, detail-page fixture/runtime acceptance, admin-screen layout composition, custom-screen binding/metadata safety, the collection-workspace route/read/cache/UI shell, and the manual detail-template editor. The remaining follow-up work is narrower: generic assistant detail-page resource packaging, review metadata, and no-duplicate DB reuse stay under the later `TASK-190` leaves.
+- The current composition cutover is intentionally bounded to existing packs/modules. Capability manifests may already describe latent `detail-page` intent, and the landed `TASK-190` slices already cover persisted detail-page storage, published runtime rendering, shared preview handling, typed `detail-page.upsert`, the internal detail-page admin route family, admin client/cache parity, detail-page fixture/runtime acceptance, admin-screen layout composition, custom-screen binding/metadata safety, the collection-workspace route/read/cache/UI shell, the manual detail-template editor, and assistant follow-up context for the workspace/detail-page surface. The remaining follow-up work is narrower: generic assistant detail-page resource packaging, review metadata, and no-duplicate DB reuse stay under the later `TASK-190` leaves.
 
 Resource catalog context:
 - `POST /assistant/actions/plan` moze otrzymac `context.includeResourceCatalog=true`.
@@ -553,6 +553,15 @@ Aktualnie zaimplementowany business setup surface:
   page-builder shell/components, warms the detail-page record plus bounded
   sample entries through shared admin prefetch, and delegates save/autosave,
   preview, publish/unpublish, and revision lifecycle to `detailPagesClient.ts`,
+- assistant follow-up context for the collection workspace stays in the existing
+  admin-context pipeline: `useAssistantAdminContext.ts` emits only
+  `collectionWorkspaceHint`, the detail-template editor publishes
+  `activeSurface.kind = "detail-page"` through `activeSurfaceContext.ts`, and
+  `assistantRoutes.ts` / `activeSurfaceHydration.ts` hydrate the bounded
+  server-owned `collectionWorkspace` summary plus detail-page identity before
+  provider packaging. Browser-owned workspace summaries are rejected, stale
+  detail-page ids drop to `null`, and `detail-page` planning context requires
+  `content:read` plus `widgets:read`,
 - published content routes that carry `detailPageId` now resolve normalized
   detail-page documents and render them through the current page-builder
   runtime shell; missing links continue to fall back to the legacy

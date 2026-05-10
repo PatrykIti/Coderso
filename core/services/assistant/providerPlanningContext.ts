@@ -102,6 +102,7 @@ export type AssistantProviderPlanningPromptPackage = {
     }>;
   };
   activeSurface: AssistantActionContext["activeSurface"];
+  collectionWorkspace: AssistantActionContext["collectionWorkspace"];
   warnings: string[];
 };
 
@@ -288,6 +289,7 @@ export const buildProviderPlanningPromptPackage = (
     policyGuidance: providerPolicyGuidance,
     operationDraftGuidance: providerOperationDraftGuidance,
     activeSurface: context.activeSurface,
+    collectionWorkspace: context.collectionWorkspace,
     warnings,
   };
 

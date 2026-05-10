@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Admin UX + Custom Screens
 **Estimated Effort:** Large
 **Dependencies:** TASK-190-03, TASK-190-04
-**Status:** In Progress (2026-05-10)
+**Status:** Done (2026-05-10)
 
 ---
 
@@ -37,9 +37,9 @@ Business value:
 - `TASK-190-06-02_Admin_Bindings_Routes_and_Permission_Safety.md` - done:
   binding composition plus canonical custom-screen metadata now round-trip
   through schema, service, client, assistant actions, and storage.
-- `TASK-190-06-03_Collection_Workspace_and_Template_Editor.md` - in progress:
-  the collection workspace route/read/cache/UI family and detail-template
-  editor surface are landed, while assistant workspace context remains.
+- `TASK-190-06-03_Collection_Workspace_and_Template_Editor.md` - done:
+  the collection workspace route/read/cache/UI family, detail-template editor
+  surface, and assistant workspace/detail-page follow-up context are landed.
   - `TASK-190-06-03-01_Collection_Workspace_Route_Read_Model_and_Canonical_Resource_Linking.md` -
     done: server route/read model, canonical resolution, cached client helpers,
     Engine prefetch, and first workspace shell are landed.
@@ -47,6 +47,9 @@ Business value:
     done: detail-template editor route, shared builder surface, sample-entry
     preview picker, lifecycle/revision actions, and Engine prefetch are landed.
   - `TASK-190-06-03-03_Collection_Workspace_Assistant_Context_and_Follow_Up_Integration.md`
+    - done: workspace route hints, `detail-page` active surface publishing,
+      server-side workspace/detail-page hydration, provider packaging, and
+      assistant route permission parity are landed.
 
 ## Architecture
 

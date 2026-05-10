@@ -94,7 +94,7 @@ Current implemented guide blueprint:
     rejecting unsafe or secret-like paths; generated canonical screens persist
     `collectionRole` / `compositionKey` through the current custom-screen schema,
     service, admin cache, and assistant action executor seams
-  - catalog capabilities can already describe `detail-page` intent in metadata, and the current `TASK-190` slices now cover persisted detail-page documents, published/runtime detail rendering, shared preview handling, the executable `detail-page.upsert` assistant action, `setting.content-route.upsert` `detailPageId` route-linking, the internal `/admin/api/detail-pages*` CRUD/lifecycle/revision route family, admin client/cache parity, local deterministic fixture/runtime acceptance, collection-workspace route/read/cache/UI shell, and the manual detail-template editor through the current owner seams; generic detail-page resource packaging and no-duplicate DB reuse remain deferred to later leaves
+  - catalog capabilities can already describe `detail-page` intent in metadata, and the current `TASK-190` slices now cover persisted detail-page documents, published/runtime detail rendering, shared preview handling, the executable `detail-page.upsert` assistant action, `setting.content-route.upsert` `detailPageId` route-linking, the internal `/admin/api/detail-pages*` CRUD/lifecycle/revision route family, admin client/cache parity, local deterministic fixture/runtime acceptance, collection-workspace route/read/cache/UI shell, the manual detail-template editor, and assistant follow-up context for workspace/detail-page surfaces through the current owner seams; generic detail-page resource packaging and no-duplicate DB reuse remain deferred to later leaves
   - provider prompt packaging now carries bounded capability summaries for setup/composer evaluation, while generic provider planning still uses the current `cms_operation_draft` response contract
   - candidate shadow diagnostics can be exposed only through a local/test env gate; they remain metadata-only even though the bounded mixed-setup cutover is now live
 
@@ -206,6 +206,10 @@ RBAC:
 - catalog-backed planning through `includeResourceCatalog=true` also requires
   `LLM Guide` availability and fails closed instead of degrading into an
   under-informed local mutation path
+- active `detail-page` follow-up context requires `content:read` plus
+  `widgets:read`; workspace follow-up packages are server-hydrated from the
+  collection-workspace read model and browser payloads may send only the
+  identity-only `collectionWorkspaceHint`
 
 Security:
 - CSRF required on all POST endpoints

@@ -1,6 +1,9 @@
 import { expect, test } from "vitest";
 
-import { buildAssistantAdminContext } from "../../../core/services/assistant/adminContextService";
+import {
+  buildAssistantAdminContext,
+  sanitizeAssistantPlanningContext,
+} from "../../../core/services/assistant/adminContextService";
 
 test("buildAssistantAdminContext keeps route/module mapping and resource catalog", () => {
   const context = buildAssistantAdminContext({
@@ -334,5 +337,100 @@ test("buildAssistantAdminContext normalizes active custom screen surface context
     ],
     writableBindingFields: ["title"],
     warnings: ["custom_screen_entry_has_unsaved_changes"],
+  });
+});
+
+test("buildAssistantAdminContext normalizes collection workspace hints and detail page surface context", () => {
+  const context = buildAssistantAdminContext({
+    page: "/admin/advanced/engine/ct-products/collection/detail-template/detail-page-products",
+    collectionWorkspaceHint: {
+      contentTypeId: "ct-products",
+      activeDetailPageId: "detail-page-products",
+    },
+    activeSurface: {
+      kind: "detail-page",
+      detailPage: {
+        id: "detail-page-products",
+        name: "Product Detail",
+        status: "draft",
+        contentTypeId: "ct-products",
+        contentTypeSlug: "products",
+        titlePattern: "{title}",
+      },
+      sampleEntryId: "entry-1",
+      selectedBlockId: "template-1",
+      blocks: [
+        {
+          id: "template-1",
+          type: "template-section",
+          label: "Product CTA",
+          path: "0",
+          childCount: 0,
+          slotKeys: [],
+          templateId: "tpl-1",
+          templateName: "Product CTA",
+        },
+        {
+          id: "secret",
+          type: "token-secret-widget",
+          label: "Secret",
+          path: "1",
+          childCount: 0,
+          slotKeys: [],
+          templateId: null,
+          templateName: null,
+        },
+      ],
+      warnings: ["detail_page_has_unsaved_changes"],
+    },
+  });
+
+  expect(context).toMatchObject({
+    route: "/admin/advanced/engine/ct-products/collection/detail-template/detail-page-products",
+    area: "advanced",
+    advancedModule: "engine",
+    collectionWorkspaceHint: {
+      contentTypeId: "ct-products",
+      activeDetailPageId: "detail-page-products",
+    },
+    activeSurface: {
+      kind: "detail-page",
+      detailPage: {
+        id: "detail-page-products",
+        contentTypeId: "ct-products",
+      },
+      sampleEntryId: "entry-1",
+      selectedBlockId: "template-1",
+      blocks: [
+        {
+          id: "template-1",
+          type: "template-section",
+          templateId: "tpl-1",
+          templateName: "Product CTA",
+        },
+      ],
+      templateReferences: [
+        {
+          templateId: "tpl-1",
+          blockIds: ["template-1"],
+          paths: ["0"],
+        },
+      ],
+      warnings: ["detail_page_has_unsaved_changes"],
+    },
+  });
+});
+
+test("sanitizeAssistantPlanningContext removes raw collection workspace hints before provider packaging", () => {
+  const context = sanitizeAssistantPlanningContext({
+    page: "/admin/advanced/engine/ct-products/collection",
+    collectionWorkspaceHint: {
+      contentTypeId: "ct-products",
+      activeDetailPageId: "detail-page-products",
+    },
+  });
+
+  expect(context).toEqual({
+    page: "/admin/advanced/engine/ct-products/collection",
   });
 });

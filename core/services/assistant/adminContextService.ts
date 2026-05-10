@@ -249,6 +249,18 @@ const normalizeCustomScreenBindingSummary = (
   };
 };
 
+const normalizeCollectionWorkspaceHint = (
+  value: AssistantActionContext["collectionWorkspaceHint"] | undefined
+) => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const contentTypeId = normalizeText(value.contentTypeId, 160);
+  if (!contentTypeId) return null;
+  return {
+    contentTypeId,
+    activeDetailPageId: normalizeText(value.activeDetailPageId, 160),
+  };
+};
+
 const normalizeActiveSurface = (
   value: AssistantActionContext["activeSurface"] | undefined
 ): AssistantActiveSurfaceContext | null => {
@@ -350,6 +362,40 @@ const normalizeActiveSurface = (
     };
   }
 
+  if (value.kind === "detail-page") {
+    const detailPage = value.detailPage;
+    if (!detailPage || typeof detailPage !== "object" || Array.isArray(detailPage)) return null;
+    const id = normalizeText(detailPage.id, 160);
+    const name = normalizeText(detailPage.name, 240);
+    const status = normalizeText(detailPage.status, 80);
+    const contentTypeId = normalizeText(detailPage.contentTypeId, 160);
+    const contentTypeSlug = normalizeText(detailPage.contentTypeSlug, 240);
+    const titlePattern = normalizeText(detailPage.titlePattern, 240);
+    if (!id || !name || !status || !contentTypeId || !contentTypeSlug || !titlePattern) {
+      return null;
+    }
+    return {
+      kind: "detail-page",
+      detailPage: {
+        id,
+        name,
+        status,
+        contentTypeId,
+        contentTypeSlug,
+        titlePattern,
+      },
+      sampleEntryId: normalizeText(value.sampleEntryId, 160),
+      selectedBlockId: normalizeText(value.selectedBlockId, 120),
+      blocks,
+      templateReferences: mergeAssistantTemplateSectionReferences([
+        ...extractAssistantTemplateSectionReferences(blocks),
+        ...(Array.isArray(value.templateReferences) ? value.templateReferences : []),
+      ]),
+      referencedTemplates: normalizeAssistantReferencedWidgetTemplates(value.referencedTemplates),
+      warnings: normalizeStringArray(value.warnings, 20, 160),
+    };
+  }
+
   return null;
 };
 
@@ -368,6 +414,8 @@ export const buildAssistantAdminContext = (
     resourceCatalog: input?.resourceCatalog ?? null,
     runtimeSnapshot: normalizeRuntimeSnapshot(input?.runtimeSnapshot, route),
     activeSurface: normalizeActiveSurface(input?.activeSurface),
+    collectionWorkspaceHint: normalizeCollectionWorkspaceHint(input?.collectionWorkspaceHint),
+    collectionWorkspace: input?.collectionWorkspace ?? null,
     planningState: normalizeAssistantPlanningState(input?.planningState),
     area: resolveArea(route),
     advancedModule: resolveAdvancedModule(route),
@@ -382,7 +430,7 @@ export const sanitizeAssistantPlanningContext = (
 ): AssistantActionContext | undefined => {
   if (!input) return undefined;
   const trustedResourceCatalog = readTrustedAssistantResourceCatalog(input);
-  const { resourceCatalog: _resourceCatalog, ...rest } = input;
+  const { resourceCatalog: _resourceCatalog, collectionWorkspaceHint: _hint, ...rest } = input;
   return {
     ...rest,
     ...(trustedResourceCatalog !== undefined ? { resourceCatalog: trustedResourceCatalog } : {}),

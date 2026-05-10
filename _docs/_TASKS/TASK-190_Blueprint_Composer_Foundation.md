@@ -73,12 +73,14 @@ remain deferred, while the published runtime, shared preview path, typed
 `detail-page.upsert` execution, internal admin route family, admin client/cache
 parity, fixture/runtime acceptance, first admin-screen layout composer,
 custom-screen binding/collection-link metadata safety, collection workspace,
-and manual detail-template editor are already landed. Collection workspace work
-has now landed the internal Engine route, bounded server read model,
-deterministic canonical resource resolution/read redaction, cached client
-helpers, specific Engine prefetch, first route shell, and the
+manual detail-template editor, and assistant follow-up context for that
+workspace/detail-page surface are already landed. Collection workspace work has
+now landed the internal Engine route, bounded server read model, deterministic
+canonical resource resolution/read redaction, cached client helpers, specific
+Engine prefetch, first route shell, the
 `/advanced/engine/:contentTypeId/collection/detail-template/:detailPageId`
-editor surface that reuses existing page-builder seams.
+editor surface that reuses existing page-builder seams, and server-owned
+assistant context hydration for the workspace/detail-page follow-up flow.
 
 This task is not limited to theme templates or a narrow detail-template editor.
 The business target remains full assistant-composed setup of a site/service

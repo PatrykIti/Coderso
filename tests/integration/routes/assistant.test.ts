@@ -531,6 +531,124 @@ test("assistant action plan route requires widget read permission for active pag
   expect(requestedPermissions).toContain("widgets:read");
 });
 
+test("assistant action plan route hydrates collection workspace hints with explicit detail page permissions", async () => {
+  const { router, routes } = makeRouter();
+  const requestedPermissions: string[] = [];
+  let receivedHydrationPermissions: readonly string[] | undefined;
+  let receivedContext: Record<string, unknown> | undefined;
+
+  registerAssistantRoutes(router, {
+    requirePermission: (permission) => {
+      requestedPermissions.push(permission);
+      return async () => undefined;
+    },
+    validate: validateSchema,
+    resolvePermissions: () => ["content:read", "settings:read"],
+    service: {
+      hydrateActiveSurface: async (context, options) => {
+        receivedHydrationPermissions = options?.permissions;
+        return {
+          ...context,
+          collectionWorkspace: {
+            contentType: {
+              id: "ct-products",
+              name: "Products",
+              slug: "products",
+              status: "published",
+              fieldCount: 3,
+              updatedAt: "2026-05-10T10:00:00.000Z",
+            },
+            canonical: {
+              contentRoute: null,
+              detailPage: {
+                id: "detail-page-products",
+                label: "Product Detail",
+                status: "draft",
+              },
+              listPage: null,
+              listingQuery: null,
+              listingTemplate: null,
+              adminScreen: null,
+            },
+            linkedSecondary: {
+              pages: [],
+              adminScreens: [],
+            },
+            unresolved: [],
+            candidates: {
+              detailPages: [],
+              pages: [],
+              listingQueries: [],
+              listingTemplates: [],
+              adminScreens: [],
+            },
+            activeDetailPageId: "detail-page-products",
+          },
+        };
+      },
+      planActions: async (payload) => {
+        receivedContext = payload.context as Record<string, unknown>;
+        return buildHouseProjectsCatalogPlan();
+      },
+    },
+  });
+
+  const route = routes.find((item) => item.path === "/assistant/actions/plan");
+  const handler = route?.handlers[route.handlers.length - 1];
+  await handler?.({
+    params: {},
+    query: {},
+    body: {
+      prompt: "continue this detail template",
+      context: {
+        page: "/admin/advanced/engine/ct-products/collection/detail-template/detail-page-products",
+        collectionWorkspaceHint: {
+          contentTypeId: "ct-products",
+          activeDetailPageId: "detail-page-products",
+        },
+        activeSurface: {
+          kind: "detail-page",
+          detailPage: {
+            id: "detail-page-products",
+            name: "Product Detail",
+            status: "draft",
+            contentTypeId: "ct-products",
+            contentTypeSlug: "products",
+            titlePattern: "{title}",
+          },
+          sampleEntryId: "entry-1",
+          selectedBlockId: "hero-1",
+          blocks: [
+            {
+              id: "hero-1",
+              type: "hero",
+              label: "Hero",
+              path: "0",
+              childCount: 0,
+              slotKeys: [],
+              templateId: null,
+              templateName: null,
+            },
+          ],
+          warnings: [],
+        },
+      },
+    },
+    requestId: "req-plan-detail-page",
+    user: { id: "user-1" },
+  });
+
+  expect(requestedPermissions).toContain("content:read");
+  expect(requestedPermissions).toContain("widgets:read");
+  expect(receivedHydrationPermissions).toEqual(["content:read", "settings:read"]);
+  expect(receivedContext?.collectionWorkspace).toMatchObject({
+    contentType: {
+      id: "ct-products",
+    },
+    activeDetailPageId: "detail-page-products",
+  });
+});
+
 test("assistant action plan route rejects unknown context fields", async () => {
   const { router, routes } = makeRouter();
 
@@ -554,6 +672,47 @@ test("assistant action plan route rejects unknown context fields", async () => {
         },
       },
       requestId: "req-plan-invalid-context",
+      user: { id: "user-1" },
+    });
+    throw new Error("expected_error");
+  } catch (error) {
+    expect(error).toBeInstanceOf(ApiError);
+    const apiError = error as ApiError;
+    expect(apiError.code).toBe("validation_error");
+    expect(apiError.status).toBe(400);
+  }
+});
+
+test("assistant action plan route rejects browser supplied collection workspace summaries", async () => {
+  const { router, routes } = makeRouter();
+
+  registerAssistantRoutes(router, {
+    requirePermission: () => async () => undefined,
+    validate: validateSchema,
+  });
+
+  const route = routes.find((item) => item.path === "/assistant/actions/plan");
+  const handler = route?.handlers[route.handlers.length - 1];
+
+  try {
+    await handler?.({
+      params: {},
+      query: {},
+      body: {
+        prompt: "potrzebuje katalogu produktow",
+        context: {
+          page: "/admin/advanced/engine/ct-products/collection",
+          collectionWorkspaceHint: {
+            contentTypeId: "ct-products",
+          },
+          collectionWorkspace: {
+            contentType: {
+              id: "ct-products",
+            },
+          },
+        },
+      },
+      requestId: "req-plan-invalid-workspace",
       user: { id: "user-1" },
     });
     throw new Error("expected_error");

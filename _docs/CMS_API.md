@@ -2923,6 +2923,9 @@ Permissions:
 - `settings:read` dla `GET /assistant/status` i `POST /assistant/chat`
 - `settings:write` dla `POST /assistant/reindex`
 - `settings:read` + `content:read` dla `POST /assistant/actions/plan`
+- dodatkowo `widgets:read` dla `POST /assistant/actions/plan`, gdy
+  `context.activeSurface.kind` to `page` z template-section inspection albo
+  `detail-page`
 - `POST /assistant/actions/dry-run` i `POST /assistant/actions/execute`
   egzekwuja per-action permissions z registry kontraktow zamiast dokladac
   jeden szerszy wspolny bundle write/read dla wszystkich action families
@@ -3176,6 +3179,12 @@ corpus.
 `includeResourceCatalog=true` enrichuje server-side planning context o bounded/redacted snapshot admin resources dla `LLM Guide`.
 Snapshot obejmuje pages, content types, custom screens, listings, forms, menus, SEO documents i widgets/templates.
 Nie jest przyjmowany jako client-supplied `resourceCatalog`; unknown context fields sa odrzucane.
+Collection workspace follow-up uses the same boundary: the browser may send only
+`context.collectionWorkspaceHint` with `contentTypeId` plus optional
+`activeDetailPageId`. Client-supplied `context.collectionWorkspace` summaries
+are rejected; the route hydrates that package server-side from
+`GET /content-types/:id/collection-workspace` semantics before provider
+packaging.
 `runtimeSnapshot` jest advisory planning context; nie zastepuje route/domain RBAC.
 Generic CMS operation planning uses the same route and can return strict read-only `inspection` metadata for resource candidate lists. Those responses have `actions: []`, are not executable, and are used for prompts such as "czy widzisz strone X" or "jakie ekrany widzisz z prefixem Y".
 Action plan responses may include `responseKind`:
@@ -3222,7 +3231,14 @@ For active page surfaces, planning hydration also dedupes `template-section` ref
 If a template-backed page edit could target either only the current page instance or the reusable template, the planner returns `needs_input` with a target question. Explicit page-instance prompts can plan `page.widget.patch`; explicit reusable-template prompts can plan `widget-template.block.patch` only when the hydrated template summary resolves one supported nested block field.
 When the active admin surface is `Advanced > Widgets > Templates > :id`, `activeSurface` may include a bounded widget template summary with template identity, selected block id, block id/type/path summaries, slot keys, template-section references, wrapper/section settings summary, and remote-update warnings.
 When the active admin surface is `Advanced > Custom Screens`, `activeSurface` may include a bounded custom screen summary with screen identity, canonical `collectionRole` / `compositionKey` metadata, capabilities mode, selected entry id, selected block id, block summaries, bindings, writable field names, and unsaved/remote-update warnings.
-Before planning, the route rehydrates active surface identity server-side. Active pages/custom screens require `content:read`; active pages also require `widgets:read` for template-section inspection; active widget templates require `widgets:read`. If the server-side resource is missing, active surface context is dropped.
+When the active admin surface is
+`Advanced > Engine > :contentTypeId > Collection > Detail Template`, the
+detail-template editor may publish `activeSurface.kind = "detail-page"` through
+the existing browser active-surface transport. The route keeps
+`runtimeSnapshot.selectedResource.kind = "content-type"` for the workspace
+shell, derives only the bounded `collectionWorkspaceHint`, then rehydrates
+`collectionWorkspace` and detail-page identity server-side before planning.
+Before planning, the route rehydrates active surface identity server-side. Active pages/custom screens require `content:read`; active pages also require `widgets:read` for template-section inspection; active widget templates require `widgets:read`; active detail pages require `content:read` plus `widgets:read`. If the server-side resource is missing, active surface context is dropped.
 
 `context.siteKit` moze byc uzyty przez AI Site Wizard jako guided entry point do tego samego action flow:
 

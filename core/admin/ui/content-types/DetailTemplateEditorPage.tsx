@@ -26,6 +26,10 @@ import {
 import { getCachedEntries, listEntriesCached, type EntrySummary } from "@/services/entriesClient";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { EditorShell } from "@/ui/layouts/EditorShell";
+import {
+  clearActiveAssistantSurfaceContext,
+  setActiveAssistantSurfaceContext,
+} from "@/ui/assistant/activeSurfaceContext";
 import { BlockList } from "@/ui/pages/builder/BlockList";
 import { BlockSettings } from "@/ui/pages/builder/BlockSettings";
 import { LibraryPanel } from "@/ui/pages/builder/LibraryPanel";
@@ -158,6 +162,72 @@ const formatTimestamp = (value: string) => {
 const getErrorMessage = (error: unknown, fallback: string) =>
   isApiClientError(error) ? error.message : fallback;
 
+const readBlockDataText = (block: Block, key: string) => {
+  const data = block.data;
+  if (!data || typeof data !== "object" || Array.isArray(data)) return null;
+  const value = (data as Record<string, unknown>)[key];
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+};
+
+const summarizeDetailTemplateBlocksForAssistant = (
+  blocks: Block[],
+  options: { maxBlocks?: number } = {}
+) => {
+  const maxBlocks = options.maxBlocks ?? 80;
+  const result: Array<{
+    id: string;
+    type: string;
+    label: string | null;
+    path: string;
+    childCount: number;
+    slotKeys: string[];
+    templateId: string | null;
+    templateName: string | null;
+  }> = [];
+
+  const visit = (items: Block[], pathPrefix: string) => {
+    items.forEach((block, index) => {
+      if (result.length >= maxBlocks) return;
+      const path = pathPrefix ? `${pathPrefix}.${index}` : String(index);
+      const slotEntries =
+        block.slots && typeof block.slots === "object" && !Array.isArray(block.slots)
+          ? Object.entries(block.slots)
+          : [];
+      const childBlocks = Array.isArray(block.children) ? block.children : [];
+      const slotChildCount = slotEntries.reduce(
+        (count, [, value]) => count + (Array.isArray(value) ? value.length : 0),
+        0
+      );
+      result.push({
+        id: block.id,
+        type: block.type,
+        label: readBlockDataText(block, "title") ?? readBlockDataText(block, "headline"),
+        path,
+        childCount: childBlocks.length + slotChildCount,
+        slotKeys: slotEntries.map(([key]) => key).sort((left, right) => left.localeCompare(right)),
+        templateId:
+          block.type === "template-section" ? readBlockDataText(block, "templateId") : null,
+        templateName:
+          block.type === "template-section" ? readBlockDataText(block, "templateName") : null,
+      });
+
+      if (result.length >= maxBlocks) return;
+      if (childBlocks.length > 0) {
+        visit(childBlocks, `${path}.children`);
+      }
+      for (const [slotId, value] of slotEntries) {
+        if (result.length >= maxBlocks) break;
+        if (Array.isArray(value)) {
+          visit(value as Block[], `${path}.slots.${slotId}`);
+        }
+      }
+    });
+  };
+
+  visit(blocks, "");
+  return result;
+};
+
 const toEditorState = (record: DetailPageRecord) => {
   const document = normalizeDetailTemplateDocument(record);
   return {
@@ -255,6 +325,43 @@ export function DetailTemplateEditorPage() {
     backgroundSize: wrapperBackgroundImage ? "cover" : undefined,
     backgroundPosition: wrapperBackgroundImage ? "center" : undefined,
   };
+
+  useEffect(() => {
+    if (!record || !document || !detailPageId) {
+      clearActiveAssistantSurfaceContext();
+      return undefined;
+    }
+
+    setActiveAssistantSurfaceContext({
+      kind: "detail-page",
+      detailPage: {
+        id: record.id,
+        name: name.trim() || document.name,
+        status: record.status,
+        contentTypeId: record.contentTypeId,
+        contentTypeSlug: document.contentTypeSlug,
+        titlePattern: titlePattern.trim() || document.titlePattern,
+      },
+      sampleEntryId: selectedSampleEntryId || null,
+      selectedBlockId: selectedId,
+      blocks: summarizeDetailTemplateBlocksForAssistant(blocks),
+      warnings: hasUnsavedChanges ? ["detail_page_has_unsaved_changes"] : [],
+    });
+
+    return () => {
+      clearActiveAssistantSurfaceContext();
+    };
+  }, [
+    blocks,
+    detailPageId,
+    document,
+    hasUnsavedChanges,
+    name,
+    record,
+    selectedId,
+    selectedSampleEntryId,
+    titlePattern,
+  ]);
 
   const setUnsavedChanges = useCallback((value: boolean) => {
     hasUnsavedChangesRef.current = value;

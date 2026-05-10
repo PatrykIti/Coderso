@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Collections + Detail Templates
 **Estimated Effort:** Large
 **Dependencies:** TASK-190-05-03, TASK-190-05-03-07, TASK-190-06-01, TASK-190-06-02
-**Status:** In Progress (2026-05-10)
+**Status:** Done (2026-05-10)
 
 ---
 
@@ -35,6 +35,10 @@ into one oversized slice.
   entry preview picker, detail-page lifecycle actions, revision actions, and
   Engine prefetch are landed.
 - `TASK-190-06-03-03_Collection_Workspace_Assistant_Context_and_Follow_Up_Integration.md`
+  - done: collection workspace follow-up context now flows through the current
+    assistant admin-context seams, `detail-page` active surface publishing,
+    strict browser hints, server-side workspace/detail-page hydration, and
+    explicit `content:read` + `widgets:read` permission parity.
 
 ## Product Contract
 
@@ -128,9 +132,10 @@ Program rules:
 - do not create a fourth large block editor stack just for detail templates;
   the landed editor reuses `EditorShell`, `LibraryPanel`, `BlockList`,
   `BlockSettings`, shared block utilities, and `RuntimePreviewDialog`.
-- if workspace/detail template becomes assistant-visible, extend the current
-  `adminContextService`, `assistantActionSchemas`, and `useAssistantAdminContext`
-  seams instead of inventing a parallel collection-context transport.
+- workspace/detail template assistant visibility extends the current
+  `adminContextService`, `assistantActionSchemas`, `activeSurfaceHydration.ts`,
+  `assistantRoutes.ts`, and `useAssistantAdminContext` seams instead of
+  inventing a parallel collection-context transport.
 - the workspace root stays inside the current `advancedModule: "engine"`
   family; it must not introduce a new assistant module/category such as
   `collections`.
