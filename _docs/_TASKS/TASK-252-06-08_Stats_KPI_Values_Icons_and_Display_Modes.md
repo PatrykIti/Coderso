@@ -12,7 +12,7 @@
 
 ## Overview
 
-Give stats-kpi prefix/suffix, icon, and grid/strip display modes while keeping
+Give stats-kpi prefix/suffix, icon, and current variant-backed display modes while keeping
 trend labels and media split presentation Adapt-only and rejecting animated
 counters for this stage.
 
@@ -31,8 +31,14 @@ and Reject decisions.
 ## Research Decisions
 
 - Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/stats-kpi/MATRIX.md`; for this leaf, start from the current owner fields `header`, `items`, `style` and add only the schema fields that the matrix explicitly keeps.
-- Keep: stat grid, prefix/suffix, icon per KPI, and stable grid/strip modes from `_docs/_WIDGETS/tmp/stats-kpi/MATRIX.md`; add schema-owned prefix/suffix/mode fields in `core/widgets/core/statsKpi.tsx`.
-- Adapt: trend label/direction and media split presentation remain conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Keep: stat grid, prefix/suffix, icon per KPI, and stable grid/strip semantics
+  from `_docs/_WIDGETS/tmp/stats-kpi/MATRIX.md`; preserve current
+  `cards`/`inline` variant ownership as the grid/strip display selector and add
+  schema-owned prefix/suffix/icon fields in `core/widgets/core/statsKpi.tsx`.
+- Adapt: trend label/direction and new media split presentation remain
+  conditional. Preserve the existing `split-highlight` variant as current
+  compatibility behavior unless this leaf intentionally migrates it with
+  renderer/editor/tests together.
 - Reject: separate one-off widgets, raw HTML/script embeds, and unbounded visual/CSS controls.
 
 ## Editor Mode Ownership

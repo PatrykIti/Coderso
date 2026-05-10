@@ -12,7 +12,9 @@
 
 ## Overview
 
-Expose posts-feed latest/category/featured/manual sources, density, author/date/category visibility, and CTA copy while leaving infinite feeds out of scope.
+Expose posts-feed latest/category/featured/manual sources, density, current
+author/date visibility, and CTA copy while leaving category display and
+infinite feeds out of scope.
 
 This is an execution leaf under `TASK-252-07`. It must not re-open the
 research phase; use `_docs/_WIDGETS/tmp/posts-feed/MATRIX.md` and the widget README under
@@ -30,10 +32,11 @@ and Reject decisions.
 
 - Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/posts-feed/MATRIX.md`; for this leaf, start from the current owner fields `source`, `fields`, `emptyState`, `style`, `resolved` and add only the schema fields that the matrix explicitly keeps.
 - Keep: latest/category/featured/manual source modes, current card/list/compact
-  density variants, and author/date/category toggles from
+  density variants, and current author/date toggles from
   `_docs/_WIDGETS/tmp/posts-feed/MATRIX.md`; add schema-owned source and
   density controls in `core/widgets/core/postsFeed.tsx`.
-- Adapt: reading time remains conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Adapt: category display and reading time remain conditional; implement only
+  when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: arbitrary operators, client-owned provider/index config, raw scripts, and privileged settings in widget data.
 
 ## Editor Mode Ownership

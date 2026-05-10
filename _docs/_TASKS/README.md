@@ -49,7 +49,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-252-04-01 | Timeline Chronology Modes and Editor IA | High | Large | Timeline chronology modes, dates, CTA links, and status markers |
 | TASK-252-05-01 | Section Regions Semantics and Spacing | High | Large | Section regions, semantics, anchors, spacing, and docs |
 | TASK-252-05-02 | Template Section Metadata Preview and Sync | High | Medium | Template metadata, preview, category, version, and conditional sync/detach controls |
-| TASK-252-05-03 | Grid Columns Presets Gaps and Mobile Stack | High | Medium | Grid presets, gaps, equal height, and mobile stack |
+| TASK-252-05-03 | Grid Columns Presets Gaps and Mobile Stack | High | Medium | Grid presets, gaps, and mobile stack |
 | TASK-252-05-04 | Split Layout Slot Order and Mobile Stack | High | Medium | Split slot order, gap, and mobile stack |
 | TASK-252-05-05 | Stack Direction Gap Alignment and Responsive Flow | High | Medium | Stack direction, gap, alignment, and responsive flow |
 | TASK-252-05-06 | Spacer Size Tokens Custom Height and Canvas Affordance | Medium | Small | Spacer token/custom height and canvas affordance |

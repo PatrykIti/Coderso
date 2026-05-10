@@ -76,11 +76,12 @@ more flexible, but implementation must not weaken runtime contracts.
     empty/error states; column/grid behavior stays a layout control, not a
     separate mode.
   - `posts-feed`: latest/featured/category/manual source clarity, card/list/
-    editorial density, and author/date/category toggles; reading time stays
-    Adapt-only.
+    compact density, and current author/date toggles; category display stays
+    Adapt-only unless a `showCategory` owner is added.
   - `entry-teaser`: source selection, fallback behavior, CTA/card mode.
-  - Commerce widgets: gallery/table/compare display modes, empty states,
-    selected product/catalog source, and safe column/attribute labels.
+  - Commerce widgets: shared commerce source controls for gallery/table,
+    selected products for compare, display modes, empty states, and safe
+    column/attribute labels.
   - `listing-filters`: facet groups, query binding, range labels, and
     reset/apply behavior.
   - `search-box`: accessible copy, compact/full modes, target route, and query

@@ -12,7 +12,8 @@
 
 ## Overview
 
-Add clear column presets, gap controls, equal-height behavior, and mobile stacking without turning Grid Columns into a spreadsheet layout tool.
+Add clear column presets, gap controls, and mobile stacking without turning
+Grid Columns into a spreadsheet layout tool.
 
 This is an execution leaf under `TASK-252-05`. It must not re-open the
 research phase; use `_docs/_WIDGETS/tmp/grid-columns/MATRIX.md` and the widget README under
@@ -29,7 +30,7 @@ and Reject decisions.
 ## Research Decisions
 
 - Keep: column presets, user-facing column/row gap controls, mobile stacking,
-  equal-height behavior, and the existing `gridColumnsSlot` from
+  and the existing `gridColumnsSlot` from
   `_docs/_WIDGETS/tmp/grid-columns/MATRIX.md`; keep persisted gap ownership in
   live `layout.gapX`/`layout.gapY` unless the implementation also ships a
   schema/default/normalizer migration for any `columnGap`/`rowGap` aliases.

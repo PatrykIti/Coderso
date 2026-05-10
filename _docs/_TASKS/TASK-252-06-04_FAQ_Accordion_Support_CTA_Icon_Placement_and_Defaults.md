@@ -67,12 +67,20 @@ and Reject decisions.
 
 ```tsx
 function normalizeFaqAccordionData(data: FaqAccordionData): FaqAccordionData {
+  const items = normalizeFaqAccordionItems(data.items);
   return {
     header: normalizeFaqAccordionHeader(data.header),
-    items: normalizeFaqAccordionItems(data.items),
+    items,
     options: normalizeFaqAccordionOptions({
-      openMode: data.options?.openMode ?? (data.options?.allowMultiple ? "multiple" : "single"),
-      defaultOpenIds: data.options?.defaultOpenIds ?? normalizeLegacyFaqOpenId(data.options?.initiallyOpenId),
+      openMode:
+        data.options?.openMode ??
+        ((data.options?.allowMultipleOpen ?? data.options?.allowMultiple)
+          ? "multiple"
+          : "single"),
+      defaultOpenIds:
+        data.options?.defaultOpenIds ??
+        normalizeLegacyFaqDefaultOpenIndex(data.options?.defaultOpenIndex, items) ??
+        normalizeLegacyFaqOpenId(data.options?.initiallyOpenId),
       collapsible: data.options?.collapsible ?? true,
     }),
     supportCta: normalizeFaqSupportCta(data.supportCta),

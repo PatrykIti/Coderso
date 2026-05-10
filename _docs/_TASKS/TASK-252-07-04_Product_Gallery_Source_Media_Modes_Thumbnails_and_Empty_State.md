@@ -12,9 +12,10 @@
 
 ## Overview
 
-Add product-gallery product/catalog source, media modes, thumbnails, and empty
-states first; variant media and lightbox/action behavior stay Adapt-only while
-provider fetch remains backend-owned.
+Add product-gallery shared commerce source controls, media modes, thumbnails,
+and empty states first; product-id/catalog source expansion, variant media, and
+lightbox/action behavior stay Adapt-only while provider fetch remains
+backend-owned.
 
 This is an execution leaf under `TASK-252-07`. It must not re-open the
 research phase; use `_docs/_WIDGETS/tmp/product-gallery/MATRIX.md` and the widget README under
