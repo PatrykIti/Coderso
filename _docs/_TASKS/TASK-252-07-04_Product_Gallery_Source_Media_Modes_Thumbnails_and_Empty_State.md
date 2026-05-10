@@ -154,7 +154,7 @@ Implementation checklist:
 
 ## Acceptance Criteria
 
-- `product-gallery` editor exposes research-backed source/display/state controls with stable metadata.
+- `product-gallery` editor exposes the research-backed controls named in this leaf with stable metadata.
 - Runtime/data source ownership remains in the existing backend or widget owner seam.
 - Public-write/provider-secret boundaries are explicitly preserved in tests/docs when touched.
 - Documentation names the research decisions that explain both added and

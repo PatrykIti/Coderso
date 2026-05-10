@@ -44,7 +44,7 @@ Summary-only archive for TASK-252. Do not copy third-party code from these sourc
 - License/terms summary: Verify block terms before reuse.
 - Observed UX pattern: card-style people sections with consistent avatar metadata.
 - Useful Coderso fields/options: `cardVariant`, `avatar`, `memberMeta`.
-- Decision: Keep
+- Decision: Adapt
 - Copy policy: Summary only.
 
 ## Card 6 - Origin UI team/profile cards

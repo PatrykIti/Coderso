@@ -32,7 +32,10 @@ and Reject decisions.
 - Keep: multi-column link groups, menu/policy sources, safe manual links,
   logo/brand/copyright, and social links from
   `_docs/_WIDGETS/tmp/footer/MATRIX.md`; start from the current owner fields
-  `columns`, `legal`, `social`, `layout`, and `style`.
+  `columns`, `legal`, `social`, `layout`, and `style`. This leaf must either
+  add an explicit `brand` schema/default/normalizer/render/editor/test contract
+  or derive brand copy from existing footer columns/legal fields; do not imply
+  `brand` already exists in `FooterData`.
 - Adapt: newsletter references and dense commerce locale/currency controls
   remain conditional; implement only when schema/defaults/normalizer/render/
   editor/tests move together.
@@ -69,7 +72,7 @@ and Reject decisions.
 function normalizeFooterData(data: FooterData): FooterData {
   return {
     columns: normalizeFooterColumns(data.columns),
-    brand: normalizeFooterBrand(data.brand),
+    brand: normalizeFooterBrand(data.brand), // add this schema field in the same implementation slice
     legal: normalizeFooterLegal(data.legal),
     social: normalizeFooterSocial(data.social),
     layout: normalizeFooterLayout(data.layout),
@@ -97,6 +100,11 @@ Implementation checklist:
 - Read `_docs/_WIDGETS/tmp/footer/MATRIX.md` before changing the schema or editor.
 - Extend or reorganize `core/widgets/core/footer.tsx` schema/defaults/normalizer/rendering
   only for fields approved by the research decisions above.
+- If implementing `footer.brand.*`, add the full `brand` field to
+  `FooterData`, `footerSchema`, defaults, normalizer, renderer, editor controls,
+  validator tests, widget tests, and editor-wave tests in the same slice. If
+  brand remains derived from existing columns/legal data, remove `footer.brand.*`
+  editor rows from this leaf.
 - Refactor `core/admin/ui/widgets/editors/FooterEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.
@@ -153,7 +161,8 @@ Implementation checklist:
 
 ## Acceptance Criteria
 
-- `footer` editor exposes research-backed source/display/state controls with stable metadata.
+- `footer` editor exposes research-backed columns, brand/derived-brand,
+  legal/social, link, and surface controls with stable metadata.
 - Runtime/data source ownership remains in the existing backend or widget owner seam.
 - Public-write/provider-secret boundaries are explicitly preserved in tests/docs when touched.
 - Documentation names the research decisions that explain both added and

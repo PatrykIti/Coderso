@@ -32,10 +32,12 @@ and Reject decisions.
 ## Research Decisions
 
 - Keep: source menu/manual links, logo/links/CTA grouping, and accessible
-  `mobileMode` collapse/offcanvas behavior from
+  mobile menu behavior from
   `_docs/_WIDGETS/tmp/navigation/MATRIX.md`; start from the current owner fields
   `logo`, `items`, `cta`, `linksSource`, `menuKey`, `behavior`, `layout`, and
-  `style`.
+  `style`. Map research terms `collapse`/`offcanvas` onto the existing
+  `behavior.mobileMode` enum (`expanded`, `drawer`, `minimal`) instead of
+  adding a duplicate top-level field.
 - Adapt: dropdown/mega groups and sticky/transparent header behavior remain
   conditional; implement only when schema/defaults/normalizer/render/editor/
   tests move together.
@@ -76,8 +78,10 @@ function normalizeNavigationData(data: NavigationData): NavigationData {
     cta: normalizeNavigationCta(data.cta),
     linksSource: normalizeNavigationLinksSource(data.linksSource),
     menuKey: normalizeNavigationMenuKey(data.menuKey),
-    behavior: normalizeNavigationBehavior(data.behavior),
-    mobileMode: normalizeNavigationMobileMode(data.mobileMode ?? data.behavior?.mobileMode),
+    behavior: normalizeNavigationBehavior({
+      ...data.behavior,
+      mobileMode: normalizeNavigationMobileMode(data.behavior?.mobileMode),
+    }),
     layout: normalizeNavigationLayout(data.layout),
     style: normalizeNavigationStyle(data.style),
   };
@@ -90,8 +94,8 @@ function NavigationVisualEditor(props: WidgetEditorProps<NavigationData>) {
       <WidgetControlRow id="navigation.linksSource" label="Links source" data-widget-control="navigation.linksSource">
         <Select value={value.linksSource ?? "manual"} onChange={handleControlChange} />
       </WidgetControlRow>
-      <WidgetControlRow id="navigation.mobileMode" label="Mobile menu" data-widget-control="navigation.mobileMode">
-        <SegmentedControl value={value.mobileMode ?? "collapse"} onChange={(mobileMode) => props.onChange(updateNavigationMobileMode(value, mobileMode))} />
+      <WidgetControlRow id="navigation.behavior.mobileMode" label="Mobile menu" data-widget-control="navigation.behavior.mobileMode">
+        <SegmentedControl value={value.behavior?.mobileMode ?? "drawer"} onChange={(mobileMode) => props.onChange(updateNavigationBehavior(value, { mobileMode }))} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -108,6 +112,10 @@ Implementation checklist:
   tips, or metadata.
 - Keep legacy payloads non-destructive: missing new fields must normalize to the
   current rendered behavior.
+- Keep mobile behavior under `behavior.mobileMode`; valid values remain
+  `expanded`, `drawer`, and `minimal`. Do not persist top-level `mobileMode` or
+  invalid `collapse`/`offcanvas` values unless a schema migration updates
+  defaults, normalizer, renderer, editor, and tests together.
 - Add or update runtime/widget tests and editor-wave tests in the files listed
   above.
 
@@ -159,7 +167,8 @@ Implementation checklist:
 
 ## Acceptance Criteria
 
-- `navigation` editor exposes research-backed source/display/state controls with stable metadata.
+- `navigation` editor exposes research-backed source, link, mobile-menu, CTA,
+  and logo controls with stable metadata.
 - Runtime/data source ownership remains in the existing backend or widget owner seam.
 - Public-write/provider-secret boundaries are explicitly preserved in tests/docs when touched.
 - Documentation names the research decisions that explain both added and

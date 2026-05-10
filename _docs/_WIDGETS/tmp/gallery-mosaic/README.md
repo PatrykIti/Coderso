@@ -53,7 +53,7 @@ Summary-only archive for TASK-252. Do not copy third-party code from these sourc
 - License/terms summary: Verify block terms before reuse.
 - Observed UX pattern: card and image grids with captions or overlay text.
 - Useful Coderso fields/options: `caption`, `overlay`, `cardStyle`.
-- Decision: Keep
+- Decision: Adapt
 - Copy policy: Summary only.
 
 ## Card 7 - Aceternity image/card effects
