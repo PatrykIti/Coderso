@@ -110,6 +110,18 @@ type WidgetControlRowProps = {
   children: (field: WidgetControlFieldProps) => ReactNode;
 };
 
+type WidgetSegmentedOption = {
+  value: string;
+  label: string;
+  disabled?: boolean;
+};
+
+type SegmentedControlProps = WidgetControlFieldProps & {
+  value: string;
+  options: WidgetSegmentedOption[];
+  onChange: (next: string) => void;
+};
+
 function WidgetEditorSection(props: WidgetEditorSectionProps) {
   return (
     <section data-widget-editor-section={props.id}>
@@ -134,6 +146,25 @@ function WidgetControlRow({ id, label, help, children }: WidgetControlRowProps) 
     </div>
   );
 }
+
+function SegmentedControl({ id, describedById, value, options, onChange }: SegmentedControlProps) {
+  return (
+    <div id={id} role="radiogroup" aria-describedby={describedById}>
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          role="radio"
+          aria-checked={value === option.value}
+          disabled={option.disabled}
+          onClick={() => onChange(option.value)}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
 ```
 
 Do not implement `WidgetControlRow` as a blind `cloneElement` wrapper. Current
@@ -145,6 +176,16 @@ losing accessibility. Simple `Input`/`Textarea` call sites can pass the props
 directly; composite controls must wire the generated ids explicitly.
 Existing TASK-252 leaf snippets that show a direct `<Input />` child should be
 treated as shorthand for this render-prop API during implementation.
+Existing TASK-252 leaf snippets that pass `data-widget-control` directly to
+`WidgetControlRow` are also shorthand; the implementation must remove that prop
+at call sites because `WidgetControlRow` owns the emitted metadata from `id`.
+
+`SegmentedControl` is a new shared primitive owned by this file/helper, not an
+existing repo component. Implement it in `WidgetEditorControls.tsx` before
+leaf migrations use it. Leaf pseudocode that calls `<SegmentedControl ... />`
+is shorthand for this shared primitive and must be wired inside
+`WidgetControlRow` render props so `id` and `aria-describedby` reach the actual
+focusable group.
 
 Refactor `BlockSettings` so slot controls are rendered by a dedicated component:
 
@@ -175,7 +216,7 @@ type WidgetSlotControlGroup = {
 const widgetSlotControlGroups: Record<string, WidgetSlotControlGroup> = {
   section: {
     widgetType: "section",
-    includeSlotIds: ["default"],
+    includeSlotIds: ["region"],
     sectionId: "section.regions",
     title: "Regions",
   },

@@ -143,7 +143,10 @@ Implementation checklist:
     normalize legacy payloads through `core/widgets/core/timeline.tsx`.
 - Anti-abuse:
   - Item titles/descriptions/icons are text or existing safe rich text only; no raw HTML expansion.
-  - Optional item hrefs use the existing safe URL pattern.
+  - Optional item CTA hrefs must pass core-owned safe href normalization before
+    render: relative paths, hash links, and HTTP(S) URLs are allowed;
+    `javascript:`, `data:`, `vbscript:`, protocol-relative URLs, and unknown
+    protocols are rejected or normalized away.
 
 ## Testing Requirements
 
@@ -153,6 +156,9 @@ Implementation checklist:
 - `bun run test:vitest -- tests/vitest/widgets/timeline.test.tsx`
 - `bun test tests/unit/widgets/validator.test.ts` when schema validation changes.
 - `bun run test:vitest -- tests/vitest/ui/timeline-editor-wave.test.tsx`
+- Add Timeline widget assertions that unsafe item CTA href payloads such as
+  `javascript:alert(1)`, `data:text/html,...`, and `//evil.example` do not
+  survive normalization or render as links.
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,
   slot, or shared output behavior changes.
 - `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` if
