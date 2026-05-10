@@ -97,6 +97,19 @@ type WidgetEditorSectionProps = {
   children: ReactNode;
 };
 
+type WidgetControlFieldProps = {
+  id: string;
+  describedById?: string;
+  "aria-describedby"?: string;
+};
+
+type WidgetControlRowProps = {
+  id: string;
+  label: string;
+  help?: ReactNode;
+  children: (field: WidgetControlFieldProps) => ReactNode;
+};
+
 function WidgetEditorSection(props: WidgetEditorSectionProps) {
   return (
     <section data-widget-editor-section={props.id}>
@@ -116,29 +129,87 @@ function WidgetControlRow({ id, label, help, children }: WidgetControlRowProps) 
     <div data-widget-control={id}>
       <label htmlFor={id}>{label}</label>
       {help ? <WidgetInfoTip content={help} label={`${label} info`} /> : null}
-      {cloneElement(children, { id, "aria-describedby": helpId })}
+      {children({ id, describedById: helpId, "aria-describedby": helpId })}
       {help ? <p id={helpId} className="sr-only">{help}</p> : null}
     </div>
   );
 }
 ```
 
+Do not implement `WidgetControlRow` as a blind `cloneElement` wrapper. Current
+widget editors use composite shadcn/Radix controls such as `Select`,
+`SelectTrigger`, `Switch`, repeated-item editors, and media pickers. The shared
+row must expose a render-prop/control-props contract so each composite can place
+`id` and `aria-describedby` on the actual focusable trigger or input without
+losing accessibility. Simple `Input`/`Textarea` call sites can pass the props
+directly; composite controls must wire the generated ids explicitly.
+Existing TASK-252 leaf snippets that show a direct `<Input />` child should be
+treated as shorthand for this render-prop API during implementation.
+
 Refactor `BlockSettings` so slot controls are rendered by a dedicated component:
 
 ```tsx
+function resolveBuilderSlotMap(block: Block): Record<string, Block[]> {
+  if (block.slots && typeof block.slots === "object" && !Array.isArray(block.slots)) {
+    return block.slots as Record<string, Block[]>;
+  }
+  return Array.isArray(block.children) ? { default: block.children } : {};
+}
+
 function WidgetSlotControls({ widget, block, onChange }: WidgetSlotControlsProps) {
+  const slotMap = resolveBuilderSlotMap(block);
+  const slotDefinitions = widget.slots ?? [];
   const slotTargets = resolveWidgetSlotTargets(widget.slots ?? [], slotMap);
   if (slotTargets.length === 0) return null;
+
+  const isAtRepeatableSlotMaximum = (definition: WidgetSlotDefinition, count: number) =>
+    Number.isFinite(definition.maxItems)
+      ? count >= Math.max(0, Math.floor(definition.maxItems ?? 0))
+      : false;
+
+  const isAtRepeatableSlotMinimum = (definition: WidgetSlotDefinition, count: number) =>
+    count <= (Number.isFinite(definition.minItems)
+      ? Math.max(0, Math.floor(definition.minItems ?? 0))
+      : 0);
+
+  function addRepeatableSlot(definitionId: string) {
+    const definition = slotDefinitions.find((slot) => slot.id === definitionId);
+    if (!definition || getWidgetSlotKind(definition) !== "repeatable") return;
+    const existing = getRepeatableSlotIds(definition, slotMap);
+    if (isAtRepeatableSlotMaximum(definition, existing.length)) return;
+    const slotId = buildRepeatableSlotId(
+      definitionId,
+      getNextRepeatableSlotInstanceId(definitionId, slotMap),
+    );
+    onChange({ ...block, slots: { ...slotMap, [slotId]: [] }, children: undefined });
+  }
+
+  function removeRepeatableSlot(slotId: string) {
+    const parsed = parseRepeatableSlotId(slotId);
+    if (!parsed) return;
+    const definition = slotDefinitions.find((slot) => slot.id === parsed.definitionId);
+    if (!definition || getWidgetSlotKind(definition) !== "repeatable") return;
+    if (isAtRepeatableSlotMinimum(definition, getRepeatableSlotIds(definition, slotMap).length)) return;
+    const nextSlots = { ...slotMap };
+    delete nextSlots[slotId];
+    onChange({ ...block, slots: nextSlots, children: undefined });
+  }
+
   return (
     <WidgetEditorSection id="slots" title="Slots" info="Manage nested widget regions.">
-      {/* Add/remove repeatable region controls here. */}
+      {/* Render slotTargets plus addRepeatableSlot/removeRepeatableSlot controls. */}
     </WidgetEditorSection>
   );
 }
 ```
 
-Then wire this component into `VisualPanel` or the widget-owned Visual editor
-context so `section` can display Regions with its own content.
+Then wire this component into `VisualPanel` or a builder-owned wrapper that
+already receives `widget`, `block`, and `onChange`. Do not rely on
+`WidgetEditorContext` for widget metadata: the current context only exposes
+surface and binding helpers, not the active `WidgetDefinition`. The slot
+component must preserve the existing `children -> slots.default` compatibility
+path and clear `children` only when writing a new `slots` map, matching the
+current `BlockSettings` behavior.
 
 ## Security Contract
 

@@ -84,13 +84,6 @@ type TimelineDisplayMode =
   | "chronology"
   | "alternating";
 
-// Adapt-only. Do not expose this until motion schema, render, editor, and
-// reduced-motion tests are implemented together.
-type TimelineMotion = {
-  reveal?: "none" | "scroll-sequence" | "connector-progress";
-  resetOnExit?: boolean;
-};
-
 type TimelineStep = {
   id: string;
   title: string;
@@ -114,16 +107,14 @@ function normalizeTimelineData(raw: unknown): TimelineData {
     steps: normalizeTimelineSteps(input.steps, {
       normalizeCta: normalizeTimelineStepCta,
     }),
-    ...(isTimelineMotionAdaptEnabled(input) ? { motion: normalizeTimelineMotion(input.motion) } : {}),
   };
 }
 ```
 
-Render core timeline state with semantic markup. Add motion data attributes only
-when the Adapt motion slice is implemented.
+Render core timeline state with semantic markup.
 
 ```tsx
-<ol data-timeline-mode={mode} {...resolveTimelineMotionDataAttributes(motion)}>
+<ol data-timeline-mode={mode}>
   {steps.map((step) => (
     <li data-timeline-step={step.id}>
       {step.date ? <time dateTime={step.date}>{step.dateLabel ?? step.date}</time> : null}
@@ -133,10 +124,16 @@ when the Adapt motion slice is implemented.
 </ol>
 ```
 
-If the Adapt motion slice needs JavaScript for replay-on-scroll, keep it narrow
-and deterministic:
+Adapt-only motion note: do not implement this in required TASK-252-04 scope.
+Only add it in a separate implementation slice when motion schema, render,
+editor controls, reduced-motion tests, and cleanup behavior move together.
 
 ```ts
+type TimelineMotion = {
+  reveal?: "none" | "scroll-sequence" | "connector-progress";
+  resetOnExit?: boolean;
+};
+
 function attachTimelineReveal(root: HTMLElement) {
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return noop;
   const observer = new IntersectionObserver((entries) => {

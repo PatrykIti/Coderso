@@ -143,17 +143,26 @@ function SectionVisualEditor(props: WidgetEditorProps<SectionData>) {
           <Input value={value.semantics?.anchorId ?? ""} onChange={(anchorId) => props.onChange(updateSectionSemantics(value, { anchorId }))} />
         </WidgetControlRow>
       </WidgetEditorSection>
-      <WidgetEditorSection id="section.regions" title="Regions">
-        <WidgetRepeatableSlotControls
-          widget={props.context.widget}
-          slots={resolveSectionSlots(props.context.widget)}
-          onChange={(slots) => props.onChange(updateSectionSlots(value, slots))}
-        />
-      </WidgetEditorSection>
+    </>
+  );
+}
+
+function VisualPanelWithSlotControls({ widget, block, onChange, editorContext }: VisualPanelProps) {
+  return (
+    <>
+      <VisualPanel widget={widget} block={block} onChange={onChange} editorContext={editorContext} />
+      <WidgetSlotControls widget={widget} block={block} onChange={onChange} />
     </>
   );
 }
 ```
+
+Regions are builder-owned, not widget-data-owned. Keep the Section editor focused
+on `section` schema fields (`heading`, `semantics`, `layout`, `style`) and move
+the Regions UI through the shared slot-control component from TASK-252-01. That
+component must receive `widget`, `block`, and `onChange` from
+`BlockSettings`/`VisualPanel`; do not read `props.context.widget`, because the
+current `WidgetEditorContext` does not expose a `widget` field.
 
 For missing docs, add contract pages that follow existing widget docs:
 

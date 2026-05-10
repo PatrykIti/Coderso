@@ -32,18 +32,20 @@ and Reject decisions.
 
 - Keep: form plus contact-info layout, field visibility, validation copy, and
   success/error/loading state copy from `_docs/_WIDGETS/tmp/contact/MATRIX.md`;
-  start from the current owner fields `form`, `contact`, and `style`.
-- Preserve existing `map` payloads only as legacy renderer data; this leaf does
-  not add map or social display controls.
+  start from the current owner fields `form`, `contact`, `map`, and `style`.
+- Preserve existing `map` payloads, renderer behavior, and editor controls as
+  the current product surface. This leaf does not add social display controls,
+  provider-secret controls, raw scripts, or arbitrary routing controls.
 - Adapt: map/social display fields, provider embed mode, and backend routing
-  references remain conditional; implement only when schema/defaults/
-  normalizer/render/editor/tests move together.
+  references remain conditional. Existing map controls stay owned by the current
+  schema/defaults/normalizer/render/editor/tests/docs contract; new map/social
+  expansion must still move through those owners together.
 - Reject: arbitrary operators, client-owned provider/index config, raw scripts, and privileged settings in widget data.
 
 ## Editor Mode Ownership
 
 - `Wizard`: first-run setup for the safest useful defaults for `contact`.
-- `Visual`: `Form fields`, `Contact info`, `State copy`, `Layout`.
+- `Visual`: `Form fields`, `Contact info`, `State copy`, `Map source`, `Layout`.
 - `Advanced`: `Public-write diagnostics`, `Backend boundary mapping`.
 
 ## Sub-Tasks
@@ -86,7 +88,7 @@ function normalizeContactData(data: ContactData): ContactData {
     validationCopy: normalizeContactValidationCopy(data.validationCopy),
     stateCopy: normalizeContactStateCopy(data.stateCopy),
     contact: normalizeContactContact(data.contact),
-    map: preserveLegacyContactMapForRendering(data.map),
+    map: normalizeContactMap(data.map),
     style: normalizeContactStyle(data.style),
   };
 }
@@ -94,20 +96,32 @@ function normalizeContactData(data: ContactData): ContactData {
 function ContactVisualEditor(props: WidgetEditorProps<ContactData>) {
   const value = props.value;
   return (
-    <WidgetEditorSection id="contact.form" title="Contact form">
-      <WidgetControlRow id="contact.form.submitLabel" label="Submit label" data-widget-control="contact.form.submitLabel">
-        <Input value={value.form?.submitLabel ?? ""} onChange={handleControlChange} />
-      </WidgetControlRow>
-      <WidgetControlRow id="contact.form.fields" label="Visible fields" data-widget-control="contact.form.fields">
-        <FieldMultiSelect value={value.form?.fields ?? contactFieldOptions} onChange={(fields) => props.onChange(updateContactForm(value, { fields }))} />
-      </WidgetControlRow>
-      <WidgetControlRow id="contact.form.required" label="Required fields" data-widget-control="contact.form.required">
-        <FieldMultiSelect value={value.form?.required ?? ["name", "email", "message"]} onChange={(required) => props.onChange(updateContactForm(value, { required }))} />
-      </WidgetControlRow>
-      <WidgetControlRow id="contact.validationCopy.email" label="Email required copy" data-widget-control="contact.validationCopy.email">
-        <Input value={value.validationCopy?.email ?? ""} onChange={(email) => props.onChange(updateContactValidationCopy(value, { email }))} />
-      </WidgetControlRow>
-    </WidgetEditorSection>
+    <>
+      <WidgetEditorSection id="contact.form" title="Contact form">
+        <WidgetControlRow id="contact.form.submitLabel" label="Submit label" data-widget-control="contact.form.submitLabel">
+          <Input value={value.form?.submitLabel ?? ""} onChange={handleControlChange} />
+        </WidgetControlRow>
+        <WidgetControlRow id="contact.form.fields" label="Visible fields" data-widget-control="contact.form.fields">
+          <FieldMultiSelect value={value.form?.fields ?? contactFieldOptions} onChange={(fields) => props.onChange(updateContactForm(value, { fields }))} />
+        </WidgetControlRow>
+        <WidgetControlRow id="contact.form.required" label="Required fields" data-widget-control="contact.form.required">
+          <FieldMultiSelect value={value.form?.required ?? ["name", "email", "message"]} onChange={(required) => props.onChange(updateContactForm(value, { required }))} />
+        </WidgetControlRow>
+        <WidgetControlRow id="contact.validationCopy.email" label="Email required copy" data-widget-control="contact.validationCopy.email">
+          <Input value={value.validationCopy?.email ?? ""} onChange={(email) => props.onChange(updateContactValidationCopy(value, { email }))} />
+        </WidgetControlRow>
+      </WidgetEditorSection>
+      <WidgetEditorSection id="contact.map" title="Map source">
+        <WidgetControlRow id="contact.map.enabled" label="Show map" data-widget-control="contact.map.enabled">
+          <Switch checked={value.map?.enabled ?? false} onCheckedChange={(enabled) => props.onChange(updateContactMap(value, { enabled }))} />
+        </WidgetControlRow>
+        {value.map?.enabled ? (
+          <WidgetControlRow id="contact.map.embedUrl" label="Map embed URL" data-widget-control="contact.map.embedUrl">
+            <Input value={value.map?.embedUrl ?? ""} onChange={(embedUrl) => props.onChange(updateContactMap(value, { embedUrl }))} />
+          </WidgetControlRow>
+        ) : null}
+      </WidgetEditorSection>
+    </>
   );
 }
 ```
@@ -133,13 +147,10 @@ Implementation checklist:
   tips, or metadata.
 - Keep legacy payloads non-destructive: missing new fields must normalize to the
   current rendered behavior.
-- Do not expose map/social display editor controls in this leaf; keep them
-  Adapt-only until schema/defaults/normalizer/render/editor/tests move
-  together.
-- Remove existing map visibility/embed URL editor controls from
-  `ContactEditors.tsx` for this leaf; legacy `map` payloads may continue to
-  render, but map/social configuration is not a required TASK-252-07-13 editor
-  surface.
+- Preserve the existing map visibility/embed URL editor controls and refactor
+  them to shared TASK-252 editor primitives with stable `data-widget-control`
+  metadata. Do not add new social display controls, provider-secret controls,
+  raw scripts, or arbitrary routing controls in this leaf.
 - Add or update runtime/widget tests and editor-wave tests in the files listed
   above.
 
