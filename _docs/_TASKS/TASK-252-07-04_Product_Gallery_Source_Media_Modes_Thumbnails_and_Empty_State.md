@@ -12,10 +12,10 @@
 
 ## Overview
 
-Add product-gallery shared commerce source controls, media modes, thumbnails,
-and empty states first; product-id/catalog source expansion, variant media, and
-lightbox/action behavior stay Adapt-only while provider fetch remains
-backend-owned.
+Add product-gallery shared commerce source controls, media modes, backend-owned
+thumbnail selection, and empty states first; product-id/catalog source
+expansion, aspect-ratio controls, variant media, and lightbox/action behavior
+stay Adapt-only while provider fetch remains backend-owned.
 
 This is an execution leaf under `TASK-252-07`. It must not re-open the
 research phase; use `_docs/_WIDGETS/tmp/product-gallery/MATRIX.md` and the widget README under
@@ -31,20 +31,20 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: shared commerce source controls, product media modes, thumbnails, and
-  aspect-ratio controls from
+- Keep: shared commerce source controls, product media modes, backend-owned
+  thumbnails, and empty states from
   `_docs/_WIDGETS/tmp/product-gallery/MATRIX.md`; start from the current owner
   fields `source`, `fields`, `emptyState`, `style`, and `resolved`.
 - Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat
-  carousel arrows/dots polish, variant media, lightbox, and quick-view/action
-  behavior as conditional; implement only when schema/defaults/normalizer/
-  render/editor/tests move together.
+  aspect-ratio controls, carousel arrows/dots polish, variant media, lightbox,
+  and quick-view/action behavior as conditional; implement only when
+  schema/defaults/normalizer/render/editor/tests move together.
 - Reject: arbitrary operators, client-owned provider/index config, raw scripts, and privileged settings in widget data.
 
 ## Editor Mode Ownership
 
 - `Wizard`: first-run setup for the safest useful defaults for `product-gallery`.
-- `Visual`: `Source`, `Media mode`, `Thumbnails`, `Aspect ratio`, `Empty state`.
+- `Visual`: `Source`, `Media mode`, `Thumbnails`, `Empty state`.
 - `Advanced`: `Commerce diagnostics`, `Backend resolver mapping`.
 
 ## Sub-Tasks
@@ -120,6 +120,14 @@ Implementation checklist:
   product/catalog source mode beyond those fields, extend
   `commerceWidgetShared.ts`, `commerceWidgetRuntime.ts`, and
   `commerceQueryService.ts` first, then add editor controls and tests.
+- Keep thumbnails backend-owned: `media.mode` and thumbnail selection may only
+  render from resolved product/media asset payloads supplied by
+  `commerceWidgetRuntime.ts`; if the resolver does not supply URL/alt metadata,
+  the implementation must either add that resolver contract with tests or defer
+  thumbnail rendering.
+- Keep aspect-ratio controls out of required scope for this leaf unless the same
+  implementation adds schema/defaults/normalizer/render/editor/tests and updates
+  the matrix to promote the field from Adapt.
 - Refactor `core/admin/ui/widgets/editors/ProductGalleryEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.

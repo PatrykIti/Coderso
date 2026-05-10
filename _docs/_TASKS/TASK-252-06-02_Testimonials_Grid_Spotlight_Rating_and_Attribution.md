@@ -31,7 +31,7 @@ and Reject decisions.
 ## Research Decisions
 
 - Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/testimonials/MATRIX.md`; for this leaf, start from the current owner fields `header`, `testimonials`, `style` and add only the schema fields that the matrix explicitly keeps.
-- Keep: quote card grid, single spotlight quote, ratings, avatar shape, and concise author metadata from `_docs/_WIDGETS/tmp/testimonials/MATRIX.md`; add schema-owned mode/featured/rating/avatar-shape fields in `core/widgets/core/testimonials.tsx`.
+- Keep: quote card grid, single spotlight quote, ratings, avatar shape, and concise author metadata from `_docs/_WIDGETS/tmp/testimonials/MATRIX.md`; add schema-owned `mode`, `featuredItemId`, item-level `rating`, and `style.avatarShape` fields in `core/widgets/core/testimonials.tsx` so the implementation does not rely on ad hoc variant-only inference.
 - Adapt: company/logo metadata, masonry, and carousel behavior remain conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: separate one-off widgets, raw HTML/script embeds, and unbounded visual/CSS controls.
 
@@ -63,11 +63,22 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
+type TestimonialsMode = "grid" | "spotlight";
+type TestimonialsAvatarShape = "circle" | "rounded" | "square";
+
 function normalizeTestimonialsData(data: TestimonialsData): TestimonialsData {
+  const testimonials = normalizeTestimonialItems(data.testimonials);
+
   return {
+    mode: normalizeTestimonialsMode(data.mode),
+    featuredItemId: normalizeFeaturedTestimonialId(data.featuredItemId, testimonials),
     header: normalizeTestimonialsHeader(data.header),
-    testimonials: normalizeTestimonialItems(data.testimonials),
-    style: normalizeTestimonialsStyle(data.style),
+    testimonials,
+    style: normalizeTestimonialsStyle({
+      ...data.style,
+      avatarShape: normalizeTestimonialsAvatarShape(data.style?.avatarShape),
+      ratingVisibility: normalizeTestimonialsRatingVisibility(data.style?.ratingVisibility),
+    }),
   };
 }
 
@@ -75,12 +86,22 @@ function normalizeTestimonialItem(item: TestimonialItem, index: number): Testimo
   return {
     ...item,
     id: normalizeStableItemId(item.id, `testimonials-${index + 1}`),
+    rating: normalizeTestimonialRating(item.rating),
   };
 }
 
 function TestimonialsVisualEditor(props: WidgetEditorProps<TestimonialsData>) {
   return (
     <WidgetEditorSection id="testimonials.testimonials" title="Testimonials">
+      <WidgetControlRow id="testimonials.mode" label="Mode" data-widget-control="testimonials.mode">
+        <SegmentedControl value={props.value.mode ?? "grid"} onChange={(mode) => props.onChange(updateTestimonialsData(props.value, { mode }))} />
+      </WidgetControlRow>
+      <WidgetControlRow id="testimonials.featuredItemId" label="Featured quote" data-widget-control="testimonials.featuredItemId">
+        <Select value={props.value.featuredItemId ?? ""} onChange={(featuredItemId) => props.onChange(updateTestimonialsData(props.value, { featuredItemId }))} />
+      </WidgetControlRow>
+      <WidgetControlRow id="testimonials.style.avatarShape" label="Avatar shape" data-widget-control="testimonials.style.avatarShape">
+        <SegmentedControl value={props.value.style?.avatarShape ?? "circle"} onChange={(avatarShape) => props.onChange(updateTestimonialsStyle(props.value, { avatarShape }))} />
+      </WidgetControlRow>
       {props.value.testimonials.map((item, index) => (
         <WidgetControlRow key={item.id ?? index} id={`testimonials.testimonials.${index}.quote`} label="Quote" data-widget-control={`testimonials.testimonials.${index}.quote`}>
           <Input
@@ -99,6 +120,15 @@ Implementation checklist:
 - Read `_docs/_WIDGETS/tmp/testimonials/MATRIX.md` before changing the schema or editor.
 - Extend or reorganize `core/widgets/core/testimonials.tsx` schema/defaults/normalizer/rendering
   only for fields approved by the research decisions above.
+- Own spotlight mode explicitly: `mode: "grid" | "spotlight"` and
+  `featuredItemId` must be added to schema/defaults/normalizer/render/editor/tests
+  together, with legacy variant values mapped non-destructively during
+  normalization.
+- Preserve current item-level rating data and add bounded rating normalization;
+  any rating visibility/scale option must be schema-owned and tested in the same
+  slice.
+- Add constrained `style.avatarShape` ownership in schema/defaults/normalizer/
+  render/editor/tests; do not infer avatar shape from arbitrary classes.
 - Refactor `core/admin/ui/widgets/editors/TestimonialsEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.

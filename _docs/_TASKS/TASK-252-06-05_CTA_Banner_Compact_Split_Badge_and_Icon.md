@@ -30,8 +30,9 @@ and Reject decisions.
 
 - Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/cta-banner/MATRIX.md`; for this leaf, start from the current owner fields `content`, `actions`, `style` and add only the schema fields that the matrix explicitly keeps.
 - Keep: centered CTA, split CTA layout, high-contrast/tone band, and badge/icon
-  CTA strip from `_docs/_WIDGETS/tmp/cta-banner/MATRIX.md`; high-contrast
-  stays tied to existing theme/style tokens, while Tailwind UI Plus
+  CTA strip from `_docs/_WIDGETS/tmp/cta-banner/MATRIX.md`; add the icon as a
+  bounded `content.icon` owner alongside the existing `content.badge`, and keep
+  high-contrast tied to existing theme/style tokens while Tailwind UI Plus
   background-media examples remain Adapt-only.
 - Adapt: background media/overlay, app-store style button groups, and reduced-motion-safe named animation presets remain conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: separate one-off widgets, raw HTML/script embeds, and unbounded visual/CSS controls.
@@ -66,7 +67,10 @@ and Reject decisions.
 ```tsx
 function normalizeCtaBannerData(data: CtaBannerData): CtaBannerData {
   return {
-    content: normalizeCtaBannerContent(data.content),
+    content: normalizeCtaBannerContent({
+      ...data.content,
+      icon: normalizeCtaBannerIcon(data.content?.icon),
+    }),
     actions: normalizeCtaBannerActions(data.actions),
     style: normalizeCtaBannerStyle(data.style),
   };
@@ -79,6 +83,9 @@ function CtaBannerVisualEditor(props: WidgetEditorProps<CtaBannerData>) {
       <WidgetControlRow id="cta-banner.content.badge" label="Badge" data-widget-control="cta-banner.content.badge">
         <Input value={value.content?.badge ?? ""} onChange={handleControlChange} />
       </WidgetControlRow>
+      <WidgetControlRow id="cta-banner.content.icon" label="Icon" data-widget-control="cta-banner.content.icon">
+        <IconPicker value={value.content?.icon ?? ""} onChange={(icon) => props.onChange(updateCtaBannerContent(value, { icon }))} />
+      </WidgetControlRow>
     </WidgetEditorSection>
   );
 }
@@ -89,6 +96,10 @@ Implementation checklist:
 - Read `_docs/_WIDGETS/tmp/cta-banner/MATRIX.md` before changing the schema or editor.
 - Extend or reorganize `core/widgets/core/ctaBanner.tsx` schema/defaults/normalizer/rendering
   only for fields approved by the research decisions above.
+- Add `content.icon` schema/default/normalizer/render/editor/test ownership
+  with an allowlisted icon identifier; if implementation defers icon support,
+  move the icon row in the matrix/task to Adapt in the same patch instead of
+  leaving it as an unowned Keep requirement.
 - Refactor `core/admin/ui/widgets/editors/CtaBannerEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.

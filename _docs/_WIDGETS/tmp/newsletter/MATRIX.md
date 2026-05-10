@@ -2,7 +2,7 @@
 
 | Researched option | Sources | Decision | Coderso editor/schema implication |
 |---|---|---|---|
-| Inline/stacked/minimal layouts | HyperUI | Keep | Preserve variants and expose layout width/alignment in Visual; Tailwind UI Plus/daisyUI remain Adapt reference material. |
+| Inline/stacked/minimal layouts | HyperUI | Keep | Preserve variants and expose existing style alignment/background controls in Visual; Tailwind UI Plus width/card composition and daisyUI remain Adapt reference material unless a schema owner is added. |
 | Consent and privacy note | Preline | Keep | Visual `Consent` section owns label/required/privacy copy; Mailchimp remains provider Adapt reference material. |
 | Passive success/error/loading copy | React Hook Form | Keep | Schema owns submit/state copy as fallback rendered copy; Mailchimp provider errors remain Adapt scope. |
 | Runtime provider-error mapping | Mailchimp, provider submission patterns | Adapt | Requires a backend-owned Coderso submission owner with route/security tests; do not infer it from widget-only action URLs. |

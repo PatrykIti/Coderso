@@ -147,7 +147,7 @@ items.map((item, index) => (
     id={`item-${index + 1}`}
     title={`Item ${index + 1}`}
   >
-    <WidgetControlRow id={`feature-grid.items.${index}.title`} label="Title">
+    <WidgetControlRow id={`feature-grid.items.${index}.title`} label="Title" data-widget-control={`feature-grid.items.${index}.title`}>
       <Input value={item.title} onChange={handleControlChange} />
     </WidgetControlRow>
   </WidgetEditorSection>

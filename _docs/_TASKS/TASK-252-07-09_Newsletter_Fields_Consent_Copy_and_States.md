@@ -78,7 +78,6 @@ type NewsletterStyle = {
   spacing?: "none" | "sm" | "md" | "lg" | "xl";
   alignment?: "start" | "center" | "end";
   background?: string;
-  width?: "narrow" | "default" | "wide";
 };
 
 function normalizeNewsletterData(data: NewsletterData): NewsletterData {
@@ -96,10 +95,7 @@ function normalizeNewsletterData(data: NewsletterData): NewsletterData {
       successMessage: data.submit?.successMessage,
     }),
     integration: preserveBackendOwnedNewsletterIntegrationReference(data.integration),
-    style: normalizeNewsletterStyle({
-      ...data.style,
-      width: normalizeNewsletterWidth(data.style?.width),
-    }),
+    style: normalizeNewsletterStyle(data.style),
   };
 }
 
@@ -112,9 +108,6 @@ function NewsletterVisualEditor(props: WidgetEditorProps<NewsletterData>) {
       </WidgetControlRow>
       <WidgetControlRow id="newsletter.consent.privacyNote" label="Privacy note" data-widget-control="newsletter.consent.privacyNote">
         <Textarea value={value.consent?.privacyNote ?? ""} onChange={handleControlChange} />
-      </WidgetControlRow>
-      <WidgetControlRow id="newsletter.style.width" label="Width" data-widget-control="newsletter.style.width">
-        <SegmentedControl value={value.style?.width ?? "default"} onChange={(width) => props.onChange(updateNewsletterStyle(value, { width }))} />
       </WidgetControlRow>
       <WidgetControlRow id="newsletter.stateCopy.errorMessage" label="Error message" data-widget-control="newsletter.stateCopy.errorMessage">
         <Input value={value.stateCopy?.errorMessage ?? ""} onChange={handleControlChange} />
@@ -139,9 +132,10 @@ Implementation checklist:
   rendered fallback copy and update the matrix/card note during execution to
   record that runtime mapping was deferred. Provider secrets/config stay
   backend-only.
-- Add bounded `style.width` plus `consent.privacyNote` schema/default/render/
-  editor/test ownership; keep consent/provider security separate from provider
-  configuration.
+- Add `consent.privacyNote` schema/default/render/editor/test ownership and keep
+  consent/provider security separate from provider configuration. Width/card
+  composition remains Adapt-only unless a later implementation adds full style
+  schema ownership and updates the matrix in the same patch.
 - Refactor `core/admin/ui/widgets/editors/NewsletterEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.

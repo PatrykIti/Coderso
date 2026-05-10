@@ -31,8 +31,9 @@ and Reject decisions.
 - Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/logo-cloud/MATRIX.md`; for this leaf, start from the current owner fields `header`, `logos`, `style` and add only the schema fields that the matrix explicitly keeps.
 - Keep: static responsive grid, intro text, grayscale/muted tone, multi-row
   cloud behavior, and explicit logo alt/accessible-label handling from
-  `_docs/_WIDGETS/tmp/logo-cloud/MATRIX.md`; add schema-owned row/wrap and
-  `altText` controls in `core/widgets/core/logoCloud.tsx`.
+  `_docs/_WIDGETS/tmp/logo-cloud/MATRIX.md`; add `logos[].altText` ownership and
+  map row/wrap behavior through bounded layout controls in
+  `core/widgets/core/logoCloud.tsx` rather than arbitrary per-logo sizing.
 - Adapt: dark/surface variants and marquee mode remain conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: separate one-off widgets, raw HTML/script embeds, and unbounded visual/CSS controls.
 
@@ -68,7 +69,11 @@ function normalizeLogoCloudData(data: LogoCloudData): LogoCloudData {
   return {
     header: normalizeLogoCloudHeader(data.header),
     logos: normalizeLogoCloudLogos(data.logos),
-    style: normalizeLogoCloudStyle(data.style),
+    style: normalizeLogoCloudStyle({
+      ...data.style,
+      logoTone: normalizeLogoTone(data.style?.logoTone),
+      rowMode: normalizeLogoCloudRowMode(data.style?.rowMode),
+    }),
   };
 }
 
@@ -83,6 +88,9 @@ function normalizeLogoCloudLogo(item: LogoCloudLogo, index: number): LogoCloudLo
 function LogoCloudVisualEditor(props: WidgetEditorProps<LogoCloudData>) {
   return (
     <WidgetEditorSection id="logo-cloud.logos" title="Logos">
+      <WidgetControlRow id="logo-cloud.style.rowMode" label="Rows" data-widget-control="logo-cloud.style.rowMode">
+        <SegmentedControl value={props.value.style?.rowMode ?? "wrap"} onChange={(rowMode) => props.onChange(updateLogoCloudStyle(props.value, { rowMode }))} />
+      </WidgetControlRow>
       {props.value.logos.map((item, index) => (
         <Fragment key={item.id ?? index}>
           <WidgetControlRow id={`logo-cloud.logos.${index}.name`} label="Name" data-widget-control={`logo-cloud.logos.${index}.name`}>
@@ -103,6 +111,11 @@ Implementation checklist:
 - Read `_docs/_WIDGETS/tmp/logo-cloud/MATRIX.md` before changing the schema or editor.
 - Extend or reorganize `core/widgets/core/logoCloud.tsx` schema/defaults/normalizer/rendering
   only for fields approved by the research decisions above.
+- Add `logos[].altText` schema/default/normalizer/render/editor/tests and use
+  the logo name only as a legacy fallback, not as a reason to omit the field.
+- Own row/wrap through bounded layout values such as `style.rowMode` plus the
+  existing variant behavior; do not add standalone grid-count or per-logo sizing
+  controls.
 - Refactor `core/admin/ui/widgets/editors/LogoCloudEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.
