@@ -31,7 +31,10 @@ import type {
 } from "../../../core/services/assistant/actionPlanTypes";
 import type { AssistantUndoManifestItem } from "../../../core/services/assistant/actionUndoManifest";
 import type { DetailPageDocument } from "../../../core/services/content/detailPageTypes";
-import type { CustomScreenBinding } from "../../../core/services/customScreens/customScreenSchemas";
+import type {
+  CustomScreenBinding,
+  CustomScreenCollectionRole,
+} from "../../../core/services/customScreens/customScreenSchemas";
 import type { ContentRouteSetting } from "../../../core/services/settings/settingsService";
 import type { WidgetBlock } from "../../../core/widgets/types";
 
@@ -52,6 +55,8 @@ const createDeps = () => {
     name: string;
     contentTypeId: string;
     status: "draft" | "active";
+    collectionRole: CustomScreenCollectionRole | null;
+    compositionKey: string | null;
     showInSidebar: boolean;
     sidebarLabel: string | null;
     schemaVersion: 1;
@@ -307,6 +312,8 @@ const createDeps = () => {
       name: string;
       contentTypeId: string;
       status?: "draft" | "active";
+      collectionRole?: CustomScreenCollectionRole | null;
+      compositionKey?: string | null;
       showInSidebar?: boolean;
       sidebarLabel?: string | null;
       blocks?: WidgetBlock[] | null;
@@ -318,6 +325,8 @@ const createDeps = () => {
         name: input.name,
         contentTypeId: input.contentTypeId,
         status: input.status ?? "draft",
+        collectionRole: input.collectionRole ?? null,
+        compositionKey: input.compositionKey ?? null,
         showInSidebar: input.showInSidebar === true,
         sidebarLabel: input.sidebarLabel ?? null,
         schemaVersion: 1 as const,
@@ -339,6 +348,8 @@ const createDeps = () => {
         name?: string;
         contentTypeId?: string;
         status?: "draft" | "active";
+        collectionRole?: CustomScreenCollectionRole | null;
+        compositionKey?: string | null;
         showInSidebar?: boolean;
         sidebarLabel?: string | null;
         blocks?: WidgetBlock[] | null;
@@ -350,6 +361,8 @@ const createDeps = () => {
       if (input.name !== undefined) existing.name = input.name;
       if (input.contentTypeId !== undefined) existing.contentTypeId = input.contentTypeId;
       if (input.status !== undefined) existing.status = input.status;
+      if (input.collectionRole !== undefined) existing.collectionRole = input.collectionRole;
+      if (input.compositionKey !== undefined) existing.compositionKey = input.compositionKey;
       if (input.showInSidebar !== undefined) existing.showInSidebar = input.showInSidebar;
       if (input.sidebarLabel !== undefined) existing.sidebarLabel = input.sidebarLabel;
       if (input.blocks !== undefined) existing.blocks = input.blocks ?? [];
@@ -1296,6 +1309,8 @@ test("executeAssistantActionPlan updates custom screen metadata and binding mode
           patch: {
             name: "Projects Admin",
             status: "active",
+            collectionRole: "secondary-admin-screen",
+            compositionKey: "projects-secondary",
             showInSidebar: true,
             sidebarLabel: "Projects",
             binding: {
@@ -1324,6 +1339,8 @@ test("executeAssistantActionPlan updates custom screen metadata and binding mode
 
   expect(executed.summary.update).toBe(1);
   expect(deps.__state.customScreens[0]?.name).toBe("Projects Admin");
+  expect(deps.__state.customScreens[0]?.collectionRole).toBe("secondary-admin-screen");
+  expect(deps.__state.customScreens[0]?.compositionKey).toBe("projects-secondary");
   expect(deps.__state.customScreens[0]?.showInSidebar).toBe(true);
   expect(deps.__state.customScreens[0]?.bindings[0]?.mode).toBe("readwrite");
   expect(deps.__state.customScreens[0]?.blocks[0]?.id).toBe("hero-1");
@@ -1344,6 +1361,8 @@ test("dryRunAssistantActionPlan treats matching custom screen upserts as noop", 
     name: "House Projects",
     contentTypeId: contentType.id,
     status: "active",
+    collectionRole: "canonical-admin-screen",
+    compositionKey: "house-projects-catalog",
     showInSidebar: true,
     sidebarLabel: "House Projects",
     blocks: [
@@ -1388,6 +1407,8 @@ test("dryRunAssistantActionPlan treats matching custom screen upserts as noop", 
           name: "House Projects",
           contentTypeSlug: "house-projects",
           status: "active",
+          collectionRole: "canonical-admin-screen",
+          compositionKey: "house-projects-catalog",
           showInSidebar: true,
           sidebarLabel: "House Projects",
           blocks: [

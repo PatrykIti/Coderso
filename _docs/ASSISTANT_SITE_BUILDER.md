@@ -89,6 +89,11 @@ Current implemented guide blueprint:
     groups deterministically, validates referenced content schema fields,
     rejects secret-like field references, and keeps output on the existing
     `custom-screen.upsert` `blocks` / `bindings` transport shape
+  - catalog admin bindings now compose through `blueprintBindingComposer.ts`,
+    which keeps the existing `widgetId + propPath + field + mode` contract while
+    rejecting unsafe or secret-like paths; generated canonical screens persist
+    `collectionRole` / `compositionKey` through the current custom-screen schema,
+    service, admin cache, and assistant action executor seams
   - catalog capabilities can already describe `detail-page` intent in metadata, and the current `TASK-190` slices now cover persisted detail-page documents, published/runtime detail rendering, shared preview handling, the executable `detail-page.upsert` assistant action, `setting.content-route.upsert` `detailPageId` route-linking, the internal `/admin/api/detail-pages*` CRUD/lifecycle/revision route family, admin client/cache parity, and local deterministic fixture/runtime acceptance through the content-domain owner seams; generic detail-page resource packaging, workspace/editor flows, and no-duplicate DB reuse remain deferred to later leaves
   - provider prompt packaging now carries bounded capability summaries for setup/composer evaluation, while generic provider planning still uses the current `cms_operation_draft` response contract
   - candidate shadow diagnostics can be exposed only through a local/test env gate; they remain metadata-only even though the bounded mixed-setup cutover is now live

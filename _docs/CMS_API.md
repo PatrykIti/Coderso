@@ -1666,6 +1666,8 @@ Create payload (summary):
   "name": "Catalog screen",
   "contentTypeId": "content-type-uuid",
   "status": "draft",
+  "collectionRole": "canonical-admin-screen",
+  "compositionKey": "catalog-screen",
   "schemaVersion": 1,
   "blocks": [
     { "id": "section-1", "type": "section", "data": {} }
@@ -1683,7 +1685,8 @@ Create payload (summary):
 ```
 
 Record shape (summary):
-- `id`, `name`, `contentTypeId`, `status`, `schemaVersion`, `blocks`, `bindings`
+- `id`, `name`, `contentTypeId`, `status`, `collectionRole`,
+  `compositionKey`, `schemaVersion`, `blocks`, `bindings`
 - `createdAt`, `updatedAt`
 
 ---
@@ -2939,6 +2942,7 @@ Stara rodzina `/assistant/site-builder/*` jest wycofana. Site-kit planning/execu
 `TASK-174-04-03` promuje `widget-template.update` i `widget-template.block.patch` do executable typed actions dla aktywnego reusable widget template; page-instance vs reusable-template ambiguity zwraca `needs_input`.
 `TASK-174-04-04` promuje `custom-screen.update` i `custom-screen.widget.patch` do executable typed actions dla aktywnego custom screen; binding target jest rozpoznawany po `widgetId + propPath + field`, bez ujawniania entry payloadow.
 `TASK-190-06-01` przenosi kompozycje katalogowych admin review screens do `blueprintAdminSurfaceComposer`: helper sklada istniejace `screen-*` custom-screen blocks, waliduje referencje do pol content schema, odrzuca secret-like field refs i nadal zwraca obecny `custom-screen.upsert` `blocks` / `bindings` payload bez nowego layout DSL.
+`TASK-190-06-02` przenosi binding composition do `blueprintBindingComposer` i rozszerza obecny custom-screen owner seam o top-level `collectionRole` / `compositionKey`; `custom-screen.upsert` oraz `custom-screen.update` moga przenosic te pola przez strict action schema, executor i `customScreenService` bez assistant-only metadata store.
 `TASK-174-04-05` promuje `entry.update`, `form.update`, `listing-query.update`, `listing-template.update`, `menu.item.update` i `seo.document.update` do executable typed actions; wszystkie mutacje ida przez istniejace domain services i zachowuja unrelated fields/config.
 `TASK-190-05-03-05` promuje `detail-page.upsert` do executable typed action dla strict detail-page documents; execute przechodzi przez content-domain owner seam, odswieza `contentTypeSlug` z canonical content type, respektuje `DetailPageDocument.status` jako jedyny owner publish state, i nie przejmuje route-link ownership od `setting.content-route.upsert`.
 `TASK-174-05-01` dodaje read-only active page template-section inspection: refy sa deduplikowane server-side, referenced widget templates sa streszczane bez raw config values/secrets, a aktywna strona z template inspection wymaga `widgets:read` poza `content:read`.
@@ -3198,7 +3202,7 @@ When the active admin surface is `Pages > :id`, `activeSurface` may include a bo
 For active page surfaces, planning hydration also dedupes `template-section` references from the advisory surface plus persisted page canvas data and attaches bounded referenced widget template summaries (`id`, name/status/category, layout summary, nested block ids/types/paths/data keys). Template summaries do not include raw block config values or secret-like keys, and this inspection requires `widgets:read`.
 If a template-backed page edit could target either only the current page instance or the reusable template, the planner returns `needs_input` with a target question. Explicit page-instance prompts can plan `page.widget.patch`; explicit reusable-template prompts can plan `widget-template.block.patch` only when the hydrated template summary resolves one supported nested block field.
 When the active admin surface is `Advanced > Widgets > Templates > :id`, `activeSurface` may include a bounded widget template summary with template identity, selected block id, block id/type/path summaries, slot keys, template-section references, wrapper/section settings summary, and remote-update warnings.
-When the active admin surface is `Advanced > Custom Screens`, `activeSurface` may include a bounded custom screen summary with screen identity, capabilities mode, selected entry id, selected block id, block summaries, bindings, writable field names, and unsaved/remote-update warnings.
+When the active admin surface is `Advanced > Custom Screens`, `activeSurface` may include a bounded custom screen summary with screen identity, canonical `collectionRole` / `compositionKey` metadata, capabilities mode, selected entry id, selected block id, block summaries, bindings, writable field names, and unsaved/remote-update warnings.
 Before planning, the route rehydrates active surface identity server-side. Active pages/custom screens require `content:read`; active pages also require `widgets:read` for template-section inspection; active widget templates require `widgets:read`. If the server-side resource is missing, active surface context is dropped.
 
 `context.siteKit` moze byc uzyty przez AI Site Wizard jako guided entry point do tego samego action flow:

@@ -69,6 +69,8 @@ const context = buildAssistantAdminContext({
         name: "House Projects",
         contentTypeId: "ct-house",
         status: "active",
+        collectionRole: null,
+        compositionKey: null,
         showInSidebar: true,
         sidebarLabel: "House Projects",
         writableBindingFields: [],
@@ -79,6 +81,8 @@ const context = buildAssistantAdminContext({
         name: "House Projects Archive",
         contentTypeId: "ct-house",
         status: "draft",
+        collectionRole: null,
+        compositionKey: null,
         showInSidebar: false,
         sidebarLabel: null,
         writableBindingFields: [],
@@ -134,9 +138,7 @@ test("buildCmsOperationDraftFromPrompt extracts operation, resource, and target"
 });
 
 test("resolveCmsOperationTargets resolves exact and prefix candidates", () => {
-  const pageDraft = buildCmsOperationDraftFromPrompt(
-    "czy widzisz strone 'Pysiek Mysiek' w pages"
-  );
+  const pageDraft = buildCmsOperationDraftFromPrompt("czy widzisz strone 'Pysiek Mysiek' w pages");
   if (!pageDraft) throw new Error("missing_page_draft");
   expect(resolveCmsOperationTargets(pageDraft, context)).toMatchObject({
     status: "exact",
@@ -183,10 +185,7 @@ test("resolveCmsOperationTargets falls back to visible candidates for vague read
       text: "widoczne w sekcji Screens",
     },
   });
-  const resolution = resolveCmsOperationTargets(
-    draft,
-    context
-  );
+  const resolution = resolveCmsOperationTargets(draft, context);
 
   expect(resolution.status).toBe("candidates");
   expect(resolution.candidates.map((candidate) => candidate.label)).toEqual([

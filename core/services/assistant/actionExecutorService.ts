@@ -798,6 +798,8 @@ const buildCustomScreenPreview = async (
         name: existing.name,
         contentTypeSlug: action.input.contentTypeSlug,
         status: existing.status,
+        collectionRole: existing.collectionRole ?? null,
+        compositionKey: existing.compositionKey ?? null,
         showInSidebar: existing.showInSidebar,
         sidebarLabel: existing.sidebarLabel,
         blocks:
@@ -816,6 +818,11 @@ const buildCustomScreenPreview = async (
             : existing.bindings,
       }
     : null;
+  const nextValue = {
+    ...action.input,
+    collectionRole: action.input.collectionRole ?? null,
+    compositionKey: action.input.compositionKey ?? null,
+  };
 
   return createPreviewChange({
     action,
@@ -826,7 +833,7 @@ const buildCustomScreenPreview = async (
       ? []
       : ["The content type does not exist yet and will be created earlier in the plan."],
     beforeValue: comparableExisting,
-    nextValue: action.input,
+    nextValue,
   });
 };
 
@@ -901,6 +908,10 @@ const applyCustomScreenUpdatePatch = (
   return {
     name: patch.name ?? existing.name,
     status: patch.status ?? existing.status,
+    collectionRole:
+      patch.collectionRole !== undefined ? patch.collectionRole : existing.collectionRole,
+    compositionKey:
+      patch.compositionKey !== undefined ? patch.compositionKey : existing.compositionKey,
     showInSidebar: patch.showInSidebar !== undefined ? patch.showInSidebar : existing.showInSidebar,
     sidebarLabel: patch.sidebarLabel !== undefined ? patch.sidebarLabel : existing.sidebarLabel,
     bindings,
@@ -3059,6 +3070,8 @@ const executeCustomScreenAction = async (
           name: action.input.name,
           contentTypeId: contentType.id,
           status: action.input.status,
+          collectionRole: action.input.collectionRole ?? null,
+          compositionKey: action.input.compositionKey ?? null,
           showInSidebar: action.input.showInSidebar,
           sidebarLabel: action.input.sidebarLabel,
           blocks: action.input.blocks as unknown as WidgetBlock[],
@@ -3069,6 +3082,8 @@ const executeCustomScreenAction = async (
             name: action.input.name,
             contentTypeId: contentType.id,
             status: action.input.status,
+            collectionRole: action.input.collectionRole ?? null,
+            compositionKey: action.input.compositionKey ?? null,
             showInSidebar: action.input.showInSidebar,
             sidebarLabel: action.input.sidebarLabel,
             blocks: action.input.blocks as unknown as WidgetBlock[],
@@ -3153,6 +3168,8 @@ const executeCustomScreenUpdateAction = async (
       : await deps.updateCustomScreen(existing.id, {
           name: nextValue.name,
           status: nextValue.status,
+          collectionRole: nextValue.collectionRole,
+          compositionKey: nextValue.compositionKey,
           showInSidebar: nextValue.showInSidebar,
           sidebarLabel: nextValue.sidebarLabel,
           bindings: nextValue.bindings,

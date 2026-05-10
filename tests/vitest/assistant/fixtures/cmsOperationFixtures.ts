@@ -1,6 +1,4 @@
-import type {
-  AssistantActionContext,
-} from "../../../../core/services/assistant/actionPlanTypes";
+import type { AssistantActionContext } from "../../../../core/services/assistant/actionPlanTypes";
 import type { AssistantProvider } from "../../../../core/services/assistant/providers/providerTypes";
 
 export type CmsOperationFixture = {
@@ -69,6 +67,8 @@ const baseCatalog = {
       name: "House Projects",
       contentTypeId: "ct-products",
       status: "active",
+      collectionRole: null,
+      compositionKey: null,
       showInSidebar: true,
       sidebarLabel: "House Projects",
       writableBindingFields: [],
@@ -79,6 +79,8 @@ const baseCatalog = {
       name: "Products Screen",
       contentTypeId: "ct-products",
       status: "draft",
+      collectionRole: null,
+      compositionKey: null,
       showInSidebar: false,
       sidebarLabel: null,
       writableBindingFields: [],

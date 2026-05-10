@@ -386,7 +386,7 @@ Rotacja klucza:
   - provider draft assumptions are redacted before they appear in action plan metadata/review UI,
   - `context.includeResourceCatalog=true` hydratuje tylko server-side bounded/redacted resource catalog,
   - client-supplied `context.resourceCatalog` i inne unknown context fields sa odrzucane,
-  - resource catalog includes bounded page, post, entry, media, commerce, solution-kit, menu, content type, custom screen, listing, form, SEO, and widget summaries, but never raw page/post/entry data payloads,
+  - resource catalog includes bounded page, post, entry, media, commerce, solution-kit, menu, content type, custom screen, listing, form, SEO, and widget summaries, but never raw page/post/entry data payloads; custom screen summaries may include only the persisted canonical `collectionRole` / `compositionKey` metadata, not browser-authored aliases,
   - resource catalog nie zawiera form submissions, entry values, post raw data, media signed URLs, commerce payment secrets, provider credentials, API key material ani secret-like config keys,
   - detail-page binding resolution is read-only and document-driven: it uses safe
     dot-path access against validated bindings, blocks secret-like entry field
@@ -410,7 +410,7 @@ Rotacja klucza:
   - active page `template-section` inspection is internal-only and read-only, requires `content:read` for page context plus `widgets:read` for referenced template details, dedupes referenced template ids server-side, and exposes only bounded/redacted template block/config summaries,
   - template-backed page edit planning returns `needs_input` when page-instance vs reusable-template target is ambiguous; reusable-template patch planning requires a single server-hydrated referenced template block/field before any reviewed mutation can be proposed,
   - `widget-template.update` and `widget-template.block.patch` are internal-only, require active widget template context plus `widgets:write` for execute, revalidate template id/name/status/category where applicable, and preserve unrelated reusable template blocks/settings,
-  - `custom-screen.update` and `custom-screen.widget.patch` are internal-only, require active custom screen context plus `content:write` for execute, revalidate screen id/name/status/content type where applicable, preserve unrelated blocks/bindings, and never expose raw entry values,
+  - `custom-screen.update` and `custom-screen.widget.patch` are internal-only, require active custom screen context plus `content:write` for execute, revalidate screen id/name/status/content type where applicable, preserve unrelated blocks/bindings, persist canonical collection-link metadata only through `customScreenService`, and never expose raw entry values,
   - counted multi-target CMS plans are allowed only when trusted context resolves the exact expected target count and every target maps to a strict typed action; mismatched, broad, or partially invalid bulk prompts return `needs_input`,
   - explicit multi-create CMS plans require locally validated `mutation.patch.items[]` definitions and reject secret-like keys before mapping to typed upsert/create actions,
   - assistant execution cache invalidation broadcasts only known admin cache keys derived from strict action inputs or sanitized `resourceId`; provider text, target labels, secrets, submissions, cookies, CSRF tokens, and arbitrary client cache keys are never broadcast,

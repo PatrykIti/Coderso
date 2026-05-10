@@ -57,10 +57,9 @@ into one oversized slice.
   list-page/supporting-resource linkage is missing today; keep that ownership in
   `TASK-190-05-02` / page-owned contracts rather than
   `collectionWorkspaceService.ts`
-- Update current custom-screen owner seams only if explicit stable metadata such
-  as exact `collectionRole` / `compositionKey` fields are required for canonical
-  admin-screen resolution; land those exact fields in `TASK-190-06-02` /
-  current custom-screen schema-service-client contracts
+- Consume the exact `collectionRole` / `compositionKey` fields from
+  `TASK-190-06-02` / current custom-screen schema-service-client contracts for
+  canonical admin-screen resolution
 - Update current detail-page owner seams only if explicit persisted secondary
   references are needed beyond route-level `detailPageId` linkage; land those
   fields in `TASK-190-05-03-01` / `TASK-190-05-03-07` / current detail-page
@@ -148,8 +147,9 @@ Owner rule:
   consumes it.
 - The custom-screen owner seam owns any explicit `collectionRole`,
   `compositionKey`, and related canonical screen-link metadata needed to resolve
-  a canonical admin screen safely. If those fields do not exist yet, they must
-  land through `TASK-190-06-02` before this leaf consumes them.
+  a canonical admin screen safely. `TASK-190-06-02` has landed those exact
+  fields through the current custom-screen schema/service/client/action/storage
+  contract; this leaf consumes them read-only.
 - The workspace service must only read these owner contracts. It must never
   invent, persist, or backfill canonical links in browser cache, local state, or
   route-local helpers.
@@ -225,9 +225,9 @@ Deterministic resolution order:
      - one matching listing template referenced by the canonical public page,
    - otherwise return `unresolved` plus bounded candidates.
 5. Admin screen:
-   - canonical admin screen may resolve from explicit stable metadata on the
+  - canonical admin screen may resolve from explicit stable metadata on the
      custom-screen owner seam from `TASK-190-06-02` first,
-   - only if that metadata does not exist yet, canonical admin screen may
+   - only if that metadata is absent on older rows, canonical admin screen may
      resolve when exactly one screen is a safe deterministic match for the
      collection content type and workspace role;
      otherwise return `unresolved` plus bounded candidates.

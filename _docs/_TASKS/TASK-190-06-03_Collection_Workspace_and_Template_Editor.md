@@ -139,9 +139,9 @@ Program rules:
     listing refs need to persist through `PageData.settings.collectionLink`,
   - `TASK-190-05-03-01` plus `TASK-190-05-03-07` / current detail-page owner
     seam own explicit references declared inside detail-page documents,
-  - `TASK-190-06-02` / current custom-screen owner seam widens the existing
-    custom-screen contract in place if canonical screen-link metadata needs
-    exact persisted `collectionRole` / `compositionKey` fields.
+  - `TASK-190-06-02` / current custom-screen owner seam now owns the exact
+    persisted `collectionRole` / `compositionKey` fields for canonical
+    screen-link metadata.
 - the workspace program may extend those existing owner seams where the current
   persisted contract is not strong enough, but it must not create a
   workspace-only registry, browser-owned source of truth, or assistant-only

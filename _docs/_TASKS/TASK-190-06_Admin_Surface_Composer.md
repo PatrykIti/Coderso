@@ -34,7 +34,9 @@ Business value:
 
 - `TASK-190-06-01_Admin_Screen_Layout_Composer.md` - done: custom-screen
   block composition now has a shared deterministic helper and Vitest coverage.
-- `TASK-190-06-02_Admin_Bindings_Routes_and_Permission_Safety.md`
+- `TASK-190-06-02_Admin_Bindings_Routes_and_Permission_Safety.md` - done:
+  binding composition plus canonical custom-screen metadata now round-trip
+  through schema, service, client, assistant actions, and storage.
 - `TASK-190-06-03_Collection_Workspace_and_Template_Editor.md`
   - `TASK-190-06-03-01_Collection_Workspace_Route_Read_Model_and_Canonical_Resource_Linking.md`
   - `TASK-190-06-03-02_Detail_Template_Editor_Surface_and_Shared_Builder_Seams.md`

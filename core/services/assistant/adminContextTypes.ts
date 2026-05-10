@@ -58,6 +58,8 @@ export type AssistantCustomScreenSummary = {
   name: string;
   contentTypeId: string;
   status: "draft" | "active" | "unknown";
+  collectionRole: "canonical-admin-screen" | "secondary-admin-screen" | null;
+  compositionKey: string | null;
   showInSidebar: boolean;
   sidebarLabel: string | null;
   writableBindingFields: string[];

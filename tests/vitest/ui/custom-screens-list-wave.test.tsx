@@ -17,6 +17,8 @@ const customScreensState = vi.hoisted(() => {
     name: "Product workspace",
     contentTypeId: "ct-products",
     status: "draft",
+    collectionRole: null,
+    compositionKey: null,
     showInSidebar: true,
     sidebarLabel: "Catalog",
     schemaVersion: 1,

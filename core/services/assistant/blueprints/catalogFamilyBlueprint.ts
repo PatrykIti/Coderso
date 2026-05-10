@@ -10,6 +10,7 @@ import {
   composeAdminSurface,
   type BlueprintAdminSurfaceField,
 } from "./blueprintAdminSurfaceComposer";
+import { composeBindings } from "./blueprintBindingComposer";
 
 type CatalogScreenFieldValue = {
   id: string;
@@ -112,43 +113,47 @@ const buildScreenBlocks = (preset: CatalogFamilyPreset): WidgetBlock[] =>
     ],
   }).blocks;
 
-const buildScreenBindings = (preset: CatalogFamilyPreset) => [
-  {
-    id: `binding-${preset.key}-header-title`,
-    widgetId: `${preset.key}-header`,
-    propPath: "title",
-    field: "title",
-    mode: "read",
-  },
-  {
-    id: `binding-${preset.key}-header-subtitle`,
-    widgetId: `${preset.key}-header`,
-    propPath: "subtitle",
-    field: "summary",
-    mode: "read",
-  },
-  {
-    id: `binding-${preset.key}-header-badge`,
-    widgetId: `${preset.key}-header`,
-    propPath: "badge",
-    field: "projectStatus",
-    mode: "read",
-  },
-  ...preset.screen.leftFields.map((field) => ({
-    id: `binding-${preset.key}-${field.id}`,
-    widgetId: `${preset.key}-${field.id}`,
-    propPath: "value",
-    field: field.field,
-    mode: "read",
-  })),
-  ...preset.screen.rightFields.map((field) => ({
-    id: `binding-${preset.key}-${field.id}`,
-    widgetId: `${preset.key}-${field.id}`,
-    propPath: "value",
-    field: field.field,
-    mode: "read",
-  })),
-];
+const buildScreenBindings = (preset: CatalogFamilyPreset) =>
+  composeBindings({
+    contentSchema: preset.contentSchema,
+    bindings: [
+      {
+        id: `binding-${preset.key}-header-title`,
+        widgetId: `${preset.key}-header`,
+        propPath: "title",
+        field: "title",
+        mode: "read",
+      },
+      {
+        id: `binding-${preset.key}-header-subtitle`,
+        widgetId: `${preset.key}-header`,
+        propPath: "subtitle",
+        field: "summary",
+        mode: "read",
+      },
+      {
+        id: `binding-${preset.key}-header-badge`,
+        widgetId: `${preset.key}-header`,
+        propPath: "badge",
+        field: "projectStatus",
+        mode: "read",
+      },
+      ...preset.screen.leftFields.map((field) => ({
+        id: `binding-${preset.key}-${field.id}`,
+        widgetId: `${preset.key}-${field.id}`,
+        propPath: "value",
+        field: field.field,
+        mode: "read" as const,
+      })),
+      ...preset.screen.rightFields.map((field) => ({
+        id: `binding-${preset.key}-${field.id}`,
+        widgetId: `${preset.key}-${field.id}`,
+        propPath: "value",
+        field: field.field,
+        mode: "read" as const,
+      })),
+    ],
+  });
 
 export const buildCatalogFamilyPlan = (
   preset: CatalogFamilyPreset,
@@ -193,6 +198,8 @@ export const buildCatalogFamilyPlan = (
         status: "active",
         showInSidebar: true,
         sidebarLabel: preset.customScreenName,
+        collectionRole: "canonical-admin-screen",
+        compositionKey: preset.key,
         blocks: buildScreenBlocks(preset) as unknown as Array<Record<string, unknown>>,
         bindings: buildScreenBindings(preset) as unknown as Array<Record<string, unknown>>,
       },

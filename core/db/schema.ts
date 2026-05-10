@@ -702,6 +702,8 @@ export const customScreens = pgTable(
       .notNull()
       .references(() => contentTypes.id, { onDelete: "cascade" }),
     status: text("status").notNull().default("draft"),
+    collectionRole: text("collection_role"),
+    compositionKey: text("composition_key"),
     showInSidebar: boolean("show_in_sidebar").notNull().default(false),
     sidebarLabel: text("sidebar_label"),
     schemaVersion: integer("schema_version").notNull().default(1),
@@ -715,6 +717,11 @@ export const customScreens = pgTable(
     nameIdx: index("custom_screens_name_idx").on(t.name),
     contentTypeIdx: index("custom_screens_content_type_id_idx").on(t.contentTypeId),
     statusIdx: index("custom_screens_status_idx").on(t.status),
+    collectionRoleIdx: index("custom_screens_collection_role_idx").on(
+      t.contentTypeId,
+      t.collectionRole
+    ),
+    compositionKeyIdx: index("custom_screens_composition_key_idx").on(t.compositionKey),
     sidebarIdx: index("custom_screens_sidebar_idx").on(t.showInSidebar),
     updatedAtIdx: index("custom_screens_updated_at_idx").on(t.updatedAt),
   })

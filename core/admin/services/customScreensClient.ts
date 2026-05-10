@@ -13,7 +13,9 @@ import {
   type CustomScreenCapabilities,
 } from "../../services/customScreens/capabilities";
 import {
+  customScreenCollectionRoleValues,
   normalizeCustomScreenDefinitionForRead,
+  type CustomScreenCollectionRole,
   type CustomScreenDefinition,
 } from "../../services/customScreens/customScreenSchemas";
 
@@ -50,6 +52,8 @@ export type CustomScreenRecord = {
   name: string;
   contentTypeId: string;
   status: CustomScreenStatus;
+  collectionRole: CustomScreenCollectionRole | null;
+  compositionKey: string | null;
   showInSidebar: boolean;
   sidebarLabel: string | null;
   schemaVersion: number;
@@ -65,6 +69,8 @@ export type CustomScreenCreateInput = {
   name: string;
   contentTypeId: string;
   status?: CustomScreenStatus;
+  collectionRole?: CustomScreenCollectionRole | null;
+  compositionKey?: string | null;
   showInSidebar?: boolean;
   sidebarLabel?: string | null;
   schemaVersion?: number;
@@ -81,12 +87,21 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const isCustomScreenStatus = (value: unknown): value is CustomScreenStatus =>
   value === "draft" || value === "active";
 
+const isCustomScreenCollectionRole = (value: unknown): value is CustomScreenCollectionRole =>
+  customScreenCollectionRoleValues.includes(value as CustomScreenCollectionRole);
+
 const isCustomScreenRecord = (value: unknown): value is CustomScreenRecord =>
   isRecord(value) &&
   typeof value.id === "string" &&
   typeof value.name === "string" &&
   typeof value.contentTypeId === "string" &&
   isCustomScreenStatus(value.status) &&
+  (value.collectionRole === undefined ||
+    value.collectionRole === null ||
+    isCustomScreenCollectionRole(value.collectionRole)) &&
+  (value.compositionKey === undefined ||
+    value.compositionKey === null ||
+    typeof value.compositionKey === "string") &&
   (value.showInSidebar === undefined || typeof value.showInSidebar === "boolean") &&
   (value.sidebarLabel === undefined ||
     value.sidebarLabel === null ||
@@ -117,6 +132,8 @@ const normalizeCustomScreenRecord = (item: CustomScreenRecord): CustomScreenReco
     definition,
     blocks: definition.editorView.blocks,
     bindings: definition.editorView.bindings,
+    collectionRole: item.collectionRole ?? null,
+    compositionKey: item.compositionKey ?? null,
     showInSidebar: item.showInSidebar ?? false,
     sidebarLabel: item.sidebarLabel ?? null,
     capabilities: item.capabilities ?? resolveCustomScreenCapabilities(definition),

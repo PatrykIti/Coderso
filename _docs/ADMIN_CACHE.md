@@ -339,6 +339,10 @@ Clients update caches and broadcast events on:
 - Custom Screens list cache (`customScreens:list`) uses
   `createMemoryBackedLocalCache`, so module memory and `localStorage` share the
   same list TTL.
+- Cached custom screen records include nullable `collectionRole` /
+  `compositionKey` metadata from the persisted custom-screen owner seam. Cache
+  readers must treat missing legacy values as `null` and must not synthesize
+  alternate canonical-screen metadata in browser storage.
 - `useCustomScreens()` follows the shared mount policy:
   - cache present -> `{ force: false, background: true }`,
   - cache missing -> `{ force: true, background: false }`,

@@ -117,6 +117,10 @@ This file maps admin UI surfaces to their implementation files and the cached AP
   - UI: `core/admin/ui/custom-screens/CustomScreenListPage.tsx`
   - Cached APIs: `listCustomScreensCached`, `getCachedCustomScreens`,
     `listContentTypesCached`, `getCachedContentTypes`
+  - Record metadata: cached custom screen rows preserve nullable
+    `collectionRole` / `compositionKey` from the custom-screen owner seam for
+    later workspace resolution; legacy cached rows normalize missing values to
+    `null`
   - Mutations: `createCustomScreen`, `updateCustomScreen`,
     `deleteCustomScreen`
   - Cache bus: `customScreens:list`, `contentTypes:list` for label projection

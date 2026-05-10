@@ -17,6 +17,7 @@ import type {
   AssistantResourceCatalogSnapshot,
   AssistantTemplateSectionReferenceSummary,
 } from "./adminContextTypes";
+import type { CustomScreenCollectionRole } from "../customScreens/customScreenSchemas";
 import { isAssistantActionPlanStrict } from "./actionPlanSchema";
 import type { DetailPageDocument } from "../content/detailPageTypes";
 
@@ -280,6 +281,8 @@ export type AssistantCustomScreenUpsertAction = {
     name: string;
     contentTypeSlug: string;
     status: "draft" | "active";
+    collectionRole?: CustomScreenCollectionRole | null;
+    compositionKey?: string | null;
     showInSidebar: boolean;
     sidebarLabel: string | null;
     blocks: Array<Record<string, unknown>>;
@@ -312,6 +315,8 @@ export type AssistantCustomScreenUpdateAction = {
     patch: {
       name?: string;
       status?: "draft" | "active";
+      collectionRole?: CustomScreenCollectionRole | null;
+      compositionKey?: string | null;
       showInSidebar?: boolean;
       sidebarLabel?: string | null;
       binding?: {

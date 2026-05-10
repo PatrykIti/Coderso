@@ -1203,6 +1203,8 @@ test("normalizeAssistantActionPlan accepts custom screen update and widget patch
           patch: {
             name: "Project Screen Updated",
             status: "active",
+            collectionRole: "secondary-admin-screen",
+            compositionKey: "projects-secondary",
             showInSidebar: true,
             sidebarLabel: "Projects",
             binding: {
@@ -1236,6 +1238,14 @@ test("normalizeAssistantActionPlan accepts custom screen update and widget patch
     "custom-screen.update",
     "custom-screen.widget.patch",
   ]);
+  expect(normalized.actions[0]).toMatchObject({
+    input: {
+      patch: {
+        collectionRole: "secondary-admin-screen",
+        compositionKey: "projects-secondary",
+      },
+    },
+  });
 });
 
 test("normalizeAssistantActionPlan accepts safe form automation upsert actions", () => {

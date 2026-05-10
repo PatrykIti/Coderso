@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Admin Safety
 **Estimated Effort:** Medium
 **Dependencies:** TASK-190-03-01, TASK-190-04-01, TASK-190-06-01
-**Status:** To Do
+**Status:** Done (2026-05-10)
 
 ---
 
@@ -172,3 +172,19 @@ export const composeBindings = (schema, adminSections) =>
 ## Documentation Updates Required
 
 - `_docs/SECURITY_SPEC.md`
+
+## Completion Notes
+
+- Added `blueprintBindingComposer.ts` as the safe custom-screen binding owner for
+  assistant-composed admin surfaces. It validates field references against the
+  composed content schema, rejects unsafe/secret-like paths, dedupes identical
+  binding ids, and returns the existing `widgetId + propPath + field + mode`
+  custom-screen binding contract.
+- Extended the existing top-level custom-screen contract with nullable
+  `collectionRole` and `compositionKey` metadata instead of adding an
+  assistant-only sidecar. The fields now round-trip through route validation,
+  custom-screen service persistence, admin cached client normalization,
+  assistant resource catalog summaries, and `custom-screen.upsert` /
+  `custom-screen.update` execution.
+- Added migration `0056_custom_screen_collection_metadata.sql` plus snapshot and
+  journal artifacts, and applied it with `bun run db:migrate`.

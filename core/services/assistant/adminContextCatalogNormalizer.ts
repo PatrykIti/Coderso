@@ -275,6 +275,12 @@ const normalizeCustomScreen = (
     name,
     contentTypeId,
     status: value.status === "draft" || value.status === "active" ? value.status : "unknown",
+    collectionRole:
+      value.collectionRole === "canonical-admin-screen" ||
+      value.collectionRole === "secondary-admin-screen"
+        ? value.collectionRole
+        : null,
+    compositionKey: readString(value.compositionKey),
     showInSidebar: readBoolean(value.showInSidebar),
     sidebarLabel: readString(value.sidebarLabel),
     writableBindingFields,

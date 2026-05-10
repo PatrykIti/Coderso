@@ -8,6 +8,10 @@ import {
 
 export const customScreenBindingModes = ["read", "write", "readwrite"] as const;
 export const customScreenStatusValues = ["draft", "active"] as const;
+export const customScreenCollectionRoleValues = [
+  "canonical-admin-screen",
+  "secondary-admin-screen",
+] as const;
 export const customScreenRowClickModes = ["editor-view", "classic-editor"] as const;
 export const customScreenCreateModes = ["editor-view", "drawer"] as const;
 export const customScreenListColumnSources = ["system", "field"] as const;
@@ -25,6 +29,7 @@ export const customScreenListFilterOperators = ["equals"] as const;
 
 export type CustomScreenBindingMode = (typeof customScreenBindingModes)[number];
 export type CustomScreenStatus = (typeof customScreenStatusValues)[number];
+export type CustomScreenCollectionRole = (typeof customScreenCollectionRoleValues)[number];
 export type CustomScreenDefinitionVersion = 1 | 2 | 3;
 export type CustomScreenListColumnSource = (typeof customScreenListColumnSources)[number];
 export type CustomScreenListFormatter = (typeof customScreenListFormatters)[number];
@@ -112,6 +117,11 @@ export type CustomScreenSidebarConfig = {
   sidebarLabel: string | null;
 };
 
+export type CustomScreenCollectionLink = {
+  collectionRole: CustomScreenCollectionRole | null;
+  compositionKey: string | null;
+};
+
 export type CustomScreenDefinitionContext = {
   contentType?: {
     id?: string;
@@ -126,6 +136,7 @@ export type CustomScreenDefinitionContext = {
 
 const supportedDefinitionVersions = new Set<CustomScreenDefinitionVersion>([1, 2, 3]);
 const bindingModes = new Set<CustomScreenBindingMode>(customScreenBindingModes);
+const collectionRoles = new Set<CustomScreenCollectionRole>(customScreenCollectionRoleValues);
 const unsafePathSegments = new Set(["__proto__", "prototype", "constructor"]);
 const columnSources = new Set<CustomScreenListColumnSource>(customScreenListColumnSources);
 const listFormatters = new Set<CustomScreenListFormatter>(customScreenListFormatters);
@@ -881,6 +892,35 @@ export function normalizeCustomScreenSidebarConfig(
   };
 }
 
+const normalizeCollectionRole = (value: unknown): CustomScreenCollectionRole | null => {
+  if (value === undefined || value === null) return null;
+  const role = normalizeText(value);
+  if (!role || !collectionRoles.has(role as CustomScreenCollectionRole)) {
+    throw new Error("custom_screen_invalid");
+  }
+  return role as CustomScreenCollectionRole;
+};
+
+const normalizeCompositionKey = (value: unknown): string | null => {
+  if (value === undefined || value === null) return null;
+  const key = normalizeText(value);
+  if (!key) return null;
+  if (key.length > 160) throw new Error("custom_screen_invalid");
+  return normalizePath(key);
+};
+
+export function normalizeCustomScreenCollectionLink(
+  input: {
+    collectionRole?: unknown;
+    compositionKey?: unknown;
+  } = {}
+): CustomScreenCollectionLink {
+  return {
+    collectionRole: normalizeCollectionRole(input.collectionRole),
+    compositionKey: normalizeCompositionKey(input.compositionKey),
+  };
+}
+
 export const customScreenBindingSchema = {
   type: "object",
   required: ["widgetId", "propPath", "field"],
@@ -1091,6 +1131,15 @@ export const customScreenCreateSchema = {
     name: { type: "string", minLength: 1, maxLength: 160 },
     contentTypeId: { type: "string", minLength: 1, maxLength: 64 },
     status: { enum: customScreenStatusValues },
+    collectionRole: {
+      anyOf: [{ enum: customScreenCollectionRoleValues }, { type: "null" }],
+    },
+    compositionKey: {
+      anyOf: [
+        { type: "string", minLength: 1, maxLength: 160, pattern: "^[a-zA-Z0-9_.-]+$" },
+        { type: "null" },
+      ],
+    },
     showInSidebar: { type: "boolean" },
     sidebarLabel: {
       anyOf: [{ type: "string", minLength: 1, maxLength: 160 }, { type: "null" }],
@@ -1118,6 +1167,15 @@ export const customScreenUpdateSchema = {
     name: { type: "string", minLength: 1, maxLength: 160 },
     contentTypeId: { type: "string", minLength: 1, maxLength: 64 },
     status: { enum: customScreenStatusValues },
+    collectionRole: {
+      anyOf: [{ enum: customScreenCollectionRoleValues }, { type: "null" }],
+    },
+    compositionKey: {
+      anyOf: [
+        { type: "string", minLength: 1, maxLength: 160, pattern: "^[a-zA-Z0-9_.-]+$" },
+        { type: "null" },
+      ],
+    },
     showInSidebar: { type: "boolean" },
     sidebarLabel: {
       anyOf: [{ type: "string", minLength: 1, maxLength: 160 }, { type: "null" }],

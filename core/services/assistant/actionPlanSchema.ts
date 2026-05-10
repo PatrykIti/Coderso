@@ -18,6 +18,7 @@ import {
   type FormActionType,
 } from "../forms/formActionsContract";
 import { normalizeDetailPageDocument } from "../content/detailPageSchema";
+import { customScreenCollectionRoleValues } from "../customScreens/customScreenSchemas";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -143,6 +144,12 @@ const readEnum = <T extends string>(value: unknown, allowed: Set<T>): T => {
 
 const readOptionalEnum = <T extends string>(value: unknown, allowed: Set<T>) => {
   if (value === undefined) return undefined;
+  return readEnum(value, allowed);
+};
+
+const readOptionalNullableEnum = <T extends string>(value: unknown, allowed: Set<T>) => {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
   return readEnum(value, allowed);
 };
 
@@ -311,6 +318,8 @@ const normalizeCustomScreenInput = (input: JsonRecord) => {
       "name",
       "contentTypeSlug",
       "status",
+      "collectionRole",
+      "compositionKey",
       "showInSidebar",
       "sidebarLabel",
       "blocks",
@@ -321,6 +330,17 @@ const normalizeCustomScreenInput = (input: JsonRecord) => {
     name: readText(input.name),
     contentTypeSlug: readText(input.contentTypeSlug),
     status: readEnum(input.status, new Set(["draft", "active"])),
+    ...(Object.prototype.hasOwnProperty.call(input, "collectionRole")
+      ? {
+          collectionRole: readOptionalNullableEnum(
+            input.collectionRole,
+            new Set(customScreenCollectionRoleValues)
+          ),
+        }
+      : {}),
+    ...(Object.prototype.hasOwnProperty.call(input, "compositionKey")
+      ? { compositionKey: readOptionalText(input.compositionKey) }
+      : {}),
     showInSidebar: readBoolean(input.showInSidebar),
     sidebarLabel: readOptionalText(input.sidebarLabel),
     blocks: readRecordArray(input.blocks),
@@ -352,11 +372,33 @@ const normalizeCustomScreenBindingPatch = (value: unknown) => {
 
 const normalizeCustomScreenUpdatePatch = (value: unknown) => {
   const input = assertRecord(value);
-  assertKeys(input, new Set(["name", "status", "showInSidebar", "sidebarLabel", "binding"]));
+  assertKeys(
+    input,
+    new Set([
+      "name",
+      "status",
+      "collectionRole",
+      "compositionKey",
+      "showInSidebar",
+      "sidebarLabel",
+      "binding",
+    ])
+  );
   return {
     ...(input.name !== undefined ? { name: readText(input.name) } : {}),
     ...(input.status !== undefined
       ? { status: readEnum(input.status, new Set(["draft", "active"])) }
+      : {}),
+    ...(Object.prototype.hasOwnProperty.call(input, "collectionRole")
+      ? {
+          collectionRole: readOptionalNullableEnum(
+            input.collectionRole,
+            new Set(customScreenCollectionRoleValues)
+          ),
+        }
+      : {}),
+    ...(Object.prototype.hasOwnProperty.call(input, "compositionKey")
+      ? { compositionKey: readOptionalText(input.compositionKey) }
       : {}),
     ...(input.showInSidebar !== undefined
       ? { showInSidebar: readBoolean(input.showInSidebar) }
