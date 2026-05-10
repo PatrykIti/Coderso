@@ -2,7 +2,7 @@
 
 | Decision | Researched options | Coderso editor/schema implication |
 |---|---|---|
-| Keep | Items with trigger and panel content from Radix, Chakra, Mantine, MUI, and React Aria. | Model tabs as repeatable `items[]` with stable ids, labels, optional icons, and panel slots/content. |
+| Keep | Items with trigger and panel content from Radix, Chakra, Mantine, and React Aria. | Model tabs as repeatable `items[]` with stable ids, labels, optional icons, and panel slots/content; MUI variants remain Adapt below. |
 | Keep | Default active tab and keyboard semantics. | Add `defaultItemId`; renderer must preserve tablist/tab/panel relationships. |
 | Keep | Horizontal/vertical orientation. | Expose orientation as a Visual control with responsive fallback. |
 | Adapt | Activation mode, lazy mount, scrollable tabs, and overflow. | Consider Advanced controls only where runtime can preserve accessibility. |

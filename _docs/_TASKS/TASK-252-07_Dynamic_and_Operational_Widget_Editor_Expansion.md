@@ -83,8 +83,11 @@ more flexible, but implementation must not weaken runtime contracts.
     reset/apply behavior.
   - `search-box`: accessible copy, compact/full modes, target route, and query
     parameter binding; suggestions/autocomplete stay Adapt-only.
-  - Forms/booking/contact/newsletter: field visibility, success/error copy,
+  - Forms/booking/contact: field visibility, success/error copy,
     field/source clarity, submit label, and layout mode.
+  - `newsletter`: email placeholder/display copy, consent/privacy copy,
+    submit label, success/error/loading copy, and layout mode; additional
+    fields remain Adapt-only until backed by the newsletter matrix and schema.
   - `navigation`/`footer`: source/manual links, CTA/social/logo grouping,
     accessible mobile navigation, and footer columns.
 

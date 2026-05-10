@@ -3,7 +3,7 @@
 | Researched option | Source family | Decision | Coderso editor/schema implication |
 |---|---|---|---|
 | Icon card grid | HyperUI, shadcn.io | Keep | Keep repeated `items` with icon/title/body and column controls. |
-| Alternating feature rows | Preline, Flowbite | Keep | Add `layout: rows` and media position controls if renderer supports media. |
+| Alternating feature rows | Preline | Keep | Add `layout: rows` and media position controls if renderer supports media; Flowbite remains Adapt reference material. |
 | Bento feature layout | Tailwind UI Plus | Adapt | Model as `mode: bento` with one featured item and strict item count guidance. |
 | Optional feature link | Origin UI | Keep | Add safe optional `items[].ctaHref` and `items[].ctaLabel` where useful. |
 | Hover animation | Aceternity | Adapt | Use named effects only with reduced-motion fallback. |

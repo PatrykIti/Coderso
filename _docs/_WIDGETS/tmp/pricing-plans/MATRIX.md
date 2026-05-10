@@ -3,8 +3,8 @@
 | Researched option | Source family | Decision | Coderso editor/schema implication |
 |---|---|---|---|
 | Tier cards | HyperUI, Flowbite, shadcn.io | Keep | Keep repeated `plans` with price, period, features, CTA, and existing plan-count variants; do not add a standalone grid-count field. |
-| Highlighted/popular plan | HyperUI, ReUI | Keep | Add `highlightedPlanId` or `plans[].highlighted` as a single normalized choice. |
-| Monthly/annual toggle | Preline, MUI | Keep | Add deterministic `billingToggle` labels and price fields per cycle. |
+| Highlighted/popular plan | HyperUI | Keep | Add `highlightedPlanId` or `plans[].highlighted` as a single normalized choice; ReUI remains Adapt reference material. |
+| Monthly/annual toggle | Preline | Keep | Add deterministic `billingToggle` labels and price fields per cycle; MUI remains Adapt reference material. |
 | Discount badge | Preline, shadcn.io | Adapt | Optional badge on plan or billing cycle; avoid pricing math in renderer. |
 | Comparison table | Tailwind UI Plus, Uilib | Adapt | Consider `mode: comparison` only with explicit rows and mobile fallback. |
 | Enterprise/custom price | Tailwind UI Plus | Adapt | Support `customPriceLabel` only if billing schema, editor, renderer, and tests move together. |

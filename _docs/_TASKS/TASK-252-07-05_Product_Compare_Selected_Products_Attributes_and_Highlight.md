@@ -29,7 +29,10 @@ and Reject decisions.
 ## Research Decisions
 
 - Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/product-compare/MATRIX.md`; for this leaf, start from the current owner fields `source`, `fields`, `labels`, `emptyState`, `style`, `resolved` and add only the schema fields that the matrix explicitly keeps.
-- Keep: selected product set, attribute rows, and highlighted product from `_docs/_WIDGETS/tmp/product-compare/MATRIX.md`; add schema-owned highlight product fallback in `core/widgets/core/productCompare.tsx`.
+- Keep: selected product set and highlighted product as Coderso compare
+  contract rows in `_docs/_WIDGETS/tmp/product-compare/MATRIX.md`, plus
+  attribute rows from the TanStack-backed table model; add schema-owned
+  highlight product fallback in `core/widgets/core/productCompare.tsx`.
 - Adapt: sticky headers/pinned first column remain conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: arbitrary operators, client-owned provider/index config, raw scripts, and privileged settings in widget data.
 

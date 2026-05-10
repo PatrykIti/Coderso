@@ -12,7 +12,7 @@
 
 ## Overview
 
-Expand newsletter field visibility, consent copy, submit copy, and
+Expand newsletter email field copy/display, consent copy, submit copy, and
 success/error/loading copy while keeping provider references and audience
 secrets backend-owned.
 

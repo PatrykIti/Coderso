@@ -33,7 +33,8 @@ and Reject decisions.
   behavior, instant/apply mode, and labels from
   `_docs/_WIDGETS/tmp/listing-filters/MATRIX.md`; start from the current owner
   fields `listingQueryId`, `autoApply`, `showSearch`, `facets`, `style`, and
-  `resolved`.
+  `resolved`; preserve current `searchLabel` and `searchPlaceholder` copy
+  fields as non-destructive top-level search-label fallbacks.
 - Keep: reset behavior means explicit schema/default/render/editor/runtime
   ownership for `behavior.resetLabel`, `behavior.applyLabel`, and reset binding.
   Reset must clear the current `lq.<queryId>.*` filter/search params and refresh
@@ -82,6 +83,8 @@ function normalizeListingFiltersData(data: ListingFiltersData): ListingFiltersDa
     description: normalizeListingFiltersDescription(data.description),
     autoApply: normalizeListingFiltersAutoApply(data.autoApply),
     showSearch: normalizeListingFiltersShowSearch(data.showSearch),
+    searchLabel: normalizeListingFiltersSearchLabel(data.searchLabel),
+    searchPlaceholder: normalizeListingFiltersSearchPlaceholder(data.searchPlaceholder),
     facets: normalizeListingFiltersFacets(data.facets),
     behavior: normalizeListingFiltersBehavior({
       autoApply: data.behavior?.autoApply ?? data.autoApply,
@@ -105,6 +108,12 @@ function ListingFiltersVisualEditor(props: WidgetEditorProps<ListingFiltersData>
       </WidgetControlRow>
       <WidgetControlRow id="listing-filters.behavior.resetLabel" label="Reset label" data-widget-control="listing-filters.behavior.resetLabel">
         <Input value={value.behavior?.resetLabel ?? ""} onChange={(resetLabel) => props.onChange(updateListingFilterBehavior(value, { resetLabel }))} />
+      </WidgetControlRow>
+      <WidgetControlRow id="listing-filters.searchLabel" label="Search label" data-widget-control="listing-filters.searchLabel">
+        <Input value={value.searchLabel ?? ""} onChange={(searchLabel) => props.onChange(updateListingFilterSearchCopy(value, { searchLabel }))} />
+      </WidgetControlRow>
+      <WidgetControlRow id="listing-filters.searchPlaceholder" label="Search placeholder" data-widget-control="listing-filters.searchPlaceholder">
+        <Input value={value.searchPlaceholder ?? ""} onChange={(searchPlaceholder) => props.onChange(updateListingFilterSearchCopy(value, { searchPlaceholder }))} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );

@@ -2,8 +2,8 @@
 
 | Researched option | Source family | Decision | Coderso editor/schema implication |
 |---|---|---|---|
-| Team member grid | HyperUI, Preline, Flowbite grid portions | Keep | Keep repeated members with photo, name, role, bio, and columns; profile-link behavior from Flowbite remains Adapt below. |
-| Social links | HyperUI, Flowbite social-icon portions | Keep | Add validated repeated social links with platform and safe href; ReUI department/profile patterns remain Adapt below. |
+| Team member grid | HyperUI, Preline | Keep | Keep repeated members with photo, name, role, bio, and columns; Flowbite profile/grid behavior remains Adapt below. |
+| Social links | HyperUI | Keep | Add validated repeated social links with platform and safe href; Flowbite and ReUI department/profile patterns remain Adapt below. |
 | Photo shape | Preline, Flowbite React | Keep | Add `photoShape` enum and fallback initials behavior. |
 | Profile link | Flowbite, Origin UI | Adapt | Optional safe profile URL; avoid action-heavy cards. |
 | Leadership/featured mode | Tailwind UI Plus | Adapt | Add optional featured member or layout mode only if product needs it. |

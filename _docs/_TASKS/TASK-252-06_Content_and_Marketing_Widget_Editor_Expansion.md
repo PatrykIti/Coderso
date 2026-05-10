@@ -48,9 +48,10 @@ inside the editor instead of duplicate widget types.
     badges/categories, hover, and rich media rows as Adapt-only.
   - `testimonials`: keep grid/spotlight/rating/avatar-shape basics; company/
     logo metadata and carousel/motion remain Adapt-only.
-  - `pricing-plans`: keep tiers, highlight, custom price, and billing toggle;
-    preserve the current derived `comparison-rows` variant, while explicit
-    comparison-row schema and mobile fallback stay Adapt-only.
+  - `pricing-plans`: keep tiers, highlight, billing toggle, and feature
+    marker controls; preserve the current derived `comparison-rows` variant,
+    while enterprise/custom price labels, explicit comparison-row schema, and
+    mobile fallback stay Adapt-only.
   - `faq-accordion`: keep question/answer, support/contact CTA, icon
     placement, and single/multiple/default-open behavior; categories and
     search remain Adapt-only.

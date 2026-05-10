@@ -30,11 +30,14 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: product/catalog source picker, grid/carousel media modes, thumbnails,
-  arrows/dots, and aspect-ratio controls from
+- Keep: product/catalog source picker, product media modes, thumbnails, and
+  aspect-ratio controls from
   `_docs/_WIDGETS/tmp/product-gallery/MATRIX.md`; start from the current owner
   fields `source`, `fields`, `emptyState`, `style`, and `resolved`.
-- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat variant media, lightbox, and quick-view/action behavior as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat
+  carousel arrows/dots polish, variant media, lightbox, and quick-view/action
+  behavior as conditional; implement only when schema/defaults/normalizer/
+  render/editor/tests move together.
 - Reject: arbitrary operators, client-owned provider/index config, raw scripts, and privileged settings in widget data.
 
 ## Editor Mode Ownership

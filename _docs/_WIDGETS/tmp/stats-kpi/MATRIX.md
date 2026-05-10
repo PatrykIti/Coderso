@@ -4,7 +4,7 @@
 |---|---|---|---|
 | Stat grid | HyperUI, Flowbite | Keep | Keep repeated stat items with value, label, description, and existing variant-driven layout; do not add a standalone grid-count field. |
 | Prefix/suffix | ReUI | Keep | Add explicit `prefix` and `suffix` fields instead of parsing value strings. |
-| Icon per KPI | Preline, Uilib | Keep | Add optional icon field and icon tone controls. |
+| Icon per KPI | Preline | Keep | Add optional icon field and icon tone controls; Uilib remains Adapt reference material. |
 | Trend label/direction | Origin UI, ReUI | Adapt | Support optional trend text/direction but avoid live data semantics. |
 | Strip mode | Tailwind UI Plus | Keep | Add or map to deterministic `mode: grid|strip`; keep split/media variants in Adapt scope. |
 | Media split stat section | Tailwind UI Plus | Adapt | Consider only if current widget needs media; otherwise use Split Layout + Stats. |

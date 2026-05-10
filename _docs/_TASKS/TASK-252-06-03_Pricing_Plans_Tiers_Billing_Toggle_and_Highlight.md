@@ -12,7 +12,7 @@
 
 ## Overview
 
-Add tier, highlight, monthly/annual toggle, and custom price controls without
+Add tier, highlight, monthly/annual toggle, and feature marker controls without
 introducing checkout/payment logic.
 
 This is an execution leaf under `TASK-252-06`. It must not re-open the
@@ -90,7 +90,6 @@ type PricingPlanItem = {
   period?: string;
   badge?: string;
   prices?: PricingPlanCyclePrices;
-  customPriceLabel?: string;
   features?: string[];
   ctaLabel?: string;
   ctaHref?: string;
@@ -131,7 +130,6 @@ function normalizePricingPlanItem(item: PricingPlanItem, index: number): Pricing
       monthly: item.price,
       annual: item.prices?.annual,
     }),
-    customPriceLabel: normalizePricingPlanCustomPriceLabel(item.customPriceLabel),
     highlighted: normalizeSingleHighlightedPlan(item.highlighted, index),
   };
 }
@@ -172,11 +170,12 @@ Implementation checklist:
 - Extend or reorganize `core/widgets/core/pricingPlans.tsx` schema/defaults/normalizer/rendering
   only for fields approved by the research decisions above.
 - Add explicit schema/default ownership for `billingToggle` labels, per-cycle
-  plan prices, `customPriceLabel`, and the single highlighted-plan fallback;
-  do not leave billing as editor-only state.
+  plan prices, and the single highlighted-plan fallback; do not leave billing
+  as editor-only state. Keep `customPriceLabel` conditional Adapt scope unless
+  its schema/defaults/normalizer/render/editor/tests are moved together.
 - Extend `pricingPlansSchema` and `pricingPlansDefaults` for `billingToggle`,
-  `plans[].prices`, and `plans[].customPriceLabel`; add validator coverage for
-  reject-unknown fields and the single highlighted-plan normalization path.
+  and `plans[].prices`; add validator coverage for reject-unknown fields and
+  the single highlighted-plan normalization path.
 - Preserve the current `plans[].badge` popular-label field as legacy/current
   display copy; do not expand it into discount-badge pricing math.
 - Add a bounded style-owned `style.featureMarker` enum in schema/defaults/
@@ -222,7 +221,7 @@ Implementation checklist:
 - `bun --cwd core lint:types`
 - `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
 - `bun test tests/unit/widgets/validator.test.ts` when adding `billingToggle`,
-  per-cycle price, custom price, or single-highlight schema fields.
+  per-cycle price, or single-highlight schema fields.
 - `bun run test:vitest -- tests/vitest/widgets/pricingPlans.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/pricing-plans-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

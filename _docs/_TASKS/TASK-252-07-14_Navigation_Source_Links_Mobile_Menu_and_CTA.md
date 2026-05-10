@@ -13,7 +13,8 @@
 ## Overview
 
 Refine navigation source/manual links, logo/CTA grouping, and accessible mobile
-collapse first. Dropdowns/mega groups and sticky/transparent header behavior
+collapse first. Preserve the current sticky/transparent/collapse behavior
+fields; only new dropdown/mega groups or expanded sticky/transparent behavior
 stay Adapt-only through the current behavior contract without client-owned
 routing hacks.
 
@@ -38,9 +39,11 @@ and Reject decisions.
   `style`. Map research terms `collapse`/`offcanvas` onto the existing
   `behavior.mobileMode` enum (`expanded`, `drawer`, `minimal`) instead of
   adding a duplicate top-level field.
-- Adapt: dropdown/mega groups and sticky/transparent header behavior remain
-  conditional; implement only when schema/defaults/normalizer/render/editor/
-  tests move together.
+- Adapt: dropdown/mega groups and new sticky/transparent behavior expansion
+  remain conditional; preserve existing `behavior.sticky`,
+  `behavior.transparent`, and `behavior.collapseOnScroll` fields with
+  non-destructive defaults unless this leaf intentionally migrates them with
+  schema/defaults/normalizer/render/editor/tests together.
 - Reject: arbitrary operators, client-owned provider/index config, raw scripts, and privileged settings in widget data.
 
 ## Editor Mode Ownership

@@ -12,7 +12,9 @@
 
 ## Overview
 
-Refine content-list source, status/sort/limit, display density, featured-first behavior, field visibility, and empty/error states without introducing template fragments.
+Refine content-list source, status/sort/limit, display density, field
+visibility, and empty/error states without introducing template fragments;
+featured-first behavior remains Adapt-only.
 
 This is an execution leaf under `TASK-252-07`. It must not re-open the
 research phase; use `_docs/_WIDGETS/tmp/content-list/MATRIX.md` and the widget README under
