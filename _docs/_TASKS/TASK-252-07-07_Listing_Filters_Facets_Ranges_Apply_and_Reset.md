@@ -29,8 +29,8 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: facet groups with counts, allowlisted range filters, reset/apply
-  behavior, instant/apply mode, and labels from
+- Keep: facet groups with counts, current Coderso `range`/`date-range` facet
+  kinds, reset/apply behavior, instant/apply mode, and labels from
   `_docs/_WIDGETS/tmp/listing-filters/MATRIX.md`; start from the current owner
   fields `listingQueryId`, `autoApply`, `showSearch`, `facets`, `style`, and
   `resolved`; preserve current `searchLabel` and `searchPlaceholder` copy

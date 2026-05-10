@@ -29,7 +29,10 @@ and Reject decisions.
 ## Research Decisions
 
 - Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/posts-feed/MATRIX.md`; for this leaf, start from the current owner fields `source`, `fields`, `emptyState`, `style`, `resolved` and add only the schema fields that the matrix explicitly keeps.
-- Keep: latest/category/featured/manual source modes, card/list/editorial density, and author/date/category toggles from `_docs/_WIDGETS/tmp/posts-feed/MATRIX.md`; add schema-owned source and density controls in `core/widgets/core/postsFeed.tsx`.
+- Keep: latest/category/featured/manual source modes, current card/list/compact
+  density variants, and author/date/category toggles from
+  `_docs/_WIDGETS/tmp/posts-feed/MATRIX.md`; add schema-owned source and
+  density controls in `core/widgets/core/postsFeed.tsx`.
 - Adapt: reading time remains conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: arbitrary operators, client-owned provider/index config, raw scripts, and privileged settings in widget data.
 

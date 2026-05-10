@@ -30,9 +30,11 @@ and Reject decisions.
 
 - Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/product-compare/MATRIX.md`; for this leaf, start from the current owner fields `source`, `fields`, `labels`, `emptyState`, `style`, `resolved` and add only the schema fields that the matrix explicitly keeps.
 - Keep: selected product set and highlighted product as Coderso compare
-  contract rows in `_docs/_WIDGETS/tmp/product-compare/MATRIX.md`, plus
-  attribute rows from the TanStack-backed table model; add schema-owned
-  highlight product fallback in `core/widgets/core/productCompare.tsx`.
+  owner-contract rows created by this leaf and documented in
+  `_docs/_WIDGETS/tmp/product-compare/MATRIX.md`, plus attribute rows from the
+  TanStack-backed table model; add schema-owned selected-product and highlight
+  product fallbacks in `core/widgets/core/productCompare.tsx`. Do not treat
+  Shopify/Medusa/Tailwind UI Plus cards as Keep evidence for these fields.
 - Adapt: sticky headers/pinned first column remain conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: arbitrary operators, client-owned provider/index config, raw scripts, and privileged settings in widget data.
 

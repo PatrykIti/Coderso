@@ -28,9 +28,9 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: selected entry source, fallback title/empty behavior, card/split
-  display modes, media/excerpt/meta/taxonomy/CTA field toggles, and strict
-  single-entry resolution from `_docs/_WIDGETS/tmp/entry-teaser/MATRIX.md`;
+- Keep: selected entry source, fallback title/empty behavior, current
+  Coderso teaser variants, media/excerpt/meta/taxonomy/CTA field toggles, and
+  strict single-entry resolution from `_docs/_WIDGETS/tmp/entry-teaser/MATRIX.md`;
   start from the current owner fields `sourceMode`, `source`, `fields`, `cta`,
   `style`, `fallback`, and `resolved`.
 - Adapt: whole-card link wrapping remains conditional; implement only when

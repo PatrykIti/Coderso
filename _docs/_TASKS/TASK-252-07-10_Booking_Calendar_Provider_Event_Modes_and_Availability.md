@@ -28,8 +28,8 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: safe provider/event reference, `displayMode` for month/week/list/slots,
-  labels/messages, and availability display states from
+- Keep: current Coderso safe provider/event reference, `displayMode` for
+  month/week/list/slots, labels/messages, and availability display states from
   `_docs/_WIDGETS/tmp/booking-calendar/MATRIX.md`; start from the current owner
   fields `flowId`, labels/messages, legacy `slotsEndpoint`, `style`, and
   `resolved`.

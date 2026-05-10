@@ -29,10 +29,11 @@ and Reject decisions.
 ## Research Decisions
 
 - Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/search-box/MATRIX.md`; for this leaf, start from the current owner fields `mode`, `listingQueryId`, `endpoint`, `sources`, `autoApply`, `style`, `resolved` and add only the schema fields that the matrix explicitly keeps.
-- Keep: accessible copy controls, compact/full modes, and result route/query
-  binding from `_docs/_WIDGETS/tmp/search-box/MATRIX.md`; add schema-owned
-  target route/query-param fields in `core/widgets/core/searchBox.tsx` and keep
-  runtime normalization in `core/widgets/core/listingRuntimeScript.ts`.
+- Keep: accessible copy controls, TASK-252-owned compact/full display modes,
+  and result route/query binding from `_docs/_WIDGETS/tmp/search-box/MATRIX.md`;
+  add schema-owned target route/query-param fields in
+  `core/widgets/core/searchBox.tsx` and keep runtime normalization in
+  `core/widgets/core/listingRuntimeScript.ts`.
 - Keep: split public API endpoint ownership from result-page routing.
   `endpoint` remains the safe public-read `/api/search` API endpoint or a
   locked diagnostic field; `targetRoute` must default to a public page route

@@ -48,7 +48,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-252-03-01 | Hero Badge Announcement and Editor IA | High | Large | Hero badge plus shared editor IA proof |
 | TASK-252-04-01 | Timeline Chronology Modes and Editor IA | High | Large | Timeline chronology modes, dates, CTA links, and status markers |
 | TASK-252-05-01 | Section Regions Semantics and Spacing | High | Large | Section regions, semantics, anchors, spacing, and docs |
-| TASK-252-05-02 | Template Section Metadata Preview and Sync | High | Medium | Template metadata, preview, category, version, and sync controls |
+| TASK-252-05-02 | Template Section Metadata Preview and Sync | High | Medium | Template metadata, preview, category, version, and conditional sync/detach controls |
 | TASK-252-05-03 | Grid Columns Presets Gaps and Mobile Stack | High | Medium | Grid presets, gaps, equal height, and mobile stack |
 | TASK-252-05-04 | Split Layout Slot Order and Mobile Stack | High | Medium | Split slot order, gap, and mobile stack |
 | TASK-252-05-05 | Stack Direction Gap Alignment and Responsive Flow | High | Medium | Stack direction, gap, alignment, and responsive flow |
@@ -59,7 +59,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-252-05-10 | Toggle Block State Switch and Accessible Content Swap | High | Medium | Toggle states, labels, default state, and accessible content swap |
 | TASK-252-06-01 | Feature Grid Icon Cards Rows and Links | High | Medium | Feature icon cards, rows, optional links, and docs |
 | TASK-252-06-02 | Testimonials Grid Spotlight Rating and Attribution | High | Medium | Testimonials layout, rating, avatar shape, author attribution, and spotlight |
-| TASK-252-06-03 | Pricing Plans Tiers Billing Toggle and Highlight | High | Large | Pricing tiers, billing toggle, custom prices, and highlights |
+| TASK-252-06-03 | Pricing Plans Tiers Billing Toggle and Highlight | High | Large | Pricing tiers, billing toggle, feature markers, highlights, and custom price as Adapt-only |
 | TASK-252-06-04 | FAQ Accordion Support CTA Icon Placement and Defaults | High | Medium | FAQ items, support CTA, icon placement, disclosure defaults, and docs |
 | TASK-252-06-05 | CTA Banner Compact Split Badge and Icon | High | Medium | CTA modes, badge/icon, contrast tone, and action controls |
 | TASK-252-06-06 | Logo Cloud Grid Tone Rows and Accessibility | Medium | Medium | Logo rows, tone, alt text, accessible labels, and layout controls |
