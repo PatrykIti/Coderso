@@ -80,7 +80,6 @@ type TimelineStep = {
   dateLabel?: string;
   icon?: string;
   accent?: string;
-  href?: string;
   cta?: {
     label: string;
     href: string;

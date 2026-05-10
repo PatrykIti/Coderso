@@ -60,13 +60,13 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-252-06-01 | Feature Grid Modes Bento and Linked Cards | High | Medium | Feature modes, bento/cards, badges, links, and docs |
 | TASK-252-06-02 | Testimonials Grid Spotlight Rating and Attribution | High | Medium | Testimonials layout, rating, avatar, company, and opt-in motion |
 | TASK-252-06-03 | Pricing Plans Tiers Toggle and Comparison Mode | High | Large | Pricing tiers, billing toggle, highlights, and comparison mode |
-| TASK-252-06-04 | FAQ Accordion Categories Support CTA and Icon Placement | High | Medium | FAQ items, categories, support CTA, icon placement, and docs |
+| TASK-252-06-04 | FAQ Accordion Categories Support CTA and Icon Placement | High | Medium | FAQ items, support CTA, icon placement, disclosure defaults, and docs |
 | TASK-252-06-05 | CTA Banner Compact Split Badge and Background Media | High | Medium | CTA modes, badge/icon, bounded media, and background controls |
 | TASK-252-06-06 | Logo Cloud Grid Tone Rows and Reduced Motion Marquee | Medium | Medium | Logo rows, tone, optional reduced-motion-safe marquee |
 | TASK-252-06-07 | Gallery Mosaic Layout Captions Overlays and Alt Text | High | Medium | Gallery layout presets, captions, overlays, and alt text |
 | TASK-252-06-08 | Stats KPI Values Trend Labels and Display Modes | Medium | Medium | KPI prefix/suffix, icons, trend labels, and display modes |
-| TASK-252-06-09 | Team Members Photo Shape Socials and Featured Profile | Medium | Medium | Team members, photos, socials, profile links, and featured member |
-| TASK-252-06-10 | Rich Text Section Prose Presets Width Badge and CTA | High | Medium | Rich text prose presets, width, badge, CTA, and safe media |
+| TASK-252-06-09 | Team Members Photo Shape Socials and Featured Profile | Medium | Medium | Team members, photos, socials, photo shape, and spotlight preservation |
+| TASK-252-06-10 | Rich Text Section Prose Presets Width Badge and CTA | High | Medium | Rich text prose presets, width, badge/eyebrow, and CTA |
 | TASK-252-06-11 | Compare Timeline Two Track Segments Status and Highlight | High | Medium | Two-track compare timeline segments, status, and highlights |
 | TASK-252-07-01 | Content List Source Display Field Visibility and Empty States | High | Large | Content source, filters, display, field visibility, and states |
 | TASK-252-07-02 | Posts Feed Source Density Author Date and Category | High | Medium | Posts source, density, metadata visibility, and CTA copy |

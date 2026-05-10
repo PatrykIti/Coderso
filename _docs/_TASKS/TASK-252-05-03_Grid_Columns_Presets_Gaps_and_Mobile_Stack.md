@@ -86,7 +86,7 @@ function GridColumnsVisualEditor(props: WidgetEditorProps<GridColumnsData>) {
         <Select value={String(value.columns?.length ?? 2)} onChange={handleControlChange} />
       </WidgetControlRow>
       <WidgetControlRow id="grid-columns.layout.rowGap" label="Row gap" data-widget-control="grid-columns.layout.rowGap">
-        <Select value={value.layout?.rowGap ?? value.layout?.gapY ?? "md"} onChange={(rowGap) => props.onChange(updateGridColumnsLayout(value, { rowGap }))} />
+        <Select value={value.layout?.rowGap ?? value.layout?.gapY ?? "6"} onChange={(rowGap) => props.onChange(updateGridColumnsLayout(value, { rowGap }))} />
       </WidgetControlRow>
       <WidgetControlRow id="grid-columns.layout.mobileStack" label="Mobile stack" data-widget-control="grid-columns.layout.mobileStack">
         <Switch checked={value.layout?.mobileStack ?? true} onCheckedChange={(mobileStack) => props.onChange(updateGridColumnsLayout(value, { mobileStack }))} />

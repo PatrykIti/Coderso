@@ -69,16 +69,12 @@ and Reject decisions.
 ```tsx
 function normalizeSplitLayoutData(data: SplitLayoutData): SplitLayoutData {
   return {
-    slots: normalizeSplitLayoutSlots(data.slots, {
-      primaryLabel: data.slotLabels?.primary ?? "Content",
-      secondaryLabel: data.slotLabels?.secondary ?? "Media",
-    }),
     mediaPosition: normalizeSplitLayoutMediaPosition(data.mediaPosition ?? inferMediaPositionFromLegacySlots(data)),
     reverse: normalizeSplitLayoutReverse(data.reverse),
     orientation: normalizeSplitLayoutOrientation(data.orientation ?? data.mediaPosition),
     ratio: normalizeSplitLayoutRatio(data.ratio),
-    mobileStack: normalizeSplitLayoutMobileStack(data.mobileStack ?? data.collapseMobile),
-    mobileOrder: normalizeSplitLayoutMobileOrder(data.mobileOrder ?? data.reverseOnMobile),
+    mobileStack: normalizeSplitLayoutMobileStack(data.mobileStack ?? legacyCollapseMobileToMobileStack(data.collapseMobile)),
+    mobileOrder: normalizeSplitLayoutMobileOrder(data.mobileOrder ?? legacyReverseOnMobileToMobileOrder(data.reverseOnMobile)),
     gap: normalizeSplitLayoutGap(data.gap),
     verticalAlign: normalizeSplitLayoutVerticalAlign(data.verticalAlign),
   };
@@ -95,7 +91,7 @@ function SplitLayoutVisualEditor(props: WidgetEditorProps<SplitLayoutData>) {
         <SegmentedControl value={value.mobileOrder ?? "content-first"} onChange={(mobileOrder) => props.onChange(updateSplitLayoutMobileOrder(value, mobileOrder))} />
       </WidgetControlRow>
       <WidgetControlRow id="split-layout.mobileStack" label="Stack on mobile" data-widget-control="split-layout.mobileStack">
-        <Switch checked={value.mobileStack ?? value.collapseMobile ?? true} onCheckedChange={(mobileStack) => props.onChange(updateSplitLayoutMobileStack(value, mobileStack))} />
+        <SegmentedControl value={value.mobileStack ?? legacyCollapseMobileToMobileStack(value.collapseMobile)} onChange={(mobileStack) => props.onChange(updateSplitLayoutMobileStack(value, mobileStack))} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -105,6 +101,9 @@ function SplitLayoutVisualEditor(props: WidgetEditorProps<SplitLayoutData>) {
 Implementation checklist:
 
 - Read `_docs/_WIDGETS/tmp/split-layout/MATRIX.md` before changing the schema or editor.
+- Keep slot ownership in the page-model/widget-definition slot contract. Do not
+  persist `slots` inside `SplitLayoutData`; only use slot labels/order as
+  renderer/editor metadata.
 - Extend or reorganize `core/widgets/core/splitLayout.tsx` schema/defaults/normalizer/rendering
   only for fields approved by the research decisions above.
 - Refactor `core/admin/ui/widgets/editors/SplitLayoutEditors.tsx` to shared TASK-252 editor primitives from

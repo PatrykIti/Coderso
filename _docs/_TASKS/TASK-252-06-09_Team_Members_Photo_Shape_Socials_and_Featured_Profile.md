@@ -12,7 +12,9 @@
 
 ## Overview
 
-Expand Team with member cards, photo shape, socials, profile links, and optional featured member without adding per-person contact workflows.
+Expand Team with member cards, photo shape, socials, and the current spotlight
+variant preservation without adding profile-link controls, explicit selected
+featured-member controls, or per-person contact workflows.
 
 This is an execution leaf under `TASK-252-06`. It must not re-open the
 research phase; use `_docs/_WIDGETS/tmp/team/MATRIX.md` and the widget README under

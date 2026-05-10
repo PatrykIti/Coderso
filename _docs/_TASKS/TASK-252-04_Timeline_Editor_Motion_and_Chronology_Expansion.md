@@ -99,7 +99,10 @@ type TimelineStep = {
   dateLabel?: string;
   icon?: string;
   accent?: string;
-  href?: string;
+  cta?: {
+    label: string;
+    href: string;
+  };
   status?: "upcoming" | "current" | "complete";
 };
 
@@ -108,7 +111,9 @@ function normalizeTimelineData(raw: unknown): TimelineData {
   return {
     ...legacyCompatibleFields,
     mode: normalizeDisplayMode(input.mode, input.variant),
-    steps: normalizeTimelineSteps(input.steps),
+    steps: normalizeTimelineSteps(input.steps, {
+      normalizeCta: normalizeTimelineStepCta,
+    }),
     ...(isTimelineMotionAdaptEnabled(input) ? { motion: normalizeTimelineMotion(input.motion) } : {}),
   };
 }

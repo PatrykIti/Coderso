@@ -65,7 +65,10 @@ and Reject decisions.
 ```tsx
 function normalizeToggleBlockData(data: ToggleBlockData): ToggleBlockData {
   return {
-    states: normalizeToggleBlockStates(data.states ?? statesFromLegacyLabels(data.labels)),
+    states: normalizeToggleBlockStates(data.states ?? statesFromLegacyToggleBlock(data.labels, {
+      primarySlotId: "primary",
+      secondarySlotId: "secondary",
+    })),
     labels: normalizeToggleBlockLabels(data.labels),
     options: normalizeToggleBlockOptions({
       ...data.options,
@@ -83,7 +86,7 @@ function ToggleBlockVisualEditor(props: WidgetEditorProps<ToggleBlockData>) {
         <SegmentedControl value={value.options?.defaultState ?? "primary"} onChange={handleControlChange} />
       </WidgetControlRow>
       <WidgetControlRow id="toggle-block.states" label="States" data-widget-control="toggle-block.states">
-        <StateListEditor value={value.states ?? statesFromLegacyLabels(value.labels)} onChange={(states) => props.onChange(updateToggleBlockStates(value, states))} maxItems={2} />
+        <StateListEditor value={value.states ?? statesFromLegacyToggleBlock(value.labels, { primarySlotId: "primary", secondarySlotId: "secondary" })} onChange={(states) => props.onChange(updateToggleBlockStates(value, states))} maxItems={2} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
