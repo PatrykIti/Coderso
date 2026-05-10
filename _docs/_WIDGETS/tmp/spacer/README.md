@@ -1,0 +1,17 @@
+# Spacer Research Cards
+
+Copy policy for this archive: summarize spacing control behavior only. Do not copy third-party source, markup, class lists, prose, screenshots, or premium implementation details into Coderso.
+
+| # | Source | URL | Access type | License/terms summary | Observed UX pattern | Useful Coderso fields/options | Decision | Copy policy |
+|---|---|---|---|---|---|---|---|---|
+| 1 | WordPress Spacer block | https://wordpress.org/documentation/article/spacer-block/ | docs-example | WordPress/Gutenberg code is GPL; docs summarized only. | Dedicated empty vertical rhythm block with height control. | `size`, `height`, `responsiveSize`, editor label. | Keep | Summarize behavior only. |
+| 2 | Chakra Spacer | https://chakra-ui.com/docs/components/flex#spacer | open-source | Chakra UI is MIT; docs examples summarized only. | Flex filler that pushes siblings apart. | `mode`, `grow`, parent context warning. | Reject | Summarize only; flex filler is not page spacer default. |
+| 3 | Mantine Space | https://mantine.dev/core/space/ | open-source | Mantine is MIT; docs examples summarized only. | Horizontal or vertical empty space token. | `axis`, `size`, responsive token. | Keep | Summarize options only. |
+| 4 | MUI Box spacing system | https://mui.com/system/spacing/ | open-source | MUI System is MIT; docs examples summarized only. | Tokenized spacing values applied through system props. | `token`, `marginY`, `paddingY`, scale mapping. | Adapt | Summarize scale idea. |
+| 5 | Tailwind spacing scale | https://tailwindcss.com/docs/margin | docs-example | Tailwind CSS is MIT; Tailwind Plus examples are separate paid references. | Fixed spacing scale with responsive variants. | `spacingToken`, `breakpointOverrides`, `negativeDisallowed`. | Adapt | Summarize token model only. |
+| 6 | Flowbite spacing conventions | https://flowbite.com/docs/getting-started/introduction/ | docs-example | Flowbite code MIT; docs code CC BY 3.0. | Components rely on consistent section rhythm and dark-mode spacing. | `sectionRhythm`, `mobileSize`, `desktopSize`. | Adapt | Summarize convention only. |
+| 7 | WordPress Dimensions controls | https://developer.wordpress.org/block-editor/reference-guides/block-api/block-supports/#spacing | docs-example | GPL ecosystem; docs summarized only. | Shared spacing support exposes margin/padding controls. | `spacingSupport`, `linkedValues`, `reset`. | Adapt | Summarize editor-control pattern. |
+| 8 | daisyUI layout utilities | https://daisyui.com/docs/layout-and-typography/ | open-source | daisyUI is open-source; verify exact license before reuse. | Utility-first rhythm managed through layout classes and themes. | `themeAwareSize`, `preset`, `visibility`. | Adapt | Summarize concept only. |
+| 9 | GrapesJS Style Manager | https://grapesjs.com/docs/modules/Style-manager.html | open-source | GrapesJS is open-source; verify exact license before reuse. | Visual spacing controls can become too granular. | `simpleMode`, `advancedMode`, `guardrails`. | Reject | Summarize IA risk only. |
+| 10 | LayoutBlocks section rhythm | https://www.layoutblocks.dev/docs/introduction | unknown-license | Site states free/open copy-paste blocks; no license file verified here. | Marketing blocks use consistent vertical section spacing rather than standalone decoration. | `presetSize`, `sectionRhythm`, `hideOnMobile`. | Adapt | Reference only; no code copy. |
+

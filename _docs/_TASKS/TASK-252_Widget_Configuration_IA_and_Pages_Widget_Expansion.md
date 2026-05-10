@@ -6,7 +6,8 @@
 **Category:** Widgets + Page Builder + Admin UI + Runtime Render
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-220, TASK-242, TASK-244
-**Status:** To Do
+**Status:** In Progress
+**Started:** 2026-05-10
 
 ---
 

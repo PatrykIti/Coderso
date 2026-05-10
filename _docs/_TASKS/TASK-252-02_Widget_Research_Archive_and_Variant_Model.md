@@ -6,7 +6,9 @@
 **Category:** Widgets + Product Research + Documentation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-252
-**Status:** To Do
+**Status:** Done
+**Started:** 2026-05-10
+**Completed:** 2026-05-10
 
 ---
 
@@ -179,3 +181,17 @@ Then build a matrix:
   copying unlicensed code.
 - Final editor option lists are backed by `Keep`, `Adapt`, and `Reject`
   decisions rather than by assumptions from the current implementation.
+
+## Completion Notes
+
+- Created `_docs/_WIDGETS/tmp/README.md` and
+  `_docs/_WIDGETS/tmp/SOURCE_POOLS.md`.
+- Created research folders for all 38 Pages-publishable widgets.
+- Added `README.md` and `MATRIX.md` for every widget folder.
+- Captured 380 research cards in total: ten cards per widget.
+- No `SHORTFALL.md` files were needed.
+- Kept the archive summary-only and license-safe; premium/proprietary sources
+  are reference-only.
+- Validation:
+  - `git diff --check`
+  - folder/card/field/matrix coverage checks across `_docs/_WIDGETS/tmp/**`

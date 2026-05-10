@@ -1,0 +1,17 @@
+# Accordion Research Cards
+
+Copy policy for this archive: summarize interaction, accessibility, and schema implications only. Do not copy third-party source, markup, class lists, prose, screenshots, or premium implementation details into Coderso.
+
+| # | Source | URL | Access type | License/terms summary | Observed UX pattern | Useful Coderso fields/options | Decision | Copy policy |
+|---|---|---|---|---|---|---|---|---|
+| 1 | Radix Accordion | https://www.radix-ui.com/primitives/docs/components/accordion | open-source | Radix UI primitives are MIT; docs examples summarized only. | Accessible single/multiple accordion with collapsible behavior and orientation. | `type`, `collapsible`, `defaultValue`, `items`. | Keep | Summarize accessibility model. |
+| 2 | shadcn Accordion | https://ui.shadcn.com/docs/components/accordion | docs-example | shadcn examples are open-source-oriented; verify terms before reuse. | Styled accordion around Radix primitive. | `variant`, `triggerStyle`, `panelPadding`. | Adapt | Summarize styling only. |
+| 3 | Chakra Accordion | https://chakra-ui.com/docs/components/accordion | open-source | Chakra UI is MIT; docs examples summarized only. | Expand/collapse sections with item indicators and controlled value. | `multiple`, `defaultOpen`, `indicator`, `disabled`. | Keep | Summarize options only. |
+| 4 | Mantine Accordion | https://mantine.dev/core/accordion/ | open-source | Mantine is MIT; docs examples summarized only. | Multiple variants, chevron position, item disabled state. | `variant`, `chevronPosition`, `disabled`, `radius`. | Keep | Summarize behavior. |
+| 5 | MUI Accordion | https://mui.com/material-ui/react-accordion/ | open-source | MUI Core is MIT; docs examples summarized only. | Summary/details panels with controlled expansion. | `expanded`, `defaultExpanded`, `disableGutters`, `headingLevel`. | Keep | Summarize options. |
+| 6 | React Aria Disclosure | https://react-spectrum.adobe.com/react-aria/Disclosure.html | docs-example | React Aria packages are Apache-2.0; examples summarized only. | Disclosure primitive that can compose accordion-like lists. | `disclosureItems`, `keyboardSupport`, `ariaControls`. | Adapt | Accessibility summary only. |
+| 7 | Flowbite Accordion | https://flowbite.com/docs/components/accordion/ | docs-example | Flowbite code MIT; docs code CC BY 3.0. | Flush, always-open, and nested accordion examples. | `flush`, `alwaysOpen`, `nestedPolicy`, `icon`. | Adapt | Summarize variants only. |
+| 8 | daisyUI Collapse | https://daisyui.com/components/collapse/ | open-source | daisyUI is open-source; verify exact license before reuse. | Collapse panels with checkbox/radio state patterns. | `stateMode`, `singleOpen`, `visualVariant`. | Adapt | Summarize behavior; avoid checkbox implementation copy. |
+| 9 | WordPress Details block | https://wordpress.org/documentation/article/details-block/ | docs-example | WordPress/Gutenberg code is GPL; docs summarized only. | Native details/summary disclosure block. | `openByDefault`, `summary`, `content`, native fallback. | Adapt | Summarize behavior only. |
+| 10 | Tailwind Plus FAQ sections | https://tailwindcss.com/plus/ui-blocks/marketing/sections/faqs | premium-reference | Paid Tailwind Plus terms; reference-only. | FAQ accordion/list presentation with polished spacing and icons. | `faqPreset`, `spacing`, `iconStyle`, `surface`. | Adapt | Visual/UX summary only. |
+

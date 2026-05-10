@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 35 tasks
-- **In Progress:** 11 tasks
-- **Done:** 1464 tasks
+- **To Do:** 33 tasks
+- **In Progress:** 13 tasks
+- **Done:** 1465 tasks
 
 ---
 
@@ -38,9 +38,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-252 | Widget Configuration IA and Pages Widget Expansion | High | Very Large | Umbrella: right inspector IA, research archive, Hero/Timeline expansion, and Pages widget editor parity |
 | TASK-252-01 | Widget Inspector IA and Shared Option Architecture | High | Large | Shared right-panel structure, info icon pattern, slot placement, and automation metadata |
-| TASK-252-02 | Widget Research Archive and Variant Model | High | Medium | License-safe `_docs/_WIDGETS/tmp/**` research lane and Coderso-owned variant/mode matrix |
 | TASK-252-03 | Hero Editor Mode and Badge Expansion | High | Large | Hero badge/announcement surface plus reorganized Wizard/Visual/Advanced editor IA |
 | TASK-252-04 | Timeline Editor Motion and Chronology Expansion | High | Large | True timeline modes, date-capable steps, and reduced-motion-safe scroll reveal |
 | TASK-252-05 | Layout and Structural Widget Editor Parity | High | Large | Section/slots baseline plus layout primitives and missing docs for tabs/accordion/toggle-block |
@@ -80,6 +78,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-252 | Widget Configuration IA and Pages Widget Expansion | High | Very Large | In progress: research archive is complete; shared inspector IA, Hero/Timeline expansion, widget-family implementation, QA, docs, and changelog closure remain |
 | TASK-190 | Blueprint Composer Foundation | High | Very Large | In progress: capability manifest/registry, candidate planning, provider/shadow safety layer, deterministic composition graph/conflicts, initial action assembly, schema/listing merge, and page-upsert collection-link persistence are landed; supported mixed-capability and primary-plus-gated setup requests now stay on the composed path before provider drafting can bypass them, while detail-page, workspace, review metadata, and no-duplicate closure waves remain |
 | TASK-190-03 | Composition Graph and Conflict Policy | High | Large | In progress: deterministic graph fragments plus typed route/resource/field conflicts and blocking gated-domain surfacing are landed for the current capability packs, while broader media/permission needs-input families remain open |
 | TASK-190-03-02 | Conflict Resolver, Stable Keys, and Needs Input | High | Large | In progress: duplicate-action merge keys now classify route/resource/field conflicts and blocking gated domains into a closed typed conflict contract consumed by the assembler/planner needs-input path, while broader media/permission surfacing remains open |
@@ -99,6 +98,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-252-02 | Widget Research Archive and Variant Model | High | Medium | Done: 38 Pages-publishable widgets now have license-safe `_docs/_WIDGETS/tmp/<widget>/` research cards and Keep/Adapt/Reject matrices |
 | TASK-190-02-03 | Composer Candidate Shadow Mode and Deferred Routing Cutover | High | Large | Done: candidate shadow now compares current plan routing to capability candidates behind an env-gated debug surface while keeping user-visible routing unchanged |
 | TASK-190-02-02 | Provider Context and Structured Composition Draft | High | Medium | Done: provider prompt packaging now includes bounded blueprint capability context and a strict capability-id draft schema without replacing `cms_operation_draft` |
 | TASK-190-02 | Intent to Blueprint Candidate Planning | High | Large | Done: current prompt candidate extraction, provider capability context, and shadow diagnostics are landed for the pre-cutover planner stage |
