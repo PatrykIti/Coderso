@@ -89,5 +89,5 @@ Summary-only archive for TASK-252. Do not copy third-party code from these sourc
 - License/terms summary: Tailwind Typography is open-source; still avoid copying docs prose.
 - Observed UX pattern: controlled text rhythm for longer feature descriptions.
 - Useful Coderso fields/options: `bodySize`, `prosePreset`, `descriptionLength`.
-- Decision: Adapt
+- Decision: Reject
 - Copy policy: Use as design rationale only.

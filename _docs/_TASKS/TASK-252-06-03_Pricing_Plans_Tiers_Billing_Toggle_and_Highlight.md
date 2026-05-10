@@ -30,9 +30,12 @@ and Reject decisions.
 ## Research Decisions
 
 - Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/pricing-plans/MATRIX.md`; for this leaf, start from the current owner fields `header`, `plans`, `style` and add only the schema fields that the matrix explicitly keeps.
-- Keep: tier cards, highlighted plan, monthly/annual billing toggle, enterprise/custom price, and feature icon/checkmark style from `_docs/_WIDGETS/tmp/pricing-plans/MATRIX.md`; add schema-owned billing labels/price fields in `core/widgets/core/pricingPlans.tsx`.
+- Keep: tier cards, highlighted plan, monthly/annual billing toggle, and
+  feature icon/checkmark style from `_docs/_WIDGETS/tmp/pricing-plans/MATRIX.md`;
+  add schema-owned billing labels/price fields in `core/widgets/core/pricingPlans.tsx`.
 - Adapt: discount badges, explicit comparison-row schema, feature groups, and
-  mobile comparison fallback remain conditional. Preserve the current
+  enterprise/custom price labels, mobile comparison fallback remain conditional.
+  Preserve the current
   `comparison-rows` style variant that derives comparison output from plan
   feature strings; either document it as current-state debt or, if upgrading it,
   move explicit comparison rows, mobile fallback, renderer, editor, and tests

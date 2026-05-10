@@ -86,23 +86,20 @@ type CommerceWidgetQueryInput = {
   manualOrderIds?: string[];
 };
 
-type CommerceWidgetQueryOptions = {
+type ProductCompareQueryOptions = {
+  productIds: string[];
   manualOrderIds?: string[];
 };
 
-function buildCommerceWidgetQueryInput(
-  source: CommerceWidgetSource,
-  options: CommerceWidgetQueryOptions = {}
+function addProductCompareSelectionToQueryInput(
+  query: CommerceWidgetQueryInput,
+  options: ProductCompareQueryOptions
 ): CommerceWidgetQueryInput {
-  const normalized = normalizeCommerceWidgetSource(source, {
-    limit: productCompareDefaults.source?.limit ?? 4,
-    sortField: "updatedAt",
-    sortDir: "desc",
-  });
+  const productIds = normalizeCommerceWidgetProductIds(options.productIds);
   return {
-    ...normalizedSourceToQueryInput(normalized),
-    productIds: normalizeCommerceWidgetProductIds(normalized.productIds),
-    manualOrderIds: normalizeCommerceWidgetProductIds(options.manualOrderIds),
+    ...query,
+    productIds,
+    manualOrderIds: normalizeCommerceWidgetProductIds(options.manualOrderIds ?? productIds),
   };
 }
 
@@ -127,19 +124,28 @@ function normalizeProductCompareData(data: ProductCompareData): ProductCompareDa
 
 function buildProductCompareQueryInput(data: ProductCompareData): CommerceWidgetQueryInput {
   const selectedProductIds = normalizeProductCompareSelectedProductIds(data.selectedProductIds);
-  return buildCommerceWidgetQueryInput(
+  const normalizedSource = normalizeCommerceWidgetSource(data.source, {
+    limit: productCompareDefaults.source?.limit ?? 3,
+    sortField: "title",
+    sortDir: "asc",
+  });
+
+  return addProductCompareSelectionToQueryInput(
+    buildCommerceWidgetQueryInput(normalizedSource),
     {
-      ...data.source,
       productIds: selectedProductIds,
-      limit: selectedProductIds.length || data.source?.limit,
-    },
-    { manualOrderIds: selectedProductIds }
+      manualOrderIds: selectedProductIds,
+    }
   );
 }
 
-async function resolveProductCompareRows(data: ProductCompareData, deps: CommerceWidgetRuntimeDeps) {
+async function resolveProductCompareRows(
+  data: ProductCompareData,
+  options: CommerceWidgetRuntimeOptions,
+  deps: CommerceWidgetRuntimeDeps
+) {
   const query = buildProductCompareQueryInput(data);
-  const result = await deps.executeCommerceQuery(query);
+  const result = await resolveWithCache(options, query, deps);
   return applyManualProductOrder(result.rows, query.manualOrderIds ?? []);
 }
 
@@ -170,22 +176,24 @@ Implementation checklist:
   normalized `attributeRows` with known keys/labels, and `highlightProductId`
   with fallback to the first selected product; keep source filters as legacy or
   backend query support, not a replacement for manual selected-product scope.
-- Extend the shared commerce query/source owner so selected product IDs resolve
-  through backend-owned product lookup and preserve manual order; cover that in
-  `tests/unit/commerce/commerceWidgetRuntime.test.ts`.
-- Extend `CommerceWidgetSource`, `NormalizedCommerceWidgetSource`, and the
-  shared query-input builder in `core/widgets/core/commerceWidgetShared.ts`
-  with bounded `productIds`, then map them into
-  `core/services/commerce/commerceQueryService.ts` as an allowlisted product-id
-  filter. `commerceWidgetRuntime.ts` must use the shared builder and apply
-  `manualOrderIds` after query execution; the editor must not synthesize rows
-  client-side.
-- Treat `productIds` as runtime-widget-only query input unless the
-  implementation intentionally promotes it into the public/admin commerce query
-  contract. If promoted, update `core/services/commerce/commerceTypes.ts`,
-  `core/server/validation/commerceSchemas.ts`, route validation, and API tests
-  in the same change; otherwise keep `productIds` out of admin/API schemas and
-  cover the runtime-widget bridge only.
+- Keep the shared `buildCommerceWidgetQueryInput` normalized-source signature
+  stable. Add selected-product resolution through a compare-specific wrapper or
+  an explicit normalized-query extension; do not change product-gallery or
+  product-table callers just to serve this leaf.
+- If selected product IDs are promoted into the shared `CommerceWidgetSource`
+  contract, extend `CommerceWidgetSource`, `NormalizedCommerceWidgetSource`,
+  `core/widgets/core/commerceWidgetShared.ts`,
+  `core/services/commerce/commerceQueryService.ts`, route validation, and API
+  tests in the same change. Otherwise keep `selectedProductIds` owned by
+  `productCompare.tsx` and bridge them into runtime query input after
+  `buildCommerceWidgetQueryInput(normalizedSource)`.
+- Use the current product-compare source defaults unless this leaf explicitly
+  migrates defaults and updates all affected tests: `limit: 3`,
+  `sortField: "title"`, and `sortDir: "asc"`.
+- Preserve backend-owned lookup and manual ordering in
+  `commerceWidgetRuntime.ts` through the existing `resolveRuntimeProducts` /
+  `resolveWithCache` path; do not introduce an `executeCommerceQuery`
+  dependency only for this widget.
 - Add query-service coverage for product-id filtering and runtime coverage for
   selected-product manual ordering plus empty/missing selected products.
 - Refactor `core/admin/ui/widgets/editors/ProductCompareEditors.tsx` to shared TASK-252 editor primitives from

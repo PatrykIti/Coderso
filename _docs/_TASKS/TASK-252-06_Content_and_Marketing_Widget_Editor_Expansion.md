@@ -124,12 +124,14 @@ type WidgetExpansionDecision = {
 };
 
 function planWidgetExpansion(widgetType: string, research: ResearchCard[]) {
-  const usefulPatterns = research.filter((card) => card.codersoFit === "yes");
+  const requiredPatterns = research.filter((card) => card.decision === "Keep");
+  const conditionalPatterns = research.filter((card) => card.decision === "Adapt");
   return {
     widgetType,
-    newModes: deriveModes(usefulPatterns),
-    schemaFields: deriveSchemaFields(usefulPatterns),
-    visualSections: deriveVisualSections(usefulPatterns),
+    newModes: deriveModes(requiredPatterns),
+    schemaFields: deriveSchemaFields(requiredPatterns),
+    visualSections: deriveVisualSections(requiredPatterns),
+    conditionalNotes: summarizeAdaptOnlyPatterns(conditionalPatterns),
     advancedSections: ["Technical tokens", "Diagnostics"].filter(isNeeded),
   };
 }

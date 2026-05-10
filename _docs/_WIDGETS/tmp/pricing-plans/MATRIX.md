@@ -7,7 +7,7 @@
 | Monthly/annual toggle | Preline, MUI | Keep | Add deterministic `billingToggle` labels and price fields per cycle. |
 | Discount badge | Preline, shadcn.io | Adapt | Optional badge on plan or billing cycle; avoid pricing math in renderer. |
 | Comparison table | Tailwind UI Plus, Uilib | Adapt | Consider `mode: comparison` only with explicit rows and mobile fallback. |
-| Enterprise/custom price | Tailwind UI Plus | Keep | Support `customPriceLabel` when price is not numeric. |
+| Enterprise/custom price | Tailwind UI Plus | Adapt | Support `customPriceLabel` only if billing schema, editor, renderer, and tests move together. |
 | Feature groups | Uilib | Adapt | Add only if current plans need grouped rows; otherwise flat list remains simpler. |
 | Icons/checkmarks per feature | Origin UI | Keep | Use style enum; feature data remains text-first. |
 | Runtime checkout/payment logic | Multiple | Reject | Pricing widget remains display-only; commerce/payment belongs elsewhere. |
