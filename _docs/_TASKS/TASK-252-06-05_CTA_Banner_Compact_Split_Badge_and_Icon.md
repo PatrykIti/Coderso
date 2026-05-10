@@ -29,7 +29,10 @@ and Reject decisions.
 ## Research Decisions
 
 - Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/cta-banner/MATRIX.md`; for this leaf, start from the current owner fields `content`, `actions`, `style` and add only the schema fields that the matrix explicitly keeps.
-- Keep: centered CTA, split CTA layout, high-contrast band, and badge/icon CTA strip from `_docs/_WIDGETS/tmp/cta-banner/MATRIX.md`; add schema-owned badge/icon fields in `core/widgets/core/ctaBanner.tsx`.
+- Keep: centered CTA, split CTA layout, high-contrast/tone band, and badge/icon
+  CTA strip from `_docs/_WIDGETS/tmp/cta-banner/MATRIX.md`; high-contrast
+  stays tied to existing theme/style tokens, while Tailwind UI Plus
+  background-media examples remain Adapt-only.
 - Adapt: background media/overlay, app-store style button groups, and reduced-motion-safe named animation presets remain conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: separate one-off widgets, raw HTML/script embeds, and unbounded visual/CSS controls.
 

@@ -8,7 +8,7 @@
 | Media-adjacent content | Flowbite, Tailwind UI Plus | Adapt | Use layout/media controls only if renderer already supports safe media. |
 | Split prose layout | Tailwind UI Plus | Adapt | Consider only for short controlled copy; avoid long inaccessible prose grids. |
 | Pull quote | Tailwind UI Plus | Adapt | Optional structured quote field if editorial needs justify it. |
-| Badge/eyebrow | ReUI | Keep | Add optional badge/eyebrow above heading. |
+| Badge/eyebrow | Existing Coderso titleBlock, ReUI reference | Keep | Preserve/reuse `titleBlock.eyebrow` above heading; ReUI remains a supporting reference, not the sole Keep source. |
 | Raw unsafe HTML | Multiple | Reject | Preserve sanitizer boundary; no arbitrary script/style support. |
 | Decorative frames from unknown catalogs | Uilib | Reject | Use Coderso theme surfaces only. |
 | Full article/CMS body replacement | Multiple | Reject | Rich Text Section stays a page widget, not the content-entry editor. |

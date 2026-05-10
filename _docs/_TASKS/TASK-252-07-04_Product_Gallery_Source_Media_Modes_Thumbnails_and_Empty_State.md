@@ -50,6 +50,12 @@ and Reject decisions.
 ## Files to Change
 
 - `core/widgets/core/productGallery.tsx`
+- `core/widgets/core/commerceWidgetShared.ts` when source fields extend the
+  shared commerce widget source contract.
+- `core/services/commerce/commerceWidgetRuntime.ts` when runtime product
+  gallery source resolution changes.
+- `core/services/commerce/commerceQueryService.ts` when runtime product query
+  normalization needs new allowlisted source fields.
 - `core/admin/ui/widgets/editors/ProductGalleryEditors.tsx`
 - Bun-owned route/security suites when public endpoint behavior changes.
 - `tests/unit/widgets/validator.test.ts` when schema validation changes.
@@ -68,7 +74,11 @@ and Reject decisions.
 ```tsx
 function normalizeProductGalleryData(data: ProductGalleryData): ProductGalleryData {
   return {
-    source: normalizeProductGallerySource(data.source),
+    source: normalizeCommerceWidgetSource(data.source, {
+      limit: productGalleryDefaults.source?.limit ?? 8,
+      sortField: "updatedAt",
+      sortDir: "desc",
+    }),
     media: normalizeProductGalleryMedia(data.media ?? data.style),
     fields: normalizeProductGalleryFields(data.fields),
     emptyState: normalizeProductGalleryEmptyState(data.emptyState),
@@ -81,8 +91,11 @@ function ProductGalleryVisualEditor(props: WidgetEditorProps<ProductGalleryData>
   const value = props.value;
   return (
     <WidgetEditorSection id="product-gallery.source" title="Product source">
-      <WidgetControlRow id="product-gallery.source.mode" label="Source mode" data-widget-control="product-gallery.source.mode">
-        <Select value={value.source?.mode ?? "manual"} onChange={handleControlChange} />
+      <WidgetControlRow id="product-gallery.source.limit" label="Products" data-widget-control="product-gallery.source.limit">
+        <NumberInput value={value.source?.limit ?? 8} onChange={(limit) => props.onChange(updateProductGallerySource(value, { limit }))} />
+      </WidgetControlRow>
+      <WidgetControlRow id="product-gallery.source.sortField" label="Sort field" data-widget-control="product-gallery.source.sortField">
+        <Select value={value.source?.sortField ?? "updatedAt"} onChange={(sortField) => props.onChange(updateProductGallerySource(value, { sortField }))} />
       </WidgetControlRow>
       <WidgetControlRow id="product-gallery.media.mode" label="Media mode" data-widget-control="product-gallery.media.mode">
         <SegmentedControl value={value.media?.mode ?? "grid"} onChange={(mode) => props.onChange(updateProductGalleryMedia(value, { mode }))} />
@@ -97,6 +110,12 @@ Implementation checklist:
 - Read `_docs/_WIDGETS/tmp/product-gallery/MATRIX.md` before changing the schema or editor.
 - Extend or reorganize `core/widgets/core/productGallery.tsx` schema/defaults/normalizer/rendering
   only for fields approved by the research decisions above.
+- Keep product source controls on the shared `CommerceWidgetSource` fields:
+  `source.limit`, `source.search`, `source.collectionIds`, `source.status`,
+  `source.sortField`, and `source.sortDir`. If a later implementation needs a
+  product/catalog source mode beyond those fields, extend
+  `commerceWidgetShared.ts`, `commerceWidgetRuntime.ts`, and
+  `commerceQueryService.ts` first, then add editor controls and tests.
 - Refactor `core/admin/ui/widgets/editors/ProductGalleryEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.
@@ -134,6 +153,8 @@ Implementation checklist:
 - `bun test tests/unit/widgets/validator.test.ts` when schema validation, slot normalization, or widget validation changes.
 - `bun run test:vitest -- tests/vitest/widgets/productGallery.test.tsx`
 - `bun test tests/unit/commerce/commerceWidgetRuntime.test.ts`
+- `bun test tests/unit/commerce/commerceQueryService.test.ts` when shared
+  commerce query normalization changes.
 - `bun run test:vitest -- tests/vitest/ui/product-gallery-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,
   slot, or shared output behavior changes.

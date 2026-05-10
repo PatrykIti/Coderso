@@ -4,7 +4,7 @@
 |---|---|---|---|
 | Simple centered CTA | HyperUI, shadcn.io | Keep | Keep heading/body plus one or two CTA links and alignment. |
 | Split CTA layout | Preline | Keep | Add `layout: split` and CTA position controls. |
-| High-contrast band | Tailwind UI Plus | Keep | Add tone/contrast preset while preserving theme tokens. |
+| High-contrast band | shadcn.io | Keep | Add tone/contrast preset while preserving theme tokens. |
 | Background media/overlay | Tailwind UI Plus, Uilib | Adapt | Support constrained background media only with overlay controls. |
 | Badge/icon CTA strip | Origin UI | Keep | Add optional badge/icon for compact announcement CTA. |
 | App store buttons | Flowbite | Adapt | Model as button group/link styles, not store-specific fields. |

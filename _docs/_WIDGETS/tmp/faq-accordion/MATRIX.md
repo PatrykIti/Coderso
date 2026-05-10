@@ -5,7 +5,7 @@
 | Basic accordion rows | HyperUI, Flowbite, shadcn/ui | Keep | Keep repeated question/answer items with default-open controls. |
 | Single vs multiple open | shadcn/ui, Flowbite React | Keep | Add `allowMultiple` and `collapsible` semantics. |
 | Categories | Tailwind UI Plus, Origin UI | Adapt | Support optional category labels; avoid full tabbed search unless justified. |
-| Support/contact CTA | Tailwind UI Plus, ReUI | Keep | Add optional `supportCta` below FAQ list. |
+| Support/contact CTA | ReUI | Keep | Add optional `supportCta` below FAQ list; Tailwind UI Plus category/layout references remain Adapt. |
 | Disabled FAQ item | MUI | Reject | Not useful for published marketing FAQs. |
 | Search box | Origin UI | Adapt | Defer unless FAQ volume requires it; do not add by default. |
 | Icon position/style | Preline, Chakra | Keep | Add constrained icon placement/style enum. |

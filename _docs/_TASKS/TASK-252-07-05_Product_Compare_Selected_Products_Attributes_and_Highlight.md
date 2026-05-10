@@ -94,7 +94,11 @@ function buildCommerceWidgetQueryInput(
   source: CommerceWidgetSource,
   options: CommerceWidgetQueryOptions = {}
 ): CommerceWidgetQueryInput {
-  const normalized = normalizeCommerceWidgetSource(source);
+  const normalized = normalizeCommerceWidgetSource(source, {
+    limit: productCompareDefaults.source?.limit ?? 4,
+    sortField: "updatedAt",
+    sortDir: "desc",
+  });
   return {
     ...normalizedSourceToQueryInput(normalized),
     productIds: normalizeCommerceWidgetProductIds(normalized.productIds),
