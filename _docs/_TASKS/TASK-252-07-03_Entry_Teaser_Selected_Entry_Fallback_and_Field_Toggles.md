@@ -28,8 +28,13 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/entry-teaser/MATRIX.md`; for this leaf, start from the current owner fields `sourceMode`, `source`, `fields`, `cta`, `style`, `fallback`, `resolved` and add only the schema fields that the matrix explicitly keeps.
-- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat split/card modes and richer fallback copy as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Keep: selected entry source, fallback title/empty behavior, card/split
+  display modes, media/excerpt/meta/taxonomy/CTA field toggles, and strict
+  single-entry resolution from `_docs/_WIDGETS/tmp/entry-teaser/MATRIX.md`;
+  start from the current owner fields `sourceMode`, `source`, `fields`, `cta`,
+  `style`, `fallback`, and `resolved`.
+- Adapt: whole-card link wrapping remains conditional; implement only when
+  schema/defaults/normalizer/render/editor/tests move together.
 - Reject: arbitrary operators, client-owned provider/index config, raw scripts, and privileged settings in widget data.
 
 ## Editor Mode Ownership
@@ -66,6 +71,7 @@ function normalizeEntryTeaserData(data: EntryTeaserData): EntryTeaserData {
     source: normalizeEntryTeaserSource(data.source),
     fields: normalizeEntryTeaserFields(data.fields),
     cta: normalizeEntryTeaserCta(data.cta),
+    display: normalizeEntryTeaserDisplay(data.display ?? data.style),
     style: normalizeEntryTeaserStyle(data.style),
     fallback: normalizeEntryTeaserFallback(data.fallback),
     resolved: normalizeEntryTeaserResolved(data.resolved),
@@ -78,6 +84,9 @@ function EntryTeaserVisualEditor(props: WidgetEditorProps<EntryTeaserData>) {
     <WidgetEditorSection id="entry-teaser.source" title="Selected entry">
       <WidgetControlRow id="entry-teaser.source.entryId" label="Entry" data-widget-control="entry-teaser.source.entryId">
         <EntryPicker value={value.source?.entryId ?? ""} onChange={handleControlChange} />
+      </WidgetControlRow>
+      <WidgetControlRow id="entry-teaser.display.mode" label="Display mode" data-widget-control="entry-teaser.display.mode">
+        <SegmentedControl value={value.display?.mode ?? "card"} onChange={(mode) => props.onChange(updateEntryTeaserDisplay(value, { mode }))} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );

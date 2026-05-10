@@ -32,7 +32,9 @@ and Reject decisions.
 ## Research Decisions
 
 - Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/faq-accordion/MATRIX.md`; for this leaf, start from the current owner fields `header`, `items`, `options`, `style` and add only the schema fields that the matrix explicitly keeps.
-- Keep: question/answer rows, single/multiple/default-open behavior, support/contact CTA, and constrained icon placement/style from `_docs/_WIDGETS/tmp/faq-accordion/MATRIX.md`.
+- Keep: question/answer rows, single/multiple/default-open behavior,
+  collapsible semantics, support/contact CTA, and constrained icon
+  placement/style from `_docs/_WIDGETS/tmp/faq-accordion/MATRIX.md`.
 - Adapt: categories and search remain conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: separate one-off widgets, raw HTML/script embeds, and unbounded visual/CSS controls.
 
@@ -68,7 +70,13 @@ function normalizeFaqAccordionData(data: FaqAccordionData): FaqAccordionData {
   return {
     header: normalizeFaqAccordionHeader(data.header),
     items: normalizeFaqAccordionItems(data.items),
-    options: normalizeFaqAccordionOptions(data.options),
+    options: normalizeFaqAccordionOptions({
+      openMode: data.options?.openMode ?? (data.options?.allowMultiple ? "multiple" : "single"),
+      defaultOpenIds: data.options?.defaultOpenIds ?? normalizeLegacyFaqOpenId(data.options?.initiallyOpenId),
+      collapsible: data.options?.collapsible ?? true,
+    }),
+    supportCta: normalizeFaqSupportCta(data.supportCta),
+    icon: normalizeFaqIconOptions(data.icon),
     style: normalizeFaqAccordionStyle(data.style),
   };
 }
@@ -91,6 +99,15 @@ function FaqAccordionVisualEditor(props: WidgetEditorProps<FaqAccordionData>) {
           />
         </WidgetControlRow>
       ))}
+      <WidgetControlRow id="faq-accordion.supportCta.label" label="Support CTA" data-widget-control="faq-accordion.supportCta.label">
+        <Input value={props.value.supportCta?.label ?? ""} onChange={(label) => props.onChange(updateFaqSupportCta(props.value, { label }))} />
+      </WidgetControlRow>
+      <WidgetControlRow id="faq-accordion.icon.position" label="Icon position" data-widget-control="faq-accordion.icon.position">
+        <SegmentedControl value={props.value.icon?.position ?? "start"} onChange={(position) => props.onChange(updateFaqIconOptions(props.value, { position }))} />
+      </WidgetControlRow>
+      <WidgetControlRow id="faq-accordion.options.collapsible" label="Allow all closed" data-widget-control="faq-accordion.options.collapsible">
+        <Switch checked={props.value.options?.collapsible ?? true} onCheckedChange={(collapsible) => props.onChange(updateFaqOptions(props.value, { collapsible }))} />
+      </WidgetControlRow>
     </WidgetEditorSection>
   );
 }

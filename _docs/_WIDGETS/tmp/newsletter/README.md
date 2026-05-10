@@ -1,8 +1,10 @@
 # Newsletter Research Cards
 
-Public-write/security note: signup submissions are public writes. Provider
-secrets, CAPTCHA, nonce, HMAC/signature checks, and rate limits are backend-owned
-and must never be stored in widget data.
+Public-write/security note: the current Coderso newsletter widget renders an
+external/provider action URL and is not itself a Coderso-owned public-write
+endpoint. If a future Coderso-owned signup endpoint is added, provider secrets,
+CAPTCHA, nonce, HMAC/signature checks, and rate limits remain backend-owned and
+must never be stored in widget data.
 
 | Source | URL | Access type | License/terms summary | Observed UX pattern | Useful Coderso fields/options | Decision | Copy policy |
 |---|---|---|---|---|---|---|---|

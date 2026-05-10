@@ -30,10 +30,11 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: two named slots, media/content orientation, and mobile stack order from
-  `_docs/_WIDGETS/tmp/split-layout/MATRIX.md`; map them to `collapseMobile`,
-  `reverseOnMobile`, and any new `mobileOrder`/slot-label fields owned in
-  `core/widgets/core/splitLayout.tsx`.
+- Keep: two named slots, media/content orientation, `mediaPosition`, `reverse`,
+  `mobileStack`, and `mobileOrder` from
+  `_docs/_WIDGETS/tmp/split-layout/MATRIX.md`; map legacy `left`/`right` slots,
+  `collapseMobile`, and `reverseOnMobile` into schema-owned orientation and
+  mobile-order fields in `core/widgets/core/splitLayout.tsx`.
 - Adapt: ratio presets and marketing split polish remain conditional; implement
   only when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: runtime resize handles and arbitrary grid/CSS controls.
@@ -68,9 +69,15 @@ and Reject decisions.
 ```tsx
 function normalizeSplitLayoutData(data: SplitLayoutData): SplitLayoutData {
   return {
+    slots: normalizeSplitLayoutSlots(data.slots, {
+      primaryLabel: data.slotLabels?.primary ?? "Content",
+      secondaryLabel: data.slotLabels?.secondary ?? "Media",
+    }),
+    mediaPosition: normalizeSplitLayoutMediaPosition(data.mediaPosition ?? inferMediaPositionFromLegacySlots(data)),
+    orientation: normalizeSplitLayoutOrientation(data.orientation ?? data.mediaPosition),
     ratio: normalizeSplitLayoutRatio(data.ratio),
-    collapseMobile: normalizeSplitLayoutCollapseMobile(data.collapseMobile),
-    reverseOnMobile: normalizeSplitLayoutReverseOnMobile(data.reverseOnMobile),
+    mobileStack: normalizeSplitLayoutMobileStack(data.mobileStack ?? data.collapseMobile),
+    mobileOrder: normalizeSplitLayoutMobileOrder(data.mobileOrder ?? data.reverseOnMobile),
     gap: normalizeSplitLayoutGap(data.gap),
     verticalAlign: normalizeSplitLayoutVerticalAlign(data.verticalAlign),
   };
@@ -80,8 +87,11 @@ function SplitLayoutVisualEditor(props: WidgetEditorProps<SplitLayoutData>) {
   const value = props.value;
   return (
     <WidgetEditorSection id="split-layout.ratio" title="Ratio and order">
-      <WidgetControlRow id="split-layout.ratio.desktop" label="Desktop ratio" data-widget-control="split-layout.ratio.desktop">
-        <SegmentedControl value={value.ratio?.desktop ?? "50-50"} onChange={handleControlChange} />
+      <WidgetControlRow id="split-layout.mediaPosition" label="Media position" data-widget-control="split-layout.mediaPosition">
+        <SegmentedControl value={value.mediaPosition ?? "right"} onChange={(mediaPosition) => props.onChange(updateSplitLayoutMediaPosition(value, mediaPosition))} />
+      </WidgetControlRow>
+      <WidgetControlRow id="split-layout.mobileOrder" label="Mobile order" data-widget-control="split-layout.mobileOrder">
+        <SegmentedControl value={value.mobileOrder ?? "content-first"} onChange={(mobileOrder) => props.onChange(updateSplitLayoutMobileOrder(value, mobileOrder))} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );

@@ -29,8 +29,14 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/listing-filters/MATRIX.md`; for this leaf, start from the current owner fields `listingQueryId`, `autoApply`, `showSearch`, `facets`, `style`, `resolved` and add only the schema fields that the matrix explicitly keeps.
-- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat mobile/sidebar/chips presentation and facet presets from listing schema metadata as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Keep: facet groups with counts, allowlisted range filters, reset/apply
+  behavior, instant/apply mode, and labels from
+  `_docs/_WIDGETS/tmp/listing-filters/MATRIX.md`; start from the current owner
+  fields `listingQueryId`, `autoApply`, `showSearch`, `facets`, `style`, and
+  `resolved`.
+- Adapt: mobile/sidebar/chips presentation and facet presets from listing
+  schema metadata remain conditional; implement only when schema/defaults/
+  normalizer/render/editor/tests move together.
 - Reject: arbitrary operators, client-owned provider/index config, raw scripts, and privileged settings in widget data.
 
 ## Editor Mode Ownership
@@ -70,6 +76,11 @@ function normalizeListingFiltersData(data: ListingFiltersData): ListingFiltersDa
     autoApply: normalizeListingFiltersAutoApply(data.autoApply),
     showSearch: normalizeListingFiltersShowSearch(data.showSearch),
     facets: normalizeListingFiltersFacets(data.facets),
+    behavior: normalizeListingFiltersBehavior({
+      autoApply: data.autoApply,
+      resetLabel: data.resetLabel,
+      applyLabel: data.applyLabel,
+    }),
     style: normalizeListingFiltersStyle(data.style),
     resolved: normalizeListingFiltersResolved(data.resolved),
   };
@@ -81,6 +92,9 @@ function ListingFiltersVisualEditor(props: WidgetEditorProps<ListingFiltersData>
     <WidgetEditorSection id="listing-filters.listing-filters" title="Facet source">
       <WidgetControlRow id="listing-filters.listingQueryId" label="Listing query" data-widget-control="listing-filters.listingQueryId">
         <ListingQueryPicker value={value.listingQueryId ?? ""} onChange={handleControlChange} />
+      </WidgetControlRow>
+      <WidgetControlRow id="listing-filters.behavior.autoApply" label="Apply mode" data-widget-control="listing-filters.behavior.autoApply">
+        <SegmentedControl value={value.autoApply ? "instant" : "manual"} onChange={(mode) => props.onChange(updateListingFilterBehavior(value, { autoApply: mode === "instant" }))} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );

@@ -30,8 +30,12 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/contact/MATRIX.md`; for this leaf, start from the current owner fields `form`, `contact`, `map`, `style` and add only the schema fields that the matrix explicitly keeps.
-- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat map/social display fields and backend routing references as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Keep: form plus contact-info layout, field visibility, validation copy, and
+  success/error/loading state copy from `_docs/_WIDGETS/tmp/contact/MATRIX.md`;
+  start from the current owner fields `form`, `contact`, `map`, and `style`.
+- Adapt: map/social display fields, provider embed mode, and backend routing
+  references remain conditional; implement only when schema/defaults/
+  normalizer/render/editor/tests move together.
 - Reject: arbitrary operators, client-owned provider/index config, raw scripts, and privileged settings in widget data.
 
 ## Editor Mode Ownership
@@ -65,6 +69,7 @@ and Reject decisions.
 function normalizeContactData(data: ContactData): ContactData {
   return {
     form: normalizeContactForm(data.form),
+    stateCopy: normalizeContactStateCopy(data.stateCopy ?? data.form),
     contact: normalizeContactContact(data.contact),
     map: normalizeContactMap(data.map),
     style: normalizeContactStyle(data.style),
@@ -77,6 +82,9 @@ function ContactVisualEditor(props: WidgetEditorProps<ContactData>) {
     <WidgetEditorSection id="contact.form" title="Contact form">
       <WidgetControlRow id="contact.form.submitLabel" label="Submit label" data-widget-control="contact.form.submitLabel">
         <Input value={value.form?.submitLabel ?? ""} onChange={handleControlChange} />
+      </WidgetControlRow>
+      <WidgetControlRow id="contact.form.showPhone" label="Show phone field" data-widget-control="contact.form.showPhone">
+        <Switch checked={value.form?.showPhone ?? true} onCheckedChange={(showPhone) => props.onChange(updateContactForm(value, { showPhone }))} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );

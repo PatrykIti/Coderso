@@ -1,8 +1,9 @@
 # Contact Research Cards
 
-Public-write/security note: contact submissions are public writes. CAPTCHA,
-nonce, HMAC/signature checks, provider keys, email routing, and rate limits are
-backend-owned.
+Public-write/security note: the current Coderso contact widget rendering is
+presentational and is not itself a Coderso-owned public-write endpoint. If a
+future backend submission route is added, CAPTCHA, nonce, HMAC/signature checks,
+provider keys, email routing, and rate limits remain backend-owned.
 
 | Source | URL | Access type | License/terms summary | Observed UX pattern | Useful Coderso fields/options | Decision | Copy policy |
 |---|---|---|---|---|---|---|---|

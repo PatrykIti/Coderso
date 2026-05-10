@@ -33,8 +33,8 @@ and Reject decisions.
   status/current highlight from `_docs/_WIDGETS/tmp/compare-timeline/MATRIX.md`.
   Start from the current owner fields `axis`, `tracks`, `guides`, `layout`,
   `highlight`, and `style`, then add schema-owned segment date/body/state/side
-  fields in `core/widgets/core/compareTimeline.tsx` when the live data model
-  lacks them.
+  fields plus a `highlightCurrent` path in
+  `core/widgets/core/compareTimeline.tsx` when the live data model lacks them.
 - Adapt: scroll narrative, progress indicator, and per-item CTA remain
   conditional; implement only when schema/defaults/normalizer/render/editor/
   tests move together.
@@ -74,7 +74,8 @@ function normalizeCompareTimelineData(data: CompareTimelineData): CompareTimelin
     tracks: normalizeCompareTimelineTracks(data.tracks, data.axis?.steps?.length ?? 0),
     guides: normalizeCompareTimelineGuides(data.guides),
     layout: normalizeCompareTimelineLayout(data.layout),
-    highlight: normalizeCompareTimelineHighlight(data.highlight),
+    highlight: normalizeCompareTimelineHighlight(data.highlight, data.tracks),
+    highlightCurrent: normalizeCompareTimelineHighlightCurrent(data.highlightCurrent, data.tracks),
     style: normalizeCompareTimelineStyle(data.style),
   };
 }
@@ -96,6 +97,13 @@ type CompareTimelineSegmentExtension = {
   state?: CompareTimelineSegmentState;
 };
 
+type CompareTimelineHighlightCurrent = {
+  enabled: boolean;
+  trackId?: string;
+  segmentId?: string;
+  state: "current";
+};
+
 function normalizeCompareTrackSegment(
   segment: CompareTrackSegment & CompareTimelineSegmentExtension,
   stepCount: number
@@ -108,6 +116,18 @@ function normalizeCompareTrackSegment(
     body: normalizeOptionalPlainText(segment.body),
     side: normalizeTwoSide(segment.side),
     state: normalizeCompareSegmentState(segment.state),
+  };
+}
+
+function normalizeCompareTimelineHighlightCurrent(
+  highlightCurrent: Partial<CompareTimelineHighlightCurrent> | undefined,
+  tracks: CompareTrack[]
+): CompareTimelineHighlightCurrent {
+  return {
+    enabled: Boolean(highlightCurrent?.enabled),
+    trackId: normalizeKnownCompareTrackId(highlightCurrent?.trackId, tracks),
+    segmentId: normalizeKnownCompareSegmentId(highlightCurrent?.segmentId, tracks),
+    state: "current",
   };
 }
 

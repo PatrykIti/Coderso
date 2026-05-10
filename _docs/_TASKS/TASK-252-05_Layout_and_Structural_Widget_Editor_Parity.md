@@ -61,7 +61,8 @@ simple widgets intentionally simple through research-backed decisions.
     layout expansion stays conditional.
   - `tabs`: horizontal/vertical mode, default tab, panel styling, keyboard
     semantics.
-  - `accordion`: single/multiple open, default open item, panel style.
+  - `accordion`: `openMode`, `defaultOpenIds`, `collapsible`, and accessible
+    disclosure behavior; panel style stays conditional.
   - `toggle-block`: comparison/toggle states, labels, default state, panel
     styling.
 - Add missing `_docs/_WIDGETS` docs for:

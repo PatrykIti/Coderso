@@ -12,9 +12,10 @@
 
 ## Overview
 
-Refine navigation source/manual links and logo grouping first; dropdowns, mobile
-menu, and sticky CTA behavior stay Adapt-only through the current behavior
-contract without client-owned routing hacks.
+Refine navigation source/manual links, logo/CTA grouping, and accessible mobile
+collapse first. Dropdowns/mega groups and sticky/transparent header behavior
+stay Adapt-only through the current behavior contract without client-owned
+routing hacks.
 
 This is an execution leaf under `TASK-252-07`. It must not re-open the
 research phase; use `_docs/_WIDGETS/tmp/navigation/MATRIX.md` and the widget README under
@@ -30,8 +31,14 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/navigation/MATRIX.md`; for this leaf, start from the current owner fields `logo`, `items`, `cta`, `linksSource`, `menuKey`, `behavior`, `layout`, `style` and add only the schema fields that the matrix explicitly keeps.
-- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat dropdowns and sticky/mobile behavior through the current `behavior` contract as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Keep: source menu/manual links, logo/links/CTA grouping, and accessible
+  `mobileMode` collapse/offcanvas behavior from
+  `_docs/_WIDGETS/tmp/navigation/MATRIX.md`; start from the current owner fields
+  `logo`, `items`, `cta`, `linksSource`, `menuKey`, `behavior`, `layout`, and
+  `style`.
+- Adapt: dropdown/mega groups and sticky/transparent header behavior remain
+  conditional; implement only when schema/defaults/normalizer/render/editor/
+  tests move together.
 - Reject: arbitrary operators, client-owned provider/index config, raw scripts, and privileged settings in widget data.
 
 ## Editor Mode Ownership
@@ -70,6 +77,7 @@ function normalizeNavigationData(data: NavigationData): NavigationData {
     linksSource: normalizeNavigationLinksSource(data.linksSource),
     menuKey: normalizeNavigationMenuKey(data.menuKey),
     behavior: normalizeNavigationBehavior(data.behavior),
+    mobileMode: normalizeNavigationMobileMode(data.mobileMode ?? data.behavior?.mobileMode),
     layout: normalizeNavigationLayout(data.layout),
     style: normalizeNavigationStyle(data.style),
   };
@@ -81,6 +89,9 @@ function NavigationVisualEditor(props: WidgetEditorProps<NavigationData>) {
     <WidgetEditorSection id="navigation.navigation" title="Links source">
       <WidgetControlRow id="navigation.linksSource" label="Links source" data-widget-control="navigation.linksSource">
         <Select value={value.linksSource ?? "manual"} onChange={handleControlChange} />
+      </WidgetControlRow>
+      <WidgetControlRow id="navigation.mobileMode" label="Mobile menu" data-widget-control="navigation.mobileMode">
+        <SegmentedControl value={value.mobileMode ?? "collapse"} onChange={(mobileMode) => props.onChange(updateNavigationMobileMode(value, mobileMode))} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );

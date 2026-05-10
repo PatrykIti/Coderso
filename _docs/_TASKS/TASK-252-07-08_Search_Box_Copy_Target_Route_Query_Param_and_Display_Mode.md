@@ -67,11 +67,17 @@ and Reject decisions.
 function normalizeSearchBoxData(data: SearchBoxData): SearchBoxData {
   return {
     mode: normalizeSearchBoxMode(data.mode),
+    variant: normalizeSearchBoxVariant(data.variant ?? data.mode),
+    size: normalizeSearchBoxSize(data.size),
     listingQueryId: normalizeSearchBoxListingQueryId(data.listingQueryId),
     title: normalizeSearchBoxTitle(data.title),
     description: normalizeSearchBoxDescription(data.description),
+    label: normalizeSearchBoxLabel(data.label ?? data.title),
     placeholder: normalizeSearchBoxPlaceholder(data.placeholder),
     submitLabel: normalizeSearchBoxSubmitLabel(data.submitLabel),
+    resetLabel: normalizeSearchBoxResetLabel(data.resetLabel),
+    targetRoute: normalizeSearchBoxTargetRoute(data.targetRoute ?? data.endpoint),
+    queryParam: normalizeSearchBoxQueryParam(data.queryParam ?? "q"),
     autoApply: normalizeSearchBoxAutoApply(data.autoApply),
     endpoint: normalizeSearchBoxEndpoint(data.endpoint),
     sources: normalizeSearchBoxSources(data.sources),
@@ -87,6 +93,12 @@ function SearchBoxVisualEditor(props: WidgetEditorProps<SearchBoxData>) {
       <WidgetControlRow id="search-box.mode" label="Mode" data-widget-control="search-box.mode">
         <SegmentedControl value={value.mode ?? "listing"} onChange={handleControlChange} />
       </WidgetControlRow>
+      <WidgetControlRow id="search-box.targetRoute" label="Target route" data-widget-control="search-box.targetRoute">
+        <Input value={value.targetRoute ?? "/search"} onChange={(targetRoute) => props.onChange(updateSearchBoxRoute(value, { targetRoute }))} />
+      </WidgetControlRow>
+      <WidgetControlRow id="search-box.queryParam" label="Query parameter" data-widget-control="search-box.queryParam">
+        <Input value={value.queryParam ?? "q"} onChange={(queryParam) => props.onChange(updateSearchBoxRoute(value, { queryParam }))} />
+      </WidgetControlRow>
     </WidgetEditorSection>
   );
 }
@@ -97,6 +109,8 @@ Implementation checklist:
 - Read `_docs/_WIDGETS/tmp/search-box/MATRIX.md` before changing the schema or editor.
 - Extend or reorganize `core/widgets/core/searchBox.tsx` schema/defaults/normalizer/rendering
   only for fields approved by the research decisions above.
+- Update `core/widgets/core/listingRuntimeScript.ts` so runtime query reads and
+  writes use the normalized `queryParam` instead of hard-coding `q`.
 - Refactor `core/admin/ui/widgets/editors/SearchBoxEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.

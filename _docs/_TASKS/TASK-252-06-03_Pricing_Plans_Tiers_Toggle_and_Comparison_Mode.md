@@ -30,7 +30,12 @@ and Reject decisions.
 
 - Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/pricing-plans/MATRIX.md`; for this leaf, start from the current owner fields `header`, `plans`, `style` and add only the schema fields that the matrix explicitly keeps.
 - Keep: tier cards, highlighted plan, monthly/annual billing toggle, enterprise/custom price, and feature icon/checkmark style from `_docs/_WIDGETS/tmp/pricing-plans/MATRIX.md`; add schema-owned billing labels/price fields in `core/widgets/core/pricingPlans.tsx`.
-- Adapt: discount badges, comparison rows, and feature groups remain conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Adapt: discount badges, explicit comparison-row schema, feature groups, and
+  mobile comparison fallback remain conditional. Preserve the current
+  `comparison-rows` style variant that derives comparison output from plan
+  feature strings; either document it as current-state debt or, if upgrading it,
+  move explicit comparison rows, mobile fallback, renderer, editor, and tests
+  together.
 - Reject: separate one-off widgets, raw HTML/script embeds, and unbounded visual/CSS controls.
 
 ## Editor Mode Ownership
@@ -65,7 +70,10 @@ function normalizePricingPlansData(data: PricingPlansData): PricingPlansData {
   return {
     header: normalizePricingPlansHeader(data.header),
     plans: normalizePricingPlansPlans(data.plans),
-    style: normalizePricingPlansStyle(data.style),
+    style: normalizePricingPlansStyle(data.style, {
+      preserveLegacyComparisonRows: true,
+      explicitComparisonRowsEnabled: isPricingComparisonRowsAdaptEnabled(data),
+    }),
   };
 }
 
@@ -84,6 +92,9 @@ function PricingPlansVisualEditor(props: WidgetEditorProps<PricingPlansData>) {
           <Input value={item.name ?? ""} onChange={handleControlChange} />
         </WidgetControlRow>
       ))}
+      <WidgetControlRow id="pricing-plans.billing.enabled" label="Billing toggle" data-widget-control="pricing-plans.billing.enabled">
+        <Switch checked={props.value.billing?.enabled ?? false} onCheckedChange={(enabled) => props.onChange(updatePricingBilling(props.value, { enabled }))} />
+      </WidgetControlRow>
     </WidgetEditorSection>
   );
 }

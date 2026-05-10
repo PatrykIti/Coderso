@@ -72,12 +72,14 @@ type TimelineMode = "process" | "axis" | "chronology" | "alternating";
 // reduced-motion tests are implemented together.
 type TimelineReveal = "none" | "scroll-sequence" | "connector-progress";
 
-type TimelineItem = {
+type TimelineStep = {
   id: string;
   title: string;
   description?: string;
   date?: string;
   dateLabel?: string;
+  icon?: string;
+  accent?: string;
   href?: string;
   status?: "upcoming" | "current" | "complete";
 };
@@ -88,7 +90,7 @@ function normalizeTimelineData(raw: unknown): TimelineData {
   return {
     ...legacy,
     mode: normalizeTimelineMode(input.mode, legacy.variant),
-    items: normalizeTimelineItems(input.items ?? legacy.items),
+    steps: normalizeTimelineSteps(input.steps ?? legacy.steps),
     ...(isTimelineMotionAdaptEnabled(input) ? { motion: normalizeTimelineMotion(input.motion) } : {}),
   };
 }
@@ -96,7 +98,7 @@ function normalizeTimelineData(raw: unknown): TimelineData {
 function renderTimeline(data: TimelineData) {
   return (
     <ol data-timeline-mode={data.mode} {...resolveTimelineMotionDataAttributes(data.motion)}>
-      {data.items.map((item) => <TimelineItemView key={item.id} item={item} />)}
+      {data.steps.map((step) => <TimelineStepView key={step.id} step={step} />)}
     </ol>
   );
 }

@@ -29,7 +29,11 @@ and Reject decisions.
 ## Research Decisions
 
 - Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/rich-text-section/MATRIX.md`; for this leaf, start from the current owner fields `titleBlock`, `body`, `options`, `style` and add only the schema fields that the matrix explicitly keeps.
-- Keep: safe prose presets, heading/body/CTA section, constrained article width, and badge/eyebrow from `_docs/_WIDGETS/tmp/rich-text-section/MATRIX.md`; add schema-owned CTA and badge/eyebrow fields in `core/widgets/core/richTextSection.tsx`.
+- Keep: safe prose presets, heading/body/CTA section, constrained article
+  width, and badge/eyebrow from `_docs/_WIDGETS/tmp/rich-text-section/MATRIX.md`;
+  reuse the existing `titleBlock.eyebrow` field for badge/eyebrow instead of
+  adding a duplicate field, and add schema-owned safe CTA fields in
+  `core/widgets/core/richTextSection.tsx`.
 - Adapt: media-adjacent content, multi-column prose, and pull quote remain conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: separate one-off widgets, raw HTML/script embeds, and unbounded visual/CSS controls.
 
@@ -65,6 +69,7 @@ function normalizeRichTextSectionData(data: RichTextSectionData): RichTextSectio
   return {
     titleBlock: normalizeRichTextSectionTitleBlock(data.titleBlock),
     body: normalizeRichTextSectionBody(data.body),
+    cta: normalizeRichTextSectionCta(data.cta),
     options: normalizeRichTextSectionOptions(data.options),
     style: normalizeRichTextSectionStyle(data.style),
   };
@@ -76,6 +81,12 @@ function RichTextSectionVisualEditor(props: WidgetEditorProps<RichTextSectionDat
     <WidgetEditorSection id="rich-text-section.options" title="Prose and width">
       <WidgetControlRow id="rich-text-section.options.maxWidth" label="Max width" data-widget-control="rich-text-section.options.maxWidth">
         <Select value={value.options?.maxWidth ?? "lg"} onChange={handleControlChange} />
+      </WidgetControlRow>
+      <WidgetControlRow id="rich-text-section.titleBlock.eyebrow" label="Badge" data-widget-control="rich-text-section.titleBlock.eyebrow">
+        <Input value={value.titleBlock?.eyebrow ?? ""} onChange={(eyebrow) => props.onChange(updateRichTextTitleBlock(value, { eyebrow }))} />
+      </WidgetControlRow>
+      <WidgetControlRow id="rich-text-section.cta.label" label="CTA label" data-widget-control="rich-text-section.cta.label">
+        <Input value={value.cta?.label ?? ""} onChange={(label) => props.onChange(updateRichTextCta(value, { label }))} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );

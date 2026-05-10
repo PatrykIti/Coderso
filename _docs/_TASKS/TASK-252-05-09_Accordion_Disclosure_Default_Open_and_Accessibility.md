@@ -30,9 +30,10 @@ and Reject decisions.
 
 - Keep: repeatable items, single/multiple open behavior, default open item(s),
   collapsible semantics, and accessibility behavior from
-  `_docs/_WIDGETS/tmp/accordion/MATRIX.md`; map them to `items`,
-  `options.initiallyOpenId`, `options.allowMultiple`, any new
-  `options.collapsible`, and the existing `accordionItemSlot`.
+  `_docs/_WIDGETS/tmp/accordion/MATRIX.md`; map them to schema-owned
+  `options.openMode`, `options.defaultOpenIds`, `options.collapsible`, and the
+  existing `accordionItemSlot`, with a legacy adapter for
+  `options.initiallyOpenId` and `options.allowMultiple`.
 - Adapt: panel style changes and visual variants remain conditional; implement
   only when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: nested accordions by default and arbitrary disclosure scripting.
@@ -68,7 +69,11 @@ and Reject decisions.
 function normalizeAccordionData(data: AccordionData): AccordionData {
   return {
     items: normalizeAccordionItems(data.items),
-    options: normalizeAccordionOptions(data.options),
+    options: normalizeAccordionOptions({
+      openMode: data.options?.openMode ?? (data.options?.allowMultiple ? "multiple" : "single"),
+      defaultOpenIds: data.options?.defaultOpenIds ?? normalizeLegacyInitiallyOpenId(data.options?.initiallyOpenId),
+      collapsible: data.options?.collapsible ?? true,
+    }),
     style: normalizeAccordionStyle(data.style),
   };
 }
@@ -77,8 +82,14 @@ function AccordionVisualEditor(props: WidgetEditorProps<AccordionData>) {
   const value = props.value;
   return (
     <WidgetEditorSection id="accordion.options" title="Disclosure behavior">
-      <WidgetControlRow id="accordion.options.initiallyOpenId" label="Default open item" data-widget-control="accordion.options.initiallyOpenId">
-        <Select value={value.options?.initiallyOpenId ?? ""} onChange={handleControlChange} />
+      <WidgetControlRow id="accordion.options.openMode" label="Open mode" data-widget-control="accordion.options.openMode">
+        <SegmentedControl value={value.options?.openMode ?? "single"} onChange={(openMode) => props.onChange(updateAccordionOptions(value, { openMode }))} />
+      </WidgetControlRow>
+      <WidgetControlRow id="accordion.options.defaultOpenIds" label="Default open items" data-widget-control="accordion.options.defaultOpenIds">
+        <DefaultOpenItemsPicker value={value.options?.defaultOpenIds ?? []} mode={value.options?.openMode ?? "single"} onChange={(defaultOpenIds) => props.onChange(updateAccordionOptions(value, { defaultOpenIds }))} />
+      </WidgetControlRow>
+      <WidgetControlRow id="accordion.options.collapsible" label="Allow all closed" data-widget-control="accordion.options.collapsible">
+        <Switch checked={value.options?.collapsible ?? true} onCheckedChange={(collapsible) => props.onChange(updateAccordionOptions(value, { collapsible }))} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );

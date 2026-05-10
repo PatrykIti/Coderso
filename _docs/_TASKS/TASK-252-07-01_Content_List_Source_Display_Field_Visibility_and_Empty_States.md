@@ -28,8 +28,14 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/content-list/MATRIX.md`; for this leaf, start from the current owner fields `source`, `filters`, `fields`, `emptyState`, `style`, `resolved` and add only the schema fields that the matrix explicitly keeps.
-- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat featured-first behavior and field visibility beyond current defaults as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Keep: source/type selection, status scope, sort, limit, card/list/compact
+  display modes, density/columns, image/excerpt/meta/CTA/taxonomy field
+  visibility, and empty/error states from
+  `_docs/_WIDGETS/tmp/content-list/MATRIX.md`; start from the current owner
+  fields `source`, `filters`, `fields`, `emptyState`, `style`, and `resolved`.
+- Adapt: featured-first editorial ordering and pagination/infinite load remain
+  conditional; implement only when schema/defaults/normalizer/render/editor/
+  tests move together.
 - Reject: arbitrary operators, client-owned provider/index config, raw scripts, and privileged settings in widget data.
 
 ## Editor Mode Ownership
@@ -65,6 +71,7 @@ function normalizeContentListData(data: ContentListData): ContentListData {
     source: normalizeContentListSource(data.source),
     filters: normalizeContentListFilters(data.filters),
     fields: normalizeContentListFields(data.fields),
+    display: normalizeContentListDisplay(data.display ?? data.style),
     emptyState: normalizeContentListEmptyState(data.emptyState),
     style: normalizeContentListStyle(data.style),
     resolved: normalizeContentListResolved(data.resolved),
@@ -77,6 +84,9 @@ function ContentListVisualEditor(props: WidgetEditorProps<ContentListData>) {
     <WidgetEditorSection id="content-list.source" title="Source">
       <WidgetControlRow id="content-list.source.type" label="Source type" data-widget-control="content-list.source.type">
         <Select value={value.source?.type ?? "manual"} onChange={handleControlChange} />
+      </WidgetControlRow>
+      <WidgetControlRow id="content-list.fields.meta" label="Show meta" data-widget-control="content-list.fields.meta">
+        <Switch checked={value.fields?.meta ?? true} onCheckedChange={(meta) => props.onChange(updateContentListFields(value, { meta }))} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );

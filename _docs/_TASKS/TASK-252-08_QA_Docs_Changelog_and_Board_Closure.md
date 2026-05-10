@@ -67,7 +67,9 @@ the implementation subtasks.
 - `_docs/_TASKS/TASK-252*.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
-- new `_docs/_CHANGELOG/CHANGELOG-XXX_*.md` entry on completion.
+- new `_docs/_CHANGELOG/{next-number}-{YYYY-MM-DD}-task-252-widget-editor-implementation.md`
+  entry on completion, where `{next-number}` is one greater than the current
+  highest changelog index number.
 - `_docs/WIDGETS.md`
 - `_docs/_WIDGETS/README.md`
 - all touched `_docs/_WIDGETS/*.md`
@@ -84,17 +86,36 @@ Build a final widget proof matrix.
 | timeline | tmp/timeline matrix | timeline-editor-wave | timeline.test | TIMELINE.md | chronology modes |
 ```
 
-Then close statuses only after validation:
+Then close statuses only after validation. Use the actual completion date from
+the final validation run, compute the changelog number from
+`_docs/_CHANGELOG/README.md`, and keep the validation summary explicit rather
+than referencing an undefined variable.
 
 ```ts
-const taskIds = collectTaskBoardRows((id) => id === "TASK-252" || id.startsWith("TASK-252-"));
-const completedOn = readTaskStatusDate("TASK-252-08");
+const taskIds = parseTaskReadmeRows("_docs/_TASKS/README.md")
+  .filter((row) => row.id === "TASK-252" || row.id.startsWith("TASK-252-"))
+  .map((row) => row.id);
+const completedOn = getActualCompletionDateFromFinalGateRun();
+const changelogNumber = getHighestChangelogIndexNumber("_docs/_CHANGELOG/README.md") + 1;
+const changelogPath = `_docs/_CHANGELOG/${changelogNumber}-${completedOn}-task-252-widget-editor-implementation.md`;
+const validationSummary = summarizeExecutedCommandsAndKnownBlockers({
+  requiredGates: ["bun --cwd core lint", "bun --cwd core lint:types", "bun run test:vitest", "bun run gates:coderso"],
+  focusedSuites: collectFocusedSuitesFromCompletedLeaves(taskIds),
+});
+
 for (const id of taskIds) {
   markTaskDone(id, completedOn);
   moveReadmeRow(id, "To Do", "Done");
 }
-updateStats({ todo: -taskIds.length, done: +taskIds.length });
-addChangelogEntry({ taskId: "TASK-252", validation });
+recomputeTaskReadmeStatisticsFromRows();
+writeChangelogEntry(changelogPath, {
+  number: changelogNumber,
+  date: completedOn,
+  title: "TASK-252 widget editor implementation",
+  tasks: taskIds,
+  validation: validationSummary,
+});
+addChangelogIndexRow({ number: changelogNumber, date: completedOn, title: "TASK-252 widget editor implementation", type: "CMS Widgets/Admin UI" });
 ```
 
 ## Security Contract

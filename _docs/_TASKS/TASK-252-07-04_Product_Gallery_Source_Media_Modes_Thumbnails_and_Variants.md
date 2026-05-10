@@ -30,7 +30,10 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/product-gallery/MATRIX.md`; for this leaf, start from the current owner fields `source`, `fields`, `emptyState`, `style`, `resolved` and add only the schema fields that the matrix explicitly keeps.
+- Keep: product/catalog source picker, grid/carousel media modes, thumbnails,
+  arrows/dots, and aspect-ratio controls from
+  `_docs/_WIDGETS/tmp/product-gallery/MATRIX.md`; start from the current owner
+  fields `source`, `fields`, `emptyState`, `style`, and `resolved`.
 - Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat variant media, lightbox, and quick-view/action behavior as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: arbitrary operators, client-owned provider/index config, raw scripts, and privileged settings in widget data.
 
@@ -66,6 +69,7 @@ and Reject decisions.
 function normalizeProductGalleryData(data: ProductGalleryData): ProductGalleryData {
   return {
     source: normalizeProductGallerySource(data.source),
+    media: normalizeProductGalleryMedia(data.media ?? data.style),
     fields: normalizeProductGalleryFields(data.fields),
     emptyState: normalizeProductGalleryEmptyState(data.emptyState),
     style: normalizeProductGalleryStyle(data.style),
@@ -79,6 +83,9 @@ function ProductGalleryVisualEditor(props: WidgetEditorProps<ProductGalleryData>
     <WidgetEditorSection id="product-gallery.source" title="Product source">
       <WidgetControlRow id="product-gallery.source.mode" label="Source mode" data-widget-control="product-gallery.source.mode">
         <Select value={value.source?.mode ?? "manual"} onChange={handleControlChange} />
+      </WidgetControlRow>
+      <WidgetControlRow id="product-gallery.media.mode" label="Media mode" data-widget-control="product-gallery.media.mode">
+        <SegmentedControl value={value.media?.mode ?? "grid"} onChange={(mode) => props.onChange(updateProductGalleryMedia(value, { mode }))} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );

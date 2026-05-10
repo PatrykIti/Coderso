@@ -29,8 +29,15 @@ and Reject decisions.
 ## Research Decisions
 
 - Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/team/MATRIX.md`; for this leaf, start from the current owner fields `header`, `members`, `style` and add only the schema fields that the matrix explicitly keeps.
-- Keep: team member grid, social links, photo shape, and image alt/fallback behavior from `_docs/_WIDGETS/tmp/team/MATRIX.md`; add schema-owned `photoShape` and fallback initials behavior in `core/widgets/core/team.tsx`.
-- Adapt: profile links, featured/leadership mode, department labels, and hover overlays remain conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Keep: team member grid, social links, photo shape, image alt/fallback
+  behavior, and the current `spotlight` variant behavior from
+  `_docs/_WIDGETS/tmp/team/MATRIX.md`; add schema-owned `photoShape` and
+  fallback initials behavior in `core/widgets/core/team.tsx` while preserving
+  the existing first-member spotlight rendering.
+- Adapt: profile links, explicit selected-featured-member controls beyond the
+  current `spotlight` variant, department labels, and hover overlays remain
+  conditional; implement only when schema/defaults/normalizer/render/editor/
+  tests move together.
 - Reject: separate one-off widgets, raw HTML/script embeds, and unbounded visual/CSS controls.
 
 ## Editor Mode Ownership
@@ -66,6 +73,7 @@ function normalizeTeamData(data: TeamData): TeamData {
     header: normalizeTeamHeader(data.header),
     members: normalizeTeamMembers(data.members),
     style: normalizeTeamStyle(data.style),
+    variant: normalizeTeamVariant(data.variant, { preserveSpotlight: true }),
   };
 }
 

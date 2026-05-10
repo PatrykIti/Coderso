@@ -28,7 +28,10 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/product-table/MATRIX.md`; for this leaf, start from the current owner fields `source`, `fields`, `labels`, `emptyState`, `style`, `resolved` and add only the schema fields that the matrix explicitly keeps.
+- Keep: stable column visibility/labels, allowlisted sort/filter controls, and
+  pagination mode/limit from `_docs/_WIDGETS/tmp/product-table/MATRIX.md`;
+  start from the current owner fields `source`, `fields`, `labels`,
+  `emptyState`, `style`, and `resolved`.
 - Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat image/action columns and richer client-side affordances as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: arbitrary operators, client-owned provider/index config, raw scripts, and privileged settings in widget data.
 
@@ -64,6 +67,10 @@ and Reject decisions.
 function normalizeProductTableData(data: ProductTableData): ProductTableData {
   return {
     source: normalizeProductTableSource(data.source),
+    columns: normalizeProductTableColumns(data.columns ?? data.fields),
+    sorting: normalizeProductTableSorting(data.sorting),
+    filters: normalizeProductTableFilters(data.filters),
+    pagination: normalizeProductTablePagination(data.pagination),
     fields: normalizeProductTableFields(data.fields),
     labels: normalizeProductTableLabels(data.labels),
     emptyState: normalizeProductTableEmptyState(data.emptyState),
@@ -78,6 +85,9 @@ function ProductTableVisualEditor(props: WidgetEditorProps<ProductTableData>) {
     <WidgetEditorSection id="product-table.source" title="Table source">
       <WidgetControlRow id="product-table.source.mode" label="Source mode" data-widget-control="product-table.source.mode">
         <Select value={value.source?.mode ?? "catalog"} onChange={handleControlChange} />
+      </WidgetControlRow>
+      <WidgetControlRow id="product-table.pagination.limit" label="Rows per page" data-widget-control="product-table.pagination.limit">
+        <NumberInput value={value.pagination?.limit ?? 12} onChange={(limit) => props.onChange(updateProductTablePagination(value, { limit }))} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );

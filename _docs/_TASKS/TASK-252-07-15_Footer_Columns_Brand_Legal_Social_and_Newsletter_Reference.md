@@ -28,8 +28,13 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/footer/MATRIX.md`; for this leaf, start from the current owner fields `columns`, `legal`, `social`, `layout`, `style` and add only the schema fields that the matrix explicitly keeps.
-- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat newsletter references and richer brand/social grouping as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Keep: multi-column link groups, menu/policy sources, safe manual links,
+  logo/brand/copyright, and social links from
+  `_docs/_WIDGETS/tmp/footer/MATRIX.md`; start from the current owner fields
+  `columns`, `legal`, `social`, `layout`, and `style`.
+- Adapt: newsletter references and dense commerce locale/currency controls
+  remain conditional; implement only when schema/defaults/normalizer/render/
+  editor/tests move together.
 - Reject: arbitrary operators, client-owned provider/index config, raw scripts, and privileged settings in widget data.
 
 ## Editor Mode Ownership
@@ -63,6 +68,7 @@ and Reject decisions.
 function normalizeFooterData(data: FooterData): FooterData {
   return {
     columns: normalizeFooterColumns(data.columns),
+    brand: normalizeFooterBrand(data.brand),
     legal: normalizeFooterLegal(data.legal),
     social: normalizeFooterSocial(data.social),
     layout: normalizeFooterLayout(data.layout),
@@ -76,6 +82,9 @@ function FooterVisualEditor(props: WidgetEditorProps<FooterData>) {
     <WidgetEditorSection id="footer.0" title="Footer columns">
       <WidgetControlRow id="footer.columns.0.title" label="Column title" data-widget-control="footer.columns.0.title">
         <Input value={value.columns?.[0]?.title ?? ""} onChange={handleControlChange} />
+      </WidgetControlRow>
+      <WidgetControlRow id="footer.brand.logoAlt" label="Logo alt text" data-widget-control="footer.brand.logoAlt">
+        <Input value={value.brand?.logoAlt ?? ""} onChange={(logoAlt) => props.onChange(updateFooterBrand(value, { logoAlt }))} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
