@@ -39,6 +39,7 @@ Defined in `core/admin/services/cachePolicy.ts`:
 - `customScreens:detail:<id>`
 - `contentTypes:list`
 - `contentTypes:detail:<id>`
+- `contentTypes:collectionWorkspace:<contentTypeId>`
 - `detailPages:list`
 - `detailPages:list:contentType:<contentTypeId>`
 - `detailPages:detail:<id>`
@@ -96,6 +97,11 @@ Defined in `core/admin/services/cachePolicy.ts`:
   hydrates both caches immediately, refreshes product/collection cache-bus
   events in the background, and uses foreground loading only when a required
   cache is missing.
+- `/advanced/engine/:contentTypeId/collection` prefetch uses a predicate
+  matcher ahead of the generic `/advanced/engine` prefix entry. It warms
+  `contentTypes:list` and `contentTypes:collectionWorkspace:<contentTypeId>`
+  with `{ force: false }`, so the workspace shell hydrates from the current
+  Engine cache family without a parallel `collections:*` namespace.
 
 ### Prefetch budgets
 - Per-hover burst request budget is gated by:
@@ -201,6 +207,11 @@ Clients update caches and broadcast events on:
 - Content type create, duplicate, save draft, publish, and delete mutate
   `contentTypes:list` and the touched `contentTypes:detail:<id>` key. Delete
   invalidates list/detail; duplicate inserts the new draft into the cached list.
+- Content type update/delete invalidates
+  `contentTypes:collectionWorkspace:<contentTypeId>` because the workspace
+  summary projects content-type metadata and canonical links from existing owner
+  seams. The workspace page owns route-local pending/refresh UX for those cache
+  events.
 - Server responses are treated as source of truth for cache updates.
 - Assistant action execution invalidates known resource-family caches from
   validated execution results. Failed and `noop` results do not broadcast cache

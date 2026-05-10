@@ -96,6 +96,16 @@ This file maps admin UI surfaces to their implementation files and the cached AP
 - Schema builder
   - UI: `core/admin/ui/content-types/SchemaBuilderPage.tsx`
   - Cached APIs: `listContentTypesCached`, `getContentTypeCached`
+- Collection workspace
+  - UI: `core/admin/ui/content-types/CollectionWorkspacePage.tsx`,
+    `CollectionOverview.tsx`, `CollectionReadinessChecklist.tsx`
+  - Cached APIs: `getContentTypeCollectionWorkspaceCached`,
+    `getCachedContentTypeCollectionWorkspace`, `listContentTypesCached`
+  - Cache bus: `contentTypes:collectionWorkspace:<contentTypeId>`,
+    `contentTypes:detail:<contentTypeId>`, `contentTypes:list`
+  - Prefetch: `/advanced/engine/:contentTypeId/collection` uses a predicate
+    prefetch matcher before the generic `/advanced/engine` prefix and warms the
+    workspace summary with `{ force: false }`
 
 ## Detail Pages
 - Detail-page admin client

@@ -1,4 +1,7 @@
-import { listContentTypesCached } from "@/services/contentTypesClient";
+import {
+  getContentTypeCollectionWorkspaceCached,
+  listContentTypesCached,
+} from "@/services/contentTypesClient";
 import { getEntryCached, listAllEntriesCached, listEntriesCached } from "@/services/entriesClient";
 import { getCustomScreenCached, listCustomScreensCached } from "@/services/customScreensClient";
 import { listMenusCached } from "@/services/menusClient";
@@ -66,6 +69,10 @@ type QueuedPrefetch = {
 };
 
 export const prefetchWarmupOptions = { force: false } as const;
+
+type CollectionWorkspacePrefetchTarget = {
+  contentTypeId: string;
+};
 
 const defaultSchedule = (callback: () => void) => {
   if (typeof window !== "undefined" && "requestIdleCallback" in window) {
@@ -194,6 +201,36 @@ export async function prefetchCustomScreenWorkspace(path: string) {
   return true;
 }
 
+export const resolveCollectionWorkspacePrefetchTarget = (
+  path: string
+): CollectionWorkspacePrefetchTarget | null => {
+  const resolvedPath = resolveAdminRoutePath(path);
+  const parts = resolvedPath.split("/").filter(Boolean);
+  if (parts.length !== 4) return null;
+  if (parts[0] !== "advanced" || parts[1] !== "engine") return null;
+  if (parts[3] !== "collection") return null;
+  const rawContentTypeId = parts[2];
+  if (!rawContentTypeId) return null;
+  try {
+    return { contentTypeId: decodeURIComponent(rawContentTypeId) };
+  } catch {
+    return { contentTypeId: rawContentTypeId };
+  }
+};
+
+export async function prefetchCollectionWorkspace(path: string) {
+  const target = resolveCollectionWorkspacePrefetchTarget(path);
+  if (!target) return false;
+
+  await Promise.all([
+    listContentTypesCached(prefetchWarmupOptions),
+    getContentTypeCollectionWorkspaceCached(target.contentTypeId, prefetchWarmupOptions).catch(
+      () => null
+    ),
+  ]);
+  return true;
+}
+
 const defaultEntries: AdminPrefetchEntry[] = [
   {
     match: "/pages",
@@ -207,6 +244,16 @@ const defaultEntries: AdminPrefetchEntry[] = [
         listWidgetTemplateCategoriesCached(prefetchWarmupOptions),
         listWidgetTemplatesCached(prefetchWarmupOptions),
       ]),
+  },
+  {
+    match: (path) => resolveCollectionWorkspacePrefetchTarget(path) !== null,
+    resolveKey: ({ path }) => {
+      const target = resolveCollectionWorkspacePrefetchTarget(path);
+      return target
+        ? `/advanced/engine/${encodeURIComponent(target.contentTypeId)}/collection`
+        : "/advanced/engine";
+    },
+    run: ({ path }) => prefetchCollectionWorkspace(path),
   },
   {
     match: "/advanced/engine",

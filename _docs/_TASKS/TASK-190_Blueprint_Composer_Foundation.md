@@ -68,16 +68,15 @@ instead of leaving canonical collection linkage implicit. The first
 detail-page storage/schema slice is also landed through
 `detail_page_documents` / `detail_page_revisions` plus the
 `content_type_has_detail_pages` delete guard. The later open detail-page scope
-is now narrower: generic assistant resource packaging, collection
-workspace/editor surfaces, and no-duplicate DB reuse remain deferred, while the
-published runtime, shared preview path, typed `detail-page.upsert` execution,
-internal admin route family, admin client/cache parity, fixture/runtime
-acceptance, first admin-screen layout composer, and custom-screen
-binding/collection-link metadata safety are already landed. Collection
-workspace/editor work has started with the internal Engine route and bounded
-server read model plus deterministic canonical resource resolution/read
-redaction; cache/prefetch/UI shell and detail-template editor seams remain
-deferred.
+is now narrower: generic assistant resource packaging, detail-template editor
+surfaces, and no-duplicate DB reuse remain deferred, while the published
+runtime, shared preview path, typed `detail-page.upsert` execution, internal
+admin route family, admin client/cache parity, fixture/runtime acceptance,
+first admin-screen layout composer, and custom-screen binding/collection-link
+metadata safety are already landed. Collection workspace work has now landed
+the internal Engine route, bounded server read model, deterministic canonical
+resource resolution/read redaction, cached client helpers, specific Engine
+prefetch, and first route shell; detail-template editor seams remain deferred.
 
 This task is not limited to theme templates or a narrow detail-template editor.
 The business target remains full assistant-composed setup of a site/service

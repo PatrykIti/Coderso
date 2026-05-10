@@ -27,8 +27,9 @@ into one oversized slice.
 ## Sub-Tasks
 
 - `TASK-190-06-03-01_Collection_Workspace_Route_Read_Model_and_Canonical_Resource_Linking.md` -
-  in progress: the server route/read-model plus deterministic canonical
-  resolution/read permissions are landed; client cache/UI shell remains.
+  done: the server route/read-model, deterministic canonical resolution/read
+  permissions, cached client helpers, Engine prefetch, and first workspace UI
+  shell are landed.
 - `TASK-190-06-03-02_Detail_Template_Editor_Surface_and_Shared_Builder_Seams.md`
 - `TASK-190-06-03-03_Collection_Workspace_Assistant_Context_and_Follow_Up_Integration.md`
 

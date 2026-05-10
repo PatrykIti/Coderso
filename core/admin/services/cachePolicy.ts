@@ -18,6 +18,7 @@ export const cacheKeys = {
   postRevisions: (id: string) => `posts:revisions:${id}`,
   contentTypesList: "contentTypes:list",
   contentTypeDetail: (id: string) => `contentTypes:detail:${id}`,
+  contentTypeCollectionWorkspace: (id: string) => `contentTypes:collectionWorkspace:${id}`,
   detailPagesList: "detailPages:list",
   detailPagesListByContentType: (contentTypeId: string) =>
     `detailPages:list:contentType:${contentTypeId}`,

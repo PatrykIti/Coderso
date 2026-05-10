@@ -38,11 +38,11 @@ Business value:
   binding composition plus canonical custom-screen metadata now round-trip
   through schema, service, client, assistant actions, and storage.
 - `TASK-190-06-03_Collection_Workspace_and_Template_Editor.md` - in progress:
-  the collection workspace route/read-model and canonical resolution leaves are
-  landed.
+  the collection workspace route/read/cache/UI family is landed, while the
+  detail-template editor and assistant workspace context leaves remain.
   - `TASK-190-06-03-01_Collection_Workspace_Route_Read_Model_and_Canonical_Resource_Linking.md` -
-    in progress: server route/read model and canonical resolution are landed;
-    cache/UI shell remains.
+    done: server route/read model, canonical resolution, cached client helpers,
+    Engine prefetch, and first workspace shell are landed.
   - `TASK-190-06-03-02_Detail_Template_Editor_Surface_and_Shared_Builder_Seams.md`
   - `TASK-190-06-03-03_Collection_Workspace_Assistant_Context_and_Follow_Up_Integration.md`
 

@@ -56,6 +56,10 @@ vi.mock("@/ui/menus/MenuEditorPage", () => ({
   MenuEditorPage: () => <div>Menu Editor Route</div>,
 }));
 
+vi.mock("@/ui/content-types/CollectionWorkspacePage", () => ({
+  CollectionWorkspacePage: () => <div>Collection workspace ct-1</div>,
+}));
+
 import {
   AdminApp,
   resolveThemeUpdatedRefreshScope,

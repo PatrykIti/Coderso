@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Collections + Read Model
 **Estimated Effort:** Medium
 **Dependencies:** TASK-190-05-02, TASK-190-05-03-07, TASK-190-06-02
-**Status:** In Progress (2026-05-10)
+**Status:** Done (2026-05-10)
 
 ---
 
@@ -37,7 +37,9 @@ into one oversized slice.
 - `TASK-190-06-03-01-02_Collection_Workspace_Canonical_Resolution_and_Read_Permissions.md` -
   done: canonical route/detail/list/listing/admin-screen links now resolve from
   owner seams with unresolved candidates and owner-read redaction.
-- `TASK-190-06-03-01-03_Collection_Workspace_Client_Cache_Prefetch_and_UI_Shell.md`
+- `TASK-190-06-03-01-03_Collection_Workspace_Client_Cache_Prefetch_and_UI_Shell.md` -
+  done: cached content-types client helpers, specific Engine prefetch warmup,
+  and first workspace route shell now hydrate the server-owned summary.
 
 ## Files to Change
 

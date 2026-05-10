@@ -393,7 +393,7 @@ Zamiast tego:
 - `core/services/assistant/blueprints/bookingServiceBlueprint.ts` registers a gated booking pack (`requires-prerequisite`) that returns typed questions instead of creating booking resources until booking action adapters exist.
 - `core/services/assistant/blueprints/productInquiryBlueprint.ts` provides an executable product inquiry catalog pack and a gated checkout/payment needs-input path.
 - `core/services/assistant/blueprints/editorialContentHubBlueprint.ts` provides an editorial hub page with a posts-feed widget and does not create or mutate post records.
-- The current composition cutover is intentionally bounded to existing packs/modules. Capability manifests may already describe latent `detail-page` intent, and the landed `TASK-190` slices already cover persisted detail-page storage, published runtime rendering, shared preview handling, typed `detail-page.upsert`, the internal detail-page admin route family, admin client/cache parity, detail-page fixture/runtime acceptance, admin-screen layout composition, and custom-screen binding/metadata safety. The remaining follow-up work is narrower: generic assistant detail-page resource packaging, collection-workspace/editor surfaces, review metadata, and no-duplicate DB reuse stay under the later `TASK-190` leaves.
+- The current composition cutover is intentionally bounded to existing packs/modules. Capability manifests may already describe latent `detail-page` intent, and the landed `TASK-190` slices already cover persisted detail-page storage, published runtime rendering, shared preview handling, typed `detail-page.upsert`, the internal detail-page admin route family, admin client/cache parity, detail-page fixture/runtime acceptance, admin-screen layout composition, custom-screen binding/metadata safety, and the collection-workspace route/read/cache/UI shell. The remaining follow-up work is narrower: generic assistant detail-page resource packaging, detail-template editor surfaces, review metadata, and no-duplicate DB reuse stay under the later `TASK-190` leaves.
 
 Resource catalog context:
 - `POST /assistant/actions/plan` moze otrzymac `context.includeResourceCatalog=true`.
@@ -542,7 +542,11 @@ Aktualnie zaimplementowany business setup surface:
   detail template, explicit canonical list page, page-linked listing query /
   template, and canonical admin screen now resolve from their current owner
   seams; missing/ambiguous links stay unresolved with bounded candidates, and
-  `settings:read` gates route-derived canonical data,
+  `settings:read` gates route-derived canonical data. Admin access to that
+  summary stays under the existing content-types client/cache family through
+  `contentTypes:collectionWorkspace:<contentTypeId>`, and the
+  `/advanced/engine/:contentTypeId/collection` shell owns only route-local
+  refresh/pending UX,
 - published content routes that carry `detailPageId` now resolve normalized
   detail-page documents and render them through the current page-builder
   runtime shell; missing links continue to fall back to the legacy
