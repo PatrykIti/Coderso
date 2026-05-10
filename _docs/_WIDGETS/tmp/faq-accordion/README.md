@@ -25,7 +25,7 @@ Summary-only archive for TASK-252. Do not copy third-party code from these sourc
 - Access type: docs-example
 - License/terms summary: Flowbite docs are public; verify license before copying.
 - Observed UX pattern: collapse panels with active/inactive styling.
-- Useful Coderso fields/options: `itemStyle`, `openIcon`, `closedIcon`, `bordered`.
+- Useful Coderso fields/options: `style.border`, `openIcon`, `closedIcon`, existing item style tokens.
 - Decision: Keep
 - Copy policy: No source copy.
 
@@ -79,7 +79,7 @@ Summary-only archive for TASK-252. Do not copy third-party code from these sourc
 - Access type: docs-example
 - License/terms summary: Verify site terms before reuse.
 - Observed UX pattern: compact FAQ rows with category headings and search-adjacent layout.
-- Useful Coderso fields/options: `category`, `density`, `showSearch`.
+- Useful Coderso fields/options: `category`, `style.spacing`, `showSearch`.
 - Decision: Adapt
 - Copy policy: Pattern summary only.
 

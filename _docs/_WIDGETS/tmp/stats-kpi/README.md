@@ -70,7 +70,7 @@ Summary-only archive for TASK-252. Do not copy third-party code from these sourc
 - Access type: unknown-license
 - License/terms summary: License not confirmed; reference only.
 - Observed UX pattern: statistic strips and card grids with icons.
-- Useful Coderso fields/options: `layoutPreset`, `icon`, `cardTone`.
+- Useful Coderso fields/options: `variant`, `icon`, `cardTone`.
 - Decision: Adapt
 - Copy policy: No copying until terms are verified.
 

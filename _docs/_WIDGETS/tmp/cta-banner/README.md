@@ -43,7 +43,7 @@ Summary-only archive for TASK-252. Do not copy third-party code from these sourc
 - Access type: docs-example
 - License/terms summary: Verify block-specific terms before reuse.
 - Observed UX pattern: minimal CTA cards with button hierarchy and neutral surfaces.
-- Useful Coderso fields/options: `surface`, `buttonVariant`, `density`.
+- Useful Coderso fields/options: `style.background`, button style tokens, `style.padding`.
 - Decision: Keep
 - Copy policy: Summary only.
 

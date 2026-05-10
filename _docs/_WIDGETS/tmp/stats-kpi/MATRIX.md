@@ -6,7 +6,7 @@
 | Prefix/suffix | ReUI | Keep | Add explicit `prefix` and `suffix` fields instead of parsing value strings. |
 | Icon per KPI | Preline, Uilib | Keep | Add optional icon field and icon tone controls. |
 | Trend label/direction | Origin UI, ReUI | Adapt | Support optional trend text/direction but avoid live data semantics. |
-| Strip mode | Tailwind UI Plus | Keep | Add `mode: grid|strip|split` if renderer supports stable layout. |
+| Strip mode | Tailwind UI Plus | Keep | Add or map to deterministic `mode: grid|strip`; keep split/media variants in Adapt scope. |
 | Media split stat section | Tailwind UI Plus | Adapt | Consider only if current widget needs media; otherwise use Split Layout + Stats. |
 | Animated counters | Common pattern | Reject | Avoid nondeterministic counting unless later accessibility/perf task approves it. |
 | Dashboard actions | MUI-style cards | Reject | Public marketing KPI should not expose operational actions. |

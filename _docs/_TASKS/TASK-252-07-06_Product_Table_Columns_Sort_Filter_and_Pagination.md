@@ -30,10 +30,10 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: stable column visibility/labels, allowlisted sort/filter controls, and
-  pagination mode/limit from `_docs/_WIDGETS/tmp/product-table/MATRIX.md`;
-  start from the current owner fields `source`, `fields`, `labels`,
-  `emptyState`, `style`, and `resolved`.
+- Keep: stable column visibility/labels plus allowlisted sort/filter/limit
+  controls from `_docs/_WIDGETS/tmp/product-table/MATRIX.md`; start from the
+  current owner fields `source`, `fields`, `labels`, `emptyState`, `style`, and
+  `resolved`.
 - Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat image/action columns and richer client-side affordances as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: arbitrary operators, client-owned provider/index config, raw scripts, and privileged settings in widget data.
 
@@ -72,13 +72,10 @@ and Reject decisions.
 ```tsx
 function normalizeProductTableData(data: ProductTableData): ProductTableData {
   return {
-    source: normalizeCommerceWidgetSource({
-      limit: data.source?.limit,
-      search: data.source?.search,
-      collectionIds: data.source?.collectionIds,
-      status: data.source?.status,
-      sortField: data.source?.sortField,
-      sortDir: data.source?.sortDir,
+    source: normalizeCommerceWidgetSource(data.source, {
+      limit: productTableDefaults.source?.limit ?? 12,
+      sortField: "updatedAt",
+      sortDir: "desc",
     }),
     fields: normalizeProductTableFields(data.fields),
     labels: normalizeProductTableLabels(data.labels),
@@ -92,9 +89,6 @@ function ProductTableVisualEditor(props: WidgetEditorProps<ProductTableData>) {
   const value = props.value;
   return (
     <WidgetEditorSection id="product-table.source" title="Table source">
-      <WidgetControlRow id="product-table.source.mode" label="Source mode" data-widget-control="product-table.source.mode">
-        <Select value={value.source?.mode ?? "catalog"} onChange={handleControlChange} />
-      </WidgetControlRow>
       <WidgetControlRow id="product-table.source.limit" label="Rows per page" data-widget-control="product-table.source.limit">
         <NumberInput value={value.source?.limit ?? 12} onChange={(limit) => props.onChange(updateProductTableSource(value, { limit }))} />
       </WidgetControlRow>
@@ -120,8 +114,8 @@ Implementation checklist:
   `commerceQueryService.ts`) instead of inventing a widget-local query shape.
 - Use existing shared source fields first: `source.limit`, `source.search`,
   `source.collectionIds`, `source.status`, `source.sortField`, and
-  `source.sortDir`. If a later implementation needs a separate pagination mode
-  or additional filter operators, extend `CommerceWidgetSource`,
+  `source.sortDir`. Treat a separate pagination display mode as deferred Adapt
+  scope unless the same implementation extends `CommerceWidgetSource`,
   `NormalizedCommerceWidgetSource`, and `buildCommerceWidgetQueryInput` before
   adding editor controls.
 - Refactor `core/admin/ui/widgets/editors/ProductTableEditors.tsx` to shared TASK-252 editor primitives from

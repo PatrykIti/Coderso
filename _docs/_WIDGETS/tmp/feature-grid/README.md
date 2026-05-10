@@ -61,7 +61,7 @@ Summary-only archive for TASK-252. Do not copy third-party code from these sourc
 - Access type: docs-example
 - License/terms summary: Verify site terms before reuse.
 - Observed UX pattern: compact product feature grids with icons and optional links.
-- Useful Coderso fields/options: `items[].href`, `density`, `iconStyle`.
+- Useful Coderso fields/options: `items[].href`, `style.gap`, `iconStyle`.
 - Decision: Keep
 - Copy policy: Summarize only.
 
