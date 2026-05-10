@@ -128,7 +128,7 @@ function normalizeHeroBadge(value: unknown): HeroBadge | undefined {
   return {
     enabled: value.enabled !== false,
     label,
-    href: normalizeSafeHref(value.href),
+    href: normalizeHeroBadgeHref(value.href),
     prefix: readOptionalText(value.prefix),
     tone: normalizeHeroBadgeTone(value.tone),
     placement: normalizeHeroBadgePlacement(value.placement),

@@ -195,22 +195,30 @@ Implementation checklist:
   - unchanged page/template/widget-template write permissions.
 - CSRF:
   - unchanged admin write CSRF handling;
-  - public reservation writes do not use admin CSRF and must keep the booking
-    nonce/signature boundary.
+  - public reservation writes do not use admin CSRF and keep the current booking
+    access evaluator. In the current route, nonce assertion is conditional on
+    the resolved access policy and internal API-key reservations may proceed
+    without a nonce.
 - Rate-limit bucket:
   - unchanged admin write buckets;
   - existing reservation submissions stay on the `public_write` bucket.
 - Reject-unknown validation:
   - changed `appointment-form` schema fields must reject unknown fields and
     normalize legacy payloads through `core/widgets/core/appointmentForm.tsx`.
+  - this leaf does not claim raw booking request body reject-unknown hardening;
+    the current booking route maps request bodies into an allowlisted payload
+    before validation.
 - Anti-abuse:
   - CAPTCHA, nonce, and provider-secret settings are not widget-data options
-  - the existing Coderso-owned reservation write must keep nonce + signature/
-    HMAC via `core/services/booking/bookingSubmissionNonce.ts` and
-    `assertBookingSubmissionNonce`, optional reCAPTCHA policy, existing
-    `public_write` rate-limit handling, strict reject-unknown validation,
-    `tests/unit/server/publicBookingApi.test.ts`, and
-    `tests/security/codersoSecurityGate.test.ts`
+  - preserve the current conditional booking access model in
+    `core/server/publicBookingApi.ts`: public flows use the booking access
+    evaluator and `assertBookingSubmissionNonce` when required by policy;
+    internal API-key flows remain covered by existing tests and are not made
+    widget-configurable
+  - if this leaf changes route-level nonce, captcha, API-key, raw
+    reject-unknown, or rate-limit behavior, update
+    `tests/unit/server/publicBookingApi.test.ts` and
+    `tests/security/codersoSecurityGate.test.ts` in the same change
   - raw provider scripts and secrets are rejected
   - custom submission endpoints are rejected or normalized to the fixed booking
     reservation endpoint before rendering

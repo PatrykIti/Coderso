@@ -92,7 +92,7 @@ function normalizeHeroBadge(value: unknown): HeroBadge | undefined {
   return {
     enabled: value.enabled !== false,
     label,
-    href: normalizeSafeHref(value.href),
+    href: normalizeHeroBadgeHref(value.href),
     icon: readTrimmedString(value.icon),
     tone: normalizeBadgeTone(value.tone),
     placement: normalizeBadgePlacement(value.placement),

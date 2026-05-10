@@ -71,7 +71,6 @@ function normalizeEntryTeaserData(data: EntryTeaserData): EntryTeaserData {
     source: normalizeEntryTeaserSource(data.source),
     fields: normalizeEntryTeaserFields(data.fields),
     cta: normalizeEntryTeaserCta(data.cta),
-    display: normalizeEntryTeaserDisplay(data.display ?? data.style),
     style: normalizeEntryTeaserStyle(data.style),
     fallback: normalizeEntryTeaserFallback(data.fallback),
     resolved: normalizeEntryTeaserResolved(data.resolved),
@@ -85,8 +84,8 @@ function EntryTeaserVisualEditor(props: WidgetEditorProps<EntryTeaserData>) {
       <WidgetControlRow id="entry-teaser.source.entryId" label="Entry" data-widget-control="entry-teaser.source.entryId">
         <EntryPicker value={value.source?.entryId ?? ""} onChange={handleControlChange} />
       </WidgetControlRow>
-      <WidgetControlRow id="entry-teaser.display.mode" label="Display mode" data-widget-control="entry-teaser.display.mode">
-        <SegmentedControl value={value.display?.mode ?? "card"} onChange={(mode) => props.onChange(updateEntryTeaserDisplay(value, { mode }))} />
+      <WidgetControlRow id="entry-teaser.variant" label="Display mode" data-widget-control="entry-teaser.variant">
+        <VariantCards value={props.variant ?? "horizontal"} onChange={props.onVariantChange} options={ENTRY_TEASER_VARIANTS} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );

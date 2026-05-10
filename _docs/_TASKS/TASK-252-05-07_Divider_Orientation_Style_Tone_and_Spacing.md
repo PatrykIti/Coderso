@@ -126,6 +126,11 @@ Implementation checklist:
 - Remove the current center-label editor row from `DividerEditors.tsx` for this
   leaf; if the runtime still supports legacy `label-center` payloads, keep that
   path render-only and covered by backward-compatibility tests.
+- Remove or hide `label-center` from all new authoring variant lists, including
+  `DividerEditors.tsx`, widget-picker/template authoring surfaces, and any
+  `createDividerWidget` variant metadata consumed by new widget creation. Keep
+  the resolver/render path accepting saved `label-center` blocks and cover that
+  compatibility with widget and editor-wave tests.
 - Add or update runtime/widget tests and editor-wave tests in the files listed
   above.
 

@@ -91,7 +91,9 @@ function normalizeGalleryMosaicItem(item: GalleryMosaicItem, index: number): Gal
   return {
     ...item,
     id: normalizeStableItemId(item.id, `gallery-mosaic-${index + 1}`),
-    href: normalizeSafeHref(item.href),
+    image: normalizeGalleryMosaicMediaUrl(item.image),
+    video: normalizeGalleryMosaicMediaUrl(item.video),
+    href: normalizeGalleryMosaicHref(item.href),
     altText: normalizeGalleryMosaicAltText(item.altText, item.caption),
     caption: normalizeGalleryMosaicCaption(item.caption),
     showCaption: normalizeGalleryMosaicShowCaption(item.showCaption),
@@ -100,10 +102,11 @@ function normalizeGalleryMosaicItem(item: GalleryMosaicItem, index: number): Gal
 
 function renderGalleryMosaicItem(item: GalleryMosaicItem, index: number, style: GalleryMosaicStyle) {
   const alt = normalizeGalleryMosaicAltText(item.altText, item.caption);
-  const href = normalizeSafeHref(item.href);
+  const image = normalizeGalleryMosaicMediaUrl(item.image);
+  const href = normalizeGalleryMosaicHref(item.href);
   return (
     <figure data-gallery-item={String(index + 1)}>
-      {href ? <a href={href}><img src={item.image} alt={alt} loading="lazy" /></a> : <img src={item.image} alt={alt} loading="lazy" />}
+      {href ? <a href={href}><img src={image} alt={alt} loading="lazy" /></a> : <img src={image} alt={alt} loading="lazy" />}
       {style.showCaptions !== false && item.showCaption !== false && item.caption ? (
         <figcaption>{item.caption}</figcaption>
       ) : null}
@@ -142,8 +145,11 @@ Implementation checklist:
   from `altText` with a deterministic fallback, and captions must be optional
   without becoming overlay text/lightbox/hover/manual-span scope.
 - Add explicit safe-href normalization for `items[].href` in
-  `core/widgets/core/galleryMosaic.tsx`; unsafe `javascript:` or malformed hrefs
-  must normalize away and be covered by `tests/vitest/widgets/galleryMosaic.test.tsx`.
+  `core/widgets/core/galleryMosaic.tsx`; implement it as a leaf-owned
+  `normalizeGalleryMosaicHref` helper unless the implementation extracts a
+  shared widget URL helper with tests in the same slice. Unsafe `javascript:`
+  or malformed hrefs must normalize away and be covered by
+  `tests/vitest/widgets/galleryMosaic.test.tsx`.
 - Bind layout presets to the existing `GalleryMosaicVariantId` widget variant
   list and bounded `style.gap`/`style.ratio` controls; do not add an undefined
   `options` bucket or arbitrary per-image span controls.
@@ -179,8 +185,11 @@ Implementation checklist:
 - Anti-abuse:
   - Link fields must use the new safe-href normalizer in this leaf; do not
     claim the current raw `href` path is already safe.
-  - Media fields must continue through the existing media-picker/storage
-    ownership and must not accept raw script/embed HTML.
+  - Gallery media currently uses raw `image`/`video` URL fields. This leaf must
+    either migrate those controls to MediaPicker/storage ownership with
+    editor/runtime/tests, or keep raw URL media and add bounded
+    `normalizeGalleryMosaicMediaUrl` sanitization plus widget/editor tests for
+    unsafe media values.
   - No raw HTML, script embed, or unbounded class-name field is introduced.
 
 ## Testing Requirements

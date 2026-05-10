@@ -106,7 +106,7 @@ function normalizeTeamSocialLinks(items: TeamSocialLink[] | undefined): TeamSoci
     id: normalizeStableItemId(link.id, `team-social-${index + 1}`),
     platform: normalizeTeamSocialPlatform(link.platform ?? link.label),
     label: normalizeTeamSocialLabel(link.label),
-    href: normalizeSafeHref(link.href ?? link.url),
+    href: normalizeTeamSocialHref(link.href ?? link.url),
   }));
 }
 
@@ -176,7 +176,9 @@ Implementation checklist:
     normalize legacy payloads through `core/widgets/core/team.tsx`.
 - Anti-abuse:
   - Link fields introduced or touched by this leaf must normalize through the
-    widget safe-href helper before render.
+    leaf-owned `normalizeTeamSocialHref` helper before render, unless the
+    implementation extracts a shared widget URL helper with tests in the same
+    slice.
   - Team photos currently use a raw public `photo` URL field, not an existing
     MediaPicker/storage owner. This leaf must either add MediaPicker/storage
     ownership with editor/runtime/tests, or keep the raw-public-URL contract and
