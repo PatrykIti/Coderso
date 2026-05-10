@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Admin UX + Custom Screens
 **Estimated Effort:** Large
 **Dependencies:** TASK-190-03, TASK-190-04
-**Status:** To Do
+**Status:** In Progress (2026-05-10)
 
 ---
 
@@ -32,7 +32,8 @@ Business value:
 
 ## Sub-Tasks
 
-- `TASK-190-06-01_Admin_Screen_Layout_Composer.md`
+- `TASK-190-06-01_Admin_Screen_Layout_Composer.md` - done: custom-screen
+  block composition now has a shared deterministic helper and Vitest coverage.
 - `TASK-190-06-02_Admin_Bindings_Routes_and_Permission_Safety.md`
 - `TASK-190-06-03_Collection_Workspace_and_Template_Editor.md`
   - `TASK-190-06-03-01_Collection_Workspace_Route_Read_Model_and_Canonical_Resource_Linking.md`

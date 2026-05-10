@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 33 tasks
-- **In Progress:** 9 tasks
-- **Done:** 1469 tasks
+- **To Do:** 31 tasks
+- **In Progress:** 10 tasks
+- **Done:** 1470 tasks
 
 ---
 
@@ -48,8 +48,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-252-07 | Dynamic and Operational Widget Editor Expansion | High | Large | Dynamic, commerce, listing/search, forms, booking, navigation, and footer editor parity |
 | TASK-252-08 | QA, Docs, Changelog, and Board Closure | Medium | Medium | Final validation matrix, missing widget docs, changelog, and board sync |
 | TASK-190-05-03-08 | Detail Page Generic Assistant Resource Integration | High | Medium | Technical leaf: later generic policy/target-resolver/provider support for detail-page after base action/admin/runtime flow exists |
-| TASK-190-06 | Admin Surface Composer | High | Large | Business area: compose custom-screen admin UX from multiple fragments |
-| TASK-190-06-01 | Admin Screen Layout Composer | High | Medium | Technical leaf: merge admin groups into screen blocks |
 | TASK-190-06-02 | Admin Bindings, Routes, and Permission Safety | High | Medium | Technical leaf: safe field bindings and permission metadata |
 | TASK-190-06-03 | Collection Workspace and Template Editor | High | Large | Technical program: workspace route/read model, canonical links, detail-template editor seams, and assistant context integration |
 | TASK-190-06-03-01 | Collection Workspace Route, Read Model, and Canonical Resource Linking | High | Medium | Technical program: route, server read model, canonical resolution, cache/prefetch, and UI shell |
@@ -81,6 +79,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-190 | Blueprint Composer Foundation | High | Very Large | In progress: capability manifest/registry, candidate planning, provider/shadow safety layer, deterministic composition graph/conflicts, initial action assembly, schema/listing merge, and page-upsert collection-link persistence are landed; supported mixed-capability and primary-plus-gated setup requests now stay on the composed path before provider drafting can bypass them, while detail-page, workspace, review metadata, and no-duplicate closure waves remain |
 | TASK-190-05 | Page Section and Widget Composer | High | Large | In progress: section alias/slot vocabulary, deterministic widget/pack mapping, page-upsert collection-link persistence, plus detail-page storage/schema, binding, route-link metadata, runtime, preview/cache, typed action, route, admin-cache, and fixture/runtime acceptance slices are landed, while generic integration remains |
 | TASK-190-05-03 | Detail Page Composition and Content Route Sections | High | Very Large | In progress: persisted detail-page document/revision storage, strict schema normalization, deterministic UUID-compatible ids, the `content_type_has_detail_pages` guard, binding resolution, structural `detailPageId` route metadata, published runtime rendering, preview/cache invalidation, `detail-page.upsert` action execution, admin client/cache parity, and fixture/runtime acceptance are landed; generic integration remains |
+| TASK-190-06 | Admin Surface Composer | High | Large | In progress: admin-screen layout composition now lands through the shared `blueprintAdminSurfaceComposer`; binding/metadata safety and collection workspace leaves remain |
 | TASK-190-07 | Action Assembly, Execution, and No-Duplicate Safety | High | Large | In progress: internal typed-action assembly is landed for the current fragments; supported mixed-capability and primary-plus-gated setup requests now stay on the composed path before provider drafting can bypass them, while DB-backed no-duplicate checks, review metadata, and deeper cutover remain |
 | TASK-190-07-01 | Composition Action Assembler | High | Large | In progress: current fragments assemble deterministically in tests, supported mixed-capability and primary-plus-gated setup requests now stay on the composed path before provider drafting can bypass them, listing projection fields now widen for merged filter/card needs, and blocking graph conflicts downgrade into typed needs-input/gated plans while detail/media dependency work remains deferred |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
@@ -94,6 +93,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-190-06-01 | Admin Screen Layout Composer | High | Medium | Done: shared admin-surface composer now merges custom-screen field groups into deterministic `screen-*` blocks, validates schema fields, rejects secret-like references, and keeps generated blocks inside `custom-screen-builder` |
 | TASK-190-02-03 | Composer Candidate Shadow Mode and Deferred Routing Cutover | High | Large | Done: candidate shadow now compares current plan routing to capability candidates behind an env-gated debug surface while keeping user-visible routing unchanged |
 | TASK-190-02-02 | Provider Context and Structured Composition Draft | High | Medium | Done: provider prompt packaging now includes bounded blueprint capability context and a strict capability-id draft schema without replacing `cms_operation_draft` |
 | TASK-190-02 | Intent to Blueprint Candidate Planning | High | Large | Done: current prompt candidate extraction, provider capability context, and shadow diagnostics are landed for the pre-cutover planner stage |

@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Custom Screens
 **Estimated Effort:** Medium
 **Dependencies:** TASK-190-03-01, TASK-190-04
-**Status:** To Do
+**Status:** Done (2026-05-10)
 
 ---
 
@@ -67,3 +67,15 @@ task explicitly extends the current custom-screen schema/service/API contract.
 ## Documentation Updates Required
 
 - `_docs/CMS_API.md`
+- `_docs/ASSISTANT_SITE_BUILDER.md`
+- `_docs/ARCHITECTURE.md`
+
+## Completion Notes
+
+- Added `blueprintAdminSurfaceComposer.ts` as the `TASK-190-06-01` owner seam
+  for deterministic custom-screen block composition.
+- The composer merges repeated admin group keys, validates referenced content
+  schema fields, rejects secret-like field references, and verifies generated
+  blocks stay inside the current `custom-screen-builder` widget surface.
+- Catalog-family custom-screen blocks now use the shared composer while keeping
+  the existing `custom-screen.upsert` `blocks` / `bindings` transport shape.

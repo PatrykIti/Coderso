@@ -6,6 +6,10 @@ import type {
   AssistantPromptKind,
   AssistantPlannedAction,
 } from "../actionPlanTypes";
+import {
+  composeAdminSurface,
+  type BlueprintAdminSurfaceField,
+} from "./blueprintAdminSurfaceComposer";
 
 type CatalogScreenFieldValue = {
   id: string;
@@ -58,90 +62,55 @@ export type CatalogFamilyPreset = {
   };
 };
 
-const createBlock = (
-  id: string,
-  type: string,
-  data: Record<string, unknown>,
-  options?: {
-    variant?: string;
-    slots?: Record<string, WidgetBlock[]>;
-  }
-): WidgetBlock => ({
-  id,
-  type,
-  ...(options?.variant ? { variant: options.variant } : {}),
-  data,
-  ...(options?.slots ? { slots: options.slots } : {}),
+const toAdminSurfaceField = (
+  field: CatalogScreenFieldValue,
+  options?: { placeholderValue?: string }
+): BlueprintAdminSurfaceField => ({
+  key: field.id,
+  label: field.label,
+  helper: field.helper,
+  field: field.field,
+  tone: field.tone,
+  ...(options?.placeholderValue !== undefined
+    ? { placeholderValue: options.placeholderValue }
+    : {}),
 });
 
-const buildScreenBlocks = (preset: CatalogFamilyPreset): WidgetBlock[] => [
-  createBlock(`${preset.key}-header`, "screen-record-header", {
-    eyebrow: preset.screen.eyebrow,
-    title: "Record overview",
-    subtitle: preset.screen.subtitle,
-    description: preset.screen.description,
-    badge: preset.screen.badge,
-    align: "start",
-  }),
-  createBlock(
-    `${preset.key}-columns`,
-    "screen-two-column",
-    {
+const buildScreenBlocks = (preset: CatalogFamilyPreset): WidgetBlock[] =>
+  composeAdminSurface({
+    key: preset.key,
+    contentSchema: preset.contentSchema,
+    header: {
+      eyebrow: preset.screen.eyebrow,
+      subtitle: preset.screen.subtitle,
+      description: preset.screen.description,
+      badge: preset.screen.badge,
+    },
+    columns: {
       leftTitle: preset.screen.leftTitle,
       rightTitle: preset.screen.rightTitle,
-      gap: "md",
     },
-    {
-      variant: "aside",
-      slots: {
-        left: [
-          createBlock(
-            `${preset.key}-left-group`,
-            "screen-field-group",
-            {
-              title: preset.screen.leftGroupTitle,
-              description: preset.screen.leftGroupDescription,
-            },
-            {
-              slots: {
-                content: preset.screen.leftFields.map((field) =>
-                  createBlock(`${preset.key}-${field.id}`, "screen-field-value", {
-                    label: field.label,
-                    value: "0",
-                    helper: field.helper,
-                    tone: field.tone,
-                  })
-                ),
-              },
-            }
-          ),
-        ],
-        right: [
-          createBlock(
-            `${preset.key}-right-group`,
-            "screen-field-group",
-            {
-              title: preset.screen.rightGroupTitle,
-              description: preset.screen.rightGroupDescription,
-            },
-            {
-              slots: {
-                content: preset.screen.rightFields.map((field) =>
-                  createBlock(`${preset.key}-${field.id}`, "screen-field-value", {
-                    label: field.label,
-                    value: field.tone === "muted" ? "status" : "0",
-                    helper: field.helper,
-                    tone: field.tone,
-                  })
-                ),
-              },
-            }
-          ),
-        ],
+    groups: [
+      {
+        key: "left",
+        title: preset.screen.leftGroupTitle,
+        description: preset.screen.leftGroupDescription,
+        column: "left",
+        fields: preset.screen.leftFields.map((field) => toAdminSurfaceField(field)),
       },
-    }
-  ),
-];
+      {
+        key: "right",
+        title: preset.screen.rightGroupTitle,
+        description: preset.screen.rightGroupDescription,
+        column: "right",
+        fields: preset.screen.rightFields.map((field) =>
+          toAdminSurfaceField(field, {
+            placeholderValue: field.tone === "muted" ? "status" : "0",
+          })
+        ),
+      },
+    ],
+  }).blocks;
 
 const buildScreenBindings = (preset: CatalogFamilyPreset) => [
   {

@@ -84,6 +84,11 @@ Current implemented guide blueprint:
     return `needs_input`/`gated` before executable action assembly instead of
     silently becoming partial plans
   - canonical collection pages now compose listing/filter/form sections through `blueprintPageSectionComposer.ts`, and `page.upsert` persists `PageData.settings.collectionLink` through the existing page owner seam so later workspace/no-duplicate slices can stop relying on route heuristics; assistant transport locators resolve back into those persisted ids before page writes land
+  - catalog admin review screens now compose their `screen-*` custom-screen
+    blocks through `blueprintAdminSurfaceComposer.ts`; the helper merges admin
+    groups deterministically, validates referenced content schema fields,
+    rejects secret-like field references, and keeps output on the existing
+    `custom-screen.upsert` `blocks` / `bindings` transport shape
   - catalog capabilities can already describe `detail-page` intent in metadata, and the current `TASK-190` slices now cover persisted detail-page documents, published/runtime detail rendering, shared preview handling, the executable `detail-page.upsert` assistant action, `setting.content-route.upsert` `detailPageId` route-linking, the internal `/admin/api/detail-pages*` CRUD/lifecycle/revision route family, admin client/cache parity, and local deterministic fixture/runtime acceptance through the content-domain owner seams; generic detail-page resource packaging, workspace/editor flows, and no-duplicate DB reuse remain deferred to later leaves
   - provider prompt packaging now carries bounded capability summaries for setup/composer evaluation, while generic provider planning still uses the current `cms_operation_draft` response contract
   - candidate shadow diagnostics can be exposed only through a local/test env gate; they remain metadata-only even though the bounded mixed-setup cutover is now live

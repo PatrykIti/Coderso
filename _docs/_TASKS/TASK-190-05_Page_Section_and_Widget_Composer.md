@@ -60,8 +60,10 @@ Current slice note:
   `/admin/api/detail-pages*` CRUD/lifecycle/revision route family now exists,
   and `setting.content-route.upsert` owns `detailPageId` route-linking through
   the shared content-route contract.
-- The remaining detail-page wave is narrower: composer fixture/runtime
-  acceptance coverage, admin client/cache parity, generic assistant resource
+- `TASK-190-05-03-06` and `TASK-190-05-03-07-03` are landed: deterministic
+  detail-page fixtures, DB-backed runtime acceptance, and admin client/cache
+  parity now cover the base detail-page surface.
+- The remaining detail-page wave is narrower: generic assistant resource
   packaging, workspace/editor integration, and no-duplicate DB reuse remain
   open.
 

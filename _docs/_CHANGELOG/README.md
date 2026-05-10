@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 818 | 2026-05-10 | TASK-190 admin screen layout composer | Assistant/Core |
 | 817 | 2026-05-10 | TASK-190 detail-page fixture runtime acceptance | Assistant/QA |
 | 816 | 2026-05-10 | TASK-190 detail-page admin client cache parity | Assistant/Admin Cache |
 | 815 | 2026-05-10 | TASK-190 conflict media and permission closure | Assistant/Core |
