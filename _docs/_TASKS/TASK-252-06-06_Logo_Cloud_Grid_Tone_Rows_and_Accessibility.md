@@ -31,8 +31,8 @@ and Reject decisions.
 - Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/logo-cloud/MATRIX.md`; for this leaf, start from the current owner fields `header`, `logos`, `style` and add only the schema fields that the matrix explicitly keeps.
 - Keep: static responsive grid, intro text, grayscale/muted tone, multi-row
   cloud behavior, and explicit logo alt/accessible-label handling from
-  `_docs/_WIDGETS/tmp/logo-cloud/MATRIX.md`; add `logos[].altText` ownership and
-  map row/wrap behavior through bounded layout controls in
+  `_docs/_WIDGETS/tmp/logo-cloud/MATRIX.md`; add `logos[].altText`,
+  `style.introPosition`, `style.logoTone`, and `style.rowMode` ownership in
   `core/widgets/core/logoCloud.tsx` rather than arbitrary per-logo sizing.
 - Adapt: dark/surface variants and marquee mode remain conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: separate one-off widgets, raw HTML/script embeds, and unbounded visual/CSS controls.
@@ -65,12 +65,17 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
+type LogoCloudIntroPosition = "above" | "inline" | "hidden";
+type LogoCloudTone = "default" | "muted" | "grayscale";
+type LogoCloudRowMode = "wrap" | "single-row" | "dense";
+
 function normalizeLogoCloudData(data: LogoCloudData): LogoCloudData {
   return {
     header: normalizeLogoCloudHeader(data.header),
     logos: normalizeLogoCloudLogos(data.logos),
     style: normalizeLogoCloudStyle({
       ...data.style,
+      introPosition: normalizeLogoCloudIntroPosition(data.style?.introPosition),
       logoTone: normalizeLogoTone(data.style?.logoTone),
       rowMode: normalizeLogoCloudRowMode(data.style?.rowMode),
     }),
@@ -88,6 +93,12 @@ function normalizeLogoCloudLogo(item: LogoCloudLogo, index: number): LogoCloudLo
 function LogoCloudVisualEditor(props: WidgetEditorProps<LogoCloudData>) {
   return (
     <WidgetEditorSection id="logo-cloud.logos" title="Logos">
+      <WidgetControlRow id="logo-cloud.style.introPosition" label="Intro position" data-widget-control="logo-cloud.style.introPosition">
+        <SegmentedControl value={props.value.style?.introPosition ?? "above"} onChange={(introPosition) => props.onChange(updateLogoCloudStyle(props.value, { introPosition }))} />
+      </WidgetControlRow>
+      <WidgetControlRow id="logo-cloud.style.logoTone" label="Logo tone" data-widget-control="logo-cloud.style.logoTone">
+        <SegmentedControl value={props.value.style?.logoTone ?? "default"} onChange={(logoTone) => props.onChange(updateLogoCloudStyle(props.value, { logoTone }))} />
+      </WidgetControlRow>
       <WidgetControlRow id="logo-cloud.style.rowMode" label="Rows" data-widget-control="logo-cloud.style.rowMode">
         <SegmentedControl value={props.value.style?.rowMode ?? "wrap"} onChange={(rowMode) => props.onChange(updateLogoCloudStyle(props.value, { rowMode }))} />
       </WidgetControlRow>
@@ -113,9 +124,16 @@ Implementation checklist:
   only for fields approved by the research decisions above.
 - Add `logos[].altText` schema/default/normalizer/render/editor/tests and use
   the logo name only as a legacy fallback, not as a reason to omit the field.
+- Add `style.introPosition: "above" | "inline" | "hidden"` schema/default/
+  normalizer/render/editor/tests for intro text placement.
+- Add `style.logoTone: "default" | "muted" | "grayscale"` schema/default/
+  normalizer/render/editor/tests, with non-destructive legacy mapping from
+  current `style.grayscale` and `style.hoverColor` booleans.
 - Own row/wrap through bounded layout values such as `style.rowMode` plus the
   existing variant behavior; do not add standalone grid-count or per-logo sizing
   controls.
+- Add stable `data-widget-control` metadata for logo add/remove/reorder actions,
+  image/href/name/alt rows, intro/tone/row controls, and style color fields.
 - Refactor `core/admin/ui/widgets/editors/LogoCloudEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.

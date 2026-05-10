@@ -154,6 +154,19 @@ items.map((item, index) => (
 ));
 ```
 
+Apply the same metadata contract to non-text controls and item actions:
+
+```tsx
+<WidgetActionButton data-widget-control={`feature-grid.items.${index}.moveUp`} aria-label="Move feature up" />
+<MediaPicker data-widget-control={`feature-grid.items.${index}.image`} value={item.image} onChange={handleMediaChange} />
+<LinkInput data-widget-control={`feature-grid.items.${index}.ctaHref`} value={item.ctaHref} onChange={handleLinkChange} />
+<ColorField data-widget-control="cta-banner.style.primaryButtonBg" value={style.primaryButtonBg} onChange={handleStyleChange} />
+```
+
+Each leaf must list its repeated item add/remove/reorder actions, variant/mode
+controls, color fields, media fields, and CTA/link fields that receive stable
+`data-widget-control` metadata before implementation starts.
+
 ## Security Contract
 
 - Visibility:

@@ -119,6 +119,9 @@ Implementation checklist:
   render through existing `items[].image` and safe link fields; if media cannot
   render safely in the implementation slice, move alternating rows to Adapt in
   the matrix/task rather than leaving a Keep requirement without an owner.
+- Add stable `data-widget-control` metadata for feature add/remove/reorder
+  actions, icon/image/title/body/link rows, layout/media-position controls,
+  variant cards, and style color fields.
 - Refactor `core/admin/ui/widgets/editors/FeatureGridEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.

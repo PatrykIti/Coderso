@@ -30,10 +30,10 @@ and Reject decisions.
 
 - Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/cta-banner/MATRIX.md`; for this leaf, start from the current owner fields `content`, `actions`, `style` and add only the schema fields that the matrix explicitly keeps.
 - Keep: centered CTA, split CTA layout, high-contrast/tone band, and badge/icon
-  CTA strip from `_docs/_WIDGETS/tmp/cta-banner/MATRIX.md`; add the icon as a
-  bounded `content.icon` owner alongside the existing `content.badge`, and keep
-  high-contrast tied to existing theme/style tokens while Tailwind UI Plus
-  background-media examples remain Adapt-only.
+  CTA strip from `_docs/_WIDGETS/tmp/cta-banner/MATRIX.md`; add bounded
+  `layout`, `ctaPosition`, and `content.icon` owners alongside the existing
+  `content.badge`, and keep high-contrast tied to existing theme/style tokens
+  while Tailwind UI Plus background-media examples remain Adapt-only.
 - Adapt: background media/overlay, app-store style button groups, and reduced-motion-safe named animation presets remain conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: separate one-off widgets, raw HTML/script embeds, and unbounded visual/CSS controls.
 
@@ -65,8 +65,13 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
+type CtaBannerLayout = "centered" | "split" | "compact";
+type CtaBannerCtaPosition = "inline" | "below" | "right";
+
 function normalizeCtaBannerData(data: CtaBannerData): CtaBannerData {
   return {
+    layout: normalizeCtaBannerLayout(data.layout),
+    ctaPosition: normalizeCtaBannerCtaPosition(data.ctaPosition),
     content: normalizeCtaBannerContent({
       ...data.content,
       icon: normalizeCtaBannerIcon(data.content?.icon),
@@ -80,6 +85,12 @@ function CtaBannerVisualEditor(props: WidgetEditorProps<CtaBannerData>) {
   const value = props.value;
   return (
     <WidgetEditorSection id="cta-banner.content" title="Content and actions">
+      <WidgetControlRow id="cta-banner.layout" label="Layout" data-widget-control="cta-banner.layout">
+        <SegmentedControl value={value.layout ?? "centered"} onChange={(layout) => props.onChange(updateCtaBannerData(value, { layout }))} />
+      </WidgetControlRow>
+      <WidgetControlRow id="cta-banner.ctaPosition" label="CTA position" data-widget-control="cta-banner.ctaPosition">
+        <SegmentedControl value={value.ctaPosition ?? "below"} onChange={(ctaPosition) => props.onChange(updateCtaBannerData(value, { ctaPosition }))} />
+      </WidgetControlRow>
       <WidgetControlRow id="cta-banner.content.badge" label="Badge" data-widget-control="cta-banner.content.badge">
         <Input value={value.content?.badge ?? ""} onChange={handleControlChange} />
       </WidgetControlRow>
@@ -100,6 +111,13 @@ Implementation checklist:
   with an allowlisted icon identifier; if implementation defers icon support,
   move the icon row in the matrix/task to Adapt in the same patch instead of
   leaving it as an unowned Keep requirement.
+- Add `layout: "centered" | "split" | "compact"` and
+  `ctaPosition: "inline" | "below" | "right"` schema/default/normalizer/render/
+  editor/tests for split CTA behavior. If split layout is deferred, move the
+  split row in the matrix/task to Adapt in the same patch.
+- Add stable `data-widget-control` metadata for every CTA action label/href row,
+  icon/badge row, layout/position segmented control, style color field, and
+  add/remove/reorder action introduced by the editor refactor.
 - Refactor `core/admin/ui/widgets/editors/CtaBannerEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.

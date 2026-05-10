@@ -31,7 +31,7 @@ and Reject decisions.
 ## Research Decisions
 
 - Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/testimonials/MATRIX.md`; for this leaf, start from the current owner fields `header`, `testimonials`, `style` and add only the schema fields that the matrix explicitly keeps.
-- Keep: quote card grid, single spotlight quote, ratings, avatar shape, and concise author metadata from `_docs/_WIDGETS/tmp/testimonials/MATRIX.md`; add schema-owned `mode`, `featuredItemId`, item-level `rating`, and `style.avatarShape` fields in `core/widgets/core/testimonials.tsx` so the implementation does not rely on ad hoc variant-only inference.
+- Keep: quote card grid, single spotlight quote, ratings, avatar shape, and concise author metadata from `_docs/_WIDGETS/tmp/testimonials/MATRIX.md`; add schema-owned `mode`, `featuredItemId`, item-level `rating`, `style.ratingVisibility`, `style.ratingScale`, and `style.avatarShape` fields in `core/widgets/core/testimonials.tsx` so the implementation does not rely on ad hoc variant-only inference.
 - Adapt: company/logo metadata, masonry, and carousel behavior remain conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: separate one-off widgets, raw HTML/script embeds, and unbounded visual/CSS controls.
 
@@ -65,6 +65,8 @@ and Reject decisions.
 ```tsx
 type TestimonialsMode = "grid" | "spotlight";
 type TestimonialsAvatarShape = "circle" | "rounded" | "square";
+type TestimonialsRatingVisibility = "show" | "hide";
+type TestimonialsRatingScale = 5;
 
 function normalizeTestimonialsData(data: TestimonialsData): TestimonialsData {
   const testimonials = normalizeTestimonialItems(data.testimonials);
@@ -78,6 +80,7 @@ function normalizeTestimonialsData(data: TestimonialsData): TestimonialsData {
       ...data.style,
       avatarShape: normalizeTestimonialsAvatarShape(data.style?.avatarShape),
       ratingVisibility: normalizeTestimonialsRatingVisibility(data.style?.ratingVisibility),
+      ratingScale: normalizeTestimonialsRatingScale(data.style?.ratingScale),
     }),
   };
 }
@@ -102,13 +105,21 @@ function TestimonialsVisualEditor(props: WidgetEditorProps<TestimonialsData>) {
       <WidgetControlRow id="testimonials.style.avatarShape" label="Avatar shape" data-widget-control="testimonials.style.avatarShape">
         <SegmentedControl value={props.value.style?.avatarShape ?? "circle"} onChange={(avatarShape) => props.onChange(updateTestimonialsStyle(props.value, { avatarShape }))} />
       </WidgetControlRow>
+      <WidgetControlRow id="testimonials.style.ratingVisibility" label="Rating visibility" data-widget-control="testimonials.style.ratingVisibility">
+        <SegmentedControl value={props.value.style?.ratingVisibility ?? "show"} onChange={(ratingVisibility) => props.onChange(updateTestimonialsStyle(props.value, { ratingVisibility }))} />
+      </WidgetControlRow>
       {props.value.testimonials.map((item, index) => (
-        <WidgetControlRow key={item.id ?? index} id={`testimonials.testimonials.${index}.quote`} label="Quote" data-widget-control={`testimonials.testimonials.${index}.quote`}>
-          <Input
-            value={item.quote ?? ""}
-            onChange={(quote) => props.onChange(updateTestimonialItem(props.value, index, { quote }))}
-          />
-        </WidgetControlRow>
+        <Fragment key={item.id ?? index}>
+          <WidgetControlRow id={`testimonials.testimonials.${index}.quote`} label="Quote" data-widget-control={`testimonials.testimonials.${index}.quote`}>
+            <Input
+              value={item.quote ?? ""}
+              onChange={(quote) => props.onChange(updateTestimonialItem(props.value, index, { quote }))}
+            />
+          </WidgetControlRow>
+          <WidgetControlRow id={`testimonials.testimonials.${index}.rating`} label="Rating" data-widget-control={`testimonials.testimonials.${index}.rating`}>
+            <NumberInput min={0} max={props.value.style?.ratingScale ?? 5} value={item.rating ?? 0} onChange={(rating) => props.onChange(updateTestimonialItem(props.value, index, { rating }))} />
+          </WidgetControlRow>
+        </Fragment>
       ))}
     </WidgetEditorSection>
   );
@@ -124,11 +135,17 @@ Implementation checklist:
   `featuredItemId` must be added to schema/defaults/normalizer/render/editor/tests
   together, with legacy variant values mapped non-destructively during
   normalization.
-- Preserve current item-level rating data and add bounded rating normalization;
-  any rating visibility/scale option must be schema-owned and tested in the same
-  slice.
+- Preserve current item-level rating data and add bounded rating normalization.
+  Add `style.ratingVisibility: "show" | "hide"` and fixed
+  `style.ratingScale: 5` ownership in schema/defaults/normalizer/render/editor/
+  tests. If a later slice supports non-5-point scales, it must extend this
+  field with migration and rendering tests rather than changing item ratings
+  ad hoc.
 - Add constrained `style.avatarShape` ownership in schema/defaults/normalizer/
   render/editor/tests; do not infer avatar shape from arbitrary classes.
+- Add stable `data-widget-control` metadata for testimonial add/remove/reorder
+  actions, avatar/media rows, quote/author/source/rating rows, rating
+  visibility controls, and style color fields.
 - Refactor `core/admin/ui/widgets/editors/TestimonialsEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.
