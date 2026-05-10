@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 814 | 2026-05-10 | TASK-190 docs status drift sync | Documentation/Assistant |
 | 813 | 2026-05-10 | Security strict dependency advisory closure | Security/Dependencies |
 | 812 | 2026-05-09 | TASK-190 detail-page route contract hardening | Assistant/Core |
 | 811 | 2026-05-09 | Test runner and wave act stabilization | QA/Tooling |

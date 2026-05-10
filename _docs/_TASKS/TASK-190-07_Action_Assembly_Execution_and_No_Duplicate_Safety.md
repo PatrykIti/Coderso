@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Assistant/Core + Execution Safety
 **Estimated Effort:** Large
-**Dependencies:** TASK-190-03, TASK-190-04, TASK-190-05, TASK-190-06
+**Dependencies:** TASK-190-03, TASK-190-04, TASK-190-05, TASK-190-06 for full closure
 **Status:** In Progress (2026-05-06)
 
 ---
@@ -32,8 +32,12 @@ Current slice note:
   listing facets or listing-template card bindings need additional runtime
   fields, while schema-backed missing-field drift falls back to typed
   `facet_field_missing`,
-- DB-backed no-duplicate checks, broader review metadata, and later
-  detail/media closure work remain deferred.
+- DB-backed no-duplicate checks, broader review metadata, generic detail-page
+  resource packaging, and media reuse remain deferred.
+- The base assembler may remain In Progress while `TASK-190-06` workspace/editor
+  leaves are still To Do; `TASK-190-06` is a full-closure dependency for
+  generated-resource editability, not a blocker for the current assembler
+  foundation slice.
 
 ## Sub-Tasks
 

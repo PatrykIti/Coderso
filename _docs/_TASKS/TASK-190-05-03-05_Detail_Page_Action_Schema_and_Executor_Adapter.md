@@ -75,7 +75,7 @@ Required integration points in this leaf:
   into `TASK-190-05-03-08`,
 - admin cached-client wrappers, cache keys, and assistant-side cache
   invalidation for `detail-page` are explicitly deferred to
-  `TASK-190-05-03-07`,
+  `TASK-190-05-03-07-03`,
 - Resource catalog transport and active-surface hydration for `detail-page`
   remain owned by `TASK-190-07-02` and `TASK-190-06-03-03`; this leaf must not
   replace those seams with ad-hoc lookups.
@@ -227,7 +227,7 @@ export const executeDetailPageUpsert = async (action, deps) => {
   `TASK-190-05-03-07`.
 - Admin cache key registration, cached-client hydration, and assistant-side
   cache invalidation for `detail-page` are explicitly deferred to
-  `TASK-190-05-03-07` so the tree stays implementable in dependency order.
+  `TASK-190-05-03-07-03` so the tree stays implementable in dependency order.
 
 ## Documentation Updates Required
 

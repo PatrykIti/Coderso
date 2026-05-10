@@ -50,7 +50,12 @@ Current slice note:
   strict assistant action registry/schema/executor path through one
   content-domain service seam, without introducing a second route-owner or
   generic provider-side mutation path.
-- The remaining route/admin leaves stay open in the later slices.
+- `TASK-190-05-03-07-01` and `TASK-190-05-03-07-02` are landed: the internal
+  `/admin/api/detail-pages*` CRUD/lifecycle/revision route family now exists,
+  and `setting.content-route.upsert` owns the structural `detailPageId`
+  round-trip for route linkage.
+- The remaining detail-page leaves are now composer fixture/runtime acceptance,
+  admin client/cache parity, and generic assistant resource integration.
 
 This unlocks proper Mabudo-like/product/service/portfolio detail pages instead
 of generic entry detail output.
@@ -248,10 +253,10 @@ Touched existing modules:
    stored server-side, not trusted from ad-hoc query params.
 6. Add required `detail-page.upsert` typed action schema/executor to
    create/update detail page documents without mutating route ownership.
-7. Add internal admin detail page API plus explicit stable-id behavior for
-   assistant/composer upserts and manual admin create flows; preview lifecycle
-   routes must consume the shared preview contract from step 5, and CRUD/client
-   parity must keep route-link ownership in step 3.
+7. Internal admin detail page APIs plus explicit stable-id behavior for
+   assistant/composer upserts and manual admin create flows are landed; preview
+   lifecycle routes consume the shared preview contract from step 5, and the
+   remaining admin-client/cache parity must keep route-link ownership in step 3.
 8. Add manual Collection Workspace / Detail Template editing integration in
    `TASK-190-06-03`.
 9. Add generic assistant resource/policy integration for `detail-page` only

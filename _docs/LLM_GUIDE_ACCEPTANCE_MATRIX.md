@@ -67,7 +67,7 @@ Rules:
 | `listing-template.delete` | Vitest planner/schema | Bun executor | Bun executor | `content:read/write` | Deletes exact unreferenced listing templates after review |
 | `listing-template.update` | Vitest planner/schema | Bun executor | Bun executor | `content:read/write` | Updates listing template metadata/layout/card config |
 | `page.upsert` | Vitest `action-plan-schema` | Bun executor | Bun executor + public runtime smoke | `content:read/write/publish` | Supports catalog and simple block-backed page mode |
-| `detail-page.upsert` | Vitest `action-plan-schema` | Bun executor | Bun executor + DB smoke | `content:read/write/publish` | Persists strict detail-page documents through the content-domain owner seam; route linkage remains a separate later action/admin wave |
+| `detail-page.upsert` | Vitest `action-plan-schema` | Bun executor | Bun executor + DB smoke | `content:read/write/publish` | Persists strict detail-page documents through the content-domain owner seam; `setting.content-route.upsert` owns `detailPageId` route linkage |
 | `form.upsert` | Vitest `action-plan-schema` | Bun executor | Bun executor | `forms:read/write` through per-action permissions when applicable | Public submissions use existing Forms runtime hardening |
 | `form.delete` | Vitest planner/schema | Bun executor | Bun executor + DB service count | `forms:read/write` | Deletes exact zero-submission forms after review |
 | `form.archive` | Vitest planner/schema | Bun executor | Bun executor + DB service count | `forms:read/write` | Archives exact forms while retaining submission history |
@@ -114,7 +114,7 @@ Rules:
 | Services Directory | Executable | Vitest planner/catalog blueprint | Catalog-family executor path | No dedicated public runtime test yet | Existing generic catalog pack |
 | Lead Capture Site | Executable | Vitest planner/blueprint | Bun executor | No dedicated public runtime test yet | Form runtime hardening remains existing Forms contract |
 | Editorial Content Hub | Executable | Vitest planner/blueprint | Bun executor | No dedicated public runtime test yet | Uses `posts-feed`; no post mutation |
-| Mixed Blueprint Composition (current packs) | Bounded live cutover | Vitest capability registry + candidate resolver + graph + assembler + provider/shadow diagnostics | Uses existing typed executor families only; broader no-duplicate/runtime closure still deferred | Not applicable yet | Supported mixed-capability and primary-plus-gated setup prompts now use the composed planner path, while single-pack setup/refinement and deeper detail/media waves remain deferred |
+| Mixed Blueprint Composition (current packs) | Bounded live cutover | Vitest capability registry + candidate resolver + graph + assembler + provider/shadow diagnostics | Uses existing typed executor families only; broader no-duplicate/workspace/evaluation closure still deferred | Not applicable yet | Supported mixed-capability and primary-plus-gated setup prompts now use the composed planner path, while single-pack setup/refinement, generic detail-page resource packaging, media reuse, and workspace/editor waves remain deferred |
 | Booking Service Business | Gated | Vitest `needs_input` | Not applicable | Not applicable | Requires booking action adapters |
 | Product Checkout/Payment | Gated | Vitest `needs_input` | Not applicable | Not applicable | Requires commerce/payment adapters |
 | Solution Kit Refinement | Gated | Docs/task audit | Not applicable | Not applicable | Requires server-derived installed-kit context |

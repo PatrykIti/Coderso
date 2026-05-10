@@ -55,10 +55,15 @@ Current slice note:
   preview-token contract, and canonical content-route updates reuse a shared
   site-cache invalidation seam.
 - `TASK-190-05-03-05` is landed: `detail-page.upsert` now executes through the
-  content-domain owner seam with strict schema/contract validation, while
-  route-link ownership and internal admin CRUD stay deferred to the later
-  detail-page admin waves.
-- The later detail-page binding/runtime/action/admin waves remain open.
+  content-domain owner seam with strict schema/contract validation.
+- `TASK-190-05-03-07-01` and `TASK-190-05-03-07-02` are landed: the internal
+  `/admin/api/detail-pages*` CRUD/lifecycle/revision route family now exists,
+  and `setting.content-route.upsert` owns `detailPageId` route-linking through
+  the shared content-route contract.
+- The remaining detail-page wave is narrower: composer fixture/runtime
+  acceptance coverage, admin client/cache parity, generic assistant resource
+  packaging, workspace/editor integration, and no-duplicate DB reuse remain
+  open.
 
 ## Sub-Tasks
 

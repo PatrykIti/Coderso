@@ -53,8 +53,9 @@ composer exists and can consume richer capabilities safely.
 The current delivered slice remains foundation-first. Capability manifests,
 candidate ranking, graph fragments, and assembler helpers now drive the local
 setup planner for supported mixed-capability and primary-plus-gated setup
-requests, but single-pack setup/refinement routing plus the broader
-detail/media/no-duplicate cutover stay deferred until the later rollout leaves
+requests, but single-pack setup/refinement routing plus generic detail-page
+resource packaging, media reuse, and no-duplicate cutover stay deferred until
+the later rollout leaves
 close.
 Compatible `content-type.upsert` fragments can now also merge into one
 validator-backed content schema action. Compatible listing facet/card fragments

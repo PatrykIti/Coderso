@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Assistant/Core + Action Assembly
 **Estimated Effort:** Large
-**Dependencies:** TASK-190-03-01, TASK-190-04, TASK-190-05, TASK-190-06
+**Dependencies:** TASK-190-03-01, TASK-190-04, TASK-190-05, TASK-190-06 for full closure
 **Status:** In Progress (2026-05-06)
 
 ---
@@ -26,6 +26,9 @@ Current slice note:
   card bindings keep the projection data they need,
 - broader refinement cutover, review metadata, detail-page ordering, and later
   media/existing-resource flows remain deferred.
+- This leaf can stay In Progress without completed `TASK-190-06` workspace/
+  editor leaves; full closure and child-specific admin-resource/no-duplicate
+  behavior wait for the documented later leaves.
 
 ## Sub-Tasks
 
