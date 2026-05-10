@@ -31,13 +31,14 @@ and Reject decisions.
 ## Research Decisions
 
 - Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/newsletter/MATRIX.md`; for this leaf, start from the current owner fields `title`, `description`, `placeholder`, `consent`, `submit`, and `style`, then add only the schema fields that the matrix explicitly keeps.
-- Preserve existing `integration` payloads only as backend-owned references;
-  this leaf does not add provider-reference editor controls, provider config,
-  or audience-secret fields.
+- Preserve existing schema-owned safe compatibility references:
+  `integration.mode`, `integration.actionUrl`, and `integration.webhookId`.
+  This leaf does not add provider secrets, audience tokens, API keys, or
+  privileged provider configuration fields.
 - Adapt: rows marked `Adapt` are conditional scope, not required scope.
-  Additional fields and provider references require a backend-owned integration;
-  implement only when schema/defaults/normalizer/render/editor/tests move
-  together.
+  Additional provider-reference fields beyond the existing safe compatibility
+  references require a backend-owned integration; implement only when
+  schema/defaults/normalizer/render/editor/tests move together.
 - Reject: arbitrary operators, client-owned provider/index config, raw scripts, and privileged settings in widget data.
 
 ## Editor Mode Ownership
