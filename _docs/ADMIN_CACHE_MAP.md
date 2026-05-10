@@ -106,10 +106,14 @@ This file maps admin UI surfaces to their implementation files and the cached AP
   - Prefetch: `/advanced/engine/:contentTypeId/collection` uses a predicate
     prefetch matcher before the generic `/advanced/engine` prefix and warms the
     workspace summary with `{ force: false }`
+  - Detail template prefetch:
+    `/advanced/engine/:contentTypeId/collection/detail-template/:detailPageId`
+    warms the workspace summary, detail-page record, content-types list, and
+    bounded sample entries with `{ force: false }`
 
 ## Detail Pages
 - Detail-page admin client
-  - UI: future collection workspace and detail-template editor surfaces
+  - UI: collection workspace and detail-template editor surfaces
   - Cached APIs: `listDetailPagesCached`, `getDetailPageCached`,
     `getCachedDetailPages`, `getCachedDetailPage`
   - Mutations: `createDetailPage`, `updateDetailPage`, `deleteDetailPage`,

@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Product Architecture + Blueprint Planning
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-172, TASK-178, TASK-188, TASK-189
-**Status:** In Progress (2026-05-07)
+**Status:** In Progress (2026-05-10)
 
 ---
 
@@ -68,15 +68,17 @@ instead of leaving canonical collection linkage implicit. The first
 detail-page storage/schema slice is also landed through
 `detail_page_documents` / `detail_page_revisions` plus the
 `content_type_has_detail_pages` delete guard. The later open detail-page scope
-is now narrower: generic assistant resource packaging, detail-template editor
-surfaces, and no-duplicate DB reuse remain deferred, while the published
-runtime, shared preview path, typed `detail-page.upsert` execution, internal
-admin route family, admin client/cache parity, fixture/runtime acceptance,
-first admin-screen layout composer, and custom-screen binding/collection-link
-metadata safety are already landed. Collection workspace work has now landed
-the internal Engine route, bounded server read model, deterministic canonical
-resource resolution/read redaction, cached client helpers, specific Engine
-prefetch, and first route shell; detail-template editor seams remain deferred.
+is now narrower: generic assistant resource packaging and no-duplicate DB reuse
+remain deferred, while the published runtime, shared preview path, typed
+`detail-page.upsert` execution, internal admin route family, admin client/cache
+parity, fixture/runtime acceptance, first admin-screen layout composer,
+custom-screen binding/collection-link metadata safety, collection workspace,
+and manual detail-template editor are already landed. Collection workspace work
+has now landed the internal Engine route, bounded server read model,
+deterministic canonical resource resolution/read redaction, cached client
+helpers, specific Engine prefetch, first route shell, and the
+`/advanced/engine/:contentTypeId/collection/detail-template/:detailPageId`
+editor surface that reuses existing page-builder seams.
 
 This task is not limited to theme templates or a narrow detail-template editor.
 The business target remains full assistant-composed setup of a site/service

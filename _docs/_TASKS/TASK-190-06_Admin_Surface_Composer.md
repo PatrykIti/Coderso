@@ -38,12 +38,14 @@ Business value:
   binding composition plus canonical custom-screen metadata now round-trip
   through schema, service, client, assistant actions, and storage.
 - `TASK-190-06-03_Collection_Workspace_and_Template_Editor.md` - in progress:
-  the collection workspace route/read/cache/UI family is landed, while the
-  detail-template editor and assistant workspace context leaves remain.
+  the collection workspace route/read/cache/UI family and detail-template
+  editor surface are landed, while assistant workspace context remains.
   - `TASK-190-06-03-01_Collection_Workspace_Route_Read_Model_and_Canonical_Resource_Linking.md` -
     done: server route/read model, canonical resolution, cached client helpers,
     Engine prefetch, and first workspace shell are landed.
-  - `TASK-190-06-03-02_Detail_Template_Editor_Surface_and_Shared_Builder_Seams.md`
+  - `TASK-190-06-03-02_Detail_Template_Editor_Surface_and_Shared_Builder_Seams.md` -
+    done: detail-template editor route, shared builder surface, sample-entry
+    preview picker, lifecycle/revision actions, and Engine prefetch are landed.
   - `TASK-190-06-03-03_Collection_Workspace_Assistant_Context_and_Follow_Up_Integration.md`
 
 ## Architecture
@@ -54,8 +56,10 @@ New owner files:
 - `core/services/assistant/blueprints/blueprintBindingComposer.ts`
 - `core/admin/ui/content-types/CollectionWorkspacePage.tsx`
 - `core/admin/ui/content-types/DetailTemplateEditorPage.tsx`
+- `core/admin/ui/content-types/detailTemplateEditorModel.ts`
 - `tests/vitest/assistant/blueprint-admin-surface-composer.test.ts`
 - `tests/vitest/ui/collection-workspace.test.tsx`
+- `tests/vitest/ui/detail-template-editor.test.tsx`
 
 Touched existing files:
 

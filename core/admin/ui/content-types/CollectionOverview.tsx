@@ -3,6 +3,9 @@ import type {
   CollectionWorkspaceCandidate,
   ContentTypeCollectionWorkspaceSummary,
 } from "@/services/contentTypesClient";
+import { AdminLink } from "@/ui/shared/AdminLink";
+
+import { buildDetailTemplateEditorHref } from "./detailTemplateEditorModel";
 
 type CollectionOverviewProps = {
   summary: ContentTypeCollectionWorkspaceSummary;
@@ -12,6 +15,7 @@ type ResourceItem = {
   key: keyof ContentTypeCollectionWorkspaceSummary["canonical"];
   label: string;
   value: CollectionWorkspaceCandidate | string | null;
+  href?: string | null;
 };
 
 const formatUpdatedAt = (value: string | null | undefined) => {
@@ -49,12 +53,26 @@ const renderResourceValue = (item: ResourceItem) => {
   }
 
   const meta = getCandidateMeta(item.value);
-  return (
+  const content = (
     <div className="min-w-0">
       <div className="truncate text-sm font-medium">{item.value.label}</div>
       {meta ? <div className="truncate text-xs text-muted-foreground">{meta}</div> : null}
     </div>
   );
+
+  if (item.href) {
+    return (
+      <AdminLink
+        href={item.href}
+        prefetch
+        className="block min-w-0 rounded-md outline-none transition hover:text-primary focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        {content}
+      </AdminLink>
+    );
+  }
+
+  return content;
 };
 
 export function CollectionOverview({ summary }: CollectionOverviewProps) {
@@ -64,7 +82,14 @@ export function CollectionOverview({ summary }: CollectionOverviewProps) {
       label: "Route",
       value: summary.canonical.contentRoute?.listPath ?? null,
     },
-    { key: "detailPage", label: "Detail page", value: summary.canonical.detailPage },
+    {
+      key: "detailPage",
+      label: "Detail page",
+      value: summary.canonical.detailPage,
+      href: summary.canonical.detailPage
+        ? buildDetailTemplateEditorHref(summary.contentType.id, summary.canonical.detailPage.id)
+        : null,
+    },
     { key: "listPage", label: "List page", value: summary.canonical.listPage },
     { key: "listingQuery", label: "Listing query", value: summary.canonical.listingQuery },
     {

@@ -1638,6 +1638,11 @@ Rules:
   `detailPages:list:contentType:<contentTypeId>`, and
   `detailPages:detail:<id>`; assistant `detail-page.upsert` execution results
   broadcast the same cache family as manual admin mutations.
+- Manual admin editing opens the route-linked detail template at
+  `/admin/advanced/engine/:contentTypeId/collection/detail-template/:detailPageId`.
+  The editor uses the same `/detail-pages*` lifecycle routes plus bounded
+  `entriesClient` reads for the preview sample entry; it does not own a
+  separate detail-page fetch or preview transport.
 
 ---
 
@@ -2076,6 +2081,9 @@ route/detail/list/listing/admin-screen links resolve from `site.contentRoutes`,
 `PageData.settings.collectionLink`, listing services, and custom-screen
 `collectionRole` metadata; ambiguous or missing links remain unresolved with
 bounded candidates, and route-derived canonical data requires `settings:read`.
+The canonical detail-page candidate links to the manual detail-template editor
+under the same Engine workspace route family; hover/focus prefetch warms the
+workspace summary, detail-page record, and sample entries with cached reads.
 
 Delete returns `{ "ok": true }` only after the content type dependency guard
 passes. Known conflicts are mapped to HTTP 409:

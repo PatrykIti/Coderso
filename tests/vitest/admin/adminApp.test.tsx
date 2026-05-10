@@ -60,6 +60,10 @@ vi.mock("@/ui/content-types/CollectionWorkspacePage", () => ({
   CollectionWorkspacePage: () => <div>Collection workspace ct-1</div>,
 }));
 
+vi.mock("@/ui/content-types/DetailTemplateEditorPage", () => ({
+  DetailTemplateEditorPage: () => <div>Detail template editor route</div>,
+}));
+
 import {
   AdminApp,
   resolveThemeUpdatedRefreshScope,
@@ -146,6 +150,17 @@ test("AdminApp resolves collection workspace under the Engine route family", asy
     await flush();
     expect(view.container.textContent).toContain("Collection workspace");
     expect(view.container.textContent).toContain("ct-1");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AdminApp resolves detail template editor under the collection workspace route family", async () => {
+  const view = mount("/admin/advanced/engine/ct-1/collection/detail-template/detail-1");
+
+  try {
+    await flush();
+    expect(view.container.textContent).toContain("Detail template editor route");
   } finally {
     view.cleanup();
   }

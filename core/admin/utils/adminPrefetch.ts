@@ -2,6 +2,7 @@ import {
   getContentTypeCollectionWorkspaceCached,
   listContentTypesCached,
 } from "@/services/contentTypesClient";
+import { getDetailPageCached } from "@/services/detailPagesClient";
 import { getEntryCached, listAllEntriesCached, listEntriesCached } from "@/services/entriesClient";
 import { getCustomScreenCached, listCustomScreensCached } from "@/services/customScreensClient";
 import { listMenusCached } from "@/services/menusClient";
@@ -72,6 +73,10 @@ export const prefetchWarmupOptions = { force: false } as const;
 
 type CollectionWorkspacePrefetchTarget = {
   contentTypeId: string;
+};
+
+type DetailTemplatePrefetchTarget = CollectionWorkspacePrefetchTarget & {
+  detailPageId: string;
 };
 
 const defaultSchedule = (callback: () => void) => {
@@ -218,6 +223,27 @@ export const resolveCollectionWorkspacePrefetchTarget = (
   }
 };
 
+export const resolveDetailTemplatePrefetchTarget = (
+  path: string
+): DetailTemplatePrefetchTarget | null => {
+  const resolvedPath = resolveAdminRoutePath(path);
+  const parts = resolvedPath.split("/").filter(Boolean);
+  if (parts.length !== 6) return null;
+  if (parts[0] !== "advanced" || parts[1] !== "engine") return null;
+  if (parts[3] !== "collection" || parts[4] !== "detail-template") return null;
+  const rawContentTypeId = parts[2];
+  const rawDetailPageId = parts[5];
+  if (!rawContentTypeId || !rawDetailPageId) return null;
+  try {
+    return {
+      contentTypeId: decodeURIComponent(rawContentTypeId),
+      detailPageId: decodeURIComponent(rawDetailPageId),
+    };
+  } catch {
+    return { contentTypeId: rawContentTypeId, detailPageId: rawDetailPageId };
+  }
+};
+
 export async function prefetchCollectionWorkspace(path: string) {
   const target = resolveCollectionWorkspacePrefetchTarget(path);
   if (!target) return false;
@@ -228,6 +254,25 @@ export async function prefetchCollectionWorkspace(path: string) {
       () => null
     ),
   ]);
+  return true;
+}
+
+export async function prefetchDetailTemplateEditor(path: string) {
+  const target = resolveDetailTemplatePrefetchTarget(path);
+  if (!target) return false;
+
+  const [, detailPage] = await Promise.all([
+    getContentTypeCollectionWorkspaceCached(target.contentTypeId, prefetchWarmupOptions).catch(
+      () => null
+    ),
+    getDetailPageCached(target.detailPageId, prefetchWarmupOptions).catch(() => null),
+    listContentTypesCached(prefetchWarmupOptions),
+  ] as const);
+
+  if (detailPage?.contentTypeSlug) {
+    await listEntriesCached(detailPage.contentTypeSlug, prefetchWarmupOptions).catch(() => null);
+  }
+
   return true;
 }
 
@@ -244,6 +289,18 @@ const defaultEntries: AdminPrefetchEntry[] = [
         listWidgetTemplateCategoriesCached(prefetchWarmupOptions),
         listWidgetTemplatesCached(prefetchWarmupOptions),
       ]),
+  },
+  {
+    match: (path) => resolveDetailTemplatePrefetchTarget(path) !== null,
+    resolveKey: ({ path }) => {
+      const target = resolveDetailTemplatePrefetchTarget(path);
+      return target
+        ? `/advanced/engine/${encodeURIComponent(
+            target.contentTypeId
+          )}/collection/detail-template/${encodeURIComponent(target.detailPageId)}`
+        : "/advanced/engine";
+    },
+    run: ({ path }) => prefetchDetailTemplateEditor(path),
   },
   {
     match: (path) => resolveCollectionWorkspacePrefetchTarget(path) !== null,

@@ -305,6 +305,10 @@ Clients update caches and broadcast events on:
   template list never hydrates another content type's workspace.
 - `detailPages:detail:<id>` stores the normalized detail-page record returned by
   list/detail/mutation responses.
+- The manual detail-template editor hydrates `detailPages:detail:<id>` first,
+  refreshes it with `getDetailPageCached(id, { force: true })`, and reuses
+  `entries:<contentTypeSlug>` list caching for the bounded preview sample
+  picker.
 - Manual create/update/delete, publish/unpublish, and revision restore flows
   update or invalidate the unfiltered list key, the active
   `contentTypeId`-scoped list key, and the touched detail key.

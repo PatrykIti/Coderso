@@ -23,6 +23,7 @@ import { BackupsPage } from "@/ui/backups/BackupsPage";
 import { ContentTypeEditor } from "@/ui/content-types/ContentTypeEditor";
 import { ContentTypeList } from "@/ui/content-types/ContentTypeList";
 import { CollectionWorkspacePage } from "@/ui/content-types/CollectionWorkspacePage";
+import { DetailTemplateEditorPage } from "@/ui/content-types/DetailTemplateEditorPage";
 import { SchemaBuilderPage } from "@/ui/content-types/SchemaBuilderPage";
 import { EntryEditor } from "@/ui/entries/EntryEditor";
 import { EntryList } from "@/ui/entries/EntryList";
@@ -543,6 +544,10 @@ export function AdminApp({ path }: AdminAppProps) {
       { pattern: "/advanced/engine", element: <ContentTypeList /> },
       { pattern: "/advanced/engine/:id", element: <ContentTypeEditor /> },
       { pattern: "/advanced/engine/:id/collection", element: <CollectionWorkspacePage /> },
+      {
+        pattern: "/advanced/engine/:id/collection/detail-template/:detailPageId",
+        element: <DetailTemplateEditorPage />,
+      },
       { pattern: "/advanced/engine/:id/schema", element: <SchemaBuilderPage /> },
       { pattern: "/advanced/entries", element: <EntryList /> },
       { pattern: "/advanced/entries/:type/:id", element: <EntryEditor /> },
