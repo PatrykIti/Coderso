@@ -1532,6 +1532,99 @@ test("executeAssistantActionPlan reuses renamed custom screens by composition me
   expect(deps.__state.customScreens[0]?.blocks[0]?.data.title).toBe("Product overview");
 });
 
+test("executeAssistantActionPlan reuses legacy custom screens by name before metadata exists", async () => {
+  const deps = createDeps();
+  const contentType = await deps.createContentType({
+    name: "Products",
+    slug: "products",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {},
+    },
+  });
+  const existing = await deps.createCustomScreen({
+    name: "Products",
+    contentTypeId: contentType.id,
+    status: "active",
+    collectionRole: null,
+    compositionKey: null,
+    showInSidebar: true,
+    sidebarLabel: "Products",
+    blocks: [
+      {
+        id: "header-1",
+        type: "screen-record-header",
+        data: {
+          title: "Legacy overview",
+        },
+      },
+    ],
+    bindings: [],
+  });
+
+  const plan: AssistantActionPlan = {
+    id: "plan-custom-screen-upsert-legacy",
+    status: "ready",
+    intentId: "custom-screen-upsert-legacy",
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+    title: "Upsert product admin screen",
+    answer: "I can update the legacy product admin screen.",
+    summary: "Reuse the canonical screen before metadata existed.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "custom-screen-upsert-1",
+        type: "custom-screen.upsert",
+        title: "Create products admin screen",
+        description: "Keep the canonical Products screen contract.",
+        input: {
+          name: "Products",
+          contentTypeSlug: "products",
+          status: "active",
+          collectionRole: "canonical-admin-screen",
+          compositionKey: "product-catalog",
+          showInSidebar: true,
+          sidebarLabel: "Products",
+          blocks: [
+            {
+              id: "header-1",
+              type: "screen-record-header",
+              data: {
+                title: "Product overview",
+              },
+            },
+          ],
+          bindings: [],
+        },
+      },
+    ],
+  };
+
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.changes[0]?.operation).toBe("update");
+
+  const executed = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-custom-screen-upsert-legacy",
+    },
+    deps
+  );
+
+  expect(executed.summary.failed).toBe(0);
+  expect(executed.summary.update).toBe(1);
+  expect(deps.__state.customScreens).toHaveLength(1);
+  expect(deps.__state.customScreens[0]?.id).toBe(existing.id);
+  expect(deps.__state.customScreens[0]?.collectionRole).toBe("canonical-admin-screen");
+  expect(deps.__state.customScreens[0]?.compositionKey).toBe("product-catalog");
+  expect(deps.__state.customScreens[0]?.blocks[0]?.data.title).toBe("Product overview");
+});
+
 test("executeAssistantActionPlan patches custom screen widget block data", async () => {
   const deps = createDeps();
   const contentType = await deps.createContentType({

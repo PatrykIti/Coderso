@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 832 | 2026-05-10 | TASK-190 legacy custom screen reuse fallback | Assistant/Core |
 | 831 | 2026-05-10 | TASK-190 post-review drift fixes | Assistant/Core |
 | 830 | 2026-05-10 | TASK-190 blueprint composer closure | Documentation/Assistant |
 | 829 | 2026-05-10 | TASK-190 blueprint composer guide | Documentation/Assistant |

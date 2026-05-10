@@ -95,3 +95,14 @@ Closure sequencing rule:
   tests, `2921` assertions), and `bun run scan:security:strict` clean. The
   container image scan remained intentionally skipped because
   `SECURITY_SCAN_IMAGE` was not set.
+- 2026-05-10: Final no-duplicate follow-up added legacy exact-name custom-screen
+  reuse before `collectionRole` / `compositionKey` metadata exists, preserving
+  backward compatibility while still preferring metadata-backed canonical
+  matches.
+- 2026-05-10: Final fallback validation passed targeted Bun action executor
+  coverage (`63` tests, `300` assertions), `bun --cwd core lint`,
+  `bun --cwd core lint:types`, `bun run lint`, full `bun run test:vitest`
+  (`582` files, `2611` tests), full DB/runtime `bun run test:bun` outside the
+  sandbox with `.env` loaded (`757` tests, `2929` assertions), and
+  `bun run scan:security:strict` clean. The container image scan remained
+  intentionally skipped because `SECURITY_SCAN_IMAGE` was not set.

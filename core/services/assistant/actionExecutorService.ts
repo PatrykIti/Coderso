@@ -707,13 +707,17 @@ const findExistingCustomScreenForUpsert = async (
 
   const role = action.input.collectionRole ?? null;
   const compositionKey = action.input.compositionKey ?? null;
-  const candidates = (await deps.listCustomScreens()).filter(
-    (entry) =>
-      entry.contentTypeId === contentType.id &&
-      (role
-        ? entry.collectionRole === role && (entry.compositionKey ?? null) === compositionKey
-        : entry.name === action.input.name)
+  const screens = (await deps.listCustomScreens()).filter(
+    (entry) => entry.contentTypeId === contentType.id
   );
+  const metadataCandidates = role
+    ? screens.filter(
+        (entry) =>
+          entry.collectionRole === role && (entry.compositionKey ?? null) === compositionKey
+      )
+    : [];
+  const nameCandidates = screens.filter((entry) => entry.name === action.input.name);
+  const candidates = metadataCandidates.length > 0 ? metadataCandidates : nameCandidates;
 
   if (candidates.length > 1) {
     return {
