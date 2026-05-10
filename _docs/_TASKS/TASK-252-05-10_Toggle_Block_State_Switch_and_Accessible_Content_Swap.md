@@ -38,7 +38,7 @@ and Reject decisions.
 ## Editor Mode Ownership
 
 - `Wizard`: first-run setup for the safest useful defaults for `toggle-block`.
-- `Visual`: `States`, `Labels`, `Default state`, `Panel styling`.
+- `Visual`: `States`, `Labels`, `Default state`, `A11y state announcement`.
 - `Advanced`: `A11y diagnostics`, `Legacy active-state mapping`.
 
 ## Sub-Tasks

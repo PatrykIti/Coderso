@@ -33,6 +33,10 @@ and Reject decisions.
   `_docs/_WIDGETS/tmp/booking-calendar/MATRIX.md`; start from the current owner
   fields `flowId`, labels/messages, legacy `slotsEndpoint`, `style`, and
   `resolved`.
+- Keep: preserve existing persisted state fields `selectedSlotEmptyMessage`,
+  `intervalMinutes`, `defaultServiceId`, and `defaultResourceId`; they already
+  belong to `core/widgets/core/bookingCalendar.tsx` and must not be dropped while
+  adding display modes or diagnostics.
 - Keep: legacy `slotsEndpoint` only as a safe relative-route diagnostic or
   migration field. The implementation must not keep or introduce a free
   editable provider/backend URL; editor controls should move this value to
@@ -82,6 +86,15 @@ function normalizeBookingCalendarData(data: BookingCalendarData): BookingCalenda
     serviceLabel: normalizeBookingCalendarServiceLabel(data.serviceLabel),
     resourceLabel: normalizeBookingCalendarResourceLabel(data.resourceLabel),
     dateLabel: normalizeBookingCalendarDateLabel(data.dateLabel),
+    refreshLabel: normalizeBookingCalendarRefreshLabel(data.refreshLabel),
+    missingSelectionMessage: normalizeBookingCalendarMissingSelectionMessage(data.missingSelectionMessage),
+    emptySlotsMessage: normalizeBookingCalendarEmptySlotsMessage(data.emptySlotsMessage),
+    loadingMessage: normalizeBookingCalendarLoadingMessage(data.loadingMessage),
+    errorMessage: normalizeBookingCalendarErrorMessage(data.errorMessage),
+    selectedSlotEmptyMessage: normalizeBookingCalendarSelectedSlotEmptyMessage(data.selectedSlotEmptyMessage),
+    intervalMinutes: normalizeBookingCalendarIntervalMinutes(data.intervalMinutes),
+    defaultServiceId: normalizeBookingCalendarDefaultServiceId(data.defaultServiceId),
+    defaultResourceId: normalizeBookingCalendarDefaultResourceId(data.defaultResourceId),
     displayMode: normalizeBookingCalendarDisplayMode(data.displayMode),
     slotsEndpoint: normalizeLegacyBookingCalendarSlotsEndpoint(data.slotsEndpoint, {
       allowExternalUrl: false,
@@ -116,6 +129,10 @@ Implementation checklist:
   or a strictly safe relative route. If the latter is kept editable, add
   schema/validator tests that reject `http:`, `https:`, protocol-relative, and
   provider-owned URLs.
+- Preserve current booking-calendar labels/messages, `selectedSlotEmptyMessage`,
+  `intervalMinutes`, `defaultServiceId`, and `defaultResourceId` during schema
+  reorganization. Missing new display-mode fields must normalize around these
+  existing defaults instead of replacing them.
 - Refactor `core/admin/ui/widgets/editors/BookingCalendarEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.
@@ -165,6 +182,10 @@ Implementation checklist:
 - `bun run test:vitest -- tests/vitest/ui/booking-calendar-editor-wave.test.tsx`
 - Add validator/widget/editor regressions proving `slotsEndpoint` is read-only
   diagnostic or safe-relative only and rejects external URLs.
+- Keep or extend the existing `intervalMinutes` clamp regression in
+  `tests/vitest/widgets/bookingCalendar.test.tsx`, and add coverage that
+  `selectedSlotEmptyMessage`, `defaultServiceId`, and `defaultResourceId` remain
+  preserved through normalization/rendering.
 - `bun test tests/unit/server/publicBookingApi.test.ts` when `/api/booking/slots`
   or `/api/booking/reservations` public route behavior changes.
 - `bun test tests/unit/booking/bookingAccess.test.ts` when booking access or

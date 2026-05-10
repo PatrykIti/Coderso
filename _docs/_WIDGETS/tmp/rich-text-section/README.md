@@ -52,7 +52,7 @@ Summary-only archive for TASK-252. Do not copy third-party code from these sourc
 - Access type: premium-reference
 - License/terms summary: Paid/proprietary; reference-only.
 - Observed UX pattern: editorial feature copy, inset images, and multi-column text.
-- Useful Coderso fields/options: `layoutPreset`, `media`, `columns`, `pullQuote`.
+- Useful Coderso fields/options: `layoutPreset`, `media`, controlled prose split, `pullQuote`.
 - Decision: Adapt
 - Copy policy: Reference-only.
 
@@ -70,7 +70,7 @@ Summary-only archive for TASK-252. Do not copy third-party code from these sourc
 - Access type: docs-example
 - License/terms summary: Verify site terms before reuse.
 - Observed UX pattern: compact content sections with heading hierarchy and text width controls.
-- Useful Coderso fields/options: `headingLevel`, `maxWidth`, `density`.
+- Useful Coderso fields/options: `headingLevel`, `maxWidth`, `spacing`.
 - Decision: Keep
 - Copy policy: Pattern summary only.
 

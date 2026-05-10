@@ -25,7 +25,7 @@ Summary-only archive for TASK-252. Do not copy third-party code from these sourc
 - Access type: docs-example
 - License/terms summary: Flowbite free/pro terms vary; reference-only until confirmed.
 - Observed UX pattern: pricing cards with included feature lists and CTA styles.
-- Useful Coderso fields/options: `featureList`, `ctaStyle`, `cardTone`, `columns`.
+- Useful Coderso fields/options: `featureList`, `ctaStyle`, `cardTone`, existing plan-count `variant`.
 - Decision: Keep
 - Copy policy: No source copy.
 
@@ -52,7 +52,7 @@ Summary-only archive for TASK-252. Do not copy third-party code from these sourc
 - Access type: docs-example
 - License/terms summary: Verify site terms before reuse.
 - Observed UX pattern: compact pricing cards with feature checkmarks and plan labels.
-- Useful Coderso fields/options: `checkIcon`, `planLabel`, `density`.
+- Useful Coderso fields/options: `checkIcon`, `planLabel`, `style.spacing`.
 - Decision: Keep
 - Copy policy: Summarize only.
 
@@ -79,7 +79,7 @@ Summary-only archive for TASK-252. Do not copy third-party code from these sourc
 - Access type: docs-example
 - License/terms summary: Flowbite React is open-source; examples should still be treated as reference.
 - Observed UX pattern: accessible table structure for comparison mode.
-- Useful Coderso fields/options: `comparisonMode`, `rows`, `columns`, `mobileCollapse`.
+- Useful Coderso fields/options: `comparisonMode`, `rows`, explicit comparison fields, `mobileCollapse`.
 - Decision: Adapt
 - Copy policy: Use concept only.
 

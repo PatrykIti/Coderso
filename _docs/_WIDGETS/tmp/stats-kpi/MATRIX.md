@@ -2,7 +2,7 @@
 
 | Researched option | Source family | Decision | Coderso editor/schema implication |
 |---|---|---|---|
-| Stat grid | HyperUI, Flowbite | Keep | Keep repeated stat items with value, label, description, and columns. |
+| Stat grid | HyperUI, Flowbite | Keep | Keep repeated stat items with value, label, description, and existing variant-driven layout; do not add a standalone grid-count field. |
 | Prefix/suffix | ReUI | Keep | Add explicit `prefix` and `suffix` fields instead of parsing value strings. |
 | Icon per KPI | Preline, Uilib | Keep | Add optional icon field and icon tone controls. |
 | Trend label/direction | Origin UI, ReUI | Adapt | Support optional trend text/direction but avoid live data semantics. |

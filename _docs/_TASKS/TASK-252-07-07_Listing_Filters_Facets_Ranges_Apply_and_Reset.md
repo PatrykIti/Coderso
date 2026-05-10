@@ -38,6 +38,9 @@ and Reject decisions.
   ownership for `behavior.resetLabel`, `behavior.applyLabel`, and reset binding.
   Reset must clear the current `lq.<queryId>.*` filter/search params and refresh
   the linked listing blocks through the existing listing runtime owner.
+- Keep: `behavior` is the new persisted shape for apply/reset labels and mode.
+  Legacy top-level `autoApply` and `applyLabel` must remain non-destructive
+  fallbacks until old payloads are migrated.
 - Adapt: mobile/sidebar/chips presentation and facet presets from listing
   schema metadata remain conditional; implement only when schema/defaults/
   normalizer/render/editor/tests move together.
@@ -81,9 +84,9 @@ function normalizeListingFiltersData(data: ListingFiltersData): ListingFiltersDa
     showSearch: normalizeListingFiltersShowSearch(data.showSearch),
     facets: normalizeListingFiltersFacets(data.facets),
     behavior: normalizeListingFiltersBehavior({
-      autoApply: data.autoApply,
-      resetLabel: data.resetLabel,
-      applyLabel: data.applyLabel,
+      autoApply: data.behavior?.autoApply ?? data.autoApply,
+      resetLabel: data.behavior?.resetLabel,
+      applyLabel: data.behavior?.applyLabel ?? data.applyLabel,
     }),
     style: normalizeListingFiltersStyle(data.style),
     resolved: normalizeListingFiltersResolved(data.resolved),
@@ -98,7 +101,10 @@ function ListingFiltersVisualEditor(props: WidgetEditorProps<ListingFiltersData>
         <ListingQueryPicker value={value.listingQueryId ?? ""} onChange={handleControlChange} />
       </WidgetControlRow>
       <WidgetControlRow id="listing-filters.behavior.autoApply" label="Apply mode" data-widget-control="listing-filters.behavior.autoApply">
-        <SegmentedControl value={value.autoApply ? "instant" : "manual"} onChange={(mode) => props.onChange(updateListingFilterBehavior(value, { autoApply: mode === "instant" }))} />
+        <SegmentedControl value={(value.behavior?.autoApply ?? value.autoApply) ? "instant" : "manual"} onChange={(mode) => props.onChange(updateListingFilterBehavior(value, { autoApply: mode === "instant" }))} />
+      </WidgetControlRow>
+      <WidgetControlRow id="listing-filters.behavior.resetLabel" label="Reset label" data-widget-control="listing-filters.behavior.resetLabel">
+        <Input value={value.behavior?.resetLabel ?? ""} onChange={(resetLabel) => props.onChange(updateListingFilterBehavior(value, { resetLabel }))} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -113,6 +119,9 @@ Implementation checklist:
 - Add explicit reset/apply schema and rendering for `behavior.resetLabel` and
   `behavior.applyLabel`; wire a stable reset control that
   `getListingRuntimeClientScript` can bind without DOM-string guessing.
+- Render reset with a stable metadata hook such as
+  `data-listing-filter-reset={listingQueryId}` and bind through
+  `getListingRuntimeClientScript`; do not leave reset behavior as unbound copy.
 - Update `core/widgets/core/listingRuntimeScript.ts` so reset clears
   `lq.<queryId>.*` params, preserves unrelated query params, and refreshes the
   same listing blocks as apply/instant updates.

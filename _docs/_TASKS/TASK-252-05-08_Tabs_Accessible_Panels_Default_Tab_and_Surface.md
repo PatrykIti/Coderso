@@ -39,7 +39,7 @@ and Reject decisions.
 ## Editor Mode Ownership
 
 - `Wizard`: first-run setup for the safest useful defaults for `tabs`.
-- `Visual`: `Items`, `Default tab`, `Orientation`, `Panel surface`, `States`.
+- `Visual`: `Items`, `Default tab`, `Orientation`, `Existing panel surface`, `States`.
 - `Advanced`: `Keyboard/a11y diagnostics`, `Legacy selected tab mapping`.
 
 ## Sub-Tasks

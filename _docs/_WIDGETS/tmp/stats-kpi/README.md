@@ -7,7 +7,7 @@ Summary-only archive for TASK-252. Do not copy third-party code from these sourc
 - Access type: open-source
 - License/terms summary: HyperUI is generally MIT-style; verify before reuse.
 - Observed UX pattern: KPI grid with value, label, and short description.
-- Useful Coderso fields/options: `items[].value`, `items[].label`, `items[].description`, `columns`.
+- Useful Coderso fields/options: `items[].value`, `items[].label`, `items[].description`, existing `variant`.
 - Decision: Keep
 - Copy policy: Summarize only.
 
@@ -25,7 +25,7 @@ Summary-only archive for TASK-252. Do not copy third-party code from these sourc
 - Access type: docs-example
 - License/terms summary: Flowbite block terms vary; reference-only until confirmed.
 - Observed UX pattern: marketing stat sections with large numbers and labels.
-- Useful Coderso fields/options: `numberSize`, `label`, `sectionIntro`, `columns`.
+- Useful Coderso fields/options: `numberSize`, `label`, `sectionIntro`, existing `variant`.
 - Decision: Keep
 - Copy policy: No source copy.
 
@@ -43,7 +43,7 @@ Summary-only archive for TASK-252. Do not copy third-party code from these sourc
 - Access type: docs-example
 - License/terms summary: Verify block terms before reuse.
 - Observed UX pattern: compact stat cards using consistent typography and muted descriptions.
-- Useful Coderso fields/options: `cardVariant`, `density`, `description`.
+- Useful Coderso fields/options: `cardVariant`, `style.spacing`, `description`.
 - Decision: Keep
 - Copy policy: Summary only.
 
@@ -78,8 +78,8 @@ Summary-only archive for TASK-252. Do not copy third-party code from these sourc
 - URL: https://mui.com/material-ui/react-card/
 - Access type: docs-example
 - License/terms summary: MUI is open-source; no dependency should be added.
-- Observed UX pattern: structured card with header/content/actions that can guide KPI density.
-- Useful Coderso fields/options: `cardDensity`, `header`, `footerMeta`.
+- Observed UX pattern: structured card with header/content/actions that can guide KPI spacing.
+- Useful Coderso fields/options: `style.spacing`, `header`, `footerMeta`.
 - Decision: Adapt
 - Copy policy: Summarize interaction/layout only.
 

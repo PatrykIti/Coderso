@@ -2,7 +2,7 @@
 
 | Researched option | Source family | Decision | Coderso editor/schema implication |
 |---|---|---|---|
-| Static responsive grid | HyperUI, Preline, Flowbite | Keep | Keep repeated logo items with image, alt, href, columns, and max height. |
+| Static responsive grid | HyperUI, Preline, Flowbite | Keep | Keep repeated logo items with image, alt, href, existing `variant`, `style.gap`, and `style.logoHeight`; do not add a standalone grid-count field. |
 | Intro text with logos | Flowbite, Tailwind UI Plus | Keep | Support optional heading/intro and intro position. |
 | Grayscale/muted logo treatment | HyperUI, Preline | Keep | Add `logoTone` enum rather than arbitrary filters. |
 | Dark/surface variants | Tailwind UI Plus, shadcn.io | Adapt | Use theme token surface/tone controls. |

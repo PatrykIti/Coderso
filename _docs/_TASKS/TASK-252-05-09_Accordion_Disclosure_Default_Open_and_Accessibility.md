@@ -41,7 +41,7 @@ and Reject decisions.
 ## Editor Mode Ownership
 
 - `Wizard`: first-run setup for the safest useful defaults for `accordion`.
-- `Visual`: `Items`, `Open behavior`, `Panel surface`, `Icons`.
+- `Visual`: `Items`, `Open behavior`, `Existing panel token preservation`.
 - `Advanced`: `A11y diagnostics`, `Legacy expanded item mapping`.
 
 ## Sub-Tasks

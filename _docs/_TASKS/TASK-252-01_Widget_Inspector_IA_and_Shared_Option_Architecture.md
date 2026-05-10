@@ -59,7 +59,10 @@ look and behave consistently.
   icons, and automation metadata.
 - [ ] Move generic helper copy into compact information affordances.
 - [ ] Move slot/region controls into named editor sections.
-- [ ] Migrate `section`, `hero`, and `timeline` as the first proof call sites.
+- [ ] Migrate shared inspector primitives and `section` as the non-overlapping
+  proof call site; `hero` and `timeline` may receive scaffold-only compatibility
+  hooks here, but their full editor migrations stay owned by
+  TASK-252-03-01 and TASK-252-04-01.
 - [ ] Add focused UI tests for metadata, accessibility labels, and slot-control
   placement.
 
@@ -73,10 +76,13 @@ look and behave consistently.
 - `core/admin/ui/widgets/editors/ClearableFields.tsx`
 - new optional shared helper, for example:
   - `core/admin/ui/widgets/editors/WidgetEditorControls.tsx`
-- focused call-site migrations in:
-  - `core/admin/ui/widgets/editors/HeroEditors.tsx`
+- focused call-site migration in:
   - `core/admin/ui/widgets/editors/SectionEditors.tsx`
-  - `core/admin/ui/widgets/editors/TimelineEditors.tsx`
+- scaffold-only compatibility checks in:
+  - `core/admin/ui/widgets/editors/HeroEditors.tsx` only if shared primitive
+    exports require an import-compatible placeholder before TASK-252-03-01
+  - `core/admin/ui/widgets/editors/TimelineEditors.tsx` only if shared primitive
+    exports require an import-compatible placeholder before TASK-252-04-01
 
 ## Implementation Pseudocode
 
@@ -154,10 +160,11 @@ context so `section` can display Regions with its own content.
 - `bun run test:vitest -- tests/vitest/ui/page-editor.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/page-editor-shell-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/widget-editors-wave-1.test.tsx`
-- Focused editor waves after first call-site migrations:
+- Focused editor waves after the proof call-site migration:
   - `tests/vitest/ui/section-editor-wave.test.tsx`
-  - `tests/vitest/ui/hero-editor-wave.test.tsx`
-  - `tests/vitest/ui/timeline-editor-wave.test.tsx`
+- Run hero/timeline editor waves only for scaffold-only compatibility touched in
+  this task; full hero/timeline editor coverage is owned by TASK-252-03-01 and
+  TASK-252-04-01.
 
 ## Documentation Updates Required
 

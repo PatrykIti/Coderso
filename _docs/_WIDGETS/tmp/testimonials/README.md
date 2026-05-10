@@ -7,7 +7,7 @@ Summary-only archive for TASK-252. Do not copy third-party code from these sourc
 - Access type: open-source
 - License/terms summary: HyperUI examples are generally MIT-style; verify before reuse.
 - Observed UX pattern: quote cards with avatar, name, role, and body.
-- Useful Coderso fields/options: `items[].quote`, `items[].author`, `items[].role`, `items[].avatar`, `columns`.
+- Useful Coderso fields/options: `items[].quote`, `items[].author`, `items[].role`, `items[].avatar`, existing `variant`.
 - Decision: Keep
 - Copy policy: Summarize only.
 
@@ -61,7 +61,7 @@ Summary-only archive for TASK-252. Do not copy third-party code from these sourc
 - Access type: docs-example
 - License/terms summary: Verify site terms before reuse.
 - Observed UX pattern: compact testimonials with ratings and author identity.
-- Useful Coderso fields/options: `ratingScale`, `showRating`, `density`.
+- Useful Coderso fields/options: `ratingScale`, `showRating`, `style.spacing`.
 - Decision: Keep
 - Copy policy: Pattern summary only.
 
@@ -79,7 +79,7 @@ Summary-only archive for TASK-252. Do not copy third-party code from these sourc
 - Access type: unknown-license
 - License/terms summary: License not confirmed; reference only.
 - Observed UX pattern: quote grids and slider-ready testimonial collections.
-- Useful Coderso fields/options: `mode`, `columns`, `carouselReady`.
+- Useful Coderso fields/options: `mode`, existing `variant`, `carouselReady`.
 - Decision: Adapt
 - Copy policy: No copying until terms are verified.
 

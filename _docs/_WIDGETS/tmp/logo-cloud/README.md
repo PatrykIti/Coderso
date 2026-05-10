@@ -7,7 +7,7 @@ Summary-only archive for TASK-252. Do not copy third-party code from these sourc
 - Access type: open-source
 - License/terms summary: HyperUI is generally MIT-style; verify before reuse.
 - Observed UX pattern: simple row/grid of partner logos with optional intro text.
-- Useful Coderso fields/options: `logos[].image`, `logos[].alt`, `intro`, `columns`, `grayscale`.
+- Useful Coderso fields/options: `logos[].image`, `logos[].alt`, `intro`, existing `variant`, `style.grayscale`.
 - Decision: Keep
 - Copy policy: Summarize only.
 
@@ -43,7 +43,7 @@ Summary-only archive for TASK-252. Do not copy third-party code from these sourc
 - Access type: docs-example
 - License/terms summary: Verify block terms before reuse.
 - Observed UX pattern: compact trust logo grids in landing-page sections.
-- Useful Coderso fields/options: `density`, `surface`, `columns`.
+- Useful Coderso fields/options: `style.gap`, `surface`, existing `variant`.
 - Decision: Keep
 - Copy policy: Summary only.
 

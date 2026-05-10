@@ -72,11 +72,14 @@ and Reject decisions.
 ```tsx
 function normalizeProductTableData(data: ProductTableData): ProductTableData {
   return {
-    source: normalizeProductTableSource(data.source),
-    columns: normalizeProductTableColumns(data.columns ?? data.fields),
-    sorting: normalizeProductTableSorting(data.sorting),
-    filters: normalizeProductTableFilters(data.filters),
-    pagination: normalizeProductTablePagination(data.pagination),
+    source: normalizeCommerceWidgetSource({
+      limit: data.source?.limit,
+      search: data.source?.search,
+      collectionIds: data.source?.collectionIds,
+      status: data.source?.status,
+      sortField: data.source?.sortField,
+      sortDir: data.source?.sortDir,
+    }),
     fields: normalizeProductTableFields(data.fields),
     labels: normalizeProductTableLabels(data.labels),
     emptyState: normalizeProductTableEmptyState(data.emptyState),
@@ -92,8 +95,14 @@ function ProductTableVisualEditor(props: WidgetEditorProps<ProductTableData>) {
       <WidgetControlRow id="product-table.source.mode" label="Source mode" data-widget-control="product-table.source.mode">
         <Select value={value.source?.mode ?? "catalog"} onChange={handleControlChange} />
       </WidgetControlRow>
-      <WidgetControlRow id="product-table.pagination.limit" label="Rows per page" data-widget-control="product-table.pagination.limit">
-        <NumberInput value={value.pagination?.limit ?? 12} onChange={(limit) => props.onChange(updateProductTablePagination(value, { limit }))} />
+      <WidgetControlRow id="product-table.source.limit" label="Rows per page" data-widget-control="product-table.source.limit">
+        <NumberInput value={value.source?.limit ?? 12} onChange={(limit) => props.onChange(updateProductTableSource(value, { limit }))} />
+      </WidgetControlRow>
+      <WidgetControlRow id="product-table.source.sortField" label="Sort field" data-widget-control="product-table.source.sortField">
+        <Select value={value.source?.sortField ?? "updatedAt"} onChange={(sortField) => props.onChange(updateProductTableSource(value, { sortField }))} />
+      </WidgetControlRow>
+      <WidgetControlRow id="product-table.source.sortDir" label="Sort direction" data-widget-control="product-table.source.sortDir">
+        <SegmentedControl value={value.source?.sortDir ?? "desc"} onChange={(sortDir) => props.onChange(updateProductTableSource(value, { sortDir }))} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -109,6 +118,12 @@ Implementation checklist:
   source-level sorting, filtering, or pagination fields through the shared
   commerce query owners (`commerceWidgetShared.ts` and
   `commerceQueryService.ts`) instead of inventing a widget-local query shape.
+- Use existing shared source fields first: `source.limit`, `source.search`,
+  `source.collectionIds`, `source.status`, `source.sortField`, and
+  `source.sortDir`. If a later implementation needs a separate pagination mode
+  or additional filter operators, extend `CommerceWidgetSource`,
+  `NormalizedCommerceWidgetSource`, and `buildCommerceWidgetQueryInput` before
+  adding editor controls.
 - Refactor `core/admin/ui/widgets/editors/ProductTableEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.
@@ -148,6 +163,9 @@ Implementation checklist:
 - `bun test tests/unit/commerce/commerceWidgetRuntime.test.ts`
 - `bun test tests/unit/commerce/commerceQueryService.test.ts` when shared
   commerce query sorting/filter/pagination normalization changes.
+- Add regressions proving product-table editor controls write through
+  `source.*` and `buildCommerceWidgetQueryInput`, not widget-local
+  `sorting`/`filters`/`pagination` objects.
 - `bun run test:vitest -- tests/vitest/ui/product-table-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,
   slot, or shared output behavior changes.

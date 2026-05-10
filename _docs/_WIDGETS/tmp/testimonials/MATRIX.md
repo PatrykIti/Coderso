@@ -2,7 +2,7 @@
 
 | Researched option | Source family | Decision | Coderso editor/schema implication |
 |---|---|---|---|
-| Quote card grid | HyperUI, shadcn.io | Keep | Keep repeated quote items with author, role, avatar, and columns. |
+| Quote card grid | HyperUI, shadcn.io | Keep | Keep repeated quote items with author, role, avatar, and existing variant-count layout; do not add a standalone grid-count field. |
 | Single spotlight quote | Preline, Aceternity | Keep | Add `mode: spotlight` and optional featured item. |
 | Ratings | Preline, Origin UI | Keep | Add optional rating fields with scale and visibility controls. |
 | Company/logo metadata | Flowbite, ReUI | Adapt | Optional `company` and `logo`; keep hidden by default unless populated. |
