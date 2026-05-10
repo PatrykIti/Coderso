@@ -5,7 +5,7 @@
 **Category:** QA + Docs + Assistant Evaluation
 **Estimated Effort:** Large
 **Dependencies:** TASK-190-01, TASK-190-02, TASK-190-03, TASK-190-04, TASK-190-05, TASK-190-06, TASK-190-07
-**Status:** To Do
+**Status:** In Progress (2026-05-10)
 
 ---
 
@@ -77,3 +77,10 @@ Owner files:
 - `_docs/SECURITY_SPEC.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
+
+## Progress Notes
+
+- 2026-05-10: `TASK-190-08-01` landed the deterministic fixture/red-team corpus
+  and live-provider composition matrix. Remaining closure work is the authoring
+  guide/observability leaf (`TASK-190-08-03`) and final docs/changelog/gates
+  leaf (`TASK-190-08-02`).

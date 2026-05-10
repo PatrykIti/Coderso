@@ -5,7 +5,7 @@
 **Category:** QA + Assistant Evaluation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-190-07
-**Status:** To Do
+**Status:** Done (2026-05-10)
 
 ---
 
@@ -182,3 +182,20 @@ test.each(blueprintCompositionFixtures)(fixture.name, async () => {
 
 - `_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md`
 - `_docs/LLM_GUIDE_LIVE_COVERAGE_MATRIX.md`
+
+## Completion Notes
+
+- Added `tests/vitest/assistant/fixtures/blueprintCompositionFixtures.ts` and
+  `tests/vitest/assistant/blueprint-composition-fixtures.test.ts` for current
+  single-pack regressions, mixed-capability composition, gated module conflicts,
+  Mabudo-like tier-A parity, resource-catalog reuse, provider action-array
+  injection, SQL/path/secret red-team payloads, media upload/ambiguous filename
+  safety, LLM-unavailable catalog-backed planning, and the content-type delete
+  fixture that carries linked detail-page context for the existing
+  `content_type_has_detail_pages` executor guard.
+- Added `tests/integration/assistant-live/blueprintCompositionLiveMatrix.test.ts`
+  for OpenAI/OpenRouter opt-in live-provider coverage of local-first mixed
+  setup planning and gated booking/checkout composition.
+- Synchronized `_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md` and
+  `_docs/LLM_GUIDE_LIVE_COVERAGE_MATRIX.md` with the TASK-190-08-01 fixture
+  matrix.

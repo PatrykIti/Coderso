@@ -1,8 +1,8 @@
 # LLM Guide Live Coverage Matrix
 
 **Status:** Active  
-**Last Updated:** 2026-04-19
-**Related Tasks:** TASK-184, TASK-188
+**Last Updated:** 2026-05-10
+**Related Tasks:** TASK-184, TASK-188, TASK-190
 
 TASK-188 mirrors this route matrix into `assistantOperationPolicy` and validates
 the checked-in markdown against generated policy coverage rows so planner/schema
@@ -16,6 +16,16 @@ Coverage states:
 - `live-read-only`: live provider tests inspect/search without mutation controls.
 - `live-gated`: live provider tests verify unsupported or sensitive prompts stay non-executable.
 - `not-applicable`: route is planned/disabled or has no runtime surface yet.
+
+## Blueprint Composition Live Fixtures
+
+These rows are not route-coverage rows. They record opt-in OpenAI/OpenRouter
+fixture coverage for TASK-190 mixed blueprint composition.
+
+| Matrix | Coverage | Test | Task | Notes |
+|---|---|---|---|---|
+| Mixed blueprint composition | live-execute | `tests/integration/assistant-live/blueprintCompositionLiveMatrix.test.ts` | TASK-190-08-01 | Product catalog + inquiry + editorial hub stays local-first and returns typed actions before provider drafting can inject executable payloads. |
+| Gated mixed blueprint composition | live-gated | `tests/integration/assistant-live/blueprintCompositionLiveMatrix.test.ts` | TASK-190-08-01 | Booking and checkout/payment adjuncts are represented in metadata but return no executable actions until typed adapters exist. |
 
 | Route | Label | Coverage | Task | Notes |
 |---|---|---|---|---|
