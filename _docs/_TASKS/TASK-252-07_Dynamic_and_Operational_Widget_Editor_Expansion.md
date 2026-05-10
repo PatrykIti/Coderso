@@ -72,7 +72,9 @@ more flexible, but implementation must not weaken runtime contracts.
     validation, existing public rate-limit buckets, and endpoint/security tests;
   - widget editor changes must not add a weaker public submission route.
 - Make dynamic widget flexibility product-focused:
-  - `content-list`: card/list/grid modes, field visibility, empty/error states.
+  - `content-list`: cards/list/compact display variants, field visibility,
+    empty/error states; column/grid behavior stays a layout control, not a
+    separate mode.
   - `posts-feed`: latest/featured/category/manual source clarity, card/list/
     editorial density, and author/date/category toggles; reading time stays
     Adapt-only.

@@ -30,7 +30,7 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: product/catalog source picker, product media modes, thumbnails, and
+- Keep: shared commerce source controls, product media modes, thumbnails, and
   aspect-ratio controls from
   `_docs/_WIDGETS/tmp/product-gallery/MATRIX.md`; start from the current owner
   fields `source`, `fields`, `emptyState`, `style`, and `resolved`.
