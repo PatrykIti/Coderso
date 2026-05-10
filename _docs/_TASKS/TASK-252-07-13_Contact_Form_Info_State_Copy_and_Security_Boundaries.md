@@ -118,10 +118,13 @@ Implementation checklist:
 - Extend or reorganize `core/widgets/core/contact.tsx` schema/defaults/normalizer/rendering
   only for fields approved by the research decisions above.
 - Add explicit `stateCopy` schema/default/render/editor ownership for loading,
-  success, and error copy as presentational/static copy only. This leaf does
-  not add a form action, client runtime state bridge, or backend submission
-  route; keep field visibility on the current `form.fields`/`form.required`
-  shape rather than introducing ad hoc `showPhone` flags.
+  success, and error copy as passive rendered fallback copy unless this leaf
+  also wires a backend-owned contact submission route and runtime state bridge.
+  If no route is added, render the copy as deterministic hidden/status markup or
+  data attributes for future enhancement and cover that it does not create a
+  functional submit path. Keep field visibility on the current
+  `form.fields`/`form.required` shape rather than introducing ad hoc
+  `showPhone` flags.
 - Add `validationCopy` schema/default/render/editor/test ownership keyed by the
   existing `ContactFieldId` values so required-field messages stay deterministic
   and do not create a backend routing/security option surface.
@@ -161,8 +164,9 @@ Implementation checklist:
   - email routing and provider secrets remain backend-owned
   - the current contact form rendering is presentational and must not be
     documented as a Coderso nonce/HMAC-protected endpoint
-  - `stateCopy` values in this leaf are static/rendered copy, not proof of an
-    active submission workflow
+  - `stateCopy` values in this leaf must have an explicit render target
+    (hidden/status markup or documented data attributes) when no active
+    submission workflow exists
   - if backend routing adds Coderso-owned public submissions, the endpoint must
     use nonce + signature/HMAC via
     `core/services/forms/submissionNonce.ts`, optional reCAPTCHA policy,

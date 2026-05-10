@@ -136,6 +136,11 @@ Implementation checklist:
 - Reject-unknown validation:
   - changed `form-embed` schema fields must reject unknown fields and
     normalize legacy payloads through `core/widgets/core/formEmbed.tsx`.
+  - existing `resolved` payloads remain backend-owned runtime hydration data
+    and may stay permissive for compatibility. If implementation makes
+    `resolved` strict, it must add a compatibility adapter and update
+    `tests/vitest/widgets/formEmbed.test.tsx` coverage that currently preserves
+    extra runtime metadata.
 - Anti-abuse:
   - form submission security remains on existing form runtime endpoints,
     including nonce + signature/HMAC ownership in

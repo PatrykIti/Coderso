@@ -133,10 +133,12 @@ Implementation checklist:
 - Extend or reorganize `core/widgets/core/newsletter.tsx` schema/defaults/normalizer/rendering
   only for fields approved by the research decisions above.
 - Add explicit schema/default/render/editor ownership for loading, success, and
-  error copy as presentational/static widget copy only. This leaf does not add
-  provider runtime error mapping; provider secrets/config stay backend-only, and
-  any future Coderso-owned newsletter submission route must be a separate
-  backend-owned public-write task with route/security/Bun tests.
+  error copy, and map known provider/runtime errors only if an existing
+  backend-owned newsletter submission owner is wired in the same change. If no
+  such owner exists in the implementation slice, keep `stateCopy` as passive
+  rendered fallback copy and update the matrix/card note during execution to
+  record that runtime mapping was deferred. Provider secrets/config stay
+  backend-only.
 - Add bounded `style.width` plus `consent.privacyNote` schema/default/render/
   editor/test ownership; keep consent/provider security separate from provider
   configuration.
@@ -174,9 +176,9 @@ Implementation checklist:
 - Anti-abuse:
   - current `newsletter` action-url mode posts to an external form target and
     must not be documented as a Coderso nonce/HMAC-protected endpoint
-  - this leaf does not add runtime provider-error mapping or a Coderso-owned
-    newsletter submission endpoint
-  - if a later task adds a Coderso-owned newsletter submission endpoint, the route
+  - runtime provider-error mapping is allowed only through an existing or newly
+    added backend-owned newsletter submission endpoint with its own tests
+  - if this or a later task adds a Coderso-owned newsletter submission endpoint, the route
     must use nonce + signature/HMAC via
     `core/services/forms/submissionNonce.ts`, optional reCAPTCHA policy,
     existing public rate-limit buckets, strict reject-unknown validation, and

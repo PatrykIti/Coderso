@@ -123,7 +123,8 @@ Implementation checklist:
 - Anti-abuse:
   - Link fields introduced or touched by this leaf must normalize through the
     widget safe-href helper before render; media fields must stay on the
-    existing media-picker/storage ownership path.
+    existing media-picker/storage ownership path when one exists; raw URL media
+    fields must add bounded sanitization and tests before render.
   - No raw HTML, script embed, or unbounded class-name field is introduced.
 
 ## Testing Requirements

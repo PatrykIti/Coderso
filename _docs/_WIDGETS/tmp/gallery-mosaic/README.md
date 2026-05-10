@@ -35,7 +35,7 @@ Summary-only archive for TASK-252. Do not copy third-party code from these sourc
 - License/terms summary: Flowbite React is open-source; examples remain reference material.
 - Observed UX pattern: gallery images can be represented as carousel slides.
 - Useful Coderso fields/options: `mode: carousel`, `controls`, `autoplay`.
-- Decision: Adapt
+- Decision: Reject
 - Copy policy: Use concept only.
 
 ## Card 5 - Tailwind UI Plus image grids

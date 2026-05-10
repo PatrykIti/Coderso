@@ -176,8 +176,12 @@ Implementation checklist:
     normalize legacy payloads through `core/widgets/core/team.tsx`.
 - Anti-abuse:
   - Link fields introduced or touched by this leaf must normalize through the
-    widget safe-href helper before render; media fields must stay on the
-    existing media-picker/storage ownership path.
+    widget safe-href helper before render.
+  - Team photos currently use a raw public `photo` URL field, not an existing
+    MediaPicker/storage owner. This leaf must either add MediaPicker/storage
+    ownership with editor/runtime/tests, or keep the raw-public-URL contract and
+    add bounded URL sanitization plus widget/editor tests for unsafe photo
+    values.
   - No raw HTML, script embed, or unbounded class-name field is introduced.
 
 ## Testing Requirements

@@ -48,7 +48,11 @@ and Reject decisions.
 - `core/widgets/core/productCompare.tsx`
 - `core/widgets/core/commerceWidgetShared.ts`
 - `core/services/commerce/commerceWidgetRuntime.ts`
+- `core/services/commerce/commerceTypes.ts` only if `productIds` becomes a
+  general commerce query contract.
 - `core/services/commerce/commerceQueryService.ts`
+- `core/server/validation/commerceSchemas.ts` only if `productIds` becomes
+  admin/API query input rather than runtime-widget-only input.
 - `core/admin/ui/widgets/editors/ProductCompareEditors.tsx`
 - Bun-owned route/security suites when public endpoint behavior changes.
 - `tests/unit/widgets/validator.test.ts` when schema validation changes.
@@ -172,6 +176,12 @@ Implementation checklist:
   filter. `commerceWidgetRuntime.ts` must use the shared builder and apply
   `manualOrderIds` after query execution; the editor must not synthesize rows
   client-side.
+- Treat `productIds` as runtime-widget-only query input unless the
+  implementation intentionally promotes it into the public/admin commerce query
+  contract. If promoted, update `core/services/commerce/commerceTypes.ts`,
+  `core/server/validation/commerceSchemas.ts`, route validation, and API tests
+  in the same change; otherwise keep `productIds` out of admin/API schemas and
+  cover the runtime-widget bridge only.
 - Add query-service coverage for product-id filtering and runtime coverage for
   selected-product manual ordering plus empty/missing selected products.
 - Refactor `core/admin/ui/widgets/editors/ProductCompareEditors.tsx` to shared TASK-252 editor primitives from

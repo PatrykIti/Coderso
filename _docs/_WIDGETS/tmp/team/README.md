@@ -24,9 +24,9 @@ Summary-only archive for TASK-252. Do not copy third-party code from these sourc
 - URL: https://flowbite.com/blocks/marketing/team/
 - Access type: docs-example
 - License/terms summary: Flowbite block terms vary; reference-only until confirmed.
-- Observed UX pattern: card grid, profile links, and social icons.
+- Observed UX pattern: card grid, optional profile links, and social icons.
 - Useful Coderso fields/options: `cardStyle`, `profileHref`, `socialLinks`, `columns`.
-- Decision: Keep
+- Decision: Adapt
 - Copy policy: No source copy.
 
 ## Card 4 - Tailwind UI Plus team sections
