@@ -1,6 +1,6 @@
-# TASK-252-07-07: Listing Filters Facets Ranges Reset and Mobile Layout
+# TASK-252-07-07: Listing Filters Facets Ranges Apply and Reset
 
-# FileName: TASK-252-07-07_Listing_Filters_Facets_Ranges_Reset_and_Mobile_Layout.md
+# FileName: TASK-252-07-07_Listing_Filters_Facets_Ranges_Apply_and_Reset.md
 
 **Priority:** High
 **Category:** Widgets + Admin UI + Runtime + Security
@@ -42,7 +42,7 @@ and Reject decisions.
 ## Editor Mode Ownership
 
 - `Wizard`: first-run setup for the safest useful defaults for `listing-filters`.
-- `Visual`: `Facet source`, `Layout`, `Range filters`, `Apply/reset`, `Mobile behavior`.
+- `Visual`: `Facet source`, `Range filters`, `Apply/reset`, `Labels`.
 - `Advanced`: `Query diagnostics`, `Facet mapping`.
 
 ## Sub-Tasks
@@ -62,7 +62,7 @@ and Reject decisions.
 - `_docs/_WIDGETS/LISTING_FILTERS.md`
 - `_docs/_WIDGETS/tmp/listing-filters/MATRIX.md` for evidence reference only; do not rewrite research
   unless implementation finds a concrete source mismatch.
-- `_docs/_TASKS/TASK-252-07-07_Listing_Filters_Facets_Ranges_Reset_and_Mobile_Layout.md` for status updates during execution.
+- `_docs/_TASKS/TASK-252-07-07_Listing_Filters_Facets_Ranges_Apply_and_Reset.md` for status updates during execution.
 - `_docs/_TASKS/README.md` on status changes.
 
 ## Implementation Pseudocode
@@ -156,7 +156,7 @@ Implementation checklist:
 - `_docs/WIDGETS.md`
 - `_docs/_WIDGETS/LISTING_FILTERS.md`
 - `_docs/_WIDGETS/README.md` if this leaf creates a missing widget doc page.
-- `_docs/_TASKS/TASK-252-07-07_Listing_Filters_Facets_Ranges_Reset_and_Mobile_Layout.md` status notes during execution.
+- `_docs/_TASKS/TASK-252-07-07_Listing_Filters_Facets_Ranges_Apply_and_Reset.md` status notes during execution.
 - `_docs/_TASKS/README.md` on status changes.
 - `_docs/_CHANGELOG/README.md` and a changelog entry only when the leaf is
   completed.

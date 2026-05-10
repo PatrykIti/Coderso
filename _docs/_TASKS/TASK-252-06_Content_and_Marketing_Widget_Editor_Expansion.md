@@ -59,8 +59,8 @@ inside the editor instead of duplicate widget types.
     countdown urgency is rejected for this widget.
   - `logo-cloud`: keep grid/intro/tone/rows; treat marquee as Adapt-only with
     reduced-motion fallback.
-  - `gallery-mosaic`: layout presets, captions, overlay controls, media
-    selection clarity, and explicit alt text.
+  - `gallery-mosaic`: layout presets, captions, media selection clarity, and
+    explicit alt text; overlay text stays Adapt-only.
   - `stats-kpi`: cards/strip modes, prefix/suffix, and icons; trend labels stay
     Adapt-only.
   - `team`: member grid, social links, photo shape, and current `spotlight`
@@ -83,7 +83,7 @@ This parent is now executed through physical per-widget leaves. Do not implement
 - [ ] TASK-252-06-04: FAQ Accordion Support CTA Icon Placement and Defaults
 - [ ] TASK-252-06-05: CTA Banner Compact Split Badge and Icon
 - [ ] TASK-252-06-06: Logo Cloud Grid Tone Rows and Accessibility
-- [ ] TASK-252-06-07: Gallery Mosaic Layout Captions Overlays and Alt Text
+- [ ] TASK-252-06-07: Gallery Mosaic Layout Captions and Alt Text
 - [ ] TASK-252-06-08: Stats KPI Values Icons and Display Modes
 - [ ] TASK-252-06-09: Team Members Photo Shape Socials and Spotlight
 - [ ] TASK-252-06-10: Rich Text Section Prose Presets Width Badge and CTA

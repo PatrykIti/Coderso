@@ -1,6 +1,6 @@
-# TASK-252-05-04: Split Layout Ratio Order and Mobile Stack
+# TASK-252-05-04: Split Layout Slot Order and Mobile Stack
 
-# FileName: TASK-252-05-04_Split_Layout_Ratio_Order_and_Mobile_Stack.md
+# FileName: TASK-252-05-04_Split_Layout_Slot_Order_and_Mobile_Stack.md
 
 **Priority:** High
 **Category:** Widgets + Admin UI + Runtime Render
@@ -38,12 +38,15 @@ and Reject decisions.
   newer mobile behavior fields in `core/widgets/core/splitLayout.tsx`.
 - Adapt: ratio presets and marketing split polish remain conditional; implement
   only when schema/defaults/normalizer/render/editor/tests move together.
+- Preserve the current `ratio` field through normalization and rendering only
+  as existing backward-compatible data. Do not add new ratio presets or span
+  controls in this leaf unless the ratio Adapt row is promoted in a later task.
 - Reject: runtime resize handles and arbitrary grid/CSS controls.
 
 ## Editor Mode Ownership
 
 - `Wizard`: first-run setup for the safest useful defaults for `split-layout`.
-- `Visual`: `Ratio and orientation`, `Slot order`, `Mobile stack`, `Gap and alignment`.
+- `Visual`: `Slot order`, `Mobile stack`, `Gap and alignment`.
 - `Advanced`: `Legacy slot mapping`, `Responsive diagnostics`.
 
 ## Sub-Tasks
@@ -62,7 +65,7 @@ and Reject decisions.
 - `_docs/_WIDGETS/SPLIT_LAYOUT.md`
 - `_docs/_WIDGETS/tmp/split-layout/MATRIX.md` for evidence reference only; do not rewrite research
   unless implementation finds a concrete source mismatch.
-- `_docs/_TASKS/TASK-252-05-04_Split_Layout_Ratio_Order_and_Mobile_Stack.md` for status updates during execution.
+- `_docs/_TASKS/TASK-252-05-04_Split_Layout_Slot_Order_and_Mobile_Stack.md` for status updates during execution.
 - `_docs/_TASKS/README.md` on status changes.
 
 ## Implementation Pseudocode
@@ -73,7 +76,7 @@ function normalizeSplitLayoutData(data: SplitLayoutData): SplitLayoutData {
     mediaPosition: normalizeSplitLayoutMediaPosition(data.mediaPosition ?? legacyReverseToMediaPosition(data.reverse)),
     reverse: normalizeSplitLayoutReverse(data.reverse),
     orientation: normalizeSplitLayoutOrientation(data.orientation ?? data.mediaPosition),
-    ratio: normalizeSplitLayoutRatio(data.ratio),
+    ratio: normalizeExistingSplitLayoutRatio(data.ratio),
     mobileStack: normalizeSplitLayoutMobileStack(data.mobileStack ?? legacyCollapseMobileToMobileStack(data.collapseMobile)),
     mobileOrder: normalizeSplitLayoutMobileOrder(data.mobileOrder ?? legacyReverseOnMobileToMobileOrder(data.reverseOnMobile)),
     gap: normalizeSplitLayoutGap(data.gap),
@@ -84,7 +87,7 @@ function normalizeSplitLayoutData(data: SplitLayoutData): SplitLayoutData {
 function SplitLayoutVisualEditor(props: WidgetEditorProps<SplitLayoutData>) {
   const value = props.value;
   return (
-    <WidgetEditorSection id="split-layout.ratio" title="Ratio and order">
+    <WidgetEditorSection id="split-layout.order" title="Slot order and mobile stack">
       <WidgetControlRow id="split-layout.mediaPosition" label="Media position" data-widget-control="split-layout.mediaPosition">
         <SegmentedControl value={value.mediaPosition ?? "right"} onChange={(mediaPosition) => props.onChange(updateSplitLayoutMediaPosition(value, mediaPosition))} />
       </WidgetControlRow>
@@ -156,7 +159,7 @@ Implementation checklist:
 - `_docs/WIDGETS.md`
 - `_docs/_WIDGETS/SPLIT_LAYOUT.md`
 - `_docs/_WIDGETS/README.md` if this leaf creates a missing widget doc page.
-- `_docs/_TASKS/TASK-252-05-04_Split_Layout_Ratio_Order_and_Mobile_Stack.md` status notes during execution.
+- `_docs/_TASKS/TASK-252-05-04_Split_Layout_Slot_Order_and_Mobile_Stack.md` status notes during execution.
 - `_docs/_TASKS/README.md` on status changes.
 - `_docs/_CHANGELOG/README.md` and a changelog entry only when the leaf is
   completed.

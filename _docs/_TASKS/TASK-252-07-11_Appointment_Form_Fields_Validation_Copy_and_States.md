@@ -1,6 +1,6 @@
-# TASK-252-07-11: Appointment Form Fields Validation Copy Provider and States
+# TASK-252-07-11: Appointment Form Fields Validation Copy and States
 
-# FileName: TASK-252-07-11_Appointment_Form_Fields_Validation_Copy_Provider_and_States.md
+# FileName: TASK-252-07-11_Appointment_Form_Fields_Validation_Copy_and_States.md
 
 **Priority:** High
 **Category:** Widgets + Admin UI + Runtime + Security
@@ -40,8 +40,8 @@ and Reject decisions.
 ## Editor Mode Ownership
 
 - `Wizard`: first-run setup for the safest useful defaults for `appointment-form`.
-- `Visual`: `Fields`, `Validation copy`, `Provider mode`, `State copy`, `Layout`.
-- `Advanced`: `Public-write diagnostics`, `Provider mapping`.
+- `Visual`: `Fields`, `Validation copy`, `State copy`, `Layout`.
+- `Advanced`: `Public-write diagnostics`, `Booking submission boundary`.
 
 ## Sub-Tasks
 
@@ -63,7 +63,7 @@ and Reject decisions.
 - `_docs/_WIDGETS/APPOINTMENT_FORM.md`
 - `_docs/_WIDGETS/tmp/appointment-form/MATRIX.md` for evidence reference only; do not rewrite research
   unless implementation finds a concrete source mismatch.
-- `_docs/_TASKS/TASK-252-07-11_Appointment_Form_Fields_Validation_Copy_Provider_and_States.md` for status updates during execution.
+- `_docs/_TASKS/TASK-252-07-11_Appointment_Form_Fields_Validation_Copy_and_States.md` for status updates during execution.
 - `_docs/_TASKS/README.md` on status changes.
 
 ## Implementation Pseudocode
@@ -164,7 +164,7 @@ Implementation checklist:
 - `_docs/WIDGETS.md`
 - `_docs/_WIDGETS/APPOINTMENT_FORM.md`
 - `_docs/_WIDGETS/README.md` if this leaf creates a missing widget doc page.
-- `_docs/_TASKS/TASK-252-07-11_Appointment_Form_Fields_Validation_Copy_Provider_and_States.md` status notes during execution.
+- `_docs/_TASKS/TASK-252-07-11_Appointment_Form_Fields_Validation_Copy_and_States.md` status notes during execution.
 - `_docs/_TASKS/README.md` on status changes.
 - `_docs/_CHANGELOG/README.md` and a changelog entry only when the leaf is
   completed.

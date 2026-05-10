@@ -1,6 +1,6 @@
-# TASK-252-06-07: Gallery Mosaic Layout Captions Overlays and Alt Text
+# TASK-252-06-07: Gallery Mosaic Layout Captions and Alt Text
 
-# FileName: TASK-252-06-07_Gallery_Mosaic_Layout_Captions_Overlays_and_Alt_Text.md
+# FileName: TASK-252-06-07_Gallery_Mosaic_Layout_Captions_and_Alt_Text.md
 
 **Priority:** High
 **Category:** Widgets + Admin UI + Runtime Render
@@ -12,7 +12,9 @@
 
 ## Overview
 
-Expose gallery mosaic layout presets, captions, overlays, and alt text while keeping carousel/lightbox as separate decisions.
+Expose gallery mosaic layout presets, media selection, captions, and alt text
+while keeping overlay text, carousel, and lightbox as separate Adapt-only
+decisions.
 
 This is an execution leaf under `TASK-252-06`. It must not re-open the
 research phase; use `_docs/_WIDGETS/tmp/gallery-mosaic/MATRIX.md` and the widget README under
@@ -28,18 +30,21 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: layout presets, captions, overlays, image alt labels, media selection,
+- Keep: layout presets, captions, image alt labels, media selection,
   and the current `header`, `items`, and `style` owner fields from
   `_docs/_WIDGETS/tmp/gallery-mosaic/MATRIX.md`; add schema-owned `altText`
   per gallery item in `core/widgets/core/galleryMosaic.tsx` while preserving
   the existing caption fallback for legacy payloads.
-- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat lightbox/carousel behavior and richer media overlays as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat
+  overlay text, lightbox behavior, hover effects, and per-image manual spans as
+  conditional; implement only when schema/defaults/normalizer/render/editor/
+  tests move together.
 - Reject: separate one-off widgets, raw HTML/script embeds, and unbounded visual/CSS controls.
 
 ## Editor Mode Ownership
 
 - `Wizard`: first-run setup for the safest useful defaults for `gallery-mosaic`.
-- `Visual`: `Layout`, `Images`, `Captions`, `Overlay`, `Accessibility`.
+- `Visual`: `Layout`, `Images`, `Captions`, `Accessibility`.
 - `Advanced`: `Media diagnostics`, `Legacy gallery mapping`.
 
 ## Sub-Tasks
@@ -58,7 +63,7 @@ and Reject decisions.
 - `_docs/_WIDGETS/GALLERY_MOSAIC.md`
 - `_docs/_WIDGETS/tmp/gallery-mosaic/MATRIX.md` for evidence reference only; do not rewrite research
   unless implementation finds a concrete source mismatch.
-- `_docs/_TASKS/TASK-252-06-07_Gallery_Mosaic_Layout_Captions_Overlays_and_Alt_Text.md` for status updates during execution.
+- `_docs/_TASKS/TASK-252-06-07_Gallery_Mosaic_Layout_Captions_and_Alt_Text.md` for status updates during execution.
 - `_docs/_TASKS/README.md` on status changes.
 
 ## Implementation Pseudocode
@@ -84,12 +89,14 @@ function GalleryMosaicVisualEditor(props: WidgetEditorProps<GalleryMosaicData>) 
   return (
     <WidgetEditorSection id="gallery-mosaic.items" title="Media items">
       {props.value.items.map((item, index) => (
-        <WidgetControlRow key={item.id ?? index} id={`gallery-mosaic.items.${index}.caption`} label="Caption" data-widget-control={`gallery-mosaic.items.${index}.caption`}>
-          <Input value={item.caption ?? ""} onChange={handleControlChange} />
-        </WidgetControlRow>
-        <WidgetControlRow key={`${item.id ?? index}-alt`} id={`gallery-mosaic.items.${index}.altText`} label="Alt text" data-widget-control={`gallery-mosaic.items.${index}.altText`}>
-          <Input value={item.altText ?? ""} onChange={(altText) => props.onChange(updateGalleryMosaicItem(props.value, index, { altText }))} />
-        </WidgetControlRow>
+        <Fragment key={item.id ?? index}>
+          <WidgetControlRow id={`gallery-mosaic.items.${index}.caption`} label="Caption" data-widget-control={`gallery-mosaic.items.${index}.caption`}>
+            <Input value={item.caption ?? ""} onChange={handleControlChange} />
+          </WidgetControlRow>
+          <WidgetControlRow id={`gallery-mosaic.items.${index}.altText`} label="Alt text" data-widget-control={`gallery-mosaic.items.${index}.altText`}>
+            <Input value={item.altText ?? ""} onChange={(altText) => props.onChange(updateGalleryMosaicItem(props.value, index, { altText }))} />
+          </WidgetControlRow>
+        </Fragment>
       ))}
     </WidgetEditorSection>
   );
@@ -149,7 +156,7 @@ Implementation checklist:
 - `_docs/WIDGETS.md`
 - `_docs/_WIDGETS/GALLERY_MOSAIC.md`
 - `_docs/_WIDGETS/README.md` if this leaf creates a missing widget doc page.
-- `_docs/_TASKS/TASK-252-06-07_Gallery_Mosaic_Layout_Captions_Overlays_and_Alt_Text.md` status notes during execution.
+- `_docs/_TASKS/TASK-252-06-07_Gallery_Mosaic_Layout_Captions_and_Alt_Text.md` status notes during execution.
 - `_docs/_TASKS/README.md` on status changes.
 - `_docs/_CHANGELOG/README.md` and a changelog entry only when the leaf is
   completed.

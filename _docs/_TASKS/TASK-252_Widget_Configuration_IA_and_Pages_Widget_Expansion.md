@@ -140,7 +140,7 @@ Use these physical execution leaves instead of broad batch edits. Each leaf owns
 - `TASK-252-05-01` - `section`: Section Regions Semantics and Spacing.
 - `TASK-252-05-02` - `template-section`: Template Section Metadata Preview and Sync.
 - `TASK-252-05-03` - `grid-columns`: Grid Columns Presets Gaps and Mobile Stack.
-- `TASK-252-05-04` - `split-layout`: Split Layout Ratio Order and Mobile Stack.
+- `TASK-252-05-04` - `split-layout`: Split Layout Slot Order and Mobile Stack.
 - `TASK-252-05-05` - `stack`: Stack Direction Gap Alignment and Responsive Flow.
 - `TASK-252-05-06` - `spacer`: Spacer Size Tokens Custom Height and Canvas Affordance.
 - `TASK-252-05-07` - `divider`: Divider Orientation Style Tone and Label.
@@ -156,7 +156,7 @@ Use these physical execution leaves instead of broad batch edits. Each leaf owns
 - `TASK-252-06-04` - `faq-accordion`: FAQ Accordion Support CTA Icon Placement and Defaults.
 - `TASK-252-06-05` - `cta-banner`: CTA Banner Compact Split Badge and Icon.
 - `TASK-252-06-06` - `logo-cloud`: Logo Cloud Grid Tone Rows and Accessibility.
-- `TASK-252-06-07` - `gallery-mosaic`: Gallery Mosaic Layout Captions Overlays and Alt Text.
+- `TASK-252-06-07` - `gallery-mosaic`: Gallery Mosaic Layout Captions and Alt Text.
 - `TASK-252-06-08` - `stats-kpi`: Stats KPI Values Icons and Display Modes.
 - `TASK-252-06-09` - `team`: Team Members Photo Shape Socials and Spotlight.
 - `TASK-252-06-10` - `rich-text-section`: Rich Text Section Prose Presets Width Badge and CTA.
@@ -169,12 +169,12 @@ Use these physical execution leaves instead of broad batch edits. Each leaf owns
 - `TASK-252-07-03` - `entry-teaser`: Entry Teaser Selected Entry Fallback and Field Toggles.
 - `TASK-252-07-04` - `product-gallery`: Product Gallery Source Media Modes Thumbnails and Empty State.
 - `TASK-252-07-05` - `product-compare`: Product Compare Selected Products Attributes and Highlight.
-- `TASK-252-07-06` - `product-table`: Product Table Columns Sort Filter Pagination and Actions.
-- `TASK-252-07-07` - `listing-filters`: Listing Filters Facets Ranges Reset and Mobile Layout.
+- `TASK-252-07-06` - `product-table`: Product Table Columns Sort Filter and Pagination.
+- `TASK-252-07-07` - `listing-filters`: Listing Filters Facets Ranges Apply and Reset.
 - `TASK-252-07-08` - `search-box`: Search Box Copy Target Route Query Param and Display Mode.
-- `TASK-252-07-09` - `newsletter`: Newsletter Fields Consent Provider Reference and States.
+- `TASK-252-07-09` - `newsletter`: Newsletter Fields Consent Copy and States.
 - `TASK-252-07-10` - `booking-calendar`: Booking Calendar Provider Event Modes and Availability.
-- `TASK-252-07-11` - `appointment-form`: Appointment Form Fields Validation Copy Provider and States.
+- `TASK-252-07-11` - `appointment-form`: Appointment Form Fields Validation Copy and States.
 - `TASK-252-07-12` - `form-embed`: Form Embed Form Picker Fields and Raw Embed Rejection.
 - `TASK-252-07-13` - `contact`: Contact Form Info State Copy and Security Boundaries.
 - `TASK-252-07-14` - `navigation`: Navigation Source Links Mobile Menu and CTA.
@@ -210,7 +210,7 @@ Use these as current research seeds, not as unlicensed source imports:
   - [ ] TASK-252-05-01: Section Regions Semantics and Spacing
   - [ ] TASK-252-05-02: Template Section Metadata Preview and Sync
   - [ ] TASK-252-05-03: Grid Columns Presets Gaps and Mobile Stack
-  - [ ] TASK-252-05-04: Split Layout Ratio Order and Mobile Stack
+  - [ ] TASK-252-05-04: Split Layout Slot Order and Mobile Stack
   - [ ] TASK-252-05-05: Stack Direction Gap Alignment and Responsive Flow
   - [ ] TASK-252-05-06: Spacer Size Tokens Custom Height and Canvas Affordance
   - [ ] TASK-252-05-07: Divider Orientation Style Tone and Label
@@ -224,7 +224,7 @@ Use these as current research seeds, not as unlicensed source imports:
   - [ ] TASK-252-06-04: FAQ Accordion Support CTA Icon Placement and Defaults
   - [ ] TASK-252-06-05: CTA Banner Compact Split Badge and Icon
   - [ ] TASK-252-06-06: Logo Cloud Grid Tone Rows and Accessibility
-  - [ ] TASK-252-06-07: Gallery Mosaic Layout Captions Overlays and Alt Text
+  - [ ] TASK-252-06-07: Gallery Mosaic Layout Captions and Alt Text
   - [ ] TASK-252-06-08: Stats KPI Values Icons and Display Modes
   - [ ] TASK-252-06-09: Team Members Photo Shape Socials and Spotlight
   - [ ] TASK-252-06-10: Rich Text Section Prose Presets Width Badge and CTA
@@ -235,12 +235,12 @@ Use these as current research seeds, not as unlicensed source imports:
   - [ ] TASK-252-07-03: Entry Teaser Selected Entry Fallback and Field Toggles
   - [ ] TASK-252-07-04: Product Gallery Source Media Modes Thumbnails and Empty State
   - [ ] TASK-252-07-05: Product Compare Selected Products Attributes and Highlight
-  - [ ] TASK-252-07-06: Product Table Columns Sort Filter Pagination and Actions
-  - [ ] TASK-252-07-07: Listing Filters Facets Ranges Reset and Mobile Layout
+  - [ ] TASK-252-07-06: Product Table Columns Sort Filter and Pagination
+  - [ ] TASK-252-07-07: Listing Filters Facets Ranges Apply and Reset
   - [ ] TASK-252-07-08: Search Box Copy Target Route Query Param and Display Mode
-  - [ ] TASK-252-07-09: Newsletter Fields Consent Provider Reference and States
+  - [ ] TASK-252-07-09: Newsletter Fields Consent Copy and States
   - [ ] TASK-252-07-10: Booking Calendar Provider Event Modes and Availability
-  - [ ] TASK-252-07-11: Appointment Form Fields Validation Copy Provider and States
+  - [ ] TASK-252-07-11: Appointment Form Fields Validation Copy and States
   - [ ] TASK-252-07-12: Form Embed Form Picker Fields and Raw Embed Rejection
   - [ ] TASK-252-07-13: Contact Form Info State Copy and Security Boundaries
   - [ ] TASK-252-07-14: Navigation Source Links Mobile Menu and CTA

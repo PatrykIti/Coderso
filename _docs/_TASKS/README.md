@@ -50,7 +50,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-252-05-01 | Section Regions Semantics and Spacing | High | Large | Section regions, semantics, anchors, spacing, and docs |
 | TASK-252-05-02 | Template Section Metadata Preview and Sync | High | Medium | Template metadata, preview, category, version, and sync controls |
 | TASK-252-05-03 | Grid Columns Presets Gaps and Mobile Stack | High | Medium | Grid presets, gaps, equal height, and mobile stack |
-| TASK-252-05-04 | Split Layout Ratio Order and Mobile Stack | High | Medium | Split ratio, slot order, gap, and mobile stack |
+| TASK-252-05-04 | Split Layout Slot Order and Mobile Stack | High | Medium | Split slot order, gap, and mobile stack |
 | TASK-252-05-05 | Stack Direction Gap Alignment and Responsive Flow | High | Medium | Stack direction, gap, alignment, and responsive flow |
 | TASK-252-05-06 | Spacer Size Tokens Custom Height and Canvas Affordance | Medium | Small | Spacer token/custom height and canvas affordance |
 | TASK-252-05-07 | Divider Orientation Style Tone and Label | Medium | Small | Divider orientation, style, tone, spacing, and label |
@@ -63,7 +63,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-252-06-04 | FAQ Accordion Support CTA Icon Placement and Defaults | High | Medium | FAQ items, support CTA, icon placement, disclosure defaults, and docs |
 | TASK-252-06-05 | CTA Banner Compact Split Badge and Icon | High | Medium | CTA modes, badge/icon, contrast tone, and action controls |
 | TASK-252-06-06 | Logo Cloud Grid Tone Rows and Accessibility | Medium | Medium | Logo rows, tone, alt text, accessible labels, and layout controls |
-| TASK-252-06-07 | Gallery Mosaic Layout Captions Overlays and Alt Text | High | Medium | Gallery layout presets, captions, overlays, and alt text |
+| TASK-252-06-07 | Gallery Mosaic Layout Captions and Alt Text | High | Medium | Gallery layout presets, captions, media selection, and alt text |
 | TASK-252-06-08 | Stats KPI Values Icons and Display Modes | Medium | Medium | KPI prefix/suffix, icons, and display modes |
 | TASK-252-06-09 | Team Members Photo Shape Socials and Spotlight | Medium | Medium | Team members, photos, socials, photo shape, and spotlight preservation |
 | TASK-252-06-10 | Rich Text Section Prose Presets Width Badge and CTA | High | Medium | Rich text prose presets, width, badge/eyebrow, and CTA |
@@ -73,12 +73,12 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-252-07-03 | Entry Teaser Selected Entry Fallback and Field Toggles | High | Medium | Single entry source, fallback, display mode, and field toggles |
 | TASK-252-07-04 | Product Gallery Source Media Modes Thumbnails and Empty State | High | Large | Product gallery source, media modes, thumbnails, and empty state |
 | TASK-252-07-05 | Product Compare Selected Products Attributes and Highlight | High | Large | Product compare products, attributes, highlight, and empty state |
-| TASK-252-07-06 | Product Table Columns Sort Filter Pagination and Actions | High | Large | Product table columns, sort/filter, pagination, and actions |
-| TASK-252-07-07 | Listing Filters Facets Ranges Reset and Mobile Layout | High | Large | Listing facets, ranges, apply/reset, and mobile layout |
+| TASK-252-07-06 | Product Table Columns Sort Filter and Pagination | High | Large | Product table columns, sort/filter, pagination, and empty state |
+| TASK-252-07-07 | Listing Filters Facets Ranges Apply and Reset | High | Large | Listing facets, ranges, apply/reset, and labels |
 | TASK-252-07-08 | Search Box Copy Target Route Query Param and Display Mode | High | Medium | Search copy, target route, query param, and display mode |
-| TASK-252-07-09 | Newsletter Fields Consent Provider Reference and States | High | Large | Newsletter fields, consent, provider reference, and states |
+| TASK-252-07-09 | Newsletter Fields Consent Copy and States | High | Large | Newsletter fields, consent, submit copy, and states |
 | TASK-252-07-10 | Booking Calendar Provider Event Modes and Availability | High | Large | Booking provider/event reference, modes, and availability |
-| TASK-252-07-11 | Appointment Form Fields Validation Copy Provider and States | High | Large | Appointment fields, validation copy, provider mode, and states |
+| TASK-252-07-11 | Appointment Form Fields Validation Copy and States | High | Large | Appointment fields, validation copy, state copy, and layout |
 | TASK-252-07-12 | Form Embed Form Picker Fields and Raw Embed Rejection | High | Large | Form picker, fields, state copy, and raw embed rejection |
 | TASK-252-07-13 | Contact Form Info State Copy and Security Boundaries | High | Large | Contact form, contact info, state copy, and security boundaries |
 | TASK-252-07-14 | Navigation Source Links Mobile Menu and CTA | High | Large | Navigation source, safe links, mobile menu, CTA, and logo grouping |

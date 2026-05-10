@@ -79,7 +79,7 @@ This parent is now executed through physical per-widget leaves. Do not implement
 - [ ] TASK-252-05-01: Section Regions Semantics and Spacing
 - [ ] TASK-252-05-02: Template Section Metadata Preview and Sync
 - [ ] TASK-252-05-03: Grid Columns Presets Gaps and Mobile Stack
-- [ ] TASK-252-05-04: Split Layout Ratio Order and Mobile Stack
+- [ ] TASK-252-05-04: Split Layout Slot Order and Mobile Stack
 - [ ] TASK-252-05-05: Stack Direction Gap Alignment and Responsive Flow
 - [ ] TASK-252-05-06: Spacer Size Tokens Custom Height and Canvas Affordance
 - [ ] TASK-252-05-07: Divider Orientation Style Tone and Label

@@ -1,6 +1,6 @@
-# TASK-252-07-09: Newsletter Fields Consent Provider Reference and States
+# TASK-252-07-09: Newsletter Fields Consent Copy and States
 
-# FileName: TASK-252-07-09_Newsletter_Fields_Consent_Provider_Reference_and_States.md
+# FileName: TASK-252-07-09_Newsletter_Fields_Consent_Copy_and_States.md
 
 **Priority:** High
 **Category:** Widgets + Admin UI + Runtime + Security
@@ -12,7 +12,9 @@
 
 ## Overview
 
-Expand newsletter field visibility, consent copy, provider reference, and success/error/loading copy while keeping audience secrets backend-only.
+Expand newsletter field visibility, consent copy, submit copy, and
+success/error/loading copy while keeping provider references and audience
+secrets backend-owned.
 
 This is an execution leaf under `TASK-252-07`. It must not re-open the
 research phase; use `_docs/_WIDGETS/tmp/newsletter/MATRIX.md` and the widget README under
@@ -38,8 +40,8 @@ and Reject decisions.
 ## Editor Mode Ownership
 
 - `Wizard`: first-run setup for the safest useful defaults for `newsletter`.
-- `Visual`: `Fields`, `Consent`, `Copy states`, `Provider reference`, `Layout`.
-- `Advanced`: `Public-write diagnostics`, `Provider mapping`.
+- `Visual`: `Fields`, `Consent`, `Copy states`, `Layout`.
+- `Advanced`: `Public-write diagnostics`, `Backend integration boundary`.
 
 ## Sub-Tasks
 
@@ -57,7 +59,7 @@ and Reject decisions.
 - `_docs/_WIDGETS/NEWSLETTER.md`
 - `_docs/_WIDGETS/tmp/newsletter/MATRIX.md` for evidence reference only; do not rewrite research
   unless implementation finds a concrete source mismatch.
-- `_docs/_TASKS/TASK-252-07-09_Newsletter_Fields_Consent_Provider_Reference_and_States.md` for status updates during execution.
+- `_docs/_TASKS/TASK-252-07-09_Newsletter_Fields_Consent_Copy_and_States.md` for status updates during execution.
 - `_docs/_TASKS/README.md` on status changes.
 
 ## Implementation Pseudocode
@@ -147,7 +149,7 @@ Implementation checklist:
 - `_docs/WIDGETS.md`
 - `_docs/_WIDGETS/NEWSLETTER.md`
 - `_docs/_WIDGETS/README.md` if this leaf creates a missing widget doc page.
-- `_docs/_TASKS/TASK-252-07-09_Newsletter_Fields_Consent_Provider_Reference_and_States.md` status notes during execution.
+- `_docs/_TASKS/TASK-252-07-09_Newsletter_Fields_Consent_Copy_and_States.md` status notes during execution.
 - `_docs/_TASKS/README.md` on status changes.
 - `_docs/_CHANGELOG/README.md` and a changelog entry only when the leaf is
   completed.

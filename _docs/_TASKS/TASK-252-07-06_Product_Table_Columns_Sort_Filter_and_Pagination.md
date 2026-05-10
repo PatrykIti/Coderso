@@ -1,6 +1,6 @@
-# TASK-252-07-06: Product Table Columns Sort Filter Pagination and Actions
+# TASK-252-07-06: Product Table Columns Sort Filter and Pagination
 
-# FileName: TASK-252-07-06_Product_Table_Columns_Sort_Filter_Pagination_and_Actions.md
+# FileName: TASK-252-07-06_Product_Table_Columns_Sort_Filter_and_Pagination.md
 
 **Priority:** High
 **Category:** Widgets + Admin UI + Runtime + Security
@@ -12,7 +12,9 @@
 
 ## Overview
 
-Add product-table column, sort/filter, pagination, image column, and action column controls while keeping bulk selection as an admin-only pattern.
+Add product-table column visibility/labels, allowlisted sort/filter controls,
+pagination, and empty-state handling while keeping image/action columns and
+bulk selection outside required scope.
 
 This is an execution leaf under `TASK-252-07`. It must not re-open the
 research phase; use `_docs/_WIDGETS/tmp/product-table/MATRIX.md` and the widget README under
@@ -38,7 +40,7 @@ and Reject decisions.
 ## Editor Mode Ownership
 
 - `Wizard`: first-run setup for the safest useful defaults for `product-table`.
-- `Visual`: `Source`, `Columns`, `Sort and filters`, `Pagination`, `Actions`.
+- `Visual`: `Source`, `Columns`, `Sort and filters`, `Pagination`, `Empty state`.
 - `Advanced`: `Commerce diagnostics`, `Column mapping`.
 
 ## Sub-Tasks
@@ -58,7 +60,7 @@ and Reject decisions.
 - `_docs/_WIDGETS/PRODUCT_TABLE.md`
 - `_docs/_WIDGETS/tmp/product-table/MATRIX.md` for evidence reference only; do not rewrite research
   unless implementation finds a concrete source mismatch.
-- `_docs/_TASKS/TASK-252-07-06_Product_Table_Columns_Sort_Filter_Pagination_and_Actions.md` for status updates during execution.
+- `_docs/_TASKS/TASK-252-07-06_Product_Table_Columns_Sort_Filter_and_Pagination.md` for status updates during execution.
 - `_docs/_TASKS/README.md` on status changes.
 
 ## Implementation Pseudocode
@@ -149,7 +151,7 @@ Implementation checklist:
 - `_docs/WIDGETS.md`
 - `_docs/_WIDGETS/PRODUCT_TABLE.md`
 - `_docs/_WIDGETS/README.md` if this leaf creates a missing widget doc page.
-- `_docs/_TASKS/TASK-252-07-06_Product_Table_Columns_Sort_Filter_Pagination_and_Actions.md` status notes during execution.
+- `_docs/_TASKS/TASK-252-07-06_Product_Table_Columns_Sort_Filter_and_Pagination.md` status notes during execution.
 - `_docs/_TASKS/README.md` on status changes.
 - `_docs/_CHANGELOG/README.md` and a changelog entry only when the leaf is
   completed.

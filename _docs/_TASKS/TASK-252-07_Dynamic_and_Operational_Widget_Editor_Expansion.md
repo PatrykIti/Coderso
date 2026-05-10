@@ -78,14 +78,14 @@ more flexible, but implementation must not weaken runtime contracts.
     Adapt-only.
   - `entry-teaser`: source selection, fallback behavior, CTA/card mode.
   - Commerce widgets: gallery/table/compare display modes, empty states,
-    selected product/catalog source, action labels.
+    selected product/catalog source, and safe column/attribute labels.
   - `listing-filters`: facet layout, query binding, reset/apply behavior.
   - `search-box`: accessible copy, compact/full modes, target route, and query
     parameter binding; suggestions/autocomplete stay Adapt-only.
   - Forms/booking/contact/newsletter: field visibility, success/error copy,
-    integration/source clarity, submit label, layout mode.
+    field/source clarity, submit label, and layout mode.
   - `navigation`/`footer`: source/manual links, CTA/social/logo grouping,
-    mobile/sticky/footer column behavior.
+    accessible mobile navigation, and footer columns.
 
 ## Sub-Tasks
 
@@ -96,12 +96,12 @@ This parent is now executed through physical per-widget leaves. Do not implement
 - [ ] TASK-252-07-03: Entry Teaser Selected Entry Fallback and Field Toggles
 - [ ] TASK-252-07-04: Product Gallery Source Media Modes Thumbnails and Empty State
 - [ ] TASK-252-07-05: Product Compare Selected Products Attributes and Highlight
-- [ ] TASK-252-07-06: Product Table Columns Sort Filter Pagination and Actions
-- [ ] TASK-252-07-07: Listing Filters Facets Ranges Reset and Mobile Layout
+- [ ] TASK-252-07-06: Product Table Columns Sort Filter and Pagination
+- [ ] TASK-252-07-07: Listing Filters Facets Ranges Apply and Reset
 - [ ] TASK-252-07-08: Search Box Copy Target Route Query Param and Display Mode
-- [ ] TASK-252-07-09: Newsletter Fields Consent Provider Reference and States
+- [ ] TASK-252-07-09: Newsletter Fields Consent Copy and States
 - [ ] TASK-252-07-10: Booking Calendar Provider Event Modes and Availability
-- [ ] TASK-252-07-11: Appointment Form Fields Validation Copy Provider and States
+- [ ] TASK-252-07-11: Appointment Form Fields Validation Copy and States
 - [ ] TASK-252-07-12: Form Embed Form Picker Fields and Raw Embed Rejection
 - [ ] TASK-252-07-13: Contact Form Info State Copy and Security Boundaries
 - [ ] TASK-252-07-14: Navigation Source Links Mobile Menu and CTA

@@ -84,12 +84,14 @@ function LogoCloudVisualEditor(props: WidgetEditorProps<LogoCloudData>) {
   return (
     <WidgetEditorSection id="logo-cloud.logos" title="Logos">
       {props.value.logos.map((item, index) => (
-        <WidgetControlRow key={item.id ?? index} id={`logo-cloud.logos.${index}.name`} label="Name" data-widget-control={`logo-cloud.logos.${index}.name`}>
-          <Input value={item.name ?? ""} onChange={handleControlChange} />
-        </WidgetControlRow>
-        <WidgetControlRow key={`${item.id ?? index}-alt`} id={`logo-cloud.logos.${index}.altText`} label="Alt text" data-widget-control={`logo-cloud.logos.${index}.altText`}>
-          <Input value={item.altText ?? ""} onChange={(altText) => props.onChange(updateLogoCloudLogo(props.value, index, { altText }))} />
-        </WidgetControlRow>
+        <Fragment key={item.id ?? index}>
+          <WidgetControlRow id={`logo-cloud.logos.${index}.name`} label="Name" data-widget-control={`logo-cloud.logos.${index}.name`}>
+            <Input value={item.name ?? ""} onChange={handleControlChange} />
+          </WidgetControlRow>
+          <WidgetControlRow id={`logo-cloud.logos.${index}.altText`} label="Alt text" data-widget-control={`logo-cloud.logos.${index}.altText`}>
+            <Input value={item.altText ?? ""} onChange={(altText) => props.onChange(updateLogoCloudLogo(props.value, index, { altText }))} />
+          </WidgetControlRow>
+        </Fragment>
       ))}
     </WidgetEditorSection>
   );
