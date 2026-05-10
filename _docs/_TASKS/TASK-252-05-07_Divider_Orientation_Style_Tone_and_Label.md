@@ -12,7 +12,9 @@
 
 ## Overview
 
-Keep Divider simple while adding orientation, style, tone, thickness, spacing, and optional label where the runtime can render it accessibly.
+Keep Divider simple around line orientation, style, thickness, and spacing;
+optional label/tone controls stay bounded Adapt scope where the runtime can
+render them accessibly.
 
 This is an execution leaf under `TASK-252-05`. It must not re-open the
 research phase; use `_docs/_WIDGETS/tmp/divider/MATRIX.md` and the widget README under
@@ -28,9 +30,11 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: orientation, style, tone, thickness, spacing, optional label.
-- Adapt: label rendering only as a bounded semantic divider enhancement.
-- Reject: decorative flourishes, shape libraries, and raw border CSS.
+- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/divider/MATRIX.md`; for this leaf, start from the current owner fields `label`, `thickness`, `color`, `width`, `customWidth`, `marginTop`, `marginBottom` and add only the schema fields that the matrix explicitly keeps.
+- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat
+  optional label and visual tone controls as bounded style additions; implement
+  only when schema/defaults/normalizer/render/editor/tests move together.
+- Reject: decorative flourishes, raw HTML labels, and arbitrary border CSS.
 
 ## Editor Mode Ownership
 
@@ -60,20 +64,24 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
-function normalizeDividerData(raw: unknown): DividerData {
-  const current = normalizeExistingDividerData(raw);
+function normalizeDividerData(data: DividerData): DividerData {
   return {
-    ...current,
-    mode: normalizeBoundedMode(raw.mode, current.mode),
-    style: normalizeKnownStyleFields(raw.style),
+    label: normalizeDividerLabel(data.label),
+    thickness: normalizeDividerThickness(data.thickness),
+    color: normalizeDividerColor(data.color),
+    width: normalizeDividerWidth(data.width),
+    customWidth: normalizeDividerCustomWidth(data.customWidth),
+    marginTop: normalizeDividerMarginTop(data.marginTop),
+    marginBottom: normalizeDividerMarginBottom(data.marginBottom),
   };
 }
 
 function DividerVisualEditor(props: WidgetEditorProps<DividerData>) {
+  const value = props.value;
   return (
-    <WidgetEditorSection id="divider.primary" title="Line style">
-      <WidgetControlRow id="divider.mode" label="Mode">
-        <SegmentedControl value={props.value.mode} onChange={...} />
+    <WidgetEditorSection id="divider.divider" title="Line and label">
+      <WidgetControlRow id="divider.label" label="Label" data-widget-control="divider.label">
+        <Input value={value.label ?? ""} onChange={...} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -118,6 +126,7 @@ Implementation checklist:
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
 - `bun run test:vitest -- tests/vitest/widgets/divider.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/divider-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

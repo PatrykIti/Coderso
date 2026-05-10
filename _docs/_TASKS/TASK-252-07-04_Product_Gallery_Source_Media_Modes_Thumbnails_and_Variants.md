@@ -12,7 +12,9 @@
 
 ## Overview
 
-Add product-gallery product/catalog source, media modes, thumbnails, variant media, and empty states while keeping provider fetch backend-owned.
+Add product-gallery product/catalog source, media modes, thumbnails, and empty
+states first; variant media and lightbox/action behavior stay Adapt-only while
+provider fetch remains backend-owned.
 
 This is an execution leaf under `TASK-252-07`. It must not re-open the
 research phase; use `_docs/_WIDGETS/tmp/product-gallery/MATRIX.md` and the widget README under
@@ -28,9 +30,9 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: product/catalog source, media modes, thumbnails, variant media.
-- Adapt: provider-backed source references through existing commerce resolver.
-- Reject: client-side provider fetch and provider secrets in widget data.
+- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/product-gallery/MATRIX.md`; for this leaf, start from the current owner fields `source`, `fields`, `emptyState`, `style`, `resolved` and add only the schema fields that the matrix explicitly keeps.
+- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat variant media, lightbox, and quick-view/action behavior as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Reject: arbitrary operators, client-owned provider/index config, raw scripts, and privileged settings in widget data.
 
 ## Editor Mode Ownership
 
@@ -61,19 +63,22 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
-function normalizeProductGalleryData(raw: unknown): ProductGalleryData {
+function normalizeProductGalleryData(data: ProductGalleryData): ProductGalleryData {
   return {
-    source: normalizeWidgetSource(raw.source),
-    display: normalizeDisplayOptions(raw.display),
-    copy: normalizeStateCopy(raw.copy),
+    source: normalizeProductGallerySource(data.source),
+    fields: normalizeProductGalleryFields(data.fields),
+    emptyState: normalizeProductGalleryEmptyState(data.emptyState),
+    style: normalizeProductGalleryStyle(data.style),
+    resolved: normalizeProductGalleryResolved(data.resolved),
   };
 }
 
 function ProductGalleryVisualEditor(props: WidgetEditorProps<ProductGalleryData>) {
+  const value = props.value;
   return (
-    <WidgetEditorSection id="product-gallery.source" title="Source">
-      <WidgetControlRow id="product-gallery.source.type" label="Source">
-        <Select value={props.value.source?.type} onValueChange={...} />
+    <WidgetEditorSection id="product-gallery.source" title="Product source">
+      <WidgetControlRow id="product-gallery.source.mode" label="Source mode" data-widget-control="product-gallery.source.mode">
+        <Select value={value.source?.mode ?? "manual"} onChange={...} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -118,6 +123,7 @@ Implementation checklist:
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
 - `bun run test:vitest -- tests/vitest/widgets/productGallery.test.tsx`
 - `bun test tests/unit/commerce/commerceWidgetRuntime.test.ts`
 - `bun run test:vitest -- tests/vitest/ui/product-gallery-editor-wave.test.tsx`

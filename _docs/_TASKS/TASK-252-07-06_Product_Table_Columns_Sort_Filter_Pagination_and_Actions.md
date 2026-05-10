@@ -28,9 +28,9 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: columns, sort/filter, pagination, image/action columns.
-- Adapt: column presets and product field visibility through commerce resolver fields.
-- Reject: bulk selection and admin table actions in public widget output.
+- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/product-table/MATRIX.md`; for this leaf, start from the current owner fields `source`, `fields`, `labels`, `emptyState`, `style`, `resolved` and add only the schema fields that the matrix explicitly keeps.
+- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat image/action columns and richer client-side affordances as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Reject: arbitrary operators, client-owned provider/index config, raw scripts, and privileged settings in widget data.
 
 ## Editor Mode Ownership
 
@@ -61,19 +61,23 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
-function normalizeProductTableData(raw: unknown): ProductTableData {
+function normalizeProductTableData(data: ProductTableData): ProductTableData {
   return {
-    source: normalizeWidgetSource(raw.source),
-    display: normalizeDisplayOptions(raw.display),
-    copy: normalizeStateCopy(raw.copy),
+    source: normalizeProductTableSource(data.source),
+    fields: normalizeProductTableFields(data.fields),
+    labels: normalizeProductTableLabels(data.labels),
+    emptyState: normalizeProductTableEmptyState(data.emptyState),
+    style: normalizeProductTableStyle(data.style),
+    resolved: normalizeProductTableResolved(data.resolved),
   };
 }
 
 function ProductTableVisualEditor(props: WidgetEditorProps<ProductTableData>) {
+  const value = props.value;
   return (
-    <WidgetEditorSection id="product-table.source" title="Source">
-      <WidgetControlRow id="product-table.source.type" label="Source">
-        <Select value={props.value.source?.type} onValueChange={...} />
+    <WidgetEditorSection id="product-table.source" title="Table source">
+      <WidgetControlRow id="product-table.source.mode" label="Source mode" data-widget-control="product-table.source.mode">
+        <Select value={value.source?.mode ?? "catalog"} onChange={...} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -118,6 +122,7 @@ Implementation checklist:
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
 - `bun run test:vitest -- tests/vitest/widgets/productTable.test.tsx`
 - `bun test tests/unit/commerce/commerceWidgetRuntime.test.ts`
 - `bun run test:vitest -- tests/vitest/ui/product-table-editor-wave.test.tsx`

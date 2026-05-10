@@ -279,9 +279,13 @@ Use these as current research seeds, not as unlicensed source imports:
     normalize unknown/legacy fields through the widget owner module.
 - Anti-abuse:
   - no public write surface is added by the shared editor IA;
-  - widgets that already submit public forms or booking requests must preserve
-    existing nonce/captcha/rate-limit contracts if their runtime contract is
-    touched by TASK-252-07.
+  - presentational/external form widgets must not be described as already
+    nonce/HMAC protected unless they use a Coderso-owned public-write endpoint;
+  - any TASK-252-07 leaf that adds or changes a Coderso-owned public-write
+    endpoint must keep nonce + signature/HMAC ownership in
+    `core/services/forms/submissionNonce.ts`, optional reCAPTCHA policy,
+    existing public rate-limit buckets, strict reject-unknown validation, and
+    endpoint/security tests.
 - Third-party research:
   - do not copy third-party code into `_docs/_WIDGETS/tmp/**` or runtime source
     unless the license permits it and the source/license are recorded.

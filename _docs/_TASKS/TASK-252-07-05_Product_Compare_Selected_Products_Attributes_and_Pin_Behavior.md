@@ -12,7 +12,9 @@
 
 ## Overview
 
-Make product-compare editor own selected products, attribute rows, sticky/pinned behavior, and highlighted product while rejecting generic editable tables.
+Make product-compare editor own selected products and attribute rows first;
+sticky/pinned behavior and highlighted product treatment stay Adapt-only while
+generic editable tables remain rejected.
 
 This is an execution leaf under `TASK-252-07`. It must not re-open the
 research phase; use `_docs/_WIDGETS/tmp/product-compare/MATRIX.md` and the widget README under
@@ -28,9 +30,9 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: selected products, attribute rows, sticky/pinned behavior, highlighted product.
-- Adapt: attribute row visibility through schema-owned product field references.
-- Reject: generic editable tables and arbitrary commerce queries.
+- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/product-compare/MATRIX.md`; for this leaf, start from the current owner fields `source`, `fields`, `labels`, `emptyState`, `style`, `resolved` and add only the schema fields that the matrix explicitly keeps.
+- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat sticky/pinned behavior and highlighted product treatment as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Reject: arbitrary operators, client-owned provider/index config, raw scripts, and privileged settings in widget data.
 
 ## Editor Mode Ownership
 
@@ -61,19 +63,23 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
-function normalizeProductCompareData(raw: unknown): ProductCompareData {
+function normalizeProductCompareData(data: ProductCompareData): ProductCompareData {
   return {
-    source: normalizeWidgetSource(raw.source),
-    display: normalizeDisplayOptions(raw.display),
-    copy: normalizeStateCopy(raw.copy),
+    source: normalizeProductCompareSource(data.source),
+    fields: normalizeProductCompareFields(data.fields),
+    labels: normalizeProductCompareLabels(data.labels),
+    emptyState: normalizeProductCompareEmptyState(data.emptyState),
+    style: normalizeProductCompareStyle(data.style),
+    resolved: normalizeProductCompareResolved(data.resolved),
   };
 }
 
 function ProductCompareVisualEditor(props: WidgetEditorProps<ProductCompareData>) {
+  const value = props.value;
   return (
-    <WidgetEditorSection id="product-compare.source" title="Products">
-      <WidgetControlRow id="product-compare.source.type" label="Source">
-        <Select value={props.value.source?.type} onValueChange={...} />
+    <WidgetEditorSection id="product-compare.source" title="Compare source">
+      <WidgetControlRow id="product-compare.source.mode" label="Source mode" data-widget-control="product-compare.source.mode">
+        <Select value={value.source?.mode ?? "manual"} onChange={...} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -118,6 +124,7 @@ Implementation checklist:
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
 - `bun run test:vitest -- tests/vitest/widgets/productCompare.test.tsx`
 - `bun test tests/unit/commerce/commerceWidgetRuntime.test.ts`
 - `bun run test:vitest -- tests/vitest/ui/product-compare-editor-wave.test.tsx`

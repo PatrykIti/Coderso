@@ -12,7 +12,8 @@
 
 ## Overview
 
-Make listing-filters own facets, ranges, reset/apply behavior, mobile/sidebar/chips layouts, and safe query binding.
+Make listing-filters own facets, ranges, reset/apply behavior, and safe query
+binding first; mobile/sidebar/chips presentation stays Adapt-only.
 
 This is an execution leaf under `TASK-252-07`. It must not re-open the
 research phase; use `_docs/_WIDGETS/tmp/listing-filters/MATRIX.md` and the widget README under
@@ -28,9 +29,9 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: facets, range, reset/apply, mobile/sidebar/chips layout.
-- Adapt: facet presets from listing schema metadata.
-- Reject: arbitrary operators and client index configuration.
+- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/listing-filters/MATRIX.md`; for this leaf, start from the current owner fields `listingQueryId`, `autoApply`, `showSearch`, `facets`, `style`, `resolved` and add only the schema fields that the matrix explicitly keeps.
+- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat mobile/sidebar/chips presentation and facet presets from listing schema metadata as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Reject: arbitrary operators, client-owned provider/index config, raw scripts, and privileged settings in widget data.
 
 ## Editor Mode Ownership
 
@@ -45,6 +46,7 @@ and Reject decisions.
 ## Files to Change
 
 - `core/widgets/core/listingFilters.tsx`
+- `core/widgets/core/listingRuntimeScript.ts` when query/reset/apply/query-param runtime behavior changes.
 - `core/admin/ui/widgets/editors/ListingFiltersEditors.tsx`
 - Bun-owned route/security suites when public endpoint behavior changes.
 - `tests/unit/widgets/validator.test.ts` when schema validation changes.
@@ -60,19 +62,25 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
-function normalizeListingFiltersData(raw: unknown): ListingFiltersData {
+function normalizeListingFiltersData(data: ListingFiltersData): ListingFiltersData {
   return {
-    source: normalizeWidgetSource(raw.source),
-    display: normalizeDisplayOptions(raw.display),
-    copy: normalizeStateCopy(raw.copy),
+    listingQueryId: normalizeListingFiltersListingQueryId(data.listingQueryId),
+    title: normalizeListingFiltersTitle(data.title),
+    description: normalizeListingFiltersDescription(data.description),
+    autoApply: normalizeListingFiltersAutoApply(data.autoApply),
+    showSearch: normalizeListingFiltersShowSearch(data.showSearch),
+    facets: normalizeListingFiltersFacets(data.facets),
+    style: normalizeListingFiltersStyle(data.style),
+    resolved: normalizeListingFiltersResolved(data.resolved),
   };
 }
 
 function ListingFiltersVisualEditor(props: WidgetEditorProps<ListingFiltersData>) {
+  const value = props.value;
   return (
-    <WidgetEditorSection id="listing-filters.source" title="Facet source">
-      <WidgetControlRow id="listing-filters.source.type" label="Source">
-        <Select value={props.value.source?.type} onValueChange={...} />
+    <WidgetEditorSection id="listing-filters.listing-filters" title="Facet source">
+      <WidgetControlRow id="listing-filters.listingQueryId" label="Listing query" data-widget-control="listing-filters.listingQueryId">
+        <ListingQueryPicker value={value.listingQueryId ?? ""} onChange={...} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -117,12 +125,14 @@ Implementation checklist:
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
 - `bun run test:vitest -- tests/vitest/widgets/listingFilters.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/listing-filters-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,
   slot, or shared output behavior changes.
 - `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` if
   token/clear/default adjacency changes.
+- Add or update a regression around `getListingRuntimeClientScript` when query/reset/apply/query-param behavior changes.
 - Add Bun-owned route/security tests when endpoint behavior, public writes,
   provider fetches, or runtime-kernel scripts change.
 

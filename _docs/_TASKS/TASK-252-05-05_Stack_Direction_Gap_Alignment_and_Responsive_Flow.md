@@ -28,9 +28,9 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: direction, gap, align, justify, responsive direction.
-- Adapt: nested child spacing only through controlled gap/section settings.
-- Reject: turning Stack into a universal layout builder with arbitrary CSS.
+- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/stack/MATRIX.md`; for this leaf, start from the current owner fields `direction`, `gap`, `align`, `justify`, `wrap` and add only the schema fields that the matrix explicitly keeps.
+- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat responsive direction overrides and wrap behavior as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Reject: turning Stack into an all-purpose layout engine.
 
 ## Editor Mode Ownership
 
@@ -60,20 +60,22 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
-function normalizeStackData(raw: unknown): StackData {
-  const current = normalizeExistingStackData(raw);
+function normalizeStackData(data: StackData): StackData {
   return {
-    ...current,
-    mode: normalizeBoundedMode(raw.mode, current.mode),
-    style: normalizeKnownStyleFields(raw.style),
+    direction: normalizeStackDirection(data.direction),
+    gap: normalizeStackGap(data.gap),
+    align: normalizeStackAlign(data.align),
+    justify: normalizeStackJustify(data.justify),
+    wrap: normalizeStackWrap(data.wrap),
   };
 }
 
 function StackVisualEditor(props: WidgetEditorProps<StackData>) {
+  const value = props.value;
   return (
-    <WidgetEditorSection id="stack.primary" title="Direction">
-      <WidgetControlRow id="stack.mode" label="Mode">
-        <SegmentedControl value={props.value.mode} onChange={...} />
+    <WidgetEditorSection id="stack.direction" title="Responsive flow">
+      <WidgetControlRow id="stack.direction.desktop" label="Desktop direction" data-widget-control="stack.direction.desktop">
+        <SegmentedControl value={value.direction?.desktop ?? "column"} onChange={...} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -118,6 +120,7 @@ Implementation checklist:
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
 - `bun run test:vitest -- tests/vitest/widgets/stack.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/stack-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

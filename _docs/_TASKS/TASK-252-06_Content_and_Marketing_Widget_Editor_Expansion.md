@@ -44,22 +44,24 @@ inside the editor instead of duplicate widget types.
   widget in this family. Each implementation leaf must cite the widget-local
   Keep/Adapt/Reject matrix before finalizing its option list.
 - Use research from TASK-252-02 to decide mode/preset expansion:
-  - `feature-grid`: icon cards, bento/grid modes, media feature rows.
-  - `testimonials`: single quote, carousel-ready list, cards grid, rating/source
-    visibility.
-  - `pricing-plans`: monthly/annual labels, highlighted plan, feature groups,
-    CTA styles.
-  - `faq-accordion`: categories, searchable/tabbed FAQ mode only if justified by
-    current UX needs.
-  - `cta-banner`: compact strip, split CTA, badge/announcement CTA, countdown
-    only if it stays schema-first and deterministic.
-  - `logo-cloud`: marquee/static/grid modes with reduced-motion fallback.
+  - `feature-grid`: keep icon-card/row basics and optional links; treat bento,
+    badges/categories, hover, and rich media rows as Adapt-only.
+  - `testimonials`: keep grid/spotlight/rating/avatar/company basics; keep
+    carousel/motion opt-in and reduced-motion safe.
+  - `pricing-plans`: keep tiers, highlight, custom price, and billing toggle;
+    treat comparison rows as Adapt-only.
+  - `faq-accordion`: keep question/answer basics; treat categories, support
+    CTA, icon placement, and search as Adapt-only.
+  - `cta-banner`: keep compact/split/high-contrast basics; treat background
+    media, icon emphasis, and countdown as Adapt-only.
+  - `logo-cloud`: keep grid/intro/tone/rows; treat marquee as Adapt-only with
+    reduced-motion fallback.
   - `gallery-mosaic`: layout presets, captions, overlay controls, media
     selection clarity.
   - `stats-kpi`: cards/strip modes, prefix/suffix, trend labels.
   - `team`: card/list/profile modes, social links, photo shape.
-  - `rich-text-section`: editorial layouts, safe typography presets, no unsafe
-    raw HTML expansion.
+  - `rich-text-section`: keep prose/width basics; treat badge, CTA, quote/media,
+    and editorial layout additions as Adapt-only.
   - `compare-timeline`: clearer track/segment editor, current/highlight states.
 - Do not widen widgets into unrelated features. If a requested capability is a
   new product surface, create a separate task instead of overloading the widget.
@@ -169,6 +171,7 @@ items.map((item, index) => (
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this task family `Done` or record the exact blocker.
 - Focused runtime/editor suites as widgets are touched:
   - `tests/vitest/widgets/featureGrid.test.tsx`
   - `tests/vitest/ui/feature-grid-editor-wave.test.tsx`

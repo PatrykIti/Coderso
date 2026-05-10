@@ -12,7 +12,9 @@
 
 ## Overview
 
-Keep Split Layout as a two-slot layout primitive with ratio presets, media/content order, and mobile stacking rules.
+Keep Split Layout as a two-slot layout primitive with mobile stacking rules;
+ratio and media/content order presets stay bounded Adapt scope and runtime
+resize handles stay rejected.
 
 This is an execution leaf under `TASK-252-05`. It must not re-open the
 research phase; use `_docs/_WIDGETS/tmp/split-layout/MATRIX.md` and the widget README under
@@ -28,9 +30,11 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: two slots, ratio presets, media/content order, mobile stacking.
-- Adapt: responsive reverse/collapse into explicit presets.
-- Reject: runtime resize handles, arbitrary drag ratios, and more than two primary slots.
+- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/split-layout/MATRIX.md`; for this leaf, start from the current owner fields `ratio`, `collapseMobile`, `reverseOnMobile`, `gap`, `verticalAlign` and add only the schema fields that the matrix explicitly keeps.
+- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat
+  ratio presets and media/content ordering as bounded layout presets; implement
+  only when schema/defaults/normalizer/render/editor/tests move together.
+- Reject: runtime resize handles and arbitrary grid/CSS controls.
 
 ## Editor Mode Ownership
 
@@ -60,20 +64,22 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
-function normalizeSplitLayoutData(raw: unknown): SplitLayoutData {
-  const current = normalizeExistingSplitLayoutData(raw);
+function normalizeSplitLayoutData(data: SplitLayoutData): SplitLayoutData {
   return {
-    ...current,
-    mode: normalizeBoundedMode(raw.mode, current.mode),
-    style: normalizeKnownStyleFields(raw.style),
+    ratio: normalizeSplitLayoutRatio(data.ratio),
+    collapseMobile: normalizeSplitLayoutCollapseMobile(data.collapseMobile),
+    reverseOnMobile: normalizeSplitLayoutReverseOnMobile(data.reverseOnMobile),
+    gap: normalizeSplitLayoutGap(data.gap),
+    verticalAlign: normalizeSplitLayoutVerticalAlign(data.verticalAlign),
   };
 }
 
 function SplitLayoutVisualEditor(props: WidgetEditorProps<SplitLayoutData>) {
+  const value = props.value;
   return (
-    <WidgetEditorSection id="split-layout.primary" title="Ratio and orientation">
-      <WidgetControlRow id="split-layout.mode" label="Mode">
-        <SegmentedControl value={props.value.mode} onChange={...} />
+    <WidgetEditorSection id="split-layout.ratio" title="Ratio and order">
+      <WidgetControlRow id="split-layout.ratio.desktop" label="Desktop ratio" data-widget-control="split-layout.ratio.desktop">
+        <SegmentedControl value={value.ratio?.desktop ?? "50-50"} onChange={...} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -118,6 +124,7 @@ Implementation checklist:
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
 - `bun run test:vitest -- tests/vitest/widgets/splitLayout.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/split-layout-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

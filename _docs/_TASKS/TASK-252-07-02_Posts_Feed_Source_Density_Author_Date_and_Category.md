@@ -28,9 +28,9 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: latest/category/featured/manual source, density, author/date/category visibility.
-- Adapt: manual selection and category filters through existing post resolver contracts.
-- Reject: infinite feed and client-owned index configuration.
+- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/posts-feed/MATRIX.md`; for this leaf, start from the current owner fields `source`, `fields`, `emptyState`, `style`, `resolved` and add only the schema fields that the matrix explicitly keeps.
+- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat manual/featured source helpers and density presets as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Reject: arbitrary operators, client-owned provider/index config, raw scripts, and privileged settings in widget data.
 
 ## Editor Mode Ownership
 
@@ -60,19 +60,22 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
-function normalizePostsFeedData(raw: unknown): PostsFeedData {
+function normalizePostsFeedData(data: PostsFeedData): PostsFeedData {
   return {
-    source: normalizeWidgetSource(raw.source),
-    display: normalizeDisplayOptions(raw.display),
-    copy: normalizeStateCopy(raw.copy),
+    source: normalizePostsFeedSource(data.source),
+    fields: normalizePostsFeedFields(data.fields),
+    emptyState: normalizePostsFeedEmptyState(data.emptyState),
+    style: normalizePostsFeedStyle(data.style),
+    resolved: normalizePostsFeedResolved(data.resolved),
   };
 }
 
 function PostsFeedVisualEditor(props: WidgetEditorProps<PostsFeedData>) {
+  const value = props.value;
   return (
     <WidgetEditorSection id="posts-feed.source" title="Source">
-      <WidgetControlRow id="posts-feed.source.type" label="Source">
-        <Select value={props.value.source?.type} onValueChange={...} />
+      <WidgetControlRow id="posts-feed.source.mode" label="Source mode" data-widget-control="posts-feed.source.mode">
+        <Select value={value.source?.mode ?? "latest"} onChange={...} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -117,6 +120,7 @@ Implementation checklist:
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
 - `bun test tests/unit/widgets/postsFeedWidget.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/posts-feed-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

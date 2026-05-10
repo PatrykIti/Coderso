@@ -28,9 +28,9 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: prefix/suffix, icon, trend label, grid/strip/split modes.
-- Adapt: trend status as text/tone metadata.
-- Reject: animated counters and live analytics bindings.
+- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/stats-kpi/MATRIX.md`; for this leaf, start from the current owner fields `header`, `items`, `style` and add only the schema fields that the matrix explicitly keeps.
+- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat trend labels and split-highlight presentation as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Reject: separate one-off widgets, raw HTML/script embeds, and unbounded visual/CSS controls.
 
 ## Editor Mode Ownership
 
@@ -60,20 +60,27 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
-function normalizeStatsKpiItem(raw: unknown, index: number) {
+function normalizeStatsKpiData(data: StatsKpiData): StatsKpiData {
   return {
-    id: normalizeStableId(raw.id, `stats-kpi-${index + 1}`),
-    title: readTrimmedString(raw.title),
-    href: normalizeSafeHref(raw.href),
+    header: normalizeStatsKpiHeader(data.header),
+    items: normalizeStatsKpiItems(data.items),
+    style: normalizeStatsKpiStyle(data.style),
+  };
+}
+
+function normalizeStatsKpiItem(item: StatsKpiItem, index: number): StatsKpiItem {
+  return {
+    ...item,
+    id: normalizeStableItemId(item.id, `stats-kpi-${index + 1}`),
   };
 }
 
 function StatsKpiVisualEditor(props: WidgetEditorProps<StatsKpiData>) {
   return (
-    <WidgetEditorSection id="stats-kpi.items" title="Display mode">
+    <WidgetEditorSection id="stats-kpi.items" title="KPI items">
       {props.value.items.map((item, index) => (
-        <WidgetControlRow key={item.id} id={`stats-kpi.items.${index}.title`} label="Title">
-          <Input value={item.title} onChange={...} />
+        <WidgetControlRow key={item.id ?? index} id={`stats-kpi.items.${index}.value`} label="Value" data-widget-control={`stats-kpi.items.${index}.value`}>
+          <Input value={item.value ?? ""} onChange={...} />
         </WidgetControlRow>
       ))}
     </WidgetEditorSection>
@@ -119,6 +126,7 @@ Implementation checklist:
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
 - `bun run test:vitest -- tests/vitest/widgets/statsKpi.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/stats-kpi-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

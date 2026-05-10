@@ -28,8 +28,8 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: regions/slots, semantics, anchors, width, spacing, surface controls.
-- Adapt: region and slot labels into shared repeatable controls while preserving legacy children-to-slot compatibility.
+- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/section/MATRIX.md`; for this leaf, start from the current owner fields `heading`, `semantics`, `style` plus the existing `sectionRegionSlot` and add only the schema fields that the matrix explicitly keeps.
+- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat region labels/slot guidance and surface presets as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: per-CSS editing, arbitrary class names, and making Section a low-level style editor.
 
 ## Editor Mode Ownership
@@ -60,20 +60,20 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
-function normalizeSectionData(raw: unknown): SectionData {
-  const current = normalizeExistingSectionData(raw);
+function normalizeSectionData(data: SectionData): SectionData {
   return {
-    ...current,
-    mode: normalizeBoundedMode(raw.mode, current.mode),
-    style: normalizeKnownStyleFields(raw.style),
+    heading: normalizeSectionHeading(data.heading),
+    semantics: normalizeSectionSemantics(data.semantics),
+    style: normalizeSectionStyle(data.style),
   };
 }
 
 function SectionVisualEditor(props: WidgetEditorProps<SectionData>) {
+  const value = props.value;
   return (
-    <WidgetEditorSection id="section.primary" title="Variant and structure">
-      <WidgetControlRow id="section.mode" label="Mode">
-        <SegmentedControl value={props.value.mode} onChange={...} />
+    <WidgetEditorSection id="section.semantics" title="Semantics and anchor">
+      <WidgetControlRow id="section.semantics.anchorId" label="Anchor ID" data-widget-control="section.semantics.anchorId">
+        <Input value={value.semantics?.anchorId ?? ""} onChange={...} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -118,6 +118,7 @@ Implementation checklist:
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
 - `bun run test:vitest -- tests/vitest/widgets/section.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/section-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

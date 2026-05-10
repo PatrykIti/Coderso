@@ -112,8 +112,13 @@ addChangelogEntry({ taskId: "TASK-252", validation });
 - Reject-unknown validation:
   - closure must verify changed widget schemas still reject unknown fields.
 - Anti-abuse:
-  - closure must verify public-write widgets still preserve nonce/captcha/
-    rate-limit contracts if touched.
+  - closure must verify presentational/external form widgets were not
+    misdocumented as Coderso-owned public-write endpoints;
+  - closure must verify any Coderso-owned public-write endpoint touched by
+    TASK-252 keeps nonce + signature/HMAC via
+    `core/services/forms/submissionNonce.ts`, optional reCAPTCHA policy,
+    existing public rate-limit buckets, strict reject-unknown validation, and
+    `tests/security/codersoSecurityGate.test.ts`.
 - Third-party artifacts:
   - closure must verify no proprietary source was committed into research
     folders.

@@ -12,7 +12,8 @@
 
 ## Overview
 
-Promote Tabs to a real accessible tabs contract with items, default tab, orientation, panel surface, and keyboard semantics.
+Promote Tabs to a real accessible tabs contract with items, default tab,
+orientation, and keyboard semantics; panel surface variants stay Adapt scope.
 
 This is an execution leaf under `TASK-252-05`. It must not re-open the
 research phase; use `_docs/_WIDGETS/tmp/tabs/MATRIX.md` and the widget README under
@@ -28,9 +29,9 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: accessible tabs, default tab, orientation, panel surface.
-- Adapt: style modes from shadcn/Radix patterns into the existing widget schema.
-- Reject: pseudo-links masquerading as tabs and route-changing tab hacks.
+- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/tabs/MATRIX.md`; for this leaf, start from the current owner fields `items`, `options.activeId`, `options.alignment`, `style` plus the existing `tabsPanelSlot` and add only the schema fields that the matrix explicitly keeps.
+- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat panel surface/visual variants, activation mode, lazy behavior, and overflow handling as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Reject: pseudo-link navigation that pretends to be tabs and copied external markup.
 
 ## Editor Mode Ownership
 
@@ -60,20 +61,20 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
-function normalizeTabsData(raw: unknown): TabsData {
-  const current = normalizeExistingTabsData(raw);
+function normalizeTabsData(data: TabsData): TabsData {
   return {
-    ...current,
-    mode: normalizeBoundedMode(raw.mode, current.mode),
-    style: normalizeKnownStyleFields(raw.style),
+    items: normalizeTabsItems(data.items),
+    options: normalizeTabsOptions(data.options),
+    style: normalizeTabsStyle(data.style),
   };
 }
 
 function TabsVisualEditor(props: WidgetEditorProps<TabsData>) {
+  const value = props.value;
   return (
-    <WidgetEditorSection id="tabs.primary" title="Items">
-      <WidgetControlRow id="tabs.mode" label="Mode">
-        <SegmentedControl value={props.value.mode} onChange={...} />
+    <WidgetEditorSection id="tabs.options" title="Tabs and panels">
+      <WidgetControlRow id="tabs.options.activeId" label="Default tab" data-widget-control="tabs.options.activeId">
+        <Select value={value.options?.activeId ?? value.items?.[0]?.id ?? ""} onChange={...} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -118,6 +119,7 @@ Implementation checklist:
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
 - `bun run test:vitest -- tests/vitest/widgets/tabs.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/tabs-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

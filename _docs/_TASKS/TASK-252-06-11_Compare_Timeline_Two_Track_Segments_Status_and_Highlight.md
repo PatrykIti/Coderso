@@ -28,9 +28,9 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: two-side compare, dated segments, status/current highlight.
-- Adapt: current marker and segment CTA through bounded fields.
-- Reject: more than two tracks and generic editable tables.
+- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/compare-timeline/MATRIX.md`; for this leaf, start from the current owner fields `axis`, `tracks`, `guides`, `layout`, `highlight`, `style` and add only the schema fields that the matrix explicitly keeps.
+- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat status/current labels and richer segment styling within the two-track limit as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Reject: separate one-off widgets, raw HTML/script embeds, and unbounded visual/CSS controls.
 
 ## Editor Mode Ownership
 
@@ -60,20 +60,30 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
-function normalizeCompareTimelineItem(raw: unknown, index: number) {
+function normalizeCompareTimelineData(data: CompareTimelineData): CompareTimelineData {
   return {
-    id: normalizeStableId(raw.id, `compare-timeline-${index + 1}`),
-    title: readTrimmedString(raw.title),
-    href: normalizeSafeHref(raw.href),
+    axis: normalizeCompareTimelineAxis(data.axis),
+    tracks: normalizeCompareTimelineTracks(data.tracks),
+    guides: normalizeCompareTimelineGuides(data.guides),
+    layout: normalizeCompareTimelineLayout(data.layout),
+    highlight: normalizeCompareTimelineHighlight(data.highlight),
+    style: normalizeCompareTimelineStyle(data.style),
+  };
+}
+
+function normalizeCompareTrack(item: CompareTrack, index: number): CompareTrack {
+  return {
+    ...item,
+    id: normalizeStableItemId(item.id, `compare-timeline-${index + 1}`),
   };
 }
 
 function CompareTimelineVisualEditor(props: WidgetEditorProps<CompareTimelineData>) {
   return (
-    <WidgetEditorSection id="compare-timeline.items" title="Segments">
-      {props.value.items.map((item, index) => (
-        <WidgetControlRow key={item.id} id={`compare-timeline.items.${index}.title`} label="Title">
-          <Input value={item.title} onChange={...} />
+    <WidgetEditorSection id="compare-timeline.tracks" title="Tracks">
+      {props.value.tracks.map((item, index) => (
+        <WidgetControlRow key={item.id ?? index} id={`compare-timeline.tracks.${index}.label`} label="Label" data-widget-control={`compare-timeline.tracks.${index}.label`}>
+          <Input value={item.label ?? ""} onChange={...} />
         </WidgetControlRow>
       ))}
     </WidgetEditorSection>
@@ -119,6 +129,7 @@ Implementation checklist:
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
 - `bun run test:vitest -- tests/vitest/widgets/compareTimeline.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/compare-timeline-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

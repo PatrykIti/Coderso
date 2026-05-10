@@ -12,7 +12,9 @@
 
 ## Overview
 
-Expand contact around form + contact info, optional map/social display fields, and state copy while keeping email routing/security backend-owned.
+Expand contact around form + contact info and state copy first; map/social
+display fields and backend routing references stay Adapt-only while email
+routing/security remain backend-owned.
 
 This is an execution leaf under `TASK-252-07`. It must not re-open the
 research phase; use `_docs/_WIDGETS/tmp/contact/MATRIX.md` and the widget README under
@@ -28,9 +30,9 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: form + contact info, map/social display fields, state copy.
-- Adapt: map/social as safe display fields and backend-owned routing references.
-- Reject: client-owned email routing and raw map embed scripts.
+- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/contact/MATRIX.md`; for this leaf, start from the current owner fields `form`, `contact`, `map`, `style` and add only the schema fields that the matrix explicitly keeps.
+- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat map/social display fields and backend routing references as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Reject: arbitrary operators, client-owned provider/index config, raw scripts, and privileged settings in widget data.
 
 ## Editor Mode Ownership
 
@@ -60,19 +62,21 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
-function normalizeContactData(raw: unknown): ContactData {
+function normalizeContactData(data: ContactData): ContactData {
   return {
-    source: normalizeWidgetSource(raw.source),
-    display: normalizeDisplayOptions(raw.display),
-    copy: normalizeStateCopy(raw.copy),
+    form: normalizeContactForm(data.form),
+    contact: normalizeContactContact(data.contact),
+    map: normalizeContactMap(data.map),
+    style: normalizeContactStyle(data.style),
   };
 }
 
 function ContactVisualEditor(props: WidgetEditorProps<ContactData>) {
+  const value = props.value;
   return (
-    <WidgetEditorSection id="contact.source" title="Form fields">
-      <WidgetControlRow id="contact.source.type" label="Source">
-        <Select value={props.value.source?.type} onValueChange={...} />
+    <WidgetEditorSection id="contact.form" title="Contact form">
+      <WidgetControlRow id="contact.form.submitLabel" label="Submit label" data-widget-control="contact.form.submitLabel">
+        <Input value={value.form?.submitLabel ?? ""} onChange={...} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -111,12 +115,19 @@ Implementation checklist:
     normalize legacy payloads through `core/widgets/core/contact.tsx`.
 - Anti-abuse:
   - email routing and provider secrets remain backend-owned
-  - public submissions keep nonce/captcha/rate-limit protections
+  - the current contact form rendering is presentational and must not be
+    documented as a Coderso nonce/HMAC-protected endpoint
+  - if backend routing adds Coderso-owned public submissions, the endpoint must
+    use nonce + signature/HMAC via
+    `core/services/forms/submissionNonce.ts`, optional reCAPTCHA policy,
+    existing public rate-limit buckets, strict reject-unknown validation, and
+    `tests/security/codersoSecurityGate.test.ts`
 
 ## Testing Requirements
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
 - `bun run test:vitest -- tests/vitest/widgets/contact.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/contact-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

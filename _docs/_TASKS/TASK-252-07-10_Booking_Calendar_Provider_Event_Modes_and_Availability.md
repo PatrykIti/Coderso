@@ -28,9 +28,9 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: provider/event reference, month/week/list/slot modes, availability display.
-- Adapt: provider references through backend-owned booking config.
-- Reject: Cal.com source copying and client-owned provider fetch.
+- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/booking-calendar/MATRIX.md`; for this leaf, start from the current owner fields `flowId`, labels/messages, `slotsEndpoint`, `style`, `resolved` and add only the schema fields that the matrix explicitly keeps.
+- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat month/week/list/slot modes and availability presentation as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Reject: arbitrary operators, client-owned provider/index config, raw scripts, and privileged settings in widget data.
 
 ## Editor Mode Ownership
 
@@ -60,19 +60,26 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
-function normalizeBookingCalendarData(raw: unknown): BookingCalendarData {
+function normalizeBookingCalendarData(data: BookingCalendarData): BookingCalendarData {
   return {
-    source: normalizeWidgetSource(raw.source),
-    display: normalizeDisplayOptions(raw.display),
-    copy: normalizeStateCopy(raw.copy),
+    flowId: normalizeBookingCalendarFlowId(data.flowId),
+    title: normalizeBookingCalendarTitle(data.title),
+    description: normalizeBookingCalendarDescription(data.description),
+    serviceLabel: normalizeBookingCalendarServiceLabel(data.serviceLabel),
+    resourceLabel: normalizeBookingCalendarResourceLabel(data.resourceLabel),
+    dateLabel: normalizeBookingCalendarDateLabel(data.dateLabel),
+    slotsEndpoint: normalizeBookingCalendarSlotsEndpoint(data.slotsEndpoint),
+    style: normalizeBookingCalendarStyle(data.style),
+    resolved: normalizeBookingCalendarResolved(data.resolved),
   };
 }
 
 function BookingCalendarVisualEditor(props: WidgetEditorProps<BookingCalendarData>) {
+  const value = props.value;
   return (
-    <WidgetEditorSection id="booking-calendar.source" title="Provider event">
-      <WidgetControlRow id="booking-calendar.source.type" label="Source">
-        <Select value={props.value.source?.type} onValueChange={...} />
+    <WidgetEditorSection id="booking-calendar.booking-calendar" title="Booking flow">
+      <WidgetControlRow id="booking-calendar.flowId" label="Flow" data-widget-control="booking-calendar.flowId">
+        <BookingFlowPicker value={value.flowId ?? ""} onChange={...} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -112,11 +119,17 @@ Implementation checklist:
 - Anti-abuse:
   - availability fetch remains backend-owned
   - provider secrets and privileged booking config must not enter widget data
+  - if this leaf adds or changes a Coderso-owned public booking write, the
+    endpoint must use nonce + signature/HMAC via
+    `core/services/forms/submissionNonce.ts`, optional reCAPTCHA policy,
+    existing public rate-limit buckets, strict reject-unknown validation, and
+    `tests/security/codersoSecurityGate.test.ts`
 
 ## Testing Requirements
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
 - `bun run test:vitest -- tests/vitest/widgets/bookingCalendar.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/booking-calendar-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

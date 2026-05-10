@@ -28,9 +28,9 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: columns, brand, legal/social, optional newsletter reference.
-- Adapt: newsletter reference as backend-owned form/provider link.
-- Reject: raw provider signup code and arbitrary footer scripts.
+- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/footer/MATRIX.md`; for this leaf, start from the current owner fields `columns`, `legal`, `social`, `layout`, `style` and add only the schema fields that the matrix explicitly keeps.
+- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat newsletter references and richer brand/social grouping as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Reject: arbitrary operators, client-owned provider/index config, raw scripts, and privileged settings in widget data.
 
 ## Editor Mode Ownership
 
@@ -60,19 +60,22 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
-function normalizeFooterData(raw: unknown): FooterData {
+function normalizeFooterData(data: FooterData): FooterData {
   return {
-    source: normalizeWidgetSource(raw.source),
-    display: normalizeDisplayOptions(raw.display),
-    copy: normalizeStateCopy(raw.copy),
+    columns: normalizeFooterColumns(data.columns),
+    legal: normalizeFooterLegal(data.legal),
+    social: normalizeFooterSocial(data.social),
+    layout: normalizeFooterLayout(data.layout),
+    style: normalizeFooterStyle(data.style),
   };
 }
 
 function FooterVisualEditor(props: WidgetEditorProps<FooterData>) {
+  const value = props.value;
   return (
-    <WidgetEditorSection id="footer.source" title="Columns">
-      <WidgetControlRow id="footer.source.type" label="Source">
-        <Select value={props.value.source?.type} onValueChange={...} />
+    <WidgetEditorSection id="footer.0" title="Footer columns">
+      <WidgetControlRow id="footer.columns.0.title" label="Column title" data-widget-control="footer.columns.0.title">
+        <Input value={value.columns?.[0]?.title ?? ""} onChange={...} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -117,6 +120,7 @@ Implementation checklist:
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
 - `bun run test:vitest -- tests/vitest/widgets/footer.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/footer-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

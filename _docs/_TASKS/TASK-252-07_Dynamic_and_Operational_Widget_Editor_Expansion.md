@@ -61,8 +61,14 @@ more flexible, but implementation must not weaken runtime contracts.
   - `booking-calendar`
   - `appointment-form`
 - Preserve public-write security for form/booking widgets:
-  - existing nonce/captcha/rate-limit behavior remains owned by the current
-    forms/booking runtime services;
+  - presentational or external form widgets, including current `newsletter`
+    action-url mode and current `contact` form rendering, are not Coderso-owned
+    public-write endpoints and must not be documented as nonce/HMAC protected;
+  - any leaf that introduces or changes a Coderso-owned public-write endpoint
+    must use the shared nonce + signature/HMAC owner in
+    `core/services/forms/submissionNonce.ts`, optional reCAPTCHA policy, strict
+    reject-unknown validation, existing public rate-limit buckets, and
+    endpoint/security tests;
   - widget editor changes must not add a weaker public submission route.
 - Make dynamic widget flexibility product-focused:
   - `content-list`: card/list/grid modes, field visibility, empty/error states.
@@ -169,14 +175,19 @@ function normalizeContactWidgetData(raw: unknown): ContactData {
   - rendered widgets are public page/runtime output.
 - Auth model:
   - editor saves use existing authenticated admin writes;
-  - public submissions keep the current public endpoint contracts.
+  - presentational/external widgets do not create a Coderso-owned public-write
+    endpoint by themselves;
+  - any Coderso-owned public submission route added or changed by a leaf must
+    use the existing public form/booking endpoint auth contract.
 - RBAC:
   - unchanged page/template write permissions;
   - source selection must not expose data beyond existing runtime resolver
     permissions.
 - CSRF:
   - admin writes keep existing CSRF handling;
-  - public writes keep existing nonce/captcha/security contracts.
+  - public writes do not use admin CSRF; Coderso-owned public-write endpoints
+    must require nonce + signature/HMAC via
+    `core/services/forms/submissionNonce.ts`.
 - Rate-limit bucket:
   - unchanged admin write buckets;
   - unchanged public form/booking/search/listing buckets unless the specific
@@ -186,13 +197,16 @@ function normalizeContactWidgetData(raw: unknown): ContactData {
   - dynamic source payloads must normalize through owner modules.
 - Anti-abuse:
   - do not store provider secrets in widget data/browser cache/localStorage;
-  - public forms/booking widgets must keep nonce/captcha/rate-limit protection;
+  - public-write endpoint changes must keep nonce + signature/HMAC, optional
+    reCAPTCHA policy, strict reject-unknown validation, and
+    `tests/security/codersoSecurityGate.test.ts` coverage;
   - search/listing widgets must clamp limits and reject unsafe query/facet data.
 
 ## Testing Requirements
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this task family `Done` or record the exact blocker.
 - Dynamic content:
   - `tests/unit/widgets/contentList.test.tsx`
   - `tests/vitest/ui/content-list-editor-wave.test.tsx`
@@ -227,7 +241,9 @@ function normalizeContactWidgetData(raw: unknown): ContactData {
   - `tests/vitest/ui/navigation-editor-wave.test.tsx`
   - `tests/vitest/widgets/footer.test.tsx`
   - `tests/vitest/ui/footer-editor-wave.test.tsx`
-- Add Bun route/security suites when endpoint behavior changes.
+- Add Bun route/security suites when endpoint behavior changes, including
+  `tests/security/codersoSecurityGate.test.ts` plus the endpoint owner suite for
+  any Coderso-owned public write.
 
 ## Documentation Updates Required
 

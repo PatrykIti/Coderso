@@ -12,7 +12,9 @@
 
 ## Overview
 
-Improve FAQ Accordion with question/answer items, optional categories, support CTA, and icon placement; search stays deferred unless FAQ volume justifies it.
+Improve FAQ Accordion from the question/answer contract first; categories,
+support CTA, icon placement, and search stay Adapt-only unless the implementation
+extends schema/defaults/normalizer/render/editor/tests together.
 
 This is an execution leaf under `TASK-252-06`. It must not re-open the
 research phase; use `_docs/_WIDGETS/tmp/faq-accordion/MATRIX.md` and the widget README under
@@ -28,9 +30,9 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: question/answer items, optional categories, support CTA, icon placement.
-- Adapt: search/tabbed FAQ only if the implementation proves real volume need.
-- Reject: raw HTML answers and duplicating generic accordion behavior blindly.
+- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/faq-accordion/MATRIX.md`; for this leaf, start from the current owner fields `header`, `items`, `options`, `style` and add only the schema fields that the matrix explicitly keeps.
+- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat categories, support CTA, and icon placement as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Reject: separate one-off widgets, raw HTML/script embeds, and unbounded visual/CSS controls.
 
 ## Editor Mode Ownership
 
@@ -60,20 +62,28 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
-function normalizeFaqAccordionItem(raw: unknown, index: number) {
+function normalizeFaqAccordionData(data: FaqAccordionData): FaqAccordionData {
   return {
-    id: normalizeStableId(raw.id, `faq-accordion-${index + 1}`),
-    title: readTrimmedString(raw.title),
-    href: normalizeSafeHref(raw.href),
+    header: normalizeFaqAccordionHeader(data.header),
+    items: normalizeFaqAccordionItems(data.items),
+    options: normalizeFaqAccordionOptions(data.options),
+    style: normalizeFaqAccordionStyle(data.style),
+  };
+}
+
+function normalizeFaqAccordionItem(item: FaqAccordionItem, index: number): FaqAccordionItem {
+  return {
+    ...item,
+    id: normalizeStableItemId(item.id, `faq-accordion-${index + 1}`),
   };
 }
 
 function FaqAccordionVisualEditor(props: WidgetEditorProps<FaqAccordionData>) {
   return (
-    <WidgetEditorSection id="faq-accordion.items" title="Categories">
+    <WidgetEditorSection id="faq-accordion.items" title="FAQ items">
       {props.value.items.map((item, index) => (
-        <WidgetControlRow key={item.id} id={`faq-accordion.items.${index}.title`} label="Title">
-          <Input value={item.title} onChange={...} />
+        <WidgetControlRow key={item.id ?? index} id={`faq-accordion.items.${index}.question`} label="Question" data-widget-control={`faq-accordion.items.${index}.question`}>
+          <Input value={item.question ?? ""} onChange={...} />
         </WidgetControlRow>
       ))}
     </WidgetEditorSection>
@@ -119,6 +129,7 @@ Implementation checklist:
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
 - `bun run test:vitest -- tests/vitest/widgets/faqAccordion.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/faq-accordion-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

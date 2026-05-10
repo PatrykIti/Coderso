@@ -28,9 +28,9 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: source, status/sort/limit, card/list/compact modes, featured-first, field visibility.
-- Adapt: empty/error copy and display density through schema-owned runtime fields.
-- Reject: template fragments and arbitrary server query builders.
+- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/content-list/MATRIX.md`; for this leaf, start from the current owner fields `source`, `filters`, `fields`, `emptyState`, `style`, `resolved` and add only the schema fields that the matrix explicitly keeps.
+- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat featured-first behavior and field visibility beyond current defaults as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Reject: arbitrary operators, client-owned provider/index config, raw scripts, and privileged settings in widget data.
 
 ## Editor Mode Ownership
 
@@ -60,19 +60,23 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
-function normalizeContentListData(raw: unknown): ContentListData {
+function normalizeContentListData(data: ContentListData): ContentListData {
   return {
-    source: normalizeWidgetSource(raw.source),
-    display: normalizeDisplayOptions(raw.display),
-    copy: normalizeStateCopy(raw.copy),
+    source: normalizeContentListSource(data.source),
+    filters: normalizeContentListFilters(data.filters),
+    fields: normalizeContentListFields(data.fields),
+    emptyState: normalizeContentListEmptyState(data.emptyState),
+    style: normalizeContentListStyle(data.style),
+    resolved: normalizeContentListResolved(data.resolved),
   };
 }
 
 function ContentListVisualEditor(props: WidgetEditorProps<ContentListData>) {
+  const value = props.value;
   return (
     <WidgetEditorSection id="content-list.source" title="Source">
-      <WidgetControlRow id="content-list.source.type" label="Source">
-        <Select value={props.value.source?.type} onValueChange={...} />
+      <WidgetControlRow id="content-list.source.type" label="Source type" data-widget-control="content-list.source.type">
+        <Select value={value.source?.type ?? "manual"} onChange={...} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -117,6 +121,7 @@ Implementation checklist:
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
 - `bun test tests/unit/widgets/contentList.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/content-list-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

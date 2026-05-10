@@ -28,9 +28,9 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: layout presets, captions, overlays, alt text.
-- Adapt: lightbox/carousel hooks only if separately approved.
-- Reject: default carousel, raw embed galleries, and unsafe media metadata.
+- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/gallery-mosaic/MATRIX.md`; for this leaf, start from the current owner fields `header`, `items`, `style` and add only the schema fields that the matrix explicitly keeps.
+- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat lightbox/carousel behavior and richer media overlays as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Reject: separate one-off widgets, raw HTML/script embeds, and unbounded visual/CSS controls.
 
 ## Editor Mode Ownership
 
@@ -60,20 +60,27 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
-function normalizeGalleryMosaicItem(raw: unknown, index: number) {
+function normalizeGalleryMosaicData(data: GalleryMosaicData): GalleryMosaicData {
   return {
-    id: normalizeStableId(raw.id, `gallery-mosaic-${index + 1}`),
-    title: readTrimmedString(raw.title),
-    href: normalizeSafeHref(raw.href),
+    header: normalizeGalleryMosaicHeader(data.header),
+    items: normalizeGalleryMosaicItems(data.items),
+    style: normalizeGalleryMosaicStyle(data.style),
+  };
+}
+
+function normalizeGalleryMosaicItem(item: GalleryMosaicItem, index: number): GalleryMosaicItem {
+  return {
+    ...item,
+    id: normalizeStableItemId(item.id, `gallery-mosaic-${index + 1}`),
   };
 }
 
 function GalleryMosaicVisualEditor(props: WidgetEditorProps<GalleryMosaicData>) {
   return (
-    <WidgetEditorSection id="gallery-mosaic.items" title="Images">
+    <WidgetEditorSection id="gallery-mosaic.items" title="Media items">
       {props.value.items.map((item, index) => (
-        <WidgetControlRow key={item.id} id={`gallery-mosaic.items.${index}.title`} label="Title">
-          <Input value={item.title} onChange={...} />
+        <WidgetControlRow key={item.id ?? index} id={`gallery-mosaic.items.${index}.caption`} label="Caption" data-widget-control={`gallery-mosaic.items.${index}.caption`}>
+          <Input value={item.caption ?? ""} onChange={...} />
         </WidgetControlRow>
       ))}
     </WidgetEditorSection>
@@ -119,6 +126,7 @@ Implementation checklist:
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
 - `bun run test:vitest -- tests/vitest/widgets/galleryMosaic.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

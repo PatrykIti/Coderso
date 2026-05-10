@@ -28,9 +28,9 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: form picker, inline/modal/provider mode, display fields.
-- Adapt: provider mode through safe backend-owned references.
-- Reject: raw script/embed HTML and provider secrets in widget data.
+- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/form-embed/MATRIX.md`; for this leaf, start from the current owner fields `formId`, `title`, `description`, `submitLabel`, `successMessage`, `layout`, `style`, `fields`, `resolved` and add only the schema fields that the matrix explicitly keeps.
+- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat modal/provider display modes when they use existing form contracts as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Reject: arbitrary operators, client-owned provider/index config, raw scripts, and privileged settings in widget data.
 
 ## Editor Mode Ownership
 
@@ -60,19 +60,26 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
-function normalizeFormEmbedData(raw: unknown): FormEmbedData {
+function normalizeFormEmbedData(data: FormEmbedData): FormEmbedData {
   return {
-    source: normalizeWidgetSource(raw.source),
-    display: normalizeDisplayOptions(raw.display),
-    copy: normalizeStateCopy(raw.copy),
+    formId: normalizeFormEmbedFormId(data.formId),
+    title: normalizeFormEmbedTitle(data.title),
+    description: normalizeFormEmbedDescription(data.description),
+    submitLabel: normalizeFormEmbedSubmitLabel(data.submitLabel),
+    successMessage: normalizeFormEmbedSuccessMessage(data.successMessage),
+    layout: normalizeFormEmbedLayout(data.layout),
+    style: normalizeFormEmbedStyle(data.style),
+    fields: normalizeFormEmbedFields(data.fields),
+    resolved: normalizeFormEmbedResolved(data.resolved),
   };
 }
 
 function FormEmbedVisualEditor(props: WidgetEditorProps<FormEmbedData>) {
+  const value = props.value;
   return (
-    <WidgetEditorSection id="form-embed.source" title="Form source">
-      <WidgetControlRow id="form-embed.source.type" label="Source">
-        <Select value={props.value.source?.type} onValueChange={...} />
+    <WidgetEditorSection id="form-embed.form-embed" title="Form picker">
+      <WidgetControlRow id="form-embed.formId" label="Form" data-widget-control="form-embed.formId">
+        <FormPicker value={value.formId ?? ""} onChange={...} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -110,13 +117,19 @@ Implementation checklist:
   - changed `form-embed` schema fields must reject unknown fields and
     normalize legacy payloads through `core/widgets/core/formEmbed.tsx`.
 - Anti-abuse:
-  - form submission security remains on existing form runtime endpoints
+  - form submission security remains on existing form runtime endpoints,
+    including nonce + signature/HMAC ownership in
+    `core/services/forms/submissionNonce.ts` for Coderso-owned public writes
+  - any changed public submission path must keep optional reCAPTCHA policy,
+    existing public rate-limit buckets, strict reject-unknown validation, and
+    `tests/security/codersoSecurityGate.test.ts`
   - raw scripts and privileged provider config are not allowed
 
 ## Testing Requirements
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
 - `bun run test:vitest -- tests/vitest/widgets/formEmbed.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/form-embed-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

@@ -28,9 +28,9 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: grid, spotlight, rating, avatar shape, company/logo attribution.
-- Adapt: carousel-ready list only as opt-in and reduced-motion safe.
-- Reject: always-on carousel motion and raw testimonial embeds.
+- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/testimonials/MATRIX.md`; for this leaf, start from the current owner fields `header`, `testimonials`, `style` and add only the schema fields that the matrix explicitly keeps.
+- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat spotlight/carousel behavior, company/logo attribution, and avatar-shape variants as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Reject: separate one-off widgets, raw HTML/script embeds, and unbounded visual/CSS controls.
 
 ## Editor Mode Ownership
 
@@ -60,20 +60,27 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
-function normalizeTestimonialsItem(raw: unknown, index: number) {
+function normalizeTestimonialsData(data: TestimonialsData): TestimonialsData {
   return {
-    id: normalizeStableId(raw.id, `testimonials-${index + 1}`),
-    title: readTrimmedString(raw.title),
-    href: normalizeSafeHref(raw.href),
+    header: normalizeTestimonialsHeader(data.header),
+    testimonials: normalizeTestimonialsTestimonials(data.testimonials),
+    style: normalizeTestimonialsStyle(data.style),
+  };
+}
+
+function normalizeTestimonialItem(item: TestimonialItem, index: number): TestimonialItem {
+  return {
+    ...item,
+    id: normalizeStableItemId(item.id, `testimonials-${index + 1}`),
   };
 }
 
 function TestimonialsVisualEditor(props: WidgetEditorProps<TestimonialsData>) {
   return (
-    <WidgetEditorSection id="testimonials.items" title="Quotes">
-      {props.value.items.map((item, index) => (
-        <WidgetControlRow key={item.id} id={`testimonials.items.${index}.title`} label="Title">
-          <Input value={item.title} onChange={...} />
+    <WidgetEditorSection id="testimonials.testimonials" title="Testimonials">
+      {props.value.testimonials.map((item, index) => (
+        <WidgetControlRow key={item.id ?? index} id={`testimonials.testimonials.${index}.quote`} label="Quote" data-widget-control={`testimonials.testimonials.${index}.quote`}>
+          <Input value={item.quote ?? ""} onChange={...} />
         </WidgetControlRow>
       ))}
     </WidgetEditorSection>
@@ -119,6 +126,7 @@ Implementation checklist:
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
 - `bun run test:vitest -- tests/vitest/widgets/testimonials.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/testimonials-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

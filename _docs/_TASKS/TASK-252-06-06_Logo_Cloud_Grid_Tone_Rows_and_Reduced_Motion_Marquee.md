@@ -12,7 +12,8 @@
 
 ## Overview
 
-Add logo-cloud grid/rows/intro/tone controls and optional marquee only with a reduced-motion fallback.
+Add logo-cloud grid/intro/tone controls first; row grouping and marquee remain
+Adapt-only and marquee must include a reduced-motion fallback if implemented.
 
 This is an execution leaf under `TASK-252-06`. It must not re-open the
 research phase; use `_docs/_WIDGETS/tmp/logo-cloud/MATRIX.md` and the widget README under
@@ -28,9 +29,9 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: grid, intro, grayscale/muted tone, rows, optional marquee.
-- Adapt: marquee as a bounded opt-in mode with reduced-motion fallback.
-- Reject: per-logo arbitrary sizing and always-on animation.
+- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/logo-cloud/MATRIX.md`; for this leaf, start from the current owner fields `header`, `logos`, `style` and add only the schema fields that the matrix explicitly keeps.
+- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat marquee and row grouping with reduced-motion fallback as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Reject: separate one-off widgets, raw HTML/script embeds, and unbounded visual/CSS controls.
 
 ## Editor Mode Ownership
 
@@ -60,20 +61,27 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
-function normalizeLogoCloudItem(raw: unknown, index: number) {
+function normalizeLogoCloudData(data: LogoCloudData): LogoCloudData {
   return {
-    id: normalizeStableId(raw.id, `logo-cloud-${index + 1}`),
-    title: readTrimmedString(raw.title),
-    href: normalizeSafeHref(raw.href),
+    header: normalizeLogoCloudHeader(data.header),
+    logos: normalizeLogoCloudLogos(data.logos),
+    style: normalizeLogoCloudStyle(data.style),
+  };
+}
+
+function normalizeLogoCloudLogo(item: LogoCloudLogo, index: number): LogoCloudLogo {
+  return {
+    ...item,
+    id: normalizeStableItemId(item.id, `logo-cloud-${index + 1}`),
   };
 }
 
 function LogoCloudVisualEditor(props: WidgetEditorProps<LogoCloudData>) {
   return (
-    <WidgetEditorSection id="logo-cloud.items" title="Logos">
-      {props.value.items.map((item, index) => (
-        <WidgetControlRow key={item.id} id={`logo-cloud.items.${index}.title`} label="Title">
-          <Input value={item.title} onChange={...} />
+    <WidgetEditorSection id="logo-cloud.logos" title="Logos">
+      {props.value.logos.map((item, index) => (
+        <WidgetControlRow key={item.id ?? index} id={`logo-cloud.logos.${index}.name`} label="Name" data-widget-control={`logo-cloud.logos.${index}.name`}>
+          <Input value={item.name ?? ""} onChange={...} />
         </WidgetControlRow>
       ))}
     </WidgetEditorSection>
@@ -119,6 +127,7 @@ Implementation checklist:
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
 - `bun run test:vitest -- tests/vitest/widgets/logoCloud.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/logo-cloud-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

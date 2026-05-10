@@ -12,7 +12,9 @@
 
 ## Overview
 
-Refine navigation source/manual links, dropdowns, mobile menu, sticky CTA, and logo grouping without client-owned routing hacks.
+Refine navigation source/manual links and logo grouping first; dropdowns, mobile
+menu, and sticky CTA behavior stay Adapt-only through the current behavior
+contract without client-owned routing hacks.
 
 This is an execution leaf under `TASK-252-07`. It must not re-open the
 research phase; use `_docs/_WIDGETS/tmp/navigation/MATRIX.md` and the widget README under
@@ -28,9 +30,9 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: source/manual links, dropdowns, mobile menu, sticky CTA.
-- Adapt: source references through existing menu/navigation owners.
-- Reject: client-owned routing hacks and raw menu scripts.
+- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/navigation/MATRIX.md`; for this leaf, start from the current owner fields `logo`, `items`, `cta`, `linksSource`, `menuKey`, `behavior`, `layout`, `style` and add only the schema fields that the matrix explicitly keeps.
+- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat dropdowns and sticky/mobile behavior through the current `behavior` contract as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Reject: arbitrary operators, client-owned provider/index config, raw scripts, and privileged settings in widget data.
 
 ## Editor Mode Ownership
 
@@ -60,19 +62,25 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
-function normalizeNavigationData(raw: unknown): NavigationData {
+function normalizeNavigationData(data: NavigationData): NavigationData {
   return {
-    source: normalizeWidgetSource(raw.source),
-    display: normalizeDisplayOptions(raw.display),
-    copy: normalizeStateCopy(raw.copy),
+    logo: normalizeNavigationLogo(data.logo),
+    items: normalizeNavigationItems(data.items),
+    cta: normalizeNavigationCta(data.cta),
+    linksSource: normalizeNavigationLinksSource(data.linksSource),
+    menuKey: normalizeNavigationMenuKey(data.menuKey),
+    behavior: normalizeNavigationBehavior(data.behavior),
+    layout: normalizeNavigationLayout(data.layout),
+    style: normalizeNavigationStyle(data.style),
   };
 }
 
 function NavigationVisualEditor(props: WidgetEditorProps<NavigationData>) {
+  const value = props.value;
   return (
-    <WidgetEditorSection id="navigation.source" title="Source">
-      <WidgetControlRow id="navigation.source.type" label="Source">
-        <Select value={props.value.source?.type} onValueChange={...} />
+    <WidgetEditorSection id="navigation.navigation" title="Links source">
+      <WidgetControlRow id="navigation.linksSource" label="Links source" data-widget-control="navigation.linksSource">
+        <Select value={value.linksSource ?? "manual"} onChange={...} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -117,6 +125,7 @@ Implementation checklist:
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
 - `bun run test:vitest -- tests/vitest/widgets/navigation.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/navigation-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

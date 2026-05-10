@@ -28,9 +28,9 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: single/multiple open, default open, collapsible behavior, accessible panels.
-- Adapt: category-like grouping only when it stays inside one accordion list.
-- Reject: nested accordions by default and arbitrary HTML answer panels.
+- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/accordion/MATRIX.md`; for this leaf, start from the current owner fields `items`, `options.initiallyOpenId`, `options.allowMultiple`, `style` plus the existing `accordionItemSlot` and add only the schema fields that the matrix explicitly keeps.
+- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat panel style changes and multiple-open behavior as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Reject: nested accordions by default and arbitrary disclosure scripting.
 
 ## Editor Mode Ownership
 
@@ -60,20 +60,20 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
-function normalizeAccordionData(raw: unknown): AccordionData {
-  const current = normalizeExistingAccordionData(raw);
+function normalizeAccordionData(data: AccordionData): AccordionData {
   return {
-    ...current,
-    mode: normalizeBoundedMode(raw.mode, current.mode),
-    style: normalizeKnownStyleFields(raw.style),
+    items: normalizeAccordionItems(data.items),
+    options: normalizeAccordionOptions(data.options),
+    style: normalizeAccordionStyle(data.style),
   };
 }
 
 function AccordionVisualEditor(props: WidgetEditorProps<AccordionData>) {
+  const value = props.value;
   return (
-    <WidgetEditorSection id="accordion.primary" title="Items">
-      <WidgetControlRow id="accordion.mode" label="Mode">
-        <SegmentedControl value={props.value.mode} onChange={...} />
+    <WidgetEditorSection id="accordion.options" title="Disclosure behavior">
+      <WidgetControlRow id="accordion.options.initiallyOpenId" label="Default open item" data-widget-control="accordion.options.initiallyOpenId">
+        <Select value={value.options?.initiallyOpenId ?? ""} onChange={...} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -118,6 +118,7 @@ Implementation checklist:
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
 - `bun run test:vitest -- tests/vitest/widgets/accordionWidget.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/accordion-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

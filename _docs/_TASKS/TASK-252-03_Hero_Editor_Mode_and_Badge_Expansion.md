@@ -144,6 +144,7 @@ control metadata:
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this task family `Done` or record the exact blocker.
 - `bun run test:vitest -- tests/vitest/widgets/hero.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/heroEditors.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/hero-editor-wave.test.tsx`

@@ -22,15 +22,18 @@ and Reject decisions.
 ## Business Requirements
 
 - Keep one `timeline` widget type and preserve existing `milestones`, `cards`, and `compact` payloads through compatibility mapping.
-- Support axis, vertical chronology, alternating, feed/roadmap-style modes, dates, statuses, per-item CTA/link, icon/accent, and current milestone highlighting.
-- Add optional motion as progressive enhancement only: no layout shift, no required runtime dependency, and `prefers-reduced-motion` must disable reveal behavior.
+- Support axis, vertical chronology, alternating layout, dates, statuses,
+  per-item CTA/link, icon/accent, and current milestone highlighting.
+- Treat feed/activity presentation and optional motion as Adapt-only progressive
+  enhancement: no layout shift, no required runtime dependency, and
+  `prefers-reduced-motion` must disable reveal behavior.
 - Use semantic ordered-list output and `<time>` when date data exists.
 
 ## Research Decisions
 
-- Keep: Axis, vertical, alternating/feed chronology modes, dates, status/current highlight, per-item CTA, and controlled motion presets..
-- Adapt: Map current variants into a richer mode model and keep reveal behavior CSS/data-attribute-first where possible..
-- Reject: Always-on animated counters/connectors, motion without reduced-motion fallback, nested arbitrary timelines, and raw HTML step content..
+- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/timeline/MATRIX.md`; for this leaf, start from the current owner fields `current `TimelineData` fields plus schema-owned date/status/link additions` and add only the schema fields that the matrix explicitly keeps.
+- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat feed/activity presentation and motion/reveal behavior as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Reject: always-on motion without reduced-motion fallback, nested arbitrary timelines, and raw HTML step content.
 
 ## Editor Mode Ownership
 
@@ -49,6 +52,7 @@ and Reject decisions.
 - `tests/vitest/widgets/styleNoneTokens.test.tsx` if token adjacency changes.
 - `tests/vitest/widgets/renderer.test.tsx` if shared renderer output changes.
 - `tests/vitest/widgets/timeline.test.tsx`
+- `tests/unit/widgets/validator.test.ts` when schema validation changes.
 - `tests/vitest/ui/timeline-editor-wave.test.tsx`
 - `_docs/WIDGETS.md`
 - `_docs/_WIDGETS/TIMELINE.md`
@@ -128,7 +132,9 @@ Implementation checklist:
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
 - `bun run test:vitest -- tests/vitest/widgets/timeline.test.tsx`
+- `bun test tests/unit/widgets/validator.test.ts` when schema validation changes.
 - `bun run test:vitest -- tests/vitest/ui/timeline-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,
   slot, or shared output behavior changes.

@@ -28,9 +28,9 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: members, photo shape, socials, profile link, featured member.
-- Adapt: social/profile links through safe URL fields.
-- Reject: contact workflow per person and staff directory permissions.
+- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/team/MATRIX.md`; for this leaf, start from the current owner fields `header`, `members`, `style` and add only the schema fields that the matrix explicitly keeps.
+- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat featured member/profile treatment and photo-shape controls as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Reject: separate one-off widgets, raw HTML/script embeds, and unbounded visual/CSS controls.
 
 ## Editor Mode Ownership
 
@@ -60,20 +60,27 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
-function normalizeTeamItem(raw: unknown, index: number) {
+function normalizeTeamData(data: TeamData): TeamData {
   return {
-    id: normalizeStableId(raw.id, `team-${index + 1}`),
-    title: readTrimmedString(raw.title),
-    href: normalizeSafeHref(raw.href),
+    header: normalizeTeamHeader(data.header),
+    members: normalizeTeamMembers(data.members),
+    style: normalizeTeamStyle(data.style),
+  };
+}
+
+function normalizeTeamMember(item: TeamMember, index: number): TeamMember {
+  return {
+    ...item,
+    id: normalizeStableItemId(item.id, `team-${index + 1}`),
   };
 }
 
 function TeamVisualEditor(props: WidgetEditorProps<TeamData>) {
   return (
-    <WidgetEditorSection id="team.items" title="Photos">
-      {props.value.items.map((item, index) => (
-        <WidgetControlRow key={item.id} id={`team.items.${index}.title`} label="Title">
-          <Input value={item.title} onChange={...} />
+    <WidgetEditorSection id="team.members" title="Members">
+      {props.value.members.map((item, index) => (
+        <WidgetControlRow key={item.id ?? index} id={`team.members.${index}.name`} label="Name" data-widget-control={`team.members.${index}.name`}>
+          <Input value={item.name ?? ""} onChange={...} />
         </WidgetControlRow>
       ))}
     </WidgetEditorSection>
@@ -119,6 +126,7 @@ Implementation checklist:
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
 - `bun run test:vitest -- tests/vitest/widgets/team.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/team-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

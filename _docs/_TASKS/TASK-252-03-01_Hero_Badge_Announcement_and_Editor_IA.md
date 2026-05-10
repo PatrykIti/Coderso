@@ -24,13 +24,15 @@ and Reject decisions.
 - Keep one `hero` widget type and preserve all existing layout, media, CTA, typography, background, border, preset, and responsive payloads.
 - Add an optional badge/announcement model with label, optional prefix/icon text, safe href, tone/style, and placement that works for centered, split, and media-led variants.
 - Preserve `widgets.hero.presets`: old presets must still apply, and new presets may include badge data without breaking older records.
-- Expose badge/headline, CTA, media, background, typography, colors, borders, and advanced responsive controls through the shared TASK-252 rows/sections and metadata.
+- Expose badge/headline, CTA, media, background, typography, colors, borders,
+  and advanced responsive controls through the shared TASK-252 rows/sections and
+  metadata; proof rows and motion remain Adapt-only.
 
 ## Research Decisions
 
-- Keep: Badge/announcement, controlled media presentation, proof items, CTA grouping, and preset-driven Hero layouts..
-- Adapt: Use visual tone and placement presets instead of arbitrary CSS; map badge into existing variants without creating a second Hero widget..
-- Reject: Raw HTML badges, free-form class names, unbounded motion controls, and duplicate hero-pattern widgets..
+- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/hero/MATRIX.md`; for this leaf, start from the current owner fields `current `HeroData` fields plus the new schema-owned `badge` model` and add only the schema fields that the matrix explicitly keeps.
+- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat social proof rows, motion/presentation extras, embedded forms/search, and proof/timeline hybrids as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Reject: raw HTML badges, free-form class names, unbounded motion controls, and duplicate hero-pattern widgets.
 
 ## Editor Mode Ownership
 
@@ -50,6 +52,7 @@ and Reject decisions.
 - `tests/vitest/widgets/styleNoneTokens.test.tsx` if token adjacency changes.
 - `tests/vitest/widgets/hero.test.tsx`
 - `tests/vitest/widgets/heroEditors.test.tsx`
+- `tests/unit/widgets/validator.test.ts` when schema validation changes.
 - `tests/vitest/ui/hero-editor-wave.test.tsx`
 - `_docs/WIDGETS.md`
 - `_docs/_WIDGETS/HERO.md`
@@ -133,7 +136,9 @@ Implementation checklist:
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
 - `bun run test:vitest -- tests/vitest/widgets/hero.test.tsx tests/vitest/widgets/heroEditors.test.tsx`
+- `bun test tests/unit/widgets/validator.test.ts` when schema validation changes.
 - `bun run test:vitest -- tests/vitest/ui/hero-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,
   slot, or shared output behavior changes.

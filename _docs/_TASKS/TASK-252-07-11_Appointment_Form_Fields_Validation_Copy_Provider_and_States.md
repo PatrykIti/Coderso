@@ -12,7 +12,9 @@
 
 ## Overview
 
-Add appointment-form fields, validation copy, provider/embed mode, and state copy while keeping CAPTCHA/nonce as backend policy, not widget options.
+Add appointment-form fields, validation copy, and state copy first; provider/embed
+mode stays Adapt-only when a backend-owned submission flow exists, and CAPTCHA/
+nonce remain backend policy rather than widget options.
 
 This is an execution leaf under `TASK-252-07`. It must not re-open the
 research phase; use `_docs/_WIDGETS/tmp/appointment-form/MATRIX.md` and the widget README under
@@ -28,9 +30,11 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: fields, validation copy, provider/embed mode, states.
-- Adapt: embed mode through safe provider reference only.
-- Reject: CAPTCHA/nonce options in widget data and raw booking scripts.
+- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/appointment-form/MATRIX.md`; for this leaf, start from the current owner fields `flowId`, field labels/placeholders, `submissionEndpoint`, `style`, `resolved` and add only the schema fields that the matrix explicitly keeps.
+- Adapt: rows marked `Adapt` are conditional scope, not required scope.
+  Provider/embed mode requires a backend-owned submission flow; implement only
+  when schema/defaults/normalizer/render/editor/tests move together.
+- Reject: arbitrary operators, client-owned provider/index config, raw scripts, and privileged settings in widget data.
 
 ## Editor Mode Ownership
 
@@ -60,19 +64,26 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
-function normalizeAppointmentFormData(raw: unknown): AppointmentFormData {
+function normalizeAppointmentFormData(data: AppointmentFormData): AppointmentFormData {
   return {
-    source: normalizeWidgetSource(raw.source),
-    display: normalizeDisplayOptions(raw.display),
-    copy: normalizeStateCopy(raw.copy),
+    flowId: normalizeAppointmentFormFlowId(data.flowId),
+    title: normalizeAppointmentFormTitle(data.title),
+    description: normalizeAppointmentFormDescription(data.description),
+    submitLabel: normalizeAppointmentFormSubmitLabel(data.submitLabel),
+    showPhone: normalizeAppointmentFormShowPhone(data.showPhone),
+    showNotes: normalizeAppointmentFormShowNotes(data.showNotes),
+    submissionEndpoint: normalizeAppointmentFormSubmissionEndpoint(data.submissionEndpoint),
+    style: normalizeAppointmentFormStyle(data.style),
+    resolved: normalizeAppointmentFormResolved(data.resolved),
   };
 }
 
 function AppointmentFormVisualEditor(props: WidgetEditorProps<AppointmentFormData>) {
+  const value = props.value;
   return (
-    <WidgetEditorSection id="appointment-form.source" title="Fields">
-      <WidgetControlRow id="appointment-form.source.type" label="Source">
-        <Select value={props.value.source?.type} onValueChange={...} />
+    <WidgetEditorSection id="appointment-form.appointment-form" title="Fields and copy">
+      <WidgetControlRow id="appointment-form.customerEmailLabel" label="Email label" data-widget-control="appointment-form.customerEmailLabel">
+        <Input value={value.customerEmailLabel ?? ""} onChange={...} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -110,13 +121,19 @@ Implementation checklist:
   - changed `appointment-form` schema fields must reject unknown fields and
     normalize legacy payloads through `core/widgets/core/appointmentForm.tsx`.
 - Anti-abuse:
-  - nonce/captcha/rate-limit policy remains backend-owned
+  - CAPTCHA, nonce, and provider-secret settings are not widget-data options
+  - if `submissionEndpoint` becomes a Coderso-owned public write, the endpoint
+    must use nonce + signature/HMAC via
+    `core/services/forms/submissionNonce.ts`, optional reCAPTCHA policy,
+    existing public rate-limit buckets, strict reject-unknown validation, and
+    `tests/security/codersoSecurityGate.test.ts`
   - raw provider scripts and secrets are rejected
 
 ## Testing Requirements
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
 - `bun run test:vitest -- tests/vitest/widgets/appointmentForm.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/appointment-form-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

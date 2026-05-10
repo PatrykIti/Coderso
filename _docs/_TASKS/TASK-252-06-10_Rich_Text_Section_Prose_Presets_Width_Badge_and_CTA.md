@@ -12,7 +12,8 @@
 
 ## Overview
 
-Improve rich-text-section with safe prose presets, width, badge, CTA, quote/media support, and no raw HTML expansion.
+Improve rich-text-section with safe prose presets and width first; badge, CTA,
+quote/media, and editorial layouts stay Adapt-only with no raw HTML expansion.
 
 This is an execution leaf under `TASK-252-06`. It must not re-open the
 research phase; use `_docs/_WIDGETS/tmp/rich-text-section/MATRIX.md` and the widget README under
@@ -28,9 +29,9 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: prose presets, width, badge, CTA, safe quote/media support.
-- Adapt: quote/media as schema-owned structured fields.
-- Reject: raw HTML and arbitrary sanitizer bypasses.
+- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/rich-text-section/MATRIX.md`; for this leaf, start from the current owner fields `titleBlock`, `body`, `options`, `style` and add only the schema fields that the matrix explicitly keeps.
+- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat badge, CTA, quote/media support, and editorial two-column treatments as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Reject: separate one-off widgets, raw HTML/script embeds, and unbounded visual/CSS controls.
 
 ## Editor Mode Ownership
 
@@ -60,22 +61,22 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
-function normalizeRichTextSectionItem(raw: unknown, index: number) {
+function normalizeRichTextSectionData(data: RichTextSectionData): RichTextSectionData {
   return {
-    id: normalizeStableId(raw.id, `rich-text-section-${index + 1}`),
-    title: readTrimmedString(raw.title),
-    href: normalizeSafeHref(raw.href),
+    titleBlock: normalizeRichTextSectionTitleBlock(data.titleBlock),
+    body: normalizeRichTextSectionBody(data.body),
+    options: normalizeRichTextSectionOptions(data.options),
+    style: normalizeRichTextSectionStyle(data.style),
   };
 }
 
 function RichTextSectionVisualEditor(props: WidgetEditorProps<RichTextSectionData>) {
+  const value = props.value;
   return (
-    <WidgetEditorSection id="rich-text-section.items" title="Prose preset">
-      {props.value.items.map((item, index) => (
-        <WidgetControlRow key={item.id} id={`rich-text-section.items.${index}.title`} label="Title">
-          <Input value={item.title} onChange={...} />
-        </WidgetControlRow>
-      ))}
+    <WidgetEditorSection id="rich-text-section.options" title="Prose and width">
+      <WidgetControlRow id="rich-text-section.options.maxWidth" label="Max width" data-widget-control="rich-text-section.options.maxWidth">
+        <Select value={value.options?.maxWidth ?? "lg"} onChange={...} />
+      </WidgetControlRow>
     </WidgetEditorSection>
   );
 }
@@ -119,6 +120,7 @@ Implementation checklist:
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
 - `bun run test:vitest -- tests/vitest/widgets/richTextSection.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/rich-text-section-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

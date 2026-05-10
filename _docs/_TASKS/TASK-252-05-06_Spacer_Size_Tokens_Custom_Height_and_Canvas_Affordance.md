@@ -28,9 +28,9 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: size token, custom height, responsive override, canvas affordance.
-- Adapt: custom length validation through the existing safe length contract.
-- Reject: marketing content, decorative shapes, and arbitrary CSS box controls.
+- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/spacer/MATRIX.md`; for this leaf, start from the current owner fields `height`, `showGuideInEditor` and add only the schema fields that the matrix explicitly keeps.
+- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat custom pixel height only through the current bounded token-or-px normalizer as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Reject: decorative content, arbitrary CSS, and layout semantics beyond spacing.
 
 ## Editor Mode Ownership
 
@@ -60,20 +60,19 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
-function normalizeSpacerData(raw: unknown): SpacerData {
-  const current = normalizeExistingSpacerData(raw);
+function normalizeSpacerData(data: SpacerData): SpacerData {
   return {
-    ...current,
-    mode: normalizeBoundedMode(raw.mode, current.mode),
-    style: normalizeKnownStyleFields(raw.style),
+    height: normalizeSpacerHeight(data.height),
+    showGuideInEditor: normalizeSpacerShowGuideInEditor(data.showGuideInEditor),
   };
 }
 
 function SpacerVisualEditor(props: WidgetEditorProps<SpacerData>) {
+  const value = props.value;
   return (
-    <WidgetEditorSection id="spacer.primary" title="Size">
-      <WidgetControlRow id="spacer.mode" label="Mode">
-        <SegmentedControl value={props.value.mode} onChange={...} />
+    <WidgetEditorSection id="spacer.height" title="Height">
+      <WidgetControlRow id="spacer.height.desktop" label="Desktop height" data-widget-control="spacer.height.desktop">
+        <Input value={value.height?.desktop ?? "16"} onChange={...} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -118,6 +117,7 @@ Implementation checklist:
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
 - `bun run test:vitest -- tests/vitest/widgets/spacer.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/spacer-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

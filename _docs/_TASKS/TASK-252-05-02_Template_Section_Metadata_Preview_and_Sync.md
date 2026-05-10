@@ -12,7 +12,9 @@
 
 ## Overview
 
-Treat template-section as a reusable template instance with metadata, preview, category, version, and sync/detach controls rather than one widget per pattern.
+Treat template-section as a reusable template reference with metadata and preview
+state first. Category/version hints are Adapt-only, and sync/detach controls are
+out of scope unless a reusable-template service/runtime owner is added first.
 
 This is an execution leaf under `TASK-252-05`. It must not re-open the
 research phase; use `_docs/_WIDGETS/tmp/template-section/MATRIX.md` and the widget README under
@@ -28,15 +30,18 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: template metadata, preview, category, version, sync/detach state.
-- Adapt: preview/category/version fields into the existing template reference contract.
-- Reject: separate widget types for every template pattern and copied template source payloads.
+- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/template-section/MATRIX.md`; for this leaf, start from the current owner fields `templateId`, `templateName`, `resolved` and add only the schema fields that the matrix explicitly keeps.
+- Adapt: rows marked `Adapt` are conditional scope, not required scope. Keep
+  preview/category/version metadata as editor-only/read-model hints unless a
+  reusable-template service contract owns them; implement only when
+  schema/defaults/normalizer/render/editor/tests move together.
+- Reject: separate widgets per pattern and unconditional sync/detach state before runtime/service ownership exists.
 
 ## Editor Mode Ownership
 
 - `Wizard`: first-run setup for the safest useful defaults for `template-section`.
-- `Visual`: `Template reference`, `Preview and metadata`, `Sync state`, `Display options`.
-- `Advanced`: `Version diagnostics`, `Detach behavior`, `Template source trace`.
+- `Visual`: `Template reference`, `Preview and metadata`, `Display options`.
+- `Advanced`: `Version diagnostics`, `Reusable-template source trace`.
 
 ## Sub-Tasks
 
@@ -60,25 +65,28 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
-function normalizeTemplateSectionData(raw: unknown): TemplateSectionData {
-  const current = normalizeExistingTemplateSectionData(raw);
+function normalizeTemplateSectionData(data: TemplateSectionData): TemplateSectionData {
   return {
-    ...current,
-    mode: normalizeBoundedMode(raw.mode, current.mode),
-    style: normalizeKnownStyleFields(raw.style),
+    templateId: normalizeTemplateId(data.templateId),
+    templateName: normalizeTemplateName(data.templateName),
+    resolved: normalizeTemplateResolution(data.resolved),
   };
 }
 
 function TemplateSectionVisualEditor(props: WidgetEditorProps<TemplateSectionData>) {
+  const value = props.value;
   return (
-    <WidgetEditorSection id="template-section.primary" title="Template reference">
-      <WidgetControlRow id="template-section.mode" label="Mode">
-        <SegmentedControl value={props.value.mode} onChange={...} />
+    <WidgetEditorSection id="template-section.template" title="Template">
+      <WidgetControlRow id="template-section.templateId" label="Template" data-widget-control="template-section.templateId">
+        <TemplatePicker value={value.templateId ?? ""} onChange={...} />
       </WidgetControlRow>
+      <TemplatePreview templateId={value.templateId} resolved={value.resolved} />
     </WidgetEditorSection>
   );
 }
 ```
+
+Sync/detach controls are not part of this leaf unless the implementation first adds an explicit reusable-template owner/service contract. Without that owner, this leaf may show source metadata and preview state only.
 
 Implementation checklist:
 
@@ -118,6 +126,7 @@ Implementation checklist:
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
 - `bun run test:vitest -- tests/vitest/widgets/templateSection.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/template-section-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

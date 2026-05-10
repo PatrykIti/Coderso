@@ -28,9 +28,9 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: tiers, highlight, monthly/annual toggle, custom price, comparison mode.
-- Adapt: feature groups and CTA styling through schema-owned fields.
-- Reject: checkout, payment provider config, and pricing rule engines.
+- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/pricing-plans/MATRIX.md`; for this leaf, start from the current owner fields `header`, `plans`, `style` and add only the schema fields that the matrix explicitly keeps.
+- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat billing toggle and comparison rows as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Reject: separate one-off widgets, raw HTML/script embeds, and unbounded visual/CSS controls.
 
 ## Editor Mode Ownership
 
@@ -60,20 +60,27 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
-function normalizePricingPlansItem(raw: unknown, index: number) {
+function normalizePricingPlansData(data: PricingPlansData): PricingPlansData {
   return {
-    id: normalizeStableId(raw.id, `pricing-plans-${index + 1}`),
-    title: readTrimmedString(raw.title),
-    href: normalizeSafeHref(raw.href),
+    header: normalizePricingPlansHeader(data.header),
+    plans: normalizePricingPlansPlans(data.plans),
+    style: normalizePricingPlansStyle(data.style),
+  };
+}
+
+function normalizePricingPlanItem(item: PricingPlanItem, index: number): PricingPlanItem {
+  return {
+    ...item,
+    id: normalizeStableItemId(item.id, `pricing-plans-${index + 1}`),
   };
 }
 
 function PricingPlansVisualEditor(props: WidgetEditorProps<PricingPlansData>) {
   return (
-    <WidgetEditorSection id="pricing-plans.items" title="Billing toggle">
-      {props.value.items.map((item, index) => (
-        <WidgetControlRow key={item.id} id={`pricing-plans.items.${index}.title`} label="Title">
-          <Input value={item.title} onChange={...} />
+    <WidgetEditorSection id="pricing-plans.plans" title="Plans">
+      {props.value.plans.map((item, index) => (
+        <WidgetControlRow key={item.id ?? index} id={`pricing-plans.plans.${index}.name`} label="Name" data-widget-control={`pricing-plans.plans.${index}.name`}>
+          <Input value={item.name ?? ""} onChange={...} />
         </WidgetControlRow>
       ))}
     </WidgetEditorSection>
@@ -119,6 +126,7 @@ Implementation checklist:
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
 - `bun run test:vitest -- tests/vitest/widgets/pricingPlans.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/pricing-plans-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

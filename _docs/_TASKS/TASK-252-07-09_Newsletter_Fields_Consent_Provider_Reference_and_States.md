@@ -28,9 +28,12 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: fields, consent, success/error/loading copy, provider reference.
-- Adapt: provider reference as non-secret backend-owned identifier.
-- Reject: audience secrets and direct provider API keys in widget data.
+- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/newsletter/MATRIX.md`; for this leaf, start from the current owner fields `title`, `description`, `placeholder`, `consent`, `submit`, `integration`, `style` and add only the schema fields that the matrix explicitly keeps.
+- Adapt: rows marked `Adapt` are conditional scope, not required scope.
+  Additional fields and provider references require a backend-owned integration;
+  implement only when schema/defaults/normalizer/render/editor/tests move
+  together.
+- Reject: arbitrary operators, client-owned provider/index config, raw scripts, and privileged settings in widget data.
 
 ## Editor Mode Ownership
 
@@ -60,19 +63,24 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
-function normalizeNewsletterData(raw: unknown): NewsletterData {
+function normalizeNewsletterData(data: NewsletterData): NewsletterData {
   return {
-    source: normalizeWidgetSource(raw.source),
-    display: normalizeDisplayOptions(raw.display),
-    copy: normalizeStateCopy(raw.copy),
+    title: normalizeNewsletterTitle(data.title),
+    description: normalizeNewsletterDescription(data.description),
+    placeholder: normalizeNewsletterPlaceholder(data.placeholder),
+    consent: normalizeNewsletterConsent(data.consent),
+    submit: normalizeNewsletterSubmit(data.submit),
+    integration: normalizeNewsletterIntegration(data.integration),
+    style: normalizeNewsletterStyle(data.style),
   };
 }
 
 function NewsletterVisualEditor(props: WidgetEditorProps<NewsletterData>) {
+  const value = props.value;
   return (
-    <WidgetEditorSection id="newsletter.source" title="Fields">
-      <WidgetControlRow id="newsletter.source.type" label="Source">
-        <Select value={props.value.source?.type} onValueChange={...} />
+    <WidgetEditorSection id="newsletter.newsletter" title="Copy and consent">
+      <WidgetControlRow id="newsletter.placeholder" label="Email placeholder" data-widget-control="newsletter.placeholder">
+        <Input value={value.placeholder ?? ""} onChange={...} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -110,13 +118,20 @@ Implementation checklist:
   - changed `newsletter` schema fields must reject unknown fields and
     normalize legacy payloads through `core/widgets/core/newsletter.tsx`.
 - Anti-abuse:
-  - nonce/captcha/rate-limit behavior remains backend-owned
+  - current `newsletter` action-url mode posts to an external form target and
+    must not be documented as a Coderso nonce/HMAC-protected endpoint
+  - if this leaf adds a Coderso-owned newsletter submission endpoint, the route
+    must use nonce + signature/HMAC via
+    `core/services/forms/submissionNonce.ts`, optional reCAPTCHA policy,
+    existing public rate-limit buckets, strict reject-unknown validation, and
+    `tests/security/codersoSecurityGate.test.ts`
   - audience/provider secrets must not be persisted in widget data/browser cache
 
 ## Testing Requirements
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
 - `bun run test:vitest -- tests/vitest/widgets/newsletter.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/newsletter-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

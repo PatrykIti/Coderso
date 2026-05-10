@@ -12,7 +12,8 @@
 
 ## Overview
 
-Shape CTA Banner around compact/split/high-contrast modes, optional badge/icon, and bounded background media.
+Shape CTA Banner around compact/split/high-contrast modes first; badge/icon and
+background media stay bounded Adapt scope.
 
 This is an execution leaf under `TASK-252-06`. It must not re-open the
 research phase; use `_docs/_WIDGETS/tmp/cta-banner/MATRIX.md` and the widget README under
@@ -28,9 +29,9 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: compact, split, high-contrast modes, badge/icon, bounded background media.
-- Adapt: background media with existing safe media picker and overlay controls.
-- Reject: signup form, countdown, and arbitrary marketing scripts inside CTA banner.
+- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/cta-banner/MATRIX.md`; for this leaf, start from the current owner fields `content`, `actions`, `style` and add only the schema fields that the matrix explicitly keeps.
+- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat background media and icon/badge emphasis as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Reject: separate one-off widgets, raw HTML/script embeds, and unbounded visual/CSS controls.
 
 ## Editor Mode Ownership
 
@@ -60,22 +61,21 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
-function normalizeCtaBannerItem(raw: unknown, index: number) {
+function normalizeCtaBannerData(data: CtaBannerData): CtaBannerData {
   return {
-    id: normalizeStableId(raw.id, `cta-banner-${index + 1}`),
-    title: readTrimmedString(raw.title),
-    href: normalizeSafeHref(raw.href),
+    content: normalizeCtaBannerContent(data.content),
+    actions: normalizeCtaBannerActions(data.actions),
+    style: normalizeCtaBannerStyle(data.style),
   };
 }
 
 function CtaBannerVisualEditor(props: WidgetEditorProps<CtaBannerData>) {
+  const value = props.value;
   return (
-    <WidgetEditorSection id="cta-banner.items" title="Copy">
-      {props.value.items.map((item, index) => (
-        <WidgetControlRow key={item.id} id={`cta-banner.items.${index}.title`} label="Title">
-          <Input value={item.title} onChange={...} />
-        </WidgetControlRow>
-      ))}
+    <WidgetEditorSection id="cta-banner.content" title="Content and actions">
+      <WidgetControlRow id="cta-banner.content.badge" label="Badge" data-widget-control="cta-banner.content.badge">
+        <Input value={value.content?.badge ?? ""} onChange={...} />
+      </WidgetControlRow>
     </WidgetEditorSection>
   );
 }
@@ -119,6 +119,7 @@ Implementation checklist:
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
 - `bun run test:vitest -- tests/vitest/widgets/ctaBanner.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/cta-banner-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

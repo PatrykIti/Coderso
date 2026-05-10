@@ -28,9 +28,9 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: label, placeholder, button, compact/full, target route/query param.
-- Adapt: results behavior only through existing search route conventions.
-- Reject: provider key/index config and client-side search secrets.
+- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/search-box/MATRIX.md`; for this leaf, start from the current owner fields `mode`, `listingQueryId`, `endpoint`, `sources`, `autoApply`, `style`, `resolved` and add only the schema fields that the matrix explicitly keeps.
+- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat compact/full display and target-route/query-param helpers as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Reject: arbitrary operators, client-owned provider/index config, raw scripts, and privileged settings in widget data.
 
 ## Editor Mode Ownership
 
@@ -45,6 +45,7 @@ and Reject decisions.
 ## Files to Change
 
 - `core/widgets/core/searchBox.tsx`
+- `core/widgets/core/listingRuntimeScript.ts` when query/reset/apply/query-param runtime behavior changes.
 - `core/admin/ui/widgets/editors/SearchBoxEditors.tsx`
 - Bun-owned route/security suites when public endpoint behavior changes.
 - `tests/unit/widgets/validator.test.ts` when schema validation changes.
@@ -60,19 +61,28 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
-function normalizeSearchBoxData(raw: unknown): SearchBoxData {
+function normalizeSearchBoxData(data: SearchBoxData): SearchBoxData {
   return {
-    source: normalizeWidgetSource(raw.source),
-    display: normalizeDisplayOptions(raw.display),
-    copy: normalizeStateCopy(raw.copy),
+    mode: normalizeSearchBoxMode(data.mode),
+    listingQueryId: normalizeSearchBoxListingQueryId(data.listingQueryId),
+    title: normalizeSearchBoxTitle(data.title),
+    description: normalizeSearchBoxDescription(data.description),
+    placeholder: normalizeSearchBoxPlaceholder(data.placeholder),
+    submitLabel: normalizeSearchBoxSubmitLabel(data.submitLabel),
+    autoApply: normalizeSearchBoxAutoApply(data.autoApply),
+    endpoint: normalizeSearchBoxEndpoint(data.endpoint),
+    sources: normalizeSearchBoxSources(data.sources),
+    style: normalizeSearchBoxStyle(data.style),
+    resolved: normalizeSearchBoxResolved(data.resolved),
   };
 }
 
 function SearchBoxVisualEditor(props: WidgetEditorProps<SearchBoxData>) {
+  const value = props.value;
   return (
-    <WidgetEditorSection id="search-box.source" title="Copy">
-      <WidgetControlRow id="search-box.source.type" label="Source">
-        <Select value={props.value.source?.type} onValueChange={...} />
+    <WidgetEditorSection id="search-box.search-box" title="Search target">
+      <WidgetControlRow id="search-box.mode" label="Mode" data-widget-control="search-box.mode">
+        <SegmentedControl value={value.mode ?? "listing"} onChange={...} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -117,12 +127,14 @@ Implementation checklist:
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
 - `bun run test:vitest -- tests/vitest/widgets/searchBox.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/search-box-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,
   slot, or shared output behavior changes.
 - `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` if
   token/clear/default adjacency changes.
+- Add or update a regression around `getListingRuntimeClientScript` when query/reset/apply/query-param behavior changes.
 - Add Bun-owned route/security tests when endpoint behavior, public writes,
   provider fetches, or runtime-kernel scripts change.
 

@@ -12,7 +12,9 @@
 
 ## Overview
 
-Expose feature-grid as icon cards, rows, and bento modes with optional badge/link fields while avoiding separate feature-card widget variants.
+Keep feature-grid centered on icon cards, rows, and optional links; bento,
+badge/category, hover, and rich-media rows stay Adapt-only rather than required
+scope.
 
 This is an execution leaf under `TASK-252-06`. It must not re-open the
 research phase; use `_docs/_WIDGETS/tmp/feature-grid/MATRIX.md` and the widget README under
@@ -28,9 +30,9 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: icon cards, rows, bento mode, optional link and badge.
-- Adapt: media feature rows into mode presets when they stay simple.
-- Reject: separate feature widgets for each card layout and arbitrary masonry rules.
+- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/feature-grid/MATRIX.md`; for this leaf, start from the current owner fields `header`, `items`, `style` and add only the schema fields that the matrix explicitly keeps.
+- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat bento, badges/categories, hover animation, and rich media rows as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Reject: separate one-off widgets, raw HTML/script embeds, and unbounded visual/CSS controls.
 
 ## Editor Mode Ownership
 
@@ -60,11 +62,18 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
-function normalizeFeatureGridItem(raw: unknown, index: number) {
+function normalizeFeatureGridData(data: FeatureGridData): FeatureGridData {
   return {
-    id: normalizeStableId(raw.id, `feature-grid-${index + 1}`),
-    title: readTrimmedString(raw.title),
-    href: normalizeSafeHref(raw.href),
+    header: normalizeFeatureGridHeader(data.header),
+    items: normalizeFeatureGridItems(data.items),
+    style: normalizeFeatureGridStyle(data.style),
+  };
+}
+
+function normalizeFeatureGridItem(item: FeatureGridItem, index: number): FeatureGridItem {
+  return {
+    ...item,
+    id: normalizeStableItemId(item.id, `feature-grid-${index + 1}`),
   };
 }
 
@@ -72,8 +81,8 @@ function FeatureGridVisualEditor(props: WidgetEditorProps<FeatureGridData>) {
   return (
     <WidgetEditorSection id="feature-grid.items" title="Feature items">
       {props.value.items.map((item, index) => (
-        <WidgetControlRow key={item.id} id={`feature-grid.items.${index}.title`} label="Title">
-          <Input value={item.title} onChange={...} />
+        <WidgetControlRow key={item.id ?? index} id={`feature-grid.items.${index}.title`} label="Title" data-widget-control={`feature-grid.items.${index}.title`}>
+          <Input value={item.title ?? ""} onChange={...} />
         </WidgetControlRow>
       ))}
     </WidgetEditorSection>
@@ -119,6 +128,7 @@ Implementation checklist:
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
 - `bun run test:vitest -- tests/vitest/widgets/featureGrid.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/feature-grid-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

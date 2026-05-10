@@ -28,9 +28,9 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: simple column presets, gap controls, mobile stack, equal-height option.
-- Adapt: safe span/order options only when they remain preset-bound and editor-readable.
-- Reject: arbitrary per-cell CSS, unbounded span/offset editing, and custom grid-template strings.
+- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/grid-columns/MATRIX.md`; for this leaf, start from the current owner fields `columns`, `layout`, `style` plus the existing `gridColumnsSlot` and add only the schema fields that the matrix explicitly keeps.
+- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat advanced span/offset-like behavior and cardized columns as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Reject: runtime drag resize handles and arbitrary CSS grid template strings.
 
 ## Editor Mode Ownership
 
@@ -60,20 +60,20 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
-function normalizeGridColumnsData(raw: unknown): GridColumnsData {
-  const current = normalizeExistingGridColumnsData(raw);
+function normalizeGridColumnsData(data: GridColumnsData): GridColumnsData {
   return {
-    ...current,
-    mode: normalizeBoundedMode(raw.mode, current.mode),
-    style: normalizeKnownStyleFields(raw.style),
+    columns: normalizeGridColumnsColumns(data.columns),
+    layout: normalizeGridColumnsLayout(data.layout),
+    style: normalizeGridColumnsStyle(data.style),
   };
 }
 
 function GridColumnsVisualEditor(props: WidgetEditorProps<GridColumnsData>) {
+  const value = props.value;
   return (
-    <WidgetEditorSection id="grid-columns.primary" title="Column preset">
-      <WidgetControlRow id="grid-columns.mode" label="Mode">
-        <SegmentedControl value={props.value.mode} onChange={...} />
+    <WidgetEditorSection id="grid-columns.columns" title="Columns and mobile stack">
+      <WidgetControlRow id="grid-columns.columns.count" label="Column preset" data-widget-control="grid-columns.columns.count">
+        <Select value={String(value.columns?.length ?? 2)} onChange={...} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -118,6 +118,7 @@ Implementation checklist:
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
 - `bun run test:vitest -- tests/vitest/widgets/gridColumns.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/grid-columns-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

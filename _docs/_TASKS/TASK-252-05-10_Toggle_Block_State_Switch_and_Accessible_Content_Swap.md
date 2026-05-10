@@ -28,9 +28,9 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: finite states, segmented labels, default state, accessible content swap.
-- Adapt: comparison-style two-state layouts only through controlled modes.
-- Reject: arbitrary CSS show/hide rules and unbounded state machines.
+- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/toggle-block/MATRIX.md`; for this leaf, start from the current owner fields `labels`, `options.defaultState`, `style` and add only the schema fields that the matrix explicitly keeps.
+- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat card presentation as a bounded variant as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Reject: arbitrary CSS show/hide rules and more than two states without a new product contract.
 
 ## Editor Mode Ownership
 
@@ -60,20 +60,20 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
-function normalizeToggleBlockData(raw: unknown): ToggleBlockData {
-  const current = normalizeExistingToggleBlockData(raw);
+function normalizeToggleBlockData(data: ToggleBlockData): ToggleBlockData {
   return {
-    ...current,
-    mode: normalizeBoundedMode(raw.mode, current.mode),
-    style: normalizeKnownStyleFields(raw.style),
+    labels: normalizeToggleBlockLabels(data.labels),
+    options: normalizeToggleBlockOptions(data.options),
+    style: normalizeToggleBlockStyle(data.style),
   };
 }
 
 function ToggleBlockVisualEditor(props: WidgetEditorProps<ToggleBlockData>) {
+  const value = props.value;
   return (
-    <WidgetEditorSection id="toggle-block.primary" title="States">
-      <WidgetControlRow id="toggle-block.mode" label="Mode">
-        <SegmentedControl value={props.value.mode} onChange={...} />
+    <WidgetEditorSection id="toggle-block.options" title="State labels">
+      <WidgetControlRow id="toggle-block.options.defaultState" label="Default state" data-widget-control="toggle-block.options.defaultState">
+        <SegmentedControl value={value.options?.defaultState ?? "primary"} onChange={...} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -118,6 +118,7 @@ Implementation checklist:
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
 - `bun run test:vitest -- tests/vitest/widgets/toggleBlock.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/toggle-block-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

@@ -167,6 +167,7 @@ For missing docs, add contract pages that follow existing widget docs:
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this task family `Done` or record the exact blocker.
 - Focused runtime/editor suites as widgets are touched:
   - `tests/vitest/widgets/section.test.tsx`
   - `tests/vitest/ui/section-editor-wave.test.tsx`

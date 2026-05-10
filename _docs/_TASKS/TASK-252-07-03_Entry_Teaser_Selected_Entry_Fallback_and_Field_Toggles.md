@@ -28,9 +28,9 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: selected entry, fallback, card/split layout, field toggles.
-- Adapt: fallback card copy as bounded fields.
-- Reject: multiple entries and generic content-list behavior.
+- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/entry-teaser/MATRIX.md`; for this leaf, start from the current owner fields `sourceMode`, `source`, `fields`, `cta`, `style`, `fallback`, `resolved` and add only the schema fields that the matrix explicitly keeps.
+- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat split/card modes and richer fallback copy as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Reject: arbitrary operators, client-owned provider/index config, raw scripts, and privileged settings in widget data.
 
 ## Editor Mode Ownership
 
@@ -60,19 +60,24 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
-function normalizeEntryTeaserData(raw: unknown): EntryTeaserData {
+function normalizeEntryTeaserData(data: EntryTeaserData): EntryTeaserData {
   return {
-    source: normalizeWidgetSource(raw.source),
-    display: normalizeDisplayOptions(raw.display),
-    copy: normalizeStateCopy(raw.copy),
+    sourceMode: normalizeEntryTeaserSourceMode(data.sourceMode),
+    source: normalizeEntryTeaserSource(data.source),
+    fields: normalizeEntryTeaserFields(data.fields),
+    cta: normalizeEntryTeaserCta(data.cta),
+    style: normalizeEntryTeaserStyle(data.style),
+    fallback: normalizeEntryTeaserFallback(data.fallback),
+    resolved: normalizeEntryTeaserResolved(data.resolved),
   };
 }
 
 function EntryTeaserVisualEditor(props: WidgetEditorProps<EntryTeaserData>) {
+  const value = props.value;
   return (
-    <WidgetEditorSection id="entry-teaser.source" title="Entry source">
-      <WidgetControlRow id="entry-teaser.source.type" label="Source">
-        <Select value={props.value.source?.type} onValueChange={...} />
+    <WidgetEditorSection id="entry-teaser.source" title="Selected entry">
+      <WidgetControlRow id="entry-teaser.source.entryId" label="Entry" data-widget-control="entry-teaser.source.entryId">
+        <EntryPicker value={value.source?.entryId ?? ""} onChange={...} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -117,6 +122,7 @@ Implementation checklist:
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
 - `bun test tests/unit/widgets/entryTeaser.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/entry-teaser-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

@@ -173,6 +173,7 @@ function attachTimelineReveal(root: HTMLElement) {
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this task family `Done` or record the exact blocker.
 - `bun run test:vitest -- tests/vitest/widgets/timeline.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/timeline-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` if

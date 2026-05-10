@@ -150,6 +150,7 @@ context so `section` can display Regions with its own content.
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this task family `Done` or record the exact blocker.
 - `bun run test:vitest -- tests/vitest/ui/page-editor.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/page-editor-shell-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/widget-editors-wave-1.test.tsx`
