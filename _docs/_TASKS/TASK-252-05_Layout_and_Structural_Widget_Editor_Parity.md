@@ -45,9 +45,9 @@ simple widgets intentionally simple through research-backed decisions.
 - Keep simple utility widgets simple:
   - `spacer` and `divider` should not gain unnecessary marketing features;
   - they should expose clear rhythm/visibility controls and strong labels.
-- Complete `_docs/_WIDGETS/tmp/<widget>/` research for every widget in this
-  family before finalizing its option list. Each widget needs ten credible
-  patterns or a widget-local `SHORTFALL.md`, plus a Keep/Adapt/Reject matrix.
+- Use the completed `_docs/_WIDGETS/tmp/<widget>/` research archive for every
+  widget in this family. Each implementation leaf must cite the widget-local
+  Keep/Adapt/Reject matrix before finalizing its option list.
 - Expand structural widgets only where it improves real page-building
   flexibility:
   - `grid-columns`: column count, gap, column width, equal height, mobile order.
@@ -67,17 +67,18 @@ simple widgets intentionally simple through research-backed decisions.
 
 ## Sub-Tasks
 
-- [ ] Migrate `section` slot/region controls into the shared editor IA.
-- [ ] Complete per-widget research folders and Keep/Adapt/Reject matrices for
-  every layout/structural widget in scope.
-- [ ] Align `grid-columns`, `split-layout`, and `stack` editor grouping with
-  the section baseline.
-- [ ] Keep `spacer` and `divider` intentionally small while adding metadata and
-  clearer labels.
-- [ ] Align `tabs`, `accordion`, and `toggle-block` editor IA and runtime docs.
-- [ ] Create missing `_docs/_WIDGETS` docs for `tabs`, `accordion`, and
-  `toggle-block`.
-- [ ] Run focused structural widget tests and update board notes.
+This parent is now executed through physical per-widget leaves. Do not implement this parent as one broad batch; complete the leaves below in dependency order.
+
+- [ ] TASK-252-05-01: Section Regions Semantics and Spacing
+- [ ] TASK-252-05-02: Template Section Metadata Preview and Sync
+- [ ] TASK-252-05-03: Grid Columns Presets Gaps and Mobile Stack
+- [ ] TASK-252-05-04: Split Layout Ratio Order and Mobile Stack
+- [ ] TASK-252-05-05: Stack Direction Gap Alignment and Responsive Flow
+- [ ] TASK-252-05-06: Spacer Size Tokens Custom Height and Canvas Affordance
+- [ ] TASK-252-05-07: Divider Orientation Style Tone and Label
+- [ ] TASK-252-05-08: Tabs Accessible Panels Default Tab and Surface
+- [ ] TASK-252-05-09: Accordion Disclosure Default Open and Accessibility
+- [ ] TASK-252-05-10: Toggle Block State Switch and Accessible Content Swap
 
 ## Files to Change
 
@@ -93,9 +94,9 @@ simple widgets intentionally simple through research-backed decisions.
 - `core/admin/ui/widgets/editors/ToggleBlockEditors.tsx`
 - Matching widget contracts under `core/widgets/core/*.tsx` when schema/defaults
   or render output changes.
-- `_docs/_WIDGETS/tmp/<widget>/*.md` research cards for every widget in scope.
-- `_docs/_WIDGETS/tmp/<widget>/SHORTFALL.md` only when TASK-252-02 permits a
-  smaller research sample.
+- Existing `_docs/_WIDGETS/tmp/<widget>/README.md` and `MATRIX.md` as evidence
+  references; update them only if implementation finds a concrete research
+  mismatch.
 - `_docs/_WIDGETS/SECTION.md`
 - `_docs/_WIDGETS/TEMPLATE_SECTION.md`
 - `_docs/_WIDGETS/GRID_COLUMNS.md`

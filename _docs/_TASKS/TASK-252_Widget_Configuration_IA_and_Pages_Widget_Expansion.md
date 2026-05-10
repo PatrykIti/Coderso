@@ -124,6 +124,60 @@ for: `tabs`, `accordion`, `toggle-block`, `product-gallery`,
 `product-compare`, `product-table`, `listing-filters`, `search-box`,
 `booking-calendar`, and `appointment-form`.
 
+## Per-Widget Leaf Map
+
+Use these physical execution leaves instead of broad batch edits. Each leaf owns one widget surface and must keep schema, defaults, normalizer, render, editor, tests, and docs together when the data model changes.
+
+### Hero and Timeline
+
+- `TASK-252-03-01` - `hero`: Hero Badge Announcement and Editor IA.
+- `TASK-252-04-01` - `timeline`: Timeline Chronology Motion and Editor IA.
+
+### Layout and Structural
+
+- `TASK-252-05-01` - `section`: Section Regions Semantics and Spacing.
+- `TASK-252-05-02` - `template-section`: Template Section Metadata Preview and Sync.
+- `TASK-252-05-03` - `grid-columns`: Grid Columns Presets Gaps and Mobile Stack.
+- `TASK-252-05-04` - `split-layout`: Split Layout Ratio Order and Mobile Stack.
+- `TASK-252-05-05` - `stack`: Stack Direction Gap Alignment and Responsive Flow.
+- `TASK-252-05-06` - `spacer`: Spacer Size Tokens Custom Height and Canvas Affordance.
+- `TASK-252-05-07` - `divider`: Divider Orientation Style Tone and Label.
+- `TASK-252-05-08` - `tabs`: Tabs Accessible Panels Default Tab and Surface.
+- `TASK-252-05-09` - `accordion`: Accordion Disclosure Default Open and Accessibility.
+- `TASK-252-05-10` - `toggle-block`: Toggle Block State Switch and Accessible Content Swap.
+
+### Content and Marketing
+
+- `TASK-252-06-01` - `feature-grid`: Feature Grid Modes Bento and Linked Cards.
+- `TASK-252-06-02` - `testimonials`: Testimonials Grid Spotlight Rating and Attribution.
+- `TASK-252-06-03` - `pricing-plans`: Pricing Plans Tiers Toggle and Comparison Mode.
+- `TASK-252-06-04` - `faq-accordion`: FAQ Accordion Categories Support CTA and Icon Placement.
+- `TASK-252-06-05` - `cta-banner`: CTA Banner Compact Split Badge and Background Media.
+- `TASK-252-06-06` - `logo-cloud`: Logo Cloud Grid Tone Rows and Reduced Motion Marquee.
+- `TASK-252-06-07` - `gallery-mosaic`: Gallery Mosaic Layout Captions Overlays and Alt Text.
+- `TASK-252-06-08` - `stats-kpi`: Stats KPI Values Trend Labels and Display Modes.
+- `TASK-252-06-09` - `team`: Team Members Photo Shape Socials and Featured Profile.
+- `TASK-252-06-10` - `rich-text-section`: Rich Text Section Prose Presets Width Badge and CTA.
+- `TASK-252-06-11` - `compare-timeline`: Compare Timeline Two Track Segments Status and Highlight.
+
+### Dynamic and Operational
+
+- `TASK-252-07-01` - `content-list`: Content List Source Display Field Visibility and Empty States.
+- `TASK-252-07-02` - `posts-feed`: Posts Feed Source Density Author Date and Category.
+- `TASK-252-07-03` - `entry-teaser`: Entry Teaser Selected Entry Fallback and Field Toggles.
+- `TASK-252-07-04` - `product-gallery`: Product Gallery Source Media Modes Thumbnails and Variants.
+- `TASK-252-07-05` - `product-compare`: Product Compare Selected Products Attributes and Pin Behavior.
+- `TASK-252-07-06` - `product-table`: Product Table Columns Sort Filter Pagination and Actions.
+- `TASK-252-07-07` - `listing-filters`: Listing Filters Facets Ranges Reset and Mobile Layout.
+- `TASK-252-07-08` - `search-box`: Search Box Copy Target Route Query Param and Display Mode.
+- `TASK-252-07-09` - `newsletter`: Newsletter Fields Consent Provider Reference and States.
+- `TASK-252-07-10` - `booking-calendar`: Booking Calendar Provider Event Modes and Availability.
+- `TASK-252-07-11` - `appointment-form`: Appointment Form Fields Validation Copy Provider and States.
+- `TASK-252-07-12` - `form-embed`: Form Embed Form Picker Display Mode and Raw Embed Rejection.
+- `TASK-252-07-13` - `contact`: Contact Form Info Map Socials and Backend Routing.
+- `TASK-252-07-14` - `navigation`: Navigation Source Dropdowns Mobile Menu and Sticky CTA.
+- `TASK-252-07-15` - `footer`: Footer Columns Brand Legal Social and Newsletter Reference.
+
 ## Research Sources To Evaluate
 
 Use these as current research seeds, not as unlicensed source imports:
@@ -145,25 +199,64 @@ Use these as current research seeds, not as unlicensed source imports:
 ## Sub-Tasks
 
 - [ ] TASK-252-01: Widget Inspector IA and Shared Option Architecture
-- [ ] TASK-252-02: Widget Research Archive and Variant Model
+- [x] TASK-252-02: Widget Research Archive and Variant Model
 - [ ] TASK-252-03: Hero Editor Mode and Badge Expansion
+  - [ ] TASK-252-03-01: Hero Badge Announcement and Editor IA
 - [ ] TASK-252-04: Timeline Editor Motion and Chronology Expansion
+  - [ ] TASK-252-04-01: Timeline Chronology Motion and Editor IA
 - [ ] TASK-252-05: Layout and Structural Widget Editor Parity
+  - [ ] TASK-252-05-01: Section Regions Semantics and Spacing
+  - [ ] TASK-252-05-02: Template Section Metadata Preview and Sync
+  - [ ] TASK-252-05-03: Grid Columns Presets Gaps and Mobile Stack
+  - [ ] TASK-252-05-04: Split Layout Ratio Order and Mobile Stack
+  - [ ] TASK-252-05-05: Stack Direction Gap Alignment and Responsive Flow
+  - [ ] TASK-252-05-06: Spacer Size Tokens Custom Height and Canvas Affordance
+  - [ ] TASK-252-05-07: Divider Orientation Style Tone and Label
+  - [ ] TASK-252-05-08: Tabs Accessible Panels Default Tab and Surface
+  - [ ] TASK-252-05-09: Accordion Disclosure Default Open and Accessibility
+  - [ ] TASK-252-05-10: Toggle Block State Switch and Accessible Content Swap
 - [ ] TASK-252-06: Content and Marketing Widget Editor Expansion
+  - [ ] TASK-252-06-01: Feature Grid Modes Bento and Linked Cards
+  - [ ] TASK-252-06-02: Testimonials Grid Spotlight Rating and Attribution
+  - [ ] TASK-252-06-03: Pricing Plans Tiers Toggle and Comparison Mode
+  - [ ] TASK-252-06-04: FAQ Accordion Categories Support CTA and Icon Placement
+  - [ ] TASK-252-06-05: CTA Banner Compact Split Badge and Background Media
+  - [ ] TASK-252-06-06: Logo Cloud Grid Tone Rows and Reduced Motion Marquee
+  - [ ] TASK-252-06-07: Gallery Mosaic Layout Captions Overlays and Alt Text
+  - [ ] TASK-252-06-08: Stats KPI Values Trend Labels and Display Modes
+  - [ ] TASK-252-06-09: Team Members Photo Shape Socials and Featured Profile
+  - [ ] TASK-252-06-10: Rich Text Section Prose Presets Width Badge and CTA
+  - [ ] TASK-252-06-11: Compare Timeline Two Track Segments Status and Highlight
 - [ ] TASK-252-07: Dynamic and Operational Widget Editor Expansion
+  - [ ] TASK-252-07-01: Content List Source Display Field Visibility and Empty States
+  - [ ] TASK-252-07-02: Posts Feed Source Density Author Date and Category
+  - [ ] TASK-252-07-03: Entry Teaser Selected Entry Fallback and Field Toggles
+  - [ ] TASK-252-07-04: Product Gallery Source Media Modes Thumbnails and Variants
+  - [ ] TASK-252-07-05: Product Compare Selected Products Attributes and Pin Behavior
+  - [ ] TASK-252-07-06: Product Table Columns Sort Filter Pagination and Actions
+  - [ ] TASK-252-07-07: Listing Filters Facets Ranges Reset and Mobile Layout
+  - [ ] TASK-252-07-08: Search Box Copy Target Route Query Param and Display Mode
+  - [ ] TASK-252-07-09: Newsletter Fields Consent Provider Reference and States
+  - [ ] TASK-252-07-10: Booking Calendar Provider Event Modes and Availability
+  - [ ] TASK-252-07-11: Appointment Form Fields Validation Copy Provider and States
+  - [ ] TASK-252-07-12: Form Embed Form Picker Display Mode and Raw Embed Rejection
+  - [ ] TASK-252-07-13: Contact Form Info Map Socials and Backend Routing
+  - [ ] TASK-252-07-14: Navigation Source Dropdowns Mobile Menu and Sticky CTA
+  - [ ] TASK-252-07-15: Footer Columns Brand Legal Social and Newsletter Reference
 - [ ] TASK-252-08: QA, Docs, Changelog, and Board Closure
 
 ## Implementation Order
 
 1. Finish TASK-252-01 so the shared inspector IA, info icon pattern, control
    metadata, and slot-control placement are stable before per-widget edits.
-2. Finish TASK-252-02 enough to produce a research matrix for every
-   Pages-publishable widget before per-widget schema/editor expansion is
-   finalized.
-3. Implement Hero and Timeline first because they are the most visible and
-   contain the explicit product gaps.
-4. Apply the shared IA to layout/structural widgets, then marketing/content,
-   then dynamic/operational widgets.
+2. Treat TASK-252-02 as the completed research archive and use each
+   `_docs/_WIDGETS/tmp/<widget>/MATRIX.md` as the binding Keep/Adapt/Reject
+   source for the matching leaf.
+3. Implement `TASK-252-03-01` and `TASK-252-04-01` first because Hero and
+   Timeline are the most visible and contain explicit product gaps.
+4. Complete layout/structural leaves `TASK-252-05-01` through `TASK-252-05-10`,
+   then marketing/content leaves `TASK-252-06-01` through `TASK-252-06-11`,
+   then dynamic/operational leaves `TASK-252-07-01` through `TASK-252-07-15`.
 5. Close missing widget docs and run the validation matrix in TASK-252-08.
 
 ## Security Contract

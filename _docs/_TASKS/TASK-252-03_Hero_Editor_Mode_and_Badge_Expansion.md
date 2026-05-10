@@ -45,12 +45,9 @@ than dense.
 
 ## Sub-Tasks
 
-- [ ] Finalize Hero research mapping from TASK-252-02.
-- [ ] Add the badge schema/default/normalizer contract.
-- [ ] Render the badge safely across existing Hero variants.
-- [ ] Refactor Hero editor sections to the TASK-252-01 shared IA.
-- [ ] Preserve and test `widgets.hero.presets` compatibility.
-- [ ] Update Hero runtime/editor tests and docs.
+This parent is now executed through physical per-widget leaves. Do not implement this parent as one broad batch; complete the leaves below in dependency order.
+
+- [ ] TASK-252-03-01: Hero Badge Announcement and Editor IA
 
 ## Files to Change
 

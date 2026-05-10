@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 33 tasks
+- **To Do:** 71 tasks
 - **In Progress:** 13 tasks
 - **Done:** 1465 tasks
 
@@ -45,6 +45,44 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-252-06 | Content and Marketing Widget Editor Expansion | High | Large | Marketing/content widget editor IA, variants, repeated item controls, and docs |
 | TASK-252-07 | Dynamic and Operational Widget Editor Expansion | High | Large | Dynamic, commerce, listing/search, forms, booking, navigation, and footer editor parity |
 | TASK-252-08 | QA, Docs, Changelog, and Board Closure | Medium | Medium | Final validation matrix, missing widget docs, changelog, and board sync |
+| TASK-252-03-01 | Hero Badge Announcement and Editor IA | High | Large | Hero badge plus shared editor IA proof |
+| TASK-252-04-01 | Timeline Chronology Motion and Editor IA | High | Large | Timeline chronology modes and reduced-motion-safe reveal |
+| TASK-252-05-01 | Section Regions Semantics and Spacing | High | Large | Section regions, semantics, anchors, spacing, and docs |
+| TASK-252-05-02 | Template Section Metadata Preview and Sync | High | Medium | Template metadata, preview, category, version, and sync controls |
+| TASK-252-05-03 | Grid Columns Presets Gaps and Mobile Stack | High | Medium | Grid presets, gaps, equal height, and mobile stack |
+| TASK-252-05-04 | Split Layout Ratio Order and Mobile Stack | High | Medium | Split ratio, slot order, gap, and mobile stack |
+| TASK-252-05-05 | Stack Direction Gap Alignment and Responsive Flow | High | Medium | Stack direction, gap, alignment, and responsive flow |
+| TASK-252-05-06 | Spacer Size Tokens Custom Height and Canvas Affordance | Medium | Small | Spacer token/custom height and canvas affordance |
+| TASK-252-05-07 | Divider Orientation Style Tone and Label | Medium | Small | Divider orientation, style, tone, spacing, and label |
+| TASK-252-05-08 | Tabs Accessible Panels Default Tab and Surface | High | Medium | Accessible tabs, default tab, orientation, and panel surface |
+| TASK-252-05-09 | Accordion Disclosure Default Open and Accessibility | High | Medium | Accordion open behavior, default items, panel style, and a11y |
+| TASK-252-05-10 | Toggle Block State Switch and Accessible Content Swap | High | Medium | Toggle states, labels, default state, and accessible content swap |
+| TASK-252-06-01 | Feature Grid Modes Bento and Linked Cards | High | Medium | Feature modes, bento/cards, badges, links, and docs |
+| TASK-252-06-02 | Testimonials Grid Spotlight Rating and Attribution | High | Medium | Testimonials layout, rating, avatar, company, and opt-in motion |
+| TASK-252-06-03 | Pricing Plans Tiers Toggle and Comparison Mode | High | Large | Pricing tiers, billing toggle, highlights, and comparison mode |
+| TASK-252-06-04 | FAQ Accordion Categories Support CTA and Icon Placement | High | Medium | FAQ items, categories, support CTA, icon placement, and docs |
+| TASK-252-06-05 | CTA Banner Compact Split Badge and Background Media | High | Medium | CTA modes, badge/icon, bounded media, and background controls |
+| TASK-252-06-06 | Logo Cloud Grid Tone Rows and Reduced Motion Marquee | Medium | Medium | Logo rows, tone, optional reduced-motion-safe marquee |
+| TASK-252-06-07 | Gallery Mosaic Layout Captions Overlays and Alt Text | High | Medium | Gallery layout presets, captions, overlays, and alt text |
+| TASK-252-06-08 | Stats KPI Values Trend Labels and Display Modes | Medium | Medium | KPI prefix/suffix, icons, trend labels, and display modes |
+| TASK-252-06-09 | Team Members Photo Shape Socials and Featured Profile | Medium | Medium | Team members, photos, socials, profile links, and featured member |
+| TASK-252-06-10 | Rich Text Section Prose Presets Width Badge and CTA | High | Medium | Rich text prose presets, width, badge, CTA, and safe media |
+| TASK-252-06-11 | Compare Timeline Two Track Segments Status and Highlight | High | Medium | Two-track compare timeline segments, status, and highlights |
+| TASK-252-07-01 | Content List Source Display Field Visibility and Empty States | High | Large | Content source, filters, display, field visibility, and states |
+| TASK-252-07-02 | Posts Feed Source Density Author Date and Category | High | Medium | Posts source, density, metadata visibility, and CTA copy |
+| TASK-252-07-03 | Entry Teaser Selected Entry Fallback and Field Toggles | High | Medium | Single entry source, fallback, display mode, and field toggles |
+| TASK-252-07-04 | Product Gallery Source Media Modes Thumbnails and Variants | High | Large | Product gallery source, media modes, thumbnails, and variants |
+| TASK-252-07-05 | Product Compare Selected Products Attributes and Pin Behavior | High | Large | Product compare products, attributes, highlight, and pin behavior |
+| TASK-252-07-06 | Product Table Columns Sort Filter Pagination and Actions | High | Large | Product table columns, sort/filter, pagination, and actions |
+| TASK-252-07-07 | Listing Filters Facets Ranges Reset and Mobile Layout | High | Large | Listing facets, ranges, apply/reset, and mobile layout |
+| TASK-252-07-08 | Search Box Copy Target Route Query Param and Display Mode | High | Medium | Search copy, target route, query param, and display mode |
+| TASK-252-07-09 | Newsletter Fields Consent Provider Reference and States | High | Large | Newsletter fields, consent, provider reference, and states |
+| TASK-252-07-10 | Booking Calendar Provider Event Modes and Availability | High | Large | Booking provider/event reference, modes, and availability |
+| TASK-252-07-11 | Appointment Form Fields Validation Copy Provider and States | High | Large | Appointment fields, validation copy, provider mode, and states |
+| TASK-252-07-12 | Form Embed Form Picker Display Mode and Raw Embed Rejection | High | Large | Form picker, display modes, provider reference, and raw embed rejection |
+| TASK-252-07-13 | Contact Form Info Map Socials and Backend Routing | High | Large | Contact form, info/map/social display, routing, and states |
+| TASK-252-07-14 | Navigation Source Dropdowns Mobile Menu and Sticky CTA | High | Large | Navigation source, dropdowns, mobile menu, sticky CTA, and links |
+| TASK-252-07-15 | Footer Columns Brand Legal Social and Newsletter Reference | High | Medium | Footer columns, brand, legal/social, newsletter reference, and links |
 | TASK-190-05-03-06 | Detail Page Composer Fixtures and Runtime Acceptance | High | Medium | Technical leaf: fixture matrix and Bun public runtime acceptance coverage |
 | TASK-190-05-03-07-03 | Detail Page Admin Client, Cache, and Delete Conflict Parity | High | Medium | Technical leaf: detail-page admin client/cache family plus linked delete and content-type conflict parity |
 | TASK-190-05-03-08 | Detail Page Generic Assistant Resource Integration | High | Medium | Technical leaf: later generic policy/target-resolver/provider support for detail-page after base action/admin/runtime flow exists |

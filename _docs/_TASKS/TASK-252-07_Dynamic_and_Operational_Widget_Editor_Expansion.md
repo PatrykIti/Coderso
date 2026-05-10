@@ -45,9 +45,9 @@ more flexible, but implementation must not weaken runtime contracts.
 ## Business Requirements
 
 - Use TASK-252-01 shared editor metadata and compact info affordances.
-- Complete `_docs/_WIDGETS/tmp/<widget>/` research for every widget in this
-  family before finalizing its option list. Each widget needs ten credible
-  patterns or a widget-local `SHORTFALL.md`, plus a Keep/Adapt/Reject matrix.
+- Use the completed `_docs/_WIDGETS/tmp/<widget>/` research archive for every
+  widget in this family. Each implementation leaf must cite the widget-local
+  Keep/Adapt/Reject matrix before finalizing its option list.
 - Keep runtime/data ownership explicit:
   - source selection belongs in Visual only when it is a normal editor decision;
   - endpoint, fallback, and diagnostics belong in Advanced.
@@ -79,17 +79,23 @@ more flexible, but implementation must not weaken runtime contracts.
 
 ## Sub-Tasks
 
-- [ ] Apply TASK-252-01 editor IA to dynamic content widgets.
-- [ ] Complete per-widget research folders and Keep/Adapt/Reject matrices for
-  every dynamic/operational widget in scope.
-- [ ] Apply TASK-252-01 editor IA to commerce, listing, and search widgets.
-- [ ] Apply TASK-252-01 editor IA to forms, booking, contact, and newsletter
-  widgets without weakening public-write security.
-- [ ] Apply TASK-252-01 editor IA to navigation and footer.
-- [ ] Create missing `_docs/_WIDGETS` docs for commerce, listing/search, and
-  booking widgets.
-- [ ] Run focused UI/widget/runtime/security owner tests for every changed
-  contract.
+This parent is now executed through physical per-widget leaves. Do not implement this parent as one broad batch; complete the leaves below in dependency order.
+
+- [ ] TASK-252-07-01: Content List Source Display Field Visibility and Empty States
+- [ ] TASK-252-07-02: Posts Feed Source Density Author Date and Category
+- [ ] TASK-252-07-03: Entry Teaser Selected Entry Fallback and Field Toggles
+- [ ] TASK-252-07-04: Product Gallery Source Media Modes Thumbnails and Variants
+- [ ] TASK-252-07-05: Product Compare Selected Products Attributes and Pin Behavior
+- [ ] TASK-252-07-06: Product Table Columns Sort Filter Pagination and Actions
+- [ ] TASK-252-07-07: Listing Filters Facets Ranges Reset and Mobile Layout
+- [ ] TASK-252-07-08: Search Box Copy Target Route Query Param and Display Mode
+- [ ] TASK-252-07-09: Newsletter Fields Consent Provider Reference and States
+- [ ] TASK-252-07-10: Booking Calendar Provider Event Modes and Availability
+- [ ] TASK-252-07-11: Appointment Form Fields Validation Copy Provider and States
+- [ ] TASK-252-07-12: Form Embed Form Picker Display Mode and Raw Embed Rejection
+- [ ] TASK-252-07-13: Contact Form Info Map Socials and Backend Routing
+- [ ] TASK-252-07-14: Navigation Source Dropdowns Mobile Menu and Sticky CTA
+- [ ] TASK-252-07-15: Footer Columns Brand Legal Social and Newsletter Reference
 
 ## Files to Change
 
@@ -111,9 +117,9 @@ more flexible, but implementation must not weaken runtime contracts.
   - `core/admin/ui/widgets/editors/FooterEditors.tsx`
 - Runtime/data owners under `core/widgets/core/*.tsx` when schemas/defaults/
   renderers change.
-- `_docs/_WIDGETS/tmp/<widget>/*.md` research cards for every widget in scope.
-- `_docs/_WIDGETS/tmp/<widget>/SHORTFALL.md` only when TASK-252-02 permits a
-  smaller research sample.
+- Existing `_docs/_WIDGETS/tmp/<widget>/README.md` and `MATRIX.md` as evidence
+  references; update them only if implementation finds a concrete research
+  mismatch.
 - Runtime service/tests only when the widget runtime contract changes:
   - content/posts owners under `tests/unit/widgets/*`
   - commerce runtime owner under `tests/unit/commerce/commerceWidgetRuntime.test.ts`

@@ -40,9 +40,9 @@ inside the editor instead of duplicate widget types.
 - Bring every Visual editor to the same sectioned control model as TASK-252-01.
 - Add stable `data-widget-control` metadata for repeated item controls, reorder
   actions, variant cards, color fields, media fields, and CTA/link fields.
-- Complete `_docs/_WIDGETS/tmp/<widget>/` research for every widget in this
-  family before finalizing its option list. Each widget needs ten credible
-  patterns or a widget-local `SHORTFALL.md`, plus a Keep/Adapt/Reject matrix.
+- Use the completed `_docs/_WIDGETS/tmp/<widget>/` research archive for every
+  widget in this family. Each implementation leaf must cite the widget-local
+  Keep/Adapt/Reject matrix before finalizing its option list.
 - Use research from TASK-252-02 to decide mode/preset expansion:
   - `feature-grid`: icon cards, bento/grid modes, media feature rows.
   - `testimonials`: single quote, carousel-ready list, cards grid, rating/source
@@ -66,16 +66,19 @@ inside the editor instead of duplicate widget types.
 
 ## Sub-Tasks
 
-- [ ] Convert shared marketing/content editor sections to the TASK-252-01 IA.
-- [ ] Complete per-widget research folders and Keep/Adapt/Reject matrices for
-  every content/marketing widget in scope.
-- [ ] Decide mode/preset expansion per widget using TASK-252-02 research.
-- [ ] Add stable metadata for repeated item, media, CTA, variant, and color
-  controls.
-- [ ] Update schema/default/normalizer/render contracts only where expansion
-  requires it.
-- [ ] Update focused runtime/editor tests for every changed widget.
-- [ ] Update existing `_docs/_WIDGETS` docs for every changed widget.
+This parent is now executed through physical per-widget leaves. Do not implement this parent as one broad batch; complete the leaves below in dependency order.
+
+- [ ] TASK-252-06-01: Feature Grid Modes Bento and Linked Cards
+- [ ] TASK-252-06-02: Testimonials Grid Spotlight Rating and Attribution
+- [ ] TASK-252-06-03: Pricing Plans Tiers Toggle and Comparison Mode
+- [ ] TASK-252-06-04: FAQ Accordion Categories Support CTA and Icon Placement
+- [ ] TASK-252-06-05: CTA Banner Compact Split Badge and Background Media
+- [ ] TASK-252-06-06: Logo Cloud Grid Tone Rows and Reduced Motion Marquee
+- [ ] TASK-252-06-07: Gallery Mosaic Layout Captions Overlays and Alt Text
+- [ ] TASK-252-06-08: Stats KPI Values Trend Labels and Display Modes
+- [ ] TASK-252-06-09: Team Members Photo Shape Socials and Featured Profile
+- [ ] TASK-252-06-10: Rich Text Section Prose Presets Width Badge and CTA
+- [ ] TASK-252-06-11: Compare Timeline Two Track Segments Status and Highlight
 
 ## Files to Change
 
@@ -93,9 +96,9 @@ inside the editor instead of duplicate widget types.
 - Matching widget contracts under `core/widgets/core/*.tsx` when schema/defaults
   or render output changes.
 - Matching docs under `_docs/_WIDGETS/*.md`.
-- `_docs/_WIDGETS/tmp/<widget>/*.md` research cards for every widget in scope.
-- `_docs/_WIDGETS/tmp/<widget>/SHORTFALL.md` only when TASK-252-02 permits a
-  smaller research sample.
+- Existing `_docs/_WIDGETS/tmp/<widget>/README.md` and `MATRIX.md` as evidence
+  references; update them only if implementation finds a concrete research
+  mismatch.
 
 ## Implementation Pseudocode
 

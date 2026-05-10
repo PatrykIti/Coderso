@@ -52,14 +52,9 @@ timeline modes while preserving existing payloads and editor tests.
 
 ## Sub-Tasks
 
-- [ ] Finalize Timeline research mapping from TASK-252-02.
-- [ ] Extend the Timeline schema/default/normalizer contract for modes, dates,
-  status, links, and motion.
-- [ ] Render horizontal axis, vertical chronology, alternating, and roadmap
-  modes from one widget type.
-- [ ] Add reduced-motion-safe scroll reveal as progressive enhancement.
-- [ ] Refactor Timeline editor sections to the TASK-252-01 shared IA.
-- [ ] Update Timeline runtime/editor tests and docs.
+This parent is now executed through physical per-widget leaves. Do not implement this parent as one broad batch; complete the leaves below in dependency order.
+
+- [ ] TASK-252-04-01: Timeline Chronology Motion and Editor IA
 
 ## Files to Change
 
