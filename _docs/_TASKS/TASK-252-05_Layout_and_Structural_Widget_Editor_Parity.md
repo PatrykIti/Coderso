@@ -17,7 +17,7 @@ Apply the shared TASK-252 inspector IA to layout and structural Pages widgets.
 These widgets shape the page but should not become noisy expert panels. Section
 is the baseline because it already groups options into clear sections; the rest
 of the layout/structural family should follow the same model while keeping
-simple widgets intentionally simple.
+simple widgets intentionally simple through research-backed decisions.
 
 ## Widgets In Scope
 
@@ -45,6 +45,9 @@ simple widgets intentionally simple.
 - Keep simple utility widgets simple:
   - `spacer` and `divider` should not gain unnecessary marketing features;
   - they should expose clear rhythm/visibility controls and strong labels.
+- Complete `_docs/_WIDGETS/tmp/<widget>/` research for every widget in this
+  family before finalizing its option list. Each widget needs ten credible
+  patterns or a widget-local `SHORTFALL.md`, plus a Keep/Adapt/Reject matrix.
 - Expand structural widgets only where it improves real page-building
   flexibility:
   - `grid-columns`: column count, gap, column width, equal height, mobile order.
@@ -65,6 +68,8 @@ simple widgets intentionally simple.
 ## Sub-Tasks
 
 - [ ] Migrate `section` slot/region controls into the shared editor IA.
+- [ ] Complete per-widget research folders and Keep/Adapt/Reject matrices for
+  every layout/structural widget in scope.
 - [ ] Align `grid-columns`, `split-layout`, and `stack` editor grouping with
   the section baseline.
 - [ ] Keep `spacer` and `divider` intentionally small while adding metadata and
@@ -88,6 +93,9 @@ simple widgets intentionally simple.
 - `core/admin/ui/widgets/editors/ToggleBlockEditors.tsx`
 - Matching widget contracts under `core/widgets/core/*.tsx` when schema/defaults
   or render output changes.
+- `_docs/_WIDGETS/tmp/<widget>/*.md` research cards for every widget in scope.
+- `_docs/_WIDGETS/tmp/<widget>/SHORTFALL.md` only when TASK-252-02 permits a
+  smaller research sample.
 - `_docs/_WIDGETS/SECTION.md`
 - `_docs/_WIDGETS/TEMPLATE_SECTION.md`
 - `_docs/_WIDGETS/GRID_COLUMNS.md`
@@ -194,5 +202,6 @@ For missing docs, add contract pages that follow existing widget docs:
 - Section no longer relies on top-of-panel slot controls.
 - Layout/structural widgets use the shared TASK-252 control metadata and section
   IA.
-- Simple widgets remain simple and do not gain unnecessary fields.
+- Simple widgets remain simple because their final option lists cite research
+  decisions rather than assumptions.
 - Missing structural widget docs are created.

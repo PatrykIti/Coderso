@@ -45,6 +45,9 @@ more flexible, but implementation must not weaken runtime contracts.
 ## Business Requirements
 
 - Use TASK-252-01 shared editor metadata and compact info affordances.
+- Complete `_docs/_WIDGETS/tmp/<widget>/` research for every widget in this
+  family before finalizing its option list. Each widget needs ten credible
+  patterns or a widget-local `SHORTFALL.md`, plus a Keep/Adapt/Reject matrix.
 - Keep runtime/data ownership explicit:
   - source selection belongs in Visual only when it is a normal editor decision;
   - endpoint, fallback, and diagnostics belong in Advanced.
@@ -77,6 +80,8 @@ more flexible, but implementation must not weaken runtime contracts.
 ## Sub-Tasks
 
 - [ ] Apply TASK-252-01 editor IA to dynamic content widgets.
+- [ ] Complete per-widget research folders and Keep/Adapt/Reject matrices for
+  every dynamic/operational widget in scope.
 - [ ] Apply TASK-252-01 editor IA to commerce, listing, and search widgets.
 - [ ] Apply TASK-252-01 editor IA to forms, booking, contact, and newsletter
   widgets without weakening public-write security.
@@ -106,6 +111,9 @@ more flexible, but implementation must not weaken runtime contracts.
   - `core/admin/ui/widgets/editors/FooterEditors.tsx`
 - Runtime/data owners under `core/widgets/core/*.tsx` when schemas/defaults/
   renderers change.
+- `_docs/_WIDGETS/tmp/<widget>/*.md` research cards for every widget in scope.
+- `_docs/_WIDGETS/tmp/<widget>/SHORTFALL.md` only when TASK-252-02 permits a
+  smaller research sample.
 - Runtime service/tests only when the widget runtime contract changes:
   - content/posts owners under `tests/unit/widgets/*`
   - commerce runtime owner under `tests/unit/commerce/commerceWidgetRuntime.test.ts`
@@ -228,7 +236,8 @@ function normalizeContactWidgetData(raw: unknown): ContactData {
 ## Acceptance Criteria
 
 - Dynamic/operational editors are easier to scan without hiding critical runtime
-  or security choices.
+  or security choices, and their option lists are backed by per-widget research
+  decisions.
 - Missing widget docs are created for commerce, listing/search, and booking
   widgets.
 - No public-write security contract is weakened.

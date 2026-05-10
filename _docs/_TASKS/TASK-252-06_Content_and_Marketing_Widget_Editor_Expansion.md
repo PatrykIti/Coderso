@@ -40,6 +40,9 @@ inside the editor instead of duplicate widget types.
 - Bring every Visual editor to the same sectioned control model as TASK-252-01.
 - Add stable `data-widget-control` metadata for repeated item controls, reorder
   actions, variant cards, color fields, media fields, and CTA/link fields.
+- Complete `_docs/_WIDGETS/tmp/<widget>/` research for every widget in this
+  family before finalizing its option list. Each widget needs ten credible
+  patterns or a widget-local `SHORTFALL.md`, plus a Keep/Adapt/Reject matrix.
 - Use research from TASK-252-02 to decide mode/preset expansion:
   - `feature-grid`: icon cards, bento/grid modes, media feature rows.
   - `testimonials`: single quote, carousel-ready list, cards grid, rating/source
@@ -64,6 +67,8 @@ inside the editor instead of duplicate widget types.
 ## Sub-Tasks
 
 - [ ] Convert shared marketing/content editor sections to the TASK-252-01 IA.
+- [ ] Complete per-widget research folders and Keep/Adapt/Reject matrices for
+  every content/marketing widget in scope.
 - [ ] Decide mode/preset expansion per widget using TASK-252-02 research.
 - [ ] Add stable metadata for repeated item, media, CTA, variant, and color
   controls.
@@ -88,6 +93,9 @@ inside the editor instead of duplicate widget types.
 - Matching widget contracts under `core/widgets/core/*.tsx` when schema/defaults
   or render output changes.
 - Matching docs under `_docs/_WIDGETS/*.md`.
+- `_docs/_WIDGETS/tmp/<widget>/*.md` research cards for every widget in scope.
+- `_docs/_WIDGETS/tmp/<widget>/SHORTFALL.md` only when TASK-252-02 permits a
+  smaller research sample.
 
 ## Implementation Pseudocode
 
@@ -195,6 +203,7 @@ items.map((item, index) => (
 ## Acceptance Criteria
 
 - Each content/marketing widget has a clearly grouped Visual editor.
-- Added flexibility is schema-first and tied to real product use cases.
+- Added flexibility is schema-first, tied to real product use cases, and backed
+  by per-widget research decisions.
 - Repeated item editors expose stable labels and automation metadata.
 - Runtime output remains backward compatible for existing saved pages.

@@ -17,9 +17,9 @@ block patterns, then translate the findings into a Coderso-owned variant/mode
 matrix.
 
 The user request is to inspect real widget/block libraries and collect multiple
-versions of widgets such as Hero and Timeline before expanding our editors.
-This task makes that workflow explicit and safe: research artifacts can be
-stored under `_docs/_WIDGETS/tmp/**`, but third-party code may only be copied
+versions of every Pages-publishable widget before expanding our editors. This
+task makes that workflow explicit and safe: research artifacts must be stored
+under `_docs/_WIDGETS/tmp/<widget>/**`, but third-party code may only be copied
 when the license permits it and the license/source are recorded.
 
 ## Business Requirements
@@ -28,7 +28,7 @@ when the license permits it and the license/source are recorded.
   - `_docs/_WIDGETS/tmp/README.md`
   - `_docs/_WIDGETS/tmp/hero/`
   - `_docs/_WIDGETS/tmp/timeline/`
-  - additional per-widget folders only when a later umbrella needs them.
+  - one folder for every Pages-publishable widget listed in TASK-252.
 - Each captured pattern must record:
   - title/name;
   - source URL;
@@ -38,13 +38,20 @@ when the license permits it and the license/source are recorded.
   - observed UX pattern;
   - Coderso mapping decision;
   - whether source code can be copied, summarized only, or ignored.
-- Gather at least ten Hero patterns and ten Timeline patterns before the Hero
-  and Timeline implementation leaves are finalized.
-- For other widget families, gather enough examples to define flexible editor
-  modes without delaying the whole program:
-  - layout/structural;
-  - content/marketing;
-  - dynamic/operational.
+- Gather at least ten credible patterns per widget before that widget's
+  implementation leaf finalizes. Valid references can include React/Tailwind
+  libraries, block libraries, CMS/page-builder blocks, plugin/theme patterns,
+  and production page references when component libraries do not expose enough
+  examples.
+- Do not treat primitives as automatically low-scope. Simple widgets such as
+  `spacer` and `divider` still need research-backed decisions; the result may
+  be a short, deliberate option set when the research shows that more controls
+  would add noise.
+- If fewer than ten useful public patterns exist for a widget after a documented
+  search, create `_docs/_WIDGETS/tmp/<widget>/SHORTFALL.md` with searched
+  sources, rejected matches, and the reason the final sample is sufficient.
+- For every widget, produce a decision matrix that marks observed options as
+  `Keep`, `Adapt`, or `Reject` before the editor/schema list is finalized.
 - Translate research into Coderso-owned models:
   - do not create ten separate widget types for ten examples;
   - add variants, presets, display modes, and editor sections only when they
@@ -53,12 +60,14 @@ when the license permits it and the license/source are recorded.
 ## Sub-Tasks
 
 - [ ] Create `_docs/_WIDGETS/tmp/README.md` with archive rules and copy policy.
-- [ ] Capture at least ten Hero research cards or justified exclusions.
-- [ ] Capture at least ten Timeline research cards or justified exclusions.
-- [ ] Capture representative patterns for layout, marketing/content, and
-  dynamic/operational widget families.
-- [ ] Produce a matrix that maps research patterns to Coderso-owned widget
+- [ ] Create one `_docs/_WIDGETS/tmp/<widget>/` folder for each
+  Pages-publishable widget from TASK-252.
+- [ ] Capture at least ten research cards per widget or a widget-local
+  `SHORTFALL.md` with the documented search and exclusion rationale.
+- [ ] Produce a per-widget matrix that maps research patterns to Coderso-owned
   fields, modes, editor sections, and tests.
+- [ ] Mark every candidate option as `Keep`, `Adapt`, or `Reject` so later
+  implementation leaves do not rediscover the same product decisions.
 - [ ] Audit the archive for license/source metadata before implementation uses
   the findings.
 
@@ -97,7 +106,9 @@ Initial source seeds:
 - `_docs/_WIDGETS/tmp/README.md`
 - `_docs/_WIDGETS/tmp/hero/*.md`
 - `_docs/_WIDGETS/tmp/timeline/*.md`
-- `_docs/_WIDGETS/tmp/<widget>/*.md` as needed by later subtasks.
+- `_docs/_WIDGETS/tmp/<widget>/*.md` for every Pages-publishable widget.
+- `_docs/_WIDGETS/tmp/<widget>/SHORTFALL.md` only when fewer than ten credible
+  references exist after documented search.
 - `_docs/WIDGETS.md` only when the research model changes the source-of-truth
   widget configuration rules.
 
@@ -124,9 +135,10 @@ Use Markdown research cards rather than raw copied component source by default.
 Then build a matrix:
 
 ```md
-| Pattern | Source | Coderso owner | Data model impact | Editor impact | Runtime impact |
-|---|---|---|---|---|---|
-| Hero badge split | shadcn/Tailwind references | hero | `badge` | Visual: Badge section | render badge above headline |
+| Pattern | Source | Decision | Coderso owner | Data model impact | Editor impact | Runtime impact |
+|---|---|---|---|---|---|---|
+| Hero badge split | shadcn/Tailwind references | Keep | hero | `badge` | Visual: Badge section | render badge above headline |
+| Divider label | CMS/theme references | Reject | divider | none | none | research shows this is content, not divider behavior |
 ```
 
 ## Security Contract
@@ -146,7 +158,9 @@ Then build a matrix:
 
 - Docs-only validation:
   - `git diff --check`
-  - verify every research file has `URL`, `Access type`, and `Copy policy`.
+  - verify every research file has `URL`, `Access type`, `Decision`, and
+    `Copy policy`.
+  - verify every Pages-publishable widget has ten cards or a `SHORTFALL.md`.
 - No Bun/Vitest suite is required until research is turned into code.
 
 ## Documentation Updates Required
@@ -157,9 +171,11 @@ Then build a matrix:
 
 ## Acceptance Criteria
 
-- Hero and Timeline each have at least ten documented research cards or clearly
-  justified exclusions.
+- Every Pages-publishable widget has at least ten documented research cards or
+  a widget-local `SHORTFALL.md` with clearly justified exclusions.
 - Every artifact records source URL and copy policy.
 - Premium/proprietary examples are treated as design references only.
 - Per-widget implementation leaves can cite concrete research patterns without
   copying unlicensed code.
+- Final editor option lists are backed by `Keep`, `Adapt`, and `Reject`
+  decisions rather than by assumptions from the current implementation.

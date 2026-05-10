@@ -67,6 +67,12 @@ widget types.
   third-party code unless the license permits it and the copied source is
   tracked with license metadata. Premium/proprietary examples are UX references
   only.
+- Treat research as required input for every Pages-publishable widget, including
+  simple structural widgets. Each widget must have a `_docs/_WIDGETS/tmp/<widget>/`
+  archive with at least ten credible external patterns or a documented
+  `SHORTFALL.md` explaining why fewer than ten useful public references exist.
+  The final editor field list must cite this research and choose only options
+  that are useful, adequate, and logical for Coderso.
 
 ## Current Owner Map
 
@@ -150,8 +156,9 @@ Use these as current research seeds, not as unlicensed source imports:
 
 1. Finish TASK-252-01 so the shared inspector IA, info icon pattern, control
    metadata, and slot-control placement are stable before per-widget edits.
-2. Finish TASK-252-02 enough to produce a research matrix for Hero, Timeline,
-   and at least one widget from each remaining family.
+2. Finish TASK-252-02 enough to produce a research matrix for every
+   Pages-publishable widget before per-widget schema/editor expansion is
+   finalized.
 3. Implement Hero and Timeline first because they are the most visible and
    contain the explicit product gaps.
 4. Apply the shared IA to layout/structural widgets, then marketing/content,
@@ -216,6 +223,9 @@ Use these as current research seeds, not as unlicensed source imports:
 - `_docs/WIDGETS.md`
 - `_docs/_WIDGETS/README.md`
 - `_docs/_WIDGETS/*.md` for each changed widget.
+- `_docs/_WIDGETS/tmp/<widget>/**` research folders for every
+  Pages-publishable widget, including Keep/Adapt/Reject decisions that justify
+  the final option set.
 - New `_docs/_WIDGETS/*.md` files for the ten Pages widgets that currently lack
   contract docs.
 - `_docs/_WIDGETS/tmp/**` research archive only after TASK-252-02 performs the
@@ -235,7 +245,7 @@ Use these as current research seeds, not as unlicensed source imports:
   defaults, normalizer, renderer, editor, tests, and docs.
 - Timeline supports true timeline modes, date-capable steps, and an accessible
   scroll/reveal behavior with reduced-motion support.
-- Every Pages-publishable widget has a documented editor IA and contract.
+- Every Pages-publishable widget has a research-backed editor IA and contract.
 - Missing `_docs/_WIDGETS` pages are created for the ten uncovered widgets.
 - Playwright CLI can identify controls by accessible name or stable
   `data-widget-*` metadata.

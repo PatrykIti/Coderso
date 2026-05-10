@@ -34,6 +34,9 @@ the implementation subtasks.
   - `_docs/_WIDGETS/tmp/**` contains only license-safe summaries or permitted
     source;
   - every artifact has URL/access/license/copy-policy metadata.
+  - every Pages-publishable widget has its own research folder with at least ten
+    credible patterns or a widget-local `SHORTFALL.md`;
+  - every final widget option list is backed by Keep/Adapt/Reject decisions.
 - Confirm missing widget docs are created:
   - `TABS.md`
   - `ACCORDION.md`
@@ -53,7 +56,8 @@ the implementation subtasks.
 - [ ] Build the final per-widget validation matrix.
 - [ ] Verify right-inspector IA acceptance criteria across representative
   widgets.
-- [ ] Verify research archive license/source metadata.
+- [ ] Verify every Pages-publishable widget has research archive coverage,
+  license/source metadata, and Keep/Adapt/Reject decisions.
 - [ ] Verify all missing `_docs/_WIDGETS` docs were created.
 - [ ] Run required lint/type/test/gate commands or record exact blockers.
 - [ ] Mark TASK-252 task files Done, sync board statistics, and add changelog.
@@ -74,10 +78,10 @@ the implementation subtasks.
 Build a final widget proof matrix.
 
 ```md
-| Widget | Editor IA proof | Runtime proof | Docs | Notes |
-|---|---|---|---|---|
-| hero | hero-editor-wave | hero.test | HERO.md | badge supported |
-| timeline | timeline-editor-wave | timeline.test | TIMELINE.md | chronology modes |
+| Widget | Research proof | Editor IA proof | Runtime proof | Docs | Notes |
+|---|---|---|---|---|---|
+| hero | tmp/hero matrix | hero-editor-wave | hero.test | HERO.md | badge supported |
+| timeline | tmp/timeline matrix | timeline-editor-wave | timeline.test | TIMELINE.md | chronology modes |
 ```
 
 Then close statuses only after validation:
@@ -132,6 +136,12 @@ addChangelogEntry({ taskId: "TASK-252", validation });
 - Run `bun run gates:coderso` before closure or document the exact blocker.
 - If DB-backed tests are required and `DATABASE_URL` is available, load env with
   `set -a && source .env && set +a` before the command.
+- Docs/research validation:
+  - verify every Pages-publishable widget has a `_docs/_WIDGETS/tmp/<widget>/`
+    folder;
+  - verify each folder has ten research cards or a documented `SHORTFALL.md`;
+  - verify final widget docs cite the relevant research decisions for new or
+    rejected options.
 
 ## Documentation Updates Required
 
@@ -142,6 +152,8 @@ addChangelogEntry({ taskId: "TASK-252", validation });
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
 - new changelog entry for TASK-252.
+- `_docs/_WIDGETS/tmp/<widget>/**` research folders for every
+  Pages-publishable widget.
 
 ## Acceptance Criteria
 
@@ -151,3 +163,6 @@ addChangelogEntry({ taskId: "TASK-252", validation });
 - Changelog entry references TASK-252 and summarizes validation.
 - Final documentation tells implementers and users how widget configuration is
   structured across Wizard, Visual, and Advanced.
+- Final validation proves every Pages-publishable widget option list is
+  research-backed, including explicit rejections for noisy or ill-fitting
+  options.
