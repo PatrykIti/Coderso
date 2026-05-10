@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 21 tasks
-- **In Progress:** 7 tasks
-- **Done:** 1483 tasks
+- **To Do:** 20 tasks
+- **In Progress:** 5 tasks
+- **Done:** 1486 tasks
 
 ---
 
@@ -47,7 +47,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-252-06 | Content and Marketing Widget Editor Expansion | High | Large | Marketing/content widget editor IA, variants, repeated item controls, and docs |
 | TASK-252-07 | Dynamic and Operational Widget Editor Expansion | High | Large | Dynamic, commerce, listing/search, forms, booking, navigation, and footer editor parity |
 | TASK-252-08 | QA, Docs, Changelog, and Board Closure | Medium | Medium | Final validation matrix, missing widget docs, changelog, and board sync |
-| TASK-190-05-03-08 | Detail Page Generic Assistant Resource Integration | High | Medium | Technical leaf: later generic policy/target-resolver/provider support for detail-page after base action/admin/runtime flow exists |
 | TASK-190-08 | Evaluation, Docs, and Closure | High | Large | Business area: fixtures, red-team corpus, live matrix, docs, and closure |
 | TASK-190-08-01 | Composition Fixture Matrix and Red-Team Corpus | High | Medium | Technical leaf: mixed prompt fixtures and provider safety cases |
 | TASK-190-08-02 | Docs, Changelog, and Closure | High | Medium | Technical leaf: final docs, changelog, board, and gates |
@@ -66,9 +65,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-190 | Blueprint Composer Foundation | High | Very Large | In progress: capability manifest/registry, candidate planning, provider/shadow safety layer, deterministic composition graph/conflicts, action assembly/review metadata, schema/listing merge, page-upsert collection-link persistence, collection workspace route/read/cache/UI, detail-template editor surface, assistant workspace/detail-page follow-up context, and catalog-backed no-duplicate reuse are landed; supported mixed-capability and primary-plus-gated setup requests now stay on the composed path before provider drafting can bypass them, while detail-page generic packaging remains |
-| TASK-190-05 | Page Section and Widget Composer | High | Large | In progress: section alias/slot vocabulary, deterministic widget/pack mapping, page-upsert collection-link persistence, plus detail-page storage/schema, binding, route-link metadata, runtime, preview/cache, typed action, route, admin-cache, and fixture/runtime acceptance slices are landed, while generic integration remains |
-| TASK-190-05-03 | Detail Page Composition and Content Route Sections | High | Very Large | In progress: persisted detail-page document/revision storage, strict schema normalization, deterministic UUID-compatible ids, the `content_type_has_detail_pages` guard, binding resolution, structural `detailPageId` route metadata, published runtime rendering, preview/cache invalidation, `detail-page.upsert` action execution, admin client/cache parity, and fixture/runtime acceptance are landed; generic integration remains |
+| TASK-190 | Blueprint Composer Foundation | High | Very Large | In progress: capability manifest/registry, candidate planning, provider/shadow safety layer, deterministic composition graph/conflicts, action assembly/review metadata, schema/listing merge, page-upsert collection-link persistence, detail-page foundation, collection workspace/editor context, and catalog-backed no-duplicate reuse are landed; supported mixed-capability and primary-plus-gated setup requests now stay on the composed path before provider drafting can bypass them, while later evaluation/closure leaves remain |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
@@ -80,6 +77,9 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-190-05 | Page Section and Widget Composer | High | Large | Done: section alias/slot vocabulary, deterministic widget/pack mapping, page-upsert collection-link persistence, detail-page storage/schema/bindings/runtime/preview/admin/API/cache/fixture acceptance, and generic detail-page resource integration are landed |
+| TASK-190-05-03 | Detail Page Composition and Content Route Sections | High | Very Large | Done: persisted detail-page documents/revisions, route linkage, runtime/preview/cache, typed `detail-page.upsert`, admin route/client/cache parity, fixture/runtime acceptance, and generic policy/provider/target-resolver integration are landed |
+| TASK-190-05-03-08 | Detail Page Generic Assistant Resource Integration | High | Medium | Done: `detail-page` is in the strict generic resource vocabulary, provider packages bounded summaries, target resolution accepts trusted catalog/content-type/active-surface matches only, and generic mutations stay gated |
 | TASK-190-07 | Action Assembly, Execution, and No-Duplicate Safety | High | Large | Done: typed composition assembly, conflict needs-input/gated routing, listing projection widening, catalog-backed existing-resource reuse, DB-backed no-duplicate proof, and strict review metadata are landed |
 | TASK-190-07-03 | Composition Review Metadata and Diagnostics | High | Medium | Done: `metadata.blueprintComposition` explains primary/adjunct/gated choices, merged resources, reuse matches, conflicts, and candidate scores in a strict redacted schema |
 | TASK-190-07-02 | No-Duplicate Idempotency and Existing Resource Reuse | High | Large | Done: bounded detail-page catalog summaries, `blueprintExistingResourceMatcher.ts`, page/detail/custom-screen/media reuse safeguards, ambiguous-name conflicts, and DB-backed no-duplicate proof are landed |

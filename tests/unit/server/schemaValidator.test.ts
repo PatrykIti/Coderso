@@ -1,10 +1,14 @@
 import { expect, test } from "bun:test";
 
-import { postAutosaveSchema, postMetadataSchema } from "../../../core/server/validation/postSchemas";
+import {
+  postAutosaveSchema,
+  postMetadataSchema,
+} from "../../../core/server/validation/postSchemas";
 import {
   contentEntryAllEntriesQuerySchema,
   contentEntryMetadataSchema,
 } from "../../../core/server/validation/contentSchemas";
+import { assistantActionPlanRequestSchema } from "../../../core/server/validation/assistantActionSchemas";
 import { validate } from "../../../core/server/validation/schemaValidator";
 import { ApiError } from "../../../core/server/errorHandler";
 
@@ -56,6 +60,34 @@ test("all content entries query schema rejects unknown filters", () => {
 
   try {
     validate(contentEntryAllEntriesQuerySchema, { type: "posts" });
+    throw new Error("expected_validation_error");
+  } catch (error) {
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).code).toBe("validation_error");
+    expect((error as ApiError).status).toBe(400);
+  }
+});
+
+test("assistant action planning request rejects client-supplied resource catalogs", () => {
+  expect(() =>
+    validate(assistantActionPlanRequestSchema, {
+      prompt: "plan detail page",
+      context: {
+        includeResourceCatalog: true,
+      },
+    })
+  ).not.toThrow();
+
+  try {
+    validate(assistantActionPlanRequestSchema, {
+      prompt: "plan detail page",
+      context: {
+        includeResourceCatalog: true,
+        resourceCatalog: {
+          schemaVersion: 1,
+        },
+      },
+    });
     throw new Error("expected_validation_error");
   } catch (error) {
     expect(error).toBeInstanceOf(ApiError);

@@ -71,6 +71,7 @@ export type AssistantProviderPlanningPromptPackage = {
     entries: NonNullable<AssistantResourceCatalogSnapshot["entries"]>;
     contentTypes: AssistantResourceCatalogSnapshot["contentTypes"];
     customScreens: AssistantResourceCatalogSnapshot["customScreens"];
+    detailPages: NonNullable<AssistantResourceCatalogSnapshot["detailPages"]>;
     listings: AssistantResourceCatalogSnapshot["listings"];
     forms: AssistantResourceCatalogSnapshot["forms"];
     menus: AssistantResourceCatalogSnapshot["menus"];
@@ -190,6 +191,12 @@ const buildResources = (
       catalog.customScreens,
       maxItemsPerGroup,
       "custom_screens_truncated",
+      warnings
+    ),
+    detailPages: clampItems(
+      catalog.detailPages ?? [],
+      maxItemsPerGroup,
+      "detail_pages_truncated",
       warnings
     ),
     listings: {

@@ -97,6 +97,19 @@ const context = buildAssistantAdminContext({
         bindings: [],
       },
     ],
+    detailPages: [
+      {
+        id: "detail-products",
+        name: "Product Detail",
+        status: "draft",
+        contentTypeId: "ct-products",
+        contentTypeSlug: "products",
+        linkedRouteType: "products",
+        updatedAt: "2026-04-17T10:00:00.000Z",
+        blockCount: 2,
+        bindingCount: 1,
+      },
+    ],
     listings: {
       queries: [
         {
@@ -346,6 +359,23 @@ test("mapCmsOperationToActionPlan maps generic update drafts to existing typed a
   ).toMatchObject({
     type: "widget-template.update",
     input: { id: "widget-template-hero", patch: { name: "Hero Template Updated" } },
+  });
+});
+
+test("mapCmsOperationToActionPlan keeps generic detail-page updates gated", () => {
+  const plan = planFor({
+    operation: "update",
+    resourceKind: "detail-page",
+    resourceKey: "detail-page",
+    targetQuery: { exactName: "ct-products" },
+    mutation: { fieldIntent: "status", value: "published" },
+  });
+
+  expect(plan).toMatchObject({
+    status: "needs_input",
+    responseKind: "gated",
+    actions: [],
+    summary: "Detail Pages update is gated by assistant operation policy.",
   });
 });
 

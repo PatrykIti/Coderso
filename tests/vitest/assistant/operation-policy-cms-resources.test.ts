@@ -25,6 +25,7 @@ test("assistantOperationPolicy includes migrated CMS and admin resources", () =>
     "content-type",
     "custom-screen",
     "dashboard",
+    "detail-page",
     "entry",
     "filters",
     "form",
@@ -86,7 +87,9 @@ test("assistantOperationPolicy covers form visibility and actions", () => {
   const form = getResourcePolicy(assistantOperationPolicy, "form");
   if (!form) throw new Error("missing_form_policy");
 
-  expect(resolveResourcePolicyFromPrompt(assistantOperationPolicy, "formularz kontaktowy")).toBe(form);
+  expect(resolveResourcePolicyFromPrompt(assistantOperationPolicy, "formularz kontaktowy")).toBe(
+    form
+  );
   expect(getFilterPolicy(form, "visibility")?.values?.public).toContain("publiczny");
   expect(getFieldPolicy(form, "dostęp")?.action).toMatchObject({
     type: "form.update",
@@ -139,9 +142,10 @@ test("assistantOperationPolicy covers content entries screens widgets and media"
   const contentType = getResourcePolicy(assistantOperationPolicy, "content-type");
   const entry = getResourcePolicy(assistantOperationPolicy, "entry");
   const screen = getResourcePolicy(assistantOperationPolicy, "custom-screen");
+  const detailPage = getResourcePolicy(assistantOperationPolicy, "detail-page");
   const widget = getResourcePolicy(assistantOperationPolicy, "widget-template");
   const media = getResourcePolicy(assistantOperationPolicy, "media");
-  if (!contentType || !entry || !screen || !widget || !media) {
+  if (!contentType || !entry || !screen || !detailPage || !widget || !media) {
     throw new Error("missing_content_policy");
   }
 
@@ -151,8 +155,20 @@ test("assistantOperationPolicy covers content entries screens widgets and media"
   expect(getFieldPolicy(entry, "media")?.action?.type).toBe("media.reference.attach");
   expect(getFilterPolicy(screen, "status")?.values?.active).toContain("opublikowane");
   expect(Object.values(screen.actions).map((action) => action.type)).toEqual(
-    expect.arrayContaining(["custom-screen.upsert", "custom-screen.update", "custom-screen.delete", "custom-screen.widget.patch"])
+    expect.arrayContaining([
+      "custom-screen.upsert",
+      "custom-screen.update",
+      "custom-screen.delete",
+      "custom-screen.widget.patch",
+    ])
   );
+  expect(
+    resolveResourcePolicyFromPrompt(assistantOperationPolicy, "pokaż detail page Products")
+  ).toBe(detailPage);
+  expect(detailPage.actions.update).toMatchObject({
+    type: "detail-page.upsert",
+    mode: "gated",
+  });
   expect(getFieldPolicy(widget, "headline")?.action?.type).toBe("widget-template.block.patch");
   expect(media.actions.upload).toMatchObject({ type: "none", mode: "gated" });
   expect(media.actions.attachReference.type).toBe("media.reference.attach");

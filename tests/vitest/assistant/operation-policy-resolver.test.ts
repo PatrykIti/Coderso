@@ -5,6 +5,7 @@ import { buildCmsOperationDraftFromPrompt } from "../../../core/services/assista
 import { normalizeCmsOperationDraft } from "../../../core/services/assistant/cmsOperationDraftSchema";
 import {
   getResolverResourcePolicy,
+  inferActiveResourceKindWithPolicy,
   inferFiltersFromPromptWithPolicy,
   inferOperationWithPolicy,
   inferRequestedCountWithPolicy,
@@ -18,11 +19,14 @@ import {
 
 test("resolver policy resolves resource operation and count aliases from operation policy", () => {
   expect(resolveResourceKindFromPromptWithPolicy("usun dwie strony")).toBe("page");
+  expect(resolveResourceKindFromPromptWithPolicy("pokaż detail page Products")).toBe("detail-page");
   expect(resolveResourceKindFromPromptWithPolicy("pokaż API Keys")).toBe("settings-surface");
-  expect(resolveResourcePolicyEntryFromPromptWithPolicy("pokaż API Keys")?.key).toBe("settings-api-keys");
-  expect(resolveResourcePolicyEntryFromPromptWithPolicy("assistant settings provider key")?.key).toBe(
-    "settings-assistant"
+  expect(resolveResourcePolicyEntryFromPromptWithPolicy("pokaż API Keys")?.key).toBe(
+    "settings-api-keys"
   );
+  expect(
+    resolveResourcePolicyEntryFromPromptWithPolicy("assistant settings provider key")?.key
+  ).toBe("settings-assistant");
   expect(resolveResourcePolicyEntryFromPromptWithPolicy("security csrf settings")?.key).toBe(
     "settings-security"
   );
@@ -30,8 +34,32 @@ test("resolver policy resolves resource operation and count aliases from operati
     "settings-webhooks"
   );
   expect(inferOperationWithPolicy(normalizeResolverText("usun dwie strony"))).toBe("delete");
-  expect(inferOperationWithPolicy(normalizeResolverText("czy istnieje model Products"))).toBe("inspect");
+  expect(inferOperationWithPolicy(normalizeResolverText("czy istnieje model Products"))).toBe(
+    "inspect"
+  );
   expect(inferRequestedCountWithPolicy(normalizeResolverText("usun dwie strony"))).toBe(2);
+});
+
+test("resolver policy infers active detail pages through the shared policy seam", () => {
+  expect(
+    inferActiveResourceKindWithPolicy({
+      activeSurface: {
+        kind: "detail-page",
+        detailPage: {
+          id: "detail-page-products",
+          name: "Product Detail",
+          status: "draft",
+          contentTypeId: "ct-products",
+          contentTypeSlug: "products",
+          titlePattern: "{title}",
+        },
+        sampleEntryId: null,
+        selectedBlockId: null,
+        blocks: [],
+        warnings: [],
+      },
+    })
+  ).toBe("detail-page");
 });
 
 test("resolver policy infers filters from resource filter aliases", () => {
@@ -98,9 +126,9 @@ test("resolver policy handles text matching and surface-only read queries", () =
     adminHref: "/admin/pages/page-test",
   };
 
-  expect(
-    matchesCandidateWithPolicy(candidate, { text: "missing OR test-page" }, policy)
-  ).toBe(true);
+  expect(matchesCandidateWithPolicy(candidate, { text: "missing OR test-page" }, policy)).toBe(
+    true
+  );
 
   const surfaceDraft = normalizeCmsOperationDraft({
     operation: "find",
@@ -118,7 +146,7 @@ test("resolver policy handles text matching and surface-only read queries", () =
   expect(isSurfaceOnlyReadQueryWithPolicy(surfaceDraft, surfaceDraft.targetQuery!, policy)).toBe(
     true
   );
-  expect(isSurfaceOnlyReadQueryWithPolicy(realSearchDraft, realSearchDraft.targetQuery!, policy)).toBe(
-    false
-  );
+  expect(
+    isSurfaceOnlyReadQueryWithPolicy(realSearchDraft, realSearchDraft.targetQuery!, policy)
+  ).toBe(false);
 });

@@ -89,6 +89,30 @@ const context = buildAssistantAdminContext({
         bindings: [],
       },
     ],
+    detailPages: [
+      {
+        id: "detail-products",
+        name: "Product Detail",
+        status: "draft",
+        contentTypeId: "ct-products",
+        contentTypeSlug: "products",
+        linkedRouteType: "products",
+        updatedAt: "2026-04-18T10:00:00.000Z",
+        blockCount: 3,
+        bindingCount: 2,
+      },
+      {
+        id: "detail-services",
+        name: "Product Detail",
+        status: "published",
+        contentTypeId: "ct-services",
+        contentTypeSlug: "services",
+        linkedRouteType: "services",
+        updatedAt: "2026-04-18T11:00:00.000Z",
+        blockCount: 2,
+        bindingCount: 1,
+      },
+    ],
     listings: { queries: [], templates: [] },
     forms: [
       {
@@ -175,6 +199,105 @@ test("resolveCmsOperationTargets returns post candidates from resource catalog",
     "Draft Post",
     "Public Post",
   ]);
+});
+
+test("resolveCmsOperationTargets resolves detail pages only through trusted ids or route linkage", () => {
+  const contentTypeDraft = normalizeCmsOperationDraft({
+    operation: "inspect",
+    resourceKind: "detail-page",
+    resourceKey: "detail-page",
+    targetQuery: {
+      exactName: "ct-products",
+    },
+  });
+
+  expect(resolveCmsOperationTargets(contentTypeDraft, context)).toMatchObject({
+    status: "exact",
+    candidates: [
+      {
+        id: "detail-products",
+        label: "Product Detail",
+        slug: "products",
+        details: {
+          contentTypeId: "ct-products",
+          contentTypeSlug: "products",
+          linkedRouteType: "products",
+        },
+      },
+    ],
+  });
+
+  const routeDraft = normalizeCmsOperationDraft({
+    operation: "inspect",
+    resourceKind: "detail-page",
+    resourceKey: "detail-page",
+    targetQuery: {
+      route: "/services",
+    },
+  });
+
+  expect(resolveCmsOperationTargets(routeDraft, context)).toMatchObject({
+    status: "exact",
+    candidates: [
+      {
+        id: "detail-services",
+        slug: "services",
+      },
+    ],
+  });
+
+  const nameOnlyDraft = normalizeCmsOperationDraft({
+    operation: "inspect",
+    resourceKind: "detail-page",
+    resourceKey: "detail-page",
+    targetQuery: {
+      exactName: "Product Detail",
+    },
+  });
+
+  expect(resolveCmsOperationTargets(nameOnlyDraft, context)).toMatchObject({
+    status: "no_match",
+    candidates: [],
+  });
+});
+
+test("resolveCmsOperationTargets accepts active detail-page context", () => {
+  const activeContext = buildAssistantAdminContext({
+    page: "/admin/advanced/engine/ct-products/collection/detail-template/detail-products",
+    activeSurface: {
+      kind: "detail-page",
+      detailPage: {
+        id: "detail-products-active",
+        name: "Active Product Detail",
+        status: "draft",
+        contentTypeId: "ct-products",
+        contentTypeSlug: "products",
+        titlePattern: "{title}",
+      },
+      sampleEntryId: null,
+      selectedBlockId: null,
+      blocks: [],
+      warnings: [],
+    },
+  });
+  const draft = normalizeCmsOperationDraft({
+    operation: "inspect",
+    resourceKind: "detail-page",
+    resourceKey: "detail-page",
+    targetQuery: { active: true },
+  });
+
+  expect(resolveCmsOperationTargets(draft, activeContext)).toMatchObject({
+    status: "exact",
+    candidates: [
+      {
+        id: "detail-products-active",
+        details: {
+          contentTypeId: "ct-products",
+        },
+      },
+    ],
+  });
 });
 
 test("resolveCmsOperationTargets falls back to visible candidates for vague read-only text", () => {

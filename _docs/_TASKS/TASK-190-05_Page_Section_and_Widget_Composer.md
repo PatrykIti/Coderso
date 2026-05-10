@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Page Builder + Widgets
 **Estimated Effort:** Large
 **Dependencies:** TASK-190-03, TASK-190-04
-**Status:** In Progress (2026-05-08)
+**Status:** Done (2026-05-10)
 
 ---
 
@@ -63,9 +63,11 @@ Current slice note:
 - `TASK-190-05-03-06` and `TASK-190-05-03-07-03` are landed: deterministic
   detail-page fixtures, DB-backed runtime acceptance, and admin client/cache
   parity now cover the base detail-page surface.
-- The remaining detail-page wave is narrower: generic assistant resource
-  packaging, workspace/editor integration, and no-duplicate DB reuse remain
-  open.
+- `TASK-190-05-03-08` is landed: generic assistant resource packaging now covers
+  `detail-page` with strict policy/schema vocabulary, bounded provider context,
+  trusted target resolution, and gated generic mutations that keep execution on
+  the existing local `detail-page.upsert` path.
+- The page section, widget, and detail-page composer family is complete.
 
 ## Sub-Tasks
 
@@ -130,9 +132,10 @@ Touched existing files:
 10. `setting.content-route.upsert` is extended rather than replaced; omitted
     `detailPageId` preserves the current link, `null` clears it, and a string
     sets it.
-11. Generic assistant resource support for `detail-page` is a later explicit
-    slice; base composer/runtime/admin flow does not pretend that support
-    already exists.
+11. Generic assistant resource support for `detail-page` is explicit and
+    bounded: provider planning may describe the resource family, target
+    resolution uses trusted catalog/active context only, and generic mutations
+    stay gated instead of creating a second executor path.
 12. Detail page preview/cache/invalidation behavior is covered by Bun runtime
     tests.
 

@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Public Runtime + Page Sections
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-190-05-01, TASK-190-05-02
-**Status:** In Progress (2026-05-08)
+**Status:** Done (2026-05-10)
 
 ---
 
@@ -54,8 +54,12 @@ Current slice note:
   `/admin/api/detail-pages*` CRUD/lifecycle/revision route family now exists,
   and `setting.content-route.upsert` owns the structural `detailPageId`
   round-trip for route linkage.
-- The remaining detail-page leaves are now composer fixture/runtime acceptance,
-  admin client/cache parity, and generic assistant resource integration.
+- `TASK-190-05-03-08` is landed: `detail-page` is now in the generic assistant
+  resource vocabulary, provider planning packages include bounded detail-page
+  summaries, active-surface inference stays in `resolverPolicy.ts`, and target
+  resolution accepts only trusted ids, stable `contentTypeId`, exact
+  route/content-type linkage, or active detail-page context.
+- The detail-page composition and content-route section family is complete.
 
 This unlocks proper Mabudo-like/product/service/portfolio detail pages instead
 of generic entry detail output.

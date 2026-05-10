@@ -332,8 +332,11 @@ const candidateSearchValues = (candidate: CmsResolvedTargetCandidate) =>
 export const matchesCandidateWithPolicy = (
   candidate: CmsResolvedTargetCandidate,
   query: CmsOperationTargetQuery,
-  _resourcePolicy: AssistantResourcePolicy | null
+  resourcePolicy: AssistantResourcePolicy | null
 ) => {
+  if (candidate.kind === "detail-page" || resourcePolicy?.kind === "detail-page") {
+    return matchesDetailPageCandidateWithPolicy(candidate, query);
+  }
   const candidates = candidateSearchValues(candidate);
   if (query.slug) return normalizeValue(candidate.slug) === normalizeResolverText(query.slug);
   if (query.exactName) {
@@ -349,6 +352,55 @@ export const matchesCandidateWithPolicy = (
     return targets.some((target) => candidates.some((value) => value.includes(target)));
   }
   return true;
+};
+
+const detailPageTrustedTargetValues = (candidate: CmsResolvedTargetCandidate) =>
+  [
+    candidate.id,
+    candidate.details?.contentTypeId,
+    candidate.details?.contentTypeSlug,
+    candidate.details?.linkedRouteType,
+    candidate.slug,
+  ]
+    .map((value) => normalizeValue(value))
+    .filter(Boolean);
+
+const detailPageRouteTargetValues = (candidate: CmsResolvedTargetCandidate) => {
+  const values = detailPageTrustedTargetValues(candidate);
+  return new Set(
+    values.flatMap((value) => [value, value.startsWith("/") ? value.slice(1) : `/${value}`])
+  );
+};
+
+const matchesDetailPageCandidateWithPolicy = (
+  candidate: CmsResolvedTargetCandidate,
+  query: CmsOperationTargetQuery
+) => {
+  if (query.active) return true;
+  if (query.slug) {
+    const target = normalizeResolverText(query.slug).replace(/^\/+/u, "");
+    return (
+      detailPageRouteTargetValues(candidate).has(target) ||
+      detailPageRouteTargetValues(candidate).has(`/${target}`)
+    );
+  }
+  if (query.route) {
+    const target = normalizeResolverText(query.route).replace(/^\/+/u, "");
+    return (
+      detailPageRouteTargetValues(candidate).has(target) ||
+      detailPageRouteTargetValues(candidate).has(`/${target}`)
+    );
+  }
+  if (query.exactName) {
+    const target = normalizeResolverText(query.exactName);
+    return detailPageTrustedTargetValues(candidate).includes(target);
+  }
+  if (query.text) {
+    const targets = splitTextQueryTerms(query.text);
+    const trustedValues = detailPageTrustedTargetValues(candidate);
+    return targets.some((target) => trustedValues.includes(target));
+  }
+  return !query.prefix;
 };
 
 const surfaceTokensForPolicy = (resourcePolicy: AssistantResourcePolicy | null) => {
@@ -402,6 +454,7 @@ export const inferActiveResourceKindWithPolicy = (
 ): CmsResourceKind | null => {
   const activeSurface = context?.activeSurface ?? null;
   if (activeSurface?.kind === "page") return "page";
+  if (activeSurface?.kind === "detail-page") return "detail-page";
   if (activeSurface?.kind === "custom-screen") return "custom-screen";
   if (activeSurface?.kind === "widget-template") return "widget-template";
   const selected = context?.runtimeSnapshot?.selectedResource;

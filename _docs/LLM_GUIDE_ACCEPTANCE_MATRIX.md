@@ -99,7 +99,7 @@ Rules:
 
 | Plan Type | Plan Coverage | UI Coverage | Route Permissions | Notes |
 |---|---|---|---|---|
-| CMS resource inspection/candidates | Vitest operation draft + target resolver | Vitest `ActionPlanReview` | target-family read permissions through resource catalog/active context | Non-mutating; no dry-run/execute controls |
+| CMS resource inspection/candidates | Vitest operation draft + target resolver | Vitest `ActionPlanReview` | target-family read permissions through resource catalog/active context | Non-mutating; includes bounded `detail-page` lookup from trusted ids/content-type linkage/active surface only |
 
 ---
 
@@ -114,7 +114,7 @@ Rules:
 | Services Directory | Executable | Vitest planner/catalog blueprint + local detail-page fixture | Catalog-family executor path | Detail-page composer runtime fixture | Existing generic catalog pack; booking remains gated |
 | Lead Capture Site | Executable | Vitest planner/blueprint | Bun executor | No dedicated public runtime test yet | Form runtime hardening remains existing Forms contract |
 | Editorial Content Hub | Executable | Vitest planner/blueprint | Bun executor | No dedicated public runtime test yet | Uses `posts-feed`; no post mutation |
-| Mixed Blueprint Composition (current packs) | Bounded live cutover | Vitest capability registry + candidate resolver + graph + assembler + provider/shadow diagnostics | Uses existing typed executor families only; broader no-duplicate/workspace/evaluation closure still deferred | Not applicable yet | Supported mixed-capability and primary-plus-gated setup prompts now use the composed planner path, while single-pack setup/refinement, generic detail-page resource packaging, media reuse, and workspace/editor waves remain deferred |
+| Mixed Blueprint Composition (current packs) | Bounded live cutover | Vitest capability registry + candidate resolver + graph + assembler + provider/shadow diagnostics + generic detail-page resource packaging | Uses existing typed executor families only; broader evaluation closure still deferred | Not applicable yet | Supported mixed-capability and primary-plus-gated setup prompts now use the composed planner path; single-pack setup/refinement still needs later rollout work |
 | Detail-page Composer Local Fixtures | Local deterministic acceptance | Vitest `blueprint-detail-page-fixtures` | Existing `detail-page.upsert` executor family; no provider/live matrix yet | Bun DB-backed `detail-page-composer-runtime` | House projects, products, services, and portfolio fixtures now validate route-linked detail-page documents, public runtime render, preview, draft hiding, legacy fallback, negative bindings, duplicate routes, and gated checkout/booking metadata without updating the TASK-190-08 live/provider matrix |
 | Booking Service Business | Gated | Vitest `needs_input` | Not applicable | Not applicable | Requires booking action adapters |
 | Product Checkout/Payment | Gated | Vitest `needs_input` | Not applicable | Not applicable | Requires commerce/payment adapters |
@@ -128,7 +128,7 @@ Rules:
 |---|---|---|
 | `docs-only` mutation prompts remain read-only | `tests/unit/assistant/assistantService.test.ts` | Bun |
 | Unknown action type is rejected as `assistant_action_plan_invalid` | `tests/integration/routes/assistant.test.ts` | Bun |
-| Client-supplied resource catalog context is rejected | `tests/integration/routes/assistant.test.ts` | Bun |
+| Client-supplied resource catalog context is rejected | `tests/unit/server/schemaValidator.test.ts` plus route coverage | Bun |
 | Per-action dry-run/execute permissions are requested | `tests/integration/routes/assistant.test.ts` | Bun |
 | Provider unsafe draft actions recover to `needs_input` | `tests/vitest/assistant/provider-planner-fixtures.test.ts` | Vitest |
 | Provider prompt package redacts secrets | `tests/vitest/assistant/provider-planning-context.test.ts` and `assistantRedaction.test.ts` | Vitest |
