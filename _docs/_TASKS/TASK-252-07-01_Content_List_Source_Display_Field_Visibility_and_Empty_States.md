@@ -31,10 +31,12 @@ and Reject decisions.
 ## Research Decisions
 
 - Keep: source/type selection, status scope, sort, limit, card/list/compact
-  display modes, density/columns, image/excerpt/meta/CTA/taxonomy field
-  visibility, and empty/error states from
+  display modes, density/columns, image/excerpt/meta/CTA field visibility, and
+  empty/error states from
   `_docs/_WIDGETS/tmp/content-list/MATRIX.md`; start from the current owner
   fields `source`, `filters`, `fields`, `emptyState`, `style`, and `resolved`.
+  Treat taxonomy/tags as current `fields.showMeta` output unless a future
+  `fields.showTaxonomy` owner is added with schema/defaults/render/editor/tests.
 - Adapt: featured-first editorial ordering and pagination/infinite load remain
   conditional; implement only when schema/defaults/normalizer/render/editor/
   tests move together.
