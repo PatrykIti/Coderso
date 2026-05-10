@@ -1,6 +1,6 @@
-# TASK-252-07-05: Product Compare Selected Products Attributes and Pin Behavior
+# TASK-252-07-05: Product Compare Selected Products Attributes and Highlight
 
-# FileName: TASK-252-07-05_Product_Compare_Selected_Products_Attributes_and_Pin_Behavior.md
+# FileName: TASK-252-07-05_Product_Compare_Selected_Products_Attributes_and_Highlight.md
 
 **Priority:** High
 **Category:** Widgets + Admin UI + Runtime + Security
@@ -36,7 +36,7 @@ and Reject decisions.
 ## Editor Mode Ownership
 
 - `Wizard`: first-run setup for the safest useful defaults for `product-compare`.
-- `Visual`: `Products`, `Attributes`, `Highlight`, `Sticky behavior`, `Empty state`.
+- `Visual`: `Products`, `Attributes`, `Highlight`, `Empty state`.
 - `Advanced`: `Commerce diagnostics`, `Attribute mapping`.
 
 ## Sub-Tasks
@@ -56,7 +56,7 @@ and Reject decisions.
 - `_docs/_WIDGETS/PRODUCT_COMPARE.md`
 - `_docs/_WIDGETS/tmp/product-compare/MATRIX.md` for evidence reference only; do not rewrite research
   unless implementation finds a concrete source mismatch.
-- `_docs/_TASKS/TASK-252-07-05_Product_Compare_Selected_Products_Attributes_and_Pin_Behavior.md` for status updates during execution.
+- `_docs/_TASKS/TASK-252-07-05_Product_Compare_Selected_Products_Attributes_and_Highlight.md` for status updates during execution.
 - `_docs/_TASKS/README.md` on status changes.
 
 ## Implementation Pseudocode
@@ -140,7 +140,7 @@ Implementation checklist:
 - `_docs/WIDGETS.md`
 - `_docs/_WIDGETS/PRODUCT_COMPARE.md`
 - `_docs/_WIDGETS/README.md` if this leaf creates a missing widget doc page.
-- `_docs/_TASKS/TASK-252-07-05_Product_Compare_Selected_Products_Attributes_and_Pin_Behavior.md` status notes during execution.
+- `_docs/_TASKS/TASK-252-07-05_Product_Compare_Selected_Products_Attributes_and_Highlight.md` status notes during execution.
 - `_docs/_TASKS/README.md` on status changes.
 - `_docs/_CHANGELOG/README.md` and a changelog entry only when the leaf is
   completed.

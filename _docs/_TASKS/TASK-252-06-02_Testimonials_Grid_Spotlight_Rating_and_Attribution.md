@@ -39,7 +39,7 @@ and Reject decisions.
 
 - `Wizard`: first-run setup for the safest useful defaults for `testimonials`.
 - `Visual`: `Layout`, `Quotes`, `Attribution`, `Rating`, `Avatar shape`.
-- `Advanced`: `Motion diagnostics`, `Legacy item mapping`.
+- `Advanced`: `Legacy item mapping`, `Attribution diagnostics`.
 
 ## Sub-Tasks
 

@@ -1,6 +1,6 @@
-# TASK-252-07-14: Navigation Source Dropdowns Mobile Menu and Sticky CTA
+# TASK-252-07-14: Navigation Source Links Mobile Menu and CTA
 
-# FileName: TASK-252-07-14_Navigation_Source_Dropdowns_Mobile_Menu_and_Sticky_CTA.md
+# FileName: TASK-252-07-14_Navigation_Source_Links_Mobile_Menu_and_CTA.md
 
 **Priority:** High
 **Category:** Widgets + Admin UI + Runtime + Security
@@ -44,7 +44,7 @@ and Reject decisions.
 ## Editor Mode Ownership
 
 - `Wizard`: first-run setup for the safest useful defaults for `navigation`.
-- `Visual`: `Source`, `Links and dropdowns`, `Mobile menu`, `Sticky behavior`, `CTA/logo`.
+- `Visual`: `Source`, `Links`, `Mobile menu`, `CTA/logo`.
 - `Advanced`: `Route diagnostics`, `Legacy link mapping`.
 
 ## Sub-Tasks
@@ -63,7 +63,7 @@ and Reject decisions.
 - `_docs/_WIDGETS/NAVIGATION.md`
 - `_docs/_WIDGETS/tmp/navigation/MATRIX.md` for evidence reference only; do not rewrite research
   unless implementation finds a concrete source mismatch.
-- `_docs/_TASKS/TASK-252-07-14_Navigation_Source_Dropdowns_Mobile_Menu_and_Sticky_CTA.md` for status updates during execution.
+- `_docs/_TASKS/TASK-252-07-14_Navigation_Source_Links_Mobile_Menu_and_CTA.md` for status updates during execution.
 - `_docs/_TASKS/README.md` on status changes.
 
 ## Implementation Pseudocode
@@ -152,7 +152,7 @@ Implementation checklist:
 - `_docs/WIDGETS.md`
 - `_docs/_WIDGETS/NAVIGATION.md`
 - `_docs/_WIDGETS/README.md` if this leaf creates a missing widget doc page.
-- `_docs/_TASKS/TASK-252-07-14_Navigation_Source_Dropdowns_Mobile_Menu_and_Sticky_CTA.md` status notes during execution.
+- `_docs/_TASKS/TASK-252-07-14_Navigation_Source_Links_Mobile_Menu_and_CTA.md` status notes during execution.
 - `_docs/_TASKS/README.md` on status changes.
 - `_docs/_CHANGELOG/README.md` and a changelog entry only when the leaf is
   completed.

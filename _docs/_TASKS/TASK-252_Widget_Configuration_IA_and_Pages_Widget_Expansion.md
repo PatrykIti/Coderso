@@ -167,18 +167,18 @@ Use these physical execution leaves instead of broad batch edits. Each leaf owns
 - `TASK-252-07-01` - `content-list`: Content List Source Display Field Visibility and Empty States.
 - `TASK-252-07-02` - `posts-feed`: Posts Feed Source Density Author Date and Category.
 - `TASK-252-07-03` - `entry-teaser`: Entry Teaser Selected Entry Fallback and Field Toggles.
-- `TASK-252-07-04` - `product-gallery`: Product Gallery Source Media Modes Thumbnails and Variants.
-- `TASK-252-07-05` - `product-compare`: Product Compare Selected Products Attributes and Pin Behavior.
+- `TASK-252-07-04` - `product-gallery`: Product Gallery Source Media Modes Thumbnails and Empty State.
+- `TASK-252-07-05` - `product-compare`: Product Compare Selected Products Attributes and Highlight.
 - `TASK-252-07-06` - `product-table`: Product Table Columns Sort Filter Pagination and Actions.
 - `TASK-252-07-07` - `listing-filters`: Listing Filters Facets Ranges Reset and Mobile Layout.
 - `TASK-252-07-08` - `search-box`: Search Box Copy Target Route Query Param and Display Mode.
 - `TASK-252-07-09` - `newsletter`: Newsletter Fields Consent Provider Reference and States.
 - `TASK-252-07-10` - `booking-calendar`: Booking Calendar Provider Event Modes and Availability.
 - `TASK-252-07-11` - `appointment-form`: Appointment Form Fields Validation Copy Provider and States.
-- `TASK-252-07-12` - `form-embed`: Form Embed Form Picker Display Mode and Raw Embed Rejection.
-- `TASK-252-07-13` - `contact`: Contact Form Info Map Socials and Backend Routing.
-- `TASK-252-07-14` - `navigation`: Navigation Source Dropdowns Mobile Menu and Sticky CTA.
-- `TASK-252-07-15` - `footer`: Footer Columns Brand Legal Social and Newsletter Reference.
+- `TASK-252-07-12` - `form-embed`: Form Embed Form Picker Fields and Raw Embed Rejection.
+- `TASK-252-07-13` - `contact`: Contact Form Info State Copy and Security Boundaries.
+- `TASK-252-07-14` - `navigation`: Navigation Source Links Mobile Menu and CTA.
+- `TASK-252-07-15` - `footer`: Footer Columns Brand Legal and Social Links.
 
 ## Research Sources To Evaluate
 
@@ -233,18 +233,18 @@ Use these as current research seeds, not as unlicensed source imports:
   - [ ] TASK-252-07-01: Content List Source Display Field Visibility and Empty States
   - [ ] TASK-252-07-02: Posts Feed Source Density Author Date and Category
   - [ ] TASK-252-07-03: Entry Teaser Selected Entry Fallback and Field Toggles
-  - [ ] TASK-252-07-04: Product Gallery Source Media Modes Thumbnails and Variants
-  - [ ] TASK-252-07-05: Product Compare Selected Products Attributes and Pin Behavior
+  - [ ] TASK-252-07-04: Product Gallery Source Media Modes Thumbnails and Empty State
+  - [ ] TASK-252-07-05: Product Compare Selected Products Attributes and Highlight
   - [ ] TASK-252-07-06: Product Table Columns Sort Filter Pagination and Actions
   - [ ] TASK-252-07-07: Listing Filters Facets Ranges Reset and Mobile Layout
   - [ ] TASK-252-07-08: Search Box Copy Target Route Query Param and Display Mode
   - [ ] TASK-252-07-09: Newsletter Fields Consent Provider Reference and States
   - [ ] TASK-252-07-10: Booking Calendar Provider Event Modes and Availability
   - [ ] TASK-252-07-11: Appointment Form Fields Validation Copy Provider and States
-  - [ ] TASK-252-07-12: Form Embed Form Picker Display Mode and Raw Embed Rejection
-  - [ ] TASK-252-07-13: Contact Form Info Map Socials and Backend Routing
-  - [ ] TASK-252-07-14: Navigation Source Dropdowns Mobile Menu and Sticky CTA
-  - [ ] TASK-252-07-15: Footer Columns Brand Legal Social and Newsletter Reference
+  - [ ] TASK-252-07-12: Form Embed Form Picker Fields and Raw Embed Rejection
+  - [ ] TASK-252-07-13: Contact Form Info State Copy and Security Boundaries
+  - [ ] TASK-252-07-14: Navigation Source Links Mobile Menu and CTA
+  - [ ] TASK-252-07-15: Footer Columns Brand Legal and Social Links
 - [ ] TASK-252-08: QA, Docs, Changelog, and Board Closure
 
 ## Implementation Order

@@ -1,6 +1,6 @@
-# TASK-252-07-13: Contact Form Info Map Socials and Backend Routing
+# TASK-252-07-13: Contact Form Info State Copy and Security Boundaries
 
-# FileName: TASK-252-07-13_Contact_Form_Info_Map_Socials_and_Backend_Routing.md
+# FileName: TASK-252-07-13_Contact_Form_Info_State_Copy_and_Security_Boundaries.md
 
 **Priority:** High
 **Category:** Widgets + Admin UI + Runtime + Security
@@ -41,8 +41,8 @@ and Reject decisions.
 ## Editor Mode Ownership
 
 - `Wizard`: first-run setup for the safest useful defaults for `contact`.
-- `Visual`: `Form fields`, `Contact info`, `Map/social display`, `State copy`, `Layout`.
-- `Advanced`: `Public-write diagnostics`, `Routing mapping`.
+- `Visual`: `Form fields`, `Contact info`, `State copy`, `Layout`.
+- `Advanced`: `Public-write diagnostics`, `Backend boundary mapping`.
 
 ## Sub-Tasks
 
@@ -60,7 +60,7 @@ and Reject decisions.
 - `_docs/_WIDGETS/CONTACT.md`
 - `_docs/_WIDGETS/tmp/contact/MATRIX.md` for evidence reference only; do not rewrite research
   unless implementation finds a concrete source mismatch.
-- `_docs/_TASKS/TASK-252-07-13_Contact_Form_Info_Map_Socials_and_Backend_Routing.md` for status updates during execution.
+- `_docs/_TASKS/TASK-252-07-13_Contact_Form_Info_State_Copy_and_Security_Boundaries.md` for status updates during execution.
 - `_docs/_TASKS/README.md` on status changes.
 
 ## Implementation Pseudocode
@@ -151,7 +151,7 @@ Implementation checklist:
 - `_docs/WIDGETS.md`
 - `_docs/_WIDGETS/CONTACT.md`
 - `_docs/_WIDGETS/README.md` if this leaf creates a missing widget doc page.
-- `_docs/_TASKS/TASK-252-07-13_Contact_Form_Info_Map_Socials_and_Backend_Routing.md` status notes during execution.
+- `_docs/_TASKS/TASK-252-07-13_Contact_Form_Info_State_Copy_and_Security_Boundaries.md` status notes during execution.
 - `_docs/_TASKS/README.md` on status changes.
 - `_docs/_CHANGELOG/README.md` and a changelog entry only when the leaf is
   completed.

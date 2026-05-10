@@ -1,6 +1,6 @@
-# TASK-252-07-15: Footer Columns Brand Legal Social and Newsletter Reference
+# TASK-252-07-15: Footer Columns Brand Legal and Social Links
 
-# FileName: TASK-252-07-15_Footer_Columns_Brand_Legal_Social_and_Newsletter_Reference.md
+# FileName: TASK-252-07-15_Footer_Columns_Brand_Legal_and_Social_Links.md
 
 **Priority:** High
 **Category:** Widgets + Admin UI + Runtime + Security
@@ -12,7 +12,8 @@
 
 ## Overview
 
-Refine footer columns, brand, legal/social links, and optional newsletter reference while rejecting raw provider signup code.
+Refine footer columns, brand, legal/social links, and safe link sources while
+keeping newsletter references Adapt-only and rejecting raw provider signup code.
 
 This is an execution leaf under `TASK-252-07`. It must not re-open the
 research phase; use `_docs/_WIDGETS/tmp/footer/MATRIX.md` and the widget README under
@@ -40,7 +41,7 @@ and Reject decisions.
 ## Editor Mode Ownership
 
 - `Wizard`: first-run setup for the safest useful defaults for `footer`.
-- `Visual`: `Columns`, `Brand`, `Legal/social`, `Newsletter reference`, `Surface`.
+- `Visual`: `Columns`, `Brand`, `Legal/social`, `Surface`.
 - `Advanced`: `Link diagnostics`, `Legacy column mapping`.
 
 ## Sub-Tasks
@@ -59,7 +60,7 @@ and Reject decisions.
 - `_docs/_WIDGETS/FOOTER.md`
 - `_docs/_WIDGETS/tmp/footer/MATRIX.md` for evidence reference only; do not rewrite research
   unless implementation finds a concrete source mismatch.
-- `_docs/_TASKS/TASK-252-07-15_Footer_Columns_Brand_Legal_Social_and_Newsletter_Reference.md` for status updates during execution.
+- `_docs/_TASKS/TASK-252-07-15_Footer_Columns_Brand_Legal_and_Social_Links.md` for status updates during execution.
 - `_docs/_TASKS/README.md` on status changes.
 
 ## Implementation Pseudocode
@@ -145,7 +146,7 @@ Implementation checklist:
 - `_docs/WIDGETS.md`
 - `_docs/_WIDGETS/FOOTER.md`
 - `_docs/_WIDGETS/README.md` if this leaf creates a missing widget doc page.
-- `_docs/_TASKS/TASK-252-07-15_Footer_Columns_Brand_Legal_Social_and_Newsletter_Reference.md` status notes during execution.
+- `_docs/_TASKS/TASK-252-07-15_Footer_Columns_Brand_Legal_and_Social_Links.md` status notes during execution.
 - `_docs/_TASKS/README.md` on status changes.
 - `_docs/_CHANGELOG/README.md` and a changelog entry only when the leaf is
   completed.

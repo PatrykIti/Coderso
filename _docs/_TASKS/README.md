@@ -58,7 +58,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-252-05-09 | Accordion Disclosure Default Open and Accessibility | High | Medium | Accordion open behavior, default items, panel style, and a11y |
 | TASK-252-05-10 | Toggle Block State Switch and Accessible Content Swap | High | Medium | Toggle states, labels, default state, and accessible content swap |
 | TASK-252-06-01 | Feature Grid Icon Cards Rows and Links | High | Medium | Feature icon cards, rows, optional links, and docs |
-| TASK-252-06-02 | Testimonials Grid Spotlight Rating and Attribution | High | Medium | Testimonials layout, rating, avatar, company, and opt-in motion |
+| TASK-252-06-02 | Testimonials Grid Spotlight Rating and Attribution | High | Medium | Testimonials layout, rating, avatar shape, author attribution, and spotlight |
 | TASK-252-06-03 | Pricing Plans Tiers Toggle and Comparison Mode | High | Large | Pricing tiers, billing toggle, highlights, and comparison mode |
 | TASK-252-06-04 | FAQ Accordion Support CTA Icon Placement and Defaults | High | Medium | FAQ items, support CTA, icon placement, disclosure defaults, and docs |
 | TASK-252-06-05 | CTA Banner Compact Split Badge and Icon | High | Medium | CTA modes, badge/icon, contrast tone, and action controls |
@@ -71,18 +71,18 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-252-07-01 | Content List Source Display Field Visibility and Empty States | High | Large | Content source, filters, display, field visibility, and states |
 | TASK-252-07-02 | Posts Feed Source Density Author Date and Category | High | Medium | Posts source, density, metadata visibility, and CTA copy |
 | TASK-252-07-03 | Entry Teaser Selected Entry Fallback and Field Toggles | High | Medium | Single entry source, fallback, display mode, and field toggles |
-| TASK-252-07-04 | Product Gallery Source Media Modes Thumbnails and Variants | High | Large | Product gallery source, media modes, thumbnails, and variants |
-| TASK-252-07-05 | Product Compare Selected Products Attributes and Pin Behavior | High | Large | Product compare products, attributes, highlight, and pin behavior |
+| TASK-252-07-04 | Product Gallery Source Media Modes Thumbnails and Empty State | High | Large | Product gallery source, media modes, thumbnails, and empty state |
+| TASK-252-07-05 | Product Compare Selected Products Attributes and Highlight | High | Large | Product compare products, attributes, highlight, and empty state |
 | TASK-252-07-06 | Product Table Columns Sort Filter Pagination and Actions | High | Large | Product table columns, sort/filter, pagination, and actions |
 | TASK-252-07-07 | Listing Filters Facets Ranges Reset and Mobile Layout | High | Large | Listing facets, ranges, apply/reset, and mobile layout |
 | TASK-252-07-08 | Search Box Copy Target Route Query Param and Display Mode | High | Medium | Search copy, target route, query param, and display mode |
 | TASK-252-07-09 | Newsletter Fields Consent Provider Reference and States | High | Large | Newsletter fields, consent, provider reference, and states |
 | TASK-252-07-10 | Booking Calendar Provider Event Modes and Availability | High | Large | Booking provider/event reference, modes, and availability |
 | TASK-252-07-11 | Appointment Form Fields Validation Copy Provider and States | High | Large | Appointment fields, validation copy, provider mode, and states |
-| TASK-252-07-12 | Form Embed Form Picker Display Mode and Raw Embed Rejection | High | Large | Form picker, display modes, provider reference, and raw embed rejection |
-| TASK-252-07-13 | Contact Form Info Map Socials and Backend Routing | High | Large | Contact form, info/map/social display, routing, and states |
-| TASK-252-07-14 | Navigation Source Dropdowns Mobile Menu and Sticky CTA | High | Large | Navigation source, dropdowns, mobile menu, sticky CTA, and links |
-| TASK-252-07-15 | Footer Columns Brand Legal Social and Newsletter Reference | High | Medium | Footer columns, brand, legal/social, newsletter reference, and links |
+| TASK-252-07-12 | Form Embed Form Picker Fields and Raw Embed Rejection | High | Large | Form picker, fields, state copy, and raw embed rejection |
+| TASK-252-07-13 | Contact Form Info State Copy and Security Boundaries | High | Large | Contact form, contact info, state copy, and security boundaries |
+| TASK-252-07-14 | Navigation Source Links Mobile Menu and CTA | High | Large | Navigation source, safe links, mobile menu, CTA, and logo grouping |
+| TASK-252-07-15 | Footer Columns Brand Legal and Social Links | High | Medium | Footer columns, brand, legal/social links, and safe link sources |
 | TASK-190-05-03-06 | Detail Page Composer Fixtures and Runtime Acceptance | High | Medium | Technical leaf: fixture matrix and Bun public runtime acceptance coverage |
 | TASK-190-05-03-07-03 | Detail Page Admin Client, Cache, and Delete Conflict Parity | High | Medium | Technical leaf: detail-page admin client/cache family plus linked delete and content-type conflict parity |
 | TASK-190-05-03-08 | Detail Page Generic Assistant Resource Integration | High | Medium | Technical leaf: later generic policy/target-resolver/provider support for detail-page after base action/admin/runtime flow exists |

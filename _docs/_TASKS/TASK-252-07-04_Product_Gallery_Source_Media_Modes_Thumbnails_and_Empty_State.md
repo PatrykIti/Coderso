@@ -1,6 +1,6 @@
-# TASK-252-07-04: Product Gallery Source Media Modes Thumbnails and Variants
+# TASK-252-07-04: Product Gallery Source Media Modes Thumbnails and Empty State
 
-# FileName: TASK-252-07-04_Product_Gallery_Source_Media_Modes_Thumbnails_and_Variants.md
+# FileName: TASK-252-07-04_Product_Gallery_Source_Media_Modes_Thumbnails_and_Empty_State.md
 
 **Priority:** High
 **Category:** Widgets + Admin UI + Runtime + Security
@@ -40,8 +40,8 @@ and Reject decisions.
 ## Editor Mode Ownership
 
 - `Wizard`: first-run setup for the safest useful defaults for `product-gallery`.
-- `Visual`: `Source`, `Media mode`, `Thumbnails`, `Variant media`, `Empty state`.
-- `Advanced`: `Commerce diagnostics`, `Provider reference mapping`.
+- `Visual`: `Source`, `Media mode`, `Thumbnails`, `Aspect ratio`, `Empty state`.
+- `Advanced`: `Commerce diagnostics`, `Backend resolver mapping`.
 
 ## Sub-Tasks
 
@@ -60,7 +60,7 @@ and Reject decisions.
 - `_docs/_WIDGETS/PRODUCT_GALLERY.md`
 - `_docs/_WIDGETS/tmp/product-gallery/MATRIX.md` for evidence reference only; do not rewrite research
   unless implementation finds a concrete source mismatch.
-- `_docs/_TASKS/TASK-252-07-04_Product_Gallery_Source_Media_Modes_Thumbnails_and_Variants.md` for status updates during execution.
+- `_docs/_TASKS/TASK-252-07-04_Product_Gallery_Source_Media_Modes_Thumbnails_and_Empty_State.md` for status updates during execution.
 - `_docs/_TASKS/README.md` on status changes.
 
 ## Implementation Pseudocode
@@ -147,7 +147,7 @@ Implementation checklist:
 - `_docs/WIDGETS.md`
 - `_docs/_WIDGETS/PRODUCT_GALLERY.md`
 - `_docs/_WIDGETS/README.md` if this leaf creates a missing widget doc page.
-- `_docs/_TASKS/TASK-252-07-04_Product_Gallery_Source_Media_Modes_Thumbnails_and_Variants.md` status notes during execution.
+- `_docs/_TASKS/TASK-252-07-04_Product_Gallery_Source_Media_Modes_Thumbnails_and_Empty_State.md` status notes during execution.
 - `_docs/_TASKS/README.md` on status changes.
 - `_docs/_CHANGELOG/README.md` and a changelog entry only when the leaf is
   completed.
