@@ -66,7 +66,7 @@ and Reject decisions.
 type TestimonialsMode = "grid" | "spotlight";
 type TestimonialsAvatarShape = "circle" | "rounded" | "square";
 type TestimonialsRatingVisibility = "show" | "hide";
-type TestimonialsRatingScale = 5;
+type TestimonialsRatingScale = 5 | 10;
 
 function normalizeTestimonialsData(data: TestimonialsData): TestimonialsData {
   const testimonials = normalizeTestimonialItems(data.testimonials);
@@ -108,6 +108,9 @@ function TestimonialsVisualEditor(props: WidgetEditorProps<TestimonialsData>) {
       <WidgetControlRow id="testimonials.style.ratingVisibility" label="Rating visibility" data-widget-control="testimonials.style.ratingVisibility">
         <SegmentedControl value={props.value.style?.ratingVisibility ?? "show"} onChange={(ratingVisibility) => props.onChange(updateTestimonialsStyle(props.value, { ratingVisibility }))} />
       </WidgetControlRow>
+      <WidgetControlRow id="testimonials.style.ratingScale" label="Rating scale" data-widget-control="testimonials.style.ratingScale">
+        <SegmentedControl value={props.value.style?.ratingScale ?? 5} onChange={(ratingScale) => props.onChange(updateTestimonialsStyle(props.value, { ratingScale }))} />
+      </WidgetControlRow>
       {props.value.testimonials.map((item, index) => (
         <Fragment key={item.id ?? index}>
           <WidgetControlRow id={`testimonials.testimonials.${index}.quote`} label="Quote" data-widget-control={`testimonials.testimonials.${index}.quote`}>
@@ -136,11 +139,10 @@ Implementation checklist:
   together, with legacy variant values mapped non-destructively during
   normalization.
 - Preserve current item-level rating data and add bounded rating normalization.
-  Add `style.ratingVisibility: "show" | "hide"` and fixed
-  `style.ratingScale: 5` ownership in schema/defaults/normalizer/render/editor/
-  tests. If a later slice supports non-5-point scales, it must extend this
-  field with migration and rendering tests rather than changing item ratings
-  ad hoc.
+  Add `style.ratingVisibility: "show" | "hide"` and bounded
+  `style.ratingScale: 5 | 10` ownership in schema/defaults/normalizer/render/
+  editor/tests. Normalize item ratings against the selected scale and clamp
+  legacy ratings non-destructively.
 - Add constrained `style.avatarShape` ownership in schema/defaults/normalizer/
   render/editor/tests; do not infer avatar shape from arbitrary classes.
 - Add stable `data-widget-control` metadata for testimonial add/remove/reorder

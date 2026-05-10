@@ -163,9 +163,10 @@ Apply the same metadata contract to non-text controls and item actions:
 <ColorField data-widget-control="cta-banner.style.primaryButtonBg" value={style.primaryButtonBg} onChange={handleStyleChange} />
 ```
 
-Each leaf must list its repeated item add/remove/reorder actions, variant/mode
-controls, color fields, media fields, and CTA/link fields that receive stable
-`data-widget-control` metadata before implementation starts.
+When a leaf touches repeated items, variant/mode controls, color fields, media
+fields, CTA/link fields, or add/remove/reorder actions, it must list the stable
+`data-widget-control` metadata for the touched controls before implementation
+starts.
 
 ## Security Contract
 

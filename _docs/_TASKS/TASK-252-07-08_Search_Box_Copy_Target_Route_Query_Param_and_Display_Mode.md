@@ -28,7 +28,7 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/search-box/MATRIX.md`; for this leaf, start from the current owner fields `mode`, `listingQueryId`, `endpoint`, `sources`, `autoApply`, `style`, `resolved` and add only the schema fields that the matrix explicitly keeps.
+- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/search-box/MATRIX.md`; for this leaf, start from the current owner fields `mode`, `listingQueryId`, `title`, `description`, `placeholder`, `submitLabel`, `endpoint`, `sources`, `autoApply`, `style`, `resolved` and add only the schema fields that the matrix explicitly keeps.
 - Keep: accessible copy controls, TASK-252-owned compact/full display modes,
   and result route/query binding from `_docs/_WIDGETS/tmp/search-box/MATRIX.md`;
   add schema-owned target route/query-param fields in
