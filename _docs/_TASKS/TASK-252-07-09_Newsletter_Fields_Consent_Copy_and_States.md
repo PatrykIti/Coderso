@@ -68,6 +68,12 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
+type NewsletterStateCopy = {
+  loadingMessage: string;
+  successMessage: string;
+  errorMessage: string;
+};
+
 function normalizeNewsletterData(data: NewsletterData): NewsletterData {
   return {
     title: normalizeNewsletterTitle(data.title),
@@ -75,6 +81,10 @@ function normalizeNewsletterData(data: NewsletterData): NewsletterData {
     placeholder: normalizeNewsletterPlaceholder(data.placeholder),
     consent: normalizeNewsletterConsent(data.consent),
     submit: normalizeNewsletterSubmit(data.submit),
+    stateCopy: normalizeNewsletterStateCopy({
+      ...data.stateCopy,
+      successMessage: data.submit?.successMessage,
+    }),
     integration: preserveExistingNewsletterIntegration(data.integration),
     style: normalizeNewsletterStyle(data.style),
   };
@@ -87,6 +97,12 @@ function NewsletterVisualEditor(props: WidgetEditorProps<NewsletterData>) {
       <WidgetControlRow id="newsletter.placeholder" label="Email placeholder" data-widget-control="newsletter.placeholder">
         <Input value={value.placeholder ?? ""} onChange={handleControlChange} />
       </WidgetControlRow>
+      <WidgetControlRow id="newsletter.stateCopy.errorMessage" label="Error message" data-widget-control="newsletter.stateCopy.errorMessage">
+        <Input value={value.stateCopy?.errorMessage ?? ""} onChange={handleControlChange} />
+      </WidgetControlRow>
+      <WidgetControlRow id="newsletter.stateCopy.loadingMessage" label="Loading message" data-widget-control="newsletter.stateCopy.loadingMessage">
+        <Input value={value.stateCopy?.loadingMessage ?? ""} onChange={handleControlChange} />
+      </WidgetControlRow>
     </WidgetEditorSection>
   );
 }
@@ -97,6 +113,9 @@ Implementation checklist:
 - Read `_docs/_WIDGETS/tmp/newsletter/MATRIX.md` before changing the schema or editor.
 - Extend or reorganize `core/widgets/core/newsletter.tsx` schema/defaults/normalizer/rendering
   only for fields approved by the research decisions above.
+- Add explicit schema/default/render/editor ownership for loading, success, and
+  provider-error copy; keep provider secrets/config backend-only and map known
+  runtime errors to `stateCopy.errorMessage`.
 - Refactor `core/admin/ui/widgets/editors/NewsletterEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.

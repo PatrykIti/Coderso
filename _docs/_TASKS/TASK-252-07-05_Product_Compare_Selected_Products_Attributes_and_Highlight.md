@@ -46,6 +46,7 @@ and Reject decisions.
 ## Files to Change
 
 - `core/widgets/core/productCompare.tsx`
+- `core/widgets/core/commerceWidgetShared.ts`
 - `core/admin/ui/widgets/editors/ProductCompareEditors.tsx`
 - Bun-owned route/security suites when public endpoint behavior changes.
 - `tests/unit/widgets/validator.test.ts` when schema validation changes.
@@ -69,13 +70,15 @@ type ProductCompareAttributeRow = {
 };
 
 function normalizeProductCompareData(data: ProductCompareData): ProductCompareData {
+  const selectedProductIds = normalizeProductCompareSelectedProductIds(data.selectedProductIds);
+
   return {
     source: normalizeProductCompareSource(data.source),
-    selectedProductIds: normalizeProductCompareSelectedProductIds(data.selectedProductIds),
+    selectedProductIds,
     attributeRows: normalizeProductCompareAttributeRows(data.attributeRows),
     highlightProductId: normalizeProductCompareHighlightProductId(
       data.highlightProductId,
-      data.selectedProductIds
+      selectedProductIds
     ),
     fields: normalizeProductCompareFields(data.fields),
     labels: normalizeProductCompareLabels(data.labels),
@@ -83,6 +86,18 @@ function normalizeProductCompareData(data: ProductCompareData): ProductCompareDa
     style: normalizeProductCompareStyle(data.style),
     resolved: normalizeProductCompareResolved(data.resolved),
   };
+}
+
+function buildProductCompareQueryInput(data: ProductCompareData): CommerceWidgetQueryInput {
+  const selectedProductIds = normalizeProductCompareSelectedProductIds(data.selectedProductIds);
+  return buildCommerceWidgetQueryInput(
+    {
+      ...data.source,
+      productIds: selectedProductIds,
+      limit: selectedProductIds.length || data.source?.limit,
+    },
+    { manualOrderIds: selectedProductIds }
+  );
 }
 
 function ProductCompareVisualEditor(props: WidgetEditorProps<ProductCompareData>) {
@@ -112,6 +127,9 @@ Implementation checklist:
   normalized `attributeRows` with known keys/labels, and `highlightProductId`
   with fallback to the first selected product; keep source filters as legacy or
   backend query support, not a replacement for manual selected-product scope.
+- Extend the shared commerce query/source owner so selected product IDs resolve
+  through backend-owned product lookup and preserve manual order; cover that in
+  `tests/unit/commerce/commerceWidgetRuntime.test.ts`.
 - Refactor `core/admin/ui/widgets/editors/ProductCompareEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.

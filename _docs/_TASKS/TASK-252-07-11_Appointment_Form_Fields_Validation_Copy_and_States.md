@@ -74,12 +74,41 @@ and Reject decisions.
 ```tsx
 const BOOKING_RESERVATIONS_ENDPOINT = "/api/booking/reservations";
 
+type AppointmentFormStateCopy = {
+  loadingMessage: string;
+  successMessage: string;
+  errorMessage: string;
+  noSelectionMessage: string;
+};
+
+type AppointmentFormValidationCopy = {
+  customerNameRequired: string;
+  customerEmailRequired: string;
+  slotRequired: string;
+};
+
 function normalizeAppointmentFormData(data: AppointmentFormData): AppointmentFormData {
   return {
     flowId: normalizeAppointmentFormFlowId(data.flowId),
     title: normalizeAppointmentFormTitle(data.title),
     description: normalizeAppointmentFormDescription(data.description),
+    slotSummaryLabel: normalizeAppointmentFormSlotSummaryLabel(data.slotSummaryLabel),
+    slotSummaryEmptyMessage: normalizeAppointmentFormSlotSummaryEmptyMessage(data.slotSummaryEmptyMessage),
+    customerNameLabel: normalizeAppointmentFormCustomerNameLabel(data.customerNameLabel),
+    customerEmailLabel: normalizeAppointmentFormCustomerEmailLabel(data.customerEmailLabel),
+    customerPhoneLabel: normalizeAppointmentFormCustomerPhoneLabel(data.customerPhoneLabel),
+    notesLabel: normalizeAppointmentFormNotesLabel(data.notesLabel),
+    customerNamePlaceholder: normalizeAppointmentFormCustomerNamePlaceholder(data.customerNamePlaceholder),
+    customerEmailPlaceholder: normalizeAppointmentFormCustomerEmailPlaceholder(data.customerEmailPlaceholder),
+    customerPhonePlaceholder: normalizeAppointmentFormCustomerPhonePlaceholder(data.customerPhonePlaceholder),
+    notesPlaceholder: normalizeAppointmentFormNotesPlaceholder(data.notesPlaceholder),
     submitLabel: normalizeAppointmentFormSubmitLabel(data.submitLabel),
+    stateCopy: normalizeAppointmentFormStateCopy({
+      ...data.stateCopy,
+      successMessage: data.successMessage,
+      noSelectionMessage: data.noSelectionMessage,
+    }),
+    validationCopy: normalizeAppointmentFormValidationCopy(data.validationCopy),
     showPhone: normalizeAppointmentFormShowPhone(data.showPhone),
     showNotes: normalizeAppointmentFormShowNotes(data.showNotes),
     style: normalizeAppointmentFormStyle(data.style),
@@ -98,6 +127,12 @@ function AppointmentFormVisualEditor(props: WidgetEditorProps<AppointmentFormDat
       <WidgetControlRow id="appointment-form.customerEmailLabel" label="Email label" data-widget-control="appointment-form.customerEmailLabel">
         <Input value={value.customerEmailLabel ?? ""} onChange={handleControlChange} />
       </WidgetControlRow>
+      <WidgetControlRow id="appointment-form.stateCopy.loadingMessage" label="Loading message" data-widget-control="appointment-form.stateCopy.loadingMessage">
+        <Input value={value.stateCopy?.loadingMessage ?? ""} onChange={handleControlChange} />
+      </WidgetControlRow>
+      <WidgetControlRow id="appointment-form.validationCopy.customerEmailRequired" label="Email required copy" data-widget-control="appointment-form.validationCopy.customerEmailRequired">
+        <Input value={value.validationCopy?.customerEmailRequired ?? ""} onChange={handleControlChange} />
+      </WidgetControlRow>
     </WidgetEditorSection>
   );
 }
@@ -108,6 +143,10 @@ Implementation checklist:
 - Read `_docs/_WIDGETS/tmp/appointment-form/MATRIX.md` before changing the schema or editor.
 - Extend or reorganize `core/widgets/core/appointmentForm.tsx` schema/defaults/normalizer/rendering
   only for fields approved by the research decisions above.
+- Add schema/default/render/editor ownership for slot summary labels, customer
+  labels/placeholders, validation copy, and loading/success/error/no-selection
+  state copy; map known reservation errors to these copy fields in runtime
+  tests without exposing nonce/CAPTCHA settings as widget data.
 - Refactor `core/admin/ui/widgets/editors/AppointmentFormEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.

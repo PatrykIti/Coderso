@@ -53,6 +53,7 @@ and Reject decisions.
 
 - `core/widgets/core/pricingPlans.tsx`
 - `core/admin/ui/widgets/editors/PricingPlansEditors.tsx`
+- `tests/unit/widgets/validator.test.ts` when schema validation changes.
 - `tests/vitest/widgets/renderer.test.tsx` if shared renderer output changes.
 - `tests/vitest/widgets/styleNoneTokens.test.tsx` if token/clear adjacency changes.
 - `tests/vitest/widgets/pricingPlans.test.tsx`
@@ -79,6 +80,19 @@ type PricingPlanCyclePrices = {
   annual?: string;
 };
 
+type PricingPlanItem = {
+  id?: string;
+  name?: string;
+  price?: string;
+  period?: string;
+  prices?: PricingPlanCyclePrices;
+  customPriceLabel?: string;
+  features?: string[];
+  ctaLabel?: string;
+  ctaHref?: string;
+  highlighted?: boolean;
+};
+
 function normalizePricingPlansData(data: PricingPlansData): PricingPlansData {
   return {
     header: normalizePricingPlansHeader(data.header),
@@ -99,7 +113,7 @@ function normalizePricingPlanItem(item: PricingPlanItem, index: number): Pricing
     period: normalizePricingPlanPeriod(item.period),
     prices: normalizePricingPlanCyclePrices(item.prices, {
       monthly: item.price,
-      annual: item.priceAnnual,
+      annual: item.prices?.annual,
     }),
     customPriceLabel: normalizePricingPlanCustomPriceLabel(item.customPriceLabel),
     highlighted: normalizeSingleHighlightedPlan(item.highlighted, index),
@@ -141,6 +155,9 @@ Implementation checklist:
 - Add explicit schema/default ownership for `billingToggle` labels, per-cycle
   plan prices, `customPriceLabel`, and the single highlighted-plan fallback;
   do not leave billing as editor-only state.
+- Extend `pricingPlansSchema` and `pricingPlansDefaults` for `billingToggle`,
+  `plans[].prices`, and `plans[].customPriceLabel`; add validator coverage for
+  reject-unknown fields and the single highlighted-plan normalization path.
 - Refactor `core/admin/ui/widgets/editors/PricingPlansEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.
@@ -175,6 +192,8 @@ Implementation checklist:
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
+- `bun test tests/unit/widgets/validator.test.ts` when adding `billingToggle`,
+  per-cycle price, custom price, or single-highlight schema fields.
 - `bun run test:vitest -- tests/vitest/widgets/pricingPlans.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/pricing-plans-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

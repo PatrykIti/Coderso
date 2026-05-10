@@ -62,6 +62,11 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
+type FormEmbedStateCopy = {
+  successMessage: string;
+  errorMessage: string;
+};
+
 function normalizeFormEmbedData(data: FormEmbedData): FormEmbedData {
   return {
     formId: normalizeFormEmbedFormId(data.formId),
@@ -69,6 +74,11 @@ function normalizeFormEmbedData(data: FormEmbedData): FormEmbedData {
     description: normalizeFormEmbedDescription(data.description),
     submitLabel: normalizeFormEmbedSubmitLabel(data.submitLabel),
     successMessage: normalizeFormEmbedSuccessMessage(data.successMessage),
+    stateCopy: normalizeFormEmbedStateCopy({
+      ...data.stateCopy,
+      successMessage: data.successMessage,
+      resolvedError: data.resolved?.error,
+    }),
     layout: normalizeFormEmbedLayout(data.layout),
     style: normalizeFormEmbedStyle(data.style),
     fields: normalizeFormEmbedFields(data.fields),
@@ -83,6 +93,9 @@ function FormEmbedVisualEditor(props: WidgetEditorProps<FormEmbedData>) {
       <WidgetControlRow id="form-embed.formId" label="Form" data-widget-control="form-embed.formId">
         <FormPicker value={value.formId ?? ""} onChange={handleControlChange} />
       </WidgetControlRow>
+      <WidgetControlRow id="form-embed.stateCopy.errorMessage" label="Error message" data-widget-control="form-embed.stateCopy.errorMessage">
+        <Input value={value.stateCopy?.errorMessage ?? ""} onChange={handleControlChange} />
+      </WidgetControlRow>
     </WidgetEditorSection>
   );
 }
@@ -93,6 +106,9 @@ Implementation checklist:
 - Read `_docs/_WIDGETS/tmp/form-embed/MATRIX.md` before changing the schema or editor.
 - Extend or reorganize `core/widgets/core/formEmbed.tsx` schema/defaults/normalizer/rendering
   only for fields approved by the research decisions above.
+- Add explicit schema/default/render/editor ownership for success and known
+  error copy; map `resolved.error` and submission failures to the normalized
+  error copy without allowing raw provider scripts or secret fields.
 - Refactor `core/admin/ui/widgets/editors/FormEmbedEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.

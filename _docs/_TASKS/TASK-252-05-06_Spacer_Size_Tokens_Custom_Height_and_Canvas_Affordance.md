@@ -62,11 +62,35 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
+const SPACER_CUSTOM_HEIGHT_MIN_PX = 0;
+const SPACER_CUSTOM_HEIGHT_MAX_PX = 320;
+
+type SpacerHeight = {
+  desktop?: string;
+  tablet?: string;
+  mobile?: string;
+};
+
 function normalizeSpacerData(data: SpacerData): SpacerData {
   return {
     height: normalizeSpacerHeight(data.height),
     showGuideInEditor: normalizeSpacerShowGuideInEditor(data.showGuideInEditor),
   };
+}
+
+function normalizeSpacerHeight(value: SpacerHeight | undefined): Required<SpacerHeight> {
+  return {
+    desktop: normalizeSpacerTokenOrBoundedPx(value?.desktop, "16"),
+    tablet: normalizeSpacerTokenOrBoundedPx(value?.tablet, "12"),
+    mobile: normalizeSpacerTokenOrBoundedPx(value?.mobile, "8"),
+  };
+}
+
+function normalizeSpacerTokenOrBoundedPx(value: string | undefined, fallback: string): string {
+  if (isSpacerHeightToken(value)) return value;
+  const px = parseOptionalPx(value);
+  if (px === null) return fallback;
+  return `${clamp(px, SPACER_CUSTOM_HEIGHT_MIN_PX, SPACER_CUSTOM_HEIGHT_MAX_PX)}px`;
 }
 
 function SpacerVisualEditor(props: WidgetEditorProps<SpacerData>) {
@@ -86,6 +110,8 @@ Implementation checklist:
 - Read `_docs/_WIDGETS/tmp/spacer/MATRIX.md` before changing the schema or editor.
 - Extend or reorganize `core/widgets/core/spacer.tsx` schema/defaults/normalizer/rendering
   only for fields approved by the research decisions above.
+- Keep custom height bounded in the shared normalizer for desktop/tablet/mobile
+  values; do not let raw arbitrary CSS lengths survive validation.
 - Refactor `core/admin/ui/widgets/editors/SpacerEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.

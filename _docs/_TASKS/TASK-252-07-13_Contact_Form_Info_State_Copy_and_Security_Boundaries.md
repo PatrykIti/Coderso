@@ -68,10 +68,20 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
+type ContactStateCopy = {
+  loadingMessage: string;
+  successMessage: string;
+  errorMessage: string;
+};
+
 function normalizeContactData(data: ContactData): ContactData {
   return {
-    form: normalizeContactForm(data.form),
-    stateCopy: normalizeContactStateCopy(data.stateCopy ?? data.form),
+    form: normalizeContactForm({
+      fields: data.form?.fields,
+      required: data.form?.required,
+      submitLabel: data.form?.submitLabel,
+    }),
+    stateCopy: normalizeContactStateCopy(data.stateCopy),
     contact: normalizeContactContact(data.contact),
     map: preserveExistingContactMap(data.map),
     style: normalizeContactStyle(data.style),
@@ -85,8 +95,11 @@ function ContactVisualEditor(props: WidgetEditorProps<ContactData>) {
       <WidgetControlRow id="contact.form.submitLabel" label="Submit label" data-widget-control="contact.form.submitLabel">
         <Input value={value.form?.submitLabel ?? ""} onChange={handleControlChange} />
       </WidgetControlRow>
-      <WidgetControlRow id="contact.form.showPhone" label="Show phone field" data-widget-control="contact.form.showPhone">
-        <Switch checked={value.form?.showPhone ?? true} onCheckedChange={(showPhone) => props.onChange(updateContactForm(value, { showPhone }))} />
+      <WidgetControlRow id="contact.form.fields" label="Visible fields" data-widget-control="contact.form.fields">
+        <FieldMultiSelect value={value.form?.fields ?? contactFieldOptions} onChange={(fields) => props.onChange(updateContactForm(value, { fields }))} />
+      </WidgetControlRow>
+      <WidgetControlRow id="contact.form.required" label="Required fields" data-widget-control="contact.form.required">
+        <FieldMultiSelect value={value.form?.required ?? ["name", "email", "message"]} onChange={(required) => props.onChange(updateContactForm(value, { required }))} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -98,6 +111,10 @@ Implementation checklist:
 - Read `_docs/_WIDGETS/tmp/contact/MATRIX.md` before changing the schema or editor.
 - Extend or reorganize `core/widgets/core/contact.tsx` schema/defaults/normalizer/rendering
   only for fields approved by the research decisions above.
+- Add explicit `stateCopy` schema/default/render/editor ownership for loading,
+  success, and error copy; keep field visibility on the current
+  `form.fields`/`form.required` shape rather than introducing ad hoc
+  `showPhone` flags.
 - Refactor `core/admin/ui/widgets/editors/ContactEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.

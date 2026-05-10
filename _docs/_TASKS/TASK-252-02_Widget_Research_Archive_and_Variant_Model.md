@@ -140,7 +140,7 @@ Then build a matrix:
 | Pattern | Source | Decision | Coderso owner | Data model impact | Editor impact | Runtime impact |
 |---|---|---|---|---|---|---|
 | Hero badge split | shadcn/Tailwind references | Keep | hero | `badge` | Visual: Badge section | render badge above headline |
-| Divider label | CMS/theme references | Reject | divider | none | none | research shows this is content, not divider behavior |
+| Divider label | CMS/theme references | Adapt | divider | legacy label preservation only | no required control | optional labels require a separate accessibility-safe style pass |
 ```
 
 ## Security Contract

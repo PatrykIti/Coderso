@@ -76,6 +76,49 @@ type HeroBadge = {
   placement?: "above-headline" | "inline-headline";
 };
 
+const heroBadgeSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    enabled: { type: "boolean" },
+    label: { type: "string" },
+    href: { type: "string" },
+    prefix: { type: "string" },
+    tone: { enum: ["neutral", "primary", "success", "warning"] },
+    placement: { enum: ["above-headline", "inline-headline"] },
+  },
+};
+
+const heroSchema = {
+  ...currentHeroSchema,
+  properties: {
+    ...currentHeroSchema.properties,
+    badge: heroBadgeSchema,
+  },
+};
+
+const heroDefaults: HeroData = {
+  ...currentHeroDefaults,
+  badge: { enabled: false, label: "", tone: "neutral", placement: "above-headline" },
+};
+
+function normalizeHeroData(data: HeroData): HeroData {
+  return {
+    headline: normalizeHeroHeadline(data.headline),
+    subhead: normalizeHeroSubhead(data.subhead),
+    body: normalizeHeroBody(data.body),
+    primaryCta: normalizeHeroCta(data.primaryCta),
+    secondaryCta: normalizeHeroCta(data.secondaryCta),
+    media: normalizeHeroMedia(data.media),
+    layout: normalizeHeroLayout(data.layout),
+    spacing: normalizeHeroSpacing(data.spacing),
+    style: normalizeHeroStyle(data.style),
+    background: normalizeHeroBackground(data.background),
+    responsive: normalizeHeroResponsive(data.responsive),
+    badge: normalizeHeroBadge(data.badge),
+  };
+}
+
 function normalizeHeroBadge(value: unknown): HeroBadge | undefined {
   if (!isRecord(value)) return undefined;
   const label = readTrimmedString(value.label);
@@ -88,6 +131,17 @@ function normalizeHeroBadge(value: unknown): HeroBadge | undefined {
     tone: normalizeHeroBadgeTone(value.tone),
     placement: normalizeHeroBadgePlacement(value.placement),
   };
+}
+
+function HeroBlock(props: WidgetRenderProps<HeroData>) {
+  const data = normalizeHeroData(props.data);
+  const badge = data.badge?.enabled ? data.badge : undefined;
+  return (
+    <HeroShell data={data}>
+      {badge ? <HeroBadgeView badge={badge} data-widget-part="hero.badge" /> : null}
+      <HeroHeadline data={data} />
+    </HeroShell>
+  );
 }
 
 function HeroVisualEditor(props: WidgetEditorProps<HeroData>) {
@@ -106,6 +160,14 @@ Implementation checklist:
 - Read `_docs/_WIDGETS/tmp/hero/MATRIX.md` before changing the schema or editor.
 - Extend or reorganize `core/widgets/core/hero.tsx` schema/defaults/normalizer/rendering
   only for fields approved by the research decisions above.
+- Add `badge` to `HeroData`, `heroSchema`, defaults/presets, the render path,
+  and editor state together; existing presets without badge data must normalize
+  to the previous rendered output.
+- Extend the existing `HeroData` type in `core/widgets/core/hero.tsx` directly;
+  do not introduce a parallel badge-only data type or editor-only local state.
+- The `currentHeroSchema` and `currentHeroDefaults` pseudocode names refer to
+  the existing `heroSchema` and defaults in `core/widgets/core/hero.tsx`; update
+  those owners in place.
 - Refactor `core/admin/ui/widgets/editors/HeroEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.

@@ -71,10 +71,21 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
+type TeamPhotoShape = "circle" | "rounded" | "square";
+
+type TeamSocialLink = {
+  id?: string;
+  platform: "linkedin" | "github" | "x" | "website";
+  label: string;
+  href: string;
+  url?: string;
+};
+
 function normalizeTeamData(data: TeamData): TeamData {
   return {
     header: normalizeTeamHeader(data.header),
     members: normalizeTeamMembers(data.members),
+    photoShape: normalizeTeamPhotoShape(data.photoShape),
     style: normalizeTeamStyle(data.style),
     variant: preserveExistingTeamVariant(data.variant),
   };
@@ -84,16 +95,37 @@ function normalizeTeamMember(item: TeamMember, index: number): TeamMember {
   return {
     ...item,
     id: normalizeStableItemId(item.id, `team-${index + 1}`),
+    photoShape: normalizeTeamPhotoShape(item.photoShape),
+    initials: normalizeTeamFallbackInitials(item.initials, item.name),
+    photoAlt: normalizeTeamPhotoAlt(item.photoAlt, item.name),
+    socialLinks: normalizeTeamSocialLinks(item.socialLinks),
   };
+}
+
+function normalizeTeamSocialLinks(items: TeamSocialLink[] | undefined): TeamSocialLink[] {
+  return normalizeRepeatedItems(items, teamSocialLinksMax).map((link, index) => ({
+    id: normalizeStableItemId(link.id, `team-social-${index + 1}`),
+    platform: normalizeTeamSocialPlatform(link.platform ?? link.label),
+    label: normalizeTeamSocialLabel(link.label),
+    href: normalizeSafeHref(link.href ?? link.url),
+  }));
 }
 
 function TeamVisualEditor(props: WidgetEditorProps<TeamData>) {
   return (
     <WidgetEditorSection id="team.members" title="Members">
       {props.value.members.map((item, index) => (
-        <WidgetControlRow key={item.id ?? index} id={`team.members.${index}.name`} label="Name" data-widget-control={`team.members.${index}.name`}>
-          <Input value={item.name ?? ""} onChange={handleControlChange} />
-        </WidgetControlRow>
+        <Fragment key={item.id ?? index}>
+          <WidgetControlRow id={`team.members.${index}.name`} label="Name" data-widget-control={`team.members.${index}.name`}>
+            <Input value={item.name ?? ""} onChange={handleControlChange} />
+          </WidgetControlRow>
+          <WidgetControlRow id={`team.members.${index}.photoShape`} label="Photo shape" data-widget-control={`team.members.${index}.photoShape`}>
+            <SegmentedControl value={item.photoShape ?? props.value.photoShape ?? "rounded"} onChange={(photoShape) => props.onChange(updateTeamMember(props.value, index, { photoShape }))} />
+          </WidgetControlRow>
+          <WidgetControlRow id={`team.members.${index}.socialLinks`} label="Social links" data-widget-control={`team.members.${index}.socialLinks`}>
+            <SocialLinksEditor value={item.socialLinks ?? []} onChange={(socialLinks) => props.onChange(updateTeamMember(props.value, index, { socialLinks }))} />
+          </WidgetControlRow>
+        </Fragment>
       ))}
     </WidgetEditorSection>
   );
@@ -105,6 +137,9 @@ Implementation checklist:
 - Read `_docs/_WIDGETS/tmp/team/MATRIX.md` before changing the schema or editor.
 - Extend or reorganize `core/widgets/core/team.tsx` schema/defaults/normalizer/rendering
   only for fields approved by the research decisions above.
+- Add explicit schema/default/render/editor ownership for `photoShape`, fallback
+  initials/alt text, and normalized social links with platform plus safe href;
+  preserve legacy `label`/`url` social links through the normalizer.
 - Refactor `core/admin/ui/widgets/editors/TeamEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.
