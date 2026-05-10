@@ -63,9 +63,9 @@ inside the editor instead of duplicate widget types.
     explicit alt text; overlay text stays Adapt-only.
   - `stats-kpi`: cards/strip modes, prefix/suffix, and icons; trend labels stay
     Adapt-only.
-  - `team`: member grid, social links, photo shape, and current `spotlight`
-    variant preservation; explicit selected-featured-member/profile controls
-    stay Adapt-only.
+  - `team`: member grid, social links, photo shape, and fallback rendering;
+    existing `spotlight` payloads are preservation-only, while explicit
+    selected-featured-member/profile controls stay Adapt-only.
   - `rich-text-section`: keep prose/width plus badge/eyebrow and CTA; quote/
     media and editorial layout additions stay Adapt-only.
   - `compare-timeline`: two-side comparison, dated segments, track labels, and
@@ -79,13 +79,13 @@ This parent is now executed through physical per-widget leaves. Do not implement
 
 - [ ] TASK-252-06-01: Feature Grid Icon Cards Rows and Links
 - [ ] TASK-252-06-02: Testimonials Grid Spotlight Rating and Attribution
-- [ ] TASK-252-06-03: Pricing Plans Tiers Toggle and Comparison Mode
+- [ ] TASK-252-06-03: Pricing Plans Tiers Billing Toggle and Highlight
 - [ ] TASK-252-06-04: FAQ Accordion Support CTA Icon Placement and Defaults
 - [ ] TASK-252-06-05: CTA Banner Compact Split Badge and Icon
 - [ ] TASK-252-06-06: Logo Cloud Grid Tone Rows and Accessibility
 - [ ] TASK-252-06-07: Gallery Mosaic Layout Captions and Alt Text
 - [ ] TASK-252-06-08: Stats KPI Values Icons and Display Modes
-- [ ] TASK-252-06-09: Team Members Photo Shape Socials and Spotlight
+- [ ] TASK-252-06-09: Team Members Photo Shape Socials and Fallbacks
 - [ ] TASK-252-06-10: Rich Text Section Prose Presets Width Badge and CTA
 - [ ] TASK-252-06-11: Compare Timeline Two Track Segments Status and Highlight
 

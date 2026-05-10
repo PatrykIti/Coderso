@@ -53,19 +53,19 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-252-05-04 | Split Layout Slot Order and Mobile Stack | High | Medium | Split slot order, gap, and mobile stack |
 | TASK-252-05-05 | Stack Direction Gap Alignment and Responsive Flow | High | Medium | Stack direction, gap, alignment, and responsive flow |
 | TASK-252-05-06 | Spacer Size Tokens Custom Height and Canvas Affordance | Medium | Small | Spacer token/custom height and canvas affordance |
-| TASK-252-05-07 | Divider Orientation Style Tone and Label | Medium | Small | Divider orientation, style, tone, spacing, and label |
+| TASK-252-05-07 | Divider Orientation Style Tone and Spacing | Medium | Small | Divider orientation, style, tone, and spacing |
 | TASK-252-05-08 | Tabs Accessible Panels Default Tab and Surface | High | Medium | Accessible tabs, default tab, orientation, and panel surface |
 | TASK-252-05-09 | Accordion Disclosure Default Open and Accessibility | High | Medium | Accordion open behavior, default items, panel style, and a11y |
 | TASK-252-05-10 | Toggle Block State Switch and Accessible Content Swap | High | Medium | Toggle states, labels, default state, and accessible content swap |
 | TASK-252-06-01 | Feature Grid Icon Cards Rows and Links | High | Medium | Feature icon cards, rows, optional links, and docs |
 | TASK-252-06-02 | Testimonials Grid Spotlight Rating and Attribution | High | Medium | Testimonials layout, rating, avatar shape, author attribution, and spotlight |
-| TASK-252-06-03 | Pricing Plans Tiers Toggle and Comparison Mode | High | Large | Pricing tiers, billing toggle, highlights, and comparison mode |
+| TASK-252-06-03 | Pricing Plans Tiers Billing Toggle and Highlight | High | Large | Pricing tiers, billing toggle, custom prices, and highlights |
 | TASK-252-06-04 | FAQ Accordion Support CTA Icon Placement and Defaults | High | Medium | FAQ items, support CTA, icon placement, disclosure defaults, and docs |
 | TASK-252-06-05 | CTA Banner Compact Split Badge and Icon | High | Medium | CTA modes, badge/icon, contrast tone, and action controls |
 | TASK-252-06-06 | Logo Cloud Grid Tone Rows and Accessibility | Medium | Medium | Logo rows, tone, alt text, accessible labels, and layout controls |
 | TASK-252-06-07 | Gallery Mosaic Layout Captions and Alt Text | High | Medium | Gallery layout presets, captions, media selection, and alt text |
 | TASK-252-06-08 | Stats KPI Values Icons and Display Modes | Medium | Medium | KPI prefix/suffix, icons, and display modes |
-| TASK-252-06-09 | Team Members Photo Shape Socials and Spotlight | Medium | Medium | Team members, photos, socials, photo shape, and spotlight preservation |
+| TASK-252-06-09 | Team Members Photo Shape Socials and Fallbacks | Medium | Medium | Team members, photos, socials, photo shape, and image fallbacks |
 | TASK-252-06-10 | Rich Text Section Prose Presets Width Badge and CTA | High | Medium | Rich text prose presets, width, badge/eyebrow, and CTA |
 | TASK-252-06-11 | Compare Timeline Two Track Segments Status and Highlight | High | Medium | Two-track compare timeline segments, status, and highlights |
 | TASK-252-07-01 | Content List Source Display Field Visibility and Empty States | High | Large | Content source, filters, display, field visibility, and states |
@@ -79,7 +79,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-252-07-09 | Newsletter Fields Consent Copy and States | High | Large | Newsletter fields, consent, submit copy, and states |
 | TASK-252-07-10 | Booking Calendar Provider Event Modes and Availability | High | Large | Booking provider/event reference, modes, and availability |
 | TASK-252-07-11 | Appointment Form Fields Validation Copy and States | High | Large | Appointment fields, validation copy, state copy, and layout |
-| TASK-252-07-12 | Form Embed Form Picker Fields and Raw Embed Rejection | High | Large | Form picker, fields, state copy, and raw embed rejection |
+| TASK-252-07-12 | Form Embed Form Picker Fields and State Copy | High | Large | Form picker, fields, state copy, and provider boundary |
 | TASK-252-07-13 | Contact Form Info State Copy and Security Boundaries | High | Large | Contact form, contact info, state copy, and security boundaries |
 | TASK-252-07-14 | Navigation Source Links Mobile Menu and CTA | High | Large | Navigation source, safe links, mobile menu, CTA, and logo grouping |
 | TASK-252-07-15 | Footer Columns Brand Legal and Social Links | High | Medium | Footer columns, brand, legal/social links, and safe link sources |

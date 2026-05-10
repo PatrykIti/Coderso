@@ -1,6 +1,6 @@
-# TASK-252-05-07: Divider Orientation Style Tone and Label
+# TASK-252-05-07: Divider Orientation Style Tone and Spacing
 
-# FileName: TASK-252-05-07_Divider_Orientation_Style_Tone_and_Label.md
+# FileName: TASK-252-05-07_Divider_Orientation_Style_Tone_and_Spacing.md
 
 **Priority:** Medium
 **Category:** Widgets + Admin UI + Runtime Render
@@ -12,9 +12,9 @@
 
 ## Overview
 
-Keep Divider simple around line orientation, style, thickness, and spacing;
-optional label/tone controls stay bounded Adapt scope where the runtime can
-render them accessibly.
+Keep Divider simple around line orientation, style, tone, thickness, and
+spacing. Optional labels stay bounded Adapt scope where the runtime can render
+them accessibly.
 
 This is an execution leaf under `TASK-252-05`. It must not re-open the
 research phase; use `_docs/_WIDGETS/tmp/divider/MATRIX.md` and the widget README under
@@ -30,20 +30,20 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: orientation, line style, thickness, spacing, semantic vs decorative
-  behavior, and the existing label/color/width spacing fields from
+- Keep: orientation, line style, tone, thickness, spacing, semantic vs
+  decorative behavior, and the existing color/width spacing fields from
   `_docs/_WIDGETS/tmp/divider/MATRIX.md`; add schema-owned `orientation` and
   `semanticRole` fields in `core/widgets/core/divider.tsx` while preserving
   legacy horizontal visual-only payloads.
 - Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat
-  optional label and visual tone controls as bounded style additions; implement
-  only when schema/defaults/normalizer/render/editor/tests move together.
+  optional labels as bounded style additions; implement only when schema/
+  defaults/normalizer/render/editor/tests move together.
 - Reject: decorative flourishes, raw HTML labels, and arbitrary border CSS.
 
 ## Editor Mode Ownership
 
 - `Wizard`: first-run setup for the safest useful defaults for `divider`.
-- `Visual`: `Line style`, `Tone and thickness`, `Spacing`, `Optional label`.
+- `Visual`: `Orientation`, `Line style`, `Tone and thickness`, `Spacing`.
 - `Advanced`: `Accessibility diagnostics`, `Legacy spacing tokens`.
 
 ## Sub-Tasks
@@ -62,7 +62,7 @@ and Reject decisions.
 - `_docs/_WIDGETS/DIVIDER.md`
 - `_docs/_WIDGETS/tmp/divider/MATRIX.md` for evidence reference only; do not rewrite research
   unless implementation finds a concrete source mismatch.
-- `_docs/_TASKS/TASK-252-05-07_Divider_Orientation_Style_Tone_and_Label.md` for status updates during execution.
+- `_docs/_TASKS/TASK-252-05-07_Divider_Orientation_Style_Tone_and_Spacing.md` for status updates during execution.
 - `_docs/_TASKS/README.md` on status changes.
 
 ## Implementation Pseudocode
@@ -71,8 +71,8 @@ and Reject decisions.
 function normalizeDividerData(data: DividerData): DividerData {
   return {
     orientation: normalizeDividerOrientation(data.orientation ?? "horizontal"),
-    semanticRole: normalizeDividerSemanticRole(data.semanticRole ?? inferDividerRole(data.label)),
-    label: normalizeDividerLabel(data.label),
+    semanticRole: normalizeDividerSemanticRole(data.semanticRole ?? "decorative"),
+    label: preserveExistingDividerLabel(data.label),
     thickness: normalizeDividerThickness(data.thickness),
     color: normalizeDividerColor(data.color),
     width: normalizeDividerWidth(data.width),
@@ -85,10 +85,7 @@ function normalizeDividerData(data: DividerData): DividerData {
 function DividerVisualEditor(props: WidgetEditorProps<DividerData>) {
   const value = props.value;
   return (
-    <WidgetEditorSection id="divider.divider" title="Line and label">
-      <WidgetControlRow id="divider.label" label="Label" data-widget-control="divider.label">
-        <Input value={value.label ?? ""} onChange={handleControlChange} />
-      </WidgetControlRow>
+    <WidgetEditorSection id="divider.divider" title="Line and spacing">
       <WidgetControlRow id="divider.orientation" label="Orientation" data-widget-control="divider.orientation">
         <SegmentedControl value={value.orientation ?? "horizontal"} onChange={(orientation) => props.onChange(updateDividerOrientation(value, orientation))} />
       </WidgetControlRow>
@@ -110,6 +107,12 @@ Implementation checklist:
   tips, or metadata.
 - Keep legacy payloads non-destructive: missing new fields must normalize to the
   current rendered behavior.
+- Do not expose optional label editor controls in this leaf; preserve existing
+  label payloads only as legacy renderer data until label support is promoted
+  from Adapt scope.
+- Remove the current center-label editor row from `DividerEditors.tsx` for this
+  leaf; if the runtime still supports legacy `label-center` payloads, keep that
+  path render-only and covered by backward-compatibility tests.
 - Add or update runtime/widget tests and editor-wave tests in the files listed
   above.
 
@@ -154,7 +157,7 @@ Implementation checklist:
 - `_docs/WIDGETS.md`
 - `_docs/_WIDGETS/DIVIDER.md`
 - `_docs/_WIDGETS/README.md` if this leaf creates a missing widget doc page.
-- `_docs/_TASKS/TASK-252-05-07_Divider_Orientation_Style_Tone_and_Label.md` status notes during execution.
+- `_docs/_TASKS/TASK-252-05-07_Divider_Orientation_Style_Tone_and_Spacing.md` status notes during execution.
 - `_docs/_TASKS/README.md` on status changes.
 - `_docs/_CHANGELOG/README.md` and a changelog entry only when the leaf is
   completed.

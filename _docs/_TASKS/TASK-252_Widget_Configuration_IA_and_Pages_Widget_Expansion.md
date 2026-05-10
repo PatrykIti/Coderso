@@ -143,7 +143,7 @@ Use these physical execution leaves instead of broad batch edits. Each leaf owns
 - `TASK-252-05-04` - `split-layout`: Split Layout Slot Order and Mobile Stack.
 - `TASK-252-05-05` - `stack`: Stack Direction Gap Alignment and Responsive Flow.
 - `TASK-252-05-06` - `spacer`: Spacer Size Tokens Custom Height and Canvas Affordance.
-- `TASK-252-05-07` - `divider`: Divider Orientation Style Tone and Label.
+- `TASK-252-05-07` - `divider`: Divider Orientation Style Tone and Spacing.
 - `TASK-252-05-08` - `tabs`: Tabs Accessible Panels Default Tab and Surface.
 - `TASK-252-05-09` - `accordion`: Accordion Disclosure Default Open and Accessibility.
 - `TASK-252-05-10` - `toggle-block`: Toggle Block State Switch and Accessible Content Swap.
@@ -152,13 +152,13 @@ Use these physical execution leaves instead of broad batch edits. Each leaf owns
 
 - `TASK-252-06-01` - `feature-grid`: Feature Grid Icon Cards Rows and Links.
 - `TASK-252-06-02` - `testimonials`: Testimonials Grid Spotlight Rating and Attribution.
-- `TASK-252-06-03` - `pricing-plans`: Pricing Plans Tiers Toggle and Comparison Mode.
+- `TASK-252-06-03` - `pricing-plans`: Pricing Plans Tiers Billing Toggle and Highlight.
 - `TASK-252-06-04` - `faq-accordion`: FAQ Accordion Support CTA Icon Placement and Defaults.
 - `TASK-252-06-05` - `cta-banner`: CTA Banner Compact Split Badge and Icon.
 - `TASK-252-06-06` - `logo-cloud`: Logo Cloud Grid Tone Rows and Accessibility.
 - `TASK-252-06-07` - `gallery-mosaic`: Gallery Mosaic Layout Captions and Alt Text.
 - `TASK-252-06-08` - `stats-kpi`: Stats KPI Values Icons and Display Modes.
-- `TASK-252-06-09` - `team`: Team Members Photo Shape Socials and Spotlight.
+- `TASK-252-06-09` - `team`: Team Members Photo Shape Socials and Fallbacks.
 - `TASK-252-06-10` - `rich-text-section`: Rich Text Section Prose Presets Width Badge and CTA.
 - `TASK-252-06-11` - `compare-timeline`: Compare Timeline Two Track Segments Status and Highlight.
 
@@ -175,7 +175,7 @@ Use these physical execution leaves instead of broad batch edits. Each leaf owns
 - `TASK-252-07-09` - `newsletter`: Newsletter Fields Consent Copy and States.
 - `TASK-252-07-10` - `booking-calendar`: Booking Calendar Provider Event Modes and Availability.
 - `TASK-252-07-11` - `appointment-form`: Appointment Form Fields Validation Copy and States.
-- `TASK-252-07-12` - `form-embed`: Form Embed Form Picker Fields and Raw Embed Rejection.
+- `TASK-252-07-12` - `form-embed`: Form Embed Form Picker Fields and State Copy.
 - `TASK-252-07-13` - `contact`: Contact Form Info State Copy and Security Boundaries.
 - `TASK-252-07-14` - `navigation`: Navigation Source Links Mobile Menu and CTA.
 - `TASK-252-07-15` - `footer`: Footer Columns Brand Legal and Social Links.
@@ -213,20 +213,20 @@ Use these as current research seeds, not as unlicensed source imports:
   - [ ] TASK-252-05-04: Split Layout Slot Order and Mobile Stack
   - [ ] TASK-252-05-05: Stack Direction Gap Alignment and Responsive Flow
   - [ ] TASK-252-05-06: Spacer Size Tokens Custom Height and Canvas Affordance
-  - [ ] TASK-252-05-07: Divider Orientation Style Tone and Label
+  - [ ] TASK-252-05-07: Divider Orientation Style Tone and Spacing
   - [ ] TASK-252-05-08: Tabs Accessible Panels Default Tab and Surface
   - [ ] TASK-252-05-09: Accordion Disclosure Default Open and Accessibility
   - [ ] TASK-252-05-10: Toggle Block State Switch and Accessible Content Swap
 - [ ] TASK-252-06: Content and Marketing Widget Editor Expansion
   - [ ] TASK-252-06-01: Feature Grid Icon Cards Rows and Links
   - [ ] TASK-252-06-02: Testimonials Grid Spotlight Rating and Attribution
-  - [ ] TASK-252-06-03: Pricing Plans Tiers Toggle and Comparison Mode
+  - [ ] TASK-252-06-03: Pricing Plans Tiers Billing Toggle and Highlight
   - [ ] TASK-252-06-04: FAQ Accordion Support CTA Icon Placement and Defaults
   - [ ] TASK-252-06-05: CTA Banner Compact Split Badge and Icon
   - [ ] TASK-252-06-06: Logo Cloud Grid Tone Rows and Accessibility
   - [ ] TASK-252-06-07: Gallery Mosaic Layout Captions and Alt Text
   - [ ] TASK-252-06-08: Stats KPI Values Icons and Display Modes
-  - [ ] TASK-252-06-09: Team Members Photo Shape Socials and Spotlight
+  - [ ] TASK-252-06-09: Team Members Photo Shape Socials and Fallbacks
   - [ ] TASK-252-06-10: Rich Text Section Prose Presets Width Badge and CTA
   - [ ] TASK-252-06-11: Compare Timeline Two Track Segments Status and Highlight
 - [ ] TASK-252-07: Dynamic and Operational Widget Editor Expansion
@@ -241,7 +241,7 @@ Use these as current research seeds, not as unlicensed source imports:
   - [ ] TASK-252-07-09: Newsletter Fields Consent Copy and States
   - [ ] TASK-252-07-10: Booking Calendar Provider Event Modes and Availability
   - [ ] TASK-252-07-11: Appointment Form Fields Validation Copy and States
-  - [ ] TASK-252-07-12: Form Embed Form Picker Fields and Raw Embed Rejection
+  - [ ] TASK-252-07-12: Form Embed Form Picker Fields and State Copy
   - [ ] TASK-252-07-13: Contact Form Info State Copy and Security Boundaries
   - [ ] TASK-252-07-14: Navigation Source Links Mobile Menu and CTA
   - [ ] TASK-252-07-15: Footer Columns Brand Legal and Social Links

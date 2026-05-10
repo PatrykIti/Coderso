@@ -30,7 +30,10 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/newsletter/MATRIX.md`; for this leaf, start from the current owner fields `title`, `description`, `placeholder`, `consent`, `submit`, `integration`, `style` and add only the schema fields that the matrix explicitly keeps.
+- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/newsletter/MATRIX.md`; for this leaf, start from the current owner fields `title`, `description`, `placeholder`, `consent`, `submit`, and `style`, then add only the schema fields that the matrix explicitly keeps.
+- Preserve existing `integration` payloads only as backend-owned references;
+  this leaf does not add provider-reference editor controls, provider config,
+  or audience-secret fields.
 - Adapt: rows marked `Adapt` are conditional scope, not required scope.
   Additional fields and provider references require a backend-owned integration;
   implement only when schema/defaults/normalizer/render/editor/tests move
@@ -72,7 +75,7 @@ function normalizeNewsletterData(data: NewsletterData): NewsletterData {
     placeholder: normalizeNewsletterPlaceholder(data.placeholder),
     consent: normalizeNewsletterConsent(data.consent),
     submit: normalizeNewsletterSubmit(data.submit),
-    integration: normalizeNewsletterIntegration(data.integration),
+    integration: preserveExistingNewsletterIntegration(data.integration),
     style: normalizeNewsletterStyle(data.style),
   };
 }
@@ -99,6 +102,12 @@ Implementation checklist:
   tips, or metadata.
 - Keep legacy payloads non-destructive: missing new fields must normalize to the
   current rendered behavior.
+- Do not expose provider-reference or integration-config editor controls in
+  this leaf; provider/audience ownership remains backend-only.
+- Remove existing integration mode/action URL/webhook editor controls from
+  `NewsletterEditors.tsx` or convert them to non-editable diagnostics; legacy
+  `integration` payloads may render safely but must not become new provider
+  configuration UI.
 - Add or update runtime/widget tests and editor-wave tests in the files listed
   above.
 

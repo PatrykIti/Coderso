@@ -31,7 +31,10 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/appointment-form/MATRIX.md`; for this leaf, start from the current owner fields `flowId`, field labels/placeholders, `submissionEndpoint`, `style`, `resolved` and add only the schema fields that the matrix explicitly keeps.
+- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/appointment-form/MATRIX.md`; for this leaf, start from the current owner fields `flowId`, field labels/placeholders, `style`, and `resolved`, then add only the schema fields that the matrix explicitly keeps.
+- Preserve the public submission path as the fixed existing
+  `POST /api/booking/reservations` contract; do not expose a configurable
+  `submissionEndpoint` control.
 - Adapt: rows marked `Adapt` are conditional scope, not required scope.
   Provider/embed mode requires a backend-owned submission flow; implement only
   when schema/defaults/normalizer/render/editor/tests move together.
@@ -69,6 +72,8 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
+const BOOKING_RESERVATIONS_ENDPOINT = "/api/booking/reservations";
+
 function normalizeAppointmentFormData(data: AppointmentFormData): AppointmentFormData {
   return {
     flowId: normalizeAppointmentFormFlowId(data.flowId),
@@ -77,10 +82,13 @@ function normalizeAppointmentFormData(data: AppointmentFormData): AppointmentFor
     submitLabel: normalizeAppointmentFormSubmitLabel(data.submitLabel),
     showPhone: normalizeAppointmentFormShowPhone(data.showPhone),
     showNotes: normalizeAppointmentFormShowNotes(data.showNotes),
-    submissionEndpoint: normalizeAppointmentFormSubmissionEndpoint(data.submissionEndpoint),
     style: normalizeAppointmentFormStyle(data.style),
     resolved: normalizeAppointmentFormResolved(data.resolved),
   };
+}
+
+function resolveAppointmentFormSubmissionAction(): string {
+  return BOOKING_RESERVATIONS_ENDPOINT;
 }
 
 function AppointmentFormVisualEditor(props: WidgetEditorProps<AppointmentFormData>) {
@@ -105,6 +113,11 @@ Implementation checklist:
   tips, or metadata.
 - Keep legacy payloads non-destructive: missing new fields must normalize to the
   current rendered behavior.
+- Reject or normalize away custom `submissionEndpoint` values; the editor must
+  not expose a submission endpoint control.
+- Remove the existing editable `submissionEndpoint` input from
+  `AppointmentFormEditors.tsx`; rendering and runtime script metadata must use
+  `resolveAppointmentFormSubmissionAction()` instead of widget data.
 - Add or update runtime/widget tests and editor-wave tests in the files listed
   above.
 
@@ -117,6 +130,7 @@ Implementation checklist:
   - no new endpoint is introduced by this leaf;
   - rendered appointment forms continue to submit to the existing
     `POST /api/booking/reservations` endpoint by default;
+  - custom widget-owned submission endpoints are not allowed;
   - edits persist through existing authenticated admin page/template save flows.
 - RBAC:
   - unchanged page/template/widget-template write permissions.
@@ -139,6 +153,8 @@ Implementation checklist:
     `tests/unit/server/publicBookingApi.test.ts`, and
     `tests/security/codersoSecurityGate.test.ts`
   - raw provider scripts and secrets are rejected
+  - custom submission endpoints are rejected or normalized to the fixed booking
+    reservation endpoint before rendering
 
 ## Testing Requirements
 

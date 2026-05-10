@@ -82,7 +82,7 @@ This parent is now executed through physical per-widget leaves. Do not implement
 - [ ] TASK-252-05-04: Split Layout Slot Order and Mobile Stack
 - [ ] TASK-252-05-05: Stack Direction Gap Alignment and Responsive Flow
 - [ ] TASK-252-05-06: Spacer Size Tokens Custom Height and Canvas Affordance
-- [ ] TASK-252-05-07: Divider Orientation Style Tone and Label
+- [ ] TASK-252-05-07: Divider Orientation Style Tone and Spacing
 - [ ] TASK-252-05-08: Tabs Accessible Panels Default Tab and Surface
 - [ ] TASK-252-05-09: Accordion Disclosure Default Open and Accessibility
 - [ ] TASK-252-05-10: Toggle Block State Switch and Accessible Content Swap
@@ -121,14 +121,34 @@ This parent is now executed through physical per-widget leaves. Do not implement
 Use the shared editor sections from TASK-252-01.
 
 ```tsx
+const SECTION_VARIANTS = [
+  { id: "default", label: "Default" },
+  { id: "contained", label: "Contained" },
+];
+
 function SectionVisualEditor(props: WidgetEditorProps<SectionData>) {
+  const value = props.value;
+
   return (
     <>
-      <WidgetEditorSection id="variant-structure" title="Variant and structure">
-        <VariantCards ... />
+      <WidgetEditorSection id="section.variant-structure" title="Variant and structure">
+        {SECTION_VARIANTS.map((variant) => (
+          <WidgetVariantCard
+            key={variant.id}
+            value={variant.id}
+            label={variant.label}
+            selected={value.variant === variant.id}
+            onSelect={() => props.onChange(updateSectionVariant(value, variant.id))}
+            data-widget-control={`section.variant.${variant.id}`}
+          />
+        ))}
       </WidgetEditorSection>
-      <WidgetEditorSection id="regions" title="Regions">
-        <WidgetRepeatableSlotControls widget={props.context.widget} block={...} />
+      <WidgetEditorSection id="section.regions" title="Regions">
+        <WidgetRepeatableSlotControls
+          widget={props.context.widget}
+          slots={resolveSectionSlots(props.context.widget)}
+          onChange={(slots) => props.onChange(updateSectionSlots(value, slots))}
+        />
       </WidgetEditorSection>
     </>
   );

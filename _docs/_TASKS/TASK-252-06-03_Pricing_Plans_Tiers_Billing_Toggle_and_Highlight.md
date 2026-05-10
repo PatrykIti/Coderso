@@ -1,6 +1,6 @@
-# TASK-252-06-03: Pricing Plans Tiers Toggle and Comparison Mode
+# TASK-252-06-03: Pricing Plans Tiers Billing Toggle and Highlight
 
-# FileName: TASK-252-06-03_Pricing_Plans_Tiers_Toggle_and_Comparison_Mode.md
+# FileName: TASK-252-06-03_Pricing_Plans_Tiers_Billing_Toggle_and_Highlight.md
 
 **Priority:** High
 **Category:** Widgets + Admin UI + Runtime Render
@@ -12,7 +12,8 @@
 
 ## Overview
 
-Add tier, highlight, monthly/annual toggle, custom price, and comparison display controls without introducing checkout/payment logic.
+Add tier, highlight, monthly/annual toggle, and custom price controls without
+introducing checkout/payment logic.
 
 This is an execution leaf under `TASK-252-06`. It must not re-open the
 research phase; use `_docs/_WIDGETS/tmp/pricing-plans/MATRIX.md` and the widget README under
@@ -41,7 +42,7 @@ and Reject decisions.
 ## Editor Mode Ownership
 
 - `Wizard`: first-run setup for the safest useful defaults for `pricing-plans`.
-- `Visual`: `Plans`, `Billing toggle`, `Features`, `Comparison`, `CTA and highlight`.
+- `Visual`: `Plans`, `Billing toggle`, `Feature rows`, `CTA and highlight`.
 - `Advanced`: `Legacy price mapping`, `No-checkout diagnostics`.
 
 ## Sub-Tasks
@@ -60,7 +61,7 @@ and Reject decisions.
 - `_docs/_WIDGETS/PRICING_PLANS.md`
 - `_docs/_WIDGETS/tmp/pricing-plans/MATRIX.md` for evidence reference only; do not rewrite research
   unless implementation finds a concrete source mismatch.
-- `_docs/_TASKS/TASK-252-06-03_Pricing_Plans_Tiers_Toggle_and_Comparison_Mode.md` for status updates during execution.
+- `_docs/_TASKS/TASK-252-06-03_Pricing_Plans_Tiers_Billing_Toggle_and_Highlight.md` for status updates during execution.
 - `_docs/_TASKS/README.md` on status changes.
 
 ## Implementation Pseudocode
@@ -153,7 +154,7 @@ Implementation checklist:
 - `_docs/WIDGETS.md`
 - `_docs/_WIDGETS/PRICING_PLANS.md`
 - `_docs/_WIDGETS/README.md` if this leaf creates a missing widget doc page.
-- `_docs/_TASKS/TASK-252-06-03_Pricing_Plans_Tiers_Toggle_and_Comparison_Mode.md` status notes during execution.
+- `_docs/_TASKS/TASK-252-06-03_Pricing_Plans_Tiers_Billing_Toggle_and_Highlight.md` status notes during execution.
 - `_docs/_TASKS/README.md` on status changes.
 - `_docs/_CHANGELOG/README.md` and a changelog entry only when the leaf is
   completed.

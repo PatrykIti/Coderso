@@ -32,7 +32,9 @@ and Reject decisions.
 
 - Keep: form plus contact-info layout, field visibility, validation copy, and
   success/error/loading state copy from `_docs/_WIDGETS/tmp/contact/MATRIX.md`;
-  start from the current owner fields `form`, `contact`, `map`, and `style`.
+  start from the current owner fields `form`, `contact`, and `style`.
+- Preserve existing `map` payloads only as legacy renderer data; this leaf does
+  not add map or social display controls.
 - Adapt: map/social display fields, provider embed mode, and backend routing
   references remain conditional; implement only when schema/defaults/
   normalizer/render/editor/tests move together.
@@ -71,7 +73,7 @@ function normalizeContactData(data: ContactData): ContactData {
     form: normalizeContactForm(data.form),
     stateCopy: normalizeContactStateCopy(data.stateCopy ?? data.form),
     contact: normalizeContactContact(data.contact),
-    map: normalizeContactMap(data.map),
+    map: preserveExistingContactMap(data.map),
     style: normalizeContactStyle(data.style),
   };
 }
@@ -101,6 +103,13 @@ Implementation checklist:
   tips, or metadata.
 - Keep legacy payloads non-destructive: missing new fields must normalize to the
   current rendered behavior.
+- Do not expose map/social display editor controls in this leaf; keep them
+  Adapt-only until schema/defaults/normalizer/render/editor/tests move
+  together.
+- Remove existing map visibility/embed URL editor controls from
+  `ContactEditors.tsx` for this leaf; legacy `map` payloads may continue to
+  render, but map/social configuration is not a required TASK-252-07-13 editor
+  surface.
 - Add or update runtime/widget tests and editor-wave tests in the files listed
   above.
 

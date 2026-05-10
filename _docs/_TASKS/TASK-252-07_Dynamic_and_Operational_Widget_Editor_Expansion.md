@@ -79,7 +79,8 @@ more flexible, but implementation must not weaken runtime contracts.
   - `entry-teaser`: source selection, fallback behavior, CTA/card mode.
   - Commerce widgets: gallery/table/compare display modes, empty states,
     selected product/catalog source, and safe column/attribute labels.
-  - `listing-filters`: facet layout, query binding, reset/apply behavior.
+  - `listing-filters`: facet groups, query binding, range labels, and
+    reset/apply behavior.
   - `search-box`: accessible copy, compact/full modes, target route, and query
     parameter binding; suggestions/autocomplete stay Adapt-only.
   - Forms/booking/contact/newsletter: field visibility, success/error copy,
@@ -102,7 +103,7 @@ This parent is now executed through physical per-widget leaves. Do not implement
 - [ ] TASK-252-07-09: Newsletter Fields Consent Copy and States
 - [ ] TASK-252-07-10: Booking Calendar Provider Event Modes and Availability
 - [ ] TASK-252-07-11: Appointment Form Fields Validation Copy and States
-- [ ] TASK-252-07-12: Form Embed Form Picker Fields and Raw Embed Rejection
+- [ ] TASK-252-07-12: Form Embed Form Picker Fields and State Copy
 - [ ] TASK-252-07-13: Contact Form Info State Copy and Security Boundaries
 - [ ] TASK-252-07-14: Navigation Source Links Mobile Menu and CTA
 - [ ] TASK-252-07-15: Footer Columns Brand Legal and Social Links

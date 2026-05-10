@@ -1,6 +1,6 @@
-# TASK-252-06-09: Team Members Photo Shape Socials and Spotlight
+# TASK-252-06-09: Team Members Photo Shape Socials and Fallbacks
 
-# FileName: TASK-252-06-09_Team_Members_Photo_Shape_Socials_and_Spotlight.md
+# FileName: TASK-252-06-09_Team_Members_Photo_Shape_Socials_and_Fallbacks.md
 
 **Priority:** Medium
 **Category:** Widgets + Admin UI + Runtime Render
@@ -12,9 +12,10 @@
 
 ## Overview
 
-Expand Team with member cards, photo shape, socials, and the current spotlight
-variant preservation without adding profile-link controls, explicit selected
-featured-member controls, or per-person contact workflows.
+Expand Team with member cards, photo shape, socials, and image fallback
+rendering while preserving any existing `spotlight` variant as legacy runtime
+behavior only. Do not add profile-link controls, explicit selected-featured-
+member controls, or per-person contact workflows.
 
 This is an execution leaf under `TASK-252-06`. It must not re-open the
 research phase; use `_docs/_WIDGETS/tmp/team/MATRIX.md` and the widget README under
@@ -31,21 +32,21 @@ and Reject decisions.
 ## Research Decisions
 
 - Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/team/MATRIX.md`; for this leaf, start from the current owner fields `header`, `members`, `style` and add only the schema fields that the matrix explicitly keeps.
-- Keep: team member grid, social links, photo shape, image alt/fallback
-  behavior, and the current `spotlight` variant behavior from
-  `_docs/_WIDGETS/tmp/team/MATRIX.md`; add schema-owned `photoShape` and
-  fallback initials behavior in `core/widgets/core/team.tsx` while preserving
-  the existing first-member spotlight rendering.
-- Adapt: profile links, explicit selected-featured-member controls beyond the
-  current `spotlight` variant, department labels, and hover overlays remain
-  conditional; implement only when schema/defaults/normalizer/render/editor/
-  tests move together.
+- Keep: team member grid, social links, photo shape, and image alt/fallback
+  behavior from `_docs/_WIDGETS/tmp/team/MATRIX.md`; add schema-owned
+  `photoShape` and fallback initials behavior in `core/widgets/core/team.tsx`.
+- Preserve the existing `spotlight` variant only as legacy/backward-compatible
+  rendering; do not add editor controls for selected featured or leadership
+  modes in this leaf.
+- Adapt: profile links, explicit selected-featured-member controls, leadership
+  mode, department labels, and hover overlays remain conditional; implement
+  only when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: separate one-off widgets, raw HTML/script embeds, and unbounded visual/CSS controls.
 
 ## Editor Mode Ownership
 
 - `Wizard`: first-run setup for the safest useful defaults for `team`.
-- `Visual`: `Members`, `Photos`, `Socials`, `Spotlight layout`, `Layout`.
+- `Visual`: `Members`, `Photos`, `Socials`, `Fallbacks`, `Layout`.
 - `Advanced`: `Safe-link diagnostics`, `Legacy member mapping`.
 
 ## Sub-Tasks
@@ -64,7 +65,7 @@ and Reject decisions.
 - `_docs/_WIDGETS/TEAM.md`
 - `_docs/_WIDGETS/tmp/team/MATRIX.md` for evidence reference only; do not rewrite research
   unless implementation finds a concrete source mismatch.
-- `_docs/_TASKS/TASK-252-06-09_Team_Members_Photo_Shape_Socials_and_Spotlight.md` for status updates during execution.
+- `_docs/_TASKS/TASK-252-06-09_Team_Members_Photo_Shape_Socials_and_Fallbacks.md` for status updates during execution.
 - `_docs/_TASKS/README.md` on status changes.
 
 ## Implementation Pseudocode
@@ -75,7 +76,7 @@ function normalizeTeamData(data: TeamData): TeamData {
     header: normalizeTeamHeader(data.header),
     members: normalizeTeamMembers(data.members),
     style: normalizeTeamStyle(data.style),
-    variant: normalizeTeamVariant(data.variant, { preserveSpotlight: true }),
+    variant: preserveExistingTeamVariant(data.variant),
   };
 }
 
@@ -109,6 +110,12 @@ Implementation checklist:
   tips, or metadata.
 - Keep legacy payloads non-destructive: missing new fields must normalize to the
   current rendered behavior.
+- Do not expose selected-featured, leadership, or `spotlight` layout editor
+  controls in this leaf; only preserve existing `spotlight` payloads for
+  backward-compatible rendering.
+- If current editor/runtime code exposes a `spotlight` variant selector, keep it
+  as legacy rendering compatibility only or move it behind a future Adapt leaf;
+  TASK-252-06-09 does not add new spotlight configuration.
 - Add or update runtime/widget tests and editor-wave tests in the files listed
   above.
 
@@ -152,7 +159,7 @@ Implementation checklist:
 - `_docs/WIDGETS.md`
 - `_docs/_WIDGETS/TEAM.md`
 - `_docs/_WIDGETS/README.md` if this leaf creates a missing widget doc page.
-- `_docs/_TASKS/TASK-252-06-09_Team_Members_Photo_Shape_Socials_and_Spotlight.md` status notes during execution.
+- `_docs/_TASKS/TASK-252-06-09_Team_Members_Photo_Shape_Socials_and_Fallbacks.md` status notes during execution.
 - `_docs/_TASKS/README.md` on status changes.
 - `_docs/_CHANGELOG/README.md` and a changelog entry only when the leaf is
   completed.

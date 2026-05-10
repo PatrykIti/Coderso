@@ -1,6 +1,6 @@
-# TASK-252-07-12: Form Embed Form Picker Fields and Raw Embed Rejection
+# TASK-252-07-12: Form Embed Form Picker Fields and State Copy
 
-# FileName: TASK-252-07-12_Form_Embed_Form_Picker_Fields_and_Raw_Embed_Rejection.md
+# FileName: TASK-252-07-12_Form_Embed_Form_Picker_Fields_and_State_Copy.md
 
 **Priority:** High
 **Category:** Widgets + Admin UI + Runtime + Security
@@ -12,8 +12,9 @@
 
 ## Overview
 
-Keep form-embed around form picker, display fields, state copy, styling, and
-raw script/embed rejection; modal/provider display modes remain Adapt-only.
+Keep form-embed around form picker, display fields, state copy, and styling.
+Raw script/embed handling remains a Reject/security-boundary rule, while
+modal/provider display modes stay Adapt-only.
 
 This is an execution leaf under `TASK-252-07`. It must not re-open the
 research phase; use `_docs/_WIDGETS/tmp/form-embed/MATRIX.md` and the widget README under
@@ -55,7 +56,7 @@ and Reject decisions.
 - `_docs/_WIDGETS/FORM_EMBED.md`
 - `_docs/_WIDGETS/tmp/form-embed/MATRIX.md` for evidence reference only; do not rewrite research
   unless implementation finds a concrete source mismatch.
-- `_docs/_TASKS/TASK-252-07-12_Form_Embed_Form_Picker_Fields_and_Raw_Embed_Rejection.md` for status updates during execution.
+- `_docs/_TASKS/TASK-252-07-12_Form_Embed_Form_Picker_Fields_and_State_Copy.md` for status updates during execution.
 - `_docs/_TASKS/README.md` on status changes.
 
 ## Implementation Pseudocode
@@ -146,7 +147,7 @@ Implementation checklist:
 - `_docs/WIDGETS.md`
 - `_docs/_WIDGETS/FORM_EMBED.md`
 - `_docs/_WIDGETS/README.md` if this leaf creates a missing widget doc page.
-- `_docs/_TASKS/TASK-252-07-12_Form_Embed_Form_Picker_Fields_and_Raw_Embed_Rejection.md` status notes during execution.
+- `_docs/_TASKS/TASK-252-07-12_Form_Embed_Form_Picker_Fields_and_State_Copy.md` status notes during execution.
 - `_docs/_TASKS/README.md` on status changes.
 - `_docs/_CHANGELOG/README.md` and a changelog entry only when the leaf is
   completed.
