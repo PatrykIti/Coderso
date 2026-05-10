@@ -30,7 +30,10 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/hero/MATRIX.md`; for this leaf, start from the current owner fields `current `HeroData` fields plus the new schema-owned `badge` model` and add only the schema fields that the matrix explicitly keeps.
+- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/hero/MATRIX.md`; for
+  this leaf, start from the current `HeroData` fields plus the new schema-owned
+  `badge` model, then add only the schema fields that the matrix explicitly
+  keeps.
 - Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat social proof rows, motion/presentation extras, embedded forms/search, and proof/timeline hybrids as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: raw HTML badges, free-form class names, unbounded motion controls, and duplicate hero-pattern widgets.
 

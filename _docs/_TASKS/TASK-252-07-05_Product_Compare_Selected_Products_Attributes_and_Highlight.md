@@ -62,9 +62,21 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
+type ProductCompareAttributeRow = {
+  key: "price" | "compareAt" | "stock" | "quantity" | "slug";
+  label: string;
+  visible: boolean;
+};
+
 function normalizeProductCompareData(data: ProductCompareData): ProductCompareData {
   return {
     source: normalizeProductCompareSource(data.source),
+    selectedProductIds: normalizeProductCompareSelectedProductIds(data.selectedProductIds),
+    attributeRows: normalizeProductCompareAttributeRows(data.attributeRows),
+    highlightProductId: normalizeProductCompareHighlightProductId(
+      data.highlightProductId,
+      data.selectedProductIds
+    ),
     fields: normalizeProductCompareFields(data.fields),
     labels: normalizeProductCompareLabels(data.labels),
     emptyState: normalizeProductCompareEmptyState(data.emptyState),
@@ -77,8 +89,14 @@ function ProductCompareVisualEditor(props: WidgetEditorProps<ProductCompareData>
   const value = props.value;
   return (
     <WidgetEditorSection id="product-compare.source" title="Compare source">
-      <WidgetControlRow id="product-compare.source.mode" label="Source mode" data-widget-control="product-compare.source.mode">
-        <Select value={value.source?.mode ?? "manual"} onChange={handleControlChange} />
+      <WidgetControlRow id="product-compare.selectedProductIds" label="Products" data-widget-control="product-compare.selectedProductIds">
+        <ProductMultiSelect value={value.selectedProductIds ?? []} maxItems={4} onChange={(selectedProductIds) => props.onChange(updateProductCompareProducts(value, selectedProductIds))} />
+      </WidgetControlRow>
+      <WidgetControlRow id="product-compare.highlightProductId" label="Highlight" data-widget-control="product-compare.highlightProductId">
+        <Select value={value.highlightProductId ?? ""} onChange={(highlightProductId) => props.onChange(updateProductCompareHighlight(value, highlightProductId))} />
+      </WidgetControlRow>
+      <WidgetControlRow id="product-compare.attributeRows" label="Attributes" data-widget-control="product-compare.attributeRows">
+        <AttributeRowPicker value={value.attributeRows ?? []} allowedKeys={PRODUCT_COMPARE_ATTRIBUTE_KEYS} onChange={(attributeRows) => props.onChange(updateProductCompareAttributeRows(value, attributeRows))} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -90,6 +108,10 @@ Implementation checklist:
 - Read `_docs/_WIDGETS/tmp/product-compare/MATRIX.md` before changing the schema or editor.
 - Extend or reorganize `core/widgets/core/productCompare.tsx` schema/defaults/normalizer/rendering
   only for fields approved by the research decisions above.
+- Add explicit schema/default ownership for bounded `selectedProductIds`,
+  normalized `attributeRows` with known keys/labels, and `highlightProductId`
+  with fallback to the first selected product; keep source filters as legacy or
+  backend query support, not a replacement for manual selected-product scope.
 - Refactor `core/admin/ui/widgets/editors/ProductCompareEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.

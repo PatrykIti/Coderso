@@ -67,10 +67,23 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
+type PricingBillingToggle = {
+  enabled: boolean;
+  monthlyLabel: string;
+  annualLabel: string;
+  defaultCycle: "monthly" | "annual";
+};
+
+type PricingPlanCyclePrices = {
+  monthly?: string;
+  annual?: string;
+};
+
 function normalizePricingPlansData(data: PricingPlansData): PricingPlansData {
   return {
     header: normalizePricingPlansHeader(data.header),
     plans: normalizePricingPlansPlans(data.plans),
+    billingToggle: normalizePricingBillingToggle(data.billingToggle),
     style: normalizePricingPlansStyle(data.style, {
       preserveLegacyComparisonRows: true,
       explicitComparisonRowsEnabled: isPricingComparisonRowsAdaptEnabled(data),
@@ -82,6 +95,25 @@ function normalizePricingPlanItem(item: PricingPlanItem, index: number): Pricing
   return {
     ...item,
     id: normalizeStableItemId(item.id, `pricing-plans-${index + 1}`),
+    price: normalizePricingPlanPrice(item.price),
+    period: normalizePricingPlanPeriod(item.period),
+    prices: normalizePricingPlanCyclePrices(item.prices, {
+      monthly: item.price,
+      annual: item.priceAnnual,
+    }),
+    customPriceLabel: normalizePricingPlanCustomPriceLabel(item.customPriceLabel),
+    highlighted: normalizeSingleHighlightedPlan(item.highlighted, index),
+  };
+}
+
+function normalizePricingBillingToggle(
+  value: Partial<PricingBillingToggle> | undefined
+): PricingBillingToggle {
+  return {
+    enabled: normalizeBoolean(value?.enabled, false),
+    monthlyLabel: normalizeText(value?.monthlyLabel, "Monthly"),
+    annualLabel: normalizeText(value?.annualLabel, "Annual"),
+    defaultCycle: value?.defaultCycle === "annual" ? "annual" : "monthly",
   };
 }
 
@@ -94,7 +126,7 @@ function PricingPlansVisualEditor(props: WidgetEditorProps<PricingPlansData>) {
         </WidgetControlRow>
       ))}
       <WidgetControlRow id="pricing-plans.billing.enabled" label="Billing toggle" data-widget-control="pricing-plans.billing.enabled">
-        <Switch checked={props.value.billing?.enabled ?? false} onCheckedChange={(enabled) => props.onChange(updatePricingBilling(props.value, { enabled }))} />
+        <Switch checked={props.value.billingToggle?.enabled ?? false} onCheckedChange={(enabled) => props.onChange(updatePricingBillingToggle(props.value, { enabled }))} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -106,6 +138,9 @@ Implementation checklist:
 - Read `_docs/_WIDGETS/tmp/pricing-plans/MATRIX.md` before changing the schema or editor.
 - Extend or reorganize `core/widgets/core/pricingPlans.tsx` schema/defaults/normalizer/rendering
   only for fields approved by the research decisions above.
+- Add explicit schema/default ownership for `billingToggle` labels, per-cycle
+  plan prices, `customPriceLabel`, and the single highlighted-plan fallback;
+  do not leave billing as editor-only state.
 - Refactor `core/admin/ui/widgets/editors/PricingPlansEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.

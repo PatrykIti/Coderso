@@ -224,6 +224,7 @@ For missing docs, add contract pages that follow existing widget docs:
 - `_docs/_WIDGETS/README.md`
 - Existing layout/structural widget docs listed above.
 - New docs for `tabs`, `accordion`, and `toggle-block`.
+- `_docs/_TASKS/README.md` on status, title, or board row changes.
 - `_docs/_TASKS/TASK-252*.md`
 
 ## Acceptance Criteria

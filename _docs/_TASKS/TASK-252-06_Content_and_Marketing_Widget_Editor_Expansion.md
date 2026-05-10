@@ -212,6 +212,7 @@ items.map((item, index) => (
 - Existing docs for all widgets in scope.
 - `_docs/_WIDGETS/tmp/<widget>/*` only when research artifacts are created.
 - `_docs/_TASKS/TASK-252*.md`
+- `_docs/_TASKS/README.md` on status, title, or board row changes.
 
 ## Acceptance Criteria
 

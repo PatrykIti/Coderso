@@ -28,8 +28,10 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/spacer/MATRIX.md`; for this leaf, start from the current owner fields `height`, `showGuideInEditor` and add only the schema fields that the matrix explicitly keeps.
-- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat custom pixel height only through the current bounded token-or-px normalizer as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/spacer/MATRIX.md`; for this leaf, start from the current owner fields `height`, `showGuideInEditor`, bounded token-or-px custom height, and responsive override, then add only the schema fields that the matrix explicitly keeps.
+- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat
+  new global rhythm-token alignment as conditional; implement only when schema/
+  defaults/normalizer/render/editor/tests move together.
 - Reject: decorative content, arbitrary CSS, and layout semantics beyond spacing.
 
 ## Editor Mode Ownership

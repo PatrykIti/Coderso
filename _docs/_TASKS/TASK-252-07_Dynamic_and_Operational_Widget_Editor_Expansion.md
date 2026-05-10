@@ -261,6 +261,7 @@ function normalizeContactWidgetData(raw: unknown): ContactData {
   `listing-filters`, `search-box`, `booking-calendar`, and
   `appointment-form`.
 - `_docs/_TASKS/TASK-252*.md`
+- `_docs/_TASKS/README.md` on status, title, or board row changes.
 
 ## Acceptance Criteria
 

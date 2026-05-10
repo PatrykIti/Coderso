@@ -13,8 +13,9 @@
 ## Overview
 
 Expose gallery mosaic layout presets, media selection, captions, and alt text
-while keeping overlay text, carousel, and lightbox as separate Adapt-only
-decisions.
+while keeping overlay text and lightbox as separate Adapt-only decisions.
+Carousel mode is rejected for this widget unless a separate task/product
+surface approves it.
 
 This is an execution leaf under `TASK-252-06`. It must not re-open the
 research phase; use `_docs/_WIDGETS/tmp/gallery-mosaic/MATRIX.md` and the widget README under
