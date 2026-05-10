@@ -28,8 +28,14 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/stack/MATRIX.md`; for this leaf, start from the current owner fields `direction`, `gap`, `align`, `justify`, `wrap` and add only the schema fields that the matrix explicitly keeps.
-- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat responsive direction overrides and wrap behavior as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Keep: direction, schema-validated responsive direction, gap, alignment, and
+  justification from `_docs/_WIDGETS/tmp/stack/MATRIX.md`; preserve the current
+  `wrap` field as backward-compatible data only and do not expand wrap behavior
+  in this leaf.
+- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat
+  wrap/group behavior, optional separators/dividers, and joined-item style as
+  conditional; implement only when schema/defaults/normalizer/render/editor/
+  tests move together.
 - Reject: turning Stack into an all-purpose layout engine.
 
 ## Editor Mode Ownership
@@ -62,7 +68,11 @@ and Reject decisions.
 ```tsx
 function normalizeStackData(data: StackData): StackData {
   return {
-    direction: normalizeStackDirection(data.direction),
+    direction: normalizeStackResponsiveDirection(data.direction, {
+      desktop: "column",
+      tablet: "column",
+      mobile: "column",
+    }),
     gap: normalizeStackGap(data.gap),
     align: normalizeStackAlign(data.align),
     justify: normalizeStackJustify(data.justify),
@@ -76,6 +86,9 @@ function StackVisualEditor(props: WidgetEditorProps<StackData>) {
     <WidgetEditorSection id="stack.direction" title="Responsive flow">
       <WidgetControlRow id="stack.direction.desktop" label="Desktop direction" data-widget-control="stack.direction.desktop">
         <SegmentedControl value={value.direction?.desktop ?? "column"} onChange={handleControlChange} />
+      </WidgetControlRow>
+      <WidgetControlRow id="stack.direction.mobile" label="Mobile direction" data-widget-control="stack.direction.mobile">
+        <SegmentedControl value={value.direction?.mobile ?? "column"} onChange={handleControlChange} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );

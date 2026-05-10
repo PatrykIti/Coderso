@@ -28,8 +28,15 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/section/MATRIX.md`; for this leaf, start from the current owner fields `heading`, `semantics`, `style` plus the existing `sectionRegionSlot` and add only the schema fields that the matrix explicitly keeps.
-- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat region labels/slot guidance and surface presets as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Keep: region/slot model, semantic wrapper/anchor controls, constrained
+  `containerWidth`/`maxWidth`, and gutter/padding presets from
+  `_docs/_WIDGETS/tmp/section/MATRIX.md`; start from the current owner fields
+  `heading`, `semantics`, `style` plus the existing `sectionRegionSlot`, then
+  add only schema-owned width/spacing fields that the matrix keeps.
+- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat
+  cover/background media, template/preset insertion, and dense layout polish as
+  conditional; implement only when schema/defaults/normalizer/render/editor/
+  tests move together.
 - Reject: per-CSS editing, arbitrary class names, and making Section a low-level style editor.
 
 ## Editor Mode Ownership
@@ -64,6 +71,12 @@ function normalizeSectionData(data: SectionData): SectionData {
   return {
     heading: normalizeSectionHeading(data.heading),
     semantics: normalizeSectionSemantics(data.semantics),
+    layout: normalizeSectionLayout({
+      containerWidth: data.layout?.containerWidth ?? "content",
+      maxWidth: data.layout?.maxWidth ?? "7xl",
+      paddingBlock: data.layout?.paddingBlock ?? "lg",
+      paddingInline: data.layout?.paddingInline ?? "default",
+    }),
     style: normalizeSectionStyle(data.style),
   };
 }
@@ -75,6 +88,12 @@ function SectionVisualEditor(props: WidgetEditorProps<SectionData>) {
       <WidgetControlRow id="section.semantics.anchorId" label="Anchor ID" data-widget-control="section.semantics.anchorId">
         <Input value={value.semantics?.anchorId ?? ""} onChange={handleControlChange} />
       </WidgetControlRow>
+      <WidgetControlRow id="section.layout.containerWidth" label="Container width" data-widget-control="section.layout.containerWidth">
+        <Select value={value.layout?.containerWidth ?? "content"} onChange={handleControlChange} />
+      </WidgetControlRow>
+      <WidgetControlRow id="section.layout.paddingBlock" label="Vertical padding" data-widget-control="section.layout.paddingBlock">
+        <Select value={value.layout?.paddingBlock ?? "lg"} onChange={handleControlChange} />
+      </WidgetControlRow>
     </WidgetEditorSection>
   );
 }
@@ -83,6 +102,10 @@ function SectionVisualEditor(props: WidgetEditorProps<SectionData>) {
 Implementation checklist:
 
 - Read `_docs/_WIDGETS/tmp/section/MATRIX.md` before changing the schema or editor.
+- Add width/gutter fields as bounded schema tokens such as
+  `layout.containerWidth`, `layout.maxWidth`, `layout.paddingBlock`, and
+  `layout.paddingInline`; do not expose arbitrary CSS width, margin, or padding
+  strings.
 - Extend or reorganize `core/widgets/core/section.tsx` schema/defaults/normalizer/rendering
   only for fields approved by the research decisions above.
 - Refactor `core/admin/ui/widgets/editors/SectionEditors.tsx` to shared TASK-252 editor primitives from

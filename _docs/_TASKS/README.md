@@ -40,13 +40,13 @@ Task board for project work. Keep task files and this board in sync.
 |----|-------|----------|--------|-------|
 | TASK-252-01 | Widget Inspector IA and Shared Option Architecture | High | Large | Shared right-panel structure, info icon pattern, slot placement, and automation metadata |
 | TASK-252-03 | Hero Editor Mode and Badge Expansion | High | Large | Hero badge/announcement surface plus reorganized Wizard/Visual/Advanced editor IA |
-| TASK-252-04 | Timeline Editor Motion and Chronology Expansion | High | Large | True timeline modes, date-capable steps, and reduced-motion-safe scroll reveal |
+| TASK-252-04 | Timeline Chronology and Editor IA | High | Large | True timeline modes, date-capable steps, per-item CTA, and status markers |
 | TASK-252-05 | Layout and Structural Widget Editor Parity | High | Large | Section/slots baseline plus layout primitives and missing docs for tabs/accordion/toggle-block |
 | TASK-252-06 | Content and Marketing Widget Editor Expansion | High | Large | Marketing/content widget editor IA, variants, repeated item controls, and docs |
 | TASK-252-07 | Dynamic and Operational Widget Editor Expansion | High | Large | Dynamic, commerce, listing/search, forms, booking, navigation, and footer editor parity |
 | TASK-252-08 | QA, Docs, Changelog, and Board Closure | Medium | Medium | Final validation matrix, missing widget docs, changelog, and board sync |
 | TASK-252-03-01 | Hero Badge Announcement and Editor IA | High | Large | Hero badge plus shared editor IA proof |
-| TASK-252-04-01 | Timeline Chronology Motion and Editor IA | High | Large | Timeline chronology modes and reduced-motion-safe reveal |
+| TASK-252-04-01 | Timeline Chronology Modes and Editor IA | High | Large | Timeline chronology modes, dates, CTA links, and status markers |
 | TASK-252-05-01 | Section Regions Semantics and Spacing | High | Large | Section regions, semantics, anchors, spacing, and docs |
 | TASK-252-05-02 | Template Section Metadata Preview and Sync | High | Medium | Template metadata, preview, category, version, and sync controls |
 | TASK-252-05-03 | Grid Columns Presets Gaps and Mobile Stack | High | Medium | Grid presets, gaps, equal height, and mobile stack |
@@ -57,15 +57,15 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-252-05-08 | Tabs Accessible Panels Default Tab and Surface | High | Medium | Accessible tabs, default tab, orientation, and panel surface |
 | TASK-252-05-09 | Accordion Disclosure Default Open and Accessibility | High | Medium | Accordion open behavior, default items, panel style, and a11y |
 | TASK-252-05-10 | Toggle Block State Switch and Accessible Content Swap | High | Medium | Toggle states, labels, default state, and accessible content swap |
-| TASK-252-06-01 | Feature Grid Modes Bento and Linked Cards | High | Medium | Feature modes, bento/cards, badges, links, and docs |
+| TASK-252-06-01 | Feature Grid Icon Cards Rows and Links | High | Medium | Feature icon cards, rows, optional links, and docs |
 | TASK-252-06-02 | Testimonials Grid Spotlight Rating and Attribution | High | Medium | Testimonials layout, rating, avatar, company, and opt-in motion |
 | TASK-252-06-03 | Pricing Plans Tiers Toggle and Comparison Mode | High | Large | Pricing tiers, billing toggle, highlights, and comparison mode |
-| TASK-252-06-04 | FAQ Accordion Categories Support CTA and Icon Placement | High | Medium | FAQ items, support CTA, icon placement, disclosure defaults, and docs |
-| TASK-252-06-05 | CTA Banner Compact Split Badge and Background Media | High | Medium | CTA modes, badge/icon, bounded media, and background controls |
-| TASK-252-06-06 | Logo Cloud Grid Tone Rows and Reduced Motion Marquee | Medium | Medium | Logo rows, tone, optional reduced-motion-safe marquee |
+| TASK-252-06-04 | FAQ Accordion Support CTA Icon Placement and Defaults | High | Medium | FAQ items, support CTA, icon placement, disclosure defaults, and docs |
+| TASK-252-06-05 | CTA Banner Compact Split Badge and Icon | High | Medium | CTA modes, badge/icon, contrast tone, and action controls |
+| TASK-252-06-06 | Logo Cloud Grid Tone Rows and Accessibility | Medium | Medium | Logo rows, tone, alt text, accessible labels, and layout controls |
 | TASK-252-06-07 | Gallery Mosaic Layout Captions Overlays and Alt Text | High | Medium | Gallery layout presets, captions, overlays, and alt text |
-| TASK-252-06-08 | Stats KPI Values Trend Labels and Display Modes | Medium | Medium | KPI prefix/suffix, icons, trend labels, and display modes |
-| TASK-252-06-09 | Team Members Photo Shape Socials and Featured Profile | Medium | Medium | Team members, photos, socials, photo shape, and spotlight preservation |
+| TASK-252-06-08 | Stats KPI Values Icons and Display Modes | Medium | Medium | KPI prefix/suffix, icons, and display modes |
+| TASK-252-06-09 | Team Members Photo Shape Socials and Spotlight | Medium | Medium | Team members, photos, socials, photo shape, and spotlight preservation |
 | TASK-252-06-10 | Rich Text Section Prose Presets Width Badge and CTA | High | Medium | Rich text prose presets, width, badge/eyebrow, and CTA |
 | TASK-252-06-11 | Compare Timeline Two Track Segments Status and Highlight | High | Medium | Two-track compare timeline segments, status, and highlights |
 | TASK-252-07-01 | Content List Source Display Field Visibility and Empty States | High | Large | Content source, filters, display, field visibility, and states |

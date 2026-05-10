@@ -133,7 +133,7 @@ Use these physical execution leaves instead of broad batch edits. Each leaf owns
 ### Hero and Timeline
 
 - `TASK-252-03-01` - `hero`: Hero Badge Announcement and Editor IA.
-- `TASK-252-04-01` - `timeline`: Timeline Chronology Motion and Editor IA.
+- `TASK-252-04-01` - `timeline`: Timeline Chronology Modes and Editor IA.
 
 ### Layout and Structural
 
@@ -150,15 +150,15 @@ Use these physical execution leaves instead of broad batch edits. Each leaf owns
 
 ### Content and Marketing
 
-- `TASK-252-06-01` - `feature-grid`: Feature Grid Modes Bento and Linked Cards.
+- `TASK-252-06-01` - `feature-grid`: Feature Grid Icon Cards Rows and Links.
 - `TASK-252-06-02` - `testimonials`: Testimonials Grid Spotlight Rating and Attribution.
 - `TASK-252-06-03` - `pricing-plans`: Pricing Plans Tiers Toggle and Comparison Mode.
-- `TASK-252-06-04` - `faq-accordion`: FAQ Accordion Categories Support CTA and Icon Placement.
-- `TASK-252-06-05` - `cta-banner`: CTA Banner Compact Split Badge and Background Media.
-- `TASK-252-06-06` - `logo-cloud`: Logo Cloud Grid Tone Rows and Reduced Motion Marquee.
+- `TASK-252-06-04` - `faq-accordion`: FAQ Accordion Support CTA Icon Placement and Defaults.
+- `TASK-252-06-05` - `cta-banner`: CTA Banner Compact Split Badge and Icon.
+- `TASK-252-06-06` - `logo-cloud`: Logo Cloud Grid Tone Rows and Accessibility.
 - `TASK-252-06-07` - `gallery-mosaic`: Gallery Mosaic Layout Captions Overlays and Alt Text.
-- `TASK-252-06-08` - `stats-kpi`: Stats KPI Values Trend Labels and Display Modes.
-- `TASK-252-06-09` - `team`: Team Members Photo Shape Socials and Featured Profile.
+- `TASK-252-06-08` - `stats-kpi`: Stats KPI Values Icons and Display Modes.
+- `TASK-252-06-09` - `team`: Team Members Photo Shape Socials and Spotlight.
 - `TASK-252-06-10` - `rich-text-section`: Rich Text Section Prose Presets Width Badge and CTA.
 - `TASK-252-06-11` - `compare-timeline`: Compare Timeline Two Track Segments Status and Highlight.
 
@@ -204,8 +204,8 @@ Use these as current research seeds, not as unlicensed source imports:
 - [x] TASK-252-02: Widget Research Archive and Variant Model
 - [ ] TASK-252-03: Hero Editor Mode and Badge Expansion
   - [ ] TASK-252-03-01: Hero Badge Announcement and Editor IA
-- [ ] TASK-252-04: Timeline Editor Motion and Chronology Expansion
-  - [ ] TASK-252-04-01: Timeline Chronology Motion and Editor IA
+- [ ] TASK-252-04: Timeline Chronology and Editor IA
+  - [ ] TASK-252-04-01: Timeline Chronology Modes and Editor IA
 - [ ] TASK-252-05: Layout and Structural Widget Editor Parity
   - [ ] TASK-252-05-01: Section Regions Semantics and Spacing
   - [ ] TASK-252-05-02: Template Section Metadata Preview and Sync
@@ -218,15 +218,15 @@ Use these as current research seeds, not as unlicensed source imports:
   - [ ] TASK-252-05-09: Accordion Disclosure Default Open and Accessibility
   - [ ] TASK-252-05-10: Toggle Block State Switch and Accessible Content Swap
 - [ ] TASK-252-06: Content and Marketing Widget Editor Expansion
-  - [ ] TASK-252-06-01: Feature Grid Modes Bento and Linked Cards
+  - [ ] TASK-252-06-01: Feature Grid Icon Cards Rows and Links
   - [ ] TASK-252-06-02: Testimonials Grid Spotlight Rating and Attribution
   - [ ] TASK-252-06-03: Pricing Plans Tiers Toggle and Comparison Mode
-  - [ ] TASK-252-06-04: FAQ Accordion Categories Support CTA and Icon Placement
-  - [ ] TASK-252-06-05: CTA Banner Compact Split Badge and Background Media
-  - [ ] TASK-252-06-06: Logo Cloud Grid Tone Rows and Reduced Motion Marquee
+  - [ ] TASK-252-06-04: FAQ Accordion Support CTA Icon Placement and Defaults
+  - [ ] TASK-252-06-05: CTA Banner Compact Split Badge and Icon
+  - [ ] TASK-252-06-06: Logo Cloud Grid Tone Rows and Accessibility
   - [ ] TASK-252-06-07: Gallery Mosaic Layout Captions Overlays and Alt Text
-  - [ ] TASK-252-06-08: Stats KPI Values Trend Labels and Display Modes
-  - [ ] TASK-252-06-09: Team Members Photo Shape Socials and Featured Profile
+  - [ ] TASK-252-06-08: Stats KPI Values Icons and Display Modes
+  - [ ] TASK-252-06-09: Team Members Photo Shape Socials and Spotlight
   - [ ] TASK-252-06-10: Rich Text Section Prose Presets Width Badge and CTA
   - [ ] TASK-252-06-11: Compare Timeline Two Track Segments Status and Highlight
 - [ ] TASK-252-07: Dynamic and Operational Widget Editor Expansion

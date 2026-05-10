@@ -1,6 +1,6 @@
-# TASK-252-06-06: Logo Cloud Grid Tone Rows and Reduced Motion Marquee
+# TASK-252-06-06: Logo Cloud Grid Tone Rows and Accessibility
 
-# FileName: TASK-252-06-06_Logo_Cloud_Grid_Tone_Rows_and_Reduced_Motion_Marquee.md
+# FileName: TASK-252-06-06_Logo_Cloud_Grid_Tone_Rows_and_Accessibility.md
 
 **Priority:** Medium
 **Category:** Widgets + Admin UI + Runtime Render
@@ -39,8 +39,8 @@ and Reject decisions.
 ## Editor Mode Ownership
 
 - `Wizard`: first-run setup for the safest useful defaults for `logo-cloud`.
-- `Visual`: `Layout`, `Logos`, `Tone`, `Rows`, `Motion`.
-- `Advanced`: `Reduced-motion diagnostics`, `Legacy logo mapping`.
+- `Visual`: `Layout`, `Logos`, `Tone`, `Rows`, `Accessibility`.
+- `Advanced`: `Legacy logo mapping`, `Adapt-only marquee diagnostics`.
 
 ## Sub-Tasks
 
@@ -58,7 +58,7 @@ and Reject decisions.
 - `_docs/_WIDGETS/LOGO_CLOUD.md`
 - `_docs/_WIDGETS/tmp/logo-cloud/MATRIX.md` for evidence reference only; do not rewrite research
   unless implementation finds a concrete source mismatch.
-- `_docs/_TASKS/TASK-252-06-06_Logo_Cloud_Grid_Tone_Rows_and_Reduced_Motion_Marquee.md` for status updates during execution.
+- `_docs/_TASKS/TASK-252-06-06_Logo_Cloud_Grid_Tone_Rows_and_Accessibility.md` for status updates during execution.
 - `_docs/_TASKS/README.md` on status changes.
 
 ## Implementation Pseudocode
@@ -149,7 +149,7 @@ Implementation checklist:
 - `_docs/WIDGETS.md`
 - `_docs/_WIDGETS/LOGO_CLOUD.md`
 - `_docs/_WIDGETS/README.md` if this leaf creates a missing widget doc page.
-- `_docs/_TASKS/TASK-252-06-06_Logo_Cloud_Grid_Tone_Rows_and_Reduced_Motion_Marquee.md` status notes during execution.
+- `_docs/_TASKS/TASK-252-06-06_Logo_Cloud_Grid_Tone_Rows_and_Accessibility.md` status notes during execution.
 - `_docs/_TASKS/README.md` on status changes.
 - `_docs/_CHANGELOG/README.md` and a changelog entry only when the leaf is
   completed.

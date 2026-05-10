@@ -1,6 +1,6 @@
-# TASK-252-04: Timeline Editor Motion and Chronology Expansion
+# TASK-252-04: Timeline Chronology and Editor IA
 
-# FileName: TASK-252-04_Timeline_Editor_Motion_and_Chronology_Expansion.md
+# FileName: TASK-252-04_Timeline_Chronology_and_Editor_IA.md
 
 **Priority:** High
 **Category:** Widgets + Admin UI + Runtime Render
@@ -48,7 +48,7 @@ timeline modes while preserving existing payloads and editor tests.
 - Reorganize editor modes:
   - `Wizard`: choose timeline purpose (`process`, `chronology`, `alternating`),
     orientation, step count, and starter labels.
-  - `Visual`: Mode and layout; Items and dates; Motion; Axis and markers;
+  - `Visual`: Mode and layout; Items and dates; Axis and markers;
     Colors; Typography and spacing.
   - `Advanced`: data normalization, IDs, reduced-motion/debug options, raw
     diagnostics only if needed.
@@ -57,7 +57,7 @@ timeline modes while preserving existing payloads and editor tests.
 
 This parent is now executed through physical per-widget leaves. Do not implement this parent as one broad batch; complete the leaves below in dependency order.
 
-- [ ] TASK-252-04-01: Timeline Chronology Motion and Editor IA
+- [ ] TASK-252-04-01: Timeline Chronology Modes and Editor IA
 
 ## Files to Change
 

@@ -1,6 +1,6 @@
-# TASK-252-06-05: CTA Banner Compact Split Badge and Background Media
+# TASK-252-06-05: CTA Banner Compact Split Badge and Icon
 
-# FileName: TASK-252-06-05_CTA_Banner_Compact_Split_Badge_and_Background_Media.md
+# FileName: TASK-252-06-05_CTA_Banner_Compact_Split_Badge_and_Icon.md
 
 **Priority:** High
 **Category:** Widgets + Admin UI + Runtime Render
@@ -36,7 +36,7 @@ and Reject decisions.
 ## Editor Mode Ownership
 
 - `Wizard`: first-run setup for the safest useful defaults for `cta-banner`.
-- `Visual`: `Mode`, `Copy`, `CTA buttons`, `Badge and icon`, `Background`.
+- `Visual`: `Mode`, `Copy`, `CTA buttons`, `Badge and icon`, `Tone`.
 - `Advanced`: `Legacy layout mapping`, `Media diagnostics`.
 
 ## Sub-Tasks
@@ -55,7 +55,7 @@ and Reject decisions.
 - `_docs/_WIDGETS/CTA_BANNER.md`
 - `_docs/_WIDGETS/tmp/cta-banner/MATRIX.md` for evidence reference only; do not rewrite research
   unless implementation finds a concrete source mismatch.
-- `_docs/_TASKS/TASK-252-06-05_CTA_Banner_Compact_Split_Badge_and_Background_Media.md` for status updates during execution.
+- `_docs/_TASKS/TASK-252-06-05_CTA_Banner_Compact_Split_Badge_and_Icon.md` for status updates during execution.
 - `_docs/_TASKS/README.md` on status changes.
 
 ## Implementation Pseudocode
@@ -134,7 +134,7 @@ Implementation checklist:
 - `_docs/WIDGETS.md`
 - `_docs/_WIDGETS/CTA_BANNER.md`
 - `_docs/_WIDGETS/README.md` if this leaf creates a missing widget doc page.
-- `_docs/_TASKS/TASK-252-06-05_CTA_Banner_Compact_Split_Badge_and_Background_Media.md` status notes during execution.
+- `_docs/_TASKS/TASK-252-06-05_CTA_Banner_Compact_Split_Badge_and_Icon.md` status notes during execution.
 - `_docs/_TASKS/README.md` on status changes.
 - `_docs/_CHANGELOG/README.md` and a changelog entry only when the leaf is
   completed.

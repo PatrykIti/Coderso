@@ -77,15 +77,15 @@ inside the editor instead of duplicate widget types.
 
 This parent is now executed through physical per-widget leaves. Do not implement this parent as one broad batch; complete the leaves below in dependency order.
 
-- [ ] TASK-252-06-01: Feature Grid Modes Bento and Linked Cards
+- [ ] TASK-252-06-01: Feature Grid Icon Cards Rows and Links
 - [ ] TASK-252-06-02: Testimonials Grid Spotlight Rating and Attribution
 - [ ] TASK-252-06-03: Pricing Plans Tiers Toggle and Comparison Mode
-- [ ] TASK-252-06-04: FAQ Accordion Categories Support CTA and Icon Placement
-- [ ] TASK-252-06-05: CTA Banner Compact Split Badge and Background Media
-- [ ] TASK-252-06-06: Logo Cloud Grid Tone Rows and Reduced Motion Marquee
+- [ ] TASK-252-06-04: FAQ Accordion Support CTA Icon Placement and Defaults
+- [ ] TASK-252-06-05: CTA Banner Compact Split Badge and Icon
+- [ ] TASK-252-06-06: Logo Cloud Grid Tone Rows and Accessibility
 - [ ] TASK-252-06-07: Gallery Mosaic Layout Captions Overlays and Alt Text
-- [ ] TASK-252-06-08: Stats KPI Values Trend Labels and Display Modes
-- [ ] TASK-252-06-09: Team Members Photo Shape Socials and Featured Profile
+- [ ] TASK-252-06-08: Stats KPI Values Icons and Display Modes
+- [ ] TASK-252-06-09: Team Members Photo Shape Socials and Spotlight
 - [ ] TASK-252-06-10: Rich Text Section Prose Presets Width Badge and CTA
 - [ ] TASK-252-06-11: Compare Timeline Two Track Segments Status and Highlight
 

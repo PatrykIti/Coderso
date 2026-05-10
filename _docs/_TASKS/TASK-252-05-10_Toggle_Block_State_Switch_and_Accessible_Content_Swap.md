@@ -63,12 +63,21 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
+type ToggleBlockState = {
+  id: "primary" | "secondary";
+  label: string;
+  slotId: "primary" | "secondary";
+};
+
 function normalizeToggleBlockData(data: ToggleBlockData): ToggleBlockData {
   return {
     states: normalizeToggleBlockStates(data.states ?? statesFromLegacyToggleBlock(data.labels, {
       primarySlotId: "primary",
       secondarySlotId: "secondary",
-    })),
+    }), {
+      allowedSlotIds: ["primary", "secondary"],
+      maxItems: 2,
+    }),
     labels: normalizeToggleBlockLabels(data.labels),
     options: normalizeToggleBlockOptions({
       ...data.options,
@@ -86,7 +95,7 @@ function ToggleBlockVisualEditor(props: WidgetEditorProps<ToggleBlockData>) {
         <SegmentedControl value={value.options?.defaultState ?? "primary"} onChange={handleControlChange} />
       </WidgetControlRow>
       <WidgetControlRow id="toggle-block.states" label="States" data-widget-control="toggle-block.states">
-        <StateListEditor value={value.states ?? statesFromLegacyToggleBlock(value.labels, { primarySlotId: "primary", secondarySlotId: "secondary" })} onChange={(states) => props.onChange(updateToggleBlockStates(value, states))} maxItems={2} />
+        <StateListEditor value={value.states ?? statesFromLegacyToggleBlock(value.labels, { primarySlotId: "primary", secondarySlotId: "secondary" })} onChange={(states) => props.onChange(updateToggleBlockStates(value, states))} lockedSlotIds={["primary", "secondary"]} maxItems={2} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -96,6 +105,10 @@ function ToggleBlockVisualEditor(props: WidgetEditorProps<ToggleBlockData>) {
 Implementation checklist:
 
 - Read `_docs/_WIDGETS/tmp/toggle-block/MATRIX.md` before changing the schema or editor.
+- Keep `primary` and `secondary` slot ownership in the widget-definition/page-model
+  slot contract. `states[]` may own labels, ordering, and default state, but
+  each state must carry a stable `slotId` so existing pane content cannot be
+  orphaned by renaming or reordering states.
 - Extend or reorganize `core/widgets/core/toggleBlock.tsx` schema/defaults/normalizer/rendering
   only for fields approved by the research decisions above.
 - Refactor `core/admin/ui/widgets/editors/ToggleBlockEditors.tsx` to shared TASK-252 editor primitives from

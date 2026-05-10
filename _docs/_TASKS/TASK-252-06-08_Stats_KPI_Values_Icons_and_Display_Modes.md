@@ -1,6 +1,6 @@
-# TASK-252-06-08: Stats KPI Values Trend Labels and Display Modes
+# TASK-252-06-08: Stats KPI Values Icons and Display Modes
 
-# FileName: TASK-252-06-08_Stats_KPI_Values_Trend_Labels_and_Display_Modes.md
+# FileName: TASK-252-06-08_Stats_KPI_Values_Icons_and_Display_Modes.md
 
 **Priority:** Medium
 **Category:** Widgets + Admin UI + Runtime Render
@@ -57,7 +57,7 @@ and Reject decisions.
 - `_docs/_WIDGETS/STATS_KPI.md`
 - `_docs/_WIDGETS/tmp/stats-kpi/MATRIX.md` for evidence reference only; do not rewrite research
   unless implementation finds a concrete source mismatch.
-- `_docs/_TASKS/TASK-252-06-08_Stats_KPI_Values_Trend_Labels_and_Display_Modes.md` for status updates during execution.
+- `_docs/_TASKS/TASK-252-06-08_Stats_KPI_Values_Icons_and_Display_Modes.md` for status updates during execution.
 - `_docs/_TASKS/README.md` on status changes.
 
 ## Implementation Pseudocode
@@ -147,7 +147,7 @@ Implementation checklist:
 - `_docs/WIDGETS.md`
 - `_docs/_WIDGETS/STATS_KPI.md`
 - `_docs/_WIDGETS/README.md` if this leaf creates a missing widget doc page.
-- `_docs/_TASKS/TASK-252-06-08_Stats_KPI_Values_Trend_Labels_and_Display_Modes.md` status notes during execution.
+- `_docs/_TASKS/TASK-252-06-08_Stats_KPI_Values_Icons_and_Display_Modes.md` status notes during execution.
 - `_docs/_TASKS/README.md` on status changes.
 - `_docs/_CHANGELOG/README.md` and a changelog entry only when the leaf is
   completed.

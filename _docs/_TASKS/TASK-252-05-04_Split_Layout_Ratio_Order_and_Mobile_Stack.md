@@ -30,11 +30,12 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: two named slots, media/content orientation, `mediaPosition`, `reverse`,
-  `mobileStack`, and `mobileOrder` from
-  `_docs/_WIDGETS/tmp/split-layout/MATRIX.md`; map legacy `left`/`right` slots,
-  `collapseMobile`, and `reverseOnMobile` into schema-owned orientation and
-  mobile-order fields in `core/widgets/core/splitLayout.tsx`.
+- Keep: two named slots, media/content presentation order, `mediaPosition`,
+  `reverse`, `mobileStack`, and `mobileOrder` from
+  `_docs/_WIDGETS/tmp/split-layout/MATRIX.md`; preserve fixed `left`/`right`
+  slot IDs in the widget-definition/page-model slot contract and map only
+  legacy data fields such as `collapseMobile` and `reverseOnMobile` into the
+  newer mobile behavior fields in `core/widgets/core/splitLayout.tsx`.
 - Adapt: ratio presets and marketing split polish remain conditional; implement
   only when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: runtime resize handles and arbitrary grid/CSS controls.
@@ -69,7 +70,7 @@ and Reject decisions.
 ```tsx
 function normalizeSplitLayoutData(data: SplitLayoutData): SplitLayoutData {
   return {
-    mediaPosition: normalizeSplitLayoutMediaPosition(data.mediaPosition ?? inferMediaPositionFromLegacySlots(data)),
+    mediaPosition: normalizeSplitLayoutMediaPosition(data.mediaPosition ?? legacyReverseToMediaPosition(data.reverse)),
     reverse: normalizeSplitLayoutReverse(data.reverse),
     orientation: normalizeSplitLayoutOrientation(data.orientation ?? data.mediaPosition),
     ratio: normalizeSplitLayoutRatio(data.ratio),

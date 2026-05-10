@@ -28,19 +28,18 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: column presets, column gap, row gap, mobile stacking, equal-height
-  behavior, and the existing `gridColumnsSlot` from
-  `_docs/_WIDGETS/tmp/grid-columns/MATRIX.md`; map live `layout.gapX` to
-  `columnGap`, live `layout.gapY` to `rowGap`, and per-column `mobileSpan` to
-  a schema-owned `mobileStack`/mobile preset contract in
-  `core/widgets/core/gridColumns.tsx`.
+- Keep: column presets, user-facing column/row gap controls, mobile stacking,
+  equal-height behavior, and the existing `gridColumnsSlot` from
+  `_docs/_WIDGETS/tmp/grid-columns/MATRIX.md`; keep persisted gap ownership in
+  live `layout.gapX`/`layout.gapY` unless the implementation also ships a
+  schema/default/normalizer migration for any `columnGap`/`rowGap` aliases.
 - Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat advanced span/offset-like behavior and cardized columns as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: runtime drag resize handles and arbitrary CSS grid template strings.
 
 ## Editor Mode Ownership
 
 - `Wizard`: first-run setup for the safest useful defaults for `grid-columns`.
-- `Visual`: `Column preset`, `Gaps and padding`, `Mobile behavior`, `Cards and equal height`.
+- `Visual`: `Column preset`, `Gaps and padding`, `Mobile behavior`, `Equal height`.
 - `Advanced`: `Legacy column payloads`, `Responsive diagnostics`.
 
 ## Sub-Tasks
@@ -70,8 +69,8 @@ function normalizeGridColumnsData(data: GridColumnsData): GridColumnsData {
     columns: normalizeGridColumnsColumns(data.columns),
     layout: normalizeGridColumnsLayout({
       ...data.layout,
-      columnGap: data.layout?.columnGap ?? data.layout?.gapX,
-      rowGap: data.layout?.rowGap ?? data.layout?.gapY,
+      gapX: data.layout?.gapX ?? data.layout?.columnGap,
+      gapY: data.layout?.gapY ?? data.layout?.rowGap,
       mobileStack: data.layout?.mobileStack ?? inferGridColumnsMobileStack(data.columns),
     }),
     style: normalizeGridColumnsStyle(data.style),
@@ -85,8 +84,11 @@ function GridColumnsVisualEditor(props: WidgetEditorProps<GridColumnsData>) {
       <WidgetControlRow id="grid-columns.columns.count" label="Column preset" data-widget-control="grid-columns.columns.count">
         <Select value={String(value.columns?.length ?? 2)} onChange={handleControlChange} />
       </WidgetControlRow>
-      <WidgetControlRow id="grid-columns.layout.rowGap" label="Row gap" data-widget-control="grid-columns.layout.rowGap">
-        <Select value={value.layout?.rowGap ?? value.layout?.gapY ?? "6"} onChange={(rowGap) => props.onChange(updateGridColumnsLayout(value, { rowGap }))} />
+      <WidgetControlRow id="grid-columns.layout.gapX" label="Column gap" data-widget-control="grid-columns.layout.gapX">
+        <Select value={value.layout?.gapX ?? "6"} onChange={(gapX) => props.onChange(updateGridColumnsLayout(value, { gapX }))} />
+      </WidgetControlRow>
+      <WidgetControlRow id="grid-columns.layout.gapY" label="Row gap" data-widget-control="grid-columns.layout.gapY">
+        <Select value={value.layout?.gapY ?? "6"} onChange={(gapY) => props.onChange(updateGridColumnsLayout(value, { gapY }))} />
       </WidgetControlRow>
       <WidgetControlRow id="grid-columns.layout.mobileStack" label="Mobile stack" data-widget-control="grid-columns.layout.mobileStack">
         <Switch checked={value.layout?.mobileStack ?? true} onCheckedChange={(mobileStack) => props.onChange(updateGridColumnsLayout(value, { mobileStack }))} />
@@ -99,6 +101,10 @@ function GridColumnsVisualEditor(props: WidgetEditorProps<GridColumnsData>) {
 Implementation checklist:
 
 - Read `_docs/_WIDGETS/tmp/grid-columns/MATRIX.md` before changing the schema or editor.
+- Treat matrix terms `gap` and `rowGap` as editor labels mapped to the current
+  strict schema fields `layout.gapX` and `layout.gapY`. Do not persist unknown
+  `columnGap`/`rowGap` keys unless this leaf also updates schema, defaults,
+  normalizer, renderer, and validator/editor tests together.
 - Extend or reorganize `core/widgets/core/gridColumns.tsx` schema/defaults/normalizer/rendering
   only for fields approved by the research decisions above.
 - Refactor `core/admin/ui/widgets/editors/GridColumnsEditors.tsx` to shared TASK-252 editor primitives from

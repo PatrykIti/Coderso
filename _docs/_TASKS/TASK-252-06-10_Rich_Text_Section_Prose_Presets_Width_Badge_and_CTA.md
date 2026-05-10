@@ -40,7 +40,7 @@ and Reject decisions.
 ## Editor Mode Ownership
 
 - `Wizard`: first-run setup for the safest useful defaults for `rich-text-section`.
-- `Visual`: `Content`, `Prose preset`, `Width`, `Badge and CTA`, `Quote/media`.
+- `Visual`: `Content`, `Prose preset`, `Width`, `Badge and CTA`.
 - `Advanced`: `Sanitizer diagnostics`, `Legacy content mapping`.
 
 ## Sub-Tasks

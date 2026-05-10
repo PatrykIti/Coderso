@@ -1,6 +1,6 @@
-# TASK-252-04-01: Timeline Chronology Motion and Editor IA
+# TASK-252-04-01: Timeline Chronology Modes and Editor IA
 
-# FileName: TASK-252-04-01_Timeline_Chronology_Motion_and_Editor_IA.md
+# FileName: TASK-252-04-01_Timeline_Chronology_Modes_and_Editor_IA.md
 
 **Priority:** High
 **Category:** Widgets + Admin UI + Runtime Render
@@ -12,7 +12,9 @@
 
 ## Overview
 
-Expand Timeline from a process-step block into a true chronology-capable widget with accessible modes, dates/statuses, and optional reduced-motion-safe reveal behavior.
+Expand Timeline from a process-step block into a true chronology-capable widget
+with accessible modes, dates/statuses, and explicit Adapt-only guidance for any
+future reveal behavior.
 
 This is an execution leaf under `TASK-252-04`. It must not re-open the
 research phase; use `_docs/_WIDGETS/tmp/timeline/MATRIX.md` and the widget README under
@@ -41,7 +43,7 @@ and Reject decisions.
 ## Editor Mode Ownership
 
 - `Wizard`: first-run setup for the safest useful defaults for `timeline`.
-- `Visual`: `Mode and layout`, `Items and dates`, `Motion`, `Axis and markers`, `Colors`, `Typography and spacing`.
+- `Visual`: `Mode and layout`, `Items and dates`, `Axis and markers`, `Colors`, `Typography and spacing`.
 - `Advanced`: `Legacy variant mapping`, `Reduced-motion diagnostics`, `Stable item IDs`.
 
 ## Sub-Tasks
@@ -61,7 +63,7 @@ and Reject decisions.
 - `_docs/_WIDGETS/TIMELINE.md`
 - `_docs/_WIDGETS/tmp/timeline/MATRIX.md` for evidence reference only; do not rewrite research
   unless implementation finds a concrete source mismatch.
-- `_docs/_TASKS/TASK-252-04-01_Timeline_Chronology_Motion_and_Editor_IA.md` for status updates during execution.
+- `_docs/_TASKS/TASK-252-04-01_Timeline_Chronology_Modes_and_Editor_IA.md` for status updates during execution.
 - `_docs/_TASKS/README.md` on status changes.
 
 ## Implementation Pseudocode
@@ -163,7 +165,7 @@ Implementation checklist:
 - `_docs/WIDGETS.md`
 - `_docs/_WIDGETS/TIMELINE.md`
 - `_docs/_WIDGETS/README.md` if this leaf creates a missing widget doc page.
-- `_docs/_TASKS/TASK-252-04-01_Timeline_Chronology_Motion_and_Editor_IA.md` status notes during execution.
+- `_docs/_TASKS/TASK-252-04-01_Timeline_Chronology_Modes_and_Editor_IA.md` status notes during execution.
 - `_docs/_TASKS/README.md` on status changes.
 - `_docs/_CHANGELOG/README.md` and a changelog entry only when the leaf is
   completed.

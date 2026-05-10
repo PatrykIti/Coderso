@@ -1,6 +1,6 @@
-# TASK-252-06-04: FAQ Accordion Categories Support CTA and Icon Placement
+# TASK-252-06-04: FAQ Accordion Support CTA Icon Placement and Defaults
 
-# FileName: TASK-252-06-04_FAQ_Accordion_Categories_Support_CTA_and_Icon_Placement.md
+# FileName: TASK-252-06-04_FAQ_Accordion_Support_CTA_Icon_Placement_and_Defaults.md
 
 **Priority:** High
 **Category:** Widgets + Admin UI + Runtime Render
@@ -60,7 +60,7 @@ and Reject decisions.
 - `_docs/_WIDGETS/FAQ.md`
 - `_docs/_WIDGETS/tmp/faq-accordion/MATRIX.md` for evidence reference only; do not rewrite research
   unless implementation finds a concrete source mismatch.
-- `_docs/_TASKS/TASK-252-06-04_FAQ_Accordion_Categories_Support_CTA_and_Icon_Placement.md` for status updates during execution.
+- `_docs/_TASKS/TASK-252-06-04_FAQ_Accordion_Support_CTA_Icon_Placement_and_Defaults.md` for status updates during execution.
 - `_docs/_TASKS/README.md` on status changes.
 
 ## Implementation Pseudocode
@@ -166,7 +166,7 @@ Implementation checklist:
 - `_docs/WIDGETS.md`
 - `_docs/_WIDGETS/FAQ.md`
 - `_docs/_WIDGETS/README.md` if this leaf creates a missing widget doc page.
-- `_docs/_TASKS/TASK-252-06-04_FAQ_Accordion_Categories_Support_CTA_and_Icon_Placement.md` status notes during execution.
+- `_docs/_TASKS/TASK-252-06-04_FAQ_Accordion_Support_CTA_Icon_Placement_and_Defaults.md` status notes during execution.
 - `_docs/_TASKS/README.md` on status changes.
 - `_docs/_CHANGELOG/README.md` and a changelog entry only when the leaf is
   completed.

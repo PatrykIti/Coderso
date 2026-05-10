@@ -1,6 +1,6 @@
-# TASK-252-06-01: Feature Grid Modes Bento and Linked Cards
+# TASK-252-06-01: Feature Grid Icon Cards Rows and Links
 
-# FileName: TASK-252-06-01_Feature_Grid_Modes_Bento_and_Linked_Cards.md
+# FileName: TASK-252-06-01_Feature_Grid_Icon_Cards_Rows_and_Links.md
 
 **Priority:** High
 **Category:** Widgets + Admin UI + Runtime Render
@@ -37,7 +37,7 @@ and Reject decisions.
 ## Editor Mode Ownership
 
 - `Wizard`: first-run setup for the safest useful defaults for `feature-grid`.
-- `Visual`: `Mode`, `Feature items`, `Icons and media`, `Links and badges`, `Surface`.
+- `Visual`: `Mode`, `Feature items`, `Icons`, `Links`, `Surface`.
 - `Advanced`: `Item IDs`, `Legacy layout mapping`.
 
 ## Sub-Tasks
@@ -56,7 +56,7 @@ and Reject decisions.
 - `_docs/_WIDGETS/FEATURE_GRID.md`
 - `_docs/_WIDGETS/tmp/feature-grid/MATRIX.md` for evidence reference only; do not rewrite research
   unless implementation finds a concrete source mismatch.
-- `_docs/_TASKS/TASK-252-06-01_Feature_Grid_Modes_Bento_and_Linked_Cards.md` for status updates during execution.
+- `_docs/_TASKS/TASK-252-06-01_Feature_Grid_Icon_Cards_Rows_and_Links.md` for status updates during execution.
 - `_docs/_TASKS/README.md` on status changes.
 
 ## Implementation Pseudocode
@@ -143,7 +143,7 @@ Implementation checklist:
 - `_docs/WIDGETS.md`
 - `_docs/_WIDGETS/FEATURE_GRID.md`
 - `_docs/_WIDGETS/README.md` if this leaf creates a missing widget doc page.
-- `_docs/_TASKS/TASK-252-06-01_Feature_Grid_Modes_Bento_and_Linked_Cards.md` status notes during execution.
+- `_docs/_TASKS/TASK-252-06-01_Feature_Grid_Icon_Cards_Rows_and_Links.md` status notes during execution.
 - `_docs/_TASKS/README.md` on status changes.
 - `_docs/_CHANGELOG/README.md` and a changelog entry only when the leaf is
   completed.

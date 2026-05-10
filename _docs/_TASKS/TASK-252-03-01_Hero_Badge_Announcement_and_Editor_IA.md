@@ -37,7 +37,7 @@ and Reject decisions.
 ## Editor Mode Ownership
 
 - `Wizard`: first-run setup for the safest useful defaults for `hero`.
-- `Visual`: `Variant and preset`, `Badge and headline`, `Proof and CTA`, `Media`, `Background`, `Typography and borders`.
+- `Visual`: `Variant and preset`, `Badge and headline`, `CTA`, `Media`, `Surface`, `Typography and borders`.
 - `Advanced`: `Responsive media behavior`, `Layout width and spacing`, `Preset compatibility diagnostics`.
 
 ## Sub-Tasks

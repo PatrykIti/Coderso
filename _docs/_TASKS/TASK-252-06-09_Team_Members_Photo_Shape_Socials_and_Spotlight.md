@@ -1,6 +1,6 @@
-# TASK-252-06-09: Team Members Photo Shape Socials and Featured Profile
+# TASK-252-06-09: Team Members Photo Shape Socials and Spotlight
 
-# FileName: TASK-252-06-09_Team_Members_Photo_Shape_Socials_and_Featured_Profile.md
+# FileName: TASK-252-06-09_Team_Members_Photo_Shape_Socials_and_Spotlight.md
 
 **Priority:** Medium
 **Category:** Widgets + Admin UI + Runtime Render
@@ -45,7 +45,7 @@ and Reject decisions.
 ## Editor Mode Ownership
 
 - `Wizard`: first-run setup for the safest useful defaults for `team`.
-- `Visual`: `Members`, `Photos`, `Socials`, `Featured member`, `Layout`.
+- `Visual`: `Members`, `Photos`, `Socials`, `Spotlight layout`, `Layout`.
 - `Advanced`: `Safe-link diagnostics`, `Legacy member mapping`.
 
 ## Sub-Tasks
@@ -64,7 +64,7 @@ and Reject decisions.
 - `_docs/_WIDGETS/TEAM.md`
 - `_docs/_WIDGETS/tmp/team/MATRIX.md` for evidence reference only; do not rewrite research
   unless implementation finds a concrete source mismatch.
-- `_docs/_TASKS/TASK-252-06-09_Team_Members_Photo_Shape_Socials_and_Featured_Profile.md` for status updates during execution.
+- `_docs/_TASKS/TASK-252-06-09_Team_Members_Photo_Shape_Socials_and_Spotlight.md` for status updates during execution.
 - `_docs/_TASKS/README.md` on status changes.
 
 ## Implementation Pseudocode
@@ -152,7 +152,7 @@ Implementation checklist:
 - `_docs/WIDGETS.md`
 - `_docs/_WIDGETS/TEAM.md`
 - `_docs/_WIDGETS/README.md` if this leaf creates a missing widget doc page.
-- `_docs/_TASKS/TASK-252-06-09_Team_Members_Photo_Shape_Socials_and_Featured_Profile.md` status notes during execution.
+- `_docs/_TASKS/TASK-252-06-09_Team_Members_Photo_Shape_Socials_and_Spotlight.md` status notes during execution.
 - `_docs/_TASKS/README.md` on status changes.
 - `_docs/_CHANGELOG/README.md` and a changelog entry only when the leaf is
   completed.

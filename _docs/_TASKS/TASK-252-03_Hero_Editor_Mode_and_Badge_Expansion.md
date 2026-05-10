@@ -33,7 +33,7 @@ than dense.
   preset, and responsive features backward compatible.
 - Reorganize the Hero editor using TASK-252-01 shared IA:
   - `Wizard`: goal, hero layout, headline/subhead, CTA count, primary media.
-  - `Visual`: Variant and presets; Badge and headline; CTA; Media; Background;
+  - `Visual`: Variant and presets; Badge and headline; CTA; Media; Surface;
     Typography; Colors and borders.
   - `Advanced`: layout width, spacing, responsive media behavior, raw technical
     diagnostics only if needed.
