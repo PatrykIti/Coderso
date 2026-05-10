@@ -51,11 +51,11 @@ as Mabudo-like house projects. Preset-specific enrichment comes after the
 composer exists and can consume richer capabilities safely.
 
 The current delivered slice remains foundation-first. Capability manifests,
-candidate ranking, graph fragments, and assembler helpers now drive the local
-setup planner for supported mixed-capability and primary-plus-gated setup
-requests, but single-pack setup/refinement routing plus generic detail-page
-resource packaging and review diagnostics stay deferred until the later rollout
-leaves close.
+candidate ranking, graph fragments, assembler helpers, no-duplicate reuse, and
+composition review metadata now drive the local setup planner for supported
+mixed-capability and primary-plus-gated setup requests, but single-pack
+setup/refinement routing plus generic detail-page resource packaging stay
+deferred until the later rollout leaves close.
 Compatible `content-type.upsert` fragments can now also merge into one
 validator-backed content schema action. Compatible listing facet/card fragments
 can now also merge through schema-backed listing owners and widen
@@ -67,13 +67,13 @@ instead of leaving canonical collection linkage implicit. The first
 detail-page storage/schema slice is also landed through
 `detail_page_documents` / `detail_page_revisions` plus the
 `content_type_has_detail_pages` delete guard. The later open detail-page scope
-is now narrower: generic assistant resource packaging and review diagnostics
-remain deferred, while no-duplicate DB reuse, the published runtime, shared preview path, typed
-`detail-page.upsert` execution, internal admin route family, admin client/cache
-parity, fixture/runtime acceptance, first admin-screen layout composer,
-custom-screen binding/collection-link metadata safety, collection workspace,
-manual detail-template editor, and assistant follow-up context for that
-workspace/detail-page surface are already landed. Collection workspace work has
+is now narrower: generic assistant resource packaging remains deferred, while
+no-duplicate DB reuse, review metadata, the published runtime, shared preview
+path, typed `detail-page.upsert` execution, internal admin route family, admin
+client/cache parity, fixture/runtime acceptance, first admin-screen layout
+composer, custom-screen binding/collection-link metadata safety, collection
+workspace, manual detail-template editor, and assistant follow-up context for
+that workspace/detail-page surface are already landed. Collection workspace work has
 now landed the internal Engine route, bounded server read model, deterministic
 canonical resource resolution/read redaction, cached client helpers, specific
 Engine prefetch, first route shell, the
@@ -84,6 +84,10 @@ The no-duplicate slice now also adds bounded detail-page resource catalog
 summaries and the catalog-backed `blueprintExistingResourceMatcher.ts` seam so
 supported create-like actions can reuse existing detail pages/pages/resources
 through current owner metadata before the existing executor validates them.
+The review-metadata slice now adds strict `metadata.blueprintComposition`
+diagnostics with primary/adjunct/gated capability ids, merged resource ownership,
+existing-resource reuse matches, conflicts, and redacted deterministic candidate
+scores for the admin review UI and tests.
 
 This task is not limited to theme templates or a narrow detail-template editor.
 The business target remains full assistant-composed setup of a site/service

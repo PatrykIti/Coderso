@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 826 | 2026-05-10 | TASK-190 composition review metadata | Assistant/Core |
 | 825 | 2026-05-10 | TASK-190 existing resource matcher | Assistant/Core |
 | 824 | 2026-05-10 | TASK-190 collection workspace assistant context | Assistant/Core |
 | 823 | 2026-05-10 | TASK-190 detail template editor surface | Assistant/Admin UI |

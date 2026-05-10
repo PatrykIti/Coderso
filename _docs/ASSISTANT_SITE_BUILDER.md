@@ -74,7 +74,7 @@ Current implemented guide blueprint:
   - current packs and adjunct/gated modules now register through a strict capability manifest and registry layer
   - mixed setup prompts can now be analyzed into primary + adjunct capability candidates inside the foundation layer
   - composed graph/assembler helpers still reuse the current strict typed action families; no parallel blueprint executor was introduced
-  - supported mixed-capability and primary-plus-gated setup prompts now route through the composed planner path, while single-pack setup/refinement, generic detail-page resource packaging, and review diagnostics still remain on the later leaves
+  - supported mixed-capability and primary-plus-gated setup prompts now route through the composed planner path, while single-pack setup/refinement and generic detail-page resource packaging still remain on the later leaves
   - compatible `content-type.upsert` fragments now merge server-side through `blueprintSchemaMerger.ts` plus the existing content schema validator, so additive field/enum extensions stay in one strict action instead of surfacing as duplicate-resource drift
   - compatible listing facet/card fragments now merge through schema-backed listing owners, and the assembler widens `listing-query.upsert.fields` automatically so merged filters/card bindings keep the runtime projection fields they need
   - assistant-facing page section aliases and merge slots now resolve through a deterministic library over the current page-builder widget registry and alias-specific `modulePackMatrix` helper mappings; unsupported aliases stay gated instead of inventing a second section catalog
@@ -96,6 +96,12 @@ Current implemented guide blueprint:
     service, admin cache, and assistant action executor seams
   - catalog capabilities can already describe `detail-page` intent in metadata, and the current `TASK-190` slices now cover persisted detail-page documents, published/runtime detail rendering, shared preview handling, the executable `detail-page.upsert` assistant action, `setting.content-route.upsert` `detailPageId` route-linking, the internal `/admin/api/detail-pages*` CRUD/lifecycle/revision route family, admin client/cache parity, local deterministic fixture/runtime acceptance, collection-workspace route/read/cache/UI shell, the manual detail-template editor, assistant follow-up context for workspace/detail-page surfaces, and catalog-backed no-duplicate reuse through the current owner seams; generic detail-page resource packaging remains deferred to a later leaf
   - `blueprintExistingResourceMatcher.ts` consumes the server-derived resource catalog before executor handoff: detail pages reuse stable/canonical linked ids, pages reuse persisted `PageData.settings.collectionLink`, custom screens use `collectionRole` / `compositionKey`, listing query name collisions block as `needs_input`, and media reuse stays exact-id only
+  - `blueprintCompositionMetadata.ts` attaches strict
+    `metadata.blueprintComposition` diagnostics to composed ready and
+    needs-input plans: primary/adjunct/gated capability ids, merged resource
+    ownership, existing-resource reuse matches, resolved/unresolved conflicts,
+    and redacted deterministic candidate scores are available to review UI/tests
+    without exposing raw provider output
   - provider prompt packaging now carries bounded capability summaries for setup/composer evaluation, while generic provider planning still uses the current `cms_operation_draft` response contract
   - candidate shadow diagnostics can be exposed only through a local/test env gate; they remain metadata-only even though the bounded mixed-setup cutover is now live
 
@@ -155,6 +161,7 @@ Core domain service:
   - `core/services/assistant/blueprints/blueprintPageSectionLibrary.ts`
   - `core/services/assistant/blueprints/blueprintPageSectionComposer.ts`
   - `core/services/assistant/blueprints/blueprintActionAssembler.ts`
+  - `core/services/assistant/blueprints/blueprintCompositionMetadata.ts`
   - `core/services/assistant/blueprints/blueprintProviderContext.ts`
   - `core/services/assistant/blueprints/blueprintCompositionDraftSchema.ts`
   - `core/services/assistant/blueprints/blueprintComposerShadow.ts`

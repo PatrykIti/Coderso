@@ -221,6 +221,131 @@ test("normalizeAssistantActionPlan accepts strict planner metadata", () => {
   ).toThrow("assistant_action_plan_invalid");
 });
 
+test("normalizeAssistantActionPlan accepts strict blueprint composition metadata", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  const normalized = normalizeAssistantActionPlan({
+    ...plan,
+    metadata: {
+      planner: "local",
+      providerDraftUsed: false,
+      blueprintComposition: {
+        schemaVersion: 1,
+        kind: "blueprint-composition",
+        primaryCapabilityId: "product-catalog",
+        adjunctCapabilityIds: ["product-inquiry-catalog"],
+        gatedCapabilityIds: ["booking-service"],
+        mergedResources: [
+          {
+            key: "detail-page:products",
+            kind: "detail-page",
+            sourceCapabilityIds: ["product-catalog"],
+          },
+          {
+            key: "content-type:products",
+            kind: "content-type",
+            sourceCapabilityIds: ["product-catalog", "product-inquiry-catalog"],
+          },
+        ],
+        existingResourceMatches: [
+          {
+            actionId: "page-products",
+            actionType: "page.upsert",
+            resourceKey: "page-collection-link:ct-products",
+            existingId: "page-products",
+            status: "matched",
+            reason: "collection_link",
+            candidateIds: ["page-products"],
+          },
+        ],
+        resolvedConflicts: [],
+        unresolvedConflicts: [
+          {
+            code: "gated_domain",
+            severity: "error",
+            message: "Booking remains gated.",
+            capabilityId: "booking-service",
+            resourceKey: "gated:booking",
+            actionType: null,
+          },
+        ],
+        diagnostics: {
+          candidateScores: [
+            {
+              id: "product-catalog",
+              role: "primary",
+              score: 100,
+              reasons: ["Primary product catalog."],
+            },
+          ],
+        },
+      },
+    },
+  });
+
+  expect(normalized.metadata?.blueprintComposition).toMatchObject({
+    kind: "blueprint-composition",
+    primaryCapabilityId: "product-catalog",
+    adjunctCapabilityIds: ["product-inquiry-catalog"],
+    gatedCapabilityIds: ["booking-service"],
+    mergedResources: expect.arrayContaining([
+      expect.objectContaining({ kind: "detail-page", key: "detail-page:products" }),
+    ]),
+    existingResourceMatches: [
+      expect.objectContaining({
+        status: "matched",
+        existingId: "page-products",
+      }),
+    ],
+  });
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      metadata: {
+        planner: "local",
+        providerDraftUsed: false,
+        blueprintComposition: {
+          schemaVersion: 1,
+          kind: "blueprint-composition",
+          primaryCapabilityId: "product-catalog",
+          adjunctCapabilityIds: [],
+          gatedCapabilityIds: [],
+          mergedResources: [],
+          existingResourceMatches: [],
+          resolvedConflicts: [],
+          unresolvedConflicts: [],
+          rawProviderOutput: "not allowed",
+        },
+      },
+    })
+  ).toThrow("assistant_action_plan_invalid");
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      metadata: {
+        planner: "local",
+        providerDraftUsed: false,
+        blueprintComposition: {
+          schemaVersion: 2,
+          kind: "blueprint-composition",
+          primaryCapabilityId: "product-catalog",
+          adjunctCapabilityIds: [],
+          gatedCapabilityIds: [],
+          mergedResources: [],
+          existingResourceMatches: [],
+          resolvedConflicts: [],
+          unresolvedConflicts: [],
+        },
+      },
+    })
+  ).toThrow("assistant_action_plan_invalid");
+});
+
 test("normalizeAssistantActionPlan accepts read-only inspection plans", () => {
   const plan = normalizeAssistantActionPlan({
     id: "plan-cms-page-inspect",

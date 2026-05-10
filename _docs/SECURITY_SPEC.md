@@ -432,6 +432,11 @@ Rotacja klucza:
   - dry-run and execute routes request per-action permissions from `actionFamilyContracts.ts` before delegating to executor services,
   - contract-only families declare intended schema owners, permissions, anti-abuse notes, and secret-handling rules before implementation,
   - preview metadata strings from `actionDiffService.ts` redact secret-like `key=value` fragments before they are returned to admin UI/API clients,
+  - composed blueprint review metadata is schema-normalized under
+    `metadata.blueprintComposition`, derived only from local capability graph /
+    matcher state, rejects unknown fields, and redacts secret-like diagnostic
+    strings before returning primary/adjunct/gated choices or reuse/conflict
+    summaries to the admin UI,
   - assistant redaction treats signed-url-like metadata keys as sensitive,
   - `execute` wymaga `idempotencyKey`,
   - idempotency jest persystowane w tabeli `assistant_action_executions` i scope’owane przez actor/plan/hash,

@@ -303,6 +303,12 @@ test("planAssistantActionsWithProviderDraft prefers local blueprint composition 
   expect(plan.metadata).toMatchObject({
     planner: "local",
     providerDraftUsed: false,
+    blueprintComposition: {
+      kind: "blueprint-composition",
+      primaryCapabilityId: "product-catalog",
+      adjunctCapabilityIds: ["product-inquiry-catalog", "editorial-content-hub"],
+      gatedCapabilityIds: [],
+    },
     blueprintShadow: {
       currentIntentId: "blueprint-composed-product-catalog",
       primaryCapabilityId: "product-catalog",
@@ -310,6 +316,11 @@ test("planAssistantActionsWithProviderDraft prefers local blueprint composition 
       mismatchReason: null,
     },
   });
+  expect(plan.metadata?.blueprintComposition?.mergedResources).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ kind: "detail-page", key: "detail-page:products" }),
+    ])
+  );
   expect(requests).toHaveLength(0);
 });
 

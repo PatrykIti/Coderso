@@ -1023,10 +1023,74 @@ export type AssistantActionFamilyContract<TType extends string = string> = {
   secretHandling: readonly string[];
 };
 
+export type AssistantBlueprintCompositionResourceKind =
+  | "content-type"
+  | "content-route"
+  | "entry"
+  | "custom-screen"
+  | "listing-query"
+  | "listing-template"
+  | "page"
+  | "detail-page"
+  | "media"
+  | "form"
+  | "menu"
+  | "seo"
+  | "widget-template"
+  | "site-kit";
+
+export type AssistantBlueprintCompositionConflictMetadata = {
+  code: string;
+  severity: "warning" | "error";
+  message: string;
+  capabilityId?: string | null;
+  resourceKey?: string | null;
+  actionType?: AssistantExecutableActionType | null;
+};
+
+export type AssistantBlueprintCompositionResourceMetadata = {
+  key: string;
+  kind: AssistantBlueprintCompositionResourceKind;
+  sourceCapabilityIds: string[];
+};
+
+export type AssistantBlueprintCompositionExistingResourceMetadata = {
+  actionId: string | null;
+  actionType: AssistantExecutableActionType | null;
+  resourceKey: string;
+  existingId: string | null;
+  status: "matched" | "unresolved";
+  reason: string | null;
+  candidateIds: string[];
+};
+
+export type AssistantBlueprintCompositionCandidateScoreMetadata = {
+  id: string;
+  role: "primary" | "adjunct" | "gated";
+  score: number;
+  reasons: string[];
+};
+
+export type AssistantBlueprintCompositionMetadata = {
+  schemaVersion: 1;
+  kind: "blueprint-composition";
+  primaryCapabilityId: string;
+  adjunctCapabilityIds: string[];
+  gatedCapabilityIds: string[];
+  mergedResources: AssistantBlueprintCompositionResourceMetadata[];
+  existingResourceMatches: AssistantBlueprintCompositionExistingResourceMetadata[];
+  resolvedConflicts: AssistantBlueprintCompositionConflictMetadata[];
+  unresolvedConflicts: AssistantBlueprintCompositionConflictMetadata[];
+  diagnostics?: {
+    candidateScores?: AssistantBlueprintCompositionCandidateScoreMetadata[];
+  };
+};
+
 export type AssistantActionPlanMetadata = {
   planner: "local" | "provider" | "fallback";
   providerDraftUsed: boolean;
   providerId?: string | null;
+  blueprintComposition?: AssistantBlueprintCompositionMetadata;
   blueprintShadow?: {
     schemaVersion: 1;
     currentIntentId: string;

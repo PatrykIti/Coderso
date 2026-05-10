@@ -75,6 +75,27 @@ const safeFormAutomationActionTypes = new Set<FormActionType>([
 ]);
 
 const actionTypes = new Set<AssistantExecutableActionType>(assistantActionTypes);
+const blueprintCompositionResourceKinds = new Set([
+  "content-type",
+  "content-route",
+  "entry",
+  "custom-screen",
+  "listing-query",
+  "listing-template",
+  "page",
+  "detail-page",
+  "media",
+  "form",
+  "menu",
+  "seo",
+  "widget-template",
+  "site-kit",
+] as const);
+const blueprintCompositionRoles = new Set(["primary", "adjunct", "gated"] as const);
+const blueprintCompositionMatchStatuses = new Set(["matched", "unresolved"] as const);
+const blueprintCompositionConflictSeverities = new Set(["warning", "error"] as const);
+const secretLikeMetadataPattern =
+  /\b[\w.-]*(token|secret|password|api[-_]?key|credential|cookie|session|csrf|authorization|bearer)[\w.-]*\b/gi;
 
 const isRecord = (value: unknown): value is JsonRecord =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -106,6 +127,16 @@ const readOptionalText = (value: unknown) => {
   return readText(value);
 };
 
+const redactMetadataText = (value: string) =>
+  value.replace(secretLikeMetadataPattern, "[redacted]");
+
+const readMetadataText = (value: unknown) => redactMetadataText(readText(value));
+
+const readOptionalMetadataText = (value: unknown) => {
+  const text = readOptionalText(value);
+  return text === null ? null : redactMetadataText(text);
+};
+
 const readBoolean = (value: unknown) => (typeof value === "boolean" ? value : fail());
 
 const readOptionalBoolean = (value: unknown) => {
@@ -128,6 +159,9 @@ const readOptionalRecord = (value: unknown) => {
 
 const readStringArray = (value: unknown) =>
   Array.isArray(value) ? value.map((item) => readText(item)) : fail();
+
+const readMetadataStringArray = (value: unknown) =>
+  Array.isArray(value) ? value.map((item) => readMetadataText(item)) : fail();
 
 const readOptionalStringArray = (value: unknown) => {
   if (value === undefined) return undefined;
@@ -166,10 +200,133 @@ const normalizeQuestions = (value: unknown) =>
     };
   });
 
+const normalizeBlueprintCompositionConflictMetadata = (value: unknown) => {
+  const conflict = assertRecord(value);
+  assertKeys(
+    conflict,
+    new Set(["code", "severity", "message", "capabilityId", "resourceKey", "actionType"])
+  );
+  return {
+    code: readMetadataText(conflict.code),
+    severity: readEnum(conflict.severity, blueprintCompositionConflictSeverities),
+    message: readMetadataText(conflict.message),
+    ...(conflict.capabilityId !== undefined
+      ? { capabilityId: readOptionalMetadataText(conflict.capabilityId) }
+      : {}),
+    ...(conflict.resourceKey !== undefined
+      ? { resourceKey: readOptionalMetadataText(conflict.resourceKey) }
+      : {}),
+    ...(conflict.actionType !== undefined
+      ? { actionType: readOptionalNullableEnum(conflict.actionType, actionTypes) }
+      : {}),
+  };
+};
+
+const normalizeBlueprintCompositionMetadata = (value: unknown) => {
+  const input = assertRecord(value);
+  assertKeys(
+    input,
+    new Set([
+      "schemaVersion",
+      "kind",
+      "primaryCapabilityId",
+      "adjunctCapabilityIds",
+      "gatedCapabilityIds",
+      "mergedResources",
+      "existingResourceMatches",
+      "resolvedConflicts",
+      "unresolvedConflicts",
+      "diagnostics",
+    ])
+  );
+  if (readFiniteNumber(input.schemaVersion) !== 1) fail();
+  const mergedResources = readRecordArray(input.mergedResources).map((resource) => {
+    assertKeys(resource, new Set(["key", "kind", "sourceCapabilityIds"]));
+    return {
+      key: readMetadataText(resource.key),
+      kind: readEnum(resource.kind, blueprintCompositionResourceKinds),
+      sourceCapabilityIds: readMetadataStringArray(resource.sourceCapabilityIds),
+    };
+  });
+  const existingResourceMatches = readRecordArray(input.existingResourceMatches).map((match) => {
+    assertKeys(
+      match,
+      new Set([
+        "actionId",
+        "actionType",
+        "resourceKey",
+        "existingId",
+        "status",
+        "reason",
+        "candidateIds",
+      ])
+    );
+    return {
+      actionId: readOptionalMetadataText(match.actionId),
+      actionType: readOptionalNullableEnum(match.actionType, actionTypes) ?? null,
+      resourceKey: readMetadataText(match.resourceKey),
+      existingId: readOptionalMetadataText(match.existingId),
+      status: readEnum(match.status, blueprintCompositionMatchStatuses),
+      reason: readOptionalMetadataText(match.reason),
+      candidateIds: readMetadataStringArray(match.candidateIds),
+    };
+  });
+  const diagnostics =
+    input.diagnostics === undefined
+      ? undefined
+      : (() => {
+          const diagnosticsInput = assertRecord(input.diagnostics);
+          assertKeys(diagnosticsInput, new Set(["candidateScores"]));
+          return {
+            ...(diagnosticsInput.candidateScores !== undefined
+              ? {
+                  candidateScores: readRecordArray(diagnosticsInput.candidateScores).map(
+                    (candidate) => {
+                      assertKeys(candidate, new Set(["id", "role", "score", "reasons"]));
+                      return {
+                        id: readMetadataText(candidate.id),
+                        role: readEnum(candidate.role, blueprintCompositionRoles),
+                        score: readFiniteNumber(candidate.score),
+                        reasons: readMetadataStringArray(candidate.reasons),
+                      };
+                    }
+                  ),
+                }
+              : {}),
+          };
+        })();
+
+  return {
+    schemaVersion: 1 as const,
+    kind: readEnum(input.kind, new Set(["blueprint-composition"] as const)),
+    primaryCapabilityId: readMetadataText(input.primaryCapabilityId),
+    adjunctCapabilityIds: readMetadataStringArray(input.adjunctCapabilityIds),
+    gatedCapabilityIds: readMetadataStringArray(input.gatedCapabilityIds),
+    mergedResources,
+    existingResourceMatches,
+    resolvedConflicts: readRecordArray(input.resolvedConflicts).map(
+      normalizeBlueprintCompositionConflictMetadata
+    ),
+    unresolvedConflicts: readRecordArray(input.unresolvedConflicts).map(
+      normalizeBlueprintCompositionConflictMetadata
+    ),
+    ...(diagnostics !== undefined ? { diagnostics } : {}),
+  };
+};
+
 const normalizePlanMetadata = (value: unknown): AssistantActionPlanMetadata | undefined => {
   if (value === undefined) return undefined;
   const input = assertRecord(value);
-  assertKeys(input, new Set(["planner", "providerDraftUsed", "providerId", "blueprintShadow"]));
+  assertKeys(
+    input,
+    new Set([
+      "planner",
+      "providerDraftUsed",
+      "providerId",
+      "blueprintComposition",
+      "blueprintShadow",
+    ])
+  );
   const blueprintShadow =
     input.blueprintShadow === undefined
       ? undefined
@@ -222,6 +379,9 @@ const normalizePlanMetadata = (value: unknown): AssistantActionPlanMetadata | un
     planner: readEnum(input.planner, new Set(["local", "provider", "fallback"])),
     providerDraftUsed: readBoolean(input.providerDraftUsed),
     ...(input.providerId !== undefined ? { providerId: readOptionalText(input.providerId) } : {}),
+    ...(input.blueprintComposition !== undefined
+      ? { blueprintComposition: normalizeBlueprintCompositionMetadata(input.blueprintComposition) }
+      : {}),
     ...(blueprintShadow !== undefined ? { blueprintShadow } : {}),
   };
 };

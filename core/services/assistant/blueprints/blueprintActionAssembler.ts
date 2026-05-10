@@ -28,6 +28,7 @@ import {
 } from "./blueprintCardConfigMerger";
 import { mergeBlueprintSchemas } from "./blueprintSchemaMerger";
 import { matchExistingCompositionResources } from "./blueprintExistingResourceMatcher";
+import { buildBlueprintCompositionMetadata } from "./blueprintCompositionMetadata";
 
 const unique = <T>(items: T[]) => Array.from(new Set(items));
 
@@ -261,6 +262,7 @@ const buildBlueprintConflictNeedsInputPlan = (input: {
   intentFamily: AssistantIntentFamily;
   graph: BlueprintCompositionGraph;
   conflicts: BlueprintConflict[];
+  compositionMetadata: NonNullable<AssistantActionPlan["metadata"]>["blueprintComposition"];
 }): AssistantActionPlan => {
   const selectedLabels = [
     input.graph.primary?.capability.label ?? "Blueprint composition",
@@ -294,6 +296,11 @@ const buildBlueprintConflictNeedsInputPlan = (input: {
       ? `The requested composition includes gated modules (${(gatedLabels.length > 0 ? gatedLabels : selectedLabels).join(", ")}) that still need dedicated adapters.`
       : `The requested composition includes unresolved route/resource/schema conflicts across ${selectedLabels.join(", ")}.`,
     confidence: onlyGatedConflicts ? 0.58 : 0.42,
+    metadata: {
+      planner: "local",
+      providerDraftUsed: false,
+      blueprintComposition: input.compositionMetadata,
+    },
     assumptions: [
       ...input.graph.fragments.flatMap((fragment) => fragment.assumptions),
       `Selected capabilities: ${capabilityLabels.join(", ")}.`,
@@ -798,12 +805,19 @@ export const assembleComposedBlueprintPlan = (input: {
   if (!input.graph.primary) return null;
   const assembled = assembleBlueprintActions(input.graph, input.resourceCatalog);
   const fatalConflicts = assembled.conflicts.filter((conflict) => conflict.severity === "error");
+  const compositionMetadata = buildBlueprintCompositionMetadata({
+    graph: input.graph,
+    existingResourceMatches: assembled.existingResourceMatches,
+    resolvedConflicts: assembled.conflicts.filter((conflict) => conflict.severity !== "error"),
+    unresolvedConflicts: fatalConflicts,
+  });
   if (fatalConflicts.length > 0) {
     return buildBlueprintConflictNeedsInputPlan({
       promptKind: input.promptKind,
       intentFamily: input.intentFamily,
       graph: input.graph,
       conflicts: fatalConflicts,
+      compositionMetadata,
     });
   }
 
@@ -842,6 +856,11 @@ export const assembleComposedBlueprintPlan = (input: {
       0.94,
       0.62 + input.graph.adjuncts.length * 0.07 - input.graph.gated.length * 0.04
     ),
+    metadata: {
+      planner: "local",
+      providerDraftUsed: false,
+      blueprintComposition: compositionMetadata,
+    },
     assumptions,
     questions: [],
     actions: assembled.actions,

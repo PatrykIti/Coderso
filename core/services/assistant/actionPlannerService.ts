@@ -1036,6 +1036,7 @@ const buildPreferredBlueprintSetupPlan = (input: {
     normalizeAssistantActionPlan({
       ...composedPlan,
       metadata: {
+        ...composedPlan.metadata,
         planner: "local",
         providerDraftUsed: false,
       },

@@ -123,6 +123,9 @@ const resolvePlannerLabel = (metadata: AssistantActionPlanResponse["metadata"]) 
   return "Local planner";
 };
 
+const formatCompositionId = (value: string) =>
+  redactUiText(value.replaceAll("-", " ").replaceAll("_", " "));
+
 export function ActionPlanReview({
   plan,
   preview,
@@ -152,6 +155,14 @@ export function ActionPlanReview({
     : plan.status === "ready"
       ? "Ready"
       : "Needs input";
+  const composition = plan.metadata?.blueprintComposition;
+  const mergedCompositionResources =
+    composition?.mergedResources.filter((resource) => resource.sourceCapabilityIds.length > 1) ??
+    [];
+  const matchedCompositionResources =
+    composition?.existingResourceMatches.filter((match) => match.status === "matched") ?? [];
+  const unresolvedCompositionResources =
+    composition?.existingResourceMatches.filter((match) => match.status === "unresolved") ?? [];
 
   return (
     <Card className="border-emerald-200/80 bg-emerald-50/40">
@@ -213,6 +224,58 @@ export function ActionPlanReview({
                 <li key={item}>{redactUiText(item)}</li>
               ))}
             </ul>
+          </div>
+        ) : null}
+
+        {composition ? (
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Composition diagnostics
+            </p>
+            <div className="space-y-3 rounded-lg border bg-background px-3 py-3 text-sm">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="secondary">
+                  Primary {formatCompositionId(composition.primaryCapabilityId)}
+                </Badge>
+                {composition.adjunctCapabilityIds.map((capabilityId) => (
+                  <Badge key={`adjunct-${capabilityId}`} variant="outline">
+                    Adjunct {formatCompositionId(capabilityId)}
+                  </Badge>
+                ))}
+                {composition.gatedCapabilityIds.map((capabilityId) => (
+                  <Badge key={`gated-${capabilityId}`} variant="outline">
+                    Gated {formatCompositionId(capabilityId)}
+                  </Badge>
+                ))}
+              </div>
+              {matchedCompositionResources.length > 0 ||
+              unresolvedCompositionResources.length > 0 ||
+              mergedCompositionResources.length > 0 ? (
+                <div className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-3">
+                  <div>
+                    <span className="font-medium text-foreground">Merged</span>{" "}
+                    {mergedCompositionResources.length}
+                  </div>
+                  <div>
+                    <span className="font-medium text-foreground">Reused</span>{" "}
+                    {matchedCompositionResources.length}
+                  </div>
+                  <div>
+                    <span className="font-medium text-foreground">Needs input</span>{" "}
+                    {composition.unresolvedConflicts.length + unresolvedCompositionResources.length}
+                  </div>
+                </div>
+              ) : null}
+              {mergedCompositionResources.length > 0 ? (
+                <ul className="ml-5 list-disc space-y-1 text-xs text-muted-foreground">
+                  {mergedCompositionResources.slice(0, 4).map((resource) => (
+                    <li key={`${resource.kind}-${resource.key}`}>
+                      {redactUiText(resource.kind)} {redactUiText(resource.key)}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
           </div>
         ) : null}
 
