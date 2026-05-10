@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 26 tasks
+- **To Do:** 35 tasks
 - **In Progress:** 11 tasks
 - **Done:** 1464 tasks
 
@@ -38,6 +38,15 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-252 | Widget Configuration IA and Pages Widget Expansion | High | Very Large | Umbrella: right inspector IA, research archive, Hero/Timeline expansion, and Pages widget editor parity |
+| TASK-252-01 | Widget Inspector IA and Shared Option Architecture | High | Large | Shared right-panel structure, info icon pattern, slot placement, and automation metadata |
+| TASK-252-02 | Widget Research Archive and Variant Model | High | Medium | License-safe `_docs/_WIDGETS/tmp/**` research lane and Coderso-owned variant/mode matrix |
+| TASK-252-03 | Hero Editor Mode and Badge Expansion | High | Large | Hero badge/announcement surface plus reorganized Wizard/Visual/Advanced editor IA |
+| TASK-252-04 | Timeline Editor Motion and Chronology Expansion | High | Large | True timeline modes, date-capable steps, and reduced-motion-safe scroll reveal |
+| TASK-252-05 | Layout and Structural Widget Editor Parity | High | Large | Section/slots baseline plus layout primitives and missing docs for tabs/accordion/toggle-block |
+| TASK-252-06 | Content and Marketing Widget Editor Expansion | High | Large | Marketing/content widget editor IA, variants, repeated item controls, and docs |
+| TASK-252-07 | Dynamic and Operational Widget Editor Expansion | High | Large | Dynamic, commerce, listing/search, forms, booking, navigation, and footer editor parity |
+| TASK-252-08 | QA, Docs, Changelog, and Board Closure | Medium | Medium | Final validation matrix, missing widget docs, changelog, and board sync |
 | TASK-190-05-03-06 | Detail Page Composer Fixtures and Runtime Acceptance | High | Medium | Technical leaf: fixture matrix and Bun public runtime acceptance coverage |
 | TASK-190-05-03-07-03 | Detail Page Admin Client, Cache, and Delete Conflict Parity | High | Medium | Technical leaf: detail-page admin client/cache family plus linked delete and content-type conflict parity |
 | TASK-190-05-03-08 | Detail Page Generic Assistant Resource Integration | High | Medium | Technical leaf: later generic policy/target-resolver/provider support for detail-page after base action/admin/runtime flow exists |

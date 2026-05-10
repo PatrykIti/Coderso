@@ -1,0 +1,153 @@
+# TASK-252-08: QA, Docs, Changelog, and Board Closure
+
+# FileName: TASK-252-08_QA_Docs_Changelog_and_Board_Closure.md
+
+**Priority:** Medium
+**Category:** Widgets + QA + Documentation
+**Estimated Effort:** Medium
+**Dependencies:** TASK-252-01, TASK-252-02, TASK-252-03, TASK-252-04, TASK-252-05, TASK-252-06, TASK-252-07
+**Status:** To Do
+
+---
+
+## Overview
+
+Close TASK-252 only after the right-inspector IA, Hero, Timeline, and the
+remaining Pages widget editor families are validated, documented, and reflected
+in the task board and changelog.
+
+This closure task owns final proof. It is not a substitute for targeted tests in
+the implementation subtasks.
+
+## Business Requirements
+
+- Confirm every Pages-publishable widget has:
+  - a documented `Wizard / Visual / Advanced` ownership model;
+  - accessible labels and automation metadata for its main controls;
+  - matching runtime/schema/default/normalizer/editor/docs updates when its
+    data model changed.
+- Confirm right-panel UX:
+  - no large persistent instructional cards above tabs except blocking warnings;
+  - info/help is available through compact information affordances;
+  - slot/region controls are inside a named editor section.
+- Confirm research artifacts:
+  - `_docs/_WIDGETS/tmp/**` contains only license-safe summaries or permitted
+    source;
+  - every artifact has URL/access/license/copy-policy metadata.
+- Confirm missing widget docs are created:
+  - `TABS.md`
+  - `ACCORDION.md`
+  - `TOGGLE_BLOCK.md`
+  - `PRODUCT_GALLERY.md`
+  - `PRODUCT_COMPARE.md`
+  - `PRODUCT_TABLE.md`
+  - `LISTING_FILTERS.md`
+  - `SEARCH_BOX.md`
+  - `BOOKING_CALENDAR.md`
+  - `APPOINTMENT_FORM.md`
+- Add a changelog entry and sync `_docs/_TASKS/README.md` when the family is
+  completed.
+
+## Sub-Tasks
+
+- [ ] Build the final per-widget validation matrix.
+- [ ] Verify right-inspector IA acceptance criteria across representative
+  widgets.
+- [ ] Verify research archive license/source metadata.
+- [ ] Verify all missing `_docs/_WIDGETS` docs were created.
+- [ ] Run required lint/type/test/gate commands or record exact blockers.
+- [ ] Mark TASK-252 task files Done, sync board statistics, and add changelog.
+
+## Files to Change
+
+- `_docs/_TASKS/TASK-252*.md`
+- `_docs/_TASKS/README.md`
+- `_docs/_CHANGELOG/README.md`
+- new `_docs/_CHANGELOG/CHANGELOG-XXX_*.md` entry on completion.
+- `_docs/WIDGETS.md`
+- `_docs/_WIDGETS/README.md`
+- all touched `_docs/_WIDGETS/*.md`
+- final validation notes in this task file.
+
+## Implementation Pseudocode
+
+Build a final widget proof matrix.
+
+```md
+| Widget | Editor IA proof | Runtime proof | Docs | Notes |
+|---|---|---|---|---|
+| hero | hero-editor-wave | hero.test | HERO.md | badge supported |
+| timeline | timeline-editor-wave | timeline.test | TIMELINE.md | chronology modes |
+```
+
+Then close statuses only after validation:
+
+```ts
+const taskIds = ["TASK-252", "TASK-252-01", "..."];
+for (const id of taskIds) {
+  markTaskDone(id, "2026-??-??");
+  moveReadmeRow(id, "To Do", "Done");
+}
+updateStats({ todo: -taskIds.length, done: +taskIds.length });
+addChangelogEntry({ taskId: "TASK-252", validation });
+```
+
+## Security Contract
+
+- Visibility:
+  - closure docs are internal project docs;
+  - widget output remains public runtime output.
+- Auth model:
+  - no new endpoint.
+- RBAC:
+  - unchanged.
+- CSRF:
+  - unchanged.
+- Rate-limit bucket:
+  - unchanged.
+- Reject-unknown validation:
+  - closure must verify changed widget schemas still reject unknown fields.
+- Anti-abuse:
+  - closure must verify public-write widgets still preserve nonce/captcha/
+    rate-limit contracts if touched.
+- Third-party artifacts:
+  - closure must verify no proprietary source was committed into research
+    folders.
+
+## Testing Requirements
+
+- Baseline gates:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun run test:vitest`
+- Focused suites from all implementation subtasks must pass.
+- Run Bun-owned suites for touched runtime/data/public-write widgets:
+  - content/posts/commerce/booking/forms/search/listing owner suites named in
+    TASK-252-07.
+- Run registry/contract suites:
+  - `tests/unit/widgets/registry.test.ts`
+  - `tests/unit/widgets/runtimeRegistry.test.ts`
+  - `tests/unit/widgets/validator.test.ts`
+  - `tests/unit/widgets/modulePackMatrix.test.ts`
+- Run `bun run gates:coderso` before closure or document the exact blocker.
+- If DB-backed tests are required and `DATABASE_URL` is available, load env with
+  `set -a && source .env && set +a` before the command.
+
+## Documentation Updates Required
+
+- `_docs/WIDGETS.md`
+- `_docs/_WIDGETS/README.md`
+- every changed `_docs/_WIDGETS/*.md`
+- `_docs/_TASKS/TASK-252*.md`
+- `_docs/_TASKS/README.md`
+- `_docs/_CHANGELOG/README.md`
+- new changelog entry for TASK-252.
+
+## Acceptance Criteria
+
+- All TASK-252 task files are marked Done only after implementation and
+  validation are complete.
+- Board statistics match task statuses.
+- Changelog entry references TASK-252 and summarizes validation.
+- Final documentation tells implementers and users how widget configuration is
+  structured across Wizard, Visual, and Advanced.
