@@ -192,6 +192,9 @@ Then build a matrix:
 - No `SHORTFALL.md` files were needed.
 - Kept the archive summary-only and license-safe; premium/proprietary sources
   are reference-only.
+- Synchronized `_docs/_TASKS/README.md`, `_docs/_CHANGELOG/README.md`, and
+  `_docs/_CHANGELOG/814-2026-05-10-task-252-widget-research-archive.md` as the
+  board/changelog closure artifacts for the completed archive slice.
 - Validation:
   - `git diff --check`
   - folder/card/field/matrix coverage checks across `_docs/_WIDGETS/tmp/**`

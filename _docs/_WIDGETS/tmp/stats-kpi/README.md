@@ -60,8 +60,8 @@ Summary-only archive for TASK-252. Do not copy third-party code from these sourc
 - URL: https://reui.io/
 - Access type: docs-example
 - License/terms summary: Verify ReUI terms before reuse.
-- Observed UX pattern: SaaS KPI cards with prefix/suffix and trend metadata.
-- Useful Coderso fields/options: `prefix`, `suffix`, `trend`, `caption`.
+- Observed UX pattern: SaaS KPI cards with prefix/suffix around displayed values.
+- Useful Coderso fields/options: `prefix`, `suffix`; trend/caption metadata remains Adapt-only.
 - Decision: Keep
 - Copy policy: Summarize only.
 

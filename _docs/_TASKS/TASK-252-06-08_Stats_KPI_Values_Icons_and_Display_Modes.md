@@ -81,7 +81,16 @@ function normalizeStatsKpiItem(item: StatsKpiItem, index: number): StatsKpiItem 
   return {
     ...item,
     id: normalizeStableItemId(item.id, `stats-kpi-${index + 1}`),
+    prefix: normalizeOptionalText(item.prefix),
+    suffix: normalizeOptionalText(item.suffix),
+    icon: normalizeOptionalIcon(item.icon),
   };
+}
+
+function resolveStatsKpiDisplayMode(variant: StatsKpiVariantId): "grid" | "strip" | "legacy-split" {
+  if (variant === "inline") return "strip";
+  if (variant === "split-highlight") return "legacy-split";
+  return "grid";
 }
 
 function StatsKpiVisualEditor(props: WidgetEditorProps<StatsKpiData>) {
@@ -105,6 +114,11 @@ Implementation checklist:
 - Read `_docs/_WIDGETS/tmp/stats-kpi/MATRIX.md` before changing the schema or editor.
 - Extend or reorganize `core/widgets/core/statsKpi.tsx` schema/defaults/normalizer/rendering
   only for fields approved by the research decisions above.
+- Add or preserve schema/default/normalizer/render/editor ownership for
+  `items[].prefix`, `items[].suffix`, and `items[].icon`.
+- Map current variants explicitly: `cards` is grid semantics, `inline` is strip
+  semantics, and `split-highlight` remains compatibility behavior unless this
+  leaf intentionally migrates it with renderer/editor/tests together.
 - Refactor `core/admin/ui/widgets/editors/StatsKpiEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.

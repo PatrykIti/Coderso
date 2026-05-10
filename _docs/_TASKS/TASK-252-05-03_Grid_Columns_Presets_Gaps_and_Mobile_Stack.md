@@ -40,7 +40,7 @@ and Reject decisions.
 ## Editor Mode Ownership
 
 - `Wizard`: first-run setup for the safest useful defaults for `grid-columns`.
-- `Visual`: `Column preset`, `Gaps and padding`, `Mobile behavior`, `Equal height`.
+- `Visual`: `Column preset`, `Gaps and padding`, `Mobile behavior`.
 - `Advanced`: `Legacy column payloads`, `Responsive diagnostics`.
 
 ## Sub-Tasks

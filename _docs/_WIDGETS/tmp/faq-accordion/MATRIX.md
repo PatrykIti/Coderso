@@ -3,7 +3,7 @@
 | Researched option | Source family | Decision | Coderso editor/schema implication |
 |---|---|---|---|
 | Basic accordion rows | HyperUI, Flowbite, shadcn/ui | Keep | Keep repeated question/answer items with default-open controls. |
-| Single vs multiple open | shadcn/ui | Keep | Add `allowMultiple` and `collapsible` semantics; Flowbite React remains Adapt reference material. |
+| Single vs multiple open | shadcn/ui | Keep | Map current `options.allowMultipleOpen` and `options.defaultOpenIndex` into planned `openMode`, `defaultOpenIds`, and `collapsible` semantics; Flowbite React remains Adapt reference material. |
 | Categories | Tailwind UI Plus, Origin UI | Adapt | Support optional category labels; avoid full tabbed search unless justified. |
 | Support/contact CTA | ReUI | Keep | Add optional `supportCta` below FAQ list; Tailwind UI Plus category/layout references remain Adapt. |
 | Disabled FAQ item | MUI | Reject | Not useful for published marketing FAQs. |
