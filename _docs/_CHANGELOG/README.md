@@ -25,6 +25,9 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 817 | 2026-05-10 | TASK-190 detail-page fixture runtime acceptance | Assistant/QA |
+| 816 | 2026-05-10 | TASK-190 detail-page admin client cache parity | Assistant/Admin Cache |
+| 815 | 2026-05-10 | TASK-190 conflict media and permission closure | Assistant/Core |
 | 814 | 2026-05-10 | TASK-190 docs status drift sync | Documentation/Assistant |
 | 813 | 2026-05-10 | Security strict dependency advisory closure | Security/Dependencies |
 | 812 | 2026-05-09 | TASK-190 detail-page route contract hardening | Assistant/Core |

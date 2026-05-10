@@ -69,6 +69,10 @@ export type BlueprintMediaResourceMetadata = {
   mode: "existing-asset-reference";
   targetKinds: Array<"entry" | "page" | "widget">;
   field?: string | null;
+  operation?: "attach" | "replace" | "remove-reference" | "delete-asset";
+  assetId?: string | null;
+  candidateIds?: string[];
+  required?: boolean;
 };
 
 export type BlueprintResourceContribution = {

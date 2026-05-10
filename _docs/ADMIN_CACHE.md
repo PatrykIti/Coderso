@@ -39,6 +39,9 @@ Defined in `core/admin/services/cachePolicy.ts`:
 - `customScreens:detail:<id>`
 - `contentTypes:list`
 - `contentTypes:detail:<id>`
+- `detailPages:list`
+- `detailPages:list:contentType:<contentTypeId>`
+- `detailPages:detail:<id>`
 - `menus:list`
 - `menus:detail:<id>`
 - `seo:list`
@@ -208,6 +211,7 @@ Clients update caches and broadcast events on:
   - `entry.*` -> `entries:list:all`, `entries:list:<typeSlug>`, touched `entries:detail:<typeSlug>:<id>`
   - `custom-screen.*` -> `customScreens:list`, touched `customScreens:detail:<id>`
   - `page.*` -> `pages:list`, touched `pages:detail:<id>`
+  - `detail-page.upsert` -> `detailPages:list`, `detailPages:list:contentType:<contentTypeId>`, touched `detailPages:detail:<id>`
   - `form.*` -> `forms:list`, touched `forms:detail:<id>`
   - `form.automation.upsert` -> `forms:actions:<id>`, `forms:action-runs:<id>`
   - `listing-query.*` -> `listings:queries:list`, touched `listings:queries:detail:<id>`
@@ -281,6 +285,23 @@ Clients update caches and broadcast events on:
 - Detail-style updates (`getPageCached`, `updatePage`, revision restore) merge
   title/slug/status fields into an existing list row without dropping the
   current author identity.
+
+### Detail Pages list/detail cache note
+
+- Detail-page caches are owned by `core/admin/services/detailPagesClient.ts`.
+- `detailPages:list` covers unfiltered internal reads; filtered workspace/editor
+  reads use `detailPages:list:contentType:<contentTypeId>` so one content type's
+  template list never hydrates another content type's workspace.
+- `detailPages:detail:<id>` stores the normalized detail-page record returned by
+  list/detail/mutation responses.
+- Manual create/update/delete, publish/unpublish, and revision restore flows
+  update or invalidate the unfiltered list key, the active
+  `contentTypeId`-scoped list key, and the touched detail key.
+- Assistant `detail-page.upsert` execution results use the same cache-key
+  family; failed and `noop` execution results do not mutate cache state.
+- Route-link ownership stays outside this client. Canonical public route links
+  are still changed through `setting.content-route.upsert`; the detail-page
+  client only manages detail-page documents and revision/lifecycle helpers.
 
 ### Posts list/detail/revisions cache note
 

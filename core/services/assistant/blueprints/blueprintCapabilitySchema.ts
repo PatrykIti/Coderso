@@ -191,13 +191,29 @@ const normalizeRequirement = (value: JsonRecord): BlueprintRequirement => {
 };
 
 const normalizeMediaMetadata = (value: JsonRecord): BlueprintMediaResourceMetadata => {
-  assertKeys(value, new Set(["mode", "targetKinds", "field"]));
+  assertKeys(
+    value,
+    new Set(["mode", "targetKinds", "field", "operation", "assetId", "candidateIds", "required"])
+  );
   return {
     mode: readEnum(value.mode, new Set(["existing-asset-reference"] as const)),
     targetKinds: readStringArray(value.targetKinds).map((entry) =>
       readEnum(entry, new Set(["entry", "page", "widget"] as const))
     ),
     ...(value.field !== undefined ? { field: readOptionalText(value.field) } : {}),
+    ...(value.operation !== undefined
+      ? {
+          operation: readEnum(
+            value.operation,
+            new Set(["attach", "replace", "remove-reference", "delete-asset"] as const)
+          ),
+        }
+      : {}),
+    ...(value.assetId !== undefined ? { assetId: readOptionalText(value.assetId) } : {}),
+    ...(value.candidateIds !== undefined
+      ? { candidateIds: readStringArray(value.candidateIds) }
+      : {}),
+    ...(value.required !== undefined ? { required: readBoolean(value.required) } : {}),
   };
 };
 

@@ -1,7 +1,7 @@
 # LLM Guide Acceptance Matrix
 
 **Status:** Active
-**Last Updated:** 2026-05-08
+**Last Updated:** 2026-05-10
 **Related Tasks:** TASK-101-09, TASK-170, TASK-171, TASK-172, TASK-173, TASK-173-01, TASK-173-06, TASK-174, TASK-174-05, TASK-174-07, TASK-178, TASK-178-01, TASK-178-02, TASK-178-03, TASK-178-03-01, TASK-178-03-02, TASK-178-03-03, TASK-178-03-04, TASK-178-05, TASK-178-07-01, TASK-178-07-02, TASK-180, TASK-184, TASK-188, TASK-190
 
 ---
@@ -108,13 +108,14 @@ Rules:
 | Pack | Status | Plan Coverage | Execute Coverage | Runtime Coverage | Notes |
 |---|---|---|---|---|---|
 | House Projects Catalog | Executable | Vitest planner/catalog blueprint | Bun executor + DB idempotency | Bun public runtime test | Baseline full-stack pack |
-| Product Catalog | Executable | Vitest planner/catalog blueprint | Bun executor | Covered by catalog-family executor smoke | No checkout |
+| Product Catalog | Executable | Vitest planner/catalog blueprint + local detail-page fixture | Bun executor | Detail-page composer runtime fixture | No checkout |
 | Product Inquiry Catalog | Executable | Vitest planner/catalog blueprint | Bun executor | No dedicated public runtime test yet | Adds public inquiry form |
-| Portfolio Case Study | Executable | Vitest planner/catalog blueprint | Catalog-family executor path | No dedicated public runtime test yet | Adds result/testimonial fields |
-| Services Directory | Executable | Vitest planner/catalog blueprint | Catalog-family executor path | No dedicated public runtime test yet | Existing generic catalog pack |
+| Portfolio Case Study | Executable | Vitest planner/catalog blueprint + local detail-page fixture | Catalog-family executor path | Detail-page composer runtime fixture | Adds result/testimonial fields |
+| Services Directory | Executable | Vitest planner/catalog blueprint + local detail-page fixture | Catalog-family executor path | Detail-page composer runtime fixture | Existing generic catalog pack; booking remains gated |
 | Lead Capture Site | Executable | Vitest planner/blueprint | Bun executor | No dedicated public runtime test yet | Form runtime hardening remains existing Forms contract |
 | Editorial Content Hub | Executable | Vitest planner/blueprint | Bun executor | No dedicated public runtime test yet | Uses `posts-feed`; no post mutation |
 | Mixed Blueprint Composition (current packs) | Bounded live cutover | Vitest capability registry + candidate resolver + graph + assembler + provider/shadow diagnostics | Uses existing typed executor families only; broader no-duplicate/workspace/evaluation closure still deferred | Not applicable yet | Supported mixed-capability and primary-plus-gated setup prompts now use the composed planner path, while single-pack setup/refinement, generic detail-page resource packaging, media reuse, and workspace/editor waves remain deferred |
+| Detail-page Composer Local Fixtures | Local deterministic acceptance | Vitest `blueprint-detail-page-fixtures` | Existing `detail-page.upsert` executor family; no provider/live matrix yet | Bun DB-backed `detail-page-composer-runtime` | House projects, products, services, and portfolio fixtures now validate route-linked detail-page documents, public runtime render, preview, draft hiding, legacy fallback, negative bindings, duplicate routes, and gated checkout/booking metadata without updating the TASK-190-08 live/provider matrix |
 | Booking Service Business | Gated | Vitest `needs_input` | Not applicable | Not applicable | Requires booking action adapters |
 | Product Checkout/Payment | Gated | Vitest `needs_input` | Not applicable | Not applicable | Requires commerce/payment adapters |
 | Solution Kit Refinement | Gated | Docs/task audit | Not applicable | Not applicable | Requires server-derived installed-kit context |
@@ -146,4 +147,4 @@ These are intentional follow-up capabilities, not current production claims:
 - Booking resource/schedule/reservation assistant actions.
 - Checkout/payment assistant actions.
 - Solution-kit refinement from server-derived installed-kit resource context.
-- Dedicated public runtime acceptance tests for every non-house catalog pack.
+- Full live/provider matrix coverage for detail-page composer prompts.

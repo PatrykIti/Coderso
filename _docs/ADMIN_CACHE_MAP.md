@@ -97,6 +97,21 @@ This file maps admin UI surfaces to their implementation files and the cached AP
   - UI: `core/admin/ui/content-types/SchemaBuilderPage.tsx`
   - Cached APIs: `listContentTypesCached`, `getContentTypeCached`
 
+## Detail Pages
+- Detail-page admin client
+  - UI: future collection workspace and detail-template editor surfaces
+  - Cached APIs: `listDetailPagesCached`, `getDetailPageCached`,
+    `getCachedDetailPages`, `getCachedDetailPage`
+  - Mutations: `createDetailPage`, `updateDetailPage`, `deleteDetailPage`,
+    `publishDetailPage`, `unpublishDetailPage`, `restoreDetailPageRevision`
+  - Lifecycle/revisions: `previewDetailPage`, `autosaveDetailPage`,
+    `listDetailPageRevisions`, `discardDetailPageRevision`
+  - Cache bus: `detailPages:list`,
+    `detailPages:list:contentType:<contentTypeId>`,
+    `detailPages:detail:<id>`
+  - Assistant execution: `detail-page.upsert` emits the same list/detail cache
+    events as manual admin mutations
+
 ## Custom Screens
 - Screens list
   - UI: `core/admin/ui/custom-screens/CustomScreenListPage.tsx`

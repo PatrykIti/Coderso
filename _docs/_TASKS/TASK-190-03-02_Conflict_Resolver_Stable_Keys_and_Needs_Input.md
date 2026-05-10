@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Conflict Safety
 **Estimated Effort:** Large
 **Dependencies:** TASK-190-03-01
-**Status:** In Progress (2026-05-06)
+**Status:** Done (2026-05-10)
 
 ---
 
@@ -19,7 +19,13 @@ Current slice note:
   blocking `gated_domain` surfacing now return machine-readable conflicts
   through a closed typed contract that the assembler/planner path can downgrade
   into `needs_input` / `gated`,
-- broader media and permission conflict families remain open.
+- media conflicts now surface as `media_asset_missing`,
+  `media_asset_ambiguous`, `media_upload_gated`, and `media_delete_gated`
+  without transporting raw upload payloads or deleting media assets through the
+  composer,
+- required manifest permissions that are not declared by the composed action
+  family contracts now surface as typed `permission_gap` conflicts instead of
+  being treated as implicit grants.
 
 ## Sub-Tasks
 
@@ -74,7 +80,8 @@ export const resolveBlueprintConflicts = (graph) => {
 - Route collision test.
 - Gated module test.
 - Closed-contract regression for unknown conflict codes.
-- Media and permission conflict families remain deferred to follow-up work.
+- Media missing/ambiguous/upload/delete conflict tests.
+- Permission gap and permission-satisfied-by-action-contract tests.
 
 ## Documentation Updates Required
 

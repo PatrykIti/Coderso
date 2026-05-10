@@ -378,7 +378,7 @@ Rotacja klucza:
   - `LLM Guide` mode routes through `/assistant/actions/plan`; docs-only mode remains on `/assistant/chat`,
   - `responseKind=docs` and `responseKind=inspection` are non-mutating and cannot execute actions,
   - `responseKind=action_plan` requires strict typed actions before dry-run/execute,
-- blueprint composition conflicts remain non-executable: when the local setup planner or shadow comparison selects the composed blueprint path, blocking route/schema/resource collisions and gated domains downgrade the result into `needs_input` or `gated` with typed questions instead of returning partial executable actions,
+- blueprint composition conflicts remain non-executable: when the local setup planner or shadow comparison selects the composed blueprint path, blocking route/schema/resource collisions, media missing/ambiguous/upload/delete gates, manifest permission gaps, and gated domains downgrade the result into `needs_input` or `gated` with typed questions instead of returning partial executable actions,
   - generic CMS mutation mapping can only emit existing typed action contracts and never bypasses `actionRegistry.ts`, per-action permissions, dry-run, execute idempotency, or domain service revalidation,
   - surface hints and CMS filters are allowlisted planner fields and cannot encode arbitrary DB paths or privileged settings,
   - assistant planning state is short-lived, bounded, advisory-only, contains candidate summaries only, and is revalidated/re-resolved server-side before mutation planning,

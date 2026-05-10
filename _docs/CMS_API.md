@@ -1634,6 +1634,10 @@ Rules:
   `detail_page_revision_delete_forbidden`.
 - This CRUD family manages documents only; canonical route linking remains owned
   by `setting.content-route.upsert`.
+- Admin client cache keys for these routes are `detailPages:list`,
+  `detailPages:list:contentType:<contentTypeId>`, and
+  `detailPages:detail:<id>`; assistant `detail-page.upsert` execution results
+  broadcast the same cache family as manual admin mutations.
 
 ---
 

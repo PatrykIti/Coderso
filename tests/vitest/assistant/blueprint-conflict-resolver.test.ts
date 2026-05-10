@@ -3,9 +3,45 @@ import { expect, test } from "vitest";
 import { buildProductInquiryCatalogPlan } from "../../../core/services/assistant/blueprints/productInquiryBlueprint";
 import { buildCatalogFamilyPlan } from "../../../core/services/assistant/blueprints/catalogFamilyBlueprint";
 import { PRODUCT_CATALOG_PRESET } from "../../../core/services/assistant/blueprints/catalogFamilyPresets";
-import { normalizeBlueprintConflict } from "../../../core/services/assistant/blueprints/blueprintCapabilityTypes";
+import {
+  normalizeBlueprintConflict,
+  type BlueprintCapability,
+  type BlueprintCompositionNode,
+} from "../../../core/services/assistant/blueprints/blueprintCapabilityTypes";
 import { buildBlueprintCompositionGraph } from "../../../core/services/assistant/blueprints/blueprintCompositionGraph";
 import { resolveBlueprintCompositionConflicts } from "../../../core/services/assistant/blueprints/blueprintConflictResolver";
+
+const createTestCapability = (
+  overrides: Partial<BlueprintCapability> = {}
+): BlueprintCapability => ({
+  id: "test-capability",
+  version: 1,
+  label: "Test Capability",
+  family: "test",
+  provides: [{ kind: "catalog", key: "test-catalog", label: "Test catalog" }],
+  requires: [],
+  resources: [],
+  pageSections: [],
+  adminSurfaces: [],
+  gated: [],
+  merge: {
+    role: "primary",
+    resourceStrategy: "dedupe-by-key",
+    pageStrategy: "merge-page-upsert",
+    gatedStrategy: "metadata-only",
+    priority: 10,
+  },
+  ...overrides,
+});
+
+const createTestNode = (capability: BlueprintCapability): BlueprintCompositionNode => ({
+  capabilityId: capability.id,
+  role: capability.merge.role,
+  score: 10,
+  matchedSignals: ["test"],
+  reasons: ["Test node."],
+  capability,
+});
 
 test("resolveBlueprintCompositionConflicts accepts product inquiry page merge on the same catalog slug", () => {
   const base = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
@@ -287,6 +323,183 @@ test("resolveBlueprintCompositionConflicts surfaces gated booking domains as blo
       severity: "error",
     }),
   ]);
+});
+
+test("resolveBlueprintCompositionConflicts surfaces media import gates as media upload conflicts", () => {
+  const capability = createTestCapability({
+    id: "media-import-gate",
+    label: "Media Import Gate",
+    gated: [
+      {
+        key: "gated:media-import",
+        kind: "media-import",
+        label: "Media import",
+        reason: "Attached files must become trusted media-library assets first.",
+      },
+    ],
+    merge: {
+      role: "gated",
+      resourceStrategy: "dedupe-by-key",
+      pageStrategy: "keep-separate",
+      gatedStrategy: "needs-input",
+      priority: 10,
+    },
+  });
+
+  const conflicts = resolveBlueprintCompositionConflicts({
+    fragments: [],
+    gated: [createTestNode(capability)],
+  });
+
+  expect(conflicts).toEqual([
+    expect.objectContaining({
+      code: "media_upload_gated",
+      capabilityId: "media-import-gate",
+      resourceKey: "gated:media-import",
+      severity: "error",
+    }),
+  ]);
+});
+
+test("resolveBlueprintCompositionConflicts surfaces missing ambiguous and delete-gated media references", () => {
+  const capability = createTestCapability({
+    id: "media-reference-capability",
+    label: "Media Reference Capability",
+    resources: [
+      {
+        key: "media:hero",
+        kind: "media",
+        label: "Hero image",
+        executable: false,
+        actionTypes: [],
+        stableTarget: "heroImage",
+        owner: "media.reference.attach",
+        metadata: {
+          mode: "existing-asset-reference",
+          targetKinds: ["entry"],
+          field: "heroImage",
+          operation: "attach",
+          required: true,
+        },
+      },
+      {
+        key: "media:gallery",
+        kind: "media",
+        label: "Gallery image",
+        executable: false,
+        actionTypes: [],
+        stableTarget: "gallery",
+        owner: "media.reference.attach",
+        metadata: {
+          mode: "existing-asset-reference",
+          targetKinds: ["entry"],
+          field: "gallery",
+          operation: "replace",
+          candidateIds: ["media-1", "media-2"],
+        },
+      },
+      {
+        key: "media:delete",
+        kind: "media",
+        label: "Old hero image",
+        executable: false,
+        actionTypes: [],
+        stableTarget: "oldHeroImage",
+        owner: "media.reference.attach",
+        metadata: {
+          mode: "existing-asset-reference",
+          targetKinds: ["entry"],
+          field: "heroImage",
+          operation: "delete-asset",
+          assetId: "media-old",
+        },
+      },
+    ],
+  });
+
+  const conflicts = resolveBlueprintCompositionConflicts({
+    fragments: [],
+    selectedCapabilities: [capability],
+  });
+
+  expect(conflicts).toEqual([
+    expect.objectContaining({
+      code: "media_asset_missing",
+      capabilityId: "media-reference-capability",
+      resourceKey: "media:hero",
+    }),
+    expect.objectContaining({
+      code: "media_asset_ambiguous",
+      capabilityId: "media-reference-capability",
+      resourceKey: "media:gallery",
+    }),
+    expect.objectContaining({
+      code: "media_delete_gated",
+      capabilityId: "media-reference-capability",
+      resourceKey: "media:delete",
+    }),
+  ]);
+});
+
+test("resolveBlueprintCompositionConflicts surfaces permission gaps against action contracts", () => {
+  const capability = createTestCapability({
+    id: "permission-capability",
+    label: "Permission Capability",
+    requires: [
+      {
+        kind: "permission",
+        key: "media:delete",
+        label: "Media delete",
+      },
+    ],
+  });
+
+  const conflicts = resolveBlueprintCompositionConflicts({
+    fragments: [],
+    selectedCapabilities: [capability],
+  });
+
+  expect(conflicts).toEqual([
+    expect.objectContaining({
+      code: "permission_gap",
+      capabilityId: "permission-capability",
+      resourceKey: "permission:media:delete",
+      severity: "error",
+    }),
+  ]);
+});
+
+test("resolveBlueprintCompositionConflicts accepts permission requirements already declared by actions", () => {
+  const base = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+  const capability = createTestCapability({
+    id: "content-write-capability",
+    label: "Content Write Capability",
+    requires: [
+      {
+        kind: "permission",
+        key: "content:write",
+        label: "Content write",
+      },
+    ],
+  });
+
+  const conflicts = resolveBlueprintCompositionConflicts({
+    fragments: [
+      {
+        capabilityId: "product-catalog",
+        planId: base.id,
+        title: base.title,
+        assumptions: base.assumptions,
+        actions: base.actions,
+      },
+    ],
+    selectedCapabilities: [capability],
+  });
+
+  expect(conflicts).toEqual([]);
 });
 
 test("normalizeBlueprintConflict rejects unknown conflict codes", () => {

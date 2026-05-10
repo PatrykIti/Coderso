@@ -314,7 +314,9 @@ test("executeAssistantActions invalidates custom screen caches after successful 
       idempotencyKey: "assistant-custom-screen-delete-1",
     });
 
-    const events = storageWrites.map((value) => JSON.parse(value) as { key: string; action: string });
+    const events = storageWrites.map(
+      (value) => JSON.parse(value) as { key: string; action: string }
+    );
     expect(events).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -426,7 +428,9 @@ test("executeAssistantActions invalidates page caches after successful delete", 
       idempotencyKey: "assistant-page-delete-1",
     });
 
-    const events = storageWrites.map((value) => JSON.parse(value) as { key: string; action: string });
+    const events = storageWrites.map(
+      (value) => JSON.parse(value) as { key: string; action: string }
+    );
     expect(events).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ key: cacheKeys.pagesList, action: "invalidate" }),
@@ -498,6 +502,21 @@ test("executeAssistantActions broadcasts cache events for supported CMS action f
         title: "Archive form",
         description: "Archive form.",
         input: { id: "form-lead", name: "Lead", slug: "lead", expectedStatus: "published" },
+      },
+      {
+        id: "detail-page-upsert-products",
+        type: "detail-page.upsert",
+        title: "Upsert detail page",
+        description: "Upsert detail template.",
+        input: {
+          expectedExistingId: "detail-page-products",
+          document: {
+            id: "detail-page-products",
+            contentTypeId: "ct-products",
+            contentTypeSlug: "products",
+            name: "Products detail",
+          },
+        },
       },
       {
         id: "form-automation-lead",
@@ -648,6 +667,18 @@ test("executeAssistantActions broadcasts cache events for supported CMS action f
           message: "Archived.",
         },
         {
+          actionId: "detail-page-upsert-products",
+          type: "detail-page.upsert",
+          targetType: "detail-page",
+          targetKey: "products/detail-page-products",
+          operation: "update",
+          status: "success",
+          resourceId: "detail-page-products",
+          adminHref: null,
+          publicHref: null,
+          message: "Detail template updated.",
+        },
+        {
           actionId: "form-automation-lead",
           type: "form.automation.upsert",
           targetType: "form-action",
@@ -756,7 +787,7 @@ test("executeAssistantActions broadcasts cache events for supported CMS action f
           message: "Unknown.",
         },
       ],
-      summary: { create: 0, update: 8, delete: 1, noop: 1, failed: 1 },
+      summary: { create: 0, update: 9, delete: 1, noop: 1, failed: 1 },
     });
   };
 
@@ -767,24 +798,53 @@ test("executeAssistantActions broadcasts cache events for supported CMS action f
       idempotencyKey: "assistant-cache-matrix-1",
     });
 
-    const events = storageWrites.map((value) => JSON.parse(value) as { key: string; action: string });
+    const events = storageWrites.map(
+      (value) => JSON.parse(value) as { key: string; action: string }
+    );
     expect(events).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ key: cacheKeys.contentTypesList, action: "invalidate" }),
-        expect.objectContaining({ key: cacheKeys.contentTypeDetail("ct-products"), action: "invalidate" }),
+        expect.objectContaining({
+          key: cacheKeys.contentTypeDetail("ct-products"),
+          action: "invalidate",
+        }),
         expect.objectContaining({ key: cacheKeys.entriesList("products"), action: "update" }),
         expect.objectContaining({ key: cacheKeys.entriesAllList, action: "update" }),
-        expect.objectContaining({ key: cacheKeys.entryDetail("products", "entry-1"), action: "update" }),
+        expect.objectContaining({
+          key: cacheKeys.entryDetail("products", "entry-1"),
+          action: "update",
+        }),
         expect.objectContaining({ key: cacheKeys.formsList, action: "update" }),
         expect.objectContaining({ key: cacheKeys.formDetail("form-lead"), action: "update" }),
+        expect.objectContaining({ key: cacheKeys.detailPagesList, action: "update" }),
+        expect.objectContaining({
+          key: cacheKeys.detailPagesListByContentType("ct-products"),
+          action: "update",
+        }),
+        expect.objectContaining({
+          key: cacheKeys.detailPageDetail("detail-page-products"),
+          action: "update",
+        }),
         expect.objectContaining({ key: cacheKeys.formActions("form-lead"), action: "update" }),
-        expect.objectContaining({ key: cacheKeys.formActionRuns("form-lead"), action: "invalidate" }),
+        expect.objectContaining({
+          key: cacheKeys.formActionRuns("form-lead"),
+          action: "invalidate",
+        }),
         expect.objectContaining({ key: cacheKeys.listingQueriesList, action: "update" }),
-        expect.objectContaining({ key: cacheKeys.listingQueryDetail("query-products"), action: "update" }),
+        expect.objectContaining({
+          key: cacheKeys.listingQueryDetail("query-products"),
+          action: "update",
+        }),
         expect.objectContaining({ key: cacheKeys.listingTemplatesList, action: "update" }),
-        expect.objectContaining({ key: cacheKeys.listingTemplateDetail("template-products"), action: "update" }),
+        expect.objectContaining({
+          key: cacheKeys.listingTemplateDetail("template-products"),
+          action: "update",
+        }),
         expect.objectContaining({ key: cacheKeys.widgetTemplatesList, action: "update" }),
-        expect.objectContaining({ key: cacheKeys.widgetTemplateDetail("widget-template-hero"), action: "update" }),
+        expect.objectContaining({
+          key: cacheKeys.widgetTemplateDetail("widget-template-hero"),
+          action: "update",
+        }),
         expect.objectContaining({ key: cacheKeys.widgetCatalogList, action: "invalidate" }),
         expect.objectContaining({ key: cacheKeys.menusList, action: "update" }),
         expect.objectContaining({ key: cacheKeys.menuDetail("menu-primary"), action: "update" }),

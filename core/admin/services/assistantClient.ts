@@ -5,6 +5,7 @@ import { apiRequest } from "./apiClient";
 import { cacheKeys } from "./cachePolicy";
 import { clearContentTypesCache } from "./contentTypesClient";
 import { clearCustomScreensCache } from "./customScreensClient";
+import { clearDetailPageListCache } from "./detailPagesClient";
 import { clearAllEntriesCache, clearEntriesCache } from "./entriesClient";
 import { clearFormsCache } from "./formsClient";
 import { clearListingQueriesCache, clearListingTemplatesCache } from "./listingsClient";
@@ -409,6 +410,20 @@ const notifyAssistantExecutionCacheEvent = (input: {
       return;
     }
 
+    case "detail-page.upsert": {
+      const planned = readActionId(action, "detail-page.upsert");
+      const document = planned?.input.document;
+      const contentTypeId = document?.contentTypeId ?? null;
+      const id = resourceId(item, document?.id);
+      clearDetailPageListCache(contentTypeId);
+      emit(cacheKeys.detailPagesList, cacheAction);
+      if (contentTypeId) {
+        emit(cacheKeys.detailPagesListByContentType(contentTypeId), cacheAction);
+      }
+      if (id) clearAndEmitDetail(cacheKeys.detailPageDetail(id), cacheAction, emit);
+      return;
+    }
+
     case "form.upsert":
     case "form.delete":
     case "form.archive":
@@ -601,8 +616,8 @@ export async function executeAssistantSiteKitActions(
     plan: executionPlan,
     idempotencyKey: payload.idempotencyKey ?? createSiteKitIdempotencyKey(),
   });
-  const execution = result.results.find((item) => item.type === "site-kit.install")
-    ?.details?.siteKit?.execution;
+  const execution = result.results.find((item) => item.type === "site-kit.install")?.details
+    ?.siteKit?.execution;
   if (!execution) {
     throw new Error("assistant_site_kit_execution_missing");
   }
