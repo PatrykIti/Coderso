@@ -2,8 +2,8 @@
 
 | Researched option | Source family | Decision | Coderso editor/schema implication |
 |---|---|---|---|
-| Responsive image grid | HyperUI, Preline | Keep | Keep repeated media items with image, alt, aspect ratio, columns, and gap. |
-| Masonry/mosaic layout | Preline, Uilib | Keep | Add constrained `layoutPreset`; avoid arbitrary per-breakpoint spans unless needed. |
+| Responsive image grid | HyperUI, Preline | Keep | Keep repeated media items with image, alt, existing variant mapping, `style.ratio`, and `style.gap`; do not add standalone column-count config. |
+| Masonry/mosaic layout | Preline, Uilib | Keep | Map mosaic choices to existing `GalleryMosaicVariantId` variants plus bounded `style.gap`, `style.ratio`, and `style.radius`; do not add a separate layout-preset field. |
 | Captions | shadcn.io, Origin UI | Keep | Add optional caption and visibility controls. |
 | Overlay text | shadcn.io, ReUI | Adapt | Support safe title/label overlay, not rich arbitrary content. |
 | Lightbox/modal | Flowbite | Adapt | Defer if no existing shared modal path; schema can reserve `previewMode`. |

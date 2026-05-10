@@ -29,9 +29,15 @@ and Reject decisions.
 ## Research Decisions
 
 - Keep: safe provider/event reference, `displayMode` for month/week/list/slots,
-  labels/messages, `slotsEndpoint`, and availability display states from
+  labels/messages, and availability display states from
   `_docs/_WIDGETS/tmp/booking-calendar/MATRIX.md`; start from the current owner
-  fields `flowId`, labels/messages, `slotsEndpoint`, `style`, and `resolved`.
+  fields `flowId`, labels/messages, legacy `slotsEndpoint`, `style`, and
+  `resolved`.
+- Keep: legacy `slotsEndpoint` only as a safe relative-route diagnostic or
+  migration field. The implementation must not keep or introduce a free
+  editable provider/backend URL; editor controls should move this value to
+  read-only diagnostics unless the same change adds strict safe-relative-route
+  normalization and tests rejecting external URLs.
 - Adapt: time-slot bounds and intake-form handoff remain conditional; implement
   only when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: arbitrary operators, client-owned provider/index config, raw scripts, and privileged settings in widget data.
@@ -77,7 +83,10 @@ function normalizeBookingCalendarData(data: BookingCalendarData): BookingCalenda
     resourceLabel: normalizeBookingCalendarResourceLabel(data.resourceLabel),
     dateLabel: normalizeBookingCalendarDateLabel(data.dateLabel),
     displayMode: normalizeBookingCalendarDisplayMode(data.displayMode),
-    slotsEndpoint: normalizeBookingCalendarSlotsEndpoint(data.slotsEndpoint),
+    slotsEndpoint: normalizeLegacyBookingCalendarSlotsEndpoint(data.slotsEndpoint, {
+      allowExternalUrl: false,
+      mode: "read-only-diagnostic",
+    }),
     style: normalizeBookingCalendarStyle(data.style),
     resolved: normalizeBookingCalendarResolved(data.resolved),
   };
@@ -103,6 +112,10 @@ Implementation checklist:
 - Read `_docs/_WIDGETS/tmp/booking-calendar/MATRIX.md` before changing the schema or editor.
 - Extend or reorganize `core/widgets/core/bookingCalendar.tsx` schema/defaults/normalizer/rendering
   only for fields approved by the research decisions above.
+- Convert existing `slotsEndpoint` editor exposure into a read-only diagnostic
+  or a strictly safe relative route. If the latter is kept editable, add
+  schema/validator tests that reject `http:`, `https:`, protocol-relative, and
+  provider-owned URLs.
 - Refactor `core/admin/ui/widgets/editors/BookingCalendarEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.
@@ -133,6 +146,8 @@ Implementation checklist:
   - availability fetch remains backend-owned through
     `core/services/booking/bookingSlotsToken.ts` and
     `core/server/publicBookingApi.ts`
+  - legacy `slotsEndpoint` must be safe-relative only and must not point at
+    provider-owned or arbitrary external URLs
   - provider secrets and privileged booking config must not enter widget data
   - if this leaf adds or changes a Coderso-owned public booking write, the
     endpoint must use nonce + signature/HMAC via
@@ -148,6 +163,8 @@ Implementation checklist:
 - `bun test tests/unit/widgets/validator.test.ts` when schema validation, slot normalization, or widget validation changes.
 - `bun run test:vitest -- tests/vitest/widgets/bookingCalendar.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/booking-calendar-editor-wave.test.tsx`
+- Add validator/widget/editor regressions proving `slotsEndpoint` is read-only
+  diagnostic or safe-relative only and rejects external URLs.
 - `bun test tests/unit/server/publicBookingApi.test.ts` when `/api/booking/slots`
   or `/api/booking/reservations` public route behavior changes.
 - `bun test tests/unit/booking/bookingAccess.test.ts` when booking access or

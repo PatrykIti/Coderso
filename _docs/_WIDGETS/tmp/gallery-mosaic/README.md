@@ -7,7 +7,7 @@ Summary-only archive for TASK-252. Do not copy third-party code from these sourc
 - Access type: open-source
 - License/terms summary: HyperUI is generally MIT-style; verify before reuse.
 - Observed UX pattern: responsive image grid with simple cropping.
-- Useful Coderso fields/options: `items[].image`, `items[].alt`, `columns`, `aspectRatio`, `gap`.
+- Useful Coderso fields/options: `items[].image`, `items[].alt`, `variant`, `style.ratio`, `style.gap`.
 - Decision: Keep
 - Copy policy: Summarize only.
 
@@ -16,7 +16,7 @@ Summary-only archive for TASK-252. Do not copy third-party code from these sourc
 - Access type: docs-example
 - License/terms summary: Verify Preline terms before reuse.
 - Observed UX pattern: masonry and grid gallery layouts with responsive breakpoints.
-- Useful Coderso fields/options: `layout: grid|masonry`, `breakpoints`, `imageFit`.
+- Useful Coderso fields/options: existing `variant` mapping for grid/mosaic, `style.ratio`, `imageFit`.
 - Decision: Keep
 - Copy policy: Pattern only.
 
@@ -25,7 +25,7 @@ Summary-only archive for TASK-252. Do not copy third-party code from these sourc
 - Access type: docs-example
 - License/terms summary: Flowbite docs are public; verify license before copying.
 - Observed UX pattern: image gallery with grid columns and modal/lightbox adjacency.
-- Useful Coderso fields/options: `previewMode`, `lightboxEnabled`, `columns`.
+- Useful Coderso fields/options: `previewMode`, `lightboxEnabled`, existing `variant` mapping.
 - Decision: Adapt
 - Copy policy: No source copy.
 
@@ -70,7 +70,7 @@ Summary-only archive for TASK-252. Do not copy third-party code from these sourc
 - Access type: docs-example
 - License/terms summary: Verify site terms before reuse.
 - Observed UX pattern: compact image grids with consistent radius and captions.
-- Useful Coderso fields/options: `radius`, `captionVisibility`, `density`.
+- Useful Coderso fields/options: `style.radius`, `captionVisibility`, `style.gap`.
 - Decision: Keep
 - Copy policy: Pattern summary only.
 
@@ -88,6 +88,6 @@ Summary-only archive for TASK-252. Do not copy third-party code from these sourc
 - Access type: unknown-license
 - License/terms summary: License not confirmed; reference only.
 - Observed UX pattern: mosaic and masonry galleries with variable image sizes.
-- Useful Coderso fields/options: `layoutPreset`, `span`, `masonry`.
+- Useful Coderso fields/options: existing `variant` mapping, `style.gap`, `masonry` reference only.
 - Decision: Adapt
 - Copy policy: No copying until terms are verified.

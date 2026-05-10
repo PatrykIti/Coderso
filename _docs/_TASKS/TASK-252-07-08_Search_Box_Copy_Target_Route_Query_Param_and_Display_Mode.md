@@ -29,7 +29,14 @@ and Reject decisions.
 ## Research Decisions
 
 - Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/search-box/MATRIX.md`; for this leaf, start from the current owner fields `mode`, `listingQueryId`, `endpoint`, `sources`, `autoApply`, `style`, `resolved` and add only the schema fields that the matrix explicitly keeps.
-- Keep: accessible copy controls, compact/full modes, and result route/query binding from `_docs/_WIDGETS/tmp/search-box/MATRIX.md`; add schema-owned target route/query-param fields in `core/widgets/core/searchBox.tsx` and keep runtime normalization in `core/widgets/core/listingRuntimeScript.ts`.
+- Keep: accessible copy controls, compact/full modes, and result route/query
+  binding from `_docs/_WIDGETS/tmp/search-box/MATRIX.md`; add schema-owned
+  target route/query-param fields in `core/widgets/core/searchBox.tsx` and keep
+  runtime normalization in `core/widgets/core/listingRuntimeScript.ts`.
+- Keep: split public API endpoint ownership from result-page routing.
+  `endpoint` remains the safe public-read `/api/search` API endpoint or a
+  locked diagnostic field; `targetRoute` must default to a public page route
+  such as `/search` and must not inherit `endpoint`.
 - Adapt: suggestions/autocomplete remain conditional and backend-owned; implement only when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: arbitrary operators, client-owned provider/index config, raw scripts, and privileged settings in widget data.
 
@@ -76,10 +83,10 @@ function normalizeSearchBoxData(data: SearchBoxData): SearchBoxData {
     placeholder: normalizeSearchBoxPlaceholder(data.placeholder),
     submitLabel: normalizeSearchBoxSubmitLabel(data.submitLabel),
     resetLabel: normalizeSearchBoxResetLabel(data.resetLabel),
-    targetRoute: normalizeSearchBoxTargetRoute(data.targetRoute ?? data.endpoint),
+    targetRoute: normalizeSearchBoxTargetRoute(data.targetRoute ?? "/search"),
     queryParam: normalizeSearchBoxQueryParam(data.queryParam ?? "q"),
     autoApply: normalizeSearchBoxAutoApply(data.autoApply),
-    endpoint: normalizeSearchBoxEndpoint(data.endpoint),
+    endpoint: normalizeSearchBoxPublicApiEndpoint(data.endpoint ?? "/api/search"),
     sources: normalizeSearchBoxSources(data.sources),
     style: normalizeSearchBoxStyle(data.style),
     resolved: normalizeSearchBoxResolved(data.resolved),
@@ -109,6 +116,10 @@ Implementation checklist:
 - Read `_docs/_WIDGETS/tmp/search-box/MATRIX.md` before changing the schema or editor.
 - Extend or reorganize `core/widgets/core/searchBox.tsx` schema/defaults/normalizer/rendering
   only for fields approved by the research decisions above.
+- Keep `endpoint` and `targetRoute` separate in schema, rendering, and editor
+  controls: `endpoint` is the public-read API action, while `targetRoute` is the
+  result page route. Do not migrate legacy `/api/search` endpoint values into
+  `targetRoute`.
 - Update `core/widgets/core/listingRuntimeScript.ts` so runtime query reads and
   writes use the normalized `queryParam` instead of hard-coding `q`.
 - Refactor `core/admin/ui/widgets/editors/SearchBoxEditors.tsx` to shared TASK-252 editor primitives from
@@ -143,6 +154,8 @@ Implementation checklist:
     normalize legacy payloads through `core/widgets/core/searchBox.tsx`.
 - Anti-abuse:
   - target route/query param must be sanitized and bounded;
+  - `targetRoute` must reject API endpoints and external URLs unless a later
+    route owner explicitly allows them;
   - `/api/search` limits/sources stay clamped by the public route owner;
   - provider secrets must not enter widget data.
 
@@ -162,6 +175,9 @@ Implementation checklist:
   token/clear/default adjacency changes.
 - Add or update a regression around `getListingRuntimeClientScript` when query/
   reset/apply/query-param behavior changes.
+- Add a regression proving `targetRoute` does not inherit `/api/search` from
+  legacy `endpoint`, and that `queryParam` is rendered/read by runtime instead
+  of hard-coded to `q`.
 - `bun test tests/unit/security/rateLimit.test.ts` when `public_read` bucket
   behavior changes.
 - Add Bun-owned route/security tests when `/api/search` endpoint behavior,

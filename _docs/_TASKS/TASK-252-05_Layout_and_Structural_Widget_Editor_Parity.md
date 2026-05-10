@@ -59,12 +59,12 @@ simple widgets intentionally simple through research-backed decisions.
     order; ratio/span systems stay conditional.
   - `stack`: flow direction, gap, alignment, and responsive direction; nested
     layout expansion stays conditional.
-  - `tabs`: horizontal/vertical mode, default tab, panel styling, keyboard
-    semantics.
+  - `tabs`: horizontal/vertical mode, default tab, existing panel surface/style
+    preservation, keyboard semantics; new visual panel variants stay Adapt-only.
   - `accordion`: `openMode`, `defaultOpenIds`, `collapsible`, and accessible
     disclosure behavior; panel style stays conditional.
-  - `toggle-block`: comparison/toggle states, labels, default state, panel
-    styling.
+  - `toggle-block`: comparison/toggle states, labels, default state, and
+    existing panel presentation; new card/panel presentation stays Adapt-only.
 - Add missing `_docs/_WIDGETS` docs for:
   - `tabs`
   - `accordion`
@@ -163,7 +163,7 @@ For missing docs, add contract pages that follow existing widget docs:
 - Type: `tabs`
 - Surface: Pages / widget library
 - Wizard: starter tab labels and default tab
-- Visual: items, orientation, panel style
+- Visual: items, orientation, existing panel surface
 - Advanced: IDs, keyboard/runtime details
 - Tests: `tests/vitest/widgets/tabs.test.tsx`,
   `tests/vitest/ui/tabs-editor-wave.test.tsx`

@@ -50,6 +50,10 @@ and Reject decisions.
 ## Files to Change
 
 - `core/widgets/core/productTable.tsx`
+- `core/widgets/core/commerceWidgetShared.ts` when source sorting/filter/
+  pagination fields extend the shared commerce widget source contract.
+- `core/services/commerce/commerceQueryService.ts` when runtime product query
+  normalization needs new allowlisted sort/filter/pagination fields.
 - `core/admin/ui/widgets/editors/ProductTableEditors.tsx`
 - Bun-owned route/security suites when public endpoint behavior changes.
 - `tests/unit/widgets/validator.test.ts` when schema validation changes.
@@ -101,6 +105,10 @@ Implementation checklist:
 - Read `_docs/_WIDGETS/tmp/product-table/MATRIX.md` before changing the schema or editor.
 - Extend or reorganize `core/widgets/core/productTable.tsx` schema/defaults/normalizer/rendering
   only for fields approved by the research decisions above.
+- Keep column visibility/labels local to `productTable.tsx`, but route any
+  source-level sorting, filtering, or pagination fields through the shared
+  commerce query owners (`commerceWidgetShared.ts` and
+  `commerceQueryService.ts`) instead of inventing a widget-local query shape.
 - Refactor `core/admin/ui/widgets/editors/ProductTableEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.
@@ -138,6 +146,8 @@ Implementation checklist:
 - `bun test tests/unit/widgets/validator.test.ts` when schema validation, slot normalization, or widget validation changes.
 - `bun run test:vitest -- tests/vitest/widgets/productTable.test.tsx`
 - `bun test tests/unit/commerce/commerceWidgetRuntime.test.ts`
+- `bun test tests/unit/commerce/commerceQueryService.test.ts` when shared
+  commerce query sorting/filter/pagination normalization changes.
 - `bun run test:vitest -- tests/vitest/ui/product-table-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,
   slot, or shared output behavior changes.

@@ -12,7 +12,7 @@
 
 ## Overview
 
-Make Accordion a first-class disclosure widget with single/multiple open behavior, default open items, collapsible state, and accessible panel styling.
+Make Accordion a first-class disclosure widget with single/multiple open behavior, default open items, collapsible state, and accessible panel semantics.
 
 This is an execution leaf under `TASK-252-05`. It must not re-open the
 research phase; use `_docs/_WIDGETS/tmp/accordion/MATRIX.md` and the widget README under

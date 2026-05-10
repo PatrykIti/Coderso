@@ -34,6 +34,10 @@ and Reject decisions.
   `_docs/_WIDGETS/tmp/listing-filters/MATRIX.md`; start from the current owner
   fields `listingQueryId`, `autoApply`, `showSearch`, `facets`, `style`, and
   `resolved`.
+- Keep: reset behavior means explicit schema/default/render/editor/runtime
+  ownership for `behavior.resetLabel`, `behavior.applyLabel`, and reset binding.
+  Reset must clear the current `lq.<queryId>.*` filter/search params and refresh
+  the linked listing blocks through the existing listing runtime owner.
 - Adapt: mobile/sidebar/chips presentation and facet presets from listing
   schema metadata remain conditional; implement only when schema/defaults/
   normalizer/render/editor/tests move together.
@@ -106,6 +110,12 @@ Implementation checklist:
 - Read `_docs/_WIDGETS/tmp/listing-filters/MATRIX.md` before changing the schema or editor.
 - Extend or reorganize `core/widgets/core/listingFilters.tsx` schema/defaults/normalizer/rendering
   only for fields approved by the research decisions above.
+- Add explicit reset/apply schema and rendering for `behavior.resetLabel` and
+  `behavior.applyLabel`; wire a stable reset control that
+  `getListingRuntimeClientScript` can bind without DOM-string guessing.
+- Update `core/widgets/core/listingRuntimeScript.ts` so reset clears
+  `lq.<queryId>.*` params, preserves unrelated query params, and refreshes the
+  same listing blocks as apply/instant updates.
 - Refactor `core/admin/ui/widgets/editors/ListingFiltersEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.
@@ -148,6 +158,8 @@ Implementation checklist:
 - `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` if
   token/clear/default adjacency changes.
 - Add or update a regression around `getListingRuntimeClientScript` when query/reset/apply/query-param behavior changes.
+- Add reset regressions proving `lq.<queryId>.*` params are cleared while
+  unrelated URL params remain, and the linked listing blocks refresh.
 - Add Bun-owned route/security tests when endpoint behavior, public writes,
   provider fetches, or runtime-kernel scripts change.
 

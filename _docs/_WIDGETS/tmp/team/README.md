@@ -16,7 +16,7 @@ Summary-only archive for TASK-252. Do not copy third-party code from these sourc
 - Access type: docs-example
 - License/terms summary: Verify Preline terms before reuse.
 - Observed UX pattern: profile grids with circular avatars and role text.
-- Useful Coderso fields/options: `photoShape`, `alignment`, `roleVisibility`, `gap`.
+- Useful Coderso fields/options: `photoShape`, `members[].role`, `style.gap`.
 - Decision: Keep
 - Copy policy: Pattern only.
 
@@ -87,7 +87,7 @@ Summary-only archive for TASK-252. Do not copy third-party code from these sourc
 - URL: https://flowbite-react.com/docs/components/avatar
 - Access type: docs-example
 - License/terms summary: Flowbite React is open-source; examples remain reference material.
-- Observed UX pattern: avatar variants with rounded, bordered, and placeholder states.
-- Useful Coderso fields/options: `photoShape`, `fallbackInitials`, `bordered`.
+- Observed UX pattern: avatar variants with rounded and placeholder states.
+- Useful Coderso fields/options: `photoShape`, `fallbackInitials`, `avatarFallback`.
 - Decision: Keep
 - Copy policy: Use concept only.
