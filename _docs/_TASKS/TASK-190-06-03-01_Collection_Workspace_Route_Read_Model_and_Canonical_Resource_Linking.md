@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Collections + Read Model
 **Estimated Effort:** Medium
 **Dependencies:** TASK-190-05-02, TASK-190-05-03-07, TASK-190-06-02
-**Status:** To Do
+**Status:** In Progress (2026-05-10)
 
 ---
 
@@ -31,7 +31,9 @@ into one oversized slice.
 
 ## Sub-Tasks
 
-- `TASK-190-06-03-01-01_Collection_Workspace_Route_and_Server_Read_Model.md`
+- `TASK-190-06-03-01-01_Collection_Workspace_Route_and_Server_Read_Model.md` -
+  done: internal collection workspace route/read model is registered and returns
+  bounded canonical/unresolved/candidate buckets.
 - `TASK-190-06-03-01-02_Collection_Workspace_Canonical_Resolution_and_Read_Permissions.md`
 - `TASK-190-06-03-01-03_Collection_Workspace_Client_Cache_Prefetch_and_UI_Shell.md`
 

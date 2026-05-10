@@ -82,8 +82,10 @@ przez `setup.completed=true`.
 - W admin sidebar jest jeden nadrzedny modul techniczny: `Advanced`.
 - `Coderso` pozostaje nazwa produktu; nie jest nazwa grupy nawigacyjnej.
 - Domyslne moduly v1 (widoczne w sidebar):
-  - `Engine` (`/admin/advanced/engine`) - content model builder (content types + schema).
-  - `Entries` (`/admin/advanced/entries`) - wpisy rekordow typow z Engine.
+- `Engine` (`/admin/advanced/engine`) - content model builder (content types + schema).
+  - Collection workspace route:
+    `/admin/advanced/engine/:contentTypeId/collection`.
+- `Entries` (`/admin/advanced/entries`) - wpisy rekordow typow z Engine.
   - `Screens` (`/admin/advanced/custom-screens`) - custom admin screens z widgetow dla danych entry.
   - `Widgets` (`/admin/advanced/widgets`) - biblioteka widgetow i template editor.
   - `Forms` (`/admin/advanced/forms`) - lista i edytor formularzy.
@@ -533,6 +535,12 @@ Aktualnie zaimplementowany business setup surface:
   now carry optional `detailPageId` metadata as the structural link to one
   detail-page document, and the public runtime consumes that link through the
   dedicated detail-page runtime resolver,
+- Engine collection workspace reads begin at
+  `GET /admin/api/content-types/:id/collection-workspace`. The server-owned
+  summary is bounded and separates `canonical`, `linkedSecondary`,
+  `unresolved`, and `candidates` buckets so later workspace/editor leaves can
+  resolve links deterministically without browser-only state or slug/title
+  guessing,
 - published content routes that carry `detailPageId` now resolve normalized
   detail-page documents and render them through the current page-builder
   runtime shell; missing links continue to fall back to the legacy

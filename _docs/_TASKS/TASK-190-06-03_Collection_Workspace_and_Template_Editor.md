@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Collections + Detail Templates
 **Estimated Effort:** Large
 **Dependencies:** TASK-190-05-03, TASK-190-05-03-07, TASK-190-06-01, TASK-190-06-02
-**Status:** To Do
+**Status:** In Progress (2026-05-10)
 
 ---
 
@@ -26,7 +26,9 @@ into one oversized slice.
 
 ## Sub-Tasks
 
-- `TASK-190-06-03-01_Collection_Workspace_Route_Read_Model_and_Canonical_Resource_Linking.md`
+- `TASK-190-06-03-01_Collection_Workspace_Route_Read_Model_and_Canonical_Resource_Linking.md` -
+  in progress: the first server route/read-model leaf is landed; canonical
+  resolution/read permissions and client cache/UI shell remain.
 - `TASK-190-06-03-02_Detail_Template_Editor_Surface_and_Shared_Builder_Seams.md`
 - `TASK-190-06-03-03_Collection_Workspace_Assistant_Context_and_Follow_Up_Integration.md`
 

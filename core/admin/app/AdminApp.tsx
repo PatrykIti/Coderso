@@ -22,6 +22,7 @@ import { SetPasswordPage } from "@/ui/auth/SetPasswordPage";
 import { BackupsPage } from "@/ui/backups/BackupsPage";
 import { ContentTypeEditor } from "@/ui/content-types/ContentTypeEditor";
 import { ContentTypeList } from "@/ui/content-types/ContentTypeList";
+import { CollectionWorkspacePage } from "@/ui/content-types/CollectionWorkspacePage";
 import { SchemaBuilderPage } from "@/ui/content-types/SchemaBuilderPage";
 import { EntryEditor } from "@/ui/entries/EntryEditor";
 import { EntryList } from "@/ui/entries/EntryList";
@@ -105,13 +106,7 @@ import { AdminAssistantConfigProvider } from "@/ui/contexts/AdminAssistantConfig
 import { useOptionalAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { clearAssistantRuntimeStateCache } from "@/ui/assistant/AssistantPanel";
 
-const publicRoutes = new Set([
-  "/login",
-  "/2fa",
-  "/reset",
-  "/reset/confirm",
-  "/preview",
-]);
+const publicRoutes = new Set(["/login", "/2fa", "/reset", "/reset/confirm", "/preview"]);
 
 const ADMIN_THEME_TOKENS_STORAGE_KEY = "coderso.adminThemeTokens";
 const LEGACY_ADMIN_THEME_TOKENS_STORAGE_KEY = "nextless.adminThemeTokens";
@@ -146,12 +141,13 @@ const matchRoute = (pattern: string, path: string) => {
   return params;
 };
 
-type SettingsValues = GeneralSettingsValues & AssistantSettingsValues & {
-  publicBaseUrl: string;
-  authSessionTtlDays: number;
-  authResetTtlMinutes: number;
-  setupCompleted: boolean;
-};
+type SettingsValues = GeneralSettingsValues &
+  AssistantSettingsValues & {
+    publicBaseUrl: string;
+    authSessionTtlDays: number;
+    authResetTtlMinutes: number;
+    setupCompleted: boolean;
+  };
 
 const defaultSettingsValues: SettingsValues = {
   ...GENERAL_SETTINGS_DEFAULT_VALUES,
@@ -191,10 +187,7 @@ const readStoredAdminThemeTokens = () => {
     const parsed = JSON.parse(cached) as unknown;
     assertAdminThemeTokens(parsed);
     if (!window.localStorage.getItem(ADMIN_THEME_TOKENS_STORAGE_KEY)) {
-      window.localStorage.setItem(
-        ADMIN_THEME_TOKENS_STORAGE_KEY,
-        JSON.stringify(parsed)
-      );
+      window.localStorage.setItem(ADMIN_THEME_TOKENS_STORAGE_KEY, JSON.stringify(parsed));
     }
     return parsed;
   } catch {
@@ -234,10 +227,7 @@ export const resolveThemeUpdatedRefreshScope = () => ({
   refreshTheme: true,
 });
 
-const resolveSettingsPayload = (
-  payload: Record<string, unknown>,
-  fallback: SettingsState
-) => {
+const resolveSettingsPayload = (payload: Record<string, unknown>, fallback: SettingsState) => {
   const resolveBoolean = (value: unknown, fallbackValue: boolean) =>
     typeof value === "boolean" ? value : fallbackValue;
   const resolveString = (value: unknown, fallbackValue: string) =>
@@ -270,9 +260,7 @@ const resolveSettingsPayload = (
     value: unknown,
     fallbackValue: SettingsValues["assistantLlmProvider"]
   ): SettingsValues["assistantLlmProvider"] =>
-    value === "openai" || value === "openrouter" || value === "none"
-      ? value
-      : fallbackValue;
+    value === "openai" || value === "openrouter" || value === "none" ? value : fallbackValue;
   const resolveOptionalString = (value: unknown, fallbackValue: string) => {
     if (value === null) return "";
     if (typeof value !== "string") return fallbackValue;
@@ -281,9 +269,7 @@ const resolveSettingsPayload = (
   };
 
   const siteName =
-    typeof payload["site.name"] === "string"
-      ? payload["site.name"]
-      : fallback.values.siteName;
+    typeof payload["site.name"] === "string" ? payload["site.name"] : fallback.values.siteName;
   const siteLocale =
     typeof payload["site.locale"] === "string"
       ? payload["site.locale"]
@@ -309,10 +295,7 @@ const resolveSettingsPayload = (
         5,
         1440
       ),
-      setupCompleted: resolveBoolean(
-        payload["setup.completed"],
-        fallback.values.setupCompleted
-      ),
+      setupCompleted: resolveBoolean(payload["setup.completed"], fallback.values.setupCompleted),
       assistantEnabled: resolveBoolean(
         payload["assistant.enabled"],
         fallback.values.assistantEnabled
@@ -416,9 +399,9 @@ export function AdminApp({ path }: AdminAppProps) {
   const isPublic = publicRoutes.has(canonicalRelativePath);
   const isProtected = isAdminPath && !isPublic;
 
-  const [authState, setAuthState] = useState<
-    "checking" | "authenticated" | "unauthenticated"
-  >(isProtected ? "checking" : "unauthenticated");
+  const [authState, setAuthState] = useState<"checking" | "authenticated" | "unauthenticated">(
+    isProtected ? "checking" : "unauthenticated"
+  );
 
   const [settingsState, setSettingsState] = useState<SettingsState>({
     status: "idle",
@@ -429,10 +412,7 @@ export function AdminApp({ path }: AdminAppProps) {
   const [setupSaving, setSetupSaving] = useState(false);
   const [setupError, setSetupError] = useState<string | null>(null);
   const [adminThemeTokens, setAdminThemeTokens] = useState(readStoredAdminThemeTokens);
-  const tokenCss = useMemo(
-    () => toAdminThemeCssVariables(adminThemeTokens),
-    [adminThemeTokens]
-  );
+  const tokenCss = useMemo(() => toAdminThemeCssVariables(adminThemeTokens), [adminThemeTokens]);
   const assistantConfig = useMemo(
     () => ({
       enabled: settingsState.values.assistantEnabled,
@@ -463,9 +443,7 @@ export function AdminApp({ path }: AdminAppProps) {
         };
       });
     } catch (error) {
-      const message = isApiClientError(error)
-        ? error.message
-        : "Failed to save general settings.";
+      const message = isApiClientError(error) ? error.message : "Failed to save general settings.";
       setSettingsState((prev) => ({
         ...prev,
         error: message,
@@ -525,9 +503,7 @@ export function AdminApp({ path }: AdminAppProps) {
         };
       });
     } catch (error) {
-      const message = isApiClientError(error)
-        ? error.message
-        : "Failed to complete setup wizard.";
+      const message = isApiClientError(error) ? error.message : "Failed to complete setup wizard.";
       setSetupError(message);
       throw error;
     } finally {
@@ -566,6 +542,7 @@ export function AdminApp({ path }: AdminAppProps) {
       { pattern: "/advanced/forms/:id", element: <FormBuilderPage /> },
       { pattern: "/advanced/engine", element: <ContentTypeList /> },
       { pattern: "/advanced/engine/:id", element: <ContentTypeEditor /> },
+      { pattern: "/advanced/engine/:id/collection", element: <CollectionWorkspacePage /> },
       { pattern: "/advanced/engine/:id/schema", element: <SchemaBuilderPage /> },
       { pattern: "/advanced/entries", element: <EntryList /> },
       { pattern: "/advanced/entries/:type/:id", element: <EntryEditor /> },
@@ -685,9 +662,7 @@ export function AdminApp({ path }: AdminAppProps) {
         }));
       })
       .catch((error) => {
-        const message = isApiClientError(error)
-          ? error.message
-          : "Failed to load settings.";
+        const message = isApiClientError(error) ? error.message : "Failed to load settings.";
         setSettingsState((prev) => ({
           ...prev,
           status: "error",
@@ -703,18 +678,14 @@ export function AdminApp({ path }: AdminAppProps) {
       listAdminThemeProfilesCached({ force: options?.force }),
     ])
       .then(([templates, profiles]) => {
-        const activeProfile =
-          profiles.find((profile) => profile.isActive) ?? profiles[0] ?? null;
+        const activeProfile = profiles.find((profile) => profile.isActive) ?? profiles[0] ?? null;
         const template = activeProfile
-          ? templates.find((item) => item.id === activeProfile.templateId) ?? null
-          : templates[0] ?? null;
+          ? (templates.find((item) => item.id === activeProfile.templateId) ?? null)
+          : (templates[0] ?? null);
         const resolved = mergeAdminThemeTokens(fallback, template?.tokens ?? null);
         setAdminThemeTokens(resolved);
         if (typeof window !== "undefined") {
-          window.localStorage.setItem(
-            ADMIN_THEME_TOKENS_STORAGE_KEY,
-            JSON.stringify(resolved)
-          );
+          window.localStorage.setItem(ADMIN_THEME_TOKENS_STORAGE_KEY, JSON.stringify(resolved));
         }
       })
       .catch(() => {
@@ -757,9 +728,7 @@ export function AdminApp({ path }: AdminAppProps) {
       })
       .catch((error) => {
         if (!active) return;
-        const message = isApiClientError(error)
-          ? error.message
-          : "Failed to load settings.";
+        const message = isApiClientError(error) ? error.message : "Failed to load settings.";
         setSettingsState((prev) => ({
           ...prev,
           status: "error",
@@ -802,33 +771,17 @@ export function AdminApp({ path }: AdminAppProps) {
     }
     if (typeof window === "undefined") return;
     window.history.replaceState({}, "", canonicalHref);
-  }, [
-    adminBasePath,
-    canonicalRelativePath,
-    isAdminPath,
-    relativePath,
-    router,
-  ]);
+  }, [adminBasePath, canonicalRelativePath, isAdminPath, relativePath, router]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (authState === "unauthenticated" && isProtected) {
       window.location.assign(withAdminBasePath(adminBasePath, "/login"));
     }
-    if (
-      authState === "authenticated" &&
-      isPublic &&
-      canonicalRelativePath !== "/preview"
-    ) {
+    if (authState === "authenticated" && isPublic && canonicalRelativePath !== "/preview") {
       window.location.assign(withAdminBasePath(adminBasePath, "/"));
     }
-  }, [
-    adminBasePath,
-    authState,
-    canonicalRelativePath,
-    isProtected,
-    isPublic,
-  ]);
+  }, [adminBasePath, authState, canonicalRelativePath, isProtected, isPublic]);
 
   const showSetupWizard = shouldShowSetupWizard({
     isProtected,

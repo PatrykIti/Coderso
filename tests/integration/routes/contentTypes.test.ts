@@ -12,8 +12,14 @@ import {
 } from "../../../core/server/routes/contentEntryRoutes";
 import { registerContentTypeRoutes } from "../../../core/server/routes/contentTypeRoutes";
 import { createEntry } from "../../../core/services/content/entryService";
+import type { CollectionWorkspaceSummary } from "../../../core/services/content/collectionWorkspaceService";
 import { normalizeDetailPageDocument } from "../../../core/services/content/detailPageSchema";
 import { createContentType } from "../../../core/services/content/typeService";
+import {
+  getSetting,
+  setSetting,
+  type ContentRouteSetting,
+} from "../../../core/services/settings/settingsService";
 
 type Route = { method: string; path: string; handlers: RouteHandler[] };
 
@@ -82,6 +88,7 @@ test("content routes are registered", () => {
       "POST /content-types",
       "POST /content-types/:id/duplicate",
       "GET /content-types/:id",
+      "GET /content-types/:id/collection-workspace",
       "PATCH /content-types/:id",
       "DELETE /content-types/:id",
       "GET /content-entries",
@@ -97,6 +104,29 @@ test("content routes are registered", () => {
       "POST /content/:type/entries/:id/unpublish",
     ])
   );
+});
+
+test("collection workspace route requires content read permission", async () => {
+  const { router, routes } = makeRouter();
+  const permissions: string[] = [];
+
+  registerContentTypeRoutes(router, {
+    requirePermission: (permission) => async () => {
+      permissions.push(permission);
+      throw new Error("permission_checked");
+    },
+    validate: () => undefined,
+  });
+
+  await expect(
+    runRoute(routes, "GET", "/content-types/:id/collection-workspace", {
+      params: { id: "ct-1" },
+      query: {},
+      body: {},
+    })
+  ).rejects.toThrow("permission_checked");
+
+  expect(permissions).toEqual(["content:read"]);
 });
 
 test("all entries route does not collide with type-scoped entries routes", () => {
@@ -307,4 +337,142 @@ testIfDb("content type delete route maps detail page dependency conflicts", asyn
     await db.delete(detailPageDocuments).where(eq(detailPageDocuments.contentTypeId, type.id));
     await db.delete(contentTypes).where(eq(contentTypes.id, type.id));
   }
+});
+
+testIfDbWithOptions(
+  "collection workspace route returns bounded server summary",
+  async () => {
+    const { router, routes } = makeRouter();
+    const originalContentRoutes =
+      ((await getSetting("site.contentRoutes")) as ContentRouteSetting[]) ?? [];
+
+    registerContentTypeRoutes(router, {
+      requirePermission: () => async () => undefined,
+      validate: () => undefined,
+    });
+
+    const type = await createContentType({
+      name: `Route Workspace ${randomUUID()}`,
+      slug: `route-workspace-${randomUUID()}`,
+      schema: {
+        type: "object",
+        additionalProperties: false,
+        required: ["title"],
+        properties: { title: { type: "string" }, summary: { type: "string" } },
+      },
+    });
+    const detailPageId = randomUUID();
+
+    try {
+      await db.insert(detailPageDocuments).values({
+        id: detailPageId,
+        name: "Workspace detail page",
+        contentTypeId: type.id,
+        status: "draft",
+        currentDocument: normalizeDetailPageDocument({
+          schemaVersion: 1,
+          id: detailPageId,
+          name: "Workspace detail page",
+          contentTypeId: type.id,
+          contentTypeSlug: type.slug,
+          status: "draft",
+          titlePattern: "{{ title }}",
+          settings: {
+            template: "detail",
+            layout: {},
+          },
+          blocks: [
+            {
+              id: "hero",
+              type: "hero",
+              data: {
+                headline: "Detail",
+              },
+            },
+          ],
+          bindings: [
+            {
+              id: "binding-title",
+              blockId: "hero",
+              propPath: "headline",
+              source: {
+                kind: "entry-meta",
+                field: "title",
+              },
+            },
+          ],
+        }),
+      });
+      await setSetting("site.contentRoutes", [
+        {
+          type: type.slug,
+          listPath: `/_catalog/${type.slug}`,
+          detailPath: `/${type.slug}/:slug`,
+          enabled: true,
+          detailPageId,
+        },
+      ]);
+
+      const result = (await runRoute(routes, "GET", "/content-types/:id/collection-workspace", {
+        params: { id: type.id },
+        query: {},
+        body: {},
+      })) as CollectionWorkspaceSummary;
+
+      expect(Object.keys(result)).toEqual([
+        "contentType",
+        "canonical",
+        "linkedSecondary",
+        "unresolved",
+        "candidates",
+      ]);
+      expect(result.contentType).toMatchObject({
+        id: type.id,
+        slug: type.slug,
+        fieldCount: 2,
+      });
+      expect(result.canonical.contentRoute).toMatchObject({
+        type: type.slug,
+        listPath: `/_catalog/${type.slug}`,
+        detailPath: `/${type.slug}/:slug`,
+        detailPageId,
+      });
+      expect(result.canonical.detailPage).toBeNull();
+      expect(result.candidates.detailPages).toEqual([
+        expect.objectContaining({
+          id: detailPageId,
+          label: "Workspace detail page",
+          status: "draft",
+        }),
+      ]);
+      expect(result.unresolved.map((entry) => entry.resource)).toEqual(
+        expect.arrayContaining(["detailPage", "listPage", "adminScreen"])
+      );
+    } finally {
+      await setSetting("site.contentRoutes", originalContentRoutes);
+      await db.delete(detailPageDocuments).where(eq(detailPageDocuments.contentTypeId, type.id));
+      await db.delete(contentTypes).where(eq(contentTypes.id, type.id));
+    }
+  },
+  { timeout: 15_000 }
+);
+
+testIfDb("collection workspace route maps unknown content type to not found", async () => {
+  const { router, routes } = makeRouter();
+
+  registerContentTypeRoutes(router, {
+    requirePermission: () => async () => undefined,
+    validate: () => undefined,
+  });
+
+  await expect(
+    runRoute(routes, "GET", "/content-types/:id/collection-workspace", {
+      params: { id: randomUUID() },
+      query: {},
+      body: {},
+    })
+  ).rejects.toMatchObject({
+    code: "content_type_not_found",
+    status: 404,
+  } satisfies Partial<ApiError>);
 });

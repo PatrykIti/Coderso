@@ -135,6 +135,18 @@ test("AdminApp resolves /menus/:id to the menu editor route", async () => {
   }
 });
 
+test("AdminApp resolves collection workspace under the Engine route family", async () => {
+  const view = mount("/admin/advanced/engine/ct-1/collection");
+
+  try {
+    await flush();
+    expect(view.container.textContent).toContain("Collection workspace");
+    expect(view.container.textContent).toContain("ct-1");
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("shouldShowSetupWizard returns true only for authenticated protected ready state", () => {
   expect(
     shouldShowSetupWizard({

@@ -2042,6 +2042,7 @@ Permissions: `content:read`, `content:write`, `content:publish`
 - `GET /content-types`
 - `POST /content-types`
 - `POST /content-types/:id/duplicate`
+- `GET /content-types/:id/collection-workspace`
 - `PATCH /content-types/:id`
 - `DELETE /content-types/:id`
 
@@ -2065,6 +2066,14 @@ from the TASK-202 migration were retained as `published`.
 
 Duplicate payload accepts optional `name` / `slug`; without them the service
 creates a unique `Copy of ...` draft and copies schema only, never entries.
+
+`GET /content-types/:id/collection-workspace` is the internal Engine workspace
+read model for one collection root. It requires `content:read` and returns a
+bounded server-owned summary with `canonical`, `linkedSecondary`, `unresolved`,
+and `candidates` buckets. It does not expose preview tokens, raw custom-screen
+bindings, signed media URLs, or browser-owned canonical-link state. Full
+deterministic canonical selection and owner-read redaction are handled by the
+follow-up workspace leaves.
 
 Delete returns `{ "ok": true }` only after the content type dependency guard
 passes. Known conflicts are mapped to HTTP 409:

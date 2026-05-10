@@ -6,6 +6,7 @@ import {
   listContentTypes,
   updateContentType,
 } from "../../services/content/typeService";
+import { getCollectionWorkspaceSummary } from "../../services/content/collectionWorkspaceService";
 import { ApiError } from "../errorHandler";
 import {
   contentTypeCreateSchema,
@@ -109,6 +110,12 @@ export function registerContentTypeRoutes(router: Router, deps: ContentTypeRoute
       return result;
     });
   });
+
+  router.get(
+    "/content-types/:id/collection-workspace",
+    requirePermission("content:read"),
+    async (ctx) => withContentTypeErrors(() => getCollectionWorkspaceSummary(ctx.params.id))
+  );
 
   router.post("/content-types", requirePermission("content:write"), async (ctx) => {
     return withContentTypeErrors(async () => {
