@@ -29,7 +29,10 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/tabs/MATRIX.md`; for this leaf, start from the current owner fields `items`, `options.activeId`, `options.alignment`, `style` plus the existing `tabsPanelSlot` and add only the schema fields that the matrix explicitly keeps.
+- Keep: tab items, `defaultItemId`, horizontal/vertical orientation, keyboard
+  semantics, and the existing `tabsPanelSlot` from
+  `_docs/_WIDGETS/tmp/tabs/MATRIX.md`; map legacy `options.activeId` into
+  schema-owned `options.defaultItemId` in `core/widgets/core/tabs.tsx`.
 - Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat panel surface/visual variants, activation mode, lazy behavior, and overflow handling as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: pseudo-link navigation that pretends to be tabs and copied external markup.
 
@@ -64,7 +67,11 @@ and Reject decisions.
 function normalizeTabsData(data: TabsData): TabsData {
   return {
     items: normalizeTabsItems(data.items),
-    options: normalizeTabsOptions(data.options),
+    options: normalizeTabsOptions({
+      ...data.options,
+      defaultItemId: data.options?.defaultItemId ?? data.options?.activeId,
+      orientation: data.options?.orientation ?? "horizontal",
+    }),
     style: normalizeTabsStyle(data.style),
   };
 }
@@ -73,8 +80,11 @@ function TabsVisualEditor(props: WidgetEditorProps<TabsData>) {
   const value = props.value;
   return (
     <WidgetEditorSection id="tabs.options" title="Tabs and panels">
-      <WidgetControlRow id="tabs.options.activeId" label="Default tab" data-widget-control="tabs.options.activeId">
-        <Select value={value.options?.activeId ?? value.items?.[0]?.id ?? ""} onChange={handleControlChange} />
+      <WidgetControlRow id="tabs.options.defaultItemId" label="Default tab" data-widget-control="tabs.options.defaultItemId">
+        <Select value={value.options?.defaultItemId ?? value.options?.activeId ?? value.items?.[0]?.id ?? ""} onChange={(defaultItemId) => props.onChange(updateTabsOptions(value, { defaultItemId }))} />
+      </WidgetControlRow>
+      <WidgetControlRow id="tabs.options.orientation" label="Orientation" data-widget-control="tabs.options.orientation">
+        <SegmentedControl value={value.options?.orientation ?? "horizontal"} onChange={(orientation) => props.onChange(updateTabsOptions(value, { orientation }))} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );

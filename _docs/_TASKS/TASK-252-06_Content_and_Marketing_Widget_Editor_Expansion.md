@@ -49,7 +49,8 @@ inside the editor instead of duplicate widget types.
   - `testimonials`: keep grid/spotlight/rating/avatar-shape basics; company/
     logo metadata and carousel/motion remain Adapt-only.
   - `pricing-plans`: keep tiers, highlight, custom price, and billing toggle;
-    treat comparison rows as Adapt-only.
+    preserve the current derived `comparison-rows` variant, while explicit
+    comparison-row schema and mobile fallback stay Adapt-only.
   - `faq-accordion`: keep question/answer, support/contact CTA, icon
     placement, and single/multiple/default-open behavior; categories and
     search remain Adapt-only.
@@ -59,10 +60,11 @@ inside the editor instead of duplicate widget types.
   - `logo-cloud`: keep grid/intro/tone/rows; treat marquee as Adapt-only with
     reduced-motion fallback.
   - `gallery-mosaic`: layout presets, captions, overlay controls, media
-    selection clarity.
+    selection clarity, and explicit alt text.
   - `stats-kpi`: cards/strip modes, prefix/suffix, and icons; trend labels stay
     Adapt-only.
-  - `team`: member grid, social links, and photo shape; profile/featured modes
+  - `team`: member grid, social links, photo shape, and current `spotlight`
+    variant preservation; explicit selected-featured-member/profile controls
     stay Adapt-only.
   - `rich-text-section`: keep prose/width plus badge/eyebrow and CTA; quote/
     media and editorial layout additions stay Adapt-only.

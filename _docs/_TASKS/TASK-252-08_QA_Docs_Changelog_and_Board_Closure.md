@@ -67,9 +67,8 @@ the implementation subtasks.
 - `_docs/_TASKS/TASK-252*.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
-- new `_docs/_CHANGELOG/{next-number}-{YYYY-MM-DD}-task-252-widget-editor-implementation.md`
-  entry on completion, where `{next-number}` is one greater than the current
-  highest changelog index number.
+- a new numbered `_docs/_CHANGELOG/*.md` entry on completion, using the next
+  index from `_docs/_CHANGELOG/README.md` and the actual completion date.
 - `_docs/WIDGETS.md`
 - `_docs/_WIDGETS/README.md`
 - all touched `_docs/_WIDGETS/*.md`

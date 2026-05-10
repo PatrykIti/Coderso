@@ -28,7 +28,11 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/gallery-mosaic/MATRIX.md`; for this leaf, start from the current owner fields `header`, `items`, `style` and add only the schema fields that the matrix explicitly keeps.
+- Keep: layout presets, captions, overlays, image alt labels, media selection,
+  and the current `header`, `items`, and `style` owner fields from
+  `_docs/_WIDGETS/tmp/gallery-mosaic/MATRIX.md`; add schema-owned `altText`
+  per gallery item in `core/widgets/core/galleryMosaic.tsx` while preserving
+  the existing caption fallback for legacy payloads.
 - Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat lightbox/carousel behavior and richer media overlays as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: separate one-off widgets, raw HTML/script embeds, and unbounded visual/CSS controls.
 
@@ -72,6 +76,7 @@ function normalizeGalleryMosaicItem(item: GalleryMosaicItem, index: number): Gal
   return {
     ...item,
     id: normalizeStableItemId(item.id, `gallery-mosaic-${index + 1}`),
+    altText: normalizeGalleryMosaicAltText(item.altText, item.caption),
   };
 }
 
@@ -81,6 +86,9 @@ function GalleryMosaicVisualEditor(props: WidgetEditorProps<GalleryMosaicData>) 
       {props.value.items.map((item, index) => (
         <WidgetControlRow key={item.id ?? index} id={`gallery-mosaic.items.${index}.caption`} label="Caption" data-widget-control={`gallery-mosaic.items.${index}.caption`}>
           <Input value={item.caption ?? ""} onChange={handleControlChange} />
+        </WidgetControlRow>
+        <WidgetControlRow key={`${item.id ?? index}-alt`} id={`gallery-mosaic.items.${index}.altText`} label="Alt text" data-widget-control={`gallery-mosaic.items.${index}.altText`}>
+          <Input value={item.altText ?? ""} onChange={(altText) => props.onChange(updateGalleryMosaicItem(props.value, index, { altText }))} />
         </WidgetControlRow>
       ))}
     </WidgetEditorSection>

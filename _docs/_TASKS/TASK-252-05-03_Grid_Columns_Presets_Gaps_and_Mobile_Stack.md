@@ -28,7 +28,12 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/grid-columns/MATRIX.md`; for this leaf, start from the current owner fields `columns`, `layout`, `style` plus the existing `gridColumnsSlot` and add only the schema fields that the matrix explicitly keeps.
+- Keep: column presets, column gap, row gap, mobile stacking, equal-height
+  behavior, and the existing `gridColumnsSlot` from
+  `_docs/_WIDGETS/tmp/grid-columns/MATRIX.md`; map live `layout.gapX` to
+  `columnGap`, live `layout.gapY` to `rowGap`, and per-column `mobileSpan` to
+  a schema-owned `mobileStack`/mobile preset contract in
+  `core/widgets/core/gridColumns.tsx`.
 - Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat advanced span/offset-like behavior and cardized columns as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: runtime drag resize handles and arbitrary CSS grid template strings.
 
@@ -63,7 +68,12 @@ and Reject decisions.
 function normalizeGridColumnsData(data: GridColumnsData): GridColumnsData {
   return {
     columns: normalizeGridColumnsColumns(data.columns),
-    layout: normalizeGridColumnsLayout(data.layout),
+    layout: normalizeGridColumnsLayout({
+      ...data.layout,
+      columnGap: data.layout?.columnGap ?? data.layout?.gapX,
+      rowGap: data.layout?.rowGap ?? data.layout?.gapY,
+      mobileStack: data.layout?.mobileStack ?? inferGridColumnsMobileStack(data.columns),
+    }),
     style: normalizeGridColumnsStyle(data.style),
   };
 }
@@ -74,6 +84,12 @@ function GridColumnsVisualEditor(props: WidgetEditorProps<GridColumnsData>) {
     <WidgetEditorSection id="grid-columns.columns" title="Columns and mobile stack">
       <WidgetControlRow id="grid-columns.columns.count" label="Column preset" data-widget-control="grid-columns.columns.count">
         <Select value={String(value.columns?.length ?? 2)} onChange={handleControlChange} />
+      </WidgetControlRow>
+      <WidgetControlRow id="grid-columns.layout.rowGap" label="Row gap" data-widget-control="grid-columns.layout.rowGap">
+        <Select value={value.layout?.rowGap ?? value.layout?.gapY ?? "md"} onChange={(rowGap) => props.onChange(updateGridColumnsLayout(value, { rowGap }))} />
+      </WidgetControlRow>
+      <WidgetControlRow id="grid-columns.layout.mobileStack" label="Mobile stack" data-widget-control="grid-columns.layout.mobileStack">
+        <Switch checked={value.layout?.mobileStack ?? true} onCheckedChange={(mobileStack) => props.onChange(updateGridColumnsLayout(value, { mobileStack }))} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );

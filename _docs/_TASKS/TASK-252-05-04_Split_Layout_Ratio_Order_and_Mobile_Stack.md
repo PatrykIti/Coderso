@@ -74,6 +74,7 @@ function normalizeSplitLayoutData(data: SplitLayoutData): SplitLayoutData {
       secondaryLabel: data.slotLabels?.secondary ?? "Media",
     }),
     mediaPosition: normalizeSplitLayoutMediaPosition(data.mediaPosition ?? inferMediaPositionFromLegacySlots(data)),
+    reverse: normalizeSplitLayoutReverse(data.reverse),
     orientation: normalizeSplitLayoutOrientation(data.orientation ?? data.mediaPosition),
     ratio: normalizeSplitLayoutRatio(data.ratio),
     mobileStack: normalizeSplitLayoutMobileStack(data.mobileStack ?? data.collapseMobile),
@@ -92,6 +93,9 @@ function SplitLayoutVisualEditor(props: WidgetEditorProps<SplitLayoutData>) {
       </WidgetControlRow>
       <WidgetControlRow id="split-layout.mobileOrder" label="Mobile order" data-widget-control="split-layout.mobileOrder">
         <SegmentedControl value={value.mobileOrder ?? "content-first"} onChange={(mobileOrder) => props.onChange(updateSplitLayoutMobileOrder(value, mobileOrder))} />
+      </WidgetControlRow>
+      <WidgetControlRow id="split-layout.mobileStack" label="Stack on mobile" data-widget-control="split-layout.mobileStack">
+        <Switch checked={value.mobileStack ?? value.collapseMobile ?? true} onCheckedChange={(mobileStack) => props.onChange(updateSplitLayoutMobileStack(value, mobileStack))} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );

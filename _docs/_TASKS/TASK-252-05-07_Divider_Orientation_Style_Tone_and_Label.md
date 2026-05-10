@@ -30,7 +30,11 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/divider/MATRIX.md`; for this leaf, start from the current owner fields `label`, `thickness`, `color`, `width`, `customWidth`, `marginTop`, `marginBottom` and add only the schema fields that the matrix explicitly keeps.
+- Keep: orientation, line style, thickness, spacing, semantic vs decorative
+  behavior, and the existing label/color/width spacing fields from
+  `_docs/_WIDGETS/tmp/divider/MATRIX.md`; add schema-owned `orientation` and
+  `semanticRole` fields in `core/widgets/core/divider.tsx` while preserving
+  legacy horizontal visual-only payloads.
 - Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat
   optional label and visual tone controls as bounded style additions; implement
   only when schema/defaults/normalizer/render/editor/tests move together.
@@ -66,6 +70,8 @@ and Reject decisions.
 ```tsx
 function normalizeDividerData(data: DividerData): DividerData {
   return {
+    orientation: normalizeDividerOrientation(data.orientation ?? "horizontal"),
+    semanticRole: normalizeDividerSemanticRole(data.semanticRole ?? inferDividerRole(data.label)),
     label: normalizeDividerLabel(data.label),
     thickness: normalizeDividerThickness(data.thickness),
     color: normalizeDividerColor(data.color),
@@ -82,6 +88,12 @@ function DividerVisualEditor(props: WidgetEditorProps<DividerData>) {
     <WidgetEditorSection id="divider.divider" title="Line and label">
       <WidgetControlRow id="divider.label" label="Label" data-widget-control="divider.label">
         <Input value={value.label ?? ""} onChange={handleControlChange} />
+      </WidgetControlRow>
+      <WidgetControlRow id="divider.orientation" label="Orientation" data-widget-control="divider.orientation">
+        <SegmentedControl value={value.orientation ?? "horizontal"} onChange={(orientation) => props.onChange(updateDividerOrientation(value, orientation))} />
+      </WidgetControlRow>
+      <WidgetControlRow id="divider.semanticRole" label="Semantic role" data-widget-control="divider.semanticRole">
+        <SegmentedControl value={value.semanticRole ?? "decorative"} onChange={(semanticRole) => props.onChange(updateDividerRole(value, semanticRole))} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );

@@ -28,7 +28,10 @@ and Reject decisions.
 
 ## Research Decisions
 
-- Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/toggle-block/MATRIX.md`; for this leaf, start from the current owner fields `labels`, `options.defaultState`, `style` and add only the schema fields that the matrix explicitly keeps.
+- Keep: finite `states[]` with segmented labels, default state, state labels,
+  and accessible state announcement from `_docs/_WIDGETS/tmp/toggle-block/MATRIX.md`;
+  map the current fixed `primary`/`secondary` labels and slots into canonical
+  two-item `states[]` in `core/widgets/core/toggleBlock.tsx`.
 - Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat card presentation as a bounded variant as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: arbitrary CSS show/hide rules and more than two states without a new product contract.
 
@@ -62,8 +65,12 @@ and Reject decisions.
 ```tsx
 function normalizeToggleBlockData(data: ToggleBlockData): ToggleBlockData {
   return {
+    states: normalizeToggleBlockStates(data.states ?? statesFromLegacyLabels(data.labels)),
     labels: normalizeToggleBlockLabels(data.labels),
-    options: normalizeToggleBlockOptions(data.options),
+    options: normalizeToggleBlockOptions({
+      ...data.options,
+      defaultState: data.options?.defaultState ?? data.states?.[0]?.id ?? "primary",
+    }),
     style: normalizeToggleBlockStyle(data.style),
   };
 }
@@ -74,6 +81,9 @@ function ToggleBlockVisualEditor(props: WidgetEditorProps<ToggleBlockData>) {
     <WidgetEditorSection id="toggle-block.options" title="State labels">
       <WidgetControlRow id="toggle-block.options.defaultState" label="Default state" data-widget-control="toggle-block.options.defaultState">
         <SegmentedControl value={value.options?.defaultState ?? "primary"} onChange={handleControlChange} />
+      </WidgetControlRow>
+      <WidgetControlRow id="toggle-block.states" label="States" data-widget-control="toggle-block.states">
+        <StateListEditor value={value.states ?? statesFromLegacyLabels(value.labels)} onChange={(states) => props.onChange(updateToggleBlockStates(value, states))} maxItems={2} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
