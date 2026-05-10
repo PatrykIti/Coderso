@@ -85,28 +85,22 @@ function FooterVisualEditor(props: WidgetEditorProps<FooterData>) {
   const value = props.value;
   return (
     <WidgetEditorSection id="footer.0" title="Footer columns">
-      <WidgetControlRow id="footer.columns.0.title" label="Column title" data-widget-control="footer.columns.0.title">
-        <Input value={value.columns?.[0]?.title ?? ""} onChange={handleControlChange} />
+      <WidgetControlRow id="footer.columns.0.title" label="Column title">
+        {(field) => <Input id={field.id} value={value.columns?.[0]?.title ?? ""} onChange={(event) => props.onChange(updateFooterColumn(value, 0, { title: event.target.value }))} aria-describedby={field.describedById} />}
       </WidgetControlRow>
-      <WidgetControlRow id="footer.brand.logoAlt" label="Logo alt text" data-widget-control="footer.brand.logoAlt">
-        <Input value={value.brand?.logoAlt ?? ""} onChange={(logoAlt) => props.onChange(updateFooterBrand(value, { logoAlt }))} />
+      <WidgetControlRow id="footer.brand.logoAlt" label="Logo alt text">
+        {(field) => <Input id={field.id} value={value.brand?.logoAlt ?? ""} onChange={(event) => props.onChange(updateFooterBrand(value, { logoAlt: event.target.value }))} aria-describedby={field.describedById} />}
       </WidgetControlRow>
     </WidgetEditorSection>
   );
 }
 
-function FooterSlotControls(props: BuilderSlotControlProps) {
-  return (
-    <WidgetSlotControls
-      widget={props.widget}
-      block={props.block}
-      onChange={props.onChange}
-      includeSlotIds={["column-1", "column-2", "column-3", "bottom"]}
-      sectionId="footer.slots"
-      title="Footer slots"
-    />
-  );
-}
+const footerSlotGroup: WidgetSlotControlGroup = {
+  widgetType: "footer",
+  includeSlotIds: ["column-1", "column-2", "column-3", "bottom"],
+  sectionId: "footer.slots",
+  title: "Footer slots",
+};
 ```
 
 Implementation checklist:
@@ -125,8 +119,9 @@ Implementation checklist:
 - Preserve the existing footer slots (`column-1`, `column-2`, `column-3`,
   `bottom`) as builder-owned slot surfaces. Do not move them into `FooterData`,
   do not remove them from the widget definition, and do not duplicate slot
-  add/remove logic in `FooterEditors.tsx`; route them through the shared
-  TASK-252-01 `WidgetSlotControls` flow with stable `footer.slots` metadata.
+  add/remove logic in `FooterEditors.tsx`; register `footerSlotGroup` in the
+  builder-level TASK-252-01 slot-control map and render it from
+  `VisualPanel`/`BlockSettings` with stable `footer.slots` metadata.
 - Keep legacy payloads non-destructive: missing new fields must normalize to the
   current rendered behavior.
 - Add or update runtime/widget tests and editor-wave tests in the files listed
@@ -150,7 +145,11 @@ Implementation checklist:
   - changed `footer` schema fields must reject unknown fields and
     normalize legacy payloads through `core/widgets/core/footer.tsx`.
 - Anti-abuse:
-  - links must use safe URL normalization
+  - all public footer hrefs must pass core-owned safe href normalization before
+    render, including column links, legal links, and social hrefs: relative
+    paths, hash links, and HTTP(S) URLs are allowed; `javascript:`, `data:`,
+    `vbscript:`, protocol-relative URLs, and unknown protocols are rejected or
+    normalized away.
   - newsletter provider secrets stay backend-owned
 
 ## Testing Requirements
@@ -161,6 +160,9 @@ Implementation checklist:
 - `bun test tests/unit/widgets/validator.test.ts` when schema validation, slot normalization, or widget validation changes.
 - `bun run test:vitest -- tests/vitest/widgets/footer.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/footer-editor-wave.test.tsx`
+- Add footer widget assertions that unsafe column, legal, and social href
+  payloads such as `javascript:alert(1)`, `data:text/html,...`, and
+  `//evil.example` do not survive normalization or render as links.
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,
   slot, or shared output behavior changes.
 - `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` if

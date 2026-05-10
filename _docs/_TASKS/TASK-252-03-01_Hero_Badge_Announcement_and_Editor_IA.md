@@ -152,10 +152,11 @@ function normalizeHeroHref(value: unknown): string | undefined {
 function normalizeHeroCta(value: unknown): HeroCta | undefined {
   if (!isRecord(value)) return undefined;
   const label = readTrimmedString(value.label);
-  if (!label) return undefined;
+  const href = normalizeHeroHref(value.href);
+  if (!label || !href) return undefined;
   return {
     label,
-    href: normalizeHeroHref(value.href),
+    href,
   };
 }
 

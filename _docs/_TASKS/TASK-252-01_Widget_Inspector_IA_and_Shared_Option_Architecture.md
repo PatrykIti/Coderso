@@ -165,7 +165,33 @@ type WidgetSlotControlsProps = {
   title?: string;
 };
 
-type BuilderSlotControlProps = Pick<WidgetSlotControlsProps, "widget" | "block" | "onChange">;
+type WidgetSlotControlGroup = {
+  widgetType: string;
+  includeSlotIds: string[];
+  sectionId: string;
+  title: string;
+};
+
+const widgetSlotControlGroups: Record<string, WidgetSlotControlGroup> = {
+  section: {
+    widgetType: "section",
+    includeSlotIds: ["default"],
+    sectionId: "section.regions",
+    title: "Regions",
+  },
+  navigation: {
+    widgetType: "navigation",
+    includeSlotIds: ["right"],
+    sectionId: "navigation.slots",
+    title: "Right Actions slot",
+  },
+  footer: {
+    widgetType: "footer",
+    includeSlotIds: ["column-1", "column-2", "column-3", "bottom"],
+    sectionId: "footer.slots",
+    title: "Footer slots",
+  },
+};
 
 function WidgetSlotControls({
   widget,
@@ -231,6 +257,14 @@ surface and binding helpers, not the active `WidgetDefinition`. The slot
 component must preserve the existing `children -> slots.default` compatibility
 path and clear `children` only when writing a new `slots` map, matching the
 current `BlockSettings` behavior.
+
+Slot groups for `section`, `navigation`, and `footer` must be registered in a
+builder-level map such as `widgetSlotControlGroups` and rendered by
+`VisualPanel`/`BlockSettings` after the widget-owned Visual editor. Do not place
+`WidgetSlotControls` inside `SectionEditors.tsx`, `NavigationEditors.tsx`, or
+`FooterEditors.tsx`, because those editors receive `WidgetEditorProps` and do
+not have the required builder-level `widget`, `block`, and block `onChange`
+contract.
 
 ## Security Contract
 

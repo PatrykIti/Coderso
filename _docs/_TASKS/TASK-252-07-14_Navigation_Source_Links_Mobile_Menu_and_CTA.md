@@ -95,28 +95,36 @@ function NavigationVisualEditor(props: WidgetEditorProps<NavigationData>) {
   const value = props.value;
   return (
     <WidgetEditorSection id="navigation.navigation" title="Links source">
-      <WidgetControlRow id="navigation.linksSource" label="Links source" data-widget-control="navigation.linksSource">
-        <Select value={value.linksSource ?? "manual"} onChange={handleControlChange} />
+      <WidgetControlRow id="navigation.linksSource" label="Links source">
+        {(field) => (
+          <Select value={value.linksSource ?? "manual"} onValueChange={(linksSource) => props.onChange(updateNavigationSource(value, { linksSource }))}>
+            <SelectTrigger id={field.id} aria-describedby={field.describedById}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>{/* manual/menu/pages options */}</SelectContent>
+          </Select>
+        )}
       </WidgetControlRow>
-      <WidgetControlRow id="navigation.behavior.mobileMode" label="Mobile menu" data-widget-control="navigation.behavior.mobileMode">
-        <SegmentedControl value={value.behavior?.mobileMode ?? "drawer"} onChange={(mobileMode) => props.onChange(updateNavigationBehavior(value, { mobileMode }))} />
+      <WidgetControlRow id="navigation.behavior.mobileMode" label="Mobile menu">
+        {(field) => (
+          <Select value={value.behavior?.mobileMode ?? "drawer"} onValueChange={(mobileMode) => props.onChange(updateNavigationBehavior(value, { mobileMode }))}>
+            <SelectTrigger id={field.id} aria-describedby={field.describedById}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>{/* expanded/drawer/minimal options */}</SelectContent>
+          </Select>
+        )}
       </WidgetControlRow>
     </WidgetEditorSection>
   );
 }
 
-function NavigationSlotControls(props: BuilderSlotControlProps) {
-  return (
-    <WidgetSlotControls
-      widget={props.widget}
-      block={props.block}
-      onChange={props.onChange}
-      includeSlotIds={["right"]}
-      sectionId="navigation.slots"
-      title="Right Actions slot"
-    />
-  );
-}
+const navigationSlotGroup: WidgetSlotControlGroup = {
+  widgetType: "navigation",
+  includeSlotIds: ["right"],
+  sectionId: "navigation.slots",
+  title: "Right Actions slot",
+};
 ```
 
 Implementation checklist:
@@ -132,8 +140,9 @@ Implementation checklist:
 - Preserve the existing `right` slot (`Right Actions`) as a builder-owned slot
   surface. Do not move it into `NavigationData`, do not remove it from the
   widget definition, and do not duplicate slot add/remove logic in
-  `NavigationEditors.tsx`; route it through the shared TASK-252-01
-  `WidgetSlotControls` flow with stable `navigation.slots` metadata.
+  `NavigationEditors.tsx`; register `navigationSlotGroup` in the builder-level
+  TASK-252-01 slot-control map and render it from `VisualPanel`/`BlockSettings`
+  with stable `navigation.slots` metadata.
 - Keep mobile behavior under `behavior.mobileMode`; valid values remain
   `expanded`, `drawer`, and `minimal`. Do not persist top-level `mobileMode` or
   invalid `collapse`/`offcanvas` values unless a schema migration updates
@@ -160,7 +169,11 @@ Implementation checklist:
     normalize legacy payloads through `core/widgets/core/navigation.tsx`.
 - Anti-abuse:
   - admin route helpers remain canonical for admin links
-  - hrefs must use safe URL/link normalization
+  - all public navigation hrefs must pass core-owned safe href normalization
+    before render, including item links, child links, and CTA hrefs: relative
+    paths, hash links, and HTTP(S) URLs are allowed; `javascript:`, `data:`,
+    `vbscript:`, protocol-relative URLs, and unknown protocols are rejected or
+    normalized away.
 
 ## Testing Requirements
 
@@ -170,6 +183,9 @@ Implementation checklist:
 - `bun test tests/unit/widgets/validator.test.ts` when schema validation, slot normalization, or widget validation changes.
 - `bun run test:vitest -- tests/vitest/widgets/navigation.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/navigation-editor-wave.test.tsx`
+- Add navigation widget assertions that unsafe item, child, and CTA href
+  payloads such as `javascript:alert(1)`, `data:text/html,...`, and
+  `//evil.example` do not survive normalization or render as links.
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,
   slot, or shared output behavior changes.
 - `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` if
