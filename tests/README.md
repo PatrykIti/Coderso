@@ -46,6 +46,9 @@ bun run test:coverage:all
 `test:vitest` loads `.env` and then forces `NODE_ENV=test` for the Vitest
 process so React test helpers and test-only assistant diagnostics do not inherit
 production shell settings.
+`test:bun` runs the DB/runtime lane serially with a `15000ms` per-test timeout;
+the lane exercises real database and runtime flows that can exceed Bun's default
+`5000ms` timeout under full-suite load.
 `test:bun:lane` runs curated Bun-owned route/plugin/perf suites without coverage.
 `test:coverage:bun` uses the same curated Bun-owned route/plugin/perf suites through `scripts/run-bun-lane.ts`.
 `test:coverage` now uses `scripts/run-vitest-coverage.ts` and the canonical full-lane report path `coverage/vitest/coverage-summary.json`.

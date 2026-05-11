@@ -77,6 +77,9 @@ then that test should move to Vitest.
 - Public write protection and runtime security hardening.
 - Performance budgets.
 - Contract tests that must execute against the real Bun runtime.
+- The repo `test:bun` command runs the DB/runtime gate serially with a
+  `15000ms` per-test timeout because real database fixtures and runtime renders
+  can exceed Bun's default `5000ms` timeout under full-suite load.
 
 ### Vitest Owns
 

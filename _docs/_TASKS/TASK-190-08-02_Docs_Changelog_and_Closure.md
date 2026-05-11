@@ -130,12 +130,16 @@ Closure sequencing rule:
   before service work, and dedicated detail-page preview now has explicit
   title/SEO regression coverage. The Vitest command also forces
   `NODE_ENV=test` after `.env` loading so local production shells cannot disable
-  React `act` or test-only blueprint-shadow diagnostics. Validation passed
+  React `act` or test-only blueprint-shadow diagnostics. A post-commit Bun
+  gate rerun also stabilized the DB/runtime lane with an explicit `15000ms`
+  `test:bun` timeout after multiple real DB-backed tests proved to run above
+  Bun's `5000ms` default in the full serial gate. Validation passed
   targeted Bun route/runtime coverage (`42` tests, `178` assertions), targeted
-  Vitest assistant schema/contract coverage (`2` files, `54` tests), full
-  DB/runtime `bun run test:bun` outside the sandbox with `.env` loaded (`763`
-  tests across `204` files, `2956` assertions), full `bun run test:vitest`
-  (`582` files, `2611` tests), and `bun run scan:security:strict` clean across
-  Semgrep, `bun audit`, Trivy vulnerability/config/secret scans, and Gitleaks
-  history/worktree scans. The container image scan remained intentionally
-  skipped because `SECURITY_SCAN_IMAGE` was not set.
+  Vitest assistant schema/contract coverage (`2` files, `54` tests),
+  `bun run lint`, full DB/runtime `bun run test:bun` outside the sandbox with
+  `.env` loaded (`763` tests across `204` files, `2956` assertions), full
+  `bun run test:vitest` (`582` files, `2611` tests), and
+  `bun run scan:security:strict` clean across Semgrep, `bun audit`, Trivy
+  vulnerability/config/secret scans, and Gitleaks history/worktree scans. The
+  container image scan remained intentionally skipped because
+  `SECURITY_SCAN_IMAGE` was not set.

@@ -13,11 +13,7 @@ import {
 } from "../../../core/db/schema";
 import { createEntry } from "../../../core/services/content/entryService";
 import { createContentType } from "../../../core/services/content/typeService";
-import {
-  createPage,
-  publishPage,
-  updatePage,
-} from "../../../core/services/pages/pageService";
+import { createPage, publishPage, updatePage } from "../../../core/services/pages/pageService";
 import { createPreviewToken } from "../../../core/services/pages/previewService";
 import {
   deleteSetting,
@@ -31,6 +27,12 @@ import { resetRateLimitBuckets } from "../../../core/server/middleware/rateLimit
 
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
 const testIfDb = hasDb ? test : test.skip;
+const testIfDbWithOptions = testIfDb as unknown as (
+  name: string,
+  fn: () => Promise<void>,
+  options: { timeout: number }
+) => void;
+const dbRuntimeTimeout = 15_000;
 
 async function canConnect() {
   try {
@@ -201,35 +203,39 @@ const requestPublicPath = (path: string) =>
     })
   );
 
-testIfDb("public page runtime renders published data while preview renders current draft data", async () => {
-  resetRateLimitBuckets();
-  await setTestSetting("site.cacheTtlSeconds", 0);
-  await setTestSetting("site.contentRoutes", []);
-  await setTestSetting("site.previewEnabled", true);
+testIfDbWithOptions(
+  "public page runtime renders published data while preview renders current draft data",
+  async () => {
+    resetRateLimitBuckets();
+    await setTestSetting("site.cacheTtlSeconds", 0);
+    await setTestSetting("site.contentRoutes", []);
+    await setTestSetting("site.previewEnabled", true);
 
-  const fixture = await createPublishedPageWithDraft();
+    const fixture = await createPublishedPageWithDraft();
 
-  const publicResponse = await requestPublicPath(fixture.slug);
-  expect(publicResponse.status).toBe(200);
-  const publicHtml = await publicResponse.text();
-  expect(publicHtml).toContain(fixture.publishedHeadline);
-  expect(publicHtml).not.toContain(fixture.draftHeadline);
-  expect(publicHtml).not.toContain("Preview mode");
+    const publicResponse = await requestPublicPath(fixture.slug);
+    expect(publicResponse.status).toBe(200);
+    const publicHtml = await publicResponse.text();
+    expect(publicHtml).toContain(fixture.publishedHeadline);
+    expect(publicHtml).not.toContain(fixture.draftHeadline);
+    expect(publicHtml).not.toContain("Preview mode");
 
-  const { token } = await createPreviewToken({
-    targetType: "page",
-    targetId: fixture.page.id,
-    ttlMinutes: 5,
-  });
-  const previewResponse = await requestPublicPath(
-    `/preview?type=page&token=${encodeURIComponent(token)}&device=mobile`
-  );
-  expect(previewResponse.status).toBe(200);
-  const previewHtml = await previewResponse.text();
-  expect(previewHtml).toContain(fixture.draftHeadline);
-  expect(previewHtml).not.toContain(fixture.publishedHeadline);
-  expect(previewHtml).toContain("Preview mode");
-});
+    const { token } = await createPreviewToken({
+      targetType: "page",
+      targetId: fixture.page.id,
+      ttlMinutes: 5,
+    });
+    const previewResponse = await requestPublicPath(
+      `/preview?type=page&token=${encodeURIComponent(token)}&device=mobile`
+    );
+    expect(previewResponse.status).toBe(200);
+    const previewHtml = await previewResponse.text();
+    expect(previewHtml).toContain(fixture.draftHeadline);
+    expect(previewHtml).not.toContain(fixture.publishedHeadline);
+    expect(previewHtml).toContain("Preview mode");
+  },
+  { timeout: dbRuntimeTimeout }
+);
 
 testIfDb("public root renders the configured homepage by page id", async () => {
   resetRateLimitBuckets();
@@ -246,72 +252,78 @@ testIfDb("public root renders the configured homepage by page id", async () => {
   expect(html).not.toContain(fixture.draftHeadline);
 });
 
-testIfDb("public page runtime rejects drafts and published rows without published data", async () => {
-  resetRateLimitBuckets();
-  await setTestSetting("site.cacheTtlSeconds", 0);
-  await setTestSetting("site.contentRoutes", []);
+testIfDb(
+  "public page runtime rejects drafts and published rows without published data",
+  async () => {
+    resetRateLimitBuckets();
+    await setTestSetting("site.cacheTtlSeconds", 0);
+    await setTestSetting("site.contentRoutes", []);
 
-  const draft = await createPage({
-    title: "Draft Runtime Page",
-    slug: `/runtime-draft-${randomUUID()}`,
-    data: pageData("Draft-only Runtime"),
-  });
-  trackPage(draft?.id);
-  const draftResponse = await requestPublicPath(draft.slug);
-  expect(draftResponse.status).toBe(404);
+    const draft = await createPage({
+      title: "Draft Runtime Page",
+      slug: `/runtime-draft-${randomUUID()}`,
+      data: pageData("Draft-only Runtime"),
+    });
+    trackPage(draft?.id);
+    const draftResponse = await requestPublicPath(draft.slug);
+    expect(draftResponse.status).toBe(404);
 
-  const [publishedWithoutData] = await db
-    .insert(pages)
-    .values({
-      title: "Broken Published Runtime Page",
-      slug: `/runtime-broken-${randomUUID()}`,
-      status: "published",
-      currentData: pageData("Broken Runtime"),
-      publishedData: null,
-    })
-    .returning();
-  trackPage(publishedWithoutData?.id);
-  if (!publishedWithoutData) throw new Error("missing_broken_page");
+    const [publishedWithoutData] = await db
+      .insert(pages)
+      .values({
+        title: "Broken Published Runtime Page",
+        slug: `/runtime-broken-${randomUUID()}`,
+        status: "published",
+        currentData: pageData("Broken Runtime"),
+        publishedData: null,
+      })
+      .returning();
+    trackPage(publishedWithoutData?.id);
+    if (!publishedWithoutData) throw new Error("missing_broken_page");
 
-  const brokenResponse = await requestPublicPath(publishedWithoutData.slug);
-  expect(brokenResponse.status).toBe(404);
-});
+    const brokenResponse = await requestPublicPath(publishedWithoutData.slug);
+    expect(brokenResponse.status).toBe(404);
+  }
+);
 
-testIfDb("page preview runtime rejects missing, invalid, expired, and disabled tokens", async () => {
-  resetRateLimitBuckets();
-  await setTestSetting("site.previewEnabled", true);
-  await setTestSetting("site.cacheTtlSeconds", 0);
+testIfDb(
+  "page preview runtime rejects missing, invalid, expired, and disabled tokens",
+  async () => {
+    resetRateLimitBuckets();
+    await setTestSetting("site.previewEnabled", true);
+    await setTestSetting("site.cacheTtlSeconds", 0);
 
-  const fixture = await createPublishedPageWithDraft();
+    const fixture = await createPublishedPageWithDraft();
 
-  const missingToken = await requestPublicPath("/preview?type=page");
-  expect(missingToken.status).toBe(404);
+    const missingToken = await requestPublicPath("/preview?type=page");
+    expect(missingToken.status).toBe(404);
 
-  const invalidType = await requestPublicPath("/preview?type=unknown&token=test");
-  expect(invalidType.status).toBe(404);
+    const invalidType = await requestPublicPath("/preview?type=unknown&token=test");
+    expect(invalidType.status).toBe(404);
 
-  const expired = await createPreviewToken({
-    targetType: "page",
-    targetId: fixture.page.id,
-    ttlMinutes: -1,
-  });
-  const expiredResponse = await requestPublicPath(
-    `/preview?type=page&token=${encodeURIComponent(expired.token)}`
-  );
-  expect(expiredResponse.status).toBe(410);
-  expect(await expiredResponse.text()).toBe("Preview expired");
+    const expired = await createPreviewToken({
+      targetType: "page",
+      targetId: fixture.page.id,
+      ttlMinutes: -1,
+    });
+    const expiredResponse = await requestPublicPath(
+      `/preview?type=page&token=${encodeURIComponent(expired.token)}`
+    );
+    expect(expiredResponse.status).toBe(410);
+    expect(await expiredResponse.text()).toBe("Preview expired");
 
-  const valid = await createPreviewToken({
-    targetType: "page",
-    targetId: fixture.page.id,
-    ttlMinutes: 5,
-  });
-  await setTestSetting("site.previewEnabled", false);
-  const disabledResponse = await requestPublicPath(
-    `/preview?type=page&token=${encodeURIComponent(valid.token)}`
-  );
-  expect(disabledResponse.status).toBe(404);
-});
+    const valid = await createPreviewToken({
+      targetType: "page",
+      targetId: fixture.page.id,
+      ttlMinutes: 5,
+    });
+    await setTestSetting("site.previewEnabled", false);
+    const disabledResponse = await requestPublicPath(
+      `/preview?type=page&token=${encodeURIComponent(valid.token)}`
+    );
+    expect(disabledResponse.status).toBe(404);
+  }
+);
 
 testIfDb("content preview renders generic entries whose type slug is post", async () => {
   resetRateLimitBuckets();
@@ -364,25 +376,28 @@ testIfDb("content preview renders generic entries whose type slug is post", asyn
   expect(await response.text()).toContain(entry.title);
 });
 
-testIfDb("content route match takes precedence over a page slug until routes are cleared", async () => {
-  resetRateLimitBuckets();
-  await setTestSetting("site.cacheTtlSeconds", 0);
-  const fixture = await createPublishedPageWithDraft();
-  const contentRoutes: ContentRouteSetting[] = [
-    {
-      type: `missing-type-${fixture.token}`,
-      listPath: fixture.slug,
-      detailPath: `${fixture.slug}/:slug`,
-      enabled: true,
-    },
-  ];
+testIfDb(
+  "content route match takes precedence over a page slug until routes are cleared",
+  async () => {
+    resetRateLimitBuckets();
+    await setTestSetting("site.cacheTtlSeconds", 0);
+    const fixture = await createPublishedPageWithDraft();
+    const contentRoutes: ContentRouteSetting[] = [
+      {
+        type: `missing-type-${fixture.token}`,
+        listPath: fixture.slug,
+        detailPath: `${fixture.slug}/:slug`,
+        enabled: true,
+      },
+    ];
 
-  await setTestSetting("site.contentRoutes", contentRoutes);
-  const shadowedResponse = await requestPublicPath(fixture.slug);
-  expect(shadowedResponse.status).toBe(404);
+    await setTestSetting("site.contentRoutes", contentRoutes);
+    const shadowedResponse = await requestPublicPath(fixture.slug);
+    expect(shadowedResponse.status).toBe(404);
 
-  await setTestSetting("site.contentRoutes", []);
-  const pageResponse = await requestPublicPath(fixture.slug);
-  expect(pageResponse.status).toBe(200);
-  expect(await pageResponse.text()).toContain(fixture.publishedHeadline);
-});
+    await setTestSetting("site.contentRoutes", []);
+    const pageResponse = await requestPublicPath(fixture.slug);
+    expect(pageResponse.status).toBe(200);
+    expect(await pageResponse.text()).toContain(fixture.publishedHeadline);
+  }
+);
