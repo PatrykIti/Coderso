@@ -1586,6 +1586,11 @@ Create/update payload (summary):
     "contentTypeSlug": "products",
     "status": "draft",
     "titlePattern": "{{ title }}",
+    "seo": {
+      "titlePattern": "{{ title }} | Products",
+      "descriptionField": "summary",
+      "imageField": "coverImage"
+    },
     "settings": {
       "template": "detail",
       "layout": {}
@@ -1619,6 +1624,10 @@ Rules:
 - `POST /detail-pages/:id/publish` promotes the saved `current_document` into
   `published_document`, records a `publish` revision, and keeps public runtime
   behind the existing canonical route link.
+- Public runtime and dedicated detail-page preview render detail-document
+  `titlePattern` / `seo.titlePattern`, `seo.descriptionField`, and
+  `seo.imageField` against the selected entry before falling back to entry SEO
+  metadata.
 - `POST /detail-pages/:id/autosave` accepts `{ document }`, records or reuses a
   single latest `autosave` revision snapshot for recovery, and does not mutate
   canonical route linkage.
@@ -2973,7 +2982,7 @@ Stara rodzina `/assistant/site-builder/*` jest wycofana. Site-kit planning/execu
 `TASK-190-06-02` przenosi binding composition do `blueprintBindingComposer` i rozszerza obecny custom-screen owner seam o top-level `collectionRole` / `compositionKey`; `custom-screen.upsert` oraz `custom-screen.update` moga przenosic te pola przez strict action schema, executor i `customScreenService` bez assistant-only metadata store.
 `TASK-174-04-05` promuje `entry.update`, `form.update`, `listing-query.update`, `listing-template.update`, `menu.item.update` i `seo.document.update` do executable typed actions; wszystkie mutacje ida przez istniejace domain services i zachowuja unrelated fields/config.
 `TASK-190-05-03-05` promuje `detail-page.upsert` do executable typed action dla strict detail-page documents; execute przechodzi przez content-domain owner seam, odswieza `contentTypeSlug` z canonical content type, respektuje `DetailPageDocument.status` jako jedyny owner publish state, i nie przejmuje route-link ownership od `setting.content-route.upsert`.
-`TASK-190-07-02` dodaje catalog-backed no-duplicate matcher przed handoffem do strict executor path: bounded resource catalog zawiera bezpieczne detail-page summaries, page `collectionLink` metadata, custom-screen `collectionRole` / `compositionKey`, media summaries bez raw/signed payloadow, a matcher przepisuje wspierane create-like akcje na istniejace stable ids albo zwraca blocking conflict dla niejednoznacznych query/screen/media kandydatow.
+`TASK-190-07-02` dodaje catalog-backed no-duplicate matcher przed handoffem do strict executor path: bounded resource catalog zawiera bezpieczne detail-page summaries, page `collectionLink` metadata, custom-screen `collectionRole` / `compositionKey`, media summaries bez raw/signed payloadow, a matcher przepisuje wspierane create-like akcje na istniejace stable ids albo zwraca blocking conflict dla niejednoznacznych query/screen/media kandydatow. W executorze istnieje tylko compatibility fallback dla pojedynczego exact-name custom screena bez `collectionRole` i bez `compositionKey`; ekran o tej samej nazwie z innymi metadanymi pozostaje konfliktem zaleznosci zamiast silent reuse.
 `TASK-190-05-03-08` promuje `detail-page` do generic CMS operation vocabulary tylko jako bounded resource-context seam: provider guidance/package metadata moga opisywac `detail-page`, target resolver akceptuje zaufane id, stable `contentTypeId`, exact route/content-type linkage albo aktywny detail-template surface, a generic `detail-page` mutation pozostaje policy-gated bez nowej sciezki wykonawczej poza lokalnym `detail-page.upsert`.
 `TASK-174-05-01` dodaje read-only active page template-section inspection: refy sa deduplikowane server-side, referenced widget templates sa streszczane bez raw config values/secrets, a aktywna strona z template inspection wymaga `widgets:read` poza `content:read`.
 `TASK-174-05-02` dodaje konserwatywne target resolution dla template-backed page edits: ambiguous prompt zwraca `needs_input`, page-instance prompt idzie do `page.widget.patch`, a template-wide prompt idzie do `widget-template.block.patch` tylko przy jednoznacznym zhydratowanym nested block target.

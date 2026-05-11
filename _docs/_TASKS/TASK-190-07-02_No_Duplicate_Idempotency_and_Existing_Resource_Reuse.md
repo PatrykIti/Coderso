@@ -99,7 +99,10 @@ Rules:
 - this slice only consumes those persisted fields in bounded catalogs and
   matcher logic; it must not introduce planner-owned metadata fallbacks.
 - Non-unique fields such as listing query `name` or custom screen `name` are
-  advisory labels only; they are not sufficient for silent reuse.
+  advisory labels only; they are not sufficient for silent reuse. The only
+  custom-screen exception is an executor-side compatibility fallback for one
+  exact-name screen whose `collectionRole` and `compositionKey` are both null;
+  same-name screens carrying other metadata must remain dependency conflicts.
 - Media labels, file names, and alt text are advisory labels only. They are not
   sufficient for silent media reuse, replacement, or removal without an exact id
   or explicit user confirmation.
@@ -237,7 +240,8 @@ Matcher rules:
   `PageData.settings.collectionLink`, custom screens use
   `collectionRole` / `compositionKey`, detail pages use stable ids and canonical
   linked summaries, listing query names are only safe when unique, and media
-  reuse is exact-id only.
+  reuse is exact-id only. Executor-side legacy custom-screen reuse is limited to
+  one exact-name screen with null `collectionRole` and null `compositionKey`.
 - Generic provider/policy/target-resolver exposure for `detail-page` remains
   deferred to `TASK-190-05-03-08`; this leaf keeps the new behavior inside the
   bounded catalog, matcher, assembler, and executor validation paths.

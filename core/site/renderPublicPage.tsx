@@ -23,6 +23,7 @@ export type PublicPageRenderOptions = {
   previewDevice?: DeviceTarget;
   metaDescription?: string | null;
   canonicalUrl?: string | null;
+  imageUrl?: string | null;
   layoutSettings?: PageLayoutSettings;
 };
 
@@ -52,6 +53,7 @@ const renderDocument = (
   inlineCss?: string | null,
   metaDescription?: string | null,
   canonicalUrl?: string | null,
+  imageUrl?: string | null,
   devModuleScripts?: string[] | null,
   isPreview?: boolean
 ) => {
@@ -67,6 +69,10 @@ const renderDocument = (
 
   if (canonicalUrl) {
     headTags.push(<link key="canonical" rel="canonical" href={canonicalUrl} />);
+  }
+
+  if (imageUrl) {
+    headTags.push(<meta key="og-image" property="og:image" content={imageUrl} />);
   }
 
   if (inlineCss) {
@@ -163,6 +169,7 @@ export function renderPublicPageHtml(options: PublicPageRenderOptions) {
     inlineCss,
     metaDescription,
     canonicalUrl,
+    options.imageUrl,
     devModuleScripts,
     isPreview
   );
@@ -217,6 +224,7 @@ export async function renderPublicPageRuntimeHtml(options: PublicPageRuntimeRend
     inlineCss,
     metaDescription,
     canonicalUrl,
+    options.imageUrl,
     devModuleScripts,
     isPreview
   );

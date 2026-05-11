@@ -107,3 +107,17 @@ Closure sequencing rule:
   sandbox with `.env` loaded (`758` tests, `2936` assertions), and
   `bun run scan:security:strict` clean. The container image scan remained
   intentionally skipped because `SECURITY_SCAN_IMAGE` was not set.
+- 2026-05-11: Final agent-pass drift fixes landed for catalog-backed LLM
+  gating, detail-page runtime SEO/title mappings, metadata-aware custom-screen
+  action identity, and source-of-truth legacy fallback wording. Validation
+  passed targeted Vitest planner/assembler/renderer coverage (`3` files, `125`
+  tests), targeted Bun action executor coverage (`65` tests, `313`
+  assertions), targeted DB-backed detail-page runtime coverage outside the
+  sandbox (`8` tests, `24` assertions), `bun --cwd core lint`,
+  `bun --cwd core lint:types`, `bun run lint`, full `bun run test:vitest`
+  (`582` files, `2611` tests), and `bun run precommit`. Full DB/runtime
+  `bun run test:bun` outside the sandbox and outside-sandbox
+  `bun run scan:security:strict` remain pending because the approval layer
+  rejected both escalations with the usage-limit message; a sandbox-only strict
+  scan also failed on Semgrep CA trust anchors and `bun audit` connection
+  refusal, while Trivy and Gitleaks scanner lanes were clean.

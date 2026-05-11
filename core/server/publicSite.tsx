@@ -30,6 +30,7 @@ import {
   resolvePreviewDetailPageRuntime,
   resolvePublishedDetailPageRuntime,
 } from "../services/content/detailPageRuntimeResolver";
+import type { DetailPageDocument } from "../services/content/detailPageTypes";
 import { resolvePostsFeedRuntimeData } from "../services/content/postsFeedResolver";
 import { resolveEntryTeaserRuntimeData } from "../services/content/entryTeaserResolver";
 import {
@@ -89,6 +90,7 @@ import { searchPublicIndex } from "../services/search/searchIndexService";
 import { publicSearchRequestSchema } from "./validation/filterSchemas";
 import { validate } from "./validation/schemaValidator";
 import { handlePublicBookingApi } from "./publicBookingApi";
+import { readBindingPathValue } from "../services/utils/bindingPath";
 
 export type PublicPageData = {
   title: string;
@@ -499,6 +501,123 @@ const jsonResponse = (payload: unknown, status = 200) =>
     headers: { "Content-Type": "application/json" },
   });
 
+type DetailPageRuntimeEntrySeo = {
+  description?: string | null;
+  canonicalUrl?: string | null;
+};
+
+type DetailPageRuntimeEntry = {
+  title?: string | null;
+  slug?: string | null;
+  data?: Record<string, unknown> | null;
+  seo?: DetailPageRuntimeEntrySeo | null;
+  publishedAt?: Date | string | null;
+  updatedAt?: Date | string | null;
+  createdAt?: Date | string | null;
+  author?: { name?: string | null } | null;
+};
+
+const detailPageTitleTokenPattern = /\{\{\s*([A-Za-z0-9_.-]+)\s*\}\}|\{\s*([A-Za-z0-9_.-]+)\s*\}/g;
+
+const toPublicSeoText = (value: unknown) => {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (value instanceof Date && Number.isFinite(value.getTime())) return value.toISOString();
+  return null;
+};
+
+const readDetailPageEntryValue = (entry: DetailPageRuntimeEntry, field: string) => {
+  const normalized = field.trim();
+  switch (normalized) {
+    case "title":
+      return entry.title;
+    case "slug":
+      return entry.slug;
+    case "publishedAt":
+      return entry.publishedAt;
+    case "updatedAt":
+      return entry.updatedAt;
+    case "createdAt":
+      return entry.createdAt;
+    case "author":
+      return entry.author?.name ?? null;
+    default: {
+      const dataPath = normalized.startsWith("data.")
+        ? normalized.slice("data.".length)
+        : normalized;
+      return readBindingPathValue(entry.data ?? {}, dataPath);
+    }
+  }
+};
+
+const resolveDetailPageTitle = (
+  pattern: string | null | undefined,
+  entry: DetailPageRuntimeEntry,
+  fallback: string
+) => {
+  const source = typeof pattern === "string" && pattern.trim().length > 0 ? pattern : fallback;
+  const rendered = source.replace(
+    detailPageTitleTokenPattern,
+    (_match, doubleToken, singleToken) => {
+      const token = doubleToken ?? singleToken;
+      return toPublicSeoText(readDetailPageEntryValue(entry, token)) ?? "";
+    }
+  );
+  const trimmed = rendered.trim();
+  return trimmed.length > 0 ? trimmed : fallback;
+};
+
+const resolveDetailPageImageUrl = (value: unknown): string | null => {
+  if (Array.isArray(value)) return value.length > 0 ? resolveDetailPageImageUrl(value[0]) : null;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (
+      trimmed.startsWith("/") ||
+      trimmed.startsWith("https://") ||
+      trimmed.startsWith("http://")
+    ) {
+      return trimmed;
+    }
+    return null;
+  }
+  if (!value || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  return resolveDetailPageImageUrl(record.src ?? record.url);
+};
+
+const resolveEntryMetaDescription = (entry: DetailPageRuntimeEntry) =>
+  entry.seo?.description ?? resolvePostRuntimeMetaDescription(entry.data ?? {});
+
+const resolveDetailPageRuntimeSeo = (input: {
+  document: DetailPageDocument;
+  entry: DetailPageRuntimeEntry;
+  contentTypeName: string;
+}) => {
+  const fallbackTitle = input.entry.title ?? input.contentTypeName;
+  const descriptionField = input.document.seo?.descriptionField ?? null;
+  const imageField = input.document.seo?.imageField ?? null;
+  const description = descriptionField
+    ? toPublicSeoText(readDetailPageEntryValue(input.entry, descriptionField))
+    : null;
+  const imageUrl = imageField
+    ? resolveDetailPageImageUrl(readDetailPageEntryValue(input.entry, imageField))
+    : null;
+
+  return {
+    title: resolveDetailPageTitle(
+      input.document.seo?.titlePattern ?? input.document.titlePattern,
+      input.entry,
+      fallbackTitle
+    ),
+    metaDescription: description ?? resolveEntryMetaDescription(input.entry),
+    imageUrl,
+    canonicalUrl: input.entry.seo?.canonicalUrl ?? null,
+  };
+};
+
 const renderPublicPageHtmlInternal = async (
   page: PublicPageData,
   options?: {
@@ -803,12 +922,13 @@ const renderEntryDetailHtml = async (
         });
     if (!detailPage) return null;
 
-    const metaDescription =
-      "seo" in entryDetail && entryDetail.seo
-        ? (entryDetail.seo.description ?? resolvePostRuntimeMetaDescription(entryDetail.data))
-        : resolvePostRuntimeMetaDescription(entryDetail.data);
+    const detailSeo = resolveDetailPageRuntimeSeo({
+      document: detailPage.document,
+      entry: entryDetail,
+      contentTypeName: contentType.name,
+    });
     return renderPublicPageRuntimeHtml({
-      title: entryDetail.title ?? contentType.name,
+      title: detailSeo.title,
       blocks: await hydrateRuntimeBlocks(detailPage.blocks, {
         preview: options?.preview ?? false,
         contentRoutes,
@@ -821,9 +941,9 @@ const renderEntryDetailHtml = async (
       isPreview: options?.preview ?? false,
       previewDevice: options?.previewDevice,
       layoutSettings: detailPage.document.settings.layout,
-      metaDescription,
-      canonicalUrl:
-        "seo" in entryDetail && entryDetail.seo ? (entryDetail.seo.canonicalUrl ?? null) : null,
+      metaDescription: detailSeo.metaDescription,
+      canonicalUrl: detailSeo.canonicalUrl,
+      imageUrl: detailSeo.imageUrl,
       themeName: options?.themeName ?? (await resolvePublicThemeName()),
       templateKey: detailPage.document.settings.template,
     });
@@ -887,13 +1007,14 @@ const renderDetailPagePreviewHtml = async (input: {
   if (!detailPage) return null;
 
   const { inlineCss, cssHref, devModuleScripts } = await resolvePublicStyles();
-  const metaDescription =
-    "seo" in entryDetail && entryDetail.seo
-      ? (entryDetail.seo.description ?? resolvePostRuntimeMetaDescription(entryDetail.data))
-      : resolvePostRuntimeMetaDescription(entryDetail.data);
+  const detailSeo = resolveDetailPageRuntimeSeo({
+    document: detailPage.document,
+    entry: entryDetail,
+    contentTypeName: contentType.name,
+  });
 
   return renderPublicPageRuntimeHtml({
-    title: entryDetail.title ?? contentType.name,
+    title: detailSeo.title,
     blocks: await hydrateRuntimeBlocks(detailPage.blocks, {
       preview: true,
       contentRoutes,
@@ -906,9 +1027,9 @@ const renderDetailPagePreviewHtml = async (input: {
     isPreview: true,
     previewDevice: input.previewDevice,
     layoutSettings: detailPage.document.settings.layout,
-    metaDescription,
-    canonicalUrl:
-      "seo" in entryDetail && entryDetail.seo ? (entryDetail.seo.canonicalUrl ?? null) : null,
+    metaDescription: detailSeo.metaDescription,
+    canonicalUrl: detailSeo.canonicalUrl,
+    imageUrl: detailSeo.imageUrl,
     themeName: await resolvePublicThemeName(),
     templateKey: detailPage.document.settings.template,
   });

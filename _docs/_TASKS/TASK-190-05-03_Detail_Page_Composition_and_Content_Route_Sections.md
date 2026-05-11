@@ -163,6 +163,10 @@ type DetailPageBinding = {
 };
 ```
 
+Public runtime and dedicated detail-page preview render `titlePattern` /
+`seo.titlePattern`, `seo.descriptionField`, and `seo.imageField` against the
+selected entry before falling back to entry-owned SEO metadata.
+
 Storage direction:
 
 - `detail_page_documents` is the required storage contract.

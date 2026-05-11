@@ -109,7 +109,9 @@ links:
 
 - pages: persisted `PageData.settings.collectionLink`,
 - detail pages: stable `contentTypeId` and linked route context,
-- custom screens: `collectionRole` and `compositionKey`,
+- custom screens: `collectionRole` and `compositionKey`; during execute only,
+  a single exact-name screen with null `collectionRole` and null
+  `compositionKey` may be upgraded as a legacy compatibility fallback,
 - media: exact trusted media ids only,
 - listing query/template names: exact unique matches or `needs_input`.
 

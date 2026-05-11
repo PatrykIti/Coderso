@@ -494,8 +494,13 @@ export const buildBlueprintActionMergeKey = (action: AssistantPlannedAction) => 
       return `${action.type}:${action.input.typeSlug}`;
     case "content-type.upsert":
       return `${action.type}:${action.input.slug}`;
-    case "custom-screen.upsert":
-      return `${action.type}:${action.input.contentTypeSlug}:${action.input.name}`;
+    case "custom-screen.upsert": {
+      const role = action.input.collectionRole ?? null;
+      if (role) {
+        return `${action.type}:${action.input.contentTypeSlug}:role:${role}:composition:${action.input.compositionKey ?? "default"}`;
+      }
+      return `${action.type}:${action.input.contentTypeSlug}:name:${action.input.name}`;
+    }
     case "listing-query.upsert":
       return `${action.type}:${action.input.name}`;
     case "listing-template.upsert":
@@ -542,6 +547,8 @@ export const mergeBlueprintActions = (
       if (
         left.input.name !== other.input.name ||
         left.input.contentTypeSlug !== other.input.contentTypeSlug ||
+        (left.input.collectionRole ?? null) !== (other.input.collectionRole ?? null) ||
+        (left.input.compositionKey ?? null) !== (other.input.compositionKey ?? null) ||
         left.input.status !== other.input.status ||
         left.input.showInSidebar !== other.input.showInSidebar ||
         left.input.sidebarLabel !== other.input.sidebarLabel

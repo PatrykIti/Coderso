@@ -1710,11 +1710,97 @@ test("executeAssistantActionPlan rejects same-name custom screens owned by other
   );
 
   expect(executed.summary.failed).toBe(1);
+  expect(executed.results[0]?.errorCode).toBe("assistant_action_dependency_conflict");
   expect(deps.__state.customScreens).toHaveLength(1);
   expect(deps.__state.customScreens[0]?.id).toBe(existing.id);
   expect(deps.__state.customScreens[0]?.collectionRole).toBe("secondary-admin-screen");
   expect(deps.__state.customScreens[0]?.compositionKey).toBe("comparison");
   expect(deps.__state.customScreens[0]?.blocks[0]?.data.title).toBe("Comparison overview");
+});
+
+test("executeAssistantActionPlan rejects ambiguous legacy custom screen name reuse", async () => {
+  const deps = createDeps();
+  const contentType = await deps.createContentType({
+    name: "Products",
+    slug: "products",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {},
+    },
+  });
+  await deps.createCustomScreen({
+    name: "Products",
+    contentTypeId: contentType.id,
+    status: "active",
+    collectionRole: null,
+    compositionKey: null,
+    showInSidebar: true,
+    sidebarLabel: "Products",
+    blocks: [],
+    bindings: [],
+  });
+  await deps.createCustomScreen({
+    name: "Products",
+    contentTypeId: contentType.id,
+    status: "draft",
+    collectionRole: null,
+    compositionKey: null,
+    showInSidebar: false,
+    sidebarLabel: null,
+    blocks: [],
+    bindings: [],
+  });
+
+  const plan: AssistantActionPlan = {
+    id: "plan-custom-screen-upsert-ambiguous-legacy",
+    status: "ready",
+    intentId: "custom-screen-upsert-ambiguous-legacy",
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+    title: "Upsert product admin screen",
+    answer: "I need the exact legacy screen before updating this admin surface.",
+    summary: "Do not pick between ambiguous legacy screens.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "custom-screen-upsert-1",
+        type: "custom-screen.upsert",
+        title: "Create products admin screen",
+        description: "Keep the canonical Products screen contract.",
+        input: {
+          name: "Products",
+          contentTypeSlug: "products",
+          status: "active",
+          collectionRole: "canonical-admin-screen",
+          compositionKey: "product-catalog",
+          showInSidebar: true,
+          sidebarLabel: "Products",
+          blocks: [],
+          bindings: [],
+        },
+      },
+    ],
+  };
+
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.changes[0]?.conflicts[0]?.code).toBe("assistant_action_dependency_conflict");
+
+  const executed = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-custom-screen-upsert-ambiguous-legacy",
+    },
+    deps
+  );
+
+  expect(executed.summary.failed).toBe(1);
+  expect(executed.results[0]?.errorCode).toBe("assistant_action_dependency_conflict");
+  expect(deps.__state.customScreens).toHaveLength(2);
+  expect(deps.__state.customScreens.every((entry) => entry.collectionRole === null)).toBe(true);
 });
 
 test("executeAssistantActionPlan patches custom screen widget block data", async () => {
