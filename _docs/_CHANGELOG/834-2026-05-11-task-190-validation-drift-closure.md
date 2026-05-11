@@ -35,3 +35,7 @@ Tasks: TASK-190, TASK-190-05, TASK-190-07, TASK-190-08
   Trivy vulnerability/config/secret scans, and Gitleaks history/worktree scans.
   Container image scanning remained intentionally skipped because
   `SECURITY_SCAN_IMAGE` was not set.
+- Did not rerun `bun run test:assistant:live` for this second-pass drift closure:
+  the local live-provider env is configured for OpenAI and OpenRouter, but the
+  gate sends test prompts and fixture data to external providers and remains
+  blocked pending explicit approval for that data transfer.

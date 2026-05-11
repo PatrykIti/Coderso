@@ -143,3 +143,8 @@ Closure sequencing rule:
   vulnerability/config/secret scans, and Gitleaks history/worktree scans. The
   container image scan remained intentionally skipped because
   `SECURITY_SCAN_IMAGE` was not set.
+- 2026-05-11: The second-pass validation has not rerun
+  `bun run test:assistant:live` yet. The local `.env` exposes both OpenAI and
+  OpenRouter live-provider pairs, so the TASK-190 live matrix remains applicable,
+  but running it would send test prompts and fixture data to external providers
+  and is blocked pending explicit approval for that data transfer.
