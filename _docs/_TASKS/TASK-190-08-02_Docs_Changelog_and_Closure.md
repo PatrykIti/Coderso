@@ -122,3 +122,20 @@ Closure sequencing rule:
   `bun audit`, Trivy vulnerability/config/secret scans, and Gitleaks
   history/worktree scans. The container image scan remained intentionally
   skipped because `SECURITY_SCAN_IMAGE` was not set.
+- 2026-05-11: Second final agent pass found no high TASK-190 drift and closed
+  the remaining medium/low validation drift: `setting.content-route.upsert`
+  now rejects invalid `detailPageId` values at the assistant schema and route
+  boundary, `page.upsert` action-family metadata matches the real strict page
+  schema, detail-page route schemas reject unknown top-level document fields
+  before service work, and dedicated detail-page preview now has explicit
+  title/SEO regression coverage. The Vitest command also forces
+  `NODE_ENV=test` after `.env` loading so local production shells cannot disable
+  React `act` or test-only blueprint-shadow diagnostics. Validation passed
+  targeted Bun route/runtime coverage (`42` tests, `178` assertions), targeted
+  Vitest assistant schema/contract coverage (`2` files, `54` tests), full
+  DB/runtime `bun run test:bun` outside the sandbox with `.env` loaded (`763`
+  tests across `204` files, `2956` assertions), full `bun run test:vitest`
+  (`582` files, `2611` tests), and `bun run scan:security:strict` clean across
+  Semgrep, `bun audit`, Trivy vulnerability/config/secret scans, and Gitleaks
+  history/worktree scans. The container image scan remained intentionally
+  skipped because `SECURITY_SCAN_IMAGE` was not set.

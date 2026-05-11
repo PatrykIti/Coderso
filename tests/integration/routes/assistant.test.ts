@@ -1276,6 +1276,61 @@ test("assistant action dry-run route maps unsupported actions to invalid plan er
   }
 });
 
+test("assistant action dry-run route rejects invalid content route detailPageId", async () => {
+  const { router, routes } = makeRouter();
+  const plan = {
+    id: "plan-invalid-detail-page-id",
+    status: "ready",
+    intentId: "invalid-detail-page-id",
+    title: "Invalid detail page id",
+    answer: "Invalid detail page id",
+    summary: "Invalid detail page id",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "route-invalid-detail-page-id",
+        type: "setting.content-route.upsert",
+        title: "Update route",
+        description: "Update route with invalid detailPageId.",
+        input: {
+          typeSlug: "products",
+          listPath: "/products",
+          detailPath: "/products/:slug",
+          enabled: true,
+          detailPageId: "not-a-detail-page-id",
+        },
+      },
+    ],
+  };
+
+  registerAssistantRoutes(router, {
+    requirePermission: () => async () => undefined,
+    validate: () => undefined,
+  });
+
+  const route = routes.find((item) => item.path === "/assistant/actions/dry-run");
+  const handler = route?.handlers[route.handlers.length - 1];
+
+  try {
+    await handler?.({
+      params: {},
+      query: {},
+      body: { plan },
+      requestId: "req-invalid-detail-page-id",
+      user: { id: "user-1" },
+    });
+    throw new Error("expected_error");
+  } catch (error) {
+    expect(error).toBeInstanceOf(ApiError);
+    const apiError = error as ApiError;
+    expect(apiError.code).toBe("assistant_action_plan_invalid");
+    expect(apiError.status).toBe(400);
+    expect(apiError.details).toEqual({ requestId: "req-invalid-detail-page-id" });
+  }
+});
+
 test("assistant action execute route injects actorId and idempotency key", async () => {
   const { router, routes } = makeRouter();
   const plan = buildHouseProjectsCatalogPlan();

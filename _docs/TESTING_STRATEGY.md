@@ -120,6 +120,9 @@ then that test should move to Vitest.
 - Full `bun run test:vitest` should be both green and log-clean; happy-dom
   `AsyncTaskManager` errors or `ECONNREFUSED localhost:3000` output indicate a
   test harness or component-test isolation bug.
+- The repo `test:vitest` command forces `NODE_ENV=test` after loading `.env`;
+  inherited production shell environments must not disable React `act` or
+  test-only assistant blueprint-shadow diagnostics.
 
 ### Do Not Do
 

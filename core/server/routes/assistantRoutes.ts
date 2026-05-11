@@ -191,6 +191,12 @@ const mapAssistantError = (error: unknown) => {
         message: "Assistant action plan payload is invalid",
         status: 400,
       };
+    case "settings_value_invalid":
+      return {
+        code: "assistant_action_plan_invalid",
+        message: "Assistant action plan payload is invalid",
+        status: 400,
+      };
     case "assistant_action_plan_not_ready":
       return {
         code: "assistant_action_plan_not_ready",

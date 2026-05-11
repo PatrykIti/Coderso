@@ -143,6 +143,7 @@ const createProductFixture = async () => {
       properties: {
         headline: { type: "string", xFieldType: "text" },
         summary: { type: "string", xFieldType: "textarea" },
+        coverImage: { type: "string", xFieldType: "text" },
       },
     },
   });
@@ -155,6 +156,7 @@ const createProductFixture = async () => {
     data: {
       headline: `Published detail headline ${token}`,
       summary: `Published detail summary ${token}`,
+      coverImage: `/media/preview-detail-cover-${token}.jpg`,
     },
   });
   if (!entry) throw new Error("missing_detail_page_preview_entry");
@@ -171,6 +173,7 @@ const insertDetailPageDocument = async (input: {
   status?: "draft" | "published";
   currentBody: string;
   publishedBody?: string;
+  documentOverrides?: Partial<DetailPageDocument>;
 }) => {
   const currentDocument = normalizeDetailPageDocument({
     schemaVersion: 1,
@@ -231,6 +234,7 @@ const insertDetailPageDocument = async (input: {
         required: true,
       },
     ],
+    ...(input.documentOverrides ?? {}),
   } satisfies DetailPageDocument);
 
   const publishedDocument =
@@ -300,6 +304,68 @@ testIfDb(
     expect(html).toContain("Draft detail template body");
     expect(html).not.toContain("Published detail template body");
     expect(html).toContain("Preview mode");
+  },
+  15_000
+);
+
+testIfDb(
+  "detail-page preview applies detail-page title and SEO field mappings",
+  async () => {
+    resetRateLimitBuckets();
+    await setTestSetting("site.previewEnabled", true);
+    await setTestSetting("site.cacheTtlSeconds", 0);
+
+    const fixture = await createProductFixture();
+    const detailPageId = randomUUID();
+    await updateEntryMetadata(
+      fixture.entry.id,
+      {
+        seo: {
+          description: "Entry SEO fallback should not win in preview",
+        },
+      },
+      fixture.actor.id
+    );
+    await insertDetailPageDocument({
+      id: detailPageId,
+      contentTypeId: fixture.contentType.id,
+      contentTypeSlug: fixture.contentType.slug,
+      status: "draft",
+      currentBody: "Draft detail template body",
+      publishedBody: "Published detail template body",
+      documentOverrides: {
+        titlePattern: "{{ title }} | Default detail",
+        seo: {
+          titlePattern: "{{ title }} | Preview detail",
+          descriptionField: "summary",
+          imageField: "coverImage",
+        },
+      },
+    });
+
+    const { token } = await createPreviewToken({
+      targetType: "detail-page",
+      targetId: detailPageId,
+      context: {
+        kind: "detail-page",
+        sampleEntryId: fixture.entry.id,
+      },
+    });
+
+    const response = await requestPublicPath(
+      `/preview?type=detail-page&token=${encodeURIComponent(token)}`
+    );
+
+    expect(response.status).toBe(200);
+    const html = await response.text();
+    expect(html).toContain(`<title>${fixture.entry.title} | Preview detail</title>`);
+    expect(html).toContain(
+      `name="description" content="Published detail summary ${fixture.token}"`
+    );
+    expect(html).toContain(
+      `property="og:image" content="/media/preview-detail-cover-${fixture.token}.jpg"`
+    );
+    expect(html).not.toContain("Entry SEO fallback should not win in preview");
   },
   15_000
 );

@@ -82,6 +82,27 @@ test("normalizeAssistantActionPlan accepts content route actions with explicit d
       detailPageId: null,
     },
   });
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...normalized,
+      actions: [
+        {
+          id: "route-invalid",
+          type: "setting.content-route.upsert",
+          title: "Invalid detail page route",
+          description: "Reject invalid detailPageId.",
+          input: {
+            typeSlug: "invalid",
+            listPath: "/invalid",
+            detailPath: "/invalid/:slug",
+            enabled: true,
+            detailPageId: "not-a-detail-page-id",
+          },
+        },
+      ],
+    })
+  ).toThrow("assistant_action_plan_invalid");
 });
 
 test("normalizeAssistantActionPlan accepts strict planner metadata", () => {

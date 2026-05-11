@@ -19,6 +19,7 @@ import {
 } from "../forms/formActionsContract";
 import { normalizeDetailPageDocument } from "../content/detailPageSchema";
 import { customScreenCollectionRoleValues } from "../customScreens/customScreenSchemas";
+import { normalizeOptionalDetailPageId } from "../settings/detailPageIdContract";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -125,6 +126,14 @@ const readText = (value: unknown) => {
 const readOptionalText = (value: unknown) => {
   if (value === undefined || value === null) return null;
   return readText(value);
+};
+
+const readOptionalContentRouteDetailPageId = (value: unknown) => {
+  try {
+    return normalizeOptionalDetailPageId(value);
+  } catch {
+    fail();
+  }
 };
 
 const redactMetadataText = (value: string) =>
@@ -445,7 +454,7 @@ const normalizeContentRouteInput = (input: JsonRecord) => {
     detailPath: readText(input.detailPath),
     enabled: readBoolean(input.enabled),
     ...(Object.prototype.hasOwnProperty.call(input, "detailPageId")
-      ? { detailPageId: readOptionalText(input.detailPageId) }
+      ? { detailPageId: readOptionalContentRouteDetailPageId(input.detailPageId) }
       : {}),
   };
 };

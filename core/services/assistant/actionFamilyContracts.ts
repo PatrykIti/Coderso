@@ -549,13 +549,17 @@ export const assistantActionFamilyContracts = [
       ],
     }
   ),
-  executableContract("page.upsert", "page", "core/services/pages/pageService.ts", [
-    "title",
-    "slug",
-    "status",
-    "listingQueryName",
-    "listingTemplateSlug",
-  ]),
+  executableContract(
+    "page.upsert",
+    "page",
+    "core/services/pages/pageService.ts",
+    ["title", "slug", "status", "introTitle", "introBody"],
+    {
+      notes: [
+        "Optional collectionLink, listing query/template locators, blocks, filters, and form embeds are normalized by the strict assistant page schema and persisted through the page owner seam.",
+      ],
+    }
+  ),
   executableContract(
     "detail-page.upsert",
     "detail-page",

@@ -43,6 +43,9 @@ bun run test:coverage:bun:full
 bun run test:coverage:all
 ```
 
+`test:vitest` loads `.env` and then forces `NODE_ENV=test` for the Vitest
+process so React test helpers and test-only assistant diagnostics do not inherit
+production shell settings.
 `test:bun:lane` runs curated Bun-owned route/plugin/perf suites without coverage.
 `test:coverage:bun` uses the same curated Bun-owned route/plugin/perf suites through `scripts/run-bun-lane.ts`.
 `test:coverage` now uses `scripts/run-vitest-coverage.ts` and the canonical full-lane report path `coverage/vitest/coverage-summary.json`.

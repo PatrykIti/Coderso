@@ -16,6 +16,7 @@ import {
   registerDetailPageRoutes,
   type DetailPageRouteHandler,
 } from "../../../core/server/routes/detailPageRoutes";
+import { validate as validateSchema } from "../../../core/server/validation/schemaValidator";
 import { createContentType, deleteContentType } from "../../../core/services/content/typeService";
 import {
   deleteSetting,
@@ -366,6 +367,29 @@ test("detail page routes validate list and write payloads before service work", 
     { id: validId, revisionId: validRevisionId },
     { extra: true },
   ]);
+});
+
+test("detail page route schemas reject unknown top-level document fields before service work", async () => {
+  const { router, routes } = makeRouter();
+
+  registerDetailPageRoutes(router, {
+    requirePermission: () => async () => undefined,
+    validate: validateSchema,
+  });
+
+  await expect(
+    runRoute(routes, "POST", "/detail-pages", {
+      body: {
+        document: {
+          ...buildDetailPageDocumentInput(randomUUID(), "products"),
+          unexpectedField: true,
+        },
+      },
+    })
+  ).rejects.toMatchObject({
+    code: "validation_error",
+    status: 400,
+  });
 });
 
 test("detail page autosave and publish require an authenticated actor after validation", async () => {
