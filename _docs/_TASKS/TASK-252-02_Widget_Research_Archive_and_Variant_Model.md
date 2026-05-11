@@ -172,7 +172,7 @@ Then build a matrix:
 - `_docs/WIDGETS.md` only if the final research matrix changes widget IA rules.
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
-- `_docs/_CHANGELOG/814-2026-05-10-task-252-widget-research-archive.md`
+- `_docs/_CHANGELOG/837-2026-05-10-task-252-widget-research-archive.md`
 
 ## Acceptance Criteria
 
@@ -196,7 +196,7 @@ Then build a matrix:
 - Kept the archive summary-only and license-safe; premium/proprietary sources
   are reference-only.
 - Synchronized `_docs/_TASKS/README.md`, `_docs/_CHANGELOG/README.md`, and
-  `_docs/_CHANGELOG/814-2026-05-10-task-252-widget-research-archive.md` as the
+  `_docs/_CHANGELOG/837-2026-05-10-task-252-widget-research-archive.md` as the
   board/changelog closure artifacts for the completed archive slice.
 - Validation:
   - `git diff --check`
