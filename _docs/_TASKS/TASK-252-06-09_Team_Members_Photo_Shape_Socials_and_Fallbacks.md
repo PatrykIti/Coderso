@@ -176,10 +176,10 @@ Implementation checklist:
   - changed `team` schema fields must reject unknown fields and
     normalize legacy payloads through `core/widgets/core/team.tsx`.
 - Anti-abuse:
-  - Link fields introduced or touched by this leaf must normalize through the
-    leaf-owned `normalizeTeamSocialHref` helper before render, unless the
-    implementation extracts a shared widget URL helper with tests in the same
-    slice.
+  - Link fields introduced or touched by this leaf must normalize through a
+    `core/widgets/core/widgetSafeHref.ts` helper with identical allowed/rejected
+    protocol tests before render. A private `normalizeTeamSocialHref` helper is
+    acceptable only as the team-owner adapter over that shared policy.
   - Team photos currently use a raw public `photo` URL field, not an existing
     MediaPicker/storage owner. This leaf must either add MediaPicker/storage
     ownership with editor/runtime/tests, or keep the raw-public-URL contract and

@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Admin UI + Runtime Render
 **Estimated Effort:** Large
-**Dependencies:** TASK-252-01, TASK-252-02, TASK-252-03, TASK-252-04
+**Dependencies:** TASK-252-01, TASK-252-02
 **Status:** To Do
 
 ---
@@ -105,6 +105,9 @@ This parent is now executed through physical per-widget leaves. Do not implement
 - `core/admin/ui/widgets/editors/CompareTimelineEditors.tsx`
 - Matching widget contracts under `core/widgets/core/*.tsx` when schema/defaults
   or render output changes.
+- Shared safe-href owner when any leaf touches public link fields:
+  - `core/widgets/core/widgetSafeHref.ts`
+  - `tests/vitest/widgets/widgetSafeHref.test.ts`
 - Matching docs under `_docs/_WIDGETS/*.md`.
 - Existing `_docs/_WIDGETS/tmp/<widget>/README.md` and `MATRIX.md` as evidence
   references; update them only if implementation finds a concrete research
@@ -123,6 +126,15 @@ type WidgetExpansionDecision = {
   advancedSections: string[];
   tests: string[];
 };
+
+type WidgetSafeHref = string | undefined;
+
+function normalizeWidgetSafeHref(value: unknown): WidgetSafeHref {
+  // Shared owner: core/widgets/core/widgetSafeHref.ts.
+  // Allow relative paths, hash links, and http(s) URLs. Reject javascript:,
+  // data:, vbscript:, protocol-relative URLs, unknown protocols, and malformed
+  // values before render.
+}
 
 function planWidgetExpansion(widgetType: string, research: ResearchCard[]) {
   const requiredPatterns = research.filter((card) => card.decision === "Keep");
@@ -187,7 +199,11 @@ starts.
     payloads through its owner module.
 - Anti-abuse:
   - no public write endpoint;
-  - link/href fields must keep safe URL validation;
+  - link/href fields must use `core/widgets/core/widgetSafeHref.ts`; the helper
+    owns the allowed scheme list once, rejects `javascript:`, `data:`,
+    `vbscript:`, protocol-relative URLs, unknown protocols, and malformed
+    values, and is covered by shared allowed/rejected protocol tests plus
+    per-widget render/normalizer assertions;
   - rich-text changes must preserve the existing sanitizer boundary and avoid
     raw unsafe HTML.
 
@@ -230,6 +246,8 @@ starts.
 - `_docs/_WIDGETS/tmp/<widget>/*` only when research artifacts are created.
 - `_docs/_TASKS/TASK-252*.md`
 - `_docs/_TASKS/README.md` on status, title, or board row changes.
+- `_docs/_CHANGELOG/README.md` and a new or consolidated changelog entry
+  listing `TASK-252-06` when this parent is marked `Done`.
 
 ## Acceptance Criteria
 

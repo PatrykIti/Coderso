@@ -52,8 +52,10 @@ and Reject decisions.
 ## Files to Change
 
 - `core/widgets/core/section.tsx`
-- `core/admin/ui/pages/builder/BlockSettings.tsx`
-- `core/admin/ui/pages/builder/VisualPanel.tsx`
+- `core/admin/ui/pages/builder/BlockSettings.tsx` only if this leaf explicitly
+  completes deferred shared slot-control wiring from TASK-252-01.
+- `core/admin/ui/pages/builder/VisualPanel.tsx` only if this leaf explicitly
+  completes deferred shared slot-control wiring from TASK-252-01.
 - `core/widgets/slots.ts` only if the existing slot helper contract needs a
   narrow extraction for reuse.
 - `core/admin/ui/widgets/editors/SectionEditors.tsx`
@@ -85,6 +87,15 @@ function normalizeSectionData(data: SectionData): SectionData {
   };
 }
 
+function resolveSectionLayoutClasses(variant: SectionVariantId, layout: SectionLayout) {
+  // Preserve current variant behavior by using the existing wrapper/surface
+  // classes as defaults:
+  // - bleed -> `w-full`
+  // - contained -> `mx-auto w-full max-w-5xl px-4` plus contained surface padding
+  // - default -> `mx-auto w-full max-w-6xl px-4`
+  // New layout tokens may override width/padding only through bounded maps.
+}
+
 function SectionVisualEditor(props: WidgetEditorProps<SectionData>) {
   const value = props.value;
   return (
@@ -102,76 +113,18 @@ function SectionVisualEditor(props: WidgetEditorProps<SectionData>) {
   );
 }
 
-function resolveBuilderSlotMap(block: Block): Record<string, Block[]> {
-  if (block.slots && typeof block.slots === "object" && !Array.isArray(block.slots)) {
-    return block.slots as Record<string, Block[]>;
-  }
-  return Array.isArray(block.children) ? { default: block.children } : {};
-}
+const sectionSlotGroup: WidgetSlotControlGroup = {
+  widgetType: "section",
+  includeSlotIds: ["region"],
+  sectionId: "section.regions",
+  title: "Regions",
+};
 
-function WidgetSlotControls({ widget, block, onChange }: WidgetSlotControlsProps) {
-  const slotMap = resolveBuilderSlotMap(block);
-  const slotDefinitions = widget.slots ?? [];
-  const slotTargets = resolveWidgetSlotTargets(slotDefinitions, slotMap);
-  if (slotTargets.length === 0 && !widget.canHaveChildren) return null;
-  return (
-    <WidgetEditorSection id="section.regions" title="Regions">
-      {slotTargets.map((slot) => (
-        <WidgetControlRow key={slot.slotId} id={`slots.${slot.slotId}`} label={`${slot.label} region`}>
-          {() => (
-            <SlotSummary
-              slot={slot}
-              count={slotMap[slot.slotId]?.length ?? 0}
-              onAddRepeatable={() => addRepeatableSlotInstance(widget, block, onChange, slot.definitionId)}
-              onRemoveRepeatable={() => removeRepeatableSlotInstance(widget, block, onChange, slot.slotId)}
-            />
-          )}
-        </WidgetControlRow>
-      ))}
-    </WidgetEditorSection>
-  );
-}
-
-function addRepeatableSlotInstance(
-  widget: WidgetDefinition,
-  block: Block,
-  onChange: (next: Block) => void,
-  definitionId: string,
-) {
-  const slotMap = resolveBuilderSlotMap(block);
-  const definition = (widget.slots ?? []).find((slot) => slot.id === definitionId);
-  if (!definition || getWidgetSlotKind(definition) !== "repeatable") return;
-  const existing = getRepeatableSlotIds(definition, slotMap);
-  const maximum = Number.isFinite(definition.maxItems)
-    ? Math.max(0, Math.floor(definition.maxItems ?? 0))
-    : undefined;
-  if (typeof maximum === "number" && existing.length >= maximum) return;
-  const nextSlotId = buildRepeatableSlotId(
-    definitionId,
-    getNextRepeatableSlotInstanceId(definitionId, slotMap),
-  );
-  onChange({ ...block, slots: { ...slotMap, [nextSlotId]: [] }, children: undefined });
-}
-
-function removeRepeatableSlotInstance(
-  widget: WidgetDefinition,
-  block: Block,
-  onChange: (next: Block) => void,
-  slotId: string,
-) {
-  const parsed = parseRepeatableSlotId(slotId);
-  if (!parsed) return;
-  const slotMap = resolveBuilderSlotMap(block);
-  const definition = (widget.slots ?? []).find((slot) => slot.id === parsed.definitionId);
-  if (!definition || getWidgetSlotKind(definition) !== "repeatable") return;
-  const existing = getRepeatableSlotIds(definition, slotMap);
-  const minimum = Number.isFinite(definition.minItems)
-    ? Math.max(0, Math.floor(definition.minItems ?? 0))
-    : 0;
-  if (existing.length <= minimum || !(slotId in slotMap)) return;
-  const nextSlots = { ...slotMap };
-  delete nextSlots[slotId];
-  onChange({ ...block, slots: nextSlots, children: undefined });
+function renderSectionSlotControls(args: BuilderSlotControlArgs) {
+  // TASK-252-01 owns the shared builder-level WidgetSlotControls implementation,
+  // including slot-map compatibility and repeatable add/remove write-back.
+  // This leaf only registers the Section group and verifies Section placement.
+  return <WidgetSlotControls {...args} group={sectionSlotGroup} />;
 }
 ```
 
@@ -184,15 +137,21 @@ Implementation checklist:
   strings.
 - Extend or reorganize `core/widgets/core/section.tsx` schema/defaults/normalizer/rendering
   only for fields approved by the research decisions above.
+- The current `SectionData` has no `layout` owner; width and padding are derived
+  from `block.variant` inside wrapper/surface classes. If this leaf adds
+  `layout`, it must add the schema/default/normalizer types and a renderer
+  mapping that preserves current `default`, `contained`, and `bleed` output for
+  legacy payloads. Cover both legacy variant-only sections and new layout-token
+  sections in widget tests.
 - Refactor `core/admin/ui/widgets/editors/SectionEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.
 - Move Regions/slot controls through the builder-owned slot component from
-  TASK-252-01. The component must derive `slotMap` from `block.slots` with
-  `children -> slots.default` compatibility, use the existing helpers from
-  `core/widgets/slots.ts` for repeatable ids/min/max handling, and write back
-  `{ ...block, slots: nextSlots, children: undefined }` only when a slot map is
-  intentionally updated.
+  TASK-252-01. Do not redefine `WidgetSlotControls`, `resolveBuilderSlotMap`,
+  repeatable add/remove helpers, or slot write-back logic here; this leaf only
+  registers/uses the Section `region` slot group once the shared helper exists.
+  If this leaf must complete deferred TASK-252-01 shared wiring, say so
+  explicitly and include the shared helper tests in the same slice.
 - Do not read `props.context.widget` inside `SectionEditors.tsx`; current
   `WidgetEditorContext` does not provide the active widget definition.
 - Keep legacy payloads non-destructive: missing new fields must normalize to the

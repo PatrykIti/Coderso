@@ -32,11 +32,15 @@ and Reject decisions.
 
 - Keep: two named slots, the current bounded ratio variant contract
   (`50-50`, `40-60`, `60-40`), current `ratio.desktop`/`ratio.tablet`,
-  media/content presentation order, mobile stacking/order, gap, and alignment
+  mobile stacking/order through `collapseMobile` and `reverseOnMobile`, gap, and alignment
   from `_docs/_WIDGETS/tmp/split-layout/MATRIX.md`; preserve fixed
   `left`/`right` slot IDs in the widget-definition/page-model slot contract and
-  map legacy data fields such as `collapseMobile` and `reverseOnMobile` into
-  the newer mobile behavior fields in `core/widgets/core/splitLayout.tsx`.
+  keep the current `SplitLayoutData` field names unless this leaf explicitly
+  ships a schema/default/normalizer/render/editor/test migration for any new
+  alias. The matrix terms `mediaPosition`, `reverse`, `mobileStack`, and
+  `mobileOrder` are research concept names; in the current Coderso widget they
+  map to the existing fixed slots plus `ratio`, `collapseMobile`, and
+  `reverseOnMobile`, not to new persisted field names.
 - Adapt: additional ratio presets, drag/span controls, and marketing split
   polish remain conditional; implement only when schema/defaults/normalizer/
   render/editor/tests move together.
@@ -75,12 +79,9 @@ and Reject decisions.
 ```tsx
 function normalizeSplitLayoutData(data: SplitLayoutData, blockVariant: SplitLayoutVariantId = "50-50"): SplitLayoutData {
   return {
-    mediaPosition: normalizeSplitLayoutMediaPosition(data.mediaPosition ?? legacyReverseToMediaPosition(data.reverse)),
-    reverse: normalizeSplitLayoutReverse(data.reverse),
-    orientation: normalizeSplitLayoutOrientation(data.orientation ?? data.mediaPosition),
     ratio: normalizeSplitLayoutRatioPreservingCurrentVariant(data.ratio, blockVariant),
-    mobileStack: normalizeSplitLayoutMobileStack(data.mobileStack ?? legacyCollapseMobileToMobileStack(data.collapseMobile)),
-    mobileOrder: normalizeSplitLayoutMobileOrder(data.mobileOrder ?? legacyReverseOnMobileToMobileOrder(data.reverseOnMobile)),
+    collapseMobile: normalizeSplitLayoutCollapse(data.collapseMobile),
+    reverseOnMobile: normalizeSplitLayoutReverseOnMobile(data.reverseOnMobile),
     gap: normalizeSplitLayoutGap(data.gap),
     verticalAlign: normalizeSplitLayoutVerticalAlign(data.verticalAlign),
   };
@@ -93,14 +94,17 @@ function SplitLayoutVisualEditor(props: WidgetEditorProps<SplitLayoutData>) {
       <WidgetControlRow id="split-layout.variant" label="Pane ratio" data-widget-control="split-layout.variant">
         <VariantCards value={props.variant ?? "50-50"} onChange={props.onVariantChange} options={SPLIT_LAYOUT_RATIO_VARIANTS} />
       </WidgetControlRow>
-      <WidgetControlRow id="split-layout.mediaPosition" label="Media position" data-widget-control="split-layout.mediaPosition">
-        <SegmentedControl value={value.mediaPosition ?? "right"} onChange={(mediaPosition) => props.onChange(updateSplitLayoutMediaPosition(value, mediaPosition))} />
+      <WidgetControlRow id="split-layout.collapseMobile" label="Mobile layout" data-widget-control="split-layout.collapseMobile">
+        <SegmentedControl value={value.collapseMobile ?? "stack"} onChange={(collapseMobile) => props.onChange(updateSplitLayoutData(value, { collapseMobile }))} />
       </WidgetControlRow>
-      <WidgetControlRow id="split-layout.mobileOrder" label="Mobile order" data-widget-control="split-layout.mobileOrder">
-        <SegmentedControl value={value.mobileOrder ?? "content-first"} onChange={(mobileOrder) => props.onChange(updateSplitLayoutMobileOrder(value, mobileOrder))} />
+      <WidgetControlRow id="split-layout.reverseOnMobile" label="Reverse mobile order" data-widget-control="split-layout.reverseOnMobile">
+        <Switch checked={value.reverseOnMobile === true} onCheckedChange={(reverseOnMobile) => props.onChange(updateSplitLayoutData(value, { reverseOnMobile }))} />
       </WidgetControlRow>
-      <WidgetControlRow id="split-layout.mobileStack" label="Stack on mobile" data-widget-control="split-layout.mobileStack">
-        <SegmentedControl value={value.mobileStack ?? legacyCollapseMobileToMobileStack(value.collapseMobile)} onChange={(mobileStack) => props.onChange(updateSplitLayoutMobileStack(value, mobileStack))} />
+      <WidgetControlRow id="split-layout.gap" label="Gap" data-widget-control="split-layout.gap">
+        <Select value={value.gap ?? "6"} onChange={(gap) => props.onChange(updateSplitLayoutData(value, { gap }))} />
+      </WidgetControlRow>
+      <WidgetControlRow id="split-layout.verticalAlign" label="Vertical align" data-widget-control="split-layout.verticalAlign">
+        <Select value={value.verticalAlign ?? "stretch"} onChange={(verticalAlign) => props.onChange(updateSplitLayoutData(value, { verticalAlign }))} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -115,6 +119,11 @@ Implementation checklist:
   renderer/editor metadata.
 - Extend or reorganize `core/widgets/core/splitLayout.tsx` schema/defaults/normalizer/rendering
   only for fields approved by the research decisions above.
+- The current schema owns `ratio`, `collapseMobile`, `reverseOnMobile`, `gap`,
+  and `verticalAlign`. Do not add or persist `mediaPosition`, `reverse`,
+  `orientation`, `mobileStack`, or `mobileOrder` unless the same slice also
+  introduces a real schema migration, legacy adapter, renderer mapping, editor
+  controls, validator coverage, and docs.
 - Refactor `core/admin/ui/widgets/editors/SplitLayoutEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.

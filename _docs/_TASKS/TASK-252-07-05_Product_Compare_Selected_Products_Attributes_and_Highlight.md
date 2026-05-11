@@ -31,9 +31,11 @@ and Reject decisions.
 - Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/product-compare/MATRIX.md`; for this leaf, start from the current owner fields `source`, `fields`, `labels`, `emptyState`, `style`, `resolved` and add only the schema fields that the matrix explicitly keeps.
 - Keep: selected product set and highlighted product as Coderso compare
   owner-contract rows created by this leaf and documented in
-  `_docs/_WIDGETS/tmp/product-compare/MATRIX.md`, plus attribute rows from the
-  TanStack-backed table model; add schema-owned selected-product and highlight
-  product fallbacks in `core/widgets/core/productCompare.tsx`. Do not treat
+  `_docs/_WIDGETS/tmp/product-compare/MATRIX.md`, plus attribute rows that
+  start from the current local `metrics` comparison model in
+  `core/widgets/core/productCompare.tsx` unless this leaf explicitly introduces
+  a new shared table-model seam with tests; add schema-owned selected-product
+  and highlight product fallbacks in `core/widgets/core/productCompare.tsx`. Do not treat
   Shopify/Medusa/Tailwind UI Plus cards as Keep evidence for these fields.
 - Adapt: sticky headers/pinned first column remain conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: arbitrary operators, client-owned provider/index config, raw scripts, and privileged settings in widget data.
@@ -196,13 +198,21 @@ Implementation checklist:
   tests in the same change. Otherwise keep `selectedProductIds` owned by
   `productCompare.tsx` and bridge them into runtime query input after
   `buildCommerceWidgetQueryInput(normalizedSource)`.
+- Current `CommerceWidgetSource`, `CommerceQueryInput`, and
+  `executeCommerceQuery` do not support deterministic product-id filtering.
+  This leaf must make that path explicit before claiming selected-product
+  runtime support: either extend `CommerceQueryInput`/execution with bounded
+  `productIds` filtering before pagination, or add a dedicated product-compare
+  resolver that hydrates selected ids through backend commerce owners and
+  preserves manual selected-id order.
 - Use the current product-compare source defaults unless this leaf explicitly
   migrates defaults and updates all affected tests: `limit: 3`,
   `sortField: "title"`, and `sortDir: "asc"`.
 - Preserve backend-owned lookup and manual ordering in
   `commerceWidgetRuntime.ts` through the existing `resolveRuntimeProducts` /
-  `resolveWithCache` path; do not introduce an `executeCommerceQuery`
-  dependency only for this widget.
+  `resolveWithCache` path unless the same slice extends the query service with
+  product-id filtering before pagination and proves product-gallery/product-table
+  behavior does not change.
 - Add query-service coverage for product-id filtering and runtime coverage for
   selected-product manual ordering plus empty/missing selected products.
 - Refactor `core/admin/ui/widgets/editors/ProductCompareEditors.tsx` to shared TASK-252 editor primitives from

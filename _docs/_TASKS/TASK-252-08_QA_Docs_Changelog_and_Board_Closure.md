@@ -70,6 +70,9 @@ the implementation subtasks.
 - a new numbered `_docs/_CHANGELOG/*.md` entry on completion, using the next
   index from `_docs/_CHANGELOG/README.md` and the actual completion date.
 - `_docs/WIDGETS.md`
+  - refresh the `visualOwnsVariantSelection` note so it matches the live widget
+    definitions, including structural widgets such as `section`, `tabs`, and
+    `toggle-block`, not only the earlier hero/navigation/footer/timeline examples.
 - `_docs/_WIDGETS/README.md`
 - all touched `_docs/_WIDGETS/*.md`
 - `core/widgets/modulePackMatrix.ts` if TASK-252 changes module pack
@@ -186,16 +189,24 @@ its status and changelog link, not move it again from `To Do`.
   record the reason in the final proof matrix.
 - Run `bun run gates:coderso` before closure or document the exact blocker.
 - For auth, public-write, secret-handling, scanner-config, or other
-  security-sensitive TASK-252 changes, run the local scanner lane from
-  `_docs/SECURITY_SPEC.md` when feasible:
+  security-sensitive TASK-252 changes, run the strict local scanner lane from
+  `_docs/SECURITY_SPEC.md` when feasible and treat blocking findings as closure
+  blockers:
+  - `bun run scan:security:strict`
+  - `bun run scan:audit:strict`
+  - `bun run scan:semgrep:strict`
+  - `bun run scan:trivy:strict`
+  - `bun run scan:gitleaks:strict`
+  Advisory commands may be recorded as supporting triage only:
   - `bun run scan:security`
   - `bun run scan:audit`
   - `bun run scan:semgrep`
   - `bun run scan:trivy`
   - `gitleaks git --config .gitleaks.toml --redact=100 .`
   - `gitleaks dir --config .gitleaks.toml --redact=100 .`
-  If any scanner CLI is unavailable locally, record the exact skipped command
-  and whether validation remains CI-only.
+  If any strict scanner CLI is unavailable locally or reports blocking findings,
+  record the exact skipped/failed command and keep closure blocked or explicitly
+  CI-only until the strict lane passes.
 - If DB-backed tests are required and `DATABASE_URL` is available, load env with
   `set -a && source .env && set +a` before the command.
 - Docs/research validation:
@@ -229,7 +240,8 @@ its status and changelog link, not move it again from `To Do`.
 - Board statistics match task statuses.
 - Changelog entry references TASK-252 and summarizes validation.
 - Security-sensitive closure records the scanner lane results from
-  `_docs/SECURITY_SPEC.md`, or an explicit CI-only/skipped-command note.
+  `_docs/SECURITY_SPEC.md`, including strict no-blocking-finding proof, or an
+  explicit CI-only/skipped-command blocker note.
 - Final documentation tells implementers and users how widget configuration is
   structured across Wizard, Visual, and Advanced.
 - Final validation proves every Pages-publishable widget option list is

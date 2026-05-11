@@ -71,18 +71,28 @@ type SpacerHeight = {
   mobile?: string;
 };
 
-function normalizeSpacerData(data: SpacerData): SpacerData {
+const SPACER_HEIGHT_DEFAULTS = {
+  desktop: "16",
+  tablet: "12",
+  mobile: "8",
+} as const;
+
+function normalizeSpacerData(data: SpacerData, variant: string = "responsive"): SpacerData {
+  const desktop = normalizeSpacerTokenOrBoundedPx(data.height?.desktop, SPACER_HEIGHT_DEFAULTS.desktop);
   return {
-    height: normalizeSpacerHeight(data.height),
+    height: normalizeSpacerHeight(data.height, variant, desktop),
     showGuideInEditor: normalizeSpacerShowGuideInEditor(data.showGuideInEditor),
   };
 }
 
-function normalizeSpacerHeight(value: SpacerHeight | undefined): Required<SpacerHeight> {
+function normalizeSpacerHeight(value: SpacerHeight | undefined, variant: string, desktop: string): Required<SpacerHeight> {
+  if (resolveSpacerVariant(variant) === "fixed") {
+    return { desktop, tablet: desktop, mobile: desktop };
+  }
   return {
-    desktop: normalizeSpacerTokenOrBoundedPx(value?.desktop, "16"),
-    tablet: normalizeSpacerTokenOrBoundedPx(value?.tablet, "12"),
-    mobile: normalizeSpacerTokenOrBoundedPx(value?.mobile, "8"),
+    desktop,
+    tablet: normalizeSpacerTokenOrBoundedPx(value?.tablet, SPACER_HEIGHT_DEFAULTS.tablet),
+    mobile: normalizeSpacerTokenOrBoundedPx(value?.mobile, SPACER_HEIGHT_DEFAULTS.mobile),
   };
 }
 
@@ -100,7 +110,7 @@ function SpacerVisualEditor(props: WidgetEditorProps<SpacerData>) {
       {(["desktop", "tablet", "mobile"] as const).map((breakpoint) => (
         <WidgetControlRow key={breakpoint} id={`spacer.height.${breakpoint}`} label={`${breakpoint} height`} data-widget-control={`spacer.height.${breakpoint}`}>
           <SpacerHeightControl
-            value={value.height?.[breakpoint] ?? "md"}
+            value={value.height?.[breakpoint] ?? SPACER_HEIGHT_DEFAULTS[breakpoint]}
             tokens={SPACER_HEIGHT_TOKENS}
             minPx={SPACER_CUSTOM_HEIGHT_MIN_PX}
             maxPx={SPACER_CUSTOM_HEIGHT_MAX_PX}
@@ -121,6 +131,13 @@ Implementation checklist:
 - Read `_docs/_WIDGETS/tmp/spacer/MATRIX.md` before changing the schema or editor.
 - Extend or reorganize `core/widgets/core/spacer.tsx` schema/defaults/normalizer/rendering
   only for fields approved by the research decisions above.
+- Keep the current token vocabulary: `none`, `0`, `1`, `2`, `3`, `4`, `5`, `6`,
+  `8`, `10`, `12`, `16`, `20`, `24`, and `32`. Do not use stale size names
+  such as `md` unless a same-slice schema/default/normalizer/render migration
+  adds them deliberately.
+- Preserve the current variant-aware behavior: `normalizeSpacerData(data, "fixed")`
+  copies desktop height to tablet/mobile, while `responsive` keeps the
+  `16`/`12`/`8` defaults per breakpoint.
 - Keep custom height bounded in the shared normalizer for desktop/tablet/mobile
   values; do not let raw arbitrary CSS lengths survive validation.
 - The visual editor must offer token choices plus bounded custom px values for

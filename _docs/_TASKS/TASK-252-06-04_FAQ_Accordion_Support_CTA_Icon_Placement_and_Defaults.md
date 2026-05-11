@@ -67,6 +67,19 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
+type FaqSupportCta = {
+  label?: string;
+  href?: string;
+  ariaLabel?: string;
+};
+
+type FaqIconOptions = {
+  enabled?: boolean;
+  position?: "start" | "end";
+  openIcon?: "chevron" | "plus";
+  closedIcon?: "chevron" | "plus";
+};
+
 function normalizeFaqAccordionData(data: FaqAccordionData): FaqAccordionData {
   const items = normalizeFaqAccordionItems(data.items);
   return {
@@ -111,6 +124,9 @@ function FaqAccordionVisualEditor(props: WidgetEditorProps<FaqAccordionData>) {
       <WidgetControlRow id="faq-accordion.supportCta.label" label="Support CTA" data-widget-control="faq-accordion.supportCta.label">
         <Input value={props.value.supportCta?.label ?? ""} onChange={(label) => props.onChange(updateFaqSupportCta(props.value, { label }))} />
       </WidgetControlRow>
+      <WidgetControlRow id="faq-accordion.supportCta.href" label="Support CTA link" data-widget-control="faq-accordion.supportCta.href">
+        <Input value={props.value.supportCta?.href ?? ""} onChange={(href) => props.onChange(updateFaqSupportCta(props.value, { href }))} />
+      </WidgetControlRow>
       <WidgetControlRow id="faq-accordion.icon.position" label="Icon position" data-widget-control="faq-accordion.icon.position">
         <SegmentedControl value={props.value.icon?.position ?? "start"} onChange={(position) => props.onChange(updateFaqIconOptions(props.value, { position }))} />
       </WidgetControlRow>
@@ -119,6 +135,43 @@ function FaqAccordionVisualEditor(props: WidgetEditorProps<FaqAccordionData>) {
       </WidgetControlRow>
     </WidgetEditorSection>
   );
+}
+
+function renderFaqAccordionRuntime(
+  items: FaqAccordionItem[],
+  options: FaqAccordionOptions,
+  supportCta?: FaqSupportCta,
+  icon?: FaqIconOptions
+) {
+  const openIds = resolveFaqOpenIds(items, options);
+  const supportHref = normalizeWidgetSafeHref(supportCta?.href);
+  return (
+    <div data-faq-accordion="1" data-faq-open-mode={options.openMode ?? "single"}>
+      {items.map((item) => (
+        <details
+          key={item.id}
+          data-faq-accordion-item={item.id}
+          open={openIds.includes(item.id)}
+        >
+          <summary data-faq-icon-position={icon?.position ?? "start"}>{item.question}</summary>
+          <div>{item.answer}</div>
+        </details>
+      ))}
+      {supportCta?.label && supportHref ? (
+        <a href={supportHref} aria-label={supportCta.ariaLabel}>
+          {supportCta.label}
+        </a>
+      ) : null}
+    </div>
+  );
+}
+
+function bindFaqAccordionRuntime(root: HTMLElement) {
+  // Native details/summary handles basic disclosure. If this leaf promises
+  // runtime-enforced single-open or non-collapsible behavior after user
+  // interaction, add an inline delegated controller that syncs open details and
+  // accessible state. Otherwise document `openMode`/`defaultOpenIds` as SSR
+  // initial state only.
 }
 ```
 
@@ -132,6 +185,15 @@ Implementation checklist:
   tips, or metadata.
 - Keep legacy payloads non-destructive: missing new fields must normalize to the
   current rendered behavior.
+- Define `supportCta` and `icon` schema/default/normalizer/render/editor
+  contracts in this leaf if they remain in scope. `supportCta.href` must use the
+  shared `normalizeWidgetSafeHref` helper before render, and icon placement must
+  have bounded values plus renderer tests for start/end/default behavior.
+- The current renderer uses native `details`/`summary`. Decide explicitly in
+  implementation whether `openMode`, `defaultOpenIds`, and `collapsible` are
+  SSR initial-state controls only, or whether they require a public delegated
+  runtime controller. If enforcing single-open/non-collapsible behavior after
+  interaction, ship the inline script and tests in the same slice.
 - Add or update runtime/widget tests and editor-wave tests in the files listed
   above.
 
@@ -154,8 +216,8 @@ Implementation checklist:
     normalize legacy payloads through `core/widgets/core/faqAccordion.tsx`.
 - Anti-abuse:
   - Link fields introduced or touched by this leaf must normalize through a
-    leaf-owned safe-href normalizer, or a shared helper extracted with tests in
-    the same implementation slice, before render; media fields must stay on the
+    `core/widgets/core/widgetSafeHref.ts` helper with identical allowed/rejected
+    protocol tests before render; media fields must stay on the
     existing media-picker/storage ownership path when one exists; raw URL media
     fields must add bounded sanitization and tests before render.
   - No raw HTML, script embed, or unbounded class-name field is introduced.
@@ -170,6 +232,11 @@ Implementation checklist:
   legacy-normalization assertions for this widget.
 - `bun run test:vitest -- tests/vitest/widgets/faqAccordion.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/faq-accordion-editor-wave.test.tsx`
+  must cover whether disclosure behavior is initial SSR-only or enforced by a
+  delegated runtime controller; do not leave single/multiple/collapsible
+  semantics implied but untested.
+- Add support CTA tests for label/href rendering, unsafe href rejection through
+  `widgetSafeHref`, and icon placement tests for start/end/default behavior.
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,
   slot, or shared output behavior changes.
 - `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` if

@@ -30,8 +30,9 @@ and Reject decisions.
 
 - Keep: direction, schema-validated responsive direction, gap, alignment, and
   justification from `_docs/_WIDGETS/tmp/stack/MATRIX.md`; preserve the current
-  `wrap` field as backward-compatible data only and do not expand wrap behavior
-  in this leaf.
+  `wrap` field as an existing active editor/runtime/test contract. Do not
+  remove, hide, or downgrade the current wrap controls unless the same slice
+  defines a migration and updates the existing stack editor/runtime tests.
 - Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat
   wrap/group behavior, optional separators/dividers, and joined-item style as
   conditional; implement only when schema/defaults/normalizer/render/editor/
@@ -66,12 +67,14 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
-function normalizeStackData(data: StackData): StackData {
+function normalizeStackData(data: StackData, variant: string = "vertical"): StackData {
+  const resolvedVariant = resolveStackVariant(variant);
+  const directionDefaults = resolveVariantDirectionDefaults(resolvedVariant);
   return {
     direction: normalizeStackResponsiveDirection(data.direction, {
-      desktop: "column",
-      tablet: "column",
-      mobile: "column",
+      desktop: directionDefaults.desktop,
+      tablet: directionDefaults.tablet,
+      mobile: directionDefaults.mobile,
     }),
     gap: normalizeStackGap(data.gap),
     align: normalizeStackAlign(data.align),
@@ -81,14 +84,15 @@ function normalizeStackData(data: StackData): StackData {
 }
 
 function StackVisualEditor(props: WidgetEditorProps<StackData>) {
-  const value = props.value;
+  const value = normalizeStackData(props.value, props.variant);
+  const directionDefaults = resolveVariantDirectionDefaults(resolveStackVariant(props.variant ?? "vertical"));
   return (
     <WidgetEditorSection id="stack.direction" title="Responsive flow">
       <WidgetControlRow id="stack.direction.desktop" label="Desktop direction" data-widget-control="stack.direction.desktop">
-        <SegmentedControl value={value.direction?.desktop ?? "column"} onChange={handleControlChange} />
+        <SegmentedControl value={value.direction?.desktop ?? directionDefaults.desktop} onChange={handleControlChange} />
       </WidgetControlRow>
       <WidgetControlRow id="stack.direction.mobile" label="Mobile direction" data-widget-control="stack.direction.mobile">
-        <SegmentedControl value={value.direction?.mobile ?? "column"} onChange={handleControlChange} />
+        <SegmentedControl value={value.direction?.mobile ?? directionDefaults.mobile} onChange={handleControlChange} />
       </WidgetControlRow>
     </WidgetEditorSection>
   );
@@ -100,6 +104,13 @@ Implementation checklist:
 - Read `_docs/_WIDGETS/tmp/stack/MATRIX.md` before changing the schema or editor.
 - Extend or reorganize `core/widgets/core/stack.tsx` schema/defaults/normalizer/rendering
   only for fields approved by the research decisions above.
+- Preserve the current variant-aware normalizer contract. `vertical`,
+  `horizontal`, and `responsive` block variants drive different direction
+  defaults through `normalizeStackData(data, variant)`; do not hard-code
+  all breakpoints to `column` or saved horizontal/responsive stacks will drift.
+- Preserve the existing `wrap` editor/runtime/test behavior while reorganizing
+  Stack controls. Research Adapt notes may cover future grouped/wrap patterns,
+  but the current `wrap` control itself is already shipped compatibility scope.
 - Refactor `core/admin/ui/widgets/editors/StackEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.

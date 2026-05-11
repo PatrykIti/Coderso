@@ -141,6 +141,9 @@ This parent is now executed through physical per-widget leaves. Do not implement
   - content/posts owners under `tests/unit/widgets/*`
   - commerce runtime owner under `tests/unit/commerce/commerceWidgetRuntime.test.ts`
   - booking/forms/security suites named by the touched endpoint owner.
+- Shared safe-href owner when any leaf touches public link fields:
+  - `core/widgets/core/widgetSafeHref.ts`
+  - `tests/vitest/widgets/widgetSafeHref.test.ts`
 - Docs under `_docs/_WIDGETS/*.md`.
 
 ## Implementation Pseudocode
@@ -214,6 +217,11 @@ function normalizeContactWidgetData(raw: unknown): ContactData {
   - dynamic source payloads must normalize through owner modules.
 - Anti-abuse:
   - do not store provider secrets in widget data/browser cache/localStorage;
+  - public link/href fields must use `core/widgets/core/widgetSafeHref.ts`;
+    the helper owns allowed schemes once, rejects `javascript:`, `data:`,
+    `vbscript:`, protocol-relative URLs, unknown protocols, and malformed
+    values, and is covered by shared allowed/rejected protocol tests plus
+    per-widget render/normalizer assertions;
   - public-write endpoint changes must keep nonce + signature/HMAC, optional
     reCAPTCHA policy, strict reject-unknown validation, and
     `tests/security/codersoSecurityGate.test.ts` coverage;

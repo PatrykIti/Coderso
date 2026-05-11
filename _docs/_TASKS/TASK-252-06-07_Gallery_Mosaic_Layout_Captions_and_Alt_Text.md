@@ -146,9 +146,9 @@ Implementation checklist:
   from `altText` with a deterministic fallback, and captions must be optional
   without becoming overlay text/lightbox/hover/manual-span scope.
 - Add explicit safe-href normalization for `items[].href` in
-  `core/widgets/core/galleryMosaic.tsx`; implement it as a leaf-owned
-  `normalizeGalleryMosaicHref` helper unless the implementation extracts a
-  shared widget URL helper with tests in the same slice. Unsafe `javascript:`
+  `core/widgets/core/galleryMosaic.tsx`; use a core-owned/shared widget helper
+  where one exists, or extract it in this slice with identical allowed/rejected
+  protocol tests before cross-widget reuse. Unsafe `javascript:`
   or malformed hrefs must normalize away and be covered by
   `tests/vitest/widgets/galleryMosaic.test.tsx`.
 - Bind layout presets to the existing `GalleryMosaicVariantId` widget variant
@@ -184,8 +184,8 @@ Implementation checklist:
   - changed `gallery-mosaic` schema fields must reject unknown fields and
     normalize legacy payloads through `core/widgets/core/galleryMosaic.tsx`.
 - Anti-abuse:
-  - Link fields must use the new safe-href normalizer in this leaf; do not
-    claim the current raw `href` path is already safe.
+  - Link fields must use the core-owned/shared widget safe-href policy in this
+    leaf; do not claim the current raw `href` path is already safe.
   - Gallery media currently uses raw `image`/`video` URL fields. This leaf must
     either migrate those controls to MediaPicker/storage ownership with
     editor/runtime/tests, or keep raw URL media and add bounded

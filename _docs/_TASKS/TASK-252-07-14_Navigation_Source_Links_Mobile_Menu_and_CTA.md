@@ -107,7 +107,7 @@ function NavigationVisualEditor(props: WidgetEditorProps<NavigationData>) {
       </WidgetControlRow>
       <WidgetControlRow id="navigation.behavior.mobileMode" label="Mobile menu">
         {(field) => (
-          <Select value={value.behavior?.mobileMode ?? "drawer"} onValueChange={(mobileMode) => props.onChange(updateNavigationBehavior(value, { mobileMode }))}>
+          <Select value={value.behavior?.mobileMode ?? "expanded"} onValueChange={(mobileMode) => props.onChange(updateNavigationBehavior(value, { mobileMode }))}>
             <SelectTrigger id={field.id} aria-describedby={field.describedById}>
               <SelectValue />
             </SelectTrigger>
@@ -117,6 +117,37 @@ function NavigationVisualEditor(props: WidgetEditorProps<NavigationData>) {
       </WidgetControlRow>
     </WidgetEditorSection>
   );
+}
+
+function renderNavigationRuntime(data: NavigationData, slots: WidgetSlots, blockId: string) {
+  const mobileMode = data.behavior?.mobileMode ?? "expanded";
+  const mobilePanelId = `navigation-mobile-${blockId}`;
+  return (
+    <nav data-navigation-widget="1" data-navigation-mobile-mode={mobileMode}>
+      {mobileMode !== "expanded" ? (
+        <>
+          <button
+            type="button"
+            data-navigation-mobile-toggle
+            aria-expanded="false"
+            aria-controls={mobilePanelId}
+          >
+            Menu
+          </button>
+          <div id={mobilePanelId} data-navigation-mobile-panel hidden>
+            {/* Render the same normalized navigation links/CTA/right-slot actions for mobile. */}
+          </div>
+        </>
+      ) : null}
+    </nav>
+  );
+}
+
+function bindNavigationMobileRuntime(root: HTMLElement) {
+  // If `drawer` or `minimal` mode collapses mobile links, the public runtime
+  // must attach delegated click and keyboard-safe handlers that update
+  // aria-expanded, hidden panel state, and focus boundaries. The current
+  // server-rendered output has no React handlers after renderToString.
 }
 
 const navigationSlotGroup: WidgetSlotControlGroup = {
@@ -144,9 +175,20 @@ Implementation checklist:
   TASK-252-01 slot-control map and render it from `VisualPanel`/`BlockSettings`
   with stable `navigation.slots` metadata.
 - Keep mobile behavior under `behavior.mobileMode`; valid values remain
-  `expanded`, `drawer`, and `minimal`. Do not persist top-level `mobileMode` or
-  invalid `collapse`/`offcanvas` values unless a schema migration updates
-  defaults, normalizer, renderer, editor, and tests together.
+  `expanded`, `drawer`, and `minimal`, and the legacy/default value remains
+  `expanded`. Do not persist top-level `mobileMode` or invalid
+  `collapse`/`offcanvas` values unless a schema migration updates defaults,
+  normalizer, renderer, editor, and tests together.
+- The current runtime renders a static mobile menu button. If this leaf claims
+  accessible `drawer` or `minimal` collapse behavior, add the rendered
+  `aria-expanded`/`aria-controls` panel contract plus an inline delegated
+  runtime controller. Do not rely on React-only handlers for public navigation
+  output.
+- `drawer` and `minimal` must render the mobile toggle and panel even when there
+  is no CTA and no `right` slot content; navigation links cannot become hidden
+  without an opener. Derive the mobile panel id from the real renderer `blockId`
+  (`WidgetRenderer` passes `blockId` into widget renderers), not from an
+  undefined placeholder id.
 - Add or update runtime/widget tests and editor-wave tests in the files listed
   above.
 
@@ -169,7 +211,8 @@ Implementation checklist:
     normalize legacy payloads through `core/widgets/core/navigation.tsx`.
 - Anti-abuse:
   - admin route helpers remain canonical for admin links
-  - all public navigation hrefs must pass core-owned safe href normalization
+  - all public navigation hrefs must pass `core/widgets/core/widgetSafeHref.ts`
+    normalization
     before render, including item links, child links, and CTA hrefs: relative
     paths, hash links, and HTTP(S) URLs are allowed; `javascript:`, `data:`,
     `vbscript:`, protocol-relative URLs, and unknown protocols are rejected or
@@ -183,6 +226,11 @@ Implementation checklist:
 - `bun test tests/unit/widgets/validator.test.ts` when schema validation, slot normalization, or widget validation changes.
 - `bun run test:vitest -- tests/vitest/widgets/navigation.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/navigation-editor-wave.test.tsx`
+  must cover mobile-mode editor controls plus runtime markup for
+  `aria-expanded`, `aria-controls`, hidden panel state, and the delegated
+  controller when collapse/drawer behavior is implemented. Include a regression
+  where `mobileMode` is `drawer` or `minimal` with no CTA and no `right` slot,
+  proving the toggle and panel still render.
 - Add navigation widget assertions that unsafe item, child, and CTA href
   payloads such as `javascript:alert(1)`, `data:text/html,...`, and
   `//evil.example` do not survive normalization or render as links.

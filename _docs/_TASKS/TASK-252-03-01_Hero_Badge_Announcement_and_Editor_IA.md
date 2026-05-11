@@ -52,9 +52,13 @@ and Reject decisions.
 ## Files to Change
 
 - `core/widgets/core/hero.tsx`
+- `core/widgets/core/widgetSafeHref.ts` as the first TASK-252 owner of the
+  shared public widget href normalizer if it does not already exist.
 - `core/admin/ui/widgets/editors/HeroEditors.tsx`
 - `core/admin/services/userSettingsClient.ts` only if preset storage types change.
 - `tests/vitest/widgets/styleNoneTokens.test.tsx` if token adjacency changes.
+- `tests/vitest/widgets/widgetSafeHref.test.ts` when creating or changing the
+  shared href normalizer.
 - `tests/vitest/widgets/hero.test.tsx`
 - `tests/vitest/widgets/heroEditors.test.tsx`
 - `tests/unit/widgets/validator.test.ts` when schema validation changes.
@@ -140,6 +144,8 @@ function normalizeHeroBadgeHref(value: unknown): string | undefined {
 }
 
 function normalizeHeroHref(value: unknown): string | undefined {
+  // TASK-252-03-01 creates/owns the shared helper if it is missing; later
+  // TASK-252 leaves reuse this policy instead of reimplementing it.
   return normalizeWidgetSafeHref(value, {
     allowRelative: true,
     allowHash: true,
@@ -233,7 +239,8 @@ Implementation checklist:
     normalize legacy payloads through `core/widgets/core/hero.tsx`.
 - Anti-abuse:
   - Badge text/prefix are text-only, not raw HTML.
-  - Every public Hero href must pass core-owned safe href normalization before
+  - Every public Hero href must pass `core/widgets/core/widgetSafeHref.ts`
+    normalization before
     render, including existing primary/secondary CTA hrefs and the new badge
     href: relative paths, hash links, and HTTP(S) URLs are allowed;
     `javascript:`, `data:`, `vbscript:`, protocol-relative URLs, and unknown
@@ -250,6 +257,10 @@ Implementation checklist:
 - Add Hero widget assertions that unsafe badge and CTA href payloads such as
   `javascript:alert(1)`, `data:text/html,...`, and `//evil.example` do not
   survive normalization or render as links.
+- If this leaf creates `core/widgets/core/widgetSafeHref.ts`, add shared helper
+  tests for allowed relative/hash/http(s) URLs and rejected `javascript:`,
+  `data:`, `vbscript:`, protocol-relative, unknown-protocol, and malformed
+  values.
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,
   slot, or shared output behavior changes.
 - `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` if

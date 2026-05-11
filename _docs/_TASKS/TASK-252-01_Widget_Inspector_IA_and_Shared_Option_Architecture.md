@@ -99,7 +99,9 @@ type WidgetEditorSectionProps = {
 
 type WidgetControlFieldProps = {
   id: string;
+  labelId: string;
   describedById?: string;
+  "aria-labelledby": string;
   "aria-describedby"?: string;
 };
 
@@ -137,11 +139,12 @@ function WidgetEditorSection(props: WidgetEditorSectionProps) {
 
 function WidgetControlRow({ id, label, help, children }: WidgetControlRowProps) {
   const helpId = help ? `${id}-help` : undefined;
+  const labelId = `${id}-label`;
   return (
     <div data-widget-control={id}>
-      <label htmlFor={id}>{label}</label>
+      <span id={labelId}>{label}</span>
       {help ? <WidgetInfoTip content={help} label={`${label} info`} /> : null}
-      {children({ id, describedById: helpId, "aria-describedby": helpId })}
+      {children({ id, labelId, describedById: helpId, "aria-labelledby": labelId, "aria-describedby": helpId })}
       {help ? <p id={helpId} className="sr-only">{help}</p> : null}
     </div>
   );
@@ -154,7 +157,7 @@ function getNextSegmentedOptionIndex({
 }: {
   currentIndex: number;
   key: string;
-  enabledOptions: SegmentedOption[];
+  enabledOptions: WidgetSegmentedOption[];
 }): number {
   if (key === "Home") return 0;
   if (key === "End") return enabledOptions.length - 1;
@@ -167,27 +170,32 @@ function getNextSegmentedOptionIndex({
   return currentIndex;
 }
 
-function SegmentedControl({ id, describedById, value, options, onChange }: SegmentedControlProps) {
+function SegmentedControl({ id, labelId, describedById, value, options, onChange }: SegmentedControlProps) {
   const enabledOptions = options.filter((option) => !option.disabled);
   const activeValue = enabledOptions.some((option) => option.value === value)
     ? value
     : enabledOptions[0]?.value;
+  const groupRef = useRef<HTMLDivElement | null>(null);
 
-  function handleKeyDown(event: React.KeyboardEvent<HTMLButtonElement>, option: SegmentedOption) {
+  function handleKeyDown(event: React.KeyboardEvent<HTMLButtonElement>, option: WidgetSegmentedOption) {
     if (!["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp", "Home", "End"].includes(event.key)) {
       return;
     }
     event.preventDefault();
+    if (enabledOptions.length === 0) return;
     const currentIndex = enabledOptions.findIndex((item) => item.value === option.value);
+    if (currentIndex < 0) return;
     const nextIndex = getNextSegmentedOptionIndex({ currentIndex, key: event.key, enabledOptions });
     const nextOption = enabledOptions[nextIndex];
     if (!nextOption) return;
     onChange(nextOption.value);
-    document.querySelector<HTMLButtonElement>(`[data-segmented-option="${id}-${nextOption.value}"]`)?.focus();
+    groupRef.current
+      ?.querySelector<HTMLButtonElement>(`[data-segmented-option="${id}-${nextOption.value}"]`)
+      ?.focus();
   }
 
   return (
-    <div id={id} role="radiogroup" aria-describedby={describedById}>
+    <div ref={groupRef} id={id} role="radiogroup" aria-labelledby={labelId} aria-describedby={describedById}>
       {options.map((option) => (
         <button
           key={option.value}
@@ -256,7 +264,10 @@ existing repo component. Implement it in `WidgetEditorControls.tsx` before
 leaf migrations use it. Leaf pseudocode that calls `<SegmentedControl ... />`
 is shorthand for this shared primitive and must be wired inside
 `WidgetControlRow` render props so `id` and `aria-describedby` reach the actual
-focusable group.
+focusable group. The keyboard implementation must use a component-local
+radiogroup ref or ref map for focus transfer, not a global `document.querySelector`,
+because multiple widget inspectors/tests can render controls with similar ids.
+Guard empty or all-disabled option sets without throwing.
 
 Refactor `BlockSettings` so slot controls are rendered by a dedicated component:
 
@@ -390,8 +401,11 @@ builder-level `widget`, `block`, and block `onChange` contract.
   `data-widget-editor-mode` on Wizard, Visual, and Advanced panel roots for at
   least the selected proof widget.
 - Shared segmented-control proof must assert `role="radiogroup"`/`role="radio"`,
+  accessible group name via `aria-labelledby`/`getByRole("radiogroup", { name })`,
   `aria-checked`, `aria-disabled` for disabled options, roving `tabIndex`, and
-  Arrow/Home/End keyboard movement without changing disabled options.
+  Arrow/Home/End keyboard movement without changing disabled options. Add a
+  multi-control case that proves keyboard focus stays inside the active
+  radiogroup and does not use a global document lookup.
 - Focused editor waves after the proof call-site migration:
   - `tests/vitest/ui/section-editor-wave.test.tsx`
 - Navigation/Footer slot placement tests are not required in this leaf unless
@@ -405,6 +419,7 @@ builder-level `widget`, `block`, and block `onChange` contract.
 
 - `_docs/WIDGETS.md` mode ownership and inspector IA section.
 - `_docs/_TASKS/TASK-252*.md` status notes.
+- `_docs/_TASKS/README.md` on status or board-row/stat changes.
 - Widget docs touched by the first migration wave if visible editor behavior
   changes.
 - `_docs/_CHANGELOG/README.md` and a new changelog entry listing

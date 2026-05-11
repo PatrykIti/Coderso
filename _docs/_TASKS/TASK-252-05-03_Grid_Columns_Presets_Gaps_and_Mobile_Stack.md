@@ -77,9 +77,10 @@ function GridColumnsVisualEditor(props: WidgetEditorProps<GridColumnsData>) {
   const value = props.value;
   return (
     <WidgetEditorSection id="grid-columns.columns" title="Columns and mobile stack">
-      <WidgetControlRow id="grid-columns.columns.count" label="Column preset" data-widget-control="grid-columns.columns.count">
-        <Select value={String(value.columns?.length ?? 2)} onChange={handleControlChange} />
-      </WidgetControlRow>
+      {/* Column count is owned by the builder slot component because runtime
+          columns are repeatable column:* slots. The editor may show the current
+          count, but it must not pretend that updating data.columns alone creates
+          or removes rendered columns. */}
       <WidgetControlRow id="grid-columns.layout.gapX" label="Column gap" data-widget-control="grid-columns.layout.gapX">
         <Select value={value.layout?.gapX ?? "6"} onChange={(gapX) => props.onChange(updateGridColumnsLayout(value, { gapX }))} />
       </WidgetControlRow>
@@ -92,6 +93,19 @@ function GridColumnsVisualEditor(props: WidgetEditorProps<GridColumnsData>) {
     </WidgetEditorSection>
   );
 }
+
+function updateGridColumnPresetFromBuilder({
+  block,
+  widget,
+  nextCount,
+  data,
+  onBlockChange,
+  onDataChange,
+}: GridColumnPresetUpdateInput) {
+  // Add/remove repeatable `column:*` slots through the TASK-252-01
+  // WidgetSlotControls/builder owner, then normalize data.columns to the same
+  // stable instance ids. Runtime rendering reads resolveWidgetSlotTargets([gridColumnsSlot], slotMap).
+}
 ```
 
 Implementation checklist:
@@ -101,6 +115,11 @@ Implementation checklist:
   strict schema fields `layout.gapX` and `layout.gapY`. Do not persist unknown
   `columnGap`/`rowGap` keys unless this leaf also updates schema, defaults,
   normalizer, renderer, and validator/editor tests together.
+- Runtime columns are driven by `gridColumnsSlot` repeatable slot instances, not
+  only by `data.columns`. If the UI exposes a column-count preset, implement it
+  through the builder-owned slot component from TASK-252-01 so add/remove
+  actions update `block.slots["column:*"]` and `data.columns` together. Do not
+  ship a data-only count control that leaves rendered slots unchanged.
 - Extend or reorganize `core/widgets/core/gridColumns.tsx` schema/defaults/normalizer/rendering
   only for fields approved by the research decisions above.
 - Refactor `core/admin/ui/widgets/editors/GridColumnsEditors.tsx` to shared TASK-252 editor primitives from
@@ -140,6 +159,8 @@ Implementation checklist:
 - `bun test tests/unit/widgets/validator.test.ts` when schema validation, slot normalization, or widget validation changes.
 - `bun run test:vitest -- tests/vitest/widgets/gridColumns.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/grid-columns-editor-wave.test.tsx`
+  must cover column preset behavior against repeatable `column:*` slot changes
+  when the implementation exposes add/remove count controls.
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,
   slot, or shared output behavior changes.
 - `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` if

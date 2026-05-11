@@ -70,10 +70,20 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
-function normalizeFooterData(data: FooterData): FooterData {
+type FooterBrand = {
+  name?: string;
+  logoSrc?: string;
+  logoAlt?: string;
+  tagline?: string;
+  href?: string;
+};
+
+type FooterDataWithBrand = FooterData & { brand?: FooterBrand };
+
+function normalizeFooterData(data: FooterDataWithBrand): FooterDataWithBrand {
   return {
     columns: normalizeFooterColumns(data.columns),
-    brand: normalizeFooterBrand(data.brand), // add this schema field in the same implementation slice
+    brand: normalizeFooterBrand(data.brand),
     legal: normalizeFooterLegal(data.legal),
     social: normalizeFooterSocial(data.social),
     layout: normalizeFooterLayout(data.layout),
@@ -81,7 +91,18 @@ function normalizeFooterData(data: FooterData): FooterData {
   };
 }
 
-function FooterVisualEditor(props: WidgetEditorProps<FooterData>) {
+function normalizeFooterBrand(brand: FooterBrand | undefined): FooterBrand | undefined {
+  if (!brand) return undefined;
+  return {
+    name: normalizeFooterText(brand.name),
+    logoSrc: normalizeFooterMediaRef(brand.logoSrc),
+    logoAlt: normalizeFooterText(brand.logoAlt),
+    tagline: normalizeFooterText(brand.tagline),
+    href: normalizeWidgetSafeHref(brand.href),
+  };
+}
+
+function FooterVisualEditor(props: WidgetEditorProps<FooterDataWithBrand>) {
   const value = props.value;
   return (
     <WidgetEditorSection id="footer.0" title="Footer columns">
@@ -108,11 +129,12 @@ Implementation checklist:
 - Read `_docs/_WIDGETS/tmp/footer/MATRIX.md` before changing the schema or editor.
 - Extend or reorganize `core/widgets/core/footer.tsx` schema/defaults/normalizer/rendering
   only for fields approved by the research decisions above.
-- If implementing `footer.brand.*`, add the full `brand` field to
-  `FooterData`, `footerSchema`, defaults, normalizer, renderer, editor controls,
-  validator tests, widget tests, and editor-wave tests in the same slice. If
-  brand remains derived from existing columns/legal data, remove `footer.brand.*`
-  editor rows from this leaf.
+- This leaf implements persisted `footer.brand.*` if the Brand visual controls
+  ship. Add the full `brand` field to `FooterData`, `footerSchema`, defaults,
+  normalizer, renderer, editor controls, validator tests, widget tests, and
+  editor-wave tests in the same slice. If implementation later chooses
+  derived-only brand, remove all persisted `footer.brand.*` pseudocode and
+  editor rows in that same change rather than leaving both contracts.
 - Refactor `core/admin/ui/widgets/editors/FooterEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.
@@ -145,7 +167,8 @@ Implementation checklist:
   - changed `footer` schema fields must reject unknown fields and
     normalize legacy payloads through `core/widgets/core/footer.tsx`.
 - Anti-abuse:
-  - all public footer hrefs must pass core-owned safe href normalization before
+  - all public footer hrefs must pass `core/widgets/core/widgetSafeHref.ts`
+    normalization before
     render, including column links, legal links, and social hrefs: relative
     paths, hash links, and HTTP(S) URLs are allowed; `javascript:`, `data:`,
     `vbscript:`, protocol-relative URLs, and unknown protocols are rejected or

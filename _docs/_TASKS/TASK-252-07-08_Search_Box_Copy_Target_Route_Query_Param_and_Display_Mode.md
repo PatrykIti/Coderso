@@ -30,14 +30,17 @@ and Reject decisions.
 
 - Keep: only rows marked `Keep` in `_docs/_WIDGETS/tmp/search-box/MATRIX.md`; for this leaf, start from the current owner fields `mode`, `listingQueryId`, `title`, `description`, `placeholder`, `submitLabel`, `endpoint`, `sources`, `autoApply`, `style`, `resolved` and add only the schema fields that the matrix explicitly keeps.
 - Keep: accessible copy controls, TASK-252-owned compact/full display modes,
-  and result route/query binding from `_docs/_WIDGETS/tmp/search-box/MATRIX.md`;
-  add schema-owned target route/query-param fields in
-  `core/widgets/core/searchBox.tsx` and keep runtime normalization in
-  `core/widgets/core/listingRuntimeScript.ts`.
+  and result route/query binding from `_docs/_WIDGETS/tmp/search-box/MATRIX.md`.
+  Keep the current runtime split explicit: listing mode uses the existing
+  `lq.<queryId>.<token>` runtime parameter names, global API mode uses
+  `/api/search` with `q`, and `targetRoute`/`queryParam` apply only to a
+  route-submit result-page behavior if this leaf adds that behavior end to end.
 - Keep: split public API endpoint ownership from result-page routing.
   `endpoint` remains the safe public-read `/api/search` API endpoint or a
-  locked diagnostic field; `targetRoute` must default to a public page route
-  such as `/search` and must not inherit `endpoint`.
+  locked diagnostic field; `targetRoute` must stay empty unless route-submit
+  result-page behavior is implemented end-to-end, and it must never inherit
+  `endpoint`. If route-submit mode is added, its default target must be a public
+  page route such as `/search`.
 - Adapt: suggestions/autocomplete remain conditional and backend-owned; implement only when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: arbitrary operators, client-owned provider/index config, raw scripts, and privileged settings in widget data.
 
@@ -76,10 +79,16 @@ and Reject decisions.
 ## Implementation Pseudocode
 
 ```tsx
+type SearchBoxMode = "listing" | "global" | "route-submit";
+type SearchBoxDisplayMode = "full" | "compact";
+
 function normalizeSearchBoxData(data: SearchBoxData): SearchBoxData {
+  const mode = normalizeSearchBoxMode(data.mode);
+  const isRouteSubmit = mode === "route-submit";
   return {
-    mode: normalizeSearchBoxMode(data.mode),
-    variant: normalizeSearchBoxVariant(data.variant ?? data.mode),
+    mode,
+    displayMode: normalizeSearchBoxDisplayMode(data.displayMode ?? "full"),
+    variant: normalizeSearchBoxVariant(data.variant ?? "default"),
     size: normalizeSearchBoxSize(data.size),
     listingQueryId: normalizeSearchBoxListingQueryId(data.listingQueryId),
     title: normalizeSearchBoxTitle(data.title),
@@ -88,8 +97,8 @@ function normalizeSearchBoxData(data: SearchBoxData): SearchBoxData {
     placeholder: normalizeSearchBoxPlaceholder(data.placeholder),
     submitLabel: normalizeSearchBoxSubmitLabel(data.submitLabel),
     resetLabel: normalizeSearchBoxResetLabel(data.resetLabel),
-    targetRoute: normalizeSearchBoxTargetRoute(data.targetRoute ?? "/search"),
-    queryParam: normalizeSearchBoxQueryParam(data.queryParam ?? "q"),
+    targetRoute: isRouteSubmit ? normalizeSearchBoxTargetRoute(data.targetRoute ?? "/search") : undefined,
+    queryParam: isRouteSubmit ? normalizeSearchBoxRouteQueryParam(data.queryParam ?? "q") : undefined,
     autoApply: normalizeSearchBoxAutoApply(data.autoApply),
     endpoint: normalizeSearchBoxPublicApiEndpoint(data.endpoint ?? "/api/search"),
     sources: normalizeSearchBoxSources(data.sources),
@@ -105,12 +114,16 @@ function SearchBoxVisualEditor(props: WidgetEditorProps<SearchBoxData>) {
       <WidgetControlRow id="search-box.mode" label="Mode" data-widget-control="search-box.mode">
         <SegmentedControl value={value.mode ?? "listing"} onChange={handleControlChange} />
       </WidgetControlRow>
-      <WidgetControlRow id="search-box.targetRoute" label="Target route" data-widget-control="search-box.targetRoute">
-        <Input value={value.targetRoute ?? "/search"} onChange={(targetRoute) => props.onChange(updateSearchBoxRoute(value, { targetRoute }))} />
-      </WidgetControlRow>
-      <WidgetControlRow id="search-box.queryParam" label="Query parameter" data-widget-control="search-box.queryParam">
-        <Input value={value.queryParam ?? "q"} onChange={(queryParam) => props.onChange(updateSearchBoxRoute(value, { queryParam }))} />
-      </WidgetControlRow>
+      {value.mode === "route-submit" ? (
+        <>
+          <WidgetControlRow id="search-box.targetRoute" label="Target route" data-widget-control="search-box.targetRoute">
+            <Input value={value.targetRoute ?? "/search"} onChange={(targetRoute) => props.onChange(updateSearchBoxRoute(value, { targetRoute }))} />
+          </WidgetControlRow>
+          <WidgetControlRow id="search-box.queryParam" label="Query parameter" data-widget-control="search-box.queryParam">
+            <Input value={value.queryParam ?? "q"} onChange={(queryParam) => props.onChange(updateSearchBoxRoute(value, { queryParam }))} />
+          </WidgetControlRow>
+        </>
+      ) : null}
     </WidgetEditorSection>
   );
 }
@@ -125,8 +138,22 @@ Implementation checklist:
   controls: `endpoint` is the public-read API action, while `targetRoute` is the
   result page route. Do not migrate legacy `/api/search` endpoint values into
   `targetRoute`.
-- Update `core/widgets/core/listingRuntimeScript.ts` so runtime query reads and
-  writes use the normalized `queryParam` instead of hard-coding `q`.
+- Split modes explicitly as current `listing`, current `global`, and new
+  `route-submit`.
+  `targetRoute`/`queryParam` are valid only for `route-submit`; listing and
+  global API modes must not persist or render them as active behavior.
+- Keep behavior mode separate from display mode. `mode` chooses listing/global/
+  route-submit behavior; `displayMode` or `variant` chooses compact/full/default
+  presentation and must never default from `mode`.
+- Do not apply `queryParam` to listing mode. Listing mode must keep
+  `buildListingRuntimeParamName(listingQueryId, listingRuntimeTokens.search)`
+  and the existing `lq.<queryId>.<token>` contract.
+- For current global API mode, `endpoint` remains the `/api/search` fetch
+  target and the runtime currently reads/writes `input[name="q"]`. If this leaf
+  makes that name configurable, update the rendered input name, form
+  `data-search-query-param`, `runGlobalSearch`, `/api/search` expectations, and
+  widget/runtime tests together. Otherwise leave global API mode on `q` and use
+  `targetRoute`/`queryParam` only for an explicit route-submit result-page mode.
 - Refactor `core/admin/ui/widgets/editors/SearchBoxEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.
@@ -181,8 +208,11 @@ Implementation checklist:
 - Add or update a regression around `getListingRuntimeClientScript` when query/
   reset/apply/query-param behavior changes.
 - Add a regression proving `targetRoute` does not inherit `/api/search` from
-  legacy `endpoint`, and that `queryParam` is rendered/read by runtime instead
-  of hard-coded to `q`.
+  legacy `endpoint`. If query-param configurability is implemented, add
+  separate regressions for listing mode (`lq.<queryId>.<token>` unchanged),
+  global API mode (`q` or configured API query param wired through
+  `data-search-query-param`), and route-submit mode (`targetRoute` plus
+  `queryParam` navigation).
 - `bun test tests/unit/security/rateLimit.test.ts` when `public_read` bucket
   behavior changes.
 - Add Bun-owned route/security tests when `/api/search` endpoint behavior,

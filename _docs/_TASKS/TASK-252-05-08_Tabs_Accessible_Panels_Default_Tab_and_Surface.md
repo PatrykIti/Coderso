@@ -30,16 +30,17 @@ and Reject decisions.
 ## Research Decisions
 
 - Keep: tab items, `defaultItemId`, horizontal/vertical orientation, keyboard
-  semantics, and the existing `tabsPanelSlot` from
+  semantics, current `options.alignment`, and the existing `tabsPanelSlot` from
   `_docs/_WIDGETS/tmp/tabs/MATRIX.md`; map legacy `options.activeId` into
-  schema-owned `options.defaultItemId` in `core/widgets/core/tabs.tsx`.
+  schema-owned `options.defaultItemId` in `core/widgets/core/tabs.tsx` without
+  changing saved alignment output.
 - Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat panel surface/visual variants, activation mode, lazy behavior, and overflow handling as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
 - Reject: pseudo-link navigation that pretends to be tabs and copied external markup.
 
 ## Editor Mode Ownership
 
 - `Wizard`: first-run setup for the safest useful defaults for `tabs`.
-- `Visual`: `Items`, `Default tab`, `Orientation`, `Existing panel surface`, `States`.
+- `Visual`: `Items`, `Default tab`, `Orientation`, `Existing panel surface`, `Trigger/panel relationships`.
 - `Advanced`: `Keyboard/a11y diagnostics`, `Legacy selected tab mapping`.
 
 ## Sub-Tasks
@@ -60,6 +61,11 @@ and Reject decisions.
   unless implementation finds a concrete source mismatch.
 - `_docs/_TASKS/TASK-252-05-08_Tabs_Accessible_Panels_Default_Tab_and_Surface.md` for status updates during execution.
 - `_docs/_TASKS/README.md` on status changes.
+
+## New Files to Create
+
+- `_docs/_WIDGETS/TABS.md` if no canonical tabs widget page exists when this
+  leaf is implemented.
 
 ## Implementation Pseudocode
 
@@ -93,25 +99,35 @@ function TabsVisualEditor(props: WidgetEditorProps<TabsData>) {
 function renderTabsRuntime(panels: TabsPanel[], options: TabsOptions) {
   const activeId = resolveDefaultTabId(options.defaultItemId, panels);
   return (
-    <div role="tablist" aria-orientation={options.orientation ?? "horizontal"}>
-      {panels.map((panel) => (
-        <button
-          id={`tabs-trigger-${panel.instanceId}`}
-          role="tab"
-          aria-selected={panel.instanceId === activeId}
-          aria-controls={`tabs-panel-${panel.instanceId}`}
-          tabIndex={panel.instanceId === activeId ? 0 : -1}
-          data-nextless-tabs-trigger
-          data-nextless-tabs-id={panel.instanceId}
-        >
-          {panel.label}
-        </button>
-      ))}
+    <div
+      data-nextless-tabs="1"
+      data-nextless-tabs-active-id={activeId}
+      data-nextless-tabs-panels={String(panels.length)}
+    >
+      <div role="tablist" aria-orientation={options.orientation ?? "horizontal"}>
+        {panels.map((panel) => (
+          <button
+            id={`tabs-trigger-${panel.instanceId}`}
+            role="tab"
+            type="button"
+            aria-selected={panel.instanceId === activeId}
+            aria-controls={`tabs-panel-${panel.instanceId}`}
+            tabIndex={panel.instanceId === activeId ? 0 : -1}
+            data-nextless-tabs-trigger
+            data-nextless-tabs-id={panel.instanceId}
+          >
+            {panel.label}
+          </button>
+        ))}
+      </div>
       {panels.map((panel) => (
         <div
           id={`tabs-panel-${panel.instanceId}`}
           role="tabpanel"
           aria-labelledby={`tabs-trigger-${panel.instanceId}`}
+          data-nextless-tabs-panel
+          data-nextless-tabs-id={panel.instanceId}
+          data-state={panel.instanceId === activeId ? "active" : "inactive"}
           hidden={panel.instanceId !== activeId}
         />
       ))}
@@ -123,7 +139,9 @@ function bindTabsKeyboard(root: HTMLElement) {
   // ArrowLeft/ArrowRight drive horizontal tablists; ArrowUp/ArrowDown drive
   // vertical tablists. Home and End jump to the first/last enabled tab.
   // The handler must update aria-selected, tabIndex, hidden panels, focus, and
-  // `data-nextless-tabs-active-id` through one shared sync function.
+  // `data-nextless-tabs-active-id` through one shared sync function that uses
+  // the existing `[data-nextless-tabs='1']`, `[data-nextless-tabs-trigger]`,
+  // and `[data-nextless-tabs-panel]` runtime selectors.
 }
 ```
 
@@ -137,10 +155,23 @@ Implementation checklist:
   tips, or metadata.
 - Keep legacy payloads non-destructive: missing new fields must normalize to the
   current rendered behavior.
+- Preserve the current `options.alignment` schema/default/normalizer/render
+  contract unless this same slice explicitly migrates it with compatibility
+  tests. Adding `defaultItemId` or `orientation` must not change saved alignment
+  classes.
 - Add explicit trigger/panel ids and `aria-controls`/`aria-labelledby`; do not
   rely on text-only association between tabs and panels.
+- Preserve existing runtime selectors (`data-nextless-tabs="1"`,
+  `data-nextless-tabs-trigger`, `data-nextless-tabs-panel`, and
+  `data-nextless-tabs-id`) so the current click script and new keyboard handler
+  can share one sync path.
+- Render tab panels as siblings after the `role="tablist"`, not descendants of
+  the tablist, to match the ARIA tab pattern and the existing renderer shape.
 - Add runtime keyboard handling for Arrow/Home/End keys, respecting horizontal
   vs vertical orientation and keeping focus on the active trigger.
+- Current gap to fix: `tests/vitest/widgets/tabs.test.tsx` does not yet prove
+  the `role="tabpanel"` nodes are siblings after `role="tablist"`; the
+  implementation must add that assertion before this leaf can move to `Done`.
 - Add or update runtime/widget tests and editor-wave tests in the files listed
   above.
 
@@ -175,7 +206,9 @@ Implementation checklist:
 - `bun run test:vitest -- tests/vitest/ui/tabs-editor-wave.test.tsx`
   must cover default active tab mapping, dynamic `aria-orientation`,
   trigger/panel ids, `aria-controls`/`aria-labelledby`, and
-  Arrow/Home/End keyboard behavior.
+  Arrow/Home/End keyboard behavior. Runtime tests must also assert
+  `role="tabpanel"` nodes are not descendants of the `role="tablist"` node and
+  that legacy `options.alignment` output remains unchanged.
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,
   slot, or shared output behavior changes.
 - `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` if
@@ -187,7 +220,8 @@ Implementation checklist:
 
 - `_docs/WIDGETS.md`
 - `_docs/_WIDGETS/TABS.md`
-- `_docs/_WIDGETS/README.md` if this leaf creates a missing widget doc page.
+- `_docs/_WIDGETS/README.md`; `TABS.md` does not currently exist, so completing
+  this leaf must create the page and index entry.
 - `_docs/_TASKS/TASK-252-05-08_Tabs_Accessible_Panels_Default_Tab_and_Surface.md` status notes during execution.
 - `_docs/_TASKS/README.md` on status changes.
 - `_docs/_CHANGELOG/README.md` and a changelog entry only when the leaf is

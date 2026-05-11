@@ -63,6 +63,11 @@ and Reject decisions.
 - `_docs/_TASKS/TASK-252-05-09_Accordion_Disclosure_Default_Open_and_Accessibility.md` for status updates during execution.
 - `_docs/_TASKS/README.md` on status changes.
 
+## New Files to Create
+
+- `_docs/_WIDGETS/ACCORDION.md` if no canonical accordion widget page exists
+  when this leaf is implemented.
+
 ## Implementation Pseudocode
 
 ```tsx
@@ -95,33 +100,54 @@ function AccordionVisualEditor(props: WidgetEditorProps<AccordionData>) {
   );
 }
 
-function renderAccordionRuntime(items: AccordionItem[], options: AccordionOptions) {
+function renderAccordionRuntime(items: AccordionItem[], options: AccordionOptions, variant: AccordionVariantId) {
   const openIds = resolveAccordionOpenIds(items, options);
-  return items.map((item) => {
-    const buttonId = `accordion-trigger-${item.instanceId}`;
-    const panelId = `accordion-panel-${item.instanceId}`;
-    const expanded = openIds.includes(item.instanceId);
-    return (
-      <div data-nextless-accordion-item={item.instanceId}>
-        <h3>
-          <button
-            id={buttonId}
-            type="button"
-            aria-expanded={expanded}
-            aria-controls={panelId}
-          >
-            {item.title}
-          </button>
-        </h3>
-        <div
-          id={panelId}
-          role="region"
-          aria-labelledby={buttonId}
-          hidden={!expanded}
-        />
-      </div>
-    );
-  });
+  return (
+    <div
+      data-nextless-accordion="1"
+      data-nextless-accordion-variant={variant}
+      data-nextless-accordion-count={String(items.length)}
+    >
+      {items.map((item) => {
+        const buttonId = `accordion-trigger-${item.instanceId}`;
+        const panelId = `accordion-panel-${item.instanceId}`;
+        const expanded = openIds.includes(item.instanceId);
+        return (
+          <div data-nextless-accordion-item={item.instanceId}>
+            <h3>
+              <button
+                id={buttonId}
+                type="button"
+                aria-expanded={expanded}
+                aria-controls={panelId}
+              >
+                {item.title}
+              </button>
+            </h3>
+            <div
+              id={panelId}
+              role="region"
+              aria-labelledby={buttonId}
+              hidden={!expanded}
+            />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function syncAccordionDisclosure(root: HTMLElement, itemId: string, options: AccordionOptions) {
+  // If this leaf replaces the current native details/summary behavior with
+  // explicit button/region markup, the inline runtime script must own public
+  // disclosure behavior. It updates aria-expanded, hidden panels, focus-safe
+  // single/multiple state, and data-state through existing data-nextless markers.
+}
+
+function bindAccordionRuntime(root: HTMLElement) {
+  // Attach delegated click and keydown handlers to accordion trigger buttons.
+  // Keep Space/Enter behavior keyboard-accessible and preserve native fallback
+  // if the implementation stays on details/summary.
 }
 ```
 
@@ -135,9 +161,20 @@ Implementation checklist:
   tips, or metadata.
 - Keep legacy payloads non-destructive: missing new fields must normalize to the
   current rendered behavior.
+- Preserve existing runtime/test markers (`data-nextless-accordion="1"`,
+  `data-nextless-accordion-variant`, `data-nextless-accordion-count`, and
+  `data-nextless-accordion-item`) even if the renderer moves away from the
+  current native `details`/`summary` shape toward explicit button/region
+  semantics.
 - Preserve a deterministic button/region strategy: every trigger needs a stable
   id, `aria-expanded`, and `aria-controls`, and every panel needs a matching
   `role="region"` plus `aria-labelledby`.
+- Do not make public accordions inert. The current renderer gets interaction
+  from native `details`/`summary`; if this leaf moves to explicit button/region
+  markup, add an inline delegated runtime script that synchronizes
+  `aria-expanded`, hidden panels, single/multiple open rules, and keyboard
+  activation. React-only event handlers are not sufficient for server-rendered
+  public widget output.
 - Tests must prove `openMode`, `defaultOpenIds`, and `collapsible` update both
   visible state and accessible state without orphaning existing slot content.
 - Add or update runtime/widget tests and editor-wave tests in the files listed
@@ -174,7 +211,10 @@ Implementation checklist:
 - `bun run test:vitest -- tests/vitest/ui/accordion-editor-wave.test.tsx`
   must cover single vs multiple open behavior, `defaultOpenIds`,
   `collapsible`, trigger/panel id wiring, `aria-expanded`,
-  `aria-controls`, and panel `aria-labelledby`.
+  `aria-controls`, panel `aria-labelledby`, and preservation of the existing
+  `data-nextless-accordion*` runtime markers. If button/region markup replaces
+  native `details`, tests must also prove the delegated runtime script is present
+  and covers click plus keyboard activation.
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,
   slot, or shared output behavior changes.
 - `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` if
@@ -186,7 +226,8 @@ Implementation checklist:
 
 - `_docs/WIDGETS.md`
 - `_docs/_WIDGETS/ACCORDION.md`
-- `_docs/_WIDGETS/README.md` if this leaf creates a missing widget doc page.
+- `_docs/_WIDGETS/README.md`; `ACCORDION.md` does not currently exist, so
+  completing this leaf must create the page and index entry.
 - `_docs/_TASKS/TASK-252-05-09_Accordion_Disclosure_Default_Open_and_Accessibility.md` status notes during execution.
 - `_docs/_TASKS/README.md` on status changes.
 - `_docs/_CHANGELOG/README.md` and a changelog entry only when the leaf is

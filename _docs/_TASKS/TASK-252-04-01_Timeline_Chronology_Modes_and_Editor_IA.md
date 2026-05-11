@@ -53,9 +53,13 @@ and Reject decisions.
 ## Files to Change
 
 - `core/widgets/core/timeline.tsx`
+- `core/widgets/core/widgetSafeHref.ts` only if TASK-252-03-01 has not already
+  created the shared widget href normalizer.
 - `core/admin/ui/widgets/editors/TimelineEditors.tsx`
 - `tests/vitest/widgets/styleNoneTokens.test.tsx` if token adjacency changes.
 - `tests/vitest/widgets/renderer.test.tsx` if shared renderer output changes.
+- `tests/vitest/widgets/widgetSafeHref.test.ts` only if this leaf creates or
+  changes the shared href normalizer.
 - `tests/vitest/widgets/timeline.test.tsx`
 - `tests/unit/widgets/validator.test.ts` when schema validation changes.
 - `tests/vitest/ui/timeline-editor-wave.test.tsx`
@@ -143,10 +147,12 @@ Implementation checklist:
     normalize legacy payloads through `core/widgets/core/timeline.tsx`.
 - Anti-abuse:
   - Item titles/descriptions/icons are text or existing safe rich text only; no raw HTML expansion.
-  - Optional item CTA hrefs must pass core-owned safe href normalization before
-    render: relative paths, hash links, and HTTP(S) URLs are allowed;
-    `javascript:`, `data:`, `vbscript:`, protocol-relative URLs, and unknown
-    protocols are rejected or normalized away.
+  - Optional item CTA hrefs must pass `core/widgets/core/widgetSafeHref.ts`
+    normalization before
+  render: relative paths, hash links, and HTTP(S) URLs are allowed;
+  `javascript:`, `data:`, `vbscript:`, protocol-relative URLs, and unknown
+  protocols are rejected or normalized away. Reuse the helper owned by
+  TASK-252-03-01; do not create a timeline-local href sanitizer.
 
 ## Testing Requirements
 

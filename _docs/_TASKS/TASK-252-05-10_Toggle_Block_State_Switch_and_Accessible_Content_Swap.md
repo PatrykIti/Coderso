@@ -32,7 +32,10 @@ and Reject decisions.
   and accessible state announcement from `_docs/_WIDGETS/tmp/toggle-block/MATRIX.md`;
   map the current fixed `primary`/`secondary` labels and slots into canonical
   two-item `states[]` in `core/widgets/core/toggleBlock.tsx`.
-- Adapt: rows marked `Adapt` are conditional scope, not required scope. Treat card presentation as a bounded variant as conditional; implement only when schema/defaults/normalizer/render/editor/tests move together.
+- Adapt: rows marked `Adapt` are conditional scope, not required scope. New card
+  presentation options are conditional, but the existing live `cards` variant is
+  current compatibility scope and must remain supported while the state model
+  changes.
 - Reject: arbitrary CSS show/hide rules and more than two states without a new product contract.
 
 ## Editor Mode Ownership
@@ -59,6 +62,11 @@ and Reject decisions.
   unless implementation finds a concrete source mismatch.
 - `_docs/_TASKS/TASK-252-05-10_Toggle_Block_State_Switch_and_Accessible_Content_Swap.md` for status updates during execution.
 - `_docs/_TASKS/README.md` on status changes.
+
+## New Files to Create
+
+- `_docs/_WIDGETS/TOGGLE_BLOCK.md` if no canonical toggle block widget page
+  exists when this leaf is implemented.
 
 ## Implementation Pseudocode
 
@@ -117,8 +125,10 @@ function renderToggleRuntime(states: ToggleBlockState[], options: ToggleBlockOpt
             role="radio"
             aria-checked={state.id === activeState.id}
             aria-controls={`toggle-pane-${state.slotId}`}
+            tabIndex={state.id === activeState.id ? 0 : -1}
             data-nextless-toggle-trigger
             data-nextless-toggle-state-id={state.id}
+            data-state={state.id === activeState.id ? "active" : "inactive"}
           >
             {state.label}
           </button>
@@ -137,6 +147,33 @@ function renderToggleRuntime(states: ToggleBlockState[], options: ToggleBlockOpt
     </div>
   );
 }
+
+function syncToggleState(root: HTMLElement, nextStateId: ToggleBlockState["id"], options?: { focus?: boolean }) {
+  // The inline runtime script owns public interactivity because widget runtime
+  // output is server-rendered HTML. It must update aria-checked, roving
+  // tabIndex, hidden panes, data-nextless-toggle-state, the live/status target,
+  // and optional focus together through the existing runtime selectors.
+}
+
+function bindToggleRuntime(root: HTMLElement) {
+  // Attach delegated click and keydown listeners to [data-nextless-toggle-trigger].
+  // ArrowLeft/ArrowUp choose the previous enabled state; ArrowRight/ArrowDown
+  // choose the next enabled state. Home/End jump to first/last enabled state.
+  // Both click and keyboard paths call syncToggleState(root, nextStateId, { focus: true }).
+}
+
+function getNextToggleState({
+  key,
+  currentState,
+  states,
+}: {
+  key: string;
+  currentState: ToggleBlockState;
+  states: ToggleBlockState[];
+}): ToggleBlockState {
+  // Return the next state for Arrow/Home/End keys without changing slot ids.
+  return currentState;
+}
 ```
 
 Implementation checklist:
@@ -148,6 +185,9 @@ Implementation checklist:
   orphaned by renaming or reordering states.
 - Extend or reorganize `core/widgets/core/toggleBlock.tsx` schema/defaults/normalizer/rendering
   only for fields approved by the research decisions above.
+- Preserve the current `switch` and `cards` variants from runtime/editor code.
+  TASK-252-05-10 may reorganize state labels/defaults, but it must not treat the
+  existing `cards` variant as future-only or remove it from variant selection.
 - Refactor `core/admin/ui/widgets/editors/ToggleBlockEditors.tsx` to shared TASK-252 editor primitives from
   TASK-252-01; do not create widget-local replacements for sections, rows, info
   tips, or metadata.
@@ -155,11 +195,20 @@ Implementation checklist:
   current rendered behavior.
 - Render both state triggers as an accessible finite state control rather than
   a single ambiguous "swap" button. The runtime must update `aria-checked`,
-  `aria-controls`, hidden panes, `data-nextless-toggle-state`, and an
-  announcement/status target together.
+  `aria-controls`, roving `tabIndex`, hidden panes, `data-nextless-toggle-state`,
+  and an announcement/status target together.
+- Implement public interaction in the existing inline delegated runtime script,
+  not as JSX `onKeyDown` handlers. React event handlers do not survive
+  `renderToString`; click and keyboard paths must share one script-owned
+  `syncToggleState(root, nextStateId, { focus })` function.
 - Keyboard tests must cover Arrow/Home/End movement across the two states and
   verify that renamed/reordered labels do not rename the stable `primary` /
   `secondary` slot ids.
+- Current gap to fix: `core/widgets/core/toggleBlock.tsx` still uses the legacy
+  single `aria-pressed` swap button and `tests/vitest/widgets/toggleBlock.test.tsx`
+  does not yet cover roving focus, keydown movement, status text, or stable
+  slot ownership. The implementation must replace that runtime/test contract
+  before this leaf can move to `Done`.
 - Add or update runtime/widget tests and editor-wave tests in the files listed
   above.
 
@@ -193,7 +242,8 @@ Implementation checklist:
 - `bun run test:vitest -- tests/vitest/widgets/toggleBlock.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/toggle-block-editor-wave.test.tsx`
   must cover the accessible state control, `aria-checked`,
-  `aria-controls`, status announcement target, default state, and stable
+  `aria-controls`, roving `tabIndex`, Arrow/Home/End keyboard movement with
+  focus transfer, status announcement target, default state, and stable
   `primary`/`secondary` slot ownership.
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,
   slot, or shared output behavior changes.
@@ -206,7 +256,8 @@ Implementation checklist:
 
 - `_docs/WIDGETS.md`
 - `_docs/_WIDGETS/TOGGLE_BLOCK.md`
-- `_docs/_WIDGETS/README.md` if this leaf creates a missing widget doc page.
+- `_docs/_WIDGETS/README.md`; `TOGGLE_BLOCK.md` does not currently exist, so
+  completing this leaf must create the page and index entry.
 - `_docs/_TASKS/TASK-252-05-10_Toggle_Block_State_Switch_and_Accessible_Content_Swap.md` status notes during execution.
 - `_docs/_TASKS/README.md` on status changes.
 - `_docs/_CHANGELOG/README.md` and a changelog entry only when the leaf is
