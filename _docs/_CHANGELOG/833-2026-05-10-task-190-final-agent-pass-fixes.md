@@ -30,8 +30,10 @@ Tasks: TASK-190, TASK-190-02, TASK-190-05, TASK-190-07, TASK-190-08
   sandbox (`8` tests, `24` assertions), `bun --cwd core lint`,
   `bun --cwd core lint:types`, `bun run lint`, full `bun run test:vitest`
   (`582` files, `2611` tests), and `bun run precommit`.
-- Full DB/runtime `bun run test:bun` outside the sandbox and outside-sandbox
-  `bun run scan:security:strict` remain pending because the approval layer
-  rejected both escalations with the usage-limit message. A sandbox-only strict
-  scan attempt also failed on Semgrep CA trust anchors and `bun audit`
-  connection refusal, while Trivy and Gitleaks scanner lanes were clean.
+- Final local rerun on 2026-05-11 confirmed the broad gates green:
+  `bun run test:bun` (`760` tests across `204` files, `2946` assertions), full
+  `bun run test:vitest` (`582` files, `2611` tests), and
+  `bun run scan:security:strict` clean across Semgrep, `bun audit`, Trivy
+  vulnerability/config/secret scans, and Gitleaks history/worktree scans.
+  Container image scanning remained intentionally skipped because
+  `SECURITY_SCAN_IMAGE` was not set.
