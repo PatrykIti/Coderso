@@ -43,20 +43,21 @@ const createActor = async (prefix: string) => {
     .returning();
   if (!actor) throw new Error("assistant_live_actor_create_failed");
   globalCleanup.add(`user:${actor.id}`, async () => {
-    await db.delete(users).where(eq(users.id, actor.id)).catch(() => undefined);
+    await db
+      .delete(users)
+      .where(eq(users.id, actor.id))
+      .catch(() => undefined);
   });
   return actor;
 };
 
-const createFormFixture = async (
-  input: {
-    name: string;
-    slug: string;
-    status: "draft" | "published" | "archived";
-    submissionAccess: "public" | "internal";
-    cleanup: ReturnType<typeof createLiveCleanupStack>;
-  }
-) => {
+const createFormFixture = async (input: {
+  name: string;
+  slug: string;
+  status: "draft" | "published" | "archived";
+  submissionAccess: "public" | "internal";
+  cleanup: ReturnType<typeof createLiveCleanupStack>;
+}) => {
   const { createForm, deleteForm } = await loadForms();
   const form = await createForm({
     name: input.name,
@@ -79,6 +80,7 @@ const buildFormsContext = async (): Promise<AssistantActionContext> => {
   return {
     page: "/admin/advanced/forms",
     locale: "pl-PL",
+    includeResourceCatalog: true,
     resourceCatalog: {
       schemaVersion: 1,
       generatedAt: new Date().toISOString(),
@@ -159,7 +161,10 @@ const runFormsMatrixForProvider = async (provider: LiveProviderRuntime) => {
         `submissionAccess "internal"`,
       ].join(", "),
     });
-    expect(createPlan.actions.map((action) => action.type), provider.id).toContain("form.upsert");
+    expect(
+      createPlan.actions.map((action) => action.type),
+      provider.id
+    ).toContain("form.upsert");
     expect((await dryRunLivePlan(createPlan)).readyToExecute, provider.id).toBe(true);
     const createResult = await executeLivePlan({
       plan: createPlan,
@@ -180,7 +185,8 @@ const runFormsMatrixForProvider = async (provider: LiveProviderRuntime) => {
       context: await buildFormsContext(),
       prompt: `Znajdz publiczne formularze ktore maja w nazwie "${prefix} Lead Public"`,
     });
-    const publicLabels = publicLookup.inspection?.candidates.map((candidate) => candidate.label) ?? [];
+    const publicLabels =
+      publicLookup.inspection?.candidates.map((candidate) => candidate.label) ?? [];
     expect(publicLabels, provider.id).toContain(publicForm.name);
     expect(publicLabels, provider.id).not.toContain(internalForm.name);
 
@@ -190,7 +196,10 @@ const runFormsMatrixForProvider = async (provider: LiveProviderRuntime) => {
       context: await buildFormsContext(),
       prompt: `Zmien nazwe formularza "${publicForm.name}" na "${renamed}"`,
     });
-    expect(updatePlan.actions.map((action) => action.type), provider.id).toContain("form.update");
+    expect(
+      updatePlan.actions.map((action) => action.type),
+      provider.id
+    ).toContain("form.update");
     expectSuccessfulExecution(
       await executeLivePlan({
         plan: updatePlan,
@@ -206,7 +215,10 @@ const runFormsMatrixForProvider = async (provider: LiveProviderRuntime) => {
       context: await buildFormsContext(),
       prompt: `Zarchiwizuj formularz "${renamed}"`,
     });
-    expect(archivePlan.actions.map((action) => action.type), provider.id).toContain("form.archive");
+    expect(
+      archivePlan.actions.map((action) => action.type),
+      provider.id
+    ).toContain("form.archive");
     expectSuccessfulExecution(
       await executeLivePlan({
         plan: archivePlan,
@@ -229,10 +241,10 @@ const runFormsMatrixForProvider = async (provider: LiveProviderRuntime) => {
       context: await buildFormsContext(),
       prompt: `Usun dokladnie dwa formularze, ktore maja w nazwie "${prefix} Lead"`,
     });
-    expect(deletePlan.actions.map((action) => action.type), provider.id).toEqual([
-      "form.delete",
-      "form.delete",
-    ]);
+    expect(
+      deletePlan.actions.map((action) => action.type),
+      provider.id
+    ).toEqual(["form.delete", "form.delete"]);
     expectSuccessfulExecution(
       await executeLivePlan({
         plan: deletePlan,

@@ -40,18 +40,19 @@ const createActor = async (prefix: string) => {
     .returning();
   if (!actor) throw new Error("assistant_live_actor_create_failed");
   globalCleanup.add(`user:${actor.id}`, async () => {
-    await db.delete(users).where(eq(users.id, actor.id)).catch(() => undefined);
+    await db
+      .delete(users)
+      .where(eq(users.id, actor.id))
+      .catch(() => undefined);
   });
   return actor;
 };
 
-const createPostFixture = async (
-  input: {
-    prefix: string;
-    actorId: string;
-    cleanup: ReturnType<typeof createLiveCleanupStack>;
-  }
-) => {
+const createPostFixture = async (input: {
+  prefix: string;
+  actorId: string;
+  cleanup: ReturnType<typeof createLiveCleanupStack>;
+}) => {
   const { createPost, deletePost } = await loadPosts();
   const post = await createPost({
     title: `${input.prefix} Post Alpha`,
@@ -69,13 +70,11 @@ const createPostFixture = async (
   return post;
 };
 
-const createMediaRowFixture = async (
-  input: {
-    prefix: string;
-    actorId: string;
-    cleanup: ReturnType<typeof createLiveCleanupStack>;
-  }
-) => {
+const createMediaRowFixture = async (input: {
+  prefix: string;
+  actorId: string;
+  cleanup: ReturnType<typeof createLiveCleanupStack>;
+}) => {
   const { db, media } = await loadDb();
   const [row] = await db
     .insert(media)
@@ -94,12 +93,18 @@ const createMediaRowFixture = async (
     .returning();
   if (!row) throw new Error("assistant_live_media_create_failed");
   input.cleanup.add(`media:${row.id}`, async () => {
-    await db.delete(media).where(eq(media.id, row.id)).catch(() => undefined);
+    await db
+      .delete(media)
+      .where(eq(media.id, row.id))
+      .catch(() => undefined);
   });
   return row;
 };
 
-const assertNoExecutableActions = (plan: Awaited<ReturnType<typeof planWithLiveProvider>>, provider: string) => {
+const assertNoExecutableActions = (
+  plan: Awaited<ReturnType<typeof planWithLiveProvider>>,
+  provider: string
+) => {
   expect(plan.actions, provider).toEqual([]);
   expect(
     plan.responseKind === "needs_input" ||
@@ -123,6 +128,7 @@ const runPostsMediaSearchForProvider = async (provider: LiveProviderRuntime) => 
       context: {
         page: "/admin/posts",
         locale: "pl-PL",
+        includeResourceCatalog: true,
         resourceCatalog: {
           schemaVersion: 1,
           generatedAt: new Date().toISOString(),

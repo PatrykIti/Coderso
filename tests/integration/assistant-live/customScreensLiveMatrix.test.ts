@@ -118,6 +118,7 @@ const buildScreenContext = async (activeScreenId?: string): Promise<AssistantAct
       ? `/admin/advanced/custom-screens/${activeScreen.id}`
       : "/admin/advanced/custom-screens",
     locale: "pl-PL",
+    includeResourceCatalog: true,
     resourceCatalog: {
       schemaVersion: 1,
       generatedAt: new Date().toISOString(),

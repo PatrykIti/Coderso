@@ -13,6 +13,7 @@ const testIfLive = providers.length > 0 ? test : test.skip;
 const context = {
   page: "/admin",
   locale: "pl-PL",
+  includeResourceCatalog: true,
   resourceCatalog: {
     schemaVersion: 1,
     generatedAt: new Date().toISOString(),

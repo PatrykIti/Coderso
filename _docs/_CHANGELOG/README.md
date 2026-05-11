@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 835 | 2026-05-11 | TASK-190 live provider matrix rerun | Assistant/QA |
 | 834 | 2026-05-11 | TASK-190 validation drift closure | Assistant/Core/QA |
 | 833 | 2026-05-10 | TASK-190 final agent pass fixes | Assistant/Core |
 | 832 | 2026-05-10 | TASK-190 legacy custom screen reuse fallback | Assistant/Core |

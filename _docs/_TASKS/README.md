@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 17 tasks
+- **To Do:** 16 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1491 tasks
+- **Done:** 1492 tasks
 
 ---
 
@@ -38,7 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-190-08-04 | Live Provider Matrix Approval and Rerun | High | Small | Approval-gated rerun of the TASK-190 live provider matrix after second-pass drift fixes |
 | TASK-252 | Widget Configuration IA and Pages Widget Expansion | High | Very Large | Umbrella: right inspector IA, research archive, Hero/Timeline expansion, and Pages widget editor parity |
 | TASK-252-01 | Widget Inspector IA and Shared Option Architecture | High | Large | Shared right-panel structure, info icon pattern, slot placement, and automation metadata |
 | TASK-252-02 | Widget Research Archive and Variant Model | High | Medium | License-safe `_docs/_WIDGETS/tmp/**` research lane and Coderso-owned variant/mode matrix |
@@ -73,9 +72,10 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-190 | Blueprint Composer Foundation | High | Very Large | Done: capability manifests, candidate planning, graph/conflict policy, schema/listing/page/admin/detail-page composition, collection workspace/editor context, no-duplicate reuse, review metadata, fixture/live matrices, diagnostics, docs, and closure gates are complete; second-pass live rerun is tracked by TASK-190-08-04 |
-| TASK-190-08 | Evaluation, Docs, and Closure | High | Large | Done: deterministic fixture/red-team corpus, live-provider composition matrix, authoring guide, redacted diagnostics serialization, source-of-truth docs, changelog, and board closure are synchronized; second-pass live rerun is tracked by TASK-190-08-04 |
-| TASK-190-08-02 | Docs, Changelog, and Closure | High | Medium | Done: final docs, changelog, task board, security notes, and validation evidence synchronized for TASK-190 closure; approval-gated live rerun is tracked by TASK-190-08-04 |
+| TASK-190-08-04 | Live Provider Matrix Approval and Rerun | High | Small | Done: user-approved opt-in live provider rerun fixed live CMS harness trust-flag drift and passed route/CMS OpenAI/OpenRouter gates |
+| TASK-190 | Blueprint Composer Foundation | High | Very Large | Done: capability manifests, candidate planning, graph/conflict policy, schema/listing/page/admin/detail-page composition, collection workspace/editor context, no-duplicate reuse, review metadata, fixture/live matrices, diagnostics, docs, and closure gates are complete; second-pass live rerun passed in TASK-190-08-04 |
+| TASK-190-08 | Evaluation, Docs, and Closure | High | Large | Done: deterministic fixture/red-team corpus, live-provider composition matrix, authoring guide, redacted diagnostics serialization, source-of-truth docs, changelog, board closure, and second-pass live rerun are synchronized |
+| TASK-190-08-02 | Docs, Changelog, and Closure | High | Medium | Done: final docs, changelog, task board, security notes, validation evidence, and second-pass live rerun are synchronized for TASK-190 closure |
 | TASK-190-08-03 | Capability Authoring Guide and Observability | High | Medium | Done: `_docs/BLUEPRINT_COMPOSER.md`, docs index updates, architecture/testing/site-builder references, and redacted composition diagnostics serialization are landed |
 | TASK-190-08-01 | Composition Fixture Matrix and Red-Team Corpus | High | Medium | Done: single-pack regressions, mixed-capability composition, gated booking/checkout, Mabudo-like tier-A parity, catalog reuse, provider red-team safety, media safety, LLM-unavailable gate, and live-provider composition matrix are covered |
 | TASK-190-05 | Page Section and Widget Composer | High | Large | Done: section alias/slot vocabulary, deterministic widget/pack mapping, page-upsert collection-link persistence, detail-page storage/schema/bindings/runtime/preview/admin/API/cache/fixture acceptance, and generic detail-page resource integration are landed |

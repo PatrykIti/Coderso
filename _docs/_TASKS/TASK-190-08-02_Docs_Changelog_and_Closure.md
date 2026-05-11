@@ -143,8 +143,12 @@ Closure sequencing rule:
   vulnerability/config/secret scans, and Gitleaks history/worktree scans. The
   container image scan remained intentionally skipped because
   `SECURITY_SCAN_IMAGE` was not set.
-- 2026-05-11: The second-pass validation has not rerun
-  `bun run test:assistant:live` yet. The local `.env` exposes both OpenAI and
-  OpenRouter live-provider pairs, so the TASK-190 live matrix remains applicable,
-  but running it would send test prompts and fixture data to external providers
-  and is blocked pending explicit approval for that data transfer.
+- 2026-05-11: After explicit user approval for the opt-in external provider
+  transfer, the second-pass live gate was rerun outside the sandbox. The first
+  `bun run test:assistant:live` attempt exposed live CMS harness drift: fixture
+  `resourceCatalog` payloads missed the required `includeResourceCatalog: true`
+  trust flag and were correctly ignored by the current server-side security
+  contract. After adding that flag to the live CMS contexts,
+  `bun run test:assistant:live:cms:openai` passed (`15` tests, `263`
+  assertions), then full `bun run test:assistant:live` passed for route
+  OpenAI/OpenRouter and CMS OpenAI/OpenRouter.

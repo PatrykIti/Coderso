@@ -5,7 +5,7 @@
 **Category:** QA Closure
 **Estimated Effort:** Small
 **Dependencies:** TASK-190-08-02
-**Status:** To Do
+**Status:** Done (2026-05-11)
 
 ---
 
@@ -67,3 +67,25 @@ No child task files.
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
 - A TASK-190 changelog note recording the final live matrix status.
+
+## Progress Notes
+
+- 2026-05-11: User approved the opt-in live provider gate after confirming the
+  deterministic assistant coverage remains owned by `bun run test:bun` and
+  `bun run test:vitest`.
+- 2026-05-11: Initial `bun run test:assistant:live` exposed live CMS harness
+  drift: those tests supplied fixture `resourceCatalog` payloads without the
+  required `includeResourceCatalog: true` trust flag, so the server correctly
+  ignored the client-authored catalog under the current security contract.
+- 2026-05-11: Added the trust flag to all live CMS matrix contexts and reran
+  the gate outside the sandbox. `bun run test:assistant:live:cms:openai`
+  passed (`15` tests, `263` assertions), then full
+  `bun run test:assistant:live` passed: route OpenAI (`1` test, `33`
+  assertions), route OpenRouter (`1` test, `43` assertions), CMS OpenAI (`15`
+  tests, `263` assertions), and CMS OpenRouter (`15` tests, `263`
+  assertions).
+- 2026-05-11: Final post-fix gates also passed outside the sandbox:
+  `bun run lint`, `bun run test:bun` (`763` tests, `2956` assertions),
+  `bun run test:vitest` (`582` files, `2611` tests), and
+  `bun run scan:security:strict` clean. Container image scanning remained
+  skipped because `SECURITY_SCAN_IMAGE` was not set.

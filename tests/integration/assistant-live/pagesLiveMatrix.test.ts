@@ -43,7 +43,10 @@ const createActor = async (prefix: string) => {
     .returning();
   if (!actor) throw new Error("assistant_live_actor_create_failed");
   globalCleanup.add(`user:${actor.id}`, async () => {
-    await db.delete(users).where(eq(users.id, actor.id)).catch(() => undefined);
+    await db
+      .delete(users)
+      .where(eq(users.id, actor.id))
+      .catch(() => undefined);
   });
   return actor;
 };
@@ -61,14 +64,12 @@ const pageData = (title: string) => ({
   ],
 });
 
-const createPublishedFixturePage = async (
-  input: {
-    title: string;
-    slug: string;
-    actorId: string;
-    cleanup: ReturnType<typeof createLiveCleanupStack>;
-  }
-) => {
+const createPublishedFixturePage = async (input: {
+  title: string;
+  slug: string;
+  actorId: string;
+  cleanup: ReturnType<typeof createLiveCleanupStack>;
+}) => {
   const { createPage, deletePage, publishPage } = await loadPageService();
   const page = await createPage({
     title: input.title,
@@ -90,6 +91,7 @@ const buildPageContext = async (): Promise<AssistantActionContext> => {
   return {
     page: "/admin/pages",
     locale: "pl-PL",
+    includeResourceCatalog: true,
     resourceCatalog: {
       schemaVersion: 1,
       generatedAt: new Date().toISOString(),
@@ -173,7 +175,10 @@ const runPagesMatrixForProvider = async (provider: LiveProviderRuntime) => {
         `introBody "Live matrix body for ${prefix}"`,
       ].join(", "),
     });
-    expect(createPlan.actions.map((action) => action.type), provider.id).toContain("page.upsert");
+    expect(
+      createPlan.actions.map((action) => action.type),
+      provider.id
+    ).toContain("page.upsert");
     const createPreview = await dryRunLivePlan(createPlan);
     expect(createPreview.readyToExecute, provider.id).toBe(true);
     const createResult = await executeLivePlan({
@@ -182,7 +187,9 @@ const runPagesMatrixForProvider = async (provider: LiveProviderRuntime) => {
       idempotencyKey: `${prefix}-page-create`,
     });
     expectSuccessfulExecution(createResult);
-    const createdPageId = createResult.results.find((item) => item.type === "page.upsert")?.resourceId;
+    const createdPageId = createResult.results.find(
+      (item) => item.type === "page.upsert"
+    )?.resourceId;
     if (createdPageId) {
       cleanup.add(`page:${createdPageId}`, async () => {
         const { deletePage } = await loadPageService();
@@ -210,7 +217,10 @@ const runPagesMatrixForProvider = async (provider: LiveProviderRuntime) => {
       context: await buildPageContext(),
       prompt: `Zmien tytul strony "${alpha.title}" na "${renamedTitle}"`,
     });
-    expect(updatePlan.actions.map((action) => action.type), provider.id).toContain("page.update");
+    expect(
+      updatePlan.actions.map((action) => action.type),
+      provider.id
+    ).toContain("page.update");
     const updatePreview = await dryRunLivePlan(updatePlan);
     expect(updatePreview.readyToExecute, provider.id).toBe(true);
     expectSuccessfulExecution(
@@ -235,10 +245,10 @@ const runPagesMatrixForProvider = async (provider: LiveProviderRuntime) => {
       context: await buildPageContext(),
       prompt: `Usun dokladnie dwie opublikowane strony, ktore maja w tytule "${searchTerm}"`,
     });
-    expect(deletePlan.actions.map((action) => action.type), provider.id).toEqual([
-      "page.delete",
-      "page.delete",
-    ]);
+    expect(
+      deletePlan.actions.map((action) => action.type),
+      provider.id
+    ).toEqual(["page.delete", "page.delete"]);
     const deletePreview = await dryRunLivePlan(deletePlan);
     expect(deletePreview.readyToExecute, provider.id).toBe(true);
     expectSuccessfulExecution(
