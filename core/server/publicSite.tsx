@@ -30,6 +30,7 @@ import {
   resolvePreviewDetailPageRuntime,
   resolvePublishedDetailPageRuntime,
 } from "../services/content/detailPageRuntimeResolver";
+import { isDetailPageTitleTokenSafe } from "../services/content/detailPageSchema";
 import type { DetailPageDocument } from "../services/content/detailPageTypes";
 import { resolvePostsFeedRuntimeData } from "../services/content/postsFeedResolver";
 import { resolveEntryTeaserRuntimeData } from "../services/content/entryTeaserResolver";
@@ -559,13 +560,19 @@ const resolveDetailPageTitle = (
   fallback: string
 ) => {
   const source = typeof pattern === "string" && pattern.trim().length > 0 ? pattern : fallback;
+  let blockedToken = false;
   const rendered = source.replace(
     detailPageTitleTokenPattern,
     (_match, doubleToken, singleToken) => {
       const token = doubleToken ?? singleToken;
+      if (!isDetailPageTitleTokenSafe(token)) {
+        blockedToken = true;
+        return "";
+      }
       return toPublicSeoText(readDetailPageEntryValue(entry, token)) ?? "";
     }
   );
+  if (blockedToken) return fallback;
   const trimmed = rendered.trim();
   return trimmed.length > 0 ? trimmed : fallback;
 };

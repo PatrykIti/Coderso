@@ -41,6 +41,7 @@ const entry: {
   tags: [],
   data: {
     headline: "Bound headline",
+    apiKey: "secret-api-key",
   },
   publishedAt: new Date("2026-05-08T10:00:00.000Z"),
   scheduledAt: null,
@@ -332,6 +333,23 @@ test("public detail routes render composed detail pages without requiring a live
   expect(html).toContain("Mock detail headline");
   expect(html).toContain("Mock detail body");
   expect(html).toContain('rel="canonical" href="https://example.test/products/runtime-product"');
+});
+
+test("public detail routes do not render unsafe title pattern tokens", async () => {
+  currentResolvedDetailPage = {
+    document: {
+      ...detailPageDocument,
+      titlePattern: "{{ data.apiKey }} - {{ title }}",
+    },
+    blocks: detailPageDocument.blocks,
+  };
+
+  const response = await requestPublicPath(`/${contentType.slug}/${entry.id}`);
+
+  expect(response.status).toBe(200);
+  const html = await response.text();
+  expect(html).not.toContain("secret-api-key");
+  expect(html).toContain("<title>Runtime product</title>");
 });
 
 test("public detail routes fail closed when linked detail-page resolution returns null", async () => {

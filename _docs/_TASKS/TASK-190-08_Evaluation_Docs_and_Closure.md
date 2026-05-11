@@ -5,7 +5,7 @@
 **Category:** QA + Docs + Assistant Evaluation
 **Estimated Effort:** Large
 **Dependencies:** TASK-190-01, TASK-190-02, TASK-190-03, TASK-190-04, TASK-190-05, TASK-190-06, TASK-190-07
-**Status:** Done (2026-05-10)
+**Status:** Done (2026-05-11)
 
 ---
 
@@ -25,6 +25,7 @@ Business value:
 - `TASK-190-08-01_Composition_Fixture_Matrix_and_Red_Team_Corpus.md`
 - `TASK-190-08-02_Docs_Changelog_and_Closure.md`
 - `TASK-190-08-03_Capability_Authoring_Guide_and_Observability.md`
+- `TASK-190-08-04_Live_Provider_Matrix_Approval_and_Rerun.md`
 
 ## Architecture
 
@@ -39,10 +40,11 @@ Owner files:
 
 ## Acceptance Criteria
 
-1. At least five mixed prompts are covered.
-2. At least three single-preset regression prompts remain green.
+1. The deterministic Vitest fixture matrix covers at least five mixed prompts.
+2. The deterministic Vitest fixture matrix keeps at least three single-preset
+   regression prompts green.
 3. Gated modules are represented but non-executable.
-4. Provider matrix passes for OpenAI/OpenRouter where configured.
+4. The opt-in provider matrix passes for OpenAI/OpenRouter where configured.
 5. Docs and changelog are synchronized.
 6. Capability authoring guide and diagnostics/redaction rules are documented.
 
@@ -88,3 +90,9 @@ Owner files:
 - 2026-05-10: `TASK-190-08-02` synchronized source-of-truth docs, task board,
   changelog, and final validation notes; the TASK-190 evaluation/docs closure is
   complete.
+- 2026-05-11: `TASK-190-08-04` recorded the explicit-approval live provider
+  rerun after final validation drift fixes and keeps the opt-in OpenAI/OpenRouter
+  matrix attached to the TASK-190 evaluation closure.
+- 2026-05-11: acceptance wording now keeps the five mixed and three
+  single-preset counts on the deterministic Vitest fixture matrix, while the
+  live provider matrix remains opt-in smoke/regression coverage.

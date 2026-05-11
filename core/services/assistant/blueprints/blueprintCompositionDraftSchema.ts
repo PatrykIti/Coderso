@@ -7,7 +7,6 @@ export type ProviderBlueprintCompositionDraft = {
   primaryCapabilityId: string;
   adjunctCapabilityIds: string[];
   gatedCapabilityIds: string[];
-  notes?: string[];
 };
 
 const draftKeys = new Set([
@@ -15,7 +14,6 @@ const draftKeys = new Set([
   "primaryCapabilityId",
   "adjunctCapabilityIds",
   "gatedCapabilityIds",
-  "notes",
 ]);
 
 const fail = (): never => {
@@ -81,6 +79,5 @@ export const normalizeProviderBlueprintCompositionDraft = (
     primaryCapabilityId,
     adjunctCapabilityIds,
     gatedCapabilityIds,
-    ...(input.notes !== undefined ? { notes: readStringArray(input.notes) } : {}),
   };
 };

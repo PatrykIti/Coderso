@@ -72,6 +72,15 @@ with title/slug heuristics or a parallel workspace-only registry.
 Do not model hybrid outcomes as if every tab could only ever point at one
 singleton resource with no linked secondary modules.
 
+Implementation scope note (2026-05-11): the completed server-owned workspace
+summary currently resolves the deterministic owner seams that exist today:
+content route, canonical list page, canonical detail template, canonical listing
+query/template, canonical admin screen, linked secondary pages, and linked
+secondary admin screens. Forms/CTA, media, and SEO remain product-level workspace
+tabs and future owner-seam extensions; they are not claimed by
+`collectionWorkspaceService` until those domains expose stable collection
+metadata without title/slug heuristics.
+
 Canonical route:
 
 ```text

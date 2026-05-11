@@ -3,7 +3,10 @@ import { broadcastCacheEvent } from "@/utils/cacheBus";
 import { clearLocalCache } from "@/utils/storageCache";
 import { apiRequest } from "./apiClient";
 import { cacheKeys } from "./cachePolicy";
-import { clearContentTypesCache } from "./contentTypesClient";
+import {
+  clearContentTypeCollectionWorkspaceCache,
+  clearContentTypesCache,
+} from "./contentTypesClient";
 import { clearCustomScreensCache } from "./customScreensClient";
 import { clearDetailPageListCache } from "./detailPagesClient";
 import { clearAllEntriesCache, clearEntriesCache } from "./entriesClient";
@@ -418,7 +421,9 @@ const notifyAssistantExecutionCacheEvent = (input: {
       clearDetailPageListCache(contentTypeId);
       emit(cacheKeys.detailPagesList, cacheAction);
       if (contentTypeId) {
+        clearContentTypeCollectionWorkspaceCache(contentTypeId);
         emit(cacheKeys.detailPagesListByContentType(contentTypeId), cacheAction);
+        emit(cacheKeys.contentTypeCollectionWorkspace(contentTypeId), cacheAction);
       }
       if (id) clearAndEmitDetail(cacheKeys.detailPageDetail(id), cacheAction, emit);
       return;

@@ -307,7 +307,7 @@ Clients update caches and broadcast events on:
   list/detail/mutation responses.
 - The manual detail-template editor hydrates `detailPages:detail:<id>` first,
   refreshes it with `getDetailPageCached(id, { force: true })`, and reuses
-  `entries:<contentTypeSlug>` list caching for the bounded preview sample
+  `entries:list:<contentTypeSlug>` list caching for the bounded preview sample
   picker.
 - Manual create/update/delete, publish/unpublish, and revision restore flows
   update or invalidate the unfiltered list key, the active

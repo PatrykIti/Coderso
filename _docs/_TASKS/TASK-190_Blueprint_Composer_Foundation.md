@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Product Architecture + Blueprint Planning
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-172, TASK-178, TASK-188, TASK-189
-**Status:** Done (2026-05-10)
+**Status:** Done (2026-05-11)
 
 ---
 
@@ -365,6 +365,7 @@ Technical leaf tasks:
 - `TASK-190-08-01_Composition_Fixture_Matrix_and_Red_Team_Corpus.md`
 - `TASK-190-08-02_Docs_Changelog_and_Closure.md`
 - `TASK-190-08-03_Capability_Authoring_Guide_and_Observability.md`
+- `TASK-190-08-04_Live_Provider_Matrix_Approval_and_Rerun.md`
 
 ## Implementation Order
 

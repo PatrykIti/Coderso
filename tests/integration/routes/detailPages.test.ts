@@ -16,6 +16,7 @@ import {
   registerDetailPageRoutes,
   type DetailPageRouteHandler,
 } from "../../../core/server/routes/detailPageRoutes";
+import { detailPageCreateSchema } from "../../../core/server/validation/detailPageSchemas";
 import { validate as validateSchema } from "../../../core/server/validation/schemaValidator";
 import { createContentType, deleteContentType } from "../../../core/services/content/typeService";
 import {
@@ -390,6 +391,33 @@ test("detail page route schemas reject unknown top-level document fields before 
     code: "validation_error",
     status: 400,
   });
+});
+
+test("detail page route schemas accept the owner document related field only", () => {
+  const payload = {
+    document: {
+      ...buildDetailPageDocumentInput(randomUUID(), "products"),
+      related: [
+        {
+          id: "related-products",
+          kind: "same-content-type",
+          label: "Related products",
+          limit: 4,
+          excludeCurrentEntry: true,
+        },
+      ],
+    },
+  };
+
+  expect(() => validateSchema(detailPageCreateSchema, payload)).not.toThrow();
+  expect(() =>
+    validateSchema(detailPageCreateSchema, {
+      document: {
+        ...buildDetailPageDocumentInput(randomUUID(), "products"),
+        relatedSources: [],
+      },
+    })
+  ).toThrow();
 });
 
 test("detail page autosave and publish require an authenticated actor after validation", async () => {

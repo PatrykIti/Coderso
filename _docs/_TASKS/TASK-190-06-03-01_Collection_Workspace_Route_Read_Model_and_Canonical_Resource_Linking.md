@@ -41,6 +41,12 @@ into one oversized slice.
   done: cached content-types client helpers, specific Engine prefetch warmup,
   and first workspace route shell now hydrate the server-owned summary.
 
+Scope correction (2026-05-11): the landed read model is intentionally bounded to
+current deterministic owner seams: route, detail page, list page, listing query,
+listing template, admin screen, secondary pages, and secondary admin screens.
+Forms/CTA, media, and SEO workspace summaries remain follow-up owner-seam
+extensions rather than inferred fields inside this read model.
+
 ## Files to Change
 
 - Add `core/services/content/collectionWorkspaceService.ts`

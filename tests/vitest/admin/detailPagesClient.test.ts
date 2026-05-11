@@ -266,11 +266,17 @@ test("detail page create, update, and delete synchronize caches and cache bus", 
     setCacheValue(storage, cacheKeys.detailPagesList, [existing]);
     setCacheValue(storage, cacheKeys.detailPagesListByContentType("ct-products"), [existing]);
     setCacheValue(storage, cacheKeys.detailPageDetail(existing.id), existing);
+    setCacheValue(storage, cacheKeys.contentTypeCollectionWorkspace("ct-products"), {
+      contentType: { id: "ct-products" },
+    });
 
     await createDetailPage(created.currentDocument);
     expect(getCachedDetailPage("detail-page-created")).toEqual(created);
     expect(getCachedDetailPages()).toEqual([created, existing]);
     expect(getCachedDetailPages("ct-products")).toEqual([created, existing]);
+    expect(readCacheValue(storage, cacheKeys.contentTypeCollectionWorkspace("ct-products"))).toBe(
+      null
+    );
 
     await updateDetailPage("detail-page-created", updated.currentDocument);
     expect(getCachedDetailPage("detail-page-created")).toEqual(updated);
@@ -290,9 +296,11 @@ test("detail page create, update, and delete synchronize caches and cache bus", 
       expect.arrayContaining([
         `update:${cacheKeys.detailPagesList}`,
         `update:${cacheKeys.detailPagesListByContentType("ct-products")}`,
+        `update:${cacheKeys.contentTypeCollectionWorkspace("ct-products")}`,
         `update:${cacheKeys.detailPageDetail("detail-page-created")}`,
         `invalidate:${cacheKeys.detailPagesList}`,
         `invalidate:${cacheKeys.detailPagesListByContentType("ct-products")}`,
+        `invalidate:${cacheKeys.contentTypeCollectionWorkspace("ct-products")}`,
         `invalidate:${cacheKeys.detailPageDetail("detail-page-created")}`,
       ])
     );

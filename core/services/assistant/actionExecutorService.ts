@@ -162,6 +162,9 @@ import { applyPageWidgetDataPatch } from "./pageWidgetPatch";
 
 type ExecutionCacheEntry = {
   result: AssistantActionExecuteResult;
+  actorId: string;
+  planId: string;
+  planHash: string;
   savedAt: number;
 };
 
@@ -174,6 +177,24 @@ const cleanupExecutionCache = (now = Date.now()) => {
       executionCache.delete(key);
     }
   }
+};
+
+const readMemoryExecutionResult = (input: {
+  idempotencyKey: string;
+  actorId: string;
+  planId: string;
+  planHash: string;
+}) => {
+  const cached = executionCache.get(input.idempotencyKey);
+  if (!cached) return null;
+  if (
+    cached.actorId !== input.actorId ||
+    cached.planId !== input.planId ||
+    cached.planHash !== input.planHash
+  ) {
+    throw new Error("assistant_action_idempotency_conflict");
+  }
+  return cached.result;
 };
 
 const countExecutionOperations = (items: AssistantActionExecutionItem[]) =>
@@ -623,6 +644,21 @@ type ActionExecutorDeps = {
 };
 
 type CustomScreenRecord = Awaited<ReturnType<ActionExecutorDeps["listCustomScreens"]>>[number];
+type ListingQueryRecord = Awaited<ReturnType<ActionExecutorDeps["listListingQueries"]>>[number];
+
+const findListingQueryNameMatches = async (
+  name: string,
+  deps: ActionExecutorDeps
+): Promise<ListingQueryRecord[]> =>
+  (await deps.listListingQueries()).filter((entry) => entry.name === name);
+
+const listingQueryNameConflict = (
+  name: string
+): AssistantActionPreviewChange["conflicts"][number] => ({
+  code: "assistant_action_dependency_conflict",
+  severity: "error",
+  message: `Listing query name "${name}" is not unique. Re-run planning with an exact listing query id before updating it.`,
+});
 
 const defaultDeps: ActionExecutorDeps = {
   getSetting,
@@ -1119,14 +1155,16 @@ const buildListingQueryPreview = async (
   action: AssistantListingQueryUpsertAction,
   deps: ActionExecutorDeps
 ) => {
-  const existing =
-    (await deps.listListingQueries()).find((entry) => entry.name === action.input.name) ?? null;
+  const matches = await findListingQueryNameMatches(action.input.name, deps);
+  const existing = matches.length === 1 ? matches[0] : null;
+  const ambiguousMatches = matches.length > 1;
   return createPreviewChange({
     action,
     targetType: "listing-query",
     targetKey: action.input.name,
-    summary: `${existing ? "Update" : "Create"} listing query "${action.input.name}"`,
-    beforeValue: existing,
+    summary: `${matches.length > 0 ? "Update" : "Create"} listing query "${action.input.name}"`,
+    conflicts: ambiguousMatches ? [listingQueryNameConflict(action.input.name)] : [],
+    beforeValue: ambiguousMatches ? matches : existing,
     nextValue: action.input,
   });
 };
@@ -3328,8 +3366,11 @@ const executeListingQueryAction = async (
     throw new Error("assistant_action_dependency_missing");
   }
 
-  const existing =
-    (await deps.listListingQueries()).find((entry) => entry.name === action.input.name) ?? null;
+  const matches = await findListingQueryNameMatches(action.input.name, deps);
+  if (matches.length > 1) {
+    throw new Error("assistant_action_dependency_conflict");
+  }
+  const existing = matches[0] ?? null;
   const payload = {
     name: action.input.name,
     description: action.input.description,
@@ -5330,7 +5371,12 @@ export const executeAssistantActionPlan = async (
         planId: plan.id,
         planHash,
       })
-    : (executionCache.get(input.idempotencyKey)?.result ?? null);
+    : readMemoryExecutionResult({
+        idempotencyKey: input.idempotencyKey,
+        actorId: input.actorId,
+        planId: plan.id,
+        planHash,
+      });
   if (cached) {
     recordAssistantActionMetric({
       failedCount: cached.summary.failed,
@@ -5413,6 +5459,9 @@ export const executeAssistantActionPlan = async (
   } else {
     executionCache.set(input.idempotencyKey, {
       result,
+      actorId: input.actorId,
+      planId: plan.id,
+      planHash,
       savedAt: Date.now(),
     });
   }

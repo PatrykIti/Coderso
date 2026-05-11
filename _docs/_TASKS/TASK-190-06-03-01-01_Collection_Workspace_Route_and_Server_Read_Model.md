@@ -97,3 +97,7 @@ router.get("/admin/api/content-types/:id/collection-workspace", async (ctx) => {
 - Kept full deterministic canonical resolution and owner-read redaction deferred
   to `TASK-190-06-03-01-02`; this leaf reads owner seams and returns candidates
   rather than guessing.
+- 2026-05-11 correction: the completed summary should be read as bounded route /
+  detail / list / listing / admin-screen coverage. Forms/CTA, media, and SEO
+  need explicit owner-seam metadata before this endpoint can summarize them
+  without title/slug heuristics.

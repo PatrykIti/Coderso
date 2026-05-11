@@ -29,6 +29,15 @@ const unsafePropSegments = new Set([
 ]);
 const secretLikePattern =
   /\b[\w.-]*(token|secret|password|api[-_]?key|credential|cookie|session|csrf)[\w.-]*\b/i;
+const detailPageTitleTokenPattern = /\{\{\s*([A-Za-z0-9_.-]+)\s*\}\}|\{\s*([A-Za-z0-9_.-]+)\s*\}/g;
+const detailPageTitleMetaTokens = new Set([
+  "title",
+  "slug",
+  "publishedAt",
+  "updatedAt",
+  "createdAt",
+  "author",
+]);
 const relatedLimitMin = 1;
 const relatedLimitMax = 24;
 const deterministicNamespace = "detail-page-document";
@@ -96,6 +105,44 @@ const normalizeSafePath = (value: unknown) => {
   return text;
 };
 
+export const isDetailPageTitleTokenSafe = (token: string) => {
+  const text = normalizeText(token);
+  if (!text) return false;
+  if (detailPageTitleMetaTokens.has(text)) return true;
+
+  const dataPath = text.startsWith("data.") ? text.slice("data.".length) : text;
+  if (!dataPath) return false;
+
+  try {
+    const safePath = normalizeSafePath(dataPath);
+    return !secretLikePattern.test(safePath);
+  } catch {
+    return false;
+  }
+};
+
+const normalizeTitlePattern = (value: unknown) => {
+  const text = normalizeRequiredText(value);
+  detailPageTitleTokenPattern.lastIndex = 0;
+  for (
+    let match = detailPageTitleTokenPattern.exec(text);
+    match;
+    match = detailPageTitleTokenPattern.exec(text)
+  ) {
+    const token = match[1] ?? match[2] ?? "";
+    if (!isDetailPageTitleTokenSafe(token)) {
+      throw new Error("detail_page_document_invalid");
+    }
+  }
+  return text;
+};
+
+const normalizeOptionalTitlePattern = (value: unknown) => {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  return normalizeTitlePattern(value);
+};
+
 const normalizeFallback = (value: unknown) => {
   if (
     value === undefined ||
@@ -140,7 +187,7 @@ const normalizeSeo = (value: unknown): DetailPageSeo | undefined => {
   if (!isRecord(value)) throw new Error("detail_page_document_invalid");
   rejectUnknownKeys(value, ["titlePattern", "descriptionField", "imageField"]);
 
-  const titlePattern = normalizeOptionalText(value.titlePattern);
+  const titlePattern = normalizeOptionalTitlePattern(value.titlePattern);
   const descriptionField = normalizeOptionalText(value.descriptionField);
   const imageField = normalizeOptionalText(value.imageField);
 
@@ -365,6 +412,7 @@ export const normalizeDetailPageDocument = (
   const blockIds = collectBlockIds(blocks as Array<Record<string, unknown>>);
   const bindings = normalizeBindings(value.bindings, blockIds);
   const related = normalizeRelatedSources(value.related);
+  const seo = normalizeSeo(value.seo);
 
   const schemaVersion = value.schemaVersion ?? 1;
   if (schemaVersion !== 1) throw new Error("detail_page_document_invalid");
@@ -376,8 +424,8 @@ export const normalizeDetailPageDocument = (
     contentTypeId: normalizeUuid(overrides?.contentTypeId ?? value.contentTypeId),
     contentTypeSlug: normalizeSlug(overrides?.contentTypeSlug ?? value.contentTypeSlug),
     status: normalizeStatus(overrides?.status ?? value.status),
-    titlePattern: normalizeRequiredText(value.titlePattern),
-    ...(normalizeSeo(value.seo) ? { seo: normalizeSeo(value.seo)! } : {}),
+    titlePattern: normalizeTitlePattern(value.titlePattern),
+    ...(seo ? { seo } : {}),
     settings: normalizeSettings(value.settings),
     blocks,
     bindings,

@@ -196,6 +196,37 @@ test("normalizeDetailPageDocument rejects secret-like entry fields", () => {
   ).toThrow("detail_page_document_invalid");
 });
 
+test("normalizeDetailPageDocument accepts safe title pattern tokens", () => {
+  const normalized = normalizeDetailPageDocument({
+    ...baseDocument,
+    titlePattern: "{{ title }} - {{ data.headline }} - { publishedAt }",
+    seo: {
+      titlePattern: "{{ slug }} | {{ headline }}",
+    },
+  });
+
+  expect(normalized.titlePattern).toBe("{{ title }} - {{ data.headline }} - { publishedAt }");
+  expect(normalized.seo?.titlePattern).toBe("{{ slug }} | {{ headline }}");
+});
+
+test("normalizeDetailPageDocument rejects unsafe title pattern tokens", () => {
+  expect(() =>
+    normalizeDetailPageDocument({
+      ...baseDocument,
+      titlePattern: "{{ data.apiKey }}",
+    })
+  ).toThrow("detail_page_document_invalid");
+
+  expect(() =>
+    normalizeDetailPageDocument({
+      ...baseDocument,
+      seo: {
+        titlePattern: "{{ password }}",
+      },
+    })
+  ).toThrow("detail_page_document_invalid");
+});
+
 test("detail page ids stay UUID-compatible and deterministic for stable content identity", () => {
   const first = buildDeterministicDetailPageId({
     contentTypeId: baseDocument.contentTypeId,

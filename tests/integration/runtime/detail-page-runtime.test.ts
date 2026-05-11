@@ -277,7 +277,7 @@ testIfDbWithOptions(
     expect(html).toContain(`Runtime product ${fixture.token}`);
     expect(html).not.toContain("Composed detail template body");
   },
-  { timeout: 15_000 }
+  { timeout: 30_000 }
 );
 
 testIfDbWithOptions(

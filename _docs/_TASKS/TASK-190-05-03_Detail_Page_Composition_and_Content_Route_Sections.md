@@ -165,7 +165,10 @@ type DetailPageBinding = {
 
 Public runtime and dedicated detail-page preview render `titlePattern` /
 `seo.titlePattern`, `seo.descriptionField`, and `seo.imageField` against the
-selected entry before falling back to entry-owned SEO metadata.
+selected entry before falling back to entry-owned SEO metadata. Title patterns
+may reference safe entry meta/data tokens only; secret-like tokens such as
+`token`, `secret`, `password`, `apiKey`, `cookie`, `session`, or `csrf` reject at
+document normalization and are ignored defensively at public render time.
 
 Storage direction:
 

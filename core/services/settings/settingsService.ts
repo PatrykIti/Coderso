@@ -336,6 +336,14 @@ export const normalizeContentRoutes = (value: unknown): ContentRouteSetting[] =>
   });
 };
 
+const readContentRoutesSettingValue = (value: unknown): ContentRouteSetting[] => {
+  try {
+    return normalizeContentRoutes(value);
+  } catch {
+    return DEFAULT_SETTINGS["site.contentRoutes"];
+  }
+};
+
 function validateSettingValue(key: SettingKey, value: unknown): SettingValueMap[SettingKey] {
   if (key === "site.name" || key === "site.locale") {
     if (typeof value !== "string") {
@@ -594,7 +602,7 @@ export async function listSettings(): Promise<SettingValueMap> {
     }
 
     if (key === "site.contentRoutes") {
-      merged[key] = row.value as ContentRouteSetting[];
+      merged[key] = readContentRoutesSettingValue(row.value);
       continue;
     }
 
@@ -630,7 +638,7 @@ export async function getSetting(key: string) {
     return typeof row.value === "number" ? row.value : DEFAULT_SETTINGS[normalizedKey];
   }
   if (normalizedKey === "site.contentRoutes") {
-    return row.value as ContentRouteSetting[];
+    return readContentRoutesSettingValue(row.value);
   }
   if (
     normalizedKey === "auth.sessionTtlDays" ||

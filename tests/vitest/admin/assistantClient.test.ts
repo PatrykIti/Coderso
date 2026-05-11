@@ -822,6 +822,10 @@ test("executeAssistantActions broadcasts cache events for supported CMS action f
           action: "update",
         }),
         expect.objectContaining({
+          key: cacheKeys.contentTypeCollectionWorkspace("ct-products"),
+          action: "update",
+        }),
+        expect.objectContaining({
           key: cacheKeys.detailPageDetail("detail-page-products"),
           action: "update",
         }),

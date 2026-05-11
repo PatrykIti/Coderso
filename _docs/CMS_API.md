@@ -1627,7 +1627,9 @@ Rules:
 - Public runtime and dedicated detail-page preview render detail-document
   `titlePattern` / `seo.titlePattern`, `seo.descriptionField`, and
   `seo.imageField` against the selected entry before falling back to entry SEO
-  metadata.
+  metadata. Title-pattern tokens are limited to safe entry meta/data paths;
+  secret-like token names are rejected by the document normalizer and fail
+  closed in public rendering.
 - `POST /detail-pages/:id/autosave` accepts `{ document }`, records or reuses a
   single latest `autosave` revision snapshot for recovery, and does not mutate
   canonical route linkage.

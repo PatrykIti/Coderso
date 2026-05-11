@@ -68,7 +68,7 @@ const detailPageDocumentEnvelopeSchema = {
         settings: { type: "object" },
         blocks: { type: "array" },
         bindings: { type: "array" },
-        relatedSources: { type: "array" },
+        related: { type: "array" },
         seo: { type: "object" },
       },
     },

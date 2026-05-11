@@ -1,6 +1,7 @@
 import { apiRequest } from "./apiClient";
 import { broadcastCacheEvent } from "@/utils/cacheBus";
 import { cacheKeys, cacheTtlMs } from "@/services/cachePolicy";
+import { clearContentTypeCollectionWorkspaceCache } from "@/services/contentTypesClient";
 import {
   clearLocalCache,
   createMemoryBackedLocalCache,
@@ -204,8 +205,14 @@ export const invalidateDetailPageClientCaches = (input: {
   clearDetailPageListCache(input.contentTypeId);
   broadcastCacheEvent({ key: cacheKeys.detailPagesList, action: "invalidate" });
   if (input.contentTypeId?.trim()) {
+    const contentTypeId = input.contentTypeId.trim();
+    clearContentTypeCollectionWorkspaceCache(contentTypeId);
     broadcastCacheEvent({
-      key: cacheKeys.detailPagesListByContentType(input.contentTypeId.trim()),
+      key: cacheKeys.detailPagesListByContentType(contentTypeId),
+      action: "invalidate",
+    });
+    broadcastCacheEvent({
+      key: cacheKeys.contentTypeCollectionWorkspace(contentTypeId),
       action: "invalidate",
     });
   }
@@ -278,6 +285,11 @@ export async function createDetailPage(document: DetailPageDocument) {
     key: cacheKeys.detailPagesListByContentType(created.contentTypeId),
     action: "update",
   });
+  clearContentTypeCollectionWorkspaceCache(created.contentTypeId);
+  broadcastCacheEvent({
+    key: cacheKeys.contentTypeCollectionWorkspace(created.contentTypeId),
+    action: "update",
+  });
   broadcastCacheEvent({ key: cacheKeys.detailPageDetail(created.id), action: "update" });
   return created;
 }
@@ -296,6 +308,11 @@ export async function updateDetailPage(id: string, document: DetailPageDocument)
   broadcastCacheEvent({ key: cacheKeys.detailPagesList, action: "update" });
   broadcastCacheEvent({
     key: cacheKeys.detailPagesListByContentType(updated.contentTypeId),
+    action: "update",
+  });
+  clearContentTypeCollectionWorkspaceCache(updated.contentTypeId);
+  broadcastCacheEvent({
+    key: cacheKeys.contentTypeCollectionWorkspace(updated.contentTypeId),
     action: "update",
   });
   broadcastCacheEvent({ key: cacheKeys.detailPageDetail(updated.id), action: "update" });
@@ -317,8 +334,14 @@ export async function deleteDetailPage(id: string, options?: { contentTypeId?: s
     clearDetailPageDetailCache(id);
     broadcastCacheEvent({ key: cacheKeys.detailPagesList, action: "invalidate" });
     if (contentTypeId?.trim()) {
+      const normalizedContentTypeId = contentTypeId.trim();
+      clearContentTypeCollectionWorkspaceCache(normalizedContentTypeId);
       broadcastCacheEvent({
-        key: cacheKeys.detailPagesListByContentType(contentTypeId.trim()),
+        key: cacheKeys.detailPagesListByContentType(normalizedContentTypeId),
+        action: "invalidate",
+      });
+      broadcastCacheEvent({
+        key: cacheKeys.contentTypeCollectionWorkspace(normalizedContentTypeId),
         action: "invalidate",
       });
     }
