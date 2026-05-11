@@ -27,6 +27,8 @@ const readContextFromHtml = (html: string) => {
     runtimeSnapshot?: {
       route: string | null;
       activeHref: string | null;
+      area: string;
+      advancedModule: string | null;
       selectedResource: { kind: string; id: string } | null;
       visibleActions: Array<{ id: string; requiredPermission: string | null }>;
       permissionHints: {
@@ -36,7 +38,7 @@ const readContextFromHtml = (html: string) => {
       };
     };
     activeSurface?: {
-      kind: "page" | "widget-template" | "custom-screen";
+      kind: "page" | "widget-template" | "custom-screen" | "detail-page";
       page?: { id: string; title: string; slug: string; status: string; template: string | null };
       template?: { id: string; name: string; status: string; category: string };
       screen?: {
@@ -48,6 +50,15 @@ const readContextFromHtml = (html: string) => {
         sidebarLabel: string | null;
         mode: string;
       };
+      detailPage?: {
+        id: string;
+        name: string;
+        status: string;
+        contentTypeId: string;
+        contentTypeSlug: string;
+        titlePattern: string;
+      };
+      sampleEntryId?: string | null;
       selectedEntryId?: string | null;
       selectedBlockId: string | null;
       blocks: Array<{ id: string; type: string; templateId: string | null }>;
@@ -59,6 +70,10 @@ const readContextFromHtml = (html: string) => {
         hasBackgroundMedia: boolean;
       };
       warnings: string[];
+    } | null;
+    collectionWorkspaceHint?: {
+      contentTypeId: string;
+      activeDetailPageId?: string | null;
     } | null;
   };
 };
@@ -132,6 +147,29 @@ test("buildAssistantAdminRuntimeSnapshot derives entry and widget-template resou
       route: "/admin/advanced/widgets/templates/template-1",
     }).selectedResource
   ).toEqual({ kind: "widget-template", id: "template-1" });
+});
+
+test("useAssistantAdminContext recognizes collection workspace route without changing selected resource", () => {
+  const html = renderToString(
+    <AdminRouterProvider initialPath="/admin/advanced/engine/ct-products/collection">
+      <SnapshotProbe activeHref="/admin/advanced/engine/ct-products/collection" />
+    </AdminRouterProvider>
+  );
+  const context = readContextFromHtml(html);
+
+  expect(context.runtimeSnapshot).toMatchObject({
+    route: "/admin/advanced/engine/ct-products/collection",
+    area: "advanced",
+    advancedModule: "engine",
+    selectedResource: {
+      kind: "content-type",
+      id: "ct-products",
+    },
+  });
+  expect(context.collectionWorkspaceHint).toEqual({
+    contentTypeId: "ct-products",
+    activeDetailPageId: null,
+  });
 });
 
 test("useAssistantAdminContext includes matching active page surface context", () => {
@@ -404,4 +442,95 @@ test("useAssistantAdminContext treats custom screen create routes as screen cont
     kind: "custom-screen",
     id: "screen-1",
   });
+});
+
+test("useAssistantAdminContext scopes detail page active surface to collection workspace routes", () => {
+  setActiveAssistantSurfaceContext({
+    kind: "detail-page",
+    detailPage: {
+      id: "detail-page-products",
+      name: "Product detail",
+      status: "draft",
+      contentTypeId: "ct-products",
+      contentTypeSlug: "products",
+      titlePattern: "{title}",
+    },
+    sampleEntryId: "entry-1",
+    selectedBlockId: "hero-1",
+    blocks: [
+      {
+        id: "hero-1",
+        type: "hero",
+        label: "Product hero",
+        path: "0",
+        childCount: 0,
+        slotKeys: [],
+        templateId: null,
+        templateName: null,
+      },
+    ],
+    warnings: ["detail_page_has_unsaved_changes"],
+  });
+
+  try {
+    const html = renderToString(
+      <AdminRouterProvider initialPath="/admin/advanced/engine/ct-products/collection/detail-template/detail-page-products">
+        <SnapshotProbe activeHref="/admin/advanced/engine/ct-products/collection/detail-template/detail-page-products" />
+      </AdminRouterProvider>
+    );
+    const context = readContextFromHtml(html);
+
+    expect(context.runtimeSnapshot?.selectedResource).toEqual({
+      kind: "content-type",
+      id: "ct-products",
+    });
+    expect(context.activeSurface).toMatchObject({
+      kind: "detail-page",
+      detailPage: {
+        id: "detail-page-products",
+        contentTypeId: "ct-products",
+        contentTypeSlug: "products",
+      },
+      sampleEntryId: "entry-1",
+      selectedBlockId: "hero-1",
+    });
+    expect(context.collectionWorkspaceHint).toEqual({
+      contentTypeId: "ct-products",
+      activeDetailPageId: "detail-page-products",
+    });
+  } finally {
+    clearActiveAssistantSurfaceContext();
+  }
+});
+
+test("useAssistantAdminContext does not inherit stale detail page surfaces outside workspace", () => {
+  setActiveAssistantSurfaceContext({
+    kind: "detail-page",
+    detailPage: {
+      id: "detail-page-products",
+      name: "Product detail",
+      status: "draft",
+      contentTypeId: "ct-products",
+      contentTypeSlug: "products",
+      titlePattern: "{title}",
+    },
+    sampleEntryId: null,
+    selectedBlockId: null,
+    blocks: [],
+    warnings: [],
+  });
+
+  try {
+    const html = renderToString(
+      <AdminRouterProvider initialPath="/admin/advanced/engine/ct-products">
+        <SnapshotProbe activeHref="/admin/advanced/engine/ct-products" />
+      </AdminRouterProvider>
+    );
+    const context = readContextFromHtml(html);
+
+    expect(context.activeSurface).toBeNull();
+    expect(context.collectionWorkspaceHint).toBeNull();
+  } finally {
+    clearActiveAssistantSurfaceContext();
+  }
 });

@@ -14,14 +14,30 @@ const testIfLive = providers.length > 0 ? test : test.skip;
 const buildContext = (prefix: string): AssistantActionContext => ({
   page: "/admin/pages",
   locale: "pl-PL",
+  includeResourceCatalog: true,
   resourceCatalog: {
     schemaVersion: 1,
     generatedAt: new Date().toISOString(),
     budget: { maxItemsPerGroup: 100, maxFieldsPerResource: 24, truncated: false },
     pages: [
-      { id: `${prefix}-page-alpha`, title: `${prefix} Page Alpha`, slug: `/${prefix}-alpha`, status: "published" },
-      { id: `${prefix}-page-beta`, title: `${prefix} Page Beta`, slug: `/${prefix}-beta`, status: "published" },
-      { id: `${prefix}-other`, title: `${prefix} Other`, slug: `/${prefix}-other`, status: "published" },
+      {
+        id: `${prefix}-page-alpha`,
+        title: `${prefix} Page Alpha`,
+        slug: `/${prefix}-alpha`,
+        status: "published",
+      },
+      {
+        id: `${prefix}-page-beta`,
+        title: `${prefix} Page Beta`,
+        slug: `/${prefix}-beta`,
+        status: "published",
+      },
+      {
+        id: `${prefix}-other`,
+        title: `${prefix} Other`,
+        slug: `/${prefix}-other`,
+        status: "published",
+      },
     ],
     contentTypes: [],
     customScreens: [],
@@ -78,14 +94,14 @@ const runBulkSafetyForProvider = async (provider: LiveProviderRuntime) => {
     prompt: "tak, te dwie, usun je",
   });
   expect(followUpPlan.status, provider.id).toBe("ready");
-  expect(followUpPlan.actions.map((action) => action.type), provider.id).toEqual([
-    "page.delete",
-    "page.delete",
-  ]);
-  expect(followUpPlan.actions.map((action) => action.title), provider.id).toEqual([
-    `Delete ${prefix} Page Alpha`,
-    `Delete ${prefix} Page Beta`,
-  ]);
+  expect(
+    followUpPlan.actions.map((action) => action.type),
+    provider.id
+  ).toEqual(["page.delete", "page.delete"]);
+  expect(
+    followUpPlan.actions.map((action) => action.title),
+    provider.id
+  ).toEqual([`Delete ${prefix} Page Alpha`, `Delete ${prefix} Page Beta`]);
 
   const countMismatchPlan = await planWithLiveProvider({
     provider,
@@ -109,10 +125,10 @@ const runBulkSafetyForProvider = async (provider: LiveProviderRuntime) => {
     prompt: `Zmien tytul dokladnie dwom stronom z prefixem "${prefix} Page" na "${prefix} Updated"`,
   });
   expect(updatePlan.status, provider.id).toBe("ready");
-  expect(updatePlan.actions.map((action) => action.type), provider.id).toEqual([
-    "page.update",
-    "page.update",
-  ]);
+  expect(
+    updatePlan.actions.map((action) => action.type),
+    provider.id
+  ).toEqual(["page.update", "page.update"]);
 };
 
 testIfLive(

@@ -63,7 +63,17 @@ export const pagePolicy: AssistantResourcePolicy = {
     },
     blockData: {
       field: "blockData",
-      aliases: ["widget", "block", "blok", "headline", "title", "label", "description", "text", "tekst"],
+      aliases: [
+        "widget",
+        "block",
+        "blok",
+        "headline",
+        "title",
+        "label",
+        "description",
+        "text",
+        "tekst",
+      ],
       valueType: "record",
       action: { type: "page.widget.patch", patchPath: ["dataPath"] },
     },
@@ -72,7 +82,12 @@ export const pagePolicy: AssistantResourcePolicy = {
     create: { operation: "create", type: "page.upsert", target: "explicit", mode: "executable" },
     update: { operation: "update", type: "page.update", target: "single", mode: "executable" },
     delete: { operation: "delete", type: "page.delete", target: "multiple", mode: "executable" },
-    patchWidget: { operation: "update", type: "page.widget.patch", target: "active", mode: "executable" },
+    patchWidget: {
+      operation: "update",
+      type: "page.widget.patch",
+      target: "active",
+      mode: "executable",
+    },
   },
   destructive: filteredDestructivePolicy,
   coverage: {
@@ -80,6 +95,92 @@ export const pagePolicy: AssistantResourcePolicy = {
     task: "TASK-184-02",
     routes: ["/admin/pages"],
     notes: "Page create/search/update/delete/safety live matrix.",
+  },
+};
+
+export const detailPagePolicy: AssistantResourcePolicy = {
+  kind: "detail-page",
+  label: "Detail Pages",
+  aliases: [
+    "detail page",
+    "detail pages",
+    "detail template",
+    "detail templates",
+    "public detail page",
+    "template szczegolow",
+    "template szczegółów",
+    "szablon szczegolow",
+    "szablon szczegółów",
+    "strona szczegolow",
+    "strona szczegółów",
+  ],
+  routes: ["/admin/advanced/engine"],
+  operations: ["inspect", "find", "update"],
+  readPermissions: ["content:read"],
+  executePermissions: ["content:write"],
+  filters: {
+    status: {
+      field: "status",
+      aliases: ["status", "published", "opublikowana", "draft", "szkic"],
+      operators: ["eq", "in"],
+      values: {
+        published: ["published", "opublikowana", "opublikowane", "opublikowany"],
+        draft: ["draft", "szkic"],
+      },
+    },
+  },
+  fields: {
+    name: {
+      field: "name",
+      aliases: ["name", "nazwa", "nazwe", "nazwę"],
+      valueType: "string",
+      action: { type: "detail-page.upsert", patchPath: ["document", "name"] },
+    },
+    status: {
+      field: "status",
+      aliases: ["status", "published", "draft", "opublikuj", "szkic"],
+      valueType: "enum",
+      enumValues: ["draft", "published"],
+      action: { type: "detail-page.upsert", patchPath: ["document", "status"] },
+    },
+    titlePattern: {
+      field: "titlePattern",
+      aliases: ["title pattern", "wzor tytulu", "wzór tytułu", "template title"],
+      valueType: "string",
+      action: { type: "detail-page.upsert", patchPath: ["document", "titlePattern"] },
+    },
+    blockData: {
+      field: "blockData",
+      aliases: [
+        "widget",
+        "block",
+        "blok",
+        "headline",
+        "title",
+        "label",
+        "description",
+        "text",
+        "tekst",
+      ],
+      valueType: "record",
+      action: { type: "detail-page.upsert", patchPath: ["document", "blocks"] },
+    },
+  },
+  actions: {
+    inspect: { operation: "inspect", type: "none", target: "none", mode: "read-only" },
+    update: { operation: "update", type: "detail-page.upsert", target: "single", mode: "gated" },
+  },
+  secrets: {
+    redacted: true,
+    secretFields: ["document.blocks.secret", "document.settings.secret"],
+    providerAllowed: false,
+  },
+  coverage: {
+    state: "live-gated",
+    task: "TASK-190-05-03-08",
+    routes: ["/admin/advanced/engine"],
+    notes:
+      "Provider drafts can inspect trusted detail-page context; executable detail-page.upsert stays owned by local blueprint assembly.",
   },
 };
 
@@ -104,7 +205,15 @@ export const formPolicy: AssistantResourcePolicy = {
     },
     visibility: {
       field: "visibility",
-      aliases: ["visibility", "public", "publiczny", "publiczne", "internal", "wewnetrzne", "wewnętrzne"],
+      aliases: [
+        "visibility",
+        "public",
+        "publiczny",
+        "publiczne",
+        "internal",
+        "wewnetrzne",
+        "wewnętrzne",
+      ],
       operators: ["eq", "in"],
       values: {
         public: ["public", "publiczny", "publiczne"],
@@ -134,7 +243,15 @@ export const formPolicy: AssistantResourcePolicy = {
     },
     submissionAccess: {
       field: "submissionAccess",
-      aliases: ["submissionAccess", "submission access", "access", "dostep", "dostęp", "publiczny", "internal"],
+      aliases: [
+        "submissionAccess",
+        "submission access",
+        "access",
+        "dostep",
+        "dostęp",
+        "publiczny",
+        "internal",
+      ],
       valueType: "enum",
       enumValues: ["public", "internal"],
       action: { type: "form.update", patchPath: ["submissionAccess"] },
@@ -145,7 +262,12 @@ export const formPolicy: AssistantResourcePolicy = {
     update: { operation: "update", type: "form.update", target: "single", mode: "executable" },
     archive: { operation: "archive", type: "form.archive", target: "single", mode: "executable" },
     delete: { operation: "delete", type: "form.delete", target: "multiple", mode: "executable" },
-    automation: { operation: "update", type: "form.automation.upsert", target: "single", mode: "executable" },
+    automation: {
+      operation: "update",
+      type: "form.automation.upsert",
+      target: "single",
+      mode: "executable",
+    },
   },
   destructive: filteredDestructivePolicy,
   secrets: {
@@ -204,10 +326,30 @@ export const listingQueryPolicy: AssistantResourcePolicy = {
     },
   },
   actions: {
-    create: { operation: "create", type: "listing-query.upsert", target: "explicit", mode: "executable" },
-    update: { operation: "update", type: "listing-query.update", target: "single", mode: "executable" },
-    delete: { operation: "delete", type: "listing-query.delete", target: "single", mode: "executable" },
-    patchFilters: { operation: "update", type: "listing-query.filters.patch", target: "single", mode: "executable" },
+    create: {
+      operation: "create",
+      type: "listing-query.upsert",
+      target: "explicit",
+      mode: "executable",
+    },
+    update: {
+      operation: "update",
+      type: "listing-query.update",
+      target: "single",
+      mode: "executable",
+    },
+    delete: {
+      operation: "delete",
+      type: "listing-query.delete",
+      target: "single",
+      mode: "executable",
+    },
+    patchFilters: {
+      operation: "update",
+      type: "listing-query.filters.patch",
+      target: "single",
+      mode: "executable",
+    },
   },
   destructive: filteredDestructivePolicy,
   coverage: {
@@ -262,10 +404,30 @@ export const listingTemplatePolicy: AssistantResourcePolicy = {
     },
   },
   actions: {
-    create: { operation: "create", type: "listing-template.upsert", target: "explicit", mode: "executable" },
-    update: { operation: "update", type: "listing-template.update", target: "single", mode: "executable" },
-    delete: { operation: "delete", type: "listing-template.delete", target: "single", mode: "executable" },
-    patchCard: { operation: "update", type: "listing-template.card.patch", target: "single", mode: "executable" },
+    create: {
+      operation: "create",
+      type: "listing-template.upsert",
+      target: "explicit",
+      mode: "executable",
+    },
+    update: {
+      operation: "update",
+      type: "listing-template.update",
+      target: "single",
+      mode: "executable",
+    },
+    delete: {
+      operation: "delete",
+      type: "listing-template.delete",
+      target: "single",
+      mode: "executable",
+    },
+    patchCard: {
+      operation: "update",
+      type: "listing-template.card.patch",
+      target: "single",
+      mode: "executable",
+    },
   },
   destructive: filteredDestructivePolicy,
   coverage: {
@@ -316,8 +478,18 @@ export const contentTypePolicy: AssistantResourcePolicy = {
     },
   },
   actions: {
-    upsert: { operation: "create", type: "content-type.upsert", target: "explicit", mode: "executable" },
-    delete: { operation: "delete", type: "content-type.delete", target: "single", mode: "executable" },
+    upsert: {
+      operation: "create",
+      type: "content-type.upsert",
+      target: "explicit",
+      mode: "executable",
+    },
+    delete: {
+      operation: "delete",
+      type: "content-type.delete",
+      target: "single",
+      mode: "executable",
+    },
   },
   destructive: {
     ...filteredDestructivePolicy,
@@ -391,10 +563,20 @@ export const entryPolicy: AssistantResourcePolicy = {
     },
   },
   actions: {
-    createDraft: { operation: "create", type: "entry.upsert-draft", target: "explicit", mode: "executable" },
+    createDraft: {
+      operation: "create",
+      type: "entry.upsert-draft",
+      target: "explicit",
+      mode: "executable",
+    },
     update: { operation: "update", type: "entry.update", target: "active", mode: "executable" },
     delete: { operation: "delete", type: "entry.delete", target: "active", mode: "executable" },
-    attachMedia: { operation: "update", type: "media.reference.attach", target: "explicit", mode: "executable" },
+    attachMedia: {
+      operation: "update",
+      type: "media.reference.attach",
+      target: "explicit",
+      mode: "executable",
+    },
   },
   destructive: filteredDestructivePolicy,
   secrets: {
@@ -469,16 +651,46 @@ export const customScreenPolicy: AssistantResourcePolicy = {
     },
     blockData: {
       field: "blockData",
-      aliases: ["widget", "block", "blok", "headline", "title", "label", "description", "text", "tekst"],
+      aliases: [
+        "widget",
+        "block",
+        "blok",
+        "headline",
+        "title",
+        "label",
+        "description",
+        "text",
+        "tekst",
+      ],
       valueType: "record",
       action: { type: "custom-screen.widget.patch", patchPath: ["dataPath"] },
     },
   },
   actions: {
-    upsert: { operation: "create", type: "custom-screen.upsert", target: "explicit", mode: "executable" },
-    update: { operation: "update", type: "custom-screen.update", target: "active", mode: "executable" },
-    delete: { operation: "delete", type: "custom-screen.delete", target: "multiple", mode: "executable" },
-    patchWidget: { operation: "update", type: "custom-screen.widget.patch", target: "active", mode: "executable" },
+    upsert: {
+      operation: "create",
+      type: "custom-screen.upsert",
+      target: "explicit",
+      mode: "executable",
+    },
+    update: {
+      operation: "update",
+      type: "custom-screen.update",
+      target: "active",
+      mode: "executable",
+    },
+    delete: {
+      operation: "delete",
+      type: "custom-screen.delete",
+      target: "multiple",
+      mode: "executable",
+    },
+    patchWidget: {
+      operation: "update",
+      type: "custom-screen.widget.patch",
+      target: "active",
+      mode: "executable",
+    },
   },
   destructive: filteredDestructivePolicy,
   secrets: {
@@ -525,15 +737,51 @@ export const widgetTemplatePolicy: AssistantResourcePolicy = {
     },
   },
   fields: {
-    name: { field: "name", aliases: ["name", "nazwa", "nazwe", "nazwę"], valueType: "string", action: { type: "widget-template.update", patchPath: ["name"] } },
-    category: { field: "category", aliases: ["category", "kategoria"], valueType: "string", action: { type: "widget-template.update", patchPath: ["category"] } },
-    status: { field: "status", aliases: ["status"], valueType: "enum", enumValues: ["draft", "published"], action: { type: "widget-template.update", patchPath: ["status"] } },
-    blockData: { field: "blockData", aliases: ["block", "blok", "headline", "title", "label", "description", "text", "tekst"], valueType: "record", action: { type: "widget-template.block.patch", patchPath: ["dataPath"] } },
+    name: {
+      field: "name",
+      aliases: ["name", "nazwa", "nazwe", "nazwę"],
+      valueType: "string",
+      action: { type: "widget-template.update", patchPath: ["name"] },
+    },
+    category: {
+      field: "category",
+      aliases: ["category", "kategoria"],
+      valueType: "string",
+      action: { type: "widget-template.update", patchPath: ["category"] },
+    },
+    status: {
+      field: "status",
+      aliases: ["status"],
+      valueType: "enum",
+      enumValues: ["draft", "published"],
+      action: { type: "widget-template.update", patchPath: ["status"] },
+    },
+    blockData: {
+      field: "blockData",
+      aliases: ["block", "blok", "headline", "title", "label", "description", "text", "tekst"],
+      valueType: "record",
+      action: { type: "widget-template.block.patch", patchPath: ["dataPath"] },
+    },
   },
   actions: {
-    update: { operation: "update", type: "widget-template.update", target: "active", mode: "executable" },
-    delete: { operation: "delete", type: "widget-template.delete", target: "active", mode: "executable" },
-    patchBlock: { operation: "update", type: "widget-template.block.patch", target: "active", mode: "executable" },
+    update: {
+      operation: "update",
+      type: "widget-template.update",
+      target: "active",
+      mode: "executable",
+    },
+    delete: {
+      operation: "delete",
+      type: "widget-template.delete",
+      target: "active",
+      mode: "executable",
+    },
+    patchBlock: {
+      operation: "update",
+      type: "widget-template.block.patch",
+      target: "active",
+      mode: "executable",
+    },
   },
   destructive: filteredDestructivePolicy,
   secrets: { redacted: true, secretFields: ["settings.secret"], providerAllowed: false },
@@ -555,12 +803,22 @@ export const mediaPolicy: AssistantResourcePolicy = {
   filters: {},
   fields: {
     title: { field: "title", aliases: ["title", "tytul", "tytuł"], valueType: "string" },
-    reference: { field: "reference", aliases: ["attach", "podłącz", "podlacz"], valueType: "string", action: { type: "media.reference.attach", patchPath: ["field"] } },
+    reference: {
+      field: "reference",
+      aliases: ["attach", "podłącz", "podlacz"],
+      valueType: "string",
+      action: { type: "media.reference.attach", patchPath: ["field"] },
+    },
     upload: { field: "upload", aliases: ["upload", "wgraj", "prześlij"], valueType: "record" },
   },
   actions: {
     inspect: { operation: "inspect", type: "none", target: "none", mode: "read-only" },
-    attachReference: { operation: "update", type: "media.reference.attach", target: "explicit", mode: "executable" },
+    attachReference: {
+      operation: "update",
+      type: "media.reference.attach",
+      target: "explicit",
+      mode: "executable",
+    },
     upload: { operation: "create", type: "none", target: "none", mode: "gated" },
   },
   secrets: {
@@ -578,6 +836,7 @@ export const mediaPolicy: AssistantResourcePolicy = {
 
 export const pagesFormsListingsPolicies = {
   page: pagePolicy,
+  "detail-page": detailPagePolicy,
   form: formPolicy,
   "listing-query": listingQueryPolicy,
   "listing-template": listingTemplatePolicy,

@@ -181,6 +181,7 @@ export const attachBlueprintShadowMetadata = (input: {
   return {
     ...input.plan,
     metadata: {
+      ...input.plan.metadata,
       planner: input.plan.metadata?.planner ?? "local",
       providerDraftUsed: input.plan.metadata?.providerDraftUsed ?? false,
       ...(input.plan.metadata?.providerId !== undefined

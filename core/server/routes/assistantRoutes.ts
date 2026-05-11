@@ -29,6 +29,7 @@ import {
   getAssistantActionFamilyContract,
   isAssistantKnownActionContractType,
 } from "../../services/assistant/actionFamilyContracts";
+import { getUserPermissions } from "../../services/auth/roleService";
 
 export type RouteContext = {
   params: Record<string, string>;
@@ -56,7 +57,8 @@ type AssistantRouteService = {
   executeActions: typeof executeAssistantActionPlan;
   buildResourceCatalog: typeof buildAssistantResourceCatalogSnapshotWithDefaultDeps;
   hydrateActiveSurface: (
-    context: AssistantActionContext | undefined
+    context: AssistantActionContext | undefined,
+    options?: { permissions?: readonly string[] }
   ) => Promise<AssistantActionContext | undefined>;
 };
 
@@ -110,16 +112,27 @@ const defaultService: AssistantRouteService = {
   dryRunActions: dryRunAssistantActionPlan,
   executeActions: executeAssistantActionPlan,
   buildResourceCatalog: buildAssistantResourceCatalogSnapshotWithDefaultDeps,
-  hydrateActiveSurface: async (context) => {
-    const [pageService, widgetTemplateService, customScreenService] = await Promise.all([
+  hydrateActiveSurface: async (context, options) => {
+    const [
+      pageService,
+      widgetTemplateService,
+      customScreenService,
+      detailPageDocumentService,
+      collectionWorkspaceService,
+    ] = await Promise.all([
       import("../../services/pages/pageService"),
       import("../../services/widgets/widgetTemplateService"),
       import("../../services/customScreens/customScreenService"),
+      import("../../services/content/detailPageDocumentService"),
+      import("../../services/content/collectionWorkspaceService"),
     ]);
     return hydrateAssistantActiveSurfaceContext(context, {
       getPage: pageService.getPage,
       getWidgetTemplate: widgetTemplateService.getWidgetTemplate,
       getCustomScreen: customScreenService.getCustomScreen,
+      getDetailPageDocument: detailPageDocumentService.getDetailPageDocument,
+      getCollectionWorkspaceSummary: collectionWorkspaceService.getCollectionWorkspaceSummary,
+      permissions: options?.permissions,
     });
   },
 };
@@ -127,6 +140,7 @@ const defaultService: AssistantRouteService = {
 export type AssistantRouteDeps = {
   requirePermission: (permission: string) => RouteHandler;
   validate: (schema: unknown, payload: unknown) => void;
+  resolvePermissions?: (ctx: RouteContext) => Promise<string[]> | string[];
   service?: Partial<AssistantRouteService>;
 };
 
@@ -172,6 +186,12 @@ const mapAssistantError = (error: unknown) => {
         status: 409,
       };
     case "assistant_action_plan_invalid":
+      return {
+        code: "assistant_action_plan_invalid",
+        message: "Assistant action plan payload is invalid",
+        status: 400,
+      };
+    case "settings_value_invalid":
       return {
         code: "assistant_action_plan_invalid",
         message: "Assistant action plan payload is invalid",
@@ -279,6 +299,18 @@ const activeSurfaceKind = (value: unknown) => {
   return typeof kind === "string" ? kind : null;
 };
 
+const hasCollectionWorkspaceHint = (value: unknown) =>
+  isRecord(value) && isRecord(value.collectionWorkspaceHint);
+
+const resolveRoutePermissions = async (
+  ctx: RouteContext,
+  resolvePermissions?: AssistantRouteDeps["resolvePermissions"]
+) => {
+  if (resolvePermissions) return resolvePermissions(ctx);
+  if (!ctx.user?.id) return ["content:read"];
+  return getUserPermissions(ctx.user.id);
+};
+
 const hasSiteKitActions = (plan: unknown) => {
   if (!isRecord(plan) || !Array.isArray(plan.actions)) return false;
   return plan.actions.some(
@@ -374,10 +406,11 @@ export function registerAssistantRoutes(router: Router, deps: AssistantRouteDeps
       if (surfaceKind === "widget-template") {
         await requirePermission("widgets:read")(ctx);
       }
-      if (surfaceKind === "page" || surfaceKind === "custom-screen") {
+      if (surfaceKind === "custom-screen") {
         await requirePermission("content:read")(ctx);
       }
-      if (surfaceKind === "page") {
+      if (surfaceKind === "page" || surfaceKind === "detail-page") {
+        await requirePermission("content:read")(ctx);
         await requirePermission("widgets:read")(ctx);
       }
       return withAssistantErrors(ctx.requestId, async () => {
@@ -390,7 +423,11 @@ export function registerAssistantRoutes(router: Router, deps: AssistantRouteDeps
               resourceCatalog: await service.buildResourceCatalog({}),
             }
           : body.context;
-        const context = await service.hydrateActiveSurface(contextWithCatalog);
+        const context = await service.hydrateActiveSurface(contextWithCatalog, {
+          permissions: hasCollectionWorkspaceHint(body.context)
+            ? await resolveRoutePermissions(ctx, deps.resolvePermissions)
+            : undefined,
+        });
         return service.planActions({
           prompt: body.prompt,
           context,

@@ -44,6 +44,19 @@ const resourceCatalog = {
     },
   ],
   customScreens: [],
+  detailPages: [
+    {
+      id: "detail-page-products",
+      name: "Product Detail",
+      status: "draft",
+      contentTypeId: "ct-products",
+      contentTypeSlug: "products",
+      linkedRouteType: "products",
+      updatedAt: "2026-04-12T10:00:00.000Z",
+      blockCount: 3,
+      bindingCount: 2,
+    },
+  ],
   posts: [
     {
       id: "post-1",
@@ -250,12 +263,14 @@ test("buildProviderPlanningPromptPackage creates bounded deterministic context",
   expect(JSON.stringify(prompt.operationDraftGuidance.examples)).toContain("Custom Screens");
   expect(JSON.stringify(prompt.operationDraftGuidance.examples)).toContain("content-type");
   expect(JSON.stringify(prompt.operationDraftGuidance.examples)).toContain("Lead Form");
+  expect(JSON.stringify(prompt.operationDraftGuidance.examples)).toContain("detail-page");
   expect(JSON.stringify(prompt.operationDraftGuidance.examples)).toContain("listing-query");
   expect(JSON.stringify(prompt.operationDraftGuidance.examples)).toContain("seo-document");
   expect(prompt.resources?.pages).toHaveLength(1);
   expect(prompt.resources?.posts).toHaveLength(1);
   expect(prompt.resources?.entries).toHaveLength(1);
   expect(prompt.resources?.contentTypes).toHaveLength(1);
+  expect(prompt.resources?.detailPages).toHaveLength(1);
   expect(prompt.resources?.forms).toHaveLength(1);
   expect(prompt.resources?.menus).toHaveLength(1);
   expect(prompt.resources?.seoDocuments).toHaveLength(1);
@@ -334,6 +349,20 @@ test("buildProviderPlanningPromptPackage emits truncation warnings for added res
             updatedAt: "2026-04-12T12:00:00.000Z",
           },
         ],
+        detailPages: [
+          ...(catalog.detailPages ?? []),
+          {
+            id: "detail-page-services",
+            name: "Service Detail",
+            status: "published",
+            contentTypeId: "ct-services",
+            contentTypeSlug: "services",
+            linkedRouteType: "services",
+            updatedAt: "2026-04-12T12:00:00.000Z",
+            blockCount: 2,
+            bindingCount: 1,
+          },
+        ],
         media: [
           ...(catalog.media ?? []),
           {
@@ -388,12 +417,14 @@ test("buildProviderPlanningPromptPackage emits truncation warnings for added res
 
   expect(prompt.resources?.posts).toHaveLength(1);
   expect(prompt.resources?.entries).toHaveLength(1);
+  expect(prompt.resources?.detailPages).toHaveLength(1);
   expect(prompt.resources?.media).toHaveLength(1);
   expect(prompt.resources?.commerce.products).toHaveLength(1);
   expect(prompt.resources?.commerce.collections).toHaveLength(1);
   expect(prompt.resources?.solutionKits).toHaveLength(1);
   expect(prompt.warnings).toContain("posts_truncated");
   expect(prompt.warnings).toContain("entries_truncated");
+  expect(prompt.warnings).toContain("detail_pages_truncated");
   expect(prompt.warnings).toContain("media_truncated");
   expect(prompt.warnings).toContain("commerce_products_truncated");
   expect(prompt.warnings).toContain("commerce_collections_truncated");
@@ -573,6 +604,69 @@ test("buildProviderPlanningPromptPackage includes referenced template target con
   });
   expect(JSON.stringify(prompt)).not.toContain("apiKey should be hidden");
   expect(JSON.stringify(prompt)).not.toContain("apiKey");
+});
+
+test("buildProviderPlanningPromptPackage includes only hydrated collection workspace context", () => {
+  const prompt = buildProviderPlanningPromptPackage({
+    prompt: "Continue the product detail template",
+    context: {
+      page: "/admin/advanced/engine/ct-products/collection",
+      collectionWorkspaceHint: {
+        contentTypeId: "ct-products",
+        activeDetailPageId: "detail-page-products",
+      },
+      collectionWorkspace: {
+        contentType: {
+          id: "ct-products",
+          name: "Products",
+          slug: "products",
+          status: "published",
+          fieldCount: 3,
+          updatedAt: "2026-05-10T10:00:00.000Z",
+        },
+        canonical: {
+          contentRoute: null,
+          detailPage: {
+            id: "detail-page-products",
+            label: "Product Detail",
+            status: "draft",
+          },
+          listPage: null,
+          listingQuery: null,
+          listingTemplate: null,
+          adminScreen: null,
+        },
+        linkedSecondary: {
+          pages: [],
+          adminScreens: [],
+        },
+        unresolved: [],
+        candidates: {
+          detailPages: [
+            {
+              id: "detail-page-products",
+              label: "Product Detail",
+              status: "draft",
+            },
+          ],
+          pages: [],
+          listingQueries: [],
+          listingTemplates: [],
+          adminScreens: [],
+        },
+        activeDetailPageId: "detail-page-products",
+      },
+    },
+  });
+
+  expect(prompt.collectionWorkspace).toMatchObject({
+    contentType: {
+      id: "ct-products",
+      slug: "products",
+    },
+    activeDetailPageId: "detail-page-products",
+  });
+  expect(JSON.stringify(prompt)).not.toContain("collectionWorkspaceHint");
 });
 
 test("buildProviderPlanningPromptPackage redacts secret-like prompt data", () => {

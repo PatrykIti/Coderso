@@ -46,6 +46,31 @@ const detailPageDocumentEnvelopeSchema = {
   properties: {
     document: {
       type: "object",
+      additionalProperties: false,
+      required: [
+        "name",
+        "contentTypeId",
+        "contentTypeSlug",
+        "status",
+        "titlePattern",
+        "settings",
+        "blocks",
+        "bindings",
+      ],
+      properties: {
+        schemaVersion: { const: 1 },
+        id: { type: "string", pattern: uuidPattern },
+        name: { type: "string", minLength: 1 },
+        contentTypeId: { type: "string", pattern: uuidPattern },
+        contentTypeSlug: { type: "string", minLength: 1 },
+        status: { enum: ["draft", "published"] },
+        titlePattern: { type: "string", minLength: 1 },
+        settings: { type: "object" },
+        blocks: { type: "array" },
+        bindings: { type: "array" },
+        related: { type: "array" },
+        seo: { type: "object" },
+      },
     },
   },
 };

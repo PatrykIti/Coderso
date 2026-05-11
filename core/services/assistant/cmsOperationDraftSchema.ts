@@ -26,6 +26,7 @@ export const cmsResourceKindValues = [
   "advanced-search",
   "commerce",
   "page",
+  "detail-page",
   "entry",
   "content-type",
   "custom-screen",
@@ -65,11 +66,7 @@ export type CmsOperationTargetQuery = {
   active?: boolean;
 };
 
-export const cmsOperationFilterFieldValues = [
-  "status",
-  "visibility",
-  "showInSidebar",
-] as const;
+export const cmsOperationFilterFieldValues = ["status", "visibility", "showInSidebar"] as const;
 
 export type CmsOperationFilterField = (typeof cmsOperationFilterFieldValues)[number];
 
@@ -231,7 +228,9 @@ const normalizeMutation = (value: unknown): CmsOperationMutation | undefined => 
   const input = assertRecord(value);
   assertKeys(input, mutationKeys);
   return {
-    ...(input.fieldIntent !== undefined ? { fieldIntent: readOptionalText(input.fieldIntent) } : {}),
+    ...(input.fieldIntent !== undefined
+      ? { fieldIntent: readOptionalText(input.fieldIntent) }
+      : {}),
     ...(input.value !== undefined ? { value: readMutationValue(input.value) } : {}),
     ...(input.patch !== undefined ? { patch: readOptionalRecord(input.patch) } : {}),
   };
@@ -262,8 +261,12 @@ export const normalizeCmsOperationDraft = (value: unknown): CmsOperationDraft =>
   return {
     operation: operation as CmsOperation,
     resourceKind: resourceKind as CmsResourceKind,
-    ...(input.resourceKey !== undefined ? { resourceKey: readOptionalText(input.resourceKey) } : {}),
-    ...(input.surfaceHint !== undefined ? { surfaceHint: readOptionalText(input.surfaceHint) } : {}),
+    ...(input.resourceKey !== undefined
+      ? { resourceKey: readOptionalText(input.resourceKey) }
+      : {}),
+    ...(input.surfaceHint !== undefined
+      ? { surfaceHint: readOptionalText(input.surfaceHint) }
+      : {}),
     ...(input.filters !== undefined ? { filters: normalizeFilters(input.filters) } : {}),
     ...(input.targetQuery !== undefined
       ? { targetQuery: normalizeTargetQuery(input.targetQuery) }
@@ -284,7 +287,8 @@ export const normalizeCmsOperationDraftWithPolicy = (
     ([, resource]) =>
       resource.coverage.state !== "not-applicable" && resource.kind === draft.resourceKind
   );
-  const resolvedKey = draft.resourceKey ?? (resourceEntries.length === 1 ? resourceEntries[0]?.[0] : undefined);
+  const resolvedKey =
+    draft.resourceKey ?? (resourceEntries.length === 1 ? resourceEntries[0]?.[0] : undefined);
   if (!resolvedKey) fail();
   const resourceKey = resolvedKey as string;
   const resource = policy.resources[resourceKey];
@@ -336,123 +340,131 @@ export const buildCmsOperationDraftJsonSchema = (
   );
 
   return {
-  type: "object",
-  additionalProperties: false,
-  required: ["operation", "resourceKind", "resourceKey", "surfaceHint", "filters", "targetQuery", "mutation", "constraints"],
-  properties: {
-    operation: {
-      type: "string",
-      enum: operationEnum,
-    },
-    resourceKind: {
-      type: "string",
-      enum: resourceKindEnum,
-    },
-    resourceKey: resourceKeyEnum.length > 0
-      ? { type: "string", enum: resourceKeyEnum }
-      : { type: "string" },
-    surfaceHint: { type: ["string", "null"] },
-    filters: {
-      anyOf: [
-        {
-          type: "array",
-          items: {
+    type: "object",
+    additionalProperties: false,
+    required: [
+      "operation",
+      "resourceKind",
+      "resourceKey",
+      "surfaceHint",
+      "filters",
+      "targetQuery",
+      "mutation",
+      "constraints",
+    ],
+    properties: {
+      operation: {
+        type: "string",
+        enum: operationEnum,
+      },
+      resourceKind: {
+        type: "string",
+        enum: resourceKindEnum,
+      },
+      resourceKey:
+        resourceKeyEnum.length > 0 ? { type: "string", enum: resourceKeyEnum } : { type: "string" },
+      surfaceHint: { type: ["string", "null"] },
+      filters: {
+        anyOf: [
+          {
+            type: "array",
+            items: {
+              type: "object",
+              additionalProperties: false,
+              required: ["field", "operator", "value"],
+              properties: {
+                field: {
+                  type: "string",
+                  enum: filterFieldEnum,
+                },
+                operator: {
+                  type: "string",
+                  enum: cmsOperationFilterOperatorValues,
+                },
+                value: {
+                  anyOf: [
+                    { type: "string" },
+                    { type: "boolean" },
+                    {
+                      type: "array",
+                      items: { type: "string" },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+          { type: "null" },
+        ],
+      },
+      targetQuery: {
+        anyOf: [
+          {
             type: "object",
             additionalProperties: false,
-            required: ["field", "operator", "value"],
+            required: ["text", "exactName", "prefix", "slug", "route", "active"],
             properties: {
-              field: {
-                type: "string",
-                enum: filterFieldEnum,
-              },
-              operator: {
-                type: "string",
-                enum: cmsOperationFilterOperatorValues,
-              },
+              text: { type: ["string", "null"] },
+              exactName: { type: ["string", "null"] },
+              prefix: { type: ["string", "null"] },
+              slug: { type: ["string", "null"] },
+              route: { type: ["string", "null"] },
+              active: { type: ["boolean", "null"] },
+            },
+          },
+          { type: "null" },
+        ],
+      },
+      mutation: {
+        anyOf: [
+          {
+            type: "object",
+            additionalProperties: false,
+            required: ["fieldIntent", "value", "patch"],
+            properties: {
+              fieldIntent: { type: ["string", "null"] },
               value: {
                 anyOf: [
                   { type: "string" },
+                  { type: "number" },
                   { type: "boolean" },
+                  { type: "null" },
+                ],
+              },
+              patch: {
+                anyOf: [
                   {
-                    type: "array",
-                    items: { type: "string" },
+                    type: "object",
+                    additionalProperties: false,
+                    properties: {},
+                    required: [],
                   },
+                  { type: "null" },
                 ],
               },
             },
           },
-        },
-        { type: "null" },
-      ],
-    },
-    targetQuery: {
-      anyOf: [
-        {
-          type: "object",
-          additionalProperties: false,
-          required: ["text", "exactName", "prefix", "slug", "route", "active"],
-          properties: {
-            text: { type: ["string", "null"] },
-            exactName: { type: ["string", "null"] },
-            prefix: { type: ["string", "null"] },
-            slug: { type: ["string", "null"] },
-            route: { type: ["string", "null"] },
-            active: { type: ["boolean", "null"] },
-          },
-        },
-        { type: "null" },
-      ],
-    },
-    mutation: {
-      anyOf: [
-        {
-          type: "object",
-          additionalProperties: false,
-          required: ["fieldIntent", "value", "patch"],
-          properties: {
-            fieldIntent: { type: ["string", "null"] },
-            value: {
-              anyOf: [
-                { type: "string" },
-                { type: "number" },
-                { type: "boolean" },
-                { type: "null" },
-              ],
-            },
-            patch: {
-              anyOf: [
-                {
-                  type: "object",
-                  additionalProperties: false,
-                  properties: {},
-                  required: [],
-                },
-                { type: "null" },
-              ],
+          { type: "null" },
+        ],
+      },
+      constraints: {
+        anyOf: [
+          {
+            type: "object",
+            additionalProperties: false,
+            required: ["expectedCount", "destructive", "requiresConfirmation"],
+            properties: {
+              expectedCount: {
+                type: ["integer", "null"],
+                minimum: 1,
+              },
+              destructive: { type: ["boolean", "null"] },
+              requiresConfirmation: { type: ["boolean", "null"] },
             },
           },
-        },
-        { type: "null" },
-      ],
+          { type: "null" },
+        ],
+      },
     },
-    constraints: {
-      anyOf: [
-        {
-          type: "object",
-          additionalProperties: false,
-          required: ["expectedCount", "destructive", "requiresConfirmation"],
-          properties: {
-            expectedCount: {
-              type: ["integer", "null"],
-              minimum: 1,
-            },
-            destructive: { type: ["boolean", "null"] },
-            requiresConfirmation: { type: ["boolean", "null"] },
-          },
-        },
-        { type: "null" },
-      ],
-    },
-  },
   };
 };

@@ -39,6 +39,10 @@ Defined in `core/admin/services/cachePolicy.ts`:
 - `customScreens:detail:<id>`
 - `contentTypes:list`
 - `contentTypes:detail:<id>`
+- `contentTypes:collectionWorkspace:<contentTypeId>`
+- `detailPages:list`
+- `detailPages:list:contentType:<contentTypeId>`
+- `detailPages:detail:<id>`
 - `menus:list`
 - `menus:detail:<id>`
 - `seo:list`
@@ -93,6 +97,11 @@ Defined in `core/admin/services/cachePolicy.ts`:
   hydrates both caches immediately, refreshes product/collection cache-bus
   events in the background, and uses foreground loading only when a required
   cache is missing.
+- `/advanced/engine/:contentTypeId/collection` prefetch uses a predicate
+  matcher ahead of the generic `/advanced/engine` prefix entry. It warms
+  `contentTypes:list` and `contentTypes:collectionWorkspace:<contentTypeId>`
+  with `{ force: false }`, so the workspace shell hydrates from the current
+  Engine cache family without a parallel `collections:*` namespace.
 
 ### Prefetch budgets
 - Per-hover burst request budget is gated by:
@@ -198,6 +207,11 @@ Clients update caches and broadcast events on:
 - Content type create, duplicate, save draft, publish, and delete mutate
   `contentTypes:list` and the touched `contentTypes:detail:<id>` key. Delete
   invalidates list/detail; duplicate inserts the new draft into the cached list.
+- Content type update/delete invalidates
+  `contentTypes:collectionWorkspace:<contentTypeId>` because the workspace
+  summary projects content-type metadata and canonical links from existing owner
+  seams. The workspace page owns route-local pending/refresh UX for those cache
+  events.
 - Server responses are treated as source of truth for cache updates.
 - Assistant action execution invalidates known resource-family caches from
   validated execution results. Failed and `noop` results do not broadcast cache
@@ -208,6 +222,7 @@ Clients update caches and broadcast events on:
   - `entry.*` -> `entries:list:all`, `entries:list:<typeSlug>`, touched `entries:detail:<typeSlug>:<id>`
   - `custom-screen.*` -> `customScreens:list`, touched `customScreens:detail:<id>`
   - `page.*` -> `pages:list`, touched `pages:detail:<id>`
+  - `detail-page.upsert` -> `detailPages:list`, `detailPages:list:contentType:<contentTypeId>`, touched `detailPages:detail:<id>`
   - `form.*` -> `forms:list`, touched `forms:detail:<id>`
   - `form.automation.upsert` -> `forms:actions:<id>`, `forms:action-runs:<id>`
   - `listing-query.*` -> `listings:queries:list`, touched `listings:queries:detail:<id>`
@@ -282,6 +297,27 @@ Clients update caches and broadcast events on:
   title/slug/status fields into an existing list row without dropping the
   current author identity.
 
+### Detail Pages list/detail cache note
+
+- Detail-page caches are owned by `core/admin/services/detailPagesClient.ts`.
+- `detailPages:list` covers unfiltered internal reads; filtered workspace/editor
+  reads use `detailPages:list:contentType:<contentTypeId>` so one content type's
+  template list never hydrates another content type's workspace.
+- `detailPages:detail:<id>` stores the normalized detail-page record returned by
+  list/detail/mutation responses.
+- The manual detail-template editor hydrates `detailPages:detail:<id>` first,
+  refreshes it with `getDetailPageCached(id, { force: true })`, and reuses
+  `entries:list:<contentTypeSlug>` list caching for the bounded preview sample
+  picker.
+- Manual create/update/delete, publish/unpublish, and revision restore flows
+  update or invalidate the unfiltered list key, the active
+  `contentTypeId`-scoped list key, and the touched detail key.
+- Assistant `detail-page.upsert` execution results use the same cache-key
+  family; failed and `noop` execution results do not mutate cache state.
+- Route-link ownership stays outside this client. Canonical public route links
+  are still changed through `setting.content-route.upsert`; the detail-page
+  client only manages detail-page documents and revision/lifecycle helpers.
+
 ### Posts list/detail/revisions cache note
 
 - Posts list/detail cache stays owned by `core/admin/services/postsClient.ts`
@@ -318,6 +354,10 @@ Clients update caches and broadcast events on:
 - Custom Screens list cache (`customScreens:list`) uses
   `createMemoryBackedLocalCache`, so module memory and `localStorage` share the
   same list TTL.
+- Cached custom screen records include nullable `collectionRole` /
+  `compositionKey` metadata from the persisted custom-screen owner seam. Cache
+  readers must treat missing legacy values as `null` and must not synthesize
+  alternate canonical-screen metadata in browser storage.
 - `useCustomScreens()` follows the shared mount policy:
   - cache present -> `{ force: false, background: true }`,
   - cache missing -> `{ force: true, background: false }`,

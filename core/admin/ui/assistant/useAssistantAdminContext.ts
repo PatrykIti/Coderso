@@ -22,6 +22,10 @@ type AssistantAdminContextOptions = {
 };
 
 type RuntimeSurface = Pick<AssistantAdminRuntimeSnapshot, "area" | "advancedModule">;
+type CollectionWorkspaceRouteMatch = {
+  contentTypeId: string;
+  detailPageId: string | null;
+};
 
 const actionKindValues = new Set<AssistantAdminRuntimeActionKind>([
   "navigate",
@@ -61,7 +65,8 @@ const readBrowserLocale = () => {
 
 const activeSurfaceMatchesRoute = (
   activeSurface: AssistantActiveSurfaceContext | null,
-  selectedResource: AssistantAdminRuntimeSelectedResource | null
+  selectedResource: AssistantAdminRuntimeSelectedResource | null,
+  collectionWorkspaceRoute: CollectionWorkspaceRouteMatch | null
 ) => {
   if (!activeSurface || !selectedResource) return false;
   if (activeSurface.kind === "page") {
@@ -80,6 +85,16 @@ const activeSurfaceMatchesRoute = (
     if (selectedResource.kind === "custom-screen-entry") {
       return selectedResource.id === activeSurface.selectedEntryId;
     }
+  }
+  if (activeSurface.kind === "detail-page") {
+    return (
+      Boolean(collectionWorkspaceRoute) &&
+      selectedResource.kind === "content-type" &&
+      selectedResource.id === activeSurface.detailPage.contentTypeId &&
+      collectionWorkspaceRoute?.contentTypeId === activeSurface.detailPage.contentTypeId &&
+      (!collectionWorkspaceRoute.detailPageId ||
+        collectionWorkspaceRoute.detailPageId === activeSurface.detailPage.id)
+    );
   }
   return false;
 };
@@ -175,6 +190,23 @@ const selectedResourceFromRoute = (
     return { kind: "listing-query", id: safeDecode(segments[2]) ?? segments[2] };
   }
   return null;
+};
+
+const resolveCollectionWorkspaceRoute = (
+  route: string | null
+): CollectionWorkspaceRouteMatch | null => {
+  const segments = routeSegments(route);
+  if (segments[0] !== "advanced" || segments[1] !== "engine" || !segments[2]) return null;
+  if (segments[3] !== "collection") return null;
+  const contentTypeId = safeDecode(segments[2]) ?? segments[2];
+  const detailPageId =
+    segments[4] === "detail-template" && segments[5]
+      ? (safeDecode(segments[5]) ?? segments[5])
+      : null;
+  return {
+    contentTypeId,
+    detailPageId,
+  };
 };
 
 const action = (
@@ -380,12 +412,27 @@ export const useAssistantAdminContext = (
       }),
     [activeHref, route]
   );
+  const collectionWorkspaceRoute = useMemo(() => resolveCollectionWorkspaceRoute(route), [route]);
   const resolvedActiveSurface = activeSurfaceMatchesRoute(
     activeSurface,
-    runtimeSnapshot.selectedResource
+    runtimeSnapshot.selectedResource,
+    collectionWorkspaceRoute
   )
     ? activeSurface
     : null;
+  const collectionWorkspaceHint = useMemo(
+    () =>
+      collectionWorkspaceRoute
+        ? {
+            contentTypeId: collectionWorkspaceRoute.contentTypeId,
+            activeDetailPageId:
+              resolvedActiveSurface?.kind === "detail-page"
+                ? resolvedActiveSurface.detailPage.id
+                : null,
+          }
+        : null,
+    [collectionWorkspaceRoute, resolvedActiveSurface]
+  );
 
   return useMemo(
     () => ({
@@ -393,7 +440,8 @@ export const useAssistantAdminContext = (
       locale: readBrowserLocale(),
       runtimeSnapshot,
       activeSurface: resolvedActiveSurface,
+      collectionWorkspaceHint,
     }),
-    [resolvedActiveSurface, route, runtimeSnapshot]
+    [collectionWorkspaceHint, resolvedActiveSurface, route, runtimeSnapshot]
   );
 };

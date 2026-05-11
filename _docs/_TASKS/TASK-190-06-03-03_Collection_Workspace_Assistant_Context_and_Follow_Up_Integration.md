@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Admin Context
 **Estimated Effort:** Medium
 **Dependencies:** TASK-190-05-03-05, TASK-190-05-03-07, TASK-190-06-03-01, TASK-190-06-03-02
-**Status:** To Do
+**Status:** Done (2026-05-10)
 
 ---
 
@@ -272,6 +272,29 @@ return service.planActions({ prompt, context: hydratedContext });
   leak into frontend runtime snapshot fields; media context excludes raw bytes,
   signed/private URLs, upload tokens, and secret storage details.
 
+## Implementation Notes
+
+- `AssistantActionContext` now carries browser-owned
+  `collectionWorkspaceHint` plus server-hydrated `collectionWorkspace`.
+- `useAssistantAdminContext.ts` recognizes only the explicit
+  `/admin/advanced/engine/:contentTypeId/collection` route family for
+  workspace hints and keeps `selectedResource.kind = "content-type"`.
+- `DetailTemplateEditorPage.tsx` publishes `activeSurface.kind =
+  "detail-page"` through the existing `activeSurfaceContext.ts` transport.
+- `assistantActionSchemas.ts` accepts the strict `detail-page` active-surface
+  payload and identity-only `collectionWorkspaceHint`; browser-supplied
+  `collectionWorkspace` summaries remain rejected.
+- `assistantRoutes.ts` keeps explicit `detail-page` read planning permission
+  parity with `content:read` plus `widgets:read`, then passes route-resolved
+  permissions into the default hydrator.
+- `activeSurfaceHydration.ts` reuses `getCollectionWorkspaceSummary(...)` and
+  `getDetailPageDocument(...)` to hydrate the bounded workspace summary,
+  reconcile `activeDetailPageId`, drop stale/missing detail-page context, and
+  attach referenced widget-template summaries without adding a second lookup
+  path.
+- `providerPlanningContext.ts` exposes only the hydrated workspace package to
+  provider prompts; raw browser hints are sanitized before provider packaging.
+
 ## Testing Requirements
 
 - workspace route is recognized as `advancedModule: "engine"`.
@@ -328,8 +351,29 @@ return service.planActions({ prompt, context: hydratedContext });
   through the existing active-surface transport instead of inventing a second
   producer path.
 
+## Validation
+
+- `bun run test:vitest -- tests/vitest/ui/use-assistant-admin-context.test.tsx tests/vitest/ui/detail-template-editor.test.tsx tests/vitest/assistant/admin-context-service.test.ts tests/vitest/assistant/active-surface-hydration.test.ts tests/vitest/assistant/provider-planning-context.test.ts`
+  - 5 files passed / 39 tests passed.
+- `bun test tests/integration/routes/assistant.test.ts`
+  - 25 tests passed.
+- `bun run test:vitest`
+  - 578 files passed / 2578 tests passed.
+- `bun run test:bun`
+  - 752 tests passed / 204 files passed.
+- `bun run lint`
+  - passed.
+- `bun run scan:security:strict`
+  - passed.
+- `bun --cwd core lint:types`
+  - passed.
+- `bun --cwd core lint`
+  - passed.
+
 ## Documentation Updates Required
 
 - `_docs/ARCHITECTURE.md`
 - `_docs/ASSISTANT_SITE_BUILDER.md`
 - `_docs/_TASKS/README.md`
+- `_docs/CMS_API.md`
+- `_docs/_CHANGELOG/824-2026-05-10-task-190-collection-workspace-assistant-context.md`

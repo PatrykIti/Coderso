@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Cache + Prefetch
 **Estimated Effort:** Medium
 **Dependencies:** TASK-190-06-03-01-01, TASK-190-06-03-01-02
-**Status:** To Do
+**Status:** Done (2026-05-10)
 
 ---
 
@@ -97,3 +97,22 @@ prefetchEntries.unshift({
 - `_docs/ADMIN_CACHE.md`
 - `_docs/ADMIN_CACHE_MAP.md`
 - `_docs/_TASKS/README.md`
+
+## Completion Notes
+
+- Added `contentTypes:collectionWorkspace:<contentTypeId>` cache ownership under
+  `contentTypesClient.ts` with read-through cached helpers and strict cached
+  payload validation.
+- Added a predicate Engine prefetch matcher for
+  `/advanced/engine/:contentTypeId/collection` ahead of the generic
+  `/advanced/engine` prefix so workspace warmup is not swallowed by the list
+  route.
+- Replaced the placeholder workspace route with an `AdminShell` page that
+  hydrates the server-owned summary, surfaces canonical resource readiness, and
+  keeps cache-bus pending/refresh UX route-local.
+
+## Validation
+
+- `bun run test:vitest -- tests/vitest/admin/contentTypesClient.test.ts tests/vitest/admin/adminPrefetch.test.ts tests/vitest/ui/collection-workspace.test.tsx tests/vitest/admin/adminApp.test.tsx`
+  - 4 files passed / 34 tests passed.
+- Final full-gate validation is recorded in changelog entry `822`.

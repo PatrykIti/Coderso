@@ -8,6 +8,7 @@ import type {
   AssistantPlannedAction,
   AssistantPromptKind,
 } from "../actionPlanTypes";
+import type { AssistantResourceCatalogSnapshot } from "../adminContextTypes";
 import { normalizeAssistantActionPlan } from "../actionPlanSchema";
 import {
   normalizeBlueprintConflict,
@@ -26,6 +27,8 @@ import {
   validateListingCardConfigAgainstSchema,
 } from "./blueprintCardConfigMerger";
 import { mergeBlueprintSchemas } from "./blueprintSchemaMerger";
+import { matchExistingCompositionResources } from "./blueprintExistingResourceMatcher";
+import { buildBlueprintCompositionMetadata } from "./blueprintCompositionMetadata";
 
 const unique = <T>(items: T[]) => Array.from(new Set(items));
 
@@ -259,6 +262,7 @@ const buildBlueprintConflictNeedsInputPlan = (input: {
   intentFamily: AssistantIntentFamily;
   graph: BlueprintCompositionGraph;
   conflicts: BlueprintConflict[];
+  compositionMetadata: NonNullable<AssistantActionPlan["metadata"]>["blueprintComposition"];
 }): AssistantActionPlan => {
   const selectedLabels = [
     input.graph.primary?.capability.label ?? "Blueprint composition",
@@ -292,6 +296,11 @@ const buildBlueprintConflictNeedsInputPlan = (input: {
       ? `The requested composition includes gated modules (${(gatedLabels.length > 0 ? gatedLabels : selectedLabels).join(", ")}) that still need dedicated adapters.`
       : `The requested composition includes unresolved route/resource/schema conflicts across ${selectedLabels.join(", ")}.`,
     confidence: onlyGatedConflicts ? 0.58 : 0.42,
+    metadata: {
+      planner: "local",
+      providerDraftUsed: false,
+      blueprintComposition: input.compositionMetadata,
+    },
     assumptions: [
       ...input.graph.fragments.flatMap((fragment) => fragment.assumptions),
       `Selected capabilities: ${capabilityLabels.join(", ")}.`,
@@ -485,8 +494,13 @@ export const buildBlueprintActionMergeKey = (action: AssistantPlannedAction) => 
       return `${action.type}:${action.input.typeSlug}`;
     case "content-type.upsert":
       return `${action.type}:${action.input.slug}`;
-    case "custom-screen.upsert":
-      return `${action.type}:${action.input.contentTypeSlug}:${action.input.name}`;
+    case "custom-screen.upsert": {
+      const role = action.input.collectionRole ?? null;
+      if (role) {
+        return `${action.type}:${action.input.contentTypeSlug}:role:${role}:composition:${action.input.compositionKey ?? "default"}`;
+      }
+      return `${action.type}:${action.input.contentTypeSlug}:name:${action.input.name}`;
+    }
     case "listing-query.upsert":
       return `${action.type}:${action.input.name}`;
     case "listing-template.upsert":
@@ -533,6 +547,8 @@ export const mergeBlueprintActions = (
       if (
         left.input.name !== other.input.name ||
         left.input.contentTypeSlug !== other.input.contentTypeSlug ||
+        (left.input.collectionRole ?? null) !== (other.input.collectionRole ?? null) ||
+        (left.input.compositionKey ?? null) !== (other.input.compositionKey ?? null) ||
         left.input.status !== other.input.status ||
         left.input.showInSidebar !== other.input.showInSidebar ||
         left.input.sidebarLabel !== other.input.sidebarLabel
@@ -620,7 +636,10 @@ export const mergeBlueprintActions = (
   }
 };
 
-export const assembleBlueprintActions = (graph: BlueprintCompositionGraph) => {
+export const assembleBlueprintActions = (
+  graph: BlueprintCompositionGraph,
+  catalog?: AssistantResourceCatalogSnapshot | null
+) => {
   const mergedActions: AssistantPlannedAction[] = [];
   const conflicts: BlueprintConflict[] = [...graph.conflicts];
 
@@ -651,12 +670,19 @@ export const assembleBlueprintActions = (graph: BlueprintCompositionGraph) => {
 
   const listingFinalize = finalizeListingComposition(mergedActions);
   conflicts.push(...listingFinalize.conflicts);
+  const existingResourceMatches = matchExistingCompositionResources({
+    actions: listingFinalize.actions,
+    catalog,
+    resources: graph.resources,
+  });
+  conflicts.push(...existingResourceMatches.conflicts);
 
   return {
-    actions: [...listingFinalize.actions].sort(
+    actions: [...existingResourceMatches.actions].sort(
       (left, right) => actionOrder[left.type] - actionOrder[right.type]
     ),
     conflicts: dedupeConflicts(conflicts),
+    existingResourceMatches: existingResourceMatches.matches,
   };
 };
 
@@ -781,16 +807,24 @@ export const assembleComposedBlueprintPlan = (input: {
   promptKind: AssistantPromptKind;
   intentFamily: AssistantIntentFamily;
   graph: BlueprintCompositionGraph;
+  resourceCatalog?: AssistantResourceCatalogSnapshot | null;
 }): AssistantActionPlan | null => {
   if (!input.graph.primary) return null;
-  const assembled = assembleBlueprintActions(input.graph);
+  const assembled = assembleBlueprintActions(input.graph, input.resourceCatalog);
   const fatalConflicts = assembled.conflicts.filter((conflict) => conflict.severity === "error");
+  const compositionMetadata = buildBlueprintCompositionMetadata({
+    graph: input.graph,
+    existingResourceMatches: assembled.existingResourceMatches,
+    resolvedConflicts: assembled.conflicts.filter((conflict) => conflict.severity !== "error"),
+    unresolvedConflicts: fatalConflicts,
+  });
   if (fatalConflicts.length > 0) {
     return buildBlueprintConflictNeedsInputPlan({
       promptKind: input.promptKind,
       intentFamily: input.intentFamily,
       graph: input.graph,
       conflicts: fatalConflicts,
+      compositionMetadata,
     });
   }
 
@@ -829,6 +863,11 @@ export const assembleComposedBlueprintPlan = (input: {
       0.94,
       0.62 + input.graph.adjuncts.length * 0.07 - input.graph.gated.length * 0.04
     ),
+    metadata: {
+      planner: "local",
+      providerDraftUsed: false,
+      blueprintComposition: compositionMetadata,
+    },
     assumptions,
     questions: [],
     actions: assembled.actions,

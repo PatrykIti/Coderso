@@ -378,7 +378,7 @@ Rotacja klucza:
   - `LLM Guide` mode routes through `/assistant/actions/plan`; docs-only mode remains on `/assistant/chat`,
   - `responseKind=docs` and `responseKind=inspection` are non-mutating and cannot execute actions,
   - `responseKind=action_plan` requires strict typed actions before dry-run/execute,
-- blueprint composition conflicts remain non-executable: when the local setup planner or shadow comparison selects the composed blueprint path, blocking route/schema/resource collisions and gated domains downgrade the result into `needs_input` or `gated` with typed questions instead of returning partial executable actions,
+- blueprint composition conflicts remain non-executable: when the local setup planner or shadow comparison selects the composed blueprint path, blocking route/schema/resource collisions, media missing/ambiguous/upload/delete gates, manifest permission gaps, and gated domains downgrade the result into `needs_input` or `gated` with typed questions instead of returning partial executable actions,
   - generic CMS mutation mapping can only emit existing typed action contracts and never bypasses `actionRegistry.ts`, per-action permissions, dry-run, execute idempotency, or domain service revalidation,
   - surface hints and CMS filters are allowlisted planner fields and cannot encode arbitrary DB paths or privileged settings,
   - assistant planning state is short-lived, bounded, advisory-only, contains candidate summaries only, and is revalidated/re-resolved server-side before mutation planning,
@@ -386,7 +386,7 @@ Rotacja klucza:
   - provider draft assumptions are redacted before they appear in action plan metadata/review UI,
   - `context.includeResourceCatalog=true` hydratuje tylko server-side bounded/redacted resource catalog,
   - client-supplied `context.resourceCatalog` i inne unknown context fields sa odrzucane,
-  - resource catalog includes bounded page, post, entry, media, commerce, solution-kit, menu, content type, custom screen, listing, form, SEO, and widget summaries, but never raw page/post/entry data payloads,
+  - resource catalog includes bounded page, post, entry, media, commerce, solution-kit, menu, content type, custom screen, listing, form, SEO, and widget summaries, but never raw page/post/entry data payloads; custom screen summaries may include only the persisted canonical `collectionRole` / `compositionKey` metadata, not browser-authored aliases,
   - resource catalog nie zawiera form submissions, entry values, post raw data, media signed URLs, commerce payment secrets, provider credentials, API key material ani secret-like config keys,
   - detail-page binding resolution is read-only and document-driven: it uses safe
     dot-path access against validated bindings, blocks secret-like entry field
@@ -410,7 +410,7 @@ Rotacja klucza:
   - active page `template-section` inspection is internal-only and read-only, requires `content:read` for page context plus `widgets:read` for referenced template details, dedupes referenced template ids server-side, and exposes only bounded/redacted template block/config summaries,
   - template-backed page edit planning returns `needs_input` when page-instance vs reusable-template target is ambiguous; reusable-template patch planning requires a single server-hydrated referenced template block/field before any reviewed mutation can be proposed,
   - `widget-template.update` and `widget-template.block.patch` are internal-only, require active widget template context plus `widgets:write` for execute, revalidate template id/name/status/category where applicable, and preserve unrelated reusable template blocks/settings,
-  - `custom-screen.update` and `custom-screen.widget.patch` are internal-only, require active custom screen context plus `content:write` for execute, revalidate screen id/name/status/content type where applicable, preserve unrelated blocks/bindings, and never expose raw entry values,
+  - `custom-screen.update` and `custom-screen.widget.patch` are internal-only, require active custom screen context plus `content:write` for execute, revalidate screen id/name/status/content type where applicable, preserve unrelated blocks/bindings, persist canonical collection-link metadata only through `customScreenService`, and never expose raw entry values,
   - counted multi-target CMS plans are allowed only when trusted context resolves the exact expected target count and every target maps to a strict typed action; mismatched, broad, or partially invalid bulk prompts return `needs_input`,
   - explicit multi-create CMS plans require locally validated `mutation.patch.items[]` definitions and reject secret-like keys before mapping to typed upsert/create actions,
   - assistant execution cache invalidation broadcasts only known admin cache keys derived from strict action inputs or sanitized `resourceId`; provider text, target labels, secrets, submissions, cookies, CSRF tokens, and arbitrary client cache keys are never broadcast,
@@ -432,6 +432,16 @@ Rotacja klucza:
   - dry-run and execute routes request per-action permissions from `actionFamilyContracts.ts` before delegating to executor services,
   - contract-only families declare intended schema owners, permissions, anti-abuse notes, and secret-handling rules before implementation,
   - preview metadata strings from `actionDiffService.ts` redact secret-like `key=value` fragments before they are returned to admin UI/API clients,
+  - composed blueprint review metadata is schema-normalized under
+    `metadata.blueprintComposition`, derived only from local capability graph /
+    matcher state, rejects unknown fields, and redacts secret-like diagnostic
+    strings before returning primary/adjunct/gated choices or reuse/conflict
+    summaries to the admin UI,
+  - blueprint composition diagnostics serialize only prompt hashes, selected
+    capability ids, action type/count traces, conflict summaries, no-duplicate
+    decisions, candidate scores, and provider-draft shape; raw prompts,
+    provider snippets, secret-like keys, signed URLs, and provider-authored
+    executable payloads stay redacted/non-executable,
   - assistant redaction treats signed-url-like metadata keys as sensitive,
   - `execute` wymaga `idempotencyKey`,
   - idempotency jest persystowane w tabeli `assistant_action_executions` i scope’owane przez actor/plan/hash,

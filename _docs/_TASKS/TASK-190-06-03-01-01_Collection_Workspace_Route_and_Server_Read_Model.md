@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Collections + Server Read Model
 **Estimated Effort:** Medium
 **Dependencies:** TASK-190-05-02, TASK-190-05-03-07, TASK-190-06-02
-**Status:** To Do
+**Status:** Done (2026-05-10)
 
 ---
 
@@ -80,3 +80,24 @@ router.get("/admin/api/content-types/:id/collection-workspace", async (ctx) => {
 - `_docs/CMS_API.md`
 - `_docs/ARCHITECTURE.md`
 - `_docs/_TASKS/README.md`
+
+## Completion Notes
+
+- Added the server-owned `collectionWorkspaceService` read model for one
+  content type / collection root. The summary is bounded and exposes explicit
+  `canonical`, `linkedSecondary`, `unresolved`, and `candidates` buckets without
+  raw bindings, preview tokens, or browser-owned state.
+- Registered `GET /admin/api/content-types/:id/collection-workspace` under the
+  current content-type route family with `content:read` and existing
+  `content_type_not_found` error mapping.
+- Registered the canonical admin route
+  `/admin/advanced/engine/:contentTypeId/collection` with a minimal route
+  landing. Cached client helpers, specific Engine prefetch, and the full UI
+  shell remain owned by `TASK-190-06-03-01-03`.
+- Kept full deterministic canonical resolution and owner-read redaction deferred
+  to `TASK-190-06-03-01-02`; this leaf reads owner seams and returns candidates
+  rather than guessing.
+- 2026-05-11 correction: the completed summary should be read as bounded route /
+  detail / list / listing / admin-screen coverage. Forms/CTA, media, and SEO
+  need explicit owner-seam metadata before this endpoint can summarize them
+  without title/slug heuristics.

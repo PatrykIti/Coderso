@@ -4,8 +4,8 @@
 **Priority:** High
 **Category:** Assistant/Core + Execution Safety
 **Estimated Effort:** Large
-**Dependencies:** TASK-190-03, TASK-190-04, TASK-190-05, TASK-190-06
-**Status:** In Progress (2026-05-06)
+**Dependencies:** TASK-190-03, TASK-190-04, TASK-190-05, TASK-190-06 for full closure
+**Status:** Done (2026-05-10)
 
 ---
 
@@ -32,8 +32,14 @@ Current slice note:
   listing facets or listing-template card bindings need additional runtime
   fields, while schema-backed missing-field drift falls back to typed
   `facet_field_missing`,
-- DB-backed no-duplicate checks, broader review metadata, and later
-  detail/media closure work remain deferred.
+- DB-backed no-duplicate checks and existing-resource reuse are landed through
+  the bounded resource catalog plus `blueprintExistingResourceMatcher.ts`;
+  broader review metadata now lands through `blueprintCompositionMetadata.ts`.
+- Composed ready/needs-input plans now carry strict `metadata.blueprintComposition`
+  diagnostics for primary/adjunct/gated choices, merged resources, reuse matches,
+  conflicts, and deterministic candidate scores.
+- Generic detail-page resource packaging remains owned by `TASK-190-05-03-08`,
+  not by this action-assembly closure.
 
 ## Sub-Tasks
 

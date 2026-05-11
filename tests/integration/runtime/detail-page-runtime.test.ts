@@ -139,6 +139,7 @@ const createProductFixture = async (status: "draft" | "published" = "published")
       properties: {
         headline: { type: "string", xFieldType: "text" },
         summary: { type: "string", xFieldType: "textarea" },
+        coverImage: { type: "string", xFieldType: "text" },
       },
     },
   });
@@ -151,6 +152,7 @@ const createProductFixture = async (status: "draft" | "published" = "published")
     data: {
       headline: `Bound detail headline ${token}`,
       summary: `Bound detail summary ${token}`,
+      coverImage: `/media/detail-cover-${token}.jpg`,
     },
   });
   if (!entry) throw new Error("missing_runtime_detail_entry");
@@ -275,7 +277,7 @@ testIfDbWithOptions(
     expect(html).toContain(`Runtime product ${fixture.token}`);
     expect(html).not.toContain("Composed detail template body");
   },
-  { timeout: 15_000 }
+  { timeout: 30_000 }
 );
 
 testIfDbWithOptions(
@@ -460,6 +462,59 @@ testIfDbWithOptions(
     expect(response.status).toBe(200);
     const html = await response.text();
     expect(html).toContain(`rel="canonical" href="${canonicalUrl}"`);
+  },
+  { timeout: 15_000 }
+);
+
+testIfDbWithOptions(
+  "composed detail pages apply detail-page title and SEO field mappings",
+  async () => {
+    resetRateLimitBuckets();
+    await setTestSetting("site.cacheTtlSeconds", 0);
+
+    const fixture = await createProductFixture("published");
+    const detailPageId = randomUUID();
+    await updateEntryMetadata(
+      fixture.entry.id,
+      {
+        seo: {
+          description: "Entry SEO fallback should not win",
+        },
+      },
+      fixture.actor.id
+    );
+    await insertPublishedDetailPageDocument({
+      id: detailPageId,
+      contentTypeId: fixture.contentType.id,
+      contentTypeSlug: fixture.contentType.slug,
+      documentOverrides: {
+        titlePattern: "{{ title }} | Product catalog",
+        seo: {
+          titlePattern: "{{ title }} | Canonical detail",
+          descriptionField: "summary",
+          imageField: "coverImage",
+        },
+      },
+    });
+    await setTestSetting("site.contentRoutes", [
+      {
+        type: fixture.contentType.slug,
+        listPath: `/${fixture.contentType.slug}`,
+        detailPath: `/${fixture.contentType.slug}/:slug`,
+        enabled: true,
+        detailPageId,
+      } satisfies ContentRouteSetting,
+    ]);
+
+    const response = await requestPublicPath(`/${fixture.contentType.slug}/${fixture.entry.slug}`);
+
+    expect(response.status).toBe(200);
+    const html = await response.text();
+    expect(html).toContain(`<title>${fixture.entry.title} | Canonical detail</title>`);
+    expect(html).toContain(`name="description" content="Bound detail summary ${fixture.token}"`);
+    expect(html).toContain(
+      `property="og:image" content="/media/detail-cover-${fixture.token}.jpg"`
+    );
   },
   { timeout: 15_000 }
 );

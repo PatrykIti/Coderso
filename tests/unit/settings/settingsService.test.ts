@@ -1,7 +1,8 @@
 import { afterAll, expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "../../../core/db/client";
+import { settings } from "../../../core/db/schema";
 import {
   assertAssistantSettingsConsistency,
   deleteSetting,
@@ -31,6 +32,7 @@ const cleanupKeys = [
   "site.publicBaseUrl",
   "site.adminPath",
   "site.adminRedirectEnabled",
+  "site.contentRoutes",
   "auth.sessionTtlDays",
   "auth.resetTtlMinutes",
   "posts.editor.mode",
@@ -123,24 +125,14 @@ testIfDb("set/get/list/delete settings", async () => {
 });
 
 testIfDb("enforces auth TTL bounds and setup boolean type", async () => {
-  await expect(setSetting("auth.sessionTtlDays", 0)).rejects.toThrow(
-    "settings_value_invalid"
-  );
-  await expect(setSetting("auth.sessionTtlDays", 366)).rejects.toThrow(
-    "settings_value_invalid"
-  );
-  await expect(setSetting("auth.resetTtlMinutes", 4)).rejects.toThrow(
-    "settings_value_invalid"
-  );
-  await expect(setSetting("auth.resetTtlMinutes", 1441)).rejects.toThrow(
-    "settings_value_invalid"
-  );
+  await expect(setSetting("auth.sessionTtlDays", 0)).rejects.toThrow("settings_value_invalid");
+  await expect(setSetting("auth.sessionTtlDays", 366)).rejects.toThrow("settings_value_invalid");
+  await expect(setSetting("auth.resetTtlMinutes", 4)).rejects.toThrow("settings_value_invalid");
+  await expect(setSetting("auth.resetTtlMinutes", 1441)).rejects.toThrow("settings_value_invalid");
   await expect(setSetting("posts.editor.mode", "invalid")).rejects.toThrow(
     "settings_value_invalid"
   );
-  await expect(setSetting("setup.completed", "yes")).rejects.toThrow(
-    "settings_value_invalid"
-  );
+  await expect(setSetting("setup.completed", "yes")).rejects.toThrow("settings_value_invalid");
 
   await setSetting("auth.sessionTtlDays", 365);
   await setSetting("auth.resetTtlMinutes", 1440);
@@ -154,9 +146,7 @@ testIfDb("enforces auth TTL bounds and setup boolean type", async () => {
 });
 
 testIfDb("rejects unknown key", async () => {
-  await expect(setSetting("unknown.key", "value")).rejects.toThrow(
-    "settings_key_invalid"
-  );
+  await expect(setSetting("unknown.key", "value")).rejects.toThrow("settings_key_invalid");
 });
 
 testIfDb("rejects duplicate keys after alias normalization in bulk payload", async () => {
@@ -166,6 +156,47 @@ testIfDb("rejects duplicate keys after alias normalization in bulk payload", asy
       "site.publicBaseUrl": "https://canonical.example.com",
     })
   ).rejects.toThrow("settings_payload_invalid");
+});
+
+testIfDb("normalizes site.contentRoutes when reading stored settings", async () => {
+  const upsertRawContentRoutes = async (value: unknown) => {
+    await db
+      .insert(settings)
+      .values({ key: "site.contentRoutes", value, updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: settings.key,
+        set: { value, updatedAt: new Date() },
+      });
+  };
+
+  await upsertRawContentRoutes([
+    {
+      type: "products",
+      listPath: "products",
+      detailPath: "products/:slug",
+      enabled: true,
+      detailPageId: null,
+    },
+  ]);
+
+  const expected = [
+    {
+      type: "products",
+      listPath: "/products",
+      detailPath: "/products/:slug",
+      enabled: true,
+      detailPageId: null,
+    },
+  ];
+
+  expect(await getSetting("site.contentRoutes")).toEqual(expected);
+  expect((await listSettings())["site.contentRoutes"]).toEqual(expected);
+
+  await upsertRawContentRoutes([{ type: "", listPath: "", detailPath: "", enabled: true }]);
+
+  expect(await getSetting("site.contentRoutes")).toEqual([]);
+  expect((await listSettings())["site.contentRoutes"]).toEqual([]);
+  await db.delete(settings).where(eq(settings.key, "site.contentRoutes"));
 });
 
 testIfDb(
@@ -249,9 +280,7 @@ test("assertAssistantSettingsConsistency rejects invalid llm-guide combinations"
 });
 
 test("legacy assistant docs settings keys are no longer part of the active settings surface", async () => {
-  await expect(setSetting("assistant.docs.backend", "db")).rejects.toThrow(
-    "settings_key_invalid"
-  );
+  await expect(setSetting("assistant.docs.backend", "db")).rejects.toThrow("settings_key_invalid");
   await expect(setSetting("assistant.docs.sourceRoot", "docs")).rejects.toThrow(
     "settings_key_invalid"
   );

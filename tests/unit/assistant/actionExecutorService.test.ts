@@ -3,6 +3,7 @@ import { expect, test } from "bun:test";
 import { planAssistantActions } from "../../../core/services/assistant/actionPlannerService";
 import { buildCatalogFamilyPlan } from "../../../core/services/assistant/blueprints/catalogFamilyBlueprint";
 import { PRODUCT_CATALOG_PRESET } from "../../../core/services/assistant/blueprints/catalogFamilyPresets";
+import { matchExistingCompositionResources } from "../../../core/services/assistant/blueprints/blueprintExistingResourceMatcher";
 import { buildHouseProjectsCatalogPlan } from "../../../core/services/assistant/blueprints/houseProjectsCatalogBlueprint";
 import { buildLeadCaptureSitePlan } from "../../../core/services/assistant/blueprints/leadCaptureBlueprint";
 import { buildProductInquiryCatalogPlan } from "../../../core/services/assistant/blueprints/productInquiryBlueprint";
@@ -31,7 +32,10 @@ import type {
 } from "../../../core/services/assistant/actionPlanTypes";
 import type { AssistantUndoManifestItem } from "../../../core/services/assistant/actionUndoManifest";
 import type { DetailPageDocument } from "../../../core/services/content/detailPageTypes";
-import type { CustomScreenBinding } from "../../../core/services/customScreens/customScreenSchemas";
+import type {
+  CustomScreenBinding,
+  CustomScreenCollectionRole,
+} from "../../../core/services/customScreens/customScreenSchemas";
 import type { ContentRouteSetting } from "../../../core/services/settings/settingsService";
 import type { WidgetBlock } from "../../../core/widgets/types";
 
@@ -52,6 +56,8 @@ const createDeps = () => {
     name: string;
     contentTypeId: string;
     status: "draft" | "active";
+    collectionRole: CustomScreenCollectionRole | null;
+    compositionKey: string | null;
     showInSidebar: boolean;
     sidebarLabel: string | null;
     schemaVersion: 1;
@@ -307,6 +313,8 @@ const createDeps = () => {
       name: string;
       contentTypeId: string;
       status?: "draft" | "active";
+      collectionRole?: CustomScreenCollectionRole | null;
+      compositionKey?: string | null;
       showInSidebar?: boolean;
       sidebarLabel?: string | null;
       blocks?: WidgetBlock[] | null;
@@ -318,6 +326,8 @@ const createDeps = () => {
         name: input.name,
         contentTypeId: input.contentTypeId,
         status: input.status ?? "draft",
+        collectionRole: input.collectionRole ?? null,
+        compositionKey: input.compositionKey ?? null,
         showInSidebar: input.showInSidebar === true,
         sidebarLabel: input.sidebarLabel ?? null,
         schemaVersion: 1 as const,
@@ -339,6 +349,8 @@ const createDeps = () => {
         name?: string;
         contentTypeId?: string;
         status?: "draft" | "active";
+        collectionRole?: CustomScreenCollectionRole | null;
+        compositionKey?: string | null;
         showInSidebar?: boolean;
         sidebarLabel?: string | null;
         blocks?: WidgetBlock[] | null;
@@ -350,6 +362,8 @@ const createDeps = () => {
       if (input.name !== undefined) existing.name = input.name;
       if (input.contentTypeId !== undefined) existing.contentTypeId = input.contentTypeId;
       if (input.status !== undefined) existing.status = input.status;
+      if (input.collectionRole !== undefined) existing.collectionRole = input.collectionRole;
+      if (input.compositionKey !== undefined) existing.compositionKey = input.compositionKey;
       if (input.showInSidebar !== undefined) existing.showInSidebar = input.showInSidebar;
       if (input.sidebarLabel !== undefined) existing.sidebarLabel = input.sidebarLabel;
       if (input.blocks !== undefined) existing.blocks = input.blocks ?? [];
@@ -1296,6 +1310,8 @@ test("executeAssistantActionPlan updates custom screen metadata and binding mode
           patch: {
             name: "Projects Admin",
             status: "active",
+            collectionRole: "secondary-admin-screen",
+            compositionKey: "projects-secondary",
             showInSidebar: true,
             sidebarLabel: "Projects",
             binding: {
@@ -1324,6 +1340,8 @@ test("executeAssistantActionPlan updates custom screen metadata and binding mode
 
   expect(executed.summary.update).toBe(1);
   expect(deps.__state.customScreens[0]?.name).toBe("Projects Admin");
+  expect(deps.__state.customScreens[0]?.collectionRole).toBe("secondary-admin-screen");
+  expect(deps.__state.customScreens[0]?.compositionKey).toBe("projects-secondary");
   expect(deps.__state.customScreens[0]?.showInSidebar).toBe(true);
   expect(deps.__state.customScreens[0]?.bindings[0]?.mode).toBe("readwrite");
   expect(deps.__state.customScreens[0]?.blocks[0]?.id).toBe("hero-1");
@@ -1344,6 +1362,8 @@ test("dryRunAssistantActionPlan treats matching custom screen upserts as noop", 
     name: "House Projects",
     contentTypeId: contentType.id,
     status: "active",
+    collectionRole: "canonical-admin-screen",
+    compositionKey: "house-projects-catalog",
     showInSidebar: true,
     sidebarLabel: "House Projects",
     blocks: [
@@ -1388,6 +1408,8 @@ test("dryRunAssistantActionPlan treats matching custom screen upserts as noop", 
           name: "House Projects",
           contentTypeSlug: "house-projects",
           status: "active",
+          collectionRole: "canonical-admin-screen",
+          compositionKey: "house-projects-catalog",
           showInSidebar: true,
           sidebarLabel: "House Projects",
           blocks: [
@@ -1416,6 +1438,369 @@ test("dryRunAssistantActionPlan treats matching custom screen upserts as noop", 
   const preview = await dryRunAssistantActionPlan({ plan }, deps);
 
   expect(preview.changes[0]?.operation).toBe("noop");
+});
+
+test("executeAssistantActionPlan reuses renamed custom screens by composition metadata", async () => {
+  const deps = createDeps();
+  const contentType = await deps.createContentType({
+    name: "Products",
+    slug: "products",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {},
+    },
+  });
+  const existing = await deps.createCustomScreen({
+    name: "Products Admin Renamed",
+    contentTypeId: contentType.id,
+    status: "active",
+    collectionRole: "canonical-admin-screen",
+    compositionKey: "product-catalog",
+    showInSidebar: true,
+    sidebarLabel: "Products",
+    blocks: [
+      {
+        id: "header-1",
+        type: "screen-record-header",
+        data: {
+          title: "Old overview",
+        },
+      },
+    ],
+    bindings: [],
+  });
+
+  const plan: AssistantActionPlan = {
+    id: "plan-custom-screen-upsert-renamed",
+    status: "ready",
+    intentId: "custom-screen-upsert-renamed",
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+    title: "Upsert product admin screen",
+    answer: "I can update the existing product admin screen.",
+    summary: "Reuse the canonical screen even if it was renamed.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "custom-screen-upsert-1",
+        type: "custom-screen.upsert",
+        title: "Create products admin screen",
+        description: "Keep the canonical Products screen contract.",
+        input: {
+          name: "Products",
+          contentTypeSlug: "products",
+          status: "active",
+          collectionRole: "canonical-admin-screen",
+          compositionKey: "product-catalog",
+          showInSidebar: true,
+          sidebarLabel: "Products",
+          blocks: [
+            {
+              id: "header-1",
+              type: "screen-record-header",
+              data: {
+                title: "Product overview",
+              },
+            },
+          ],
+          bindings: [],
+        },
+      },
+    ],
+  };
+
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.changes[0]?.operation).toBe("update");
+
+  const executed = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-custom-screen-upsert-renamed",
+    },
+    deps
+  );
+
+  expect(executed.summary.failed).toBe(0);
+  expect(executed.summary.update).toBe(1);
+  expect(deps.__state.customScreens).toHaveLength(1);
+  expect(deps.__state.customScreens[0]?.id).toBe(existing.id);
+  expect(deps.__state.customScreens[0]?.name).toBe("Products");
+  expect(deps.__state.customScreens[0]?.blocks[0]?.data.title).toBe("Product overview");
+});
+
+test("executeAssistantActionPlan reuses legacy custom screens by name before metadata exists", async () => {
+  const deps = createDeps();
+  const contentType = await deps.createContentType({
+    name: "Products",
+    slug: "products",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {},
+    },
+  });
+  const existing = await deps.createCustomScreen({
+    name: "Products",
+    contentTypeId: contentType.id,
+    status: "active",
+    collectionRole: null,
+    compositionKey: null,
+    showInSidebar: true,
+    sidebarLabel: "Products",
+    blocks: [
+      {
+        id: "header-1",
+        type: "screen-record-header",
+        data: {
+          title: "Legacy overview",
+        },
+      },
+    ],
+    bindings: [],
+  });
+
+  const plan: AssistantActionPlan = {
+    id: "plan-custom-screen-upsert-legacy",
+    status: "ready",
+    intentId: "custom-screen-upsert-legacy",
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+    title: "Upsert product admin screen",
+    answer: "I can update the legacy product admin screen.",
+    summary: "Reuse the canonical screen before metadata existed.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "custom-screen-upsert-1",
+        type: "custom-screen.upsert",
+        title: "Create products admin screen",
+        description: "Keep the canonical Products screen contract.",
+        input: {
+          name: "Products",
+          contentTypeSlug: "products",
+          status: "active",
+          collectionRole: "canonical-admin-screen",
+          compositionKey: "product-catalog",
+          showInSidebar: true,
+          sidebarLabel: "Products",
+          blocks: [
+            {
+              id: "header-1",
+              type: "screen-record-header",
+              data: {
+                title: "Product overview",
+              },
+            },
+          ],
+          bindings: [],
+        },
+      },
+    ],
+  };
+
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.changes[0]?.operation).toBe("update");
+
+  const executed = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-custom-screen-upsert-legacy",
+    },
+    deps
+  );
+
+  expect(executed.summary.failed).toBe(0);
+  expect(executed.summary.update).toBe(1);
+  expect(deps.__state.customScreens).toHaveLength(1);
+  expect(deps.__state.customScreens[0]?.id).toBe(existing.id);
+  expect(deps.__state.customScreens[0]?.collectionRole).toBe("canonical-admin-screen");
+  expect(deps.__state.customScreens[0]?.compositionKey).toBe("product-catalog");
+  expect(deps.__state.customScreens[0]?.blocks[0]?.data.title).toBe("Product overview");
+});
+
+test("executeAssistantActionPlan rejects same-name custom screens owned by other metadata", async () => {
+  const deps = createDeps();
+  const contentType = await deps.createContentType({
+    name: "Products",
+    slug: "products",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {},
+    },
+  });
+  const existing = await deps.createCustomScreen({
+    name: "Products",
+    contentTypeId: contentType.id,
+    status: "active",
+    collectionRole: "secondary-admin-screen",
+    compositionKey: "comparison",
+    showInSidebar: true,
+    sidebarLabel: "Products",
+    blocks: [
+      {
+        id: "header-1",
+        type: "screen-record-header",
+        data: {
+          title: "Comparison overview",
+        },
+      },
+    ],
+    bindings: [],
+  });
+
+  const plan: AssistantActionPlan = {
+    id: "plan-custom-screen-upsert-conflicting-metadata",
+    status: "ready",
+    intentId: "custom-screen-upsert-conflicting-metadata",
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+    title: "Upsert product admin screen",
+    answer: "I need the exact screen before updating this admin surface.",
+    summary: "Do not overwrite a same-name screen from another composition.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "custom-screen-upsert-1",
+        type: "custom-screen.upsert",
+        title: "Create products admin screen",
+        description: "Keep the canonical Products screen contract.",
+        input: {
+          name: "Products",
+          contentTypeSlug: "products",
+          status: "active",
+          collectionRole: "canonical-admin-screen",
+          compositionKey: "product-catalog",
+          showInSidebar: true,
+          sidebarLabel: "Products",
+          blocks: [
+            {
+              id: "header-1",
+              type: "screen-record-header",
+              data: {
+                title: "Product overview",
+              },
+            },
+          ],
+          bindings: [],
+        },
+      },
+    ],
+  };
+
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.changes[0]?.conflicts[0]?.code).toBe("assistant_action_dependency_conflict");
+
+  const executed = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-custom-screen-upsert-conflicting-metadata",
+    },
+    deps
+  );
+
+  expect(executed.summary.failed).toBe(1);
+  expect(executed.results[0]?.errorCode).toBe("assistant_action_dependency_conflict");
+  expect(deps.__state.customScreens).toHaveLength(1);
+  expect(deps.__state.customScreens[0]?.id).toBe(existing.id);
+  expect(deps.__state.customScreens[0]?.collectionRole).toBe("secondary-admin-screen");
+  expect(deps.__state.customScreens[0]?.compositionKey).toBe("comparison");
+  expect(deps.__state.customScreens[0]?.blocks[0]?.data.title).toBe("Comparison overview");
+});
+
+test("executeAssistantActionPlan rejects ambiguous legacy custom screen name reuse", async () => {
+  const deps = createDeps();
+  const contentType = await deps.createContentType({
+    name: "Products",
+    slug: "products",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {},
+    },
+  });
+  await deps.createCustomScreen({
+    name: "Products",
+    contentTypeId: contentType.id,
+    status: "active",
+    collectionRole: null,
+    compositionKey: null,
+    showInSidebar: true,
+    sidebarLabel: "Products",
+    blocks: [],
+    bindings: [],
+  });
+  await deps.createCustomScreen({
+    name: "Products",
+    contentTypeId: contentType.id,
+    status: "draft",
+    collectionRole: null,
+    compositionKey: null,
+    showInSidebar: false,
+    sidebarLabel: null,
+    blocks: [],
+    bindings: [],
+  });
+
+  const plan: AssistantActionPlan = {
+    id: "plan-custom-screen-upsert-ambiguous-legacy",
+    status: "ready",
+    intentId: "custom-screen-upsert-ambiguous-legacy",
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+    title: "Upsert product admin screen",
+    answer: "I need the exact legacy screen before updating this admin surface.",
+    summary: "Do not pick between ambiguous legacy screens.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "custom-screen-upsert-1",
+        type: "custom-screen.upsert",
+        title: "Create products admin screen",
+        description: "Keep the canonical Products screen contract.",
+        input: {
+          name: "Products",
+          contentTypeSlug: "products",
+          status: "active",
+          collectionRole: "canonical-admin-screen",
+          compositionKey: "product-catalog",
+          showInSidebar: true,
+          sidebarLabel: "Products",
+          blocks: [],
+          bindings: [],
+        },
+      },
+    ],
+  };
+
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.changes[0]?.conflicts[0]?.code).toBe("assistant_action_dependency_conflict");
+
+  const executed = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-custom-screen-upsert-ambiguous-legacy",
+    },
+    deps
+  );
+
+  expect(executed.summary.failed).toBe(1);
+  expect(executed.results[0]?.errorCode).toBe("assistant_action_dependency_conflict");
+  expect(deps.__state.customScreens).toHaveLength(2);
+  expect(deps.__state.customScreens.every((entry) => entry.collectionRole === null)).toBe(true);
 });
 
 test("executeAssistantActionPlan patches custom screen widget block data", async () => {
@@ -2160,6 +2545,88 @@ test("executeAssistantActionPlan updates listing query and template config witho
   expect(deps.__state.listingTemplates[0]?.layout).toBe("list");
   expect(deps.__state.listingTemplates[0]?.config.columns).toBe(3);
   expect(deps.__state.listingTemplates[0]?.config.card).toEqual({ showImage: false });
+});
+
+test("listing query upsert blocks ambiguous name matches", async () => {
+  const deps = createDeps();
+  const contentType = await deps.createContentType({
+    name: "Products",
+    slug: "products",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        title: { type: "string" },
+      },
+    },
+  });
+  const queryPayload = {
+    name: "Products Catalog Query",
+    description: "Product listing",
+    query: {
+      source: "entries" as const,
+      sourceConfig: {
+        contentTypeId: contentType.id,
+        includeDrafts: false,
+      },
+      filters: [],
+      sort: [{ field: "title", dir: "asc" as const }],
+      pagination: { limit: 12, offset: 0 },
+      fields: ["title"],
+    },
+  };
+  await deps.createListingQuery(queryPayload);
+  await deps.createListingQuery(queryPayload);
+
+  const plan: AssistantActionPlan = {
+    id: "plan-ambiguous-listing-query",
+    status: "ready",
+    intentId: "listing-query-upsert",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: "Update listing query",
+    answer: "I can update the listing query.",
+    summary: "Update listing query.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "listing-query-upsert-ambiguous",
+        type: "listing-query.upsert",
+        title: "Update Products Catalog Query",
+        description: "Update selected listing query.",
+        input: {
+          name: "Products Catalog Query",
+          description: "Updated product listing",
+          contentTypeSlug: "products",
+          fields: ["title", "slug"],
+          includeDrafts: false,
+          limit: 24,
+          sort: [{ field: "title", dir: "asc" }],
+        },
+      },
+    ],
+  };
+
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.changes[0]?.conflicts[0]?.code).toBe("assistant_action_dependency_conflict");
+
+  const executed = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-listing-query-upsert-ambiguous",
+    },
+    deps
+  );
+
+  expect(executed.summary.failed).toBe(1);
+  expect(executed.results[0]?.errorCode).toBe("assistant_action_dependency_conflict");
+  expect(deps.__state.listingQueries).toHaveLength(2);
+  expect(
+    deps.__state.listingQueries.every((query) => query.description === "Product listing")
+  ).toBe(true);
 });
 
 test("executeAssistantActionPlan deletes empty forms through explicit delete actions", async () => {
@@ -3691,6 +4158,43 @@ test("executeAssistantActionPlan creates resources and reuses idempotency key", 
   expect(second.idempotency).toEqual({ replayed: true, scope: "actor_plan_hash" });
 });
 
+test("executeAssistantActionPlan rejects memory idempotency conflicts", async () => {
+  const plan = buildHouseProjectsCatalogPlan();
+  const deps = createDeps();
+  const idempotencyKey = "assistant-house-projects-memory-conflict-1";
+
+  await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey,
+    },
+    deps
+  );
+
+  await expect(
+    executeAssistantActionPlan(
+      {
+        plan: { ...plan, id: "plan-house-projects-changed" },
+        actorId: "user-1",
+        idempotencyKey,
+      },
+      deps
+    )
+  ).rejects.toThrow("assistant_action_idempotency_conflict");
+
+  await expect(
+    executeAssistantActionPlan(
+      {
+        plan,
+        actorId: "user-2",
+        idempotencyKey,
+      },
+      deps
+    )
+  ).rejects.toThrow("assistant_action_idempotency_conflict");
+});
+
 test("executeAssistantActionPlan replays persisted idempotency result", async () => {
   const plan = buildHouseProjectsCatalogPlan();
   const deps = createDeps();
@@ -4804,6 +5308,9 @@ test("executeAssistantActionPlan upserts detail-page documents through the conte
 
   expect(first.summary.failed).toBe(0);
   expect(first.summary.create).toBe(1);
+  expect(first.results[0]?.adminHref).toBe(
+    `/admin/advanced/engine/${contentType.id}/collection/detail-template/34d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c`
+  );
   expect(deps.__state.detailPages).toHaveLength(1);
   expect(deps.__state.detailPages[0]?.currentDocument.contentTypeSlug).toBe("products");
   expect(deps.__state.detailPages[0]?.publishedDocument?.contentTypeSlug).toBe("products");
@@ -4843,6 +5350,188 @@ test("executeAssistantActionPlan upserts detail-page documents through the conte
   expect(deps.__state.detailPages[0]?.name).toBe("Products detail template updated");
   expect(deps.__state.detailPages[0]?.status).toBe("draft");
   expect(deps.__state.detailPages[0]?.publishedDocument).toBeNull();
+});
+
+test("executeAssistantActionPlan consumes matched existing detail-page ids without creating duplicates", async () => {
+  const deps = createDeps();
+  const contentType = {
+    id: "64d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+    name: "Products",
+    slug: "products",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        headline: { type: "string", xFieldType: "text" },
+      },
+    },
+    createdAt: new Date("2026-04-10T12:00:00.000Z"),
+    updatedAt: new Date("2026-04-10T12:00:00.000Z"),
+  };
+  deps.__state.contentTypes.push(contentType);
+  const existingDetailPageId = "34d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c";
+  const plannedDetailPageId = "44d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c";
+  const existingDocument: DetailPageDocument = {
+    schemaVersion: 1,
+    id: existingDetailPageId,
+    name: "Products detail template",
+    contentTypeId: contentType.id,
+    contentTypeSlug: "products",
+    status: "published",
+    titlePattern: "{{ title }}",
+    settings: {
+      template: "detail",
+      layout: {
+        wrapper: {
+          container: "default",
+          padding: { top: "md", bottom: "lg" },
+          background: {
+            color: "#ffffff",
+            image: null,
+            media: { type: "none", source: "external", src: null },
+          },
+        },
+        sections: {
+          gap: "lg",
+          defaults: {
+            container: "default",
+            padding: { top: "xl", bottom: "xl" },
+            margin: { top: "none", bottom: "none" },
+          },
+        },
+        applyDefaultsToNewBlocks: false,
+      },
+    },
+    blocks: [{ id: "hero-1", type: "hero", variant: "centered", data: {} }],
+    bindings: [],
+  };
+  deps.__state.detailPages.push({
+    id: existingDetailPageId,
+    name: existingDocument.name,
+    contentTypeId: contentType.id,
+    status: "published",
+    currentDocument: existingDocument,
+    publishedDocument: existingDocument,
+    createdAt: new Date("2026-04-10T12:00:00.000Z"),
+    updatedAt: new Date("2026-04-10T12:00:00.000Z"),
+    publishedAt: new Date("2026-04-10T12:00:00.000Z"),
+  });
+  deps.__state.contentRoutes.push({
+    type: "products",
+    listPath: "/products",
+    detailPath: "/products/:slug",
+    enabled: true,
+    detailPageId: existingDetailPageId,
+  });
+
+  const plannedDocument: DetailPageDocument = {
+    ...existingDocument,
+    id: plannedDetailPageId,
+    name: "Products detail template updated",
+    status: "draft",
+  };
+  const matched = matchExistingCompositionResources({
+    actions: [
+      {
+        id: "detail-page-products",
+        type: "detail-page.upsert",
+        title: "Update products detail template",
+        description: "Update the linked products detail template.",
+        input: {
+          document: plannedDocument,
+        },
+      },
+      {
+        id: "route-products",
+        type: "setting.content-route.upsert",
+        title: "Link products route",
+        description: "Link the products route.",
+        input: {
+          typeSlug: "products",
+          listPath: "/products",
+          detailPath: "/products/:slug",
+          enabled: true,
+          detailPageId: plannedDetailPageId,
+        },
+      },
+    ],
+    catalog: {
+      schemaVersion: 1,
+      generatedAt: "2026-05-10T10:00:00.000Z",
+      budget: { maxItemsPerGroup: 50, maxFieldsPerResource: 24, truncated: false },
+      pages: [],
+      posts: [],
+      entries: [],
+      contentTypes: [
+        {
+          id: contentType.id,
+          slug: contentType.slug,
+          name: contentType.name,
+          entryCount: 0,
+          fields: [],
+        },
+      ],
+      customScreens: [],
+      detailPages: [
+        {
+          id: existingDetailPageId,
+          name: existingDocument.name,
+          status: "published",
+          contentTypeId: contentType.id,
+          contentTypeSlug: "products",
+          linkedRouteType: "products",
+          updatedAt: "2026-04-10T12:00:00.000Z",
+          blockCount: 1,
+          bindingCount: 0,
+        },
+      ],
+      listings: { queries: [], templates: [] },
+      forms: [],
+      menus: [],
+      seoDocuments: [],
+      widgets: [],
+      media: [],
+      commerce: { products: [], collections: [] },
+      solutionKits: [],
+      warnings: [],
+    },
+  });
+
+  expect(matched.conflicts).toHaveLength(0);
+  expect(matched.matches[0]).toMatchObject({
+    existingId: existingDetailPageId,
+    reason: "canonical_link",
+  });
+
+  const result = await executeAssistantActionPlan(
+    {
+      plan: {
+        id: "plan-detail-page-existing-resource-match",
+        status: "ready",
+        intentId: "detail-page-existing-resource-match",
+        promptKind: "setup_request",
+        intentFamily: "product_catalog",
+        title: "Update detail template",
+        answer: "I can update the existing detail template.",
+        summary: "Update a route-linked products detail template.",
+        confidence: 0.91,
+        assumptions: [],
+        questions: [],
+        actions: matched.actions,
+      },
+      actorId: "user-1",
+      idempotencyKey: "assistant-detail-page-existing-resource-match-1",
+    },
+    deps
+  );
+
+  expect(result.summary.failed).toBe(0);
+  expect(result.summary.update).toBe(1);
+  expect(result.summary.noop).toBe(1);
+  expect(deps.__state.detailPages).toHaveLength(1);
+  expect(deps.__state.detailPages[0]?.id).toBe(existingDetailPageId);
+  expect(deps.__state.detailPages[0]?.name).toBe("Products detail template updated");
+  expect(deps.__state.contentRoutes[0]?.detailPageId).toBe(existingDetailPageId);
 });
 
 test("executeAssistantActionPlan fails detail-page upserts that reuse an id across content types", async () => {

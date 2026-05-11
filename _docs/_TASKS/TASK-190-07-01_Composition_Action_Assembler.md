@@ -4,8 +4,8 @@
 **Priority:** High
 **Category:** Assistant/Core + Action Assembly
 **Estimated Effort:** Large
-**Dependencies:** TASK-190-03-01, TASK-190-04, TASK-190-05, TASK-190-06
-**Status:** In Progress (2026-05-06)
+**Dependencies:** TASK-190-03-01, TASK-190-04, TASK-190-05, TASK-190-06 for full closure
+**Status:** Done (2026-05-10)
 
 ---
 
@@ -14,18 +14,19 @@
 Convert the composed graph into existing typed assistant actions.
 
 Current slice note:
-- current catalog/form/page fragments can already be assembled and deduped in
-  tests,
-- the setup planner now keeps supported multi-capability and
-  primary-plus-gated setup requests on the composed blueprint path before any
-  provider drafting fallback can bypass them,
-- blocking graph conflicts now downgrade the composed result into typed
+- catalog/form/page/detail/listing fragments assemble deterministically through
+  existing typed assistant actions,
+- the setup planner keeps supported multi-capability and primary-plus-gated
+  setup requests on the composed blueprint path before provider drafting can
+  bypass them,
+- blocking graph conflicts downgrade the composed result into typed
   `needs_input` / `gated` plans instead of failing with a null result,
-- compatible listing facet/card fragments now also widen
-  `listing-query.upsert.fields` automatically after merge so runtime filters and
-  card bindings keep the projection data they need,
-- broader refinement cutover, review metadata, detail-page ordering, and later
-  media/existing-resource flows remain deferred.
+- compatible listing facet/card fragments widen `listing-query.upsert.fields`
+  automatically after merge so runtime filters and card bindings keep the
+  projection data they need,
+- existing-resource matching and review metadata are now handled by the
+  downstream `TASK-190-07-02` and `TASK-190-07-03` seams without adding a second
+  executor.
 
 ## Sub-Tasks
 

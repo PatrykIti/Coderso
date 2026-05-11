@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Cache + Error Parity
 **Estimated Effort:** Medium
 **Dependencies:** TASK-190-05-03-05, TASK-190-05-03-07-01, TASK-190-05-03-07-02
-**Status:** To Do
+**Status:** Done (2026-05-10)
 
 ---
 
@@ -13,6 +13,19 @@
 
 Add the admin cached-client family for detail pages and align delete/content-type
 conflict behavior across manual admin flows and assistant execution results.
+
+Current closure:
+
+- `detailPagesClient.ts` now owns list/detail, create/update/delete,
+  preview/publish/unpublish/autosave, and revision helpers for the internal
+  detail-page route family.
+- Detail-page cache keys are represented as an unfiltered list key, a
+  `contentTypeId`-scoped list key, and a detail key.
+- Assistant `detail-page.upsert` execution results clear and broadcast the same
+  cache-key family as manual admin mutations.
+- The `content_type_has_detail_pages` route/error boundary was already present
+  in `contentTypeRoutes.ts`; this leaf kept the admin client/cache behavior in
+  parity with that existing delete conflict contract.
 
 ## Sub-Tasks
 
@@ -81,6 +94,9 @@ const mapContentTypeError = (error) => {
 - Content-type delete route/service coverage maps `content_type_has_detail_pages`
   through the existing API boundary.
 - Linked detail pages reject delete until the canonical route link is cleared.
+- Targeted validation for this leaf:
+  - `bun run vitest run --config vitest.config.ts tests/vitest/admin/detailPagesClient.test.ts tests/vitest/admin/assistantClient.test.ts`
+  - `set -a && source .env && set +a && bun test --parallel=1 tests/integration/routes/contentTypes.test.ts tests/integration/routes/detailPages.test.ts`
 
 ## Documentation Updates Required
 

@@ -162,6 +162,9 @@ import { applyPageWidgetDataPatch } from "./pageWidgetPatch";
 
 type ExecutionCacheEntry = {
   result: AssistantActionExecuteResult;
+  actorId: string;
+  planId: string;
+  planHash: string;
   savedAt: number;
 };
 
@@ -174,6 +177,24 @@ const cleanupExecutionCache = (now = Date.now()) => {
       executionCache.delete(key);
     }
   }
+};
+
+const readMemoryExecutionResult = (input: {
+  idempotencyKey: string;
+  actorId: string;
+  planId: string;
+  planHash: string;
+}) => {
+  const cached = executionCache.get(input.idempotencyKey);
+  if (!cached) return null;
+  if (
+    cached.actorId !== input.actorId ||
+    cached.planId !== input.planId ||
+    cached.planHash !== input.planHash
+  ) {
+    throw new Error("assistant_action_idempotency_conflict");
+  }
+  return cached.result;
 };
 
 const countExecutionOperations = (items: AssistantActionExecutionItem[]) =>
@@ -622,6 +643,23 @@ type ActionExecutorDeps = {
   saveExecutionResult?: typeof saveAssistantActionExecutionResult;
 };
 
+type CustomScreenRecord = Awaited<ReturnType<ActionExecutorDeps["listCustomScreens"]>>[number];
+type ListingQueryRecord = Awaited<ReturnType<ActionExecutorDeps["listListingQueries"]>>[number];
+
+const findListingQueryNameMatches = async (
+  name: string,
+  deps: ActionExecutorDeps
+): Promise<ListingQueryRecord[]> =>
+  (await deps.listListingQueries()).filter((entry) => entry.name === name);
+
+const listingQueryNameConflict = (
+  name: string
+): AssistantActionPreviewChange["conflicts"][number] => ({
+  code: "assistant_action_dependency_conflict",
+  severity: "error",
+  message: `Listing query name "${name}" is not unique. Re-run planning with an exact listing query id before updating it.`,
+});
+
 const defaultDeps: ActionExecutorDeps = {
   getSetting,
   setSetting,
@@ -688,6 +726,82 @@ const defaultDeps: ActionExecutorDeps = {
   validateSiteKitRun: validateGuidedSiteBuilderRun,
   getExecutionResult: getAssistantActionExecutionByIdempotencyKey,
   saveExecutionResult: saveAssistantActionExecutionResult,
+};
+
+const findExistingCustomScreenForUpsert = async (
+  action: AssistantCustomScreenUpsertAction,
+  deps: ActionExecutorDeps
+): Promise<{
+  contentType: ContentTypeRecord | null;
+  existing: CustomScreenRecord | null;
+  conflicts: AssistantActionPreviewChange["conflicts"];
+}> => {
+  const contentType = await deps.getContentTypeBySlug(action.input.contentTypeSlug);
+  if (!contentType) {
+    return { contentType: null, existing: null, conflicts: [] };
+  }
+
+  const role = action.input.collectionRole ?? null;
+  const compositionKey = action.input.compositionKey ?? null;
+  const screens = (await deps.listCustomScreens()).filter(
+    (entry) => entry.contentTypeId === contentType.id
+  );
+  const metadataCandidates = role
+    ? screens.filter(
+        (entry) =>
+          entry.collectionRole === role && (entry.compositionKey ?? null) === compositionKey
+      )
+    : [];
+  const nameCandidates = screens.filter((entry) => entry.name === action.input.name);
+  const legacyNameCandidates = role
+    ? nameCandidates.filter(
+        (entry) => entry.collectionRole === null && (entry.compositionKey ?? null) === null
+      )
+    : nameCandidates;
+  const hasConflictingMetadataName =
+    role &&
+    metadataCandidates.length === 0 &&
+    nameCandidates.length !== legacyNameCandidates.length;
+  const candidates =
+    metadataCandidates.length > 0
+      ? metadataCandidates
+      : hasConflictingMetadataName
+        ? []
+        : legacyNameCandidates;
+
+  if (hasConflictingMetadataName) {
+    return {
+      contentType,
+      existing: null,
+      conflicts: [
+        {
+          code: "assistant_action_dependency_conflict",
+          severity: "error",
+          message: `Custom screen "${action.input.name}" already belongs to another composition; choose the exact collection screen before composing an update.`,
+        },
+      ],
+    };
+  }
+
+  if (candidates.length > 1) {
+    return {
+      contentType,
+      existing: null,
+      conflicts: [
+        {
+          code: "assistant_action_dependency_conflict",
+          severity: "error",
+          message: `Custom screen target for "${action.input.name}" is ambiguous; choose the exact collection screen before composing an update.`,
+        },
+      ],
+    };
+  }
+
+  return {
+    contentType,
+    existing: candidates[0] ?? null,
+    conflicts: [],
+  };
 };
 
 const assertAssistantActionPlan = (value: unknown): AssistantActionPlan => {
@@ -787,17 +901,17 @@ const buildCustomScreenPreview = async (
   action: AssistantCustomScreenUpsertAction,
   deps: ActionExecutorDeps
 ) => {
-  const contentType = await deps.getContentTypeBySlug(action.input.contentTypeSlug);
-  const existing = contentType
-    ? ((await deps.listCustomScreens()).find(
-        (entry) => entry.contentTypeId === contentType.id && entry.name === action.input.name
-      ) ?? null)
-    : null;
+  const { contentType, existing, conflicts } = await findExistingCustomScreenForUpsert(
+    action,
+    deps
+  );
   const comparableExisting = existing
     ? {
         name: existing.name,
         contentTypeSlug: action.input.contentTypeSlug,
         status: existing.status,
+        collectionRole: existing.collectionRole ?? null,
+        compositionKey: existing.compositionKey ?? null,
         showInSidebar: existing.showInSidebar,
         sidebarLabel: existing.sidebarLabel,
         blocks:
@@ -816,6 +930,11 @@ const buildCustomScreenPreview = async (
             : existing.bindings,
       }
     : null;
+  const nextValue = {
+    ...action.input,
+    collectionRole: action.input.collectionRole ?? null,
+    compositionKey: action.input.compositionKey ?? null,
+  };
 
   return createPreviewChange({
     action,
@@ -825,8 +944,9 @@ const buildCustomScreenPreview = async (
     warnings: contentType
       ? []
       : ["The content type does not exist yet and will be created earlier in the plan."],
+    conflicts,
     beforeValue: comparableExisting,
-    nextValue: action.input,
+    nextValue,
   });
 };
 
@@ -901,6 +1021,10 @@ const applyCustomScreenUpdatePatch = (
   return {
     name: patch.name ?? existing.name,
     status: patch.status ?? existing.status,
+    collectionRole:
+      patch.collectionRole !== undefined ? patch.collectionRole : existing.collectionRole,
+    compositionKey:
+      patch.compositionKey !== undefined ? patch.compositionKey : existing.compositionKey,
     showInSidebar: patch.showInSidebar !== undefined ? patch.showInSidebar : existing.showInSidebar,
     sidebarLabel: patch.sidebarLabel !== undefined ? patch.sidebarLabel : existing.sidebarLabel,
     bindings,
@@ -1031,14 +1155,16 @@ const buildListingQueryPreview = async (
   action: AssistantListingQueryUpsertAction,
   deps: ActionExecutorDeps
 ) => {
-  const existing =
-    (await deps.listListingQueries()).find((entry) => entry.name === action.input.name) ?? null;
+  const matches = await findListingQueryNameMatches(action.input.name, deps);
+  const existing = matches.length === 1 ? matches[0] : null;
+  const ambiguousMatches = matches.length > 1;
   return createPreviewChange({
     action,
     targetType: "listing-query",
     targetKey: action.input.name,
-    summary: `${existing ? "Update" : "Create"} listing query "${action.input.name}"`,
-    beforeValue: existing,
+    summary: `${matches.length > 0 ? "Update" : "Create"} listing query "${action.input.name}"`,
+    conflicts: ambiguousMatches ? [listingQueryNameConflict(action.input.name)] : [],
+    beforeValue: ambiguousMatches ? matches : existing,
     nextValue: action.input,
   });
 };
@@ -3043,15 +3169,16 @@ const executeCustomScreenAction = async (
   preview: AssistantActionPreviewChange,
   deps: ActionExecutorDeps
 ) => {
-  const contentType = await deps.getContentTypeBySlug(action.input.contentTypeSlug);
+  const { contentType, existing, conflicts } = await findExistingCustomScreenForUpsert(
+    action,
+    deps
+  );
   if (!contentType) {
     throw new Error("assistant_action_dependency_missing");
   }
-
-  const existing =
-    (await deps.listCustomScreens()).find(
-      (entry) => entry.contentTypeId === contentType.id && entry.name === action.input.name
-    ) ?? null;
+  if (conflicts.length > 0) {
+    throw new Error("assistant_action_dependency_conflict");
+  }
 
   const record =
     preview.operation === "create"
@@ -3059,6 +3186,8 @@ const executeCustomScreenAction = async (
           name: action.input.name,
           contentTypeId: contentType.id,
           status: action.input.status,
+          collectionRole: action.input.collectionRole ?? null,
+          compositionKey: action.input.compositionKey ?? null,
           showInSidebar: action.input.showInSidebar,
           sidebarLabel: action.input.sidebarLabel,
           blocks: action.input.blocks as unknown as WidgetBlock[],
@@ -3069,6 +3198,8 @@ const executeCustomScreenAction = async (
             name: action.input.name,
             contentTypeId: contentType.id,
             status: action.input.status,
+            collectionRole: action.input.collectionRole ?? null,
+            compositionKey: action.input.compositionKey ?? null,
             showInSidebar: action.input.showInSidebar,
             sidebarLabel: action.input.sidebarLabel,
             blocks: action.input.blocks as unknown as WidgetBlock[],
@@ -3153,6 +3284,8 @@ const executeCustomScreenUpdateAction = async (
       : await deps.updateCustomScreen(existing.id, {
           name: nextValue.name,
           status: nextValue.status,
+          collectionRole: nextValue.collectionRole,
+          compositionKey: nextValue.compositionKey,
           showInSidebar: nextValue.showInSidebar,
           sidebarLabel: nextValue.sidebarLabel,
           bindings: nextValue.bindings,
@@ -3233,8 +3366,11 @@ const executeListingQueryAction = async (
     throw new Error("assistant_action_dependency_missing");
   }
 
-  const existing =
-    (await deps.listListingQueries()).find((entry) => entry.name === action.input.name) ?? null;
+  const matches = await findListingQueryNameMatches(action.input.name, deps);
+  if (matches.length > 1) {
+    throw new Error("assistant_action_dependency_conflict");
+  }
+  const existing = matches[0] ?? null;
   const payload = {
     name: action.input.name,
     description: action.input.description,
@@ -4435,7 +4571,9 @@ const executeDetailPageAction = async (
     operation: preview.operation,
     status: "success",
     resourceId: finalRecord.id,
-    adminHref: null,
+    adminHref: `/admin/advanced/engine/${encodeURIComponent(
+      prepared.contentType.id
+    )}/collection/detail-template/${encodeURIComponent(finalRecord.id)}`,
     publicHref: null,
     message:
       preview.operation === "noop"
@@ -5233,7 +5371,12 @@ export const executeAssistantActionPlan = async (
         planId: plan.id,
         planHash,
       })
-    : (executionCache.get(input.idempotencyKey)?.result ?? null);
+    : readMemoryExecutionResult({
+        idempotencyKey: input.idempotencyKey,
+        actorId: input.actorId,
+        planId: plan.id,
+        planHash,
+      });
   if (cached) {
     recordAssistantActionMetric({
       failedCount: cached.summary.failed,
@@ -5316,6 +5459,9 @@ export const executeAssistantActionPlan = async (
   } else {
     executionCache.set(input.idempotencyKey, {
       result,
+      actorId: input.actorId,
+      planId: plan.id,
+      planHash,
       savedAt: Date.now(),
     });
   }

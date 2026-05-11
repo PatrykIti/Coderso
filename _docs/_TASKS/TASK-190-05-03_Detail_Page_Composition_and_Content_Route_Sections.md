@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Public Runtime + Page Sections
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-190-05-01, TASK-190-05-02
-**Status:** In Progress (2026-05-08)
+**Status:** Done (2026-05-10)
 
 ---
 
@@ -50,7 +50,16 @@ Current slice note:
   strict assistant action registry/schema/executor path through one
   content-domain service seam, without introducing a second route-owner or
   generic provider-side mutation path.
-- The remaining route/admin leaves stay open in the later slices.
+- `TASK-190-05-03-07-01` and `TASK-190-05-03-07-02` are landed: the internal
+  `/admin/api/detail-pages*` CRUD/lifecycle/revision route family now exists,
+  and `setting.content-route.upsert` owns the structural `detailPageId`
+  round-trip for route linkage.
+- `TASK-190-05-03-08` is landed: `detail-page` is now in the generic assistant
+  resource vocabulary, provider planning packages include bounded detail-page
+  summaries, active-surface inference stays in `resolverPolicy.ts`, and target
+  resolution accepts only trusted ids, stable `contentTypeId`, exact
+  route/content-type linkage, or active detail-page context.
+- The detail-page composition and content-route section family is complete.
 
 This unlocks proper Mabudo-like/product/service/portfolio detail pages instead
 of generic entry detail output.
@@ -154,6 +163,13 @@ type DetailPageBinding = {
 };
 ```
 
+Public runtime and dedicated detail-page preview render `titlePattern` /
+`seo.titlePattern`, `seo.descriptionField`, and `seo.imageField` against the
+selected entry before falling back to entry-owned SEO metadata. Title patterns
+may reference safe entry meta/data tokens only; secret-like tokens such as
+`token`, `secret`, `password`, `apiKey`, `cookie`, `session`, or `csrf` reject at
+document normalization and are ignored defensively at public render time.
+
 Storage direction:
 
 - `detail_page_documents` is the required storage contract.
@@ -248,10 +264,10 @@ Touched existing modules:
    stored server-side, not trusted from ad-hoc query params.
 6. Add required `detail-page.upsert` typed action schema/executor to
    create/update detail page documents without mutating route ownership.
-7. Add internal admin detail page API plus explicit stable-id behavior for
-   assistant/composer upserts and manual admin create flows; preview lifecycle
-   routes must consume the shared preview contract from step 5, and CRUD/client
-   parity must keep route-link ownership in step 3.
+7. Internal admin detail page APIs plus explicit stable-id behavior for
+   assistant/composer upserts and manual admin create flows are landed; preview
+   lifecycle routes consume the shared preview contract from step 5, and the
+   remaining admin-client/cache parity must keep route-link ownership in step 3.
 8. Add manual Collection Workspace / Detail Template editing integration in
    `TASK-190-06-03`.
 9. Add generic assistant resource/policy integration for `detail-page` only

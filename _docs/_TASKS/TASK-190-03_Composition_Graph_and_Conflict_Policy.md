@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Composition Engine
 **Estimated Effort:** Large
 **Dependencies:** TASK-190-01, TASK-190-02
-**Status:** In Progress (2026-05-06)
+**Status:** Done (2026-05-10)
 
 ---
 
@@ -24,8 +24,9 @@ Current slice note:
 - deterministic graph fragments are landed for current capability packs,
 - typed route/resource/field conflicts plus blocking gated-domain surfacing are
   landed for the current capability packs,
-- broader media and permission `needs_input` families remain in follow-up work
-  before live cutover.
+- media missing/ambiguous/upload/delete conflicts and manifest permission gaps
+  now surface through the same closed typed conflict contract before live
+  cutover.
 
 ## Sub-Tasks
 
@@ -66,15 +67,15 @@ type BlueprintCompositionGraph = {
 5. Unresolved conflicts stay machine-readable and can be downgraded into
    `needs_input` with questions by the assembler/planner path.
 6. Media conflicts for attached files, ambiguous matches, and unsupported
-   delete/upload flows remain explicit follow-up scope under the later closure
-   leaves.
+   delete/upload flows surface as typed conflicts. Existing-media reuse still
+   belongs to the later no-duplicate/resource-reuse leaf.
 
 ## Security Contract
 
 - Visibility: internal planner graph only.
 - Auth model: unchanged.
-- RBAC: permission-gap detection remains deferred; execute remains
-  authoritative for the current slice.
+- RBAC: manifest permission gaps are surfaced before assembly; execute remains
+  authoritative for actual route/action permission enforcement.
 - CSRF: no route changes.
 - Rate-limit bucket: existing assistant bucket.
 - Reject-unknown validation: graph nodes and conflicts use closed typed
@@ -90,9 +91,9 @@ type BlueprintCompositionGraph = {
   - incompatible field type,
   - duplicate page route,
   - incompatible listing template slug,
-  - gated booking/checkout module.
-- Media and permission conflict families remain deferred to the later closure
-  leaves.
+  - gated booking/checkout module,
+  - media missing/ambiguous/upload/delete families,
+  - permission gaps versus satisfied action-contract permissions.
 
 ## Documentation Updates Required
 

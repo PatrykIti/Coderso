@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Policy + Resource Context
 **Estimated Effort:** Medium
 **Dependencies:** TASK-190-05-03-05, TASK-190-05-03-07, TASK-190-06-03-03, TASK-190-07-02
-**Status:** To Do
+**Status:** Done (2026-05-10)
 
 ---
 
@@ -19,6 +19,20 @@ This leaf is intentionally separate from the first `detail-page.upsert`
 promotion. The base composer/runtime/admin flow should be able to ship without
 pretending that `detail-page` is already a generic CMS resource family in
 policy, provider guidance, follow-up context, and target resolver flows.
+
+Completion note (2026-05-10):
+- `detail-page` is now part of the strict generic CMS operation draft vocabulary
+  and assistant operation policy.
+- Provider guidance can describe `detail-page` as a resource family, but generic
+  `detail-page` mutations stay gated and cannot bypass local action assembly.
+- Bounded server-derived `detailPages` summaries are packaged in provider
+  planning context without narrowing existing pages/posts/entries/media/commerce
+  / solution-kit groups.
+- Target resolution accepts trusted detail-page ids, stable `contentTypeId`,
+  exact route/content-type linkage, or active detail-page surface context only;
+  prompt-only free-text names do not become mutation targets.
+- Request validation still rejects client-supplied `context.resourceCatalog`;
+  `includeResourceCatalog=true` remains the server-owned enrichment flag.
 
 ## Sub-Tasks
 

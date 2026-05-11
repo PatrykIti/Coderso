@@ -1,8 +1,22 @@
 import type { AssistantPlannedAction } from "../actionPlanTypes";
-import { normalizeBlueprintConflict, type BlueprintConflict } from "./blueprintCapabilityTypes";
+import { getAssistantActionFamilyContract } from "../actionFamilyContracts";
+import {
+  normalizeBlueprintConflict,
+  type BlueprintCapability,
+  type BlueprintConflict,
+  type BlueprintMediaResourceMetadata,
+  type BlueprintResourceContribution,
+} from "./blueprintCapabilityTypes";
 import { buildBlueprintActionMergeKey, mergeBlueprintActions } from "./blueprintActionAssembler";
 import type { BlueprintCompositionGraph } from "./blueprintCapabilityTypes";
 import { BlueprintSchemaMergeError, mergeBlueprintSchemas } from "./blueprintSchemaMerger";
+
+type BlueprintConflictResolverInput = {
+  fragments: BlueprintCompositionGraph["fragments"];
+  gated?: BlueprintCompositionGraph["gated"];
+  resources?: BlueprintResourceContribution[];
+  selectedCapabilities?: BlueprintCapability[];
+};
 
 const buildTypedConflict = (input: {
   current: AssistantPlannedAction;
@@ -113,10 +127,162 @@ const buildTypedConflict = (input: {
   }
 };
 
-export const resolveBlueprintCompositionConflicts = (graph: {
-  fragments: BlueprintCompositionGraph["fragments"];
-  gated?: BlueprintCompositionGraph["gated"];
+const unique = <T>(items: T[]) => Array.from(new Set(items));
+
+const isMediaResource = (
+  resource: BlueprintResourceContribution
+): resource is BlueprintResourceContribution & { metadata: BlueprintMediaResourceMetadata } =>
+  resource.kind === "media";
+
+const buildMediaConflict = (input: {
+  code: "media_asset_missing" | "media_asset_ambiguous" | "media_delete_gated";
+  capabilityId?: string | null;
+  resource: BlueprintResourceContribution;
+  message: string;
 }) => {
+  const actionType = input.resource.actionTypes[0];
+  return normalizeBlueprintConflict({
+    code: input.code,
+    severity: "error",
+    capabilityId: input.capabilityId ?? undefined,
+    resourceKey: input.resource.key,
+    message: input.message,
+    ...(actionType ? { actionType } : {}),
+  });
+};
+
+const resolveMediaResourceConflicts = (input: BlueprintConflictResolverInput) => {
+  const resourcesByCapability =
+    input.selectedCapabilities && input.selectedCapabilities.length > 0
+      ? input.selectedCapabilities.flatMap((capability) =>
+          capability.resources.map((resource) => ({
+            capabilityId: capability.id,
+            resource,
+          }))
+        )
+      : (input.resources ?? []).map((resource) => ({
+          capabilityId: null,
+          resource,
+        }));
+  const conflicts: BlueprintConflict[] = [];
+
+  for (const { capabilityId, resource } of resourcesByCapability) {
+    if (!isMediaResource(resource)) continue;
+    const metadata = resource.metadata;
+    const candidateIds = unique(metadata.candidateIds ?? []).filter((candidateId) =>
+      candidateId.trim()
+    );
+
+    if (metadata.operation === "delete-asset") {
+      conflicts.push(
+        buildMediaConflict({
+          code: "media_delete_gated",
+          capabilityId,
+          resource,
+          message: `Media asset deletion for "${resource.label}" must stay outside blueprint composition and use the media owner flow.`,
+        })
+      );
+      continue;
+    }
+
+    if (candidateIds.length > 1) {
+      conflicts.push(
+        buildMediaConflict({
+          code: "media_asset_ambiguous",
+          capabilityId,
+          resource,
+          message: `Media reference "${resource.label}" matched multiple existing assets (${candidateIds.join(", ")}); choose one exact media id before composition can continue.`,
+        })
+      );
+      continue;
+    }
+
+    if (metadata.required === true && !metadata.assetId && candidateIds.length === 0) {
+      conflicts.push(
+        buildMediaConflict({
+          code: "media_asset_missing",
+          capabilityId,
+          resource,
+          message: `Media reference "${resource.label}" requires a trusted existing media-library asset before composition can continue.`,
+        })
+      );
+    }
+  }
+
+  return conflicts;
+};
+
+const collectActionPermissions = (fragments: BlueprintConflictResolverInput["fragments"]) => {
+  const permissions = new Set<string>();
+  for (const fragment of fragments) {
+    for (const action of fragment.actions) {
+      const contract = getAssistantActionFamilyContract(action.type);
+      for (const permission of [
+        ...contract.permissions.plan,
+        ...contract.permissions.dryRun,
+        ...contract.permissions.execute,
+      ]) {
+        permissions.add(permission);
+      }
+    }
+  }
+  return permissions;
+};
+
+const resolvePermissionConflicts = (input: BlueprintConflictResolverInput) => {
+  const capabilities = input.selectedCapabilities ?? [];
+  if (capabilities.length === 0) return [];
+
+  const availablePermissions = collectActionPermissions(input.fragments);
+  const conflicts: BlueprintConflict[] = [];
+
+  for (const capability of capabilities) {
+    for (const requirement of capability.requires) {
+      if (requirement.kind !== "permission") continue;
+      if (availablePermissions.has(requirement.key)) continue;
+      conflicts.push(
+        normalizeBlueprintConflict({
+          code: "permission_gap",
+          severity: requirement.optional === true ? "warning" : "error",
+          capabilityId: capability.id,
+          resourceKey: `permission:${requirement.key}`,
+          message: `Capability "${capability.label}" requires "${requirement.label}" (${requirement.key}), but the composed action fragments do not declare that permission boundary.`,
+        })
+      );
+    }
+  }
+
+  return conflicts;
+};
+
+const buildGatedConflict = (input: {
+  capabilityId: string;
+  key: string;
+  kind: string;
+  label: string;
+  reason: string;
+  blocking?: boolean;
+}) => {
+  if (input.kind === "media-import") {
+    return normalizeBlueprintConflict({
+      code: "media_upload_gated",
+      severity: input.blocking === false ? "warning" : "error",
+      capabilityId: input.capabilityId,
+      resourceKey: input.key,
+      message: `${input.label} remains gated: ${input.reason}`,
+    });
+  }
+
+  return normalizeBlueprintConflict({
+    code: "gated_domain",
+    severity: input.blocking === false ? "warning" : "error",
+    capabilityId: input.capabilityId,
+    resourceKey: input.key,
+    message: `${input.label} remains gated: ${input.reason}`,
+  });
+};
+
+export const resolveBlueprintCompositionConflicts = (graph: BlueprintConflictResolverInput) => {
   const conflicts: BlueprintConflict[] = [];
   const seen = new Map<string, BlueprintCompositionGraph["fragments"][number]["actions"][number]>();
   const gatedConflictKeys = new Set<string>();
@@ -146,17 +312,12 @@ export const resolveBlueprintCompositionConflicts = (graph: {
       const key = `${gatedNode.capability.id}:${gated.key}`;
       if (gatedConflictKeys.has(key)) continue;
       gatedConflictKeys.add(key);
-      conflicts.push(
-        normalizeBlueprintConflict({
-          code: "gated_domain",
-          severity: gated.blocking === false ? "warning" : "error",
-          capabilityId: gatedNode.capability.id,
-          resourceKey: gated.key,
-          message: `${gated.label} remains gated: ${gated.reason}`,
-        })
-      );
+      conflicts.push(buildGatedConflict({ capabilityId: gatedNode.capability.id, ...gated }));
     }
   }
+
+  conflicts.push(...resolveMediaResourceConflicts(graph));
+  conflicts.push(...resolvePermissionConflicts(graph));
 
   return conflicts;
 };

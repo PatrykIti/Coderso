@@ -46,19 +46,20 @@ const createActor = async (prefix: string) => {
     .returning();
   if (!actor) throw new Error("assistant_live_actor_create_failed");
   globalCleanup.add(`user:${actor.id}`, async () => {
-    await db.delete(users).where(eq(users.id, actor.id)).catch(() => undefined);
+    await db
+      .delete(users)
+      .where(eq(users.id, actor.id))
+      .catch(() => undefined);
   });
   return actor;
 };
 
-const createPageFixture = async (
-  input: {
-    title: string;
-    slug: string;
-    actorId: string;
-    cleanup: ReturnType<typeof createLiveCleanupStack>;
-  }
-) => {
+const createPageFixture = async (input: {
+  title: string;
+  slug: string;
+  actorId: string;
+  cleanup: ReturnType<typeof createLiveCleanupStack>;
+}) => {
   const { createPage, deletePage, publishPage } = await loadPages();
   const page = await createPage({
     title: input.title,
@@ -74,12 +75,10 @@ const createPageFixture = async (
   return page;
 };
 
-const createMenuFixture = async (
-  input: {
-    prefix: string;
-    cleanup: ReturnType<typeof createLiveCleanupStack>;
-  }
-) => {
+const createMenuFixture = async (input: {
+  prefix: string;
+  cleanup: ReturnType<typeof createLiveCleanupStack>;
+}) => {
   const { createMenu, deleteMenu, replaceMenuItems } = await loadMenus();
   const menu = await createMenu({ name: `${input.prefix} Menu` });
   if (!menu) throw new Error("assistant_live_menu_create_failed");
@@ -104,11 +103,8 @@ const createMenuFixture = async (
 };
 
 const buildContext = async (): Promise<AssistantActionContext> => {
-  const [{ listMenus, listMenuItems }, { listPages }, { listExistingSeoDocuments }] = await Promise.all([
-    loadMenus(),
-    loadPages(),
-    loadSeo(),
-  ]);
+  const [{ listMenus, listMenuItems }, { listPages }, { listExistingSeoDocuments }] =
+    await Promise.all([loadMenus(), loadPages(), loadSeo()]);
   const [menus, pages, seoDocuments] = await Promise.all([
     listMenus(),
     listPages(),
@@ -120,6 +116,7 @@ const buildContext = async (): Promise<AssistantActionContext> => {
   return {
     page: "/admin/menus",
     locale: "pl-PL",
+    includeResourceCatalog: true,
     resourceCatalog: {
       schemaVersion: 1,
       generatedAt: new Date().toISOString(),
@@ -211,14 +208,20 @@ const runMenusSeoMatrixForProvider = async (provider: LiveProviderRuntime) => {
     });
     expect(menuLookup.responseKind, provider.id).toBe("inspection");
     expect(menuLookup.inspection?.resourceKind, provider.id).toBe("menu-item");
-    expect(menuLookup.inspection?.candidates.map((candidate) => candidate.label), provider.id).toContain(`${prefix} Products`);
+    expect(
+      menuLookup.inspection?.candidates.map((candidate) => candidate.label),
+      provider.id
+    ).toContain(`${prefix} Products`);
 
     const updateMenuPlan = await planWithLiveProvider({
       provider,
       context: await buildContext(),
       prompt: `Zmien menu item "/${prefix}-products" na "${prefix} Products Catalog"`,
     });
-    expect(updateMenuPlan.actions.map((action) => action.type), provider.id).toContain("menu.item.update");
+    expect(
+      updateMenuPlan.actions.map((action) => action.type),
+      provider.id
+    ).toContain("menu.item.update");
     expectSuccessfulExecution(
       await executeLivePlan({
         plan: updateMenuPlan,
@@ -237,7 +240,10 @@ const runMenusSeoMatrixForProvider = async (provider: LiveProviderRuntime) => {
       context: await buildContext(),
       prompt: `Usun menu item "/${prefix}-about"`,
     });
-    expect(deleteMenuPlan.actions.map((action) => action.type), provider.id).toEqual(["menu.item.delete"]);
+    expect(
+      deleteMenuPlan.actions.map((action) => action.type),
+      provider.id
+    ).toEqual(["menu.item.delete"]);
     expectSuccessfulExecution(
       await executeLivePlan({
         plan: deleteMenuPlan,
@@ -255,7 +261,10 @@ const runMenusSeoMatrixForProvider = async (provider: LiveProviderRuntime) => {
       context: await buildContext(),
       prompt: `Zmien seo document "${page.slug}" title na "${prefix} SEO Updated"`,
     });
-    expect(updateSeoPlan.actions.map((action) => action.type), provider.id).toContain("seo.document.update");
+    expect(
+      updateSeoPlan.actions.map((action) => action.type),
+      provider.id
+    ).toContain("seo.document.update");
     expectSuccessfulExecution(
       await executeLivePlan({
         plan: updateSeoPlan,
@@ -272,7 +281,10 @@ const runMenusSeoMatrixForProvider = async (provider: LiveProviderRuntime) => {
       context: await buildContext(),
       prompt: `Usun seo document "${page.slug}"`,
     });
-    expect(deleteSeoPlan.actions.map((action) => action.type), provider.id).toEqual(["seo.document.delete"]);
+    expect(
+      deleteSeoPlan.actions.map((action) => action.type),
+      provider.id
+    ).toEqual(["seo.document.delete"]);
     expectSuccessfulExecution(
       await executeLivePlan({
         plan: deleteSeoPlan,
@@ -284,12 +296,11 @@ const runMenusSeoMatrixForProvider = async (provider: LiveProviderRuntime) => {
     const { getPage } = await loadPages();
     expect(await getPage(page.id), provider.id).toBeTruthy();
 
-    const [{ media }, { createContentType, deleteContentType }, { createEntry, deleteEntry, getEntry }] =
-      await Promise.all([
-        import("../../../core/db/schema"),
-        loadContentTypes(),
-        loadEntries(),
-      ]);
+    const [
+      { media },
+      { createContentType, deleteContentType },
+      { createEntry, deleteEntry, getEntry },
+    ] = await Promise.all([import("../../../core/db/schema"), loadContentTypes(), loadEntries()]);
     const { db } = await loadDb();
     const mediaType = await createContentType({
       name: `${prefix} Media Entry Model`,
@@ -337,7 +348,10 @@ const runMenusSeoMatrixForProvider = async (provider: LiveProviderRuntime) => {
       .returning();
     if (!mediaRow) throw new Error("assistant_live_media_create_failed");
     cleanup.add(`media:${mediaRow.id}`, async () => {
-      await db.delete(media).where(eq(media.id, mediaRow.id)).catch(() => undefined);
+      await db
+        .delete(media)
+        .where(eq(media.id, mediaRow.id))
+        .catch(() => undefined);
     });
 
     const mediaPlan = await planWithLiveProvider({
@@ -345,9 +359,10 @@ const runMenusSeoMatrixForProvider = async (provider: LiveProviderRuntime) => {
       context: await buildContext(),
       prompt: `Podlacz mediaId "${mediaRow.id}" do entryId "${entry.id}" field "heroImage"`,
     });
-    expect(mediaPlan.actions.map((action) => action.type), provider.id).toEqual([
-      "media.reference.attach",
-    ]);
+    expect(
+      mediaPlan.actions.map((action) => action.type),
+      provider.id
+    ).toEqual(["media.reference.attach"]);
     expectSuccessfulExecution(
       await executeLivePlan({
         plan: mediaPlan,

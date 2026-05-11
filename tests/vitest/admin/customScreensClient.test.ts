@@ -32,13 +32,13 @@ const createLocalStorage = () => {
   };
 };
 
-const makeScreen = (
-  overrides: Partial<CustomScreenRecord> = {}
-): CustomScreenRecord => ({
+const makeScreen = (overrides: Partial<CustomScreenRecord> = {}): CustomScreenRecord => ({
   id: "screen-1",
   name: "Catalog screen",
   contentTypeId: "ct-1",
   status: "draft",
+  collectionRole: null,
+  compositionKey: null,
   showInSidebar: false,
   sidebarLabel: null,
   schemaVersion: 1,
@@ -111,9 +111,7 @@ test("listCustomScreensCached returns fresh memory-backed cache without fetch", 
       );
       const result = await listCustomScreensCached();
       expect(result).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({ id: "cached-screen" }),
-        ])
+        expect.arrayContaining([expect.objectContaining({ id: "cached-screen" })])
       );
       expect(calls).toHaveLength(1);
     } finally {

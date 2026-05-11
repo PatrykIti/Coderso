@@ -44,7 +44,10 @@ const createActor = async (prefix: string) => {
     .returning();
   if (!actor) throw new Error("assistant_live_actor_create_failed");
   globalCleanup.add(`user:${actor.id}`, async () => {
-    await db.delete(users).where(eq(users.id, actor.id)).catch(() => undefined);
+    await db
+      .delete(users)
+      .where(eq(users.id, actor.id))
+      .catch(() => undefined);
   });
   return actor;
 };
@@ -61,13 +64,11 @@ const schema = {
   required: [],
 } as const;
 
-const createContentTypeFixture = async (
-  input: {
-    name: string;
-    slug: string;
-    cleanup: ReturnType<typeof createLiveCleanupStack>;
-  }
-) => {
+const createContentTypeFixture = async (input: {
+  name: string;
+  slug: string;
+  cleanup: ReturnType<typeof createLiveCleanupStack>;
+}) => {
   const { createContentType, deleteContentType } = await loadContentTypes();
   const contentType = await createContentType({
     name: input.name,
@@ -81,15 +82,13 @@ const createContentTypeFixture = async (
   return contentType;
 };
 
-const createEntryFixture = async (
-  input: {
-    typeId: string;
-    title: string;
-    slug: string;
-    actorId: string;
-    cleanup: ReturnType<typeof createLiveCleanupStack>;
-  }
-) => {
+const createEntryFixture = async (input: {
+  typeId: string;
+  title: string;
+  slug: string;
+  actorId: string;
+  cleanup: ReturnType<typeof createLiveCleanupStack>;
+}) => {
   const { createEntry, deleteEntry } = await loadEntries();
   const entry = await createEntry(input.typeId, {
     title: input.title,
@@ -106,12 +105,10 @@ const createEntryFixture = async (
   return entry;
 };
 
-const buildContentContext = async (
-  input?: {
-    activeEntryId?: string;
-    activeContentTypeSlug?: string;
-  }
-): Promise<AssistantActionContext> => {
+const buildContentContext = async (input?: {
+  activeEntryId?: string;
+  activeContentTypeSlug?: string;
+}): Promise<AssistantActionContext> => {
   const { listContentTypes } = await loadContentTypes();
   const contentTypes = await listContentTypes();
   const route =
@@ -121,6 +118,7 @@ const buildContentContext = async (
   return {
     page: route,
     locale: "pl-PL",
+    includeResourceCatalog: true,
     resourceCatalog: {
       schemaVersion: 1,
       generatedAt: new Date().toISOString(),
@@ -151,9 +149,7 @@ const buildContentContext = async (
       activeHref: route,
       area: "advanced",
       advancedModule: "entries",
-      selectedResource: input?.activeEntryId
-        ? { kind: "entry", id: input.activeEntryId }
-        : null,
+      selectedResource: input?.activeEntryId ? { kind: "entry", id: input.activeEntryId } : null,
       visibleActions: [],
       permissionHints: {
         known: false,
@@ -216,7 +212,10 @@ const runContentEntriesMatrixForProvider = async (provider: LiveProviderRuntime)
       }),
       prompt: `Zmien tytul aktywnego wpisu na "${renamedEntry}"`,
     });
-    expect(updateEntryPlan.actions.map((action) => action.type), provider.id).toContain("entry.update");
+    expect(
+      updateEntryPlan.actions.map((action) => action.type),
+      provider.id
+    ).toContain("entry.update");
     expect((await dryRunLivePlan(updateEntryPlan)).readyToExecute, provider.id).toBe(true);
     expectSuccessfulExecution(
       await executeLivePlan({
@@ -236,7 +235,10 @@ const runContentEntriesMatrixForProvider = async (provider: LiveProviderRuntime)
       }),
       prompt: "Usun aktywny wpis",
     });
-    expect(deleteEntryPlan.actions.map((action) => action.type), provider.id).toEqual(["entry.delete"]);
+    expect(
+      deleteEntryPlan.actions.map((action) => action.type),
+      provider.id
+    ).toEqual(["entry.delete"]);
     expectSuccessfulExecution(
       await executeLivePlan({
         plan: deleteEntryPlan,
@@ -251,9 +253,10 @@ const runContentEntriesMatrixForProvider = async (provider: LiveProviderRuntime)
       context: await buildContentContext(),
       prompt: `Usun model "${zeroType.name}" z Engine`,
     });
-    expect(deleteZeroTypePlan.actions.map((action) => action.type), provider.id).toEqual([
-      "content-type.delete",
-    ]);
+    expect(
+      deleteZeroTypePlan.actions.map((action) => action.type),
+      provider.id
+    ).toEqual(["content-type.delete"]);
     expectSuccessfulExecution(
       await executeLivePlan({
         plan: deleteZeroTypePlan,

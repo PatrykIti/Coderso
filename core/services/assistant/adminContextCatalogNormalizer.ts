@@ -2,6 +2,7 @@ import type {
   AssistantContentTypeSummary,
   AssistantCommerceCollectionSummary,
   AssistantCommerceProductSummary,
+  AssistantDetailPageSummary,
   AssistantCustomScreenBindingSummary,
   AssistantCustomScreenSummary,
   AssistantEntrySummary,
@@ -28,6 +29,7 @@ import type {
 import { collectWritableBindingFields } from "../customScreens/bindingResolver";
 import type { WidgetBlock } from "../../widgets/types";
 import { normalizeWidgetTemplateSettings } from "../widgets/widgetTemplateSettings";
+import { normalizePageCollectionLink } from "../pages/pageCollectionLink";
 
 export type AssistantResourceCatalogRawInput = {
   pages?: unknown;
@@ -35,6 +37,7 @@ export type AssistantResourceCatalogRawInput = {
   entries?: unknown;
   contentTypes?: unknown;
   customScreens?: unknown;
+  detailPages?: unknown;
   listingQueries?: unknown;
   listingTemplates?: unknown;
   forms?: unknown;
@@ -192,11 +195,23 @@ const normalizePage = (value: Record<string, unknown>): AssistantPageSummary | n
   const title = readString(value.title);
   const slug = readString(value.slug);
   if (!id || !title || !slug) return null;
+  const currentData = isRecord(value.currentData) ? value.currentData : {};
+  const settings = isRecord(currentData.settings) ? currentData.settings : {};
+  const collectionLink = normalizePageCollectionLink(settings.collectionLink);
   return {
     id,
     title,
     slug,
     status: readString(value.status) ?? "unknown",
+    collectionLink: collectionLink
+      ? {
+          contentTypeId: collectionLink.contentTypeId,
+          pageRole: collectionLink.pageRole,
+          compositionKey: collectionLink.compositionKey ?? null,
+          listingQueryId: collectionLink.listingQueryId ?? null,
+          listingTemplateId: collectionLink.listingTemplateId ?? null,
+        }
+      : null,
   };
 };
 
@@ -275,10 +290,47 @@ const normalizeCustomScreen = (
     name,
     contentTypeId,
     status: value.status === "draft" || value.status === "active" ? value.status : "unknown",
+    collectionRole:
+      value.collectionRole === "canonical-admin-screen" ||
+      value.collectionRole === "secondary-admin-screen"
+        ? value.collectionRole
+        : null,
+    compositionKey: readString(value.compositionKey),
     showInSidebar: readBoolean(value.showInSidebar),
     sidebarLabel: readString(value.sidebarLabel),
     writableBindingFields,
     bindings,
+  };
+};
+
+const normalizeDetailPage = (value: Record<string, unknown>): AssistantDetailPageSummary | null => {
+  const id = readString(value.id);
+  const name = readString(value.name);
+  const contentTypeId = readString(value.contentTypeId);
+  const currentDocument = isRecord(value.currentDocument) ? value.currentDocument : {};
+  const contentTypeSlug =
+    readString(value.contentTypeSlug) ?? readString(currentDocument.contentTypeSlug);
+  if (!id || !name || !contentTypeId || !contentTypeSlug) return null;
+
+  const blocks =
+    readArray(value.blocks).length > 0
+      ? readArray(value.blocks)
+      : readArray(currentDocument.blocks);
+  const bindings =
+    readArray(value.bindings).length > 0
+      ? readArray(value.bindings)
+      : readArray(currentDocument.bindings);
+
+  return {
+    id,
+    name,
+    status: value.status === "published" ? "published" : "draft",
+    contentTypeId,
+    contentTypeSlug,
+    linkedRouteType: readString(value.linkedRouteType),
+    updatedAt: readIsoDate(value.updatedAt),
+    blockCount: readNumber(value.blockCount) ?? blocks.length,
+    bindingCount: readNumber(value.bindingCount) ?? bindings.length,
   };
 };
 
@@ -887,6 +939,15 @@ export function normalizeAssistantResourceCatalog(
     ),
     "custom_screens"
   );
+  const detailPages = clamp(
+    sortByKey(
+      readRecordArray(raw.detailPages)
+        .map(normalizeDetailPage)
+        .filter((entry): entry is AssistantDetailPageSummary => Boolean(entry)),
+      (entry) => `${entry.contentTypeId}:${entry.id}`
+    ),
+    "detail_pages"
+  );
   const queries = clamp(
     sortByKey(
       readRecordArray(raw.listingQueries)
@@ -991,6 +1052,7 @@ export function normalizeAssistantResourceCatalog(
     entries,
     contentTypes,
     customScreens,
+    detailPages,
     listings: {
       queries,
       templates,

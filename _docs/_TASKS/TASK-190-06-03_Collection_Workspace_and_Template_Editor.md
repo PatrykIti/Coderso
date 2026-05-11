@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Collections + Detail Templates
 **Estimated Effort:** Large
 **Dependencies:** TASK-190-05-03, TASK-190-05-03-07, TASK-190-06-01, TASK-190-06-02
-**Status:** To Do
+**Status:** Done (2026-05-10)
 
 ---
 
@@ -26,9 +26,19 @@ into one oversized slice.
 
 ## Sub-Tasks
 
-- `TASK-190-06-03-01_Collection_Workspace_Route_Read_Model_and_Canonical_Resource_Linking.md`
-- `TASK-190-06-03-02_Detail_Template_Editor_Surface_and_Shared_Builder_Seams.md`
+- `TASK-190-06-03-01_Collection_Workspace_Route_Read_Model_and_Canonical_Resource_Linking.md` -
+  done: the server route/read-model, deterministic canonical resolution/read
+  permissions, cached client helpers, Engine prefetch, and first workspace UI
+  shell are landed.
+- `TASK-190-06-03-02_Detail_Template_Editor_Surface_and_Shared_Builder_Seams.md` -
+  done: the detail-template editor route, shared page-builder surface, sample
+  entry preview picker, detail-page lifecycle actions, revision actions, and
+  Engine prefetch are landed.
 - `TASK-190-06-03-03_Collection_Workspace_Assistant_Context_and_Follow_Up_Integration.md`
+  - done: collection workspace follow-up context now flows through the current
+    assistant admin-context seams, `detail-page` active surface publishing,
+    strict browser hints, server-side workspace/detail-page hydration, and
+    explicit `content:read` + `widgets:read` permission parity.
 
 ## Product Contract
 
@@ -62,6 +72,15 @@ with title/slug heuristics or a parallel workspace-only registry.
 Do not model hybrid outcomes as if every tab could only ever point at one
 singleton resource with no linked secondary modules.
 
+Implementation scope note (2026-05-11): the completed server-owned workspace
+summary currently resolves the deterministic owner seams that exist today:
+content route, canonical list page, canonical detail template, canonical listing
+query/template, canonical admin screen, linked secondary pages, and linked
+secondary admin screens. Forms/CTA, media, and SEO remain product-level workspace
+tabs and future owner-seam extensions; they are not claimed by
+`collectionWorkspaceService` until those domains expose stable collection
+metadata without title/slug heuristics.
+
 Canonical route:
 
 ```text
@@ -94,7 +113,7 @@ Ownership split:
 - `06-03-01` owns the route, aggregated read model, and canonical resource
   linking contract.
 - `06-03-02` owns the detail-template editor surface and shared builder seam
-  extraction.
+  reuse.
 - `06-03-03` owns assistant runtime/context/follow-up integration for the
   workspace and `detail-page` active surface.
 
@@ -119,10 +138,13 @@ Program rules:
 - `adminPrefetch.ts` remains the owner of hover/focus warmup for the Engine
   route family; the workspace route extends that seam instead of adding route-
   local prefetch logic.
-- do not create a fourth large block editor stack just for detail templates.
-- if workspace/detail template becomes assistant-visible, extend the current
-  `adminContextService`, `assistantActionSchemas`, and `useAssistantAdminContext`
-  seams instead of inventing a parallel collection-context transport.
+- do not create a fourth large block editor stack just for detail templates;
+  the landed editor reuses `EditorShell`, `LibraryPanel`, `BlockList`,
+  `BlockSettings`, shared block utilities, and `RuntimePreviewDialog`.
+- workspace/detail template assistant visibility extends the current
+  `adminContextService`, `assistantActionSchemas`, `activeSurfaceHydration.ts`,
+  `assistantRoutes.ts`, and `useAssistantAdminContext` seams instead of
+  inventing a parallel collection-context transport.
 - the workspace root stays inside the current `advancedModule: "engine"`
   family; it must not introduce a new assistant module/category such as
   `collections`.
@@ -139,9 +161,9 @@ Program rules:
     listing refs need to persist through `PageData.settings.collectionLink`,
   - `TASK-190-05-03-01` plus `TASK-190-05-03-07` / current detail-page owner
     seam own explicit references declared inside detail-page documents,
-  - `TASK-190-06-02` / current custom-screen owner seam widens the existing
-    custom-screen contract in place if canonical screen-link metadata needs
-    exact persisted `collectionRole` / `compositionKey` fields.
+  - `TASK-190-06-02` / current custom-screen owner seam now owns the exact
+    persisted `collectionRole` / `compositionKey` fields for canonical
+    screen-link metadata.
 - the workspace program may extend those existing owner seams where the current
   persisted contract is not strong enough, but it must not create a
   workspace-only registry, browser-owned source of truth, or assistant-only

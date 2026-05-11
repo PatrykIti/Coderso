@@ -5,7 +5,7 @@
 **Category:** CMS/Admin API + Detail Pages
 **Estimated Effort:** Large
 **Dependencies:** TASK-190-05-03-01, TASK-190-05-03-04
-**Status:** In Progress (2026-05-08)
+**Status:** Done (2026-05-10)
 
 ---
 
@@ -42,7 +42,10 @@ Current slice note:
   optional `detailPageId` through settings normalization, assistant
   `setting.content-route.upsert`, Site Settings client/form types, and matcher
   metadata.
-- Admin client/cache parity remains open in the remaining subleaf.
+- `TASK-190-05-03-07-03` is landed: admin detail-page client/cache helpers now
+  share the same list/detail cache-key family as assistant-driven
+  `detail-page.upsert` execution results, including `contentTypeId`-scoped list
+  invalidation.
 
 ## Sub-Tasks
 

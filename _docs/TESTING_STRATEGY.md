@@ -77,6 +77,9 @@ then that test should move to Vitest.
 - Public write protection and runtime security hardening.
 - Performance budgets.
 - Contract tests that must execute against the real Bun runtime.
+- The repo `test:bun` command runs the DB/runtime gate serially with a
+  `15000ms` per-test timeout because real database fixtures and runtime renders
+  can exceed Bun's default `5000ms` timeout under full-suite load.
 
 ### Vitest Owns
 
@@ -99,6 +102,12 @@ then that test should move to Vitest.
   assistant lane: capability registry context, capability-id draft schema, and
   env-gated planner shadow diagnostics are pure planning contracts and must not
   require Bun runtime coupling.
+- TASK-190 composition fixture and diagnostics work stays split by ownership:
+  `tests/vitest/assistant/blueprint-composition-fixtures.test.ts` and
+  `blueprint-composition-diagnostics.test.ts` own pure fixture/redaction
+  behavior, while `tests/integration/assistant-live/blueprintCompositionLiveMatrix.test.ts`
+  is an opt-in Bun live-provider matrix for OpenAI/OpenRouter local-first and
+  gated composition behavior.
 
 ### Vitest Happy-DOM Guardrails
 
@@ -114,6 +123,9 @@ then that test should move to Vitest.
 - Full `bun run test:vitest` should be both green and log-clean; happy-dom
   `AsyncTaskManager` errors or `ECONNREFUSED localhost:3000` output indicate a
   test harness or component-test isolation bug.
+- The repo `test:vitest` command forces `NODE_ENV=test` after loading `.env`;
+  inherited production shell environments must not disable React `act` or
+  test-only assistant blueprint-shadow diagnostics.
 
 ### Do Not Do
 
@@ -295,7 +307,11 @@ bun run test:assistant:live:cms:openai
 bun run test:assistant:live:cms:openrouter
 ```
 
-The live CMS matrix is Bun-owned, DB-backed, and intentionally opt-in. It must load `.env`, requires a disposable database behind `DATABASE_URL`, and uses test-only provider variables:
+The live CMS matrix is Bun-owned and intentionally opt-in. DB-backed live suites
+must load `.env` and require a disposable database behind `DATABASE_URL`;
+provider-only composition suites may run without DB fixtures when they prove
+local-first/gated planner behavior. The matrix uses test-only provider
+variables:
 
 - `TEST_OPENAI_API_KEY`
 - `TEST_OPENAI_MODEL`

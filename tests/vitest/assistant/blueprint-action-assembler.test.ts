@@ -3,6 +3,7 @@ import { expect, test } from "vitest";
 import {
   assembleComposedBlueprintPlan,
   buildBlueprintActionMergeKey,
+  mergeBlueprintActions,
 } from "../../../core/services/assistant/blueprints/blueprintActionAssembler";
 import { buildCatalogFamilyPlan } from "../../../core/services/assistant/blueprints/catalogFamilyBlueprint";
 import { PRODUCT_CATALOG_PRESET } from "../../../core/services/assistant/blueprints/catalogFamilyPresets";
@@ -981,7 +982,7 @@ test("assembleComposedBlueprintPlan keeps separate questions for different targe
   ]);
 });
 
-test("buildBlueprintActionMergeKey scopes custom screen resources by content type slug", () => {
+test("buildBlueprintActionMergeKey scopes custom screen resources by content type slug and composition metadata", () => {
   expect(
     buildBlueprintActionMergeKey({
       id: "screen-products",
@@ -1015,4 +1016,36 @@ test("buildBlueprintActionMergeKey scopes custom screen resources by content typ
       },
     })
   );
+
+  const canonicalProductsScreen = {
+    id: "screen-products-canonical",
+    type: "custom-screen.upsert" as const,
+    title: "Products screen",
+    description: "Products.",
+    input: {
+      name: "Overview",
+      contentTypeSlug: "products",
+      status: "active" as const,
+      collectionRole: "canonical-admin-screen" as const,
+      compositionKey: "product-catalog",
+      showInSidebar: true,
+      sidebarLabel: "Overview",
+      blocks: [],
+      bindings: [],
+    },
+  };
+  const comparisonProductsScreen = {
+    ...canonicalProductsScreen,
+    id: "screen-products-comparison",
+    input: {
+      ...canonicalProductsScreen.input,
+      collectionRole: "secondary-admin-screen" as const,
+      compositionKey: "comparison",
+    },
+  };
+
+  expect(buildBlueprintActionMergeKey(canonicalProductsScreen)).not.toBe(
+    buildBlueprintActionMergeKey(comparisonProductsScreen)
+  );
+  expect(mergeBlueprintActions(canonicalProductsScreen, comparisonProductsScreen)).toBeNull();
 });

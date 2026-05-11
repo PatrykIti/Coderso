@@ -34,6 +34,8 @@ const createScreenRecord = (): CustomScreenRecord => ({
   name: "Project Screen",
   contentTypeId: "type-1",
   status: "active" as const,
+  collectionRole: null,
+  compositionKey: null,
   showInSidebar: true,
   sidebarLabel: "Projects",
   schemaVersion: 3,

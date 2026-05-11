@@ -5,7 +5,7 @@
 **Category:** QA + Runtime Acceptance
 **Estimated Effort:** Medium
 **Dependencies:** TASK-190-05-03-04, TASK-190-05-03-05, TASK-190-05-03-07
-**Status:** To Do
+**Status:** Done (2026-05-10)
 
 ---
 
@@ -13,6 +13,27 @@
 
 Add fixture and acceptance coverage proving that composed detail page contracts
 work end-to-end and do not regress current public content route behavior.
+
+Current closure:
+
+- `tests/vitest/assistant/blueprint-detail-page-fixtures.test.ts` now owns the
+  local deterministic detail-page fixture matrix for house projects, products,
+  services, and portfolio case studies.
+- The local matrix assembles `content-type.upsert`, `detail-page.upsert`, and
+  `setting.content-route.upsert` through the blueprint composer seam with
+  canonical route linkage in `site.contentRoutes.detailPageId`.
+- Negative fixture coverage rejects missing fields, secret-like field bindings,
+  duplicate canonical route mappings, and provider-injected top-level
+  detail-page action payloads.
+- Product checkout and services booking prompts remain gated review metadata
+  only, with no executable checkout/booking actions.
+- `tests/integration/runtime/detail-page-composer-runtime.test.tsx` proves the
+  composed detail pages render for published fixture entries, draft entries stay
+  hidden, detail-page preview uses the current draft document with a valid
+  token, and legacy unlinked detail routes still render through the old
+  `content-detail` template.
+- Shared `tests/vitest/assistant/blueprint-composition-fixtures.test.ts` and
+  `_docs/LLM_GUIDE_LIVE_COVERAGE_MATRIX.md` remain `TASK-190-08`-owned.
 
 ## Sub-Tasks
 
@@ -104,6 +125,9 @@ for (const fixture of detailPageFixtures) {
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - Add live provider coverage in TASK-190-08 only after local fixtures pass.
+- Targeted validation for this leaf:
+  - `bun run vitest run --config vitest.config.ts tests/vitest/assistant/blueprint-detail-page-fixtures.test.ts`
+  - `set -a && source .env && set +a && bun test --parallel=1 tests/integration/runtime/detail-page-composer-runtime.test.tsx`
 
 ## Documentation Updates Required
 

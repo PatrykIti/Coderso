@@ -47,7 +47,10 @@ const createActor = async (prefix: string) => {
     .returning();
   if (!actor) throw new Error("assistant_live_actor_create_failed");
   globalCleanup.add(`user:${actor.id}`, async () => {
-    await db.delete(users).where(eq(users.id, actor.id)).catch(() => undefined);
+    await db
+      .delete(users)
+      .where(eq(users.id, actor.id))
+      .catch(() => undefined);
   });
   return actor;
 };
@@ -79,14 +82,12 @@ const createTemplateBlock = (prefix: string): WidgetBlock => ({
   },
 });
 
-const createTemplateFixture = async (
-  input: {
-    name: string;
-    category: string;
-    actorId: string;
-    cleanup: ReturnType<typeof createLiveCleanupStack>;
-  }
-) => {
+const createTemplateFixture = async (input: {
+  name: string;
+  category: string;
+  actorId: string;
+  cleanup: ReturnType<typeof createLiveCleanupStack>;
+}) => {
   const { createWidgetTemplate, deleteWidgetTemplate } = await loadWidgetTemplates();
   const template = await createWidgetTemplate(
     {
@@ -125,6 +126,7 @@ const buildWidgetTemplateContext = async (
       ? `/admin/advanced/widgets/templates/${activeTemplate.id}`
       : "/admin/advanced/widgets",
     locale: "pl-PL",
+    includeResourceCatalog: true,
     resourceCatalog: {
       schemaVersion: 1,
       generatedAt: new Date().toISOString(),
@@ -224,7 +226,10 @@ const runWidgetTemplatesMatrixForProvider = async (provider: LiveProviderRuntime
     });
     expect(lookupPlan.responseKind, provider.id).toBe("inspection");
     expect(lookupPlan.inspection?.resourceKind, provider.id).toBe("widget-template");
-    expect(lookupPlan.inspection?.candidates.map((candidate) => candidate.label), provider.id).toContain(template.name);
+    expect(
+      lookupPlan.inspection?.candidates.map((candidate) => candidate.label),
+      provider.id
+    ).toContain(template.name);
 
     const renamed = `${prefix} Template Renamed`;
     const updatePlan = await planWithLiveProvider({
@@ -232,7 +237,10 @@ const runWidgetTemplatesMatrixForProvider = async (provider: LiveProviderRuntime
       context: await buildWidgetTemplateContext(template.id),
       prompt: `Zmien nazwe aktywnego widget template na "${renamed}"`,
     });
-    expect(updatePlan.actions.map((action) => action.type), provider.id).toContain("widget-template.update");
+    expect(
+      updatePlan.actions.map((action) => action.type),
+      provider.id
+    ).toContain("widget-template.update");
     expectSuccessfulExecution(
       await executeLivePlan({
         plan: updatePlan,
@@ -248,7 +256,10 @@ const runWidgetTemplatesMatrixForProvider = async (provider: LiveProviderRuntime
       context: await buildWidgetTemplateContext(template.id),
       prompt: `Zmien headline wybranego bloku widget template na "${prefix} Patched Headline"`,
     });
-    expect(patchPlan.actions.map((action) => action.type), provider.id).toContain("widget-template.block.patch");
+    expect(
+      patchPlan.actions.map((action) => action.type),
+      provider.id
+    ).toContain("widget-template.block.patch");
     expect((await dryRunLivePlan(patchPlan)).readyToExecute, provider.id).toBe(true);
     expectSuccessfulExecution(
       await executeLivePlan({
@@ -257,10 +268,9 @@ const runWidgetTemplatesMatrixForProvider = async (provider: LiveProviderRuntime
         idempotencyKey: `${prefix}-template-block-patch`,
       })
     );
-    expect(
-      ((await getWidgetTemplate(template.id))?.blocks[0]?.data.headline),
-      provider.id
-    ).toBe(`${prefix} Patched Headline`);
+    expect((await getWidgetTemplate(template.id))?.blocks[0]?.data.headline, provider.id).toBe(
+      `${prefix} Patched Headline`
+    );
 
     const broadDeletePlan = await planWithLiveProvider({
       provider,
@@ -275,9 +285,10 @@ const runWidgetTemplatesMatrixForProvider = async (provider: LiveProviderRuntime
       context: await buildWidgetTemplateContext(template.id),
       prompt: "Usun aktywny widget template",
     });
-    expect(deletePlan.actions.map((action) => action.type), provider.id).toEqual([
-      "widget-template.delete",
-    ]);
+    expect(
+      deletePlan.actions.map((action) => action.type),
+      provider.id
+    ).toEqual(["widget-template.delete"]);
     expectSuccessfulExecution(
       await executeLivePlan({
         plan: deletePlan,

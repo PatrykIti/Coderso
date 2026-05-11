@@ -113,6 +113,15 @@ test("menu seo media and surface expansion contracts declare domain permissions"
   expect(
     getAssistantActionFamilyContract("page.widget.patch").strictInput.notes.join(" ")
   ).toContain("top-level");
+  const pageUpsertContract = getAssistantActionFamilyContract("page.upsert");
+  expect(pageUpsertContract.strictInput.required).toEqual([
+    "title",
+    "slug",
+    "status",
+    "introTitle",
+    "introBody",
+  ]);
+  expect(pageUpsertContract.strictInput.notes.join(" ")).toContain("collectionLink");
   const detailPageContract = getAssistantActionFamilyContract("detail-page.upsert");
   expect(detailPageContract.status).toBe("executable");
   expect(detailPageContract.family).toBe("detail-page");

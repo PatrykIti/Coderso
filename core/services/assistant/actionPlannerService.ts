@@ -388,6 +388,7 @@ const buildBlueprintComposerSetupPlan = (input: {
     promptKind: input.promptKind,
     intentFamily: input.intentFamily,
     graph,
+    resourceCatalog: trustedContext?.resourceCatalog ?? null,
   });
 };
 
@@ -1035,6 +1036,7 @@ const buildPreferredBlueprintSetupPlan = (input: {
     normalizeAssistantActionPlan({
       ...composedPlan,
       metadata: {
+        ...composedPlan.metadata,
         planner: "local",
         providerDraftUsed: false,
       },
@@ -1169,15 +1171,15 @@ export const planAssistantActionsWithProviderDraft = async (
   const trustedContext = sanitizeAssistantPlanningContext(input.context);
   const context = buildAssistantAdminContext(trustedContext);
   const routedClassification = buildRoutedClassification(input.prompt, context, trustedContext);
+  if (requiresProviderLlmGate(trustedContext) && (!input.llmAvailable || !input.provider)) {
+    throw new Error("assistant_llm_unavailable");
+  }
   const preferredBlueprintSetupPlan = buildPreferredBlueprintSetupPlan({
     prompt: input.prompt,
     context: trustedContext,
   });
   if (preferredBlueprintSetupPlan) {
     return preferredBlueprintSetupPlan;
-  }
-  if (requiresProviderLlmGate(trustedContext) && (!input.llmAvailable || !input.provider)) {
-    throw new Error("assistant_llm_unavailable");
   }
 
   const planningStatePlan = buildGenericCmsPlanningStateFollowUpPlan(input.prompt, context);

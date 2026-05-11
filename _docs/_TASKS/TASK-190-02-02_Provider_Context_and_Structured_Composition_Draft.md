@@ -80,7 +80,6 @@ type ProviderBlueprintCompositionDraft = {
   primaryCapabilityId: string;
   adjunctCapabilityIds: string[];
   gatedCapabilityIds: string[];
-  notes?: string[];
 };
 
 const normalizeProviderBlueprintCompositionDraft = (value, registry) => {
@@ -112,6 +111,7 @@ const normalizeProviderBlueprintCompositionDraft = (value, registry) => {
 
 - Valid provider draft normalizes.
 - Unknown capability id rejects.
+- Free-form provider notes reject as unknown fields.
 - Provider action arrays reject.
 - Provider cannot invent page sections.
 - Fallback uses deterministic local candidates.

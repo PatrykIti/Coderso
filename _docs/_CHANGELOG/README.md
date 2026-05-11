@@ -25,7 +25,30 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
-| 814 | 2026-05-10 | TASK-252 widget research archive | CMS Widgets/Research |
+| 837 | 2026-05-10 | TASK-252 widget research archive | CMS Widgets/Research |
+| 836 | 2026-05-11 | TASK-190 implementation drift hardening | Assistant/Core |
+| 835 | 2026-05-11 | TASK-190 live provider matrix rerun | Assistant/QA |
+| 834 | 2026-05-11 | TASK-190 validation drift closure | Assistant/Core/QA |
+| 833 | 2026-05-10 | TASK-190 final agent pass fixes | Assistant/Core |
+| 832 | 2026-05-10 | TASK-190 legacy custom screen reuse fallback | Assistant/Core |
+| 831 | 2026-05-10 | TASK-190 post-review drift fixes | Assistant/Core |
+| 830 | 2026-05-10 | TASK-190 blueprint composer closure | Documentation/Assistant |
+| 829 | 2026-05-10 | TASK-190 blueprint composer guide | Documentation/Assistant |
+| 828 | 2026-05-10 | TASK-190 composition fixture matrix | Assistant/QA |
+| 827 | 2026-05-10 | TASK-190 detail-page generic resource integration | Assistant/Core |
+| 826 | 2026-05-10 | TASK-190 composition review metadata | Assistant/Core |
+| 825 | 2026-05-10 | TASK-190 existing resource matcher | Assistant/Core |
+| 824 | 2026-05-10 | TASK-190 collection workspace assistant context | Assistant/Core |
+| 823 | 2026-05-10 | TASK-190 detail template editor surface | Assistant/Admin UI |
+| 822 | 2026-05-10 | TASK-190 collection workspace cache UI shell | Assistant/Admin UI |
+| 821 | 2026-05-10 | TASK-190 collection workspace canonical resolution | Assistant/Core |
+| 820 | 2026-05-10 | TASK-190 collection workspace route read model | Assistant/Core |
+| 819 | 2026-05-10 | TASK-190 admin bindings metadata safety | Assistant/Core |
+| 818 | 2026-05-10 | TASK-190 admin screen layout composer | Assistant/Core |
+| 817 | 2026-05-10 | TASK-190 detail-page fixture runtime acceptance | Assistant/QA |
+| 816 | 2026-05-10 | TASK-190 detail-page admin client cache parity | Assistant/Admin Cache |
+| 815 | 2026-05-10 | TASK-190 conflict media and permission closure | Assistant/Core |
+| 814 | 2026-05-10 | TASK-190 docs status drift sync | Documentation/Assistant |
 | 813 | 2026-05-10 | Security strict dependency advisory closure | Security/Dependencies |
 | 812 | 2026-05-09 | TASK-190 detail-page route contract hardening | Assistant/Core |
 | 811 | 2026-05-09 | Test runner and wave act stabilization | QA/Tooling |

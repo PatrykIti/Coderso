@@ -1,4 +1,4 @@
-# 814 - TASK-252 widget research archive
+# 837 - TASK-252 widget research archive
 
 **Date:** 2026-05-10
 **Version:** Unreleased

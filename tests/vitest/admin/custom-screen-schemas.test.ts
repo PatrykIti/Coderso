@@ -4,6 +4,7 @@ import {
   buildDefaultListViewDefinition,
   customScreenCreateSchema,
   customScreenUpdateSchema,
+  normalizeCustomScreenCollectionLink,
   normalizeCustomScreenBindings,
   normalizeCustomScreenDefinition,
   normalizeCustomScreenDefinitionForRead,
@@ -38,6 +39,50 @@ test("custom screen schemas accept nullable sidebarLabel", () => {
       sidebarLabel: null,
     })
   ).not.toThrow();
+});
+
+test("custom screen schemas accept canonical collection metadata", () => {
+  expect(() =>
+    validate(customScreenCreateSchema, {
+      name: "Catalog",
+      contentTypeId: "type-1",
+      collectionRole: "canonical-admin-screen",
+      compositionKey: "catalog-canonical",
+    })
+  ).not.toThrow();
+
+  expect(() =>
+    validate(customScreenUpdateSchema, {
+      collectionRole: null,
+      compositionKey: null,
+    })
+  ).not.toThrow();
+
+  expect(
+    normalizeCustomScreenCollectionLink({
+      collectionRole: "secondary-admin-screen",
+      compositionKey: "catalog-secondary",
+    })
+  ).toEqual({
+    collectionRole: "secondary-admin-screen",
+    compositionKey: "catalog-secondary",
+  });
+});
+
+test("custom screen schemas reject unknown canonical collection metadata", () => {
+  expect(() =>
+    validate(customScreenCreateSchema, {
+      name: "Catalog",
+      contentTypeId: "type-1",
+      collectionRole: "primary",
+    })
+  ).toThrow("Invalid payload");
+
+  expect(() =>
+    normalizeCustomScreenCollectionLink({
+      collectionRole: "primary",
+    })
+  ).toThrow("custom_screen_invalid");
 });
 
 test("normalizeCustomScreenDefinition returns defaults", () => {

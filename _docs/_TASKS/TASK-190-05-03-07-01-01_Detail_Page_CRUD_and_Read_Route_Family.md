@@ -85,3 +85,10 @@ router.delete("/admin/api/detail-pages/:id", async (ctx) => {
 - `_docs/CMS_API.md`
 - `_docs/ARCHITECTURE.md`
 - `_docs/_TASKS/README.md`
+
+## Progress Notes
+
+- 2026-05-11: Follow-up drift pass aligned the route validation envelope with
+  the content-domain `DetailPageDocument.related` owner field. The route schema
+  now accepts `related` and keeps legacy/mistyped `relatedSources` rejected as
+  an unknown document field before service normalization.

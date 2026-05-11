@@ -6,6 +6,8 @@ import {
   listContentTypes,
   updateContentType,
 } from "../../services/content/typeService";
+import { getCollectionWorkspaceSummary } from "../../services/content/collectionWorkspaceService";
+import { getUserPermissions } from "../../services/auth/roleService";
 import { ApiError } from "../errorHandler";
 import {
   contentTypeCreateSchema,
@@ -32,6 +34,7 @@ export type Router = {
 export type ContentTypeRouteDeps = {
   requirePermission: (permission: string) => RouteHandler;
   validate: (schema: unknown, payload: unknown) => void;
+  resolvePermissions?: (ctx: RouteContext) => Promise<string[]> | string[];
 };
 
 const mapContentTypeError = (error: unknown) => {
@@ -95,8 +98,17 @@ const withContentTypeErrors = async <T>(fn: () => Promise<T>) => {
   }
 };
 
+const resolveRoutePermissions = async (
+  ctx: RouteContext,
+  resolvePermissions?: ContentTypeRouteDeps["resolvePermissions"]
+) => {
+  if (resolvePermissions) return resolvePermissions(ctx);
+  if (!ctx.user?.id) return ["content:read"];
+  return getUserPermissions(ctx.user.id);
+};
+
 export function registerContentTypeRoutes(router: Router, deps: ContentTypeRouteDeps) {
-  const { requirePermission, validate } = deps;
+  const { requirePermission, validate, resolvePermissions } = deps;
 
   router.get("/content-types", requirePermission("content:read"), async () => {
     return withContentTypeErrors(() => listContentTypes());
@@ -109,6 +121,17 @@ export function registerContentTypeRoutes(router: Router, deps: ContentTypeRoute
       return result;
     });
   });
+
+  router.get(
+    "/content-types/:id/collection-workspace",
+    requirePermission("content:read"),
+    async (ctx) =>
+      withContentTypeErrors(async () =>
+        getCollectionWorkspaceSummary(ctx.params.id, {
+          permissions: await resolveRoutePermissions(ctx, resolvePermissions),
+        })
+      )
+  );
 
   router.post("/content-types", requirePermission("content:write"), async (ctx) => {
     return withContentTypeErrors(async () => {

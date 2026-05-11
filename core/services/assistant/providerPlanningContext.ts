@@ -71,6 +71,7 @@ export type AssistantProviderPlanningPromptPackage = {
     entries: NonNullable<AssistantResourceCatalogSnapshot["entries"]>;
     contentTypes: AssistantResourceCatalogSnapshot["contentTypes"];
     customScreens: AssistantResourceCatalogSnapshot["customScreens"];
+    detailPages: NonNullable<AssistantResourceCatalogSnapshot["detailPages"]>;
     listings: AssistantResourceCatalogSnapshot["listings"];
     forms: AssistantResourceCatalogSnapshot["forms"];
     menus: AssistantResourceCatalogSnapshot["menus"];
@@ -102,6 +103,7 @@ export type AssistantProviderPlanningPromptPackage = {
     }>;
   };
   activeSurface: AssistantActionContext["activeSurface"];
+  collectionWorkspace: AssistantActionContext["collectionWorkspace"];
   warnings: string[];
 };
 
@@ -189,6 +191,12 @@ const buildResources = (
       catalog.customScreens,
       maxItemsPerGroup,
       "custom_screens_truncated",
+      warnings
+    ),
+    detailPages: clampItems(
+      catalog.detailPages ?? [],
+      maxItemsPerGroup,
+      "detail_pages_truncated",
       warnings
     ),
     listings: {
@@ -288,6 +296,7 @@ export const buildProviderPlanningPromptPackage = (
     policyGuidance: providerPolicyGuidance,
     operationDraftGuidance: providerOperationDraftGuidance,
     activeSurface: context.activeSurface,
+    collectionWorkspace: context.collectionWorkspace,
     warnings,
   };
 

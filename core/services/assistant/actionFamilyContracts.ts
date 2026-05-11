@@ -171,7 +171,12 @@ export const assistantActionFamilyContracts = [
     "custom-screen.upsert",
     "custom-screen",
     "core/services/customScreens/customScreenService.ts",
-    ["name", "contentTypeSlug", "status", "showInSidebar", "blocks", "bindings"]
+    ["name", "contentTypeSlug", "status", "showInSidebar", "blocks", "bindings"],
+    {
+      notes: [
+        "Optional collectionRole/compositionKey metadata persists through the current custom-screen owner seam.",
+      ],
+    }
   ),
   executableContract(
     "custom-screen.delete",
@@ -201,7 +206,7 @@ export const assistantActionFamilyContracts = [
         execute: ["content:write"],
       },
       notes: [
-        "Updates custom screen metadata/sidebar/binding mode while preserving unrelated config.",
+        "Updates custom screen metadata/sidebar/canonical collection link/binding mode while preserving unrelated config.",
       ],
     }
   ),
@@ -544,13 +549,17 @@ export const assistantActionFamilyContracts = [
       ],
     }
   ),
-  executableContract("page.upsert", "page", "core/services/pages/pageService.ts", [
-    "title",
-    "slug",
-    "status",
-    "listingQueryName",
-    "listingTemplateSlug",
-  ]),
+  executableContract(
+    "page.upsert",
+    "page",
+    "core/services/pages/pageService.ts",
+    ["title", "slug", "status", "introTitle", "introBody"],
+    {
+      notes: [
+        "Optional collectionLink, listing query/template locators, blocks, filters, and form embeds are normalized by the strict assistant page schema and persisted through the page owner seam.",
+      ],
+    }
+  ),
   executableContract(
     "detail-page.upsert",
     "detail-page",

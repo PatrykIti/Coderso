@@ -1,7 +1,4 @@
-import type {
-  AssistantActionContext,
-  AssistantAdminContext,
-} from "./actionPlanTypes";
+import type { AssistantActionContext, AssistantAdminContext } from "./actionPlanTypes";
 import type { AssistantResourceCatalogSnapshot } from "./adminContextTypes";
 import {
   type CmsOperationDraft,
@@ -75,7 +72,9 @@ const extractQuotedValues = (prompt: string) =>
 const extractNamedQuotedValue = (prompt: string, labels: string[]) => {
   for (const label of labels) {
     const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const match = prompt.match(new RegExp(`(?:^|[\\s,;])${escaped}\\s*[:=]?\\s*['"“”]([^'"“”]+)['"“”]`, "iu"));
+    const match = prompt.match(
+      new RegExp(`(?:^|[\\s,;])${escaped}\\s*[:=]?\\s*['"“”]([^'"“”]+)['"“”]`, "iu")
+    );
     const value = match?.[1]?.trim();
     if (value) return value;
   }
@@ -84,7 +83,12 @@ const extractNamedQuotedValue = (prompt: string, labels: string[]) => {
 
 const extractExplicitMediaReference = (prompt: string) => {
   const mediaId = extractNamedQuotedValue(prompt, ["mediaId", "media id", "media"]);
-  const targetId = extractNamedQuotedValue(prompt, ["entryId", "entry id", "targetId", "target id"]);
+  const targetId = extractNamedQuotedValue(prompt, [
+    "entryId",
+    "entry id",
+    "targetId",
+    "target id",
+  ]);
   const field = extractNamedQuotedValue(prompt, ["field", "pole"]);
   if (!mediaId || !targetId || !field) return null;
   return {
@@ -110,10 +114,16 @@ const resolveBlockDataPath = (normalizedPrompt: string, blockType?: string | nul
   ) {
     return ["label"];
   }
-  if (/\bdescription\b/.test(promptWithoutQuotedValues) || includesAny(promptWithoutQuotedValues, ["opis"])) {
+  if (
+    /\bdescription\b/.test(promptWithoutQuotedValues) ||
+    includesAny(promptWithoutQuotedValues, ["opis"])
+  ) {
     return ["description"];
   }
-  if (/\btext\b/.test(promptWithoutQuotedValues) || includesAny(promptWithoutQuotedValues, ["tekst"])) {
+  if (
+    /\btext\b/.test(promptWithoutQuotedValues) ||
+    includesAny(promptWithoutQuotedValues, ["tekst"])
+  ) {
     return ["text"];
   }
   return null;
@@ -160,7 +170,9 @@ export const buildCmsOperationDraftFromPrompt = (
   const firstQuoted = quotedValues[0];
   const activeContextMatches = inferActiveResourceKindWithPolicy(context) === resourceKind;
   const usesActiveTarget =
-    /\b(this|current|active|aktywny|aktywna|aktywne|aktywną|aktywnym|obecny|obecna|bieżący|bieżąca|ten|te|ta|tej)\b/u.test(normalizedPrompt) ||
+    /\b(this|current|active|aktywny|aktywna|aktywne|aktywną|aktywnym|obecny|obecna|bieżący|bieżąca|ten|te|ta|tej)\b/u.test(
+      normalizedPrompt
+    ) ||
     ((operation === "update" || operation === "delete" || operation === "archive") &&
       activeContextMatches &&
       (quotedValues.length <= 1 || !firstQuoted));
@@ -175,14 +187,23 @@ export const buildCmsOperationDraftFromPrompt = (
   const queryValue =
     operation === "update" && usesActiveTarget && !secondQuoted ? undefined : targetValue;
   const rawFieldIntent =
-    operation === "update" ? resolveFieldIntentWithPolicy(normalizedPrompt, resourcePolicy) : undefined;
+    operation === "update"
+      ? resolveFieldIntentWithPolicy(normalizedPrompt, resourcePolicy)
+      : undefined;
   const blockField = Object.values(resourcePolicy?.fields ?? {}).find(
     (field) => field.action?.patchPath?.[0] === "dataPath"
   );
   const fieldIntent =
     operation === "update" &&
     blockField &&
-    includesAny(normalizedPrompt, ["block", "blok", "bloku", "wybrany blok", "wybranego bloku", "headline"])
+    includesAny(normalizedPrompt, [
+      "block",
+      "blok",
+      "bloku",
+      "wybrany blok",
+      "wybranego bloku",
+      "headline",
+    ])
       ? blockField.field
       : rawFieldIntent;
   const fieldPolicy = fieldIntent
@@ -192,9 +213,11 @@ export const buildCmsOperationDraftFromPrompt = (
     mutationValue ??
     (fieldPolicy?.valueType === "number"
       ? extractFirstNumber(prompt)
-      : fieldPolicy?.valueType === "boolean" && includesAny(normalizedPrompt, ["hide", "ukryj", "wyłącz", "wylacz"])
+      : fieldPolicy?.valueType === "boolean" &&
+          includesAny(normalizedPrompt, ["hide", "ukryj", "wyłącz", "wylacz"])
         ? false
-        : fieldPolicy?.valueType === "boolean" && includesAny(normalizedPrompt, ["show", "pokaz", "pokaż", "włącz", "wlacz"])
+        : fieldPolicy?.valueType === "boolean" &&
+            includesAny(normalizedPrompt, ["show", "pokaz", "pokaż", "włącz", "wlacz"])
           ? true
           : undefined);
   const activeSurface = context?.activeSurface ?? null;
@@ -206,7 +229,7 @@ export const buildCmsOperationDraftFromPrompt = (
       ? (() => {
           const selectedBlockId = activeSurface.selectedBlockId;
           const block = selectedBlockId
-            ? activeSurface.blocks.find((entry) => entry.id === selectedBlockId) ?? null
+            ? (activeSurface.blocks.find((entry) => entry.id === selectedBlockId) ?? null)
             : null;
           const wantsPageInstance = includesAny(normalizedPrompt, [
             "only this page",
@@ -248,10 +271,11 @@ export const buildCmsOperationDraftFromPrompt = (
       : null;
 
   if (operation === "create" && resourceKind === "page") {
-    const title = extractNamedQuotedValue(
-      prompt,
-      findFieldPolicyByAliases(resourcePolicy, ["title", "tytul", "tytuł", "tytulem", "tytułem"])
-    ) ?? firstQuoted;
+    const title =
+      extractNamedQuotedValue(
+        prompt,
+        findFieldPolicyByAliases(resourcePolicy, ["title", "tytul", "tytuł", "tytulem", "tytułem"])
+      ) ?? firstQuoted;
     const pageSlug = extractNamedQuotedValue(
       prompt,
       findFieldPolicyByAliases(resourcePolicy, ["slug", "url", "sciezka", "ścieżka"])
@@ -260,8 +284,16 @@ export const buildCmsOperationDraftFromPrompt = (
       prompt,
       findFieldPolicyByAliases(resourcePolicy, ["status"])
     );
-    const introTitle = extractNamedQuotedValue(prompt, ["introTitle", "intro title", "naglowek", "nagłówek"]) ?? title;
-    const introBody = extractNamedQuotedValue(prompt, ["introBody", "intro body", "opis", "tresc", "treść"]);
+    const introTitle =
+      extractNamedQuotedValue(prompt, ["introTitle", "intro title", "naglowek", "nagłówek"]) ??
+      title;
+    const introBody = extractNamedQuotedValue(prompt, [
+      "introBody",
+      "intro body",
+      "opis",
+      "tresc",
+      "treść",
+    ]);
     if (title && pageSlug && introTitle && introBody) {
       return normalizeCmsOperationDraft({
         operation,
@@ -274,7 +306,9 @@ export const buildCmsOperationDraftFromPrompt = (
                 title,
                 slug: normalizeSlug(pageSlug) ?? pageSlug,
                 status:
-                  statusValue === "published" || statusValue === "opublikowana" || statusValue === "opublikowane"
+                  statusValue === "published" ||
+                  statusValue === "opublikowana" ||
+                  statusValue === "opublikowane"
                     ? "published"
                     : "draft",
                 introTitle,
@@ -293,10 +327,11 @@ export const buildCmsOperationDraftFromPrompt = (
   }
 
   if (operation === "create" && resourceKind === "form") {
-    const name = extractNamedQuotedValue(
-      prompt,
-      findFieldPolicyByAliases(resourcePolicy, ["name", "nazwa", "nazwie", "formularz"])
-    ) ?? firstQuoted;
+    const name =
+      extractNamedQuotedValue(
+        prompt,
+        findFieldPolicyByAliases(resourcePolicy, ["name", "nazwa", "nazwie", "formularz"])
+      ) ?? firstQuoted;
     const formSlug = extractNamedQuotedValue(
       prompt,
       findFieldPolicyByAliases(resourcePolicy, ["slug", "url"])
@@ -400,6 +435,8 @@ export const buildCmsOperationDraftFromPrompt = (
 
 const pageHref = (id: string) => `/admin/pages/${encodeURIComponent(id)}`;
 const postHref = (id: string) => `/admin/posts/${encodeURIComponent(id)}`;
+const detailPageHref = (contentTypeId: string, id: string) =>
+  `/admin/advanced/engine/${encodeURIComponent(contentTypeId)}/collection/detail-template/${encodeURIComponent(id)}`;
 const customScreenHref = (id: string) => `/admin/advanced/custom-screens/${encodeURIComponent(id)}`;
 const formHref = (id: string) => `/admin/advanced/forms/${encodeURIComponent(id)}`;
 const listingHref = (id: string) => `/admin/advanced/listings/${encodeURIComponent(id)}`;
@@ -419,65 +456,98 @@ const candidatesForKind = (
   const result: CmsResolvedTargetCandidate[] = [];
   if (kind === "page") {
     for (const page of catalog?.pages ?? []) {
-      result.push(candidate({
-        kind,
-        id: page.id,
-        label: page.title,
-        slug: page.slug,
-        status: page.status,
-        adminHref: pageHref(page.id),
-      }));
-    }
-    if (context.activeSurface?.kind === "page") {
-      const page = context.activeSurface.page;
-      if (!result.some((item) => item.id === page.id)) {
-        result.push(candidate({
+      result.push(
+        candidate({
           kind,
           id: page.id,
           label: page.title,
           slug: page.slug,
           status: page.status,
           adminHref: pageHref(page.id),
-        }));
+        })
+      );
+    }
+    if (context.activeSurface?.kind === "page") {
+      const page = context.activeSurface.page;
+      if (!result.some((item) => item.id === page.id)) {
+        result.push(
+          candidate({
+            kind,
+            id: page.id,
+            label: page.title,
+            slug: page.slug,
+            status: page.status,
+            adminHref: pageHref(page.id),
+          })
+        );
       }
     }
   }
   if (kind === "post") {
     for (const post of catalog?.posts ?? []) {
-      result.push(candidate({
-        kind,
-        id: post.id,
-        label: post.title,
-        slug: post.slug,
-        status: post.status,
-        adminHref: postHref(post.id),
-        details: {
-          publishedAt: post.publishedAt,
-          updatedAt: post.updatedAt,
-        },
-      }));
+      result.push(
+        candidate({
+          kind,
+          id: post.id,
+          label: post.title,
+          slug: post.slug,
+          status: post.status,
+          adminHref: postHref(post.id),
+          details: {
+            publishedAt: post.publishedAt,
+            updatedAt: post.updatedAt,
+          },
+        })
+      );
+    }
+  }
+  if (kind === "detail-page") {
+    for (const detailPage of catalog?.detailPages ?? []) {
+      result.push(
+        candidate({
+          kind,
+          id: detailPage.id,
+          label: detailPage.name,
+          slug: detailPage.contentTypeSlug,
+          status: detailPage.status,
+          adminHref: detailPageHref(detailPage.contentTypeId, detailPage.id),
+          details: {
+            contentTypeId: detailPage.contentTypeId,
+            contentTypeSlug: detailPage.contentTypeSlug,
+            linkedRouteType: detailPage.linkedRouteType,
+            updatedAt: detailPage.updatedAt,
+            blockCount: detailPage.blockCount,
+            bindingCount: detailPage.bindingCount,
+          },
+        })
+      );
+    }
+    if (context.activeSurface?.kind === "detail-page") {
+      const detailPage = context.activeSurface.detailPage;
+      if (!result.some((item) => item.id === detailPage.id)) {
+        result.push(
+          candidate({
+            kind,
+            id: detailPage.id,
+            label: detailPage.name,
+            slug: detailPage.contentTypeSlug,
+            status: detailPage.status,
+            adminHref: detailPageHref(detailPage.contentTypeId, detailPage.id),
+            details: {
+              contentTypeId: detailPage.contentTypeId,
+              contentTypeSlug: detailPage.contentTypeSlug,
+              linkedRouteType: detailPage.contentTypeSlug,
+              titlePattern: detailPage.titlePattern,
+            },
+          })
+        );
+      }
     }
   }
   if (kind === "custom-screen") {
     for (const screen of catalog?.customScreens ?? []) {
-      result.push(candidate({
-        kind,
-        id: screen.id,
-        label: screen.name,
-        slug: null,
-        status: screen.status,
-        adminHref: customScreenHref(screen.id),
-        details: {
-          contentTypeId: screen.contentTypeId,
-          showInSidebar: screen.showInSidebar,
-          sidebarLabel: screen.sidebarLabel,
-        },
-      }));
-    }
-    if (context.activeSurface?.kind === "custom-screen") {
-      const screen = context.activeSurface.screen;
-      if (!result.some((item) => item.id === screen.id)) {
-        result.push(candidate({
+      result.push(
+        candidate({
           kind,
           id: screen.id,
           label: screen.name,
@@ -489,237 +559,285 @@ const candidatesForKind = (
             showInSidebar: screen.showInSidebar,
             sidebarLabel: screen.sidebarLabel,
           },
-        }));
+        })
+      );
+    }
+    if (context.activeSurface?.kind === "custom-screen") {
+      const screen = context.activeSurface.screen;
+      if (!result.some((item) => item.id === screen.id)) {
+        result.push(
+          candidate({
+            kind,
+            id: screen.id,
+            label: screen.name,
+            slug: null,
+            status: screen.status,
+            adminHref: customScreenHref(screen.id),
+            details: {
+              contentTypeId: screen.contentTypeId,
+              showInSidebar: screen.showInSidebar,
+              sidebarLabel: screen.sidebarLabel,
+            },
+          })
+        );
       }
     }
   }
   if (kind === "content-type") {
     for (const contentType of catalog?.contentTypes ?? []) {
-      result.push(candidate({
-        kind,
-        id: contentType.id,
-        label: contentType.name,
-        slug: contentType.slug,
-        status: null,
-        adminHref: `/admin/advanced/engine/${encodeURIComponent(contentType.id)}`,
-        details: {
-          entryCount: contentType.entryCount,
-        },
-      }));
+      result.push(
+        candidate({
+          kind,
+          id: contentType.id,
+          label: contentType.name,
+          slug: contentType.slug,
+          status: null,
+          adminHref: `/admin/advanced/engine/${encodeURIComponent(contentType.id)}`,
+          details: {
+            entryCount: contentType.entryCount,
+          },
+        })
+      );
     }
   }
   if (kind === "entry") {
     for (const entry of catalog?.entries ?? []) {
-      result.push(candidate({
-        kind,
-        id: entry.id,
-        label: entry.title,
-        slug: entry.slug,
-        status: entry.status,
-        adminHref: `/admin/advanced/entries/${encodeURIComponent(entry.typeId)}/${encodeURIComponent(entry.id)}`,
-        details: {
-          typeId: entry.typeId,
-          publishedAt: entry.publishedAt,
-          updatedAt: entry.updatedAt,
-        },
-      }));
+      result.push(
+        candidate({
+          kind,
+          id: entry.id,
+          label: entry.title,
+          slug: entry.slug,
+          status: entry.status,
+          adminHref: `/admin/advanced/entries/${encodeURIComponent(entry.typeId)}/${encodeURIComponent(entry.id)}`,
+          details: {
+            typeId: entry.typeId,
+            publishedAt: entry.publishedAt,
+            updatedAt: entry.updatedAt,
+          },
+        })
+      );
     }
   }
   if (kind === "form") {
     for (const form of catalog?.forms ?? []) {
-      result.push(candidate({
-        kind,
-        id: form.id,
-        label: form.name,
-        slug: form.slug,
-        status: form.status,
-        adminHref: formHref(form.id),
-        details: {
-          submissionAccess: form.submissionAccess,
-        },
-      }));
+      result.push(
+        candidate({
+          kind,
+          id: form.id,
+          label: form.name,
+          slug: form.slug,
+          status: form.status,
+          adminHref: formHref(form.id),
+          details: {
+            submissionAccess: form.submissionAccess,
+          },
+        })
+      );
     }
   }
   if (kind === "listing-query") {
     for (const query of catalog?.listings.queries ?? []) {
-      result.push(candidate({
-        kind,
-        id: query.id,
-        label: query.name,
-        slug: null,
-        status: null,
-        adminHref: listingHref(query.id),
-        details: {
-          source: query.source,
-          limit: query.limit,
-          includeDrafts: query.includeDrafts,
-        },
-      }));
+      result.push(
+        candidate({
+          kind,
+          id: query.id,
+          label: query.name,
+          slug: null,
+          status: null,
+          adminHref: listingHref(query.id),
+          details: {
+            source: query.source,
+            limit: query.limit,
+            includeDrafts: query.includeDrafts,
+          },
+        })
+      );
     }
   }
   if (kind === "listing-template") {
     for (const template of catalog?.listings.templates ?? []) {
-      result.push(candidate({
-        kind,
-        id: template.id,
-        label: template.name,
-        slug: template.slug,
-        status: template.layout,
-        adminHref: "/admin/advanced/listings",
-        details: {
-          layout: template.layout,
-        },
-      }));
+      result.push(
+        candidate({
+          kind,
+          id: template.id,
+          label: template.name,
+          slug: template.slug,
+          status: template.layout,
+          adminHref: "/admin/advanced/listings",
+          details: {
+            layout: template.layout,
+          },
+        })
+      );
     }
   }
   if (kind === "widget-template") {
     for (const widget of (catalog?.widgets ?? []).filter((item) => item.source === "template")) {
-      result.push(candidate({
-        kind,
-        id: widget.id,
-        label: widget.name,
-        slug: null,
-        status: widget.status,
-        adminHref: widgetTemplateHref(widget.id),
-        details: {
-          category: widget.category,
-        },
-      }));
+      result.push(
+        candidate({
+          kind,
+          id: widget.id,
+          label: widget.name,
+          slug: null,
+          status: widget.status,
+          adminHref: widgetTemplateHref(widget.id),
+          details: {
+            category: widget.category,
+          },
+        })
+      );
     }
     if (context.activeSurface?.kind === "widget-template") {
       const template = context.activeSurface.template;
       if (!result.some((item) => item.id === template.id)) {
-        result.push(candidate({
-          kind,
-          id: template.id,
-          label: template.name,
-          slug: null,
-          status: template.status,
-          adminHref: widgetTemplateHref(template.id),
-          details: {
-            category: template.category,
-          },
-        }));
+        result.push(
+          candidate({
+            kind,
+            id: template.id,
+            label: template.name,
+            slug: null,
+            status: template.status,
+            adminHref: widgetTemplateHref(template.id),
+            details: {
+              category: template.category,
+            },
+          })
+        );
       }
     }
   }
   if (kind === "media") {
     for (const item of catalog?.media ?? []) {
-      result.push(candidate({
-        kind,
-        id: item.id,
-        label: item.title || item.originalName,
-        slug: null,
-        status: item.type,
-        adminHref: mediaHref(item.id),
-        details: {
-          originalName: item.originalName,
-          mimeType: item.mimeType,
-          size: item.size,
-          alt: item.alt,
-        },
-      }));
+      result.push(
+        candidate({
+          kind,
+          id: item.id,
+          label: item.title || item.originalName,
+          slug: null,
+          status: item.type,
+          adminHref: mediaHref(item.id),
+          details: {
+            originalName: item.originalName,
+            mimeType: item.mimeType,
+            size: item.size,
+            alt: item.alt,
+          },
+        })
+      );
     }
   }
   if (kind === "menu") {
     for (const menu of catalog?.menus ?? []) {
-      result.push(candidate({
-        kind,
-        id: menu.id,
-        label: menu.name,
-        slug: menu.location,
-        status: null,
-        adminHref: `/admin/menus/${encodeURIComponent(menu.id)}`,
-        details: {
-          location: menu.location,
-          itemCount: menu.itemCount,
-        },
-      }));
+      result.push(
+        candidate({
+          kind,
+          id: menu.id,
+          label: menu.name,
+          slug: menu.location,
+          status: null,
+          adminHref: `/admin/menus/${encodeURIComponent(menu.id)}`,
+          details: {
+            location: menu.location,
+            itemCount: menu.itemCount,
+          },
+        })
+      );
     }
   }
   if (kind === "menu-item") {
     for (const menu of catalog?.menus ?? []) {
       for (const item of menu.items) {
-        result.push(candidate({
-          kind,
-          id: item.id,
-          label: item.label,
-          slug: item.href,
-          status: menu.name,
-          adminHref: "/admin/menus",
-          details: {
-            menuId: menu.id,
-            href: item.href,
-            parentId: item.parentId,
-          },
-        }));
+        result.push(
+          candidate({
+            kind,
+            id: item.id,
+            label: item.label,
+            slug: item.href,
+            status: menu.name,
+            adminHref: "/admin/menus",
+            details: {
+              menuId: menu.id,
+              href: item.href,
+              parentId: item.parentId,
+            },
+          })
+        );
       }
     }
   }
   if (kind === "commerce") {
     for (const product of catalog?.commerce?.products ?? []) {
-      result.push(candidate({
-        kind,
-        id: product.id,
-        label: product.title,
-        slug: product.slug,
-        status: product.status,
-        adminHref: commerceProductHref(product.id),
-        details: {
-          commerceType: "product",
-          currency: product.currency,
-          priceAmount: product.priceAmount,
-          stockState: product.stockState,
-        },
-      }));
+      result.push(
+        candidate({
+          kind,
+          id: product.id,
+          label: product.title,
+          slug: product.slug,
+          status: product.status,
+          adminHref: commerceProductHref(product.id),
+          details: {
+            commerceType: "product",
+            currency: product.currency,
+            priceAmount: product.priceAmount,
+            stockState: product.stockState,
+          },
+        })
+      );
     }
     for (const collection of catalog?.commerce?.collections ?? []) {
-      result.push(candidate({
-        kind,
-        id: collection.id,
-        label: collection.name,
-        slug: collection.slug,
-        status: "collection",
-        adminHref: "/admin/advanced/commerce",
-        details: {
-          commerceType: "collection",
-          productCount: collection.productCount,
-        },
-      }));
+      result.push(
+        candidate({
+          kind,
+          id: collection.id,
+          label: collection.name,
+          slug: collection.slug,
+          status: "collection",
+          adminHref: "/admin/advanced/commerce",
+          details: {
+            commerceType: "collection",
+            productCount: collection.productCount,
+          },
+        })
+      );
     }
   }
   if (kind === "solution-kit") {
     for (const kit of catalog?.solutionKits ?? []) {
-      result.push(candidate({
-        kind,
-        id: kit.id,
-        label: kit.title,
-        slug: kit.id,
-        status: null,
-        adminHref: solutionKitHref(kit.id),
-        details: {
-          shortDescription: kit.shortDescription,
-          recommendedModules: kit.recommendedModules.join(", "),
-          features: kit.features.join(", "),
-        },
-      }));
+      result.push(
+        candidate({
+          kind,
+          id: kit.id,
+          label: kit.title,
+          slug: kit.id,
+          status: null,
+          adminHref: solutionKitHref(kit.id),
+          details: {
+            shortDescription: kit.shortDescription,
+            recommendedModules: kit.recommendedModules.join(", "),
+            features: kit.features.join(", "),
+          },
+        })
+      );
     }
   }
   if (kind === "seo-document") {
     for (const doc of catalog?.seoDocuments ?? []) {
-      result.push(candidate({
-        kind,
-        id: doc.id,
-        label: doc.targetTitle ?? doc.title ?? doc.slug ?? doc.targetId,
-        slug: doc.slug,
-        status: doc.status,
-        adminHref: "/admin/seo",
-        details: {
-          targetType: doc.targetType,
-          targetId: doc.targetId,
-          title: doc.title,
-        },
-      }));
+      result.push(
+        candidate({
+          kind,
+          id: doc.id,
+          label: doc.targetTitle ?? doc.title ?? doc.slug ?? doc.targetId,
+          slug: doc.slug,
+          status: doc.status,
+          adminHref: "/admin/seo",
+          details: {
+            targetType: doc.targetType,
+            targetId: doc.targetId,
+            title: doc.title,
+          },
+        })
+      );
     }
   }
   return result.sort((left, right) => left.label.localeCompare(right.label));
@@ -735,7 +853,7 @@ const activeCandidateForKind = (
     const segments = (context.route ?? "").split("/").filter(Boolean);
     const entriesIndex = segments.findIndex((segment) => segment === "entries");
     const contentTypeSlug =
-      selected.kind === "entry" && entriesIndex >= 0 ? segments[entriesIndex + 1] ?? null : null;
+      selected.kind === "entry" && entriesIndex >= 0 ? (segments[entriesIndex + 1] ?? null) : null;
     return {
       kind,
       id: selected.id,
@@ -750,9 +868,11 @@ const activeCandidateForKind = (
   }
   const selected = context.runtimeSnapshot?.selectedResource;
   if (selected?.kind === kind) {
-    return candidatesForKind(kind, context.resourceCatalog, context).find(
-      (candidate) => candidate.id === selected.id
-    ) ?? null;
+    return (
+      candidatesForKind(kind, context.resourceCatalog, context).find(
+        (candidate) => candidate.id === selected.id
+      ) ?? null
+    );
   }
   if (kind === "page" && context.activeSurface?.kind === "page") {
     const page = context.activeSurface.page;
@@ -763,6 +883,23 @@ const activeCandidateForKind = (
       slug: page.slug,
       status: page.status,
       adminHref: pageHref(page.id),
+    };
+  }
+  if (kind === "detail-page" && context.activeSurface?.kind === "detail-page") {
+    const detailPage = context.activeSurface.detailPage;
+    return {
+      kind,
+      id: detailPage.id,
+      label: detailPage.name,
+      slug: detailPage.contentTypeSlug,
+      status: detailPage.status,
+      adminHref: detailPageHref(detailPage.contentTypeId, detailPage.id),
+      details: {
+        contentTypeId: detailPage.contentTypeId,
+        contentTypeSlug: detailPage.contentTypeSlug,
+        linkedRouteType: detailPage.contentTypeSlug,
+        titlePattern: detailPage.titlePattern,
+      },
     };
   }
   if (kind === "custom-screen" && context.activeSurface?.kind === "custom-screen") {
@@ -800,6 +937,8 @@ const activeCandidateForKind = (
 
 const normalizeCandidateValue = (value: string | null) => (value ? normalizeText(value) : "");
 
+const allowsPartialNameResolution = (kind: CmsResourceKind) => kind !== "detail-page";
+
 export const resolveCmsOperationTargets = (
   draft: CmsOperationDraft,
   context: AssistantAdminContext
@@ -829,7 +968,9 @@ export const resolveCmsOperationTargets = (
     ? [activeCandidate]
     : candidatesForKind(draft.resourceKind, context.resourceCatalog, context);
   const matchQuery =
-    query.active && !activeCandidate && (draft.operation === "inspect" || draft.operation === "find")
+    query.active &&
+    !activeCandidate &&
+    (draft.operation === "inspect" || draft.operation === "find")
       ? { ...query, active: undefined }
       : query;
   const directMatches = allCandidates.filter((item) =>
@@ -837,6 +978,7 @@ export const resolveCmsOperationTargets = (
   );
   const readOnlyPartialMatches =
     directMatches.length === 0 &&
+    allowsPartialNameResolution(draft.resourceKind) &&
     query.exactName &&
     (draft.operation === "inspect" || draft.operation === "find")
       ? allCandidates.filter((item) => {
@@ -850,13 +992,16 @@ export const resolveCmsOperationTargets = (
     readOnlyPartialMatches.length > 0
       ? readOnlyPartialMatches
       : directMatches.length === 0 &&
-    draft.constraints?.expectedCount !== undefined &&
-    query.exactName &&
-    (draft.operation === "delete" || draft.operation === "archive" || draft.operation === "update")
-      ? allCandidates.filter((item) =>
-          normalizeCandidateValue(item.label).includes(normalizeText(query.exactName ?? ""))
-        )
-      : directMatches;
+          allowsPartialNameResolution(draft.resourceKind) &&
+          draft.constraints?.expectedCount !== undefined &&
+          query.exactName &&
+          (draft.operation === "delete" ||
+            draft.operation === "archive" ||
+            draft.operation === "update")
+        ? allCandidates.filter((item) =>
+            normalizeCandidateValue(item.label).includes(normalizeText(query.exactName ?? ""))
+          )
+        : directMatches;
   const hasFilters = (draft.filters ?? []).length > 0;
   const filteredMatches = matches.filter((item) =>
     matchesFiltersWithPolicy(item, draft.filters, resourcePolicy)
@@ -906,7 +1051,8 @@ export const resolveCmsOperationTargets = (
     };
   }
   return {
-    status: draft.operation === "inspect" || draft.operation === "find" ? "candidates" : "ambiguous",
+    status:
+      draft.operation === "inspect" || draft.operation === "find" ? "candidates" : "ambiguous",
     draft,
     candidates: effectiveMatches,
     reason: `Matched ${effectiveMatches.length} candidates.`,

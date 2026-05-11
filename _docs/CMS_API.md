@@ -1586,6 +1586,11 @@ Create/update payload (summary):
     "contentTypeSlug": "products",
     "status": "draft",
     "titlePattern": "{{ title }}",
+    "seo": {
+      "titlePattern": "{{ title }} | Products",
+      "descriptionField": "summary",
+      "imageField": "coverImage"
+    },
     "settings": {
       "template": "detail",
       "layout": {}
@@ -1619,6 +1624,12 @@ Rules:
 - `POST /detail-pages/:id/publish` promotes the saved `current_document` into
   `published_document`, records a `publish` revision, and keeps public runtime
   behind the existing canonical route link.
+- Public runtime and dedicated detail-page preview render detail-document
+  `titlePattern` / `seo.titlePattern`, `seo.descriptionField`, and
+  `seo.imageField` against the selected entry before falling back to entry SEO
+  metadata. Title-pattern tokens are limited to safe entry meta/data paths;
+  secret-like token names are rejected by the document normalizer and fail
+  closed in public rendering.
 - `POST /detail-pages/:id/autosave` accepts `{ document }`, records or reuses a
   single latest `autosave` revision snapshot for recovery, and does not mutate
   canonical route linkage.
@@ -1634,6 +1645,15 @@ Rules:
   `detail_page_revision_delete_forbidden`.
 - This CRUD family manages documents only; canonical route linking remains owned
   by `setting.content-route.upsert`.
+- Admin client cache keys for these routes are `detailPages:list`,
+  `detailPages:list:contentType:<contentTypeId>`, and
+  `detailPages:detail:<id>`; assistant `detail-page.upsert` execution results
+  broadcast the same cache family as manual admin mutations.
+- Manual admin editing opens the route-linked detail template at
+  `/admin/advanced/engine/:contentTypeId/collection/detail-template/:detailPageId`.
+  The editor uses the same `/detail-pages*` lifecycle routes plus bounded
+  `entriesClient` reads for the preview sample entry; it does not own a
+  separate detail-page fetch or preview transport.
 
 ---
 
@@ -1662,6 +1682,8 @@ Create payload (summary):
   "name": "Catalog screen",
   "contentTypeId": "content-type-uuid",
   "status": "draft",
+  "collectionRole": "canonical-admin-screen",
+  "compositionKey": "catalog-screen",
   "schemaVersion": 1,
   "blocks": [
     { "id": "section-1", "type": "section", "data": {} }
@@ -1679,7 +1701,8 @@ Create payload (summary):
 ```
 
 Record shape (summary):
-- `id`, `name`, `contentTypeId`, `status`, `schemaVersion`, `blocks`, `bindings`
+- `id`, `name`, `contentTypeId`, `status`, `collectionRole`,
+  `compositionKey`, `schemaVersion`, `blocks`, `bindings`
 - `createdAt`, `updatedAt`
 
 ---
@@ -2035,6 +2058,7 @@ Permissions: `content:read`, `content:write`, `content:publish`
 - `GET /content-types`
 - `POST /content-types`
 - `POST /content-types/:id/duplicate`
+- `GET /content-types/:id/collection-workspace`
 - `PATCH /content-types/:id`
 - `DELETE /content-types/:id`
 
@@ -2058,6 +2082,25 @@ from the TASK-202 migration were retained as `published`.
 
 Duplicate payload accepts optional `name` / `slug`; without them the service
 creates a unique `Copy of ...` draft and copies schema only, never entries.
+
+`GET /content-types/:id/collection-workspace` is the internal Engine workspace
+read model for one collection root. It requires `content:read` and returns a
+bounded server-owned summary with `canonical`, `linkedSecondary`, `unresolved`,
+and `candidates` buckets. It does not expose preview tokens, raw custom-screen
+bindings, signed media URLs, or browser-owned canonical-link state. Canonical
+route/detail/list/listing/admin-screen links resolve from `site.contentRoutes`,
+`PageData.settings.collectionLink`, listing services, and custom-screen
+`collectionRole` metadata; ambiguous or missing links remain unresolved with
+bounded candidates, and route-derived canonical data requires `settings:read`.
+The canonical detail-page candidate links to the manual detail-template editor
+under the same Engine workspace route family; hover/focus prefetch warms the
+workspace summary, detail-page record, and sample entries with cached reads.
+TASK-190 blueprint composition consumes this same workspace/detail-page read
+model for supported mixed setup follow-ups. The assistant may request
+server-derived resource catalog inclusion, but clients cannot submit trusted
+`resourceCatalog` payloads, and detail-page writes still execute only through
+the typed `detail-page.upsert` action plus the detail-page route/service owner
+seams.
 
 Delete returns `{ "ok": true }` only after the content type dependency guard
 passes. Known conflicts are mapped to HTTP 409:
@@ -2897,6 +2940,9 @@ Permissions:
 - `settings:read` dla `GET /assistant/status` i `POST /assistant/chat`
 - `settings:write` dla `POST /assistant/reindex`
 - `settings:read` + `content:read` dla `POST /assistant/actions/plan`
+- dodatkowo `widgets:read` dla `POST /assistant/actions/plan`, gdy
+  `context.activeSurface.kind` to `page` z template-section inspection albo
+  `detail-page`
 - `POST /assistant/actions/dry-run` i `POST /assistant/actions/execute`
   egzekwuja per-action permissions z registry kontraktow zamiast dokladac
   jeden szerszy wspolny bundle write/read dla wszystkich action families
@@ -2934,8 +2980,12 @@ Stara rodzina `/assistant/site-builder/*` jest wycofana. Site-kit planning/execu
 `TASK-174-04-02` rozszerza `page.widget.patch` o selected-block `patch-data`; akcja wymaga istniejacego block id i dataPath, a brak sciezki blokuje patch zamiast wykonywac szeroki rewrite.
 `TASK-174-04-03` promuje `widget-template.update` i `widget-template.block.patch` do executable typed actions dla aktywnego reusable widget template; page-instance vs reusable-template ambiguity zwraca `needs_input`.
 `TASK-174-04-04` promuje `custom-screen.update` i `custom-screen.widget.patch` do executable typed actions dla aktywnego custom screen; binding target jest rozpoznawany po `widgetId + propPath + field`, bez ujawniania entry payloadow.
+`TASK-190-06-01` przenosi kompozycje katalogowych admin review screens do `blueprintAdminSurfaceComposer`: helper sklada istniejace `screen-*` custom-screen blocks, waliduje referencje do pol content schema, odrzuca secret-like field refs i nadal zwraca obecny `custom-screen.upsert` `blocks` / `bindings` payload bez nowego layout DSL.
+`TASK-190-06-02` przenosi binding composition do `blueprintBindingComposer` i rozszerza obecny custom-screen owner seam o top-level `collectionRole` / `compositionKey`; `custom-screen.upsert` oraz `custom-screen.update` moga przenosic te pola przez strict action schema, executor i `customScreenService` bez assistant-only metadata store.
 `TASK-174-04-05` promuje `entry.update`, `form.update`, `listing-query.update`, `listing-template.update`, `menu.item.update` i `seo.document.update` do executable typed actions; wszystkie mutacje ida przez istniejace domain services i zachowuja unrelated fields/config.
 `TASK-190-05-03-05` promuje `detail-page.upsert` do executable typed action dla strict detail-page documents; execute przechodzi przez content-domain owner seam, odswieza `contentTypeSlug` z canonical content type, respektuje `DetailPageDocument.status` jako jedyny owner publish state, i nie przejmuje route-link ownership od `setting.content-route.upsert`.
+`TASK-190-07-02` dodaje catalog-backed no-duplicate matcher przed handoffem do strict executor path: bounded resource catalog zawiera bezpieczne detail-page summaries, page `collectionLink` metadata, custom-screen `collectionRole` / `compositionKey`, media summaries bez raw/signed payloadow, a matcher przepisuje wspierane create-like akcje na istniejace stable ids albo zwraca blocking conflict dla niejednoznacznych query/screen/media kandydatow. W executorze istnieje tylko compatibility fallback dla pojedynczego exact-name custom screena bez `collectionRole` i bez `compositionKey`; ekran o tej samej nazwie z innymi metadanymi pozostaje konfliktem zaleznosci zamiast silent reuse.
+`TASK-190-05-03-08` promuje `detail-page` do generic CMS operation vocabulary tylko jako bounded resource-context seam: provider guidance/package metadata moga opisywac `detail-page`, target resolver akceptuje zaufane id, stable `contentTypeId`, exact route/content-type linkage albo aktywny detail-template surface, a generic `detail-page` mutation pozostaje policy-gated bez nowej sciezki wykonawczej poza lokalnym `detail-page.upsert`.
 `TASK-174-05-01` dodaje read-only active page template-section inspection: refy sa deduplikowane server-side, referenced widget templates sa streszczane bez raw config values/secrets, a aktywna strona z template inspection wymaga `widgets:read` poza `content:read`.
 `TASK-174-05-02` dodaje konserwatywne target resolution dla template-backed page edits: ambiguous prompt zwraca `needs_input`, page-instance prompt idzie do `page.widget.patch`, a template-wide prompt idzie do `widget-template.block.patch` tylko przy jednoznacznym zhydratowanym nested block target.
 `TASK-174-06-01` aktualizuje admin review/result UI dla resource operations: preview pokazuje operation badges, destructive/blocked states i warningi, execute pokazuje partial counts i redaguje secret-like dynamic text.
@@ -3146,8 +3196,19 @@ corpus.
 ```
 
 `includeResourceCatalog=true` enrichuje server-side planning context o bounded/redacted snapshot admin resources dla `LLM Guide`.
-Snapshot obejmuje pages, content types, custom screens, listings, forms, menus, SEO documents i widgets/templates.
+Snapshot obejmuje pages, detail pages, content types, custom screens, listings, forms, menus, SEO documents, media, commerce, solution kits i widgets/templates.
 Nie jest przyjmowany jako client-supplied `resourceCatalog`; unknown context fields sa odrzucane.
+Generic provider planning package zawiera bounded `detailPages` obok istniejacych
+pages/posts/entries/media/commerce/solution-kit grup; dodanie `detail-page` nie
+usuwa zadnej dotychczasowej grupy. Dopasowanie detail-page uzywa stable
+`contentTypeId` / exact ids jako preferowanych kluczy, a route-facing slugi i
+`linkedRouteType` sa traktowane jako kompatybilne etykiety, nie fuzzy nazwy.
+Collection workspace follow-up uses the same boundary: the browser may send only
+`context.collectionWorkspaceHint` with `contentTypeId` plus optional
+`activeDetailPageId`. Client-supplied `context.collectionWorkspace` summaries
+are rejected; the route hydrates that package server-side from
+`GET /content-types/:id/collection-workspace` semantics before provider
+packaging.
 `runtimeSnapshot` jest advisory planning context; nie zastepuje route/domain RBAC.
 Generic CMS operation planning uses the same route and can return strict read-only `inspection` metadata for resource candidate lists. Those responses have `actions: []`, are not executable, and are used for prompts such as "czy widzisz strone X" or "jakie ekrany widzisz z prefixem Y".
 Action plan responses may include `responseKind`:
@@ -3193,8 +3254,15 @@ When the active admin surface is `Pages > :id`, `activeSurface` may include a bo
 For active page surfaces, planning hydration also dedupes `template-section` references from the advisory surface plus persisted page canvas data and attaches bounded referenced widget template summaries (`id`, name/status/category, layout summary, nested block ids/types/paths/data keys). Template summaries do not include raw block config values or secret-like keys, and this inspection requires `widgets:read`.
 If a template-backed page edit could target either only the current page instance or the reusable template, the planner returns `needs_input` with a target question. Explicit page-instance prompts can plan `page.widget.patch`; explicit reusable-template prompts can plan `widget-template.block.patch` only when the hydrated template summary resolves one supported nested block field.
 When the active admin surface is `Advanced > Widgets > Templates > :id`, `activeSurface` may include a bounded widget template summary with template identity, selected block id, block id/type/path summaries, slot keys, template-section references, wrapper/section settings summary, and remote-update warnings.
-When the active admin surface is `Advanced > Custom Screens`, `activeSurface` may include a bounded custom screen summary with screen identity, capabilities mode, selected entry id, selected block id, block summaries, bindings, writable field names, and unsaved/remote-update warnings.
-Before planning, the route rehydrates active surface identity server-side. Active pages/custom screens require `content:read`; active pages also require `widgets:read` for template-section inspection; active widget templates require `widgets:read`. If the server-side resource is missing, active surface context is dropped.
+When the active admin surface is `Advanced > Custom Screens`, `activeSurface` may include a bounded custom screen summary with screen identity, canonical `collectionRole` / `compositionKey` metadata, capabilities mode, selected entry id, selected block id, block summaries, bindings, writable field names, and unsaved/remote-update warnings.
+When the active admin surface is
+`Advanced > Engine > :contentTypeId > Collection > Detail Template`, the
+detail-template editor may publish `activeSurface.kind = "detail-page"` through
+the existing browser active-surface transport. The route keeps
+`runtimeSnapshot.selectedResource.kind = "content-type"` for the workspace
+shell, derives only the bounded `collectionWorkspaceHint`, then rehydrates
+`collectionWorkspace` and detail-page identity server-side before planning.
+Before planning, the route rehydrates active surface identity server-side. Active pages/custom screens require `content:read`; active pages also require `widgets:read` for template-section inspection; active widget templates require `widgets:read`; active detail pages require `content:read` plus `widgets:read`. If the server-side resource is missing, active surface context is dropped.
 
 `context.siteKit` moze byc uzyty przez AI Site Wizard jako guided entry point do tego samego action flow:
 

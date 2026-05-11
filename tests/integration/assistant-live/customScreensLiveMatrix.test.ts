@@ -43,7 +43,10 @@ const createActor = async (prefix: string) => {
     .returning();
   if (!actor) throw new Error("assistant_live_actor_create_failed");
   globalCleanup.add(`user:${actor.id}`, async () => {
-    await db.delete(users).where(eq(users.id, actor.id)).catch(() => undefined);
+    await db
+      .delete(users)
+      .where(eq(users.id, actor.id))
+      .catch(() => undefined);
   });
   return actor;
 };
@@ -77,15 +80,13 @@ const createContentTypeFixture = async (
   return contentType;
 };
 
-const createScreenFixture = async (
-  input: {
-    name: string;
-    contentTypeId: string;
-    status: "draft" | "active";
-    showInSidebar: boolean;
-    cleanup: ReturnType<typeof createLiveCleanupStack>;
-  }
-) => {
+const createScreenFixture = async (input: {
+  name: string;
+  contentTypeId: string;
+  status: "draft" | "active";
+  showInSidebar: boolean;
+  cleanup: ReturnType<typeof createLiveCleanupStack>;
+}) => {
   const { createCustomScreen, deleteCustomScreen } = await loadCustomScreens();
   const screen = await createCustomScreen({
     name: input.name,
@@ -102,9 +103,7 @@ const createScreenFixture = async (
   return screen;
 };
 
-const buildScreenContext = async (
-  activeScreenId?: string
-): Promise<AssistantActionContext> => {
+const buildScreenContext = async (activeScreenId?: string): Promise<AssistantActionContext> => {
   const [{ listContentTypes }, { getCustomScreen, listCustomScreens }] = await Promise.all([
     loadContentTypes(),
     loadCustomScreens(),
@@ -119,6 +118,7 @@ const buildScreenContext = async (
       ? `/admin/advanced/custom-screens/${activeScreen.id}`
       : "/admin/advanced/custom-screens",
     locale: "pl-PL",
+    includeResourceCatalog: true,
     resourceCatalog: {
       schemaVersion: 1,
       generatedAt: new Date().toISOString(),
@@ -140,6 +140,8 @@ const buildScreenContext = async (
         name: screen.name,
         contentTypeId: screen.contentTypeId,
         status: screen.status,
+        collectionRole: screen.collectionRole,
+        compositionKey: screen.compositionKey,
         showInSidebar: screen.showInSidebar,
         sidebarLabel: screen.sidebarLabel,
         writableBindingFields: [],
@@ -244,7 +246,8 @@ const runCustomScreensMatrixForProvider = async (provider: LiveProviderRuntime) 
       context: await buildScreenContext(),
       prompt: `Pokaz widoczne w sidebarze ekrany custom screen z prefixem "${prefix}"`,
     });
-    const visibleLabels = visiblePlan.inspection?.candidates.map((candidate) => candidate.label) ?? [];
+    const visibleLabels =
+      visiblePlan.inspection?.candidates.map((candidate) => candidate.label) ?? [];
     expect(visibleLabels, provider.id).toContain(screenAlpha.name);
     expect(visibleLabels, provider.id).not.toContain(screenBeta.name);
 
@@ -254,7 +257,10 @@ const runCustomScreensMatrixForProvider = async (provider: LiveProviderRuntime) 
       context: await buildScreenContext(screenAlpha.id),
       prompt: `Zmien nazwe aktywnego custom screen na "${renamed}"`,
     });
-    expect(updatePlan.actions.map((action) => action.type), provider.id).toContain("custom-screen.update");
+    expect(
+      updatePlan.actions.map((action) => action.type),
+      provider.id
+    ).toContain("custom-screen.update");
     expect((await dryRunLivePlan(updatePlan)).readyToExecute, provider.id).toBe(true);
     expectSuccessfulExecution(
       await executeLivePlan({
@@ -279,10 +285,10 @@ const runCustomScreensMatrixForProvider = async (provider: LiveProviderRuntime) 
       context: await buildScreenContext(),
       prompt: `Usun dokladnie dwa ekrany custom screen z prefixem "${prefix} Screen"`,
     });
-    expect(deletePlan.actions.map((action) => action.type), provider.id).toEqual([
-      "custom-screen.delete",
-      "custom-screen.delete",
-    ]);
+    expect(
+      deletePlan.actions.map((action) => action.type),
+      provider.id
+    ).toEqual(["custom-screen.delete", "custom-screen.delete"]);
     expectSuccessfulExecution(
       await executeLivePlan({
         plan: deletePlan,

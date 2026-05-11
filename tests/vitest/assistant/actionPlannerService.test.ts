@@ -303,6 +303,12 @@ test("planAssistantActionsWithProviderDraft prefers local blueprint composition 
   expect(plan.metadata).toMatchObject({
     planner: "local",
     providerDraftUsed: false,
+    blueprintComposition: {
+      kind: "blueprint-composition",
+      primaryCapabilityId: "product-catalog",
+      adjunctCapabilityIds: ["product-inquiry-catalog", "editorial-content-hub"],
+      gatedCapabilityIds: [],
+    },
     blueprintShadow: {
       currentIntentId: "blueprint-composed-product-catalog",
       primaryCapabilityId: "product-catalog",
@@ -310,6 +316,11 @@ test("planAssistantActionsWithProviderDraft prefers local blueprint composition 
       mismatchReason: null,
     },
   });
+  expect(plan.metadata?.blueprintComposition?.mergedResources).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ kind: "detail-page", key: "detail-page:products" }),
+    ])
+  );
   expect(requests).toHaveLength(0);
 });
 
@@ -985,6 +996,8 @@ test("planAssistantActions returns custom screen prefix candidates as read-only 
             name: "House Projects",
             contentTypeId: "type-1",
             status: "active",
+            collectionRole: null,
+            compositionKey: null,
             showInSidebar: true,
             sidebarLabel: "House Projects",
             writableBindingFields: [],
@@ -995,6 +1008,8 @@ test("planAssistantActions returns custom screen prefix candidates as read-only 
             name: "House Projects Archive",
             contentTypeId: "type-1",
             status: "draft",
+            collectionRole: null,
+            compositionKey: null,
             showInSidebar: false,
             sidebarLabel: null,
             writableBindingFields: [],
@@ -1067,6 +1082,8 @@ test("planAssistantActions reuses planning state for follow-up target selection"
             name: "House Projects",
             contentTypeId: "type-1",
             status: "active",
+            collectionRole: null,
+            compositionKey: null,
             showInSidebar: true,
             sidebarLabel: "House Projects",
             writableBindingFields: [],
@@ -1077,6 +1094,8 @@ test("planAssistantActions reuses planning state for follow-up target selection"
             name: "House Projects Archive",
             contentTypeId: "type-1",
             status: "draft",
+            collectionRole: null,
+            compositionKey: null,
             showInSidebar: false,
             sidebarLabel: null,
             writableBindingFields: [],
@@ -1249,6 +1268,8 @@ test("planAssistantActions builds custom screen delete plan from resource catalo
             name: "House Projects",
             contentTypeId: "type-1",
             status: "active",
+            collectionRole: null,
+            compositionKey: null,
             showInSidebar: true,
             sidebarLabel: "House Projects",
             writableBindingFields: [],
@@ -1259,6 +1280,8 @@ test("planAssistantActions builds custom screen delete plan from resource catalo
             name: "House Projects Archive",
             contentTypeId: "type-1",
             status: "draft",
+            collectionRole: null,
+            compositionKey: null,
             showInSidebar: false,
             sidebarLabel: null,
             writableBindingFields: [],
@@ -1269,6 +1292,8 @@ test("planAssistantActions builds custom screen delete plan from resource catalo
             name: "Products",
             contentTypeId: "type-2",
             status: "active",
+            collectionRole: null,
+            compositionKey: null,
             showInSidebar: true,
             sidebarLabel: "Products",
             writableBindingFields: [],
@@ -3014,6 +3039,8 @@ test("planAssistantActions inspects left-menu resource catalog sections", () => 
         name: "Products Screen",
         contentTypeId: "ct-products",
         status: "active",
+        collectionRole: null,
+        compositionKey: null,
         showInSidebar: true,
         sidebarLabel: "Products",
         writableBindingFields: [],
@@ -3489,37 +3516,35 @@ test("planAssistantActionsWithProviderDraft enforces the LLM gate for catalog-ba
   ).rejects.toThrow("assistant_llm_unavailable");
 });
 
-test("planAssistantActionsWithProviderDraft keeps supported mixed setup requests on the local composed path without LLM availability", async () => {
-  const plan = await planAssistantActionsWithProviderDraft({
-    prompt: "Create a product catalog with inquiry form and a blog hub.",
-    llmAvailable: false,
-    context: {
-      page: "/admin/advanced/widgets",
-      locale: "en-US",
-      includeResourceCatalog: true,
-      resourceCatalog: {
-        schemaVersion: 1,
-        generatedAt: "2026-05-07T10:00:00.000Z",
-        budget: { maxItemsPerGroup: 50, maxFieldsPerResource: 24, truncated: false },
-        pages: [],
-        posts: [],
-        entries: [],
-        contentTypes: [],
-        customScreens: [],
-        listings: { queries: [], templates: [] },
-        forms: [],
-        menus: [],
-        seoDocuments: [],
-        widgets: [],
-        media: [],
-        warnings: [],
+test("planAssistantActionsWithProviderDraft gates supported catalog-backed setup requests when LLM is unavailable", async () => {
+  await expect(
+    planAssistantActionsWithProviderDraft({
+      prompt: "Create a product catalog with inquiry form and a blog hub.",
+      llmAvailable: false,
+      context: {
+        page: "/admin/advanced/widgets",
+        locale: "en-US",
+        includeResourceCatalog: true,
+        resourceCatalog: {
+          schemaVersion: 1,
+          generatedAt: "2026-05-07T10:00:00.000Z",
+          budget: { maxItemsPerGroup: 50, maxFieldsPerResource: 24, truncated: false },
+          pages: [],
+          posts: [],
+          entries: [],
+          contentTypes: [],
+          customScreens: [],
+          listings: { queries: [], templates: [] },
+          forms: [],
+          menus: [],
+          seoDocuments: [],
+          widgets: [],
+          media: [],
+          warnings: [],
+        },
       },
-    },
-  });
-
-  expect(plan.intentId).toBe("blueprint-composed-product-catalog");
-  expect(plan.metadata?.planner).toBe("local");
-  expect(plan.metadata?.providerDraftUsed).toBe(false);
+    })
+  ).rejects.toThrow("assistant_llm_unavailable");
 });
 
 test("planAssistantActionsWithProviderDraft prefers planning state for follow-up target selection", async () => {
