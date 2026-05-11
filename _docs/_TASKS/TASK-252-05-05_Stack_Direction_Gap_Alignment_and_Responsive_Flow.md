@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Admin UI + Runtime Render
 **Estimated Effort:** Medium
-**Dependencies:** TASK-252-01, TASK-252-02, TASK-252-05
+**Dependencies:** TASK-252-01, TASK-252-02
 **Status:** To Do
 
 ---

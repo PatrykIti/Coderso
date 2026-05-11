@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Admin UI + Runtime + Security
 **Estimated Effort:** Large
-**Dependencies:** TASK-252-01, TASK-252-02, TASK-252-07
+**Dependencies:** TASK-252-01, TASK-252-02
 **Status:** To Do
 
 ---
@@ -126,6 +126,8 @@ Implementation checklist:
   - rendered `form-embed` output is public page/runtime output.
 - Auth model:
   - no new endpoint is introduced by this leaf;
+  - internal form submissions require an authenticated admin session or API key
+    scope `forms.submit`;
   - edits persist through existing authenticated admin page/template save flows.
 - RBAC:
   - unchanged page/template/widget-template write permissions.
@@ -145,6 +147,8 @@ Implementation checklist:
   - form submission security remains on existing form runtime endpoints,
     including nonce + signature/HMAC ownership in
     `core/services/forms/submissionNonce.ts` for Coderso-owned public writes
+  - internal form submission mode keeps the existing `forms.submit` API-key
+    scope requirement and is not made widget-configurable
   - any changed public submission path must keep optional reCAPTCHA policy,
     existing public rate-limit buckets, strict reject-unknown validation, and
     `tests/security/codersoSecurityGate.test.ts`

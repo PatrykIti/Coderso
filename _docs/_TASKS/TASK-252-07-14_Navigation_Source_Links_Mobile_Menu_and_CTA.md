@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Admin UI + Runtime + Security
 **Estimated Effort:** Large
-**Dependencies:** TASK-252-01, TASK-252-02, TASK-252-07
+**Dependencies:** TASK-252-01, TASK-252-02
 **Status:** To Do
 
 ---

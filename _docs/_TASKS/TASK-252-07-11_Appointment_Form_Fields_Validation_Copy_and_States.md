@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Admin UI + Runtime + Security
 **Estimated Effort:** Large
-**Dependencies:** TASK-252-01, TASK-252-02, TASK-252-07
+**Dependencies:** TASK-252-01, TASK-252-02
 **Status:** To Do
 
 ---
@@ -68,6 +68,10 @@ and Reject decisions.
   unless implementation finds a concrete source mismatch.
 - `_docs/_TASKS/TASK-252-07-11_Appointment_Form_Fields_Validation_Copy_and_States.md` for status updates during execution.
 - `_docs/_TASKS/README.md` on status changes.
+
+## New Files to Create
+
+- `_docs/_WIDGETS/APPOINTMENT_FORM.md`
 
 ## Implementation Pseudocode
 
@@ -190,6 +194,8 @@ Implementation checklist:
   - rendered appointment forms continue to submit to the existing
     `POST /api/booking/reservations` endpoint by default;
   - custom widget-owned submission endpoints are not allowed;
+  - internal booking reservation mode requires an authenticated admin session or
+    API key scope `booking.submit`;
   - edits persist through existing authenticated admin page/template save flows.
 - RBAC:
   - unchanged page/template/widget-template write permissions.
@@ -213,8 +219,8 @@ Implementation checklist:
   - preserve the current conditional booking access model in
     `core/server/publicBookingApi.ts`: public flows use the booking access
     evaluator and `assertBookingSubmissionNonce` when required by policy;
-    internal API-key flows remain covered by existing tests and are not made
-    widget-configurable
+    internal API-key flows require `booking.submit`, remain covered by existing
+    tests, and are not made widget-configurable
   - if this leaf changes route-level nonce, captcha, API-key, raw
     reject-unknown, or rate-limit behavior, update
     `tests/unit/server/publicBookingApi.test.ts` and
@@ -247,7 +253,8 @@ Implementation checklist:
 
 - `_docs/WIDGETS.md`
 - `_docs/_WIDGETS/APPOINTMENT_FORM.md`
-- `_docs/_WIDGETS/README.md` if this leaf creates a missing widget doc page.
+- `_docs/_WIDGETS/README.md` with an `APPOINTMENT_FORM.md` entry before leaf
+  completion.
 - `_docs/_TASKS/TASK-252-07-11_Appointment_Form_Fields_Validation_Copy_and_States.md` status notes during execution.
 - `_docs/_TASKS/README.md` on status changes.
 - `_docs/_CHANGELOG/README.md` and a changelog entry only when the leaf is
@@ -255,6 +262,8 @@ Implementation checklist:
 
 ## Acceptance Criteria
 
+- `_docs/_WIDGETS/README.md` includes the `APPOINTMENT_FORM.md` entry before
+  this leaf is marked `Done`.
 - `appointment-form` editor exposes the research-backed controls named in this leaf with stable metadata.
 - Runtime/data source ownership remains in the existing backend or widget owner seam.
 - Public-write/provider-secret boundaries are explicitly preserved in tests/docs when touched.

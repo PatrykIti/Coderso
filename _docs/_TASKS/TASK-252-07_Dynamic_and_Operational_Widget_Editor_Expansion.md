@@ -190,6 +190,10 @@ function normalizeContactWidgetData(raw: unknown): ContactData {
     endpoint by themselves;
   - any Coderso-owned public submission route added or changed by a leaf must
     use the existing public form/booking endpoint auth contract.
+  - internal form submissions require an authenticated admin session or API key
+    scope `forms.submit`;
+  - internal booking slot/reservation flows require an authenticated admin
+    session or API key scope `booking.submit`.
 - RBAC:
   - unchanged page/template write permissions;
   - source selection must not expose data beyond existing runtime resolver

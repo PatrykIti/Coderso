@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Admin UI + Runtime Render
 **Estimated Effort:** Medium
-**Dependencies:** TASK-252-01, TASK-252-02, TASK-252-05
+**Dependencies:** TASK-252-01, TASK-252-02
 **Status:** To Do
 
 ---
@@ -94,6 +94,35 @@ function AccordionVisualEditor(props: WidgetEditorProps<AccordionData>) {
     </WidgetEditorSection>
   );
 }
+
+function renderAccordionRuntime(items: AccordionItem[], options: AccordionOptions) {
+  const openIds = resolveAccordionOpenIds(items, options);
+  return items.map((item) => {
+    const buttonId = `accordion-trigger-${item.instanceId}`;
+    const panelId = `accordion-panel-${item.instanceId}`;
+    const expanded = openIds.includes(item.instanceId);
+    return (
+      <div data-nextless-accordion-item={item.instanceId}>
+        <h3>
+          <button
+            id={buttonId}
+            type="button"
+            aria-expanded={expanded}
+            aria-controls={panelId}
+          >
+            {item.title}
+          </button>
+        </h3>
+        <div
+          id={panelId}
+          role="region"
+          aria-labelledby={buttonId}
+          hidden={!expanded}
+        />
+      </div>
+    );
+  });
+}
 ```
 
 Implementation checklist:
@@ -106,6 +135,11 @@ Implementation checklist:
   tips, or metadata.
 - Keep legacy payloads non-destructive: missing new fields must normalize to the
   current rendered behavior.
+- Preserve a deterministic button/region strategy: every trigger needs a stable
+  id, `aria-expanded`, and `aria-controls`, and every panel needs a matching
+  `role="region"` plus `aria-labelledby`.
+- Tests must prove `openMode`, `defaultOpenIds`, and `collapsible` update both
+  visible state and accessible state without orphaning existing slot content.
 - Add or update runtime/widget tests and editor-wave tests in the files listed
   above.
 
@@ -138,6 +172,9 @@ Implementation checklist:
 - `bun test tests/unit/widgets/validator.test.ts` when schema validation, slot normalization, or widget validation changes.
 - `bun run test:vitest -- tests/vitest/widgets/accordionWidget.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/accordion-editor-wave.test.tsx`
+  must cover single vs multiple open behavior, `defaultOpenIds`,
+  `collapsible`, trigger/panel id wiring, `aria-expanded`,
+  `aria-controls`, and panel `aria-labelledby`.
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,
   slot, or shared output behavior changes.
 - `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` if

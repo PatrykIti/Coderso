@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Admin UI + Runtime + Security
 **Estimated Effort:** Medium
-**Dependencies:** TASK-252-01, TASK-252-02, TASK-252-07
+**Dependencies:** TASK-252-01, TASK-252-02
 **Status:** To Do
 
 ---
@@ -68,6 +68,10 @@ and Reject decisions.
   unless implementation finds a concrete source mismatch.
 - `_docs/_TASKS/TASK-252-07-08_Search_Box_Copy_Target_Route_Query_Param_and_Display_Mode.md` for status updates during execution.
 - `_docs/_TASKS/README.md` on status changes.
+
+## New Files to Create
+
+- `_docs/_WIDGETS/SEARCH_BOX.md`
 
 ## Implementation Pseudocode
 
@@ -188,7 +192,8 @@ Implementation checklist:
 
 - `_docs/WIDGETS.md`
 - `_docs/_WIDGETS/SEARCH_BOX.md`
-- `_docs/_WIDGETS/README.md` if this leaf creates a missing widget doc page.
+- `_docs/_WIDGETS/README.md` with a `SEARCH_BOX.md` entry before leaf
+  completion.
 - `_docs/_TASKS/TASK-252-07-08_Search_Box_Copy_Target_Route_Query_Param_and_Display_Mode.md` status notes during execution.
 - `_docs/_TASKS/README.md` on status changes.
 - `_docs/_CHANGELOG/README.md` and a changelog entry only when the leaf is
@@ -196,6 +201,8 @@ Implementation checklist:
 
 ## Acceptance Criteria
 
+- `_docs/_WIDGETS/README.md` includes the `SEARCH_BOX.md` entry before this
+  leaf is marked `Done`.
 - `search-box` editor exposes the research-backed controls named in this leaf with stable metadata.
 - Runtime/data source ownership remains in the existing backend or widget owner seam.
 - Public-read/provider-secret boundaries are explicitly preserved in tests/docs when touched.

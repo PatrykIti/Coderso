@@ -249,6 +249,11 @@ Use these as current research seeds, not as unlicensed source imports:
 
 ## Implementation Order
 
+Dependency fields in the physical task files capture hard prerequisites only.
+The order below is the preferred rollout sequence for reducing merge/rework
+risk; it does not make later parent families hard blockers unless their own
+`Dependencies` field says so.
+
 1. Finish TASK-252-01 so the shared inspector IA, info icon pattern, control
    metadata, and slot-control placement are stable before per-widget edits.
 2. Treat TASK-252-02 as the completed research archive and use each

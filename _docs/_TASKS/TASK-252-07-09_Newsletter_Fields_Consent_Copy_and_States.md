@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Admin UI + Runtime + Security
 **Estimated Effort:** Large
-**Dependencies:** TASK-252-01, TASK-252-02, TASK-252-07
+**Dependencies:** TASK-252-01, TASK-252-02
 **Status:** To Do
 
 ---
@@ -179,7 +179,8 @@ Implementation checklist:
     must use nonce + signature/HMAC via
     `core/services/forms/submissionNonce.ts`, optional reCAPTCHA policy,
     existing public rate-limit buckets, strict reject-unknown validation, and
-    `tests/security/codersoSecurityGate.test.ts`
+    `tests/security/codersoSecurityGate.test.ts`; internal submission mode
+    requires an authenticated admin session or API key scope `forms.submit`
   - audience/provider secrets must not be persisted in widget data/browser cache
 
 ## Testing Requirements

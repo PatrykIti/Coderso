@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Admin UI + Runtime Render
 **Estimated Effort:** Large
-**Dependencies:** TASK-252-01, TASK-252-02, TASK-252-06
+**Dependencies:** TASK-252-01, TASK-252-02
 **Status:** To Do
 
 ---
@@ -221,7 +221,9 @@ Implementation checklist:
 - `bun --cwd core lint:types`
 - `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
 - `bun test tests/unit/widgets/validator.test.ts` when adding `billingToggle`,
-  per-cycle price, or single-highlight schema fields.
+  `plans[].prices`, `style.featureMarker`, or single-highlight schema fields;
+  include accepted-new-field coverage, unknown-field rejection for every new
+  contract object, and legacy-normalization assertions for missing new fields.
 - `bun run test:vitest -- tests/vitest/widgets/pricingPlans.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/pricing-plans-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

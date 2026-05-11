@@ -170,6 +170,9 @@ Then build a matrix:
 - `_docs/_WIDGETS/tmp/README.md`
 - `_docs/_TASKS/TASK-252*.md`
 - `_docs/WIDGETS.md` only if the final research matrix changes widget IA rules.
+- `_docs/_TASKS/README.md`
+- `_docs/_CHANGELOG/README.md`
+- `_docs/_CHANGELOG/814-2026-05-10-task-252-widget-research-archive.md`
 
 ## Acceptance Criteria
 

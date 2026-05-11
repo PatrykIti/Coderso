@@ -5,7 +5,7 @@
 **Priority:** Medium
 **Category:** Widgets + Admin UI + Runtime Render
 **Estimated Effort:** Medium
-**Dependencies:** TASK-252-01, TASK-252-02, TASK-252-06
+**Dependencies:** TASK-252-01, TASK-252-02
 **Status:** To Do
 
 ---
@@ -57,6 +57,7 @@ and Reject decisions.
 - `core/admin/ui/widgets/editors/StatsKpiEditors.tsx`
 - `tests/vitest/widgets/renderer.test.tsx` if shared renderer output changes.
 - `tests/vitest/widgets/styleNoneTokens.test.tsx` if token/clear adjacency changes.
+- `tests/unit/widgets/validator.test.ts` when schema/defaults/normalizer fields change.
 - `tests/vitest/widgets/statsKpi.test.tsx`
 - `tests/vitest/ui/stats-kpi-editor-wave.test.tsx`
 - `_docs/WIDGETS.md`
@@ -157,6 +158,9 @@ Implementation checklist:
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
+- `bun test tests/unit/widgets/validator.test.ts` when schema/defaults/normalizer
+  fields change; include accepted-new-field, unknown-field rejection, and
+  legacy-normalization assertions for this widget.
 - `bun run test:vitest -- tests/vitest/widgets/statsKpi.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/stats-kpi-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,

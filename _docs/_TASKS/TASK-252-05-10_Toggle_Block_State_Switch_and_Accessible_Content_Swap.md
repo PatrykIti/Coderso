@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Admin UI + Runtime Render
 **Estimated Effort:** Medium
-**Dependencies:** TASK-252-01, TASK-252-02, TASK-252-05
+**Dependencies:** TASK-252-01, TASK-252-02
 **Status:** To Do
 
 ---
@@ -100,6 +100,43 @@ function ToggleBlockVisualEditor(props: WidgetEditorProps<ToggleBlockData>) {
     </WidgetEditorSection>
   );
 }
+
+function renderToggleRuntime(states: ToggleBlockState[], options: ToggleBlockOptions) {
+  const activeState = resolveToggleDefaultState(states, options.defaultState);
+  return (
+    <div
+      data-nextless-toggle-block="1"
+      data-nextless-toggle-state={activeState.id}
+      aria-live="polite"
+    >
+      <div role="radiogroup" aria-label="Toggle content view">
+        {states.map((state) => (
+          <button
+            key={state.id}
+            type="button"
+            role="radio"
+            aria-checked={state.id === activeState.id}
+            aria-controls={`toggle-pane-${state.slotId}`}
+            data-nextless-toggle-trigger
+            data-nextless-toggle-state-id={state.id}
+          >
+            {state.label}
+          </button>
+        ))}
+      </div>
+      {states.map((state) => (
+        <div
+          id={`toggle-pane-${state.slotId}`}
+          data-nextless-toggle-pane={state.slotId}
+          hidden={state.id !== activeState.id}
+        />
+      ))}
+      <span className="sr-only" data-nextless-toggle-status>
+        {activeState.label} selected
+      </span>
+    </div>
+  );
+}
 ```
 
 Implementation checklist:
@@ -116,6 +153,13 @@ Implementation checklist:
   tips, or metadata.
 - Keep legacy payloads non-destructive: missing new fields must normalize to the
   current rendered behavior.
+- Render both state triggers as an accessible finite state control rather than
+  a single ambiguous "swap" button. The runtime must update `aria-checked`,
+  `aria-controls`, hidden panes, `data-nextless-toggle-state`, and an
+  announcement/status target together.
+- Keyboard tests must cover Arrow/Home/End movement across the two states and
+  verify that renamed/reordered labels do not rename the stable `primary` /
+  `secondary` slot ids.
 - Add or update runtime/widget tests and editor-wave tests in the files listed
   above.
 
@@ -148,6 +192,9 @@ Implementation checklist:
 - `bun test tests/unit/widgets/validator.test.ts` when schema validation, slot normalization, or widget validation changes.
 - `bun run test:vitest -- tests/vitest/widgets/toggleBlock.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/toggle-block-editor-wave.test.tsx`
+  must cover the accessible state control, `aria-checked`,
+  `aria-controls`, status announcement target, default state, and stable
+  `primary`/`secondary` slot ownership.
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,
   slot, or shared output behavior changes.
 - `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` if

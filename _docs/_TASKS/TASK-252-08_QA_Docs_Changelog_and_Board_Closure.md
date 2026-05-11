@@ -72,17 +72,26 @@ the implementation subtasks.
 - `_docs/WIDGETS.md`
 - `_docs/_WIDGETS/README.md`
 - all touched `_docs/_WIDGETS/*.md`
+- `core/widgets/modulePackMatrix.ts` if TASK-252 changes module pack
+  completeness/readiness.
+- `_docs/WIDGET_PACK_MATRIX.md` if TASK-252 changes module pack
+  completeness/readiness; otherwise record a "not affected" rationale in the
+  final proof matrix.
 - final validation notes in this task file.
 
 ## Implementation Pseudocode
 
-Build a final widget proof matrix.
+Build a final widget proof matrix. Include a pack-matrix checkpoint for every
+widget family that changes module pack completeness/readiness; when TASK-252
+does not affect readiness, record "not affected" with the reason instead of
+silently skipping `core/widgets/modulePackMatrix.ts` and
+`_docs/WIDGET_PACK_MATRIX.md`.
 
 ```md
-| Widget | Research proof | Editor IA proof | Runtime proof | Docs | Notes |
-|---|---|---|---|---|---|
-| hero | tmp/hero matrix | hero-editor-wave | hero.test | HERO.md | badge supported |
-| timeline | tmp/timeline matrix | timeline-editor-wave | timeline.test | TIMELINE.md | chronology modes |
+| Widget | Research proof | Editor IA proof | Runtime proof | Docs | Pack matrix | Notes |
+|---|---|---|---|---|---|---|
+| hero | tmp/hero matrix | hero-editor-wave | hero.test | HERO.md | not affected: existing pack status unchanged | badge supported |
+| timeline | tmp/timeline matrix | timeline-editor-wave | timeline.test | TIMELINE.md | WIDGET_PACK_MATRIX.md updated | chronology modes |
 ```
 
 Then close statuses only after validation. Use the actual completion date from
@@ -91,9 +100,9 @@ the final validation run, compute the changelog number from
 than referencing an undefined variable.
 
 ```ts
-const taskIds = parseTaskReadmeRows("_docs/_TASKS/README.md")
-  .filter((row) => row.id === "TASK-252" || row.id.startsWith("TASK-252-"))
-  .map((row) => row.id);
+const taskRows = parseTaskReadmeRows("_docs/_TASKS/README.md")
+  .filter((row) => row.id === "TASK-252" || row.id.startsWith("TASK-252-"));
+const taskIds = taskRows.map((row) => row.id);
 const completedOn = getActualCompletionDateFromFinalGateRun();
 const changelogNumber = getHighestChangelogIndexNumber("_docs/_CHANGELOG/README.md") + 1;
 const changelogPath = `_docs/_CHANGELOG/${changelogNumber}-${completedOn}-task-252-widget-editor-implementation.md`;
@@ -102,9 +111,16 @@ const validationSummary = summarizeExecutedCommandsAndKnownBlockers({
   focusedSuites: collectFocusedSuitesFromCompletedLeaves(taskIds),
 });
 
-for (const id of taskIds) {
-  markTaskDone(id, completedOn);
-  moveReadmeRow(id, "To Do", "Done");
+for (const row of taskRows) {
+  if (row.status === "Done") continue;
+  markTaskDone(row.id, completedOn);
+  if (row.status === "To Do") {
+    moveReadmeRow(row.id, "To Do", "Done");
+  } else if (row.status === "In Progress") {
+    moveReadmeRow(row.id, "In Progress", "Done");
+  } else {
+    throw new Error(`unexpected_task_status:${row.id}`);
+  }
 }
 recomputeTaskReadmeStatisticsFromRows();
 writeChangelogEntry(changelogPath, {
@@ -116,6 +132,10 @@ writeChangelogEntry(changelogPath, {
 });
 addChangelogIndexRow({ number: changelogNumber, date: completedOn, title: "TASK-252 widget editor implementation", type: "CMS Widgets/Admin UI" });
 ```
+
+`TASK-252-02` is already Done in the current board and must remain a preserved
+completed research slice during final closure. The closure pass should verify
+its status and changelog link, not move it again from `To Do`.
 
 ## Security Contract
 
@@ -161,7 +181,21 @@ addChangelogIndexRow({ number: changelogNumber, date: completedOn, title: "TASK-
   - `bun test tests/unit/widgets/runtimeRegistry.test.ts`
   - `bun test tests/unit/widgets/validator.test.ts`
   - `bun test tests/unit/widgets/modulePackMatrix.test.ts`
+- If the pack matrix is marked "not affected", still inspect
+  `core/widgets/modulePackMatrix.ts` and `_docs/WIDGET_PACK_MATRIX.md` and
+  record the reason in the final proof matrix.
 - Run `bun run gates:coderso` before closure or document the exact blocker.
+- For auth, public-write, secret-handling, scanner-config, or other
+  security-sensitive TASK-252 changes, run the local scanner lane from
+  `_docs/SECURITY_SPEC.md` when feasible:
+  - `bun run scan:security`
+  - `bun run scan:audit`
+  - `bun run scan:semgrep`
+  - `bun run scan:trivy`
+  - `gitleaks git --config .gitleaks.toml --redact=100 .`
+  - `gitleaks dir --config .gitleaks.toml --redact=100 .`
+  If any scanner CLI is unavailable locally, record the exact skipped command
+  and whether validation remains CI-only.
 - If DB-backed tests are required and `DATABASE_URL` is available, load env with
   `set -a && source .env && set +a` before the command.
 - Docs/research validation:
@@ -175,6 +209,8 @@ addChangelogIndexRow({ number: changelogNumber, date: completedOn, title: "TASK-
 
 - `_docs/WIDGETS.md`
 - `_docs/_WIDGETS/README.md`
+- `_docs/WIDGET_PACK_MATRIX.md` when module pack completeness/readiness
+  changes, or a recorded "not affected" rationale in this task's final matrix.
 - every changed `_docs/_WIDGETS/*.md`
 - `_docs/_TASKS/TASK-252*.md`
 - `_docs/_TASKS/README.md`
@@ -187,8 +223,13 @@ addChangelogIndexRow({ number: changelogNumber, date: completedOn, title: "TASK-
 
 - All TASK-252 task files are marked Done only after implementation and
   validation are complete.
+- The final proof matrix either updates `core/widgets/modulePackMatrix.ts` and
+  `_docs/WIDGET_PACK_MATRIX.md` or records why TASK-252 did not affect module
+  pack completeness/readiness.
 - Board statistics match task statuses.
 - Changelog entry references TASK-252 and summarizes validation.
+- Security-sensitive closure records the scanner lane results from
+  `_docs/SECURITY_SPEC.md`, or an explicit CI-only/skipped-command note.
 - Final documentation tells implementers and users how widget configuration is
   structured across Wizard, Visual, and Advanced.
 - Final validation proves every Pages-publishable widget option list is

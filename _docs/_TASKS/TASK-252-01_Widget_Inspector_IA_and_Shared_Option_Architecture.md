@@ -147,7 +147,45 @@ function WidgetControlRow({ id, label, help, children }: WidgetControlRowProps) 
   );
 }
 
+function getNextSegmentedOptionIndex({
+  currentIndex,
+  key,
+  enabledOptions,
+}: {
+  currentIndex: number;
+  key: string;
+  enabledOptions: SegmentedOption[];
+}): number {
+  if (key === "Home") return 0;
+  if (key === "End") return enabledOptions.length - 1;
+  if (key === "ArrowRight" || key === "ArrowDown") {
+    return (currentIndex + 1) % enabledOptions.length;
+  }
+  if (key === "ArrowLeft" || key === "ArrowUp") {
+    return (currentIndex - 1 + enabledOptions.length) % enabledOptions.length;
+  }
+  return currentIndex;
+}
+
 function SegmentedControl({ id, describedById, value, options, onChange }: SegmentedControlProps) {
+  const enabledOptions = options.filter((option) => !option.disabled);
+  const activeValue = enabledOptions.some((option) => option.value === value)
+    ? value
+    : enabledOptions[0]?.value;
+
+  function handleKeyDown(event: React.KeyboardEvent<HTMLButtonElement>, option: SegmentedOption) {
+    if (!["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp", "Home", "End"].includes(event.key)) {
+      return;
+    }
+    event.preventDefault();
+    const currentIndex = enabledOptions.findIndex((item) => item.value === option.value);
+    const nextIndex = getNextSegmentedOptionIndex({ currentIndex, key: event.key, enabledOptions });
+    const nextOption = enabledOptions[nextIndex];
+    if (!nextOption) return;
+    onChange(nextOption.value);
+    document.querySelector<HTMLButtonElement>(`[data-segmented-option="${id}-${nextOption.value}"]`)?.focus();
+  }
+
   return (
     <div id={id} role="radiogroup" aria-describedby={describedById}>
       {options.map((option) => (
@@ -155,8 +193,12 @@ function SegmentedControl({ id, describedById, value, options, onChange }: Segme
           key={option.value}
           type="button"
           role="radio"
-          aria-checked={value === option.value}
+          aria-checked={activeValue === option.value}
+          aria-disabled={option.disabled || undefined}
+          tabIndex={option.value === activeValue ? 0 : -1}
+          data-segmented-option={`${id}-${option.value}`}
           disabled={option.disabled}
+          onKeyDown={(event) => handleKeyDown(event, option)}
           onClick={() => onChange(option.value)}
         >
           {option.label}
@@ -166,6 +208,35 @@ function SegmentedControl({ id, describedById, value, options, onChange }: Segme
   );
 }
 ```
+
+Wrap each mode panel body at the builder panel owner so the required root
+metadata is emitted once per active widget/mode instead of repeated by every
+editor:
+
+```tsx
+function WidgetEditorModeRoot({
+  widgetType,
+  mode,
+  children,
+}: {
+  widgetType: string;
+  mode: EditorMode;
+  children: ReactNode;
+}) {
+  return (
+    <div data-widget-editor={widgetType} data-widget-editor-mode={mode}>
+      {children}
+    </div>
+  );
+}
+```
+
+`WizardPanel`, `VisualPanel`, and `AdvancedPanel` should each render their
+existing body inside this wrapper. The wrapper must sit outside widget-specific
+editor components so `data-widget-editor` and `data-widget-editor-mode` are
+present even before an individual widget has migrated to shared rows. Add
+`page-editor-shell-wave` or `widget-editors-wave-1` assertions for the selected
+widget type and active mode.
 
 Do not implement `WidgetControlRow` as a blind `cloneElement` wrapper. Current
 widget editors use composite shadcn/Radix controls such as `Select`,
@@ -219,18 +290,6 @@ const widgetSlotControlGroups: Record<string, WidgetSlotControlGroup> = {
     includeSlotIds: ["region"],
     sectionId: "section.regions",
     title: "Regions",
-  },
-  navigation: {
-    widgetType: "navigation",
-    includeSlotIds: ["right"],
-    sectionId: "navigation.slots",
-    title: "Right Actions slot",
-  },
-  footer: {
-    widgetType: "footer",
-    includeSlotIds: ["column-1", "column-2", "column-3", "bottom"],
-    sectionId: "footer.slots",
-    title: "Footer slots",
   },
 };
 
@@ -299,13 +358,13 @@ component must preserve the existing `children -> slots.default` compatibility
 path and clear `children` only when writing a new `slots` map, matching the
 current `BlockSettings` behavior.
 
-Slot groups for `section`, `navigation`, and `footer` must be registered in a
-builder-level map such as `widgetSlotControlGroups` and rendered by
-`VisualPanel`/`BlockSettings` after the widget-owned Visual editor. Do not place
-`WidgetSlotControls` inside `SectionEditors.tsx`, `NavigationEditors.tsx`, or
-`FooterEditors.tsx`, because those editors receive `WidgetEditorProps` and do
-not have the required builder-level `widget`, `block`, and block `onChange`
-contract.
+The initial TASK-252-01 proof owns `section` repeatable regions only.
+Navigation and Footer also have slots, but their placement belongs to
+`TASK-252-07-14` and `TASK-252-07-15` unless this shared leaf explicitly adds
+their editor/runtime assertions. Do not place `WidgetSlotControls` inside
+`SectionEditors.tsx`, `NavigationEditors.tsx`, or `FooterEditors.tsx`, because
+those editors receive `WidgetEditorProps` and do not have the required
+builder-level `widget`, `block`, and block `onChange` contract.
 
 ## Security Contract
 
@@ -327,8 +386,17 @@ contract.
 - `bun run test:vitest -- tests/vitest/ui/page-editor.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/page-editor-shell-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/widget-editors-wave-1.test.tsx`
+- These UI suites must assert `data-widget-editor` and
+  `data-widget-editor-mode` on Wizard, Visual, and Advanced panel roots for at
+  least the selected proof widget.
+- Shared segmented-control proof must assert `role="radiogroup"`/`role="radio"`,
+  `aria-checked`, `aria-disabled` for disabled options, roving `tabIndex`, and
+  Arrow/Home/End keyboard movement without changing disabled options.
 - Focused editor waves after the proof call-site migration:
   - `tests/vitest/ui/section-editor-wave.test.tsx`
+- Navigation/Footer slot placement tests are not required in this leaf unless
+  the implementation also moves their slot groups; otherwise those checks stay
+  with `TASK-252-07-14` and `TASK-252-07-15`.
 - Run hero/timeline editor waves only for scaffold-only compatibility touched in
   this task; full hero/timeline editor coverage is owned by TASK-252-03-01 and
   TASK-252-04-01.

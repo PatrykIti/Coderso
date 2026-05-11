@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Admin UI + Runtime Render
 **Estimated Effort:** Medium
-**Dependencies:** TASK-252-01, TASK-252-02, TASK-252-05
+**Dependencies:** TASK-252-01, TASK-252-02
 **Status:** To Do
 
 ---
@@ -89,6 +89,42 @@ function TabsVisualEditor(props: WidgetEditorProps<TabsData>) {
     </WidgetEditorSection>
   );
 }
+
+function renderTabsRuntime(panels: TabsPanel[], options: TabsOptions) {
+  const activeId = resolveDefaultTabId(options.defaultItemId, panels);
+  return (
+    <div role="tablist" aria-orientation={options.orientation ?? "horizontal"}>
+      {panels.map((panel) => (
+        <button
+          id={`tabs-trigger-${panel.instanceId}`}
+          role="tab"
+          aria-selected={panel.instanceId === activeId}
+          aria-controls={`tabs-panel-${panel.instanceId}`}
+          tabIndex={panel.instanceId === activeId ? 0 : -1}
+          data-nextless-tabs-trigger
+          data-nextless-tabs-id={panel.instanceId}
+        >
+          {panel.label}
+        </button>
+      ))}
+      {panels.map((panel) => (
+        <div
+          id={`tabs-panel-${panel.instanceId}`}
+          role="tabpanel"
+          aria-labelledby={`tabs-trigger-${panel.instanceId}`}
+          hidden={panel.instanceId !== activeId}
+        />
+      ))}
+    </div>
+  );
+}
+
+function bindTabsKeyboard(root: HTMLElement) {
+  // ArrowLeft/ArrowRight drive horizontal tablists; ArrowUp/ArrowDown drive
+  // vertical tablists. Home and End jump to the first/last enabled tab.
+  // The handler must update aria-selected, tabIndex, hidden panels, focus, and
+  // `data-nextless-tabs-active-id` through one shared sync function.
+}
 ```
 
 Implementation checklist:
@@ -101,6 +137,10 @@ Implementation checklist:
   tips, or metadata.
 - Keep legacy payloads non-destructive: missing new fields must normalize to the
   current rendered behavior.
+- Add explicit trigger/panel ids and `aria-controls`/`aria-labelledby`; do not
+  rely on text-only association between tabs and panels.
+- Add runtime keyboard handling for Arrow/Home/End keys, respecting horizontal
+  vs vertical orientation and keeping focus on the active trigger.
 - Add or update runtime/widget tests and editor-wave tests in the files listed
   above.
 
@@ -133,6 +173,9 @@ Implementation checklist:
 - `bun test tests/unit/widgets/validator.test.ts` when schema validation, slot normalization, or widget validation changes.
 - `bun run test:vitest -- tests/vitest/widgets/tabs.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/tabs-editor-wave.test.tsx`
+  must cover default active tab mapping, dynamic `aria-orientation`,
+  trigger/panel ids, `aria-controls`/`aria-labelledby`, and
+  Arrow/Home/End keyboard behavior.
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,
   slot, or shared output behavior changes.
 - `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` if
