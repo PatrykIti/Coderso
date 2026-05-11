@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 16 tasks
+- **To Do:** 17 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1491 tasks
 
@@ -38,6 +38,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-190-08-04 | Live Provider Matrix Approval and Rerun | High | Small | Approval-gated rerun of the TASK-190 live provider matrix after second-pass drift fixes |
 | TASK-252 | Widget Configuration IA and Pages Widget Expansion | High | Very Large | Umbrella: right inspector IA, research archive, Hero/Timeline expansion, and Pages widget editor parity |
 | TASK-252-01 | Widget Inspector IA and Shared Option Architecture | High | Large | Shared right-panel structure, info icon pattern, slot placement, and automation metadata |
 | TASK-252-02 | Widget Research Archive and Variant Model | High | Medium | License-safe `_docs/_WIDGETS/tmp/**` research lane and Coderso-owned variant/mode matrix |
