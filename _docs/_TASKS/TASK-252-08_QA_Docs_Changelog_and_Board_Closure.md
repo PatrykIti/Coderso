@@ -299,7 +299,8 @@ its status and changelog link, not move it again from `To Do`.
   - `bun --cwd core lint` -> green
   - `bun --cwd core lint:types` -> green
   - `bun run test:vitest` -> green (`583` files, `2630` tests)
-  - `bun run test:bun` -> green (`553` pass, `216` skip, `0` fail)
+  - `bun run test:bun` -> green (`769` pass, `0` fail)
+  - `bun run gates:coderso` -> green
   - `bun run scan:security:strict` -> green
     - `semgrep-sast`: ok
     - `bun-audit`: ok

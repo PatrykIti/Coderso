@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 7 tasks
+- **To Do:** 8 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1539 tasks
 
@@ -42,6 +42,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-240 | Coderso Multilingual and i18n Umbrella | High | Very Large | Execution-ready locale/translation/runtime routing program superseding TASK-054-21 |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |
 | TASK-105-09 | QA, Docs, Changelog, and Closure | Medium | Medium | Final metrics, docs, board, and changelog closure |
+| TASK-105-11-03-05 | Server Cluster Bun Ownership Freeze | Medium | Medium | Document and freeze remaining `tests/unit/server/*` Bun ownership so future migrations do not reopen runner ambiguity |
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |

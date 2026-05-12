@@ -45,4 +45,5 @@
 - `bun --cwd core lint:types`
 - `bun run test:vitest`
 - `bun run test:bun`
+- `bun run gates:coderso`
 - `bun run scan:security:strict`
