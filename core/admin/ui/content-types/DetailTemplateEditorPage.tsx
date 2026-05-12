@@ -7,8 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
+import {
+  getCachedContentTypes,
+  listContentTypesCached,
+  type ContentTypeSummary,
+} from "@/services/contentTypesClient";
 import {
   autosaveDetailPage,
   discardDetailPageRevision,
@@ -39,6 +45,7 @@ import {
   deleteBlockById,
   duplicateBlock,
   findBlockById,
+  flattenBlocks,
   getFirstBlockId,
   moveBlockIntoSlot,
   reorderBlocksAtPath,
@@ -50,15 +57,20 @@ import { getWidgetRegistry } from "@/ui/pages/builder/widgetRegistry";
 import { RuntimePreviewDialog } from "@/ui/preview/RuntimePreviewDialog";
 import { createAdminActionToastAdapter } from "@/ui/shared/actionToasts";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
-import type { DetailPageDocument } from "../../../services/content/detailPageTypes";
+import type {
+  DetailPageBinding,
+  DetailPageDocument,
+} from "../../../services/content/detailPageTypes";
 import type { PageMaxWidthToken } from "../../../services/pages/layoutSettings";
-import type { ContainerToken, SpacingToken } from "../../../widgets/types";
+import type { ContainerToken, SpacingToken, WidgetEditorContext } from "../../../widgets/types";
 
+import { DetailTemplateBindingPanel } from "./DetailTemplateBindingPanel";
 import {
   buildDetailTemplateDocumentUpdate,
   normalizeDetailTemplateDocument,
   resolveDetailTemplateEditorRoute,
 } from "./detailTemplateEditorModel";
+import { fieldsFromSchema } from "./schemaMapping";
 
 type SlotInsertTarget = {
   parentId: string;
@@ -228,12 +240,40 @@ const summarizeDetailTemplateBlocksForAssistant = (
   return result;
 };
 
+const summarizeDetailTemplateBindingsForAssistant = (
+  bindings: DetailPageBinding[],
+  options: { maxBindings?: number } = {}
+) => {
+  const maxBindings = options.maxBindings ?? 80;
+  return bindings.slice(0, maxBindings).map((binding) => ({
+    id: binding.id,
+    blockId: binding.blockId,
+    propPath: binding.propPath,
+    source: binding.source,
+    transform: binding.transform ?? null,
+    required: binding.required === true,
+  }));
+};
+
+const resolveDetailTemplateBindingState = (
+  bindings: DetailPageBinding[],
+  blockId: string | null,
+  propPath: string
+): "literal" | "bound" | "mixed" => {
+  if (!blockId) return "literal";
+  const hasBinding = bindings.some(
+    (binding) => binding.blockId === blockId && binding.propPath === propPath
+  );
+  return hasBinding ? "bound" : "literal";
+};
+
 const toEditorState = (record: DetailPageRecord) => {
   const document = normalizeDetailTemplateDocument(record);
   return {
     record,
     document,
     blocks: document.blocks as Block[],
+    bindings: document.bindings,
     name: document.name,
     titlePattern: document.titlePattern,
   };
@@ -254,9 +294,17 @@ export function DetailTemplateEditorPage() {
     initialState?.document ?? null
   );
   const [blocks, setBlocks] = useState<Block[]>(initialState?.blocks ?? []);
+  const [bindings, setBindings] = useState<DetailPageBinding[]>(initialState?.bindings ?? []);
   const [name, setName] = useState(initialState?.name ?? "");
   const [titlePattern, setTitlePattern] = useState(initialState?.titlePattern ?? "{title}");
   const [selectedId, setSelectedId] = useState<string | null>(initialState?.blocks[0]?.id ?? null);
+  const [contentTypes, setContentTypes] = useState<ContentTypeSummary[]>(
+    () => getCachedContentTypes() ?? []
+  );
+  const [activeDetailsTab, setActiveDetailsTab] = useState<"template" | "data" | "widget">(
+    "template"
+  );
+  const [focusedBindingPropPath, setFocusedBindingPropPath] = useState<string | null>(null);
   const [sampleEntries, setSampleEntries] = useState<EntrySummary[]>(() =>
     initialState?.document.contentTypeSlug
       ? (getCachedEntries(initialState.document.contentTypeSlug) ?? [])
@@ -296,6 +344,27 @@ export function DetailTemplateEditorPage() {
     if (!selectedBlock) return undefined;
     return getWidgetRegistry().find((widget) => widget.type === selectedBlock.type);
   }, [selectedBlock]);
+  const selectedContentType = useMemo(() => {
+    const contentTypeId = record?.contentTypeId ?? document?.contentTypeId ?? route?.contentTypeId;
+    if (!contentTypeId) return null;
+    return contentTypes.find((contentType) => contentType.id === contentTypeId) ?? null;
+  }, [contentTypes, document?.contentTypeId, record?.contentTypeId, route?.contentTypeId]);
+  const contentFields = useMemo(
+    () => (selectedContentType ? fieldsFromSchema(selectedContentType.schema) : []),
+    [selectedContentType]
+  );
+  const detailTemplateWidgetContext = useMemo<WidgetEditorContext | undefined>(() => {
+    if (!selectedBlock) return undefined;
+    return {
+      surface: "page-builder",
+      jumpToBindingPropPath: (propPath: string) => {
+        setActiveDetailsTab("data");
+        setFocusedBindingPropPath(propPath);
+      },
+      getBindingState: (propPath: string) =>
+        resolveDetailTemplateBindingState(bindings, selectedId, propPath),
+    };
+  }, [bindings, selectedBlock, selectedId]);
 
   const layout = document?.settings.layout;
   const wrapperPaddingClass = layout
@@ -345,6 +414,7 @@ export function DetailTemplateEditorPage() {
       sampleEntryId: selectedSampleEntryId || null,
       selectedBlockId: selectedId,
       blocks: summarizeDetailTemplateBlocksForAssistant(blocks),
+      bindings: summarizeDetailTemplateBindingsForAssistant(bindings),
       warnings: hasUnsavedChanges ? ["detail_page_has_unsaved_changes"] : [],
     });
 
@@ -352,6 +422,7 @@ export function DetailTemplateEditorPage() {
       clearActiveAssistantSurfaceContext();
     };
   }, [
+    bindings,
     blocks,
     detailPageId,
     document,
@@ -362,6 +433,20 @@ export function DetailTemplateEditorPage() {
     selectedSampleEntryId,
     titlePattern,
   ]);
+
+  useEffect(() => {
+    let active = true;
+    listContentTypesCached({ force: true })
+      .then((items) => {
+        if (active) setContentTypes(items);
+      })
+      .catch(() => {
+        if (active) setContentTypes(getCachedContentTypes() ?? []);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const setUnsavedChanges = useCallback((value: boolean) => {
     hasUnsavedChangesRef.current = value;
@@ -374,8 +459,10 @@ export function DetailTemplateEditorPage() {
       setRecord(next.record);
       setDocument(next.document);
       setBlocks(next.blocks);
+      setBindings(next.bindings);
       setName(next.name);
       setTitlePattern(next.titlePattern);
+      setFocusedBindingPropPath(null);
       setSelectedId((current) =>
         current && findBlockById(next.blocks, current) ? current : (next.blocks[0]?.id ?? null)
       );
@@ -505,6 +592,17 @@ export function DetailTemplateEditorPage() {
     markDraftChanged();
   };
 
+  const updateBindings = (next: DetailPageBinding[]) => {
+    setBindings(next);
+    setDocument((current) => (current ? { ...current, bindings: next } : current));
+    markDraftChanged();
+  };
+
+  const pruneBindingsForBlocks = (nextBlocks: Block[]) => {
+    const remainingBlockIds = new Set(flattenBlocks(nextBlocks).map((block) => block.id));
+    updateBindings(bindings.filter((binding) => remainingBlockIds.has(binding.blockId)));
+  };
+
   const handleAddBlock = (type: string) => {
     if (slotInsertTarget) {
       handleInsertIntoSlot(slotInsertTarget.parentId, slotInsertTarget.slotId, type);
@@ -563,6 +661,11 @@ export function DetailTemplateEditorPage() {
     updateBlocks(reorderBlocksAtPath(blocks, pathValue, from, to));
   };
 
+  const handleSelectBlock = (id: string) => {
+    setSelectedId(id);
+    setFocusedBindingPropPath(null);
+  };
+
   const handleDuplicate = (id: string) => {
     updateBlocks(duplicateBlock(blocks, id));
   };
@@ -571,8 +674,10 @@ export function DetailTemplateEditorPage() {
     const result = deleteBlockById(blocks, id);
     if (!result.deleted) return;
     updateBlocks(result.blocks);
+    pruneBindingsForBlocks(result.blocks);
     if (selectedId && !findBlockById(result.blocks, selectedId)) {
       setSelectedId(getFirstBlockId(result.blocks));
+      setFocusedBindingPropPath(null);
     }
   };
 
@@ -598,6 +703,7 @@ export function DetailTemplateEditorPage() {
       name,
       titlePattern,
       blocks,
+      bindings,
     });
   };
 
@@ -788,56 +894,89 @@ export function DetailTemplateEditorPage() {
 
   const renderDetailsPanel = () => (
     <div className="flex flex-col gap-6 p-6">
-      <section className="space-y-3">
-        <div>
-          <h2 className="text-sm font-semibold">Template</h2>
-          <p className="text-xs text-muted-foreground">
-            {document?.contentTypeSlug ? `/${document.contentTypeSlug}` : "Collection"}
-          </p>
-        </div>
-        <label className="grid gap-1 text-xs font-medium text-muted-foreground">
-          Name
-          <Input value={name} onChange={(event) => handleNameChange(event.target.value)} />
-        </label>
-        <label className="grid gap-1 text-xs font-medium text-muted-foreground">
-          Title pattern
-          <Input
-            value={titlePattern}
-            onChange={(event) => handleTitlePatternChange(event.target.value)}
+      <Tabs
+        value={activeDetailsTab}
+        onValueChange={(next) => setActiveDetailsTab(next as typeof activeDetailsTab)}
+        className="space-y-5"
+      >
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="template">Template</TabsTrigger>
+          <TabsTrigger value="data">Data</TabsTrigger>
+          <TabsTrigger value="widget">Widget</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="template" className="space-y-4">
+          <section className="space-y-3">
+            <div>
+              <h2 className="text-sm font-semibold">Template</h2>
+              <p className="text-xs text-muted-foreground">
+                {document?.contentTypeSlug ? `/${document.contentTypeSlug}` : "Collection"}
+              </p>
+            </div>
+            <label className="grid gap-1 text-xs font-medium text-muted-foreground">
+              Name
+              <Input value={name} onChange={(event) => handleNameChange(event.target.value)} />
+            </label>
+            <label className="grid gap-1 text-xs font-medium text-muted-foreground">
+              Title pattern
+              <Input
+                value={titlePattern}
+                onChange={(event) => handleTitlePatternChange(event.target.value)}
+              />
+            </label>
+            <label className="grid gap-1 text-xs font-medium text-muted-foreground">
+              Sample entry
+              <select
+                value={selectedSampleEntryId}
+                onChange={(event) => setSelectedSampleEntryId(event.target.value)}
+                className="h-9 w-full rounded-md border border-[var(--admin-input-border)] bg-[var(--admin-input-bg)] px-3 text-sm text-[var(--admin-input-text)] shadow-xs outline-none focus-visible:ring-[3px] focus-visible:ring-[var(--admin-input-ring)]/50"
+              >
+                {sampleEntries.length === 0 ? (
+                  <option value="">No entries</option>
+                ) : (
+                  sampleEntries.map((entry) => (
+                    <option key={entry.id} value={entry.id}>
+                      {entry.title || entry.slug}
+                    </option>
+                  ))
+                )}
+              </select>
+            </label>
+            {sampleEntriesLoading ? (
+              <p className="text-xs text-muted-foreground">Loading entries...</p>
+            ) : null}
+            {sampleEntriesError ? (
+              <p className="text-xs text-destructive">{sampleEntriesError}</p>
+            ) : null}
+          </section>
+        </TabsContent>
+
+        <TabsContent value="data" className="space-y-4">
+          <DetailTemplateBindingPanel
+            selectedBlock={selectedBlock}
+            selectedWidget={selectedWidget ?? null}
+            value={bindings}
+            fields={contentFields}
+            onChange={updateBindings}
+            focusedPropPath={focusedBindingPropPath}
+            onFocusedPropPathChange={setFocusedBindingPropPath}
           />
-        </label>
-        <label className="grid gap-1 text-xs font-medium text-muted-foreground">
-          Sample entry
-          <select
-            value={selectedSampleEntryId}
-            onChange={(event) => setSelectedSampleEntryId(event.target.value)}
-            className="h-9 w-full rounded-md border border-[var(--admin-input-border)] bg-[var(--admin-input-bg)] px-3 text-sm text-[var(--admin-input-text)] shadow-xs outline-none focus-visible:ring-[3px] focus-visible:ring-[var(--admin-input-ring)]/50"
-          >
-            {sampleEntries.length === 0 ? (
-              <option value="">No entries</option>
-            ) : (
-              sampleEntries.map((entry) => (
-                <option key={entry.id} value={entry.id}>
-                  {entry.title || entry.slug}
-                </option>
-              ))
-            )}
-          </select>
-        </label>
-        {sampleEntriesLoading ? (
-          <p className="text-xs text-muted-foreground">Loading entries...</p>
-        ) : null}
-        {sampleEntriesError ? (
-          <p className="text-xs text-destructive">{sampleEntriesError}</p>
-        ) : null}
-      </section>
+        </TabsContent>
+
+        <TabsContent value="widget" className="space-y-4">
+          <section className="space-y-3">
+            <h2 className="text-sm font-semibold">Block</h2>
+            <BlockSettings
+              block={selectedBlock}
+              widget={selectedWidget}
+              onChange={handleChangeBlock}
+              editorContext={detailTemplateWidgetContext}
+            />
+          </section>
+        </TabsContent>
+      </Tabs>
 
       <Separator />
-
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold">Block</h2>
-        <BlockSettings block={selectedBlock} widget={selectedWidget} onChange={handleChangeBlock} />
-      </section>
     </div>
   );
 
@@ -1021,7 +1160,7 @@ export function DetailTemplateEditorPage() {
                   }
                   pageDefaults={layout?.sections.defaults}
                   selectedId={selectedId}
-                  onSelect={setSelectedId}
+                  onSelect={handleSelectBlock}
                   onMove={handleMove}
                   onDuplicate={handleDuplicate}
                   onDelete={handleDelete}

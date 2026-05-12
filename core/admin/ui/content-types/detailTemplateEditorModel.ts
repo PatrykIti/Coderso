@@ -20,6 +20,7 @@ export type DetailTemplateDocumentDraft = {
   name: string;
   titlePattern: string;
   blocks: Block[];
+  bindings: DetailPageBinding[];
 };
 
 const decodePathSegment = (value: string | undefined) => {
@@ -154,5 +155,6 @@ export const buildDetailTemplateDocumentUpdate = (
     status: "draft",
     titlePattern: normalizeText(draft.titlePattern, current.titlePattern),
     blocks: draft.blocks,
+    bindings: draft.bindings,
   };
 };

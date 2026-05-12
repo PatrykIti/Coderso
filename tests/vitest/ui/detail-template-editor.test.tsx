@@ -8,6 +8,7 @@ import type {
   DetailPageRecord,
   DetailPageRevisionSummary,
 } from "../../../core/admin/services/detailPagesClient";
+import type { ContentTypeSummary } from "../../../core/admin/services/contentTypesClient";
 import type { EntrySummary } from "../../../core/admin/services/entriesClient";
 import { AdminRouterProvider } from "../../../core/admin/ui/contexts/AdminRouterContext";
 import type { DetailPageDocument } from "../../../core/services/content/detailPageTypes";
@@ -21,6 +22,7 @@ const detailTemplateState = vi.hoisted(() => {
   const state = {
     cachedRecord: null as DetailPageRecord | null,
     remoteRecord: null as DetailPageRecord | null,
+    contentTypes: [] as ContentTypeSummary[],
     entries: [] as EntrySummary[],
     revisions: [] as DetailPageRevisionSummary[],
     cacheListener: null as ((event: CacheEvent) => void) | null,
@@ -118,6 +120,8 @@ const detailTemplateState = vi.hoisted(() => {
     discardDetailPageRevision: vi.fn(async () => ({ ok: true })),
     getCachedEntries: vi.fn(() => state.entries),
     listEntriesCached: vi.fn(async () => state.entries),
+    getCachedContentTypes: vi.fn(() => state.contentTypes),
+    listContentTypesCached: vi.fn(async () => state.contentTypes),
     subscribeCacheEvents: vi.fn((listener: (event: CacheEvent) => void) => {
       state.cacheListener = listener;
       return () => {
@@ -130,6 +134,7 @@ const detailTemplateState = vi.hoisted(() => {
     reset() {
       state.cachedRecord = null;
       state.remoteRecord = null;
+      state.contentTypes = [];
       state.entries = [];
       state.revisions = [];
       state.cacheListener = null;
@@ -145,6 +150,8 @@ const detailTemplateState = vi.hoisted(() => {
       state.discardDetailPageRevision.mockClear();
       state.getCachedEntries.mockClear();
       state.listEntriesCached.mockClear();
+      state.getCachedContentTypes.mockClear();
+      state.listContentTypesCached.mockClear();
       state.subscribeCacheEvents.mockClear();
     },
   };
@@ -167,6 +174,11 @@ vi.mock("@/services/detailPagesClient", () => ({
 vi.mock("@/services/entriesClient", () => ({
   getCachedEntries: detailTemplateState.getCachedEntries,
   listEntriesCached: detailTemplateState.listEntriesCached,
+}));
+
+vi.mock("@/services/contentTypesClient", () => ({
+  getCachedContentTypes: detailTemplateState.getCachedContentTypes,
+  listContentTypesCached: detailTemplateState.listContentTypesCached,
 }));
 
 vi.mock("@/services/apiClient", () => ({
@@ -220,6 +232,81 @@ vi.mock("@/components/ui/sheet", () => ({
   SheetContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   SheetDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   SheetTitle: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+}));
+
+vi.mock("@/components/ui/tabs", () => ({
+  Tabs: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  TabsContent: ({ children }: { children: React.ReactNode; value: string }) => (
+    <div>{children}</div>
+  ),
+  TabsList: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  TabsTrigger: ({ children }: { children: React.ReactNode; value: string }) => (
+    <button type="button">{children}</button>
+  ),
+}));
+
+vi.mock("@/components/ui/select", () => {
+  const flattenText = (value: React.ReactNode): string =>
+    React.Children.toArray(value)
+      .map((child) => {
+        if (typeof child === "string" || typeof child === "number") return String(child);
+        if (React.isValidElement(child)) return flattenText(child.props.children);
+        return "";
+      })
+      .join("")
+      .trim();
+
+  const collectOptions = (value: React.ReactNode): Array<{ value: string; label: string }> =>
+    React.Children.toArray(value).flatMap((child) => {
+      if (!React.isValidElement(child)) return [];
+      if (typeof child.props.value === "string") {
+        return [{ value: child.props.value, label: flattenText(child.props.children) }];
+      }
+      return collectOptions(child.props.children);
+    });
+
+  return {
+    Select: ({
+      children,
+      onValueChange,
+      value,
+    }: {
+      children: React.ReactNode;
+      onValueChange?: (value: string) => void;
+      value?: string;
+    }) => (
+      <select value={value} onChange={(event) => onValueChange?.(event.target.value)}>
+        {collectOptions(children).map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    ),
+    SelectContent: () => null,
+    SelectItem: () => null,
+    SelectTrigger: () => null,
+    SelectValue: ({ children }: { children?: React.ReactNode }) => <>{children ?? null}</>,
+  };
+});
+
+vi.mock("@/components/ui/switch", () => ({
+  Switch: ({
+    checked,
+    disabled,
+    onCheckedChange,
+  }: {
+    checked?: boolean;
+    disabled?: boolean;
+    onCheckedChange?: (checked: boolean) => void;
+  }) => (
+    <input
+      type="checkbox"
+      checked={Boolean(checked)}
+      disabled={disabled}
+      onChange={(event) => onCheckedChange?.(event.target.checked)}
+    />
+  ),
 }));
 
 vi.mock("@/ui/preview/RuntimePreviewDialog", () => ({
@@ -423,6 +510,26 @@ const createEntry = (overrides: Partial<EntrySummary> = {}): EntrySummary => ({
   ...overrides,
 });
 
+const createContentType = (overrides: Partial<ContentTypeSummary> = {}): ContentTypeSummary => ({
+  id: "ct-products",
+  name: "Products",
+  slug: "products",
+  status: "published",
+  createdAt: "2026-05-10T10:00:00.000Z",
+  updatedAt: "2026-05-10T10:00:00.000Z",
+  schema: {
+    type: "object",
+    additionalProperties: false,
+    required: ["headline"],
+    properties: {
+      headline: { type: "string", title: "Headline" },
+      summary: { type: "string", title: "Summary" },
+      coverImage: { type: "string", title: "Cover image", xFieldType: "media" },
+    },
+  },
+  ...overrides,
+});
+
 const createRevision = (
   overrides: Partial<DetailPageRevisionSummary> = {}
 ): DetailPageRevisionSummary => ({
@@ -440,6 +547,7 @@ beforeEach(() => {
   detailTemplateState.reset();
   detailTemplateState.cachedRecord = createRecord();
   detailTemplateState.remoteRecord = createRecord();
+  detailTemplateState.contentTypes = [createContentType()];
   detailTemplateState.entries = [createEntry()];
   detailTemplateState.revisions = [
     createRevision({ id: "rev-published", kind: "publish" }),
@@ -486,6 +594,17 @@ const clickButton = (container: HTMLElement, label: string) => {
   if (!button) throw new Error(`Missing button: ${label}`);
   React.act(() => {
     button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+};
+
+const changeSelect = (container: HTMLElement, optionValue: string) => {
+  const select = Array.from(container.querySelectorAll("select")).find((candidate) =>
+    Array.from(candidate.options).some((option) => option.value === optionValue)
+  );
+  if (!select) throw new Error(`Missing select option: ${optionValue}`);
+  React.act(() => {
+    select.value = optionValue;
+    select.dispatchEvent(new Event("change", { bubbles: true }));
   });
 };
 
@@ -552,6 +671,65 @@ test("detail template editor saves shared builder blocks and previews with selec
   }
 });
 
+test("detail template editor saves block field bindings with draft payloads", async () => {
+  const view = mount(
+    "/admin/advanced/engine/ct-products/collection/detail-template/detail-products"
+  );
+
+  try {
+    await flush();
+    clickButton(view.container, "Add binding");
+    changeSelect(view.container, "entry-field:headline");
+    clickButton(view.container, "Save draft");
+    await flush();
+
+    const savedDocument = detailTemplateState.updateDetailPage.mock.calls.at(-1)?.[1];
+    expect(savedDocument?.bindings).toEqual([
+      expect.objectContaining({
+        blockId: "block-hero",
+        propPath: "headline",
+        source: { kind: "entry-field", field: "headline" },
+        transform: "text",
+      }),
+    ]);
+    expect(savedDocument?.blocks[0]?.data).toEqual({ headline: "Product" });
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("detail template editor removes bindings for deleted blocks", async () => {
+  const document = createDocument({
+    bindings: [
+      {
+        id: "binding-headline",
+        blockId: "block-hero",
+        propPath: "headline",
+        source: { kind: "entry-field", field: "headline" },
+        transform: "text",
+      },
+    ],
+  });
+  detailTemplateState.cachedRecord = createRecord({ currentDocument: document });
+  detailTemplateState.remoteRecord = createRecord({ currentDocument: document });
+  const view = mount(
+    "/admin/advanced/engine/ct-products/collection/detail-template/detail-products"
+  );
+
+  try {
+    await flush();
+    clickButton(view.container, "delete-first-block");
+    clickButton(view.container, "Save draft");
+    await flush();
+
+    const savedDocument = detailTemplateState.updateDetailPage.mock.calls.at(-1)?.[1];
+    expect(savedDocument?.blocks).toEqual([]);
+    expect(savedDocument?.bindings).toEqual([]);
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("detail template editor saves published templates through draft payloads", async () => {
   const publishedDocument = createDocument({ status: "published" });
   detailTemplateState.cachedRecord = createRecord({
@@ -596,6 +774,7 @@ test("buildDetailTemplateDocumentUpdate downgrades published records to draft up
       name: "Product detail template edited",
       titlePattern: "{title}",
       blocks: publishedDocument.blocks,
+      bindings: publishedDocument.bindings,
     }
   );
 

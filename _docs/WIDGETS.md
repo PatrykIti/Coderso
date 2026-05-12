@@ -104,6 +104,23 @@ Zasady:
   sekcji `Visual` albo `Advanced`; nie wracamy do top-of-panel slot banners nad
   zakladkami.
 
+## Detail Template Content Bindings
+
+Detail templates moga mapowac wybrane sciezki propsow widgetu do danych wpisu
+przez `DetailPageDocument.bindings`. Prawy inspector detail template ma zakladke
+`Data`, ktora zapisuje bindingi dla zaznaczonego bloku.
+
+Zasady:
+
+- literalne `block.data` pozostaje defaultem i fallbackiem widocznym w edytorze;
+- runtime publicznego detail page nadpisuje tylko te propsy, ktore maja binding
+  w `document.bindings`;
+- zrodlem moga byc pola content type, bezpieczne entry meta (`title`, `slug`,
+  `publishedAt`, `author`) albo istniejace computed resolvery detail-page;
+- bindingi sa obslugiwane przez istniejacy `resolveDetailPageBlocks`, bez
+  osobnej warstwy runtime dla widgetow;
+- zwykle Pages nie dostaja automatycznego content-type bindingu w tym kontrakcie.
+
 ---
 
 ## Dokumentacja widgetow

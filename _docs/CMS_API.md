@@ -1654,6 +1654,12 @@ Rules:
   The editor uses the same `/detail-pages*` lifecycle routes plus bounded
   `entriesClient` reads for the preview sample entry; it does not own a
   separate detail-page fetch or preview transport.
+- The detail template editor exposes block-level Data bindings for
+  `document.bindings` through the same `PATCH /detail-pages/:id` draft payload.
+  Block `data` remains fallback/default content; public detail runtime overlays
+  entry-specific values only through the existing `resolveDetailPageBlocks`
+  binding resolver. This binding UI is detail-template scoped and does not add a
+  generic Pages content-type binding contract.
 
 ---
 

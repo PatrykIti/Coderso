@@ -212,6 +212,15 @@ export type AssistantCollectionWorkspaceSummary = CollectionWorkspaceSummary & {
   activeDetailPageId: string | null;
 };
 
+export type AssistantDetailPageBindingSummary = {
+  id: string;
+  blockId: string;
+  propPath: string;
+  source: DetailPageDocument["bindings"][number]["source"];
+  transform: DetailPageDocument["bindings"][number]["transform"] | null;
+  required: boolean;
+};
+
 export type AssistantActiveDetailPageSurfaceContext = {
   kind: "detail-page";
   detailPage: {
@@ -225,6 +234,7 @@ export type AssistantActiveDetailPageSurfaceContext = {
   sampleEntryId: string | null;
   selectedBlockId: string | null;
   blocks: AssistantActiveSurfaceBlockSummary[];
+  bindings?: AssistantDetailPageBindingSummary[];
   templateReferences?: AssistantTemplateSectionReferenceSummary[];
   referencedTemplates?: AssistantReferencedWidgetTemplateSummary[];
   warnings: string[];

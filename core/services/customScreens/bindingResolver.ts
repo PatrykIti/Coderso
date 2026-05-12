@@ -11,11 +11,10 @@ import {
   splitBindingPath,
   writeBindingPathValue,
 } from "../utils/bindingPath";
+export { collectBindingPropPaths } from "../utils/bindingPropPaths";
 
 import type { CustomScreenBinding } from "./customScreenSchemas";
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
 export { readBindingPathValue, splitBindingPath, writeBindingPathValue };
 
 export type CustomScreenBindingWidgetSource = "screen-registry" | "legacy-fallback" | "unknown";
@@ -313,27 +312,6 @@ export function applyBindingsToBlocks(
   fieldValues: Record<string, unknown>
 ) {
   return blocks.map((block) => applyBindingsToBlock(block, bindings, fieldValues));
-}
-
-export function collectBindingPropPaths(value: unknown, prefix = ""): string[] {
-  if (Array.isArray(value)) {
-    return value.flatMap((item, index) =>
-      collectBindingPropPaths(item, prefix ? `${prefix}.${String(index)}` : String(index))
-    );
-  }
-
-  if (!isRecord(value)) {
-    return prefix ? [prefix] : [];
-  }
-
-  const entries = Object.entries(value);
-  if (entries.length === 0) {
-    return prefix ? [prefix] : [];
-  }
-
-  return entries.flatMap(([key, nested]) =>
-    collectBindingPropPaths(nested, prefix ? `${prefix}.${key}` : key)
-  );
 }
 
 export function collectWritableBindingFields(
