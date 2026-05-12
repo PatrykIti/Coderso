@@ -1,5 +1,3 @@
-import { createHash } from "node:crypto";
-
 import { ensureRuntimeWidgetsRegistered } from "../../widgets/runtime";
 import { normalizeWidgetBlocks } from "../../widgets/validator";
 import { normalizePageLayoutSettings } from "../pages/layoutSettings";
@@ -41,6 +39,97 @@ const detailPageTitleMetaTokens = new Set([
 const relatedLimitMin = 1;
 const relatedLimitMax = 24;
 const deterministicNamespace = "detail-page-document";
+const textEncoder = new TextEncoder();
+
+const rotateLeft = (value: number, bits: number) =>
+  ((value << bits) | (value >>> (32 - bits))) >>> 0;
+
+const toHex = (bytes: Uint8Array, start = 0, end = bytes.length) => {
+  let output = "";
+  for (let index = start; index < end; index += 1) {
+    output += bytes[index]!.toString(16).padStart(2, "0");
+  }
+  return output;
+};
+
+const sha1Digest = (value: string) => {
+  const source = textEncoder.encode(value);
+  const bitLength = source.length * 8;
+  const totalLength = Math.ceil((source.length + 9) / 64) * 64;
+  const padded = new Uint8Array(totalLength);
+  padded.set(source);
+  padded[source.length] = 0x80;
+
+  const paddedView = new DataView(padded.buffer);
+  paddedView.setUint32(totalLength - 8, Math.floor(bitLength / 0x100000000), false);
+  paddedView.setUint32(totalLength - 4, bitLength >>> 0, false);
+
+  let h0 = 0x67452301;
+  let h1 = 0xefcdab89;
+  let h2 = 0x98badcfe;
+  let h3 = 0x10325476;
+  let h4 = 0xc3d2e1f0;
+
+  const words = new Uint32Array(80);
+  for (let offset = 0; offset < totalLength; offset += 64) {
+    for (let index = 0; index < 16; index += 1) {
+      words[index] = paddedView.getUint32(offset + index * 4, false);
+    }
+    for (let index = 16; index < 80; index += 1) {
+      words[index] = rotateLeft(
+        words[index - 3]! ^ words[index - 8]! ^ words[index - 14]! ^ words[index - 16]!,
+        1
+      );
+    }
+
+    let a = h0;
+    let b = h1;
+    let c = h2;
+    let d = h3;
+    let e = h4;
+
+    for (let index = 0; index < 80; index += 1) {
+      let f = 0;
+      let k = 0;
+
+      if (index < 20) {
+        f = (b & c) | (~b & d);
+        k = 0x5a827999;
+      } else if (index < 40) {
+        f = b ^ c ^ d;
+        k = 0x6ed9eba1;
+      } else if (index < 60) {
+        f = (b & c) | (b & d) | (c & d);
+        k = 0x8f1bbcdc;
+      } else {
+        f = b ^ c ^ d;
+        k = 0xca62c1d6;
+      }
+
+      const next = (rotateLeft(a, 5) + f + e + k + words[index]!) >>> 0;
+      e = d;
+      d = c;
+      c = rotateLeft(b, 30);
+      b = a;
+      a = next;
+    }
+
+    h0 = (h0 + a) >>> 0;
+    h1 = (h1 + b) >>> 0;
+    h2 = (h2 + c) >>> 0;
+    h3 = (h3 + d) >>> 0;
+    h4 = (h4 + e) >>> 0;
+  }
+
+  const digest = new Uint8Array(20);
+  const digestView = new DataView(digest.buffer);
+  digestView.setUint32(0, h0, false);
+  digestView.setUint32(4, h1, false);
+  digestView.setUint32(8, h2, false);
+  digestView.setUint32(12, h3, false);
+  digestView.setUint32(16, h4, false);
+  return digest;
+};
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -355,11 +444,11 @@ const normalizeRelatedSources = (value: unknown): DetailPageRelatedSource[] | un
 
 const toUuidString = (bytes: Uint8Array) =>
   [
-    Buffer.from(bytes.slice(0, 4)).toString("hex"),
-    Buffer.from(bytes.slice(4, 6)).toString("hex"),
-    Buffer.from(bytes.slice(6, 8)).toString("hex"),
-    Buffer.from(bytes.slice(8, 10)).toString("hex"),
-    Buffer.from(bytes.slice(10, 16)).toString("hex"),
+    toHex(bytes, 0, 4),
+    toHex(bytes, 4, 6),
+    toHex(bytes, 6, 8),
+    toHex(bytes, 8, 10),
+    toHex(bytes, 10, 16),
   ].join("-");
 
 export const buildDeterministicDetailPageId = (input: {
@@ -374,8 +463,8 @@ export const buildDeterministicDetailPageId = (input: {
     input.pageRole,
     normalizeOptionalText(input.compositionKey) ?? "",
   ].join(":");
-  const digest = createHash("sha1").update(name).digest();
-  const bytes = Uint8Array.from(digest.slice(0, 16));
+  const digest = sha1Digest(name);
+  const bytes = digest.slice(0, 16);
   bytes[6] = (bytes[6]! & 0x0f) | 0x50;
   bytes[8] = (bytes[8]! & 0x3f) | 0x80;
   return toUuidString(bytes);

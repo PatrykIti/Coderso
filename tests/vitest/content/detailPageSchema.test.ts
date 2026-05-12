@@ -245,6 +245,7 @@ test("detail page ids stay UUID-compatible and deterministic for stable content 
   });
 
   expect(normalizeDetailPageId(first)).toBe(first);
+  expect(first).toBe("051b16e5-c5a6-596e-84ba-2c7052186326");
   expect(first).toBe(second);
   expect(other).not.toBe(first);
 });

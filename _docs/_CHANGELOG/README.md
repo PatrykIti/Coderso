@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 840 | 2026-05-12 | Admin detail page schema browser-safe hashing | Admin UI/Resilience |
 | 839 | 2026-05-12 | TASK-252 widget configuration closure | CMS Widgets/Admin UI/QA |
 | 838 | 2026-05-11 | TASK-252 widget inspector IA | CMS Widgets/Admin UI |
 | 837 | 2026-05-10 | TASK-252 widget research archive | CMS Widgets/Research |
