@@ -1,8 +1,10 @@
 import type { CSSProperties, ComponentType } from "react";
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
+import { normalizeWidgetSafeHref } from "./widgetSafeHref";
 
 export type TimelineVariantId = "milestones" | "cards" | "compact";
+export type TimelineMode = "process" | "axis" | "chronology" | "alternating";
 export type TimelineOrientation = "horizontal" | "vertical";
 export type TimelineAlign = "start" | "center" | "end";
 export type TimelineLabelPosition = "top" | "bottom";
@@ -13,6 +15,12 @@ export type TimelineMarkerSize = "sm" | "md" | "lg";
 export type TimelineThickness = "1" | "2" | "3" | "4";
 export type TimelineTitleSize = "none" | "sm" | "base" | "lg" | "xl";
 export type TimelineDescriptionSize = "none" | "xs" | "sm" | "base" | "lg";
+export type TimelineStatus = "upcoming" | "current" | "complete";
+
+export type TimelineStepCta = {
+  label: string;
+  href: string;
+};
 
 export type TimelineStep = {
   id?: string;
@@ -20,9 +28,14 @@ export type TimelineStep = {
   description?: string;
   icon?: string;
   accent?: string;
+  date?: string;
+  dateLabel?: string;
+  status?: TimelineStatus;
+  cta?: TimelineStepCta;
 };
 
 export type TimelineData = {
+  mode?: TimelineMode;
   steps: TimelineStep[];
   layout?: {
     orientation?: TimelineOrientation;
@@ -86,6 +99,18 @@ const descriptionSizeClassMap = {
   lg: "text-lg",
 } as const;
 
+const timelineStatusLabelMap: Record<TimelineStatus, string> = {
+  upcoming: "Upcoming",
+  current: "Current",
+  complete: "Complete",
+};
+
+const timelineStatusClassMap: Record<TimelineStatus, string> = {
+  upcoming: "border-border/70 bg-muted/50 text-[var(--color-text)]/75",
+  current: "border-transparent bg-[var(--color-primary)]/15 text-[var(--color-primary)]",
+  complete: "border-transparent bg-emerald-500/15 text-emerald-700",
+};
+
 const textAlignClassMap = {
   start: "text-left",
   center: "text-center",
@@ -116,6 +141,9 @@ export const timelineSchema = {
   additionalProperties: false,
   required: ["steps"],
   properties: {
+    mode: {
+      enum: ["process", "axis", "chronology", "alternating"],
+    },
     steps: {
       type: "array",
       minItems: timelineStepMin,
@@ -130,6 +158,18 @@ export const timelineSchema = {
           description: { type: "string" },
           icon: { type: "string" },
           accent: { type: "string" },
+          date: { type: "string" },
+          dateLabel: { type: "string" },
+          status: { enum: ["upcoming", "current", "complete"] },
+          cta: {
+            type: "object",
+            additionalProperties: false,
+            required: ["label", "href"],
+            properties: {
+              label: { type: "string" },
+              href: { type: "string" },
+            },
+          },
         },
       },
     },
@@ -221,13 +261,72 @@ export function normalizeTimelineSteps(
       description: typeof base.description === "string" ? base.description : undefined,
       icon: typeof base.icon === "string" ? base.icon : undefined,
       accent: typeof base.accent === "string" ? base.accent : undefined,
+      date: typeof base.date === "string" && base.date.trim().length > 0 ? base.date : undefined,
+      dateLabel:
+        typeof base.dateLabel === "string" && base.dateLabel.trim().length > 0
+          ? base.dateLabel
+          : undefined,
+      status:
+        base.status === "upcoming" || base.status === "current" || base.status === "complete"
+          ? base.status
+          : undefined,
+      cta:
+        typeof base.cta?.label === "string" &&
+        base.cta.label.trim().length > 0 &&
+        typeof base.cta?.href === "string"
+          ? {
+              label: base.cta.label.trim(),
+              href: base.cta.href,
+            }
+          : undefined,
     });
   }
 
   return normalized;
 }
 
+function normalizeTimelineStepCta(value: TimelineStep["cta"]): TimelineStep["cta"] {
+  if (!value || typeof value.label !== "string" || typeof value.href !== "string") return undefined;
+  const label = value.label.trim();
+  const href = normalizeWidgetSafeHref(value.href, {
+    allowRelative: true,
+    allowHash: true,
+    allowHttp: true,
+  });
+  if (!label || !href) return undefined;
+  return { label, href };
+}
+
+export function normalizeTimelineData(data: TimelineData, variant = "milestones"): TimelineData {
+  const steps = normalizeTimelineSteps(data.steps).map((step) => ({
+    ...step,
+    cta: normalizeTimelineStepCta(step.cta),
+  }));
+
+  return {
+    ...timelineDefaults,
+    ...data,
+    mode: resolveTimelineMode(data.mode, variant),
+    steps,
+    layout: {
+      ...timelineDefaults.layout,
+      ...data.layout,
+    },
+    guides: {
+      ...timelineDefaults.guides,
+      ...data.guides,
+    },
+    style: {
+      ...timelineDefaults.style,
+      ...data.style,
+    },
+    background:
+      data.background !== undefined ? { ...data.background } : timelineDefaults.background,
+  };
+}
+
 export const timelineDefaults: TimelineData = {
+  mode: "axis",
   steps: normalizeTimelineSteps([
     { id: "step-1", title: "Discovery", description: "Define goals and context." },
     { id: "step-2", title: "Planning", description: "Align scope and milestones." },
@@ -253,6 +352,16 @@ export const timelineDefaults: TimelineData = {
 export const resolveTimelineVariant = (variant: string): TimelineVariantId => {
   if (variant === "cards" || variant === "compact") return variant;
   return "milestones";
+};
+
+export const resolveTimelineMode = (mode: TimelineData["mode"], variant: string): TimelineMode => {
+  if (mode === "process" || mode === "axis" || mode === "chronology" || mode === "alternating") {
+    return mode;
+  }
+  const resolvedVariant = resolveTimelineVariant(variant);
+  if (resolvedVariant === "cards") return "chronology";
+  if (resolvedVariant === "compact") return "process";
+  return "axis";
 };
 
 export const resolveTimelineLayout = (
@@ -312,6 +421,26 @@ const renderStepText = (
 
   return (
     <div className={joinClasses("space-y-1", textAlignClassMap[align] ?? "text-center")}>
+      {step.status || step.date || step.dateLabel ? (
+        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          {step.status ? (
+            <span
+              className={joinClasses(
+                "inline-flex items-center rounded-full border px-2 py-0.5 font-medium",
+                timelineStatusClassMap[step.status]
+              )}
+              data-timeline-status={step.status}
+            >
+              {timelineStatusLabelMap[step.status]}
+            </span>
+          ) : null}
+          {step.date ? (
+            <time dateTime={step.date}>{step.dateLabel ?? step.date}</time>
+          ) : step.dateLabel ? (
+            <span>{step.dateLabel}</span>
+          ) : null}
+        </div>
+      ) : null}
       <div className="flex items-center gap-2">
         {step.icon ? <span className="text-sm leading-none">{step.icon}</span> : null}
         <span
@@ -328,6 +457,14 @@ const renderStepText = (
         >
           {step.description}
         </p>
+      ) : null}
+      {!compact && step.cta ? (
+        <a
+          className="inline-flex text-xs font-medium underline underline-offset-2"
+          href={step.cta.href}
+        >
+          {step.cta.label}
+        </a>
       ) : null}
     </div>
   );
@@ -539,6 +676,159 @@ function TimelineCardsLayout({
   );
 }
 
+function TimelineChronologyLayout({
+  steps,
+  layout,
+  guides,
+  style,
+}: {
+  steps: TimelineStep[];
+  layout: Required<NonNullable<TimelineData["layout"]>>;
+  guides: Required<NonNullable<TimelineData["guides"]>>;
+  style: ReturnType<typeof resolveTimelineStyle>;
+}) {
+  const markerColor = style.markerColor ?? "var(--color-primary)";
+  const lineColor = style.lineColor ?? "var(--color-border)";
+  const titleColor = style.titleColor ?? "var(--color-text)";
+  const descriptionColor = style.descriptionColor ?? "var(--color-text)";
+  const lineThickness = thicknessValueMap[style.thickness] ?? "2px";
+  const markerSize = markerSizeClassMap[style.markerSize] ?? "h-3.5 w-3.5";
+
+  return (
+    <ol className={joinClasses("flex flex-col", spacingClassMap[layout.spacing] ?? "gap-5")}>
+      {steps.map((step, index) => (
+        <li
+          key={step.id ?? `${step.title}-${index}`}
+          className="grid gap-3 md:grid-cols-[10rem_1fr]"
+        >
+          <div className="text-xs text-muted-foreground">
+            {step.date ? (
+              <time dateTime={step.date}>{step.dateLabel ?? step.date}</time>
+            ) : (
+              (step.dateLabel ?? "Timeline step")
+            )}
+          </div>
+          <div className="flex gap-4">
+            <div className="flex flex-col items-center">
+              <span
+                className={joinClasses("rounded-full border", markerSize)}
+                style={{
+                  backgroundColor: step.accent ?? markerColor,
+                  borderColor: step.accent ?? markerColor,
+                  borderWidth: lineThickness,
+                  borderStyle: style.lineStyle,
+                }}
+              />
+              {guides.enabled && index < steps.length - 1 ? (
+                <span
+                  className="mt-1 h-full min-h-8"
+                  style={{
+                    width: lineThickness,
+                    backgroundColor: lineColor,
+                    borderStyle: guides.style,
+                  }}
+                />
+              ) : null}
+            </div>
+            <div className="min-w-0 flex-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
+              {renderStepText(
+                step,
+                layout.align,
+                titleColor,
+                descriptionColor,
+                style.titleSize ?? "base",
+                style.descriptionSize ?? "xs"
+              )}
+            </div>
+          </div>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function TimelineAlternatingLayout({
+  steps,
+  layout,
+  guides,
+  style,
+}: {
+  steps: TimelineStep[];
+  layout: Required<NonNullable<TimelineData["layout"]>>;
+  guides: Required<NonNullable<TimelineData["guides"]>>;
+  style: ReturnType<typeof resolveTimelineStyle>;
+}) {
+  const markerColor = style.markerColor ?? "var(--color-primary)";
+  const lineColor = style.lineColor ?? "var(--color-border)";
+  const titleColor = style.titleColor ?? "var(--color-text)";
+  const descriptionColor = style.descriptionColor ?? "var(--color-text)";
+  const lineThickness = thicknessValueMap[style.thickness] ?? "2px";
+  const markerSize = markerSizeClassMap[style.markerSize] ?? "h-3.5 w-3.5";
+
+  return (
+    <ol className={joinClasses("flex flex-col", spacingClassMap[layout.spacing] ?? "gap-5")}>
+      {steps.map((step, index) => {
+        const reverse = index % 2 === 1;
+        return (
+          <li
+            key={step.id ?? `${step.title}-${index}`}
+            className="grid items-start gap-4 md:grid-cols-[1fr_auto_1fr]"
+          >
+            <div
+              className={joinClasses(
+                "rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4",
+                reverse ? "md:col-start-3 md:text-left" : "md:col-start-1 md:text-right"
+              )}
+            >
+              {renderStepText(
+                step,
+                reverse ? "start" : "end",
+                titleColor,
+                descriptionColor,
+                style.titleSize ?? "base",
+                style.descriptionSize ?? "xs"
+              )}
+            </div>
+            <div className="flex flex-col items-center md:col-start-2">
+              <span
+                className={joinClasses("rounded-full border", markerSize)}
+                style={{
+                  backgroundColor: step.accent ?? markerColor,
+                  borderColor: step.accent ?? markerColor,
+                  borderWidth: lineThickness,
+                  borderStyle: style.lineStyle,
+                }}
+              />
+              {guides.enabled && index < steps.length - 1 ? (
+                <span
+                  className="mt-1 h-full min-h-10"
+                  style={{
+                    width: lineThickness,
+                    backgroundColor: lineColor,
+                    borderStyle: guides.style,
+                  }}
+                />
+              ) : null}
+            </div>
+            <div
+              className={joinClasses(
+                "hidden md:block text-xs text-muted-foreground",
+                reverse ? "md:col-start-1 md:text-right" : "md:col-start-3 md:text-left"
+              )}
+            >
+              {step.date ? (
+                <time dateTime={step.date}>{step.dateLabel ?? step.date}</time>
+              ) : (
+                step.dateLabel
+              )}
+            </div>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
 function TimelineCompactLayout({
   steps,
   layout,
@@ -608,12 +898,14 @@ function TimelineCompactLayout({
 
 export function TimelineBlock({ data, variant }: { data: TimelineData; variant: string }) {
   const resolvedVariant = resolveTimelineVariant(variant);
-  const steps = normalizeTimelineSteps(data.steps);
-  const layout = resolveTimelineLayout(data.layout);
-  const guides = resolveTimelineGuides(data.guides);
-  const style = resolveTimelineStyle(data.style);
+  const normalizedData = normalizeTimelineData(data, variant);
+  const steps = normalizedData.steps;
+  const mode = resolveTimelineMode(normalizedData.mode, variant);
+  const layout = resolveTimelineLayout(normalizedData.layout);
+  const guides = resolveTimelineGuides(normalizedData.guides);
+  const style = resolveTimelineStyle(normalizedData.style);
   const backgroundStyle = compactStyle({
-    backgroundColor: resolveClearableStyleValue(data.background?.color),
+    backgroundColor: resolveClearableStyleValue(normalizedData.background?.color),
   });
 
   return (
@@ -621,13 +913,23 @@ export function TimelineBlock({ data, variant }: { data: TimelineData; variant: 
       <div className="mx-auto w-full max-w-6xl">
         <div
           data-timeline-variant={resolvedVariant}
+          data-timeline-mode={mode}
           data-timeline-orientation={layout.orientation}
           data-timeline-label-position={layout.labelPosition}
         >
-          {resolvedVariant === "cards" ? (
-            <TimelineCardsLayout steps={steps} layout={layout} guides={guides} style={style} />
-          ) : resolvedVariant === "compact" ? (
+          {mode === "chronology" ? (
+            <TimelineChronologyLayout steps={steps} layout={layout} guides={guides} style={style} />
+          ) : mode === "alternating" ? (
+            <TimelineAlternatingLayout
+              steps={steps}
+              layout={layout}
+              guides={guides}
+              style={style}
+            />
+          ) : mode === "process" || resolvedVariant === "compact" ? (
             <TimelineCompactLayout steps={steps} layout={layout} guides={guides} style={style} />
+          ) : resolvedVariant === "cards" ? (
+            <TimelineCardsLayout steps={steps} layout={layout} guides={guides} style={style} />
           ) : (
             <TimelineMilestonesLayout steps={steps} layout={layout} guides={guides} style={style} />
           )}

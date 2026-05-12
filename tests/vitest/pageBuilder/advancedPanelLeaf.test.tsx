@@ -147,6 +147,8 @@ test("AdvancedPanel wires editor, layout, and visibility callbacks", () => {
   );
 
   try {
+    expect(container.innerHTML).toContain('data-widget-editor="hero"');
+    expect(container.innerHTML).toContain('data-widget-editor-mode="advanced"');
     const byText = (label: string) =>
       Array.from(container.querySelectorAll("button")).find(
         (element) => element.textContent === label
@@ -241,6 +243,8 @@ test("AdvancedPanel falls back for missing variant, visibility, and invalid layo
 
   try {
     const layoutButton = container.querySelector("button[data-layout-panel='true']");
+    expect(container.innerHTML).toContain('data-widget-editor="hero"');
+    expect(container.innerHTML).toContain('data-widget-editor-mode="advanced"');
     expect(layoutButton?.getAttribute("data-layout-container")).toBe("default");
     expect(layoutButton?.getAttribute("data-layout-padding-top")).toBe("md");
     expect(

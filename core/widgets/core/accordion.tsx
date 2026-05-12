@@ -16,6 +16,9 @@ export type AccordionItem = {
 export type AccordionData = {
   items?: AccordionItem[];
   options?: {
+    openMode?: "single" | "multiple";
+    defaultOpenIds?: string[];
+    collapsible?: boolean;
     initiallyOpenId?: string;
     allowMultiple?: boolean;
   };
@@ -59,6 +62,13 @@ export const accordionSchema = {
       type: "object",
       additionalProperties: false,
       properties: {
+        openMode: { enum: ["single", "multiple"] },
+        defaultOpenIds: {
+          type: "array",
+          maxItems: accordionItemMax,
+          items: { type: "string" },
+        },
+        collapsible: { type: "boolean" },
         initiallyOpenId: { type: "string" },
         allowMultiple: { type: "boolean" },
       },
@@ -89,6 +99,9 @@ export const accordionDefaults: AccordionData = {
     },
   ],
   options: {
+    openMode: "single",
+    defaultOpenIds: ["1"],
+    collapsible: true,
     initiallyOpenId: "1",
     allowMultiple: false,
   },
@@ -167,22 +180,47 @@ export function normalizeAccordionItems(
 
 export function normalizeAccordionData(data: AccordionData, desiredCount?: number): AccordionData {
   const items = normalizeAccordionItems(data.items, desiredCount);
-  const initialIdCandidate = toTrimmedString(data.options?.initiallyOpenId);
-  const initiallyOpenId =
-    initialIdCandidate && items.some((item) => item.id === initialIdCandidate)
-      ? initialIdCandidate
-      : (items[0]?.id ?? "1");
+  const itemIds = new Set(items.map((item) => item.id));
+  const legacyInitialId = toTrimmedString(data.options?.initiallyOpenId);
+  const openMode =
+    data.options?.openMode === "multiple" || data.options?.allowMultiple === true
+      ? "multiple"
+      : "single";
+  const defaultOpenIdsRaw = Array.isArray(data.options?.defaultOpenIds)
+    ? data.options?.defaultOpenIds
+    : legacyInitialId
+      ? [legacyInitialId]
+      : [];
+  const defaultOpenIds = Array.from(
+    new Set(
+      defaultOpenIdsRaw
+        .map((value) => toTrimmedString(value))
+        .filter((value): value is string => typeof value === "string" && itemIds.has(value))
+    )
+  );
+  const normalizedDefaultOpenIds =
+    defaultOpenIds.length > 0
+      ? openMode === "multiple"
+        ? defaultOpenIds
+        : [defaultOpenIds[0]!]
+      : items[0]?.id
+        ? [items[0].id]
+        : ["1"];
+  const initiallyOpenId = normalizedDefaultOpenIds[0] ?? items[0]?.id ?? "1";
 
   const hasStyleObject = data.style !== undefined;
 
   return {
     items,
     options: {
+      openMode,
+      defaultOpenIds: normalizedDefaultOpenIds,
+      collapsible:
+        typeof data.options?.collapsible === "boolean"
+          ? data.options.collapsible
+          : (accordionDefaults.options?.collapsible ?? true),
       initiallyOpenId,
-      allowMultiple:
-        typeof data.options?.allowMultiple === "boolean"
-          ? data.options.allowMultiple
-          : (accordionDefaults.options?.allowMultiple ?? false),
+      allowMultiple: openMode === "multiple",
     },
     style: {
       surfaceColor: hasStyleObject
@@ -265,8 +303,11 @@ export function AccordionBlock({
   const resolvedItems = resolveAccordionItems(data, slotMap);
   const normalized = normalizeAccordionData(data, resolvedItems.length);
   const resolvedVariant = resolveVariant(variant);
-  const initiallyOpenId = normalized.options?.initiallyOpenId ?? resolvedItems[0]?.instanceId;
-  const allowMultiple = normalized.options?.allowMultiple ?? false;
+  const openMode = normalized.options?.openMode ?? "single";
+  const defaultOpenIds =
+    normalized.options?.defaultOpenIds?.filter((id) =>
+      resolvedItems.some((item) => item.instanceId === id)
+    ) ?? [];
   const detailsGroupName = `nextless-accordion-${resolvedItems[0]?.instanceId ?? "group"}`;
   const style = normalized.style ?? accordionDefaults.style!;
 
@@ -289,15 +330,17 @@ export function AccordionBlock({
       data-nextless-accordion-count={String(resolvedItems.length)}
     >
       {resolvedItems.map((item, index) => {
-        const shouldOpen = allowMultiple
-          ? item.instanceId === initiallyOpenId
-          : item.instanceId === initiallyOpenId && index === 0;
+        const shouldOpen =
+          openMode === "multiple"
+            ? defaultOpenIds.includes(item.instanceId)
+            : item.instanceId === (defaultOpenIds[0] ?? resolvedItems[0]?.instanceId) &&
+              index === 0;
 
         return (
           <details
             key={item.slotId}
             open={shouldOpen}
-            name={allowMultiple ? undefined : detailsGroupName}
+            name={openMode === "multiple" ? undefined : detailsGroupName}
             className={resolveContainerClass(resolvedVariant)}
             style={containerStyle}
             data-nextless-accordion-item={item.instanceId}

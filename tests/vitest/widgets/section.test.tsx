@@ -29,6 +29,8 @@ test("section renders defaults", () => {
   const html = renderToString(<SectionBlock data={sectionDefaults} variant="default" />);
 
   expect(html).toContain('data-section-variant="default"');
+  expect(html).toContain('data-section-container-width="content"');
+  expect(html).toContain('data-section-max-width="6xl"');
   expect(html).toContain('data-section-regions="1"');
   expect(html).toContain("Empty region.");
 });
@@ -74,6 +76,12 @@ test("section validator accepts expanded model", () => {
           element: "section",
           anchorId: "conversion",
           ariaLabel: "Conversion section",
+        },
+        layout: {
+          containerWidth: "wide",
+          maxWidth: "7xl",
+          paddingBlock: "lg",
+          paddingInline: "lg",
         },
         style: {
           backgroundColor: "#ffffff",
@@ -173,7 +181,8 @@ test("section editors render expected sections", () => {
   );
   expect(wizardHtml).toContain("Section layout");
   expect(wizardHtml).toContain("Section title");
-  expect(wizardHtml).toContain("Regions are repeatable slots");
+  expect(wizardHtml).toContain("Section setup");
+  expect(wizardHtml).toContain('data-widget-control="section.wizard.variant"');
 
   const visualHtml = renderToString(
     <SectionVisualEditor
@@ -185,7 +194,10 @@ test("section editors render expected sections", () => {
   );
   expect(visualHtml).toContain("Variant and structure");
   expect(visualHtml).toContain("Semantics and anchor");
+  expect(visualHtml).toContain("Width and spacing");
   expect(visualHtml).toContain("Surface and borders");
+  expect(visualHtml).toContain('data-widget-editor-section="section.semantics-anchor"');
+  expect(visualHtml).toContain('data-widget-editor-section="section.width-spacing"');
 
   const advancedHtml = renderToString(
     <SectionAdvancedEditor

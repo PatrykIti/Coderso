@@ -6,7 +6,9 @@
 **Category:** Widgets + Admin UI + Runtime Render
 **Estimated Effort:** Large
 **Dependencies:** TASK-252-01, TASK-252-02
-**Status:** To Do
+**Status:** Done
+**Started:** 2026-05-12
+**Completed:** 2026-05-12
 
 ---
 
@@ -78,17 +80,17 @@ inside the editor instead of duplicate widget types.
 
 This parent is now executed through physical per-widget leaves. Do not implement this parent as one broad batch; complete the leaves below in dependency order.
 
-- [ ] TASK-252-06-01: Feature Grid Icon Cards Rows and Links
-- [ ] TASK-252-06-02: Testimonials Grid Spotlight Rating and Attribution
-- [ ] TASK-252-06-03: Pricing Plans Tiers Billing Toggle and Highlight
-- [ ] TASK-252-06-04: FAQ Accordion Support CTA Icon Placement and Defaults
-- [ ] TASK-252-06-05: CTA Banner Compact Split Badge and Icon
-- [ ] TASK-252-06-06: Logo Cloud Grid Tone Rows and Accessibility
-- [ ] TASK-252-06-07: Gallery Mosaic Layout Captions and Alt Text
-- [ ] TASK-252-06-08: Stats KPI Values Icons and Display Modes
-- [ ] TASK-252-06-09: Team Members Photo Shape Socials and Fallbacks
-- [ ] TASK-252-06-10: Rich Text Section Prose Presets Width Badge and CTA
-- [ ] TASK-252-06-11: Compare Timeline Two Track Segments Status and Highlight
+- [x] TASK-252-06-01: Feature Grid Icon Cards Rows and Links
+- [x] TASK-252-06-02: Testimonials Grid Spotlight Rating and Attribution
+- [x] TASK-252-06-03: Pricing Plans Tiers Billing Toggle and Highlight
+- [x] TASK-252-06-04: FAQ Accordion Support CTA Icon Placement and Defaults
+- [x] TASK-252-06-05: CTA Banner Compact Split Badge and Icon
+- [x] TASK-252-06-06: Logo Cloud Grid Tone Rows and Accessibility
+- [x] TASK-252-06-07: Gallery Mosaic Layout Captions and Alt Text
+- [x] TASK-252-06-08: Stats KPI Values Icons and Display Modes
+- [x] TASK-252-06-09: Team Members Photo Shape Socials and Fallbacks
+- [x] TASK-252-06-10: Rich Text Section Prose Presets Width Badge and CTA
+- [x] TASK-252-06-11: Compare Timeline Two Track Segments Status and Highlight
 
 ## Files to Change
 

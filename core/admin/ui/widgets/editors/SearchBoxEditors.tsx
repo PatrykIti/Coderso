@@ -16,32 +16,32 @@ import { listListingQueriesCached, type ListingQueryRecord } from "@/services/li
 import {
   normalizeSearchBoxData,
   searchBoxDefaults,
+  type SearchBoxDisplayMode,
   type SearchBoxData,
 } from "../../../../widgets/core/searchBox";
 import type { WidgetEditorProps } from "../../../../widgets/types";
 import { ClearableInputField } from "./ClearableFields";
+import { WidgetEditorSection } from "./WidgetEditorControls";
 
 const NO_LISTING_QUERY_VALUE = "__no_listing_query__";
+const displayModeOptions: SearchBoxDisplayMode[] = ["full", "compact"];
 
 function EditorSection({
+  id,
   title,
   description,
   children,
 }: {
+  id?: string;
   title: string;
   description?: string;
   children: ReactNode;
 }) {
+  const resolvedId = id ?? title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   return (
-    <section className="space-y-3 rounded-lg border border-border/70 bg-background/50 p-3">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          {title}
-        </p>
-        {description ? <p className="text-xs text-muted-foreground">{description}</p> : null}
-      </div>
-      <div className="space-y-3">{children}</div>
-    </section>
+    <WidgetEditorSection id={resolvedId} title={title} description={description}>
+      {children}
+    </WidgetEditorSection>
   );
 }
 
@@ -145,7 +145,12 @@ function SearchMode({
         onValueChange={(nextMode) => {
           updateValue(value, onChange, (current) => ({
             ...current,
-            mode: nextMode === "global" ? "global" : "listing",
+            mode:
+              nextMode === "global"
+                ? "global"
+                : nextMode === "route-submit"
+                  ? "route-submit"
+                  : "listing",
           }));
         }}
       >
@@ -155,6 +160,7 @@ function SearchMode({
         <SelectContent>
           <SelectItem value="listing">Listing runtime search</SelectItem>
           <SelectItem value="global">Global public search</SelectItem>
+          <SelectItem value="route-submit">Route submit search</SelectItem>
         </SelectContent>
       </Select>
 
@@ -191,7 +197,7 @@ function SearchMode({
             <p className="text-xs text-destructive">{error}</p>
           ) : null}
         </div>
-      ) : (
+      ) : mode === "global" ? (
         <div className="space-y-2">
           <Input
             value={normalized.endpoint ?? ""}
@@ -206,6 +212,29 @@ function SearchMode({
           <p className="text-xs text-muted-foreground">
             Endpoint should return <code>{"{ items: [...] }"}</code>.
           </p>
+        </div>
+      ) : (
+        <div className="grid gap-2 sm:grid-cols-2">
+          <Input
+            value={normalized.targetRoute ?? "/search"}
+            onChange={(event) =>
+              updateValue(value, onChange, (current) => ({
+                ...current,
+                targetRoute: event.target.value,
+              }))
+            }
+            placeholder="/search"
+          />
+          <Input
+            value={normalized.queryParam ?? "q"}
+            onChange={(event) =>
+              updateValue(value, onChange, (current) => ({
+                ...current,
+                queryParam: event.target.value,
+              }))
+            }
+            placeholder="q"
+          />
         </div>
       )}
     </EditorSection>
@@ -266,6 +295,26 @@ function CopyAndBehavior({
           }
           placeholder="Search"
         />
+        <Select
+          value={normalized.displayMode ?? "full"}
+          onValueChange={(next) =>
+            updateValue(value, onChange, (current) => ({
+              ...current,
+              displayMode: next as SearchBoxDisplayMode,
+            }))
+          }
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Display mode" />
+          </SelectTrigger>
+          <SelectContent>
+            {displayModeOptions.map((option) => (
+              <SelectItem key={option} value={option}>
+                {option}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       {mode === "listing" ? (
         <label className="flex items-center justify-between rounded-md border border-border/70 bg-background/60 px-3 py-2 text-sm">
@@ -280,7 +329,7 @@ function CopyAndBehavior({
             }
           />
         </label>
-      ) : (
+      ) : mode === "global" ? (
         <div className="space-y-2 rounded-md border border-border/70 bg-background/60 p-3">
           <p className="text-sm font-medium">Global search sources</p>
           <label className="flex items-center justify-between text-sm">
@@ -329,6 +378,11 @@ function CopyAndBehavior({
             />
           </label>
         </div>
+      ) : (
+        <p className="text-xs text-muted-foreground">
+          Route-submit mode forwards the query to a public page route using the configured parameter
+          name.
+        </p>
       )}
     </EditorSection>
   );
@@ -418,7 +472,7 @@ export function SearchBoxAdvancedEditor({ value, onChange }: WidgetEditorProps<S
       <RuntimeSnapshot value={value} />
       <EditorSection
         title="Contract"
-        description="Listing mode writes and reads lq.<queryId>.__q from page URL."
+        description="Listing mode uses lq.<queryId>.__q, global mode keeps /api/search, and route-submit forwards q-like params to a public page route."
       >
         <p className="text-xs text-muted-foreground">
           Defaults come from <code>searchBoxDefaults</code>.

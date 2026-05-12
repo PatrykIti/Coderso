@@ -333,6 +333,16 @@ test("Timeline wizard editor covers variant selection, normalized step growth, a
     setSelectValue(variantSelect, "cards");
     expect(currentVariant).toBe("cards");
 
+    const modeSelect = findSelectByOptions(view.container, [
+      "process",
+      "axis",
+      "chronology",
+      "alternating",
+    ]);
+    setSelectValue(modeSelect, "alternating");
+    expect(latestValue.mode).toBe("alternating");
+    expect(currentVariant).toBe("cards");
+
     const stepCountSelect = findSelectByOptions(view.container, ["3", "4", "5", "6", "7", "8"]);
     expect((stepCountSelect as HTMLSelectElement | null | undefined)?.value).toBe("3");
     setSelectValue(stepCountSelect, "5");
@@ -452,10 +462,24 @@ test("Timeline visual editor covers variant cards, step ordering, color fallback
       findTextareaByPlaceholder(contentSection as ParentNode, "Step description"),
       "Align stakeholders"
     );
+    setInputValue(findInputByPlaceholder(contentSection as ParentNode, "2026-05-11"), "2026-05-12");
     setInputValue(
-      findInputsByPlaceholder(contentSection as ParentNode, "Icon text or emoji")[0],
-      "🧭"
+      findInputByPlaceholder(contentSection as ParentNode, "May 11, 2026"),
+      "May 12, 2026"
     );
+    const statusSelect = findSelectByOptions(contentSection as ParentNode, [
+      "upcoming",
+      "current",
+      "complete",
+    ]);
+    setSelectValue(statusSelect, "current");
+    setInputValue(findInputByPlaceholder(contentSection as ParentNode, "Icon text or emoji"), "🧭");
+    setInputValue(findInputByPlaceholder(contentSection as ParentNode, "Step CTA label"), "Open");
+    setInputValue(
+      findInputByPlaceholder(contentSection as ParentNode, "/timeline-step"),
+      "javascript:alert(1)"
+    );
+    expect(contentSection?.textContent).toContain("Use a relative path, hash, or full URL.");
 
     clickButtonByText(contentSection as ParentNode, "Down", 0);
     clickButtonByText(contentSection as ParentNode, "Up", 1);
@@ -522,7 +546,14 @@ test("Timeline visual editor covers variant cards, step ordering, color fallback
         id: "alpha",
         title: "Map",
         description: "Align stakeholders",
+        date: "2026-05-12",
+        dateLabel: "May 12, 2026",
+        status: "current",
         icon: "🧭",
+        cta: expect.objectContaining({
+          label: "Open",
+          href: "javascript:alert(1)",
+        }),
       })
     );
     expect(latestValue.layout).toEqual(
@@ -612,6 +643,7 @@ test("Timeline advanced editor covers layout-only controls and payload normaliza
     clickButtonByText(view.container, "Normalize timeline payload");
 
     expect(onChangeSpy).toHaveBeenCalled();
+    expect(latestValue.mode).toBe("axis");
     expect(latestValue.steps).toHaveLength(8);
     expect(latestValue.steps.map((step) => step.id)).toEqual([
       "step-1",

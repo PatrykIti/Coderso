@@ -11,6 +11,8 @@ import {
 import {
   TimelineBlock,
   createTimelineWidget,
+  normalizeTimelineData,
+  resolveTimelineMode,
   normalizeTimelineStepCount,
   normalizeTimelineSteps,
   timelineDefaults,
@@ -27,6 +29,7 @@ test("timeline renders defaults", () => {
   const html = renderToString(<TimelineBlock data={timelineDefaults} variant="milestones" />);
   expect(html).toContain(timelineDefaults.steps[0]?.title ?? "");
   expect(html).toContain('data-timeline-variant="milestones"');
+  expect(html).toContain('data-timeline-mode="axis"');
   expect(html).toContain('data-timeline-orientation="horizontal"');
   expect(html).toContain('data-timeline-label-position="top"');
 });
@@ -68,9 +71,19 @@ test("timeline validator accepts extended model fields", () => {
     variant: "cards",
     data: {
       ...timelineDefaults,
+      mode: "alternating",
       steps: normalizeTimelineSteps(timelineDefaults.steps, 4).map((step, index) => ({
         ...step,
         accent: index === 0 ? "#1d4ed8" : undefined,
+        date: `2026-05-0${index + 1}`,
+        dateLabel: `May ${index + 1}, 2026`,
+        status: index === 1 ? "current" : "upcoming",
+        cta:
+          index === 0
+            ? { label: "Read step", href: "/timeline-step" }
+            : index === 1
+              ? { label: "Blocked", href: "javascript:alert(1)" }
+              : undefined,
       })),
       layout: {
         orientation: "vertical",
@@ -99,10 +112,14 @@ test("timeline validator accepts extended model fields", () => {
 
   expect(normalized.variant).toBe("cards");
   const data = normalized.data as TimelineData;
-  expect(data.layout?.spacing).toBe("lg");
-  expect(data.style?.thickness).toBe("3");
-  expect(data.style?.titleSize).toBe("lg");
-  expect(data.background?.color).toBe("#f8fafc");
+  const normalizedData = normalizeTimelineData(data, normalized.variant);
+  expect(normalizedData.mode).toBe("alternating");
+  expect(normalizedData.layout?.spacing).toBe("lg");
+  expect(normalizedData.style?.thickness).toBe("3");
+  expect(normalizedData.style?.titleSize).toBe("lg");
+  expect(normalizedData.background?.color).toBe("#f8fafc");
+  expect(normalizedData.steps[0]?.cta).toEqual({ label: "Read step", href: "/timeline-step" });
+  expect(normalizedData.steps[1]?.cta).toBeUndefined();
 });
 
 test("timeline cleared background omits section style while semantic markers remain readable", () => {
@@ -207,6 +224,53 @@ test("timeline renderer falls back to milestones for unknown variant", () => {
   );
 
   expect(html).toContain('data-timeline-variant="milestones"');
+  expect(html).toContain('data-timeline-mode="axis"');
   expect(html).toContain('data-timeline-orientation="vertical"');
   expect(html).toContain('data-timeline-label-position="bottom"');
+});
+
+test("timeline resolves legacy variants to compatibility modes", () => {
+  expect(resolveTimelineMode(undefined, "milestones")).toBe("axis");
+  expect(resolveTimelineMode(undefined, "cards")).toBe("chronology");
+  expect(resolveTimelineMode(undefined, "compact")).toBe("process");
+});
+
+test("timeline renders chronology metadata and strips unsafe CTA links", () => {
+  const html = renderToString(
+    <TimelineBlock
+      data={{
+        ...timelineDefaults,
+        mode: "chronology",
+        steps: normalizeTimelineSteps([
+          {
+            id: "step-1",
+            title: "Launch",
+            description: "Roll out the release.",
+            date: "2026-05-11",
+            dateLabel: "May 11, 2026",
+            status: "current",
+            cta: { label: "View notes", href: "javascript:alert(1)" },
+          },
+          {
+            id: "step-2",
+            title: "Iterate",
+            dateLabel: "Next week",
+            cta: { label: "Plan sprint", href: "/sprint" },
+          },
+          {
+            id: "step-3",
+            title: "Scale",
+          },
+        ]),
+      }}
+      variant="cards"
+    />
+  );
+
+  expect(html).toContain('data-timeline-mode="chronology"');
+  expect(html).toContain("May 11, 2026");
+  expect(html).toContain('dateTime="2026-05-11"');
+  expect(html).toContain('data-timeline-status="current"');
+  expect(html).toContain('href="/sprint"');
+  expect(html).not.toContain("javascript:alert");
 });

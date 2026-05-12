@@ -32,12 +32,18 @@ Sections:
 1. Variant and structure
 2. Heading and intro
 3. Semantics and anchor
-4. Surface and borders
-5. Regions guidance
+4. Width and spacing
+5. Surface and borders
+6. Regions
 
 Notes:
 - Section owns variant selection in Visual (`visualOwnsVariantSelection = true`).
-- Region count is controlled by repeatable slot controls in the Slots panel.
+- Region count is controlled by builder-owned repeatable slot controls in the
+  `Regions` Visual section rather than by a banner above the mode tabs.
+- Shared inspector rows emit stable `data-widget-editor-section` and
+  `data-widget-control` metadata for automation and accessible labels.
+- Width and padding are bounded by schema-owned layout tokens instead of raw
+  CSS fields.
 
 ### Advanced
 - semantics tokens (`anchorId`, `ariaLabel`)
@@ -70,6 +76,12 @@ Notes:
     "label": "",
     "title": "",
     "description": ""
+  },
+  "layout": {
+    "containerWidth": "content",
+    "maxWidth": "6xl",
+    "paddingBlock": "md",
+    "paddingInline": "md"
   },
   "semantics": {
     "element": "section",

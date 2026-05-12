@@ -42,6 +42,9 @@ test("accordion normalization resolves defaults", () => {
     },
   });
 
+  expect(normalized.options?.openMode).toBe("multiple");
+  expect(normalized.options?.defaultOpenIds).toEqual(["2"]);
+  expect(normalized.options?.collapsible).toBe(true);
   expect(normalized.options?.initiallyOpenId).toBe("2");
   expect(normalized.options?.allowMultiple).toBe(true);
 });
@@ -102,6 +105,8 @@ test("accordion visual editor renders key sections", () => {
 
   expect(html).toContain("Items");
   expect(html).toContain("Behavior and Style");
+  expect(html).toContain('data-widget-editor-section="accordion.items"');
+  expect(html).toContain('data-widget-editor-section="accordion.behavior-style"');
 });
 
 const editors = [AccordionWizardEditor, AccordionAdvancedEditor];

@@ -6,7 +6,9 @@
 **Category:** Widgets + Admin UI + Runtime Render
 **Estimated Effort:** Large
 **Dependencies:** TASK-252-01, TASK-252-02
-**Status:** To Do
+**Status:** Done
+**Started:** 2026-05-11
+**Completed:** 2026-05-12
 
 ---
 
@@ -52,7 +54,7 @@ than dense.
 
 This parent is now executed through physical per-widget leaves. Do not implement this parent as one broad batch; complete the leaves below in dependency order.
 
-- [ ] TASK-252-03-01: Hero Badge Announcement and Editor IA
+- [x] TASK-252-03-01: Hero Badge Announcement and Editor IA
 
 ## Files to Change
 

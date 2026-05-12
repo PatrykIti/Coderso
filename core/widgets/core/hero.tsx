@@ -2,6 +2,7 @@ import type { ComponentType, CSSProperties } from "react";
 import { WidgetRenderer } from "../renderers/widgetRenderer";
 import type { DeviceTarget, WidgetBlock, WidgetDefinition, WidgetEditorProps } from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
+import { normalizeWidgetSafeHref } from "./widgetSafeHref";
 
 export type HeroCta = {
   label: string;
@@ -18,10 +19,23 @@ export type HeroMedia = {
   overlay?: string;
 };
 
+export type HeroBadgeTone = "neutral" | "primary" | "success" | "warning";
+export type HeroBadgePlacement = "above-headline" | "inline-headline";
+
+export type HeroBadge = {
+  enabled?: boolean;
+  label: string;
+  href?: string;
+  prefix?: string;
+  tone?: HeroBadgeTone;
+  placement?: HeroBadgePlacement;
+};
+
 export type HeroData = {
   headline: string;
   subhead?: string;
   body?: string;
+  badge?: HeroBadge;
   primaryCta?: HeroCta;
   secondaryCta?: HeroCta;
   media?: HeroMedia;
@@ -83,6 +97,19 @@ export const heroSchema = {
     headline: { type: "string" },
     subhead: { type: "string" },
     body: { type: "string" },
+    badge: {
+      type: "object",
+      additionalProperties: false,
+      required: ["label"],
+      properties: {
+        enabled: { type: "boolean" },
+        label: { type: "string" },
+        href: { type: "string" },
+        prefix: { type: "string" },
+        tone: { enum: ["neutral", "primary", "success", "warning"] },
+        placement: { enum: ["above-headline", "inline-headline"] },
+      },
+    },
     primaryCta: {
       type: "object",
       additionalProperties: false,
@@ -197,6 +224,7 @@ export const heroDefaults: HeroData = {
   headline: "Build your system with Coderso",
   subhead: "Launch modern sites without rebuilding the app.",
   body: "",
+  badge: { enabled: false, label: "", tone: "neutral", placement: "above-headline" },
   primaryCta: { label: "Get started", href: "#" },
   secondaryCta: { label: "Learn more", href: "#" },
   media: { type: "none", source: "external" },
@@ -286,11 +314,98 @@ const radiusClassMap = {
   "3xl": "rounded-3xl",
 } as const;
 
+const heroBadgeToneClassMap: Record<HeroBadgeTone, string> = {
+  neutral: "border-border/80 bg-background/80 text-[var(--color-text)]",
+  primary: "border-transparent bg-[var(--color-primary)]/15 text-[var(--color-primary)]",
+  success: "border-transparent bg-emerald-500/15 text-emerald-700",
+  warning: "border-transparent bg-amber-500/15 text-amber-700",
+};
+
 const joinClasses = (...classes: Array<string | false | undefined>) =>
   classes.filter(Boolean).join(" ");
 
 const resolveSpacingKey = (value: string | undefined, fallback: keyof typeof spacingValueMap) =>
   value && value in spacingValueMap ? (value as keyof typeof spacingValueMap) : fallback;
+
+export const normalizeHeroHref = (value: unknown) =>
+  normalizeWidgetSafeHref(value, {
+    allowRelative: true,
+    allowHash: true,
+    allowHttp: true,
+  });
+
+function normalizeHeroBadge(value: HeroBadge | undefined): HeroBadge | undefined {
+  if (!value || typeof value.label !== "string") return undefined;
+  const label = value.label.trim();
+  if (!label) return undefined;
+  return {
+    enabled: value.enabled !== false,
+    label,
+    href: normalizeHeroHref(value.href),
+    prefix:
+      typeof value.prefix === "string" && value.prefix.trim().length > 0 ? value.prefix : undefined,
+    tone:
+      value.tone === "primary" ||
+      value.tone === "success" ||
+      value.tone === "warning" ||
+      value.tone === "neutral"
+        ? value.tone
+        : "neutral",
+    placement: value.placement === "inline-headline" ? "inline-headline" : "above-headline",
+  };
+}
+
+function normalizeHeroCta(value: HeroCta | undefined): HeroCta | undefined {
+  if (!value || typeof value.label !== "string") return undefined;
+  const label = value.label.trim();
+  const href = normalizeHeroHref(value.href);
+  if (!label || !href) return undefined;
+  return { label, href };
+}
+
+export function normalizeHeroData(data: HeroData): HeroData {
+  return {
+    ...heroDefaults,
+    ...data,
+    headline:
+      typeof data.headline === "string" && data.headline.trim().length > 0
+        ? data.headline
+        : heroDefaults.headline,
+    subhead: typeof data.subhead === "string" ? data.subhead : undefined,
+    body: typeof data.body === "string" ? data.body : undefined,
+    badge: normalizeHeroBadge(data.badge),
+    primaryCta: normalizeHeroCta(data.primaryCta),
+    secondaryCta: normalizeHeroCta(data.secondaryCta),
+    media: {
+      type: data.media?.type ?? heroDefaults.media?.type ?? "none",
+      source: data.media?.source ?? heroDefaults.media?.source ?? "external",
+      assetId: data.media?.assetId,
+      src: data.media?.src,
+      alt: data.media?.alt,
+      ratio: data.media?.ratio,
+      overlay: data.media?.overlay,
+    },
+    layout: {
+      ...heroDefaults.layout,
+      ...data.layout,
+    },
+    spacing: {
+      ...heroDefaults.spacing,
+      ...data.spacing,
+    },
+    style: data.style ? { ...data.style } : undefined,
+    background: data.background
+      ? {
+          ...data.background,
+          media: data.background.media ? { ...data.background.media } : undefined,
+        }
+      : heroDefaults.background,
+    responsive: {
+      ...heroDefaults.responsive,
+      ...data.responsive,
+    },
+  };
+}
 
 export function HeroBlock({
   data,
@@ -303,8 +418,9 @@ export function HeroBlock({
   slots?: Record<string, WidgetBlock[]>;
   previewDevice?: DeviceTarget;
 }) {
-  const layout = data.layout ?? {};
-  const media = data.media ?? { type: "none" };
+  const normalized = normalizeHeroData(data);
+  const layout = normalized.layout ?? {};
+  const media = normalized.media ?? { type: "none" };
   const spacingDefaults = heroDefaults.spacing ?? {
     paddingTop: "xl",
     paddingBottom: "xl",
@@ -314,15 +430,15 @@ export function HeroBlock({
   const spacing = {
     paddingTop: spacingDefaults.paddingTop,
     paddingBottom: spacingDefaults.paddingBottom,
-    ...(data.style ?? {}),
-    ...(data.spacing ?? {}),
+    ...(normalized.style ?? {}),
+    ...(normalized.spacing ?? {}),
   };
   const align = layout.align ?? "center";
   const maxWidth = layout.maxWidth ?? "xl";
   const contentWidth = layout.contentWidth ?? "lg";
   const paddingTop = resolveSpacingKey(spacing.paddingTop, defaultPaddingTop);
   const paddingBottom = resolveSpacingKey(spacing.paddingBottom, defaultPaddingBottom);
-  const background = data.background ?? {};
+  const background = normalized.background ?? {};
   const backgroundMedia = {
     type: background.media?.type ?? (background.image ? "image" : "none"),
     source: background.media?.source ?? "external",
@@ -360,8 +476,8 @@ export function HeroBlock({
     paddingTop: spacingValueMap[paddingTop],
     paddingBottom: spacingValueMap[paddingBottom],
   };
-  const style = data.style ?? {};
-  const hasStyleObject = data.style !== undefined;
+  const style = normalized.style ?? {};
+  const hasStyleObject = normalized.style !== undefined;
   const borderWidth = style.borderWidth ?? "1";
   const mediaBorderWidth = style.mediaBorderWidth ?? "1";
   const cardStyle: CSSProperties = {
@@ -411,8 +527,36 @@ export function HeroBlock({
 
   const isSplit = variant !== "centered";
   const isMediaLeft = variant === "media-left";
-  const hideMediaOnMobile = data.responsive?.hideMediaOnMobile;
+  const hideMediaOnMobile = normalized.responsive?.hideMediaOnMobile;
   const contentSlots = slots?.content ?? [];
+  const badge = normalized.badge?.enabled ? normalized.badge : undefined;
+  const badgeTone = badge?.tone ?? "neutral";
+  const badgeNode = badge ? (
+    badge.href ? (
+      <a
+        data-widget-part="hero.badge"
+        className={joinClasses(
+          "inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold",
+          heroBadgeToneClassMap[badgeTone]
+        )}
+        href={badge.href}
+      >
+        {badge.prefix ? <span>{badge.prefix}</span> : null}
+        <span>{badge.label}</span>
+      </a>
+    ) : (
+      <span
+        data-widget-part="hero.badge"
+        className={joinClasses(
+          "inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold",
+          heroBadgeToneClassMap[badgeTone]
+        )}
+      >
+        {badge.prefix ? <span>{badge.prefix}</span> : null}
+        <span>{badge.label}</span>
+      </span>
+    )
+  ) : null;
 
   const textAlignClass =
     align === "center" ? "text-center" : align === "right" ? "text-right" : "text-left";
@@ -467,29 +611,32 @@ export function HeroBlock({
               !isSplit && contentPlacementClass
             )}
           >
+            {badge && badge.placement !== "inline-headline" ? badgeNode : null}
             <h1
               className={joinClasses(
                 "font-semibold",
+                badge?.placement === "inline-headline" && "flex flex-wrap items-center gap-3",
                 headlineSizeClassMap[headlineSize] ?? "text-3xl"
               )}
               style={{ color: headlineColor }}
             >
-              {data.headline}
+              {badge?.placement === "inline-headline" ? badgeNode : null}
+              <span>{normalized.headline}</span>
             </h1>
-            {data.subhead ? (
+            {normalized.subhead ? (
               <p
                 className={joinClasses(subheadSizeClassMap[subheadSize] ?? "text-xl")}
                 style={{ color: subheadColor }}
               >
-                {data.subhead}
+                {normalized.subhead}
               </p>
             ) : null}
-            {data.body ? (
+            {normalized.body ? (
               <p
                 className={joinClasses(bodySizeClassMap[bodySize] ?? "text-base")}
                 style={{ color: bodyColor }}
               >
-                {data.body}
+                {normalized.body}
               </p>
             ) : null}
             <div
@@ -499,28 +646,28 @@ export function HeroBlock({
                 align === "right" && "justify-end"
               )}
             >
-              {data.primaryCta ? (
+              {normalized.primaryCta ? (
                 <a
                   className={joinClasses(
                     "rounded-md font-semibold",
                     buttonSizeClassMap[primaryButtonSize] ?? "px-4 py-2 text-sm"
                   )}
                   style={primaryButtonStyle}
-                  href={data.primaryCta.href}
+                  href={normalized.primaryCta.href}
                 >
-                  {data.primaryCta.label}
+                  {normalized.primaryCta.label}
                 </a>
               ) : null}
-              {data.secondaryCta ? (
+              {normalized.secondaryCta ? (
                 <a
                   className={joinClasses(
                     "rounded-md font-semibold",
                     buttonSizeClassMap[secondaryButtonSize] ?? "px-4 py-2 text-sm"
                   )}
                   style={secondaryButtonStyle}
-                  href={data.secondaryCta.href}
+                  href={normalized.secondaryCta.href}
                 >
-                  {data.secondaryCta.label}
+                  {normalized.secondaryCta.label}
                 </a>
               ) : null}
             </div>

@@ -26,11 +26,16 @@ test("tabs renders defaults with runtime marker", () => {
 
   expect(html).toContain('data-nextless-tabs="1"');
   expect(html).toContain('data-nextless-tabs-variant="pills"');
+  expect(html).toContain('data-nextless-tabs-orientation="horizontal"');
+  expect(html).toContain('role="tablist"');
+  expect(html).toContain('role="tabpanel"');
+  expect(html).toContain('aria-controls="tabs-panel-1"');
+  expect(html).toContain('aria-labelledby="tabs-trigger-1"');
   expect(html).toContain("Add widgets to this tab panel.");
   expect(html).toContain("__nextlessTabsBound");
 });
 
-test("tabs normalization keeps valid active tab and alignment", () => {
+test("tabs normalization keeps valid default tab, alignment, and orientation", () => {
   const normalized = normalizeTabsData(
     {
       items: [
@@ -38,15 +43,19 @@ test("tabs normalization keeps valid active tab and alignment", () => {
         { id: "2", label: "Specs" },
       ],
       options: {
+        defaultItemId: "2",
         activeId: "2",
         alignment: "center",
+        orientation: "vertical",
       },
     },
     2
   );
 
+  expect(normalized.options?.defaultItemId).toBe("2");
   expect(normalized.options?.activeId).toBe("2");
   expect(normalized.options?.alignment).toBe("center");
+  expect(normalized.options?.orientation).toBe("vertical");
 });
 
 test("tabs validator accepts schema", () => {
@@ -69,8 +78,10 @@ test("tabs validator accepts schema", () => {
           { id: "2", label: "Second" },
         ],
         options: {
+          defaultItemId: "1",
           activeId: "1",
           alignment: "start",
+          orientation: "vertical",
         },
       },
       slots: {
@@ -110,6 +121,8 @@ test("tabs visual editor renders structure sections", () => {
 
   expect(html).toContain("Tabs Structure");
   expect(html).toContain("Layout");
+  expect(html).toContain('data-widget-editor-section="tabs.structure"');
+  expect(html).toContain('data-widget-editor-section="tabs.layout"');
 });
 
 const editors = [TabsWizardEditor, TabsAdvancedEditor];

@@ -9,12 +9,22 @@ export type SectionVariantId = "default" | "contained" | "bleed";
 export type SectionElement = "section" | "div";
 export type SectionBorderWidth = "0" | "1" | "2" | "3";
 export type SectionRadius = "none" | "lg" | "xl" | "2xl";
+export type SectionContainerWidth = "content" | "wide" | "full";
+export type SectionMaxWidth = "none" | "4xl" | "5xl" | "6xl" | "7xl";
+export type SectionPaddingBlock = "sm" | "md" | "lg" | "xl";
+export type SectionPaddingInline = "none" | "sm" | "md" | "lg";
 
 export type SectionData = {
   heading?: {
     label?: string;
     title?: string;
     description?: string;
+  };
+  layout?: {
+    containerWidth?: SectionContainerWidth;
+    maxWidth?: SectionMaxWidth;
+    paddingBlock?: SectionPaddingBlock;
+    paddingInline?: SectionPaddingInline;
   };
   semantics?: {
     element?: SectionElement;
@@ -64,6 +74,16 @@ export const sectionSchema = {
         ariaLabel: { type: "string" },
       },
     },
+    layout: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        containerWidth: { enum: ["content", "wide", "full"] },
+        maxWidth: { enum: ["none", "4xl", "5xl", "6xl", "7xl"] },
+        paddingBlock: { enum: ["sm", "md", "lg", "xl"] },
+        paddingInline: { enum: ["none", "sm", "md", "lg"] },
+      },
+    },
     style: {
       type: "object",
       additionalProperties: false,
@@ -93,6 +113,12 @@ export const sectionDefaults: SectionData = {
     anchorId: "",
     ariaLabel: "",
   },
+  layout: {
+    containerWidth: "content",
+    maxWidth: "6xl",
+    paddingBlock: "md",
+    paddingInline: "md",
+  },
   style: {
     backgroundColor: "transparent",
     gradientFrom: "",
@@ -120,6 +146,34 @@ const radiusClassMap: Record<SectionRadius, string> = {
   "2xl": "rounded-2xl",
 };
 
+const containerWidthClassMap: Record<SectionContainerWidth, string> = {
+  content: "mx-auto w-full",
+  wide: "mx-auto w-full",
+  full: "w-full",
+};
+
+const maxWidthClassMap: Record<SectionMaxWidth, string> = {
+  none: "",
+  "4xl": "max-w-4xl",
+  "5xl": "max-w-5xl",
+  "6xl": "max-w-6xl",
+  "7xl": "max-w-7xl",
+};
+
+const paddingBlockClassMap: Record<SectionPaddingBlock, string> = {
+  sm: "py-4",
+  md: "py-6",
+  lg: "py-8",
+  xl: "py-10",
+};
+
+const paddingInlineClassMap: Record<SectionPaddingInline, string> = {
+  none: "px-0",
+  sm: "px-4",
+  md: "px-6",
+  lg: "px-8",
+};
+
 const joinClasses = (...classes: Array<string | undefined | false>) =>
   classes.filter(Boolean).join(" ");
 
@@ -131,6 +185,26 @@ const resolveSectionBorderWidth = (value: string | undefined): SectionBorderWidt
 const resolveSectionRadius = (value: string | undefined): SectionRadius => {
   if (value === "none" || value === "lg" || value === "xl") return value;
   return "2xl";
+};
+
+const resolveSectionContainerWidth = (value: string | undefined): SectionContainerWidth => {
+  if (value === "wide" || value === "full") return value;
+  return "content";
+};
+
+const resolveSectionMaxWidth = (value: string | undefined): SectionMaxWidth => {
+  if (value === "none" || value === "4xl" || value === "5xl" || value === "7xl") return value;
+  return "6xl";
+};
+
+const resolveSectionPaddingBlock = (value: string | undefined): SectionPaddingBlock => {
+  if (value === "sm" || value === "lg" || value === "xl") return value;
+  return "md";
+};
+
+const resolveSectionPaddingInline = (value: string | undefined): SectionPaddingInline => {
+  if (value === "none" || value === "sm" || value === "lg") return value;
+  return "md";
 };
 
 const clampOpacity = (value: number | undefined) => {
@@ -159,6 +233,12 @@ export function normalizeSectionData(data: SectionData): SectionData {
     anchorId: "",
     ariaLabel: "",
   };
+  const layoutDefaults = sectionDefaults.layout ?? {
+    containerWidth: "content",
+    maxWidth: "6xl",
+    paddingBlock: "md",
+    paddingInline: "md",
+  };
   const styleDefaults = sectionDefaults.style ?? {
     backgroundColor: "transparent",
     gradientFrom: "",
@@ -178,6 +258,18 @@ export function normalizeSectionData(data: SectionData): SectionData {
       label: data.heading?.label ?? headingDefaults.label,
       title: data.heading?.title ?? headingDefaults.title,
       description: data.heading?.description ?? headingDefaults.description,
+    },
+    layout: {
+      containerWidth: resolveSectionContainerWidth(
+        data.layout?.containerWidth ?? layoutDefaults.containerWidth
+      ),
+      maxWidth: resolveSectionMaxWidth(data.layout?.maxWidth ?? layoutDefaults.maxWidth),
+      paddingBlock: resolveSectionPaddingBlock(
+        data.layout?.paddingBlock ?? layoutDefaults.paddingBlock
+      ),
+      paddingInline: resolveSectionPaddingInline(
+        data.layout?.paddingInline ?? layoutDefaults.paddingInline
+      ),
     },
     semantics: {
       element: data.semantics?.element === "div" ? "div" : "section",
@@ -218,22 +310,24 @@ export function SectionBlock({
     (slot) => slot.definitionId === sectionRegionSlot.id
   );
   const heading = normalized.heading ?? sectionDefaults.heading!;
+  const layout = normalized.layout ?? sectionDefaults.layout!;
   const semantics = normalized.semantics ?? sectionDefaults.semantics!;
   const style = normalized.style ?? sectionDefaults.style!;
 
   const regionGapClass =
     resolvedVariant === "contained" ? "gap-4" : resolvedVariant === "bleed" ? "gap-8" : "gap-6";
-
-  const wrapperClass =
-    resolvedVariant === "bleed"
-      ? "w-full"
-      : resolvedVariant === "contained"
-        ? "mx-auto w-full max-w-5xl px-4"
-        : "mx-auto w-full max-w-6xl px-4";
+  const wrapperClass = joinClasses(
+    containerWidthClassMap[layout.containerWidth ?? "content"],
+    maxWidthClassMap[layout.maxWidth ?? "6xl"],
+    layout.containerWidth === "full" && resolvedVariant === "bleed"
+      ? undefined
+      : paddingInlineClassMap[layout.paddingInline ?? "md"]
+  );
 
   const surfaceClass = joinClasses(
     "relative w-full overflow-hidden",
-    resolvedVariant === "contained" ? "px-6 py-6" : "px-4 py-4",
+    paddingBlockClassMap[layout.paddingBlock ?? "md"],
+    resolvedVariant === "contained" ? "shadow-sm" : undefined,
     radiusClassMap[style.radius ?? "none"]
   );
 
@@ -267,6 +361,8 @@ export function SectionBlock({
       aria-label={ariaLabel || undefined}
       className={wrapperClass}
       data-section-variant={resolvedVariant}
+      data-section-container-width={layout.containerWidth ?? "content"}
+      data-section-max-width={layout.maxWidth ?? "6xl"}
       data-section-regions={String(slotTargets.length)}
       data-section-element={semantics.element ?? "section"}
     >
@@ -358,6 +454,11 @@ export function createSectionWidget(editors: {
     editor: editors,
     editorCapabilities: {
       visualOwnsVariantSelection: true,
+      slotControlSection: {
+        id: "section.regions",
+        title: "Regions",
+        description: "Add or remove repeatable region slots, then populate them from the canvas.",
+      },
     },
     render: SectionBlock,
   };

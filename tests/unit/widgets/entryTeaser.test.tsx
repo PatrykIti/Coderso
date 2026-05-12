@@ -158,6 +158,19 @@ test("entry teaser cleared surface omits card background and border color styles
   expect(html).not.toContain("border-color:");
 });
 
+test("entry teaser custom CTA sanitizes unsafe hrefs", () => {
+  const normalized = normalizeEntryTeaserData({
+    ...entryTeaserDefaults,
+    cta: {
+      label: "Read more",
+      hrefMode: "custom",
+      href: "javascript:alert(1)",
+    },
+  });
+
+  expect(normalized.cta?.href).toBe("#");
+});
+
 test("entry teaser validator accepts extended model and visual ownership", () => {
   clearWidgets();
   const widget = createEntryTeaserWidget({

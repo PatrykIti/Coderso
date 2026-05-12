@@ -1,13 +1,24 @@
 import type { ComponentType } from "react";
 
 import { WidgetRenderer } from "../renderers/widgetRenderer";
-import type { DeviceTarget, WidgetBlock, WidgetDefinition, WidgetEditorProps, WidgetLayoutDefaults } from "../types";
+import type {
+  DeviceTarget,
+  WidgetBlock,
+  WidgetDefinition,
+  WidgetEditorProps,
+  WidgetLayoutDefaults,
+} from "../types";
 
 export const TEMPLATE_SECTION_TYPE = "template-section";
 
 export type TemplateSectionData = {
   templateId?: string;
   templateName?: string;
+  metadata?: {
+    category?: string;
+    previewLabel?: string;
+    version?: string;
+  };
   resolved?: {
     blocks?: WidgetBlock[];
     error?: string;
@@ -20,6 +31,15 @@ export const templateSectionSchema = {
   properties: {
     templateId: { type: "string" },
     templateName: { type: "string" },
+    metadata: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        category: { type: "string" },
+        previewLabel: { type: "string" },
+        version: { type: "string" },
+      },
+    },
     resolved: {
       type: "object",
       additionalProperties: false,
@@ -39,25 +59,33 @@ export const templateSectionSchema = {
 export const templateSectionDefaults: TemplateSectionData = {
   templateId: "",
   templateName: "",
+  metadata: {
+    category: "",
+    previewLabel: "",
+    version: "",
+  },
 };
 
-export function normalizeTemplateSectionData(
-  data: TemplateSectionData
-): TemplateSectionData {
+export function normalizeTemplateSectionData(data: TemplateSectionData): TemplateSectionData {
   const templateId = typeof data.templateId === "string" ? data.templateId : "";
   const templateName = typeof data.templateName === "string" ? data.templateName : "";
+  const metadata = data.metadata
+    ? {
+        category: typeof data.metadata.category === "string" ? data.metadata.category : "",
+        previewLabel:
+          typeof data.metadata.previewLabel === "string" ? data.metadata.previewLabel : "",
+        version: typeof data.metadata.version === "string" ? data.metadata.version : "",
+      }
+    : templateSectionDefaults.metadata;
   const resolvedBlocks =
-    data.resolved && Array.isArray(data.resolved.blocks)
-      ? data.resolved.blocks
-      : undefined;
+    data.resolved && Array.isArray(data.resolved.blocks) ? data.resolved.blocks : undefined;
   const resolvedError =
-    data.resolved && typeof data.resolved.error === "string"
-      ? data.resolved.error
-      : undefined;
+    data.resolved && typeof data.resolved.error === "string" ? data.resolved.error : undefined;
 
   return {
     templateId,
     templateName,
+    metadata,
     ...(data.resolved
       ? {
           resolved: {
@@ -69,8 +97,9 @@ export function normalizeTemplateSectionData(
   };
 }
 
-
 const resolveTemplateLabel = (data: TemplateSectionData) => {
+  const previewLabel = data.metadata?.previewLabel?.trim();
+  if (previewLabel) return previewLabel;
   const name = data.templateName?.trim();
   if (name) return name;
   const id = data.templateId?.trim();
@@ -130,6 +159,10 @@ export function TemplateSectionBlock({
   const blocks = Array.isArray(normalized.resolved?.blocks) ? normalized.resolved?.blocks : [];
   const templateId = normalized.templateId?.trim();
   const label = resolveTemplateLabel(normalized);
+  const metadata = normalized.metadata ?? templateSectionDefaults.metadata ?? {};
+  const category = metadata.category?.trim();
+  const previewLabel = metadata.previewLabel?.trim();
+  const version = metadata.version?.trim();
 
   if (!blocks.length) {
     return (
@@ -146,7 +179,16 @@ export function TemplateSectionBlock({
       className="flex flex-col gap-6"
       data-template-section={templateId ?? ""}
       data-template-section-state="ready"
+      data-template-section-category={category ?? ""}
+      data-template-section-version={version ?? ""}
     >
+      {previewLabel || category || version ? (
+        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          {previewLabel ? <span>{previewLabel}</span> : null}
+          {category ? <span>{category}</span> : null}
+          {version ? <span>{version}</span> : null}
+        </div>
+      ) : null}
       {blocks.map((child) => (
         <WidgetRenderer
           key={child.id}

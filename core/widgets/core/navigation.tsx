@@ -3,6 +3,7 @@ import { WidgetRenderer } from "../renderers/widgetRenderer";
 import type { DeviceTarget, WidgetDefinition, WidgetEditorProps } from "../types";
 import type { WidgetBlock } from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
+import { normalizeWidgetSafeHref } from "./widgetSafeHref";
 
 export type NavigationItem = {
   label: string;
@@ -236,6 +237,19 @@ export const navigationDefaults: NavigationData = {
 const joinClasses = (...classes: Array<string | false | undefined>) =>
   classes.filter(Boolean).join(" ");
 
+const toTrimmedString = (value: unknown) => {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+};
+
+const normalizeNavigationHref = (value: unknown) =>
+  normalizeWidgetSafeHref(value, {
+    allowRelative: true,
+    allowHash: true,
+    allowHttp: true,
+  });
+
 const variantSupportsCta = (variant: string) => variant === "with-cta" || variant === "split";
 
 const maxWidthClassMap = {
@@ -290,37 +304,146 @@ const borderWidthValueMap = {
   "3": "3px",
 } as const;
 
+const navigationRuntimeClientScript = `
+(() => {
+  if (typeof window === "undefined") return;
+  if (window.__nextlessNavigationBound === true) return;
+  window.__nextlessNavigationBound = true;
+
+  document.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const trigger = target.closest("[data-navigation-mobile-toggle]");
+    if (!(trigger instanceof HTMLElement)) return;
+    const root = trigger.closest("[data-navigation-widget='1']");
+    if (!(root instanceof HTMLElement)) return;
+    const panel = root.querySelector("[data-navigation-mobile-panel]");
+    if (!(panel instanceof HTMLElement)) return;
+    const expanded = trigger.getAttribute("aria-expanded") === "true";
+    trigger.setAttribute("aria-expanded", expanded ? "false" : "true");
+    if (expanded) {
+      panel.setAttribute("hidden", "");
+    } else {
+      panel.removeAttribute("hidden");
+    }
+  });
+})();
+`;
+
+function normalizeNavigationItemMeta(meta: NavigationItem["meta"]): NavigationItemMeta | undefined {
+  if (!meta) return undefined;
+  return {
+    visibility:
+      meta.visibility === "logged_in" || meta.visibility === "logged_out" ? meta.visibility : "all",
+    badge:
+      meta.badge && toTrimmedString(meta.badge.label)
+        ? {
+            label: toTrimmedString(meta.badge.label)!,
+            tone:
+              meta.badge.tone === "accent" ||
+              meta.badge.tone === "success" ||
+              meta.badge.tone === "warning" ||
+              meta.badge.tone === "danger"
+                ? meta.badge.tone
+                : "default",
+          }
+        : null,
+    description: toTrimmedString(meta.description ?? undefined) ?? null,
+    icon: toTrimmedString(meta.icon ?? undefined) ?? null,
+  };
+}
+
+function normalizeNavigationItems(items: NavigationData["items"]): NavigationItem[] {
+  if (!Array.isArray(items)) return [];
+  return items
+    .map((item) => {
+      const label = toTrimmedString(item?.label);
+      const href = normalizeNavigationHref(item?.href);
+      if (!label || !href) return null;
+      const children = Array.isArray(item.children)
+        ? item.children
+            .map((child) => {
+              const childLabel = toTrimmedString(child?.label);
+              const childHref = normalizeNavigationHref(child?.href);
+              if (!childLabel || !childHref) return null;
+              return {
+                label: childLabel,
+                href: childHref,
+                ...(normalizeNavigationItemMeta(child.meta)
+                  ? { meta: normalizeNavigationItemMeta(child.meta) }
+                  : {}),
+              } satisfies NavigationItem;
+            })
+            .filter((child): child is NavigationItem => child !== null)
+        : undefined;
+      return {
+        label,
+        href,
+        ...(normalizeNavigationItemMeta(item.meta)
+          ? { meta: normalizeNavigationItemMeta(item.meta) }
+          : {}),
+        ...(children && children.length > 0 ? { children } : {}),
+      } satisfies NavigationItem;
+    })
+    .filter((item): item is NavigationItem => item !== null);
+}
+
+export function normalizeNavigationData(data: NavigationData): NavigationData {
+  const normalizedItems = normalizeNavigationItems(data.items);
+  const ctaLabel = toTrimmedString(data.cta?.label);
+  const ctaHref = normalizeNavigationHref(data.cta?.href);
+
+  return {
+    ...navigationDefaults,
+    ...data,
+    logo: {
+      ...navigationDefaults.logo,
+      ...data.logo,
+      value: toTrimmedString(data.logo?.value) ?? navigationDefaults.logo.value,
+      href: normalizeNavigationHref(data.logo?.href) ?? navigationDefaults.logo.href,
+      alt: toTrimmedString(data.logo?.alt) ?? data.logo?.alt,
+    },
+    items: normalizedItems,
+    ...(ctaLabel && ctaHref ? { cta: { label: ctaLabel, href: ctaHref } } : { cta: undefined }),
+  };
+}
+
 export function NavigationBlock({
   data,
   variant,
   slots,
   previewDevice,
+  blockId,
 }: {
   data: NavigationData;
   variant: string;
   slots?: Record<string, WidgetBlock[]>;
   previewDevice?: DeviceTarget;
+  blockId?: string;
 }) {
+  const normalized = normalizeNavigationData(data);
   const showCta = variantSupportsCta(variant);
   const splitLayout = variant === "split";
-  const linksSource = data.linksSource ?? "manual";
+  const linksSource = normalized.linksSource ?? "manual";
   const resolvedAlignment =
-    data.layout?.alignment ?? navigationDefaults.layout?.alignment ?? "left";
+    normalized.layout?.alignment ?? navigationDefaults.layout?.alignment ?? "left";
   const alignmentClass =
     resolvedAlignment === "center"
       ? "justify-center"
       : resolvedAlignment === "right"
         ? "justify-end"
         : "justify-start";
-  const layout = data.layout ?? {};
-  const style = data.style ?? {};
-  const behavior = data.behavior ?? {};
+  const layout = normalized.layout ?? {};
+  const style = normalized.style ?? {};
+  const behavior = normalized.behavior ?? {};
   const mobileMode = behavior.mobileMode ?? "expanded";
   const linksVisibleOnMobile = mobileMode === "expanded";
   const showMobileToggle = mobileMode !== "expanded";
-  const renderedItems = data.items.length > 0 ? data.items : navigationDefaults.items;
+  const renderedItems = normalized.items.length > 0 ? normalized.items : navigationDefaults.items;
   const rightSlotBlocks = slots?.right ?? [];
-  const hasRightActions = rightSlotBlocks.length > 0 || Boolean(showCta && data.cta);
+  const hasRightActions = rightSlotBlocks.length > 0 || Boolean(showCta && normalized.cta);
+  const shouldRenderRightCluster = hasRightActions || showMobileToggle;
+  const mobilePanelId = `navigation-mobile-${blockId ?? "panel"}`;
   const borderWidth = style.borderWidth ?? "1";
   const navStyle: CSSProperties =
     compactStyle({
@@ -336,7 +459,7 @@ export function NavigationBlock({
     }) ?? {};
 
   const logoStyle: CSSProperties =
-    data.logo.type === "text"
+    normalized.logo.type === "text"
       ? { color: style.logoColor ?? style.textColor ?? "var(--color-text)" }
       : {};
 
@@ -367,10 +490,11 @@ export function NavigationBlock({
   return (
     <nav
       className={navClass}
+      data-navigation-widget="1"
       data-collapse-on-scroll={behavior.collapseOnScroll ? "true" : undefined}
       data-mobile-mode={mobileMode}
       data-link-source={linksSource}
-      data-menu-key={data.menuKey ?? undefined}
+      data-menu-key={normalized.menuKey ?? undefined}
       style={navStyle}
     >
       <div
@@ -380,10 +504,14 @@ export function NavigationBlock({
         )}
       >
         <div className="flex items-center gap-3 text-sm font-semibold text-[var(--color-text)]">
-          {data.logo.type === "image" ? (
-            <img src={data.logo.value} alt={data.logo.alt ?? "Logo"} className="h-6 w-auto" />
+          {normalized.logo.type === "image" ? (
+            <img
+              src={normalized.logo.value}
+              alt={normalized.logo.alt ?? "Logo"}
+              className="h-6 w-auto"
+            />
           ) : (
-            <span style={logoStyle}>{data.logo.value}</span>
+            <span style={logoStyle}>{normalized.logo.value}</span>
           )}
         </div>
         <div
@@ -424,12 +552,15 @@ export function NavigationBlock({
             ))}
           </ul>
         </div>
-        {hasRightActions ? (
+        {shouldRenderRightCluster ? (
           <div className="flex items-center gap-3 pl-4">
             {showMobileToggle ? (
               <button
                 type="button"
                 className="rounded-md border border-[var(--color-border)] px-2 py-1 text-xs font-semibold md:hidden"
+                data-navigation-mobile-toggle
+                aria-expanded="false"
+                aria-controls={mobilePanelId}
               >
                 Menu
               </button>
@@ -437,21 +568,57 @@ export function NavigationBlock({
             {rightSlotBlocks.map((slotBlock) => (
               <WidgetRenderer key={slotBlock.id} block={slotBlock} previewDevice={previewDevice} />
             ))}
-            {showCta && data.cta ? (
+            {showCta && normalized.cta ? (
               <a
                 className={joinClasses(
                   "rounded-md px-3 py-2 text-xs font-semibold",
                   behavior.hideCtaOnMobile && "hidden md:inline-flex"
                 )}
                 style={ctaStyle}
-                href={data.cta.href}
+                href={normalized.cta.href}
               >
-                {data.cta.label}
+                {normalized.cta.label}
               </a>
             ) : null}
           </div>
         ) : null}
       </div>
+      {showMobileToggle ? (
+        <div
+          id={mobilePanelId}
+          data-navigation-mobile-panel
+          hidden
+          className="mx-auto mt-3 w-full max-w-6xl rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] p-4 md:hidden"
+        >
+          <ul
+            className={joinClasses(
+              "flex flex-col gap-3",
+              fontSizeClassMap[style.fontSize ?? "sm"] ?? "text-sm",
+              fontWeightClassMap[style.fontWeight ?? "medium"] ?? "font-medium",
+              textTransformClassMap[style.textTransform ?? "none"] ?? "normal-case"
+            )}
+            style={linksStyle}
+          >
+            {renderedItems.map((item, index) => (
+              <li key={`mobile-${item.href || item.label}-${index}`}>
+                <a href={item.href}>{item.label}</a>
+              </li>
+            ))}
+          </ul>
+          {showCta && normalized.cta ? (
+            <a
+              className="mt-4 inline-flex rounded-md px-3 py-2 text-xs font-semibold"
+              style={ctaStyle}
+              href={normalized.cta.href}
+            >
+              {normalized.cta.label}
+            </a>
+          ) : null}
+        </div>
+      ) : null}
+      {showMobileToggle ? (
+        <script dangerouslySetInnerHTML={{ __html: navigationRuntimeClientScript }} />
+      ) : null}
     </nav>
   );
 }

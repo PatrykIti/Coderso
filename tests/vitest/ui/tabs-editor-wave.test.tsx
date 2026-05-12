@@ -328,6 +328,7 @@ test("Tabs wizard editor covers variant fallback, item-count growth, active-tab 
 
     const activeSelect = findSelectByOptions(structureSection, ["overview", "details", "3"]);
     setSelectValue(activeSelect, "3");
+    expect(view.getValue().options?.defaultItemId).toBe("3");
     expect(view.getValue().options?.activeId).toBe("3");
 
     setInputValue(findInputByPlaceholder(structureSection, "Tab 1"), "   ");
@@ -399,18 +400,21 @@ test("Tabs visual editor covers variant cards, alignment fallback, active-tab pr
 
     const layoutSection = getSectionByTitle(view.container, "Layout");
     const alignmentSelect = findSelectByOptions(layoutSection, ["start", "center", "end"]);
+    const orientationSelect = findSelectByOptions(layoutSection, ["horizontal", "vertical"]);
     const surfaceColorInput = findInputByPlaceholder(layoutSection, "var(--color-surface)");
     const borderColorInput = findInputByPlaceholder(layoutSection, "var(--color-border)");
     const activeBackgroundInput = findInputByPlaceholder(layoutSection, "var(--color-text)");
     const activeTextColorInput = findInputByPlaceholder(layoutSection, "var(--color-background)");
 
     expect(alignmentSelect.value).toBe("start");
+    expect(orientationSelect.value).toBe("horizontal");
     expect(surfaceColorInput.value).toBe(tabsDefaults.style?.surfaceColor);
     expect(borderColorInput.value).toBe(tabsDefaults.style?.borderColor);
     expect(activeBackgroundInput.value).toBe("#111111");
     expect(activeTextColorInput.value).toBe(tabsDefaults.style?.activeTextColor);
 
     setSelectValue(alignmentSelect, "center");
+    setSelectValue(orientationSelect, "vertical");
     setInputValue(surfaceColorInput, "#f3f4f6");
     setInputValue(borderColorInput, "#d1d5db");
     setInputValue(activeBackgroundInput, "#111827");
@@ -419,8 +423,10 @@ test("Tabs visual editor covers variant cards, alignment fallback, active-tab pr
     expect(view.getValue()).toEqual(
       expect.objectContaining({
         options: expect.objectContaining({
+          defaultItemId: "details",
           activeId: "details",
           alignment: "center",
+          orientation: "vertical",
         }),
         style: expect.objectContaining({
           surfaceColor: "#f3f4f6",
@@ -446,7 +452,9 @@ test("Tabs advanced editor covers diagnostics normalization, technical field upd
       ],
       options: {
         activeId: "missing",
+        defaultItemId: "missing",
         alignment: "end",
+        orientation: "vertical",
       },
       style: {
         surfaceColor: "   ",
@@ -464,8 +472,10 @@ test("Tabs advanced editor covers diagnostics normalization, technical field upd
     expect(snapshotBefore?.textContent).toContain('"id": "dup"');
     expect(snapshotBefore?.textContent).toContain('"id": "2"');
     expect(snapshotBefore?.textContent).toContain('"label": "Tab 1"');
+    expect(snapshotBefore?.textContent).toContain('"defaultItemId": "dup"');
     expect(snapshotBefore?.textContent).toContain('"activeId": "dup"');
     expect(snapshotBefore?.textContent).toContain('"alignment": "end"');
+    expect(snapshotBefore?.textContent).toContain('"orientation": "vertical"');
     expect(snapshotBefore?.textContent).not.toContain('"surfaceColor"');
     expect(snapshotBefore?.textContent).toContain('"borderColor": "token-border"');
 

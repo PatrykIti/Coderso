@@ -1167,6 +1167,56 @@ test("HeroVisualEditor handles preset fallback, variant button changes, load fai
   }
 });
 
+test("HeroVisualEditor toggles badge fields and validates unsafe badge hrefs", async () => {
+  const { HeroVisualEditor } = await import("../../../core/admin/ui/widgets/editors/HeroEditors");
+  const onChangeSpy = vi.fn();
+
+  const Harness = () => {
+    const [value, setValue] = useState<HeroData>({ headline: "Hero headline" });
+    return (
+      <HeroVisualEditor
+        value={value}
+        onChange={(next) => {
+          onChangeSpy(next);
+          setValue(next);
+        }}
+        variant="centered"
+        onVariantChange={() => undefined}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    await flush();
+    const badgeSection = findSectionByTitle(view.container, "Badge and headline");
+    expect(badgeSection?.getAttribute("data-widget-editor-section")).toBe("hero.badge-headline");
+    const badgeToggle = badgeSection?.querySelector("input[type='checkbox']");
+    clickElement(badgeToggle ?? undefined);
+
+    React.act(() => {
+      setInputValue(findInputByPlaceholder(view.container, "Now shipping"), "Launch week");
+      setInputValue(findInputByPlaceholder(view.container, "New"), "New");
+      setInputValue(findInputByPlaceholder(view.container, "/launch"), "javascript:alert(1)");
+    });
+
+    expect(view.container.textContent).toContain("Use a relative path, hash, or full URL.");
+    expect(onChangeSpy.mock.lastCall?.[0]).toEqual(
+      expect.objectContaining({
+        badge: expect.objectContaining({
+          enabled: true,
+          label: "Launch week",
+          prefix: "New",
+          href: "javascript:alert(1)",
+        }),
+      })
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("HeroAdvancedEditor covers legacy background media, layout and spacing controls, gradients, hide-on-mobile, and media reset", async () => {
   const { HeroAdvancedEditor } = await import("../../../core/admin/ui/widgets/editors/HeroEditors");
 

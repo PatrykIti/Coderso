@@ -6,7 +6,9 @@
 **Category:** Widgets + Admin UI + Runtime Render
 **Estimated Effort:** Large
 **Dependencies:** TASK-252-01, TASK-252-02
-**Status:** To Do
+**Status:** Done
+**Started:** 2026-05-11
+**Completed:** 2026-05-12
 
 ---
 
@@ -57,7 +59,7 @@ timeline modes while preserving existing payloads and editor tests.
 
 This parent is now executed through physical per-widget leaves. Do not implement this parent as one broad batch; complete the leaves below in dependency order.
 
-- [ ] TASK-252-04-01: Timeline Chronology Modes and Editor IA
+- [x] TASK-252-04-01: Timeline Chronology Modes and Editor IA
 
 ## Files to Change
 

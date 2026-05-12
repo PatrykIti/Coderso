@@ -36,6 +36,7 @@ import {
 } from "../../../../widgets/core/contentList";
 import type { WidgetEditorProps } from "../../../../widgets/types";
 import { ClearableInputField } from "./ClearableFields";
+import { WidgetEditorSection } from "./WidgetEditorControls";
 
 const variantOptions: Array<{
   id: ContentListVariantId;
@@ -105,24 +106,21 @@ const NO_LISTING_QUERY_VALUE = "__no_listing_query__";
 const NO_LISTING_TEMPLATE_VALUE = "__no_listing_template__";
 
 function EditorSection({
+  id,
   title,
   description,
   children,
 }: {
+  id?: string;
   title: string;
   description?: string;
   children: ReactNode;
 }) {
+  const resolvedId = id ?? title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   return (
-    <section className="space-y-3 rounded-lg border border-border/70 bg-background/50 p-3">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          {title}
-        </p>
-        {description ? <p className="text-xs text-muted-foreground">{description}</p> : null}
-      </div>
-      <div className="space-y-3">{children}</div>
-    </section>
+    <WidgetEditorSection id={resolvedId} title={title} description={description}>
+      {children}
+    </WidgetEditorSection>
   );
 }
 

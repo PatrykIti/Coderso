@@ -6,6 +6,7 @@ import { renderToString } from "react-dom/server";
 import {
   createNavigationWidget,
   navigationDefaults,
+  normalizeNavigationData,
   NavigationBlock,
   type NavigationData,
 } from "../../../core/widgets/core/navigation";
@@ -59,12 +60,17 @@ test("navigation reflects sticky and transparent behavior in runtime output", ()
   );
 
   expect(html).toContain("sticky top-0 z-40");
+  expect(html).toContain('data-navigation-widget="1"');
   expect(html).toContain('data-mobile-mode="drawer"');
   expect(html).toContain('data-collapse-on-scroll="true"');
   expect(html).toContain("border-bottom-width:2px");
   expect(html).toContain("text-lg");
   expect(html).toContain("uppercase");
   expect(html).toContain("Menu");
+  expect(html).toContain("data-navigation-mobile-toggle");
+  expect(html).toContain("data-navigation-mobile-panel");
+  expect(html).toContain('aria-expanded="false"');
+  expect(html).toContain('aria-controls="navigation-mobile-panel"');
 });
 
 test("navigation cleared surface and CTA background omit background styles", () => {
@@ -180,6 +186,59 @@ test("navigation widget exposes right slot and visual variant ownership", () => 
 
   expect(widget.slots).toEqual([{ id: "right", label: "Right Actions" }]);
   expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBe(true);
+});
+
+test("navigation normalizes unsafe item, child, CTA, and logo hrefs before render", () => {
+  const normalized = normalizeNavigationData({
+    ...navigationDefaults,
+    logo: {
+      ...navigationDefaults.logo,
+      href: "javascript:alert(1)",
+    },
+    items: [
+      { label: "Safe", href: "/safe" },
+      {
+        label: "Unsafe",
+        href: "javascript:alert(2)",
+        children: [{ label: "Child unsafe", href: "//evil.example" }],
+      },
+    ],
+    cta: {
+      label: "Start",
+      href: "data:text/html,boom",
+    },
+  });
+
+  expect(normalized.logo.href).toBe("/");
+  expect(normalized.items).toEqual([{ label: "Safe", href: "/safe" }]);
+  expect(normalized.cta).toBeUndefined();
+
+  const html = renderToString(<NavigationBlock data={normalized} variant="with-cta" />);
+  expect(html).toContain('href="/safe"');
+  expect(html).not.toContain("javascript:alert");
+  expect(html).not.toContain("//evil.example");
+  expect(html).not.toContain("data:text/html");
+});
+
+test("navigation still renders mobile toggle without CTA or right slot content", () => {
+  const html = renderToString(
+    <NavigationBlock
+      data={{
+        ...navigationDefaults,
+        cta: undefined,
+        behavior: {
+          ...navigationDefaults.behavior,
+          mobileMode: "minimal",
+        },
+      }}
+      variant="simple"
+      blockId="panel"
+    />
+  );
+
+  expect(html).toContain("data-navigation-mobile-toggle");
+  expect(html).toContain("data-navigation-mobile-panel");
+  expect(html).toContain('id="navigation-mobile-panel"');
 });
 
 test("navigation wizard shows CTA fields only for CTA variants", () => {

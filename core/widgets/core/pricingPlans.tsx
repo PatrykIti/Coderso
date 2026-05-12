@@ -2,10 +2,25 @@ import type { CSSProperties, ComponentType } from "react";
 
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
+import { normalizeWidgetSafeHref } from "./widgetSafeHref";
 
 export type PricingPlansVariantId = "three-plans" | "four-plans" | "comparison-rows";
 export type PricingPlansSpacing = "none" | "sm" | "md" | "lg";
 export type PricingPlansRadius = "none" | "md" | "lg" | "xl";
+export type PricingBillingCycle = "monthly" | "annual";
+export type PricingPlansFeatureMarker = "bullet" | "check" | "icon";
+
+export type PricingBillingToggle = {
+  enabled?: boolean;
+  monthlyLabel?: string;
+  annualLabel?: string;
+  defaultCycle?: PricingBillingCycle;
+};
+
+export type PricingPlanCyclePrices = {
+  monthly?: string;
+  annual?: string;
+};
 
 export type PricingPlanItem = {
   id?: string;
@@ -13,6 +28,7 @@ export type PricingPlanItem = {
   price?: string;
   period?: string;
   badge?: string;
+  prices?: PricingPlanCyclePrices;
   features?: string[];
   ctaLabel?: string;
   ctaHref?: string;
@@ -25,12 +41,14 @@ export type PricingPlansData = {
     description?: string;
   };
   plans: PricingPlanItem[];
+  billingToggle?: PricingBillingToggle;
   style?: {
     cardSurface?: string;
     cardBorder?: string;
     highlightRing?: string;
     spacing?: PricingPlansSpacing;
     radius?: PricingPlansRadius;
+    featureMarker?: PricingPlansFeatureMarker;
   };
 };
 
@@ -92,6 +110,14 @@ export const pricingPlansSchema = {
           price: { type: "string" },
           period: { type: "string" },
           badge: { type: "string" },
+          prices: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              monthly: { type: "string" },
+              annual: { type: "string" },
+            },
+          },
           features: {
             type: "array",
             items: { type: "string" },
@@ -100,6 +126,16 @@ export const pricingPlansSchema = {
           ctaHref: { type: "string" },
           highlighted: { type: "boolean" },
         },
+      },
+    },
+    billingToggle: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        enabled: { type: "boolean" },
+        monthlyLabel: { type: "string" },
+        annualLabel: { type: "string" },
+        defaultCycle: { enum: ["monthly", "annual"] },
       },
     },
     style: {
@@ -111,6 +147,7 @@ export const pricingPlansSchema = {
         highlightRing: { type: "string" },
         spacing: { enum: ["none", "sm", "md", "lg"] },
         radius: { enum: ["none", "md", "lg", "xl"] },
+        featureMarker: { enum: ["bullet", "check", "icon"] },
       },
     },
   },
@@ -121,6 +158,12 @@ export const pricingPlansDefaults: PricingPlansData = {
     title: "Choose the plan that fits your workflow",
     description: "Compare pricing tiers and pick the option matching your team stage.",
   },
+  billingToggle: {
+    enabled: false,
+    monthlyLabel: "Monthly",
+    annualLabel: "Annual",
+    defaultCycle: "monthly",
+  },
   plans: [
     {
       id: "plan-1",
@@ -128,6 +171,10 @@ export const pricingPlansDefaults: PricingPlansData = {
       price: "$19",
       period: "/month",
       badge: "For individuals",
+      prices: {
+        monthly: "$19",
+        annual: "$190",
+      },
       features: ["1 project", "Email support", "Basic analytics"],
       ctaLabel: "Start now",
       ctaHref: "#",
@@ -139,6 +186,10 @@ export const pricingPlansDefaults: PricingPlansData = {
       price: "$49",
       period: "/month",
       badge: "Most popular",
+      prices: {
+        monthly: "$49",
+        annual: "$490",
+      },
       features: ["10 projects", "Priority support", "Advanced analytics"],
       ctaLabel: "Choose growth",
       ctaHref: "#",
@@ -150,6 +201,10 @@ export const pricingPlansDefaults: PricingPlansData = {
       price: "$99",
       period: "/month",
       badge: "For teams",
+      prices: {
+        monthly: "$99",
+        annual: "$990",
+      },
       features: ["Unlimited projects", "SLA", "Audit logs"],
       ctaLabel: "Contact sales",
       ctaHref: "#",
@@ -162,6 +217,7 @@ export const pricingPlansDefaults: PricingPlansData = {
     highlightRing: "var(--color-primary)",
     spacing: "md",
     radius: "lg",
+    featureMarker: "bullet",
   },
 };
 
@@ -181,6 +237,14 @@ const resolvePricingSpacing = (value: string | undefined): PricingPlansSpacing =
 const resolvePricingRadius = (value: string | undefined): PricingPlansRadius => {
   if (value === "none" || value === "md" || value === "xl") return value;
   return "lg";
+};
+
+const resolvePricingBillingCycle = (value: string | undefined): PricingBillingCycle =>
+  value === "annual" ? "annual" : "monthly";
+
+const resolvePricingFeatureMarker = (value: string | undefined): PricingPlansFeatureMarker => {
+  if (value === "check" || value === "icon") return value;
+  return "bullet";
 };
 
 const normalizeFeatureList = (value: unknown): string[] => {
@@ -260,9 +324,18 @@ export function normalizePricingPlans(
       price,
       period: resolveOptionalString(base.period),
       badge: resolveOptionalString(base.badge),
+      prices: {
+        monthly: resolveOptionalString(base.prices?.monthly) ?? price,
+        annual: resolveOptionalString(base.prices?.annual),
+      },
       features: normalizeFeatureList(base.features),
       ctaLabel: resolveOptionalString(base.ctaLabel),
-      ctaHref: resolveOptionalString(base.ctaHref),
+      ctaHref:
+        normalizeWidgetSafeHref(base.ctaHref, {
+          allowRelative: true,
+          allowHash: true,
+          allowHttp: true,
+        }) ?? undefined,
       highlighted: Boolean(base.highlighted),
     });
   }
@@ -295,12 +368,19 @@ export function normalizePricingPlansData(data: PricingPlansData): PricingPlansD
     title: "",
     description: "",
   };
+  const billingDefaults = pricingPlansDefaults.billingToggle ?? {
+    enabled: false,
+    monthlyLabel: "Monthly",
+    annualLabel: "Annual",
+    defaultCycle: "monthly" as const,
+  };
   const styleDefaults = pricingPlansDefaults.style ?? {
     cardSurface: "var(--color-bg)",
     cardBorder: "var(--color-border)",
     highlightRing: "var(--color-primary)",
     spacing: "md",
     radius: "lg",
+    featureMarker: "bullet",
   };
   const hasStyleObject = data.style !== undefined;
 
@@ -311,6 +391,23 @@ export function normalizePricingPlansData(data: PricingPlansData): PricingPlansD
       description: resolveString(data.header?.description, headerDefaults.description ?? ""),
     },
     plans: ensureSingleHighlighted(normalizePricingPlans(data.plans)),
+    billingToggle: {
+      enabled:
+        typeof data.billingToggle?.enabled === "boolean"
+          ? data.billingToggle.enabled
+          : billingDefaults.enabled !== false,
+      monthlyLabel: resolveString(
+        data.billingToggle?.monthlyLabel,
+        billingDefaults.monthlyLabel ?? "Monthly"
+      ),
+      annualLabel: resolveString(
+        data.billingToggle?.annualLabel,
+        billingDefaults.annualLabel ?? "Annual"
+      ),
+      defaultCycle: resolvePricingBillingCycle(
+        data.billingToggle?.defaultCycle ?? billingDefaults.defaultCycle
+      ),
+    },
     style: {
       cardSurface: hasStyleObject
         ? resolveClearableStyleValue(data.style?.cardSurface)
@@ -324,6 +421,9 @@ export function normalizePricingPlansData(data: PricingPlansData): PricingPlansD
       ),
       spacing: resolvePricingSpacing(data.style?.spacing),
       radius: resolvePricingRadius(data.style?.radius),
+      featureMarker: resolvePricingFeatureMarker(
+        data.style?.featureMarker ?? styleDefaults.featureMarker
+      ),
     },
   };
 }
@@ -339,14 +439,34 @@ function collectFeatureRows(plans: PricingPlanItem[]): string[] {
   return rows;
 }
 
+const featureMarkerIconMap: Record<PricingPlansFeatureMarker, string> = {
+  bullet: "•",
+  check: "✓",
+  icon: "◆",
+};
+
+const resolveDisplayedPlanPrice = (
+  plan: PricingPlanItem,
+  billingToggle: NonNullable<PricingPlansData["billingToggle"]>
+) => {
+  if (billingToggle.enabled) {
+    return billingToggle.defaultCycle === "annual"
+      ? (plan.prices?.annual ?? plan.price)
+      : (plan.prices?.monthly ?? plan.price);
+  }
+  return plan.price;
+};
+
 function PricingCardsLayout({
   plans,
   variant,
   style,
+  billingToggle,
 }: {
   plans: PricingPlanItem[];
   variant: PricingPlansVariantId;
   style: ResolvedPricingStyle;
+  billingToggle: NonNullable<PricingPlansData["billingToggle"]>;
 }) {
   const gridClassName =
     variant === "four-plans"
@@ -397,7 +517,9 @@ function PricingCardsLayout({
             </div>
 
             <p className="flex items-end gap-1 text-[var(--color-text)]">
-              <span className="text-3xl font-semibold">{plan.price}</span>
+              <span className="text-3xl font-semibold">
+                {resolveDisplayedPlanPrice(plan, billingToggle)}
+              </span>
               {(plan.period ?? "").trim().length > 0 ? (
                 <span className="pb-1 text-xs text-[var(--color-text)]/65">{plan.period}</span>
               ) : null}
@@ -406,7 +528,9 @@ function PricingCardsLayout({
             <ul className="space-y-2 text-sm text-[var(--color-text)]/80">
               {(plan.features ?? []).map((feature, featureIndex) => (
                 <li key={`${plan.id ?? index}-feature-${featureIndex}`} className="flex gap-2">
-                  <span style={{ color: style.highlightRing }}>•</span>
+                  <span style={{ color: style.highlightRing }}>
+                    {featureMarkerIconMap[style.featureMarker ?? "bullet"]}
+                  </span>
                   <span>{feature}</span>
                 </li>
               ))}
@@ -430,9 +554,11 @@ function PricingCardsLayout({
 function PricingComparisonRowsLayout({
   plans,
   style,
+  billingToggle,
 }: {
   plans: PricingPlanItem[];
   style: ResolvedPricingStyle;
+  billingToggle: NonNullable<PricingPlansData["billingToggle"]>;
 }) {
   const featureRows = collectFeatureRows(plans);
 
@@ -469,7 +595,9 @@ function PricingComparisonRowsLayout({
                 }
               >
                 <p className="text-sm font-semibold text-[var(--color-text)]">{plan.name}</p>
-                <p className="text-xl font-semibold text-[var(--color-text)]">{plan.price}</p>
+                <p className="text-xl font-semibold text-[var(--color-text)]">
+                  {resolveDisplayedPlanPrice(plan, billingToggle)}
+                </p>
                 {(plan.period ?? "").trim().length > 0 ? (
                   <p className="text-xs text-[var(--color-text)]/65">{plan.period}</p>
                 ) : null}
@@ -537,6 +665,7 @@ export function PricingPlansBlock({ data, variant }: { data: PricingPlansData; v
   const resolvedVariant = resolvePricingPlansVariant(variant);
   const visibleCount = resolvePricingPlanCountForVariant(resolvedVariant);
   const normalizedData = normalizePricingPlansData(data);
+  const billingToggle = normalizedData.billingToggle ?? pricingPlansDefaults.billingToggle!;
   const style = normalizedData.style ?? pricingPlansDefaults.style!;
 
   const plans = normalizePricingPlans(normalizedData.plans, visibleCount);
@@ -547,6 +676,7 @@ export function PricingPlansBlock({ data, variant }: { data: PricingPlansData; v
     highlightRing: style.highlightRing ?? "var(--color-primary)",
     spacing: resolvePricingSpacing(style.spacing),
     radius: resolvePricingRadius(style.radius),
+    featureMarker: resolvePricingFeatureMarker(style.featureMarker),
   } satisfies ResolvedPricingStyle;
 
   return (
@@ -569,10 +699,46 @@ export function PricingPlansBlock({ data, variant }: { data: PricingPlansData; v
         ) : null}
       </header>
 
+      {billingToggle.enabled ? (
+        <div
+          className="mb-4 flex items-center justify-center gap-2"
+          data-pricing-billing-toggle="1"
+          data-pricing-cycle={billingToggle.defaultCycle ?? "monthly"}
+        >
+          <button
+            type="button"
+            className="rounded-full border px-3 py-1 text-xs font-semibold"
+            data-pricing-cycle-trigger="monthly"
+            aria-pressed={billingToggle.defaultCycle !== "annual" ? "true" : "false"}
+            data-state={billingToggle.defaultCycle !== "annual" ? "active" : "inactive"}
+          >
+            {billingToggle.monthlyLabel}
+          </button>
+          <button
+            type="button"
+            className="rounded-full border px-3 py-1 text-xs font-semibold"
+            data-pricing-cycle-trigger="annual"
+            aria-pressed={billingToggle.defaultCycle === "annual" ? "true" : "false"}
+            data-state={billingToggle.defaultCycle === "annual" ? "active" : "inactive"}
+          >
+            {billingToggle.annualLabel}
+          </button>
+        </div>
+      ) : null}
+
       {resolvedVariant === "comparison-rows" ? (
-        <PricingComparisonRowsLayout plans={plans} style={resolvedStyle} />
+        <PricingComparisonRowsLayout
+          plans={plans}
+          style={resolvedStyle}
+          billingToggle={billingToggle}
+        />
       ) : (
-        <PricingCardsLayout plans={plans} variant={resolvedVariant} style={resolvedStyle} />
+        <PricingCardsLayout
+          plans={plans}
+          variant={resolvedVariant}
+          style={resolvedStyle}
+          billingToggle={billingToggle}
+        />
       )}
     </section>
   );

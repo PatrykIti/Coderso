@@ -7,6 +7,7 @@ import {
   createHeroWidget,
   heroDefaults,
   HeroBlock,
+  normalizeHeroData,
   type HeroData,
 } from "../../../core/widgets/core/hero";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
@@ -67,6 +68,14 @@ test("hero validator accepts extended schema", () => {
       variant: "split",
       data: {
         ...heroDefaults,
+        badge: {
+          enabled: true,
+          label: "New",
+          href: "/new",
+          prefix: "Beta",
+          tone: "primary",
+          placement: "above-headline",
+        },
         background: {
           color: "#fff",
           gradient: "linear-gradient(#fff,#eee)",
@@ -245,4 +254,69 @@ test("hero clearable background and CTA fields omit runtime styles", () => {
   expect(html).not.toContain("linear-gradient");
   expect(html).not.toContain("data-hero-background-overlay");
   expect(html).not.toContain("background:transparent");
+});
+
+test("hero normalizer strips unsafe CTA hrefs and keeps safe badge text", () => {
+  const normalized = normalizeHeroData({
+    ...heroDefaults,
+    badge: {
+      enabled: true,
+      label: "Launch week",
+      href: "javascript:alert(1)",
+      prefix: "New",
+      tone: "warning",
+    },
+    primaryCta: {
+      label: "Start",
+      href: "javascript:alert(2)",
+    },
+    secondaryCta: {
+      label: "Docs",
+      href: "//evil.example",
+    },
+  });
+
+  expect(normalized.badge).toEqual(
+    expect.objectContaining({
+      label: "Launch week",
+      href: undefined,
+      prefix: "New",
+      tone: "warning",
+    })
+  );
+  expect(normalized.primaryCta).toBeUndefined();
+  expect(normalized.secondaryCta).toBeUndefined();
+});
+
+test("hero renders badge and omits unsafe links from runtime output", () => {
+  const html = renderToString(
+    <HeroBlock
+      data={{
+        ...heroDefaults,
+        badge: {
+          enabled: true,
+          label: "Launch week",
+          href: "javascript:alert(1)",
+          prefix: "New",
+          tone: "primary",
+          placement: "inline-headline",
+        },
+        primaryCta: {
+          label: "Start",
+          href: "javascript:alert(2)",
+        },
+        secondaryCta: {
+          label: "Docs",
+          href: "#docs",
+        },
+      }}
+      variant="centered"
+    />
+  );
+
+  expect(html).toContain("Launch week");
+  expect(html).toContain("New");
+  expect(html).toContain('data-widget-part="hero.badge"');
+  expect(html).toContain('href="#docs"');
+  expect(html).not.toContain("javascript:alert");
 });

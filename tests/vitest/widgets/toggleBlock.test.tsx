@@ -26,6 +26,13 @@ test("toggle block renders defaults", () => {
 
   expect(html).toContain('data-nextless-toggle-block="1"');
   expect(html).toContain('data-nextless-toggle-state="primary"');
+  expect(html).toContain('role="radiogroup"');
+  expect(html).toContain('role="radio"');
+  expect(html).toContain('aria-controls="toggle-pane-primary"');
+  expect(html).toContain('aria-controls="toggle-pane-secondary"');
+  expect(html).toContain('aria-labelledby="toggle-trigger-primary"');
+  expect(html).toContain('aria-labelledby="toggle-trigger-secondary"');
+  expect(html).toContain("data-nextless-toggle-status");
   expect(html).toContain("Add widgets for the primary view.");
   expect(html).toContain("__nextlessToggleBlockBound");
 });
@@ -101,6 +108,8 @@ test("toggle block visual editor renders key sections", () => {
 
   expect(html).toContain("Labels");
   expect(html).toContain("Behavior and Style");
+  expect(html).toContain('data-widget-editor-section="toggle-block.labels"');
+  expect(html).toContain('data-widget-editor-section="toggle-block.behavior-style"');
 });
 
 const editors = [ToggleBlockWizardEditor, ToggleBlockAdvancedEditor];

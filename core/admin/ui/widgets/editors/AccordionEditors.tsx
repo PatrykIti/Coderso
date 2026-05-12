@@ -23,6 +23,7 @@ import {
 } from "../../../../widgets/core/accordion";
 import type { WidgetEditorProps } from "../../../../widgets/types";
 import { ClearableFieldHeader } from "./ClearableFields";
+import { WidgetEditorSection } from "./WidgetEditorControls";
 
 const variantOptions: Array<{
   id: AccordionVariantId;
@@ -156,24 +157,20 @@ function clearStyleField(
 }
 
 function EditorSection({
+  id,
   title,
   description,
   children,
 }: {
+  id: string;
   title: string;
   description?: string;
   children: ReactNode;
 }) {
   return (
-    <section className="space-y-3 rounded-lg border border-border/70 bg-background/50 p-3">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          {title}
-        </p>
-        {description ? <p className="text-xs text-muted-foreground">{description}</p> : null}
-      </div>
-      <div className="space-y-3">{children}</div>
-    </section>
+    <WidgetEditorSection id={id} title={title} description={description}>
+      {children}
+    </WidgetEditorSection>
   );
 }
 
@@ -222,7 +219,11 @@ function StructureSection({
   const items = normalizeAccordionItems(normalized.items);
 
   return (
-    <EditorSection title="Items" description="Set titles and helper text for each item.">
+    <EditorSection
+      id="accordion.items"
+      title="Items"
+      description="Set titles and helper text for each item."
+    >
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="space-y-2">
           <p className="text-sm font-medium">Number of items</p>
@@ -247,7 +248,12 @@ function StructureSection({
           <p className="text-sm font-medium">Initially open item</p>
           <Select
             value={normalized.options?.initiallyOpenId ?? items[0]?.id ?? "1"}
-            onValueChange={(next) => updateOptions(value, onChange, { initiallyOpenId: next })}
+            onValueChange={(next) =>
+              updateOptions(value, onChange, {
+                initiallyOpenId: next,
+                defaultOpenIds: [next],
+              })
+            }
           >
             <SelectTrigger>
               <SelectValue placeholder="Choose item" />
@@ -300,24 +306,109 @@ function BehaviorSection({
   onChange: (next: AccordionData) => void;
 }) {
   const normalized = normalizeValue(value);
+  const items = normalizeAccordionItems(normalized.items);
+  const openMode = normalized.options?.openMode ?? "single";
+  const defaultOpenIds = normalized.options?.defaultOpenIds ?? [];
 
   return (
     <EditorSection
+      id="accordion.behavior-style"
       title="Behavior and Style"
       description="Control opening behavior and panel colors."
     >
-      <div className="flex items-center justify-between rounded-md border p-3">
-        <div>
-          <p className="text-sm font-medium">Allow multiple open items</p>
-          <p className="text-xs text-muted-foreground">
-            Disable for classic one-open-at-a-time accordion behavior.
-          </p>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Open mode</p>
+          <Select
+            value={openMode}
+            onValueChange={(next) =>
+              updateOptions(value, onChange, {
+                openMode: next as "single" | "multiple",
+                allowMultiple: next === "multiple",
+                defaultOpenIds:
+                  next === "multiple" ? defaultOpenIds : [defaultOpenIds[0] ?? items[0]?.id ?? "1"],
+                initiallyOpenId: defaultOpenIds[0] ?? items[0]?.id ?? "1",
+              })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Choose open mode" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="single">Single open item</SelectItem>
+              <SelectItem value="multiple">Multiple open items</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-        <Switch
-          checked={normalized.options?.allowMultiple ?? false}
-          onCheckedChange={(checked) => updateOptions(value, onChange, { allowMultiple: checked })}
-        />
+
+        <div className="flex items-center justify-between rounded-md border p-3">
+          <div>
+            <p className="text-sm font-medium">Allow all closed</p>
+            <p className="text-xs text-muted-foreground">
+              Keep disclosure state collapsible after the default open state.
+            </p>
+          </div>
+          <Switch
+            checked={normalized.options?.collapsible ?? true}
+            onCheckedChange={(checked) => updateOptions(value, onChange, { collapsible: checked })}
+          />
+        </div>
       </div>
+
+      {openMode === "single" ? (
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Default open item</p>
+          <Select
+            value={defaultOpenIds[0] ?? items[0]?.id ?? "1"}
+            onValueChange={(next) =>
+              updateOptions(value, onChange, {
+                defaultOpenIds: [next],
+                initiallyOpenId: next,
+              })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Choose item" />
+            </SelectTrigger>
+            <SelectContent>
+              {items.map((item) => (
+                <SelectItem key={`accordion-default-open-${item.id}`} value={item.id}>
+                  {item.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Default open items</p>
+          <div className="space-y-2 rounded-md border p-3">
+            {items.map((item) => {
+              const checked = defaultOpenIds.includes(item.id);
+              return (
+                <label
+                  key={`accordion-default-open-checkbox-${item.id}`}
+                  className="flex items-center justify-between gap-3 text-sm"
+                >
+                  <span>{item.title}</span>
+                  <Switch
+                    checked={checked}
+                    onCheckedChange={(nextChecked) => {
+                      const nextIds = nextChecked
+                        ? Array.from(new Set([...defaultOpenIds, item.id]))
+                        : defaultOpenIds.filter((entry) => entry !== item.id);
+                      updateOptions(value, onChange, {
+                        defaultOpenIds: nextIds,
+                        initiallyOpenId: nextIds[0] ?? item.id,
+                      });
+                    }}
+                  />
+                </label>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div className="space-y-2">
@@ -375,7 +466,11 @@ export function AccordionWizardEditor({
 }: WidgetEditorProps<AccordionData>) {
   return (
     <div className="space-y-4">
-      <EditorSection title="Variant" description="Pick accordion visual style.">
+      <EditorSection
+        id="accordion.variant"
+        title="Variant"
+        description="Pick accordion visual style."
+      >
         <VariantCards value={resolveVariant(variant)} onChange={onVariantChange} />
       </EditorSection>
       <StructureSection value={value} onChange={onChange} />
@@ -391,7 +486,7 @@ export function AccordionVisualEditor({
 }: WidgetEditorProps<AccordionData>) {
   return (
     <div className="space-y-4">
-      <EditorSection title="Variant" description="Choose accordion style.">
+      <EditorSection id="accordion.variant" title="Variant" description="Choose accordion style.">
         <VariantCards value={resolveVariant(variant)} onChange={onVariantChange} />
       </EditorSection>
       <StructureSection value={value} onChange={onChange} />
@@ -408,12 +503,20 @@ export function AccordionAdvancedEditor({
 }: WidgetEditorProps<AccordionData>) {
   return (
     <div className="space-y-4">
-      <EditorSection title="Variant" description="Variant and behavior tuning.">
+      <EditorSection
+        id="accordion.variant"
+        title="Variant"
+        description="Variant and behavior tuning."
+      >
         <VariantCards value={resolveVariant(variant)} onChange={onVariantChange} />
       </EditorSection>
       <StructureSection value={value} onChange={onChange} />
       <BehaviorSection value={value} onChange={onChange} />
-      <EditorSection title="Diagnostics" description="Normalized payload preview.">
+      <EditorSection
+        id="accordion.diagnostics"
+        title="Diagnostics"
+        description="Normalized payload preview."
+      >
         <DiagnosticsSnapshot value={normalizeValue(value)} />
       </EditorSection>
     </div>

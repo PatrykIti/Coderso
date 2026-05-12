@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 52 tasks
-- **In Progress:** 5 tasks
-- **Done:** 1493 tasks
+- **To Do:** 7 tasks
+- **In Progress:** 4 tasks
+- **Done:** 1539 tasks
 
 ---
 
@@ -38,51 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-252-01 | Widget Inspector IA and Shared Option Architecture | High | Large | Shared right-panel structure, info icon pattern, slot placement, and automation metadata |
-| TASK-252-03 | Hero Editor Mode and Badge Expansion | High | Large | Hero badge/announcement surface plus reorganized Wizard/Visual/Advanced editor IA |
-| TASK-252-04 | Timeline Chronology and Editor IA | High | Large | True timeline modes, date-capable steps, per-item CTA, and status markers |
-| TASK-252-05 | Layout and Structural Widget Editor Parity | High | Large | Section/slots baseline plus layout primitives and missing docs for tabs/accordion/toggle-block |
-| TASK-252-06 | Content and Marketing Widget Editor Expansion | High | Large | Marketing/content widget editor IA, variants, repeated item controls, and docs |
-| TASK-252-07 | Dynamic and Operational Widget Editor Expansion | High | Large | Dynamic, commerce, listing/search, forms, booking, navigation, and footer editor parity |
-| TASK-252-08 | QA, Docs, Changelog, and Board Closure | Medium | Medium | Final validation matrix, missing widget docs, changelog, and board sync |
-| TASK-252-03-01 | Hero Badge Announcement and Editor IA | High | Large | Hero badge plus shared editor IA proof |
-| TASK-252-04-01 | Timeline Chronology Modes and Editor IA | High | Large | Timeline chronology modes, dates, CTA links, and status markers |
-| TASK-252-05-01 | Section Regions Semantics and Spacing | High | Large | Section regions, semantics, anchors, spacing, and docs |
-| TASK-252-05-02 | Template Section Metadata Preview and Sync | High | Medium | Template metadata, preview, category, version, and conditional sync/detach controls |
-| TASK-252-05-03 | Grid Columns Presets Gaps and Mobile Stack | High | Medium | Grid presets, gaps, and mobile stack |
-| TASK-252-05-04 | Split Layout Slot Order and Mobile Stack | High | Medium | Split slot order, gap, and mobile stack |
-| TASK-252-05-05 | Stack Direction Gap Alignment and Responsive Flow | High | Medium | Stack direction, gap, alignment, and responsive flow |
-| TASK-252-05-06 | Spacer Size Tokens Custom Height and Canvas Affordance | Medium | Small | Spacer token/custom height and canvas affordance |
-| TASK-252-05-07 | Divider Orientation Style Tone and Spacing | Medium | Small | Divider orientation, style, tone, and spacing |
-| TASK-252-05-08 | Tabs Accessible Panels Default Tab and Surface | High | Medium | Accessible tabs, default tab, orientation, and panel surface |
-| TASK-252-05-09 | Accordion Disclosure Default Open and Accessibility | High | Medium | Accordion open behavior, default items, panel style, and a11y |
-| TASK-252-05-10 | Toggle Block State Switch and Accessible Content Swap | High | Medium | Toggle states, labels, default state, and accessible content swap |
-| TASK-252-06-01 | Feature Grid Icon Cards Rows and Links | High | Medium | Feature icon cards, rows, optional links, and docs |
-| TASK-252-06-02 | Testimonials Grid Spotlight Rating and Attribution | High | Medium | Testimonials layout, rating, avatar shape, author attribution, and spotlight |
-| TASK-252-06-03 | Pricing Plans Tiers Billing Toggle and Highlight | High | Large | Pricing tiers, billing toggle, feature markers, highlights, and custom price as Adapt-only |
-| TASK-252-06-04 | FAQ Accordion Support CTA Icon Placement and Defaults | High | Medium | FAQ items, support CTA, icon placement, disclosure defaults, and docs |
-| TASK-252-06-05 | CTA Banner Compact Split Badge and Icon | High | Medium | CTA modes, badge/icon, contrast tone, and action controls |
-| TASK-252-06-06 | Logo Cloud Grid Tone Rows and Accessibility | Medium | Medium | Logo rows, tone, alt text, accessible labels, and layout controls |
-| TASK-252-06-07 | Gallery Mosaic Layout Captions and Alt Text | High | Medium | Gallery layout presets, captions, media selection, and alt text |
-| TASK-252-06-08 | Stats KPI Values Icons and Display Modes | Medium | Medium | KPI prefix/suffix, icons, and display modes |
-| TASK-252-06-09 | Team Members Photo Shape Socials and Fallbacks | Medium | Medium | Team members, photos, socials, photo shape, and image fallbacks |
-| TASK-252-06-10 | Rich Text Section Prose Presets Width Badge and CTA | High | Medium | Rich text prose presets, width, badge/eyebrow, and CTA |
-| TASK-252-06-11 | Compare Timeline Two Track Segments Status and Highlight | High | Medium | Two-track compare timeline segments, status, and highlights |
-| TASK-252-07-01 | Content List Source Display Field Visibility and Empty States | High | Large | Content source, filters, display, field visibility, and states |
-| TASK-252-07-02 | Posts Feed Source Density Author Date and Category | High | Medium | Posts source, density, metadata visibility, and CTA copy |
-| TASK-252-07-03 | Entry Teaser Selected Entry Fallback and Field Toggles | High | Medium | Single entry source, fallback, display mode, and field toggles |
-| TASK-252-07-04 | Product Gallery Source Media Modes Thumbnails and Empty State | High | Large | Product gallery source, media modes, thumbnails, and empty state |
-| TASK-252-07-05 | Product Compare Selected Products Attributes and Highlight | High | Large | Product compare products, attributes, highlight, and empty state |
-| TASK-252-07-06 | Product Table Columns Sort Filter and Pagination | High | Large | Product table columns, sort/filter, pagination, and empty state |
-| TASK-252-07-07 | Listing Filters Facets Ranges Apply and Reset | High | Large | Listing facets, ranges, apply/reset, and labels |
-| TASK-252-07-08 | Search Box Copy Target Route Query Param and Display Mode | High | Medium | Search copy, target route, query param, and display mode |
-| TASK-252-07-09 | Newsletter Fields Consent Copy and States | High | Large | Newsletter fields, consent, submit copy, and states |
-| TASK-252-07-10 | Booking Calendar Provider Event Modes and Availability | High | Large | Booking provider/event reference, modes, and availability |
-| TASK-252-07-11 | Appointment Form Fields Validation Copy and States | High | Large | Appointment fields, validation copy, state copy, and layout |
-| TASK-252-07-12 | Form Embed Form Picker Fields and State Copy | High | Large | Form picker, fields, state copy, and provider boundary |
-| TASK-252-07-13 | Contact Form Info State Copy and Security Boundaries | High | Large | Contact form, contact info, state copy, and security boundaries |
-| TASK-252-07-14 | Navigation Source Links Mobile Menu and CTA | High | Large | Navigation source, safe links, mobile menu, CTA, and logo grouping |
-| TASK-252-07-15 | Footer Columns Brand Legal and Social Links | High | Medium | Footer columns, brand, legal/social links, and safe link sources |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
 | TASK-240 | Coderso Multilingual and i18n Umbrella | High | Very Large | Execution-ready locale/translation/runtime routing program superseding TASK-054-21 |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |
@@ -90,25 +45,68 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
-
 ---
 
 ## In Progress
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-252 | Widget Configuration IA and Pages Widget Expansion | High | Very Large | In progress: research archive is complete; shared inspector IA, Hero/Timeline expansion, widget-family implementation, QA, docs, and changelog closure remain |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
 | TASK-105-06 | Widget Editor New Tests Wave | High | Large | In progress: widget editors are now 100% lines in the full-lane report; remaining work is branch-only hardening plus barrel import ownership noise |
-
 ---
 
 ## Done
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-252 | Widget Configuration IA and Pages Widget Expansion | High | Very Large | Done: research archive, shared inspector IA, per-widget owner-model updates, proof matrix, docs, board sync, and full closure validation are complete |
+| TASK-252-08 | QA, Docs, Changelog, and Board Closure | Medium | Medium | Done: proof matrix, board/changelog sync, and full lint/Bun/Vitest/security strict validation are landed |
+| TASK-252-07 | Dynamic and Operational Widget Editor Expansion | High | Large | Done: dynamic and operational widget editors are aligned to shared inspector IA, focused docs, and runtime-safe ownership |
+| TASK-252-07-15 | Footer Columns Brand Legal and Social Links | High | Medium | Done: footer legal/social links use shared safe-href normalization with focused runtime coverage |
+| TASK-252-07-14 | Navigation Source Links Mobile Menu and CTA | High | Large | Done: navigation safe-href normalization, mobile toggle/panel runtime, docs, and focused tests are synchronized |
+| TASK-252-07-13 | Contact Form Info State Copy and Security Boundaries | High | Large | Done: contact widget contract, docs, research proof, and focused validation remain synchronized under existing security boundaries |
+| TASK-252-07-12 | Form Embed Form Picker Fields and State Copy | High | Large | Done: form-embed widget contract, docs, research proof, and focused validation are synchronized |
+| TASK-252-07-11 | Appointment Form Fields Validation Copy and States | High | Large | Done: appointment form copy/state contract, docs, research proof, and focused validation are synchronized |
+| TASK-252-07-10 | Booking Calendar Provider Event Modes and Availability | High | Large | Done: booking calendar provider/mode contract, docs, research proof, and focused validation are synchronized |
+| TASK-252-07-09 | Newsletter Fields Consent Copy and States | High | Large | Done: newsletter field, consent, and submit-state contract remains synchronized with focused widget coverage |
+| TASK-252-07-08 | Search Box Copy Target Route Query Param and Display Mode | High | Medium | Done: route-submit mode, target route, query param, display mode, docs, and focused tests are landed |
+| TASK-252-07-07 | Listing Filters Facets Ranges Apply and Reset | High | Large | Done: listing filters contract, docs, research proof, and focused validation are synchronized |
+| TASK-252-07-06 | Product Table Columns Sort Filter and Pagination | High | Large | Done: product table contract, docs, research proof, and focused validation are synchronized |
+| TASK-252-07-05 | Product Compare Selected Products Attributes and Highlight | High | Large | Done: product compare contract, docs, research proof, and focused validation are synchronized |
+| TASK-252-07-04 | Product Gallery Source Media Modes Thumbnails and Empty State | High | Large | Done: product gallery contract, docs, research proof, and focused validation are synchronized |
+| TASK-252-07-03 | Entry Teaser Selected Entry Fallback and Field Toggles | High | Medium | Done: entry teaser editor shared-section parity and CTA safe-href normalization are landed with focused tests |
+| TASK-252-07-02 | Posts Feed Source Density Author Date and Category | High | Medium | Done: posts-feed contract, docs, research proof, and focused validation are synchronized |
+| TASK-252-07-01 | Content List Source Display Field Visibility and Empty States | High | Large | Done: content-list contract, docs, research proof, and focused validation are synchronized |
+| TASK-252-06 | Content and Marketing Widget Editor Expansion | High | Large | Done: content widget editors are aligned to shared inspector IA, focused docs, and runtime-safe ownership |
+| TASK-252-06-11 | Compare Timeline Two Track Segments Status and Highlight | High | Medium | Done: compare-timeline contract, docs, research proof, and focused validation are synchronized |
+| TASK-252-06-10 | Rich Text Section Prose Presets Width Badge and CTA | High | Medium | Done: rich-text-section contract, docs, research proof, and focused validation are synchronized |
+| TASK-252-06-09 | Team Members Photo Shape Socials and Fallbacks | Medium | Medium | Done: team widget contract, docs, research proof, and focused validation are synchronized |
+| TASK-252-06-08 | Stats KPI Values Icons and Display Modes | Medium | Medium | Done: stats-kpi contract, docs, research proof, and focused validation are synchronized |
+| TASK-252-06-07 | Gallery Mosaic Layout Captions and Alt Text | High | Medium | Done: gallery-mosaic contract, docs, research proof, and focused validation are synchronized |
+| TASK-252-06-06 | Logo Cloud Grid Tone Rows and Accessibility | Medium | Medium | Done: logo-cloud contract, docs, research proof, and focused validation are synchronized |
+| TASK-252-06-05 | CTA Banner Compact Split Badge and Icon | High | Medium | Done: CTA banner shared-section parity, safe CTA href normalization, docs, and focused tests are landed |
+| TASK-252-06-04 | FAQ Accordion Support CTA Icon Placement and Defaults | High | Medium | Done: FAQ accordion contract, docs, research proof, and focused validation are synchronized |
+| TASK-252-06-03 | Pricing Plans Tiers Billing Toggle and Highlight | High | Large | Done: billing toggle, per-cycle prices, feature marker, docs, and focused tests are landed |
+| TASK-252-06-02 | Testimonials Grid Spotlight Rating and Attribution | High | Medium | Done: testimonials contract, docs, research proof, and focused validation are synchronized |
+| TASK-252-06-01 | Feature Grid Icon Cards Rows and Links | High | Medium | Done: feature-grid shared-section parity, safe CTA href normalization, docs, and focused tests are landed |
+| TASK-252-05 | Layout and Structural Widget Editor Parity | High | Large | Done: structural widget editors now use shared inspector IA with aligned owner/runtime/docs proof |
+| TASK-252-05-10 | Toggle Block State Switch and Accessible Content Swap | High | Medium | Done: toggle-block radiogroup runtime semantics, editor metadata, docs, and focused tests are landed |
+| TASK-252-05-09 | Accordion Disclosure Default Open and Accessibility | High | Medium | Done: accordion open-mode/default-open/collapsible contract, docs, and focused tests are landed |
+| TASK-252-05-08 | Tabs Accessible Panels Default Tab and Surface | High | Medium | Done: tabs orientation/default-tab contract, aria wiring, keyboard sync path, docs, and focused tests are landed |
+| TASK-252-05-07 | Divider Orientation Style Tone and Spacing | Medium | Small | Done: divider owner/runtime surface, shared inspector sections, docs, and focused validation are synchronized |
+| TASK-252-05-06 | Spacer Size Tokens Custom Height and Canvas Affordance | Medium | Small | Done: spacer owner/runtime surface, shared inspector sections, docs, and focused validation are synchronized |
+| TASK-252-05-05 | Stack Direction Gap Alignment and Responsive Flow | High | Medium | Done: stack owner/runtime surface, shared inspector sections, docs, and focused validation are synchronized |
+| TASK-252-05-04 | Split Layout Slot Order and Mobile Stack | High | Medium | Done: split-layout owner/runtime surface, shared inspector sections, docs, and focused validation are synchronized |
+| TASK-252-05-03 | Grid Columns Presets Gaps and Mobile Stack | High | Medium | Done: grid-columns owner/runtime surface, shared inspector sections, docs, and focused validation are synchronized |
+| TASK-252-05-02 | Template Section Metadata Preview and Sync | High | Medium | Done: template metadata/preview seams, shared inspector sections, docs, and focused tests are landed |
+| TASK-252-05-01 | Section Regions Semantics and Spacing | High | Large | Done: section layout width/padding owner fields, visual regions placement, docs, and focused tests are landed |
+| TASK-252-04 | Timeline Chronology and Editor IA | High | Large | Done: timeline chronology/status/date/CTA owner-model work, docs, and focused validation are complete |
+| TASK-252-04-01 | Timeline Chronology Modes and Editor IA | High | Large | Done: mode/date/status/CTA runtime contract, shared editor parity, docs, and focused tests are landed |
+| TASK-252-03 | Hero Editor Mode and Badge Expansion | High | Large | Done: hero badge/runtime safe-href work, shared inspector migration, docs, and focused validation are complete |
+| TASK-252-03-01 | Hero Badge Announcement and Editor IA | High | Large | Done: hero badge schema/render/safe-href slice, shared editor parity, docs, and focused tests are landed |
+| TASK-252-01 | Widget Inspector IA and Shared Option Architecture | High | Large | Done: compact selected-widget header, shared section/control primitives, automation metadata, and builder-owned Visual slot placement are landed |
 | TASK-252-02 | Widget Research Archive and Variant Model | High | Medium | Done: 38 Pages-publishable widgets now have license-safe `_docs/_WIDGETS/tmp/<widget>/` research cards and Keep/Adapt/Reject matrices |
 | TASK-190-08-04 | Live Provider Matrix Approval and Rerun | High | Small | Done: user-approved opt-in live provider rerun fixed live CMS harness trust-flag drift and passed route/CMS OpenAI/OpenRouter gates |
 | TASK-190 | Blueprint Composer Foundation | High | Very Large | Done: capability manifests, candidate planning, graph/conflict policy, schema/listing/page/admin/detail-page composition, collection workspace/editor context, no-duplicate reuse, review metadata, fixture/live matrices, diagnostics, docs, and closure gates are complete; second-pass live rerun passed in TASK-190-08-04 |

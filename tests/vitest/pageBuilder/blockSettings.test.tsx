@@ -47,12 +47,16 @@ const heroBlock: Block = {
 
 test("BlockSettings clarifies empty slot availability", () => {
   const html = renderAdminUi(
-    <BlockSettings block={heroBlock} widget={asBlockSettingsWidget(heroWidget)} onChange={() => undefined} />
+    <BlockSettings
+      block={heroBlock}
+      widget={asBlockSettingsWidget(heroWidget)}
+      onChange={() => undefined}
+    />
   );
 
-  expect(html).toContain(
-    "Next: fine-tune layout, styling, and advanced settings for this widget."
-  );
+  expect(html).toContain("Selected widget");
+  expect(html).toContain("Hero");
+  expect(html).toContain('data-widget-editor-section="hero.structure"');
   expect(html).toMatch(/Hero Content(?:<!-- -->)? slot/);
   expect(html).toMatch(/0(?:<!-- -->)?\s*(?:<!-- -->)?items/);
   expect(html).toContain(
@@ -82,5 +86,7 @@ test("BlockSettings shows repeatable slot controls", () => {
   );
 
   expect(html).toMatch(/Add(?:<!-- -->)?\s*(?:<!-- -->)?Region/);
+  expect(html).toContain('data-widget-editor-section="section.regions"');
+  expect(html).toContain("Regions");
   expect(html).toContain("Region 1");
 });

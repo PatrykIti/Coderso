@@ -113,6 +113,8 @@ test("VisualPanel keeps generic variant controls by default", () => {
     <VisualPanel widget={createWidget()} block={baseBlock} onChange={() => undefined} />
   );
 
+  expect(html).toContain('data-widget-editor="hero"');
+  expect(html).toContain('data-widget-editor-mode="visual"');
   expect(html).toContain("Choose a visual style for this widget.");
   expect(html).toContain("Add variant preset");
   expect(html).toContain("Hero visual editor body");
@@ -129,6 +131,37 @@ test("VisualPanel hides generic variant controls when widget owns visual variant
 
   expect(html).not.toContain("Choose a visual style for this widget.");
   expect(html).toContain("Hero visual editor body");
+});
+
+test("VisualPanel renders slot controls inside a named structure section", () => {
+  const html = renderAdminUi(
+    <VisualPanel
+      widget={createWidget({ visualOwnsVariantSelection: true })}
+      block={baseBlock}
+      onChange={() => undefined}
+      slotControls={{
+        sectionId: "hero.structure",
+        title: "Structure",
+        description: "Manage slots in the visual flow.",
+        addActions: [],
+        items: [
+          {
+            id: "hero.slot.content",
+            label: "Hero Content slot",
+            count: 0,
+            empty: true,
+            canRemove: false,
+          },
+        ],
+        childrenHint: "Use the slot add action in the canvas or drag from the widgets tab.",
+      }}
+    />
+  );
+
+  expect(html).toContain('data-widget-editor-section="hero.structure"');
+  expect(html).toContain('data-widget-control="hero.slot.content"');
+  expect(html).toContain("Hero Content slot");
+  expect(html).toContain("Manage slots in the visual flow.");
 });
 
 test("VisualPanel uses navigation editor variant controls", () => {

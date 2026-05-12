@@ -69,8 +69,16 @@ Kazdy widget musi wspierac 3 tryby konfiguracji:
   - colors/borders/background
 - Widget moze przejac kontrole nad selektorem wariantu (bez generycznego duplikatu)
   przez `editorCapabilities.visualOwnsVariantSelection = true`.
-- Core widgets `hero`, `navigation`, `footer` i `timeline` uzywaja tego podejscia i renderuja
-  sekcyjny Visual IA zamiast generycznej listy wariantow.
+- Core widgets `hero`, `navigation`, `footer`, `timeline`, `section`, `tabs`,
+  `accordion`, `toggle-block`, `grid-columns`, `split-layout`, `stack`,
+  `spacer`, `divider`, `template-section`, `feature-grid`, `testimonials`,
+  `pricing-plans`, `faq-accordion`, `cta-banner`, `logo-cloud`,
+  `gallery-mosaic`, `stats-kpi`, `team`, `rich-text-section`, `compare-timeline`,
+  `content-list`, `posts-feed`, `entry-teaser`, `product-gallery`,
+  `product-compare`, `product-table`, `listing-filters`, `search-box`,
+  `newsletter`, `booking-calendar`, `appointment-form`, `form-embed`, and
+  `contact` already render sectioned Visual IA instead of the generic variant
+  list.
 
 3) Advanced
 - Tryb ekspercki/techniczny:
@@ -83,6 +91,15 @@ Zasady:
 - Kazdy tryb mapuje do tego samego modelu danych.
 - Uzytkownik moze w kazdej chwili przelaczyc sie na Advanced.
 - Przejscie do Advanced nie resetuje danych.
+- Prawy inspector utrzymuje kompaktowy naglowek zaznaczonego widgetu; stale
+  helper copy nad zakladkami jest zastapione ikonami `Info`, a duze karty
+  informacyjne sa zarezerwowane dla blokujacych ostrzezen.
+- Tryby edytora emituja stabilne metadane automatyzacyjne:
+  `data-widget-editor`, `data-widget-editor-mode`,
+  `data-widget-editor-section`, i `data-widget-control`.
+- Widgety z `slots` lub nested content przenosza kontrole struktury do nazwanej
+  sekcji `Visual` albo `Advanced`; nie wracamy do top-of-panel slot banners nad
+  zakladkami.
 
 ---
 
@@ -104,9 +121,16 @@ Szczegoly dla kazdego widgetu znajduja sie w `_docs/_WIDGETS/`:
 - `_docs/_WIDGETS/TEAM.md`
 - `_docs/_WIDGETS/TESTIMONIALS.md`
 - `_docs/_WIDGETS/PRICING_PLANS.md`
+- `_docs/_WIDGETS/PRODUCT_GALLERY.md`
+- `_docs/_WIDGETS/PRODUCT_COMPARE.md`
+- `_docs/_WIDGETS/PRODUCT_TABLE.md`
 - `_docs/_WIDGETS/RICH_TEXT_SECTION.md`
 - `_docs/_WIDGETS/CONTENT_LIST.md`
+- `_docs/_WIDGETS/LISTING_FILTERS.md`
+- `_docs/_WIDGETS/SEARCH_BOX.md`
 - `_docs/_WIDGETS/ENTRY_TEASER.md`
+- `_docs/_WIDGETS/BOOKING_CALENDAR.md`
+- `_docs/_WIDGETS/APPOINTMENT_FORM.md`
 - `_docs/_WIDGETS/FORM_EMBED.md`
 - `_docs/_WIDGETS/SCREEN_RECORD_HEADER.md`
 - `_docs/_WIDGETS/SCREEN_FIELD_VALUE.md`
@@ -116,6 +140,9 @@ Szczegoly dla kazdego widgetu znajduja sie w `_docs/_WIDGETS/`:
 - `_docs/_WIDGETS/SECTION.md`
 - `_docs/_WIDGETS/TEMPLATE_SECTION.md`
 - `_docs/_WIDGETS/GRID_COLUMNS.md`
+- `_docs/_WIDGETS/TABS.md`
+- `_docs/_WIDGETS/ACCORDION.md`
+- `_docs/_WIDGETS/TOGGLE_BLOCK.md`
 - `_docs/_WIDGETS/STACK.md`
 - `_docs/_WIDGETS/SPLIT_LAYOUT.md`
 - `_docs/_WIDGETS/SPACER.md`

@@ -290,6 +290,7 @@ test("ToggleBlock wizard editor covers variant fallback and label normalization"
   });
 
   try {
+    expect(view.container.innerHTML).toContain('data-widget-editor-section="toggle-block.labels"');
     const variantSection = getSectionByTitle(view.container, "Variant");
     expect(normalizeText(findButtonByText(variantSection, "Switch").textContent)).toContain(
       "selected"
@@ -357,6 +358,9 @@ test("ToggleBlock visual editor covers behavior controls and style token normali
   });
 
   try {
+    expect(view.container.innerHTML).toContain(
+      'data-widget-editor-section="toggle-block.behavior-style"'
+    );
     const variantSection = getSectionByTitle(view.container, "Variant");
     expect(normalizeText(findButtonByText(variantSection, "Cards").textContent)).toContain(
       "selected"

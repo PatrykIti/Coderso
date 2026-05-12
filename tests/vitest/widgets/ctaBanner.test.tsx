@@ -123,6 +123,23 @@ test("cta banner cleared background surfaces omit container, badge, and button b
   expect(html).not.toContain("background-color:");
 });
 
+test("cta banner strips unsafe CTA hrefs during normalization", () => {
+  const normalized = normalizeCtaBannerData({
+    ...ctaBannerDefaults,
+    actions: {
+      primaryCta: { label: "Join", href: "javascript:alert(1)" },
+      secondaryCta: { label: "Talk", href: "//evil.example" },
+    },
+  });
+
+  expect(normalized.actions?.primaryCta?.href).toBe("#");
+  expect(normalized.actions?.secondaryCta?.href).toBe("#");
+
+  const html = renderToString(<CtaBannerBlock data={normalized} variant="centered" />);
+  expect(html).not.toContain("javascript:alert");
+  expect(html).not.toContain("//evil.example");
+});
+
 test("cta banner validator rejects unsupported variant", () => {
   clearWidgets();
   registerWidget(

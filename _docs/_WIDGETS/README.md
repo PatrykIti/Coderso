@@ -3,6 +3,9 @@
 - `SECTION.md` - Section layout wrapper
 - `TEMPLATE_SECTION.md` - Template section (widget templates)
 - `GRID_COLUMNS.md` - Grid/columns layout primitive
+- `TABS.md` - Tabs layout/navigation surface
+- `ACCORDION.md` - Accordion layout surface
+- `TOGGLE_BLOCK.md` - Two-pane toggle layout surface
 - `STACK.md` - Flow layout primitive
 - `SPLIT_LAYOUT.md` - Two-pane layout primitive
 - `SPACER.md` - Vertical spacing primitive
@@ -17,6 +20,9 @@
 - `FEATURE_GRID.md` - Feature grid
 - `PRICING_PLANS.md` - Pricing plans
 - `TESTIMONIALS.md` - Testimonials
+- `PRODUCT_GALLERY.md` - Commerce product gallery
+- `PRODUCT_COMPARE.md` - Commerce compare matrix
+- `PRODUCT_TABLE.md` - Commerce product table
 - `FORM_EMBED.md` - Form embed
 - `LOGO_CLOUD.md` - Logo cloud
 - `GALLERY_MOSAIC.md` - Gallery mosaic
@@ -26,6 +32,10 @@
 - `CONTENT_LIST.md` - Dynamic content list
 - `POSTS_FEED.md` - Dynamic posts feed (latest/featured/category/manual)
 - `ENTRY_TEASER.md` - Dynamic single-entry teaser
+- `LISTING_FILTERS.md` - Listing runtime filters
+- `SEARCH_BOX.md` - Listing/global search widget
+- `BOOKING_CALENDAR.md` - Booking slot selector
+- `APPOINTMENT_FORM.md` - Booking appointment details form
 - `SCREEN_RECORD_HEADER.md` - Screen record summary header with read-only
   selected-entry binding targets
 - `SCREEN_FIELD_VALUE.md` - Screen field value row/card with widget-owned

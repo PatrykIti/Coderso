@@ -2,6 +2,7 @@ import type { CSSProperties, ComponentType } from "react";
 
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
+import { normalizeWidgetSafeHref } from "./widgetSafeHref";
 
 export type FeatureGridVariantId = "cards-3" | "cards-4" | "highlight-first";
 export type FeatureGridColumns = "2" | "3" | "4";
@@ -242,7 +243,12 @@ export function normalizeFeatureGridItems(
       title,
       description: resolveOptionalString(base.description),
       ctaLabel: resolveOptionalString(base.ctaLabel),
-      ctaHref: resolveOptionalString(base.ctaHref),
+      ctaHref:
+        normalizeWidgetSafeHref(base.ctaHref, {
+          allowRelative: true,
+          allowHash: true,
+          allowHttp: true,
+        }) ?? undefined,
     });
   }
 

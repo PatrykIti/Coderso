@@ -2,17 +2,25 @@
 
 ## Purpose
 
-Process timeline without dates, used for milestones and step-by-step flows.
+Process and chronology timeline for milestones, dated events, and alternating
+story flows.
 
 ## Widget ID
 
 `timeline`
 
-## Variants (v1)
+## Variants (legacy compatibility surface)
 
 - `milestones`: markers with labels around the axis
 - `cards`: steps rendered as cards
 - `compact`: minimal marker+label process strip
+
+Legacy variants remain supported, but current behavior is driven by
+`data.mode`:
+- `process`
+- `axis`
+- `chronology`
+- `alternating`
 
 ## Editor Modes (current after TASK-050-08-02)
 
@@ -20,6 +28,7 @@ Process timeline without dates, used for milestones and step-by-step flows.
 - minimal onboarding:
   - step count (`3-8`)
   - variant
+  - mode/purpose
   - orientation
   - guides baseline
   - quick step title editing
@@ -36,6 +45,12 @@ Primary day-to-day editing mode with section-based IA:
 Timeline owns variant selection in Visual via:
 `editorCapabilities.visualOwnsVariantSelection = true`.
 
+Each step can now own:
+- optional `date`
+- optional `dateLabel`
+- optional `status` (`upcoming`, `current`, `complete`)
+- optional CTA (`label`, `href`)
+
 ### Advanced
 Technical-only scope:
 - layout tokens (orientation, alignment, label position)
@@ -47,7 +62,11 @@ Advanced intentionally excludes day-to-day content/style editing.
 
 - Steps are normalized to `3-8` with stable IDs (`step-1`, `step-2`, ...).
 - Duplicate/missing step IDs are normalized to unique IDs.
-- Renderer supports all variants with orientation and label-position markers.
+- Renderer supports process, axis, chronology, and alternating modes while
+  keeping legacy variants as compatibility input.
+- Optional step dates render through semantic `<time>` when `date` exists.
+- Optional step CTA links are sanitized through the shared widget safe-href
+  contract before render.
 - Invalid runtime variant input falls back to `milestones`.
 
 ## Clear Controls
@@ -62,13 +81,21 @@ Advanced intentionally excludes day-to-day content/style editing.
 ```json
 {
   "variant": "milestones",
+  "mode": "axis",
   "steps": [
     {
       "id": "step-1",
       "title": "Discovery",
       "description": "Define goals and context.",
       "icon": "🔍",
-      "accent": "#1d4ed8"
+      "accent": "#1d4ed8",
+      "date": "2026-05-11",
+      "dateLabel": "May 11, 2026",
+      "status": "current",
+      "cta": {
+        "label": "View details",
+        "href": "/timeline/discovery"
+      }
     }
   ],
   "layout": {

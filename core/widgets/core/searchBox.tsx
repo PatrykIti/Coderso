@@ -10,10 +10,12 @@ import { getListingRuntimeClientScript } from "./listingRuntimeScript";
 
 export type SearchBoxVariantId = "default";
 
-export type SearchBoxMode = "listing" | "global";
+export type SearchBoxMode = "listing" | "global" | "route-submit";
+export type SearchBoxDisplayMode = "full" | "compact";
 
 export type SearchBoxData = {
   mode?: SearchBoxMode;
+  displayMode?: SearchBoxDisplayMode;
   listingQueryId?: string;
   title?: string;
   description?: string;
@@ -21,6 +23,8 @@ export type SearchBoxData = {
   submitLabel?: string;
   autoApply?: boolean;
   endpoint?: string;
+  targetRoute?: string;
+  queryParam?: string;
   sources?: {
     pages?: boolean;
     entries?: boolean;
@@ -52,6 +56,7 @@ const resolveOptionalText = (value: string | undefined) => {
 
 export const searchBoxDefaults: SearchBoxData = {
   mode: "listing",
+  displayMode: "full",
   listingQueryId: "",
   title: "Search",
   description: "Search listing items in real time.",
@@ -59,6 +64,8 @@ export const searchBoxDefaults: SearchBoxData = {
   submitLabel: "Search",
   autoApply: true,
   endpoint: "/api/search",
+  targetRoute: "/search",
+  queryParam: "q",
   sources: {
     pages: true,
     entries: true,
@@ -75,7 +82,8 @@ export const searchBoxSchema = {
   type: "object",
   additionalProperties: false,
   properties: {
-    mode: { enum: ["listing", "global"] },
+    mode: { enum: ["listing", "global", "route-submit"] },
+    displayMode: { enum: ["full", "compact"] },
     listingQueryId: { type: "string" },
     title: { type: "string" },
     description: { type: "string" },
@@ -83,6 +91,8 @@ export const searchBoxSchema = {
     submitLabel: { type: "string" },
     autoApply: { type: "boolean" },
     endpoint: { type: "string" },
+    targetRoute: { type: "string" },
+    queryParam: { type: "string" },
     sources: {
       type: "object",
       additionalProperties: false,
@@ -122,9 +132,31 @@ const sourceOptions = [
   { key: "posts", label: "Posts" },
 ] as const;
 
+const resolveSearchBoxMode = (value: SearchBoxData["mode"]): SearchBoxMode => {
+  if (value === "global" || value === "route-submit") return value;
+  return "listing";
+};
+
+const resolveDisplayMode = (value: SearchBoxData["displayMode"]): SearchBoxDisplayMode =>
+  value === "compact" ? "compact" : "full";
+
+const resolveTargetRoute = (value: string | undefined) => {
+  const trimmed = resolveOptionalText(value);
+  if (!trimmed) return "/search";
+  if (!trimmed.startsWith("/")) return "/search";
+  if (trimmed.startsWith("/api/")) return "/search";
+  return trimmed;
+};
+
+const resolveQueryParam = (value: string | undefined) => {
+  const trimmed = resolveOptionalText(value);
+  if (!trimmed) return "q";
+  return /^[A-Za-z][A-Za-z0-9_-]{0,31}$/.test(trimmed) ? trimmed : "q";
+};
+
 export function normalizeSearchBoxData(data: SearchBoxData): SearchBoxData {
   const defaults = searchBoxDefaults;
-  const mode = data.mode === "global" ? "global" : "listing";
+  const mode = resolveSearchBoxMode(data.mode);
   const hasStyleObject = data.style !== undefined;
   const style = hasStyleObject
     ? (compactObject({
@@ -136,6 +168,7 @@ export function normalizeSearchBoxData(data: SearchBoxData): SearchBoxData {
 
   return {
     mode,
+    displayMode: resolveDisplayMode(data.displayMode ?? defaults.displayMode),
     listingQueryId: resolveText(data.listingQueryId, defaults.listingQueryId ?? ""),
     title: resolveText(data.title, defaults.title ?? "Search"),
     description: resolveText(
@@ -146,6 +179,12 @@ export function normalizeSearchBoxData(data: SearchBoxData): SearchBoxData {
     submitLabel: resolveText(data.submitLabel, defaults.submitLabel ?? "Search"),
     autoApply: typeof data.autoApply === "boolean" ? data.autoApply : defaults.autoApply !== false,
     endpoint: resolveText(data.endpoint, defaults.endpoint ?? "/api/search"),
+    ...(mode === "route-submit"
+      ? {
+          targetRoute: resolveTargetRoute(data.targetRoute ?? defaults.targetRoute),
+          queryParam: resolveQueryParam(data.queryParam ?? defaults.queryParam),
+        }
+      : {}),
     sources: {
       pages:
         typeof data.sources?.pages === "boolean"
@@ -183,7 +222,8 @@ export function SearchBoxBlock({
   blockId?: string;
 }) {
   const normalized = normalizeSearchBoxData(data);
-  const mode = normalized.mode === "global" ? "global" : "listing";
+  const mode = resolveSearchBoxMode(normalized.mode);
+  const compact = normalized.displayMode === "compact";
   const title = resolveText(normalized.title, "Search");
   const description = resolveOptionalText(normalized.description);
   const placeholder = resolveText(normalized.placeholder, "Type to search...");
@@ -200,6 +240,9 @@ export function SearchBoxBlock({
   const legacyFrameClass =
     normalized.style === undefined ? "border-[var(--color-border)] bg-[var(--color-bg)]/80" : "";
   const legacyActionClass = normalized.style === undefined ? "bg-[var(--color-primary)]" : "";
+  const maxWidthClass = compact ? "max-w-3xl" : "max-w-5xl";
+  const shellGapClass = compact ? "space-y-2" : "space-y-4";
+  const formGapClass = compact ? "flex-nowrap" : "flex-wrap";
 
   if (mode === "listing") {
     const listingQueryId = resolveOptionalText(normalized.listingQueryId);
@@ -208,6 +251,7 @@ export function SearchBoxBlock({
         <section
           className="mx-auto w-full max-w-4xl rounded-xl border border-dashed border-[var(--color-border)] px-4 py-6"
           data-listing-widget="search-box"
+          data-search-box-display-mode={normalized.displayMode ?? "full"}
           data-listing-block-id={blockId ?? ""}
           data-listing-query-id=""
         >
@@ -220,8 +264,9 @@ export function SearchBoxBlock({
 
     return (
       <section
-        className="mx-auto w-full max-w-4xl px-4 py-5"
+        className={`mx-auto w-full max-w-4xl px-4 py-5`}
         data-listing-widget="search-box"
+        data-search-box-display-mode={normalized.displayMode ?? "full"}
         data-listing-block-id={blockId ?? ""}
         data-listing-query-id={listingQueryId}
       >
@@ -243,7 +288,7 @@ export function SearchBoxBlock({
               ) : null}
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
+            <div className={`flex items-center gap-2 ${formGapClass}`}>
               <input
                 className="h-9 min-w-0 flex-1 rounded-md border border-[var(--color-border)] bg-transparent px-3 text-sm"
                 name={buildListingRuntimeParamName(listingQueryId, listingRuntimeTokens.search)}
@@ -284,6 +329,51 @@ export function SearchBoxBlock({
     );
   }
 
+  if (mode === "route-submit") {
+    return (
+      <section
+        className={`mx-auto w-full ${maxWidthClass} px-4 py-5`}
+        data-listing-widget="search-box"
+        data-search-box-display-mode={normalized.displayMode ?? "full"}
+        data-search-box-mode="route-submit"
+        data-search-target-route={resolveText(normalized.targetRoute, "/search")}
+        data-search-query-param={resolveText(normalized.queryParam, "q")}
+      >
+        <div className={`rounded-xl border p-4 ${legacyFrameClass}`} style={frameStyle}>
+          <form
+            method="get"
+            action={resolveText(normalized.targetRoute, "/search")}
+            className={`grid gap-3 ${shellGapClass}`}
+          >
+            <div className="space-y-1">
+              <p className="text-sm font-semibold uppercase tracking-wide text-[var(--color-text)]/75">
+                {title}
+              </p>
+              {!compact && description ? (
+                <p className="text-sm text-[var(--color-text)]/70">{description}</p>
+              ) : null}
+            </div>
+            <div className={`flex items-center gap-2 ${formGapClass}`}>
+              <input
+                className="h-9 min-w-0 flex-1 rounded-md border border-[var(--color-border)] bg-transparent px-3 text-sm"
+                name={resolveText(normalized.queryParam, "q")}
+                defaultValue={queryValue}
+                placeholder={placeholder}
+              />
+              <button
+                type="submit"
+                className={`inline-flex h-9 items-center justify-center rounded-md px-4 text-sm font-semibold text-[var(--color-bg)] ${legacyActionClass}`}
+                style={actionStyle}
+              >
+                {submitLabel}
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+    );
+  }
+
   const boxId = blockId ?? "global-search";
   const enabledSources = {
     pages: normalized.sources?.pages !== false,
@@ -293,12 +383,16 @@ export function SearchBoxBlock({
 
   return (
     <section
-      className="mx-auto w-full max-w-5xl px-4 py-6"
+      className={`mx-auto w-full ${maxWidthClass} px-4 py-6`}
       data-listing-widget="search-box"
+      data-search-box-display-mode={normalized.displayMode ?? "full"}
       data-listing-block-id={blockId ?? ""}
       data-listing-query-id=""
     >
-      <div className={`space-y-4 rounded-xl border p-4 ${legacyFrameClass}`} style={frameStyle}>
+      <div
+        className={`${shellGapClass} rounded-xl border p-4 ${legacyFrameClass}`}
+        style={frameStyle}
+      >
         <form
           method="get"
           action={resolveText(normalized.endpoint, "/api/search")}
@@ -316,7 +410,7 @@ export function SearchBoxBlock({
             ) : null}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className={`flex items-center gap-2 ${formGapClass}`}>
             <input
               className="h-9 min-w-0 flex-1 rounded-md border border-[var(--color-border)] bg-transparent px-3 text-sm"
               name="q"

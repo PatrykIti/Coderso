@@ -109,7 +109,14 @@ test("pricing plans normalization keeps deterministic ids and count bounds", () 
 
   const normalized = normalizePricingPlansData({ plans: [] });
   expect(normalized.plans).toHaveLength(3);
+  expect(normalized.billingToggle).toEqual({
+    enabled: false,
+    monthlyLabel: "Monthly",
+    annualLabel: "Annual",
+    defaultCycle: "monthly",
+  });
   expect(normalized.style?.spacing).toBe("md");
+  expect(normalized.style?.featureMarker).toBe("bullet");
 });
 
 test("pricing plans validator accepts expanded model", () => {
@@ -131,6 +138,12 @@ test("pricing plans validator accepts expanded model", () => {
           title: "Plans",
           description: "Compare offers",
         },
+        billingToggle: {
+          enabled: true,
+          monthlyLabel: "Monthly",
+          annualLabel: "Yearly",
+          defaultCycle: "annual",
+        },
         plans: [
           {
             id: "starter",
@@ -138,6 +151,10 @@ test("pricing plans validator accepts expanded model", () => {
             price: "$19",
             period: "/month",
             badge: "New",
+            prices: {
+              monthly: "$19",
+              annual: "$190",
+            },
             features: ["Email support", "Basic analytics"],
             ctaLabel: "Start",
             ctaHref: "/start",
@@ -181,6 +198,7 @@ test("pricing plans validator accepts expanded model", () => {
           highlightRing: "#1d4ed8",
           spacing: "lg",
           radius: "xl",
+          featureMarker: "check",
         },
       },
     })
@@ -203,6 +221,81 @@ test("pricing plans cleared card surfaces omit card and table backgrounds", () =
   expect(normalized.style?.cardBorder).toBeUndefined();
   expect(cardHtml).not.toContain("background-color:var(--color-bg)");
   expect(tableHtml).not.toContain("background-color:var(--color-bg)");
+});
+
+test("pricing plans render annual cycle and feature marker when billing toggle is enabled", () => {
+  const html = renderToString(
+    <PricingPlansBlock
+      data={{
+        ...pricingPlansDefaults,
+        billingToggle: {
+          enabled: true,
+          monthlyLabel: "Monthly",
+          annualLabel: "Yearly",
+          defaultCycle: "annual",
+        },
+        plans: [
+          {
+            id: "starter",
+            name: "Starter",
+            price: "$19",
+            period: "/month",
+            prices: { monthly: "$19", annual: "$190" },
+            features: ["Email support"],
+          },
+          {
+            id: "growth",
+            name: "Growth",
+            price: "$49",
+            period: "/month",
+            prices: { monthly: "$49", annual: "$490" },
+            features: ["Priority support"],
+            highlighted: true,
+          },
+        ],
+        style: {
+          ...pricingPlansDefaults.style,
+          featureMarker: "check",
+        },
+      }}
+      variant="three-plans"
+    />
+  );
+
+  expect(html).toContain('data-pricing-billing-toggle="1"');
+  expect(html).toContain('data-pricing-cycle="annual"');
+  expect(html).toContain("Yearly");
+  expect(html).toContain("$190");
+  expect(html).toContain("✓");
+});
+
+test("pricing plans strip unsafe CTA hrefs from normalized plans", () => {
+  const normalized = normalizePricingPlansData({
+    ...pricingPlansDefaults,
+    plans: [
+      {
+        id: "starter",
+        name: "Starter",
+        price: "$19",
+        ctaLabel: "Start",
+        ctaHref: "/start",
+      },
+      {
+        id: "growth",
+        name: "Growth",
+        price: "$49",
+        ctaLabel: "Break",
+        ctaHref: "javascript:alert(1)",
+      },
+    ],
+  });
+
+  expect(normalized.plans[0]?.ctaHref).toBe("/start");
+  expect(normalized.plans[1]?.ctaHref).toBeUndefined();
+
+  const html = renderToString(<PricingPlansBlock data={normalized} variant="three-plans" />);
+  expect(html).toContain('href="/start"');
+  expect(html).not.toContain("javascript:alert");
 });
 
 test("pricing plans validator rejects invalid variant", () => {

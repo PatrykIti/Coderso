@@ -5,6 +5,13 @@ import type { DeviceTarget, WidgetBlock, WidgetDefinition, WidgetEditorProps } f
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export type ToggleBlockVariantId = "switch" | "cards";
+export type ToggleBlockStateId = "primary" | "secondary";
+
+export type ToggleBlockState = {
+  id: ToggleBlockStateId;
+  label: string;
+  slotId: ToggleBlockStateId;
+};
 
 export type ToggleBlockData = {
   labels?: {
@@ -114,22 +121,47 @@ export function normalizeToggleBlockData(data: ToggleBlockData): ToggleBlockData
   };
 }
 
+function resolveToggleStates(data: ToggleBlockData): ToggleBlockState[] {
+  const normalized = normalizeToggleBlockData(data);
+  const labels = normalized.labels ?? toggleBlockDefaults.labels!;
+  return [
+    {
+      id: "primary",
+      label: labels.primary ?? toggleBlockDefaults.labels?.primary ?? "View A",
+      slotId: "primary",
+    },
+    {
+      id: "secondary",
+      label: labels.secondary ?? toggleBlockDefaults.labels?.secondary ?? "View B",
+      slotId: "secondary",
+    },
+  ];
+}
+
 const toggleRuntimeClientScript = `
 (() => {
   if (typeof window === "undefined") return;
   if (window.__nextlessToggleBlockBound === true) return;
   window.__nextlessToggleBlockBound = true;
 
-  const sync = (root, state) => {
+  const getTriggers = (root) =>
+    Array.from(root.querySelectorAll("[data-nextless-toggle-trigger]")).filter(
+      (node) => node instanceof HTMLElement,
+    );
+
+  const sync = (root, state, options = {}) => {
     const normalized = state === "secondary" ? "secondary" : "primary";
     root.setAttribute("data-nextless-toggle-state", normalized);
 
-    root.querySelectorAll("[data-nextless-toggle-trigger]").forEach((button) => {
-      const next = button.getAttribute("data-nextless-toggle-next");
-      const active = normalized === "secondary" ? "primary" : "secondary";
-      button.setAttribute("data-state", active);
-      button.setAttribute("aria-pressed", active === "secondary" ? "true" : "false");
-      button.setAttribute("data-nextless-toggle-next", next ?? "secondary");
+    getTriggers(root).forEach((button) => {
+      const stateId = button.getAttribute("data-nextless-toggle-state-id");
+      const isActive = stateId === normalized;
+      button.setAttribute("data-state", isActive ? "active" : "inactive");
+      button.setAttribute("aria-checked", isActive ? "true" : "false");
+      button.setAttribute("tabindex", isActive ? "0" : "-1");
+      if (isActive && options.focus === true) {
+        button.focus();
+      }
     });
 
     root.querySelectorAll("[data-nextless-toggle-pane]").forEach((pane) => {
@@ -143,6 +175,32 @@ const toggleRuntimeClientScript = `
         pane.setAttribute("data-state", "inactive");
       }
     });
+
+    const statusTarget = root.querySelector("[data-nextless-toggle-status]");
+    const activeTrigger = getTriggers(root).find(
+      (button) => button.getAttribute("data-nextless-toggle-state-id") === normalized,
+    );
+    if (statusTarget instanceof HTMLElement && activeTrigger instanceof HTMLElement) {
+      statusTarget.textContent = (activeTrigger.textContent || normalized) + " selected";
+    }
+  };
+
+  const resolveNextState = (root, current, key) => {
+    const triggers = getTriggers(root);
+    const states = triggers
+      .map((trigger) => trigger.getAttribute("data-nextless-toggle-state-id"))
+      .filter((value) => value === "primary" || value === "secondary");
+    const currentIndex = states.indexOf(current);
+    if (currentIndex < 0 || states.length === 0) return current;
+    if (key === "Home") return states[0];
+    if (key === "End") return states[states.length - 1];
+    if (key === "ArrowRight" || key === "ArrowDown") {
+      return states[(currentIndex + 1) % states.length];
+    }
+    if (key === "ArrowLeft" || key === "ArrowUp") {
+      return states[(currentIndex - 1 + states.length) % states.length];
+    }
+    return current;
   };
 
   document.addEventListener("click", (event) => {
@@ -154,11 +212,40 @@ const toggleRuntimeClientScript = `
     const root = trigger.closest("[data-nextless-toggle-block='1']");
     if (!(root instanceof HTMLElement)) return;
 
-    const current = root.getAttribute("data-nextless-toggle-state") === "secondary"
-      ? "secondary"
-      : "primary";
-    const next = current === "primary" ? "secondary" : "primary";
-    sync(root, next);
+    const next =
+      trigger.getAttribute("data-nextless-toggle-state-id") === "secondary"
+        ? "secondary"
+        : "primary";
+    sync(root, next, { focus: true });
+  });
+
+  document.addEventListener("keydown", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    const trigger = target.closest("[data-nextless-toggle-trigger]");
+    if (!(trigger instanceof HTMLElement)) return;
+
+    if (
+      event.key !== "ArrowRight" &&
+      event.key !== "ArrowLeft" &&
+      event.key !== "ArrowDown" &&
+      event.key !== "ArrowUp" &&
+      event.key !== "Home" &&
+      event.key !== "End"
+    ) {
+      return;
+    }
+
+    const root = trigger.closest("[data-nextless-toggle-block='1']");
+    if (!(root instanceof HTMLElement)) return;
+
+    const current =
+      trigger.getAttribute("data-nextless-toggle-state-id") === "secondary"
+        ? "secondary"
+        : "primary";
+    const next = resolveNextState(root, current, event.key);
+    event.preventDefault();
+    sync(root, next, { focus: true });
   });
 })();
 `;
@@ -191,6 +278,7 @@ export function ToggleBlock({
   const state = normalized.options?.defaultState === "secondary" ? "secondary" : "primary";
   const style = normalized.style ?? toggleBlockDefaults.style!;
   const labels = normalized.labels ?? toggleBlockDefaults.labels!;
+  const states = resolveToggleStates(normalized);
 
   const slotMap = slots && typeof slots === "object" && !Array.isArray(slots) ? slots : {};
   const primaryBlocks = Array.isArray(slotMap.primary) ? slotMap.primary : [];
@@ -219,33 +307,37 @@ export function ToggleBlock({
       data-nextless-toggle-variant={resolvedVariant}
       data-nextless-toggle-state={state}
     >
-      <div className="flex items-center justify-between gap-3">
-        <button
-          type="button"
-          className={joinClasses("transition", resolveTriggerClass(resolvedVariant))}
-          data-nextless-toggle-trigger
-          data-nextless-toggle-next={state === "primary" ? "secondary" : "primary"}
-          data-state={state === "secondary" ? "secondary" : "primary"}
-          aria-pressed={state === "secondary" ? "true" : "false"}
-          style={triggerStyle}
+      <div className="flex flex-col gap-3">
+        <div
+          role="radiogroup"
+          aria-label="Toggle content view"
+          className="flex flex-wrap items-center gap-2"
         >
-          {state === "primary" ? labels.secondary : labels.primary}
-        </button>
-        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <span
-            className="rounded-full border px-2 py-1"
-            style={{ borderColor: style.borderColor }}
-          >
-            {labels.primary}
-          </span>
-          <span>⇄</span>
-          <span
-            className="rounded-full border px-2 py-1"
-            style={{ borderColor: style.borderColor }}
-          >
-            {labels.secondary}
-          </span>
+          {states.map((toggleState) => {
+            const isActive = toggleState.id === state;
+            return (
+              <button
+                key={toggleState.id}
+                id={`toggle-trigger-${toggleState.id}`}
+                type="button"
+                role="radio"
+                className={joinClasses("transition", resolveTriggerClass(resolvedVariant))}
+                data-nextless-toggle-trigger
+                data-nextless-toggle-state-id={toggleState.id}
+                data-state={isActive ? "active" : "inactive"}
+                aria-checked={isActive ? "true" : "false"}
+                aria-controls={`toggle-pane-${toggleState.slotId}`}
+                tabIndex={isActive ? 0 : -1}
+                style={triggerStyle}
+              >
+                {toggleState.label}
+              </button>
+            );
+          })}
         </div>
+        <span className="sr-only" aria-live="polite" data-nextless-toggle-status>
+          {state === "primary" ? labels.primary : labels.secondary} selected
+        </span>
       </div>
 
       {labels.helper ? (
@@ -253,6 +345,9 @@ export function ToggleBlock({
       ) : null}
 
       <div
+        id="toggle-pane-primary"
+        role="region"
+        aria-labelledby="toggle-trigger-primary"
         className={resolvedVariant === "cards" ? "rounded-lg border p-4" : "rounded-md border p-4"}
         style={{ borderColor: style.borderColor }}
         data-nextless-toggle-pane="primary"
@@ -271,6 +366,9 @@ export function ToggleBlock({
       </div>
 
       <div
+        id="toggle-pane-secondary"
+        role="region"
+        aria-labelledby="toggle-trigger-secondary"
         className={resolvedVariant === "cards" ? "rounded-lg border p-4" : "rounded-md border p-4"}
         style={{ borderColor: style.borderColor }}
         data-nextless-toggle-pane="secondary"

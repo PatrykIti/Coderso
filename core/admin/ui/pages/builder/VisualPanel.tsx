@@ -2,21 +2,55 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 import type { Block, WidgetDefinition, WidgetEditorContext } from "./types";
+import {
+  WidgetEditorModeRoot,
+  WidgetEditorSection,
+} from "../../widgets/editors/WidgetEditorControls";
+
+export type VisualPanelSlotControlItem = {
+  id: string;
+  label: string;
+  count: number;
+  empty: boolean;
+  canRemove: boolean;
+  onRemove?: () => void;
+};
+
+export type VisualPanelSlotControls = {
+  sectionId: string;
+  title: string;
+  description?: string;
+  items: VisualPanelSlotControlItem[];
+  addActions: Array<{
+    id: string;
+    label: string;
+    disabled: boolean;
+    onClick: () => void;
+  }>;
+  childrenHint?: string;
+};
 
 export type VisualPanelProps = {
   widget: WidgetDefinition;
   block: Block;
   onChange: (next: Block) => void;
   editorContext?: WidgetEditorContext;
+  slotControls?: VisualPanelSlotControls;
 };
 
-export function VisualPanel({ widget, block, onChange, editorContext }: VisualPanelProps) {
+export function VisualPanel({
+  widget,
+  block,
+  onChange,
+  editorContext,
+  slotControls,
+}: VisualPanelProps) {
   const variant = block.variant ?? widget.variants[0]?.id ?? "";
   const Editor = widget.editor.visual;
   const visualOwnsVariantSelection = Boolean(widget.editorCapabilities?.visualOwnsVariantSelection);
 
   return (
-    <div className="space-y-4">
+    <WidgetEditorModeRoot widgetType={widget.type} mode="visual">
       {!visualOwnsVariantSelection ? (
         <>
           <div>
@@ -64,6 +98,69 @@ export function VisualPanel({ widget, block, onChange, editorContext }: VisualPa
         onVariantChange={(next) => onChange({ ...block, variant: next })}
         context={editorContext}
       />
-    </div>
+      {slotControls ? (
+        <WidgetEditorSection
+          id={slotControls.sectionId}
+          title={slotControls.title}
+          description={slotControls.description}
+        >
+          {slotControls.addActions.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {slotControls.addActions.map((action) => (
+                <Button
+                  key={action.id}
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={action.disabled}
+                  onClick={action.onClick}
+                  className="h-8 px-2 text-[11px]"
+                >
+                  {action.label}
+                </Button>
+              ))}
+            </div>
+          ) : null}
+          <div className="space-y-2">
+            {slotControls.items.map((item) => (
+              <div
+                key={item.id}
+                data-widget-control={item.id}
+                className="rounded-md border border-border/60 bg-background/40 px-2 py-1.5"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm font-medium">{item.label}</span>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span>
+                      {item.count} {item.count === 1 ? "item" : "items"}
+                    </span>
+                    {item.canRemove && item.onRemove ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 px-2 text-[10px]"
+                        onClick={item.onRemove}
+                      >
+                        Remove
+                      </Button>
+                    ) : null}
+                  </div>
+                </div>
+                {item.empty ? (
+                  <div className="mt-1 text-[11px] text-muted-foreground">
+                    Slot is available and currently empty. Use the slot add action in the canvas or
+                    drag from the widgets tab.
+                  </div>
+                ) : null}
+              </div>
+            ))}
+          </div>
+          {slotControls.childrenHint ? (
+            <p className="text-xs text-muted-foreground">{slotControls.childrenHint}</p>
+          ) : null}
+        </WidgetEditorSection>
+      ) : null}
+    </WidgetEditorModeRoot>
   );
 }

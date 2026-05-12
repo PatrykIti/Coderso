@@ -1,6 +1,5 @@
-import { type ReactNode } from "react";
-
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -13,17 +12,22 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
 import {
+  type SectionContainerWidth,
   normalizeSectionData,
   resolveSectionVariant,
   sectionDefaults,
   type SectionBorderWidth,
   type SectionData,
   type SectionElement,
+  type SectionMaxWidth,
+  type SectionPaddingBlock,
+  type SectionPaddingInline,
   type SectionRadius,
   type SectionVariantId,
 } from "../../../../widgets/core/section";
 import type { WidgetEditorProps } from "../../../../widgets/types";
-import { ClearableFieldHeader } from "./ClearableFields";
+import { hasClearableFieldValue } from "./ClearableFields";
+import { WidgetControlRow, WidgetEditorSection } from "./WidgetEditorControls";
 
 const variantOptions: Array<{
   id: SectionVariantId;
@@ -66,9 +70,38 @@ const radiusOptions: Array<{ id: SectionRadius; label: string }> = [
   { id: "2xl", label: "2XL" },
 ];
 
+const containerWidthOptions: Array<{ id: SectionContainerWidth; label: string }> = [
+  { id: "content", label: "Content width" },
+  { id: "wide", label: "Wide" },
+  { id: "full", label: "Full width" },
+];
+
+const maxWidthOptions: Array<{ id: SectionMaxWidth; label: string }> = [
+  { id: "none", label: "No max width" },
+  { id: "4xl", label: "4XL" },
+  { id: "5xl", label: "5XL" },
+  { id: "6xl", label: "6XL" },
+  { id: "7xl", label: "7XL" },
+];
+
+const paddingBlockOptions: Array<{ id: SectionPaddingBlock; label: string }> = [
+  { id: "sm", label: "Compact" },
+  { id: "md", label: "Default" },
+  { id: "lg", label: "Spacious" },
+  { id: "xl", label: "Extra spacious" },
+];
+
+const paddingInlineOptions: Array<{ id: SectionPaddingInline; label: string }> = [
+  { id: "none", label: "No side padding" },
+  { id: "sm", label: "Compact" },
+  { id: "md", label: "Default" },
+  { id: "lg", label: "Spacious" },
+];
+
 const hexColorPattern = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
 
 type HeadingData = NonNullable<SectionData["heading"]>;
+type LayoutData = NonNullable<SectionData["layout"]>;
 type SemanticsData = NonNullable<SectionData["semantics"]>;
 type StyleData = NonNullable<SectionData["style"]>;
 
@@ -87,28 +120,6 @@ const clampAngle = (value: number | undefined) => {
 
 function normalizeValue(value: SectionData): SectionData {
   return normalizeSectionData(value);
-}
-
-function EditorSection({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description?: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className="space-y-3 rounded-lg border border-border/70 bg-background/50 p-3">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          {title}
-        </p>
-        {description ? <p className="text-xs text-muted-foreground">{description}</p> : null}
-      </div>
-      <div className="space-y-3">{children}</div>
-    </section>
-  );
 }
 
 function VariantCards({
@@ -146,6 +157,7 @@ function VariantCards({
 }
 
 function ColorField({
+  id,
   label,
   value,
   onChange,
@@ -153,6 +165,7 @@ function ColorField({
   pickerFallback,
   onClear,
 }: {
+  id: string;
   label: string;
   value: string | undefined;
   onChange: (next: string) => void;
@@ -161,22 +174,44 @@ function ColorField({
   onClear?: () => void;
 }) {
   return (
-    <div className="space-y-2">
-      <ClearableFieldHeader label={label} value={value} onClear={onClear} />
-      <div className="grid grid-cols-[2.5rem_1fr] gap-2">
-        <Input
-          type="color"
-          value={resolvePickerColor(value, pickerFallback)}
-          onChange={(event) => onChange(event.target.value)}
-          className="h-9 w-10 p-1"
-        />
-        <Input
-          value={value ?? ""}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder={placeholder}
-        />
-      </div>
-    </div>
+    <WidgetControlRow
+      id={id}
+      label={label}
+      actions={
+        onClear ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onClear}
+            disabled={!hasClearableFieldValue(value)}
+          >
+            Clear
+          </Button>
+        ) : null
+      }
+    >
+      {(fieldProps) => (
+        <div className="grid grid-cols-[2.5rem_1fr] gap-2">
+          <Input
+            type="color"
+            value={resolvePickerColor(value, pickerFallback)}
+            onChange={(event) => onChange(event.target.value)}
+            className="h-9 w-10 p-1"
+            aria-labelledby={fieldProps["aria-labelledby"]}
+            aria-describedby={fieldProps["aria-describedby"]}
+          />
+          <Input
+            id={fieldProps.id}
+            value={value ?? ""}
+            onChange={(event) => onChange(event.target.value)}
+            placeholder={placeholder}
+            aria-labelledby={fieldProps["aria-labelledby"]}
+            aria-describedby={fieldProps["aria-describedby"]}
+          />
+        </div>
+      )}
+    </WidgetControlRow>
   );
 }
 
@@ -213,6 +248,20 @@ function updateSemantics(
     ...current,
     semantics: {
       ...current.semantics,
+      ...patch,
+    },
+  }));
+}
+
+function updateLayout(
+  value: SectionData,
+  onChange: (next: SectionData) => void,
+  patch: Partial<LayoutData>
+) {
+  updateValue(value, onChange, (current) => ({
+    ...current,
+    layout: {
+      ...current.layout,
       ...patch,
     },
   }));
@@ -264,55 +313,73 @@ export function SectionWizardEditor({
 
   return (
     <div className="space-y-4">
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Section layout</p>
-        <Select
-          value={resolveSectionVariant(variant)}
-          onValueChange={(next) => onVariantChange?.(next)}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select variant" />
-          </SelectTrigger>
-          <SelectContent>
-            {variantOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <WidgetEditorSection
+        id="section.wizard"
+        title="Section setup"
+        description="Pick a safe starting layout and heading for this section."
+      >
+        <WidgetControlRow id="section.wizard.variant" label="Section layout">
+          {(fieldProps) => (
+            <Select
+              value={resolveSectionVariant(variant)}
+              onValueChange={(next) => onVariantChange?.(next)}
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Select variant" />
+              </SelectTrigger>
+              <SelectContent>
+                {variantOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
 
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Section title</p>
-        <Input
-          value={normalized.heading?.title ?? ""}
-          onChange={(event) => updateHeading(value, onChange, { title: event.target.value })}
-          placeholder="Section title"
+        <WidgetControlRow id="section.wizard.title" label="Section title">
+          {(fieldProps) => (
+            <Input
+              id={fieldProps.id}
+              value={normalized.heading?.title ?? ""}
+              onChange={(event) => updateHeading(value, onChange, { title: event.target.value })}
+              placeholder="Section title"
+              aria-labelledby={fieldProps["aria-labelledby"]}
+              aria-describedby={fieldProps["aria-describedby"]}
+            />
+          )}
+        </WidgetControlRow>
+
+        <WidgetControlRow id="section.wizard.description" label="Description">
+          {(fieldProps) => (
+            <Textarea
+              id={fieldProps.id}
+              value={normalized.heading?.description ?? ""}
+              onChange={(event) =>
+                updateHeading(value, onChange, { description: event.target.value })
+              }
+              placeholder="Short context for the section"
+              aria-labelledby={fieldProps["aria-labelledby"]}
+              aria-describedby={fieldProps["aria-describedby"]}
+            />
+          )}
+        </WidgetControlRow>
+
+        <ColorField
+          id="section.wizard.backgroundColor"
+          label="Background color"
+          value={normalized.style?.backgroundColor}
+          onChange={(next) => updateStyle(value, onChange, { backgroundColor: next })}
+          onClear={() => clearStyleField(value, onChange, "backgroundColor")}
+          placeholder="transparent"
+          pickerFallback="#ffffff"
         />
-      </div>
-
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Description</p>
-        <Textarea
-          value={normalized.heading?.description ?? ""}
-          onChange={(event) => updateHeading(value, onChange, { description: event.target.value })}
-          placeholder="Short context for the section"
-        />
-      </div>
-
-      <ColorField
-        label="Background color"
-        value={normalized.style?.backgroundColor}
-        onChange={(next) => updateStyle(value, onChange, { backgroundColor: next })}
-        onClear={() => clearStyleField(value, onChange, "backgroundColor")}
-        placeholder="transparent"
-        pickerFallback="#ffffff"
-      />
-
-      <div className="rounded-md border border-dashed border-border/80 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
-        Regions are repeatable slots. Add or remove them in the slots panel above tabs.
-      </div>
+      </WidgetEditorSection>
     </div>
   );
 }
@@ -327,98 +394,252 @@ export function SectionVisualEditor({
 
   return (
     <div className="space-y-4">
-      <EditorSection
+      <WidgetEditorSection
         title="Variant and structure"
         description="Choose the section wrapper style and width behavior."
+        id="section.variant-structure"
       >
         <VariantCards value={resolveSectionVariant(variant)} onChange={onVariantChange} />
-      </EditorSection>
+      </WidgetEditorSection>
 
-      <EditorSection
+      <WidgetEditorSection
         title="Heading and intro"
         description="Control heading label, title, and helper description."
+        id="section.heading-intro"
       >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Label</p>
-          <Input
-            value={normalized.heading?.label ?? ""}
-            onChange={(event) => updateHeading(value, onChange, { label: event.target.value })}
-            placeholder="Section label"
-          />
-        </div>
+        <WidgetControlRow id="section.heading.label" label="Label">
+          {(fieldProps) => (
+            <Input
+              id={fieldProps.id}
+              value={normalized.heading?.label ?? ""}
+              onChange={(event) => updateHeading(value, onChange, { label: event.target.value })}
+              placeholder="Section label"
+              aria-labelledby={fieldProps["aria-labelledby"]}
+              aria-describedby={fieldProps["aria-describedby"]}
+            />
+          )}
+        </WidgetControlRow>
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Title</p>
-          <Input
-            value={normalized.heading?.title ?? ""}
-            onChange={(event) => updateHeading(value, onChange, { title: event.target.value })}
-            placeholder="Section title"
-          />
-        </div>
+        <WidgetControlRow id="section.heading.title" label="Title">
+          {(fieldProps) => (
+            <Input
+              id={fieldProps.id}
+              value={normalized.heading?.title ?? ""}
+              onChange={(event) => updateHeading(value, onChange, { title: event.target.value })}
+              placeholder="Section title"
+              aria-labelledby={fieldProps["aria-labelledby"]}
+              aria-describedby={fieldProps["aria-describedby"]}
+            />
+          )}
+        </WidgetControlRow>
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Description</p>
-          <Textarea
-            value={normalized.heading?.description ?? ""}
-            onChange={(event) =>
-              updateHeading(value, onChange, { description: event.target.value })
-            }
-            placeholder="Supportive copy for this section"
-          />
-        </div>
-      </EditorSection>
+        <WidgetControlRow id="section.heading.description" label="Description">
+          {(fieldProps) => (
+            <Textarea
+              id={fieldProps.id}
+              value={normalized.heading?.description ?? ""}
+              onChange={(event) =>
+                updateHeading(value, onChange, { description: event.target.value })
+              }
+              placeholder="Supportive copy for this section"
+              aria-labelledby={fieldProps["aria-labelledby"]}
+              aria-describedby={fieldProps["aria-describedby"]}
+            />
+          )}
+        </WidgetControlRow>
+      </WidgetEditorSection>
 
-      <EditorSection
+      <WidgetEditorSection
         title="Semantics and anchor"
         description="Define section element type, anchor id, and accessibility label."
+        id="section.semantics-anchor"
       >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Element</p>
-          <Select
-            value={normalized.semantics?.element ?? sectionDefaults.semantics?.element ?? "section"}
-            onValueChange={(next) =>
-              updateSemantics(value, onChange, { element: next as SectionElement })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select element" />
-            </SelectTrigger>
-            <SelectContent>
-              {elementOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <WidgetControlRow id="section.semantics.element" label="Element">
+          {(fieldProps) => (
+            <Select
+              value={
+                normalized.semantics?.element ?? sectionDefaults.semantics?.element ?? "section"
+              }
+              onValueChange={(next) =>
+                updateSemantics(value, onChange, { element: next as SectionElement })
+              }
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Select element" />
+              </SelectTrigger>
+              <SelectContent>
+                {elementOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Anchor ID</p>
-          <Input
-            value={normalized.semantics?.anchorId ?? ""}
-            onChange={(event) => updateSemantics(value, onChange, { anchorId: event.target.value })}
-            placeholder="pricing-section"
-          />
-        </div>
+        <WidgetControlRow id="section.semantics.anchorId" label="Anchor ID">
+          {(fieldProps) => (
+            <Input
+              id={fieldProps.id}
+              value={normalized.semantics?.anchorId ?? ""}
+              onChange={(event) =>
+                updateSemantics(value, onChange, { anchorId: event.target.value })
+              }
+              placeholder="pricing-section"
+              aria-labelledby={fieldProps["aria-labelledby"]}
+              aria-describedby={fieldProps["aria-describedby"]}
+            />
+          )}
+        </WidgetControlRow>
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Aria label</p>
-          <Input
-            value={normalized.semantics?.ariaLabel ?? ""}
-            onChange={(event) =>
-              updateSemantics(value, onChange, { ariaLabel: event.target.value })
-            }
-            placeholder="Pricing section"
-          />
-        </div>
-      </EditorSection>
+        <WidgetControlRow id="section.semantics.ariaLabel" label="Aria label">
+          {(fieldProps) => (
+            <Input
+              id={fieldProps.id}
+              value={normalized.semantics?.ariaLabel ?? ""}
+              onChange={(event) =>
+                updateSemantics(value, onChange, { ariaLabel: event.target.value })
+              }
+              placeholder="Pricing section"
+              aria-labelledby={fieldProps["aria-labelledby"]}
+              aria-describedby={fieldProps["aria-describedby"]}
+            />
+          )}
+        </WidgetControlRow>
+      </WidgetEditorSection>
 
-      <EditorSection
+      <WidgetEditorSection
+        title="Width and spacing"
+        description="Choose bounded width and padding presets instead of raw CSS values."
+        id="section.width-spacing"
+      >
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <WidgetControlRow id="section.layout.containerWidth" label="Container width">
+            {(fieldProps) => (
+              <Select
+                value={
+                  normalized.layout?.containerWidth ??
+                  sectionDefaults.layout?.containerWidth ??
+                  "content"
+                }
+                onValueChange={(next) =>
+                  updateLayout(value, onChange, { containerWidth: next as SectionContainerWidth })
+                }
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Select container width" />
+                </SelectTrigger>
+                <SelectContent>
+                  {containerWidthOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
+
+          <WidgetControlRow id="section.layout.maxWidth" label="Max width">
+            {(fieldProps) => (
+              <Select
+                value={normalized.layout?.maxWidth ?? sectionDefaults.layout?.maxWidth ?? "6xl"}
+                onValueChange={(next) =>
+                  updateLayout(value, onChange, { maxWidth: next as SectionMaxWidth })
+                }
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Select max width" />
+                </SelectTrigger>
+                <SelectContent>
+                  {maxWidthOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
+
+          <WidgetControlRow id="section.layout.paddingBlock" label="Vertical padding">
+            {(fieldProps) => (
+              <Select
+                value={
+                  normalized.layout?.paddingBlock ?? sectionDefaults.layout?.paddingBlock ?? "md"
+                }
+                onValueChange={(next) =>
+                  updateLayout(value, onChange, { paddingBlock: next as SectionPaddingBlock })
+                }
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Select vertical padding" />
+                </SelectTrigger>
+                <SelectContent>
+                  {paddingBlockOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
+
+          <WidgetControlRow id="section.layout.paddingInline" label="Side padding">
+            {(fieldProps) => (
+              <Select
+                value={
+                  normalized.layout?.paddingInline ?? sectionDefaults.layout?.paddingInline ?? "md"
+                }
+                onValueChange={(next) =>
+                  updateLayout(value, onChange, { paddingInline: next as SectionPaddingInline })
+                }
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Select side padding" />
+                </SelectTrigger>
+                <SelectContent>
+                  {paddingInlineOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
+        </div>
+      </WidgetEditorSection>
+
+      <WidgetEditorSection
         title="Surface and borders"
         description="Tune background, gradient, overlay, border width, and radius."
+        id="section.surface-borders"
       >
         <ColorField
+          id="section.style.backgroundColor"
           label="Background color"
           value={normalized.style?.backgroundColor}
           onChange={(next) => updateStyle(value, onChange, { backgroundColor: next })}
@@ -428,6 +649,7 @@ export function SectionVisualEditor({
         />
 
         <ColorField
+          id="section.style.gradientFrom"
           label="Gradient start"
           value={normalized.style?.gradientFrom}
           onChange={(next) => updateStyle(value, onChange, { gradientFrom: next })}
@@ -436,6 +658,7 @@ export function SectionVisualEditor({
         />
 
         <ColorField
+          id="section.style.gradientTo"
           label="Gradient end"
           value={normalized.style?.gradientTo}
           onChange={(next) => updateStyle(value, onChange, { gradientTo: next })}
@@ -443,146 +666,10 @@ export function SectionVisualEditor({
           pickerFallback="#f1f5f9"
         />
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Gradient angle</p>
-          <Input
-            type="number"
-            min={0}
-            max={360}
-            value={String(clampAngle(normalized.style?.gradientAngle))}
-            onChange={(event) =>
-              updateStyle(value, onChange, {
-                gradientAngle: clampAngle(Number(event.target.value)),
-              })
-            }
-          />
-        </div>
-
-        <ColorField
-          label="Border color"
-          value={normalized.style?.borderColor}
-          onChange={(next) => updateStyle(value, onChange, { borderColor: next })}
-          placeholder="var(--color-border)"
-          pickerFallback="#e2e8f0"
-        />
-
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Border width</p>
-            <Select
-              value={normalized.style?.borderWidth ?? sectionDefaults.style?.borderWidth ?? "0"}
-              onValueChange={(next) =>
-                updateStyle(value, onChange, { borderWidth: next as SectionBorderWidth })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select border width" />
-              </SelectTrigger>
-              <SelectContent>
-                {borderWidthOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Corner radius</p>
-            <Select
-              value={normalized.style?.radius ?? sectionDefaults.style?.radius ?? "none"}
-              onValueChange={(next) =>
-                updateStyle(value, onChange, { radius: next as SectionRadius })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select radius" />
-              </SelectTrigger>
-              <SelectContent>
-                {radiusOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        <ColorField
-          label="Overlay color"
-          value={normalized.style?.overlayColor}
-          onChange={(next) => updateStyle(value, onChange, { overlayColor: next })}
-          placeholder="#000000"
-          pickerFallback="#000000"
-        />
-
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Overlay opacity (%)</p>
-          <Input
-            type="number"
-            min={0}
-            max={100}
-            value={String(clampOpacity(normalized.style?.overlayOpacity))}
-            onChange={(event) =>
-              updateStyle(value, onChange, {
-                overlayOpacity: clampOpacity(Number(event.target.value)),
-              })
-            }
-          />
-        </div>
-      </EditorSection>
-
-      <EditorSection
-        title="Regions"
-        description="This widget uses repeatable region slots. Use Add/Remove controls in slots panel to shape structure."
-      >
-        <p className="text-xs text-muted-foreground">
-          Insert dialog can place any widget inside each region slot.
-        </p>
-      </EditorSection>
-    </div>
-  );
-}
-
-export function SectionAdvancedEditor({ value, onChange }: WidgetEditorProps<SectionData>) {
-  const normalized = normalizeValue(value);
-
-  return (
-    <div className="space-y-4">
-      <EditorSection
-        title="Technical tokens"
-        description="Fine-grained values for semantics and surface tokens."
-      >
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Anchor ID</p>
+        <WidgetControlRow id="section.style.gradientAngle" label="Gradient angle">
+          {(fieldProps) => (
             <Input
-              value={normalized.semantics?.anchorId ?? ""}
-              onChange={(event) =>
-                updateSemantics(value, onChange, { anchorId: event.target.value })
-              }
-              placeholder="section-anchor"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Aria label</p>
-            <Input
-              value={normalized.semantics?.ariaLabel ?? ""}
-              onChange={(event) =>
-                updateSemantics(value, onChange, { ariaLabel: event.target.value })
-              }
-              placeholder="Descriptive section label"
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Gradient angle</p>
-            <Input
+              id={fieldProps.id}
               type="number"
               min={0}
               max={360}
@@ -592,12 +679,88 @@ export function SectionAdvancedEditor({ value, onChange }: WidgetEditorProps<Sec
                   gradientAngle: clampAngle(Number(event.target.value)),
                 })
               }
+              aria-labelledby={fieldProps["aria-labelledby"]}
+              aria-describedby={fieldProps["aria-describedby"]}
             />
-          </div>
+          )}
+        </WidgetControlRow>
 
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Overlay opacity</p>
+        <ColorField
+          id="section.style.borderColor"
+          label="Border color"
+          value={normalized.style?.borderColor}
+          onChange={(next) => updateStyle(value, onChange, { borderColor: next })}
+          placeholder="var(--color-border)"
+          pickerFallback="#e2e8f0"
+        />
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <WidgetControlRow id="section.style.borderWidth" label="Border width">
+            {(fieldProps) => (
+              <Select
+                value={normalized.style?.borderWidth ?? sectionDefaults.style?.borderWidth ?? "0"}
+                onValueChange={(next) =>
+                  updateStyle(value, onChange, { borderWidth: next as SectionBorderWidth })
+                }
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Select border width" />
+                </SelectTrigger>
+                <SelectContent>
+                  {borderWidthOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
+
+          <WidgetControlRow id="section.style.radius" label="Corner radius">
+            {(fieldProps) => (
+              <Select
+                value={normalized.style?.radius ?? sectionDefaults.style?.radius ?? "none"}
+                onValueChange={(next) =>
+                  updateStyle(value, onChange, { radius: next as SectionRadius })
+                }
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Select radius" />
+                </SelectTrigger>
+                <SelectContent>
+                  {radiusOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
+        </div>
+
+        <ColorField
+          id="section.style.overlayColor"
+          label="Overlay color"
+          value={normalized.style?.overlayColor}
+          onChange={(next) => updateStyle(value, onChange, { overlayColor: next })}
+          placeholder="#000000"
+          pickerFallback="#000000"
+        />
+
+        <WidgetControlRow id="section.style.overlayOpacity" label="Overlay opacity (%)">
+          {(fieldProps) => (
             <Input
+              id={fieldProps.id}
               type="number"
               min={0}
               max={100}
@@ -607,17 +770,106 @@ export function SectionAdvancedEditor({ value, onChange }: WidgetEditorProps<Sec
                   overlayOpacity: clampOpacity(Number(event.target.value)),
                 })
               }
+              aria-labelledby={fieldProps["aria-labelledby"]}
+              aria-describedby={fieldProps["aria-describedby"]}
             />
-          </div>
-        </div>
-      </EditorSection>
+          )}
+        </WidgetControlRow>
+      </WidgetEditorSection>
+    </div>
+  );
+}
 
-      <EditorSection
+export function SectionAdvancedEditor({ value, onChange }: WidgetEditorProps<SectionData>) {
+  const normalized = normalizeValue(value);
+
+  return (
+    <div className="space-y-4">
+      <WidgetEditorSection
+        title="Technical tokens"
+        description="Fine-grained values for semantics and surface tokens."
+        id="section.technical-tokens"
+      >
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <WidgetControlRow id="section.advanced.anchorId" label="Anchor ID">
+            {(fieldProps) => (
+              <Input
+                id={fieldProps.id}
+                value={normalized.semantics?.anchorId ?? ""}
+                onChange={(event) =>
+                  updateSemantics(value, onChange, { anchorId: event.target.value })
+                }
+                placeholder="section-anchor"
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              />
+            )}
+          </WidgetControlRow>
+
+          <WidgetControlRow id="section.advanced.ariaLabel" label="Aria label">
+            {(fieldProps) => (
+              <Input
+                id={fieldProps.id}
+                value={normalized.semantics?.ariaLabel ?? ""}
+                onChange={(event) =>
+                  updateSemantics(value, onChange, { ariaLabel: event.target.value })
+                }
+                placeholder="Descriptive section label"
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              />
+            )}
+          </WidgetControlRow>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <WidgetControlRow id="section.advanced.gradientAngle" label="Gradient angle">
+            {(fieldProps) => (
+              <Input
+                id={fieldProps.id}
+                type="number"
+                min={0}
+                max={360}
+                value={String(clampAngle(normalized.style?.gradientAngle))}
+                onChange={(event) =>
+                  updateStyle(value, onChange, {
+                    gradientAngle: clampAngle(Number(event.target.value)),
+                  })
+                }
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              />
+            )}
+          </WidgetControlRow>
+
+          <WidgetControlRow id="section.advanced.overlayOpacity" label="Overlay opacity">
+            {(fieldProps) => (
+              <Input
+                id={fieldProps.id}
+                type="number"
+                min={0}
+                max={100}
+                value={String(clampOpacity(normalized.style?.overlayOpacity))}
+                onChange={(event) =>
+                  updateStyle(value, onChange, {
+                    overlayOpacity: clampOpacity(Number(event.target.value)),
+                  })
+                }
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              />
+            )}
+          </WidgetControlRow>
+        </div>
+      </WidgetEditorSection>
+
+      <WidgetEditorSection
         title="Raw payload snapshot"
         description="Runtime-oriented JSON view of normalized data."
+        id="section.raw-payload"
       >
         <DiagnosticsSnapshot value={normalized} />
-      </EditorSection>
+      </WidgetEditorSection>
     </div>
   );
 }

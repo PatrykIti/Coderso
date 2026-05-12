@@ -297,6 +297,7 @@ test("Accordion wizard editor resolves legacy variants, preserves a valid open i
   });
 
   try {
+    expect(view.container.innerHTML).toContain('data-widget-editor-section="accordion.items"');
     expect(findButtonByText(view.container, "Soft")?.textContent).toContain("Selected");
     expect(findButtonByText(view.container, "Bordered")?.textContent).toContain("Pick");
 
@@ -359,6 +360,9 @@ test("Accordion visual editor covers behavior controls, style fallbacks, and str
   });
 
   try {
+    expect(view.container.innerHTML).toContain(
+      'data-widget-editor-section="accordion.behavior-style"'
+    );
     const surfaceInput = findInputByPlaceholder(view.container, "var(--color-surface)");
     const borderInput = findInputByPlaceholder(view.container, "var(--color-border)");
     const summaryInput = findInputByPlaceholder(view.container, "var(--color-text)");
@@ -395,8 +399,10 @@ test("Accordion visual editor covers behavior controls, style fallbacks, and str
     setInputValue(findInputByPlaceholder(view.container, "Section 3"), "Delivery");
     expect(view.getValue().items?.[2]?.title).toBe("Delivery");
 
-    const allowMultipleCheckbox = view.container.querySelector("input[type='checkbox']");
-    toggleCheckbox(allowMultipleCheckbox ?? undefined, true);
+    setSelectValue(findSelectByOptions(view.container, ["single", "multiple"]), "multiple");
+
+    expect(view.getValue().options?.openMode).toBe("multiple");
+    expect(view.getValue().options?.defaultOpenIds).toEqual(["3"]);
 
     setInputValue(surfaceInput, "#101010");
     setInputValue(borderInput, "#202020");
@@ -405,6 +411,9 @@ test("Accordion visual editor covers behavior controls, style fallbacks, and str
     expect(view.getValue()).toEqual(
       expect.objectContaining({
         options: expect.objectContaining({
+          openMode: "multiple",
+          defaultOpenIds: ["3"],
+          collapsible: true,
           allowMultiple: true,
           initiallyOpenId: "3",
         }),
@@ -449,6 +458,9 @@ test("Accordion advanced editor shows normalized diagnostics and keeps the previ
         { id: "2", title: "Custom title", description: "Helpful details" },
       ],
       options: {
+        openMode: "single",
+        defaultOpenIds: ["1"],
+        collapsible: true,
         initiallyOpenId: "1",
         allowMultiple: false,
       },
@@ -463,7 +475,7 @@ test("Accordion advanced editor shows normalized diagnostics and keeps the previ
       "3"
     );
     setInputValue(findInputByPlaceholder(view.container, "Section 3"), "Rollout");
-    toggleCheckbox(view.container.querySelector("input[type='checkbox']") ?? undefined, true);
+    setSelectValue(findSelectByOptions(view.container, ["single", "multiple"]), "multiple");
     setInputValue(
       findInputByPlaceholder(view.container, "var(--color-text)"),
       "var(--color-muted)"
@@ -476,6 +488,9 @@ test("Accordion advanced editor shows normalized diagnostics and keeps the previ
         { id: "3", title: "Rollout" },
       ],
       options: {
+        openMode: "multiple",
+        defaultOpenIds: ["1"],
+        collapsible: true,
         initiallyOpenId: "1",
         allowMultiple: true,
       },

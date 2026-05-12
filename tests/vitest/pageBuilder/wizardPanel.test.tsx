@@ -114,9 +114,9 @@ test("WizardPanel renders widget editor and metadata", () => {
     expect(view.container.textContent).toContain("Dummy Widget");
     expect(view.container.textContent).toContain("Widget type");
     expect(view.container.textContent).toContain("dummy");
-    expect(view.container.textContent).toContain(
-      "Next you can fine-tune layout, styling, and advanced settings."
-    );
+    expect(view.container.innerHTML).toContain('data-widget-editor="dummy"');
+    expect(view.container.innerHTML).toContain('data-widget-editor-mode="wizard"');
+    expect(view.container.innerHTML).toContain('aria-label="Dummy Widget widget information"');
     expect(view.container.textContent).toContain("Continue to layout and styling");
   } finally {
     view.cleanup();

@@ -25,8 +25,9 @@ Pricing table for plans, tiers, and comparison-style rows.
 ### Visual
 
 - plan cards and features
+- billing toggle labels and default cycle
 - highlighted plan
-- spacing, radius, and colors
+- spacing, radius, colors, and feature marker style
 
 ### Advanced
 
@@ -52,12 +53,33 @@ Pricing table for plans, tiers, and comparison-style rows.
     "title": "Plans",
     "description": "Choose a package."
   },
-  "plans": [],
+  "billingToggle": {
+    "enabled": false,
+    "monthlyLabel": "Monthly",
+    "annualLabel": "Annual",
+    "defaultCycle": "monthly"
+  },
+  "plans": [
+    {
+      "id": "plan-1",
+      "name": "Starter",
+      "price": "$19",
+      "period": "/month",
+      "prices": {
+        "monthly": "$19",
+        "annual": "$190"
+      },
+      "ctaLabel": "Start now",
+      "ctaHref": "#",
+      "highlighted": false
+    }
+  ],
   "style": {
     "spacing": "md",
     "radius": "lg",
     "cardSurface": "var(--color-bg)",
-    "cardBorder": "var(--color-border)"
+    "cardBorder": "var(--color-border)",
+    "featureMarker": "bullet"
   }
 }
 ```

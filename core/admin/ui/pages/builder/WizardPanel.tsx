@@ -2,6 +2,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
 import type { Block, WidgetDefinition, WidgetEditorContext } from "./types";
+import { InfoTip } from "../../shared/InfoTip";
+import { WidgetEditorModeRoot } from "../../widgets/editors/WidgetEditorControls";
 
 export type WizardPanelProps = {
   widget: WidgetDefinition;
@@ -22,15 +24,23 @@ export function WizardPanel({
   const variant = block.variant ?? widget.variants[0]?.id ?? "";
 
   return (
-    <div className="space-y-4">
+    <WidgetEditorModeRoot widgetType={widget.type} mode="wizard">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Wizard
-        </p>
-        <h3 className="text-lg font-semibold">{widget.title}</h3>
-        {widget.description ? (
-          <p className="text-sm text-muted-foreground">{widget.description}</p>
-        ) : null}
+        <div className="flex items-center justify-between gap-3">
+          <div className="space-y-1">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Wizard
+            </p>
+            <h3 className="text-lg font-semibold">{widget.title}</h3>
+          </div>
+          {widget.description ? (
+            <InfoTip
+              content={widget.description}
+              label={`${widget.title} widget information`}
+              side="left"
+            />
+          ) : null}
+        </div>
       </div>
       <div className="rounded-lg border bg-muted/20 p-3">
         <div className="flex items-center justify-between gap-2">
@@ -49,12 +59,9 @@ export function WizardPanel({
         onVariantChange={(next) => onChange({ ...block, variant: next })}
         context={editorContext}
       />
-      <p className="text-xs text-muted-foreground">
-        Next you can fine-tune layout, styling, and advanced settings.
-      </p>
       <Button className="w-full" onClick={onComplete}>
         Continue to layout and styling
       </Button>
-    </div>
+    </WidgetEditorModeRoot>
   );
 }

@@ -6,6 +6,7 @@ import type { DeviceTarget, WidgetBlock, WidgetDefinition, WidgetEditorProps } f
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export type TabsVariantId = "pills" | "underline" | "minimal";
+export type TabsOrientation = "horizontal" | "vertical";
 
 export type TabsItem = {
   id?: string;
@@ -16,8 +17,10 @@ export type TabsItem = {
 export type TabsData = {
   items?: TabsItem[];
   options?: {
+    defaultItemId?: string;
     activeId?: string;
     alignment?: "start" | "center" | "end";
+    orientation?: TabsOrientation;
   };
   style?: {
     surfaceColor?: string;
@@ -62,8 +65,10 @@ export const tabsSchema = {
       type: "object",
       additionalProperties: false,
       properties: {
+        defaultItemId: { type: "string" },
         activeId: { type: "string" },
         alignment: { enum: ["start", "center", "end"] },
+        orientation: { enum: ["horizontal", "vertical"] },
       },
     },
     style: {
@@ -87,8 +92,10 @@ export const tabsDefaults: TabsData = {
     { id: "2", label: "Tab 2", description: "Secondary details." },
   ],
   options: {
+    defaultItemId: "1",
     activeId: "1",
     alignment: "start",
+    orientation: "horizontal",
   },
   style: {
     surfaceColor: "var(--color-surface)",
@@ -136,6 +143,11 @@ const resolveAlignment = (
   return "start";
 };
 
+const resolveOrientation = (value: string | undefined): TabsOrientation => {
+  if (value === "vertical") return value;
+  return "horizontal";
+};
+
 const normalizeItemId = (value: unknown, fallbackIndex: number, used: Set<string>) => {
   const trimmed = toTrimmedString(value) ?? String(fallbackIndex + 1);
   if (!used.has(trimmed)) {
@@ -181,10 +193,10 @@ export function normalizeTabsItems(
 
 export function normalizeTabsData(data: TabsData, desiredCount?: number): TabsData {
   const items = normalizeTabsItems(data.items, desiredCount);
-  const activeId =
-    toTrimmedString(data.options?.activeId) &&
-    items.some((item) => item.id === data.options?.activeId)
-      ? (data.options?.activeId as string)
+  const requestedDefaultId = toTrimmedString(data.options?.defaultItemId ?? data.options?.activeId);
+  const defaultItemId =
+    requestedDefaultId && items.some((item) => item.id === requestedDefaultId)
+      ? requestedDefaultId
       : (items[0]?.id ?? "1");
 
   const hasStyleObject = data.style !== undefined;
@@ -192,8 +204,10 @@ export function normalizeTabsData(data: TabsData, desiredCount?: number): TabsDa
   return {
     items,
     options: {
-      activeId,
+      defaultItemId,
+      activeId: defaultItemId,
       alignment: resolveAlignment(data.options?.alignment),
+      orientation: resolveOrientation(data.options?.orientation),
     },
     style: {
       surfaceColor: hasStyleObject
@@ -260,14 +274,20 @@ const tabsRuntimeClientScript = `
   if (window.__nextlessTabsBound === true) return;
   window.__nextlessTabsBound = true;
 
+  const getTriggers = (root) =>
+    Array.from(root.querySelectorAll("[data-nextless-tabs-trigger]")).filter(
+      (node) => node instanceof HTMLElement,
+    );
+
   const syncState = (root, activeId) => {
     root.setAttribute("data-nextless-tabs-active-id", activeId);
 
-    root.querySelectorAll("[data-nextless-tabs-trigger]").forEach((trigger) => {
+    getTriggers(root).forEach((trigger) => {
       const id = trigger.getAttribute("data-nextless-tabs-id");
       const isActive = id === activeId;
       trigger.setAttribute("aria-selected", isActive ? "true" : "false");
       trigger.setAttribute("data-state", isActive ? "active" : "inactive");
+      trigger.setAttribute("tabindex", isActive ? "0" : "-1");
     });
 
     root.querySelectorAll("[data-nextless-tabs-panel]").forEach((panel) => {
@@ -283,6 +303,13 @@ const tabsRuntimeClientScript = `
     });
   };
 
+  const focusAndActivate = (root, trigger) => {
+    const activeId = trigger.getAttribute("data-nextless-tabs-id");
+    if (!activeId) return;
+    syncState(root, activeId);
+    trigger.focus();
+  };
+
   document.addEventListener("click", (event) => {
     const target = event.target;
     if (!(target instanceof Element)) return;
@@ -296,6 +323,50 @@ const tabsRuntimeClientScript = `
     if (!activeId) return;
 
     syncState(root, activeId);
+  });
+
+  document.addEventListener("keydown", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    const trigger = target.closest("[data-nextless-tabs-trigger]");
+    if (!(trigger instanceof HTMLElement)) return;
+
+    const root = trigger.closest("[data-nextless-tabs='1']");
+    if (!(root instanceof HTMLElement)) return;
+
+    const triggers = getTriggers(root);
+    const currentIndex = triggers.indexOf(trigger);
+    if (currentIndex < 0) return;
+
+    const orientation = root.getAttribute("data-nextless-tabs-orientation") === "vertical"
+      ? "vertical"
+      : "horizontal";
+
+    const moveNext =
+      (orientation === "horizontal" && event.key === "ArrowRight") ||
+      (orientation === "vertical" && event.key === "ArrowDown");
+    const movePrev =
+      (orientation === "horizontal" && event.key === "ArrowLeft") ||
+      (orientation === "vertical" && event.key === "ArrowUp");
+
+    if (!moveNext && !movePrev && event.key !== "Home" && event.key !== "End") return;
+    event.preventDefault();
+
+    if (event.key === "Home") {
+      const first = triggers[0];
+      if (first) focusAndActivate(root, first);
+      return;
+    }
+    if (event.key === "End") {
+      const last = triggers[triggers.length - 1];
+      if (last) focusAndActivate(root, last);
+      return;
+    }
+
+    const delta = moveNext ? 1 : -1;
+    const nextIndex = (currentIndex + delta + triggers.length) % triggers.length;
+    const next = triggers[nextIndex];
+    if (next) focusAndActivate(root, next);
   });
 })();
 `;
@@ -328,11 +399,12 @@ export function TabsBlock({
   const normalized = normalizeTabsData(data, panels.length);
   const resolvedVariant = resolveVariant(variant);
   const activeId =
-    normalized.options?.activeId &&
-    panels.some((panel) => panel.instanceId === normalized.options?.activeId)
-      ? normalized.options.activeId
+    normalized.options?.defaultItemId &&
+    panels.some((panel) => panel.instanceId === normalized.options?.defaultItemId)
+      ? normalized.options.defaultItemId
       : (panels[0]?.instanceId ?? "1");
   const style = normalized.style ?? tabsDefaults.style!;
+  const orientation = normalized.options?.orientation ?? "horizontal";
 
   const containerStyle: CSSProperties =
     compactStyle({
@@ -365,26 +437,32 @@ export function TabsBlock({
       data-nextless-tabs-variant={resolvedVariant}
       data-nextless-tabs-active-id={activeId}
       data-nextless-tabs-panels={String(panels.length)}
+      data-nextless-tabs-orientation={orientation}
     >
       <div
         role="tablist"
-        aria-orientation="horizontal"
+        aria-orientation={orientation}
         className={joinClasses(
-          "flex flex-wrap gap-2",
+          orientation === "vertical" ? "flex flex-col gap-2" : "flex flex-wrap gap-2",
           alignmentClassMap[normalized.options?.alignment ?? "start"]
         )}
       >
         {panels.map((panel) => {
           const isActive = panel.instanceId === activeId;
+          const triggerId = `tabs-trigger-${panel.instanceId}`;
+          const panelId = `tabs-panel-${panel.instanceId}`;
           return (
             <button
               key={panel.slotId}
+              id={triggerId}
               type="button"
               role="tab"
               data-nextless-tabs-trigger
               data-nextless-tabs-id={panel.instanceId}
               data-state={isActive ? "active" : "inactive"}
               aria-selected={isActive ? "true" : "false"}
+              aria-controls={panelId}
+              tabIndex={isActive ? 0 : -1}
               className={joinClasses(
                 "text-sm font-medium transition",
                 resolveTriggerClasses(resolvedVariant)
@@ -399,13 +477,17 @@ export function TabsBlock({
 
       {panels.map((panel) => {
         const isActive = panel.instanceId === activeId;
+        const triggerId = `tabs-trigger-${panel.instanceId}`;
+        const panelId = `tabs-panel-${panel.instanceId}`;
         return (
           <div
             key={`${panel.slotId}-panel`}
+            id={panelId}
             role="tabpanel"
             data-nextless-tabs-panel
             data-nextless-tabs-id={panel.instanceId}
             data-state={isActive ? "active" : "inactive"}
+            aria-labelledby={triggerId}
             hidden={!isActive}
             className="rounded-lg border p-4"
             style={panelStyle}

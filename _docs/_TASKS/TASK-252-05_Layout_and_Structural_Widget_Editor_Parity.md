@@ -6,7 +6,9 @@
 **Category:** Widgets + Admin UI + Runtime Render
 **Estimated Effort:** Large
 **Dependencies:** TASK-252-01, TASK-252-02
-**Status:** To Do
+**Status:** Done
+**Started:** 2026-05-11
+**Completed:** 2026-05-12
 
 ---
 
@@ -76,16 +78,16 @@ simple widgets intentionally simple through research-backed decisions.
 
 This parent is now executed through physical per-widget leaves. Do not implement this parent as one broad batch; complete the leaves below in dependency order.
 
-- [ ] TASK-252-05-01: Section Regions Semantics and Spacing
-- [ ] TASK-252-05-02: Template Section Metadata Preview and Sync
-- [ ] TASK-252-05-03: Grid Columns Presets Gaps and Mobile Stack
-- [ ] TASK-252-05-04: Split Layout Slot Order and Mobile Stack
-- [ ] TASK-252-05-05: Stack Direction Gap Alignment and Responsive Flow
-- [ ] TASK-252-05-06: Spacer Size Tokens Custom Height and Canvas Affordance
-- [ ] TASK-252-05-07: Divider Orientation Style Tone and Spacing
-- [ ] TASK-252-05-08: Tabs Accessible Panels Default Tab and Surface
-- [ ] TASK-252-05-09: Accordion Disclosure Default Open and Accessibility
-- [ ] TASK-252-05-10: Toggle Block State Switch and Accessible Content Swap
+- [x] TASK-252-05-01: Section Regions Semantics and Spacing
+- [x] TASK-252-05-02: Template Section Metadata Preview and Sync
+- [x] TASK-252-05-03: Grid Columns Presets Gaps and Mobile Stack
+- [x] TASK-252-05-04: Split Layout Slot Order and Mobile Stack
+- [x] TASK-252-05-05: Stack Direction Gap Alignment and Responsive Flow
+- [x] TASK-252-05-06: Spacer Size Tokens Custom Height and Canvas Affordance
+- [x] TASK-252-05-07: Divider Orientation Style Tone and Spacing
+- [x] TASK-252-05-08: Tabs Accessible Panels Default Tab and Surface
+- [x] TASK-252-05-09: Accordion Disclosure Default Open and Accessibility
+- [x] TASK-252-05-10: Toggle Block State Switch and Accessible Content Swap
 
 ## Files to Change
 

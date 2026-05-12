@@ -2,6 +2,7 @@ import type { CSSProperties, ComponentType } from "react";
 
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
+import { normalizeWidgetSafeHref } from "./widgetSafeHref";
 
 export type CtaBannerVariantId = "centered" | "split" | "with-badge";
 export type CtaBannerBorderWidth = "0" | "1" | "2" | "3";
@@ -167,7 +168,18 @@ const normalizeAction = (
   fallback: Required<CtaBannerAction>
 ): Required<CtaBannerAction> => ({
   label: resolveString(action?.label, fallback.label),
-  href: resolveString(action?.href, fallback.href),
+  href:
+    normalizeWidgetSafeHref(action?.href, {
+      allowRelative: true,
+      allowHash: true,
+      allowHttp: true,
+    }) ??
+    normalizeWidgetSafeHref(fallback.href, {
+      allowRelative: true,
+      allowHash: true,
+      allowHttp: true,
+    }) ??
+    "#",
 });
 
 const resolveCtaBannerBorderWidth = (value: string | undefined): CtaBannerBorderWidth => {

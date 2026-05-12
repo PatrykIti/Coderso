@@ -15,6 +15,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
 import {
+  type PricingBillingCycle,
+  type PricingPlansFeatureMarker,
   normalizePricingPlans,
   normalizePricingPlansData,
   pricingPlanMax,
@@ -29,6 +31,7 @@ import {
 } from "../../../../widgets/core/pricingPlans";
 import type { WidgetEditorProps } from "../../../../widgets/types";
 import { ClearableFieldHeader } from "./ClearableFields";
+import { WidgetEditorSection } from "./WidgetEditorControls";
 
 const variantOptions: Array<{
   id: PricingPlansVariantId;
@@ -66,6 +69,17 @@ const radiusOptions: Array<{ id: PricingPlansRadius; label: string }> = [
   { id: "xl", label: "Extra large" },
 ];
 
+const billingCycleOptions: Array<{ id: PricingBillingCycle; label: string }> = [
+  { id: "monthly", label: "Monthly" },
+  { id: "annual", label: "Annual" },
+];
+
+const featureMarkerOptions: Array<{ id: PricingPlansFeatureMarker; label: string }> = [
+  { id: "bullet", label: "Bullet" },
+  { id: "check", label: "Check" },
+  { id: "icon", label: "Icon" },
+];
+
 const planCountOptions = Array.from({ length: pricingPlanMax - 1 }, (_, index) =>
   String(index + 2)
 );
@@ -73,6 +87,7 @@ const planCountOptions = Array.from({ length: pricingPlanMax - 1 }, (_, index) =
 const hexColorPattern = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
 
 type HeaderData = NonNullable<PricingPlansData["header"]>;
+type BillingToggleData = NonNullable<PricingPlansData["billingToggle"]>;
 type StyleData = NonNullable<PricingPlansData["style"]>;
 
 const resolvePickerColor = (value: string | undefined, fallback: string) =>
@@ -83,24 +98,21 @@ function normalizeValue(value: PricingPlansData): PricingPlansData {
 }
 
 function EditorSection({
+  id,
   title,
   description,
   children,
 }: {
+  id?: string;
   title: string;
   description?: string;
   children: ReactNode;
 }) {
+  const resolvedId = id ?? title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   return (
-    <section className="space-y-3 rounded-lg border border-border/70 bg-background/50 p-3">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          {title}
-        </p>
-        {description ? <p className="text-xs text-muted-foreground">{description}</p> : null}
-      </div>
-      <div className="space-y-3">{children}</div>
-    </section>
+    <WidgetEditorSection id={resolvedId} title={title} description={description}>
+      {children}
+    </WidgetEditorSection>
   );
 }
 
@@ -206,6 +218,20 @@ function updateStyle(
     ...current,
     style: {
       ...current.style,
+      ...patch,
+    },
+  }));
+}
+
+function updateBillingToggle(
+  value: PricingPlansData,
+  onChange: (next: PricingPlansData) => void,
+  patch: Partial<BillingToggleData>
+) {
+  updateValue(value, onChange, (current) => ({
+    ...current,
+    billingToggle: {
+      ...current.billingToggle,
       ...patch,
     },
   }));
@@ -559,6 +585,7 @@ export function PricingPlansVisualEditor({
   const normalized = normalizeValue(value);
   const resolvedVariant = resolvePricingPlansVariant(variant);
   const plans = normalizePricingPlans(normalized.plans);
+  const billingToggle = normalized.billingToggle ?? pricingPlansDefaults.billingToggle!;
 
   return (
     <div className="space-y-4">
@@ -608,6 +635,69 @@ export function PricingPlansVisualEditor({
             onChange={(event) => updateHeader(value, onChange, { description: event.target.value })}
             placeholder="Compare pricing tiers and pick the option matching your team stage."
           />
+        </div>
+      </EditorSection>
+
+      <EditorSection
+        id="pricing.billing"
+        title="Billing toggle"
+        description="Control whether plans show monthly vs annual pricing defaults."
+      >
+        <div className="flex items-center justify-between rounded-lg border p-3">
+          <div>
+            <p className="text-sm font-medium">Enable billing toggle</p>
+            <p className="text-xs text-muted-foreground">
+              Use cycle-specific prices while keeping legacy price fields as fallback.
+            </p>
+          </div>
+          <Switch
+            checked={billingToggle.enabled === true}
+            onCheckedChange={(checked) =>
+              updateBillingToggle(value, onChange, { enabled: checked })
+            }
+          />
+        </div>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Monthly label</p>
+            <Input
+              value={billingToggle.monthlyLabel ?? ""}
+              onChange={(event) =>
+                updateBillingToggle(value, onChange, { monthlyLabel: event.target.value })
+              }
+              placeholder="Monthly"
+            />
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Annual label</p>
+            <Input
+              value={billingToggle.annualLabel ?? ""}
+              onChange={(event) =>
+                updateBillingToggle(value, onChange, { annualLabel: event.target.value })
+              }
+              placeholder="Annual"
+            />
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Default cycle</p>
+            <Select
+              value={billingToggle.defaultCycle ?? "monthly"}
+              onValueChange={(next) =>
+                updateBillingToggle(value, onChange, { defaultCycle: next as PricingBillingCycle })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Cycle" />
+              </SelectTrigger>
+              <SelectContent>
+                {billingCycleOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </EditorSection>
 
@@ -707,6 +797,38 @@ export function PricingPlansVisualEditor({
                     updatePlan(value, onChange, planIndex, { period: event.target.value })
                   }
                   placeholder="/month"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Monthly price</p>
+                <Input
+                  value={plan.prices?.monthly ?? ""}
+                  onChange={(event) =>
+                    updatePlan(value, onChange, planIndex, {
+                      prices: {
+                        ...plan.prices,
+                        monthly: event.target.value,
+                      },
+                    })
+                  }
+                  placeholder="$49"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Annual price</p>
+                <Input
+                  value={plan.prices?.annual ?? ""}
+                  onChange={(event) =>
+                    updatePlan(value, onChange, planIndex, {
+                      prices: {
+                        ...plan.prices,
+                        annual: event.target.value,
+                      },
+                    })
+                  }
+                  placeholder="$490"
                 />
               </div>
 
@@ -883,6 +1005,31 @@ export function PricingPlansVisualEditor({
               </SelectTrigger>
               <SelectContent>
                 {radiusOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Feature marker</p>
+            <Select
+              value={
+                normalized.style?.featureMarker ??
+                pricingPlansDefaults.style?.featureMarker ??
+                "bullet"
+              }
+              onValueChange={(next) =>
+                updateStyle(value, onChange, { featureMarker: next as PricingPlansFeatureMarker })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Feature marker" />
+              </SelectTrigger>
+              <SelectContent>
+                {featureMarkerOptions.map((option) => (
                   <SelectItem key={option.id} value={option.id}>
                     {option.label}
                   </SelectItem>

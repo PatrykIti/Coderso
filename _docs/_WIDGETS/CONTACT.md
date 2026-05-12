@@ -14,16 +14,18 @@ Sekcja kontaktu z formularzem, danymi firmy i opcjonalna mapa embed.
 - `form-right` - dane kontaktowe po lewej, formularz po prawej
 - `minimal` - tylko dane kontaktowe (bez formularza), opcjonalna mapa
 
-## Wizard flow (TASK-050-11-02)
+## Editor Modes (current after TASK-050-11-02)
 
-1. Layout (`form-left` / `form-right` / `minimal`)
-2. Form fields (`name`, `email`, `phone`, `message`)
-3. Submit label
-4. Contact details (`phone`, `email`, `address`)
+### Wizard
+
+- Layout (`form-left` / `form-right` / `minimal`)
+- Form fields (`name`, `email`, `phone`, `message`)
+- Submit label
+- Contact details (`phone`, `email`, `address`)
 
 Wizard ma dawac bezpieczny quick setup bez pol technicznych.
 
-## Visual mode (TASK-050-11-02)
+### Visual
 
 Contact przejmuje selektor wariantu w Visual przez:
 `editorCapabilities.visualOwnsVariantSelection = true`
@@ -39,7 +41,7 @@ Docelowe sekcje Visual:
 
 Visual jest glownym trybem codziennej edycji content + stylu.
 
-## Advanced mode (TASK-050-11-02)
+### Advanced
 
 Advanced jest techniczny i nie duplikuje codziennej edycji content/style z Visual.
 
@@ -49,7 +51,7 @@ Sekcje Advanced:
 - Normalization and fallback controls
 - Runtime diagnostics snapshot
 
-## Runtime rendering rules
+## Runtime Behavior Notes
 
 - Renderer respektuje wariant (`form-left` / `form-right` / `minimal`).
 - `minimal` nie renderuje formularza.
@@ -73,7 +75,7 @@ Sekcje Advanced:
 - Border width/color, form field rules, and map rendering rules are unchanged by
   surface clear.
 
-## Data model (summary)
+## Data Model (summary)
 
 ```json
 {

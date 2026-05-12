@@ -2,6 +2,7 @@ import type { CSSProperties, ComponentType } from "react";
 import { WidgetRenderer } from "../renderers/widgetRenderer";
 import type { DeviceTarget, WidgetBlock, WidgetDefinition, WidgetEditorProps } from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
+import { normalizeWidgetSafeHref } from "./widgetSafeHref";
 
 export type FooterLink = {
   label: string;
@@ -239,9 +240,16 @@ const borderWidthValueMap = {
 const joinClasses = (...classes: Array<string | undefined | false>) =>
   classes.filter(Boolean).join(" ");
 
+const normalizeFooterHref = (value: string | undefined) =>
+  normalizeWidgetSafeHref(value, {
+    allowRelative: true,
+    allowHash: true,
+    allowHttp: true,
+  });
+
 const normalizeFooterLink = (link: FooterLink, index: number): FooterLink => {
   const label = link.label?.trim() || `Link ${index + 1}`;
-  const href = link.href?.trim() || "#";
+  const href = normalizeFooterHref(link.href) ?? "#";
   return { label, href };
 };
 
@@ -299,8 +307,24 @@ export function FooterBlock({
       : visibleColumnCount === 1
         ? "md:grid-cols-1"
         : "md:grid-cols-2";
-  const legal = data.legal ?? footerDefaults.legal;
-  const social = Array.isArray(data.social) ? data.social : footerDefaults.social;
+  const legal = {
+    ...(data.legal ?? footerDefaults.legal),
+    privacy:
+      normalizeFooterHref(data.legal?.privacy) ??
+      normalizeFooterHref(footerDefaults.legal?.privacy),
+    terms:
+      normalizeFooterHref(data.legal?.terms) ?? normalizeFooterHref(footerDefaults.legal?.terms),
+  };
+  const social = (Array.isArray(data.social) ? data.social : (footerDefaults.social ?? []))
+    .map((entry) => {
+      const href = normalizeFooterHref(entry?.href);
+      if (!href) return null;
+      return {
+        ...entry,
+        href,
+      };
+    })
+    .filter((entry): entry is FooterSocial => entry !== null);
   const bottomSlotBlocks = slots?.bottom ?? [];
   const outerStyle: CSSProperties =
     compactStyle({

@@ -23,26 +23,24 @@ import {
   type CommerceWidgetSource,
   type NormalizedCommerceWidgetSource,
 } from "../../../../widgets/core/commerceWidgetShared";
+import { WidgetEditorSection } from "./WidgetEditorControls";
 
 export function CommerceEditorSection({
+  id,
   title,
   description,
   children,
 }: {
+  id?: string;
   title: string;
   description?: string;
   children: ReactNode;
 }) {
+  const resolvedId = id ?? title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   return (
-    <section className="space-y-3 rounded-lg border border-border/70 bg-background/50 p-3">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          {title}
-        </p>
-        {description ? <p className="text-xs text-muted-foreground">{description}</p> : null}
-      </div>
-      <div className="space-y-3">{children}</div>
-    </section>
+    <WidgetEditorSection id={resolvedId} title={title} description={description}>
+      {children}
+    </WidgetEditorSection>
   );
 }
 
@@ -117,7 +115,11 @@ export function CommerceTextareaField({
   return (
     <label className="space-y-1 text-sm">
       <span className="font-medium text-foreground">{label}</span>
-      <Textarea rows={rows} value={value ?? ""} onChange={(event) => onChange(event.target.value)} />
+      <Textarea
+        rows={rows}
+        value={value ?? ""}
+        onChange={(event) => onChange(event.target.value)}
+      />
     </label>
   );
 }
@@ -143,7 +145,9 @@ export function CommerceToggleField({
       />
       <span className="space-y-0.5">
         <span className="block font-medium text-foreground">{label}</span>
-        {description ? <span className="block text-xs text-muted-foreground">{description}</span> : null}
+        {description ? (
+          <span className="block text-xs text-muted-foreground">{description}</span>
+        ) : null}
       </span>
     </label>
   );
@@ -257,9 +261,7 @@ export function CommerceSourceFields({
         {collectionsLoading ? (
           <p className="text-xs text-muted-foreground">Loading collections...</p>
         ) : null}
-        {collectionsError ? (
-          <p className="text-xs text-destructive">{collectionsError}</p>
-        ) : null}
+        {collectionsError ? <p className="text-xs text-destructive">{collectionsError}</p> : null}
         {!collectionsLoading && !collectionsError && collections.length === 0 ? (
           <p className="rounded-md border border-dashed bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
             No commerce collections are available yet.
@@ -289,12 +291,8 @@ export function CommerceSourceFields({
                     }}
                   />
                   <span className="space-y-0.5">
-                    <span className="block font-medium text-foreground">
-                      {collection.name}
-                    </span>
-                    <span className="block text-xs text-muted-foreground">
-                      {collection.slug}
-                    </span>
+                    <span className="block font-medium text-foreground">{collection.name}</span>
+                    <span className="block text-xs text-muted-foreground">{collection.slug}</span>
                   </span>
                 </label>
               );

@@ -18,7 +18,7 @@ CTA jest renderowane dla wariantow:
 - `with-cta`
 - `split`
 
-## Mode responsibilities (final)
+## Editor Modes (final)
 
 ### Wizard
 
@@ -72,7 +72,7 @@ CTA jest renderowane dla wariantow:
   - Renderowany po prawej stronie paska nawigacji.
   - Moze zawierac dodatkowe akcje (np. login / language switcher / custom CTA).
 
-## Runtime behavior
+## Runtime Behavior Notes
 
 - `behavior.sticky = true` -> nav jest przypiety (`sticky`, `top-0`, `z-40`).
 - `behavior.transparent = true` -> przezroczyste tlo i border.
@@ -105,7 +105,7 @@ CTA jest renderowane dla wariantow:
 - `behavior.transparent` remains a separate product behavior mode for
   transparent navigation and is not the editor clear sentinel.
 
-## Data model (summary)
+## Data Model (summary)
 
 ```json
 {

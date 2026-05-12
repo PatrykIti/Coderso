@@ -358,6 +358,45 @@ test("SearchBox visual editor covers global mode endpoint and source toggles", a
   }
 });
 
+test("SearchBox visual editor covers route-submit target route, query param, and display mode", async () => {
+  const { SearchBoxVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/SearchBoxEditors");
+
+  let latestValue: SearchBoxData = { mode: "route-submit" };
+  const Harness = () => {
+    const [value, setValue] = useState<SearchBoxData>(latestValue);
+    return (
+      <SearchBoxVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="default"
+        onVariantChange={() => undefined}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+  try {
+    await flush();
+    setInputValue(findInputByPlaceholder(view.container, "/search"), "/results");
+    setInputValue(findInputByPlaceholder(view.container, "q"), "term");
+    setSelectValue(findSelectByOptions(view.container, ["full", "compact"]), "compact");
+
+    expect(latestValue).toMatchObject({
+      mode: "route-submit",
+      targetRoute: "/results",
+      queryParam: "term",
+      displayMode: "compact",
+    });
+    expect(view.container.textContent).toContain("Route-submit mode forwards the query");
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("SearchBox visual editor surfaces listing query API errors and normalizes listing copy fields", async () => {
   searchBoxState.error = makeApiClientError("Listing queries are restricted.");
 

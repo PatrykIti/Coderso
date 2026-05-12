@@ -402,10 +402,24 @@ test("Section editors normalize malformed defaults, preserve token strings, and 
     if (!(semanticsSection instanceof HTMLElement)) {
       throw new Error("Missing semantics section");
     }
+    const spacingSection = findSectionByTitle(view.container, "Width and spacing");
+    if (!(spacingSection instanceof HTMLElement)) {
+      throw new Error("Missing width and spacing section");
+    }
+    expect(semanticsSection.getAttribute("data-widget-editor-section")).toBe(
+      "section.semantics-anchor"
+    );
+    expect(
+      semanticsSection.querySelector('[data-widget-control="section.semantics.anchorId"]')
+    ).not.toBeNull();
     const surfaceSection = findSectionByTitle(view.container, "Surface and borders");
     if (!(surfaceSection instanceof HTMLElement)) {
       throw new Error("Missing surface section");
     }
+    expect(surfaceSection.getAttribute("data-widget-editor-section")).toBe(
+      "section.surface-borders"
+    );
+    expect(spacingSection.getAttribute("data-widget-editor-section")).toBe("section.width-spacing");
 
     expect(findSelectByOptions(semanticsSection, ["section", "div"]).value).toBe("section");
     expect(findInputByPlaceholder(surfaceSection, "#ffffff")?.value).toBe("surface-start-token");
@@ -492,8 +506,20 @@ test("Section editors cover variant changes, semantics, surface tokens, and adva
     if (!(surfaceSection instanceof HTMLElement)) {
       throw new Error("Missing surface section");
     }
+    const spacingSection = findSectionByTitle(view.container, "Width and spacing");
+    if (!(spacingSection instanceof HTMLElement)) {
+      throw new Error("Missing width and spacing section");
+    }
     const borderWidthSelect = findSelectByOptions(surfaceSection, ["0", "1", "2", "3"]);
     const radiusSelect = findSelectByOptions(surfaceSection, ["none", "lg", "xl", "2xl"]);
+    const spacingSelects = findSelectsByOptions(spacingSection, ["content", "wide", "full"]);
+    setSelectValue(spacingSelects[0], "wide");
+    setSelectValue(
+      findSelectByOptions(spacingSection, ["none", "4xl", "5xl", "6xl", "7xl"]),
+      "7xl"
+    );
+    setSelectValue(findSelectByOptions(spacingSection, ["sm", "md", "lg", "xl"]), "xl");
+    setSelectValue(findSelectByOptions(spacingSection, ["none", "sm", "md", "lg"]), "lg");
     setInputValue(findColorInputForPlaceholder(surfaceSection, "transparent"), "#ecfeff");
     setInputValue(findInputByPlaceholder(surfaceSection, "#ffffff"), "#1d4ed8");
     setInputValue(findInputByPlaceholder(surfaceSection, "#f1f5f9"), "#222222");
@@ -511,6 +537,12 @@ test("Section editors cover variant changes, semantics, surface tokens, and adva
       label: "Overview",
       title: "Overview section",
       description: "Supporting copy from visual editor.",
+    });
+    expect(view.getLatestValue().layout).toMatchObject({
+      containerWidth: "wide",
+      maxWidth: "7xl",
+      paddingBlock: "xl",
+      paddingInline: "lg",
     });
     expect(view.getLatestValue().semantics).toMatchObject({
       element: "div",

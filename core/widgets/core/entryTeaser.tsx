@@ -2,6 +2,7 @@ import type { CSSProperties, ComponentType } from "react";
 
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
+import { normalizeWidgetSafeHref } from "./widgetSafeHref";
 
 export type EntryTeaserVariantId = "horizontal" | "vertical" | "minimal";
 export type EntryTeaserSourceMode = "manual" | "latest" | "featured";
@@ -238,15 +239,13 @@ const resolveTrimmedOptionalString = (value: string | undefined) => {
 const sanitizeHref = (value: string | undefined) => {
   const trimmed = resolveTrimmedOptionalString(value);
   if (!trimmed) return "#";
-  if (
-    trimmed.startsWith("/") ||
-    trimmed.startsWith("http://") ||
-    trimmed.startsWith("https://") ||
-    trimmed.startsWith("#")
-  ) {
-    return trimmed;
-  }
-  return "#";
+  return (
+    normalizeWidgetSafeHref(trimmed, {
+      allowRelative: true,
+      allowHash: true,
+      allowHttp: true,
+    }) ?? "#"
+  );
 };
 
 export const resolveEntryTeaserVariant = (variant: string): EntryTeaserVariantId => {
@@ -340,6 +339,7 @@ export function normalizeEntryTeaserData(data: EntryTeaserData): EntryTeaserData
     fallbackToLatest: true,
   };
   const hasStyleObject = data.style !== undefined;
+  const ctaHrefMode = resolveEntryTeaserHrefMode(data.cta?.hrefMode);
 
   return {
     ...data,
@@ -371,8 +371,11 @@ export function normalizeEntryTeaserData(data: EntryTeaserData): EntryTeaserData
     },
     cta: {
       label: resolveString(data.cta?.label, ctaDefaults.label ?? "Read more"),
-      hrefMode: resolveEntryTeaserHrefMode(data.cta?.hrefMode),
-      href: resolveString(data.cta?.href, ctaDefaults.href ?? ""),
+      hrefMode: ctaHrefMode,
+      href:
+        ctaHrefMode === "custom"
+          ? sanitizeHref(data.cta?.href)
+          : resolveString(data.cta?.href, ctaDefaults.href ?? ""),
     },
     style: {
       surface: hasStyleObject

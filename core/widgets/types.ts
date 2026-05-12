@@ -59,8 +59,16 @@ export type WidgetEditorContext = {
   getBindingState?: (propPath: string) => "literal" | "bound" | "mixed";
 };
 
+export type WidgetSlotControlSection = {
+  id: string;
+  title: string;
+  description?: string;
+  mode?: "visual" | "advanced";
+};
+
 export type WidgetEditorCapabilities = {
   visualOwnsVariantSelection?: boolean;
+  slotControlSection?: WidgetSlotControlSection;
 };
 
 export type WidgetDefinition<T = Record<string, unknown>> = {

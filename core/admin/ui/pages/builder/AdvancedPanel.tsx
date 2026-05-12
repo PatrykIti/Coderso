@@ -4,6 +4,7 @@ import { Switch } from "@/components/ui/switch";
 import type { Block, DeviceTarget, WidgetDefinition, WidgetEditorContext } from "./types";
 import { LayoutPanel } from "./LayoutPanel";
 import { sanitizeLayout } from "./blockUtils";
+import { WidgetEditorModeRoot } from "../../widgets/editors/WidgetEditorControls";
 
 const deviceLabels: { id: DeviceTarget; label: string }[] = [
   { id: "desktop", label: "Desktop" },
@@ -38,7 +39,7 @@ export function AdvancedPanel({ block, widget, onChange, editorContext }: Advanc
   };
 
   return (
-    <div className="space-y-6">
+    <WidgetEditorModeRoot widgetType={widget.type} mode="advanced" className="space-y-6">
       <Editor
         value={block.data as Record<string, unknown>}
         onChange={(data) => onChange({ ...block, data })}
@@ -78,6 +79,6 @@ export function AdvancedPanel({ block, widget, onChange, editorContext }: Advanc
           ))}
         </div>
       </div>
-    </div>
+    </WidgetEditorModeRoot>
   );
 }

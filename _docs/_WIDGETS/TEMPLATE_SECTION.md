@@ -26,6 +26,7 @@ None.
 ### Visual
 - swap template selection
 - surface template status (draft/published)
+- category, preview label, and version metadata
 
 ### Advanced
 - same selection controls
@@ -47,6 +48,11 @@ None.
 {
   "templateId": "template-id",
   "templateName": "Hero Cluster",
+  "metadata": {
+    "category": "Marketing",
+    "previewLabel": "Homepage Hero",
+    "version": "v2"
+  },
   "resolved": {
     "blocks": [],
     "error": "template_missing"

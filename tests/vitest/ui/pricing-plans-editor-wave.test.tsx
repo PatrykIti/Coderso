@@ -439,9 +439,9 @@ test("PricingPlans visual editor covers variant cards, plan and feature manageme
     const initialHighlightSwitches = Array.from(
       view.container.querySelectorAll("input[type='checkbox']")
     ) as HTMLInputElement[];
-    expect(initialHighlightSwitches).toHaveLength(3);
-    expect(initialHighlightSwitches[0]?.checked).toBe(true);
-    expect(initialHighlightSwitches[1]?.checked).toBe(false);
+    expect(initialHighlightSwitches.length).toBeGreaterThanOrEqual(4);
+    expect(initialHighlightSwitches[1]?.checked).toBe(true);
+    expect(initialHighlightSwitches[2]?.checked).toBe(false);
 
     const initialColorPickers = Array.from(
       view.container.querySelectorAll("input[type='color']")
@@ -449,6 +449,10 @@ test("PricingPlans visual editor covers variant cards, plan and feature manageme
     expect(initialColorPickers[0]?.value).toBe("#ffffff");
 
     clickButtonByText(view.container, "Four Plans");
+    clickElement(initialHighlightSwitches[0]);
+    setInputValue(findInputByPlaceholder(view.container, "Monthly"), "Monthly");
+    setInputValue(findInputByPlaceholder(view.container, "Annual"), "Yearly");
+    setSelectValue(findSelectByOptions(view.container, ["monthly", "annual"]), "annual");
     setInputValue(
       findInputByPlaceholder(
         view.container,
@@ -491,6 +495,7 @@ test("PricingPlans visual editor covers variant cards, plan and feature manageme
     firstPlanCard = getPlanCards(view.container)[0];
     setInputValue(findInputByPlaceholder(firstPlanCard ?? view.container, "Plan 1"), "Solo");
     setInputValue(findInputsByPlaceholder(firstPlanCard ?? view.container, "$49")[0], "$29");
+    setInputValue(findInputByPlaceholder(firstPlanCard ?? view.container, "$490"), "$290");
     setInputValue(
       findInputByPlaceholder(firstPlanCard ?? view.container, "Most popular"),
       "Best value"
@@ -513,10 +518,19 @@ test("PricingPlans visual editor covers variant cards, plan and feature manageme
       title: "Scale with your team",
       description: "Pick the tier that matches your launch stage.",
     });
+    expect(latestValue.billingToggle).toMatchObject({
+      enabled: true,
+      monthlyLabel: "Monthly",
+      annualLabel: "Yearly",
+      defaultCycle: "annual",
+    });
     expect(latestValue.plans.map((plan) => plan.id)).toEqual(["growth", "starter", "scale"]);
     expect(latestValue.plans[1]).toMatchObject({
       name: "Solo",
       price: "$29",
+      prices: expect.objectContaining({
+        annual: "$290",
+      }),
       badge: "Best value",
       period: "/seat",
       ctaLabel: "Try now",
@@ -528,7 +542,7 @@ test("PricingPlans visual editor covers variant cards, plan and feature manageme
     const highlightSwitchesAfterMove = Array.from(
       view.container.querySelectorAll("input[type='checkbox']")
     ) as HTMLInputElement[];
-    clickElement(highlightSwitchesAfterMove[0]);
+    clickElement(highlightSwitchesAfterMove[1]);
 
     expect(latestValue.plans.map((plan) => plan.highlighted)).toEqual([true, false, false]);
 
@@ -555,6 +569,7 @@ test("PricingPlans visual editor covers variant cards, plan and feature manageme
     setInputValue(findInputByPlaceholder(view.container, "var(--color-primary)"), "#334455");
     setSelectValue(findSelectByOptions(view.container, ["none", "sm", "md", "lg"]), "lg");
     setSelectValue(findSelectByOptions(view.container, ["none", "md", "lg", "xl"]), "xl");
+    setSelectValue(findSelectByOptions(view.container, ["bullet", "check", "icon"]), "check");
 
     const colorPickersAfterUpdate = Array.from(
       view.container.querySelectorAll("input[type='color']")
@@ -566,6 +581,7 @@ test("PricingPlans visual editor covers variant cards, plan and feature manageme
       highlightRing: "#334455",
       spacing: "lg",
       radius: "xl",
+      featureMarker: "check",
     });
   } finally {
     view.cleanup();

@@ -129,6 +129,31 @@ test("footer cleared surface and border colors omit background color output", ()
   expect(html).not.toContain("background-color:");
 });
 
+test("footer normalizes unsafe legal and social hrefs before render", () => {
+  const html = renderToString(
+    <FooterBlock
+      data={{
+        ...footerDefaults,
+        legal: {
+          ...footerDefaults.legal,
+          privacy: "javascript:alert(1)",
+          terms: "/terms",
+        },
+        social: [
+          { type: "x", href: "data:text/html,boom" },
+          { type: "github", href: "https://github.com/coderso" },
+        ],
+      }}
+      variant="columns-2"
+    />
+  );
+
+  expect(html).not.toContain("javascript:alert");
+  expect(html).not.toContain("data:text/html");
+  expect(html).toContain('href="/terms"');
+  expect(html).toContain('href="https://github.com/coderso"');
+});
+
 test("footer renders column and bottom slots", () => {
   clearWidgets();
   registerWidget(

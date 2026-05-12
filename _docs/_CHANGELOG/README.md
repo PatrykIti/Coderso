@@ -25,6 +25,8 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 839 | 2026-05-12 | TASK-252 widget configuration closure | CMS Widgets/Admin UI/QA |
+| 838 | 2026-05-11 | TASK-252 widget inspector IA | CMS Widgets/Admin UI |
 | 837 | 2026-05-10 | TASK-252 widget research archive | CMS Widgets/Research |
 | 836 | 2026-05-11 | TASK-190 implementation drift hardening | Assistant/Core |
 | 835 | 2026-05-11 | TASK-190 live provider matrix rerun | Assistant/QA |

@@ -6,8 +6,9 @@
 **Category:** Widgets + Page Builder + Admin UI + Runtime Render
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-220, TASK-242, TASK-244
-**Status:** In Progress
+**Status:** Done
 **Started:** 2026-05-10
+**Completed:** 2026-05-12
 
 ---
 
@@ -200,52 +201,52 @@ Use these as current research seeds, not as unlicensed source imports:
 
 ## Sub-Tasks
 
-- [ ] TASK-252-01: Widget Inspector IA and Shared Option Architecture
+- [x] TASK-252-01: Widget Inspector IA and Shared Option Architecture
 - [x] TASK-252-02: Widget Research Archive and Variant Model
-- [ ] TASK-252-03: Hero Editor Mode and Badge Expansion
-  - [ ] TASK-252-03-01: Hero Badge Announcement and Editor IA
-- [ ] TASK-252-04: Timeline Chronology and Editor IA
-  - [ ] TASK-252-04-01: Timeline Chronology Modes and Editor IA
-- [ ] TASK-252-05: Layout and Structural Widget Editor Parity
-  - [ ] TASK-252-05-01: Section Regions Semantics and Spacing
-  - [ ] TASK-252-05-02: Template Section Metadata Preview and Sync
-  - [ ] TASK-252-05-03: Grid Columns Presets Gaps and Mobile Stack
-  - [ ] TASK-252-05-04: Split Layout Slot Order and Mobile Stack
-  - [ ] TASK-252-05-05: Stack Direction Gap Alignment and Responsive Flow
-  - [ ] TASK-252-05-06: Spacer Size Tokens Custom Height and Canvas Affordance
-  - [ ] TASK-252-05-07: Divider Orientation Style Tone and Spacing
-  - [ ] TASK-252-05-08: Tabs Accessible Panels Default Tab and Surface
-  - [ ] TASK-252-05-09: Accordion Disclosure Default Open and Accessibility
-  - [ ] TASK-252-05-10: Toggle Block State Switch and Accessible Content Swap
-- [ ] TASK-252-06: Content and Marketing Widget Editor Expansion
-  - [ ] TASK-252-06-01: Feature Grid Icon Cards Rows and Links
-  - [ ] TASK-252-06-02: Testimonials Grid Spotlight Rating and Attribution
-  - [ ] TASK-252-06-03: Pricing Plans Tiers Billing Toggle and Highlight
-  - [ ] TASK-252-06-04: FAQ Accordion Support CTA Icon Placement and Defaults
-  - [ ] TASK-252-06-05: CTA Banner Compact Split Badge and Icon
-  - [ ] TASK-252-06-06: Logo Cloud Grid Tone Rows and Accessibility
-  - [ ] TASK-252-06-07: Gallery Mosaic Layout Captions and Alt Text
-  - [ ] TASK-252-06-08: Stats KPI Values Icons and Display Modes
-  - [ ] TASK-252-06-09: Team Members Photo Shape Socials and Fallbacks
-  - [ ] TASK-252-06-10: Rich Text Section Prose Presets Width Badge and CTA
-  - [ ] TASK-252-06-11: Compare Timeline Two Track Segments Status and Highlight
-- [ ] TASK-252-07: Dynamic and Operational Widget Editor Expansion
-  - [ ] TASK-252-07-01: Content List Source Display Field Visibility and Empty States
-  - [ ] TASK-252-07-02: Posts Feed Source Density Author Date and Category
-  - [ ] TASK-252-07-03: Entry Teaser Selected Entry Fallback and Field Toggles
-  - [ ] TASK-252-07-04: Product Gallery Source Media Modes Thumbnails and Empty State
-  - [ ] TASK-252-07-05: Product Compare Selected Products Attributes and Highlight
-  - [ ] TASK-252-07-06: Product Table Columns Sort Filter and Pagination
-  - [ ] TASK-252-07-07: Listing Filters Facets Ranges Apply and Reset
-  - [ ] TASK-252-07-08: Search Box Copy Target Route Query Param and Display Mode
-  - [ ] TASK-252-07-09: Newsletter Fields Consent Copy and States
-  - [ ] TASK-252-07-10: Booking Calendar Provider Event Modes and Availability
-  - [ ] TASK-252-07-11: Appointment Form Fields Validation Copy and States
-  - [ ] TASK-252-07-12: Form Embed Form Picker Fields and State Copy
-  - [ ] TASK-252-07-13: Contact Form Info State Copy and Security Boundaries
-  - [ ] TASK-252-07-14: Navigation Source Links Mobile Menu and CTA
-  - [ ] TASK-252-07-15: Footer Columns Brand Legal and Social Links
-- [ ] TASK-252-08: QA, Docs, Changelog, and Board Closure
+- [x] TASK-252-03: Hero Editor Mode and Badge Expansion
+  - [x] TASK-252-03-01: Hero Badge Announcement and Editor IA
+- [x] TASK-252-04: Timeline Chronology and Editor IA
+  - [x] TASK-252-04-01: Timeline Chronology Modes and Editor IA
+- [x] TASK-252-05: Layout and Structural Widget Editor Parity
+  - [x] TASK-252-05-01: Section Regions Semantics and Spacing
+  - [x] TASK-252-05-02: Template Section Metadata Preview and Sync
+  - [x] TASK-252-05-03: Grid Columns Presets Gaps and Mobile Stack
+  - [x] TASK-252-05-04: Split Layout Slot Order and Mobile Stack
+  - [x] TASK-252-05-05: Stack Direction Gap Alignment and Responsive Flow
+  - [x] TASK-252-05-06: Spacer Size Tokens Custom Height and Canvas Affordance
+  - [x] TASK-252-05-07: Divider Orientation Style Tone and Spacing
+  - [x] TASK-252-05-08: Tabs Accessible Panels Default Tab and Surface
+  - [x] TASK-252-05-09: Accordion Disclosure Default Open and Accessibility
+  - [x] TASK-252-05-10: Toggle Block State Switch and Accessible Content Swap
+- [x] TASK-252-06: Content and Marketing Widget Editor Expansion
+  - [x] TASK-252-06-01: Feature Grid Icon Cards Rows and Links
+  - [x] TASK-252-06-02: Testimonials Grid Spotlight Rating and Attribution
+  - [x] TASK-252-06-03: Pricing Plans Tiers Billing Toggle and Highlight
+  - [x] TASK-252-06-04: FAQ Accordion Support CTA Icon Placement and Defaults
+  - [x] TASK-252-06-05: CTA Banner Compact Split Badge and Icon
+  - [x] TASK-252-06-06: Logo Cloud Grid Tone Rows and Accessibility
+  - [x] TASK-252-06-07: Gallery Mosaic Layout Captions and Alt Text
+  - [x] TASK-252-06-08: Stats KPI Values Icons and Display Modes
+  - [x] TASK-252-06-09: Team Members Photo Shape Socials and Fallbacks
+  - [x] TASK-252-06-10: Rich Text Section Prose Presets Width Badge and CTA
+  - [x] TASK-252-06-11: Compare Timeline Two Track Segments Status and Highlight
+- [x] TASK-252-07: Dynamic and Operational Widget Editor Expansion
+  - [x] TASK-252-07-01: Content List Source Display Field Visibility and Empty States
+  - [x] TASK-252-07-02: Posts Feed Source Density Author Date and Category
+  - [x] TASK-252-07-03: Entry Teaser Selected Entry Fallback and Field Toggles
+  - [x] TASK-252-07-04: Product Gallery Source Media Modes Thumbnails and Empty State
+  - [x] TASK-252-07-05: Product Compare Selected Products Attributes and Highlight
+  - [x] TASK-252-07-06: Product Table Columns Sort Filter and Pagination
+  - [x] TASK-252-07-07: Listing Filters Facets Ranges Apply and Reset
+  - [x] TASK-252-07-08: Search Box Copy Target Route Query Param and Display Mode
+  - [x] TASK-252-07-09: Newsletter Fields Consent Copy and States
+  - [x] TASK-252-07-10: Booking Calendar Provider Event Modes and Availability
+  - [x] TASK-252-07-11: Appointment Form Fields Validation Copy and States
+  - [x] TASK-252-07-12: Form Embed Form Picker Fields and State Copy
+  - [x] TASK-252-07-13: Contact Form Info State Copy and Security Boundaries
+  - [x] TASK-252-07-14: Navigation Source Links Mobile Menu and CTA
+  - [x] TASK-252-07-15: Footer Columns Brand Legal and Social Links
+- [x] TASK-252-08: QA, Docs, Changelog, and Board Closure
 
 ## Implementation Order
 

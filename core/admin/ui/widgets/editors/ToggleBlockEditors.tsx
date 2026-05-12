@@ -19,6 +19,7 @@ import {
 } from "../../../../widgets/core/toggleBlock";
 import type { WidgetEditorProps } from "../../../../widgets/types";
 import { ClearableFieldHeader } from "./ClearableFields";
+import { WidgetEditorSection } from "./WidgetEditorControls";
 
 const variantOptions: Array<{
   id: ToggleBlockVariantId;
@@ -113,24 +114,20 @@ function clearStyleField(
 }
 
 function EditorSection({
+  id,
   title,
   description,
   children,
 }: {
+  id: string;
   title: string;
   description?: string;
   children: ReactNode;
 }) {
   return (
-    <section className="space-y-3 rounded-lg border border-border/70 bg-background/50 p-3">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          {title}
-        </p>
-        {description ? <p className="text-xs text-muted-foreground">{description}</p> : null}
-      </div>
-      <div className="space-y-3">{children}</div>
-    </section>
+    <WidgetEditorSection id={id} title={title} description={description}>
+      {children}
+    </WidgetEditorSection>
   );
 }
 
@@ -178,7 +175,11 @@ function LabelsSection({
   const normalized = normalizeValue(value);
 
   return (
-    <EditorSection title="Labels" description="Name both toggle states and helper copy.">
+    <EditorSection
+      id="toggle-block.labels"
+      title="Labels"
+      description="Name both toggle states and helper copy."
+    >
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="space-y-2">
           <p className="text-sm font-medium">Primary label</p>
@@ -231,7 +232,11 @@ function BehaviorSection({
   const normalized = normalizeValue(value);
 
   return (
-    <EditorSection title="Behavior and Style" description="Choose default pane and visual tokens.">
+    <EditorSection
+      id="toggle-block.behavior-style"
+      title="Behavior and Style"
+      description="Choose default pane and visual tokens."
+    >
       <div className="space-y-2">
         <p className="text-sm font-medium">Default state</p>
         <Select
@@ -316,7 +321,11 @@ export function ToggleBlockWizardEditor({
 }: WidgetEditorProps<ToggleBlockData>) {
   return (
     <div className="space-y-4">
-      <EditorSection title="Variant" description="Choose toggle block style.">
+      <EditorSection
+        id="toggle-block.variant"
+        title="Variant"
+        description="Choose toggle block style."
+      >
         <VariantCards value={resolveVariant(variant)} onChange={onVariantChange} />
       </EditorSection>
       <LabelsSection value={value} onChange={onChange} />
@@ -332,7 +341,11 @@ export function ToggleBlockVisualEditor({
 }: WidgetEditorProps<ToggleBlockData>) {
   return (
     <div className="space-y-4">
-      <EditorSection title="Variant" description="Choose toggle block style.">
+      <EditorSection
+        id="toggle-block.variant"
+        title="Variant"
+        description="Choose toggle block style."
+      >
         <VariantCards value={resolveVariant(variant)} onChange={onVariantChange} />
       </EditorSection>
       <LabelsSection value={value} onChange={onChange} />
@@ -349,12 +362,20 @@ export function ToggleBlockAdvancedEditor({
 }: WidgetEditorProps<ToggleBlockData>) {
   return (
     <div className="space-y-4">
-      <EditorSection title="Variant" description="Variant and behavior tuning.">
+      <EditorSection
+        id="toggle-block.variant"
+        title="Variant"
+        description="Variant and behavior tuning."
+      >
         <VariantCards value={resolveVariant(variant)} onChange={onVariantChange} />
       </EditorSection>
       <LabelsSection value={value} onChange={onChange} />
       <BehaviorSection value={value} onChange={onChange} />
-      <EditorSection title="Diagnostics" description="Normalized payload preview.">
+      <EditorSection
+        id="toggle-block.diagnostics"
+        title="Diagnostics"
+        description="Normalized payload preview."
+      >
         <DiagnosticsSnapshot value={normalizeValue(value)} />
       </EditorSection>
     </div>

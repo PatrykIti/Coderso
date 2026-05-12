@@ -1,5 +1,6 @@
-import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { InfoTip } from "@/ui/shared/InfoTip";
 import {
   buildRepeatableSlotId,
   getNextRepeatableSlotInstanceId,
@@ -11,7 +12,7 @@ import {
 
 import type { Block, EditorMode, WidgetDefinition, WidgetEditorContext } from "./types";
 import { AdvancedPanel } from "./AdvancedPanel";
-import { VisualPanel } from "./VisualPanel";
+import { VisualPanel, type VisualPanelSlotControls } from "./VisualPanel";
 import { WizardPanel } from "./WizardPanel";
 import { applyWizardSelection } from "./blockUtils";
 
@@ -49,6 +50,7 @@ export function BlockSettings({ block, widget, onChange, editorContext }: BlockS
     0
   );
   const supportsChildren = Boolean(widget.canHaveChildren);
+  const slotControlSection = widget.editorCapabilities?.slotControlSection;
 
   const handleAddRepeatableSlotInstance = (definitionId: string) => {
     const definition = slotDefinitions.find((slot) => slot.id === definitionId);
@@ -93,6 +95,63 @@ export function BlockSettings({ block, widget, onChange, editorContext }: BlockS
     });
   };
 
+  const slotControls: VisualPanelSlotControls | undefined =
+    supportsSlots || supportsChildren
+      ? {
+          sectionId: slotControlSection?.id ?? `${widget.type}.structure`,
+          title: slotControlSection?.title ?? "Structure",
+          description:
+            slotControlSection?.description ??
+            (supportsSlots
+              ? "Manage fixed and repeatable slots without leaving the Visual editor."
+              : "Use the canvas and insert dialog to manage nested content."),
+          addActions: repeatableSlotDefinitions.map((slot) => {
+            const count = getRepeatableSlotIds(slot, slotMap).length;
+            const maximum = Number.isFinite(slot.maxItems)
+              ? Math.max(0, Math.floor(slot.maxItems ?? 0))
+              : undefined;
+            return {
+              id: `add-${slot.id}`,
+              label: `Add ${slot.label}`,
+              disabled: typeof maximum === "number" && count >= maximum,
+              onClick: () => handleAddRepeatableSlotInstance(slot.id),
+            };
+          }),
+          items: slotTargets.map((slot) => {
+            const count = Array.isArray(slotMap[slot.slotId]) ? slotMap[slot.slotId].length : 0;
+            const repeatableDefinition =
+              slot.kind === "repeatable"
+                ? slotDefinitions.find((definition) => definition.id === slot.definitionId)
+                : undefined;
+            const repeatableCount =
+              repeatableDefinition && slot.kind === "repeatable"
+                ? getRepeatableSlotIds(repeatableDefinition, slotMap).length
+                : 0;
+            const repeatableMinimum =
+              repeatableDefinition && Number.isFinite(repeatableDefinition.minItems)
+                ? Math.max(0, Math.floor(repeatableDefinition.minItems ?? 0))
+                : 0;
+            const canRemoveRepeatable =
+              slot.kind === "repeatable" &&
+              repeatableDefinition &&
+              repeatableCount > repeatableMinimum;
+            return {
+              id: `${widget.type}.slot.${slot.slotId}`,
+              label: `${slot.label} slot`,
+              count,
+              empty: count === 0,
+              canRemove: Boolean(canRemoveRepeatable),
+              onRemove: canRemoveRepeatable
+                ? () => handleRemoveRepeatableSlotInstance(slot.slotId)
+                : undefined,
+            };
+          }),
+          childrenHint: supportsSlots
+            ? "Use the slot add action in the canvas or drag from the widgets tab to place widgets into a slot."
+            : `Nested blocks: ${nestedCount}. Use the Insert dialog to add widgets inside this block.`,
+        }
+      : undefined;
+
   if (!editorState.wizardCompleted) {
     return (
       <WizardPanel
@@ -107,99 +166,28 @@ export function BlockSettings({ block, widget, onChange, editorContext }: BlockS
 
   return (
     <>
-      <div className="mb-3 rounded-lg border bg-muted/20 p-3 text-xs text-muted-foreground">
-        Next: fine-tune layout, styling, and advanced settings for this widget.
-      </div>
-      {supportsSlots ? (
-        <div className="mb-3 rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground">
-          Slots:
-          {repeatableSlotDefinitions.length > 0 ? (
-            <div className="mt-2 flex flex-wrap gap-2">
-              {repeatableSlotDefinitions.map((slot) => {
-                const count = getRepeatableSlotIds(slot, slotMap).length;
-                const maximum = Number.isFinite(slot.maxItems)
-                  ? Math.max(0, Math.floor(slot.maxItems ?? 0))
-                  : undefined;
-                const disabled = typeof maximum === "number" && count >= maximum;
-                return (
-                  <Button
-                    key={`add-repeatable-${slot.id}`}
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    disabled={disabled}
-                    onClick={() => handleAddRepeatableSlotInstance(slot.id)}
-                    className="h-7 px-2 text-[11px]"
-                  >
-                    Add {slot.label}
-                  </Button>
-                );
-              })}
+      <div className="mb-4 rounded-lg border bg-muted/10 p-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-1">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Selected widget
+            </p>
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-semibold">{widget.title}</h3>
+              <Badge variant="outline" className="text-[10px] uppercase">
+                {widget.type}
+              </Badge>
             </div>
+          </div>
+          {widget.description ? (
+            <InfoTip
+              content={widget.description}
+              label={`${widget.title} widget information`}
+              side="left"
+            />
           ) : null}
-          <div className="mt-2 space-y-1">
-            {slotTargets.map((slot) => {
-              const count = Array.isArray(slotMap[slot.slotId]) ? slotMap[slot.slotId].length : 0;
-              const repeatableDefinition =
-                slot.kind === "repeatable"
-                  ? slotDefinitions.find((definition) => definition.id === slot.definitionId)
-                  : undefined;
-              const repeatableCount =
-                repeatableDefinition && slot.kind === "repeatable"
-                  ? getRepeatableSlotIds(repeatableDefinition, slotMap).length
-                  : 0;
-              const repeatableMinimum =
-                repeatableDefinition && Number.isFinite(repeatableDefinition.minItems)
-                  ? Math.max(0, Math.floor(repeatableDefinition.minItems ?? 0))
-                  : 0;
-              const canRemoveRepeatable =
-                slot.kind === "repeatable" &&
-                repeatableDefinition &&
-                repeatableCount > repeatableMinimum;
-              return (
-                <div
-                  key={slot.slotId}
-                  className="rounded-md border border-border/60 bg-background/40 px-2 py-1.5"
-                >
-                  <div className="flex items-center justify-between">
-                    <span>{slot.label} slot</span>
-                    <div className="flex items-center gap-2">
-                      <span>
-                        {count} {count === 1 ? "item" : "items"}
-                      </span>
-                      {canRemoveRepeatable ? (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          className="h-6 px-2 text-[10px]"
-                          onClick={() => handleRemoveRepeatableSlotInstance(slot.slotId)}
-                        >
-                          Remove
-                        </Button>
-                      ) : null}
-                    </div>
-                  </div>
-                  {count === 0 ? (
-                    <div className="mt-1 text-[11px] text-muted-foreground">
-                      Slot is available and currently empty. Use the slot add action in the canvas
-                      or drag from the widgets tab.
-                    </div>
-                  ) : null}
-                </div>
-              );
-            })}
-          </div>
-          <div className="mt-2">
-            Use the slot add action in the canvas or drag from the widgets tab to place widgets into
-            a slot.
-          </div>
         </div>
-      ) : supportsChildren ? (
-        <div className="mb-3 rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground">
-          Nested blocks: {nestedCount}. Use the Insert dialog to add widgets inside this block.
-        </div>
-      ) : null}
+      </div>
       <Tabs
         value={editorState.mode}
         onValueChange={(mode) =>
@@ -230,6 +218,7 @@ export function BlockSettings({ block, widget, onChange, editorContext }: BlockS
             block={block}
             onChange={onChange}
             editorContext={editorContext}
+            slotControls={slotControls}
           />
         </TabsContent>
         <TabsContent value="advanced">

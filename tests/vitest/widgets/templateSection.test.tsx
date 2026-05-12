@@ -65,10 +65,13 @@ test("template section renders resolved blocks", () => {
       data={{
         templateId: "template-1",
         templateName: "Hero Cluster",
+        metadata: {
+          category: "Marketing",
+          previewLabel: "Homepage Hero",
+          version: "v2",
+        },
         resolved: {
-          blocks: [
-            { id: "dummy-1", type: "dummy", variant: "default", data: {} },
-          ],
+          blocks: [{ id: "dummy-1", type: "dummy", variant: "default", data: {} }],
         },
       }}
       variant="default"
@@ -76,6 +79,9 @@ test("template section renders resolved blocks", () => {
   );
 
   expect(html).toContain('data-template-section-state="ready"');
+  expect(html).toContain('data-template-section-category="Marketing"');
+  expect(html).toContain('data-template-section-version="v2"');
+  expect(html).toContain("Homepage Hero");
   expect(html).toContain('data-dummy="true"');
 });
 
@@ -97,6 +103,11 @@ test("template section schema accepts runtime payload", () => {
       data: {
         templateId: "template-1",
         templateName: "Hero Cluster",
+        metadata: {
+          category: "Marketing",
+          previewLabel: "Homepage Hero",
+          version: "v2",
+        },
         resolved: {
           blocks: [],
         },

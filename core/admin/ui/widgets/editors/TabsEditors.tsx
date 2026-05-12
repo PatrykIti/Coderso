@@ -18,10 +18,12 @@ import {
   tabsItemMax,
   tabsItemMin,
   type TabsData,
+  type TabsOrientation,
   type TabsVariantId,
 } from "../../../../widgets/core/tabs";
 import type { WidgetEditorProps } from "../../../../widgets/types";
 import { ClearableFieldHeader } from "./ClearableFields";
+import { WidgetEditorSection } from "./WidgetEditorControls";
 
 const variantOptions: Array<{
   id: TabsVariantId;
@@ -46,6 +48,7 @@ const variantOptions: Array<{
 ];
 
 const alignmentOptions = ["start", "center", "end"] as const;
+const orientationOptions: TabsOrientation[] = ["horizontal", "vertical"];
 
 const tabCountOptions = Array.from({ length: tabsItemMax - tabsItemMin + 1 }, (_, index) =>
   String(tabsItemMin + index)
@@ -74,8 +77,9 @@ function setCount(value: TabsData, onChange: (next: TabsData) => void, count: nu
   const current = normalizeValue(value, count);
   const items = normalizeTabsItems(current.items, count);
   const activeId =
-    current.options?.activeId && items.some((item) => item.id === current.options?.activeId)
-      ? current.options.activeId
+    current.options?.defaultItemId &&
+    items.some((item) => item.id === current.options?.defaultItemId)
+      ? current.options.defaultItemId
       : items[0]?.id;
 
   onChange(
@@ -85,6 +89,7 @@ function setCount(value: TabsData, onChange: (next: TabsData) => void, count: nu
         items,
         options: {
           ...current.options,
+          defaultItemId: activeId,
           activeId,
         },
       },
@@ -155,24 +160,20 @@ function clearStyleField(
 }
 
 function EditorSection({
+  id,
   title,
   description,
   children,
 }: {
+  id: string;
   title: string;
   description?: string;
   children: ReactNode;
 }) {
   return (
-    <section className="space-y-3 rounded-lg border border-border/70 bg-background/50 p-3">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          {title}
-        </p>
-        {description ? <p className="text-xs text-muted-foreground">{description}</p> : null}
-      </div>
-      <div className="space-y-3">{children}</div>
-    </section>
+    <WidgetEditorSection id={id} title={title} description={description}>
+      {children}
+    </WidgetEditorSection>
   );
 }
 
@@ -222,6 +223,7 @@ function TabsStructureSection({
 
   return (
     <EditorSection
+      id="tabs.structure"
       title="Tabs Structure"
       description="Set tab count, labels, and short descriptions."
     >
@@ -246,13 +248,20 @@ function TabsStructureSection({
         </div>
 
         <div className="space-y-2">
-          <p className="text-sm font-medium">Initially active tab</p>
+          <p className="text-sm font-medium">Default tab</p>
           <Select
-            value={normalized.options?.activeId ?? items[0]?.id ?? "1"}
-            onValueChange={(next) => updateOptions(value, onChange, { activeId: next })}
+            value={
+              normalized.options?.defaultItemId ??
+              normalized.options?.activeId ??
+              items[0]?.id ??
+              "1"
+            }
+            onValueChange={(next) =>
+              updateOptions(value, onChange, { defaultItemId: next, activeId: next })
+            }
           >
             <SelectTrigger>
-              <SelectValue placeholder="Choose active tab" />
+              <SelectValue placeholder="Choose default tab" />
             </SelectTrigger>
             <SelectContent>
               {items.map((item) => (
@@ -304,28 +313,56 @@ function TabsBehaviorSection({
   const normalized = normalizeValue(value);
 
   return (
-    <EditorSection title="Layout" description="Align tab triggers and tune visual colors.">
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Tab alignment</p>
-        <Select
-          value={normalized.options?.alignment ?? "start"}
-          onValueChange={(next) =>
-            updateOptions(value, onChange, {
-              alignment: next as NonNullable<NonNullable<TabsData["options"]>["alignment"]>,
-            })
-          }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Choose alignment" />
-          </SelectTrigger>
-          <SelectContent>
-            {alignmentOptions.map((option) => (
-              <SelectItem key={`tabs-align-${option}`} value={option}>
-                {option}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+    <EditorSection
+      id="tabs.layout"
+      title="Layout"
+      description="Align tab triggers and tune visual colors."
+    >
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Tab alignment</p>
+          <Select
+            value={normalized.options?.alignment ?? "start"}
+            onValueChange={(next) =>
+              updateOptions(value, onChange, {
+                alignment: next as NonNullable<NonNullable<TabsData["options"]>["alignment"]>,
+              })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Choose alignment" />
+            </SelectTrigger>
+            <SelectContent>
+              {alignmentOptions.map((option) => (
+                <SelectItem key={`tabs-align-${option}`} value={option}>
+                  {option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Orientation</p>
+          <Select
+            value={normalized.options?.orientation ?? "horizontal"}
+            onValueChange={(next) =>
+              updateOptions(value, onChange, {
+                orientation: next as TabsOrientation,
+              })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Choose orientation" />
+            </SelectTrigger>
+            <SelectContent>
+              {orientationOptions.map((option) => (
+                <SelectItem key={`tabs-orientation-${option}`} value={option}>
+                  {option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -422,7 +459,7 @@ export function TabsWizardEditor({
 }: WidgetEditorProps<TabsData>) {
   return (
     <div className="space-y-4">
-      <EditorSection title="Variant" description="Pick tabs presentation style.">
+      <EditorSection id="tabs.variant" title="Variant" description="Pick tabs presentation style.">
         <VariantCards value={resolveVariant(variant)} onChange={onVariantChange} />
       </EditorSection>
       <TabsStructureSection value={value} onChange={onChange} />
@@ -438,7 +475,7 @@ export function TabsVisualEditor({
 }: WidgetEditorProps<TabsData>) {
   return (
     <div className="space-y-4">
-      <EditorSection title="Variant" description="Choose tab presentation style.">
+      <EditorSection id="tabs.variant" title="Variant" description="Choose tab presentation style.">
         <VariantCards value={resolveVariant(variant)} onChange={onVariantChange} />
       </EditorSection>
       <TabsStructureSection value={value} onChange={onChange} />
@@ -455,12 +492,20 @@ export function TabsAdvancedEditor({
 }: WidgetEditorProps<TabsData>) {
   return (
     <div className="space-y-4">
-      <EditorSection title="Variant" description="Variant and technical controls.">
+      <EditorSection
+        id="tabs.variant"
+        title="Variant"
+        description="Variant and technical controls."
+      >
         <VariantCards value={resolveVariant(variant)} onChange={onVariantChange} />
       </EditorSection>
       <TabsStructureSection value={value} onChange={onChange} />
       <TabsBehaviorSection value={value} onChange={onChange} />
-      <EditorSection title="Diagnostics" description="Normalized data payload preview.">
+      <EditorSection
+        id="tabs.diagnostics"
+        title="Diagnostics"
+        description="Normalized data payload preview."
+      >
         <DiagnosticsSnapshot value={normalizeValue(value)} />
       </EditorSection>
     </div>

@@ -6,7 +6,9 @@
 **Category:** Widgets + Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-252
-**Status:** To Do
+**Status:** Done
+**Started:** 2026-05-10
+**Completed:** 2026-05-11
 
 ---
 
@@ -54,16 +56,16 @@ look and behave consistently.
 
 ## Sub-Tasks
 
-- [ ] Define the final right-inspector structure and mode ownership.
-- [ ] Add or update shared editor primitives for sections, rows, labels, info
+- [x] Define the final right-inspector structure and mode ownership.
+- [x] Add or update shared editor primitives for sections, rows, labels, info
   icons, and automation metadata.
-- [ ] Move generic helper copy into compact information affordances.
-- [ ] Move slot/region controls into named editor sections.
-- [ ] Migrate shared inspector primitives and `section` as the non-overlapping
+- [x] Move generic helper copy into compact information affordances.
+- [x] Move slot/region controls into named editor sections.
+- [x] Migrate shared inspector primitives and `section` as the non-overlapping
   proof call site; `hero` and `timeline` may receive scaffold-only compatibility
   hooks here, but their full editor migrations stay owned by
   TASK-252-03-01 and TASK-252-04-01.
-- [ ] Add focused UI tests for metadata, accessibility labels, and slot-control
+- [x] Add focused UI tests for metadata, accessibility labels, and slot-control
   placement.
 
 ## Files to Change
@@ -435,3 +437,21 @@ builder-level `widget`, `block`, and block `onChange` contract.
   weakening React Hooks lint rules.
 - Playwright CLI can identify migrated controls through accessible names or
   stable `data-widget-*` attributes.
+
+## Completion Notes
+
+- Added shared `WidgetEditorModeRoot`, `WidgetEditorSection`, and
+  `WidgetControlRow` primitives for the Pages widget inspector.
+- Replaced the top-of-panel helper card with a compact selected-widget header
+  and `Info` tooltip affordances.
+- Moved slot and nested-content guidance into builder-owned Visual sections,
+  with `section` using a dedicated `Regions` section as the proof call site.
+- Added stable `data-widget-editor`, `data-widget-editor-mode`,
+  `data-widget-editor-section`, and `data-widget-control` metadata for the
+  migrated panel flow and `section` controls.
+- Validation:
+  - `git diff --check`
+  - `set -a && source .env && set +a && bun --cwd core lint`
+  - `set -a && source .env && set +a && bun --cwd core lint:types`
+  - `set -a && source .env && set +a && bun run test:vitest -- tests/vitest/pageBuilder/wizardPanel.test.tsx tests/vitest/pageBuilder/visualPanel.test.tsx tests/vitest/pageBuilder/advancedPanelLeaf.test.tsx tests/vitest/pageBuilder/blockSettings.test.tsx tests/vitest/pageBuilder/blockSettings-wave.test.tsx tests/vitest/ui/section-editor-wave.test.tsx`
+  - `set -a && source .env && set +a && bun run test:vitest -- tests/vitest/widgets/section.test.tsx tests/vitest/ui/info-tip.test.tsx`

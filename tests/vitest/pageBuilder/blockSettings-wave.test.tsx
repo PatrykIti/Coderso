@@ -93,9 +93,48 @@ vi.mock("../../../core/admin/ui/pages/builder/WizardPanel", () => ({
 }));
 
 vi.mock("../../../core/admin/ui/pages/builder/VisualPanel", () => ({
-  VisualPanel: ({ block, onChange }: { block: Block; onChange: (next: Block) => void }) => (
+  VisualPanel: ({
+    block,
+    onChange,
+    slotControls,
+  }: {
+    block: Block;
+    onChange: (next: Block) => void;
+    slotControls?: {
+      title: string;
+      addActions: Array<{ label: string; onClick: () => void; disabled: boolean }>;
+      items: Array<{ label: string; canRemove?: boolean; onRemove?: () => void }>;
+      childrenHint?: string;
+    };
+  }) => (
     <div>
       <span>{`visual:${block.id}`}</span>
+      {slotControls ? (
+        <div>
+          <span>{slotControls.title}</span>
+          {slotControls.addActions.map((action) => (
+            <button
+              key={action.label}
+              type="button"
+              onClick={action.onClick}
+              disabled={action.disabled}
+            >
+              {action.label}
+            </button>
+          ))}
+          {slotControls.items.map((item) => (
+            <span key={item.label}>
+              {item.label}
+              {item.canRemove && item.onRemove ? (
+                <button type="button" onClick={item.onRemove}>
+                  Remove
+                </button>
+              ) : null}
+            </span>
+          ))}
+          {slotControls.childrenHint ? <span>{slotControls.childrenHint}</span> : null}
+        </div>
+      ) : null}
       <button
         type="button"
         onClick={() =>
@@ -271,6 +310,10 @@ test("BlockSettings manages repeatable slots and editor mode transitions", () =>
   const view = mount(<Harness />);
 
   try {
+    expect(view.container.textContent).toContain("Selected widget");
+    expect(view.container.textContent).not.toContain(
+      "Next: fine-tune layout, styling, and advanced settings for this widget."
+    );
     expect(view.container.textContent).toContain("Region 1 slot");
     expect(view.container.textContent).not.toContain("Remove");
 
@@ -339,6 +382,7 @@ test("BlockSettings shows nested-children guidance for child-capable widgets", (
   const view = mount(<BlockSettings block={block} widget={widget} onChange={() => undefined} />);
 
   try {
+    expect(view.container.textContent).toContain("Structure");
     expect(view.container.textContent).toContain("Nested blocks: 2.");
     expect(view.container.textContent).toContain(
       "Use the Insert dialog to add widgets inside this block."

@@ -6,7 +6,9 @@
 **Category:** Widgets + Admin UI + Runtime + Security
 **Estimated Effort:** Large
 **Dependencies:** TASK-252-01, TASK-252-02
-**Status:** To Do
+**Status:** Done
+**Started:** 2026-05-12
+**Completed:** 2026-05-12
 
 ---
 
@@ -98,21 +100,21 @@ more flexible, but implementation must not weaken runtime contracts.
 
 This parent is now executed through physical per-widget leaves. Do not implement this parent as one broad batch; complete the leaves below in dependency order.
 
-- [ ] TASK-252-07-01: Content List Source Display Field Visibility and Empty States
-- [ ] TASK-252-07-02: Posts Feed Source Density Author Date and Category
-- [ ] TASK-252-07-03: Entry Teaser Selected Entry Fallback and Field Toggles
-- [ ] TASK-252-07-04: Product Gallery Source Media Modes Thumbnails and Empty State
-- [ ] TASK-252-07-05: Product Compare Selected Products Attributes and Highlight
-- [ ] TASK-252-07-06: Product Table Columns Sort Filter and Pagination
-- [ ] TASK-252-07-07: Listing Filters Facets Ranges Apply and Reset
-- [ ] TASK-252-07-08: Search Box Copy Target Route Query Param and Display Mode
-- [ ] TASK-252-07-09: Newsletter Fields Consent Copy and States
-- [ ] TASK-252-07-10: Booking Calendar Provider Event Modes and Availability
-- [ ] TASK-252-07-11: Appointment Form Fields Validation Copy and States
-- [ ] TASK-252-07-12: Form Embed Form Picker Fields and State Copy
-- [ ] TASK-252-07-13: Contact Form Info State Copy and Security Boundaries
-- [ ] TASK-252-07-14: Navigation Source Links Mobile Menu and CTA
-- [ ] TASK-252-07-15: Footer Columns Brand Legal and Social Links
+- [x] TASK-252-07-01: Content List Source Display Field Visibility and Empty States
+- [x] TASK-252-07-02: Posts Feed Source Density Author Date and Category
+- [x] TASK-252-07-03: Entry Teaser Selected Entry Fallback and Field Toggles
+- [x] TASK-252-07-04: Product Gallery Source Media Modes Thumbnails and Empty State
+- [x] TASK-252-07-05: Product Compare Selected Products Attributes and Highlight
+- [x] TASK-252-07-06: Product Table Columns Sort Filter and Pagination
+- [x] TASK-252-07-07: Listing Filters Facets Ranges Apply and Reset
+- [x] TASK-252-07-08: Search Box Copy Target Route Query Param and Display Mode
+- [x] TASK-252-07-09: Newsletter Fields Consent Copy and States
+- [x] TASK-252-07-10: Booking Calendar Provider Event Modes and Availability
+- [x] TASK-252-07-11: Appointment Form Fields Validation Copy and States
+- [x] TASK-252-07-12: Form Embed Form Picker Fields and State Copy
+- [x] TASK-252-07-13: Contact Form Info State Copy and Security Boundaries
+- [x] TASK-252-07-14: Navigation Source Links Mobile Menu and CTA
+- [x] TASK-252-07-15: Footer Columns Brand Legal and Social Links
 
 ## Files to Change
 

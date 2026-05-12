@@ -71,6 +71,30 @@ test("search box renders global mode source toggles", () => {
   expect(html).toContain("Posts");
 });
 
+test("search box normalizes and renders route-submit mode separately from endpoint", () => {
+  const normalized = normalizeSearchBoxData({
+    ...searchBoxDefaults,
+    mode: "route-submit",
+    displayMode: "compact",
+    endpoint: "/api/site-search",
+    targetRoute: "https://bad.example/search",
+    queryParam: "query-text",
+  });
+
+  expect(normalized.targetRoute).toBe("/search");
+  expect(normalized.queryParam).toBe("query-text");
+
+  const html = renderToString(<SearchBoxBlock variant="default" data={normalized} />);
+
+  expect(html).toContain('data-search-box-mode="route-submit"');
+  expect(html).toContain('data-search-box-display-mode="compact"');
+  expect(html).toContain('data-search-target-route="/search"');
+  expect(html).toContain('data-search-query-param="query-text"');
+  expect(html).toContain('action="/search"');
+  expect(html).toContain('name="query-text"');
+  expect(html).not.toContain("/api/site-search");
+});
+
 test("search box cleared frame style omits listing and global shell backgrounds", () => {
   const listingHtml = renderToString(
     <SearchBoxBlock
@@ -116,8 +140,9 @@ test("search box validator accepts resolved runtime payload", () => {
       variant: "default",
       data: {
         ...searchBoxDefaults,
-        mode: "listing",
-        listingQueryId: "listing-query-1",
+        mode: "route-submit",
+        targetRoute: "/search",
+        queryParam: "q",
         resolved: {
           query: "news",
           rejectedTokens: ["__page"],
@@ -150,4 +175,5 @@ test("search box editors render expected sections", () => {
   );
   expect(advanced).toContain("Runtime payload");
   expect(advanced).toContain("Contract");
+  expect(advanced).toContain("route-submit");
 });

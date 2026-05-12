@@ -6,7 +6,9 @@
 **Category:** Widgets + QA + Documentation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-252-01, TASK-252-02, TASK-252-03, TASK-252-04, TASK-252-05, TASK-252-06, TASK-252-07
-**Status:** To Do
+**Status:** Done
+**Started:** 2026-05-12
+**Completed:** 2026-05-12
 
 ---
 
@@ -53,14 +55,14 @@ the implementation subtasks.
 
 ## Sub-Tasks
 
-- [ ] Build the final per-widget validation matrix.
-- [ ] Verify right-inspector IA acceptance criteria across representative
+- [x] Build the final per-widget validation matrix.
+- [x] Verify right-inspector IA acceptance criteria across representative
   widgets.
-- [ ] Verify every Pages-publishable widget has research archive coverage,
+- [x] Verify every Pages-publishable widget has research archive coverage,
   license/source metadata, and Keep/Adapt/Reject decisions.
-- [ ] Verify all missing `_docs/_WIDGETS` docs were created.
-- [ ] Run required lint/type/test/gate commands or record exact blockers.
-- [ ] Mark TASK-252 task files Done, sync board statistics, and add changelog.
+- [x] Verify all missing `_docs/_WIDGETS` docs were created.
+- [x] Run required lint/type/test/gate commands or record exact blockers.
+- [x] Mark TASK-252 task files Done, sync board statistics, and add changelog.
 
 ## Files to Change
 
@@ -247,3 +249,78 @@ its status and changelog link, not move it again from `To Do`.
 - Final validation proves every Pages-publishable widget option list is
   research-backed, including explicit rejections for noisy or ill-fitting
   options.
+
+## Working Proof Matrix
+
+| Widget | Research proof | Editor IA proof | Runtime/schema/default proof | Canonical doc | Pack matrix |
+|---|---|---|---|---|---|
+| `section` | `_docs/_WIDGETS/tmp/section/MATRIX.md` | `tests/vitest/ui/section-editor-wave.test.tsx` | `tests/vitest/widgets/section.test.tsx` | `_docs/_WIDGETS/SECTION.md` | not affected: layout primitive, no pack readiness change |
+| `template-section` | `_docs/_WIDGETS/tmp/template-section/MATRIX.md` | `tests/vitest/ui/template-section-editor-wave.test.tsx` | `tests/vitest/widgets/templateSection.test.tsx` | `_docs/_WIDGETS/TEMPLATE_SECTION.md` | not affected: reusable template reference, existing packs unchanged |
+| `grid-columns` | `_docs/_WIDGETS/tmp/grid-columns/MATRIX.md` | `tests/vitest/ui/grid-columns-editor-wave.test.tsx` | `tests/vitest/widgets/gridColumns.test.tsx` | `_docs/_WIDGETS/GRID_COLUMNS.md` | not affected: layout primitive only |
+| `split-layout` | `_docs/_WIDGETS/tmp/split-layout/MATRIX.md` | `tests/vitest/ui/split-layout-editor-wave.test.tsx` | `tests/vitest/widgets/splitLayout.test.tsx` | `_docs/_WIDGETS/SPLIT_LAYOUT.md` | not affected: layout primitive only |
+| `stack` | `_docs/_WIDGETS/tmp/stack/MATRIX.md` | `tests/vitest/ui/stack-editor-wave.test.tsx` | `tests/vitest/widgets/stack.test.tsx` | `_docs/_WIDGETS/STACK.md` | not affected: layout primitive only |
+| `spacer` | `_docs/_WIDGETS/tmp/spacer/MATRIX.md` | `tests/vitest/ui/spacer-editor-wave.test.tsx` | `tests/vitest/widgets/spacer.test.tsx` | `_docs/_WIDGETS/SPACER.md` | not affected: layout primitive only |
+| `divider` | `_docs/_WIDGETS/tmp/divider/MATRIX.md` | `tests/vitest/ui/divider-editor-wave.test.tsx` | `tests/vitest/widgets/divider.test.tsx` | `_docs/_WIDGETS/DIVIDER.md` | not affected: layout primitive only |
+| `tabs` | `_docs/_WIDGETS/tmp/tabs/MATRIX.md` | `tests/vitest/ui/tabs-editor-wave.test.tsx` | `tests/vitest/widgets/tabs.test.tsx` | `_docs/_WIDGETS/TABS.md` | not affected: layout primitive only |
+| `accordion` | `_docs/_WIDGETS/tmp/accordion/MATRIX.md` | `tests/vitest/ui/accordion-editor-wave.test.tsx` | `tests/vitest/widgets/accordionWidget.test.tsx` | `_docs/_WIDGETS/ACCORDION.md` | not affected: layout primitive only |
+| `toggle-block` | `_docs/_WIDGETS/tmp/toggle-block/MATRIX.md` | `tests/vitest/ui/toggle-block-editor-wave.test.tsx` | `tests/vitest/widgets/toggleBlock.test.tsx` | `_docs/_WIDGETS/TOGGLE_BLOCK.md` | not affected: layout primitive only |
+| `hero` | `_docs/_WIDGETS/tmp/hero/MATRIX.md` | `tests/vitest/ui/hero-editor-wave.test.tsx` | `tests/vitest/widgets/hero.test.tsx` | `_docs/_WIDGETS/HERO.md` | not affected: existing content pack remains valid |
+| `feature-grid` | `_docs/_WIDGETS/tmp/feature-grid/MATRIX.md` | `tests/vitest/ui/feature-grid-editor-wave.test.tsx` | `tests/vitest/widgets/featureGrid.test.tsx` | `_docs/_WIDGETS/FEATURE_GRID.md` | not affected: already counted in content pack |
+| `testimonials` | `_docs/_WIDGETS/tmp/testimonials/MATRIX.md` | `tests/vitest/ui/testimonials-editor-wave.test.tsx` | `tests/vitest/widgets/testimonials.test.tsx` | `_docs/_WIDGETS/TESTIMONIALS.md` | not affected: engagement pack count unchanged |
+| `pricing-plans` | `_docs/_WIDGETS/tmp/pricing-plans/MATRIX.md` | `tests/vitest/ui/pricing-plans-editor-wave.test.tsx` | `tests/vitest/widgets/pricingPlans.test.tsx` | `_docs/_WIDGETS/PRICING_PLANS.md` | not affected: no new composite count change |
+| `faq-accordion` | `_docs/_WIDGETS/tmp/faq-accordion/MATRIX.md` | `tests/vitest/ui/faq-accordion-editor-wave.test.tsx` | `tests/vitest/widgets/faqAccordion.test.tsx` | `_docs/_WIDGETS/FAQ.md` | not affected: engagement pack count unchanged |
+| `cta-banner` | `_docs/_WIDGETS/tmp/cta-banner/MATRIX.md` | `tests/vitest/ui/cta-banner-editor-wave.test.tsx` | `tests/vitest/widgets/ctaBanner.test.tsx` | `_docs/_WIDGETS/CTA_BANNER.md` | not affected: already counted in content pack |
+| `logo-cloud` | `_docs/_WIDGETS/tmp/logo-cloud/MATRIX.md` | `tests/vitest/ui/logo-cloud-editor-wave.test.tsx` | `tests/vitest/widgets/logoCloud.test.tsx` | `_docs/_WIDGETS/LOGO_CLOUD.md` | not affected: media advisory pack unchanged |
+| `gallery-mosaic` | `_docs/_WIDGETS/tmp/gallery-mosaic/MATRIX.md` | `tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx` | `tests/vitest/widgets/galleryMosaic.test.tsx` | `_docs/_WIDGETS/GALLERY_MOSAIC.md` | not affected: media advisory pack unchanged |
+| `stats-kpi` | `_docs/_WIDGETS/tmp/stats-kpi/MATRIX.md` | `tests/vitest/ui/stats-kpi-editor-wave.test.tsx` | `tests/vitest/widgets/statsKpi.test.tsx` | `_docs/_WIDGETS/STATS_KPI.md` | not affected: no pack readiness change |
+| `team` | `_docs/_WIDGETS/tmp/team/MATRIX.md` | `tests/vitest/ui/team-editor-wave.test.tsx` | `tests/vitest/widgets/team.test.tsx` | `_docs/_WIDGETS/TEAM.md` | not affected: no pack readiness change |
+| `rich-text-section` | `_docs/_WIDGETS/tmp/rich-text-section/MATRIX.md` | `tests/vitest/ui/rich-text-section-editor-wave.test.tsx` | `tests/vitest/widgets/richTextSection.test.tsx` | `_docs/_WIDGETS/RICH_TEXT_SECTION.md` | not affected: no pack readiness change |
+| `timeline` | `_docs/_WIDGETS/tmp/timeline/MATRIX.md` | `tests/vitest/ui/timeline-editor-wave.test.tsx` | `tests/vitest/widgets/timeline.test.tsx` | `_docs/_WIDGETS/TIMELINE.md` | not affected: no pack readiness change |
+| `compare-timeline` | `_docs/_WIDGETS/tmp/compare-timeline/MATRIX.md` | `tests/vitest/ui/compare-timeline-editor-wave.test.tsx` | `tests/vitest/widgets/compareTimeline.test.tsx` | `_docs/_WIDGETS/COMPARE_TIMELINE.md` | not affected: no pack readiness change |
+| `content-list` | `_docs/_WIDGETS/tmp/content-list/MATRIX.md` | `tests/vitest/ui/content-list-editor-wave.test.tsx` | `tests/unit/widgets/contentList.test.tsx` | `_docs/_WIDGETS/CONTENT_LIST.md` | not affected: already counted in listings pack |
+| `posts-feed` | `_docs/_WIDGETS/tmp/posts-feed/MATRIX.md` | `tests/vitest/ui/posts-feed-editor-wave.test.tsx` | `tests/unit/widgets/postsFeedWidget.test.tsx` | `_docs/_WIDGETS/POSTS_FEED.md` | not affected: already counted in listings pack |
+| `entry-teaser` | `_docs/_WIDGETS/tmp/entry-teaser/MATRIX.md` | `tests/vitest/ui/entry-teaser-editor-wave.test.tsx` | `tests/unit/widgets/entryTeaser.test.tsx` | `_docs/_WIDGETS/ENTRY_TEASER.md` | not affected: already counted in listings pack |
+| `product-gallery` | `_docs/_WIDGETS/tmp/product-gallery/MATRIX.md` | `tests/vitest/ui/product-gallery-editor-wave.test.tsx` | `tests/vitest/widgets/productGallery.test.tsx` | `_docs/_WIDGETS/PRODUCT_GALLERY.md` | not affected: already counted in commerce pack |
+| `product-compare` | `_docs/_WIDGETS/tmp/product-compare/MATRIX.md` | `tests/vitest/ui/product-compare-editor-wave.test.tsx` | `tests/vitest/widgets/productCompare.test.tsx` | `_docs/_WIDGETS/PRODUCT_COMPARE.md` | not affected: already counted in commerce pack |
+| `product-table` | `_docs/_WIDGETS/tmp/product-table/MATRIX.md` | `tests/vitest/ui/product-table-editor-wave.test.tsx` | `tests/vitest/widgets/productTable.test.tsx` | `_docs/_WIDGETS/PRODUCT_TABLE.md` | not affected: already counted in commerce pack |
+| `listing-filters` | `_docs/_WIDGETS/tmp/listing-filters/MATRIX.md` | `tests/vitest/ui/listing-filters-editor-wave.test.tsx` | `tests/vitest/widgets/listingFilters.test.tsx` | `_docs/_WIDGETS/LISTING_FILTERS.md` | not affected: already counted in listings pack |
+| `search-box` | `_docs/_WIDGETS/tmp/search-box/MATRIX.md` | `tests/vitest/ui/search-box-editor-wave.test.tsx` | `tests/vitest/widgets/searchBox.test.tsx` | `_docs/_WIDGETS/SEARCH_BOX.md` | not affected: search pack stays advisory and unchanged |
+| `newsletter` | `_docs/_WIDGETS/tmp/newsletter/MATRIX.md` | `tests/vitest/ui/newsletter-editor-wave.test.tsx` | `tests/vitest/widgets/newsletter.test.tsx` | `_docs/_WIDGETS/NEWSLETTER.md` | not affected: already counted in forms pack |
+| `booking-calendar` | `_docs/_WIDGETS/tmp/booking-calendar/MATRIX.md` | `tests/vitest/ui/booking-calendar-editor-wave.test.tsx` | `tests/vitest/widgets/bookingCalendar.test.tsx` | `_docs/_WIDGETS/BOOKING_CALENDAR.md` | not affected: booking advisory pack unchanged |
+| `appointment-form` | `_docs/_WIDGETS/tmp/appointment-form/MATRIX.md` | `tests/vitest/ui/appointment-form-editor-wave.test.tsx` | `tests/vitest/widgets/appointmentForm.test.tsx` | `_docs/_WIDGETS/APPOINTMENT_FORM.md` | not affected: booking advisory pack unchanged |
+| `form-embed` | `_docs/_WIDGETS/tmp/form-embed/MATRIX.md` | `tests/vitest/ui/form-embed-editor-wave.test.tsx` | `tests/vitest/widgets/formEmbed.test.tsx` | `_docs/_WIDGETS/FORM_EMBED.md` | not affected: already counted in forms pack |
+| `contact` | `_docs/_WIDGETS/tmp/contact/MATRIX.md` | `tests/vitest/ui/contact-editor-wave.test.tsx` | `tests/vitest/widgets/contact.test.tsx` | `_docs/_WIDGETS/CONTACT.md` | not affected: already counted in forms pack |
+| `navigation` | `_docs/_WIDGETS/tmp/navigation/MATRIX.md` | `tests/vitest/ui/navigation-editor-wave.test.tsx` | `tests/vitest/widgets/navigation.test.tsx` | `_docs/_WIDGETS/NAVIGATION.md` | not affected: navigation advisory pack unchanged |
+| `footer` | `_docs/_WIDGETS/tmp/footer/MATRIX.md` | `tests/vitest/ui/footer-editor-wave.test.tsx` | `tests/vitest/widgets/footer.test.tsx` | `_docs/_WIDGETS/FOOTER.md` | not affected: navigation advisory pack unchanged |
+
+## Working Notes
+
+- Current validation status on 2026-05-12:
+  - `bun --cwd core lint` -> green
+  - `bun --cwd core lint:types` -> green
+  - `bun run test:vitest` -> green (`583` files, `2630` tests)
+  - `bun run test:bun` -> green (`553` pass, `216` skip, `0` fail)
+  - `bun run scan:security:strict` -> green
+    - `semgrep-sast`: ok
+    - `bun-audit`: ok
+    - `trivy-vuln`, `trivy-config`, `trivy-secret`, `gitleaks-history`, and
+      `gitleaks-worktree`: ok
+- Research/archive checkpoint:
+  - `38` per-widget `_docs/_WIDGETS/tmp/<widget>/MATRIX.md` files are present.
+  - `39` `_docs/_WIDGETS/tmp/**/README.md` files are present, including the
+    archive root rules page.
+  - Missing canonical widget docs from the original TASK-252 umbrella list were
+    created: `TABS`, `ACCORDION`, `TOGGLE_BLOCK`, `PRODUCT_GALLERY`,
+    `PRODUCT_COMPARE`, `PRODUCT_TABLE`, `LISTING_FILTERS`, `SEARCH_BOX`,
+    `BOOKING_CALENDAR`, and `APPOINTMENT_FORM`.
+- Representative right-inspector IA proof:
+  - `pageBuilder/*`, `section`, `hero`, `timeline`, `tabs`, `accordion`,
+    `toggle-block`, `search-box`, `navigation`, and `template-section` now have
+    dedicated focused tests proving sectioned inspector output and/or
+    `data-widget-editor-section` coverage.
+- Pack matrix checkpoint:
+  - `core/widgets/modulePackMatrix.ts` and `_docs/WIDGET_PACK_MATRIX.md` were
+    inspected and treated as **not affected** for TASK-252. The current work
+    refines configuration and editor/runtime seams for existing widget types,
+    but it does not add or remove composite widget types or change module pack
+    completeness counts.

@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 
 import {
   normalizeTimelineStepCount,
+  resolveTimelineMode,
   normalizeTimelineSteps,
   timelineDefaults,
   timelineStepMax,
@@ -27,15 +28,19 @@ import {
   type TimelineLabelPosition,
   type TimelineLineStyle,
   type TimelineMarkerSize,
+  type TimelineMode,
   type TimelineOrientation,
   type TimelineSpacing,
   type TimelineStep,
+  type TimelineStatus,
   type TimelineThickness,
   type TimelineTitleSize,
   type TimelineVariantId,
 } from "../../../../widgets/core/timeline";
 import type { WidgetEditorProps } from "../../../../widgets/types";
 import { ClearableFieldHeader } from "./ClearableFields";
+import { WidgetEditorSection } from "./WidgetEditorControls";
+import { normalizeWidgetSafeHref } from "../../../../widgets/core/widgetSafeHref";
 
 const variantOptions: Array<{ id: TimelineVariantId; label: string; description: string }> = [
   {
@@ -53,6 +58,19 @@ const variantOptions: Array<{ id: TimelineVariantId; label: string; description:
     label: "Compact",
     description: "Minimal process strip for concise labels.",
   },
+];
+
+const modeOptions: Array<{ id: TimelineMode; label: string }> = [
+  { id: "process", label: "Process" },
+  { id: "axis", label: "Axis" },
+  { id: "chronology", label: "Chronology" },
+  { id: "alternating", label: "Alternating" },
+];
+
+const statusOptions: Array<{ id: TimelineStatus; label: string }> = [
+  { id: "upcoming", label: "Upcoming" },
+  { id: "current", label: "Current" },
+  { id: "complete", label: "Complete" },
 ];
 
 const orientationOptions: Array<{ id: TimelineOrientation; label: string }> = [
@@ -125,32 +143,43 @@ const stepCountOptions = Array.from(
 
 const hexColorPattern = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
 
+const preferredVariantForMode = (mode: TimelineMode): TimelineVariantId => {
+  if (mode === "process") return "compact";
+  if (mode === "axis") return "milestones";
+  return "cards";
+};
+
+const isValidTimelineHref = (value: string | undefined) =>
+  !value ||
+  normalizeWidgetSafeHref(value, {
+    allowRelative: true,
+    allowHash: true,
+    allowHttp: true,
+  }) !== undefined;
+
 type TimelineLayout = NonNullable<TimelineData["layout"]>;
 type TimelineGuides = NonNullable<TimelineData["guides"]>;
 type TimelineStyle = NonNullable<TimelineData["style"]>;
+type TimelineStepCta = NonNullable<TimelineStep["cta"]>;
 
 const resolvePickerColor = (value: string | undefined, fallback: string) =>
   value && hexColorPattern.test(value) ? value : fallback;
 
 function EditorSection({
+  id,
   title,
   description,
   children,
 }: {
+  id: string;
   title: string;
   description?: string;
   children: ReactNode;
 }) {
   return (
-    <section className="space-y-3 rounded-lg border border-border/70 bg-background/50 p-3">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          {title}
-        </p>
-        {description ? <p className="text-xs text-muted-foreground">{description}</p> : null}
-      </div>
-      <div className="space-y-3">{children}</div>
-    </section>
+    <WidgetEditorSection id={id} title={title} description={description}>
+      {children}
+    </WidgetEditorSection>
   );
 }
 
@@ -265,6 +294,26 @@ function updateStep(
   onChange({ ...value, steps: next });
 }
 
+function updateStepCta(
+  value: TimelineData,
+  onChange: (next: TimelineData) => void,
+  index: number,
+  patch: Partial<TimelineStepCta>
+) {
+  const steps = getNormalizedSteps(value);
+  const current = steps[index];
+  if (!current) return;
+  const next = [...steps];
+  const cta = {
+    label: current.cta?.label ?? "",
+    href: current.cta?.href ?? "",
+    ...current.cta,
+    ...patch,
+  };
+  next[index] = { ...current, cta };
+  onChange({ ...value, steps: next });
+}
+
 function updateLayout(
   value: TimelineData,
   onChange: (next: TimelineData) => void,
@@ -277,6 +326,16 @@ function updateLayout(
       ...patch,
     },
   });
+}
+
+function updateMode(
+  value: TimelineData,
+  onChange: (next: TimelineData) => void,
+  nextMode: TimelineMode,
+  onVariantChange?: (next: string) => void
+) {
+  onChange({ ...value, mode: nextMode });
+  onVariantChange?.(preferredVariantForMode(nextMode));
 }
 
 function updateGuides(
@@ -384,6 +443,7 @@ function moveStep(
 function normalizeTimelinePayload(value: TimelineData): TimelineData {
   return {
     ...value,
+    mode: resolveTimelineMode(value.mode, "milestones"),
     steps: normalizeTimelineSteps(value.steps),
     layout: {
       orientation: value.layout?.orientation ?? timelineDefaults.layout?.orientation,
@@ -401,13 +461,18 @@ function normalizeTimelinePayload(value: TimelineData): TimelineData {
 function TimelineStructureFields({
   value,
   onChange,
+  onVariantChange,
+  variant = "milestones",
   includeStepCount = true,
 }: {
   value: TimelineData;
   onChange: (next: TimelineData) => void;
+  onVariantChange?: (next: string) => void;
+  variant?: string;
   includeStepCount?: boolean;
 }) {
   const steps = getNormalizedSteps(value);
+  const mode = resolveTimelineMode(value.mode, variant);
 
   return (
     <div className="grid gap-3 md:grid-cols-2">
@@ -431,6 +496,27 @@ function TimelineStructureFields({
           </Select>
         </div>
       ) : null}
+
+      <div className="space-y-2">
+        <p className="text-sm font-medium">Timeline mode</p>
+        <Select
+          value={mode}
+          onValueChange={(next) =>
+            updateMode(value, onChange, next as TimelineMode, onVariantChange)
+          }
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select mode" />
+          </SelectTrigger>
+          <SelectContent>
+            {modeOptions.map((option) => (
+              <SelectItem key={option.id} value={option.id}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
       <div className="space-y-2">
         <p className="text-sm font-medium">Orientation</p>
@@ -787,10 +873,32 @@ export function TimelineWizardEditor({
   onVariantChange,
 }: WidgetEditorProps<TimelineData>) {
   const steps = getNormalizedSteps(value);
+  const mode = resolveTimelineMode(value.mode, variant);
 
   return (
     <div className="space-y-4">
       <TimelineVariantSelect value={variant} onChange={onVariantChange} />
+
+      <div className="space-y-2">
+        <p className="text-sm font-medium">Timeline mode</p>
+        <Select
+          value={mode}
+          onValueChange={(next) =>
+            updateMode(value, onChange, next as TimelineMode, onVariantChange)
+          }
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select mode" />
+          </SelectTrigger>
+          <SelectContent>
+            {modeOptions.map((option) => (
+              <SelectItem key={option.id} value={option.id}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
       <div className="space-y-2">
         <p className="text-sm font-medium">Number of steps</p>
@@ -876,14 +984,21 @@ export function TimelineVisualEditor({
   return (
     <div className="space-y-4">
       <EditorSection
+        id="timeline.mode-layout"
         title="Variant and timeline structure"
         description="Choose timeline variant and core structure before styling details."
       >
         <TimelineVariantCards value={variant} onChange={onVariantChange} />
-        <TimelineStructureFields value={value} onChange={onChange} />
+        <TimelineStructureFields
+          value={value}
+          onChange={onChange}
+          onVariantChange={onVariantChange}
+          variant={variant}
+        />
       </EditorSection>
 
       <EditorSection
+        id="timeline.items-dates"
         title="Steps content and order"
         description="Edit content for each step and reorder without leaving Visual mode."
       >
@@ -953,19 +1068,78 @@ export function TimelineVisualEditor({
                 }
                 placeholder="Step description"
               />
-              <Input
-                value={step.icon ?? ""}
-                onChange={(event) =>
-                  updateStep(value, onChange, index, { icon: event.target.value })
-                }
-                placeholder="Icon text or emoji"
-              />
+              <div className="grid gap-2 md:grid-cols-2">
+                <Input
+                  value={step.date ?? ""}
+                  onChange={(event) =>
+                    updateStep(value, onChange, index, { date: event.target.value })
+                  }
+                  placeholder="2026-05-11"
+                />
+                <Input
+                  value={step.dateLabel ?? ""}
+                  onChange={(event) =>
+                    updateStep(value, onChange, index, { dateLabel: event.target.value })
+                  }
+                  placeholder="May 11, 2026"
+                />
+              </div>
+              <div className="grid gap-2 md:grid-cols-2">
+                <Select
+                  value={step.status ?? "upcoming"}
+                  onValueChange={(next) =>
+                    updateStep(value, onChange, index, { status: next as TimelineStatus })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {statusOptions.map((option) => (
+                      <SelectItem key={option.id} value={option.id}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  value={step.icon ?? ""}
+                  onChange={(event) =>
+                    updateStep(value, onChange, index, { icon: event.target.value })
+                  }
+                  placeholder="Icon text or emoji"
+                />
+              </div>
+              <div className="grid gap-2 md:grid-cols-2">
+                <Input
+                  value={step.cta?.label ?? ""}
+                  onChange={(event) =>
+                    updateStepCta(value, onChange, index, { label: event.target.value })
+                  }
+                  placeholder="Step CTA label"
+                />
+                <div className="space-y-1">
+                  <Input
+                    value={step.cta?.href ?? ""}
+                    onChange={(event) =>
+                      updateStepCta(value, onChange, index, { href: event.target.value })
+                    }
+                    placeholder="/timeline-step"
+                  />
+                  {!isValidTimelineHref(step.cta?.href) ? (
+                    <p className="text-xs text-destructive">
+                      Use a relative path, hash, or full URL.
+                    </p>
+                  ) : null}
+                </div>
+              </div>
             </div>
           ))}
         </div>
       </EditorSection>
 
       <EditorSection
+        id="timeline.axis-markers"
         title="Guides and axis line"
         description="Control helper guides and axis line appearance."
       >
@@ -973,6 +1147,7 @@ export function TimelineVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="timeline.markers-accents"
         title="Markers and accents"
         description="Configure marker sizing and per-step accent colors."
       >
@@ -980,6 +1155,7 @@ export function TimelineVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="timeline.colors"
         title="Colors and background"
         description="Set line, marker, text, and section background colors."
       >
@@ -987,6 +1163,7 @@ export function TimelineVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="timeline.typography-spacing"
         title="Typography and spacing"
         description="Tune typography scale and spacing density."
       >
@@ -1002,6 +1179,7 @@ export function TimelineAdvancedEditor({ value, onChange }: WidgetEditorProps<Ti
   return (
     <div className="space-y-4">
       <EditorSection
+        id="timeline.layout-tokens"
         title="Layout tokens"
         description="Technical controls for orientation, alignment, and axis labels."
       >
@@ -1009,6 +1187,7 @@ export function TimelineAdvancedEditor({ value, onChange }: WidgetEditorProps<Ti
       </EditorSection>
 
       <EditorSection
+        id="timeline.data-normalization"
         title="Data normalization"
         description="Normalize step IDs and enforce safe step-count bounds."
       >

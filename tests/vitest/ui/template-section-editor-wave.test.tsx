@@ -39,6 +39,20 @@ vi.mock("@/components/ui/badge", () => ({
   Badge: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
 }));
 
+vi.mock("@/components/ui/input", () => ({
+  Input: ({
+    value,
+    onChange,
+    placeholder,
+    ...props
+  }: {
+    value?: string;
+    onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
+    placeholder?: string;
+    [key: string]: unknown;
+  }) => <input value={value} onChange={onChange} placeholder={placeholder} {...props} />,
+}));
+
 vi.mock("@/components/ui/select", () => {
   const flattenText = (value: React.ReactNode): string =>
     React.Children.toArray(value)
@@ -137,6 +151,16 @@ const setSelectValue = (element: Element | null | undefined, value: string) => {
   });
 };
 
+const setInputValue = (element: Element | null | undefined, value: string) => {
+  if (!(element instanceof HTMLInputElement)) return;
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
+  React.act(() => {
+    descriptor?.set?.call(element, value);
+    element.dispatchEvent(new Event("input", { bubbles: true }));
+    element.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+};
+
 afterEach(() => {
   templateState.current = {
     items: [
@@ -222,13 +246,37 @@ test("TemplateSection editors cover template selection, draft badge, reset, and 
       "Select a widget template to render in this section."
     );
     expect(view.container.textContent).toContain("Runtime behavior");
+    expect(view.container.textContent).toContain("Preview and metadata");
 
     const selects = Array.from(view.container.querySelectorAll("select"));
     setSelectValue(selects[0], "template-2");
+    const inputs = Array.from(view.container.querySelectorAll("input"));
+    const previewLabelInput = inputs.find((input) => input.placeholder === "Homepage Hero Cluster");
+    const categoryInput = inputs.find((input) => input.placeholder === "Marketing");
+    const versionInput = inputs.find((input) => input.placeholder === "v1");
+
+    if (!(previewLabelInput instanceof HTMLInputElement)) {
+      throw new Error("Missing preview label input");
+    }
+    if (!(categoryInput instanceof HTMLInputElement)) {
+      throw new Error("Missing category input");
+    }
+    if (!(versionInput instanceof HTMLInputElement)) {
+      throw new Error("Missing version input");
+    }
+
+    setInputValue(previewLabelInput, "Landing Hero");
+    setInputValue(categoryInput, "Marketing");
+    setInputValue(versionInput, "v2");
 
     expect(onChangeSpy).toHaveBeenCalled();
     expect(latestValue.templateId).toBe("template-2");
     expect(latestValue.templateName).toBe("Promo grid");
+    expect(latestValue.metadata).toEqual({
+      previewLabel: "Landing Hero",
+      category: "Marketing",
+      version: "v2",
+    });
     expect(view.container.textContent).toContain("Draft");
     expect(view.container.textContent).toContain("Active template:");
     expect(view.container.textContent).toContain("Promo grid");
@@ -273,6 +321,7 @@ test("TemplateSection editors surface error state from the template hook while k
   try {
     expect(view.container.textContent).toContain("Failed to load templates.");
     expect(view.container.textContent).toContain("No template");
+    expect(view.container.textContent).toContain("Preview and metadata");
     expect(view.container.textContent).toContain(
       "Select a widget template to render in this section."
     );

@@ -2,6 +2,7 @@ import { useMemo } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -16,6 +17,7 @@ import {
 } from "../../../../widgets/core/templateSection";
 import { useWidgetTemplates } from "../hooks/useWidgetTemplates";
 import type { WidgetEditorProps } from "../../../../widgets/types";
+import { WidgetEditorSection } from "./WidgetEditorControls";
 
 const NO_TEMPLATE_VALUE = "__no-template__";
 
@@ -25,7 +27,7 @@ const statusLabelMap: Record<string, string> = {
 };
 
 const resolveTemplateStatusLabel = (status?: string | null) =>
-  status ? statusLabelMap[status] ?? status : "Unknown";
+  status ? (statusLabelMap[status] ?? status) : "Unknown";
 
 function updateValue(
   value: TemplateSectionData,
@@ -84,9 +86,7 @@ function TemplateSelectField({
         <Select value={selectValue} onValueChange={handleSelect}>
           <SelectTrigger>
             <SelectValue
-              placeholder={
-                isLoading ? "Loading templates..." : "Choose a widget template"
-              }
+              placeholder={isLoading ? "Loading templates..." : "Choose a widget template"}
             />
           </SelectTrigger>
           <SelectContent>
@@ -98,9 +98,7 @@ function TemplateSelectField({
             ))}
           </SelectContent>
         </Select>
-        {error ? (
-          <p className="text-xs text-destructive">{error}</p>
-        ) : null}
+        {error ? <p className="text-xs text-destructive">{error}</p> : null}
       </div>
       {selectedTemplate ? (
         <div className="rounded-lg border bg-muted/20 p-3 text-xs">
@@ -111,9 +109,7 @@ function TemplateSelectField({
             </Badge>
           </div>
           {selectedTemplate.description ? (
-            <p className="mt-1 text-muted-foreground">
-              {selectedTemplate.description}
-            </p>
+            <p className="mt-1 text-muted-foreground">{selectedTemplate.description}</p>
           ) : null}
         </div>
       ) : (
@@ -130,37 +126,94 @@ function TemplateSectionEditor({
   onChange,
   title,
   description,
+  sectionId,
 }: {
   value: TemplateSectionData;
   onChange: (next: TemplateSectionData) => void;
   title: string;
   description?: string;
+  sectionId: string;
 }) {
   const normalized = normalizeTemplateSectionData(value);
   const activeName = normalized.templateName?.trim();
+  const metadata = normalized.metadata ?? templateSectionDefaults.metadata ?? {};
 
   return (
     <div className="space-y-4">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          {title}
-        </p>
-        <h3 className="text-lg font-semibold">Template section</h3>
-        {description ? (
-          <p className="text-sm text-muted-foreground">{description}</p>
-        ) : null}
-      </div>
-      <TemplateSelectField value={normalized} onChange={onChange} />
-      {activeName ? (
-        <div className="rounded-lg border bg-background/60 p-3 text-xs text-muted-foreground">
-          Active template: <span className="font-semibold text-foreground">{activeName}</span>
+      <WidgetEditorSection id={`${sectionId}.selection`} title={title} description={description}>
+        <div>
+          <h3 className="text-lg font-semibold">Template section</h3>
         </div>
-      ) : null}
+        <TemplateSelectField value={normalized} onChange={onChange} />
+        {activeName ? (
+          <div className="rounded-lg border bg-background/60 p-3 text-xs text-muted-foreground">
+            Active template: <span className="font-semibold text-foreground">{activeName}</span>
+          </div>
+        ) : null}
+      </WidgetEditorSection>
+      <WidgetEditorSection
+        id={`${sectionId}.metadata`}
+        title="Preview and metadata"
+        description="Store category, preview label, and version without changing runtime ownership."
+      >
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Preview label</p>
+          <Input
+            value={metadata.previewLabel ?? ""}
+            onChange={(event) =>
+              updateValue(value, onChange, {
+                metadata: {
+                  ...metadata,
+                  previewLabel: event.target.value,
+                },
+              })
+            }
+            placeholder="Homepage Hero Cluster"
+          />
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Category</p>
+            <Input
+              value={metadata.category ?? ""}
+              onChange={(event) =>
+                updateValue(value, onChange, {
+                  metadata: {
+                    ...metadata,
+                    category: event.target.value,
+                  },
+                })
+              }
+              placeholder="Marketing"
+            />
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Version</p>
+            <Input
+              value={metadata.version ?? ""}
+              onChange={(event) =>
+                updateValue(value, onChange, {
+                  metadata: {
+                    ...metadata,
+                    version: event.target.value,
+                  },
+                })
+              }
+              placeholder="v1"
+            />
+          </div>
+        </div>
+      </WidgetEditorSection>
+      <WidgetEditorSection id={`${sectionId}.runtime`} title="Runtime behavior">
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Runtime behavior
+        </p>
+      </WidgetEditorSection>
       <Alert>
         <AlertTitle>Runtime behavior</AlertTitle>
         <AlertDescription>
-          This widget renders the selected template blocks in order. Draft templates
-          will only render in preview mode.
+          This widget renders the selected template blocks in order. Draft templates will only
+          render in preview mode.
         </AlertDescription>
       </Alert>
     </div>
@@ -177,6 +230,7 @@ export function TemplateSectionWizardEditor({
       onChange={onChange}
       title="Wizard"
       description="Choose which widget template should render as this section."
+      sectionId="template-section.wizard"
     />
   );
 }
@@ -191,6 +245,7 @@ export function TemplateSectionVisualEditor({
       onChange={onChange}
       title="Visual"
       description="Swap templates or verify the active selection."
+      sectionId="template-section.visual"
     />
   );
 }
@@ -209,13 +264,16 @@ export function TemplateSectionAdvancedEditor({
         onChange={onChange}
         title="Advanced"
         description="Manage template resolution details."
+        sectionId="template-section.advanced"
       />
-      <div className="rounded-lg border bg-muted/20 p-3 text-xs text-muted-foreground">
-        Resolved payload (read-only)
-        <pre className="mt-2 overflow-auto rounded-md bg-muted/40 p-3 text-[11px]">
-          {JSON.stringify(resolvedPayload, null, 2)}
-        </pre>
-      </div>
+      <WidgetEditorSection id="template-section.advanced.diagnostics" title="Resolved payload">
+        <div className="rounded-lg border bg-muted/20 p-3 text-xs text-muted-foreground">
+          Resolved payload (read-only)
+          <pre className="mt-2 overflow-auto rounded-md bg-muted/40 p-3 text-[11px]">
+            {JSON.stringify(resolvedPayload, null, 2)}
+          </pre>
+        </div>
+      </WidgetEditorSection>
     </div>
   );
 }

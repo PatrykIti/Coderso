@@ -30,9 +30,11 @@ import {
 } from "@/services/userSettingsClient";
 import { MediaPicker } from "@/ui/media/MediaPicker";
 
-import type { HeroData } from "../../../../widgets/core/hero";
+import type { HeroBadgePlacement, HeroBadgeTone, HeroData } from "../../../../widgets/core/hero";
+import { normalizeHeroHref } from "../../../../widgets/core/hero";
 import type { WidgetEditorProps } from "../../../../widgets/types";
-import { ClearableFieldHeader } from "./ClearableFields";
+import { ClearableFieldHeader, hasClearableFieldValue } from "./ClearableFields";
+import { WidgetControlRow, WidgetEditorSection } from "./WidgetEditorControls";
 
 type HeroVariantId = "centered" | "split" | "media-left";
 
@@ -124,8 +126,19 @@ type HeroRadius = NonNullable<HeroStyle["borderRadius"]>;
 type HeroBackground = NonNullable<HeroData["background"]>;
 type HeroBackgroundMedia = NonNullable<HeroBackground["media"]>;
 
-const isValidHref = (value: string | undefined) =>
-  !value || value.startsWith("/") || value.startsWith("http");
+const badgeToneOptions: Array<{ id: HeroBadgeTone; label: string }> = [
+  { id: "neutral", label: "Neutral" },
+  { id: "primary", label: "Primary" },
+  { id: "success", label: "Success" },
+  { id: "warning", label: "Warning" },
+];
+
+const badgePlacementOptions: Array<{ id: HeroBadgePlacement; label: string }> = [
+  { id: "above-headline", label: "Above headline" },
+  { id: "inline-headline", label: "Inline headline" },
+];
+
+const isValidHref = (value: string | undefined) => !value || normalizeHeroHref(value) !== undefined;
 
 const isValidMediaUrl = (value: string | undefined) =>
   !value || value.startsWith("http") || value.startsWith("/");
@@ -517,28 +530,25 @@ const resolveBackgroundMedia = (background: HeroData["background"]): HeroBackgro
 };
 
 function EditorSection({
+  id,
   title,
   description,
   children,
 }: {
+  id: string;
   title: string;
   description?: string;
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-lg border border-border/70 bg-background/50 p-3">
-      <div className="mb-3">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          {title}
-        </p>
-        {description ? <p className="text-xs text-muted-foreground">{description}</p> : null}
-      </div>
-      <div className="space-y-3">{children}</div>
-    </section>
+    <WidgetEditorSection id={id} title={title} description={description}>
+      {children}
+    </WidgetEditorSection>
   );
 }
 
 function ColorField({
+  id,
   label,
   value,
   onChange,
@@ -546,6 +556,7 @@ function ColorField({
   pickerFallback = "#111827",
   onClear,
 }: {
+  id: string;
   label: string;
   value: string | undefined;
   onChange: (next: string) => void;
@@ -554,31 +565,55 @@ function ColorField({
   onClear?: () => void;
 }) {
   return (
-    <div className="space-y-2">
-      <ClearableFieldHeader label={label} value={value} onClear={onClear} />
-      <div className="grid grid-cols-[2.5rem_1fr] gap-2">
-        <Input
-          type="color"
-          value={resolvePickerColor(value, pickerFallback)}
-          onChange={(event) => onChange(event.target.value)}
-          className="h-9 w-10 p-1"
-        />
-        <Input
-          value={value ?? ""}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder={placeholder}
-        />
-      </div>
-    </div>
+    <WidgetControlRow
+      id={id}
+      label={label}
+      actions={
+        onClear ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onClear}
+            disabled={!hasClearableFieldValue(value)}
+          >
+            Clear
+          </Button>
+        ) : null
+      }
+    >
+      {(fieldProps) => (
+        <div className="grid grid-cols-[2.5rem_1fr] gap-2">
+          <Input
+            type="color"
+            value={resolvePickerColor(value, pickerFallback)}
+            onChange={(event) => onChange(event.target.value)}
+            className="h-9 w-10 p-1"
+            aria-labelledby={fieldProps["aria-labelledby"]}
+            aria-describedby={fieldProps["aria-describedby"]}
+          />
+          <Input
+            id={fieldProps.id}
+            value={value ?? ""}
+            onChange={(event) => onChange(event.target.value)}
+            placeholder={placeholder}
+            aria-labelledby={fieldProps["aria-labelledby"]}
+            aria-describedby={fieldProps["aria-describedby"]}
+          />
+        </div>
+      )}
+    </WidgetControlRow>
   );
 }
 
 function GradientField({
+  id,
   label,
   value,
   onChange,
   onClear,
 }: {
+  id: string;
   label: string;
   value: string | undefined;
   onChange: (next: string) => void;
@@ -595,51 +630,77 @@ function GradientField({
   };
 
   return (
-    <div className="space-y-2">
-      <ClearableFieldHeader label={label} value={value} onClear={onClear} />
-      <div
-        className="h-10 rounded-md border border-border/70"
-        style={{ backgroundImage: `linear-gradient(${angle}deg, ${start}, ${end})` }}
-      />
-      <div className="grid grid-cols-2 gap-2">
-        <div className="space-y-1">
-          <p className="text-xs text-muted-foreground">Start color</p>
-          <Input
-            type="color"
-            value={resolvePickerColor(start, defaultGradientStart)}
-            onChange={(event) => {
-              emit(angle, event.target.value, end);
-            }}
-            className="h-9 w-full p-1"
+    <WidgetControlRow
+      id={id}
+      label={label}
+      actions={
+        onClear ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onClear}
+            disabled={!hasClearableFieldValue(value)}
+          >
+            Clear
+          </Button>
+        ) : null
+      }
+    >
+      {(fieldProps) => (
+        <div className="space-y-2">
+          <div
+            className="h-10 rounded-md border border-border/70"
+            style={{ backgroundImage: `linear-gradient(${angle}deg, ${start}, ${end})` }}
           />
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">Start color</p>
+              <Input
+                type="color"
+                value={resolvePickerColor(start, defaultGradientStart)}
+                onChange={(event) => {
+                  emit(angle, event.target.value, end);
+                }}
+                className="h-9 w-full p-1"
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              />
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">End color</p>
+              <Input
+                type="color"
+                value={resolvePickerColor(end, defaultGradientEnd)}
+                onChange={(event) => {
+                  emit(angle, start, event.target.value);
+                }}
+                className="h-9 w-full p-1"
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>Angle</span>
+              <span>{Math.round(angle)}deg</span>
+            </div>
+            <Input
+              id={fieldProps.id}
+              type="range"
+              min={0}
+              max={360}
+              step={1}
+              value={angle}
+              onChange={(event) => emit(Number(event.target.value), start, end)}
+              aria-labelledby={fieldProps["aria-labelledby"]}
+              aria-describedby={fieldProps["aria-describedby"]}
+            />
+          </div>
         </div>
-        <div className="space-y-1">
-          <p className="text-xs text-muted-foreground">End color</p>
-          <Input
-            type="color"
-            value={resolvePickerColor(end, defaultGradientEnd)}
-            onChange={(event) => {
-              emit(angle, start, event.target.value);
-            }}
-            className="h-9 w-full p-1"
-          />
-        </div>
-      </div>
-      <div className="space-y-1">
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>Angle</span>
-          <span>{Math.round(angle)}deg</span>
-        </div>
-        <Input
-          type="range"
-          min={0}
-          max={360}
-          step={1}
-          value={angle}
-          onChange={(event) => emit(Number(event.target.value), start, end)}
-        />
-      </div>
-    </div>
+      )}
+    </WidgetControlRow>
   );
 }
 
@@ -662,6 +723,14 @@ export function HeroVisualEditor({
   const style = value.style ?? {};
   const mediaType: HeroMediaType = media.type ?? "none";
   const backgroundMediaType: HeroMediaType = backgroundMedia.type ?? "none";
+  const badge = {
+    enabled: value.badge?.enabled ?? false,
+    label: value.badge?.label ?? "",
+    href: value.badge?.href ?? "",
+    prefix: value.badge?.prefix ?? "",
+    tone: value.badge?.tone ?? "neutral",
+    placement: value.badge?.placement ?? "above-headline",
+  };
   const [presets, setPresets] = useState<HeroPresetSetting[]>([]);
   const [presetsLoading, setPresetsLoading] = useState(true);
   const [presetsError, setPresetsError] = useState<string | null>(null);
@@ -718,6 +787,18 @@ export function HeroVisualEditor({
         label: value.primaryCta?.label ?? "",
         href: value.primaryCta?.href ?? "",
         ...value.primaryCta,
+        ...patch,
+      },
+    });
+  const updateBadge = (patch: Partial<NonNullable<HeroData["badge"]>>) =>
+    update({
+      badge: {
+        enabled: value.badge?.enabled ?? false,
+        label: value.badge?.label ?? "",
+        href: value.badge?.href ?? "",
+        prefix: value.badge?.prefix ?? "",
+        tone: value.badge?.tone ?? "neutral",
+        placement: value.badge?.placement ?? "above-headline",
         ...patch,
       },
     });
@@ -862,6 +943,7 @@ export function HeroVisualEditor({
   return (
     <div className="space-y-4">
       <EditorSection
+        id="hero.variant-presets"
         title="Variant and Presets"
         description="Choose hero orientation and save reusable configurations."
       >
@@ -955,34 +1037,159 @@ export function HeroVisualEditor({
         {presetsError ? <p className="text-xs text-destructive">{presetsError}</p> : null}
       </EditorSection>
 
-      <EditorSection title="Content" description="Edit all copy shown in this Hero block.">
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Headline</p>
-          <Input
-            value={value.headline}
-            onChange={(event) => update({ headline: event.target.value })}
-            placeholder="Build with confidence"
-          />
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Subhead</p>
-          <Textarea
-            value={value.subhead ?? ""}
-            onChange={(event) => update({ subhead: event.target.value })}
-            placeholder="Short supporting message"
-          />
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Body</p>
-          <Textarea
-            value={value.body ?? ""}
-            onChange={(event) => update({ body: event.target.value })}
-            placeholder="Explain the key benefit."
-          />
-        </div>
+      <EditorSection
+        id="hero.badge-headline"
+        title="Badge and headline"
+        description="Control the announcement line and primary hero copy."
+      >
+        <WidgetControlRow id="hero.badge.enabled" label="Show badge">
+          {(fieldProps) => (
+            <Switch
+              checked={badge.enabled}
+              onCheckedChange={(checked) => updateBadge({ enabled: checked })}
+              aria-labelledby={fieldProps["aria-labelledby"]}
+              aria-describedby={fieldProps["aria-describedby"]}
+            />
+          )}
+        </WidgetControlRow>
+        {badge.enabled ? (
+          <>
+            <WidgetControlRow id="hero.badge.label" label="Badge label">
+              {(fieldProps) => (
+                <Input
+                  id={fieldProps.id}
+                  value={badge.label}
+                  onChange={(event) => updateBadge({ label: event.target.value })}
+                  placeholder="Now shipping"
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                />
+              )}
+            </WidgetControlRow>
+            <WidgetControlRow id="hero.badge.prefix" label="Badge prefix">
+              {(fieldProps) => (
+                <Input
+                  id={fieldProps.id}
+                  value={badge.prefix}
+                  onChange={(event) => updateBadge({ prefix: event.target.value })}
+                  placeholder="New"
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                />
+              )}
+            </WidgetControlRow>
+            <WidgetControlRow id="hero.badge.href" label="Badge URL">
+              {(fieldProps) => (
+                <div className="space-y-2">
+                  <Input
+                    id={fieldProps.id}
+                    value={badge.href}
+                    onChange={(event) => updateBadge({ href: event.target.value })}
+                    placeholder="/launch"
+                    aria-labelledby={fieldProps["aria-labelledby"]}
+                    aria-describedby={fieldProps["aria-describedby"]}
+                  />
+                  {!isValidHref(badge.href) ? (
+                    <p className="text-xs text-destructive">
+                      Use a relative path, hash, or full URL.
+                    </p>
+                  ) : null}
+                </div>
+              )}
+            </WidgetControlRow>
+            <div className="grid gap-3 md:grid-cols-2">
+              <WidgetControlRow id="hero.badge.tone" label="Badge tone">
+                {(fieldProps) => (
+                  <Select
+                    value={badge.tone}
+                    onValueChange={(next) => updateBadge({ tone: next as HeroBadgeTone })}
+                  >
+                    <SelectTrigger
+                      id={fieldProps.id}
+                      aria-labelledby={fieldProps["aria-labelledby"]}
+                      aria-describedby={fieldProps["aria-describedby"]}
+                    >
+                      <SelectValue placeholder="Select tone" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {badgeToneOptions.map((option) => (
+                        <SelectItem key={option.id} value={option.id}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </WidgetControlRow>
+              <WidgetControlRow id="hero.badge.placement" label="Badge placement">
+                {(fieldProps) => (
+                  <Select
+                    value={badge.placement}
+                    onValueChange={(next) => updateBadge({ placement: next as HeroBadgePlacement })}
+                  >
+                    <SelectTrigger
+                      id={fieldProps.id}
+                      aria-labelledby={fieldProps["aria-labelledby"]}
+                      aria-describedby={fieldProps["aria-describedby"]}
+                    >
+                      <SelectValue placeholder="Select placement" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {badgePlacementOptions.map((option) => (
+                        <SelectItem key={option.id} value={option.id}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </WidgetControlRow>
+            </div>
+          </>
+        ) : null}
+        <WidgetControlRow id="hero.headline" label="Headline">
+          {(fieldProps) => (
+            <Input
+              id={fieldProps.id}
+              value={value.headline}
+              onChange={(event) => update({ headline: event.target.value })}
+              placeholder="Build with confidence"
+              aria-labelledby={fieldProps["aria-labelledby"]}
+              aria-describedby={fieldProps["aria-describedby"]}
+            />
+          )}
+        </WidgetControlRow>
+        <WidgetControlRow id="hero.subhead" label="Subhead">
+          {(fieldProps) => (
+            <Textarea
+              id={fieldProps.id}
+              value={value.subhead ?? ""}
+              onChange={(event) => update({ subhead: event.target.value })}
+              placeholder="Short supporting message"
+              aria-labelledby={fieldProps["aria-labelledby"]}
+              aria-describedby={fieldProps["aria-describedby"]}
+            />
+          )}
+        </WidgetControlRow>
+        <WidgetControlRow id="hero.body" label="Body">
+          {(fieldProps) => (
+            <Textarea
+              id={fieldProps.id}
+              value={value.body ?? ""}
+              onChange={(event) => update({ body: event.target.value })}
+              placeholder="Explain the key benefit."
+              aria-labelledby={fieldProps["aria-labelledby"]}
+              aria-describedby={fieldProps["aria-describedby"]}
+            />
+          )}
+        </WidgetControlRow>
       </EditorSection>
 
-      <EditorSection title="CTA" description="Manage CTA structure and button appearance.">
+      <EditorSection
+        id="hero.cta"
+        title="CTA"
+        description="Manage CTA structure and button appearance."
+      >
         <div className="space-y-2">
           <p className="text-sm font-medium">CTA layout</p>
           <Select
@@ -1093,6 +1300,7 @@ export function HeroVisualEditor({
 
       {selectedVariant !== "centered" ? (
         <EditorSection
+          id="hero.media"
           title="Media"
           description="Inline media visible only in split and media-left variants."
         >
@@ -1160,7 +1368,11 @@ export function HeroVisualEditor({
         </EditorSection>
       ) : null}
 
-      <EditorSection title="Typography" description="Adjust alignment and text scale.">
+      <EditorSection
+        id="hero.typography"
+        title="Typography"
+        description="Adjust alignment and text scale."
+      >
         <div className="space-y-2">
           <p className="text-sm font-medium">Alignment</p>
           <Select
@@ -1238,35 +1450,41 @@ export function HeroVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="hero.colors-borders"
         title="Colors and Borders"
         description="Fine-tune text, button, and frame styling."
       >
         <div className="grid gap-3 md:grid-cols-2">
           <ColorField
+            id="hero.style.textColor"
             label="Headline color"
             value={style.textColor}
             onChange={(next) => updateStyle({ textColor: next })}
             placeholder="var(--color-text)"
           />
           <ColorField
+            id="hero.style.subheadColor"
             label="Subhead color"
             value={style.subheadColor}
             onChange={(next) => updateStyle({ subheadColor: next })}
             placeholder="rgba(17, 24, 39, 0.8)"
           />
           <ColorField
+            id="hero.style.bodyColor"
             label="Body color"
             value={style.bodyColor}
             onChange={(next) => updateStyle({ bodyColor: next })}
             placeholder="rgba(17, 24, 39, 0.7)"
           />
           <ColorField
+            id="hero.style.borderColor"
             label="Card border color"
             value={style.borderColor}
             onChange={(next) => updateStyle({ borderColor: next })}
             placeholder="var(--color-border)"
           />
           <ColorField
+            id="hero.style.primaryButtonBg"
             label="Primary button background"
             value={style.primaryButtonBg}
             onChange={(next) => updateStyle({ primaryButtonBg: next })}
@@ -1274,18 +1492,21 @@ export function HeroVisualEditor({
             placeholder="var(--color-primary)"
           />
           <ColorField
+            id="hero.style.primaryButtonText"
             label="Primary button text"
             value={style.primaryButtonText}
             onChange={(next) => updateStyle({ primaryButtonText: next })}
             placeholder="var(--color-bg)"
           />
           <ColorField
+            id="hero.style.primaryButtonBorder"
             label="Primary button border"
             value={style.primaryButtonBorder}
             onChange={(next) => updateStyle({ primaryButtonBorder: next })}
             placeholder="transparent"
           />
           <ColorField
+            id="hero.style.secondaryButtonBg"
             label="Secondary button background"
             value={style.secondaryButtonBg}
             onChange={(next) => updateStyle({ secondaryButtonBg: next })}
@@ -1293,18 +1514,21 @@ export function HeroVisualEditor({
             placeholder="transparent"
           />
           <ColorField
+            id="hero.style.secondaryButtonText"
             label="Secondary button text"
             value={style.secondaryButtonText}
             onChange={(next) => updateStyle({ secondaryButtonText: next })}
             placeholder="var(--color-text)"
           />
           <ColorField
+            id="hero.style.secondaryButtonBorder"
             label="Secondary button border"
             value={style.secondaryButtonBorder}
             onChange={(next) => updateStyle({ secondaryButtonBorder: next })}
             placeholder="var(--color-border)"
           />
           <ColorField
+            id="hero.style.mediaBorderColor"
             label="Media frame border color"
             value={style.mediaBorderColor}
             onChange={(next) => updateStyle({ mediaBorderColor: next })}
@@ -1388,10 +1612,12 @@ export function HeroVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="hero.background"
         title="Background"
         description="Background can use image/video from library or external URL."
       >
         <ColorField
+          id="hero.background.color"
           label="Background color"
           value={value.background?.color}
           onChange={(next) => updateBackground({ color: next })}
@@ -1400,6 +1626,7 @@ export function HeroVisualEditor({
           pickerFallback="#ffffff"
         />
         <GradientField
+          id="hero.background.gradient"
           label="Background gradient"
           value={value.background?.gradient}
           onChange={(next) => updateBackground({ gradient: next })}
@@ -1543,6 +1770,7 @@ export function HeroAdvancedEditor({ value, onChange }: WidgetEditorProps<HeroDa
         Advanced mode exposes technical layout controls only.
       </p>
       <EditorSection
+        id="hero.advanced.layout"
         title="Hero Layout"
         description="Control alignment, max width, and internal spacing."
       >
@@ -1643,10 +1871,12 @@ export function HeroAdvancedEditor({ value, onChange }: WidgetEditorProps<HeroDa
       </EditorSection>
 
       <EditorSection
+        id="hero.advanced.background"
         title="Background"
         description="Set color/gradient and optional image or video source."
       >
         <ColorField
+          id="hero.advanced.background.color"
           label="Background color"
           value={value.background?.color}
           onChange={(next) => updateBackground({ color: next })}
@@ -1655,6 +1885,7 @@ export function HeroAdvancedEditor({ value, onChange }: WidgetEditorProps<HeroDa
           pickerFallback="#ffffff"
         />
         <GradientField
+          id="hero.advanced.background.gradient"
           label="Background gradient"
           value={value.background?.gradient}
           onChange={(next) => updateBackground({ gradient: next })}

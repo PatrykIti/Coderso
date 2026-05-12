@@ -124,6 +124,41 @@ test("feature grid cleared card surface omits background style", () => {
   expect(html).not.toContain("background-color:");
 });
 
+test("feature grid strips unsafe CTA hrefs from normalized items", () => {
+  const normalized = normalizeFeatureGridData({
+    ...featureGridDefaults,
+    items: [
+      {
+        id: "feature-1",
+        title: "Safe",
+        ctaLabel: "Read more",
+        ctaHref: "/safe",
+      },
+      {
+        id: "feature-2",
+        title: "Unsafe",
+        ctaLabel: "Break out",
+        ctaHref: "javascript:alert(1)",
+      },
+      {
+        id: "feature-3",
+        title: "Protocol relative",
+        ctaLabel: "Docs",
+        ctaHref: "//evil.example",
+      },
+    ],
+  });
+
+  expect(normalized.items?.[0]?.ctaHref).toBe("/safe");
+  expect(normalized.items?.[1]?.ctaHref).toBeUndefined();
+  expect(normalized.items?.[2]?.ctaHref).toBeUndefined();
+
+  const html = renderToString(<FeatureGridBlock data={normalized} variant="cards-3" />);
+  expect(html).toContain('href="/safe"');
+  expect(html).not.toContain("javascript:alert");
+  expect(html).not.toContain("//evil.example");
+});
+
 test("feature grid validator rejects unsupported variant", () => {
   clearWidgets();
   registerWidget(
