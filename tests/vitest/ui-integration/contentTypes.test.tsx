@@ -16,6 +16,7 @@ test("ContentTypeEditor renders schema preview and actions", () => {
   const html = renderAdminUi(<ContentTypeEditor />);
 
   expect(html).toContain("Schema Preview");
+  expect(html).toContain("Collection workspace");
   expect(html).toContain("Save draft");
   expect(html).toContain("Publish");
 });

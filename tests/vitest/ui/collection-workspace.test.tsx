@@ -4,7 +4,10 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { beforeEach, expect, test, vi } from "vitest";
 
+import type { DetailPageDocument } from "../../../core/services/content/detailPageTypes";
+import type { DetailPageRecord } from "../../../core/admin/services/detailPagesClient";
 import type { ContentTypeCollectionWorkspaceSummary } from "../../../core/admin/services/contentTypesClient";
+import type { SiteSettingsResponse } from "../../../core/admin/services/siteSettingsClient";
 import { AdminRouterProvider } from "../../../core/admin/ui/contexts/AdminRouterContext";
 
 type CacheEvent = {
@@ -78,12 +81,50 @@ const workspaceSummary = {
   },
 } satisfies ContentTypeCollectionWorkspaceSummary;
 
+const workspaceSummaryWithoutDetailTemplate = {
+  ...workspaceSummary,
+  canonical: {
+    ...workspaceSummary.canonical,
+    contentRoute: null,
+    detailPage: null,
+  },
+  unresolved: [
+    { resource: "contentRoute", reason: "missing_content_route" },
+    { resource: "detailPage", reason: "explicit_link_missing" },
+  ],
+  candidates: {
+    ...workspaceSummary.candidates,
+    detailPages: [],
+  },
+} satisfies ContentTypeCollectionWorkspaceSummary;
+
 const collectionWorkspaceState = vi.hoisted(() => {
+  const defaultSiteSettings = (): SiteSettingsResponse => ({
+    adminBaseUrl: null,
+    publicBaseUrl: null,
+    adminPath: "/admin",
+    adminRedirectEnabled: false,
+    homepageId: null,
+    notFoundPageId: null,
+    previewEnabled: true,
+    cacheTtlSeconds: 30,
+    contentRoutes: [
+      {
+        type: "products",
+        listPath: "/products",
+        detailPath: "/products/:slug",
+        enabled: true,
+        detailPageId: "detail-products",
+      },
+    ],
+  });
   const state = {
     cachedSummary: null as ContentTypeCollectionWorkspaceSummary | null,
     remoteSummary: null as ContentTypeCollectionWorkspaceSummary | null,
     remoteError: null as unknown,
     cacheListener: null as ((event: CacheEvent) => void) | null,
+    siteSettings: defaultSiteSettings(),
+    createdDetailPage: null as DetailPageRecord | null,
     getCachedContentTypeCollectionWorkspace: vi.fn((id: string) =>
       state.cachedSummary?.contentType.id === id ? state.cachedSummary : null
     ),
@@ -100,6 +141,35 @@ const collectionWorkspaceState = vi.hoisted(() => {
         }
       };
     }),
+    createDetailPage: vi.fn(async (document: DetailPageDocument) => {
+      const now = "2026-05-12T08:00:00.000Z";
+      const created: DetailPageRecord = {
+        id: document.id,
+        contentTypeId: document.contentTypeId,
+        contentTypeSlug: document.contentTypeSlug,
+        name: document.name,
+        status: document.status,
+        currentDocument: document,
+        publishedDocument: null,
+        createdAt: now,
+        updatedAt: now,
+        publishedAt: null,
+        authorId: null,
+      };
+      state.createdDetailPage = created;
+      return created;
+    }),
+    deleteDetailPage: vi.fn(async () => ({ ok: true })),
+    getSiteSettings: vi.fn(async () => state.siteSettings),
+    updateSiteSettings: vi.fn(async (update: Partial<SiteSettingsResponse>) => {
+      state.siteSettings = {
+        ...state.siteSettings,
+        ...update,
+      };
+      return state.siteSettings;
+    }),
+    toastSuccess: vi.fn(),
+    toastError: vi.fn(),
     triggerCacheEvent(key: string) {
       state.cacheListener?.({ key, action: "update" });
     },
@@ -108,9 +178,17 @@ const collectionWorkspaceState = vi.hoisted(() => {
       state.remoteSummary = null;
       state.remoteError = null;
       state.cacheListener = null;
+      state.siteSettings = defaultSiteSettings();
+      state.createdDetailPage = null;
       state.getCachedContentTypeCollectionWorkspace.mockClear();
       state.getContentTypeCollectionWorkspaceCached.mockClear();
       state.subscribeCacheEvents.mockClear();
+      state.createDetailPage.mockClear();
+      state.deleteDetailPage.mockClear();
+      state.getSiteSettings.mockClear();
+      state.updateSiteSettings.mockClear();
+      state.toastSuccess.mockClear();
+      state.toastError.mockClear();
     },
   };
   return state;
@@ -128,8 +206,25 @@ vi.mock("@/services/apiClient", () => ({
     Boolean(error && typeof error === "object" && "kind" in error),
 }));
 
+vi.mock("@/services/detailPagesClient", () => ({
+  createDetailPage: collectionWorkspaceState.createDetailPage,
+  deleteDetailPage: collectionWorkspaceState.deleteDetailPage,
+}));
+
+vi.mock("@/services/siteSettingsClient", () => ({
+  getSiteSettings: collectionWorkspaceState.getSiteSettings,
+  updateSiteSettings: collectionWorkspaceState.updateSiteSettings,
+}));
+
 vi.mock("@/utils/cacheBus", () => ({
   subscribeCacheEvents: collectionWorkspaceState.subscribeCacheEvents,
+}));
+
+vi.mock("sonner", () => ({
+  toast: {
+    success: collectionWorkspaceState.toastSuccess,
+    error: collectionWorkspaceState.toastError,
+  },
 }));
 
 vi.mock("@/ui/layouts/AdminShell", () => ({
@@ -147,6 +242,28 @@ vi.mock("@/ui/layouts/AdminShell", () => ({
       {children}
     </div>
   ),
+}));
+
+vi.mock("@/ui/shared/ConfirmActionDialog", () => ({
+  ConfirmActionDialog: ({
+    open,
+    title,
+    confirmLabel,
+    onConfirm,
+  }: {
+    open: boolean;
+    title: string;
+    confirmLabel: string;
+    onConfirm: () => void | Promise<void>;
+  }) =>
+    open ? (
+      <div role="dialog">
+        <p>{title}</p>
+        <button type="button" onClick={() => void onConfirm()}>
+          {confirmLabel}
+        </button>
+      </div>
+    ) : null,
 }));
 
 import { cacheKeys } from "../../../core/admin/services/cachePolicy";
@@ -184,9 +301,19 @@ const mount = (path: string) => {
 
 const flush = async () => {
   await React.act(async () => {
-    await Promise.resolve();
-    await Promise.resolve();
-    await Promise.resolve();
+    for (let index = 0; index < 8; index += 1) {
+      await Promise.resolve();
+    }
+  });
+};
+
+const clickButton = (container: HTMLElement, label: string) => {
+  const button = Array.from(container.querySelectorAll("button")).find((candidate) =>
+    candidate.textContent?.includes(label)
+  );
+  expect(button).toBeTruthy();
+  React.act(() => {
+    button?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 };
 
@@ -228,6 +355,87 @@ test("collection workspace keeps cache bus pending state in the page shell", asy
 
     expect(view.container.textContent).toContain("Workspace changed");
     expect(view.container.textContent).toContain("New collection links are available.");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("collection workspace creates and route-links a missing detail template", async () => {
+  collectionWorkspaceState.cachedSummary = workspaceSummaryWithoutDetailTemplate;
+  collectionWorkspaceState.remoteSummary = workspaceSummaryWithoutDetailTemplate;
+  collectionWorkspaceState.siteSettings = {
+    ...collectionWorkspaceState.siteSettings,
+    contentRoutes: [],
+  };
+  const view = mount("/admin/advanced/engine/ct-products/collection");
+
+  try {
+    await flush();
+    expect(view.container.textContent).toContain("Create detail template");
+
+    clickButton(view.container, "Create detail template");
+    await flush();
+
+    expect(collectionWorkspaceState.createDetailPage).toHaveBeenCalledTimes(1);
+    const createdDocument = collectionWorkspaceState.createDetailPage.mock.calls[0]?.[0];
+    expect(createdDocument).toMatchObject({
+      name: "Products detail template",
+      contentTypeId: "ct-products",
+      contentTypeSlug: "products",
+      status: "draft",
+      titlePattern: "{title}",
+      blocks: [],
+      bindings: [],
+    });
+    expect(collectionWorkspaceState.updateSiteSettings).toHaveBeenCalledWith({
+      contentRoutes: [
+        {
+          type: "products",
+          listPath: "/products",
+          detailPath: "/products/:slug",
+          enabled: true,
+          detailPageId: createdDocument?.id,
+        },
+      ],
+    });
+    expect(collectionWorkspaceState.toastSuccess).toHaveBeenCalledWith(
+      'Detail template "Products detail template" created.'
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("collection workspace unlinks a route before deleting its detail template", async () => {
+  collectionWorkspaceState.cachedSummary = workspaceSummary;
+  collectionWorkspaceState.remoteSummary = workspaceSummary;
+  const view = mount("/admin/advanced/engine/ct-products/collection");
+
+  try {
+    await flush();
+    clickButton(view.container, "Delete");
+    expect(view.container.textContent).toContain("Delete detail template?");
+
+    clickButton(view.container, "Delete detail template");
+    await flush();
+
+    expect(collectionWorkspaceState.updateSiteSettings).toHaveBeenCalledWith({
+      contentRoutes: [
+        {
+          type: "products",
+          listPath: "/products",
+          detailPath: "/products/:slug",
+          enabled: true,
+          detailPageId: null,
+        },
+      ],
+    });
+    expect(collectionWorkspaceState.deleteDetailPage).toHaveBeenCalledWith("detail-products", {
+      contentTypeId: "ct-products",
+    });
+    expect(collectionWorkspaceState.toastSuccess).toHaveBeenCalledWith(
+      'Detail template "Product Detail" deleted.'
+    );
   } finally {
     view.cleanup();
   }

@@ -1,4 +1,7 @@
+import { Pencil, Plus, Trash2 } from "lucide-react";
+
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import type {
   CollectionWorkspaceCandidate,
   ContentTypeCollectionWorkspaceSummary,
@@ -9,6 +12,10 @@ import { buildDetailTemplateEditorHref } from "./detailTemplateEditorModel";
 
 type CollectionOverviewProps = {
   summary: ContentTypeCollectionWorkspaceSummary;
+  isCreatingDetailTemplate?: boolean;
+  deletingDetailTemplateId?: string | null;
+  onCreateDetailTemplate?: () => void;
+  onDeleteDetailTemplate?: (candidate: CollectionWorkspaceCandidate) => void;
 };
 
 type ResourceItem = {
@@ -75,7 +82,13 @@ const renderResourceValue = (item: ResourceItem) => {
   return content;
 };
 
-export function CollectionOverview({ summary }: CollectionOverviewProps) {
+export function CollectionOverview({
+  summary,
+  isCreatingDetailTemplate = false,
+  deletingDetailTemplateId = null,
+  onCreateDetailTemplate,
+  onDeleteDetailTemplate,
+}: CollectionOverviewProps) {
   const resourceItems: ResourceItem[] = [
     {
       key: "contentRoute",
@@ -144,14 +157,59 @@ export function CollectionOverview({ summary }: CollectionOverviewProps) {
           </Badge>
         </div>
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {resourceItems.map((item) => (
-            <div key={item.key} className="min-w-0 rounded-lg border bg-background p-4">
-              <div className="mb-2 text-xs font-medium uppercase text-muted-foreground">
-                {item.label}
+          {resourceItems.map((item) => {
+            const detailPage =
+              item.key === "detailPage" && item.value && typeof item.value !== "string"
+                ? item.value
+                : null;
+            const isDeletingDetailTemplate =
+              Boolean(detailPage) && deletingDetailTemplateId === detailPage?.id;
+
+            return (
+              <div key={item.key} className="min-w-0 rounded-lg border bg-background p-4">
+                <div className="mb-2 text-xs font-medium uppercase text-muted-foreground">
+                  {item.label}
+                </div>
+                {renderResourceValue(item)}
+                {item.key === "detailPage" ? (
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    {item.href ? (
+                      <Button asChild variant="outline" size="sm">
+                        <AdminLink href={item.href} prefetch>
+                          <Pencil className="h-4 w-4" />
+                          Edit
+                        </AdminLink>
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="gap-2"
+                        disabled={!onCreateDetailTemplate || isCreatingDetailTemplate}
+                        onClick={onCreateDetailTemplate}
+                      >
+                        <Plus className="h-4 w-4" />
+                        {isCreatingDetailTemplate ? "Creating..." : "Create detail template"}
+                      </Button>
+                    )}
+                    {detailPage ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="gap-2"
+                        disabled={!onDeleteDetailTemplate || isDeletingDetailTemplate}
+                        onClick={() => onDeleteDetailTemplate?.(detailPage)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        {isDeletingDetailTemplate ? "Deleting..." : "Delete"}
+                      </Button>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
-              {renderResourceValue(item)}
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>

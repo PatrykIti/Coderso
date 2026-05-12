@@ -110,6 +110,16 @@ Detail templates moga mapowac wybrane sciezki propsow widgetu do danych wpisu
 przez `DetailPageDocument.bindings`. Prawy inspector detail template ma zakladke
 `Data`, ktora zapisuje bindingi dla zaznaczonego bloku.
 
+Detail template tworzy sie z workspace kolekcji:
+`Advanced -> Engine -> <content type> -> Collection -> Canonical resources`.
+Z edytora content type (`/admin/advanced/engine/:id`) prowadzi tam akcja
+`Collection workspace`.
+Karta `Detail page` pokazuje akcje `Create detail template`, gdy kolekcja nie
+ma jeszcze route-linked detail template. Akcja tworzy draft `DetailPageDocument`,
+podpina go do `site.contentRoutes.detailPageId`, odswieza workspace i otwiera
+ten sam builder-style edytor co route-linked detail template. Usuniecie z tej
+karty najpierw odpina `detailPageId` z route, a potem usuwa dokument.
+
 Zasady:
 
 - literalne `block.data` pozostaje defaultem i fallbackiem widocznym w edytorze;

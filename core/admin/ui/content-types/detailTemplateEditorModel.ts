@@ -54,6 +54,26 @@ export const buildDetailTemplateEditorHref = (contentTypeId: string, detailPageI
     detailPageId
   )}`;
 
+export const buildDefaultDetailTemplateDocument = (input: {
+  contentTypeId: string;
+  contentTypeSlug: string;
+  contentTypeName: string;
+}): DetailPageDocument => ({
+  schemaVersion: 1,
+  id: crypto.randomUUID(),
+  name: `${normalizeText(input.contentTypeName, input.contentTypeSlug)} detail template`,
+  contentTypeId: input.contentTypeId,
+  contentTypeSlug: input.contentTypeSlug,
+  status: "draft",
+  titlePattern: "{title}",
+  settings: {
+    template: "detail",
+    layout: normalizePageLayoutSettings(undefined),
+  },
+  blocks: [],
+  bindings: [],
+});
+
 export const resolveDetailTemplateEditorRoute = (
   pathname: string
 ): DetailTemplateEditorRoute | null => {

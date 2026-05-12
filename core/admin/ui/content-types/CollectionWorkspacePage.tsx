@@ -9,15 +9,33 @@ import { cacheKeys } from "@/services/cachePolicy";
 import {
   getCachedContentTypeCollectionWorkspace,
   getContentTypeCollectionWorkspaceCached,
+  type CollectionWorkspaceCandidate,
   type ContentTypeCollectionWorkspaceSummary,
 } from "@/services/contentTypesClient";
+import {
+  createDetailPage,
+  deleteDetailPage,
+  type DetailPageRecord,
+} from "@/services/detailPagesClient";
+import {
+  getSiteSettings,
+  updateSiteSettings,
+  type SiteContentRoute,
+} from "@/services/siteSettingsClient";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { AdminShell } from "@/ui/layouts/AdminShell";
+import { buildDefaultRoute } from "@/ui/site/siteSettingsValidation";
+import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
+import { createListActionToastAdapter } from "@/ui/shared/listActionToasts";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 
 import { CollectionOverview } from "./CollectionOverview";
 import { CollectionReadinessChecklist } from "./CollectionReadinessChecklist";
+import {
+  buildDefaultDetailTemplateDocument,
+  buildDetailTemplateEditorHref,
+} from "./detailTemplateEditorModel";
 import { resolveContentTypeIdFromPath } from "./pathResolvers";
 
 type WorkspaceState = {
@@ -28,6 +46,30 @@ type WorkspaceState = {
   isRefreshing: boolean;
   remoteUpdatePending: boolean;
 };
+
+type DetailTemplateDeleteTarget = {
+  id: string;
+  label: string;
+};
+
+const detailTemplateToasts = createListActionToastAdapter<"create" | "delete">({
+  labels: {
+    singular: "detail template",
+    plural: "detail templates",
+  },
+  actions: {
+    create: {
+      pastTense: "created",
+      failureVerb: "create",
+      errorFallback: "Failed to create detail template.",
+    },
+    delete: {
+      pastTense: "deleted",
+      failureVerb: "delete",
+      errorFallback: "Failed to delete detail template.",
+    },
+  },
+});
 
 const emptyWorkspaceState = (contentTypeId: string | null): WorkspaceState => ({
   contentTypeId,
@@ -45,13 +87,46 @@ const getErrorMessage = (error: unknown) => {
   return "Failed to load collection workspace.";
 };
 
+const upsertDetailTemplateRoute = (
+  routes: SiteContentRoute[],
+  contentTypeSlug: string,
+  detailPageId: string
+) => {
+  const routeIndex = routes.findIndex((route) => route.type === contentTypeSlug);
+  const existingRoute = routeIndex >= 0 ? routes[routeIndex] : null;
+  const nextRoute: SiteContentRoute = existingRoute
+    ? { ...existingRoute, enabled: true, detailPageId }
+    : { ...buildDefaultRoute(contentTypeSlug), detailPageId };
+
+  if (routeIndex < 0) return [...routes, nextRoute];
+  return routes.map((route, index) => (index === routeIndex ? nextRoute : route));
+};
+
+const clearDetailTemplateRoute = (
+  routes: SiteContentRoute[],
+  contentTypeSlug: string,
+  detailPageId: string
+) => {
+  let changed = false;
+  const nextRoutes = routes.map((route) => {
+    if (route.type !== contentTypeSlug || route.detailPageId !== detailPageId) return route;
+    changed = true;
+    return { ...route, detailPageId: null };
+  });
+  return { changed, nextRoutes };
+};
+
 export function CollectionWorkspacePage() {
-  const { path } = useAdminRouter();
+  const { path, navigate } = useAdminRouter();
   const contentTypeId = useMemo(() => resolveContentTypeIdFromPath(path), [path]);
   const requestSeq = useRef(0);
   const [workspaceState, setWorkspaceState] = useState<WorkspaceState>(() =>
     emptyWorkspaceState(contentTypeId)
   );
+  const [isCreatingDetailTemplate, setIsCreatingDetailTemplate] = useState(false);
+  const [pendingDetailTemplateDelete, setPendingDetailTemplateDelete] =
+    useState<DetailTemplateDeleteTarget | null>(null);
+  const [deletingDetailTemplateId, setDeletingDetailTemplateId] = useState<string | null>(null);
 
   const visibleState =
     workspaceState.contentTypeId === contentTypeId
@@ -157,6 +232,100 @@ export function CollectionWorkspacePage() {
     });
   }, [contentTypeId]);
 
+  const handleCreateDetailTemplate = useCallback(async () => {
+    if (!summary) return;
+    setIsCreatingDetailTemplate(true);
+    setWorkspaceState((prev) => ({ ...prev, error: null }));
+    let created: DetailPageRecord | null = null;
+
+    try {
+      const document = buildDefaultDetailTemplateDocument({
+        contentTypeId: summary.contentType.id,
+        contentTypeSlug: summary.contentType.slug,
+        contentTypeName: summary.contentType.name,
+      });
+      created = await createDetailPage(document);
+      const settings = await getSiteSettings();
+      const nextRoutes = upsertDetailTemplateRoute(
+        settings.contentRoutes,
+        summary.contentType.slug,
+        created.id
+      );
+      await updateSiteSettings({ contentRoutes: nextRoutes });
+      detailTemplateToasts.success("create", { targetLabel: created.name });
+      await refreshWorkspace({ force: true, showRefreshing: true });
+      navigate(buildDetailTemplateEditorHref(summary.contentType.id, created.id));
+    } catch (error) {
+      if (created) {
+        try {
+          await deleteDetailPage(created.id, { contentTypeId: created.contentTypeId });
+        } catch {
+          // The visible failure is the create/link operation; cleanup is best effort.
+        }
+      }
+      const message = detailTemplateToasts.error("create", error);
+      setWorkspaceState((prev) => ({
+        ...prev,
+        error: message,
+      }));
+    } finally {
+      setIsCreatingDetailTemplate(false);
+    }
+  }, [navigate, refreshWorkspace, summary]);
+
+  const handleRequestDetailTemplateDelete = useCallback(
+    (candidate: CollectionWorkspaceCandidate) => {
+      setPendingDetailTemplateDelete({
+        id: candidate.id,
+        label: candidate.label,
+      });
+    },
+    []
+  );
+
+  const handleConfirmDetailTemplateDelete = useCallback(async () => {
+    if (!summary || !pendingDetailTemplateDelete) return;
+    setDeletingDetailTemplateId(pendingDetailTemplateDelete.id);
+    setWorkspaceState((prev) => ({ ...prev, error: null }));
+    let previousRoutes: SiteContentRoute[] | null = null;
+
+    try {
+      const settings = await getSiteSettings();
+      const cleared = clearDetailTemplateRoute(
+        settings.contentRoutes,
+        summary.contentType.slug,
+        pendingDetailTemplateDelete.id
+      );
+      if (cleared.changed) {
+        previousRoutes = settings.contentRoutes;
+        await updateSiteSettings({ contentRoutes: cleared.nextRoutes });
+      }
+      await deleteDetailPage(pendingDetailTemplateDelete.id, {
+        contentTypeId: summary.contentType.id,
+      });
+      detailTemplateToasts.success("delete", {
+        targetLabel: pendingDetailTemplateDelete.label,
+      });
+      setPendingDetailTemplateDelete(null);
+      await refreshWorkspace({ force: true, showRefreshing: true });
+    } catch (error) {
+      if (previousRoutes) {
+        try {
+          await updateSiteSettings({ contentRoutes: previousRoutes });
+        } catch {
+          // Keep the original delete failure visible; restoring the link is best effort.
+        }
+      }
+      const message = detailTemplateToasts.error("delete", error);
+      setWorkspaceState((prev) => ({
+        ...prev,
+        error: message,
+      }));
+    } finally {
+      setDeletingDetailTemplateId(null);
+    }
+  }, [pendingDetailTemplateDelete, refreshWorkspace, summary]);
+
   const headerTitle = summary?.contentType.name ?? "Collection workspace";
   const headerDescription = summary
     ? `/${summary.contentType.slug}`
@@ -233,11 +402,34 @@ export function CollectionWorkspacePage() {
 
         {summary ? (
           <>
-            <CollectionOverview summary={summary} />
+            <CollectionOverview
+              summary={summary}
+              isCreatingDetailTemplate={isCreatingDetailTemplate}
+              deletingDetailTemplateId={deletingDetailTemplateId}
+              onCreateDetailTemplate={() => void handleCreateDetailTemplate()}
+              onDeleteDetailTemplate={handleRequestDetailTemplateDelete}
+            />
             <CollectionReadinessChecklist summary={summary} />
           </>
         ) : null}
       </div>
+
+      <ConfirmActionDialog
+        open={Boolean(pendingDetailTemplateDelete)}
+        title="Delete detail template?"
+        description={
+          pendingDetailTemplateDelete
+            ? `This deletes "${pendingDetailTemplateDelete.label}" and clears it from the collection route.`
+            : "This deletes the detail template and clears it from the collection route."
+        }
+        confirmLabel="Delete detail template"
+        confirmingLabel="Deleting..."
+        isConfirming={Boolean(deletingDetailTemplateId)}
+        onOpenChange={(open) => {
+          if (!open && !deletingDetailTemplateId) setPendingDetailTemplateDelete(null);
+        }}
+        onConfirm={() => void handleConfirmDetailTemplateDelete()}
+      />
     </AdminShell>
   );
 }

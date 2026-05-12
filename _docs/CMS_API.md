@@ -1654,6 +1654,16 @@ Rules:
   The editor uses the same `/detail-pages*` lifecycle routes plus bounded
   `entriesClient` reads for the preview sample entry; it does not own a
   separate detail-page fetch or preview transport.
+- The Engine collection workspace may create the missing manual detail template
+  from the canonical resource card. The browser creates a draft
+  `DetailPageDocument` through `POST /detail-pages`, then links the returned id
+  through the existing Site Settings `site.contentRoutes.detailPageId` owner. If
+  no route exists for the content type slug, the workspace writes the same
+  default route shape that Site Settings suggests: `/{slug}` and `/{slug}/:slug`.
+- Workspace deletion of the canonical detail template clears the matching
+  `site.contentRoutes.detailPageId` first and then calls `DELETE /detail-pages/:id`;
+  this preserves the route-conflict guard while keeping the UI action
+  one-click-confirmable for admins.
 - The detail template editor exposes block-level Data bindings for
   `document.bindings` through the same `PATCH /detail-pages/:id` draft payload.
   Block `data` remains fallback/default content; public detail runtime overlays
@@ -2101,6 +2111,12 @@ bounded candidates, and route-derived canonical data requires `settings:read`.
 The canonical detail-page candidate links to the manual detail-template editor
 under the same Engine workspace route family; hover/focus prefetch warms the
 workspace summary, detail-page record, and sample entries with cached reads.
+When the canonical detail-page candidate is missing, the same workspace card
+offers a create action that persists a draft detail template, links it through
+`site.contentRoutes.detailPageId`, refreshes the workspace summary, and opens
+the shared builder-style editor. Deleting the canonical detail template from the
+card first clears the matching route link, then deletes the document through the
+existing detail-page lifecycle route.
 TASK-190 blueprint composition consumes this same workspace/detail-page read
 model for supported mixed setup follow-ups. The assistant may request
 server-derived resource catalog inclusion, but clients cannot submit trusted
