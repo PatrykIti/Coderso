@@ -94,6 +94,9 @@ Zasady:
 - Prawy inspector utrzymuje kompaktowy naglowek zaznaczonego widgetu; stale
   helper copy nad zakladkami jest zastapione ikonami `Info`, a duze karty
   informacyjne sa zarezerwowane dla blokujacych ostrzezen.
+- Tryby `Visual` i `Advanced` preferuja jedna opcje na linie. Responsywne
+  wielokolumnowe grupy kontroli sa redukowane do jednego stosu, aby etykiety i
+  inputy nie nachodzily na siebie w prawym inspectorze.
 - Tryby edytora emituja stabilne metadane automatyzacyjne:
   `data-widget-editor`, `data-widget-editor-mode`,
   `data-widget-editor-section`, i `data-widget-control`.

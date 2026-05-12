@@ -127,6 +127,21 @@
 }
 
 @layer components {
+  [data-widget-editor-mode="visual"] [class*="sm:grid-cols-2"],
+  [data-widget-editor-mode="visual"] [class*="sm:grid-cols-3"],
+  [data-widget-editor-mode="visual"] [class*="sm:grid-cols-["],
+  [data-widget-editor-mode="visual"] [class*="md:grid-cols-2"],
+  [data-widget-editor-mode="visual"] [class*="md:grid-cols-3"],
+  [data-widget-editor-mode="visual"] [class*="md:grid-cols-["],
+  [data-widget-editor-mode="advanced"] [class*="sm:grid-cols-2"],
+  [data-widget-editor-mode="advanced"] [class*="sm:grid-cols-3"],
+  [data-widget-editor-mode="advanced"] [class*="sm:grid-cols-["],
+  [data-widget-editor-mode="advanced"] [class*="md:grid-cols-2"],
+  [data-widget-editor-mode="advanced"] [class*="md:grid-cols-3"],
+  [data-widget-editor-mode="advanced"] [class*="md:grid-cols-["] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
   .toaster [data-sonner-toast] {
     background: var(--normal-bg);
     color: var(--normal-text);
@@ -273,7 +288,17 @@
   }
 
   .post-editor-richtext [data-font="mono"] {
-    font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace);
+    font-family: var(
+      --font-mono,
+      ui-monospace,
+      SFMono-Regular,
+      Menlo,
+      Monaco,
+      Consolas,
+      "Liberation Mono",
+      "Courier New",
+      monospace
+    );
   }
 
   .post-editor-richtext [data-text-scale="sm"] {
@@ -412,7 +437,17 @@
   }
 
   .post-runtime-blocks [data-font="mono"] {
-    font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace);
+    font-family: var(
+      --font-mono,
+      ui-monospace,
+      SFMono-Regular,
+      Menlo,
+      Monaco,
+      Consolas,
+      "Liberation Mono",
+      "Courier New",
+      monospace
+    );
   }
 
   .post-runtime-blocks [data-text-scale="sm"] {
