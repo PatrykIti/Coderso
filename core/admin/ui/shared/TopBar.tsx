@@ -1,26 +1,38 @@
 import { Bell, HelpCircle } from "lucide-react";
+import type { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import {
+  AdminBreadcrumbs,
+  buildAdminBreadcrumbItemsFromNode,
+  isAdminBreadcrumbItems,
+  type AdminBreadcrumbInput,
+} from "@/ui/shared/AdminBreadcrumbs";
 import { AdminThemeSwitcher } from "@/ui/shared/AdminThemeSwitcher";
 
 type TopBarProps = {
-  navToggle?: React.ReactNode;
-  breadcrumbs?: React.ReactNode;
-  search?: React.ReactNode;
-  actions?: React.ReactNode;
-  user?: React.ReactNode;
+  navToggle?: ReactNode;
+  breadcrumbs?: ReactNode | AdminBreadcrumbInput[];
+  search?: ReactNode;
+  actions?: ReactNode;
+  user?: ReactNode;
   className?: string;
 };
 
-export function TopBar({
-  navToggle,
-  breadcrumbs,
-  search,
-  actions,
-  user,
-  className,
-}: TopBarProps) {
+export function TopBar({ navToggle, breadcrumbs, search, actions, user, className }: TopBarProps) {
+  const renderedBreadcrumbs = (() => {
+    if (isAdminBreadcrumbItems(breadcrumbs)) {
+      return <AdminBreadcrumbs items={breadcrumbs} />;
+    }
+    if (breadcrumbs) {
+      const derivedItems = buildAdminBreadcrumbItemsFromNode(breadcrumbs);
+      if (derivedItems) return <AdminBreadcrumbs items={derivedItems} />;
+      return breadcrumbs;
+    }
+    return <AdminBreadcrumbs items={[{ label: "Home", href: "/admin" }, { label: "Dashboard" }]} />;
+  })();
+
   return (
     <header
       className={cn(
@@ -30,19 +42,9 @@ export function TopBar({
     >
       <div className="flex min-w-0 items-center gap-3 text-sm text-[var(--admin-topbar-text)]">
         {navToggle}
-        <div className="min-w-0 truncate">
-          {breadcrumbs ?? (
-            <div className="flex items-center gap-2">
-              <span>Home</span>
-              <span className="text-[var(--admin-topbar-text)]/60">/</span>
-              <span className="text-[var(--admin-base-text)]">Dashboard</span>
-            </div>
-          )}
-        </div>
+        <div className="min-w-0 truncate">{renderedBreadcrumbs}</div>
       </div>
-      <div className="order-3 w-full lg:order-none lg:flex-1 lg:px-6">
-        {search}
-      </div>
+      <div className="order-3 w-full lg:order-none lg:flex-1 lg:px-6">{search}</div>
       <div className="ml-auto flex flex-wrap items-center gap-2 lg:ml-0 lg:flex-nowrap">
         <AdminThemeSwitcher />
         {actions}

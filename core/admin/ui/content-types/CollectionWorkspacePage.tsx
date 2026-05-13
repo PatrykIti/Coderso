@@ -336,15 +336,7 @@ export function CollectionWorkspacePage() {
   return (
     <AdminShell
       activeHref="/admin/advanced/engine"
-      breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Advanced</span>
-          <span>/</span>
-          <span>Engine</span>
-          <span>/</span>
-          <span className="text-foreground">Collection</span>
-        </div>
-      }
+      breadcrumbs={["Advanced", "Engine", "Collection"]}
     >
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
         <PageHeader

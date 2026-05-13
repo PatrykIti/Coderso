@@ -85,6 +85,14 @@ przez `setup.completed=true`.
 - `Engine` (`/admin/advanced/engine`) - content model builder (content types + schema).
   - Collection workspace route:
     `/admin/advanced/engine/:contentTypeId/collection`.
+- Admin breadcrumbs render through `AdminBreadcrumbs` in `TopBar`: screens
+  should pass terse label arrays, for example
+  `["Advanced", "Engine", "Collection"]` or `["Content", typeLabel, title]`.
+  Structured `{ label, href }` items are only needed when a crumb must override
+  the inferred route. Existing local breadcrumb JSX is normalized into clickable
+  admin links when labels map to known admin routes. Breadcrumb links must
+  continue to use `AdminLink` / admin route helpers instead of hand-built
+  anchors.
 - `Entries` (`/admin/advanced/entries`) - wpisy rekordow typow z Engine.
   - `Screens` (`/admin/advanced/custom-screens`) - custom admin screens z widgetow dla danych entry.
   - `Widgets` (`/admin/advanced/widgets`) - biblioteka widgetow i template editor.
@@ -557,6 +565,12 @@ Aktualnie zaimplementowany business setup surface:
   `contentTypes:collectionWorkspace:<contentTypeId>`, and the
   `/advanced/engine/:contentTypeId/collection` shell owns only route-local
   refresh/pending UX,
+- the collection workspace is a navigation hub for canonical resources, not a
+  second owner for every resource type: detail-template create/delete remains
+  workspace-owned because it links `site.contentRoutes.detailPageId`, while
+  canonical list pages, listing queries, listing templates, admin screens, and
+  route settings link to their existing Pages, Listings, Custom Screens, and
+  Settings owner surfaces,
 - canonical detail templates can be opened from that workspace at
   `/admin/advanced/engine/:contentTypeId/collection/detail-template/:detailPageId`.
   The editor stays in the content-types admin family, reuses the existing

@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 844 | 2026-05-13 | Admin breadcrumbs and workspace links | CMS Content/Admin UI |
 | 843 | 2026-05-12 | Detail template workspace actions | CMS Content/Admin UI |
 | 842 | 2026-05-12 | Detail template field bindings | CMS Content/Admin UI |
 | 841 | 2026-05-12 | Widget editor single-column control stacking | CMS Widgets/Admin UI |

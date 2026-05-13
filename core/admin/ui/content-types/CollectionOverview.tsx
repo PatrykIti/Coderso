@@ -1,4 +1,4 @@
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { ExternalLink, Pencil, Plus, Trash2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,9 @@ type ResourceItem = {
   label: string;
   value: CollectionWorkspaceCandidate | string | null;
   href?: string | null;
+  actionHref?: string | null;
+  actionLabel?: string | null;
+  actionIcon?: "edit" | "create" | "open";
 };
 
 const formatUpdatedAt = (value: string | null | undefined) => {
@@ -89,11 +92,17 @@ export function CollectionOverview({
   onCreateDetailTemplate,
   onDeleteDetailTemplate,
 }: CollectionOverviewProps) {
+  const listingQueryCreateHref = `/advanced/listings/new?contentTypeId=${encodeURIComponent(
+    summary.contentType.id
+  )}`;
   const resourceItems: ResourceItem[] = [
     {
       key: "contentRoute",
       label: "Route",
       value: summary.canonical.contentRoute?.listPath ?? null,
+      actionHref: "/settings/site",
+      actionLabel: "Open settings",
+      actionIcon: "open",
     },
     {
       key: "detailPage",
@@ -103,14 +112,54 @@ export function CollectionOverview({
         ? buildDetailTemplateEditorHref(summary.contentType.id, summary.canonical.detailPage.id)
         : null,
     },
-    { key: "listPage", label: "List page", value: summary.canonical.listPage },
-    { key: "listingQuery", label: "Listing query", value: summary.canonical.listingQuery },
+    {
+      key: "listPage",
+      label: "List page",
+      value: summary.canonical.listPage,
+      href: summary.canonical.listPage
+        ? `/pages/${encodeURIComponent(summary.canonical.listPage.id)}`
+        : null,
+      actionHref: summary.canonical.listPage
+        ? `/pages/${encodeURIComponent(summary.canonical.listPage.id)}`
+        : "/pages",
+      actionLabel: summary.canonical.listPage ? "Edit page" : "Open Pages",
+      actionIcon: summary.canonical.listPage ? "edit" : "open",
+    },
+    {
+      key: "listingQuery",
+      label: "Listing query",
+      value: summary.canonical.listingQuery,
+      href: summary.canonical.listingQuery
+        ? `/advanced/listings/${encodeURIComponent(summary.canonical.listingQuery.id)}`
+        : null,
+      actionHref: summary.canonical.listingQuery
+        ? `/advanced/listings/${encodeURIComponent(summary.canonical.listingQuery.id)}`
+        : listingQueryCreateHref,
+      actionLabel: summary.canonical.listingQuery ? "Edit query" : "Create query",
+      actionIcon: summary.canonical.listingQuery ? "edit" : "create",
+    },
     {
       key: "listingTemplate",
       label: "Listing template",
       value: summary.canonical.listingTemplate,
+      href: "/advanced/listings?tab=templates",
+      actionHref: "/advanced/listings?tab=templates",
+      actionLabel: "Open templates",
+      actionIcon: "open",
     },
-    { key: "adminScreen", label: "Admin screen", value: summary.canonical.adminScreen },
+    {
+      key: "adminScreen",
+      label: "Admin screen",
+      value: summary.canonical.adminScreen,
+      href: summary.canonical.adminScreen
+        ? `/advanced/custom-screens/${encodeURIComponent(summary.canonical.adminScreen.id)}`
+        : null,
+      actionHref: summary.canonical.adminScreen
+        ? `/advanced/custom-screens/${encodeURIComponent(summary.canonical.adminScreen.id)}`
+        : "/advanced/custom-screens",
+      actionLabel: summary.canonical.adminScreen ? "Edit screen" : "Open Screens",
+      actionIcon: summary.canonical.adminScreen ? "edit" : "open",
+    },
   ];
 
   return (
@@ -205,6 +254,21 @@ export function CollectionOverview({
                         {isDeletingDetailTemplate ? "Deleting..." : "Delete"}
                       </Button>
                     ) : null}
+                  </div>
+                ) : item.actionHref && item.actionLabel ? (
+                  <div className="mt-3">
+                    <Button asChild variant="outline" size="sm">
+                      <AdminLink href={item.actionHref} prefetch>
+                        {item.actionIcon === "create" ? (
+                          <Plus className="h-4 w-4" />
+                        ) : item.actionIcon === "open" ? (
+                          <ExternalLink className="h-4 w-4" />
+                        ) : (
+                          <Pencil className="h-4 w-4" />
+                        )}
+                        {item.actionLabel}
+                      </AdminLink>
+                    </Button>
                   </div>
                 ) : null}
               </div>

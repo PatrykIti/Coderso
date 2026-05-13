@@ -16,10 +16,7 @@ import {
   type CustomScreenCreateInput,
   type CustomScreenStatus,
 } from "@/services/customScreensClient";
-import {
-  getUserSettings,
-  setUserSetting,
-} from "@/services/userSettingsClient";
+import { getUserSettings, setUserSetting } from "@/services/userSettingsClient";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
@@ -62,12 +59,10 @@ export function CustomScreenListPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] =
-    useState<CustomScreenFilterStatus>("all");
+  const [statusFilter, setStatusFilter] = useState<CustomScreenFilterStatus>("all");
   const [contentTypeFilter, setContentTypeFilter] = useState("all");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [bulkAction, setBulkAction] =
-    useState<CustomScreenBulkActionValue | "">("");
+  const [bulkAction, setBulkAction] = useState<CustomScreenBulkActionValue | "">("");
   const [isBulkWorking, setIsBulkWorking] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [drawerKey, setDrawerKey] = useState(0);
@@ -79,10 +74,7 @@ export function CustomScreenListPage() {
   const [pendingBulkDeleteIds, setPendingBulkDeleteIds] = useState<string[]>([]);
   const contentTypesHydratedRef = useRef(hasInitialContentTypes);
 
-  const refreshScreens = useCallback(
-    () => refresh({ force: true, background: true }),
-    [refresh]
-  );
+  const refreshScreens = useCallback(() => refresh({ force: true, background: true }), [refresh]);
 
   const refreshContentTypes = useCallback(
     async (options?: { force?: boolean; background?: boolean }) => {
@@ -126,9 +118,7 @@ export function CustomScreenListPage() {
   useEffect(() => {
     return subscribeCacheEvents((event) => {
       if (event.key !== cacheKeys.contentTypesList) return;
-      refreshContentTypes({ force: true, background: true }).catch(
-        () => undefined
-      );
+      refreshContentTypes({ force: true, background: true }).catch(() => undefined);
     });
   }, [refreshContentTypes]);
 
@@ -148,22 +138,13 @@ export function CustomScreenListPage() {
     };
   }, []);
 
-  const rows = useMemo(
-    () => buildCustomScreenListRows(items, contentTypes),
-    [contentTypes, items]
-  );
+  const rows = useMemo(() => buildCustomScreenListRows(items, contentTypes), [contentTypes, items]);
   const contentTypeOptions = useMemo(
     () => buildCustomScreenContentTypeFilterOptions(rows, contentTypes),
     [contentTypes, rows]
   );
   const filteredRows = useMemo(
-    () =>
-      filterCustomScreenRows(
-        rows,
-        searchQuery,
-        statusFilter,
-        contentTypeFilter
-      ),
+    () => filterCustomScreenRows(rows, searchQuery, statusFilter, contentTypeFilter),
     [contentTypeFilter, rows, searchQuery, statusFilter]
   );
   const pagination = useListPagination(filteredRows, {
@@ -179,8 +160,7 @@ export function CustomScreenListPage() {
   );
   const visibleSelectedIds = selectedIds.filter((id) => visibleIds.includes(id));
   const selectedCount = visibleSelectedIds.length;
-  const isAllSelected =
-    visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
+  const isAllSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
   const isIndeterminate = selectedCount > 0 && !isAllSelected;
 
   const handleDrawerOpenChange = (next: boolean) => {
@@ -269,9 +249,7 @@ export function CustomScreenListPage() {
 
   const handleToggleScreen = (id: string) => {
     setSelectedIds((prev) =>
-      prev.includes(id)
-        ? prev.filter((screenId) => screenId !== id)
-        : [...prev, id]
+      prev.includes(id) ? prev.filter((screenId) => screenId !== id) : [...prev, id]
     );
   };
 
@@ -284,10 +262,7 @@ export function CustomScreenListPage() {
     setBulkAction("");
   };
 
-  const runBulkAction = async (
-    action: CustomScreenBulkActionValue,
-    ids: string[]
-  ) => {
+  const runBulkAction = async (action: CustomScreenBulkActionValue, ids: string[]) => {
     if (ids.length === 0) return;
     setIsBulkWorking(true);
     setActionError(null);
@@ -301,11 +276,7 @@ export function CustomScreenListPage() {
         })
       );
       await refreshScreens();
-      const summary = customScreenListToasts.summarizeBulkAction(
-        action,
-        ids,
-        results
-      );
+      const summary = customScreenListToasts.summarizeBulkAction(action, ids, results);
       customScreenListToasts.emitBulk(summary);
       if (!summary.ok) {
         setActionError(summary.inlineMessage);
@@ -339,16 +310,7 @@ export function CustomScreenListPage() {
   };
 
   return (
-    <AdminShell
-      activeHref="/admin/advanced/custom-screens"
-      breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Coderso</span>
-          <span>/</span>
-          <span className="text-foreground">Screens</span>
-        </div>
-      }
-    >
+    <AdminShell activeHref="/admin/advanced/custom-screens" breadcrumbs={["Coderso", "Screens"]}>
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <PageHeader
           title="Custom Screens"
@@ -404,9 +366,7 @@ export function CustomScreenListPage() {
           <CustomScreenTable
             items={pagination.visibleRows}
             emptyMessage={
-              items.length > 0
-                ? "No custom screens match your current filters."
-                : undefined
+              items.length > 0 ? "No custom screens match your current filters." : undefined
             }
             selectedIds={visibleSelectedIds}
             isAllSelected={isAllSelected}

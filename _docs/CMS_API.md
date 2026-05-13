@@ -2116,7 +2116,12 @@ offers a create action that persists a draft detail template, links it through
 `site.contentRoutes.detailPageId`, refreshes the workspace summary, and opens
 the shared builder-style editor. Deleting the canonical detail template from the
 card first clears the matching route link, then deletes the document through the
-existing detail-page lifecycle route.
+existing detail-page lifecycle route. Other canonical resource cards stay
+owner-routed: list pages link to Pages, listing queries and listing templates
+link to Listings, admin screens link to Custom Screens, and route rows link to
+Site Settings. Missing listing queries may open the new query editor with the
+current `contentTypeId` pre-filled, but persistence still happens through the
+existing Listings owner routes.
 TASK-190 blueprint composition consumes this same workspace/detail-page read
 model for supported mixed setup follow-ups. The assistant may request
 server-derived resource catalog inclusion, but clients cannot submit trusted

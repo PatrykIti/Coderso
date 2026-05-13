@@ -78,39 +78,27 @@ export function BookingPage() {
   const initialReservations = getCachedBookingReservations();
   const initialBlackouts = getCachedBookingBlackouts();
 
-  const [resources, setResources] = useState<BookingResourceRecord[]>(
-    () => initialResources ?? []
-  );
-  const [services, setServices] = useState<BookingServiceRecord[]>(
-    () => initialServices ?? []
-  );
+  const [resources, setResources] = useState<BookingResourceRecord[]>(() => initialResources ?? []);
+  const [services, setServices] = useState<BookingServiceRecord[]>(() => initialServices ?? []);
   const [reservations, setReservations] = useState<BookingReservationRecord[]>(
     () => initialReservations ?? []
   );
-  const [blackouts, setBlackouts] = useState<BookingBlackoutRecord[]>(
-    () => initialBlackouts ?? []
-  );
+  const [blackouts, setBlackouts] = useState<BookingBlackoutRecord[]>(() => initialBlackouts ?? []);
 
   const [resourcesLoading, setResourcesLoading] = useState(() => !initialResources);
   const [servicesLoading, setServicesLoading] = useState(() => !initialServices);
-  const [reservationsLoading, setReservationsLoading] = useState(
-    () => !initialReservations
-  );
+  const [reservationsLoading, setReservationsLoading] = useState(() => !initialReservations);
   const [blackoutsLoading, setBlackoutsLoading] = useState(() => !initialBlackouts);
 
   const [selectedResourceId, setSelectedResourceId] = useState(
     () => initialResources?.[0]?.id ?? ""
   );
-  const [selectedServiceId, setSelectedServiceId] = useState(
-    () => initialServices?.[0]?.id ?? ""
-  );
+  const [selectedServiceId, setSelectedServiceId] = useState(() => initialServices?.[0]?.id ?? "");
 
   const [resourceForm, setResourceForm] = useState<ResourceFormState>(() =>
     defaultResourceFormState()
   );
-  const [serviceForm, setServiceForm] = useState<ServiceFormState>(() =>
-    defaultServiceFormState()
-  );
+  const [serviceForm, setServiceForm] = useState<ServiceFormState>(() => defaultServiceFormState());
   const [editingResourceId, setEditingResourceId] = useState<string | null>(null);
   const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
 
@@ -122,9 +110,7 @@ export function BookingPage() {
   const [scheduleSaving, setScheduleSaving] = useState(false);
 
   const [serviceResourceIds, setServiceResourceIds] = useState<string[]>([]);
-  const [requiredServiceResourceIds, setRequiredServiceResourceIds] = useState<
-    string[]
-  >([]);
+  const [requiredServiceResourceIds, setRequiredServiceResourceIds] = useState<string[]>([]);
   const [serviceResourceLoading, setServiceResourceLoading] = useState(false);
   const [serviceResourceSaving, setServiceResourceSaving] = useState(false);
 
@@ -162,12 +148,9 @@ export function BookingPage() {
     setBlackoutForm((current) => ({ ...current, ...patch }));
   }, []);
 
-  const patchReservationForm = useCallback(
-    (patch: Partial<ReservationFormState>) => {
-      setReservationForm((current) => ({ ...current, ...patch }));
-    },
-    []
-  );
+  const patchReservationForm = useCallback((patch: Partial<ReservationFormState>) => {
+    setReservationForm((current) => ({ ...current, ...patch }));
+  }, []);
 
   const patchSlotPreviewForm = useCallback((patch: Partial<SlotPreviewFormState>) => {
     setSlotPreviewForm((current) => ({ ...current, ...patch }));
@@ -355,9 +338,7 @@ export function BookingPage() {
     try {
       const items = await listBookingServiceResourcesCached(serviceId, { force: true });
       const ids = items.map((item) => item.resourceId);
-      const requiredIds = items
-        .filter((item) => item.isRequired)
-        .map((item) => item.resourceId);
+      const requiredIds = items.filter((item) => item.isRequired).map((item) => item.resourceId);
       setServiceResourceIds(ids);
       setRequiredServiceResourceIds(requiredIds);
     } catch (error) {
@@ -434,8 +415,7 @@ export function BookingPage() {
     setFeedback({
       tone: "success",
       title: "Booking data refreshed",
-      message:
-        "Resources, services, schedules, blackouts, and reservations are up to date.",
+      message: "Resources, services, schedules, blackouts, and reservations are up to date.",
     });
   };
 
@@ -530,19 +510,14 @@ export function BookingPage() {
           min: 5,
           max: 1440,
         }),
-        bufferBeforeMinutes: parseNumberInRange(
-          serviceForm.bufferBeforeMinutes,
-          "Buffer before",
-          { min: 0, max: 1440 }
-        ),
-        bufferAfterMinutes: parseNumberInRange(
-          serviceForm.bufferAfterMinutes,
-          "Buffer after",
-          {
-            min: 0,
-            max: 1440,
-          }
-        ),
+        bufferBeforeMinutes: parseNumberInRange(serviceForm.bufferBeforeMinutes, "Buffer before", {
+          min: 0,
+          max: 1440,
+        }),
+        bufferAfterMinutes: parseNumberInRange(serviceForm.bufferAfterMinutes, "Buffer after", {
+          min: 0,
+          max: 1440,
+        }),
         priceCents: parseOptionalNumber(serviceForm.priceCents, "Price", 0, 1_000_000_000),
         currency: normalizeOptionalText(serviceForm.currency),
         settings: withBookingSubmissionAccess(
@@ -625,10 +600,7 @@ export function BookingPage() {
     }
   };
 
-  const handleToggleRequiredServiceResource = (
-    resourceId: string,
-    required: boolean
-  ) => {
+  const handleToggleRequiredServiceResource = (resourceId: string, required: boolean) => {
     setRequiredServiceResourceIds((current) => {
       const set = new Set(current);
       if (required) set.add(resourceId);
@@ -731,9 +703,7 @@ export function BookingPage() {
       }
       await createBookingBlackout({
         resourceId:
-          blackoutForm.resourceId === "all"
-            ? null
-            : normalizeOptionalText(blackoutForm.resourceId),
+          blackoutForm.resourceId === "all" ? null : normalizeOptionalText(blackoutForm.resourceId),
         startsAt,
         endsAt,
         reason: normalizeOptionalText(blackoutForm.reason),
@@ -852,14 +822,10 @@ export function BookingPage() {
       if (!slotPreviewForm.serviceId) throw new Error("Service is required.");
       if (!slotPreviewForm.resourceId) throw new Error("Resource is required.");
       if (!slotPreviewForm.date.trim()) throw new Error("Date is required.");
-      const intervalMinutes = parseNumberInRange(
-        slotPreviewForm.intervalMinutes,
-        "Interval",
-        {
-          min: 5,
-          max: 180,
-        }
-      );
+      const intervalMinutes = parseNumberInRange(slotPreviewForm.intervalMinutes, "Interval", {
+        min: 5,
+        max: 180,
+      });
       const items = await previewBookingSlots({
         serviceId: slotPreviewForm.serviceId,
         resourceId: slotPreviewForm.resourceId,
@@ -889,16 +855,7 @@ export function BookingPage() {
   };
 
   return (
-    <AdminShell
-      activeHref="/admin/advanced/booking"
-      breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Coderso</span>
-          <span>/</span>
-          <span className="text-foreground">Booking</span>
-        </div>
-      }
-    >
+    <AdminShell activeHref="/admin/advanced/booking" breadcrumbs={["Coderso", "Booking"]}>
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
         <PageHeader
           title="Booking"

@@ -5,10 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 
-import {
-  PluginDetailsTabs,
-  type PluginDetailsData,
-} from "./PluginDetailsTabs";
+import { PluginDetailsTabs, type PluginDetailsData } from "./PluginDetailsTabs";
 
 const pluginDetails: PluginDetailsData = {
   description:
@@ -141,18 +138,7 @@ const statusStyles: Record<string, string> = {
 
 export function PluginDetailsPage() {
   return (
-    <AdminShell
-      activeHref="/admin/store"
-      breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Store</span>
-          <span>/</span>
-          <span>Plugins</span>
-          <span>/</span>
-          <span className="text-foreground">SEO Optimizer</span>
-        </div>
-      }
-    >
+    <AdminShell activeHref="/admin/store" breadcrumbs={["Store", "Plugins", "SEO Optimizer"]}>
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <div className="rounded-2xl border bg-card p-6 shadow-sm">
           <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
@@ -163,24 +149,17 @@ export function PluginDetailsPage() {
               <div className="space-y-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <h1 className="text-2xl font-semibold">SEO Optimizer</h1>
-                  <Badge
-                    variant="outline"
-                    className={statusStyles.Enabled}
-                  >
+                  <Badge variant="outline" className={statusStyles.Enabled}>
                     Enabled
                   </Badge>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  v2.4.1 by Digital Labs
-                </p>
+                <p className="text-sm text-muted-foreground">v2.4.1 by Digital Labs</p>
               </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
               <div className="flex items-center gap-3 rounded-xl border bg-muted/40 px-4 py-2">
-                <span className="text-sm font-medium text-muted-foreground">
-                  Auto-update
-                </span>
+                <span className="text-sm font-medium text-muted-foreground">Auto-update</span>
                 <Switch defaultChecked />
               </div>
               <Button

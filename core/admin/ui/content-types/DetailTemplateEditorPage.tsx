@@ -991,15 +991,9 @@ export function DetailTemplateEditorPage() {
       leftPanel={renderLibraryPanel()}
       rightPanel={renderDetailsPanel()}
       rightPanelClassName="p-0"
-      breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Advanced</span>
-          <span>/</span>
-          <span>Engine</span>
-          <span>/</span>
-          <span>Collection</span>
-          <span>/</span>
-          <span className="text-foreground">{title}</span>
+      breadcrumbs={["Advanced", "Engine", "Collection", title]}
+      topbarActions={
+        <div className="flex items-center gap-2">
           <span className={formatStatusBadgeClassName(record?.status ?? "draft")}>
             {record?.status === "published" ? "Published" : "Draft"}
           </span>

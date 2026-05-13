@@ -50,21 +50,16 @@ export function GeneralSettingsPage({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
   const [localSaving, setLocalSaving] = useState(false);
-  const { enabled: autoSaveEnabled, setEnabled: setAutoSaveEnabled } =
-    useSettingsAutoSave();
+  const { enabled: autoSaveEnabled, setEnabled: setAutoSaveEnabled } = useSettingsAutoSave();
 
   const hasValidationErrors = false;
 
-  const form =
-    formState.source === values ? formState.form : normalizeValues(values);
+  const form = formState.source === values ? formState.form : normalizeValues(values);
   const setForm = (
-    next:
-      | GeneralSettingsValues
-      | ((previous: GeneralSettingsValues) => GeneralSettingsValues)
+    next: GeneralSettingsValues | ((previous: GeneralSettingsValues) => GeneralSettingsValues)
   ) => {
     setFormState((previous) => {
-      const current =
-        previous.source === values ? previous.form : normalizeValues(values);
+      const current = previous.source === values ? previous.form : normalizeValues(values);
       return {
         source: values,
         form: typeof next === "function" ? next(current) : next,
@@ -110,16 +105,7 @@ export function GeneralSettingsPage({
       activeHref="/admin/settings"
       showSearch={false}
       sidebar={<SettingsSidebar activeId="general" />}
-      breadcrumbs={
-        <div className="flex flex-col gap-1">
-          <span className="text-base font-semibold text-foreground">
-            General Settings
-          </span>
-          <span className="text-xs text-muted-foreground">
-            Manage your global site configuration and preferences
-          </span>
-        </div>
-      }
+      breadcrumbs={["Settings", "General"]}
       topbarActions={
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
           <span>{busy ? "Saving changes..." : "Manage site identity and branding"}</span>
@@ -173,12 +159,7 @@ export function GeneralSettingsPage({
               <span>Auto-save settings across all screens</span>
             </div>
             <div className="flex items-center gap-3">
-              <Button
-                size="sm"
-                className="gap-2"
-                onClick={handleSave}
-                disabled={disableSave}
-              >
+              <Button size="sm" className="gap-2" onClick={handleSave} disabled={disableSave}>
                 <CheckCircle2 className="h-4 w-4" />
                 {busy ? "Saving..." : "Save changes"}
               </Button>

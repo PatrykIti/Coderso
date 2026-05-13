@@ -10,10 +10,7 @@ import {
   type FormRecord,
   type FormStatus,
 } from "@/services/formsClient";
-import {
-  getUserSettings,
-  setUserSetting,
-} from "@/services/userSettingsClient";
+import { getUserSettings, setUserSetting } from "@/services/userSettingsClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 import { ListPaginationFooter } from "@/ui/shared/ListPaginationFooter";
@@ -22,16 +19,9 @@ import { PageHeader } from "@/ui/shared/PageHeader";
 import { useListPagination } from "@/ui/shared/useListPagination";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 
-import {
-  FormBulkActionsBar,
-  type FormBulkActionValue,
-} from "./FormBulkActionsBar";
+import { FormBulkActionsBar, type FormBulkActionValue } from "./FormBulkActionsBar";
 import { FormCreateDrawer } from "./FormCreateDrawer";
-import {
-  FormFilters,
-  type FormAccessFilter,
-  type FormStatusFilter,
-} from "./FormFilters";
+import { FormFilters, type FormAccessFilter, type FormStatusFilter } from "./FormFilters";
 import { FormTable } from "./FormTable";
 import { useForms } from "./hooks/useForms";
 
@@ -65,9 +55,7 @@ export function filterForms(
   });
 }
 
-const statusForBulkAction = (
-  action: Exclude<FormBulkActionValue, "delete">
-): FormStatus => {
+const statusForBulkAction = (action: Exclude<FormBulkActionValue, "delete">): FormStatus => {
   if (action === "publish") return "published";
   if (action === "draft") return "draft";
   return "archived";
@@ -124,8 +112,7 @@ export function FormListPage() {
   );
   const visibleSelectedIds = selectedIds.filter((id) => visibleIds.includes(id));
   const selectedCount = visibleSelectedIds.length;
-  const isAllSelected =
-    visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
+  const isAllSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
   const isIndeterminate = selectedCount > 0 && !isAllSelected;
 
   const handleCreate = async (payload: {
@@ -269,16 +256,7 @@ export function FormListPage() {
   };
 
   return (
-    <AdminShell
-      activeHref="/admin/advanced/forms"
-      breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Content</span>
-          <span>/</span>
-          <span className="text-foreground">Forms</span>
-        </div>
-      }
-    >
+    <AdminShell activeHref="/admin/advanced/forms" breadcrumbs={["Content", "Forms"]}>
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <PageHeader
           title="Forms"
@@ -330,11 +308,7 @@ export function FormListPage() {
         ) : (
           <FormTable
             items={pagination.visibleRows}
-            emptyMessage={
-              items.length > 0
-                ? "No forms match your current filters."
-                : undefined
-            }
+            emptyMessage={items.length > 0 ? "No forms match your current filters." : undefined}
             selectedIds={visibleSelectedIds}
             isAllSelected={isAllSelected}
             isIndeterminate={isIndeterminate}
@@ -348,11 +322,7 @@ export function FormListPage() {
             onDelete={setPendingDeleteId}
           />
         )}
-        <ListPaginationFooter
-          resourceLabel="forms"
-          pagination={pagination}
-          isLoading={isLoading}
-        />
+        <ListPaginationFooter resourceLabel="forms" pagination={pagination} isLoading={isLoading} />
       </div>
       <FormCreateDrawer
         key={drawerKey}

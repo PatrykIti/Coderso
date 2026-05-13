@@ -98,6 +98,23 @@ const workspaceSummaryWithoutDetailTemplate = {
   },
 } satisfies ContentTypeCollectionWorkspaceSummary;
 
+const workspaceSummaryWithoutCanonicalResources = {
+  ...workspaceSummary,
+  canonical: {
+    ...workspaceSummary.canonical,
+    listPage: null,
+    listingQuery: null,
+    listingTemplate: null,
+    adminScreen: null,
+  },
+  unresolved: [
+    { resource: "listPage", reason: "explicit_link_missing" },
+    { resource: "listingQuery", reason: "explicit_link_missing" },
+    { resource: "listingTemplate", reason: "explicit_link_missing" },
+    { resource: "adminScreen", reason: "explicit_link_missing" },
+  ],
+} satisfies ContentTypeCollectionWorkspaceSummary;
+
 const collectionWorkspaceState = vi.hoisted(() => {
   const defaultSiteSettings = (): SiteSettingsResponse => ({
     adminBaseUrl: null,
@@ -234,11 +251,18 @@ vi.mock("@/ui/layouts/AdminShell", () => ({
     children,
   }: {
     activeHref?: string;
-    breadcrumbs?: React.ReactNode;
+    breadcrumbs?: React.ReactNode | Array<string | { label: string; href?: string | null }>;
     children: React.ReactNode;
   }) => (
     <div data-active-href={activeHref}>
-      <div>{breadcrumbs}</div>
+      <div>
+        {Array.isArray(breadcrumbs)
+          ? breadcrumbs.map((item) => {
+              const label = typeof item === "string" ? item : item.label;
+              return <span key={label}>{label}</span>;
+            })
+          : breadcrumbs}
+      </div>
       {children}
     </div>
   ),
@@ -317,6 +341,14 @@ const clickButton = (container: HTMLElement, label: string) => {
   });
 };
 
+const getLinkByText = (container: HTMLElement, label: string) => {
+  const link = Array.from(container.querySelectorAll("a")).find((candidate) =>
+    candidate.textContent?.includes(label)
+  );
+  expect(link).toBeTruthy();
+  return link as HTMLAnchorElement;
+};
+
 test("collection workspace renders cached summary and refreshes route data", async () => {
   collectionWorkspaceState.cachedSummary = workspaceSummary;
   collectionWorkspaceState.remoteSummary = workspaceSummary;
@@ -335,6 +367,41 @@ test("collection workspace renders cached summary and refreshes route data", asy
       { force: true }
     );
     expect(view.container.textContent).toContain("Ready");
+    expect(getLinkByText(view.container, "Edit page").getAttribute("href")).toBe(
+      "/admin/pages/page-products"
+    );
+    expect(getLinkByText(view.container, "Edit query").getAttribute("href")).toBe(
+      "/admin/advanced/listings/query-products"
+    );
+    expect(getLinkByText(view.container, "Open templates").getAttribute("href")).toBe(
+      "/admin/advanced/listings?tab=templates"
+    );
+    expect(getLinkByText(view.container, "Edit screen").getAttribute("href")).toBe(
+      "/admin/advanced/custom-screens/screen-products"
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("collection workspace links missing canonical resources to owner surfaces", async () => {
+  collectionWorkspaceState.cachedSummary = workspaceSummaryWithoutCanonicalResources;
+  collectionWorkspaceState.remoteSummary = workspaceSummaryWithoutCanonicalResources;
+  const view = mount("/admin/advanced/engine/ct-products/collection");
+
+  try {
+    await flush();
+
+    expect(getLinkByText(view.container, "Open Pages").getAttribute("href")).toBe("/admin/pages");
+    expect(getLinkByText(view.container, "Create query").getAttribute("href")).toBe(
+      "/admin/advanced/listings/new?contentTypeId=ct-products"
+    );
+    expect(getLinkByText(view.container, "Open templates").getAttribute("href")).toBe(
+      "/admin/advanced/listings?tab=templates"
+    );
+    expect(getLinkByText(view.container, "Open Screens").getAttribute("href")).toBe(
+      "/admin/advanced/custom-screens"
+    );
   } finally {
     view.cleanup();
   }

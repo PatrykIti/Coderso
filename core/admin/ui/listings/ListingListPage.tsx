@@ -17,10 +17,7 @@ import { ListPaginationFooter } from "@/ui/shared/ListPaginationFooter";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { useListPagination } from "@/ui/shared/useListPagination";
 
-import {
-  ListingBulkActionsBar,
-  type ListingBulkActionValue,
-} from "./ListingBulkActionsBar";
+import { ListingBulkActionsBar, type ListingBulkActionValue } from "./ListingBulkActionsBar";
 import { ListingQueryFilters, type ListingQuerySourceFilter } from "./ListingQueryFilters";
 import { ListingQueryTable } from "./ListingQueryTable";
 import { ListingTemplateFilters, type ListingTemplateLayoutFilter } from "./ListingTemplateFilters";
@@ -31,6 +28,12 @@ import { useListingTemplates } from "./hooks/useListingTemplates";
 import { listingQueryToasts, listingTemplateToasts } from "./listingActionToasts";
 
 type ListingsTab = "queries" | "templates";
+
+const resolveListingsTabFromPath = (path: string): ListingsTab => {
+  const queryString = path.split("?")[1]?.split("#")[0] ?? "";
+  const tab = new URLSearchParams(queryString).get("tab");
+  return tab === "templates" ? "templates" : "queries";
+};
 
 export function filterListingQueries(
   items: ListingQueryRecord[],
@@ -69,7 +72,7 @@ const sortByUpdatedDesc = <T extends { updatedAt: string }>(items: T[]) =>
   [...items].sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
 
 export function ListingListPage() {
-  const { navigate } = useAdminRouter();
+  const { navigate, path } = useAdminRouter();
   const {
     items: queryItems,
     isLoading: isQueryLoading,
@@ -83,44 +86,28 @@ export function ListingListPage() {
     refresh: refreshTemplates,
   } = useListingTemplates();
 
-  const [activeTab, setActiveTab] = useState<ListingsTab>("queries");
+  const [activeTab, setActiveTab] = useState<ListingsTab>(() => resolveListingsTabFromPath(path));
   const [actionError, setActionError] = useState<string | null>(null);
   const [querySearch, setQuerySearch] = useState("");
-  const [querySource, setQuerySource] =
-    useState<ListingQuerySourceFilter>("all");
+  const [querySource, setQuerySource] = useState<ListingQuerySourceFilter>("all");
   const [templateSearch, setTemplateSearch] = useState("");
-  const [templateLayout, setTemplateLayout] =
-    useState<ListingTemplateLayoutFilter>("all");
+  const [templateLayout, setTemplateLayout] = useState<ListingTemplateLayoutFilter>("all");
   const [selectedQueryIds, setSelectedQueryIds] = useState<string[]>([]);
   const [selectedTemplateIds, setSelectedTemplateIds] = useState<string[]>([]);
-  const [queryBulkAction, setQueryBulkAction] =
-    useState<ListingBulkActionValue | "">("");
-  const [templateBulkAction, setTemplateBulkAction] =
-    useState<ListingBulkActionValue | "">("");
+  const [queryBulkAction, setQueryBulkAction] = useState<ListingBulkActionValue | "">("");
+  const [templateBulkAction, setTemplateBulkAction] = useState<ListingBulkActionValue | "">("");
   const [isBulkWorking, setIsBulkWorking] = useState(false);
-  const [pendingQueryDeleteId, setPendingQueryDeleteId] = useState<string | null>(
-    null
-  );
-  const [pendingTemplateDeleteId, setPendingTemplateDeleteId] = useState<
-    string | null
-  >(null);
+  const [pendingQueryDeleteId, setPendingQueryDeleteId] = useState<string | null>(null);
+  const [pendingTemplateDeleteId, setPendingTemplateDeleteId] = useState<string | null>(null);
   const [deletingQueryId, setDeletingQueryId] = useState<string | null>(null);
-  const [deletingTemplateId, setDeletingTemplateId] = useState<string | null>(
-    null
-  );
-  const [pendingBulkQueryDeleteIds, setPendingBulkQueryDeleteIds] = useState<
-    string[]
-  >([]);
-  const [pendingBulkTemplateDeleteIds, setPendingBulkTemplateDeleteIds] =
-    useState<string[]>([]);
+  const [deletingTemplateId, setDeletingTemplateId] = useState<string | null>(null);
+  const [pendingBulkQueryDeleteIds, setPendingBulkQueryDeleteIds] = useState<string[]>([]);
+  const [pendingBulkTemplateDeleteIds, setPendingBulkTemplateDeleteIds] = useState<string[]>([]);
   const [templateCreateOpen, setTemplateCreateOpen] = useState(false);
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
 
   const sortedQueries = useMemo(() => sortByUpdatedDesc(queryItems), [queryItems]);
-  const sortedTemplates = useMemo(
-    () => sortByUpdatedDesc(templateItems),
-    [templateItems]
-  );
+  const sortedTemplates = useMemo(() => sortByUpdatedDesc(templateItems), [templateItems]);
 
   const filteredQueries = useMemo(
     () => filterListingQueries(sortedQueries, querySearch, querySource),
@@ -147,20 +134,16 @@ export function ListingListPage() {
     [templatePagination.visibleRows]
   );
 
-  const visibleSelectedQueryIds = selectedQueryIds.filter((id) =>
-    visibleQueryIds.includes(id)
-  );
+  const visibleSelectedQueryIds = selectedQueryIds.filter((id) => visibleQueryIds.includes(id));
   const visibleSelectedTemplateIds = selectedTemplateIds.filter((id) =>
     visibleTemplateIds.includes(id)
   );
   const isAllQueriesSelected =
-    visibleQueryIds.length > 0 &&
-    visibleQueryIds.every((id) => selectedQueryIds.includes(id));
+    visibleQueryIds.length > 0 && visibleQueryIds.every((id) => selectedQueryIds.includes(id));
   const isAllTemplatesSelected =
     visibleTemplateIds.length > 0 &&
     visibleTemplateIds.every((id) => selectedTemplateIds.includes(id));
-  const isQuerySelectionIndeterminate =
-    visibleSelectedQueryIds.length > 0 && !isAllQueriesSelected;
+  const isQuerySelectionIndeterminate = visibleSelectedQueryIds.length > 0 && !isAllQueriesSelected;
   const isTemplateSelectionIndeterminate =
     visibleSelectedTemplateIds.length > 0 && !isAllTemplatesSelected;
 
@@ -176,17 +159,13 @@ export function ListingListPage() {
 
   const toggleQuery = (id: string) => {
     setSelectedQueryIds((prev) =>
-      prev.includes(id)
-        ? prev.filter((selectedId) => selectedId !== id)
-        : [...prev, id]
+      prev.includes(id) ? prev.filter((selectedId) => selectedId !== id) : [...prev, id]
     );
   };
 
   const toggleTemplate = (id: string) => {
     setSelectedTemplateIds((prev) =>
-      prev.includes(id)
-        ? prev.filter((selectedId) => selectedId !== id)
-        : [...prev, id]
+      prev.includes(id) ? prev.filter((selectedId) => selectedId !== id) : [...prev, id]
     );
   };
 
@@ -221,9 +200,7 @@ export function ListingListPage() {
       await deleteListingTemplate(id);
       await refreshTemplates({ force: true, background: true });
       listingTemplateToasts.success("delete");
-      setSelectedTemplateIds((prev) =>
-        prev.filter((selectedId) => selectedId !== id)
-      );
+      setSelectedTemplateIds((prev) => prev.filter((selectedId) => selectedId !== id));
       setPendingTemplateDeleteId(null);
     } catch (err) {
       setActionError(listingTemplateToasts.error("delete", err));
@@ -237,15 +214,9 @@ export function ListingListPage() {
     setIsBulkWorking(true);
     setActionError(null);
     try {
-      const results = await Promise.allSettled(
-        ids.map((id) => deleteListingQuery(id))
-      );
+      const results = await Promise.allSettled(ids.map((id) => deleteListingQuery(id)));
       await refreshQueries({ force: true, background: true });
-      const summary = listingQueryToasts.summarizeBulkAction(
-        "delete",
-        ids,
-        results
-      );
+      const summary = listingQueryToasts.summarizeBulkAction("delete", ids, results);
       listingQueryToasts.emitBulk(summary);
       if (summary.ok) {
         clearQuerySelection();
@@ -270,15 +241,9 @@ export function ListingListPage() {
     setIsBulkWorking(true);
     setActionError(null);
     try {
-      const results = await Promise.allSettled(
-        ids.map((id) => deleteListingTemplate(id))
-      );
+      const results = await Promise.allSettled(ids.map((id) => deleteListingTemplate(id)));
       await refreshTemplates({ force: true, background: true });
-      const summary = listingTemplateToasts.summarizeBulkAction(
-        "delete",
-        ids,
-        results
-      );
+      const summary = listingTemplateToasts.summarizeBulkAction("delete", ids, results);
       listingTemplateToasts.emitBulk(summary);
       if (summary.ok) {
         clearTemplateSelection();
@@ -316,9 +281,7 @@ export function ListingListPage() {
   };
 
   const activeSelectedCount =
-    activeTab === "queries"
-      ? visibleSelectedQueryIds.length
-      : visibleSelectedTemplateIds.length;
+    activeTab === "queries" ? visibleSelectedQueryIds.length : visibleSelectedTemplateIds.length;
   const activeBulkBar =
     activeTab === "queries" ? (
       <ListingBulkActionsBar
@@ -348,18 +311,16 @@ export function ListingListPage() {
     }
     setTemplateCreateOpen(true);
   };
+  const handleTabChange = (value: string) => {
+    const nextTab: ListingsTab = value === "templates" ? "templates" : "queries";
+    setActiveTab(nextTab);
+    navigate(nextTab === "templates" ? "/advanced/listings?tab=templates" : "/advanced/listings", {
+      replace: true,
+    });
+  };
 
   return (
-    <AdminShell
-      activeHref="/admin/advanced/listings"
-      breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Coderso</span>
-          <span>/</span>
-          <span className="text-foreground">Listings</span>
-        </div>
-      }
-    >
+    <AdminShell activeHref="/admin/advanced/listings" breadcrumbs={["Coderso", "Listings"]}>
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <PageHeader
           title="Listings"
@@ -394,11 +355,7 @@ export function ListingListPage() {
           </Alert>
         ) : null}
 
-        <Tabs
-          value={activeTab}
-          onValueChange={(value) => setActiveTab(value as ListingsTab)}
-          className="space-y-4"
-        >
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
           <TabsList>
             <TabsTrigger value="queries">Queries</TabsTrigger>
             <TabsTrigger value="templates">Templates</TabsTrigger>

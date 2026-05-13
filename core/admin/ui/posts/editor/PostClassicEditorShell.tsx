@@ -2,6 +2,7 @@ import { Eye, RefreshCcw, Save, Send, SlidersHorizontal } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -22,7 +23,6 @@ import {
 } from "@/services/postsClient";
 import { EntryMetadataPanel, type EntryStatus } from "@/ui/entries/EntryMetadataPanel";
 import { buildEntryChecklist } from "@/ui/entries/entryChecklist";
-import { EntryEditorHeader } from "@/ui/entries/EntryEditorHeader";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { RuntimePreviewDialog } from "@/ui/preview/RuntimePreviewDialog";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
@@ -392,13 +392,18 @@ export function PostClassicEditorShell() {
       activeHref="/admin/posts"
       showSearch={false}
       contentClassName="p-0 overflow-hidden"
-      breadcrumbs={
-        <EntryEditorHeader
-          status={status}
-          hasUnsavedChanges={hasUnsavedChanges}
-          contentType="Posts"
-          entryLabel={post?.title ?? "Edit Post"}
-        />
+      breadcrumbs={["Content", "Posts", post?.title ?? "Edit Post"]}
+      topbarActions={
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="text-[10px] uppercase">
+            {status}
+          </Badge>
+          {hasUnsavedChanges ? (
+            <Badge variant="outline" className="border-rose-500/30 bg-rose-500/10 text-rose-600">
+              Unsaved changes
+            </Badge>
+          ) : null}
+        </div>
       }
     >
       <div className="flex h-full min-h-0">

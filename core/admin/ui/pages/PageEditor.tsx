@@ -970,11 +970,9 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
         <BlockSettings block={selectedBlock} widget={selectedWidget} onChange={handleChangeBlock} />
       }
       rightPanelClassName="p-6"
-      breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Pages</span>
-          <span>/</span>
-          <span className="text-foreground">{title}</span>
+      breadcrumbs={["Pages", title]}
+      topbarActions={
+        <div className="flex items-center gap-2">
           <span className={pageEditorStatusBadgeClassName(status)}>
             {status === "published" ? "Published" : "Draft"}
           </span>

@@ -133,8 +133,7 @@ export function filterMenus(
     const matchesLocation =
       location === "all" ||
       (location === "unassigned" && !menu.location) ||
-      (location.startsWith("location:") &&
-        menu.location === location.slice("location:".length));
+      (location.startsWith("location:") && menu.location === location.slice("location:".length));
     return matchesQuery && matchesStatus && matchesLocation;
   });
 }
@@ -244,12 +243,8 @@ function MenuListTable({
         <TableBody>
           {items.length === 0 ? (
             <TableRow>
-              <TableCell
-                colSpan={7}
-                className="py-10 text-center text-sm text-muted-foreground"
-              >
-                {emptyMessage ??
-                  "No menus yet. Create your first menu to get started."}
+              <TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
+                {emptyMessage ?? "No menus yet. Create your first menu to get started."}
               </TableCell>
             </TableRow>
           ) : null}
@@ -257,10 +252,7 @@ function MenuListTable({
             const href = `/menus/${encodeURIComponent(item.id)}`;
             const isSelected = selectedIds.includes(item.id);
             return (
-              <TableRow
-                key={item.id}
-                className={isSelected ? "bg-muted/30" : undefined}
-              >
+              <TableRow key={item.id} className={isSelected ? "bg-muted/30" : undefined}>
                 <TableCell className="pl-4">
                   <Checkbox
                     aria-label={`Select ${item.name}`}
@@ -352,10 +344,7 @@ function MenuFilters({
         />
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <Select
-          value={status}
-          onValueChange={(value) => onStatusChange(value as MenuStatusFilter)}
-        >
+        <Select value={status} onValueChange={(value) => onStatusChange(value as MenuStatusFilter)}>
           <SelectTrigger className="h-8 w-full sm:w-[140px]">
             <Filter className="h-3 w-3 text-muted-foreground" />
             <SelectValue placeholder="Status" />
@@ -382,12 +371,7 @@ function MenuFilters({
             ))}
           </SelectContent>
         </Select>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8"
-          aria-label="Customize menu columns"
-        >
+        <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Customize menu columns">
           <Columns2 className="h-4 w-4" />
         </Button>
       </div>
@@ -419,9 +403,7 @@ function MenuBulkActionsBar({
         <Badge variant="secondary" className="text-[10px] uppercase tracking-widest">
           Selected {selectedCount}
         </Badge>
-        <span className="sr-only">
-          Apply a bulk action to the selected menus.
-        </span>
+        <span className="sr-only">Apply a bulk action to the selected menus.</span>
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <Select
@@ -446,12 +428,7 @@ function MenuBulkActionsBar({
         <Button size="sm" onClick={onApply} disabled={!action || isApplying}>
           {isApplying ? "Applying..." : "Apply"}
         </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onClear}
-          aria-label="Clear selection"
-        >
+        <Button variant="ghost" size="sm" onClick={onClear} aria-label="Clear selection">
           Clear
         </Button>
       </div>
@@ -551,11 +528,7 @@ export function MenuListPage() {
 
   const locationOptions = useMemo(() => {
     const locations = Array.from(
-      new Set(
-        items
-          .map((item) => item.location)
-          .filter((value): value is string => Boolean(value))
-      )
+      new Set(items.map((item) => item.location).filter((value): value is string => Boolean(value)))
     ).sort((a, b) => a.localeCompare(b));
     return [
       { value: "all" as const, label: "All locations" },
@@ -584,8 +557,7 @@ export function MenuListPage() {
   );
   const visibleSelectedIds = selectedIds.filter((id) => visibleIds.includes(id));
   const selectedCount = visibleSelectedIds.length;
-  const isAllSelected =
-    visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
+  const isAllSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
   const isIndeterminate = selectedCount > 0 && !isAllSelected;
 
   const handleEdit = (id: string) => {
@@ -686,16 +658,7 @@ export function MenuListPage() {
   };
 
   return (
-    <AdminShell
-      activeHref="/admin/menus"
-      breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Content</span>
-          <span>/</span>
-          <span className="text-foreground">Menus</span>
-        </div>
-      }
-    >
+    <AdminShell activeHref="/admin/menus" breadcrumbs={["Content", "Menus"]}>
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <PageHeader
           title="Menus"
@@ -744,11 +707,7 @@ export function MenuListPage() {
         ) : (
           <MenuListTable
             items={pagination.visibleRows}
-            emptyMessage={
-              items.length > 0
-                ? "No menus match your current filters."
-                : undefined
-            }
+            emptyMessage={items.length > 0 ? "No menus match your current filters." : undefined}
             selectedIds={visibleSelectedIds}
             isAllSelected={isAllSelected}
             isIndeterminate={isIndeterminate}
@@ -760,11 +719,7 @@ export function MenuListPage() {
             onDelete={handleDelete}
           />
         )}
-        <ListPaginationFooter
-          resourceLabel="menus"
-          pagination={pagination}
-          isLoading={isLoading}
-        />
+        <ListPaginationFooter resourceLabel="menus" pagination={pagination} isLoading={isLoading} />
       </div>
 
       <MenuCreateDialog

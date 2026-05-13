@@ -32,10 +32,7 @@ import { ThemeTemplateCard } from "./ThemeTemplateCard";
 import { ThemeTemplateDrawer } from "./ThemeTemplateDrawer";
 
 const resolveTemplatePalette = (template: AdminThemeTemplate | null) => {
-  const resolved = mergeAdminThemeTokens(
-    DEFAULT_ADMIN_THEME_TOKENS,
-    template?.tokens ?? null
-  );
+  const resolved = mergeAdminThemeTokens(DEFAULT_ADMIN_THEME_TOKENS, template?.tokens ?? null);
   return [
     resolved.buttons.primary.bg,
     resolved.buttons.secondary.bg,
@@ -59,22 +56,15 @@ export function ThemesPage() {
   const [templateDrawerOpen, setTemplateDrawerOpen] = useState(false);
   const [profileDrawerOpen, setProfileDrawerOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
-  const [editingTemplate, setEditingTemplate] = useState<AdminThemeTemplate | null>(
-    null
-  );
-  const [editingProfile, setEditingProfile] = useState<AdminThemeProfileCard | null>(
-    null
-  );
+  const [editingTemplate, setEditingTemplate] = useState<AdminThemeTemplate | null>(null);
+  const [editingProfile, setEditingProfile] = useState<AdminThemeProfileCard | null>(null);
   const initialCachedTemplates = getCachedAdminThemeTemplates();
   const initialCachedProfiles = getCachedAdminThemeProfiles();
-  const hasInitialCache =
-    initialCachedTemplates !== null || initialCachedProfiles !== null;
+  const hasInitialCache = initialCachedTemplates !== null || initialCachedProfiles !== null;
   const [templates, setTemplates] = useState<AdminThemeTemplate[]>(
     () => initialCachedTemplates ?? []
   );
-  const [profiles, setProfiles] = useState<AdminThemeProfile[]>(
-    () => initialCachedProfiles ?? []
-  );
+  const [profiles, setProfiles] = useState<AdminThemeProfile[]>(() => initialCachedProfiles ?? []);
   const [isLoading, setIsLoading] = useState(() => !hasInitialCache);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -86,36 +76,33 @@ export function ThemesPage() {
     window.dispatchEvent(new CustomEvent("theme:updated"));
   };
 
-  const refresh = useCallback(
-    async (options?: { force?: boolean; background?: boolean }) => {
-      const force = options?.force ?? false;
-      const background = options?.background ?? hasHydratedRef.current;
+  const refresh = useCallback(async (options?: { force?: boolean; background?: boolean }) => {
+    const force = options?.force ?? false;
+    const background = options?.background ?? hasHydratedRef.current;
+    if (!background) {
+      setIsLoading(true);
+    }
+    setError(null);
+    try {
+      const [templatesResult, profilesResult] = await Promise.all([
+        listAdminThemeTemplatesCached({ force }),
+        listAdminThemeProfilesCached({ force }),
+      ]);
+      setTemplates(templatesResult);
+      setProfiles(profilesResult);
+      hasHydratedRef.current = true;
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Failed to load admin themes.");
+      }
+    } finally {
       if (!background) {
-        setIsLoading(true);
+        setIsLoading(false);
       }
-      setError(null);
-      try {
-        const [templatesResult, profilesResult] = await Promise.all([
-          listAdminThemeTemplatesCached({ force }),
-          listAdminThemeProfilesCached({ force }),
-        ]);
-        setTemplates(templatesResult);
-        setProfiles(profilesResult);
-        hasHydratedRef.current = true;
-      } catch (err) {
-        if (isApiClientError(err)) {
-          setError(err.message);
-        } else {
-          setError("Failed to load admin themes.");
-        }
-      } finally {
-        if (!background) {
-          setIsLoading(false);
-        }
-      }
-    },
-    []
-  );
+    }
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -215,16 +202,7 @@ export function ThemesPage() {
   };
 
   return (
-    <AdminShell
-      activeHref="/admin/themes"
-      breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Visual</span>
-          <span>/</span>
-          <span className="text-foreground">Admin UI Theme</span>
-        </div>
-      }
-    >
+    <AdminShell activeHref="/admin/themes" breadcrumbs={["Visual", "Admin UI Theme"]}>
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-10">
         <PageHeader
           title="Admin UI Theme"

@@ -2,12 +2,7 @@ import { Menu } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import {
   appendNavItemsAfterGroup,
@@ -21,6 +16,7 @@ import { SearchBar } from "@/ui/search/SearchBar";
 import { SidebarNav } from "@/ui/shared/SidebarNav";
 import { TopBar } from "@/ui/shared/TopBar";
 import { AssistantPanel } from "@/ui/assistant/AssistantPanel";
+import type { AdminBreadcrumbInput } from "@/ui/shared/AdminBreadcrumbs";
 import { mapNavItems, mapNavSections, resolveAdminHref } from "@/utils/adminPaths";
 import { useAdminBasePath } from "@/ui/contexts/AdminBasePathContext";
 import {
@@ -84,7 +80,7 @@ type AdminShellProps = {
   navSections?: NavSection[];
   footerItems?: NavItem[];
   activeHref?: string;
-  breadcrumbs?: React.ReactNode;
+  breadcrumbs?: React.ReactNode | AdminBreadcrumbInput[];
   topbarActions?: React.ReactNode;
   search?: React.ReactNode;
   showSearch?: boolean;
@@ -113,8 +109,8 @@ export function AdminShell({
   const [solutionKits, setSolutionKits] = useState<SolutionKitSummary[]>(
     () => getCachedSolutionKits() ?? []
   );
-  const [activeSolutionKitId, setActiveSolutionKitId] = useState<SolutionKitId | null>(
-    () => getActiveSolutionKitId()
+  const [activeSolutionKitId, setActiveSolutionKitId] = useState<SolutionKitId | null>(() =>
+    getActiveSolutionKitId()
   );
   const adminBasePath = useAdminBasePath();
   const activeSolutionKit = useMemo(
@@ -130,7 +126,8 @@ export function AdminShell({
     [navSections, solutionKitFlags]
   );
   const hasAdvancedGroup = useMemo(
-    () => baseNavSections.some((section) => section.groups?.some((group) => group.id === "advanced")),
+    () =>
+      baseNavSections.some((section) => section.groups?.some((group) => group.id === "advanced")),
     [baseNavSections]
   );
   const navGroupDefaults = useMemo(
@@ -195,9 +192,7 @@ export function AdminShell({
     () => (footerItems ? mapNavItems(footerItems, adminBasePath) : footerItems),
     [adminBasePath, footerItems]
   );
-  const resolvedActiveHref = activeHref
-    ? resolveAdminHref(adminBasePath, activeHref)
-    : activeHref;
+  const resolvedActiveHref = activeHref ? resolveAdminHref(adminBasePath, activeHref) : activeHref;
   const resolvedNavGroupState = useMemo(
     () => ({
       ...navGroupDefaults,
@@ -208,10 +203,7 @@ export function AdminShell({
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    window.localStorage.setItem(
-      NAV_GROUP_STATE_KEY,
-      JSON.stringify(resolvedNavGroupState)
-    );
+    window.localStorage.setItem(NAV_GROUP_STATE_KEY, JSON.stringify(resolvedNavGroupState));
   }, [resolvedNavGroupState]);
 
   return (
@@ -251,14 +243,7 @@ export function AdminShell({
             </Button>
           }
         />
-        <main
-          className={cn(
-            "flex-1 overflow-y-auto px-6 py-8",
-            contentClassName
-          )}
-        >
-          {children}
-        </main>
+        <main className={cn("flex-1 overflow-y-auto px-6 py-8", contentClassName)}>{children}</main>
       </div>
       <Sheet open={navOpen} onOpenChange={setNavOpen}>
         <SheetContent side="left" className="w-72 p-0">

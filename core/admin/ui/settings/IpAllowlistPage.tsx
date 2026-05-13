@@ -17,14 +17,7 @@ export function IpAllowlistPage() {
       showSearch={false}
       sidebar={<SettingsSidebar activeId="security" />}
       preview={<IpAllowlistDrawerPanel readOnly />}
-      breadcrumbs={
-        <div className="flex flex-col gap-1">
-          <span className="text-base font-semibold text-foreground">IP Allowlist</span>
-          <span className="text-xs text-muted-foreground">
-            Security & Access Controls
-          </span>
-        </div>
-      }
+      breadcrumbs={["Settings", "Security", "IP Allowlist"]}
       topbarActions={
         <div className="flex items-center gap-2">
           <IpAllowlistDrawer

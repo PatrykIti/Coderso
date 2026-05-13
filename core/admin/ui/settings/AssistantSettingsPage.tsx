@@ -24,9 +24,7 @@ export type AssistantSettingsPageProps = {
   error?: string | null;
 };
 
-const resolveAssistantValidationError = (
-  input: AssistantSettingsValues
-): string | null => {
+const resolveAssistantValidationError = (input: AssistantSettingsValues): string | null => {
   if (
     input.assistantDefaultMode === "llm-guide" &&
     (!input.assistantLlmEnabled || input.assistantLlmProvider === "none")
@@ -84,19 +82,14 @@ export function AssistantSettingsPage({
   const [reindexSuccess, setReindexSuccess] = useState<string | null>(null);
   const [localSaving, setLocalSaving] = useState(false);
   const [isReindexing, setIsReindexing] = useState(false);
-  const { enabled: autoSaveEnabled, setEnabled: setAutoSaveEnabled } =
-    useSettingsAutoSave();
+  const { enabled: autoSaveEnabled, setEnabled: setAutoSaveEnabled } = useSettingsAutoSave();
 
-  const form =
-    formState.source === values ? formState.form : normalizeValues(values);
+  const form = formState.source === values ? formState.form : normalizeValues(values);
   const setForm = (
-    next:
-      | AssistantSettingsValues
-      | ((previous: AssistantSettingsValues) => AssistantSettingsValues)
+    next: AssistantSettingsValues | ((previous: AssistantSettingsValues) => AssistantSettingsValues)
   ) => {
     setFormState((previous) => {
-      const current =
-        previous.source === values ? previous.form : normalizeValues(values);
+      const current = previous.source === values ? previous.form : normalizeValues(values);
       return {
         source: values,
         form: typeof next === "function" ? next(current) : next,
@@ -173,16 +166,7 @@ export function AssistantSettingsPage({
       activeHref="/admin/settings/assistant"
       showSearch={false}
       sidebar={<SettingsSidebar activeId="assistant" />}
-      breadcrumbs={
-        <div className="flex flex-col gap-1">
-          <span className="text-base font-semibold text-foreground">
-            Assistant Settings
-          </span>
-          <span className="text-xs text-muted-foreground">
-            Control Docs Assistant defaults and LLM Guide behavior
-          </span>
-        </div>
-      }
+      breadcrumbs={["Settings", "Assistant"]}
       topbarActions={null}
     >
       <div className="flex min-h-full flex-col">
@@ -256,12 +240,7 @@ export function AssistantSettingsPage({
               >
                 {isReindexing ? "Reindexing..." : "Run reindex"}
               </Button>
-              <Button
-                size="sm"
-                className="gap-2"
-                onClick={handleSave}
-                disabled={disableSave}
-              >
+              <Button size="sm" className="gap-2" onClick={handleSave} disabled={disableSave}>
                 <CheckCircle2 className="h-4 w-4" />
                 {busy ? "Saving..." : "Save changes"}
               </Button>

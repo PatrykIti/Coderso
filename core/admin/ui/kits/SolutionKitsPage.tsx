@@ -11,10 +11,7 @@ import {
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { AiSiteWizard } from "@/ui/setup/AiSiteWizard";
-import {
-  getActiveSolutionKitId,
-  setActiveSolutionKitId,
-} from "@/services/solutionKitSelection";
+import { getActiveSolutionKitId, setActiveSolutionKitId } from "@/services/solutionKitSelection";
 
 import { SolutionKitCard } from "./SolutionKitCard";
 import { useSolutionKits } from "./hooks/useSolutionKits";
@@ -72,13 +69,7 @@ export function SolutionKitsPage() {
   return (
     <AdminShell
       activeHref="/admin/advanced/solution-kits"
-      breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Coderso</span>
-          <span>/</span>
-          <span className="text-foreground">Solution Kits</span>
-        </div>
-      }
+      breadcrumbs={["Coderso", "Solution Kits"]}
     >
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
         <PageHeader
@@ -179,7 +170,11 @@ export function SolutionKitsPage() {
                           <p className="font-medium text-foreground">Recommended modules</p>
                           <div className="flex flex-wrap gap-2">
                             {selectedSummary.recommendedModules.map((moduleId) => (
-                              <Badge key={`recommended:${moduleId}`} variant="outline" className="text-[11px]">
+                              <Badge
+                                key={`recommended:${moduleId}`}
+                                variant="outline"
+                                className="text-[11px]"
+                              >
                                 {moduleId}
                               </Badge>
                             ))}
@@ -192,7 +187,11 @@ export function SolutionKitsPage() {
                           <p className="font-medium text-foreground">Optional modules</p>
                           <div className="flex flex-wrap gap-2">
                             {manifest.optionalModules?.map((moduleId) => (
-                              <Badge key={`optional:${moduleId}`} variant="outline" className="text-[11px]">
+                              <Badge
+                                key={`optional:${moduleId}`}
+                                variant="outline"
+                                className="text-[11px]"
+                              >
                                 {moduleId}
                               </Badge>
                             ))}
@@ -201,7 +200,8 @@ export function SolutionKitsPage() {
                       ) : null}
 
                       <p className="text-xs text-muted-foreground">
-                        Selecting a kit can focus the `Coderso` sidebar on the modules recommended for this vertical.
+                        Selecting a kit can focus the `Coderso` sidebar on the modules recommended
+                        for this vertical.
                       </p>
 
                       {(manifest.postInstallTasks?.length ?? 0) > 0 ? (

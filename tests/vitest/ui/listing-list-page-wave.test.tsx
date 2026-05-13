@@ -11,6 +11,7 @@ import type {
 
 const listingPageState = vi.hoisted(() => ({
   navigate: vi.fn(),
+  path: "/admin/advanced/listings",
   refreshQueries: vi.fn(async () => undefined),
   refreshTemplates: vi.fn(async () => undefined),
   deleteListingQuery: vi.fn(async () => undefined),
@@ -66,6 +67,7 @@ const listingPageState = vi.hoisted(() => ({
     this.deleteListingQuery.mockResolvedValue(undefined);
     this.deleteListingTemplate.mockReset();
     this.deleteListingTemplate.mockResolvedValue(undefined);
+    this.path = "/admin/advanced/listings";
     this.queryError = null;
     this.templateError = null;
   },
@@ -137,6 +139,7 @@ vi.mock("@/services/listingsClient", () => ({
 vi.mock("@/ui/contexts/AdminRouterContext", () => ({
   useAdminRouter: () => ({
     navigate: listingPageState.navigate,
+    path: listingPageState.path,
   }),
 }));
 
@@ -422,9 +425,24 @@ test("ListingListPage routes active-tab New through the shell", () => {
     expect(listingPageState.navigate).toHaveBeenCalledWith("/advanced/listings/new");
 
     clickByText(view.container, "Templates");
+    expect(listingPageState.navigate).toHaveBeenCalledWith("/advanced/listings?tab=templates", {
+      replace: true,
+    });
     clickByText(view.container, "New");
     expect(view.container.textContent).toContain("template-create-dialog");
-    expect(listingPageState.navigate).toHaveBeenCalledTimes(1);
+    expect(listingPageState.navigate).toHaveBeenCalledTimes(2);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("ListingListPage opens templates tab from query params", () => {
+  listingPageState.path = "/admin/advanced/listings?tab=templates";
+  const view = mount(<ListingListPage />);
+
+  try {
+    expect(view.container.textContent).toContain("template-count:1");
+    expect(view.container.textContent).not.toContain("query-count:1");
   } finally {
     view.cleanup();
   }

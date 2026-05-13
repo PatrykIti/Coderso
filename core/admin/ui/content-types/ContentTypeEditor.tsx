@@ -443,13 +443,7 @@ export function ContentTypeEditor() {
         )
       }
       rightPanelClassName="p-0"
-      breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Content</span>
-          <span>/</span>
-          <span className="text-foreground">Content Types</span>
-        </div>
-      }
+      breadcrumbs={["Content", "Content Types"]}
     >
       <>
         <div className="border-b px-6 py-6">

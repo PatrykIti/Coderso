@@ -314,14 +314,7 @@ export function SiteSettingsPage() {
       activeHref="/admin/settings/site"
       showSearch={false}
       sidebar={<SettingsSidebar activeId="site" />}
-      breadcrumbs={
-        <div className="flex flex-col gap-1">
-          <span className="text-base font-semibold text-foreground">Site Settings</span>
-          <span className="text-xs text-muted-foreground">
-            Configure homepage, preview, and content routing for the public site
-          </span>
-        </div>
-      }
+      breadcrumbs={["Settings", "Site"]}
       topbarActions={null}
     >
       <div className="flex min-h-full flex-col">

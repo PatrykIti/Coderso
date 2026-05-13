@@ -496,16 +496,7 @@ export function MediaLibraryPage() {
   };
 
   return (
-    <AdminShell
-      activeHref="/admin/media"
-      breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Home</span>
-          <span>/</span>
-          <span className="text-foreground">Media Library</span>
-        </div>
-      }
-    >
+    <AdminShell activeHref="/admin/media" breadcrumbs={["Home", "Media Library"]}>
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <PageHeader
           title="Media Library"

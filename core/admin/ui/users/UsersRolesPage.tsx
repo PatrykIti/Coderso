@@ -76,16 +76,12 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
   const initialUserId =
     typeof window === "undefined"
       ? ""
-      : new URLSearchParams(window.location.search).get("user") ?? "";
+      : (new URLSearchParams(window.location.search).get("user") ?? "");
   const initialIsLargeScreen =
-    typeof window === "undefined"
-      ? true
-      : window.matchMedia("(min-width: 1024px)").matches;
+    typeof window === "undefined" ? true : window.matchMedia("(min-width: 1024px)").matches;
   const [users, setUsers] = useState<UserSummary[]>([]);
   const [roles, setRoles] = useState<RoleSummary[]>([]);
-  const [permissionGroups, setPermissionGroups] = useState(
-    fallbackPermissionGroups
-  );
+  const [permissionGroups, setPermissionGroups] = useState(fallbackPermissionGroups);
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("any");
@@ -101,9 +97,7 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
   const [userEditorSeed, setUserEditorSeed] = useState(0);
   const [roleEditorSeed, setRoleEditorSeed] = useState(0);
   const [inviteDialogSeed, setInviteDialogSeed] = useState(0);
-  const [detailsOpen, setDetailsOpen] = useState(
-    Boolean(initialUserId) && !initialIsLargeScreen
-  );
+  const [detailsOpen, setDetailsOpen] = useState(Boolean(initialUserId) && !initialIsLargeScreen);
   const [isLargeScreen, setIsLargeScreen] = useState(initialIsLargeScreen);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -133,9 +127,7 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
       const roleList = rolesData as RoleSummary[];
       setRoles(roleList);
       setUsers(usersData.map(mapUserSummary));
-      setPermissionGroups(
-        permissionsData.length > 0 ? permissionsData : fallbackPermissionGroups
-      );
+      setPermissionGroups(permissionsData.length > 0 ? permissionsData : fallbackPermissionGroups);
     } catch (err) {
       if (isApiClientError(err)) {
         setError(err.message);
@@ -149,11 +141,7 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
 
   useEffect(() => {
     let active = true;
-    Promise.all([
-      listAdminUsers(),
-      listAdminRoles(),
-      listPermissionCatalog(),
-    ])
+    Promise.all([listAdminUsers(), listAdminRoles(), listPermissionCatalog()])
       .then(([usersData, rolesData, permissionsData]) => {
         if (!active) return;
         const roleList = rolesData as RoleSummary[];
@@ -186,10 +174,8 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
         !normalizedQuery ||
         user.name.toLowerCase().includes(normalizedQuery) ||
         user.email.toLowerCase().includes(normalizedQuery);
-      const matchesRole =
-        roleFilter === "all" || user.roleIds.includes(roleFilter);
-      const matchesStatus =
-        statusFilter === "any" || user.status === statusFilter;
+      const matchesRole = roleFilter === "all" || user.roleIds.includes(roleFilter);
+      const matchesStatus = statusFilter === "any" || user.status === statusFilter;
       return matchesQuery && matchesRole && matchesStatus;
     });
   }, [query, roleFilter, statusFilter, users]);
@@ -208,20 +194,13 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
   const adminRoleIds = useMemo(
     () =>
       roles
-        .filter(
-          (role) =>
-            role.permissions.includes("*") ||
-            role.name.toLowerCase() === "admin"
-        )
+        .filter((role) => role.permissions.includes("*") || role.name.toLowerCase() === "admin")
         .map((role) => role.id),
     [roles]
   );
 
   const adminUsers = useMemo(
-    () =>
-      users.filter((user) =>
-        user.roleIds.some((roleId) => adminRoleIds.includes(roleId))
-      ),
+    () => users.filter((user) => user.roleIds.some((roleId) => adminRoleIds.includes(roleId))),
     [adminRoleIds, users]
   );
 
@@ -436,13 +415,7 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
           onResetPassword={() => undefined}
         />
       }
-      breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Settings</span>
-          <span>/</span>
-          <span className="text-foreground">Users & Roles</span>
-        </div>
-      }
+      breadcrumbs={["Settings", "Users & Roles"]}
     >
       <div className="mx-auto flex max-w-5xl flex-col gap-6">
         <PageHeader
@@ -464,11 +437,7 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
                 <UserCog className="h-4 w-4" />
                 Create Role
               </Button>
-              <Button
-                className="gap-2"
-                onClick={openInviteDialog}
-                disabled={!userActionsEnabled}
-              >
+              <Button className="gap-2" onClick={openInviteDialog} disabled={!userActionsEnabled}>
                 <UserPlus className="h-4 w-4" />
                 Invite User
               </Button>
@@ -550,11 +519,7 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
         open={userEditorOpen}
         user={editingUser}
         roles={roles}
-        lockedRoleIds={
-          editingUser && protectedUserIds.includes(editingUser.id)
-            ? adminRoleIds
-            : []
-        }
+        lockedRoleIds={editingUser && protectedUserIds.includes(editingUser.id) ? adminRoleIds : []}
         canManageUsers={userActionsEnabled}
         onOpenChange={setUserEditorOpen}
         onSave={handleSaveUser}

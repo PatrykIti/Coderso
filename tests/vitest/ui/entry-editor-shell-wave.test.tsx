@@ -514,7 +514,8 @@ test("EntryEditor loads cached data and drives preview, save, publish, metadata,
       await Promise.resolve();
     });
 
-    expect(view.container.textContent).toContain("Hello:draft");
+    expect(view.container.textContent).toContain("ContentArticlesHello");
+    expect(view.container.textContent).toContain("draft");
 
     const buttons = Array.from(view.container.querySelectorAll("button"));
     const textareas = Array.from(view.container.querySelectorAll("textarea"));

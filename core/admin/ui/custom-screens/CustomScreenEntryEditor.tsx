@@ -733,20 +733,21 @@ export function CustomScreenEntryEditor() {
       <EditorShell
         activeHref={screenRecordsHref}
         breadcrumbs={
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>Coderso</span>
-            <span>/</span>
-            <span>Screens</span>
-            {screen?.name ? (
-              <>
-                <span>/</span>
-                <span>{screen.name}</span>
-              </>
-            ) : null}
-            <span>/</span>
-            <span className="text-foreground">
-              {isCreateMode ? "New record" : entry?.title?.trim() ? entry.title : "Record"}
-            </span>
+          screen?.name
+            ? [
+                "Coderso",
+                "Screens",
+                screen.name,
+                isCreateMode ? "New record" : entry?.title?.trim() ? entry.title : "Record",
+              ]
+            : [
+                "Coderso",
+                "Screens",
+                isCreateMode ? "New record" : entry?.title?.trim() ? entry.title : "Record",
+              ]
+        }
+        topbarActions={
+          <div className="flex items-center gap-2">
             {entry ? (
               <Badge
                 variant={entry.status === "published" ? "default" : "outline"}
@@ -760,10 +761,6 @@ export function CustomScreenEntryEditor() {
                 Unsaved changes
               </span>
             ) : null}
-          </div>
-        }
-        topbarActions={
-          <div className="flex items-center gap-2">
             {canEditInScreen ? (
               <Button
                 size="sm"

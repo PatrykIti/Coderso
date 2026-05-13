@@ -7,12 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
-import {
-  listSeo,
-  runSeoAudit,
-  updateSeo,
-  type SeoDocumentItem,
-} from "@/services/seoClient";
+import { listSeo, runSeoAudit, updateSeo, type SeoDocumentItem } from "@/services/seoClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 
@@ -47,8 +42,7 @@ const resolveAnalysisStatus = (status: SeoDocumentItem["status"]) =>
 const resolvePreviewInfo = (slug: string | null) => {
   const path = slug ? (slug.startsWith("/") ? slug : `/${slug}`) : "/";
   const previewPath = path.replace(/^\//, "");
-  const baseUrl =
-    typeof window !== "undefined" ? window.location.origin : "https://coderso.local";
+  const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://coderso.local";
   return { path, previewUrl: baseUrl, previewPath };
 };
 
@@ -145,8 +139,7 @@ export function SeoManagerPage() {
         !query ||
         item.title.toLowerCase().includes(query.toLowerCase()) ||
         item.path.toLowerCase().includes(query.toLowerCase());
-      const matchesStatus =
-        statusFilter === "all" || getHealth(item) === statusFilter;
+      const matchesStatus = statusFilter === "all" || getHealth(item) === statusFilter;
       return matchesQuery && matchesStatus;
     });
   }, [items, query, statusFilter]);
@@ -197,28 +190,16 @@ export function SeoManagerPage() {
   };
 
   return (
-    <AdminShell
-      activeHref="/admin/seo"
-      showSearch={false}
-      breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Admin</span>
-          <span>/</span>
-          <span className="text-foreground">SEO Manager</span>
-        </div>
-      }
-    >
+    <AdminShell activeHref="/admin/seo" showSearch={false} breadcrumbs={["Admin", "SEO Manager"]}>
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-center gap-3">
-                <h1 className="text-3xl font-semibold tracking-tight">
-                  SEO Manager
-                </h1>
-                <Badge
-                  variant="secondary"
-                  className="text-[10px] font-semibold uppercase tracking-wide"
-                >
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-3xl font-semibold tracking-tight">SEO Manager</h1>
+              <Badge
+                variant="secondary"
+                className="text-[10px] font-semibold uppercase tracking-wide"
+              >
                 Global Scan: {averageScore}%
               </Badge>
             </div>
@@ -279,11 +260,7 @@ export function SeoManagerPage() {
             Loading SEO data...
           </div>
         ) : (
-          <SeoTable
-            items={filteredItems}
-            activeId={activeSelectedId}
-            onEdit={setSelectedId}
-          />
+          <SeoTable items={filteredItems} activeId={activeSelectedId} onEdit={setSelectedId} />
         )}
       </div>
 

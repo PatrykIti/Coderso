@@ -30,7 +30,7 @@ Task board for project work. Keep task files and this board in sync.
 
 - **To Do:** 8 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1541 tasks
+- **Done:** 1542 tasks
 
 ---
 
@@ -62,6 +62,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-255 | Admin Breadcrumb Renderer and Workspace Resource Links | High | Medium | Done: TopBar renders clickable shorthand/structured breadcrumbs, existing admin pages use label arrays, and collection workspace cards link to their owner surfaces |
 | TASK-254 | Detail Template Workspace Create Delete Actions | High | Medium | Done: content-type editor links to collection workspace, which can create, route-link, open, confirm-delete, and unlink canonical detail templates with shared admin notifications |
 | TASK-253 | Detail Template Content Field Bindings | High | Medium | Done: detail template editor exposes Data bindings for selected blocks so widget copy stays fallback while public detail runtime overlays linked entry values |
 | TASK-252 | Widget Configuration IA and Pages Widget Expansion | High | Very Large | Done: research archive, shared inspector IA, per-widget owner-model updates, proof matrix, docs, board sync, and full closure validation are complete |

@@ -1,13 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { AdminShell } from "@/ui/layouts/AdminShell";
+import type { AdminBreadcrumbInput } from "@/ui/shared/AdminBreadcrumbs";
 
 import {
   PostEditorContentRegion,
@@ -21,7 +17,7 @@ type PostEditorViewportMode = "auto" | "desktop" | "mobile";
 
 type PostEditorLayoutProps = {
   activeHref: string;
-  breadcrumbs?: React.ReactNode;
+  breadcrumbs?: React.ReactNode | AdminBreadcrumbInput[];
   header?: React.ReactNode;
   content: React.ReactNode;
   footer?: React.ReactNode;
@@ -78,26 +74,14 @@ export function PostEditorLayout({
   }, [viewportMode]);
 
   const isDesktopViewport =
-    viewportMode === "desktop"
-      ? true
-      : viewportMode === "mobile"
-        ? false
-        : matchesDesktopQuery;
+    viewportMode === "desktop" ? true : viewportMode === "mobile" ? false : matchesDesktopQuery;
 
   const showDesktopSecondary =
-    isDesktopViewport &&
-    !focusMode &&
-    secondarySidebarOpen &&
-    Boolean(secondarySidebar);
+    isDesktopViewport && !focusMode && secondarySidebarOpen && Boolean(secondarySidebar);
   const showDesktopDetails =
-    isDesktopViewport &&
-    !focusMode &&
-    detailsSidebarOpen &&
-    Boolean(detailsSidebar);
-  const showMobileSecondary =
-    !isDesktopViewport && !focusMode && Boolean(secondarySidebar);
-  const showMobileDetails =
-    !isDesktopViewport && !focusMode && Boolean(detailsSidebar);
+    isDesktopViewport && !focusMode && detailsSidebarOpen && Boolean(detailsSidebar);
+  const showMobileSecondary = !isDesktopViewport && !focusMode && Boolean(secondarySidebar);
+  const showMobileDetails = !isDesktopViewport && !focusMode && Boolean(detailsSidebar);
 
   const contentRegion = useMemo(
     () => (

@@ -761,7 +761,7 @@ test("PostClassicEditorShell handles missing post ids, generic preview failures,
     });
     await flush();
 
-    expect(genericPreviewView.container.textContent).toContain("unsaved:true");
+    expect(genericPreviewView.container.textContent).toContain("Unsaved changes");
     expect(genericPreviewView.container.textContent).toContain(
       "preview-error:Failed to generate preview."
     );

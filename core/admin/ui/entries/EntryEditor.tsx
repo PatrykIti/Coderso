@@ -5,26 +5,19 @@ import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
-import { getCachedContentTypes, listContentTypesCached, type ContentTypeSummary } from "@/services/contentTypesClient";
+import {
+  getCachedContentTypes,
+  listContentTypesCached,
+  type ContentTypeSummary,
+} from "@/services/contentTypesClient";
 import {
   deleteEntry,
   getEntryCached,
@@ -51,21 +44,15 @@ import { AdminShell } from "@/ui/layouts/AdminShell";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 import { RuntimePreviewDialog } from "@/ui/preview/RuntimePreviewDialog";
 
-import { EntryEditorHeader } from "./EntryEditorHeader";
 import { EntryDeleteDialog } from "./EntryDeleteDialog";
 import { EntryMetadataPanel, type EntryStatus } from "./EntryMetadataPanel";
 import { getContentTypeLabels } from "./contentTypeLabels";
 import { buildEntryChecklist } from "./entryChecklist";
 import { FieldRenderer } from "./FieldRenderer";
 import type { ContentField } from "../content-types/SchemaBuilder";
-import {
-  buildSchemaFromFields,
-  fieldsFromSchema,
-} from "../content-types/schemaMapping";
+import { buildSchemaFromFields, fieldsFromSchema } from "../content-types/schemaMapping";
 
-const resolveEntryParams = (
-  pathname: string
-): { type: string | null; id: string | null } => {
+const resolveEntryParams = (pathname: string): { type: string | null; id: string | null } => {
   const parts = pathname.split("/").filter(Boolean);
   const entriesIndex = parts.findIndex((segment) => segment === "entries");
   if (entriesIndex !== -1) {
@@ -90,10 +77,7 @@ function resolveDefaultValue(field: ContentField) {
   return field.defaultValue;
 }
 
-function buildInitialValues(
-  fields: ContentField[],
-  data: Record<string, unknown>
-) {
+function buildInitialValues(fields: ContentField[], data: Record<string, unknown>) {
   return fields.reduce<Record<string, unknown>>((acc, field) => {
     if (data[field.name] !== undefined) {
       acc[field.name] = data[field.name];
@@ -169,19 +153,14 @@ export function EntryEditor() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [relationTargets, setRelationTargets] = useState<
-    Array<{ slug: string; name: string }>
-  >(() => mapRelationTargets(getCachedContentTypes() ?? []));
-  const [taxonomyOverview, setTaxonomyOverview] = useState<TaxonomyOverview | null>(
-    null
+  const [relationTargets, setRelationTargets] = useState<Array<{ slug: string; name: string }>>(
+    () => mapRelationTargets(getCachedContentTypes() ?? [])
   );
+  const [taxonomyOverview, setTaxonomyOverview] = useState<TaxonomyOverview | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
 
-  const schemaFieldNames = useMemo(
-    () => new Set(fields.map((field) => field.name)),
-    [fields]
-  );
+  const schemaFieldNames = useMemo(() => new Set(fields.map((field) => field.name)), [fields]);
   const hiddenSchemaFieldNames = useMemo(() => new Set<string>(), []);
 
   const applyEntry = useCallback(
@@ -207,20 +186,17 @@ export function EntryEditor() {
     [hiddenSchemaFieldNames]
   );
 
-  const loadTaxonomy = useCallback(
-    async (contentTypeId: string, entryResult: EntryDetail) => {
-      let overview: TaxonomyOverview | null = null;
-      try {
-        overview = await getTaxonomyOverview(contentTypeId);
-      } catch {
-        overview = null;
-      }
-      setTaxonomyOverview(overview);
-      setSelectedCategoryId(entryResult.taxonomy?.category?.id ?? null);
-      setSelectedTagIds(entryResult.taxonomy?.tags?.map((tag) => tag.id) ?? []);
-    },
-    []
-  );
+  const loadTaxonomy = useCallback(async (contentTypeId: string, entryResult: EntryDetail) => {
+    let overview: TaxonomyOverview | null = null;
+    try {
+      overview = await getTaxonomyOverview(contentTypeId);
+    } catch {
+      overview = null;
+    }
+    setTaxonomyOverview(overview);
+    setSelectedCategoryId(entryResult.taxonomy?.category?.id ?? null);
+    setSelectedTagIds(entryResult.taxonomy?.tags?.map((tag) => tag.id) ?? []);
+  }, []);
 
   const resolveContentType = useCallback(
     async (force?: boolean) => {
@@ -671,9 +647,7 @@ export function EntryEditor() {
     fields,
     values,
   });
-  const missingRequiredNames = new Set(
-    checklist.missingRequiredFields.map((field) => field.name)
-  );
+  const missingRequiredNames = new Set(checklist.missingRequiredFields.map((field) => field.name));
   const tabGroups = useMemo(() => {
     const resolveTabLabel = (field: ContentField) => {
       const explicitTab = field.layout?.tab?.trim();
@@ -719,20 +693,25 @@ export function EntryEditor() {
   const [activeTab, setActiveTab] = useState("content");
   const activeTabId = tabGroups.some((tab) => tab.id === activeTab)
     ? activeTab
-    : tabGroups[0]?.id ?? activeTab;
+    : (tabGroups[0]?.id ?? activeTab);
 
   return (
     <AdminShell
       activeHref="/admin/entries"
       showSearch={false}
       contentClassName="p-0 overflow-hidden"
-      breadcrumbs={
-        <EntryEditorHeader
-          status={status}
-          hasUnsavedChanges={hasAnyUnsavedChanges}
-          contentType={typeLabel}
-          entryLabel={entry?.title ?? editorLabel}
-        />
+      breadcrumbs={["Content", typeLabel, entry?.title ?? editorLabel]}
+      topbarActions={
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="text-[10px] uppercase">
+            {status}
+          </Badge>
+          {hasAnyUnsavedChanges ? (
+            <Badge variant="outline" className="border-rose-500/30 bg-rose-500/10 text-rose-600">
+              Unsaved changes
+            </Badge>
+          ) : null}
+        </div>
       }
     >
       <div className="flex h-full min-h-0">
@@ -787,158 +766,158 @@ export function EntryEditor() {
           </div>
           <ScrollArea className="flex-1 min-h-0">
             <div className="mx-auto flex max-w-4xl flex-col gap-8 px-10 py-10">
-            {error ? (
-              <Alert variant="destructive">
-                <AlertTitle>Unable to load entry</AlertTitle>
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            ) : null}
-            {remoteUpdatePending ? (
-              <Alert>
-                <AlertTitle>Updated in another tab</AlertTitle>
-                <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <span>New changes are available. Refresh to load the latest version.</span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => refreshEntry({ allowUnsaved: true })}
-                  >
-                    Refresh
-                  </Button>
-                </AlertDescription>
-              </Alert>
-            ) : null}
-            {hasAnyUnsavedChanges ? (
-              <Alert>
-                <AlertTitle>Unsaved changes</AlertTitle>
-                <AlertDescription>
-                  Save the entry content or metadata to keep your edits.
-                </AlertDescription>
-              </Alert>
-            ) : null}
-            <div className="space-y-4">
-              <Textarea
-                ref={titleRef}
-                value={title}
-                onChange={(event) => handleTitleChange(event.target.value)}
-                rows={1}
-                className="min-h-0 h-auto resize-none overflow-hidden rounded-lg border bg-background px-3 py-1 text-3xl font-semibold leading-tight tracking-tight focus-visible:ring-1 focus-visible:ring-ring"
-                placeholder="Enter post title..."
-              />
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Slug
-                </span>
-                <div className="flex flex-1 items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2">
-                  <span className="text-xs text-muted-foreground">/</span>
-                  <Input
-                    value={slug}
-                    onChange={(event) => handleSlugChange(event.target.value)}
-                    className="h-auto border-0 bg-transparent px-0 py-0 text-sm font-mono focus-visible:ring-0"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-xs"
-                    onClick={handleGenerateSlug}
-                  >
-                    <RefreshCcw className="h-3 w-3" />
-                  </Button>
+              {error ? (
+                <Alert variant="destructive">
+                  <AlertTitle>Unable to load entry</AlertTitle>
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              ) : null}
+              {remoteUpdatePending ? (
+                <Alert>
+                  <AlertTitle>Updated in another tab</AlertTitle>
+                  <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <span>New changes are available. Refresh to load the latest version.</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => refreshEntry({ allowUnsaved: true })}
+                    >
+                      Refresh
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              ) : null}
+              {hasAnyUnsavedChanges ? (
+                <Alert>
+                  <AlertTitle>Unsaved changes</AlertTitle>
+                  <AlertDescription>
+                    Save the entry content or metadata to keep your edits.
+                  </AlertDescription>
+                </Alert>
+              ) : null}
+              <div className="space-y-4">
+                <Textarea
+                  ref={titleRef}
+                  value={title}
+                  onChange={(event) => handleTitleChange(event.target.value)}
+                  rows={1}
+                  className="min-h-0 h-auto resize-none overflow-hidden rounded-lg border bg-background px-3 py-1 text-3xl font-semibold leading-tight tracking-tight focus-visible:ring-1 focus-visible:ring-ring"
+                  placeholder="Enter post title..."
+                />
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Slug
+                  </span>
+                  <div className="flex flex-1 items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2">
+                    <span className="text-xs text-muted-foreground">/</span>
+                    <Input
+                      value={slug}
+                      onChange={(event) => handleSlugChange(event.target.value)}
+                      className="h-auto border-0 bg-transparent px-0 py-0 text-sm font-mono focus-visible:ring-0"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-xs"
+                      onClick={handleGenerateSlug}
+                    >
+                      <RefreshCcw className="h-3 w-3" />
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {isLoading ? (
-              <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
-                Loading entry fields...
-              </div>
-            ) : tabGroups.length === 0 ? (
-              <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
-                This content type has no fields yet.
-              </div>
-            ) : (
-              <Tabs
-                value={activeTabId}
-                onValueChange={setActiveTab}
-                className="space-y-6"
-              >
-                <TabsList variant="line">
-                  {tabGroups.map((tab) => (
-                    <TabsTrigger key={tab.id} value={tab.id}>
-                      {tab.label}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-                {tabGroups.map((tab) => (
-                  <TabsContent key={tab.id} value={tab.id} className="space-y-8">
-                    {tab.sections.map((section, index) => (
-                      <div key={`${tab.id}-${section.label ?? "default"}-${index}`} className="space-y-4">
-                        {section.label ? (
-                          <div className="flex items-center gap-3">
-                            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                              {section.label}
-                            </h4>
-                            <div className="h-px flex-1 bg-border" />
-                          </div>
-                        ) : null}
-                        <div className="grid gap-4 md:grid-cols-12">
-                          {section.fields.map((field) => {
-                            const width = field.layout?.width ?? "full";
-                            const colSpan =
-                              width === "half" ? "md:col-span-6" : "md:col-span-12";
-                            const isCompact = field.layout?.display === "compact";
-                            const isMissing = missingRequiredNames.has(field.name);
-                            const requiredBadgeClass = isMissing
-                              ? "border-destructive/40 bg-destructive/10 text-destructive"
-                              : undefined;
-                            return (
-                              <div key={field.id} className={colSpan}>
-                                <Card
-                                  className={[
-                                    isCompact ? "border-dashed" : "",
-                                    isMissing ? "border-destructive/40 bg-destructive/5" : "",
-                                  ]
-                                    .filter(Boolean)
-                                    .join(" ")}
-                                >
-                                  <CardHeader className={isCompact ? "space-y-1 pb-3" : "space-y-2"}>
-                                    <div className="flex items-center justify-between gap-3">
-                                      <CardTitle className="text-base">{field.label}</CardTitle>
-                                      {field.required ? (
-                                        <Badge variant="outline" className={requiredBadgeClass}>
-                                          Required
-                                        </Badge>
-                                      ) : null}
-                                    </div>
-                                    {field.help ? (
-                                      <CardDescription>{field.help}</CardDescription>
-                                    ) : null}
-                                    {isMissing ? (
-                                      <p className="text-xs font-semibold text-destructive">
-                                        Required field missing.
-                                      </p>
-                                    ) : null}
-                                  </CardHeader>
-                                  <CardContent className={isCompact ? "pt-0" : undefined}>
-                                    <FieldRenderer
-                                      field={field}
-                                      value={values[field.name]}
-                                      onChange={(value) => handleFieldChange(field.name, value)}
-                                      relationTargets={relationTargets}
-                                      display={field.layout?.display}
-                                    />
-                                  </CardContent>
-                                </Card>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
+              {isLoading ? (
+                <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
+                  Loading entry fields...
+                </div>
+              ) : tabGroups.length === 0 ? (
+                <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
+                  This content type has no fields yet.
+                </div>
+              ) : (
+                <Tabs value={activeTabId} onValueChange={setActiveTab} className="space-y-6">
+                  <TabsList variant="line">
+                    {tabGroups.map((tab) => (
+                      <TabsTrigger key={tab.id} value={tab.id}>
+                        {tab.label}
+                      </TabsTrigger>
                     ))}
-                  </TabsContent>
-                ))}
-              </Tabs>
-            )}
+                  </TabsList>
+                  {tabGroups.map((tab) => (
+                    <TabsContent key={tab.id} value={tab.id} className="space-y-8">
+                      {tab.sections.map((section, index) => (
+                        <div
+                          key={`${tab.id}-${section.label ?? "default"}-${index}`}
+                          className="space-y-4"
+                        >
+                          {section.label ? (
+                            <div className="flex items-center gap-3">
+                              <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                                {section.label}
+                              </h4>
+                              <div className="h-px flex-1 bg-border" />
+                            </div>
+                          ) : null}
+                          <div className="grid gap-4 md:grid-cols-12">
+                            {section.fields.map((field) => {
+                              const width = field.layout?.width ?? "full";
+                              const colSpan = width === "half" ? "md:col-span-6" : "md:col-span-12";
+                              const isCompact = field.layout?.display === "compact";
+                              const isMissing = missingRequiredNames.has(field.name);
+                              const requiredBadgeClass = isMissing
+                                ? "border-destructive/40 bg-destructive/10 text-destructive"
+                                : undefined;
+                              return (
+                                <div key={field.id} className={colSpan}>
+                                  <Card
+                                    className={[
+                                      isCompact ? "border-dashed" : "",
+                                      isMissing ? "border-destructive/40 bg-destructive/5" : "",
+                                    ]
+                                      .filter(Boolean)
+                                      .join(" ")}
+                                  >
+                                    <CardHeader
+                                      className={isCompact ? "space-y-1 pb-3" : "space-y-2"}
+                                    >
+                                      <div className="flex items-center justify-between gap-3">
+                                        <CardTitle className="text-base">{field.label}</CardTitle>
+                                        {field.required ? (
+                                          <Badge variant="outline" className={requiredBadgeClass}>
+                                            Required
+                                          </Badge>
+                                        ) : null}
+                                      </div>
+                                      {field.help ? (
+                                        <CardDescription>{field.help}</CardDescription>
+                                      ) : null}
+                                      {isMissing ? (
+                                        <p className="text-xs font-semibold text-destructive">
+                                          Required field missing.
+                                        </p>
+                                      ) : null}
+                                    </CardHeader>
+                                    <CardContent className={isCompact ? "pt-0" : undefined}>
+                                      <FieldRenderer
+                                        field={field}
+                                        value={values[field.name]}
+                                        onChange={(value) => handleFieldChange(field.name, value)}
+                                        relationTargets={relationTargets}
+                                        display={field.layout?.display}
+                                      />
+                                    </CardContent>
+                                  </Card>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </TabsContent>
+                  ))}
+                </Tabs>
+              )}
             </div>
           </ScrollArea>
         </div>
