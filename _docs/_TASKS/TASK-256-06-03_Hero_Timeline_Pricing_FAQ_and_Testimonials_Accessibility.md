@@ -1,0 +1,157 @@
+# TASK-256-06-03: Hero, Timeline, Pricing, FAQ, and Testimonials Accessibility
+
+# FileName: TASK-256-06-03_Hero_Timeline_Pricing_FAQ_and_Testimonials_Accessibility.md
+
+**Priority:** High
+**Category:** Widgets + Marketing Content + Runtime Render + Accessibility
+**Estimated Effort:** Large
+**Dependencies:** TASK-256-01, TASK-256-02, TASK-256-04, TASK-256-06
+**Status:** To Do
+
+---
+
+## Overview
+
+Repair the remaining marketing widget findings for `hero`, `timeline`,
+`pricing-plans`, `faq-accordion`, and `testimonials`.
+
+This leaf excludes page-shell defects found while testing widget pages. Page
+editor history/auth, preview toolbar, discard, and viewport-control issues must
+be split by TASK-256-08 into a page-shell follow-up if still reproducible.
+
+## Drift Evidence
+
+- `_docs/PLAYWRIGHT/REPORT_HERO_WIDGET.md:126-159,166-181,256-260,271-284` for
+  media/gradient/alt/editor drift plus page-shell-only findings that need
+  separate ownership.
+- `_docs/PLAYWRIGHT/REPORT_TIMELINE_WIDGET.md:121,156,170,192,262-273` for
+  race conditions, Wizard showing only part of the model, mobile date
+  visibility, line style on cards, connector width, and ARIA.
+- `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md:154-200,206-236,286-294,320-347`
+  for plan count/variant drift, missing clear, static toggle, pricing
+  semantics, and validation priorities.
+- `_docs/PLAYWRIGHT/REPORT_FAQ_ACCORDION_WIDGET.md:96,116,125,140-144,173-180`
+  for single-open runtime, spacing/default guards, clear controls, expand
+  indicator, and ARIA.
+- `_docs/PLAYWRIGHT/REPORT_TESTIMONIALS_WIDGET.md:72-126,136-160` for slider
+  scope, avatar/media lazy/alt behavior, clear gaps, and ARIA.
+
+## Scope Decision Matrix
+
+| Finding | TASK-256 action | Owner | Follow-up policy |
+|---|---|---|---|
+| Hero widget media/gradient/alt/link drift | Fix here | `HeroEditors.tsx`, `hero.tsx` | None |
+| Hero page history auth/toolbar/discard/viewport issues | Out of widget leaf scope | `PageEditor.tsx`, `PageRevisionDrawer.tsx`, preview toolbar owners | TASK-256-08 creates page-shell task if still reproducible |
+| Timeline Visual race and Wizard 4/8 step coverage | Fix here plus TASK-256-01 | `TimelineEditors.tsx`, `timeline.tsx` | None |
+| Timeline mobile date/lineStyle/connector issues | Fix here if current renderer exposes the controls; otherwise classify in report | `timeline.tsx` | TASK-256-08 records deferral if product expansion |
+| Pricing static toggle/plan-count drift | Fix here | `PricingPlansEditors.tsx`, `pricingPlans.tsx` | None |
+| FAQ single-open, chevron, ARIA, clear controls | Fix here plus TASK-256-04 | `FaqAccordionEditors.tsx`, `faqAccordion.tsx` | None |
+| Testimonials true carousel, drag/drop, rich media picker | Future product scope unless current `slider-static` label is misleading | Future task | TASK-256-08 records deferral |
+
+## Sub-Tasks
+
+- [ ] Fix hero widget-owned media, gradient, alt, and safe-link findings.
+- [ ] Add explicit page-shell follow-up notes for non-widget Hero findings.
+- [ ] Fix timeline Visual mode race, Wizard model coverage, mobile date output,
+  line style behavior, connector width, and timeline/list ARIA where current
+  controls exist.
+- [ ] Fix pricing plan-count/variant desync, `highlightRing` clear, billing
+  toggle behavior, and accessible pricing semantics.
+- [ ] Fix FAQ single-open behavior, expand indicator, clear controls, and ARIA.
+- [ ] Classify testimonials `slider-static`: rename/static-proof it or make it
+  interactive only if that is required by the existing contract.
+- [ ] Add testimonial avatar/image lazy and alt assertions.
+
+## Files to Change
+
+| File | Lines | Required change |
+|---|---:|---|
+| `core/admin/ui/widgets/editors/HeroEditors.tsx` | media/gradient controls | Make visible controls persist and render truthfully; keep page-shell findings out of this leaf. |
+| `core/widgets/core/hero.tsx` | media/link render | Alt/media/link safety and any confirmed gradient runtime drift. |
+| `core/admin/ui/widgets/editors/TimelineEditors.tsx` | mode/status/Wizard sections | Atomic mode update, complete Wizard fields or truthful Wizard scope, and status/line controls. |
+| `core/widgets/core/timeline.tsx` | renderer | Mobile date, line style, connector, and ARIA semantics. |
+| `core/admin/ui/widgets/editors/PricingPlansEditors.tsx` | 596-615, 965-971 | Plan count/variant sync, missing clear, billing controls, and validation feedback. |
+| `core/widgets/core/pricingPlans.tsx` | 232-239, 390-405, 664-727 | Explicit token guards, interactive or static billing semantics, table/plan ARIA. |
+| `core/admin/ui/widgets/editors/FaqAccordionEditors.tsx` | behavior/colors sections | Clear controls, default-open labels, single-open editor truthfulness. |
+| `core/widgets/core/faqAccordion.tsx` | 142-145, 316-365 | Explicit spacing resolver, single-open runtime script, chevron, summary/content ARIA. |
+| `core/admin/ui/widgets/editors/TestimonialsEditors.tsx` | media/style sections | Slider-static scope, avatar clear/lazy/alt controls, and accessibility labels. |
+| `core/widgets/core/testimonials.tsx` | 38-42, 155-158 | Lazy images, alt semantics, and static-vs-interactive output. |
+
+## Implementation Pseudocode
+
+Timeline mode:
+
+```tsx
+function handleTimelineModeChange(nextVariant: TimelineVariantId) {
+  const nextData = normalizeTimelineDataForVariant(value, nextVariant);
+  onVariantChange?.(nextVariant, nextData);
+}
+```
+
+FAQ single-open:
+
+```js
+function bindFaqSingleOpen(root) {
+  if (root.dataset.faqMultipleOpen === "true") return;
+  root.querySelectorAll("details").forEach((details) => {
+    details.addEventListener("toggle", () => {
+      if (!details.open) return;
+      root.querySelectorAll("details[open]").forEach((other) => {
+        if (other !== details) other.open = false;
+      });
+    });
+  });
+}
+```
+
+Error handling:
+
+- Timeline unsupported statuses normalize without dropping legacy item data.
+- Pricing over-limit or hidden plans are preserved until explicit normalization.
+- FAQ invalid default-open indices clamp to `-1` or the closest valid item.
+- Hero page-shell failures are not marked fixed by widget tests.
+
+## Security Contract
+
+No API routes are added.
+
+- Endpoint visibility: none.
+- Auth/RBAC/CSRF/rate limit: unchanged.
+- Reject-unknown validation: update validator tests if schemas change.
+- Anti-abuse: external links remain safe, runtime scripts scope to their widget
+  root, and no user-authored script execution is added.
+- Secret handling: no secrets in media/link payloads, diagnostics, or reports.
+
+## Testing Requirements
+
+- `bun run test:vitest -- tests/vitest/ui/hero-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/hero.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/timeline-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/timeline.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/pricing-plans-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/pricingPlans.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/faq-accordion-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/faqAccordion.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/testimonials-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/testimonials.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/widgetSafeHref.test.ts` when link
+  semantics change.
+- Run Bun validator/registry tests if schemas/defaults change.
+- Run `bun --cwd core lint` and `bun --cwd core lint:types`.
+
+## Documentation Updates Required
+
+- Update the five touched Playwright reports with fixed/deferred status.
+- Update `_docs/_WIDGETS/HERO.md`, `_docs/_WIDGETS/TIMELINE.md`,
+  `_docs/_WIDGETS/PRICING_PLANS.md`, `_docs/_WIDGETS/FAQ_ACCORDION.md`, and
+  `_docs/_WIDGETS/TESTIMONIALS.md` when behavior changes.
+- Update `_docs/WIDGETS.md` only if shared accessibility or editor-mode
+  contracts change.
+
+## Acceptance Criteria
+
+- Widget-owned findings are fixed with focused editor/runtime tests.
+- Page-shell findings are not hidden inside widget closure.
+- Timeline, pricing, FAQ, and testimonials expose truthful interactive/static
+  behavior.
+- Public runtime output has accessible names, states, and safe links/media.

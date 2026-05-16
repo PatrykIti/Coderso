@@ -24,6 +24,8 @@ rendered into frontend output.
 
 - `_docs/WIDGETS.md:100-105` requires stable editor metadata and named
   slot/nested-content sections.
+- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:252,270,283` reports that
+  `Empty region.` can leak into public frontend output.
 - `_docs/PLAYWRIGHT/REPORT_GRID_COLUMNS_WIDGET.md:63,150-160,188-191,215-217`
   confirms manual slot/config desync and public `Empty column.` output.
 - `_docs/PLAYWRIGHT/REPORT_SPLIT_LAYOUT_WIDGET.md:174-176,202,218-224`
@@ -37,8 +39,8 @@ rendered into frontend output.
 
 ## Sub-Tasks
 
-- [ ] Add a shared runtime guard for empty-slot placeholders based on preview or
-  editor context.
+- [ ] Add a shared runtime guard for empty-slot placeholders based on a concrete
+  renderer context owned by `WidgetRenderer`, not by ad hoc per-widget flags.
 - [ ] Replace public placeholder copy with `null` output in production runtime.
 - [ ] Keep editor preview affordances visible in page builder/preview only.
 - [ ] Synchronize repeatable config counts with slot add/remove actions for
@@ -51,6 +53,8 @@ rendered into frontend output.
 | File | Lines | Required change |
 |---|---:|---|
 | `core/admin/ui/pages/builder/VisualPanel.tsx` | 101-162 | Keep slot controls in named sections and expose enough metadata for repeated slots without technical copy. |
+| `core/widgets/types.ts` | render props around `WidgetBlockRenderProps` | Add a backward-compatible render context or `renderMode` field that distinguishes public runtime from editor/admin preview. |
+| `core/widgets/renderers/widgetRenderer.tsx` | 194 and render callsites | Pass the render context to widget renderers through the existing renderer owner so public placeholder behavior is centralized. |
 | `core/admin/ui/widgets/editors/GridColumnsEditors.tsx` | repeatable column config section | Prevent config count from drifting from actual slots or add explicit sync actions with warnings. |
 | `core/admin/ui/widgets/editors/TabsEditors.tsx` | 277-302 | Replace `slot id` copy with user-facing panel labels and metadata. |
 | `core/admin/ui/widgets/editors/AccordionEditors.tsx` | 272-297 | Replace `slot id` copy with user-facing item labels and metadata. |
@@ -80,6 +84,28 @@ function renderSlotPlaceholder(message: string, mode: WidgetRenderMode | undefin
 }
 ```
 
+Renderer contract shape:
+
+```tsx
+type WidgetRenderContext = {
+  mode: WidgetRenderMode;
+  previewDevice?: "desktop" | "tablet" | "mobile";
+};
+
+function WidgetRenderer(props: WidgetRendererProps) {
+  const renderContext: WidgetRenderContext = props.renderContext ?? { mode: "public" };
+
+  return renderWidget({
+    data: props.data,
+    variant: props.variant,
+    slots: props.slots,
+    previewDevice: props.previewDevice,
+    blockId: props.blockId,
+    renderContext,
+  });
+}
+```
+
 Grid columns sync shape:
 
 ```tsx
@@ -100,6 +126,8 @@ Error handling:
 - If slots exist without configs, normalize a default config for preview and
   save it only through an explicit editor update.
 - Public renderers should not emit admin instructions.
+- If `renderContext` is missing on legacy callsites, default to `public` so
+  placeholders fail closed outside the page builder.
 
 ## Security Contract
 
@@ -121,11 +149,11 @@ No API routes are added.
   and toggle-block.
 - Update runtime widget tests:
   - `tests/vitest/widgets/section.test.tsx`
-  - `gridColumns.test.tsx`
-  - `splitLayout.test.tsx`
-  - `tabs.test.tsx`
-  - `accordionWidget.test.tsx`
-  - `toggleBlock.test.tsx`
+  - `tests/vitest/widgets/gridColumns.test.tsx`
+  - `tests/vitest/widgets/splitLayout.test.tsx`
+  - `tests/vitest/widgets/tabs.test.tsx`
+  - `tests/vitest/widgets/accordionWidget.test.tsx`
+  - `tests/vitest/widgets/toggleBlock.test.tsx`
 - Add assertions that public output does not contain `Empty column.`,
   `Empty region.`, `Add widgets`, or similar admin-only copy.
 - Run targeted Vitest suites plus `bun --cwd core lint` and

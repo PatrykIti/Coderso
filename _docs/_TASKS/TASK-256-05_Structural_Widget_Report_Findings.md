@@ -4,7 +4,7 @@
 
 **Priority:** High
 **Category:** Widgets + Layout + Admin UI + Runtime Render
-**Estimated Effort:** Large
+**Estimated Effort:** Very Large
 **Dependencies:** TASK-256-01, TASK-256-02, TASK-256-03, TASK-256-04
 **Status:** To Do
 
@@ -15,8 +15,13 @@
 Apply the shared TASK-256 repairs to structural widgets after the shared helpers
 land.
 
-This task owns widget-specific fixes for:
+This parent task owns structural-widget decomposition and sequencing. Execute
+the physical child leaves below; do not implement this parent as one broad
+patch.
 
+This task family owns widget-specific fixes for:
+
+- `section`
 - `grid-columns`
 - `split-layout`
 - `stack`
@@ -30,6 +35,7 @@ renderers, editors, tests, and docs together per widget.
 
 ## Drift Evidence
 
+- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:252,270,280-298`
 - `_docs/PLAYWRIGHT/REPORT_GRID_COLUMNS_WIDGET.md:63,90,104,150-160,173,188-191,215-227`
 - `_docs/PLAYWRIGHT/REPORT_SPLIT_LAYOUT_WIDGET.md:121-125,174-182,190,202,218-224`
 - `_docs/PLAYWRIGHT/REPORT_STACK_WIDGET.md:37-49,61-120`
@@ -41,57 +47,36 @@ renderers, editors, tests, and docs together per widget.
 
 ## Sub-Tasks
 
-- [ ] Fix `grid-columns` slot/config synchronization and cardize Advanced drift.
-- [ ] Fix `split-layout` duplicate `None`/`Gap 0`, redundant slot section, and
-  Advanced ownership drift.
-- [ ] Decide which `stack` pre-test findings are actual contract bugs vs future
-  feature requests, then implement only contract repairs.
-- [ ] Fix `spacer` fixed/responsive Advanced behavior and custom token UX.
-- [ ] Fix `divider` custom spacing UX, inert Advanced variant select, and ARIA.
-- [ ] Apply shared slot/ARIA clearups to tabs/accordion/toggle structural
-  sections that remain after TASK-256-03/04.
+- [ ] TASK-256-05-01: Section and Grid Columns Structural Findings.
+- [ ] TASK-256-05-02: Split Layout and Stack Variant Data Sync.
+- [ ] TASK-256-05-03: Spacer and Divider Token Control Findings.
+- [ ] TASK-256-05-04: Tabs, Accordion, and Toggle Block Structural Residuals.
 
 ## Files to Change
 
-| Widget | Files and line refs | Required change |
-|---|---|---|
-| `grid-columns` | `core/widgets/core/gridColumns.tsx:452-503`; `core/admin/ui/widgets/editors/GridColumnsEditors.tsx` | Public placeholder gating, config/slot sync, Advanced cardize fields hidden/disabled when cardize is off. |
-| `split-layout` | `core/widgets/core/splitLayout.tsx:247-270`; `core/admin/ui/widgets/editors/SplitLayoutEditors.tsx` | Public placeholder gating, duplicate zero token cleanup, remove/rework redundant pane slot info, clarify Advanced ownership. |
-| `stack` | `core/widgets/core/stack.tsx`; `core/admin/ui/widgets/editors/StackEditors.tsx` | Validate pre-test gaps against contract; avoid adding speculative options unless required by shared guidelines. |
-| `spacer` | `core/admin/ui/widgets/editors/SpacerEditors.tsx:46-52,157-205`; `core/widgets/core/spacer.tsx` | Custom token UX and variant-aware Advanced controls. |
-| `divider` | `core/admin/ui/widgets/editors/DividerEditors.tsx:61-69,179-217`; `core/widgets/core/divider.tsx` | Custom token UX, remove inert Advanced variant select, separator ARIA. |
-| `tabs` | `core/admin/ui/widgets/editors/TabsEditors.tsx:277-302,370-430`; `core/widgets/core/tabs.tsx:432-505` | Slot labels, `inactiveTextColor` editor control, public placeholder gating. |
-| `accordion` | `core/admin/ui/widgets/editors/AccordionEditors.tsx:272-430`; `core/widgets/core/accordion.tsx:361-368` | Slot labels, default-open duplication cleanup, clear controls, public placeholder gating. |
-| `toggle-block` | `core/widgets/core/toggleBlock.tsx:298-389`; `core/admin/ui/widgets/editors/ToggleBlockEditors.tsx` | Per-pane placeholder gating and editor mode ownership cleanup. |
+| Child | Widget scope | Primary owner files | Required change |
+|---|---|---|---|
+| TASK-256-05-01 | `section`, `grid-columns` | `core/widgets/core/section.tsx`; `SectionEditors.tsx`; `core/widgets/core/gridColumns.tsx`; `GridColumnsEditors.tsx` | Hide public placeholders, validate section anchors/default tokens, sync grid slots/config, and classify public column labels as editor metadata unless a caption field is intentionally added. |
+| TASK-256-05-02 | `split-layout`, `stack` | `core/widgets/core/splitLayout.tsx`; `SplitLayoutEditors.tsx`; `core/widgets/core/stack.tsx`; `StackEditors.tsx` | Repair variant-bound ratio/direction data sync, duplicate zero-token choices, and redundant Advanced controls. |
+| TASK-256-05-03 | `spacer`, `divider` | `core/widgets/core/spacer.tsx`; `SpacerEditors.tsx`; `core/widgets/core/divider.tsx`; `DividerEditors.tsx` | Repair fixed/responsive Advanced behavior, custom token UX, inert variant select, and divider ARIA. |
+| TASK-256-05-04 | `tabs`, `accordion`, `toggle-block` | `core/widgets/core/tabs.tsx`; `TabsEditors.tsx`; `core/widgets/core/accordion.tsx`; `AccordionEditors.tsx`; `core/widgets/core/toggleBlock.tsx`; `ToggleBlockEditors.tsx` | Apply remaining slot-label, clear-control, placeholder, default-open/collapsible, and interactive structural residuals after TASK-256-03/04. |
 
 ## Implementation Pseudocode
 
-```tsx
-function applyStructuralWidgetFix(widgetType: StructuralWidgetType, data: unknown) {
-  const normalized = normalizeByWidgetType(widgetType, data);
-  const repaired = applySharedContractRepairs(widgetType, normalized, {
-    clearSemantics: "delete-field",
-    publicPlaceholders: "hidden",
-    tokenZeroMode: "single-visible-zero-choice",
-  });
-  return repaired;
-}
-```
-
-Grid example:
+Parent orchestration shape:
 
 ```tsx
-function GridColumnsVisualEditor(props: WidgetEditorProps<GridColumnsData>) {
-  const slotIds = props.context?.slotTargets?.map((target) => target.slotId) ?? [];
-  const value = reconcileColumnConfigsWithSlots(props.value, slotIds);
+type StructuralLeafId =
+  | "TASK-256-05-01"
+  | "TASK-256-05-02"
+  | "TASK-256-05-03"
+  | "TASK-256-05-04";
 
-  return (
-    <WidgetEditorSection id="grid-columns.columns" title="Columns">
-      {value.columns.map((column, index) => (
-        <ColumnConfigRow key={column.slotId} column={column} index={index} />
-      ))}
-    </WidgetEditorSection>
-  );
+function selectStructuralLeaf(widgetType: string): StructuralLeafId {
+  if (widgetType === "section" || widgetType === "grid-columns") return "TASK-256-05-01";
+  if (widgetType === "split-layout" || widgetType === "stack") return "TASK-256-05-02";
+  if (widgetType === "spacer" || widgetType === "divider") return "TASK-256-05-03";
+  return "TASK-256-05-04";
 }
 ```
 
@@ -101,6 +86,8 @@ Error handling:
   config confuse the editor without a warning/sync action.
 - If a report asks for a broad new feature, defer it unless it repairs an
   existing broken control.
+- Keep child leaf write scopes disjoint. If a shared helper change is required,
+  land it in TASK-256-01/02/03/04 before the child leaf mutates widget files.
 
 ## Security Contract
 
@@ -109,36 +96,39 @@ No API routes are added.
 - Endpoint visibility: none.
 - Auth/RBAC/CSRF/rate limit: unchanged.
 - Reject-unknown validation: update validator tests if schemas change.
-- Anti-abuse: public renderers must not output admin-only placeholders or
-  unsafe href/script values.
+- Anti-abuse: public renderers must not output admin-only placeholders,
+  duplicate DOM IDs, unsafe inline scripts, or privileged/debug identifiers.
 - Secret handling: no secrets in diagnostics or widget payloads.
 
 ## Testing Requirements
 
-- Update editor waves:
-  - `grid-columns-editor-wave.test.tsx`
-  - `split-layout-editor-wave.test.tsx`
-  - `stack-editor-wave.test.tsx`
-  - `spacer-editor-wave.test.tsx`
-  - `divider-editor-wave.test.tsx`
-  - `tabs-editor-wave.test.tsx`
-  - `accordion-editor-wave.test.tsx`
-  - `toggle-block-editor-wave.test.tsx`
-- Update runtime tests:
-  - `gridColumns.test.tsx`
-  - `splitLayout.test.tsx`
-  - `stack.test.tsx`
-  - `spacer.test.tsx`
-  - `divider.test.tsx`
-  - `tabs.test.tsx`
-  - `accordionWidget.test.tsx`
-  - `toggleBlock.test.tsx`
+- Update editor waves through the child leaves:
+  - `tests/vitest/ui/section-editor-wave.test.tsx`
+  - `tests/vitest/ui/grid-columns-editor-wave.test.tsx`
+  - `tests/vitest/ui/split-layout-editor-wave.test.tsx`
+  - `tests/vitest/ui/stack-editor-wave.test.tsx`
+  - `tests/vitest/ui/spacer-editor-wave.test.tsx`
+  - `tests/vitest/ui/divider-editor-wave.test.tsx`
+  - `tests/vitest/ui/tabs-editor-wave.test.tsx`
+  - `tests/vitest/ui/accordion-editor-wave.test.tsx`
+  - `tests/vitest/ui/toggle-block-editor-wave.test.tsx`
+- Update runtime tests through the child leaves:
+  - `tests/vitest/widgets/section.test.tsx`
+  - `tests/vitest/widgets/gridColumns.test.tsx`
+  - `tests/vitest/widgets/splitLayout.test.tsx`
+  - `tests/vitest/widgets/stack.test.tsx`
+  - `tests/vitest/widgets/spacer.test.tsx`
+  - `tests/vitest/widgets/divider.test.tsx`
+  - `tests/vitest/widgets/tabs.test.tsx`
+  - `tests/vitest/widgets/accordionWidget.test.tsx`
+  - `tests/vitest/widgets/toggleBlock.test.tsx`
 - Run targeted Vitest suites, `bun --cwd core lint`, and
   `bun --cwd core lint:types`.
 
 ## Documentation Updates Required
 
-- Update touched structural widget docs in `_docs/_WIDGETS/*.md`.
+- Update touched structural widget docs in `_docs/_WIDGETS/*.md`, including
+  `_docs/_WIDGETS/SECTION.md` when section behavior changes.
 - Update structural Playwright reports with fixed/deferred status.
 - Update `_docs/WIDGET_PACK_MATRIX.md` only if readiness changes.
 

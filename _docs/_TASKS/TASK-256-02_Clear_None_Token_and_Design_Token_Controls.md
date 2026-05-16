@@ -41,10 +41,18 @@ The reports show repeated drift from the documented contract:
   clear controls for border/divider-like fields.
 - `_docs/PLAYWRIGHT/REPORT_CONTENT_LIST_WIDGET.md:77,147,160,269-280` reports
   a missing `textColor` clear control.
-- `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md:100-103` reports missing
+- `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md:179-183` reports missing
   `highlightRing` clear.
 - `_docs/PLAYWRIGHT/REPORT_FEATURE_GRID_WIDGET.md:275-276` reports missing
   `borderColor` clear.
+- `_docs/PLAYWRIGHT/REPORT_CTA_BANNER_WIDGET.md:155-161` reports missing clear
+  controls for CTA banner text/button color fields.
+- `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md:78,87-98,177-179` reports
+  overlay alpha loss through the hex-only picker.
+- `_docs/PLAYWRIGHT/REPORT_LOGO_CLOUD_WIDGET.md:94-100,112-116` reports
+  duplicated Advanced token controls and hover/height token truthfulness.
+- `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md:82-89,100-116,192-204`
+  reports duplicated Advanced tokens and CSS-variable color picker drift.
 
 ## Sub-Tasks
 
@@ -70,6 +78,10 @@ The reports show repeated drift from the documented contract:
 | `core/admin/ui/widgets/editors/ContentListEditors.tsx` | style controls | Add clear control for `textColor` and hide token controls with no runtime effect. |
 | `core/admin/ui/widgets/editors/PricingPlansEditors.tsx` | 965-971 | Add `onClear` for `highlightRing`. |
 | `core/admin/ui/widgets/editors/FeatureGridEditors.tsx` | 668-683 | Add `onClear` for `borderColor` if the normalizer/render contract supports omission. |
+| `core/admin/ui/widgets/editors/CtaBannerEditors.tsx` | 413-486 | Add `onClear` for text, badge text, primary/secondary button text, and border-like color fields where omission is supported. |
+| `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx` | 92-98, 178, 720-832 | Preserve `rgba(...)`/CSS variable overlay values and make duplicated Advanced style controls explicitly technical or read-only. |
+| `core/admin/ui/widgets/editors/LogoCloudEditors.tsx` | 510-594, 616-694 | Gate hoverColor when grayscale is inactive, keep logo-height `none` truthful, and make duplicated Advanced token controls explicit. |
+| `core/admin/ui/widgets/editors/StatsKpiEditors.tsx` | 570-713 | Preserve CSS variable color values and make duplicated Advanced spacing/alignment/color tokens explicit. |
 | `core/widgets/core/*` clearable style owners | per widget | Normalize omitted style fields through `resolveClearableStyleValue` and `compactStyle` where needed. |
 
 ## Implementation Pseudocode
@@ -159,6 +171,10 @@ No API routes are added.
   - `content-list-editor-wave.test.tsx`
   - `pricing-plans-editor-wave.test.tsx`
   - `feature-grid-editor-wave.test.tsx`
+  - `cta-banner-editor-wave.test.tsx`
+  - `gallery-mosaic-editor-wave.test.tsx`
+  - `logo-cloud-editor-wave.test.tsx`
+  - `stats-kpi-editor-wave.test.tsx`
 - Update affected runtime widget tests when normalized output changes.
 - Run targeted Vitest suites, `bun --cwd core lint`, and
   `bun --cwd core lint:types`.

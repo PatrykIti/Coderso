@@ -27,6 +27,9 @@ leaves expand it.
 - `_docs/PLAYWRIGHT/REPORT_TABS_WIDGET.md:168,287` reports ARIA gaps.
 - `_docs/PLAYWRIGHT/REPORT_FAQ_ACCORDION_WIDGET.md:96,140-144,173-180` reports
   FAQ single-open and ARIA gaps.
+- `_docs/PLAYWRIGHT/REPORT_ACCORDION_WIDGET.md:138,240,286` reports
+  default-open, collapsible, placeholder, chevron, and ARIA gaps in the
+  generic accordion renderer.
 - `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md:117,211-219,241-244`
   reports static billing toggle and pricing semantics gaps.
 - `_docs/PLAYWRIGHT/REPORT_TIMELINE_WIDGET.md:170,266-270` reports ARIA gaps.
@@ -50,6 +53,8 @@ leaves expand it.
 | `core/widgets/core/tabs.tsx` | 432-505 | Prefix `tabs-trigger-*` and `tabs-panel-*` IDs with a root instance ID. |
 | `core/widgets/core/toggleBlock.tsx` | 141-250 | Make script binding idempotent per root and safe across repeated renders/navigation. |
 | `core/widgets/core/toggleBlock.tsx` | 298-389 | Prefix `toggle-trigger-*` and `toggle-pane-*` IDs with a root instance ID; replace hardcoded radiogroup label where data provides better context. |
+| `core/widgets/core/accordion.tsx` | item render and placeholder region around 361-368 | Add instance-safe summary/content IDs, chevron/expanded state semantics, default-open/collapsible behavior, and placeholder gating through TASK-256-03. |
+| `core/admin/ui/widgets/editors/AccordionEditors.tsx` | 272-430 | Keep default-open/collapsible controls consistent with runtime behavior and remove duplicated clear/control drift. |
 | `core/widgets/core/faqAccordion.tsx` | 316-365 | Add section labelling, summary/content IDs, visible expand indicator, and single-open behavior if `allowMultipleOpen=false`. |
 | `core/widgets/core/pricingPlans.tsx` | 682-727 | Make billing toggle interactive if it remains rendered as a toggle; otherwise downgrade to static copy. Add table/plan ARIA where missing. |
 | `core/widgets/core/timeline.tsx` | marker/list render | Add timeline/list semantics and labels for steps/status. |

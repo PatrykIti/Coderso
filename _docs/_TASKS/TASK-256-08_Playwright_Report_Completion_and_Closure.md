@@ -15,21 +15,25 @@
 Complete the Playwright report audit loop and close TASK-256 only after reports,
 tests, docs, changelog, and task board agree with the implemented behavior.
 
-Several current reports are still marked in progress or contain pre-test
-sections. This closure leaf converts the audit archive into final evidence:
-fixed findings, intentionally deferred findings, exact validation commands, and
-follow-up tasks for product expansions that are not contract repairs.
+Several current reports are still marked in progress, are authentication-limited,
+or were completed after the first TASK-256 draft. This closure leaf converts the
+audit archive into final evidence: fixed findings, intentionally deferred
+findings, exact validation commands, and follow-up tasks for product expansions
+that are not contract repairs.
 
 ## Drift Evidence
 
-- `_docs/PLAYWRIGHT/REPORT_STACK_WIDGET.md:61-120` still has unfilled browser
-  test sections.
-- `_docs/PLAYWRIGHT/REPORT_FEATURE_GRID_WIDGET.md:75-140` still has pending
-  Playwright tables.
-- `_docs/PLAYWRIGHT/REPORT_TESTIMONIALS_WIDGET.md:50-66` still has empty test
-  result sections.
-- `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md:221-236` still has pending
-  Playwright result sections.
+- `_docs/PLAYWRIGHT/REPORT_CTA_BANNER_WIDGET.md:3,87-123` is still marked
+  `W toku` and contains pending Playwright result rows.
+- `_docs/PLAYWRIGHT/REPORT_LOGO_CLOUD_WIDGET.md:3` is still marked `W toku`.
+- `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md:3` is still marked
+  `W toku`.
+- `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md:3` is still marked `W toku`.
+- `_docs/PLAYWRIGHT/REPORT_TEAM_WIDGET.md:3` is still marked `W trakcie`.
+- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:220,258` contains
+  authentication-limited comparison sections that require final classification.
+- Completed reports such as stack, testimonials, and pricing plans need their
+  fixed/deferred status refreshed after the implementation leaves land.
 - Other reports need fixed/deferred status updates after implementation leaves.
 
 ## Sub-Tasks
@@ -39,6 +43,11 @@ follow-up tasks for product expansions that are not contract repairs.
   product scope.
 - [ ] Add follow-up task files for deferred work that is not a shared-contract
   repair.
+- [ ] Add a page-shell follow-up task if Hero report findings around history
+  auth, preview toolbar, discard, or viewport controls are still reproducible
+  after widget-local fixes.
+- [ ] Record git-scope preflight before every closure commit and stage only
+  explicit TASK-256/report/docs/changelog files.
 - [ ] Update source-of-truth widget docs and pack matrix where behavior changed.
 - [ ] Add changelog entry and synchronize `_docs/_CHANGELOG/README.md`.
 - [ ] Move all TASK-256 task files and `_docs/_TASKS/README.md` rows to Done.
@@ -57,13 +66,15 @@ follow-up tasks for product expansions that are not contract repairs.
 
 ## Implementation Pseudocode
 
+Template only, not final evidence:
+
 ```md
 ## Final TASK-256 Evidence
 
 | Finding | Status | Fix owner | Test evidence | Deferred task |
 |---|---|---|---|---|
-| Public empty placeholder | Fixed | TASK-256-03 | `bunx vitest ... gridColumns.test.tsx` | n/a |
-| True carousel controls | Deferred | n/a | n/a | TASK-257 |
+| Public empty placeholder | <fixed/deferred/not-reproducible/future-scope> | <TASK-256-03 or leaf> | <command + result> | <n/a or task id> |
+| True carousel controls | <future-scope> | n/a | n/a | <physical follow-up task id> |
 ```
 
 Closure helper shape:
@@ -86,6 +97,8 @@ Error handling:
 - Do not close TASK-256 while any child task remains To Do/In Progress.
 - If a broad repo gate fails for unrelated reasons, isolate and record it; do
   not hide the failure in report prose.
+- If `git status --short --branch` shows unrelated dirty files, leave them
+  unstaged and state that they were not part of closure evidence.
 
 ## Security Contract
 
@@ -102,6 +115,16 @@ No API routes are added by this closure task.
 ## Testing Requirements
 
 - Run every targeted suite listed in completed TASK-256 leaves.
+- Dynamic/content closure must include:
+  - `bun run test:vitest -- tests/vitest/ui/content-list-editor-wave.test.tsx`
+  - `bun test tests/unit/widgets/contentList.test.tsx`
+  - `bun run test:vitest -- tests/vitest/ui/navigation-editor-wave.test.tsx`
+  - `bun run test:vitest -- tests/vitest/widgets/navigation.test.tsx`
+  - `bun run test:vitest -- tests/vitest/ui/menu-editor-validation.test.ts`
+- Schema/default/runtime registration changes must include:
+  - `bun test tests/unit/widgets/validator.test.ts`
+  - `bun test tests/unit/widgets/registry.test.ts`
+  - `bun test tests/unit/widgets/runtimeRegistry.test.ts`
 - Run:
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`

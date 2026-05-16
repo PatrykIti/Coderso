@@ -4,7 +4,7 @@
 
 **Priority:** High
 **Category:** Widgets + Marketing Content + Runtime Render + Admin UI
-**Estimated Effort:** Large
+**Estimated Effort:** Very Large
 **Dependencies:** TASK-256-01, TASK-256-02, TASK-256-04
 **Status:** To Do
 
@@ -15,6 +15,9 @@
 Apply the shared TASK-256 repairs to marketing and content widgets after the
 shared mode, clear, slot, and accessibility contracts land.
 
+This parent coordinates physical child leaves. Do not implement every marketing
+widget from this broad parent in one patch.
+
 This task owns widget-specific fixes for:
 
 - `hero`
@@ -23,6 +26,11 @@ This task owns widget-specific fixes for:
 - `testimonials`
 - `pricing-plans`
 - `faq-accordion`
+- `cta-banner`
+- `logo-cloud`
+- `gallery-mosaic`
+- `stats-kpi`
+- `team`
 
 Do not turn every missing feature listed in reports into immediate scope. Repair
 broken or misleading existing controls first. New larger product features should
@@ -32,33 +40,41 @@ be deferred into follow-up tasks with explicit owner/docs/tests.
 
 - `_docs/PLAYWRIGHT/REPORT_HERO_WIDGET.md:126-159,166-181,256-260,271-284`
 - `_docs/PLAYWRIGHT/REPORT_TIMELINE_WIDGET.md:73,92-93,145,170,192,266-270`
-- `_docs/PLAYWRIGHT/REPORT_FEATURE_GRID_WIDGET.md:157-176,181-186,247-276,289-294`
+- `_docs/PLAYWRIGHT/REPORT_FEATURE_GRID_WIDGET.md:72-83,157-176,181-186,247-276,289-294`
 - `_docs/PLAYWRIGHT/REPORT_TESTIMONIALS_WIDGET.md:72-126,136-160`
-- `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md:75-117,127-155,211-219,241-268`
+- `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md:154-200,206-236,286-294,320-347`
 - `_docs/PLAYWRIGHT/REPORT_FAQ_ACCORDION_WIDGET.md:96,116,125,140-144,173-180`
+- `_docs/PLAYWRIGHT/REPORT_CTA_BANNER_WIDGET.md:132-161,175-185,223-241`
+- `_docs/PLAYWRIGHT/REPORT_LOGO_CLOUD_WIDGET.md:38-116,134-153`
+- `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md:54-124,177-213`
+- `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md:42-116,174-222`
+- `_docs/PLAYWRIGHT/REPORT_TEAM_WIDGET.md:42-91,111-154,210-280`
 
 ## Sub-Tasks
 
-- [ ] Fix hero editor fields that appear active but do not affect persisted
-  state; preserve media/alt/link security rules.
-- [ ] Fix timeline mode race, optional status handling, and ARIA semantics.
-- [ ] Fix feature-grid variant/count/columns mismatch and missing clear controls.
-- [ ] Triage testimonials static slider/avatar/media/a11y findings into repair
-  vs future feature scope.
-- [ ] Fix pricing plan-count/variant desync, `highlightRing` clear, billing
-  toggle behavior, and pricing semantics.
-- [ ] Fix FAQ accordion single-open behavior, clear controls, and ARIA.
+- [ ] TASK-256-06-01: Feature Grid and Stats KPI Truthful Controls.
+- [ ] TASK-256-06-02: CTA Banner, Logo Cloud, and Gallery Media Links.
+- [ ] TASK-256-06-03: Hero, Timeline, Pricing, FAQ, and Testimonials
+  Accessibility.
+- [ ] TASK-256-06-04: Team Profile Links and Accessibility.
+
+## Scope Decision Matrix
+
+| Finding class | TASK-256 action | Owner | Follow-up policy |
+|---|---|---|---|
+| Broken/misleading existing controls | Fix in the relevant child leaf | Widget editor/runtime owner | None |
+| Public link/media security and ARIA | Fix in the relevant child leaf | Widget renderer plus editor tests | None |
+| Page-shell issues found while testing a widget, such as history auth, toolbar aria, discard, or viewport controls | Do not patch inside widget leaves | `core/admin/ui/pages/PageEditor.tsx`, `core/admin/ui/pages/PageRevisionDrawer.tsx`, shared preview toolbar owners | TASK-256-08 must create a separate page-shell follow-up before closure if still reproducible |
+| Major new features such as drag-and-drop, true carousel/lightbox, marquee, rich text, per-item advanced typography, or SEO schema | Defer unless needed to make an existing control truthful | Future product task | TASK-256-08 records future scope |
 
 ## Files to Change
 
-| Widget | Files and line refs | Required change |
-|---|---|---|
-| `hero` | `core/admin/ui/widgets/editors/HeroEditors.tsx`; `core/widgets/core/hero.tsx` | Fix visible-but-inactive gradient/media controls, alt/media field visibility, toolbar aria labels, and external link rel/security where reports confirm drift. |
-| `timeline` | `core/admin/ui/widgets/editors/TimelineEditors.tsx`; `core/widgets/core/timeline.tsx` | Apply TASK-256-01 atomic mode fix, support optional/no status if existing model allows it, and add timeline semantics. |
-| `feature-grid` | `core/widgets/core/featureGrid.tsx:266-332`; `core/admin/ui/widgets/editors/FeatureGridEditors.tsx:435-455,668-683` | Make columns/count controls match runtime effect, add missing clear, and explicit default-token guards. |
-| `testimonials` | `core/widgets/core/testimonials.tsx:38-42,155-158`; `core/admin/ui/widgets/editors/TestimonialsEditors.tsx` | Decide whether `slider-static` should be renamed/static or made interactive; add image lazy/alt improvements and clear/style consistency. |
-| `pricing-plans` | `core/widgets/core/pricingPlans.tsx:232-239,390-405,664-727`; `core/admin/ui/widgets/editors/PricingPlansEditors.tsx:596-615,965-971` | Fix plan-count/variant desync, missing clear, static toggle, explicit token guards, and accessible pricing semantics. |
-| `faq-accordion` | `core/widgets/core/faqAccordion.tsx:142-145,316-365`; `core/admin/ui/widgets/editors/FaqAccordionEditors.tsx` | Fix explicit spacing guard, single-open runtime, clear controls, expand indicator, and ARIA relationships. |
+| Child | Widget scope | Primary owner files | Required change |
+|---|---|---|---|
+| TASK-256-06-01 | `feature-grid`, `stats-kpi` | `FeatureGridEditors.tsx`, `featureGrid.tsx`, `StatsKpiEditors.tsx`, `statsKpi.tsx` | Fix truthful columns/count/divider controls, variant-bound item counts, grid layout holes, clear controls, and KPI ARIA. |
+| TASK-256-06-02 | `cta-banner`, `logo-cloud`, `gallery-mosaic` | `CtaBannerEditors.tsx`, `ctaBanner.tsx`, `LogoCloudEditors.tsx`, `logoCloud.tsx`, `GalleryMosaicEditors.tsx`, `galleryMosaic.tsx` | Fix empty badges, clear controls, link/media security, alt/ARIA, hover/focus behavior, and media type truthfulness. |
+| TASK-256-06-03 | `hero`, `timeline`, `pricing-plans`, `faq-accordion`, `testimonials` | `HeroEditors.tsx`, `hero.tsx`, `TimelineEditors.tsx`, `timeline.tsx`, `PricingPlansEditors.tsx`, `pricingPlans.tsx`, `FaqAccordionEditors.tsx`, `faqAccordion.tsx`, `TestimonialsEditors.tsx`, `testimonials.tsx` | Fix residual contract bugs around media/alt/link safety, timeline mode/status/wizard, pricing toggle/semantics, FAQ single-open/ARIA, and testimonial media/slider scope. |
+| TASK-256-06-04 | `team` | `TeamEditors.tsx`, `team.tsx` | Fix spotlight columns truthfulness, social link safety, section/header ARIA, photo lazy loading, and Wizard/profile UX drift. |
 
 ## Implementation Pseudocode
 
@@ -130,21 +146,31 @@ No API routes are added.
 
 ## Testing Requirements
 
-- Update editor waves:
-  - `hero-editor-wave.test.tsx`
-  - `timeline-editor-wave.test.tsx`
-  - `feature-grid-editor-wave.test.tsx`
-  - `testimonials-editor-wave.test.tsx`
-  - `pricing-plans-editor-wave.test.tsx`
-  - `faq-accordion-editor-wave.test.tsx`
-- Update runtime tests:
-  - `hero.test.tsx`
-  - `timeline.test.tsx`
-  - `featureGrid.test.tsx`
-  - `testimonials.test.tsx`
-  - `pricingPlans.test.tsx`
-  - `faqAccordion.test.tsx`
-  - `widgetSafeHref.test.ts` where link semantics change.
+- Update editor waves through child leaves:
+  - `tests/vitest/ui/hero-editor-wave.test.tsx`
+  - `tests/vitest/ui/timeline-editor-wave.test.tsx`
+  - `tests/vitest/ui/feature-grid-editor-wave.test.tsx`
+  - `tests/vitest/ui/stats-kpi-editor-wave.test.tsx`
+  - `tests/vitest/ui/testimonials-editor-wave.test.tsx`
+  - `tests/vitest/ui/pricing-plans-editor-wave.test.tsx`
+  - `tests/vitest/ui/faq-accordion-editor-wave.test.tsx`
+  - `tests/vitest/ui/cta-banner-editor-wave.test.tsx`
+  - `tests/vitest/ui/logo-cloud-editor-wave.test.tsx`
+  - `tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx`
+  - `tests/vitest/ui/team-editor-wave.test.tsx`
+- Update runtime tests through child leaves:
+  - `tests/vitest/widgets/hero.test.tsx`
+  - `tests/vitest/widgets/timeline.test.tsx`
+  - `tests/vitest/widgets/featureGrid.test.tsx`
+  - `tests/vitest/widgets/statsKpi.test.tsx`
+  - `tests/vitest/widgets/testimonials.test.tsx`
+  - `tests/vitest/widgets/pricingPlans.test.tsx`
+  - `tests/vitest/widgets/faqAccordion.test.tsx`
+  - `tests/vitest/widgets/ctaBanner.test.tsx`
+  - `tests/vitest/widgets/logoCloud.test.tsx`
+  - `tests/vitest/widgets/galleryMosaic.test.tsx`
+  - `tests/vitest/widgets/team.test.tsx`
+  - `tests/vitest/widgets/widgetSafeHref.test.ts` where link semantics change.
 - Update `tests/unit/widgets/validator.test.ts` when schemas change.
 - Run targeted Vitest suites, relevant Bun validator/registry suites, lint, and
   type lint.

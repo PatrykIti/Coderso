@@ -31,6 +31,19 @@ for the active variant/source.
   reports `logo.href` not rendered, hash href validation drift, and sticky
   behavior blocked by section overflow.
 
+## Scope Decision Matrix
+
+| Finding | TASK-256 action | Owner | Follow-up policy |
+|---|---|---|---|
+| Content-list columns/gap controls visible for variants that ignore them | Fix here | `ContentListEditors.tsx` | None |
+| Content-list `textColor` clear gap | Fix here through TASK-256-02 helpers | `ContentListEditors.tsx` | None |
+| Content-list pagination, view-all, section-title, duplicate content-type dropdowns, empty-state copy, and disabled-toggle styling | Classify during implementation; fix only if current controls are broken/misleading | `ContentListEditors.tsx`, `contentList.tsx` | TASK-256-08 creates product follow-up for expansions |
+| Content-list canvas preview communication | Fix here only if report shows stale preview for a current control | Page-builder preview owner plus content-list editor | Otherwise defer via TASK-256-08 |
+| Navigation `logo.href` not rendered | Fix here with safe href normalization | `navigation.tsx`, `NavigationEditors.tsx` | None |
+| Navigation hash validation differs from runtime safe href support | Fix here and menu validation tests | `NavigationEditors.tsx`, menu validation owner | None |
+| Navigation sticky blocked by section overflow | Decide wrapper ownership and either fix section/layout wrapper or document a physical follow-up | Section/layout wrapper owner | TASK-256-08 must create follow-up if not fixed |
+| Navigation broader menu IA/product requests | Future product scope unless needed for broken current behavior | Navigation future task | TASK-256-08 records deferral |
+
 ## Sub-Tasks
 
 - [ ] Hide or disable content-list layout controls that do not affect the active
@@ -48,7 +61,7 @@ for the active variant/source.
 | `content-list` | `core/widgets/core/contentList.tsx:145-156,256-267`; `core/admin/ui/widgets/editors/ContentListEditors.tsx` | Hide/disable columns and gap where variants ignore them; add `textColor` clear; keep resolved content data unchanged. |
 | `navigation` | `core/widgets/core/navigation.tsx:25-32,391-405`; logo render around `navigation.tsx:506-516`; `core/admin/ui/widgets/editors/NavigationEditors.tsx` | Render normalized `logo.href`; align editor URL validation with `normalizeWidgetSafeHref`/hash support; expose behavior constraints truthfully. |
 | `section/layout wrapper` | owner around section overflow behavior | Fix or document `overflow-hidden` conflict when sticky navigation is nested inside a section. |
-| `menu editor validation` | menu validation tests | Ensure `#` menu links are valid where runtime permits hash links. |
+| `menu editor validation` | `tests/vitest/ui/menu-editor-validation.test.ts` | Ensure `#` menu links are valid where runtime permits hash links. |
 
 ## Implementation Pseudocode
 
@@ -115,11 +128,15 @@ No API routes are added.
 ## Testing Requirements
 
 - Update `tests/vitest/ui/content-list-editor-wave.test.tsx`.
-- Update or add `tests/vitest/widgets/contentList.test.tsx` if runtime behavior
-  changes.
+- Update `tests/unit/widgets/contentList.test.tsx` for runtime/widget behavior.
 - Update `tests/vitest/ui/navigation-editor-wave.test.tsx`.
 - Update `tests/vitest/widgets/navigation.test.tsx`.
-- Update menu validation tests covering `href="#"` where applicable.
+- Update `tests/vitest/ui/menu-editor-validation.test.ts` covering `href="#"`
+  where applicable.
+- Update `tests/unit/widgets/validator.test.ts`,
+  `tests/unit/widgets/registry.test.ts`, or
+  `tests/unit/widgets/runtimeRegistry.test.ts` if schema/default/registration
+  behavior changes.
 - Add a focused sticky-wrapper regression test if section wrapper behavior
   changes.
 - Run targeted Vitest suites, `bun --cwd core lint`, and

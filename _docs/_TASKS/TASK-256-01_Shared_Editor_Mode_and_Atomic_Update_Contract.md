@@ -18,19 +18,30 @@ Repair shared editor-mode update drift across `Wizard`, `Visual`, and
 The main risk is that several editors write `variant` and `data` through
 separate callbacks. When an editor owns variant selection and also normalizes
 data for the new variant, the current `VisualPanel` spread-based callback can
-drop one update. The Timeline report confirms this behavior, and other reports
-show mode controls that look editable but either duplicate Visual or do nothing.
+drop one update. The Timeline, Feature Grid, Split Layout, and Stack reports
+confirm the same variant-bound data class. Other reports show mode controls
+that look editable but either duplicate Visual or do nothing.
 
 ## Drift Evidence
 
 - `_docs/PLAYWRIGHT/REPORT_TIMELINE_WIDGET.md:145` confirms that Advanced can
   change the timeline mode correctly while Visual races `onVariantChange`.
+- `_docs/PLAYWRIGHT/REPORT_FEATURE_GRID_WIDGET.md:74-83,171-176` confirms that
+  variant changes and card counts can diverge between editor and renderer.
+- `_docs/PLAYWRIGHT/REPORT_SPLIT_LAYOUT_WIDGET.md:95,161` confirms
+  variant-bound ratio/data desync for split layout.
+- `_docs/PLAYWRIGHT/REPORT_STACK_WIDGET.md:111` confirms
+  variant-bound direction/data desync for stack.
 - `_docs/PLAYWRIGHT/REPORT_SPACER_WIDGET.md:162-171` reports Advanced always
   renders responsive height controls even when the widget variant is fixed.
 - `_docs/PLAYWRIGHT/REPORT_DIVIDER_WIDGET.md:71-72` reports an Advanced variant
   select whose `onValueChange` is a no-op.
 - `_docs/PLAYWRIGHT/REPORT_SPLIT_LAYOUT_WIDGET.md:180-182` reports Advanced
   repeats Visual controls plus JSON without meaningful Advanced ownership.
+- `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md:87-98`,
+  `_docs/PLAYWRIGHT/REPORT_LOGO_CLOUD_WIDGET.md:94-100`, and
+  `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md:82-89` report duplicated
+  Advanced style controls that need an explicit owner decision.
 - `_docs/WIDGETS.md:54-105` is the source contract for mode ownership and
   stable editor metadata.
 
@@ -40,6 +51,9 @@ show mode controls that look editable but either duplicate Visual or do nothing.
 - [ ] Replace spread-based `variant`/`data` callbacks in shared panels.
 - [ ] Update widget-owned variant controls to emit a single atomic result when
   changing variant also changes normalized data.
+- [ ] Cover variant-bound data sync for feature-grid, split-layout, stack,
+  timeline, stats-kpi, logo-cloud, and gallery-mosaic editors before widget
+  leaves rely on shared helpers.
 - [ ] Convert no-op Advanced controls to working controls, read-only summaries,
   or remove them.
 - [ ] Make Advanced controls variant-aware where the active variant changes what
@@ -53,9 +67,14 @@ show mode controls that look editable but either duplicate Visual or do nothing.
 | `core/admin/ui/pages/builder/WizardPanel.tsx` | 55-60 | Apply the same atomic helper contract for wizard-owned variant changes. |
 | `core/admin/ui/pages/builder/AdvancedPanel.tsx` | 43-48 | Apply the same atomic helper contract for advanced-owned variant or data edits. |
 | `core/admin/ui/widgets/editors/TimelineEditors.tsx` | variant/change handlers | Emit a single variant+data update when timeline mode changes. |
+| `core/admin/ui/widgets/editors/FeatureGridEditors.tsx` | 435-455 and variant/count handlers | Emit variant+item-count updates atomically or disable item counts that the renderer ignores. |
+| `core/admin/ui/widgets/editors/SplitLayoutEditors.tsx` | variant/ratio handlers | Preserve ratio data when variant changes and expose only ratio controls that affect the active variant. |
+| `core/admin/ui/widgets/editors/StackEditors.tsx` | variant/direction handlers | Preserve direction data when variant changes and make Advanced direction ownership explicit. |
 | `core/admin/ui/widgets/editors/SpacerEditors.tsx` | 202-205 and Advanced editor render site | Pass the actual variant into `ResponsiveHeights` or render fixed-aware Advanced controls. |
 | `core/admin/ui/widgets/editors/DividerEditors.tsx` | 118-149 and Advanced variant select | Remove no-op `onValueChange` or wire it to real variant ownership. |
-| `core/admin/ui/widgets/editors/SplitLayoutEditors.tsx` | Advanced editor sections | Keep only true advanced fields or convert duplicated Visual controls into read-only diagnostics. |
+| `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx` | Advanced style controls | Keep only true raw-token controls in Advanced or mark the duplicated Visual controls as read-only diagnostics. |
+| `core/admin/ui/widgets/editors/LogoCloudEditors.tsx` | Advanced style controls | Keep only true raw-token controls in Advanced or mark the duplicated Visual controls as read-only diagnostics. |
+| `core/admin/ui/widgets/editors/StatsKpiEditors.tsx` | Advanced style controls | Keep only true raw-token controls in Advanced or mark the duplicated Visual controls as read-only diagnostics. |
 
 ## Implementation Pseudocode
 
@@ -130,9 +149,16 @@ No API routes are added.
   contract.
 - Update `tests/vitest/ui/timeline-editor-wave.test.tsx` to cover Visual mode
   changes preserving normalized timeline data.
+- Update `tests/vitest/ui/feature-grid-editor-wave.test.tsx`,
+  `tests/vitest/ui/split-layout-editor-wave.test.tsx`,
+  `tests/vitest/ui/stack-editor-wave.test.tsx`,
+  `tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx`,
+  `tests/vitest/ui/logo-cloud-editor-wave.test.tsx`, and
+  `tests/vitest/ui/stats-kpi-editor-wave.test.tsx` for variant-bound
+  data/count synchronization and Advanced ownership decisions.
 - Update `tests/vitest/ui/spacer-editor-wave.test.tsx`,
-  `divider-editor-wave.test.tsx`, and `split-layout-editor-wave.test.tsx` for
-  no inert or misleading Advanced controls.
+  `tests/vitest/ui/divider-editor-wave.test.tsx`, and the relevant child leaf
+  editor waves for no inert or misleading Advanced controls.
 - Run the targeted Vitest suites plus `bun --cwd core lint` and
   `bun --cwd core lint:types`.
 

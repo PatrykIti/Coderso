@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 17 tasks
+- **To Do:** 25 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1542 tasks
 
@@ -43,8 +43,16 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-256-02 | Clear, None Token, and Design Token Controls | High | Large | Normalize Clear vs `none` semantics, zero/custom token UX, and clearable style fields |
 | TASK-256-03 | Slot Nested Content and Public Placeholder Safety | High | Large | Keep editor slot affordances while removing admin-only placeholders from public runtime output |
 | TASK-256-04 | Interactive Runtime Instance and Accessibility Contract | High | Large | Add instance-safe IDs, scoped runtime binding, and ARIA repairs for interactive widgets |
-| TASK-256-05 | Structural Widget Report Findings | High | Large | Apply shared fixes to grid-columns, split-layout, stack, spacer, divider, tabs, accordion, and toggle-block |
-| TASK-256-06 | Marketing Widget Report Findings | High | Large | Apply shared fixes to hero, timeline, feature-grid, testimonials, pricing-plans, and FAQ accordion |
+| TASK-256-05 | Structural Widget Report Findings | High | Very Large | Parent for structural widget report leaves across section, grid, split, stack, spacer, divider, tabs, accordion, and toggle-block |
+| TASK-256-05-01 | Section and Grid Columns Structural Findings | High | Medium | Repair section placeholders/anchors and grid slot/config/public-label drift |
+| TASK-256-05-02 | Split Layout and Stack Variant Data Sync | High | Medium | Repair variant-bound ratio/direction data sync and duplicate zero-token UX |
+| TASK-256-05-03 | Spacer and Divider Token Control Findings | High | Medium | Repair spacer/divider token controls, inert Advanced state, and divider ARIA |
+| TASK-256-05-04 | Tabs Accordion and Toggle Block Structural Residuals | High | Medium | Apply remaining slot-label, placeholder, clear, and interactive structural fixes |
+| TASK-256-06 | Marketing Widget Report Findings | High | Very Large | Parent for marketing/content widget report leaves, including CTA, logo-cloud, gallery-mosaic, and stats-kpi |
+| TASK-256-06-01 | Feature Grid and Stats KPI Truthful Controls | High | Medium | Repair columns/count/divider truthfulness, grid layout, clear controls, and ARIA |
+| TASK-256-06-02 | CTA Banner, Logo Cloud, and Gallery Media Links | High | Large | Repair CTA/logo/gallery link, media, clear, alpha, alt, and accessibility drift |
+| TASK-256-06-03 | Hero Timeline Pricing FAQ and Testimonials Accessibility | High | Large | Repair residual hero/timeline/pricing/FAQ/testimonials contract findings and split page-shell follow-ups |
+| TASK-256-06-04 | Team Profile Links and Accessibility | High | Medium | Repair team spotlight columns, social link safety, photo lazy loading, and section/header ARIA |
 | TASK-256-07 | Dynamic Navigation and Content Widget Findings | High | Medium | Repair content-list and navigation report drift around truthful controls, hrefs, and sticky behavior |
 | TASK-256-08 | Playwright Report Completion and Closure | Medium | Medium | Refresh reports, docs, changelog, board, and validation evidence after implementation leaves |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
