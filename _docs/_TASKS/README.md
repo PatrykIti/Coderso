@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 97 tasks
+- **To Do:** 107 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1542 tasks
 
@@ -38,6 +38,16 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-272 | Hero Widget Playwright Product Followups | High | Very Large | Hero-only follow-up family for `REPORT_HERO_WIDGET.md`, excluding TASK-256 shared-contract and page-shell scope |
+| TASK-272-01 | Hero Centered Media Control and CTA Placeholder Polish | High | Medium | Hide centered-only irrelevant inline media frame controls and align Hero CTA URL placeholder copy |
+| TASK-272-02 | Hero Video Poster and Media Metadata | High | Large | Add Hero video poster, title/description, and video-specific editor/runtime semantics |
+| TASK-272-03 | Hero Preset Delete Confirmation and Library Management | High | Large | Add preset delete confirmation plus bounded Hero preset search, import, and export |
+| TASK-272-04 | Hero Layout Height Full Bleed and Media Center Variant | High | Very Large | Add bounded full-height/full-bleed layout controls, clearer spacing labels, and a media-center variant |
+| TASK-272-05 | Hero Shadow, Typography, Font, and Motion Controls | Medium | Large | Add bounded Hero shadows, font family/weight, and reduced-motion-safe animation tokens |
+| TASK-272-06 | Hero Color Palettes and Contrast Guidance | High | Large | Add Hero-owned palette presets and contrast guidance after TASK-256 shared color-field state |
+| TASK-272-07 | Hero Rich Copy and Social Proof Composition | Medium | Very Large | Add safe rich-copy support and a bounded social proof row for conversion Hero sections |
+| TASK-272-08 | Hero Responsive Images and LCP Priority | Medium | Large | Define Hero responsive image, lazy/eager loading, and fetch-priority policy without inventing media variants |
+| TASK-272-09 | Hero Report Docs Changelog and Closure | Medium | Medium | Refresh Hero report/docs/changelog/board and final validation evidence |
 | TASK-267 | Feature Grid Widget Playwright Product Followups | High | Very Large | Feature Grid-only follow-up family for `REPORT_FEATURE_GRID_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-267-01 | Feature Grid Variant Preview and Responsive Cards-4 Layout | High | Medium | Add variant preview affordances, repair cards-4 responsive product behavior, and keep columns truthfulness in TASK-256 |
 | TASK-267-02 | Feature Grid Card Reorder, Remove, and Item Management | High | Medium | Add drag reorder plus recoverable remove flow while preserving keyboard move fallback |
