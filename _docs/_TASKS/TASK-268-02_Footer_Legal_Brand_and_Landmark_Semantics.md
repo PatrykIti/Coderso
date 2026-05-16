@@ -26,8 +26,8 @@ payloads.
 This leaf owns:
 
 - `legal.privacyLabel` and `legal.termsLabel` with backward-compatible defaults.
-- A Footer brand model with safe plain text, optional safe image URL, alt text,
-  and tagline.
+- A Footer brand model with safe plain text, optional safe image URL/media src,
+  alt text, and tagline.
 - Placement of brand content in the Footer layout without removing existing
   `column-1` slot behavior.
 - `<footer aria-label>` or `aria-labelledby` when a visible brand/title label
@@ -44,8 +44,9 @@ rich-text taglines, media upload flows, or a new shared heading-level helper.
   `brand.logoText`, and `brand.tagline`.
 - [ ] Normalize legacy legal objects to visible defaults: Privacy and Terms
   labels must stay unchanged until the user edits them.
-- [ ] Normalize brand fields with safe URL handling for logo sources and plain
-  text labels/taglines only.
+- [ ] Normalize brand fields with a Footer image/media source helper for logo
+  sources and plain text labels/taglines only. Do not reuse link-only
+  normalization for `<img src>` without rejecting hash-only values.
 - [ ] Render the Footer landmark with an accessible name. Use `aria-labelledby`
   when a visible brand text/title can own the label; otherwise use
   `aria-label="Site footer"` or a configured plain-text label.
@@ -98,10 +99,18 @@ function normalizeFooterLegal(value: unknown): Required<FooterLegal> {
   };
 }
 
+function normalizeFooterImageSrc(value: unknown): string | undefined {
+  return normalizeWidgetSafeHref(value, {
+    allowRelative: true,
+    allowHash: false,
+    allowHttp: true,
+  });
+}
+
 function normalizeFooterBrand(value: unknown): FooterBrand | undefined {
   const logoText = normalizeOptionalText(read(value, "logoText"));
   const tagline = normalizeOptionalText(read(value, "tagline"));
-  const logoUrl = normalizeFooterHref(read(value, "logoUrl"));
+  const logoUrl = normalizeFooterImageSrc(read(value, "logoUrl"));
   if (!logoText && !tagline && !logoUrl) return undefined;
   return {
     logoUrl,
@@ -134,7 +143,8 @@ const footerLabelId = brand.logoText ? `${blockId}-footer-brand` : undefined;
 Error handling:
 
 - Empty legal labels fall back to `Privacy` and `Terms`.
-- Unsafe logo URLs are omitted rather than rendered.
+- Unsafe logo URLs, protocol-relative URLs, and hash-only values are omitted
+  rather than rendered.
 - Empty brand objects normalize away.
 - Existing payloads without brand/legal labels render unchanged except for
   improved semantics.
@@ -145,8 +155,9 @@ No API routes are added.
 
 - Endpoint visibility/auth/RBAC/CSRF/rate limit: unchanged.
 - Reject-unknown validation: brand and legal payloads must reject unknown keys.
-- Anti-abuse: brand/logo URLs use existing safe href/media normalization; brand
-  text and legal labels are plain text only, not HTML.
+- Anti-abuse: brand/logo URLs use a safe image/media source normalizer, not a
+  link-only helper that accepts hash anchors; brand text and legal labels are
+  plain text only, not HTML.
 - Secret handling: no provider keys, private media tokens, or privileged URLs in
   brand/legal examples, tests, docs, or reports.
 
@@ -159,6 +170,9 @@ No API routes are added.
 - `bun test tests/unit/widgets/validator.test.ts` when schema changes.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- Before moving this leaf to `Done` or committing it independently, also run
+  `git diff --check`, `bun run gates:coderso`,
+  `bun run scan:security:strict`, and `bun run precommit`.
 
 ## Documentation Updates Required
 

@@ -101,9 +101,10 @@ that are not contract repairs.
   an executable TASK-256 physical leaf before closure, or is explicitly marked
   not reproducible/resolved/future physical task when it sits outside the
   current TASK-256 executable leaves.
-- [ ] Add follow-up task files for deferred report rows outside the current
-  TASK-256 executable leaves, then add those rows to `_docs/_TASKS/README.md`
-  and update board statistics.
+- [ ] Add or reference follow-up task files for deferred report rows outside the
+  current TASK-256 executable leaves. Footer-specific rows should reference
+  TASK-268; newly created follow-ups must also be added to
+  `_docs/_TASKS/README.md` with updated board statistics.
 - [ ] Add a page-shell follow-up task if Hero report findings around history
   auth, preview toolbar, discard, or viewport controls are still reproducible
   after widget-local fixes.

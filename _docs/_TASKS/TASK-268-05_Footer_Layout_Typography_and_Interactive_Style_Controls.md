@@ -32,8 +32,8 @@ This leaf owns:
 - Footer link hover/active/underline controls implemented through bounded
   classes or scoped CSS variables, not arbitrary CSS.
 - Footer link font-weight and letter-spacing controls from fixed enums.
-- Footer link target controls for column/legal links if approved by product,
-  preserving safe href normalization and external-link safety.
+- Footer link target controls for column and legal links, preserving safe href
+  normalization and external-link safety.
 
 This leaf does not own:
 
@@ -52,15 +52,16 @@ This leaf does not own:
 - [ ] Add a bounded responsive layout choice, for example
   `columnBreakpoint: "sm" | "md" | "lg"` or a higher-level density enum, and
   map it to fixed grid classes.
-- [ ] Add link style fields such as `linkHoverColor`, `linkUnderline`,
-  `linkFontWeight`, and `linkLetterSpacing` only if they can be rendered safely
-  without arbitrary CSS injection.
-- [ ] Add optional `target` controls for Footer column/legal links only if the
-  schema and renderer preserve safe `rel` behavior.
+- [ ] Add link style fields such as `linkHoverColor`, `linkActiveColor`,
+  `linkUnderline`, `linkFontWeight`, and `linkLetterSpacing` only if they can be
+  rendered safely without arbitrary CSS injection.
+- [ ] Add `target` controls for Footer column and legal links with schema,
+  editor, renderer, and tests that preserve safe `rel` behavior.
 - [ ] Update Footer editors with labeled controls in Visual or Advanced based
   on final mode ownership.
-- [ ] Explicitly record market-only rows such as newsletter slot and back-to-top
-  as deferred/future scope in TASK-268-06 unless product approves them here.
+- [ ] Explicitly record market-only rows such as newsletter slot,
+  address/contact block, and back-to-top as deferred/future scope in TASK-268-06
+  unless product approves a new physical task.
 
 ## Files to Change
 
@@ -85,6 +86,13 @@ type FooterLink = {
   target?: FooterLinkTarget;
 };
 
+type FooterLegal = {
+  privacy?: string;
+  privacyTarget?: FooterLinkTarget;
+  terms?: string;
+  termsTarget?: FooterLinkTarget;
+};
+
 type FooterLayout = {
   paddingX?: "none" | "4" | "6" | "8";
   columnBreakpoint?: "sm" | "md" | "lg";
@@ -92,6 +100,7 @@ type FooterLayout = {
 
 type FooterStyle = {
   linkHoverColor?: string;
+  linkActiveColor?: string;
   linkUnderline?: "none" | "hover" | "always";
   linkFontWeight?: "normal" | "medium" | "semibold";
   linkLetterSpacing?: "normal" | "wide";
@@ -104,14 +113,32 @@ const paddingXClassMap = {
   "8": "px-8",
 } as const;
 
+const gridClassMap = {
+  sm: {
+    1: "sm:grid-cols-1",
+    2: "sm:grid-cols-2",
+    3: "sm:grid-cols-3",
+  },
+  md: {
+    1: "md:grid-cols-1",
+    2: "md:grid-cols-2",
+    3: "md:grid-cols-3",
+  },
+  lg: {
+    1: "lg:grid-cols-1",
+    2: "lg:grid-cols-2",
+    3: "lg:grid-cols-3",
+  },
+} as const;
+
 function resolveFooterGridClass(count: number, breakpoint: FooterLayout["columnBreakpoint"]) {
-  if (count === 1) return `${breakpoint}:grid-cols-1`;
-  if (count === 3) return `${breakpoint}:grid-cols-3`;
-  return `${breakpoint}:grid-cols-2`;
+  const normalizedBreakpoint = breakpoint ?? "md";
+  const normalizedCount = count === 1 || count === 3 ? count : 2;
+  return gridClassMap[normalizedBreakpoint][normalizedCount];
 }
 
-function getFooterLinkAttrs(link: FooterLink) {
-  if (link.target === "_blank" && /^https?:\/\//i.test(link.href)) {
+function getFooterLinkAttrs(href: string, target: FooterLinkTarget | undefined) {
+  if (target === "_blank" && /^https?:\/\//i.test(href)) {
     return { target: "_blank", rel: "noopener noreferrer" };
   }
   return {};
@@ -125,6 +152,8 @@ Error handling:
 - Unsafe hrefs still normalize to `#` or are omitted according to the existing
   Footer safe-href behavior.
 - `_blank` on unsafe or non-http hrefs must not create weaker behavior.
+- All class output comes from static maps so Tailwind can see every class at
+  build time.
 
 ## Security Contract
 
@@ -146,6 +175,9 @@ No API routes are added.
 - `bun test tests/unit/widgets/validator.test.ts` when schema changes.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- Before moving this leaf to `Done` or committing it independently, also run
+  `git diff --check`, `bun run gates:coderso`,
+  `bun run scan:security:strict`, and `bun run precommit`.
 
 ## Documentation Updates Required
 
@@ -165,8 +197,8 @@ No API routes are added.
 - Footer horizontal padding is configurable through bounded tokens.
 - Footer responsive behavior is configurable through bounded choices or is
   explicitly deferred with a concrete reason.
-- Link hover/underline/typography controls render safely and are tested.
-- Optional link target behavior preserves safe href normalization and rel
-  hardening.
+- Link hover/active/underline/typography controls render safely and are tested.
+- Link target behavior for column and legal links preserves safe href
+  normalization and rel hardening.
 - Market-only utility ideas are not silently implemented without an approved
   security and product contract.

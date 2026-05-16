@@ -25,7 +25,8 @@ global icon system or a shared social-link component.
 
 This leaf owns:
 
-- Footer social platform allowlist and optional safe custom label/icon fallback.
+- Footer social platform allowlist for editor/runtime output and optional safe
+  custom label/icon fallback.
 - Social icon rendering from a fixed local map or an approved existing icon
   library already used in the admin/runtime bundle.
 - `aria-label` for every social link.
@@ -33,6 +34,8 @@ This leaf owns:
   the href resolves to an external HTTP(S) URL.
 - Backward-compatible normalization for existing social payloads such as
   `twitter`, `linkedin`, `github`, `youtube`, `facebook`, and `instagram`.
+- Compatibility with legacy unknown `social.type` values that may already pass
+  through widget data.
 - Footer editor platform options and tests for modern platforms named by the
   report.
 
@@ -43,11 +46,16 @@ public write/subscription endpoint.
 ## Sub-Tasks
 
 - [ ] Add a Footer-owned `FooterSocialType` allowlist for known platforms,
-  including the existing six plus `x`, `tiktok`, `discord`, `pinterest`, and
-  `mastodon` when their icon output can be fixed and local.
+  including the existing six plus `x`, `tiktok`, `discord`, `pinterest`,
+  `mastodon`, `twitch`, and `snapchat` when their icon output can be fixed and
+  local.
 - [ ] Decide whether custom platforms are allowed. If allowed, represent them
   with `type: "custom"` plus a plain-text `label`; never store arbitrary SVG,
   HTML, or script data.
+- [ ] Keep the persisted schema compatible with current AJV validation. Current
+  widget blocks are validated before renderer normalization, so do not tighten
+  `social.type` to an enum unless a pre-AJV migration/normalization seam is
+  added and tested.
 - [ ] Normalize legacy `twitter` as the current default while optionally mapping
   display copy/icon to X only if product copy explicitly chooses that.
 - [ ] Render each social link with a visible icon and screen-reader label, not
@@ -61,12 +69,12 @@ public write/subscription endpoint.
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/footer.tsx` | Extend social types/schema/defaults/normalization and render icons, labels, and safe external link attributes. |
+| `core/widgets/core/footer.tsx` | Extend social editor/runtime type helpers, keep schema compatibility or add a tested pre-AJV migration seam, and render icons, labels, and safe external link attributes. |
 | `core/admin/ui/widgets/editors/FooterEditors.tsx` | Update `socialTypeOptions`, custom-label UI if accepted, and social field copy. |
 | `tests/vitest/widgets/footer.test.tsx` | Cover icon output, no raw platform text as the only visible content, social `aria-label`, safe target/rel, unsafe href filtering, and legacy payloads. |
 | `tests/vitest/ui/footer-editor-wave.test.tsx` | Cover new platform choices and any custom social editor fields. |
 | `tests/vitest/widgets/renderer.test.tsx` | Update only if shared renderer assertions need Footer social output proof. |
-| `tests/unit/widgets/validator.test.ts` | Update when the Footer social schema changes. |
+| `tests/unit/widgets/validator.test.ts` | Cover the chosen compatibility path, especially legacy unknown social types when schema compatibility is preserved or migrated. |
 | `_docs/_WIDGETS/FOOTER.md` | Document social platform options, safe href behavior, and accessibility labels. |
 
 ## Implementation Pseudocode
@@ -84,16 +92,24 @@ const footerSocialTypes = [
   "discord",
   "pinterest",
   "mastodon",
+  "twitch",
+  "snapchat",
   "custom",
 ] as const;
 
 type FooterSocial = {
-  type: FooterSocialType;
+  type: string;
   href: string;
   label?: string;
 };
 
-function normalizeFooterSocial(entry: unknown, index: number): FooterSocial | null {
+type NormalizedFooterSocial = {
+  type: FooterSocialType;
+  href: string;
+  label: string;
+};
+
+function normalizeFooterSocial(entry: unknown, index: number): NormalizedFooterSocial | null {
   const href = normalizeFooterHref(readHref(entry));
   if (!href) return null;
 
@@ -130,6 +146,9 @@ Error handling:
 
 - Unknown legacy `type` values fall back to `custom` with a plain label, or to a
   deterministic known default if custom is rejected.
+- Because current `normalizeWidgetBlock` validates merged widget data with AJV
+  before renderer normalization, unknown legacy `social.type` values must either
+  remain schema-valid as strings or be migrated before AJV validation.
 - Unsafe hrefs are filtered out before render.
 - Missing labels fall back to platform display names.
 - Icon fallback must be a safe local symbol and must not render the raw type as
@@ -141,6 +160,8 @@ No API routes are added.
 
 - Endpoint visibility/auth/RBAC/CSRF/rate limit: unchanged.
 - Reject-unknown validation: social payload keys must remain allowlisted.
+  `social.type` may remain a string for backward compatibility; the normalized
+  renderer/editor type still uses the fixed allowlist.
 - Anti-abuse: no arbitrary SVG/HTML/script/icon URL payloads; all hrefs pass
   `normalizeWidgetSafeHref`; external social links get `noopener noreferrer`.
 - Secret handling: social URLs and labels are public content, not secret
@@ -155,6 +176,9 @@ No API routes are added.
 - `bun test tests/unit/widgets/validator.test.ts` when schema changes.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- Before moving this leaf to `Done` or committing it independently, also run
+  `git diff --check`, `bun run gates:coderso`,
+  `bun run scan:security:strict`, and `bun run precommit`.
 
 ## Documentation Updates Required
 
