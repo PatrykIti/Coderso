@@ -1,6 +1,6 @@
 # RAPORT: Tabs Widget — Analiza UX/UI i brakujące funkcjonalności
 
-> **Status:** W trakcie  
+> **Status:** Zakończony  
 > **Data:** 2026-05-16  
 > **Sesja:** Playwright #8 (Tabs Widget)  
 > **Środowisko:** http://localhost:5173/admin · http://localhost:3000  
@@ -111,22 +111,167 @@ Skrypt client-side obsługuje:
 ## 4. Testy w Admin UI Preview
 
 > **Sesja:** `playwright-cli -s=tabs-audit`  
-> **Strona testowa:** (do uzupełnienia po teście)  
+> **Strona testowa:** TEST-TABS-0516 (ID: `1a545dbc-a218-4bd5-929e-fc469203ef72`, slug: `/test-tabs-0516`)  
 > **Data testu:** 2026-05-16
 
-*(sekcja zostanie uzupełniona po testach w przeglądarce)*
+### 4.1 Potwierdzony bug C1: Brak pola `inactiveTextColor` w Visual Editor
+
+Skan Visual editor wykazał następujące pola w sekcji "Layout":
+- Surface color (clearable)
+- Border color
+- Active background (clearable)
+- Active text color
+- Panel background (clearable)
+
+**Brak `Inactive text color`** — mimo że pole `inactiveTextColor` istnieje w modelu danych (potwierdzone w Advanced Diagnostics JSON: `"inactiveTextColor": "var(--color-text)"`), nie ma go w formularzu Visual Editor. Użytkownik nie może zmienić koloru nieaktywnych zakładek bez edycji przez inny kanał.
+
+**Diagnostics JSON snapshot (Advanced mode):**
+```json
+{
+  "items": [...],
+  "options": { "defaultItemId": "1", "activeId": "1", "alignment": "center", "orientation": "vertical" },
+  "style": {
+    "surfaceColor": "var(--color-surface)",
+    "borderColor": "var(--color-border)",
+    "activeBackgroundColor": "var(--color-text)",
+    "activeTextColor": "var(--color-background)",
+    "inactiveTextColor": "var(--color-text)",   ← pole w danych, brak w edytorze
+    "panelBackgroundColor": "var(--color-surface)"
+  }
+}
+```
+
+### 4.2 Potwierdzony bug C3: Runtime script NIE jest wykonywany w admin preview
+
+```js
+// Admin preview:
+window.__nextlessTabsBound === undefined  // script NIE wykonany
+```
+
+Widget Tabs w admin preview nie jest interaktywny — kliknięcie Tab 2 nie przełącza panelu. Przyczyną jest zachowanie React/`dangerouslySetInnerHTML`: skrypt wstrzyknięty przez React do DOM nie jest automatycznie re-wykonywany przez przeglądarkę (jest to standardowe zachowanie `innerHTML` — skrypty wstrzyknięte tym sposobem nie są uruchamiane).
+
+**Skutek:** Admin preview pokazuje zawsze tylko Panel 1 (default), bez możliwości podglądu innych paneli. Użytkownik nie może sprawdzić jak wyglądają Panel 2, 3... bez publikowania strony.
+
+**Dodatkowe odkrycie:** Nawet po ręcznym wykonaniu skryptu (`eval(script.textContent)`), event `click` na triggerze nie propaguje do `document` w React admin app. React 17+ deleguje eventy do root container, nie do `document`.
+
+### 4.3 Potwierdzony bug W3/R1: `justify-*` zamiast `items-*` dla Vertical orientation
+
+```js
+// Vertical, alignment=center:
+{ classes: "flex flex-col gap-2 justify-center",
+  computedJustifyContent: "center",   ← przesuwa wzdłuż osi Y
+  computedAlignItems: "normal" }      ← brak centrowania poziomego
+```
+
+`justify-center` na `flex-col` przesuwa triggery do środka kontenera **w pionie**, a nie centruje je **poziomo**. Dla wyrównania poziomego triggerów w trybie vertical powinno być `items-center`.
+
+### 4.4 Potwierdzony bug W4/R2, R3: Brak ARIA na tablist i panelach
+
+```json
+{ "tablistAriaLabel": null,
+  "panelTabIndices": [null, null],
+  "rootAriaLabel": null }
+```
+
+- `role="tablist"` bez `aria-label` — niezidentyfikowana lista zakładek dla screen readerów
+- `role="tabpanel"` bez `tabIndex="0"` — panel niedostępny z klawiatury
+
+### 4.5 Potwierdzony bug U2: Alignment labels lowercase
+
+Dropdown "Tab alignment" zawiera opcje: `start`, `center`, `end` zamiast `Start`, `Center`, `End`. Niespójne z resztą formularzy edytora.
+
+### 4.6 Potwierdzony bug W7: `description` renderowany w panelu, nie pod triggerem
+
+```html
+<!-- Faktyczny render w panelu: -->
+<p class="mb-3 text-sm text-[var(--color-text)]/70">Primary details.</p>
+<div class="... border-dashed ...">Add widgets to this tab panel.</div>
+```
+
+Opis zakładki ("Primary details.") pojawia się jako pierwsza linia contentu panelu, nie pod triggerem. Użytkownik konfigurujący pole "Optional tab description" może oczekiwać subtytuł przy triggerze lub tooltip.
+
+### 4.7 Wizard — poprawnie pokazuje wszystkie zakładki
+
+W przeciwieństwie do Timeline widget (bug C1), Tabs Wizard poprawnie pokazuje wszystkie zakładki (2–6) bez przycinania. Przy 6 zakładkach widoczne są pola Tab 1–Tab 6.
+
+### 4.8 Warianty — wszystkie renderują się poprawnie
+
+| Wariant | CSS triggera | Zachowanie active |
+|---------|-------------|-------------------|
+| `pills` | `rounded-full border px-3 py-1.5` | border-transparent + active bg/color |
+| `underline` | `rounded-none border-b-2 border-transparent pb-2` | `data-[state=active]:border-current` |
+| `minimal` | `rounded-md px-2 py-1.5` | `data-[state=active]:underline` |
 
 ---
 
 ## 5. Testy na froncie (localhost:3000)
 
-*(sekcja zostanie uzupełniona po testach w przeglądarce)*
+**URL:** http://localhost:3000/test-tabs-0516  
+**Widget:** Tabs — pills, vertical, 2 panele  
+**Opublikowany:** Tak
+
+### 5.1 Runtime script działa na froncie
+
+```js
+{ scriptBound: true }  // __nextlessTabsBound = true
+```
+
+Na froncie skrypt jest wykonywany poprawnie (SSR + hydration). Tab switching przez kliknięcie działa:
+```js
+// Click Tab 2 → activeId: "2", panel1Hidden: true, panel2Hidden: false ✅
+```
+
+### 5.2 Keyboard navigation działa na froncie
+
+Nawigacja klawiaturą potwierdzona:
+- ArrowDown (vertical) → przejście Tab 1 → Tab 2 ✅
+- `aria-orientation="vertical"` ustawione na tablist ✅
+
+### 5.3 ARIA na froncie (identyczne jak w admin preview)
+
+```json
+{ "tablistAriaLabel": null,         ← brak aria-label na tablist
+  "panelTabIndices": [null, null],  ← brak tabIndex na panelach
+  "rootAriaLabel": null }           ← brak aria-label na root
+```
+
+Wszystkie braki ARIA są w rendererze (`tabs.tsx`) — identyczne w admin preview i na froncie.
+
+### 5.4 Vertical alignment — ten sam bug co w adminie
+
+```js
+// Frontend, orientation=vertical:
+{ flexDirection: "column",
+  justifyContent: "flex-start",
+  alignItems: "normal",           ← brak items-* klasy
+  tablistClass: "flex flex-col gap-2 justify-start" }
+```
+
+### 5.5 ID format
+
+IDs na stronie: `tabs-trigger-1`, `tabs-trigger-2`, `tabs-panel-1`, `tabs-panel-2` — brak kolizji przy jednej instancji. Kolizja wystąpi przy dodaniu drugiego Tabs widgetu na tej samej stronie.
+
+### 5.6 Mobile (390×844)
+
+Vertical tabs na mobile — tablist `nowrap`, 2 triggery jeden pod drugim. Layout działa poprawnie — flex-col nie wymaga responsywnego breakpointu.
 
 ---
 
 ## 6. Porównanie Admin Preview vs Frontend
 
-*(sekcja zostanie uzupełniona po testach w przeglądarce)*
+| Aspekt | Admin Preview | Frontend | Zgodność |
+|--------|--------------|----------|----------|
+| Widget rendering | Tak | Tak | ✅ Zgodne |
+| Runtime script | ❌ Nie wykonany | ✅ Wykonany | ❌ Rozbieżność |
+| Tab switching interaktywność | ❌ Nie działa | ✅ Działa | ❌ Rozbieżność |
+| Keyboard navigation | ❌ Nie działa | ✅ Działa | ❌ Rozbieżność |
+| ARIA attributes | Brak | Brak | ✅ Zgodne (oba błędne) |
+| Vertical alignment justify-* | `justify-center` (błędne) | `justify-start` (testowane) | ✅ Zgodne (oba błędne) |
+| inactiveTextColor brak w edytorze | — | — | Błąd w edytorze |
+
+**Kluczowa rozbieżność:** Admin preview jest statyczny (runtime JS NIE uruchamia się), frontend jest interaktywny (runtime JS uruchamia się podczas ładowania strony). Użytkownik pracujący w admin **nie może przetestować** działania przełączania zakładek bez publikowania strony.
+
+**Prawdopodobna przyczyna:** `dangerouslySetInnerHTML` dla tagu `<script>` nie powoduje wykonania skryptu przez przeglądarkę gdy element jest wstrzykiwany przez React (standard HTML — skrypty dodane przez innerHTML nie są wykonywane). Na froncie skrypt jest częścią SSR response i przeglądarka go wykonuje podczas parsowania HTML.
 
 ---
 

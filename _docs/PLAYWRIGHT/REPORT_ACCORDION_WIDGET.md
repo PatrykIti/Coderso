@@ -1,9 +1,10 @@
 # RAPORT: Accordion Widget — Analiza UX/UI i brakujące funkcjonalności
 
-> **Status:** W toku  
+> **Status:** Zakończony  
 > **Data:** 2026-05-16  
 > **Sesja:** Playwright #8 (Accordion Widget)  
 > **Środowisko:** http://localhost:5173/admin · http://localhost:3000  
+> **Strona testowa:** TEST-ACCORDION-0516 (`/test-accordion-0516`)  
 > **Sesja przeglądarki:** `accordion-audit` (oddzielna od innych agentów)
 
 ---
@@ -58,7 +59,7 @@ FAQ Accordion to specjalistyczny widget do sekcji FAQ — pary pytanie/odpowied�
 ### 2.3 Tryby edytora
 
 #### Accordion
-- **Wizard** — wariant + structure (count, initially-open, title/description per item)
+- **Wizard** — wariant + structure (count, initially-open, title/description per item) + przycisk "Continue to layout and styling"
 - **Visual** — Wizard + BehaviorSection (openMode, collapsible, default open, kolory)
 - **Advanced** — Visual + Diagnostics (JSON snapshot)
 
@@ -75,9 +76,10 @@ FAQ Accordion to specjalistyczny widget do sekcji FAQ — pary pytanie/odpowied�
 
 | # | Problem | Widget | Obszar |
 |---|---------|--------|--------|
-| C1 | **`allowMultipleOpen` nie działa w rendererze FAQ** — mimo włączenia opcji, renderer używa wyłącznie `defaultOpenIndex` (single index). Efekt: zawsze tylko jeden item otwarty przy załadowaniu strony, nawet gdy `allowMultipleOpen=true` | FAQ Accordion | Renderer |
-| C2 | **`collapsible=false` nie jest egzekwowane** — natywny element `<details>` nie obsługuje zakazu zwijania bez JavaScriptu. Opcja jest przechowywana w danych ale nie ma żadnego efektu w rendererze | Accordion | Renderer |
-| C3 | **Brak wskaźnika expand/collapse (chevron/arrow)** — `<summary>` renderuje sam tekst bez żadnej ikony toggle. Użytkownik nie ma wizualnej wskazówki, że panel jest klikalny | Oba | Renderer |
+| C1 | **`shouldOpen && index === 0` blokuje dowolny default open item** — w `accordion.tsx` warunek `item.instanceId === defaultOpenIds[0] && index === 0` sprawia, że tylko item na pozycji 0 może być domyślnie otwarty. Wybór "Default open item = Section 2" powoduje, że ŻADEN item nie jest otwarty (item 2 ma `index=1`, więc `index===0` = false). Bug potwierdzony w rendererze: `shouldOpen = "2"==="2" && 1===0 = false` | Accordion | Renderer |
+| C2 | **`allowMultipleOpen` nie działa w rendererze FAQ** — mimo włączenia opcji, renderer używa wyłącznie `defaultOpenIndex` (single index). Efekt: zawsze tylko jeden item otwarty przy załadowaniu, nawet gdy `allowMultipleOpen=true` | FAQ Accordion | Renderer |
+| C3 | **`collapsible=false` nie jest egzekwowane** — natywny `<details>` nie obsługuje zakazu zwijania bez JS. Opcja zapisywana w danych, ale nie ma efektu w rendererze — potwierdzono: po wyłączeniu "Allow all closed" kliknięcie otwartego itemu nadal go zamyka | Accordion | Renderer |
+| C4 | **Brak wskaźnika expand/collapse (chevron/arrow)** — `<summary>` renderuje sam tekst bez żadnej ikony toggle. Użytkownik nie ma wizualnej wskazówki, że panel jest klikalny — `summaryInnerHTML: "Section 1"` (potwierdzono na froncie) | Oba | Renderer |
 
 ### 3.2 Ważne (ograniczają zakres konfiguracji)
 
@@ -93,61 +95,187 @@ FAQ Accordion to specjalistyczny widget do sekcji FAQ — pary pytanie/odpowied�
 | W8 | **Brak kontroli wyrównania nagłówka FAQ** — `text-center` hardcoded, brak opcji left/right | FAQ Accordion | Layout |
 | W9 | **Brak padding/margin sekcji FAQ** — `px-4 py-8` hardcoded w `FaqAccordionBlock` | FAQ Accordion | Layout |
 | W10 | **Brak pola koloru tekstu nagłówka FAQ** (header title + description) | FAQ Accordion | Styl |
-| W11 | **Brak opcji "none open by default" w Accordion** — `initiallyOpenId` zawsze wskazuje na jakiś item; nie ma możliwości uruchomienia z wszystkimi zamkniętymi (np. gdy `collapsible=true`) | Accordion | Opcje |
+| W11 | **Brak opcji "none open by default" w Accordion** — `initiallyOpenId` zawsze wskazuje na jakiś item; brak możliwości uruchomienia z wszystkimi zamkniętymi przy `collapsible=true` | Accordion | Opcje |
 | W12 | **Brak font-size/weight dla tytułu elementu** — rozmiar i pogrubienie `summary` hardcoded per variant | Oba | Typografia |
 | W13 | **Brak opcji SEO schema (FAQPage JSON-LD)** — FAQ Accordion to idealne miejsce dla `FAQPage` structured data | FAQ Accordion | SEO |
-| W14 | **Brak opcji max-items dynamicznego** — stałe granice min 2 / max 8 (Accordion), min 1 / max 12 (FAQ) bez możliwości konfiguracji | Oba | Dane |
-| W15 | **Brak linkowania w treści Q&A** — pola `answer` to plain text, brak markdown/HTML | FAQ Accordion | Treść |
+| W14 | **Brak linkowania w treści Q&A** — pola `answer` to plain text, brak markdown/HTML | FAQ Accordion | Treść |
 
 ### 3.3 Problemy UX edytora
 
 | # | Problem | Widget | Obszar |
 |---|---------|--------|--------|
-| U1 | **Eksponowanie `slot id` w edytorze** — `"Item 1 (slot id: 1)"` widoczne dla redaktora; techniczna etykieta nie powinna być widoczna w UI | Accordion | Edytor |
-| U2 | **Dwa zduplikowane pola `initiallyOpenId` i `defaultOpenIds`** — oba kontrolują to samo; `initiallyOpenId` jest legacy, ale nadal widoczne w edytorze StructureSection ("Initially open item") oraz BehaviorSection ("Default open item") | Accordion | Edytor |
-| U3 | **Brak walidacji duplikatów `defaultOpenIds`** — w trybie multiple można wybrać te same items wielokrotnie (chroniona przez `Set`, ale UI tego nie sygnalizuje) | Accordion | Edytor |
-| U4 | **Switch "Allow all closed" ma niejasny opis** — `"Keep disclosure state collapsible after the default open state"` — zbyt techniczne dla redaktora treści | Accordion | Edytor |
-| U5 | **Brak podglądu wyboru wariantu** — tylko karty z tekstem; brak miniaturek wizualnych reprezentacji wariantów | Oba | Edytor |
-| U6 | **Brak przycisków Move Up/Down w Accordion editor** — można zmienić liczbę items selektem, ale nie można przestawiać kolejności itemów w edytorze | Accordion | Edytor |
-| U7 | **Brak przycisku "Add item"** w Accordion Wizard/Visual — zmiana liczby przez dropdown, nie przez przycisk dodawania/usuwania | Accordion | Edytor |
-| U8 | **Brak ClearableFieldHeader dla `borderColor` i `summaryTextColor`** w Accordion editor — tylko `surfaceColor` ma przycisk clear; pozostałe pola kolorów nie można wyczyścić | Accordion | Edytor |
-| U9 | **Color inputs w Accordion są plain text** — w FAQ Accordion jest `<input type="color">` + text pole; w Accordion edytorze tylko text field | Accordion | Edytor |
-| U10 | **Brak potwierdzenia przy usunięciu itemu FAQ** — `removeItem` działa natychmiast bez confirmation dialog | FAQ Accordion | Edytor |
-| U11 | **`defaultOpenIndex=-1` (all collapsed) niedostępne w Advanced FAQ** — wartość jest poprawna w kodzie, ale input `min={-1}` nie informuje użytkownika o semantyce wartości `-1` | FAQ Accordion | Edytor |
+| U1 | **Eksponowanie `slot id` w edytorze** — `"ITEM 1 (SLOT ID: 1)"` i `"ITEM 2 (SLOT ID: 2)"` widoczne dla redaktora; techniczna etykieta nie powinna być widoczna w UI — potwierdzono vizualnie | Accordion | Edytor |
+| U2 | **Zduplikowane pola kontroli domyślnego itemu** — "Initially open item" w sekcji ITEMS (Wizard/Visual/Advanced) ORAZ "Default open item" w sekcji BEHAVIOR (Visual/Advanced) kontrolują to samo. Redaktor nie wie, które jest wiążące | Accordion | Edytor |
+| U3 | **Switch "Allow all closed" ma niejasny opis** — `"Keep disclosure state collapsible after the default open state"` — zbyt techniczne dla redaktora treści; potwierdzono w UI | Accordion | Edytor |
+| U4 | **Brak podglądu wizualnego wariantów** — tylko karty z tekstem; brak miniaturek reprezentacji wariantów (soft/bordered/compact) | Oba | Edytor |
+| U5 | **Brak przycisku Move Up/Down w Accordion editor** — można zmienić liczbę items selektem, ale nie można przestawiać kolejności | Accordion | Edytor |
+| U6 | **Brak przycisku "Add item" w Accordion** — zmiana liczby tylko przez dropdown select; nie ma UX-owego "dodaj jeszcze jeden" | Accordion | Edytor |
+| U7 | **Brak ClearableFieldHeader dla `borderColor` i `summaryTextColor`** — tylko `surfaceColor` ma przycisk clear; potwierdzono wizualnie | Accordion | Edytor |
+| U8 | **Brak color pickera w Accordion** — FAQ Accordion ma `<input type="color">` + text pole; Accordion tylko plain text field — niespójna UX między widgetami | Accordion | Edytor |
+| U9 | **Brak potwierdzenia przy usunięciu itemu FAQ** — `removeItem` działa natychmiast bez confirmation | FAQ Accordion | Edytor |
+| U10 | **Canvas preview nie aktualizuje się po zmianie `openMode`** — gdy user zmienia Single → Multiple (lub odwrotnie), `<details>` elementy nie są odmontowywane/montowane, więc kontrolowany `open` prop React nie nadpisuje stanu DOM po interakcji użytkownika | Accordion | Edytor |
 
 ### 3.4 Problemy renderera (frontend)
 
 | # | Problem | Widget | Obszar |
 |---|---------|--------|--------|
-| R1 | **Brak `aria-label` na `<details>`** — każdy panel akordeonowy nie ma etykiety dla screen readera | Oba | Dostępność |
-| R2 | **Brak `role="region"` na treści `<details>`** — treść panelu powinna mieć `role="region"` z `aria-labelledby` wskazującym na `<summary>` | Oba | Dostępność |
-| R3 | **`<summary>` bez `aria-expanded`** — natywny element obsługuje expanded state, ale `aria-expanded` nie jest dodawane | Oba | Dostępność |
-| R4 | **Brak `aria-label` / `aria-labelledby` na kontenera widgetu** — div `data-nextless-accordion` bez semantycznej roli | Accordion | Dostępność |
-| R5 | **`<section>` FAQ bez `aria-label` / `aria-labelledby`** — wrapper sekcji bez opisu | FAQ Accordion | Dostępność |
-| R6 | **Pusty accordion item** — gdy brak bloków w slocie, pokazuje "Add widgets to this accordion item." — tekst placeholder widoczny na froncie | Accordion | Renderer |
-| R7 | **`name` attribute dla `openMode=single`** — `detailsGroupName` bazuje na `resolvedItems[0].instanceId` (np. `nextless-accordion-1`). Przy zmianie kolejności lub ID, name się zmienia, psując grupowanie | Accordion | Logika |
-| R8 | **Spacing `"none"` i `spacingClassMap`** — `gap-0` dla none vs inline item spacing — brak wizualnego separatora między items gdy spacing=none | FAQ Accordion | Renderer |
+| R1 | **Brak `aria-label` / `aria-labelledby` na kontenera widgetu** — `<div data-nextless-accordion>` bez semantycznej roli; `accordionAriaLabel: null` — potwierdzono na froncie | Accordion | Dostępność |
+| R2 | **Brak `aria-expanded` na `<summary>`** — natywny element obsługuje state, ale `aria-expanded` nie jest explicite dodawane; `firstSummaryAriaExpanded: null` — potwierdzono | Oba | Dostępność |
+| R3 | **Brak `aria-controls` na `<summary>`** — `<summary>` nie wskazuje na ID zawartości panelu; `firstSummaryAriaControls: null` — potwierdzono | Oba | Dostępność |
+| R4 | **Brak `role="region"` na treści `<details>`** — zawartość panelu powinna mieć `role="region"` z `aria-labelledby` wskazującym na `<summary>` | Oba | Dostępność |
+| R5 | **`<section>` FAQ bez `aria-label`** — wrapper sekcji FAQ bez semantycznego opisu | FAQ Accordion | Dostępność |
+| R6 | **Placeholder "Add widgets to this accordion item." widoczny na froncie** — gdy brak bloków w slocie, dev placeholder widoczny na produkcji; potwierdzono na `localhost:3000` | Accordion | Renderer |
+| R7 | **`name` attribute w single mode** — `detailsGroupName = nextless-accordion-{firstItem.instanceId}` — przy zmianie ID pierwszego itemu grupowanie HTML `<details>` przestaje działać | Accordion | Logika |
 
 ---
 
 ## 4. Testy w Admin UI Preview
 
 > **Sesja:** `playwright-cli -s=accordion-audit`  
+> **Strona testowa:** TEST-ACCORDION-0516 (ID: `5931e4c5-a135-41a9-ad08-707c61cd897b`)  
 > **Data testu:** 2026-05-16
 
-*(Sekcja uzupełniana po testach przeglądarkowych)*
+### 4.1 KRYTYCZNY BUG: `shouldOpen && index === 0` — domyślne otwieranie nie działa dla itemów poza pozycją 0
+
+**Lokalizacja:** `core/widgets/core/accordion.tsx` — funkcja `AccordionBlock`
+
+**Kod (błędny fragment):**
+```js
+const shouldOpen =
+  openMode === "multiple"
+    ? defaultOpenIds.includes(item.instanceId)
+    : item.instanceId === (defaultOpenIds[0] ?? resolvedItems[0]?.instanceId) &&
+      index === 0;  // ← BUG: ten warunek blokuje dowolny item poza pierwszym
+```
+
+**Dowód:**
+- W Visual editor zmieniono "Default open item" na "Section 2"
+- Canvas: `{ item1: { openAttr: null, openProp: false }, item2: { openAttr: null, openProp: false } }`
+- Logika: item 2 (index=1): `"2"==="2" && 1===0` → `true && false` → `false`
+- Wynik: ŻADEN item nie jest otwarty po wybraniu "Default open item = Section 2"
+
+**Naprawa:**
+```js
+// Zamiast:
+: item.instanceId === (defaultOpenIds[0] ?? resolvedItems[0]?.instanceId) && index === 0;
+
+// Powinno być:
+: item.instanceId === (defaultOpenIds[0] ?? resolvedItems[0]?.instanceId);
+```
+
+### 4.2 KRYTYCZNY BUG: `collapsible=false` nie blokuje zamknięcia
+
+**Dowód:**
+- W Visual editor wyłączono "Allow all closed" (collapsible=false)
+- Kliknięto otwarty item (Section 2, y=175 w canvas)
+- Po kliknięciu: `{ item1open: false, item2open: false }` — item zamknął się mimo collapsible=false
+- Natywny `<details>` nie obsługuje zapobiegania zamknięciu bez JavaScriptu
+
+### 4.3 Potwierdzono: Slot ID widoczny w edytorze (U1)
+
+Tekst z DOM: `"Item 1 (slot id: 1)"` i `"Item 2 (slot id: 2)"` — widoczne bezpośrednio w panelu edytora dla redaktora treści.
+
+### 4.4 Potwierdzono: Zduplikowane pola open item (U2)
+
+Edytor Visual pokazuje jednocześnie:
+- **ITEMS sekcja**: "Initially open item" → Section 1 (dropdown)
+- **BEHAVIOR sekcja**: "Default open item" → Section 1 (dropdown)
+
+Oba dropdowny mają inne etykiety ale kontrolują to samo — `defaultOpenIds` + `initiallyOpenId` (legacy alias).
+
+### 4.5 Potwierdzono: Brak color pickera w Accordion (U8)
+
+Accordion Visual editor: pola "Surface color", "Border color", "Summary text color" to plain `<input type="text">`.  
+FAQ Accordion Visual editor: każde pole koloru ma `<input type="color" class="h-9 w-10 p-1">` + text field.  
+Niespójna UX między widgetami tego samego systemu.
+
+### 4.6 Potwierdzono: Brak chevron (C4)
+
+DOM canvas: `summaryInnerHTML: "Section 1"` — brak SVG, brak CSS triangle, brak ikony.  
+Użytkownik widzi tylko tekst bez żadnego wskazania, że panel jest interaktywny.
+
+### 4.7 Potwierdzono: Brak wszystkich atrybutów ARIA (R1–R4)
+
+```json
+{
+  "accordionAriaLabel": null,
+  "accordionAriaLabelledby": null,
+  "firstDetailsAriaLabel": null,
+  "firstSummaryAriaExpanded": null,
+  "firstSummaryAriaControls": null,
+  "contentDivRole": null
+}
+```
 
 ---
 
 ## 5. Testy na froncie (localhost:3000)
 
-*(Sekcja uzupełniana po testach przeglądarkowych)*
+**URL:** http://localhost:3000/test-accordion-0516  
+**Strona opublikowana:** Tak  
+**Data testu:** 2026-05-16
+
+### 5.1 KRYTYCZNY BUG: `defaultOpenIds=["2"]` → oba items zamknięte
+
+DOM frontendu (fresh SSR render):
+```json
+{
+  "items": [
+    { "id": "1", "openAttr": null, "openProp": false, "name": "nextless-accordion-1" },
+    { "id": "2", "openAttr": null, "openProp": false, "name": "nextless-accordion-1" }
+  ]
+}
+```
+
+Renderer na froncie używa tej samej logiki `shouldOpen && index === 0`. Wynik identyczny jak w admin preview.
+
+### 5.2 Potwierdzono: Brak chevron na froncie (C4)
+
+```json
+{ "hasSummaryChevron": false, "summaryInnerHTML": "Section 1" }
+```
+
+Elementy `<details>` bez żadnego wskaźnika toggle — użytkownik nie wie, że może kliknąć.
+
+### 5.3 KRYTYCZNY: Placeholder "Add widgets" widoczny na produkcji (R6)
+
+```json
+{ "hasPlaceholderText": true }
+```
+
+Tekst `"Add widgets to this accordion item."` widoczny na `localhost:3000` po otwarciu sekcji przez użytkownika. Developerski komunikat na produkcji.
+
+### 5.4 Potwierdzono: Pełny brak ARIA na froncie (R1–R5)
+
+```json
+{
+  "accordionAriaLabel": null,
+  "firstSummaryAriaExpanded": null,
+  "firstSummaryAriaControls": null,
+  "contentDivRole": null
+}
+```
+
+### 5.5 Mobile (390×844)
+
+Accordion poprawnie responsywny — `space-y-3` sprawia, że items stackują się pionowo. Brak specyficznych problemów mobilnych na poziomie layoutu.
 
 ---
 
 ## 6. Porównanie Admin Preview vs Frontend
 
-*(Sekcja uzupełniana po testach przeglądarkowych)*
+| Aspekt | Admin Preview | Frontend | Zgodność |
+|--------|--------------|----------|----------|
+| `shouldOpen` bug (C1) | ✅ Potwierdzony | ✅ Potwierdzony | ✅ Zgodne (oba błędne) |
+| `collapsible=false` bug (C3) | ✅ Potwierdzony | N/A (wymaga interakcji) | — |
+| Brak chevron (C4) | ✅ Potwierdzony | ✅ Potwierdzony | ✅ Zgodne |
+| Placeholder na produkcji (R6) | ✅ Widoczny | ✅ Widoczny | ✅ Zgodne (oba błędne) |
+| ARIA attributes | Brak | Brak | ✅ Zgodne (oba błędne) |
+| Single mode (name attr) | `name="nextless-accordion-1"` | `name="nextless-accordion-1"` | ✅ Zgodne |
+| Mobile responsiveness | N/A (canvas) | OK | — |
+| Slot ID w edytorze (U1) | ✅ Widoczny | N/A | — |
+
+**Wnioski:** Admin preview i frontend renderują widget identycznie. Wszystkie bugi są w warstwie renderera (`accordion.tsx`) i edytora (`AccordionEditors.tsx`). Brak rozbieżności środowiskowych.
 
 ---
 
@@ -155,21 +283,156 @@ FAQ Accordion to specjalistyczny widget do sekcji FAQ — pary pytanie/odpowied�
 
 | Priorytet | ID | Problem | Wpływ |
 |-----------|---|---------|-------|
-| 🔴 KRYTYCZNY | C1 | **`allowMultipleOpen` nie działa — zawsze single open** | Kluczowa funkcja FAQ Accordion nie działa na froncie |
-| 🔴 KRYTYCZNY | C2 | **`collapsible=false` ignorowane przez renderer** | Opcja zachowuje się jak `true` zawsze |
-| 🔴 KRYTYCZNY | C3 | **Brak wskaźnika expand/collapse (chevron)** | Użytkownik nie wie że element jest klikalny |
-| 🟠 WYSOKI | R6 | **Placeholder "Add widgets..." widoczny na froncie** | Zawartość developerska na produkcji |
-| 🟠 WYSOKI | U1 | **Slot id widoczny w edytorze** | Confusing UX dla redaktora treści |
-| 🟠 WYSOKI | U2 | **Zduplikowane pola `initiallyOpenId`/`defaultOpenIds`** | Dezorientacja — dwa miejsca ustawiania tego samego |
-| 🟠 WYSOKI | R1–R5 | **Brak ARIA** | Niedostępność dla screen readerów |
-| 🟡 ŚREDNI | W1 | **Brak animacji** | Wrażenie statyczności UI |
-| 🟡 ŚREDNI | U6, U7 | **Brak reorder / add/remove per item** | Ograniczona kontrola kolejności elementów |
-| 🟡 ŚREDNI | U9 | **Brak color pickera w Accordion** | Spójność edytora — FAQ ma picker, Accordion nie |
-| 🟡 ŚREDNI | W3, W4 | **Brak koloru body/description i tekstu pytania** | Niepełna kontrola typografii |
+| 🔴 KRYTYCZNY | C1 | **`shouldOpen && index === 0` — wybór default open item nie działa dla nie-pierwszego itemu** | Użytkownik nie może kontrolować który item jest domyślnie otwarty |
+| 🔴 KRYTYCZNY | C4 | **Brak chevron/expand indicator** | Użytkownik nie wie, że panel jest klikalny — fundamentalny UX |
+| 🔴 KRYTYCZNY | R6 | **Placeholder "Add widgets" widoczny na produkcji** | Dev tekst widoczny dla użytkowników końcowych |
+| 🟠 WYSOKI | C2 | **`allowMultipleOpen` FAQ nie działa** | Kluczowa funkcja FAQ Accordion niedziałająca |
+| 🟠 WYSOKI | C3 | **`collapsible=false` ignorowane przez renderer** | Opcja zachowuje się jak `true` zawsze |
+| 🟠 WYSOKI | U1 | **Slot ID widoczny w edytorze** | Techniczna etykieta dezorientuje redaktorów treści |
+| 🟠 WYSOKI | U2 | **Zduplikowane pola "Initially open item" + "Default open item"** | Dezorientacja redaktora — dwa miejsca na to samo ustawienie |
+| 🟠 WYSOKI | R1–R4 | **Pełny brak ARIA** | Niedostępność dla screen readerów — `aria-expanded=null`, `aria-controls=null` |
+| 🟡 ŚREDNI | U8 | **Brak color pickera w Accordion vs FAQ** | Niespójna UX w tym samym systemie |
+| 🟡 ŚREDNI | U3 | **Niejasny label "Allow all closed"** | Confusing dla redaktorów |
+| 🟡 ŚREDNI | U5, U6 | **Brak reorder / add/remove per item** | Ograniczona kontrola kolejności |
+| 🟡 ŚREDNI | W3, W4 | **Brak koloru body text i pytania** | Niepełna kontrola typografii |
 | 🟡 ŚREDNI | W8, W9 | **Wyrównanie i padding FAQ hardcoded** | Ograniczony wachlarz konfiguracyjny |
 | 🟢 NISKI | W13 | **Brak SEO FAQ schema** | Utracona szansa SEO |
-| 🟢 NISKI | W15 | **Plain text w Q&A** | Brak formatowania/linków w odpowiedziach |
+| 🟢 NISKI | W14 | **Plain text w Q&A** | Brak formatowania/linków w odpowiedziach |
 
 ---
 
-*Raport w toku — sekcje 4–6 uzupełniane po testach Playwright.*
+## 8. Sugerowane naprawy
+
+### 8.1 Naprawa C1 — shouldOpen (KRYTYCZNE)
+
+**Plik:** `core/widgets/core/accordion.tsx`
+
+```js
+// Obecny błędny kod:
+const shouldOpen =
+  openMode === "multiple"
+    ? defaultOpenIds.includes(item.instanceId)
+    : item.instanceId === (defaultOpenIds[0] ?? resolvedItems[0]?.instanceId) &&
+      index === 0;
+
+// Naprawiony kod:
+const shouldOpen =
+  openMode === "multiple"
+    ? defaultOpenIds.includes(item.instanceId)
+    : item.instanceId === (defaultOpenIds[0] ?? resolvedItems[0]?.instanceId);
+```
+
+### 8.2 Naprawa C4 — Dodaj chevron do `<summary>` (KRYTYCZNE)
+
+**Plik:** `core/widgets/core/accordion.tsx` — `AccordionBlock`
+
+```jsx
+// W <summary>:
+<summary className={resolveSummaryClass(resolvedVariant)} style={summaryStyle}>
+  <span className="flex-1">{item.title}</span>
+  <svg
+    className="h-4 w-4 shrink-0 transition-transform duration-200 [[open]_&]:rotate-180"
+    fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"
+  >
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+  </svg>
+</summary>
+// Zmienić klasę summary na: flex items-center justify-between gap-2 ...
+```
+
+### 8.3 Naprawa R6 — Ukryj placeholder na froncie (KRYTYCZNE)
+
+**Plik:** `core/widgets/core/accordion.tsx`
+
+```jsx
+// Obecny kod renderuje placeholder gdy brak bloków:
+{item.blocks.length > 0 ? (
+  item.blocks.map(...)
+) : (
+  <div className="rounded-md border border-dashed ...">
+    Add widgets to this accordion item.
+  </div>
+)}
+
+// Naprawa — nie renderuj placeholder gdy nie jesteśmy w admin context:
+// Opcja 1: Przekazać props `isEditing` i warunkować placeholder
+// Opcja 2: Sprawdzić environment/context
+// Opcja 3: Nie renderować niczego gdy brak bloków (null zamiast placeholder):
+{item.blocks.length > 0
+  ? item.blocks.map((block) => <WidgetRenderer key={block.id} block={block} previewDevice={previewDevice} />)
+  : null
+}
+```
+
+### 8.4 Naprawa R1–R4 — ARIA (WYSOKI)
+
+**Plik:** `core/widgets/core/accordion.tsx`
+
+```jsx
+// Kontener:
+<div
+  className="space-y-3"
+  data-nextless-accordion="1"
+  role="region"           // ← dodać
+  aria-label="Accordion"  // ← dodać
+  ...
+>
+
+// Summary:
+<summary
+  className={resolveSummaryClass(resolvedVariant)}
+  style={summaryStyle}
+  id={`accordion-summary-${item.instanceId}`}  // ← dodać
+>
+
+// Content div:
+<div
+  className={...}
+  role="region"                                                      // ← dodać
+  aria-labelledby={`accordion-summary-${item.instanceId}`}          // ← dodać
+>
+```
+
+### 8.5 Naprawa U1 — Ukryj slot ID w edytorze
+
+**Plik:** `core/admin/ui/widgets/editors/AccordionEditors.tsx` — `StructureSection`
+
+```jsx
+// Zamiast:
+<p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+  Item {index + 1} (slot id: {item.id})
+</p>
+
+// Powinno być:
+<p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+  Item {index + 1}
+</p>
+```
+
+### 8.6 Naprawa U2 — Usuń zduplikowane pole "Initially open item" z ITEMS sekcji
+
+**Plik:** `core/admin/ui/widgets/editors/AccordionEditors.tsx` — `StructureSection`
+
+Usunąć z StructureSection dropdown "Initially open item" — zostaje tylko "Default open item" w BehaviorSection.
+
+### 8.7 Naprawa C3 — Egzekwuj collapsible=false przez JavaScript
+
+**Plik:** `core/widgets/core/accordion.tsx`
+
+```jsx
+// Dodać event listener na toggle dla wyłączonego collapsible:
+useEffect(() => {
+  if (collapsible === false && openMode === "single") {
+    const details = containerRef.current?.querySelectorAll("details");
+    const handleToggle = (e) => {
+      if (!e.target.open) e.target.open = true; // prevent closing
+    };
+    details?.forEach(d => d.addEventListener("toggle", handleToggle));
+    return () => details?.forEach(d => d.removeEventListener("toggle", handleToggle));
+  }
+}, [collapsible, openMode]);
+```
+
+---
+
+*Raport zakończony. Wszystkie testy wykonane 2026-05-16.*
