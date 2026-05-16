@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Layout + Runtime Render + Admin UI
 **Estimated Effort:** Medium
-**Dependencies:** TASK-256-05-04, TASK-257
+**Dependencies:** TASK-256-04, TASK-256-05-04, TASK-257
 **Status:** To Do
 
 ---
@@ -31,7 +31,8 @@ This leaf does not own:
 - R7 instance-safe details group naming.
 
 Those stay in TASK-256-05-04 and TASK-256-04. This leaf starts after those fixes
-or must be rebased on their final model.
+or must be rebased on their final model. Do not implement this leaf while the
+live renderer still contains the TASK-256 default-open and collapsible bugs.
 
 ## Sub-Tasks
 
@@ -40,6 +41,10 @@ or must be rebased on their final model.
 - [ ] Update `normalizeAccordionData()` so it preserves an empty
   `defaultOpenIds` only when `options.collapsible !== false`; otherwise it
   still selects a valid item.
+- [ ] Distinguish explicit `defaultOpenIds: []` from stale non-empty
+  `defaultOpenIds` whose IDs no longer match slot instances. Stale IDs must use
+  the existing valid-item fallback instead of becoming an intentional
+  all-collapsed state.
 - [ ] Update Wizard/Visual/Advanced controls so editors can choose:
   - "None - start collapsed" when all-closed is allowed;
   - a concrete item title when one should be open;
@@ -62,10 +67,13 @@ or must be rebased on their final model.
 
 ```ts
 function resolveAccordionDefaultOpenIds(current: AccordionData, items: NormalizedAccordionItem[]) {
-  const requested = extractValidDefaultOpenIds(current.options?.defaultOpenIds, items);
+  const rawDefaultOpenIds = Array.isArray(current.options?.defaultOpenIds)
+    ? current.options.defaultOpenIds
+    : undefined;
+  const requested = extractValidDefaultOpenIds(rawDefaultOpenIds, items);
   const allClosedAllowed = current.options?.collapsible !== false;
 
-  if (current.options?.defaultOpenIds && requested.length === 0 && allClosedAllowed) {
+  if (rawDefaultOpenIds?.length === 0 && allClosedAllowed) {
     return [];
   }
 
@@ -73,6 +81,8 @@ function resolveAccordionDefaultOpenIds(current: AccordionData, items: Normalize
     return openMode === "multiple" ? requested : [requested[0]];
   }
 
+  // A non-empty raw array with no valid IDs is stale persisted data, not an
+  // intentional all-collapsed choice.
   return items[0] ? [items[0].id] : [];
 }
 ```
@@ -92,6 +102,7 @@ function handleDefaultOpenChange(next: string) {
 Error handling:
 
 - Invalid item IDs are still removed by the normalizer.
+- Stale non-empty `defaultOpenIds` arrays fall back to the first valid item.
 - `collapsible=false` cannot save all-collapsed because runtime must keep at
   least one panel open.
 - Sparse legacy payloads without explicit default-open data keep the current
@@ -111,6 +122,7 @@ No API routes are added.
 - `bun run test:vitest -- tests/vitest/widgets/accordionWidget.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/accordion-editor-wave.test.tsx`
 - `bun test tests/unit/widgets/validator.test.ts` if schema/defaults change
+- `git diff --check`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 

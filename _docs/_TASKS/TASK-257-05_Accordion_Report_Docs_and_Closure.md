@@ -16,8 +16,9 @@ Close the TASK-257 Accordion-specific follow-up family with report evidence,
 source-of-truth docs, task-board sync, changelog, and final validation.
 
 This closure leaf must keep TASK-257 separate from TASK-256: shared-contract
-rows stay attributed to TASK-256, FAQ rows stay attributed to FAQ ownership, and
-only Accordion product-scope rows are marked fixed by TASK-257.
+rows stay attributed to TASK-256, FAQ rows and FAQ portions of mixed rows stay
+attributed to FAQ ownership, and only Accordion product-scope rows are marked
+fixed by TASK-257.
 
 ## Sub-Tasks
 
@@ -41,11 +42,11 @@ only Accordion product-scope rows are marked fixed by TASK-257.
 | Row | Expected status | Evidence required |
 |---|---|---|
 | W11 | fixed by TASK-257-01 or deferred with reason | Normalizer/editor/runtime test names plus manual or rendered evidence. |
-| W3, W5, W6, W7, W12, U8 | fixed by TASK-257-02 or deferred with reason | Schema/editor/runtime tests and docs update. |
+| W3, W5, W6, Accordion part of W7, Accordion part of W12, U8 | fixed by TASK-257-02 or deferred with reason | Schema/editor/runtime tests and docs update. |
 | W2, U3, U5, U6 | fixed by TASK-257-03 or deferred with reason | Item editor/runtime tests; slot-safety note for add/reorder. |
-| W1, U4 | fixed by TASK-257-04 or deferred with reason | Motion/preview tests and reduced-motion note. |
+| Accordion part of W1, Accordion part of U4 | fixed by TASK-257-04 or deferred with reason | Motion/preview tests and reduced-motion note. |
 | TASK-256-owned rows | excluded | Link to TASK-256 child owner and do not mark as fixed by TASK-257. |
-| FAQ rows | excluded | Link to FAQ owner and do not mark as fixed by TASK-257. |
+| FAQ rows and FAQ portions of W1/W7/W12/U4/C4/R2-R4 | excluded | Link to FAQ owner and do not mark as fixed by TASK-257. |
 
 ## Files to Change
 
@@ -93,6 +94,7 @@ No API routes are added.
 - `bun run test:vitest -- tests/vitest/ui/accordion-editor-wave.test.tsx`
 - Any page-builder suites touched by TASK-257-03
 - `bun test tests/unit/widgets/validator.test.ts` if schema/defaults changed
+- `git diff --check`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run scan:security:strict`

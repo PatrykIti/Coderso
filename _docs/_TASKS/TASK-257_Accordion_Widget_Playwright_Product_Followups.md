@@ -35,7 +35,8 @@ It must not re-open the shared contract work already routed through TASK-256:
   TASK-256-05-04;
 - instance-safe IDs, ARIA relationships, chevrons, and interactive runtime
   state remain TASK-256-04 and TASK-256-05-04;
-- FAQ Accordion rows remain TASK-256-06-03 or a future FAQ-specific family.
+- FAQ Accordion rows and FAQ portions of mixed `Oba` rows remain
+  TASK-256-06-03 or a future FAQ-specific family.
 
 If an implementation leaf discovers that a requested Accordion UX requires a
 shared page-builder contract change, the leaf must stop and split that shared
@@ -45,12 +46,12 @@ change out instead of hiding it inside TASK-257.
 
 | Report rows | Owner | TASK-257 action |
 |---|---|---|
-| C1, C3, C4, U1, U2, U7, U10, R1-R7 | TASK-256-02/03/04 and TASK-256-05-04 | Excluded from TASK-257; reuse the final shared-contract result as a dependency. |
-| C2, W4, W8, W9, W10, W13, W14, U9, R5, FAQ parts of C4/R2-R4 | TASK-256-06-03 or future FAQ task | Excluded from TASK-257 because they target `faq-accordion`. |
+| C1, C3, Accordion part of C4, U1, U2, U7, U10, R1, Accordion parts of R2-R4, R6, R7 | TASK-256-02/03/04 and TASK-256-05-04 | Excluded from TASK-257; reuse the final shared-contract result as a dependency. |
+| C2, W4, FAQ parts of W1/W7/W12/U4, W8, W9, W10, W13, W14, U9, R5, FAQ parts of C4/R2-R4 | TASK-256-06-03 or future FAQ task | Excluded from TASK-257 because they target `faq-accordion`. |
 | W11 | TASK-257-01 | Add an explicit Accordion all-collapsed initial state after TASK-256 fixes default-open truthfulness. |
-| W3, W5, W6, W7, W12, U8 | TASK-257-02 | Add Accordion-owned style/layout/typography controls and consistent color-picking UX. |
+| W3, W5, W6, Accordion part of W7, Accordion part of W12, U8 | TASK-257-02 | Add Accordion-owned style/layout/typography controls and consistent color-picking UX. |
 | W2, U3, U5, U6 | TASK-257-03 | Add Accordion item content affordances and item-management UX where it can be done without a shared slot-contract change. |
-| W1, U4 | TASK-257-04 | Add Accordion-specific motion and variant preview polish after the functional product controls land. |
+| Accordion part of W1, Accordion part of U4 | TASK-257-04 | Add Accordion-specific motion and variant preview polish after the functional product controls land. |
 | Report refresh and docs closure | TASK-257-05 | Update report/docs/changelog/board with fixed/deferred evidence after implementation leaves finish. |
 
 ## Current Owner and Test Matrix
@@ -114,7 +115,8 @@ No API routes are added.
 - For implementation leaves:
   - `bun run test:vitest -- tests/vitest/widgets/accordionWidget.test.tsx`
   - `bun run test:vitest -- tests/vitest/ui/accordion-editor-wave.test.tsx`
-  - `bun test tests/unit/widgets/validator.test.ts` if schema/defaults change
+  - `bun test tests/unit/widgets/validator.test.ts` for every leaf that changes
+    Accordion schema/defaults/normalizers
   - `bun run test:vitest -- tests/vitest/pageBuilder/blockSettings-wave.test.tsx`
     only if a leaf touches page-builder slot controls
   - `bun --cwd core lint`

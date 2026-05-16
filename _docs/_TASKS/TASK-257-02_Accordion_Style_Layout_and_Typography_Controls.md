@@ -22,8 +22,8 @@ widget:
 - W3: body/description text color;
 - W5: panel content padding;
 - W6: panel border radius;
-- W7: accordion max width;
-- W12: summary title font size/weight;
+- Accordion part of W7: accordion max width;
+- Accordion part of W12: summary title font size/weight;
 - U8: color picker UX parity for Accordion color fields.
 
 ## Scope Boundary
@@ -32,6 +32,20 @@ This leaf does not add shared token semantics. New fields must use the existing
 repo token conventions and only introduce `none` where `_docs/WIDGETS.md`
 permits it. Missing `Clear` buttons for existing color fields remain TASK-256-02
 unless already landed before this leaf starts.
+
+Exact Accordion schema paths for this leaf:
+
+- `style.descriptionTextColor`
+- `style.contentPadding`
+- `style.radius`
+- `style.summaryFontSize`
+- `style.summaryFontWeight`
+- `layout.maxWidth`
+
+Do not add a `none` token for these new Accordion fields unless the same leaf
+also updates `_docs/WIDGETS.md` to explicitly approve that shared token
+extension. The default implementation should use concrete Accordion-local
+tokens and preserve current variant defaults for legacy payloads.
 
 ## Sub-Tasks
 
@@ -52,7 +66,7 @@ unless already landed before this leaf starts.
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/accordion.tsx` | Add schema/defaults/normalizer maps for `descriptionTextColor`, `contentPadding`, `radius`, `maxWidth`, `summaryFontSize`, and `summaryFontWeight` or equivalent repo-native names. |
+| `core/widgets/core/accordion.tsx` | Add schema/defaults/normalizer maps for `style.descriptionTextColor`, `style.contentPadding`, `style.radius`, `style.summaryFontSize`, `style.summaryFontWeight`, and `layout.maxWidth`. |
 | `core/admin/ui/widgets/editors/AccordionEditors.tsx` | Add token/color controls and color-picker UX. |
 | `tests/vitest/widgets/accordionWidget.test.tsx` | Add render and normalization assertions for each new style/layout field. |
 | `tests/vitest/ui/accordion-editor-wave.test.tsx` | Add editor interaction assertions for color picker/text sync and token selects. |
@@ -62,30 +76,59 @@ unless already landed before this leaf starts.
 
 ```ts
 const accordionPaddingClassMap = {
-  none: "p-0",
   sm: "p-3",
   md: "p-4",
   lg: "p-5",
 } as const;
 
 const accordionRadiusClassMap = {
-  none: "rounded-none",
   sm: "rounded-md",
   md: "rounded-lg",
   lg: "rounded-xl",
+  xl: "rounded-2xl",
 } as const;
+
+const accordionMaxWidthClassMap = {
+  sm: "max-w-2xl",
+  md: "max-w-3xl",
+  lg: "max-w-4xl",
+  full: "max-w-none",
+} as const;
+
+function resolveAccordionToken<T extends string>(
+  value: unknown,
+  fallback: T,
+  allowed: readonly T[]
+) {
+  return typeof value === "string" && allowed.includes(value as T) ? (value as T) : fallback;
+}
 
 function normalizeAccordionStyle(style: AccordionData["style"] | undefined) {
   return {
     surfaceColor: resolveClearableStyleValue(style?.surfaceColor),
-    borderColor: normalizeOptionalColor(style?.borderColor, accordionDefaults.style.borderColor),
-    summaryTextColor: normalizeOptionalColor(style?.summaryTextColor, defaults.summaryTextColor),
-    descriptionTextColor: normalizeOptionalColor(style?.descriptionTextColor, undefined),
-    contentPadding: resolveToken(style?.contentPadding, "md", accordionPaddingTokens),
-    radius: resolveToken(style?.radius, "lg", accordionRadiusTokens),
-    maxWidth: resolveToken(style?.maxWidth, "full", accordionMaxWidthTokens),
-    summaryFontSize: resolveToken(style?.summaryFontSize, "base", summarySizeTokens),
-    summaryFontWeight: resolveToken(style?.summaryFontWeight, "semibold", summaryWeightTokens),
+    borderColor: normalizeAccordionColor(
+      style?.borderColor,
+      accordionDefaults.style?.borderColor
+    ),
+    summaryTextColor: normalizeAccordionColor(
+      style?.summaryTextColor,
+      accordionDefaults.style?.summaryTextColor
+    ),
+    descriptionTextColor: normalizeAccordionColor(style?.descriptionTextColor, undefined),
+    contentPadding: resolveAccordionToken(style?.contentPadding, "md", accordionPaddingTokens),
+    radius: resolveAccordionToken(style?.radius, "lg", accordionRadiusTokens),
+    summaryFontSize: resolveAccordionToken(style?.summaryFontSize, "base", summarySizeTokens),
+    summaryFontWeight: resolveAccordionToken(
+      style?.summaryFontWeight,
+      "semibold",
+      summaryWeightTokens
+    ),
+  };
+}
+
+function normalizeAccordionLayout(layout: AccordionData["layout"] | undefined) {
+  return {
+    maxWidth: resolveAccordionToken(layout?.maxWidth, "full", accordionMaxWidthTokens),
   };
 }
 ```
@@ -103,10 +146,11 @@ function ColorField({ label, value, fallback, onChange, onClear }: ColorFieldPro
 
 Error handling:
 
-- Unknown tokens normalize to defaults without dropping other style fields.
+- Unknown tokens normalize to defaults without dropping other style/layout fields.
 - CSS variables remain valid in text inputs even when the native color picker
   must use a hex fallback.
 - Cleared color fields omit inline styles instead of serializing empty strings.
+- Unknown `layout.maxWidth` values normalize to `full`.
 
 ## Security Contract
 
@@ -125,16 +169,18 @@ No API routes are added.
 - `bun run test:vitest -- tests/vitest/ui/accordion-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` if
   approved `none` tokens are added
-- `bun test tests/unit/widgets/validator.test.ts` if schema/defaults change
+- `bun test tests/unit/widgets/validator.test.ts`
+- `git diff --check`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 
 ## Documentation Updates Required
 
 - Update `_docs/_WIDGETS/ACCORDION.md`.
-- Update `_docs/PLAYWRIGHT/REPORT_ACCORDION_WIDGET.md` rows W3, W5, W6, W7,
-  W12, and U8 after validation.
-- Update `_docs/WIDGETS.md` only if this leaf adds a new shared token rule.
+- Update `_docs/PLAYWRIGHT/REPORT_ACCORDION_WIDGET.md` rows W3, W5, W6,
+  Accordion part of W7, Accordion part of W12, and U8 after validation.
+- Update `_docs/WIDGETS.md` if this leaf adds a new shared token rule, including
+  any new `none` token approval for Accordion fields.
 
 ## Changelog Policy
 

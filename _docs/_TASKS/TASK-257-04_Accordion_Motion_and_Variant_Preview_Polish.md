@@ -5,7 +5,7 @@
 **Priority:** Medium
 **Category:** Widgets + Admin UI + Runtime Render + UX Polish
 **Estimated Effort:** Medium
-**Dependencies:** TASK-257-02, TASK-257-03, TASK-257
+**Dependencies:** TASK-256-04, TASK-256-05-04, TASK-257-02, TASK-257-03, TASK-257
 **Status:** To Do
 
 ---
@@ -15,15 +15,20 @@
 Add Accordion-specific motion and visual preview polish after functional product
 controls land.
 
-`REPORT_ACCORDION_WIDGET.md` rows W1 and U4 are product UX improvements, not
-shared-contract defects. This leaf keeps them out of TASK-256 while still making
-the Accordion widget feel consistent and inspectable in the editor.
+The Accordion parts of `REPORT_ACCORDION_WIDGET.md` rows W1 and U4 are product
+UX improvements, not shared-contract defects. FAQ parts of those same mixed
+rows remain outside TASK-257. This leaf keeps the Accordion work out of TASK-256
+while still making the Accordion widget feel consistent and inspectable in the
+editor.
 
 ## Scope Boundary
 
 This leaf does not replace TASK-256 runtime accessibility work. Motion must
 respect the final accessible details/summary behavior from TASK-256 and must
 not introduce keyboard traps, duplicate IDs, or hydration-sensitive scripts.
+
+Persist motion as `options.motion`. The `"none"` value in this enum is a motion
+mode, not a TASK-242 visual-off token.
 
 ## Sub-Tasks
 
@@ -41,7 +46,7 @@ not introduce keyboard traps, duplicate IDs, or hydration-sensitive scripts.
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/accordion.tsx` | Add optional motion field and render output. |
+| `core/widgets/core/accordion.tsx` | Add `options.motion` schema/default/normalizer and render output. |
 | `core/admin/ui/widgets/editors/AccordionEditors.tsx` | Add motion control and variant preview cards. |
 | `tests/vitest/widgets/accordionWidget.test.tsx` | Add motion class/data output coverage. |
 | `tests/vitest/ui/accordion-editor-wave.test.tsx` | Add motion and variant preview editor coverage. |
@@ -78,6 +83,8 @@ Error handling:
 - Unknown motion values normalize to `none`.
 - Motion classes must be additive and must not remove native details behavior.
 - Variant previews are visual only and must not duplicate live editor controls.
+- If TASK-256 changes the final `<details>/<summary>` runtime shape, rebase the
+  motion implementation on that shape before adding animation.
 
 ## Security Contract
 
@@ -92,15 +99,16 @@ No API routes are added.
 
 - `bun run test:vitest -- tests/vitest/widgets/accordionWidget.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/accordion-editor-wave.test.tsx`
-- `bun test tests/unit/widgets/validator.test.ts` if schema/defaults change
+- `bun test tests/unit/widgets/validator.test.ts`
+- `git diff --check`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 
 ## Documentation Updates Required
 
 - Update `_docs/_WIDGETS/ACCORDION.md`.
-- Update `_docs/PLAYWRIGHT/REPORT_ACCORDION_WIDGET.md` rows W1 and U4 after
-  validation.
+- Update `_docs/PLAYWRIGHT/REPORT_ACCORDION_WIDGET.md` Accordion parts of rows
+  W1 and U4 after validation; leave FAQ parts routed outside TASK-257.
 
 ## Changelog Policy
 
