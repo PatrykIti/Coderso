@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Marketing Content + Runtime Render + Admin UI
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-256-01, TASK-256-02, TASK-256-04
+**Dependencies:** TASK-256-01, TASK-256-02, TASK-256-03, TASK-256-04, TASK-256-07
 **Status:** To Do
 
 ---
@@ -13,12 +13,13 @@
 ## Overview
 
 Apply the shared TASK-256 repairs to marketing and content widgets after the
-shared mode, clear, slot, and accessibility contracts land.
+shared mode, clear, slot, accessibility, and cross-report classification
+contracts land.
 
 This parent coordinates physical child leaves. Do not implement every marketing
 widget from this broad parent in one patch.
 
-This task owns widget-specific fixes for:
+This task owns marketing/content shared-contract repairs for report evidence in:
 
 - `hero`
 - `timeline`
@@ -33,8 +34,10 @@ This task owns widget-specific fixes for:
 - `team`
 
 Do not turn every missing feature listed in reports into immediate scope. Repair
-broken or misleading existing controls first. New larger product features should
-be deferred into follow-up tasks with explicit owner/docs/tests.
+shared contract drift first: misleading existing controls, unsafe public output,
+clear/token drift, media/link safety, and accessibility relationships. New
+larger product features are deferred into follow-up tasks with explicit
+owner/docs/tests.
 
 ## Drift Evidence
 
@@ -62,14 +65,14 @@ be deferred into follow-up tasks with explicit owner/docs/tests.
 
 | Finding class | TASK-256 action | Owner | Follow-up policy |
 |---|---|---|---|
-| Broken/misleading existing controls | Fix in the relevant child leaf | Widget editor/runtime owner | None |
-| Public link/media security and ARIA | Fix in the relevant child leaf | Widget renderer plus editor tests | None |
+| Broken/misleading existing controls | Fix in the relevant child leaf when the drift matches a TASK-256 shared contract | Widget editor/runtime owner | None |
+| Public link/media security and ARIA | Fix in the relevant child leaf through shared safe-output/accessibility contracts | Widget renderer plus editor tests | None |
 | Page-shell issues found while testing a widget, such as history auth, toolbar aria, discard, or viewport controls | Do not patch inside widget leaves | `core/admin/ui/pages/PageEditor.tsx`, `core/admin/ui/pages/PageRevisionDrawer.tsx`, shared preview toolbar owners | TASK-256-08 must create a separate page-shell follow-up before closure if still reproducible |
 | Major new features such as drag-and-drop, true carousel/lightbox, marquee, rich text, per-item advanced typography, or SEO schema | Defer unless needed to make an existing control truthful | Future product task | TASK-256-08 records future scope |
 
 ## Files to Change
 
-| Child | Widget scope | Primary owner files | Required change |
+| Child | Evidence scope | Primary owner files | Required shared-contract change |
 |---|---|---|---|
 | TASK-256-06-01 | `feature-grid`, `stats-kpi` | `FeatureGridEditors.tsx`, `featureGrid.tsx`, `StatsKpiEditors.tsx`, `statsKpi.tsx` | Fix truthful columns/count/divider controls, variant-bound item counts, grid layout holes, clear controls, and KPI ARIA. |
 | TASK-256-06-02 | `cta-banner`, `logo-cloud`, `gallery-mosaic` | `CtaBannerEditors.tsx`, `ctaBanner.tsx`, `LogoCloudEditors.tsx`, `logoCloud.tsx`, `GalleryMosaicEditors.tsx`, `galleryMosaic.tsx` | Fix empty badges, clear controls, link/media security, alt/ARIA, hover/focus behavior, and media type truthfulness. |

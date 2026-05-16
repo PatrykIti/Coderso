@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Layout + Admin UI + Runtime Render
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-256-01, TASK-256-02, TASK-256-03, TASK-256-04
+**Dependencies:** TASK-256-01, TASK-256-02, TASK-256-03, TASK-256-04, TASK-256-07
 **Status:** To Do
 
 ---
@@ -13,13 +13,13 @@
 ## Overview
 
 Apply the shared TASK-256 repairs to structural widgets after the shared helpers
-land.
+land and TASK-256-07 classifies report rows into shared-contract scope.
 
 This parent task owns structural-widget decomposition and sequencing. Execute
 the physical child leaves below; do not implement this parent as one broad
 patch.
 
-This task family owns widget-specific fixes for:
+This task family owns structural shared-contract repairs for report evidence in:
 
 - `section`
 - `grid-columns`
@@ -31,7 +31,9 @@ This task family owns widget-specific fixes for:
   covered by TASK-256-03/04
 
 Do not implement this leaf by broad refactor. Keep schema/defaults/normalizers,
-renderers, editors, tests, and docs together per widget.
+renderers, editors, tests, and docs together only when the shared contract being
+repaired requires that owner chain. Product-only layout expansions stay out of
+TASK-256 and are recorded by TASK-256-08.
 
 ## Drift Evidence
 
@@ -54,7 +56,7 @@ renderers, editors, tests, and docs together per widget.
 
 ## Files to Change
 
-| Child | Widget scope | Primary owner files | Required change |
+| Child | Evidence scope | Primary owner files | Required shared-contract change |
 |---|---|---|---|
 | TASK-256-05-01 | `section`, `grid-columns` | `core/widgets/core/section.tsx`; `SectionEditors.tsx`; `core/widgets/core/gridColumns.tsx`; `GridColumnsEditors.tsx` | Hide public placeholders, validate section anchors/default tokens, sync grid slots/config, and classify public column labels as editor metadata unless a caption field is intentionally added. |
 | TASK-256-05-02 | `split-layout`, `stack` | `core/widgets/core/splitLayout.tsx`; `SplitLayoutEditors.tsx`; `core/widgets/core/stack.tsx`; `StackEditors.tsx` | Repair variant-bound ratio/direction data sync, duplicate zero-token choices, and redundant Advanced controls. |

@@ -47,11 +47,11 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-256-05-01 | Section and Grid Columns Structural Findings | High | Medium | Repair section placeholders/anchors and grid slot/config/public-label drift |
 | TASK-256-05-02 | Split Layout and Stack Variant Data Sync | High | Medium | Repair variant-bound ratio/direction data sync and duplicate zero-token UX |
 | TASK-256-05-03 | Spacer and Divider Token Control Findings | High | Medium | Repair spacer/divider token controls, inert Advanced state, and divider ARIA |
-| TASK-256-05-04 | Tabs Accordion and Toggle Block Structural Residuals | High | Medium | Apply remaining slot-label, placeholder, clear, and interactive structural fixes |
+| TASK-256-05-04 | Tabs, Accordion, and Toggle Block Structural Residuals | High | Medium | Apply remaining slot-label, placeholder, clear, and interactive structural fixes |
 | TASK-256-06 | Marketing Widget Report Findings | High | Very Large | Parent for shared marketing/content contract repairs across the listed child leaves |
 | TASK-256-06-01 | Feature Grid and Stats KPI Truthful Controls | High | Medium | Repair columns/count/divider truthfulness, grid layout, clear controls, and ARIA |
 | TASK-256-06-02 | CTA Banner, Logo Cloud, and Gallery Media Links | High | Large | Repair CTA/logo/gallery link, media, clear, alpha, alt, and accessibility drift |
-| TASK-256-06-03 | Hero Timeline Pricing FAQ and Testimonials Accessibility | High | Large | Repair residual hero/timeline/pricing/FAQ/testimonials contract findings and split page-shell follow-ups |
+| TASK-256-06-03 | Hero, Timeline, Pricing, FAQ, and Testimonials Accessibility | High | Large | Repair residual hero/timeline/pricing/FAQ/testimonials contract findings and split page-shell follow-ups |
 | TASK-256-06-04 | Team Profile Links and Accessibility | High | Medium | Repair team spotlight columns, social link safety, photo lazy loading, and section/header ARIA |
 | TASK-256-07 | Cross-Report Shared Contract Classification | High | Medium | Route all completed widget reports into shared TASK-256 contracts or future product-scope follow-ups |
 | TASK-256-08 | Playwright Report Completion and Closure | Medium | Medium | Refresh reports, docs, changelog, board, and validation evidence after implementation leaves |

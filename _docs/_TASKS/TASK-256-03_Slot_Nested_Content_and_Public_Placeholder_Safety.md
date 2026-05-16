@@ -53,8 +53,8 @@ rendered into frontend output.
 | File | Lines | Required change |
 |---|---:|---|
 | `core/admin/ui/pages/builder/VisualPanel.tsx` | 101-162 | Keep slot controls in named sections and expose enough metadata for repeated slots without technical copy. |
-| `core/widgets/types.ts` | render props around `WidgetBlockRenderProps` | Add a backward-compatible render context or `renderMode` field that distinguishes public runtime from editor/admin preview. |
-| `core/widgets/renderers/widgetRenderer.tsx` | 194 and render callsites | Pass the render context to widget renderers through the existing renderer owner so public placeholder behavior is centralized. |
+| `core/widgets/types.ts` | inline `WidgetDefinition.render` props around 98-106 | Add a backward-compatible `WidgetRenderContext`/`renderContext` field that distinguishes public runtime from editor/admin preview. Update the existing `renderBlock?: (block: WidgetBlock) => ReactNode` seam so context cannot be dropped by nested renderers. |
+| `core/widgets/renderers/widgetRenderer.tsx` | 194 and render callsites around 201-214 | Pass the render context to widget renderers through the existing renderer owner and wrap the `renderBlock` callback with the current context so public placeholder behavior is centralized. |
 | `core/admin/ui/pages/builder/BlockList.tsx` | 232 | Pass `renderContext={{ mode: "editor-preview" }}` into the page-builder canvas renderer so editor placeholders remain visible only in the admin canvas. |
 | `core/admin/ui/widgets/editors/GridColumnsEditors.tsx` | repeatable column config section | Prevent config count from drifting from actual slots or add explicit sync actions with warnings. |
 | `core/admin/ui/widgets/editors/TabsEditors.tsx` | 277-302 | Replace `slot id` copy with user-facing panel labels and metadata. |
@@ -93,8 +93,24 @@ type WidgetRenderContext = {
   previewDevice?: "desktop" | "tablet" | "mobile";
 };
 
+type RenderBlockWithContext = (
+  block: WidgetBlock,
+  context?: WidgetRenderContext
+) => ReactNode;
+
 function WidgetRenderer(props: WidgetRendererProps) {
   const renderContext: WidgetRenderContext = props.renderContext ?? { mode: "public" };
+  const renderBlockWithContext: RenderBlockWithContext = (child, nextContext = renderContext) =>
+    props.renderBlock ? (
+      props.renderBlock(child, nextContext)
+    ) : (
+      <WidgetRenderer
+        block={child}
+        pageDefaults={props.pageDefaults}
+        previewDevice={props.previewDevice}
+        renderContext={nextContext}
+      />
+    );
 
   return renderWidget({
     data: props.data,
@@ -103,6 +119,7 @@ function WidgetRenderer(props: WidgetRendererProps) {
     previewDevice: props.previewDevice,
     blockId: props.blockId,
     renderContext,
+    renderBlock: renderBlockWithContext,
   });
 }
 ```
@@ -111,7 +128,9 @@ Nested renderer rule:
 
 ```tsx
 function renderNestedBlock(block: WidgetBlock, context: WidgetRenderContext) {
-  return <WidgetRenderer block={block} renderContext={context} />;
+  return props.renderBlock
+    ? props.renderBlock(block, context)
+    : <WidgetRenderer block={block} renderContext={context} />;
 }
 ```
 
@@ -137,6 +156,9 @@ Error handling:
 - Public renderers should not emit admin instructions.
 - If `renderContext` is missing on legacy callsites, default to `public` so
   placeholders fail closed outside the page builder.
+- Existing custom `renderBlock` callsites must be wrapped or extended to accept
+  the current context; nested widgets must not fall back to public mode inside
+  an editor preview.
 
 ## Git Scope Safeguards
 
@@ -176,6 +198,8 @@ No API routes are added.
   `Empty region.`, `Add widgets`, or similar admin-only copy.
 - Add renderer assertions for default public mode, page-builder
   `editor-preview` mode, and nested context propagation.
+- Add a renderer assertion for a custom `renderBlock` callback receiving or
+  preserving the current render context.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 

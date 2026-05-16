@@ -190,7 +190,8 @@ No API routes are added by this closure task.
 - Run:
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`
-  - `bun run gates:coderso`
+  - `bun run gates:coderso` as the Coderso baseline gate for every completed
+    implementation leaf;
   - `bun run scan:security:strict`
   - `bun run precommit`
 - Run `bun test tests/unit/widgets/validator.test.ts`,

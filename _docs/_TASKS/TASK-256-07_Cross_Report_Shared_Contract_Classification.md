@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Playwright QA + Contract Classification
 **Estimated Effort:** Medium
-**Dependencies:** TASK-256-01, TASK-256-02, TASK-256-03, TASK-256-04, TASK-256-05, TASK-256-06
+**Dependencies:** TASK-256-01, TASK-256-02, TASK-256-03, TASK-256-04
 **Status:** To Do
 
 ---

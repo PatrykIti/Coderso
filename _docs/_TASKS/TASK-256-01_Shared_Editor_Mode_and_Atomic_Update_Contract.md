@@ -48,6 +48,9 @@ that look editable but either duplicate Visual or do nothing.
 ## Sub-Tasks
 
 - [ ] Add shared atomic block update helpers for builder panels.
+- [ ] Thread the atomic patch callback through the live
+  `PageEditor -> BlockSettings -> WizardPanel/VisualPanel/AdvancedPanel` owner
+  chain.
 - [ ] Replace spread-based `variant`/`data` callbacks in shared panels.
 - [ ] Update widget-owned variant controls to emit a single atomic result when
   changing variant also changes normalized data.
@@ -64,7 +67,8 @@ that look editable but either duplicate Visual or do nothing.
 | File | Lines | Required change |
 |---|---:|---|
 | `core/widgets/types.ts` | 40-49 | Extend the editor prop contract with a backward-compatible atomic block patch callback, for example `onBlockPatch?: (patch: WidgetBlockPatch) => void`; do not overload the current one-argument `onVariantChange(next: string)` signature. |
-| `core/admin/ui/pages/PageEditor.tsx` | 741 | Add an updater-style block patch path through `handleChangeBlock`/`updateBlockById` so panels compose edits against the latest block state. |
+| `core/admin/ui/pages/PageEditor.tsx` | 741, 970, 1205 | Add an updater-style block patch path through `handleChangeBlock`/`updateBlockById` and pass it to `BlockSettings` so panels compose edits against the latest block state. |
+| `core/admin/ui/pages/builder/BlockSettings.tsx` | 19-23, 157-162, 207-229 | Add `onBlockPatch` to `BlockSettingsProps`, adapt local slot/editor updates through it, and pass the callback into Wizard, Visual, and Advanced panels. |
 | `core/admin/ui/pages/builder/VisualPanel.tsx` | 94-99 | Replace `onChange({ ...block, data })` and `onChange({ ...block, variant: next })` with updater-style helpers that compose with the latest block state. |
 | `core/admin/ui/pages/builder/WizardPanel.tsx` | 55-60 | Apply the same atomic helper contract for wizard-owned variant changes. |
 | `core/admin/ui/pages/builder/AdvancedPanel.tsx` | 43-48 | Apply the same atomic helper contract for advanced-owned variant or data edits. |
@@ -101,6 +105,26 @@ function createBlockChangeHandlers(onBlockPatch: (patch: WidgetBlockPatch) => vo
       onBlockPatch((current) => ({ ...current, variant: nextVariant, data: nextData }));
     },
   };
+}
+```
+
+Routing through the live owner chain:
+
+```tsx
+function handlePatchBlock(id: string, patch: WidgetBlockPatch) {
+  updateBlocks(updateBlockById(blocks, id, (current) => applyWidgetBlockPatch(current, patch)));
+}
+
+<BlockSettings
+  block={selectedBlock}
+  widget={selectedWidget}
+  onChange={handleChangeBlock}
+  onBlockPatch={(patch) => selectedBlock ? handlePatchBlock(selectedBlock.id, patch) : undefined}
+/>
+
+function BlockSettings({ block, onChange, onBlockPatch }: BlockSettingsProps) {
+  const patchBlock = onBlockPatch ?? ((patch) => onChange(applyWidgetBlockPatch(block, patch)));
+  return <VisualPanel block={block} onBlockPatch={patchBlock} onChange={onChange} />;
 }
 ```
 

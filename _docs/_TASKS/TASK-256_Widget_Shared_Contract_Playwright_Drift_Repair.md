@@ -142,7 +142,7 @@ and test results.
 
 1. Complete TASK-256-01 and TASK-256-02 first because they define shared helper
    behavior used by many widget leaves.
-2. Complete TASK-256-03 before widget-specific placeholder fixes so public
+2. Complete TASK-256-03 before placeholder fixes in child leaves so public
    runtime gating is consistent.
 3. Complete TASK-256-04 before marketing/dynamic leaves that add or repair
    interactive behavior.
