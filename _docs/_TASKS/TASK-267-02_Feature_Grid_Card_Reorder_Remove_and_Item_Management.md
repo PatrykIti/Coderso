@@ -35,7 +35,8 @@ normalizer fix.
 
 | File | Required change |
 |---|---|
-| `core/admin/ui/widgets/editors/FeatureGridEditors.tsx` | Add native drag handle/drop behavior for card rows, keep move up/down fallback, and add either undo toast or confirmation for remove. |
+| `core/admin/ui/widgets/editors/FeatureGridEditors.tsx` | Add native drag handle/drop behavior for card rows, keep move up/down fallback, and add either local undo state or a `ConfirmActionDialog` remove flow. |
+| `core/admin/ui/shared/ConfirmActionDialog.tsx` | Reuse as-is if the implementation chooses confirmation. Do not fork a widget-local dialog. |
 | `tests/vitest/ui/feature-grid-editor-wave.test.tsx` | Add DnD event assertions, keyboard/button fallback assertions, and remove recovery/confirm assertions. |
 | `_docs/_WIDGETS/FEATURE_GRID.md` | Document the editor item-management behavior. |
 | `_docs/PLAYWRIGHT/REPORT_FEATURE_GRID_WIDGET.md` | Mark UX-03/UX-06 fixed or record deferral evidence. |
@@ -61,15 +62,14 @@ function handleCardDrop(event: React.DragEvent, toIndex: number) {
   moveItem(value, onChange, fromIndex, toIndex);
 }
 
-function removeItemWithUndo(index: number) {
-  const snapshot = normalizeFeatureGridItems(value.items);
-  removeItem(value, onChange, index);
-  toast("Card removed.", {
-    action: {
-      label: "Undo",
-      onClick: () => onChange({ ...normalizeValue(value), items: snapshot }),
-    },
-  });
+function confirmRemoveItem(index: number) {
+  setPendingRemoveIndex(index);
+}
+
+function handleConfirmedRemove() {
+  if (pendingRemoveIndex === null) return;
+  removeItem(value, onChange, pendingRemoveIndex);
+  setPendingRemoveIndex(null);
 }
 ```
 
@@ -77,6 +77,11 @@ Error handling:
 
 - Ignore malformed drag payloads and reset hover/drag state.
 - Keep remove disabled at the one-card minimum.
+- If choosing undo instead of confirmation, implement it with local component
+  state such as `lastRemovedItem`, `lastRemovedIndex`, and an inline Undo action;
+  do not call an undeclared `toast` helper from pseudocode.
+- If choosing confirmation, render the existing shared `ConfirmActionDialog`
+  with the card title/index and call `removeItem` only from `onConfirm`.
 - Keep keyboard move buttons visible or available to assistive tech; drag is an
   additional affordance, not the only reorder path.
 - Do not introduce a new DnD dependency unless a repo-approved shared DnD helper

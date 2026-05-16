@@ -35,11 +35,13 @@ three-mode widget contract from `_docs/WIDGETS.md`.
 
 | File | Required change |
 |---|---|
-| `core/admin/ui/widgets/editors/FeatureGridEditors.tsx` | Add concise Wizard guidance, keep first-run setup minimal, and expose a clear Visual handoff. |
-| `core/widgets/core/featureGrid.tsx` | Change only if widget definition needs a local editor-entry hint supported by shared page-builder code. |
-| `core/admin/ui/pages/builder/*` | Touch only if a shared editor-entry API already exists; do not add a Feature Grid-only page-builder branch. |
-| `tests/vitest/ui/feature-grid-editor-wave.test.tsx` | Assert Wizard guidance and Visual handoff state. |
-| `tests/vitest/pageBuilder/*` | Update only if a shared editor-entry API changes. |
+| `core/admin/ui/widgets/editors/FeatureGridEditors.tsx` | Add concise Wizard guidance and keep first-run setup minimal. Do not add widget-local tab state. |
+| `core/admin/ui/pages/builder/WizardPanel.tsx` | Change only if the shared `onComplete` button label or copy needs to expose a clearer Visual handoff for all widgets. |
+| `core/admin/ui/pages/builder/BlockSettings.tsx` | Change only if product accepts a shared editor-entry policy that can choose initial `editor.mode` / `wizardCompleted` by widget definition. |
+| `core/admin/ui/pages/builder/blockUtils.ts` | Change only if a shared, schema-backed initial editor-state helper is added near `createBlock` / `applyWizardSelection`; do not add a Feature Grid-only branch without a shared capability flag. |
+| `core/widgets/core/featureGrid.tsx` | Change only if widget definition receives a shared editor capability such as `initialEditorMode` or `skipWizardForExistingBlocks`. |
+| `tests/vitest/ui/feature-grid-editor-wave.test.tsx` | Assert Wizard guidance is visible and does not duplicate Visual card controls. |
+| `tests/vitest/pageBuilder/wizardPanel.test.tsx`, `tests/vitest/pageBuilder/blockSettings-wave.test.tsx`, `tests/vitest/pageBuilder/wizardFlow.test.tsx` | Update only if shared Wizard handoff or initial editor-state behavior changes. |
 | `_docs/_WIDGETS/FEATURE_GRID.md` | Document Wizard/Visual division after all previous leaves land. |
 | `_docs/PLAYWRIGHT/REPORT_FEATURE_GRID_WIDGET.md` | Record fixed/deferred status for UX-05/UX-10. |
 
@@ -53,24 +55,34 @@ function FeatureGridWizardEditor(props: WidgetEditorProps<FeatureGridData>) {
       <p className="text-xs text-muted-foreground">
         Use Visual for card descriptions, media, CTA links, layout, and styling.
       </p>
-      <Button type="button" variant="outline" onClick={() => props.onModeChange?.("visual")}>
-        Continue to Visual
-      </Button>
     </div>
   );
 }
 
-function resolveFeatureGridInitialMode(context: WidgetEditorOpenContext) {
-  if (context.isNewBlock) return "wizard";
-  if (context.hasExistingFeatureGridData) return "visual";
-  return "wizard";
+type WidgetEditorEntryPolicy = {
+  initialMode?: "wizard" | "visual";
+  skipWizardForExistingBlocks?: boolean;
+};
+
+function resolveInitialEditorState(
+  definition: WidgetDefinition,
+  existingEditorState?: WidgetEditorState
+): WidgetEditorState {
+  if (existingEditorState?.wizardCompleted) return existingEditorState;
+  const policy = definition.editorCapabilities?.entryPolicy;
+  if (policy?.initialMode === "visual") {
+    return { mode: "visual", wizardCompleted: true };
+  }
+  return { mode: "wizard", wizardCompleted: false };
 }
 ```
 
 Error handling:
 
-- If shared editor props do not expose `onModeChange`, keep the current handoff
-  button behavior and add guidance only. Do not invent a widget-local tab state.
+- Current `WidgetEditorProps` exposes `value`, `onChange`, `variant`,
+  `onVariantChange`, and `context`; it does not expose `onModeChange`.
+- Keep the existing shared handoff through `WizardPanel.onComplete` and
+  `applyWizardSelection`. Do not invent a widget-local tab state.
 - Do not make Wizard duplicate Visual controls added by earlier TASK-267 leaves.
 - If product review keeps Wizard as first open for all blocks, TASK-267-08 must
   record UX-10 as a deliberate deferral with rationale.
@@ -88,8 +100,11 @@ No API routes are added.
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/ui/feature-grid-editor-wave.test.tsx`
-- `bun run test:vitest -- tests/vitest/pageBuilder/visualPanel.test.tsx` or the
-  exact page-builder suite if a shared editor-entry API changes.
+- `bun run test:vitest -- tests/vitest/pageBuilder/wizardPanel.test.tsx` if the
+  shared Wizard handoff label/copy changes.
+- `bun run test:vitest -- tests/vitest/pageBuilder/blockSettings-wave.test.tsx`
+  and `bun run test:vitest -- tests/vitest/pageBuilder/wizardFlow.test.tsx` if
+  shared initial editor-state behavior changes.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 

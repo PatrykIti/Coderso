@@ -54,9 +54,7 @@ type FeatureGridTextAlign = "left" | "center" | "right";
 type FeatureGridCardPadding = "compact" | "default" | "spacious";
 type FeatureGridMediaSize = "sm" | "md" | "lg";
 
-type FeatureGridStyle = {
-  columns?: FeatureGridColumns;
-  gap?: FeatureGridGap;
+type FeatureGridStyle = NonNullable<FeatureGridData["style"]> & {
   cardLayout?: FeatureGridCardLayout;
   textAlign?: FeatureGridTextAlign;
   cardPadding?: FeatureGridCardPadding;
@@ -64,8 +62,14 @@ type FeatureGridStyle = {
 };
 
 function normalizeFeatureGridStyle(style: Partial<FeatureGridStyle> | undefined): FeatureGridStyle {
+  const styleDefaults = featureGridDefaults.style!;
   return {
-    ...existingStyle,
+    columns: resolveFeatureGridColumns(style?.columns, styleDefaults.columns ?? "3"),
+    gap: resolveFeatureGridGap(style?.gap),
+    surfaceColor: resolveClearableStyleValue(style?.surfaceColor),
+    borderColor: resolveString(style?.borderColor, styleDefaults.borderColor ?? "var(--color-border)"),
+    borderWidth: resolveFeatureGridBorderWidth(style?.borderWidth),
+    radius: resolveFeatureGridRadius(style?.radius),
     cardLayout: style?.cardLayout === "horizontal" ? "horizontal" : "vertical",
     textAlign: ["center", "right"].includes(style?.textAlign ?? "") ? style.textAlign : "left",
     cardPadding: resolveCardPadding(style?.cardPadding),
@@ -87,6 +91,9 @@ function getFeatureGridCardClass(style: FeatureGridStyle, highlighted: boolean) 
 Error handling:
 
 - Unknown enum values fall back to existing output-preserving defaults.
+- New layout fields must extend the current `FeatureGridData["style"]` contract;
+  they must not replace or drop existing `columns`, `gap`, `surfaceColor`,
+  `borderColor`, `borderWidth`, or `radius` behavior.
 - Existing saved pages without new fields must keep their current visual output.
 - If adding `hero-top` as a variant, update widget variant registration and
   validator tests in the same commit. If the design is deferred, TASK-267-08 must

@@ -40,7 +40,7 @@ reuse the TASK-256 media helpers after they land.
 
 | File | Required change |
 |---|---|
-| `core/admin/ui/widgets/editors/FeatureGridEditors.tsx` | Import `MediaPicker` and `listMediaCached`, add per-card image selection, add bounded emoji presets, and display image-over-icon priority copy. |
+| `core/admin/ui/widgets/editors/FeatureGridEditors.tsx` | Import `MediaPicker` from `@/ui/media/MediaPicker` and `listMediaCached` from `@/services/mediaClient`, add per-card transient media-id selection that persists public URLs into `items[].image`, add bounded emoji presets, and display image-over-icon priority copy. |
 | `tests/vitest/ui/feature-grid-editor-wave.test.tsx` | Mock `MediaPicker`/media client and assert selecting media patches the correct card image, emoji preset patches `items[].icon`, and priority copy is visible. |
 | `core/widgets/core/featureGrid.tsx` | Change only if TASK-256 media helpers require a field normalization hook; otherwise keep existing `items[].image` shape. |
 | `tests/vitest/widgets/featureGrid.test.tsx` | Update only if normalizer/runtime behavior changes. |
@@ -55,9 +55,11 @@ const featureGridEmojiOptions = ["⚡", "🧩", "📈", "🔒", "🚀", "✨", "
 async function handleItemMediaSelection(index: number, nextValue: unknown) {
   const mediaId = typeof nextValue === "string" ? nextValue : null;
   if (!mediaId) {
+    setSelectedMediaIds((current) => ({ ...current, [index]: null }));
     updateItem(value, onChange, index, { image: undefined });
     return;
   }
+  setSelectedMediaIds((current) => ({ ...current, [index]: mediaId }));
   try {
     const mediaItems = await listMediaCached({ force: false });
     const media = mediaItems.find((item) => item.id === mediaId);
@@ -83,6 +85,11 @@ function FeatureGridIconPicker({ value, onChange }: IconPickerProps) {
 
 Error handling:
 
+- Follow the existing Gallery Mosaic pattern: `MediaPicker` stores selected asset
+  ids in editor-local state, then `listMediaCached({ force: false })` resolves
+  those ids to public media records and persists only `media.url` into widget
+  data. Do not pass `items[].image` URLs back as the `MediaPicker` value because
+  the picker expects asset ids.
 - Media lookup failures show a local editor error and do not clear existing card
   data.
 - Selecting media stores only the public URL in `items[].image` unless a later
