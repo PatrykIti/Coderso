@@ -17,7 +17,12 @@ contracts before implementation closes. This leaf is not a per-widget
 implementation backlog. It is the routing layer that prevents completed reports
 from widening TASK-256 into one-off widget feature work.
 
-Every report finding must end in one of these buckets:
+Every report finding must end in one of these classification buckets. A finding
+may be routed to a TASK-256 implementation leaf only when that leaf has a
+physical task file with concrete owner and test rows for the relevant shared
+contract. If a completed report exposes a shared-contract class that no current
+TASK-256 leaf owns executably, TASK-256-08 must create a future physical task
+instead of widening this family into a per-widget implementation backlog.
 
 - `TASK-256-01`: shared editor mode, atomic block updates, and mode ownership.
 - `TASK-256-02`: `Clear`, `none`, token picker, custom value, and CSS-variable
@@ -30,7 +35,8 @@ Every report finding must end in one of these buckets:
 - `TASK-256-06`: safe public href/media output, public form/runtime safety,
   section/header semantics, and anti-abuse boundaries.
 - `TASK-256-08`: closure evidence, explicit non-reproducible rows, or physical
-  future tasks for product expansion that is not a shared-contract repair.
+  future tasks for product expansion or shared-contract rows not owned by an
+  existing TASK-256 implementation leaf.
 
 ## Drift Evidence
 
@@ -72,13 +78,15 @@ contract findings that must be classified before closure:
 
 - [ ] Build a report-to-contract matrix for every current
   `_docs/PLAYWRIGHT/REPORT_*_WIDGET.md` file.
-- [ ] Map every shared-contract finding to TASK-256-01 through TASK-256-06.
+- [ ] Map every shared-contract finding to the exact TASK-256 physical leaf
+  that already owns its implementation and validation path.
 - [ ] Mark product-feature findings as future scope and leave their
   implementation out of TASK-256.
 - [ ] Mark resolved/non-bug findings explicitly so they cannot silently re-enter
   implementation leaves.
 - [ ] Add future physical task files only when a deferred finding is
-  product-scope, still reproducible, and not covered by the shared contracts.
+  product-scope or is shared-contract drift that no current TASK-256 physical
+  leaf owns executably.
 - [ ] Update TASK-256-08 with the final classification evidence before closure.
 
 ## Classification Matrix
@@ -126,7 +134,7 @@ type ReportFindingClassification = {
   reportPath: string;
   findingId: string;
   className: Task256ContractClass;
-  ownerTask: string;
+  ownerTask?: string;
   reason: string;
   followUpTaskId?: string;
 };
@@ -134,7 +142,9 @@ type ReportFindingClassification = {
 function classifyTask256Finding(finding: ReportFinding): ReportFindingClassification {
   if (finding.isResolved || finding.isNonBug) return resolvedNonBug(finding);
   if (finding.requiresNewProductSurface) return futureProductScope(finding);
-  return mapToSharedContractTask(finding);
+  const ownerTask = findExecutableTask256Leaf(finding);
+  if (ownerTask) return mapToSharedContractTask(finding, ownerTask);
+  return futureSharedContractTask(finding);
 }
 ```
 
@@ -145,7 +155,9 @@ Error handling:
 - If the report evidence is incomplete, TASK-256-08 records it as
   `needs-refresh` and does not mark the corresponding contract fixed.
 - If a finding names a widget but the same failure class exists elsewhere, route
-  through the shared owner instead of creating a widget-only patch plan.
+  through the shared owner only when that owner has a physical TASK-256 leaf
+  with concrete files and tests. Otherwise TASK-256-08 opens a future physical
+  task and TASK-256 does not implement the row.
 
 ## Git Scope Safeguards
 
@@ -189,8 +201,9 @@ No API routes are added.
 ## Acceptance Criteria
 
 - Every current Playwright widget report is listed in a classification matrix.
-- Every high/medium/low shared-contract finding is routed to TASK-256-01 through
-  TASK-256-06 or explicitly marked not reproducible/resolved.
+- Every high/medium/low shared-contract finding is routed to an executable
+  TASK-256 physical leaf, explicitly marked not reproducible/resolved, or
+  deferred to a future physical task when no current leaf owns it.
 - Product-feature findings are deferred to future physical tasks and are not
   implemented as TASK-256 widget-specific work.
 - TASK-256-08 has enough evidence to close without rediscovering report scope.

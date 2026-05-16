@@ -98,29 +98,53 @@ type RenderBlockWithContext = (
   context?: WidgetRenderContext
 ) => ReactNode;
 
-function WidgetRenderer(props: WidgetRendererProps) {
-  const renderContext: WidgetRenderContext = props.renderContext ?? { mode: "public" };
+type WidgetRendererPropsWithContext = WidgetRendererProps & {
+  renderContext?: WidgetRenderContext;
+  renderBlock?: RenderBlockWithContext;
+};
+
+function WidgetRenderer({
+  block,
+  pageDefaults,
+  previewDevice,
+  renderBlock,
+  renderContext: incomingContext,
+}: WidgetRendererPropsWithContext) {
+  const def = getWidget(block.type);
+  if (!def) return <MissingWidget type={block.type} />;
+
+  const normalized = normalizeWidgetBlock(block);
+  if (normalized.visibility?.enabled === false) return null;
+
+  const renderContext: WidgetRenderContext = incomingContext ?? {
+    mode: "public",
+    previewDevice,
+  };
   const renderBlockWithContext: RenderBlockWithContext = (child, nextContext = renderContext) =>
-    props.renderBlock ? (
-      props.renderBlock(child, nextContext)
+    renderBlock ? (
+      renderBlock(child, nextContext)
     ) : (
       <WidgetRenderer
         block={child}
-        pageDefaults={props.pageDefaults}
-        previewDevice={props.previewDevice}
+        pageDefaults={pageDefaults}
+        previewDevice={previewDevice}
         renderContext={nextContext}
       />
     );
 
-  return renderWidget({
-    data: props.data,
-    variant: props.variant,
-    slots: props.slots,
-    previewDevice: props.previewDevice,
-    blockId: props.blockId,
-    renderContext,
-    renderBlock: renderBlockWithContext,
-  });
+  const WidgetComponent = def.render;
+  return (
+    <WidgetComponent
+      data={normalized.data}
+      variant={normalized.variant ?? def.variants[0].id}
+      slots={normalized.slots}
+      previewDevice={previewDevice}
+      pageDefaults={pageDefaults}
+      blockId={normalized.id}
+      renderContext={renderContext}
+      renderBlock={renderBlockWithContext}
+    />
+  );
 }
 ```
 
@@ -137,11 +161,22 @@ function renderNestedBlock(block: WidgetBlock, context: WidgetRenderContext) {
 Grid columns sync shape:
 
 ```tsx
-function reconcileColumnConfigsWithSlots(data: GridColumnsData, slotIds: string[]): GridColumnsData {
-  const bySlot = new Map(data.columns.map((column) => [column.slotId, column]));
-  const columns = slotIds.map((slotId, index) =>
-    normalizeGridColumnConfig(bySlot.get(slotId), { slotId, index })
-  );
+function reconcileColumnConfigsWithSlots(
+  data: GridColumnsData,
+  targets: Array<{ slotId: string; label: string }>
+): GridColumnsData {
+  const normalized = normalizeGridColumnsData(data);
+  const columnsById = new Map((normalized.columns ?? []).map((column) => [column.id ?? "", column]));
+  const columns = targets.map((target, index) => {
+    const parsed = parseRepeatableSlotId(target.slotId);
+    const columnId = parsed?.instanceId ?? String(index + 1);
+    const existing = columnsById.get(columnId) ?? normalized.columns?.[index] ?? {};
+    return {
+      ...existing,
+      id: columnId,
+      label: existing.label?.trim() || target.label || `Column ${index + 1}`,
+    };
+  });
 
   return normalizeGridColumnsData({ ...data, columns });
 }

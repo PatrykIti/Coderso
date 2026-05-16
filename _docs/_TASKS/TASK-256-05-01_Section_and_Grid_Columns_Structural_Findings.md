@@ -112,16 +112,20 @@ function reconcileColumnConfigsWithSlotTargets(
   data: GridColumnsData,
   targets: Array<{ slotId: string; label: string }>
 ): GridColumnsData {
-  const existing = new Map(normalizeGridColumnsData(data).columns.map((column) => [column.slotId, column]));
+  const normalized = normalizeGridColumnsData(data);
+  const existing = new Map((normalized.columns ?? []).map((column) => [column.id ?? "", column]));
   return normalizeGridColumnsData({
     ...data,
-    columns: targets.map((target, index) =>
-      normalizeGridColumnConfig(existing.get(target.slotId), {
-        slotId: target.slotId,
-        label: target.label,
-        index,
-      })
-    ),
+    columns: targets.map((target, index) => {
+      const parsed = parseRepeatableSlotId(target.slotId);
+      const columnId = parsed?.instanceId ?? String(index + 1);
+      const current = existing.get(columnId) ?? normalized.columns?.[index] ?? {};
+      return {
+        ...current,
+        id: columnId,
+        label: current.label?.trim() || target.label || `Column ${index + 1}`,
+      };
+    }),
   });
 }
 ```

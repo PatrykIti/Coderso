@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Marketing Content + Runtime Render + Accessibility
 **Estimated Effort:** Medium
-**Dependencies:** TASK-256-01, TASK-256-02, TASK-256-04, TASK-256-06
+**Dependencies:** TASK-256-01, TASK-256-02, TASK-256-04, TASK-256-06, TASK-256-06-02
 **Status:** To Do
 
 ---
@@ -60,6 +60,7 @@ unless they are needed to fix a broken existing control.
 |---|---:|---|
 | `core/admin/ui/widgets/editors/TeamEditors.tsx` | 301-369, 494-659, 792-888 | Spotlight-aware columns control, safer add-member/add-link defaults, photo validation feedback, and Wizard role scope. |
 | `core/widgets/core/team.tsx` | 58-63, 184-197, 360-383, 447-483 | Explicit resolver defaults, spotlight column behavior, lazy photos, safe social links, section labels, heading semantics, and duplicate normalization cleanup. |
+| `core/widgets/core/widgetSafeHref.ts` | shared helper | Reuse the TASK-256-06-02 `resolveWidgetLinkAttrs` helper for Team social-link output; extend it here only if Team needs an additional safe option. |
 | `tests/vitest/ui/team-editor-wave.test.tsx` | existing suite | Add spotlight columns, Wizard role/default, social link default, and photo validation regressions. |
 | `tests/vitest/widgets/team.test.tsx` | existing suite | Add social link, lazy image, section ARIA, heading, and spotlight column regressions. |
 | `tests/vitest/widgets/widgetSafeHref.test.ts` | existing suite | Add team social-link safe href coverage if helper behavior changes. |

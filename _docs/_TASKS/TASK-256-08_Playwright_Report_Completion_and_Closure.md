@@ -59,11 +59,10 @@ that are not contract repairs.
   TASK-256-08 must refresh the report or mark any unverified rows as
   `needs-refresh`; it must not mark those rows fixed without runtime evidence.
 - `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:3` is completed, but constrained
-  comparison evidence remains split: frontend textual evidence at
-  `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:220` is completed, while the
-  auth-limited admin/runtime comparison at
-  `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:306` requires final
-  classification.
+  comparison evidence has also been completed:
+  `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:220` and
+  `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:306` both require final
+  fixed/deferred classification during closure.
 - The following structural report findings still need fixed/deferred status
   refreshed after implementation:
   `_docs/PLAYWRIGHT/REPORT_GRID_COLUMNS_WIDGET.md:3`,
@@ -99,10 +98,11 @@ that are not contract repairs.
 - [ ] Mark each report finding as fixed, deferred, not reproducible, or future
   product scope.
 - [ ] Verify that every high/medium/low shared-contract finding from completed
-  reports maps to TASK-256-01 through TASK-256-06 before closure; only product
-  expansion may bypass those implementation leaves.
-- [ ] Add follow-up task files for deferred work that is not a shared-contract
-  repair.
+  reports maps to an executable TASK-256 physical leaf before closure, or is
+  explicitly marked not reproducible/resolved/future physical task when no
+  current TASK-256 leaf owns it.
+- [ ] Add follow-up task files for deferred product work and for any
+  shared-contract row that no current TASK-256 physical leaf owns executably.
 - [ ] Add a page-shell follow-up task if Hero report findings around history
   auth, preview toolbar, discard, or viewport controls are still reproducible
   after widget-local fixes.

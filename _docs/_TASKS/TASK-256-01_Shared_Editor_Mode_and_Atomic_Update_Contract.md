@@ -111,8 +111,22 @@ function createBlockChangeHandlers(onBlockPatch: (patch: WidgetBlockPatch) => vo
 Routing through the live owner chain:
 
 ```tsx
+type BlocksPatch = Block[] | ((currentBlocks: Block[]) => Block[]);
+
+function updateBlocks(patch: BlocksPatch) {
+  setBlocks((currentBlocks) => {
+    const nextBlocks =
+      typeof patch === "function" ? patch(currentBlocks) : patch;
+    setPageData((currentPage) => ({ ...currentPage, blocks: nextBlocks }));
+    setUnsavedChanges(true);
+    return nextBlocks;
+  });
+}
+
 function handlePatchBlock(id: string, patch: WidgetBlockPatch) {
-  updateBlocks(updateBlockById(blocks, id, (current) => applyWidgetBlockPatch(current, patch)));
+  updateBlocks((currentBlocks) =>
+    updateBlockById(currentBlocks, id, (current) => applyWidgetBlockPatch(current, patch))
+  );
 }
 
 <BlockSettings
