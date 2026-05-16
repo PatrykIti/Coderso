@@ -17,12 +17,15 @@ Add CTA Banner-owned Visual style controls and button shape/emphasis options.
 This leaf covers CTA-specific field wiring and product controls. It does not own
 the shared Clear/none/token semantics from TASK-256-02. If TASK-256-02 has not
 landed the final shared helper, do not invent a CTA-only replacement; keep the
-CTA wiring blocked or split the shared helper first.
+CTA wiring blocked or split the shared helper first. `UX-01` from the source
+report is routed to TASK-256-02 unless that shared task explicitly leaves a
+CTA-only hook after the generic Clear behavior is available.
 
 ## Sub-Tasks
 
-- [ ] After TASK-256-02 lands, wire `onClear` for CTA text color fields:
-  `text`, `badgeText`, `primaryButtonText`, and `secondaryButtonText`.
+- [ ] If TASK-256-02 leaves a CTA-only follow-up hook, wire `onClear` for CTA
+  text color fields: `text`, `badgeText`, `primaryButtonText`, and
+  `secondaryButtonText`. Otherwise keep `UX-01` entirely in TASK-256-02.
 - [ ] Move CTA-owned `primaryButtonBorder` and `secondaryButtonBorder` controls
   from Advanced-only scope into Visual while leaving Advanced as raw token
   editing.
@@ -40,8 +43,8 @@ CTA wiring blocked or split the shared helper first.
 | File | Required change |
 |---|---|
 | `core/widgets/core/ctaBanner.tsx` | Add button radius/size enums, defaults, schema, normalizer, and runtime class/style resolution. |
-| `core/admin/ui/widgets/editors/CtaBannerEditors.tsx` | Add Visual controls for button borders, radius, size/emphasis, and shared Clear wiring after TASK-256-02. |
-| `tests/vitest/widgets/ctaBanner.test.tsx` | Cover schema/normalizer/runtime classes for button radius and size plus clearable text fields when wired. |
+| `core/admin/ui/widgets/editors/CtaBannerEditors.tsx` | Add Visual controls for button borders, radius, and size/emphasis; add Clear wiring only if TASK-256-02 leaves a CTA-local hook. |
+| `tests/vitest/widgets/ctaBanner.test.tsx` | Cover schema/normalizer/runtime classes for button radius and size plus clearable text fields only if CTA-local Clear wiring is explicitly in scope. |
 | `tests/vitest/ui/cta-banner-editor-wave.test.tsx` | Cover Visual controls, Advanced raw token retention, and no duplicate/no-op style rows. |
 | `tests/vitest/widgets/styleNoneTokens.test.tsx` | Run/update only if this leaf touches shared Clear/none semantics after TASK-256-02. |
 | `tests/unit/widgets/validator.test.ts` | Update when schema/defaults change. |
@@ -81,7 +84,7 @@ function resolveButtonSize(value: string | undefined) {
 }
 ```
 
-Clear wiring:
+CTA-local Clear hook, only when TASK-256-02 explicitly leaves it:
 
 ```tsx
 <ColorField
@@ -95,8 +98,8 @@ Clear wiring:
 Error handling:
 
 - Invalid button radius/size values fall back to existing visual behavior.
-- Clearing a style field removes the key and lets the shared default/preview
-  behavior handle fallback.
+- If Clear wiring is in scope, clearing a style field removes the key and lets
+  the shared default/preview behavior handle fallback.
 - Advanced still exposes raw tokens for technical border fields; Visual owns
   day-to-day button border editing.
 - Do not serialize `none` or `transparent` as Clear sentinels.
@@ -125,10 +128,12 @@ No API routes are added.
 
 ## Documentation Updates Required
 
-- Update `_docs/_WIDGETS/CTA_BANNER.md` with clearable colors, button border,
-  button radius, and button size controls.
-- Update `_docs/PLAYWRIGHT/REPORT_CTA_BANNER_WIDGET.md` rows UX-01, UX-02,
-  BF-01, and BF-07 after validation.
+- Update `_docs/_WIDGETS/CTA_BANNER.md` with button border, button radius, and
+  button size controls; document Clear fields only if TASK-256-02 leaves a
+  CTA-local hook.
+- Update `_docs/PLAYWRIGHT/REPORT_CTA_BANNER_WIDGET.md` rows UX-02, BUG-05
+  report alias for BF-01, BF-01, and BF-07 after validation. UX-01 remains
+  routed to TASK-256-02 unless explicitly reclassified.
 
 ## Changelog Policy
 
@@ -139,7 +144,8 @@ No API routes are added.
 
 - CTA Visual mode exposes all day-to-day button colors/borders without forcing
   users into Advanced.
-- CTA text color fields use the shared Clear behavior once that contract exists.
+- CTA text color Clear behavior is either proven through TASK-256-02 or wired
+  here only when TASK-256-02 explicitly leaves a CTA-local hook.
 - Primary and secondary buttons can differ in emphasis and shape without
   breaking existing saved pages.
 - New style controls are schema-owned, normalized, documented, and tested.

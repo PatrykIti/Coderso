@@ -38,6 +38,12 @@ runtime/a11y helper that belongs in TASK-256-04.
   `aria-label` fallback when it does not.
 - [ ] Add action `aria-label` support only if it can be derived from CTA-owned
   data or a new allowlisted field; do not infer unsafe rich labels.
+- [ ] Treat the badge as a visual CTA label with explicit semantics: either
+  expose it as plain contextual text tied to the heading area or mark decorative
+  output consistently if the final design treats badge copy as non-essential.
+- [ ] Add a CTA-local contrast regression for description text using the
+  configured `style.text` path; defer generic cross-widget contrast tooling to
+  TASK-256 if a shared color validator is required.
 - [ ] Add CTA-local `focus-visible` classes to primary and secondary links.
 
 ## Files to Change
@@ -45,7 +51,7 @@ runtime/a11y helper that belongs in TASK-256-04.
 | File | Required change |
 |---|---|
 | `core/widgets/core/ctaBanner.tsx` | Runtime rendering, resolver defaults, `blockId` usage, aria labels, focus-visible classes. |
-| `tests/vitest/widgets/ctaBanner.test.tsx` | SSR assertions for hidden empty badge, description color style, no border class when width is zero, explicit default resolver behavior, section labels, action labels, and focus classes. |
+| `tests/vitest/widgets/ctaBanner.test.tsx` | SSR assertions for hidden empty badge, badge semantics, description color/contrast path, no border class when width is zero, explicit default resolver behavior, section labels, action labels, and focus classes. |
 | `tests/vitest/widgets/renderer.test.tsx` | Update only if shared renderer coverage should assert CTA `blockId`/section output. |
 | `_docs/_WIDGETS/CTA_BANNER.md` | Document runtime semantics and accessibility behavior after implementation. |
 
@@ -103,6 +109,8 @@ Error handling:
 - Missing `blockId` still renders a deterministic `aria-label`.
 - Empty title does not create an empty `aria-labelledby` reference.
 - Empty badge text does not render a badge node in any variant.
+- Badge semantics must be deterministic: visible badge text is available to
+  assistive technology, or decorative treatment is explicit and tested.
 - Invalid enum values continue to fall back to current defaults.
 - Existing payloads render without migration.
 
@@ -114,8 +122,9 @@ No API routes are added.
 - Reject-unknown validation: unchanged unless this leaf adds a persisted
   accessible-label field, which must update `ctaBannerSchema` and validator
   coverage.
-- Anti-abuse: accessible labels must be plain React text. Do not add raw HTML,
-  scripts, event handlers, arbitrary classes, or unsafe href behavior.
+- Anti-abuse: accessible labels and badge semantics must be plain React text. Do
+  not add raw HTML, scripts, event handlers, arbitrary classes, or unsafe href
+  behavior.
 - Secret handling: no secrets or private URLs in widget data, DOM attributes,
   report evidence, or docs.
 
@@ -147,4 +156,6 @@ No API routes are added.
   support-line visual hierarchy.
 - `borderWidth="0"` produces no semantic border class or visible border.
 - CTA section and actions expose meaningful accessible names.
+- Badge and description accessibility findings have explicit tests instead of
+  relying on visual-only evidence.
 - Keyboard focus state is visible without relying only on browser defaults.

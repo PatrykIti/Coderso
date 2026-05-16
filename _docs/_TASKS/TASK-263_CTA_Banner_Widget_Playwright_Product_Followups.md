@@ -43,8 +43,9 @@ In scope for TASK-263:
   controls, variant cards in Wizard, explicit action field labels, invalid URL
   feedback, and a clear secondary CTA enablement toggle.
 - CTA Banner style and button controls: Visual exposure for CTA-owned button
-  border fields, CTA-local button radius/size options, and CTA-specific Clear
-  wiring after shared Clear semantics exist.
+  border fields plus CTA-local button radius/size options. Generic Clear
+  behavior remains TASK-256-02; TASK-263 may only add CTA-local wiring if
+  TASK-256-02 explicitly leaves that hook after the shared contract lands.
 - CTA Banner conversion options: target/new-tab policy, safe rel generation,
   button icon enums, optional tertiary text CTA, and description visibility.
 - CTA Banner layout/media/motion options: full-width mode, gradient background,
@@ -72,7 +73,8 @@ Out of scope for TASK-263:
 |---|---|
 | BUG-01, BUG-02, BUG-03, BUG-04, A1, A2, A3, A4, A5 | TASK-263-01, using TASK-256-04 only for any shared helper that already exists |
 | UX-03, UX-04, UX-05, UX-06, UX-07, UX-08 | TASK-263-02 |
-| UX-01, UX-02, BF-01, BF-07 | TASK-263-03, with shared Clear semantics delegated to TASK-256-02 |
+| UX-01 | TASK-256-02; TASK-263-03 may only add a CTA-local hook if TASK-256-02 explicitly leaves one |
+| UX-02, BUG-05 report alias for button radius, BF-01, BF-07 | TASK-263-03 |
 | BF-02, BF-03, BF-08, BF-09 | TASK-263-04 |
 | BF-04, BF-05, BF-06, BF-10 | TASK-263-05 |
 | Final fixed/deferred evidence, report refresh, docs/changelog/board closure | TASK-263-06 |
@@ -84,7 +86,7 @@ Out of scope for TASK-263:
 |---|---|---|---|
 | TASK-263-01 | Report lines 66-71, 123-131, 139-158, 230-236, 244-248 | `ctaBanner.tsx`, CTA docs | `tests/vitest/widgets/ctaBanner.test.tsx`, `tests/vitest/widgets/renderer.test.tsx` if shared renderer assertions change |
 | TASK-263-02 | Report lines 62-64, 89-91, 108-113, 170-192, 254-258, 292-294 | `CtaBannerEditors.tsx`, `ctaBanner.tsx` for schema fields needed by editor UX | `tests/vitest/ui/cta-banner-editor-wave.test.tsx`, `tests/vitest/widgets/ctaBanner.test.tsx`, validator tests when schema changes |
-| TASK-263-03 | Report lines 97-99, 125, 162-168, 196-198, 214-215, 254-255, 265, 267 | `CtaBannerEditors.tsx`, `ctaBanner.tsx`, shared Clear helper only after TASK-256-02 lands | `tests/vitest/ui/cta-banner-editor-wave.test.tsx`, `tests/vitest/widgets/ctaBanner.test.tsx`, `tests/vitest/widgets/styleNoneTokens.test.tsx` only when shared style semantics are touched |
+| TASK-263-03 | Report lines 99, 125, 166-168, 196-198, 214-215, 255, 265, 267; line 125 uses `BUG-05` as a button-radius alias for BF-01 | `CtaBannerEditors.tsx`, `ctaBanner.tsx`; shared Clear helper only after TASK-256-02 leaves a CTA-only hook | `tests/vitest/ui/cta-banner-editor-wave.test.tsx`, `tests/vitest/widgets/ctaBanner.test.tsx`, `tests/vitest/widgets/styleNoneTokens.test.tsx` only when shared style semantics are touched |
 | TASK-263-04 | Report lines 186-192, 199-203, 217-221, 264, 268, 270 | `ctaBanner.tsx`, `CtaBannerEditors.tsx`, `widgetSafeHref.ts` only if a shared helper already owns target/rel attrs | CTA widget/editor tests, `tests/vitest/widgets/widgetSafeHref.test.ts` if shared link attrs change, validator tests when schema changes |
 | TASK-263-05 | Report lines 68, 205-212, 223-224, 266, 269 | `ctaBanner.tsx`, `CtaBannerEditors.tsx`, media picker owners only if existing picker components are reused | CTA widget/editor tests, validator tests, media-picker UI test only when a media control is introduced |
 | TASK-263-06 | Report lines 274-303 and every fixed/deferred row | `_docs/PLAYWRIGHT/REPORT_CTA_BANNER_WIDGET.md`, `_docs/_WIDGETS/CTA_BANNER.md`, board/changelog/docs | `git diff --check`, targeted production lanes after implementation leaves |
