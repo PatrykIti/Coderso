@@ -1,6 +1,6 @@
 # RAPORT: Stats KPI Widget — Analiza UX/UI i brakujące funkcjonalności
 
-> **Status:** W toku
+> **Status:** Zakończony
 > **Data:** 2026-05-16
 > **Sesja:** Playwright (Stats KPI Widget)
 > **Środowisko:** http://localhost:5173/admin · http://localhost:3000
@@ -105,24 +105,139 @@ Stats KPI widget służy do prezentacji kluczowych wskaźników wydajności (KPI
 ## 4. Testy w Admin UI Preview
 
 > **Sesja:** `playwright-cli -s=stats-kpi-audit`
-> **Strona testowa:** *do uzupełnienia po teście*
+> **Strona testowa:** STATS-KPI-AUDIT-0516 (ID: 542ecb61-16e2-41bb-b45c-53ead52a49a3)
 > **Data testu:** 2026-05-16
 
-*Sekcja uzupełniana po testach Playwright.*
+### 4.1 Wizard editor — potwierdzenie C3
+
+Wizard pokazuje:
+- Select dropdown dla wariantu (nie karty wizualne jak w Visual editor) — **U1 potwierdzony**
+- Select dropdown dla liczby metryk (1–12)
+- Pola `value` dla każdej metryki (wszystkich, bez limitu jak w Timeline — brak analogicznego bug)
+
+Brakuje: `label`, `description`, `icon` per metrykę, `header.title`, `header.description` — **C3 potwierdzony**
+
+Screenshot: `stats-kpi-02-wizard-editor.png`
+
+### 4.2 Potwierdzony bug C1: divider bez efektu w cards/split-highlight
+
+DOM przy `variant=cards`, `divider=true`, count=3:
+```json
+[
+  { "item": "1", "hasBorderL": false, "className": "rounded-xl border p-4" },
+  { "item": "2", "hasBorderL": false, "className": "rounded-xl border p-4" },
+  { "item": "3", "hasBorderL": false, "className": "rounded-xl border p-4" }
+]
+```
+
+Przełącznik `divider` włączony (checked), persystuje w danych (`data-stats-kpi-divider="true"`), ale renderer NIE aplikuje `border-l` w `cards`. Brak feedbacku dla użytkownika.
+
+W wariancie `inline` divider działa poprawnie — elementy 2–N mają `border-l border-[var(--color-border)]/70`.
+
+Screenshot: `stats-kpi-05-inline-divider.png`
+
+### 4.3 Potwierdzony bug C2: cards — hardcoded 4 kolumny
+
+DOM przy `variant=cards`, count=3:
+```json
+{ "gridClass": "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4", "itemCount": 3 }
+```
+
+3 metryki na dużym ekranie: 3 karty zajmują 3 z 4 kolumn, 4. kolumna pusta.
+
+Screenshot: `stats-kpi-04-cards-3-items-grid-bug.png`
+
+### 4.4 Potwierdzony bug R6: split-highlight — niezbilansowany grid drugorzędny
+
+DOM przy `variant=split-highlight`, count=6 (5 drugorzędnych):
+```json
+{ "restGrid": "grid grid-cols-1 sm:grid-cols-2 lg:col-span-2 gap-4", "splitRestItems": 5 }
+```
+
+5 metryk drugorzędnych w `sm:grid-cols-2` = 2+2+1 — ostatnia metryka rozciągnięta na pełną szerokość kolumny.
+
+Screenshot: `stats-kpi-08-split-highlight-6-items.png`
+
+### 4.5 Potwierdzony bug R1, R2, R3: Brak ARIA
+
+```json
+{
+  "sectionAriaLabel": null,
+  "articleAriaLabels": [null, null, null, null],
+  "iconAriaHidden": [null, null, null, null]
+}
+```
+
+`<section>` bez `aria-label`, `<article>` per metrykę bez `aria-label`, ikony emoji bez `aria-hidden="true"`.
+
+### 4.6 Potwierdzony bug U2: ColorField — fallback hex dla CSS variables
+
+```json
+{ "colorPickerValue": "#0f172a", "textInputValue": "var(--color-text)" }
+```
+
+Kolor picker pokazuje `#0f172a` (hardcoded fallback), choć wartość to CSS variable. Brak tooltipa.
+
+### 4.7 Advanced editor — obserwacje
+
+Advanced zawiera globalne kontrole bloku (Container: default/narrow/full, Padding top/bottom, Margin top/bottom, Visibility) — dostępne dla wszystkich widgetów. Padding/margin w rendererze (`px-4 py-8`) nadal hardcoded — kontrole bloku działają na wrapper, nie na wewnętrzny `<section>`.
+
+Screenshot: `stats-kpi-07-advanced-editor.png`
 
 ---
 
 ## 5. Testy na froncie (localhost:3000)
 
-> **URL:** *do uzupełnienia po teście*
+> **URL:** http://localhost:3000/stats-kpi-audit-0516
+> **Strona opublikowana:** Tak
 
-*Sekcja uzupełniana po testach Playwright.*
+### 5.1 Widget na froncie
+
+DOM frontendu:
+```json
+{
+  "variant": "split-highlight",
+  "divider": "true",
+  "count": "4",
+  "sectionAriaLabel": null,
+  "articleAriaLabels": [null, null, null, null],
+  "iconAriaHidden": [null, null, null, null],
+  "gridClass": "grid grid-cols-1 lg:grid-cols-3 gap-4",
+  "cardClasses": ["rounded-xl border p-5", "rounded-xl border p-4", "rounded-xl border p-4", "rounded-xl border p-4"]
+}
+```
+
+Screenshot: `stats-kpi-09-frontend.png`
+
+### 5.2 Mobile (390x844)
+
+```json
+{ "gridComputedColumns": "358px", "firstItemComputedWidth": 358, "sectionComputedMaxWidth": "1152px" }
+```
+
+Widget poprawnie spada do jednej kolumny na mobile. Screenshot: `stats-kpi-10-frontend-mobile.png`
+
+### 5.3 ARIA na froncie (R1, R2, R3 potwierdzone)
+
+Identyczne jak admin preview — `null` dla wszystkich atrybutów ARIA. Błędy w rendererze, nie środowisku.
 
 ---
 
 ## 6. Porównanie Admin Preview vs Frontend
 
-*Sekcja uzupełniana po testach Playwright.*
+| Aspekt | Admin Preview | Frontend | Zgodność |
+|--------|--------------|----------|----------|
+| Variant rendering | split-highlight | split-highlight | ✅ Zgodne |
+| Item count | 4 | 4 | ✅ Zgodne |
+| divider persisted | true | true | ✅ Zgodne |
+| divider visual effect (non-inline) | brak | brak | ✅ Zgodne (oba błędne) |
+| ARIA attributes | null | null | ✅ Zgodne (oba błędne) |
+| Icon aria-hidden | null | null | ✅ Zgodne (oba błędne) |
+| Card classes | identyczne | identyczne | ✅ Zgodne |
+| Mobile responsiveness | N/A (canvas) | Single col (ok) | ✅ OK |
+| split-highlight secondary grid | sm:grid-cols-2 | sm:grid-cols-2 | ✅ Zgodne |
+
+**Wnioski:** Admin preview i frontend renderują identycznie. Wszystkie bugi są w warstwie renderera (`statsKpi.tsx`) i edytora — brak rozbieżności środowiskowych.
 
 ---
 
