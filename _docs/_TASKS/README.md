@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 152 tasks
+- **To Do:** 160 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1542 tasks
 
@@ -47,6 +47,14 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-278-06 | Pricing Plans Section Layout Typography and Notes | Medium | Large | Add bounded max-width, typography presets, and plain-text pricing notes |
 | TASK-278-07 | Pricing Plans Two-Plan Variant and Pack Docs | Medium | Medium | Add a dedicated two-plan variant with registry/editor/runtime/tests/docs coverage after TASK-256 count sync |
 | TASK-278-08 | Pricing Plans Report, Docs, Changelog, and Closure | Medium | Medium | Refresh Pricing Plans report/docs/changelog/board and final validation evidence |
+| TASK-276 | Newsletter Widget Playwright Product Followups | High | Very Large | Newsletter-only follow-up family for `REPORT_NEWSLETTER_WIDGET.md`, excluding TASK-256 shared-contract scope |
+| TASK-276-01 | Newsletter Form Semantics, Consent, and Accessibility | High | Large | Add email field metadata, consent-in-form semantics, accessible labels, autocomplete, and safe no-target submit behavior |
+| TASK-276-02 | Newsletter Submission States and Public Write Hardening | High | Very Large | Add hidden-by-default success/error/loading states and backend-owned anti-abuse for Coderso-owned submissions |
+| TASK-276-03 | Newsletter Integration Validation and Transport Diagnostics | High | Large | Add safe action URL/method validation and Advanced active-transport diagnostics |
+| TASK-276-04 | Newsletter Editor Mode Ownership and Variant Guidance | High | Medium | Align Newsletter editor mode ownership, Minimal description guidance, consent help, mobile copy, and success preview |
+| TASK-276-05 | Newsletter Field Expansion and Double Opt-In Model | Medium | Large | Add bounded extra fields and double opt-in semantics after the base form/transport contract is stable |
+| TASK-276-06 | Newsletter Visual Style, Width, and Contrast Controls | Medium | Large | Add Newsletter-local width/color/contrast controls, background picker clarity, breakpoint decisions, and explicit spacing resolver cleanup |
+| TASK-276-07 | Newsletter Report, Docs, Changelog, and Closure | Medium | Medium | Refresh Newsletter report/docs/changelog/board and final validation evidence |
 | TASK-272 | Hero Widget Playwright Product Followups | High | Very Large | Hero-only follow-up family for `REPORT_HERO_WIDGET.md`, excluding TASK-256 shared-contract and page-shell scope |
 | TASK-272-01 | Hero Centered Media Control and CTA Placeholder Polish | High | Medium | Hide centered-only irrelevant inline media frame controls and align Hero CTA URL placeholder copy |
 | TASK-272-02 | Hero Video Poster and Media Metadata | High | Large | Add Hero video poster, title/description, and video-specific editor/runtime semantics |
