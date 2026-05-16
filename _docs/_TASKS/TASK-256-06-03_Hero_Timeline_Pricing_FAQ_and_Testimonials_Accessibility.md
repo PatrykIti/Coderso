@@ -30,10 +30,10 @@ be split by TASK-256-08 into a page-shell follow-up if still reproducible.
 - `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md:154-200,206-236,286-294,320-347`
   for plan count/variant drift, missing clear, static toggle, pricing
   semantics, and validation priorities.
-- `_docs/PLAYWRIGHT/REPORT_FAQ_ACCORDION_WIDGET.md:97-99,119,126-127,141-145,179-185,303-305,310-311,328-338`
-  for single-open runtime, spacing/default guards, clear controls,
-  CSS-variable picker behavior, expand indicator, spacing `none`
-  double-border, and ARIA.
+- `_docs/PLAYWRIGHT/REPORT_FAQ_ACCORDION_WIDGET.md:97-99,119,141-145,179,303-305,314,328-338`
+  for single-open runtime, spacing/default guards, expand indicator, spacing
+  `none` double-border, and ARIA. FAQ clear controls and CSS-variable picker
+  behavior remain owned by TASK-256-02.
 - `_docs/PLAYWRIGHT/REPORT_TESTIMONIALS_WIDGET.md:136-180,291-304` for
   slider-static scroll-snap, variant/count sync, heading hierarchy,
   section/article ARIA, clear gaps, Wizard field gaps, and avatar/media scope.
@@ -47,7 +47,7 @@ be split by TASK-256-08 into a page-shell follow-up if still reproducible.
 | Timeline Visual race and Wizard 4/8 step coverage | Fix here plus TASK-256-01 | `TimelineEditors.tsx`, `timeline.tsx` | None |
 | Timeline mobile date/lineStyle/connector issues | Fix here if current renderer exposes the controls; otherwise classify in report | `timeline.tsx` | TASK-256-08 records deferral if product expansion |
 | Pricing static toggle/plan-count drift | Fix here | `PricingPlansEditors.tsx`, `pricingPlans.tsx` | None |
-| FAQ single-open, chevron, ARIA, clear controls, and CSS-variable picker behavior | Fix here plus TASK-256-04 and TASK-256-02 | `FaqAccordionEditors.tsx`, `faqAccordion.tsx` | Keep question-aware default-open labels in TASK-266-04. |
+| FAQ single-open, chevron, ARIA, spacing resolver, and `spacing="none"` double-border behavior | Fix here plus TASK-256-04 | `FaqAccordionEditors.tsx`, `faqAccordion.tsx` | FAQ clear/CSS-variable picker work stays in TASK-256-02; question-aware default-open labels stay in TASK-266-04. |
 | FAQ `spacing="none"` double-border renderer defect | Fix here with renderer spacing/border regression | `faqAccordion.tsx` | None |
 | FAQ animation, SEO JSON-LD, rich text answers, max-width/layout typography, and remove confirmation | Future product scope unless needed to repair current misleading controls | Future FAQ task | TASK-256-08 records deferral |
 | Testimonials slider-static lacks scroll-snap behavior | Fix here or rename/static-proof the variant so the control is truthful | `testimonials.tsx` | None |
@@ -64,7 +64,7 @@ be split by TASK-256-08 into a page-shell follow-up if still reproducible.
   controls exist.
 - [ ] Fix pricing plan-count/variant desync, `highlightRing` clear, billing
   toggle behavior, and accessible pricing semantics.
-- [ ] Fix FAQ single-open behavior, expand indicator, clear controls, and ARIA.
+- [ ] Fix FAQ single-open behavior, expand indicator, spacing resolver, and ARIA.
 - [ ] Fix FAQ `spacing="none"` double-border output.
 - [ ] Classify testimonials `slider-static`: rename/static-proof it or make it
   interactive only if that is required by the existing contract.
@@ -83,7 +83,7 @@ be split by TASK-256-08 into a page-shell follow-up if still reproducible.
 | `core/widgets/core/timeline.tsx` | renderer | Mobile date, line style, connector, and ARIA semantics. |
 | `core/admin/ui/widgets/editors/PricingPlansEditors.tsx` | 596-615, 965-971 | Plan count/variant sync, missing clear, billing controls, and validation feedback. |
 | `core/widgets/core/pricingPlans.tsx` | 232-239, 390-405, 664-727 | Explicit token guards, interactive or static billing semantics, table/plan ARIA. |
-| `core/admin/ui/widgets/editors/FaqAccordionEditors.tsx` | behavior/colors sections | Clear controls, CSS-variable picker preservation, and single-open editor truthfulness. Question-aware default-open labels are owned by TASK-266-04. |
+| `core/admin/ui/widgets/editors/FaqAccordionEditors.tsx` | behavior section | Single-open editor truthfulness only. Clear controls and CSS-variable picker preservation are owned by TASK-256-02; question-aware default-open labels are owned by TASK-266-04. |
 | `core/widgets/core/faqAccordion.tsx` | 142-145, 316-365, spacing/border render | Explicit spacing resolver, single-open runtime script, chevron, summary/content ARIA, and no doubled borders for `spacing="none"`. |
 | `core/admin/ui/widgets/editors/TestimonialsEditors.tsx` | 336-350, 659-674, media/style sections | Variant/count sync, text/accent clear controls, slider-static scope, avatar clear/lazy/alt controls, and accessibility labels. |
 | `core/widgets/core/testimonials.tsx` | 38-42, 155-158, 359, 382 | Lazy images, alt semantics, slider-static scroll-snap or truthful naming, heading hierarchy, and static-vs-interactive output. |

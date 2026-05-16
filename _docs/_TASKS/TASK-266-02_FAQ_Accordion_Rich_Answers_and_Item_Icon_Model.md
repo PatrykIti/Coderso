@@ -37,6 +37,9 @@ Out of scope:
 ## Sub-Tasks
 
 - [ ] Extend `FaqAccordionItem` with `icon?: string` and `answerFormat?: "plain" | "markdown"`.
+- [ ] Add explicit schema and normalizer bounds for FAQ text and markdown:
+  question length, answer length, icon length, link href length, markdown token
+  count, list item count, and rendered node count.
 - [ ] Add a safe FAQ answer renderer that supports only a bounded markdown
   subset. Prefer a small FAQ-local parser that renders React nodes; if HTML is
   introduced internally, route it through the existing
@@ -53,9 +56,9 @@ Out of scope:
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/faqAccordion.tsx` | Extend item schema/types/defaults/normalizer; add safe answer rendering and plain-text extraction. Add enum and length constraints for `answerFormat` and `icon`. |
+| `core/widgets/core/faqAccordion.tsx` | Extend item schema/types/defaults/normalizer; add safe answer rendering and plain-text extraction. Add enum and length constraints for `question`, `answer`, `answerFormat`, `icon`, link hrefs, markdown tokens, list items, and rendered nodes. |
 | `core/admin/ui/widgets/editors/FaqAccordionEditors.tsx` | Add per-item icon and answer-format controls in Wizard/Visual as appropriate. |
-| `tests/vitest/widgets/faqAccordion.test.tsx` | Add SSR assertions for safe markdown output, escaping, malicious markdown/link payloads, icon bounds, and plain-text extraction. |
+| `tests/vitest/widgets/faqAccordion.test.tsx` | Add SSR assertions for safe markdown output, escaping, malicious markdown/link payloads, oversized markdown/JSON-LD payloads, icon bounds, and plain-text extraction. |
 | `tests/vitest/ui/faq-accordion-editor-wave.test.tsx` | Add editor assertions for icon and answer-format updates. |
 | `tests/unit/widgets/validator.test.ts` | Run and update if schema fixture coverage requires new item fields. |
 
@@ -105,6 +108,9 @@ function updateItemIcon(index: number, icon: string) {
 Error handling:
 
 - Unsupported answer formats normalize to `plain`.
+- Oversized questions, answers, icons, hrefs, token streams, list items, and
+  rendered markdown nodes are clamped or rejected through one documented helper
+  before render.
 - Unsafe links render as plain text or are omitted according to the existing
   safe-href helper.
 - Empty icons are omitted.
@@ -119,6 +125,9 @@ No API routes are added.
 
 - Endpoint visibility/auth/RBAC/CSRF/rate limit: unchanged.
 - Reject-unknown validation: item schema must reject unknown item fields.
+- Input bounds: schema and normalizer must cap question, answer, icon, href,
+  markdown token/list/node counts, and JSON-LD text extraction length so one
+  FAQ item cannot create unbounded DOM or script payloads.
 - Anti-abuse: rich answers must not allow raw HTML, scripts, inline event
   handlers, unsafe URLs, or externally loaded embeds.
 - Secret handling: no secrets or private URLs in FAQ content, diagnostics, or
@@ -131,6 +140,8 @@ No API routes are added.
 - `bun test tests/unit/widgets/validator.test.ts`
 - `bun run test:vitest -- tests/vitest/widgets/widgetSafeHref.test.ts` if link
   normalization or safe-href behavior changes
+- Add focused cases for oversized answer markdown, too many list items, overly
+  long hrefs, and JSON-LD text truncation/omission policy.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - If this leaf is committed or moved to `Done` separately from TASK-266-06,

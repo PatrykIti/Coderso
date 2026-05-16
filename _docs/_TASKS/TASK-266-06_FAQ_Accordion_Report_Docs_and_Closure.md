@@ -122,6 +122,7 @@ No API routes are added by this closure task.
   - `bun run test:vitest -- tests/vitest/widgets/faqAccordion.test.tsx`
   - `bun run test:vitest -- tests/vitest/ui/faq-accordion-editor-wave.test.tsx`
   - `bun test tests/unit/widgets/validator.test.ts` if schema changed
+  - `bun run lint`
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`
   - `bun run gates:coderso`

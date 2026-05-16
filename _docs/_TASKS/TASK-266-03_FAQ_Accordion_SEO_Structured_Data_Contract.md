@@ -102,6 +102,8 @@ Error handling:
 - Unsafe rich answer syntax never reaches JSON-LD as HTML.
 - `serializeJsonLdForScript()` must JSON-stringify the object and escape `<`,
   `>`, `&`, U+2028, and U+2029 before insertion into a script tag.
+- JSON-LD text extraction must reuse TASK-266-02 bounds so oversized answers
+  are truncated or omitted before serialization.
 - Unknown `seo` fields are rejected by schema validation.
 
 ## Security Contract
@@ -114,6 +116,8 @@ No API routes are added.
 - Anti-abuse: JSON-LD is built only from normalized strings and serialized
   through `serializeJsonLdForScript()`, not raw `JSON.stringify`, so
   user-authored FAQ text cannot break out of the script tag.
+- Output bounds: JSON-LD question/answer text uses the same max-length policy as
+  the runtime answer renderer and must be tested with oversized FAQ payloads.
 - Secret handling: no private URLs, tokens, or secrets in structured data.
 
 ## Testing Requirements
