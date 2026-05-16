@@ -60,7 +60,7 @@ change out instead of hiding it inside TASK-257.
 |---|---|---|---|
 | Accordion schema/defaults/normalizer | `core/widgets/core/accordion.tsx` | `tests/vitest/widgets/accordionWidget.test.tsx` | Add schema/normalizer/runtime coverage for new option/style fields. |
 | Accordion editors | `core/admin/ui/widgets/editors/AccordionEditors.tsx` | `tests/vitest/ui/accordion-editor-wave.test.tsx` | Add mode-specific editor assertions for new controls and UX copy. |
-| Repeatable slot item controls | `core/admin/ui/pages/builder/BlockSettings.tsx`, `VisualPanel.tsx`, `blockUtils.ts` | `tests/vitest/pageBuilder/blockSettings-wave.test.tsx`, `tests/vitest/pageBuilder/blockList.test.tsx` | Only touch if the leaf can remain Accordion-scoped; otherwise split shared slot work first. |
+| Repeatable slot item controls | `core/admin/ui/pages/builder/BlockSettings.tsx` for existing add-item label/discovery polish only | `tests/vitest/pageBuilder/blockSettings-wave.test.tsx`; `tests/vitest/pageBuilder/visualPanel.test.tsx` only if slot-control rendering changes | Do not add shared repeatable-slot reorder helpers in TASK-257; split reorder into a shared slot task unless an owner already exists. |
 | Widget docs/report | `_docs/_WIDGETS/ACCORDION.md`, `_docs/PLAYWRIGHT/REPORT_ACCORDION_WIDGET.md` | docs diff checks | Update fixed/deferred evidence and new contract docs. |
 
 ## Sub-Tasks

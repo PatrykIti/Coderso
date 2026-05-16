@@ -92,7 +92,10 @@ No API routes are added.
 
 - `bun run test:vitest -- tests/vitest/widgets/accordionWidget.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/accordion-editor-wave.test.tsx`
-- Any page-builder suites touched by TASK-257-03
+- `bun run test:vitest -- tests/vitest/pageBuilder/blockSettings-wave.test.tsx`
+  if TASK-257-03 changes page-builder slot controls
+- `bun run test:vitest -- tests/vitest/pageBuilder/visualPanel.test.tsx` if
+  TASK-257-03 changes slot-control rendering
 - `bun test tests/unit/widgets/validator.test.ts` if schema/defaults changed
 - `git diff --check`
 - `bun --cwd core lint`

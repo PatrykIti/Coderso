@@ -20,7 +20,7 @@ This leaf covers product fields that are specific to the layout `accordion`
 widget:
 
 - W3: body/description text color;
-- W5: panel content padding;
+- W5: summary trigger padding and panel content padding;
 - W6: panel border radius;
 - Accordion part of W7: accordion max width;
 - Accordion part of W12: summary title font size/weight;
@@ -36,6 +36,7 @@ unless already landed before this leaf starts.
 Exact Accordion schema paths for this leaf:
 
 - `style.descriptionTextColor`
+- `style.summaryPadding`
 - `style.contentPadding`
 - `style.radius`
 - `style.summaryFontSize`
@@ -66,7 +67,7 @@ tokens and preserve current variant defaults for legacy payloads.
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/accordion.tsx` | Add schema/defaults/normalizer maps for `style.descriptionTextColor`, `style.contentPadding`, `style.radius`, `style.summaryFontSize`, `style.summaryFontWeight`, and `layout.maxWidth`. |
+| `core/widgets/core/accordion.tsx` | Add schema/defaults/normalizer maps for `style.descriptionTextColor`, `style.summaryPadding`, `style.contentPadding`, `style.radius`, `style.summaryFontSize`, `style.summaryFontWeight`, and `layout.maxWidth`. |
 | `core/admin/ui/widgets/editors/AccordionEditors.tsx` | Add token/color controls and color-picker UX. |
 | `tests/vitest/widgets/accordionWidget.test.tsx` | Add render and normalization assertions for each new style/layout field. |
 | `tests/vitest/ui/accordion-editor-wave.test.tsx` | Add editor interaction assertions for color picker/text sync and token selects. |
@@ -79,6 +80,12 @@ const accordionPaddingClassMap = {
   sm: "p-3",
   md: "p-4",
   lg: "p-5",
+} as const;
+
+const accordionSummaryPaddingClassMap = {
+  sm: "px-3 py-2",
+  md: "px-4 py-3",
+  lg: "px-5 py-4",
 } as const;
 
 const accordionRadiusClassMap = {
@@ -115,6 +122,7 @@ function normalizeAccordionStyle(style: AccordionData["style"] | undefined) {
       accordionDefaults.style?.summaryTextColor
     ),
     descriptionTextColor: normalizeAccordionColor(style?.descriptionTextColor, undefined),
+    summaryPadding: resolveAccordionToken(style?.summaryPadding, "md", accordionSummaryPaddingTokens),
     contentPadding: resolveAccordionToken(style?.contentPadding, "md", accordionPaddingTokens),
     radius: resolveAccordionToken(style?.radius, "lg", accordionRadiusTokens),
     summaryFontSize: resolveAccordionToken(style?.summaryFontSize, "base", summarySizeTokens),
@@ -151,6 +159,9 @@ Error handling:
   must use a hex fallback.
 - Cleared color fields omit inline styles instead of serializing empty strings.
 - Unknown `layout.maxWidth` values normalize to `full`.
+- Summary trigger padding and panel content padding are separate because current
+  runtime has hard-coded trigger padding and hard-coded body padding in different
+  render locations.
 
 ## Security Contract
 
@@ -190,7 +201,8 @@ No API routes are added.
 ## Acceptance Criteria
 
 - Accordion exposes documented, schema-backed controls for body text color,
-  panel padding, radius, max width, and summary typography.
+  summary trigger padding, panel content padding, radius, max width, and summary
+  typography.
 - Existing payloads render as before unless the user configures the new fields.
 - Accordion color controls match the repo's color-picker/text-input pattern and
   preserve CSS variable values.

@@ -67,6 +67,10 @@ live renderer still contains the TASK-256 default-open and collapsible bugs.
 
 ```ts
 function resolveAccordionDefaultOpenIds(current: AccordionData, items: NormalizedAccordionItem[]) {
+  const openMode =
+    current.options?.openMode === "multiple" || current.options?.allowMultiple === true
+      ? "multiple"
+      : "single";
   const rawDefaultOpenIds = Array.isArray(current.options?.defaultOpenIds)
     ? current.options.defaultOpenIds
     : undefined;

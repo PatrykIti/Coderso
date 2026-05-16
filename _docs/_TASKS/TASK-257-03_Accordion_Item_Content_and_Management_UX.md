@@ -29,11 +29,12 @@ Accordion item order is not just an `items[]` array concern. Each item owns a
 repeatable slot (`item:<id>`) that can contain nested widgets. A data-only
 reorder would desynchronize titles from slot contents and is not acceptable.
 
-This leaf may only implement item add/reorder when the code path moves the
-Accordion item metadata and matching repeatable slot content together. If that
-requires a shared repeatable-slot ordering helper in `BlockSettings`,
-`VisualPanel`, or `blockUtils`, split that shared helper into TASK-256 or a new
-shared slot task before continuing this leaf.
+This leaf may only implement item add when it delegates to the existing
+page-builder repeatable-slot owner. It must not implement item reorder unless a
+shared repeatable-slot reorder contract already exists before this leaf starts.
+If reorder still requires a new shared helper in `BlockSettings`, `VisualPanel`,
+or `blockUtils`, create a separate shared slot task and mark U5 deferred from
+TASK-257.
 
 Live owner constraint:
 
@@ -58,9 +59,10 @@ Live owner constraint:
 - [ ] Verify current page-builder slot controls already expose a discoverable
   "Add item" action for Accordion; if not, improve the page-builder-owned slot
   control labels for Accordion instead of adding a data-only editor button.
-- [ ] Implement reorder only through a shared repeatable-slot owner path that
-  synchronizes slot order and Accordion item metadata. Do not ship metadata-only
-  reorder.
+- [ ] Classify U5 reorder during implementation. If a shared repeatable-slot
+  reorder owner already exists, use it with Accordion metadata sync tests. If it
+  does not exist, create/link a separate shared slot follow-up and do not ship
+  reorder in TASK-257.
 
 ## Files to Change
 
@@ -68,9 +70,7 @@ Live owner constraint:
 |---|---|
 | `core/widgets/core/accordion.tsx` | Add item icon schema/defaults/normalizer/rendering. |
 | `core/admin/ui/widgets/editors/AccordionEditors.tsx` | Add item icon controls and clearer behavior copy. |
-| `core/admin/ui/pages/builder/BlockSettings.tsx` | Own any add/reorder affordance that needs concrete repeatable slot callbacks. |
-| `core/admin/ui/pages/builder/VisualPanel.tsx` | Add optional repeatable slot move controls only if BlockSettings supplies safe callbacks. |
-| `core/admin/ui/pages/builder/blockUtils.ts` | Add shared repeatable slot reorder helper if reorder ships in this leaf. |
+| `core/admin/ui/pages/builder/BlockSettings.tsx` | Touch only for Accordion-specific add-item label/discovery polish that uses existing repeatable slot callbacks. |
 | `tests/vitest/widgets/accordionWidget.test.tsx` | Add item icon render/normalizer coverage. |
 | `tests/vitest/ui/accordion-editor-wave.test.tsx` | Add item icon and copy regression coverage. |
 | `tests/vitest/pageBuilder/blockSettings-wave.test.tsx` | Add only if page-builder slot controls change. |
@@ -95,60 +95,37 @@ function normalizeAccordionItem(raw: AccordionItem, index: number) {
 }
 ```
 
-Slot-safe reorder shape:
+Slot-safe reorder decision gate:
 
 ```ts
-// Proposed shared page-builder helper; add beside existing add/remove repeatable
-// slot helpers in `blockUtils.ts`.
-function reorderRepeatableSlotInstance(
-  blocks: Block[],
-  parentId: string,
-  slotId: string,
-  toIndex: number
-) {
-  return updateBlockById(blocks, parentId, (block) => {
-    const parsed = parseRepeatableSlotId(slotId);
-    if (!parsed) return block;
-    const definition = getRegisteredWidget(block.type);
-    const slot = definition?.slots?.find((item) => item.id === parsed.definitionId);
-    if (!slot || getWidgetSlotKind(slot) !== "repeatable") return block;
-
-    const slots = getSlotMap(block);
-    const orderedSlotIds = getRepeatableSlotIds(slot, slots);
-    const fromIndex = orderedSlotIds.indexOf(slotId);
-    if (fromIndex < 0 || toIndex < 0 || toIndex >= orderedSlotIds.length) return block;
-
-    const nextSlotIds = moveArrayItem(orderedSlotIds, fromIndex, toIndex);
-    const nextSlots = rebuildSlotsPreservingNonRepeatableKeys(slots, slot.id, nextSlotIds);
+function resolveAccordionReorderPlan(capabilities: PageBuilderSlotCapabilities) {
+  if (!capabilities.canReorderRepeatableSlots) {
     return {
-      ...block,
-      slots: nextSlots,
-      data:
-        block.type === "accordion"
-          ? reorderAccordionItemsBySlotOrder(block.data, nextSlotIds)
-          : block.data,
-      children: undefined,
+      action: "defer",
+      followUp: "Create shared repeatable-slot reorder task before fixing U5.",
     };
-  });
-}
+  }
 
-function reorderAccordionItemsBySlotOrder(data: unknown, nextSlotIds: string[]) {
-  const nextInstanceIds = nextSlotIds
-    .map((entry) => parseRepeatableSlotId(entry)?.instanceId)
-    .filter((entry): entry is string => Boolean(entry));
-  return normalizeAccordionDataWithItemOrder(data, nextInstanceIds);
+  return {
+    action: "use-shared-owner",
+    requirements: [
+      "move repeatable slot content",
+      "sync Accordion item metadata by slot instance id",
+      "cover BlockSettings and Accordion editor regressions",
+    ],
+  };
 }
 ```
 
 Error handling:
 
 - Icons are plain text only; trim empty values to `undefined`.
-- Reorder controls are hidden or disabled until the slot/content move is safe.
 - Add-item controls must respect `accordionItemMax` and preserve existing nested
   slot contents.
-- Invalid reorder targets return the original block unchanged.
-- If the shared helper cannot safely synchronize metadata and slots, U5 must be
-  deferred to a separate shared repeatable-slot task and recorded in TASK-257-05.
+- Reorder controls are not rendered from TASK-257 unless a shared repeatable-slot
+  reorder owner already exists.
+- If no shared reorder owner exists, U5 must be deferred to a separate shared
+  repeatable-slot task and recorded in TASK-257-05.
 
 ## Security Contract
 
@@ -164,8 +141,8 @@ No API routes are added.
 - `bun run test:vitest -- tests/vitest/widgets/accordionWidget.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/accordion-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/pageBuilder/blockSettings-wave.test.tsx`
-- `bun run test:vitest -- tests/vitest/pageBuilder/blockList.test.tsx` if slot
-  movement helpers change
+- `bun run test:vitest -- tests/vitest/pageBuilder/visualPanel.test.tsx` if
+  page-builder slot-control rendering changes
 - `bun test tests/unit/widgets/validator.test.ts` if schema/defaults change
 - `git diff --check`
 - `bun --cwd core lint`
