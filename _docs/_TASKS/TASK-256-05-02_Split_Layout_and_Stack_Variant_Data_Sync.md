@@ -65,7 +65,7 @@ function handleSplitVariantChange(nextVariant: SplitLayoutVariantId) {
       ratio: resolveDefaultRatioForVariant(nextVariant, value.layout?.ratio),
     },
   });
-  onVariantChange?.(nextVariant, nextData);
+  applyVariantDataPatch(nextVariant, nextData);
 }
 
 function handleStackVariantChange(nextVariant: StackVariantId) {
@@ -73,7 +73,21 @@ function handleStackVariantChange(nextVariant: StackVariantId) {
     ...value,
     direction: resolveDirectionForVariant(nextVariant, value.direction),
   });
-  onVariantChange?.(nextVariant, nextData);
+  applyVariantDataPatch(nextVariant, nextData);
+}
+
+function applyVariantDataPatch(nextVariant: string, nextData: Record<string, unknown>) {
+  if (onBlockPatch) {
+    onBlockPatch((current) => ({
+      ...current,
+      variant: nextVariant,
+      data: nextData,
+    }));
+    return;
+  }
+
+  onVariantChange?.(nextVariant);
+  onChange(nextData);
 }
 ```
 

@@ -107,9 +107,13 @@ function handleVariantChangeWithBoundItems(nextVariant: string) {
       normalizeItem,
     }),
   };
-  onVariantChange?.(nextVariant, nextData);
+  applyVariantDataPatch(nextVariant, nextData);
 }
 ```
+
+Use the shared TASK-256-01 atomic block patch helper when available, then fall
+back to one-argument `onVariantChange(nextVariant)` plus the normal data
+`onChange(nextData)` path for legacy editor wrappers.
 
 Interactive billing shape:
 

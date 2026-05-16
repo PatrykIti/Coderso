@@ -59,8 +59,11 @@ that are not contract repairs.
   TASK-256-08 must refresh the report or mark any unverified rows as
   `needs-refresh`; it must not mark those rows fixed without runtime evidence.
 - `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:3` is completed, but constrained
-  comparison sections at `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:220,258`
-  require final classification.
+  comparison evidence remains split: frontend textual evidence at
+  `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:220` is completed, while the
+  auth-limited admin/runtime comparison at
+  `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:306` requires final
+  classification.
 - The following structural report findings still need fixed/deferred status
   refreshed after implementation:
   `_docs/PLAYWRIGHT/REPORT_GRID_COLUMNS_WIDGET.md:3`,
@@ -84,8 +87,11 @@ that are not contract repairs.
   `_docs/PLAYWRIGHT/REPORT_TEAM_WIDGET.md:3`.
 - The following dynamic report findings still need fixed/deferred status
   refreshed after implementation:
-  `_docs/PLAYWRIGHT/REPORT_CONTENT_LIST_WIDGET.md:3` and
-  `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:3`.
+  `_docs/PLAYWRIGHT/REPORT_CONTENT_LIST_WIDGET.md:3`,
+  `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:3`,
+  `_docs/PLAYWRIGHT/REPORT_POSTS_FEED_WIDGET.md:3`,
+  `_docs/PLAYWRIGHT/REPORT_ENTRY_TEASER_WIDGET.md:3`, and
+  `_docs/PLAYWRIGHT/REPORT_LISTING_FILTERS_WIDGET.md:3`.
 
 ## Sub-Tasks
 
@@ -183,6 +189,13 @@ No API routes are added by this closure task.
   - `bun run test:vitest -- tests/vitest/ui/navigation-editor-wave.test.tsx`
   - `bun run test:vitest -- tests/vitest/widgets/navigation.test.tsx`
   - `bun run test:vitest -- tests/vitest/ui/menu-editor-validation.test.ts`
+  - `bun run test:vitest -- tests/vitest/ui/posts-feed-editor-wave.test.tsx`
+  - `bun test tests/unit/widgets/postsFeedWidget.test.tsx`
+  - `bun run test:vitest -- tests/vitest/ui/entry-teaser-editor-wave.test.tsx`
+  - `bun test tests/unit/widgets/entryTeaser.test.tsx`
+  - `bun run test:vitest -- tests/vitest/ui/listing-filters-editor-wave.test.tsx`
+  - `bun run test:vitest -- tests/vitest/widgets/listingFilters.test.tsx`
+  - `bun run test:vitest -- tests/vitest/search/listingRuntimeService.test.ts`
 - Schema/default/runtime registration changes must include:
   - `bun test tests/unit/widgets/validator.test.ts`
   - `bun test tests/unit/widgets/registry.test.ts`

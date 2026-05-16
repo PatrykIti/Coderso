@@ -94,9 +94,13 @@ Timeline mode:
 ```tsx
 function handleTimelineModeChange(nextVariant: TimelineVariantId) {
   const nextData = normalizeTimelineDataForVariant(value, nextVariant);
-  onVariantChange?.(nextVariant, nextData);
+  applyVariantDataPatch(nextVariant, nextData);
 }
 ```
+
+Timeline mode updates must use the TASK-256-01 atomic block patch helper when
+available. Legacy wrappers fall back to one-argument
+`onVariantChange(nextVariant)` plus `onChange(nextData)`.
 
 FAQ single-open:
 

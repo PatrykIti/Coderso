@@ -83,13 +83,17 @@ function handleFeatureGridVariantChange(nextVariant: FeatureGridVariantId) {
       columns: columnsForVariant(nextVariant),
     },
   });
-  onVariantChange?.(nextVariant, nextData);
+  applyVariantDataPatch(nextVariant, nextData);
 }
 
 function shouldShowStatsDividerControl(variant: StatsKpiVariantId) {
   return variant === "inline";
 }
 ```
+
+`applyVariantDataPatch` must use the TASK-256-01 atomic block patch helper when
+the editor receives it, then fall back to one-argument `onVariantChange` plus
+`onChange(nextData)`.
 
 Stats KPI runtime shape:
 

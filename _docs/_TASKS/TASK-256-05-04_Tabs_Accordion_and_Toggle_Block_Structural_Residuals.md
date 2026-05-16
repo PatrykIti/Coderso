@@ -82,9 +82,14 @@ function createPanelLabel(index: number, title: string | undefined) {
   return trimmed ? `Panel ${index + 1}: ${trimmed}` : `Panel ${index + 1}`;
 }
 
-function renderAccordionPanel(panel: AccordionPanel, context: WidgetRenderContext) {
-  const summaryId = scopedId(context.instanceId, `summary-${panel.id}`);
-  const contentId = scopedId(context.instanceId, `content-${panel.id}`);
+function renderAccordionPanel(
+  panel: AccordionPanel,
+  context: WidgetRenderContext,
+  blockId: string
+) {
+  const instanceId = createWidgetInstanceId("accordion", blockId, panel.id);
+  const summaryId = scopedId(instanceId, `summary-${panel.id}`);
+  const contentId = scopedId(instanceId, `content-${panel.id}`);
 
   return (
     <details open={panel.defaultOpen}>

@@ -91,6 +91,14 @@ contract findings that must be classified before closure:
 | Commerce widgets: product-gallery, product-compare, product-table | Safe href/media output, table/list semantics, status text accessibility, runtime error/empty states, editor controls with no runtime effect | Commerce catalog features, new merchandising layout variants, advanced filtering/product table product scope |
 | Dynamic widgets: content-list, navigation, posts-feed, entry-teaser, listing-filters | Truthful controls, safe href/media, listing runtime token validation, sticky/layout ownership, accessibility/focus/runtime state | Pagination widgets, taxonomy pickers, active chips, complex menu IA, broad content-query expansion |
 
+Footer, Compare Timeline, and Rich Text Section reports enter TASK-256 only by
+shared contract class. Safe link and media output route to TASK-256-06-02 or
+TASK-256-06-04; duplicated or ineffective controls route to TASK-256-01,
+TASK-256-02, or TASK-256-05; heading, focus, and ARIA rows route to TASK-256-04
+or TASK-256-06. Brand systems, WYSIWYG behavior, icon expansion, advanced
+typography, and other product-specific work must be recorded by TASK-256-08 as
+future physical task scope instead of being implemented in this family.
+
 ## Files to Change
 
 | File | Required change |
