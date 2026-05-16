@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 169 tasks
+- **To Do:** 178 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1542 tasks
 
@@ -64,6 +64,15 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-277-06 | Posts Feed Editor Flow, Variant Previews, and Style Controls | Medium | Large | Add text-color control, variant preview affordances, and progressive Wizard flow |
 | TASK-277-07 | Posts Feed Pagination, Author, Date, and Featured-First Filters | Medium | Very Large | Add or explicitly split bounded pagination/load-more, author/date filters, and featured-first sorting |
 | TASK-277-08 | Posts Feed Report, Docs, Changelog, and Closure | Medium | Medium | Refresh Posts Feed report/docs/changelog/board and final validation evidence |
+| TASK-273 | Listing Filters Widget Playwright Product Followups | High | Very Large | Listing Filters-only follow-up family for `REPORT_LISTING_FILTERS_WIDGET.md`, excluding TASK-256 shared-contract scope |
+| TASK-273-01 | Admin Canvas, Facet Draft State, and Query Loading | High | Large | Repair canvas query fallback, visible editable facet drafts, duplicate-id feedback, and transient query-load handling |
+| TASK-273-02 | Facet Field, Operator, Options, and Preview Editors | High | Large | Add query-aware field suggestions, kind-scoped operators, structured option/sort rows, inline validation, and facet previews |
+| TASK-273-03 | Range, Date, Taxonomy, and Searchable Option Controls | High | Very Large | Add practical range/date/taxonomy/searchable-option controls while preserving the existing URL token contract |
+| TASK-273-04 | Active Filters, Clear All, Counts, and Auto Apply State | High | Large | Add active filter summary, clear-all, truthful missing-count state, and less confusing auto-apply behavior |
+| TASK-273-05 | Pagination, Page Reset, Loading, and Error State | High | Large | Add page controls, reset page on filter changes, AJAX busy state, stale-response guard, and inline runtime errors |
+| TASK-273-06 | Layout Variants, Collapsible Facets, and Width Controls | High | Very Large | Add horizontal/sidebar/drawer layouts, collapsible facets, and bounded width controls |
+| TASK-273-07 | Wizard, Diagnostics, and Mode Onboarding | Medium | Medium | Add safe Wizard facet onboarding, Visual diagnostics, and clearer Advanced contract linkage |
+| TASK-273-08 | Report, Docs, Changelog, and Closure | Medium | Medium | Refresh Listing Filters report/docs/changelog/board and final validation evidence |
 | TASK-272 | Hero Widget Playwright Product Followups | High | Very Large | Hero-only follow-up family for `REPORT_HERO_WIDGET.md`, excluding TASK-256 shared-contract and page-shell scope |
 | TASK-272-01 | Hero Centered Media Control and CTA Placeholder Polish | High | Medium | Hide centered-only irrelevant inline media frame controls and align Hero CTA URL placeholder copy |
 | TASK-272-02 | Hero Video Poster and Media Metadata | High | Large | Add Hero video poster, title/description, and video-specific editor/runtime semantics |
