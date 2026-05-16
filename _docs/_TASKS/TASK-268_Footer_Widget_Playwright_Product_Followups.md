@@ -1,0 +1,194 @@
+# TASK-268: Footer Widget Playwright Product Followups
+
+# FileName: TASK-268_Footer_Widget_Playwright_Product_Followups.md
+
+**Priority:** High
+**Category:** Widgets + Navigation/Shell + Admin UI + Runtime Render + Accessibility + Playwright QA
+**Estimated Effort:** Very Large
+**Dependencies:** TASK-252-07-15, TASK-256-07
+**Status:** To Do
+
+---
+
+## Overview
+
+Create the Footer-only follow-up family for
+`_docs/PLAYWRIGHT/REPORT_FOOTER_WIDGET.md`.
+
+TASK-256 owns the general widget-contract repair wave. TASK-268 deliberately
+keeps only the Footer widget product/runtime/editor scope: the Footer schema,
+defaults, normalizers, renderer, editors, focused tests, Footer widget docs, and
+the Footer Playwright report closure. It must not become another shared widget
+contract umbrella.
+
+The current Footer is a useful composite baseline with columns, legal strip,
+social links, nested slots, and mode-specific editors. The report identifies
+Footer-specific gaps that are visible in public output and admin editing:
+text-rendered social links, hardcoded legal labels, missing brand area, weak
+landmark/heading semantics, minimal-variant mismatch, local editor label and
+layout-token drift, and missing Footer-owned layout/style/link options.
+
+## Scope Boundary Against TASK-256
+
+In scope for TASK-268:
+
+- Footer social output: icon rendering, platform allowlist/custom handling,
+  social accessible names, and safe external-link attributes.
+- Footer legal and brand output: configurable legal labels, brand logo/text,
+  tagline, section placement, and backward-compatible legal defaults.
+- Footer runtime semantics: `<footer>` accessible name, column heading levels,
+  minimal variant output, and optional legal/social strip visibility.
+- Footer editor IA that lives only in `FooterEditors.tsx`: labeled Advanced
+  controls, removal of Footer-local duplicate layout controls, Wizard quick-link
+  disclosure, and Footer link/social management.
+- Footer-owned layout/style options: horizontal padding, responsive column
+  breakpoint, link hover/underline/typography, and link target controls.
+- Final Footer report/docs/changelog/board closure.
+
+Out of scope for TASK-268:
+
+- Shared editor atomic update helpers, mode tab discovery, and page-builder
+  first-open mode navigation, owned by TASK-256-01 or a later shared
+  page-builder task.
+- Generic `Clear`, `none`, color-token, CSS-variable preservation, and reusable
+  color-picker primitives, owned by TASK-256-02. TASK-268 may only wire Footer
+  fields to already-approved shared helpers; it must not redefine their
+  semantics.
+- Generic slot placeholder/public runtime gating, owned by TASK-256-03.
+- Generic interactive widget instance ID helpers, owned by TASK-256-04.
+- Login/admin rate limiting from the report environment note. That is not a
+  Footer widget concern.
+- New public write endpoints. If a future Footer newsletter area is needed, it
+  must compose an existing newsletter/form widget or route through an approved
+  public-write task.
+
+If a TASK-268 leaf discovers that a required primitive is still missing at the
+shared layer, stop that slice and route the primitive through TASK-256 or a new
+shared task before continuing with the Footer-only implementation.
+
+## Source Report Coverage
+
+| Report finding | Route |
+|---|---|
+| Social text output, missing social icons, social accessible names, safe `target`/`rel`, modern platforms | TASK-268-01 |
+| Hardcoded Privacy/Terms labels, missing brand/logo/tagline, Footer landmark label, column headings | TASK-268-02 |
+| Minimal variant is just one column, legal strip always renders, social/legal empty-state visibility | TASK-268-03 |
+| Wizard first-link limitations/disclosure, Advanced unlabeled selects, Footer-local `sectionPaddingY` duplication, link/social reordering and editor IA | TASK-268-04 |
+| Footer horizontal padding, responsive breakpoint, link hover/active/underline, link typography, open-in-new-tab controls, market-only utility backlog | TASK-268-05 |
+| Fixed/deferred evidence, docs, changelog, board, Playwright report refresh, final validation | TASK-268-06 |
+| Generic clear/color-token/color-picker semantics | TASK-256-02 first; TASK-268 only applies final shared helper to Footer if needed |
+| First-open Wizard/Visual/Advanced tab discovery outside Footer editor files | Shared page-builder/editor task, not TASK-268 |
+| Login 429/rate-limit environment note | Out of scope for Footer |
+
+## Current Owner and Test Matrix
+
+| Leaf | Current drift evidence | Owner files | Required test lanes |
+|---|---|---|---|
+| TASK-268-01 | Report lines 67-71, 91-95, 99-103, 191, 193, 207-208, 217, 220-221, 318, 321, 383, 386, 403, 427, 433, 446 | `core/widgets/core/footer.tsx`, `core/admin/ui/widgets/editors/FooterEditors.tsx`, `tests/vitest/widgets/footer.test.tsx`, `tests/vitest/ui/footer-editor-wave.test.tsx` | Vitest widget render, UI editor wave, renderer smoke when public output changes, validator test when schema changes |
+| TASK-268-02 | Report lines 73-89, 173-175, 183, 192, 194-206, 218-219, 317-320, 384-395, 429-433, 445 | `footer.tsx`, `FooterEditors.tsx`, Footer docs, validator tests when schema changes | Vitest widget render/schema/editor, renderer smoke for nested slots if brand affects layout |
+| TASK-268-03 | Report lines 155-163, 184, 197, 301-305, 334, 411, 452 | `footer.tsx`, `FooterEditors.tsx`, Footer docs | Vitest widget render for variants/visibility, editor wave for toggles, renderer smoke when slots/legal row behavior changes |
+| TASK-268-04 | Report lines 112-116, 129-137, 176-182, 257-276, 331-333, 437-441 | `FooterEditors.tsx`, `tests/vitest/ui/footer-editor-wave.test.tsx`, `tests/vitest/widgets/footer.test.tsx` | Vitest UI editor wave; widget render only when editor changes require schema/default changes |
+| TASK-268-05 | Report lines 105-110, 139-153, 215-224, 401-417, 447 | `footer.tsx`, `FooterEditors.tsx`, Footer docs, pack matrix only if readiness changes | Vitest widget render/editor, validator when schema changes, renderer smoke for link target/styling output |
+| TASK-268-06 | Report lines 339-357, 361-373, 377-452 and every fixed/deferred row | `_docs/PLAYWRIGHT/REPORT_FOOTER_WIDGET.md`, `_docs/_WIDGETS/FOOTER.md`, `_docs/WIDGETS.md` if shared wording changes, board/changelog/docs | `git diff --check`, targeted production lanes after implementation leaves, final precommit/security gate |
+
+## Sub-Tasks
+
+- [ ] TASK-268-01: Footer Social Icons and External Link Safety
+- [ ] TASK-268-02: Footer Legal, Brand, and Landmark Semantics
+- [ ] TASK-268-03: Footer Minimal Variant and Visibility Controls
+- [ ] TASK-268-04: Footer Editor Mode IA and Link Management
+- [ ] TASK-268-05: Footer Layout, Typography, and Interactive Style Controls
+- [ ] TASK-268-06: Footer Report, Docs, Changelog, and Closure
+
+## Implementation Order
+
+1. Complete TASK-268-01 first because social output is the highest public-facing
+   defect and sets the safe-link/platform model used by later editor work.
+2. Complete TASK-268-02 next so legal/brand/schema semantics are stable before
+   minimal and visibility decisions depend on them.
+3. Complete TASK-268-03 after legal/brand normalization lands so the minimal
+   variant and optional strips reuse the final data model.
+4. Complete TASK-268-04 after the public data model is stable, because editor
+   IA should expose the final fields without duplicate temporary controls.
+5. Complete TASK-268-05 last among implementation leaves, because layout/style
+   expansion should not churn earlier semantic and editor contracts.
+6. Complete TASK-268-06 only after code, tests, docs, Playwright report
+   evidence, changelog, and task-board rows are synchronized.
+
+## Git Scope Safeguards
+
+- Use a dedicated worktree/branch for TASK-268 because many agents are editing
+  nearby `_docs/_TASKS/README.md` rows.
+- Run `git status --short --branch` before implementation, before staging, and
+  before closure.
+- Stage only `TASK-268*`, Footer owners, focused Footer tests, Footer docs,
+  Footer report, changelog, and row-scoped task-board changes.
+- Do not stage unrelated TASK-256, TASK-257, TASK-258, TASK-259, TASK-260,
+  TASK-261, or other Playwright report changes.
+- `_docs/_TASKS/README.md` is shared. Keep edits row-scoped and statistics-only;
+  before commit, inspect `git diff -- _docs/_TASKS/README.md` and reconcile only
+  the visible TASK-268 rows/statistics.
+
+## Security Contract
+
+No API routes are added by this umbrella.
+
+- Endpoint visibility: public Footer rendering plus internal admin editing
+  only through existing page/widget editing routes.
+- Auth/RBAC/CSRF/rate limit: unchanged; no new admin or public route is
+  introduced.
+- Reject-unknown validation: Footer schema keeps `additionalProperties: false`
+  and must reject unknown brand/legal/social/layout/style fields.
+- Anti-abuse: all public href output must keep `normalizeWidgetSafeHref`, fixed
+  platform/icon allowlists, safe target/rel handling for external links, and no
+  arbitrary HTML/SVG/script payloads in widget JSON.
+- Secret handling: Footer data, docs, reports, and tests must not store provider
+  keys, private URLs, nonce values, CAPTCHA secrets, or privileged settings.
+
+## Testing Requirements
+
+- Docs-only task creation: `git diff --check`.
+- Implementation leaves:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun run test:vitest -- tests/vitest/widgets/footer.test.tsx`
+  - `bun run test:vitest -- tests/vitest/ui/footer-editor-wave.test.tsx`
+  - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` when
+    public/widget renderer output, slot placement, or registry behavior changes.
+  - `bun test tests/unit/widgets/validator.test.ts` when Footer schema/defaults
+    change.
+  - `bun run gates:coderso`, `bun run scan:security:strict`, and
+    `bun run precommit` before final family closure.
+
+## Documentation Updates Required
+
+- `_docs/PLAYWRIGHT/REPORT_FOOTER_WIDGET.md`
+- `_docs/_WIDGETS/FOOTER.md`
+- `_docs/WIDGETS.md` only if this family changes general widget wording.
+- `_docs/WIDGET_PACK_MATRIX.md` only if Footer readiness/completeness changes.
+- `_docs/_TASKS/README.md` on status changes.
+- `_docs/_CHANGELOG/` and `_docs/_CHANGELOG/README.md` when leaves or umbrella
+  move to `Done`.
+
+## Changelog Policy
+
+- This task must not move to `Done` until a changelog entry lists TASK-268 and
+  `_docs/_CHANGELOG/README.md` is updated.
+- Leaves may share one final TASK-268 changelog entry if implementation lands
+  as one family; otherwise each completed leaf must be listed.
+
+## Acceptance Criteria
+
+- Every finding in `_docs/PLAYWRIGHT/REPORT_FOOTER_WIDGET.md` is fixed,
+  explicitly excluded as TASK-256/shared scope, marked non-Footer environment
+  scope, or deferred to a named future task with a reason.
+- Footer schema, defaults, normalization, renderer, editor, tests, and docs move
+  together for every new user-facing option.
+- Public Footer output no longer exposes text-only social platform names,
+  hardcoded legal labels, missing Footer landmark label, or non-heading column
+  titles after the relevant leaves land.
+- Footer editor controls are labeled, mode-owned, and do not duplicate the same
+  Footer setting in multiple modes without a clear owner.
+- Admin preview and public frontend agree on Footer runtime behavior.
+- Widget docs, Playwright report evidence, task board, changelog, and targeted
+  validation evidence are synchronized before closure.

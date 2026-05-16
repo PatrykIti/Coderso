@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 107 tasks
+- **To Do:** 114 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1542 tasks
 
@@ -48,6 +48,13 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-272-07 | Hero Rich Copy and Social Proof Composition | Medium | Very Large | Add safe rich-copy support and a bounded social proof row for conversion Hero sections |
 | TASK-272-08 | Hero Responsive Images and LCP Priority | Medium | Large | Define Hero responsive image, lazy/eager loading, and fetch-priority policy without inventing media variants |
 | TASK-272-09 | Hero Report Docs Changelog and Closure | Medium | Medium | Refresh Hero report/docs/changelog/board and final validation evidence |
+| TASK-268 | Footer Widget Playwright Product Followups | High | Very Large | Footer-only follow-up family for `REPORT_FOOTER_WIDGET.md`, excluding TASK-256 shared-contract scope |
+| TASK-268-01 | Footer Social Icons and External Link Safety | High | Large | Replace text social output with safe icons, platform labels, accessible names, and external-link hardening |
+| TASK-268-02 | Footer Legal, Brand, and Landmark Semantics | High | Large | Add legal labels, brand/logo/tagline, Footer landmark naming, and heading semantics |
+| TASK-268-03 | Footer Minimal Variant and Visibility Controls | High | Medium | Make minimal variant truthful and add non-destructive legal/social visibility controls |
+| TASK-268-04 | Footer Editor Mode IA and Link Management | High | Large | Label Advanced controls, remove duplicate layout ownership, improve Wizard disclosure, and add deterministic link management |
+| TASK-268-05 | Footer Layout, Typography, and Interactive Style Controls | Medium | Large | Add bounded padding, responsive, hover, link typography, and target controls while deferring market-only utilities |
+| TASK-268-06 | Footer Report, Docs, Changelog, and Closure | Medium | Medium | Refresh Footer report/docs/changelog/board and final validation for the TASK-268 family |
 | TASK-267 | Feature Grid Widget Playwright Product Followups | High | Very Large | Feature Grid-only follow-up family for `REPORT_FEATURE_GRID_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-267-01 | Feature Grid Variant Preview and Responsive Cards-4 Layout | High | Medium | Add variant preview affordances, repair cards-4 responsive product behavior, and keep columns truthfulness in TASK-256 |
 | TASK-267-02 | Feature Grid Card Reorder, Remove, and Item Management | High | Medium | Add drag reorder plus recoverable remove flow while preserving keyboard move fallback |
