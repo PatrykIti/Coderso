@@ -119,19 +119,22 @@ const accordionVariantFallbackClassMap = {
     summaryPaddingClass: "px-4 py-3.5",
     contentPaddingClass: "p-4",
     radiusClass: "rounded-xl",
-    summaryTextClass: "text-base font-semibold",
+    summarySizeClass: "text-base",
+    summaryWeightClass: "font-semibold",
   },
   bordered: {
     summaryPaddingClass: "px-4 py-3",
     contentPaddingClass: "p-4",
     radiusClass: "rounded-lg",
-    summaryTextClass: "text-sm font-semibold",
+    summarySizeClass: "text-sm",
+    summaryWeightClass: "font-semibold",
   },
   compact: {
     summaryPaddingClass: "px-3 py-2",
     contentPaddingClass: "p-3",
     radiusClass: "rounded-md",
-    summaryTextClass: "text-sm font-medium",
+    summarySizeClass: "text-sm",
+    summaryWeightClass: "font-medium",
   },
 } as const;
 
@@ -148,8 +151,12 @@ function resolveOptionalAccordionToken<T extends string>(value: unknown, allowed
 }
 
 function normalizeAccordionStyle(style: AccordionData["style"] | undefined) {
+  const hasStyleObject = style !== undefined;
+
   return {
-    surfaceColor: resolveClearableStyleValue(style?.surfaceColor),
+    surfaceColor: hasStyleObject
+      ? resolveClearableStyleValue(style?.surfaceColor)
+      : (accordionDefaults.style?.surfaceColor ?? "var(--color-surface)"),
     borderColor: normalizeAccordionColor(
       style?.borderColor,
       accordionDefaults.style?.borderColor
@@ -185,6 +192,13 @@ function resolveAccordionLayoutClass(layout: AccordionLayout) {
 
 function resolveAccordionRenderClasses(style: AccordionStyle, variant: AccordionVariantId) {
   const fallback = accordionVariantFallbackClassMap[variant];
+  const summarySizeClass = style.summaryFontSize
+    ? summarySizeClassMap[style.summaryFontSize]
+    : fallback.summarySizeClass;
+  const summaryWeightClass = style.summaryFontWeight
+    ? summaryWeightClassMap[style.summaryFontWeight]
+    : fallback.summaryWeightClass;
+
   return {
     summaryPaddingClass: style.summaryPadding
       ? accordionSummaryPaddingClassMap[style.summaryPadding]
@@ -193,13 +207,7 @@ function resolveAccordionRenderClasses(style: AccordionStyle, variant: Accordion
       ? accordionPaddingClassMap[style.contentPadding]
       : fallback.contentPaddingClass,
     radiusClass: style.radius ? accordionRadiusClassMap[style.radius] : fallback.radiusClass,
-    summaryTextClass:
-      style.summaryFontSize || style.summaryFontWeight
-        ? [
-            style.summaryFontSize ? summarySizeClassMap[style.summaryFontSize] : undefined,
-            style.summaryFontWeight ? summaryWeightClassMap[style.summaryFontWeight] : undefined,
-          ].filter(Boolean).join(" ")
-        : fallback.summaryTextClass,
+    summaryTextClass: joinClasses(summarySizeClass, summaryWeightClass),
   };
 }
 
@@ -258,6 +266,12 @@ Error handling:
 - Missing new style fields must resolve through the variant fallback class map
   so legacy `soft`, `bordered`, and `compact` payloads render with the same
   classes they had before the fields existed.
+- Partial summary typography overrides must preserve the missing axis from the
+  variant fallback; changing only size must keep the variant weight, and
+  changing only weight must keep the variant size.
+- Missing `style` must preserve the existing default surface color behavior;
+  only an explicit style object with cleared `surfaceColor` may omit the inline
+  surface color.
 - `style.descriptionTextColor` must style item description copy without
   overriding the summary title color.
 - `layout.maxWidth` must be applied to the outer Accordion wrapper, with `full`
@@ -307,6 +321,10 @@ No API routes are added.
 - Existing payloads render as before unless the user configures the new fields.
 - Legacy `soft`, `bordered`, and `compact` payloads have explicit regression
   tests proving their old radius, padding, and summary typography classes.
+- Partial typography override tests prove size-only and weight-only changes keep
+  the variant fallback for the other typography axis.
+- Surface-color regression tests prove absent `style` keeps the default surface,
+  while explicit cleared `style.surfaceColor` still omits the inline surface.
 - Runtime tests assert configured `descriptionTextColor` appears on description
   copy and configured `layout.maxWidth` appears on the wrapper.
 - Accordion color controls match the repo's color-picker/text-input pattern and
