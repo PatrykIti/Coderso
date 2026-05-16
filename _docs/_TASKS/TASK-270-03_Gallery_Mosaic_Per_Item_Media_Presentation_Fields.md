@@ -26,8 +26,9 @@ accessibility and media contracts are stable.
   without poster image.
 - `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md:329-331` - BF-11,
   BF-12, and BF-13 list object-position, per-item ratio, and poster image gaps.
-- `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md:381-383` - summary repeats
-  focus point, responsive presentation, and poster follow-ups.
+- `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md:381,383` - summary repeats
+  focus point and poster follow-ups. Responsive columns at line 382 belong to
+  TASK-270-05.
 - `_docs/_WIDGETS/tmp/gallery-mosaic/MATRIX.md:8` - per-image manual span is an
   Adapt option, preferably exposed as bounded presets instead of raw grid
   classes.
@@ -44,7 +45,7 @@ accessibility and media contracts are stable.
 | `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx` | Add Visual per-item controls for focal point/object position, optional item ratio override, and poster URL/media picker after TASK-270-01 media picker is available. |
 | `tests/vitest/widgets/galleryMosaic.test.tsx` | Add schema, normalizer, renderer, poster, object-position, and per-item ratio coverage. |
 | `tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx` | Assert editor controls patch the right item and preserve existing media fields. |
-| `tests/unit/widgets/validator.test.ts` | Add schema validation coverage if this suite owns widget schema acceptance/rejection for new fields in the current branch. |
+| `tests/unit/widgets/validator.test.ts` | Add mandatory schema validation coverage for accepting valid new fields, rejecting unknown nested `items[]` fields, and rejecting invalid enum values. |
 | `_docs/_WIDGETS/GALLERY_MOSAIC.md` | Document the new optional fields and default behavior. |
 | `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md` | Mark BF-11, BF-12, and BF-13 fixed or deferred with evidence. |
 
@@ -90,7 +91,13 @@ Error handling:
 No API routes are added.
 
 - Endpoint visibility: none.
-- Auth/RBAC/CSRF/rate-limit: unchanged admin editing and public rendering.
+- Auth model: existing authenticated admin session for page/template editing and
+  unchanged public read-only runtime rendering.
+- RBAC: existing page/template widget write permission; no new role or public
+  capability.
+- CSRF: unchanged admin write route protection; this leaf adds no route.
+- Rate-limit bucket: unchanged admin write and public read buckets; no public
+  write bucket.
 - Reject-unknown validation: update `galleryMosaicSchema` with
   `additionalProperties: false` and add rejection coverage for unknown fields
   and invalid enum values.
@@ -106,8 +113,11 @@ No API routes are added.
 - `bun test tests/unit/widgets/validator.test.ts`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer
   output markers or shared rendering assertions change.
+- `git diff --check`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run scan:security:strict`
+- `bun run precommit`
 
 ## Documentation Updates Required
 

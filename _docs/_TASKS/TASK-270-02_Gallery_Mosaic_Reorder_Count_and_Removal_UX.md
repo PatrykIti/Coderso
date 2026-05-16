@@ -89,7 +89,11 @@ Error handling:
 No API routes are added.
 
 - Endpoint visibility: none.
-- Auth/RBAC/CSRF/rate-limit: unchanged admin editing.
+- Auth model: existing authenticated admin session for page/template editing.
+- RBAC: existing page/template widget write permission; no new role or public
+  capability.
+- CSRF: unchanged admin write route protection; this leaf adds no route.
+- Rate-limit bucket: unchanged admin write bucket; no public write bucket.
 - Reject-unknown validation: unchanged unless item metadata fields are added,
   which this leaf should avoid.
 - Anti-abuse: no raw HTML, script, or unbounded class data is introduced.
@@ -100,8 +104,11 @@ No API routes are added.
 - `bun run test:vitest -- tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/galleryMosaic.test.tsx` only if
   normalizer behavior changes.
+- `git diff --check`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run scan:security:strict`
+- `bun run precommit`
 
 ## Documentation Updates Required
 

@@ -36,9 +36,9 @@ not create an alternate schema parser outside the widget owner module.
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/galleryMosaic.tsx` | Add pure import/export helpers only if the widget owner needs them, using `normalizeGalleryMosaicData` and schema-owned fields as the only accepted payload boundary. |
+| `core/widgets/core/galleryMosaic.tsx` | Add pure import/export helpers only if the widget owner needs them, using `galleryMosaicSchema`, `normalizeGalleryMosaicData`, and schema-owned fields as the only accepted payload boundary. |
 | `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx` | Add copy/export/import controls in a bounded editor section; parse pasted JSON defensively; normalize valid payloads; display machine-readable import errors without leaking raw stack traces. |
-| `tests/vitest/widgets/galleryMosaic.test.tsx` | Add pure helper tests for export shape, import normalization, invalid payload rejection, and legacy payload compatibility if helpers are added. |
+| `tests/vitest/widgets/galleryMosaic.test.tsx` | Add pure helper tests for export shape, import normalization, invalid top-level and nested payload rejection, machine-readable import error codes, and legacy payload compatibility if helpers are added. |
 | `tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx` | Assert import/export controls render, valid import patches data, invalid import is non-destructive, and Wizard guidance reflects final TASK-256 media behavior. |
 | `_docs/_WIDGETS/GALLERY_MOSAIC.md` | Document import/export behavior, accepted payload scope, and Wizard guidance. |
 | `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md` | Mark BF-16 fixed or deferred and record TASK-256 ownership for Wizard video behavior. |
@@ -48,7 +48,14 @@ not create an alternate schema parser outside the widget owner module.
 ```ts
 type GalleryMosaicImportResult =
   | { ok: true; data: GalleryMosaicData }
-  | { ok: false; code: "gallery_mosaic_import_invalid_json" | "gallery_mosaic_import_invalid_payload" };
+  | {
+      ok: false;
+      code:
+        | "gallery_mosaic_import_invalid_json"
+        | "gallery_mosaic_import_invalid_payload"
+        | "gallery_mosaic_import_unknown_field";
+      path?: string;
+    };
 
 function exportGalleryMosaicConfig(data: GalleryMosaicData): string {
   return JSON.stringify(normalizeGalleryMosaicData(data), null, 2);
@@ -57,7 +64,11 @@ function exportGalleryMosaicConfig(data: GalleryMosaicData): string {
 function importGalleryMosaicConfig(source: string): GalleryMosaicImportResult {
   try {
     const parsed = JSON.parse(source) as unknown;
-    if (!isGalleryMosaicLikePayload(parsed)) {
+    const validation = validateGalleryMosaicImportPayload(parsed, galleryMosaicSchema);
+    if (!validation.ok) {
+      return validation;
+    }
+    if (!isGalleryMosaicObject(parsed)) {
       return { ok: false, code: "gallery_mosaic_import_invalid_payload" };
     }
     return { ok: true, data: normalizeGalleryMosaicData(parsed) };
@@ -71,6 +82,9 @@ Error handling:
 
 - Invalid JSON or unknown payload shape must be rejected without mutating the
   current widget data.
+- Validation rejects unknown fields at every schema level, including nested
+  `header`, `items[]`, `style`, and future TASK-270 presentation objects. Error
+  paths use machine-readable paths such as `items[0].privateToken`.
 - Import helpers must call the widget normalizer rather than duplicating field
   defaults in the editor.
 - Export output includes only schema-owned public widget data, never editor-local
@@ -84,9 +98,15 @@ Error handling:
 No API routes are added.
 
 - Endpoint visibility: none.
-- Auth/RBAC/CSRF/rate-limit: unchanged admin editing.
-- Reject-unknown validation: imports must reject unknown top-level fields and
-  normalize through the schema owner before persistence.
+- Auth model: existing authenticated admin session for page/template editing.
+- RBAC: existing page/template widget write permission; no new role or public
+  capability.
+- CSRF: unchanged admin write route protection; this leaf adds no route.
+- Rate-limit bucket: unchanged admin write bucket; import/export runs in the
+  editor only and adds no public write bucket.
+- Reject-unknown validation: imports must reject unknown top-level and nested
+  fields using the widget schema owner, then normalize through
+  `normalizeGalleryMosaicData` before persistence.
 - Anti-abuse: imported JSON cannot contain scripts, raw HTML, arbitrary classes,
   or private media tokens.
 - Secret handling: export/import payloads must not include provider keys, signed
@@ -97,8 +117,11 @@ No API routes are added.
 - `bun run test:vitest -- tests/vitest/widgets/galleryMosaic.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx`
 - `bun test tests/unit/widgets/validator.test.ts` if schema/defaults change.
+- `git diff --check`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run scan:security:strict`
+- `bun run precommit`
 
 ## Documentation Updates Required
 
@@ -112,5 +135,7 @@ No API routes are added.
 - Valid Gallery Mosaic config can be exported and re-imported without losing
   schema-owned data.
 - Invalid imports are rejected with visible, non-destructive editor errors.
+- Unknown nested fields and invalid values are rejected with machine-readable
+  error codes and paths before normalization.
 - Wizard guidance reflects the final TASK-256 media contract without owning that
   shared fix.

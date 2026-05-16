@@ -49,7 +49,7 @@ owner/docs/tests.
 - `_docs/PLAYWRIGHT/REPORT_FAQ_ACCORDION_WIDGET.md:96,116,119,125,140-144,173-180,262-266,332-336`
 - `_docs/PLAYWRIGHT/REPORT_CTA_BANNER_WIDGET.md:132-161,175-185,223-241`
 - `_docs/PLAYWRIGHT/REPORT_LOGO_CLOUD_WIDGET.md:38-116,134-153`
-- `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md:54-94,195-220,226-227,274-281`
+- `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md:54-94,195-225,239-243,274-281,342-347`
 - `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md:42-116,170-206`
 - `_docs/PLAYWRIGHT/REPORT_TEAM_WIDGET.md:42-91,210-339,365-393`
 
@@ -67,6 +67,7 @@ owner/docs/tests.
 |---|---|---|---|
 | Broken/misleading existing controls | Fix in the relevant child leaf when the drift matches a TASK-256 shared contract | Widget editor/runtime owner | None |
 | Public link/media security and ARIA | Fix in the relevant child leaf through shared safe-output/accessibility contracts | Widget renderer plus editor tests | None |
+| Current Gallery Mosaic renderer/editor bugs that make existing controls misleading, including feature-left one-item empty column, redundant row-span cleanup, resolver readability, overlay alpha loss, media type ambiguity, Wizard video scope, link safety, and current alt/figure/video-title semantics | Fix in TASK-256-06-02 only for the current contract fields already named by that leaf | `GalleryMosaicEditors.tsx`, `galleryMosaic.tsx`, `widgetSafeHref.ts` | Product additions such as Visual per-item picker, poster image, per-item ratio, object-position, lightbox, motion, responsive layout presets, and import/export stay in TASK-270 |
 | Page-shell issues found while testing a widget, such as history auth, toolbar aria, discard, or viewport controls | Do not patch inside widget leaves | `core/admin/ui/pages/PageEditor.tsx`, `core/admin/ui/pages/PageRevisionDrawer.tsx`, shared preview toolbar owners | TASK-256-08 must create a separate page-shell follow-up before closure if still reproducible |
 | Major new features such as drag-and-drop, true carousel/lightbox, marquee, rich text, per-item advanced typography, or SEO schema | Defer unless needed to make an existing control truthful | Future product task | TASK-256-08 records future scope |
 
@@ -75,7 +76,7 @@ owner/docs/tests.
 | Child | Evidence scope | Primary owner files | Required shared-contract change |
 |---|---|---|---|
 | TASK-256-06-01 | `feature-grid`, `stats-kpi` | `FeatureGridEditors.tsx`, `featureGrid.tsx`, `StatsKpiEditors.tsx`, `statsKpi.tsx` | Fix truthful columns/count/divider controls, variant-bound item counts, grid layout holes, clear controls, and KPI ARIA. |
-| TASK-256-06-02 | `cta-banner`, `logo-cloud`, `gallery-mosaic` | `CtaBannerEditors.tsx`, `ctaBanner.tsx`, `LogoCloudEditors.tsx`, `logoCloud.tsx`, `GalleryMosaicEditors.tsx`, `galleryMosaic.tsx` | Fix empty badges, clear controls, link/media security, alt/ARIA, hover/focus behavior, and media type truthfulness. |
+| TASK-256-06-02 | `cta-banner`, `logo-cloud`, `gallery-mosaic` | `CtaBannerEditors.tsx`, `ctaBanner.tsx`, `LogoCloudEditors.tsx`, `logoCloud.tsx`, `GalleryMosaicEditors.tsx`, `galleryMosaic.tsx` | Fix empty badges, clear controls, link/media security, alt/ARIA, hover/focus behavior, Gallery Mosaic feature-left one-item handling, and media type truthfulness for current fields only. |
 | TASK-256-06-03 | `hero`, `timeline`, `pricing-plans`, `faq-accordion`, `testimonials` | `HeroEditors.tsx`, `hero.tsx`, `TimelineEditors.tsx`, `timeline.tsx`, `PricingPlansEditors.tsx`, `pricingPlans.tsx`, `FaqAccordionEditors.tsx`, `faqAccordion.tsx`, `TestimonialsEditors.tsx`, `testimonials.tsx` | Fix residual contract bugs around media/alt/link safety, timeline mode/status/wizard, pricing toggle/semantics, FAQ single-open/ARIA, and testimonial media/slider scope. |
 | TASK-256-06-04 | `team` | `TeamEditors.tsx`, `team.tsx` | Fix spotlight columns truthfulness, social link safety, section/header ARIA, photo lazy loading, and Wizard/profile UX drift. |
 

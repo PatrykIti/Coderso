@@ -25,10 +25,13 @@ and truthful editor controls.
 - `_docs/PLAYWRIGHT/REPORT_LOGO_CLOUD_WIDGET.md:38-116,134-153` for missing
   link `rel`, heading/section ARIA, hoverColor truthfulness, logo height, Wizard
   image/link gaps, alt text, and image picker scope.
-- `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md:54-94,195-220,274-281` for
+- `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md:54-94,140-147,195-225,239-243,274-281,342-347` for
   media type ambiguity, overlay alpha loss, alt/caption semantics, video picker
   scope, feature-left minimum handling, link security, and hover-caption
   accessibility.
+- `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md:226,331,383` is explicitly
+  outside this shared-contract leaf: video poster image is a Gallery
+  Mosaic-specific product field owned by TASK-270-03.
 - `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md:3` is now marked
   `Zakończony`; this leaf may use the current report ranges for planning, while
   TASK-256-08 must still refresh fixed/deferred status after implementation.
@@ -42,9 +45,11 @@ and truthful editor controls.
 | Logo Cloud link `rel`, section aria, hoverColor truthfulness | Fix here | `LogoCloudEditors.tsx`, `logoCloud.tsx` | None |
 | Logo Cloud image picker, drag/drop, marquee, eyebrow/background | Future product scope unless needed to repair broken current flow | Future widget task | TASK-256-08 records deferral |
 | Gallery Mosaic overlay alpha loss and image/video ambiguity | Fix here because current controls can destroy data or mislead users | `GalleryMosaicEditors.tsx` | None |
+| Gallery Mosaic feature-left one-item empty column plus redundant row-span/resolver cleanup | Fix here because current runtime output is visibly misleading for an existing variant | `galleryMosaic.tsx`, `tests/vitest/widgets/galleryMosaic.test.tsx` | None |
 | Gallery Mosaic alt text and link security | Fix here | `galleryMosaic.tsx`, editor tests | None |
+| Gallery Mosaic Wizard video support and current media-type truthfulness | Fix here for Wizard media accept rules and the current image/video priority controls only | `GalleryMosaicEditors.tsx`, `tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx` | Visual per-item MediaPicker remains TASK-270-01 |
 | Gallery Mosaic video `title`, hover-caption keyboard/touch access, and autoplay control | Fix here when it changes current runtime semantics; otherwise create explicit accessibility follow-up | `galleryMosaic.tsx`, `GalleryMosaicEditors.tsx` | TASK-256-08 creates follow-up if schema expansion is required |
-| Gallery Mosaic lightbox, drag/drop, per-item ratio, object-position | Future product scope | Future widget task | TASK-256-08 records deferral |
+| Gallery Mosaic Visual per-item MediaPicker, lightbox, drag/drop, per-item ratio, object-position, video poster image, responsive columns, motion, and import/export | Future product scope | TASK-270 | Excluded from TASK-256 and implemented or deferred by physical TASK-270 leaves |
 
 ## Sub-Tasks
 
@@ -56,6 +61,10 @@ and truthful editor controls.
 - [ ] Preserve Gallery Mosaic overlay alpha and add opacity-aware editing.
 - [ ] Make Gallery Mosaic media type selection explicit when image and video
   fields are both present.
+- [ ] Repair Gallery Mosaic feature-left one-item runtime output and clean up
+  redundant row-span/resolver drift without adding new product fields.
+- [ ] Limit Gallery Mosaic Wizard media picker repair to current contract video
+  support; Visual per-item picker remains TASK-270-01.
 - [ ] Add separate alt/figure semantics for Gallery Mosaic images where the
   data model changes are accepted.
 
@@ -67,15 +76,15 @@ and truthful editor controls.
 | `core/widgets/core/ctaBanner.tsx` | 185-200, 333-389 | Empty badge suppression, description color, border class, focus-visible, and safe link output. |
 | `core/admin/ui/widgets/editors/LogoCloudEditors.tsx` | 284-694 | Wizard image/link scope decisions, hoverColor gating, alt/link fields if model changes, and Advanced duplicate controls. |
 | `core/widgets/core/logoCloud.tsx` | 268-401 | Link `rel`/target handling, section labels, heading semantics, logo height fallback, and hoverColor output. |
-| `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx` | 92-98, 448, 559-598, 720-832 | Overlay alpha-safe editing, image/video type clarity, video media picker scope, and duplicated Advanced controls. |
-| `core/widgets/core/galleryMosaic.tsx` | 159-275, 314-507 | Explicit resolver defaults, feature-left one-item handling, link safety, alt/figure semantics, and redundant row-span cleanup. |
+| `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx` | 92-98, 448, 559-598, 720-832 | Overlay alpha-safe editing, current image/video type clarity, Wizard video media picker scope, and duplicated Advanced controls. Visual per-item media picker is TASK-270-01. |
+| `core/widgets/core/galleryMosaic.tsx` | 159-275, 314-507 | Explicit resolver defaults, feature-left one-item handling, link safety, alt/figure semantics, video title/control behavior, and redundant row-span cleanup. Poster image remains TASK-270-03. |
 | `core/widgets/core/widgetSafeHref.ts` | 1-25 | Extend the shared href owner with a tested helper such as `resolveWidgetLinkAttrs(href, options)` that returns normalized `href`, `target`, and safe `rel` attributes. Do not duplicate external-link detection in individual widgets. |
 | `tests/vitest/ui/cta-banner-editor-wave.test.tsx` | existing suite | Add clear/action/focus/url regressions. |
 | `tests/vitest/widgets/ctaBanner.test.tsx` | existing suite | Add badge/color/focus/link regressions. |
 | `tests/vitest/ui/logo-cloud-editor-wave.test.tsx` | existing suite | Add hoverColor/alt/link/Wizard regressions. |
 | `tests/vitest/widgets/logoCloud.test.tsx` | existing suite | Add link/ARIA/height regressions. |
-| `tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx` | existing suite | Add overlay/media-type/Advanced regressions. |
-| `tests/vitest/widgets/galleryMosaic.test.tsx` | existing suite | Add alt/link/feature-left/figure regressions. |
+| `tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx` | existing suite | Add overlay/current media-type/Wizard-video/Advanced regressions. |
+| `tests/vitest/widgets/galleryMosaic.test.tsx` | existing suite | Add alt/link/feature-left/figure/video-control regressions, excluding poster-image product fields. |
 
 ## Implementation Pseudocode
 

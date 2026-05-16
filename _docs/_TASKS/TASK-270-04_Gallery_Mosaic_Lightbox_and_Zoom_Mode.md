@@ -12,12 +12,16 @@
 
 ## Overview
 
-Add an optional Gallery Mosaic lightbox/zoom presentation mode using existing
-safe runtime and accessibility patterns.
+Add an optional Gallery Mosaic lightbox/zoom presentation mode using the
+repo's existing public-widget runtime script pattern.
 
 This leaf is product scope. It must not replace the TASK-256 safe link,
 caption, alt, or video-control repairs. It may use those final contracts as the
-baseline for lightbox labels, keyboard behavior, and media output.
+baseline for lightbox labels, keyboard behavior, and media output. The current
+checkout has admin-only Radix dialogs and public widget runtime scripts in
+`tabs.tsx` and `toggleBlock.tsx`, but no shared public lightbox/modal helper.
+This leaf therefore stays Gallery Mosaic-local and must not introduce a generic
+cross-widget modal framework.
 
 ## Source Findings
 
@@ -26,7 +30,10 @@ baseline for lightbox labels, keyboard behavior, and media output.
 - `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md:380` - summary repeats
   lightbox/zoom as a medium-priority product gap.
 - `_docs/_WIDGETS/tmp/gallery-mosaic/MATRIX.md:6` - lightbox/modal is Adapt
-  only if an existing shared modal path can be reused.
+  only if an existing safe runtime path can be reused. In the current checkout,
+  the reusable pattern is the idempotent public widget script used by
+  `core/widgets/core/tabs.tsx` and `core/widgets/core/toggleBlock.tsx`; admin
+  Radix dialogs are not public runtime owners.
 
 ## Sub-Tasks
 
@@ -36,10 +43,11 @@ baseline for lightbox labels, keyboard behavior, and media output.
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/galleryMosaic.tsx` | Add a bounded `interaction` or `lightbox` config if no shared widget interaction owner already exists; render safe trigger attributes and deterministic data markers without inline unsafe scripts. |
-| `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx` | Add Visual controls for lightbox disabled/enabled mode and any bounded zoom behavior; show when link behavior takes precedence if both href and lightbox are configured. |
-| `tests/vitest/widgets/galleryMosaic.test.tsx` | Assert lightbox-disabled default, lightbox-enabled markers, safe labels, and href precedence behavior. |
+| `core/widgets/core/galleryMosaic.tsx` | Add a bounded `interaction` config, a widget-local idempotent runtime script patterned after `tabsRuntimeClientScript`/`toggleRuntimeClientScript`, safe trigger attributes, a hidden dialog region, focus return, Escape close, backdrop close, and deterministic data markers without unsafe inline handlers. |
+| `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx` | Add Visual controls for lightbox disabled/enabled mode and bounded zoom behavior; show when link behavior takes precedence if both href and lightbox are configured. |
+| `tests/vitest/widgets/galleryMosaic.test.tsx` | Assert lightbox-disabled default, schema normalization, lightbox-enabled trigger/dialog markers, safe labels, href precedence behavior, and embedded runtime script output. |
 | `tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx` | Assert editor controls patch the lightbox config and explain interaction precedence. |
+| `tests/unit/widgets/validator.test.ts` | Add mandatory strict schema coverage for the interaction config and invalid enum rejection. |
 | `tests/vitest/widgets/renderer.test.tsx` | Update only if shared renderer snapshot/markers need awareness of the new interaction output. |
 | `_docs/_WIDGETS/GALLERY_MOSAIC.md` | Document lightbox behavior and accessibility expectations. |
 | `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md` | Mark BF-10 fixed or deferred with implementation evidence. |
@@ -52,6 +60,7 @@ type GalleryMosaicInteractionMode = "none" | "lightbox";
 type GalleryMosaicData = {
   interaction?: {
     mode?: GalleryMosaicInteractionMode;
+    zoom?: "fit" | "fill";
   };
 };
 
@@ -64,6 +73,45 @@ function getGalleryItemInteraction(item: GalleryMosaicItem, mode: GalleryMosaicI
   if (mode === "lightbox") return { type: "lightbox" as const };
   return { type: "none" as const };
 }
+
+function renderGalleryLightboxTrigger(item: GalleryMosaicItem, index: number) {
+  const id = `gallery-lightbox-${index + 1}`;
+  return {
+    "data-gallery-lightbox-trigger": id,
+    "aria-haspopup": "dialog",
+    "aria-controls": id,
+    "aria-label": `Open ${item.caption?.trim() || `gallery item ${index + 1}`}`,
+  };
+}
+
+const galleryMosaicLightboxRuntimeScript = `
+(() => {
+  if (typeof window === "undefined") return;
+  if (window.__codersoGalleryMosaicLightboxBound === true) return;
+  window.__codersoGalleryMosaicLightboxBound = true;
+  let lastTrigger = null;
+  const close = (dialog) => { dialog.hidden = true; lastTrigger?.focus?.(); };
+  const open = (trigger, dialog) => { lastTrigger = trigger; dialog.hidden = false; dialog.querySelector("[data-gallery-lightbox-close]")?.focus?.(); };
+  document.addEventListener("click", (event) => {
+    const target = event.target instanceof Element ? event.target : null;
+    const trigger = target?.closest("[data-gallery-lightbox-trigger]");
+    const closeButton = target?.closest("[data-gallery-lightbox-close]");
+    const backdrop = target?.closest("[data-gallery-lightbox-backdrop]");
+    if (trigger instanceof HTMLElement) {
+      const dialog = document.getElementById(trigger.getAttribute("aria-controls") || "");
+      if (dialog instanceof HTMLElement) open(trigger, dialog);
+    } else if (closeButton instanceof HTMLElement || backdrop instanceof HTMLElement) {
+      const dialog = target?.closest("[role='dialog']");
+      if (dialog instanceof HTMLElement) close(dialog);
+    }
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    const dialog = document.querySelector("[data-gallery-lightbox-dialog]:not([hidden])");
+    if (dialog instanceof HTMLElement) close(dialog);
+  });
+})();
+`;
 ```
 
 Error handling:
@@ -73,16 +121,25 @@ Error handling:
   require an explicit user choice.
 - Do not introduce a one-off global script if a shared runtime interaction
   helper exists by implementation time.
-- Keyboard and focus behavior must be tested. If accessible lightbox behavior
-  cannot be implemented without a shared runtime contract, split that shared
-  helper out before landing this leaf.
+- Keyboard and focus behavior must be tested: trigger opens the dialog, close
+  returns focus to the trigger, Escape closes the dialog, and link items keep
+  navigation precedence.
+- If a shared public runtime lightbox owner exists by implementation time, reuse
+  it; otherwise keep the script local to `gallery-mosaic` and idempotently bound
+  like the existing tabs/toggle widget scripts.
 
 ## Security Contract
 
 No API routes are added.
 
 - Endpoint visibility: none.
-- Auth/RBAC/CSRF/rate-limit: unchanged.
+- Auth model: existing authenticated admin session for page/template editing and
+  unchanged public read-only runtime rendering.
+- RBAC: existing page/template widget write permission; no new role or public
+  capability.
+- CSRF: unchanged admin write route protection; this leaf adds no route.
+- Rate-limit bucket: unchanged admin write and public read buckets; no public
+  write bucket.
 - Reject-unknown validation: new interaction config must be schema-backed and
   reject unknown values.
 - Anti-abuse: no raw HTML, unsafe inline event handlers, arbitrary selectors, or
@@ -97,9 +154,12 @@ No API routes are added.
 - `bun run test:vitest -- tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if shared
   renderer assertions change.
-- `bun test tests/unit/widgets/validator.test.ts` if schema/defaults change.
+- `bun test tests/unit/widgets/validator.test.ts`
+- `git diff --check`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run scan:security:strict`
+- `bun run precommit`
 
 ## Documentation Updates Required
 
@@ -112,5 +172,7 @@ No API routes are added.
 
 - Lightbox is opt-in and off by default for existing payloads.
 - Lightbox behavior is accessible by keyboard and does not break link items.
+- Runtime tests prove trigger/dialog markers, Escape close, focus return
+  expectations, and link precedence.
 - Runtime output remains deterministic, safe, and testable without committing
   screenshots.

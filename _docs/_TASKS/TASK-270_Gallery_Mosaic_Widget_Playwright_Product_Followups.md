@@ -54,7 +54,7 @@ cross-widget media/link repair leaf.
 | CODE-06, UX-06, BF-08 image/video ambiguity | `REPORT_GALLERY_MOSAIC_WIDGET.md:81-84,130,307-308,326,368` | TASK-256-06-02 | Shared truthful media-control contract for current fields. |
 | CODE-07, BF-01, A1, A5, A6 alt/figure/video title semantics | `REPORT_GALLERY_MOSAIC_WIDGET.md:86-89,233,239,319,342,346-347,377` | TASK-256-04, TASK-256-06-02 | Shared runtime accessibility and current data-model repair. |
 | CODE-08, UX-07, BF-03 Wizard video media picker scope | `REPORT_GALLERY_MOSAIC_WIDGET.md:91-94,310-312,321,370` | TASK-256-06-02 | Existing TASK-256 leaf already names Wizard video picker scope. |
-| BUG-05, BF-05, A2 safe external link output | `REPORT_GALLERY_MOSAIC_WIDGET.md:212,240,282-286,323,343,361` | TASK-256-06-02 | Shared safe href/noopener output. |
+| BUG-05, BF-05, A2 safe external link output | `REPORT_GALLERY_MOSAIC_WIDGET.md:147,212,240,282-286,323,343,361` | TASK-256-06-02 | Shared safe href/noopener output. |
 | UX-01 Advanced duplicates Visual controls | `REPORT_GALLERY_MOSAIC_WIDGET.md:153,292-293` | TASK-256-01 | Shared editor-mode ownership and Advanced scope. |
 | A3 hover caption keyboard/touch access, A4 autoplay controls | `REPORT_GALLERY_MOSAIC_WIDGET.md:205,225,241-242,344-345` | TASK-256-04, TASK-256-06-02 | Shared accessibility baseline for current runtime semantics. TASK-270 may add product presentation fields only after TASK-256 lands. |
 | BUG-01 and BUG-02 401 Not authenticated | `REPORT_GALLERY_MOSAIC_WIDGET.md:261-270,357-358` | Out of widget scope | Resolved system/session-limit issue, not a Gallery Mosaic implementation task. |
