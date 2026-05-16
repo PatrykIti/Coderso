@@ -24,6 +24,15 @@ Advanced controls, custom pixel UX, and divider accessibility.
   inert Advanced variant select, CSS variable destruction, duplicate none/zero
   choices, renderer issues, and test requirements.
 
+## Scope Decision Matrix
+
+| Finding | TASK-256 action | Owner | Follow-up policy |
+|---|---|---|---|
+| Spacer duplicate `none`/zero/custom-pixel and fixed/responsive Advanced drift | Fix here through TASK-256-02 token helpers and variant-aware editor controls | `SpacerEditors.tsx`, `spacer.tsx` | None |
+| Divider inert Advanced variant select, duplicate `none`/zero/custom-pixel, CSS variable color loss | Fix here through TASK-256-02 token helpers and editor truthfulness | `DividerEditors.tsx`, `divider.tsx` | None |
+| Divider `<div>` vs semantic separator and missing separator/hidden ARIA | Fix here plus TASK-256-04 ARIA assertions | `divider.tsx` | None |
+| Divider label color, nowrap, inline preview, custom-width validation, hardcoded container width, and label typography controls | Fix here only where an existing visible control is broken; otherwise classify as future editor/style scope | `DividerEditors.tsx`, `divider.tsx` | TASK-256-08 records deferrals |
+
 ## Sub-Tasks
 
 - [ ] Normalize spacer `none`/`0` and custom-pixel UI through TASK-256-02.
@@ -33,6 +42,9 @@ Advanced controls, custom pixel UX, and divider accessibility.
   represent them.
 - [ ] Add divider separator semantics according to decorative vs labelled
   variants.
+- [ ] Classify divider label-color, nowrap, inline-preview, custom-width
+  validation, container-width, and typography rows as fixed or future scope
+  during report closure.
 
 ## Files to Change
 

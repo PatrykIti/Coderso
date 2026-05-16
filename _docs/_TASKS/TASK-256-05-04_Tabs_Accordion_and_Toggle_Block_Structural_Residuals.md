@@ -31,6 +31,16 @@ contract alone.
   covers helper-text clear drift, missing clear controls, editor ownership,
   placeholder leakage, duplicate IDs, and remaining structural cleanup.
 
+## Scope Decision Matrix
+
+| Finding | TASK-256 action | Owner | Follow-up policy |
+|---|---|---|---|
+| Tabs missing clear controls, technical slot labels, public placeholders, ID collisions, runtime `hidden` conflict, and ARIA gaps | Fix here plus TASK-256-02/03/04 shared helpers | `TabsEditors.tsx`, `tabs.tsx` | None |
+| Tabs per-trigger icons, vertical alignment semantics, Wizard layout shortcut, per-tab description placement, animations, visual variant previews, label polish | Fix here only if a current visible control is misleading; otherwise future UX/product scope | `TabsEditors.tsx`, `tabs.tsx` | TASK-256-08 records deferrals |
+| Accordion slot labels, default-open/collapsible behavior, placeholder leakage, clear controls, chevron, and ARIA gaps | Fix here plus TASK-256-02/03/04 shared helpers | `AccordionEditors.tsx`, `accordion.tsx` | None |
+| Toggle Block helper clear, missing clear controls, pane labels, placeholders, duplicate IDs, and ARIA/runtime root scope | Fix here plus TASK-256-02/03/04 shared helpers | `ToggleBlockEditors.tsx`, `toggleBlock.tsx` | None |
+| Toggle Block accent-contrast, weak switch/cards visual distinction, placeholder CTA, Wizard naming, color-token picker, reset-to-defaults, localized aria label | Fix here only where current controls are broken; otherwise future UX/product scope | `ToggleBlockEditors.tsx`, `toggleBlock.tsx` | TASK-256-08 records deferrals |
+
 ## Sub-Tasks
 
 - [ ] Replace technical slot IDs in tabs and accordion editors with
@@ -43,6 +53,9 @@ contract alone.
   and runtime.
 - [ ] Apply TASK-256-02 clear/normalizer repair to toggle-block helper text,
   `borderColor`, and `accentColor`.
+- [ ] Classify Tabs icon/alignment/layout/description/animation rows and Toggle
+  Block accent-contrast/visual-distinction/reset/localization rows as fixed or
+  deferred during TASK-256-08 closure.
 
 ## Files to Change
 

@@ -264,3 +264,7 @@ URL testowy: `http://localhost:3000/test-toggle-block-0516`
 | Nawigacja klawiaturą działa | ✅ Tak | ✅ ArrowLeft/Right/Home/End działają |
 | Live preview aktualizuje się | ✅ Tak | ✅ Wszystkie kontrolki aktualizują preview |
 | Switch vs Cards — minimalna różnica | ✅ Tak | ⚠️ Tylko radius i padding triggera |
+
+---
+
+*Raport zakończony. Sekcje statyczne i weryfikacja Playwright zostały uzupełnione.*
