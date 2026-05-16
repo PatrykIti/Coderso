@@ -30,11 +30,12 @@ be split by TASK-256-08 into a page-shell follow-up if still reproducible.
 - `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md:154-200,206-236,286-294,320-347`
   for plan count/variant drift, missing clear, static toggle, pricing
   semantics, and validation priorities.
-- `_docs/PLAYWRIGHT/REPORT_FAQ_ACCORDION_WIDGET.md:96,116,125,140-144,173-180`
+- `_docs/PLAYWRIGHT/REPORT_FAQ_ACCORDION_WIDGET.md:96,116,119,125,140-144,173-180,262-266,332-336`
   for single-open runtime, spacing/default guards, clear controls, expand
-  indicator, and ARIA.
-- `_docs/PLAYWRIGHT/REPORT_TESTIMONIALS_WIDGET.md:72-126,136-160` for slider
-  scope, avatar/media lazy/alt behavior, clear gaps, and ARIA.
+  indicator, spacing `none` double-border, and ARIA.
+- `_docs/PLAYWRIGHT/REPORT_TESTIMONIALS_WIDGET.md:136-180,291-304` for
+  slider-static scroll-snap, variant/count sync, heading hierarchy,
+  section/article ARIA, clear gaps, Wizard field gaps, and avatar/media scope.
 
 ## Scope Decision Matrix
 
@@ -46,7 +47,11 @@ be split by TASK-256-08 into a page-shell follow-up if still reproducible.
 | Timeline mobile date/lineStyle/connector issues | Fix here if current renderer exposes the controls; otherwise classify in report | `timeline.tsx` | TASK-256-08 records deferral if product expansion |
 | Pricing static toggle/plan-count drift | Fix here | `PricingPlansEditors.tsx`, `pricingPlans.tsx` | None |
 | FAQ single-open, chevron, ARIA, clear controls | Fix here plus TASK-256-04 | `FaqAccordionEditors.tsx`, `faqAccordion.tsx` | None |
+| FAQ `spacing="none"` double-border renderer defect | Fix here with renderer spacing/border regression | `faqAccordion.tsx` | None |
 | FAQ animation, SEO JSON-LD, rich text answers, max-width/layout typography, and remove confirmation | Future product scope unless needed to repair current misleading controls | Future FAQ task | TASK-256-08 records deferral |
+| Testimonials slider-static lacks scroll-snap behavior | Fix here or rename/static-proof the variant so the control is truthful | `testimonials.tsx` | None |
+| Testimonials clear gaps for text/accent colors | Fix through TASK-256-02 helpers | `TestimonialsEditors.tsx` | None |
+| Testimonials Wizard rating/role/avatar/source gaps, avatar media picker, remove confirmation, and rating-0 semantics | Future product/editor UX scope unless a current visible control is misleading | Future testimonials task | TASK-256-08 records deferral |
 | Testimonials true carousel, drag/drop, rich media picker | Future product scope unless current `slider-static` label is misleading | Future task | TASK-256-08 records deferral |
 
 ## Sub-Tasks
@@ -59,9 +64,13 @@ be split by TASK-256-08 into a page-shell follow-up if still reproducible.
 - [ ] Fix pricing plan-count/variant desync, `highlightRing` clear, billing
   toggle behavior, and accessible pricing semantics.
 - [ ] Fix FAQ single-open behavior, expand indicator, clear controls, and ARIA.
+- [ ] Fix FAQ `spacing="none"` double-border output.
 - [ ] Classify testimonials `slider-static`: rename/static-proof it or make it
   interactive only if that is required by the existing contract.
 - [ ] Add testimonial avatar/image lazy and alt assertions.
+- [ ] Add testimonials clear-control ownership for `textColor` and
+  `accentColor`; defer Wizard/media-picker/remove-confirm expansions through
+  TASK-256-08 if they remain product scope.
 
 ## Files to Change
 
@@ -74,9 +83,9 @@ be split by TASK-256-08 into a page-shell follow-up if still reproducible.
 | `core/admin/ui/widgets/editors/PricingPlansEditors.tsx` | 596-615, 965-971 | Plan count/variant sync, missing clear, billing controls, and validation feedback. |
 | `core/widgets/core/pricingPlans.tsx` | 232-239, 390-405, 664-727 | Explicit token guards, interactive or static billing semantics, table/plan ARIA. |
 | `core/admin/ui/widgets/editors/FaqAccordionEditors.tsx` | behavior/colors sections | Clear controls, default-open labels, single-open editor truthfulness. |
-| `core/widgets/core/faqAccordion.tsx` | 142-145, 316-365 | Explicit spacing resolver, single-open runtime script, chevron, summary/content ARIA. |
-| `core/admin/ui/widgets/editors/TestimonialsEditors.tsx` | media/style sections | Slider-static scope, avatar clear/lazy/alt controls, and accessibility labels. |
-| `core/widgets/core/testimonials.tsx` | 38-42, 155-158 | Lazy images, alt semantics, and static-vs-interactive output. |
+| `core/widgets/core/faqAccordion.tsx` | 142-145, 316-365, spacing/border render | Explicit spacing resolver, single-open runtime script, chevron, summary/content ARIA, and no doubled borders for `spacing="none"`. |
+| `core/admin/ui/widgets/editors/TestimonialsEditors.tsx` | 336-350, 659-674, media/style sections | Variant/count sync, text/accent clear controls, slider-static scope, avatar clear/lazy/alt controls, and accessibility labels. |
+| `core/widgets/core/testimonials.tsx` | 38-42, 155-158, 359, 382 | Lazy images, alt semantics, slider-static scroll-snap or truthful naming, heading hierarchy, and static-vs-interactive output. |
 
 ## Implementation Pseudocode
 

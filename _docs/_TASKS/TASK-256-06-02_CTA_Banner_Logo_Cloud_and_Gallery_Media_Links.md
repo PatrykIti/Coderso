@@ -28,6 +28,9 @@ and truthful editor controls.
 - `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md:54-124,177-213` for media
   type ambiguity, overlay alpha loss, alt/caption semantics, video picker scope,
   feature-left minimum handling, link security, and hover-caption accessibility.
+- `REPORT_GALLERY_MOSAIC_WIDGET.md` is still marked `W toku`; this leaf may use
+  the current report ranges for planning, but TASK-256-08 must refresh final
+  admin/frontend evidence before closure.
 
 ## Scope Decision Matrix
 

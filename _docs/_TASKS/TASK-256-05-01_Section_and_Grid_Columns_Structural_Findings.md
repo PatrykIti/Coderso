@@ -28,8 +28,9 @@ This leaf owns two contract classes:
 - `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:252,270,280-298` for public
   `Empty region.`, anchor validation, duplicate Advanced controls, bleed, and
   heading-level issues.
-- `_docs/PLAYWRIGHT/REPORT_GRID_COLUMNS_WIDGET.md:63,90,104,150-160` for
-  manual slot/config sync and cardize Advanced drift.
+- `_docs/PLAYWRIGHT/REPORT_GRID_COLUMNS_WIDGET.md:63,90,104,121-133,150-160`
+  for manual slot/config sync, asymmetric span truthfulness, masonry cardize
+  truthfulness, and cardize Advanced drift.
 - `_docs/PLAYWRIGHT/REPORT_GRID_COLUMNS_WIDGET.md:187-191,212-217` for public
   `Column 1/2` label leakage and empty placeholder risk.
 
@@ -40,6 +41,8 @@ This leaf owns two contract classes:
 | Section `Empty region.` in public output | Fix here through TASK-256-03 render context | `section.tsx` | None |
 | Section anchor accepts invalid IDs | Fix here with schema/editor validation and tests | `SectionEditors.tsx`, `section.tsx` | None |
 | Section heading level control | Fix if existing report confirms hardcoded invalid hierarchy; otherwise defer with report note | `section.tsx` | TASK-256-08 creates future task if it becomes product scope |
+| Grid `asymmetric` variant does not update existing explicit spans | Fix here through variant-aware span reconciliation or editor warning | `GridColumnsEditors.tsx`, `gridColumns.tsx` | None |
+| Grid `masonry-lite` forces cardized render while switch stays off | Fix here by synchronizing switch state, disabling the switch with explanation, or making renderer honor the visible switch | `GridColumnsEditors.tsx`, `gridColumns.tsx` | None |
 | Grid `Column 1/2` public labels | Treat as editor metadata and hide publicly unless a real caption field is introduced | `gridColumns.tsx` | Caption feature is future scope |
 | Grid slot/config count drift | Fix here | `GridColumnsEditors.tsx`, `VisualPanel.tsx` slot metadata | None |
 
@@ -53,6 +56,9 @@ This leaf owns two contract classes:
   rejecting valid CSS variables.
 - [ ] Reconcile `grid-columns` config rows with slot targets or add an explicit
   sync action that does not silently delete legacy config.
+- [ ] Make `asymmetric` and `masonry-lite` variants truthful for existing saved
+  columns by either updating spans/switch state atomically or showing an
+  explicit inactive-control warning.
 - [ ] Hide public grid column labels that are editor metadata.
 - [ ] Keep cardize-only Advanced controls hidden or disabled when cardized
   styling is inactive.
@@ -62,9 +68,9 @@ This leaf owns two contract classes:
 | File | Lines | Required change |
 |---|---:|---|
 | `core/widgets/core/section.tsx` | 180-207, 380-413 | Normalize style defaults explicitly, label headings safely, and render `Empty region.` only for editor/admin preview. |
-| `core/admin/ui/widgets/editors/SectionEditors.tsx` | 59-99, 159-215 | Validate anchor IDs, add missing clear controls, and avoid duplicated Advanced controls that mirror Visual without extra ownership. |
+| `core/admin/ui/widgets/editors/SectionEditors.tsx` | 485-498, 651-667, 826-850 | Validate anchor IDs, add missing gradient clear controls, and avoid duplicated Advanced controls that mirror Visual without extra ownership. |
 | `core/widgets/core/gridColumns.tsx` | 452-503 | Hide public `Empty column.` and `Column N` editor labels unless a real caption is configured. |
-| `core/admin/ui/widgets/editors/GridColumnsEditors.tsx` | column config sections | Reconcile repeated column configs with slot targets and gate cardized-only controls. |
+| `core/admin/ui/widgets/editors/GridColumnsEditors.tsx` | variant, span, and cardize controls | Reconcile repeated column configs with slot targets, make `asymmetric` span changes truthful, and gate cardized-only controls for `masonry-lite`. |
 | `tests/vitest/ui/section-editor-wave.test.tsx` | existing suite | Add anchor, clear, and duplicated-control assertions. |
 | `tests/vitest/widgets/section.test.tsx` | existing suite | Add public vs editor placeholder assertions. |
 | `tests/vitest/ui/grid-columns-editor-wave.test.tsx` | existing suite | Add slot/config sync and cardize-control assertions. |

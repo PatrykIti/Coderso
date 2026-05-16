@@ -383,4 +383,4 @@ className={joinClasses(
 
 ---
 
-*Raport w trakcie. Sekcje 4-6 zostaną uzupełnione po testach przeglądarki.*
+*Raport zakończony. Sekcje 4-6 zostały uzupełnione po testach przeglądarki.*

@@ -28,10 +28,11 @@ for the active variant/source.
   pagination/title/view-all scope, columns/gap controls visible for variants
   where they do not apply, content-type dropdown drift, and missing `textColor`
   clear behavior.
-- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:74-84,327-333,380-406`
+- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:74-84,142-151,207-214,327-333,380-406,412-414`
   reports inert `collapseOnScroll`, unimplemented `minimal` mobile mode, mobile
   menu state/CTA duplication, `logo.href` not rendered, hash href validation
-  drift, and sticky behavior blocked by section overflow.
+  drift, external-link target/rel drift, hover-only dropdown accessibility,
+  mobile focus-trap gaps, and sticky behavior blocked by section overflow.
 
 ## Scope Decision Matrix
 
@@ -43,12 +44,17 @@ for the active variant/source.
 | Content-list section title | Future product scope unless an existing editor control is added before implementation | Future content-list task | TASK-256-08 creates follow-up |
 | Content-list duplicate/technical content-type dropdown options | Fix here if owned by widget editor option loading; otherwise create picker cleanup follow-up with owner | `ContentListEditors.tsx`, content-type option owner | TASK-256-08 creates follow-up if owner is outside widget |
 | Content-list empty-state copy and disabled listing toggles | Fix here because current controls/copy can mislead editors | `ContentListEditors.tsx`, `contentList.tsx` | None |
+| Content-list duplicated source mode selector and technical labels | Fix here if label/source-mode copy is widget-owned; otherwise document shared selector owner | `ContentListEditors.tsx` | TASK-256-08 creates follow-up if shared resource picker owns it |
+| Content-list image height, tag badges, taxonomy autocomplete, author picker, variant/card previews, color picker, CTA fallback, and loading-state polish | Future product/editor UX scope unless a current visible control is misleading | Future content-list task or shared picker task | TASK-256-08 records deferrals |
+| Content-list ignored `statusScope` and stale disabled fields in listing mode | Fix here with disabled-state copy and stale-value hiding/preservation | `ContentListEditors.tsx`, `contentList.tsx` | None |
 | Content-list canvas preview communication | Fix here only if report shows stale preview for a current control | Page-builder preview owner plus content-list editor | Otherwise defer via TASK-256-08 |
 | Navigation `logo.href` not rendered | Fix here with safe href normalization | `navigation.tsx`, `NavigationEditors.tsx` | None |
 | Navigation hash validation differs from runtime safe href support | Fix here and menu validation tests | `NavigationEditors.tsx`, menu validation owner | None |
+| Navigation external links lack target/rel ownership | Fix here through the existing widget safe-href/external-link owner | `navigation.tsx`, `NavigationEditors.tsx`, `widgetSafeHref.test.ts` | None |
 | Navigation `collapseOnScroll` is an inert runtime flag | Fix here or hide/disable the control until runtime exists | `navigationRuntimeClientScript`, `NavigationEditors.tsx`, `navigation.tsx` | None |
 | Navigation `minimal` mobile mode renders like drawer | Fix here or relabel/remove the mode | `navigation.tsx`, `NavigationEditors.tsx` | None |
 | Navigation mobile menu open state and duplicate mobile CTA | Fix here with scoped runtime state/ARIA and non-duplicated CTA output | `navigationRuntimeClientScript`, `navigation.tsx` | None |
+| Navigation hover-only dropdowns, missing `aria-expanded`, touch failure, keyboard-inaccessible submenu, and mobile focus trap | Fix or explicitly defer as navigation accessibility follow-up before closure; do not leave unclassified | `navigation.tsx`, `navigationRuntimeClientScript`, `NavigationEditors.tsx` | TASK-256-08 creates follow-up only if implementation requires broader menu behavior work |
 | Navigation sticky blocked by section overflow | Fix or document with exact wrapper owner | `core/widgets/core/section.tsx:327-331`, `core/widgets/core/navigation.tsx:487` | TASK-256-08 must create follow-up if not fixed |
 | Navigation broader menu IA/product requests such as icon fields, rich descriptions, drag/drop, and larger link limits | Future product scope unless needed for broken current behavior | Navigation future task | TASK-256-08 records deferral |
 
@@ -60,12 +66,21 @@ for the active variant/source.
 - [ ] Fix or explicitly defer content-list content-type dropdown cleanup,
   empty-state copy, disabled listing toggles, pagination, section title, and
   view-all findings according to the scope matrix.
+- [ ] Classify the remaining content-list report IDs during implementation:
+  image height, tag badges, duplicated source mode, taxonomy autocomplete,
+  author picker, technical labels, variant previews, color picker, hidden CTA,
+  loading state, ignored status scope, and stale disabled fields.
 - [ ] Align navigation editor hash validation with runtime safe-href behavior.
 - [ ] Render `logo.href` safely when configured.
+- [ ] Add target/rel semantics for external navigation links through the shared
+  safe-link contract.
 - [ ] Implement or hide `collapseOnScroll` until it has runtime behavior.
 - [ ] Implement or relabel/remove `minimal` mobile mode so it no longer behaves
   identically to drawer.
 - [ ] Add mobile menu open-state text/icon/ARIA and remove duplicated mobile CTA.
+- [ ] Assign or defer hover/touch/keyboard dropdown accessibility and mobile
+  focus-trap findings with explicit follow-up if broader menu behavior is out
+  of this leaf.
 - [ ] Decide sticky navigation ownership with the section/layout wrapper and
   either fix it or document the constraint.
 
@@ -74,7 +89,7 @@ for the active variant/source.
 | Widget | Files and line refs | Required change |
 |---|---|---|
 | `content-list` | `core/widgets/core/contentList.tsx:145-156,256-267`; `core/admin/ui/widgets/editors/ContentListEditors.tsx` | Hide/disable columns and gap where variants ignore them; add `textColor` clear; keep resolved content data unchanged. |
-| `navigation` | `core/widgets/core/navigation.tsx:25-32,391-405`; runtime script owner `navigationRuntimeClientScript`; mobile render around `navigation.tsx:440-516`; `core/admin/ui/widgets/editors/NavigationEditors.tsx` | Render normalized `logo.href`; align editor URL validation with `normalizeWidgetSafeHref`/hash support; implement or hide `collapseOnScroll`; make `minimal` mobile mode truthful; add mobile menu open-state/ARIA and avoid duplicate CTA. |
+| `navigation` | `core/widgets/core/navigation.tsx:25-32,391-405`; runtime script owner `navigationRuntimeClientScript`; dropdown/mobile render around `navigation.tsx:440-516`; `core/admin/ui/widgets/editors/NavigationEditors.tsx` | Render normalized `logo.href`; align editor URL validation with `normalizeWidgetSafeHref`/hash support; add safe external-link target/rel; implement or hide `collapseOnScroll`; make `minimal` mobile mode truthful; add mobile menu open-state/ARIA, dropdown keyboard/touch ownership, focus-trap decision, and avoid duplicate CTA. |
 | `section/layout wrapper` | `core/widgets/core/section.tsx:327-331`; `core/widgets/core/navigation.tsx:487` | Fix or document `overflow-hidden` conflict when sticky navigation is nested inside a section. |
 | `menu editor validation` | `tests/vitest/ui/menu-editor-validation.test.ts` | Ensure `#` menu links are valid where runtime permits hash links. |
 
@@ -153,6 +168,8 @@ No API routes are added.
 - `bun test tests/unit/widgets/contentList.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/navigation-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/navigation.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/widgetSafeHref.test.ts` when
+  navigation external-link semantics change.
 - `bun run test:vitest -- tests/vitest/widgets/section.test.tsx` if sticky
   wrapper behavior changes.
 - `bun run test:vitest -- tests/vitest/ui/menu-editor-validation.test.ts`

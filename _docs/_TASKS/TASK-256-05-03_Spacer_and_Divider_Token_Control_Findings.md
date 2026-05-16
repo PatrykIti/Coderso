@@ -40,7 +40,7 @@ Advanced controls, custom pixel UX, and divider accessibility.
 |---|---:|---|
 | `core/admin/ui/widgets/editors/SpacerEditors.tsx` | 46-52, 157-205 | Single visible zero/off choice, custom token state, and variant-aware Advanced controls. |
 | `core/widgets/core/spacer.tsx` | renderer and normalizer | Preserve explicit `none` semantics and deterministic height output. |
-| `core/admin/ui/widgets/editors/DividerEditors.tsx` | 61-69, 118-149, 179-217 | Remove inert controls, preserve CSS variable values, and expose clear/custom token state truthfully. |
+| `core/admin/ui/widgets/editors/DividerEditors.tsx` | 61-69, 179-217, 433-445 | Remove inert controls, preserve CSS variable values, and expose clear/custom token state truthfully. |
 | `core/widgets/core/divider.tsx` | separator render | Add `role="separator"` or `aria-hidden` according to the rendered divider type. |
 | `tests/vitest/ui/spacer-editor-wave.test.tsx` | existing suite | Add variant-aware Advanced and token regressions. |
 | `tests/vitest/widgets/spacer.test.tsx` | existing suite | Add height/token output regressions. |

@@ -27,9 +27,9 @@ contract alone.
 - `_docs/PLAYWRIGHT/REPORT_ACCORDION_WIDGET.md:96,106-116,138,163-170,240,286`
   covers slot labels, default-open/collapsible behavior, placeholder leakage,
   clear controls, chevron, and ARIA.
-- `_docs/PLAYWRIGHT/REPORT_TOGGLE_BLOCK_WIDGET.md:82,111,124,207,248` covers
-  editor ownership, placeholder leakage, duplicate IDs, and remaining structural
-  cleanup.
+- `_docs/PLAYWRIGHT/REPORT_TOGGLE_BLOCK_WIDGET.md:43-52,82,111,124,149,165-166,207,248`
+  covers helper-text clear drift, missing clear controls, editor ownership,
+  placeholder leakage, duplicate IDs, and remaining structural cleanup.
 
 ## Sub-Tasks
 
@@ -41,6 +41,8 @@ contract alone.
 - [ ] Apply TASK-256-04 instance-safe ID and ARIA work to widget-local renderers.
 - [ ] Keep accordion default-open/collapsible controls consistent between editor
   and runtime.
+- [ ] Apply TASK-256-02 clear/normalizer repair to toggle-block helper text,
+  `borderColor`, and `accentColor`.
 
 ## Files to Change
 
@@ -50,14 +52,14 @@ contract alone.
 | `core/widgets/core/tabs.tsx` | 432-505 | Public placeholder gating and widget-local ARIA/ID application. |
 | `core/admin/ui/widgets/editors/AccordionEditors.tsx` | 272-430 | Friendly item labels, default-open/collapsible truthfulness, and clear controls. |
 | `core/widgets/core/accordion.tsx` | 361-368 and item render | Public placeholder gating, chevron/expanded semantics, and default-open/collapsible runtime behavior. |
-| `core/admin/ui/widgets/editors/ToggleBlockEditors.tsx` | editor sections | Friendly pane labels and remaining mode ownership cleanup. |
-| `core/widgets/core/toggleBlock.tsx` | 298-389 | Public placeholder gating and widget-local ID/ARIA application. |
+| `core/admin/ui/widgets/editors/ToggleBlockEditors.tsx` | 102-114, 209-219, 262-302, editor sections | Friendly pane labels, helper clear/visibility, color clear controls, and remaining mode ownership cleanup. |
+| `core/widgets/core/toggleBlock.tsx` | 91-104, 298-389 | Helper visibility normalization, public placeholder gating, and widget-local ID/ARIA application. |
 | `tests/vitest/ui/tabs-editor-wave.test.tsx` | existing suite | Add slot-label and clear-control regressions. |
 | `tests/vitest/widgets/tabs.test.tsx` | existing suite | Add placeholder/ID/ARIA regressions. |
 | `tests/vitest/ui/accordion-editor-wave.test.tsx` | existing suite | Add item-label/default-open/clear regressions. |
 | `tests/vitest/widgets/accordionWidget.test.tsx` | existing suite | Add placeholder/default-open/ARIA regressions. |
-| `tests/vitest/ui/toggle-block-editor-wave.test.tsx` | existing suite | Add pane-label regressions. |
-| `tests/vitest/widgets/toggleBlock.test.tsx` | existing suite | Add placeholder/ID/ARIA regressions. |
+| `tests/vitest/ui/toggle-block-editor-wave.test.tsx` | existing suite | Add pane-label, helper-clear, and color-clear regressions. |
+| `tests/vitest/widgets/toggleBlock.test.tsx` | existing suite | Add helper visibility, placeholder/ID/ARIA regressions. |
 
 ## Implementation Pseudocode
 

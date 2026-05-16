@@ -47,6 +47,9 @@ The reports show repeated drift from the documented contract:
   `borderColor` clear.
 - `_docs/PLAYWRIGHT/REPORT_CTA_BANNER_WIDGET.md:155-161` reports missing clear
   controls for CTA banner text/button color fields.
+- `_docs/PLAYWRIGHT/REPORT_TOGGLE_BLOCK_WIDGET.md:43-52,149,165-166`
+  reports helper-text clear drift and missing clear controls for `borderColor`
+  and `accentColor`.
 - `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md:78,87-98,177-179` reports
   overlay alpha loss through the hex-only picker.
 - `_docs/PLAYWRIGHT/REPORT_LOGO_CLOUD_WIDGET.md:94-100,112-116` reports
@@ -59,6 +62,8 @@ The reports show repeated drift from the documented contract:
 - [ ] Extend shared clearable field helpers to expose configured vs fallback
   state clearly.
 - [ ] Add missing `onClear` support to every style field called out in reports.
+- [ ] Add a toggle-block helper-text visibility/clear decision so an editor can
+  intentionally hide helper copy without the normalizer restoring defaults.
 - [ ] Prevent color inputs from overwriting CSS variable values when only the
   swatch changes accidentally.
 - [ ] Rework token dropdowns so `None`, `0`, and `Custom px` are not ambiguous.
@@ -79,6 +84,8 @@ The reports show repeated drift from the documented contract:
 | `core/admin/ui/widgets/editors/PricingPlansEditors.tsx` | 965-971 | Add `onClear` for `highlightRing`. |
 | `core/admin/ui/widgets/editors/FeatureGridEditors.tsx` | 668-683 | Add `onClear` for `borderColor` if the normalizer/render contract supports omission. |
 | `core/admin/ui/widgets/editors/CtaBannerEditors.tsx` | 413-486 | Add `onClear` for text, badge text, primary/secondary button text, and border-like color fields where omission is supported. |
+| `core/admin/ui/widgets/editors/ToggleBlockEditors.tsx` | 102-114, 209-219, 262-302 | Add clear/visibility handling for helper text and use existing clear helpers for `borderColor` and `accentColor`. |
+| `core/widgets/core/toggleBlock.tsx` | 91-104, 298-345 | Preserve an intentional hidden helper state separately from missing legacy data; keep omitted style fields falling back through defaults. |
 | `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx` | 92-98, 178, 720-832 | Preserve `rgba(...)`/CSS variable overlay values and make duplicated Advanced style controls explicitly technical or read-only. |
 | `core/admin/ui/widgets/editors/LogoCloudEditors.tsx` | 510-594, 616-694 | Gate hoverColor when grayscale is inactive, keep logo-height `none` truthful, and make duplicated Advanced token controls explicit. |
 | `core/admin/ui/widgets/editors/StatsKpiEditors.tsx` | 570-713 | Preserve CSS variable color values and make duplicated Advanced spacing/alignment/color tokens explicit. |
@@ -178,10 +185,11 @@ No API routes are added.
 - `bun run test:vitest -- tests/vitest/ui/pricing-plans-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/feature-grid-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/cta-banner-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/toggle-block-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/logo-cloud-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/stats-kpi-editor-wave.test.tsx`
-- `bun run test:vitest -- tests/vitest/widgets/divider.test.tsx tests/vitest/widgets/spacer.test.tsx tests/vitest/widgets/splitLayout.test.tsx tests/vitest/widgets/tabs.test.tsx tests/vitest/widgets/accordionWidget.test.tsx tests/vitest/widgets/faqAccordion.test.tsx tests/vitest/widgets/pricingPlans.test.tsx tests/vitest/widgets/featureGrid.test.tsx tests/vitest/widgets/ctaBanner.test.tsx tests/vitest/widgets/galleryMosaic.test.tsx tests/vitest/widgets/logoCloud.test.tsx tests/vitest/widgets/statsKpi.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/divider.test.tsx tests/vitest/widgets/spacer.test.tsx tests/vitest/widgets/splitLayout.test.tsx tests/vitest/widgets/tabs.test.tsx tests/vitest/widgets/accordionWidget.test.tsx tests/vitest/widgets/faqAccordion.test.tsx tests/vitest/widgets/pricingPlans.test.tsx tests/vitest/widgets/featureGrid.test.tsx tests/vitest/widgets/ctaBanner.test.tsx tests/vitest/widgets/toggleBlock.test.tsx tests/vitest/widgets/galleryMosaic.test.tsx tests/vitest/widgets/logoCloud.test.tsx tests/vitest/widgets/statsKpi.test.tsx`
 - `bun test tests/unit/widgets/validator.test.ts` if schemas/defaults change.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
