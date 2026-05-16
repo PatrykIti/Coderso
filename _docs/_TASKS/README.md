@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 90 tasks
+- **To Do:** 97 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1542 tasks
 
@@ -61,6 +61,13 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-265-04 | Entry Teaser Layout, Media, Tags, and Heading Controls | High | Large | Add section heading, media sizing, tag limits, max-width, optional icon/logo mode, image dimensions, and heading controls |
 | TASK-265-06 | Entry Teaser Shared Color Control Adoption | Medium | Medium | Adopt the TASK-256-02 shared color-control hook for Entry Teaser surface/border fields without duplicating generic picker behavior |
 | TASK-265-05 | Entry Teaser Report, Docs, and Closure | Medium | Medium | Refresh Entry Teaser report/docs/changelog/board and final validation for the TASK-265 family |
+| TASK-264 | Divider Widget Playwright Product Followups | High | Large | Divider-specific follow-up family for `REPORT_DIVIDER_WIDGET.md`, excluding TASK-256 shared-contract scope |
+| TASK-264-01 | Divider Label Color Typography and Gap Controls | High | Medium | Add label-center color, typography, nowrap, gap, truthful labels, and clear-label UX |
+| TASK-264-02 | Divider Width Alignment and Custom Validation | High | Medium | Add container width, left/center/right alignment, and custom-width validation feedback |
+| TASK-264-03 | Divider Line Style Opacity and Spacer Only Mode | Medium | Medium | Add bounded opacity, dotted/dashed style polish, and spacer-only visibility mode |
+| TASK-264-04 | Divider Editor Preview Reset and Wizard UX | Medium | Medium | Add inline preview, compact Wizard controls, and reset/normalize actions after shared fixes land |
+| TASK-264-05 | Divider Runtime DOM Marker Hygiene | Medium | Small | Remove or sanitize raw Divider style-token data markers from public DOM output |
+| TASK-264-06 | Divider Report Docs and Closure | Medium | Medium | Refresh Divider report/docs/changelog/board and final validation for the TASK-264 family |
 | TASK-263 | CTA Banner Widget Playwright Product Followups | High | Very Large | CTA Banner-only follow-up family for `REPORT_CTA_BANNER_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-263-01 | CTA Banner Runtime Semantics and Accessibility | High | Large | Repair CTA-local empty badge, description color, border semantics, resolver defaults, section/action labels, and focus-visible output |
 | TASK-263-02 | CTA Banner Wizard and Action Editing UX | High | Large | Add Wizard CTA URL/secondary controls, variant cards, explicit action labels, invalid URL feedback, and secondary toggle |

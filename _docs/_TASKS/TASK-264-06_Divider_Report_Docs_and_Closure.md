@@ -1,0 +1,147 @@
+# TASK-264-06: Divider Report Docs and Closure
+
+# FileName: TASK-264-06_Divider_Report_Docs_and_Closure.md
+
+**Priority:** Medium
+**Category:** Widgets + Playwright QA + Documentation + Changelog
+**Estimated Effort:** Medium
+**Dependencies:** TASK-264-01, TASK-264-02, TASK-264-03, TASK-264-04, TASK-264-05
+**Status:** To Do
+
+---
+
+## Overview
+
+Close the Divider-specific Playwright follow-up family after implementation
+leaves land.
+
+This leaf owns textual evidence updates for
+`_docs/PLAYWRIGHT/REPORT_DIVIDER_WIDGET.md`, Divider widget docs, task-board
+status changes, and changelog closure. It does not implement production fixes
+by itself except for documentation-only corrections discovered during closure.
+
+## Sub-Tasks
+
+- [ ] Re-run or refresh admin preview evidence for each completed TASK-264 row.
+- [ ] Re-run or refresh frontend evidence for each completed TASK-264 row.
+- [ ] Mark every source report finding as `fixed`, `TASK-256`, `deferred`,
+  `excluded`, or `not reproducible`, with a concrete task ID and reason.
+- [ ] Keep C1/C2/C3/U1/U8/W6/W7/R1/R2 routed to TASK-256 unless TASK-256-08
+  explicitly reclassifies them.
+- [ ] Record section 8.1 admin-session expiry as excluded CMS/session scope.
+- [ ] Update `_docs/_WIDGETS/DIVIDER.md` with final data/editor/runtime
+  behavior.
+- [ ] Update `_docs/WIDGETS.md` or `_docs/WIDGET_PACK_MATRIX.md` only when an
+  implementation leaf changed those source-of-truth contracts.
+- [ ] Add a changelog entry and update `_docs/_CHANGELOG/README.md`.
+- [ ] Move TASK-264 and completed leaves to `Done`, update dates, and sync
+  `_docs/_TASKS/README.md` statistics.
+
+## Files to Change
+
+| File | Required change |
+|---|---|
+| `_docs/PLAYWRIGHT/REPORT_DIVIDER_WIDGET.md` | Add fixed/deferred/routed/excluded status and textual admin/frontend evidence. |
+| `_docs/_WIDGETS/DIVIDER.md` | Document final Divider contract after implementation. |
+| `_docs/WIDGETS.md` | Update only if shared widget contract changes. |
+| `_docs/WIDGET_PACK_MATRIX.md` | Update only if readiness/completeness changes. |
+| `_docs/_TASKS/TASK-264*.md` | Status/date updates for umbrella and leaves. |
+| `_docs/_TASKS/README.md` | Board row/status/stat updates. |
+| `_docs/_CHANGELOG/*.md`, `_docs/_CHANGELOG/README.md` | Final changelog entry and index update. |
+
+## Implementation Pseudocode
+
+```ts
+type DividerFindingStatus =
+  | "fixed"
+  | "task-256"
+  | "deferred"
+  | "excluded"
+  | "not-reproducible";
+
+type DividerClosureRow = {
+  findingId: string;
+  status: DividerFindingStatus;
+  ownerTask: string;
+  evidence: string;
+  validationCommands: string[];
+};
+
+function buildDividerClosureMatrix(rows: DividerClosureRow[]) {
+  return rows.map((row) => ({
+    ...row,
+    evidence: redactPrivateRuntimeValues(row.evidence),
+  }));
+}
+```
+
+Closure flow:
+
+1. Read all TASK-264 leaves, TASK-256-05-03, and the source report.
+2. Build a finding-by-finding closure matrix.
+3. Update report evidence with textual DOM/admin/frontend results; do not add
+   Playwright PNG artifacts.
+4. Update widget docs and changelog.
+5. Run final targeted validation plus required baseline gates.
+6. Update task statuses and board statistics only after validation status is
+   known.
+
+Error handling:
+
+- If Playwright replay is blocked, record the exact blocker and use Vitest/SSR
+  evidence only when it directly covers the finding.
+- If a finding is TASK-256 scope, record the TASK-256 owner task and do not mark
+  it fixed by TASK-264.
+- If broad suites fail for unrelated reasons, isolate with targeted commands and
+  record the unrelated failure separately.
+
+## Security Contract
+
+No API routes are added.
+
+- Endpoint visibility/auth/RBAC/CSRF/rate limit: unchanged.
+- Reject-unknown validation: unchanged unless a prior leaf changed schema.
+- Anti-abuse: reports and changelog must not include secrets, raw privileged
+  payloads, nonce values, private preview tokens, raw user-authored style
+  strings, or unredacted runtime credentials.
+- Secret handling: redact runtime URLs/tokens where needed.
+
+## Testing Requirements
+
+- `git diff --check`
+- `bun run test:vitest -- tests/vitest/widgets/divider.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/divider-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if any leaf
+  changes shared renderer output
+- `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` if any
+  leaf consumes or changes token semantics
+- `bun test tests/unit/widgets/validator.test.ts` if schema/defaults changed
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run gates:coderso`
+- `bun run scan:security:strict`
+- `bun run precommit` before final commit/closure
+
+## Documentation Updates Required
+
+- `_docs/PLAYWRIGHT/REPORT_DIVIDER_WIDGET.md`
+- `_docs/_WIDGETS/DIVIDER.md`
+- `_docs/WIDGETS.md` only if shared contract changed
+- `_docs/WIDGET_PACK_MATRIX.md` only if readiness changed
+- `_docs/_TASKS/README.md`
+- `_docs/_CHANGELOG/README.md`
+- New `_docs/_CHANGELOG/<next>-<date>-task-264-divider-widget-followups.md`
+
+## Changelog Policy
+
+- This leaf creates or verifies the changelog entry that covers TASK-264 and
+  all completed TASK-264 leaves.
+
+## Acceptance Criteria
+
+- Every row from `REPORT_DIVIDER_WIDGET.md` has an explicit final status and
+  owner.
+- Divider docs reflect the final schema/editor/runtime behavior.
+- Task board, task files, changelog, and report evidence are synchronized.
+- Required validation is green or the exact blocker is documented before any
+  task is marked `Done`.
