@@ -27,7 +27,8 @@ This leaf owns only Form Embed editor content and diagnostics:
 
 - distinct Wizard, Visual, and Advanced Form Embed sections;
 - selected form summary with status, submission access, layout mode, save
-  progress, field count, field type list, and resolver error when available;
+  progress, field count, field type list from `getFormDetailCached()` /
+  `listFormFields()`, and resolver error when available;
 - no-form CTA copy and disabled-state guidance;
 - draft/archived/internal warnings for public page embedding;
 - success message and submit label normalization feedback.
@@ -48,8 +49,9 @@ color picker behavior, generic clear controls, or Forms route policy.
   data summary.
 - [ ] Show draft/archived/internal warnings and multi-step/save-progress badges
   from the selected Forms record.
-- [ ] Show selected field count and field type summary when the admin Forms
-  record or resolved runtime payload exposes field metadata.
+- [ ] Fetch selected form detail through existing `getFormDetailCached()` /
+  `listFormFields()` cache helpers when the list record lacks fields, and show
+  selected field count and field type summary without mount-force refetch loops.
 - [ ] Add no-form CTA and clear feedback when `formId` is empty or references a
   missing form.
 - [ ] Surface empty submit label and success message fallback behavior in the
@@ -60,6 +62,7 @@ color picker behavior, generic clear controls, or Forms route policy.
 | File | Required change |
 |---|---|
 | `core/admin/ui/widgets/editors/FormEmbedEditors.tsx` | Split mode renderers, add diagnostics, selected-form summary, no-form CTA, and normalized payload snapshot. |
+| `core/admin/services/formsClient.ts` | Reuse `getFormDetailCached()` / `listFormFields()` detail helpers and cache keys; add fields to list records only if the admin Forms contract is intentionally changed. |
 | `core/widgets/core/formEmbed.tsx` | Update normalizer only if editor-visible empty-string behavior needs a data contract change. |
 | `tests/vitest/ui/form-embed-editor-wave.test.tsx` | Cover mode-specific sections, selected-form warnings, field summary, no-form CTA, and Advanced diagnostics. |
 | `tests/vitest/widgets/formEmbed.test.tsx` | Update only when defaults/normalizer behavior changes. |
@@ -85,11 +88,13 @@ type FormEmbedFormDiagnostics = {
 
 function resolveFormEmbedDiagnostics(
   value: FormEmbedData,
-  forms: FormRecord[]
+  forms: FormRecord[],
+  detail?: FormDetail | null
 ): FormEmbedFormDiagnostics {
   const normalized = normalizeFormEmbedData(value);
   const selected = forms.find((form) => form.id === normalized.formId) ?? null;
   const resolved = normalized.resolved;
+  const fields = detail?.fields ?? resolved?.fields ?? [];
   return {
     selected: Boolean(selected || normalized.formId),
     formId: normalized.formId,
@@ -98,10 +103,46 @@ function resolveFormEmbedDiagnostics(
     submissionAccess: selected?.submissionAccess ?? resolved?.submissionAccess,
     layoutMode: selected?.settings?.layoutMode ?? resolved?.settings?.layoutMode ?? "single",
     saveProgress: selected?.settings?.saveProgress ?? resolved?.settings?.saveProgress ?? false,
-    fieldCount: resolveFieldCount(selected, resolved),
-    fieldTypes: resolveFieldTypes(selected, resolved),
+    fieldCount: fields.length,
+    fieldTypes: resolveFieldTypes(fields),
     error: resolved?.error,
   };
+}
+```
+
+Detail loading shape:
+
+```tsx
+function useSelectedFormDetail(formId: string | undefined) {
+  const [detail, setDetail] = useState<FormDetail | null>(null);
+  const [status, setStatus] = useState<"idle" | "loading" | "loaded" | "error">("idle");
+
+  useEffect(() => {
+    let active = true;
+    const normalizedFormId = formId?.trim();
+    if (!normalizedFormId) {
+      setDetail(null);
+      setStatus("idle");
+      return;
+    }
+    setStatus("loading");
+    void getFormDetailCached(normalizedFormId)
+      .then((next) => {
+        if (!active) return;
+        setDetail(next);
+        setStatus("loaded");
+      })
+      .catch(() => {
+        if (!active) return;
+        setDetail(null);
+        setStatus("error");
+      });
+    return () => {
+      active = false;
+    };
+  }, [formId]);
+
+  return { detail, status };
 }
 ```
 
@@ -149,6 +190,8 @@ Error handling:
   Advanced diagnostics and a concise editor warning in Wizard/Visual.
 - If field metadata is unavailable, show "fields resolve at runtime" rather
   than a false `0 fields` count.
+- If detail loading fails, keep the selected form visible and show a diagnostic
+  without overwriting the current widget data.
 - Empty submit label falls back to `formEmbedDefaults.submitLabel`; empty
   success message should either inherit the resolved form success message or
   show a clear "no inline success message" diagnostic.

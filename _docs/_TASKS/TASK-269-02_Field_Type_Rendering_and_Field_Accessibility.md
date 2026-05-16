@@ -14,60 +14,65 @@
 
 Bring Form Embed field rendering in line with the current Forms field model.
 
-`REPORT_FORM_EMBED_WIDGET.md` shows that `radio`, `number`, `time`, `hidden`,
-`file`, `range`, and `rating` fields are not represented truthfully, checkbox
-inline label placement is inconsistent, and field controls lack stable IDs,
-`htmlFor`, `aria-required`, and `aria-describedby`. This leaf fixes Form
-Embed-owned field rendering and field-level accessibility without changing
-unrelated widgets.
+`REPORT_FORM_EMBED_WIDGET.md` lists missing `radio`, `number`, `time`,
+`hidden`, `file`, `range`, and `rating` behavior, but the current Forms
+validation contract in `core/services/forms/validation.ts` accepts only `text`,
+`email`, `select`, `checkbox`, `textarea`, `phone`, and `date`. Therefore this
+leaf fixes Form Embed-owned rendering and field-level accessibility for the
+currently supported field types, and it records report rows C2/W1 as future
+Forms field-model scope when they require adding new field types before Form
+Embed can render them.
 
 ## Scope Boundary
 
-This leaf owns Form Embed field markup and runtime value collection:
+This leaf owns Form Embed field markup and runtime value collection for current
+Forms fields:
 
-- `radio`, `number`, `time`, `hidden`, `range`, and rating rendering;
-- truthful file field behavior, either through an existing supported upload
-  contract or a disabled/explained unsupported state;
+- `text`, `email`, `phone`, `date`, `textarea`, `checkbox`, and `select`
+  rendering parity;
+- truthful unsupported-field diagnostics if legacy/resolved runtime payloads
+  contain field types that the current Forms model rejects;
 - stable field IDs derived from the widget instance and field ID/name;
 - `label htmlFor`, `aria-label` fallback when labels are hidden,
   `aria-required`, and helper text `aria-describedby`;
-- fieldset/legend output for option groups;
-- checkbox inline label placement parity with other field types.
+- checkbox inline label placement parity with other field types;
+- select option labels and helper text as plain text only.
 
-This leaf does not invent a new file upload endpoint, a generic field renderer
-for all widgets, or a shared ARIA helper outside the Form Embed owner. If the
-Forms submission API cannot accept a field type safely, render a truthful
-non-submitting state and open a separate Forms task.
+This leaf does not add new Forms field types, invent a file upload endpoint,
+create a generic field renderer for all widgets, or add a shared ARIA helper
+outside the Form Embed owner. If the report-only field types are still required,
+open a separate Forms field-model task that owns validation, builder UI,
+persistence, submission validation, and then the Form Embed renderer.
 
 ## Sub-Tasks
 
 - [ ] Add a Form Embed field rendering helper that returns a structured render
-  model for each supported field type.
-- [ ] Render `radio` options as a fieldset with one radio per option, stable
+  model for each currently supported Forms field type.
+- [ ] Keep `select` options and `checkbox` controls accessible with stable
   names, IDs, labels, required state, and helper linkage.
-- [ ] Render `number`, `time`, `hidden`, `range`, and rating controls with
-  schema-bounded attributes and no unsafe arbitrary HTML.
-- [ ] Decide file field handling against the current Forms route. If upload is
-  unsupported, render a disabled field plus editor/runtime diagnostic instead
-  of submitting fake file paths.
-- [ ] Add stable IDs and `htmlFor` to text, textarea, checkbox, select, and new
-  controls.
+- [ ] Render unsupported legacy/resolved field types as non-submitting
+  diagnostics instead of silently converting them to text inputs.
+- [ ] Record `radio`, `number`, `time`, `hidden`, `file`, `range`, and `rating`
+  as future Forms field-model scope unless the current Forms validation owner is
+  expanded in a separate task.
+- [ ] Add stable IDs and `htmlFor` to text, textarea, checkbox, select, phone,
+  email, and date controls.
 - [ ] Add `aria-label` when `showLabels=false`, `aria-required` for required
   fields, and `aria-describedby` for helper text.
 - [ ] Preserve conditional logic disabling and required restoration in
-  `formRuntimeScript.ts` for new field types.
-- [ ] Keep old form payloads rendering with current defaults.
+  `formRuntimeScript.ts` for current supported controls.
+- [ ] Keep old supported form payloads rendering with current defaults.
 
 ## Files to Change
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/formEmbed.tsx` | Extend field rendering, stable IDs, labels, descriptions, option groups, and truthful unsupported states. |
-| `core/widgets/core/formRuntimeScript.ts` | Update value collection/hydration only for new controls that need script support. |
-| `tests/vitest/widgets/formEmbed.test.tsx` | Cover every supported field type, stable IDs, labels, ARIA, helper linkage, and unsupported file behavior. |
+| `core/widgets/core/formEmbed.tsx` | Extend supported field rendering, stable IDs, labels, descriptions, current option controls, and truthful unsupported states. |
+| `core/widgets/core/formRuntimeScript.ts` | Update value collection/hydration only for currently supported controls that need script support. |
+| `tests/vitest/widgets/formEmbed.test.tsx` | Cover current supported field types, stable IDs, labels, ARIA, helper linkage, and unsupported-field diagnostics. |
 | `tests/vitest/ui/form-embed-editor-wave.test.tsx` | Cover field summary/editor diagnostics if new field states are surfaced there. |
 | `tests/unit/widgets/validator.test.ts` | Update if Form Embed schema changes. |
-| `_docs/_WIDGETS/FORM_EMBED.md` | Document supported field types and unsupported file behavior if applicable. |
+| `_docs/_WIDGETS/FORM_EMBED.md` | Document the supported field type matrix and future Forms field-model boundary for report-only types. |
 
 ## Implementation Pseudocode
 
@@ -77,16 +82,10 @@ type FormEmbedFieldRenderKind =
   | "email"
   | "phone"
   | "date"
-  | "number"
-  | "time"
   | "textarea"
   | "checkbox"
   | "select"
-  | "radio"
-  | "range"
-  | "rating"
-  | "hidden"
-  | "unsupported-file";
+  | "unsupported";
 
 type FieldA11yIds = {
   inputId: string;
@@ -94,6 +93,16 @@ type FieldA11yIds = {
   helperId?: string;
   groupId?: string;
 };
+
+const currentFormFieldTypes = new Set([
+  "text",
+  "email",
+  "phone",
+  "date",
+  "textarea",
+  "checkbox",
+  "select",
+]);
 
 function resolveFieldA11yIds(instanceId: string, field: ResolvedFormField): FieldA11yIds {
   const stableKey = slugify(`${field.id || field.name}`);
@@ -106,54 +115,57 @@ function resolveFieldA11yIds(instanceId: string, field: ResolvedFormField): Fiel
 }
 
 function resolveFieldRenderKind(field: ResolvedFormField): FormEmbedFieldRenderKind {
-  switch (field.type) {
-    case "radio":
-    case "number":
-    case "time":
-    case "hidden":
-    case "range":
-    case "rating":
-      return field.type;
-    case "file":
-      return formsRouteSupportsFileUpload() ? "file" : "unsupported-file";
-    default:
-      return knownInputKind(field.type);
+  if (currentFormFieldTypes.has(field.type)) {
+    return field.type as FormEmbedFieldRenderKind;
   }
+  return "unsupported";
 }
 ```
 
 Renderer shape:
 
 ```tsx
-function renderRadioGroup(field: ResolvedFormField, ids: FieldA11yIds) {
+function renderSupportedField(field: ResolvedFormField, ids: FieldA11yIds) {
+  const helperId = ids.helperId;
+  const labelHidden = shouldHideLabel(field);
   return (
-    <fieldset id={ids.groupId} aria-describedby={ids.helperId}>
-      <legend id={ids.labelId}>{field.label}</legend>
-      {field.settings?.options?.map((option, index) => {
-        const optionId = `${ids.inputId}-${index}`;
-        return (
-          <label key={option} htmlFor={optionId}>
-            <input id={optionId} type="radio" name={field.name} value={option} required={field.required} />
-            {option}
-          </label>
-        );
-      })}
-      {helper ? <p id={ids.helperId}>{helper}</p> : null}
-    </fieldset>
+    <div data-form-field={field.name}>
+      {!labelHidden ? (
+        <label id={ids.labelId} htmlFor={ids.inputId}>{field.label}</label>
+      ) : null}
+      <FormEmbedControl
+        id={ids.inputId}
+        field={field}
+        aria-label={labelHidden ? field.label : undefined}
+        aria-describedby={helperId}
+        aria-required={field.required ? "true" : undefined}
+      />
+      {helperId ? <p id={helperId}>{field.settings?.helper}</p> : null}
+    </div>
+  );
+}
+
+function renderUnsupportedField(field: ResolvedFormField) {
+  return (
+    <div data-form-field={field.name} data-form-field-unsupported={field.type}>
+      Unsupported form field type: {field.type}
+    </div>
   );
 }
 ```
 
 Error handling:
 
-- Unknown field types render a clear unsupported-field placeholder in admin
-  preview and public output only when the Forms model cannot safely map them.
-- `file` fields must never submit browser fake paths as JSON. Use a disabled
-  explanatory state unless an existing upload contract is verified and tested.
+- Unknown field types render a clear unsupported-field diagnostic in admin
+  preview and public output when legacy/resolved data contains types that the
+  current Forms model cannot safely map.
+- `file` fields must never submit browser fake paths as JSON. Keep them in the
+  unsupported diagnostic path until a separate Forms upload contract is verified
+  and tested.
 - Missing `field.name` should fall back to a stable field ID for DOM IDs but
   must not submit unnamed data silently.
-- Empty option lists render an explanatory disabled state instead of an empty
-  radio/select group.
+- Empty select option lists render an explanatory disabled state instead of an
+  empty select.
 
 ## Security Contract
 
@@ -164,9 +176,9 @@ No API routes are added by this leaf.
   by widget validator tests.
 - Anti-abuse: field labels, helper text, and option labels render as text only;
   no arbitrary HTML/script/style injection.
-- Secret handling: hidden fields must be Form model fields only; do not embed
-  secrets, API keys, CAPTCHA secrets, nonce secrets, or privileged values in
-  widget JSON or public DOM.
+- Secret handling: unsupported hidden/file-like fields must not embed secrets,
+  API keys, CAPTCHA secrets, nonce secrets, or privileged values in widget JSON
+  or public DOM.
 
 ## Testing Requirements
 
@@ -178,10 +190,11 @@ No API routes are added by this leaf.
 
 ## Documentation Updates Required
 
-- Update `_docs/_WIDGETS/FORM_EMBED.md` with the supported field type matrix,
-  accessibility behavior, and any explicit unsupported file upload note.
-- Update `_docs/PLAYWRIGHT/REPORT_FORM_EMBED_WIDGET.md` rows C2, W1, W17,
-  A3-A7, and A10 after validation.
+- Update `_docs/_WIDGETS/FORM_EMBED.md` with the current supported field type
+  matrix, accessibility behavior, and future Forms field-model boundary.
+- Update `_docs/PLAYWRIGHT/REPORT_FORM_EMBED_WIDGET.md` rows W17, A3-A7, and
+  A10 after validation. Mark C2/W1 fixed only for current supported-field
+  diagnostics; route new field type support to a future Forms field-model task.
 
 ## Changelog Policy
 
@@ -190,11 +203,13 @@ No API routes are added by this leaf.
 
 ## Acceptance Criteria
 
-- Radio and other non-text Forms field types render truthfully instead of
-  silently falling back to text inputs.
+- Current Forms field types render truthfully instead of silently falling back
+  to text inputs.
+- Report-only field types that the current Forms model rejects are explicitly
+  classified as future Forms field-model scope or rendered as non-submitting
+  unsupported diagnostics for legacy/resolved payloads.
 - Field labels, IDs, helper text, required state, and hidden-label fallback are
   programmatically connected.
-- File fields are either supported through a verified existing route contract or
-  clearly disabled with user-facing explanation.
-- Conditional logic and progress hydration still work for newly supported
+- File and hidden-like unsupported fields never expose or submit secrets.
+- Conditional logic and progress hydration still work for currently supported
   controls.

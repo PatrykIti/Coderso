@@ -31,8 +31,9 @@ This leaf owns Form Embed runtime submit UX:
 - success behavior that can hide, reset, or keep the form by explicit config;
 - `role="alert"` / `aria-live` for success/error output;
 - redirect handling from existing Forms runtime response and resolved data;
-- Form Embed projection of existing nonce/CAPTCHA/honeypot metadata when the
-  backend already owns those policies.
+- Form Embed projection of the existing safe Forms nonce field. CAPTCHA and
+  honeypot policy stay future Forms/public-write scope unless a backend owner
+  already exposes safe public metadata in a separate task.
 
 This leaf does not add a new public write endpoint, store CAPTCHA secrets in
 widget JSON, or redesign Forms submission validation. If the existing Forms
@@ -41,9 +42,8 @@ Forms/public-write task and keep this leaf to Form Embed projection/wiring.
 
 ## Sub-Tasks
 
-- [ ] Add Form Embed submit state data attributes for loading copy, success
-  behavior, and optional anti-abuse placeholder metadata that is safe for public
-  DOM.
+- [ ] Add Form Embed submit state data attributes for loading copy and success
+  behavior.
 - [ ] Update `formRuntimeScript.ts` to set `aria-busy`, disable submit/nav
   buttons during fetch, and restore state in `finally`.
 - [ ] Add accessible live regions for success and error messages.
@@ -51,8 +51,11 @@ Forms/public-write task and keep this leaf to Form Embed projection/wiring.
   on a bounded Form Embed setting.
 - [ ] Confirm `successRedirectUrl` is projected consistently from Forms runtime
   resolver and/or response runtime payload.
-- [ ] Wire existing backend-owned nonce/CAPTCHA/honeypot metadata only if the
-  Forms route already exposes safe public fields; do not serialize secrets.
+- [ ] Project the existing backend-owned submission nonce field safely; do not
+  add widget-owned security switches and do not serialize secrets.
+- [ ] If W11 still requires new CAPTCHA/honeypot policy after checking the Forms
+  route, create or link a future Forms/public-write task outside TASK-269 before
+  marking that part deferred.
 - [ ] Add targeted security tests if public payload validation, nonce, CAPTCHA,
   or honeypot behavior changes.
 
@@ -60,11 +63,11 @@ Forms/public-write task and keep this leaf to Form Embed projection/wiring.
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/formEmbed.tsx` | Add submit-state schema/defaults/normalizer, live-region markup, busy attributes, success behavior config, and safe anti-abuse placeholders. |
-| `core/widgets/core/formRuntimeScript.ts` | Add busy/disabled state, live-region updates, success hide/reset policy, redirect handling, and safe anti-abuse token submission where already supported. |
-| `core/server/publicSite.tsx` | Update only if resolved Forms runtime data must project `successRedirectUrl` or safe anti-abuse metadata into Form Embed data. |
-| `core/services/forms/formRuntimeResolver.ts` | Update only when existing Forms resolved-data projection already owns safe public metadata. |
-| `tests/vitest/widgets/formEmbed.test.tsx` | Cover live regions, busy attributes, success behavior markup, redirect data, and anti-abuse placeholders. |
+| `core/widgets/core/formEmbed.tsx` | Add submit-state schema/defaults/normalizer, live-region markup, busy attributes, success behavior config, and existing nonce projection. |
+| `core/widgets/core/formRuntimeScript.ts` | Add busy/disabled state, live-region updates, success hide/reset policy, redirect handling, and current nonce submission preservation. |
+| `core/server/publicSite.tsx` | Update only if resolved Forms runtime data must project `successRedirectUrl` or current nonce metadata into Form Embed data. |
+| `core/services/forms/formRuntimeResolver.ts` | Update only when existing Forms resolved-data projection changes for nonce or redirect data. |
+| `tests/vitest/widgets/formEmbed.test.tsx` | Cover live regions, busy attributes, success behavior markup, redirect data, and current nonce projection. |
 | `tests/vitest/widgets/formRuntimeScript.test.ts` | Create or update submit busy state, success hide/reset, error reveal, redirect, and state restoration coverage. |
 | `tests/integration/routes/forms.test.ts` | Run/update when public payload, nonce, CAPTCHA, or honeypot request behavior changes. |
 | `tests/unit/forms/submissionService.test.ts` | Run/update when submission validation or anti-abuse service behavior changes. |
@@ -77,8 +80,6 @@ Forms/public-write task and keep this leaf to Form Embed projection/wiring.
 type FormEmbedSubmitBehavior = {
   loadingLabel?: string;
   successBehavior?: "show-message-hide-form" | "show-message-reset-form" | "show-message-keep-form";
-  enableHoneypot?: boolean;
-  captchaPolicy?: "inherit" | "disabled";
 };
 
 function normalizeFormEmbedSubmitBehavior(value: unknown): Required<FormEmbedSubmitBehavior> {
@@ -89,8 +90,18 @@ function normalizeFormEmbedSubmitBehavior(value: unknown): Required<FormEmbedSub
       "show-message-reset-form",
       "show-message-keep-form",
     ], "show-message-hide-form"),
-    enableHoneypot: readBoolean(value, "enableHoneypot", true),
-    captchaPolicy: readEnum(value, "captchaPolicy", ["inherit", "disabled"], "inherit"),
+  };
+}
+
+type SafeFormsAntiAbuseProjection = {
+  nonceFieldName?: "__nl_form_nonce";
+};
+
+function projectSafeFormsAntiAbuse(
+  resolved: FormEmbedResolvedData
+): SafeFormsAntiAbuseProjection {
+  return {
+    nonceFieldName: resolved.submissionNonce ? "__nl_form_nonce" : undefined,
   };
 }
 ```
@@ -121,15 +132,37 @@ const applySuccessBehavior = (form, message) => {
 };
 ```
 
+Runtime test harness shape:
+
+```ts
+import { getFormRuntimeClientScript } from "../../../core/widgets/core/formRuntimeScript";
+
+function installFormRuntimeScript() {
+  delete (window as { __nextlessFormRuntimeClient?: boolean }).__nextlessFormRuntimeClient;
+  const script = document.createElement("script");
+  script.textContent = getFormRuntimeClientScript();
+  document.body.append(script);
+}
+
+test("form runtime disables submit and announces success", async () => {
+  document.body.innerHTML = renderFixtureForm();
+  vi.stubGlobal("fetch", vi.fn(async () => Response.json({ runtime: { successMessage: "Done" } })));
+  installFormRuntimeScript();
+  form.dispatchEvent(new SubmitEvent("submit", { bubbles: true, cancelable: true }));
+  await waitFor(() => expect(successNode.classList.contains("hidden")).toBe(false));
+  expect(submitButton.getAttribute("aria-busy")).toBe("false");
+});
+```
+
 Error handling:
 
 - Network or non-OK responses reveal the error live region and restore button
   state.
 - Redirect URL must come from the server runtime response first; resolved-data
   fallback is allowed only if the Forms resolver explicitly owns that field.
-- Anti-abuse fields must fail closed: if CAPTCHA or honeypot metadata is not
-  available from backend-owned safe metadata, do not invent client-only
-  security.
+- Anti-abuse fields must fail closed: TASK-269 only preserves/projects the
+  current backend-owned nonce. Do not invent client-only CAPTCHA or honeypot
+  security; route missing backend policy to a future Forms/public-write task.
 - Success hide/reset behavior must clear saved progress only after a successful
   response.
 
@@ -175,9 +208,11 @@ not add a new endpoint.
 ## Documentation Updates Required
 
 - Update `_docs/_WIDGETS/FORM_EMBED.md` with loading, success, redirect, and
-  anti-abuse projection behavior.
-- Update `_docs/PLAYWRIGHT/REPORT_FORM_EMBED_WIDGET.md` rows W2, W3, W11, W15,
-  A8, and A9 after validation.
+  current nonce projection behavior.
+- Update `_docs/PLAYWRIGHT/REPORT_FORM_EMBED_WIDGET.md` rows W2, W3, W15, A8,
+  and A9 after validation. Mark W11 fixed only for projection of existing
+  backend-owned safe metadata; route any missing CAPTCHA/honeypot policy to a
+  future Forms/public-write task.
 
 ## Changelog Policy
 
@@ -192,4 +227,5 @@ not add a new endpoint.
   ambiguous empty form unless explicitly configured.
 - Redirect behavior is consistent with Forms runtime response/resolved data.
 - Public-write anti-abuse remains backend-owned and is covered by Bun
-  route/security tests when touched.
+  route/security tests when touched. TASK-269 does not add widget-owned
+  CAPTCHA/honeypot policy switches.

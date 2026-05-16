@@ -109,6 +109,29 @@ const refreshProgressUi = (form) => {
 };
 ```
 
+Runtime test harness shape:
+
+```ts
+import { getFormRuntimeClientScript } from "../../../core/widgets/core/formRuntimeScript";
+
+function installFormRuntimeScript() {
+  delete (window as { __nextlessFormRuntimeClient?: boolean }).__nextlessFormRuntimeClient;
+  const script = document.createElement("script");
+  script.textContent = getFormRuntimeClientScript();
+  document.body.append(script);
+}
+
+test("form runtime expires stale saved progress", () => {
+  document.body.innerHTML = renderFixtureForm({ saveProgress: true });
+  localStorage.setItem(
+    progressKey,
+    JSON.stringify({ savedAt: Date.now() - ttlMs - 1, values: {}, currentStep: 2 })
+  );
+  installFormRuntimeScript();
+  expect(localStorage.getItem(progressKey)).toBeNull();
+});
+```
+
 Error handling:
 
 - Invalid custom labels fall back to "Back" and "Next".

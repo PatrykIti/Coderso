@@ -71,9 +71,9 @@ follow-up before marking the row deferred.
 
 | Finding | Status | Fix owner | Test evidence | Notes |
 |---|---|---|---|---|
-| C2 radio fields | fixed | TASK-269-02 | bun run test:vitest -- tests/vitest/widgets/formEmbed.test.tsx | public render verified |
+| C2 radio fields | future Forms field-model scope | TASK-269-02 classification plus future Forms field-model task | validation owner evidence | current Forms model rejects radio |
 | U3 CSS var picker | TASK-256 shared scope | TASK-256-02 | recorded TASK-256-02 validation evidence | not implemented in TASK-269 |
-| W11 CAPTCHA/honeypot | fixed/deferred | TASK-269-05 or future Forms task | route/security/runtime command list | backend-owned only |
+| W11 CAPTCHA/honeypot | nonce projection fixed / CAPTCHA-honeypot policy deferred | TASK-269-05 plus future Forms/public-write task if needed | route/security/runtime command list | current resolver projects `submissionNonce`; no widget-owned switches |
 ```
 
 Closure helper shape:

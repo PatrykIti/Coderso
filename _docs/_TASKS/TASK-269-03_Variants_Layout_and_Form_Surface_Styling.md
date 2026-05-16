@@ -64,7 +64,6 @@ adapter after the shared helper lands.
 |---|---|
 | `core/widgets/core/formEmbed.tsx` | Extend variant union/schema/defaults/normalizer/render, layout controls, style fields, section semantics, and border color handling. |
 | `core/admin/ui/widgets/editors/FormEmbedEditors.tsx` | Add Visual/Advanced controls for Form Embed variants and new bounded style fields. |
-| `core/widgets/core/index.ts` | Ensure registry metadata exposes the new variants through `createFormEmbedWidget`. |
 | `tests/vitest/widgets/formEmbed.test.tsx` | Cover variants, layout/style fields, section naming, heading output, submit colors, and backward compatibility. |
 | `tests/vitest/ui/form-embed-editor-wave.test.tsx` | Cover Visual/Advanced controls for variants and style fields. |
 | `tests/unit/widgets/validator.test.ts` | Cover schema acceptance/rejection when variants or schema fields change. |

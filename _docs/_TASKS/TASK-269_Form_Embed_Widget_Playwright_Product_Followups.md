@@ -38,16 +38,17 @@ In scope for TASK-269:
 - Form Embed form selection diagnostics, resolved error/status visibility, field
   count/type preview, no-form CTA state, empty-string normalization feedback,
   and Form Embed-specific Wizard/Visual/Advanced mode content.
-- Form Embed field type rendering for CMS field types, field-level accessible
-  names/IDs/descriptions, radio/checkbox group semantics, and truthful file
-  field behavior.
+- Form Embed field type rendering for the currently supported Forms field model,
+  field-level accessible names/IDs/descriptions, checkbox semantics, and
+  truthful unsupported-field diagnostics for report-only types that the current
+  Forms model rejects.
 - Form Embed `card` and `inline` variants documented in
   `_docs/_WIDGETS/FORM_EMBED.md`, Form Embed section layout controls, title and
   field typography controls, and submit button style controls.
 - Form Embed multi-step navigation labels, progress indicator, and saved
   progress expiry policy.
 - Form Embed runtime submit feedback, success/redirect projection, busy state,
-  success/error live regions, and Form Embed use of existing Forms anti-abuse
+  success/error live regions, and projection of existing safe Forms anti-abuse
   metadata.
 - Final Form Embed Playwright report/docs/changelog/board closure.
 
@@ -76,10 +77,12 @@ work.
 | Report finding | Route |
 |---|---|
 | C3, C4, U1, U2, U5, U6, U9, U10, W12 | TASK-269-01 |
-| C2, W1, W17, A3, A4, A5, A6, A7, A10 | TASK-269-02 |
+| W17, A3, A4, A5, A6, A7, A10 | TASK-269-02 |
+| C2, W1 | TASK-269-02 for current supported-field diagnostics only; adding `radio`, `number`, `time`, `hidden`, `file`, `range`, or `rating` to the Forms model is future Forms field-model scope outside TASK-269 |
 | C1, W4, W5, W6, W7, W8, W9, W10, A1, A2 | TASK-269-03 |
 | W13, W14, W16, U7, U8 | TASK-269-04 |
-| W2, W3, W11, W15, A8, A9 | TASK-269-05 |
+| W2, W3, W15, A8, A9 | TASK-269-05 |
+| W11 | TASK-269-05 only for current backend-owned nonce projection; missing CAPTCHA/honeypot policy is future Forms/public-write scope outside TASK-269 |
 | U3, U4 | TASK-256-02 shared scope, not TASK-269 |
 | Final fixed/deferred evidence, report refresh, docs/changelog/board closure | TASK-269-06 |
 
@@ -87,11 +90,11 @@ work.
 
 | Leaf | Current drift evidence | Owner files | Required test lanes |
 |---|---|---|---|
-| TASK-269-01 | Report lines 131-140, 160-161, 178, 189-198, 296, 302-303 | `FormEmbedEditors.tsx`, `formEmbed.tsx` only when normalized editor-visible defaults change, `core/admin/services/formsClient.ts` if diagnostics need existing metadata | Vitest Form Embed editor wave, widget render smoke when defaults/normalizer change |
-| TASK-269-02 | Report lines 90-105, 159, 167, 183, 206-210, 213, 295, 300, 309 | `formEmbed.tsx`, `formRuntimeScript.ts` for value collection only when a new rendered control needs runtime handling, validator when schema changes | Vitest widget render, runtime script DOM/value tests if added, validator when schema changes |
+| TASK-269-01 | Report lines 131-140, 160-161, 178, 189-198, 296, 302-303 | `FormEmbedEditors.tsx`, `core/admin/services/formsClient.ts` for `getFormDetailCached` / `listFormFields` diagnostics, `formEmbed.tsx` only when normalized editor-visible defaults change | Vitest Form Embed editor wave, widget render smoke when defaults/normalizer change |
+| TASK-269-02 | Report lines 183, 206-210, 213, 300 plus C2/W1 unsupported-field classification from lines 90-105, 159, 167, 295, 309 | `formEmbed.tsx`, `formRuntimeScript.ts` for value collection only when a currently supported control needs runtime handling, validator when schema changes | Vitest widget render, runtime script DOM/value tests if added, validator when schema changes |
 | TASK-269-03 | Report lines 16, 84-88, 107-123, 158, 170-176, 204-205, 294, 299 | `formEmbed.tsx`, `FormEmbedEditors.tsx`, widget registry/docs, pack matrix only if readiness changes | Vitest widget render, editor wave, validator when schema/variants change, style adjacency tests if shared style semantics are touched |
 | TASK-269-04 | Report lines 143-148, 179-182, 194-196, 306, 308 | `formEmbed.tsx`, `formRuntimeScript.ts`, `FormEmbedEditors.tsx` | Vitest widget render, editor wave, runtime script DOM/localStorage tests |
-| TASK-269-05 | Report lines 168-169, 177, 181, 211-212, 297-298, 301, 307 | `formEmbed.tsx`, `formRuntimeScript.ts`, `publicSite.tsx` / Forms runtime resolver only if resolved redirect/anti-abuse projection changes, existing Forms public route/security owners only if payload policy changes | Vitest widget/runtime script, Forms runtime resolver projection, Bun Forms route/security tests when public payload/nonce/CAPTCHA changes |
+| TASK-269-05 | Report lines 168-169, 181, 211-212, 297-298, 301 plus W11 nonce-projection evidence from line 177 | `formEmbed.tsx`, `formRuntimeScript.ts`, `publicSite.tsx` / Forms runtime resolver only if resolved redirect or current nonce projection changes, existing Forms public route/security owners only if payload policy changes | Vitest widget/runtime script, Forms runtime resolver projection, Bun Forms route/security tests when public payload/nonce/CAPTCHA changes |
 | TASK-269-06 | Report lines 217-319 and every fixed/deferred row | `_docs/PLAYWRIGHT/REPORT_FORM_EMBED_WIDGET.md`, `_docs/_WIDGETS/FORM_EMBED.md`, board/changelog/docs | `git diff --check`, targeted production lanes after implementation leaves |
 
 ## Sub-Tasks
@@ -155,8 +158,8 @@ Embed output, but it must not introduce a new public endpoint.
   `additionalProperties: false`; public request bodies remain allowlisted
   through Forms schemas before persistence.
 - Anti-abuse: nonce/CAPTCHA/honeypot remain backend-owned; widget data may
-  expose copy, labels, style tokens, selected form IDs, and non-secret
-  anti-abuse placeholders, but not provider secrets, CAPTCHA secrets, nonce
+  expose copy, labels, style tokens, selected form IDs, and existing non-secret
+  nonce projection fields, but not provider secrets, CAPTCHA secrets, nonce
   secrets, arbitrary scripts, or privileged security configuration.
 - Secret handling: no raw submissions, nonce secrets, provider keys, private
   URLs, or secret-like settings in widget JSON, browser cache, reports, or
@@ -214,5 +217,9 @@ Embed output, but it must not introduce a new public endpoint.
   success/redirect behavior.
 - Public-write hardening remains backend-owned and tested in Bun route/security
   lanes when touched.
+- W11 is not fixed by adding widget-owned CAPTCHA/honeypot switches. TASK-269
+  may only project existing backend-owned safe metadata; any missing backend
+  policy remains a future Forms/public-write task with its own route/security
+  owner files.
 - Widget docs, Playwright report evidence, task board, changelog, and targeted
   validation evidence are synchronized before closure.
