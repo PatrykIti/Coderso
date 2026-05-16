@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 25 tasks
+- **To Do:** 31 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1542 tasks
 
@@ -38,6 +38,12 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-257 | Accordion Widget Playwright Product Followups | High | Large | Widget-specific follow-up family for `REPORT_ACCORDION_WIDGET.md`, excluding TASK-256 shared-contract and FAQ scope |
+| TASK-257-01 | Accordion Initial Open State Product Options | High | Medium | Add intentional all-collapsed initial state after shared default-open/collapsible fixes land |
+| TASK-257-02 | Accordion Style Layout and Typography Controls | High | Large | Add Accordion-owned body color, padding, radius, max-width, typography, and color-picker controls |
+| TASK-257-03 | Accordion Item Content and Management UX | High | Large | Add item icon/copy/add/reorder UX only where nested slot content stays synchronized |
+| TASK-257-04 | Accordion Motion and Variant Preview Polish | Medium | Medium | Add Accordion-specific motion tokens and visual variant preview cards |
+| TASK-257-05 | Accordion Report Docs and Closure | Medium | Medium | Refresh report/docs/changelog/board and final validation for the TASK-257 family |
 | TASK-256 | Widget Shared Contract Playwright Drift Repair | High | Very Large | New umbrella for shared widget contract drift found in `_docs/PLAYWRIGHT/REPORT_*_WIDGET.md` |
 | TASK-256-01 | Shared Editor Mode and Atomic Update Contract | High | Large | Repair mode update races, inert Advanced controls, and variant-aware editor ownership |
 | TASK-256-02 | Clear, None Token, and Design Token Controls | High | Large | Normalize Clear vs `none` semantics, zero/custom token UX, and clearable style fields |
