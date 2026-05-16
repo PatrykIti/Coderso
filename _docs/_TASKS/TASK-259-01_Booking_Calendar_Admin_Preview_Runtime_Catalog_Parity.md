@@ -12,9 +12,9 @@
 
 ## Overview
 
-Make the page-builder admin canvas render `booking-calendar` with the same
-service/resource catalog shape that public runtime rendering receives from
-`resolveBookingRuntimeData({ preview: true })`.
+Make the page-builder admin canvas render `booking-calendar` with an active
+service/resource catalog that matches the public runtime catalog shape, without
+generating or exposing public runtime tokens in the admin browser.
 
 `REPORT_BOOKING_CALENDAR_WIDGET.md` sections 4.5, 6, and 7.1 show that the
 admin canvas always displays `No active booking services/resources configured
@@ -24,13 +24,16 @@ the block before rendering.
 
 This leaf fixes only Booking Calendar preview/catalog parity. It must not add a
 generic preview resolver for every widget unless a shared task is opened first.
+It also must not call token-generating runtime resolution from the admin client;
+admin preview data is catalog-only.
 
 ## Scope Boundary
 
 This leaf does not own:
 
 - generic widget preview resolver architecture outside Booking Calendar;
-- shared interactive ARIA fixes from TASK-256-04;
+- shared interactive ARIA fixes from TASK-256-04 only after
+  TASK-256-07/TASK-256-08 names a concrete Booking Calendar owner/test path;
 - Appointment Form admin preview behavior from TASK-258;
 - Booking admin Availability "Add row" UX from report section 7.4.
 
@@ -45,8 +48,12 @@ before implementing this leaf.
 - [ ] Keep the helper pure enough to unit test: input is services, resources,
   service-resource pairs, and optional resolver error; output is the existing
   normalized `resolved` payload.
-- [ ] Wire page-builder canvas preview so `WidgetRenderer` receives a hydrated
-  Booking Calendar block in admin only.
+- [ ] Wire page-builder canvas preview so the real `BlockList -> WidgetRenderer`
+  path receives a hydrated Booking Calendar block in admin only.
+- [ ] Pass the same preview catalog to the selected Booking Calendar editor via
+  `WidgetEditorContext` or a narrow Booking Calendar-specific context seam so
+  Advanced diagnostics and later default pickers can read the same data without
+  persisting it.
 - [ ] Keep slot/runtime tokens backend-owned: admin preview may show catalog
   services/resources and diagnostic errors, but it must not persist or expose
   privileged token values in page JSON.
@@ -60,11 +67,13 @@ before implementing this leaf.
 
 | File | Required change |
 |---|---|
-| `core/admin/ui/pages/builder/BlockList.tsx` | Hydrate Booking Calendar preview blocks before rendering, or delegate to a narrow preview-hydration component/helper. |
+| `core/admin/ui/pages/PageEditor.tsx` | Load booking catalog preview data through existing admin clients/cache events and pass hydrated preview blocks plus editor context into the builder. |
+| `core/admin/ui/pages/builder/BlockList.tsx` | Accept hydrated preview blocks or a preview resolver result before real `WidgetRenderer` rendering; do not hide the path behind a mocked shell-only test. |
+| `core/admin/ui/pages/builder/BlockSettings.tsx` | Pass Booking Calendar preview catalog diagnostics to the selected editor via `WidgetEditorContext` or a narrow extension. |
 | `core/admin/services/bookingClient.ts` | Reuse existing cached list/service-resource reads; add no new write behavior. |
 | `core/admin/ui/widgets/editors/BookingCalendarEditors.tsx` | Keep diagnostics truthful when preview catalog data exists; do not store preview-only token data. |
 | `core/widgets/core/bookingCalendar.tsx` | Update render only if the empty-state behavior must distinguish no catalog from preview-loading/error. |
-| `tests/vitest/ui/booking-calendar-admin-preview.test.tsx` | New focused test for hydrating admin preview from cached services/resources and preserving block data. |
+| `tests/vitest/ui/booking-calendar-admin-preview.test.tsx` | New focused test for hydrating admin preview from cached services/resources through the real `BlockList -> WidgetRenderer` seam and preserving block data. |
 | `tests/vitest/widgets/bookingCalendar.test.tsx` | Add render assertions for preview catalog/error states if renderer output changes. |
 | `tests/vitest/admin/bookingClient.test.ts` | Update only if helper/client cache behavior changes. |
 
@@ -128,6 +137,9 @@ Error handling:
   preview catalog.
 - If the block is saved while preview data is present, persist only user-authored
   widget data and never the preview-only `resolved` payload.
+- Inactive services/resources are excluded from the admin canvas preview so the
+  preview matches public runtime behavior. If editors need inactive diagnostics,
+  show them outside the rendered public-like widget surface.
 
 ## Security Contract
 
@@ -175,5 +187,5 @@ No public endpoint is added.
   persisted.
 - Preview-only resolved data is not saved into page JSON.
 - Advanced diagnostics reflect the hydrated preview catalog count accurately.
-- No public token or private booking diagnostic is exposed in admin cache or
-  widget data.
+- No public runtime token, nonce, or private booking diagnostic is exposed in
+  admin cache, editor context, page JSON, or widget data.

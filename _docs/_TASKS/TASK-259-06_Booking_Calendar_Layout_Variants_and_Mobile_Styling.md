@@ -23,7 +23,9 @@ and mobile control layout stacks four controls vertically before slot results.
 
 This leaf does not own:
 
-- generic frame background/border color-picker behavior from TASK-256-02;
+- generic frame background/border color-picker behavior from TASK-256-02 only
+  after TASK-256-07/TASK-256-08 names a concrete Booking Calendar owner/test
+  path;
 - visual calendar availability UI from TASK-259-05;
 - shared widget mode atomic update behavior from TASK-256-01.
 

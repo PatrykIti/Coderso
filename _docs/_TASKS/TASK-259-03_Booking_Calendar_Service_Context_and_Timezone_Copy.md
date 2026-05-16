@@ -25,10 +25,13 @@ timezone. The empty state also uses developer-facing copy.
 
 This leaf does not own:
 
-- generic public ARIA baseline from TASK-256-04;
+- generic public ARIA baseline from TASK-256-04 only after
+  TASK-256-07/TASK-256-08 names a concrete Booking Calendar owner/test path;
 - visual calendar availability indicators from TASK-259-05;
-- Appointment Form slot summary copy from TASK-258, except for a narrow smoke
-  if the shared selection payload is extended.
+- Appointment Form slot summary, locale, redirect, or flow-pairing behavior
+  from TASK-258. If the shared selection payload is extended for calendar-owned
+  timezone display, keep the payload backward compatible and add only smoke
+  coverage for Appointment Form consumption.
 
 ## Sub-Tasks
 
@@ -41,9 +44,9 @@ This leaf does not own:
   overload the selector labels.
 - [ ] Render selected resource timezone near the date/slot controls and include
   timezone in selected-slot summary.
-- [ ] Update runtime selection payload only if Appointment Form needs timezone
-  or service metadata for downstream summaries; if changed, keep the payload
-  backward compatible.
+- [ ] Keep service metadata display calendar-owned. Do not add Appointment Form
+  product behavior here; only preserve existing selection payload compatibility
+  if calendar runtime state needs an additive field.
 - [ ] Replace hardcoded empty-state copy with normalized, editor-owned copy.
 
 ## Files to Change
@@ -55,7 +58,7 @@ This leaf does not own:
 | `core/widgets/core/bookingRuntimeScript.ts` | Update selected-slot summary and resource timezone display after resource/date/slot changes. |
 | `tests/vitest/widgets/bookingCalendar.test.tsx` | Add render/normalizer coverage for price, duration, description, timezone, and empty state. |
 | `tests/vitest/ui/booking-calendar-editor-wave.test.tsx` | Add editor coverage for display toggles and empty-state copy. |
-| `tests/vitest/widgets/bookingRuntimeScript.bookingCalendar.test.ts` | Add selected summary/timezone update coverage if runtime script changes. |
+| `tests/vitest/widgets/bookingRuntimeScript.bookingCalendar.test.ts` | Create or extend this happy-dom runtime script suite with selected summary/timezone update coverage if runtime script changes. |
 | `tests/vitest/widgets/appointmentForm.test.tsx` | Smoke only if the shared booking selection payload changes. |
 
 ## Implementation Pseudocode
@@ -69,12 +72,17 @@ type BookingCalendarContextDisplay = {
   emptyStateMessage?: string;
 };
 
-function formatServicePrice(service: BookingCalendarResolvedService) {
+function formatServicePrice(service: BookingCalendarResolvedService, locale = "en-US") {
   if (service.priceCents === null || !service.currency) return null;
-  return new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency: service.currency.toUpperCase(),
-  }).format(service.priceCents / 100);
+  const currency = service.currency.toUpperCase();
+  try {
+    return new Intl.NumberFormat(locale, {
+      style: "currency",
+      currency,
+    }).format(service.priceCents / 100);
+  } catch {
+    return `${(service.priceCents / 100).toFixed(2)} ${currency}`;
+  }
 }
 
 function buildServiceMeta(service: BookingCalendarResolvedService, options: ContextDisplay) {
@@ -106,6 +114,8 @@ Error handling:
 
 - Unknown or invalid currency codes must not throw during render; fall back to a
   plain uppercase currency suffix or omit price copy.
+- Tests must pass an explicit locale or assert the fallback branch so price
+  output stays deterministic across CI machines.
 - Missing service/resource metadata should omit only that metadata line, not the
   whole calendar.
 - Empty-state copy must normalize blank editor input back to the default
@@ -127,7 +137,9 @@ No API routes are added.
 
 - `bun run test:vitest -- tests/vitest/widgets/bookingCalendar.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/booking-calendar-editor-wave.test.tsx`
-- `bun run test:vitest -- tests/vitest/widgets/bookingRuntimeScript.bookingCalendar.test.ts`
+- Create or extend
+  `tests/vitest/widgets/bookingRuntimeScript.bookingCalendar.test.ts`, then run
+  `bun run test:vitest -- tests/vitest/widgets/bookingRuntimeScript.bookingCalendar.test.ts`
   if runtime summary/timezone behavior changes.
 - `bun run test:vitest -- tests/vitest/widgets/appointmentForm.test.tsx` if the
   shared selection payload changes.

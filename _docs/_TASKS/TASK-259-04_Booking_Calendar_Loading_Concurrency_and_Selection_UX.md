@@ -25,8 +25,9 @@ cleared.
 
 This leaf does not own:
 
-- generic ARIA baseline from TASK-256-04, except accessible labels for newly
-  introduced Booking Calendar controls;
+- generic ARIA baseline from TASK-256-04 unless TASK-256-07/TASK-256-08 names a
+  concrete Booking Calendar owner/test path; this leaf may still add accessible
+  labels for newly introduced Booking Calendar controls;
 - visual calendar day availability and slot-count prefetching from TASK-259-05;
 - Appointment Form submit/reset behavior from TASK-258, except for the shared
   selection event staying backward compatible.
@@ -119,7 +120,9 @@ No API routes are added.
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/widgets/bookingCalendar.test.tsx`
-- `bun run test:vitest -- tests/vitest/widgets/bookingRuntimeScript.bookingCalendar.test.ts`
+- Create or extend
+  `tests/vitest/widgets/bookingRuntimeScript.bookingCalendar.test.ts`, then run
+  `bun run test:vitest -- tests/vitest/widgets/bookingRuntimeScript.bookingCalendar.test.ts`
 - `bun run test:vitest -- tests/vitest/ui/booking-calendar-editor-wave.test.tsx`
   if copy/schema fields change.
 - `bun run test:vitest -- tests/vitest/widgets/appointmentForm.test.tsx` if

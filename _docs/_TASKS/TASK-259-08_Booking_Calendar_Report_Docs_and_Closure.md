@@ -25,12 +25,17 @@ fixed by TASK-259.
 - [ ] Refresh `_docs/PLAYWRIGHT/REPORT_BOOKING_CALENDAR_WIDGET.md` with
   fixed/deferred/excluded statuses for every source finding.
 - [ ] Record the exact task owner for excluded rows:
-  - TASK-256 for shared editor/clear/placeholder/ARIA contract rows;
+  - concrete TASK-256 physical owner IDs from TASK-256-07/TASK-256-08 for
+    shared editor/clear/placeholder/ARIA contract rows;
   - TASK-258 for Appointment Form behavior affected by shared booking runtime
     script changes;
   - future Booking Admin UX task for Availability "Add row -> Save" workflow.
 - [ ] Update `_docs/_WIDGETS/BOOKING_CALENDAR.md` with final data/editor/runtime
   behavior.
+- [ ] Repair existing Booking Calendar widget-doc drift while updating the
+  final contract: Visual currently owns copy/surface/status messages, Advanced
+  owns defaults/diagnostics, and both `style.frameBackground` and
+  `style.frameBorderColor` are clearable today.
 - [ ] Update `_docs/WIDGET_PACK_MATRIX.md` only if final Booking Calendar
   behavior changes booking pack readiness.
 - [ ] Update `_docs/_TASKS/README.md` statuses and statistics when the family
@@ -50,7 +55,7 @@ fixed by TASK-259.
 | Visual calendar/availability/slot density | Fixed by TASK-259-05 or deferred with reason | Runtime script tests plus route/service tests for any API changes. |
 | Layout variants/mobile/styling | Fixed by TASK-259-06 or deferred with reason | Widget/editor/schema tests and rendered evidence. |
 | Default pickers/diagnostics | Fixed by TASK-259-07 or deferred with reason | Editor picker tests and diagnostics evidence. |
-| Shared ARIA/color-picker rows | Excluded | Link to TASK-256 owner; do not mark fixed by TASK-259. |
+| Shared ARIA/color-picker rows | Excluded | Link to the concrete TASK-256 physical owner named by TASK-256-07/TASK-256-08; do not mark fixed by TASK-259 or by a generic TASK-256 umbrella reference. |
 | Booking admin Availability Add row UX | Excluded | Link to a future Booking Admin UX task if still actionable. |
 
 ## Files to Change
@@ -73,7 +78,7 @@ fixed by TASK-259.
 | Finding | Status | Owner | Evidence |
 |---|---|---|---|
 | Admin preview empty catalog | Fixed | TASK-259-01 | `bun run test:vitest -- ...` |
-| Slot ARIA baseline | Excluded | TASK-256-04/TASK-256-07 | Shared-contract row, not TASK-259 scope |
+| Slot ARIA baseline | Excluded | TASK-256-07/TASK-256-08 concrete physical owner ID | Shared-contract row, not TASK-259 scope |
 ```
 
 Closure status flow:
@@ -87,6 +92,9 @@ Error handling:
 
 - Do not mark a report finding fixed unless the code/test evidence exists or the
   row was verified as no longer reproducible.
+- Do not mark a report finding excluded to TASK-256 unless the closure evidence
+  names a concrete TASK-256 physical owner ID that lists Booking Calendar owner
+  files/tests, or a TASK-256-08 future physical task for that exact row.
 - If a broad gate fails for unrelated reasons, isolate the targeted TASK-259
   suites and record the blocker before closure.
 - If `_docs/_TASKS/README.md` has parallel-agent conflicts, resolve by
@@ -109,13 +117,17 @@ This closure task adds no API routes.
 - `git diff --check`
 - `bun run test:vitest -- tests/vitest/widgets/bookingCalendar.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/booking-calendar-editor-wave.test.tsx`
-- `bun run test:vitest -- tests/vitest/widgets/bookingRuntimeScript.bookingCalendar.test.ts`
-  once added.
+- Create or extend
+  `tests/vitest/widgets/bookingRuntimeScript.bookingCalendar.test.ts`, then run
+  `bun run test:vitest -- tests/vitest/widgets/bookingRuntimeScript.bookingCalendar.test.ts`
+  when runtime script leaves landed.
 - `bun test tests/unit/widgets/validator.test.ts` when schema/defaults changed.
 - `bun test tests/unit/server/publicBookingApi.test.ts` when public slots route
   behavior changed.
 - `bun test tests/unit/booking/bookingService.test.ts` when slot generation/date
   behavior changed.
+- Route registration and `mapBookingError` coverage when public/internal booking
+  route handlers or known booking error mappings changed.
 - `bun run test:vitest -- tests/vitest/validation/bookingSchemas.test.ts` when
   route schemas changed.
 - Appointment smoke if shared runtime selection payload changed:
@@ -144,7 +156,8 @@ This closure task adds no API routes.
 
 - TASK-259 rows are Done only after validation and changelog evidence exists.
 - The Booking Calendar report clearly separates TASK-259 fixes from TASK-256
-  shared-contract fixes and TASK-258 Appointment Form ownership.
+  shared-contract fixes and TASK-258 Appointment Form ownership, with concrete
+  physical TASK-256 owner IDs for excluded shared rows.
 - No PNG screenshots or temporary Playwright artifacts are committed.
 - `_docs/_TASKS/README.md` statistics match the final visible task rows after
   resolving any parallel-agent board edits.

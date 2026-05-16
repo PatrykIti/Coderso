@@ -29,7 +29,8 @@ This leaf does not own:
 
 - admin canvas preview hydration itself, owned by TASK-259-01;
 - date default/range controls, owned by TASK-259-02;
-- generic frame style color pickers from TASK-256-02.
+- generic frame style color pickers from TASK-256-02 only after
+  TASK-256-07/TASK-256-08 names a concrete Booking Calendar owner/test path.
 
 ## Sub-Tasks
 
