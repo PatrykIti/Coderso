@@ -217,61 +217,121 @@ Struktura HTML (Default variant):
 
 ## 5. Testy Playwright — Frontend
 
-> **Status:** Ograniczony — limit sesji per user w ustawieniach CMS-a (401 Unauthorized)
+> **Status:** Zakończony
 
 ### 5.1 Środowisko testowe
 
 - **URL:** http://localhost:3000
+- **Strona testowa:** `Section Widget Test` (`/section-widget-test`) — UUID: `0426f80c-46d1-4200-8b8c-9fa89187dad8`
+- **Konfiguracja widgetu:** variant `default`, gradient `#3b82f6 → #8b5cf6` (180°), border 2px, title „Test Section Title", description, 1 pusty region
+- **Uwaga:** W poprzedniej sesji testowej napotkano **401 Unauthorized** spowodowany przekroczeniem limitu aktywnych sesji per user w ustawieniach CMS-a. Limit zwiększony do 30 — bieżąca sesja przeszła bez błędów.
 
 ### 5.2 Wyniki testów
 
-#### 5.2.1 Przyczyna ograniczonego testu
+#### 5.2.1 Renderowanie strony — weryfikacja podstawowa
 
-Podczas testów napotkano **401 Unauthorized** przy próbach:
-- `POST /admin/api/pages/{id}` (Save draft)
-- `POST /admin/api/pages/{id}/publish` (Publish)
-- Wbudowany Preview w edytorze (Runtime preview — "Not authenticated")
+| Test | Wynik | Szczegóły |
+|------|-------|-----------|
+| Strona `/section-widget-test` dostępna | ✅ | HTTP 200, tytuł „Section Widget Test" |
+| Element `[data-section-variant]` obecny w DOM | ✅ | `data-section-variant="default"` |
+| Element HTML outer — `section` vs `div` | ✅ | `<section>` — zgodnie z ustawieniem `semantics.element = section` |
+| Gradient renderuje się na froncie | ✅ | `background-image: linear-gradient(180deg, #3b82f6, #8b5cf6)` obecny w `style` |
+| Border 2px renderuje się na froncie | ✅ | `border-width: 2px; border-style: solid` |
+| Nagłówek sekcji widoczny | ✅ | `<h3>Test Section Title</h3>` obecny |
+| Opis sekcji widoczny | ✅ | `<p class="text-sm">This is a test description...</p>` obecny |
 
-**Przyczyna:** Przekroczony limit aktywnych sesji per user skonfigurowany w ustawieniach CMS-a — nie był to problem z poświadczeniami ani uprawnieniami konta. Po wyczerpaniu dozwolonej liczby równoległych sesji, kolejne żądania API były odrzucane z kodem 401.
+#### 5.2.2 Weryfikacja DOM — szczegóły struktury
 
-Strona testowa `Section Widget Test` nie mogła zostać opublikowana/zapisana, więc nie jest dostępna pod `http://localhost:3000/section-widget-test`.
+```
+Struktura HTML (Frontend — Default variant):
+<section class="mx-auto w-full max-w-6xl px-6"
+         data-section-variant="default"
+         data-section-container-width="content"
+         data-section-max-width="6xl"
+         data-section-regions="1"
+         data-section-element="section">
+  <div class="relative w-full overflow-hidden py-6"
+       style="background-color: transparent;
+              background-image: linear-gradient(180deg, #3b82f6, #8b5cf6);
+              border-color: var(--color-border);
+              border-style: solid;
+              border-width: 2px;">
+    <div class="relative z-[1] flex flex-col gap-4">
+      <header class="space-y-2">
+        <h3 class="text-2xl font-semibold text-[var(--color-text)]">Test Section Title</h3>
+        <p class="text-sm text-[var(--color-text)]/75">This is a test description for Section Widget.</p>
+      </header>
+      <div class="flex flex-col gap-6">
+        <div class="space-y-4" data-section-region="region:1">
+          <div class="rounded-md border border-dashed ...">Empty region.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+```
 
-#### 5.2.2 Sprawdzone istniejące strony
+#### 5.2.3 Wariant „contained" — weryfikacja shadow
 
-Sprawdzono wszystkie dostępne strony na froncie (`/`, `/homepage`, `/ux-audit-scratch-0516`, `/fsdsfsdf`, `/examples`) — żadna nie zawiera widgetów Section (`[data-section-variant]`). Brak możliwości pełnego testu porównawczego Admin ↔ Frontend.
+Zmieniono wariant na `contained`, opublikowano i sprawdzono frontend:
 
-#### 5.2.3 Wnioski z porównania kodu
+| Aspekt | Wynik | Szczegóły |
+|--------|-------|-----------|
+| Outer element classes | ✅ Identyczne | `mx-auto w-full max-w-6xl px-6` — takie same jak default |
+| Inner element shadow | ✅ Działa | Dodana klasa `shadow-sm` — widoczny cień ramy sekcji |
+| Gradient i border | ✅ Zachowane | Bez zmian względem default |
 
-Na podstawie analizy kodu (`SectionBlock` w `section.tsx`) i renderowania w admin canvas:
+#### 5.2.4 Potwierdzone problemy z frontendu
 
-| Aspekt | Admin Canvas | Frontend |
-|--------|-------------|---------|
-| Renderowanie widgetu | ✅ Identyczny komponent `SectionBlock` | ✅ Identyczny komponent `SectionBlock` |
-| CSS klasy | ✅ Tailwind (identyczne) | ✅ Tailwind (identyczne) |
-| Inline styles | ✅ Identyczne | ✅ Identyczne |
-| „Empty region." placeholder | ✅ Widoczny w admin | ❓ **Prawdopodobnie też widoczny na froncie** — brak warunkowego ukrycia na produkcji |
+| Problem | Wynik | Szczegóły |
+|---------|-------|-----------|
+| „Empty region." widoczny na froncie | ❌ **Potwierdzone** | `display: block`, tekst „Empty region." widoczny dla użytkownika końcowego |
+| Heading zawsze `<h3>` (hardcoded) | ❌ **Potwierdzone** | `<h3 class="text-2xl font-semibold text-[var(--color-text)]">` — brak możliwości zmiany poziomu semantycznego |
+| Regiony zawsze `flex flex-col` | ❌ **Potwierdzone** | `flex flex-col gap-4` na wrapperze regionów, `flex flex-col gap-6` na kontenerze |
 
-**Potencjalny problem na froncie (P1):** Placeholder „Empty region." jest renderowany przez `SectionBlock` zawsze gdy region nie ma widgetów. Nie ma warunkowego kodu ukrywającego ten placeholder na produkcji. Oznacza to, że pusta sekcja na opublikowanej stronie wyświetla tekst „Empty region." użytkownikom końcowym.
+#### 5.2.5 Responsywność — mobile (375px)
+
+| Test | Wynik | Szczegóły |
+|------|-------|-----------|
+| Sekcja wypełnia pełną szerokość | ✅ | `sectionWidth: 375px`, `sectionLeft: 0` |
+| Brak poziomego overflow | ✅ | `scrollWidth ≤ innerWidth` |
+| Padding boczny zachowany | ✅ | `padding-left: 24px / padding-right: 24px` (px-6) |
+| Gradient widoczny | ✅ | Renderuje się poprawnie na mobile |
+| „Empty region." widoczny | ❌ | Widoczny tak samo jak na desktop |
 
 ---
 
 ## 6. Porównanie Admin ↔ Frontend
 
-> **Status:** Częściowy (ograniczony autentykacją)
+> **Status:** Zakończony
 
 ### 6.1 Zachowanie identyczne
 
-- Komponent renderujący `SectionBlock` jest współdzielony — brak rozdwojenia logiki
-- CSS (Tailwind klasy + inline style) identyczny w obu środowiskach
-- Gradient, border, radius, overlay — renderowanie takie same
+| Aspekt | Admin Canvas | Frontend | Wynik |
+|--------|-------------|---------|-------|
+| Komponent renderujący | `SectionBlock` | `SectionBlock` | ✅ Identyczny |
+| Outer element tag | `<section>` | `<section>` | ✅ Identyczny |
+| Outer element klasy CSS | `mx-auto w-full max-w-6xl px-6` | `mx-auto w-full max-w-6xl px-6` | ✅ Identyczne |
+| Inline styles (gradient, border) | `linear-gradient(180deg, #3b82f6, #8b5cf6)`, `border-width: 2px` | Identyczne | ✅ |
+| Heading tag | `<h3 class="text-2xl font-semibold">` | `<h3 class="text-2xl font-semibold">` | ✅ Identyczny |
+| Regiony układ | `flex flex-col gap-4` + `flex flex-col gap-6` | Identyczne | ✅ |
+| data-atrybuty HTML | `data-section-variant`, `data-section-regions`, itd. | Identyczne | ✅ |
+| Contained variant shadow | `shadow-sm` na inner div | `shadow-sm` na inner div | ✅ Identyczny |
 
-### 6.2 Różnice i potencjalne problemy na froncie
+### 6.2 Różnice i potwierdzone problemy
 
-| Problem | Opis | Priorytet |
-|---------|------|-----------|
-| „Empty region." widoczne na froncie | Placeholder nie jest ukrywany na produkcji — użytkownik końcowy widzi techniczny tekst | **P1** |
-| Brak `mx-auto` dla `containerWidth: "full"` na froncie | Gdy strona ma globalne margin auto layout, sekcja może wyglądać inaczej niż w admin canvas | Do weryfikacji |
-| Admin canvas vs site theme | Canvas używa admin theme (zmienne CSS admin), frontend używa site theme — kolory mogą wyglądać inaczej | Oczekiwane |
+| Problem | Admin Canvas | Frontend | Priorytet | Status |
+|---------|-------------|---------|-----------|--------|
+| „Empty region." widoczny | ✅ Widoczny (oczekiwane w admin) | ❌ **Widoczny dla użytkownika końcowego** | **P0** | Potwierdzone |
+| CSS zmienne — `--color-text` | Puste (admin nie ustawia) | `#0f172a` (dark navy, site theme) | Oczekiwane | Potwierdzone |
+| CSS zmienne — `--color-bg` | Puste | `#ffffff` (white, site theme) | Oczekiwane | Potwierdzone |
+| CSS zmienne — `--color-border` | `#1d170f` (dark admin border) | `#e2e8f0` (light gray, site theme) | Oczekiwane | Potwierdzone |
+| Admin theme zmienne | `--admin-base-bg: #000000`, `--admin-base-text: #f0e8d5` | Brak `--admin-*` zmiennych | Oczekiwane | Potwierdzone |
+
+**Wnioski do sekcji 6.2:**
+- **„Empty region."** — potwierdzony P0 problem: placeholder renderuje się na froncie bez żadnego warunkowego ukrycia. Użytkownik końcowy widzi techniczny tekst, który powinien być widoczny tylko w edytorze.
+- **Kolory CSS zmiennych** — `var(--color-border)` na froncie = `#e2e8f0` (jasny), w admin canvas = `#1d170f` (ciemny). Sekcja z `borderColor: var(--color-border)` będzie wyglądała inaczej w obu środowiskach — to zachowanie oczekiwane, ale potencjalnie dezorientujące podczas edycji.
+- **Brak `mx-auto` dla `containerWidth: "full"` na bleed** — potwierdzone w kodzie (sekcja 4.2.4), niesprawdzone wizualnie na froncie (brak opublikowanej strony z bleed+full variant). Logika kodu jest taka sama po obu stronach, więc zachowanie powinno być identyczne.
 
 ---
 
@@ -319,7 +379,13 @@ Na podstawie analizy kodu (`SectionBlock` w `section.tsx`) i renderowania w admi
 - **Anchor ID**: brak walidacji formatu — nieprawidłowe id w HTML
 - **Gradient fields**: brak Clear button — trudne do wyczyszczenia
 - **Advanced editor**: duplikuje pola z Visual — zbędny szum
-- **Heading level**: zawsze h3 — problem SEO/dostępności
-- **Regiony**: zawsze flex-col — brak opcji layoutu poziomego
-- **„Empty region."**: widoczny na froncie dla użytkownika końcowego
+- **Heading level**: zawsze h3 na froncie (potwierdzono Playwright) — problem SEO/dostępności
+- **Regiony**: zawsze flex-col na froncie (potwierdzono Playwright) — brak opcji layoutu poziomego
+- **„Empty region."**: widoczny na froncie dla użytkownika końcowego — **potwierdzono Playwright** (`display: block`)
 - **Container width „Content" vs „Wide"**: identyczne CSS — brak realnej różnicy
+
+### Uwagi do sesji testowej
+
+- Sesja Playwright #3 (Admin UI) była ograniczona błędem 401 spowodowanym limitem sesji per user w CMS — limit zwiększony do 30.
+- Sesja Playwright #3b (Frontend) — zakończona w pełni: strona `Section Widget Test` opublikowana, przetestowana na desktop i mobile (375px).
+- Kluczowy wynik: **wszystkie 3 potencjalne problemy frontendowe z poprzedniej sesji zostały potwierdzone** (Empty region. widoczny, h3 hardcoded, flex-col).

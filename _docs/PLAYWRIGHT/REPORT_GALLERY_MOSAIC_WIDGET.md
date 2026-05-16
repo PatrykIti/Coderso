@@ -168,23 +168,89 @@ Gallery Mosaic to widget do tworzenia sekcji galerii mediów — zdjęć i film�
 
 ## 5. Wyniki testów Frontend (localhost:3000)
 
-**STATUS: Nieterminalny — Brak możliwości przetestowania**
+**STATUS: Zakończony — Strona opublikowana i przetestowana**
 
-Strona testowa `GALLERY-MOSAIC-TEST-0516` nie mogła zostać zapisana z powodu błędów autoryzacji HTTP 401 na endpointach API (`/api/pages/{id}` i `/api/pages/{id}/publish`). To jest znany, systemowy problem z sesją API — identyczny jak opisany w raporcie Hero Widget (BUG-03).
+Po zwiększeniu limitu aktywnych sesji per user w CMS do 30 — zapis i publikacja strony przebiegły bez błędów. Strona testowa `GALLERY-MOSAIC-TEST-0516` (`/gallery-mosaic-test-0516`) jest dostępna na frontendzie. Testy przeprowadzono przez inspekcję HTML źródła strony (SSR) oraz Playwright.
 
-**Efekt:** Strona nie istnieje na frontendzie (`/gallery-mosaic-test-0516` → 404). Żadna z istniejących opublikowanych stron frontendowych nie zawiera widgetu Gallery Mosaic.
+**Środowisko testowe:**
+- Frontend: `http://localhost:3000/gallery-mosaic-test-0516`
+- Viewport desktop: 1280×800, tablet: 768×1024, mobile: 375×812
+- 5 bloków Gallery Mosaic: mosaic (hover), mosaic (inside), uniform-grid (below), feature-left (5 items), feature-left (1 item)
+- 1 blok z elementem wideo (autoplay test)
 
-**Rzeczywista przyczyna:** Limit aktywnych sesji per user w ustawieniach CMS był zbyt niski — przy otwartych równolegle kilku zakładkach/sesjach Playwright kolejne żądania API były odrzucane jako 401 z powodu przekroczenia limitu współbieżnych sesji.
+### 5.1 Warianty layoutu
+
+| Test | Wynik | Szczegóły |
+|------|-------|-----------|
+| Renderowanie mosaic | ✓ Działa | `grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4` — 4 kolumny na desktop; item 0 z `lg:col-span-2 lg:row-span-2` (asymetryczny 2×2) |
+| Renderowanie uniform-grid | ✓ Działa | `grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4` — 3 równe kolumny na desktop; computed width: `320px 320px 320px` |
+| Renderowanie feature-left | ✓ Działa | `grid grid-cols-1 lg:grid-cols-3 gap-4`; lead item z `lg:col-span-2`; prawa kolumna `flex flex-col gap-4` |
+| Zgodność admin preview ↔ frontend | ✓ Zgodna | Struktury CSS klas identyczne |
+
+### 5.2 Responsywność
+
+| Breakpoint | Mosaic | Uniform-grid | Feature-left | Wynik |
+|-----------|--------|--------------|-------------|-------|
+| Mobile 375px | 1 kolumna (`343px`) | 1 kolumna | 1 kolumna | ✓ Działa |
+| Tablet 768px | 2 kolumny (`360px 360px`) | 2 kolumny | 1 kolumna (lg: breakpoint nie aktywny) | ✓ Działa |
+| Desktop 1280px | 4 kolumny | 3 kolumny | 3 kolumny (lead 2/3 + support 1/3) | ✓ Działa |
+
+### 5.3 Caption — pozycje
+
+| Caption position | Wynik | Szczegóły |
+|-----------------|-------|-----------|
+| Inside | ✓ Działa | `pointer-events-none absolute inset-x-0 bottom-0` — overlay na dole kafelka, zawsze widoczny |
+| Below | ✓ Działa | `<p class="mt-2 text-xs font-medium text-[var(--color-text)]/80">` poniżej obrazka |
+| Hover | ✓ Działa | `opacity-0 transition-opacity duration-200 group-hover:opacity-100` — caption pojawia się po najechaniu; Playwright mousemove potwierdził `computedOpacity: "1"` po hover |
+| Hover — dostępność klawiaturowa | ✗ Bug (A3) | Caption niedostępna klawiaturowo — `group-hover:opacity-100` reaguje tylko na CSS `:hover`, brak `:focus-within` |
+
+### 5.4 Linki i nawigacja
+
+| Test | Wynik | Szczegóły |
+|------|-------|-----------|
+| Link href renderuje się | ✓ Działa | `<a href="https://example.com/item1" class="block">` |
+| rel="noopener noreferrer" | ✗ Bug (BUG-05) | `rel=""` i `target=""` — potwierdzone w HTML źródle i DOM. 3 linki bez rel w 3 różnych wariantach. Luka bezpieczeństwa (reverse tabnapping) |
+| Elementy bez href nie mają tagu `<a>` | ✓ Działa | Elementy z pustym href renderują tylko `<div>`, bez zbędnego `<a>` |
+
+### 5.5 Wideo autoplay/loop
+
+| Test | Wynik | Szczegóły |
+|------|-------|-----------|
+| Element `<video>` renderuje się | ✓ Działa | `<video src="..." class="h-full w-full object-cover" playsInline="" muted="" loop="" autoPlay="">` |
+| autoPlay | ✓ Działa | Atrybut `autoPlay=""` obecny w HTML — wideo startuje automatycznie |
+| loop | ✓ Działa | Atrybut `loop=""` obecny — wideo powtarza się w pętli |
+| muted | ✓ Działa | `muted=""` — wymagane przez przeglądarki dla autoPlay |
+| playsInline | ✓ Działa | `playsInline=""` — poprawne dla mobile |
+| Video priorytet nad image | ✓ Działa | Gdy `video` jest niepuste, element renderuje `<video>` zamiast `<img>` (data-gallery-media-type="video") |
+| Brak controls na `<video>` | ✗ Bug (A4) | Brak atrybutu `controls` — użytkownik nie może zatrzymać autoodtwarzającego się wideo. Naruszenie WCAG 2.2 SC 2.2.2 |
+| Brak poster image | ✗ Bug (BF-13) | `<video>` bez `poster` — czarny ekran przy ładowaniu |
+
+### 5.6 Błędy CODE-04, CODE-07 na frontendzie
+
+| Bug | Wynik | Szczegóły |
+|-----|-------|-----------|
+| CODE-04 — pusta prawa kolumna feature-left + 1 item | ✓ Potwierdzone na frontendzie | HTML: `<div class="flex flex-col gap-4"></div>` — prawa kolumna pusta, wizualnie duży pusty obszar po prawej |
+| CODE-07 — caption jako alt text | ✓ Potwierdzone na frontendzie | `alt="Caption item 1"` == widoczny caption tekst. Duplikacja semantyczna w HTML źródle |
+
+### 5.7 Dostępność na frontendzie
+
+| # | Problem | Wynik |
+|---|---------|-------|
+| A1 | Caption == alt text (CODE-07) | ✓ Potwierdzone na frontendzie |
+| A2 | Brak `rel="noopener noreferrer"` | ✓ Potwierdzone na frontendzie |
+| A3 | Hover caption niedostępna klawiaturowo | ✓ Potwierdzone — brak `:focus-within` |
+| A4 | `<video autoPlay>` bez opcji zatrzymania | ✓ Potwierdzone na frontendzie — brak `controls` |
+| A5 | Brak `<figure>` + `<figcaption>` | ✓ Potwierdzone w HTML źródle |
 
 | Test | Admin preview | Frontend | Zgodność |
 |------|--------------|----------|----------|
-| Renderowanie mosaic | ✓ Działa | ✗ Nie testowane | — |
-| Renderowanie uniform-grid | ✓ Działa | ✗ Nie testowane | — |
-| Renderowanie feature-left | ✓ Działa | ✗ Nie testowane | — |
-| Hover caption | ✓ CSS działa | ✗ Nie testowane | — |
-| Video autoplay/loop | ✓ Widoczne w canvas | ✗ Nie testowane | — |
-| Linki href | ✓ Działają | ✗ Nie testowane | — |
-| Responsywność | ✓ Breakpointy w CSS | ✗ Nie testowane | — |
+| Renderowanie mosaic | ✓ Działa | ✓ Działa | ✓ Zgodne |
+| Renderowanie uniform-grid | ✓ Działa | ✓ Działa | ✓ Zgodne |
+| Renderowanie feature-left | ✓ Działa | ✓ Działa | ✓ Zgodne |
+| Hover caption | ✓ CSS działa | ✓ Działa (opacity 0→1 po hover) | ✓ Zgodne |
+| Video autoplay/loop | ✓ Widoczne w canvas | ✓ Działa (autoPlay + loop + muted + playsInline) | ✓ Zgodne |
+| Linki href | ✓ Działają | ✓ Działają (bez rel) | ✓ Zgodne — BUG-05 obustronnie |
+| Responsywność | ✓ Breakpointy w CSS | ✓ Mobile 1-kol, tablet 2-kol, desktop 3–4 kol | ✓ Zgodne |
 
 ---
 
@@ -337,6 +403,8 @@ Strona testowa `GALLERY-MOSAIC-TEST-0516` nie mogła zostać zapisana z powodu b
 > przechwyceń Playwright. Same pliki PNG są ignorowane przez Git i nie są
 > wymaganym evidence w repo.
 
+**Admin (sesja 1):**
+
 | Plik | Opis |
 |------|------|
 | `gallery-mosaic-21-video-priority.png` | Video priority over image — Item 1 przełącza się na typ video |
@@ -344,18 +412,36 @@ Strona testowa `GALLERY-MOSAIC-TEST-0516` nie mogła zostać zapisana z powodu b
 | `gallery-mosaic-23-hover-caption-test.png` | Test hover caption — mysz nad elementem 2 |
 | `gallery-mosaic-24-mosaic-variant-full.png` | Mosaic wariant w canvas z 5 elementami |
 
-> **Uwaga:** Pliki `gallery-mosaic-01` do `gallery-mosaic-20` nie zostały zapisane do docelowego katalogu z powodu braku katalogu `screenshots/` w trakcie pierwszych sesji. Zapis był poprawny dla ostatnich 4 screenshotów.
+**Frontend (sesja 2 — po naprawieniu limitu sesji):**
+
+| Plik | Opis |
+|------|------|
+| `gallery-mosaic-01-mosaic-frontend.png` | Wariant mosaic — desktop 1280px, 5 elementów z hover caption |
+| `gallery-mosaic-02-mobile-375.png` | Mobile 375px — layout 1-kolumnowy |
+| `gallery-mosaic-03-tablet-768.png` | Tablet 768px — layout 2-kolumnowy |
+| `gallery-mosaic-04-desktop.png` | Desktop 1280px — overview |
+| `gallery-mosaic-06-all-variants-top.png` | Widok górny z mosaic + scrollowane sekcje |
+| `gallery-mosaic-07-mosaic-hover-full.png` | Mosaic wariant — pełny widok desktop z hover caption |
+| `gallery-mosaic-08-uniform-grid.png` | Uniform grid — 3 kolumny z captionem below |
+| `gallery-mosaic-09-feature-left-5items.png` | Feature-left — lead 2/3 + support 1/3 |
+| `gallery-mosaic-10-feature-left-1item-CODE04.png` | Feature-left z 1 item — pusta prawa kolumna (CODE-04) |
+| `gallery-mosaic-11-mobile-375.png` | Mobile 375px — responsywność |
+| `gallery-mosaic-12-tablet-768.png` | Tablet 768px — responsywność |
+| `gallery-mosaic-13-video-autoplay.png` | Sekcja video autoplay — mosaic z `<video autoPlay loop muted>` |
+| `gallery-mosaic-14-video-section.png` | Video element zbliżenie |
+
+> **Uwaga:** Pliki `gallery-mosaic-01` do `gallery-mosaic-20` (admin) nie zostały zapisane do docelowego katalogu z powodu braku katalogu `screenshots/` w trakcie pierwszych sesji. Pliki frontendowe (01–14) zapisane w `.playwright-cli/`.
 
 ---
 
 ## 12. Uwagi techniczne
 
-### Znany błąd systemowy — HTTP 401 przy zapisie
-Ten sam problem z autoryzacją API pojawia się konsekwentnie we wszystkich testach widgetów (Hero, Gallery Mosaic). Sesja przeglądarki działa (logowanie OK), ale API calls do zapisu stron zwracają HTTP 401. **Zidentyfikowana przyczyna:** zbyt niski limit aktywnych sesji per user w ustawieniach CMS — przy równoległych sesjach Playwright (lub otwartych kilku zakładkach) limit jest wyczerpywany i kolejne żądania są odrzucane jako 401. **Rozwiązanie:** zwiększyć limit sesji per user w konfiguracji CMS przed kolejną sesją testową.
+### Błąd systemowy HTTP 401 — rozwiązany
+Pierwotny błąd 401 przy zapisie/publikacji strony był spowodowany zbyt niskim limitem aktywnych sesji per user w ustawieniach CMS. **Rozwiązanie:** limit zwiększony do 30 równoległych sesji — zapis i publikacja działają poprawnie w obu sesjach testowych.
 
-### Frontend nie testowany
-Brak możliwości przetestowania widgetu na frontendzie — strona testowa nie mogła zostać zapisana/opublikowana z powodu błędu 401. Zachowanie frontendu (responsywność, hover, video autoplay) można ocenić tylko pośrednio przez canvas w admin preview.
+### Frontend przetestowany w sesji 2
+Strona testowa `GALLERY-MOSAIC-TEST-0516` (`/gallery-mosaic-test-0516`) opublikowana i w pełni przetestowana na frontendzie. Wszystkie 3 warianty layoutu, responsywność (375/768/1280px), hover caption, video autoplay, linki i weryfikacja HTML źródłowego — wykonane. Wyniki w sekcji 5.
 
 ---
 
-*Raport zakończony — 2026-05-16. Testy przeprowadzone w sesji Playwright `gallery-mosaic`.*
+*Raport zakończony (sesja 1: 2026-05-16, sesja 2 frontend: 2026-05-16). Testy przeprowadzone w sesjach Playwright `gallery-mosaic` (admin) i `gallery-mosaic-frontend` (frontend).*
