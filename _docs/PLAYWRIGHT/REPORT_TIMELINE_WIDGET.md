@@ -1,21 +1,21 @@
 # RAPORT: Timeline Widget — Analiza UX/UI i brakujące funkcjonalności
 
-> **Status:** Zakończony  
-> **Data:** 2026-05-16  
-> **Sesja:** Playwright #3 (Timeline Widget)  
-> **Środowisko:** http://localhost:5173/admin · http://localhost:3000  
+> **Status:** Zakończony
+> **Data:** 2026-05-16
+> **Sesja:** Playwright #3 (Timeline Widget)
+> **Środowisko:** http://localhost:5173/admin · http://localhost:3000
 > **Sesja przeglądarki:** `timeline-audit` (oddzielna od innych agentów)
 
 ---
 
 ## 1. Przegląd widgetu
 
-**Typ:** Composite  
-**Moduł:** Content  
-**Audience:** Intermediate  
-**Warianty:** `milestones`, `cards`, `compact`  
-**Tryby (mode):** `process`, `axis`, `chronology`, `alternating`  
-**Ograniczenia kroków:** min 3 / max 8  
+**Typ:** Composite
+**Moduł:** Content
+**Audience:** Intermediate
+**Warianty:** `milestones`, `cards`, `compact`
+**Tryby (mode):** `process`, `axis`, `chronology`, `alternating`
+**Ograniczenia kroków:** min 3 / max 8
 
 Timeline widget służy do prezentacji kroków procesu, kamieni milowych, wydarzeń chronologicznych oraz przeplatających się narracji. Obsługuje orientację poziomą i pionową, oznaczenia statusu kroków, daty, ikony, akcenty kolorów per krok oraz linki CTA per krok.
 
@@ -114,8 +114,8 @@ Timeline widget służy do prezentacji kroków procesu, kamieni milowych, wydarz
 
 ## 4. Testy w Admin UI Preview
 
-> **Sesja:** `playwright-cli -s=timeline-audit`  
-> **Strona testowa:** UX Audit Scratch 0516 (ID: 6ece9868)  
+> **Sesja:** `playwright-cli -s=timeline-audit`
+> **Strona testowa:** UX Audit Scratch 0516 (ID: 6ece9868)
 > **Data testu:** 2026-05-16
 
 ### 4.1 KRYTYCZNY BUG: Race condition przy zmianie trybu w Visual editor
@@ -145,7 +145,7 @@ Oba wywołania używają tej samej starej referencji `block` z closury. Drugie w
 - **TYLKO Advanced editor pozwala poprawnie zmienić tryb** (nie wywołuje `onVariantChange`)
 - Po zapisaniu: `data-timeline-mode="axis"`, variant="compact" (mode NIE zapisany)
 
-**Lokalizacja błędu:** `VisualPanel.tsx:98`  
+**Lokalizacja błędu:** `VisualPanel.tsx:98`
 **Naprawa:** Użyć functional update lub połączyć obie zmiany w jednym `onChange`:
 ```js
 // Fix option: combine both changes in one update
@@ -197,7 +197,7 @@ Każdy krok ma domyślnie "upcoming" w dropdown statusu w Visual editor. Brak mo
 
 ## 5. Testy na froncie (localhost:3000)
 
-**URL:** http://localhost:3000/ux-audit-scratch-0516  
+**URL:** http://localhost:3000/ux-audit-scratch-0516
 **Strona opublikowana:** Tak (opublikowano podczas testu)
 
 ### 5.1 Widget na froncie
@@ -232,7 +232,7 @@ Identyczne jak w admin preview — błędy ARIA są w rendererze (`timeline.tsx`
 
 ### 5.4 Mobile (390x844)
 
-Chronology layout: single column na mobile — poprawne.  
+Chronology layout: single column na mobile — poprawne.
 Alternating: `hidden md:block` na elementach daty — R1 zadziała gdy daty będą ustawione.
 
 ---
@@ -286,7 +286,7 @@ onChange={(data) => onChange({ ...block, data })}
 onVariantChange={(next) => onChange({ ...block, variant: next })}
 ```
 
-Gdy oba są wywoływane synchronicznie, `onVariantChange` nadpisuje `data` ze starego `block`. 
+Gdy oba są wywoływane synchronicznie, `onVariantChange` nadpisuje `data` ze starego `block`.
 
 Naprawa — opcja 1 (w `updateMode`):
 ```js

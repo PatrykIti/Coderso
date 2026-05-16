@@ -285,6 +285,8 @@ Widget CTA Banner to kompaktowy pasek konwersyjny służący do osadzania wezwan
 
 ## 8. Screenshoty
 
+> Uwaga: nazwy plików PNG w tej sekcji są wyłącznie lokalnymi etykietami przechwyceń Playwright. Same pliki PNG są ignorowane przez Git i nie są wymaganym evidence w repo.
+
 | Plik | Opis |
 |------|------|
 | `cta-banner-admin-wizard.png` | Wizard Editor: 3 pola (layout, headline, primary CTA label) — bez href i secondary CTA |

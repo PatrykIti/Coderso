@@ -339,6 +339,8 @@ Logo Cloud widget służy do prezentacji logotypów partnerów i klientów w cel
 
 ## 9. Screenshoty
 
+> Uwaga: nazwy plików PNG w tej sekcji są wyłącznie lokalnymi etykietami przechwyceń Playwright. Same pliki PNG są ignorowane przez Git i nie są wymaganym evidence w repo.
+
 | Plik | Opis |
 |------|------|
 | `logo-cloud-01-page-created.png` | Nowa strona TEST-LOGO-CLOUD-0516 w admin |

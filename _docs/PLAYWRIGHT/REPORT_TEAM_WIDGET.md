@@ -408,6 +408,8 @@ Pełne wyniki w sekcji 3.8 — wszystkie zachowania są identyczne w admin canva
 
 ## 11. Screenshoty
 
+> Uwaga: nazwy plików PNG w tej sekcji są wyłącznie lokalnymi etykietami przechwyceń Playwright. Same pliki PNG są ignorowane przez Git i nie są wymaganym evidence w repo.
+
 | Plik | Opis |
 |------|------|
 | `team-00-login.png` | Panel logowania admin |

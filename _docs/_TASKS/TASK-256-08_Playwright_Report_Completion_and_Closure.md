@@ -25,7 +25,24 @@ that are not contract repairs.
 
 - `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md:3` is still marked
   `W toku`.
-- `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md:3` is still marked `W toku`.
+- `_docs/PLAYWRIGHT/REPORT_RICH_TEXT_SECTION_WIDGET.md:3` is still marked
+  `W trakcie` and must be classified against shared-contract TASK-256 scope
+  before closure.
+- `_docs/PLAYWRIGHT/REPORT_POSTS_FEED_WIDGET.md:3` is still marked `W toku`
+  and must be classified against shared-contract TASK-256 scope before closure.
+- `_docs/PLAYWRIGHT/REPORT_ENTRY_TEASER_WIDGET.md:3` is still marked
+  `W TRAKCIE` and must be classified against shared-contract TASK-256 scope
+  before closure.
+- `_docs/PLAYWRIGHT/REPORT_LISTING_FILTERS_WIDGET.md:3` is still marked
+  `W TOKU` and must be classified against shared-contract TASK-256 scope before
+  closure.
+- `_docs/PLAYWRIGHT/REPORT_PRODUCT_GALLERY_WIDGET.md:3`,
+  `_docs/PLAYWRIGHT/REPORT_PRODUCT_COMPARE_WIDGET.md:3`, and
+  `_docs/PLAYWRIGHT/REPORT_PRODUCT_TABLE_WIDGET.md:3` are still marked in
+  progress and must be classified against shared-contract TASK-256 scope before
+  closure.
+- `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md:3` is completed, but its findings
+  still need fixed/deferred closure classification after implementation.
 - `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:220,258` contains
   authentication-limited comparison sections that require final classification.
 - Completed reports such as CTA banner, logo cloud, team, stack,
@@ -53,7 +70,7 @@ that are not contract repairs.
 
 | File group | Required change |
 |---|---|
-| `_docs/PLAYWRIGHT/REPORT_*_WIDGET.md` | Add final admin/frontend evidence, fixed/deferred status, and screenshots/URLs where applicable. |
+| `_docs/PLAYWRIGHT/REPORT_*_WIDGET.md` | Add final textual admin/frontend evidence, fixed/deferred status, and run URLs/log snippets where applicable. Screenshot filenames may remain as local capture labels, but PNG files under `_docs/PLAYWRIGHT` are temporary and must not be committed. |
 | `_docs/_WIDGETS/*.md` | Update widget contracts for changed schema/editor/runtime behavior. |
 | `_docs/WIDGETS.md` | Update only if shared contracts changed. |
 | `_docs/WIDGET_PACK_MATRIX.md` | Update only if readiness/completeness changes. |
@@ -114,7 +131,8 @@ No API routes are added by this closure task.
   changed schemas.
 - Anti-abuse: final reports must not include secrets, tokens, private URLs, or
   privileged debug payloads.
-- Secret handling: redact screenshots/logs if they contain sensitive values.
+- Secret handling: redact logs/report snippets if they contain sensitive values;
+  do not commit Playwright screenshot artifacts.
 
 ## Testing Requirements
 
@@ -135,8 +153,10 @@ No API routes are added by this closure task.
   - `bun run gates:coderso`
   - `bun run scan:security:strict`
   - `bun run precommit`
-- Run Bun registry/validator tests when any widget schema/default/runtime
-  registration changed.
+- Run `bun test tests/unit/widgets/validator.test.ts`,
+  `bun test tests/unit/widgets/registry.test.ts`, and
+  `bun test tests/unit/widgets/runtimeRegistry.test.ts` when any widget
+  schema/default/runtime registration changed.
 - If DB-backed or network-backed gates are unavailable, record the exact blocker
   and rerun before final closure.
 

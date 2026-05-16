@@ -1,10 +1,10 @@
 # REPORT: Split Layout Widget — UX/UI Audit
 
-**Widget:** `split-layout`  
-**Data:** 2026-05-16  
-**Status:** Zakończony  
-**Pliki:** `core/widgets/core/splitLayout.tsx`, `core/admin/ui/widgets/editors/SplitLayoutEditors.tsx`  
-**Strona testowa:** `http://localhost:5173/admin/pages/4a1bbf86-6e3c-4aa7-804c-66df11d34186`  
+**Widget:** `split-layout`
+**Data:** 2026-05-16
+**Status:** Zakończony
+**Pliki:** `core/widgets/core/splitLayout.tsx`, `core/admin/ui/widgets/editors/SplitLayoutEditors.tsx`
+**Strona testowa:** `http://localhost:5173/admin/pages/4a1bbf86-6e3c-4aa7-804c-66df11d34186`
 **Frontend URL:** `http://localhost:3000/test-split-layout-0516`
 
 ---

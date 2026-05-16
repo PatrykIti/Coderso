@@ -1,21 +1,21 @@
 # RAPORT: Testimonials Widget — Analiza UX/UI i brakujące funkcjonalności
 
-> **Status:** Zakończony  
-> **Data:** 2026-05-16  
-> **Sesja:** Playwright (Testimonials Widget)  
-> **Środowisko:** http://localhost:5173/admin · http://localhost:3000  
-> **Sesja przeglądarki:** `testimonials-audit` (oddzielna od innych agentów)  
+> **Status:** Zakończony
+> **Data:** 2026-05-16
+> **Sesja:** Playwright (Testimonials Widget)
+> **Środowisko:** http://localhost:5173/admin · http://localhost:3000
+> **Sesja przeglądarki:** `testimonials-audit` (oddzielna od innych agentów)
 > **Strona testowa:** TEST-TESTIMONIALS-0516 (`/test-testimonials-0516`)
 
 ---
 
 ## 1. Przegląd widgetu
 
-**Typ:** Content (standalone, bez slotów)  
-**Kategoria:** `content`  
-**Warianty:** `grid`, `spotlight`, `slider-static`  
-**Ograniczenia elementów:** min 2 / max 8  
-**Plik renderera:** `core/widgets/core/testimonials.tsx`  
+**Typ:** Content (standalone, bez slotów)
+**Kategoria:** `content`
+**Warianty:** `grid`, `spotlight`, `slider-static`
+**Ograniczenia elementów:** min 2 / max 8
+**Plik renderera:** `core/widgets/core/testimonials.tsx`
 **Plik edytora:** `core/admin/ui/widgets/editors/TestimonialsEditors.tsx`
 
 Testimonials widget służy do wyświetlania cytatów klientów z ocenami gwiazdkowymi, danymi autora (imię, rola, avatar, etykieta źródła) oraz sekcją nagłówkową.
@@ -133,28 +133,28 @@ Testimonials widget służy do wyświetlania cytatów klientów z ocenami gwiazd
 ### 4.1 Błędy funkcjonalne (Bugs)
 
 #### BUG-01 — Slider Static: `snap-start` na kartach bez `scroll-snap-type` na kontenerze
-**Priorytet:** Wysoki  
-**Środowisko:** Admin canvas + Frontend (oba)  
-**Opis:** Karty slidera mają klasę `snap-start` (z Tailwind), ale kontener flex (`overflow-x-auto`) nie posiada `scroll-snap-type`. Oznacza to, że snap points są zdefiniowane na elementach, ale kontener ich nie respektuje — scroll-snap w ogóle nie działa.  
-**Weryfikacja:** `getComputedStyle(container).scrollSnapType === "none"` — potwierdzone na froncie.  
-**Lokalizacja:** `core/widgets/core/testimonials.tsx:359` — `listClassName` dla `slider-static` brakuje `snap-x snap-mandatory`.  
+**Priorytet:** Wysoki
+**Środowisko:** Admin canvas + Frontend (oba)
+**Opis:** Karty slidera mają klasę `snap-start` (z Tailwind), ale kontener flex (`overflow-x-auto`) nie posiada `scroll-snap-type`. Oznacza to, że snap points są zdefiniowane na elementach, ale kontener ich nie respektuje — scroll-snap w ogóle nie działa.
+**Weryfikacja:** `getComputedStyle(container).scrollSnapType === "none"` — potwierdzone na froncie.
+**Lokalizacja:** `core/widgets/core/testimonials.tsx:359` — `listClassName` dla `slider-static` brakuje `snap-x snap-mandatory`.
 **Naprawa:** Dodać `snap-x snap-mandatory` do klasy kontenera dla wariantu `slider-static`.
 
 #### BUG-02 — Wizard: Zmiana wariantu nie aktualizuje pola "Testimonials count"
-**Priorytet:** Średni  
-**Opis:** W Wizard, po zmianie wariantu z Grid (domyślnie 3) na Spotlight (domyślnie 2), pole "Testimonials count" nie aktualizuje się automatycznie do domyślnej wartości dla nowego wariantu. Użytkownik konfiguruje Spotlight ale ma 3 testimonialy zamiast 2.  
+**Priorytet:** Średni
+**Opis:** W Wizard, po zmianie wariantu z Grid (domyślnie 3) na Spotlight (domyślnie 2), pole "Testimonials count" nie aktualizuje się automatycznie do domyślnej wartości dla nowego wariantu. Użytkownik konfiguruje Spotlight ale ma 3 testimonialy zamiast 2.
 **Lokalizacja:** `TestimonialsEditors.tsx:336–350` — `onVariantChange` tylko zmienia wariant, nie wywołuje `setTestimonialsCount`.
 
 #### BUG-03 — Heading level `<h3>` hardcoded bez H1/H2 context
-**Priorytet:** Średni  
-**Opis:** Tytuł sekcji testimonialów renderuje się jako `<h3>` niezależnie od kontekstu strony. Na stronie testowej brak H1 i H2 — dostępny jest jedynie H3, co narusza hierarchię nagłówków WCAG.  
-**Weryfikacja:** Frontend — `document.querySelectorAll('h1, h2, h3')` zwraca tylko `["H3: Trusted by teams that ship fast"]`.  
-**Lokalizacja:** `core/widgets/core/testimonials.tsx:382` — `<h3>` hardcoded.  
+**Priorytet:** Średni
+**Opis:** Tytuł sekcji testimonialów renderuje się jako `<h3>` niezależnie od kontekstu strony. Na stronie testowej brak H1 i H2 — dostępny jest jedynie H3, co narusza hierarchię nagłówków WCAG.
+**Weryfikacja:** Frontend — `document.querySelectorAll('h1, h2, h3')` zwraca tylko `["H3: Trusted by teams that ship fast"]`.
+**Lokalizacja:** `core/widgets/core/testimonials.tsx:382` — `<h3>` hardcoded.
 **Naprawa:** Dodać opcję `headingLevel` (h2/h3/h4) w konfiguracji lub zawsze używać odpowiedniego poziomu.
 
 #### BUG-04 — Brak `aria-label` na sekcji i kartach `<article>`
-**Priorytet:** Średni  
-**Opis:** Element `<section>` (wrapper testimonialów) nie posiada `aria-label` ani `aria-labelledby`. Elementy `<article>` (karty) też nie mają `aria-label`. Screen reader nie identyfikuje regionu ani poszczególnych testimonialów.  
+**Priorytet:** Średni
+**Opis:** Element `<section>` (wrapper testimonialów) nie posiada `aria-label` ani `aria-labelledby`. Elementy `<article>` (karty) też nie mają `aria-label`. Screen reader nie identyfikuje regionu ani poszczególnych testimonialów.
 **Weryfikacja:** `section.getAttribute('aria-label') === null` — potwierdzone.
 
 ---
@@ -162,34 +162,34 @@ Testimonials widget służy do wyświetlania cytatów klientów z ocenami gwiazd
 ### 4.2 Problemy UX edytora
 
 #### UX-01 — Remove testimonial bez dialogu potwierdzenia
-**Opis:** Kliknięcie "Remove" natychmiast usuwa testimonial bez żadnego dialogu potwierdzenia. Brak opcji cofnięcia.  
-**Ryzyko:** Przypadkowe usunięcie testimonialów z wypełnioną treścią.  
+**Opis:** Kliknięcie "Remove" natychmiast usuwa testimonial bez żadnego dialogu potwierdzenia. Brak opcji cofnięcia.
+**Ryzyko:** Przypadkowe usunięcie testimonialów z wypełnioną treścią.
 **Rekomendacja:** Dodać confirm dialog: *"Usunąć testimonial X? Akcja jest nieodwracalna."*
 
 #### UX-02 — Inconsistency: Card background/border mają Clear, ale Text color i Accent color nie
-**Opis:** W sekcji "Colors and emphasis" kontrolki `Card background` i `Card border` mają przycisk "Clear" (`ClearableFieldHeader`), ale `Text color` i `Accent color` go nie mają — mimo podobnej struktury i semantyki. Użytkownik nie może "wyczyścić" tych kolorów do wartości domyślnych.  
+**Opis:** W sekcji "Colors and emphasis" kontrolki `Card background` i `Card border` mają przycisk "Clear" (`ClearableFieldHeader`), ale `Text color` i `Accent color` go nie mają — mimo podobnej struktury i semantyki. Użytkownik nie może "wyczyścić" tych kolorów do wartości domyślnych.
 **Lokalizacja:** `TestimonialsEditors.tsx:659–674` — `ColorField` dla `textColor` i `accentColor` bez `onClear`.
 
 #### UX-03 — Rating 0 wyświetla 5 szarych gwiazdek (niejasne znaczenie)
-**Opis:** Ustawienie oceny 0/5 renderuje 5 pustych gwiazdek zamiast ukrycia sekcji ocen. Dla odwiedzającego witrynę wygląda to jak "0 gwiazdek" — negatywna ocena — zamiast "ocena nieznana/brak oceny".  
+**Opis:** Ustawienie oceny 0/5 renderuje 5 pustych gwiazdek zamiast ukrycia sekcji ocen. Dla odwiedzającego witrynę wygląda to jak "0 gwiazdek" — negatywna ocena — zamiast "ocena nieznana/brak oceny".
 **Rekomendacja:** Przy rating = 0 ukrywać gwiazdki lub wyświetlać inny placeholder (np. "Brak oceny").
 
 #### UX-04 — Wizard: Brak pól Rating, Role, Avatar, Source label
-**Opis:** Wizard ekspozuje tylko Quote + Author dla każdego testimonial. Użytkownik konfigurujący przez Wizard od razu traci dane (Rating defaultuje do 5, ale rola/avatar/sourceLabel pozostają puste).  
+**Opis:** Wizard ekspozuje tylko Quote + Author dla każdego testimonial. Użytkownik konfigurujący przez Wizard od razu traci dane (Rating defaultuje do 5, ale rola/avatar/sourceLabel pozostają puste).
 **Rekomendacja:** Dodać przynajmniej pole Rating w Wizard (jest kluczowe dla social proof). Rola i source label mogą pozostać w Visual.
 
 #### UX-05 — Wizard: Brak pola "Eyebrow" i "Description" sekcji
 **Opis:** Wizard pozwala edytować tylko tytuł sekcji. Eyebrow i description sekcji dostępne są tylko w zakładce Visual. Eyebrow jest ważnym elementem spójności wizualnej (często zawiera np. "Customer stories").
 
 #### UX-06 — Brak Avatar URL picker z Media Library
-**Opis:** Pole "Avatar URL" to prosty input tekstowy wymagający wklejenia URL. Brak przycisku "Pick from library" (jak w Hero widget). Użytkownik musi znać URL zewnętrzny lub ręcznie kopiować ścieżki do assetów.  
+**Opis:** Pole "Avatar URL" to prosty input tekstowy wymagający wklejenia URL. Brak przycisku "Pick from library" (jak w Hero widget). Użytkownik musi znać URL zewnętrzny lub ręcznie kopiować ścieżki do assetów.
 **Rekomendacja:** Dodać przycisk "Pick image" otwierający Asset Picker filtrowany po `image/*`.
 
 #### UX-07 — Brak walidacji formatu URL avatara
 **Opis:** Pole Avatar URL akceptuje dowolny tekst. Wpisanie niepoprawnego URL skutkuje czarnym kwadratem zamiast inicjału (przeglądarka nie ładuje obrazu). Nie ma inline walidacji ani feedbacku o błędnym URL.
 
 #### UX-08 — Spacing token zduplikowany w Visual i Advanced
-**Opis:** Kontrolka "Card spacing" pojawia się zarówno w zakładce Visual (sekcja "Variant and layout structure") jak i w Advanced (sekcja "Display tokens"). Duplikacja bez wyjaśnienia różnicy może mylić użytkownika.  
+**Opis:** Kontrolka "Card spacing" pojawia się zarówno w zakładce Visual (sekcja "Variant and layout structure") jak i w Advanced (sekcja "Display tokens"). Duplikacja bez wyjaśnienia różnicy może mylić użytkownika.
 **Rekomendacja:** Usunąć z Advanced albo oznaczyć "zaawansowaną" kontrolkę jako "Spacing token (CSS class)".
 
 ---
@@ -197,56 +197,56 @@ Testimonials widget służy do wyświetlania cytatów klientów z ocenami gwiazd
 ### 4.3 Braki funkcjonalne
 
 #### BF-01 — Slider Static bez nawigacji (strzałki / dots / autoplay)
-**Priorytet:** Wysoki  
-**Opis:** Wariant `slider-static` to jedynie `overflow-x-auto` — brak przycisków poprzedni/następny, brak dot indicators, brak autoplay, brak swipe touch. Nazwa "Slider" sugeruje interaktywność. Scrollbar jest jedynym sposobem nawigacji.  
-**Naprawa 1:** Naprawić scroll-snap (BUG-01) by przynajmniej snap działał.  
-**Naprawa 2:** Zmienić nazwę na "Horizontal Scroll" jeśli nawigacja nie jest planowana.  
+**Priorytet:** Wysoki
+**Opis:** Wariant `slider-static` to jedynie `overflow-x-auto` — brak przycisków poprzedni/następny, brak dot indicators, brak autoplay, brak swipe touch. Nazwa "Slider" sugeruje interaktywność. Scrollbar jest jedynym sposobem nawigacji.
+**Naprawa 1:** Naprawić scroll-snap (BUG-01) by przynajmniej snap działał.
+**Naprawa 2:** Zmienić nazwę na "Horizontal Scroll" jeśli nawigacja nie jest planowana.
 **Naprawa 3:** Dodać przyciski Prev/Next nad lub pod listą.
 
 #### BF-02 — Brak tła sekcji (background color / gradient / image)
-**Priorytet:** Wysoki  
+**Priorytet:** Wysoki
 **Opis:** Widget nie ma żadnej kontrolki tła sekcji. Wrapper `<section>` ma jedynie `px-4 py-8` i zawsze przezroczyste tło. Testimonials często są prezentowane na kontrastowym tle (np. ciemne tło + jasne karty jako sekcja "social proof").
 
 #### BF-03 — Brak kontrolek typografii nagłówka (align / rozmiar)
-**Priorytet:** Średni  
+**Priorytet:** Średni
 **Opis:** Nagłówek sekcji ma hardcoded `text-center` i stały rozmiar (`text-2xl font-semibold`). Brak opcji wyrównania (left/center/right) ani rozmiaru tytułu (np. xl / 2xl / 3xl).
 
 #### BF-04 — Spotlight: brak możliwości wyboru wyróżnionego testimonialnego
-**Priorytet:** Średni  
-**Opis:** W wariancie `spotlight` zawsze `index === 0` (pierwszy element) jest wyróżniony (`col-span-2`). Nie ma opcji zmiany który element jest "spotlight" — jedynym sposobem jest użycie "Move up". Nie jest to oczywiste.  
+**Priorytet:** Średni
+**Opis:** W wariancie `spotlight` zawsze `index === 0` (pierwszy element) jest wyróżniony (`col-span-2`). Nie ma opcji zmiany który element jest "spotlight" — jedynym sposobem jest użycie "Move up". Nie jest to oczywiste.
 **Rekomendacja:** Dodać checkbox "Pin as spotlight" per-testimonial lub przycisk "Set as spotlight".
 
 #### BF-05 — Brak atrybutu `loading="lazy"` na avatarach
-**Priorytet:** Średni  
-**Opis:** Komponent `Avatar` renderuje `<img>` z `loading="auto"` (wartość domyślna). Przy wielu testimonialach below-the-fold wszystkie avatary ładują się natychmiast. Wpływ na czas ładowania strony.  
+**Priorytet:** Średni
+**Opis:** Komponent `Avatar` renderuje `<img>` z `loading="auto"` (wartość domyślna). Przy wielu testimonialach below-the-fold wszystkie avatary ładują się natychmiast. Wpływ na czas ładowania strony.
 **Lokalizacja:** `core/widgets/core/testimonials.tsx:316`.
 
 #### BF-06 — Brak walidacji kontrastu kolorów (WCAG)
-**Priorytet:** Średni  
+**Priorytet:** Średni
 **Opis:** Użytkownik może ustawić `textColor` identyczny z `cardSurface`, czyniąc tekst niewidocznym. Brak wskaźnika kontrastu (4.5:1 WCAG AA).
 
 #### BF-07 — Brak CTA pod sekcją testimonialów
-**Priorytet:** Niski  
+**Priorytet:** Niski
 **Opis:** Sekcja testimonialów często zawiera CTA pod listą kart (np. "Zobacz wszystkie opinie" lub "Rozpocznij teraz"). Widget nie ma pola CTA.
 
 #### BF-08 — Brak kontrolek `borderRadius` i `borderWidth` karty
-**Priorytet:** Niski  
+**Priorytet:** Niski
 **Opis:** Karta ma hardcoded `rounded-xl` (border-radius) i `1px` border. Brak opcji zmiany zaokrąglenia ani grubości obramowania.
 
 #### BF-09 — Limit 8 testimonialów bez paginacji
-**Priorytet:** Niski  
+**Priorytet:** Niski
 **Opis:** `testimonialsItemMax = 8`. Po osiągnięciu limitu "Add testimonial" jest wyłączony. Brak paginacji, "load more" ani stronicowania dla większych zestawów.
 
 #### BF-10 — Brak eksportu/importu testimonialów
-**Priorytet:** Niski  
+**Priorytet:** Niski
 **Opis:** Brak możliwości eksportu listy do CSV/JSON ani importu z zewnętrznych źródeł (Trustpilot, Google Reviews, Clutch).
 
 #### BF-11 — Brak rich text dla pola `quote`
-**Priorytet:** Niski  
+**Priorytet:** Niski
 **Opis:** Cytat to plain text — brak możliwości pogrubień, kursywy, linków wewnątrz cytatu.
 
 #### BF-12 — Brak opcji `headingLevel` dla tytułu sekcji
-**Priorytet:** Niski  
+**Priorytet:** Niski
 **Opis:** Tytuł sekcji hardcodes `<h3>`. Brak opcji zmiany poziomu nagłówka (H2/H3/H4) zależnie od kontekstu strony.
 
 ---
@@ -332,6 +332,8 @@ Testimonials widget służy do wyświetlania cytatów klientów z ocenami gwiazd
 ---
 
 ## 9. Screenshoty
+
+> Uwaga: nazwy plików PNG w tej sekcji są wyłącznie lokalnymi etykietami przechwyceń Playwright. Same pliki PNG są ignorowane przez Git i nie są wymaganym evidence w repo.
 
 | Plik | Opis |
 |------|------|

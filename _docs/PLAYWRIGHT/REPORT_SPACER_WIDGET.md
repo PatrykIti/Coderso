@@ -1,18 +1,18 @@
 # RAPORT: Spacer Widget — Analiza UX/UI i brakujące funkcjonalności
 
-> **Status:** Zakończony  
-> **Data:** 2026-05-16  
-> **Sesja:** Playwright #11 (Spacer Widget)  
-> **Środowisko:** http://localhost:5173/admin + http://localhost:3000  
+> **Status:** Zakończony
+> **Data:** 2026-05-16
+> **Sesja:** Playwright #11 (Spacer Widget)
+> **Środowisko:** http://localhost:5173/admin + http://localhost:3000
 > **Strona testowa:** TEST-SPACER-0516 (`/admin/pages/1d6c38df-4720-4ea8-b1d5-8b43dc97b515`)
 
 ---
 
 ## 1. Przegląd widgetu
 
-**Typ:** Layout primitive  
-**Moduł:** Layout  
-**Warianty:** `responsive` (domyślny), `fixed`  
+**Typ:** Layout primitive
+**Moduł:** Layout
+**Warianty:** `responsive` (domyślny), `fixed`
 **Kategoria:** `layout`
 
 Spacer widget to minimalistyczny blok pionowej przestrzeni w layoucie strony. Odpowiada za wstawianie kontrolowanej pustej przestrzeni między innymi widgetami. Obsługuje responsywne wysokości na poziomie desktop/tablet/mobile (tryb `responsive`) lub jedną wspólną wysokość dla wszystkich breakpointów (tryb `fixed`).
@@ -146,38 +146,38 @@ Widget renderuje `<div aria-hidden="true">` z CSS custom properties:
 ### 4.1 Błędy funkcjonalne (Bugs)
 
 #### BUG-01 — Duplikat tokenów `none` i `0`
-**Priorytet:** Średni  
-**Opis:** Token `none` i token `0` mają identyczną wartość CSS (`0rem`). Oba są widoczne w liście jako oddzielne opcje — "None" i "0 (0rem)" — co wprowadza zbędną redundancję.  
-**Lokalizacja:** `core/widgets/core/spacer.tsx:5` — `spacerHeightTokens` array  
-**Repro:** Dropdown Desktop height → wybierz "None" → Resolved: 0rem → wybierz "0 (0rem)" → Resolved: 0rem (identyczne)  
+**Priorytet:** Średni
+**Opis:** Token `none` i token `0` mają identyczną wartość CSS (`0rem`). Oba są widoczne w liście jako oddzielne opcje — "None" i "0 (0rem)" — co wprowadza zbędną redundancję.
+**Lokalizacja:** `core/widgets/core/spacer.tsx:5` — `spacerHeightTokens` array
+**Repro:** Dropdown Desktop height → wybierz "None" → Resolved: 0rem → wybierz "0 (0rem)" → Resolved: 0rem (identyczne)
 **Rekomendacja:** Usunąć jeden z tokenów (najlepiej `"0"`) i zachować tylko `"none"`.
 
 #### BUG-02 — Fixed→Responsive: wartości tablet/mobile dziedziczą desktop zamiast poprzednich wartości
-**Priorytet:** Wysoki  
-**Opis:** Gdy użytkownik ustawia różne wartości (np. desktop=32, tablet=12, mobile=8) w trybie Responsive, a następnie przełącza na Fixed i z powrotem na Responsive — wartości tablet i mobile są nadpisane przez wartość desktop (32, 32, 32). Użytkownik traci poprzednie ustawienia breakpointów.  
-**Lokalizacja:** `core/admin/ui/widgets/editors/SpacerEditors.tsx:55` — `normalizeValue` → `normalizeSpacerData` w trybie Fixed nadpisuje tablet i mobile  
-**Repro:** Visual → ustaw tablet=12, mobile=8 → przełącz na Fixed → wróć do Responsive → tablet=desktop, mobile=desktop  
+**Priorytet:** Wysoki
+**Opis:** Gdy użytkownik ustawia różne wartości (np. desktop=32, tablet=12, mobile=8) w trybie Responsive, a następnie przełącza na Fixed i z powrotem na Responsive — wartości tablet i mobile są nadpisane przez wartość desktop (32, 32, 32). Użytkownik traci poprzednie ustawienia breakpointów.
+**Lokalizacja:** `core/admin/ui/widgets/editors/SpacerEditors.tsx:55` — `normalizeValue` → `normalizeSpacerData` w trybie Fixed nadpisuje tablet i mobile
+**Repro:** Visual → ustaw tablet=12, mobile=8 → przełącz na Fixed → wróć do Responsive → tablet=desktop, mobile=desktop
 **Rekomendacja:** Zachować wartości tablet/mobile w osobnym stanie przed wejściem w Fixed, przywrócić je przy powrocie do Responsive.
 
 #### BUG-03 — Advanced editor force-używa `variant="responsive"` niezależnie od aktualnego wariantu
-**Priorytet:** Wysoki  
-**Opis:** W `SpacerAdvancedEditor` komponent `<ResponsiveHeights>` jest wywołany z hardcoded `variant="responsive"`, co oznacza że zawsze wyświetla 3 oddzielne pola (desktop, tablet, mobile) — nawet gdy aktywny wariant widgetu to "fixed". W trybie Fixed edytowanie pól tablet/mobile w Advanced nie ma efektu (bo normalizacja Fixed je nadpisze), ale użytkownik nie dostaje żadnej informacji zwrotnej o tym.  
-**Lokalizacja:** `core/admin/ui/widgets/editors/SpacerEditors.tsx:358`  
+**Priorytet:** Wysoki
+**Opis:** W `SpacerAdvancedEditor` komponent `<ResponsiveHeights>` jest wywołany z hardcoded `variant="responsive"`, co oznacza że zawsze wyświetla 3 oddzielne pola (desktop, tablet, mobile) — nawet gdy aktywny wariant widgetu to "fixed". W trybie Fixed edytowanie pól tablet/mobile w Advanced nie ma efektu (bo normalizacja Fixed je nadpisze), ale użytkownik nie dostaje żadnej informacji zwrotnej o tym.
+**Lokalizacja:** `core/admin/ui/widgets/editors/SpacerEditors.tsx:358`
 ```tsx
 // Linia 358 — hardcoded "responsive" zamiast przekazania aktualnego `variant` prop
 <ResponsiveHeights value={value} variant="responsive" onChange={onChange} />
 ```
-**Repro:** Ustaw wariant Fixed → przejdź do Advanced → zobaczysz 3 oddzielne edytowalne pola tablet/mobile mimo że Fixed nie ich używa  
+**Repro:** Ustaw wariant Fixed → przejdź do Advanced → zobaczysz 3 oddzielne edytowalne pola tablet/mobile mimo że Fixed nie ich używa
 **Rekomendacja:** Przekazać `variant={variant}` do `ResponsiveHeights` w Advanced lub jawnie oznaczyć pola tablet/mobile jako disabled/read-only gdy wariant to Fixed.
 
 #### BUG-04 — "Show guide in editor" — mylący opis i niedziałający w głównym canvas
-**Priorytet:** Wysoki  
-**Opis:** Guide overlay (label "Spacer Xrem") nie jest widoczny w głównym canvas edytora mimo że `showGuideInEditor=true` i `data-spacer-show-guide="true"`. Guide renderuje się wyłącznie gdy `previewDevice` prop jest przekazany do SpacerBlock (co dzieje się tylko w Preview modal i custom-screens). Nazwy i opisy opcji sugerują że guide jest widoczny "w edytorze" — co jest niezgodne z rzeczywistością.  
+**Priorytet:** Wysoki
+**Opis:** Guide overlay (label "Spacer Xrem") nie jest widoczny w głównym canvas edytora mimo że `showGuideInEditor=true` i `data-spacer-show-guide="true"`. Guide renderuje się wyłącznie gdy `previewDevice` prop jest przekazany do SpacerBlock (co dzieje się tylko w Preview modal i custom-screens). Nazwy i opisy opcji sugerują że guide jest widoczny "w edytorze" — co jest niezgodne z rzeczywistością.
 **Lokalizacja:**
 - `core/widgets/core/spacer.tsx:160` — `const showGuide = Boolean(normalized.showGuideInEditor) && Boolean(previewDevice);`
 - Wizard opis: "Displays spacer label overlay in runtime preview only." (dokładny, ale niejasny)
-- Visual opis: "Helps identify spacer size while composing templates." (sugeruje działanie w edytorze — mylący)  
-**Repro:** Dodaj spacer, włącz "Show guide in editor", sprawdź canvas → nakładka niewidoczna. Kliknij Preview → "Spacer 8rem" widoczny.  
+- Visual opis: "Helps identify spacer size while composing templates." (sugeruje działanie w edytorze — mylący)
+**Repro:** Dodaj spacer, włącz "Show guide in editor", sprawdź canvas → nakładka niewidoczna. Kliknij Preview → "Spacer 8rem" widoczny.
 **Rekomendacja:** Dwa możliwe rozwiązania:
 1. (Preferowane) Przekazać `previewDevice="desktop"` do SpacerBlock renderowanego w canvas edytora
 2. Zmienić nazwy: "Show guide in preview" + opis "Visible in page preview, not in editor"
@@ -187,27 +187,27 @@ Widget renderuje `<div aria-hidden="true">` z CSS custom properties:
 ### 4.2 Problemy UX edytora
 
 #### UX-01 — Wizard nie informuje że Fixed = ta sama wartość dla tablet i mobile
-**Opis:** W trybie Wizard po wyborze wariantu "Fixed", formularz pokazuje jedynie "Desktop height" bez żadnej informacji że ta wartość będzie użyta też dla tablet i mobile. Brak komunikatu informacyjnego jak w Visual editor ("Fixed mode uses desktop height for tablet and mobile."). Użytkownik może nie zdawać sobie sprawy z konsekwencji wyboru Fixed.  
+**Opis:** W trybie Wizard po wyborze wariantu "Fixed", formularz pokazuje jedynie "Desktop height" bez żadnej informacji że ta wartość będzie użyta też dla tablet i mobile. Brak komunikatu informacyjnego jak w Visual editor ("Fixed mode uses desktop height for tablet and mobile."). Użytkownik może nie zdawać sobie sprawy z konsekwencji wyboru Fixed.
 **Rekomendacja:** Dodać komunikat informacyjny pod polem Desktop height w Wizard gdy wybrany jest tryb Fixed.
 
 #### UX-02 — "Custom px" opcja w dropdownie jest no-op
-**Opis:** Kliknięcie opcji "Custom px" w dropdownie wysokości nie wykonuje żadnej akcji (`if (next === "custom") return;`). Combobox wraca do poprzedniej wartości. Użytkownik może kliknąć "Custom px" oczekując jakiegoś efektu, ale nic się nie dzieje — dezorientujące.  
-**Lokalizacja:** `core/admin/ui/widgets/editors/SpacerEditors.tsx:172-177`  
+**Opis:** Kliknięcie opcji "Custom px" w dropdownie wysokości nie wykonuje żadnej akcji (`if (next === "custom") return;`). Combobox wraca do poprzedniej wartości. Użytkownik może kliknąć "Custom px" oczekując jakiegoś efektu, ale nic się nie dzieje — dezorientujące.
+**Lokalizacja:** `core/admin/ui/widgets/editors/SpacerEditors.tsx:172-177`
 **Rekomendacja:** Ukryć opcję "Custom px" z dropdownu lub przekształcić ją w separator/label wyjaśniający że input poniżej służy do custom px. Ewentualnie: kliknięcie "Custom px" przenosi focus do custom input.
 
 #### UX-03 — Custom input pusty gdy wybrany token (duplikat stanu)
-**Opis:** Gdy wybrany jest token (np. `16`), custom px input jest pusty — `value={isSpacerHeightToken(value) ? "" : value}`. Skutkuje to tym że obie kontrolki mogą wydawać się "niezapisane" jednocześnie. Użytkownik widzi albo wartość w dropdownie albo w inpucie, ale nigdy w obu.  
+**Opis:** Gdy wybrany jest token (np. `16`), custom px input jest pusty — `value={isSpacerHeightToken(value) ? "" : value}`. Skutkuje to tym że obie kontrolki mogą wydawać się "niezapisane" jednocześnie. Użytkownik widzi albo wartość w dropdownie albo w inpucie, ale nigdy w obu.
 **Rekomendacja:** Dodać placeholder lub pomocniczy tekst gdy jest aktywny token (np. "Token active: 16 → 4rem").
 
 #### UX-04 — Brak wizualnego rozróżnienia spacera w canvas gdy guide=false
-**Opis:** Gdy `showGuideInEditor=false` (lub guide nie jest przekazany przez previewDevice), spacer jest kompletnie niewidoczny w canvas — to zwykła pusta przestrzeń bez żadnego wskaźnika. Użytkownik może pomyśleć że nic się nie dodało lub przypadkowo kliknąć w inne miejsce.  
+**Opis:** Gdy `showGuideInEditor=false` (lub guide nie jest przekazany przez previewDevice), spacer jest kompletnie niewidoczny w canvas — to zwykła pusta przestrzeń bez żadnego wskaźnika. Użytkownik może pomyśleć że nic się nie dodało lub przypadkowo kliknąć w inne miejsce.
 **Rekomendacja:** Zawsze pokazywać przynajmniej subtelny dashed border lub tło w canvas edytora dla spacera — niezależnie od `showGuideInEditor`. `showGuideInEditor` powinien kontrolować tylko label tekstowy, nie całą widoczność.
 
 #### UX-05 — Advanced editor nie odzwierciedla wariantu Fixed
 **Opis:** Powiązany z BUG-03. W trybie Fixed, Advanced pokazuje 3 edytowalne pola zamiast:
 - Jedno pole (desktop) + informacja że tablet i mobile będą takie same
-- Lub pola tablet/mobile disabled/read-only  
-Użytkownik edytuje wartości tablet/mobile w Advanced myśląc że ma efekt, ale po normalizacji Fixed są one nadpisane.  
+- Lub pola tablet/mobile disabled/read-only
+Użytkownik edytuje wartości tablet/mobile w Advanced myśląc że ma efekt, ale po normalizacji Fixed są one nadpisane.
 **Rekomendacja:** Wyświetlać wariant-aware layout w Advanced lub dodać baner "Widget is in Fixed mode — tablet and mobile values are synchronized with desktop."
 
 ---
@@ -215,31 +215,31 @@ Użytkownik edytuje wartości tablet/mobile w Advanced myśląc że ma efekt, al
 ### 4.3 Braki funkcjonalne
 
 #### BF-01 — Brak widoczności guide w głównym canvas (powiązany z BUG-04)
-**Priorytet:** Wysoki  
+**Priorytet:** Wysoki
 **Opis:** `showGuideInEditor` nie ma żadnego efektu w głównym edytorze canvas. Guide działa tylko w Preview dialog. Jedna z głównych zadeklarowanych funkcji widgetu nie działa w oczekiwanym kontekście.
 
 #### BF-02 — Brak jednostek vw/vh/dvh/svh
-**Priorytet:** Średni  
+**Priorytet:** Średni
 **Opis:** Spacer obsługuje tylko tokeny Tailwind (rem) i px. Brak viewport units (np. `10vh`, `5dvh`) które są przydatne do tworzenia space'u proporcjonalnego do viewportu.
 
 #### BF-03 — Brak `clamp()` / fluid spacing
-**Priorytet:** Niski  
+**Priorytet:** Niski
 **Opis:** Brak możliwości zdefiniowania płynnej wysokości przestrzeni skalującej się między wartościami min/max jak `clamp(2rem, 5vw, 8rem)`. Alternatywą jest korzystanie z 3 oddzielnych breakpointów w trybie Responsive, ale to nie jest to samo.
 
 #### BF-04 — Brak named presets / templates spacerów
-**Priorytet:** Średni  
+**Priorytet:** Średni
 **Opis:** Brak predefiniowanych nazwanych presetów (np. "Section gap", "Card gap", "Hero spacer") które pozwoliłyby na utrzymanie spójnego rytmu pionowego na całej stronie. Każdy spacer jest konfigurowany indywidualnie.
 
 #### BF-05 — Brak orientacji poziomej (horizontal spacer)
-**Priorytet:** Niski  
+**Priorytet:** Niski
 **Opis:** Widget obsługuje wyłącznie pionową przestrzeń (`height`). Brak opcji `width` dla poziomego spacera używanego wewnątrz flex/grid kontenerów.
 
 #### BF-06 — Brak wizualnego wskaźnika breakpointu w polu Desktop height
-**Priorytet:** Niski  
+**Priorytet:** Niski
 **Opis:** Przy wpisywaniu wartości brakuje wskaźnika "ta wartość zostanie użyta dla viewportów > 1024px (Tailwind lg:)". Nie wiadomo dokładnie kiedy używany jest desktop vs tablet vs mobile breakpoint w kontekście Tailwind.
 
 #### BF-07 — Brak możliwości wpisania wartości bez "px" sufiksu w custom input
-**Priorytet:** Niski  
+**Priorytet:** Niski
 **Opis:** `resolveHeightTokenOrPx` obsługuje zapis bez sufiksu (np. `"48"` → `"48px"`), ale placeholder i dokumentacja sugerują tylko format z px (`"e.g. 48px"`). Niespójność między implementacją a komunikacją użytkownika.
 
 ---
@@ -311,6 +311,8 @@ Użytkownik edytuje wartości tablet/mobile w Advanced myśląc że ma efekt, al
 ---
 
 ## 9. Screenshoty
+
+> Uwaga: nazwy plików PNG w tej sekcji są wyłącznie lokalnymi etykietami przechwyceń Playwright. Same pliki PNG są ignorowane przez Git i nie są wymaganym evidence w repo.
 
 | Plik | Opis |
 |------|------|

@@ -153,7 +153,8 @@ No API routes are added.
 - `bun run test:vitest -- tests/vitest/widgets/testimonials.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/widgetSafeHref.test.ts` when link
   semantics change.
-- Run Bun validator/registry tests if schemas/defaults change.
+- `bun test tests/unit/widgets/validator.test.ts` if schemas/defaults change.
+- `bun test tests/unit/widgets/registry.test.ts` if registry/default wiring changes.
 - Run `bun --cwd core lint` and `bun --cwd core lint:types`.
 
 ## Documentation Updates Required

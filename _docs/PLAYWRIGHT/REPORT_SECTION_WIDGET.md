@@ -1,18 +1,18 @@
 # RAPORT: Section Widget — Analiza UX/UI i brakujące funkcjonalności
 
-> **Status:** Zakończony  
-> **Data:** 2026-05-16  
-> **Sesja:** Playwright #3 (Section Widget)  
+> **Status:** Zakończony
+> **Data:** 2026-05-16
+> **Sesja:** Playwright #3 (Section Widget)
 > **Środowisko:** http://localhost:5173/admin | http://localhost:3000
 
 ---
 
 ## 1. Przegląd widgetu
 
-**Typ:** Atomic  
-**Moduł:** Layout  
-**Audience:** Advanced  
-**Warianty:** `default`, `contained`, `bleed`  
+**Typ:** Atomic
+**Moduł:** Layout
+**Audience:** Advanced
+**Warianty:** `default`, `contained`, `bleed`
 **Slot:** `region` — powtarzalny (min 1, max 8 regionów)
 
 Section widget jest bazowym kontenerem układu strony. Odpowiada za: semantyczny element HTML (section/div), nagłówek sekcji (label + title + description), szerokość kontenera, padding, tło (kolor / gradient / overlay), obramowanie i zaokrąglenie. Wewnątrz zawiera powtarzalne sloty `region`, do których wstawiamy inne widgety.
@@ -106,7 +106,7 @@ Section widget jest bazowym kontenerem układu strony. Odpowiada za: semantyczny
 ### 4.1 Środowisko testowe
 
 - **URL:** http://localhost:5173/admin
-- **Login:** patryk.ciechanski@patrykiti.pl
+- **Login:** admin test account (redacted)
 - **Strona testowa:** `Section Widget Test` (nowa, dedykowana strona)
 - **Sesja Playwright:** `section-widget-test` (izolowana)
 

@@ -27,9 +27,9 @@ runtime output that is semantically incomplete.
 - `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md:63-74,90-101,181-206` for
   value-size/layout/split-grid, section and
   article ARIA, emoji semantics, and heading hierarchy.
-- `REPORT_STATS_KPI_WIDGET.md` is still marked `W toku`; this leaf may use the
-  current report ranges for planning, but TASK-256-08 must refresh final
-  admin/frontend evidence before closure.
+- `REPORT_STATS_KPI_WIDGET.md` is now marked `Zakończony`; this leaf may use
+  the current report ranges for planning, while TASK-256-08 must still refresh
+  fixed/deferred status after implementation.
 
 ## Scope Decision Matrix
 
@@ -137,8 +137,8 @@ No API routes are added.
 - `bun run test:vitest -- tests/vitest/widgets/statsKpi.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/widgetSafeHref.test.ts` when link
   semantics change.
-- Run `tests/unit/widgets/validator.test.ts` and `tests/unit/widgets/registry.test.ts`
-  if schemas/defaults change.
+- `bun test tests/unit/widgets/validator.test.ts` if schemas/defaults change.
+- `bun test tests/unit/widgets/registry.test.ts` if registry/default wiring changes.
 - Run `bun --cwd core lint` and `bun --cwd core lint:types`.
 
 ## Documentation Updates Required

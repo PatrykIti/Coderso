@@ -1,19 +1,19 @@
 # RAPORT: Divider Widget — Analiza UX/UI i brakujące funkcjonalności
 
-> **Status:** Zakończony  
-> **Data:** 2026-05-16  
-> **Sesja:** Playwright #11 (Divider Widget)  
-> **Środowisko:** http://localhost:5173/admin · http://localhost:3000  
+> **Status:** Zakończony
+> **Data:** 2026-05-16
+> **Sesja:** Playwright #11 (Divider Widget)
+> **Środowisko:** http://localhost:5173/admin · http://localhost:3000
 > **Sesja przeglądarki:** `divider-audit` (oddzielna od innych agentów)
 
 ---
 
 ## 1. Przegląd widgetu
 
-**Typ:** Layout / Atomic (brak slotów)  
-**Kategoria:** `layout`  
-**Warianty:** `line`, `dashed`, `label-center`  
-**Plik renderera:** `core/widgets/core/divider.tsx`  
+**Typ:** Layout / Atomic (brak slotów)
+**Kategoria:** `layout`
+**Warianty:** `line`, `dashed`, `label-center`
+**Plik renderera:** `core/widgets/core/divider.tsx`
 **Plik edytora:** `core/admin/ui/widgets/editors/DividerEditors.tsx`
 
 Divider to prosty widget separatora wizualnego — pozioma linia oddzielająca sekcje/bloki. Opcjonalnie może mieć wyśrodkowany label (wariant `label-center`). Widget jest w pełni statyczny (zero JavaScript, zero slotów).
@@ -116,8 +116,8 @@ Divider to prosty widget separatora wizualnego — pozioma linia oddzielająca s
 
 ## 4. Testy w Admin UI Preview
 
-> **Sesja:** `playwright-cli -s=divider-audit`  
-> **Data testu:** 2026-05-16  
+> **Sesja:** `playwright-cli -s=divider-audit`
+> **Data testu:** 2026-05-16
 > **Strona testowa:** `/test-divider-0516` (UUID: `37fbfa5f-9583-4277-ac30-92b21559ae9b`)
 
 ### 4.1 Wizard Editor
@@ -173,7 +173,7 @@ Divider to prosty widget separatora wizualnego — pozioma linia oddzielająca s
 
 ## 5. Testy na froncie (localhost:3000)
 
-> **URL:** `http://localhost:3000/test-divider-0516`  
+> **URL:** `http://localhost:3000/test-divider-0516`
 > **Viewporty:** 1280×800 (desktop), 390×844 (mobile)
 
 ### 5.1 Renderowanie wariantów
@@ -198,7 +198,7 @@ label-center: 2× solid segments (linia | label | linia)
 
 ```html
 <!-- Wynik dla wariantu line: -->
-<div class="w-full" 
+<div class="w-full"
   data-divider="true"
   data-divider-variant="line"
   data-divider-thickness="1"

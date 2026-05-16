@@ -1,19 +1,19 @@
 # RAPORT: Pricing Plans Widget — Analiza UX/UI i brakujące funkcjonalności
 
-> **Status:** Zakończony  
-> **Data:** 2026-05-16  
-> **Sesja:** Playwright #N (Pricing Plans Widget)  
-> **Środowisko admin:** http://localhost:5173/admin  
-> **Środowisko front:** http://localhost:3000  
+> **Status:** Zakończony
+> **Data:** 2026-05-16
+> **Sesja:** Playwright #N (Pricing Plans Widget)
+> **Środowisko admin:** http://localhost:5173/admin
+> **Środowisko front:** http://localhost:3000
 > **Strona testowa:** TEST-PRICING-PLANS-0516 (`/admin/pages/8902f76a-6745-4788-a9c6-9356998d3e9f`)
 
 ---
 
 ## 1. Przegląd widgetu
 
-**Typ:** Composite  
-**Moduł:** Content  
-**Warianty:** `three-plans`, `four-plans`, `comparison-rows`  
+**Typ:** Composite
+**Moduł:** Content
+**Warianty:** `three-plans`, `four-plans`, `comparison-rows`
 **Slot:** brak (widget samodzielny)
 
 Pricing Plans widget prezentuje karty cenowe lub tabelę porównawczą planów subskrypcyjnych. Obsługuje: nagłówek sekcji, przełącznik cyklu rozliczeniowego (monthly/annual), do 6 planów z funkcjami i CTA, kolory kart, promowanie wybranego planu (highlight).
@@ -139,8 +139,8 @@ Pricing Plans widget prezentuje karty cenowe lub tabelę porównawczą planów s
 ### 4.1 Błędy funkcjonalne (Bugs)
 
 #### BUG-01 — Billing toggle jest włączony domyślnie mimo `enabled: false` w defaults
-**Priorytet:** Wysoki  
-**Źródło:** Analiza kodu  
+**Priorytet:** Wysoki
+**Źródło:** Analiza kodu
 **Opis:** W `normalizePricingPlansData` przy obsłudze `billingToggle.enabled`:
 ```ts
 enabled:
@@ -148,12 +148,12 @@ enabled:
     ? data.billingToggle.enabled
     : billingDefaults.enabled !== false,
 ```
-Gdy `data.billingToggle` jest `undefined` (nowy widget), gałąź else-a daje `billingDefaults.enabled !== false` — a `billingDefaults.enabled = false`, więc wyrażenie daje **`false !== false` = `false`**. To jest poprawne — ale zapis jest mylący i podatny na błędy przy zmianie defaults. Jeśli ktoś zmieni default na `true`, wyrażenie zwróci `false` (co jest odwrotnym skutkiem).  
+Gdy `data.billingToggle` jest `undefined` (nowy widget), gałąź else-a daje `billingDefaults.enabled !== false` — a `billingDefaults.enabled = false`, więc wyrażenie daje **`false !== false` = `false`**. To jest poprawne — ale zapis jest mylący i podatny na błędy przy zmianie defaults. Jeśli ktoś zmieni default na `true`, wyrażenie zwróci `false` (co jest odwrotnym skutkiem).
 **Lokalizacja:** `pricingPlans.tsx:395-400`
 
 #### BUG-02 — `resolvePricingSpacing` pomija wartość `"md"`
-**Priorytet:** Wysoki  
-**Źródło:** Analiza kodu  
+**Priorytet:** Wysoki
+**Źródło:** Analiza kodu
 **Opis:**
 ```ts
 const resolvePricingSpacing = (value: string | undefined): PricingPlansSpacing => {
@@ -161,42 +161,42 @@ const resolvePricingSpacing = (value: string | undefined): PricingPlansSpacing =
   return "md";
 };
 ```
-Wartość `"md"` nie jest sprawdzana explicite — trafia do `return "md"` jako fallback. To działa, ALE sprawia że przekazanie np. `"xl"` lub dowolnej nieprawidłowej wartości zwraca `"md"` bez żadnego sygnału błędu. Analogicznie `resolvePricingRadius` pomija `"lg"`.  
+Wartość `"md"` nie jest sprawdzana explicite — trafia do `return "md"` jako fallback. To działa, ALE sprawia że przekazanie np. `"xl"` lub dowolnej nieprawidłowej wartości zwraca `"md"` bez żadnego sygnału błędu. Analogicznie `resolvePricingRadius` pomija `"lg"`.
 **Lokalizacja:** `pricingPlans.tsx:232-239`
 
 #### BUG-03 — Zmiana wariantu wymusza nadpisanie liczby planów bez ostrzeżenia
-**Priorytet:** Wysoki  
-**Źródło:** Analiza kodu  
-**Opis:** `pricingVariantPlanCountMap` jest sztywny: `three-plans=3`, `four-plans=4`, `comparison-rows=3`. Zmiana wariantu z `four-plans` (4 plany z wypełnioną treścią) na `three-plans` lub `comparison-rows` powoduje **automatyczne ucięcie czwartego planu** przez `normalizePricingPlans(normalizedData.plans, visibleCount)` w `PricingPlansBlock`. Użytkownik nie dostaje żadnego ostrzeżenia że jego dane zostaną utracone.  
+**Priorytet:** Wysoki
+**Źródło:** Analiza kodu
+**Opis:** `pricingVariantPlanCountMap` jest sztywny: `three-plans=3`, `four-plans=4`, `comparison-rows=3`. Zmiana wariantu z `four-plans` (4 plany z wypełnioną treścią) na `three-plans` lub `comparison-rows` powoduje **automatyczne ucięcie czwartego planu** przez `normalizePricingPlans(normalizedData.plans, visibleCount)` w `PricingPlansBlock`. Użytkownik nie dostaje żadnego ostrzeżenia że jego dane zostaną utracone.
 **Lokalizacja:** `pricingPlans.tsx:664-671`
 
 #### BUG-04 — Plan count selector w Visual Editor nie jest zsynchronizowany z wariantem
-**Priorytet:** Wysoki  
-**Źródło:** Analiza kodu  
-**Opis:** Visual Editor pokazuje "Plans count" selector (wartości 2–6) niezależnie od wybranego wariantu. Gdy wariant to `three-plans`, użytkownik może ustawić count=5, ale render zawsze pokaże 3 (wymusza `pricingVariantPlanCountMap`). Powoduje to **desynchronizację między edytorem a podglądem** — użytkownik edytuje plany które nie są widoczne.  
+**Priorytet:** Wysoki
+**Źródło:** Analiza kodu
+**Opis:** Visual Editor pokazuje "Plans count" selector (wartości 2–6) niezależnie od wybranego wariantu. Gdy wariant to `three-plans`, użytkownik może ustawić count=5, ale render zawsze pokaże 3 (wymusza `pricingVariantPlanCountMap`). Powoduje to **desynchronizację między edytorem a podglądem** — użytkownik edytuje plany które nie są widoczne.
 **Lokalizacja:** `PricingPlansEditors.tsx:596-616`
 
 #### BUG-05 — `highlightRing` nie ma opcji `onClear`
-**Priorytet:** Średni  
-**Źródło:** Analiza kodu  
-**Opis:** `ColorField` dla "Highlight ring" nie ma przekazanego `onClear` (w przeciwieństwie do `cardSurface` i `cardBorder`). Użytkownik nie może zresetować koloru pierścienia do wartości domyślnej `var(--color-primary)`.  
+**Priorytet:** Średni
+**Źródło:** Analiza kodu
+**Opis:** `ColorField` dla "Highlight ring" nie ma przekazanego `onClear` (w przeciwieństwie do `cardSurface` i `cardBorder`). Użytkownik nie może zresetować koloru pierścienia do wartości domyślnej `var(--color-primary)`.
 **Lokalizacja:** `PricingPlansEditors.tsx:965-971`
 
 #### BUG-06 — Badge planu jest zawsze renderowany w kolorze `highlightRing`
-**Priorytet:** Średni  
-**Źródło:** Analiza kodu  
-**Opis:** Każdy badge (np. "For individuals", "For teams") używa `style.highlightRing` jako tła — bez względu na to, czy plan jest `highlighted`. Oznacza to, że plany oznaczone jako niewyróżnione (`highlighted: false`) nadal mają badge w kolorze akcentu, co zaburza hierarchię wizualną.  
+**Priorytet:** Średni
+**Źródło:** Analiza kodu
+**Opis:** Każdy badge (np. "For individuals", "For teams") używa `style.highlightRing` jako tła — bez względu na to, czy plan jest `highlighted`. Oznacza to, że plany oznaczone jako niewyróżnione (`highlighted: false`) nadal mają badge w kolorze akcentu, co zaburza hierarchię wizualną.
 **Lokalizacja:** `pricingPlans.tsx:508-516`
 
 #### BUG-07 — `comparison-rows` nie renderuje CTA planu w header tabeli
-**Priorytet:** Średni  
-**Źródło:** Analiza kodu  
+**Priorytet:** Średni
+**Źródło:** Analiza kodu
 **Opis:** W `PricingComparisonRowsLayout` header tabeli pokazuje tylko name, price i period — brak badge planu w nagłówku. CTA jest wyodrębnione do ostatniego wiersza tabeli ("Action row"). Nie ma możliwości wyróżnienia planu w header tabeli analogicznie do kart (brak visual hierarchy `highlighted`).
 
 #### BUG-08 — Billing toggle nie jest interaktywny (statyczny render)
-**Priorytet:** Wysoki  
-**Źródło:** Analiza kodu  
-**Opis:** Przyciski `Monthly` / `Annual` w `PricingPlansBlock` nie mają obsługi `onClick`. `defaultCycle` jest odczytywany ze stanu danych, ale kliknięcie przycisku nic nie robi — widget jest statyczny. Przełączenie cyklu rozliczeniowego **nie działa po stronie frontu**.  
+**Priorytet:** Wysoki
+**Źródło:** Analiza kodu
+**Opis:** Przyciski `Monthly` / `Annual` w `PricingPlansBlock` nie mają obsługi `onClick`. `defaultCycle` jest odczytywany ze stanu danych, ale kliknięcie przycisku nic nie robi — widget jest statyczny. Przełączenie cyklu rozliczeniowego **nie działa po stronie frontu**.
 **Lokalizacja:** `pricingPlans.tsx:708-726`
 
 ---
@@ -204,35 +204,35 @@ Wartość `"md"` nie jest sprawdzana explicite — trafia do `return "md"` jako 
 ### 4.2 Problemy UX edytora
 
 #### UX-01 — Spacing i Radius zduplikowane między Visual i Advanced
-**Opis:** Kontrolki Spacing i Radius są obecne zarówno w zakładce **Visual** (sekcja "Colors and emphasis") jak i **Advanced** (sekcja "Display tokens"). Dwukrotna edycja tego samego pola w różnych miejscach powoduje dezorientację — użytkownik nie wie które miejsce jest "właściwe".  
+**Opis:** Kontrolki Spacing i Radius są obecne zarówno w zakładce **Visual** (sekcja "Colors and emphasis") jak i **Advanced** (sekcja "Display tokens"). Dwukrotna edycja tego samego pola w różnych miejscach powoduje dezorientację — użytkownik nie wie które miejsce jest "właściwe".
 **Rekomendacja:** Usunąć z Advanced lub oznaczyć jako "read-only reference".
 
 #### UX-02 — Plan count selector konflikuje z wariantem
-**Opis:** Selector `Plans count` (2–6) jest widoczny dla wszystkich wariantów mimo że wariant wymusza sztywną liczbę planów. Powoduje to false expectation — użytkownik ustawia "5 plans" ale widzi 3.  
+**Opis:** Selector `Plans count` (2–6) jest widoczny dla wszystkich wariantów mimo że wariant wymusza sztywną liczbę planów. Powoduje to false expectation — użytkownik ustawia "5 plans" ale widzi 3.
 **Rekomendacja:** Ukryć lub zablokować selector gdy wariant ma sztywną liczbę (wszystkie aktualne warianty), lub zmienić logikę na obsługę custom count.
 
 #### UX-03 — Feature marker "icon" renderuje `◆` (losowy symbol)
-**Opis:** W kodzie `featureMarkerIconMap` mapuje `"icon"` → `"◆"`. To jest placeholder, nie prawdziwa ikona. W edytorze pole nazywa się "Icon" ale użytkownik nie wie jaka ikona zostanie użyta ani nie może jej zmienić.  
+**Opis:** W kodzie `featureMarkerIconMap` mapuje `"icon"` → `"◆"`. To jest placeholder, nie prawdziwa ikona. W edytorze pole nazywa się "Icon" ale użytkownik nie wie jaka ikona zostanie użyta ani nie może jej zmienić.
 **Rekomendacja:** Albo usunąć opcję "icon" do czasu implementacji, albo dodać pole wyboru ikony.
 
 #### UX-04 — Wizard nie zawiera pól features, CTA i badge
-**Opis:** Wizard editor oferuje tylko: layout, title, plans count i name+price per plan. Brakuje kluczowych pól: `badge`, `ctaLabel`, `ctaHref`, `features`. Użytkownik musi przejść do Visual żeby dodać te dane, co rozbija flow.  
+**Opis:** Wizard editor oferuje tylko: layout, title, plans count i name+price per plan. Brakuje kluczowych pól: `badge`, `ctaLabel`, `ctaHref`, `features`. Użytkownik musi przejść do Visual żeby dodać te dane, co rozbija flow.
 **Rekomendacja:** Rozszerzyć Wizard o minimum: badge i CTA per plan.
 
 #### UX-05 — "Normalization and safeguards" (Advanced) — nieczytelna nazwa
-**Opis:** Sekcja "Normalization and safeguards" z przyciskami "Normalize plans to variant baseline" i "Normalize full payload" jest dla użytkownika niezrozumiała. Nie wiadomo co "normalizacja" robi i kiedy jej używać.  
+**Opis:** Sekcja "Normalization and safeguards" z przyciskami "Normalize plans to variant baseline" i "Normalize full payload" jest dla użytkownika niezrozumiała. Nie wiadomo co "normalizacja" robi i kiedy jej używać.
 **Rekomendacja:** Przepisać jako "Fix / Reset" z opisem "Resets plan count to match variant" i "Resets all values to defaults".
 
 #### UX-06 — Brak potwierdzenia przy Remove planu
-**Opis:** Przycisk "Remove" na planie usuwa go natychmiast bez dialogu potwierdzenia. Utracone dane (features, CTA) są nieodwracalne.  
+**Opis:** Przycisk "Remove" na planie usuwa go natychmiast bez dialogu potwierdzenia. Utracone dane (features, CTA) są nieodwracalne.
 **Rekomendacja:** Dodać confirm dialog lub undo snackbar.
 
 #### UX-07 — Brak wizualnego wskaźnika aktywnego planu "highlighted" na liście planów
-**Opis:** Na liście planów w edytorze nie ma żadnego wizualnego oznaczenia który plan jest wyróżniony (badge, kolor obramowania). Użytkownik musi kliknąć każdy plan żeby sprawdzić stan switcha "Highlight this plan".  
+**Opis:** Na liście planów w edytorze nie ma żadnego wizualnego oznaczenia który plan jest wyróżniony (badge, kolor obramowania). Użytkownik musi kliknąć każdy plan żeby sprawdzić stan switcha "Highlight this plan".
 **Rekomendacja:** Dodać badge "★ Highlighted" obok nazwy planu na liście.
 
 #### UX-08 — Billing toggle labels zawsze widoczne (nawet gdy toggle wyłączony)
-**Opis:** Pola "Monthly label" i "Annual label" są zawsze widoczne i edytowalne, nawet gdy "Enable billing toggle" jest wyłączony. Edycja nieaktywnych pól może mylić użytkownika.  
+**Opis:** Pola "Monthly label" i "Annual label" są zawsze widoczne i edytowalne, nawet gdy "Enable billing toggle" jest wyłączony. Edycja nieaktywnych pól może mylić użytkownika.
 **Rekomendacja:** Zwinąć/wyłączyć pola label gdy `enabled = false`.
 
 ---
@@ -484,6 +484,8 @@ Tabela porównawcza renderuje się poprawnie: features per plan, checkmarks (✓
 ---
 
 ## 10. Screenshoty
+
+> Uwaga: nazwy plików PNG w tej sekcji są wyłącznie lokalnymi etykietami przechwyceń Playwright. Same pliki PNG są ignorowane przez Git i nie są wymaganym evidence w repo.
 
 | Plik | Opis |
 |------|------|

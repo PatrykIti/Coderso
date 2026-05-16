@@ -1,8 +1,8 @@
 # REPORT: Toggle Block Widget — UX/UI Audit
 
-**Widget:** `toggle-block`  
-**Data:** 2026-05-16  
-**Status:** Zakończony — pełny raport (analiza kodu + testy Playwright: Admin UI + Frontend)  
+**Widget:** `toggle-block`
+**Data:** 2026-05-16
+**Status:** Zakończony — pełny raport (analiza kodu + testy Playwright: Admin UI + Frontend)
 **Pliki:** `core/widgets/core/toggleBlock.tsx`, `core/admin/ui/widgets/editors/ToggleBlockEditors.tsx`
 
 ---

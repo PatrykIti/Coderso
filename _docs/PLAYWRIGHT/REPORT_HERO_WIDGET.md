@@ -1,18 +1,18 @@
 # RAPORT: Hero Widget — Analiza UX/UI i brakujące funkcjonalności
 
-> **Status:** Zakończony  
-> **Data:** 2026-05-16  
-> **Sesja:** Playwright #2 (Hero Widget)  
-> **Środowisko:** http://localhost:5173/admin  
+> **Status:** Zakończony
+> **Data:** 2026-05-16
+> **Sesja:** Playwright #2 (Hero Widget)
+> **Środowisko:** http://localhost:5173/admin
 > **Strona testowa:** HomePage (`/admin/pages/7c075789-e294-4396-8fe1-db83f215c186`)
 
 ---
 
 ## 1. Przegląd widgetu
 
-**Typ:** Composite  
-**Moduł:** Content  
-**Warianty:** `centered`, `split` (alias: `media-right`), `media-left`  
+**Typ:** Composite
+**Moduł:** Content
+**Warianty:** `centered`, `split` (alias: `media-right`), `media-left`
 **Slot:** `content` — dodatkowe bloki poniżej obszaru CTA
 
 Hero widget jest centralnym elementem sekcji hero stron. Odpowiada za: nagłówek, podnagłówek, treść, badge, CTA (1–2 przyciski), media (obraz/wideo), tło (kolor, gradient, media), typografię, style oraz układ responsywny.
@@ -124,40 +124,40 @@ Hero widget jest centralnym elementem sekcji hero stron. Odpowiada za: nagłówe
 ### 4.1 Błędy funkcjonalne (Bugs)
 
 #### BUG-01 — Media border controls widoczne w Centered
-**Priorytet:** Wysoki  
-**Opis:** W wariancie "Centered" sekcja "Colors and Borders" nadal wyświetla pola: *Media frame border color*, *Media border width*, *Media radius*. W tym wariancie nie ma inline media, więc te kontrolki nie mają zastosowania i powinny być ukryte.  
-**Lokalizacja:** Visual editor → Colors and Borders  
+**Priorytet:** Wysoki
+**Opis:** W wariancie "Centered" sekcja "Colors and Borders" nadal wyświetla pola: *Media frame border color*, *Media border width*, *Media radius*. W tym wariancie nie ma inline media, więc te kontrolki nie mają zastosowania i powinny być ukryte.
+**Lokalizacja:** Visual editor → Colors and Borders
 
 #### BUG-02 — Gradient nie jest aktywny mimo wypełnionych pól
-**Priorytet:** Wysoki  
-**Opis:** W sekcji Background gradient widoczne są pola Start color i End color z wartościami (`#0f172a`, `#475569`) oraz suwak Angle (135deg), ALE przycisk "Clear" jest wyłączony — gradient nie jest faktycznie zaaplikowany. Gradient staje się aktywny dopiero po ręcznej edycji jednego z pól + Tab. Użytkownik nie dostaje żadnej informacji zwrotnej że gradient jest "nieaktywny", mimo że widzi wypełnione pola.  
-**Lokalizacja:** Visual editor → Background → Background gradient  
-**Repro:** Otwórz edytor → Background → sprawdź czy Clear disabled przy wypełnionych polach → zmień kolor → Tab → Clear się aktywuje  
+**Priorytet:** Wysoki
+**Opis:** W sekcji Background gradient widoczne są pola Start color i End color z wartościami (`#0f172a`, `#475569`) oraz suwak Angle (135deg), ALE przycisk "Clear" jest wyłączony — gradient nie jest faktycznie zaaplikowany. Gradient staje się aktywny dopiero po ręcznej edycji jednego z pól + Tab. Użytkownik nie dostaje żadnej informacji zwrotnej że gradient jest "nieaktywny", mimo że widzi wypełnione pola.
+**Lokalizacja:** Visual editor → Background → Background gradient
+**Repro:** Otwórz edytor → Background → sprawdź czy Clear disabled przy wypełnionych polach → zmień kolor → Tab → Clear się aktywuje
 
 #### BUG-03 — History panel: "Not authenticated"
-**Priorytet:** Wysoki  
-**Opis:** Przycisk "History" otwiera panel który wyświetla komunikat *"Not authenticated"* mimo że użytkownik jest zalogowany. Funkcja Page history jest całkowicie niedostępna.  
-**Lokalizacja:** Toolbar → History  
+**Priorytet:** Wysoki
+**Opis:** Przycisk "History" otwiera panel który wyświetla komunikat *"Not authenticated"* mimo że użytkownik jest zalogowany. Funkcja Page history jest całkowicie niedostępna.
+**Lokalizacja:** Toolbar → History
 
 #### BUG-04 — Brak video poster dla wideo inline
-**Priorytet:** Wysoki  
-**Opis:** Po wyborze media type = Video w sekcji Media, nie pojawia się pole "Video poster image". Skutkuje to czarnym ekranem podczas ładowania wideo, co jest złym UX dla użytkownika końcowego.  
-**Lokalizacja:** Visual editor → Media → Media type = Video  
+**Priorytet:** Wysoki
+**Opis:** Po wyborze media type = Video w sekcji Media, nie pojawia się pole "Video poster image". Skutkuje to czarnym ekranem podczas ładowania wideo, co jest złym UX dla użytkownika końcowego.
+**Lokalizacja:** Visual editor → Media → Media type = Video
 
 #### BUG-05 — Dwa przyciski w toolbar bez etykiet/aria-label
-**Priorytet:** Średni  
-**Opis:** W głównym toolbarze edytora strony widoczne są 2 przyciski z samymi ikonami (brak title, aria-label, tekstu). Nie wiadomo co robią bez klikania. Naruszenie WCAG 2.1 SC 4.1.2.  
-**Lokalizacja:** Toolbar → ikony obok "PUBLISHED / UNSAVED CHANGES"  
+**Priorytet:** Średni
+**Opis:** W głównym toolbarze edytora strony widoczne są 2 przyciski z samymi ikonami (brak title, aria-label, tekstu). Nie wiadomo co robią bez klikania. Naruszenie WCAG 2.1 SC 4.1.2.
+**Lokalizacja:** Toolbar → ikony obok "PUBLISHED / UNSAVED CHANGES"
 
 #### BUG-06 — Media alt text wymagany dla obrazów, ale nieobjęty walidacją
-**Priorytet:** Średni  
-**Opis:** Pole "Media alt text" jest opcjonalne i nie ma walidacji — użytkownik może opublikować stronę z obrazem bez alt tekstu, naruszając WCAG 1.1.1.  
-**Lokalizacja:** Visual editor → Media → Media alt text  
+**Priorytet:** Średni
+**Opis:** Pole "Media alt text" jest opcjonalne i nie ma walidacji — użytkownik może opublikować stronę z obrazem bez alt tekstu, naruszając WCAG 1.1.1.
+**Lokalizacja:** Visual editor → Media → Media alt text
 
 #### BUG-07 — Alt text widoczny dla wideo (semantycznie niepoprawne)
-**Priorytet:** Niski  
-**Opis:** Po zmianie Media type na Video pole "Media alt text" nadal jest widoczne. Wideo nie używa atrybutu alt w ten sam sposób co obrazy. Powinno być zastąpione polem "Video title" lub "Video description".  
-**Lokalizacja:** Visual editor → Media → Media type = Video  
+**Priorytet:** Niski
+**Opis:** Po zmianie Media type na Video pole "Media alt text" nadal jest widoczne. Wideo nie używa atrybutu alt w ten sam sposób co obrazy. Powinno być zastąpione polem "Video title" lub "Video description".
+**Lokalizacja:** Visual editor → Media → Media type = Video
 
 ---
 
@@ -165,17 +165,17 @@ Hero widget jest centralnym elementem sekcji hero stron. Odpowiada za: nagłówe
 
 #### UX-01 — Dual textbox dla kolorów — niejasna relacja między polami
 **Opis:** Każde pole koloru ma dwa inputy: `<input type="color">` (picker hex) + zwykły tekst (CSS var/wartość). Relacja między nimi nie jest wyjaśniona użytkownikowi. Pytania które się pojawiają:
-- Które pole "wygrywa"?  
-- Co się dzieje gdy oba mają wartości?  
-- Dlaczego są dwa pola na jeden kolor?  
+- Które pole "wygrywa"?
+- Co się dzieje gdy oba mają wartości?
+- Dlaczego są dwa pola na jeden kolor?
 **Rekomendacja:** Dodać tooltip lub labelkę "Visual" / "Custom value" wyjaśniającą cel każdego pola.
 
 #### UX-02 — Disabled Clear button na polach z widocznymi wartościami
-**Opis:** Kilka pól kolorów (np. Secondary button background, Card border color) pokazuje wartości hex (#111827) ale przycisk "Clear" jest wyłączony — co oznacza że wartość NIE jest faktycznie zapisana w danych (to tylko podgląd stanu swatcha). Użytkownik nie może odróżnić "wartości zapisanej" od "wartości domyślnej". Prowadzi to do błędnej interpretacji stanu.  
+**Opis:** Kilka pól kolorów (np. Secondary button background, Card border color) pokazuje wartości hex (#111827) ale przycisk "Clear" jest wyłączony — co oznacza że wartość NIE jest faktycznie zapisana w danych (to tylko podgląd stanu swatcha). Użytkownik nie może odróżnić "wartości zapisanej" od "wartości domyślnej". Prowadzi to do błędnej interpretacji stanu.
 **Rekomendacja:** Wyraźnie oznaczaj pola z zapisaną wartością (np. outline/badge "overridden") vs. korzystające z domyślnych.
 
 #### UX-03 — Brak potwierdzenia przy usuwaniu presetu
-**Opis:** Przycisk "Delete" na presecie natychmiast usuwa go bez żadnego dialogu potwierdzenia. Brak opcji cofnięcia. Ryzyko przypadkowego usunięcia cennej konfiguracji.  
+**Opis:** Przycisk "Delete" na presecie natychmiast usuwa go bez żadnego dialogu potwierdzenia. Brak opcji cofnięcia. Ryzyko przypadkowego usunięcia cennej konfiguracji.
 **Rekomendacja:** Dodać dialog confirm: "Usunąć preset 'Nazwa'? Nie można cofnąć."
 
 #### UX-04 — Dwa zestawy kontrolek Padding w Advanced
@@ -183,19 +183,19 @@ Hero widget jest centralnym elementem sekcji hero stron. Odpowiada za: nagłówe
 1. "Hero Layout" → Padding top / Padding bottom (hero-specific spacing wewnątrz widgetu)
 2. "Layout" → Padding top / Padding bottom (widget container padding)
 
-Różnica nie jest wyjaśniona. Użytkownik może nie wiedzieć, który padding zmieniać.  
+Różnica nie jest wyjaśniona. Użytkownik może nie wiedzieć, który padding zmieniać.
 **Rekomendacja:** Dodać opisy sekcji wyjaśniające różnicę (np. "Hero content spacing" vs "Widget container spacing").
 
 #### UX-05 — Brak podglądu mobile/desktop w edytorze
-**Opis:** Canvas zawsze pokazuje desktop layout. Nie ma przełącznika viewport (Mobile / Tablet / Desktop). Użytkownik nie wie jak hero wygląda na urządzeniach mobilnych mimo że istnieje opcja "hideMediaOnMobile".  
+**Opis:** Canvas zawsze pokazuje desktop layout. Nie ma przełącznika viewport (Mobile / Tablet / Desktop). Użytkownik nie wie jak hero wygląda na urządzeniach mobilnych mimo że istnieje opcja "hideMediaOnMobile".
 **Rekomendacja:** Dodać pasek przełączania viewport w toolbarze strony.
 
 #### UX-06 — Brak "Discard Changes" w toolbarze
-**Opis:** Gdy są niezapisane zmiany ("UNSAVED CHANGES" badge), brak wyraźnego przycisku "Discard" lub "Revert". Jedyną opcją jest ręczne cofnięcie zmian lub opuszczenie strony. Historia jest niedostępna (BUG-03).  
+**Opis:** Gdy są niezapisane zmiany ("UNSAVED CHANGES" badge), brak wyraźnego przycisku "Discard" lub "Revert". Jedyną opcją jest ręczne cofnięcie zmian lub opuszczenie strony. Historia jest niedostępna (BUG-03).
 **Rekomendacja:** Dodać przycisk "Odrzuć zmiany" obok "Publish".
 
 #### UX-07 — Gradient bez stanu "aktywny/nieaktywny"
-**Opis:** Pola gradientu są zawsze widoczne ze swoimi wartościami domyślnymi niezależnie czy gradient jest włączony. Brak toggle/checkbox "Enable gradient". Użytkownik musi ręcznie edytować kolor żeby gradient się "aktywował" — niezrozumiały flow.  
+**Opis:** Pola gradientu są zawsze widoczne ze swoimi wartościami domyślnymi niezależnie czy gradient jest włączony. Brak toggle/checkbox "Enable gradient". Użytkownik musi ręcznie edytować kolor żeby gradient się "aktywował" — niezrozumiały flow.
 **Rekomendacja:** Dodać toggle "Enable gradient" który kontroluje aktywność całej sekcji gradientu.
 
 #### UX-08 — Placeholder CTA URL nie odzwierciedla stanu
@@ -313,6 +313,8 @@ Różnica nie jest wyjaśniona. Użytkownik może nie wiedzieć, który padding 
 ---
 
 ## 8. Screenshoty
+
+> Uwaga: nazwy plików PNG w tej sekcji są wyłącznie lokalnymi etykietami przechwyceń Playwright. Same pliki PNG są ignorowane przez Git i nie są wymaganym evidence w repo.
 
 | Plik | Opis |
 |------|------|

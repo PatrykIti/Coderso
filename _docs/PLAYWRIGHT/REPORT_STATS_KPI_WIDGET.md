@@ -108,6 +108,10 @@ Stats KPI widget służy do prezentacji kluczowych wskaźników wydajności (KPI
 > **Strona testowa:** STATS-KPI-AUDIT-0516 (ID: 542ecb61-16e2-41bb-b45c-53ead52a49a3)
 > **Data testu:** 2026-05-16
 
+> Uwaga: nazwy plików PNG w tym raporcie są wyłącznie lokalnymi etykietami
+> przechwyceń Playwright. Same pliki PNG są ignorowane przez Git i nie są
+> wymaganym evidence w repo.
+
 ### 4.1 Wizard editor — potwierdzenie C3
 
 Wizard pokazuje:

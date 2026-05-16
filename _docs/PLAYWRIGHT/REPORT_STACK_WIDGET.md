@@ -1,10 +1,10 @@
 # REPORT: Stack Widget — UX/UI Audit
 
-**Widget:** `stack`  
-**Data:** 2026-05-16  
-**Status:** Zakończony  
-**Pliki:** `core/widgets/core/stack.tsx`, `core/admin/ui/widgets/editors/StackEditors.tsx`  
-**Strona testowa:** `http://localhost:5173/admin/pages/589ad789-284c-4610-a304-d6f158bcfd57`  
+**Widget:** `stack`
+**Data:** 2026-05-16
+**Status:** Zakończony
+**Pliki:** `core/widgets/core/stack.tsx`, `core/admin/ui/widgets/editors/StackEditors.tsx`
+**Strona testowa:** `http://localhost:5173/admin/pages/589ad789-284c-4610-a304-d6f158bcfd57`
 **Frontend URL:** `http://localhost:3000/test-stack-0516`
 
 ---

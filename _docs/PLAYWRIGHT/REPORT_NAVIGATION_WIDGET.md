@@ -336,6 +336,8 @@ Widget `navigation` jest widgetem kompozytowym odpowiedzialnym za wyświetlanie 
 
 ## 8. Screenshoty z testów
 
+> Uwaga: nazwy plików PNG w tej sekcji są wyłącznie lokalnymi etykietami przechwyceń Playwright. Same pliki PNG są ignorowane przez Git i nie są wymaganym evidence w repo.
+
 | Plik | Opis |
 |------|------|
 | `nav_visual_editor.png` | Visual editor — wariant With CTA, menu source |
@@ -380,7 +382,7 @@ Widget `navigation` jest widgetem kompozytowym odpowiedzialnym za wyświetlanie 
 **Przyczyna:** Wrapper komponent `<Section>` renderuje div z klasą `relative overflow-hidden pt-0 pb-0`. Właściwość `overflow: hidden` na elemencie nadrzędnym **blokuje `position: sticky`** — to jest znane ograniczenie CSS.
 
 ```
-Nav (position: sticky top-0) 
+Nav (position: sticky top-0)
   └─ div [static]
       └─ SECTION [static]
           └─ MAIN [static]

@@ -1,10 +1,10 @@
 # RAPORT: Accordion Widget — Analiza UX/UI i brakujące funkcjonalności
 
-> **Status:** Zakończony  
-> **Data:** 2026-05-16  
-> **Sesja:** Playwright #8 (Accordion Widget)  
-> **Środowisko:** http://localhost:5173/admin · http://localhost:3000  
-> **Strona testowa:** TEST-ACCORDION-0516 (`/test-accordion-0516`)  
+> **Status:** Zakończony
+> **Data:** 2026-05-16
+> **Sesja:** Playwright #8 (Accordion Widget)
+> **Środowisko:** http://localhost:5173/admin · http://localhost:3000
+> **Strona testowa:** TEST-ACCORDION-0516 (`/test-accordion-0516`)
 > **Sesja przeglądarki:** `accordion-audit` (oddzielna od innych agentów)
 
 ---
@@ -15,22 +15,22 @@ Projekt zawiera **dwa oddzielne widgety akordeonowe** z różnymi modelami danyc
 
 ### 1.1 Accordion Widget (layout)
 
-**Typ:** Layout / Composite (repeatable slots)  
-**Kategoria:** `layout`  
-**Warianty:** `soft`, `bordered`, `compact`  
-**Ograniczenia elementów:** min 2 / max 8  
-**Plik renderera:** `core/widgets/core/accordion.tsx`  
+**Typ:** Layout / Composite (repeatable slots)
+**Kategoria:** `layout`
+**Warianty:** `soft`, `bordered`, `compact`
+**Ograniczenia elementów:** min 2 / max 8
+**Plik renderera:** `core/widgets/core/accordion.tsx`
 **Plik edytora:** `core/admin/ui/widgets/editors/AccordionEditors.tsx`
 
 Accordion to ogólny widget layoutowy z zagnieżdżonymi slotami — każdy item może zawierać dowolne inne widgety. Oparty na natywnych elementach HTML `<details>/<summary>`.
 
 ### 1.2 FAQ Accordion Widget (content)
 
-**Typ:** Content (standalone, bez slotów)  
-**Kategoria:** `content`  
-**Warianty:** `single-column`, `two-column`, `compact`  
-**Ograniczenia elementów:** min 1 / max 12  
-**Plik renderera:** `core/widgets/core/faqAccordion.tsx`  
+**Typ:** Content (standalone, bez slotów)
+**Kategoria:** `content`
+**Warianty:** `single-column`, `two-column`, `compact`
+**Ograniczenia elementów:** min 1 / max 12
+**Plik renderera:** `core/widgets/core/faqAccordion.tsx`
 **Plik edytora:** `core/admin/ui/widgets/editors/FaqAccordionEditors.tsx`
 
 FAQ Accordion to specjalistyczny widget do sekcji FAQ — pary pytanie/odpowiedź. Zawiera sekcję nagłówkową, opcjonalny układ dwukolumnowy oraz kontrolę spacingu.
@@ -131,8 +131,8 @@ FAQ Accordion to specjalistyczny widget do sekcji FAQ — pary pytanie/odpowied�
 
 ## 4. Testy w Admin UI Preview
 
-> **Sesja:** `playwright-cli -s=accordion-audit`  
-> **Strona testowa:** TEST-ACCORDION-0516 (ID: `5931e4c5-a135-41a9-ad08-707c61cd897b`)  
+> **Sesja:** `playwright-cli -s=accordion-audit`
+> **Strona testowa:** TEST-ACCORDION-0516 (ID: `5931e4c5-a135-41a9-ad08-707c61cd897b`)
 > **Data testu:** 2026-05-16
 
 ### 4.1 KRYTYCZNY BUG: `shouldOpen && index === 0` — domyślne otwieranie nie działa dla itemów poza pozycją 0
@@ -185,13 +185,13 @@ Oba dropdowny mają inne etykiety ale kontrolują to samo — `defaultOpenIds` +
 
 ### 4.5 Potwierdzono: Brak color pickera w Accordion (U8)
 
-Accordion Visual editor: pola "Surface color", "Border color", "Summary text color" to plain `<input type="text">`.  
-FAQ Accordion Visual editor: każde pole koloru ma `<input type="color" class="h-9 w-10 p-1">` + text field.  
+Accordion Visual editor: pola "Surface color", "Border color", "Summary text color" to plain `<input type="text">`.
+FAQ Accordion Visual editor: każde pole koloru ma `<input type="color" class="h-9 w-10 p-1">` + text field.
 Niespójna UX między widgetami tego samego systemu.
 
 ### 4.6 Potwierdzono: Brak chevron (C4)
 
-DOM canvas: `summaryInnerHTML: "Section 1"` — brak SVG, brak CSS triangle, brak ikony.  
+DOM canvas: `summaryInnerHTML: "Section 1"` — brak SVG, brak CSS triangle, brak ikony.
 Użytkownik widzi tylko tekst bez żadnego wskazania, że panel jest interaktywny.
 
 ### 4.7 Potwierdzono: Brak wszystkich atrybutów ARIA (R1–R4)
@@ -211,8 +211,8 @@ Użytkownik widzi tylko tekst bez żadnego wskazania, że panel jest interaktywn
 
 ## 5. Testy na froncie (localhost:3000)
 
-**URL:** http://localhost:3000/test-accordion-0516  
-**Strona opublikowana:** Tak  
+**URL:** http://localhost:3000/test-accordion-0516
+**Strona opublikowana:** Tak
 **Data testu:** 2026-05-16
 
 ### 5.1 KRYTYCZNY BUG: `defaultOpenIds=["2"]` → oba items zamknięte

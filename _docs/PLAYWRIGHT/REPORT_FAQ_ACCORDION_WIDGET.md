@@ -213,6 +213,8 @@ Tryb Preview (`dialog "Page Preview"` z iframe):
 
 ### Screenshoty Admin Preview
 
+> Uwaga: nazwy plików PNG w tej sekcji są wyłącznie lokalnymi etykietami przechwyceń Playwright. Same pliki PNG są ignorowane przez Git i nie są wymaganym evidence w repo.
+
 - `faq-accordion-wizard-editor.png` — edytor Wizard z 3 pytaniami
 - `faq-accordion-visual-editor.png` — edytor Visual (Single Column)
 - `faq-accordion-two-column-preview.png` — wariant Two Column
@@ -267,6 +269,8 @@ Przy `spacing="none"` (gap=0), każdy `<article>` ma:
 Efekt: między itemami pojawia się wizualnie podwójne obramowanie (2px zamiast 1px). **Bug W15 potwierdzony.**
 
 ### Screenshoty Frontend
+
+> Uwaga: nazwy plików PNG w tej sekcji są wyłącznie lokalnymi etykietami przechwyceń Playwright. Same pliki PNG są ignorowane przez Git i nie są wymaganym evidence w repo.
 
 - `faq-accordion-frontend-initial.png` — frontend z defaultOpenIndex=0
 - `faq-accordion-frontend-multiple-open-bug.png` — bug C1 na froncie (item 1 + item 2 otwarte)

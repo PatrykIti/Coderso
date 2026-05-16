@@ -244,6 +244,8 @@ Gallery Mosaic to widget do tworzenia sekcji galerii mediów — zdjęć i film�
 
 ## 9. Screenshoty
 
+> Uwaga: nazwy plików PNG w tej sekcji są wyłącznie lokalnymi etykietami przechwyceń Playwright. Same pliki PNG są ignorowane przez Git i nie są wymaganym evidence w repo.
+
 > *(Do uzupełnienia po testach Playwright)*
 
 ---

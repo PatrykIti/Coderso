@@ -1,21 +1,21 @@
 # RAPORT: Tabs Widget — Analiza UX/UI i brakujące funkcjonalności
 
-> **Status:** Zakończony  
-> **Data:** 2026-05-16  
-> **Sesja:** Playwright #8 (Tabs Widget)  
-> **Środowisko:** http://localhost:5173/admin · http://localhost:3000  
+> **Status:** Zakończony
+> **Data:** 2026-05-16
+> **Sesja:** Playwright #8 (Tabs Widget)
+> **Środowisko:** http://localhost:5173/admin · http://localhost:3000
 > **Sesja przeglądarki:** `tabs-audit` (oddzielna od innych agentów)
 
 ---
 
 ## 1. Przegląd widgetu
 
-**Typ:** Atomic / Layout  
-**Moduł:** Engagement  
-**Audience:** Intermediate  
-**Warianty:** `pills`, `underline`, `minimal`  
-**Ograniczenia zakładek:** min 2 / max 6  
-**Slot:** `panel` (repeatable: `panel:1`, `panel:2`, ...)  
+**Typ:** Atomic / Layout
+**Moduł:** Engagement
+**Audience:** Intermediate
+**Warianty:** `pills`, `underline`, `minimal`
+**Ograniczenia zakładek:** min 2 / max 6
+**Slot:** `panel` (repeatable: `panel:1`, `panel:2`, ...)
 
 Widget Tabs służy do przełączania między grupowanymi panelami treści. Obsługuje orientację poziomą i pionową, wyrównanie triggerów (start/center/end), niestandardowe kolory surface/border/active/inactive/panel, oraz keyboard navigation (Arrow keys, Home, End). Panele są repeatable slots z pełną obsługą zagnieżdżonych widgetów.
 
@@ -48,7 +48,7 @@ Widget Tabs służy do przełączania między grupowanymi panelami treści. Obs�
 ### 2.4 Runtime script
 
 Skrypt client-side obsługuje:
-- Click na trigger → `syncState(root, activeId)` 
+- Click na trigger → `syncState(root, activeId)`
 - Keyboard: Arrow (L/R dla horizontal, U/D dla vertical), Home, End
 - Guard `window.__nextlessTabsBound = true` zapobiega wielokrotnemu bindowaniu event listenerów
 
@@ -110,8 +110,8 @@ Skrypt client-side obsługuje:
 
 ## 4. Testy w Admin UI Preview
 
-> **Sesja:** `playwright-cli -s=tabs-audit`  
-> **Strona testowa:** TEST-TABS-0516 (ID: `1a545dbc-a218-4bd5-929e-fc469203ef72`, slug: `/test-tabs-0516`)  
+> **Sesja:** `playwright-cli -s=tabs-audit`
+> **Strona testowa:** TEST-TABS-0516 (ID: `1a545dbc-a218-4bd5-929e-fc469203ef72`, slug: `/test-tabs-0516`)
 > **Data testu:** 2026-05-16
 
 ### 4.1 Potwierdzony bug C1: Brak pola `inactiveTextColor` w Visual Editor
@@ -206,8 +206,8 @@ W przeciwieństwie do Timeline widget (bug C1), Tabs Wizard poprawnie pokazuje w
 
 ## 5. Testy na froncie (localhost:3000)
 
-**URL:** http://localhost:3000/test-tabs-0516  
-**Widget:** Tabs — pills, vertical, 2 panele  
+**URL:** http://localhost:3000/test-tabs-0516
+**Widget:** Tabs — pills, vertical, 2 panele
 **Opublikowany:** Tak
 
 ### 5.1 Runtime script działa na froncie

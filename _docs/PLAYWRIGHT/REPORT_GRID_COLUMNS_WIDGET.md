@@ -1,17 +1,17 @@
 # RAPORT: Grid Columns Widget — Analiza UX/UI i brakujące funkcjonalności
 
-> **Status:** Zakończony  
-> **Data:** 2026-05-16  
-> **Sesja:** Playwright #3 (Grid Columns Widget)  
+> **Status:** Zakończony
+> **Data:** 2026-05-16
+> **Sesja:** Playwright #3 (Grid Columns Widget)
 > **Środowisko:** http://localhost:5173/admin | http://localhost:3000
 
 ---
 
 ## 1. Przegląd widgetu
 
-**Typ:** Layout  
-**Moduł:** Core / Layout  
-**Warianty:** `equal`, `asymmetric`, `masonry-lite`  
+**Typ:** Layout
+**Moduł:** Core / Layout
+**Warianty:** `equal`, `asymmetric`, `masonry-lite`
 **Slot:** `column` — repeatable (min: 2, max: 6 kolumn)
 
 Grid Columns widget pozwala na budowę responsywnych wielokolumnowych układów. Każda kolumna jest osobnym slotem repeatable z konfiguracją spanów (desktop/tablet/mobile) na bazie 12-kolumnowego gridu. Opcjonalnie kolumny mogą być "cardized" — owinięte tłem, ramką i zaokrągleniami.
@@ -40,8 +40,8 @@ Grid Columns widget pozwala na budowę responsywnych wielokolumnowych układów.
 
 ### 2.3 Tryby edytora
 
-- **Wizard** — wariant, liczba kolumn, etykiety (tylko kol. 1 i 2), gap X/Y  
-- **Visual** — wariant (karty), liczba kolumn, sizing grid, gapi, cardize + kolory  
+- **Wizard** — wariant, liczba kolumn, etykiety (tylko kol. 1 i 2), gap X/Y
+- **Visual** — wariant (karty), liczba kolumn, sizing grid, gapi, cardize + kolory
 - **Advanced** — tokeny techniczne (align, gap, cardize, border, padding), JSON snapshot
 
 ### 2.4 Breakpointy
@@ -109,8 +109,8 @@ Grid Columns widget pozwala na budowę responsywnych wielokolumnowych układów.
 
 ## 5. Testy w przeglądarce (Admin Preview)
 
-> **Strona testowa:** TEST-GRID-COLUMNS-0516  
-> **URL Admin:** http://localhost:5173/admin/pages/dabb2bc8-af98-498b-abac-bab7e8e2334a  
+> **Strona testowa:** TEST-GRID-COLUMNS-0516
+> **URL Admin:** http://localhost:5173/admin/pages/dabb2bc8-af98-498b-abac-bab7e8e2334a
 > **Slug:** /test-grid-columns-0516
 
 ### 5.1 Test — Warianty
@@ -177,7 +177,7 @@ div[data-grid-column] > div.className = "h-full min-h-[6rem] border p-4 rounded-
 
 ## 6. Testy na froncie (http://localhost:3000)
 
-> **URL frontu:** http://localhost:3000/test-grid-columns-0516  
+> **URL frontu:** http://localhost:3000/test-grid-columns-0516
 > **Status strony:** Published
 
 ### 6.1 Renderowanie HTML

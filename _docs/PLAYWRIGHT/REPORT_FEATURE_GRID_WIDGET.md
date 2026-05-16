@@ -430,6 +430,8 @@ Wszystkie trafiają do fallback który zwraca domyślną wartość, więc dział
 
 ## 12. Screenshoty
 
+> Uwaga: nazwy plików PNG w tej sekcji są wyłącznie lokalnymi etykietami przechwyceń Playwright. Same pliki PNG są ignorowane przez Git i nie są wymaganym evidence w repo.
+
 | Plik | Opis |
 |------|------|
 | `fg-01-new-page.png` | Nowa strona testowa FeatureGridTest |
