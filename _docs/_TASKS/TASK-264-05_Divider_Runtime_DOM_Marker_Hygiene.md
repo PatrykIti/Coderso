@@ -36,6 +36,10 @@ that baseline so DOM evidence is collected once.
   style leak.
 - [ ] Remove raw style-value markers or replace them with bounded categories
   such as `data-divider-color-kind="token|hex|custom"`.
+- [ ] Apply that marker policy to every style-bearing marker, including current
+  raw color, resolved width, custom width, and future style fields. Keep raw
+  values only when the task documents why the value is not user-authored or is
+  required for QA.
 - [ ] Keep stable markers for variant, thickness, width mode, margins, and
   label presence unless tests/docs prove they are unnecessary.
 - [ ] Update SSR tests and report evidence with the final marker policy.
@@ -44,8 +48,8 @@ that baseline so DOM evidence is collected once.
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/divider.tsx` | Remove or sanitize raw color/style data markers while preserving useful deterministic QA markers. |
-| `tests/vitest/widgets/divider.test.tsx` | Add assertions that raw CSS variable values are not emitted in data attributes and required QA markers remain. |
+| `core/widgets/core/divider.tsx` | Remove or sanitize raw color, width, and other style-bearing data markers while preserving useful deterministic QA markers. |
+| `tests/vitest/widgets/divider.test.tsx` | Add assertions that raw CSS variable/custom style values are not emitted in data attributes and required QA markers remain. |
 | `_docs/_WIDGETS/DIVIDER.md` | Document final runtime marker contract. |
 | `_docs/PLAYWRIGHT/REPORT_DIVIDER_WIDGET.md` | Mark R3 as fixed/deferred with DOM evidence after validation. |
 
@@ -64,6 +68,7 @@ function getDividerDataAttributes(normalized: DividerData) {
     "data-divider": "true",
     "data-divider-variant": resolvedVariant,
     "data-divider-color-kind": resolveDividerColorMarker(normalized.color),
+    "data-divider-width-kind": resolveDividerWidthMarker(normalized),
   };
 }
 ```
@@ -71,6 +76,8 @@ function getDividerDataAttributes(normalized: DividerData) {
 Error handling:
 
 - Do not expose raw user-authored style strings in data attributes.
+- Resolved/custom width strings must be categorized, removed, or explicitly
+  justified in the task docs before they remain as raw data attributes.
 - Keep visible style output unchanged; only metadata changes.
 - If downstream tests rely on `data-divider-color`, update them to assert the
   visible style or sanitized marker instead of keeping the raw marker.
@@ -123,5 +130,8 @@ No API routes are added.
 
 - Public Divider DOM no longer exposes raw CSS variable or custom color values
   through `data-divider-*` attributes.
+- Public Divider DOM no longer exposes raw user-authored style values through
+  width or future style-bearing `data-divider-*` attributes unless the final
+  report explicitly documents a bounded, non-sensitive QA reason.
 - Existing visible rendering and useful QA markers remain stable.
 - Runtime tests cover the final marker policy.

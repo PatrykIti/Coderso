@@ -21,8 +21,8 @@ This leaf covers:
   shared CSS-variable picker contract;
 - W10: bounded dash-pattern and dotted line-style polish beyond the current
   browser-default dashed variant;
-- W11: a spacer-only mode for intentional vertical rhythm without a visible
-  line.
+- W11: schema-backed `visibility: "spacer-only"` mode for intentional vertical
+  rhythm without a visible line.
 
 ## Scope Boundary
 
@@ -45,8 +45,9 @@ the separate Spacer widget or shared slot/spacing contracts.
   editor-only placeholders.
 - [ ] Add editor controls for opacity, line style, and dash pattern in
   Visual/Advanced.
-- [ ] Decide whether spacer-only is a new variant or a schema-backed visibility
-  field, and document the chosen model before implementation.
+- [ ] Model spacer-only as a schema-backed `visibility` field, not a new
+  variant, so existing `line`, `dashed`, and `label-center` variant ownership
+  remains stable.
 - [ ] Add tests for opacity style output, dotted line output, dash-pattern
   output, and spacer-only output.
 
@@ -54,7 +55,7 @@ the separate Spacer widget or shared slot/spacing contracts.
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/divider.tsx` | Add line style, opacity, dash-pattern, and visibility/spacer-only fields; update schema/defaults/normalizer and runtime output. |
+| `core/widgets/core/divider.tsx` | Add line style, opacity, dash-pattern, and schema-backed `visibility` fields; update schema/defaults/normalizer and runtime output. |
 | `core/admin/ui/widgets/editors/DividerEditors.tsx` | Add bounded controls for line style, dash pattern, opacity, and spacer-only visibility. |
 | `tests/vitest/widgets/divider.test.tsx` | Add SSR assertions for opacity, dotted/dashed/solid output, dash-pattern output, spacer-only output, and backward compatibility. |
 | `tests/vitest/ui/divider-editor-wave.test.tsx` | Add editor interaction assertions for the new style/visibility controls. |
@@ -110,6 +111,9 @@ Error handling:
   markers, but no visible border.
 - Label-center with spacer-only should either hide the label or block the
   combination with clear editor copy; choose and test one deterministic rule.
+- Do not add a `spacer-only` variant id; variant selection remains owned by the
+  current Divider variants and spacer-only is persisted only through
+  `data.visibility`.
 
 ## Security Contract
 
