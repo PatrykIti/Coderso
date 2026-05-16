@@ -28,8 +28,10 @@ This leaf covers:
 ## Files to Change
 
 - `core/widgets/core/appointmentForm.tsx`
+- `core/admin/ui/widgets/editors/AppointmentFormEditors.tsx`
 - `core/widgets/core/bookingRuntimeScript.ts`
 - `tests/vitest/widgets/appointmentForm.test.tsx`
+- `tests/vitest/ui/appointment-form-editor-wave.test.tsx`
 - `tests/vitest/widgets/bookingRuntimeScript.appointmentForm.test.ts` (create)
 - `_docs/_TASKS/TASK-258-01_Runtime_State_Admin_Preview_and_Submission_Feedback.md`
 - `_docs/_TASKS/README.md` on status changes
@@ -42,8 +44,8 @@ This leaf covers:
 
 - [ ] Render Appointment Form submit disabled by default so SSR/admin canvas
   matches the no-slot public runtime state.
-- [ ] Add schema/default/runtime data for loading copy without adding a new API
-  route.
+- [ ] Add schema/default/normalizer/render/editor support for configurable
+  `loadingMessage` without adding a new API route.
 - [ ] Update `bindAppointmentForm` to hide stale error text on first
   visitor input/change after a failed submission.
 - [ ] Update submission state so the submit button exposes loading copy while
@@ -114,6 +116,10 @@ Error handling:
 - If the loading label is blank, normalize it to the default value.
 - If the runtime script is not executed, server-rendered/admin-preview markup
   still starts with a disabled no-slot submit button.
+- `loadingMessage` must be owned in `appointmentForm.tsx` alongside
+  `submitLabel`: schema field, default, normalizer fallback, rendered
+  `data-loading-message`, Wizard editor control beside `submitLabel`, and
+  editor/widget regression coverage all move together.
 
 ## Security Contract
 
@@ -138,7 +144,6 @@ No route is added and the public booking request shape remains unchanged.
 - `bun run test:vitest -- tests/vitest/widgets/appointmentForm.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/bookingRuntimeScript.appointmentForm.test.ts`
 - `bun run test:vitest -- tests/vitest/ui/appointment-form-editor-wave.test.tsx`
-  if loading copy is exposed in the editor.
 - `bun test tests/unit/server/publicBookingApi.test.ts` only if this leaf changes
   public reservation payload semantics.
 

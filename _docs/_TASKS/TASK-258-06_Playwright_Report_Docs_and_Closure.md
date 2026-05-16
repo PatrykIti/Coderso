@@ -123,6 +123,10 @@ No route is added by this closure leaf.
 - `bun run test:vitest -- tests/vitest/ui/appointment-form-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/bookingRuntimeScript.appointmentForm.test.ts`
   if created.
+- `bun run test:vitest -- tests/vitest/validation/bookingSchemas.test.ts` if
+  public booking metadata shape changed for consent/custom fields.
+- `bun test tests/integration/runtime/appointment-form-runtime-hydration.test.ts`
+  if public CAPTCHA metadata injection changed.
 - `bun test tests/unit/widgets/validator.test.ts` if schema changed.
 - `set -a && source .env && set +a` before DB-backed public booking API tests.
 - `bun test tests/unit/server/publicBookingApi.test.ts` if public booking route

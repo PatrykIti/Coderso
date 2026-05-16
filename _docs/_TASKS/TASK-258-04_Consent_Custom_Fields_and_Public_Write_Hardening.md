@@ -34,15 +34,21 @@ This leaf covers:
 - `core/server/validation/bookingSchemas.ts`
 - `core/services/booking/bookingRuntimeResolver.ts` when booking runtime data
   becomes the owner of public CAPTCHA metadata for booking widgets.
-- `core/services/settings/securitySettings.ts` and
-  `core/server/routes/authRoutes.ts` only if the implementation reuses or
-  reshapes the existing public bot-protection projection.
+- `core/services/settings/securitySettings.ts` only if a typed public CAPTCHA
+  projection helper must be extracted from existing security settings behavior.
 - `tests/vitest/widgets/appointmentForm.test.tsx`
 - `tests/vitest/ui/appointment-form-editor-wave.test.tsx`
 - `tests/vitest/widgets/bookingRuntimeScript.appointmentForm.test.ts`
+- `tests/vitest/validation/bookingSchemas.test.ts`
+- `tests/integration/runtime/appointment-form-runtime-hydration.test.ts`
+  (create)
 - `tests/unit/server/publicBookingApi.test.ts`
 - `tests/security/codersoSecurityGate.test.ts`
 - `_docs/_WIDGETS/APPOINTMENT_FORM.md`
+
+## New Files to Create
+
+- `tests/integration/runtime/appointment-form-runtime-hydration.test.ts`
 
 ## Sub-Tasks
 
@@ -61,8 +67,7 @@ This leaf covers:
 - [ ] Tighten public booking metadata validation enough to bound custom field
   and consent payloads.
 - [ ] Update both route normalization and JSON schema validation so unknown
-  reservation metadata keys are rejected or dropped consistently before service
-  persistence.
+  reservation metadata keys are rejected before service persistence.
 
 ## Implementation Pseudocode
 
@@ -162,24 +167,37 @@ const bookingReservationMetadataSchema = {
 This bridge must be wired through the current runtime seam. Today
 `publicSite.tsx` injects only `resolved.submissionNonce`/`error` for
 Appointment Form blocks, and `resolveBookingRuntimeData` has no public
-bot-protection output. Implement either:
+bot-protection output. TASK-258-04 must implement the narrow backend-owned
+bridge:
 
-- a narrow booking runtime resolver output that reads `getSecuritySettingsPublic`
-  and returns public-only CAPTCHA metadata, then inject it from `publicSite.tsx`;
-  or
-- an explicit deferral of browser token acquisition to a new physical task, while
-  keeping BF-08 marked deferred in the Playwright report.
+1. Extend `resolveBookingRuntimeData` with public-only CAPTCHA metadata derived
+   from `getSecuritySettingsPublic` when bot protection is enabled and a public
+   site key is configured.
+2. Inject only that public metadata from `publicSite.tsx` into Appointment Form
+   rendered data attributes; never serialize provider secrets, threshold config,
+   nonce secrets, or private settings into widget JSON.
+3. Update `bookingRuntimeScript.ts` to load/execute the public reCAPTCHA client
+   from the resolved site key/action and submit the resulting `captchaToken`
+   only for the current reservation attempt.
+4. Keep `publicBookingApi.ts` as the route owner for enforcing nonce plus
+   CAPTCHA before persistence; the client bridge is only a token acquisition
+   path, not a security decision.
 
 Error handling:
 
 - If custom field ids collide, normalize to stable unique ids before rendering.
-- If custom select options are empty, render the field as text or reject the
-  field in normalization; choose and test one behavior.
+- If custom select options are empty, reject/drop that custom field during
+  Appointment Form normalization and surface an editor warning; do not silently
+  render it as a different field type.
 - If consent is required and unchecked, HTML `required` blocks normal browser
   submission; the runtime must also avoid sending a payload when the checkbox is
   absent or false.
 - If CAPTCHA is required but unavailable, show a user-facing error and do not
   submit.
+- If the backend-owned public CAPTCHA metadata cannot be resolved because site
+  key configuration is missing, render the existing nonce-protected form and
+  surface the resolver warning through read-only diagnostics; do not let widget
+  config provide a site key or bypass route enforcement.
 - If DB-backed public booking route tests cannot connect to `DATABASE_URL`, keep
   route evidence blocked and still cover metadata schema/normalization with a
   non-DB test.
@@ -213,6 +231,11 @@ This leaf can affect the existing public booking write route.
 - `bun run test:vitest -- tests/vitest/widgets/appointmentForm.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/appointment-form-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/bookingRuntimeScript.appointmentForm.test.ts`
+- `bun run test:vitest -- tests/vitest/validation/bookingSchemas.test.ts` for
+  bounded consent/custom-field metadata acceptance and reject-unknown cases.
+- `bun test tests/integration/runtime/appointment-form-runtime-hydration.test.ts`
+  to prove public CAPTCHA metadata is injected into Appointment Form runtime
+  markup and provider secrets are not rendered.
 - `set -a && source .env && set +a` before DB-backed public booking API tests.
 - `bun test tests/unit/server/publicBookingApi.test.ts`; confirm the DB-backed
   reservation assertions ran. If `DATABASE_URL` is unavailable or `canConnect()`
@@ -229,6 +252,7 @@ This leaf can affect the existing public booking write route.
   BF-05, BF-07, and BF-08.
 - `_docs/SECURITY_SPEC.md` only if public booking anti-abuse behavior changes
   beyond the existing policy.
+- `_docs/_TASKS/README.md` on status changes.
 - `_docs/_CHANGELOG/` and `_docs/_CHANGELOG/README.md` on completion.
 
 ## Acceptance Criteria

@@ -61,6 +61,11 @@ Out of scope for TASK-258:
   owned by TASK-256-04.
 - Booking Calendar product redesign beyond the minimal runtime selection data
   needed by Appointment Form slot summaries.
+- New public endpoint policy, custom endpoint removal, or cross-widget
+  bot-protection projection redesign not required by the Appointment Form
+  report. If public-write implementation discovers a real endpoint ownership
+  issue, route it through TASK-258-04 or a new physical security task with a
+  backward-compatibility plan; do not hide it inside TASK-258-05 styling work.
 
 ## Source Report Coverage
 
@@ -77,11 +82,11 @@ Out of scope for TASK-258:
 
 | Leaf | Current drift evidence | Owner files | Required test lanes |
 |---|---|---|---|
-| TASK-258-01 | Report IDs: BUG-01, BUG-02, UX-07, BF-09, BF-13 | `appointmentForm.tsx`, `bookingRuntimeScript.ts` | Vitest widget render, new booking runtime script DOM suite, Bun public API only if payload changes |
+| TASK-258-01 | Report IDs: BUG-01, BUG-02, UX-07, BF-09, BF-13 | `appointmentForm.tsx`, `AppointmentFormEditors.tsx`, `bookingRuntimeScript.ts` | Vitest widget render, editor wave for `loadingMessage`, new booking runtime script DOM suite, Bun public API only if payload changes |
 | TASK-258-02 | Report IDs: UX-01, UX-03, BF-02, BF-04, BF-10, BF-11, BF-14, BF-17, BF-18, A1-A5 | `appointmentForm.tsx`, `AppointmentFormEditors.tsx`, `bookingRuntimeScript.ts` | Vitest widget render, editor wave, validator, runtime payload DOM assertions |
 | TASK-258-03 | Report IDs: UX-02, BF-06, BF-12, BF-15 | `AppointmentFormEditors.tsx`, `bookingRuntimeScript.ts`, `bookingCalendar.tsx`, `core/widgets/types.ts`, `PageEditor.tsx`, `WidgetTemplateEditorPage.tsx`, `BlockSettings.tsx` | Vitest editor wave, booking calendar/runtime script assertions, widget render |
-| TASK-258-04 | Report IDs: BF-05, BF-07, BF-08 | `appointmentForm.tsx`, `AppointmentFormEditors.tsx`, `bookingRuntimeScript.ts`, `publicSite.tsx`, `publicBookingApi.ts`, `bookingSchemas.ts`, `bookingRuntimeResolver.ts`, `securitySettings.ts`, `authRoutes.ts` | Vitest widget/editor, Bun public booking API, security gate |
-| TASK-258-05 | Report IDs: UX-04, UX-05, UX-06, BF-01, BF-03, BF-16, A6 | `appointmentForm.tsx`, `AppointmentFormEditors.tsx`, widget registry docs | Vitest widget/editor, style clear adjacency if shared styles change |
+| TASK-258-04 | Report IDs: BF-05, BF-07, BF-08 | `appointmentForm.tsx`, `AppointmentFormEditors.tsx`, `bookingRuntimeScript.ts`, `publicSite.tsx`, `publicBookingApi.ts`, `bookingSchemas.ts`, `bookingRuntimeResolver.ts`, `securitySettings.ts`, optional shared CAPTCHA helper only if extracted | Vitest widget/editor, booking schema validation, public runtime hydration, Bun public booking API, security gate |
+| TASK-258-05 | Report IDs: UX-04, UX-05, UX-06, BF-01, BF-03, BF-16, A6 | `appointmentForm.tsx`, `AppointmentFormEditors.tsx`, widget registry/docs only when Appointment Form variants or docs metadata change | Vitest widget/editor, style clear adjacency if shared styles change |
 | TASK-258-06 | Report closure table plus every fixed/deferred source row | `_docs/PLAYWRIGHT/REPORT_APPOINTMENT_FORM_WIDGET.md`, `_docs/_WIDGETS/APPOINTMENT_FORM.md`, board/changelog/docs | `git diff --check`, targeted production lanes after implementation leaves |
 
 ## Sub-Tasks

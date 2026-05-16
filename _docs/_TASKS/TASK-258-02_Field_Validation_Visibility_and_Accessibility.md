@@ -34,7 +34,7 @@ This leaf covers:
 - `core/widgets/core/appointmentForm.tsx`
 - `core/admin/ui/widgets/editors/AppointmentFormEditors.tsx`
 - `core/widgets/core/bookingRuntimeScript.ts` if split-name payload composition
-  or custom field serialization needs runtime support.
+  needs runtime support.
 - `tests/vitest/widgets/appointmentForm.test.tsx`
 - `tests/vitest/ui/appointment-form-editor-wave.test.tsx`
 - `tests/vitest/widgets/bookingRuntimeScript.appointmentForm.test.ts`
@@ -129,11 +129,12 @@ const fullName =
 Error handling:
 
 - If `name.mode` is missing or invalid, normalize to `full`.
-- If `requiredEmail` is true while email is hidden, normalize email to visible
-  or force `requiredEmail: false`; choose the simpler product-safe behavior and
-  test it.
-- If `requiredPhone` is true while phone is hidden, normalize phone to visible
-  or force `requiredPhone: false`; choose and document one behavior.
+- If `requiredEmail` is true while email is hidden, keep email hidden and
+  normalize `requiredEmail` to `false`. The rendered form must not require an
+  invisible field, and the editor test must assert this normalization.
+- If `requiredPhone` is true while phone is hidden, keep phone hidden and
+  normalize `requiredPhone` to `false`. The rendered form must not require an
+  invisible field, and the editor test must assert this normalization.
 - Clamp `notesMaxLength` to a bounded range and omit the attribute only when the
   normalized value means unlimited.
 
@@ -176,12 +177,15 @@ client payload composition, but it must keep the existing reservation endpoint.
 - `_docs/_WIDGETS/APPOINTMENT_FORM.md`
 - `_docs/PLAYWRIGHT/REPORT_APPOINTMENT_FORM_WIDGET.md` fixed evidence for
   UX-01, UX-03, BF-02, BF-04, BF-10, BF-11, BF-14, BF-17, BF-18, and A1-A5.
+- `_docs/_TASKS/README.md` on status changes.
 - `_docs/_CHANGELOG/` and `_docs/_CHANGELOG/README.md` on completion.
 
 ## Acceptance Criteria
 
 - Editors never show active label/placeholder controls for hidden fields.
 - Visual owns all user-facing field and no-slot copy.
+- Hidden email/phone fields normalize their corresponding `required*` flags to
+  `false`, with render/editor regression coverage.
 - Email/phone required behavior is configurable and reflected in rendered HTML.
 - Split-name mode submits the existing `customerName` API payload safely.
 - Rendered fields include autocomplete hints, bounded notes length when set, and

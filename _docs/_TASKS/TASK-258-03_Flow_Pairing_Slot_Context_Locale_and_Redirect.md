@@ -183,14 +183,20 @@ No API route is added.
 - `bun run test:vitest -- tests/vitest/widgets/appointmentForm.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/bookingCalendar.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/bookingRuntimeScript.appointmentForm.test.ts`
-- Add or update PageEditor/BlockSettings Vitest coverage if editor context
-  creation moves through those components.
+- `bun run test:vitest -- tests/vitest/pageBuilder/blockSettings-wave.test.tsx`
+  when `BlockSettings` passes the booking flow context to editor modes.
+- `bun run test:vitest -- tests/vitest/ui/page-editor-shell-wave.test.tsx`
+  when desktop/mobile `PageEditor` `BlockSettings` calls collect booking flow
+  context from page blocks.
+- `bun run test:vitest -- tests/vitest/ui/widget-template-editor.test.tsx`
+  when `WidgetTemplateEditorPage` passes local template block context.
 
 ## Documentation Updates Required
 
 - `_docs/_WIDGETS/APPOINTMENT_FORM.md`
 - `_docs/PLAYWRIGHT/REPORT_APPOINTMENT_FORM_WIDGET.md` fixed evidence for
   UX-02, BF-06, BF-12, and BF-15.
+- `_docs/_TASKS/README.md` on status changes.
 - `_docs/_CHANGELOG/` and `_docs/_CHANGELOG/README.md` on completion.
 
 ## Acceptance Criteria

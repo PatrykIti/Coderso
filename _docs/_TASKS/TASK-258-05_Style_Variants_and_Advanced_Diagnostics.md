@@ -42,19 +42,23 @@ helper must change, land that in TASK-256-02 first.
 ## Sub-Tasks
 
 - [ ] Add Appointment Form variants: `default`, `compact`, `inline`,
-  `sidebar`, `card-summary`, and `multi-step`.
+  `sidebar`, and `card-summary`.
 - [ ] Keep variant behavior schema-owned and backward compatible for existing
   `default` payloads.
 - [ ] Add `style.submitTextColor` and render it through the same clearable style
   rules as other Appointment Form surface fields.
 - [ ] Add editor-visible style status indicators for inherited theme defaults
   versus configured overrides without changing shared `Clear` semantics.
-- [ ] Remove editable custom endpoint control unless a current architecture doc
-  explicitly approves custom Appointment Form submission endpoints.
 - [ ] Convert resolved nonce and runtime error controls into read-only
   diagnostics with explanatory copy.
 - [ ] Add runtime diagnostic copy that explains who sets nonce/error values and
   what the admin can do when a resolver warning appears.
+- [ ] Leave custom submission endpoint policy unchanged in this leaf. If endpoint
+  editability is later judged unsafe, create a separate public-write/security
+  task with migration and backward-compatibility notes.
+- [ ] Do not implement a `multi-step` variant in this leaf. It remains future
+  Appointment Form product scope until a physical task defines step state,
+  keyboard behavior, validation flow, and runtime tests.
 
 ## Implementation Pseudocode
 
@@ -64,8 +68,7 @@ export type AppointmentFormVariantId =
   | "compact"
   | "inline"
   | "sidebar"
-  | "card-summary"
-  | "multi-step";
+  | "card-summary";
 
 type AppointmentFormStyle = {
   frameBackground?: string;
@@ -86,8 +89,6 @@ function resolveAppointmentFormVariantClasses(variant: AppointmentFormVariantId)
       return { root: "grid gap-4 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]" };
     case "card-summary":
       return { root: "grid gap-4", summaryPlacement: "card" };
-    case "multi-step":
-      return { root: "space-y-4", steps: true };
     default:
       return { root: "space-y-4" };
   }
@@ -126,9 +127,9 @@ Error handling:
   existing theme background text color fallback.
 - If `resolved.submissionNonce` exists in old widget data, display it read-only
   but do not let the editor write it.
-- If `submissionEndpoint` exists in old widget data, normalize rendering to the
-  fixed booking reservations endpoint unless an explicit architecture decision
-  keeps custom endpoint support.
+- If `submissionEndpoint` exists in old widget data, keep the existing behavior
+  in this leaf. Endpoint ownership is a public-write/security migration concern,
+  not a style or diagnostics repair.
 
 ## Security Contract
 
@@ -139,16 +140,16 @@ payloads.
 - Auth model: unchanged. Admin editors require the existing admin session, public
   booking mode keeps the booking access evaluator, and internal booking mode
   still requires admin session or API key scope.
-- RBAC: unchanged. Variant/style authors never gain permission to choose a
-  custom write target.
+- RBAC: unchanged. This leaf does not add, remove, or expand submission endpoint
+  controls.
 - CSRF: unchanged for admin editing; public reservations keep the existing
   booking submission nonce/signature check when required.
 - Rate-limit bucket: unchanged `public_write`.
 - Reject-unknown validation: new variants and style fields must be schema-owned
   and strict.
-- Anti-abuse: nonce remains server-injected read-only diagnostics; custom
-  endpoint editing must not let authors bypass booking nonce/signature,
-  reCAPTCHA, or internal session/API-key policy.
+- Anti-abuse: nonce remains server-injected read-only diagnostics; variant,
+  style, and diagnostic changes must not bypass booking nonce/signature,
+  reCAPTCHA, internal session/API-key policy, or the current endpoint behavior.
 - Secret handling: diagnostic UI must not show secrets. Submission nonce display
   is allowed only because it is already a public hidden field in rendered form
   markup; do not show nonce secret material or provider keys.
@@ -170,14 +171,19 @@ payloads.
 - `_docs/PLAYWRIGHT/REPORT_APPOINTMENT_FORM_WIDGET.md` fixed evidence for
   UX-04, UX-05, UX-06, BF-01, BF-03, BF-16, and A6.
 - `_docs/WIDGET_PACK_MATRIX.md` if variant readiness affects the booking pack.
+- `_docs/_TASKS/README.md` on status changes.
 - `_docs/_CHANGELOG/` and `_docs/_CHANGELOG/README.md` on completion.
 
 ## Acceptance Criteria
 
-- Appointment Form exposes the documented variants with stable render output.
+- Appointment Form exposes `default`, `compact`, `inline`, `sidebar`, and
+  `card-summary` variants with stable render output. Conversational or
+  multi-step appointment intake remains future product scope unless a later
+  physical task defines the state machine, keyboard behavior, validation flow,
+  and tests.
 - Submit text color is configurable and can be cleared without serializing
   empty or transparent sentinels.
 - Editor style fields show whether the value is inherited or configured.
-- Runtime endpoint, nonce, and runtime error values are not editable author
-  controls unless explicitly approved by architecture docs.
+- Runtime nonce and runtime error values are read-only diagnostics. Submission
+  endpoint editability is unchanged by this leaf.
 - Existing default payloads render backward compatibly.
