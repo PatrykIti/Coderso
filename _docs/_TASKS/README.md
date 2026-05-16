@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 38 tasks
+- **To Do:** 60 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1542 tasks
 
@@ -38,6 +38,28 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-261 | Contact Widget Playwright Product Followups | High | Very Large | Contact-only follow-up family for `REPORT_CONTACT_WIDGET.md`, excluding TASK-256 shared-contract scope |
+| TASK-261-01 | Contact Header, Details Links, and Semantic Output | High | Large | Add Contact section headings, panel headings, semantic details, and safe tel/mailto output |
+| TASK-261-02 | Contact Form Field Metadata and Public Submission Bridge | High | Very Large | Add field names/ids/autocomplete/custom labels and route active submits through existing Forms runtime hardening |
+| TASK-261-03 | Contact Editor Mode Parity and Minimal Variant UX | High | Large | Repair Contact Wizard/Visual/Advanced UX, Wizard hours, minimal form controls, hints, and normalization feedback |
+| TASK-261-04 | Contact Map Validation, Fallback, and Display Controls | Medium | Medium | Add map title/description, validation, height, fullscreen, and fallback behavior |
+| TASK-261-05 | Contact Layout, Social Links, and Normalizer Polish | Medium | Medium | Add max-width, padding, bounded social links, and explicit default enum normalization |
+| TASK-261-06 | Contact Report, Docs, Changelog, and Closure | Medium | Medium | Refresh Contact report evidence, docs, changelog, board, and final validation |
+| TASK-260 | Compare Timeline Widget Playwright Product Followups | High | Very Large | Widget-specific follow-up family for `REPORT_COMPARE_TIMELINE_WIDGET.md`, excluding TASK-256 shared-contract scope |
+| TASK-260-01 | Compare Timeline Renderer Truthfulness and Accessibility | High | Large | Repair Compare Timeline-local renderer grid, guide, semantic, fallback, min-height, and overflow findings |
+| TASK-260-02 | Compare Timeline Segment Editing and Highlight Model | High | Large | Expand both-track segment editing, Wizard segment setup, preserved segment messaging, range feedback, and friendly track labels |
+| TASK-260-03 | Compare Timeline Axis Steps and Content Controls | High | Large | Add Visual step buttons, step descriptions, bounded range decisions, optional icons, and safe step/segment links |
+| TASK-260-04 | Compare Timeline Layout Typography and Visual Polish | Medium | Large | Add Compare Timeline-owned heading, width, padding, typography, motion, order, background, marker, preview, and spacing help |
+| TASK-260-05 | Compare Timeline Report Docs and Closure | Medium | Medium | Refresh report/docs/changelog/board and final validation for the TASK-260 family |
+| TASK-259 | Booking Calendar Widget Playwright Product Followups | High | Very Large | Widget-specific follow-up family for `REPORT_BOOKING_CALENDAR_WIDGET.md`, excluding TASK-256 shared-contract and TASK-258 Appointment Form scope |
+| TASK-259-01 | Booking Calendar Admin Preview Runtime Catalog Parity | High | Large | Hydrate admin canvas/editor preview with booking services/resources without persisting preview-only tokens |
+| TASK-259-02 | Booking Calendar Date Defaults, Range, and Past-Date Safety | High | Large | Add default/min/max date config and enforce public slots past-date policy |
+| TASK-259-03 | Booking Calendar Service Context and Timezone Copy | High | Large | Show price, duration, description, timezone, and user-facing empty-state copy |
+| TASK-259-04 | Booking Calendar Loading, Concurrency, and Selection UX | High | Large | Add refresh busy state, skeleton, AbortController, stale-response guard, and clear selection |
+| TASK-259-05 | Booking Calendar Availability Calendar and Slot Density | High | Very Large | Add visual date availability signals and non-overlapping slot density mode |
+| TASK-259-06 | Booking Calendar Layout Variants and Mobile Styling | Medium | Large | Add compact/inline/horizontal layouts, mobile control density, and selected-slot style controls |
+| TASK-259-07 | Booking Calendar Default Pickers and Diagnostics | Medium | Medium | Replace raw default IDs with catalog-aware pickers and truthful diagnostics |
+| TASK-259-08 | Booking Calendar Report, Docs, and Closure | Medium | Medium | Refresh report/docs/changelog/board and final validation for the TASK-259 family |
 | TASK-258 | Appointment Form Widget Playwright Follow-Up | High | Very Large | Widget-specific follow-up for `_docs/PLAYWRIGHT/REPORT_APPOINTMENT_FORM_WIDGET.md`; excludes shared TASK-256 contract repairs |
 | TASK-258-01 | Runtime State, Admin Preview, and Submission Feedback | High | Large | Repair no-slot disabled parity, stale errors, loading copy, and post-success slot clearing |
 | TASK-258-02 | Field Validation, Visibility, and Accessibility | High | Large | Add truthful field toggles, required controls, split name, validation attributes, autocomplete, and form labels |
