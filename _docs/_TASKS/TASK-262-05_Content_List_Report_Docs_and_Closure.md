@@ -124,6 +124,8 @@ No API routes are added by this closure leaf.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun test tests/unit/widgets/contentList.test.tsx`
+- `bun test tests/unit/content/contentListResolver.test.ts` when Content List
+  runtime metadata or listing-source resolution changed
 - `bun run test:vitest -- tests/vitest/ui/content-list-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/site/publicRenderer.test.tsx` when
   public output changed

@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Runtime Render + Admin UI + Visual Editing
 **Estimated Effort:** Large
-**Dependencies:** TASK-262, TASK-262-01, TASK-262-02
+**Dependencies:** TASK-262, TASK-262-01, TASK-262-02, TASK-262-03
 **Status:** To Do
 
 ---

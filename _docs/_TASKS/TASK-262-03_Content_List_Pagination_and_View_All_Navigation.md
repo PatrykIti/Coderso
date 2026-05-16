@@ -63,6 +63,7 @@ changes to unrelated dynamic widgets.
 | `core/services/content/contentListResolver.ts` | Resolve page/page size/total metadata for legacy and listing modes through existing runtime query seams. |
 | `core/services/search/filterEngine.ts` | Update only if Content List pagination needs a new bounded runtime token beyond current listing runtime page support. |
 | `core/admin/ui/widgets/editors/ContentListEditors.tsx` | Add source-aware pagination and View all/Load more controls. |
+| `tests/unit/content/contentListResolver.test.ts` | Cover Content List runtime metadata and listing-source pagination resolution. |
 | `tests/unit/widgets/contentList.test.tsx` | Cover schema/defaults/rendered controls/safe links. |
 | `tests/vitest/search/filterEngine.test.ts` | Cover listing runtime page token parsing/resolution if `filterEngine.ts` changes. |
 | `tests/vitest/ui/content-list-editor-wave.test.tsx` | Cover editor controls and source-aware options. |
@@ -144,6 +145,8 @@ No public write API is added.
 ## Testing Requirements
 
 - `bun test tests/unit/widgets/contentList.test.tsx`
+- `bun test tests/unit/content/contentListResolver.test.ts` when Content List
+  runtime metadata or listing-source resolution changes
 - `bun run test:vitest -- tests/vitest/search/filterEngine.test.ts` when
   listing runtime page parsing changes
 - `bun run test:vitest -- tests/vitest/ui/content-list-editor-wave.test.tsx`

@@ -77,7 +77,7 @@ work.
 |---|---|---|---|
 | TASK-262-01 | Report lines 78-80, 82, 87, 114-122, 134-137, 153-155, 163-164, 277-279, 290, 297 | `ContentListEditors.tsx`, content type/listings clients only if existing response metadata supports safer labels, Content List docs | Vitest editor wave; Bun route/service tests only if admin source APIs change |
 | TASK-262-02 | Report lines 67, 85, 94, 97, 173-181, 201-203, 221-252, 270-284, 300 | `contentList.tsx`, `ContentListEditors.tsx`, public renderer tests, Content List docs | Bun widget render tests; Vitest editor wave; public renderer smoke when runtime markers/copy change |
-| TASK-262-03 | Report lines 66, 68, 270, 275 plus existing `resolved.runtime.page` schema at `contentList.tsx` | `contentList.tsx`, `contentListResolver.ts`, `filterEngine.ts` only if the current listing runtime page token needs extension, public page renderer/listing runtime seams | Bun content-list resolver tests, widget tests, public renderer tests, and `tests/vitest/search/filterEngine.test.ts` when listing runtime page parsing changes |
+| TASK-262-03 | Report lines 66, 68, 270, 275 plus existing `resolved.runtime.page` schema at `contentList.tsx` | `contentList.tsx`, `contentListResolver.ts`, `filterEngine.ts` only if the current listing runtime page token needs extension, public page renderer/listing runtime seams | `tests/unit/content/contentListResolver.test.ts`, widget tests, public renderer tests, and `tests/vitest/search/filterEngine.test.ts` when listing runtime page parsing changes |
 | TASK-262-04 | Report lines 69-71, 77, 83, 86, 93, 128-147, 287-288, 298 | `contentList.tsx`, `ContentListEditors.tsx`, Content List widget tests | Bun widget tests, Vitest editor wave, validator tests when schema expands |
 | TASK-262-05 | Report lines 264-306 and every fixed/deferred row | `_docs/PLAYWRIGHT/REPORT_CONTENT_LIST_WIDGET.md`, `_docs/_WIDGETS/CONTENT_LIST.md`, `_docs/WIDGETS.md` if product surface changes, board/changelog/docs | `git diff --check`, targeted production lanes after implementation leaves |
 
@@ -151,6 +151,8 @@ This umbrella does not add API routes.
   - `bun run test:vitest -- tests/vitest/site/publicRenderer.test.tsx` when
     public rendering, runtime markers, or output copy change.
   - `bun test tests/unit/widgets/validator.test.ts` when schema/defaults change.
+  - `bun test tests/unit/content/contentListResolver.test.ts` when Content
+    List runtime metadata or listing-source resolution changes.
   - `bun run test:vitest -- tests/vitest/search/filterEngine.test.ts` when
     listing/runtime query parameter parsing changes.
   - `bun run gates:coderso`, `bun run scan:security:strict`, and
