@@ -127,7 +127,7 @@ Widget formularza umówienia wizyty — zbiera dane klienta i wysyła rezerwacj�
 | Brak e-maila → submisja przechodzi | ✓ Zgodne z kodem | Email niewymagany — **BF-02 potwierdzony** |
 | Nieprawidłowy format email → blokuje | ✓ Działa | HTML5 `type="email"` walidacja działa |
 | Brak slotu → button disabled | ✓ Działa | Runtime skrypt poprawnie wyłącza przycisk |
-| Telefon bez `pattern` → brak formatu | ✓ Potwierdzone | `pattern: ""` — **BF-13 potwierdzony** |
+| Telefon bez `pattern` → brak formatu | ✓ Potwierdzone | `pattern: ""` — **BF-10 potwierdzony** |
 | Textarea bez `maxlength` | ✓ Potwierdzone | `maxLength: -1` — **BF-11 potwierdzony** |
 
 ### 4.3 Zachowanie po submisji (API 400)

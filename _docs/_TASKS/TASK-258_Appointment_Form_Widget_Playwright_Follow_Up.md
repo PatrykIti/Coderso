@@ -77,12 +77,12 @@ Out of scope for TASK-258:
 
 | Leaf | Current drift evidence | Owner files | Required test lanes |
 |---|---|---|---|
-| TASK-258-01 | Report lines 104, 140, 168-178, 213-216, 254-272 | `appointmentForm.tsx`, `bookingRuntimeScript.ts` | Vitest widget render, new booking runtime script DOM suite, Bun public API only if payload changes |
-| TASK-258-02 | Report lines 79-81, 90, 126-131, 142-149, 184-195, 226-236, 258-292 | `appointmentForm.tsx`, `AppointmentFormEditors.tsx`, `bookingRuntimeScript.ts` | Vitest widget render, editor wave, validator, runtime payload DOM assertions |
-| TASK-258-03 | Report lines 120, 189-191, 242-244, 266-280 | `AppointmentFormEditors.tsx`, `bookingRuntimeScript.ts`, `bookingCalendar.tsx`, `WidgetEditorContext` owner paths as needed | Vitest editor wave, booking calendar/runtime script assertions, widget render |
-| TASK-258-04 | Report lines 238-252 | `appointmentForm.tsx`, `AppointmentFormEditors.tsx`, `bookingRuntimeScript.ts`, public booking route/schema/security owners | Vitest widget/editor, Bun public booking API, security gate |
-| TASK-258-05 | Report lines 89-92, 106, 197-207, 209-211, 222-232, 282-284 | `appointmentForm.tsx`, `AppointmentFormEditors.tsx`, widget registry docs | Vitest widget/editor, style clear adjacency if shared styles change |
-| TASK-258-06 | Report lines 358-390 and every fixed/deferred source row | `_docs/PLAYWRIGHT/REPORT_APPOINTMENT_FORM_WIDGET.md`, `_docs/_WIDGETS/APPOINTMENT_FORM.md`, board/changelog/docs | `git diff --check`, targeted production lanes after implementation leaves |
+| TASK-258-01 | Report IDs: BUG-01, BUG-02, UX-07, BF-09, BF-13 | `appointmentForm.tsx`, `bookingRuntimeScript.ts` | Vitest widget render, new booking runtime script DOM suite, Bun public API only if payload changes |
+| TASK-258-02 | Report IDs: UX-01, UX-03, BF-02, BF-04, BF-10, BF-11, BF-14, BF-17, BF-18, A1-A5 | `appointmentForm.tsx`, `AppointmentFormEditors.tsx`, `bookingRuntimeScript.ts` | Vitest widget render, editor wave, validator, runtime payload DOM assertions |
+| TASK-258-03 | Report IDs: UX-02, BF-06, BF-12, BF-15 | `AppointmentFormEditors.tsx`, `bookingRuntimeScript.ts`, `bookingCalendar.tsx`, `core/widgets/types.ts`, `PageEditor.tsx`, `WidgetTemplateEditorPage.tsx`, `BlockSettings.tsx` | Vitest editor wave, booking calendar/runtime script assertions, widget render |
+| TASK-258-04 | Report IDs: BF-05, BF-07, BF-08 | `appointmentForm.tsx`, `AppointmentFormEditors.tsx`, `bookingRuntimeScript.ts`, `publicSite.tsx`, `publicBookingApi.ts`, `bookingSchemas.ts`, `bookingRuntimeResolver.ts`, `securitySettings.ts`, `authRoutes.ts` | Vitest widget/editor, Bun public booking API, security gate |
+| TASK-258-05 | Report IDs: UX-04, UX-05, UX-06, BF-01, BF-03, BF-16, A6 | `appointmentForm.tsx`, `AppointmentFormEditors.tsx`, widget registry docs | Vitest widget/editor, style clear adjacency if shared styles change |
+| TASK-258-06 | Report closure table plus every fixed/deferred source row | `_docs/PLAYWRIGHT/REPORT_APPOINTMENT_FORM_WIDGET.md`, `_docs/_WIDGETS/APPOINTMENT_FORM.md`, board/changelog/docs | `git diff --check`, targeted production lanes after implementation leaves |
 
 ## Sub-Tasks
 

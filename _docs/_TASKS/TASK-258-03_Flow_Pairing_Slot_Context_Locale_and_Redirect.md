@@ -93,7 +93,22 @@ function getFlowKeyState(flowId: string, context?: BookingFlowContext) {
   if (matches.length > 1) return "duplicate";
   return "matched";
 }
+
+function buildPageEditorContext(blocks: WidgetBlock[], base: WidgetEditorContext) {
+  return {
+    ...base,
+    bookingFlows: collectBookingFlowContext(blocks),
+  };
+}
 ```
+
+Wire this context through the live entrypoints, not just the type:
+
+- `PageEditor.tsx` desktop inspector `BlockSettings` call.
+- `PageEditor.tsx` mobile/sheet `BlockSettings` call.
+- `WidgetTemplateEditorPage.tsx` template `BlockSettings` call when local
+  template blocks can be inspected without a page fetch.
+- `BlockSettings.tsx` remains the pass-through owner for `editorContext`.
 
 Runtime selection payload:
 
@@ -140,13 +155,23 @@ Error handling:
 
 No API route is added.
 
-- Endpoint visibility: unchanged admin editing and public runtime output.
-- Auth/RBAC/CSRF/rate limit: unchanged.
+- Endpoint visibility: unchanged admin editing and public runtime output. The
+  existing public booking write route remains `POST /api/booking/reservations`.
+- Auth model: unchanged. Admin/template editors require the existing admin
+  session, public booking mode uses the booking access evaluator, and internal
+  booking mode still requires admin session or API key scope.
+- RBAC: unchanged. Flow pairing diagnostics expose only editor-visible block
+  ids, labels, and flow keys.
+- CSRF: unchanged for admin editing; public reservation submissions keep the
+  existing booking submission nonce/signature check when required.
+- Rate-limit bucket: unchanged `public_write` for public reservations.
 - Reject-unknown validation: new widget fields such as locale, summary display,
   and redirect URL must be schema-owned and normalized in
   `appointmentForm.tsx`.
 - Anti-abuse: redirect URLs must be same-origin or relative. Do not allow
-  external redirect targets from widget data.
+  external redirect targets from widget data. Locale and summary fields must not
+  weaken nonce/signature, optional reCAPTCHA, or internal session/API-key
+  checks.
 - Secret handling: flow context must not expose private booking data beyond
   widget block ids, labels, and flow keys already visible in the editor.
 

@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Admin UI + Runtime Rendering + Accessibility
 **Estimated Effort:** Large
-**Dependencies:** TASK-258, TASK-256-02, TASK-258-02
+**Dependencies:** TASK-258, TASK-256-02, TASK-258-02, TASK-258-04
 **Status:** To Do
 
 ---
@@ -136,11 +136,19 @@ No route is added. This leaf reduces author control over runtime-only security
 payloads.
 
 - Endpoint visibility: unchanged public booking write endpoint.
-- Auth/RBAC/CSRF/rate limit: unchanged.
+- Auth model: unchanged. Admin editors require the existing admin session, public
+  booking mode keeps the booking access evaluator, and internal booking mode
+  still requires admin session or API key scope.
+- RBAC: unchanged. Variant/style authors never gain permission to choose a
+  custom write target.
+- CSRF: unchanged for admin editing; public reservations keep the existing
+  booking submission nonce/signature check when required.
+- Rate-limit bucket: unchanged `public_write`.
 - Reject-unknown validation: new variants and style fields must be schema-owned
   and strict.
 - Anti-abuse: nonce remains server-injected read-only diagnostics; custom
-  endpoint editing must not let authors bypass booking nonce/CAPTCHA policy.
+  endpoint editing must not let authors bypass booking nonce/signature,
+  reCAPTCHA, or internal session/API-key policy.
 - Secret handling: diagnostic UI must not show secrets. Submission nonce display
   is allowed only because it is already a public hidden field in rendered form
   markup; do not show nonce secret material or provider keys.

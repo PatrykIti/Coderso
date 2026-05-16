@@ -28,10 +28,15 @@ This leaf covers:
 - `core/widgets/core/appointmentForm.tsx`
 - `core/admin/ui/widgets/editors/AppointmentFormEditors.tsx`
 - `core/widgets/core/bookingRuntimeScript.ts`
+- `core/server/publicSite.tsx` when Appointment Form runtime hydration needs
+  public CAPTCHA metadata in the rendered block data.
 - `core/server/publicBookingApi.ts`
 - `core/server/validation/bookingSchemas.ts`
-- `core/services/booking/bookingRuntimeResolver.ts` only if runtime must expose
-  backend-owned public CAPTCHA metadata.
+- `core/services/booking/bookingRuntimeResolver.ts` when booking runtime data
+  becomes the owner of public CAPTCHA metadata for booking widgets.
+- `core/services/settings/securitySettings.ts` and
+  `core/server/routes/authRoutes.ts` only if the implementation reuses or
+  reshapes the existing public bot-protection projection.
 - `tests/vitest/widgets/appointmentForm.test.tsx`
 - `tests/vitest/ui/appointment-form-editor-wave.test.tsx`
 - `tests/vitest/widgets/bookingRuntimeScript.appointmentForm.test.ts`
@@ -55,6 +60,9 @@ This leaf covers:
   backend-owned provider bridge and send it as `captchaToken`.
 - [ ] Tighten public booking metadata validation enough to bound custom field
   and consent payloads.
+- [ ] Update both route normalization and JSON schema validation so unknown
+  reservation metadata keys are rejected or dropped consistently before service
+  persistence.
 
 ## Implementation Pseudocode
 
@@ -98,6 +106,23 @@ function collectAppointmentMetadata(formData: FormData) {
 CAPTCHA bridge:
 
 ```ts
+type BookingRuntimeCaptcha = {
+  enabled: boolean;
+  provider: "recaptcha_v3";
+  siteKey: string;
+  action: "public_write";
+};
+
+function toBookingRuntimeCaptcha(settings: SecuritySettingsPublic): BookingRuntimeCaptcha | null {
+  if (!settings.botProtection.enabled || !settings.botProtection.siteKey) return null;
+  return {
+    enabled: true,
+    provider: "recaptcha_v3",
+    siteKey: settings.botProtection.siteKey,
+    action: "public_write",
+  };
+}
+
 async function resolveCaptchaToken(form: HTMLFormElement): Promise<string | undefined> {
   const siteKey = form.dataset.captchaSiteKey;
   const action = form.dataset.captchaAction || "public_write";
@@ -134,6 +159,17 @@ const bookingReservationMetadataSchema = {
 };
 ```
 
+This bridge must be wired through the current runtime seam. Today
+`publicSite.tsx` injects only `resolved.submissionNonce`/`error` for
+Appointment Form blocks, and `resolveBookingRuntimeData` has no public
+bot-protection output. Implement either:
+
+- a narrow booking runtime resolver output that reads `getSecuritySettingsPublic`
+  and returns public-only CAPTCHA metadata, then inject it from `publicSite.tsx`;
+  or
+- an explicit deferral of browser token acquisition to a new physical task, while
+  keeping BF-08 marked deferred in the Playwright report.
+
 Error handling:
 
 - If custom field ids collide, normalize to stable unique ids before rendering.
@@ -144,6 +180,9 @@ Error handling:
   absent or false.
 - If CAPTCHA is required but unavailable, show a user-facing error and do not
   submit.
+- If DB-backed public booking route tests cannot connect to `DATABASE_URL`, keep
+  route evidence blocked and still cover metadata schema/normalization with a
+  non-DB test.
 
 ## Security Contract
 
@@ -154,12 +193,16 @@ This leaf can affect the existing public booking write route.
 - RBAC: internal booking writes still require `booking:write`; public writes do
   not gain admin privileges.
 - CSRF: preserve booking nonce enforcement when public access policy requires
-  it.
+  it; do not introduce a client-generated substitute for the existing
+  nonce/signature contract.
 - Rate-limit bucket: `public_write`.
 - Reject-unknown validation: route payload and metadata must be allowlisted;
-  widget schema must reject unknown custom field config.
+  widget schema must reject unknown custom field config; schema tests must cover
+  rejected unknown metadata keys.
 - Anti-abuse: CAPTCHA token is resolved from backend-owned public config; widget
-  data must not store CAPTCHA secret, provider secret, or nonce secret.
+  data must not store CAPTCHA secret, provider secret, or nonce secret. Internal
+  booking mode continues to use admin session or API key scope rather than
+  browser nonce/CAPTCHA.
 - Privacy: consent and custom-field values are personal data. Tests and docs
   must use dummy values only and must not log raw submissions.
 
@@ -170,7 +213,11 @@ This leaf can affect the existing public booking write route.
 - `bun run test:vitest -- tests/vitest/widgets/appointmentForm.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/appointment-form-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/bookingRuntimeScript.appointmentForm.test.ts`
-- `bun test tests/unit/server/publicBookingApi.test.ts`
+- `set -a && source .env && set +a` before DB-backed public booking API tests.
+- `bun test tests/unit/server/publicBookingApi.test.ts`; confirm the DB-backed
+  reservation assertions ran. If `DATABASE_URL` is unavailable or `canConnect()`
+  skips them, record the blocker and add non-DB schema/normalization evidence for
+  bounded metadata.
 - `bun test tests/security/codersoSecurityGate.test.ts`
 - `bun run scan:security:strict` before closure because this leaf touches
   public-write hardening.

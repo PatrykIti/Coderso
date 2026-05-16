@@ -142,13 +142,22 @@ Error handling:
 No API route is added. This leaf changes public form markup and may change the
 client payload composition, but it must keep the existing reservation endpoint.
 
-- Endpoint visibility: unchanged public `POST /api/booking/reservations`.
-- Auth/RBAC/CSRF/rate limit: unchanged.
+- Endpoint visibility: unchanged public `POST /api/booking/reservations`; no
+  new admin or public route is added.
+- Auth model: public booking reservations keep the existing booking access
+  evaluator. Internal booking mode still requires an admin session or API key
+  scope; client-required fields must not bypass it.
+- RBAC: unchanged. Browser widget payloads never gain admin permissions.
+- CSRF: unchanged for any admin/internal writes; public reservations keep the
+  existing booking submission nonce/signature check when the access policy
+  requires it.
+- Rate-limit bucket: unchanged `public_write`.
 - Reject-unknown validation: Appointment Form widget schema stays strict and
   legacy booleans normalize through `appointmentForm.tsx`; public reservation
   payload stays allowlisted by booking schemas.
 - Anti-abuse: client-required fields improve UX but do not replace booking
-  nonce/CAPTCHA enforcement.
+  nonce/signature validation, the optional reCAPTCHA `public_write` policy, or
+  internal session/API-key checks.
 - Privacy: do not store contact values in localStorage, browser cache, report
   fixtures, or docs examples.
 

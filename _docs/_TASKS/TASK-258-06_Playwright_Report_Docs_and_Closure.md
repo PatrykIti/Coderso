@@ -98,8 +98,16 @@ Error handling:
 
 No route is added by this closure leaf.
 
-- Endpoint visibility/auth/RBAC/CSRF/rate limit: unchanged from completed
-  implementation leaves.
+- Endpoint visibility: no new route. Closure must cite the final endpoint
+  visibility from completed leaves, including public
+  `POST /api/booking/reservations` when TASK-258-04 changes it.
+- Auth model/RBAC: unchanged from completed implementation leaves. Public
+  booking access, internal session/API-key scope, and admin editor permissions
+  must be recorded where relevant.
+- CSRF: unchanged from completed implementation leaves. Public booking writes
+  must keep the existing nonce/signature policy where relevant.
+- Rate-limit bucket: unchanged from completed implementation leaves. Public
+  booking writes must keep `public_write` where relevant.
 - Reject-unknown validation: closure must list final schema/API validation
   evidence when TASK-258-04 touched public booking payloads.
 - Anti-abuse: closure must list nonce/CAPTCHA/security-gate evidence when
@@ -116,8 +124,11 @@ No route is added by this closure leaf.
 - `bun run test:vitest -- tests/vitest/widgets/bookingRuntimeScript.appointmentForm.test.ts`
   if created.
 - `bun test tests/unit/widgets/validator.test.ts` if schema changed.
+- `set -a && source .env && set +a` before DB-backed public booking API tests.
 - `bun test tests/unit/server/publicBookingApi.test.ts` if public booking route
-  behavior changed.
+  behavior changed; confirm DB-backed reservation assertions ran, or record the
+  `DATABASE_URL`/connectivity blocker and cite non-DB schema normalization
+  evidence for bounded metadata.
 - `bun test tests/security/codersoSecurityGate.test.ts` if nonce/CAPTCHA/public
   write hardening changed.
 - `bun run gates:coderso`
