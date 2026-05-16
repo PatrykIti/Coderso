@@ -22,9 +22,10 @@ runtime output that is semantically incomplete.
   control drift and variant/card-count desync.
 - `_docs/PLAYWRIGHT/REPORT_FEATURE_GRID_WIDGET.md:177-189,247-276,289-294` for
   CTA link security, image URL feedback, missing clear, and ARIA/performance.
-- `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md:42-58,174-187` for divider
+- `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md:42-58,170-187` for divider
   controls without effect, fixed cards grid, and limited Wizard content.
-- `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md:100-116,205-222` for section and
+- `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md:63-74,90-101,181-206` for
+  value-size/layout/split-grid, section and
   article ARIA, emoji semantics, and heading hierarchy.
 
 ## Scope Decision Matrix
@@ -37,6 +38,7 @@ runtime output that is semantically incomplete.
 | Feature Grid image media picker, drag/drop, rich text | Future product scope unless needed for broken existing control | Widget editor future task | TASK-256-08 creates task if retained |
 | Stats KPI divider toggle only affects inline | Hide/disable outside inline or make renderer honor it | `StatsKpiEditors.tsx`, `statsKpi.tsx` | None |
 | Stats KPI cards grid holes | Fix deterministic grid class or expose a real columns option | `statsKpi.tsx` | None |
+| Stats KPI value-size, split secondary grid, section/article ARIA, and emoji semantics | Fix ARIA here; fix grid truthfulness here; defer typography controls if they add new schema scope | `statsKpi.tsx`, `StatsKpiEditors.tsx` | TASK-256-08 records typography follow-up if not fixed |
 | Stats KPI count-up/trend/per-item accent/CTA | Future product scope | Future task | TASK-256-08 records deferral |
 
 ## Sub-Tasks
@@ -106,6 +108,13 @@ Error handling:
 - Stats KPI divider values saved on non-inline variants remain in data but are
   marked inactive in the editor.
 
+## Git Scope Safeguards
+
+- Run `git status --short --branch` before implementation, before staging, and before closure.
+- For non-trivial or parallel leaf work, prefer a dedicated branch or worktree.
+- Stage only the owner files listed in this task plus required docs/reports/changelog files.
+- Verify `git diff --name-only --cached` before every commit so unrelated report or code edits stay out of scope.
+
 ## Security Contract
 
 No API routes are added.
@@ -136,6 +145,11 @@ No API routes are added.
 - Update `_docs/_WIDGETS/FEATURE_GRID.md` and `_docs/_WIDGETS/STATS_KPI.md`
   when behavior changes.
 - Update `_docs/WIDGETS.md` only if shared truthful-control contracts change.
+
+## Changelog Policy
+
+- This task must not move to `Done` until it is covered by a changelog entry and `_docs/_CHANGELOG/README.md` is updated.
+- A leaf may create its own changelog entry, or TASK-256-08 may create the final umbrella changelog entry that explicitly lists this task ID.
 
 ## Acceptance Criteria
 

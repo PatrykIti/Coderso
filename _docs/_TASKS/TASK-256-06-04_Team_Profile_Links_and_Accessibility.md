@@ -22,11 +22,11 @@ unless they are needed to fix a broken existing control.
 - `_docs/PLAYWRIGHT/REPORT_TEAM_WIDGET.md:42-91` for resolver/default cleanup,
   empty photo payload, spotlight columns, section ARIA, hardcoded `h3`, social
   link safety, avatar fallback, and duplicate normalization.
-- `_docs/PLAYWRIGHT/REPORT_TEAM_WIDGET.md:111-154` for editor UX issues around
+- `_docs/PLAYWRIGHT/REPORT_TEAM_WIDGET.md:210-264` for editor UX issues around
   spotlight lead, misleading columns, Wizard role fields, photo URL validation,
   social link defaults, and remove flows.
-- `_docs/PLAYWRIGHT/REPORT_TEAM_WIDGET.md:210-280` for pending Playwright
-  tables that must be finalized by TASK-256-08.
+- `_docs/PLAYWRIGHT/REPORT_TEAM_WIDGET.md:328-393` for accessibility and
+  priority findings confirmed by Playwright.
 
 ## Scope Decision Matrix
 
@@ -36,7 +36,8 @@ unless they are needed to fix a broken existing control.
 | Social links lack safe external-link behavior | Fix here | `team.tsx`, `widgetSafeHref.test.ts` | None |
 | Section lacks accessible label and hardcoded `h3` may break hierarchy | Fix here if current model can support it without breaking compatibility; otherwise document heading-level follow-up | `team.tsx` | TASK-256-08 creates follow-up if schema expansion is required |
 | Photo URL validation and lazy loading | Fix here for lazy loading and safe editor feedback | `TeamEditors.tsx`, `team.tsx` | Media picker is future scope |
-| Drag/drop, section background, CTA, contact buttons, department filters | Future product scope | Future widget task | TASK-256-08 records deferral |
+| Member-count reduction data loss, social default `#`, and spotlight lead badge | Fix here because current controls can destroy data or mislead editors | `TeamEditors.tsx` | None |
+| Drag/drop, section background, CTA, contact buttons, department filters, contrast validator, and configurable lead member | Future product scope unless needed for existing-control truthfulness | Future widget task | TASK-256-08 records deferral |
 
 ## Sub-Tasks
 
@@ -48,6 +49,8 @@ unless they are needed to fix a broken existing control.
 - [ ] Add section/header accessible labels without breaking existing pages.
 - [ ] Add `loading="lazy"` to member photos and keep fallback initials
   accessible through the card/member label.
+- [ ] Protect member-count reductions from silent data loss.
+- [ ] Use empty social-link URLs for new links and show safe validation feedback.
 - [ ] Improve Wizard minimum profile setup by exposing role where needed or
   documenting why Wizard remains name-only.
 
@@ -97,6 +100,13 @@ Error handling:
 - Unsupported style tokens normalize to defaults without dropping safe legacy
   member data.
 
+## Git Scope Safeguards
+
+- Run `git status --short --branch` before implementation, before staging, and before closure.
+- For non-trivial or parallel leaf work, prefer a dedicated branch or worktree.
+- Stage only the owner files listed in this task plus required docs/reports/changelog files.
+- Verify `git diff --name-only --cached` before every commit so unrelated report or code edits stay out of scope.
+
 ## Security Contract
 
 No API routes are added.
@@ -125,6 +135,11 @@ No API routes are added.
 - Update `_docs/_WIDGETS/TEAM.md` when editor/runtime behavior changes.
 - Update `_docs/WIDGETS.md` only if shared safe-link/media or heading contracts
   change.
+
+## Changelog Policy
+
+- This task must not move to `Done` until it is covered by a changelog entry and `_docs/_CHANGELOG/README.md` is updated.
+- A leaf may create its own changelog entry, or TASK-256-08 may create the final umbrella changelog entry that explicitly lists this task ID.
 
 ## Acceptance Criteria
 

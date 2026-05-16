@@ -46,9 +46,9 @@ be deferred into follow-up tasks with explicit owner/docs/tests.
 - `_docs/PLAYWRIGHT/REPORT_FAQ_ACCORDION_WIDGET.md:96,116,125,140-144,173-180`
 - `_docs/PLAYWRIGHT/REPORT_CTA_BANNER_WIDGET.md:132-161,175-185,223-241`
 - `_docs/PLAYWRIGHT/REPORT_LOGO_CLOUD_WIDGET.md:38-116,134-153`
-- `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md:54-124,177-213`
-- `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md:42-116,174-222`
-- `_docs/PLAYWRIGHT/REPORT_TEAM_WIDGET.md:42-91,111-154,210-280`
+- `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md:54-124,177-213,221-228`
+- `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md:42-116,170-206`
+- `_docs/PLAYWRIGHT/REPORT_TEAM_WIDGET.md:42-91,210-339,365-393`
 
 ## Sub-Tasks
 
@@ -132,6 +132,13 @@ Error handling:
   control truthful.
 - External URLs must stay normalized through existing safe-href helpers.
 
+## Git Scope Safeguards
+
+- Run `git status --short --branch` before implementation, before staging, and before closure.
+- For non-trivial or parallel leaf work, prefer a dedicated branch or worktree.
+- Stage only the owner files listed in this task plus required docs/reports/changelog files.
+- Verify `git diff --name-only --cached` before every commit so unrelated report or code edits stay out of scope.
+
 ## Security Contract
 
 No API routes are added.
@@ -182,6 +189,11 @@ No API routes are added.
 - Update Playwright reports with fixed/deferred evidence.
 - Add follow-up tasks for deferred product expansions that are not contract
   repairs.
+
+## Changelog Policy
+
+- This task must not move to `Done` until it is covered by a changelog entry and `_docs/_CHANGELOG/README.md` is updated.
+- A leaf may create its own changelog entry, or TASK-256-08 may create the final umbrella changelog entry that explicitly lists this task ID.
 
 ## Acceptance Criteria
 

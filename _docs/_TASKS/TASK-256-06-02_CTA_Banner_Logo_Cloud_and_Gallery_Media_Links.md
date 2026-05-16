@@ -34,10 +34,12 @@ and truthful editor controls.
 | Finding | TASK-256 action | Owner | Follow-up policy |
 |---|---|---|---|
 | CTA empty badge/text/focus/clear drift | Fix here | `CtaBannerEditors.tsx`, `ctaBanner.tsx` | None |
+| CTA BF/accessibility list beyond current controls, including animation, icon controls, and broad layout additions | Future product scope unless the current control already exists and is misleading | Future CTA task | TASK-256-08 records deferral |
 | Logo Cloud link `rel`, section aria, hoverColor truthfulness | Fix here | `LogoCloudEditors.tsx`, `logoCloud.tsx` | None |
 | Logo Cloud image picker, drag/drop, marquee, eyebrow/background | Future product scope unless needed to repair broken current flow | Future widget task | TASK-256-08 records deferral |
 | Gallery Mosaic overlay alpha loss and image/video ambiguity | Fix here because current controls can destroy data or mislead users | `GalleryMosaicEditors.tsx` | None |
 | Gallery Mosaic alt text and link security | Fix here | `galleryMosaic.tsx`, editor tests | None |
+| Gallery Mosaic video `title`, hover-caption keyboard/touch access, and autoplay control | Fix here when it changes current runtime semantics; otherwise create explicit accessibility follow-up | `galleryMosaic.tsx`, `GalleryMosaicEditors.tsx` | TASK-256-08 creates follow-up if schema expansion is required |
 | Gallery Mosaic lightbox, drag/drop, per-item ratio, object-position | Future product scope | Future widget task | TASK-256-08 records deferral |
 
 ## Sub-Tasks
@@ -114,6 +116,13 @@ Error handling:
 - If adding `alt` fields requires schema migration, keep fallback behavior
   backward compatible and update validator tests.
 
+## Git Scope Safeguards
+
+- Run `git status --short --branch` before implementation, before staging, and before closure.
+- For non-trivial or parallel leaf work, prefer a dedicated branch or worktree.
+- Stage only the owner files listed in this task plus required docs/reports/changelog files.
+- Verify `git diff --name-only --cached` before every commit so unrelated report or code edits stay out of scope.
+
 ## Security Contract
 
 No API routes are added.
@@ -147,6 +156,11 @@ No API routes are added.
 - Update `_docs/_WIDGETS/CTA_BANNER.md`, `_docs/_WIDGETS/LOGO_CLOUD.md`, and
   `_docs/_WIDGETS/GALLERY_MOSAIC.md` when behavior changes.
 - Update `_docs/WIDGETS.md` only if shared media/link/clear contracts change.
+
+## Changelog Policy
+
+- This task must not move to `Done` until it is covered by a changelog entry and `_docs/_CHANGELOG/README.md` is updated.
+- A leaf may create its own changelog entry, or TASK-256-08 may create the final umbrella changelog entry that explicitly lists this task ID.
 
 ## Acceptance Criteria
 

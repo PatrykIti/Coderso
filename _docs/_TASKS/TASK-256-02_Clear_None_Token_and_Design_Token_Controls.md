@@ -144,6 +144,13 @@ Error handling:
   normalizer/defaults.
 - Empty strings are not saved as clear sentinels.
 
+## Git Scope Safeguards
+
+- Run `git status --short --branch` before implementation, before staging, and before closure.
+- For non-trivial or parallel leaf work, prefer a dedicated branch or worktree.
+- Stage only the owner files listed in this task plus required docs/reports/changelog files.
+- Verify `git diff --name-only --cached` before every commit so unrelated report or code edits stay out of scope.
+
 ## Security Contract
 
 No API routes are added.
@@ -158,26 +165,26 @@ No API routes are added.
 
 ## Testing Requirements
 
-- Update `tests/vitest/ui/clearable-fields.test.tsx`.
-- Update `tests/vitest/widgets/styleNoneTokens.test.tsx`.
-- Update `tests/vitest/widgets/clearableStyle.test.ts`.
-- Update affected editor waves:
-  - `divider-editor-wave.test.tsx`
-  - `spacer-editor-wave.test.tsx`
-  - `split-layout-editor-wave.test.tsx`
-  - `tabs-editor-wave.test.tsx`
-  - `accordion-editor-wave.test.tsx`
-  - `faq-accordion-editor-wave.test.tsx`
-  - `content-list-editor-wave.test.tsx`
-  - `pricing-plans-editor-wave.test.tsx`
-  - `feature-grid-editor-wave.test.tsx`
-  - `cta-banner-editor-wave.test.tsx`
-  - `gallery-mosaic-editor-wave.test.tsx`
-  - `logo-cloud-editor-wave.test.tsx`
-  - `stats-kpi-editor-wave.test.tsx`
-- Update affected runtime widget tests when normalized output changes.
-- Run targeted Vitest suites, `bun --cwd core lint`, and
-  `bun --cwd core lint:types`.
+- `bun run test:vitest -- tests/vitest/ui/clearable-fields.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/clearableStyle.test.ts`
+- `bun run test:vitest -- tests/vitest/ui/divider-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/spacer-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/split-layout-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/tabs-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/accordion-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/faq-accordion-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/content-list-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/pricing-plans-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/feature-grid-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/cta-banner-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/logo-cloud-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/stats-kpi-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/divider.test.tsx tests/vitest/widgets/spacer.test.tsx tests/vitest/widgets/splitLayout.test.tsx tests/vitest/widgets/tabs.test.tsx tests/vitest/widgets/accordionWidget.test.tsx tests/vitest/widgets/faqAccordion.test.tsx tests/vitest/widgets/pricingPlans.test.tsx tests/vitest/widgets/featureGrid.test.tsx tests/vitest/widgets/ctaBanner.test.tsx tests/vitest/widgets/galleryMosaic.test.tsx tests/vitest/widgets/logoCloud.test.tsx tests/vitest/widgets/statsKpi.test.tsx`
+- `bun test tests/unit/widgets/validator.test.ts` if schemas/defaults change.
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
 
 ## Documentation Updates Required
 
@@ -186,6 +193,11 @@ No API routes are added.
 - Update touched widget docs under `_docs/_WIDGETS/*.md` where visible editor
   behavior changes.
 - Update Playwright reports with fixed evidence.
+
+## Changelog Policy
+
+- This task must not move to `Done` until it is covered by a changelog entry and `_docs/_CHANGELOG/README.md` is updated.
+- A leaf may create its own changelog entry, or TASK-256-08 may create the final umbrella changelog entry that explicitly lists this task ID.
 
 ## Acceptance Criteria
 

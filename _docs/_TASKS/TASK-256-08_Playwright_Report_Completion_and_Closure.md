@@ -23,17 +23,14 @@ that are not contract repairs.
 
 ## Drift Evidence
 
-- `_docs/PLAYWRIGHT/REPORT_CTA_BANNER_WIDGET.md:3,87-123` is still marked
-  `W toku` and contains pending Playwright result rows.
-- `_docs/PLAYWRIGHT/REPORT_LOGO_CLOUD_WIDGET.md:3` is still marked `W toku`.
 - `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md:3` is still marked
   `W toku`.
 - `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md:3` is still marked `W toku`.
-- `_docs/PLAYWRIGHT/REPORT_TEAM_WIDGET.md:3` is still marked `W trakcie`.
 - `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:220,258` contains
   authentication-limited comparison sections that require final classification.
-- Completed reports such as stack, testimonials, and pricing plans need their
-  fixed/deferred status refreshed after the implementation leaves land.
+- Completed reports such as CTA banner, logo cloud, team, stack,
+  testimonials, and pricing plans need their fixed/deferred status refreshed
+  after the implementation leaves land.
 - Other reports need fixed/deferred status updates after implementation leaves.
 
 ## Sub-Tasks
@@ -100,6 +97,13 @@ Error handling:
 - If `git status --short --branch` shows unrelated dirty files, leave them
   unstaged and state that they were not part of closure evidence.
 
+## Git Scope Safeguards
+
+- Run `git status --short --branch` before implementation, before staging, and before closure.
+- For non-trivial or parallel leaf work, prefer a dedicated branch or worktree.
+- Stage only the owner files listed in this task plus required docs/reports/changelog files.
+- Verify `git diff --name-only --cached` before every commit so unrelated report or code edits stay out of scope.
+
 ## Security Contract
 
 No API routes are added by this closure task.
@@ -143,6 +147,11 @@ No API routes are added by this closure task.
 - `_docs/_TASKS/README.md`.
 - `_docs/_CHANGELOG/README.md` and the new changelog entry.
 - `_docs/WIDGET_PACK_MATRIX.md` only if readiness changed.
+
+## Changelog Policy
+
+- This task must not move to `Done` until it is covered by a changelog entry and `_docs/_CHANGELOG/README.md` is updated.
+- A leaf may create its own changelog entry, or TASK-256-08 may create the final umbrella changelog entry that explicitly lists this task ID.
 
 ## Acceptance Criteria
 

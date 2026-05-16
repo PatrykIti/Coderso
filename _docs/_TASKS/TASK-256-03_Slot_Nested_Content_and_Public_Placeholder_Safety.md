@@ -129,6 +129,13 @@ Error handling:
 - If `renderContext` is missing on legacy callsites, default to `public` so
   placeholders fail closed outside the page builder.
 
+## Git Scope Safeguards
+
+- Run `git status --short --branch` before implementation, before staging, and before closure.
+- For non-trivial or parallel leaf work, prefer a dedicated branch or worktree.
+- Stage only the owner files listed in this task plus required docs/reports/changelog files.
+- Verify `git diff --name-only --cached` before every commit so unrelated report or code edits stay out of scope.
+
 ## Security Contract
 
 No API routes are added.
@@ -142,28 +149,34 @@ No API routes are added.
 
 ## Testing Requirements
 
-- Update `tests/vitest/pageBuilder/visualPanel.test.tsx` for slot-control
-  metadata.
-- Update `tests/vitest/ui/page-editor-slot-insert-flow.test.tsx`.
-- Update widget editor waves for grid-columns, split-layout, tabs, accordion,
-  and toggle-block.
-- Update runtime widget tests:
-  - `tests/vitest/widgets/section.test.tsx`
-  - `tests/vitest/widgets/gridColumns.test.tsx`
-  - `tests/vitest/widgets/splitLayout.test.tsx`
-  - `tests/vitest/widgets/tabs.test.tsx`
-  - `tests/vitest/widgets/accordionWidget.test.tsx`
-  - `tests/vitest/widgets/toggleBlock.test.tsx`
+- `bun run test:vitest -- tests/vitest/pageBuilder/visualPanel.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/page-editor-slot-insert-flow.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/grid-columns-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/split-layout-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/tabs-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/accordion-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/toggle-block-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/section.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/gridColumns.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/splitLayout.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/tabs.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/accordionWidget.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/toggleBlock.test.tsx`
 - Add assertions that public output does not contain `Empty column.`,
   `Empty region.`, `Add widgets`, or similar admin-only copy.
-- Run targeted Vitest suites plus `bun --cwd core lint` and
-  `bun --cwd core lint:types`.
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
 
 ## Documentation Updates Required
 
 - Update `_docs/WIDGETS.md` only if render-mode/placeholder contract changes.
 - Update structural widget docs for any slot-sync behavior change.
 - Update relevant Playwright reports with public/admin before-after evidence.
+
+## Changelog Policy
+
+- This task must not move to `Done` until it is covered by a changelog entry and `_docs/_CHANGELOG/README.md` is updated.
+- A leaf may create its own changelog entry, or TASK-256-08 may create the final umbrella changelog entry that explicitly lists this task ID.
 
 ## Acceptance Criteria
 

@@ -73,6 +73,13 @@ Error handling:
   safe style fields.
 - Decorative dividers should not receive misleading accessible names.
 
+## Git Scope Safeguards
+
+- Run `git status --short --branch` before implementation, before staging, and before closure.
+- For non-trivial or parallel leaf work, prefer a dedicated branch or worktree.
+- Stage only the owner files listed in this task plus required docs/reports/changelog files.
+- Verify `git diff --name-only --cached` before every commit so unrelated report or code edits stay out of scope.
+
 ## Security Contract
 
 No API routes are added.
@@ -100,6 +107,11 @@ No API routes are added.
 - Update `_docs/_WIDGETS/SPACER.md` and `_docs/_WIDGETS/DIVIDER.md` when
   behavior changes.
 - Update `_docs/WIDGETS.md` only if shared token semantics change.
+
+## Changelog Policy
+
+- This task must not move to `Done` until it is covered by a changelog entry and `_docs/_CHANGELOG/README.md` is updated.
+- A leaf may create its own changelog entry, or TASK-256-08 may create the final umbrella changelog entry that explicitly lists this task ID.
 
 ## Acceptance Criteria
 

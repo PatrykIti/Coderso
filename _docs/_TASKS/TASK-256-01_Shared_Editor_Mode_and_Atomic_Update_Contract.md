@@ -129,6 +129,13 @@ Error handling:
   public signature backward compatible and add an adapter in the shared panel.
 - Do not add test-only fallbacks in widget editors.
 
+## Git Scope Safeguards
+
+- Run `git status --short --branch` before implementation, before staging, and before closure.
+- For non-trivial or parallel leaf work, prefer a dedicated branch or worktree.
+- Stage only the owner files listed in this task plus required docs/reports/changelog files.
+- Verify `git diff --name-only --cached` before every commit so unrelated report or code edits stay out of scope.
+
 ## Security Contract
 
 No API routes are added.
@@ -142,31 +149,31 @@ No API routes are added.
 
 ## Testing Requirements
 
-- Update `tests/vitest/pageBuilder/visualPanel.test.tsx` for atomic
-  variant+data updates.
-- Update `tests/vitest/pageBuilder/wizardPanel.test.tsx` and
-  `tests/vitest/pageBuilder/advancedPanel.test.tsx` for the shared callback
-  contract.
-- Update `tests/vitest/ui/timeline-editor-wave.test.tsx` to cover Visual mode
-  changes preserving normalized timeline data.
-- Update `tests/vitest/ui/feature-grid-editor-wave.test.tsx`,
-  `tests/vitest/ui/split-layout-editor-wave.test.tsx`,
-  `tests/vitest/ui/stack-editor-wave.test.tsx`,
-  `tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx`,
-  `tests/vitest/ui/logo-cloud-editor-wave.test.tsx`, and
-  `tests/vitest/ui/stats-kpi-editor-wave.test.tsx` for variant-bound
-  data/count synchronization and Advanced ownership decisions.
-- Update `tests/vitest/ui/spacer-editor-wave.test.tsx`,
-  `tests/vitest/ui/divider-editor-wave.test.tsx`, and the relevant child leaf
-  editor waves for no inert or misleading Advanced controls.
-- Run the targeted Vitest suites plus `bun --cwd core lint` and
-  `bun --cwd core lint:types`.
+- `bun run test:vitest -- tests/vitest/pageBuilder/visualPanel.test.tsx`
+- `bun run test:vitest -- tests/vitest/pageBuilder/wizardPanel.test.tsx`
+- `bun run test:vitest -- tests/vitest/pageBuilder/advancedPanel.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/timeline-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/feature-grid-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/split-layout-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/stack-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/logo-cloud-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/stats-kpi-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/spacer-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/divider-editor-wave.test.tsx`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
 
 ## Documentation Updates Required
 
 - Update `_docs/WIDGETS.md` only if the editor prop contract changes.
 - Update affected Playwright reports with fixed evidence.
 - Update this task and `_docs/_TASKS/README.md` during status changes.
+
+## Changelog Policy
+
+- This task must not move to `Done` until it is covered by a changelog entry and `_docs/_CHANGELOG/README.md` is updated.
+- A leaf may create its own changelog entry, or TASK-256-08 may create the final umbrella changelog entry that explicitly lists this task ID.
 
 ## Acceptance Criteria
 

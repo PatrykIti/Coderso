@@ -46,6 +46,7 @@ be split by TASK-256-08 into a page-shell follow-up if still reproducible.
 | Timeline mobile date/lineStyle/connector issues | Fix here if current renderer exposes the controls; otherwise classify in report | `timeline.tsx` | TASK-256-08 records deferral if product expansion |
 | Pricing static toggle/plan-count drift | Fix here | `PricingPlansEditors.tsx`, `pricingPlans.tsx` | None |
 | FAQ single-open, chevron, ARIA, clear controls | Fix here plus TASK-256-04 | `FaqAccordionEditors.tsx`, `faqAccordion.tsx` | None |
+| FAQ animation, SEO JSON-LD, rich text answers, max-width/layout typography, and remove confirmation | Future product scope unless needed to repair current misleading controls | Future FAQ task | TASK-256-08 records deferral |
 | Testimonials true carousel, drag/drop, rich media picker | Future product scope unless current `slider-static` label is misleading | Future task | TASK-256-08 records deferral |
 
 ## Sub-Tasks
@@ -111,6 +112,13 @@ Error handling:
 - FAQ invalid default-open indices clamp to `-1` or the closest valid item.
 - Hero page-shell failures are not marked fixed by widget tests.
 
+## Git Scope Safeguards
+
+- Run `git status --short --branch` before implementation, before staging, and before closure.
+- For non-trivial or parallel leaf work, prefer a dedicated branch or worktree.
+- Stage only the owner files listed in this task plus required docs/reports/changelog files.
+- Verify `git diff --name-only --cached` before every commit so unrelated report or code edits stay out of scope.
+
 ## Security Contract
 
 No API routes are added.
@@ -143,10 +151,15 @@ No API routes are added.
 
 - Update the five touched Playwright reports with fixed/deferred status.
 - Update `_docs/_WIDGETS/HERO.md`, `_docs/_WIDGETS/TIMELINE.md`,
-  `_docs/_WIDGETS/PRICING_PLANS.md`, `_docs/_WIDGETS/FAQ_ACCORDION.md`, and
+  `_docs/_WIDGETS/PRICING_PLANS.md`, `_docs/_WIDGETS/FAQ.md`, and
   `_docs/_WIDGETS/TESTIMONIALS.md` when behavior changes.
 - Update `_docs/WIDGETS.md` only if shared accessibility or editor-mode
   contracts change.
+
+## Changelog Policy
+
+- This task must not move to `Done` until it is covered by a changelog entry and `_docs/_CHANGELOG/README.md` is updated.
+- A leaf may create its own changelog entry, or TASK-256-08 may create the final umbrella changelog entry that explicitly lists this task ID.
 
 ## Acceptance Criteria
 

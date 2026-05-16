@@ -108,6 +108,13 @@ Error handling:
   interactive affordance and document it as static.
 - External links must keep safe href normalization and `rel` requirements.
 
+## Git Scope Safeguards
+
+- Run `git status --short --branch` before implementation, before staging, and before closure.
+- For non-trivial or parallel leaf work, prefer a dedicated branch or worktree.
+- Stage only the owner files listed in this task plus required docs/reports/changelog files.
+- Verify `git diff --name-only --cached` before every commit so unrelated report or code edits stay out of scope.
+
 ## Security Contract
 
 No API routes are added.
@@ -121,21 +128,20 @@ No API routes are added.
 
 ## Testing Requirements
 
-- Update runtime tests:
-  - `tests/vitest/widgets/tabs.test.tsx`
-  - `tests/vitest/widgets/toggleBlock.test.tsx`
-  - `tests/vitest/widgets/accordionWidget.test.tsx`
-  - `tests/vitest/widgets/faqAccordion.test.tsx`
-  - `tests/vitest/widgets/pricingPlans.test.tsx`
-  - `tests/vitest/widgets/timeline.test.tsx`
-  - `tests/vitest/widgets/divider.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/tabs.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/toggleBlock.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/accordionWidget.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/faqAccordion.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/pricingPlans.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/timeline.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/divider.test.tsx`
 - Add duplicate-ID assertions for rendering two instances of each interactive
   widget on one page.
 - Add keyboard/ARIA assertions for tabs and toggle block.
 - Add pricing/FAQ tests for interactive behavior if those controls remain
   interactive.
-- Run targeted Vitest suites, `bun --cwd core lint`, and
-  `bun --cwd core lint:types`.
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
 
 ## Documentation Updates Required
 
@@ -143,6 +149,11 @@ No API routes are added.
 - Update Playwright reports with multi-instance and accessibility evidence.
 - Update `_docs/WIDGETS.md` only if a new shared runtime ID helper becomes part
   of the widget contract.
+
+## Changelog Policy
+
+- This task must not move to `Done` until it is covered by a changelog entry and `_docs/_CHANGELOG/README.md` is updated.
+- A leaf may create its own changelog entry, or TASK-256-08 may create the final umbrella changelog entry that explicitly lists this task ID.
 
 ## Acceptance Criteria
 

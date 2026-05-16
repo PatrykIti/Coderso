@@ -1,24 +1,24 @@
 # RAPORT: FAQ Accordion Widget — Analiza UX/UI i brakujące funkcjonalności
 
-> **Status:** Zakończony  
-> **Data:** 2026-05-16  
-> **Sesja:** Playwright #9 (FAQ Accordion Widget)  
-> **Środowisko:** http://localhost:5173/admin · http://localhost:3000  
-> **Sesja przeglądarki:** `faq-accordion-audit` (oddzielna od innych agentów)  
+> **Status:** Zakończony
+> **Data:** 2026-05-16
+> **Sesja:** Playwright #9 (FAQ Accordion Widget)
+> **Środowisko:** http://localhost:5173/admin · http://localhost:3000
+> **Sesja przeglądarki:** `faq-accordion-audit` (oddzielna od innych agentów)
 > **Strona testowa:** `/test-faq-accordion-0516` (UUID: `59dd9d58-eb80-4691-9749-9d8e2589e822`)
 
 ---
 
 ## 1. Przegląd widgetu
 
-**Typ:** Content (standalone, bez slotów)  
-**Kategoria:** `content` / moduł `engagement`  
-**Warianty:** `single-column`, `two-column`, `compact`  
-**Ograniczenia elementów:** min 1 / max 12  
-**Złożoność:** `composite` / audience `beginner`  
-**Plik renderera:** `core/widgets/core/faqAccordion.tsx`  
-**Plik edytora:** `core/admin/ui/widgets/editors/FaqAccordionEditors.tsx`  
-**Presets sekcji:** `engagement:faq-proof`  
+**Typ:** Content (standalone, bez slotów)
+**Kategoria:** `content` / moduł `engagement`
+**Warianty:** `single-column`, `two-column`, `compact`
+**Ograniczenia elementów:** min 1 / max 12
+**Złożoność:** `composite` / audience `beginner`
+**Plik renderera:** `core/widgets/core/faqAccordion.tsx`
+**Plik edytora:** `core/admin/ui/widgets/editors/FaqAccordionEditors.tsx`
+**Presets sekcji:** `engagement:faq-proof`
 **Presets strony:** `engagement:trust-loop`
 
 FAQ Accordion to specjalistyczny widget content do sekcji FAQ — pary pytanie/odpowiedź. Zawiera opcjonalny nagłówek sekcji, trzy warianty układu (single-column, two-column, compact), kontrolę spacingu oraz personalizację kolorów. Oparty na natywnych elementach HTML `<details>/<summary>`.
@@ -148,8 +148,8 @@ FaqAccordionItem {
 
 ## 4. Testy w Admin UI Preview
 
-> **Sesja:** `playwright-cli -s=faq-accordion-audit`  
-> **Data testu:** 2026-05-16  
+> **Sesja:** `playwright-cli -s=faq-accordion-audit`
+> **Data testu:** 2026-05-16
 > **Strona:** `/test-faq-accordion-0516` — nowa strona stworzona na potrzeby testów
 
 ### 4.1 Edytor Wizard
@@ -227,7 +227,7 @@ Tryb Preview (`dialog "Page Preview"` z iframe):
 
 ## 5. Testy na froncie (localhost:3000)
 
-> **URL:** `http://localhost:3000/test-faq-accordion-0516`  
+> **URL:** `http://localhost:3000/test-faq-accordion-0516`
 > **Status strony:** Opublikowana (Published)
 
 ### 5.1 Rendering widgetu
@@ -294,23 +294,47 @@ Efekt: między itemami pojawia się wizualnie podwójne obramowanie (2px zamiast
 
 ## 7. Podsumowanie priorytetów
 
-| Priorytet | ID | Problem | Wpływ |
-|-----------|---|---------|-------|
-| 🔴 KRYTYCZNY | C1 | **`allowMultipleOpen=false` nie egzekwuje single-open** | Kluczowa opcja FAQ nie działa — zawsze można otworzyć wiele |
-| 🔴 KRYTYCZNY | C2 | **Brak wskaźnika expand/collapse (chevron)** | Użytkownik nie wie że pytanie jest klikalne |
-| 🟠 WYSOKI | A1–A5 | **Braki ARIA i dostępności** | Niedostępność dla screen readerów |
-| 🟠 WYSOKI | W1 | **Brak animacji** | Skokowe otwieranie negatywnie wpływa na odbiór UI |
-| 🟠 WYSOKI | W9 | **Brak SEO FAQ schema** | Utracona szansa SEO dla FAQ |
-| 🟠 WYSOKI | W10 | **Plain text w odpowiedziach** | Brak linków, formatowania, list w Q/A |
-| 🟡 ŚREDNI | U1 | **Brak potwierdzenia przy usunięciu** | Przypadkowe usunięcie Q/A bez możliwości cofnięcia |
-| 🟡 ŚREDNI | U2 | **Brak Clear dla border/divider** | Niespójna UX edytora — surface można wyczyścić, reszty nie |
-| 🟡 ŚREDNI | W2, W3, W4 | **Hardcoded maxWidth, wyrównanie nagłówka, padding sekcji** | Ograniczony wachlarz konfiguracyjny layoutu |
-| 🟡 ŚREDNI | W5, W6, W7 | **Brak kontroli kolorów tekstu** | Niepełna personalizacja typografii |
-| 🟡 ŚREDNI | U8 | **Select defaultOpenIndex nie pokazuje treści pytania** | Redaktor musi zapamiętać indeks zamiast widzieć pytanie |
-| 🟢 NISKI | C3 | **Bug w `resolveFaqAccordionSpacing()` — brak `"md"` w guard** | Niski wpływ (fallback=md), ale logika niepoprawna |
-| 🟢 NISKI | U10 | **Brak drag & drop reorder** | Move Up/Down działa, ale jest nieefektywne przy 10+ itemach |
-| 🟢 NISKI | W11 | **Brak ikon per item** | Brak możliwości wizualnego wyróżnienia pytań |
+| Priorytet | ID | Problem | Status testu | Wpływ |
+|-----------|---|---------|--------------|-------|
+| 🔴 KRYTYCZNY | C1 | **`allowMultipleOpen=false` nie egzekwuje single-open** | ✅ Potwierdzony (Admin + Frontend) | Kluczowa opcja FAQ nie działa — zawsze można otworzyć wiele |
+| 🔴 KRYTYCZNY | C2 | **Brak wskaźnika expand/collapse (chevron)** | ✅ Potwierdzony (Admin + Frontend) | Użytkownik nie wie że pytanie jest klikalne |
+| 🟠 WYSOKI | A1–A5 | **Braki ARIA i dostępności** | ✅ Potwierdzony (Frontend) | Niedostępność dla screen readerów |
+| 🟠 WYSOKI | W1 | **Brak animacji** | ✅ Potwierdzony (oboje) | Skokowe otwieranie negatywnie wpływa na odbiór UI |
+| 🟠 WYSOKI | W9 | **Brak SEO FAQ schema** | Analiza kodu | Utracona szansa SEO dla FAQ |
+| 🟠 WYSOKI | W10 | **Plain text w odpowiedziach** | Analiza kodu | Brak linków, formatowania, list w Q/A |
+| 🟡 ŚREDNI | U1 | **Brak potwierdzenia przy usunięciu** | ✅ Potwierdzony (Admin) | Przypadkowe usunięcie Q/A bez możliwości cofnięcia |
+| 🟡 ŚREDNI | U2 | **Brak Clear dla border/divider** | ✅ Potwierdzony (Admin) | Niespójna UX edytora — surface można wyczyścić, reszty nie |
+| 🟡 ŚREDNI | U3 | **Color picker fallback na `#ffffff` dla CSS var** | ✅ Potwierdzony (Admin) | Picker bezużyteczny przy wartościach `var(--color-*)` |
+| 🟡 ŚREDNI | W2, W3, W4 | **Hardcoded maxWidth, wyrównanie nagłówka, padding sekcji** | Analiza kodu | Ograniczony wachlarz konfiguracyjny layoutu |
+| 🟡 ŚREDNI | W5, W6, W7 | **Brak kontroli kolorów tekstu** | Analiza kodu | Niepełna personalizacja typografii |
+| 🟡 ŚREDNI | W15 | **spacing=none → podwójne granice między itemami** | ✅ Potwierdzony (Admin + Frontend) | Wizualny defekt przy spacing=none |
+| 🟡 ŚREDNI | U8 | **Select defaultOpenIndex nie pokazuje treści pytania** | ✅ Potwierdzony (Admin) | Redaktor musi zapamiętać indeks zamiast widzieć pytanie |
+| 🟢 NISKI | C3 | **Bug w `resolveFaqAccordionSpacing()` — brak `"md"` w guard** | Analiza kodu | Niski wpływ (fallback=md), ale logika niepoprawna |
+| 🟢 NISKI | U10 | **Brak drag & drop reorder** | Analiza kodu | Move Up/Down działa, ale jest nieefektywne przy 10+ itemach |
+| 🟢 NISKI | W11 | **Brak ikon per item** | Analiza kodu | Brak możliwości wizualnego wyróżnienia pytań |
 
 ---
 
-*Raport w toku — sekcje 4–6 uzupełniane po testach Playwright.*
+## 8. Kluczowe wnioski techniczne
+
+### Przyczyna bug C1 (`allowMultipleOpen=false` nie działa)
+
+Natywny element HTML `<details>` obsługuje wyłącznie zachowanie **multiple-open** — każdy panel działa niezależnie. Aby wymusić **single-open**, konieczne jest użycie JavaScriptu (event listener na `toggle`). Opcja `allowMultipleOpen=false` jest zapisywana w danych i przekazywana przez `data-faq-multiple-open`, ale renderer nie zawiera żadnej logiki JS egzekwującej to zachowanie.
+
+**Naprawa:** Dodać event listener `details.addEventListener('toggle', ...)` który zamyka inne panele gdy jeden się otwiera, pod warunkiem `data-faq-multiple-open === "false"`.
+
+### Przyczyna bug C2 (brak chevron)
+
+Klasa Tailwind `list-none` na `<summary>` usuwa domyślny marker przeglądarki (trójkąt `▶`). Brak czegokolwiek go zastępuje. Użytkownik widzi tylko tekst pytania.
+
+**Naprawa:** Dodać ikonę chevron (`▼`/`▶`) przez pseudo-element CSS `::before`/`::after` lub inline SVG jako dziecko `<summary>`, obrócone przy `details[open]`.
+
+### Przyczyna bug W15 (podwójne granice)
+
+Każdy `<article>` ma `borderWidth: 1px` ze wszystkich stron. Przy `gap=0` (spacing=none) bordery sąsiadujących itemów nakładają się wizualnie: `borderBottom=1px` + `borderTop=1px` = 2px między itemami.
+
+**Naprawa:** Przy `spacing="none"` użyć `border-collapse`-like techniki — np. negatywne marginesy (`-mt-px`) lub `divide-y` Tailwind zamiast border na każdym item.
+
+---
+
+*Raport zakończony — 2026-05-16, sesja `faq-accordion-audit`.*

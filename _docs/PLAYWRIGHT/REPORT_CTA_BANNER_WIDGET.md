@@ -1,10 +1,10 @@
 # RAPORT: CTA Banner Widget — Analiza UX/UI i brakujące funkcjonalności
 
-> **Status:** W toku
+> **Status:** Zakończony
 > **Data:** 2026-05-16
 > **Sesja:** Playwright #1 (CTA Banner Widget)
 > **Środowisko:** http://localhost:5173/admin · http://localhost:3000
-> **Strona testowa:** CTA Banner Test (`/admin/pages/[TBD]`)
+> **Strona testowa:** TEST-CTA-BANNER-0516 (`/admin/pages/61de318a-9705-4da2-be5d-96b549318f52` · `/test-cta-banner-0516`)
 
 ---
 
@@ -78,50 +78,57 @@ Widget CTA Banner to kompaktowy pasek konwersyjny służący do osadzania wezwan
 
 | Test | Wynik | Uwagi |
 |------|-------|-------|
-| Załadowanie strony z widgetem CTA Banner | — | Do weryfikacji |
-| Wyświetlenie wariantów jako kart w Visual Editorze | — | Do weryfikacji |
-| Zmiana wariantu na `split` | — | Do weryfikacji |
-| Zmiana wariantu na `with-badge` | — | Do weryfikacji |
-| Edycja treści badge | — | Do weryfikacji |
-| Edycja title | — | Do weryfikacji |
-| Edycja description | — | Do weryfikacji |
-| Edycja primary CTA label | — | Do weryfikacji |
-| Edycja primary CTA href | — | Do weryfikacji |
-| Edycja secondary CTA label | — | Do weryfikacji |
-| Edycja secondary CTA href | — | Do weryfikacji |
-| Zmiana koloru tła (color picker) | — | Do weryfikacji |
-| Zmiana koloru przycisku primary | — | Do weryfikacji |
-| Zmiana border width na "2px" | — | Do weryfikacji |
-| Zmiana radius na "2xl" | — | Do weryfikacji |
-| Zmiana padding na "xl" | — | Do weryfikacji |
-| Wyczyść (Clear) pole background | — | Do weryfikacji |
-| Przełączenie do Advanced Editora | — | Do weryfikacji |
-| Normalize now | — | Do weryfikacji |
-| Reset to defaults | — | Do weryfikacji |
+| Załadowanie strony z widgetem CTA Banner | ✓ Działa | Strona TEST-CTA-BANNER-0516 załadowana poprawnie |
+| Wyświetlenie wariantów jako kart w Visual Editorze | ✓ Działa | 3 karty: Centered (Selected), Split (Pick), With Badge (Pick) |
+| Zmiana wariantu na `split` | ✓ Działa | Karta przechodzi w stan "Selected", podgląd aktualizuje się |
+| Zmiana wariantu na `with-badge` | ✓ Działa | Wariant zmieniony poprawnie, badge widoczny w podglądzie |
+| Edycja treści badge | ✓ Działa | Pole Input aktualizuje podgląd |
+| Edycja title | ✓ Działa | Nagłówek aktualizuje się w podglądzie na bieżąco |
+| Edycja description | ✓ Działa | Textarea działa, podgląd aktualny |
+| Edycja primary CTA label | ✓ Działa | Zmiana etykiety widoczna w podglądzie |
+| Edycja primary CTA href | ✓ Działa | Pole URL przyjmuje wartość; niebezpieczne URL (javascript:) są sanitizowane cicho |
+| Edycja secondary CTA label | ✓ Działa | Zmiana działa poprawnie |
+| Edycja secondary CTA href | ✓ Działa | Jak primary href |
+| Zmiana koloru tła (color picker) | ✓ Działa | Wpisanie `#ff0000` aktualizuje `backgroundColor: rgb(255,0,0)` w podglądzie |
+| Zmiana koloru przycisku primary | ✓ Działa | Color picker + text input działają |
+| Zmiana border width na "2px" | ✓ Działa | `data-cta-banner-border-width="2"` ustawiony poprawnie |
+| Zmiana radius na "2xl" | ✓ Działa | Klasa `rounded-2xl` stosowana na kontenerze |
+| Zmiana padding | ✓ Działa | Select działa; wartości none/sm/md/lg/xl |
+| Wyczyść (Clear) pole background | ✓ Działa | Przycisk Clear dostępny dla: background, badgeBackground, primaryButtonBg, secondaryButtonBg |
+| Brak Clear dla: text, badgeText, primaryButtonText, secondaryButtonText | ✓ Potwierdzone | 4 pola bez opcji Clear — patrz UX-01 |
+| Brak primaryButtonBorder i secondaryButtonBorder w Visual | ✓ Potwierdzone | Tylko w Advanced — patrz UX-02 |
+| Przełączenie do Advanced Editora | ✓ Działa | Zakładka Advanced otwiera się poprawnie |
+| Normalize now | ✓ Działa | Przyciski normalizują dane; wynik widoczny w Raw payload snapshot |
+| Reset to defaults | ✓ Działa | Przywraca domyślne CSS tokeny i wartości |
 
 ### 3.2 Admin UI — Wizard Editor
 
 | Test | Wynik | Uwagi |
 |------|-------|-------|
-| Zmiana wariantu przez Select | — | Do weryfikacji |
-| Edycja headline | — | Do weryfikacji |
-| Edycja primary CTA label | — | Do weryfikacji |
-| Brak pola href w Wizardzie | — | Znany brak — do potwierdzenia |
-| Brak secondary CTA w Wizardzie | — | Znany brak — do potwierdzenia |
+| Zmiana wariantu przez Select | ✓ Działa | Dropdown z 3 opcjami (Centered, Split, With Badge) |
+| Edycja headline | ✓ Działa | Input działa poprawnie |
+| Edycja primary CTA label | ✓ Działa | Input działa poprawnie |
+| Brak pola href w Wizardzie | ✓ Potwierdzone | Wizard ma tylko: Banner layout, Headline, Primary CTA label — patrz UX-03 |
+| Brak secondary CTA w Wizardzie | ✓ Potwierdzone | Żadnego pola dla secondary CTA — patrz UX-04 |
+| Brak podglądu wariantów w Wizard (tylko Select dropdown) | ✓ Potwierdzone | Visual ma karty, Wizard ma zwykły Select — patrz UX-05 |
 
 ### 3.3 Frontend — widok publiczny (localhost:3000)
 
 | Test | Wynik | Uwagi |
 |------|-------|-------|
-| Wariant `centered` renderuje się poprawnie | — | Do weryfikacji |
-| Wariant `split` — układ responsive | — | Do weryfikacji |
-| Wariant `with-badge` — badge wyświetlony | — | Do weryfikacji |
-| Empty badge w wariancie `with-badge` | — | Spodziewany bug — pusty `<span>` |
-| Kolory z CSS tokenów renderują się poprawnie | — | Do weryfikacji |
-| Kolory hex renderują się poprawnie | — | Do weryfikacji |
-| Responsywność na mobile | — | Do weryfikacji |
-| Kliknięcie primary CTA | — | Do weryfikacji |
-| Kliknięcie secondary CTA | — | Do weryfikacji |
+| Wariant `centered` renderuje się poprawnie | ✓ Działa | Wszystkie elementy widoczne: badge, title, opis, oba CTA |
+| Wariant `split` — układ responsive | ✓ Działa | `flex flex-col gap-4 md:flex-row md:items-center md:justify-between` — responsywny |
+| Wariant `with-badge` — badge wyświetlony | ✓ Działa | Badge "Limited offer" widoczny ze stylem primary |
+| Admin i frontend renderują identycznie | ✓ Działa | Oba środowiska wyświetlają te same dane i układ |
+| Empty badge w wariancie `with-badge` | ✓ Potwierdzone BUG-01 | DOM zawiera `<span class="..."></span>` gdy badge text pusty |
+| Kolor opisu ignoruje `style.text` (custom hex) | ✓ Potwierdzone BUG-02 | Frontend: `containerColor: var(--color-text)`, desc: `text-[var(--color-text)]/80` — opis zawsze używa tokenu CSS, nie wartości z `style.text` |
+| Przyciski mają stały `rounded-md` niezależnie od radius kontenera | ✓ Potwierdzone BUG-05 | Kontener: 16px (rounded-xl), przyciski: 8px (rounded-md) |
+| `<section>` bez `aria-label`/`aria-labelledby` | ✓ Potwierdzone A1 | `ariaLabel: null`, `ariaLabelledBy: null` |
+| Focus visible na przyciskach CTA | ✓ Częściowe | Browser default outline obecny (`rgb(0,95,204) auto 1px`), brak własnych klas `focus-visible:` |
+| Responsywność na mobile (375px) | ✓ Działa | Układ stack pionowy, treść i przyciski wyśrodkowane |
+| Kliknięcie primary CTA | ✓ Działa | Href `#` - strona scrolluje do góry |
+| Niebezpieczny href (`javascript:`) sanitizowany | ✓ Działa | Sanitizowany do `#` przez `normalizeWidgetSafeHref` — bez feedbacku dla użytkownika (UX-07) |
+| Klasa `border` przy borderWidth=0 | ✓ BUG-03 łagodny | Klasa `border` zawsze obecna, ale inline style `borderWidth: 0px` nadpisuje — brak artefaktu wizualnego |
 
 ---
 
@@ -140,9 +147,9 @@ Widget CTA Banner to kompaktowy pasek konwersyjny służący do osadzania wezwan
 **Opis:** Linia `<p className="text-sm text-[var(--color-text)]/80">` używa hardcoded tokenu CSS `var(--color-text)` zamiast wartości z `style.text`. Nawet jeśli użytkownik ustawi własny kolor tekstu, opis będzie zawsze renderował się jako `var(--color-text)` z 80% opacity.
 **Lokalizacja:** `core/widgets/core/ctaBanner.tsx:369`
 
-#### BUG-03 — Klasa `border` zawsze obecna przy `borderWidth=0`
+#### BUG-03 — Klasa `border` zawsze obecna przy `borderWidth=0` (Code smell)
 **Priorytet:** Niski
-**Opis:** Kontener bannera ma zawsze klasę Tailwind `border` (`border-width: 1px` w domyślnym Tailwind). Przy `borderWidth="0"` inline style ustawia `borderWidth: "0px"`, co nadpisuje klasę, ale może być niestabilne w zależności od specificity CSS i konfiguracji Tailwind.
+**Opis:** Kontener bannera ma zawsze klasę Tailwind `border`. Przy `borderWidth="0"` inline style `borderWidth: 0px` nadpisuje klasę CSS — weryfikacja Playwright potwierdziła `computedBorder: "0px"`, więc artefakt wizualny nie występuje. Jest to jednak niespójność semantyczna: klasa `border` jest zawsze obecna, nawet gdy border jest wyłączony.
 **Lokalizacja:** `core/widgets/core/ctaBanner.tsx:337`
 
 #### BUG-04 — Niespójność w funkcjach `resolveCtaBannerRadius` i `resolveCtaBannerPadding`
@@ -225,7 +232,7 @@ Widget CTA Banner to kompaktowy pasek konwersyjny służący do osadzania wezwan
 | A1 | `<section>` bez `aria-label` ani `aria-labelledby` — czytnik ekranu nie ma kontekstu sekcji | WCAG 1.3.1 | Średni |
 | A2 | Przyciski CTA (`<a>`) bez `aria-label` gdy label jest skrótem; brak `role="link"` description | WCAG 2.4.6 | Średni |
 | A3 | Badge `<span>` bez semantyki — nie opisuje roli wizualnej etykiety w kontekście | WCAG 1.3.1 | Niski |
-| A4 | Brak klas `focus-visible:` na przyciskach CTA — niewidoczny focus przy nawigacji klawiaturą | WCAG 2.4.7 | Wysoki |
+| A4 | Brak klas `focus-visible:` na przyciskach CTA — browser default outline obecny (`rgb(0,95,204) auto 1px`), brak własnego wskaźnika fokusa zgodnego z design systemem | WCAG 2.4.7 | Średni |
 | A5 | Opis (`description`) ma kolor `var(--color-text)/80` — przy ciemnym tle może nie spełniać kontrastu 4.5:1 | WCAG 1.4.3 | Średni |
 
 ---
@@ -280,13 +287,15 @@ Widget CTA Banner to kompaktowy pasek konwersyjny służący do osadzania wezwan
 
 | Plik | Opis |
 |------|------|
-| `cta-banner-admin-visual.png` | Widok Visual Editora w panelu admin |
-| `cta-banner-admin-wizard.png` | Widok Wizard Editora |
-| `cta-banner-admin-advanced.png` | Widok Advanced Editora |
-| `cta-banner-centered-frontend.png` | Wariant centered na froncie |
-| `cta-banner-split-frontend.png` | Wariant split na froncie |
-| `cta-banner-with-badge-frontend.png` | Wariant with-badge na froncie |
+| `cta-banner-admin-wizard.png` | Wizard Editor: 3 pola (layout, headline, primary CTA label) — bez href i secondary CTA |
+| `cta-banner-admin-visual.png` | Visual Editor: karty wariantów, pola treści, Actions, kolory, border/spacing |
+| `cta-banner-admin-advanced.png` | Advanced Editor: tokeny, Normalize now, Reset to defaults, Raw payload snapshot |
+| `cta-banner-admin-with-badge.png` | Admin preview z wariantem with-badge |
+| `cta-banner-centered-frontend.png` | Wariant centered na froncie — wyśrodkowany layout |
+| `cta-banner-split-frontend.png` | Wariant split na froncie — treść po lewej, przyciski po prawej |
+| `cta-banner-with-badge-frontend.png` | Wariant with-badge na froncie — badge nad nagłówkiem |
+| `cta-banner-mobile-frontend.png` | Wariant with-badge na mobile (375px) — stack pionowy |
 
 ---
 
-*Raport wygenerowany na podstawie analizy kodu i testów Playwright — 2026-05-16. Sekcja 3 (wyniki testów) zostanie uzupełniona po sesji Playwright.*
+*Raport wygenerowany na podstawie analizy kodu i testów Playwright — 2026-05-16.*
