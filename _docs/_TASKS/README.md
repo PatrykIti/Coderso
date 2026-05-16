@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 69 tasks
+- **To Do:** 76 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1542 tasks
 
@@ -38,6 +38,13 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-275 | Navigation Widget Playwright Product Followups | High | Very Large | Navigation-only follow-up family for `REPORT_NAVIGATION_WIDGET.md`, excluding TASK-256 shared-contract and Section/page-shell scope |
+| TASK-275-01 | Navigation Logo and Safe Link Parity | High | Medium | Render logo as a safe link, align hash URL validation with runtime rules, and label logo-link fields |
+| TASK-275-02 | Navigation Mobile Drawer and Minimal Mode | High | Large | Make minimal/drawer behavior explicit, remove mobile CTA duplication, add toggle state, icons, labels, animation, and focus policy |
+| TASK-275-03 | Navigation Dropdown and Rich Link Metadata | High | Large | Add touch/keyboard dropdown behavior plus schema-backed icon, badge, and description rendering/editing |
+| TASK-275-04 | Navigation Link Management UX | Medium | Large | Add reorder controls, limit feedback, sub-link hierarchy, and read-only synced menu preview |
+| TASK-275-05 | Navigation Optional Style and Product Controls | Medium | Very Large | Add lower-priority Navigation-owned style/product controls or split them before implementation if too broad |
+| TASK-275-06 | Navigation Report Docs Changelog and Closure | Medium | Medium | Refresh Navigation report/docs/changelog/board and final validation evidence after implementation leaves land |
 | TASK-267 | Feature Grid Widget Playwright Product Followups | High | Very Large | Feature Grid-only follow-up family for `REPORT_FEATURE_GRID_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-267-01 | Feature Grid Variant Preview and Responsive Cards-4 Layout | High | Medium | Add variant preview affordances, repair cards-4 responsive product behavior, and keep columns truthfulness in TASK-256 |
 | TASK-267-02 | Feature Grid Card Reorder, Remove, and Item Management | High | Medium | Add drag reorder plus recoverable remove flow while preserving keyboard move fallback |
