@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 69 tasks
+- **To Do:** 76 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1542 tasks
 
@@ -47,6 +47,13 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-267-06 | Feature Grid CTA Enablement, Target, and Rich Description Authoring | Medium | Large | Add explicit CTA enablement, safe target choice, and bounded rich description authoring after TASK-256 link safety |
 | TASK-267-07 | Feature Grid Wizard Guidance and Editor Entry Flow | Medium | Medium | Add Wizard scope guidance and decide first-open flow after Visual expansion |
 | TASK-267-08 | Feature Grid Report, Docs, Changelog, and Closure | Medium | Medium | Refresh Feature Grid report/docs/changelog/board and final validation evidence |
+| TASK-263 | CTA Banner Widget Playwright Product Followups | High | Very Large | CTA Banner-only follow-up family for `REPORT_CTA_BANNER_WIDGET.md`, excluding TASK-256 shared-contract scope |
+| TASK-263-01 | CTA Banner Runtime Semantics and Accessibility | High | Large | Repair CTA-local empty badge, description color, border semantics, resolver defaults, section/action labels, and focus-visible output |
+| TASK-263-02 | CTA Banner Wizard and Action Editing UX | High | Large | Add Wizard CTA URL/secondary controls, variant cards, explicit action labels, invalid URL feedback, and secondary toggle |
+| TASK-263-03 | CTA Banner Visual Style and Button Controls | High | Large | Add CTA visual button border controls, optional TASK-256-02 Clear hook, and button radius/size options |
+| TASK-263-04 | CTA Banner Link Target and Conversion Options | Medium | Large | Add safe target/rel policy, icon enums, tertiary CTA, and description visibility controls |
+| TASK-263-05 | CTA Banner Layout Media and Motion Options | Medium | Large | Add CTA-local width, gradient, background media, and bounded motion options where page layout does not already own them |
+| TASK-263-06 | CTA Banner Report Docs and Closure | Medium | Medium | Refresh CTA report/docs/changelog/board and final validation for the TASK-263 family |
 | TASK-261 | Contact Widget Playwright Product Followups | High | Very Large | Contact-only follow-up family for `REPORT_CONTACT_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-261-01 | Contact Header, Details Links, and Semantic Output | High | Large | Add Contact section headings, panel headings, semantic details, and safe tel/mailto output |
 | TASK-261-02 | Contact Form Field Metadata and Public Submission Bridge | High | Very Large | Add field names/ids/autocomplete/custom labels and route active submits through existing Forms runtime hardening |
