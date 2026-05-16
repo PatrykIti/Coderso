@@ -24,9 +24,11 @@ by `CompareTimelineEditors.tsx`.
 
 - [ ] Expose `SegmentEditor` for both tracks in the
   `dual-track-highlight` Visual editor, not only the selected target track.
-- [ ] Decide whether W1 requires a new bounded highlight model
-  (`targetTrackId: "a" | "b" | "both"` or an explicit `highlight.trackIds[]`)
-  and implement it only with schema/defaults/normalizer/tests.
+  C1 is an editor-access fix; non-target segments must be labeled as stored
+  data that render only when their track is selected as a highlight target.
+- [ ] Implement W1 with a backward-compatible `highlight.targetTrackIds?: string[]`
+  model that can highlight one or both normalized tracks while preserving legacy
+  `highlight.targetTrackId` payloads.
 - [ ] Add basic Wizard segment setup when highlight mode is enabled, limited to
   beginner-safe add/edit/remove controls.
 - [ ] Keep `dual-track` variant segment data non-destructive and show clear
@@ -44,7 +46,7 @@ by `CompareTimelineEditors.tsx`.
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/compareTimeline.tsx` | Extend highlight model only if W1 is implemented; keep legacy `targetTrackId` payloads backward compatible. |
+| `core/widgets/core/compareTimeline.tsx` | Add `highlight.targetTrackIds?: string[]`, normalize it against the two deterministic track IDs, derive it from legacy `targetTrackId` when absent, and keep `targetTrackId` populated for backward compatibility. |
 | `core/admin/ui/widgets/editors/CompareTimelineEditors.tsx` | Update Visual/Wizard/Advanced segment and target-track controls with non-destructive variant messaging and range feedback. |
 | `tests/vitest/widgets/compareTimeline.test.tsx` | Add normalizer/schema coverage for any new highlight model and legacy payload compatibility. |
 | `tests/vitest/ui/compare-timeline-editor-wave.test.tsx` | Add editor-flow coverage for both-track segment editing, Wizard segment setup, `from > to` feedback, empty-marker warning, and friendly Advanced labels. |
@@ -53,22 +55,29 @@ by `CompareTimelineEditors.tsx`.
 ## Implementation Pseudocode
 
 ```ts
-type CompareHighlightTarget = "a" | "b" | "both";
-
 function normalizeCompareHighlight(
   input: CompareTimelineData["highlight"],
   tracks: CompareTrack[]
-): { targetTrackId: CompareHighlightTarget } {
+): { targetTrackId: string; targetTrackIds: string[] } {
   const ids = tracks.map((track) => track.id);
-  if (input?.targetTrackId === "both") return { targetTrackId: "both" };
-  if (ids.includes(input?.targetTrackId ?? "")) {
-    return { targetTrackId: input?.targetTrackId as CompareHighlightTarget };
-  }
-  return { targetTrackId: tracks[1]?.id ?? tracks[0]?.id ?? "a" };
+  const requestedIds = Array.isArray(input?.targetTrackIds)
+    ? input.targetTrackIds.filter((id): id is string => ids.includes(id))
+    : [];
+  const legacyTarget =
+    typeof input?.targetTrackId === "string" && ids.includes(input.targetTrackId)
+      ? input.targetTrackId
+      : tracks[1]?.id ?? tracks[0]?.id ?? "a";
+  const targetTrackIds =
+    requestedIds.length > 0 ? [...new Set(requestedIds)] : [legacyTarget];
+
+  return {
+    targetTrackId: targetTrackIds[0] ?? legacyTarget,
+    targetTrackIds,
+  };
 }
 
-function shouldRenderTrackSegments(trackId: string, target: CompareHighlightTarget) {
-  return target === "both" || target === trackId;
+function shouldRenderTrackSegments(trackId: string, highlight: CompareHighlight) {
+  return highlight.targetTrackIds.includes(trackId);
 }
 
 function resolveSegmentRangeMessage(segment: CompareTrackSegment) {
@@ -82,15 +91,21 @@ Editor flow:
 1. Normalize current data once at render.
 2. In highlight mode, render each track with marker controls and its own
    `SegmentEditor`.
-3. Show target-track control separately from segment list so selecting the
-   target never hides the other track's persisted segments.
-4. In `dual-track`, render a compact preserved-data notice when any segment
+3. Show a highlight-target selector that supports track A, track B, and both
+   tracks without hiding either track's persisted segment editor.
+4. Until a track is included in `highlight.targetTrackIds`, its segment editor
+   shows a compact stored-but-not-rendered hint. This keeps C1 truthful after
+   W1 lands and prevents users from thinking a saved non-target segment is
+   visible on the public page.
+5. In `dual-track`, render a compact preserved-data notice when any segment
    exists.
-5. Advanced editor displays `Traditional (a)` and `With us (b)` style labels.
+6. Advanced editor displays `Traditional (a)` and `With us (b)` style labels.
 
 Error handling:
 
 - Unknown highlight target falls back to the current second track behavior.
+- Unknown `targetTrackIds` values are dropped; an empty result falls back to the
+  current second track behavior.
 - Empty segment labels remain optional and use the existing fallback label.
 - Invalid ranges remain normalized by the domain normalizer; editor feedback is
   advisory and must not bypass normalization.
@@ -129,6 +144,10 @@ No API routes are added.
 ## Acceptance Criteria
 
 - Visual editor can edit segments on both tracks in highlight mode.
+- Highlight mode can render highlighted segments for track A, track B, or both
+  tracks while legacy `targetTrackId` payloads still normalize.
+- Segment editors clearly distinguish stored non-target segments from currently
+  rendered highlighted segments.
 - Switching to `dual-track` does not imply segment data loss.
 - Wizard exposes a beginner-safe segment path when highlight mode is enabled.
 - Invalid segment ranges are visible to editors before normalization silently

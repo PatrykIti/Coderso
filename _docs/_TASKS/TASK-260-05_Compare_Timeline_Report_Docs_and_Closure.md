@@ -24,12 +24,18 @@ production fixes by itself.
 
 - [ ] Re-run or refresh admin preview evidence for each completed TASK-260 row.
 - [ ] Re-run or refresh frontend evidence for each completed TASK-260 row.
-- [ ] Mark every source report finding as `fixed`, `TASK-256`, `deferred`, or
-  `not reproducible`, with a concrete task ID and reason.
+- [ ] Mark every source report finding as `fixed`,
+  `task-256-physical-owner`, `deferred`, or `not reproducible`, with a concrete
+  task ID and reason.
+- [ ] For U4, U5, U10, shared W7, W8, and any other row outside TASK-260,
+  record the exact physical owner task (`TASK-256-01`, `TASK-256-02`,
+  `TASK-256-05`, `TASK-256-08` future physical task, or a later task ID);
+  never close a row with broad `TASK-256` ownership only.
 - [ ] Update `_docs/_WIDGETS/COMPARE_TIMELINE.md` with final data/editor/runtime
   behavior.
-- [ ] Update `_docs/WIDGETS.md` or `_docs/WIDGET_PACK_MATRIX.md` only when an
-  implementation leaf changed those source-of-truth contracts.
+- [ ] Update `_docs/WIDGETS.md`, `core/widgets/modulePackMatrix.ts`, or
+  `_docs/WIDGET_PACK_MATRIX.md` only when an implementation leaf changed those
+  source-of-truth contracts.
 - [ ] Add a changelog entry and update `_docs/_CHANGELOG/README.md`.
 - [ ] Move TASK-260 and completed leaves to `Done`, update dates, and sync
   `_docs/_TASKS/README.md` statistics.
@@ -41,7 +47,7 @@ production fixes by itself.
 | `_docs/PLAYWRIGHT/REPORT_COMPARE_TIMELINE_WIDGET.md` | Add fixed/deferred/routed status and textual admin/frontend evidence. |
 | `_docs/_WIDGETS/COMPARE_TIMELINE.md` | Document final Compare Timeline contract after implementation. |
 | `_docs/WIDGETS.md` | Update only if shared widget contract changes. |
-| `_docs/WIDGET_PACK_MATRIX.md` | Update only if readiness/completeness changes. |
+| `core/widgets/modulePackMatrix.ts`, `_docs/WIDGET_PACK_MATRIX.md` | Update only if readiness/completeness changes. |
 | `_docs/_TASKS/TASK-260*.md` | Status/date updates for umbrella and leaves. |
 | `_docs/_TASKS/README.md` | Board row/status/stat updates. |
 | `_docs/_CHANGELOG/*.md`, `_docs/_CHANGELOG/README.md` | Final changelog entry and index update. |
@@ -51,7 +57,7 @@ production fixes by itself.
 ```ts
 type CompareTimelineFindingStatus =
   | "fixed"
-  | "task-256"
+  | "task-256-physical-owner"
   | "deferred"
   | "not-reproducible";
 
@@ -62,6 +68,13 @@ type CompareTimelineClosureRow = {
   evidence: string;
   validationCommands: string[];
 };
+
+const sharedOwnerAllowList = new Set([
+  "TASK-256-01",
+  "TASK-256-02",
+  "TASK-256-05",
+  "TASK-256-08",
+]);
 
 function buildClosureMatrix(rows: CompareTimelineClosureRow[]) {
   return rows.map((row) => ({
@@ -74,7 +87,8 @@ function buildClosureMatrix(rows: CompareTimelineClosureRow[]) {
 Closure flow:
 
 1. Read all TASK-260 leaves and the source report.
-2. Build a finding-by-finding closure matrix.
+2. Build a finding-by-finding closure matrix. Rows routed outside TASK-260 must
+   use exact physical owner IDs, not umbrella-only `TASK-256`.
 3. Update report evidence with textual DOM/admin/frontend results; do not add
    Playwright PNG artifacts.
 4. Update docs and changelog.
@@ -86,8 +100,9 @@ Error handling:
 
 - If Playwright replay is blocked, record exact blocker and use existing
   Vitest/SSR evidence only when it directly covers the finding.
-- If a finding was actually TASK-256 scope, record the TASK-256 owner task and
-  do not mark it fixed by TASK-260.
+- If a finding was actually shared-contract scope, record the exact
+  TASK-256 physical owner task or future physical task ID and do not mark it
+  fixed by TASK-260.
 - If broad suites fail for unrelated reasons, isolate with targeted commands
   and record the unrelated failure separately.
 
@@ -120,7 +135,8 @@ No API routes are added.
 - `_docs/PLAYWRIGHT/REPORT_COMPARE_TIMELINE_WIDGET.md`
 - `_docs/_WIDGETS/COMPARE_TIMELINE.md`
 - `_docs/WIDGETS.md` only if shared contract changed
-- `_docs/WIDGET_PACK_MATRIX.md` only if readiness changed
+- `core/widgets/modulePackMatrix.ts` and `_docs/WIDGET_PACK_MATRIX.md` only if
+  readiness changed
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
 - New `_docs/_CHANGELOG/<next>-<date>-task-260-compare-timeline-widget-followups.md`
@@ -134,6 +150,8 @@ No API routes are added.
 
 - Every row from `REPORT_COMPARE_TIMELINE_WIDGET.md` has an explicit final
   status and owner.
+- Shared-contract or future-scope rows are not closed with generic TASK-256
+  ownership; each row has an exact physical task ID and reason.
 - Compare Timeline docs reflect the final schema/editor/runtime behavior.
 - Task board, task files, changelog, and report evidence are synchronized.
 - Required validation is green or the exact blocker is documented before any

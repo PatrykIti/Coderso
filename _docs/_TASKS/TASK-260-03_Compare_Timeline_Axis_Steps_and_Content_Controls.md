@@ -24,22 +24,25 @@ schema-owned instead of creating a generic timeline/content-list contract.
   count control, with min/max disabled states.
 - [ ] Add Wizard/Visual step `description` fields so editors do not need
   Advanced mode for user-facing descriptions.
-- [ ] Decide whether the step-count range should expand beyond `3-6`; if yes,
-  update constants, schema `maxItems`, normalizer, renderer grid behavior, and
+- [ ] Expand the step-count range from `3-6` to `3-10` and update constants,
+  schema `maxItems`, normalizer, renderer grid behavior, editor controls, and
   tests together.
-- [ ] Add optional step icon/emoji fields only if the final contract keeps them
-  plain-text, bounded, and renderer-safe.
-- [ ] Add optional safe CTA/link fields for steps or segments only if they use
-  the existing safe-href helper and do not create a public write flow.
+- [ ] Add optional step icon/emoji fields as bounded plain text with no raw
+  HTML or custom class names.
+- [ ] Add optional safe CTA/link fields for axis steps and segment labels through
+  the existing `normalizeWidgetSafeHref()` owner in
+  `core/widgets/core/widgetSafeHref.ts`; do not create a public write flow or a
+  Compare Timeline-specific URL sanitizer.
 - [ ] Keep old payloads with label-only steps rendering exactly as before.
 
 ## Files to Change
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/compareTimeline.tsx` | Extend `CompareAxisStep` and schema only for approved fields; update constants/normalizer/render if range/icons/links are added. |
+| `core/widgets/core/compareTimeline.tsx` | Extend `CompareAxisStep` and `CompareTrackSegment` with bounded `icon?` and `href?` fields, expand the step range to `3-10`, normalize hrefs through `normalizeWidgetSafeHref()`, and render links only when safe. |
 | `core/admin/ui/widgets/editors/CompareTimelineEditors.tsx` | Add Visual add/remove step buttons and Wizard/Visual description controls; add optional icon/link controls only after schema is finalized. |
-| `tests/vitest/widgets/compareTimeline.test.tsx` | Add schema/normalizer/render coverage for descriptions, new step range, icons, and safe links where implemented. |
+| `tests/vitest/widgets/compareTimeline.test.tsx` | Add schema/normalizer/render coverage for descriptions, 10-step bounds, icons, accepted safe links, rejected unsafe protocols, and rendered link attributes. |
+| `tests/vitest/widgets/widgetSafeHref.test.ts` | Update only if `normalizeWidgetSafeHref()` itself needs a contract change; otherwise reuse the existing safe-href contract and keep Compare Timeline assertions in `compareTimeline.test.tsx`. |
 | `tests/vitest/ui/compare-timeline-editor-wave.test.tsx` | Add editor-flow coverage for Visual buttons, min/max disabled state, and Wizard/Visual description editing. |
 | `tests/unit/widgets/validator.test.ts` | Run and update when schema/defaults change. |
 
@@ -74,14 +77,16 @@ Data flow:
 2. The normalizer clamps step count and trims optional user-facing fields.
 3. Markers and segments are re-normalized after step-count changes so indexes
    remain valid.
-4. Optional safe links render only through the existing safe-href output helper.
+4. Optional safe links normalize only through `normalizeWidgetSafeHref()` with
+   protocols already accepted by the widget-safe href owner.
 
 Error handling:
 
 - Min/max buttons are disabled and no-op at bounds.
 - Empty descriptions normalize to `undefined`.
 - Optional icon values must be bounded text; invalid link protocols must be
-  dropped or rejected through the existing safe-href contract.
+  dropped by `normalizeWidgetSafeHref()` and covered by tests with at least a
+  `javascript:` input.
 
 ## Security Contract
 
@@ -90,14 +95,17 @@ No API routes are added.
 - Endpoint visibility/auth/RBAC/CSRF/rate limit: unchanged.
 - Reject-unknown validation: new step fields and expanded count limits must be
   represented in schema and validator tests.
-- Anti-abuse: optional links must use existing safe-href normalization; icons
-  remain plain text and no raw HTML/script is allowed.
+- Anti-abuse: optional links must use `normalizeWidgetSafeHref()` from
+  `core/widgets/core/widgetSafeHref.ts`; icons remain plain text and no raw
+  HTML/script is allowed.
 - Secret handling: no secrets in widget data, links, diagnostics, or report
   evidence.
 
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/widgets/compareTimeline.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/widgetSafeHref.test.ts` if the
+  safe-href helper contract changes
 - `bun run test:vitest -- tests/vitest/ui/compare-timeline-editor-wave.test.tsx`
 - `bun test tests/unit/widgets/validator.test.ts` if schema/defaults change
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if rendered
@@ -123,6 +131,6 @@ No API routes are added.
 
 - Visual editor offers add/remove step buttons with correct guard rails.
 - Wizard/Visual editors can edit rendered step descriptions.
-- Any expanded step count, icon, or link field is schema-owned, normalized,
-  tested, and documented.
+- The `3-10` step range, icon, and link fields are schema-owned, normalized,
+  tested, and documented; unsafe link protocols are not rendered.
 - Existing label-only Compare Timeline payloads stay compatible.
