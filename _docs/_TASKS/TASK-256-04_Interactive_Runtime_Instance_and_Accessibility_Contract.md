@@ -33,7 +33,7 @@ leaves expand it.
 - `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md:117,211-219,241-244`
   reports static billing toggle and pricing semantics gaps.
 - `_docs/PLAYWRIGHT/REPORT_TIMELINE_WIDGET.md:170,266-270` reports ARIA gaps.
-- `_docs/PLAYWRIGHT/REPORT_DIVIDER_WIDGET.md:147` reports separator ARIA gaps.
+- `_docs/PLAYWRIGHT/REPORT_DIVIDER_WIDGET.md:253` reports separator ARIA gaps.
 
 ## Sub-Tasks
 
