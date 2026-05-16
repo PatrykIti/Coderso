@@ -121,6 +121,7 @@ No API routes are added.
     only if a leaf touches page-builder slot controls
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`
+  - `bun run gates:coderso`
   - `bun run scan:security:strict` and `bun run precommit` before final closure
 
 ## Documentation Updates Required

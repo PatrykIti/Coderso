@@ -25,7 +25,8 @@ editor.
 
 This leaf does not replace TASK-256 runtime accessibility work. Motion must
 respect the final accessible details/summary behavior from TASK-256 and must
-not introduce keyboard traps, duplicate IDs, or hydration-sensitive scripts.
+not introduce keyboard traps, duplicate IDs, runtime scripts, or
+hydration-sensitive behavior.
 
 Persist motion as `options.motion`. The `"none"` value in this enum is a motion
 mode, not a TASK-242 visual-off token.
@@ -34,8 +35,9 @@ mode, not a TASK-242 visual-off token.
 
 - [ ] Define a small Accordion motion model, such as `none`, `subtle`, and
   `smooth`, with `none` as an accessible opt-out.
-- [ ] Implement motion with CSS/classes or an instance-scoped script only when
-  it does not break native `<details>` semantics.
+- [ ] Implement motion with CSS/classes only. If a future animation requires
+  instance-scoped runtime script behavior, split that into a separate runtime
+  task with Bun-owned validation before implementing it.
 - [ ] Respect `prefers-reduced-motion` for any animated state.
 - [ ] Replace text-only variant cards with compact visual previews for `soft`,
   `bordered`, and `compact`.
@@ -82,6 +84,8 @@ Error handling:
 
 - Unknown motion values normalize to `none`.
 - Motion classes must be additive and must not remove native details behavior.
+- TASK-257-04 must not add runtime scripts. Any script-based behavior requires a
+  separate task and Bun runtime-kernel tests.
 - Variant previews are visual only and must not duplicate live editor controls.
 - If TASK-256 changes the final `<details>/<summary>` runtime shape, rebase the
   motion implementation on that shape before adding animation.
@@ -92,7 +96,8 @@ No API routes are added.
 
 - Endpoint visibility/auth/RBAC/CSRF/rate limit: unchanged.
 - Reject-unknown validation: schema must reject unknown motion keys.
-- Anti-abuse: no user-authored script/CSS injection.
+- Anti-abuse: no user-authored script/CSS injection and no widget-owned runtime
+  script.
 - Secret handling: no secrets in preview metadata or reports.
 
 ## Testing Requirements
@@ -103,6 +108,7 @@ No API routes are added.
 - `git diff --check`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso`
 
 ## Documentation Updates Required
 

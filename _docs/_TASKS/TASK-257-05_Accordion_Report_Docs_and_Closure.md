@@ -100,6 +100,7 @@ No API routes are added.
 - `git diff --check`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso`
 - `bun run scan:security:strict`
 - `bun run precommit`
 

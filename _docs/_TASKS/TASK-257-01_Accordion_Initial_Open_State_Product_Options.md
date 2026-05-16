@@ -71,13 +71,16 @@ function resolveAccordionDefaultOpenIds(current: AccordionData, items: Normalize
     current.options?.openMode === "multiple" || current.options?.allowMultiple === true
       ? "multiple"
       : "single";
-  const rawDefaultOpenIds = Array.isArray(current.options?.defaultOpenIds)
+  const explicitDefaultOpenIds = Array.isArray(current.options?.defaultOpenIds)
     ? current.options.defaultOpenIds
     : undefined;
-  const requested = extractValidDefaultOpenIds(rawDefaultOpenIds, items);
+  const legacyInitiallyOpenId = toTrimmedString(current.options?.initiallyOpenId);
+  const rawDefaultOpenIds =
+    explicitDefaultOpenIds ?? (legacyInitiallyOpenId ? [legacyInitiallyOpenId] : undefined);
+  const requested = extractValidDefaultOpenIds(rawDefaultOpenIds ?? [], items);
   const allClosedAllowed = current.options?.collapsible !== false;
 
-  if (rawDefaultOpenIds?.length === 0 && allClosedAllowed) {
+  if (explicitDefaultOpenIds?.length === 0 && allClosedAllowed) {
     return [];
   }
 
@@ -86,7 +89,8 @@ function resolveAccordionDefaultOpenIds(current: AccordionData, items: Normalize
   }
 
   // A non-empty raw array with no valid IDs is stale persisted data, not an
-  // intentional all-collapsed choice.
+  // intentional all-collapsed choice. Stale legacy initiallyOpenId follows the
+  // same compatibility fallback.
   return items[0] ? [items[0].id] : [];
 }
 ```
@@ -107,6 +111,8 @@ Error handling:
 
 - Invalid item IDs are still removed by the normalizer.
 - Stale non-empty `defaultOpenIds` arrays fall back to the first valid item.
+- Legacy `initiallyOpenId` is only a fallback source when `defaultOpenIds` is
+  absent, and legacy `allowMultiple=true` still maps to multiple-open mode.
 - `collapsible=false` cannot save all-collapsed because runtime must keep at
   least one panel open.
 - Sparse legacy payloads without explicit default-open data keep the current
@@ -129,6 +135,7 @@ No API routes are added.
 - `git diff --check`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso`
 
 ## Documentation Updates Required
 
@@ -146,5 +153,7 @@ No API routes are added.
   behavior is allowed.
 - Normalization preserves intentional empty `defaultOpenIds` without breaking
   legacy first-item fallback.
+- Legacy `initiallyOpenId` and `allowMultiple` payloads retain their saved open
+  behavior unless their IDs are stale.
 - Runtime output starts with all panels closed for the intentional all-collapsed
   case after TASK-256 runtime fixes are present.

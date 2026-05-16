@@ -102,12 +102,49 @@ const accordionMaxWidthClassMap = {
   full: "max-w-none",
 } as const;
 
+const summarySizeClassMap = {
+  sm: "text-sm",
+  base: "text-base",
+  lg: "text-lg",
+} as const;
+
+const summaryWeightClassMap = {
+  medium: "font-medium",
+  semibold: "font-semibold",
+  bold: "font-bold",
+} as const;
+
+const accordionVariantFallbackClassMap = {
+  soft: {
+    summaryPaddingClass: "px-4 py-3.5",
+    contentPaddingClass: "p-4",
+    radiusClass: "rounded-xl",
+    summaryTextClass: "text-base font-semibold",
+  },
+  bordered: {
+    summaryPaddingClass: "px-4 py-3",
+    contentPaddingClass: "p-4",
+    radiusClass: "rounded-lg",
+    summaryTextClass: "text-sm font-semibold",
+  },
+  compact: {
+    summaryPaddingClass: "px-3 py-2",
+    contentPaddingClass: "p-3",
+    radiusClass: "rounded-md",
+    summaryTextClass: "text-sm font-medium",
+  },
+} as const;
+
 function resolveAccordionToken<T extends string>(
   value: unknown,
   fallback: T,
   allowed: readonly T[]
 ) {
   return typeof value === "string" && allowed.includes(value as T) ? (value as T) : fallback;
+}
+
+function resolveOptionalAccordionToken<T extends string>(value: unknown, allowed: readonly T[]) {
+  return typeof value === "string" && allowed.includes(value as T) ? (value as T) : undefined;
 }
 
 function normalizeAccordionStyle(style: AccordionData["style"] | undefined) {
@@ -122,13 +159,15 @@ function normalizeAccordionStyle(style: AccordionData["style"] | undefined) {
       accordionDefaults.style?.summaryTextColor
     ),
     descriptionTextColor: normalizeAccordionColor(style?.descriptionTextColor, undefined),
-    summaryPadding: resolveAccordionToken(style?.summaryPadding, "md", accordionSummaryPaddingTokens),
-    contentPadding: resolveAccordionToken(style?.contentPadding, "md", accordionPaddingTokens),
-    radius: resolveAccordionToken(style?.radius, "lg", accordionRadiusTokens),
-    summaryFontSize: resolveAccordionToken(style?.summaryFontSize, "base", summarySizeTokens),
-    summaryFontWeight: resolveAccordionToken(
+    summaryPadding: resolveOptionalAccordionToken(
+      style?.summaryPadding,
+      accordionSummaryPaddingTokens
+    ),
+    contentPadding: resolveOptionalAccordionToken(style?.contentPadding, accordionPaddingTokens),
+    radius: resolveOptionalAccordionToken(style?.radius, accordionRadiusTokens),
+    summaryFontSize: resolveOptionalAccordionToken(style?.summaryFontSize, summarySizeTokens),
+    summaryFontWeight: resolveOptionalAccordionToken(
       style?.summaryFontWeight,
-      "semibold",
       summaryWeightTokens
     ),
   };
@@ -137,6 +176,26 @@ function normalizeAccordionStyle(style: AccordionData["style"] | undefined) {
 function normalizeAccordionLayout(layout: AccordionData["layout"] | undefined) {
   return {
     maxWidth: resolveAccordionToken(layout?.maxWidth, "full", accordionMaxWidthTokens),
+  };
+}
+
+function resolveAccordionRenderClasses(style: AccordionStyle, variant: AccordionVariantId) {
+  const fallback = accordionVariantFallbackClassMap[variant];
+  return {
+    summaryPaddingClass: style.summaryPadding
+      ? accordionSummaryPaddingClassMap[style.summaryPadding]
+      : fallback.summaryPaddingClass,
+    contentPaddingClass: style.contentPadding
+      ? accordionPaddingClassMap[style.contentPadding]
+      : fallback.contentPaddingClass,
+    radiusClass: style.radius ? accordionRadiusClassMap[style.radius] : fallback.radiusClass,
+    summaryTextClass:
+      style.summaryFontSize || style.summaryFontWeight
+        ? [
+            style.summaryFontSize ? summarySizeClassMap[style.summaryFontSize] : undefined,
+            style.summaryFontWeight ? summaryWeightClassMap[style.summaryFontWeight] : undefined,
+          ].filter(Boolean).join(" ")
+        : fallback.summaryTextClass,
   };
 }
 ```
@@ -162,6 +221,9 @@ Error handling:
 - Summary trigger padding and panel content padding are separate because current
   runtime has hard-coded trigger padding and hard-coded body padding in different
   render locations.
+- Missing new style fields must resolve through the variant fallback class map
+  so legacy `soft`, `bordered`, and `compact` payloads render with the same
+  classes they had before the fields existed.
 
 ## Security Contract
 
@@ -184,6 +246,7 @@ No API routes are added.
 - `git diff --check`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso`
 
 ## Documentation Updates Required
 
@@ -204,5 +267,7 @@ No API routes are added.
   summary trigger padding, panel content padding, radius, max width, and summary
   typography.
 - Existing payloads render as before unless the user configures the new fields.
+- Legacy `soft`, `bordered`, and `compact` payloads have explicit regression
+  tests proving their old radius, padding, and summary typography classes.
 - Accordion color controls match the repo's color-picker/text-input pattern and
   preserve CSS variable values.

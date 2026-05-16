@@ -43,8 +43,10 @@ Live owner constraint:
 - `AccordionBlock` renders concrete panels from repeatable `slots` via
   `resolveWidgetSlotTargets()`, then resolves copy by item ID.
 - `BlockSettings` currently owns add/remove repeatable slot mutations. Any
-  inline Accordion add/reorder UX must delegate to that page-builder owner or
-  introduce a shared page-builder helper first.
+  inline Accordion add/reorder UX must delegate to that page-builder owner or be
+  deferred to a shared page-builder helper task first. TASK-257-03 may polish
+  the existing `BlockSettings` add-item label/discovery for Accordion; it must
+  not add a data-only button inside `AccordionEditors.tsx`.
 
 ## Sub-Tasks
 
@@ -56,9 +58,10 @@ Live owner constraint:
   or icon labels and normalize overlong values.
 - [ ] Replace the current technical collapsible helper copy with editor-facing
   language after TASK-256 fixes behavior truthfulness.
-- [ ] Verify current page-builder slot controls already expose a discoverable
-  "Add item" action for Accordion; if not, improve the page-builder-owned slot
-  control labels for Accordion instead of adding a data-only editor button.
+- [ ] Implement U6 through the page-builder-owned repeatable slot controls:
+  verify current controls expose a discoverable "Add accordion item" action; if
+  not, improve `BlockSettings` copy/labels while reusing its existing slot
+  callbacks and leaving `AccordionEditors.tsx` data-only.
 - [ ] Classify U5 reorder during implementation. If a shared repeatable-slot
   reorder owner already exists, use it with Accordion metadata sync tests. If it
   does not exist, create/link a separate shared slot follow-up and do not ship
@@ -98,6 +101,25 @@ function normalizeAccordionItem(raw: AccordionItem, index: number) {
 Slot-safe reorder decision gate:
 
 ```ts
+function resolveAccordionSlotControlCopy(blockType: string, slot: WidgetSlotDefinition) {
+  if (blockType === "accordion" && slot.id === "item" && slot.repeatable) {
+    return {
+      addLabel: "Add accordion item",
+      emptyLabel: "No accordion items yet",
+      itemLabel: "Accordion item",
+    };
+  }
+
+  return getDefaultSlotControlCopy(slot);
+}
+
+function handleAccordionAddItemFromBlockSettings(slot: WidgetSlotDefinition) {
+  // Use the existing page-builder repeatable-slot callback. Do not mutate
+  // Accordion `items[]` here; `AccordionBlock` normalizes metadata from the
+  // resulting `item:<instanceId>` slot targets.
+  addRepeatableSlot(slot);
+}
+
 function resolveAccordionReorderPlan(capabilities: PageBuilderSlotCapabilities) {
   if (!capabilities.canReorderRepeatableSlots) {
     return {
@@ -120,8 +142,11 @@ function resolveAccordionReorderPlan(capabilities: PageBuilderSlotCapabilities) 
 Error handling:
 
 - Icons are plain text only; trim empty values to `undefined`.
-- Add-item controls must respect `accordionItemMax` and preserve existing nested
-  slot contents.
+- Add-item controls must respect `accordionItemMax`, call the existing
+  repeatable-slot mutation owner, and let Accordion metadata normalize from the
+  resulting slot instance IDs.
+- `AccordionEditors.tsx` must not render an add-item button unless it receives a
+  shared page-builder slot mutation callback in a future task.
 - Reorder controls are not rendered from TASK-257 unless a shared repeatable-slot
   reorder owner already exists.
 - If no shared reorder owner exists, U5 must be deferred to a separate shared
@@ -147,6 +172,7 @@ No API routes are added.
 - `git diff --check`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso`
 
 ## Documentation Updates Required
 
@@ -166,5 +192,8 @@ No API routes are added.
 
 - Accordion supports safe plain-text item icons when configured.
 - Editor copy for all-closed behavior is understandable to content editors.
-- Add/reorder affordances either work with nested slot content preserved or are
-  explicitly deferred with a shared slot-contract blocker.
+- The add-item affordance is discoverable through page-builder-owned repeatable
+  slot controls and preserves nested slot content.
+- Reorder affordances either work with nested slot content preserved through an
+  existing shared owner or are explicitly deferred with a shared slot-contract
+  blocker.
