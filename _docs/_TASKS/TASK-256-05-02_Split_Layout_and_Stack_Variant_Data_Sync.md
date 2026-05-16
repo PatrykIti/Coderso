@@ -22,7 +22,8 @@ but persisted `data` can disagree with what the renderer shows.
   covers ratio/data desync, duplicate zero tokens, and mobile ratio/reverse
   behavior.
 - `_docs/PLAYWRIGHT/REPORT_SPLIT_LAYOUT_WIDGET.md:174-182,202,209-214` covers
-  redundant slot sections, Advanced duplication, and closure checklist.
+  redundant slot sections, Advanced duplication, `keep` tablet/mobile ratio
+  communication, reverse-on-mobile truthfulness, and closure checklist.
 - `_docs/PLAYWRIGHT/REPORT_STACK_WIDGET.md:111,141,157,163,169-187,220-223`
   covers variant/data direction desync, duplicate zero tokens, Wizard mobile
   direction, and Advanced variant drift.
@@ -35,6 +36,8 @@ but persisted `data` can disagree with what the renderer shows.
   show them as active controls for the wrong variant.
 - [ ] Remove duplicate `None`/`0` token choices or normalize them through
   TASK-256-02.
+- [ ] Communicate or block split-layout `keep` behavior where tablet ratio
+  becomes the mobile ratio and `Reverse on mobile` has no effect.
 - [ ] Replace redundant slot instructions with TASK-256-03 editor labels and
   public placeholder gating.
 
@@ -42,12 +45,12 @@ but persisted `data` can disagree with what the renderer shows.
 
 | File | Lines | Required change |
 |---|---:|---|
-| `core/admin/ui/widgets/editors/SplitLayoutEditors.tsx` | variant, ratio, Advanced sections | Emit atomic variant+data patches, hide duplicate zero choices, and make Advanced ownership explicit. |
+| `core/admin/ui/widgets/editors/SplitLayoutEditors.tsx` | variant, ratio, mobile behavior, Advanced sections | Emit atomic variant+data patches, hide duplicate zero choices, make `keep` mobile behavior truthful, and make Advanced ownership explicit. |
 | `core/widgets/core/splitLayout.tsx` | 247-270 | Gate empty pane placeholders through render context and avoid public editor copy. |
 | `core/admin/ui/widgets/editors/StackEditors.tsx` | variant, direction, Wizard/Advanced sections | Emit atomic variant+data patches and make mobile direction controls truthful. |
 | `core/widgets/core/stack.tsx` | renderer data resolution | Keep rendered direction deterministic and aligned with normalized data. |
-| `tests/vitest/ui/split-layout-editor-wave.test.tsx` | existing suite | Add variant/ratio and duplicate-token regressions. |
-| `tests/vitest/widgets/splitLayout.test.tsx` | existing suite | Add public placeholder and ratio assertions. |
+| `tests/vitest/ui/split-layout-editor-wave.test.tsx` | existing suite | Add variant/ratio, `keep` mobile behavior, reverse-on-mobile, and duplicate-token regressions. |
+| `tests/vitest/widgets/splitLayout.test.tsx` | existing suite | Add public placeholder, ratio, and mobile-behavior assertions. |
 | `tests/vitest/ui/stack-editor-wave.test.tsx` | existing suite | Add variant/direction and Advanced ownership assertions. |
 | `tests/vitest/widgets/stack.test.tsx` | existing suite | Add direction and public placeholder assertions. |
 

@@ -28,8 +28,9 @@ This leaf owns two contract classes:
 - `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:252,270,280-298` for public
   `Empty region.`, anchor validation, duplicate Advanced controls, bleed, and
   heading-level issues.
-- `_docs/PLAYWRIGHT/REPORT_GRID_COLUMNS_WIDGET.md:63,90,104,121-133,150-160`
-  for manual slot/config sync, asymmetric span truthfulness, masonry cardize
+- `_docs/PLAYWRIGHT/REPORT_GRID_COLUMNS_WIDGET.md:63-68,90,104,121-133,150-160`
+  for manual slot/config sync, CSS-variable color picker drift, span
+  validation/preview, asymmetric span truthfulness, masonry cardize
   truthfulness, and cardize Advanced drift.
 - `_docs/PLAYWRIGHT/REPORT_GRID_COLUMNS_WIDGET.md:187-191,212-217` for public
   `Column 1/2` label leakage and empty placeholder risk.
@@ -46,6 +47,8 @@ This leaf owns two contract classes:
 | Section fullscreen/min-height, horizontal region layouts, text typography controls, background media, presets, responsive padding, shadows, custom region names | Future product scope unless a current visible control already promises it | Future section task | TASK-256-08 records deferral |
 | Grid `asymmetric` variant does not update existing explicit spans | Fix here through variant-aware span reconciliation or editor warning | `GridColumnsEditors.tsx`, `gridColumns.tsx` | None |
 | Grid `masonry-lite` forces cardized render while switch stays off | Fix here by synchronizing switch state, disabling the switch with explanation, or making renderer honor the visible switch | `GridColumnsEditors.tsx`, `gridColumns.tsx` | None |
+| Grid color picker does not represent CSS variables | Fix here through token-aware picker display that preserves `var(...)` values | `GridColumnsEditors.tsx`, shared picker helper if reused | None |
+| Grid span preview and span-sum validation | Fix here if current span controls permit broken layouts without feedback; otherwise defer as editor UX enhancement | `GridColumnsEditors.tsx` | TASK-256-08 records deferral if not part of contract repair |
 | Grid `Column 1/2` public labels | Treat as editor metadata and hide publicly unless a real caption field is introduced | `gridColumns.tsx` | Caption feature is future scope |
 | Grid slot/config count drift | Fix here | `GridColumnsEditors.tsx`, `VisualPanel.tsx` slot metadata | None |
 
@@ -67,6 +70,10 @@ This leaf owns two contract classes:
 - [ ] Make `asymmetric` and `masonry-lite` variants truthful for existing saved
   columns by either updating spans/switch state atomically or showing an
   explicit inactive-control warning.
+- [ ] Preserve and visibly represent CSS variable color tokens in grid column
+  picker controls.
+- [ ] Add span-sum validation/preview feedback or defer it explicitly if it
+  stays outside the shared-contract repair.
 - [ ] Hide public grid column labels that are editor metadata.
 - [ ] Keep cardize-only Advanced controls hidden or disabled when cardized
   styling is inactive.
@@ -78,10 +85,10 @@ This leaf owns two contract classes:
 | `core/widgets/core/section.tsx` | 180-207, 380-413 | Normalize style defaults explicitly, label headings safely, and render `Empty region.` only for editor/admin preview. |
 | `core/admin/ui/widgets/editors/SectionEditors.tsx` | 485-498, 651-667, 826-850 | Validate anchor IDs, add missing gradient clear controls, and avoid duplicated Advanced controls that mirror Visual without extra ownership. |
 | `core/widgets/core/gridColumns.tsx` | 452-503 | Hide public `Empty column.` and `Column N` editor labels unless a real caption is configured. |
-| `core/admin/ui/widgets/editors/GridColumnsEditors.tsx` | variant, span, and cardize controls | Reconcile repeated column configs with slot targets, make `asymmetric` span changes truthful, and gate cardized-only controls for `masonry-lite`. |
+| `core/admin/ui/widgets/editors/GridColumnsEditors.tsx` | variant, span, color, and cardize controls | Reconcile repeated column configs with slot targets, preserve CSS variable picker values, make `asymmetric` span changes truthful, add span feedback, and gate cardized-only controls for `masonry-lite`. |
 | `tests/vitest/ui/section-editor-wave.test.tsx` | existing suite | Add anchor, clear, and duplicated-control assertions. |
 | `tests/vitest/widgets/section.test.tsx` | existing suite | Add public vs editor placeholder assertions. |
-| `tests/vitest/ui/grid-columns-editor-wave.test.tsx` | existing suite | Add slot/config sync and cardize-control assertions. |
+| `tests/vitest/ui/grid-columns-editor-wave.test.tsx` | existing suite | Add slot/config sync, CSS-variable picker, span validation/preview, and cardize-control assertions. |
 | `tests/vitest/widgets/gridColumns.test.tsx` | existing suite | Add public label/placeholder assertions. |
 
 ## Implementation Pseudocode
