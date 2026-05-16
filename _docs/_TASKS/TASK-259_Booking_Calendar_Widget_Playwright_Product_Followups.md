@@ -45,7 +45,8 @@ In scope for TASK-259:
 - Booking Calendar date defaults, date range configuration, and public slots
   past-date safety.
 - Service context shown in the calendar: price, duration, description, buffers
-  where useful, resource timezone, and user-facing empty-state copy.
+  where useful, resource timezone, selected-summary locale/date formatting, and
+  user-facing empty-state copy.
 - Calendar-owned refresh/loading, skeleton, request cancellation, slot clear,
   and slot density behavior.
 - Visual calendar/date navigation and availability count signals when backed by
@@ -95,7 +96,7 @@ Out of scope for TASK-259:
 |---|---|---|
 | 4.5, 6, 7.1, recommendation 1: admin preview never receives booking services/resources | TASK-259-01 | Hydrate admin canvas/editor preview from booking catalog data without leaking tokens or secrets. |
 | 3.9, 3.10, 5.4, 7.3, recommendations 2, 13, 16: default date, min/max range, and past-date acceptance | TASK-259-02 | Add date defaults/range config and enforce public slots date policy in the route/service lane. |
-| 3.2, 3.3, 3.4, 3.11, 5.3, 5.7, recommendations 4, 5, 6, 10: price, duration, description, timezone, and empty state | TASK-259-03 | Render service/resource context and make empty state copy widget-owned. |
+| 3.2, 3.3, 3.4, 3.11, 5.3, 5.7, recommendations 4, 5, 6, 10: price, duration, description, selected-summary locale/date formatting, timezone, and empty state | TASK-259-03 | Render service/resource context, summary formatting, and make empty state copy widget-owned. |
 | 3.5, 3.6, 3.17, 3.18, 5.2, recommendations 7, 8, 15: refresh/loading, skeleton, clear selection, AbortController | TASK-259-04 | Add calendar-owned loading/concurrency/selection UX in the runtime script and renderer markers. |
 | 3.1, 3.8, 7.2: visual date navigation, availability signals, and overlapping slot density | TASK-259-05 | Add visual calendar/date navigation, availability signals, and non-overlapping slot density mode. |
 | 3.7, 3.13, 3.16, recommendations 12, 14: layout variants, selected/hover styling, mobile controls | TASK-259-06 | Add Booking Calendar variants, mobile control layout, and selected-slot style tokens. |

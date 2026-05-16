@@ -94,7 +94,7 @@ authoritative.
 | `tests/vitest/widgets/bookingRuntimeScript.bookingCalendar.test.ts` | Create or extend this happy-dom runtime script suite with initial date/clamp/fetch query assertions. |
 | `tests/unit/server/publicBookingApi.test.ts` | Add public slots past-date/out-of-range route coverage. |
 | `tests/unit/booking/bookingService.test.ts` | Add service-level past-date/out-of-range slot policy coverage. |
-| `tests/unit/server/bookingRoutes.test.ts` or existing booking route test owner | Add route registration and `mapBookingError` assertions if the route family gains new registered handlers or mapped errors. |
+| `tests/integration/routes/bookingRoutes.test.ts` | Add route registration and `mapBookingError` assertions if the route family gains new registered handlers or mapped errors. |
 
 ## Implementation Pseudocode
 

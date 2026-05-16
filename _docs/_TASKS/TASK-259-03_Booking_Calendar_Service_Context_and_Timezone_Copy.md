@@ -13,13 +13,14 @@
 ## Overview
 
 Render the booking context users need before choosing a slot: service price,
-duration, optional description, resource timezone, and user-facing empty-state
-copy.
+duration, optional description, resource timezone, selected-summary date/locale
+formatting, and user-facing empty-state copy.
 
 `REPORT_BOOKING_CALENDAR_WIDGET.md` sections 3.2, 3.3, 3.4, 3.11, 5.3, and 5.7
 show that the resolved service/resource payload already contains useful data,
 but the widget hides price, currency, service description, duration, buffers, and
-timezone. The empty state also uses developer-facing copy.
+timezone. The selected-slot summary also uses the browser locale implicitly, and
+the empty state uses developer-facing copy.
 
 ## Scope Boundary
 
@@ -44,6 +45,10 @@ This leaf does not own:
   overload the selector labels.
 - [ ] Render selected resource timezone near the date/slot controls and include
   timezone in selected-slot summary.
+- [ ] Add calendar-owned selected-summary formatting fields such as
+  `summaryLocale` and `summaryDateStyle` or equivalent product names. Keep the
+  default backward-compatible with the browser locale, but allow an explicit
+  site/widget locale so the report's hardcoded locale row has a TASK-259 owner.
 - [ ] Keep service metadata display calendar-owned. Do not add Appointment Form
   product behavior here; only preserve existing selection payload compatibility
   if calendar runtime state needs an additive field.
@@ -53,12 +58,12 @@ This leaf does not own:
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/bookingCalendar.tsx` | Add fields/defaults/schema/normalizer and render service metadata, timezone, and user-facing empty state. |
-| `core/admin/ui/widgets/editors/BookingCalendarEditors.tsx` | Add Wizard/Visual controls for metadata visibility and empty-state copy. |
-| `core/widgets/core/bookingRuntimeScript.ts` | Update selected-slot summary and resource timezone display after resource/date/slot changes. |
-| `tests/vitest/widgets/bookingCalendar.test.tsx` | Add render/normalizer coverage for price, duration, description, timezone, and empty state. |
-| `tests/vitest/ui/booking-calendar-editor-wave.test.tsx` | Add editor coverage for display toggles and empty-state copy. |
-| `tests/vitest/widgets/bookingRuntimeScript.bookingCalendar.test.ts` | Create or extend this happy-dom runtime script suite with selected summary/timezone update coverage if runtime script changes. |
+| `core/widgets/core/bookingCalendar.tsx` | Add fields/defaults/schema/normalizer and render service metadata, timezone, selected-summary formatting metadata, and user-facing empty state. |
+| `core/admin/ui/widgets/editors/BookingCalendarEditors.tsx` | Add Wizard/Visual controls for metadata visibility, summary locale/date format, and empty-state copy. |
+| `core/widgets/core/bookingRuntimeScript.ts` | Update selected-slot summary, explicit locale/date formatting, and resource timezone display after resource/date/slot changes. |
+| `tests/vitest/widgets/bookingCalendar.test.tsx` | Add render/normalizer coverage for price, duration, description, timezone, summary formatting fields, and empty state. |
+| `tests/vitest/ui/booking-calendar-editor-wave.test.tsx` | Add editor coverage for display toggles, summary locale/date controls, and empty-state copy. |
+| `tests/vitest/widgets/bookingRuntimeScript.bookingCalendar.test.ts` | Create or extend this happy-dom runtime script suite with selected summary locale/timezone update coverage if runtime script changes. |
 | `tests/vitest/widgets/appointmentForm.test.tsx` | Smoke only if the shared booking selection payload changes. |
 
 ## Implementation Pseudocode
@@ -69,6 +74,8 @@ type BookingCalendarContextDisplay = {
   showServiceDuration?: boolean;
   showServiceDescription?: boolean;
   showTimezone?: boolean;
+  summaryLocale?: string;
+  summaryDateStyle?: "short" | "medium" | "long";
   emptyStateMessage?: string;
 };
 
@@ -91,6 +98,14 @@ function buildServiceMeta(service: BookingCalendarResolvedService, options: Cont
     options.showServicePrice ? formatServicePrice(service) : null,
   ]).join(" · ");
 }
+
+function formatSelectedSlotDate(startsAt: string, options: BookingCalendarContextDisplay) {
+  return new Intl.DateTimeFormat(options.summaryLocale || undefined, {
+    year: "numeric",
+    month: options.summaryDateStyle ?? "short",
+    day: "2-digit",
+  }).format(new Date(startsAt));
+}
 ```
 
 Runtime update flow:
@@ -105,7 +120,7 @@ function renderResourceTimezone() {
 
 function renderSelectedSummary(selection) {
   selectedNode.textContent = selection
-    ? `${toDateLabel(selection.startsAt)} • ${timeRange} • ${selection.timezone}`
+    ? `${formatSelectedSlotDate(selection.startsAt, options)} • ${timeRange} • ${selection.timezone}`
     : selectedNode.dataset.empty;
 }
 ```
@@ -116,6 +131,8 @@ Error handling:
   plain uppercase currency suffix or omit price copy.
 - Tests must pass an explicit locale or assert the fallback branch so price
   output stays deterministic across CI machines.
+- Invalid selected-summary locale or date-style values must normalize to a safe
+  default and must not throw during runtime summary rendering.
 - Missing service/resource metadata should omit only that metadata line, not the
   whole calendar.
 - Empty-state copy must normalize blank editor input back to the default
@@ -140,7 +157,7 @@ No API routes are added.
 - Create or extend
   `tests/vitest/widgets/bookingRuntimeScript.bookingCalendar.test.ts`, then run
   `bun run test:vitest -- tests/vitest/widgets/bookingRuntimeScript.bookingCalendar.test.ts`
-  if runtime summary/timezone behavior changes.
+  if runtime summary locale/timezone behavior changes.
 - `bun run test:vitest -- tests/vitest/widgets/appointmentForm.test.tsx` if the
   shared selection payload changes.
 - `bun test tests/unit/widgets/validator.test.ts` if schema/defaults change.
@@ -152,7 +169,7 @@ No API routes are added.
 - Update `_docs/PLAYWRIGHT/REPORT_BOOKING_CALENDAR_WIDGET.md` sections 3.2,
   3.3, 3.4, 3.11, 5.3, and 5.7 after validation.
 - Update `_docs/_WIDGETS/BOOKING_CALENDAR.md` with context display fields and
-  empty-state copy behavior.
+  selected-summary locale/date formatting, plus empty-state copy behavior.
 
 ## Changelog Policy
 
@@ -162,7 +179,8 @@ No API routes are added.
 ## Acceptance Criteria
 
 - Users can see enough service/resource context to understand price, duration,
-  description, and timezone before selecting a slot.
+  description, timezone, and selected-summary date format before selecting a
+  slot.
 - Empty state is user-facing and configurable, not developer-facing.
 - Service descriptions render as text and cannot inject HTML.
 - Appointment Form behavior remains compatible if the shared runtime payload is

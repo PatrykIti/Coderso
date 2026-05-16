@@ -50,7 +50,7 @@ fixed by TASK-259.
 |---|---|---|
 | Admin preview catalog parity | Fixed by TASK-259-01 or deferred with reason | Admin preview hydration test and report evidence. |
 | Date defaults/range/past-date safety | Fixed by TASK-259-02 or deferred with reason | Widget tests plus Bun public API/service tests. |
-| Service context/timezone/empty state | Fixed by TASK-259-03 or deferred with reason | Widget render/editor/runtime summary tests and docs. |
+| Service context/summary formatting/timezone/empty state | Fixed by TASK-259-03 or deferred with reason | Widget render/editor/runtime summary locale/timezone tests and docs. |
 | Loading/concurrency/clear selection | Fixed by TASK-259-04 or deferred with reason | Runtime script DOM tests and linked form smoke if event payload changed. |
 | Visual calendar/availability/slot density | Fixed by TASK-259-05 or deferred with reason | Runtime script tests plus route/service tests for any API changes. |
 | Layout variants/mobile/styling | Fixed by TASK-259-06 or deferred with reason | Widget/editor/schema tests and rendered evidence. |
