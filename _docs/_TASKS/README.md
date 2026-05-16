@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 69 tasks
+- **To Do:** 77 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1542 tasks
 
@@ -38,6 +38,14 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-270 | Gallery Mosaic Widget Playwright Product Followups | High | Very Large | Gallery Mosaic-only product follow-up family for `REPORT_GALLERY_MOSAIC_WIDGET.md`, excluding TASK-256 shared-contract scope |
+| TASK-270-01 | Gallery Mosaic Item Previews and Media Picker | High | Large | Add per-item media previews and Visual media picker after TASK-256 safe media behavior lands |
+| TASK-270-02 | Gallery Mosaic Reorder, Count, and Removal UX | High | Large | Add efficient reorder, clear count/add/remove semantics, and recoverable or confirmed item removal |
+| TASK-270-03 | Gallery Mosaic Per-Item Media Presentation Fields | Medium | Large | Add bounded object-position, per-item ratio, and video poster fields without taking over TASK-256 accessibility scope |
+| TASK-270-04 | Gallery Mosaic Lightbox and Zoom Mode | Medium | Large | Add optional safe lightbox/zoom presentation using existing accessible runtime patterns |
+| TASK-270-05 | Gallery Mosaic Responsive Columns and Motion Presets | Medium | Large | Add bounded responsive column and reduced-motion-safe animation presets |
+| TASK-270-06 | Gallery Mosaic Config Import Export and Wizard Guidance | Low | Medium | Add safe config import/export and post-TASK-256 Wizard guidance |
+| TASK-270-07 | Gallery Mosaic Report Docs Changelog and Closure | Medium | Medium | Refresh Gallery Mosaic report/docs/changelog/board and final validation evidence |
 | TASK-267 | Feature Grid Widget Playwright Product Followups | High | Very Large | Feature Grid-only follow-up family for `REPORT_FEATURE_GRID_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-267-01 | Feature Grid Variant Preview and Responsive Cards-4 Layout | High | Medium | Add variant preview affordances, repair cards-4 responsive product behavior, and keep columns truthfulness in TASK-256 |
 | TASK-267-02 | Feature Grid Card Reorder, Remove, and Item Management | High | Medium | Add drag reorder plus recoverable remove flow while preserving keyboard move fallback |
