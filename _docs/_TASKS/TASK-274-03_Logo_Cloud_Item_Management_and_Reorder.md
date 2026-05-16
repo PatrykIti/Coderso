@@ -1,0 +1,134 @@
+# TASK-274-03: Logo Cloud Item Management and Reorder
+
+# FileName: TASK-274-03_Logo_Cloud_Item_Management_and_Reorder.md
+
+**Priority:** High
+**Category:** Widgets + Logo Cloud + Admin UI + Repeated Item UX
+**Estimated Effort:** Large
+**Dependencies:** TASK-274, TASK-274-02
+**Status:** To Do
+
+---
+
+## Overview
+
+Improve Logo Cloud repeated-item lifecycle controls so users can manage up to 24
+logos without accidental destructive edits or excessive Move button clicks.
+
+Source report findings:
+
+- UX-02 remove logo without confirm or undo
+- UX-08 missing drag-and-drop reorder
+
+Explicitly out of scope:
+
+- Adding a global document undo stack.
+- Removing existing Move up / Move down controls; they remain the keyboard and
+  deterministic fallback.
+- Reusing menu/tree nesting behavior; Logo Cloud owns a flat list only.
+
+## Files to Change
+
+| File | Required change |
+|---|---|
+| `core/admin/ui/widgets/editors/LogoCloudEditors.tsx` | Add confirm/undo remove behavior, drag handle reorder, drag state, drop targets, and stable metadata for logo item actions. |
+| `core/admin/ui/shared/ConfirmActionDialog.tsx` | Reuse only when choosing confirm-dialog flow. Do not fork it. |
+| `tests/vitest/ui/logo-cloud-editor-wave.test.tsx` | Cover confirm/undo, drag reorder, Move fallback, min/max count boundaries, and no accidental deletion. |
+| `_docs/_WIDGETS/LOGO_CLOUD.md` | Document repeated-item management behavior. |
+| `_docs/PLAYWRIGHT/REPORT_LOGO_CLOUD_WIDGET.md` | Record fixed evidence for UX-02/UX-08. |
+
+## Implementation Pseudocode
+
+```tsx
+type PendingLogoRemoval = {
+  logo: LogoCloudLogo;
+  index: number;
+} | null;
+
+function removeLogoWithUndo(index: number) {
+  updateValue(value, onChange, (current) => {
+    const logos = normalizeLogoCloudLogos(current.logos);
+    const removed = logos[index];
+    if (!removed || logos.length <= 1) return current;
+    setPendingRemoval({ logo: removed, index });
+    return { ...current, logos: normalizeLogoCloudLogos(logos.filter((_, i) => i !== index), logos.length - 1) };
+  });
+}
+
+function restoreRemovedLogo() {
+  if (!pendingRemoval) return;
+  updateValue(value, onChange, (current) => {
+    const logos = normalizeLogoCloudLogos(current.logos);
+    const nextLogos = [...logos];
+    nextLogos.splice(Math.min(pendingRemoval.index, nextLogos.length), 0, pendingRemoval.logo);
+    return { ...current, logos: normalizeLogoCloudLogos(nextLogos, nextLogos.length) };
+  });
+  setPendingRemoval(null);
+}
+
+function handleLogoDrop(fromIndex: number, toIndex: number) {
+  if (fromIndex === toIndex) return;
+  moveLogo(value, onChange, fromIndex, toIndex);
+}
+```
+
+Editor data flow:
+
+1. Keep `moveLogo` as the canonical reorder helper.
+2. Add a drag handle per logo card with `draggable`, `aria-label`, and stable
+   `data-widget-control` metadata.
+3. Store only transient drag state in React local state; persisted order changes
+   flow through `onChange` once a valid drop occurs.
+4. Choose one destructive-action pattern:
+   - confirmation dialog before removing, or
+   - immediate remove with inline Undo that restores the exact removed item.
+5. Preserve `logos.length >= 1` and `logos.length <= logoCloudLogoMax`.
+
+Error handling:
+
+- Ignore drops with missing, same, out-of-range, or stale indices.
+- Do not normalize duplicate IDs into a different item until final persisted
+  value passes through the existing normalizer.
+- Keep the existing order if remove confirmation is cancelled.
+- Restore button must no-op safely after another edit invalidates the pending
+  removal.
+
+## Sub-Tasks
+
+- None. This is an execution-ready implementation leaf.
+
+## Security Contract
+
+No API routes are added.
+
+- Endpoint visibility: none.
+- Auth/RBAC/CSRF/rate limit: unchanged admin page/template save flow.
+- Reject-unknown validation: no new persisted schema field is required.
+- Anti-abuse: drag state and undo state remain editor-local. No raw HTML,
+  scripts, class names, credentials, or untrusted external payloads are stored.
+
+## Testing Requirements
+
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run test:vitest -- tests/vitest/ui/logo-cloud-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/logoCloud.test.tsx` if
+  normalization/order behavior changes.
+- `bun run scan:security:strict`
+- `bun run precommit`
+
+## Documentation Updates Required
+
+- `_docs/_WIDGETS/LOGO_CLOUD.md`
+- `_docs/PLAYWRIGHT/REPORT_LOGO_CLOUD_WIDGET.md`
+- `_docs/_TASKS/README.md` on status transition.
+- `_docs/_CHANGELOG/README.md` and a changelog entry when this leaf is completed
+  independently or through TASK-274-06 closure.
+
+## Acceptance Criteria
+
+- Removing a logo is recoverable or confirmed before data loss.
+- Drag reorder works for long logo lists and keeps Move buttons as fallback.
+- Min/max logo count protections remain intact.
+- Editor tests prove reorder/remove behavior without relying on browser-only
+  Playwright evidence.
