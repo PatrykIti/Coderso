@@ -322,4 +322,4 @@ Dodać pola `label` i `icon` per metrykę w Wizard obok `value`, oraz skrócone 
 
 ---
 
-*Raport wstępny z analizy kodu — sekcje 4–6 uzupełniane po testach Playwright.*
+*Raport zakończony na podstawie analizy kodu i testów Playwright — 2026-05-16.*

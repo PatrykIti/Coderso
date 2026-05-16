@@ -38,7 +38,7 @@ that look editable but either duplicate Visual or do nothing.
   select whose `onValueChange` is a no-op.
 - `_docs/PLAYWRIGHT/REPORT_SPLIT_LAYOUT_WIDGET.md:180-182` reports Advanced
   repeats Visual controls plus JSON without meaningful Advanced ownership.
-- `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md:87-98`,
+- `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md:48,153,226-227`,
   `_docs/PLAYWRIGHT/REPORT_LOGO_CLOUD_WIDGET.md:94-100`, and
   `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md:82-89` report duplicated
   Advanced style controls that need an explicit owner decision.

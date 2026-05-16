@@ -41,13 +41,14 @@ for the active variant/source.
   support, unresolved image/media mapping, category copy drift, and accessibility
   findings that must be mapped to the existing content-list/posts-feed contract
   before implementation.
-- `_docs/PLAYWRIGHT/REPORT_ENTRY_TEASER_WIDGET.md:54-116,128-136` reports
-  dynamic teaser product requests plus editor/source/CTA/runtime-state
-  truthfulness issues that must be separated from future feature expansion.
-- `_docs/PLAYWRIGHT/REPORT_LISTING_FILTERS_WIDGET.md:67-139,159-166` reports
-  listing filter product requests plus facet/editor/runtime truthfulness,
-  URL-state, and accessibility findings that must be mapped to the listing
-  runtime contract before implementation.
+- `_docs/PLAYWRIGHT/REPORT_ENTRY_TEASER_WIDGET.md:70-112,130-166,181-194,214-244`
+  reports dynamic teaser product requests plus editor/source/CTA/runtime-state,
+  admin-preview parity, and accessibility/link findings that must be separated
+  from future feature expansion.
+- `_docs/PLAYWRIGHT/REPORT_LISTING_FILTERS_WIDGET.md:67-139,156-202,249-262,314-363`
+  reports listing filter product requests plus facet/editor/runtime truthfulness,
+  URL-state, admin-preview parity, and accessibility findings that must be
+  mapped to the listing runtime contract before implementation.
 
 ## Scope Decision Matrix
 

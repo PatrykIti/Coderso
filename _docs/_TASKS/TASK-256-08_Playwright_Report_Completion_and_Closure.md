@@ -23,26 +23,32 @@ that are not contract repairs.
 
 ## Drift Evidence
 
-- `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md:3` is still marked
-  `W toku`.
 - `_docs/PLAYWRIGHT/REPORT_RICH_TEXT_SECTION_WIDGET.md:3` is still marked
   `W trakcie` and must be classified against shared-contract TASK-256 scope
   before closure.
-- `_docs/PLAYWRIGHT/REPORT_POSTS_FEED_WIDGET.md:3` is still marked `W toku`
-  and must be classified against shared-contract TASK-256 scope before closure.
-- `_docs/PLAYWRIGHT/REPORT_ENTRY_TEASER_WIDGET.md:3` is still marked
-  `W TRAKCIE` and must be classified against shared-contract TASK-256 scope
-  before closure.
-- `_docs/PLAYWRIGHT/REPORT_LISTING_FILTERS_WIDGET.md:3` is still marked
-  `W TOKU` and must be classified against shared-contract TASK-256 scope before
-  closure.
-- `_docs/PLAYWRIGHT/REPORT_PRODUCT_GALLERY_WIDGET.md:3`,
-  `_docs/PLAYWRIGHT/REPORT_PRODUCT_COMPARE_WIDGET.md:3`, and
-  `_docs/PLAYWRIGHT/REPORT_PRODUCT_TABLE_WIDGET.md:3` are still marked in
-  progress and must be classified against shared-contract TASK-256 scope before
-  closure.
 - `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md:3` is completed, but its findings
   still need fixed/deferred closure classification after implementation.
+- `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md:3` is completed, but its
+  findings still need fixed/deferred closure classification after
+  implementation.
+- `_docs/PLAYWRIGHT/REPORT_PRODUCT_COMPARE_WIDGET.md:3` is completed, but its
+  commerce/runtime findings still need fixed/deferred closure classification
+  against the shared widget contracts before any product expansion is opened.
+- `_docs/PLAYWRIGHT/REPORT_PRODUCT_GALLERY_WIDGET.md:3` is completed, but its
+  commerce/runtime findings still need fixed/deferred closure classification
+  against the shared widget contracts before any product expansion is opened.
+- `_docs/PLAYWRIGHT/REPORT_LISTING_FILTERS_WIDGET.md:3` is completed, but its
+  dynamic/runtime findings still need fixed/deferred closure classification
+  against the shared widget contracts before any product expansion is opened.
+- `_docs/PLAYWRIGHT/REPORT_POSTS_FEED_WIDGET.md:3` is completed, but its
+  dynamic/runtime findings still need fixed/deferred closure classification
+  against the shared widget contracts before any product expansion is opened.
+- `_docs/PLAYWRIGHT/REPORT_ENTRY_TEASER_WIDGET.md:3` is completed, but its
+  dynamic/runtime findings still need fixed/deferred closure classification
+  against the shared widget contracts before any product expansion is opened.
+- `_docs/PLAYWRIGHT/REPORT_PRODUCT_TABLE_WIDGET.md:3` is completed, but its
+  commerce/runtime findings still need fixed/deferred closure classification
+  against the shared widget contracts before any product expansion is opened.
 - `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:220,258` contains
   authentication-limited comparison sections that require final classification.
 - Completed reports such as CTA banner, logo cloud, team, stack,

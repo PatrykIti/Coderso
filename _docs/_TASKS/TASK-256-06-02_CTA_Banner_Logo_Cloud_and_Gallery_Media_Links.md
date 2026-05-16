@@ -25,12 +25,13 @@ and truthful editor controls.
 - `_docs/PLAYWRIGHT/REPORT_LOGO_CLOUD_WIDGET.md:38-116,134-153` for missing
   link `rel`, heading/section ARIA, hoverColor truthfulness, logo height, Wizard
   image/link gaps, alt text, and image picker scope.
-- `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md:54-124,177-213` for media
-  type ambiguity, overlay alpha loss, alt/caption semantics, video picker scope,
-  feature-left minimum handling, link security, and hover-caption accessibility.
-- `REPORT_GALLERY_MOSAIC_WIDGET.md` is still marked `W toku`; this leaf may use
-  the current report ranges for planning, but TASK-256-08 must refresh final
-  admin/frontend evidence before closure.
+- `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md:54-94,195-220,274-281` for
+  media type ambiguity, overlay alpha loss, alt/caption semantics, video picker
+  scope, feature-left minimum handling, link security, and hover-caption
+  accessibility.
+- `REPORT_GALLERY_MOSAIC_WIDGET.md` is now marked `Zakończony`; this leaf may
+  use the current report ranges for planning, while TASK-256-08 must still
+  refresh fixed/deferred status after implementation.
 
 ## Scope Decision Matrix
 

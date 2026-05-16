@@ -1,11 +1,11 @@
 # RAPORT: Product Compare Widget — Analiza UX/UI i brakujące funkcjonalności
 
-> **Status:** W toku
+> **Status:** Zakończony
 > **Data:** 2026-05-16
 > **Sesja:** Playwright (Product Compare Widget)
 > **Środowisko admin:** http://localhost:5173/admin
 > **Środowisko front:** http://localhost:3000
-> **Strona testowa:** TEST-PRODUCT-COMPARE-0516 (zostanie uzupełnione po teście)
+> **Strona testowa:** TEST-PRODUCT-COMPARE-0516 (`/admin/pages/0819cd19-ca10-4485-9566-ca0f80c93459`)
 
 ---
 
@@ -206,8 +206,6 @@ Dostępne: `title`, `slug`, `status`, `pricing.amount`, `stock.state`, `createdA
 
 ## 4. Wyniki testów Playwright — Admin UI
 
-> *Sekcja zostanie uzupełniona po testach przeglądarki*
-
 ### 4.1 Konfiguracja testu
 
 | Parametr | Wartość |
@@ -215,69 +213,114 @@ Dostępne: `title`, `slug`, `status`, `pricing.amount`, `stock.state`, `createdA
 | URL admin | http://localhost:5173/admin |
 | Login | admin test account (redacted) |
 | Strona testowa | TEST-PRODUCT-COMPARE-0516 |
-| Adres strony | (do uzupełnienia) |
+| UUID strony | `0819cd19-ca10-4485-9566-ca0f80c93459` |
+| Slug front | `/test-product-compare-0516` |
 
 ### 4.2 Wizard editor
 
 | Test | Wynik |
 |------|-------|
-| Dodanie widgetu do strony | — |
-| Source filters (search, collections, status) | — |
-| Limit slider/input | — |
-| Sort field selector | — |
-| Sort direction selector | — |
-| Limit guidance info | — |
-| Surfaces: Table background input | — |
-| Surfaces: Table border input | — |
-| Surfaces: Header background input | — |
-| Surfaces: Empty background input | — |
-| Surfaces: Empty border input | — |
+| Dodanie widgetu do strony | ✓ Działa |
+| Source: Limit spinbutton (zmiana 3→5) | ✓ Działa |
+| Source: Search textbox | ✓ Dostępny (placeholder: "title or slug") |
+| Source: Collections — brak kolekcji | ⚠ "No commerce collections are available yet." — fallback textbox dostępny |
+| Source: Sort field combobox | ✓ Dostępny (domyślnie: Title) |
+| Source: Sort direction combobox | ✓ Dostępny (domyślnie: Ascending) |
+| Source: Status filter (draft/published/archived checkboxes) | ✓ Dostępny |
+| Limit guidance info (dynamiczna aktualizacja) | ✓ Aktualizuje się przy zmianie limitu |
+| Limit guidance przy limit > 5 | ⚠ Brak ostrzeżenia — UX-06 confirmed |
+| Limit max — spinbutton `max` attr | ✗ `max=48` zamiast `12` — BF-15 confirmed |
+| Wpisanie limit=13 (ponad schema max=12) | ✗ UI przyjmuje 13, brak walidacji — BF-15 confirmed |
+| Brak wskaźnika dopasowanych produktów | ✗ UX-05 confirmed |
+| Surfaces: 5 pól kolorów w Wizard | ⚠ Za zaawansowane dla kroku Wizard — UX-02 confirmed |
+| Surfaces: Table background + Clear | ✓ Działa |
+| Surfaces: Table border + Clear | ✓ Działa |
+| Surfaces: Header background + Clear | ✓ Działa |
+| Surfaces: Empty background + Clear | ✓ Działa |
+| Surfaces: Empty border + Clear | ✓ Działa |
 
 ### 4.3 Visual editor
 
 | Test | Wynik |
 |------|-------|
-| Toggle "Show compare-at price" | — |
-| Toggle "Show stock quantity" | — |
-| Toggle "Show slug" | — |
-| Label Price edit | — |
-| Label Compare at edit | — |
-| Label Stock edit | — |
-| Empty state title edit | — |
-| Empty state description edit | — |
-| Surfaces (kolory) | — |
+| Przejście przez "Continue to layout and styling" | ✓ Działa |
+| Wariant selector: "Matrix" wybrany / "Selected" badge | ✓ Działa |
+| Toggle "Show compare-at price" (uncheck) | ✓ Działa (checkbox reaguje) |
+| Toggle "Show stock quantity" | ✓ Działa |
+| Toggle "Show slug" (enable) | ✓ Działa |
+| Live update canvas przy toggle zmianie | ✓ Działa (empty state — nie weryfikowalne z produktami w canvas) |
+| Labels sekcja — widoczne pola | ⚠ Tylko 3 z 5: Price, Compare at, Stock — brak Quantity i Slug |
+| Label "Quantity" i "Slug" niedostępne | ✗ UX-01 confirmed |
+| Label Price — edit na "Cena" | ✓ Działa |
+| Empty state title — live update w canvas | ✓ Działa (canvas pokazuje "Brak produktów do porównania") |
+| Empty state description — edit | ✓ Działa |
+| Surfaces (kolory) w Visual — duplikacja z Wizard | ⚠ UX-02 confirmed |
 
 ### 4.4 Advanced editor
 
 | Test | Wynik |
 |------|-------|
-| Resolved rows count display | — |
-| Runtime error flag input | — |
-| Query preview JSON | — |
+| "Resolved rows: 0 · Total: 0" — admin canvas nie resolve | ✓ Wyświetla 0 (expected) |
+| Runtime error flag — edytowalny | ✗ UX-03 confirmed — można wpisać fałszywy błąd |
+| Wpisanie testowego błędu → error banner w canvas | ✓ Banner pojawia się natychmiast |
+| Error banner `role="alert"` | ✗ A7 confirmed — `role=null` |
+| Query preview JSON — aktualny | ✓ Pokazuje poprawny limit=3, sort by title asc |
+| Query preview czytelny bez kontekstu | ⚠ UX-04 — surowy JSON bez opisów |
 
 ### 4.5 Canvas preview
 
 | Test | Wynik |
 |------|-------|
-| Empty state render (brak produktów) | — |
-| Tabela z produktami render | — |
-| Error banner render | — |
-| Responsywność (overflow-x-auto) | — |
+| Empty state render ("No products to compare") | ✓ Działa |
+| Empty state tytuł/opis edytowalny i live | ✓ Działa |
+| Tabela z produktami w canvas admin | ✗ Canvas zawsze pokazuje empty state — UX-08 confirmed |
+| Error banner render (amber) | ✓ Pojawia się po wpisaniu błędu w Advanced |
 
 ---
 
 ## 5. Wyniki testów Playwright — Frontend (localhost:3000)
 
-> *Sekcja zostanie uzupełniona po testach frontu*
+### 5.1 Produkt testowy
 
-### 5.1 Zgodność admin preview ↔ frontend
+Widget na froncie załadował **1 produkt**: "Alpha Widget Pro"
+
+| Atrybut | Wartość |
+|---------|---------|
+| Tytuł | Alpha Widget Pro |
+| Cena | $19,900.00 |
+| Compare at | $24,900.00 |
+| Stan magazynowy | In stock |
+| Ilość | 15 |
+
+### 5.2 Zgodność admin preview ↔ frontend
 
 | Element | Admin Preview | Frontend | Status |
 |---------|--------------|----------|--------|
-| Tabela z produktami | — | — | — |
-| Empty state | — | — | — |
-| Error banner | — | — | — |
-| Style (kolory) | — | — | — |
+| Tabela z produktami | ✗ Pusta (empty state) | ✓ Widoczna z danymi | **RÓŻNICA** — produkcyjny SSR vs brak resolve w edytorze |
+| Empty state | ✓ Widoczny | ✗ Nie widoczny (jest produkt) | Zgodne (normalny stan) |
+| Error banner | ✓ Testowo wyświetlony | — | Nie testowany na froncie |
+| Style (kolory) | Domyślne | Domyślne | Zgodne |
+| Tytuł produktu w `<th>` | — | Statyczny tekst (bez linka) | ✗ BF-07 confirmed |
+
+**Główna różnica admin↔frontend:** Admin canvas zawsze pokazuje empty state ponieważ runtime resolver działa wyłącznie podczas SSR (renderowanie po stronie serwera). Nie jest to bug — to architektoniczne ograniczenie, ale poważny problem UX (UX-08): edytor jest ślepym narzędziem bez podglądu realnych danych.
+
+### 5.3 Wyniki accessibility — frontend
+
+| ID | Element | Stan | Wynik |
+|----|---------|------|-------|
+| A1 | `<table>` — `<caption>` | `hasCaption: false` | ✗ Brak |
+| A2 | `<th>` produktów — `scope="col"` | `thScopes: [null, null]` | ✗ Brak |
+| A3 | `<th>` "Attribute" — `scope="col"` | `thScopes: [null, null]` | ✗ Brak |
+| A4 | `<section>` — `aria-label` | `sectionAriaLabel: null` | ✗ Brak |
+| A7 | Error banner — `role="alert"` | `role: null` (DOM) | ✗ Brak |
+| A9 | Overflow container — `tabindex="0"` | `overflowTabindex: null` | ✗ Brak |
+
+### 5.4 Dodatkowe obserwacje
+
+- Jedynym błędem konsoli na froncie jest `404 /favicon.ico` — niezwiązany z widgetem
+- Tabela renderuje się poprawnie HTML-owo (`min-w-full text-sm`, `overflow-x-auto` wrapper)
+- Tytuł produktu w `<th>` to zwykły tekst — brak linku do strony produktu (BF-07 confirmed)
+- Na mobile (375px) tabela z 1 produktem nie wymaga scrollowania — ale z 3+ produktami overflow będzie niezbędny
 
 ---
 
@@ -329,7 +372,87 @@ Dostępne: `title`, `slug`, `status`, `pricing.amount`, `stock.state`, `createdA
 
 ---
 
-## 7. Statystyki (stan po analizie kodu)
+## 7. Szczegółowe obserwacje Playwright — kluczowe problemy
+
+### 7.1 Admin canvas zawsze puste — produkt widoczny tylko na froncie (UX-08 + architektura)
+
+**Obserwacja:** Admin canvas pokazuje permanentnie: "No products to compare". Frontend po opublikowaniu wyświetlił poprawną tabelę z produktem "Alpha Widget Pro".
+
+**Przyczyna:** Runtime resolver (`hydrateProductCompareRuntimeData`) uruchamia się wyłącznie podczas SSR w `publicSite.tsx`. Admin canvas renderuje komponent `ProductCompareBlock` bezpośrednio z danymi edytora — bez wywołania resolvers. Pole `resolved.rows` jest zawsze puste w edytorze.
+
+**Skutek dla użytkownika:** Nie ma możliwości podglądu jak widget wygląda z prawdziwymi produktami przed publikacją. Edytor jest "ślepym narzędziem".
+
+---
+
+### 7.2 Limit spinbutton max=48 zamiast max=12 (BF-15)
+
+**Obserwacja:**
+```
+Spinbutton min/max: {"min":"1","max":"48","value":"13"}
+Schema JSON: limit { type: "number", minimum: 1, maximum: 12 }
+```
+UI akceptuje limit=13 bez żadnego błędu lub ostrzeżenia. `normalizeCommerceWidgetSource` klampuje do 48. JSON schema validation odrzuciłaby 13, ale spinbutton pozwala wpisać tę wartość.
+
+---
+
+### 7.3 Labels: Quantity i Slug niedostępne w Visual Editorze (UX-01)
+
+**Obserwacja:** Sekcja Labels w Visual Editorze zawiera wyłącznie:
+- Price
+- Compare at
+- Stock
+
+Brakuje:
+- **Quantity** — etykieta dla wiersza ilości (toggle `showStockQuantity=true` włącza ten wiersz)
+- **Slug** — etykieta dla wiersza slugu (toggle `showSlug=true` włącza ten wiersz)
+
+Użytkownik może włączyć te wiersze ale nie może zmienić ich etykiet z edytora Visual.
+
+---
+
+### 7.4 Runtime error flag edytowalny (UX-03)
+
+**Obserwacja:** W Advanced Editorze, pole "Runtime error flag" jest aktywnym `<input>`. Wpisanie wartości powoduje natychmiastowe pojawienie się bannera błędu w canvas:
+```
+Commerce runtime warning: Test error: commerce resolver unavailable
+```
+Pole jest elementem UI, który nie powinien być edytowalny przez content managera — mógłby wprowadzać fałszywy komunikat o błędzie.
+
+---
+
+### 7.5 Tabela accessibility — 4 z 4 problemów potwierdzone
+
+Wynik JavaScript DOM audit na froncie:
+```json
+{
+  "hasCaption": false,
+  "thScopes": [null, null],
+  "sectionAriaLabel": null,
+  "overflowTabindex": null
+}
+```
+| Problem | Wynik testu |
+|---------|-------------|
+| A1: `<table>` bez `<caption>` | ✗ Potwierdzony |
+| A2+A3: `<th>` bez `scope="col"` | ✗ Potwierdzony (oba th: null) |
+| A4: `<section>` bez `aria-label` | ✗ Potwierdzony |
+| A9: Overflow bez `tabindex="0"` | ✗ Potwierdzony |
+
+---
+
+### 7.6 Tytuł produktu w `<th>` — nie jest linkiem (BF-07)
+
+**Obserwacja z HTML:**
+```html
+<th class="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text)]/75">
+  Alpha Widget Pro
+</th>
+```
+Tytuł to statyczny tekst, nie `<a href>`. Użytkownik nie może kliknąć na produkt w tabeli porównawczej.
+
+---
+
+## 8. Statystyki — finalne
 
 | Kategoria | Liczba |
 |-----------|--------|
@@ -340,17 +463,26 @@ Dostępne: `title`, `slug`, `status`, `pricing.amount`, `stock.state`, `createdA
 
 ---
 
-## 8. Screenshoty
+## 9. Screenshoty
 
 > Uwaga: nazwy plików PNG w tej sekcji są wyłącznie lokalnymi etykietami
 > przechwyceń Playwright. Same pliki PNG są ignorowane przez Git i nie są
 > wymaganym evidence w repo.
 
-> *Sekcja zostanie uzupełniona po testach Playwright*
-
 | Plik | Opis |
 |------|------|
-| (do uzupełnienia) | — |
+| `product-compare-01-page-created.png` | Nowo utworzona strona testowa |
+| `product-compare-02-wizard-editor.png` | Wizard editor z widgetem dodanym |
+| `product-compare-03-visual-editor.png` | Visual editor — toggles i labels |
+| `product-compare-04-toggles-test.png` | Stan po wyłączeniu compare-at i włączeniu slug |
+| `product-compare-05-advanced-editor.png` | Advanced editor — Runtime error flag wpisany |
+| `product-compare-06-empty-state.png` | Canvas po wyczyszczeniu błędu — empty state |
+| `product-compare-07-admin-published.png` | Admin po opublikowaniu strony |
+| `product-compare-08-frontend.png` | Frontend — tabela z "Alpha Widget Pro" |
+| `product-compare-09-admin-empty-vs-frontend.png` | Admin canvas vs frontend — różnica widoczności produktów |
+| `product-compare-10-frontend-mobile.png` | Frontend na mobile 375px |
+| `product-compare-11-visual-labels-missing.png` | Visual editor — brakujące labels Quantity i Slug |
+| `product-compare-12-advanced-editor-2.png` | Advanced editor — Resolved rows: 0, Query preview |
 
 ---
 

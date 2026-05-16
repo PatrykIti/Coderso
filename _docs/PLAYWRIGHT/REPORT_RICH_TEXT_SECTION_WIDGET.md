@@ -214,7 +214,7 @@ Rich Text Section to widget do prezentacji długich treści edytorskich (long-fo
 
 ## 4. Wyniki testów Playwright — Admin UI (localhost:5173)
 
-> *(Uzupełnione po testach Playwright)*
+> *(Do uzupełnienia po testach Playwright)*
 
 ### 4.1 Warianty
 
@@ -279,7 +279,7 @@ Rich Text Section to widget do prezentacji długich treści edytorskich (long-fo
 
 ## 5. Wyniki testów Playwright — Frontend (localhost:3000)
 
-> *(Uzupełnione po testach frontend)*
+> *(Do uzupełnienia po testach frontend)*
 
 ### 5.1 Tabela porównawcza Admin ↔ Frontend
 
@@ -296,7 +296,7 @@ Rich Text Section to widget do prezentacji długich treści edytorskich (long-fo
 
 ### 5.2 Obserwacje z testów frontend
 
-> *(Uzupełnione po testach)*
+> *(Do uzupełnienia po testach)*
 
 ---
 

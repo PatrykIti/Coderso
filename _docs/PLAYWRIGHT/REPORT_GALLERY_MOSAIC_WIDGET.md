@@ -1,11 +1,12 @@
 # RAPORT: Gallery Mosaic Widget — Analiza UX/UI i brakujące funkcjonalności
 
-> **Status:** W toku
+> **Status:** Zakończony
 > **Data:** 2026-05-16
 > **Sesja:** Playwright — Gallery Mosaic Widget
 > **Środowisko admin:** http://localhost:5173/admin
 > **Środowisko frontend:** http://localhost:3000
-> **Strona testowa:** TBD (dedykowana strona w sesji)
+> **Strona testowa:** GALLERY-MOSAIC-TEST-0516 (`/gallery-mosaic-test-0516`)
+> **Page ID:** `a097da80-3d15-4b0a-8413-fac910b876e3`
 
 ---
 
@@ -44,210 +45,317 @@ Gallery Mosaic to widget do tworzenia sekcji galerii mediów — zdjęć i film�
 |------|-----------|
 | **Wizard** | Wariant, tytuł sekcji, liczba elementów, media library picker |
 | **Visual** | Wariant + liczba, header copy, lista elementów (image/video/caption/href), overlay+caption, ratio/gap/radius |
-| **Advanced** | Zduplikowane tokeny stylu (ratio/gap/radius/captionPosition/overlay), normalizacja, JSON snapshot |
+| **Advanced** | Zduplikowane tokeny stylu (ratio/gap/radius/captionPosition/overlay), normalizacja, JSON snapshot, układ kontenera, widoczność |
 
 ---
 
-## 3. Problemy znalezione w kodzie (statyczna analiza)
+## 3. Błędy znalezione w kodzie (statyczna analiza + potwierdzone testami)
 
 ### 3.1 Błędy logiczne (Code Bugs)
 
 #### CODE-01 — `resolveGalleryMosaicRatio` pomija "4:3" w explicit check
 **Plik:** `core/widgets/core/galleryMosaic.tsx:159`
-**Opis:** Funkcja sprawdza `"1:1" || "16:9" || "3:4"` — wartość `"4:3"` wpada do `return "4:3"` przez `else`. Działa poprawnie, ale jest nieczytelne i łatwo skopane przy refaktorze. To samo dotyczy `resolveGalleryMosaicGap` (pomija "md") i `resolveGalleryMosaicRadius` (pomija "lg").
+**Status:** Potencjalny problem przy refaktorze
+**Opis:** Funkcja sprawdza `"1:1" || "16:9" || "3:4"` — wartość `"4:3"` wpada do `return "4:3"` przez `else`. Działa poprawnie, ale jest nieczytelne. To samo dotyczy `resolveGalleryMosaicGap` (pomija "md", linia 164) i `resolveGalleryMosaicRadius` (pomija "lg", linia 169).
 
-#### CODE-02 — Podwójny `lg:row-span-2` w wariancie `mosaic`
+#### CODE-02 — Podwójny `lg:row-span-2` w wariancie `mosaic` ✓ POTWIERDZONE
 **Plik:** `core/widgets/core/galleryMosaic.tsx:493–507`
-**Opis:** W wariancie `mosaic`, wrapper `<div>` dla elementu 0 otrzymuje `lg:col-span-2 lg:row-span-2`. Ten sam element przekazuje `featured` prop do `GalleryCard`, który wewnętrznie dodaje kolejne `lg:row-span-2` do `<div>` karty. Zagnieżdżone `row-span-2` wewnątrz `row-span-2` — klasa na karcie jest nadmiarowa i może powodować nieprzewidywalne zachowanie w niektórych konfiguracjach grid.
+**Status:** Nadmiarowa klasa CSS
+**Opis:** W wariancie `mosaic`, wrapper `<div>` elementu 0 ma `lg:col-span-2 lg:row-span-2`. Ten sam element otrzymuje `featured` prop, który dodaje kolejne `lg:row-span-2` bezpośrednio do `<div>` karty. Potwierdzone przez eval DOM: `item1.parentElement.parentElement.className = "lg:col-span-2 lg:row-span-2"` + `item1.className zawiera "lg:row-span-2"`. Klasa na karcie jest redundantna.
 
 #### CODE-03 — `featured` prop w `feature-left` — `row-span-2` na elemencie w jednej kolumnie
 **Plik:** `core/widgets/core/galleryMosaic.tsx:434–441`
-**Opis:** W wariancie `feature-left` lead card dostaje `featured` prop, co dodaje `lg:row-span-2`. Jednak lead jest w kolumnie `lg:col-span-2` bez elementów w tej samej kolumnie poniżej — `row-span-2` nie robi nic użytecznego. Proporcje wyglądają prawidłowo dzięki ratio, ale klasa jest zbędna i myląca.
+**Status:** Zbędna klasa CSS
+**Opis:** Lead card w `feature-left` dostaje `featured` → `lg:row-span-2`, ale jest w jednej kolumnie — klasa nie ma efektu. Proporcje działają dzięki ratio, ale jest myląca.
 
-#### CODE-04 — Brak walidacji minimalnej liczby elementów w `feature-left`
+#### CODE-04 — Pusta prawa kolumna w `feature-left` z 1 elementem ✓ POTWIERDZONE
 **Plik:** `core/widgets/core/galleryMosaic.tsx:406–407`
-**Opis:** W wariancie `feature-left` kod robi `const [lead, ...rest] = items`. Przy jednym elemencie (`rest = []`) prawa kolumna renderuje pusty `<div class="flex flex-col gap-...">`. Wizualnie pojawia się duże puste pole po prawej stronie.
+**Status:** Bug wizualny
+**Opis:** W wariancie `feature-left` kod wykonuje `const [lead, ...rest] = items`. Przy 1 elemencie `rest = []` → prawa kolumna renderuje pusty `<div class="flex flex-col gap-4"></div>`. Potwierdzone Playwright: `innerHTML` zawiera `<div class="flex flex-col gap-4"></div>` bez zawartości.
 
-#### CODE-05 — Overlay: picker koloru vs rgba — utrata przezroczystości
+#### CODE-05 — Overlay: picker koloru vs rgba — utrata przezroczystości ✓ POTWIERDZONE
 **Plik:** `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx:92–98, 178`
-**Opis:** `resolvePickerColor` zwraca `pickerFallback` (`"#0f172a"`) dla wartości rgba, bo nie pasuje do `hexColorPattern`. Picker `<input type="color">` nie obsługuje kanału alpha. Zmiana koloru overlaya przez picker trwale usuwa przezroczystość (`rgba(...)` → `#xxxxxx`). Brak osobnego suwaka opacity.
+**Status:** Bug edytora
+**Opis:** `resolvePickerColor` zwraca fallback `"#0f172a"` gdy wartość to `rgba(...)` (nie pasuje do `hexColorPattern`). Picker `<input type="color">` nie obsługuje kanału alpha. Zmiana koloru przez picker usuwa przezroczystość. Potwierdzone: wartość `rgba(0, 100, 200, 0.6)` → picker nadal pokazuje `#0f172a`. Brak suwaka opacity.
 
-#### CODE-06 — Oba pola (Image URL + Video URL) widoczne jednocześnie
+#### CODE-06 — Oba pola (Image URL + Video URL) widoczne jednocześnie ✓ POTWIERDZONE
 **Plik:** `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx:559–598`
-**Opis:** W Visual editor każdy element ma widoczne jednocześnie pola "Image URL" i "Video URL". Logika renderera traktuje video jako priorytet nad image. Użytkownik może przypadkowo ustawić oba i nie rozumieć, że video wygrywa. Brak wskaźnika "aktywny typ medium".
+**Status:** UX problem edytora
+**Opis:** Visual editor pokazuje jednocześnie pola "Image URL" i "Video URL" dla każdego elementu. Renderer traktuje video jako priorytet. Potwierdzone: dodanie video URL przy istniejącym image URL → element przełącza się na `data-gallery-media-type="video"`. Użytkownik nie dostaje wskaźnika który typ jest aktywny.
 
-#### CODE-07 — `caption` jako alt text obrazu — duplikacja semantyczna
+#### CODE-07 — `caption` jako alt text obrazu — duplikacja semantyczna ✓ POTWIERDZONE
 **Plik:** `core/widgets/core/galleryMosaic.tsx:347`
-**Opis:** `<img alt={item.caption ?? \`Gallery item ${index + 1}\`}>` — caption (widoczny tekst) jest jednocześnie alt tekstem. Caption jest skróconym opisem wizualnym, alt text powinien opisywać obraz dla czytników ekranowych. Brak osobnego pola `alt` w modelu danych i edytorze.
+**Status:** Błąd dostępności
+**Opis:** `<img alt={item.caption ?? \`Gallery item ${index + 1}\`}>` — visible caption jest jednocześnie alt tekstem. Caption i alt text mają różną semantykę. Brak osobnego pola `alt` w modelu danych i edytorze.
 
-#### CODE-08 — Wizard MediaPicker akceptuje tylko `image/*`
+#### CODE-08 — Wizard MediaPicker akceptuje tylko `image/*` ✓ POTWIERDZONE
 **Plik:** `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx:448`
-**Opis:** `accept={["image/*"]}` w Wizard MediaPicker wyklucza wybór filmów z biblioteki. Użytkownik musi wejść do Visual editor i ręcznie wpisać URL wideo. Niekonsekwentne — model danych wspiera wideo, wizard nie.
-
-### 3.2 Problemy UX edytora (kod)
-
-#### UX-01 — Duplikacja kontrolek w Visual + Advanced
-**Opis:** Sekcje "Technical ratio and layout tokens" w Advanced zawierają identyczne kontrolki (Ratio, Gap, Radius, Caption position, Overlay) jak sekcja "Layout style" w Visual. Zmiana w jednym miejscu wpływa na oba, ale oba wyglądają niezależnie. Użytkownik może być dezorientowany.
-
-#### UX-02 — Brak podglądu miniatury przy edycji elementów
-**Opis:** Lista elementów w Visual editor pokazuje tylko pola tekstowe (URL, caption, href). Brak podglądu thumbnailem jakie zdjęcie jest aktualnie przypisane do slotu. Przy 10+ elementach bardzo trudno zidentyfikować, który element to który.
-
-#### UX-03 — "Move up" / "Move down" — brak drag-and-drop
-**Opis:** Reorder elementów odbywa się przyciskami "Move up" / "Move down". Przy 16 elementach przestawienie ostatniego na pierwszą pozycję wymaga 15 kliknięć. Brak drag-and-drop.
-
-#### UX-04 — "Add item" jako jedyna droga dodania elementu w Visual
-**Opis:** W Visual jest przycisk "Add item" na dole. "Items count" select też działa (zmiana liczby). Dwie drogi zarządzania liczbą elementów mogą dezorientować — select nie usuwa danych elementów, "Remove" tak.
-
-#### UX-05 — Brak wpisu MediaPicker dla elementów w Visual editor
-**Opis:** Visual editor pozwala wpisać Image URL ręcznie. Nie ma przycisku "Wybierz z biblioteki" (media picker) przy poszczególnych elementach. Trzeba znać publiczny URL obrazu — nieergonomiczne dla zwykłego użytkownika CMS.
-
-#### UX-06 — Brak informacji o typie medium w nagłówku elementu
-**Opis:** Nagłówek każdego elementu to "Item 1", "Item 2" itd. Brak badge/ikony wskazującej czy to obraz czy wideo. Przy wypełnionej galerii niemożliwe odróżnienie typów bez scrollowania.
+**Status:** Niekompletna funkcjonalność
+**Opis:** Wizard MediaPicker ma `accept={["image/*"]}` i wyświetla "Allowed: image/*". Model danych obsługuje wideo (`video` pole), ale Wizard nie umożliwia ich wyboru z biblioteki. Potwierdzone Playwright: dialog pokazuje `Allowed: image/*`.
 
 ---
 
 ## 4. Wyniki testów Playwright — Admin UI
 
-> *(Sekcja zostanie uzupełniona po testach)*
-
 ### 4.1 Warianty
 
-| Test | Wynik |
-|------|-------|
-| Przełączanie mosaic / uniform-grid / feature-left | — |
-| Badge "Selected" na aktywnym wariancie | — |
-| Podgląd canvas aktualizuje się po zmianie wariantu | — |
+| Test | Wynik | Uwagi |
+|------|-------|-------|
+| Przełączanie mosaic / uniform-grid / feature-left | ✓ Działa | Canvas aktualizuje się natychmiast |
+| Badge "Selected" na aktywnym wariancie | ✓ Działa | Poprawnie pokazuje "Selected" / "Pick" |
+| Canvas aktualizuje się po zmianie wariantu | ✓ Działa | `data-gallery-mosaic-variant` w DOM aktualizuje się |
+| Feature-left z 1 elementem — pusta prawa kolumna | ✗ Bug | `<div class="flex flex-col gap-4"></div>` bez zawartości |
 
-### 4.2 Wizard
+### 4.2 Wizard editor
 
-| Test | Wynik |
-|------|-------|
-| Wybór wariantu przez Select | — |
-| Pole Section title | — |
-| Select Initial media count | — |
-| MediaPicker multi-select | — |
-| Przejście do Visual po Continue | — |
+| Test | Wynik | Uwagi |
+|------|-------|-------|
+| Wybór wariantu przez Select (Mosaic/Uniform Grid/Feature Left) | ✓ Działa | Variant aktualizuje się natychmiast |
+| Pole Section title | ✓ Działa | Placeholder "Gallery highlights" |
+| Select Initial media count (1–16) | ✓ Działa | Wszystkie 16 opcji dostępne |
+| MediaPicker — Browse media button | ✗ Bug | Dialog pokazuje "Not authenticated" — 401 /api/media |
+| "Allowed: image/*" — tylko obrazy | ✓ Potwierdzone | Brak obsługi wideo w Wizard |
+| Continue to layout and styling | ✓ Działa | Przechodzi do Visual tab |
 
 ### 4.3 Visual editor
 
-| Test | Wynik |
-|------|-------|
-| Variant cards — zmiana wariantu | — |
-| Items count select — zmiana liczby elementów | — |
-| Header title/description edit | — |
-| Image URL input per item | — |
-| Video URL input per item | — |
-| Caption input per item | — |
-| Link URL input per item | — |
-| Move up / Move down buttons | — |
-| Remove item (disabled przy 1 elemencie) | — |
-| Add item button (disabled przy max) | — |
-| Caption position select | — |
-| Overlay color — picker | — |
-| Overlay color — clear | — |
-| Ratio select | — |
-| Gap select | — |
-| Radius select | — |
+| Test | Wynik | Uwagi |
+|------|-------|-------|
+| Variant cards — zmiana wariantu | ✓ Działa | Wszystkie 3 warianty |
+| Items count select — zmiana liczby elementów | ✓ Działa | 1–16 elementów |
+| Header title edit | ✓ Działa | Live update w canvas |
+| Header description edit | ✓ Działa | Live update w canvas |
+| Image URL input per item | ✓ Działa | Live update w canvas |
+| Video URL input per item | ✓ Działa | Priorytet nad image URL |
+| Oba URL widoczne jednocześnie (CODE-06) | ✓ Potwierdzone | Brak wskaźnika aktywnego typu |
+| Caption input per item | ✓ Działa | |
+| Link URL input per item | ✓ Działa | |
+| Move up (disabled dla item 1) | ✓ Działa | Poprawnie disabled |
+| Move down (disabled dla ostatniego) | ✓ Działa | Poprawnie disabled |
+| Remove item (disabled gdy 1 element) | ✓ Działa | |
+| Add item (disabled przy max 16) | ✓ Działa | |
+| Caption position: Inside tile | ✓ Działa | Overlay na kafelku |
+| Caption position: Below tile | ✓ Działa | `<p class="mt-2 text-xs...">` pod kafelkiem |
+| Caption position: On hover | ✓ Działa | `opacity-0 group-hover:opacity-100` |
+| Overlay color — text input (rgba) | ✓ Działa | Aktualizuje canvas w czasie rzeczywistym |
+| Overlay color — color picker (hex) | ✗ Bug | Pokazuje stały fallback `#0f172a` zamiast aktualnego koloru |
+| Overlay color — Clear button | ✓ Działa | Kasuje overlay, przycisk staje się disabled |
+| Ratio: 1:1 / 4:3 / 16:9 / 3:4 | ✓ Działa | Wszystkie 4 opcje, canvas aktualizuje się |
+| Gap: None / Compact / Default / Spacious | ✓ Działa | |
+| Radius: None / Medium / Large / Extra large | ✓ Działa | |
+| Brak MediaPicker przy elementach | ✓ Potwierdzone | Tylko ręczny URL input |
+| Linki bez rel="noopener noreferrer" | ✗ Bug | `rel=""` i `target=""` w DOM |
 
 ### 4.4 Advanced editor
 
-| Test | Wynik |
-|------|-------|
-| Duplicate controls działają | — |
-| Normalize now button | — |
-| Reset to defaults button | — |
-| Raw payload snapshot | — |
+| Test | Wynik | Uwagi |
+|------|-------|-------|
+| Kontrolki zduplikowane z Visual (Ratio/Gap/Radius/Caption/Overlay) | ✓ Potwierdzone | UX-01 potwierdzony |
+| Normalize now button | ✓ Działa | Normalizuje dane |
+| Reset to defaults button | ✓ Działa | Przywraca 5 domyślnych elementów z obrazkami |
+| Raw payload snapshot | ✓ Działa | Aktualny JSON z danymi widgetu |
+| Dodatkowa sekcja Layout (Container/Padding/Margin) | ✓ Dostępna | Nie jest w Visual editor |
+| Visibility toggles (Desktop/Tablet/Mobile) | ✓ Działa | |
 
-### 4.5 Canvas — podgląd wariantów
+### 4.5 Zapis strony
 
-| Test | Wynik |
-|------|-------|
-| Mosaic — lead tile 2×2 | — |
-| Mosaic — pozostałe kafelki w siatce | — |
-| Uniform-grid — 3 kolumny | — |
-| Feature-left — 2-kol. lead + prawa kolumna | — |
-| Feature-left z 1 elementem — puste pole | — |
-| Hover caption effect | — |
-| Below caption — widoczny pod kafelkiem | — |
-| Inside caption — overlay na kafelku | — |
-| Gap none / sm / md / lg | — |
-| Radius none → xl | — |
-| Ratio 1:1 / 4:3 / 16:9 / 3:4 | — |
+| Test | Wynik | Uwagi |
+|------|-------|-------|
+| Publish button | ✗ Bug | "Page error: Not authenticated" (HTTP 401) |
+| Save Draft button | ✗ Bug | HTTP 401 na `/api/pages/{id}` |
 
 ---
 
-## 5. Wyniki testów Playwright — Frontend (localhost:3000)
+## 5. Wyniki testów Frontend (localhost:3000)
 
-> *(Sekcja zostanie uzupełniona po testach)*
+**STATUS: Nieterminalny — Brak możliwości przetestowania**
 
-| Test | Admin | Frontend | Zgodność |
-|------|-------|----------|----------|
-| Renderowanie mosaic | — | — | — |
-| Renderowanie uniform-grid | — | — | — |
-| Renderowanie feature-left | — | — | — |
-| Hover caption | — | — | — |
-| Video autoplay | — | — | — |
-| Linki href | — | — | — |
+Strona testowa `GALLERY-MOSAIC-TEST-0516` nie mogła zostać zapisana z powodu błędów autoryzacji HTTP 401 na endpointach API (`/api/pages/{id}` i `/api/pages/{id}/publish`). To jest znany, systemowy problem z sesją API — identyczny jak opisany w raporcie Hero Widget (BUG-03).
+
+**Efekt:** Strona nie istnieje na frontendzie (`/gallery-mosaic-test-0516` → 404). Żadna z istniejących opublikowanych stron frontendowych nie zawiera widgetu Gallery Mosaic.
+
+**Przypuszczalna przyczyna:** Sesja użytkownika w przeglądarce admin (cookie JWT lub session token) nie jest przekazywana poprawnie do API przy operacjach zapisu — może problem z CSRF, expired token, lub SameSite cookie policy w kontekście dev.
+
+| Test | Admin preview | Frontend | Zgodność |
+|------|--------------|----------|----------|
+| Renderowanie mosaic | ✓ Działa | ✗ Nie testowane | — |
+| Renderowanie uniform-grid | ✓ Działa | ✗ Nie testowane | — |
+| Renderowanie feature-left | ✓ Działa | ✗ Nie testowane | — |
+| Hover caption | ✓ CSS działa | ✗ Nie testowane | — |
+| Video autoplay/loop | ✓ Widoczne w canvas | ✗ Nie testowane | — |
+| Linki href | ✓ Działają | ✗ Nie testowane | — |
+| Responsywność | ✓ Breakpointy w CSS | ✗ Nie testowane | — |
 
 ---
 
-## 6. Braki funkcjonalne
+## 6. Znalezione błędy i problemy UX
 
-### 6.1 Zidentyfikowane z analizy kodu
+### 6.1 Błędy funkcjonalne (Bugs)
+
+#### BUG-01 — MediaPicker "Not authenticated" w Wizard
+**Priorytet:** Wysoki
+**Opis:** Kliknięcie "Browse media" w Wizard editor otwiera dialog biblioteki mediów, ale wyświetla "Not authenticated" zamiast listy plików. API `/api/media` zwraca HTTP 401.
+**Lokalizacja:** Wizard → Media library → Browse media
+
+#### BUG-02 — Publish/Save Draft — "Not authenticated" (HTTP 401)
+**Priorytet:** Wysoki
+**Opis:** Próba opublikowania lub zapisania strony z widgetem Gallery Mosaic kończy się błędem "Page error: Not authenticated". API zwraca 401 na endpointach zapisu.
+**Lokalizacja:** Toolbar → Publish / Save draft
+**Uwaga:** Ten sam problem systemowy jak w Hero Widget BUG-03.
+
+#### BUG-03 — Overlay color picker nie synchronizuje się z rgba
+**Priorytet:** Wysoki
+**Opis:** Picker `<input type="color">` wyświetla stały fallback `#0f172a` zamiast aktualnego koloru. Gdy wartość overlaya jest w formacie `rgba(...)`, picker nie jest w stanie jej wyświetlić (tylko hex). Zmiana koloru przez picker usuwa przezroczystość (alpha).
+**Lokalizacja:** Visual editor → Overlay and caption controls → Overlay color (picker)
+
+#### BUG-04 — Pusta prawa kolumna w feature-left z 1 elementem
+**Priorytet:** Wysoki
+**Opis:** Ustawienie Items count = 1 w wariancie feature-left generuje pustą prawą kolumnę z czystym `<div class="flex flex-col gap-4"></div>`. Wizualnie — duże puste pole po prawej stronie.
+**Lokalizacja:** Visual editor → Feature Left variant → Items count = 1
+
+#### BUG-05 — Linki bez `rel="noopener noreferrer"`
+**Priorytet:** Wysoki
+**Opis:** Elementy galerii z wypełnionym polem href generują `<a href="...">` bez atrybutu `rel`. Dla zewnętrznych URL to luka bezpieczeństwa (reverse tabnapping).
+**Plik:** `core/widgets/core/galleryMosaic.tsx:373–379`
+**Potwierdzone:** DOM eval → `{rel: "", target: ""}` dla wszystkich linków.
+
+---
+
+### 6.2 Problemy UX edytora
+
+#### UX-01 — Duplikacja kontrolek Visual i Advanced ✓ POTWIERDZONE
+**Opis:** Sekcja "Technical ratio and layout tokens" w Advanced duplikuje Ratio, Gap, Radius, Caption position, Overlay z Visual editor "Layout style". Kontrolki są zsynchronizowane (ta sama wartość), ale ich obecność w obu miejscach dezorientuje użytkownika.
+
+#### UX-02 — Brak podglądu miniatury przy edycji elementów
+**Opis:** Lista elementów w Visual editor pokazuje tylko pola tekstowe. Brak thumbnail preview przy każdym elemencie. Przy 10–16 elementach niemożliwe wizualne zidentyfikowanie który element to który bez scrollowania do canvas.
+
+#### UX-03 — "Move up" / "Move down" zamiast drag-and-drop
+**Opis:** Przestawianie kolejności elementów przez przyciski. Przy 16 elementach zmiana ostatniego na pierwsze = 15 kliknięć. Brak drag-and-drop.
+
+#### UX-04 — Dwa równoległe mechanizmy zmiany liczby elementów
+**Opis:** "Items count" select (automatyczna normalizacja) i "Add item" + "Remove" (manualne zarządzanie). "Items count" nie usuwa danych — podnosi lub dodaje placeholder. "Remove" usuwa konkretny element z danymi. Różnica niewidoczna dla użytkownika.
+
+#### UX-05 — Brak MediaPicker przy poszczególnych elementach w Visual ✓ POTWIERDZONE
+**Opis:** Visual editor wymaga ręcznego wpisania URL zdjęcia/wideo. Brak przycisku "Wybierz z biblioteki" per element. Używalny tylko przez osoby znające publiczne URL plików.
+
+#### UX-06 — Brak wskaźnika aktywnego typu medium per element ✓ POTWIERDZONE
+**Opis:** Nagłówek elementu to "Item 1", "Item 2" itd. bez badge/ikony wskazującej czy to obraz, wideo, czy placeholder. Oba pola URL widoczne jednocześnie — użytkownik nie wie który typ "wygrywa".
+
+#### UX-07 — Wizard Allowed: image/* — wykluczenie wideo bez wyjaśnienia
+**Opis:** MediaPicker w Wizard przyjmuje tylko obrazy, ale model danych i Visual editor obsługują wideo. Użytkownik, który chce dodać wideo przez Wizard, nie ma takiej możliwości — musi przejść do Visual i ręcznie wpisać URL.
+
+---
+
+## 7. Braki funkcjonalne
 
 | ID | Opis | Priorytet |
 |----|------|-----------|
-| BF-01 | Brak `alt` jako osobnego pola (caption ≠ alt text) | Wysoki |
+| BF-01 | Brak pola `alt` jako osobnego tekstu (caption ≠ alt text) | Wysoki |
 | BF-02 | Brak MediaPicker dla poszczególnych elementów w Visual editor | Wysoki |
 | BF-03 | Wizard MediaPicker nie obsługuje wideo | Wysoki |
-| BF-04 | Brak suwaka opacity dla overlaya (picker usuwa alpha) | Wysoki |
-| BF-05 | Brak drag-and-drop reorder elementów | Średni |
-| BF-06 | Brak podglądu miniaturki przy elemencie w edytorze | Średni |
-| BF-07 | Brak toggle "tylko obraz" / "tylko wideo" per element | Średni |
-| BF-08 | Brak walidacji przy 1 elemencie w feature-left | Średni |
-| BF-09 | Brak opcji lightbox / zoom na kliknięcie | Średni |
-| BF-10 | Brak kontroli `object-position` (focus point zdjęcia) | Średni |
-| BF-11 | Brak per-item ratio (wszystkie kafelki mają ten sam ratio) | Niski |
-| BF-12 | Brak lazy loading / IntersectionObserver kontroli | Niski |
-| BF-13 | Brak animacji wejścia (fade, slide) | Niski |
-| BF-14 | Brak video poster image field | Niski |
-| BF-15 | Brak paginacji / infinite scroll przy 16 elementach | Niski |
-| BF-16 | Brak breakpoint per-column (np. 2-kol mobile, 4-kol desktop) | Średni |
+| BF-04 | Brak suwaka opacity dla overlaya | Wysoki |
+| BF-05 | Brak `rel="noopener noreferrer"` na linkach | Wysoki |
+| BF-06 | Brak drag-and-drop reorder elementów | Średni |
+| BF-07 | Brak thumbnail preview przy elementach w edytorze | Średni |
+| BF-08 | Brak per-item media type toggle (obraz vs wideo) | Średni |
+| BF-09 | Brak walidacji / warning gdy feature-left ma tylko 1 element | Średni |
+| BF-10 | Brak opcji lightbox / zoom na kliknięcie | Średni |
+| BF-11 | Brak kontroli `object-position` (punkt skupienia zdjęcia) | Średni |
+| BF-12 | Brak per-item ratio (wszystkie kafelki mają jeden ratio) | Niski |
+| BF-13 | Brak video poster image field (czarny ekran przy ładowaniu) | Niski |
+| BF-14 | Brak animacji wejścia kafelków (fade, slide) | Niski |
+| BF-15 | Brak breakpoint per-column (np. 2 kol. mobile, 4 kol. desktop) | Średni |
+| BF-16 | Brak eksportu/importu konfiguracji galerii | Niski |
 
 ---
 
-## 7. Problemy dostępności (Accessibility)
+## 8. Problemy dostępności (Accessibility)
 
-| # | Problem | Standard | Priorytet |
-|---|---------|----------|-----------|
-| A1 | `caption` jako alt text — duplikacja, brak semantycznej separacji | WCAG 1.1.1 | Wysoki |
-| A2 | Brak `rel="noopener noreferrer"` na linkach href w elementach | Bezpieczeństwo | Wysoki |
-| A3 | Brak atrybutu `title` na wideo (w HTML `<video>`) | WCAG 1.2 | Średni |
-| A4 | Hover-caption niedostępny klawiaturowo / dotykowo | WCAG 2.1 SC 1.4.13 | Wysoki |
-| A5 | `<video>` autoplay bez opcji wyłączenia przez użytkownika | WCAG 2.2 SC 2.2.2 | Wysoki |
-| A6 | Brak `<figure>` + `<figcaption>` dla semantyki galerii | HTML5 semantics | Średni |
-| A7 | `loading="lazy"` brak na `<img>` (jest w kodzie ✓) — OK | — | — |
+| # | Problem | Standard | Priorytet | Status |
+|---|---------|----------|-----------|--------|
+| A1 | `caption` jako alt text — duplikacja semantyczna | WCAG 1.1.1 | Wysoki | ✓ Potwierdzone (CODE-07) |
+| A2 | Brak `rel="noopener noreferrer"` na linkach href | Bezpieczeństwo | Wysoki | ✓ Potwierdzone (BUG-05) |
+| A3 | Hover caption niedostępny klawiaturowo / na dotyk | WCAG 2.1 SC 1.4.13 | Wysoki | ✓ Potwierdzone (CSS hover only) |
+| A4 | `<video>` z `autoPlay` bez opcji wyłączenia | WCAG 2.2 SC 2.2.2 | Wysoki | Zidentyfikowane w kodzie |
+| A5 | Brak `<figure>` + `<figcaption>` (semantyka galerii) | HTML5 | Średni | Zidentyfikowane w kodzie |
+| A6 | Brak atrybutu `title` na elementach wideo | WCAG 1.2 | Średni | Zidentyfikowane w kodzie |
 
 ---
 
-## 8. Podsumowanie wstępne (do uzupełnienia po testach)
+## 9. Podsumowanie — macierz priorytetów
+
+### Błędy do naprawy natychmiast
+
+| ID | Opis | Obszar |
+|----|------|--------|
+| BUG-01 | MediaPicker "Not authenticated" | Wizard / API |
+| BUG-02 | Publish/Save: "Not authenticated" (HTTP 401) | API / session |
+| BUG-03 | Overlay picker nie synchronizuje rgba | Visual editor |
+| BUG-04 | Feature-left z 1 elementem — pusta prawa kolumna | Renderer |
+| BUG-05 | Linki bez `rel="noopener noreferrer"` | Renderer / Bezpieczeństwo |
+
+### Pilne ulepszenia UX
+
+| ID | Opis |
+|----|------|
+| UX-05 | Dodać MediaPicker per element w Visual editor |
+| UX-06 | Dodać wskaźnik aktywnego typu medium (obraz/wideo/placeholder) |
+| UX-02 | Dodać thumbnail preview przy elementach |
+| UX-07 | Obsłużyć wideo w Wizard MediaPicker lub dodać informację |
+| UX-03 | Dodać drag-and-drop reorder |
+
+### Brakujące funkcjonalności
+
+| ID | Priorytet | Opis |
+|----|-----------|------|
+| BF-01 | Wysoki | Osobne pole `alt` text dla obrazów |
+| BF-04 | Wysoki | Suwak opacity dla overlaya |
+| BF-09 | Średni | Warning przy feature-left + 1 element |
+| BF-10 | Średni | Lightbox / zoom na kliknięcie |
+| BF-11 | Średni | Object-position (focus point) |
+| BF-15 | Średni | Konfiguracja breakpoint kolumn |
+| BF-13 | Niski | Video poster image |
+
+---
+
+## 10. Statystyki
 
 | Kategoria | Liczba |
 |-----------|--------|
+| Błędy funkcjonalne (Bugs) | 5 |
+| Problemy UX edytora | 7 |
 | Błędy w kodzie (Code Bugs) | 8 |
-| Problemy UX edytora | 6 |
 | Braki funkcjonalne | 16 |
-| Problemy dostępności | 5 |
-| **Łącznie (wstępnie)** | **35** |
+| Problemy dostępności | 6 |
+| **Łącznie** | **42** |
 
 ---
 
-## 9. Screenshoty
+## 11. Screenshoty
 
-> Uwaga: nazwy plików PNG w tej sekcji są wyłącznie lokalnymi etykietami przechwyceń Playwright. Same pliki PNG są ignorowane przez Git i nie są wymaganym evidence w repo.
+> Uwaga: nazwy plików PNG w tej sekcji są wyłącznie lokalnymi etykietami
+> przechwyceń Playwright. Same pliki PNG są ignorowane przez Git i nie są
+> wymaganym evidence w repo.
 
-> *(Do uzupełnienia po testach Playwright)*
+| Plik | Opis |
+|------|------|
+| `gallery-mosaic-21-video-priority.png` | Video priority over image — Item 1 przełącza się na typ video |
+| `gallery-mosaic-22-current-state.png` | Widok Visual editor z uniform-grid wariantem |
+| `gallery-mosaic-23-hover-caption-test.png` | Test hover caption — mysz nad elementem 2 |
+| `gallery-mosaic-24-mosaic-variant-full.png` | Mosaic wariant w canvas z 5 elementami |
+
+> **Uwaga:** Pliki `gallery-mosaic-01` do `gallery-mosaic-20` nie zostały zapisane do docelowego katalogu z powodu braku katalogu `screenshots/` w trakcie pierwszych sesji. Zapis był poprawny dla ostatnich 4 screenshotów.
 
 ---
 
-*Raport w toku — 2026-05-16. Sekcje 4–5 i 9 zostaną uzupełnione po testach Playwright.*
+## 12. Uwagi techniczne
+
+### Znany błąd systemowy — HTTP 401 przy zapisie
+Ten sam problem z autoryzacją API pojawia się konsekwentnie we wszystkich testach widgetów (Hero, Gallery Mosaic). Sesja przeglądarki działa (logowanie OK), ale API calls do zapisu stron zwracają HTTP 401. Prawdopodobna przyczyna: token sesji nie jest dołączany do żądań POST/PUT w środowisku dev (problem z CSRF token, cookie SameSite policy lub wygaśnięcie session w trybie dev).
+
+### Frontend nie testowany
+Brak możliwości przetestowania widgetu na frontendzie — strona testowa nie mogła zostać zapisana/opublikowana z powodu błędu 401. Zachowanie frontendu (responsywność, hover, video autoplay) można ocenić tylko pośrednio przez canvas w admin preview.
+
+---
+
+*Raport zakończony — 2026-05-16. Testy przeprowadzone w sesji Playwright `gallery-mosaic`.*

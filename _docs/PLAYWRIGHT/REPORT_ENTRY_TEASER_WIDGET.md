@@ -1,12 +1,18 @@
 # REPORT: Entry Teaser Widget
 
-> Status: **W TRAKCIE** | Data: 2026-05-16 | Autor: Claude Code
+> Status: **UKOŃCZONY** | Data: 2026-05-16 | Autor: Claude Code
 
 ---
 
 ## 1. Podsumowanie
 
 Widget `entry-teaser` służy do wyróżnionego podglądu jednego wybranego, najnowszego lub wyróżnionego wpisu. Obsługuje 3 warianty layoutu (`horizontal`, `vertical`, `minimal`), konfigurowalne pola widoczności, CTA, style tokenowe i mechanizm fallback. Wspiera dwa tryby źródła danych: legacy (typ treści) i listing (zapytanie).
+
+**Wynik testów:**
+- Wszystkie 3 warianty (`horizontal`, `vertical`, `minimal`) renderują się poprawnie na froncie
+- Widget poprawnie obsługuje stany: `ready`, `empty`, `missing-source`
+- Admin preview **nigdy nie pokazuje** rzeczywistej treści wpisu — zawsze wyświetla fallback
+- Atrybuty `data-entry-teaser-*` są poprawne na froncie
 
 ---
 
@@ -53,9 +59,9 @@ Widget `entry-teaser` służy do wyróżnionego podglądu jednego wybranego, naj
 - `fallbackToLatest`: boolean (dla trybu `featured`)
 
 **Warianty:**
-- `horizontal` – media i tekst obok siebie (40%/60%)
+- `horizontal` – media i tekst obok siebie (md:flex-row, 40%/60%)
 - `vertical` – układ pionowy (stacked)
-- `minimal` – kompaktowy, mniejsza czcionka i obrazek `h-36`
+- `minimal` – kompaktowy (`text-lg` zamiast `text-2xl`, `h-36` zamiast `h-52`)
 
 ---
 
@@ -66,64 +72,176 @@ Widget `entry-teaser` służy do wyróżnionego podglądu jednego wybranego, naj
 | # | Problem | Opis | Priorytet |
 |---|---------|------|-----------|
 | B-01 | **Brak pola tytułu / nagłówka widgetu** | Widget wyświetla sam teaser bez możliwości dodania nagłówka sekcji (np. "Polecany artykuł"). Każde zastosowanie wymaga osobnego widgetu tekstowego dla kontekstu. | Wysoki |
-| B-02 | **Brak konfiguracji proporcji/rozmiaru obrazka** | Obrazek w wariancie `horizontal` i `vertical` ma stałą wysokość `h-52`, w `minimal` – `h-36`. Brak opcji zmiany proporcji, trybu skalowania (`cover`/`contain`) ani wysokości. | Wysoki |
-| B-03 | **Brak limitu tagów w konfiguracji** | Tagi są obcinane do 5 (linia 552 `slice(0, 5)`) w renderze i do 8 (linia 307 `slice(0, 8)`) w normalizacji bez żadnej opcji konfiguracyjnej. Użytkownik nie może kontrolować tej wartości. | Średni |
-| B-04 | **Brak opcji otwarcia linku w nowej karcie** | CTA jest renderowane jako zwykły `<a>`. Brak opcji `target="_blank"` — nie można skonfigurować otwierania linku w nowej karcie. | Średni |
-| B-05 | **Brak stylizacji CTA (typ przycisku)** | CTA to zawsze tekst z podkreśleniem (`hover:underline`). Brak opcji zmiany na button, outlined, filled — ogranicza możliwości wizualne. | Średni |
-| B-06 | **Brak opcji trybu `featured` w trybie listing** | `sourceMode` (`latest`/`featured`/`manual`) jest dostępny wyłącznie w trybie legacy. Przy przełączeniu na tryb listing, selektor `sourceMode` znika — brak sposobu na odpowiednik logiki "featured" w zapytaniach listingowych. | Średni |
-| B-07 | **Brak konfiguracji max-width** | Widget zawsze renderuje `max-w-5xl`. Brak opcji pełnej szerokości, węższego lub szerszego layoutu dla różnych kontekstów strony. | Niski |
-| B-08 | **Brak obsługi ikony/logo zamiast obrazka** | Pola `imageSrc`/`imageAlt` zakładają wyłącznie fotografie. Brak alternatywnego trybu dla ikon SVG lub logo — ogranicza warianty użycia (np. teaser produktu z logo firmy). | Niski |
+| B-02 | **Brak konfiguracji proporcji/rozmiaru obrazka** | Obrazek w `horizontal` i `vertical` ma stałą wysokość `h-52`, w `minimal` – `h-36`. Brak opcji zmiany proporcji, trybu skalowania (`cover`/`contain`) ani wysokości. | Wysoki |
+| B-03 | **Brak limitu tagów w konfiguracji** | Tagi są obcinane do 5 (render: `slice(0, 5)`) i do 8 (normalizacja: `slice(0, 8)`) bez żadnej opcji konfiguracyjnej. | Średni |
+| B-04 | **Brak opcji otwarcia linku w nowej karcie** | CTA to `<a>` bez `target="_blank"` — nie można skonfigurować otwierania w nowej karcie. | Średni |
+| B-05 | **Brak stylizacji CTA (typ przycisku)** | CTA to zawsze tekst z `hover:underline`. Brak opcji zmiany na button, outlined, filled — ogranicza możliwości wizualne. | Średni |
+| B-06 | **Brak opcji trybu `featured`/`latest` w trybie listing** | `sourceMode` (`latest`/`featured`/`manual`) jest dostępny wyłącznie w trybie legacy. Przy przełączeniu na listing, selektor sourceMode znika — brak sposobu na odpowiednik logiki "featured" w zapytaniach listingowych. | Średni |
+| B-07 | **Brak konfiguracji max-width** | Widget zawsze renderuje `max-w-5xl`. Brak opcji pełnej szerokości, węższego lub szerszego layoutu. | Niski |
+| B-08 | **Brak obsługi ikony/logo zamiast obrazka** | Pola `imageSrc`/`imageAlt` zakładają wyłącznie fotografie. Brak alternatywnego trybu dla ikon SVG lub logo. | Niski |
 
 ### 3.2 Błędy UX w edytorze admin
 
 | # | Problem | Opis | Priorytet |
 |---|---------|------|-----------|
-| E-01 | **Wizard Editor pokazuje "Data source mode" — termin techniczny** | Etykiety `"Legacy content type source"` i `"Listings query source"` to żargon techniczny niezrozumiały dla redaktorów. Powinno być np. "Typ treści" / "Zapytanie". | Wysoki |
-| E-02 | **Brak wizualnego podglądu wariantów** | Selector wariantu w Wizard to zwykły `<Select>` a w Visual to karty tekstowe. Brak miniatur pokazujących jak wygląda `horizontal` vs `vertical` vs `minimal`. | Wysoki |
-| E-03 | **Duplikacja "Data source mode" w trzech edytorach** | Selektor trybu źródła (Legacy/Listing) pojawia się we wszystkich trzech edytorach: Wizard, Visual, Advanced. Powoduje chaos — użytkownik może go zmienić w dowolnym edytorze niezależnie. | Wysoki |
-| E-04 | **Fallback copy w Visual Editor, ale `fallbackToLatest` w Advanced** | Konfiguracja fallbacku jest podzielona: teksty w Visual (sekcja "Empty state copy"), a toggle logiki `fallbackToLatest` w Advanced (sekcja "Fallback behavior"). Brak spójności. | Wysoki |
-| E-05 | **Brak stanu informującego o braku wpisu w trybie manual** | Gdy źródło to content type bez wpisów, pojawia się tylko tekst "No entries loaded yet" — nie ma wyraźnego komunikatu o braku opublikowanych wpisów (vs. brak wpisów w ogóle). | Średni |
-| E-06 | **Brak podglądu efektu toggleów fields w edytorze** | Przełączniki `Show image`, `Show excerpt`, `Show meta`, `Show tags` nie mają żadnej wizualnej reprezentacji efektu — użytkownik musi zapisać i podglądać stronę osobno. | Średni |
-| E-07 | **CTA "Auto entry URL" — brak wyjaśnienia co to znaczy** | Opcja `Auto entry URL` w href mode nie wyjaśnia, że URL pochodzi z adresu wpisu w CMS. Redaktor może nie wiedzieć, czy link zostanie automatycznie uzupełniony. | Średni |
-| E-08 | **Brak color picker dla surface i border** | Pola kolorów `surface` i `border` to pola tekstowe (`ClearableInputField`). Brak pickera — trudno wpisać wartość hex/hsl bez narzędzi. | Niski |
-| E-09 | **Advanced editor: "Runtime payload snapshot" nie jest interaktywny** | Sekcja z `JSON.stringify` to read-only, ale nie ma przycisku "Kopiuj do schowka", nie ma formatowania klikania — zmarnowany potencjał narzędzia debugowania. | Niski |
-| E-10 | **Brak informacji o statusie wpisów przy wyborze Manual** | W trybie manual wpisy są listowane, ale w trybie `compact` (Wizard) status `(published)` jest ukrywany (linia 558: `compact ? "" : ` (${entry.status})`)`). Użytkownik nie wie czy wybierany wpis jest opublikowany. | Niski |
-| E-11 | **Brak walidacji custom URL** | Pole `Custom URL` w sekcji CTA nie waliduje poprawności URL w czasie rzeczywistym — błędny URL zostanie zapisany i dopiero po podglądzie widoczny jest efekt sanityzacji do `#`. | Niski |
+| E-01 | **Techniczna terminologia "Data source mode"** | Etykiety `"Legacy content type source"` i `"Listings query source"` to żargon techniczny. Powinno być np. "Typ treści" / "Zapytanie Listings". | Wysoki |
+| E-02 | **Brak wizualnego podglądu wariantów** | Selector wariantu w Wizard to `<Select>` a w Visual to karty tekstowe. Brak miniatur/thumbnails pokazujących jak wygląda `horizontal` vs `vertical` vs `minimal`. | Wysoki |
+| E-03 | **Duplikacja "Data source mode" w trzech edytorach** | Selektor trybu źródła (Legacy/Listing) pojawia się w Wizard, Visual i Advanced jednocześnie. Powoduje redundancję i chaos — zmiana w jednym edytorze jest widoczna w pozostałych. | Wysoki |
+| E-04 | **Fallback copy w Visual Editor, `fallbackToLatest` w Advanced** | Konfiguracja fallbacku jest podzielona: teksty (title/description) w Visual → sekcja "Empty state copy", natomiast toggle logiki `fallbackToLatest` w Advanced → sekcja "Fallback behavior". Brak spójności. | Wysoki |
+| E-05 | **Admin preview nigdy nie pokazuje rzeczywistej treści** | W panelu admina widget zawsze wyświetla stan empty/fallback. Resolver SSR nie działa w edytorze. Redaktor nie może podglądnąć jak teaser wygląda z rzeczywistym wpisem bez publikowania strony. | Wysoki |
+| E-06 | **"Not authenticated" w dropdownie content type po błędzie API** | Gdy API `/api/content-types` zwraca 401, pod selektorem content type pojawia się mały tekst "Not authenticated". Brak komunikatu o błędzie, brak przycisku "Odśwież", brak wskazówki co zrobić. | Wysoki |
+| E-07 | **Manual entry picker pusty gdy API content-types nie załadował** | Gdy `types` jest puste (błąd API), dropdown manual entry pokazuje tylko "No entry selected" i komunikat "No entries loaded yet" — bez rozróżnienia między brakiem wpisów a błędem API. | Wysoki |
+| E-08 | **Custom URL field pokazuje "#" zamiast pustego pola** | Przy przełączeniu na tryb `Custom URL`, pole URL od razu wyświetla `"#"` (sanitized fallback z normalizacji). Użytkownik oczekuje pustego pola, nie znaku `#`. | Średni |
+| E-09 | **Brak podglądu efektu toggleów fields** | Przełączniki `Show image`, `Show excerpt`, `Show meta`, `Show tags` nie mają żadnej wizualnej reprezentacji efektu — admin musi opublikować stronę by zobaczyć zmiany. | Średni |
+| E-10 | **CTA "Auto entry URL" — brak wyjaśnienia co to znaczy** | Opcja `Auto entry URL` nie wyjaśnia, że URL pochodzi z adresu wpisu w CMS. Redaktor może nie wiedzieć, czy link zostanie uzupełniony automatycznie. | Średni |
+| E-11 | **Brak walidacji custom URL w czasie rzeczywistym** | Pole `Custom URL` nie waliduje poprawności URL. Błędny URL (np. `javascript:`) jest sanityzowany do `#` bez komunikatu dla użytkownika. | Niski |
+| E-12 | **Advanced editor: "Runtime payload snapshot" bez przycisku kopiowania** | Sekcja z `JSON.stringify` to read-only `<pre>`. Brak przycisku "Kopiuj do schowka" — zmarnowany potencjał narzędzia debugowania. | Niski |
+| E-13 | **Brak informacji o statusie wpisu w Wizard (compact mode)** | W Wizard edytorze (compact: true) status wpisu `(published)` jest ukrywany w dropdownie manual entry (linia 558). Redaktor nie wie czy wybierany wpis jest opublikowany. | Niski |
+| E-14 | **Brak color picker dla surface i border** | Pola kolorów to pola tekstowe (`ClearableInputField`). Brak pickera — trudno wpisać wartość hex/hsl bez narzędzi. | Niski |
 
 ### 3.3 Potencjalne błędy techniczne
 
 | # | Problem | Opis |
 |---|---------|------|
-| T-01 | **`resolveEntryTeaserVariant` nie obsługuje `"lg"` jako fallback** | Funkcja (linia 251–254) zwraca `"horizontal"` dla wszystkich nieznanych wartości. Zmiana enum w przyszłości może niepostrzeżenie cofnąć wariant do `horizontal`. |
-| T-02 | **`resolveEntryTeaserRadius` pomija `"lg"` w warunkach** | W funkcji (linia 266–269) warunek sprawdza `none`, `sm`, `md`, `xl` — brak explicite `"lg"`. Fallback to `"lg"`, więc działa, ale jest to pułapka logiczna — `"lg"` nie jest walidowane. |
-| T-03 | **Brak obsługi błędu rozwiązania w UI fallback** | Pole `resolved.error` (linia 502) wyświetla komunikat błędu, ale nie przesłania stanu "missing-source" — oba mogą pojawić się jednocześnie, co może zdezorientować użytkownika. |
-| T-04 | **Obrazek bez `width`/`height`** | `<img>` (linia 523–531) nie ma atrybutów `width` i `height` — powoduje CLS (Cumulative Layout Shift) przy lazy loadowaniu. |
-| T-05 | **Brak `rel="noopener noreferrer"` na CTA link** | `<a href={href}>` (linia 563) nie ma atrybutu `rel` — bezpieczeństwo dla zewnętrznych linków (gdy `target="_blank"` zostanie dodany). |
-| T-06 | **Meta line łączy datę i autora bez separatora fallback** | `buildMetaLine` (linia 421–428) używa `" • "` jako separator, ale jeśli brakuje daty lub autora — wynik jest poprawny. Problem pojawia się przy bardzo długich nazwach autorów — brak truncation. |
+| T-01 | **`resolveEntryTeaserRadius` pomija `"lg"` w warunkach** | Funkcja (linia 266–269) sprawdza `none`, `sm`, `md`, `xl` — brak `"lg"`. Fallback to `"lg"`, więc działa, ale `"lg"` nie jest explicite walidowane. |
+| T-02 | **`resolveEntryTeaserVariant` fallback do `"horizontal"`** | Funkcja zwraca `"horizontal"` dla wszystkich nieznanych wartości. Niepostrzeżona zmiana w enum może cofnąć wariant do horizontal. |
+| T-03 | **Obrazek bez `width`/`height`** | `<img>` nie ma atrybutów `width` i `height` — powoduje CLS (Cumulative Layout Shift) przy lazy loadowaniu. |
+| T-04 | **Brak `rel="noopener noreferrer"` na CTA link** | `<a href={href}>` nie ma `rel` — potencjalne ryzyko bezpieczeństwa gdy `target="_blank"` zostanie dodany. |
+| T-05 | **Duplikaty content types na liście** | W dropdownie content type widocznych wiele duplikatów ("News" ×4, "Blog" ×2) oraz technicznie nazwane wpisy ("Screen 2dcaeaad", "Screen d4d0bb4d"). Brak grupowania ani deduplikacji. |
+| T-06 | **Poziom nagłówka hardcoded jako `<h3>`** | Tytuł wpisu jest zawsze `<h3>` bez możliwości konfiguracji. W kontekście strony z jednym widgetem powinien być `<h2>` lub nawet `<h1>`. |
+| T-07 | **Brak stanu ładowania w resolverze** | W admin preview nie ma skeleton loadera ani wskaźnika ładowania treści — stan fallback i stan błędu wyglądają identycznie. |
 
 ---
 
 ## 4. Testy w Admin UI
 
-> Status: **W TRAKCIE**
+### 4.1 Strona testowa
+
+- **URL admina:** `http://localhost:5173/admin/pages/b6991088-1ee5-4d08-9880-8c8b9d2af92d`
+- **Slug:** `/test-entry-teaser-0516`
+- **Status:** Published
+
+### 4.2 Wyniki testów Admin
+
+#### Wizard Editor
+
+| Test | Wynik | Uwagi |
+|------|-------|-------|
+| Data source mode selector | ✅ Działa | Etykiety techniczne (E-01) |
+| Source mode (latest/featured/manual) | ✅ Działa | Widoczny tylko w trybie legacy |
+| Content type dropdown | ✅ Działa | Duplikaty na liście (T-05) |
+| Layout variant select | ✅ Działa | Brak wizualnego podglądu (E-02) |
+| "Continue to layout" button | ✅ Działa | Przenosi do Visual editor |
+| Stan widgetu w canvas (missing-source) | ✅ Wyświetla się | "Select content type to resolve teaser source." |
+| Stan widgetu w canvas (empty/fallback) | ✅ Wyświetla się | Zawsze widoczny fallback, nigdy rzeczywista treść (E-05) |
+
+#### Visual Editor
+
+| Test | Wynik | Uwagi |
+|------|-------|-------|
+| Variant cards (Horizontal/Vertical/Minimal) | ✅ Działa | Brak wizualnych miniatur (E-02) |
+| Zmiana wariantu w canvas (real-time) | ✅ Działa | |
+| Source configuration (ponowny data source mode) | ✅ Działa | Duplikacja z Wizard (E-03) |
+| Source mode → Manual → entry picker | ⚠️ Warunkowo | Działa gdy API załaduje types; puste gdy API 401 (E-07) |
+| Toggle Show image/excerpt/meta/tags | ✅ Działa | Brak live preview w canvas (E-09) |
+| CTA label edit | ✅ Działa | |
+| CTA Href mode: Auto | ✅ Działa | Brak wyjaśnienia (E-10) |
+| CTA Href mode: Custom | ⚠️ Problem | Pole pokazuje "#" zamiast pustego (E-08) |
+| Custom URL valid (https://...) | ✅ Działa | |
+| Custom URL invalid (javascript:) | ✅ Sanityzuje do "#" | Bez komunikatu błędu (E-11) |
+| Fallback title/description edit | ✅ Działa | Aktualizuje canvas real-time |
+
+#### Advanced Editor
+
+| Test | Wynik | Uwagi |
+|------|-------|-------|
+| Data source mode (3. duplikat) | ✅ Działa | Kolejna duplikacja (E-03) |
+| Listing mode: query selector | ✅ Działa | |
+| Listing mode: template selector | ✅ Działa | |
+| Style tokens: Surface color (ClearableInput) | ✅ Działa | Brak color picker (E-14) |
+| Style tokens: Border color (ClearableInput) | ✅ Działa | Brak color picker (E-14) |
+| Style tokens: Radius (5 opcji) | ✅ Działa | |
+| Style tokens: Spacing (4 opcje) | ✅ Działa | |
+| Fallback behavior: fallbackToLatest toggle | ✅ Działa | Odizolowany od fallback copy (E-04) |
+| Runtime payload snapshot | ✅ Wyświetla JSON | Zawsze `item: null` w admin, brak kopiowania (E-12) |
 
 ---
 
 ## 5. Testy na Froncie (http://localhost:3000)
 
-> Status: **DO WYKONANIA**
+### 5.1 Strona testowa
+
+- **URL:** `http://localhost:3000/test-entry-teaser-0516`
+- **Entry testowa:** "QA Test Article 2026 (updated)" (content type: testowy, status: published)
+
+### 5.2 Wyniki testów Frontend
+
+| Test | Wynik | Uwagi |
+|------|-------|-------|
+| Wariant horizontal | ✅ Działa | `flex flex-col md:flex-row` |
+| Wariant vertical | ✅ Działa | `flex flex-col` |
+| Wariant minimal | ✅ Działa | `text-lg` (mniejszy h3), `h-36` obraz |
+| Tytuł wpisu (h3) | ✅ Wyświetla | Zawsze `h3` (T-06) |
+| Meta linia (data • autor) | ✅ Wyświetla | Format `YYYY-MM-DD • Autor` |
+| CTA link (Auto URL) | ✅ Działa | href poprawny z entry slug |
+| Brak obrazu gdy `imageSrc = null` | ✅ Brak wyświetlenia | Poprawne warunkowe renderowanie |
+| Style tokeny (radius xl) | ✅ Działa | `rounded-2xl` w DOM |
+| Atrybut `data-entry-teaser-state=ready` | ✅ Poprawny | |
+| Atrybut `data-entry-teaser-variant=minimal` | ✅ Poprawny | |
+| Atrybut `data-entry-teaser-source-mode=manual` | ✅ Poprawny | |
+| Stan `empty` z custom fallback text | ✅ Działa | Tekst fallback z edytora widoczny |
+| Brak `rel` na CTA anchor | ⚠️ Brak | (T-04) |
+| Brak `width`/`height` na img | ⚠️ Brak | (T-03) |
 
 ---
 
 ## 6. Porównanie Admin vs Frontend
 
-> Status: **DO WYKONANIA**
+| Zachowanie | Admin Preview | Frontend | Spójne? |
+|-----------|--------------|----------|---------|
+| Stan `empty` (fallback) | ✅ Wyświetla fallback text | ✅ Wyświetla fallback text | ✅ Tak |
+| Stan `ready` (rzeczywista treść) | ❌ **Nie pokazuje** — zawsze fallback | ✅ Pokazuje tytuł, meta, CTA | ❌ **Nie** |
+| Stan `missing-source` | ✅ "Select content type..." | ✅ "Select content type..." | ✅ Tak |
+| Zmiana wariantu | ✅ Widoczna w canvas (dla fallback) | ✅ Widoczna z rzeczywistą treścią | ✅ Tak |
+| Style (radius, spacing) | ✅ Widoczne w canvas | ✅ Widoczne na stronie | ✅ Tak |
+
+**Główna niespójność (E-05):** Admin preview nigdy nie renderuje rozwiązanego wpisu. Przyczyną jest brak uruchomienia runtime resolvera (`resolveEntryTeaserRuntimeData`) w środowisku edytora. Nie jest to błąd — jest to by design — ale stanowi istotny UX gap: redaktor nie może podejrzeć ostatecznego wyglądu teasera bez publikowania strony.
 
 ---
 
 ## 7. Wnioski i priorytety
 
-> Status: **DO UZUPEŁNIENIA po testach**
+### 7.1 Krytyczne (do naprawy przed produkcją)
+
+1. **E-05** – Admin preview nigdy nie pokazuje rzeczywistej treści. Rozwiązanie: mock resolver w edytorze lub tryb „Preview" wywołujący API resolvera.
+2. **E-04** – Fallback copy i fallbackToLatest w różnych edytorach. Zebrać w jedną sekcję (Visual lub Advanced).
+3. **E-06/E-07** – Błąd API (401) w edytorze bez informacji zwrotnej i bez mechanizmu odświeżania.
+
+### 7.2 Wysoki priorytet (UX)
+
+4. **E-03** – `Data source mode` widoczny w 3 edytorach — usunąć z Wizard lub Advanced.
+5. **E-01** – Techniczne etykiety „Legacy content type source" / „Listings query source" — zmienić na przyjazne.
+6. **E-08** – Custom URL pokazuje `"#"` zamiast pustego pola po przełączeniu trybu.
+7. **B-01** – Brak tytułu/nagłówka widgetu — wymaga osobnego Heading widgetu dla kontekstu.
+8. **B-06** – sourceMode niedostępny w trybie listing.
+
+### 7.3 Średni priorytet
+
+9. **E-02** – Brak wizualnego podglądu wariantów.
+10. **E-09** – Togglei fields bez live preview w edytorze.
+11. **B-02** – Stały rozmiar obrazka bez konfiguracji.
+12. **T-03** – Brak `width`/`height` na img (CLS).
+13. **T-05** – Duplikaty content types w dropdownie.
+14. **T-06** – Hardcoded `<h3>` bez konfiguracji poziomu nagłówka.
+
+### 7.4 Niski priorytet
+
+15. **E-10** – Brak opisu "Auto entry URL".
+16. **E-12** – Brak przycisku kopiowania w Runtime payload snapshot.
+17. **E-13** – Status wpisu ukryty w compact Wizard mode.
+18. **T-04** – Brak `rel="noopener noreferrer"` na CTA.
+19. **B-04** – Brak opcji `target="_blank"`.
+20. **B-05** – Brak wariantów stylizacji CTA (button/outlined/filled).
 
 ---
 
@@ -134,3 +252,26 @@ Widget `entry-teaser` służy do wyróżnionego podglądu jednego wybranego, naj
 > wymaganym evidence w repo.
 
 > Katalog: `_docs/PLAYWRIGHT/screenshots/entry-teaser/`
+
+| Plik | Opis |
+|------|------|
+| `01-wizard-editor-initial.png` | Wizard Editor — stan początkowy (brak content type) |
+| `02-widget-missing-source-state.png` | Widget w stanie missing-source w canvas |
+| `03-wizard-with-content-type.png` | Wizard z wybranym content type (News) |
+| `04-visual-editor-full.png` | Visual Editor — pełny widok z "Not authenticated" |
+| `05-variant-vertical.png` | Wybór wariantu Vertical w Visual Editor |
+| `06-variant-minimal.png` | Wybór wariantu Minimal w Visual Editor |
+| `07-visual-editor-complete.png` | Visual Editor po ponownym logowaniu — kompletny |
+| `08-show-image-off.png` | Toggle Show image wyłączony |
+| `09-cta-custom-url-mode.png` | CTA Custom URL mode — pole z "#" |
+| `10-advanced-editor-full.png` | Advanced Editor — pełny widok |
+| `11-advanced-listing-mode.png` | Advanced Editor — tryb Listings query |
+| `12-visual-editor-confirmed.png` | Visual Editor — potwierdzone działanie po czystym logowaniu |
+| `13-manual-mode-no-entries.png` | Manual mode — puste entry picker (brak wpisów) |
+| `14-fallback-copy-working.png` | Fallback copy aktualizuje canvas real-time |
+| `15-advanced-runtime-snapshot.png` | Advanced Editor — Runtime payload (item: null) |
+| `16-frontend-fallback-state.png` | Frontend — stan empty z custom fallback text |
+| `17-frontend-ready-state-horizontal.png` | Frontend — stan ready, wariant horizontal |
+| `18-frontend-horizontal-real-content.png` | Frontend — rzeczywista treść w horizontal |
+| `19-frontend-vertical-variant.png` | Frontend — wariant vertical |
+| `20-frontend-minimal-variant.png` | Frontend — wariant minimal |

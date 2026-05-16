@@ -1,11 +1,11 @@
 # RAPORT: Product Table Widget — Analiza UX/UI i brakujące funkcjonalności
 
-> **Status:** W trakcie — analiza kodu zakończona, testy Playwright w toku
+> **Status:** Zakończony
 > **Data:** 2026-05-16
 > **Sesja:** Playwright (Product Table Widget)
 > **Środowisko admin:** http://localhost:5173/admin
 > **Środowisko front:** http://localhost:3000
-> **Strona testowa:** ProductTableTest (`/producttabletest`)
+> **Strona testowa:** ProductTableTestproducttabletest (`/producttabletestproducttabletest`) — UUID: `7227f3ad-d3bf-4fc2-88b1-d61d52df59df`
 
 ---
 
@@ -63,59 +63,151 @@ Z tych pól **nigdy nie są renderowane**: `excerpt`, `stock.quantity`, `stock.i
 
 ## 3. Wyniki testów Playwright — Admin UI (localhost:5173)
 
-> _Sekcja zostanie uzupełniona po testach Playwright_
-
 ### 3.1 Wizard editor
 
-| Test | Wynik |
-|------|-------|
+| Test | Wynik | Uwagi |
+|------|-------|-------|
+| Formularz "Table source" widoczny | ✓ Działa | Limit (spinbutton), Search, Sort field, Sort direction |
+| Limit domyślny = 12 | ✓ Działa | Spinbutton pokazuje "12" |
+| Sort field = Updated (updatedAt) | ✓ Działa | Combobox poprawny |
+| Sort direction = Descending | ✓ Działa | |
+| Status filter: checkboxy draft/published/archived | ✓ Działa | Domyślnie wszystkie odznaczone (runtime default) |
+| Sekcja Surfaces — 5 clearable inputów | ✓ Działa | Table background, Table border, Header background, Empty background, Empty border |
+| Przycisk Clear na polach Surfaces | ✓ Działa | Wszystkie 5 pól ma Clear button |
+| Collections: "No commerce collections available yet" | ✓ Informacja | Kolekcji brak — wyświetla placeholder |
+| Przycisk "Continue to layout and styling" | ✓ Działa | Przechodzi do Visual editor |
 
 ### 3.2 Visual editor — Columns
 
-| Test | Wynik |
-|------|-------|
+| Test | Wynik | Uwagi |
+|------|-------|-------|
+| 5 togglei widocznych | ✓ Działa | Show slug, Show status, Show stock, Show compare-at price, Show collection count |
+| Domyślnie: slug ON, status ON, stock ON | ✓ Potwierdzone | Checkboxy zaznaczone |
+| Domyślnie: compareAt OFF, collectionCount OFF | ✓ Potwierdzone | Checkboxy odznaczone |
+| Toggle "Show slug" → wyłączenie | ✓ Działa | Po publikacji na froncie kolumna Slug znika |
+| Toggle "Show compare-at price" → włączenie | ✓ Działa | Na froncie pojawia się kolumna "Compare at" |
+| Toggle "Show collection count" → włączenie | ✓ Działa | Na froncie pojawia się kolumna "Collections" |
+| Admin preview przy empty state — brak efektu toggle | ✓ Potwierdzone | Empty state nie pokazuje tabelki — nie można zobaczyć efektu toggle w admin |
+| Brak togglea dla kolumny Product (title) | ✗ BUG-04 | Kolumna zawsze widoczna |
+| Brak togglea dla kolumny Price | ✗ BUG-04 | Kolumna zawsze widoczna |
 
-### 3.3 Visual editor — Labels
+### 3.3 Visual editor — Column labels
 
-| Test | Wynik |
-|------|-------|
+| Test | Wynik | Uwagi |
+|------|-------|-------|
+| Sekcja "Column labels" widoczna | ✓ Działa | |
+| Pole edycji "Product" | ✓ Działa | Zmiana na "Produkt" działa i pojawia się na froncie |
+| Pole edycji "Price" | ✓ Działa | |
+| Pole edycji "Status" | ✓ Działa | |
+| Brak pola edycji "Slug" | ✗ BUG-01 | Kolumna Slug nie ma edytora etykiety |
+| Brak pola edycji "Stock" | ✗ BUG-01 | Kolumna Stock nie ma edytora etykiety |
+| Brak pola edycji "Compare at" | ✗ BUG-01 | Kolumna Compare at nie ma edytora etykiety |
+| Brak pola edycji "Collections" | ✗ BUG-01 | Kolumna Collections nie ma edytora etykiety |
 
 ### 3.4 Visual editor — Empty state
 
-| Test | Wynik |
-|------|-------|
+| Test | Wynik | Uwagi |
+|------|-------|-------|
+| Edycja tytułu empty state | ✓ Działa | Zmiana widoczna od razu w admin preview |
+| Edycja opisu empty state | ✓ Działa | |
+| Zmiany odzwierciedlone w admin canvas | ✓ Działa | Tekst w preview aktualizuje się live |
+| Puste pola → powrót do defaults | ✓ Potwierdzone | Normalizacja ustawia defaults gdy pusty string |
 
 ### 3.5 Visual editor — Surfaces
 
-| Test | Wynik |
-|------|-------|
+| Test | Wynik | Uwagi |
+|------|-------|-------|
+| 5 clearable inputów dla kolorów | ✓ Działa | Table background, Table border, Header background, Empty background, Empty border |
+| Clear button na każdym polu | ✓ Działa | Wszystkie pola mają Clear (asymetria naprawiona vs FeatureGrid) |
+| Wpisanie koloru hex (#f0f4ff) | ✓ Działa | Kolor pojawia się w tabeli na froncie |
+| Clear → powrót do var(--color-bg) | ✓ Działa | Po Clear pole jest puste (fallback do defaults) |
+| Zmiana koloru tła tabeli odzwierciedlona na froncie | ✓ Działa | `background-color: rgb(240, 244, 255)` w inline style |
 
 ### 3.6 Advanced editor
 
-| Test | Wynik |
-|------|-------|
+| Test | Wynik | Uwagi |
+|------|-------|-------|
+| Sekcja "Runtime payload" widoczna | ✓ Działa | "Resolved items: 0 · Total: 0" |
+| Admin zawsze pokazuje 0 items | ✓ Potwierdzone | Hydratacja danych jest wyłącznie na froncie — KRYTYCZNY UX BUG |
+| Pole "Runtime error flag" edytowalne | ✗ UX-09 | Pole error jest edytowalne przez użytkownika — powinno być read-only |
+| Query preview JSON | ✓ Działa | Pokazuje `{"pagination": {"limit": 12, "offset": 0}, "sort": [...], "status": [...]}` |
+| Query preview aktualizuje się po zmianie source | ✓ Działa | Status filter ["draft","published"] pojawia się po zaznaczeniu |
+| Sekcja "Layout" — Container, Padding, Margin tokeny | ✓ Działa | Standardowe tokeny layoutu |
+| Sekcja "Visibility" — Desktop/Tablet/Mobile switches | ✓ Działa | Trzy przełączniki widoczności |
 
-### 3.7 Renderowanie tabeli z danymi
+### 3.7 Renderowanie admin preview
 
-| Test | Wynik |
-|------|-------|
+| Test | Wynik | Uwagi |
+|------|-------|-------|
+| Admin preview: empty state gdy brak produktów commerce | ✓ Działa | `data-product-table-count="0"` |
+| Admin preview: NIGDY nie pokazuje realnych danych | ✗ KRYTYCZNE | Nawet po dodaniu produktów admin preview zawsze pokazuje empty state |
+| Empty state title zmienia się live w preview | ✓ Działa | Edycja tekstu visible od razu |
+| Empty state border dashed | ✓ Działa | `border-dashed` klasa widoczna |
+| Błąd commerce (amber box) — nie testowano | — | Brak możliwości wywołania w tej sesji |
 
 ---
 
 ## 4. Wyniki testów Playwright — Frontend (localhost:3000)
 
-> _Sekcja zostanie uzupełniona po testach Playwright_
+**Nota:** Strona testowa dostępna pod `/producttabletestproducttabletest` (podwójony slug — patrz sekcja 11).
 
 ### 4.1 Tabela porównawcza Admin ↔ Frontend
 
 | Test | Admin | Front | Zgodność |
 |------|-------|-------|----------|
+| Empty state renderuje się | ✓ | ✓ | ✓ Zgodne |
+| Tabela z danymi (2 produkty) | ✗ nie renderuje | ✓ renderuje | ✗ Rozbieżność — Admin nie hydruje danych |
+| Kolumna Slug (toggle OFF) | — | ✓ ukryta | — |
+| Kolumna Compare At (toggle ON) | — | ✓ widoczna | — |
+| Kolumna Collections (toggle ON) | — | ✓ widoczna | — |
+| Zmiana etykiety "Produkt" | — | ✓ widoczna | — |
+| Custom kolor tła (#f0f4ff) | — | ✓ rgb(240, 244, 255) | — |
+| Empty state custom text | ✓ live | ✓ po publish | ✓ Zgodne |
+
+### 4.2 HTML tabeli — wyniki na froncie
+
+```
+Kolumny wyświetlone (po konfiguracji): Produkt, Slug, Price, Compare at, Status, Stock, Collections
+Dane wiersz 1: ["Gamma Consulting Draft (draft)", "/gamma-consulting-draft", "$120,000.00", "-", "draft", "In stock", "0"]
+Dane wiersz 2: ["Alpha Widget Pro", "/alpha-widget-pro", "$19,900.00", "$24,900.00", "published", "In stock", "0"]
+Tło tabeli: rgb(240, 244, 255) ← z custom koloru
+```
+
+### 4.3 Weryfikacja struktury HTML (dostępność)
+
+| Sprawdzenie | Wynik | Uwagi |
+|------------|-------|-------|
+| `<caption>` w tabeli | ✗ BRAK | Potwierdzone — A1 |
+| `scope="col"` na `<th>` | ✗ BRAK | 4 `<th>` bez scope — A2 |
+| `aria-label` na sekcji | ✗ BRAK | `<section>` bez aria-label |
+| `aria-label` na `<table>` | ✗ BRAK | |
+| Linki w wierszach tabeli | ✗ BRAK | Slug jako plain text `/<slug>`, nie `<a>` |
+| Efekt hover na wierszach | ✗ BRAK | Klasy: `border-b border-[var(--color-border)]/70 last:border-b-0` — brak `hover:bg-*` |
+| Status jako badge | ✗ BRAK | Wartości "draft"/"published" jako plain text |
+| Quantity (stock.quantity) wyświetlana | ✗ BRAK | Tylko "In stock"/"Out of stock", bez liczby |
+| `role="alert"` na błędzie commerce | ✗ BRAK | — |
+| Mobilne overflow-x-auto | ✓ Działa | Tabela scrolluje poziomo na 375px |
+
+### 4.4 Responsywność
+
+| Viewport | Wynik | Uwagi |
+|---------|-------|-------|
+| Desktop (1440px) | ✓ Działa | Tabela pełna szerokość |
+| Mobile (375px) | ✓ Działa | Horizontal scroll przez `overflow-x-auto` |
+| Brak breakpointów kolumn | — | Tabela nie zmienia struktury na mobile — poziomy scroll |
 
 ---
 
 ## 5. Znalezione błędy i problemy UX
 
-### 5.1 Błędy funkcjonalne (Bugs) — z analizy kodu
+### 5.1 Błędy funkcjonalne (Bugs) — potwierdzone testami + analiza kodu
+
+#### BUG-00 — Admin preview NIGDY nie hydruje danych commerce — edytor zawsze pokazuje empty state
+**Priorytet:** Krytyczny
+**Opis:** Admin canvas nie wywołuje `hydrateProductTableRuntimeData()` — widget zawsze renderuje się z `resolved.items = []` w admin preview, niezależnie od liczby produktów w katalogu. Edytor **nie może zobaczyć swojej tabeli** z prawdziwymi danymi bez opublikowania strony i sprawdzenia frontendu. Brak możliwości testowania konfiguracji kolumn, sortowania, widoczności w admin preview.
+**Potwierdzone Playwright:** `data-product-table-count="0"` w admin przez cały czas testów; `data-product-table-count="2"` na froncie po publish.
+**Skutek:** Workflow edytora jest fundamentalnie zepsuty — edytor musi publikować i sprawdzać frontend żeby zobaczyć efekty konfiguracji kolumn.
+**Rekomendacja:** Dodać "preview mode" resolver w admin który odpytuje commerce API z tymi samymi parametrami co runtime.
 
 #### BUG-01 — Etykiety kolumn Slug, Stock, CompareAt, Collections niedostępne w edytorze
 **Priorytet:** Wysoki
@@ -243,52 +335,72 @@ Z tych pól **nigdy nie są renderowane**: `excerpt`, `stock.quantity`, `stock.i
 
 ---
 
-## 8. Tabela podsumowania — macierz priorytetów (z analizy kodu)
+## 8. Tabela podsumowania — macierz priorytetów
 
-### Błędy do naprawy
+### Błędy krytyczne i wysokiego priorytetu
 
-| ID | Opis | Priorytet |
-|----|------|-----------|
-| BUG-01 | Brak edycji etykiet dla Slug, Stock, CompareAt, Collections | Wysoki |
-| BUG-02 | Status jako plain text — brak badge/koloru | Średni |
-| BUG-03 | stock.quantity nigdy niewyświetlany | Średni |
-| BUG-04 | Title i Price niewyłączalne — asymetria togglei | Niski |
-| UX-09 | Runtime error flag edytowalny przez użytkownika | Niski |
+| ID | Opis | Priorytet | Potwierdzone |
+|----|------|-----------|-------------|
+| BUG-00 | Admin preview nigdy nie hydruje danych commerce — edytor widzi tylko empty state | Krytyczny | ✓ Playwright |
+| BUG-01 | Brak edycji etykiet dla Slug, Stock, CompareAt, Collections | Wysoki | ✓ Playwright |
+| A1 | Brak `<caption>` w tabeli | Wysoki (WCAG 1.3.1) | ✓ Playwright |
+| A2 | Brak `scope="col"` na `<th>` | Wysoki (WCAG 1.3.1) | ✓ Playwright |
+| BUG-02 | Status jako plain text — brak badge/koloru + duplikacja w tytule | Średni | ✓ Playwright |
+| BUG-03 | stock.quantity nigdy niewyświetlany mimo że jest w danych | Średni | ✓ Kod |
 
 ### Pilne braki UX
 
 | ID | Opis | Priorytet |
 |----|------|-----------|
 | UX-02 | Brak paginacji — max 48 produktów | Wysoki |
-| UX-03 | Brak klikalnych wierszy / linków | Wysoki |
-| UX-05 | Brak thumbnails | Wysoki |
+| UX-03 | Brak klikalnych wierszy / linków do produktów | Wysoki |
+| UX-05 | Brak thumbnails — produkt bez zdjęcia | Wysoki |
 | UX-01 | Tylko jeden wariant (default) | Średni |
-| UX-04 | Brak sortowania interaktywnego | Średni |
-| UX-06 | Brak search inline | Średni |
+| UX-04 | Brak sortowania interaktywnego kliknięciem nagłówka | Średni |
+| UX-06 | Brak search inline na froncie | Średni |
+| UX-10 | Brak hover na wierszach tabeli | Średni |
+| UX-09 | Runtime error flag edytowalny przez użytkownika | Niski |
+| BUG-04 | Title i Price niewyłączalne — asymetria togglei | Niski |
 
-### Dostępność krytyczna
+### Braki funkcjonalne (najważniejsze)
 
-| ID | Opis | Standard |
-|----|------|---------|
-| A1 | Brak `<caption>` | WCAG 1.3.1 |
-| A2 | Brak `scope="col"` na `<th>` | WCAG 1.3.1 |
-| A5 | Błąd commerce bez `role="alert"` | WCAG 4.1.3 |
+| ID | Priorytet | Opis |
+|----|-----------|------|
+| BF-01 | Wysoki | Brak thumbnails / kolumny obraz |
+| BF-02 | Wysoki | Brak klikalnych wierszy / linków |
+| BF-03 | Wysoki | Brak ilości sztuk (stock.quantity) w kolumnie Stock |
+| BF-07 | Wysoki | Brak nagłówka sekcji (eyebrow/title/description nad tabelą) |
+| BF-04 | Średni | Brak kolorowania wierszy wg statusu |
+| BF-05 | Średni | Brak zebra striping |
+| BF-06 | Średni | Brak kontroli gęstości wierszy (row density) |
+| BF-10 | Średni | Brak row hover efektu |
+| BF-11 | Średni | Brak kolumny akcji (Actions column) |
+| BF-12 | Średni | Brak sticky header przy 48 produktach |
+| BF-15 | Średni | Brak wyszukiwarki po stronie klienta |
 
 ---
 
-## 9. Wyniki testów Playwright — uzupełnienie
+## 9. Zgodność Admin Preview ↔ Frontend
 
-> _Do uzupełnienia po sesjach testowych_
+> **Wniosek: Admin preview i frontend są NIEZGODNE w kluczowym aspekcie.**
+
+Widget Product Table ma fundamentalną rozbieżność między admin preview a frontendem:
+- **Admin preview:** zawsze pokazuje empty state (`data-product-table-count="0"`) — hydratacja danych commerce nie jest wywoływana w canvas
+- **Frontend:** pokazuje realne produkty po hydratacji przez `hydrateProductTableRuntimeData()` (`data-product-table-count="2"`)
+
+Tylko elementy nie zależne od danych runtime są zgodne:
+| Element | Admin | Front | Zgodność |
+|---------|-------|-------|----------|
+| Empty state text (title/description) | ✓ | ✓ | ✓ Zgodne |
+| Empty state style (tło, border) | ✓ | ✓ | ✓ Zgodne |
+| Kolory tabeli (custom background) | — | ✓ | — |
+| Konfiguracja togglei kolumn | brak efektu w admin | ✓ na froncie | ✗ Rozbieżność |
+| Etykiety kolumn | brak efektu w admin | ✓ na froncie | ✗ Rozbieżność |
+| Dane produktów | ✗ (zawsze 0) | ✓ (2 produkty) | ✗ Rozbieżność krytyczna |
 
 ---
 
-## 10. Zgodność Admin Preview ↔ Frontend
-
-> _Do uzupełnienia po testach Playwright_
-
----
-
-## 11. Screenshoty
+## 10. Screenshoty
 
 > Uwaga: nazwy plików PNG w tej sekcji są wyłącznie lokalnymi etykietami
 > przechwyceń Playwright. Same pliki PNG są ignorowane przez Git i nie są
@@ -296,19 +408,30 @@ Z tych pól **nigdy nie są renderowane**: `excerpt`, `stock.quantity`, `stock.i
 
 | Plik | Opis |
 |------|------|
+| `pt-01-wizard-editor.png` | Wizard editor — Table source + Surfaces |
+| `pt-02-visual-editor-overview.png` | Visual editor — pełny widok |
+| `pt-03-advanced-editor.png` | Advanced editor — Runtime payload + Query preview |
+| `pt-04-admin-published.png` | Admin — strona po publikacji |
+| `pt-05-frontend-table-with-data.png` | Frontend — tabela z 2 produktami (domyślne kolumny) |
+| `pt-06-frontend-mobile-375.png` | Frontend — widok mobile 375px z horizontal scroll |
+| `pt-07-visual-editor-columns-section.png` | Visual editor — sekcja Columns ze wszystkimi toggleami |
+| `pt-08-visual-editor-surfaces.png` | Visual editor — sekcja Surfaces z customowym kolorem |
+| `pt-09-frontend-all-columns.png` | Frontend — tabela ze wszystkimi 7 kolumnami widocznymi |
+| `pt-10-advanced-editor-query-preview.png` | Advanced editor — Query preview JSON |
+| `pt-11-admin-preview-empty-state.png` | Admin preview zawsze pokazuje empty state (BUG-00) |
 
 ---
 
-## 12. Statystyki (wstępne — z analizy kodu)
+## 11. Statystyki
 
 | Kategoria | Liczba |
 |-----------|--------|
-| Błędy funkcjonalne (Bugs) | 4 |
+| Błędy funkcjonalne (Bugs) | 5 (w tym 1 krytyczny) |
 | Problemy UX edytora | 9 |
 | Braki funkcjonalne | 15 |
 | Problemy dostępności | 7 |
-| **Łącznie** | **35** |
+| **Łącznie** | **36** |
 
 ---
 
-*Raport wygenerowany na podstawie analizy kodu — 2026-05-16. Testy Playwright w toku.*
+*Raport wygenerowany na podstawie analizy kodu + testów Playwright — 2026-05-16.*

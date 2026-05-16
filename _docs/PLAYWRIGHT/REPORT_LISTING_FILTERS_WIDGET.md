@@ -1,6 +1,6 @@
 # REPORT: Listing Filters Widget
 
-> Status: **W TOKU** | Data: 2026-05-16 | Autor: Claude Code
+> Status: **UKOŃCZONY** | Data: 2026-05-16 | Autor: Claude Code
 
 ---
 
@@ -136,31 +136,258 @@ Skrypt kliencki (`listingRuntimeScript.ts`) zarządza:
 
 ## 4. Testowanie w przeglądarce (Admin UI)
 
-> Status: **W TOKU**
+> Status: **UKOŃCZONY** | Strona testowa: `TEST-LISTING-FILTERS-0516` (ID: `c5fe0a98-1090-4a42-80f6-23f294f44a5e`)
 
 ### 4.1 Środowisko
 - Admin URL: `http://localhost:5173/admin`
 - Strona testowa: `TEST-LISTING-FILTERS-0516` (dedykowana, nowo tworzona)
-- Sesja playwright: izolowana, nowa strona w Pages
+- Sesja playwright: `listing-filters` (izolowana)
+- Listing query dostępna w systemie: `House Projects Catalog Query a3f06199` (ID: `22f2ad81-9e2f-4c6f-bdf6-8bff33549b6f`)
+
+### 4.2 Wizard Editor
+
+**Co widziałem:**
+- Sekcja "Listing query": combobox z jedną dostępną opcją — `House Projects Catalog Query a3f06199` (poprawnie ładuje przez API)
+- Pierwsze otwarcie edytora: komunikat "Not authenticated" zamiast listy queries — **błąd 401 Unauthorized** na `/admin/api/listings/queries` (bug sesji admin po nawigacji)
+- Po ponownym logowaniu: API działa, queries ładują się prawidłowo
+- Sekcja "Runtime behavior": wszystkie pola widoczne i edytowalne (title, description, labels, toggles)
+- Sekcja "Surface": 3 pola stylu z przyciskami "Clear" — poprawna spójność z innymi widgetami
+
+**Problemy:**
+- **Bug sesji (nowy)**: API `/admin/api/listings/queries` zwraca 401 przy pierwszym otwarciu edytora tuż po zalogowaniu — komponent `useListingQueries()` wywołuje `listListingQueriesCached({ force: true })` ale sesja cookie nie jest jeszcze aktywna w kontekście API. Użytkownik widzi "Not authenticated" zamiast listy.
+- **E-09 (potwierdzone)**: Brak wyraźnego komunikatu "Wybierz query, aby aktywować filtr" — jest tylko mały opis sekcji "Bind facets to a single listing query source."
+- **E-07 (potwierdzone)**: Wizard Editor nie zawiera FacetsEditor — użytkownik musi przejść do Visual, żeby zarządzać facetami
+
+### 4.3 Visual Editor
+
+**Co widziałem:**
+- Sekcja wariantów: tylko jeden wariant `Default`, przycisk "Add variant preset"
+- Sekcja "Facet controls": Facet 1 (Sort) — id: `sort`, kind: Sort, textarea z sortOptions w formacie `value|label|field|dir`
+- Przycisk "Add facet": **klikalny, ale nie dodaje facetu** — żadna wizualna reakcja, żaden komunikat błędu
+
+**KRYTYCZNY BUG (T-01 / E-01 potwierdzony):**
+- Kliknięcie "Add facet" tworzy wewnętrznie `{id: "facet-2", kind: "checkbox", field: "", op: "in"}` ale `normalizeListingFacetConfigs` natychmiast odrzuca facet bo `field` jest pusty (`if (kind !== "sort" && !field) return`)
+- **Skutek**: Nie można dodać żadnego nieSortowego facetu przez UI — checkbox/radio/range/date-range/taxonomy znikają natychmiast
+- **Zmiana kind facetu sortowego na inny**: Analogicznie niemożliwa — sortowy facet nie ma `field`, po zmianie kind na checkbox, normalizacja odrzuca go, facet wraca do Sort
+- **Jedyne co działa**: Edycja istniejącego Sort facetu (sortOptions textarea)
+
+**Screenshot:** `listing-filters-05-visual-editor.png`, `listing-filters-06-facet-kind-dropdown.png`
+
+### 4.4 Advanced Editor
+
+**Co widziałem:**
+- Facet controls: ten sam co w Visual (Sort facet z sortOptions)
+- Runtime payload (read-only textarea): `{ "resolved": { "listingQueryId": "", "metrics": [], "rejectedTokens": [] } }` — ZAWSZE pusty, bo SSR nie uruchomił się w kontekście edytora
+- Contract section: informacja o `listingFiltersDefaults` — tylko tekst, brak linku do dokumentacji
+- Layout: Container/Padding/Margin — tokeny globalne widgetu
+- Visibility: Desktop/Tablet/Mobile toggles — wszystkie włączone
+
+**Screenshot:** `listing-filters-07-advanced-editor.png`
+
+### 4.5 Canvas (podgląd w edytorze)
+
+**KRYTYCZNY BUG (T-04 potwierdzony — nowy rodzaj błędu):**
+- Canvas ZAWSZE wyświetla placeholder "Select a listing query in widget settings to enable runtime filters."
+- **NAWET PO ZAPISANIU** strony z poprawnie skonfigurowanym `listingQueryId`
+- **NAWET PO PEŁNYM RELOADU** strony edytora
+- **Przyczyna (znaleziona w kodzie)**:
+  ```js
+  // listingFilters.tsx
+  const listingQueryId = resolveOptionalText(
+    normalized.resolved?.listingQueryId ?? normalized.listingQueryId
+  );
+  ```
+  Operator `??` (nullish coalescing) działa tylko dla `null`/`undefined`. `normalized.resolved?.listingQueryId` to `""` (pusty string, bo `resolveText` zawsze zwraca string). `"" ?? fallback` → `""` (nie fallbackuje!). Potem `resolveOptionalText("")` → `undefined`. Widget zawsze widzi `undefined` jako listingQueryId.
+- **Fix**: zamienić `??` na `||`: `normalized.resolved?.listingQueryId || normalized.listingQueryId`
+- **Skutek UX**: Redaktor nigdy nie widzi podglądu widgetu w canvas — jedyne co widzi to placeholder. Widget jest efektywnie blind w admin preview.
+
+**Screenshot:** `listing-filters-08-canvas-after-save.png`, `listing-filters-09-published-canvas-state.png`
 
 ---
 
 ## 5. Testowanie na froncie (localhost:3000)
 
-> Status: **W TOKU**
+> Status: **UKOŃCZONY** | Strona: `/test-listing-filters-0516`
+
+### 5.1 Środowisko testowe
+- Frontend URL: `http://localhost:3000/test-listing-filters-0516`
+- Widget: `listing-filters`, query: `House Projects Catalog Query` (22f2ad81...)
+- Strona opublikowana
+
+### 5.2 Renderowanie widgetu
+
+**Co widziałem:**
+- Widget renderuje się poprawnie na froncie — SSR rozwiązuje `listingQueryId` poprawnie
+- Wyświetla: tytuł "Filter results", opis, pole Search, combobox Sort z opcjami, przycisk "Apply filters"
+- Informacja "Updates automatically when values change." widoczna przy przycisku (autoApply=true)
+- `data-listing-widget="listing-filters"`, `data-listing-query-id="22f2ad81-..."` ustawione prawidłowo
+- `data-listing-auto-apply="1"` — autoApply aktywne
+
+**Screenshot:** `listing-filters-10-frontend-widget.png`, `listing-filters-15-frontend-clean.png`
+
+### 5.3 Testy interakcji
+
+**Auto-apply (Sort):**
+- Zmiana sort dropdown → automatycznie buduje URL: `?lq.22f2ad81....__sort=updatedAt:desc`
+- Działa poprawnie ✓
+
+**Auto-apply (Search):**
+- Wpisanie tekstu + Tab (blur) → URL aktualizuje się: `?lq.22f2ad81....__q=test`
+- Działa poprawnie ✓
+
+**Kombinacja Sort + Search:**
+- Oba tokeny w URL: `?lq.22f2ad81....__q=test&lq.22f2ad81....__sort=updatedAt:desc`
+- Działa poprawnie ✓
+
+**Browser Back (popstate):**
+- Powrót do poprzedniego URL przywraca poprzedni stan filtrów
+- Sort combobox poprawnie wraca do "Default order"
+- Działa poprawnie ✓
+
+**Screenshot:** `listing-filters-11-frontend-auto-apply.png`, `listing-filters-12-frontend-search-active.png`, `listing-filters-13-frontend-combined-filters.png`, `listing-filters-14-frontend-popstate-back.png`
+
+### 5.4 Dostępność (accessibility audit)
+
+**Wyniki audytu kontrolek formularza:**
+```json
+[
+  { "tag": "INPUT", "type": "text", "token": "__q", "id": "none", "hasAriaLabel": false, "hasLabelFor": false },
+  { "tag": "SELECT", "type": "select-one", "token": "__sort", "id": "none", "hasAriaLabel": false, "hasLabelFor": false }
+]
+```
+
+- Brak `id` na elementach INPUT/SELECT — potwierdza T-06
+- Brak `aria-label` na elementach — potwierdza T-05
+- Asocjacja label-control tylko przez wrapping `<label>` (implicit, nie explicit)
+- Brak `aria-label` na `<form>`, `<section>` i `<button type="submit">` — potwierdza T-08
 
 ---
 
 ## 6. Porównanie Admin vs Frontend
 
-> Status: **W TOKU**
+> Status: **UKOŃCZONY**
+
+### 6.1 Diagram przepływu danych
+
+```
+Admin Canvas (edytor)
+  └── ZAWSZE pokazuje placeholder (bug ?? vs || w resolveOptionalText fallback)
+  └── Nieużywalny do podglądu — blokuje feedback dla redaktora
+
+Admin Preview Dialog
+  └── NIE TESTOWANO (widget nie jest dostępny przez Preview w tym stanie)
+
+Frontend (localhost:3000)
+  └── SSR rozwiązuje listingQueryId poprawnie
+  └── Widget renderuje się i działa w pełni
+```
+
+### 6.2 Tabela porównawcza
+
+| Aspekt | Admin Canvas | Frontend |
+|--------|-------------|----------|
+| Placeholder gdy brak query | ✓ Pokazuje | ✓ Pokazuje |
+| Widżet z query | ✗ Nadal placeholder (bug) | ✓ Działa |
+| Tytuł/opis widoczny | ✗ (placeholder) | ✓ |
+| Search field | ✗ (placeholder) | ✓ |
+| Sort combobox | ✗ (placeholder) | ✓ |
+| Auto-apply URL sync | ✗ (nie testowalne) | ✓ |
+| Browser Back | ✗ | ✓ |
+| Data-atrybuty w DOM | ✓ (data-listing-query-id="") | ✓ (poprawne UUID) |
+
+### 6.3 Rozbieżności i ich przyczyny
+
+**Admin Canvas ≠ Frontend (krytyczna rozbieżność):**
+- **Przyczyna**: Bug `??` vs `||` w `normalizeListingFiltersData` przy odczycie `listingQueryId`. Admin canvas używa `ListingFiltersBlock` bezpośrednio z `data` widgetu, gdzie `resolved.listingQueryId` jest `""` (empty string, nie null). Operator `??` nie fallbackuje na `listingQueryId`.
+- **Frontend**: SSR uruchamia resolver który wypełnia `resolved.listingQueryId` poprawnym UUID — canvas nie ma tego problemu.
+- **Fix**: Zmienić `??` na `||` w lini:
+  ```ts
+  const listingQueryId = resolveOptionalText(
+    normalized.resolved?.listingQueryId ?? normalized.listingQueryId
+  );
+  ```
 
 ---
 
 ## 7. Wnioski i Rekomendacje
 
-> Status: **W TOKU — uzupełniany po testach**
+### 7.1 Priorytety napraw (po testach)
+
+**Krytyczne (blokują podstawowe użycie):**
+
+1. **Bug `??` → `||` w canvas** (nowy, znaleziony w testach): Admin canvas ZAWSZE pokazuje placeholder zamiast widgetu. Fix jednoliniowy: `??` → `||`. Blokuje cały feedback redaktora.
+
+2. **Niemożność dodania facetu** (T-01/E-01 potwierdzone): "Add facet" tworzy checkbox z pustym `field`, normalizacja odrzuca go natychmiast, żadnego komunikatu błędu. **Użytkownik nie może dodać żadnego facetu innego niż Sort przez UI.** Fix: pozwolić polu `field` być pustym w edytorze (pomijać normalizację dla stanów edycji in-progress) LUB walidować i pokazywać komunikat.
+
+3. **Zmiana kind facetu Sort → inny** (powiązane z #2): Sortowy facet nie ma `field`, zmiana kind na checkbox powoduje jego natychmiastowe zniknięcie. Fix: przy zmianie kind ustaw `field` na pusty string i pokaż walidację zamiast cicho odrzucać.
+
+4. **Bug sesji: 401 na API listings/queries** (nowy, znaleziony w testach): Pierwsze otwarcie edytora po zalogowaniu zwraca 401 z API. Redaktor widzi "Not authenticated" w dropdown — musi przeładować. Fix: retry logic lub opóźnienie wywołania API do momentu stabilizacji sesji.
+
+**Ważne (ograniczają szeroki zakres konfiguracji):**
+
+5. **B-05/B-06 — Range/Date-range jako text input**: Użytkownik musi wpisać `min,max` lub `YYYY-MM-DD,YYYY-MM-DD` w pole tekstowe. Brak slidera i date picker blokuje zastosowanie dla normalnych redaktorów.
+
+6. **B-02 — Brak paginacji**: Token `__page` istnieje w kontrakcje ale nie ma żadnej kontrolki paginacji w widgecie. Listing filters bez paginacji jest niepełny.
+
+7. **B-03 — Brak wskaźnika aktywnych filtrów**: Brak licznika aktywnych filtrów, tagów wyborów, przycisku "Clear all". Użytkownik nie wie jakie filtry są aktywne bez czytania URL.
+
+8. **B-11 — Brak reset `__page` przy zmianie filtrów**: Skrypt nie zeruje `__page` przy submit filtrów. Krytyczne dla paginowanych list.
+
+9. **B-01 — Tylko jeden wariant (`default`)**: Brak `horizontal` (filtry w wierszu), `sidebar` (sticky panel), `drawer` (mobilny). Wszystkie typowe wzorce UX dla listingów są nieobsługiwane.
+
+**UX informacyjne:**
+
+10. **E-07 (potwierdzone)**: Wizard nie zawiera FacetsEditor — redaktor musi przełączyć się na Visual, żeby dodać facety. Należy dodać FacetsEditor do Wizard lub wyraźnie kierować do Visual tab.
+
+11. **E-04 (potwierdzone)**: Tekst opcji/sortOptions w formacie `value|label` / `value|label|field|dir` — nieintuicyjny, bez walidacji inline. Brak wizualnego edytora par.
+
+12. **E-12 (potwierdzone)**: Przycisk "Apply filters" widoczny przy `autoApply=true` z opisem "Updates automatically" — zbędny przycisk i myląca informacja obok niego.
+
+13. **T-07 (potwierdzone)**: Count `0` dla każdej opcji gdy metrics nie są załadowane — mylące (zero wyników vs dane niezaładowane).
+
+**Dostępność:**
+
+14. **T-05/T-06/T-08 (potwierdzone)**: Brak `id` na kontrolkach, brak `aria-label`, brak `aria-label` na form i button submit. Nieakceptowalne dla zastosowań wymagających WCAG 2.1 AA.
+
+### 7.2 Podsumowanie stanu jakości
+
+| Obszar | Ocena | Komentarz |
+|--------|-------|-----------|
+| Funkcjonalność core (frontend) | ✅ Działa | SSR, URL sync, popstate — wszystko poprawne |
+| Admin Canvas Preview | ❌ Zepsuty | Zawsze placeholder (bug `??` vs `||`) |
+| Wizard Editor | ⚠️ Niekompletny | Brak FacetsEditor, bug sesji 401 |
+| Visual Editor | ❌ Krytyczny bug | Nie można dodać facetu (normalizacja odrzuca puste field) |
+| Advanced Editor | ⚠️ Ograniczony | Runtime payload zawsze pusty, sortOptions format nieintuicyjny |
+| Zakres konfiguracyjny | ⚠️ Wąski | Tylko Sort facet działa przez UI; brak Range slider/date picker/pagination/wariantów |
+| Dostępność | ⚠️ Luki | Brak id/aria-label na kontrolkach |
+| Admin ↔ Frontend spójność | ❌ Rozbieżność | Canvas pokazuje placeholder, frontend działa prawidłowo |
 
 ---
 
-_Raport wstępny (analiza kodu). Uzupełniany po testach w przeglądarce._
+## 8. Screenshoty
+
+> Uwaga: nazwy plików PNG w tej sekcji są wyłącznie lokalnymi etykietami
+> przechwyceń Playwright. Same pliki PNG są ignorowane przez Git i nie są
+> wymaganym evidence w repo.
+
+| Plik | Opis |
+|------|------|
+| `listing-filters-01-canvas-empty-state.png` | Canvas z placeholderem (brak listingQueryId) |
+| `listing-filters-02-wizard-editor.png` | Wizard Editor - pełny widok |
+| `listing-filters-03-wizard-editor-dropdown.png` | Dropdown listing query z dostępnymi opcjami |
+| `listing-filters-04-wizard-query-selected.png` | Po wybraniu query — canvas nadal placeholder |
+| `listing-filters-05-visual-editor.png` | Visual Editor z sekcją Facet controls |
+| `listing-filters-06-facet-kind-dropdown.png` | Dropdown rodzaju facetu (6 opcji) |
+| `listing-filters-07-advanced-editor.png` | Advanced Editor - runtime payload i contract |
+| `listing-filters-08-canvas-after-save.png` | Canvas po zapisaniu — nadal placeholder |
+| `listing-filters-09-published-canvas-state.png` | Canvas po publikacji — nadal placeholder |
+| `listing-filters-10-frontend-widget.png` | Frontend: widget działa prawidłowo po SSR |
+| `listing-filters-11-frontend-auto-apply.png` | Frontend: auto-apply URL sync po zmianie sort |
+| `listing-filters-12-frontend-search-active.png` | Frontend: search pole aktualizuje URL |
+| `listing-filters-13-frontend-combined-filters.png` | Frontend: połączony search + sort w URL |
+| `listing-filters-14-frontend-popstate-back.png` | Frontend: Browser Back przywraca poprzedni stan |
+| `listing-filters-15-frontend-clean.png` | Frontend: czysty widok widgetu |
+
+---
+
+_Raport ukończony po pełnym cyklu testów: analiza kodu + testy Admin UI + testy Frontend + porównanie._
