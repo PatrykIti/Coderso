@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 196 tasks
+- **To Do:** 199 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1542 tasks
 
@@ -177,6 +177,9 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-261 | Contact Widget Playwright Product Followups | High | Very Large | Contact-only follow-up family for `REPORT_CONTACT_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-261-01 | Contact Header, Details Links, and Semantic Output | High | Large | Add Contact section headings, panel headings, semantic details, and safe tel/mailto output |
 | TASK-261-02 | Contact Form Field Metadata and Public Submission Bridge | High | Very Large | Add field names/ids/autocomplete/custom labels and route active submits through existing Forms runtime hardening |
+| TASK-261-02-01 | Contact Field Metadata and Accessible HTML | High | Large | Add Contact-owned field labels/placeholders, names, ids, autocomplete, and layout metadata |
+| TASK-261-02-02 | Contact Static Form State and No-GET Safety | High | Medium | Prevent presentational Contact forms from native GET submission before Forms binding is enabled |
+| TASK-261-02-03 | Contact Forms Runtime Bridge and Public-Write Hardening | High | Large | Bind Contact to existing Forms records with strict field mapping, runtime hydration, nonce, and route/security proof |
 | TASK-261-03 | Contact Editor Mode Parity and Minimal Variant UX | High | Large | Repair Contact Wizard/Visual/Advanced UX, Wizard hours, minimal form controls, hints, and normalization feedback |
 | TASK-261-04 | Contact Map Validation, Fallback, and Display Controls | Medium | Medium | Add map title/description, validation, height, fullscreen, and fallback behavior |
 | TASK-261-05 | Contact Layout, Social Links, and Normalizer Polish | Medium | Medium | Add max-width, padding, bounded social links, and explicit default enum normalization |

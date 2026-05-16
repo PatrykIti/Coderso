@@ -23,7 +23,8 @@ not reopen shared TASK-256 style helper work.
 This leaf owns:
 
 - `style.maxWidth` and `style.paddingX`/section padding controls.
-- Contact-owned social links with safe URL normalization.
+- Contact-owned social links with safe absolute web URL normalization through a
+  Contact-local wrapper around `normalizeWidgetSafeHref`.
 - Explicit checks for default enum values in Contact normalizer helpers
   (`spacing=md`, `borderWidth=1`) so tests can distinguish valid defaults from
   invalid fallback behavior.
@@ -32,8 +33,9 @@ This leaf does not own:
 
 - Generic shared spacing/padding token systems.
 - Generic social link rendering for footer/navigation/team widgets.
-- Generic safe-href helpers unless the existing helper is already available and
-  should be reused.
+- Generic safe-href helper changes; Contact social links should reuse the
+  existing helper with Contact-local options and without expanding its protocol
+  policy.
 - Contact `borderColor` clear behavior, which remains TASK-256-02 shared
   clear/token scope unless that task leaves a Contact-only hook.
 
@@ -44,9 +46,12 @@ This leaf does not own:
   `max-w-5xl px-4`.
 - [ ] Add a bounded `contact.social[]` model with platform enum, label, URL,
   and optional visibility/order fields.
-- [ ] Normalize social URLs through the existing safe public href behavior when
-  available; otherwise add a Contact-local allowlist for `https`, `mailto`, and
-  `tel` as appropriate.
+- [ ] Normalize social URLs through existing `normalizeWidgetSafeHref` behavior
+  for public web profile links via `normalizeContactSocialHref(value)`. Use
+  `{ allowHttp: true }` so absolute `https://` profile links survive, but keep
+  `mailto:`, `tel:`, relative, hash-only, protocol-relative, and scriptable
+  schemes rejected for social rows. `tel:`/`mailto:` contact-detail links stay
+  owned by TASK-261-01.
 - [ ] Add editor controls for max width, padding, and social links without
   creating a broad social-link platform.
 - [ ] Update `resolveContactSpacing()` and `resolveContactBorderWidth()` to
@@ -57,10 +62,11 @@ This leaf does not own:
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/contact.tsx` | Extend style/social schema/defaults/normalizer and render width/padding/social links. |
+| `core/widgets/core/contact.tsx` | Extend style/social schema/defaults/normalizer and render width/padding/social links through existing safe href normalization. |
 | `core/admin/ui/widgets/editors/ContactEditors.tsx` | Add Contact-local layout and social controls. |
 | `tests/vitest/widgets/contact.test.tsx` | Cover width/padding tokens, social link normalization, and explicit enum default normalization. |
 | `tests/vitest/ui/contact-editor-wave.test.tsx` | Cover editor controls for layout/social fields. |
+| `tests/vitest/widgets/widgetSafeHref.test.ts` | Run if this task touches `normalizeWidgetSafeHref`; prefer not touching it for Contact social links. |
 | `tests/unit/widgets/validator.test.ts` | Update when schema fields are added. |
 | `_docs/_WIDGETS/CONTACT.md` | Document layout/social options and safe links. |
 | `_docs/WIDGET_PACK_MATRIX.md` | Update only if these options change Contact pack readiness. |
@@ -107,9 +113,16 @@ function resolveContactBorderWidth(value: string | undefined): ContactBorderWidt
   return "1";
 }
 
+function normalizeContactSocialHref(value: unknown): string | undefined {
+  const href = normalizeWidgetSafeHref(value, { allowHttp: true });
+  if (!href) return undefined;
+  // Social links are public profile URLs only, not contact-detail links.
+  return href;
+}
+
 function normalizeSocialLinks(value: unknown): ContactSocialLink[] {
   return readArray(value)
-    .map(normalizeSocialLink)
+    .map((row) => normalizeSocialLink(row, normalizeContactSocialHref))
     .filter((link): link is ContactSocialLink => Boolean(link));
 }
 ```
@@ -127,7 +140,10 @@ Error handling:
 - Invalid social platforms fall back to `custom` only when label and href are
   valid; otherwise the row is dropped.
 - Unsafe hrefs are omitted from runtime output and surfaced in editor validation
-  where possible.
+  where possible. `https://` profile URLs stay valid; `mailto:`, `tel:`,
+  relative, hash-only, protocol-relative, and scriptable URLs are not accepted
+  for social rows unless a separate shared safe-href task expands and tests that
+  helper contract.
 - Old blocks without style/social fields keep the current `max-w-5xl px-4`
   behavior through defaults.
 
@@ -147,6 +163,11 @@ No API routes are added.
 
 - `bun run test:vitest -- tests/vitest/widgets/contact.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/contact-editor-wave.test.tsx`
+- Contact widget tests must prove `https://` social profile links render while
+  `mailto:`, `tel:`, relative, hash-only, protocol-relative, and scriptable
+  hrefs are dropped.
+- `bun run test:vitest -- tests/vitest/widgets/widgetSafeHref.test.ts` if the
+  shared helper is touched
 - `bun test tests/unit/widgets/validator.test.ts` when schema changes
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`

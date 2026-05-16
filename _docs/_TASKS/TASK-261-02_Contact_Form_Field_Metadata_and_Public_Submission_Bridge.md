@@ -12,175 +12,135 @@
 
 ## Overview
 
-Make the Contact form HTML complete and route active submissions through the
-existing Forms runtime hardening.
+Coordinate the Contact form execution leaves for the Playwright findings around
+field metadata, accessible HTML, no-GET safety, and optional Forms runtime
+submission.
 
-`REPORT_CONTACT_WIDGET.md` confirms that Contact inputs have no `name`, no
-explicit `id`, no `autocomplete`, and the form defaults to a native GET against
-the current page. This leaf fixes the Contact form contract without inventing an
-arbitrary endpoint in widget data.
+This parent is not an implementation leaf. The work is intentionally split into
+three physical children so each implementer can change one contract without
+rediscovering the full public-write strategy:
+
+- `TASK-261-02-01`: Contact field metadata and accessible HTML.
+- `TASK-261-02-02`: presentational/static form behavior and no native GET
+  reload.
+- `TASK-261-02-03`: optional bridge to existing Forms runtime submission,
+  nonce/CAPTCHA/access checks, and public-write tests.
+
+`REPORT_CONTACT_WIDGET.md` confirms that Contact inputs currently have no
+`name`, no explicit `id`, no `autocomplete`, and the form defaults to native GET
+against the current page. The children must fix that Contact contract without
+inventing an arbitrary endpoint in widget data.
 
 ## Scope Boundary
 
-This leaf owns:
+This parent owns dependency order and cross-leaf invariants only.
+
+In scope across the children:
 
 - Contact field `name`, `id`, `autocomplete`, `label`, `placeholder`, and layout
   span metadata.
 - Explicit `<label htmlFor>` relationships and form accessible naming.
 - A safe non-submitting state for presentational Contact blocks.
-- Optional binding to an existing Forms record for real submission via the
-  existing `POST /forms/:id/submissions` route, nonce, CAPTCHA, and runtime
-  script contract.
-- Submit button `data-form-submit` / `aria-busy` state compatibility when the
-  Forms runtime script owns submission.
+- Optional binding to an existing Forms record for real submission through the
+  existing `POST /forms/:id/submissions` route, nonce, CAPTCHA, runtime script,
+  and status-node contract.
+- A narrow runtime-only Contact `resolved` schema/type allowance when
+  `publicSite.tsx` hydrates Forms data for rendering. Do not loosen Contact to
+  arbitrary additional properties.
+- `data-form-submit` / `aria-busy` compatibility when the Forms runtime script
+  owns submission.
 
-This leaf does not own:
+Out of scope:
 
 - Creating a new public Contact endpoint.
-- Storing endpoint URLs, provider secrets, CAPTCHA settings, or email routing in
-  Contact widget JSON.
+- Storing arbitrary endpoint URLs, provider secrets, CAPTCHA settings, nonce
+  secrets, raw submissions, or email routing in Contact widget JSON.
 - Replacing Form Embed or the Forms builder.
 - Generic Forms route redesign beyond focused integration coverage required by
   Contact.
 
 ## Sub-Tasks
 
-- [ ] Extend `ContactData.form` with field metadata keyed by
-  `ContactFieldId`, including label, placeholder, autocomplete, and layout span.
-- [ ] Add a Contact submission binding, preferably `form.sourceFormId` or
-  `submission.formId`, that points to an existing Forms record.
-- [ ] Hydrate the selected Forms runtime data in public rendering the same way
-  `form-embed` does, reusing `resolveFormRuntimeData()` and existing nonce
-  generation.
-- [ ] Render `method="post"` and `action="/forms/:id/submissions"` only when a
-  valid Forms runtime binding exists.
-- [ ] If no valid binding exists, prevent silent GET reloads by rendering a
-  non-submitting presentational form state and explicit editor/runtime copy.
-- [ ] Add field `name`, stable `id`, `autocomplete`, explicit labels, and
-  per-field placeholder/label output.
-- [ ] Add success/error/status nodes compatible with existing
-  `getFormRuntimeClientScript()` instead of a Contact-only script.
-- [ ] Keep required fields clamped to selected fields and keep unknown public
-  payload keys rejected by Forms schemas.
+- [ ] TASK-261-02-01: Contact Field Metadata and Accessible HTML
+- [ ] TASK-261-02-02: Contact Static Form State and No-GET Safety
+- [ ] TASK-261-02-03: Contact Forms Runtime Bridge and Public-Write Hardening
 
 ## Files to Change
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/contact.tsx` | Extend schema/defaults/normalizer/render for field metadata and Forms runtime binding. |
-| `core/admin/ui/widgets/editors/ContactEditors.tsx` | Add editor controls for labels, placeholders, autocomplete hints, field layout spans, selected Forms binding, and static-vs-submit state copy. |
-| `core/server/publicSite.tsx` | Hydrate Contact Forms runtime data when Contact is bound to an existing form. |
-| `core/widgets/core/formRuntimeScript.ts` | Reuse as-is when possible; change only if Contact needs a generalized selector/name that remains compatible with Form Embed. |
-| `core/services/forms/formRuntimeResolver.ts` | Reuse existing resolver; add focused coverage if Contact requires a small adapter. |
-| `tests/vitest/widgets/contact.test.tsx` | Cover names, ids, autocomplete, labels/placeholders, static non-submit state, and active Forms runtime action. |
-| `tests/vitest/ui/contact-editor-wave.test.tsx` | Cover metadata controls and submission binding UI. |
-| `tests/vitest/forms/formRuntimeResolver.test.ts` | Add Contact hydration coverage only if resolver/adapter logic changes. |
-| `tests/integration/routes/forms.test.ts` | Add public submit route coverage if Contact changes payload shape or runtime assumptions. |
-| `tests/security/codersoSecurityGate.test.ts` | Run/update when nonce, CAPTCHA, or public-write policy behavior changes. |
-| `tests/unit/widgets/validator.test.ts` | Update when Contact schema changes. |
+| `_docs/_TASKS/TASK-261-02-01_Contact_Field_Metadata_and_Accessible_HTML.md` | Execution leaf for labels, placeholders, `name`, `id`, `autocomplete`, and field layout metadata. |
+| `_docs/_TASKS/TASK-261-02-02_Contact_Static_Form_State_and_No_GET_Safety.md` | Execution leaf for non-submitting presentational behavior, static copy, and no native GET reload. |
+| `_docs/_TASKS/TASK-261-02-03_Contact_Forms_Runtime_Bridge_and_Public_Write_Hardening.md` | Execution leaf for Forms runtime binding, public route/security proof, and status behavior. |
+| `core/widgets/core/contact.tsx` | Shared Contact schema/default/normalizer/render owner touched by all children; TASK-261-02-03 may add a narrow render-only `resolved` schema/type field. |
+| `core/admin/ui/widgets/editors/ContactEditors.tsx` | Editor controls for child-owned Contact form fields and runtime binding. |
+| `core/server/publicSite.tsx` | Touched only by TASK-261-02-03 when runtime Forms data must be hydrated for Contact. |
+| `core/widgets/core/formRuntimeScript.ts` | Reuse as-is if possible; change only through TASK-261-02-03 if the selector/status/submit-button `aria-busy` contract must become Contact-compatible. |
+| `core/services/forms/formRuntimeResolver.ts` | Reuse as-is if possible; add focused adapter coverage only through TASK-261-02-03. |
 
-## Implementation Pseudocode
+## Implementation Order
+
+1. Complete `TASK-261-02-01` first so field metadata and labels exist before
+   any submit/static behavior depends on stable control names.
+2. Complete `TASK-261-02-02` next so Contact never performs a blank native GET,
+   even if Forms runtime binding is not enabled.
+3. Complete `TASK-261-02-03` last because public submission is the high-risk
+   runtime/security surface and must build on the static-safe form contract.
+
+## Runtime Data Invariant
+
+Forms runtime data is transient render-time data. If Contact needs resolved
+Forms data, implementation must keep these rules:
 
 ```ts
-type ContactFieldSettings = {
-  label?: string;
-  placeholder?: string;
-  autocomplete?: "name" | "email" | "tel" | "off";
-  span?: "full" | "half";
-};
+type PersistedContactData = ContactDataWithoutRuntimeSecrets;
 
-type ContactSubmissionSettings = {
-  formId?: string;
-  mode?: "static" | "forms-runtime";
-  successMessage?: string;
-  errorMessage?: string;
-};
-
-type ContactData = {
-  form?: {
-    fields?: ContactFieldId[];
-    required?: ContactFieldId[];
-    submitLabel?: string;
-    fieldSettings?: Partial<Record<ContactFieldId, ContactFieldSettings>>;
-    fieldLayout?: "one" | "two";
-    submission?: ContactSubmissionSettings;
-  };
+type ContactRuntimeRenderData = PersistedContactData & {
   resolved?: {
     formId?: string;
-    submissionNonce?: string | null;
+    formName?: string;
+    fields?: NormalizedFormField[];
+    status?: string;
+    successMessage?: string | null;
+    successRedirectUrl?: string | null;
     submissionAccess?: "public" | "internal";
+    submissionNonce?: string | null;
     error?: string;
   };
 };
-```
 
-Runtime hydration:
+function hydrateContactForPublicRender(block: WidgetBlock): WidgetBlock {
+  const data = normalizeContactData(block.data as ContactData);
+  const formId = data.form?.submission?.formId;
+  const resolved = formId ? resolveFormRuntimeData(formId, { preview }) : undefined;
 
-```ts
-if (block.type === "contact") {
-  const normalized = normalizeContactData(ensureRecord(block.data) as ContactData);
-  const formId = normalized.form?.submission?.formId;
-  const resolved = formId
-    ? await resolveFormRuntimeData(formId, { preview: options.preview })
-    : { error: "contact_form_missing" };
-
-  nextBlock = {
+  return {
     ...block,
     data: {
-      ...normalized,
+      ...data,
+      // Render-request only. Do not persist this value back to page/widget JSON.
       resolved,
     },
   };
 }
 ```
 
-Renderer shape:
+Because live widget validation uses the widget schema before render, the
+Contact schema must explicitly allow only this runtime `resolved` key when
+hydrated public render blocks are validated. It must still reject unrelated
+unknown keys; do not use broad `additionalProperties: true`.
 
-```tsx
-const canSubmit =
-  showForm &&
-  normalized.form?.submission?.mode === "forms-runtime" &&
-  normalized.form?.submission?.formId &&
-  !normalized.resolved?.error;
-
-<form
-  method={canSubmit ? "post" : undefined}
-  action={canSubmit ? `/forms/${formId}/submissions` : undefined}
-  data-nextless-form-runtime={canSubmit ? "1" : undefined}
-  aria-labelledby={formTitleId}
-  onSubmit={canSubmit ? undefined : preventNativeSubmit}
->
-  {nonce ? <input type="hidden" name="__nl_form_nonce" value={nonce} /> : null}
-  {fields.map((field) => (
-    <input
-      id={`${instanceId}-${field}`}
-      name={fieldSettings[field].name ?? field}
-      autoComplete={fieldSettings[field].autocomplete}
-      required={requiredFields.has(field)}
-    />
-  ))}
-  <button
-    type={canSubmit ? "submit" : "button"}
-    data-form-submit={canSubmit ? "1" : undefined}
-    aria-busy="false"
-  >
-    {submitLabel}
-  </button>
-</form>
-```
-
-Error handling:
-
-- Missing or unpublished Forms bindings render a clear non-submitting fallback
-  and do not produce a GET submit.
-- Unknown field setting keys are rejected by Contact schema validation.
-- Unknown submitted fields are still rejected by the Forms submission schema.
-- Internal Forms mode requires admin session or API key scope `forms.submit`.
+The hidden nonce value may appear in the rendered public form exactly like
+`form-embed`, but nonce secrets and raw nonce evidence must not be stored in
+Contact widget JSON, browser cache, Playwright reports, changelog entries, or
+admin diagnostics. If a cache layer serializes public HTML, it must follow the
+existing Forms runtime nonce/cache policy instead of inventing a Contact-specific
+exception.
 
 ## Security Contract
 
-This leaf may affect existing Forms public submission behavior through Contact
-runtime integration. It must not introduce a new public endpoint.
+This parent may affect existing Forms public submission behavior only through
+the `TASK-261-02-03` bridge. It must not introduce a new public endpoint.
 
 - Endpoint visibility: existing public `POST /forms/:id/submissions`; admin
   editing remains internal.
@@ -192,38 +152,39 @@ runtime integration. It must not introduce a new public endpoint.
   `__nl_form_nonce`.
 - Rate-limit bucket: existing public write/forms bucket through current route
   middleware; do not add a weaker widget bucket.
-- Reject-unknown validation: Contact schema rejects unknown widget fields;
-  Forms schemas reject unknown submission fields.
+- Reject-unknown validation: Contact schema rejects unknown widget fields except
+  the explicit render-only `resolved` hydration key; Forms schemas reject
+  unknown submission fields.
 - Anti-abuse: nonce + signature/HMAC remain required for public submit when
   access policy requires it; optional reCAPTCHA remains backend-owned through
   security settings.
 - Secret handling: widget JSON must not store nonce secrets, CAPTCHA secrets,
-  provider keys, raw submission payloads, or arbitrary endpoint URLs.
+  provider keys, raw submission payloads, arbitrary endpoint URLs, or privileged
+  routing settings.
 
 ## Testing Requirements
 
+Parent validation after any child lands:
+
 - `bun run test:vitest -- tests/vitest/widgets/contact.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/contact-editor-wave.test.tsx`
-- `bun run test:vitest -- tests/vitest/forms/formRuntimeResolver.test.ts` when
-  runtime hydration changes
-- `bun test tests/unit/widgets/validator.test.ts`
-- `bun test tests/integration/routes/forms.test.ts` when Contact changes public
-  submission payload/action behavior
-- `bun test tests/unit/forms/submissionService.test.ts` when submitted data
-  normalization changes
-- `bun test tests/security/codersoSecurityGate.test.ts` when nonce/CAPTCHA or
-  public-write hardening changes
+- `bun test tests/unit/widgets/validator.test.ts` when Contact schema changes.
+- Contact validator coverage must prove hydrated `resolved` render data is
+  accepted while an unrelated unknown Contact field is still rejected.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 
+Additional Forms/public-write validation is owned by `TASK-261-02-03`.
+
 ## Documentation Updates Required
 
-- Update `_docs/_WIDGETS/CONTACT.md` with form metadata, static state, Forms
-  runtime binding, nonce/CAPTCHA boundary, and accepted field settings.
+- Update `_docs/_WIDGETS/CONTACT.md` with final field metadata, static state,
+  Forms runtime binding, nonce/CAPTCHA boundary, and accepted field settings.
 - Update `_docs/PLAYWRIGHT/REPORT_CONTACT_WIDGET.md` rows C3, C4, W2, W3, W11,
   W12, R2, R3, R4, and R10 after validation.
 - Update `_docs/SECURITY_SPEC.md` only if the existing Forms public-write
   contract changes, not for Contact simply reusing it.
+- Keep `_docs/_TASKS/README.md` synchronized when child task rows change state.
 
 ## Changelog Policy
 
@@ -232,11 +193,13 @@ runtime integration. It must not introduce a new public endpoint.
 
 ## Acceptance Criteria
 
+- The three physical child leaves are execution-ready and cover every Contact
+  field/submission finding from the source report.
 - Contact form fields have stable names, IDs, labels, placeholders, and
-  autocomplete attributes.
-- Contact no longer submits a blank GET to the current page.
-- Active Contact submissions use the existing Forms route, nonce/CAPTCHA/access
-  checks, and runtime status behavior.
+  autocomplete attributes after the relevant child lands.
+- Contact no longer submits a blank GET to the current page after the static
+  behavior child lands.
+- Active Contact submissions, if enabled, use the existing Forms route,
+  nonce/CAPTCHA/access checks, runtime script, and status behavior.
 - Static Contact forms are visibly non-submitting or editor-clearly
   presentational, without pretending to send data.
-- Tests cover both static and active Forms-runtime modes.

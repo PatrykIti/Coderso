@@ -69,7 +69,7 @@ follow-up before marking the row deferred.
 | Finding | Status | Fix owner | Test evidence | Notes |
 |---|---|---|---|---|
 | C2 tel/mailto links | fixed | TASK-261-01 | bun run test:vitest -- tests/vitest/widgets/contact.test.tsx | public/frontend parity verified |
-| U2 border clear | TASK-256 shared scope | TASK-256-02 | <TASK-256 evidence> | not implemented in TASK-261 |
+| U2 border clear | TASK-256 shared scope | TASK-256-02 | N/A for TASK-261; optional TASK-256-02 status link if landed | not implemented in TASK-261 |
 | C4 public submit | fixed/deferred | TASK-261-02 | <route/security/runtime tests> | must not silently GET current URL |
 ```
 
@@ -126,6 +126,10 @@ No API routes are added by this closure leaf.
   - `bun test tests/unit/widgets/validator.test.ts` when schema changed
 - Forms/public-write additions:
   - `bun run test:vitest -- tests/vitest/forms/formRuntimeResolver.test.ts`
+  - `bun test tests/integration/runtime/pages-runtime.test.ts` when Contact
+    runtime hydration changes `publicSite.tsx`
+  - `bun run test:vitest -- tests/vitest/widgets/formEmbed.test.tsx` when
+    shared Forms runtime script/status attributes change
   - `bun test tests/integration/routes/forms.test.ts`
   - `bun test tests/unit/forms/submissionService.test.ts`
   - `bun test tests/security/codersoSecurityGate.test.ts`
@@ -150,6 +154,9 @@ No API routes are added by this closure leaf.
 
 - This leaf must add or verify a changelog entry that lists TASK-261 and every
   completed TASK-261 child task.
+- At closure, read `_docs/_CHANGELOG/README.md` and use the next unused
+  monotonically increasing number; do not hardcode the changelog number in
+  advance.
 
 ## Acceptance Criteria
 

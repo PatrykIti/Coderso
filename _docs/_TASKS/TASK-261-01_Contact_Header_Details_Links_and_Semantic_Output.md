@@ -54,7 +54,7 @@ helpers, generic icon systems, or arbitrary rich text in contact details.
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/contact.tsx` | Extend schema/defaults/normalizer and render section/detail semantics. |
+| `core/widgets/core/contact.tsx` | Extend schema/defaults/normalizer and render section/detail semantics; consume existing `blockId` render prop for stable local IDs. |
 | `core/admin/ui/widgets/editors/ContactEditors.tsx` | Add title/description/panel heading/label/icon controls in appropriate modes. |
 | `tests/vitest/widgets/contact.test.tsx` | Cover headings, `aria-labelledby`, semantic detail markup, `tel:` and `mailto:` links, and backward-compatible defaults. |
 | `tests/vitest/ui/contact-editor-wave.test.tsx` | Cover editor updates for the new Contact-owned content fields. |
@@ -118,7 +118,8 @@ function toContactHref(key: ContactDetailKey, value: string) {
 Renderer shape:
 
 ```tsx
-const sectionTitleId = title ? `${instanceId}-title` : undefined;
+const contactIdBase = blockId ?? "contact";
+const sectionTitleId = title ? `${contactIdBase}-title` : undefined;
 
 <section aria-labelledby={sectionTitleId} aria-label={sectionTitleId ? undefined : "Contact"}>
   {title ? <h2 id={sectionTitleId}>{title}</h2> : null}
@@ -143,6 +144,9 @@ Error handling:
 - Empty custom labels fall back to stable defaults.
 - Invalid phone/email values render as text, not unsafe links.
 - Old blocks without new fields must still render with current content.
+- Stable IDs must use the existing `blockId` renderer prop when available and a
+  deterministic local fallback otherwise. Do not introduce shared instance-ID
+  helpers here; generic instance-safe ID work belongs to TASK-256-04.
 
 ## Security Contract
 

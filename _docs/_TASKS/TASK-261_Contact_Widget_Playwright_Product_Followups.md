@@ -24,8 +24,9 @@ source-of-truth docs.
 
 The current Contact widget is a presentational contact section with hardcoded
 form labels, no real submission target, no `name` attributes, text-only
-phone/email details, and a shallow editor surface. TASK-261 turns the report
-into execution-ready leaves without widening TASK-256.
+phone/email details, and specific missing Contact controls inside an otherwise
+sectioned editor surface. TASK-261 turns the report into execution-ready leaves
+without widening TASK-256.
 
 ## Scope Boundary Against TASK-256
 
@@ -68,8 +69,8 @@ work.
 | Report finding | Route |
 |---|---|
 | C1, C2, W1, W4, W5, R1, R5, R6, R7 | TASK-261-01 |
-| C3, C4, W2, W3, W11, W12, R2, R3, R4, R10 | TASK-261-02 |
-| C5, U1, U3, U4, U5, U6, U7, U8, U9, U10 | TASK-261-03 |
+| C3, C4, W2, W3, W11, W12, R2, R3, R4, R10 | TASK-261-02 parent; execution leaves TASK-261-02-01 through TASK-261-02-03 |
+| C5, W8, U1, U3, U4, U5, U6, U7, U8, U9, U10 | TASK-261-03; W8 is current button-ordering/future drag-and-drop classification, not required DnD implementation |
 | W9, W10, W14, W15, R8, R9 | TASK-261-04 |
 | W6, W7, W13, R11, R12 | TASK-261-05 |
 | U2 and CSS-variable swatch drift | TASK-256-02, not TASK-261, unless final shared helper needs a Contact-only hook |
@@ -80,8 +81,11 @@ work.
 | Leaf | Current drift evidence | Owner files | Required test lanes |
 |---|---|---|---|
 | TASK-261-01 | Report lines 57-60, 67-73, 104, 108-110, 200-203, 227-240, 294, 307, 310 | `contact.tsx`, `ContactEditors.tsx`, Contact docs | Vitest widget render, editor wave when editors expose labels/icons |
-| TASK-261-02 | Report lines 61-62, 70-71, 79-80, 105-107, 113, 181-198, 248-253, 295-296, 300, 309, 320 | `contact.tsx`, `ContactEditors.tsx`, `publicSite.tsx`, Forms runtime owners when submission is active | Vitest widget/editor, validator, Forms runtime resolver/script, Bun Forms route/security tests if public submit changes |
-| TASK-261-03 | Report lines 47-49, 63, 89, 91-98, 131-156, 170-175, 297, 299, 311 | `ContactEditors.tsx` plus shared editor controls only when already available | Vitest editor wave, widget render smoke for minimal behavior |
+| TASK-261-02 | Report lines 61-62, 70-71, 79-80, 105-107, 113, 181-198, 248-253, 295-296, 300, 309, 320 | Parent only; child leaves own implementation files | Child leaf lanes plus parent Contact/widget validator smoke |
+| TASK-261-02-01 | Field metadata rows C3, W2, W3, W12, R2, R3, R4, R10 | `contact.tsx`, `ContactEditors.tsx`, Contact docs | Contact Vitest widget/editor and widget validator tests |
+| TASK-261-02-02 | No-GET static submit row C4 before active Forms binding | `contact.tsx`, `ContactEditors.tsx`, Contact docs | Contact Vitest widget/editor and widget validator tests |
+| TASK-261-02-03 | Active Forms runtime/public-write portion of C4/R10 | `contact.tsx`, `ContactEditors.tsx`, `publicSite.tsx`, `formRuntimeScript.ts`, Forms runtime owners when needed | Contact Vitest widget/editor, widget validator, `pages-runtime` Bun smoke, Forms route/submission/security tests; Form Embed regression for shared busy-state/script behavior |
+| TASK-261-03 | Report lines 47-49, 63, 76, 89, 91-98, 131-156, 170-175, 297, 299, 311 | `ContactEditors.tsx` plus shared editor controls only when already available | Vitest editor wave, widget render smoke for minimal behavior |
 | TASK-261-04 | Report lines 77-78, 82-83, 111-112, 161-168, 301, 319 | `contact.tsx`, `ContactEditors.tsx` | Vitest widget/editor and validator when schema changes |
 | TASK-261-05 | Report lines 74-75, 81, 114-115, 317-320 | `contact.tsx`, `ContactEditors.tsx`, docs, pack matrix only if readiness changes | Vitest widget/editor, validator when schema changes |
 | TASK-261-06 | Report lines 288-330 and every fixed/deferred row | `_docs/PLAYWRIGHT/REPORT_CONTACT_WIDGET.md`, `_docs/_WIDGETS/CONTACT.md`, board/changelog/docs | `git diff --check`, targeted production lanes after implementation leaves |
@@ -90,6 +94,9 @@ work.
 
 - [ ] TASK-261-01: Contact Header, Details Links, and Semantic Output
 - [ ] TASK-261-02: Contact Form Field Metadata and Public Submission Bridge
+  - [ ] TASK-261-02-01: Contact Field Metadata and Accessible HTML
+  - [ ] TASK-261-02-02: Contact Static Form State and No-GET Safety
+  - [ ] TASK-261-02-03: Contact Forms Runtime Bridge and Public-Write Hardening
 - [ ] TASK-261-03: Contact Editor Mode Parity and Minimal Variant UX
 - [ ] TASK-261-04: Contact Map Validation, Fallback, and Display Controls
 - [ ] TASK-261-05: Contact Layout, Social Links, and Normalizer Polish
@@ -99,8 +106,10 @@ work.
 
 1. Complete TASK-261-01 first so Contact has stable section/detail headings and
    accessible names before form submission work depends on them.
-2. Complete TASK-261-02 next because public submit behavior is the highest-risk
-   runtime/security surface.
+2. Complete TASK-261-02 children next in order: field metadata, static no-GET
+   safety, then active Forms runtime bridge. Public submit behavior is the
+   highest-risk runtime/security surface and must wait for the static-safe
+   contract.
 3. Complete TASK-261-03 after the data model and runtime field contract are
    stable so editor mode copy and grouping target the final controls.
 4. Complete TASK-261-04 after the editor helper patterns are stable, then wire
@@ -142,8 +151,9 @@ existing Forms public-write route instead of introducing an arbitrary endpoint.
 - Rate-limit bucket: existing public write bucket for Forms submission; no
   weaker or widget-specific bucket.
 - Reject-unknown validation: Contact widget schema stays
-  `additionalProperties: false`; public request bodies remain allowlisted
-  through Forms schemas before persistence.
+  `additionalProperties: false` except for the explicit render-only `resolved`
+  hydration key required by the Forms runtime bridge; public request bodies
+  remain allowlisted through Forms schemas before persistence.
 - Anti-abuse: nonce/CAPTCHA remain backend-owned; widget data may contain copy,
   labels, placeholders, and selected form IDs, but not provider secrets,
   CAPTCHA secrets, nonce secrets, arbitrary scripts, or privileged security
@@ -165,6 +175,10 @@ existing Forms public-write route instead of introducing an arbitrary endpoint.
   - `bun test tests/unit/widgets/validator.test.ts` when schema/defaults change.
   - `bun run test:vitest -- tests/vitest/forms/formRuntimeResolver.test.ts`
     and focused runtime-script coverage when Contact reuses Forms runtime data.
+  - `bun test tests/integration/runtime/pages-runtime.test.ts` when
+    `publicSite.tsx` hydrates Contact Forms runtime data.
+  - `bun run test:vitest -- tests/vitest/widgets/formEmbed.test.tsx` when
+    `formRuntimeScript.ts` or Form Embed status attributes are generalized.
   - `bun test tests/integration/routes/forms.test.ts`,
     `bun test tests/unit/forms/submissionService.test.ts`, and
     `bun test tests/security/codersoSecurityGate.test.ts` when public

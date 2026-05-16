@@ -30,6 +30,9 @@ This leaf owns Contact editor behavior only:
 - Form controls hidden or replaced by clear static copy when variant is
   `minimal`.
 - Separate visible-fields, required-fields, and ordering groups.
+- W8 classification: keep the existing Move up/Move down ordering path unless
+  product explicitly requests drag-and-drop; record drag-and-drop as future
+  product UX rather than required scope for TASK-261.
 - Inline hints for address, map URL, spacing, and submission/static behavior.
 - Normalization feedback in Advanced.
 - Optional Contact-local collapsible sections only if an existing shared
@@ -52,6 +55,9 @@ TASK-256-02.
   replacing it with user-facing copy that explains the variant has no form.
 - [ ] Split RequiredFieldList into separate "Required fields" and "Field order"
   affordances or make the combined purpose explicit with copy and layout.
+- [ ] Record W8 as current button-ordering behavior with future drag-and-drop
+  deferral; do not implement drag-and-drop in this leaf unless a separate
+  physical task owns it.
 - [ ] Add helper text for address multiline behavior, map URL requirements,
   spacing density, static/submit-capable states, and field metadata introduced
   by TASK-261-02.
@@ -151,8 +157,8 @@ No API routes are added.
 
 - Update `_docs/_WIDGETS/CONTACT.md` with final Wizard, Visual, and Advanced
   responsibilities.
-- Update `_docs/PLAYWRIGHT/REPORT_CONTACT_WIDGET.md` rows C5, U1, U3, U4, U5,
-  U6, U7, U8, U9, and U10 after validation.
+- Update `_docs/PLAYWRIGHT/REPORT_CONTACT_WIDGET.md` rows C5, W8, U1, U3, U4,
+  U5, U6, U7, U8, U9, and U10 after validation/classification.
 
 ## Changelog Policy
 
@@ -165,5 +171,8 @@ No API routes are added.
 - Minimal variant no longer shows form-field editing controls as if they affect
   runtime output.
 - Required state and field order are clear as separate user tasks.
+- W8 is either explicitly classified as future drag-and-drop product scope or
+  covered by a separate physical task; TASK-261-03 itself preserves the current
+  working button-ordering behavior.
 - Advanced normalization gives visible feedback and stays technical without
   duplicating everyday Visual editing.
