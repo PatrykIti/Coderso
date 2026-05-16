@@ -69,6 +69,7 @@ and truthful editor controls.
 | `core/widgets/core/logoCloud.tsx` | 268-401 | Link `rel`/target handling, section labels, heading semantics, logo height fallback, and hoverColor output. |
 | `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx` | 92-98, 448, 559-598, 720-832 | Overlay alpha-safe editing, image/video type clarity, video media picker scope, and duplicated Advanced controls. |
 | `core/widgets/core/galleryMosaic.tsx` | 159-275, 314-507 | Explicit resolver defaults, feature-left one-item handling, link safety, alt/figure semantics, and redundant row-span cleanup. |
+| `core/widgets/core/widgetSafeHref.ts` | 1-25 | Extend the shared href owner with a tested helper such as `resolveWidgetLinkAttrs(href, options)` that returns normalized `href`, `target`, and safe `rel` attributes. Do not duplicate external-link detection in individual widgets. |
 | `tests/vitest/ui/cta-banner-editor-wave.test.tsx` | existing suite | Add clear/action/focus/url regressions. |
 | `tests/vitest/widgets/ctaBanner.test.tsx` | existing suite | Add badge/color/focus/link regressions. |
 | `tests/vitest/ui/logo-cloud-editor-wave.test.tsx` | existing suite | Add hoverColor/alt/link/Wizard regressions. |
@@ -90,11 +91,10 @@ Logo link:
 
 ```tsx
 function renderLogoLink(href: string | undefined, content: ReactNode) {
-  const safeHref = normalizeWidgetSafeHref(href);
-  if (!safeHref) return content;
-  const external = isExternalWidgetHref(safeHref);
+  const attrs = resolveWidgetLinkAttrs(href, { allowRelative: true, allowHash: true, allowHttp: true });
+  if (!attrs) return content;
   return (
-    <a href={safeHref} target={external ? "_blank" : undefined} rel={external ? "noopener noreferrer" : undefined}>
+    <a {...attrs}>
       {content}
     </a>
   );

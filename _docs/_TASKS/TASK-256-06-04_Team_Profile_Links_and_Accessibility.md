@@ -82,11 +82,10 @@ function addMember(value: TeamData, onChange: (next: TeamData) => void) {
 }
 
 function renderSocialLink(link: TeamSocialLink) {
-  const href = normalizeWidgetSafeHref(link.url);
-  if (!href) return null;
-  const external = isExternalWidgetHref(href);
+  const attrs = resolveWidgetLinkAttrs(link.url, { allowRelative: true, allowHash: true, allowHttp: true });
+  if (!attrs) return null;
   return (
-    <a href={href} target={external ? "_blank" : undefined} rel={external ? "noopener noreferrer" : undefined}>
+    <a {...attrs}>
       {link.label}
     </a>
   );

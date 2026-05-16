@@ -63,6 +63,8 @@ that look editable but either duplicate Visual or do nothing.
 
 | File | Lines | Required change |
 |---|---:|---|
+| `core/widgets/types.ts` | 40-49 | Extend the editor prop contract with a backward-compatible atomic block patch callback, for example `onBlockPatch?: (patch: WidgetBlockPatch) => void`; do not overload the current one-argument `onVariantChange(next: string)` signature. |
+| `core/admin/ui/pages/PageEditor.tsx` | 741 | Add an updater-style block patch path through `handleChangeBlock`/`updateBlockById` so panels compose edits against the latest block state. |
 | `core/admin/ui/pages/builder/VisualPanel.tsx` | 94-99 | Replace `onChange({ ...block, data })` and `onChange({ ...block, variant: next })` with updater-style helpers that compose with the latest block state. |
 | `core/admin/ui/pages/builder/WizardPanel.tsx` | 55-60 | Apply the same atomic helper contract for wizard-owned variant changes. |
 | `core/admin/ui/pages/builder/AdvancedPanel.tsx` | 43-48 | Apply the same atomic helper contract for advanced-owned variant or data edits. |
@@ -79,30 +81,24 @@ that look editable but either duplicate Visual or do nothing.
 ## Implementation Pseudocode
 
 ```tsx
-type BlockPatch =
+type WidgetBlockPatch =
   | Partial<WidgetBlock>
   | ((current: WidgetBlock) => WidgetBlock);
 
-function applyWidgetBlockPatch(current: WidgetBlock, patch: BlockPatch): WidgetBlock {
+function applyWidgetBlockPatch(current: WidgetBlock, patch: WidgetBlockPatch): WidgetBlock {
   return typeof patch === "function" ? patch(current) : { ...current, ...patch };
 }
 
-function createBlockChangeHandlers(block: WidgetBlock, onChange: (next: WidgetBlock) => void) {
+function createBlockChangeHandlers(onBlockPatch: (patch: WidgetBlockPatch) => void) {
   return {
     updateData(nextData: Record<string, unknown>) {
-      onChange(applyWidgetBlockPatch(block, (current) => ({ ...current, data: nextData })));
+      onBlockPatch((current) => ({ ...current, data: nextData }));
     },
     updateVariant(nextVariant: string) {
-      onChange(applyWidgetBlockPatch(block, (current) => ({ ...current, variant: nextVariant })));
+      onBlockPatch((current) => ({ ...current, variant: nextVariant }));
     },
     updateVariantAndData(nextVariant: string, nextData: Record<string, unknown>) {
-      onChange(
-        applyWidgetBlockPatch(block, (current) => ({
-          ...current,
-          variant: nextVariant,
-          data: nextData,
-        }))
-      );
+      onBlockPatch((current) => ({ ...current, variant: nextVariant, data: nextData }));
     },
   };
 }
@@ -111,10 +107,21 @@ function createBlockChangeHandlers(block: WidgetBlock, onChange: (next: WidgetBl
 Widget editor shape:
 
 ```tsx
-function TimelineVisualEditor({ value, variant, onChange, onVariantChange }: WidgetEditorProps<TimelineData>) {
+function TimelineVisualEditor({
+  value,
+  variant,
+  onChange,
+  onVariantChange,
+  onBlockPatch,
+}: WidgetEditorProps<TimelineData>) {
   function handleModeChange(nextVariant: TimelineVariantId) {
     const nextData = normalizeTimelineDataForVariant(value, nextVariant);
-    onVariantChange?.(nextVariant, nextData);
+    if (onBlockPatch) {
+      onBlockPatch((current) => ({ ...current, variant: nextVariant, data: nextData }));
+      return;
+    }
+    onVariantChange?.(nextVariant);
+    onChange(nextData);
   }
 
   return <VariantCards value={variant} onChange={handleModeChange} />;
@@ -125,8 +132,9 @@ Error handling:
 
 - If an editor receives an unsupported variant, normalize through the widget
   owner and keep the previous data fields that are still valid.
-- If a widget cannot support atomic variant+data callback immediately, keep the
-  public signature backward compatible and add an adapter in the shared panel.
+- Keep the existing `onVariantChange(next: string)` signature backward
+  compatible for editors that only change the variant. Atomic variant+data edits
+  use the new block patch callback.
 - Do not add test-only fallbacks in widget editors.
 
 ## Git Scope Safeguards

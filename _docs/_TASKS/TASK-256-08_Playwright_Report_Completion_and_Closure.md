@@ -5,7 +5,7 @@
 **Priority:** Medium
 **Category:** QA + Documentation + Changelog
 **Estimated Effort:** Medium
-**Dependencies:** TASK-256-01, TASK-256-02, TASK-256-03, TASK-256-04, TASK-256-05, TASK-256-06, TASK-256-07
+**Dependencies:** TASK-256-01, TASK-256-02, TASK-256-03, TASK-256-04, TASK-256-05, TASK-256-05-01, TASK-256-05-02, TASK-256-05-03, TASK-256-05-04, TASK-256-06, TASK-256-06-01, TASK-256-06-02, TASK-256-06-03, TASK-256-06-04, TASK-256-07
 **Status:** To Do
 
 ---
@@ -23,9 +23,8 @@ that are not contract repairs.
 
 ## Drift Evidence
 
-- `_docs/PLAYWRIGHT/REPORT_RICH_TEXT_SECTION_WIDGET.md:3` is still marked
-  `W trakcie` and must be classified against shared-contract TASK-256 scope
-  before closure.
+- `_docs/PLAYWRIGHT/REPORT_RICH_TEXT_SECTION_WIDGET.md:3` is now completed and
+  must be classified against shared-contract TASK-256 scope before closure.
 - `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md:3` is completed, but its findings
   still need fixed/deferred closure classification after implementation.
 - `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md:3` is completed, but its
@@ -49,6 +48,16 @@ that are not contract repairs.
 - `_docs/PLAYWRIGHT/REPORT_PRODUCT_TABLE_WIDGET.md:3` is completed, but its
   commerce/runtime findings still need fixed/deferred closure classification
   against the shared widget contracts before any product expansion is opened.
+- `_docs/PLAYWRIGHT/REPORT_CONTACT_WIDGET.md:3`,
+  `_docs/PLAYWRIGHT/REPORT_NEWSLETTER_WIDGET.md:3`,
+  `_docs/PLAYWRIGHT/REPORT_APPOINTMENT_FORM_WIDGET.md:3`,
+  `_docs/PLAYWRIGHT/REPORT_BOOKING_CALENDAR_WIDGET.md:3`,
+  `_docs/PLAYWRIGHT/REPORT_COMPARE_TIMELINE_WIDGET.md:3`,
+  and `_docs/PLAYWRIGHT/REPORT_FOOTER_WIDGET.md:3` are completed and require
+  shared-contract classification before TASK-256 closure.
+- `_docs/PLAYWRIGHT/REPORT_FORM_EMBED_WIDGET.md:3` remains in progress, so
+  TASK-256-08 must refresh the report or mark any unverified rows as
+  `needs-refresh`; it must not mark those rows fixed without runtime evidence.
 - `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:3` is completed, but constrained
   comparison sections at `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:220,258`
   require final classification.
@@ -83,6 +92,9 @@ that are not contract repairs.
 - [ ] Re-run or refresh every widget report touched by TASK-256.
 - [ ] Mark each report finding as fixed, deferred, not reproducible, or future
   product scope.
+- [ ] Verify that every high/medium/low shared-contract finding from completed
+  reports maps to TASK-256-01 through TASK-256-06 before closure; only product
+  expansion may bypass those implementation leaves.
 - [ ] Add follow-up task files for deferred work that is not a shared-contract
   repair.
 - [ ] Add a page-shell follow-up task if Hero report findings around history
@@ -205,6 +217,8 @@ No API routes are added by this closure task.
 
 - Every TASK-256 child task is Done with validation evidence.
 - Every report finding has a final status and owner.
+- No completed report contains an unclassified high/medium/low
+  shared-contract finding.
 - Deferred items have physical follow-up tasks.
 - Changelog and task board statistics are synchronized.
 - Required validation gates are green or explicitly blocked with final rerun

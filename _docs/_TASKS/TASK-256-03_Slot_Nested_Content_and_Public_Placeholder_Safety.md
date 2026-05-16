@@ -55,6 +55,7 @@ rendered into frontend output.
 | `core/admin/ui/pages/builder/VisualPanel.tsx` | 101-162 | Keep slot controls in named sections and expose enough metadata for repeated slots without technical copy. |
 | `core/widgets/types.ts` | render props around `WidgetBlockRenderProps` | Add a backward-compatible render context or `renderMode` field that distinguishes public runtime from editor/admin preview. |
 | `core/widgets/renderers/widgetRenderer.tsx` | 194 and render callsites | Pass the render context to widget renderers through the existing renderer owner so public placeholder behavior is centralized. |
+| `core/admin/ui/pages/builder/BlockList.tsx` | 232 | Pass `renderContext={{ mode: "editor-preview" }}` into the page-builder canvas renderer so editor placeholders remain visible only in the admin canvas. |
 | `core/admin/ui/widgets/editors/GridColumnsEditors.tsx` | repeatable column config section | Prevent config count from drifting from actual slots or add explicit sync actions with warnings. |
 | `core/admin/ui/widgets/editors/TabsEditors.tsx` | 277-302 | Replace `slot id` copy with user-facing panel labels and metadata. |
 | `core/admin/ui/widgets/editors/AccordionEditors.tsx` | 272-297 | Replace `slot id` copy with user-facing item labels and metadata. |
@@ -103,6 +104,14 @@ function WidgetRenderer(props: WidgetRendererProps) {
     blockId: props.blockId,
     renderContext,
   });
+}
+```
+
+Nested renderer rule:
+
+```tsx
+function renderNestedBlock(block: WidgetBlock, context: WidgetRenderContext) {
+  return <WidgetRenderer block={block} renderContext={context} />;
 }
 ```
 
@@ -162,8 +171,11 @@ No API routes are added.
 - `bun run test:vitest -- tests/vitest/widgets/tabs.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/accordionWidget.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/toggleBlock.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx`
 - Add assertions that public output does not contain `Empty column.`,
   `Empty region.`, `Add widgets`, or similar admin-only copy.
+- Add renderer assertions for default public mode, page-builder
+  `editor-preview` mode, and nested context propagation.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 
