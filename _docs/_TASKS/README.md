@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 31 tasks
+- **To Do:** 38 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1542 tasks
 
@@ -38,6 +38,13 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-258 | Appointment Form Widget Playwright Follow-Up | High | Very Large | Widget-specific follow-up for `_docs/PLAYWRIGHT/REPORT_APPOINTMENT_FORM_WIDGET.md`; excludes shared TASK-256 contract repairs |
+| TASK-258-01 | Runtime State, Admin Preview, and Submission Feedback | High | Large | Repair no-slot disabled parity, stale errors, loading copy, and post-success slot clearing |
+| TASK-258-02 | Field Validation, Visibility, and Accessibility | High | Large | Add truthful field toggles, required controls, split name, validation attributes, autocomplete, and form labels |
+| TASK-258-03 | Flow Pairing, Slot Context, Locale, and Redirect | High | Large | Add flow-key pairing feedback, service/resource slot summary context, locale formatting, and safe success redirect |
+| TASK-258-04 | Consent, Custom Fields, and Public Write Hardening | High | Large | Add bounded custom fields, consent controls, and backend-owned CAPTCHA bridge for booking submissions |
+| TASK-258-05 | Style, Variants, and Advanced Diagnostics | High | Large | Add Appointment Form variants, submit text color, inherited-style indicators, and read-only runtime diagnostics |
+| TASK-258-06 | Playwright Report, Docs, and Closure | Medium | Medium | Refresh report evidence, widget docs, changelog, board, and validation matrix after implementation |
 | TASK-257 | Accordion Widget Playwright Product Followups | High | Large | Widget-specific follow-up family for `REPORT_ACCORDION_WIDGET.md`, excluding TASK-256 shared-contract and FAQ scope |
 | TASK-257-01 | Accordion Initial Open State Product Options | High | Medium | Add intentional all-collapsed initial state after shared default-open/collapsible fixes land |
 | TASK-257-02 | Accordion Style Layout and Typography Controls | High | Large | Add Accordion-owned body color, padding, radius, max-width, typography, and color-picker controls |
