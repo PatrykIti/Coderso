@@ -97,12 +97,13 @@ that are not contract repairs.
 - [ ] Re-run or refresh every widget report touched by TASK-256.
 - [ ] Mark each report finding as fixed, deferred, not reproducible, or future
   product scope.
-- [ ] Verify that every high/medium/low shared-contract finding from completed
-  reports maps to an executable TASK-256 physical leaf before closure, or is
-  explicitly marked not reproducible/resolved/future physical task when no
-  current TASK-256 leaf owns it.
-- [ ] Add follow-up task files for deferred product work and for any
-  shared-contract row that no current TASK-256 physical leaf owns executably.
+- [ ] Verify that every high/medium/low finding from completed reports maps to
+  an executable TASK-256 physical leaf before closure, or is explicitly marked
+  not reproducible/resolved/future physical task when it sits outside the
+  current TASK-256 executable leaves.
+- [ ] Add follow-up task files for deferred report rows outside the current
+  TASK-256 executable leaves, then add those rows to `_docs/_TASKS/README.md`
+  and update board statistics.
 - [ ] Add a page-shell follow-up task if Hero report findings around history
   auth, preview toolbar, discard, or viewport controls are still reproducible
   after widget-local fixes.
@@ -121,7 +122,7 @@ that are not contract repairs.
 | `_docs/WIDGETS.md` | Update only if shared contracts changed. |
 | `_docs/WIDGET_PACK_MATRIX.md` | Update only if readiness/completeness changes. |
 | `_docs/_TASKS/TASK-256*.md` | Update status, dates, validation evidence, and remaining follow-ups. |
-| `_docs/_TASKS/README.md` | Move tasks from To Do/In Progress to Done and update statistics. |
+| `_docs/_TASKS/README.md` | Move TASK-256 rows from To Do/In Progress to Done, add any newly created follow-up task rows, and update statistics. |
 | `_docs/_CHANGELOG/*.md` and `_docs/_CHANGELOG/README.md` | Add final TASK-256 changelog entry. |
 
 ## Implementation Pseudocode

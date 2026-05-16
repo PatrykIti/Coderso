@@ -50,10 +50,10 @@ leaves expand it.
 | File | Lines | Required change |
 |---|---:|---|
 | `core/widgets/core/tabs.tsx` | 271-371 | Make script binding idempotent per root and safe across repeated renders/navigation. |
-| `core/widgets/core/tabs.tsx` | 432-505 | Prefix `tabs-trigger-*` and `tabs-panel-*` IDs with a root instance ID. |
+| `core/widgets/core/tabs.tsx` | 432-505 | Prefix `tabs-trigger-*` and `tabs-panel-*` IDs with a root instance ID and rename legacy external-project `data-*`/global binding names to the `data-coderso-*` namespace. |
 | `core/widgets/core/toggleBlock.tsx` | 141-250 | Make script binding idempotent per root and safe across repeated renders/navigation. |
-| `core/widgets/core/toggleBlock.tsx` | 298-389 | Prefix `toggle-trigger-*` and `toggle-pane-*` IDs with a root instance ID; replace hardcoded radiogroup label where data provides better context. |
-| `core/widgets/core/accordion.tsx` | item render and placeholder region around 361-368 | Add instance-safe summary/content IDs, chevron/expanded state semantics, default-open/collapsible behavior, and placeholder gating through TASK-256-03. |
+| `core/widgets/core/toggleBlock.tsx` | 298-389 | Prefix `toggle-trigger-*` and `toggle-pane-*` IDs with a root instance ID; replace hardcoded radiogroup label where data provides better context; rename legacy external-project `data-*` names to `data-coderso-*`. |
+| `core/widgets/core/accordion.tsx` | item render and placeholder region around 361-368 | Add instance-safe summary/content IDs, chevron/expanded state semantics, default-open/collapsible behavior, placeholder gating through TASK-256-03, and rename legacy external-project accordion IDs/data attributes to `coderso`/`data-coderso-*`. |
 | `core/admin/ui/widgets/editors/AccordionEditors.tsx` | 272-430 | Keep default-open/collapsible controls consistent with runtime behavior and remove duplicated clear/control drift. |
 | `core/widgets/core/faqAccordion.tsx` | 316-365 | Add section labelling, summary/content IDs, visible expand indicator, and single-open behavior if `allowMultipleOpen=false`. |
 | `core/widgets/core/pricingPlans.tsx` | 682-727 | Make billing toggle interactive if it remains rendered as a toggle; otherwise downgrade to static copy. Add table/plan ARIA where missing. |
@@ -90,10 +90,10 @@ Runtime script shape:
 })();
 ```
 
-The current toggle owner still contains a legacy external-project data
-namespace. This leaf must rename that runtime namespace to `data-coderso-*`
-together with the scoped instance-id work so the shared contract does not
-preserve cross-project selectors.
+The current tabs, toggle, and accordion owners still contain legacy
+external-project data/global namespaces. This leaf must rename those runtime
+namespaces to `coderso`/`data-coderso-*` together with the scoped instance-id
+work so the shared contract does not preserve cross-project selectors.
 
 ARIA relationship shape:
 

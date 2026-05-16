@@ -48,9 +48,9 @@ that look editable but either duplicate Visual or do nothing.
 ## Sub-Tasks
 
 - [ ] Add shared atomic block update helpers for builder panels.
-- [ ] Thread the atomic patch callback through the live
-  `PageEditor -> BlockSettings -> WizardPanel/VisualPanel/AdvancedPanel` owner
-  chain.
+- [ ] Thread the atomic patch callback through every live `BlockSettings` host:
+  `PageEditor`, `CustomScreenEditorPage`, and `DetailTemplateEditorPage`, then
+  into `WizardPanel`, `VisualPanel`, and `AdvancedPanel`.
 - [ ] Replace spread-based `variant`/`data` callbacks in shared panels.
 - [ ] Update widget-owned variant controls to emit a single atomic result when
   changing variant also changes normalized data.
@@ -68,6 +68,8 @@ that look editable but either duplicate Visual or do nothing.
 |---|---:|---|
 | `core/widgets/types.ts` | 40-49 | Extend the editor prop contract with a backward-compatible atomic block patch callback, for example `onBlockPatch?: (patch: WidgetBlockPatch) => void`; do not overload the current one-argument `onVariantChange(next: string)` signature. |
 | `core/admin/ui/pages/PageEditor.tsx` | 741, 970, 1205 | Add an updater-style block patch path through `handleChangeBlock`/`updateBlockById` and pass it to `BlockSettings` so panels compose edits against the latest block state. |
+| `core/admin/ui/custom-screens/CustomScreenEditorPage.tsx` | 359 and `BlockSettings` usage | Apply the same updater-style block patch path for Custom Screens so shared panel callbacks do not use stale block snapshots. |
+| `core/admin/ui/content-types/DetailTemplateEditorPage.tsx` | 589 and `BlockSettings` usage | Apply the same updater-style block patch path for Detail Templates so shared panel callbacks do not use stale block snapshots. |
 | `core/admin/ui/pages/builder/BlockSettings.tsx` | 19-23, 157-162, 207-229 | Add `onBlockPatch` to `BlockSettingsProps`, adapt local slot/editor updates through it, and pass the callback into Wizard, Visual, and Advanced panels. |
 | `core/admin/ui/pages/builder/VisualPanel.tsx` | 94-99 | Replace `onChange({ ...block, data })` and `onChange({ ...block, variant: next })` with updater-style helpers that compose with the latest block state. |
 | `core/admin/ui/pages/builder/WizardPanel.tsx` | 55-60 | Apply the same atomic helper contract for wizard-owned variant changes. |

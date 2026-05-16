@@ -53,10 +53,11 @@ rendered into frontend output.
 | File | Lines | Required change |
 |---|---:|---|
 | `core/admin/ui/pages/builder/VisualPanel.tsx` | 101-162 | Keep slot controls in named sections and expose enough metadata for repeated slots without technical copy. |
-| `core/widgets/types.ts` | inline `WidgetDefinition.render` props around 98-106 | Add a backward-compatible `WidgetRenderContext`/`renderContext` field that distinguishes public runtime from editor/admin preview. Update the existing `renderBlock?: (block: WidgetBlock) => ReactNode` seam so context cannot be dropped by nested renderers. |
+| `core/widgets/types.ts` | inline `WidgetDefinition.render` props around 98-106 and `WidgetEditorContext` | Add a backward-compatible `WidgetRenderContext`/`renderContext` field that distinguishes public runtime from editor/admin preview. Update the existing `renderBlock?: (block: WidgetBlock) => ReactNode` seam so context cannot be dropped by nested renderers. Add typed repeatable slot target metadata to `WidgetEditorContext` so editors do not rediscover slot topology. |
 | `core/widgets/renderers/widgetRenderer.tsx` | 194 and render callsites around 201-214 | Pass the render context to widget renderers through the existing renderer owner and wrap the `renderBlock` callback with the current context so public placeholder behavior is centralized. |
+| `core/admin/ui/pages/builder/BlockSettings.tsx` | slot target helpers around 42 and editor context assembly | Own repeatable slot target calculation and pass typed targets through `WidgetEditorContext` or run the sync before calling widget editors. |
 | `core/admin/ui/pages/builder/BlockList.tsx` | 232 | Pass `renderContext={{ mode: "editor-preview" }}` into the page-builder canvas renderer so editor placeholders remain visible only in the admin canvas. |
-| `core/admin/ui/widgets/editors/GridColumnsEditors.tsx` | repeatable column config section | Prevent config count from drifting from actual slots or add explicit sync actions with warnings. |
+| `core/admin/ui/widgets/editors/GridColumnsEditors.tsx` | repeatable column config section | Read `context.slotTargets` from `BlockSettings` for grid column targets; prevent config count from drifting from actual slots or add explicit sync actions with warnings. |
 | `core/admin/ui/widgets/editors/TabsEditors.tsx` | 277-302 | Replace `slot id` copy with user-facing panel labels and metadata. |
 | `core/admin/ui/widgets/editors/AccordionEditors.tsx` | 272-297 | Replace `slot id` copy with user-facing item labels and metadata. |
 | `core/widgets/core/section.tsx` | 403-413 | Accept `renderContext`/context-aware `renderBlock`, pass that context through nested `WidgetRenderer` calls, and gate `Empty region.` to editor/preview only or render `null` publicly. |
@@ -91,6 +92,19 @@ Renderer contract shape:
 type WidgetRenderContext = {
   mode: WidgetRenderMode;
   previewDevice?: "desktop" | "tablet" | "mobile";
+};
+
+type WidgetEditorSlotTarget = {
+  definitionId: string;
+  slotId: string;
+  label: string;
+};
+
+type WidgetEditorContext = {
+  surface: WidgetSurface;
+  jumpToBindingPropPath?: (propPath: string) => void;
+  getBindingState?: (propPath: string) => "literal" | "bound" | "mixed";
+  slotTargets?: WidgetEditorSlotTarget[];
 };
 
 type RenderBlockWithContext = (

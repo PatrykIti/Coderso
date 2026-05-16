@@ -12,17 +12,17 @@
 
 ## Overview
 
-Classify every current Playwright widget report against the shared TASK-256
-contracts before implementation closes. This leaf is not a per-widget
+Classify every current Playwright widget report against the current executable
+TASK-256 contract before implementation closes. This leaf is not a per-widget
 implementation backlog. It is the routing layer that prevents completed reports
 from widening TASK-256 into one-off widget feature work.
 
 Every report finding must end in one of these classification buckets. A finding
 may be routed to a TASK-256 implementation leaf only when that leaf has a
-physical task file with concrete owner and test rows for the relevant shared
-contract. If a completed report exposes a shared-contract class that no current
-TASK-256 leaf owns executably, TASK-256-08 must create a future physical task
-instead of widening this family into a per-widget implementation backlog.
+physical task file with concrete owner and test rows for the relevant current
+TASK-256 contract. If a completed late report exposes a defect outside the
+current TASK-256 executable leaves, TASK-256-08 must create a future physical
+task instead of widening this family into a per-widget implementation backlog.
 
 - `TASK-256-01`: shared editor mode, atomic block updates, and mode ownership.
 - `TASK-256-02`: `Clear`, `none`, token picker, custom value, and CSS-variable
@@ -32,17 +32,17 @@ instead of widening this family into a per-widget implementation backlog.
   accessibility relationships.
 - `TASK-256-05`: truthful controls, variant-bound data, inert/duplicated
   controls, and editor-visible state that does not match runtime output.
-- `TASK-256-06`: safe public href/media output, public form/runtime safety,
-  section/header semantics, and anti-abuse boundaries.
+- `TASK-256-06`: safe public href/media output, section/header semantics, and
+  marketing/content accessibility boundaries already owned by physical
+  TASK-256-06 leaves.
 - `TASK-256-08`: closure evidence, explicit non-reproducible rows, or physical
-  future tasks for product expansion or shared-contract rows not owned by an
-  existing TASK-256 implementation leaf.
+  future tasks for report rows outside the current TASK-256 executable leaves.
 
 ## Drift Evidence
 
 The first TASK-256 draft missed reports that were completed later or were not
-part of the early structural/marketing pass. These reports still contain shared
-contract findings that must be classified before closure:
+part of the early structural/marketing pass. These reports still contain report
+findings that must be classified before closure:
 
 - `_docs/PLAYWRIGHT/REPORT_CONTACT_WIDGET.md:294` for public form submission,
   `name`/autocomplete semantics, clear controls, hidden/minimal-variant
@@ -91,21 +91,23 @@ contract findings that must be classified before closure:
 
 ## Classification Matrix
 
-| Report group | Shared-contract classes to route | Out of TASK-256 unless a current control is broken |
+| Report group | Current TASK-256 executable route | Future family boundary |
 |---|---|---|
-| Form widgets: contact, newsletter, form-embed | Form `name`/autocomplete/label semantics, consent/form containment, success/error `aria-live`, mode ownership, clear controls, URL validation, public submission anti-abuse | New form field builders, marketing integrations, analytics, double opt-in, large form product features |
-| Booking widgets: booking-calendar, appointment-form | Admin preview vs public runtime parity, scoped runtime state, slot/form ARIA, stale error cleanup, nonce/runtime-only field boundaries, past-date/runtime request safety | Calendar UI redesign, service pricing UX, captcha UI, legal consent product configuration |
-| Shell/content composites: footer, compare-timeline, rich-text-section | Safe links, ARIA/heading semantics, duplicated controls, clear/token controls, dynamic grid/control truthfulness, mode reset/output-mode truthfulness | New brand/social icon systems, WYSIWYG editor, SEO schemas, drag/drop and advanced typography |
-| Commerce widgets: product-gallery, product-compare, product-table | Safe href/media output, table/list semantics, status text accessibility, runtime error/empty states, editor controls with no runtime effect | Commerce catalog features, new merchandising layout variants, advanced filtering/product table product scope |
-| Dynamic widgets: content-list, navigation, posts-feed, entry-teaser, listing-filters | Truthful controls, safe href/media, listing runtime token validation, sticky/layout ownership, accessibility/focus/runtime state | Pagination widgets, taxonomy pickers, active chips, complex menu IA, broad content-query expansion |
+| Form widgets: contact, newsletter, form-embed | Only rows that exactly match TASK-256-01 mode update, TASK-256-02 clear/token repair, or TASK-256-04 generic accessibility/state wiring already owned by those leaves. | Form `name`/autocomplete, consent/form containment, public submission anti-abuse, nonce, captcha, form-builder behavior, integrations, analytics, and double opt-in must become a future forms/public-write widget family. |
+| Booking widgets: booking-calendar, appointment-form | Only rows that exactly match TASK-256-03 placeholder gating or TASK-256-04 generic scoped runtime/a11y wiring already owned by those leaves. | Admin-preview vs public booking resolver parity, stale runtime errors, past-date safety, runtime request behavior, calendar UX, service pricing, and consent/captcha policy must become a future booking widget family. |
+| Shell/content composites: footer, compare-timeline, rich-text-section | Only rows that map to existing physical leaves with the exact owner file already named there. | Footer social/brand systems, Rich Text editor/WYSIWYG behavior, Compare Timeline product behavior, SEO schemas, drag/drop, and advanced typography must become future shell/content widget families. |
+| Commerce widgets: product-gallery, product-compare, product-table | Only rows that map to existing physical safe-output or accessibility leaves with the exact owner file already named there. | Catalog behavior, merchandising layouts, filters, product-table product scope, commerce runtime flows, and advanced commerce validation must become future commerce widget families. |
+| Dynamic widgets: content-list, navigation, posts-feed, entry-teaser, listing-filters | Current TASK-256 can use existing shared link/a11y/truthful-control leaves plus TASK-256-08 dynamic validation when the exact owner/test path is named. | Pagination widgets, taxonomy pickers, active chips, complex menu IA, broad content-query expansion, and dynamic runtime behavior outside current owners must become future dynamic content widget families. |
 
-Footer, Compare Timeline, and Rich Text Section reports enter TASK-256 only by
-shared contract class. Safe link and media output route to TASK-256-06-02 or
-TASK-256-06-04; duplicated or ineffective controls route to TASK-256-01,
-TASK-256-02, or TASK-256-05; heading, focus, and ARIA rows route to TASK-256-04
-or TASK-256-06. Brand systems, WYSIWYG behavior, icon expansion, advanced
-typography, and other product-specific work must be recorded by TASK-256-08 as
-future physical task scope instead of being implemented in this family.
+Footer, Compare Timeline, and Rich Text Section reports enter TASK-256 only
+when a row maps to an existing physical TASK-256 owner. Safe link and media
+output route to TASK-256-06-02 or TASK-256-06-04 only when those leaves already
+name the concrete owner file; duplicated or ineffective controls route to
+TASK-256-01, TASK-256-02, or TASK-256-05 only when the exact owner exists
+there; heading, focus, and ARIA rows route to TASK-256-04 or TASK-256-06 only
+when the physical leaf owns the file. All other rows must be recorded by
+TASK-256-08 as future physical task scope instead of being implemented in this
+family.
 
 ## Late Report Execution Routing
 
@@ -128,7 +130,7 @@ TASK-256 physical leaf or must leave TASK-256 as a future physical family.
 | `_docs/_TASKS/TASK-256_Widget_Shared_Contract_Playwright_Drift_Repair.md` | Keep the source report list complete and describe reports as evidence for shared contracts, not per-widget implementation families. |
 | `_docs/_TASKS/TASK-256-08_Playwright_Report_Completion_and_Closure.md` | Add final classification evidence and future task IDs for product-scope deferrals. |
 | `_docs/PLAYWRIGHT/REPORT_*_WIDGET.md` | During closure only: add textual fixed/deferred/not-reproducible status rows. |
-| Future `_docs/_TASKS/TASK-*.md` | Create only for deferred product-scope work that TASK-256 intentionally does not implement. |
+| Future `_docs/_TASKS/TASK-*.md` | Create only for deferred report rows outside the current TASK-256 executable leaves; include concrete owner/test rows and keep `_docs/_TASKS/README.md` statistics synchronized. |
 
 ## Implementation Pseudocode
 

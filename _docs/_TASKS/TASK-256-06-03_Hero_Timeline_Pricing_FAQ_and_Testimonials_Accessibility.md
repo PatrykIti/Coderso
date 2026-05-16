@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Marketing Content + Runtime Render + Accessibility
 **Estimated Effort:** Large
-**Dependencies:** TASK-256-01, TASK-256-02, TASK-256-04, TASK-256-06
+**Dependencies:** TASK-256-01, TASK-256-02, TASK-256-04, TASK-256-06, TASK-256-06-02
 **Status:** To Do
 
 ---

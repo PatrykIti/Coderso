@@ -85,7 +85,8 @@ This leaf owns two contract classes:
 | `core/widgets/core/section.tsx` | 180-207, 380-413 | Normalize style defaults explicitly, label headings safely, and render `Empty region.` only for editor/admin preview. |
 | `core/admin/ui/widgets/editors/SectionEditors.tsx` | 485-498, 651-667, 826-850 | Validate anchor IDs, add missing gradient clear controls, and avoid duplicated Advanced controls that mirror Visual without extra ownership. |
 | `core/widgets/core/gridColumns.tsx` | 452-503 | Hide public `Empty column.` and `Column N` editor labels unless a real caption is configured. |
-| `core/admin/ui/widgets/editors/GridColumnsEditors.tsx` | variant, span, color, and cardize controls | Reconcile repeated column configs with slot targets, preserve CSS variable picker values, make `asymmetric` span changes truthful, add span feedback, and gate cardized-only controls for `masonry-lite`. |
+| `core/admin/ui/pages/builder/BlockSettings.tsx` | slot target helpers around 42 and editor context assembly | Provide repeatable grid column targets to widget editors through `WidgetEditorContext.slotTargets` or run sync before invoking `GridColumnsEditors`. |
+| `core/admin/ui/widgets/editors/GridColumnsEditors.tsx` | variant, span, color, and cardize controls | Reconcile repeated column configs from `context.slotTargets`, preserve CSS variable picker values, make `asymmetric` span changes truthful, add span feedback, and gate cardized-only controls for `masonry-lite`. |
 | `tests/vitest/ui/section-editor-wave.test.tsx` | existing suite | Add anchor, clear, and duplicated-control assertions. |
 | `tests/vitest/widgets/section.test.tsx` | existing suite | Add public vs editor placeholder assertions. |
 | `tests/vitest/ui/grid-columns-editor-wave.test.tsx` | existing suite | Add slot/config sync, CSS-variable picker, span validation/preview, and cardize-control assertions. |
@@ -110,8 +111,11 @@ Grid sync:
 ```tsx
 function reconcileColumnConfigsWithSlotTargets(
   data: GridColumnsData,
-  targets: Array<{ slotId: string; label: string }>
+  context: WidgetEditorContext
 ): GridColumnsData {
+  const targets = (context.slotTargets ?? []).filter(
+    (target) => target.definitionId === "column"
+  );
   const normalized = normalizeGridColumnsData(data);
   const existing = new Map((normalized.columns ?? []).map((column) => [column.id ?? "", column]));
   return normalizeGridColumnsData({
