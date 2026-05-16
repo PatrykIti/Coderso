@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 114 tasks
+- **To Do:** 121 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1542 tasks
 
@@ -48,6 +48,13 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-272-07 | Hero Rich Copy and Social Proof Composition | Medium | Very Large | Add safe rich-copy support and a bounded social proof row for conversion Hero sections |
 | TASK-272-08 | Hero Responsive Images and LCP Priority | Medium | Large | Define Hero responsive image, lazy/eager loading, and fetch-priority policy without inventing media variants |
 | TASK-272-09 | Hero Report Docs Changelog and Closure | Medium | Medium | Refresh Hero report/docs/changelog/board and final validation evidence |
+| TASK-269 | Form Embed Widget Playwright Product Followups | High | Very Large | Form Embed-only follow-up family for `REPORT_FORM_EMBED_WIDGET.md`, excluding TASK-256 shared-contract scope |
+| TASK-269-01 | Form Selection, Editor Modes, and Admin Diagnostics | High | Large | Split Form Embed editor modes and add selected-form status/error/field diagnostics |
+| TASK-269-02 | Field Type Rendering and Field Accessibility | High | Large | Render Form Embed CMS field types truthfully with stable IDs, labels, helpers, and group semantics |
+| TASK-269-03 | Variants, Layout, and Form Surface Styling | High | Large | Implement Form Embed `card`/`inline`, section layout, typography, and bounded styling controls |
+| TASK-269-04 | Multi-Step Controls and Stored Progress | High | Large | Add multi-step labels, progress indicator, and saved-progress expiry for Form Embed |
+| TASK-269-05 | Submission Runtime Feedback and Public Write Projection | High | Large | Add Form Embed busy/success/error feedback and backend-owned anti-abuse projection |
+| TASK-269-06 | Form Embed Report, Docs, and Closure | Medium | Medium | Refresh Form Embed report/docs/changelog/board and final validation |
 | TASK-268 | Footer Widget Playwright Product Followups | High | Very Large | Footer-only follow-up family for `REPORT_FOOTER_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-268-01 | Footer Social Icons and External Link Safety | High | Large | Replace text social output with safe icons, platform labels, accessible names, and external-link hardening |
 | TASK-268-02 | Footer Legal, Brand, and Landmark Semantics | High | Large | Add legal labels, brand/logo/tagline, Footer landmark naming, and heading semantics |
