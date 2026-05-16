@@ -48,8 +48,9 @@ Out of scope for TASK-262:
 - Shared editor atomic update helpers, owned by TASK-256-01.
 - Generic `Clear`, `none`, token picker, CSS-variable preservation, and
   shared color-picker contracts, owned by TASK-256-02. The `textColor` clear
-  row from `REPORT_CONTENT_LIST_WIDGET.md:81` is classified there unless the
-  shared helper later requires a Content List-only hook.
+  row from `REPORT_CONTENT_LIST_WIDGET.md:81` and color-picker row from
+  `REPORT_CONTENT_LIST_WIDGET.md:84` are classified there unless the shared
+  helper later requires a Content List-only hook.
 - Generic slot placeholder gating, owned by TASK-256-03.
 - Shared instance-safe runtime binding and unrelated ARIA helpers, owned by
   TASK-256-04.
@@ -67,17 +68,17 @@ work.
 | B-02, E-09, T-02 canvas/preview communication, T-05, static canvas discovery | TASK-262-02 |
 | B-01, B-03, runtime `resolved.runtime.page` navigation behavior | TASK-262-03 |
 | B-04, B-05, B-06, E-01, E-07, E-10, T-01 | TASK-262-04 |
-| E-05 and generic color-token/picker rows | TASK-256-02, not TASK-262 |
+| E-05, E-08, and generic color-token/picker rows | TASK-256-02, not TASK-262 |
 | Final fixed/deferred evidence, report refresh, docs/changelog/board closure | TASK-262-05 |
 
 ## Current Owner and Test Matrix
 
 | Leaf | Current drift evidence | Owner files | Required test lanes |
 |---|---|---|---|
-| TASK-262-01 | Report lines 78-82, 87, 114-122, 134-137, 153-164, 274-280, 290, 297 | `ContentListEditors.tsx`, content type/listings clients only if existing response metadata supports safer labels, Content List docs | Vitest editor wave; Bun route/service tests only if admin source APIs change |
+| TASK-262-01 | Report lines 78-80, 82, 87, 114-122, 134-137, 153-155, 163-164, 277-279, 290, 297 | `ContentListEditors.tsx`, content type/listings clients only if existing response metadata supports safer labels, Content List docs | Vitest editor wave; Bun route/service tests only if admin source APIs change |
 | TASK-262-02 | Report lines 67, 85, 94, 97, 173-181, 201-203, 221-252, 270-284, 300 | `contentList.tsx`, `ContentListEditors.tsx`, public renderer tests, Content List docs | Bun widget render tests; Vitest editor wave; public renderer smoke when runtime markers/copy change |
-| TASK-262-03 | Report lines 66, 68, 76, 268-276 plus existing `resolved.runtime.page` schema at `contentList.tsx` | `contentList.tsx`, `contentListResolver.ts`, public page renderer/listing runtime resolver seams | Bun content-list resolver tests, widget tests, public renderer/listing runtime tests |
-| TASK-262-04 | Report lines 69-71, 77, 83, 86, 93, 128-147, 157-160, 286-289, 298-299 | `contentList.tsx`, `ContentListEditors.tsx`, Content List widget tests | Bun widget tests, Vitest editor wave, validator tests when schema expands |
+| TASK-262-03 | Report lines 66, 68, 270, 275 plus existing `resolved.runtime.page` schema at `contentList.tsx` | `contentList.tsx`, `contentListResolver.ts`, `filterEngine.ts` only if the current listing runtime page token needs extension, public page renderer/listing runtime seams | Bun content-list resolver tests, widget tests, public renderer tests, and `tests/vitest/search/filterEngine.test.ts` when listing runtime page parsing changes |
+| TASK-262-04 | Report lines 69-71, 77, 83, 86, 93, 128-147, 287-288, 298 | `contentList.tsx`, `ContentListEditors.tsx`, Content List widget tests | Bun widget tests, Vitest editor wave, validator tests when schema expands |
 | TASK-262-05 | Report lines 264-306 and every fixed/deferred row | `_docs/PLAYWRIGHT/REPORT_CONTENT_LIST_WIDGET.md`, `_docs/_WIDGETS/CONTENT_LIST.md`, `_docs/WIDGETS.md` if product surface changes, board/changelog/docs | `git diff --check`, targeted production lanes after implementation leaves |
 
 ## Sub-Tasks
@@ -150,8 +151,8 @@ This umbrella does not add API routes.
   - `bun run test:vitest -- tests/vitest/site/publicRenderer.test.tsx` when
     public rendering, runtime markers, or output copy change.
   - `bun test tests/unit/widgets/validator.test.ts` when schema/defaults change.
-  - `bun test tests/unit/content/listingRuntimeResolver.test.ts` and focused
-    resolver tests when pagination/search/runtime query handling changes.
+  - `bun run test:vitest -- tests/vitest/search/filterEngine.test.ts` when
+    listing/runtime query parameter parsing changes.
   - `bun run gates:coderso`, `bun run scan:security:strict`, and
     `bun run precommit` before final family closure.
 

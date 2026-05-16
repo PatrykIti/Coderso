@@ -128,8 +128,8 @@ No API routes are added by this closure leaf.
 - `bun run test:vitest -- tests/vitest/site/publicRenderer.test.tsx` when
   public output changed
 - `bun test tests/unit/widgets/validator.test.ts` when schema changed
-- `bun test tests/unit/content/listingRuntimeResolver.test.ts` when pagination
-  or listing runtime behavior changed
+- `bun run test:vitest -- tests/vitest/search/filterEngine.test.ts` when
+  pagination or listing runtime query parsing changed
 - `bun run gates:coderso`
 - `bun run scan:security:strict`
 - `bun run precommit`

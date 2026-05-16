@@ -61,9 +61,10 @@ changes to unrelated dynamic widgets.
 |---|---|
 | `core/widgets/core/contentList.tsx` | Add pagination/action schema, defaults, normalizer, renderer controls, runtime metadata consumption, and safe link handling. |
 | `core/services/content/contentListResolver.ts` | Resolve page/page size/total metadata for legacy and listing modes through existing runtime query seams. |
+| `core/services/search/filterEngine.ts` | Update only if Content List pagination needs a new bounded runtime token beyond current listing runtime page support. |
 | `core/admin/ui/widgets/editors/ContentListEditors.tsx` | Add source-aware pagination and View all/Load more controls. |
 | `tests/unit/widgets/contentList.test.tsx` | Cover schema/defaults/rendered controls/safe links. |
-| `tests/unit/content/listingRuntimeResolver.test.ts` | Cover listing runtime page override integration when touched. |
+| `tests/vitest/search/filterEngine.test.ts` | Cover listing runtime page token parsing/resolution if `filterEngine.ts` changes. |
 | `tests/vitest/ui/content-list-editor-wave.test.tsx` | Cover editor controls and source-aware options. |
 | `tests/vitest/site/publicRenderer.test.tsx` | Cover public HTML markers/links if output changes. |
 | `_docs/_WIDGETS/CONTENT_LIST.md` | Document pagination, View all, and Load more behavior. |
@@ -143,8 +144,8 @@ No public write API is added.
 ## Testing Requirements
 
 - `bun test tests/unit/widgets/contentList.test.tsx`
-- `bun test tests/unit/content/listingRuntimeResolver.test.ts` when listing
-  pagination overrides change
+- `bun run test:vitest -- tests/vitest/search/filterEngine.test.ts` when
+  listing runtime page parsing changes
 - `bun run test:vitest -- tests/vitest/ui/content-list-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/site/publicRenderer.test.tsx` when
   public output changes
