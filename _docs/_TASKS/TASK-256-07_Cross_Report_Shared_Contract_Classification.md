@@ -107,6 +107,20 @@ or TASK-256-06. Brand systems, WYSIWYG behavior, icon expansion, advanced
 typography, and other product-specific work must be recorded by TASK-256-08 as
 future physical task scope instead of being implemented in this family.
 
+## Late Report Execution Routing
+
+This matrix prevents the classifier from becoming an implicit implementation
+backlog. It defines whether a completed late report can be fixed by an existing
+TASK-256 physical leaf or must leave TASK-256 as a future physical family.
+
+| Report group | TASK-256 implementation route | Required closure output |
+|---|---|---|
+| Contact, Newsletter, Form Embed | Classification only unless a row is exactly a TASK-256-01 mode update, TASK-256-02 clear/token repair, or TASK-256-04 accessibility/runtime-state repair already covered by those physical leaf owners. Public submission, nonce, consent, autocomplete, and form-builder behavior must become a future forms/public-write widget task. | TASK-256-08 records fixed/deferred status and creates a future task with form widget owners/tests before marking any unowned row deferred. |
+| Appointment Form, Booking Calendar | Classification only unless a row is exactly a TASK-256-03 slot placeholder or TASK-256-04 scoped runtime/a11y repair already covered by those physical leaf owners. Booking service, past-date request safety, calendar UX, and runtime request behavior must become a future booking widget task. | TASK-256-08 records fixed/deferred status and creates a future task with booking widget, booking route, and booking service tests before marking any unowned row deferred. |
+| Footer, Compare Timeline, Rich Text Section | Classification only unless a row maps to an existing physical leaf with the exact owner file already named there. Footer social systems, Rich Text editing/WYSIWYG scope, and Compare Timeline product behavior must become future shell/content widget tasks. | TASK-256-08 records fixed/deferred status and creates future shell/content task files for unowned rows. |
+| Product Gallery, Product Compare, Product Table | Classification only unless a row maps to an existing physical safe-output or accessibility leaf with the exact owner file already named there. Catalog, merchandising, filters, and commerce runtime behavior must become future commerce widget tasks. | TASK-256-08 records fixed/deferred status and creates future commerce widget tasks for unowned rows. |
+| Content List, Navigation, Posts Feed, Entry Teaser, Listing Filters | Classification plus the explicit dynamic/content validation in TASK-256-08. Any row outside current shared link/a11y/truthful-control owners becomes a future dynamic content widget task. | TASK-256-08 runs the dynamic/content validation commands and creates future dynamic task files for unowned rows. |
+
 ## Files to Change
 
 | File | Required change |

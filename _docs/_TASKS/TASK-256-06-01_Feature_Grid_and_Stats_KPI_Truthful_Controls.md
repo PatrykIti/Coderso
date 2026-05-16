@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Marketing Content + Admin UI + Runtime Render
 **Estimated Effort:** Medium
-**Dependencies:** TASK-256-01, TASK-256-02, TASK-256-04, TASK-256-06
+**Dependencies:** TASK-256-01, TASK-256-02, TASK-256-04, TASK-256-06, TASK-256-06-02
 **Status:** To Do
 
 ---
@@ -37,7 +37,7 @@ runtime output that is semantically incomplete.
 |---|---|---|---|
 | Feature Grid columns dropdown has no runtime effect | Fix or disable with explicit variant explanation | `FeatureGridEditors.tsx`, `featureGrid.tsx` | None |
 | Feature Grid variant/card count desync | Fix through TASK-256-01 atomic variant+data update | `FeatureGridEditors.tsx` | None |
-| Feature Grid external CTA missing rel | Fix through safe link renderer | `featureGrid.tsx`, `widgetSafeHref.test.ts` | None |
+| Feature Grid external CTA missing rel | Fix through TASK-256-06-02 safe link renderer | `featureGrid.tsx`, `widgetSafeHref.ts`, `widgetSafeHref.test.ts` | None |
 | Feature Grid image media picker, drag/drop, rich text | Future product scope unless needed for broken existing control | Widget editor future task | TASK-256-08 creates task if retained |
 | Stats KPI divider toggle only affects inline | Hide/disable outside inline or make renderer honor it | `StatsKpiEditors.tsx`, `statsKpi.tsx` | None |
 | Stats KPI cards grid holes | Fix deterministic grid class or expose a real columns option | `statsKpi.tsx` | None |
@@ -64,6 +64,7 @@ runtime output that is semantically incomplete.
 |---|---:|---|
 | `core/admin/ui/widgets/editors/FeatureGridEditors.tsx` | 435-467, 619-684 | Variant/count sync, truthful columns control, image URL validation feedback, and `borderColor` clear. |
 | `core/widgets/core/featureGrid.tsx` | 266-347, 410-418 | Deterministic columns behavior, safe CTA link output, image fallback/lazy/alt semantics. |
+| `core/widgets/core/widgetSafeHref.ts` | shared helper | Reuse the TASK-256-06-02 `resolveWidgetLinkAttrs` helper for Feature Grid CTA output; do not duplicate target/rel logic in `featureGrid.tsx`. |
 | `core/admin/ui/widgets/editors/StatsKpiEditors.tsx` | 315-624 | Wizard content additions required for truthful setup, divider variant gating, and clearer color/token controls. |
 | `core/widgets/core/statsKpi.tsx` | 299-450 | Dynamic grid behavior, section/article labels, emoji `aria-hidden`, and divider semantics. |
 | `tests/vitest/ui/feature-grid-editor-wave.test.tsx` | existing suite | Add variant/count, columns, URL validation, and clear regressions. |

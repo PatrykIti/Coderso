@@ -79,16 +79,21 @@ Runtime script shape:
 (() => {
   if (typeof document === "undefined") return;
 
-  document.querySelectorAll("[data-nextless-toggle-block='1']").forEach((root) => {
+  document.querySelectorAll("[data-coderso-toggle-block='1']").forEach((root) => {
     if (!(root instanceof HTMLElement)) return;
-    if (root.dataset.nextlessToggleBound === "true") return;
-    root.dataset.nextlessToggleBound = "true";
+    if (root.dataset.codersoToggleBound === "true") return;
+    root.dataset.codersoToggleBound = "true";
 
     root.addEventListener("click", handleToggleClick);
     root.addEventListener("keydown", handleToggleKeydown);
   });
 })();
 ```
+
+The current toggle owner still contains a legacy external-project data
+namespace. This leaf must rename that runtime namespace to `data-coderso-*`
+together with the scoped instance-id work so the shared contract does not
+preserve cross-project selectors.
 
 ARIA relationship shape:
 

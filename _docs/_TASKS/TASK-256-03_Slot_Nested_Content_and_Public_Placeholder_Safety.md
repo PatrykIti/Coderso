@@ -59,12 +59,12 @@ rendered into frontend output.
 | `core/admin/ui/widgets/editors/GridColumnsEditors.tsx` | repeatable column config section | Prevent config count from drifting from actual slots or add explicit sync actions with warnings. |
 | `core/admin/ui/widgets/editors/TabsEditors.tsx` | 277-302 | Replace `slot id` copy with user-facing panel labels and metadata. |
 | `core/admin/ui/widgets/editors/AccordionEditors.tsx` | 272-297 | Replace `slot id` copy with user-facing item labels and metadata. |
-| `core/widgets/core/section.tsx` | 403-413 | Gate `Empty region.` to editor/preview only or render `null` publicly. |
-| `core/widgets/core/gridColumns.tsx` | 452-503 | Gate `Empty column.` to editor/preview only; preserve layout wrappers only when needed. |
-| `core/widgets/core/splitLayout.tsx` | 247-270 | Gate `Empty left/right pane.` to editor/preview only. |
-| `core/widgets/core/tabs.tsx` | 498-505 | Gate `Add widgets to this tab panel.` to editor/preview only. |
-| `core/widgets/core/accordion.tsx` | 361-368 | Gate `Add widgets to this accordion item.` to editor/preview only. |
-| `core/widgets/core/toggleBlock.tsx` | 357-384 | Gate `Add widgets for the primary/secondary view.` to editor/preview only. |
+| `core/widgets/core/section.tsx` | 403-413 | Accept `renderContext`/context-aware `renderBlock`, pass that context through nested `WidgetRenderer` calls, and gate `Empty region.` to editor/preview only or render `null` publicly. |
+| `core/widgets/core/gridColumns.tsx` | 452-503 | Accept `renderContext`/context-aware `renderBlock`, pass context through column children, gate `Empty column.` to editor/preview only, and preserve layout wrappers only when needed. |
+| `core/widgets/core/splitLayout.tsx` | 247-270 | Accept `renderContext`/context-aware `renderBlock`, pass context through pane children, and gate `Empty left/right pane.` to editor/preview only. |
+| `core/widgets/core/tabs.tsx` | 498-505 | Accept `renderContext`/context-aware `renderBlock`, pass context through tab panel children, and gate `Add widgets to this tab panel.` to editor/preview only. |
+| `core/widgets/core/accordion.tsx` | 361-368 | Accept `renderContext`/context-aware `renderBlock`, pass context through accordion children, and gate `Add widgets to this accordion item.` to editor/preview only. |
+| `core/widgets/core/toggleBlock.tsx` | 357-384 | Accept `renderContext`/context-aware `renderBlock`, pass context through both view panes, and gate `Add widgets for the primary/secondary view.` to editor/preview only. |
 
 ## Implementation Pseudocode
 
@@ -98,7 +98,10 @@ type RenderBlockWithContext = (
   context?: WidgetRenderContext
 ) => ReactNode;
 
-type WidgetRendererPropsWithContext = WidgetRendererProps & {
+type WidgetRendererPropsWithContext = {
+  block: WidgetBlock;
+  pageDefaults?: WidgetRendererPageDefaults;
+  previewDevice?: DeviceTarget;
   renderContext?: WidgetRenderContext;
   renderBlock?: RenderBlockWithContext;
 };

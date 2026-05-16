@@ -183,6 +183,43 @@ No API routes are added by this closure task.
 ## Testing Requirements
 
 - Run every targeted suite listed in completed TASK-256 leaves.
+- Late-report closure must follow the TASK-256-07 execution routing matrix:
+  when a report row is classified as `future physical task`, create that task
+  with owner/test rows before marking it deferred; when a row is classified as
+  fixed by an existing TASK-256 physical leaf, run that leaf's exact suites plus
+  the matching report-group smoke listed below.
+- Forms/public-write report smoke, when TASK-256 marks any form row fixed:
+  - `bun run test:vitest -- tests/vitest/widgets/contact.test.tsx`
+  - `bun run test:vitest -- tests/vitest/widgets/newsletter.test.tsx`
+  - `bun run test:vitest -- tests/vitest/widgets/formEmbed.test.tsx`
+  - `bun run test:vitest -- tests/vitest/ui/contact-editor-wave.test.tsx`
+  - `bun run test:vitest -- tests/vitest/ui/newsletter-editor-wave.test.tsx`
+  - `bun run test:vitest -- tests/vitest/ui/form-embed-editor-wave.test.tsx`
+  - `bun test tests/unit/forms/schema.test.ts`
+  - `bun test tests/unit/forms/submissionService.test.ts`
+- Booking report smoke, when TASK-256 marks any booking row fixed:
+  - `bun run test:vitest -- tests/vitest/widgets/appointmentForm.test.tsx`
+  - `bun run test:vitest -- tests/vitest/widgets/bookingCalendar.test.tsx`
+  - `bun run test:vitest -- tests/vitest/ui/appointment-form-editor-wave.test.tsx`
+  - `bun run test:vitest -- tests/vitest/ui/booking-calendar-editor-wave.test.tsx`
+  - `bun test tests/unit/booking/bookingService.test.ts`
+  - `bun test tests/unit/server/publicBookingApi.test.ts`
+- Shell/content report smoke, when TASK-256 marks any footer, rich-text, or
+  compare row fixed:
+  - `bun run test:vitest -- tests/vitest/widgets/footer.test.tsx`
+  - `bun run test:vitest -- tests/vitest/widgets/richTextSection.test.tsx`
+  - `bun run test:vitest -- tests/vitest/widgets/compareTimeline.test.tsx`
+  - `bun run test:vitest -- tests/vitest/ui/footer-editor-wave.test.tsx`
+  - `bun run test:vitest -- tests/vitest/ui/rich-text-section-editor-wave.test.tsx`
+  - `bun run test:vitest -- tests/vitest/ui/compare-timeline-editor-wave.test.tsx`
+- Commerce report smoke, when TASK-256 marks any commerce row fixed:
+  - `bun run test:vitest -- tests/vitest/widgets/productGallery.test.tsx`
+  - `bun run test:vitest -- tests/vitest/widgets/productCompare.test.tsx`
+  - `bun run test:vitest -- tests/vitest/widgets/productTable.test.tsx`
+  - `bun run test:vitest -- tests/vitest/ui/product-gallery-editor-wave.test.tsx`
+  - `bun run test:vitest -- tests/vitest/ui/product-compare-editor-wave.test.tsx`
+  - `bun run test:vitest -- tests/vitest/ui/product-table-editor-wave.test.tsx`
+  - `bun test tests/unit/commerce/commerceWidgetRuntime.test.ts`
 - Dynamic/content closure must include:
   - `bun run test:vitest -- tests/vitest/ui/content-list-editor-wave.test.tsx`
   - `bun test tests/unit/widgets/contentList.test.tsx`
