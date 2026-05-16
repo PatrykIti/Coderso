@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 160 tasks
+- **To Do:** 169 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1542 tasks
 
@@ -55,6 +55,15 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-276-05 | Newsletter Field Expansion and Double Opt-In Model | Medium | Large | Add bounded extra fields and double opt-in semantics after the base form/transport contract is stable |
 | TASK-276-06 | Newsletter Visual Style, Width, and Contrast Controls | Medium | Large | Add Newsletter-local width/color/contrast controls, background picker clarity, breakpoint decisions, and explicit spacing resolver cleanup |
 | TASK-276-07 | Newsletter Report, Docs, Changelog, and Closure | Medium | Medium | Refresh Newsletter report/docs/changelog/board and final validation evidence |
+| TASK-277 | Posts Feed Widget Playwright Product Followups | High | Very Large | Posts Feed-only follow-up family for `REPORT_POSTS_FEED_WIDGET.md`, excluding TASK-256 shared-contract and global auth/session scope |
+| TASK-277-01 | Posts Feed Source Mode, Route, and Filter Truthfulness | High | Large | Repair manual-sort truthfulness, category filter copy/parsing, and post detail-route fallback behavior |
+| TASK-277-02 | Posts Feed Media, Tags, and Card Metadata | High | Large | Add show-image, thumbnail/alt mapping, bounded tags, and image aspect controls for posts-feed cards |
+| TASK-277-03 | Posts Feed Manual Picker Search, Reorder, and Accessibility | High | Large | Add picker search, selected-order controls, accessible labels/live state, and local retry/error UX |
+| TASK-277-04 | Posts Feed Admin Preview and Runtime Status | High | Large | Hydrate admin canvas preview with bounded post data and expose readable sync/runtime status |
+| TASK-277-05 | Posts Feed Section Header, View All, and Editorial Chrome | Medium | Large | Add optional section heading, safe View All link, and bounded posts-feed visual motion |
+| TASK-277-06 | Posts Feed Editor Flow, Variant Previews, and Style Controls | Medium | Large | Add text-color control, variant preview affordances, and progressive Wizard flow |
+| TASK-277-07 | Posts Feed Pagination, Author, Date, and Featured-First Filters | Medium | Very Large | Add or explicitly split bounded pagination/load-more, author/date filters, and featured-first sorting |
+| TASK-277-08 | Posts Feed Report, Docs, Changelog, and Closure | Medium | Medium | Refresh Posts Feed report/docs/changelog/board and final validation evidence |
 | TASK-272 | Hero Widget Playwright Product Followups | High | Very Large | Hero-only follow-up family for `REPORT_HERO_WIDGET.md`, excluding TASK-256 shared-contract and page-shell scope |
 | TASK-272-01 | Hero Centered Media Control and CTA Placeholder Polish | High | Medium | Hide centered-only irrelevant inline media frame controls and align Hero CTA URL placeholder copy |
 | TASK-272-02 | Hero Video Poster and Media Metadata | High | Large | Add Hero video poster, title/description, and video-specific editor/runtime semantics |
