@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 135 tasks
+- **To Do:** 143 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1542 tasks
 
@@ -48,6 +48,14 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-272-07 | Hero Rich Copy and Social Proof Composition | Medium | Very Large | Add safe rich-copy support and a bounded social proof row for conversion Hero sections |
 | TASK-272-08 | Hero Responsive Images and LCP Priority | Medium | Large | Define Hero responsive image, lazy/eager loading, and fetch-priority policy without inventing media variants |
 | TASK-272-09 | Hero Report Docs Changelog and Closure | Medium | Medium | Refresh Hero report/docs/changelog/board and final validation evidence |
+| TASK-271 | Grid Columns Widget Playwright Product Followups | High | Very Large | Grid Columns-only follow-up family for `REPORT_GRID_COLUMNS_WIDGET.md`, excluding TASK-256 shared-contract scope |
+| TASK-271-01 | Grid Columns Wizard, Presets, and Editor Guidance | High | Large | Expand all-column Wizard editing, variant previews, column-count copy, and layout presets |
+| TASK-271-02 | Grid Columns Reorder and Column Management | High | Large | Add reorder controls that preserve nested column slot content after TASK-256 slot/config sync |
+| TASK-271-03 | Grid Columns Responsive Order, Visibility, and Wide Breakpoints | High | Very Large | Add mobile reverse, per-column visibility, wide breakpoint spans, and any residual overflow guardrails |
+| TASK-271-04 | Grid Columns Per-Column Surface and Overflow | Medium | Large | Add bounded per-column card surface overrides and overflow controls without raw class strings |
+| TASK-271-05 | Grid Columns Height and Cross-Axis Alignment | Medium | Large | Replace hardcoded min-height with tokens and add per-column alignment overrides |
+| TASK-271-06 | Grid Columns Gap Tokens and Density Controls | Medium | Medium | Expand bounded gap tokens, keep independent gapX/gapY, and improve spacing labels |
+| TASK-271-07 | Grid Columns Report, Docs, Changelog, and Closure | Medium | Medium | Refresh Grid Columns report/docs/changelog/board and final validation evidence |
 | TASK-270 | Gallery Mosaic Widget Playwright Product Followups | High | Very Large | Gallery Mosaic-only product follow-up family for `REPORT_GALLERY_MOSAIC_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-270-01 | Gallery Mosaic Item Previews and Media Picker | High | Large | Add per-item media previews and Visual media picker after TASK-256 safe media behavior lands |
 | TASK-270-02 | Gallery Mosaic Reorder, Count, and Removal UX | High | Large | Add efficient reorder, clear count/add/remove semantics, and recoverable or confirmed item removal |
