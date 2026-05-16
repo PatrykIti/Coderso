@@ -179,6 +179,10 @@ function normalizeAccordionLayout(layout: AccordionData["layout"] | undefined) {
   };
 }
 
+function resolveAccordionLayoutClass(layout: AccordionLayout) {
+  return accordionMaxWidthClassMap[layout.maxWidth ?? "full"];
+}
+
 function resolveAccordionRenderClasses(style: AccordionStyle, variant: AccordionVariantId) {
   const fallback = accordionVariantFallbackClassMap[variant];
   return {
@@ -197,6 +201,36 @@ function resolveAccordionRenderClasses(style: AccordionStyle, variant: Accordion
           ].filter(Boolean).join(" ")
         : fallback.summaryTextClass,
   };
+}
+
+function renderAccordion(data: AccordionData, variant: AccordionVariantId) {
+  const normalized = normalizeAccordionData(data);
+  const items = resolveAccordionItems(normalized, slotMap);
+  const classes = resolveAccordionRenderClasses(normalized.style, variant);
+  const layoutClass = resolveAccordionLayoutClass(normalized.layout);
+  const descriptionStyle =
+    compactStyle({ color: normalized.style.descriptionTextColor }) ?? undefined;
+
+  return (
+    <div className={joinClasses("space-y-3", layoutClass)}>
+      {items.map((item) => (
+        <details className={joinClasses(classes.radiusClass, "border")}>
+          <summary
+            className={joinClasses(classes.summaryPaddingClass, classes.summaryTextClass)}
+          >
+            {item.title}
+          </summary>
+          <div className={joinClasses("space-y-4 border-t", classes.contentPaddingClass)}>
+            {item.description ? (
+              <p className="text-sm" style={descriptionStyle}>
+                {item.description}
+              </p>
+            ) : null}
+          </div>
+        </details>
+      ))}
+    </div>
+  );
 }
 ```
 
@@ -224,6 +258,10 @@ Error handling:
 - Missing new style fields must resolve through the variant fallback class map
   so legacy `soft`, `bordered`, and `compact` payloads render with the same
   classes they had before the fields existed.
+- `style.descriptionTextColor` must style item description copy without
+  overriding the summary title color.
+- `layout.maxWidth` must be applied to the outer Accordion wrapper, with `full`
+  preserving the current unconstrained layout.
 
 ## Security Contract
 
@@ -269,5 +307,7 @@ No API routes are added.
 - Existing payloads render as before unless the user configures the new fields.
 - Legacy `soft`, `bordered`, and `compact` payloads have explicit regression
   tests proving their old radius, padding, and summary typography classes.
+- Runtime tests assert configured `descriptionTextColor` appears on description
+  copy and configured `layout.maxWidth` appears on the wrapper.
 - Accordion color controls match the repo's color-picker/text-input pattern and
   preserve CSS variable values.
