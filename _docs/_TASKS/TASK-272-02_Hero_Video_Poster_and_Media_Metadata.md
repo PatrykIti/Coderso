@@ -19,6 +19,11 @@ This leaf does not own the shared required-image-alt baseline from TASK-256. It
 may add Hero-specific image/video editor guidance, but image-alt enforcement and
 safe media/link policy stay with TASK-256.
 
+TASK-256-06-03 still owns broad Hero media safety, image-alt baseline, and
+safe-link behavior. This leaf only owns Hero product metadata for video poster,
+video title, and video description, plus the editor/runtime split between image
+alt controls and video metadata controls.
+
 ## Source Findings
 
 - `_docs/PLAYWRIGHT/REPORT_HERO_WIDGET.md:142-145` - BUG-04 no inline video

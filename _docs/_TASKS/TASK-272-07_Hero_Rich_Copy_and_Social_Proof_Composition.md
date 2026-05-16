@@ -37,7 +37,8 @@ same fail-closed safety posture.
 |---|---|
 | `core/widgets/core/hero.tsx` | Add safe rich-copy fields and optional `socialProof` data. Normalize rich text through a bounded sanitizer and render it without unsafe script/event attributes. |
 | `core/admin/ui/widgets/editors/HeroEditors.tsx` | Add rich copy controls and social proof controls in Visual mode. Keep Wizard plain and beginner-safe unless a minimal toggle is explicitly needed. |
-| `core/services/posts/editor/postRichTextSerializer.ts` and related sanitizer helpers | Reuse only if the dependency remains Bun-free and import-safe for widget tests; otherwise create a small Hero-owned sanitizer/helper. |
+| `core/widgets/core/richTextSection.tsx` | Inspect the existing widget-side rich text normalizer/rendering seam first and reuse its pure sanitizer pattern if it is compatible with Hero inline copy. |
+| `core/services/posts/editor/postRichTextSerializer.ts` and related sanitizer helpers | Use only if the dependency remains Bun-free and import-safe for widget tests; otherwise create a small Hero-owned sanitizer/helper based on the widget-side pattern. |
 | `tests/vitest/widgets/hero.test.tsx` | Assert sanitized rich copy renders allowed inline marks/links and strips unsafe tags/attributes. Assert social proof row rendering and fallback behavior. |
 | `tests/vitest/widgets/heroEditors.test.tsx` | Assert rich-copy/social-proof editor controls render with stable metadata. |
 | `tests/vitest/ui/hero-editor-wave.test.tsx` | Cover toggling rich copy/social proof, editing fields, and preserving CTA/media data. |
@@ -62,6 +63,8 @@ type HeroSocialProof = {
 };
 
 function normalizeHeroRichText(value: unknown) {
+  // Prefer the pure widget-side rich text sanitizer seam; use post rich-text
+  // helpers only if they remain import-safe for widget tests.
   const sanitized = sanitizePostRichTextHtml(readString(value) ?? "");
   return sanitized || undefined;
 }

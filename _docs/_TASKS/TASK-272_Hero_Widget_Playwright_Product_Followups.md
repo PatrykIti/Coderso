@@ -33,6 +33,8 @@ Live owners inspected while drafting:
 - `tests/vitest/widgets/heroEditors.test.tsx`
 - `tests/vitest/ui/hero-editor-wave.test.tsx`
 - `_docs/_WIDGETS/HERO.md`
+- `_docs/_WIDGETS/tmp/hero/README.md`
+- `_docs/_WIDGETS/tmp/hero/MATRIX.md`
 - `_docs/WIDGETS.md`
 - `_docs/_TASKS/TASK-256-06-03_Hero_Timeline_Pricing_FAQ_and_Testimonials_Accessibility.md`
 - `_docs/_TASKS/TASK-244-02-01_Hero_Gradient_Background_and_Media_Overlay_Clear.md`
@@ -53,18 +55,24 @@ shared widget-contract or page-editor shell work.
 | UX-05 viewport switcher | `REPORT_HERO_WIDGET.md:189-191,281` | TASK-256-08 page-shell follow-up | Shared page-preview toolbar/canvas owner. |
 | UX-06 discard changes action | `REPORT_HERO_WIDGET.md:193-195,282` | TASK-256-08 page-shell follow-up | Page editor dirty-state/history owner. |
 
+TASK-256-06-03 uses broad "Hero media/gradient/alt/link drift" wording because
+it covers shared baseline repairs across several marketing widgets. TASK-272
+carves out video-poster and video title/description metadata as Hero product
+expansion. TASK-256 keeps ownership of shared media safety, image-alt baseline,
+safe-link behavior, clear/default state, and cross-widget accessibility.
+
 ## TASK-272 Scope Matrix
 
 | Report finding | TASK-272 owner | Notes |
 |---|---|---|
 | BUG-01 centered variant still shows inline-media border controls | TASK-272-01 | Hero-specific Visual editor control visibility. |
 | UX-08 CTA URL placeholder mismatch | TASK-272-01 | Hero-specific copy/placeholder polish. |
-| BUG-04 / BUG-07 / BF-01 video poster and video metadata | TASK-272-02 | Extend Hero media schema/editor/runtime without taking over shared image-alt policy. |
+| BUG-04 / BUG-07 / BF-01 video poster and video metadata | TASK-272-02 | Extend Hero media schema/editor/runtime without taking over shared image-alt policy or TASK-256 shared media safety. |
 | UX-03 preset delete has no confirmation | TASK-272-03 | Hero preset manager destructive action. |
 | BF-09 / BF-10 preset export/import/search/organization | TASK-272-03 | Hero preset manager usability. |
 | UX-04 padding explanation, BF-03 full-height/full-bleed, BF-13 media-center variant | TASK-272-04 | Hero layout product expansion. |
 | BF-02 shadows, BF-06 font family/weight, BF-12 motion controls | TASK-272-05 | Hero visual styling expansion with bounded enums only. |
-| BF-05 palette presets and BF-08 Hero contrast guidance | TASK-272-06 | Hero-owned palette/contrast UX after shared color-field state lands. |
+| BF-05 palette presets and BF-08 / A2 Hero contrast guidance | TASK-272-06 | Hero-owned palette/contrast UX after shared color-field state lands. |
 | BF-04 rich text for headline/body and BF-14 social proof row | TASK-272-07 | Hero composition/content expansion using safe rich-text patterns. |
 | BF-07 responsive images, A5 image loading policy, BF-11/A6 LCP fetch priority | TASK-272-08 | Hero-specific media performance policy. |
 | Report fixed/deferred notes, widget docs, changelog, board closure | TASK-272-09 | Final evidence and synchronization. |

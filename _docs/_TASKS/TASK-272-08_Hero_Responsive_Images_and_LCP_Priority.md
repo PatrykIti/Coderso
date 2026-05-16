@@ -37,10 +37,11 @@ policy, not a one-off hardcoded attribute.
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/hero.tsx` | Extend Hero media output with bounded loading/fetch-priority policy and responsive image attributes. Use `<picture>` only if the available media contract can provide variants; otherwise add explicit `sizes` and documented future media-variant deferral. |
+| `core/widgets/core/hero.tsx` | Extend Hero media output with bounded loading/fetch-priority policy and current-model responsive image attributes. Add `sizes` for current single-source images. Do not add `srcSet` unless a separate media-owner task first exposes real generated variants. |
 | `core/admin/ui/widgets/editors/HeroEditors.tsx` | Add Hero media performance controls only if authors need to override default policy. Prefer sensible defaults and read-only diagnostics over advanced knobs. |
-| `core/admin/services/mediaClient.ts` / media service owners | Touch only if the current media model is extended to expose generated variants. Do not invent Hero-local media variant storage. |
-| `tests/vitest/widgets/hero.test.tsx` | Assert centered/split/media-center image output includes the intended `loading`, `fetchPriority`, `sizes`, and optional `srcSet`/`picture` attributes. |
+| `core/admin/services/mediaClient.ts` | Current model exposes `MediaRecord.url`, dimensions, and metadata only; do not change it in this Hero leaf. If responsive variants are promoted, split a separate media-service/API task before implementing `srcSet`. |
+| `core/services/media/mediaService.ts`, `core/server/routes/mediaRoutes.ts`, and `core/server/validation/mediaSchemas.ts` | Out of scope for TASK-272-08 unless a separate media variant task is created. Name these owners there with full API/security contract if variants are promoted. |
+| `tests/vitest/widgets/hero.test.tsx` | Assert centered/split/media-center image output includes the intended `loading`, `fetchPriority`, and `sizes` attributes for current single-source images. Assert `srcSet`/`picture` only after a media-owner variant task lands. |
 | `tests/vitest/ui/hero-editor-wave.test.tsx` | Cover any new performance controls or diagnostics. |
 | `tests/unit/widgets/validator.test.ts` | Run and update if schema fields change. |
 | `_docs/_WIDGETS/HERO.md` | Document the Hero image loading policy. |
@@ -71,7 +72,6 @@ Runtime flow:
   loading={policy.loading}
   fetchPriority={policy.fetchPriority}
   sizes={policy.sizes}
-  srcSet={media.srcSet}
 />
 ```
 
@@ -89,11 +89,16 @@ Error handling:
 
 ## Security Contract
 
-No API routes are added unless media variants are explicitly promoted by a
-separate media owner task.
+No API routes are added by this Hero leaf. Responsive image variants remain
+deferred until a separate media-owner task adds real generated variants.
 
-- Endpoint visibility: none for Hero-only work.
-- Auth/RBAC/CSRF/rate-limit: unchanged admin editing and public rendering.
+- Endpoint visibility: none for Hero-only work. If media variants are promoted
+  in a separate task, that task must document the existing or new media route
+  visibility.
+- Auth/RBAC/CSRF/rate-limit: unchanged admin editing and public rendering for
+  Hero-only work. Any media variant API work must state authenticated media
+  read/write permissions, CSRF expectations for writes, and the rate-limit
+  bucket in its own task.
 - Reject-unknown validation: any new media policy fields must be strict enums.
 - Anti-abuse: no remote URL rewriting, no untrusted `srcset` generation, no raw
   HTML injection, and no secrets in diagnostics.

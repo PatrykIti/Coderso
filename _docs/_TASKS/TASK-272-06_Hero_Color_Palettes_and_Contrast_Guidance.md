@@ -25,8 +25,8 @@ Hero palette application and Hero-specific contrast calculations.
   color palettes.
 - `_docs/PLAYWRIGHT/REPORT_HERO_WIDGET.md:229-230` - BF-08 missing WCAG
   contrast validator.
-- `_docs/PLAYWRIGHT/REPORT_HERO_WIDGET.md:257,291,293` - accessibility and
-  priority summary.
+- `_docs/PLAYWRIGHT/REPORT_HERO_WIDGET.md:257` - A2 missing contrast validator.
+- `_docs/PLAYWRIGHT/REPORT_HERO_WIDGET.md:291,293` - priority summary.
 
 ## Sub-Tasks
 
@@ -43,7 +43,7 @@ Hero palette application and Hero-specific contrast calculations.
 | `tests/vitest/ui/hero-editor-wave.test.tsx` | Cover applying palettes, preserving manual overrides, and showing failing/passing contrast status. |
 | `tests/unit/widgets/validator.test.ts` | Run and update only if schema fields are added. |
 | `_docs/_WIDGETS/HERO.md` | Document palette behavior and contrast guidance limitations. |
-| `_docs/PLAYWRIGHT/REPORT_HERO_WIDGET.md` | Mark BF-05/BF-08 fixed or record evidence. |
+| `_docs/PLAYWRIGHT/REPORT_HERO_WIDGET.md` | Mark BF-05/BF-08/A2 fixed or record evidence. |
 
 ## Implementation Pseudocode
 
