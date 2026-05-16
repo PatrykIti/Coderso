@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 60 tasks
+- **To Do:** 69 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1542 tasks
 
@@ -38,6 +38,15 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-267 | Feature Grid Widget Playwright Product Followups | High | Very Large | Feature Grid-only follow-up family for `REPORT_FEATURE_GRID_WIDGET.md`, excluding TASK-256 shared-contract scope |
+| TASK-267-01 | Feature Grid Variant Preview and Responsive Cards-4 Layout | High | Medium | Add variant preview affordances, repair cards-4 responsive product behavior, and keep columns truthfulness in TASK-256 |
+| TASK-267-02 | Feature Grid Card Reorder, Remove, and Item Management | High | Medium | Add drag reorder plus recoverable remove flow while preserving keyboard move fallback |
+| TASK-267-03 | Feature Grid Media Picker, Emoji Picker, and Image Priority UX | High | Large | Add media-library card image picking, bounded emoji presets, and image-over-icon guidance |
+| TASK-267-04 | Feature Grid Card Layout, Density, and Alignment Controls | High | Large | Add bounded card layout, padding, alignment, media-size, horizontal, and hero-card decisions |
+| TASK-267-05 | Feature Grid Section Typography, Container, and Hover Controls | Medium | Large | Add Feature Grid-local section background, max-width, typography, and hover controls |
+| TASK-267-06 | Feature Grid CTA Enablement, Target, and Rich Description Authoring | Medium | Large | Add explicit CTA enablement, safe target choice, and bounded rich description authoring after TASK-256 link safety |
+| TASK-267-07 | Feature Grid Wizard Guidance and Editor Entry Flow | Medium | Medium | Add Wizard scope guidance and decide first-open flow after Visual expansion |
+| TASK-267-08 | Feature Grid Report, Docs, Changelog, and Closure | Medium | Medium | Refresh Feature Grid report/docs/changelog/board and final validation evidence |
 | TASK-261 | Contact Widget Playwright Product Followups | High | Very Large | Contact-only follow-up family for `REPORT_CONTACT_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-261-01 | Contact Header, Details Links, and Semantic Output | High | Large | Add Contact section headings, panel headings, semantic details, and safe tel/mailto output |
 | TASK-261-02 | Contact Form Field Metadata and Public Submission Bridge | High | Very Large | Add field names/ids/autocomplete/custom labels and route active submits through existing Forms runtime hardening |
