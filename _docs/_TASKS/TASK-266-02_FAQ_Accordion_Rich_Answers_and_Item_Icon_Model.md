@@ -22,7 +22,8 @@ public runtime output and preserve the beginner-friendly content model.
 
 In scope:
 
-- safe answer formatting for links, bold, italic, inline code, and simple lists;
+- bounded markdown answer formatting for links, bold, italic, inline code, and
+  simple lists; raw HTML remains rejected;
 - optional per-item icon/emoji field rendered before the question;
 - editor controls for answer format and item icon;
 - plain-text extraction helper for downstream JSON-LD in TASK-266-03.
@@ -36,8 +37,10 @@ Out of scope:
 ## Sub-Tasks
 
 - [ ] Extend `FaqAccordionItem` with `icon?: string` and `answerFormat?: "plain" | "markdown"`.
-- [ ] Add a safe FAQ answer renderer that supports a bounded markdown subset or
-  reuses the repo's existing sanitized rich-text helper if one already exists.
+- [ ] Add a safe FAQ answer renderer that supports only a bounded markdown
+  subset. Prefer a small FAQ-local parser that renders React nodes; if HTML is
+  introduced internally, route it through the existing
+  `sanitizeRichTextHtml()` / `sanitizeHtmlWithPolicy()` owner before output.
 - [ ] Add `extractFaqAnswerPlainText()` so SEO JSON-LD can use sanitized text
   instead of duplicating markdown parsing.
 - [ ] Add Wizard/Visual controls for item icon and rich answer mode without
@@ -50,9 +53,9 @@ Out of scope:
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/faqAccordion.tsx` | Extend item schema/types/defaults/normalizer; add safe answer rendering and plain-text extraction. |
+| `core/widgets/core/faqAccordion.tsx` | Extend item schema/types/defaults/normalizer; add safe answer rendering and plain-text extraction. Add enum and length constraints for `answerFormat` and `icon`. |
 | `core/admin/ui/widgets/editors/FaqAccordionEditors.tsx` | Add per-item icon and answer-format controls in Wizard/Visual as appropriate. |
-| `tests/vitest/widgets/faqAccordion.test.tsx` | Add SSR assertions for safe markdown output, escaping, icon output, and plain-text extraction. |
+| `tests/vitest/widgets/faqAccordion.test.tsx` | Add SSR assertions for safe markdown output, escaping, malicious markdown/link payloads, icon bounds, and plain-text extraction. |
 | `tests/vitest/ui/faq-accordion-editor-wave.test.tsx` | Add editor assertions for icon and answer-format updates. |
 | `tests/unit/widgets/validator.test.ts` | Run and update if schema fixture coverage requires new item fields. |
 
@@ -68,10 +71,11 @@ function renderFaqAnswer(item: FaqAccordionItem) {
     return item.answer;
   }
 
-  return parseFaqMarkdown(item.answer ?? "", {
+  return renderFaqMarkdownNodes(item.answer ?? "", {
     allowedInline: ["strong", "em", "code", "a"],
     allowedBlocks: ["p", "ul", "ol", "li"],
-    sanitizeHref: normalizeSafeHref,
+    sanitizeHref: normalizeFaqAnswerHref,
+    allowRawHtml: false,
   });
 }
 ```
@@ -104,6 +108,9 @@ Error handling:
 - Unsafe links render as plain text or are omitted according to the existing
   safe-href helper.
 - Empty icons are omitted.
+- `icon` is trimmed and length-clamped in the normalizer before persistence.
+- Markdown supports the documented subset only; raw HTML remains escaped or
+  stripped even when the report row mentions "Markdown/HTML".
 - Markdown parsing failures fall back to escaped plain text.
 
 ## Security Contract
@@ -126,6 +133,10 @@ No API routes are added.
   normalization or safe-href behavior changes
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- If this leaf is committed or moved to `Done` separately from TASK-266-06,
+  also run root `bun run lint`, the targeted Vitest/Bun lane above,
+  `bun run scan:security:strict`, and `bun run precommit`; otherwise keep this
+  leaf open until TASK-266-06 runs the final family gate.
 
 ## Documentation Updates Required
 
@@ -140,7 +151,7 @@ No API routes are added.
 
 ## Acceptance Criteria
 
-- FAQ answers can include a safe bounded formatting subset without allowing raw
+- FAQ answers can include a safe bounded markdown subset without allowing raw
   HTML or user-authored scripts.
 - Optional item icons render predictably and remain bounded in schema and
   normalizer tests.

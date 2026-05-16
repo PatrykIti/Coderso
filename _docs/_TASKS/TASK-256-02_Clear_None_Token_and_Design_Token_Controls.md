@@ -37,8 +37,9 @@ The reports show repeated drift from the documented contract:
 - `_docs/PLAYWRIGHT/REPORT_TABS_WIDGET.md:63,117-138,300-310` reports missing
   Visual control for `inactiveTextColor`.
 - `_docs/PLAYWRIGHT/REPORT_ACCORDION_WIDGET.md:113,163` and
-  `_docs/PLAYWRIGHT/REPORT_FAQ_ACCORDION_WIDGET.md:125,180` report missing
-  clear controls for border/divider-like fields.
+  `_docs/PLAYWRIGHT/REPORT_FAQ_ACCORDION_WIDGET.md:126-127,183-185,310-311`
+  report missing clear controls for border/divider-like fields and
+  CSS-variable color-picker fallback drift.
 - `_docs/PLAYWRIGHT/REPORT_CONTENT_LIST_WIDGET.md:77,147,160,269-280` reports
   a missing `textColor` clear control.
 - `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md:179-183` reports missing

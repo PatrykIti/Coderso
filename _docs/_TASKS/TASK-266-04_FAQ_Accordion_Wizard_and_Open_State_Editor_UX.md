@@ -113,6 +113,10 @@ No API routes are added.
   a helper moves into the widget contract
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- If this leaf is committed or moved to `Done` separately from TASK-266-06,
+  also run root `bun run lint`, the targeted Vitest/Bun lane above,
+  `bun run scan:security:strict`, and `bun run precommit`; otherwise keep this
+  leaf open until TASK-266-06 runs the final family gate.
 
 ## Documentation Updates Required
 

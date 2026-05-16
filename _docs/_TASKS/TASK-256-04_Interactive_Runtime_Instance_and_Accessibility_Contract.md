@@ -25,8 +25,8 @@ leaves expand it.
 - `_docs/PLAYWRIGHT/REPORT_TOGGLE_BLOCK_WIDGET.md:31,39,207` reports duplicate
   IDs and a global binding flag risk.
 - `_docs/PLAYWRIGHT/REPORT_TABS_WIDGET.md:168,287` reports ARIA gaps.
-- `_docs/PLAYWRIGHT/REPORT_FAQ_ACCORDION_WIDGET.md:96,140-144,173-180` reports
-  FAQ single-open and ARIA gaps.
+- `_docs/PLAYWRIGHT/REPORT_FAQ_ACCORDION_WIDGET.md:97,141-145,179-180,303-305`
+  reports FAQ single-open and ARIA gaps.
 - `_docs/PLAYWRIGHT/REPORT_ACCORDION_WIDGET.md:138,240,286` reports
   default-open, collapsible, placeholder, chevron, and ARIA gaps in the
   generic accordion renderer.

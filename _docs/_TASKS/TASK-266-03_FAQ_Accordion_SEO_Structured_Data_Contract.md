@@ -25,7 +25,7 @@ In scope:
 - default-off or default-on decision documented in `_docs/_WIDGETS/FAQ.md`;
 - JSON-LD output generated from normalized question text and sanitized answer
   plain text;
-- tests proving disabled, enabled, sparse, and unsafe-content cases.
+- tests proving disabled, enabled, sparse, and script-breakout payload cases.
 
 Out of scope:
 
@@ -52,7 +52,7 @@ Out of scope:
 |---|---|
 | `core/widgets/core/faqAccordion.tsx` | Extend schema/types/defaults/normalizer; add JSON-LD builder and renderer output. |
 | `core/admin/ui/widgets/editors/FaqAccordionEditors.tsx` | Add SEO toggle in the appropriate mode. |
-| `tests/vitest/widgets/faqAccordion.test.tsx` | Add JSON-LD structure, escaping, disabled-state, and sparse-content assertions. |
+| `tests/vitest/widgets/faqAccordion.test.tsx` | Add JSON-LD structure, script-safe serialization, disabled-state, sparse-content, and `</script>`/U+2028/U+2029 payload assertions. |
 | `tests/vitest/ui/faq-accordion-editor-wave.test.tsx` | Add editor toggle assertion. |
 | `tests/unit/widgets/validator.test.ts` | Run and update if schema fixture coverage requires `seo`. |
 
@@ -86,11 +86,12 @@ Renderer flow:
 
 ```tsx
 const jsonLd = buildFaqAccordionJsonLd(normalizedData);
+const serializedJsonLd = jsonLd ? serializeJsonLdForScript(jsonLd) : null;
 
-{jsonLd ? (
+{serializedJsonLd ? (
   <script
     type="application/ld+json"
-    dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+    dangerouslySetInnerHTML={{ __html: serializedJsonLd }}
   />
 ) : null}
 ```
@@ -99,6 +100,8 @@ Error handling:
 
 - Empty or whitespace-only Q/A pairs are omitted from `mainEntity`.
 - Unsafe rich answer syntax never reaches JSON-LD as HTML.
+- `serializeJsonLdForScript()` must JSON-stringify the object and escape `<`,
+  `>`, `&`, U+2028, and U+2029 before insertion into a script tag.
 - Unknown `seo` fields are rejected by schema validation.
 
 ## Security Contract
@@ -108,8 +111,9 @@ No API routes are added.
 - Endpoint visibility/auth/RBAC/CSRF/rate limit: unchanged.
 - Reject-unknown validation: `seo` object must use `additionalProperties:
   false`.
-- Anti-abuse: JSON-LD is built only from normalized strings and serialized with
-  `JSON.stringify`; no raw script content is accepted from widget data.
+- Anti-abuse: JSON-LD is built only from normalized strings and serialized
+  through `serializeJsonLdForScript()`, not raw `JSON.stringify`, so
+  user-authored FAQ text cannot break out of the script tag.
 - Secret handling: no private URLs, tokens, or secrets in structured data.
 
 ## Testing Requirements
@@ -119,6 +123,10 @@ No API routes are added.
 - `bun test tests/unit/widgets/validator.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- If this leaf is committed or moved to `Done` separately from TASK-266-06,
+  also run root `bun run lint`, the targeted Vitest/Bun lane above,
+  `bun run scan:security:strict`, and `bun run precommit`; otherwise keep this
+  leaf open until TASK-266-06 runs the final family gate.
 
 ## Documentation Updates Required
 
@@ -136,4 +144,5 @@ No API routes are added.
 - JSON-LD is emitted only when enabled and is derived from normalized safe FAQ
   data.
 - The renderer emits no duplicate FAQPage scripts for one widget instance.
-- Tests cover escaping, disabled state, sparse content, and validator behavior.
+- Tests cover script-safe serialization, disabled state, sparse content, and
+  validator behavior.

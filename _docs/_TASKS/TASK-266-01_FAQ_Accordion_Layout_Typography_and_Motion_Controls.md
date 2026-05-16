@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Content + Runtime Render + Admin UI
 **Estimated Effort:** Large
-**Dependencies:** TASK-256-02, TASK-256-06-03, TASK-266
+**Dependencies:** TASK-256-02, TASK-256-04, TASK-256-06-03, TASK-266
 **Status:** To Do
 
 ---
@@ -29,8 +29,8 @@ In scope:
 - question, answer, header title, and header description text colors;
 - panel radius and border-width controls;
 - header title size controls;
-- optional motion profile for FAQ open/close transitions after TASK-256 lands
-  the final runtime interaction contract.
+- optional motion profile for FAQ open/close transitions after TASK-256-04 and
+  TASK-256-06-03 land the final runtime interaction contract.
 
 Out of scope:
 
@@ -152,6 +152,10 @@ No API routes are added.
 - `bun test tests/unit/widgets/validator.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- If this leaf is committed or moved to `Done` separately from TASK-266-06,
+  also run root `bun run lint`, the targeted Vitest/Bun lane above,
+  `bun run scan:security:strict`, and `bun run precommit`; otherwise keep this
+  leaf open until TASK-266-06 runs the final family gate.
 
 ## Documentation Updates Required
 
