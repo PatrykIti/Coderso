@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 8 tasks
+- **To Do:** 17 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1542 tasks
 
@@ -38,6 +38,15 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-256 | Widget Shared Contract Playwright Drift Repair | High | Very Large | New umbrella for shared widget contract drift found in `_docs/PLAYWRIGHT/REPORT_*_WIDGET.md` |
+| TASK-256-01 | Shared Editor Mode and Atomic Update Contract | High | Large | Repair mode update races, inert Advanced controls, and variant-aware editor ownership |
+| TASK-256-02 | Clear, None Token, and Design Token Controls | High | Large | Normalize Clear vs `none` semantics, zero/custom token UX, and clearable style fields |
+| TASK-256-03 | Slot Nested Content and Public Placeholder Safety | High | Large | Keep editor slot affordances while removing admin-only placeholders from public runtime output |
+| TASK-256-04 | Interactive Runtime Instance and Accessibility Contract | High | Large | Add instance-safe IDs, scoped runtime binding, and ARIA repairs for interactive widgets |
+| TASK-256-05 | Structural Widget Report Findings | High | Large | Apply shared fixes to grid-columns, split-layout, stack, spacer, divider, tabs, accordion, and toggle-block |
+| TASK-256-06 | Marketing Widget Report Findings | High | Large | Apply shared fixes to hero, timeline, feature-grid, testimonials, pricing-plans, and FAQ accordion |
+| TASK-256-07 | Dynamic Navigation and Content Widget Findings | High | Medium | Repair content-list and navigation report drift around truthful controls, hrefs, and sticky behavior |
+| TASK-256-08 | Playwright Report Completion and Closure | Medium | Medium | Refresh reports, docs, changelog, board, and validation evidence after implementation leaves |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
 | TASK-240 | Coderso Multilingual and i18n Umbrella | High | Very Large | Execution-ready locale/translation/runtime routing program superseding TASK-054-21 |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |

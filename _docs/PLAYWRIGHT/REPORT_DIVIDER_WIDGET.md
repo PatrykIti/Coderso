@@ -1,6 +1,6 @@
 # RAPORT: Divider Widget — Analiza UX/UI i brakujące funkcjonalności
 
-> **Status:** W toku  
+> **Status:** Zakończony  
 > **Data:** 2026-05-16  
 > **Sesja:** Playwright #11 (Divider Widget)  
 > **Środowisko:** http://localhost:5173/admin · http://localhost:3000  
@@ -117,21 +117,127 @@ Divider to prosty widget separatora wizualnego — pozioma linia oddzielająca s
 ## 4. Testy w Admin UI Preview
 
 > **Sesja:** `playwright-cli -s=divider-audit`  
-> **Data testu:** 2026-05-16
+> **Data testu:** 2026-05-16  
+> **Strona testowa:** `/test-divider-0516` (UUID: `37fbfa5f-9583-4277-ac30-92b21559ae9b`)
 
-*(Sekcja uzupełniana po testach przeglądarkowych)*
+### 4.1 Wizard Editor
+
+| Obserwacja | Status |
+|-----------|--------|
+| Select wariantu (`Line` / `Dashed` / `Label center`) działa poprawnie | ✅ |
+| Pole `Center label` pojawia się tylko dla `label-center` | ✅ |
+| Select grubości linii (1–8px) działa | ✅ |
+| Brak kontroli koloru w Wizard | ⚠️ (U4) |
+| Brak kontroli spacingu w Wizard | ⚠️ (U4) |
+| Przycisk "Continue to layout and styling" przechodzi do Visual | ✅ |
+
+### 4.2 Visual Editor
+
+| Obserwacja | Status |
+|-----------|--------|
+| Variant cards (Line/Dashed/Label center) renderują się i przełączają | ✅ |
+| Pole `Center label` pojawia się po wyborze `label-center` | ✅ |
+| Canvas preview aktualizuje się po wpisaniu labelu ("OR") | ✅ |
+| `Line thickness` dropdown (1–8px) działa | ✅ |
+| `Width mode`: Full width / Container width / Custom width działają | ✅ |
+| Po wyborze `Custom width` pojawia się pole z wartością `320px` | ✅ |
+| **Color picker pokazuje `#e2e8f0` gdy wartość to `var(--color-border)`** | 🔴 C3 |
+| Po zmianie koloru przez picker CSS var `var(--color-border)` zostaje zastąpiona przez hex | 🔴 C3 |
+| Można przywrócić CSS var ręcznie przez tekst input | ✅ (obejście) |
+| **"Custom px" w SpacingField — wybór z dropdown nic nie zmienia** | 🔴 C2 |
+| Tekst input w SpacingField pozwala wpisać własną wartość (ręcznie) | ✅ (obejście) |
+| "Resolved: 1.5rem" przy tokenie `6` — informacja pomocna | ✅ |
+
+### 4.3 Advanced Editor
+
+| Obserwacja | Status |
+|-----------|--------|
+| **Variant select otwiera się i pokazuje opcje, ale wybór nic nie zmienia** | 🔴 C1 |
+| Po wyborze "Line" z "Label center" — canvas, badge i dane pozostają `label-center` | 🔴 C1 |
+| Mała nota "Variant is controlled by visual variant cards." — zbyt subtelna | ⚠️ U8 |
+| Line thickness, Width mode, Line color — działają jak w Visual | ✅ |
+| SpacingField — te same problemy co w Visual (C2) | 🔴 C2 |
+| JSON snapshot sekcja "Raw payload" poprawnie pokazuje normalized data | ✅ |
+
+### 4.4 Rendering w Admin Canvas
+
+| Obserwacja | Status |
+|-----------|--------|
+| `line` — cienka ciągła linia widoczna w canvas | ✅ |
+| `dashed` — przerywana linia widoczna w canvas | ✅ |
+| `label-center` + label "OR" — tekst wyśrodkowany między dwiema liniami | ✅ |
+| Real-time preview aktualizuje się przy zmianie wariantu, koloru, grubości | ✅ |
+| Canvas shows "Page error: Not authenticated" przy wygaśnięciu sesji | ⚠️ Sesja |
 
 ---
 
 ## 5. Testy na froncie (localhost:3000)
 
-*(Sekcja uzupełniana po testach przeglądarkowych)*
+> **URL:** `http://localhost:3000/test-divider-0516`  
+> **Viewporty:** 1280×800 (desktop), 390×844 (mobile)
+
+### 5.1 Renderowanie wariantów
+
+| Wariant | Desktop | Mobile (390px) |
+|---------|---------|----------------|
+| `line` — solid 1px border | ✅ | ✅ |
+| `dashed` — dashed border-style | ✅ | ✅ |
+| `label-center` z "OR" | ✅ | ✅ |
+
+### 5.2 Computed styles (DOM inspection)
+
+```
+line:   border-style: solid,  1px, rgb(226,232,240)
+dashed: border-style: dashed, 1px, rgb(226,232,240)
+label-center: 2× solid segments (linia | label | linia)
+```
+
+`var(--color-border)` rozwiązuje się do `rgb(226, 232, 240)` (#e2e8f0) na light theme — poprawnie.
+
+### 5.3 Struktura HTML i ARIA
+
+```html
+<!-- Wynik dla wariantu line: -->
+<div class="w-full" 
+  data-divider="true"
+  data-divider-variant="line"
+  data-divider-thickness="1"
+  data-divider-color="var(--color-border)"  <!-- CSS var w atrybucie -->
+  data-divider-width-mode="full"
+  data-divider-has-label="false"
+  <!-- brak role="separator" -->
+  <!-- brak aria-hidden="true" -->
+>
+  <div class="mx-auto border-t" style="border-top-width:1px;...;width:100%"></div>
+</div>
+```
+
+**Problemy potwierdzone w DOM:**
+- Wszystkie warianty renderowane jako `<div>` — potwierdzenie **W7/R2**
+- Zero `role` na jakimkolwiek elemencie — potwierdzenie **R1**
+- Zero `aria-hidden` na dekoracyjnych dividerach — potwierdzenie **R1**
+- `data-divider-color="var(--color-border)"` eksponuje CSS var w DOM — potwierdzenie **R3**
+
+### 5.4 Mobile (390px)
+
+- Wszystkie 3 warianty renderują poprawnie
+- Krótki label "OR" nie powoduje zawijania
+- Spacing (marginTop/marginBottom 1.5rem) zachowany
 
 ---
 
 ## 6. Porównanie Admin Preview vs Frontend
 
-*(Sekcja uzupełniana po testach przeglądarkowych)*
+| Aspekt | Admin Preview | Frontend | Zgodność |
+|--------|--------------|----------|----------|
+| Wariant `line` — rendering | Cienka szara linia | Cienka szara linia | ✅ |
+| Wariant `dashed` — rendering | Przerywana linia | Przerywana linia (border-style: dashed) | ✅ |
+| Wariant `label-center` + "OR" | Tekst wyśrodkowany | Tekst wyśrodkowany | ✅ |
+| Kolor `var(--color-border)` | Wyświetla jako border | Resolves do #e2e8f0 | ✅ |
+| Spacing (1.5rem top/bottom) | Visible space above/below | margin-top: 1.5rem ✅ | ✅ |
+| Responsywność (390px) | Canvas zbyt wąski by porównać | Poprawne | — |
+
+**Wnioski:** Admin preview i frontend są **spójne** — nie wykryto rozbieżności renderowania między środowiskami.
 
 ---
 
@@ -158,4 +264,21 @@ Divider to prosty widget separatora wizualnego — pozioma linia oddzielająca s
 
 ---
 
-*Raport w toku — sekcje 4–6 uzupełniane po testach Playwright.*
+## 8. Dodatkowe obserwacje z sesji
+
+### 8.1 Wygasanie sesji admin (problem CMS, nie widget)
+
+Sesja admina wygasa po ~5 minutach bezczynności na poziomie API (401 Unauthorized na `/api/pages/{id}` i `/api/pages/{id}/publish`). Skutkuje to:
+- Utratą niezapisanych zmian (widget data reset do ostatnio opublikowanej wersji)
+- Koniecznością ponownego logowania
+- Nieudanymi próbami publikacji (zmiany nie docierają do backendu)
+
+Prawdopodobna przyczyna: krótki TTL sesji/tokena JWT bez silent refresh. Nie jest to bezpośredni błąd divider widget, ale wpływa na workflow redaktora.
+
+### 8.2 Potwierdzenie spójności Preview
+
+Nie wykryto żadnych rozbieżności między admin canvas preview a frontendem (`localhost:3000`). Oba środowiska renderują widget identycznie dla wszystkich 3 wariantów.
+
+---
+
+*Raport zakończony — 2026-05-16.*

@@ -1,11 +1,11 @@
 # RAPORT: Pricing Plans Widget — Analiza UX/UI i brakujące funkcjonalności
 
-> **Status:** W trakcie (testy Playwright)  
+> **Status:** Zakończony  
 > **Data:** 2026-05-16  
 > **Sesja:** Playwright #N (Pricing Plans Widget)  
 > **Środowisko admin:** http://localhost:5173/admin  
 > **Środowisko front:** http://localhost:3000  
-> **Strona testowa:** TBD
+> **Strona testowa:** TEST-PRICING-PLANS-0516 (`/admin/pages/8902f76a-6745-4788-a9c6-9356998d3e9f`)
 
 ---
 
@@ -51,7 +51,86 @@ Pricing Plans widget prezentuje karty cenowe lub tabelę porównawczą planów s
 
 ## 3. Wyniki testów Playwright — co działa poprawnie ✓
 
-> *(Sekcja uzupełniana po testach)*
+### 3.1 Warianty
+
+| Test | Wynik |
+|------|-------|
+| Przełączanie Three Plans / Four Plans / Comparison Rows | ✓ Działa |
+| Three Plans: grid 3-kolumnowy | ✓ Działa |
+| Four Plans: grid 4-kolumnowy (sm:2, xl:4) | ✓ Działa |
+| Comparison Rows: tabela feature-by-feature | ✓ Działa |
+| Aktywny wariant oznaczony "Selected" | ✓ Działa |
+| Tabela porównawcza z aria-label na ✓/- komórkach | ✓ Działa |
+
+### 3.2 Billing toggle (UI)
+
+| Test | Wynik |
+|------|-------|
+| Switch "Enable billing toggle" włącza/wyłącza sekcję | ✓ Działa |
+| Billing toggle widoczny w canvas gdy enabled | ✓ Działa |
+| Przyciski Monthly/Annual renderują się poprawnie | ✓ Działa |
+| Monthly/Annual labels konfigurowalne z edytora | ✓ Działa |
+| Default cycle (monthly/annual) poprawnie ustawia aria-pressed | ✓ Działa |
+
+### 3.3 Plany i features
+
+| Test | Wynik |
+|------|-------|
+| Dodawanie planu (Add plan) | ✓ Działa |
+| Dodawanie features do planu (Add feature) | ✓ Działa |
+| Move up/down dla planów | ✓ Działa |
+| Move up/down dla features | ✓ Działa |
+| Usuwanie feature (Remove) | ✓ Działa |
+| Highlight plan — tylko jeden może być aktywny (normalizacja) | ✓ Działa |
+| CTA label + URL per plan | ✓ Działa |
+| Badge per plan | ✓ Działa |
+
+### 3.4 Kolory i styl
+
+| Test | Wynik |
+|------|-------|
+| Card surface picker + text input | ✓ Działa |
+| Card border picker + text input | ✓ Działa |
+| Highlight ring picker + text input | ✓ Działa |
+| Clear dla card surface i card border | ✓ Działa |
+| Spacing selector (None/Compact/Default/Spacious) | ✓ Działa |
+| Radius selector (None/Medium/Large/Extra large) | ✓ Działa |
+| Feature marker: Bullet (•) | ✓ Działa |
+| Feature marker: Check (✓) | ✓ Działa |
+| Feature marker: Icon (◆ placeholder) | ✓ Działa (patrz UX-03) |
+
+### 3.5 Wizard editor
+
+| Test | Wynik |
+|------|-------|
+| Dropdown wyboru wariantu | ✓ Działa |
+| Section title input | ✓ Działa |
+| Plans count selector | ✓ Działa |
+| Basic plan setup (name + price per plan) | ✓ Działa |
+| Przejście do Visual po "Continue to layout and styling" | ✓ Działa |
+
+### 3.6 Advanced editor
+
+| Test | Wynik |
+|------|-------|
+| Spacing token selector | ✓ Działa |
+| Radius token selector | ✓ Działa |
+| "Normalize plans to variant baseline" przycisk | ✓ Działa |
+| "Normalize full payload" przycisk | ✓ Działa |
+| Raw payload JSON snapshot | ✓ Widoczny, aktualizuje się |
+| Layout padding/margin kontrolki | ✓ Dostępne |
+| Visibility (Desktop/Tablet/Mobile) | ✓ Dostępne |
+
+### 3.7 Frontend (localhost:3000) — zgodność z admin preview
+
+| Element | Admin Preview | Frontend | Status |
+|---------|--------------|----------|--------|
+| Three Plans layout | ✓ | ✓ | Zgodne |
+| Comparison Rows layout | ✓ | ✓ | Zgodne |
+| Plan content (name, price, features, CTA) | ✓ | ✓ | Zgodne |
+| Header (title, description) | ✓ | ✓ | Zgodne |
+| Billing toggle UI (Monthly/Annual buttons) | ✓ Widoczny | ✓ Widoczny | Zgodne |
+| Billing toggle interaktywność | ✗ Nie działa | ✗ Nie działa | Zgodne — oba broken |
 
 ---
 
@@ -220,15 +299,138 @@ Wartość `"md"` nie jest sprawdzana explicite — trafia do `return "md"` jako 
 
 ---
 
-## 6. Testy Playwright — Admin UI
+## 6. Testy Playwright — Szczegółowe obserwacje Admin UI
 
-> *(Sekcja uzupełniana po testach)*
+### 6.1 Billing toggle — nieinternaktywny (BUG-08)
+
+**Obserwacja:** Po włączeniu "Enable billing toggle" w edytorze, przyciski "Monthly" / "Annual" pojawiają się w canvasie. Po kliknięciu "Annual" — ceny **nie zmieniają się**. `aria-pressed` pozostaje `false`. Nie ma żadnego JavaScript obsługującego kliknięcia.
+
+```
+# Wynik testu:
+Cena plan-1 przed kliknięciem Annual: "$19"
+Cena plan-1 po kliknięciu Annual:     "$19"   ← BŁĄD
+aria-pressed annual po kliknięciu:    "false"  ← BŁĄD
+```
+
+**Przyczyna (z kodu):** Przyciski w `PricingPlansBlock` (`pricingPlans.tsx:708-726`) nie mają `onClick`. `defaultCycle` jest statycznym polem z danych — nie istnieje stan React który zarządzałby aktywnym cyklem.
+
+---
+
+### 6.2 Plans count desynchronizacja z wariantem (BUG-04)
+
+**Obserwacja:** Po przełączeniu z "Three Plans" na "Four Plans" — Plans count selector nadal pokazuje "3". Canvas renderuje 4 karty (bo `pricingVariantPlanCountMap` wymusza 4), ale edytor wskazuje 3. Użytkownik nie widzi planu 4 (Business) na liście edytora dopóki nie zwróci uwagi na canvas.
+
+```
+# Wynik testu:
+Plans count selector po zmianie na Four Plans: "3"  ← BŁĄD
+Liczba kart w canvas: 4                             ← poprawna
+```
+
+---
+
+### 6.3 Zmiana wariantu usuwa dane planów bez ostrzeżenia (BUG-03)
+
+**Obserwacja:** Sekwencja testowa:
+1. Dodano widget → Three Plans → 3 plany
+2. Zmieniono na Four Plans → pojawił się "Business" (plan 4, domyślny)
+3. Zmieniono z powrotem na Three Plans → Plan 4 "Business" **zniknął z edytora**
+4. Zmieniono z powrotem na Four Plans → Plan 4 odtworzony z domyślnymi wartościami (dane utracone)
+
+Brak jakiegokolwiek ostrzeżenia, dialogu, undoable akcji.
+
+---
+
+### 6.4 Usunięcie planu bez potwierdzenia (UX-06)
+
+**Obserwacja:** Kliknięcie "Remove" na planie usuwa go natychmiast. Brak dialogu, brak undoable toast. Plan ze wszystkimi features, CTA, badge znika bez możliwości cofnięcia.
+
+---
+
+### 6.5 Highlight ring bez Clear (BUG-05)
+
+**Obserwacja:** "Card surface" i "Card border" mają przycisk "Clear" (widoczny przy wartości). "Highlight ring" nie ma Clear — brak możliwości resetu do `var(--color-primary)`.
+
+---
+
+### 6.6 Badges wszystkich planów w kolorze highlightRing (BUG-06)
+
+**Obserwacja:**
+```
+Badgi planów (innerHTML backgroundColor):
+"var(--color-primary), var(--color-primary)"
+```
+Plany "For individuals" i "For teams" (oba `highlighted: false`) mają badge w tym samym kolorze co wyróżniony "Growth". Brak wizualnej hierarchii.
+
+---
+
+### 6.7 Icon marker — placeholder ◆ (UX-03)
+
+**Obserwacja:** Wybranie "Icon" w Feature marker selector renderuje `◆` (Unicode Black Diamond Suit). To nie jest prawdziwa ikona — to hardcoded symbol bez możliwości konfiguracji. Etykieta "Icon" w edytorze sugeruje możliwość wyboru ikony, której nie ma.
+
+---
+
+### 6.8 Spacing i Radius zduplikowane (UX-01)
+
+**Obserwacja:** Visual tab → "Colors and emphasis" → Spacing + Radius. Advanced tab → "Display tokens" → Spacing token + Radius token. Te same kontrolki, te same wartości, w dwóch miejscach.
+
+---
+
+### 6.9 Billing toggle labels widoczne przy disabled toggle (UX-08)
+
+**Obserwacja:** Pola "Monthly label" i "Annual label" są zawsze widoczne i edytowalne — niezależnie od stanu switcha "Enable billing toggle". Gdy toggle jest off, edycja tych pól jest pozbawiona sensu dla użytkownika.
+
+---
+
+### 6.10 Wizard — ograniczone pola (UX-04)
+
+**Obserwacja:** Wizard oferuje jedynie: layout, section title, plans count, oraz name + price per plan. Kluczowe pola: `badge`, `ctaLabel`, `ctaHref`, `features`, `period` — wymagają przejścia do Visual tab. Dla nowego użytkownika Wizard nie daje możliwości skonfigurowania pełnego widgetu.
+
+---
+
+### 6.11 "Normalization and safeguards" — niejasne nazwy (UX-05)
+
+**Obserwacja:** Sekcja w Advanced posiada przyciski "Normalize plans to variant baseline" i "Normalize full payload". Działają poprawnie, ale nazwy są technicznie i nieczytelne dla zwykłego użytkownika. Brak tooltipa wyjaśniającego efekt kliknięcia.
+
+---
+
+### 6.12 Nowe feature bez auto-focus (obserwacja)
+
+**Obserwacja:** Po kliknięciu "Add feature", nowe pole pojawia się z domyślną wartością "New feature" ALE kursor nie przechodzi na to pole. Focus pozostaje na przycisku "Add feature". Wymaga ręcznego kliknięcia w pole, co utrudnia szybką edycję wielu features.
 
 ---
 
 ## 7. Testy Playwright — Frontend (localhost:3000)
 
-> *(Sekcja uzupełniana po testach)*
+### 7.1 Zgodność admin preview ↔ frontend
+
+Widget na froncie wygląda **identycznie** jak w podglądzie admina. Renderowanie po obu stronach jest spójne — to samo HTML, te same klasy Tailwind, ta sama zawartość.
+
+### 7.2 Billing toggle — BROKEN na froncie (BUG-08 / BF-01)
+
+```
+Cena plan-1 przed kliknięciem Annual: "$19"
+Cena plan-1 po kliknięciu Annual:     "$19"  ← BŁĄD
+aria-pressed annual po kliknięciu:    "false" ← BŁĄD
+Błędy JS w konsoli:                   0       ← brak błędów (btn po prostu nie ma onClick)
+```
+
+**Przyczyna:** Widget jest renderowany jako statyczny HTML/React bez client-side state. Przyciski `Monthly`/`Annual` nie mają `onClick`. Jest to kluczowa brakująca funkcjonalność — feature jest completnie nieużyteczna dla użytkownika końcowego.
+
+**Zachowanie:** Identyczne na admin preview i froncie — w obu miejscach billing toggle jest nieinternaktywny. Nie jest to bug specyficzny dla frontu — to brak implementacji w runtime component.
+
+### 7.3 Comparison Rows — poprawny render na froncie
+
+Tabela porównawcza renderuje się poprawnie: features per plan, checkmarks (✓) i dashes (-), CTA buttons w ostatnim wierszu. Brak sticky header (BF-11).
+
+### 7.4 Accessibility na froncie
+
+| Element | Stan |
+|---------|------|
+| `<table>` bez `<caption>` | ✗ Brak — A3 |
+| `<th>` bez `scope` | ✗ Brak — A8 (`scope="null, null, null, null"`) |
+| `<article>` bez `aria-labelledby` | ✗ Brak — A5 |
+| `aria-label` na checkmark spans | ✓ "Included"/"Not included" — OK |
+| CTA links — brak kontekstu planu | ✗ "Start now" bez plan name — A6 |
 
 ---
 
@@ -269,7 +471,7 @@ Wartość `"md"` nie jest sprawdzana explicite — trafia do `return "md"` jako 
 
 ---
 
-## 9. Statystyki (wstępne — przed testami Playwright)
+## 9. Statystyki
 
 | Kategoria | Liczba |
 |-----------|--------|
@@ -283,7 +485,25 @@ Wartość `"md"` nie jest sprawdzana explicite — trafia do `return "md"` jako 
 
 ## 10. Screenshoty
 
-> *(Uzupełniane podczas testów Playwright)*
+| Plik | Opis |
+|------|------|
+| `pricing-plans-01-page-created.png` | Nowa strona testowa po utworzeniu |
+| `pricing-plans-02-widget-added.png` | Widok po dodaniu Pricing Plans widget |
+| `pricing-plans-03-wizard-editor.png` | Wizard editor — ograniczone pola (name+price only) |
+| `pricing-plans-04-visual-editor.png` | Visual editor — pełne opcje konfiguracji |
+| `pricing-plans-05-four-plans-variant.png` | Wariant Four Plans w edytorze |
+| `pricing-plans-06-billing-toggle-enabled.png` | Billing toggle włączony — przyciski Monthly/Annual |
+| `pricing-plans-07-billing-toggle-noninteractive.png` | Billing toggle po kliknięciu Annual — ceny bez zmian |
+| `pricing-plans-08-comparison-rows.png` | Wariant Comparison Rows w admin |
+| `pricing-plans-09-advanced-editor.png` | Advanced editor — Display tokens + Raw payload |
+| `pricing-plans-10-wizard-limited.png` | Wizard — widoczne ograniczenie do 2 planów |
+| `pricing-plans-11-frontend.png` | Frontend — pusta strona (po błędzie publikacji) |
+| `pricing-plans-12-frontend-with-widget.png` | Frontend — Pricing Plans widget z billing toggle |
+| `pricing-plans-13-frontend-billing-toggle-broken.png` | Frontend — billing toggle nieinteraktywny |
+| `pricing-plans-14-comparison-rows-admin.png` | Admin — wariant Comparison Rows |
+| `pricing-plans-15-frontend-comparison-rows.png` | Frontend — Comparison Rows |
+| `pricing-plans-16-icon-marker.png` | Feature marker "Icon" — placeholder ◆ |
+| `pricing-plans-17-final-admin-state.png` | Końcowy stan edytora admin |
 
 ---
 

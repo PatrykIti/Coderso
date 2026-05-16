@@ -1,10 +1,11 @@
 # RAPORT: FAQ Accordion Widget — Analiza UX/UI i brakujące funkcjonalności
 
-> **Status:** W toku  
+> **Status:** Zakończony  
 > **Data:** 2026-05-16  
 > **Sesja:** Playwright #9 (FAQ Accordion Widget)  
 > **Środowisko:** http://localhost:5173/admin · http://localhost:3000  
-> **Sesja przeglądarki:** `faq-accordion-audit` (oddzielna od innych agentów)
+> **Sesja przeglądarki:** `faq-accordion-audit` (oddzielna od innych agentów)  
+> **Strona testowa:** `/test-faq-accordion-0516` (UUID: `59dd9d58-eb80-4691-9749-9d8e2589e822`)
 
 ---
 
@@ -148,21 +149,146 @@ FaqAccordionItem {
 ## 4. Testy w Admin UI Preview
 
 > **Sesja:** `playwright-cli -s=faq-accordion-audit`  
-> **Data testu:** 2026-05-16
+> **Data testu:** 2026-05-16  
+> **Strona:** `/test-faq-accordion-0516` — nowa strona stworzona na potrzeby testów
 
-*(Sekcja uzupełniana po testach przeglądarkowych)*
+### 4.1 Edytor Wizard
+
+**Testowane:** wariant (select), tytuł, liczba Q/A, lista Q/A
+
+| # | Test | Wynik |
+|---|------|-------|
+| ✅ | Domyślne 3 pytania załadowane poprawnie | OK |
+| ✅ | Zmiana liczby pytań przez select | OK — zakres 1–12 |
+| ✅ | Edycja Q/A przez Input + Textarea | OK |
+| ✅ | Zmiana wariantu przez select | OK — wszystkie 3 opcje dostępne |
+| ⚠️ | Brak pola "Description" nagłówka w Wizard | `header.description` edytowalne tylko w Visual |
+
+### 4.2 Edytor Visual
+
+**Testowane:** warianty, Q/A zarządzanie, behavior, kolory
+
+| # | Test | Wynik |
+|---|------|-------|
+| ✅ | `Single Column` — VariantCard z `Selected` badge | OK |
+| ✅ | `Two Column` — klikalne, badge zmienia się na `Selected` | OK |
+| ✅ | `Compact` — klikalne, badge zmienia się na `Selected` | OK |
+| ✅ | Move Up/Down przyciski działają | OK — Move Up disabled na pozycji 1, Move Down disabled na ostatniej |
+| ✅ | Remove item — item usunięty natychmiast | **Bug U1 potwierdzony** — brak confirmation dialog |
+| ✅ | Add item — nowy item z pustymi polami | OK, ale fallback "Question N"/"Answer N" od razu nie widać (pole puste) |
+| ✅ | Switch `Allow multiple items open` | OK — toggle zmienia `data-faq-multiple-open` |
+| ✅ | Select `Default open item` — opcje "None", "Item 1", "Item 2"... | **Bug U8 potwierdzony** — nie pokazuje treści pytania |
+| ✅ | Wybór `None (all collapsed)` → `data-faq-default-open="-1"` | OK — wszystkie items zamknięte |
+| ✅ | `Panel surface` ma przycisk Clear | OK |
+| ❌ | `Panel border` — brak przycisku Clear | **Bug U2 potwierdzony** |
+| ❌ | `Divider color` — brak przycisku Clear | **Bug U2 potwierdzony** |
+| ❌ | Color picker pokazuje `#ffffff` zamiast `var(--color-bg)` | **Bug U3 potwierdzony** — picker fallback na hex |
+| ✅ | Select Spacing (None/Compact/Default/Spacious) | OK — wszystkie opcje widoczne |
+
+### 4.3 Edytor Advanced
+
+| # | Test | Wynik |
+|---|------|-------|
+| ✅ | Switch `Allow multiple items open` | OK |
+| ✅ | Spinbutton `Default open index` (`min=-1`, `max=n-1`) | OK — wartość `-1` działa |
+| ⚠️ | Hint `Use -1 to collapse all items` tylko pod polem | **Bug U9** — brak wskazówki w samym polu |
+| ✅ | Raw token inputs (surface/border/divider/spacing) | OK — działają |
+| ✅ | Button `Normalize now` | OK — normalizuje dane |
+| ✅ | Button `Reset to defaults` | OK — resetuje do defaults |
+| ✅ | JSON snapshot `Raw payload snapshot` | OK — aktualny payload widoczny |
+| ✅ | Layout section (Padding top/bottom, Margin top/bottom) | OK — globalne kontrole layoutu |
+| ✅ | Visibility (Desktop/Tablet/Mobile switches) | OK — wszystkie domyślnie `true` |
+
+### 4.4 Zachowanie Accordionu w Preview (Admin)
+
+Tryb Preview (`dialog "Page Preview"` z iframe):
+
+| # | Test | Wynik |
+|---|------|-------|
+| ✅ | Item 1 domyślnie otwarty (`defaultOpenIndex=0`) | OK |
+| ❌ | `allowMultipleOpen=false` — kliknięcie item 2 pozostawia item 1 otwarty | **Bug C1 potwierdzony** — brak single-open enforcement |
+| ❌ | Brak ikony chevron przy pytaniu | **Bug C2 potwierdzony** — `list-none` usuwa marker, brak zastępnika |
+| ✅ | Klikanie pytania otwiera/zamyka odpowiedź | OK (native `<details>`) |
+| ✅ | `defaultOpenIndex=-1` → wszystkie items zamknięte | OK |
+
+### Screenshoty Admin Preview
+
+- `faq-accordion-wizard-editor.png` — edytor Wizard z 3 pytaniami
+- `faq-accordion-visual-editor.png` — edytor Visual (Single Column)
+- `faq-accordion-two-column-preview.png` — wariant Two Column
+- `faq-accordion-compact-preview.png` — wariant Compact
+- `faq-accordion-advanced-editor.png` — edytor Advanced z JSON snapshot
+- `faq-accordion-preview-dialog.png` — dialog Runtime Preview
+- `faq-accordion-multiple-open-bug.png` — bug C1 (wszystkie items otwarte)
+- `faq-accordion-colors-section.png` — sekcja Colors (brak Clear dla border/divider)
+- `faq-accordion-spacing-none-admin.png` — spacing=none w Admin
 
 ---
 
 ## 5. Testy na froncie (localhost:3000)
 
-*(Sekcja uzupełniana po testach przeglądarkowych)*
+> **URL:** `http://localhost:3000/test-faq-accordion-0516`  
+> **Status strony:** Opublikowana (Published)
+
+### 5.1 Rendering widgetu
+
+| # | Test | Wynik |
+|---|------|-------|
+| ✅ | Widget renderuje się poprawnie na froncie | OK |
+| ✅ | `data-faq-variant`, `data-faq-spacing`, `data-faq-multiple-open`, `data-faq-default-open` obecne | OK — wszystkie atrybuty w HTML |
+| ✅ | Wariant `two-column` renderuje `grid grid-cols-1 lg:grid-cols-2 gap-3` | OK — responsive grid |
+| ✅ | Nagłówek sekcji (title + description) wyświetla się | OK |
+| ✅ | `defaultOpenIndex=0` → item 1 otwarty na start | OK |
+| ✅ | `defaultOpenIndex=-1` → wszystkie items zamknięte na start | OK |
+
+### 5.2 Interaktywność
+
+| # | Test | Wynik |
+|---|------|-------|
+| ❌ | `allowMultipleOpen=false` — kliknięcie otwiera item, inne nie zamykają się | **Bug C1 potwierdzony na froncie** |
+| ❌ | Brak chevron/strzałki wskazującej na klikalność | **Bug C2 potwierdzony** — `list-style-type: none`, brak zastępnika |
+| ✅ | Kliknięcie pytania otwiera odpowiedź (native `<details>`) | OK |
+| ✅ | Kliknięcie otwartego pytania zamyka je | OK |
+
+### 5.3 ARIA / Dostępność
+
+| # | Test | Wynik |
+|---|------|-------|
+| ❌ | `<section aria-label>` — brak | **Bug A1 potwierdzony** — `ariaLabel: null` |
+| ❌ | `<section aria-labelledby>` — brak | **Bug A1 potwierdzony** |
+| ❌ | `<summary aria-expanded>` — brak | **Bug A3 potwierdzony** — `summaryAriaExpanded: null` |
+| ❌ | `<summary id>` — brak | **Bug A5 potwierdzony** — `summaryId: ""` |
+
+### 5.4 Spacing=none — podwójne granice
+
+Przy `spacing="none"` (gap=0), każdy `<article>` ma:
+- `borderTop: 1px`, `borderBottom: 1px`, `marginBottom: 0px`
+
+Efekt: między itemami pojawia się wizualnie podwójne obramowanie (2px zamiast 1px). **Bug W15 potwierdzony.**
+
+### Screenshoty Frontend
+
+- `faq-accordion-frontend-initial.png` — frontend z defaultOpenIndex=0
+- `faq-accordion-frontend-multiple-open-bug.png` — bug C1 na froncie (item 1 + item 2 otwarte)
+- `faq-accordion-two-column-frontend.png` — wariant two-column na froncie
+- `faq-accordion-spacing-none-frontend.png` — spacing=none z podwójnymi granicami
 
 ---
 
 ## 6. Porównanie Admin Preview vs Frontend
 
-*(Sekcja uzupełniana po testach przeglądarkowych)*
+| Zachowanie | Admin Preview | Frontend | Różnica? |
+|------------|---------------|----------|----------|
+| `allowMultipleOpen=false` — single-open enforcement | Nie działa | Nie działa | **Brak różnicy — oboje broken** |
+| Wskaźnik expand/collapse (chevron) | Brak | Brak | **Brak różnicy — oboje brak** |
+| `defaultOpenIndex=-1` (all collapsed) | Działa | Działa | Brak różnicy |
+| `defaultOpenIndex=0` (first open) | Działa | Działa | Brak różnicy |
+| Two-column variant `lg:grid-cols-2` | Działa (canvas resize) | Działa (responsive) | Brak różnicy |
+| Spacing=none + podwójne granice | Widoczne | Widoczne | Brak różnicy |
+| ARIA atrybuty | Brak | Brak | Brak różnicy |
+| Natywna interaktywność `<details>` | Działa | Działa | Brak różnicy |
+
+**Wniosek:** Admin preview (iframe z runtime theme) i frontend zachowują się identycznie. Wszystkie bugi renderera reprodukują się w obu środowiskach. Nie ma rozbieżności wynikających z różnicy środowisk.
 
 ---
 
