@@ -44,13 +44,15 @@ implemented in TASK-271.
 | Report item | Required closure result |
 |---|---|
 | TASK-256 exclusions from TASK-271 umbrella | Mark fixed by TASK-256, deferred to TASK-256, or still open under TASK-256. Do not claim TASK-271 fixed them. |
-| C3, U1, U2, U5, U8 | Fixed/deferred by TASK-271-01 with screenshots or textual DOM/editor evidence. |
+| TASK-256 span feedback exclusions C4/C5/U4 | Mark fixed by TASK-256, deferred to TASK-256, or still open under TASK-256. Do not claim TASK-271 fixed them. |
+| C3, U2, U5, U8 | Fixed/deferred by TASK-271-01 with screenshots or textual DOM/editor evidence. |
 | W7 | Fixed/deferred by TASK-271-02 with editor reorder evidence. |
 | W3, W4, W6, residual P3 | Fixed/deferred by TASK-271-03 with runtime class/DOM evidence. |
 | W1, W9 | Fixed/deferred by TASK-271-04 with editor/runtime style evidence. |
 | W2, W5, P4 | Fixed/deferred by TASK-271-05 with runtime class/DOM evidence. |
-| W10 | Fixed/current-state/deferred by TASK-271-06. Must mention current code already has separate `gapX` and `gapY`. |
+| U1, W10 | Fixed/current-state/deferred by TASK-271-06. Must mention current code already has separate `gapX` and `gapY`. |
 | W8 custom CSS class per column | Reject or defer unless a safe class registry/global policy exists; do not add arbitrary raw class strings as a Grid Columns-only fix. |
+| Page Preview vs Canvas Preview discovery | Current-state/no Grid Columns fix, or route to a future shared admin preview UX task. |
 
 ## Files to Change
 

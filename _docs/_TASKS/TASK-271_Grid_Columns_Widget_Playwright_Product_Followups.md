@@ -47,15 +47,15 @@ TASK-256 already owns them as shared widget-contract drift.
 
 | Report finding | Evidence | Owner task | Reason |
 |---|---|---|---|
-| C1 slot/config desync and manual synchronization | `REPORT_GRID_COLUMNS_WIDGET.md:63-68,150-160` | TASK-256-03, TASK-256-05-01 | Shared repeatable-slot/config contract. |
-| C2 CSS-variable color picker fallback | `REPORT_GRID_COLUMNS_WIDGET.md:70,136-145` | TASK-256-05-01 | Shared token-aware color control contract when existing controls accept `var(...)`. |
-| C4/C5 span preview and sum validation | `REPORT_GRID_COLUMNS_WIDGET.md:72-73,121-133,224-226` | TASK-256-05-01 | Shared truthful-control and invalid-layout feedback for existing span controls. |
-| U3 Advanced cardize controls visible when inactive | `REPORT_GRID_COLUMNS_WIDGET.md:104,177-182,228` | TASK-256-05-01 | Shared mode ownership and inactive-control truthfulness. |
-| U6 masonry-lite forces cardize while switch stays off | `REPORT_GRID_COLUMNS_WIDGET.md:105,119-133,220-222` | TASK-256-05-01 | Existing control/renderer truthfulness. |
-| U7/P1 public column labels | `REPORT_GRID_COLUMNS_WIDGET.md:106,187-191,212-217` | TASK-256-03, TASK-256-05-01 | Public runtime must not leak editor metadata. |
-| P2 public `Empty column.` placeholder | `REPORT_GRID_COLUMNS_WIDGET.md:188-191,212-217` | TASK-256-03, TASK-256-05-01 | Public placeholder safety. |
-| P3 overflow caused by invalid span sums | `REPORT_GRID_COLUMNS_WIDGET.md:190` | TASK-256-05-01 first, TASK-271-03 only if residual product guard remains | Validation/preview is shared; optional overflow containment is local only if still needed after TASK-256. |
-| Asymmetric variant has no effect with explicit spans | `REPORT_GRID_COLUMNS_WIDGET.md:119-133,265-268` | TASK-256-05-01 | Existing variant control truthfulness. |
+| C1 slot/config desync and manual synchronization | `REPORT_GRID_COLUMNS_WIDGET.md:63,150-160,217` | TASK-256-03, TASK-256-05-01 | Shared repeatable-slot/config contract. |
+| C2 CSS-variable color picker fallback | `REPORT_GRID_COLUMNS_WIDGET.md:64,132,218` | TASK-256-05-01 | Shared token-aware color control contract when existing controls accept `var(...)`. |
+| C4/C5/U4 span preview, sum validation, and current-sum indicator | `REPORT_GRID_COLUMNS_WIDGET.md:66-67,91,224-225` | TASK-256-05-01 | Shared truthful-control and invalid-layout feedback for existing span controls. |
+| U3 Advanced cardize controls visible when inactive | `REPORT_GRID_COLUMNS_WIDGET.md:90,166-171,227` | TASK-256-05-01 | Shared mode ownership and inactive-control truthfulness. |
+| U6 masonry-lite forces cardize while switch stays off | `REPORT_GRID_COLUMNS_WIDGET.md:93,121-133,216` | TASK-256-05-01 | Existing control/renderer truthfulness. |
+| U7/P1 public column labels | `REPORT_GRID_COLUMNS_WIDGET.md:94,190,214,250` | TASK-256-03, TASK-256-05-01 | Public runtime must not leak editor metadata. |
+| P2 public `Empty column.` placeholder | `REPORT_GRID_COLUMNS_WIDGET.md:104,191,215` | TASK-256-03, TASK-256-05-01 | Public placeholder safety. |
+| P3 overflow caused by invalid span sums | `REPORT_GRID_COLUMNS_WIDGET.md:105` | TASK-256-05-01 first, TASK-271-03 only if residual product guard remains | Validation/preview is shared; optional overflow containment is local only if still needed after TASK-256. |
+| Asymmetric variant has no effect with explicit spans | `REPORT_GRID_COLUMNS_WIDGET.md:121,124,246` | TASK-256-05-01 | Existing variant control truthfulness. |
 
 TASK-271 may depend on the TASK-256 result, but it must not restage those repairs
 inside its own implementation leaves.
@@ -65,7 +65,7 @@ inside its own implementation leaves.
 | Report finding | TASK-271 owner | Notes |
 |---|---|---|
 | C3 Wizard labels only columns 1 and 2 | TASK-271-01 | Grid Columns editor onboarding and all-column Wizard coverage. |
-| U1 gap labels lack scale context | TASK-271-01, TASK-271-06 | Editor copy and expanded spacing tokens. |
+| U1 gap labels lack scale context | TASK-271-06 | Editor copy and expanded spacing tokens. |
 | U2 variant cards have no visual miniatures | TASK-271-01 | Grid Columns Visual selector affordance. |
 | U5 `Column configs` label is misleading | TASK-271-01 | Rename to user-facing column count/config copy after TASK-256 sync lands. |
 | U8 predefined layout templates | TASK-271-01 | Grid Columns-local span preset application. |

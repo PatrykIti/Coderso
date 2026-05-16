@@ -13,19 +13,18 @@
 ## Overview
 
 Expand the Grid Columns editor entry path so beginner users can configure all
-columns without switching modes, understand spacing scale, and apply common
-layout presets without editing raw spans.
+columns without switching modes and apply common layout presets without editing
+raw spans.
 
-This leaf owns report findings C3, U1, U2, U5, and U8 after TASK-256 has fixed
-the shared slot/config and span-validation contracts.
+This leaf owns report findings C3, U2, U5, and U8 after TASK-256 has fixed the
+shared slot/config and span-validation contracts. TASK-271-06 owns U1 gap-label
+copy alongside gap-token expansion.
 
 ## Scope
 
 - Generate Wizard label inputs for every configured column, not only columns 1
   and 2.
 - Rename misleading `Column configs` copy to user-facing column-count wording.
-- Add spacing labels that explain token scale, such as `Gap 6 - 24px`, without
-  changing persisted values.
 - Add visual miniatures to the Visual variant cards for `equal`, `asymmetric`,
   and `masonry-lite`.
 - Add predefined layout templates that update `columns[].desktopSpan`,
@@ -43,7 +42,6 @@ Out of scope:
 
 - [ ] Add dynamic Wizard label inputs for every configured Grid Columns column.
 - [ ] Rename column-count copy and keep TASK-256 slot-sync guidance accurate.
-- [ ] Add spacing labels with readable scale context.
 - [ ] Add compact variant miniatures to the Visual variant cards.
 - [ ] Add bounded layout preset application through the existing data model.
 - [ ] Update focused editor tests and Grid Columns docs/report evidence.
@@ -52,7 +50,7 @@ Out of scope:
 
 | File | Required change |
 |---|---|
-| `core/admin/ui/widgets/editors/GridColumnsEditors.tsx` | Add dynamic Wizard labels, clearer column-count copy, gap labels, variant miniatures, and preset buttons/selectors. |
+| `core/admin/ui/widgets/editors/GridColumnsEditors.tsx` | Add dynamic Wizard labels, clearer column-count copy, variant miniatures, and preset buttons/selectors. |
 | `core/widgets/core/gridColumns.tsx` | Add bounded preset metadata only if the editor needs a schema-owned helper; do not persist preset names unless required. |
 | `tests/vitest/ui/grid-columns-editor-wave.test.tsx` | Cover dynamic Wizard labels, copy, gap labels, variant miniatures, and preset application. |
 | `tests/vitest/widgets/gridColumns.test.tsx` | Cover any new exported preset helper or normalizer behavior if added. |
@@ -106,7 +104,8 @@ Error handling:
 - Presets must not delete existing labels where the same column index remains.
 - If TASK-256 exposes a slot-target sync helper, call that helper before applying
   a preset so preset count and slot count stay aligned.
-- Gap label changes must not change stored `gridColumnsGapTokens`.
+- Do not change gap labels here; TASK-271-06 owns U1 together with token
+  expansion.
 
 ## Security Contract
 
@@ -131,17 +130,16 @@ No API routes are added.
 
 ## Documentation Updates Required
 
-- Update `_docs/_WIDGETS/GRID_COLUMNS.md` with Wizard all-column labels, gap
-  copy, and layout preset behavior.
+- Update `_docs/_WIDGETS/GRID_COLUMNS.md` with Wizard all-column labels and
+  layout preset behavior.
 - Update `_docs/PLAYWRIGHT/REPORT_GRID_COLUMNS_WIDGET.md` with fixed/deferred
-  evidence for C3, U1, U2, U5, and U8.
+  evidence for C3, U2, U5, and U8.
 - Update TASK-271-07 closure matrix when this leaf lands.
 
 ## Acceptance Criteria
 
 - Wizard exposes label inputs for all configured columns from 2 through 6.
 - Column-count copy no longer implies a second hidden configuration model.
-- Gap labels are understandable without knowing Tailwind token names.
 - Variant cards include compact visual miniatures without relying on copied
   third-party assets.
 - Layout presets apply bounded span data through the Grid Columns normalizer and
