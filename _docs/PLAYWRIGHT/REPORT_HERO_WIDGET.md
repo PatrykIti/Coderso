@@ -1,9 +1,10 @@
 # RAPORT: Hero Widget — Analiza UX/UI i brakujące funkcjonalności
 
-> **Status:** W trakcie  
+> **Status:** Zakończony  
 > **Data:** 2026-05-16  
 > **Sesja:** Playwright #2 (Hero Widget)  
-> **Środowisko:** http://localhost:5173/admin
+> **Środowisko:** http://localhost:5173/admin  
+> **Strona testowa:** HomePage (`/admin/pages/7c075789-e294-4396-8fe1-db83f215c186`)
 
 ---
 
@@ -43,92 +44,290 @@ Hero widget jest centralnym elementem sekcji hero stron. Odpowiada za: nagłówe
 
 ---
 
-## 3. Braki funkcjonalne — analiza kodu
+## 3. Wyniki testów Playwright — co działa poprawnie ✓
 
-### 3.1 Krytyczne (bezpośrednio wpływające na usability)
+### 3.1 Warianty
 
-| # | Problem | Obszar |
-|---|---------|--------|
-| C1 | Brak pola `rel="noopener noreferrer"` dla zewnętrznych linków w CTA i badge | Bezpieczeństwo / SEO |
-| C2 | Brak `loading="lazy"` na obrazach inline — wpływ na Core Web Vitals | Wydajność |
-| C3 | Brak podglądu mobile/desktop w edytorze — użytkownik nie wie jak wygląda na mobile | UX edytora |
-| C4 | Brak komunikatu/placeholdera gdy media zawiera błąd ładowania | UX użytkownika |
-| C5 | Brak obsługi `video poster` — czarny ekran podczas ładowania wideo | UX użytkownika |
+| Test | Wynik |
+|------|-------|
+| Przełączanie Centered / Media Right / Media Left | ✓ Działa |
+| Sekcja Media (type/source/URL) ukryta w Centered | ✓ Działa |
+| Sekcja Media widoczna w split i media-left | ✓ Działa |
+| Aktywny wariant wyraźnie oznaczony „Selected" | ✓ Działa |
 
-### 3.2 Ważne (ograniczają zakres konfiguracji)
+### 3.2 Badge
 
-| # | Problem | Obszar |
-|---|---------|--------|
-| W1 | Brak kontroli cieni/głębi (card, przyciski, media) | Styl |
-| W2 | Brak srcset/responsive images — jeden rozmiar dla wszystkich ekranów | Wydajność |
-| W3 | Brak eksportu/importu presetów między użytkownikami | Workflow |
-| W4 | Brak wyszukiwarki/filtrowania presetów (max 24, brak organizacji) | Edytor |
-| W5 | Brak walidatora kontrastu kolorów (accessibility) | Dostępność |
-| W6 | Brak kontroli animacji/przejść (scroll effects, wejście elementów) | Efekty |
-| W7 | Brak opcji pełnoekranowego hero (100vh) — brak predefiniowanej wartości paddingu | Layout |
-| W8 | Brak `font-weight` i rodziny fontu jako oddzielnych kontrolek | Typografia |
+| Test | Wynik |
+|------|-------|
+| Show badge toggle collapse/expand pól | ✓ Działa |
+| Badge tone: 4 opcje (Neutral, Primary, Success, Warning) | ✓ Działa |
+| Badge placement: Above headline / Inline headline | ✓ Działa |
+| Badge prefix i URL | ✓ Dostępne |
 
-### 3.3 Ulepszenia UX edytora
+### 3.3 CTA
 
-| # | Problem | Obszar |
-|---|---------|--------|
-| U1 | Brak walidacji URL w czasie rzeczywistym w polach CTA | Edytor |
-| U2 | Brak podglądu gradientu przed zastosowaniem | Edytor |
-| U3 | Brak informacji o wymiarach/proporcjach przy wyborze media | Edytor |
-| U4 | Brak predefiniowanych kombinacji kolorów (palety) | Edytor |
-| U5 | Brak trybu „tylko treść" — szybka edycja bez rozwijania wszystkich sekcji | Edytor |
+| Test | Wynik |
+|------|-------|
+| Single/Dual CTA layout toggle | ✓ Działa |
+| Secondary CTA fields collapse po wybraniu Single | ✓ Działa |
+| Button size: sm / md / lg dla primary i secondary | ✓ Działa |
 
-### 3.4 Brakujące warianty / rozszerzenia
+### 3.4 Media
 
-| # | Problem | Obszar |
-|---|---------|--------|
-| V1 | Brak wariantu „media-center" (produkt/showcase na środku) | Wariant |
-| V2 | Brak opcji full-bleed tła (wychodzące poza kontener) | Layout |
-| V3 | Brak trybu form-hero (wbudowany formularz/wyszukiwarka) | Rozszerzenie |
-| V4 | Brak social proof row (gwiazdki, liczby, avatary) | Rozszerzenie |
+| Test | Wynik |
+|------|-------|
+| Media type: None / Image / Video | ✓ Działa |
+| Media source: External URL / Media library | ✓ Działa |
+| Library filtruje po typie (image/*, video/*) | ✓ Działa |
+| Media ratio: 16:9 / 4:3 / 1:1 / 3:4 | ✓ Dostępne |
+| Media overlay clearable | ✓ Działa |
 
----
+### 3.5 Typografia
 
-## 4. Problemy UX z perspektywy użytkownika końcowego
+| Test | Wynik |
+|------|-------|
+| Alignment: left / center / right | ✓ Działa |
+| Headline size: None / 2xl / 3xl / 4xl / 5xl | ✓ Działa |
+| Subhead i body size (5 poziomów każde) | ✓ Działa |
 
-### 4.1 Dostępność (Accessibility)
+### 3.6 Presety
 
-- Brak atrybutów ARIA na badge, przyciskach CTA, ramkach media
-- Przyciski CTA to tagi `<a>` bez `role="button"` gdy nie mają href — potencjalny problem nawigacji klawiaturą
-- Brak `alt` wymaganego walidacyjnie w edytorze dla obrazów
-- Kolory nie są walidowane pod kątem kontrastu WCAG
+| Test | Wynik |
+|------|-------|
+| Tworzenie presetu — dialog z polem nazwy | ✓ Działa |
+| Preset wyświetlany z Apply / Update / Delete | ✓ Działa |
+| Apply presetu przywraca konfigurację | ✓ Działa |
 
-### 4.2 Performance (widoczne dla użytkownika)
+### 3.7 Wizard
 
-- Brak lazy loading obrazów inline
-- Brak poster dla wideo (czarny ekran)
-- Brak WebP fallback
-- Brak LCP optimization (brak `fetchpriority="high"` dla obrazu hero)
+| Test | Wynik |
+|------|-------|
+| Pola: Goal, Layout, Headline, CTA, Media | ✓ Dostępne |
+| Goal options: Lead generation / Sales / Information | ✓ Działa |
+| Continue → przenosi do Visual tab | ✓ Działa |
+| Informacja o Centered + Image = background | ✓ Widoczna |
 
-### 4.3 Spójność wizualna
+### 3.8 Advanced
 
-- Brak predefiniowanych kombinacji styli — użytkownik musi ręcznie ustawiać 10+ pól kolorów
-- Brak podglądu różnych urządzeń w czasie rzeczywistym
-- Brak "reset do domyślnych" dla poszczególnych sekcji (tylko presety globalne)
-
----
-
-## 5. Wyniki testów Playwright
-
-> **Status:** Oczekuje na sesję przeglądarki
-
----
-
-## 6. Podsumowanie priorytetów
-
-| Priorytet | Ilość problemów | Kategoria |
-|-----------|----------------|-----------|
-| Krytyczne | 5 | C1–C5 |
-| Ważne | 8 | W1–W8 |
-| UX edytora | 5 | U1–U5 |
-| Brakujące warianty | 4 | V1–V4 |
-| **Łącznie** | **22** | |
+| Test | Wynik |
+|------|-------|
+| Layout: Alignment / Max width / Content width | ✓ Działa |
+| Padding top / bottom (hero-specific) | ✓ Działa |
+| Container / widget padding / margin | ✓ Dostępne |
+| Visibility: Desktop / Tablet / Mobile switches | ✓ Działa |
+| hideMediaOnMobile toggle | ✓ Działa |
 
 ---
 
-*Raport będzie uzupełniany po każdym etapie testów Playwright.*
+## 4. Znalezione błędy i problemy UX
+
+### 4.1 Błędy funkcjonalne (Bugs)
+
+#### BUG-01 — Media border controls widoczne w Centered
+**Priorytet:** Wysoki  
+**Opis:** W wariancie "Centered" sekcja "Colors and Borders" nadal wyświetla pola: *Media frame border color*, *Media border width*, *Media radius*. W tym wariancie nie ma inline media, więc te kontrolki nie mają zastosowania i powinny być ukryte.  
+**Lokalizacja:** Visual editor → Colors and Borders  
+
+#### BUG-02 — Gradient nie jest aktywny mimo wypełnionych pól
+**Priorytet:** Wysoki  
+**Opis:** W sekcji Background gradient widoczne są pola Start color i End color z wartościami (`#0f172a`, `#475569`) oraz suwak Angle (135deg), ALE przycisk "Clear" jest wyłączony — gradient nie jest faktycznie zaaplikowany. Gradient staje się aktywny dopiero po ręcznej edycji jednego z pól + Tab. Użytkownik nie dostaje żadnej informacji zwrotnej że gradient jest "nieaktywny", mimo że widzi wypełnione pola.  
+**Lokalizacja:** Visual editor → Background → Background gradient  
+**Repro:** Otwórz edytor → Background → sprawdź czy Clear disabled przy wypełnionych polach → zmień kolor → Tab → Clear się aktywuje  
+
+#### BUG-03 — History panel: "Not authenticated"
+**Priorytet:** Wysoki  
+**Opis:** Przycisk "History" otwiera panel który wyświetla komunikat *"Not authenticated"* mimo że użytkownik jest zalogowany. Funkcja Page history jest całkowicie niedostępna.  
+**Lokalizacja:** Toolbar → History  
+
+#### BUG-04 — Brak video poster dla wideo inline
+**Priorytet:** Wysoki  
+**Opis:** Po wyborze media type = Video w sekcji Media, nie pojawia się pole "Video poster image". Skutkuje to czarnym ekranem podczas ładowania wideo, co jest złym UX dla użytkownika końcowego.  
+**Lokalizacja:** Visual editor → Media → Media type = Video  
+
+#### BUG-05 — Dwa przyciski w toolbar bez etykiet/aria-label
+**Priorytet:** Średni  
+**Opis:** W głównym toolbarze edytora strony widoczne są 2 przyciski z samymi ikonami (brak title, aria-label, tekstu). Nie wiadomo co robią bez klikania. Naruszenie WCAG 2.1 SC 4.1.2.  
+**Lokalizacja:** Toolbar → ikony obok "PUBLISHED / UNSAVED CHANGES"  
+
+#### BUG-06 — Media alt text wymagany dla obrazów, ale nieobjęty walidacją
+**Priorytet:** Średni  
+**Opis:** Pole "Media alt text" jest opcjonalne i nie ma walidacji — użytkownik może opublikować stronę z obrazem bez alt tekstu, naruszając WCAG 1.1.1.  
+**Lokalizacja:** Visual editor → Media → Media alt text  
+
+#### BUG-07 — Alt text widoczny dla wideo (semantycznie niepoprawne)
+**Priorytet:** Niski  
+**Opis:** Po zmianie Media type na Video pole "Media alt text" nadal jest widoczne. Wideo nie używa atrybutu alt w ten sam sposób co obrazy. Powinno być zastąpione polem "Video title" lub "Video description".  
+**Lokalizacja:** Visual editor → Media → Media type = Video  
+
+---
+
+### 4.2 Problemy UX edytora
+
+#### UX-01 — Dual textbox dla kolorów — niejasna relacja między polami
+**Opis:** Każde pole koloru ma dwa inputy: `<input type="color">` (picker hex) + zwykły tekst (CSS var/wartość). Relacja między nimi nie jest wyjaśniona użytkownikowi. Pytania które się pojawiają:
+- Które pole "wygrywa"?  
+- Co się dzieje gdy oba mają wartości?  
+- Dlaczego są dwa pola na jeden kolor?  
+**Rekomendacja:** Dodać tooltip lub labelkę "Visual" / "Custom value" wyjaśniającą cel każdego pola.
+
+#### UX-02 — Disabled Clear button na polach z widocznymi wartościami
+**Opis:** Kilka pól kolorów (np. Secondary button background, Card border color) pokazuje wartości hex (#111827) ale przycisk "Clear" jest wyłączony — co oznacza że wartość NIE jest faktycznie zapisana w danych (to tylko podgląd stanu swatcha). Użytkownik nie może odróżnić "wartości zapisanej" od "wartości domyślnej". Prowadzi to do błędnej interpretacji stanu.  
+**Rekomendacja:** Wyraźnie oznaczaj pola z zapisaną wartością (np. outline/badge "overridden") vs. korzystające z domyślnych.
+
+#### UX-03 — Brak potwierdzenia przy usuwaniu presetu
+**Opis:** Przycisk "Delete" na presecie natychmiast usuwa go bez żadnego dialogu potwierdzenia. Brak opcji cofnięcia. Ryzyko przypadkowego usunięcia cennej konfiguracji.  
+**Rekomendacja:** Dodać dialog confirm: "Usunąć preset 'Nazwa'? Nie można cofnąć."
+
+#### UX-04 — Dwa zestawy kontrolek Padding w Advanced
+**Opis:** W zakładce Advanced istnieją **dwa oddzielne zestawy padding**:
+1. "Hero Layout" → Padding top / Padding bottom (hero-specific spacing wewnątrz widgetu)
+2. "Layout" → Padding top / Padding bottom (widget container padding)
+
+Różnica nie jest wyjaśniona. Użytkownik może nie wiedzieć, który padding zmieniać.  
+**Rekomendacja:** Dodać opisy sekcji wyjaśniające różnicę (np. "Hero content spacing" vs "Widget container spacing").
+
+#### UX-05 — Brak podglądu mobile/desktop w edytorze
+**Opis:** Canvas zawsze pokazuje desktop layout. Nie ma przełącznika viewport (Mobile / Tablet / Desktop). Użytkownik nie wie jak hero wygląda na urządzeniach mobilnych mimo że istnieje opcja "hideMediaOnMobile".  
+**Rekomendacja:** Dodać pasek przełączania viewport w toolbarze strony.
+
+#### UX-06 — Brak "Discard Changes" w toolbarze
+**Opis:** Gdy są niezapisane zmiany ("UNSAVED CHANGES" badge), brak wyraźnego przycisku "Discard" lub "Revert". Jedyną opcją jest ręczne cofnięcie zmian lub opuszczenie strony. Historia jest niedostępna (BUG-03).  
+**Rekomendacja:** Dodać przycisk "Odrzuć zmiany" obok "Publish".
+
+#### UX-07 — Gradient bez stanu "aktywny/nieaktywny"
+**Opis:** Pola gradientu są zawsze widoczne ze swoimi wartościami domyślnymi niezależnie czy gradient jest włączony. Brak toggle/checkbox "Enable gradient". Użytkownik musi ręcznie edytować kolor żeby gradient się "aktywował" — niezrozumiały flow.  
+**Rekomendacja:** Dodać toggle "Enable gradient" który kontroluje aktywność całej sekcji gradientu.
+
+#### UX-08 — Placeholder CTA URL nie odzwierciedla stanu
+**Opis:** Pole "Primary CTA URL" ma placeholder "/start" ale wyświetla wartość "/signup". W Wizard mode placeholder to też "/start" — mogą być nieaktualne przykłady, ale warto je ujednolicić.
+
+---
+
+### 4.3 Braki funkcjonalne
+
+#### BF-01 — Brak pola video poster
+**Opis:** Wideo hero bez poster image = czarny kadr podczas ładowania. Brakuje pola "Poster image" (thumbnail) dla video.
+
+#### BF-02 — Brak kontrolek cieni (box-shadow)
+**Opis:** Brak możliwości dodania cienia do karty hero, przycisków CTA lub ramki media. Cień jest kluczowym elementem designu i wielu projektantów go potrzebuje.
+
+#### BF-03 — Brak opcji full-bleed / 100vh
+**Opis:** Nie ma opcji "hero fullscreen" (100vh) ani "full-bleed" (treść wykracza poza kontener). Wymaga niestandardowego CSS.
+
+#### BF-04 — Brak rich text dla headline/body
+**Opis:** Pola headline, subhead i body przyjmują wyłącznie plain text. Brak możliwości użycia bold, italic, link wewnątrz tekstu, co ogranicza formatowanie.
+
+#### BF-05 — Brak predefiniowanych palet kolorów
+**Opis:** Użytkownik musi ręcznie ustawiać 10+ pól kolorów. Brak predefiniowanych schematów kolorystycznych (np. "jasny", "ciemny", "branded") jako punktu startowego.
+
+#### BF-06 — Brak kontroli font-weight / font-family
+**Opis:** Brak możliwości ustawienia grubości czcionki (thin, regular, bold, black) ani rodziny fontu per widget.
+
+#### BF-07 — Brak srcset / responsive images
+**Opis:** Jeden rozmiar obrazu dla wszystkich ekranów. Brak `srcset`, `sizes`, art direction przez `<picture>`. Wpływ na LCP i wydajność.
+
+#### BF-08 — Brak walidatora kontrastu kolorów (WCAG)
+**Opis:** Użytkownik może ustawić kombinację kolorów tekstu/tła która nie spełnia WCAG AA (4.5:1 dla tekstu normalnego). Brak wskaźnika kontrastu w pickerze.
+
+#### BF-09 — Brak eksportu/importu presetów
+**Opis:** Presety są per-user i per-browser. Nie można ich przenieść między użytkownikami ani środowiskami (dev/prod).
+
+#### BF-10 — Brak wyszukiwania/organizacji presetów
+**Opis:** Przy maksimum 24 presetach brak jakiegokolwiek filtrowania, sortowania ani grupowania.
+
+#### BF-11 — Brak atrybutu `fetchpriority="high"` dla LCP image
+**Opis:** Obraz hero jest zazwyczaj największym elementem "above the fold" (Largest Contentful Paint). Brak `fetchpriority="high"` opóźnia jego ładowanie przez przeglądarkę.
+
+#### BF-12 — Brak kontroli animacji/scroll effects
+**Opis:** Brak transition/entrance animation dla elementów hero (fade-in, slide-up itp.). Dostępne w wielu konkurencyjnych builderach.
+
+#### BF-13 — Brak wariantu "media-center"
+**Opis:** Brak wariantu z dużym obrazem/wideo w centrum (showcase produktu, pełnoekranowy produkt). Istniejące warianty: centered (media jako tło), split, media-left.
+
+#### BF-14 — Brak social proof row
+**Opis:** Brak sekcji ocen/gwiazdek/liczb/avatarów inline w hero (np. "⭐ 4.9/5 z 2000 recenzji"). Standardowy element konwersyjnych hero sections.
+
+---
+
+## 5. Problemy dostępności (Accessibility)
+
+| # | Problem | Standard | Priorytet |
+|---|---------|----------|-----------|
+| A1 | Dwa przyciski toolbar bez aria-label | WCAG 4.1.2 | Wysoki |
+| A2 | Brak walidatora kontrastu kolorów | WCAG 1.4.3 | Wysoki |
+| A3 | Brak wymaganego alt text dla obrazów | WCAG 1.1.1 | Wysoki |
+| A4 | Brak `rel="noopener noreferrer"` na zewnętrznych linkach CTA/badge | Bezpieczeństwo | Średni |
+| A5 | Brak `loading="lazy"` na obrazach inline | Performance | Średni |
+| A6 | Brak `fetchpriority="high"` na hero image LCP | Core Web Vitals | Średni |
+
+---
+
+## 6. Podsumowanie — macierz priorytetów
+
+### Błędy do naprawy natychmiast
+
+| ID | Opis | Obszar |
+|----|------|--------|
+| BUG-01 | Media border controls w Centered variant | Visual editor |
+| BUG-02 | Gradient "nieaktywny" mimo wypełnionych pól | Background |
+| BUG-03 | History panel: "Not authenticated" | Toolbar |
+| BUG-04 | Brak video poster field | Media |
+
+### Pilne ulepszenia UX
+
+| ID | Opis |
+|----|------|
+| UX-03 | Confirm dialog przy usuwaniu presetu |
+| UX-05 | Przełącznik viewport (mobile/tablet/desktop) |
+| UX-06 | Przycisk "Discard Changes" w toolbarze |
+| UX-07 | Toggle "Enable gradient" zamiast auto-aktywacji |
+| UX-01 | Wyjaśnienie relacji dual textbox w color pickerze |
+
+### Brakujące funkcjonalności
+
+| ID | Priorytet | Opis |
+|----|-----------|------|
+| BF-01 | Wysoki | Video poster image |
+| BF-05 | Wysoki | Predefiniowane palety kolorów |
+| BF-03 | Wysoki | Full-height (100vh) hero option |
+| BF-08 | Wysoki | WCAG contrast validator |
+| BF-02 | Średni | Box shadow controls |
+| BF-04 | Średni | Rich text dla headline/body |
+| BF-07 | Średni | Srcset / responsive images |
+| BF-09 | Niski | Eksport/import presetów |
+| BF-13 | Niski | Wariant media-center |
+| BF-14 | Niski | Social proof row |
+
+---
+
+## 7. Statystyki
+
+| Kategoria | Liczba |
+|-----------|--------|
+| Błędy funkcjonalne (Bugs) | 7 |
+| Problemy UX edytora | 8 |
+| Braki funkcjonalne | 14 |
+| Problemy dostępności | 6 |
+| **Łącznie** | **35** |
+
+---
+
+## 8. Screenshoty
+
+| Plik | Opis |
+|------|------|
+| `hero-editor-visual.png` | Widok Visual editor (wariant Centered) |
+| `hero-variant-centered.png` | Przełączenie na Centered |
+| `hero-advanced-tab.png` | Zakładka Advanced |
+| `hero-preset-dialog.png` | Dialog tworzenia presetu |
+| `hero-preset-saved.png` | Preset zapisany z opcjami Apply/Update/Delete |
+| `hero-color-picker.png` | Color picker (popup z RGB inputs) |
+| `hero-colors-section.png` | Sekcja Colors and Borders |
+| `hero-media-left.png` | Wariant Media Left |
+| `hero-full-editor.png` | Pełny widok edytora |
+| `hero-history.png` | History panel — "Not authenticated" bug |
+| `hero-toolbar.png` | Toolbar z "UNSAVED CHANGES" |
+
+---
+
+*Raport wygenerowany na podstawie analizy kodu i testów Playwright — 2026-05-16.*
