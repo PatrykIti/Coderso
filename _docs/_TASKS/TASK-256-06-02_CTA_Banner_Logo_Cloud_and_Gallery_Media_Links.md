@@ -29,9 +29,9 @@ and truthful editor controls.
   media type ambiguity, overlay alpha loss, alt/caption semantics, video picker
   scope, feature-left minimum handling, link security, and hover-caption
   accessibility.
-- `REPORT_GALLERY_MOSAIC_WIDGET.md` is now marked `Zakończony`; this leaf may
-  use the current report ranges for planning, while TASK-256-08 must still
-  refresh fixed/deferred status after implementation.
+- `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md:3` is now marked
+  `Zakończony`; this leaf may use the current report ranges for planning, while
+  TASK-256-08 must still refresh fixed/deferred status after implementation.
 
 ## Scope Decision Matrix
 

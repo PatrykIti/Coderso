@@ -36,7 +36,7 @@ for the active variant/source.
   menu state/CTA duplication, `logo.href` not rendered, hash href validation
   drift, external-link target/rel drift, hover-only dropdown accessibility,
   mobile focus-trap gaps, and sticky behavior blocked by section overflow.
-- `_docs/PLAYWRIGHT/REPORT_POSTS_FEED_WIDGET.md:129-193,236-278` reports
+- `_docs/PLAYWRIGHT/REPORT_POSTS_FEED_WIDGET.md:121-193,236-278` reports
   source/manual/sort truthfulness gaps, hidden `textColor` despite schema
   support, unresolved image/media mapping, category copy drift, and accessibility
   findings that must be mapped to the existing content-list/posts-feed contract
@@ -73,7 +73,7 @@ for the active variant/source.
 | Navigation hover-only dropdowns, missing `aria-expanded`, touch failure, keyboard-inaccessible submenu, and mobile focus trap | Fix or explicitly defer as navigation accessibility follow-up before closure; do not leave unclassified | `navigation.tsx`, `navigationRuntimeClientScript`, `NavigationEditors.tsx` | TASK-256-08 creates follow-up only if implementation requires broader menu behavior work |
 | Navigation sticky blocked by section overflow | Fix or document with exact wrapper owner | `core/widgets/core/section.tsx:327-331`, `core/widgets/core/navigation.tsx:487` | TASK-256-08 must create follow-up if not fixed |
 | Navigation broader menu IA/product requests such as icon fields, rich descriptions, drag/drop, and larger link limits | Future product scope unless needed for broken current behavior | Navigation future task | TASK-256-08 records deferral |
-| Posts-feed sort visible in manual mode | Fix here as truthful-control drift because resolver ignores sort for manual order | `PostsFeedEditors.tsx`, `postsFeedResolver.ts:180-220` | None |
+| Posts-feed sort visible in manual mode | Fix here as truthful-control drift because resolver ignores sort for manual order | `PostsFeedEditors.tsx`, `postsFeedResolver.ts:180-219` | None |
 | Posts-feed `textColor` exists in schema/defaults but is not exposed as a clearable editor control | Fix here through TASK-256-02 shared clear semantics | `PostsFeedEditors.tsx`, `postsFeed.tsx:225-395` | None |
 | Posts-feed image/thumbnail and resolver image mapping requests | Classify before implementation: fix here only if existing content-list shared media fields are already promised by the current contract; otherwise future product scope | `postsFeed.tsx`, `postsFeedResolver.ts`, `contentList.tsx` | TASK-256-08 records deferral if it requires new media feature scope |
 | Posts-feed category copy suggests unsupported multi-tag behavior | Fix here as truthful-control/copy drift | `PostsFeedEditors.tsx`, `postsFeedResolver.ts` | None |

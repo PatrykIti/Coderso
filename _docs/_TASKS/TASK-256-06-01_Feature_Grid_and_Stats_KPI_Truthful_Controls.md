@@ -27,9 +27,9 @@ runtime output that is semantically incomplete.
 - `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md:63-74,90-101,181-206` for
   value-size/layout/split-grid, section and
   article ARIA, emoji semantics, and heading hierarchy.
-- `REPORT_STATS_KPI_WIDGET.md` is now marked `Zakończony`; this leaf may use
-  the current report ranges for planning, while TASK-256-08 must still refresh
-  fixed/deferred status after implementation.
+- `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md:3` is now marked `Zakończony`;
+  this leaf may use the current report ranges for planning, while TASK-256-08
+  must still refresh fixed/deferred status after implementation.
 
 ## Scope Decision Matrix
 

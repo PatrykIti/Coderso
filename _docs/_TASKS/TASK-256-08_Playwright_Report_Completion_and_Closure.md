@@ -49,12 +49,34 @@ that are not contract repairs.
 - `_docs/PLAYWRIGHT/REPORT_PRODUCT_TABLE_WIDGET.md:3` is completed, but its
   commerce/runtime findings still need fixed/deferred closure classification
   against the shared widget contracts before any product expansion is opened.
-- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:220,258` contains
-  authentication-limited comparison sections that require final classification.
-- Completed reports such as CTA banner, logo cloud, team, stack,
-  testimonials, and pricing plans need their fixed/deferred status refreshed
-  after the implementation leaves land.
-- Other reports need fixed/deferred status updates after implementation leaves.
+- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:3` is completed, but constrained
+  comparison sections at `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:220,258`
+  require final classification.
+- The following structural report findings still need fixed/deferred status
+  refreshed after implementation:
+  `_docs/PLAYWRIGHT/REPORT_GRID_COLUMNS_WIDGET.md:3`,
+  `_docs/PLAYWRIGHT/REPORT_SPLIT_LAYOUT_WIDGET.md:5`,
+  `_docs/PLAYWRIGHT/REPORT_STACK_WIDGET.md:5`,
+  `_docs/PLAYWRIGHT/REPORT_SPACER_WIDGET.md:3`,
+  `_docs/PLAYWRIGHT/REPORT_DIVIDER_WIDGET.md:3`,
+  `_docs/PLAYWRIGHT/REPORT_TABS_WIDGET.md:3`,
+  `_docs/PLAYWRIGHT/REPORT_ACCORDION_WIDGET.md:3`, and
+  `_docs/PLAYWRIGHT/REPORT_TOGGLE_BLOCK_WIDGET.md:5`.
+- The following marketing/content report findings still need fixed/deferred
+  status refreshed after implementation:
+  `_docs/PLAYWRIGHT/REPORT_HERO_WIDGET.md:3`,
+  `_docs/PLAYWRIGHT/REPORT_TIMELINE_WIDGET.md:3`,
+  `_docs/PLAYWRIGHT/REPORT_FEATURE_GRID_WIDGET.md:3`,
+  `_docs/PLAYWRIGHT/REPORT_TESTIMONIALS_WIDGET.md:3`,
+  `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md:3`,
+  `_docs/PLAYWRIGHT/REPORT_FAQ_ACCORDION_WIDGET.md:3`,
+  `_docs/PLAYWRIGHT/REPORT_CTA_BANNER_WIDGET.md:3`,
+  `_docs/PLAYWRIGHT/REPORT_LOGO_CLOUD_WIDGET.md:3`, and
+  `_docs/PLAYWRIGHT/REPORT_TEAM_WIDGET.md:3`.
+- The following dynamic report findings still need fixed/deferred status
+  refreshed after implementation:
+  `_docs/PLAYWRIGHT/REPORT_CONTENT_LIST_WIDGET.md:3` and
+  `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:3`.
 
 ## Sub-Tasks
 
