@@ -1,21 +1,21 @@
 # RAPORT: Rich Text Section Widget — Analiza UX/UI i brakujące funkcjonalności
 
-> **Status:** W trakcie
+> **Status:** Zakończony
 > **Data:** 2026-05-16
 > **Sesja:** Playwright #24 (Rich Text Section Widget)
 > **Środowisko admin:** http://localhost:5173/admin
 > **Środowisko front:** http://localhost:3000
-> **Strona testowa:** RichTextSectionTest (`/richtextsectiontest`) — UUID: `(do uzupełnienia po teście)`
+> **Strona testowa:** RichTextSectionTest (`/richtextsectiontest`) — UUID: `959ee78b-c8b0-4339-ac45-a7766edf95d0`
 
 ---
 
 ## 1. Przegląd widgetu
 
-**Typ:** Composite
-**Moduł:** Content
-**Audience:** Beginner
-**Warianty:** `single-column`, `two-column`, `article`
-**Maks. bloków:** 20
+**Typ:** Composite  
+**Moduł:** Content  
+**Audience:** Beginner  
+**Warianty:** `single-column`, `two-column`, `article`  
+**Maks. bloków:** 20  
 **Min. bloków:** 0
 
 Rich Text Section to widget do prezentacji długich treści edytorskich (long-form copy) z bezpiecznym renderowaniem HTML i kontrolą typografii. Obsługuje trzy tryby output (`html`, `blocks-fallback`, `blocks`), opcjonalny spis treści (TOC) generowany automatycznie z nagłówków H2/H3/H4, dropcap dla pierwszego akapitu, oraz rozbudowane opcje stylistyczne.
@@ -47,7 +47,7 @@ Rich Text Section to widget do prezentacji długich treści edytorskich (long-fo
 |---------|------|------------|
 | `single-column` | Domyślna kolumna | `space-y-6` (TOC + content) |
 | `two-column` | Podział 1/3 TOC + 2/3 treść | `grid-cols-1 gap-6 lg:grid-cols-3` |
-| `article` | Narracyjna prezentacja edytorska | `mx-auto max-w-3xl space-y-6` |
+| `article` | Narracyjna prezentacja edytorska | `mx-auto max-w-3xl space-y-6` (hardkodowane!) |
 
 ### 2.3 Mapy CSS klas
 
@@ -78,13 +78,13 @@ Rich Text Section to widget do prezentacji długich treści edytorskich (long-fo
 |------|-----------|
 | `html` | Renderuje zawsze `body.html` |
 | `blocks-fallback` | Renderuje `body.html` jeśli niepuste, wpp. `blocks` (default) |
-| `blocks` | Renderuje zawsze z `blocks[]` — Wizard ustawia to automatycznie |
+| `blocks` | Renderuje zawsze z `blocks[]` — Wizard ustawia to automatychmicznie |
 
 ---
 
 ## 3. Zidentyfikowane problemy UX z analizy kodu (przed testami)
 
-### KOD-01: Brak wizualnego WYRÓŻNIENIA różnicy outputMode w edytorze Visual
+### KOD-01: Brak wizualnego wyróżnienia aktywnego outputMode w Visual Editor
 
 **Opis:** W Visual Editor HTML body textarea i structured blocks są oba widoczne niezależnie od `outputMode`. Użytkownik nie ma żadnego wskazania wizualnego, który z nich faktycznie będzie renderowany. Sekcja HTML body i bloki są równorzędne bez żadnego info, że dla `outputMode: "blocks-fallback"` HTML ma priorytet.
 
@@ -92,47 +92,61 @@ Rich Text Section to widget do prezentacji długich treści edytorskich (long-fo
 
 ---
 
-### KOD-02: Wizard wymusza outputMode na "blocks" — cichy reset
+### KOD-02: Wizard wymusza outputMode na "blocks" — cichy reset ✗ POTWIERDZONY
 
 **Opis:** Funkcja `updateWizardBlock` zawsze ustawia `outputMode: "blocks"` przy każdej edycji w Wizard. Jeśli użytkownik wcześniej ustawił `html` lub `blocks-fallback` w Advanced/Visual, przełączenie na Wizard i edycja dowolnego bloku resetuje outputMode. Brak ostrzeżenia.
+
+**Potwierdzenie w testach:** Po edycji dwóch bloków w Wizard editor, Advanced tab pokazał `outputMode: "Blocks only"` zamiast domyślnego `"HTML with blocks fallback"`.
 
 **Priorytet:** Wysoki (UX + Bug potencjalny)
 
 ---
 
-### KOD-03: Brak "Add block" w Visual Editor — tylko "Blocks count" dropdown
+### KOD-03: Blocks count=0 usuwa wszystkie bloki bez potwierdzenia ✗ POTWIERDZONY
 
-**Opis:** W Visual Editor sekcja "Structured fallback blocks" posiada przycisk "Add fallback block" ORAZ dropdown "Blocks count". Przy wyborze 0 w dropdownie i istnieniu bloków — wszystkie bloki znikają bez potwierdzenia. Brak undo w edytorze.
+**Opis:** W Visual Editor dropdown "Blocks count" zmiana na "0" natychmiastowo usuwa wszystkie bloki bez żadnego dialogu confirm. Brak undo w edytorze.
 
-**Priorytet:** Średni (UX risk — destruktywna akcja)
+**Potwierdzenie w testach:** Wybranie "0" w dropdownie natychmiast usunęło oba istniejące bloki — żaden dialog confirm nie pojawił się.
+
+**Priorytet:** Średni (UX risk — destruktywna akcja bez odwołania)
 
 ---
 
-### KOD-04: Brak pola "remove block" potwierdzenia
+### KOD-04: Remove block bez dialog potwierdzenia ✗ POTWIERDZONY
 
 **Opis:** Przycisk "Remove" w edytorze bloków usuwa blok natychmiastowo bez dialog confirm. Dla długich bloków z treścią — ryzyko utraty danych.
+
+**Potwierdzenie w testach:** Kliknięcie "Remove" na bloku z treścią ("Blok testowy - długi heading z ważną treścią") — blok zniknął natychmiast bez pytania o potwierdzenie.
 
 **Priorytet:** Średni (UX)
 
 ---
 
-### KOD-05: Dropcap ma twardy fallback tylko do pierwszego `<p>` — brak preview w edytorze
+### KOD-05: Dropcap — precyzacja zachowania ✓ DZIAŁA, ale nieintuicyjne
 
-**Opis:** Dropcap CSS (`[&>p:first-of-type:first-letter]`) działa na pierwszym akapicie. Jeśli treść zaczyna się od `<h2>` lub innego tagu, dropcap nie pojawi się w ogóle. Edytor nie pokazuje żadnego wskazania co do aktualnego stanu dropcap w preview.
+**Opis:** Dropcap CSS (`[&>p:first-of-type:first-letter]`) działa na pierwszym bezpośrednim dziecku `<p>` w body div. Nawet gdy treść zaczyna się od `<h2>`, dropcap poprawnie aplikuje się do pierwszego `<p>`. Jednak:
+- Edytor nie pokazuje podglądu dropcap w panelu
+- Brak opisu co się stanie gdy HTML nie ma żadnego `<p>` (dropcap nie pojawi się w ogóle — zero feedbacku)
+
+**Potwierdzenie w testach:** Dropcap działa poprawnie gdy HTML zaczyna się od H2 (CSS `> p:first-of-type` nadal trafia pierwszego `<p>`). Klasy dropcap widoczne w body div na froncie.
 
 **Priorytet:** Niski (UX informacyjny)
 
 ---
 
-### KOD-06: TOC działa tylko przy outputMode != "blocks" z HTML
+### KOD-06: TOC przy outputMode=blocks — DZIAŁA POPRAWNIE ✓ NIE BUG
 
-**Opis:** TOC generowany jest przez `injectHeadingAnchors(sanitizedHtml)`. Gdy `outputMode: "blocks"` — bloki renderowane są przez `renderBlocksAsHtml()` który produkuje `<h3>` tagi. TOC powinien być generowany z nich też — jednak bloki nie mają IDs per se w tym trybie, tylko tekst heading'a. Sprawdzić czy TOC działa dla bloku-only mode.
+**Opis:** TOC generowany jest przez `injectHeadingAnchors(sanitizedHtml)`. Gdy `outputMode: "blocks"` — bloki renderowane są przez `renderBlocksAsHtml()` który produkuje `<h3>` tagi z headingów bloków. Następnie `injectHeadingAnchors` przetwarza te `<h3>` i tworzy TOC entries.
 
-**Priorytet:** Średni (potencjalny bug)
+**Potwierdzenie w testach:** Przy domyślnym `outputMode: "blocks-fallback"` z niepustym HTML — TOC generuje linki do H2 i H3 z HTML body (`#clear-structure-for-readable-content`, `#what-works-best`). TOC anchor links działają (scroll do nagłówka). Brak buga.
+
+**Uwaga UX:** Wszystkie bloki renderują wyłącznie jako `<h3>` w TOC (brak hierarchii h2/h3/h4 w structured blocks).
+
+**Priorytet:** Niski (UX informacyjny — ograniczenie, nie bug)
 
 ---
 
-### KOD-07: Brak pola "variant" w Advanced Editor
+### KOD-07: Brak wariantu w Advanced Editor
 
 **Opis:** Advanced Editor nie wyświetla wariantu ani opcji jego zmiany. Zmiana wariantu jest możliwa tylko przez Visual Editor (VariantCards). Użytkownicy zaawansowani mogą oczekiwać kontroli wariantu w Advanced.
 
@@ -140,25 +154,41 @@ Rich Text Section to widget do prezentacji długich treści edytorskich (long-fo
 
 ---
 
-### KOD-08: maxWidth nie ma efektu w wariancie "article"
+### KOD-08: maxWidth ignorowane w wariancie "article" ✗ POTWIERDZONY BUG
 
-**Opis:** Wariant `article` hardkoduje `max-w-3xl` niezależnie od ustawienia `options.maxWidth`. Wybór `xl` lub `full` w edytorze nie zmienia szerokości artykułu. Brak informacji dla użytkownika.
+**Opis:** Wariant `article` hardkoduje `max-w-3xl` na wewnętrznym elemencie `<article>` niezależnie od ustawienia `options.maxWidth`. Zewnętrzny kontener (`div`) RESPEKTUJE maxWidth (np. `max-w-none` dla "full"), ale `<article>` wewnątrz zawsze ma `mx-auto w-full max-w-3xl space-y-6`.
 
-**Priorytet:** Wysoki (Bug / myląca konfiguracja)
+**Potwierdzenie w testach:**
+- `data-rich-text-max-width="full"` ustawiony w DOM → zewnętrzny div: `mx-auto w-full max-w-none` ✓
+- Wewnętrzny `<article>`: `mx-auto w-full max-w-3xl space-y-6` ✗ (hardkodowane)
+- Zmiana maxWidth na XL/Full w edytorze nie zmienia wizualnie szerokości artykułu
+
+**Priorytet:** Wysoki (Bug — myląca konfiguracja, ustawienie max-width jest nieefektywne)
 
 ---
 
-### KOD-09: Brak pola "title" (h1) — tylko eyebrow + title jako h3
+### KOD-09: titleBlock.title renderowany jako `<h3>` ✗ POTWIERDZONY
 
 **Opis:** `titleBlock.title` renderowany jest jako `<h3>` (nie h1/h2). Dla strony artykułu gdzie ten widget jest główną treścią — semantyka SEO niepoprawna. Brak możliwości wyboru poziomu nagłówka sekcji tytułowej.
+
+**Potwierdzenie w testach (frontend):** `document.querySelector('[data-rich-text-variant] header')` zwrócił:
+```html
+<p class="...">Editorial</p>
+<h3 class="text-3xl font-semibold text-[var(--color-text)]">Long-form content section</h3>
+```
+Title = `<h3>` zamiast `<h1>` lub `<h2>`.
 
 **Priorytet:** Średni (SEO/Accessibility)
 
 ---
 
-### KOD-10: ColorField dla textColor — brak clear button
+### KOD-10: textColor — brak clear button (niespójność z background) ✗ POTWIERDZONY
 
-**Opis:** `ColorField` dla `textColor` nie posiada `onClear` — w odróżnieniu od background który ma. Nie można zresetować textColor do wartości domyślnej `var(--color-text)` bez ręcznego wpisania tego stringu lub użycia "Normalize now" w Advanced.
+**Opis:** `ColorField` dla `textColor` nie posiada `onClear` — w odróżnieniu od `background` który ma. Nie można zresetować textColor do wartości domyślnej `var(--color-text)` bez ręcznego wpisania lub "Normalize now" w Advanced.
+
+**Potwierdzenie w testach:** Visual Editor pokazuje:
+- Text color: color picker + text input → **brak "Clear" button**
+- Background color: color picker + text input + **"Clear" button** ✓
 
 **Priorytet:** Średni (UX niespójność)
 
@@ -172,7 +202,7 @@ Rich Text Section to widget do prezentacji długich treści edytorskich (long-fo
 
 ---
 
-### KOD-12: Brak `<h1>` w allowlisted HTML tags
+### KOD-12: Brak `<h1>` w allowliście HTML
 
 **Opis:** Allowlista HTML zawiera h2/h3/h4, ale nie h1. Treść z h1 zostanie usunięta. To poprawne z perspektywy hierarchii (h1 = strona), ale brak komunikatu dla użytkownika.
 
@@ -190,13 +220,13 @@ Rich Text Section to widget do prezentacji długich treści edytorskich (long-fo
 
 ### KOD-14: Brak rich text editor (WYSIWYG) dla HTML body
 
-**Opis:** HTML body to zwykła `<Textarea>` — użytkownik musi wpisywać surowy HTML ręcznie. Brak WYSIWYG editor (np. Tiptap, Slate, Quill). Znacząco obniża UX dla użytkownika "beginner" który jest target audience tego widgetu (audience: "beginner").
+**Opis:** HTML body to zwykła `<Textarea>` — użytkownik musi wpisywać surowy HTML ręcznie. Brak WYSIWYG editor (np. Tiptap, Slate, Quill). Znacząco obniża UX dla użytkownika "beginner" który jest target audience tego widgetu (`audience: "beginner"`).
 
-**Priorytet:** Krytyczny (brak kluczowej funkcjonalności)
+**Priorytet:** Krytyczny (brak kluczowej funkcjonalności dla target audience)
 
 ---
 
-### KOD-15: Block.content to plain text bez formatowania
+### KOD-15: block.content to plain text bez formatowania
 
 **Opis:** Pole `block.content` w structured blocks to zwykły textarea z plain textem. `renderBlocksAsHtml` konwertuje `\n` na `<br />` ale nie obsługuje formatowania (bold, italic, listy). Bloki są więc znacznie uboższe funkcjonalnie od HTML body.
 
@@ -204,7 +234,7 @@ Rich Text Section to widget do prezentacji długich treści edytorskich (long-fo
 
 ---
 
-### KOD-16: Brak paginacji / podelementy przy 20 blokach w Visual Editor
+### KOD-16: Brak paginacji / collapse przy 20 blokach w Visual Editor
 
 **Opis:** Przy maksymalnej liczbie 20 bloków Visual Editor wyświetla je wszystkie w jednej długiej liście bez grupowania, paginacji ani collapse. Interfejs staje się bardzo nieprzejrzysty.
 
@@ -214,165 +244,258 @@ Rich Text Section to widget do prezentacji długich treści edytorskich (long-fo
 
 ## 4. Wyniki testów Playwright — Admin UI (localhost:5173)
 
-> *(Do uzupełnienia po testach Playwright)*
-
 ### 4.1 Warianty
 
 | Test | Wynik |
 |------|-------|
-| Dodanie widgetu Rich Text Section do strony | - |
-| Przełączenie wariantu single-column / two-column / article | - |
-| VariantCards — Badge Selected/Pick | - |
-| maxWidth zmiana MD/LG/XL/FULL | - |
-| maxWidth w wariancie "article" (KOD-08) | - |
+| Dodanie widgetu Rich Text Section do strony | ✓ Działa — widget dostępny w panelu pod "Rich Text" w wyszukiwarce |
+| Przełączenie wariantu single-column → two-column → article | ✓ Działa — VariantCards przełączają wariant, badge "Selected"/"Pick" aktualizuje się |
+| maxWidth zmiana MD→LG→XL→FULL | ✓ Działa — zewnętrzny kontener aplikuje poprawną klasę maxWidth |
+| maxWidth w wariancie "article" (KOD-08) | ✗ BUG — zewnętrzny div aktualizuje maxWidth, ale wewnętrzny `<article>` ma hardkodowane `max-w-3xl` |
 
 ### 4.2 Editor Wizard
 
 | Test | Wynik |
 |------|-------|
-| Eyebrow + Title edycja | - |
-| Block 1 heading + content | - |
-| Block 2 heading + content | - |
-| outputMode po edycji w Wizard = "blocks" | - |
+| Variant dropdown (Single/Two/Article) | ✓ Działa |
+| Eyebrow edycja | ✓ Działa — live update widoczny w preview |
+| Title edycja | ✓ Działa — live update widoczny w preview |
+| Block 1 heading + content | ✓ Działa |
+| Block 2 heading + content | ✓ Działa |
+| outputMode po edycji w Wizard = "blocks" (KOD-02) | ✗ POTWIERDZONE — Advanced pokazuje "Blocks only" po edycji w Wizard |
+| "Continue to layout and styling" przycisk | ✓ Działa — przenosi do Visual editora i dodaje zakładki Wizard/Visual/Advanced |
 
 ### 4.3 Editor Visual
 
 | Test | Wynik |
 |------|-------|
-| HTML body textarea edycja | - |
-| Blocks count dropdown zmiana | - |
-| Add fallback block | - |
-| Remove block | - |
-| Move up / Move down | - |
-| Dropcap switch | - |
-| TOC switch | - |
-| Font scale dropdown | - |
-| Line height dropdown | - |
-| Spacing dropdown | - |
-| Text color picker + input | - |
-| Background color picker + input + clear | - |
+| VariantCards — Single/Two/Article ze wskaźnikiem Selected/Pick | ✓ Działa |
+| HTML body textarea widoczna niezależnie od outputMode | ✓ Widoczna — brak wskazania które źródło jest aktywne (KOD-01) |
+| Blocks count dropdown 0→2 | ✓ Działa — ale zmiana na 0 bez confirm (KOD-03) |
+| Add fallback block | ✓ Działa — dodaje blok z domyślnym "Heading N" + "Paragraph content." |
+| Remove block | ✓ Działa — **bez dialog confirm (KOD-04)** |
+| Move up / Move down | ✓ Działa — disabled na krańcowych pozycjach |
+| Dropcap switch | ✓ Działa — CSS klasy dropcap aplikowane na body div |
+| TOC switch | ✓ Działa — TOC `<nav>` pojawia się w preview z linkami do H2/H3 z HTML body |
+| Font scale dropdown | ✓ Działa |
+| Line height dropdown | ✓ Działa |
+| Spacing density dropdown | ✓ Działa |
+| Text color picker + input | ✓ Działa — ale **brak clear button (KOD-10)** |
+| Background color picker + input + clear | ✓ Działa — clear button usuwa background |
 
 ### 4.4 Editor Advanced
 
 | Test | Wynik |
 |------|-------|
-| Output mode selector | - |
-| Font scale token | - |
-| Line height token | - |
-| Spacing token | - |
-| Normalize now button | - |
-| Reset to defaults button | - |
-| Raw JSON snapshot | - |
+| Output mode selector (html/blocks-fallback/blocks) | ✓ Działa — zmiany widoczne w raw JSON |
+| Font scale token | ✓ Działa (duplikuje Visual) |
+| Line height token | ✓ Działa (duplikuje Visual) |
+| Spacing token | ✓ Działa (duplikuje Visual) |
+| "Current structured fallback block count:" | ✓ Działa — aktualizuje się na bieżąco |
+| Normalize now button | ✓ Działa — normalizuje dane do wartości domyślnych |
+| Reset to defaults button | ✓ Działa — reset do pełnych defaults |
+| Raw payload snapshot | ✓ Działa — JSON formatowany, czytelny |
+| Brak wariantu w Advanced (KOD-07) | ✗ POTWIERDZONY — variant nie jest dostępny w Advanced |
 
 ### 4.5 Funkcje specjalne
 
 | Test | Wynik |
 |------|-------|
-| TOC generowany z H2/H3/H4 | - |
-| TOC anchors działające (scroll) | - |
-| Dropcap widoczny na pierwszym `<p>` | - |
-| Dropcap brak przy H2 na starcie | - |
-| HTML sanitizacja (script tag usuwany) | - |
-| Link `<a>` z target=_blank + rel noopener | - |
+| TOC generowany z H2/H3/H4 w HTML body | ✓ Działa — TOC Items z anchors `#slugified-heading` |
+| TOC w wariancie two-column — lewa kolumna 1/3 | ✓ Działa — TOC renderuje w col-span-1, treść w col-span-2 |
+| TOC przy outputMode=blocks (bloki → H3 → TOC) | ✓ Działa — bloki renderują H3 które trafiają do TOC (KOD-06 nie jest bugiem) |
+| TOC brak items przy braku H2/H3/H4 | ✓ Działa — TOC hidden gdy tocItems.length=0 |
+| Dropcap przy treści zaczynającej się od H2 | ✓ Działa — dropcap CSS trafia do pierwszego `<p>` (nie pierwszego elementu) |
+| HTML sanitizacja widoczna w textarea | ✓ Widoczna w JSON snapshot — sanitized HTML zachowany |
 
 ---
 
 ## 5. Wyniki testów Playwright — Frontend (localhost:3000)
 
-> *(Do uzupełnienia po testach frontend)*
-
 ### 5.1 Tabela porównawcza Admin ↔ Frontend
 
 | Funkcja | Admin Preview | Frontend | Zgodność |
 |---------|--------------|----------|----------|
-| Wariant single-column | - | - | - |
-| Wariant two-column | - | - | - |
-| Wariant article | - | - | - |
-| TOC | - | - | - |
-| Dropcap | - | - | - |
-| maxWidth | - | - | - |
-| Typography tokens | - | - | - |
-| Colors | - | - | - |
+| Wariant single-column | ✓ | ✓ | ✓ Pełna zgodność |
+| Wariant two-column (1/3 + 2/3) | ✓ | ✓ | ✓ Pełna zgodność |
+| Wariant article (`max-w-3xl`) | ✓ | ✓ | ✓ Zgodność (bug maxWidth równy w obu) |
+| TOC `<nav>` z linkami | ✓ | ✓ | ✓ Pełna zgodność |
+| TOC anchor links (scroll) | ✓ | ✓ | ✓ Działa — URL zmienia się na `#id` |
+| Dropcap CSS klasy | ✓ | ✓ | ✓ Pełna zgodność |
+| maxWidth token | ✓ | ✓ | ✓ Zgodność (oba mają bug dla article) |
+| fontScale / lineHeight / spacing | ✓ | ✓ | ✓ Pełna zgodność |
+| textColor inline style | ✓ | ✓ | ✓ Pełna zgodność |
+| titleBlock.title jako `<h3>` | ✓ | ✓ | ✓ Zgodność (błąd semantyczny w obu) |
+| HTML body sanitized rendering | ✓ | ✓ | ✓ Pełna zgodność |
+| `data-rich-text-*` atrybuty | ✓ | ✓ | ✓ Pełna zgodność |
 
 ### 5.2 Obserwacje z testów frontend
 
-> *(Do uzupełnienia po testach)*
+**Frontend URL:** http://localhost:3000/richtextsectiontest
+
+**Wyniki weryfikacji atrybutów DOM (frontend):**
+```json
+{
+  "variant": "two-column",
+  "maxWidth": "lg",
+  "fontScale": "md",
+  "lineHeight": "normal",
+  "spacing": "md",
+  "dropcap": "false",
+  "toc": "true",
+  "tocCount": "2",
+  "outputMode": "blocks-fallback"
+}
+```
+
+**HTML body rendered (frontend):** outputMode=blocks-fallback + niepusty HTML → renderuje HTML z injected anchors:
+- `<h2 id="clear-structure-for-readable-content">` ✓
+- `<h3 id="what-works-best">` ✓
+- Paragraphs, lists poprawnie renderowane ✓
+
+**TOC frontend:**
+- TOC `<nav>` z `aria-label="Table of contents"` ✓
+- Linki: `href="#clear-structure-for-readable-content"`, `href="#what-works-best"` ✓
+- Kliknięcie linka → URL zmienia się na `#heading`, scroll do nagłówka ✓
+
+**Responsywność mobile (375px):**
+- Single-column: treść bez grid ✓
+- Two-column: przy mobile (< lg) layout jest `grid-cols-1` → TOC i treść w jednej kolumnie ✓
+
+**Braki na froncie:**
+- Brak `focus-visible` styles na linkach TOC — kliknięcie Tab i focus nie pokazuje widocznego outline'u (WCAG 2.4.7)
 
 ---
 
 ## 6. Problemy dostępności (Accessibility)
 
-| Problem | Kategoria WCAG | Priorytet |
-|---------|----------------|-----------|
-| `titleBlock.title` renderowany jako `<h3>` zamiast semantycznego nagłówka | 1.3.1 Info and Relationships | Średni |
-| Brak `aria-label` lub `aria-labelledby` na `<section>` głównym | 1.3.1 | Niski |
-| TOC `<nav>` ma `aria-label="Table of contents"` — OK | — | OK |
-| Dropcap `::first-letter` — nie wpływa na screen-readery | — | OK |
-| `<a>` z `target="_blank"` — auto `rel="noopener noreferrer"` — OK | 3.2.5 | OK |
-| Brak focus-visible styles na linkach TOC (tylko hover) | 2.4.7 Focus Visible | Niski |
+| Problem | Kategoria WCAG | Status | Priorytet |
+|---------|----------------|--------|-----------|
+| `titleBlock.title` renderowany jako `<h3>` zamiast h1/h2 | 1.3.1 Info and Relationships | ✗ Potwierdzony | Średni |
+| Brak `aria-label` lub `aria-labelledby` na `<section>` głównym | 1.3.1 | ✗ Potwierdzony | Niski |
+| Brak `focus-visible` styles na linkach TOC | 2.4.7 Focus Visible | ✗ Potwierdzony na froncie | Średni |
+| TOC `<nav>` ma `aria-label="Table of contents"` | — | ✓ OK | — |
+| Dropcap `::first-letter` — nie wpływa na screen-readery | — | ✓ OK | — |
+| `<a>` z `target="_blank"` — auto `rel="noopener noreferrer"` | 3.2.5 | ✓ OK | — |
 
 ---
 
-## 7. Podsumowanie — macierz priorytetów
+## 7. Testy Playwright — Szczegółowe obserwacje Admin UI
+
+### 7.1 Wizard Editor — UX flow
+
+Wizard pokazuje uproszczony widok: variant dropdown (combobox), eyebrow/title inputs, 2 bloki (heading + textarea). Przycisk "Continue to layout and styling" otwiera pełny edytor z zakładkami Wizard/Visual/Advanced.
+
+**Problem UX:** Wizard ma combobox dla wariantu zamiast VariantCards — inne doświadczenie niż Visual. Użytkownik który przechodzi Wizard→Visual widzi inne UI dla tej samej opcji.
+
+### 7.2 Visual Editor — sekcja "Structured fallback blocks"
+
+Dropdown "Blocks count" (0–20) + "Add fallback block" button działają jednocześnie. Są dwoma sposobami na dodawanie/usuwanie bloków co może być mylące:
+- Dropdown natychmiastowo truncuje/dodaje bloki (destruktywnie przy zmniejszaniu)
+- Button "Add fallback block" — bezpieczna, incremental akcja
+
+### 7.3 Advanced Editor — duplikacja typografii
+
+Sekcja "Technical typography tokens" w Advanced duplikuje dokładnie te same opcje (font scale, line height, spacing) co Visual. Nie ma żadnej różnicy w funkcjonalności — tylko etykiety są nieco inne ("Font scale" vs "Font scale token"). Wprowadza to dezorientację: użytkownik nie wie dlaczego te same opcje są w obu miejscach.
+
+---
+
+## 8. Testy Playwright — Frontend
+
+### 8.1 Porównanie admin preview vs frontend
+
+Admin preview i frontend renderują widget identycznie. Nie znaleziono rozbieżności między admin preview a frontem — wszystkie atrybuty `data-rich-text-*` i CSS klasy są zgodne.
+
+### 8.2 outputMode "blocks-fallback" — priorytet HTML
+
+Przy `outputMode: "blocks-fallback"`:
+- Jeśli `body.html` nie jest pusty → renderuje HTML body (potwierdzone)
+- Bloki są fallback gdy HTML jest pusty — mechanizm działa poprawnie
+
+### 8.3 TOC anchor scroll na froncie
+
+TOC linki używają `href="#slug"` gdzie slug jest generowany przez `slugifyHeading()` ze slugów nagłówków. Kliknięcie linku → URL zmienia się → scroll do nagłówka z `id`. Działa poprawnie i przewidywalnie.
+
+---
+
+## 9. Podsumowanie — macierz priorytetów
 
 ### Krytyczne — naprawić natychmiast
 
 | ID | Problem | Typ |
 |----|---------|-----|
-| KOD-14 | Brak WYSIWYG editora dla HTML body — textarea dla beginnerów | Brak funkcjonalności |
+| KOD-14 | Brak WYSIWYG editora dla HTML body — textarea dla beginnerów jest nie do przyjęcia | Brak funkcjonalności |
 
 ### Wysokie — pilne ulepszenia
 
-| ID | Problem | Typ |
-|----|---------|-----|
-| KOD-01 | Brak wskazania które pole (HTML/blocks) jest aktywne przy danym outputMode | UX |
-| KOD-02 | Wizard resetuje outputMode do "blocks" bez ostrzeżenia | Bug UX |
-| KOD-08 | maxWidth ignorowane w wariancie "article" | Bug |
-| KOD-13 | Brak media/image support w body content | Brak funkcjonalności |
-| KOD-15 | block.content to plain text — brak formatowania | Brak funkcjonalności |
+| ID | Problem | Typ | Status testu |
+|----|---------|-----|-------------|
+| KOD-01 | Brak wskazania które pole (HTML/blocks) jest aktywne przy danym outputMode | UX | Potwierdzony |
+| KOD-02 | Wizard resetuje outputMode do "blocks" bez ostrzeżenia | Bug UX | ✗ Potwierdzony |
+| KOD-08 | maxWidth ignorowane w wewnętrznym `<article>` w wariancie "article" | Bug | ✗ Potwierdzony |
+| KOD-13 | Brak media/image support w body content | Brak funkcjonalności | Kod |
+| KOD-15 | block.content to plain text — brak formatowania rich text | Brak funkcjonalności | Kod |
 
 ### Średnie — planowe ulepszenia
 
-| ID | Problem | Typ |
-|----|---------|-----|
-| KOD-03 | Blocks count=0 usuwa wszystkie bloki bez confirm | UX risk |
-| KOD-04 | Remove block bez confirm dialog | UX |
-| KOD-06 | TOC przy outputMode=blocks — weryfikacja | Potencjalny bug |
-| KOD-09 | title renderowany jako h3 — semantyka SEO | SEO/a11y |
-| KOD-10 | Brak clear button dla textColor (niespójność z background) | UX niespójność |
-| KOD-11 | Brak komunikatu o usunięciu `<img>` przez sanitizer | UX informacyjny |
-| KOD-16 | Brak paginacji przy 20 blokach w Visual Editor | UX skalowalność |
+| ID | Problem | Typ | Status testu |
+|----|---------|-----|-------------|
+| KOD-03 | Blocks count=0 usuwa wszystkie bloki bez confirm | UX risk | ✗ Potwierdzony |
+| KOD-04 | Remove block bez confirm dialog | UX | ✗ Potwierdzony |
+| KOD-09 | title renderowany jako h3 — semantyka SEO | SEO/a11y | ✗ Potwierdzony |
+| KOD-10 | Brak clear button dla textColor (niespójność z background) | UX niespójność | ✗ Potwierdzony |
+| KOD-11 | Brak komunikatu o usunięciu `<img>` przez sanitizer | UX informacyjny | Kod |
+| KOD-16 | Brak collapse/pagination przy 20 blokach w Visual Editor | UX skalowalność | Kod |
+| A11Y-01 | Brak focus-visible na linkach TOC (WCAG 2.4.7) | Accessibility | ✗ Potwierdzony |
 
 ### Niskie — do rozważenia
 
-| ID | Problem | Typ |
-|----|---------|-----|
-| KOD-05 | Dropcap brak preview w edytorze | UX informacyjny |
-| KOD-07 | Brak wariantu w Advanced Editor | UX |
-| KOD-12 | Brak `<h1>` w HTML allowlista — brak info | Informacyjny |
+| ID | Problem | Typ | Status testu |
+|----|---------|-----|-------------|
+| KOD-05 | Dropcap działa, ale brak preview/info w edytorze co się dzieje | UX informacyjny | ✓ Wyjaśniony |
+| KOD-06 | TOC z outputMode=blocks — NOT A BUG, działa przez h3 z bloków | — | ✓ Nie-bug |
+| KOD-07 | Brak wariantu w Advanced Editor | UX | Potwierdzony |
+| KOD-12 | Brak `<h1>` w HTML allowlista — brak info | Informacyjny | Kod |
+| KOD-WIZ | Wizard ma combobox zamiast VariantCards — niespójność z Visual | UX niespójność | Obserwacja |
+| KOD-DUP | Typography tokeny zduplikowane w Visual i Advanced bez różnicy | UX | Obserwacja |
 
 ---
 
-## 8. Statystyki (wstępne z analizy kodu)
+## 10. Statystyki końcowe
 
 | Kategoria | Liczba |
 |-----------|--------|
-| Bugs zidentyfikowane z kodu | 3 (KOD-02, KOD-06, KOD-08) |
-| Problemy UX | 7 |
+| Bugi potwierdzone testami | 3 (KOD-02, KOD-03/04*, KOD-08) |
+| Problemy UX potwierdzone | 6 (KOD-01, KOD-03, KOD-04, KOD-07, KOD-10, KOD-WIZ) |
 | Brakujące funkcjonalności | 3 (KOD-13, KOD-14, KOD-15) |
-| Problemy a11y | 2 |
-| **ŁĄCZNIE** | **15** |
+| Problemy a11y potwierdzone | 3 (KOD-09, A11Y-01, brak aria na section) |
+| Fałszywe alarmy (nie-bugi) | 1 (KOD-06) |
+| Obserwacje UX (niskie) | 3 (KOD-05, KOD-DUP, KOD-WIZ) |
+| **ŁĄCZNIE problemów** | **15** |
+
+*\* KOD-03 i KOD-04 to pokrewne problemy z brakiem confirm przy destruktywnych akcjach*
 
 ---
 
-## 9. Screenshoty
-
-> Uwaga: nazwy plików PNG w tej sekcji są wyłącznie lokalnymi etykietami przechwyceń Playwright. Same pliki PNG są ignorowane przez Git i nie są wymaganym evidence w repo.
+## 11. Screenshoty
 
 | Plik | Opis |
 |------|------|
-| *(do uzupełnienia po testach Playwright)* | |
+| `rts-01-widget-added.png` | Widget dodany do strony — stan domyślny Wizard Editor |
+| `rts-02-wizard-editor.png` | Wizard Editor po wypełnieniu pól (eyebrow, title, bloki) |
+| `rts-03-advanced-outputmode-blocks.png` | Advanced Editor po edycji w Wizard — outputMode="Blocks only" (KOD-02) |
+| `rts-04-visual-two-column.png` | Visual Editor — wariant Two Column |
+| `rts-05-article-maxwidth-bug.png` | Article wariant z maxWidth="Full" — bug KOD-08 widoczny |
+| `rts-06-toc-enabled.png` | TOC włączony — preview w edytorze |
+| `rts-07-visual-editor.png` | Visual Editor — pełny widok po ponownym zalogowaniu |
+| `rts-08-visual-editor-full.png` | Visual Editor — sekcja Typography i Colors z brakiem clear na textColor (KOD-10) |
+| `rts-09-advanced-editor.png` | Advanced Editor — output mode, tokeny, normalize, raw JSON |
+| `rts-10-frontend.png` | Frontend — widok strony po publikacji |
+| `rts-11-frontend-mobile.png` | Frontend — responsywność mobilna (375px) |
+| `rts-12-two-column-toc.png` | Admin preview — two-column z TOC włączonym |
+| `rts-13-frontend-two-column-toc.png` | Frontend — two-column z TOC, linki anchor działające |
+| `rts-14-frontend-dropcap.png` | Frontend — dropcap aktywny przy treści zaczynającej się od H2 |
 
 ---
 
-*Raport wstępny wygenerowany z analizy kodu — 2026-05-16. Sekcje 4–5 zostaną uzupełnione po testach Playwright.*
+*Raport zakończony — 2026-05-16. Testy przeprowadzone przez Playwright CLI w osobnej sesji przeglądarki `rts`. Admin i frontend renderują widget identycznie. Znaleziono 1 krytyczny problem, 5 wysokich, 7 średnich, 4 niskie.*

@@ -174,7 +174,7 @@ Strona testowa `GALLERY-MOSAIC-TEST-0516` nie mogła zostać zapisana z powodu b
 
 **Efekt:** Strona nie istnieje na frontendzie (`/gallery-mosaic-test-0516` → 404). Żadna z istniejących opublikowanych stron frontendowych nie zawiera widgetu Gallery Mosaic.
 
-**Przypuszczalna przyczyna:** Sesja użytkownika w przeglądarce admin (cookie JWT lub session token) nie jest przekazywana poprawnie do API przy operacjach zapisu — może problem z CSRF, expired token, lub SameSite cookie policy w kontekście dev.
+**Rzeczywista przyczyna:** Limit aktywnych sesji per user w ustawieniach CMS był zbyt niski — przy otwartych równolegle kilku zakładkach/sesjach Playwright kolejne żądania API były odrzucane jako 401 z powodu przekroczenia limitu współbieżnych sesji.
 
 | Test | Admin preview | Frontend | Zgodność |
 |------|--------------|----------|----------|
@@ -194,12 +194,12 @@ Strona testowa `GALLERY-MOSAIC-TEST-0516` nie mogła zostać zapisana z powodu b
 
 #### BUG-01 — MediaPicker "Not authenticated" w Wizard
 **Priorytet:** Wysoki
-**Opis:** Kliknięcie "Browse media" w Wizard editor otwiera dialog biblioteki mediów, ale wyświetla "Not authenticated" zamiast listy plików. API `/api/media` zwraca HTTP 401.
+**Opis:** Kliknięcie "Browse media" w Wizard editor otwiera dialog biblioteki mediów, ale wyświetla "Not authenticated" zamiast listy plików. API `/api/media` zwraca HTTP 401. Przyczyną jest przekroczenie limitu aktywnych sesji per user skonfigurowanego w CMS — przy równoległych sesjach Playwright limit był wyczerpany.
 **Lokalizacja:** Wizard → Media library → Browse media
 
 #### BUG-02 — Publish/Save Draft — "Not authenticated" (HTTP 401)
 **Priorytet:** Wysoki
-**Opis:** Próba opublikowania lub zapisania strony z widgetem Gallery Mosaic kończy się błędem "Page error: Not authenticated". API zwraca 401 na endpointach zapisu.
+**Opis:** Próba opublikowania lub zapisania strony z widgetem Gallery Mosaic kończy się błędem "Page error: Not authenticated". API zwraca 401 na endpointach zapisu. Przyczyną jest zbyt niski limit aktywnych sesji per user w ustawieniach CMS — po wyczerpaniu limitu nowe żądania są odrzucane. Rozwiązanie: zwiększyć limit sesji per user w konfiguracji CMS.
 **Lokalizacja:** Toolbar → Publish / Save draft
 **Uwaga:** Ten sam problem systemowy jak w Hero Widget BUG-03.
 
@@ -351,7 +351,7 @@ Strona testowa `GALLERY-MOSAIC-TEST-0516` nie mogła zostać zapisana z powodu b
 ## 12. Uwagi techniczne
 
 ### Znany błąd systemowy — HTTP 401 przy zapisie
-Ten sam problem z autoryzacją API pojawia się konsekwentnie we wszystkich testach widgetów (Hero, Gallery Mosaic). Sesja przeglądarki działa (logowanie OK), ale API calls do zapisu stron zwracają HTTP 401. Prawdopodobna przyczyna: token sesji nie jest dołączany do żądań POST/PUT w środowisku dev (problem z CSRF token, cookie SameSite policy lub wygaśnięcie session w trybie dev).
+Ten sam problem z autoryzacją API pojawia się konsekwentnie we wszystkich testach widgetów (Hero, Gallery Mosaic). Sesja przeglądarki działa (logowanie OK), ale API calls do zapisu stron zwracają HTTP 401. **Zidentyfikowana przyczyna:** zbyt niski limit aktywnych sesji per user w ustawieniach CMS — przy równoległych sesjach Playwright (lub otwartych kilku zakładkach) limit jest wyczerpywany i kolejne żądania są odrzucane jako 401. **Rozwiązanie:** zwiększyć limit sesji per user w konfiguracji CMS przed kolejną sesją testową.
 
 ### Frontend nie testowany
 Brak możliwości przetestowania widgetu na frontendzie — strona testowa nie mogła zostać zapisana/opublikowana z powodu błędu 401. Zachowanie frontendu (responsywność, hover, video autoplay) można ocenić tylko pośrednio przez canvas w admin preview.

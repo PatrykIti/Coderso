@@ -217,7 +217,7 @@ Struktura HTML (Default variant):
 
 ## 5. Testy Playwright — Frontend
 
-> **Status:** Ograniczony — problemy z autentykacją
+> **Status:** Ograniczony — limit sesji per user w ustawieniach CMS-a (401 Unauthorized)
 
 ### 5.1 Środowisko testowe
 
@@ -231,6 +231,8 @@ Podczas testów napotkano **401 Unauthorized** przy próbach:
 - `POST /admin/api/pages/{id}` (Save draft)
 - `POST /admin/api/pages/{id}/publish` (Publish)
 - Wbudowany Preview w edytorze (Runtime preview — "Not authenticated")
+
+**Przyczyna:** Przekroczony limit aktywnych sesji per user skonfigurowany w ustawieniach CMS-a — nie był to problem z poświadczeniami ani uprawnieniami konta. Po wyczerpaniu dozwolonej liczby równoległych sesji, kolejne żądania API były odrzucane z kodem 401.
 
 Strona testowa `Section Widget Test` nie mogła zostać opublikowana/zapisana, więc nie jest dostępna pod `http://localhost:3000/section-widget-test`.
 
