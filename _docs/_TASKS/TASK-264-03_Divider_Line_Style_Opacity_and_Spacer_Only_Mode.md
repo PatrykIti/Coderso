@@ -19,8 +19,8 @@ This leaf covers:
 
 - W5: alpha/opacity control for line and label styling without replacing the
   shared CSS-variable picker contract;
-- W10: dotted/dashed line-style polish beyond the current browser-default
-  dashed variant;
+- W10: bounded dash-pattern and dotted line-style polish beyond the current
+  browser-default dashed variant;
 - W11: a spacer-only mode for intentional vertical rhythm without a visible
   line.
 
@@ -36,24 +36,27 @@ the separate Spacer widget or shared slot/spacing contracts.
 
 ## Sub-Tasks
 
-- [ ] Define line visibility/style/opacity fields in `divider.tsx`.
+- [ ] Define line visibility/style/opacity/dash-pattern fields in
+  `divider.tsx`.
 - [ ] Extend schema/defaults/normalizer with safe defaults that preserve current
   `line`, `dashed`, and `label-center` output.
-- [ ] Add runtime rendering for `solid`, `dashed`, `dotted`, and optional
-  spacer-only visibility without leaking editor-only placeholders.
-- [ ] Add editor controls for opacity and line style in Visual/Advanced.
+- [ ] Add runtime rendering for `solid`, `dashed`, `dotted`, bounded
+  dash-pattern tokens, and optional spacer-only visibility without leaking
+  editor-only placeholders.
+- [ ] Add editor controls for opacity, line style, and dash pattern in
+  Visual/Advanced.
 - [ ] Decide whether spacer-only is a new variant or a schema-backed visibility
   field, and document the chosen model before implementation.
-- [ ] Add tests for opacity style output, dotted line output, and spacer-only
-  output.
+- [ ] Add tests for opacity style output, dotted line output, dash-pattern
+  output, and spacer-only output.
 
 ## Files to Change
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/divider.tsx` | Add line style, opacity, and visibility/spacer-only fields; update schema/defaults/normalizer and runtime output. |
-| `core/admin/ui/widgets/editors/DividerEditors.tsx` | Add bounded controls for line style, opacity, and spacer-only visibility. |
-| `tests/vitest/widgets/divider.test.tsx` | Add SSR assertions for opacity, dotted/dashed/solid output, spacer-only output, and backward compatibility. |
+| `core/widgets/core/divider.tsx` | Add line style, opacity, dash-pattern, and visibility/spacer-only fields; update schema/defaults/normalizer and runtime output. |
+| `core/admin/ui/widgets/editors/DividerEditors.tsx` | Add bounded controls for line style, dash pattern, opacity, and spacer-only visibility. |
+| `tests/vitest/widgets/divider.test.tsx` | Add SSR assertions for opacity, dotted/dashed/solid output, dash-pattern output, spacer-only output, and backward compatibility. |
 | `tests/vitest/ui/divider-editor-wave.test.tsx` | Add editor interaction assertions for the new style/visibility controls. |
 | `_docs/_WIDGETS/DIVIDER.md` | Document line style, opacity, and spacer-only behavior. |
 
@@ -63,6 +66,7 @@ the separate Spacer widget or shared slot/spacing contracts.
 export type DividerLineStyle = "solid" | "dashed" | "dotted";
 export type DividerVisibility = "line" | "spacer-only";
 export type DividerOpacityToken = "100" | "75" | "50" | "25";
+export type DividerDashPattern = "browser" | "short" | "wide";
 
 function normalizeDividerLineStyle(data: DividerData, variant: DividerVariantId) {
   return {
@@ -74,13 +78,25 @@ function normalizeDividerLineStyle(data: DividerData, variant: DividerVariantId)
           : "solid",
     visibility: data.visibility === "spacer-only" ? "spacer-only" : "line",
     opacity: resolveToken(data.opacity, "100", dividerOpacityTokens),
+    dashPattern: resolveToken(data.dashPattern, "browser", dividerDashPatternTokens),
   };
 }
 
+const dividerDashPatternStyleMap = {
+  browser: undefined,
+  short: "6 4",
+  wide: "12 8",
+} as const;
+
 function buildDividerLineStyle(input: NormalizedDividerLineStyle) {
   if (input.visibility === "spacer-only") return { borderTopWidth: 0 };
+  const borderImage =
+    input.lineStyle === "dashed"
+      ? buildRepeatingLinearGradientBorder(input.dashPattern)
+      : undefined;
   return {
     borderTopStyle: input.lineStyle,
+    borderImage,
     opacity: Number(input.opacity) / 100,
   };
 }
@@ -88,8 +104,8 @@ function buildDividerLineStyle(input: NormalizedDividerLineStyle) {
 
 Error handling:
 
-- Unknown opacity/style/visibility values normalize to current default line
-  output.
+- Unknown opacity/style/dash-pattern/visibility values normalize to current
+  default line output.
 - Spacer-only still renders the configured top/bottom margins and deterministic
   markers, but no visible border.
 - Label-center with spacer-only should either hide the label or block the
@@ -106,6 +122,17 @@ No API routes are added.
 - Secret handling: no secrets in widget data, DOM markers, diagnostics, or
   reports.
 
+## Git Scope Safeguards
+
+- Work in a dedicated TASK-264 branch or worktree when implementation runs
+  alongside other widget-report agents.
+- Re-read `_docs/_TASKS/README.md` immediately before editing the board because
+  it is a shared hotspot.
+- Stage only this leaf's Divider owner files plus required Divider docs, report,
+  changelog, and task-board updates.
+- Verify `git diff --cached --name-only` before every commit so unrelated
+  widget task families stay out of scope.
+
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/widgets/divider.test.tsx`
@@ -115,6 +142,9 @@ No API routes are added.
 - `bun test tests/unit/widgets/validator.test.ts` if schema/defaults change
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso`
+- `bun run scan:security:strict`
+- `bun run precommit` before any manual commit or leaf closure
 
 ## Documentation Updates Required
 
@@ -131,7 +161,8 @@ No API routes are added.
 
 ## Acceptance Criteria
 
-- Divider supports bounded opacity and line-style controls without raw CSS.
+- Divider supports bounded opacity, line-style, and dash-pattern controls
+  without raw CSS.
 - Spacer-only behavior is deterministic, documented, and tested.
 - Current saved Divider payloads render as before unless the new fields are
   configured.

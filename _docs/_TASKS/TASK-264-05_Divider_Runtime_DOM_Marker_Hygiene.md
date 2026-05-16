@@ -87,6 +87,17 @@ No API routes are added.
 - Secret handling: no secrets in Divider DOM markers, diagnostics, reports, or
   changelog entries.
 
+## Git Scope Safeguards
+
+- Work in a dedicated TASK-264 branch or worktree when implementation runs
+  alongside other widget-report agents.
+- Re-read `_docs/_TASKS/README.md` immediately before editing the board because
+  it is a shared hotspot.
+- Stage only this leaf's Divider owner files plus required Divider docs, report,
+  changelog, and task-board updates.
+- Verify `git diff --cached --name-only` before every commit so unrelated
+  widget task families stay out of scope.
+
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/widgets/divider.test.tsx`
@@ -94,6 +105,9 @@ No API routes are added.
   editor diagnostics copy changes
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso`
+- `bun run scan:security:strict`
+- `bun run precommit` before any manual commit or leaf closure
 
 ## Documentation Updates Required
 

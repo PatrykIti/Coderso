@@ -45,8 +45,8 @@ editor UX. It must not duplicate TASK-256 shared-contract fixes:
   TASK-256-05-03.
 - Divider `<hr>`/`role="separator"`/decorative `aria-hidden` baseline remains
   TASK-256-05-03.
-- Shared spacing-token validation copy remains TASK-256-02 unless TASK-256
-  exposes a helper that this family can consume.
+- Shared spacing-token validation and resolved-value copy remain TASK-256-02
+  unless TASK-256 exposes a helper that this family can consume.
 
 If a TASK-264 leaf discovers it needs a reusable editor helper, global color
 picker behavior, page-builder mode ownership, or shared accessibility primitive,
@@ -57,10 +57,10 @@ contract task.
 
 | Report rows | Owner | TASK-264 action |
 |---|---|---|
-| C1, C2, C3, U1, U8, W6, W7, R1, R2 | TASK-256-01, TASK-256-02, TASK-256-05-03 | Excluded from TASK-264. Use the final shared-contract behavior as a dependency before implementing adjacent Divider polish. |
-| W1, W2, W8, W9, U2, U9 | TASK-264-01 | Add Divider-owned label color, typography, nowrap, label gap, clearer label copy, and clear-label affordance. |
-| W3, W4, U5, U6 plus custom-width part of U7 | TASK-264-02 | Add Divider-owned container width, horizontal alignment, and custom-width validation feedback without changing shared spacing semantics. |
-| W5, W10, W11 | TASK-264-03 | Add Divider-owned opacity/alpha, dashed/dotted line-style options, and spacer-only visibility mode using bounded schema fields. |
+| C1, C2, C3, U1, U7, U8, W6, W7, R1, R2 | TASK-256-01, TASK-256-02, TASK-256-05-03 | Excluded from TASK-264. Use the final shared-contract behavior as a dependency before implementing adjacent Divider polish. |
+| W1, W2, W8, W9, U2, U9, R4 | TASK-264-01 | Add Divider-owned label color, typography, nowrap, label gap, clearer label copy, and clear-label affordance. |
+| W3, W4, U5 and the custom-width part of U6 | TASK-264-02 | Add Divider-owned container width, horizontal alignment, and custom-width validation feedback without changing shared spacing semantics. |
+| W5, W10, W11 | TASK-264-03 | Add Divider-owned opacity/alpha, bounded dash-pattern or dotted style controls, and spacer-only visibility mode using bounded schema fields. |
 | U3, U4, W12 | TASK-264-04 | Add inline Divider preview, Wizard comfort controls, and reset/normalize actions after shared token/color behavior is available. |
 | R3 | TASK-264-05 | Remove or sanitize raw style-token data markers such as `data-divider-color="var(--color-border)"`. |
 | Source report refresh, widget docs, changelog, task board | TASK-264-06 | Record fixed/deferred/routed evidence after implementation leaves finish. |

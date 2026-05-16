@@ -106,6 +106,17 @@ No API routes are added.
 - Secret handling: preview and reset UI must not expose secrets or raw preview
   tokens.
 
+## Git Scope Safeguards
+
+- Work in a dedicated TASK-264 branch or worktree when implementation runs
+  alongside other widget-report agents.
+- Re-read `_docs/_TASKS/README.md` immediately before editing the board because
+  it is a shared hotspot.
+- Stage only this leaf's Divider owner files plus required Divider docs, report,
+  changelog, and task-board updates.
+- Verify `git diff --cached --name-only` before every commit so unrelated
+  widget task families stay out of scope.
+
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/ui/divider-editor-wave.test.tsx`
@@ -113,6 +124,9 @@ No API routes are added.
   runtime/default helpers change
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso`
+- `bun run scan:security:strict`
+- `bun run precommit` before any manual commit or leaf closure
 
 ## Documentation Updates Required
 

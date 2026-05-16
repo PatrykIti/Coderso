@@ -26,11 +26,15 @@ by itself except for documentation-only corrections discovered during closure.
 - [ ] Re-run or refresh frontend evidence for each completed TASK-264 row.
 - [ ] Mark every source report finding as `fixed`, `TASK-256`, `deferred`,
   `excluded`, or `not reproducible`, with a concrete task ID and reason.
-- [ ] Keep C1/C2/C3/U1/U8/W6/W7/R1/R2 routed to TASK-256 unless TASK-256-08
+- [ ] Keep C1/C2/C3/U1/U7/U8/W6/W7/R1/R2 routed to TASK-256 unless TASK-256-08
   explicitly reclassifies them.
 - [ ] Record section 8.1 admin-session expiry as excluded CMS/session scope.
 - [ ] Update `_docs/_WIDGETS/DIVIDER.md` with final data/editor/runtime
   behavior.
+- [ ] Review `_docs/_WIDGETS/tmp/divider/MATRIX.md` and either update it if the
+  research archive remains active for Divider decisions, or explicitly record it
+  as archived research with orientation and accessibility decisions routed or
+  deferred.
 - [ ] Update `_docs/WIDGETS.md` or `_docs/WIDGET_PACK_MATRIX.md` only when an
   implementation leaf changed those source-of-truth contracts.
 - [ ] Add a changelog entry and update `_docs/_CHANGELOG/README.md`.
@@ -43,6 +47,7 @@ by itself except for documentation-only corrections discovered during closure.
 |---|---|
 | `_docs/PLAYWRIGHT/REPORT_DIVIDER_WIDGET.md` | Add fixed/deferred/routed/excluded status and textual admin/frontend evidence. |
 | `_docs/_WIDGETS/DIVIDER.md` | Document final Divider contract after implementation. |
+| `_docs/_WIDGETS/tmp/divider/MATRIX.md` | Update only if the research archive remains active; otherwise record archived/routed status in the closure report. |
 | `_docs/WIDGETS.md` | Update only if shared widget contract changes. |
 | `_docs/WIDGET_PACK_MATRIX.md` | Update only if readiness/completeness changes. |
 | `_docs/_TASKS/TASK-264*.md` | Status/date updates for umbrella and leaves. |
@@ -82,8 +87,10 @@ Closure flow:
 3. Update report evidence with textual DOM/admin/frontend results; do not add
    Playwright PNG artifacts.
 4. Update widget docs and changelog.
-5. Run final targeted validation plus required baseline gates.
-6. Update task statuses and board statistics only after validation status is
+5. Review the Divider research matrix and record whether it was updated or left
+   as archived historical research.
+6. Run final targeted validation plus required baseline gates.
+7. Update task statuses and board statistics only after validation status is
    known.
 
 Error handling:
@@ -126,6 +133,8 @@ No API routes are added.
 
 - `_docs/PLAYWRIGHT/REPORT_DIVIDER_WIDGET.md`
 - `_docs/_WIDGETS/DIVIDER.md`
+- `_docs/_WIDGETS/tmp/divider/MATRIX.md` only if the research archive remains
+  active for Divider decisions
 - `_docs/WIDGETS.md` only if shared contract changed
 - `_docs/WIDGET_PACK_MATRIX.md` only if readiness changed
 - `_docs/_TASKS/README.md`

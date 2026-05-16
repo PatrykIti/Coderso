@@ -20,7 +20,7 @@ This leaf covers only label-specific product behavior:
 - W1: separate label color from line color;
 - W2: configurable label typography instead of hardcoded `text-xs font-medium
   uppercase tracking-wider`;
-- W8: prevent long labels from wrapping across the separator line;
+- W8/R4: prevent long labels from wrapping across the separator line;
 - W9: configurable gap between the label and line segments;
 - U2: make editor copy truthful when the line and label colors can differ;
 - U9: add a clear-label affordance.
@@ -112,6 +112,17 @@ No API routes are added.
 - Secret handling: no secrets in label data, DOM markers, diagnostics, or
   reports.
 
+## Git Scope Safeguards
+
+- Work in a dedicated TASK-264 branch or worktree when implementation runs
+  alongside other widget-report agents.
+- Re-read `_docs/_TASKS/README.md` immediately before editing the board because
+  it is a shared hotspot.
+- Stage only this leaf's Divider owner files plus required Divider docs, report,
+  changelog, and task-board updates.
+- Verify `git diff --cached --name-only` before every commit so unrelated
+  widget task families stay out of scope.
+
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/widgets/divider.test.tsx`
@@ -121,12 +132,15 @@ No API routes are added.
 - `bun test tests/unit/widgets/validator.test.ts` if schema/defaults change
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso`
+- `bun run scan:security:strict`
+- `bun run precommit` before any manual commit or leaf closure
 
 ## Documentation Updates Required
 
 - Update `_docs/_WIDGETS/DIVIDER.md`.
 - Update `_docs/PLAYWRIGHT/REPORT_DIVIDER_WIDGET.md` rows W1, W2, W8, W9, U2,
-  and U9 after validation.
+  U9, and R4 after validation.
 - Update `_docs/WIDGETS.md` only if this leaf changes a shared widget contract.
 
 ## Changelog Policy
