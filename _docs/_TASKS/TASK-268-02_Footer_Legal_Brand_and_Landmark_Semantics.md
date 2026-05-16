@@ -165,8 +165,8 @@ No API routes are added.
 
 - `bun run test:vitest -- tests/vitest/widgets/footer.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/footer-editor-wave.test.tsx`
-- `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer
-  integration assertions are updated.
+- `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` because this
+  leaf changes public Footer renderer output.
 - `bun test tests/unit/widgets/validator.test.ts` when schema changes.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`

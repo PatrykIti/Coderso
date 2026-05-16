@@ -30,7 +30,7 @@ This leaf owns:
 - Footer responsive column breakpoint or a small approved layout-density enum
   that maps to fixed class names.
 - Footer link hover/active/underline controls implemented through bounded
-  classes or scoped CSS variables, not arbitrary CSS.
+  style tokens plus an optional strict color normalizer, not arbitrary CSS.
 - Footer link font-weight and letter-spacing controls from fixed enums.
 - Footer link target controls for column and legal links, preserving safe href
   normalization and external-link safety.
@@ -53,8 +53,9 @@ This leaf does not own:
   `columnBreakpoint: "sm" | "md" | "lg"` or a higher-level density enum, and
   map it to fixed grid classes.
 - [ ] Add link style fields such as `linkHoverColor`, `linkActiveColor`,
-  `linkUnderline`, `linkFontWeight`, and `linkLetterSpacing` only if they can be
-  rendered safely without arbitrary CSS injection.
+  `linkUnderline`, `linkFontWeight`, and `linkLetterSpacing`. Color fields must
+  either reference approved design tokens or pass a strict hex/CSS-variable
+  normalizer before render.
 - [ ] Add `target` controls for Footer column and legal links with schema,
   editor, renderer, and tests that preserve safe `rel` behavior.
 - [ ] Update Footer editors with labeled controls in Visual or Advanced based
@@ -87,9 +88,12 @@ type FooterLink = {
 };
 
 type FooterLegal = {
+  enabled?: boolean;
   privacy?: string;
+  privacyLabel?: string;
   privacyTarget?: FooterLinkTarget;
   terms?: string;
+  termsLabel?: string;
   termsTarget?: FooterLinkTarget;
 };
 
@@ -98,13 +102,37 @@ type FooterLayout = {
   columnBreakpoint?: "sm" | "md" | "lg";
 };
 
+type FooterLinkColorToken = "inherit" | "muted" | "accent" | "brand" | "custom";
+
 type FooterStyle = {
-  linkHoverColor?: string;
-  linkActiveColor?: string;
+  linkHoverColor?: FooterLinkColorToken;
+  linkHoverCustomColor?: string;
+  linkActiveColor?: FooterLinkColorToken;
+  linkActiveCustomColor?: string;
   linkUnderline?: "none" | "hover" | "always";
   linkFontWeight?: "normal" | "medium" | "semibold";
   linkLetterSpacing?: "normal" | "wide";
 };
+
+function normalizeFooterLinkColor(
+  token: unknown,
+  customValue: unknown
+): { token: Exclude<FooterLinkColorToken, "custom">; value?: string } {
+  if (token === "custom") {
+    const value = normalizeStrictFooterColor(customValue);
+    return value ? { token: "inherit", value } : { token: "inherit" };
+  }
+  if (token === "muted" || token === "accent" || token === "brand") return { token };
+  return { token: "inherit" };
+}
+
+function normalizeStrictFooterColor(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  if (/^#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?$/.test(trimmed)) return trimmed;
+  if (/^var\(--[a-zA-Z0-9-_]+\)$/.test(trimmed)) return trimmed;
+  return undefined;
+}
 
 const paddingXClassMap = {
   none: "px-0",
@@ -149,9 +177,13 @@ Error handling:
 
 - Unknown layout/style tokens fall back to current defaults.
 - `none` is accepted only for fields already approved as visual off tokens.
+- Unknown hover/active color tokens fall back to `inherit`; custom colors render
+  only after the strict hex/CSS-variable normalizer accepts them.
 - Unsafe hrefs still normalize to `#` or are omitted according to the existing
   Footer safe-href behavior.
 - `_blank` on unsafe or non-http hrefs must not create weaker behavior.
+- Legal target updates are additive to the TASK-268-02/TASK-268-03 legal model:
+  they must preserve `enabled`, `privacyLabel`, and `termsLabel`.
 - All class output comes from static maps so Tailwind can see every class at
   build time.
 
@@ -162,14 +194,17 @@ No API routes are added.
 - Endpoint visibility/auth/RBAC/CSRF/rate limit: unchanged.
 - Reject-unknown validation: new layout/style/link fields must be explicit and
   reject unknown values.
-- Anti-abuse: no arbitrary class names or CSS strings; href/target behavior must
-  keep `noopener noreferrer` where needed and continue safe-href normalization.
+- Anti-abuse: no arbitrary class names or CSS strings; custom color strings must
+  pass the strict Footer color normalizer; href/target behavior must keep
+  `noopener noreferrer` where needed and continue safe-href normalization.
 - Secret handling: no secrets in style/link data, docs, tests, or reports.
 
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/widgets/footer.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/footer-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` because this
+  leaf changes public Footer renderer output.
 - `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` only if
   Footer `none` token behavior changes.
 - `bun test tests/unit/widgets/validator.test.ts` when schema changes.
