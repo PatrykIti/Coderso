@@ -1,6 +1,6 @@
 # RAPORT: Grid Columns Widget — Analiza UX/UI i brakujące funkcjonalności
 
-> **Status:** W trakcie  
+> **Status:** Zakończony  
 > **Data:** 2026-05-16  
 > **Sesja:** Playwright #3 (Grid Columns Widget)  
 > **Środowisko:** http://localhost:5173/admin | http://localhost:3000
@@ -109,91 +109,146 @@ Grid Columns widget pozwala na budowę responsywnych wielokolumnowych układów.
 
 ## 5. Testy w przeglądarce (Admin Preview)
 
-> *Sekcja do uzupełnienia po testach Playwright*
+> **Strona testowa:** TEST-GRID-COLUMNS-0516  
+> **URL Admin:** http://localhost:5173/admin/pages/dabb2bc8-af98-498b-abac-bab7e8e2334a  
+> **Slug:** /test-grid-columns-0516
 
 ### 5.1 Test — Warianty
 
 | Wariant | Wynik | Uwagi |
 |---------|-------|-------|
-| equal | — | — |
-| asymmetric | — | — |
-| masonry-lite | — | — |
+| equal | ✅ OK | Dwie równe kolumny (6/12 + 6/12), poprawnie renderowane |
+| asymmetric | ⚠️ Brak efektu wizualnego | Wariant wybrany w UI, ale kolumny mają explicit span 6/6 — wariant nie nadpisuje istniejących tokenów, tylko ustawia fallback. Układ wygląda identycznie jak `equal` |
+| masonry-lite | ✅ + ⚠️ | Wariant wymusza cardize w render: klasy `border p-4 rounded-xl` obecne. Switch "Cardized columns" pozostaje OFF w UI — patrz U6 |
+
+**Odkrycie dodatkowe (Asymmetric):** Wariant `asymmetric` zmienia TYLKO `fallbackSpanForVariant()` — jeżeli kolumny mają jawnie ustawione spany (domyślnie 6/12), przełączenie wariantu nie zmienia renderowanego układu. Użytkownik myśląc że wybrał "asymmetric" nadal widzi równe kolumny. To jest **błąd koncepcyjny** — wariant powinien albo aktualizować spany przy przełączeniu, albo wyraźnie komunikować że dotyczy tylko nowych kolumn bez ustawionego spanu.
 
 ### 5.2 Test — Cardize
 
 | Scenariusz | Wynik | Uwagi |
 |------------|-------|-------|
-| Cardize OFF | — | — |
-| Cardize ON | — | — |
-| Color picker z CSS var | — | — |
-| masonry-lite + cardize switch | — | — |
+| Cardize OFF | ✅ OK | Kolumny bez stylów tła/ramki/zaokrągleń |
+| Cardize ON | ✅ OK | Klasy `border p-4 rounded-xl` widoczne w DOM |
+| Color picker z CSS var | ⚠️ Częściowy | Text input przyjmuje `var(--color-primary)` i preview ją renderuje poprawnie (kolumna staje się pomarańczowa). Color picker (input[type=color]) nadal pokazuje fallback `#f8fafc` — potwierdza C2 |
+| masonry-lite + cardize switch | ❌ Niespójna UI | masonry-lite renderuje z cardize (klasy border/p/radius w DOM) choć switch jest `aria-checked="false"` — patrz U6 |
 
-### 5.3 Test — Responsywność (Preview Device)
+**Weryfikacja DOM (cardize ON):**
+```
+div[data-grid-column] > div.className = "h-full min-h-[6rem] border p-4 rounded-xl"
+```
+
+### 5.3 Test — Responsywność (Page Preview modal)
 
 | Breakpoint | Wynik | Uwagi |
 |------------|-------|-------|
-| Desktop | — | — |
-| Tablet | — | — |
-| Mobile | — | — |
+| Desktop | ✅ OK | Dwie kolumny obok siebie (6/12 + 6/12) |
+| Tablet | ✅ OK | Dwie kolumny obok siebie (md:col-span-6 + md:col-span-6) — poprawne dla tabletSpan=6 |
+| Mobile | ✅ OK | Kolumny stackują pionowo (col-span-12 + col-span-12) — poprawne dla mobileSpan=12 |
+
+**Device switcher:** Dostępny wyłącznie w Page Preview modal (Runtime preview). Brak urządzenia w canvas edytora samym sobie.
 
 ### 5.4 Test — Desync slot/config
 
 | Scenariusz | Wynik | Uwagi |
 |------------|-------|-------|
-| 3 sloty, 2 config | — | — |
-| 2 sloty, 3 config | — | — |
+| 2 sloty, 3 config (dodano config) | ❌ Renderuje 2 kolumny | `data-grid-columns-count="2"` — 3. config jest w danych ale nie ma slotu do renderowania. Podgląd ignoruje nadmiarowy config. |
+| Sync wymaga akcji manualnej | ❌ Brak auto-sync | Użytkownik MUSI samodzielnie dodać slot w Slots panel. Brak komunikatu o desynchronizacji. |
+
+**Przepływ desync** (odtworzony):
+1. Wizard: Column configs = 2 → Slot panel: 2 sloty — OK
+2. Visual → "Add column config" → configs = 3, sloty = 2 → Preview shows 2 columns
+3. Slots panel → dodaj slot column:3 → Preview shows 3 columns — OK
 
 ### 5.5 Test — Wizard
 
 | Scenariusz | Wynik | Uwagi |
 |------------|-------|-------|
-| 3 kolumny, etykiety w Wizard | — | — |
-| Zmiana wariantu | — | — |
+| Configs=3, etykiety w Wizard | ❌ Brakuje kol. 3 | Wizard ma 2 inputy (Column 1, Column 2). Kolumna 3 bez etykiety w Wizard — potwierdza C3 |
+| Zmiana wariantu (Wizard dropdown) | ✅ OK | Dropdown zmienia wariant. Efekt wizualny zależy od jawnych spanów — patrz 5.1 |
+
+### 5.6 Test — Advanced Editor
+
+| Scenariusz | Wynik | Uwagi |
+|------------|-------|-------|
+| Cardize OFF → kontrolki stylu | ⚠️ Widoczne | Border width i Column padding widoczne nawet gdy cardize=OFF — potwierdza U3 |
+| JSON snapshot | ✅ OK | Diagnostyczny snapshot pokazuje znormalizowane dane w czasie rzeczywistym |
 
 ---
 
 ## 6. Testy na froncie (http://localhost:3000)
 
-> *Sekcja do uzupełnienia po testach Playwright*
+> **URL frontu:** http://localhost:3000/test-grid-columns-0516  
+> **Status strony:** Published
 
 ### 6.1 Renderowanie HTML
 
 | Sprawdzenie | Wynik | Uwagi |
 |-------------|-------|-------|
-| data-grid-columns-variant | — | — |
-| data-grid-columns-count | — | — |
-| Klasy Tailwind span | — | — |
-| Label kolumny widoczny | — | — |
-| Empty column placeholder | — | — |
+| `data-grid-columns-variant` | ✅ `"equal"` | Atrybut obecny, wartość poprawna |
+| `data-grid-columns-count` | ✅ `"2"` | Atrybut obecny, wartość zgodna ze slotami |
+| Klasy Tailwind span | ✅ `col-span-12 md:col-span-6 lg:col-span-6` | Mobile/tablet/desktop spany poprawne |
+| Label kolumny widoczny | ❌ WIDOCZNY | `display: block; visibility: visible; opacity: 1` — klasa `mb-3 text-xs font-semibold uppercase tracking-[0.16em]` — widoczny publicznie |
+| Empty column placeholder | ❌ WIDOCZNY | Tekst "Empty column." renderowany w DOM frontu publicznego |
+| Console errors | ✅ Brak | Tylko 404 na favicon.ico (nieistotne) |
 
 ### 6.2 Różnice Admin vs Front
 
-| Element | Admin | Front | Różnica |
-|---------|-------|-------|---------|
-| — | — | — | — |
+| Element | Admin Preview | Front (localhost:3000) | Różnica |
+|---------|---------------|------------------------|---------|
+| Label kolumny | Widoczny | Widoczny | ✅ Identyczne |
+| Empty column placeholder | Widoczny | Widoczny | ✅ Identyczne |
+| Cardize styling | Działa | Działa | ✅ Identyczne |
+| CSS var w bg | Renderuje | Renderuje | ✅ Identyczne |
+| Responsywność | Poprawna | Poprawna | ✅ Identyczne |
+
+**Wniosek:** Admin preview i frontend zachowują się **identycznie**. Problemy P1 i P2 (label i placeholder) istnieją w obu miejscach — ich przyczyna leży w komponencie `GridColumnsBlock` który nie rozróżnia między trybem edytora a produkcją.
 
 ---
 
 ## 7. Podsumowanie i priorytety
 
-> *Do uzupełnienia po testach*
+### 7.1 Krytyczne do naprawy (produkcja)
 
-### 7.1 Do naprawy (najpilniejsze)
+| Priorytet | ID | Problem | Zalecenie |
+|-----------|-----|---------|-----------|
+| 🔴 1 | P1 | Label kolumny (`Column 1`, `Column 2`) widoczny publicznie na froncie | Przenieść label do overlay edytora admin, ukryć w render (`hidden` lub usunąć z `GridColumnsBlock`) albo dodać prop `isEditing` |
+| 🔴 2 | P2 | "Empty column." placeholder widoczny publicznie | Renderować tylko w trybie edytora, nie w produkcji |
+| 🔴 3 | U6 | masonry-lite wymusza cardize w render (kod) ale switch UI nie jest zaznaczony | Auto-toggle switch do ON gdy wariant = masonry-lite, albo wyraźny komunikat. Spójność UI/engine |
+| 🟠 4 | C1 | Desync slot/config — manualny sync | Auto-sync configów ze slotami lub blokada "Add column config" gdy sync jest off |
+| 🟠 5 | C2 | Color picker nie wyświetla CSS variable | Pokazać placeholder z nazwą tokenu gdy wartość nie jest hex, lub obsłużyć `var(--*)` w `resolvePickerColor` |
 
-1. **C1** — Desync slot/config — wymaga redesignu UX lub auto-sync
-2. **C2** — Color picker + CSS variables
-3. **P1** — Label kolumny widoczny na froncie (?)
-4. **P2** — Empty column placeholder na froncie (?)
-5. **U6** — masonry-lite + cardize switch niespójność
+### 7.2 Ważne do implementacji (UX)
 
-### 7.2 Do implementacji (high value)
+| Priorytet | ID | Problem | Zalecenie |
+|-----------|-----|---------|-----------|
+| 🟡 6 | C3 | Wizard — etykiety tylko dla kol. 1 i 2 | Dynamicznie generować inputy dla wszystkich konfigurowanych kolumn |
+| 🟡 7 | C4+C5 | Brak podglądu i walidacji sumy spanów | Wskaźnik sumy (np. `6 + 6 = 12 ✓`) przy editing każdej kolumny |
+| 🟡 8 | W3 | Brak "reverse on mobile" | Toggle per widget: odwraca kolejność `flex-col-reverse` na mobile |
+| 🟡 9 | U3 | Advanced — kontrolki cardize zawsze widoczne | Ukryć border/padding gdy cardize=OFF (spójność z Visual) |
+| 🟡 10 | U2 | Brak wizualnych miniaturek wariantów | ASCII lub SVG preview wariantu w kartach wyboru |
 
-1. **C4/C5** — Wizualny podgląd i walidacja sumy spanów
-2. **W1** — Per-kolumnowy styl (cardize per column)
-3. **W3** — Reverse on mobile
-4. **U8** — Szablony układów (presets)
-5. **U2** — Ikony/miniaturki wariantów
+### 7.3 Do rozważenia (long-term)
+
+| ID | Problem |
+|----|---------|
+| W1 | Per-kolumnowy styl (różne tła/ramki per kolumna) |
+| W2 | Kontrola min-height per kolumna |
+| W4 | Per-kolumnowa widoczność (hideOnMobile) |
+| W6 | Breakpoint XL (1280px+) |
+| W7 | Drag & drop reorder kolumn |
+| U8 | Predefiniowane szablony układów (1/3+2/3, etc.) |
+| U1 | Etykiety gap z wartościami px/rem |
 
 ---
 
-*Raport aktualizowany na bieżąco podczas sesji testowej Playwright.*
+## 8. Odkrycia nieudokumentowane przed testami
+
+1. **Wariant Asymmetric — brak efektu przy istniejących spanach** — to jest ukryty bug koncepcyjny. Variant selection zmienia tylko fallback spans, nie aktualizuje istniejących. Użytkownik myśli że zmienia layout, ale nic się nie dzieje wizualnie jeżeli spany są już ustawione.
+
+2. **Page Preview (Runtime) vs Canvas Preview** — są dwa tryby podglądu. Canvas (w edytorze) to tryb edytowalny z theme admina. Runtime (Page Preview modal) to read-only z theme strony. Device switcher istnieje TYLKO w Runtime preview — brak go w Canvas.
+
+3. **Label kolumny jako UX helper lub feature?** — Klasa `text-[var(--color-text)]/65` (65% opacity) sugeruje że jest to zamierzony element "helper" widoczny zarówno w edytorze jak i na produkcji. Jeżeli jest to feature (np. section label), wymaga opcji wyłączenia. Jeżeli to tylko hint edytora, musi być ukryty na froncie.
+
+---
+
+*Raport zakończony. Sesja Playwright #3 — 2026-05-16.*
