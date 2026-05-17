@@ -69,7 +69,7 @@ function LogoCloudVisualEditor(props: LogoCloudEditorProps) {
 
 function removeLogoWithUndo(index: number) {
   const editVersion = editVersionRef.current + 1;
-  updateValue(value, onChange, (current) => {
+  commitLogoEdit((current) => {
     const logos = normalizeLogoCloudLogos(current.logos);
     const removed = logos[index];
     if (!removed || logos.length <= 1) return current;
