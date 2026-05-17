@@ -26,7 +26,9 @@ be split by TASK-256-08 into a page-shell follow-up if still reproducible.
   separate ownership.
 - `_docs/PLAYWRIGHT/REPORT_TIMELINE_WIDGET.md:121,156,170,192,262-273` for
   race conditions, Wizard showing only part of the model, mobile date
-  visibility, line style on cards, connector width, and ARIA.
+  visibility, line style on cards, connector width, and ARIA. These Timeline
+  implementation rows are routed to TASK-256-01 and TASK-291 instead of being
+  fixed in this broad mixed-widget leaf.
 - `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md:154-200,206-236,286-294,320-347`
   for plan count/variant drift, missing clear, static toggle, pricing
   semantics, and validation priorities.
@@ -44,8 +46,9 @@ be split by TASK-256-08 into a page-shell follow-up if still reproducible.
 |---|---|---|---|
 | Hero widget media/gradient/alt/link drift | Fix here | `HeroEditors.tsx`, `hero.tsx` | None |
 | Hero page history auth/toolbar/discard/viewport issues | Out of widget leaf scope | `PageEditor.tsx`, `PageRevisionDrawer.tsx`, preview toolbar owners | TASK-256-08 creates page-shell task if still reproducible |
-| Timeline Visual race and Wizard 4/8 step coverage | Fix here plus TASK-256-01 | `TimelineEditors.tsx`, `timeline.tsx` | None |
-| Timeline mobile date/lineStyle/connector issues | Fix here if current renderer exposes the controls; otherwise classify in report | `timeline.tsx` | TASK-256-08 records deferral if product expansion |
+| Timeline Visual race | Shared root in TASK-256-01; Timeline proof in TASK-291-07 | TASK-256-01 shared editor owners | TASK-291 must not duplicate the shared atomic update contract |
+| Timeline Wizard/status/editor UX | Routed to TASK-291-01 and TASK-291-02 | `TimelineEditors.tsx` via TASK-291 | This leaf does not edit Timeline editors |
+| Timeline mobile date/lineStyle/connector/ARIA issues | Routed to TASK-291-03, with shared ARIA policy in TASK-256-04 | `timeline.tsx` via TASK-291 | This leaf does not edit Timeline renderer |
 | Pricing static toggle/plan-count drift | Fix here | `PricingPlansEditors.tsx`, `pricingPlans.tsx` | None |
 | FAQ single-open, chevron, ARIA, spacing resolver, and `spacing="none"` double-border behavior | Fix here plus TASK-256-04 | `FaqAccordionEditors.tsx`, `faqAccordion.tsx` | FAQ clear/CSS-variable picker work stays in TASK-256-02; question-aware default-open labels stay in TASK-266-04. |
 | FAQ `spacing="none"` double-border renderer defect | Fix here with renderer spacing/border regression | `faqAccordion.tsx` | None |
@@ -59,9 +62,9 @@ be split by TASK-256-08 into a page-shell follow-up if still reproducible.
 
 - [ ] Fix hero widget-owned media, gradient, alt, and safe-link findings.
 - [ ] Add explicit page-shell follow-up notes for non-widget Hero findings.
-- [ ] Fix timeline Visual mode race, Wizard model coverage, mobile date output,
-  line style behavior, connector width, and timeline/list ARIA where current
-  controls exist.
+- [ ] Route timeline Visual mode race to TASK-256-01 and timeline-specific
+  Wizard/status/editor, mobile date, line style, connector width, and
+  timeline/list ARIA findings to TASK-291-01 through TASK-291-03.
 - [ ] Fix pricing plan-count/variant desync, `highlightRing` clear, billing
   toggle behavior, and accessible pricing semantics.
 - [ ] Fix FAQ single-open behavior, expand indicator, spacing resolver, and ARIA.
@@ -79,8 +82,6 @@ be split by TASK-256-08 into a page-shell follow-up if still reproducible.
 |---|---:|---|
 | `core/admin/ui/widgets/editors/HeroEditors.tsx` | media/gradient controls | Make visible controls persist and render truthfully; keep page-shell findings out of this leaf. |
 | `core/widgets/core/hero.tsx` | media/link render | Alt/media/link safety and any confirmed gradient runtime drift. |
-| `core/admin/ui/widgets/editors/TimelineEditors.tsx` | mode/status/Wizard sections | Atomic mode update, complete Wizard fields or truthful Wizard scope, and status/line controls. |
-| `core/widgets/core/timeline.tsx` | renderer | Mobile date, line style, connector, and ARIA semantics. |
 | `core/admin/ui/widgets/editors/PricingPlansEditors.tsx` | 596-615, 965-971 | Plan count/variant sync, missing clear, billing controls, and validation feedback. |
 | `core/widgets/core/pricingPlans.tsx` | 232-239, 390-405, 664-727 | Explicit token guards, interactive or static billing semantics, table/plan ARIA. |
 | `core/admin/ui/widgets/editors/FaqAccordionEditors.tsx` | behavior section | Single-open editor truthfulness only. Clear controls and CSS-variable picker preservation are owned by TASK-256-02; question-aware default-open labels are owned by TASK-266-04. |
@@ -88,20 +89,18 @@ be split by TASK-256-08 into a page-shell follow-up if still reproducible.
 | `core/admin/ui/widgets/editors/TestimonialsEditors.tsx` | 336-350, 659-674, media/style sections | Variant/count sync, text/accent clear controls, slider-static scope, avatar clear/lazy/alt controls, and accessibility labels. |
 | `core/widgets/core/testimonials.tsx` | 38-42, 155-158, 359, 382 | Lazy images, alt semantics, slider-static scroll-snap or truthful naming, heading hierarchy, and static-vs-interactive output. |
 
+Timeline-specific implementation is excluded from this file list; see
+TASK-291-01, TASK-291-02, TASK-291-03, and TASK-291-07.
+
 ## Implementation Pseudocode
 
-Timeline mode:
+Timeline rows:
 
-```tsx
-function handleTimelineModeChange(nextVariant: TimelineVariantId) {
-  const nextData = normalizeTimelineDataForVariant(value, nextVariant);
-  applyVariantDataPatch(nextVariant, nextData);
-}
-```
-
-Timeline mode updates must use the TASK-256-01 atomic block patch helper when
-available. Legacy wrappers fall back to one-argument
-`onVariantChange(nextVariant)` plus `onChange(nextData)`.
+- TASK-256-01 owns the shared atomic editor patch mechanism.
+- TASK-291 owns Timeline-specific editor, renderer, report, docs, and closure
+  work.
+- This leaf may reference TASK-291 evidence in final report closure but must not
+  patch `TimelineEditors.tsx` or `timeline.tsx`.
 
 FAQ single-open:
 
@@ -121,7 +120,8 @@ function bindFaqSingleOpen(root) {
 
 Error handling:
 
-- Timeline unsupported statuses normalize without dropping legacy item data.
+- Timeline unsupported statuses and renderer behavior are validated in TASK-291,
+  not in this mixed-widget leaf.
 - Pricing over-limit or hidden plans are preserved until explicit normalization.
 - FAQ invalid default-open indices clamp to `-1` or the closest valid item.
 - Hero page-shell failures are not marked fixed by widget tests.
@@ -148,8 +148,7 @@ No API routes are added.
 
 - `bun run test:vitest -- tests/vitest/ui/hero-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/hero.test.tsx`
-- `bun run test:vitest -- tests/vitest/ui/timeline-editor-wave.test.tsx`
-- `bun run test:vitest -- tests/vitest/widgets/timeline.test.tsx`
+- Timeline-specific editor/renderer tests run through TASK-291, not this leaf.
 - `bun run test:vitest -- tests/vitest/ui/pricing-plans-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/pricingPlans.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/faq-accordion-editor-wave.test.tsx`
@@ -164,10 +163,11 @@ No API routes are added.
 
 ## Documentation Updates Required
 
-- Update the five touched Playwright reports with fixed/deferred status.
-- Update `_docs/_WIDGETS/HERO.md`, `_docs/_WIDGETS/TIMELINE.md`,
-  `_docs/_WIDGETS/PRICING_PLANS.md`, `_docs/_WIDGETS/FAQ.md`, and
-  `_docs/_WIDGETS/TESTIMONIALS.md` when behavior changes.
+- Update the non-Timeline touched Playwright reports with fixed/deferred status.
+  Timeline report/docs closure is owned by TASK-291-07.
+- Update `_docs/_WIDGETS/HERO.md`, `_docs/_WIDGETS/PRICING_PLANS.md`,
+  `_docs/_WIDGETS/FAQ.md`, and `_docs/_WIDGETS/TESTIMONIALS.md` when behavior
+  changes. Timeline docs are owned by TASK-291.
 - Update `_docs/WIDGETS.md` only if shared accessibility or editor-mode
   contracts change.
 

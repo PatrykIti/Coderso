@@ -41,6 +41,22 @@ strict and beginner-safe.
 | `tests/vitest/ui/timeline-editor-wave.test.tsx` | Cover marker controls and safe-link editor feedback. |
 | `tests/vitest/widgets/widgetSafeHref.test.ts` | Run if shared safe-href behavior changes; do not change it for Timeline only unless required. |
 
+## Field Ownership
+
+| Field path | Type/allowed values | Default and migration rule |
+|---|---|---|
+| `style.accentColor` | optional safe color string | Omitted by default; existing `steps[].accent` values keep rendering as per-step overrides. |
+| `style.markerDisplay` | `"dot"`, `"number"`, or `"icon"` | Defaults to `"dot"` so old payloads render unchanged. |
+| `steps[].markerIcon` | optional plain text icon token/emoji | Empty values are omitted; legacy `steps[].icon` remains readable until docs and editor migration choose the final single field. |
+| `steps[].markerIconColor` | optional safe color string | Omitted by default; renderer falls back to inherited accent/foreground. |
+| `steps[].markerBackgroundColor` | optional safe color string | Omitted by default; renderer falls back to existing marker surface. |
+| `steps[].labelPosition` | optional `"top"` or `"bottom"` only if deterministic across layouts | Omitted by default; if any layout cannot render it truthfully, this field is deferred rather than partially implemented. |
+| `steps[].link` | optional `{ href?: string; label?: string }` | Omitted by default; normalized through `normalizeWidgetSafeHref()` and disabled or rendered outside CTA when a CTA exists. |
+
+Existing `icon`, `accent`, and `cta` payloads must remain backward compatible.
+Any migration should be non-destructive: normalize old fields for rendering and
+write new fields only after the editor intentionally changes them.
+
 ## Implementation Pseudocode
 
 ```ts
@@ -80,6 +96,9 @@ Data flow:
 4. Avoid nested anchors by disabling whole-step link rendering when a step CTA
    is present, or by moving the CTA outside the link according to the final
    product decision.
+5. Keep CTA links and whole-step links mutually safe: never render an `<a>`
+   inside another `<a>`, and document the chosen behavior in
+   `_docs/_WIDGETS/TIMELINE.md`.
 
 Error handling:
 

@@ -46,12 +46,12 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-292-05 | Toggle Block Pane Authoring Guidance and Two-State Documentation | Medium | Medium | Add builder-facing pane guidance and document the intentional two-state Toggle Block boundary |
 | TASK-292-06 | Toggle Block Report Docs Changelog and Closure | Medium | Medium | Refresh Toggle Block report/docs/changelog/board and final validation evidence |
 | TASK-291 | Timeline Widget Playwright Product Followups | High | Very Large | Timeline-only follow-up family for `REPORT_TIMELINE_WIDGET.md`, excluding shared TASK-256 mechanisms |
-| TASK-291-01 | Timeline Wizard Step Authoring and Status UX | High | Large | Expand Wizard all-step editing, status none, icon/accent controls, remove UX, and hidden-title warning after shared atomic updates |
-| TASK-291-02 | Timeline Editor Mode Preview Date Guidance and Reorder UX | High | Large | Add mode preview cards, date validation/help, grouped marker controls, spacing guidance, and drag reorder with button fallback |
-| TASK-291-03 | Timeline Renderer Accessibility Axis and Responsive Correctness | High | Large | Repair Timeline-only ARIA, mobile dates, chronology/milestone responsiveness, connector sizing, line-style semantics, and min-height |
+| TASK-291-01 | Timeline Wizard Step Authoring and Status UX | High | Large | Expand Wizard all-step editing, status authoring, icon/accent controls, remove UX, and hidden-title warning after shared atomic updates |
+| TASK-291-02 | Timeline Editor Mode Preview Date Guidance and Reorder UX | High | Large | Add mode preview cards, date validation/help, Visual no-status UX, grouped marker controls, spacing guidance, and drag reorder with button fallback |
+| TASK-291-03 | Timeline Renderer Accessibility Axis and Responsive Correctness | High | Large | Repair Timeline-only ARIA, mobile dates, chronology/milestone responsiveness, connector sizing, line-style semantics, and short-timeline density |
 | TASK-291-04 | Timeline Marker Accent Numbering and Step Link Model | Medium | Large | Add global accent inheritance, numbered/icon markers, per-step label-position decisions, and safe whole-step links |
 | TASK-291-05 | Timeline Layout Typography Header and Container Controls | Medium | Large | Add title weight, bounded padding/max-width/min-height, header title/description, and dated milestone composition |
-| TASK-291-06 | Timeline Motion Presets and Reduced-Motion Policy | Low | Medium | Decide CSS-safe Timeline motion presets or defer scroll-triggered behavior to an exact shared runtime-motion owner |
+| TASK-291-06 | Timeline Motion Presets and Reduced-Motion Policy | Low | Medium | Decide CSS-safe Timeline motion presets or keep W8 static with exact shared-runtime follow-up if needed |
 | TASK-291-07 | Timeline Report Docs Changelog and Closure | Medium | Medium | Refresh Timeline report/docs/changelog/board and final validation evidence |
 | TASK-281 | Product Table Widget Playwright Product Followups | High | Very Large | Product Table-only follow-up family for `REPORT_PRODUCT_TABLE_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-281-01 | Product Table Admin Preview Resolver Parity | High | Large | Hydrate Product Table admin canvas with commerce rows using the existing query contract without persisting preview-only data |

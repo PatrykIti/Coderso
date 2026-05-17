@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Content + Admin UI + Runtime Render + Playwright QA
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-252, TASK-256-01, TASK-256-04, TASK-256-06-03, TASK-256-08
+**Dependencies:** TASK-252, TASK-256-01, TASK-256-04
 **Status:** To Do
 
 ---
@@ -42,38 +42,38 @@ TASK-291 explicitly excludes these shared mechanisms:
   atomic block update path in `VisualPanel`, `WizardPanel`, `AdvancedPanel`, and
   `WidgetEditorProps`. TASK-291 may only add Timeline-specific mode payload
   normalization after that shared path exists.
-- Shared ARIA policy: TASK-256-04 owns reusable accessibility rules. TASK-291
-  owns Timeline's concrete renderer labels, `aria-current`, hidden emoji icons,
-  and list/section names.
-- Shared cross-widget accessibility bucket: TASK-256-06-03 already tracks the
-  broad hero/timeline/pricing/FAQ/testimonials repair wave. TASK-291 is the
-  Timeline-only physical backlog that TASK-256-08 can reference when closing
-  product-scope Timeline rows.
-- W7 color-contrast validation: TASK-256-08 must route this to an exact shared
-  contrast-validation task before Timeline consumes a helper. TASK-291 must not
-  invent a one-off contrast checker.
+- Shared ARIA policy: TASK-256-04 owns reusable accessibility rules only.
+  TASK-291-03 owns Timeline's concrete renderer labels, `aria-current`, hidden
+  emoji icons, and list/section names.
+- Broad cross-widget accessibility buckets must route Timeline-specific report
+  rows into TASK-291 instead of implementing the same Timeline editor or
+  renderer changes inside TASK-256-06-03.
+- W7 color-contrast validation: excluded until a concrete shared
+  contrast-validation physical task exists. TASK-291-07 records this as
+  `blocked-pending-owner`; TASK-291 must not invent a one-off contrast checker
+  or close W7 through a generic TASK-256/TASK-256-08 reference.
 
 ## Report Classification Matrix
 
 | Report rows | Owner | TASK-291 action |
 |---|---|---|
-| NEW Visual mode race | TASK-256-01, TASK-291-07 evidence | Shared atomic update lands in TASK-256-01; TASK-291 closure verifies Timeline mode changes no longer lose paired data/variant updates. |
-| C1, C2, C3, C4, U5, U7 | TASK-291-01 | Make Wizard edit the full normalized step set, add status/none, icon, accent, and intentional remove UX, and warn on hidden title output. |
-| U1, U2, U3, U4, U8, U9, W2 | TASK-291-02 | Add visual mode cards, mode-change messaging, date input validation/picker decisions, field guidance, grouped marker controls, spacing help, and drag reorder while preserving button fallback. |
-| C5, R1, R2, R3, R4, R5, R6, R7, R8, R9, R10 | TASK-291-03 | Repair Timeline renderer output: mobile dates, responsive chronology/milestone layouts, section/list/step ARIA, emoji hiding, connector sizing, card line semantics, and min-height. |
+| NEW Visual mode race | TASK-256-01 | Shared atomic update lands in TASK-256-01; TASK-291-07 records Timeline-specific proof after the shared fix exists but does not implement the shared editor contract. |
+| C1, C2, C3, C4, U7 | TASK-291-01 | Make Wizard edit the full normalized step set, add Wizard status authoring, icon, accent, and intentional remove UX, and warn on hidden title output. |
+| U1, U2, U3, U4, U5, U8, U9, W2 | TASK-291-02 | Add visual mode cards, mode-change messaging, date input validation/picker decisions, no-status/default-upcoming Visual UX, field guidance, grouped marker controls, spacing help, and drag reorder while preserving button fallback. |
+| C5, R1, R2, R3, R4, R5, R6, R7, R8, R9, R10 | TASK-291-03 | Repair Timeline renderer output: mobile dates, responsive chronology/milestone layouts, section/list/step ARIA, emoji hiding, connector sizing, card line semantics, and short-timeline density. |
 | W3, W4, W6, W10, U6 | TASK-291-04 | Add Timeline-owned marker/accent model: inherited accent, per-step label position, numbered markers, icon-in-marker rendering, safe whole-step links, and icon color/background controls. |
 | W1, W5, W9, W11, W12 | TASK-291-05 | Add Timeline-owned typography weight, padding/max-width/min-height tokens, horizontal chronology/milestone composition, and optional section header fields. |
 | W8 | TASK-291-06 | Add or explicitly defer Timeline-local motion presets with reduced-motion safety and no shared runtime-script invention. |
 | Report refresh, widget docs, board/changelog closure | TASK-291-07 | Refresh report evidence, widget docs, changelog, board, and validation once implementation leaves land. |
-| W7 | TASK-256-08 future physical task | Excluded from TASK-291 until a shared contrast-validation owner exists. |
+| W7 | blocked-pending-owner | Excluded from TASK-291 until a concrete shared contrast-validation owner exists. |
 
 ## Source Report Ledger
 
 | Finding | Owner | Closure rule |
 |---|---|---|
-| NEW | TASK-256-01, TASK-291-07 | Shared atomic update must be fixed by TASK-256-01; TASK-291-07 records Timeline-specific proof. |
+| NEW | TASK-256-01 | Shared atomic update must be fixed by TASK-256-01; TASK-291-07 records Timeline-specific proof only after that owner lands. |
 | C1 | TASK-291-01 | Wizard renders and edits every normalized step from 3 to 8. |
-| C2 | TASK-291-01 | Wizard can set, clear, and preserve step status without forcing `upcoming`. |
+| C2 | TASK-291-01 | Wizard can set and preserve step status without forcing `upcoming`; Visual no-status/default-upcoming UX is U5 in TASK-291-02. |
 | C3 | TASK-291-01 | Wizard can remove a chosen step with min-count guard and recoverable/confirmed UX. |
 | C4 | TASK-291-01 | Wizard exposes beginner-safe icon and accent controls. |
 | C5 | TASK-291-03 | Horizontal milestone connectors size from layout/available gap instead of fixed `4rem`. |
@@ -83,8 +83,8 @@ TASK-291 explicitly excludes these shared mechanisms:
 | W4 | TASK-291-04 | Add per-step label-position override only if renderer remains deterministic. |
 | W5 | TASK-291-05 | Add bounded padding/margin or section spacing tokens instead of raw classes. |
 | W6 | TASK-291-04 | Add numbered marker mode without breaking existing dot markers. |
-| W7 | TASK-256-08 future physical task | Do not implement in TASK-291. |
-| W8 | TASK-291-06 | Add CSS-safe motion presets or defer with exact shared runtime-motion dependency. |
+| W7 | blocked-pending-owner | Do not implement in TASK-291; a concrete shared contrast-validation task must exist before closure can claim this row. |
+| W8 | TASK-291-06 | Add CSS-safe motion presets or explicitly keep Timeline static with a no-code decision; any shared runtime-motion need must name an exact future task before closure. |
 | W9 | TASK-291-05 | Add bounded max-width tokens; no raw class string fields. |
 | W10 | TASK-291-04 | Add optional whole-step link through `normalizeWidgetSafeHref()`. |
 | W11 | TASK-291-05 | Add a truthful horizontal dated milestone/chronology composition or defer with exact rationale. |
@@ -93,7 +93,7 @@ TASK-291 explicitly excludes these shared mechanisms:
 | U2 | TASK-291-02 | Explain mode-to-variant effects after TASK-256-01 makes updates atomic. |
 | U3 | TASK-291-02 | Add date picker or strict date-format feedback without destroying `dateLabel`. |
 | U4 | TASK-291-02 | Add helper text for raw fields such as icon/accent/date. |
-| U5 | TASK-291-01 | Add explicit no-status option and ensure `undefined` omits status badges. |
+| U5 | TASK-291-02 | Add explicit no-status option to Visual status controls and ensure `undefined` omits status badges instead of silently defaulting to `upcoming`. |
 | U6 | TASK-291-04 | Support icon-in-marker plus marker/icon color controls. |
 | U7 | TASK-291-01 | Warn when `titleSize: none` hides titles. |
 | U8 | TASK-291-02 | Group per-step marker/accent controls so dense timelines stay scannable. |
@@ -115,9 +115,9 @@ TASK-291 explicitly excludes these shared mechanisms:
 |---|---|---|---|
 | Schema, defaults, normalizer, renderer | `core/widgets/core/timeline.tsx` | `tests/vitest/widgets/timeline.test.tsx`, `tests/vitest/widgets/renderer.test.tsx` | Add schema/default/SSR assertions for new fields, ARIA, responsive layout markers, safe links, motion classes, and backward compatibility. |
 | Wizard/Visual/Advanced editors | `core/admin/ui/widgets/editors/TimelineEditors.tsx` | `tests/vitest/ui/timeline-editor-wave.test.tsx`, `tests/vitest/pageBuilder/visualPanel.test.tsx` | Add editor-flow tests for all-step Wizard editing, no-status selection, mode previews, date feedback, reorder fallback, grouped controls, and hidden-title warnings. |
-| Shared atomic mode contract | TASK-256-01 owners | `tests/vitest/pageBuilder/visualPanel.test.tsx`, `tests/vitest/pageBuilder/wizardPanel.test.tsx`, `tests/vitest/pageBuilder/advancedPanel.test.tsx` | TASK-291 runs Timeline editor proof only after the shared helper lands. |
-| Shared contrast validation | Future TASK-256-08 physical owner | Shared UI/contrast tests after owner exists | TASK-291 does not add one-off contrast validation. |
-| Widget docs and source report | `_docs/_WIDGETS/TIMELINE.md`, `_docs/PLAYWRIGHT/REPORT_TIMELINE_WIDGET.md` | docs diff checks | Update fixed/deferred status and final usage contract after each implementation wave. |
+| Shared atomic mode contract | TASK-256-01 owners | `tests/vitest/pageBuilder/visualPanel.test.tsx`, `tests/vitest/pageBuilder/wizardPanel.test.tsx`, `tests/vitest/pageBuilder/advancedPanel.test.tsx` | TASK-291 runs Timeline editor proof only after the shared helper/API lands. |
+| Shared contrast validation | Blocked until a concrete shared physical owner exists | Shared UI/contrast tests after owner exists | TASK-291 does not add one-off contrast validation and TASK-291-07 cannot close W7 without an exact owner. |
+| Widget docs and source report | `_docs/_WIDGETS/TIMELINE.md`, `_docs/_WIDGETS/README.md`, `_docs/WIDGETS.md`, `_docs/PLAYWRIGHT/REPORT_TIMELINE_WIDGET.md` | docs diff checks | Update fixed/deferred status and final usage contract after each implementation wave; remove stale "bez dat" summaries where Timeline dates are already part of the live model. |
 
 ## Sub-Tasks
 
@@ -181,8 +181,8 @@ No API routes are added.
   - `bun run test:vitest -- tests/vitest/ui/timeline-editor-wave.test.tsx`
   - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` when SSR
     renderer output changes
-  - `bun run test:vitest -- tests/vitest/pageBuilder/visualPanel.test.tsx` when
-    VisualPanel/editor ownership behavior changes
+  - `bun run test:vitest -- tests/vitest/pageBuilder/visualPanel.test.tsx` only
+    as dependency proof after TASK-256-01 changes shared VisualPanel ownership
   - `bun run test:vitest -- tests/vitest/widgets/widgetSafeHref.test.ts` if
     TASK-291-04 changes safe-link behavior
   - `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` only
@@ -200,8 +200,9 @@ No API routes are added.
   routed status for every TASK-291 report row.
 - Update `_docs/_WIDGETS/TIMELINE.md` when data, editor, runtime, or
   user-facing behavior changes.
-- Update `_docs/WIDGETS.md` only if a source-of-truth shared widget contract
-  changes; Timeline-only field additions belong in the widget doc.
+- Update `_docs/_WIDGETS/README.md` and `_docs/WIDGETS.md` when their Timeline
+  summaries still describe the widget as date-free; broader shared widget
+  contract changes remain outside TASK-291.
 - Update `core/widgets/modulePackMatrix.ts` and `_docs/WIDGET_PACK_MATRIX.md`
   only if pack readiness/completeness changes.
 - Add a final changelog entry and update `_docs/_CHANGELOG/README.md` when this

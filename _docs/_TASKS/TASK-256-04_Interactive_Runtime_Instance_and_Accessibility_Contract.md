@@ -33,6 +33,9 @@ leaves expand it.
 - `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md:117,211-219,241-244`
   reports static billing toggle and pricing semantics gaps.
 - `_docs/PLAYWRIGHT/REPORT_TIMELINE_WIDGET.md:170,266-270` reports ARIA gaps.
+  TASK-256-04 owns the reusable accessibility policy only; concrete Timeline
+  renderer labels, list names, hidden decorative icons, and `aria-current`
+  fixes are routed to TASK-291-03.
 - `_docs/PLAYWRIGHT/REPORT_DIVIDER_WIDGET.md:253` reports separator ARIA gaps.
 
 ## Sub-Tasks
@@ -57,8 +60,11 @@ leaves expand it.
 | `core/admin/ui/widgets/editors/AccordionEditors.tsx` | 272-430 | Keep default-open/collapsible controls consistent with runtime behavior and remove duplicated clear/control drift. |
 | `core/widgets/core/faqAccordion.tsx` | 316-365 | Add section labelling, summary/content IDs, visible expand indicator, and single-open behavior if `allowMultipleOpen=false`. |
 | `core/widgets/core/pricingPlans.tsx` | 682-727 | Make billing toggle interactive if it remains rendered as a toggle; otherwise downgrade to static copy. Add table/plan ARIA where missing. |
-| `core/widgets/core/timeline.tsx` | marker/list render | Add timeline/list semantics and labels for steps/status. |
 | `core/widgets/core/divider.tsx` | separator render | Add appropriate `role="separator"` or `aria-hidden` behavior depending on labelled vs decorative variants. |
+
+Timeline-specific `core/widgets/core/timeline.tsx` ARIA implementation is
+intentionally not in this file list; TASK-291-03 owns those concrete renderer
+edits while this leaf owns shared policy.
 
 ## Implementation Pseudocode
 
@@ -138,7 +144,8 @@ No API routes are added.
 - `bun run test:vitest -- tests/vitest/widgets/accordionWidget.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/faqAccordion.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/pricingPlans.test.tsx`
-- `bun run test:vitest -- tests/vitest/widgets/timeline.test.tsx`
+- Timeline-specific renderer tests run through TASK-291-03 when that physical
+  leaf implements `core/widgets/core/timeline.tsx` changes.
 - `bun run test:vitest -- tests/vitest/widgets/divider.test.tsx`
 - Add duplicate-ID assertions for rendering two instances of each interactive
   widget on one page.

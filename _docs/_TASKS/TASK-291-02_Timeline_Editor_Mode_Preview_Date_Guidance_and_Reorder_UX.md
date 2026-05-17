@@ -15,7 +15,7 @@
 Improve Timeline Visual editor clarity for mode selection, date editing,
 reordering, and dense step controls.
 
-This leaf owns U1-U4, U8, U9, and W2 from
+This leaf owns U1-U5, U8, U9, and W2 from
 `REPORT_TIMELINE_WIDGET.md`. It must use TASK-256-01's atomic update path when
 mode changes also update the preferred variant.
 
@@ -27,6 +27,8 @@ mode changes also update the preferred variant.
   without dropping current data.
 - [ ] Add date input guidance: date picker when possible, format validation, and
   preserved `dateLabel` for non-ISO copy.
+- [ ] Add an explicit Visual `No status` option for each step so clearing status
+  persists as `undefined` and does not render an `upcoming` badge by default.
 - [ ] Add concise helper text for icon, accent, date, spacing, and marker
   controls that currently rely on placeholders only.
 - [ ] Group per-step marker/accent controls so long timelines remain scannable.
@@ -40,7 +42,7 @@ mode changes also update the preferred variant.
 | `core/admin/ui/widgets/editors/TimelineEditors.tsx` | Add mode preview cards, mode-change copy, date validation helpers, grouped marker controls, spacing help, and optional drag reorder. |
 | `core/widgets/core/timeline.tsx` | Add schema/default support only if editor changes introduce persisted fields. |
 | `tests/vitest/ui/timeline-editor-wave.test.tsx` | Cover mode previews, mode side-effect copy, date validation, grouped marker UI, spacing help, and reorder fallback. |
-| `tests/vitest/pageBuilder/visualPanel.test.tsx` | Run when this leaf touches atomic VisualPanel behavior through TASK-256-01 integration. |
+| `tests/vitest/pageBuilder/visualPanel.test.tsx` | Dependency proof only after TASK-256-01 changes shared VisualPanel behavior; this leaf must not patch VisualPanel's shared contract. |
 
 ## Implementation Pseudocode
 
@@ -49,17 +51,10 @@ function updateTimelineMode(nextMode: TimelineMode) {
   const nextVariant = preferredVariantForMode(nextMode);
   const nextData = { ...value, mode: nextMode };
 
-  if (onBlockPatch) {
-    onBlockPatch((current) => ({
-      ...current,
-      variant: nextVariant,
-      data: nextData,
-    }));
-    return;
-  }
-
-  onVariantChange?.(nextVariant);
-  onChange(nextData);
+  applyTimelineEditorPatchAfterTask25601({
+    data: nextData,
+    variant: nextVariant,
+  });
 }
 
 function validateDateInput(date: string) {
@@ -68,22 +63,34 @@ function validateDateInput(date: string) {
     ? { valid: true }
     : { valid: false, message: "Use YYYY-MM-DD or move prose into Date label." };
 }
+
+function updateVisualStatus(index: number, next: string) {
+  updateStep(value, onChange, index, {
+    status: next === "__none__" ? undefined : (next as TimelineStatus),
+  });
+}
 ```
 
 Data flow:
 
 1. Mode selection computes the preferred variant and Timeline data patch
    together.
-2. The editor uses the atomic block patch when available, otherwise keeps the
-   legacy callback fallback for non-shared hosts.
+2. The editor consumes the final TASK-256-01 atomic helper/API after it lands.
+   If the current two-callback `onVariantChange` plus `onChange` contract is
+   still live, paired mode+variant updates remain blocked and this leaf may only
+   ship non-paired UI work until TASK-256-01 is complete.
 3. Date validation is advisory in the editor; the normalizer preserves existing
    date/dateLabel fields unless a schema rule is intentionally tightened.
-4. Drag reorder updates the same `moveStep()` flow used by Up/Down buttons.
+4. Visual status clearing writes `undefined` for no-status and renderer output
+   omits the badge rather than defaulting the display to `upcoming`.
+5. Drag reorder updates the same `moveStep()` flow used by Up/Down buttons.
 
 Error handling:
 
 - Unsupported mode IDs are ignored and do not rewrite the block.
 - Invalid date text shows inline feedback but does not destroy `dateLabel`.
+- Unknown or cleared Visual status values are treated as no-status and must not
+  be serialized as sentinel strings.
 - Drag reorder failures keep the previous step order and stable IDs.
 
 ## Security Contract
@@ -99,8 +106,8 @@ No API routes are added.
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/ui/timeline-editor-wave.test.tsx`
-- `bun run test:vitest -- tests/vitest/pageBuilder/visualPanel.test.tsx` when
-  atomic VisualPanel integration changes
+- `bun run test:vitest -- tests/vitest/pageBuilder/visualPanel.test.tsx` only as
+  TASK-256-01 dependency proof after shared VisualPanel integration changes
 - `bun run test:vitest -- tests/vitest/widgets/timeline.test.tsx` if schema or
   normalizer behavior changes
 - `bun --cwd core lint`
@@ -111,7 +118,7 @@ No API routes are added.
 - Update `_docs/_WIDGETS/TIMELINE.md` with final Visual mode/date/reorder
   behavior.
 - Update `_docs/PLAYWRIGHT/REPORT_TIMELINE_WIDGET.md` with fixed/deferred
-  status for U1-U4, U8, U9, and W2.
+  status for U1-U5, U8, U9, and W2.
 
 ## Acceptance Criteria
 
@@ -119,4 +126,5 @@ No API routes are added.
 - Mode changes preserve Timeline mode and preferred variant together after
   TASK-256-01 lands.
 - Date fields provide actionable feedback without destroying existing labels.
+- Visual status controls expose no-status/default-upcoming behavior explicitly.
 - Reorder supports pointer users and keeps keyboard button fallback.
