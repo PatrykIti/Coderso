@@ -22,8 +22,11 @@ Plans-specific product semantics around the working cycle state.
 
 ## Source Findings
 
-- `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md:251-255` - BF-04 annual
-  savings badge and BF-05 adjacent plan description dependency.
+- `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md:251-252` - BF-04 annual
+  savings badge.
+- `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md:254-255` - BF-05 per-plan
+  description is owned by TASK-278-01 so price semantics do not absorb card
+  content hierarchy.
 - `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md:278-282` - BF-13 currency and
   BF-14 free-plan handling.
 - `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md:408-419` - runtime toggle is

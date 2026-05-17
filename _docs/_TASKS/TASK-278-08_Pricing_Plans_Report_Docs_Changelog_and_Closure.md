@@ -55,7 +55,8 @@ landed.
 |---|---|---|
 | BUG-06 | Fixed by TASK-278-01 | tests + commit |
 | BUG-03 | TASK-256 | shared contract evidence |
-| BF-06 | Deferred | reason and future owner |
+| BF-06 | Fixed by TASK-278-04 or deferred there | tests + commit or owner/reason |
+| A1/A4 | No action | report marked existing labels OK |
 ```
 
 Error handling:

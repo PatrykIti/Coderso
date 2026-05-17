@@ -12,9 +12,9 @@
 
 ## Overview
 
-Add Pricing Plans-owned card hierarchy controls: plan-level surfaces, CTA
-variants, highlighted badge treatment, and a "popular" banner affordance for
-highlighted plans.
+Add Pricing Plans-owned card hierarchy controls: plan-level descriptions,
+plan-level surfaces, CTA variants, highlighted badge treatment, and a "popular"
+banner affordance for highlighted plans.
 
 This leaf must not reimplement TASK-256 clear-control or safe-link behavior.
 It builds on those contracts and only expands the Pricing Plans product model.
@@ -25,6 +25,8 @@ It builds on those contracts and only expands the Pricing Plans product model.
   badge uses `highlightRing`.
 - `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md:245-252` - BF-02 and BF-03
   for per-plan surface and CTA style.
+- `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md:254-255` - BF-05 per-plan
+  description/subline.
 - `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md:260-261` - BF-07 highlighted
   banner.
 - `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md:291` - A2 badge contrast
@@ -41,10 +43,10 @@ It builds on those contracts and only expands the Pricing Plans product model.
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/pricingPlans.tsx` | Extend `PricingPlanItem`, schema, defaults, normalizer, and card renderer for `surface`, `badgeTone`, `ctaStyle`, and optional highlighted-banner text without raw class names. |
-| `core/admin/ui/widgets/editors/PricingPlansEditors.tsx` | Add plan-local visual controls in Visual mode and keep labels stable for repeated plan cards. |
-| `tests/vitest/widgets/pricingPlans.test.tsx` | Cover normalized plan-level visual fields, badge tone fallback, highlighted banner output, and CTA style rendering. |
-| `tests/vitest/ui/pricing-plans-editor-wave.test.tsx` | Cover plan-level visual controls and highlighted-plan indicator updates. |
+| `core/widgets/core/pricingPlans.tsx` | Extend `PricingPlanItem`, schema, defaults, normalizer, and card renderer for `description`, `surface`, `badgeTone`, `ctaStyle`, and optional highlighted-banner text without raw class names. |
+| `core/admin/ui/widgets/editors/PricingPlansEditors.tsx` | Add plan-local description and visual controls in Visual mode and keep labels stable for repeated plan cards. |
+| `tests/vitest/widgets/pricingPlans.test.tsx` | Cover normalized plan description, plan-level visual fields, badge tone fallback, highlighted banner output, and CTA style rendering. |
+| `tests/vitest/ui/pricing-plans-editor-wave.test.tsx` | Cover plan description editing, plan-level visual controls, and highlighted-plan indicator updates. |
 | `tests/vitest/widgets/renderer.test.tsx` | Update if shared renderer snapshots or widget markers change. |
 | `tests/unit/widgets/validator.test.ts` | Add schema accept/reject coverage for new plan visual fields. |
 | `_docs/_WIDGETS/PRICING_PLANS.md` | Document plan-level visual fields and highlighted-banner behavior. |
@@ -57,6 +59,7 @@ type PricingPlanCtaStyle = "outline" | "filled" | "ghost";
 type PricingPlanBadgeTone = "neutral" | "accent" | "highlight";
 
 type PricingPlanVisual = {
+  description?: string;
   surface?: string;
   badgeTone?: PricingPlanBadgeTone;
   ctaStyle?: PricingPlanCtaStyle;
@@ -65,6 +68,7 @@ type PricingPlanVisual = {
 
 function normalizePricingPlanVisual(input: unknown, highlighted: boolean): PricingPlanVisual {
   return {
+    description: normalizeOptionalText(input.description),
     surface: normalizeClearableColor(input.surface),
     badgeTone: isBadgeTone(input.badgeTone) ? input.badgeTone : highlighted ? "highlight" : "neutral",
     ctaStyle: isCtaStyle(input.ctaStyle) ? input.ctaStyle : highlighted ? "filled" : "outline",
@@ -75,7 +79,7 @@ function normalizePricingPlanVisual(input: unknown, highlighted: boolean): Prici
 
 Data flow:
 
-- Editor controls patch `plans[index].visual`.
+- Editor controls patch `plans[index].description` and `plans[index].visual`.
 - `normalizePricingPlansData` normalizes legacy and new plan visual fields.
 - `PricingPlansBlock` passes normalized plan visuals into cards and CTA render.
 - Renderer emits stable `data-pricing-plan` and `data-pricing-highlighted`
@@ -116,7 +120,8 @@ No API routes are added.
 ## Documentation Updates Required
 
 - `_docs/_WIDGETS/PRICING_PLANS.md`
-- `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md`
+- `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md` with BUG-06, BF-02,
+  BF-03, BF-05, BF-07, and A2 evidence or deferral notes.
 - `_docs/_TASKS/TASK-278-01_Pricing_Plans_Card_Visual_Hierarchy_and_CTA_Styles.md`
 - `_docs/_TASKS/README.md` on status changes
 
@@ -128,4 +133,6 @@ No API routes are added.
   box shadow.
 - Plan-level CTA styles are schema-owned, normalized, rendered, and covered by
   editor and renderer tests.
+- Plan cards can render schema-owned description/subline copy with legacy
+  payloads still omitting it safely.
 - Existing saved Pricing Plans payloads still render with compatible defaults.

@@ -70,8 +70,10 @@ to Pricing Plans product fields, copy, and layout behavior.
 | BUG-06 all badges use `highlightRing` | TASK-278-01 | Pricing Plans card hierarchy and badge tone. |
 | BF-02 per-plan background color | TASK-278-01 | Plan-level card style, normalized as product fields. |
 | BF-03 per-plan CTA button style | TASK-278-01 | Plan-level CTA hierarchy; safe href remains TASK-256. |
+| BF-05 per-plan description/subline | TASK-278-01 | Pricing Plans card content hierarchy and schema-owned plan summary. |
 | BF-07 "Most popular" top banner | TASK-278-01 | Highlighted-card product treatment. |
 | UX-04 Wizard lacks badge, CTA, features, period | TASK-278-02 | Pricing Plans onboarding/editor flow. |
+| UX-05 Advanced "Normalization and safeguards" copy is unclear | TASK-278-02 | Pricing Plans-local reset/fix copy after TASK-256 Advanced ownership is settled. |
 | UX-06 remove plan without confirmation or undo | TASK-278-02 | Pricing Plans repeated-plan destructive edit UX. |
 | UX-07 missing highlighted indicator in plan list | TASK-278-02 | Editor list affordance. |
 | UX-08 billing labels visible while toggle disabled | TASK-278-02 | Local billing editor copy/visibility only; toggle runtime is TASK-256. |
@@ -88,6 +90,13 @@ to Pricing Plans product fields, copy, and layout behavior.
 | BF-12 configurable max-width | TASK-278-06 | Pricing section layout width. |
 | BF-10 two-plans variant | TASK-278-07 | New Pricing Plans product variant and pack docs. |
 | Report fixed/deferred notes, widget docs, changelog, board closure | TASK-278-08 | Final documentation and evidence pass. |
+
+## No-Action Report Findings
+
+| Report finding | Decision | Reason |
+|---|---|---|
+| A1 CTA link accessible name | No TASK-278 task | The report marks the existing CTA link label as OK. Keep covered by existing accessibility tests unless implementation changes CTA rendering. |
+| A4 Included/Not included comparison labels | No TASK-278 task | The report marks the existing comparison labels as OK. TASK-278-05 may extend table hierarchy but must preserve this baseline. |
 
 ## Sub-Tasks
 

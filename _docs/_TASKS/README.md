@@ -39,8 +39,8 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-278 | Pricing Plans Widget Playwright Product Followups | High | Very Large | Pricing Plans-only follow-up family for `REPORT_PRICING_PLANS_WIDGET.md`, excluding TASK-256 shared-contract scope |
-| TASK-278-01 | Pricing Plans Card Visual Hierarchy and CTA Styles | High | Large | Add plan-level surface, badge tone, highlighted banner, and CTA style controls after TASK-256 shared safety |
-| TASK-278-02 | Pricing Plans Content Wizard and Destructive Edit UX | High | Large | Expand Wizard content authoring, highlight indicators, disabled billing label UX, remove confirmation/undo, and feature autofocus |
+| TASK-278-01 | Pricing Plans Card Visual Hierarchy and CTA Styles | High | Large | Add plan description, plan-level surface, badge tone, highlighted banner, and CTA style controls after TASK-256 shared safety |
+| TASK-278-02 | Pricing Plans Content Wizard and Destructive Edit UX | High | Large | Expand Wizard content authoring, Advanced reset copy, highlight indicators, disabled billing label UX, remove confirmation/undo, and feature autofocus |
 | TASK-278-03 | Pricing Plans Billing Value Copy and Price Semantics | High | Large | Add explicit savings copy, free/custom display, and structured price semantics after TASK-256 billing interactivity |
 | TASK-278-04 | Pricing Plans Feature Marker and Feature Metadata | Medium | Large | Replace placeholder icon marker with bounded feature metadata and safe icon/status presets |
 | TASK-278-05 | Pricing Plans Comparison Rows Product Table | High | Large | Add comparison header hierarchy, optional header CTA/badges, and sticky header behavior after TASK-256 table ARIA |

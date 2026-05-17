@@ -15,8 +15,8 @@
 Improve Pricing Plans editor authoring flow: Wizard must cover the minimum
 useful plan content, destructive plan removal must be confirmable or undoable,
 highlighted plans must be visible in the plan list, disabled billing labels must
-not look active, and newly added feature rows should be ready for immediate
-editing.
+not look active, Advanced reset/fix controls must use product-readable copy, and
+newly added feature rows should be ready for immediate editing.
 
 This leaf must not implement the TASK-256 plan-count/variant synchronization
 fix. It assumes that shared contract has landed and keeps this scope to
@@ -26,6 +26,8 @@ Pricing Plans authoring affordances.
 
 - `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md:218-220` - UX-04 Wizard lacks
   badge, CTA, features, and period.
+- `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md:222-224` - UX-05 Advanced
+  "Normalization and safeguards" copy is unclear.
 - `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md:226-232` - UX-06 and UX-07
   remove confirmation and highlighted indicator.
 - `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md:234-236` - UX-08 billing
@@ -44,9 +46,9 @@ Pricing Plans authoring affordances.
 
 | File | Required change |
 |---|---|
-| `core/admin/ui/widgets/editors/PricingPlansEditors.tsx` | Add Wizard fields for period, badge, CTA label/href, and one or more features; add highlighted list badge; gate billing labels when disabled; add confirm/undo remove behavior; focus newly added feature input. |
+| `core/admin/ui/widgets/editors/PricingPlansEditors.tsx` | Add Wizard fields for period, badge, CTA label/href, and one or more features; rename/explain Pricing Plans Advanced reset/fix controls after TASK-256 Advanced ownership is settled; add highlighted list badge; gate billing labels when disabled; add confirm/undo remove behavior; focus newly added feature input. |
 | `core/widgets/core/pricingPlans.tsx` | Add only normalizer/schema support required by Wizard-owned fields if not already present. Do not duplicate TASK-256 variant/count logic. |
-| `tests/vitest/ui/pricing-plans-editor-wave.test.tsx` | Cover Wizard content fields, disabled billing label behavior, highlighted list indicator, remove confirmation/undo, and feature autofocus. |
+| `tests/vitest/ui/pricing-plans-editor-wave.test.tsx` | Cover Wizard content fields, Advanced reset/fix copy, disabled billing label behavior, highlighted list indicator, remove confirmation/undo, and feature autofocus. |
 | `tests/vitest/widgets/pricingPlans.test.tsx` | Update only if schema/default ownership changes. |
 | `_docs/_WIDGETS/PRICING_PLANS.md` | Document Wizard minimum fields and destructive-edit behavior. |
 | `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md` | Mark UX-04/UX-06/UX-07/UX-08 and feature autofocus fixed or deferred. |
@@ -81,6 +83,9 @@ Data flow:
 - Billing toggle label controls read from `billingToggle` and become inactive
   when `billingToggle.enabled !== true`.
 - Feature autofocus is editor-only state and never persists into widget data.
+- Advanced reset/fix buttons call the existing normalization helpers but expose
+  Pricing Plans-specific labels and helper copy instead of raw normalization
+  jargon.
 
 Error handling:
 
@@ -115,7 +120,8 @@ No API routes are added.
 ## Documentation Updates Required
 
 - `_docs/_WIDGETS/PRICING_PLANS.md`
-- `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md`
+- `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md` with UX-04, UX-05, UX-06,
+  UX-07, UX-08, and feature-autofocus evidence or deferral notes.
 - `_docs/_TASKS/TASK-278-02_Pricing_Plans_Content_Wizard_and_Destructive_Edit_UX.md`
 - `_docs/_TASKS/README.md` on status changes
 
@@ -126,4 +132,6 @@ No API routes are added.
 - Removing a plan requires confirmation or offers a working undo path.
 - Highlighted plan state is visible in the repeated plan list.
 - Disabled billing-toggle label fields are not presented as active controls.
+- Advanced reset/fix controls have user-facing labels that explain the affected
+  Pricing Plans data.
 - Adding a feature supports immediate keyboard editing.
