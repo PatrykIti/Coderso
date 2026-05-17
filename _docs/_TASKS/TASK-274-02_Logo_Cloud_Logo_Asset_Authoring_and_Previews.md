@@ -73,6 +73,15 @@ type UseLogoMediaSelectionOptions = {
   persistAssetId: boolean;
 };
 
+type UseLogoCloudEditCoordinatorOptions = {
+  value: LogoCloudData;
+  onChange: (next: LogoCloudData) => void;
+  persistAssetId: boolean;
+};
+
+// Default stays false unless this leaf makes imageAssetId schema-owned.
+const logoCloudSupportsSchemaOwnedImageAssetId = false;
+
 async function resolveLogoMediaAsset(assetId: string) {
   const items = await listMediaCached({ force: false });
   const match = items.find((item) => item.id === assetId);
@@ -90,6 +99,10 @@ function resolveLogoMediaPickerChange(value: unknown): LogoMediaPickerChange {
     return { kind: "select", assetId: value };
   }
   return { kind: "invalid" };
+}
+
+function resolveLogoRowKey(index: number, logo: LogoCloudLogo) {
+  return logo.id?.trim() || `index:${index}`;
 }
 
 function patchLogoCloudLogo(
@@ -112,11 +125,11 @@ function useLogoMediaSelection({
   const requestIdsByLogoRef = useRef<Record<string, number>>({});
   const structureVersionRef = useRef(0);
   const latestValueRef = useRef(value);
+  const [selectedAssetIdsByLogoKey, setSelectedAssetIdsByLogoKey] = useState<Record<string, string>>({});
   latestValueRef.current = value;
 
   function resolveRequestKey(index: number, logo: LogoCloudLogo) {
-    const rowKey = logo.id?.trim() || `index:${index}`;
-    return `${structureVersionRef.current}:${rowKey}`;
+    return `${structureVersionRef.current}:${resolveLogoRowKey(index, logo)}`;
   }
 
   function invalidateLogoMediaRequest(index: number, logo: LogoCloudLogo) {
@@ -127,6 +140,7 @@ function useLogoMediaSelection({
   function invalidateAllLogoMediaRequests() {
     structureVersionRef.current += 1;
     requestIdsByLogoRef.current = {};
+    setSelectedAssetIdsByLogoKey({});
   }
 
   function findLogoIndexByRequestKey(requestKey: string) {
@@ -143,8 +157,22 @@ function useLogoMediaSelection({
     commitLogoMutation((current) => patchLogoCloudLogo(current, index, patch));
   }
 
+  function clearTransientAssetSelection(index: number, logo: LogoCloudLogo) {
+    const rowKey = resolveLogoRowKey(index, logo);
+    setSelectedAssetIdsByLogoKey((current) => {
+      const { [rowKey]: _removed, ...next } = current;
+      return next;
+    });
+  }
+
+  function getLogoPickerValue(index: number, logo: LogoCloudLogo) {
+    const rowKey = resolveLogoRowKey(index, logo);
+    return logo.imageAssetId ?? selectedAssetIdsByLogoKey[rowKey] ?? null;
+  }
+
   function clearLogoImage(index: number, logo: LogoCloudLogo) {
     invalidateLogoMediaRequest(index, logo);
+    clearTransientAssetSelection(index, logo);
     commitLogoPatch(index, { image: "", imageAssetId: undefined });
   }
 
@@ -163,9 +191,14 @@ function useLogoMediaSelection({
     }
     const assetId = change.assetId;
     const requestKey = resolveRequestKey(index, logo);
+    const rowKey = resolveLogoRowKey(index, logo);
     const requestId = (requestIdsByLogoRef.current[requestKey] ?? 0) + 1;
     requestIdsByLogoRef.current[requestKey] = requestId;
-    const next = await resolveLogoMediaAsset(assetId);
+    setSelectedAssetIdsByLogoKey((current) => ({ ...current, [rowKey]: assetId }));
+    const next = await resolveLogoMediaAsset(assetId).catch((error) => {
+      clearTransientAssetSelection(index, logo);
+      throw error;
+    });
     if (requestIdsByLogoRef.current[requestKey] !== requestId) return;
     const latestIndex = findLogoIndexByRequestKey(requestKey);
     if (latestIndex < 0) return;
@@ -185,10 +218,16 @@ function useLogoMediaSelection({
     invalidateAllLogoMediaRequests,
     clearLogoImage,
     commitLogoPatch,
+    clearTransientAssetSelection,
+    getLogoPickerValue,
   };
 }
 
-function LogoCloudVisualEditor({ value, onChange }: LogoCloudVisualEditorProps) {
+function useLogoCloudEditCoordinator({
+  value,
+  onChange,
+  persistAssetId,
+}: UseLogoCloudEditCoordinatorOptions) {
   const mediaSelectionRef = useRef<ReturnType<typeof useLogoMediaSelection> | null>(null);
   const commitLogoMutation: CommitLogoMutation = (updater, options) => {
     if (options?.structural) mediaSelectionRef.current?.invalidateAllLogoMediaRequests();
@@ -200,6 +239,19 @@ function LogoCloudVisualEditor({ value, onChange }: LogoCloudVisualEditorProps) 
     persistAssetId,
   });
   mediaSelectionRef.current = mediaSelection;
+
+  return {
+    commitLogoMutation,
+    mediaSelection,
+  };
+}
+
+function LogoCloudWizardEditor({ value, onChange }: LogoCloudEditorProps) {
+  const { commitLogoMutation, mediaSelection } = useLogoCloudEditCoordinator({
+    value,
+    onChange,
+    persistAssetId: logoCloudSupportsSchemaOwnedImageAssetId,
+  });
 
   function handleLogoStructureEdit(updater: (current: LogoCloudData) => LogoCloudData) {
     commitLogoMutation(updater, { structural: true });
@@ -221,8 +273,40 @@ function LogoCloudVisualEditor({ value, onChange }: LogoCloudVisualEditorProps) 
   );
 }
 
+function LogoCloudVisualEditor({ value, onChange }: LogoCloudEditorProps) {
+  const { commitLogoMutation, mediaSelection } = useLogoCloudEditCoordinator({
+    value,
+    onChange,
+    persistAssetId: logoCloudSupportsSchemaOwnedImageAssetId,
+  });
+
+  function handleLogoStructureEdit(updater: (current: LogoCloudData) => LogoCloudData) {
+    commitLogoMutation(updater, { structural: true });
+  }
+
+  return (
+    <>
+      {logos.map((logo, index) => (
+        <LogoImageControl
+          key={logo.id}
+          logo={logo}
+          index={index}
+          mediaSelection={mediaSelection}
+        />
+      ))}
+      <Button onClick={() => handleLogoStructureEdit(addLogoToData)}>Add logo</Button>
+    </>
+  );
+}
+
 function LogoImageControl({ logo, index, mediaSelection }: LogoImageControlProps) {
-  const { handleLogoAssetChange, invalidateLogoMediaRequest, clearLogoImage, commitLogoPatch } = mediaSelection;
+  const {
+    handleLogoAssetChange,
+    invalidateLogoMediaRequest,
+    clearLogoImage,
+    clearTransientAssetSelection,
+    commitLogoPatch,
+  } = mediaSelection;
 
   return (
     <div>
@@ -233,6 +317,7 @@ function LogoImageControl({ logo, index, mediaSelection }: LogoImageControlProps
         value={logo.image ?? ""}
         onChange={(event) => {
           invalidateLogoMediaRequest(index, logo);
+          clearTransientAssetSelection(index, logo);
           commitLogoPatch(index, { image: event.target.value, imageAssetId: undefined });
         }}
       />
@@ -245,7 +330,7 @@ function LogoImageControl({ logo, index, mediaSelection }: LogoImageControlProps
         onChange={(event) => commitLogoPatch(index, { href: event.target.value })}
       />
       <MediaPicker
-        value={logo.imageAssetId ?? null}
+        value={mediaSelection.getLogoPickerValue(index, logo)}
         onChange={(next) => void handleLogoAssetChange(index, logo, resolveLogoMediaPickerChange(next))}
         multiple={false}
         accept={["image/*"]}
@@ -261,9 +346,11 @@ Editor data flow:
 1. Wizard keeps its minimal setup role, but each visible logo row gets compact
    image, alt, and link fields or an image-picker affordance next to the name
    field.
-2. Visual and Wizard parent editors create one `useLogoMediaSelection` instance
-   and pass its handlers into repeated logo rows. Do not instantiate the hook in
-   `LogoImageControl`; row unmounts must not freeze `latestValueRef`.
+2. Visual and Wizard parent editors both use the shared
+   `useLogoCloudEditCoordinator` hook, which owns `commitLogoMutation` and one
+   `useLogoMediaSelection` instance for that editor render. Do not instantiate
+   the media hook in `LogoImageControl`; row unmounts must not freeze
+   `latestValueRef`.
 3. Visual repeated logo cards reuse the same image control and show a bounded
    thumbnail preview when `logo.image` is non-empty.
 4. MediaPicker selection resolves the public media URL through cache-first
@@ -273,12 +360,17 @@ Editor data flow:
    `MediaPicker`'s `unknown` `onChange` payload through
    `resolveLogoMediaPickerChange` before calling the media resolver: string
    selects an asset, `null` is the real single-select picker clear event, and
-   every other payload is invalid/no-op.
+   every other payload is invalid/no-op. When `imageAssetId` is not schema-owned,
+   keep the selected asset id only in transient `selectedAssetIdsByLogoKey` state
+   so the current picker can render the selected item/remove affordance without
+   persisting a new field.
 5. Manual image URL and link URL entry remain supported for backward
    compatibility. Use an explicit Clear image control and the MediaPicker's
    trusted single-select remove event for destructive image removal; do not
    treat malformed or unknown non-null picker payloads as a request to erase an
-   existing manual URL.
+   existing manual URL. The picker remove event is available only for a persisted
+   or transient selected asset id; the explicit Clear image control remains the
+   destructive path for legacy manual URLs with no selected asset state.
 6. Link URL validation UI consumes TASK-256 shared safe-link output when that
    contract exists; do not hand-roll a second link validator in this leaf.
 7. Runtime `img` output uses explicit `logo.alt` when present and falls back to
@@ -291,9 +383,9 @@ Editor data flow:
    Manual image URL edits also use the row-level invalidation helper.
 9. Replace the current side-effect-only `updateLogo(value, onChange, ...)` call
    sites with a pure `patchLogoCloudLogo(current, index, patch)` helper inside
-   the coordinator path. When TASK-274-03 is present, `commitLogoMutation` should
-   delegate to its `commitLogoEdit` implementation rather than maintaining a
-   second mutation path.
+   the coordinator path. When TASK-274-03 is present, the shared coordinator must
+   expose the same `commitLogoEdit` implementation to Wizard and Visual rather
+   than keeping a second mutation path in either mode.
 
 Error handling:
 
@@ -303,6 +395,9 @@ Error handling:
   `image` plus `imageAssetId`. Unknown or malformed non-null MediaPicker values
   resolve to `invalid`, invalidate only the row's pending media request, and keep
   the previous `image`/`imageAssetId` unchanged.
+- If `resolveLogoMediaAsset` fails after a selection, clear only the transient
+  picker selection for that row, surface the inline error, and keep persisted
+  logo data unchanged.
 - Guard async media-cache resolution with a per-logo request ID/ref and commit
   resolved patches through a `latestValueRef` helper. After `await`, re-read the
   current logo row/index by stable logo key before applying the image/name patch.
@@ -340,6 +435,12 @@ Regression-test shape:
 - Assert malformed or unknown non-null MediaPicker payloads do not clear an
   existing manual image URL, while both the real picker `null` remove event and
   the explicit Clear image control clear `image` and `imageAssetId`.
+- Assert a picker-selected asset id is retained in transient editor state when
+  `imageAssetId` is not schema-owned, so the MediaPicker selected item and remove
+  affordance render during the current edit session without persisting
+  `imageAssetId`.
+- Assert a legacy manual image URL with no persisted/transient asset id can still
+  be cleared by the explicit Clear image button.
 - Assert unrelated logo edits made while media resolution is pending are
   preserved when the media selection resolves, proving the commit path uses the
   latest editor value.
@@ -350,6 +451,9 @@ Regression-test shape:
   when the normalizer reuses a fallback id such as `logo-1`.
 - Assert Wizard edits persist `logos[index].image`, `logos[index].alt`, and
   `logos[index].href`.
+- Assert Wizard and Visual row edits both route through the shared
+  `useLogoCloudEditCoordinator` path, so TASK-274-03 pending Undo and structural
+  media invalidation behavior cannot be bypassed by one editor mode.
 - Assert Visual thumbnails render success and unavailable states without
   mutating saved logo data.
 - Assert runtime rendering uses explicit alt text when present and `name`

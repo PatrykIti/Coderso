@@ -47,7 +47,7 @@ type PendingLogoRemoval = {
 } | null;
 
 type LogoDragState = {
-  logoId: string;
+  logoKey: string;
   fromIndex: number;
   editVersion: number;
 } | null;
@@ -61,7 +61,17 @@ type CommitLogoEditOptions = {
   structural?: boolean;
 };
 
-function LogoCloudVisualEditor({ value, onChange }: LogoCloudEditorProps) {
+type UseLogoCloudEditCoordinatorOptions = {
+  value: LogoCloudData;
+  onChange: (next: LogoCloudData) => void;
+  persistAssetId: boolean;
+};
+
+function resolveLogoDragKey(index: number, logo: LogoCloudLogo) {
+  return logo.id?.trim() || `index:${index}`;
+}
+
+function useLogoCloudEditCoordinator({ value, onChange, persistAssetId }: UseLogoCloudEditCoordinatorOptions) {
   const [pendingRemoval, setPendingRemoval] = useState<PendingLogoRemoval>(null);
   const [dragState, setDragState] = useState<LogoDragState>(null);
   const editVersionRef = useRef(0);
@@ -82,8 +92,13 @@ function LogoCloudVisualEditor({ value, onChange }: LogoCloudEditorProps) {
     onChange(normalizeValue(next));
   }
 
-  const mediaSelection = useLogoMediaSelection({ value, commitLogoMutation: commitLogoEdit, persistAssetId });
+  const mediaSelection = useLogoMediaSelection({
+    value,
+    commitLogoMutation: (updater, options) => commitLogoEdit((current) => updater(current), options),
+    persistAssetId,
+  });
   mediaSelectionRef.current = mediaSelection;
+  return { commitLogoEdit, mediaSelection, pendingRemoval, setPendingRemoval, dragState, setDragState };
 }
 
 function removeLogoWithUndo(index: number) {
@@ -124,14 +139,14 @@ function LogoRemovalUndoNotice() {
 }
 
 function handleLogoDragStart(index: number, logo: LogoCloudLogo) {
-  setDragState({ logoId: logo.id, fromIndex: index, editVersion: editVersionRef.current });
+  setDragState({ logoKey: resolveLogoDragKey(index, logo), fromIndex: index, editVersion: editVersionRef.current });
 }
 
 function handleLogoDrop(toIndex: number) {
   if (!dragState || dragState.editVersion !== editVersionRef.current) return;
   commitLogoEdit((current) => {
     const logos = normalizeLogoCloudLogos(current.logos);
-    const fromIndex = logos.findIndex((item) => item.id === dragState.logoId);
+    const fromIndex = logos.findIndex((item, itemIndex) => resolveLogoDragKey(itemIndex, item) === dragState.logoKey);
     if (fromIndex < 0 || fromIndex === toIndex || toIndex < 0 || toIndex >= logos.length) return current;
     const nextLogos = [...logos];
     const [item] = nextLogos.splice(fromIndex, 1);
@@ -150,15 +165,16 @@ Editor data flow:
    invalidated.
 2. Add a drag handle per logo card with `draggable`, `aria-label`, and stable
    `data-widget-control` metadata.
-3. Store only transient id/version-based drag and pending-removal state in
-   `LogoCloudVisualEditor` local state; persisted order changes flow through
-   `onChange` once a valid drop occurs.
+3. Store only transient key/version-based drag and pending-removal state in the
+   shared `useLogoCloudEditCoordinator` hook used by both Wizard and Visual;
+   persisted order changes flow through `onChange` once a valid drop occurs.
 4. Use immediate remove with inline Undo that restores the exact removed item at
    its previous index. Do not also add a confirmation dialog in this leaf.
-5. Route every logo mutation through `commitLogoEdit`: TASK-274-02 row patches
-   call it with the default non-structural options, while add, remove, move,
-   drag/drop, count, and restore call it with `{ structural: true }`. Structural
-   calls must invoke the media-selection helper's
+5. Route every logo mutation through the shared `commitLogoEdit` returned by
+   `useLogoCloudEditCoordinator`: TASK-274-02 Wizard/Visual row patches call it
+   with the default non-structural options, while add, remove, move, drag/drop,
+   count, and restore call it with `{ structural: true }`. Structural calls must
+   invoke the media-selection helper's
    `invalidateAllLogoMediaRequests` before committing the `logos[]` change.
    Every committed mutation increments `editVersionRef` and clears pending Undo
    unless `removeLogoWithUndo` returns the helper's `pendingRemoval` result shape.
@@ -167,6 +183,9 @@ Editor data flow:
 Error handling:
 
 - Ignore drops with missing, same, out-of-range, or stale indices.
+- Use `resolveLogoDragKey(index, logo)` instead of raw `logo.id` so optional IDs
+  stay type-clean; fallback `index:*` keys are valid only for the current
+  normalized list version and are invalidated by `editVersionRef`.
 - Do not normalize duplicate IDs into a different item until final persisted
   value passes through the existing normalizer.
 - Keep the existing order if remove is attempted while only one logo remains.
@@ -188,6 +207,8 @@ Regression-test shape:
   emitted `logos[]` order changes once on drop.
 - Invalid drag/drop tests cover same-index drops, out-of-range targets, missing
   drag payloads, and stale drag state without changing order.
+- Optional-id drag tests cover a normalized row with no `id` and assert fallback
+  drag keys stay type-clean and stale after another edit.
 - Move up / Move down fallback tests remain alongside drag tests so keyboard
   reorder behavior stays covered.
 
