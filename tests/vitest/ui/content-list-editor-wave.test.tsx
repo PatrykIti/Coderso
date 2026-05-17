@@ -631,10 +631,7 @@ test("ContentList visual editor switches between listing and legacy sources, per
     React.act(() => {
       setSelectValue(findSelectsByOptions(view.container, ["1", "2", "3"])[0], "2");
       setSelectValue(findSelectsByOptions(view.container, ["none", "sm", "md", "lg"])[0], "lg");
-      setSelectValue(
-        findSelectsByOptions(view.container, ["outlined", "elevated", "minimal"])[0],
-        "elevated"
-      );
+      clickElement(findButtonByText(view.container, "Elevated"));
       setSelectValue(
         findSelectsByOptions(view.container, ["standard", "wide", "square", "compact"])[0],
         "wide"
@@ -776,7 +773,6 @@ test("ContentList visual editor switches between listing and legacy sources, per
         style: expect.objectContaining({
           columns: "2",
           gap: "lg",
-          cardStyle: "elevated",
           imageAspect: "wide",
           ctaLabel: "View entry",
         }),
@@ -837,6 +833,57 @@ test("ContentList visual editor updates pagination controls", async () => {
         }),
       })
     );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("ContentList visual editor updates card style and tag display controls", async () => {
+  const { ContentListVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/ContentListEditors");
+
+  const onChangeSpy = vi.fn();
+
+  const Harness = () => {
+    const [value, setValue] = useState<ContentListData>({} as ContentListData);
+
+    return (
+      <ContentListVisualEditor
+        value={value}
+        onChange={(next) => {
+          onChangeSpy(next);
+          setValue(next);
+        }}
+        variant="cards"
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    await flush();
+
+    clickElement(findButtonByText(view.container, "Elevated"));
+    React.act(() => {
+      setSelectValue(
+        findSelectsByOptions(view.container, ["meta-line", "badges", "hidden"])[0],
+        "badges"
+      );
+      setInputValue(findNumberInputs(view.container)[0], "4");
+    });
+
+    expect(onChangeSpy.mock.lastCall?.[0]).toEqual(
+      expect.objectContaining({
+        style: expect.objectContaining({
+          cardStyle: "elevated",
+          tagMode: "badges",
+          tagLimit: 4,
+        }),
+      })
+    );
+    expect(view.container.textContent).toContain("Outlined card");
+    expect(view.container.textContent).toContain("Elevated card");
   } finally {
     view.cleanup();
   }
@@ -1295,13 +1342,10 @@ test("ContentList editors fall back to default source, style, field, and runtime
           | undefined
       )?.value
     ).toBe("md");
-    expect(
-      (
-        findSelectsByOptions(view.container, ["outlined", "elevated", "minimal"])[0] as
-          | HTMLSelectElement
-          | undefined
-      )?.value
-    ).toBe("outlined");
+    const outlinedStyleButton = Array.from(view.container.querySelectorAll("button")).find(
+      (button) => normalizeText(button.textContent).includes("outlined")
+    );
+    expect(normalizeText(outlinedStyleButton?.textContent)).toContain("selected");
     expect(
       (
         findSelectsByOptions(view.container, [

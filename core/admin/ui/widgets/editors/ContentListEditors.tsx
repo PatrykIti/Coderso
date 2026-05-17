@@ -33,6 +33,7 @@ import {
   type ContentListData,
   type ContentListImageAspect,
   type ContentListPaginationMode,
+  type ContentListTagMode,
   type ContentListGap,
   type ContentListSort,
   type ContentListStatusScope,
@@ -119,6 +120,12 @@ const imageAspectOptions: Array<{ id: ContentListImageAspect; label: string }> =
   { id: "compact", label: "Compact height" },
 ];
 
+const tagModeOptions: Array<{ id: ContentListTagMode; label: string }> = [
+  { id: "meta-line", label: "Meta line" },
+  { id: "badges", label: "Badges" },
+  { id: "hidden", label: "Hidden" },
+];
+
 const hexColorPattern = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
 
 const resolvePickerColor = (value: string | undefined, fallback: string) =>
@@ -174,7 +181,74 @@ function VariantCards({
               {value === option.id ? "Selected" : "Pick"}
             </Badge>
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">{option.description}</p>
+          <div className="mt-3 flex gap-2" aria-hidden="true">
+            {option.id === "cards" ? (
+              <>
+                <span className="h-10 flex-1 rounded-md border border-border/70 bg-muted/30" />
+                <span className="h-10 flex-1 rounded-md border border-border/70 bg-muted/10" />
+              </>
+            ) : option.id === "list" ? (
+              <span className="h-10 w-full rounded-md border border-border/70 bg-muted/15" />
+            ) : (
+              <>
+                <span className="h-6 flex-1 rounded-md border border-border/70 bg-muted/20" />
+                <span className="h-6 flex-1 rounded-md border border-border/70 bg-muted/10" />
+                <span className="h-6 flex-1 rounded-md border border-border/70 bg-muted/5" />
+              </>
+            )}
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">{option.description}</p>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function CardStyleCards({
+  value,
+  onChange,
+}: {
+  value: ContentListCardStyle;
+  onChange?: (next: ContentListCardStyle) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      {cardStyleOptions.map((option) => (
+        <button
+          key={option.id}
+          type="button"
+          onClick={() => onChange?.(option.id)}
+          className={cn(
+            "w-full rounded-lg border p-3 text-left transition",
+            value === option.id
+              ? "border-primary bg-primary/5"
+              : "border-border bg-background hover:border-primary/50"
+          )}
+        >
+          <div className="flex items-start justify-between gap-2">
+            <p className="min-w-0 text-sm font-semibold leading-tight">{option.label}</p>
+            <Badge className="shrink-0" variant={value === option.id ? "default" : "outline"}>
+              {value === option.id ? "Selected" : "Pick"}
+            </Badge>
+          </div>
+          <div
+            className="mt-3 rounded-md border p-3 text-xs text-muted-foreground shadow-sm"
+            aria-hidden="true"
+          >
+            {option.id === "minimal" ? (
+              <div className="border border-dashed border-border/60 bg-transparent p-3">
+                Minimal card
+              </div>
+            ) : option.id === "elevated" ? (
+              <div className="rounded-md border border-border/70 bg-background p-3 shadow-md">
+                Elevated card
+              </div>
+            ) : (
+              <div className="rounded-md border border-border/70 bg-muted/15 p-3">
+                Outlined card
+              </div>
+            )}
+          </div>
         </button>
       ))}
     </div>
@@ -935,23 +1009,10 @@ export function ContentListVisualEditor({
         </div>
         <div className="space-y-2">
           <p className="text-sm font-medium">Card style</p>
-          <Select
+          <CardStyleCards
             value={resolved.style?.cardStyle ?? "outlined"}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, { cardStyle: next as ContentListCardStyle })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Card style" />
-            </SelectTrigger>
-            <SelectContent>
-              {cardStyleOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            onChange={(next) => updateStyle(value, onChange, { cardStyle: next })}
+          />
         </div>
       </EditorSection>
 
@@ -1209,6 +1270,44 @@ export function ContentListVisualEditor({
             Enable &quot;Show image&quot; to configure image ratio.
           </p>
         )}
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Tag display</p>
+            <Select
+              value={resolved.style?.tagMode ?? "meta-line"}
+              onValueChange={(next) =>
+                updateStyle(value, onChange, { tagMode: next as ContentListTagMode })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Tag display" />
+              </SelectTrigger>
+              <SelectContent>
+                {tagModeOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {(resolved.style?.tagMode ?? "meta-line") !== "hidden" ? (
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Tag limit</p>
+              <Input
+                type="number"
+                min={1}
+                max={4}
+                value={String(resolved.style?.tagLimit ?? 2)}
+                onChange={(event) =>
+                  updateStyle(value, onChange, {
+                    tagLimit: Math.min(4, Math.max(1, Math.floor(Number(event.target.value) || 1))),
+                  })
+                }
+              />
+            </div>
+          ) : null}
+        </div>
         <div className="space-y-2">
           <p className="text-sm font-medium">CTA label</p>
           <Input

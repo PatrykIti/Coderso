@@ -298,6 +298,49 @@ test("content list renders paged navigation and view-all actions", () => {
   expect(viewAllHtml).toContain("Browse all");
 });
 
+test("content list renders tags as badges when configured", () => {
+  const html = renderToString(
+    <ContentListBlock
+      variant="cards"
+      data={normalizeContentListData({
+        ...contentListDefaults,
+        source: {
+          contentTypeId: "blog-type-id",
+          statusScope: "published",
+          limit: 3,
+          sort: "published-desc",
+        },
+        style: {
+          ...contentListDefaults.style,
+          tagMode: "badges",
+          tagLimit: 1,
+        },
+        resolved: {
+          items: [
+            {
+              id: "entry-1",
+              title: "Release notes",
+              href: "/blog/release-notes",
+              excerpt: "Latest platform updates.",
+              tags: ["featured", "news"],
+              authorName: "Editor",
+              publishedAt: "2026-02-08T09:00:00.000Z",
+              status: "published",
+            },
+          ],
+          total: 1,
+          sourceTypeId: "blog-type-id",
+          sourceTypeSlug: "blog",
+          resolvedAt: "2026-02-08T09:10:00.000Z",
+        },
+      })}
+    />
+  );
+
+  expect(html).toContain("featured");
+  expect(html).not.toContain("featured, news");
+});
+
 test("content list preserves none gap token", () => {
   const normalized = normalizeContentListData({
     ...contentListDefaults,

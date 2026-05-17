@@ -426,6 +426,78 @@ test("renderPublicPageHtml renders content list section context and listing empt
   expect(html).not.toContain("Adjust filters or publish entries for this content type.");
 });
 
+test("renderPublicPageHtml renders content list tag badges when configured", () => {
+  clearWidgets();
+  registerWidget(
+    createContentListWidget({
+      wizard: StubContentListEditor,
+      visual: StubContentListEditor,
+      advanced: StubContentListEditor,
+    })
+  );
+
+  const html = renderPublicPageHtml({
+    title: "Blog",
+    blocks: [
+      {
+        id: "content-list-4",
+        type: "content-list",
+        variant: "cards",
+        data: {
+          source: {
+            contentTypeId: "blog-type-id",
+            statusScope: "published",
+            limit: 6,
+            sort: "published-desc",
+          },
+          filters: {},
+          fields: {
+            showImage: false,
+            showExcerpt: true,
+            showMeta: true,
+            showCta: true,
+          },
+          emptyState: {
+            title: "No posts",
+            description: "Publish your first post.",
+          },
+          style: {
+            columns: "2",
+            gap: "md",
+            cardStyle: "outlined",
+            tagMode: "badges",
+            tagLimit: 1,
+            ctaLabel: "Read post",
+            backgroundColor: "var(--color-bg)",
+            borderColor: "var(--color-border)",
+            textColor: "var(--color-text)",
+          },
+          resolved: {
+            items: [
+              {
+                id: "post-1",
+                title: "First post",
+                href: "/blog/first-post",
+                excerpt: "Post summary.",
+                tags: ["featured", "news"],
+                status: "published",
+                publishedAt: "2026-02-08T10:00:00.000Z",
+              },
+            ],
+            total: 1,
+            sourceTypeId: "blog-type-id",
+            sourceTypeSlug: "blog",
+            resolvedAt: "2026-02-08T10:01:00.000Z",
+          },
+        },
+      },
+    ],
+  });
+
+  expect(html).toContain("featured");
+  expect(html).not.toContain("featured, news");
+});
+
 test("renderPublicPageHtml renders entry teaser resolved payload deterministically", () => {
   clearWidgets();
   registerWidget(

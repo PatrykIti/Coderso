@@ -19,6 +19,7 @@ export type ContentListGap = "none" | "sm" | "md" | "lg";
 export type ContentListCardStyle = "outlined" | "elevated" | "minimal";
 export type ContentListImageAspect = "compact" | "standard" | "wide" | "square";
 export type ContentListPaginationMode = "none" | "paged" | "load-more" | "view-all";
+export type ContentListTagMode = "meta-line" | "badges" | "hidden";
 
 export type ContentListRuntimeItem = {
   id?: string;
@@ -74,6 +75,8 @@ export type ContentListData = {
     gap?: ContentListGap;
     cardStyle?: ContentListCardStyle;
     imageAspect?: ContentListImageAspect;
+    tagMode?: ContentListTagMode;
+    tagLimit?: number;
     ctaLabel?: string;
     backgroundColor?: string;
     borderColor?: string;
@@ -181,6 +184,8 @@ export const contentListSchema = {
         gap: { enum: ["none", "sm", "md", "lg"] },
         cardStyle: { enum: ["outlined", "elevated", "minimal"] },
         imageAspect: { enum: ["compact", "standard", "wide", "square"] },
+        tagMode: { enum: ["meta-line", "badges", "hidden"] },
+        tagLimit: { type: "number", minimum: 1, maximum: 4 },
         ctaLabel: { type: "string" },
         backgroundColor: { type: "string" },
         borderColor: { type: "string" },
@@ -274,6 +279,8 @@ export const contentListDefaults: ContentListData = {
     gap: "md",
     cardStyle: "outlined",
     imageAspect: "standard",
+    tagMode: "meta-line",
+    tagLimit: 2,
     ctaLabel: "Read more",
     backgroundColor: "var(--color-bg)",
     borderColor: "var(--color-border)",
@@ -378,6 +385,16 @@ const resolveContentListPaginationMode = (value: string | undefined): ContentLis
   return "none";
 };
 
+const resolveContentListTagMode = (value: string | undefined): ContentListTagMode => {
+  if (value === "badges" || value === "hidden") return value;
+  return "meta-line";
+};
+
+const resolveContentListTagLimit = (value: number | undefined) => {
+  if (typeof value !== "number" || !Number.isFinite(value)) return 2;
+  return Math.min(4, Math.max(1, Math.floor(value)));
+};
+
 const resolveContentListImageAspect = (value: string | undefined): ContentListImageAspect => {
   if (value === "compact" || value === "wide" || value === "square") return value;
   return "standard";
@@ -455,6 +472,8 @@ export function normalizeContentListData(data: ContentListData): ContentListData
     gap: "md" as const,
     cardStyle: "outlined" as const,
     imageAspect: "standard" as const,
+    tagMode: "meta-line" as const,
+    tagLimit: 2,
     ctaLabel: "Read more",
     backgroundColor: "var(--color-bg)",
     borderColor: "var(--color-border)",
@@ -532,6 +551,8 @@ export function normalizeContentListData(data: ContentListData): ContentListData
       gap: resolveContentListGap(data.style?.gap),
       cardStyle: resolveContentListCardStyle(data.style?.cardStyle),
       imageAspect: resolveContentListImageAspect(data.style?.imageAspect),
+      tagMode: resolveContentListTagMode(data.style?.tagMode),
+      tagLimit: resolveContentListTagLimit(data.style?.tagLimit),
       ctaLabel: resolveString(data.style?.ctaLabel, styleDefaults.ctaLabel ?? "Read more"),
       backgroundColor: hasStyleObject
         ? resolveClearableStyleValue(data.style?.backgroundColor)
@@ -611,14 +632,14 @@ const resolveContentListEmptyDescription = (
   return trimmed ?? defaultContentListEmptyDescription;
 };
 
-const buildMetaLine = (item: ContentListRuntimeItem) => {
+const buildMetaLine = (item: ContentListRuntimeItem, includeTags: boolean) => {
   const chunks: string[] = [];
   const dateLabel = formatRuntimeDate(item.publishedAt);
   if (dateLabel) chunks.push(dateLabel);
   if (item.authorName && item.authorName.trim().length > 0) {
     chunks.push(item.authorName.trim());
   }
-  if (Array.isArray(item.tags) && item.tags.length > 0) {
+  if (includeTags && Array.isArray(item.tags) && item.tags.length > 0) {
     chunks.push(item.tags.slice(0, 2).join(", "));
   }
   return chunks.join(" • ");
@@ -656,7 +677,10 @@ function ContentListItemCard({
       borderColor: resolveClearableStyleValue(style.borderColor),
       color: resolveClearableStyleValue(style.textColor),
     }) ?? {};
-  const metaLine = buildMetaLine(item);
+  const tagMode = style.tagMode ?? "meta-line";
+  const tagLimit = resolveContentListTagLimit(style.tagLimit);
+  const tags = tagMode === "hidden" ? [] : (item.tags ?? []).slice(0, tagLimit);
+  const metaLine = buildMetaLine(item, tagMode === "meta-line");
   const title = item.title ?? "Untitled";
   const href = item.href && item.href.trim().length > 0 ? item.href : undefined;
   const excerpt = (item.excerpt ?? "").trim();
@@ -664,6 +688,7 @@ function ContentListItemCard({
   const showImage = Boolean(fields.showImage) && Boolean(item.imageSrc);
   const showExcerpt = fields.showExcerpt && excerpt.length > 0;
   const showMeta = fields.showMeta && metaLine.length > 0;
+  const showTagBadges = tagMode === "badges" && tags.length > 0;
   const showCta = Boolean(fields.showCta);
   const showCtaLink = showCta && Boolean(href);
   const showCtaFallback = showCta && !href;
@@ -695,6 +720,18 @@ function ContentListItemCard({
             title
           )}
         </h3>
+        {showTagBadges ? (
+          <div className="flex flex-wrap gap-2">
+            {tags.map((tag) => (
+              <span
+                key={tag}
+                className="rounded-full border border-[var(--color-border)]/70 px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.08em] opacity-80"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        ) : null}
         {showMeta ? <p className="text-xs opacity-75">{metaLine}</p> : null}
         {showExcerpt ? (
           <p className={variant === "compact" ? "text-sm opacity-90" : "text-sm opacity-90"}>
