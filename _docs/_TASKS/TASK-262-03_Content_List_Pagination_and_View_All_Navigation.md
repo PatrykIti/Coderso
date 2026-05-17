@@ -6,7 +6,7 @@
 **Category:** Widgets + Runtime Render + Listings + Public Read UX
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-262, TASK-262-01, TASK-262-02
-**Status:** To Do
+**Status:** Done (2026-05-17)
 
 ---
 

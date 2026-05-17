@@ -313,3 +313,51 @@ _Raport ukończony po pełnym cyklu testów: analiza kodu + testy Admin UI + tes
   follow-up scope continues through the `TASK-262` family.
 - Shared rows that match existing TASK-256 clear/link/truthful-control
   mechanisms remain referenced by `TASK-256-07` and `TASK-256-08`.
+
+---
+
+## Status po TASK-262 / TASK-293 (2026-05-17)
+
+### Final classification
+
+| Finding | Final status | Owner / landed scope | Evidence |
+|---|---|---|---|
+| B-01 | fixed | `TASK-262-03` | widget-owned pagination contract landed in `contentList.tsx`, `contentListResolver.ts`, and Visual controls; targeted unit + Vitest navigation assertions are green |
+| B-02 | fixed | `TASK-262-02` | Content List now renders optional section title/description with accessible section labeling |
+| B-03 | fixed | `TASK-262-03` | `view-all` / `load-more` / paged navigation contract landed with safe href handling and runtime page metadata |
+| B-04 | fixed | `TASK-293` | misleading `Columns` control is removed for non-card variants in both Content List and Posts Feed editor surfaces |
+| B-05 | fixed | `TASK-293` | image presentation is no longer hardcoded to a single `h-40` path; bounded `imageAspect` landed |
+| B-06 | fixed | `TASK-262-04` | tags can render as bounded badges instead of being forced into the meta line |
+| E-01 | fixed | `TASK-293` | `Columns` truthfulness now matches the renderer contract |
+| E-02 | fixed | `TASK-262-01` | Visual now shows current source mode and mode-specific controls without owning the mode switch itself |
+| E-03 | fixed | `TASK-262-01` | taxonomy filter now uses suggestions from the taxonomy overview seam |
+| E-04 | fixed | `TASK-262-01` | author filter is now a picker/search flow backed by `admin-users` summaries |
+| E-05 | fixed | `TASK-293` | `textColor` now uses the shared clear/picker contract |
+| E-06 | fixed | `TASK-262-01` | source-mode labels are editor-friendly (`By content type`, `By listing query`) |
+| E-07 | fixed | `TASK-262-04` | variant selection now includes visual preview cards |
+| E-08 | fixed | `TASK-293` | Content List color controls now include a picker without losing CSS-token text input ownership |
+| E-09 | fixed | reverified in `TASK-262-05` | current `missing-source` copy is already source-aware and remained correct after the family landed |
+| E-10 | fixed | `TASK-262-04` | card style now uses visual preview cards instead of a blind dropdown |
+| E-11 | fixed | `TASK-262-01` | content type selection is searchable and duplicate names are disambiguated via friendly labels |
+| T-01 | fixed | `TASK-293` | CTA no longer disappears silently when an item lacks `href`; a disabled label is rendered instead |
+| T-02 | fixed | `TASK-262-02` | editor guidance now explains saved-data canvas behavior instead of leaving the static preview unexplained |
+| T-03 | fixed / no longer reproducible | reverified in `TASK-262-05` | listing mode no longer exposes a misleading `statusScope` control path in the reported shape |
+| T-04 | fixed | `TASK-262-01` | switching to listing mode clears legacy-only filters and removes stale disabled controls |
+| T-05 | fixed | `TASK-262-02` | listing-mode empty copy is source-aware and no longer says `content type` |
+| T-06 | fixed | `TASK-262-01` | listing mode no longer shows a stale disabled `Featured only` toggle that can look active |
+
+### Validation snapshot
+
+Validated locally on the TASK-262 worktree after the final implementation slices:
+
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `set -a && source .env && set +a && bun test tests/unit/widgets/contentList.test.tsx tests/unit/widgets/postsFeedWidget.test.tsx tests/unit/content/contentListResolver.test.ts tests/unit/widgets/validator.test.ts`
+- `bun run test:vitest -- tests/vitest/ui/content-list-editor-wave.test.tsx tests/vitest/ui/posts-feed-editor-wave.test.tsx tests/vitest/site/publicRenderer.test.tsx`
+- `bun run gates:coderso`
+- `bun run precommit`
+
+`bun run scan:security:strict` still has an environment blocker in this local setup:
+- `semgrep`: local trust-store failure (`ca-certs: empty trust anchors`)
+- `bun audit`: `ConnectionRefused`
+- `trivy` and both `gitleaks` lanes were clean in the same strict pass.

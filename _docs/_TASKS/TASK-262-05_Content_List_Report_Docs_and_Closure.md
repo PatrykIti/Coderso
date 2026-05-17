@@ -6,7 +6,7 @@
 **Category:** Widgets + Documentation + Playwright QA + Release Notes
 **Estimated Effort:** Medium
 **Dependencies:** TASK-262-01, TASK-262-02, TASK-262-03, TASK-262-04
-**Status:** To Do
+**Status:** Done (2026-05-17)
 
 ---
 

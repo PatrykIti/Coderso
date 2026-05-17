@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Runtime Render + Shared Contracts
 **Estimated Effort:** Large
 **Dependencies:** TASK-256-02, TASK-262
-**Status:** In Progress (2026-05-17)
+**Status:** Done (2026-05-17)
 
 ---
 

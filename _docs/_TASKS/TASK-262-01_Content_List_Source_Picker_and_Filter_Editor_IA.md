@@ -6,7 +6,7 @@
 **Category:** Widgets + Dynamic Content + Admin UI + Listings
 **Estimated Effort:** Large
 **Dependencies:** TASK-262, TASK-256-07
-**Status:** To Do
+**Status:** Done (2026-05-17)
 
 ---
 
