@@ -61,6 +61,9 @@ Out of scope:
 | `tests/vitest/ui/product-gallery-editor-wave.test.tsx` | Cover pagination/curation editor controls and reorder behavior. |
 | `tests/unit/commerce/commerceQueryService.test.ts` | Cover page/offset and product-id filters if query semantics change. |
 | `tests/unit/commerce/commerceWidgetRuntime.test.ts` | Cover hydrated total/page/curated order behavior. |
+| `tests/integration/routes/commerceRoutes.test.ts` | Extend when admin/internal commerce read routes are reused or changed. |
+| `tests/integration/runtime/product-gallery-load-more.test.ts` | Create if a public runtime `load-more` route is introduced. |
+| `tests/security/product-gallery-load-more.test.ts` | Create if a public runtime read route is introduced, covering rate-limit and reject-unknown anti-abuse behavior. |
 | `_docs/_WIDGETS/PRODUCT_GALLERY.md` | Document pagination and manual curation behavior. |
 | `_docs/PLAYWRIGHT/REPORT_PRODUCT_GALLERY_WIDGET.md` | Update BF-06 and BF-10 fixed/deferred notes. |
 
@@ -140,7 +143,11 @@ No public write endpoints are added.
 - `bun test tests/unit/commerce/commerceWidgetRuntime.test.ts`
 - `bun test tests/unit/commerce/commerceQueryService.test.ts` when query
   semantics change.
-- Route/security tests if a read endpoint is added.
+- `bun test tests/integration/routes/commerceRoutes.test.ts` if an existing
+  admin/internal commerce read route is reused or changed.
+- `bun test tests/integration/runtime/product-gallery-load-more.test.ts` and
+  `bun test tests/security/product-gallery-load-more.test.ts` if a public
+  runtime `load-more` endpoint is added.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 

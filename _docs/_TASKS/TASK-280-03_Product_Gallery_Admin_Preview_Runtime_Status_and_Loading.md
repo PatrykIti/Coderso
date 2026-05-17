@@ -67,8 +67,10 @@ Out of scope:
 | `core/server/routes/commerceRoutes.ts` | Reuse or extend the internal `/commerce/products/query` route only through the existing permissioned commerce-read contract. |
 | `tests/vitest/widgets/productGallery.test.tsx` | Cover runtime warning/loading/status markers if render output changes. |
 | `tests/vitest/ui/product-gallery-editor-wave.test.tsx` | Cover resolver status, refresh loading, error, and count copy in the editor. |
+| `tests/vitest/admin/commerceClient.test.ts` | Cover `previewCommerceProductsQuery()` request shape if the admin preview client is reused or extended. |
 | `tests/unit/commerce/commerceWidgetRuntime.test.ts` | Cover preview hydration behavior and error mapping. |
 | `tests/integration/routes/commerceRoutes.test.ts` | Extend route/permission coverage if the commerce query preview route changes or a Product Gallery preview endpoint is introduced. |
+| `tests/integration/runtime/pages-runtime.test.ts` | Cover public page/runtime preview behavior if Product Gallery hydration changes `handlePublicRequest()` output. |
 | `_docs/_WIDGETS/PRODUCT_GALLERY.md` | Document admin preview behavior and resolver status. |
 | `_docs/PLAYWRIGHT/REPORT_PRODUCT_GALLERY_WIDGET.md` | Update admin preview findings with textual proof. |
 
@@ -147,9 +149,13 @@ If an admin preview route is required, it must follow this contract:
 
 - `bun run test:vitest -- tests/vitest/ui/product-gallery-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/productGallery.test.tsx`
+- `bun run test:vitest -- tests/vitest/admin/commerceClient.test.ts` if
+  `previewCommerceProductsQuery()` is reused or extended.
 - `bun test tests/unit/commerce/commerceWidgetRuntime.test.ts`
 - `bun test tests/integration/routes/commerceRoutes.test.ts` if the existing
   commerce query route changes or a new preview endpoint is added.
+- `bun test tests/integration/runtime/pages-runtime.test.ts` if public runtime
+  or preview-mode `handlePublicRequest()` behavior changes.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 

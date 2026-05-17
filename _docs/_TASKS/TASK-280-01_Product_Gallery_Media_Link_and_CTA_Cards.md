@@ -27,6 +27,8 @@ In scope:
 - schema-owned `link` / `basePath` / `cta` fields for Product Gallery card
   navigation;
 - media rendering from backend-resolved product/media payloads;
+- media URL/alt lookup through the backend media service when the commerce
+  runtime card only has `primaryMediaId` / `mediaIds`;
 - safe image `alt` fallback using product title when no resolved media alt is
   available;
 - card-level link and optional "View product" CTA that use the same sanitized
@@ -63,10 +65,12 @@ Out of scope:
 | `core/widgets/core/commerceWidgetShared.ts` | Add Product Gallery-specific runtime card media metadata only if the resolver can supply safe URL/alt fields without changing other widgets unexpectedly. |
 | `core/services/commerce/commerceRuntimeResolver.ts` | Map product media metadata into runtime cards if media URL/alt data already exists in commerce records or an approved media lookup seam is available. |
 | `core/services/commerce/commerceWidgetRuntime.ts` | Preserve Product Gallery resolved media/link payloads during hydration. |
+| `core/services/media/mediaService.ts` | Use `getMediaById()` as backend-owned media URL/alt lookup seam when resolving `primaryMediaId` / `mediaIds`. |
 | `core/admin/ui/widgets/editors/ProductGalleryEditors.tsx` | Add Product Gallery link/CTA and media display controls in the correct editor mode. |
 | `tests/vitest/widgets/productGallery.test.tsx` | Cover linked cards, CTA rendering, safe path fallback, image/alt output, and no image when media is unresolved. |
 | `tests/vitest/ui/product-gallery-editor-wave.test.tsx` | Cover link/CTA/media editor controls and normalized payload updates. |
 | `tests/unit/commerce/commerceWidgetRuntime.test.ts` | Cover resolver-to-card media metadata when runtime mapping changes. |
+| `tests/unit/media/mediaService.test.ts` | Extend only if media lookup behavior or returned public-safe metadata changes. |
 | `tests/unit/widgets/validator.test.ts` | Add schema accept/reject coverage for new Product Gallery fields. |
 | `_docs/_WIDGETS/PRODUCT_GALLERY.md` | Document media/link/CTA fields and resolver expectations. |
 | `_docs/PLAYWRIGHT/REPORT_PRODUCT_GALLERY_WIDGET.md` | Mark card media/link/CTA findings fixed or deferred with textual evidence. |
@@ -101,6 +105,10 @@ Data flow:
 
 - `toCommerceRuntimeCard()` includes only media URL/alt metadata that the
   backend can resolve safely.
+- When runtime card data only carries `primaryMediaId` / `mediaIds`,
+  `commerceRuntimeResolver` calls the backend media lookup seam from
+  `mediaService` and copies only public-safe URL/alt/dimension metadata into the
+  Product Gallery card payload.
 - `normalizeProductGalleryData()` normalizes the new link/media fields and keeps
   legacy payloads on the current no-image/no-CTA behavior unless defaults are
   intentionally changed in this leaf.
@@ -115,6 +123,7 @@ Error handling:
 - Empty product `slug` keeps the card unlinked instead of rendering `href="#"`.
 - Missing media URL renders the current text-only card and optional media hint;
   it must not render broken `<img>`.
+- Missing media records are treated as unresolved media, not runtime failures.
 - Missing media alt falls back to the product title. Decorative media is not
   allowed for product cards.
 - Cart/add-to-cart labels are not enabled unless an existing commerce checkout
@@ -160,6 +169,8 @@ No API routes are added by default.
 - `bun test tests/unit/commerce/commerceWidgetRuntime.test.ts`
 - `bun test tests/unit/commerce/commerceRuntimeResolver.test.ts` when resolver
   media mapping changes.
+- `bun test tests/unit/media/mediaService.test.ts` if media lookup behavior or
+  returned public-safe metadata changes.
 - `bun test tests/unit/widgets/validator.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
