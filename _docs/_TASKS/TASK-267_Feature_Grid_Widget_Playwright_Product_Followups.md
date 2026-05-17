@@ -6,7 +6,7 @@
 **Category:** Widgets + Feature Grid + Admin UI + Runtime Render + Playwright QA
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-252, TASK-256, TASK-256-01, TASK-256-02, TASK-256-04, TASK-256-06-01, TASK-256-06-02, TASK-256-08
-**Status:** To Do
+**Status:** In Progress (2026-05-17)
 
 ---
 
@@ -16,10 +16,10 @@ Create the widget-specific Feature Grid follow-up family for
 `_docs/PLAYWRIGHT/REPORT_FEATURE_GRID_WIDGET.md`.
 
 This family owns only product and UX improvements that are local to
-`feature-grid`. Shared widget-contract repairs stay in TASK-256. Do not use
-TASK-267 to duplicate the shared fixes for atomic editor updates, truthful
-generic controls, clear semantics, safe href/media hardening, ARIA baseline, or
-Advanced-mode duplication.
+`feature-grid`. Shared widget-contract repairs stay outside TASK-267. Do not
+use TASK-267 to duplicate the shared fixes for atomic editor updates, truthful
+generic controls, clear semantics, safe href/media hardening, baseline
+accessibility, or Advanced-mode duplication.
 
 ## Source Report Boundary
 
@@ -37,24 +37,27 @@ Live owners inspected while drafting:
 - `_docs/_WIDGETS/tmp/feature-grid/MATRIX.md`
 - `_docs/WIDGETS.md`
 
-## TASK-256 Exclusion Matrix
+## Shared Exclusion Matrix
 
 The following report findings are intentionally excluded from TASK-267 because
-TASK-256 already owns them as shared widget-contract drift.
+they belong to shared widget-contract work rather than Feature Grid-local
+product scope.
 
 | Report finding | Evidence | Owner task | Reason |
 |---|---|---|---|
 | BUG-01 / UX-01 / KOD-01 columns control has no effect | `REPORT_FEATURE_GRID_WIDGET.md:179-183,210-212,254-273` | TASK-256-06-01 | Shared truthful-control contract. |
 | BUG-02 / UX-04 / KOD-02 variant and item-count desync | `REPORT_FEATURE_GRID_WIDGET.md:185-189,222-224,275-278` | TASK-256-01, TASK-256-06-01 | Shared atomic editor-mode update contract. |
-| BUG-03 / BF-14 invalid image URL feedback | `REPORT_FEATURE_GRID_WIDGET.md:191-194,333-334` | TASK-256-06-01 | Shared safe media/input feedback contract. |
+| BUG-03 / BF-14 invalid image URL feedback | `REPORT_FEATURE_GRID_WIDGET.md:191-194,333-334` | TASK-307 | Residual shared safe-media/input feedback contract discovered during TASK-267 audit. |
 | BUG-04 missing `borderColor` clear | `REPORT_FEATURE_GRID_WIDGET.md:196-199` | TASK-256-02, TASK-256-06-01 | Shared Clear semantics. |
-| UX-08 blocked CTA URL feedback | `REPORT_FEATURE_GRID_WIDGET.md:238-240` | TASK-256-06-01 | Shared safe href feedback. |
-| UX-09 Advanced duplicates Visual tokens | `REPORT_FEATURE_GRID_WIDGET.md:242-244` | TASK-256-01 | Shared mode ownership and Advanced scope. |
+| UX-08 blocked CTA URL feedback | `REPORT_FEATURE_GRID_WIDGET.md:238-240` | TASK-307 | Residual shared safe-href feedback discovered during TASK-267 audit. |
+| UX-09 Advanced duplicates Visual tokens | `REPORT_FEATURE_GRID_WIDGET.md:242-244` | TASK-307 | Residual shared mode ownership and Advanced-scope cleanup discovered during TASK-267 audit. |
 | A1/A7 CTA external link rel/noopener safety | `REPORT_FEATURE_GRID_WIDGET.md:169,348,354` | TASK-256-06-02 | Shared safe link renderer behavior. |
-| A2 image alt fallback, A3 emoji ARIA, A4/A5 heading hierarchy, A6 image lazy loading | `REPORT_FEATURE_GRID_WIDGET.md:348-354` | TASK-256-04, TASK-256-06-01 | Shared runtime accessibility and performance baseline. |
+| A3 emoji ARIA | `REPORT_FEATURE_GRID_WIDGET.md:350` | TASK-307 | Residual shared decorative-icon accessibility baseline discovered during TASK-267 audit. |
+| A4/A5 heading hierarchy | `REPORT_FEATURE_GRID_WIDGET.md:351-352` | New shared follow-up if product wants cross-widget heading policy | Do not silently patch this inside TASK-267. Closure must either cite the landed shared task or record an explicit deferral. |
+| A6 image lazy loading | `REPORT_FEATURE_GRID_WIDGET.md:353` | TASK-256-06-01 | Shared runtime performance baseline already landed. |
 
-TASK-267 may depend on the TASK-256 result, but it must not restage those
-repairs inside its own implementation leaves.
+TASK-267 may depend on shared results, but it must not restage those repairs
+inside its own implementation leaves.
 
 ## TASK-267 Scope Matrix
 
@@ -66,12 +69,14 @@ repairs inside its own implementation leaves.
 | UX-03 drag-and-drop card reorder | TASK-267-02 | Feature Grid repeated-card management. |
 | UX-06 remove card without confirm/undo | TASK-267-02 | Feature Grid repeated-card destructive action. |
 | UX-07 icon/image priority explanation | TASK-267-03 | Feature Grid item media semantics. |
+| A2 image alt text authoring | TASK-267-03 | Feature Grid-local persisted media field; shared safety stays outside this leaf. |
 | BF-15 emoji picker | TASK-267-03 | Feature Grid icon authoring. |
 | BF-16 media library integration | TASK-267-03 | Feature Grid card image authoring through existing media picker. |
 | BF-01 text alignment, BF-03 card padding, BF-04 icon/image size, BF-05 horizontal card layout, BF-02 hero-card-above-grid variant | TASK-267-04 | Feature Grid card layout expansion. |
 | BF-06 header typography, BF-07 card title typography, BF-09 section background, BF-11 hover effects, BF-12 max-width | TASK-267-05 | Feature Grid section/card visual expansion. |
 | BF-08 explicit CTA enable, BF-10 user-facing target option, BF-13 rich description authoring | TASK-267-06 | Feature Grid card content/action authoring; rel safety remains TASK-256. |
-| UX-05 Wizard scope notice, UX-10 first editor mode decision | TASK-267-07 | Feature Grid onboarding and entry-flow UX. |
+| UX-05 Wizard scope notice | TASK-267-07 | Feature Grid-local onboarding copy. |
+| UX-10 first editor mode decision | New shared builder follow-up only if product wants it | Do not invent a widget-local entry-policy contract inside TASK-267. |
 | Report fixed/deferred notes, widget docs, changelog, board closure | TASK-267-08 | Final documentation and evidence pass. |
 
 ## Sub-Tasks
@@ -87,8 +92,9 @@ repairs inside its own implementation leaves.
 
 ## Implementation Order
 
-1. Finish or rebase over the TASK-256 shared fixes first. TASK-267 leaves must
-   build on those contracts instead of duplicating them.
+1. Finish or rebase over the TASK-256 shared fixes first, then land
+   `TASK-307` residual shared repairs discovered during this audit. TASK-267
+   leaves must build on those contracts instead of duplicating them.
 2. Complete TASK-267-01 first because variant preview and responsive `cards-4`
    behavior define the visual baseline for later layout work.
 3. Complete TASK-267-02 before adding richer card fields so reorder/remove tests
@@ -154,6 +160,7 @@ Implementation leaves:
   fields change.
 - `bun test tests/unit/widgets/registry.test.ts` if variant registration or widget
   registry wiring changes.
+- `bun run gates:coderso`
 - `bun run scan:security:strict`
 - `bun run precommit`
 
@@ -173,10 +180,10 @@ Implementation leaves:
 
 ## Acceptance Criteria
 
-- Every Feature Grid report finding is either owned by TASK-256, covered by a
-  TASK-267 physical leaf, or explicitly deferred by TASK-267-08 with a reason.
-- TASK-267 task docs do not duplicate TASK-256 shared-contract implementation
-  scope.
+- Every Feature Grid report finding is either owned by a shared task, covered by
+  a TASK-267 physical leaf, or explicitly deferred by TASK-267-08 with a
+  reason.
+- TASK-267 task docs do not duplicate shared-contract implementation scope.
 - Each implementation leaf names concrete files, data-flow, error handling,
   regression tests, documentation updates, and validation commands.
 - Runtime changes preserve backward compatibility for existing `feature-grid`

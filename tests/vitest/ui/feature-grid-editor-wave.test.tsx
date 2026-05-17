@@ -360,7 +360,7 @@ test("FeatureGrid editors cover variant changes, card editing, style tokens, and
     const headerSection = findSectionByTitle(view.container, "Header copy");
     const featureCardsSection = findSectionByTitle(view.container, "Feature cards and actions");
     const colorsSection = findSectionByTitle(view.container, "Colors and borders");
-    const advancedSection = findSectionByTitle(view.container, "Layout tokens");
+    const advancedSection = findSectionByTitle(view.container, "Layout diagnostics");
 
     expect(layoutSection).toBeTruthy();
     expect(headerSection).toBeTruthy();
@@ -392,7 +392,7 @@ test("FeatureGrid editors cover variant changes, card editing, style tokens, and
       "7",
       "8",
     ])[0];
-    setSelectValue(visualColumnsSelect, "2");
+    expect((visualColumnsSelect as HTMLSelectElement | null | undefined)?.disabled).toBe(true);
     setSelectValue(visualGapSelect, "lg");
     setSelectValue(visualCountSelect, "6");
     expect(latestValue.items).toHaveLength(6);
@@ -477,34 +477,6 @@ test("FeatureGrid editors cover variant changes, card editing, style tokens, and
       "var(--border-strong)"
     );
 
-    const advancedColumnsSelect = findSelectsByOptions(advancedSection as ParentNode, [
-      "2",
-      "3",
-      "4",
-    ])[0];
-    const advancedGapSelect = findSelectsByOptions(advancedSection as ParentNode, [
-      "none",
-      "sm",
-      "md",
-      "lg",
-    ])[0];
-    const advancedBorderWidthSelect = findSelectsByOptions(advancedSection as ParentNode, [
-      "0",
-      "1",
-      "2",
-      "3",
-    ])[0];
-    const advancedRadiusSelect = findSelectsByOptions(advancedSection as ParentNode, [
-      "none",
-      "md",
-      "lg",
-      "xl",
-    ])[0];
-    setSelectValue(advancedColumnsSelect, "4");
-    setSelectValue(advancedGapSelect, "sm");
-    setSelectValue(advancedBorderWidthSelect, "2");
-    setSelectValue(advancedRadiusSelect, "none");
-
     clickByText(view.container, "Normalize items to variant baseline");
     clickByText(view.container, "Normalize full payload");
 
@@ -529,10 +501,10 @@ test("FeatureGrid editors cover variant changes, card editing, style tokens, and
       ])
     );
     expect(latestValue.style).toMatchObject({
-      columns: "4",
-      gap: "sm",
-      borderWidth: "2",
-      radius: "none",
+      columns: "3",
+      gap: "lg",
+      borderWidth: "3",
+      radius: "xl",
       surfaceColor: "var(--surface-strong)",
       borderColor: "var(--border-strong)",
     });
@@ -540,8 +512,8 @@ test("FeatureGrid editors cover variant changes, card editing, style tokens, and
     const snapshot = view.container.querySelector("pre");
     expect(snapshot?.textContent).toContain('"eyebrow": "Why teams switch"');
     expect(snapshot?.textContent).toContain('"title": "Feature grid overview"');
-    expect(snapshot?.textContent).toContain('"columns": "4"');
-    expect(snapshot?.textContent).toContain('"borderWidth": "2"');
+    expect(snapshot?.textContent).toContain('"columns": "3"');
+    expect(snapshot?.textContent).toContain('"borderWidth": "3"');
     expect(snapshot?.textContent).toContain('"surfaceColor": "var(--surface-strong)"');
     expect(snapshot?.textContent).toContain('"ctaHref": "/automation"');
   } finally {
@@ -685,39 +657,12 @@ test("FeatureGrid editors render sparse fallback defaults and ignore variant cha
   );
 
   try {
-    const layoutSection = findSectionByTitle(advancedView.container, "Layout tokens");
-    expect(
-      (
-        findSelectsByOptions(layoutSection as ParentNode, ["2", "3", "4"])[0] as
-          | HTMLSelectElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("3");
-    expect(
-      (
-        findSelectsByOptions(layoutSection as ParentNode, ["none", "sm", "md", "lg"])[0] as
-          | HTMLSelectElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("md");
-    expect(
-      (
-        findSelectsByOptions(layoutSection as ParentNode, ["0", "1", "2", "3"])[0] as
-          | HTMLSelectElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("1");
-    expect(
-      (
-        findSelectsByOptions(layoutSection as ParentNode, ["none", "md", "lg", "xl"])[0] as
-          | HTMLSelectElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("lg");
+    const layoutSection = findSectionByTitle(advancedView.container, "Layout diagnostics");
+    expect(layoutSection?.textContent).toContain("Visual owns layout tokens");
+    expect(layoutSection?.textContent).toContain("Columns token:");
+    expect(layoutSection?.textContent).toContain("Gap token:");
+    expect(layoutSection?.textContent).toContain("Border width token:");
+    expect(layoutSection?.textContent).toContain("Radius token:");
   } finally {
     advancedView.cleanup();
   }
@@ -901,42 +846,76 @@ test("FeatureGrid editors fall back to default layout tokens when normalized pay
   );
 
   try {
-    const advancedSection = findSectionByTitle(advancedView.container, "Layout tokens");
-    expect(
-      (
-        findSelectsByOptions(advancedSection as ParentNode, ["2", "3", "4"])[0] as
-          | HTMLSelectElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("3");
-    expect(
-      (
-        findSelectsByOptions(advancedSection as ParentNode, ["none", "sm", "md", "lg"])[0] as
-          | HTMLSelectElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("md");
-    expect(
-      (
-        findSelectsByOptions(advancedSection as ParentNode, ["0", "1", "2", "3"])[0] as
-          | HTMLSelectElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("1");
-    expect(
-      (
-        findSelectsByOptions(advancedSection as ParentNode, ["none", "md", "lg", "xl"])[0] as
-          | HTMLSelectElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("lg");
+    const advancedSection = findSectionByTitle(advancedView.container, "Layout diagnostics");
+    expect(advancedSection?.textContent).toContain("Columns token:");
+    expect(advancedSection?.textContent).toContain("Gap token:");
+    expect(advancedSection?.textContent).toContain("Border width token:");
+    expect(advancedSection?.textContent).toContain("Radius token:");
   } finally {
     advancedView.cleanup();
     vi.doUnmock("../../../core/widgets/core/featureGrid");
     vi.resetModules();
+  }
+});
+
+test("FeatureGrid editor shows invalid image and CTA feedback while keeping raw values", async () => {
+  const { FeatureGridVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/FeatureGridEditors");
+
+  let latestValue: FeatureGridData = {
+    ...featureGridDefaults,
+    items: [
+      {
+        id: "feature-1",
+        title: "Security",
+        image: "",
+        ctaLabel: "Open",
+        ctaHref: "",
+      },
+    ],
+  };
+
+  const Harness = () => {
+    const [value, setValue] = useState<FeatureGridData>(latestValue);
+
+    return (
+      <FeatureGridVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="cards-3"
+        onVariantChange={() => undefined}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    const featureCardsSection = findSectionByTitle(view.container, "Feature cards and actions");
+    setInputValue(
+      findInputByPlaceholder(
+        featureCardsSection as ParentNode,
+        "https://cdn.example.com/feature.jpg"
+      ),
+      "javascript:alert(1)"
+    );
+    setInputValue(
+      findInputByPlaceholder(featureCardsSection as ParentNode, "/features"),
+      "ftp://blocked.invalid"
+    );
+
+    expect(featureCardsSection?.textContent).toContain(
+      "Use a relative path or full URL. Unsafe media URLs are not rendered publicly."
+    );
+    expect(featureCardsSection?.textContent).toContain(
+      "Use a relative path, hash, or full URL. Unsafe links are not rendered publicly."
+    );
+    expect(latestValue.items[0]?.image).toBe("javascript:alert(1)");
+    expect(latestValue.items[0]?.ctaHref).toBe("ftp://blocked.invalid");
+  } finally {
+    view.cleanup();
   }
 });

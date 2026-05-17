@@ -7,6 +7,11 @@
 > **Środowisko front:** http://localhost:3000
 > **Strona testowa:** FeatureGridTest (`/featuregridtest`) — UUID: `98027d08-8164-43c7-9f27-3790cdc01ba9`
 
+> **Uwaga aktualizacyjna (2026-05-17):** Sekcje 3-9 dokumentują historyczne
+> obserwacje z sesji Playwright z 2026-05-16. Aktualny stan po shared fixach jest
+> mapowany w sekcji `Status po TASK-256 i TASK-307` na końcu raportu i ta sekcja
+> jest źródłem prawdy dla zamykania tasków.
+
 ---
 
 ## 1. Przegląd widgetu
@@ -417,6 +422,9 @@ Wszystkie trafiają do fallback który zwraca domyślną wartość, więc dział
 
 ## 11. Statystyki
 
+> Liczby poniżej odnoszą się do oryginalnej sesji z 2026-05-16 i nie
+> reprezentują aktualnego stanu po shared fixach z 2026-05-17.
+
 | Kategoria | Liczba |
 |-----------|--------|
 | Błędy funkcjonalne (Bugs) | 5 |
@@ -456,16 +464,31 @@ Wszystkie trafiają do fallback który zwraca domyślną wartość, więc dział
 
 ---
 
-## Status po TASK-256 (2026-05-17)
+## Status po TASK-256 i TASK-307 (2026-05-17)
+
+- Ta sekcja zastępuje historyczne "otwarte" statusy z sekcji 3-9 dla shared
+  findings naprawionych po sesji Playwright.
 
 - `TASK-256-06-01`: variant changes now use the shared atomic builder patch
   path, so Feature Grid variant and item-count defaults no longer drift apart.
 - `TASK-256-06-01`: the `Columns` control is now truthful. It remains active
   only where runtime honors it, and it is explicitly locked for
   `highlight-first`.
+- `TASK-256-06-01`: `borderColor` now uses the shared clear contract instead of
+  remaining a one-off non-clearable field.
 - `TASK-256-06-01`: raw CTA hrefs remain visible in editor data for user
   correction, while runtime output continues to reject unsafe targets through
   the safe-href guard.
+- `TASK-256-06-02`: external CTA output now uses shared safe-link semantics
+  instead of rendering missing `rel` attributes, and card images keep lazy/eager
+  loading according to the shared runtime baseline.
+- `TASK-307`: invalid `Image URL` values now show inline editor feedback and are
+  skipped by runtime output instead of rendering broken or unsafe images.
+- `TASK-307`: invalid `CTA URL` values now show inline editor feedback while the
+  raw author input stays visible for correction.
+- `TASK-307`: decorative emoji icons now render with `aria-hidden=\"true\"`.
+- `TASK-307`: Advanced no longer duplicates editable layout token controls that
+  belong to Visual; it now exposes diagnostics plus normalization actions only.
 - Shared evidence from this turn:
   `bun run test:vitest -- tests/vitest/ui/feature-grid-editor-wave.test.tsx
   tests/vitest/widgets/featureGrid.test.tsx` passed on 2026-05-17.

@@ -5,7 +5,7 @@
 **Priority:** Medium
 **Category:** Widgets + Feature Grid + Playwright QA + Documentation
 **Estimated Effort:** Medium
-**Dependencies:** TASK-267-01, TASK-267-02, TASK-267-03, TASK-267-04, TASK-267-05, TASK-267-06, TASK-267-07, TASK-256-08
+**Dependencies:** TASK-307, TASK-267-01, TASK-267-02, TASK-267-03, TASK-267-04, TASK-267-05, TASK-267-06, TASK-267-07, TASK-256-08
 **Status:** To Do
 
 ---
@@ -17,7 +17,7 @@ changelog, board sync, and final validation.
 
 This leaf must explicitly prove that every
 `_docs/PLAYWRIGHT/REPORT_FEATURE_GRID_WIDGET.md` finding is either fixed by
-TASK-256, fixed by TASK-267, or intentionally deferred.
+shared follow-up, fixed by TASK-267, or intentionally deferred.
 
 ## Source Findings
 
@@ -40,16 +40,17 @@ TASK-256, fixed by TASK-267, or intentionally deferred.
 | `_docs/WIDGET_PACK_MATRIX.md` | Update only if Feature Grid pack completeness/readiness changes. |
 | `_docs/_TASKS/TASK-267*.md` | Mark completed leaves with dates and final validation notes. |
 | `_docs/_TASKS/README.md` | Move completed TASK-267 rows to Done and update statistics. |
-| `_docs/_CHANGELOG/{N}-2026-05-16-task-267-feature-grid-widget-followups.md` | Add the final changelog entry. |
+| `_docs/_CHANGELOG/{N}-{YYYY-MM-DD}-task-267-feature-grid-widget-followups.md` | Add the final changelog entry using the actual entry date. |
 | `_docs/_CHANGELOG/README.md` | Add the changelog index row. |
 
 ## Implementation Pseudocode
 
 ```ts
-type FeatureGridFindingStatus = "fixed-task-256" | "fixed-task-267" | "deferred";
+type FeatureGridFindingStatus = "fixed-shared" | "fixed-task-267" | "deferred";
 
 const findingMap = [
-  { id: "BUG-01", status: "fixed-task-256", evidence: "TASK-256-06-01 validation" },
+  { id: "BUG-01", status: "fixed-shared", evidence: "TASK-256-06-01 validation" },
+  { id: "BUG-03", status: "fixed-shared", evidence: "TASK-307 validation" },
   { id: "UX-02", status: "fixed-task-267", evidence: "TASK-267-01 validation" },
   { id: "BF-13", status: "deferred", reason: "Only if product rejects rich text in cards" },
 ];
@@ -63,6 +64,9 @@ function assertEveryReportFindingMapped(findings: Finding[]) {
 Closure checklist:
 
 - Re-read the final report and all TASK-267 files.
+- Rewrite or remap stale pre-`TASK-256` / pre-`TASK-307` report rows before
+  using the report as closure evidence. Do not leave contradictory "open" and
+  "fixed" statements for the same finding.
 - Verify every status/date is consistent.
 - Verify `_docs/_TASKS/README.md` counts match visible rows.
 - Verify changelog numbering is monotonic against `_docs/_CHANGELOG/README.md`.
@@ -92,9 +96,19 @@ No API routes are added by this docs/closure leaf.
   renderer output changed in the family.
 - `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` if
   token/clear semantics changed in the family.
+- `bun run test:vitest -- tests/vitest/widgets/widgetSafeHref.test.ts` if
+  `TASK-307` or `TASK-267-06` touched shared safe-link behavior.
+- `bun run test:vitest -- tests/vitest/ui/media-picker.test.tsx` if
+  `TASK-267-03` changed the shared `MediaPicker` contract rather than only local
+  Feature Grid integration.
+- `bun run test:vitest -- tests/vitest/pageBuilder/wizardPanel.test.tsx`,
+  `tests/vitest/pageBuilder/blockSettings-wave.test.tsx`, and
+  `tests/vitest/pageBuilder/wizardFlow.test.tsx` only if a dedicated shared
+  builder follow-up landed during this family.
 - `bun test tests/unit/widgets/validator.test.ts` if schema/defaults changed.
 - `bun test tests/unit/widgets/registry.test.ts` if registry/variant wiring
   changed.
+- `bun run gates:coderso`
 - `bun run scan:security:strict`
 - `bun run precommit`
 
@@ -106,13 +120,13 @@ No API routes are added by this docs/closure leaf.
 - `_docs/WIDGET_PACK_MATRIX.md` only for pack readiness changes
 - `_docs/_TASKS/TASK-267*.md`
 - `_docs/_TASKS/README.md`
-- `_docs/_CHANGELOG/{N}-2026-05-16-task-267-feature-grid-widget-followups.md`
+- `_docs/_CHANGELOG/{N}-{YYYY-MM-DD}-task-267-feature-grid-widget-followups.md`
 - `_docs/_CHANGELOG/README.md`
 
 ## Acceptance Criteria
 
 - The Feature Grid report has no unmapped finding.
-- TASK-267 does not claim TASK-256 shared-contract fixes as its own.
+- TASK-267 does not claim shared-contract fixes as its own.
 - All TASK-267 files are `Done` with dates, validation notes, and final evidence.
 - Changelog and board statistics are synchronized.
 - Final validation is recorded with exact commands and results.

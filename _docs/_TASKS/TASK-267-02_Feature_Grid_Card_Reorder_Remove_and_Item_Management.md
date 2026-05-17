@@ -104,6 +104,8 @@ No API routes are added.
   normalization changes.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso`
+- `bun run precommit`
 
 ## Documentation Updates Required
 

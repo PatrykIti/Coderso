@@ -29,7 +29,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 - **To Do:** 284 tasks
-- **In Progress:** 4 tasks
+- **In Progress:** 6 tasks
 - **Done:** 1635 tasks
 
 ---
@@ -254,7 +254,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-268-04 | Footer Editor Mode IA and Link Management | High | Large | Label Advanced controls, remove duplicate layout ownership, improve Wizard disclosure, and add deterministic link management |
 | TASK-268-05 | Footer Layout, Typography, and Interactive Style Controls | Medium | Large | Add bounded padding, responsive, hover, link typography, and target controls while deferring market-only utilities |
 | TASK-268-06 | Footer Report, Docs, Changelog, and Closure | Medium | Medium | Refresh Footer report/docs/changelog/board and final validation for the TASK-268 family |
-| TASK-267 | Feature Grid Widget Playwright Product Followups | High | Very Large | Feature Grid-only follow-up family for `REPORT_FEATURE_GRID_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-267-01 | Feature Grid Variant Preview and Responsive Cards-4 Layout | High | Medium | Add variant preview affordances, repair cards-4 responsive product behavior, and keep columns truthfulness in TASK-256 |
 | TASK-267-02 | Feature Grid Card Reorder, Remove, and Item Management | High | Medium | Add drag reorder plus recoverable remove flow while preserving keyboard move fallback |
 | TASK-267-03 | Feature Grid Media Picker, Emoji Picker, and Image Priority UX | High | Large | Add media-library card image picking, bounded emoji presets, and image-over-icon guidance |
@@ -335,6 +334,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-307 | Feature Grid Shared Contract Residuals | High | Medium | In progress: TASK-267 audit found still-live shared rows for invalid image/CTA feedback, safe image fallback, emoji ARIA, and duplicated Advanced token ownership |
+| TASK-267 | Feature Grid Widget Playwright Product Followups | High | Very Large | In progress: shared residuals were split to TASK-307 first; local Feature Grid leaves continue on this worktree after shared cleanup lands |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |

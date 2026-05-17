@@ -27,10 +27,11 @@ Marketing grid for feature cards with optional highlighted first item.
 - layout columns and gap
 - feature cards
 - colors, radius, and borders
+- inline invalid URL feedback for card images and CTA links
 
 ### Advanced
 
-- technical style tokens and normalized payload snapshot
+- read-only layout diagnostics, normalization actions, and raw payload snapshot
 
 ## None Token Support
 
@@ -41,8 +42,17 @@ Marketing grid for feature cards with optional highlighted first item.
 
 - `style.surfaceColor` is clearable; clear removes the card background field and
   the renderer omits forced card background output.
-- `style.borderColor` remains the border color field; it is not the clear
-  sentinel for surface removal.
+- `style.borderColor` is also clearable; clear removes the forced border color
+  field and lets runtime fall back to the shared border token.
+
+## Shared Safety Baseline
+
+- invalid `items[].image` values stay visible in the editor for correction, but
+  runtime output skips unsafe image URLs instead of rendering broken media
+  elements
+- invalid `items[].ctaHref` values stay visible in the editor with inline
+  feedback while public output continues to reject unsafe links
+- decorative emoji output is marked `aria-hidden="true"`
 
 ## Data Model (summary)
 

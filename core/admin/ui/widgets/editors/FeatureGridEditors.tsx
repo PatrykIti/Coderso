@@ -28,6 +28,7 @@ import {
   type FeatureGridRadius,
   type FeatureGridVariantId,
 } from "../../../../widgets/core/featureGrid";
+import { normalizeWidgetSafeHref } from "../../../../widgets/core/widgetSafeHref";
 import type { WidgetEditorProps } from "../../../../widgets/types";
 import { ClearableFieldHeader } from "./ClearableFields";
 import { WidgetEditorSection } from "./WidgetEditorControls";
@@ -96,6 +97,21 @@ const resolvePickerColor = (value: string | undefined, fallback: string) =>
 function normalizeValue(value: FeatureGridData): FeatureGridData {
   return normalizeFeatureGridData(value);
 }
+
+const isValidFeatureGridImageUrl = (value: string | undefined) =>
+  !value ||
+  normalizeWidgetSafeHref(value, {
+    allowRelative: true,
+    allowHttp: true,
+  }) !== undefined;
+
+const isValidFeatureGridCtaUrl = (value: string | undefined) =>
+  !value ||
+  normalizeWidgetSafeHref(value, {
+    allowRelative: true,
+    allowHash: true,
+    allowHttp: true,
+  }) !== undefined;
 
 function EditorSection({
   id,
@@ -698,6 +714,11 @@ export function FeatureGridVisualEditor({
                   }
                   placeholder="https://cdn.example.com/feature.jpg"
                 />
+                {(item.image ?? "").trim().length > 0 && !isValidFeatureGridImageUrl(item.image) ? (
+                  <p className="text-xs text-amber-700">
+                    Use a relative path or full URL. Unsafe media URLs are not rendered publicly.
+                  </p>
+                ) : null}
               </div>
 
               <div className="space-y-2">
@@ -720,6 +741,12 @@ export function FeatureGridVisualEditor({
                   }
                   placeholder="/features"
                 />
+                {(item.ctaHref ?? "").trim().length > 0 &&
+                !isValidFeatureGridCtaUrl(item.ctaHref) ? (
+                  <p className="text-xs text-amber-700">
+                    Use a relative path, hash, or full URL. Unsafe links are not rendered publicly.
+                  </p>
+                ) : null}
               </div>
             </div>
           </div>
@@ -816,93 +843,39 @@ export function FeatureGridAdvancedEditor({
   return (
     <div className="space-y-4">
       <EditorSection
-        title="Layout tokens"
-        description="Technical controls for density and border tokens used by renderer."
+        title="Layout diagnostics"
+        description="Visual owns layout tokens. Advanced keeps read-only diagnostics plus normalization actions."
       >
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Columns token</p>
-            <Select
-              value={normalized.style?.columns ?? featureGridDefaults.style?.columns ?? "3"}
-              onValueChange={(next) =>
-                updateStyle(value, onChange, { columns: next as FeatureGridColumns })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Columns" />
-              </SelectTrigger>
-              <SelectContent>
-                {columnsOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Gap token</p>
-            <Select
-              value={normalized.style?.gap ?? featureGridDefaults.style?.gap ?? "md"}
-              onValueChange={(next) =>
-                updateStyle(value, onChange, { gap: next as FeatureGridGap })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Gap" />
-              </SelectTrigger>
-              <SelectContent>
-                {gapOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Border width token</p>
-            <Select
-              value={normalized.style?.borderWidth ?? featureGridDefaults.style?.borderWidth ?? "1"}
-              onValueChange={(next) =>
-                updateStyle(value, onChange, { borderWidth: next as FeatureGridBorderWidth })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Border width" />
-              </SelectTrigger>
-              <SelectContent>
-                {borderWidthOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Radius token</p>
-            <Select
-              value={normalized.style?.radius ?? featureGridDefaults.style?.radius ?? "lg"}
-              onValueChange={(next) =>
-                updateStyle(value, onChange, { radius: next as FeatureGridRadius })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Radius" />
-              </SelectTrigger>
-              <SelectContent>
-                {radiusOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <div className="space-y-2 rounded-lg border p-3 text-sm text-muted-foreground">
+          <p>
+            Variant: <span className="font-medium text-foreground">{resolvedVariant}</span>
+          </p>
+          <p>
+            Columns token:{" "}
+            <span className="font-medium text-foreground">
+              {resolvedVariant === "highlight-first"
+                ? "Locked to shared spotlight layout"
+                : (normalized.style?.columns ?? featureGridDefaults.style?.columns ?? "3")}
+            </span>
+          </p>
+          <p>
+            Gap token:{" "}
+            <span className="font-medium text-foreground">
+              {normalized.style?.gap ?? featureGridDefaults.style?.gap ?? "md"}
+            </span>
+          </p>
+          <p>
+            Border width token:{" "}
+            <span className="font-medium text-foreground">
+              {normalized.style?.borderWidth ?? featureGridDefaults.style?.borderWidth ?? "1"}
+            </span>
+          </p>
+          <p>
+            Radius token:{" "}
+            <span className="font-medium text-foreground">
+              {normalized.style?.radius ?? featureGridDefaults.style?.radius ?? "lg"}
+            </span>
+          </p>
         </div>
       </EditorSection>
 

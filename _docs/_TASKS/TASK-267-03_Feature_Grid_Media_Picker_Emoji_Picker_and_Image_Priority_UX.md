@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Feature Grid + Admin UI + Media
 **Estimated Effort:** Large
-**Dependencies:** TASK-256-06-01, TASK-267-02
+**Dependencies:** TASK-307, TASK-267-02
 **Status:** To Do
 
 ---
@@ -13,17 +13,19 @@
 ## Overview
 
 Improve Feature Grid card media authoring by adding a media-library picker,
-bounded emoji/icon picker, and clear copy explaining that an image overrides the
-emoji icon in runtime output.
+bounded emoji/icon picker, explicit image alt authoring, and clear copy
+explaining that an image overrides the emoji icon in runtime output.
 
-This leaf does not own raw image URL validation, image alt/lazy baseline, or
-safe media rendering; those are TASK-256 shared-contract repairs. This leaf may
-reuse the TASK-256 media helpers after they land.
+This leaf does not own raw image URL validation or runtime safe-media fallback;
+those route through `TASK-307`. This leaf does own the Feature Grid-local image
+alt field and may reuse shared media helpers after they land.
 
 ## Source Findings
 
 - `_docs/PLAYWRIGHT/REPORT_FEATURE_GRID_WIDGET.md:234-236` - UX-07 icon/image
   priority is unclear.
+- `_docs/PLAYWRIGHT/REPORT_FEATURE_GRID_WIDGET.md:349` - A2 missing image alt
+  authoring is Feature Grid-local card media scope.
 - `_docs/PLAYWRIGHT/REPORT_FEATURE_GRID_WIDGET.md:303-305` - BF-04 lacks icon
   and image size controls; size controls are implemented in TASK-267-04, but
   media authoring starts here.
@@ -40,10 +42,11 @@ reuse the TASK-256 media helpers after they land.
 
 | File | Required change |
 |---|---|
-| `core/admin/ui/widgets/editors/FeatureGridEditors.tsx` | Import `MediaPicker` from `@/ui/media/MediaPicker` and `listMediaCached` from `@/services/mediaClient`, add per-card transient media-id selection that persists public URLs into `items[].image`, add bounded emoji presets, and display image-over-icon priority copy. |
-| `tests/vitest/ui/feature-grid-editor-wave.test.tsx` | Mock `MediaPicker`/media client and assert selecting media patches the correct card image, emoji preset patches `items[].icon`, and priority copy is visible. |
-| `core/widgets/core/featureGrid.tsx` | Change only if TASK-256 media helpers require a field normalization hook; otherwise keep existing `items[].image` shape. |
-| `tests/vitest/widgets/featureGrid.test.tsx` | Update only if normalizer/runtime behavior changes. |
+| `core/admin/ui/widgets/editors/FeatureGridEditors.tsx` | Import `MediaPicker` from `@/ui/media/MediaPicker` and `listMediaCached` from `@/services/mediaClient`, add per-card transient media-id selection that persists public URLs into `items[].image`, add bounded emoji presets, add `Image alt text` authoring, and display image-over-icon priority copy. |
+| `tests/vitest/ui/feature-grid-editor-wave.test.tsx` | Mock `MediaPicker`/media client and assert selecting media patches the correct card image, emoji preset patches `items[].icon`, `Image alt text` persists, and priority copy is visible. |
+| `core/widgets/core/featureGrid.tsx` | Extend the item contract with authorable `imageAlt` while reusing shared safe-media runtime behavior from `TASK-307`. |
+| `tests/vitest/widgets/featureGrid.test.tsx` | Cover `imageAlt` normalization and runtime fallback behavior. |
+| `tests/unit/widgets/validator.test.ts` | Update schema assertions for the new persisted media field. |
 | `_docs/_WIDGETS/FEATURE_GRID.md` | Document media picker, emoji picker, and image-over-icon priority. |
 | `_docs/PLAYWRIGHT/REPORT_FEATURE_GRID_WIDGET.md` | Mark UX-07/BF-15/BF-16 fixed or record deferral evidence. |
 
@@ -51,6 +54,10 @@ reuse the TASK-256 media helpers after they land.
 
 ```tsx
 const featureGridEmojiOptions = ["⚡", "🧩", "📈", "🔒", "🚀", "✨", "💬", "🎯"];
+
+type FeatureGridItem = {
+  imageAlt?: string;
+};
 
 async function handleItemMediaSelection(index: number, nextValue: unknown) {
   const mediaId = typeof nextValue === "string" ? nextValue : null;
@@ -94,6 +101,8 @@ Error handling:
   data.
 - Selecting media stores only the public URL in `items[].image` unless a later
   schema task explicitly adds `imageAssetId` with migration tests.
+- `imageAlt` stores concise author copy only when the card uses an image; blank
+  values fall back to the current title-derived runtime alt.
 - The editor must not silently delete `items[].icon` when `items[].image` is set;
   instead it should show that the icon is inactive while the image is present.
 
@@ -105,7 +114,7 @@ No API routes are added.
 - Auth/RBAC/CSRF/rate-limit: unchanged admin editing and existing media read
   permissions.
 - Reject-unknown validation: unchanged unless a schema-backed media field is
-  introduced.
+  introduced. `imageAlt` must be schema-backed if added here.
 - Anti-abuse: no raw upload or public write path is introduced. Media URLs must
   remain normalized by TASK-256 safe media behavior before runtime output.
 - Secret handling: media picker state and errors must not expose secrets or
@@ -118,8 +127,11 @@ No API routes are added.
   media normalization changes.
 - `bun run test:vitest -- tests/vitest/ui/media-picker.test.tsx` only if shared
   `MediaPicker` behavior changes.
+- `bun test tests/unit/widgets/validator.test.ts` when `imageAlt` is added.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso`
+- `bun run precommit`
 
 ## Documentation Updates Required
 
@@ -133,6 +145,7 @@ No API routes are added.
 - A card can choose an image from the existing media library without hand-copying
   a URL.
 - A card can choose a common emoji icon without pasting arbitrary emoji text.
+- A card image can carry explicit alt text without forcing a second media model.
 - The editor clearly communicates that image output takes priority over icon
   output.
 - Media picker failures are visible and non-destructive.

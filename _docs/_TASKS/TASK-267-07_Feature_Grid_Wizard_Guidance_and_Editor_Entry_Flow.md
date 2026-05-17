@@ -13,19 +13,23 @@
 ## Overview
 
 Refine the Feature Grid Wizard so first-run setup is honest about its limited
-scope and decide whether the widget should default to Wizard or Visual after the
-expanded Visual editor is complete.
+scope after the expanded Visual editor is complete.
 
 This leaf is Feature Grid-local onboarding work. It must preserve the shared
-three-mode widget contract from `_docs/WIDGETS.md`.
+three-mode widget contract from `_docs/WIDGETS.md`. Shared builder entry-policy
+changes are out of scope here and need a dedicated follow-up if product wants
+them.
 
 ## Source Findings
 
 - `_docs/PLAYWRIGHT/REPORT_FEATURE_GRID_WIDGET.md:226-228` - UX-05 Wizard edits
   only titles without explaining that Visual has full card editing.
-- `_docs/PLAYWRIGHT/REPORT_FEATURE_GRID_WIDGET.md:246-248` - UX-10 first editor
-  entry always starts from Wizard and adds a step for common editing.
+- `_docs/PLAYWRIGHT/REPORT_FEATURE_GRID_WIDGET.md:246-248` - UX-10 still
+  motivates a shared first-open policy discussion, but the current live owner no
+  longer has a widget-local "Continue to layout and styling" seam to patch.
 - `_docs/WIDGETS.md:54-105` - shared Wizard/Visual/Advanced ownership.
+- `core/admin/ui/widgets/editors/FeatureGridEditors.tsx` - current Wizard owner
+  is guidance-only plus shared panel handoff.
 
 ## Sub-Tasks
 
@@ -36,12 +40,7 @@ three-mode widget contract from `_docs/WIDGETS.md`.
 | File | Required change |
 |---|---|
 | `core/admin/ui/widgets/editors/FeatureGridEditors.tsx` | Add concise Wizard guidance and keep first-run setup minimal. Do not add widget-local tab state. |
-| `core/admin/ui/pages/builder/WizardPanel.tsx` | Change only if the shared `onComplete` button label or copy needs to expose a clearer Visual handoff for all widgets. |
-| `core/admin/ui/pages/builder/BlockSettings.tsx` | Change only if product accepts a shared editor-entry policy that can choose initial `editor.mode` / `wizardCompleted` by widget definition. |
-| `core/admin/ui/pages/builder/blockUtils.ts` | Change only if a shared, schema-backed initial editor-state helper is added near `createBlock` / `applyWizardSelection`; do not add a Feature Grid-only branch without a shared capability flag. |
-| `core/widgets/core/featureGrid.tsx` | Change only if widget definition receives a shared editor capability such as `initialEditorMode` or `skipWizardForExistingBlocks`. |
 | `tests/vitest/ui/feature-grid-editor-wave.test.tsx` | Assert Wizard guidance is visible and does not duplicate Visual card controls. |
-| `tests/vitest/pageBuilder/wizardPanel.test.tsx`, `tests/vitest/pageBuilder/blockSettings-wave.test.tsx`, `tests/vitest/pageBuilder/wizardFlow.test.tsx` | Update only if shared Wizard handoff or initial editor-state behavior changes. |
 | `_docs/_WIDGETS/FEATURE_GRID.md` | Document Wizard/Visual division after all previous leaves land. |
 | `_docs/PLAYWRIGHT/REPORT_FEATURE_GRID_WIDGET.md` | Record fixed/deferred status for UX-05/UX-10. |
 
@@ -58,23 +57,6 @@ function FeatureGridWizardEditor(props: WidgetEditorProps<FeatureGridData>) {
     </div>
   );
 }
-
-type WidgetEditorEntryPolicy = {
-  initialMode?: "wizard" | "visual";
-  skipWizardForExistingBlocks?: boolean;
-};
-
-function resolveInitialEditorState(
-  definition: WidgetDefinition,
-  existingEditorState?: WidgetEditorState
-): WidgetEditorState {
-  if (existingEditorState?.wizardCompleted) return existingEditorState;
-  const policy = definition.editorCapabilities?.entryPolicy;
-  if (policy?.initialMode === "visual") {
-    return { mode: "visual", wizardCompleted: true };
-  }
-  return { mode: "wizard", wizardCompleted: false };
-}
 ```
 
 Error handling:
@@ -83,6 +65,8 @@ Error handling:
   `onVariantChange`, and `context`; it does not expose `onModeChange`.
 - Keep the existing shared handoff through `WizardPanel.onComplete` and
   `applyWizardSelection`. Do not invent a widget-local tab state.
+- If product wants a shared first-open editor policy, split that work into a
+  dedicated shared builder task instead of expanding TASK-267-07 ad hoc.
 - Do not make Wizard duplicate Visual controls added by earlier TASK-267 leaves.
 - If product review keeps Wizard as first open for all blocks, TASK-267-08 must
   record UX-10 as a deliberate deferral with rationale.
@@ -100,13 +84,10 @@ No API routes are added.
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/ui/feature-grid-editor-wave.test.tsx`
-- `bun run test:vitest -- tests/vitest/pageBuilder/wizardPanel.test.tsx` if the
-  shared Wizard handoff label/copy changes.
-- `bun run test:vitest -- tests/vitest/pageBuilder/blockSettings-wave.test.tsx`
-  and `bun run test:vitest -- tests/vitest/pageBuilder/wizardFlow.test.tsx` if
-  shared initial editor-state behavior changes.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso`
+- `bun run precommit`
 
 ## Documentation Updates Required
 
@@ -118,6 +99,6 @@ No API routes are added.
 ## Acceptance Criteria
 
 - Wizard clearly states which Feature Grid fields live in Visual.
-- Common editing does not require an unexplained extra step after the initial
-  setup decision is made.
+- UX-10 is either closed through local guidance or explicitly deferred as a
+  shared builder decision rather than a widget-local hack.
 - The shared Wizard/Visual/Advanced contract remains intact.

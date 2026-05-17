@@ -159,6 +159,40 @@ test("feature grid strips unsafe CTA hrefs from normalized items", () => {
   expect(html).not.toContain("//evil.example");
 });
 
+test("feature grid skips unsafe image URLs and hides decorative emoji output", () => {
+  const html = renderToString(
+    <FeatureGridBlock
+      variant="cards-3"
+      data={{
+        ...featureGridDefaults,
+        items: [
+          {
+            id: "feature-1",
+            title: "Unsafe image fallback",
+            image: "javascript:alert(1)",
+            icon: "🛡️",
+          },
+          {
+            id: "feature-2",
+            title: "Safe image",
+            image: "https://cdn.example.com/feature.jpg",
+          },
+          {
+            id: "feature-3",
+            title: "Icon only",
+            icon: "🚀",
+          },
+        ],
+      }}
+    />
+  );
+
+  expect(html).not.toContain("javascript:alert");
+  expect(html).toContain('src="https://cdn.example.com/feature.jpg"');
+  expect(html).toContain('aria-hidden="true"');
+  expect(html).toContain("🛡️");
+});
+
 test("feature grid validator rejects unsupported variant", () => {
   clearWidgets();
   registerWidget(
@@ -221,7 +255,7 @@ test("feature grid advanced keeps technical-only scope", () => {
     />
   );
 
-  expect(html).toContain("Layout tokens");
+  expect(html).toContain("Layout diagnostics");
   expect(html).toContain("Normalization and safeguards");
   expect(html).toContain("Raw payload snapshot");
   expect(html).not.toContain("Feature cards and actions");

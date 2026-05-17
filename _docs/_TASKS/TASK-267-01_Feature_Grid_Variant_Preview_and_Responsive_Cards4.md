@@ -99,6 +99,8 @@ No API routes are added.
 - `bun test tests/unit/widgets/validator.test.ts` if a new variant id is added.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso`
+- `bun run precommit`
 
 ## Documentation Updates Required
 

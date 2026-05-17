@@ -2,7 +2,7 @@ import type { CSSProperties, ComponentType } from "react";
 
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
-import { normalizeWidgetSafeHref } from "./widgetSafeHref";
+import { normalizeWidgetSafeHref, resolveWidgetLinkAttrs } from "./widgetSafeHref";
 
 export type FeatureGridVariantId = "cards-3" | "cards-4" | "highlight-first";
 export type FeatureGridColumns = "2" | "3" | "4";
@@ -377,11 +377,15 @@ export function FeatureGridBlock({ data, variant }: { data: FeatureGridData; var
 
       <div className={gridClassName}>
         {items.map((item, index) => {
-          const hasImage = typeof item.image === "string" && item.image.trim().length > 0;
+          const safeImageHref = normalizeWidgetSafeHref(item.image, {
+            allowRelative: true,
+            allowHttp: true,
+          });
+          const hasImage = typeof safeImageHref === "string" && safeImageHref.trim().length > 0;
           const hasIcon = !hasImage && typeof item.icon === "string" && item.icon.trim().length > 0;
           const hasDescription =
             typeof item.description === "string" && item.description.trim().length > 0;
-          const safeCtaHref = normalizeWidgetSafeHref(item.ctaHref, {
+          const ctaLink = resolveWidgetLinkAttrs(item.ctaHref, {
             allowRelative: true,
             allowHash: true,
             allowHttp: true,
@@ -389,8 +393,7 @@ export function FeatureGridBlock({ data, variant }: { data: FeatureGridData; var
           const hasCta =
             typeof item.ctaLabel === "string" &&
             item.ctaLabel.trim().length > 0 &&
-            typeof safeCtaHref === "string" &&
-            safeCtaHref.trim().length > 0;
+            ctaLink !== undefined;
           const highlighted = resolvedVariant === "highlight-first" && index === 0;
 
           return (
@@ -407,7 +410,7 @@ export function FeatureGridBlock({ data, variant }: { data: FeatureGridData; var
             >
               {hasImage ? (
                 <img
-                  src={item.image}
+                  src={safeImageHref}
                   alt={item.title ?? `Feature ${index + 1}`}
                   loading={highlighted ? "eager" : "lazy"}
                   className={joinClasses(
@@ -416,7 +419,10 @@ export function FeatureGridBlock({ data, variant }: { data: FeatureGridData; var
                   )}
                 />
               ) : hasIcon ? (
-                <span className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-[var(--color-border)] bg-[var(--color-bg)] text-lg">
+                <span
+                  aria-hidden="true"
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-[var(--color-border)] bg-[var(--color-bg)] text-lg"
+                >
                   {item.icon}
                 </span>
               ) : (
@@ -431,9 +437,8 @@ export function FeatureGridBlock({ data, variant }: { data: FeatureGridData; var
 
               {hasCta ? (
                 <a
+                  {...ctaLink}
                   className="mt-auto inline-flex w-fit rounded-md border border-[var(--color-border)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text)] transition hover:border-[var(--color-primary)]"
-                  href={safeCtaHref}
-                  rel={safeCtaHref?.startsWith("http") ? "noopener noreferrer" : undefined}
                 >
                   {item.ctaLabel}
                 </a>
