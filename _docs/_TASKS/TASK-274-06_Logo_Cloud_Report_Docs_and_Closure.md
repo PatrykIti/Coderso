@@ -95,6 +95,21 @@ Manual closure flow:
 6. Re-run `git diff --check`, `bun run precommit`, and any targeted suites that
    changed during closure.
 
+Closure error handling:
+
+- If any report row lacks code, test, docs, TASK-256, deferred, or
+  not-applicable evidence, keep TASK-274 open and add or repair the owner leaf
+  before moving statuses.
+- If TASK-256 shared safe-link, heading, ARIA, hoverColor, `logoHeight: "none"`,
+  alt, or Advanced-mode work has not landed, mark the affected rows as
+  `task-256-owned` with the exact remaining task ID instead of claiming a
+  TASK-274 fix.
+- If validation cannot run because of database, network, or environment
+  blockers, record the command, blocker, and retry requirement, and leave status
+  unchanged unless the owner explicitly accepts the risk.
+- If report evidence depends on Playwright screenshots, record textual runtime
+  assertions and do not commit PNG files.
+
 ## Sub-Tasks
 
 - None. This is the closure and evidence leaf for the TASK-274 family.
@@ -121,10 +136,10 @@ Minimum final family gate:
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` if any
   style/clear/none behavior changed in the family.
-- `bun run test:vitest -- tests/vitest/widgets/widgetSafeHref.test.ts` if any
-  link target/CTA helper behavior changed.
-- `bun test tests/unit/widgets/validator.test.ts` if schema/defaults/normalizer
-  fields changed.
+- `bun run test:vitest -- tests/vitest/widgets/widgetSafeHref.test.ts` when
+  link target/CTA behavior consumes TASK-256 shared link attributes.
+- `bun test tests/unit/widgets/validator.test.ts` only when intentionally adding
+  Logo Cloud coverage to the generic Bun validator suite.
 - `bun run scan:security:strict`
 - `bun run precommit`
 

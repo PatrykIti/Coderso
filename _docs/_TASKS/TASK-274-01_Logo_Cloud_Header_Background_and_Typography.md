@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Logo Cloud + Admin UI + Runtime Render
 **Estimated Effort:** Large
-**Dependencies:** TASK-274, TASK-256-04, TASK-256-06-02
+**Dependencies:** TASK-274, TASK-256-02, TASK-256-06-02
 **Status:** To Do
 
 ---
@@ -23,10 +23,10 @@ Source report findings:
 
 Explicitly out of scope:
 
-- Changing the heading element or adding `headingLevel`; TASK-256 owns the
-  shared heading hierarchy repair.
-- Adding section `aria-label` / `aria-labelledby`; TASK-256 owns the shared
-  accessibility baseline.
+- Changing the heading element or adding `headingLevel`; TASK-256-06-02 owns
+  the Logo Cloud slice of the shared heading hierarchy repair.
+- Adding section `aria-label` / `aria-labelledby`; TASK-256-06-02 owns the Logo
+  Cloud slice of the shared accessibility baseline.
 - Adding a second generic background/clear contract; this leaf uses existing
   clearable style helpers and widget-local fields only.
 
@@ -39,7 +39,7 @@ Explicitly out of scope:
 | `tests/vitest/widgets/logoCloud.test.tsx` | Cover normalization, rendered eyebrow/background/style markers, and backward-compatible defaults. |
 | `tests/vitest/ui/logo-cloud-editor-wave.test.tsx` | Cover editor controls and update flow for eyebrow/background/typography. |
 | `tests/vitest/widgets/renderer.test.tsx` | Update only if shared renderer markers or section output assertions change. |
-| `tests/unit/widgets/validator.test.ts` | Add schema acceptance/rejection coverage if this suite owns current widget schemas. |
+| `tests/unit/widgets/validator.test.ts` | Add coverage only if intentionally expanding the generic Bun validator suite; otherwise keep Logo Cloud schema/default/normalizer assertions in `tests/vitest/widgets/logoCloud.test.tsx`. |
 | `_docs/_WIDGETS/LOGO_CLOUD.md` | Document new data fields and mode ownership. |
 | `_docs/PLAYWRIGHT/REPORT_LOGO_CLOUD_WIDGET.md` | Record fixed evidence for BF-01/BF-02/BF-07. |
 
@@ -136,7 +136,8 @@ No API routes are added.
   markers or shared renderer output changes.
 - `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` if
   clearable background semantics touch style-none adjacency.
-- `bun test tests/unit/widgets/validator.test.ts` when schema/defaults change.
+- `bun test tests/unit/widgets/validator.test.ts` only when intentionally adding
+  Logo Cloud coverage to the generic Bun validator suite.
 - `bun run scan:security:strict`
 - `bun run precommit`
 

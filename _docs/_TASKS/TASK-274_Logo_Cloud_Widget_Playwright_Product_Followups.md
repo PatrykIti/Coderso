@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Logo Cloud + Admin UI + Runtime Render + Playwright QA
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-252, TASK-256, TASK-256-01, TASK-256-02, TASK-256-04, TASK-256-06-02, TASK-256-08
+**Dependencies:** TASK-252, TASK-256, TASK-256-01, TASK-256-02, TASK-256-06-02, TASK-256-08
 **Status:** To Do
 
 ---
@@ -19,7 +19,7 @@ This family owns only product and UX improvements that are local to
 `logo-cloud`. Shared widget-contract repairs stay in TASK-256. Do not use
 TASK-274 to duplicate shared fixes for safe href rendering, baseline ARIA and
 heading semantics, hoverColor truthfulness, `logoHeight: "none"` safety,
-Advanced-mode duplication, or generic URL validation feedback.
+Advanced-mode duplication, or generic link URL validation feedback.
 
 ## Source Report Boundary
 
@@ -63,13 +63,13 @@ TASK-256 already owns them as shared widget-contract drift.
 | Report finding | Evidence | Owner task | Reason |
 |---|---|---|---|
 | BUG-01 base safe link rendering, `rel`, unsafe href rejection | `REPORT_LOGO_CLOUD_WIDGET.md:119-125,260-263,296` | TASK-256-06-02 | Shared marketing-widget safe href contract and `widgetSafeHref` ownership. |
-| BUG-02 hardcoded heading semantics and BF-09 `headingLevel` baseline | `REPORT_LOGO_CLOUD_WIDGET.md:127-133,242-244,261,297` | TASK-256-04, TASK-256-06-02 | Shared runtime accessibility and heading hierarchy repair. |
-| BUG-03 section `aria-label` / `aria-labelledby` | `REPORT_LOGO_CLOUD_WIDGET.md:135-140,260,298` | TASK-256-04, TASK-256-06-02 | Shared runtime landmark accessibility baseline. |
+| BUG-02 hardcoded heading semantics and BF-09 `headingLevel` baseline | `REPORT_LOGO_CLOUD_WIDGET.md:127-133,242-244,261,297` | TASK-256-06-02 | Logo Cloud slice of the shared runtime heading hierarchy repair. TASK-274 may consume the resulting field but must not define a second heading contract. |
+| BUG-03 section `aria-label` / `aria-labelledby` | `REPORT_LOGO_CLOUD_WIDGET.md:135-140,260,298` | TASK-256-06-02 | Logo Cloud slice of the shared runtime landmark accessibility baseline. |
 | BUG-04 / UX-01 `hoverColor` active without grayscale | `REPORT_LOGO_CLOUD_WIDGET.md:142-160,265,304` | TASK-256-06-02 | Shared truthful-control and output-class repair. |
 | BUG-05 `logoHeight: "none"` unbounded image height | `REPORT_LOGO_CLOUD_WIDGET.md:147-150` | TASK-256-06-02 | Shared size-token safety and clear/none semantics adjacency. |
 | UX-05 separate logo `alt` baseline | `REPORT_LOGO_CLOUD_WIDGET.md:180-183,264` | TASK-256-06-02 | Shared media accessibility model. TASK-274 can consume the resulting field but must not define a second alt contract. |
 | UX-07 Advanced duplicates Visual controls | `REPORT_LOGO_CLOUD_WIDGET.md:190-193` | TASK-256-01 | Shared editor-mode ownership and Advanced scope. |
-| BF-10 raw URL validation and safe feedback | `REPORT_LOGO_CLOUD_WIDGET.md:246-248,324` | TASK-256-06-02 | Shared media/link validation feedback; TASK-274 may add product affordances that use the shared validator. |
+| BF-10 raw link URL validation and safe feedback | `REPORT_LOGO_CLOUD_WIDGET.md:246-248,324` | TASK-256-06-02 | Shared link validation and safe href feedback. Image URL preview/unavailable feedback stays in TASK-274-02 as Logo Cloud asset-authoring UX. |
 
 TASK-274 may depend on TASK-256 results, but it must not restage those repairs
 inside its own implementation leaves.
@@ -78,9 +78,10 @@ inside its own implementation leaves.
 
 | Report finding | TASK-274 owner | Notes |
 |---|---|---|
-| UX-03 Wizard missing image field | TASK-274-02 | Logo Cloud starter-logo authoring. Link field is handled by TASK-274-05 after shared safe href. |
+| UX-03 Wizard missing image and link fields | TASK-274-02 | Logo Cloud starter-logo authoring for image URL and basic href entry. Link safety and validation feedback remain TASK-256-06-02. |
 | UX-04 missing image thumbnail preview | TASK-274-02 | Editor-only Logo Cloud asset confidence. |
 | UX-06 missing Media Library picker | TASK-274-02 | Use existing `MediaPicker` and media cache contract. |
+| BF-10 image URL validation/preview feedback | TASK-274-02 | Image URL unavailable/broken-preview feedback is Logo Cloud asset-authoring UX. Shared link URL validation remains TASK-256-06-02. |
 | UX-02 remove without confirm/undo | TASK-274-03 | Repeated Logo Cloud item lifecycle UX. |
 | UX-08 drag-and-drop reorder | TASK-274-03 | Logo Cloud repeated-item order flow, with Move buttons retained as keyboard fallback. |
 | BF-01 missing eyebrow | TASK-274-01 | Product-level trust-section copy field, after TASK-256 heading semantics. |
@@ -171,9 +172,12 @@ Implementation leaves:
 - `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` when
   spacing/radius/clear/none adjacency changes.
 - `bun run test:vitest -- tests/vitest/widgets/widgetSafeHref.test.ts` when
-  link target/CTA behavior consumes or extends shared href helpers.
-- `bun test tests/unit/widgets/validator.test.ts` when schema/defaults/normalizer
-  fields change.
+  link target/CTA behavior consumes TASK-256 shared link attributes. TASK-274
+  leaves must not edit shared helper ownership.
+- `bun test tests/unit/widgets/validator.test.ts` only when intentionally adding
+  Logo Cloud coverage to the generic Bun validator suite. Keep primary Logo
+  Cloud schema/default/normalizer assertions in
+  `tests/vitest/widgets/logoCloud.test.tsx`.
 - `bun test tests/unit/widgets/registry.test.ts` if variant registration or widget
   registry wiring changes.
 - `bun run scan:security:strict`

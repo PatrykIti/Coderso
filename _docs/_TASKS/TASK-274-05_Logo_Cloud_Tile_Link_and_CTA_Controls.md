@@ -28,18 +28,24 @@ Explicitly out of scope:
 - Adding arbitrary CSS strings for radius/width.
 - Adding public write behavior or tracking callbacks.
 
+Precondition:
+
+- TASK-256-06-02 must provide the shared safe link attribute helper before this
+  leaf implements link target or CTA rendering. If that helper is missing, stop
+  and finish or split the TASK-256 shared helper first. TASK-274-05 must not add
+  shared helper ownership locally.
+
 ## Files to Change
 
 | File | Required change |
 |---|---|
 | `core/widgets/core/logoCloud.tsx` | Add bounded tile radius/width, link target option, optional CTA schema/default/normalizer/rendering, and runtime markers. |
-| `core/widgets/core/widgetSafeHref.ts` | Consume shared helper from TASK-256. Extend only if TASK-256 has not yet added target/rel attrs and this leaf is explicitly rebased to own that shared helper change. |
 | `core/admin/ui/widgets/editors/LogoCloudEditors.tsx` | Add Visual controls for tile radius/width, open-new-tab option, and CTA label/href/visibility. |
 | `tests/vitest/widgets/logoCloud.test.tsx` | Cover tile classes/markers, link target behavior through shared helper, CTA rendering, and unsafe CTA omission. |
-| `tests/vitest/widgets/widgetSafeHref.test.ts` | Cover link target attrs only if the shared helper changes here. |
+| `tests/vitest/widgets/widgetSafeHref.test.ts` | Run as regression after TASK-256 shared link attributes land or when this leaf consumes them; do not edit helper ownership from TASK-274-05. |
 | `tests/vitest/ui/logo-cloud-editor-wave.test.tsx` | Cover controls and update flow. |
 | `tests/vitest/widgets/renderer.test.tsx` | Update if shared renderer output assertions change. |
-| `tests/unit/widgets/validator.test.ts` | Cover schema changes. |
+| `tests/unit/widgets/validator.test.ts` | Cover schema changes only if intentionally expanding the generic Bun validator suite. |
 | `_docs/_WIDGETS/LOGO_CLOUD.md` | Document tile/link/CTA fields. |
 | `_docs/PLAYWRIGHT/REPORT_LOGO_CLOUD_WIDGET.md` | Record fixed evidence for UX-09/BF-08/BF-11. |
 
@@ -58,6 +64,7 @@ type LogoCloudCta = {
 };
 
 function resolveLogoLinkAttrs(href: string | undefined, target: LogoCloudLinkTarget) {
+  // Provided by TASK-256-06-02; do not implement the shared helper in this leaf.
   return resolveWidgetLinkAttrs(href, {
     allowRelative: true,
     allowHash: true,
@@ -120,11 +127,13 @@ No API routes are added.
 - `bun --cwd core lint:types`
 - `bun run test:vitest -- tests/vitest/widgets/logoCloud.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/logo-cloud-editor-wave.test.tsx`
-- `bun run test:vitest -- tests/vitest/widgets/widgetSafeHref.test.ts` if the
-  shared link helper changes.
+- `bun run test:vitest -- tests/vitest/widgets/widgetSafeHref.test.ts` when
+  link target/CTA behavior consumes TASK-256 shared link attributes. Do not edit
+  shared helper ownership in this leaf.
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` when renderer
   output markers change.
-- `bun test tests/unit/widgets/validator.test.ts` when schema/defaults change.
+- `bun test tests/unit/widgets/validator.test.ts` only when intentionally adding
+  Logo Cloud coverage to the generic Bun validator suite.
 - `bun run scan:security:strict`
 - `bun run precommit`
 
