@@ -52,11 +52,11 @@ be split by TASK-256-08 into a page-shell follow-up if still reproducible.
 | Pricing static toggle/plan-count drift | Fix here | `PricingPlansEditors.tsx`, `pricingPlans.tsx` | None |
 | FAQ single-open, chevron, ARIA, spacing resolver, and `spacing="none"` double-border behavior | Fix here plus TASK-256-04 | `FaqAccordionEditors.tsx`, `faqAccordion.tsx` | FAQ clear/CSS-variable picker work stays in TASK-256-02; question-aware default-open labels stay in TASK-266-04. |
 | FAQ `spacing="none"` double-border renderer defect | Fix here with renderer spacing/border regression | `faqAccordion.tsx` | None |
-| FAQ animation, SEO JSON-LD, rich text answers, max-width/layout typography, and remove confirmation | Future product scope unless needed to repair current misleading controls | Future FAQ task | TASK-256-08 records deferral |
+| FAQ animation, SEO JSON-LD, rich text answers, max-width/layout typography, and remove confirmation | Future product scope unless needed to repair current misleading controls | `blocked-pending-owner` until a concrete FAQ physical task exists | TASK-256-08 records deferral without inventing an owner |
 | Testimonials slider-static lacks scroll-snap behavior | Fix here or rename/static-proof the variant so the control is truthful | `testimonials.tsx` | None |
 | Testimonials clear gaps for text/accent colors | Fix through TASK-256-02 helpers | `TestimonialsEditors.tsx` | None |
-| Testimonials Wizard rating/role/avatar/source gaps, avatar media picker, remove confirmation, and rating-0 semantics | Future product/editor UX scope unless a current visible control is misleading | Future testimonials task | TASK-256-08 records deferral |
-| Testimonials true carousel, drag/drop, rich media picker | Future product scope unless current `slider-static` label is misleading | Future task | TASK-256-08 records deferral |
+| Testimonials Wizard rating/role/avatar/source gaps, avatar media picker, remove confirmation, and rating-0 semantics | Future product/editor UX scope unless a current visible control is misleading | `blocked-pending-owner` until a concrete testimonials physical task exists | TASK-256-08 records deferral without inventing an owner |
+| Testimonials true carousel, drag/drop, rich media picker | Future product scope unless current `slider-static` label is misleading | `blocked-pending-owner` until a concrete testimonials physical task exists | TASK-256-08 records deferral without inventing an owner |
 
 ## Sub-Tasks
 

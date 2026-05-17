@@ -25,7 +25,8 @@ production fixes by itself.
 - [ ] Re-run or refresh admin preview evidence for each completed TASK-291 row.
 - [ ] Re-run or refresh frontend evidence for each completed TASK-291 row.
 - [ ] Mark every source report finding as `fixed`, `task-256-physical-owner`,
-  `deferred`, or `not reproducible`, with a concrete task ID and reason.
+  `deferred`, `blocked-pending-owner`, or `not-reproducible`, with a concrete
+  task ID and reason.
 - [ ] For NEW, record exact TASK-256-01 evidence; never close it with broad
   `TASK-256` ownership only.
 - [ ] For W7, either reference a concrete shared contrast-validation physical
@@ -61,6 +62,7 @@ type TimelineFindingStatus =
   | "fixed"
   | "task-256-physical-owner"
   | "deferred"
+  | "blocked-pending-owner"
   | "not-reproducible";
 
 type TimelineClosureRow = {

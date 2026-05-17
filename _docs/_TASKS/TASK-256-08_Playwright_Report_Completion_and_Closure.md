@@ -76,7 +76,6 @@ that are not contract repairs.
 - The following marketing/content report findings still need fixed/deferred
   status refreshed after implementation:
   `_docs/PLAYWRIGHT/REPORT_HERO_WIDGET.md:3`,
-  `_docs/PLAYWRIGHT/REPORT_TIMELINE_WIDGET.md:3`,
   `_docs/PLAYWRIGHT/REPORT_FEATURE_GRID_WIDGET.md:3`,
   `_docs/PLAYWRIGHT/REPORT_TESTIMONIALS_WIDGET.md:3`,
   `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md:3`,
@@ -84,6 +83,10 @@ that are not contract repairs.
   `_docs/PLAYWRIGHT/REPORT_CTA_BANNER_WIDGET.md:3`,
   `_docs/PLAYWRIGHT/REPORT_LOGO_CLOUD_WIDGET.md:3`, and
   `_docs/PLAYWRIGHT/REPORT_TEAM_WIDGET.md:3`.
+- Full `_docs/PLAYWRIGHT/REPORT_TIMELINE_WIDGET.md` closure is owned by
+  TASK-291-07. TASK-256-08 may reference exact shared TASK-256 rows from that
+  report, such as TASK-256-01 or TASK-256-04, but must not refresh or close the
+  whole Timeline report.
 - The following dynamic report findings still need fixed/deferred status
   refreshed after implementation:
   `_docs/PLAYWRIGHT/REPORT_CONTENT_LIST_WIDGET.md:3`,

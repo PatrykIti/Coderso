@@ -23,6 +23,8 @@ This leaf owns W1, W5, W9, W11, and W12 from
 - [ ] Add bounded title font-weight tokens for step titles.
 - [ ] Add bounded section padding controls that replace hardcoded `px-4 py-8`
   without exposing raw class strings.
+- [ ] Add bounded outer section margin controls, or an explicitly named section
+  spacing token, so W5's padding/margin request is not reduced to padding only.
 - [ ] Add bounded max-width tokens that replace hardcoded `max-w-6xl`.
 - [ ] Add optional `headerTitle` and `headerDescription` fields for the whole
   Timeline widget.
@@ -35,15 +37,16 @@ This leaf owns W1, W5, W9, W11, and W12 from
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/timeline.tsx` | Extend schema/defaults/normalizer and renderer for header, title weight, padding, max-width, and any accepted dated milestone composition. |
-| `core/admin/ui/widgets/editors/TimelineEditors.tsx` | Add Visual controls for section header, typography weight, padding, max-width, and dated milestone composition. |
-| `tests/vitest/widgets/timeline.test.tsx` | Cover schema/defaults, header output, accessible labels, bounded layout classes/styles, and backward compatibility. |
+| `core/widgets/core/timeline.tsx` | Extend schema/defaults/normalizer and renderer for header, title weight, padding, outer margin/section spacing, max-width, and any accepted dated milestone composition. |
+| `core/admin/ui/widgets/editors/TimelineEditors.tsx` | Add Visual controls for section header, typography weight, padding, outer margin/section spacing, max-width, and dated milestone composition. |
+| `tests/vitest/widgets/timeline.test.tsx` | Cover schema/defaults, header output, accessible labels, bounded padding/margin/max-width classes/styles, and backward compatibility. |
 | `tests/vitest/ui/timeline-editor-wave.test.tsx` | Cover editor controls and validation feedback. |
 
 ## Implementation Pseudocode
 
 ```ts
 type TimelinePadding = "none" | "sm" | "md" | "lg";
+type TimelineSectionSpacing = "none" | "sm" | "md" | "lg";
 type TimelineMaxWidth = "sm" | "md" | "lg" | "xl" | "full";
 type TimelineTitleWeight = "normal" | "medium" | "semibold" | "bold";
 
@@ -55,6 +58,7 @@ type TimelineHeader = {
 function resolveTimelineContainer(layout: TimelineData["layout"]) {
   return {
     paddingClass: paddingClassMap[layout?.padding ?? "md"],
+    sectionSpacingClass: sectionSpacingClassMap[layout?.sectionSpacing ?? "md"],
     maxWidthClass: maxWidthClassMap[layout?.maxWidth ?? "xl"],
     minHeightClass: minHeightClassMap[layout?.minHeight ?? "auto"],
   };
@@ -65,7 +69,9 @@ Data flow:
 
 1. Add strict schema entries for header/layout/style fields.
 2. Normalize empty header strings to omitted fields.
-3. Resolve token values through local maps, not arbitrary classes.
+3. Resolve token values through local maps, not arbitrary classes. Reuse the
+   existing `layout.spacing` item-gap model only for item spacing; use a
+   separate bounded section margin/spacing token if W5 needs outer spacing.
 4. Reuse header title as `aria-labelledby` when present.
 
 Error handling:
@@ -104,7 +110,8 @@ No API routes are added.
 
 ## Acceptance Criteria
 
-- Timeline no longer hardcodes the only available padding/max-width behavior.
+- Timeline no longer hardcodes the only available padding/margin/max-width
+  behavior.
 - Header title/description can be authored inside the widget and support
   accessible section naming.
 - Step title weight is bounded and test-covered.

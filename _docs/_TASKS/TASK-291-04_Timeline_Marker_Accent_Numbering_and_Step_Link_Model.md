@@ -20,8 +20,9 @@ strict and beginner-safe.
 
 ## Sub-Tasks
 
-- [ ] Add a global accent inheritance model that lets per-step accents fall
-  back to a configured Timeline accent instead of manual repeated values.
+- [ ] Reuse the existing `style.markerColor` inheritance model so per-step
+  accents fall back to the configured Timeline marker color instead of manual
+  repeated values.
 - [ ] Add bounded marker display modes: dot, number, and icon.
 - [ ] Support icon-in-marker rendering with separate marker background and icon
   color controls.
@@ -35,8 +36,8 @@ strict and beginner-safe.
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/timeline.tsx` | Extend schema/defaults/normalizer and renderer for accent fallback, marker modes, icon-in-marker fields, optional step links, and any accepted label-position override. |
-| `core/admin/ui/widgets/editors/TimelineEditors.tsx` | Add Visual/Wizard controls for marker mode, icon marker color/background, global accent, and safe step link fields. |
+| `core/widgets/core/timeline.tsx` | Extend schema/defaults/normalizer and renderer for `style.markerColor` fallback, marker modes, icon-in-marker fields, optional step links, and any accepted label-position override. |
+| `core/admin/ui/widgets/editors/TimelineEditors.tsx` | Add Visual/Wizard controls for marker mode, icon marker color/background, existing marker color, and safe step link fields. |
 | `tests/vitest/widgets/timeline.test.tsx` | Cover schema, normalization, marker modes, safe whole-step links, CTA compatibility, and no nested anchor output. |
 | `tests/vitest/ui/timeline-editor-wave.test.tsx` | Cover marker controls and safe-link editor feedback. |
 | `tests/vitest/widgets/widgetSafeHref.test.ts` | Run if shared safe-href behavior changes; do not change it for Timeline only unless required. |
@@ -45,7 +46,7 @@ strict and beginner-safe.
 
 | Field path | Type/allowed values | Default and migration rule |
 |---|---|---|
-| `style.accentColor` | optional safe color string | Omitted by default; existing `steps[].accent` values keep rendering as per-step overrides. |
+| `style.markerColor` | optional safe color string | Existing global marker/accent owner; keep current default and migration behavior. Do not add a second `style.accentColor` field. |
 | `style.markerDisplay` | `"dot"`, `"number"`, or `"icon"` | Defaults to `"dot"` so old payloads render unchanged. |
 | `steps[].markerIcon` | optional plain text icon token/emoji | Empty values are omitted; legacy `steps[].icon` remains readable until docs and editor migration choose the final single field. |
 | `steps[].markerIconColor` | optional safe color string | Omitted by default; renderer falls back to inherited accent/foreground. |
@@ -56,6 +57,12 @@ strict and beginner-safe.
 Existing `icon`, `accent`, and `cta` payloads must remain backward compatible.
 Any migration should be non-destructive: normalize old fields for rendering and
 write new fields only after the editor intentionally changes them.
+
+`steps[].accent` remains the per-step override and takes precedence over
+`style.markerColor`. New marker icon foreground/background fields must fall
+back to `steps[].accent`, then `style.markerColor`, then the existing renderer
+defaults. Any docs or editor labels that describe a global Timeline accent must
+name the existing `style.markerColor` field, not introduce `style.accentColor`.
 
 ## Implementation Pseudocode
 
@@ -92,7 +99,7 @@ Data flow:
 
 1. Add strict schema entries for any new marker/link fields.
 2. Normalize unsafe or empty links to `undefined`.
-3. Resolve global accent before per-step marker render.
+3. Resolve existing `style.markerColor` before per-step marker render.
 4. Avoid nested anchors by disabling whole-step link rendering when a step CTA
    is present, or by moving the CTA outside the link according to the final
    product decision.
