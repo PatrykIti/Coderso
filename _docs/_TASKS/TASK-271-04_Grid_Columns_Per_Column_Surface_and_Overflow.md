@@ -23,8 +23,10 @@ color-picker, or inactive cardize-control contracts.
 
 - Extend column data with optional style overrides for background, border color,
   border width, radius, padding, and overflow.
-- Keep global `style.cardizeColumns` as the default surface switch unless the
-  implementation explicitly adds a safe per-column surface toggle.
+- Keep global `style.cardizeColumns` and the current `masonry-lite` forced
+  cardized behavior as the surface switch unless TASK-256 first changes that
+  contract. TASK-271 may add a per-column "surface on" override, but not a
+  per-column "surface off" escape hatch.
 - Preserve existing global style behavior for legacy payloads.
 - Add Visual controls that make per-column overrides discoverable without
   overwhelming beginner mode.
@@ -82,13 +84,15 @@ type GridColumnsColorValue = string & { readonly __gridColumnsColorValue: unique
 function normalizeGridColumnsColorValue(value: unknown): GridColumnsColorValue | undefined {
   if (typeof value !== "string") return undefined;
   const trimmed = value.trim();
-  if (/^#[0-9a-fA-F]{3,8}$/.test(trimmed)) return trimmed as GridColumnsColorValue;
+  if (/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(trimmed)) {
+    return trimmed as GridColumnsColorValue;
+  }
   if (/^var\(--color-[a-z0-9-]+\)$/.test(trimmed)) return trimmed as GridColumnsColorValue;
   return undefined;
 }
 
 type GridColumnsColumnStyle = {
-  cardize?: boolean;
+  surface?: "inherit" | "on";
   background?: GridColumnsColorValue;
   borderColor?: GridColumnsColorValue;
   borderWidth?: GridColumnsBorderWidth;
@@ -113,10 +117,11 @@ Runtime merge:
 function resolveColumnSurface(
   global: StyleData,
   column: ResolvedGridColumn,
-  resolvedVariant: GridColumnsVariant
+  resolvedVariant: GridColumnsVariantId
 ) {
   const override = column.style ?? {};
-  const cardized = override.cardize ?? global.cardizeColumns ?? (resolvedVariant === "masonry-lite");
+  const forcedCardized = resolvedVariant === "masonry-lite";
+  const cardized = forcedCardized || override.surface === "on" || Boolean(global.cardizeColumns);
   return {
     cardized,
     backgroundColor: resolveClearableStyleValue(override.background ?? global.columnBackground),
@@ -133,8 +138,9 @@ Error handling:
 
 - Column style overrides must be optional and non-destructive for legacy payloads.
 - Clear actions remove the override field and fall back to the global value.
-- If per-column cardize is disabled, surface-only controls are hidden or disabled
-  consistently with TASK-256.
+- If a per-column surface toggle is added before TASK-256 changes U6, it can only
+  turn a column surface on. It must not disable global cardize or the current
+  `masonry-lite` forced-cardized output.
 - Color fields must preserve valid design-token variables after TASK-256 picker
   work and reject unsafe strings through schema/normalizer tests.
 - Preserve the current `masonry-lite` forced-cardized behavior unless TASK-256
@@ -177,6 +183,6 @@ No API routes are added.
 - Clear removes only the override and returns to the global/default value.
 - Overflow behavior is bounded to approved tokens and covered by runtime tests.
 - Validator tests reject invalid color strings, raw classes, CSS functions with
-  URLs, and script-like fragments.
+  URLs, script-like fragments, and invalid hex lengths such as `#12345`.
 - A regression test proves `masonry-lite` still renders cardized surfaces when
-  no per-column override disables it.
+  column-level surface overrides are present.
