@@ -62,6 +62,11 @@ Out of scope:
 | `core/admin/ui/widgets/editors/CommerceWidgetEditorShared.tsx` | Touch only if shared collection UI changes are intentional and covered for other commerce widgets. |
 | `tests/vitest/widgets/productGallery.test.tsx` | Cover query input, source/filter normalization, and legacy defaults. |
 | `tests/vitest/ui/product-gallery-editor-wave.test.tsx` | Cover collection empty/loading/selected guidance and filter controls. |
+| `tests/vitest/ui/commerce-widget-editor-shared.test.tsx` | Add coverage when shared `CommerceSourceFields` behavior changes. |
+| `tests/vitest/ui/product-compare-editor-wave.test.tsx` | Add focused regression coverage if shared commerce editor changes affect Product Compare. |
+| `tests/vitest/ui/product-table-editor-wave.test.tsx` | Add focused regression coverage if shared commerce editor changes affect Product Table. |
+| `tests/vitest/widgets/productCompare.test.tsx` | Add runtime/query regression coverage if shared commerce source or money behavior affects Product Compare. |
+| `tests/vitest/widgets/productTable.test.tsx` | Add runtime/query regression coverage if shared commerce source or money behavior affects Product Table. |
 | `tests/unit/commerce/commerceQueryService.test.ts` | Cover price filters if runtime query semantics change. |
 | `tests/unit/commerce/commerceWidgetRuntime.test.ts` | Cover Product Gallery runtime query payload. |
 | `_docs/_WIDGETS/PRODUCT_GALLERY.md` | Document source controls and any filter fields. |
@@ -140,6 +145,14 @@ No API routes are added.
 
 - `bun run test:vitest -- tests/vitest/widgets/productGallery.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/product-gallery-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/commerce-widget-editor-shared.test.tsx`
+  when shared `CommerceSourceFields` behavior changes.
+- `bun run test:vitest -- tests/vitest/ui/product-compare-editor-wave.test.tsx`
+  and `bun run test:vitest -- tests/vitest/ui/product-table-editor-wave.test.tsx`
+  when shared commerce editor behavior affects Product Compare/Table.
+- `bun run test:vitest -- tests/vitest/widgets/productCompare.test.tsx` and
+  `bun run test:vitest -- tests/vitest/widgets/productTable.test.tsx` when
+  shared commerce source/query/render helpers affect those widgets.
 - `bun test tests/unit/commerce/commerceWidgetRuntime.test.ts`
 - `bun test tests/unit/commerce/commerceQueryService.test.ts` when filters
   change runtime query semantics.

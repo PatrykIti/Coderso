@@ -47,6 +47,8 @@ Out of scope:
 | `_docs/_WIDGETS/PRODUCT_GALLERY.md` | Refresh the final schema/editor/runtime contract. |
 | `_docs/WIDGETS.md` | Update only if a shared widget contract changed outside TASK-256. |
 | `_docs/WIDGET_PACK_MATRIX.md` | Update only if Product Gallery pack readiness/completeness changed. |
+| `core/widgets/modulePackMatrix.ts` | Update only if Product Gallery pack readiness/completeness changed in code. |
+| `tests/unit/widgets/modulePackMatrix.test.ts` | Cover pack-readiness changes when `modulePackMatrix.ts` changes. |
 | `_docs/_TASKS/TASK-280*.md` | Move completed/deferred statuses with dates and validation notes. |
 | `_docs/_TASKS/README.md` | Move rows and recompute board statistics. |
 | `_docs/_CHANGELOG/{N}-2026-05-17-task-280-product-gallery-followups.md` | Add final user-facing changelog entry when the family is done. |
@@ -94,6 +96,7 @@ git diff --check
 bun run test:vitest -- tests/vitest/widgets/productGallery.test.tsx
 bun run test:vitest -- tests/vitest/ui/product-gallery-editor-wave.test.tsx
 bun test tests/unit/commerce/commerceWidgetRuntime.test.ts
+bun test tests/unit/widgets/modulePackMatrix.test.ts # if pack readiness changed
 bun --cwd core lint
 bun --cwd core lint:types
 bun run gates:coderso
@@ -124,6 +127,8 @@ This closure leaf does not add API routes.
 - `bun test tests/unit/commerce/commerceQueryService.test.ts` if query semantics
   changed in earlier leaves.
 - `bun test tests/unit/widgets/validator.test.ts` if schema/defaults changed.
+- `bun test tests/unit/widgets/modulePackMatrix.test.ts` if Product Gallery pack
+  readiness/completeness changes in `core/widgets/modulePackMatrix.ts`.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run gates:coderso`
@@ -136,6 +141,9 @@ This closure leaf does not add API routes.
 - `_docs/_WIDGETS/PRODUCT_GALLERY.md`
 - `_docs/WIDGETS.md` only for shared contract changes
 - `_docs/WIDGET_PACK_MATRIX.md` only for readiness/completeness changes
+- `core/widgets/modulePackMatrix.ts` and
+  `tests/unit/widgets/modulePackMatrix.test.ts` only for readiness/completeness
+  changes
 - `_docs/_TASKS/TASK-280*.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`

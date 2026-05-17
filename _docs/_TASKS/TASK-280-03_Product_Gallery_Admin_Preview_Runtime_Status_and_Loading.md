@@ -59,11 +59,16 @@ Out of scope:
 | `core/widgets/core/productGallery.tsx` | Add any needed normalized preview status fields only if they belong in persisted widget data; prefer transient admin preview state when possible. |
 | `core/services/commerce/commerceWidgetRuntime.ts` | Reuse Product Gallery runtime hydration for preview mode; keep provider fetch backend-owned. |
 | `core/server/publicSite.tsx` | Confirm public runtime hydration remains unchanged and preview mode semantics stay correct. |
-| Admin preview owner files | Wire Product Gallery preview hydration only through the existing admin preview/page-builder seam discovered during implementation. |
+| `core/admin/ui/pages/builder/BlockList.tsx` | Keep page-builder canvas rendering through the existing `WidgetRenderer` seam while passing Product Gallery preview data into the selected block. |
+| `core/widgets/renderers/widgetRenderer.tsx` | Preserve normalized widget render ownership; do not bypass the registry to special-case Product Gallery. |
+| `core/admin/ui/pages/PageEditor.tsx` | Use the existing page preview/save boundary if Product Gallery preview hydration must refresh page-builder canvas data. |
+| `core/admin/ui/widgets/WidgetTemplateEditorPage.tsx` | Keep widget-template preview behavior aligned if Product Gallery templates need the same runtime-preview hydration path. |
+| `core/admin/services/commerceClient.ts` | Reuse or extend the existing `previewCommerceProductsQuery()` read client for admin-side resolver checks. |
+| `core/server/routes/commerceRoutes.ts` | Reuse or extend the internal `/commerce/products/query` route only through the existing permissioned commerce-read contract. |
 | `tests/vitest/widgets/productGallery.test.tsx` | Cover runtime warning/loading/status markers if render output changes. |
 | `tests/vitest/ui/product-gallery-editor-wave.test.tsx` | Cover resolver status, refresh loading, error, and count copy in the editor. |
 | `tests/unit/commerce/commerceWidgetRuntime.test.ts` | Cover preview hydration behavior and error mapping. |
-| Admin route/security tests | Add if this leaf introduces an internal admin preview endpoint. |
+| `tests/integration/routes/commerceRoutes.test.ts` | Extend route/permission coverage if the commerce query preview route changes or a Product Gallery preview endpoint is introduced. |
 | `_docs/_WIDGETS/PRODUCT_GALLERY.md` | Document admin preview behavior and resolver status. |
 | `_docs/PLAYWRIGHT/REPORT_PRODUCT_GALLERY_WIDGET.md` | Update admin preview findings with textual proof. |
 
@@ -93,6 +98,11 @@ Editor flow:
   widget data.
 - Errors map to stable codes such as `commerce_runtime_error` or
   `commerce_query_invalid`.
+- Page-builder canvas rendering continues through `BlockList` and
+  `WidgetRenderer`; Product Gallery preview data is supplied as normalized
+  block data rather than by bypassing the widget registry.
+- Admin query refresh should prefer `previewCommerceProductsQuery()` and the
+  existing permissioned commerce query route before adding a new endpoint.
 
 Error handling:
 
@@ -138,7 +148,8 @@ If an admin preview route is required, it must follow this contract:
 - `bun run test:vitest -- tests/vitest/ui/product-gallery-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/productGallery.test.tsx`
 - `bun test tests/unit/commerce/commerceWidgetRuntime.test.ts`
-- Admin route registration/security tests if an endpoint is added.
+- `bun test tests/integration/routes/commerceRoutes.test.ts` if the existing
+  commerce query route changes or a new preview endpoint is added.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 
