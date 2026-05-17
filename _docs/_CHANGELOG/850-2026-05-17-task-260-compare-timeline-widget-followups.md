@@ -34,3 +34,6 @@ Tasks: TASK-260, TASK-260-01, TASK-260-02, TASK-260-03, TASK-260-04, TASK-260-05
   contract through `compareTimeline.test.tsx`,
   `compare-timeline-editor-wave.test.tsx`, `renderer.test.tsx`, and
   `validator.test.ts`.
+- Recorded the remaining local strict-security blockers explicitly: `semgrep`
+  failed due `ca-certs: empty trust anchors` and `bun audit` returned
+  `ConnectionRefused`, while the Trivy and Gitleaks lanes passed.

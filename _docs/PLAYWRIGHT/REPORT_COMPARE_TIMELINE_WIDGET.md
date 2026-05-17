@@ -441,6 +441,10 @@ className={`grid gap-2 grid-cols-1 sm:grid-cols-2 lg:${gridClass}`}
   `bun run test:vitest -- tests/vitest/widgets/compareTimeline.test.tsx tests/vitest/ui/compare-timeline-editor-wave.test.tsx`,
   `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx`,
   and `bun test tests/unit/widgets/validator.test.ts`.
+- `bun run scan:security:strict` was executed but could not finish green in this
+  workspace because `semgrep` failed with `ca-certs: empty trust anchors` and
+  `bun audit` returned `ConnectionRefused`. The remaining strict-scan lanes
+  (`trivy` vuln/config/secret and `gitleaks` history/worktree) passed.
 
 | Finding | Final status | Owner | Evidence |
 |---|---|---|---|
