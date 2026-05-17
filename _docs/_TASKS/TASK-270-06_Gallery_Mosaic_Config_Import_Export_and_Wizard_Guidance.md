@@ -5,7 +5,7 @@
 **Priority:** Low
 **Category:** Widgets + Gallery Mosaic + Admin UI + Authoring Workflow
 **Estimated Effort:** Medium
-**Dependencies:** TASK-256-01, TASK-256-06-02, TASK-270-01, TASK-270-02, TASK-270-03, TASK-270-05
+**Dependencies:** TASK-256-01, TASK-256-06-02, TASK-270-01, TASK-270-02, TASK-270-03, TASK-270-04, TASK-270-05
 **Status:** To Do
 
 ---

@@ -42,7 +42,7 @@ after that contract lands and uses its final media-field semantics.
 
 | File | Required change |
 |---|---|
-| `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx` | Add a per-item media preview component, import/reuse `MediaPicker`, track editor-local selected media ids by stable `item.id` with a normalized-id fallback for newly created items, resolve media through `listMediaCached({ force: false })`, and persist only schema-owned runtime fields into `items[]`. |
+| `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx` | Add a per-item media preview component, import/reuse `MediaPicker`, track editor-local selected media ids by stable normalized `item.id` only, normalize/persist deterministic ids before picker state is read or written, resolve media through `listMediaCached({ force: false })`, and persist only schema-owned runtime fields into `items[]`. |
 | `tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx` | Extend existing media-client and MediaPicker mocks to assert selecting media updates the correct item, preview state reflects image/video/placeholder, failures are visible without clearing current data, and editor-local picker state is keyed by stable item id. Use a synthetic reordered normalized item array or existing helper-level move assertion only; full drag/remove UI remains TASK-270-02. |
 | `core/widgets/core/galleryMosaic.tsx` | Change only if TASK-256 final media semantics require an owner helper for preview-safe fields; otherwise keep runtime output unchanged in this leaf. |
 | `tests/vitest/widgets/galleryMosaic.test.tsx` | Update only if normalizer/runtime behavior changes. |
@@ -73,8 +73,12 @@ function resolveGalleryItemPreview(item: GalleryMosaicItem): GalleryItemPreviewS
   return { mediaType: "placeholder", label: item.caption ?? "Media item" };
 }
 
-function getItemMediaStateKey(item: GalleryMosaicItem, index: number) {
-  return item.id?.trim() || `gallery-pending-${index + 1}`;
+function getItemMediaStateKey(item: GalleryMosaicItem) {
+  return item.id;
+}
+
+function ensureGalleryItemsHaveStableIds(items: GalleryMosaicItem[]) {
+  return normalizeGalleryMosaicItems(items);
 }
 
 function inferGalleryMosaicMediaKind(media: GalleryMosaicMediaAsset): "image" | "video" | null {
@@ -94,8 +98,10 @@ function mapMediaToGalleryItemPatch(media: GalleryMosaicMediaAsset): Partial<Gal
 }
 
 async function handleItemMediaSelection(index: number, nextValue: unknown) {
-  const item = normalizeGalleryMosaicItems(value.items)[index];
-  const stateKey = getItemMediaStateKey(item ?? {}, index);
+  const items = ensureGalleryItemsHaveStableIds(value.items);
+  const item = items[index];
+  if (!item?.id) throw new Error("gallery_mosaic_item_missing_id");
+  const stateKey = getItemMediaStateKey(item);
   const mediaId = typeof nextValue === "string" ? nextValue : null;
   if (!mediaId) {
     clearSelectedMediaId(stateKey);
@@ -130,6 +136,9 @@ Error handling:
 - Media picker state is keyed by stable normalized item id, not raw index, so
   synthetic reordered-item tests can prove state lookup stability before
   TASK-270-02 adds full drag/remove UI.
+- Newly created or legacy items must receive deterministic ids through
+  `normalizeGalleryMosaicItems()` before any local picker state is stored, so a
+  reorder cannot orphan preview state behind an index-based fallback key.
 - The editor stores only public runtime fields already accepted by the
   `galleryMosaicSchema`; do not persist media ids unless a later schema task
   explicitly adds and migrates them.
@@ -181,7 +190,8 @@ No API routes are added.
   a URL.
 - Media resolution failures are visible and non-destructive.
 - Media picker state lookup is keyed by normalized item id and survives a
-  synthetic reordered item list; full drag/remove UI coverage lands in
+  synthetic reordered item list; new items receive deterministic ids before any
+  picker state is tracked; full drag/remove UI coverage lands in
   TASK-270-02.
 - The leaf does not reimplement TASK-256 image/video priority or safe-media
   output logic.

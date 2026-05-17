@@ -43,7 +43,7 @@ cross-widget modal framework.
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/galleryMosaic.tsx` | Add a bounded `interaction` config, a widget-local idempotent runtime script patterned after `tabsRuntimeClientScript`/`toggleRuntimeClientScript`, safe trigger attributes, a hidden dialog region, focus return, Escape close, backdrop close, and deterministic data markers without unsafe inline handlers. |
+| `core/widgets/core/galleryMosaic.tsx` | Add a bounded `interaction` config, a widget-local idempotent runtime script patterned after `tabsRuntimeClientScript`/`toggleRuntimeClientScript`, instance-scoped ids via `createWidgetInstanceId()`/`scopedId()`, safe trigger attributes, a hidden dialog region, focus return, Escape close, backdrop close, and deterministic data markers without unsafe inline handlers. |
 | `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx` | Add Visual controls for lightbox disabled/enabled mode and bounded zoom behavior; show when link behavior takes precedence if both href and lightbox are configured. |
 | `tests/vitest/widgets/galleryMosaic.test.tsx` | Assert lightbox-disabled default, schema normalization, lightbox-enabled trigger/dialog markers, safe labels, href precedence behavior, and embedded runtime script output. |
 | `tests/vitest/widgets/galleryMosaicLightboxRuntime.test.ts` | New `// @vitest-environment happy-dom` suite that imports an extractable `getGalleryMosaicLightboxRuntimeScript()` helper or evaluates the exported runtime script against rendered fixture DOM, then asserts trigger open, close-button focus return, backdrop close, Escape close, idempotent double-bind behavior, and link-item precedence. |
@@ -75,8 +75,8 @@ function getGalleryItemInteraction(item: GalleryMosaicItem, mode: GalleryMosaicI
   return { type: "none" as const };
 }
 
-function renderGalleryLightboxTrigger(item: GalleryMosaicItem, index: number) {
-  const id = `gallery-lightbox-${index + 1}`;
+function renderGalleryLightboxTrigger(rootInstanceId: string, item: GalleryMosaicItem, index: number) {
+  const id = scopedId(rootInstanceId, `lightbox-${item.id ?? index + 1}`);
   return {
     "data-gallery-lightbox-trigger": id,
     "aria-haspopup": "dialog",
@@ -99,7 +99,10 @@ export const galleryMosaicLightboxRuntimeScript = `
     const closeButton = target?.closest("[data-gallery-lightbox-close]");
     const backdrop = target?.closest("[data-gallery-lightbox-backdrop]");
     if (trigger instanceof HTMLElement) {
-      const dialog = document.getElementById(trigger.getAttribute("aria-controls") || "");
+      const root = trigger.closest("[data-gallery-lightbox-root]");
+      const dialog = root?.querySelector(
+        \`#\${CSS.escape(trigger.getAttribute("aria-controls") || "")}\`
+      );
       if (dialog instanceof HTMLElement) open(trigger, dialog);
     } else if (closeButton instanceof HTMLElement || backdrop instanceof HTMLElement) {
       const dialog = target?.closest("[role='dialog']");
@@ -129,6 +132,8 @@ Error handling:
 - Keyboard and focus behavior must be tested: trigger opens the dialog, close
   returns focus to the trigger, Escape closes the dialog, and link items keep
   navigation precedence.
+- Runtime ids and `aria-controls` targets must be instance-scoped so multiple
+  Gallery Mosaic widgets on one page cannot collide or open the wrong dialog.
 - Test the runtime script in a happy-dom/browser-style suite, not only through
   server `renderToString` assertions. The suite must create fixture markup with
   `[data-gallery-lightbox-trigger]`, `[data-gallery-lightbox-dialog]`,
@@ -184,6 +189,8 @@ No API routes are added.
 
 - Lightbox is opt-in and off by default for existing payloads.
 - Lightbox behavior is accessible by keyboard and does not break link items.
+- Multiple Gallery Mosaic widgets on the same page keep isolated trigger/dialog
+  ids and do not cross-open each other.
 - Runtime tests prove trigger/dialog markers, Escape close, focus return
   expectations, and link precedence.
 - Runtime output remains deterministic, safe, and testable without committing

@@ -49,10 +49,10 @@ cross-widget media/link repair leaf.
 
 | Report finding | Evidence | Owner task | Reason |
 |---|---|---|---|
-| CODE-01, CODE-02, CODE-03, CODE-04, BUG-04, BF-09 resolver/layout cleanup and feature-left one-item handling | `REPORT_GALLERY_MOSAIC_WIDGET.md:56-73,232,277-281,379` | TASK-256-06-02 | Existing shared media/link leaf already names `galleryMosaic.tsx` and this renderer cleanup. |
+| CODE-01, CODE-02, CODE-03, CODE-04, BUG-04 renderer/layout cleanup and feature-left one-item empty-column handling | `REPORT_GALLERY_MOSAIC_WIDGET.md:56-73,232,277-281,379` | TASK-256-06-02 | Existing shared media/link leaf already names `galleryMosaic.tsx` and this renderer cleanup. |
 | CODE-05, BUG-03, BF-04 overlay alpha loss | `REPORT_GALLERY_MOSAIC_WIDGET.md:76-79,272-275,322,359,378` | TASK-256-02, TASK-256-06-02 | Shared clear/token and alpha-safe editor behavior. |
 | CODE-06, UX-06, BF-08 image/video ambiguity | `REPORT_GALLERY_MOSAIC_WIDGET.md:81-84,130,307-308,326,368` | TASK-256-06-02 | Shared truthful media-control contract for current fields. |
-| CODE-07, BF-01, A1, A5, A6 alt/figure/video title semantics | `REPORT_GALLERY_MOSAIC_WIDGET.md:86-89,233,239,319,342,346-347,377` | TASK-256-04, TASK-256-06-02 | Shared runtime accessibility and current data-model repair. |
+| CODE-07, A1, A5, A6 current alt/figure/video title semantics | `REPORT_GALLERY_MOSAIC_WIDGET.md:86-89,233,239,342,346-347` | TASK-256-04, TASK-256-06-02 | Shared runtime accessibility and backward-compatible renderer semantics using current fields only. New per-item alt authoring remains TASK-270-03. |
 | CODE-08, UX-07, BF-03 Wizard video media picker scope | `REPORT_GALLERY_MOSAIC_WIDGET.md:91-94,310-312,321,370` | TASK-256-06-02 | Existing TASK-256 leaf already names Wizard video picker scope. |
 | BUG-05, BF-05, A2 safe external link output | `REPORT_GALLERY_MOSAIC_WIDGET.md:147,212,240,282-286,323,343,361` | TASK-256-06-02 | Shared safe href/noopener output. |
 | UX-01 Advanced duplicates Visual controls | `REPORT_GALLERY_MOSAIC_WIDGET.md:153,292-293` | TASK-256-01 | Shared editor-mode ownership and Advanced scope. |
@@ -70,9 +70,10 @@ repairs inside its own implementation leaves.
 | UX-05 and BF-02 per-item media-library picker in Visual | TASK-270-01 | Product authoring expansion after TASK-256 media safety and video scope land. |
 | UX-03 and BF-06 drag-and-drop reorder | TASK-270-02 | Gallery item management with accessible button fallback. |
 | UX-04 count select vs add/remove semantics | TASK-270-02 | Preserve data intentionally and make destructive behavior clear. |
-| BF-11 object-position, BF-12 per-item ratio, BF-13 video poster image | TASK-270-03 | Gallery-specific persisted presentation fields. |
+| BF-09 feature-left one-item warning/guidance | TASK-270-02 | Author-facing copy/validation when `feature-left` would otherwise render only a lead tile after count/remove changes. |
+| BF-01 alt text authoring, BF-11 object-position, BF-12 per-item ratio, BF-13 video poster image | TASK-270-03 | Gallery-specific persisted media authoring and presentation fields that build on TASK-256 runtime accessibility fixes. |
 | BF-10 lightbox/zoom on click | TASK-270-04 | Gallery runtime presentation mode using existing safe modal/runtime patterns. |
-| BF-14 entrance animation and BF-15 responsive column configuration | TASK-270-05 | Bounded presentation presets, reduced-motion safe. |
+| BF-14 entrance animation and BF-15 responsive column configuration | TASK-270-05 | Bounded presentation presets, reduced-motion safe. This leaf resolves BF-15 through approved density presets rather than arbitrary raw breakpoint maps. |
 | BF-16 export/import configuration and post-TASK-256 Wizard guidance | TASK-270-06 | Low-risk authoring workflow expansion and import validation. |
 | Report fixed/deferred notes, widget docs, changelog, board closure | TASK-270-07 | Final documentation and evidence pass. |
 
@@ -149,12 +150,15 @@ Implementation leaves:
 - `bun run test:vitest -- tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` when renderer
   output markers, lightbox attributes, or shared widget rendering changes.
+- `bun run test:vitest -- tests/vitest/widgets/galleryMosaicLightboxRuntime.test.ts`
+  when TASK-270-04 lands.
 - `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` when
   spacing/radius/clear adjacency changes.
 - `bun test tests/unit/widgets/validator.test.ts` when schema/defaults/normalizer
   fields change.
 - `bun test tests/unit/widgets/registry.test.ts` if variant registration or
   widget registry wiring changes.
+- `bun run gates:coderso`
 - `bun run scan:security:strict`
 - `bun run precommit`
 

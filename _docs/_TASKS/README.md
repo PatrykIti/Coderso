@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 295 tasks
+- **To Do:** 299 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1559 tasks
 
@@ -45,6 +45,10 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-292-04 | Toggle Block Editor Mode Flow, Variant Previews, and Reset UX | High | Large | Add variant thumbnails, clearer Wizard/Visual/Advanced ownership, reset defaults, and active default-state messaging |
 | TASK-292-05 | Toggle Block Pane Authoring Guidance and Two-State Documentation | Medium | Medium | Add builder-facing pane guidance and document the intentional two-state Toggle Block boundary |
 | TASK-292-06 | Toggle Block Report Docs Changelog and Closure | Medium | Medium | Refresh Toggle Block report/docs/changelog/board and final validation evidence |
+| TASK-293 | Gallery Mosaic Shared Contract Residual Reopen | High | Large | Reopen the missing Gallery Mosaic shared prerequisites that TASK-270 currently assumes are already landed from TASK-256 |
+| TASK-293-01 | Gallery Mosaic Shared Editor Truthfulness Residuals | High | Large | Finish the missing shared editor-mode, current media truthfulness, and Wizard current-contract media handling for Gallery Mosaic |
+| TASK-293-02 | Gallery Mosaic Shared Runtime Semantics Residuals | High | Large | Finish the missing shared Gallery Mosaic resolver cleanup plus current figure/video semantics using the existing data model only |
+| TASK-293-03 | Gallery Mosaic Shared Residual Closure | Medium | Medium | Refresh the Gallery Mosaic report/docs/changelog/board for the reopened shared residual family and final validation evidence |
 | TASK-291 | Timeline Widget Playwright Product Followups | High | Very Large | Timeline-only follow-up family for `REPORT_TIMELINE_WIDGET.md`, excluding shared TASK-256 mechanisms |
 | TASK-291-01 | Timeline Wizard Step Authoring and Status UX | High | Large | Expand Wizard all-step editing, status authoring, icon/accent controls, remove UX, and hidden-title warning after shared atomic updates |
 | TASK-291-02 | Timeline Editor Mode Preview Date Guidance and Reorder UX | High | Large | Add mode preview cards, date validation/help, Visual no-status UX, grouped marker controls, spacing guidance, and drag reorder with button fallback |
@@ -224,8 +228,8 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-271-07 | Grid Columns Report, Docs, Changelog, and Closure | Medium | Medium | Refresh Grid Columns report/docs/changelog/board and final validation evidence |
 | TASK-270 | Gallery Mosaic Widget Playwright Product Followups | High | Very Large | Gallery Mosaic-only product follow-up family for `REPORT_GALLERY_MOSAIC_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-270-01 | Gallery Mosaic Item Previews and Media Picker | High | Large | Add per-item media previews and Visual media picker after TASK-256 safe media behavior lands |
-| TASK-270-02 | Gallery Mosaic Reorder, Count, and Removal UX | High | Large | Add efficient reorder, clear count/add/remove semantics, and recoverable or confirmed item removal |
-| TASK-270-03 | Gallery Mosaic Per-Item Media Presentation Fields | Medium | Large | Add bounded object-position, per-item ratio, and video poster fields without taking over TASK-256 accessibility scope |
+| TASK-270-02 | Gallery Mosaic Reorder, Count, and Removal UX | High | Large | Add efficient reorder, clear count/add/remove semantics, recoverable or confirmed item removal, and `feature-left` one-item guidance |
+| TASK-270-03 | Gallery Mosaic Per-Item Media Presentation Fields | Medium | Large | Add dedicated `alt`, bounded object-position, per-item ratio, and video poster fields without re-owning TASK-256 current fallback semantics |
 | TASK-270-04 | Gallery Mosaic Lightbox and Zoom Mode | Medium | Large | Add optional safe lightbox/zoom presentation using existing accessible runtime patterns |
 | TASK-270-05 | Gallery Mosaic Responsive Columns and Motion Presets | Medium | Large | Add bounded responsive column and reduced-motion-safe animation presets |
 | TASK-270-06 | Gallery Mosaic Config Import Export and Wizard Guidance | Low | Medium | Add safe config import/export and post-TASK-256 Wizard guidance |

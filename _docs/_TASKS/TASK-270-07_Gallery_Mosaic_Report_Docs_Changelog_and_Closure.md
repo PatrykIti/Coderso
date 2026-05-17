@@ -96,6 +96,8 @@ No API routes are added by this docs/closure leaf.
 - `bun --cwd core lint:types`
 - `bun run test:vitest -- tests/vitest/widgets/galleryMosaic.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/galleryMosaicLightboxRuntime.test.ts`
+  when TASK-270-04 lands
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if any
   renderer output changed in the family.
 - `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` if
@@ -103,6 +105,7 @@ No API routes are added by this docs/closure leaf.
 - `bun test tests/unit/widgets/validator.test.ts` if schema/defaults changed.
 - `bun test tests/unit/widgets/registry.test.ts` if registry/variant wiring
   changed.
+- `bun run gates:coderso`
 - `bun run scan:security:strict`
 - `bun run precommit`
 
