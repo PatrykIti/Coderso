@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 283 tasks
+- **To Do:** 290 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1542 tasks
 
@@ -66,6 +66,13 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-288-05 | Tabs Layout Overflow Typography and Spacing | High | Very Large | Add vertical alignment fix plus bounded overflow, typography, spacing, padding, and inner/panel width controls |
 | TASK-288-06 | Tabs Motion Variant Previews and Polish | Medium | Large | Add reduced-motion-safe transitions and visual variant previews after activation/layout leaves land |
 | TASK-288-07 | Tabs Report Docs and Closure | Medium | Medium | Refresh Tabs report/docs/changelog/board and final validation evidence |
+| TASK-287 | Stats KPI Widget Playwright Product Followups | High | Very Large | Stats KPI-only follow-up family for `REPORT_STATS_KPI_WIDGET.md`, excluding TASK-256 shared-contract scope |
+| TASK-287-01 | Stats KPI Value Typography and Metric Semantics | High | Large | Add value-size, description color, prefix/suffix, per-metric accent, and static trend fields after TASK-256 shared safety |
+| TASK-287-02 | Stats KPI Section Surface Layout and Icon Styling | Medium | Large | Add inner section surface, max-width, padding, sparse density, icon styling, and optional divider intensity after TASK-256 truthfulness |
+| TASK-287-03 | Stats KPI Wizard Content and Variant Onboarding | High | Large | Expand Wizard to visual variant cards, header fields, metric label/description/icon, header clear, icon guidance, and spacing help |
+| TASK-287-04 | Stats KPI Metric Links and Safe Click Semantics | Medium | Large | Add optional safe per-metric links using shared safe-href behavior without public-write or action scope |
+| TASK-287-05 | Stats KPI Metric Management and Editor IA Polish | Medium | Large | Add efficient reorder, safer removal, Visual IA grouping, and Stats KPI-local Advanced cleanup after TASK-256 editor policy |
+| TASK-287-06 | Stats KPI Report Docs Changelog and Closure | Medium | Medium | Refresh Stats KPI report/docs/changelog/board and final validation evidence |
 | TASK-286 | Stack Widget Playwright Product Followups | High | Very Large | Stack-only follow-up family for `REPORT_STACK_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-286-01 | Stack Flex Alignment Token Expansion | Medium | Medium | Add Stack-owned `baseline`, `space-around`, and `space-evenly` tokens with schema/editor/runtime/tests/docs coverage |
 | TASK-286-02 | Stack Responsive Axis and Wrap Controls | High | Large | Add responsive align/justify/wrap controls while preserving legacy scalar payload compatibility |
