@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 230 tasks
+- **To Do:** 239 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1542 tasks
 
@@ -69,6 +69,15 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-285-04 | Split Layout Advanced Diagnostics and Mode Ownership | Medium | Medium | Make Advanced useful through Split Layout responsive diagnostics after shared mode rules land |
 | TASK-285-05 | Split Layout Gap Labels and Spacing Context | Low | Medium | Add Split Layout gap scale labels/help after TASK-256 resolves none/zero token semantics |
 | TASK-285-06 | Split Layout Report Docs and Closure | Medium | Medium | Refresh Split Layout report/docs/changelog/board and final validation evidence |
+| TASK-283 | Section Widget Playwright Product Followups | High | Very Large | Section-only follow-up family for `REPORT_SECTION_WIDGET.md`, excluding TASK-256 shared-contract scope |
+| TASK-283-01 | Section Layout Height and Region Flow Controls | High | Very Large | Add bounded min-height/fullscreen, region row/grid flow, heading gap, and region gap controls after TASK-256 structural repairs |
+| TASK-283-02 | Section Background Media and Layering Model | High | Very Large | Add safe decorative background media and bounded overlay/content layer controls without generic media or token-picker scope |
+| TASK-283-03 | Section Heading Typography Alignment and Wizard UX | High | Large | Add Section-owned heading typography/alignment and Wizard label after TASK-256 heading baseline repair |
+| TASK-283-04 | Section Presets Variant Guidance and Width Copy | Medium | Large | Add local Section presets, friendlier width labels, variant UI consistency, and gradient/background guidance |
+| TASK-283-05 | Section Surface Shadow Motion and Preview Controls | Medium | Large | Add bounded shadows, reduced-motion-safe effects, sliders, and gradient/overlay preview after TASK-256 control cleanup |
+| TASK-283-06 | Section Responsive Spacing and Mobile Density | Medium | Large | Add mobile/desktop spacing overrides and density presets through bounded Section layout tokens |
+| TASK-283-07 | Section Custom Region Labels and Structure UX | Medium | Large | Add editor-only custom region labels while preserving `region:<id>` slot storage and public placeholder boundaries |
+| TASK-283-08 | Section Report Docs Changelog and Closure | Medium | Medium | Refresh Section report/docs/changelog/board and final validation evidence |
 | TASK-278 | Pricing Plans Widget Playwright Product Followups | High | Very Large | Pricing Plans-only follow-up family for `REPORT_PRICING_PLANS_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-278-01 | Pricing Plans Card Visual Hierarchy and CTA Styles | High | Large | Add plan description, plan-level surface, badge tone, highlighted banner, and CTA style controls after TASK-256 shared safety |
 | TASK-278-02 | Pricing Plans Content Wizard and Destructive Edit UX | High | Large | Expand Wizard content authoring, Advanced reset copy, highlight indicators, disabled billing label UX, remove confirmation/undo, and feature autofocus |
