@@ -5,7 +5,7 @@
 **Priority:** Medium
 **Category:** Widgets + Admin UI + Content UX
 **Estimated Effort:** Medium
-**Dependencies:** TASK-282, TASK-282-01, TASK-282-02, TASK-282-03, TASK-282-04
+**Dependencies:** TASK-282, TASK-282-01, TASK-282-02, TASK-282-03, TASK-282-04, TASK-282-05
 **Status:** To Do
 
 ---
@@ -13,7 +13,7 @@
 ## Overview
 
 Polish Rich Text Section editor mode ownership and reader guidance after the
-core output, authoring, block, and runtime semantics are repaired.
+core output, authoring, block, media/embed, and runtime semantics are repaired.
 
 This leaf covers KOD-05, KOD-07, KOD-WIZ, and KOD-DUP from
 `_docs/PLAYWRIGHT/REPORT_RICH_TEXT_SECTION_WIDGET.md`.
@@ -36,7 +36,8 @@ Out of scope:
 
 - Shared editor mode/tab shell changes across all widgets.
 - Generic design token clear/none semantics, owned by TASK-256-02.
-- Major WYSIWYG/media/block model changes, owned by earlier TASK-282 leaves.
+- Major WYSIWYG/media/embed/block model changes, owned by earlier TASK-282
+  leaves.
 
 ## Sub-Tasks
 

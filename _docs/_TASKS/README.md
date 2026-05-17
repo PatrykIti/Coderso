@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 270 tasks
+- **To Do:** 272 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1542 tasks
 
@@ -97,9 +97,11 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-282-02 | Rich Text WYSIWYG HTML Body and Sanitizer Feedback | High | Very Large | Replace raw HTML-first beginner editing with safe rich-text authoring and explicit sanitizer feedback for dropped tags |
 | TASK-282-03 | Rich Text Structured Blocks Rich Content and Scale UX | High | Large | Add rich block content, safe heading hierarchy, recoverable destructive actions, and scalable 20-block editing |
 | TASK-282-04 | Rich Text Article Width Title and TOC Accessibility | High | Large | Repair article max-width, heading-level semantics, section labeling, and visible TOC focus states |
-| TASK-282-05 | Rich Text Inline Media and Safe Content Model | High | Very Large | Add bounded inline media support using existing media ownership without opening unsafe embeds or scripts |
+| TASK-282-05 | Rich Text Inline Media and Safe Content Model | High | Very Large | Add bounded inline image support using existing media ownership without claiming attachment/embed closure |
 | TASK-282-06 | Rich Text Editor Mode IA and Reader Guidance | Medium | Medium | Align Wizard/Visual/Advanced mode IA, variant controls, dropcap guidance, and technical token duplication |
 | TASK-282-07 | Rich Text Report Docs Changelog and Closure | Medium | Medium | Refresh Rich Text Section report/docs/changelog/board and final validation evidence |
+| TASK-282-08 | Rich Text Attachments and Safe Embed Policy | High | Large | Complete KOD-13 beyond images with bounded attachment cards and safe video/embed decisions |
+| TASK-282-09 | Rich Text Text Color Clear Adoption | Medium | Medium | Give KOD-10 a physical Rich Text Section owner for `textColor` clear behavior after shared helper support |
 | TASK-280 | Product Gallery Widget Playwright Product Followups | High | Very Large | Product Gallery-only follow-up family for `REPORT_PRODUCT_GALLERY_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-280-01 | Product Gallery Media Link and CTA Cards | High | Large | Add backend-resolved product media, safe product links, CTA behavior, and image alt coverage without public write/cart scope |
 | TASK-280-02 | Product Gallery Compact Variant Surface and Price Display | High | Large | Make compact variant, card surfaces, minimal borders, compare-at display, and Product Gallery price verification truthful |

@@ -5,7 +5,7 @@
 **Priority:** Medium
 **Category:** Widgets + Docs + Playwright QA + Release Hygiene
 **Estimated Effort:** Medium
-**Dependencies:** TASK-282-01, TASK-282-02, TASK-282-03, TASK-282-04, TASK-282-05, TASK-282-06
+**Dependencies:** TASK-282-01, TASK-282-02, TASK-282-03, TASK-282-04, TASK-282-05, TASK-282-08, TASK-282-09, TASK-282-06
 **Status:** To Do
 
 ---
@@ -43,11 +43,18 @@ Out of scope:
 
 - [ ] Build a finding-by-finding closure table for every KOD/A11Y/observation row
   in `REPORT_RICH_TEXT_SECTION_WIDGET.md`.
-- [ ] Mark KOD-10 as TASK-256-02 only if TASK-256-07/08 names the exact Rich
-  Text Section physical owner path and tests. If that owner is not named, record
-  KOD-10 as excluded-pending and create or reference a named future adoption
-  task before TASK-282 closure.
+- [ ] Close KOD-10 through TASK-282-09 or leave TASK-282-09 open with explicit
+  remaining validation. Do not mark KOD-10 as closed by TASK-256 unless
+  TASK-256 closure names the exact Rich Text Section physical owner path and
+  tests.
+- [ ] Close KOD-13 only when both the image/media-picker slice (TASK-282-05) and
+  attachment/safe embed slice (TASK-282-08) have final fixed/deferred evidence.
 - [ ] Record any deferred items with a named future task or explicit reason.
+- [ ] Run or record a constrained Playwright/admin/frontend refresh for visual
+  and runtime rows that cannot be proven by unit/Vitest alone: output-source UI,
+  article max-width, TOC focus, section labeling, inline media, attachments,
+  safe embeds, and text-color clear. Capture textual run/session evidence in
+  the report; do not commit temporary screenshot PNGs.
 - [ ] Update `_docs/_WIDGETS/RICH_TEXT_SECTION.md` with the final schema,
   editor, runtime, security, media, and accessibility contract.
 - [ ] Update `_docs/WIDGETS.md` or `_docs/WIDGET_PACK_MATRIX.md` only if actual
@@ -77,7 +84,9 @@ Closure matrix:
 | Finding | Final status | Evidence | Owner |
 |---|---|---|---|
 | KOD-01 | Fixed | TASK-282-01 commit + Vitest evidence | TASK-282 |
-| KOD-10 | Excluded only with exact owner | TASK-256-02 plus TASK-256-07/08 Rich Text Section editor/test owner; otherwise named future adoption task | TASK-256 / future task |
+| KOD-10 | Fixed/deferred by physical owner | TASK-282-09 commit + editor Vitest evidence, or explicit open TASK-282-09 blocker | TASK-282-09 |
+| KOD-13 images | Fixed/deferred by physical owner | TASK-282-05 commit + media render/editor evidence | TASK-282-05 |
+| KOD-13 attachments/embeds | Fixed/deferred by physical owner | TASK-282-08 commit + attachment/embed render/editor evidence | TASK-282-08 |
 ```
 
 Board update:
@@ -125,6 +134,9 @@ No API routes are added by this closure leaf.
 - `bun run test:vitest -- tests/vitest/ui/rich-text-section-editor-wave.test.tsx`
 - `bun test tests/unit/widgets/validator.test.ts` when schema changed
 - touched post-richtext/media lanes from implementation leaves
+- constrained Playwright/admin/frontend refresh evidence for report rows that
+  are visual or runtime-only; if local Playwright CLI/session access is
+  unavailable, record the blocker and keep the affected row out of `Fixed`
 - `bun run gates:coderso`
 - `bun run scan:security:strict`
 - `bun run precommit`

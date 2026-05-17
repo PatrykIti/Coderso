@@ -5,20 +5,21 @@
 **Priority:** High
 **Category:** Widgets + Content + Media + Runtime Render + Security
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-282, TASK-282-02, TASK-282-03
+**Dependencies:** TASK-282, TASK-282-02, TASK-282-03, TASK-282-04
 **Status:** To Do
 
 ---
 
 ## Overview
 
-Add bounded inline media support for Rich Text Section long-form content without
+Add bounded inline image support for Rich Text Section long-form content without
 opening unsafe raw HTML, iframes, scripts, or arbitrary embeds.
 
 This leaf covers KOD-13 from
-`_docs/PLAYWRIGHT/REPORT_RICH_TEXT_SECTION_WIDGET.md`. KOD-11 is handled by
-TASK-282-02 as sanitizer feedback; this leaf owns the actual Rich Text
-Section-specific media model and render/editor behavior.
+`_docs/PLAYWRIGHT/REPORT_RICH_TEXT_SECTION_WIDGET.md` only for the image/media
+picker slice. KOD-11 is handled by TASK-282-02 as sanitizer feedback.
+Attachments and safe video/embed behavior are owned by TASK-282-08 so KOD-13
+cannot close after images only.
 
 ## Scope Boundary
 
@@ -26,8 +27,9 @@ In scope:
 
 - Media Library-backed image insertion for Rich Text Section body and/or
   structured blocks.
-- Safe persisted media references with alt text, caption, optional link, width,
-  alignment, and object-position controls.
+- Safe persisted media references with a `mediaId`, a stable public render URL
+  snapshot, alt text, caption, optional link, width, alignment, and
+  object-position controls.
 - Runtime rendering through React-owned output or sanitized HTML projection that
   cannot execute scripts.
 - Editor media picking using existing admin media ownership; no new upload route
@@ -35,8 +37,10 @@ In scope:
 
 Out of scope:
 
-- Arbitrary `<iframe>`, video embed, script embed, raw HTML embed, or third-party
-  widget embed support.
+- Attachments, video embeds, iframes, third-party widget embeds, or rich embed
+  cards; TASK-282-08 owns the safe product decision for those KOD-13 parts.
+- Arbitrary `<iframe>`, script embed, raw HTML embed, or third-party widget
+  executable payload support.
 - Global media library API changes unless split into a separate media task.
 - Rich authoring toolbar integration from TASK-282-02 except for the insertion
   hook required by this widget.
@@ -44,16 +48,19 @@ Out of scope:
 ## Sub-Tasks
 
 - [ ] Persist explicit structured image references, not raw `<img>` HTML and not
-  private/signed URLs. The default shape is `mediaId` plus editor-authored
-  presentation metadata; any stored `src` is allowed only as a sanitized legacy
-  public-url adapter with a documented deprecation path.
-- [ ] Add schema/default/normalizer coverage for `mediaId`, optional legacy
+  private/signed URLs. The implementation path for the current synchronous
+  widget renderer is `mediaId` plus a sanitized stable public `src` copied from
+  the selected Media Library record, plus editor-authored presentation metadata.
+- [ ] Add schema/default/normalizer coverage for `mediaId`, required-for-render
   public `src`, alt, decorative flag, caption, safe link href, width, alignment,
-  and bounded object position if supported.
-- [ ] Add a safe media resolver/renderer decision before implementation: either
-  public runtime resolves `mediaId` through an existing public media projection
-  before render, or the widget stores only stable public media URLs copied from
-  the media service. Do not persist admin-only/private/signed media URLs.
+  and bounded object position if supported. Legacy public `src`-only payloads
+  continue to render through the same public URL validator.
+- [ ] Keep media resolution out of the public render path. Current
+  `WidgetDefinition.render` / `WidgetRenderer` is synchronous and does not pass
+  a media resolver, so this leaf must not add render-time admin API lookups or
+  async `mediaId` resolution. If the existing media picker/client cannot provide
+  a stable public URL for the selected media record, split a separate public
+  media projection task before marking this leaf `Done`.
 - [ ] Add a safe media renderer that escapes captions, normalizes hrefs, and
   omits unsafe or unresolved media.
 - [ ] Add Visual editor media picker controls and preview thumbnails.
@@ -65,9 +72,9 @@ Out of scope:
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/richTextSection.tsx` | Add media schema/types/normalizer and safe renderer or safe HTML projection. Keep sanitizer as the public boundary and keep the render path sync-safe unless an existing public media projection is explicitly wired before render. |
-| `core/admin/ui/widgets/editors/RichTextSectionEditors.tsx` | Add media picker/preview controls for `mediaId` and editor-authored alt/caption/link metadata. |
-| `core/admin/ui/media/MediaPicker.tsx`, `core/admin/services/mediaClient.ts` | Reuse established media picker/list clients for admin selection only. Do not persist private/admin-only values from the picker into public widget JSON. |
+| `core/widgets/core/richTextSection.tsx` | Add media schema/types/normalizer and a sync-safe media renderer or safe HTML projection. Rendering must read only already-persisted public `src` values; `mediaId` is tracking/editor metadata unless a separate public projection is wired before render. |
+| `core/admin/ui/widgets/editors/RichTextSectionEditors.tsx` | Add media picker/preview controls that write `mediaId`, a validated public `src` snapshot from the chosen media record, and editor-authored alt/caption/link metadata. |
+| `core/admin/ui/media/MediaPicker.tsx`, `core/admin/services/mediaClient.ts` | Reuse established media picker/list clients for admin selection only. The editor may copy only stable public media URLs plus media ids into widget JSON; it must reject or explain records whose URL is missing, private, signed, or admin-only. |
 | `tests/vitest/widgets/richTextSection.test.tsx` | Add SSR assertions for valid media, missing media fallback, alt/caption escaping, unsafe link omission, and legacy payloads. |
 | `tests/vitest/ui/rich-text-section-editor-wave.test.tsx` | Add media picker/preview/editor state assertions. |
 | `tests/unit/widgets/validator.test.ts` | Run/update when media schema fields are added. |
@@ -82,8 +89,9 @@ type RichTextSectionMediaBlock = {
   kind: "image";
   mediaId?: string;
   /**
-   * Legacy/public-url fallback only. New editor writes should prefer mediaId
-   * plus backend-owned/public media projection.
+   * Stable public render URL snapshot. New editor writes must pair this with
+   * mediaId when the source comes from the Media Library. Legacy payloads may
+   * provide only src, but src must still pass the public media URL policy.
    */
   src?: string;
   alt?: string;
@@ -100,7 +108,7 @@ Normalizer:
 ```ts
 function normalizeRichTextMediaBlock(input: unknown): RichTextSectionMediaBlock | null {
   const mediaId = normalizeOptionalId(input.mediaId);
-  const src = normalizeLegacyPublicMediaSrc(input.src);
+  const src = normalizePublicMediaSrc(input.src);
   if (!mediaId && !src) return null;
   return {
     kind: "image",
@@ -116,12 +124,39 @@ function normalizeRichTextMediaBlock(input: unknown): RichTextSectionMediaBlock 
 }
 ```
 
+Editor selection flow:
+
+```ts
+function createRichTextMediaBlockFromSelection(
+  media: MediaRecord,
+  draft: RichTextMediaDraft
+) {
+  const src = normalizePublicMediaSrc(media.url);
+  if (!src) {
+    return {
+      error: "media_public_url_missing",
+      message: "Selected media is not available through a public render URL.",
+    };
+  }
+
+  return {
+    value: normalizeRichTextMediaBlock({
+      ...draft,
+      kind: "image",
+      mediaId: media.id,
+      src,
+    }),
+  };
+}
+```
+
 Renderer:
 
 ```tsx
 function RichTextMediaFigure({ media }: { media: RichTextSectionMediaBlock }) {
-  if (!media.src) return null;
-  const image = <img src={media.src} alt={media.alt ?? ""} loading="lazy" />;
+  const src = normalizePublicMediaSrc(media.src);
+  if (!src) return null;
+  const image = <img src={src} alt={media.decorative ? "" : media.alt ?? ""} loading="lazy" />;
   return (
     <figure className={resolveMediaFigureClass(media)}>
       {media.href ? <a href={media.href}>{image}</a> : image}
@@ -135,9 +170,10 @@ function RichTextMediaFigure({ media }: { media: RichTextSectionMediaBlock }) {
 
 - Missing or unauthorized media references render as omitted media with editor
   diagnostics, not broken public image placeholders.
-- Media IDs must resolve through an existing public projection before render, or
-  the renderer must omit the item. It must not fetch admin APIs from public
-  render or persist temporary signed URLs.
+- Media IDs do not resolve during public widget render in this leaf. The editor
+  must persist a stable public `src` snapshot from the selected media record, or
+  block selection with an explicit diagnostic. The renderer omits media without
+  a valid public `src`.
 - Empty alt is allowed only for decorative images; the editor must make that
   choice explicit if supported.
 - Unsafe hrefs are omitted or normalized through the existing safe href helper.
@@ -165,7 +201,14 @@ No new API routes are introduced by default.
 - `bun run test:vitest -- tests/vitest/widgets/richTextSection.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/rich-text-section-editor-wave.test.tsx`
 - `bun test tests/unit/widgets/validator.test.ts`
-- media picker/client tests if reused components are modified
+- `bun run test:vitest -- tests/vitest/ui/media-picker.test.tsx` if
+  `MediaPicker` behavior or props are changed
+- `bun run test:vitest -- tests/vitest/admin/mediaClient.test.ts` if
+  `mediaClient` response/cache behavior is changed
+- `bun run test:vitest -- tests/vitest/admin/mediaUtils.test.ts` if media URL,
+  alt, dimension, or display helper behavior is changed
+- `bun test tests/unit/media/mediaUsageService.test.ts` if media-reference
+  detection is extended for the new Rich Text Section media shape
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run gates:coderso` before marking this leaf `Done` or committing it
@@ -177,8 +220,8 @@ No new API routes are introduced by default.
 
 - Update `_docs/_WIDGETS/RICH_TEXT_SECTION.md` with media fields, alt/caption
   policy, and unsupported embed policy.
-- Update `_docs/PLAYWRIGHT/REPORT_RICH_TEXT_SECTION_WIDGET.md` row KOD-13 after
-  validation.
+- Update `_docs/PLAYWRIGHT/REPORT_RICH_TEXT_SECTION_WIDGET.md` KOD-13 image
+  slice after validation, without claiming attachment/embed closure.
 - Update `_docs/WIDGET_PACK_MATRIX.md` only if media support changes Rich Text
   Section readiness/completeness.
 
@@ -190,9 +233,10 @@ No new API routes are introduced by default.
 ## Acceptance Criteria
 
 - Editors can add safe inline images without typing raw `<img>` HTML.
-- The persisted media contract is explicit: new data stores `mediaId` and
-  bounded presentation metadata, while any `src` support is legacy/public-only
-  and never a private or signed URL.
+- The persisted media contract is explicit: new Media Library selections store
+  `mediaId`, a validated stable public `src` snapshot, and bounded presentation
+  metadata; legacy `src`-only support remains public-only and never accepts a
+  private or signed URL.
 - Public output never executes user-authored scripts or arbitrary embeds.
 - Missing/unsafe media fails closed and is explained in the editor.
 - Media schema, normalizer, renderer, editor, tests, docs, and report evidence

@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Runtime Render + Accessibility + SEO
 **Estimated Effort:** Large
-**Dependencies:** TASK-282, TASK-282-01
+**Dependencies:** TASK-282, TASK-282-01, TASK-282-02, TASK-282-03
 **Status:** To Do
 
 ---

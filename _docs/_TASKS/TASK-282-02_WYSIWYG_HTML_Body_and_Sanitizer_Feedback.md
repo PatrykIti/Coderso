@@ -54,8 +54,9 @@ Out of scope:
   `sanitizeHtmlWithPolicy()` contract has no drop callbacks, so diagnostics
   must be derived from `tokenizeHtml()`, `parseHtmlAttributes()`, the Rich Text
   allowlist, `dangerousHtmlContentTagSet`, and the same attribute sanitizer used
-  by runtime rendering, or the shared sanitizer helper must first be extended
-  with typed diagnostics and tests.
+  by runtime rendering. Do not extend shared post sanitizer/helper behavior in
+  this leaf; if implementation needs a reusable shared diagnostic API, split a
+  named shared-helper task first and keep this leaf blocked on that task.
 - [ ] Surface friendly diagnostics for stripped `<img>`, stripped `<h1>`, unsafe
   hrefs, event handlers, scripts, iframes, and unsupported attributes.
 - [ ] Keep Advanced raw HTML editing technical-only with sanitize-now behavior,
@@ -169,7 +170,12 @@ No API routes are added.
 
 - `bun run test:vitest -- tests/vitest/widgets/richTextSection.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/rich-text-section-editor-wave.test.tsx`
-- touched post rich-text Vitest lanes if the adapter/helper code changes
+- If existing post rich-text helpers/adapters are imported or changed:
+  `bun run test:vitest -- tests/vitest/posts/post-richtext-serializer.test.ts tests/vitest/posts/post-richtext-react-renderer.test.tsx tests/vitest/posts/post-richtext-command-engine.test.ts`
+- If existing post rich-text admin UI adapters/toolbars are imported or changed:
+  `bun run test:vitest -- tests/vitest/ui/post-richtext-adapter-wave.test.tsx tests/vitest/ui/post-richtext-adapter-command-dispatch.test.tsx tests/vitest/ui/post-richtext-toolbar-wave.test.tsx`
+- If command or selection behavior changes, also run:
+  `bun run test:vitest -- tests/vitest/ui-integration/post-editor-richtext-command-contract.test.tsx tests/vitest/ui-integration/post-editor-richtext-selection-contract.test.tsx`
 - `bun test tests/unit/widgets/validator.test.ts` if schema/defaults change
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`

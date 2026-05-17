@@ -41,7 +41,8 @@ In scope for TASK-282:
 - Rich Text Section output-mode truthfulness and Wizard/Visual/Advanced source
   ownership.
 - Rich Text Section body authoring, sanitizer feedback, structured block rich
-  content, safe inline media, and report-specific editor IA.
+  content, safe inline image/attachment/embed authoring, and report-specific
+  editor IA.
 - Rich Text Section runtime layout/semantic/accessibility defects in
   `richTextSection.tsx`, including `article` width, title heading level, section
   label, and TOC focus style.
@@ -52,13 +53,10 @@ Out of scope for TASK-282:
 
 - Shared editor atomic update helpers, owned by TASK-256-01.
 - Generic `Clear`, `none`, token picker, CSS-variable preservation, and shared
-  color-picker semantics, owned by TASK-256-02. `REPORT_RICH_TEXT_SECTION_WIDGET`
-  KOD-10 for `textColor` clear is classified there only when TASK-256-07/08
-  names a concrete physical owner for
+  color-picker semantics, owned by TASK-256-02. Rich Text Section-specific
+  adoption of that shared clear behavior for `textColor` is owned by
+  TASK-282-09 so KOD-10 has a physical owner if TASK-256 closure does not name
   `core/admin/ui/widgets/editors/RichTextSectionEditors.tsx` plus focused tests.
-  If TASK-256 closure does not name that owner, TASK-282-07 must leave KOD-10 as
-  excluded-pending and create or reference a named future adoption task instead
-  of claiming the row is closed by a generic umbrella.
 - Generic slot placeholder gating, owned by TASK-256-03.
 - Shared interactive runtime binding helpers outside this widget, owned by
   TASK-256-04.
@@ -77,9 +75,10 @@ Rich Text Section-only work.
 | KOD-11, KOD-12, KOD-14; report lines 197-225, 309, 427, 447-458 | TASK-282-02 |
 | KOD-03, KOD-04, KOD-06, KOD-15, KOD-16; report lines 105-145, 229-241, 274-279, 391-395, 443-448, 456 | TASK-282-03 |
 | KOD-08, KOD-09, A11Y-01, section label; report lines 157-181, 321-328, 365-376, 435, 445, 449 | TASK-282-04 |
-| KOD-13; report lines 213-217, 436 | TASK-282-05 |
+| KOD-13 image/media-picker slice; report lines 213-217, 436 | TASK-282-05 |
+| KOD-13 attachments and safe video/embed policy; report lines 213-217, 436 | TASK-282-08 |
 | KOD-05, KOD-07, KOD-WIZ, KOD-DUP; report lines 125-153, 286-299, 385-399, 455, 457, 459-460 | TASK-282-06 |
-| KOD-10 | TASK-256-02/TASK-256-07 only with exact Rich Text Section editor owner/tests; otherwise TASK-282-07 must name a future adoption task |
+| KOD-10 | TASK-282-09 after TASK-256-02 shared clear helper behavior is available, or direct local adoption if the shared helper already supports it |
 | Final screenshot/report/docs/changelog/board evidence | TASK-282-07 |
 
 ## Current Owner and Test Matrix
@@ -89,6 +88,7 @@ Rich Text Section-only work.
 | Schema/defaults/normalizer/runtime | `core/widgets/core/richTextSection.tsx` | `tests/vitest/widgets/richTextSection.test.tsx`, `tests/unit/widgets/validator.test.ts` | Add SSR, sanitizer, heading-level, article-width, media, rich block, TOC focus marker, and schema rejection assertions. |
 | Editors | `core/admin/ui/widgets/editors/RichTextSectionEditors.tsx` | `tests/vitest/ui/rich-text-section-editor-wave.test.tsx` | Add mode ownership, WYSIWYG/sanitizer feedback, destructive block, scalable block, mode IA, and reader guidance assertions. |
 | Reused rich-text authoring helpers | `core/admin/ui/posts/editor/richtext/*`, `core/services/posts/editor/*` only if Bun-free imports remain clean | `tests/vitest/ui/post-richtext-adapter-wave.test.tsx`, `tests/vitest/posts/post-richtext-serializer.test.ts` | Run only the helper lanes touched by integration. Do not persist post-editor documents in widget JSON. |
+| Media and embeds | `core/admin/ui/media/MediaPicker.tsx`, `core/admin/services/mediaClient.ts`, existing safe href/media utilities if reused | `tests/vitest/ui/media-picker.test.tsx`, `tests/vitest/admin/mediaClient.test.ts`, `tests/unit/media/mediaUsageService.test.ts` | Run only when those existing owners change. Rich Text Section render remains sync-safe and stores no private/signed media URLs. |
 | Widget registry/validation | `core/widgets/registry.ts`, `core/widgets/validator.ts` | `tests/unit/widgets/registry.test.ts`, `tests/unit/widgets/validator.test.ts` | Run when definition metadata, schema fields, or validation fixtures change. |
 | Docs/report | `_docs/PLAYWRIGHT/REPORT_RICH_TEXT_SECTION_WIDGET.md`, `_docs/_WIDGETS/RICH_TEXT_SECTION.md`, `_docs/WIDGETS.md`, `_docs/WIDGET_PACK_MATRIX.md` if readiness changes | docs diff checks | Update fixed/deferred evidence after implementation leaves land. |
 
@@ -101,6 +101,8 @@ Rich Text Section-only work.
 - [ ] TASK-282-05: Rich Text Inline Media and Safe Content Model
 - [ ] TASK-282-06: Rich Text Editor Mode IA and Reader Guidance
 - [ ] TASK-282-07: Rich Text Report Docs Changelog and Closure
+- [ ] TASK-282-08: Rich Text Attachments and Safe Embed Policy
+- [ ] TASK-282-09: Rich Text Text Color Clear Adoption
 
 ## Implementation Order
 
@@ -111,10 +113,15 @@ Rich Text Section-only work.
 3. Complete TASK-282-03 after the WYSIWYG/sanitizer model is stable.
 4. Complete TASK-282-04 once content source behavior is stable, because heading
    and TOC assertions depend on the final rendered HTML/block output.
-5. Complete TASK-282-05 after sanitizer and semantic rules settle, so media
+5. Complete TASK-282-05 after sanitizer and semantic rules settle, so image
    output does not duplicate unsafe HTML paths.
-6. Complete TASK-282-06 after the major editor surfaces are stable.
-7. Complete TASK-282-07 last with report evidence, widget docs, changelog, board,
+6. Complete TASK-282-08 after TASK-282-05 so attachments and safe embeds reuse
+   the same public media URL and sanitizer policy.
+7. Complete TASK-282-09 after TASK-256-02 shared clear helper behavior is
+   available, or earlier only if the local editor can adopt an existing helper
+   without implementing generic clear semantics.
+8. Complete TASK-282-06 after the major editor surfaces are stable.
+9. Complete TASK-282-07 last with report evidence, widget docs, changelog, board,
    and validation results.
 
 ## Git Scope Safeguards
