@@ -6,7 +6,7 @@
 **Category:** Widgets + Content + Runtime Render + Admin UI + Security
 **Estimated Effort:** Large
 **Dependencies:** TASK-266
-**Status:** To Do
+**Status:** Done (2026-05-17)
 
 ---
 

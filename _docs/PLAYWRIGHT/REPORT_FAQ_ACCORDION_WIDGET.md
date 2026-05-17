@@ -341,15 +341,31 @@ Każdy `<article>` ma `borderWidth: 1px` ze wszystkich stron. Przy `gap=0` (spac
 
 ---
 
-## Status po TASK-256 (2026-05-17)
+## Final status po TASK-293 i TASK-266 (2026-05-17)
 
-- `TASK-256-04` + `TASK-256-06-03`: FAQ items now use scoped summary/content
-  IDs and single-open grouping semantics in runtime output.
-- `TASK-256-06-03`: the current shared FAQ accessibility and single-open
-  contract is covered by focused editor/runtime tests, while richer product
-  scope stays deferred to `TASK-266`.
-- Shared evidence from this turn:
-  `bun run test:vitest -- tests/vitest/ui/faq-accordion-editor-wave.test.tsx
-  tests/vitest/widgets/faqAccordion.test.tsx` passed on 2026-05-17.
+| Row | Status | Owner | Evidence |
+|---|---|---|---|
+| C1, W13 | task-256-owned / live | TASK-256 shared runtime contract | FAQ items still use scoped summary/content IDs and grouped single-open runtime semantics already introduced before this family; TASK-266 did not duplicate that contract. |
+| C2, C3, W15, U2, U3, A1-A5 | fixed | TASK-293 | `core/widgets/core/faqAccordion.tsx`, `FaqAccordionEditors.tsx`, `bun run test:vitest -- tests/vitest/widgets/faqAccordion.test.tsx`, `bun run test:vitest -- tests/vitest/ui/faq-accordion-editor-wave.test.tsx`, `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` |
+| W1, W2, W3, W4, W5, W6, W7, W8, W12, W14 | fixed | TASK-266-01 | Bounded layout, typography, color, radius, border-width, and motion controls now live in schema, renderer, editor, and focused tests. |
+| W10, W11 | fixed | TASK-266-02 | FAQ answers now support a bounded markdown subset with safe widget href handling, plus per-item icons and plain-text extraction. |
+| W9 | fixed | TASK-266-03 | FAQ now exposes an opt-in Visual toggle for safe `FAQPage` JSON-LD serialization. |
+| U4, U6, U8, U9 | fixed | TASK-266-04 | Wizard now edits description, Visual shows `current/total` progress, and open-state controls use question-aware labels plus raw-index fallback. |
+| U1, U5, U7, U10, U11 | fixed | TASK-266-05 | FAQ item management now includes confirm-before-remove, compact icon-forward actions, variant miniatures, native drag/drop reorder, and bounded bulk delete. |
 
-*Raport zakończony — 2026-05-16, sesja `faq-accordion-audit`.*
+### Refreshed validation evidence
+
+- Passed:
+  - `bun run test:vitest -- tests/vitest/widgets/faqAccordion.test.tsx`
+  - `bun run test:vitest -- tests/vitest/ui/faq-accordion-editor-wave.test.tsx`
+  - `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx`
+  - `bun run test:vitest -- tests/vitest/widgets/widgetSafeHref.test.ts`
+  - `bun test tests/unit/widgets/validator.test.ts`
+  - `bun run lint`
+  - `bun run gates:coderso`
+- Environment blocker:
+  - `bun run scan:security:strict` is not green in this worktree for unrelated
+    local-environment reasons: Semgrep fails with `ca-certs: empty trust
+    anchors` and `bun audit` returns `ConnectionRefused`.
+
+*Raport odświeżony po implementacji TASK-293 i TASK-266 — 2026-05-17.*

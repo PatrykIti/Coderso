@@ -185,6 +185,39 @@ vi.mock("@/lib/utils", () => ({
   cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
 }));
 
+vi.mock("../../../core/admin/ui/shared/ConfirmActionDialog", () => ({
+  ConfirmActionDialog: ({
+    open,
+    title,
+    description,
+    confirmLabel,
+    onOpenChange,
+    onConfirm,
+    children,
+  }: {
+    open: boolean;
+    title: string;
+    description: React.ReactNode;
+    confirmLabel: string;
+    onOpenChange: (open: boolean) => void;
+    onConfirm: () => void | Promise<void>;
+    children?: React.ReactNode;
+  }) =>
+    open ? (
+      <div data-faq-confirm-dialog={title}>
+        <p>{title}</p>
+        <p>{description}</p>
+        {children ? <div>{children}</div> : null}
+        <button type="button" onClick={() => onOpenChange(false)}>
+          Cancel
+        </button>
+        <button type="button" onClick={() => void onConfirm()}>
+          {confirmLabel}
+        </button>
+      </div>
+    ) : null,
+}));
+
 const mount = (node: React.ReactNode) => {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -249,6 +282,25 @@ const clickElement = (element: Element | null | undefined) => {
   });
 };
 
+const dispatchDragEvent = (target: Element | null | undefined, type: string) => {
+  if (!target || typeof DragEvent === "undefined") return;
+  React.act(() => {
+    const event = new DragEvent(type, {
+      bubbles: true,
+      cancelable: true,
+    });
+    Object.defineProperty(event, "dataTransfer", {
+      configurable: true,
+      value: {
+        effectAllowed: "",
+        setDragImage: vi.fn(),
+        setData: vi.fn(),
+      },
+    });
+    target.dispatchEvent(event);
+  });
+};
+
 const findInputByPlaceholder = (container: HTMLElement, placeholder: string) =>
   Array.from(container.querySelectorAll("input")).find(
     (element) =>
@@ -278,6 +330,11 @@ const findButtonsByText = (container: HTMLElement, text: string) =>
     (element.textContent ?? "").includes(text)
   );
 
+const findButtonsByTitle = (container: HTMLElement, title: string) =>
+  Array.from(container.querySelectorAll("button")).filter(
+    (element) => element.getAttribute("title") === title
+  );
+
 const findSelectByOptions = (container: HTMLElement, values: string[]) =>
   Array.from(container.querySelectorAll("select")).find((element) => {
     if (!(element instanceof HTMLSelectElement)) return false;
@@ -289,6 +346,16 @@ const findAllInputsByPlaceholder = (container: HTMLElement, placeholder: string)
   Array.from(container.querySelectorAll("input")).filter(
     (element) =>
       element instanceof HTMLInputElement && element.getAttribute("placeholder") === placeholder
+  );
+
+const findCheckboxesWithAriaLabel = (container: HTMLElement) =>
+  Array.from(container.querySelectorAll("input[type='checkbox']")).filter(
+    (element) => element instanceof HTMLInputElement && element.hasAttribute("aria-label")
+  );
+
+const findUnnamedCheckboxes = (container: HTMLElement) =>
+  Array.from(container.querySelectorAll("input[type='checkbox']")).filter(
+    (element) => element instanceof HTMLInputElement && !element.hasAttribute("aria-label")
   );
 
 const findColorInputForPlaceholder = (container: HTMLElement, placeholder: string, index = 0) => {
@@ -367,7 +434,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test("FaqAccordion wizard editor updates variant, title, and onboarding questions across the full wizard scope", async () => {
+test("FaqAccordion wizard editor updates variant, description, answer mode, and onboarding questions across the full wizard scope", async () => {
   const view = await renderEditor({
     editor: "wizard",
     initialValue: faqAccordionDefaults,
@@ -392,13 +459,22 @@ test("FaqAccordion wizard editor updates variant, title, and onboarding question
       findInputByPlaceholder(view.container, "Frequently asked questions"),
       "Billing FAQ"
     );
+    setTextareaValue(
+      findTextareaByPlaceholder(view.container, "Address objections with short and clear answers."),
+      "Everything about billing and setup."
+    );
+    setInputValue(findInputByPlaceholder(view.container, "⭐"), "❔");
+    setSelectValue(findSelectByOptions(view.container, ["plain", "markdown"]), "markdown");
     setInputValue(questionInputs[0], "How fast is launch?");
     setInputValue(questionInputs[1], "Can I edit content myself?");
 
     expect(view.getVariant()).toBe("compact");
     expect(view.onVariantChangeSpy).toHaveBeenCalledWith("compact");
     expect(view.getValue().header?.title).toBe("Billing FAQ");
+    expect(view.getValue().header?.description).toBe("Everything about billing and setup.");
     expect(view.getValue().items).toHaveLength(faqAccordionDefaults.items.length);
+    expect(view.getValue().items[0]?.icon).toBe("❔");
+    expect(view.getValue().items[0]?.answerFormat).toBe("markdown");
     expect(view.getValue().items[0]?.question).toBe("How fast is launch?");
     expect(view.getValue().items[1]?.question).toBe("Can I edit content myself?");
   } finally {
@@ -406,7 +482,7 @@ test("FaqAccordion wizard editor updates variant, title, and onboarding question
   }
 });
 
-test("FaqAccordion visual editor covers item-count normalization, add and reorder flows, open-state controls, and style updates", async () => {
+test("FaqAccordion visual editor covers FAQ item management, drag/drop, open-state labels, style controls, and SEO", async () => {
   const view = await renderEditor({
     editor: "visual",
     initialVariant: "compact",
@@ -416,8 +492,20 @@ test("FaqAccordion visual editor covers item-count normalization, add and reorde
         description: "Old description",
       },
       items: [
-        { id: "first", question: "First question", answer: "First answer" },
-        { id: "second", question: "Second question", answer: "Second answer" },
+        {
+          id: "first",
+          question: "First question",
+          answer: "First answer",
+          answerFormat: "plain",
+          icon: "1",
+        },
+        {
+          id: "second",
+          question: "Second question",
+          answer: "Second answer",
+          answerFormat: "plain",
+          icon: "2",
+        },
       ],
       options: {
         allowMultipleOpen: false,
@@ -426,8 +514,19 @@ test("FaqAccordion visual editor covers item-count normalization, add and reorde
       style: {
         surface: "surface-token",
         border: "border-token",
-        divider: undefined,
+        divider: "divider-token",
         spacing: "md",
+        maxWidth: "xl",
+        headerAlign: "center",
+        sectionPaddingX: "md",
+        sectionPaddingY: "md",
+        panelRadius: "lg",
+        borderWidth: "1",
+        headerTitleSize: "auto",
+        motion: "none",
+      },
+      seo: {
+        emitFaqJsonLd: false,
       },
     },
   });
@@ -437,6 +536,9 @@ test("FaqAccordion visual editor covers item-count normalization, add and reorde
     expect((colorInputs[0] as HTMLInputElement | null | undefined)?.value).toBe("#ffffff");
     expect((colorInputs[1] as HTMLInputElement | null | undefined)?.value).toBe("#e2e8f0");
     expect((colorInputs[2] as HTMLInputElement | null | undefined)?.value).toBe("#e2e8f0");
+    expect(view.container.textContent).toContain(
+      "Token text remains the source of truth when the swatch falls back to a preview color."
+    );
 
     clickElement(findButtonByText(view.container, "Two Column"));
     expect(view.getVariant()).toBe("two-column");
@@ -448,7 +550,7 @@ test("FaqAccordion visual editor covers item-count normalization, add and reorde
     );
     expect(view.getValue().items).toHaveLength(1);
 
-    const removeButtonsWhenSingle = findButtonsByText(view.container, "Remove");
+    const removeButtonsWhenSingle = findButtonsByTitle(view.container, "Remove");
     expect((removeButtonsWhenSingle[0] as HTMLButtonElement | null | undefined)?.disabled).toBe(
       true
     );
@@ -459,6 +561,7 @@ test("FaqAccordion visual editor covers item-count normalization, add and reorde
       expect.objectContaining({
         question: "Question 2",
         answer: "Answer 2",
+        answerFormat: "plain",
       })
     );
 
@@ -473,6 +576,8 @@ test("FaqAccordion visual editor covers item-count normalization, add and reorde
 
     const questionInputs = findInputsByPlaceholderPrefix(view.container, "Question ");
     setInputValue(questionInputs[0], "What is included?");
+    setInputValue(findInputByPlaceholder(view.container, "⭐"), "📌");
+    setSelectValue(findSelectByOptions(view.container, ["plain", "markdown"]), "markdown");
 
     const answerAreas = Array.from(view.container.querySelectorAll("textarea")).filter(
       (element) =>
@@ -481,31 +586,54 @@ test("FaqAccordion visual editor covers item-count normalization, add and reorde
     );
     setTextareaValue(answerAreas[0], "Setup and support.");
 
-    clickElement(findButtonsByText(view.container, "Move down")[0]);
+    const draggableItems = view.container.querySelectorAll("[data-faq-drag-item]");
+    dispatchDragEvent(draggableItems[0], "dragstart");
+    dispatchDragEvent(draggableItems[1], "dragover");
+    dispatchDragEvent(draggableItems[1], "drop");
     expect(view.getValue().items[0]?.question).toBe("Question 2");
     expect(view.getValue().items[1]?.question).toBe("What is included?");
-    expect(view.getValue().items[1]?.answer).toBe("Setup and support.");
 
-    clickElement(findButtonsByText(view.container, "Move up")[1]);
+    clickElement(findButtonsByTitle(view.container, "Move up")[1]);
     expect(view.getValue().items[0]?.question).toBe("What is included?");
-    expect(view.getValue().items[1]?.question).toBe("Question 2");
+    expect(view.getValue().items[0]?.answerFormat).toBe("markdown");
+    expect(view.getValue().items[0]?.icon).toBe("📌");
 
-    const checkboxes = Array.from(view.container.querySelectorAll("input[type='checkbox']"));
-    toggleCheckbox(checkboxes[0], true);
+    clickElement(findButtonsByTitle(view.container, "Remove")[1]);
+    expect(view.container.textContent).toContain("Remove FAQ item?");
+    clickElement(findButtonByText(view.container, "Cancel"));
+    expect(view.container.textContent).not.toContain("Remove FAQ item?");
 
-    setSelectValue(findSelectByOptions(view.container, ["-1", "0", "1"]), "-1");
+    const defaultOpenSelect = findSelectByOptions(view.container, ["-1", "0", "1"]);
+    expect(
+      Array.from((defaultOpenSelect as HTMLSelectElement).options).some((option) =>
+        option.textContent?.includes("What is included?")
+      )
+    ).toBe(true);
+    setSelectValue(defaultOpenSelect, "-1");
+
+    const unnamedCheckboxes = findUnnamedCheckboxes(view.container);
+    toggleCheckbox(unnamedCheckboxes[0], true);
     setInputValue(colorInputs[0], "#111111");
     setInputValue(findInputByPlaceholder(view.container, "var(--color-bg)"), "#123456");
     const borderInputs = findAllInputsByPlaceholder(view.container, "var(--color-border)");
     setInputValue(borderInputs[0], "#654321");
     setInputValue(borderInputs[1], "#abcdef");
+    clickElement(findButtonsByText(view.container, "Clear")[1]);
+    clickElement(findButtonsByText(view.container, "Clear")[2]);
+    setSelectValue(findSelectByOptions(view.container, ["sm", "md", "lg", "xl", "full"]), "full");
+    setSelectValue(findSelectByOptions(view.container, ["left", "center", "right"]), "left");
+    setSelectValue(findSelectByOptions(view.container, ["auto", "sm", "md", "lg", "xl"]), "xl");
+    setSelectValue(findSelectByOptions(view.container, ["none", "smooth"]), "smooth");
     setSelectValue(findSelectByOptions(view.container, ["none", "sm", "md", "lg"]), "lg");
-    clickElement(findButtonsByText(view.container, "Remove")[1]);
+    setSelectValue(findSelectByOptions(view.container, ["0", "1", "2", "3"]), "2");
+    toggleCheckbox(unnamedCheckboxes[1], true);
 
-    const removeButtonsAfterDelete = findButtonsByText(view.container, "Remove");
-    expect((removeButtonsAfterDelete[0] as HTMLButtonElement | null | undefined)?.disabled).toBe(
-      true
-    );
+    const selectionCheckboxes = findCheckboxesWithAriaLabel(view.container);
+    toggleCheckbox(selectionCheckboxes[1], true);
+    clickElement(findButtonByText(view.container, "Delete selected"));
+    expect(view.container.textContent).toContain("Delete selected FAQ items?");
+    clickElement(findButtonsByText(view.container, "Delete selected").at(-1));
+    expect(view.getValue().items).toHaveLength(1);
 
     expect(view.getValue()).toEqual(
       expect.objectContaining({
@@ -517,6 +645,8 @@ test("FaqAccordion visual editor covers item-count normalization, add and reorde
           expect.objectContaining({
             question: "What is included?",
             answer: "Setup and support.",
+            answerFormat: "markdown",
+            icon: "📌",
           }),
         ],
         options: expect.objectContaining({
@@ -525,9 +655,17 @@ test("FaqAccordion visual editor covers item-count normalization, add and reorde
         }),
         style: expect.objectContaining({
           surface: "#123456",
-          border: "#654321",
-          divider: "#abcdef",
-          spacing: "lg",
+          border: undefined,
+          divider: undefined,
+          maxWidth: "full",
+          headerAlign: "left",
+          headerTitleSize: "xl",
+          motion: "smooth",
+          borderWidth: "2",
+          sectionPaddingX: "lg",
+        }),
+        seo: expect.objectContaining({
+          emitFaqJsonLd: true,
         }),
       })
     );
@@ -588,6 +726,9 @@ test("FaqAccordion advanced editor normalizes malformed payloads, applies techni
         divider: "divider-token",
         spacing: "invalid" as "md",
       },
+      seo: {
+        emitFaqJsonLd: false,
+      },
     },
   });
 
@@ -606,9 +747,10 @@ test("FaqAccordion advanced editor normalizes malformed payloads, applies techni
     expect(view.getValue().options?.defaultOpenIndex).toBe(1);
     expect(view.getValue().style?.spacing).toBe("md");
 
-    const checkbox = view.container.querySelector("input[type='checkbox']");
+    const checkbox = findUnnamedCheckboxes(view.container)[0];
     toggleCheckbox(checkbox, true);
 
+    setSelectValue(findSelectByOptions(view.container, ["-1", "0", "1"]), "-1");
     setInputValue(view.container.querySelector("input[type='number']"), "-1");
 
     const surfaceInput = findInputByPlaceholder(view.container, "var(--color-bg)");
@@ -755,10 +897,17 @@ test("FaqAccordion editors fall back to default UI values when normalized payloa
       )?.value
     ).toBe("md");
     expect(
+      (
+        findSelectByOptions(view.container, ["sm", "md", "lg", "xl", "full"]) as
+          | HTMLSelectElement
+          | undefined
+      )?.value
+    ).toBe("xl");
+    expect(
       (view.container.querySelector("input[type='number']") as HTMLInputElement | null)?.value
     ).toBe("0");
     expect(
-      (view.container.querySelector("input[type='checkbox']") as HTMLInputElement | null)?.checked
+      (findUnnamedCheckboxes(view.container)[0] as HTMLInputElement | undefined)?.checked
     ).toBe(false);
     expect(findColorInputForPlaceholder(view.container, "var(--color-bg)").value).toBe("#ffffff");
     expect(findColorInputForPlaceholder(view.container, "var(--color-border)", 0).value).toBe(

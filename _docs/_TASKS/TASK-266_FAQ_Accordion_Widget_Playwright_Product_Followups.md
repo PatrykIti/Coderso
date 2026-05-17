@@ -6,7 +6,7 @@
 **Category:** Widgets + Content + Admin UI + Runtime Render + SEO + Playwright QA
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-252-06-04, TASK-256, TASK-293
-**Status:** In Progress (2026-05-17)
+**Status:** Done (2026-05-17)
 
 ---
 
@@ -173,3 +173,20 @@ This umbrella does not add API routes.
   report evidence move together for every new product field.
 - Public runtime output remains safe, accessible, and free of user-authored
   script execution.
+
+## Completion Notes
+
+- TASK-266 landed end-to-end after TASK-293 repaired the still-live shared FAQ
+  residuals outside the widget-specific family.
+- Validation evidence:
+  - `bun run test:vitest -- tests/vitest/widgets/faqAccordion.test.tsx`
+  - `bun run test:vitest -- tests/vitest/ui/faq-accordion-editor-wave.test.tsx`
+  - `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx`
+  - `bun run test:vitest -- tests/vitest/widgets/widgetSafeHref.test.ts`
+  - `bun test tests/unit/widgets/validator.test.ts`
+  - `bun run lint`
+  - `bun run gates:coderso`
+  - `bun run precommit`
+- `bun run scan:security:strict` remains environment-blocked in this worktree
+  because local Semgrep fails with `ca-certs: empty trust anchors` and
+  `bun audit` returns `ConnectionRefused`.

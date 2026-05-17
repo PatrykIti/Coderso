@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Runtime Render + Accessibility
 **Estimated Effort:** Large
 **Dependencies:** TASK-256-02, TASK-256-04, TASK-256-06-03
-**Status:** In Progress (2026-05-17)
+**Status:** Done (2026-05-17)
 
 ---
 
@@ -162,6 +162,22 @@ No API routes are added.
 
 - Covered by its own changelog entry or by a final shared FAQ closure entry
   before moving to `Done`.
+
+## Completion Notes
+
+- Shared FAQ residual rows C2, C3, W15, U2, U3, and A1-A5 are now repaired in
+  the live FAQ owner files and reflected in the refreshed FAQ widget docs and
+  report.
+- Validation evidence:
+  - `bun run test:vitest -- tests/vitest/widgets/faqAccordion.test.tsx`
+  - `bun run test:vitest -- tests/vitest/ui/faq-accordion-editor-wave.test.tsx`
+  - `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx`
+  - `bun test tests/unit/widgets/validator.test.ts`
+  - `bun run lint`
+  - `bun run gates:coderso`
+- `bun run scan:security:strict` remains environment-blocked in this worktree
+  because local Semgrep fails with `ca-certs: empty trust anchors` and
+  `bun audit` returns `ConnectionRefused`.
 
 ## Acceptance Criteria
 

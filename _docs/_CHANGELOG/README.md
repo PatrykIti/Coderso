@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 857 | 2026-05-17 | FAQ accordion shared and product follow-ups | CMS Widgets/Admin UI/SEO/QA |
 | 856 | 2026-05-18 | TASK-265 entry teaser closure | CMS Widgets/Admin UI/QA |
 | 855 | 2026-05-18 | TASK-264 divider widget followups | CMS Widgets/Admin UI/QA |
 | 854 | 2026-05-18 | TASK-303 divider spacer shared controls | CMS Widgets/Admin UI/QA |

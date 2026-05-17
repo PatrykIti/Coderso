@@ -6,7 +6,7 @@
 **Category:** QA + Documentation + Changelog
 **Estimated Effort:** Medium
 **Dependencies:** TASK-293, TASK-266-01, TASK-266-02, TASK-266-03, TASK-266-04, TASK-266-05
-**Status:** To Do
+**Status:** Done (2026-05-17)
 
 ---
 
@@ -149,6 +149,24 @@ No API routes are added by this closure task.
 
 - This task must not move to `Done` until a changelog entry lists TASK-266 and
   `_docs/_CHANGELOG/README.md` is updated.
+
+## Final Validation Evidence
+
+- Passed:
+  - `bun run test:vitest -- tests/vitest/widgets/faqAccordion.test.tsx`
+  - `bun run test:vitest -- tests/vitest/ui/faq-accordion-editor-wave.test.tsx`
+  - `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx`
+  - `bun run test:vitest -- tests/vitest/widgets/widgetSafeHref.test.ts`
+  - `bun test tests/unit/widgets/validator.test.ts`
+  - `bun run lint`
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun run gates:coderso`
+- Environment blocker:
+  - `bun run scan:security:strict` failed for local toolchain/network reasons
+    unrelated to FAQ changes: Semgrep reported `ca-certs: empty trust anchors`
+    and `bun audit` returned `ConnectionRefused`.
+- Final manual commit still reruns `bun run precommit`.
 
 ## Acceptance Criteria
 

@@ -1,29 +1,30 @@
-# FAQ Accordion Widget (v1)
+# FAQ Accordion Widget (v2)
 
 ## Purpose
 
-Expandable FAQ section for objection handling and support answers.
+Expandable FAQ section for objection handling, support answers, and search-safe
+FAQ structured data.
 
 ## Widget ID
 
 `faq-accordion`
 
-## Variants (v1)
+## Variants
 
 - `single-column`: one-column question list
 - `two-column`: responsive two-column FAQ grid
 - `compact`: reduced spacing and tighter typography
 
-## Editor Modes (current after TASK-050-12-04)
+## Editor Modes
 
 ### Wizard (minimal onboarding)
 - FAQ layout (`single-column` / `two-column` / `compact`)
 - Section title
+- Section description
 - Questions count
+- Per-item icon
+- Per-item answer mode (`plain` / `markdown`)
 - Question and answer fields for the current wizard scope
-
-The wizard count selector and visible question/answer rows must stay in sync so
-FAQ answers are not hidden behind preset-only content.
 
 ### Visual (primary editing mode)
 Sections:
@@ -31,15 +32,23 @@ Sections:
 2. Header copy
 3. Questions and answers
 4. Display behavior
-5. Colors and spacing
+5. Layout and typography
+6. Colors and panel style
+7. SEO and structured data
 
 Notes:
 - FAQ owns variant selection in Visual (`visualOwnsVariantSelection = true`).
 - Generic Visual variant selector is suppressed.
-- Display behavior controls default open row and multiple-open mode.
+- Questions and answers now include:
+  - question-aware default-open labels,
+  - compact icon-first item actions,
+  - remove confirmation,
+  - native drag/drop reorder with Move Up/Down fallback,
+  - bounded bulk delete that keeps the min-one-item guard.
 
 ### Advanced (technical-only)
 - Open-state and fallback controls
+- bounded default-open selector plus raw index diagnostics
 - Technical style tokens
 - Normalization and safeguards
 - Raw payload snapshot
@@ -47,21 +56,44 @@ Notes:
 ## Runtime Behavior Notes
 
 - Invalid/unknown variant falls back to `single-column`.
-- Renderer always emits deterministic FAQ markers:
+- Renderer emits deterministic FAQ markers:
+  - `data-coderso-faq`
   - `data-faq-variant`
   - `data-faq-spacing`
   - `data-faq-count`
   - `data-faq-multiple-open`
   - `data-faq-default-open`
   - `data-faq-item-open`
+  - `data-faq-motion`
+- FAQ sections now expose a named section (`aria-labelledby` or fallback
+  `aria-label`) and per-item `summary`/`region` relationships.
+- FAQ summaries render a visible chevron affordance and runtime script syncs
+  `aria-expanded` after native `<details>` toggles.
 - `defaultOpenIndex = -1` renders all FAQ items collapsed by default.
 - `defaultOpenIndex` is normalized to valid item bounds.
+- `style.motion = "smooth"` enables CSS-only open/close transitions.
+- `seo.emitFaqJsonLd = true` emits one safe `FAQPage` JSON-LD script derived
+  from normalized question text and sanitized answer plain text.
+
+## Rich Answers
+
+- `answerFormat = "plain"` preserves legacy plain-text behavior.
+- `answerFormat = "markdown"` enables a bounded markdown subset:
+  - links
+  - bold
+  - italic
+  - inline code
+  - ordered and unordered lists
+- Raw HTML, embeds, scripts, and unsafe URLs are rejected.
+- Markdown links reuse the shared widget safe-href contract.
 
 ## Clear Controls
 
-- `style.surface` is clearable; clear removes the panel surface field and FAQ
-  items render without a forced panel background style.
-- Open-state options and divider/border colors keep their existing behavior.
+- `style.surface`, `style.border`, and `style.divider` are clearable.
+- Clearing a field removes the persisted token instead of forcing an empty
+  string.
+- Color swatches may fall back to display-only hex values, but token text in
+  the input remains the source of truth.
 
 ## Data Model (summary)
 
@@ -74,8 +106,10 @@ Notes:
   "items": [
     {
       "id": "faq-1",
+      "icon": "⭐",
       "question": "How long does setup take?",
-      "answer": "Most teams configure their first page in under one day using reusable templates."
+      "answer": "Use **templates** and [Docs](/docs).",
+      "answerFormat": "markdown"
     }
   ],
   "options": {
@@ -86,7 +120,22 @@ Notes:
     "surface": "var(--color-bg)",
     "border": "var(--color-border)",
     "divider": "var(--color-border)",
-    "spacing": "md"
+    "spacing": "md",
+    "maxWidth": "xl",
+    "headerAlign": "center",
+    "sectionPaddingX": "md",
+    "sectionPaddingY": "md",
+    "questionTextColor": "var(--color-text)",
+    "answerTextColor": "var(--color-text)",
+    "headerTitleColor": "var(--color-text)",
+    "headerDescriptionColor": "var(--color-text)",
+    "panelRadius": "lg",
+    "borderWidth": "1",
+    "headerTitleSize": "auto",
+    "motion": "none"
+  },
+  "seo": {
+    "emitFaqJsonLd": false
   }
 }
 ```

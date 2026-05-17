@@ -6,7 +6,7 @@
 **Category:** Widgets + Content + Admin UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-293, TASK-266
-**Status:** To Do
+**Status:** Done (2026-05-17)
 
 ---
 

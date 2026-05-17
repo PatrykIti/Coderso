@@ -30,7 +30,7 @@ Task board for project work. Keep task files and this board in sync.
 
 - **To Do:** 284 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1627 tasks
+- **Done:** 1635 tasks
 
 ---
 
@@ -263,12 +263,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-267-06 | Feature Grid CTA Enablement, Target, and Rich Description Authoring | Medium | Large | Add explicit CTA enablement, safe target choice, and bounded rich description authoring after TASK-256 link safety |
 | TASK-267-07 | Feature Grid Wizard Guidance and Editor Entry Flow | Medium | Medium | Add Wizard scope guidance and decide first-open flow after Visual expansion |
 | TASK-267-08 | Feature Grid Report, Docs, Changelog, and Closure | Medium | Medium | Refresh Feature Grid report/docs/changelog/board and final validation evidence |
-| TASK-266-01 | FAQ Accordion Layout Typography and Motion Controls | High | Large | Add FAQ-owned max-width, alignment, padding, text colors, radius, border-width, title size, and motion controls |
-| TASK-266-02 | FAQ Accordion Rich Answers and Item Icon Model | High | Large | Add safe bounded rich-answer formatting, per-item icons, and plain-text extraction for SEO |
-| TASK-266-03 | FAQ Accordion SEO Structured Data Contract | High | Medium | Add optional FAQPage JSON-LD output derived from normalized safe FAQ data |
-| TASK-266-04 | FAQ Accordion Wizard and Open State Editor UX | Medium | Medium | Add Wizard description, item counters, question-aware open labels, and clearer all-collapsed Advanced UX |
-| TASK-266-05 | FAQ Accordion Item Management and Variant Preview Polish | Medium | Large | Add safer removal flow, compact accessible item actions, variant miniatures, and bounded reorder/bulk decisions |
-| TASK-266-06 | FAQ Accordion Report Docs and Closure | Medium | Medium | Refresh FAQ report/docs/changelog/board and final validation for the TASK-266 family |
 | TASK-264 | Divider Widget Playwright Product Followups | High | Large | Divider-specific follow-up family for `REPORT_DIVIDER_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-264-01 | Divider Label Color Typography and Gap Controls | High | Medium | Add label-center color, typography, nowrap, gap, truthful labels, and clear-label UX |
 | TASK-264-02 | Divider Width Alignment and Custom Validation | High | Medium | Add container width, left/center/right alignment, and custom-width validation feedback |
@@ -341,8 +335,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-293 | FAQ Accordion Shared Contract Residuals | High | Large | In progress: FAQ chevron/ARIA, spacing guard/border collapse, and clear/token adoption residuals are being repaired outside TASK-266 so the widget family stays product-scoped |
-| TASK-266 | FAQ Accordion Widget Playwright Product Followups | High | Very Large | In progress: FAQ-local product/editor/SEO follow-ups now depend on TASK-293 for the still-live shared residual rows before the family can close cleanly |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
@@ -421,6 +413,14 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-257-03 | Accordion Item Content and Management UX | High | Large | Done: Accordion item icons and clearer all-closed copy landed; shared add/reorder remains explicitly deferred to TASK-293 |
 | TASK-257-04 | Accordion Motion and Variant Preview Polish | Medium | Medium | Done: Accordion now exposes bounded motion presets and visual variant preview cards |
 | TASK-257-05 | Accordion Report Docs and Closure | Medium | Medium | Done: report/docs/board/changelog are synchronized with final fixed/deferred ownership and validation evidence |
+| TASK-293 | FAQ Accordion Shared Contract Residuals | High | Large | Done: FAQ chevron/ARIA, spacing guard/border collapse, and border/divider clear adoption are now repaired as a dedicated shared follow-up outside TASK-266 |
+| TASK-266 | FAQ Accordion Widget Playwright Product Followups | High | Very Large | Done: FAQ-local layout, rich answers, JSON-LD, editor UX, item management, docs, and closure evidence are synchronized |
+| TASK-266-01 | FAQ Accordion Layout Typography and Motion Controls | High | Large | Done: FAQ now exposes bounded width, alignment, padding, typography, radius, border-width, and motion controls across schema, editor, runtime, and tests |
+| TASK-266-02 | FAQ Accordion Rich Answers and Item Icon Model | High | Large | Done: FAQ answers support a bounded markdown subset, per-item icons, and shared safe-href link handling with plain-text extraction for SEO |
+| TASK-266-03 | FAQ Accordion SEO Structured Data Contract | High | Medium | Done: FAQ now emits opt-in safe `FAQPage` JSON-LD from normalized question and answer text |
+| TASK-266-04 | FAQ Accordion Wizard and Open State Editor UX | Medium | Medium | Done: Wizard/Visual/Advanced now cover description, item counts, question-aware open labels, and clearer all-collapsed guidance |
+| TASK-266-05 | FAQ Accordion Item Management and Variant Preview Polish | Medium | Large | Done: FAQ item editing now includes remove confirmation, compact actions, variant miniatures, native drag/drop reorder, and bounded bulk delete |
+| TASK-266-06 | FAQ Accordion Report Docs and Closure | Medium | Medium | Done: FAQ report, widget docs, changelog, board state, and final validation evidence are synchronized |
 | TASK-256 | Widget Shared Contract Playwright Drift Repair | High | Very Large | Done: shared builder patching, placeholder gating, interactive runtime IDs, structural shared fixes, marketing truthfulness repairs, report routing, and closure evidence are synchronized |
 | TASK-256-01 | Shared Editor Mode and Atomic Update Contract | High | Large | Done: builder hosts and shared panels use atomic block patching, and variant/data sync regressions are covered across the affected widget editors |
 | TASK-256-02 | Clear, None Token, and Design Token Controls | High | Large | Done: shared clear/token semantics are synchronized with the implemented widget surfaces and validated through the focused clear/token suites |

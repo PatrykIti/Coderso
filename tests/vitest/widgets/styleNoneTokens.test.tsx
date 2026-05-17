@@ -240,12 +240,23 @@ test("marketing widgets preserve none spacing and radius tokens", () => {
       <FaqAccordionBlock
         data={normalizeFaqAccordionData({
           ...faqAccordionDefaults,
-          style: { ...faqAccordionDefaults.style, spacing: "none" },
+          style: { ...faqAccordionDefaults.style, spacing: "none", borderWidth: "2" },
         })}
         variant="single-column"
       />
     )
   ).toContain('data-faq-spacing="none"');
+  expect(
+    renderToString(
+      <FaqAccordionBlock
+        data={normalizeFaqAccordionData({
+          ...faqAccordionDefaults,
+          style: { ...faqAccordionDefaults.style, spacing: "none", borderWidth: "2" },
+        })}
+        variant="single-column"
+      />
+    )
+  ).toContain("margin-top:calc(-1 * 2px)");
 });
 
 test("people and form widgets preserve none style tokens", () => {
