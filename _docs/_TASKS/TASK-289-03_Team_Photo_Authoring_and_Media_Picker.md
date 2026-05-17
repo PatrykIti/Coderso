@@ -58,6 +58,10 @@ in the editor.
 ## Implementation Pseudocode
 
 ```tsx
+const [selectedPhotoMediaIdsByMemberId, setSelectedPhotoMediaIdsByMemberId] =
+  useState<Record<string, string>>({});
+const [photoPickerError, setPhotoPickerError] = useState<string | null>(null);
+
 function TeamPhotoField({ member, memberIndex }) {
   const photoState = resolveTeamPhotoEditorState(member.photo);
   const selectedMediaId = selectedPhotoMediaIdsByMemberId[member.id] ?? null;
@@ -94,18 +98,23 @@ async function handleTeamPhotoMediaSelection(
     return;
   }
 
-  const mediaItems = await listMediaCached({ force: false });
-  const selected = mediaItems.find((item) => item.id === String(mediaId));
-  if (!selected?.url) {
-    setPhotoPickerError("Selected image is no longer available.");
-    return;
-  }
+  setPhotoPickerError(null);
+  try {
+    const mediaItems = await listMediaCached({ force: false });
+    const selected = mediaItems.find((item) => item.id === String(mediaId));
+    if (!selected?.url) {
+      setPhotoPickerError("Selected image is no longer available.");
+      return;
+    }
 
-  setSelectedPhotoMediaIdsByMemberId((current) => ({
-    ...current,
-    [memberId]: String(mediaId),
-  }));
-  updateMember(value, onChange, memberIndex, { photo: selected.url });
+    setSelectedPhotoMediaIdsByMemberId((current) => ({
+      ...current,
+      [memberId]: String(mediaId),
+    }));
+    updateMember(value, onChange, memberIndex, { photo: selected.url });
+  } catch {
+    setPhotoPickerError("Failed to resolve selected media.");
+  }
 }
 
 function clearTeamPhoto(memberId: string, memberIndex: number) {
@@ -168,6 +177,9 @@ No API routes are added.
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/ui/team-editor-wave.test.tsx`
+  - Mock `core/admin/services/mediaClient.ts` `listMediaCached` in this suite to
+    cover ID-to-URL mapping, unresolved IDs, rejected media-list loads,
+    clear-photo behavior, and preservation of the direct URL input.
 - `bun run test:vitest -- tests/vitest/widgets/team.test.tsx` if normalizer or
   renderer behavior changes.
 - `bun test tests/unit/widgets/validator.test.ts` if schema/defaults change.

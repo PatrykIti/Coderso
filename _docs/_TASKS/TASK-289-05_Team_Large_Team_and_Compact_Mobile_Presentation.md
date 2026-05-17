@@ -69,7 +69,14 @@ function resolveVisibleMembers(members: TeamMember[], display: TeamDisplay, expa
   return expanded ? members : members.slice(0, initialCount);
 }
 
-function TeamShowMoreButton({ hiddenCount, onToggle }) {
+function renderTeamMemberList(members: TeamMember[], display: TeamDisplay) {
+  const initialCount = normalizeTeamInitialVisibleCount(display.initialVisibleCount);
+  const visibleMembers = members.slice(0, initialCount);
+  const hiddenMembers = members.slice(initialCount);
+  return { visibleMembers, hiddenMembers };
+}
+
+function TeamShowMoreButton({ hiddenCount, memberListId }) {
   if (hiddenCount <= 0) return null;
   return (
     <button

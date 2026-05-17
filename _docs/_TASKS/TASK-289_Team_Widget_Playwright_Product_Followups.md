@@ -154,6 +154,10 @@ This planning family does not add API routes.
 - Anti-abuse: photo, social, and CTA fields must reuse safe URL/media helpers
   from TASK-256, reject unsafe schemes, and must not accept raw HTML, script,
   arbitrary class names, or browser-stored secrets.
+- Secret handling: implementation leaves must not place private profile data,
+  media tokens, provider keys, signed/private URLs, privileged settings, or
+  secret-bearing diagnostics in widget JSON, browser cache, public DOM output,
+  report evidence, or changelog entries.
 
 ## Testing Requirements
 
