@@ -50,7 +50,7 @@ It builds on those contracts and only expands the Pricing Plans product model.
 | `tests/vitest/widgets/renderer.test.tsx` | Update if shared renderer snapshots or widget markers change. |
 | `tests/unit/widgets/validator.test.ts` | Add schema accept/reject coverage for new plan visual fields. |
 | `_docs/_WIDGETS/PRICING_PLANS.md` | Document plan-level visual fields and highlighted-banner behavior. |
-| `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md` | Mark BUG-06/BF-02/BF-03/BF-07 fixed or record deferral evidence. |
+| `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md` | Mark BUG-06/BF-02/BF-03/BF-05/BF-07 fixed or record deferral evidence. |
 
 ## Implementation Pseudocode
 

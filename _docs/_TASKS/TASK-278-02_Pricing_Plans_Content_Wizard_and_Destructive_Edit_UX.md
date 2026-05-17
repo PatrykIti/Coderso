@@ -54,7 +54,7 @@ Pricing Plans authoring affordances.
 | `tests/vitest/ui/pricing-plans-editor-wave.test.tsx` | Cover Wizard content fields, Advanced duplicate-token cleanup, Advanced reset/fix copy, disabled billing label behavior, highlighted list indicator, remove confirmation/undo, and feature autofocus. |
 | `tests/vitest/widgets/pricingPlans.test.tsx` | Update only if schema/default ownership changes. |
 | `_docs/_WIDGETS/PRICING_PLANS.md` | Document Wizard minimum fields and destructive-edit behavior. |
-| `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md` | Mark UX-04/UX-06/UX-07/UX-08 and feature autofocus fixed or deferred. |
+| `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md` | Mark UX-01/UX-04/UX-05/UX-06/UX-07/UX-08 and feature autofocus fixed or deferred. |
 
 ## Implementation Pseudocode
 
