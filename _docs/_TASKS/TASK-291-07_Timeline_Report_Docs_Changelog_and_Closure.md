@@ -78,6 +78,15 @@ const sharedOwnerAllowList = new Set([
   "TASK-256-04",
 ]);
 
+function isAllowedSharedOwner(row: TimelineClosureRow) {
+  if (sharedOwnerAllowList.has(row.ownerTask)) return true;
+  return (
+    row.findingId === "W7" &&
+    /^TASK-\d+(?:-\d+)*$/.test(row.ownerTask) &&
+    row.evidence.includes("contrast")
+  );
+}
+
 function buildTimelineClosureMatrix(rows: TimelineClosureRow[]) {
   return rows.map((row) => ({
     ...row,

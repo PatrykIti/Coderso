@@ -163,7 +163,6 @@ No API routes are added.
 
 - Update editor waves through child leaves:
   - `tests/vitest/ui/hero-editor-wave.test.tsx`
-  - `tests/vitest/ui/timeline-editor-wave.test.tsx`
   - `tests/vitest/ui/feature-grid-editor-wave.test.tsx`
   - `tests/vitest/ui/stats-kpi-editor-wave.test.tsx`
   - `tests/vitest/ui/testimonials-editor-wave.test.tsx`
@@ -175,7 +174,6 @@ No API routes are added.
   - `tests/vitest/ui/team-editor-wave.test.tsx`
 - Update runtime tests through child leaves:
   - `tests/vitest/widgets/hero.test.tsx`
-  - `tests/vitest/widgets/timeline.test.tsx`
   - `tests/vitest/widgets/featureGrid.test.tsx`
   - `tests/vitest/widgets/statsKpi.test.tsx`
   - `tests/vitest/widgets/testimonials.test.tsx`
@@ -187,6 +185,8 @@ No API routes are added.
   - `tests/vitest/widgets/team.test.tsx`
   - `tests/vitest/widgets/widgetSafeHref.test.ts` where link semantics change.
 - Update `tests/unit/widgets/validator.test.ts` when schemas change.
+- Timeline-specific editor/runtime suites are owned by TASK-291; this parent
+  may reference them only as exact shared TASK-256 prerequisite proof.
 - Run targeted Vitest suites, relevant Bun validator/registry suites, lint, and
   type lint.
 
