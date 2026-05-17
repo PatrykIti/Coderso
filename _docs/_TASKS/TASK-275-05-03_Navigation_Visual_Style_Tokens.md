@@ -128,6 +128,7 @@ No API routes are added.
 - `bun --cwd core lint:types`
 - `bun run gates:coderso`
 - `bun scripts/coderso-release-gates.ts --gate ux`
+- `bun scripts/coderso-release-gates.ts --gate security`
 - `bun scripts/coderso-release-gates.ts --gate performance` when public motion
   behavior changes.
 - `bun run scan:security:strict`
