@@ -51,13 +51,13 @@ but persisted `data` can disagree with what the renderer shows.
 | File | Lines | Required change |
 |---|---:|---|
 | `core/admin/ui/widgets/editors/SplitLayoutEditors.tsx` | variant and ratio controls | Emit atomic variant+data patches through the shared TASK-256-01 path; do not own mobile/reverse copy, Split Layout gap labels, pane-slot guidance, or Advanced diagnostics here. |
-| `core/widgets/core/splitLayout.tsx` | normalizer/default helpers only if needed | Reuse owner normalization for variant ratio defaults; do not implement public placeholder gating or mobile product behavior in this leaf. |
+| `core/widgets/core/splitLayout.tsx` | normalizer/default helpers | Reuse owner normalization for variant ratio defaults when the editor atomic patch changes persisted ratio data; do not implement public placeholder gating or mobile product behavior in this leaf. |
 | `core/admin/ui/widgets/editors/StackEditors.tsx` | variant, direction, Wizard/Advanced sections | Emit atomic variant+data patches and make mobile direction controls truthful. |
 | `core/widgets/core/stack.tsx` | renderer data resolution | Keep rendered direction deterministic and aligned with normalized data. |
 | `tests/vitest/ui/split-layout-editor-wave.test.tsx` | existing suite | Add variant/ratio atomic-update regressions only. |
-| `tests/vitest/widgets/splitLayout.test.tsx` | existing suite | Add ratio/default helper assertions only if owner helpers change. |
+| `tests/vitest/widgets/splitLayout.test.tsx` | existing suite | Add ratio/default helper assertions when owner normalization participates in the variant patch. |
 | `tests/vitest/ui/stack-editor-wave.test.tsx` | existing suite | Add variant/direction and Advanced ownership assertions. |
-| `tests/vitest/widgets/stack.test.tsx` | existing suite | Add direction/default helper assertions only if owner helpers change. |
+| `tests/vitest/widgets/stack.test.tsx` | existing suite | Add direction/default helper assertions when owner normalization participates in the variant patch. |
 
 ## Implementation Pseudocode
 
@@ -159,7 +159,7 @@ No API routes are added.
 - Split-layout variant changes cannot leave stale desktop/tablet ratio data
   visible as active.
 - Stack variant changes cannot leave stale direction data visible as active.
-- Duplicate zero/off token choices are resolved by TASK-256-02 and consumed here
-  only if they affect variant-adjacent state.
+- Duplicate zero/off token choices are resolved by TASK-256-02; this leaf
+  consumes the final variant-adjacent semantics without owning token UX.
 - Public slot placeholder safety is resolved by TASK-256-03; Split Layout
   product copy is resolved by TASK-285-03.

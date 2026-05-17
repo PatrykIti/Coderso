@@ -35,13 +35,13 @@ runtime output that is semantically incomplete.
 
 | Finding | TASK-256 action | Owner | Follow-up policy |
 |---|---|---|---|
-| Feature Grid columns dropdown has no runtime effect | Fix or disable with explicit variant explanation | `FeatureGridEditors.tsx`, `featureGrid.tsx` | None |
+| Feature Grid columns dropdown has no runtime effect | Hide/disable the no-effect columns control outside supported variants and add explicit variant explanation | `FeatureGridEditors.tsx`, `featureGrid.tsx` | None |
 | Feature Grid variant/card count desync | Fix through TASK-256-01 atomic variant+data update | `FeatureGridEditors.tsx` | None |
 | Feature Grid external CTA missing rel | Fix through TASK-256-06-02 safe link renderer | `featureGrid.tsx`, `widgetSafeHref.ts`, `widgetSafeHref.test.ts` | None |
-| Feature Grid image media picker, drag/drop, rich text | Future product scope unless needed for broken existing control | `TASK-267` family | TASK-256-08 references TASK-267 instead of creating duplicate Feature Grid follow-ups |
-| Stats KPI divider toggle only affects inline | Hide/disable outside inline or make renderer honor it | `StatsKpiEditors.tsx`, `statsKpi.tsx` | None |
-| Stats KPI cards grid holes | Fix deterministic grid class or expose a real columns option | `statsKpi.tsx` | None |
-| Stats KPI value-size, split secondary grid, section/article ARIA, and emoji semantics | Fix ARIA here; fix grid truthfulness here; defer typography controls if they add new schema scope | `statsKpi.tsx`, `StatsKpiEditors.tsx` | TASK-256-08 records typography follow-up if not fixed |
+| Feature Grid image media picker, drag/drop, rich text | Product scope in TASK-267; TASK-256 only fixes current broken image URL feedback and link safety | `TASK-267` family | TASK-256-08 references TASK-267 instead of creating duplicate Feature Grid follow-ups |
+| Stats KPI divider toggle only affects inline | Hide/disable the divider toggle outside inline and keep runtime output aligned with the visible control | `StatsKpiEditors.tsx`, `statsKpi.tsx` | None |
+| Stats KPI cards grid holes | Fix deterministic grid class for current metric counts | `statsKpi.tsx` | None |
+| Stats KPI value-size, split secondary grid, section/article ARIA, and emoji semantics | Fix section/article ARIA, emoji semantics, and current split-grid truthfulness here; value-size typography controls route to TASK-287 | `statsKpi.tsx`, `StatsKpiEditors.tsx` | TASK-256-08 references TASK-287 for typography product scope |
 | Stats KPI count-up/trend/per-item accent/CTA | Future product scope | `TASK-287` family | TASK-256-08 references TASK-287 instead of creating duplicate Stats KPI follow-ups |
 
 ## Sub-Tasks

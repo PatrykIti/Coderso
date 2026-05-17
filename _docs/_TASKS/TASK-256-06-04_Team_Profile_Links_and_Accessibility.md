@@ -32,12 +32,12 @@ unless they are needed to fix a broken existing control.
 
 | Finding | TASK-256 action | Owner | Follow-up policy |
 |---|---|---|---|
-| Spotlight columns selector has little/no effect | Fix or disable with clear variant context | `TeamEditors.tsx`, `team.tsx` | None |
+| Spotlight columns selector has little/no effect | Disable repeated equivalent options with clear spotlight variant context and keep renderer output aligned | `TeamEditors.tsx`, `team.tsx` | None |
 | Social links lack safe external-link behavior | Fix here | `team.tsx`, `widgetSafeHref.test.ts` | None |
-| Section lacks accessible label and hardcoded `h3` may break hierarchy | Fix here if current model can support it without breaking compatibility; otherwise document heading-level follow-up | `team.tsx` | TASK-256-08 references TASK-289 if schema expansion is required |
-| Photo URL validation and lazy loading | Fix here for lazy loading and safe editor feedback | `TeamEditors.tsx`, `team.tsx` | Media picker is future scope |
+| Section lacks accessible label and hardcoded `h3` may break hierarchy | Fix current section labelling and heading semantics with existing title/member data; do not add new heading-level schema here | `team.tsx` | Heading-level schema expansion routes to TASK-289 |
+| Photo URL validation and lazy loading | Fix here for lazy loading and safe editor feedback | `TeamEditors.tsx`, `team.tsx` | Media picker authoring routes to TASK-289-03 |
 | Member-count reduction data loss, social default `#`, and spotlight lead badge | Fix here because current controls can destroy data or mislead editors | `TeamEditors.tsx` | None |
-| Drag/drop, section background, CTA, contact buttons, department filters, contrast validator, and configurable lead member | Future product scope unless needed for existing-control truthfulness | `TASK-289` family | TASK-256-08 references TASK-289 instead of creating duplicate Team follow-ups |
+| Drag/drop, section background, CTA, contact buttons, department filters, contrast validator, and configurable lead member | Product scope in TASK-289; TASK-256 only fixes current truthfulness, link safety, photo lazy loading, and section semantics named above | `TASK-289` family | TASK-256-08 references TASK-289 instead of creating duplicate Team follow-ups |
 
 ## Sub-Tasks
 
@@ -60,7 +60,7 @@ unless they are needed to fix a broken existing control.
 |---|---:|---|
 | `core/admin/ui/widgets/editors/TeamEditors.tsx` | 301-369, 494-659, 792-888 | Spotlight-aware columns control, safer add-member/add-link defaults, photo validation feedback, and Wizard role scope. |
 | `core/widgets/core/team.tsx` | 58-63, 184-197, 360-383, 447-483 | Explicit resolver defaults, spotlight column behavior, lazy photos, safe social links, section labels, heading semantics, and duplicate normalization cleanup. |
-| `core/widgets/core/widgetSafeHref.ts` | shared helper | Reuse the TASK-256-06-02 `resolveWidgetLinkAttrs` helper for Team social-link output; extend it here only if Team needs an additional safe option. |
+| `core/widgets/core/widgetSafeHref.ts` | shared helper | Reuse the TASK-256-06-02 `resolveWidgetLinkAttrs` helper for Team social-link output; add Team-specific safe options only as explicit shared-helper inputs with tests. |
 | `tests/vitest/ui/team-editor-wave.test.tsx` | existing suite | Add spotlight columns, Wizard role/default, social link default, and photo validation regressions. |
 | `tests/vitest/widgets/team.test.tsx` | existing suite | Add social link, lazy image, section ARIA, heading, and spotlight column regressions. |
 | `tests/vitest/widgets/widgetSafeHref.test.ts` | existing suite | Add team social-link safe href coverage if helper behavior changes. |

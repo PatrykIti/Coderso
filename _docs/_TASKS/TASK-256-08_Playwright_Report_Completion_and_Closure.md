@@ -145,7 +145,7 @@ Template only, not final evidence:
 | Finding | Status | Fix owner | Test evidence | Deferred task |
 |---|---|---|---|---|
 | Public empty placeholder | <fixed/deferred/not-reproducible/future-scope> | <TASK-256-03 or leaf> | <command + result> | <n/a or task id> |
-| True carousel controls | <future-scope> | n/a | n/a | <physical follow-up task id> |
+| True carousel controls | <future-scope> | n/a | n/a | TASK-290-04 |
 ```
 
 Closure helper shape:

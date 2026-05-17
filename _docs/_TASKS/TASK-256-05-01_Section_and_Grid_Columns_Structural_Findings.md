@@ -42,13 +42,13 @@ This leaf owns two contract classes:
 | Section `Empty region.` in public output | Fix here through TASK-256-03 render context | `section.tsx` | None |
 | Section anchor accepts invalid IDs | Fix here with schema/editor validation and tests | `SectionEditors.tsx`, `section.tsx` | None |
 | Section resolver fallback and duplicated Advanced style controls | Fix here because current controls/defaults are misleading | `SectionEditors.tsx`, `section.tsx` | None |
-| Section `Wide`/`Content` duplicate semantics and bleed variant copy | Fix or relabel if existing controls imply runtime behavior that is not true | `SectionEditors.tsx`, `section.tsx` | TASK-256-08 references TASK-283 if this requires product-level layout semantics |
-| Section heading level control | Fix if existing report confirms hardcoded invalid hierarchy; otherwise defer with report note | `section.tsx` | TASK-256-08 references TASK-283 if it becomes product scope |
-| Section fullscreen/min-height, horizontal region layouts, text typography controls, background media, presets, responsive padding, shadows, custom region names | Future product scope unless a current visible control already promises it | `TASK-283` family | TASK-256-08 references TASK-283 instead of creating duplicate Section follow-ups |
+| Section `Wide`/`Content` duplicate semantics and bleed variant copy | Relabel or disable the existing duplicated controls so the editor matches current runtime behavior; do not add new layout semantics here | `SectionEditors.tsx`, `section.tsx` | Product-level layout semantics route to TASK-283 |
+| Section heading level control | Repair current hardcoded invalid hierarchy using existing section title/structure data; do not add a new heading-level schema here | `section.tsx` | Heading-level product controls route to TASK-283 |
+| Section fullscreen/min-height, horizontal region layouts, text typography controls, background media, presets, responsive padding, shadows, custom region names | Product scope in TASK-283; TASK-256 only fixes current misleading controls named above | `TASK-283` family | TASK-256-08 references TASK-283 instead of creating duplicate Section follow-ups |
 | Grid `asymmetric` variant does not update existing explicit spans | Fix here through variant-aware span reconciliation or editor warning | `GridColumnsEditors.tsx`, `gridColumns.tsx` | None |
 | Grid `masonry-lite` forces cardized render while switch stays off | Fix here by synchronizing switch state, disabling the switch with explanation, or making renderer honor the visible switch | `GridColumnsEditors.tsx`, `gridColumns.tsx` | None |
 | Grid color picker does not represent CSS variables | Fix here through token-aware picker display that preserves `var(...)` values | `GridColumnsEditors.tsx`, shared picker helper if reused | None |
-| Grid span preview and span-sum validation | Fix here if current span controls permit broken layouts without feedback; otherwise defer as editor UX enhancement | `GridColumnsEditors.tsx` | TASK-256-08 references TASK-271 if not part of contract repair |
+| Grid span preview and span-sum validation | Add warning/disabled-state feedback for current span controls that can create broken layouts; richer preview UX routes to TASK-271 | `GridColumnsEditors.tsx` | TASK-256-08 references TASK-271 for expanded editor UX |
 | Grid `Column 1/2` public labels | Treat as editor metadata and hide publicly unless a real caption field is introduced | `gridColumns.tsx` | Caption feature routes to TASK-271 |
 | Grid slot/config count drift | Fix here | `GridColumnsEditors.tsx`, `VisualPanel.tsx` slot metadata | None |
 
@@ -58,8 +58,9 @@ This leaf owns two contract classes:
   context.
 - [ ] Add section anchor validation in the editor and keep runtime output safe
   for legacy anchors.
-- [ ] Fix or relabel duplicated section style/default controls, `Wide`/`Content`
-  ambiguity, and bleed copy so editor-visible choices match runtime behavior.
+- [ ] Relabel or disable duplicated section style/default controls,
+  `Wide`/`Content` ambiguity, and bleed copy so editor-visible choices match
+  runtime behavior.
 - [ ] Record section fullscreen/layout/media/preset/responsive-padding feature
   requests as TASK-283 future scope during TASK-256-08 if they remain outside
   the shared-contract repair.
@@ -72,8 +73,8 @@ This leaf owns two contract classes:
   explicit inactive-control warning.
 - [ ] Preserve and visibly represent CSS variable color tokens in grid column
   picker controls.
-- [ ] Add span-sum validation/preview feedback or defer it explicitly if it
-  stays outside the shared-contract repair.
+- [ ] Add span-sum validation or disabled-state feedback for current controls;
+  leave richer preview UX to TASK-271.
 - [ ] Hide public grid column labels that are editor metadata.
 - [ ] Keep cardize-only Advanced controls hidden or disabled when cardized
   styling is inactive.
@@ -86,6 +87,7 @@ This leaf owns two contract classes:
 | `core/admin/ui/widgets/editors/SectionEditors.tsx` | 485-498, 651-667, 826-850 | Validate anchor IDs, add missing gradient clear controls, and avoid duplicated Advanced controls that mirror Visual without extra ownership. |
 | `core/widgets/core/gridColumns.tsx` | 452-503 | Hide public `Empty column.` and `Column N` editor labels unless a real caption is configured. |
 | `core/admin/ui/pages/builder/BlockSettings.tsx` | slot target helpers around 42 and editor context assembly | Provide repeatable grid column targets to widget editors through `WidgetEditorContext.slotTargets` or run sync before invoking `GridColumnsEditors`. |
+| `core/widgets/slots.ts` | slot topology helpers | Use the shared slot topology owner for repeated grid column targets; update this file only when the slot target shape/helper contract changes. |
 | `core/admin/ui/widgets/editors/GridColumnsEditors.tsx` | variant, span, color, and cardize controls | Reconcile repeated column configs from `context.slotTargets`, preserve CSS variable picker values, make `asymmetric` span changes truthful, add span feedback, and gate cardized-only controls for `masonry-lite`. |
 | `tests/vitest/ui/section-editor-wave.test.tsx` | existing suite | Add anchor, clear, and duplicated-control assertions. |
 | `tests/vitest/widgets/section.test.tsx` | existing suite | Add public vs editor placeholder assertions. |

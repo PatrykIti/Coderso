@@ -52,7 +52,7 @@ be split by TASK-256-08 into a page-shell follow-up if still reproducible.
 | Pricing static toggle/plan-count drift | Fix here | `PricingPlansEditors.tsx`, `pricingPlans.tsx` | None |
 | FAQ single-open, chevron, ARIA, spacing resolver, and `spacing="none"` double-border behavior | Fix here plus TASK-256-04 | `FaqAccordionEditors.tsx`, `faqAccordion.tsx` | FAQ clear/CSS-variable picker work stays in TASK-256-02; question-aware default-open labels stay in TASK-266-04. |
 | FAQ `spacing="none"` double-border renderer defect | Fix here with renderer spacing/border regression | `faqAccordion.tsx` | None |
-| FAQ animation, SEO JSON-LD, rich text answers, max-width/layout typography, and remove confirmation | Future product scope unless needed to repair current misleading controls | `TASK-266-01`, `TASK-266-02`, `TASK-266-03`, `TASK-266-05`, `TASK-266-06` | TASK-256-08 references TASK-266 instead of creating duplicate FAQ follow-ups. |
+| FAQ animation, SEO JSON-LD, rich text answers, max-width/layout typography, and remove confirmation | Product scope in TASK-266; TASK-256 only fixes current single-open, chevron, spacing, and ARIA contract drift | `TASK-266-01`, `TASK-266-02`, `TASK-266-03`, `TASK-266-05`, `TASK-266-06` | TASK-256-08 references TASK-266 instead of creating duplicate FAQ follow-ups. |
 | Testimonials slider-static lacks scroll-snap behavior | Fix here or rename/static-proof the variant so the control is truthful | `testimonials.tsx` | None |
 | Testimonials clear gaps for text/accent colors | Fix through TASK-256-02 helpers | `TestimonialsEditors.tsx` | None |
 | Testimonials Wizard rating/role/avatar/source gaps, avatar media picker, remove confirmation, and rating-0 semantics | Future product/editor UX scope unless a current visible control is misleading | `TASK-290-01`, `TASK-290-02`, `TASK-290-03`, `TASK-290-04`, `TASK-290-08` | TASK-256-08 references TASK-290 instead of creating duplicate testimonials follow-ups. |
@@ -69,8 +69,9 @@ be split by TASK-256-08 into a page-shell follow-up if still reproducible.
   toggle behavior, and accessible pricing semantics.
 - [ ] Fix FAQ single-open behavior, expand indicator, spacing resolver, and ARIA.
 - [ ] Fix FAQ `spacing="none"` double-border output.
-- [ ] Classify testimonials `slider-static`: rename/static-proof it or make it
-  interactive only if that is required by the existing contract.
+- [ ] Make testimonials `slider-static` truthful by adding scroll-snap behavior
+  for the current variant or renaming/static-proofing the variant without
+  adding carousel product controls.
 - [ ] Add testimonial avatar/image lazy and alt assertions.
 - [ ] Add testimonials clear-control ownership for `textColor` and
   `accentColor`; defer Wizard/media-picker/remove-confirm expansions through
@@ -101,6 +102,63 @@ Timeline rows:
   work.
 - This leaf may reference TASK-291 evidence in final report closure but must not
   patch `TimelineEditors.tsx` or `timeline.tsx`.
+
+Hero media/link safety:
+
+```tsx
+function resolveHeroMediaForRender(data: HeroData) {
+  const media = normalizeHeroMedia(data.media);
+  if (!media.src || !normalizeWidgetSafeHref(media.src)) return null;
+  return {
+    ...media,
+    alt: media.alt?.trim() || data.title?.trim() || "",
+    loading: data.mediaPriority === "lcp" ? "eager" : "lazy",
+  };
+}
+
+function renderHeroLink(cta: HeroCta | undefined) {
+  const attrs = resolveWidgetLinkAttrs(cta?.href, { label: cta?.label });
+  return attrs.href ? <a {...attrs}>{cta?.label}</a> : null;
+}
+```
+
+Pricing plan and billing semantics:
+
+```tsx
+function normalizePricingForVariant(data: PricingPlansData, variant: PricingVariant) {
+  const visibleCount = countPlansForVariant(variant);
+  return {
+    ...data,
+    plans: preserveHiddenPlans(data.plans, visibleCount),
+    visiblePlanIds: data.plans.slice(0, visibleCount).map((plan) => plan.id),
+  };
+}
+
+function resolveBillingToggleState(data: PricingPlansData) {
+  if (!data.billing?.enabled || data.billing.cycles.length < 2) {
+    return { mode: "static" as const, cycle: data.billing?.defaultCycle ?? "monthly" };
+  }
+  return { mode: "interactive" as const, cycle: data.billing.defaultCycle };
+}
+```
+
+Testimonials slider/media/accessibility:
+
+```tsx
+function normalizeTestimonialsVariant(data: TestimonialsData, variant: TestimonialsVariant) {
+  const count = visibleTestimonialsForVariant(variant);
+  return {
+    ...data,
+    items: preserveHiddenTestimonials(data.items, count),
+    variantLabel: variant === "slider-static" ? "scroll-snap testimonials" : variant,
+  };
+}
+
+function resolveTestimonialAvatar(item: TestimonialItem) {
+  const src = normalizeWidgetSafeHref(item.avatarUrl);
+  return src ? { src, alt: item.name ? `${item.name} avatar` : "", loading: "lazy" } : null;
+}
+```
 
 FAQ single-open:
 

@@ -71,9 +71,9 @@ owner/docs/tests.
 | Broken/misleading existing controls | Fix in the relevant child leaf when the drift matches a TASK-256 shared contract | Widget editor/runtime owner | None |
 | Public link/media security and ARIA | Fix in the relevant child leaf through shared safe-output/accessibility contracts | Widget renderer plus editor tests | None |
 | Current Gallery Mosaic renderer/editor bugs that make existing controls misleading, including feature-left one-item empty column, redundant row-span cleanup, resolver readability, overlay alpha loss, media type ambiguity, Wizard video scope, link safety, and current alt/figure/video-title semantics | Fix in TASK-256-06-02 only for the current contract fields already named by that leaf | `GalleryMosaicEditors.tsx`, `galleryMosaic.tsx`, `widgetSafeHref.ts` | Product additions such as Visual per-item picker, poster image, per-item ratio, object-position, lightbox, motion, responsive layout presets, and import/export stay in TASK-270 |
-| CTA Banner report rows | Classify generic Clear semantics through TASK-256-02 and reusable target/rel helper behavior through TASK-256-06-02 only when the helper is shared across widgets | `ClearableFields.tsx`/TASK-256-02 and `widgetSafeHref.ts`/TASK-256-06-02 | CTA-specific empty badge, description color, focus styling, action labels, URL feedback, layout, media, and product controls stay in TASK-263. |
+| CTA Banner report rows | Classify generic Clear semantics through TASK-256-02 and reusable target/rel helper behavior through TASK-256-06-02 shared helper evidence | `ClearableFields.tsx`/TASK-256-02 and `widgetSafeHref.ts`/TASK-256-06-02 | CTA-specific empty badge, description color, focus styling, action labels, URL feedback, layout, media, and product controls stay in TASK-263. |
 | Page-shell issues found while testing a widget, such as history auth, toolbar aria, discard, or viewport controls | Do not patch inside widget leaves | `core/admin/ui/pages/PageEditor.tsx`, `core/admin/ui/pages/PageRevisionDrawer.tsx`, shared preview toolbar owners | TASK-256-08 must create a separate page-shell follow-up before closure if still reproducible |
-| Major new features such as drag-and-drop, true carousel/lightbox, marquee, rich text, per-item advanced typography, or SEO schema | Defer unless needed to make an existing control truthful | Existing TASK-263/TASK-266/TASK-267/TASK-270/TASK-274/TASK-287/TASK-289/TASK-290/TASK-291 follow-up families where applicable | TASK-256-08 records future scope without creating duplicate tasks |
+| Major new features such as drag-and-drop, true carousel/lightbox, marquee, rich text, per-item advanced typography, or SEO schema | Product scope in existing follow-up families; TASK-256 fixes current truthful-control defects through the rows above | Existing TASK-263/TASK-266/TASK-267/TASK-270/TASK-274/TASK-287/TASK-289/TASK-290/TASK-291 follow-up families where applicable | TASK-256-08 records future scope without creating duplicate tasks |
 
 ## Files to Change
 
@@ -183,9 +183,9 @@ No API routes are added.
   - `tests/vitest/widgets/testimonials.test.tsx`
   - `tests/vitest/widgets/pricingPlans.test.tsx`
   - `tests/vitest/widgets/faqAccordion.test.tsx`
-  - `tests/vitest/widgets/ctaBanner.test.tsx` only if a shared TASK-256 helper
-    is adopted in CTA Banner; CTA-specific runtime regressions stay in
-    TASK-263.
+  - `tests/vitest/widgets/ctaBanner.test.tsx` as compatibility coverage when a
+    shared TASK-256 helper is adopted in CTA Banner; CTA-specific runtime
+    regressions stay in TASK-263.
   - `tests/vitest/widgets/logoCloud.test.tsx`
   - `tests/vitest/widgets/galleryMosaic.test.tsx`
   - `tests/vitest/widgets/team.test.tsx`

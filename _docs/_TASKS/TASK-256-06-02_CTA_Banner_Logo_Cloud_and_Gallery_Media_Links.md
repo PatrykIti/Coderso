@@ -25,8 +25,8 @@ controls are deferred to the TASK-274 family.
 ## Drift Evidence
 
 - `_docs/PLAYWRIGHT/REPORT_CTA_BANNER_WIDGET.md:162-164` for generic Clear
-  semantics (TASK-256-02) and `:199-200` only if target/rel needs a reusable
-  shared safe-link attribute helper. CTA-specific rows are planned in TASK-263.
+  semantics (TASK-256-02) and `:199-200` as evidence for reusable shared
+  safe-link attribute helper needs. CTA-specific rows are planned in TASK-263.
 - `_docs/PLAYWRIGHT/REPORT_LOGO_CLOUD_WIDGET.md:38-116,119-153,260-262` for
   missing link `rel`, heading/section ARIA, hoverColor truthfulness, and logo
   height safety. Wizard image/link gaps, per-logo `alt`, image picker, marquee,
@@ -48,24 +48,25 @@ controls are deferred to the TASK-274 family.
 | Finding | TASK-256 action | Owner | Follow-up policy |
 |---|---|---|---|
 | CTA empty badge/text/focus/action-label/url-feedback drift | Reclassified to TASK-263 | `TASK-263-01`, `TASK-263-02` | TASK-256-08 records the reclassification, not implementation ownership |
-| CTA Clear drift | Generic Clear semantics stay in TASK-256-02; CTA field wiring is TASK-263-03 only if TASK-256-02 leaves a CTA-local hook | `TASK-256-02`, `TASK-263-03` | Do not implement a CTA-only Clear model here |
-| CTA target/rel helper need | Provide a shared helper only if target/rel behavior must be reusable across widgets | `widgetSafeHref.ts`, `widgetSafeHref.test.ts` | CTA adoption and CTA product controls stay in TASK-263-04 |
+| CTA Clear drift | Generic Clear semantics stay in TASK-256-02; CTA field wiring routes to TASK-263-03 | `TASK-256-02`, `TASK-263-03` | Do not implement a CTA-only Clear model here |
+| CTA target/rel helper need | Extend the shared `widgetSafeHref.ts` helper for non-CTA owners in this leaf; CTA adoption routes to TASK-263-04 | `widgetSafeHref.ts`, `widgetSafeHref.test.ts` | CTA product controls stay in TASK-263-04 |
 | CTA BF/accessibility list beyond current controls, including animation, icon controls, and broad layout additions | Product scope | TASK-263 | TASK-256-08 records the route |
 | Logo Cloud safe href/`rel`, section aria, heading semantics, `logoHeight: "none"` safety, and hoverColor truthfulness | Fix here | `LogoCloudEditors.tsx`, `logoCloud.tsx` | None |
-| Logo Cloud image picker, drag/drop, marquee, eyebrow/background, per-logo `alt`, Wizard image/link authoring, and open-new-tab product control | Future product scope unless needed to repair broken current flow | TASK-274 family | TASK-274 owns the physical follow-up leaves; TASK-256 only supplies shared safe link attributes. |
+| Logo Cloud image picker, drag/drop, marquee, eyebrow/background, per-logo `alt`, Wizard image/link authoring, and open-new-tab product control | Product scope in TASK-274; TASK-256 only fixes current safe-link, hover, height, and ARIA truthfulness | TASK-274 family | TASK-274 owns the physical follow-up leaves; TASK-256 only supplies shared safe link attributes. |
 | Gallery Mosaic overlay alpha loss and image/video ambiguity | Fix here because current controls can destroy data or mislead users | `GalleryMosaicEditors.tsx` | None |
 | Gallery Mosaic feature-left one-item empty column plus redundant row-span/resolver cleanup | Fix here because current runtime output is visibly misleading for an existing variant | `galleryMosaic.tsx`, `tests/vitest/widgets/galleryMosaic.test.tsx` | None |
 | Gallery Mosaic alt text and link security | Fix here | `galleryMosaic.tsx`, editor tests | None |
 | Gallery Mosaic Wizard video support and current media-type truthfulness | Fix here for Wizard media accept rules and the current image/video priority controls only | `GalleryMosaicEditors.tsx`, `tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx` | Visual per-item MediaPicker remains TASK-270-01 |
-| Gallery Mosaic video `title`, hover-caption keyboard/touch access, and autoplay control | Fix here when it changes current runtime semantics; otherwise route to the existing Gallery Mosaic follow-up family | `galleryMosaic.tsx`, `GalleryMosaicEditors.tsx` | TASK-256-08 references TASK-270 if schema expansion is required |
+| Gallery Mosaic video `title`, hover-caption keyboard/touch access, and autoplay control | Fix current runtime semantics for existing video title/caption data; route new autoplay or expanded caption controls to TASK-270 | `galleryMosaic.tsx`, `GalleryMosaicEditors.tsx` | TASK-256-08 references TASK-270 if schema expansion is required |
 | Gallery Mosaic Visual per-item MediaPicker, lightbox, drag/drop, per-item ratio, object-position, video poster image, responsive columns, motion, and import/export | Future product scope | TASK-270 | Excluded from TASK-256 and implemented or deferred by physical TASK-270 leaves |
 
 ## Sub-Tasks
 
 - [ ] Do not implement CTA Banner product/runtime/editor fixes in this leaf;
   keep those rows routed to TASK-263.
-- [ ] If several widgets need target/rel output, add a shared
-  `resolveWidgetLinkAttrs()` helper in `widgetSafeHref.ts` and focused tests.
+- [ ] Add or extend shared `resolveWidgetLinkAttrs()` behavior in
+  `widgetSafeHref.ts` for the non-CTA owners in this leaf, with focused tests;
+  CTA adoption remains TASK-263-04.
 - [ ] Keep generic color Clear semantics in TASK-256-02; do not wire CTA field
   Clear controls here.
 - [ ] Add Logo Cloud safe external-link output and section/header ARIA.
@@ -100,7 +101,7 @@ controls are deferred to the TASK-274 family.
 
 ## Implementation Pseudocode
 
-Shared link attrs, only if multiple widgets need the same target/rel policy:
+Shared link attrs for the non-CTA owners in this leaf:
 
 ```ts
 function resolveWidgetLinkAttrs(
@@ -173,12 +174,12 @@ No API routes are added.
 
 ## Testing Requirements
 
-- `bun run test:vitest -- tests/vitest/ui/cta-banner-editor-wave.test.tsx`
-  only if a shared helper change needs CTA compatibility coverage; CTA-specific
+- `bun run test:vitest -- tests/vitest/ui/cta-banner-editor-wave.test.tsx` as
+  CTA compatibility coverage when shared helper behavior changes; CTA-specific
   editor regressions stay in TASK-263.
-- `bun run test:vitest -- tests/vitest/widgets/ctaBanner.test.tsx` only if a
-  shared helper change needs CTA runtime compatibility coverage; CTA-specific
-  renderer regressions stay in TASK-263.
+- `bun run test:vitest -- tests/vitest/widgets/ctaBanner.test.tsx` as CTA
+  runtime compatibility coverage when shared helper behavior changes;
+  CTA-specific renderer regressions stay in TASK-263.
 - `bun run test:vitest -- tests/vitest/ui/logo-cloud-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/logoCloud.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx`

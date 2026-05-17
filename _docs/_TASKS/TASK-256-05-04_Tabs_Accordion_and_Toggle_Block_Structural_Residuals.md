@@ -42,7 +42,8 @@ handled by the shared contract alone. Tabs-specific product follow-ups from
 | Tabs product rows: inactive text color, Wizard layout shortcut, trigger metadata, disabled tabs, vertical alignment semantics, overflow/typography/spacing, animations, visual previews, label polish, and admin-preview activation | Do not fix here | `TASK-288*` | TASK-288 owns implementation and final fixed/deferred evidence. |
 | Accordion slot labels, default-open/collapsible behavior, placeholder leakage, clear controls, chevron, and ARIA gaps | Fix here plus TASK-256-02/03/04 shared helpers | `AccordionEditors.tsx`, `accordion.tsx` | None |
 | Toggle Block helper clear, missing clear controls, pane labels, placeholders, duplicate IDs, and ARIA/runtime root scope | Fix here plus TASK-256-02/03/04 shared helpers | `ToggleBlockEditors.tsx`, `toggleBlock.tsx` | None |
-| Toggle Block accent-contrast, weak switch/cards visual distinction, placeholder CTA, Wizard naming, color-token picker, reset-to-defaults, localized aria label | Fix here only where current controls are broken; otherwise future UX/product scope | `ToggleBlockEditors.tsx`, `toggleBlock.tsx` | TASK-256-08 records deferrals |
+| Toggle Block accent-contrast, color-token picker, and reset-to-defaults correctness | Fix current TASK-256 shared-control defects through TASK-256-02 and the Toggle Block owners | `ToggleBlockEditors.tsx`, `toggleBlock.tsx` | None |
+| Toggle Block weak switch/cards visual distinction, placeholder CTA, Wizard naming polish, and localized aria label | Product/UX scope in TASK-292 | `TASK-292` family | TASK-256-08 references TASK-292 instead of creating duplicate Toggle Block follow-ups |
 
 ## Sub-Tasks
 

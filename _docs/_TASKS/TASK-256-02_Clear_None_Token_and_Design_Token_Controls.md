@@ -76,6 +76,7 @@ The reports show repeated drift from the documented contract:
 | File | Lines | Required change |
 |---|---:|---|
 | `core/admin/ui/widgets/editors/ClearableFields.tsx` | 4-61 | Add shared field state helpers for `configured`, `fallback`, and `empty`; keep `Clear` disabled only when there is no configured value. |
+| `core/widgets/core/clearableStyle.ts` | shared helper | Own the runtime clearable-style contract used by `tests/vitest/widgets/clearableStyle.test.ts`; normalize omitted style fields through `resolveClearableStyleValue` and `compactStyle` here before per-widget renderers adopt the helper. |
 | `core/admin/ui/widgets/editors/DividerEditors.tsx` | 61-69,179-217 | Preserve CSS var text input values, re-label/remove no-op `Custom px`, and avoid duplicated zero-token UX. |
 | `core/admin/ui/widgets/editors/SpacerEditors.tsx` | 46-52,157-197 | Apply the same token/custom behavior for height fields. |
 | `core/admin/ui/widgets/editors/SplitLayoutEditors.tsx` | gap token options | Re-label or collapse duplicate `None`/`Gap 0` controls while preserving runtime compatibility. |
@@ -100,7 +101,7 @@ The reports show repeated drift from the documented contract:
 | `core/widgets/core/contentList.tsx` | style render | Keep omitted `textColor` falling back through defaults and avoid inline styles for cleared values. |
 | `core/widgets/core/pricingPlans.tsx` | style render | Keep omitted `highlightRing` falling back through defaults and avoid inline styles for cleared values. |
 | `core/widgets/core/featureGrid.tsx` | style render | Keep omitted `borderColor` falling back through defaults and avoid inline styles for cleared values. |
-| `core/widgets/core/ctaBanner.tsx` | shared Clear fallback only | Keep omitted CTA color fields falling back through defaults only if TASK-256-02 touches the generic Clear path; CTA-specific action, badge, focus, and layout product rows stay in TASK-263. |
+| `core/widgets/core/ctaBanner.tsx` | shared Clear compatibility | Keep as compatibility proof for generic Clear fallback behavior; CTA-specific action, badge, focus, and layout product rows stay in TASK-263. |
 | `core/widgets/core/toggleBlock.tsx` | 91-104, 298-345 | Preserve an intentional hidden helper state separately from missing legacy data; keep omitted style fields falling back through defaults. |
 | `core/widgets/core/galleryMosaic.tsx` | overlay/style render | Preserve alpha/CSS variable overlay values and avoid hex-only clear sentinels. |
 | `core/widgets/core/logoCloud.tsx` | hover/style render | Keep hover and height token output truthful when editor controls are gated. |
@@ -207,9 +208,10 @@ No API routes are added.
 - `bun run test:vitest -- tests/vitest/ui/logo-cloud-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/stats-kpi-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/divider.test.tsx tests/vitest/widgets/spacer.test.tsx tests/vitest/widgets/splitLayout.test.tsx tests/vitest/widgets/tabs.test.tsx tests/vitest/widgets/accordionWidget.test.tsx tests/vitest/widgets/faqAccordion.test.tsx tests/vitest/widgets/pricingPlans.test.tsx tests/vitest/widgets/featureGrid.test.tsx tests/vitest/widgets/toggleBlock.test.tsx tests/vitest/widgets/galleryMosaic.test.tsx tests/vitest/widgets/logoCloud.test.tsx tests/vitest/widgets/statsKpi.test.tsx`
-- `bun run test:vitest -- tests/vitest/widgets/ctaBanner.test.tsx` only if
-  TASK-256-02 changes shared Clear fallback behavior consumed by CTA Banner;
-  CTA-only runtime regressions stay with TASK-263.
+- `bun run test:vitest -- tests/vitest/widgets/ctaBanner.test.tsx` as
+  compatibility coverage when TASK-256-02 changes shared Clear fallback
+  behavior consumed by CTA Banner; CTA-only runtime regressions stay with
+  TASK-263.
 - `bun test tests/unit/widgets/validator.test.ts` if schemas/defaults change.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
