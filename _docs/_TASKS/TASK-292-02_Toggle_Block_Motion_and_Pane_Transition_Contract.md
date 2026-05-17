@@ -37,8 +37,8 @@ presentation only if the final TASK-256 interactive contract remains correct.
 - Use the final TASK-256 runtime namespace for any new markers, for example
   `data-coderso-*`. Do not add new `data-nextless-*` markers in TASK-292.
 - If a safe two-phase pane lifecycle cannot be layered on the final TASK-256
-  binding, keep this leaf to class-only/no-motion polish and record fade/slide
-  as deferred in TASK-292-06.
+  binding and covered by a DOM runtime test, keep this leaf to class-only
+  SSR-safe polish and record fade/slide as deferred in TASK-292-06.
 
 ## Out of Scope
 
@@ -66,6 +66,7 @@ presentation only if the final TASK-256 interactive contract remains correct.
 | `core/widgets/core/toggleBlock.tsx` | Add normalized motion field, transition classes/data markers, and reduced-motion-safe rendering. |
 | `core/admin/ui/widgets/editors/ToggleBlockEditors.tsx` | Add a bounded motion selector in Visual/Advanced and, if appropriate, Wizard summary copy. |
 | `tests/vitest/widgets/toggleBlock.test.tsx` | Cover default motion, enum fallback, reduced-motion-safe class output, and inactive pane state. |
+| `tests/vitest/widgets/toggleBlockRuntimeMotion.test.tsx` | Add a happy-dom runtime script test if this leaf implements two-phase pane transition lifecycle beyond static SSR classes. |
 | `tests/vitest/ui/toggle-block-editor-wave.test.tsx` | Cover motion selector updates and diagnostics output. |
 | `tests/unit/widgets/validator.test.ts` | Cover schema acceptance/rejection for motion values if the schema changes. |
 | `_docs/_WIDGETS/TOGGLE_BLOCK.md` | Document supported transition modes and accessibility behavior. |
@@ -163,9 +164,12 @@ Regression-test shape:
 
 - Widget tests assert new markers use `data-coderso-*` and do not introduce
   new `data-nextless-*` attributes.
-- Runtime DOM tests cover immediate hidden behavior for `none` and the
-  two-phase inactive/leaving state for animated modes without focusable
-  inactive panes.
+- `tests/vitest/widgets/toggleBlockRuntimeMotion.test.tsx` covers immediate
+  hidden behavior for `none` and the two-phase inactive/leaving state for
+  animated modes without focusable inactive panes whenever this leaf implements
+  runtime lifecycle changes.
+- If no DOM runtime test seam is added, implementation must stay class-only and
+  SSR-safe; TASK-292-06 records full fade/slide pane lifecycle as deferred.
 - Editor tests cover the motion selector, enum fallback diagnostics, and
   reduced-motion-safe copy.
 
@@ -183,6 +187,8 @@ No API routes are added.
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/widgets/toggleBlock.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/toggleBlockRuntimeMotion.test.tsx`
+  if the implementation changes runtime pane lifecycle or transition handlers
 - `bun run test:vitest -- tests/vitest/ui/toggle-block-editor-wave.test.tsx`
 - `bun test tests/unit/widgets/validator.test.ts`
 - `bun --cwd core lint`
