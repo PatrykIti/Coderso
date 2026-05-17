@@ -47,6 +47,14 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-290-06 | Testimonials CTA and Rich Quote Content | Medium | Large | Add a safe CTA and bounded rich quote formatting for Testimonials sections |
 | TASK-290-07 | Testimonials Large Set Import Export and Pagination | Low | Very Large | Decide large-set policy and add safe local import/export or pagination without external provider connectors |
 | TASK-290-08 | Testimonials Report Docs Changelog and Closure | Medium | Medium | Refresh Testimonials report/docs/changelog/board and final validation evidence |
+| TASK-288 | Tabs Widget Playwright Product Followups | High | Very Large | Tabs-only follow-up family for `REPORT_TABS_WIDGET.md`, excluding TASK-256 shared-contract scope |
+| TASK-288-01 | Tabs Visual Color Parity and Editor IA | High | Large | Add inactive text color, readable labels, section IA, and contrast guidance through shared color-control policy |
+| TASK-288-02 | Tabs Wizard Layout, Default Tab, and Slot Guidance | High | Large | Add Wizard layout shortcuts, default-tab preview, panel-slot guidance, and safe tab-count impact copy |
+| TASK-288-03 | Tabs Admin Preview and Runtime Activation | High | Large | Make admin preview switch panels and prevent duplicate Tabs runtime payload after TASK-256 instance-safe selectors |
+| TASK-288-04 | Tabs Trigger Metadata and Disabled Tab Model | High | Large | Add bounded trigger icon/description semantics and disabled-tab behavior with schema/editor/runtime/tests |
+| TASK-288-05 | Tabs Layout Overflow Typography and Spacing | High | Very Large | Add vertical alignment fix plus bounded overflow, typography, spacing, padding, and max-width controls |
+| TASK-288-06 | Tabs Motion Variant Previews and Polish | Medium | Large | Add reduced-motion-safe transitions and visual variant previews after activation/layout leaves land |
+| TASK-288-07 | Tabs Report Docs and Closure | Medium | Medium | Refresh Tabs report/docs/changelog/board and final validation evidence |
 | TASK-286 | Stack Widget Playwright Product Followups | High | Very Large | Stack-only follow-up family for `REPORT_STACK_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-286-01 | Stack Flex Alignment Token Expansion | Medium | Medium | Add Stack-owned `baseline`, `space-around`, and `space-evenly` tokens with schema/editor/runtime/tests/docs coverage |
 | TASK-286-02 | Stack Responsive Axis and Wrap Controls | High | Large | Add responsive align/justify/wrap controls while preserving legacy scalar payload compatibility |
