@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 127 tasks
+- **To Do:** 135 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1542 tasks
 
@@ -48,6 +48,14 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-272-07 | Hero Rich Copy and Social Proof Composition | Medium | Very Large | Add safe rich-copy support and a bounded social proof row for conversion Hero sections |
 | TASK-272-08 | Hero Responsive Images and LCP Priority | Medium | Large | Define Hero responsive image, lazy/eager loading, and fetch-priority policy without inventing media variants |
 | TASK-272-09 | Hero Report Docs Changelog and Closure | Medium | Medium | Refresh Hero report/docs/changelog/board and final validation evidence |
+| TASK-270 | Gallery Mosaic Widget Playwright Product Followups | High | Very Large | Gallery Mosaic-only product follow-up family for `REPORT_GALLERY_MOSAIC_WIDGET.md`, excluding TASK-256 shared-contract scope |
+| TASK-270-01 | Gallery Mosaic Item Previews and Media Picker | High | Large | Add per-item media previews and Visual media picker after TASK-256 safe media behavior lands |
+| TASK-270-02 | Gallery Mosaic Reorder, Count, and Removal UX | High | Large | Add efficient reorder, clear count/add/remove semantics, and recoverable or confirmed item removal |
+| TASK-270-03 | Gallery Mosaic Per-Item Media Presentation Fields | Medium | Large | Add bounded object-position, per-item ratio, and video poster fields without taking over TASK-256 accessibility scope |
+| TASK-270-04 | Gallery Mosaic Lightbox and Zoom Mode | Medium | Large | Add optional safe lightbox/zoom presentation using existing accessible runtime patterns |
+| TASK-270-05 | Gallery Mosaic Responsive Columns and Motion Presets | Medium | Large | Add bounded responsive column and reduced-motion-safe animation presets |
+| TASK-270-06 | Gallery Mosaic Config Import Export and Wizard Guidance | Low | Medium | Add safe config import/export and post-TASK-256 Wizard guidance |
+| TASK-270-07 | Gallery Mosaic Report Docs Changelog and Closure | Medium | Medium | Refresh Gallery Mosaic report/docs/changelog/board and final validation evidence |
 | TASK-269 | Form Embed Widget Playwright Product Followups | High | Very Large | Form Embed-only follow-up family for `REPORT_FORM_EMBED_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-269-01 | Form Selection, Editor Modes, and Admin Diagnostics | High | Large | Split Form Embed editor modes and add selected-form status/error/field diagnostics |
 | TASK-269-02 | Field Type Rendering and Field Accessibility | High | Large | Render Form Embed CMS field types truthfully with stable IDs, labels, helpers, and group semantics |

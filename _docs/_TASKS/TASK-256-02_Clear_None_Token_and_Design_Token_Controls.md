@@ -51,7 +51,7 @@ The reports show repeated drift from the documented contract:
 - `_docs/PLAYWRIGHT/REPORT_TOGGLE_BLOCK_WIDGET.md:43-52,149,165-166`
   reports helper-text clear drift and missing clear controls for `borderColor`
   and `accentColor`.
-- `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md:76-79,206-209` reports
+- `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md:76-79,140-141,272-275,322,359,378` reports
   overlay alpha loss through the hex-only picker.
 - `_docs/PLAYWRIGHT/REPORT_LOGO_CLOUD_WIDGET.md:94-100,112-116` reports
   duplicated Advanced token controls and hover/height token truthfulness.
