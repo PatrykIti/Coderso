@@ -61,7 +61,7 @@ work.
 | UX-06 spotlight count normalization | `REPORT_TEAM_WIDGET.md:238-240` | TASK-256-06-04 | Existing Wizard variant/count truthfulness is already scoped there. |
 | UX-10 empty social-link URL default | `REPORT_TEAM_WIDGET.md:255-258` | TASK-256-06-04 | Existing unsafe/misleading default is a shared safety fix. |
 | UX-11 destructive member-count reduction | `REPORT_TEAM_WIDGET.md:260-264` | TASK-256-06-04 | Existing count selector data-loss protection is already scoped there. |
-| BF-02 lazy avatar images | `REPORT_TEAM_WIDGET.md:275-279` | TASK-256-06-04 | Baseline media performance/safety. |
+| BF-02 / A5 lazy avatar images | `REPORT_TEAM_WIDGET.md:275-279,336` | TASK-256-06-04 | Baseline media performance/safety. |
 | BF-12 image alt context | `REPORT_TEAM_WIDGET.md:318-320` | TASK-256-06-04 | Baseline media accessibility. |
 
 TASK-289 implementation leaves may depend on the TASK-256 result, but they must
@@ -82,7 +82,7 @@ fields, editor IA, and widget-specific presentation.
 | UX-07 media-library image picking | TASK-289-03 | Media authoring and preview flow. Basic URL validation remains TASK-256. |
 | BF-01 section background | TASK-289-04 | Team-specific section surface control. |
 | BF-05 header alignment and title size | TASK-289-04 | Team header presentation controls. Baseline heading semantics remains TASK-256. |
-| BF-07 contrast validator for Team colors | TASK-289-04 | Local style feedback for Team section/card colors. |
+| BF-07 / A7 contrast validator for Team colors | TASK-289-04 | Local style feedback for Team section/card colors. |
 | BF-08 header eyebrow | TASK-289-04 | Team-specific header content field. |
 | BF-09 CTA below Team section | TASK-289-04 | Bounded Team section CTA; safe href helper remains TASK-256. |
 | BF-10 card border width | TASK-289-04 | Team card presentation token. |

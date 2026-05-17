@@ -102,12 +102,24 @@ Error handling:
 
 No API routes are added.
 
-- Endpoint visibility: none.
-- Auth/RBAC/CSRF/rate-limit: unchanged admin editing and public rendering.
+- Endpoint visibility: none; this leaf uses the existing admin widget editing
+  surface and public Team renderer only.
+- Auth model: unchanged authenticated admin page/template/widget editing and
+  read-only public runtime rendering.
+- RBAC: unchanged page/template/widget write permissions.
+- CSRF: unchanged existing admin write route protection for persisted widget
+  updates.
+- Rate-limit bucket: unchanged existing admin write behavior; no public write
+  bucket is introduced.
 - Reject-unknown validation: add `spotlightLeadId` to `teamSchema` only if this
-  leaf persists it; keep `additionalProperties: false`.
+  leaf persists it; keep `additionalProperties: false` and reject unknown Team
+  fields.
 - Anti-abuse: lead IDs are inert references to local members and must not carry
-  URLs, markup, scripts, class names, or secrets.
+  URLs, markup, scripts, class names, inline handlers, or browser-executed user
+  content.
+- Secret handling: do not place private member data, media tokens, provider
+  keys, signed URLs, or privileged settings in widget JSON, browser cache,
+  diagnostics, or report evidence.
 
 ## Testing Requirements
 
@@ -118,6 +130,8 @@ No API routes are added.
   changes.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso`
+- `bun run scan:security:strict`
 - `bun run precommit`
 
 ## Documentation Updates Required
@@ -125,6 +139,10 @@ No API routes are added.
 - `_docs/_WIDGETS/TEAM.md`
 - `_docs/PLAYWRIGHT/REPORT_TEAM_WIDGET.md`
 - `_docs/WIDGET_PACK_MATRIX.md` only if pack readiness changes
+- `_docs/_TASKS/TASK-289-02_Team_Spotlight_Lead_and_Variant_Guidance.md`
+- `_docs/_TASKS/README.md` on status changes
+- `_docs/_CHANGELOG/README.md` / final TASK-289 changelog entry via
+  TASK-289-06 closure
 
 ## Acceptance Criteria
 

@@ -47,6 +47,8 @@ in the editor.
 | File | Required change |
 |---|---|
 | `core/admin/ui/widgets/editors/TeamEditors.tsx` | Add photo picker trigger, preview, clear action, and validation-state rendering inside member panels. |
+| `core/admin/ui/media/MediaPicker.tsx` | Reuse the existing `MediaPicker` component contract; do not create a Team-only media modal. |
+| `core/admin/services/mediaClient.ts` | Reuse `listMediaCached({ force: false })` to resolve selected media IDs to public URLs, matching the `GalleryMosaicEditors.tsx` pattern. |
 | `core/widgets/core/team.tsx` | Update schema/defaults only if media asset metadata is persisted beyond `photo`; keep renderer compatibility. |
 | `tests/vitest/ui/team-editor-wave.test.tsx` | Cover picker trigger wiring, clear-photo behavior, preview fallback, and validation-state copy. |
 | `tests/vitest/widgets/team.test.tsx` | Cover normalizer compatibility if the photo payload shape changes. |
@@ -58,6 +60,7 @@ in the editor.
 ```tsx
 function TeamPhotoField({ member, memberIndex }) {
   const photoState = resolveTeamPhotoEditorState(member.photo);
+  const selectedMediaId = selectedPhotoMediaIdsByMemberId[member.id] ?? null;
 
   return (
     <div>
@@ -66,31 +69,74 @@ function TeamPhotoField({ member, memberIndex }) {
         value={member.photo ?? ""}
         onChange={(event) => updateMember(value, onChange, memberIndex, { photo: event.target.value })}
       />
-      <Button onClick={() => openMediaPicker({ onSelect: (asset) => setMemberPhoto(asset.url) })}>
-        Pick image
-      </Button>
-      <Button onClick={() => updateMember(value, onChange, memberIndex, { photo: undefined })}>
+      <MediaPicker
+        value={selectedMediaId}
+        onChange={(nextValue) => handleTeamPhotoMediaSelection(member.id, memberIndex, nextValue)}
+        multiple={false}
+        accept={["image/*"]}
+        maxItems={1}
+      />
+      <Button onClick={() => clearTeamPhoto(member.id, memberIndex)}>
         Clear photo
       </Button>
     </div>
   );
+}
+
+async function handleTeamPhotoMediaSelection(
+  memberId: string,
+  memberIndex: number,
+  nextValue: unknown
+) {
+  const mediaId = Array.isArray(nextValue) ? nextValue[0] : nextValue;
+  if (!mediaId) {
+    clearTeamPhoto(memberId, memberIndex);
+    return;
+  }
+
+  const mediaItems = await listMediaCached({ force: false });
+  const selected = mediaItems.find((item) => item.id === String(mediaId));
+  if (!selected?.url) {
+    setPhotoPickerError("Selected image is no longer available.");
+    return;
+  }
+
+  setSelectedPhotoMediaIdsByMemberId((current) => ({
+    ...current,
+    [memberId]: String(mediaId),
+  }));
+  updateMember(value, onChange, memberIndex, { photo: selected.url });
+}
+
+function clearTeamPhoto(memberId: string, memberIndex: number) {
+  setSelectedPhotoMediaIdsByMemberId(({ [memberId]: _removed, ...rest }) => rest);
+  updateMember(value, onChange, memberIndex, { photo: undefined });
 }
 ```
 
 Data flow:
 
 - Keep `members[].photo` as the compatibility source unless a stronger existing
-  media field pattern is present and documented.
-- If media metadata is introduced, normalize it through `team.tsx`; do not keep
-  editor-only asset payloads in browser storage.
-- Use the existing admin media picker seam rather than adding a Team-only media
-  modal.
+  media field pattern is present and documented. The default implementation
+  path is to map the `MediaPicker` selected ID to a public URL through
+  `listMediaCached({ force: false })`, matching `GalleryMosaicEditors.tsx`, and
+  persist only `members[].photo`.
+- Keep selected media IDs in editor-local state for the current session. If a
+  future implementation chooses to persist `photoMediaId` for editor
+  continuity, normalize it through `team.tsx`, add schema/validator coverage,
+  and keep `members[].photo` as the public renderer compatibility source.
+- Use `core/admin/ui/media/MediaPicker.tsx` rather than adding a Team-only media
+  modal. The existing single-select contract returns the selected media ID via
+  `onChange(id)`, not an asset object.
 - Reuse TASK-256 URL validation/fallback helpers once they land.
 
 Error handling:
 
-- Missing media-picker dependencies should degrade to direct URL entry without
+- Missing media-picker dependencies should leave direct URL entry usable without
   breaking the editor.
+- If `listMediaCached` cannot resolve the selected ID, keep the previous photo
+  value, show inline editor feedback, and do not serialize partial asset
+  metadata.
 - Invalid URLs show inline editor feedback and public rendering must fall back
   safely after TASK-256.
 - Clearing a photo must not leave `photo: ""` unless TASK-256 explicitly keeps
@@ -100,13 +146,24 @@ Error handling:
 
 No API routes are added.
 
-- Endpoint visibility: none.
-- Auth/RBAC/CSRF/rate-limit: unchanged admin media and page editing contract.
+- Endpoint visibility: none; this leaf uses the existing admin widget editing
+  and media browsing surfaces plus read-only public Team rendering.
+- Auth model: unchanged authenticated admin page/template/widget editing and
+  authenticated admin media-library browsing; public runtime remains read-only.
+- RBAC: unchanged page/template/widget write permissions and existing media
+  library access rules.
+- CSRF: unchanged existing admin write route protection for persisted widget
+  updates.
+- Rate-limit bucket: unchanged existing admin/media behavior; no public write
+  bucket is introduced.
 - Reject-unknown validation: update `teamSchema` and validator tests if media
-  asset metadata is persisted.
+  asset metadata or `photoMediaId` is persisted; keep unknown fields rejected.
 - Anti-abuse: picked media URLs must use existing safe media helpers and must
-  not expose private tokens, signed URLs, raw HTML, scripts, arbitrary class
-  names, or privileged media metadata in widget data.
+  not expose raw HTML, scripts, arbitrary class names, inline handlers, unsafe
+  URL bypasses, or browser-executed user content.
+- Secret handling: do not store private media tokens, signed/private URLs,
+  provider keys, privileged media metadata, or upload credentials in widget
+  JSON, browser cache, diagnostics, or report evidence.
 
 ## Testing Requirements
 
@@ -116,6 +173,8 @@ No API routes are added.
 - `bun test tests/unit/widgets/validator.test.ts` if schema/defaults change.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso`
+- `bun run scan:security:strict`
 - `bun run precommit`
 
 ## Documentation Updates Required
@@ -124,6 +183,10 @@ No API routes are added.
 - `_docs/PLAYWRIGHT/REPORT_TEAM_WIDGET.md`
 - `_docs/MEDIA_SPEC.md` only if this leaf changes media-picker contract rather
   than reusing it
+- `_docs/_TASKS/TASK-289-03_Team_Photo_Authoring_and_Media_Picker.md`
+- `_docs/_TASKS/README.md` on status changes
+- `_docs/_CHANGELOG/README.md` / final TASK-289 changelog entry via
+  TASK-289-06 closure
 
 ## Acceptance Criteria
 

@@ -25,7 +25,7 @@ heading hierarchy, section ARIA, safe href, or clear/none token helpers.
 - `REPORT_TEAM_WIDGET.md:270-273` - BF-01 section background is missing.
 - `REPORT_TEAM_WIDGET.md:281-283,290-292` - BF-03 heading level is TASK-256, while
   BF-05 header alignment/title size is Team presentation scope.
-- `REPORT_TEAM_WIDGET.md:298-312` - BF-07 contrast feedback, BF-08 eyebrow,
+- `REPORT_TEAM_WIDGET.md:298-312,338` - BF-07 / A7 contrast feedback, BF-08 eyebrow,
   BF-09 CTA, and BF-10 card border width are Team product controls.
 
 ## Sub-Tasks
@@ -78,7 +78,6 @@ type TeamStyle = {
 type TeamCta = {
   label?: string;
   url?: string;
-  target?: "self" | "blank";
 };
 
 function renderTeamCta(cta: TeamCta | undefined) {
@@ -99,7 +98,10 @@ Data flow:
   payloads destructively.
 - Use `resolveClearableStyleValue` and TASK-256 clear semantics for color-like
   fields.
-- Keep CTA link safety in shared helper ownership.
+- Keep CTA link safety in shared helper ownership. Do not introduce a
+  Team-local `target`/`rel` contract until TASK-256 lands the shared safe-link
+  attribute helper; this leaf should initially own only bounded label + URL
+  authoring and rendering through that helper.
 
 Error handling:
 
@@ -113,13 +115,23 @@ Error handling:
 
 No API routes are added.
 
-- Endpoint visibility: none.
-- Auth/RBAC/CSRF/rate-limit: unchanged admin editing and public rendering.
+- Endpoint visibility: none; this leaf uses the existing admin widget editing
+  surface and public Team renderer only.
+- Auth model: unchanged authenticated admin page/template/widget editing and
+  read-only public runtime rendering.
+- RBAC: unchanged page/template/widget write permissions.
+- CSRF: unchanged existing admin write route protection for persisted widget
+  updates.
+- Rate-limit bucket: unchanged existing admin write behavior; no public write
+  bucket is introduced.
 - Reject-unknown validation: new fields must be schema-bound and covered by
-  validator tests.
+  validator tests; unknown CTA/style/header fields must be rejected.
 - Anti-abuse: CTA URL must use TASK-256 safe href behavior; presentation fields
   must not accept raw HTML, scripts, arbitrary class names, inline event
-  handlers, or secrets.
+  handlers, unsafe URL bypasses, or browser-executed user content.
+- Secret handling: do not place tokens, provider keys, signed/private URLs,
+  privileged settings, or private profile data in widget JSON, browser cache,
+  diagnostics, or report evidence.
 
 ## Testing Requirements
 
@@ -144,6 +156,10 @@ No API routes are added.
 - `_docs/PLAYWRIGHT/REPORT_TEAM_WIDGET.md`
 - `_docs/WIDGETS.md` only if a global widget contract changes
 - `_docs/WIDGET_PACK_MATRIX.md` if pack readiness changes
+- `_docs/_TASKS/TASK-289-04_Team_Header_Surface_Typography_and_CTA_Controls.md`
+- `_docs/_TASKS/README.md` on status changes
+- `_docs/_CHANGELOG/README.md` / final TASK-289 changelog entry via
+  TASK-289-06 closure
 
 ## Acceptance Criteria
 

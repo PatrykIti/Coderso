@@ -111,12 +111,24 @@ Error handling:
 
 No API routes are added.
 
-- Endpoint visibility: none.
-- Auth/RBAC/CSRF/rate-limit: unchanged admin editing contract.
+- Endpoint visibility: none; this leaf uses the existing admin widget editing
+  surface and public Team renderer only.
+- Auth model: unchanged authenticated admin page/template/widget editing and
+  read-only public runtime rendering.
+- RBAC: unchanged page/template/widget write permissions.
+- CSRF: unchanged existing admin write route protection for persisted widget
+  updates.
+- Rate-limit bucket: unchanged existing admin write behavior; no public write
+  bucket is introduced.
 - Reject-unknown validation: unchanged unless social/member payload fields are
-  added, in which case `teamSchema` and validator tests must be updated.
+  added, in which case `teamSchema` and validator tests must be updated while
+  keeping `additionalProperties: false`.
 - Anti-abuse: social URL safety remains TASK-256-owned. This leaf must not add
-  raw HTML, script payloads, arbitrary class names, or secrets to widget data.
+  raw HTML, script payloads, arbitrary class names, inline handlers, unsafe URL
+  bypasses, or browser-executed user content to widget data.
+- Secret handling: do not place private member data, media tokens, provider
+  keys, signed URLs, or privileged settings in widget JSON, browser cache,
+  diagnostics, or report evidence.
 
 ## Testing Requirements
 
@@ -126,13 +138,19 @@ No API routes are added.
 - `bun test tests/unit/widgets/validator.test.ts` if schema/defaults change.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso`
+- `bun run scan:security:strict`
 - `bun run precommit`
 
 ## Documentation Updates Required
 
 - `_docs/_WIDGETS/TEAM.md`
 - `_docs/PLAYWRIGHT/REPORT_TEAM_WIDGET.md`
+- `_docs/_TASKS/TASK-289-01_Team_Member_Editor_IA_and_Destructive_Edit_UX.md`
+- `_docs/_TASKS/README.md` on status changes
 - `_docs/_TASKS/TASK-289-06_Team_Report_Docs_Changelog_and_Closure.md`
+- `_docs/_CHANGELOG/README.md` / final TASK-289 changelog entry via
+  TASK-289-06 closure
 
 ## Acceptance Criteria
 

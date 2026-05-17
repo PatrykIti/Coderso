@@ -80,12 +80,25 @@ Error handling:
 
 No API routes are added.
 
-- Endpoint visibility: none.
-- Auth/RBAC/CSRF/rate-limit: unchanged.
+- Endpoint visibility: none; this leaf updates documentation, report evidence,
+  task status, and changelog entries only.
+- Auth model: unchanged authenticated admin page/template/widget editing and
+  read-only public runtime rendering for the implementation leaves being
+  closed.
+- RBAC: unchanged page/template/widget write permissions; closure must not
+  introduce any new admin or public endpoint.
+- CSRF: unchanged existing admin write route protection; closure must only
+  reference the implementation leaves' persisted-widget paths.
+- Rate-limit bucket: unchanged; no public write or new admin write bucket is
+  introduced by closure.
 - Reject-unknown validation: closure must reference validator tests that cover
-  any new schema fields.
+  any new schema fields and confirm unknown Team fields remain rejected.
 - Anti-abuse: closure must confirm no raw HTML/script, unsafe link, arbitrary
-  class name, or secret-bearing browser payload was introduced.
+  class name, inline handler, or browser-executed user content was introduced.
+- Secret handling: closure must confirm no private member data, media tokens,
+  provider keys, signed/private URLs, privileged settings, or secret-bearing
+  browser payloads were added to widget JSON, browser cache, diagnostics, or
+  report evidence.
 
 ## Testing Requirements
 
@@ -118,6 +131,7 @@ Docs-only closure validation:
 - `_docs/_WIDGETS/TEAM.md`
 - `_docs/WIDGETS.md` if global inventory changed
 - `_docs/WIDGET_PACK_MATRIX.md` if pack readiness changed
+- `_docs/_TASKS/TASK-289-06_Team_Report_Docs_Changelog_and_Closure.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
 - New changelog entry under `_docs/_CHANGELOG/`
