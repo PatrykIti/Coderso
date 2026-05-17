@@ -1,4 +1,4 @@
-import { type ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,13 +16,25 @@ import { cn } from "@/lib/utils";
 
 import {
   contactDefaults,
+  contactDetailOptions,
   contactFieldOptions,
+  getContactDiagnosticsSnapshot,
+  getContactMapUrlState,
   normalizeContactData,
   resolveContactVariant,
   type ContactBorderWidth,
   type ContactColumns,
   type ContactData,
+  type ContactDetailKey,
+  type ContactFieldAutocomplete,
   type ContactFieldId,
+  type ContactFieldLayout,
+  type ContactFieldSpan,
+  type ContactIconKey,
+  type ContactMapHeight,
+  type ContactMaxWidth,
+  type ContactPaddingX,
+  type ContactSocialPlatform,
   type ContactSpacing,
   type ContactVariantId,
 } from "../../../../widgets/core/contact";
@@ -36,6 +48,21 @@ const fieldLabels: Record<ContactFieldId, string> = {
   phone: "Phone",
   message: "Message",
 };
+
+const detailLabels: Record<ContactDetailKey, string> = {
+  phone: "Phone",
+  email: "Email",
+  address: "Address",
+  hours: "Hours",
+};
+
+const iconOptions: Array<{ id: ContactIconKey; label: string }> = [
+  { id: "none", label: "No icon" },
+  { id: "phone", label: "Phone" },
+  { id: "mail", label: "Mail" },
+  { id: "map-pin", label: "Map pin" },
+  { id: "clock", label: "Clock" },
+];
 
 const spacingOptions: Array<{ id: ContactSpacing; label: string }> = [
   { id: "none", label: "None" },
@@ -55,6 +82,57 @@ const borderWidthOptions: Array<{ id: ContactBorderWidth; label: string }> = [
   { id: "1", label: "1px" },
   { id: "2", label: "2px" },
   { id: "3", label: "3px" },
+];
+
+const fieldLayoutOptions: Array<{ id: ContactFieldLayout; label: string }> = [
+  { id: "one", label: "Single column" },
+  { id: "two", label: "Two columns" },
+];
+
+const fieldAutocompleteOptions: Array<{
+  id: ContactFieldAutocomplete;
+  label: string;
+}> = [
+  { id: "name", label: "Name" },
+  { id: "email", label: "Email" },
+  { id: "tel", label: "Phone" },
+  { id: "off", label: "Off" },
+];
+
+const fieldSpanOptions: Array<{ id: ContactFieldSpan; label: string }> = [
+  { id: "full", label: "Full width" },
+  { id: "half", label: "Half width" },
+];
+
+const mapHeightOptions: Array<{ id: ContactMapHeight; label: string }> = [
+  { id: "sm", label: "Small" },
+  { id: "md", label: "Default" },
+  { id: "lg", label: "Large" },
+  { id: "xl", label: "Extra large" },
+];
+
+const maxWidthOptions: Array<{ id: ContactMaxWidth; label: string }> = [
+  { id: "none", label: "Full width" },
+  { id: "md", label: "Medium" },
+  { id: "lg", label: "Large" },
+  { id: "xl", label: "Default" },
+  { id: "2xl", label: "Extra large" },
+];
+
+const paddingXOptions: Array<{ id: ContactPaddingX; label: string }> = [
+  { id: "none", label: "None" },
+  { id: "sm", label: "Compact" },
+  { id: "md", label: "Default" },
+  { id: "lg", label: "Roomy" },
+];
+
+const socialPlatformOptions: Array<{ id: ContactSocialPlatform; label: string }> = [
+  { id: "x", label: "X" },
+  { id: "linkedin", label: "LinkedIn" },
+  { id: "facebook", label: "Facebook" },
+  { id: "instagram", label: "Instagram" },
+  { id: "youtube", label: "YouTube" },
+  { id: "custom", label: "Custom" },
 ];
 
 const variantOptions: Array<{
@@ -152,6 +230,17 @@ function updateValue(
   onChange(normalizeContactData(next));
 }
 
+function updateRoot(
+  value: ContactData,
+  onChange: (next: ContactData) => void,
+  patch: Pick<ContactData, "title" | "description">
+) {
+  updateValue(value, onChange, (current) => ({
+    ...current,
+    ...patch,
+  }));
+}
+
 function updateForm(
   value: ContactData,
   onChange: (next: ContactData) => void,
@@ -204,6 +293,123 @@ function updateStyle(
     style: {
       ...current.style,
       ...patch,
+    },
+  }));
+}
+
+function updateFieldSettings(
+  value: ContactData,
+  onChange: (next: ContactData) => void,
+  field: ContactFieldId,
+  patch: Partial<NonNullable<FormData["fieldSettings"]>[ContactFieldId]>
+) {
+  updateValue(value, onChange, (current) => ({
+    ...current,
+    form: {
+      ...current.form,
+      fieldSettings: {
+        ...current.form?.fieldSettings,
+        [field]: {
+          ...current.form?.fieldSettings?.[field],
+          ...patch,
+        },
+      },
+    },
+  }));
+}
+
+function updateContactDetailDisplay(
+  value: ContactData,
+  onChange: (next: ContactData) => void,
+  key: ContactDetailKey,
+  patch: Partial<NonNullable<ContactDetails["details"]>[ContactDetailKey]>
+) {
+  updateValue(value, onChange, (current) => ({
+    ...current,
+    contact: {
+      ...current.contact,
+      details: {
+        ...current.contact?.details,
+        [key]: {
+          ...current.contact?.details?.[key],
+          ...patch,
+        },
+      },
+    },
+  }));
+}
+
+function updateSubmission(
+  value: ContactData,
+  onChange: (next: ContactData) => void,
+  patch: Partial<NonNullable<FormData["submission"]>>
+) {
+  updateValue(value, onChange, (current) => ({
+    ...current,
+    form: {
+      ...current.form,
+      submission: {
+        ...current.form?.submission,
+        ...patch,
+      },
+    },
+  }));
+}
+
+function updateSocialLink(
+  value: ContactData,
+  onChange: (next: ContactData) => void,
+  index: number,
+  patch: Partial<NonNullable<ContactDetails["social"]>[number]>
+) {
+  updateValue(value, onChange, (current) => {
+    const social = [...(current.contact?.social ?? [])];
+    const currentRow = social[index];
+    if (!currentRow) return current;
+    social[index] = {
+      ...currentRow,
+      ...patch,
+    };
+    return {
+      ...current,
+      contact: {
+        ...current.contact,
+        social,
+      },
+    };
+  });
+}
+
+function addSocialLink(value: ContactData, onChange: (next: ContactData) => void) {
+  updateValue(value, onChange, (current) => {
+    const social = [...(current.contact?.social ?? [])];
+    social.push({
+      id: `contact-social-${social.length + 1}`,
+      platform: "custom",
+      label: "",
+      href: "",
+    });
+
+    return {
+      ...current,
+      contact: {
+        ...current.contact,
+        social,
+      },
+    };
+  });
+}
+
+function removeSocialLink(
+  value: ContactData,
+  onChange: (next: ContactData) => void,
+  index: number
+) {
+  updateValue(value, onChange, (current) => ({
+    ...current,
+    contact: {
+      ...current.contact,
+      social: (current.contact?.social ?? []).filter((_, itemIndex) => itemIndex !== index),
     },
   }));
 }
@@ -320,7 +526,7 @@ function FieldToggleList({
           <div>
             <p className="text-sm font-medium">{fieldLabels[field]}</p>
             <p className="text-xs text-muted-foreground">
-              {selectedFields.includes(field) ? "Visible in form." : "Hidden in form."}
+              {selectedFields.includes(field) ? "Visible in the form." : "Hidden from the form."}
             </p>
           </div>
           <Switch
@@ -346,17 +552,43 @@ function RequiredFieldList({
 
   return (
     <div className="space-y-2">
+      {selectedFields.map((field) => (
+        <div key={field} className="flex items-center justify-between rounded-lg border p-3">
+          <div>
+            <p className="text-sm font-medium">{fieldLabels[field]}</p>
+            <p className="text-xs text-muted-foreground">
+              Decide if this field is required in the published form.
+            </p>
+          </div>
+          <Switch
+            checked={requiredFields.has(field)}
+            onCheckedChange={(checked) => toggleRequiredField(value, onChange, field, checked)}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function FieldOrderList({
+  value,
+  onChange,
+}: {
+  value: ContactData;
+  onChange: (next: ContactData) => void;
+}) {
+  const normalized = normalizeContactData(value);
+  const selectedFields = normalized.form?.fields ?? [];
+
+  return (
+    <div className="space-y-2">
       {selectedFields.map((field, index) => (
         <div key={field} className="space-y-2 rounded-lg border p-3">
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <p className="text-sm font-medium">{fieldLabels[field]}</p>
-              <p className="text-xs text-muted-foreground">Mark as required and change order.</p>
-            </div>
-            <Switch
-              checked={requiredFields.has(field)}
-              onCheckedChange={(checked) => toggleRequiredField(value, onChange, field, checked)}
-            />
+          <div>
+            <p className="text-sm font-medium">{fieldLabels[field]}</p>
+            <p className="text-xs text-muted-foreground">
+              Move this field earlier or later in the Contact form.
+            </p>
           </div>
           <div className="flex gap-2">
             <Button
@@ -422,8 +654,122 @@ function ColorField({
 function DiagnosticsSnapshot({ value }: { value: ContactData }) {
   return (
     <pre className="max-h-64 overflow-auto rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
-      {JSON.stringify(value, null, 2)}
+      {getContactDiagnosticsSnapshot(value)}
     </pre>
+  );
+}
+
+function SectionHeaderControls({
+  value,
+  onChange,
+  titlePlaceholder,
+}: {
+  value: ContactData;
+  onChange: (next: ContactData) => void;
+  titlePlaceholder: string;
+}) {
+  const normalized = normalizeContactData(value);
+  return (
+    <>
+      <div className="space-y-2">
+        <p className="text-sm font-medium">Section title</p>
+        <Input
+          value={normalized.title ?? ""}
+          onChange={(event) => updateRoot(value, onChange, { title: event.target.value })}
+          placeholder={titlePlaceholder}
+        />
+      </div>
+      <div className="space-y-2">
+        <p className="text-sm font-medium">Section description</p>
+        <Textarea
+          rows={3}
+          value={normalized.description ?? ""}
+          onChange={(event) => updateRoot(value, onChange, { description: event.target.value })}
+          placeholder="Optional supporting copy for the contact section."
+        />
+      </div>
+    </>
+  );
+}
+
+function SocialLinksEditor({
+  value,
+  onChange,
+}: {
+  value: ContactData;
+  onChange: (next: ContactData) => void;
+}) {
+  const normalized = normalizeContactData(value);
+  const social = normalized.contact?.social ?? [];
+
+  return (
+    <div className="space-y-3">
+      {social.length === 0 ? (
+        <p className="text-xs text-muted-foreground">
+          Add public profile links like LinkedIn or Instagram when the section needs them.
+        </p>
+      ) : null}
+      {social.map((link, index) => (
+        <div key={link.id ?? `social-${index + 1}`} className="space-y-2 rounded-lg border p-3">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm font-medium">Social link {index + 1}</p>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => removeSocialLink(value, onChange, index)}
+            >
+              Remove
+            </Button>
+          </div>
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase text-muted-foreground">Platform</p>
+            <Select
+              value={link.platform ?? "custom"}
+              onValueChange={(next) =>
+                updateSocialLink(value, onChange, index, {
+                  platform: next as ContactSocialPlatform,
+                })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select platform" />
+              </SelectTrigger>
+              <SelectContent>
+                {socialPlatformOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase text-muted-foreground">Label</p>
+            <Input
+              value={link.label ?? ""}
+              onChange={(event) =>
+                updateSocialLink(value, onChange, index, { label: event.target.value })
+              }
+              placeholder="LinkedIn"
+            />
+          </div>
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase text-muted-foreground">Profile URL</p>
+            <Input
+              value={link.href ?? ""}
+              onChange={(event) =>
+                updateSocialLink(value, onChange, index, { href: event.target.value })
+              }
+              placeholder="https://example.com/profile"
+            />
+          </div>
+        </div>
+      ))}
+      <Button type="button" variant="outline" onClick={() => addSocialLink(value, onChange)}>
+        Add social link
+      </Button>
+    </div>
   );
 }
 
@@ -434,50 +780,78 @@ export function ContactWizardEditor({
   onVariantChange,
 }: WidgetEditorProps<ContactData>) {
   const normalized = normalizeContactData(value);
+  const resolvedVariant = resolveContactVariant(variant);
+  const showFormControls = resolvedVariant !== "minimal";
 
   return (
     <div className="space-y-4">
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Contact layout</p>
-        <Select
-          value={resolveContactVariant(variant)}
-          onValueChange={(next) => onVariantChange?.(next)}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Choose layout" />
-          </SelectTrigger>
-          <SelectContent>
-            {variantOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <EditorSection
+        title="Contact layout"
+        description="Pick the layout first so the rest of the setup matches the final presentation."
+      >
+        <VariantCards value={resolvedVariant} onChange={onVariantChange} />
+      </EditorSection>
 
-      <div className="rounded-lg border p-3 text-xs text-muted-foreground">
-        {variantOptions.find((option) => option.id === resolveContactVariant(variant))?.description}
-      </div>
+      <EditorSection
+        title="Section header"
+        description="Optional title and description for the whole Contact section."
+      >
+        <SectionHeaderControls value={value} onChange={onChange} titlePlaceholder="Get in touch" />
+      </EditorSection>
 
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Form fields</p>
-        <FieldToggleList value={value} onChange={onChange} />
-      </div>
-
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Submit label</p>
-        <Input
-          value={normalized.form?.submitLabel ?? ""}
-          onChange={(event) => updateForm(value, onChange, { submitLabel: event.target.value })}
-          placeholder="Send message"
-        />
-      </div>
+      <EditorSection
+        title="Contact form"
+        description="Choose the visible fields and keep the static form messaging clear."
+      >
+        {showFormControls ? (
+          <>
+            <FieldToggleList value={value} onChange={onChange} />
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Submit label</p>
+              <Input
+                value={normalized.form?.submitLabel ?? ""}
+                onChange={(event) =>
+                  updateForm(value, onChange, { submitLabel: event.target.value })
+                }
+                placeholder="Send message"
+              />
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Static status note</p>
+              <Textarea
+                rows={2}
+                value={normalized.form?.submission?.staticMessage ?? ""}
+                onChange={(event) =>
+                  updateSubmission(value, onChange, { staticMessage: event.target.value })
+                }
+                placeholder="This contact form is not connected yet."
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Contact stays presentational in this wave and should never submit a blank GET.
+            </p>
+          </>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Minimal layout shows contact details only, so form controls stay hidden here.
+          </p>
+        )}
+      </EditorSection>
 
       <EditorSection
         title="Contact details"
-        description="Quick baseline information shown next to the form."
+        description="Quick business info shown beside the form."
       >
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Details panel title</p>
+          <Input
+            value={normalized.contact?.title ?? ""}
+            onChange={(event) =>
+              updateContactDetails(value, onChange, { title: event.target.value })
+            }
+            placeholder="Contact details"
+          />
+        </div>
         <div className="space-y-2">
           <p className="text-sm font-medium">Phone</p>
           <Input
@@ -501,11 +875,25 @@ export function ContactWizardEditor({
         <div className="space-y-2">
           <p className="text-sm font-medium">Address</p>
           <Textarea
+            rows={3}
             value={normalized.contact?.address ?? ""}
             onChange={(event) =>
               updateContactDetails(value, onChange, { address: event.target.value })
             }
             placeholder="123 Market Street"
+          />
+          <p className="text-xs text-muted-foreground">
+            Use separate lines for street, city, or country when needed.
+          </p>
+        </div>
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Business hours</p>
+          <Input
+            value={normalized.contact?.hours ?? ""}
+            onChange={(event) =>
+              updateContactDetails(value, onChange, { hours: event.target.value })
+            }
+            placeholder="Mon-Fri 9-5"
           />
         </div>
       </EditorSection>
@@ -522,95 +910,318 @@ export function ContactVisualEditor({
   const normalized = normalizeContactData(value);
   const resolvedVariant = resolveContactVariant(variant);
   const mapEnabled = normalized.map?.enabled ?? false;
+  const showFormControls = resolvedVariant !== "minimal";
+  const mapUrlState = getContactMapUrlState(normalized.map?.embedUrl);
 
   return (
     <div className="space-y-4">
       <EditorSection
-        title="Variant and layout structure"
-        description="Choose the contact layout and keep orientation predictable in runtime preview."
+        title="Variant and section header"
+        description="Choose the Contact layout and give the full section a clear entry point."
       >
         <VariantCards value={resolvedVariant} onChange={onVariantChange} />
+        <SectionHeaderControls value={value} onChange={onChange} titlePlaceholder="Get in touch" />
       </EditorSection>
 
       <EditorSection
         title="Form fields and required rules"
-        description="Define visible fields, required state, and field ordering for deterministic forms."
+        description="Control which Contact form fields appear and what visitors must complete."
       >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Form fields</p>
-          <FieldToggleList value={value} onChange={onChange} />
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Required fields and order</p>
-          <RequiredFieldList value={value} onChange={onChange} />
-        </div>
-        {resolvedVariant !== "minimal" ? (
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Submit label</p>
-            <Input
-              value={normalized.form?.submitLabel ?? ""}
-              onChange={(event) => updateForm(value, onChange, { submitLabel: event.target.value })}
-              placeholder="Send message"
-            />
+        {showFormControls ? (
+          <>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Visible fields</p>
+              <FieldToggleList value={value} onChange={onChange} />
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Required fields</p>
+              <RequiredFieldList value={value} onChange={onChange} />
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Field order</p>
+              <FieldOrderList value={value} onChange={onChange} />
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Form panel title</p>
+              <Input
+                value={normalized.form?.title ?? ""}
+                onChange={(event) => updateForm(value, onChange, { title: event.target.value })}
+                placeholder="Send a message"
+              />
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Submit label</p>
+              <Input
+                value={normalized.form?.submitLabel ?? ""}
+                onChange={(event) =>
+                  updateForm(value, onChange, { submitLabel: event.target.value })
+                }
+                placeholder="Send message"
+              />
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Static status note</p>
+              <Textarea
+                rows={2}
+                value={normalized.form?.submission?.staticMessage ?? ""}
+                onChange={(event) =>
+                  updateSubmission(value, onChange, { staticMessage: event.target.value })
+                }
+                placeholder="This contact form is not connected yet."
+              />
+              <p className="text-xs text-muted-foreground">
+                Keep the message honest until the Contact form is bound to a real submit runtime.
+              </p>
+            </div>
+          </>
+        ) : (
+          <div className="rounded-lg border border-dashed bg-muted/20 p-3 text-xs text-muted-foreground">
+            Minimal layout shows contact details only. Form-field controls are hidden because they
+            do not affect the published output in this variant.
           </div>
-        ) : null}
+        )}
       </EditorSection>
+
+      {showFormControls ? (
+        <EditorSection
+          title="Field labels, placeholders, and layout"
+          description="Tune labels, placeholders, autocomplete, and grid width for each visible field."
+        >
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Field layout</p>
+            <Select
+              value={normalized.form?.fieldLayout ?? "one"}
+              onValueChange={(next) =>
+                updateForm(value, onChange, { fieldLayout: next as ContactFieldLayout })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select field layout" />
+              </SelectTrigger>
+              <SelectContent>
+                {fieldLayoutOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Use two columns when short fields should sit side by side. Message fields usually work
+            best at full width.
+          </p>
+          {(normalized.form?.fields ?? []).map((field) => {
+            const settings =
+              normalized.form?.fieldSettings?.[field] ??
+              contactDefaults.form?.fieldSettings?.[field];
+
+            return (
+              <div key={field} className="space-y-2 rounded-lg border p-3">
+                <p className="text-sm font-medium">{fieldLabels[field]}</p>
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase text-muted-foreground">Label</p>
+                  <Input
+                    value={settings?.label ?? ""}
+                    onChange={(event) =>
+                      updateFieldSettings(value, onChange, field, { label: event.target.value })
+                    }
+                    placeholder={fieldLabels[field]}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase text-muted-foreground">
+                    Placeholder
+                  </p>
+                  {field === "message" ? (
+                    <Textarea
+                      rows={2}
+                      value={settings?.placeholder ?? ""}
+                      onChange={(event) =>
+                        updateFieldSettings(value, onChange, field, {
+                          placeholder: event.target.value,
+                        })
+                      }
+                      placeholder="Tell us how we can help..."
+                    />
+                  ) : (
+                    <Input
+                      value={settings?.placeholder ?? ""}
+                      onChange={(event) =>
+                        updateFieldSettings(value, onChange, field, {
+                          placeholder: event.target.value,
+                        })
+                      }
+                      placeholder={
+                        field === "name"
+                          ? "Your name"
+                          : field === "email"
+                            ? "you@example.com"
+                            : "+1 555 123 456"
+                      }
+                    />
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase text-muted-foreground">
+                    Autocomplete
+                  </p>
+                  <Select
+                    value={settings?.autocomplete ?? "off"}
+                    onValueChange={(next) =>
+                      updateFieldSettings(value, onChange, field, {
+                        autocomplete: next as ContactFieldAutocomplete,
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select autocomplete" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {fieldAutocompleteOptions.map((option) => (
+                        <SelectItem key={option.id} value={option.id}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {normalized.form?.fieldLayout === "two" ? (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold uppercase text-muted-foreground">Width</p>
+                    <Select
+                      value={settings?.span ?? "full"}
+                      onValueChange={(next) =>
+                        updateFieldSettings(value, onChange, field, {
+                          span: next as ContactFieldSpan,
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select field width" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {fieldSpanOptions.map((option) => (
+                          <SelectItem key={option.id} value={option.id}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
+        </EditorSection>
+      ) : null}
 
       <EditorSection
         title="Contact details and business info"
-        description="Edit all details visible in the contact information panel."
+        description="Shape the business panel, semantic labels, icon choices, and social links."
       >
         <div className="space-y-2">
-          <p className="text-sm font-medium">Phone</p>
+          <p className="text-sm font-medium">Details panel title</p>
           <Input
-            value={normalized.contact?.phone ?? ""}
+            value={normalized.contact?.title ?? ""}
             onChange={(event) =>
-              updateContactDetails(value, onChange, { phone: event.target.value })
+              updateContactDetails(value, onChange, { title: event.target.value })
             }
-            placeholder="+1 555 123 456"
+            placeholder="Contact details"
           />
         </div>
+        {contactDetailOptions.map((detail) => (
+          <div key={detail} className="space-y-2 rounded-lg border p-3">
+            <p className="text-sm font-medium">{detailLabels[detail]}</p>
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase text-muted-foreground">Value</p>
+              {detail === "address" ? (
+                <Textarea
+                  rows={3}
+                  value={normalized.contact?.[detail] ?? ""}
+                  onChange={(event) =>
+                    updateContactDetails(value, onChange, {
+                      [detail]: event.target.value,
+                    } as Partial<ContactDetails>)
+                  }
+                  placeholder={detail === "address" ? "123 Market Street" : ""}
+                />
+              ) : (
+                <Input
+                  value={normalized.contact?.[detail] ?? ""}
+                  onChange={(event) =>
+                    updateContactDetails(value, onChange, {
+                      [detail]: event.target.value,
+                    } as Partial<ContactDetails>)
+                  }
+                  placeholder={
+                    detail === "phone"
+                      ? "+1 555 123 456"
+                      : detail === "email"
+                        ? "hello@example.com"
+                        : "Mon-Fri 9-5"
+                  }
+                />
+              )}
+              {detail === "address" ? (
+                <p className="text-xs text-muted-foreground">
+                  Multi-line addresses render with preserved line breaks.
+                </p>
+              ) : null}
+            </div>
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase text-muted-foreground">Label</p>
+              <Input
+                value={normalized.contact?.details?.[detail]?.label ?? ""}
+                onChange={(event) =>
+                  updateContactDetailDisplay(value, onChange, detail, {
+                    label: event.target.value,
+                  })
+                }
+                placeholder={detailLabels[detail]}
+              />
+            </div>
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase text-muted-foreground">Icon</p>
+              <Select
+                value={normalized.contact?.details?.[detail]?.icon ?? "none"}
+                onValueChange={(next) =>
+                  updateContactDetailDisplay(value, onChange, detail, {
+                    icon: next as ContactIconKey,
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select icon" />
+                </SelectTrigger>
+                <SelectContent>
+                  {iconOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        ))}
+
         <div className="space-y-2">
-          <p className="text-sm font-medium">Email</p>
-          <Input
-            value={normalized.contact?.email ?? ""}
-            onChange={(event) =>
-              updateContactDetails(value, onChange, { email: event.target.value })
-            }
-            placeholder="hello@example.com"
-          />
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Address</p>
-          <Textarea
-            value={normalized.contact?.address ?? ""}
-            onChange={(event) =>
-              updateContactDetails(value, onChange, { address: event.target.value })
-            }
-            placeholder="123 Market Street"
-          />
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Business hours</p>
-          <Input
-            value={normalized.contact?.hours ?? ""}
-            onChange={(event) =>
-              updateContactDetails(value, onChange, { hours: event.target.value })
-            }
-            placeholder="Mon-Fri 9-5"
-          />
+          <p className="text-sm font-medium">Social links</p>
+          <SocialLinksEditor value={value} onChange={onChange} />
         </div>
       </EditorSection>
 
       <EditorSection
         title="Map source and display behavior"
-        description="Control if map is visible and where embed source is loaded from."
+        description="Control if the map appears, how tall it is, and how validation feedback is explained."
       >
         <div className="flex items-center justify-between rounded-lg border p-3">
           <div>
             <p className="text-sm font-medium">Show map</p>
             <p className="text-xs text-muted-foreground">
-              Runtime renders map only for valid external embed URL.
+              Runtime renders the map only for valid http:// or https:// embed URLs. HTTPS is
+              recommended when available.
             </p>
           </div>
           <Switch
@@ -619,14 +1230,70 @@ export function ContactVisualEditor({
           />
         </div>
         {mapEnabled ? (
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Map embed URL</p>
-            <Input
-              value={normalized.map?.embedUrl ?? ""}
-              onChange={(event) => updateMap(value, onChange, { embedUrl: event.target.value })}
-              placeholder="https://maps.google.com/..."
-            />
-          </div>
+          <>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Map title</p>
+              <Input
+                value={normalized.map?.title ?? ""}
+                onChange={(event) => updateMap(value, onChange, { title: event.target.value })}
+                placeholder="Find us"
+              />
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Map description</p>
+              <Textarea
+                rows={2}
+                value={normalized.map?.description ?? ""}
+                onChange={(event) =>
+                  updateMap(value, onChange, { description: event.target.value })
+                }
+                placeholder="Optional context for the map panel."
+              />
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Map embed URL</p>
+              <Input
+                value={normalized.map?.embedUrl ?? ""}
+                onChange={(event) => updateMap(value, onChange, { embedUrl: event.target.value })}
+                placeholder="https://maps.google.com/..."
+                aria-invalid={mapUrlState.valid ? undefined : true}
+              />
+              <p className="text-xs text-muted-foreground" role="status">
+                {mapUrlState.message}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Map height</p>
+              <Select
+                value={normalized.map?.height ?? "md"}
+                onValueChange={(next) =>
+                  updateMap(value, onChange, { height: next as ContactMapHeight })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select map height" />
+                </SelectTrigger>
+                <SelectContent>
+                  {mapHeightOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Map fallback copy</p>
+              <Textarea
+                rows={2}
+                value={normalized.map?.fallbackCopy ?? ""}
+                onChange={(event) =>
+                  updateMap(value, onChange, { fallbackCopy: event.target.value })
+                }
+                placeholder="Map is unavailable."
+              />
+            </div>
+          </>
         ) : null}
       </EditorSection>
 
@@ -680,9 +1347,49 @@ export function ContactVisualEditor({
       </EditorSection>
 
       <EditorSection
-        title="Spacing and columns"
-        description="Tune spacing and grid density for form-based variants."
+        title="Section layout and spacing"
+        description="Tune overall width, horizontal padding, gap density, and panel column layout."
       >
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Max width</p>
+          <Select
+            value={normalized.style?.maxWidth ?? "xl"}
+            onValueChange={(next) =>
+              updateStyle(value, onChange, { maxWidth: next as ContactMaxWidth })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select max width" />
+            </SelectTrigger>
+            <SelectContent>
+              {maxWidthOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Horizontal padding</p>
+          <Select
+            value={normalized.style?.paddingX ?? "md"}
+            onValueChange={(next) =>
+              updateStyle(value, onChange, { paddingX: next as ContactPaddingX })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select horizontal padding" />
+            </SelectTrigger>
+            <SelectContent>
+              {paddingXOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <div className="space-y-2">
           <p className="text-sm font-medium">Spacing</p>
           <Select
@@ -702,10 +1409,14 @@ export function ContactVisualEditor({
               ))}
             </SelectContent>
           </Select>
+          <p className="text-xs text-muted-foreground">
+            Compact closes the gap quickly, Default mirrors current spacing, and Extra spacious
+            gives the section more breathing room.
+          </p>
         </div>
-        {resolvedVariant !== "minimal" ? (
+        {showFormControls ? (
           <div className="space-y-2">
-            <p className="text-sm font-medium">Columns</p>
+            <p className="text-sm font-medium">Section columns</p>
             <Select
               value={normalized.style?.columns ?? "two"}
               onValueChange={(next) =>
@@ -726,7 +1437,8 @@ export function ContactVisualEditor({
           </div>
         ) : (
           <p className="text-xs text-muted-foreground">
-            Columns apply only to `form-left` and `form-right` variants.
+            Columns do not apply in the minimal layout because the section renders contact details
+            only.
           </p>
         )}
       </EditorSection>
@@ -736,18 +1448,19 @@ export function ContactVisualEditor({
 
 export function ContactAdvancedEditor({ value, onChange }: WidgetEditorProps<ContactData>) {
   const normalized = normalizeContactData(value);
+  const [normalizationMessage, setNormalizationMessage] = useState("");
 
   return (
     <div className="space-y-4">
       <EditorSection
         title="Map source and runtime metadata"
-        description="Technical embed source controls used during runtime rendering."
+        description="Technical map metadata and current Contact payload diagnostics."
       >
         <div className="flex items-center justify-between rounded-lg border p-3">
           <div>
             <p className="text-sm font-medium">Map enabled</p>
             <p className="text-xs text-muted-foreground">
-              Runtime renders map only when URL is valid.
+              Runtime renders the map only when the URL is valid.
             </p>
           </div>
           <Switch
@@ -761,29 +1474,46 @@ export function ContactAdvancedEditor({ value, onChange }: WidgetEditorProps<Con
             value={normalized.map?.embedUrl ?? ""}
             onChange={(event) => updateMap(value, onChange, { embedUrl: event.target.value })}
             placeholder="https://maps.google.com/..."
+            aria-invalid={getContactMapUrlState(normalized.map?.embedUrl).valid ? undefined : true}
           />
+          <p className="text-xs text-muted-foreground" role="status">
+            {getContactMapUrlState(normalized.map?.embedUrl).message}
+          </p>
         </div>
       </EditorSection>
 
       <EditorSection
         title="Normalization and fallback controls"
-        description="Apply deterministic normalization to trim unsupported or inconsistent payload values."
+        description="Apply deterministic normalization and confirm whether it changed the payload."
       >
         <Button
           type="button"
           variant="outline"
-          onClick={() => onChange(normalizeContactData(value))}
+          onClick={() => {
+            const before = JSON.stringify(value);
+            const next = normalizeContactData(value);
+            const after = JSON.stringify(next);
+            onChange(next);
+            setNormalizationMessage(
+              before === after ? "Already normalized." : "Payload normalized."
+            );
+          }}
         >
           Apply normalization now
         </Button>
         <p className="text-xs text-muted-foreground">
-          Normalization enforces allowed fields, required subset rules, and style token fallbacks.
+          Normalization enforces allowed field IDs, explicit defaults, and safe style tokens.
         </p>
+        {normalizationMessage ? (
+          <p className="text-xs text-muted-foreground" role="status">
+            {normalizationMessage}
+          </p>
+        ) : null}
       </EditorSection>
 
       <EditorSection
         title="Runtime diagnostics snapshot"
-        description="Read-only normalized payload for debugging and QA checks."
+        description="Read-only normalized payload for debugging and QA checks. Runtime nonces stay redacted."
       >
         <DiagnosticsSnapshot value={normalized} />
       </EditorSection>

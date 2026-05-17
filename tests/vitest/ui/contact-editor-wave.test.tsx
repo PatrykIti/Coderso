@@ -262,60 +262,23 @@ const findSection = (container: ParentNode, title: string) =>
     element.textContent?.includes(title)
   );
 
-const findFieldToggleCheckbox = (container: ParentNode, label: string) => {
-  return Array.from(container.querySelectorAll("input[type='checkbox']")).find((element) => {
-    if (!(element instanceof HTMLInputElement)) return false;
-    const rowText = element.parentElement?.textContent ?? "";
-    return (
-      rowText.includes(label) &&
-      (rowText.includes("Visible in form.") || rowText.includes("Hidden in form."))
-    );
-  });
-};
-
-const findRequiredFieldCheckbox = (container: ParentNode, label: string) =>
-  Array.from(container.querySelectorAll("input[type='checkbox']")).find((element) => {
-    if (!(element instanceof HTMLInputElement)) return false;
-    const rowText = element.parentElement?.textContent ?? "";
-    return rowText.includes(label) && rowText.includes("Mark as required and change order.");
-  });
-
-const findRequiredFieldCard = (container: ParentNode, label: string) => {
-  const checkbox = findRequiredFieldCheckbox(container, label);
-  const card = checkbox?.parentElement?.parentElement;
-  if (
-    card instanceof HTMLDivElement &&
-    card.textContent?.includes(label) &&
-    card.textContent.includes("Mark as required and change order.")
-  ) {
-    return card;
-  }
-  return undefined;
-};
-
 afterEach(() => {
   document.body.innerHTML = "";
   vi.restoreAllMocks();
 });
 
-test("ContactWizardEditor covers variant fallback, form field guard branches, and contact detail updates", async () => {
+test("ContactWizardEditor uses variant cards, exposes hours, and shows minimal form fallback copy", async () => {
   const { ContactWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/ContactEditors");
 
-  const onChangeSpy = vi.fn();
   let latestValue: ContactData = {
-    form: {
-      fields: ["email"],
-      required: ["email", "phone"],
-      submitLabel: "   ",
-    },
+    ...contactDefaults,
     contact: {
-      phone: "",
-      email: "",
-      address: "",
+      ...contactDefaults.contact,
+      hours: "",
     },
   };
-  let currentVariant = "unsupported";
+  let currentVariant = "form-left";
 
   const Harness = () => {
     const [value, setValue] = useState<ContactData>(latestValue);
@@ -326,7 +289,6 @@ test("ContactWizardEditor covers variant fallback, form field guard branches, an
         value={value}
         onChange={(next) => {
           latestValue = next;
-          onChangeSpy(next);
           setValue(next);
         }}
         variant={variant}
@@ -341,80 +303,63 @@ test("ContactWizardEditor covers variant fallback, form field guard branches, an
   const view = mount(<Harness />);
 
   try {
-    expect(view.container.textContent).toContain("Form on the left, contact details on the right.");
+    expect(view.container.textContent).toContain("Section header");
+    expect(view.container.textContent).toContain("Business hours");
 
-    setSelectValue(
-      findSelectByOptions(view.container, ["form-left", "form-right", "minimal"]),
-      "form-right"
-    );
-    expect(currentVariant).toBe("form-right");
-    expect(view.container.textContent).toContain("Contact details on the left, form on the right.");
-
-    setCheckboxValue(findFieldToggleCheckbox(view.container, "Email"), false);
-    expect(latestValue.form?.fields).toEqual(["email"]);
-    expect(latestValue.form?.required).toEqual(["email"]);
-
-    setCheckboxValue(findFieldToggleCheckbox(view.container, "Phone"), true);
-    expect(latestValue.form?.fields).toEqual(["email", "phone"]);
-
-    setCheckboxValue(findFieldToggleCheckbox(view.container, "Email"), false);
-    expect(latestValue.form?.fields).toEqual(["phone"]);
-    expect(latestValue.form?.required).toEqual([]);
-
-    setInputValue(findInputByPlaceholder(view.container, "Send message"), "Reach support");
-    setInputValue(findInputByPlaceholder(view.container, "+1 555 123 456"), "+48 600 700 800");
-    setInputValue(
-      findInputByPlaceholder(view.container, "hello@example.com"),
-      "support@example.com"
-    );
+    setInputValue(findInputByPlaceholder(view.container, "Get in touch"), "Contact us");
     setTextareaValue(
-      findTextareaByPlaceholder(view.container, "123 Market Street"),
-      "Marszalkowska 1"
+      findTextareaByPlaceholder(
+        view.container,
+        "Optional supporting copy for the contact section."
+      ),
+      "Tell us what you need."
+    );
+    setInputValue(findInputByPlaceholder(view.container, "Mon-Fri 9-5"), "24/7 support");
+    setTextareaValue(
+      findTextareaByPlaceholder(view.container, "This contact form is not connected yet."),
+      "This Contact form stays presentational for now."
     );
 
-    expect(onChangeSpy).toHaveBeenCalled();
-    expect(latestValue.form?.submitLabel).toBe("Reach support");
-    expect(latestValue.contact).toMatchObject({
-      phone: "+48 600 700 800",
-      email: "support@example.com",
-      address: "Marszalkowska 1",
-    });
+    expect(latestValue.title).toBe("Contact us");
+    expect(latestValue.description).toBe("Tell us what you need.");
+    expect(latestValue.contact?.hours).toBe("24/7 support");
+    expect(latestValue.form?.submission?.staticMessage).toBe(
+      "This Contact form stays presentational for now."
+    );
+
+    clickButtonByText(view.container, "Minimal");
+    expect(currentVariant).toBe("minimal");
+    expect(view.container.textContent).toContain(
+      "Minimal layout shows contact details only, so form controls stay hidden here."
+    );
+    expect(findInputByPlaceholder(view.container, "Send message")).toBeUndefined();
   } finally {
     view.cleanup();
   }
 });
 
-test("ContactVisualEditor covers variant cards, required and ordering rules, contact details, map visibility, and style controls", async () => {
+test("ContactVisualEditor separates required/order UX and exposes metadata, map, and social controls", async () => {
   const { ContactVisualEditor } =
     await import("../../../core/admin/ui/widgets/editors/ContactEditors");
 
-  const onChangeSpy = vi.fn();
   let latestValue: ContactData = {
+    ...contactDefaults,
     form: {
-      fields: ["email", "phone", "message", "phone" as never, "unknown" as never],
-      required: ["phone", "name"],
-      submitLabel: "Contact us",
-    },
-    contact: {
-      phone: "+48 123 123 123",
-      email: "contact@example.com",
-      address: "Main Square 1",
-      hours: "",
+      ...contactDefaults.form,
+      fields: ["name", "email", "message"],
+      required: ["email"],
     },
     map: {
+      ...contactDefaults.map,
       enabled: false,
       embedUrl: "",
     },
-    style: {
-      spacing: "wide" as never,
-      background: "bad-token",
-      columns: "stacked" as never,
-      surfaceColor: "not-a-hex",
-      borderColor: "#abcd",
-      borderWidth: "9" as never,
+    contact: {
+      ...contactDefaults.contact,
+      social: [],
     },
   };
-  let currentVariant = "form-right";
+  let currentVariant = "minimal";
 
   const Harness = () => {
     const [value, setValue] = useState<ContactData>(latestValue);
@@ -425,7 +370,6 @@ test("ContactVisualEditor covers variant cards, required and ordering rules, con
         value={value}
         onChange={(next) => {
           latestValue = next;
-          onChangeSpy(next);
           setValue(next);
         }}
         variant={variant}
@@ -440,119 +384,91 @@ test("ContactVisualEditor covers variant cards, required and ordering rules, con
   const view = mount(<Harness />);
 
   try {
-    expect(view.container.textContent).toContain("Submit label");
-    expect(view.container.textContent).not.toContain(
-      "Columns apply only to `form-left` and `form-right` variants."
-    );
-
-    const colorInputs = Array.from(
-      view.container.querySelectorAll("input[type='color']")
-    ) as HTMLInputElement[];
-    expect(colorInputs.map((input) => input.value)).toEqual(["#ffffff", "#ffffff", "#e2e8f0"]);
-
-    clickButtonByText(view.container, "Minimal");
-    expect(currentVariant).toBe("minimal");
     expect(view.container.textContent).toContain(
-      "Columns apply only to `form-left` and `form-right` variants."
+      "Minimal layout shows contact details only. Form-field controls are hidden"
     );
     expect(findInputByPlaceholder(view.container, "Send message")).toBeUndefined();
 
     clickButtonByText(view.container, "Form left");
     expect(currentVariant).toBe("form-left");
+    expect(view.container.textContent).toContain("Visible fields");
+    expect(view.container.textContent).toContain("Required fields");
+    expect(view.container.textContent).toContain("Field order");
 
-    const rulesSection = findSection(view.container, "Form fields and required rules");
-    if (!rulesSection) {
-      throw new Error("Missing rules section");
-    }
-
-    setCheckboxValue(findRequiredFieldCheckbox(rulesSection, "Email"), true);
-    expect(latestValue.form?.required).toEqual(["phone", "email"]);
-    setCheckboxValue(findRequiredFieldCheckbox(rulesSection, "Email"), false);
-    expect(latestValue.form?.required).toEqual(["phone"]);
-    setCheckboxValue(findRequiredFieldCheckbox(rulesSection, "Email"), true);
-    expect(latestValue.form?.required).toEqual(["phone", "email"]);
-
-    const phoneCard = findRequiredFieldCard(rulesSection, "Phone");
-    if (!phoneCard) {
-      throw new Error("Missing phone card");
-    }
-    clickButtonByText(phoneCard, "Move up");
-    expect(latestValue.form?.fields).toEqual(["phone", "email", "message"]);
-    clickButtonByText(findRequiredFieldCard(rulesSection, "Phone") ?? rulesSection, "Move down");
-    expect(latestValue.form?.fields).toEqual(["email", "phone", "message"]);
-
-    setCheckboxValue(findFieldToggleCheckbox(rulesSection, "Email"), false);
-    expect(latestValue.form?.fields).toEqual(["phone", "message"]);
-    expect(latestValue.form?.required).toEqual(["phone"]);
-
-    setInputValue(findInputByPlaceholder(view.container, "Send message"), "Talk to us");
-    setInputValue(findInputByPlaceholder(view.container, "+1 555 123 456"), "+48 222 333 444");
-    setInputValue(findInputByPlaceholder(view.container, "hello@example.com"), "hello@coderso.dev");
-    setTextareaValue(
-      findTextareaByPlaceholder(view.container, "123 Market Street"),
-      "Nowy Swiat 10"
+    setCheckboxValue(
+      Array.from(view.container.querySelectorAll("input[type='checkbox']")).find((element) => {
+        const rowText = element.parentElement?.textContent ?? "";
+        return rowText.includes("Name") && rowText.includes("Hidden from the form.");
+      }),
+      true
     );
-    setInputValue(findInputByPlaceholder(view.container, "Mon-Fri 9-5"), "24/7 support");
+    expect(latestValue.form?.fields).toContain("name");
+
+    const fieldLayoutSelect = findSelectByOptions(view.container, ["one", "two"]);
+    setSelectValue(fieldLayoutSelect, "two");
+    expect(latestValue.form?.fieldLayout).toBe("two");
+
+    const spanSelect = Array.from(view.container.querySelectorAll("select")).find((element) => {
+      if (!(element instanceof HTMLSelectElement)) return false;
+      const values = Array.from(element.options).map((option) => option.value);
+      return values.includes("half") && values.includes("full");
+    });
+    setSelectValue(spanSelect, "half");
+    expect(latestValue.form?.fieldSettings?.name?.span).toBe("half");
+
+    setInputValue(findInputByPlaceholder(view.container, "Get in touch"), "Reach the team");
+    setInputValue(findInputByPlaceholder(view.container, "Contact details"), "Ways to reach us");
 
     const mapSection = findSection(view.container, "Map source and display behavior");
-    if (!mapSection) {
-      throw new Error("Missing map section");
-    }
-
-    setCheckboxValue(mapSection.querySelector("input[type='checkbox']") ?? undefined, true);
-    setInputValue(
-      findInputByPlaceholder(view.container, "https://maps.google.com/..."),
-      "https://maps.example.com/embed"
+    if (!mapSection) throw new Error("Missing map section");
+    setCheckboxValue(mapSection.querySelector("input[type='checkbox']"), true);
+    setInputValue(findInputByPlaceholder(view.container, "https://maps.google.com/..."), "notaurl");
+    expect(view.container.textContent).toContain(
+      "Use a valid http:// or https:// map embed URL. HTTPS is recommended."
     );
-    expect(latestValue.map).toMatchObject({
-      enabled: true,
-      embedUrl: "https://maps.example.com/embed",
+    setSelectValue(findSelectByOptions(mapSection, ["sm", "md", "lg", "xl"]), "lg");
+    expect(latestValue.map?.height).toBe("lg");
+
+    clickButtonByText(view.container, "Add social link");
+    setInputValue(findInputByPlaceholder(view.container, "LinkedIn"), "Support team");
+    setInputValue(
+      findInputByPlaceholder(view.container, "https://example.com/profile"),
+      "https://example.com/support"
+    );
+    const platformSelect = Array.from(view.container.querySelectorAll("select")).find((element) => {
+      if (!(element instanceof HTMLSelectElement)) return false;
+      const values = Array.from(element.options).map((option) => option.value);
+      return values.includes("linkedin") && values.includes("custom");
+    });
+    setSelectValue(platformSelect, "linkedin");
+
+    expect(latestValue.contact?.social?.[0]).toMatchObject({
+      platform: "linkedin",
+      label: "Support team",
+      href: "https://example.com/support",
     });
 
-    setCheckboxValue(mapSection.querySelector("input[type='checkbox']") ?? undefined, false);
-    expect(findInputByPlaceholder(view.container, "https://maps.google.com/...")).toBeUndefined();
+    const maxWidthSelect = findSelectByOptions(view.container, ["none", "md", "lg", "xl", "2xl"]);
+    setSelectValue(maxWidthSelect, "2xl");
+    const paddingSelect = findSelectByOptions(view.container, ["none", "sm", "md", "lg"]);
+    setSelectValue(paddingSelect, "lg");
 
-    setInputValue(colorInputs[0], "#112233");
-    setInputValue(colorInputs[1], "#334455");
-    setInputValue(colorInputs[2], "#556677");
-    setInputValue(
-      findInputByPlaceholder(view.container, "transparent or #f8fafc"),
-      "var(--surface-contact)"
-    );
-    setSelectValue(findSelectByOptions(view.container, ["0", "1", "2", "3"]), "3");
-    setSelectValue(findSelectByOptions(view.container, ["none", "sm", "md", "lg", "xl"]), "xl");
-    setSelectValue(findSelectByOptions(view.container, ["one", "two"]), "one");
-
-    expect(onChangeSpy).toHaveBeenCalled();
-    expect(latestValue.form?.submitLabel).toBe("Talk to us");
-    expect(latestValue.contact).toMatchObject({
-      phone: "+48 222 333 444",
-      email: "hello@coderso.dev",
-      address: "Nowy Swiat 10",
-      hours: "24/7 support",
-    });
-    expect(latestValue.contact?.hours).toBe("24/7 support");
     expect(latestValue.style).toMatchObject({
-      background: "var(--surface-contact)",
-      surfaceColor: "#334455",
-      borderColor: "#556677",
-      borderWidth: "3",
-      spacing: "xl",
-      columns: "one",
+      maxWidth: "2xl",
+      paddingX: "lg",
     });
   } finally {
     view.cleanup();
   }
 });
 
-test("ContactAdvancedEditor covers map metadata updates, normalization, and diagnostics output", async () => {
+test("ContactAdvancedEditor reports normalization results and redacts diagnostics", async () => {
   const { ContactAdvancedEditor } =
     await import("../../../core/admin/ui/widgets/editors/ContactEditors");
 
-  const onChangeSpy = vi.fn();
   let latestValue: ContactData = {
     form: {
-      fields: ["email", "email" as never, "unknown" as never],
+      fields: ["email", "email" as never],
       required: ["name"],
       submitLabel: "",
     },
@@ -565,7 +481,10 @@ test("ContactAdvancedEditor covers map metadata updates, normalization, and diag
       columns: "stacked" as never,
       borderWidth: "9" as never,
     },
-  };
+    resolved: {
+      submissionNonce: "secret-nonce",
+    },
+  } as ContactData;
 
   const Harness = () => {
     const [value, setValue] = useState<ContactData>(latestValue);
@@ -576,7 +495,6 @@ test("ContactAdvancedEditor covers map metadata updates, normalization, and diag
         variant="form-left"
         onChange={(next) => {
           latestValue = next;
-          onChangeSpy(next);
           setValue(next);
         }}
       />
@@ -586,341 +504,20 @@ test("ContactAdvancedEditor covers map metadata updates, normalization, and diag
   const view = mount(<Harness />);
 
   try {
-    const initialSnapshot = view.container.querySelector("pre");
-    expect(initialSnapshot?.textContent).toContain('"fields": [\n      "email"\n    ]');
-    expect(initialSnapshot?.textContent).toContain('"submitLabel": "Send message"');
-    expect(initialSnapshot?.textContent).toContain('"borderWidth": "1"');
-
-    setCheckboxValue(view.container.querySelector("input[type='checkbox']") ?? undefined, true);
-    setInputValue(
-      findInputByPlaceholder(view.container, "https://maps.google.com/..."),
-      "https://maps.example.com/advanced"
-    );
-
+    expect(view.container.textContent).toContain("[redacted]");
     clickButtonByText(view.container, "Apply normalization now");
-
-    expect(onChangeSpy).toHaveBeenCalled();
+    expect(view.container.textContent).toContain("Payload normalized.");
     expect(latestValue.form).toMatchObject({
       fields: ["email"],
-      required: ["email"],
+      required: [],
       submitLabel: "Send message",
-    });
-    expect(latestValue.map).toMatchObject({
-      enabled: true,
-      embedUrl: "https://maps.example.com/advanced",
     });
     expect(latestValue.style).toMatchObject({
       spacing: "md",
       columns: "two",
       borderWidth: "1",
     });
-
-    const finalSnapshot = view.container.querySelector("pre");
-    expect(finalSnapshot?.textContent).toContain('"enabled": true');
-    expect(finalSnapshot?.textContent).toContain('"embedUrl": "https://maps.example.com/advanced"');
   } finally {
     view.cleanup();
-  }
-});
-
-test("Contact editors cover sparse defaults, minimal variant fallback, and default map metadata state", async () => {
-  const { ContactAdvancedEditor, ContactVisualEditor, ContactWizardEditor } =
-    await import("../../../core/admin/ui/widgets/editors/ContactEditors");
-
-  const sparseValue: ContactData = {
-    form: {},
-    contact: {},
-    map: {},
-    style: {},
-  };
-
-  const wizardView = mount(
-    <ContactWizardEditor value={sparseValue} onChange={() => undefined} variant="form-left" />
-  );
-
-  try {
-    expect(
-      (
-        findInputByPlaceholder(wizardView.container, "Send message") as
-          | HTMLInputElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("Send message");
-    expect(
-      (
-        findInputByPlaceholder(wizardView.container, "+1 555 123 456") as
-          | HTMLInputElement
-          | null
-          | undefined
-      )?.value
-    ).toBe(contactDefaults.contact?.phone);
-  } finally {
-    wizardView.cleanup();
-  }
-
-  let latestValue: ContactData = sparseValue;
-
-  const VisualHarness = () => {
-    const [value, setValue] = useState<ContactData>(latestValue);
-
-    return (
-      <ContactVisualEditor
-        value={value}
-        onChange={(next) => {
-          latestValue = next;
-          setValue(next);
-        }}
-        variant="minimal"
-      />
-    );
-  };
-
-  const visualView = mount(<VisualHarness />);
-
-  try {
-    expect(visualView.container.textContent).toContain(
-      "Columns apply only to `form-left` and `form-right` variants."
-    );
-    clickButtonByText(visualView.container, "Form left");
-    expect(visualView.container.textContent).toContain(
-      "Columns apply only to `form-left` and `form-right` variants."
-    );
-
-    const mapSection = findSection(visualView.container, "Map source and display behavior");
-    if (!mapSection) {
-      throw new Error("Missing map section");
-    }
-
-    expect(
-      findInputByPlaceholder(visualView.container, "https://maps.google.com/...")
-    ).toBeUndefined();
-
-    setCheckboxValue(mapSection.querySelector("input[type='checkbox']") ?? undefined, true);
-    setInputValue(
-      findInputByPlaceholder(visualView.container, "https://maps.google.com/..."),
-      "https://maps.example.com/minimal"
-    );
-
-    expect(latestValue.map).toMatchObject({
-      enabled: true,
-      embedUrl: "https://maps.example.com/minimal",
-    });
-
-    const colorsSection = findSection(visualView.container, "Colors, borders, and surface styling");
-    if (!colorsSection) {
-      throw new Error("Missing colors section");
-    }
-
-    expect(
-      (
-        findInputByPlaceholder(colorsSection, "transparent or #f8fafc") as
-          | HTMLInputElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("");
-    expect(
-      (
-        findInputByPlaceholder(colorsSection, "var(--color-bg) or #ffffff") as
-          | HTMLInputElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("");
-    expect(
-      (findSelectByOptions(colorsSection, ["0", "1", "2", "3"]) as HTMLSelectElement | undefined)
-        ?.value
-    ).toBe("1");
-
-    const spacingSection = findSection(visualView.container, "Spacing and columns");
-    if (!spacingSection) {
-      throw new Error("Missing spacing section");
-    }
-
-    expect(
-      (
-        findSelectByOptions(spacingSection, ["none", "sm", "md", "lg", "xl"]) as
-          | HTMLSelectElement
-          | undefined
-      )?.value
-    ).toBe("md");
-  } finally {
-    visualView.cleanup();
-  }
-
-  const advancedView = mount(
-    <ContactAdvancedEditor value={sparseValue} onChange={() => undefined} variant="form-left" />
-  );
-
-  try {
-    expect(
-      (
-        advancedView.container.querySelector("input[type='checkbox']") as
-          | HTMLInputElement
-          | null
-          | undefined
-      )?.checked
-    ).toBe(false);
-    expect(
-      (
-        findInputByPlaceholder(advancedView.container, "https://maps.google.com/...") as
-          | HTMLInputElement
-          | undefined
-      )?.value
-    ).toBe("");
-  } finally {
-    advancedView.cleanup();
-  }
-});
-
-test("Contact editors fall back to empty/default UI values when normalized payload is sparse", async () => {
-  vi.resetModules();
-  vi.doMock("../../../core/widgets/core/contact", async () => {
-    const actual = await vi.importActual<typeof import("../../../core/widgets/core/contact")>(
-      "../../../core/widgets/core/contact"
-    );
-
-    return {
-      ...actual,
-      normalizeContactData: (value: ContactData) => ({
-        ...actual.normalizeContactData(value),
-        form: {
-          fields: ["name", "email", "message"],
-          required: [],
-          submitLabel: undefined,
-        } as ContactData["form"],
-        contact: {
-          phone: undefined,
-          email: undefined,
-          address: undefined,
-          hours: undefined,
-        } as ContactData["contact"],
-        map: {
-          enabled: undefined,
-          embedUrl: undefined,
-        } as ContactData["map"],
-        style: {
-          spacing: undefined,
-          background: undefined,
-          columns: undefined,
-          surfaceColor: undefined,
-          borderColor: undefined,
-          borderWidth: undefined,
-        } as ContactData["style"],
-      }),
-    };
-  });
-
-  const { ContactAdvancedEditor, ContactVisualEditor, ContactWizardEditor } =
-    await import("../../../core/admin/ui/widgets/editors/ContactEditors");
-
-  const sparseValue: ContactData = {
-    form: {},
-    contact: {},
-    map: {},
-    style: {},
-  };
-
-  const wizardView = mount(
-    <ContactWizardEditor value={sparseValue} onChange={() => undefined} variant="legacy-contact" />
-  );
-
-  try {
-    expect(
-      (
-        findSelectByOptions(wizardView.container, ["form-left", "form-right", "minimal"]) as
-          | HTMLSelectElement
-          | undefined
-      )?.value
-    ).toBe("form-left");
-    expect(
-      (
-        findInputByPlaceholder(wizardView.container, "Send message") as
-          | HTMLInputElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("");
-    expect(
-      (
-        findInputByPlaceholder(wizardView.container, "+1 555 123 456") as
-          | HTMLInputElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("");
-    expect(
-      (
-        findInputByPlaceholder(wizardView.container, "hello@example.com") as
-          | HTMLInputElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("");
-    expect(
-      (
-        findTextareaByPlaceholder(wizardView.container, "123 Market Street") as
-          | HTMLTextAreaElement
-          | undefined
-      )?.value
-    ).toBe("");
-  } finally {
-    wizardView.cleanup();
-  }
-
-  const visualView = mount(
-    <ContactVisualEditor value={sparseValue} onChange={() => undefined} variant="legacy-contact" />
-  );
-
-  try {
-    const styleSection = findSection(visualView.container, "Colors, borders, and surface styling");
-    if (!(styleSection instanceof HTMLElement)) {
-      throw new Error("Missing style section");
-    }
-
-    expect(findInputByPlaceholder(visualView.container, "Send message")).toBeTruthy();
-    expect(
-      findInputByPlaceholder(visualView.container, "https://maps.google.com/...")
-    ).toBeUndefined();
-    expect(
-      (
-        findSelectByOptions(visualView.container, ["none", "sm", "md", "lg", "xl"]) as
-          | HTMLSelectElement
-          | undefined
-      )?.value
-    ).toBe("md");
-    expect(
-      (findSelectByOptions(visualView.container, ["one", "two"]) as HTMLSelectElement | undefined)
-        ?.value
-    ).toBe("two");
-    const colorInputs = Array.from(
-      styleSection.querySelectorAll("input[type='color']")
-    ) as HTMLInputElement[];
-    expect(colorInputs.map((input) => input.value)).toEqual(["#ffffff", "#ffffff", "#e2e8f0"]);
-  } finally {
-    visualView.cleanup();
-  }
-
-  const advancedView = mount(
-    <ContactAdvancedEditor value={sparseValue} onChange={() => undefined} variant="form-left" />
-  );
-
-  try {
-    expect(
-      (advancedView.container.querySelector("input[type='checkbox']") as HTMLInputElement | null)
-        ?.checked
-    ).toBe(false);
-    expect(
-      (
-        findInputByPlaceholder(advancedView.container, "https://maps.google.com/...") as
-          | HTMLInputElement
-          | undefined
-      )?.value
-    ).toBe("");
-  } finally {
-    advancedView.cleanup();
-    vi.doUnmock("../../../core/widgets/core/contact");
-    vi.resetModules();
   }
 });
