@@ -484,17 +484,24 @@ test("ContentList visual editor switches between listing and legacy sources, per
     await flush();
 
     React.act(() => {
-      clickElement(findButtonByText(view.container, "Compact"));
       setSelectValue(findSelectsByOptions(view.container, ["1", "2", "3"])[0], "2");
       setSelectValue(findSelectsByOptions(view.container, ["none", "sm", "md", "lg"])[0], "lg");
       setSelectValue(
         findSelectsByOptions(view.container, ["outlined", "elevated", "minimal"])[0],
         "elevated"
       );
+      setSelectValue(
+        findSelectsByOptions(view.container, ["standard", "wide", "square", "compact"])[0],
+        "wide"
+      );
       setInputValue(findInputByPlaceholder(view.container, "Read more"), "View entry");
+      clickElement(findButtonByText(view.container, "Compact"));
       setSelectValue(findSelectsByOptions(view.container, ["legacy", "listing"])[0], "listing");
     });
     await flush();
+
+    expect(view.container.textContent).toContain("Columns only affect the cards variant.");
+    expect(findSelectsByOptions(view.container, ["1", "2", "3"])).toHaveLength(0);
 
     React.act(() => {
       setSelectValue(
@@ -607,6 +614,7 @@ test("ContentList visual editor switches between listing and legacy sources, per
           columns: "2",
           gap: "lg",
           cardStyle: "elevated",
+          imageAspect: "wide",
           ctaLabel: "View entry",
         }),
       })
@@ -772,6 +780,11 @@ test("ContentList advanced editor handles listing query controls, disabled filte
       setInputValue(findInputByPlaceholder(view.container, "var(--color-text)"), "#f9fafb");
     });
 
+    const clearButtons = Array.from(view.container.querySelectorAll("button")).filter((button) =>
+      normalizeText(button.textContent).includes("clear")
+    );
+    expect(clearButtons).toHaveLength(3);
+
     expect(onChangeSpy.mock.lastCall?.[0]).toEqual(
       expect.objectContaining({
         source: expect.objectContaining({
@@ -794,6 +807,15 @@ test("ContentList advanced editor handles listing query controls, disabled filte
     );
     expect(view.container.textContent).toContain('"title": "Launch note"');
     expect(view.container.textContent).toContain('"page": 2');
+
+    clickElement(clearButtons[2]);
+    expect(onChangeSpy.mock.lastCall?.[0]).toEqual(
+      expect.objectContaining({
+        style: expect.objectContaining({
+          textColor: undefined,
+        }),
+      })
+    );
   } finally {
     view.cleanup();
   }

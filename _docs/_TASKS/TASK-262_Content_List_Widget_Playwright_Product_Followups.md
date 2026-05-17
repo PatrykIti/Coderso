@@ -5,8 +5,8 @@
 **Priority:** High
 **Category:** Widgets + Dynamic Content + Admin UI + Runtime Render + Listings + Playwright QA
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-252-07-01, TASK-256-07
-**Status:** To Do
+**Dependencies:** TASK-252-07-01, TASK-256-07, TASK-293
+**Status:** In Progress (2026-05-17)
 
 ---
 
@@ -38,47 +38,48 @@ In scope for TASK-262:
   missing-source instructions, and explicit saved-data canvas guidance.
 - Content List page navigation, View all/Load more action model, and bounded
   runtime page metadata.
-- Content List-only layout truthfulness for cards/list/compact variants, image
-  ratio/height controls, tag badge display, card-style preview, variant preview,
-  and CTA fallback feedback.
+- Content List-only section/context copy, tag badge display, card-style preview,
+  variant preview, and source-aware guidance that do not widen the shared
+  `ContentListBlock` / `PostsFeedBlock` contract.
 - Final Content List Playwright report/docs/changelog/board closure.
 
 Out of scope for TASK-262:
 
 - Shared editor atomic update helpers, owned by TASK-256-01.
-- Generic `Clear`, `none`, token picker, CSS-variable preservation, and
-  shared color-picker contracts, owned by TASK-256-02. The `textColor` clear
-  row from `REPORT_CONTENT_LIST_WIDGET.md:81` and color-picker row from
-  `REPORT_CONTENT_LIST_WIDGET.md:84` are classified there unless the shared
-  helper later requires a Content List-only hook.
+- Shared `ContentListBlock` / `PostsFeedBlock` renderer truthfulness and residual
+  color-control adoption discovered after TASK-256 closure, owned by TASK-293.
+  The `Columns` truthfulness rows, shared image/CTA renderer residuals, and the
+  stale `TASK-256-02` `textColor` clear/color-picker routing must be fixed
+  there instead of being patched only inside the Content List family.
 - Generic slot placeholder gating, owned by TASK-256-03.
 - Shared instance-safe runtime binding and unrelated ARIA helpers, owned by
   TASK-256-04.
 - Broad content query/listing platform changes outside the Content List widget.
 
 If a TASK-262 leaf discovers a missing shared helper, stop and route that helper
-through TASK-256 or a new shared task before continuing with Content List-only
+through TASK-293 or a new shared task before continuing with Content List-only
 work.
 
 ## Source Report Coverage
 
 | Report finding | Route |
 |---|---|
-| E-02, E-03, E-04, E-06, E-11, T-03, T-04, T-06 | TASK-262-01 |
-| B-02, E-09, T-02 canvas/preview communication, T-05, static canvas discovery | TASK-262-02 |
+| E-02, E-03, E-04, E-06, E-11, T-04, T-06 | TASK-262-01 |
+| B-02, T-02 canvas/preview communication, T-05, static canvas discovery | TASK-262-02 |
 | B-01, B-03, runtime `resolved.runtime.page` navigation behavior | TASK-262-03 |
-| B-04, B-05, B-06, E-01, E-07, E-10, T-01 | TASK-262-04 |
-| E-05, E-08, and generic color-token/picker rows | TASK-256-02, not TASK-262 |
+| B-06, E-07, E-10 | TASK-262-04 |
+| B-04, B-05, E-01, E-05, E-08, T-01 | TASK-293, not TASK-262 |
+| E-09, T-03 | Already fixed / no longer reproducible at current HEAD; verify again during TASK-262-05 closure before marking fixed in the report |
 | Final fixed/deferred evidence, report refresh, docs/changelog/board closure | TASK-262-05 |
 
 ## Current Owner and Test Matrix
 
 | Leaf | Current drift evidence | Owner files | Required test lanes |
 |---|---|---|---|
-| TASK-262-01 | Report lines 78-80, 82, 87, 114-122, 134-137, 153-155, 163-164, 277-279, 290, 297 | `ContentListEditors.tsx`, content type/listings clients only if existing response metadata supports safer labels, Content List docs | Vitest editor wave; Bun route/service tests only if admin source APIs change |
-| TASK-262-02 | Report lines 67, 85, 94, 97, 173-181, 201-203, 221-252, 270-284, 300 | `contentList.tsx`, `ContentListEditors.tsx`, public renderer tests, Content List docs | Bun widget render tests; Vitest editor wave; public renderer smoke when runtime markers/copy change |
+| TASK-262-01 | Report lines 78-80, 82, 87, 114-122, 134-137, 153-155, 163-164, 277-279, 290, 297 | `ContentListEditors.tsx`, existing admin read clients for content types/taxonomy/users when needed, Content List docs | Vitest editor wave; admin client tests only if existing read-client contracts change |
+| TASK-262-02 | Report lines 67, 94, 97, 173-181, 201-203, 221-252, 276, 283-284, 300 | `contentList.tsx`, `ContentListEditors.tsx`, public renderer tests, Content List docs | Bun widget render tests; Vitest editor wave; public renderer smoke when runtime markers/copy change |
 | TASK-262-03 | Report lines 66, 68, 270, 275 plus existing `resolved.runtime.page` schema at `contentList.tsx` | `contentList.tsx`, `contentListResolver.ts`, `filterEngine.ts` only if the current listing runtime page token needs extension, public page renderer/listing runtime seams | `tests/unit/content/contentListResolver.test.ts`, widget tests, public renderer tests, and `tests/vitest/search/filterEngine.test.ts` when listing runtime page parsing changes |
-| TASK-262-04 | Report lines 69-71, 77, 83, 86, 93, 128-147, 287-288, 298 | `contentList.tsx`, `ContentListEditors.tsx`, Content List widget tests | Bun widget tests, Vitest editor wave, validator tests when schema expands |
+| TASK-262-04 | Report lines 71, 83, 86, 287-288, 298 | `contentList.tsx`, `ContentListEditors.tsx`, Content List widget tests | Bun widget tests, Vitest editor wave, public renderer tests when HTML/output changes, validator tests when schema expands |
 | TASK-262-05 | Report lines 264-306 and every fixed/deferred row | `_docs/PLAYWRIGHT/REPORT_CONTENT_LIST_WIDGET.md`, `_docs/_WIDGETS/CONTENT_LIST.md`, `_docs/WIDGETS.md` if product surface changes, board/changelog/docs | `git diff --check`, targeted production lanes after implementation leaves |
 
 ## Sub-Tasks
@@ -179,8 +180,8 @@ This umbrella does not add API routes.
 ## Acceptance Criteria
 
 - Every finding in `_docs/PLAYWRIGHT/REPORT_CONTENT_LIST_WIDGET.md` is fixed,
-  explicitly excluded as TASK-256 shared scope, or deferred to a named future
-  task with a reason.
+  explicitly excluded as TASK-293 shared scope or another named shared/future
+  task, or deferred with a reason.
 - Content List schema, defaults, normalizer, render, editor, tests, and docs
   move together for every new user-facing option.
 - Admin canvas, preview dialog, and public frontend present truthful source,

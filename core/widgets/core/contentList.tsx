@@ -16,6 +16,7 @@ export type ContentListSourceMode = "legacy" | "listing";
 export type ContentListColumns = "1" | "2" | "3";
 export type ContentListGap = "none" | "sm" | "md" | "lg";
 export type ContentListCardStyle = "outlined" | "elevated" | "minimal";
+export type ContentListImageAspect = "compact" | "standard" | "wide" | "square";
 
 export type ContentListRuntimeItem = {
   id?: string;
@@ -61,6 +62,7 @@ export type ContentListData = {
     columns?: ContentListColumns;
     gap?: ContentListGap;
     cardStyle?: ContentListCardStyle;
+    imageAspect?: ContentListImageAspect;
     ctaLabel?: string;
     backgroundColor?: string;
     borderColor?: string;
@@ -149,6 +151,7 @@ export const contentListSchema = {
         columns: { enum: ["1", "2", "3"] },
         gap: { enum: ["none", "sm", "md", "lg"] },
         cardStyle: { enum: ["outlined", "elevated", "minimal"] },
+        imageAspect: { enum: ["compact", "standard", "wide", "square"] },
         ctaLabel: { type: "string" },
         backgroundColor: { type: "string" },
         borderColor: { type: "string" },
@@ -236,6 +239,7 @@ export const contentListDefaults: ContentListData = {
     columns: "3",
     gap: "md",
     cardStyle: "outlined",
+    imageAspect: "standard",
     ctaLabel: "Read more",
     backgroundColor: "var(--color-bg)",
     borderColor: "var(--color-border)",
@@ -264,6 +268,13 @@ const gapClassMap: Record<ContentListGap, string> = {
   sm: "gap-3",
   md: "gap-5",
   lg: "gap-7",
+};
+
+const imageAspectClassMap: Record<ContentListImageAspect, string> = {
+  compact: "h-32",
+  standard: "h-40",
+  wide: "aspect-[16/9]",
+  square: "aspect-square",
 };
 
 const resolveString = (value: string | undefined, fallback: string) =>
@@ -321,6 +332,11 @@ export const resolveContentListGap = (value: string | undefined): ContentListGap
 const resolveContentListCardStyle = (value: string | undefined): ContentListCardStyle => {
   if (value === "elevated" || value === "minimal") return value;
   return "outlined";
+};
+
+const resolveContentListImageAspect = (value: string | undefined): ContentListImageAspect => {
+  if (value === "compact" || value === "wide" || value === "square") return value;
+  return "standard";
 };
 
 export const resolveContentListVariant = (variant: string): ContentListVariantId => {
@@ -387,6 +403,7 @@ export function normalizeContentListData(data: ContentListData): ContentListData
     columns: "3" as const,
     gap: "md" as const,
     cardStyle: "outlined" as const,
+    imageAspect: "standard" as const,
     ctaLabel: "Read more",
     backgroundColor: "var(--color-bg)",
     borderColor: "var(--color-border)",
@@ -443,6 +460,7 @@ export function normalizeContentListData(data: ContentListData): ContentListData
       columns: resolveContentListColumns(data.style?.columns),
       gap: resolveContentListGap(data.style?.gap),
       cardStyle: resolveContentListCardStyle(data.style?.cardStyle),
+      imageAspect: resolveContentListImageAspect(data.style?.imageAspect),
       ctaLabel: resolveString(data.style?.ctaLabel, styleDefaults.ctaLabel ?? "Read more"),
       backgroundColor: hasStyleObject
         ? resolveClearableStyleValue(data.style?.backgroundColor)
@@ -450,10 +468,9 @@ export function normalizeContentListData(data: ContentListData): ContentListData
       borderColor: hasStyleObject
         ? resolveClearableStyleValue(data.style?.borderColor)
         : styleDefaults.borderColor,
-      textColor: resolveString(
-        data.style?.textColor,
-        styleDefaults.textColor ?? "var(--color-text)"
-      ),
+      textColor: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.textColor)
+        : styleDefaults.textColor,
     },
     resolved: {
       items: normalizeContentListRuntimeItems(data.resolved?.items),
@@ -537,16 +554,19 @@ function ContentListItemCard({
     compactStyle({
       backgroundColor: resolveClearableStyleValue(style.backgroundColor),
       borderColor: resolveClearableStyleValue(style.borderColor),
-      color: style.textColor ?? "var(--color-text)",
+      color: resolveClearableStyleValue(style.textColor),
     }) ?? {};
   const metaLine = buildMetaLine(item);
   const title = item.title ?? "Untitled";
   const href = item.href && item.href.trim().length > 0 ? item.href : undefined;
   const excerpt = (item.excerpt ?? "").trim();
-  const showImage = fields.showImage && item.imageSrc;
+  const imageAspectClassName = imageAspectClassMap[style.imageAspect ?? "standard"];
+  const showImage = Boolean(fields.showImage) && Boolean(item.imageSrc);
   const showExcerpt = fields.showExcerpt && excerpt.length > 0;
   const showMeta = fields.showMeta && metaLine.length > 0;
-  const showCta = fields.showCta && Boolean(href);
+  const showCta = Boolean(fields.showCta);
+  const showCtaLink = showCta && Boolean(href);
+  const showCtaFallback = showCta && !href;
 
   return (
     <article
@@ -560,7 +580,7 @@ function ContentListItemCard({
           <img
             src={item.imageSrc}
             alt={item.imageAlt ?? title}
-            className="h-40 w-full object-cover"
+            className={joinClasses("w-full object-cover", imageAspectClassName)}
             loading="lazy"
           />
         </div>
@@ -581,11 +601,18 @@ function ContentListItemCard({
             {excerpt}
           </p>
         ) : null}
-        {showCta ? (
+        {showCtaLink ? (
           <div>
             <a href={href} className="text-sm font-medium underline-offset-4 hover:underline">
               {style.ctaLabel ?? "Read more"}
             </a>
+          </div>
+        ) : null}
+        {showCtaFallback ? (
+          <div>
+            <span className="text-sm font-medium opacity-70" aria-disabled="true">
+              {style.ctaLabel ?? "Read more"}
+            </span>
           </div>
         ) : null}
       </div>

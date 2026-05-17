@@ -28,8 +28,8 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 295 tasks
-- **In Progress:** 4 tasks
+- **To Do:** 294 tasks
+- **In Progress:** 6 tasks
 - **Done:** 1559 tasks
 
 ---
@@ -281,11 +281,10 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-263-04 | CTA Banner Link Target and Conversion Options | Medium | Large | Add safe target/rel policy, icon enums, tertiary CTA, and description visibility controls |
 | TASK-263-05 | CTA Banner Layout Media and Motion Options | Medium | Large | Add CTA-local width, gradient, background media, and bounded motion options where page layout does not already own them |
 | TASK-263-06 | CTA Banner Report Docs and Closure | Medium | Medium | Refresh CTA report/docs/changelog/board and final validation for the TASK-263 family |
-| TASK-262 | Content List Widget Playwright Product Followups | High | Very Large | Content List-only follow-up family for `REPORT_CONTENT_LIST_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-262-01 | Content List Source Picker and Filter Editor IA | High | Large | Repair source picker labels/deduplication/search, taxonomy/author editor barriers, and listing-mode filter feedback |
 | TASK-262-02 | Content List Section Empty State and Static Canvas Guidance | High | Large | Add section heading, source-aware empty copy, missing-source guidance, and saved-data canvas messaging |
 | TASK-262-03 | Content List Pagination and View All Navigation | High | Very Large | Add bounded page navigation and View all/Load more behavior without public-write or arbitrary endpoint scope |
-| TASK-262-04 | Content List Layout Media Tags and Card Preview Controls | High | Large | Repair Content List-local layout truthfulness, image ratio controls, tag badges, CTA fallback, and card/variant previews |
+| TASK-262-04 | Content List Layout Media Tags and Card Preview Controls | High | Large | Repair Content List-local tag/presentation drift after shared renderer residuals move to TASK-293 |
 | TASK-262-05 | Content List Report Docs and Closure | Medium | Medium | Refresh report/docs/changelog/board and final validation for the TASK-262 family |
 | TASK-261 | Contact Widget Playwright Product Followups | High | Very Large | Contact-only follow-up family for `REPORT_CONTACT_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-261-01 | Contact Header, Details Links, and Semantic Output | High | Large | Add Contact section headings, panel headings, semantic details, and safe tel/mailto output |
@@ -339,6 +338,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-293 | Content List Block Shared Renderer and Color Control Residuals | High | Large | In progress: TASK-262 exposed shared `ContentListBlock` / `PostsFeedBlock` truthfulness and stale TASK-256 color-control residuals that must land outside the local widget family |
+| TASK-262 | Content List Widget Playwright Product Followups | High | Very Large | In progress: task docs are being realigned to current HEAD, shared residuals are split to TASK-293, and the remaining widget-owned implementation still needs end-to-end delivery and closure |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |

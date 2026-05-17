@@ -29,13 +29,14 @@ import {
   resolveContentListVariant,
   type ContentListCardStyle,
   type ContentListData,
+  type ContentListImageAspect,
   type ContentListGap,
   type ContentListSort,
   type ContentListStatusScope,
   type ContentListVariantId,
 } from "../../../../widgets/core/contentList";
 import type { WidgetEditorProps } from "../../../../widgets/types";
-import { ClearableInputField } from "./ClearableFields";
+import { ClearableFieldHeader, ClearableInputField } from "./ClearableFields";
 import { WidgetEditorSection } from "./WidgetEditorControls";
 
 const variantOptions: Array<{
@@ -101,6 +102,18 @@ const cardStyleOptions: Array<{ id: ContentListCardStyle; label: string }> = [
   { id: "minimal", label: "Minimal" },
 ];
 
+const imageAspectOptions: Array<{ id: ContentListImageAspect; label: string }> = [
+  { id: "standard", label: "Standard" },
+  { id: "wide", label: "Wide 16:9" },
+  { id: "square", label: "Square" },
+  { id: "compact", label: "Compact height" },
+];
+
+const hexColorPattern = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
+
+const resolvePickerColor = (value: string | undefined, fallback: string) =>
+  value && hexColorPattern.test(value) ? value : fallback;
+
 const NO_CONTENT_TYPE_VALUE = "__no_content_type__";
 const NO_LISTING_QUERY_VALUE = "__no_listing_query__";
 const NO_LISTING_TEMPLATE_VALUE = "__no_listing_template__";
@@ -154,6 +167,41 @@ function VariantCards({
           <p className="mt-1 text-xs text-muted-foreground">{option.description}</p>
         </button>
       ))}
+    </div>
+  );
+}
+
+function ColorField({
+  label,
+  value,
+  onChange,
+  placeholder,
+  pickerFallback,
+  onClear,
+}: {
+  label: string;
+  value: string | undefined;
+  onChange: (next: string) => void;
+  placeholder: string;
+  pickerFallback: string;
+  onClear?: () => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <ClearableFieldHeader label={label} value={value} onClear={onClear} />
+      <div className="grid grid-cols-[2.5rem_1fr] gap-2">
+        <Input
+          type="color"
+          value={resolvePickerColor(value, pickerFallback)}
+          onChange={(event) => onChange(event.target.value)}
+          className="h-9 w-10 p-1"
+        />
+        <Input
+          value={value ?? ""}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={placeholder}
+        />
+      </div>
     </div>
   );
 }
@@ -560,6 +608,8 @@ export function ContentListVisualEditor({
   const resolved = normalizeValue(value);
   const resolvedVariant = resolveContentListVariant(variant);
   const sourceMode = resolved.source?.mode ?? "legacy";
+  const supportsColumns = resolvedVariant === "cards";
+  const showImage = resolved.fields?.showImage ?? true;
 
   return (
     <div className="space-y-4">
@@ -569,26 +619,35 @@ export function ContentListVisualEditor({
       >
         <VariantCards value={resolvedVariant} onChange={onVariantChange} />
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Columns</p>
-            <Select
-              value={resolved.style?.columns ?? "3"}
-              onValueChange={(next) =>
-                updateStyle(value, onChange, { columns: next as "1" | "2" | "3" })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Columns" />
-              </SelectTrigger>
-              <SelectContent>
-                {columnsOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {supportsColumns ? (
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Columns</p>
+              <Select
+                value={resolved.style?.columns ?? "3"}
+                onValueChange={(next) =>
+                  updateStyle(value, onChange, { columns: next as "1" | "2" | "3" })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Columns" />
+                </SelectTrigger>
+                <SelectContent>
+                  {columnsOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Columns</p>
+              <div className="rounded-md border border-dashed border-border/70 px-3 py-2 text-xs text-muted-foreground">
+                Columns only affect the cards variant.
+              </div>
+            </div>
+          )}
           <div className="space-y-2">
             <p className="text-sm font-medium">Gap</p>
             <Select
@@ -759,6 +818,32 @@ export function ContentListVisualEditor({
             />
           </label>
         </div>
+        {showImage ? (
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Image ratio</p>
+            <Select
+              value={resolved.style?.imageAspect ?? "standard"}
+              onValueChange={(next) =>
+                updateStyle(value, onChange, { imageAspect: next as ContentListImageAspect })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Image ratio" />
+              </SelectTrigger>
+              <SelectContent>
+                {imageAspectOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Enable &quot;Show image&quot; to configure image ratio.
+          </p>
+        )}
         <div className="space-y-2">
           <p className="text-sm font-medium">CTA label</p>
           <Input
@@ -903,14 +988,14 @@ export function ContentListAdvancedEditor({ value, onChange }: WidgetEditorProps
             placeholder="var(--color-border)"
           />
         </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Text color</p>
-          <Input
-            value={resolved.style?.textColor ?? ""}
-            onChange={(event) => updateStyle(value, onChange, { textColor: event.target.value })}
-            placeholder="var(--color-text)"
-          />
-        </div>
+        <ColorField
+          label="Text color"
+          value={resolved.style?.textColor}
+          onChange={(next) => updateStyle(value, onChange, { textColor: next })}
+          onClear={() => clearStyle(value, onChange, "textColor")}
+          placeholder="var(--color-text)"
+          pickerFallback="#0f172a"
+        />
       </EditorSection>
 
       <EditorSection

@@ -128,6 +128,49 @@ test("content list renders resolved items and runtime markers", () => {
   expect(html).toContain('data-content-list-state="ready"');
 });
 
+test("content list renders image aspect classes and CTA fallback label when href is missing", () => {
+  const html = renderToString(
+    <ContentListBlock
+      variant="cards"
+      data={normalizeContentListData({
+        ...contentListDefaults,
+        source: {
+          contentTypeId: "blog-type-id",
+          statusScope: "published",
+          limit: 3,
+          sort: "published-desc",
+        },
+        style: {
+          ...contentListDefaults.style,
+          imageAspect: "wide",
+          ctaLabel: "Open post",
+        },
+        resolved: {
+          items: [
+            {
+              id: "entry-1",
+              title: "Release notes",
+              excerpt: "Latest platform updates.",
+              imageSrc: "/assets/release-notes.jpg",
+              publishedAt: "2026-02-08T09:00:00.000Z",
+              status: "published",
+            },
+          ],
+          total: 1,
+          sourceTypeId: "blog-type-id",
+          sourceTypeSlug: "blog",
+          resolvedAt: "2026-02-08T09:10:00.000Z",
+        },
+      })}
+    />
+  );
+
+  expect(html).toContain("aspect-[16/9]");
+  expect(html).toContain('aria-disabled="true"');
+  expect(html).toContain("Open post");
+  expect(html).not.toContain('href="/blog/release-notes"');
+});
+
 test("content list preserves none gap token", () => {
   const normalized = normalizeContentListData({
     ...contentListDefaults,
@@ -193,8 +236,10 @@ test("content list cleared card background omits runtime background style", () =
   const html = renderToString(<ContentListBlock data={normalized} variant="cards" />);
 
   expect(normalized.style?.backgroundColor).toBeUndefined();
+  expect(normalized.style?.textColor).toBeUndefined();
   expect(html).toContain('data-content-list-state="ready"');
   expect(html).not.toContain("background-color:");
+  expect(html).not.toContain("color:var(--color-text)");
 });
 
 test("content list normalizes limit and model defaults", () => {

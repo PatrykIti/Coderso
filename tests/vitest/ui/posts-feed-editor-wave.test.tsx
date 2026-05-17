@@ -373,13 +373,13 @@ test("PostsFeed editors cover source modes, manual posts, display toggles, layou
         ),
         "Try another filter"
       );
-      setSelectValue(findSelectByOptions(view.container, ["cards", "list", "compact"]), "compact");
       setSelectValue(findSelectByOptions(view.container, ["1", "2", "3"]), "2");
       setSelectValue(findSelectByOptions(view.container, ["none", "sm", "md", "lg"]), "lg");
       setSelectValue(
         findSelectByOptions(view.container, ["outlined", "elevated", "minimal"]),
         "elevated"
       );
+      setSelectValue(findSelectByOptions(view.container, ["cards", "list", "compact"]), "compact");
       setSelectValue(
         findSelectByOptions(view.container, [
           "published-desc",
@@ -392,6 +392,9 @@ test("PostsFeed editors cover source modes, manual posts, display toggles, layou
         "title-asc"
       );
     });
+
+    expect(view.container.textContent).toContain("Columns only affect the cards variant.");
+    expect(findSelectByOptions(view.container, ["1", "2", "3"])).toBeUndefined();
 
     const switches = Array.from(view.container.querySelectorAll("input[type='checkbox']")).slice(1);
     clickElement(switches[0]);

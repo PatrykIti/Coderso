@@ -40,7 +40,7 @@ changes to unrelated dynamic widgets.
 ## Sub-Tasks
 
 - [ ] Design a Content List `pagination` data object with mode, page size,
-  query param key, and optional View all target fields.
+  action labels, and optional View all target fields.
 - [ ] Keep `source.limit` backward compatible; map it to page size unless an
   explicit pagination object overrides it.
 - [ ] Resolve current page from existing runtime search params, clamp it to
@@ -49,7 +49,7 @@ changes to unrelated dynamic widgets.
   total/page metadata.
 - [ ] Update listing-mode runtime to pass bounded pagination overrides through
   existing `parseListingRuntimeOverrides` / `resolveListingRuntimeOverrides`
-  rather than inventing a second query parser.
+  rather than inventing a second query parser or a widget-configurable page key.
 - [ ] Render previous/next or Load more controls only when the source is
   configured and total/page metadata proves more results exist.
 - [ ] Add View all link behavior from known route/listing targets and reject
@@ -78,7 +78,6 @@ type ContentListPaginationMode = "none" | "paged" | "load-more" | "view-all";
 type ContentListPagination = {
   mode?: ContentListPaginationMode;
   pageSize?: number;
-  pageParam?: string;
   viewAllHref?: string;
   viewAllLabel?: string;
   loadMoreLabel?: string;
@@ -88,15 +87,15 @@ function normalizeContentListPagination(value: unknown): Required<ContentListPag
   return {
     mode: resolveEnum(value.mode, ["none", "paged", "load-more", "view-all"], "none"),
     pageSize: normalizeContentListLimit(value.pageSize ?? source.limit ?? 6),
-    pageParam: normalizeSafeQueryParamName(value.pageParam, "cl_page"),
     viewAllHref: normalizeSafeHref(value.viewAllHref),
     viewAllLabel: normalizeNonEmptyString(value.viewAllLabel, "View all"),
     loadMoreLabel: normalizeNonEmptyString(value.loadMoreLabel, "Load more"),
   };
 }
 
-function resolveContentListPage(params: URLSearchParams, pageParam: string) {
-  const raw = Number(params.get(pageParam) ?? "1");
+function resolveLegacyContentListPage(params: URLSearchParams, blockId?: string) {
+  const key = blockId?.trim() ? `cl.${blockId}.page` : "cl.page";
+  const raw = Number(params.get(key) ?? "1");
   return Number.isFinite(raw) ? Math.max(1, Math.floor(raw)) : 1;
 }
 ```
@@ -104,7 +103,7 @@ function resolveContentListPage(params: URLSearchParams, pageParam: string) {
 Legacy resolver shape:
 
 ```ts
-const page = resolveContentListPage(options.runtimeSearchParams, pagination.pageParam);
+const page = resolveLegacyContentListPage(options.runtimeSearchParams, options.blockId);
 const pageSize = normalizeContentListLimit(pagination.pageSize);
 const offset = (page - 1) * pageSize;
 const sliced = sorted.slice(offset, offset + pageSize);
@@ -122,6 +121,9 @@ Error handling:
 - Page size is clamped to the existing Content List max.
 - Unsafe View all hrefs normalize to undefined and render no link.
 - If total is unknown, render no next/load-more control rather than guessing.
+- Listing mode must keep the fixed shared `lq.<listingQueryId>.__page` token via
+  `parseListingRuntimeOverrides()` / `resolveListingRuntimeOverrides()`. Do not
+  add a second listing page-key contract inside this leaf.
 - Public output must not include raw runtime search params in diagnostics.
 
 ## Security Contract

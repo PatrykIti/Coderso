@@ -409,6 +409,8 @@ function LayoutOptions({
   onVariantChange?: (next: string) => void;
 }) {
   const normalized = normalizePostsFeedData(value);
+  const resolvedVariant = variantOptions.some((item) => item.id === variant) ? variant : "cards";
+  const supportsColumns = resolvedVariant === "cards";
 
   return (
     <EditorSection title="Layout and style" description="Card density and basic style tokens.">
@@ -432,34 +434,43 @@ function LayoutOptions({
       </div>
 
       <div className="grid gap-2 sm:grid-cols-2">
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Columns</p>
-          <Select
-            value={normalized.style?.columns ?? "3"}
-            onValueChange={(next) =>
-              updateValue(value, onChange, (current) => ({
-                ...current,
-                style: {
-                  ...current.style,
-                  columns: columnsOptions.some((item) => item.id === next)
-                    ? (next as (typeof columnsOptions)[number]["id"])
-                    : "3",
-                },
-              }))
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select columns" />
-            </SelectTrigger>
-            <SelectContent>
-              {columnsOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {supportsColumns ? (
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Columns</p>
+            <Select
+              value={normalized.style?.columns ?? "3"}
+              onValueChange={(next) =>
+                updateValue(value, onChange, (current) => ({
+                  ...current,
+                  style: {
+                    ...current.style,
+                    columns: columnsOptions.some((item) => item.id === next)
+                      ? (next as (typeof columnsOptions)[number]["id"])
+                      : "3",
+                  },
+                }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select columns" />
+              </SelectTrigger>
+              <SelectContent>
+                {columnsOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Columns</p>
+            <div className="rounded-md border border-dashed border-border/70 px-3 py-2 text-xs text-muted-foreground">
+              Columns only affect the cards variant.
+            </div>
+          </div>
+        )}
 
         <div className="space-y-2">
           <p className="text-sm font-medium">Gap</p>

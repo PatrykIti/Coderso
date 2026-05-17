@@ -30,8 +30,10 @@ This leaf owns only Content List source/filter editor behavior:
   Visual is day-to-day source/filter editing; Advanced is diagnostic/technical.
 - Searchable/deduplicated content type selection with stable disambiguation for
   duplicate names and hidden technical screen names.
-- Taxonomy/tag suggestions when existing content metadata can provide them.
-- Author selection/search when existing entry author metadata can provide it.
+- Taxonomy/tag suggestions through the existing taxonomy overview read seam when
+  the selected legacy content type exposes tags/categories.
+- Author selection/search through the existing admin-users read seam while
+  keeping manual fallback / diagnostics where author summaries are unavailable.
 - Listing-mode read-only feedback that clears, hides, or explains legacy-only
   filters instead of leaving stale active-looking values.
 
@@ -62,8 +64,12 @@ semantics.
 | File | Required change |
 |---|---|
 | `core/admin/ui/widgets/editors/ContentListEditors.tsx` | Update source labels, picker normalization/search, filter controls, and listing-mode inactive feedback. |
+| `core/admin/services/taxonomyClient.ts` | Reuse `getTaxonomyOverview(typeId)` for legacy taxonomy suggestions if the current response shape is sufficient; change the client only if cache/error handling must expand. |
+| `core/admin/services/adminUsersClient.ts` | Reuse `listAdminUsers()` for author picker/search if the current response shape is sufficient; change the client only if cache/error handling must expand. |
 | `core/widgets/core/contentList.tsx` | Update defaults/normalizer only if editor-owned filter display needs schema-backed state. |
 | `tests/vitest/ui/content-list-editor-wave.test.tsx` | Cover friendly labels, duplicate content type handling, search/filter behavior, listing-mode disabled feedback, taxonomy suggestions, and author picker fallback. |
+| `tests/vitest/admin/taxonomyClient.test.ts` | Update only if the existing taxonomy client contract changes. |
+| `tests/vitest/admin/adminUsersClient.test.ts` | Update only if the existing admin-users client contract changes. |
 | `tests/unit/widgets/contentList.test.tsx` | Update only if schema/defaults/normalizer change. |
 | `_docs/_WIDGETS/CONTENT_LIST.md` | Document source modes, picker behavior, and legacy-vs-listing filter ownership. |
 
@@ -96,6 +102,22 @@ function normalizeContentTypeOptions(types: ContentTypeSummary[]): ContentListSo
     .sort(compareContentTypeOptions);
 }
 
+async function loadLegacyFilterSuggestions(contentTypeId: string) {
+  const [taxonomyOverview, users] = await Promise.all([
+    contentTypeId ? getTaxonomyOverview(contentTypeId) : null,
+    listAdminUsers(),
+  ]);
+
+  return {
+    tagSuggestions: taxonomyOverview?.terms.tags.map((term) => term.name) ?? [],
+    authorOptions: users.map((user) => ({
+      id: user.id,
+      label: user.name?.trim() || user.email,
+      description: user.email,
+    })),
+  };
+}
+
 function renderLegacyFilterControl(sourceMode: ContentListSourceMode, control: ReactNode) {
   if (sourceMode === "listing") {
     return <InactiveControlNote reason="Listing queries own filters and sorting." />;
@@ -112,6 +134,9 @@ Error handling:
   suffix in the option label but keep persisted data as the source ID only.
 - If taxonomy/author suggestions are unavailable, keep manual text entry with
   clearer copy rather than blocking editors.
+- Existing read clients should be reused first. Only widen admin read endpoints
+  if `getTaxonomyOverview()` or `listAdminUsers()` cannot supply the needed
+  labels/search text.
 - Switching source modes must clear only source-specific incompatible IDs; it
   must not wipe shared presentation/empty/style fields.
 
@@ -121,6 +146,8 @@ No API routes are added by default.
 
 - Endpoint visibility/auth/RBAC/CSRF/rate limit: unchanged unless existing
   internal admin read endpoints are extended with non-secret option metadata.
+- Existing internal read seams expected by this leaf are `GET /content-types/:id/terms`
+  via `getTaxonomyOverview()` and `GET /admin-users` via `listAdminUsers()`.
 - Reject-unknown validation: widget JSON still stores source/filter IDs and
   strings through the Content List schema, not resolved labels.
 - Anti-abuse: search/filter UI is client-side over already-authorized admin
@@ -132,6 +159,10 @@ No API routes are added by default.
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/ui/content-list-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/admin/taxonomyClient.test.ts` when the
+  taxonomy client contract changes
+- `bun run test:vitest -- tests/vitest/admin/adminUsersClient.test.ts` when the
+  admin-users client contract changes
 - `bun test tests/unit/widgets/contentList.test.tsx` if schema/defaults change
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
