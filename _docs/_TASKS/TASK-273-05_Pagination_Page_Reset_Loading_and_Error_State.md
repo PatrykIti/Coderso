@@ -47,13 +47,16 @@ header.
 | File | Required change |
 |---|---|
 | `core/widgets/core/listingFilters.tsx` | Extend `resolved` schema/data with current page, page size, total items, total pages, pagination render contract, and loading/error containers or markers. |
+| `core/services/search/filterEngine.ts` | Preserve the existing `__page` token owner for parsing, clamping, and offset application; extend only through shared helpers when needed. |
 | `core/services/search/listingRuntimeService.ts` | Preserve runtime result `total`/pagination metadata, clamp page/page-size inputs, and return metadata needed by the widget. |
 | `core/server/publicSite.tsx` | Pass pagination metadata from the listing runtime service into `ListingFiltersData.resolved` during public runtime rendering. |
 | `core/widgets/core/listingRuntimeScript.ts` | Add page-reset rules, pagination binding, busy state, stale-response guard, and inline error rendering; scope Listing Filters-only behavior to local markers or prove Search Box no-regression. |
 | `core/services/search/filterContract.ts` | Reuse `listingRuntimeTokens.page`; add helpers only if needed for consistent page token names. |
 | `tests/vitest/widgets/listingFilters.test.tsx` | Cover pagination markup and runtime markers. |
 | `tests/vitest/widgets/listingRuntimeScript.test.ts` | Cover page reset, pagination clicks, busy/error state, stale response guard, unrelated-param preservation, and Search Box listing-mode no-regression cases. |
-| `tests/vitest/ui/listing-filters-query-parser.test.ts` | Cover page-token parsing, clamping, and reset behavior in the pure query parser lane. |
+| `tests/vitest/search/filterEngine.test.ts` | Cover `__page` parsing, clamping, offset application, and non-page filter reset semantics in the filter engine lane. |
+| `tests/vitest/search/listingRuntimeService.test.ts` | Cover pagination metadata returned with runtime totals and page/page-size inputs. |
+| `tests/vitest/ui/listing-filters-query-parser.test.ts` | Touch only if admin query-string extraction changes; it is not the runtime page-token owner. |
 | `_docs/_WIDGETS/LISTING_FILTERS.md` | Document pagination and refresh behavior. |
 | `_docs/PLAYWRIGHT/REPORT_LISTING_FILTERS_WIDGET.md` | Mark B-02, B-08, B-09, B-11, and T-09 fixed or record deferral evidence. |
 
@@ -110,6 +113,8 @@ async function runListingRefresh(queryId, targetUrl, pushHistory) {
 Data flow:
 
 - Pagination writes only `lq.<queryId>.__page`.
+- `filterEngine.ts` remains the runtime owner for reading `__page`, clamping
+  invalid values, and applying the page-derived offset to the listing query.
 - Public SSR passes `currentPage`, `pageSize`, `totalItems`, and `totalPages`
   from `listingRuntimeService` through `publicSite` into
   `ListingFiltersData.resolved.pagination`.
@@ -144,7 +149,10 @@ No API routes are added.
 
 - `bun run test:vitest -- tests/vitest/widgets/listingFilters.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/listingRuntimeScript.test.ts`
+- `bun run test:vitest -- tests/vitest/search/filterEngine.test.ts`
+- `bun run test:vitest -- tests/vitest/search/listingRuntimeService.test.ts`
 - `bun run test:vitest -- tests/vitest/ui/listing-filters-query-parser.test.ts`
+  only when admin query-string extraction changes.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 

@@ -41,9 +41,9 @@ unbounded arbitrary widgets inside facets.
 | `core/widgets/core/listingFilters.tsx` | Extend schema/defaults/types for bounded control presentation settings and render range/date/taxonomy/searchable option controls. |
 | `core/services/search/filterContract.ts` | Extend facet config types only when the new control metadata belongs in the query token contract. Preserve existing token names. |
 | `core/admin/ui/widgets/editors/ListingFiltersEditors.tsx` | Add editor controls for numeric/date ranges, taxonomy hierarchy, and searchable option mode. |
-| `core/widgets/core/listingRuntimeScript.ts` | Read multi-value/select/range/date controls through existing token sync without breaking current checkbox/radio/sort or Search Box listing-mode behavior. |
+| `core/widgets/core/listingRuntimeScript.ts` | Bind Listing Filters-scoped option-search filtering and read multi-value/select/range/date controls through existing token sync without breaking current checkbox/radio/sort or Search Box listing-mode behavior. |
 | `tests/vitest/widgets/listingFilters.test.tsx` | Cover rendered range/date/taxonomy/searchable controls and legacy payload fallbacks. |
-| `tests/vitest/widgets/listingRuntimeScript.test.ts` | Cover range/date/searchable multi-select serialization and Search Box listing-mode no-regression cases when shared script behavior changes. |
+| `tests/vitest/widgets/listingRuntimeScript.test.ts` | Cover local option-search filtering, range/date/searchable multi-select serialization, and Search Box listing-mode no-regression cases when shared script behavior changes. |
 | `tests/vitest/ui/listing-filters-editor-wave.test.tsx` | Cover editor controls and validation for new control metadata. |
 | `tests/unit/widgets/validator.test.ts` | Cover schema validation when new persisted fields are added. |
 | `_docs/_WIDGETS/LISTING_FILTERS.md` | Document the new control modes and bounds. |
@@ -83,30 +83,48 @@ function ListingRangeFacetControl({ metric, config }: Props) {
 }
 
 function ListingSearchableOptionControl({ metric }: Props) {
-  const [query, setQuery] = useState("");
-  const visibleOptions = filterBoundedOptions(metric.options, query, { limit: 50 });
+  const visibleOptions = metric.options.slice(0, 50);
   return (
     <div data-listing-searchable-options>
       <input
         type="search"
         data-listing-option-search
-        value={query}
-        onChange={(event) => setQuery(event.currentTarget.value)}
+        aria-controls={metric.token + "-options"}
       />
-      {visibleOptions.map((option) => (
-        <label key={option.value}>
-          <input
-            type="checkbox"
-            name={metric.token}
-            value={option.value}
-            defaultChecked={option.active}
-            data-listing-token={metric.token}
-          />
-          {option.label}
-        </label>
-      ))}
+      <div id={metric.token + "-options"}>
+        {visibleOptions.map((option) => (
+          <label
+            key={option.value}
+            data-listing-searchable-option
+            data-listing-option-label={option.label.toLowerCase()}
+          >
+            <input
+              type="checkbox"
+              name={metric.token}
+              value={option.value}
+              defaultChecked={option.active}
+              data-listing-token={metric.token}
+            />
+            {option.label}
+          </label>
+        ))}
+      </div>
     </div>
   );
+}
+
+function bindListingSearchableOptions(root: ParentNode) {
+  root.querySelectorAll("[data-listing-searchable-options]").forEach((control) => {
+    const input = control.querySelector<HTMLInputElement>("[data-listing-option-search]");
+    const options = Array.from(control.querySelectorAll<HTMLElement>("[data-listing-searchable-option]"));
+    input?.addEventListener("input", () => {
+      const query = input.value.trim().toLowerCase();
+      options.forEach((option) => {
+        const label = option.dataset.listingOptionLabel ?? "";
+        option.hidden = query.length > 0 && !label.includes(query);
+      });
+    });
+  });
 }
 ```
 
@@ -114,6 +132,10 @@ Data flow:
 
 - Persisted control metadata lives alongside each facet only when it changes
   rendering behavior.
+- Public runtime markup stays SSR-safe/static. Browser filtering for
+  searchable options is bound by `listingRuntimeScript.ts` through
+  Listing Filters-specific `data-listing-searchable-*` markers, not React
+  hydration state.
 - Runtime tokens remain `lq.<queryId>.<field>.<operator>` and use the current
   URL sync path.
 - Range/date controls serialize the same comma-separated pair currently used by
@@ -148,8 +170,9 @@ No public write or provider endpoint is added.
 - `bun run test:vitest -- tests/vitest/widgets/listingFilters.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/listing-filters-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/listingRuntimeScript.test.ts`
-  when range/date/searchable multi-select serialization changes; include Search
-  Box listing-mode no-regression cases because the script is shared.
+  when option-search filtering or range/date/searchable multi-select
+  serialization changes; include Search Box listing-mode no-regression cases
+  because the script is shared.
 - `bun test tests/unit/widgets/validator.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
@@ -169,4 +192,6 @@ No public write or provider endpoint is added.
   the current option-value token contract.
 - Large option sets have a bounded searchable multi-select control that remains
   schema-owned.
+- Searchable controls filter visible options on public runtime pages without
+  requiring hydrated React state.
 - Existing checkbox/radio/sort payloads render unchanged.
