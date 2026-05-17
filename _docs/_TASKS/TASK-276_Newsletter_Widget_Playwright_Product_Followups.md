@@ -88,13 +88,14 @@ Newsletter-specific wiring.
 | Report finding | TASK-276 route | Notes |
 |---|---|---|
 | BUG-01, BF-01, A1, A3, A6 | TASK-276-01 | Email field `name`, stable ID/label, autocomplete, validator coverage. |
-| BUG-02, A2, UX-05 | TASK-276-01 | Consent checkbox inside the form with required behavior and editor help text. |
+| BUG-02, A2 | TASK-276-01 | Consent checkbox inside the form with required behavior and submitted field semantics. |
 | Form current-URL submit drift | TASK-276-01, TASK-276-02 | Safe no-action behavior and active integration behavior must be explicit. |
 | BUG-03, A4, BF-11, BF-12 | TASK-276-02 | Runtime-visible loading/success/error states and status-region behavior. |
 | BF-07, BF-08, BF-14 | TASK-276-02 | Redirect, anti-abuse, and analytics/tracking integration through safe owners. |
 | UX-03, UX-04, BF-10, BF-13 | TASK-276-03 | Integration mode/method/URL validation and Advanced diagnostics. |
-| BUG-04, UX-02, UX-06, UX-07 | TASK-276-04 | Newsletter-specific editor mode clarity and preview guidance. |
-| BF-04, BF-05, BF-09 | TASK-276-05 | Field name/custom-field expansion and double opt-in configuration. |
+| BUG-04, UX-02, UX-05, UX-06, UX-07 | TASK-276-04 | Newsletter-specific editor mode clarity, consent help, and preview guidance. |
+| BF-04 | TASK-276-01 | Base configurable email field `name` belongs to the core form semantics leaf. |
+| BF-05, BF-09 | TASK-276-05 | Custom-field expansion and double opt-in configuration after the base form contract is stable. |
 | UX-01, BUG-05, BF-02, BF-03, BF-06, BF-15, A5 | TASK-276-06 | Style/layout/breakpoint/contrast controls and explicit spacing resolver. |
 | Final fixed/deferred evidence, report refresh, docs/changelog/board closure | TASK-276-07 | Final source-report and docs closure. |
 

@@ -72,10 +72,10 @@ This leaf does not own:
 | File | Required change |
 |---|---|
 | `core/widgets/core/newsletter.tsx` | Extend schema/defaults/normalizer; render email/consent labels, names, autocomplete, and safe no-target behavior. |
-| `core/admin/ui/widgets/editors/NewsletterEditors.tsx` | Add form field metadata controls and consent-required help text without adding provider secrets. |
+| `core/admin/ui/widgets/editors/NewsletterEditors.tsx` | Add form field metadata controls without adding provider secrets; consent-help UX copy is owned by TASK-276-04. |
 | `tests/vitest/widgets/newsletter.test.tsx` | Cover email `name`, ID/label, autocomplete, consent inside form, consent `required`, and no-target behavior. |
 | `tests/vitest/widgets/renderer.test.tsx` | Cover renderer integration markers and submitted field names when rendered through `WidgetRenderer`. |
-| `tests/vitest/ui/newsletter-editor-wave.test.tsx` | Cover field metadata controls and consent-required explanatory copy. |
+| `tests/vitest/ui/newsletter-editor-wave.test.tsx` | Cover field metadata controls; consent-required explanatory copy is covered by TASK-276-04. |
 | `tests/unit/widgets/validator.test.ts` | Update when schema/defaults are extended. |
 | `_docs/_WIDGETS/NEWSLETTER.md` | Document final field-name/label/consent semantics. |
 
@@ -188,7 +188,7 @@ This leaf does not add a new API route, but it affects public form payloads.
 
 - `_docs/_WIDGETS/NEWSLETTER.md`
 - `_docs/PLAYWRIGHT/REPORT_NEWSLETTER_WIDGET.md` rows BUG-01, BUG-02, BF-01,
-  A1, A2, A3, and A6 after validation.
+  BF-04, A1, A2, A3, and A6 after validation.
 - `_docs/_TASKS/README.md` on status changes.
 
 ## Changelog Policy

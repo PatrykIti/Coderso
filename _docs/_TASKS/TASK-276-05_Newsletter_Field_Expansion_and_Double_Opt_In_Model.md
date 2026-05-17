@@ -158,8 +158,9 @@ Coderso.
 ## Documentation Updates Required
 
 - `_docs/_WIDGETS/NEWSLETTER.md`
-- `_docs/PLAYWRIGHT/REPORT_NEWSLETTER_WIDGET.md` rows BF-04, BF-05, and BF-09
-  after validation.
+- `_docs/PLAYWRIGHT/REPORT_NEWSLETTER_WIDGET.md` rows BF-05 and BF-09 after
+  validation. BF-04 is owned by TASK-276-01 because it is the base email field
+  name contract.
 
 ## Changelog Policy
 

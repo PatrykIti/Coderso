@@ -77,14 +77,14 @@ This leaf does not own:
 | File | Required change |
 |---|---|
 | `core/widgets/core/newsletter.tsx` | Add submit state copy, hidden status nodes, busy markers, optional runtime data, and anti-abuse data attributes. |
-| `core/admin/ui/widgets/editors/NewsletterEditors.tsx` | Add state-copy, preview-success, redirect, analytics, and anti-abuse diagnostics controls. |
+| `core/admin/ui/widgets/editors/NewsletterEditors.tsx` | Add state-copy, redirect, analytics, and anti-abuse diagnostics controls; the success-preview UI affordance is owned by TASK-276-04 after this leaf defines the state model. |
 | `core/server/publicSite.tsx` | Hydrate Forms runtime data only if Newsletter binds to an existing Forms record. |
 | `core/widgets/core/formRuntimeScript.ts` | Reuse only with existing `data-form-embed-*` marker names, or generalize to shared markers plus Newsletter aliases with tests in the same patch. |
 | `core/services/forms/formRuntimeResolver.ts` | Reuse as-is when possible; add focused adapter coverage only if Newsletter hydration needs it. |
 | `core/server/routes/formsRoutes.ts` | Change only when Newsletter reuses/extends Forms public submission behavior. |
 | `core/server/routes/newsletterRoutes.ts` or equivalent future owner | Add only if a dedicated Newsletter public submit route is approved; include route registration and centralized error mapping. |
 | `tests/vitest/widgets/newsletter.test.tsx` | Cover hidden status nodes, `aria-live`, busy markers, state copy, honeypot markers, and redirect metadata. |
-| `tests/vitest/ui/newsletter-editor-wave.test.tsx` | Cover state-copy, preview-success, redirect, analytics, and diagnostics controls. |
+| `tests/vitest/ui/newsletter-editor-wave.test.tsx` | Cover state-copy, redirect, analytics, and diagnostics controls; success-preview UI coverage belongs to TASK-276-04. |
 | `tests/vitest/widgets/renderer.test.tsx` | Cover public renderer output through `WidgetRenderer`. |
 | `tests/vitest/forms/formRuntimeResolver.test.ts` | Add coverage only if runtime resolver/adapters change. |
 | `tests/integration/routes/forms.test.ts` | Run/update when Forms public submission behavior changes. |
@@ -142,10 +142,10 @@ const canUseFormsRuntime =
   <button type="submit" data-form-submit="1" aria-busy="false">
     {submit.label}
   </button>
-  <p hidden data-form-embed-success="true" data-newsletter-success="true" role="status" aria-live="polite">
+  <p className="hidden" data-form-embed-success="true" data-newsletter-success="true" role="status" aria-live="polite">
     {stateCopy.successMessage}
   </p>
-  <p hidden data-form-embed-error="true" data-newsletter-error="true" role="status" aria-live="polite">
+  <p className="hidden" data-form-embed-error="true" data-newsletter-error="true" role="status" aria-live="polite">
     {stateCopy.errorMessage}
   </p>
 </form>
@@ -163,6 +163,9 @@ Error handling:
 - If Newsletter-specific success/error markers are used, update
   `formRuntimeScript.ts` selectors and tests in the same patch so those nodes
   are not inert.
+- When reusing the current Forms runtime script, status nodes must use the
+  existing CSS-class visibility contract (`className="hidden"`), not the HTML
+  `hidden` attribute, unless the script is changed to toggle that attribute.
 - Analytics event names are allowlisted and emitted only after success; raw JS
   snippets and unbounded attributes are rejected.
 

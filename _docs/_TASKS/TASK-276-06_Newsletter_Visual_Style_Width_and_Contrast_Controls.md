@@ -156,6 +156,9 @@ No API routes are added.
   render/normalizer coverage proving arbitrary CSS strings and free-form unsafe
   colors do not render.
 - `bun run test:vitest -- tests/vitest/ui/newsletter-editor-wave.test.tsx`
+  with updates to any existing expectations that currently persist free-form
+  background values such as `background: "paper"` without routing them through
+  the approved token/color normalizer.
 - `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx`
 - `bun test tests/unit/widgets/validator.test.ts`
 - `bun --cwd core lint`

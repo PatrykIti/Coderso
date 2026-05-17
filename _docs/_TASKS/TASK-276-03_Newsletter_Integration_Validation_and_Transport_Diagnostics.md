@@ -97,7 +97,9 @@ function normalizeNewsletterActionUrl(value: unknown) {
   }
   try {
     const url = new URL(text);
-    if (url.protocol === "https:") return { value: url.toString(), status: "valid" as const };
+    if (url.protocol === "https:" && !isPrivateOrCredentialedUrl(url)) {
+      return { value: url.toString(), status: "valid" as const };
+    }
   } catch {
     return { value: "", status: "invalid" as const };
   }
@@ -106,6 +108,23 @@ function normalizeNewsletterActionUrl(value: unknown) {
 
 function isCodersoOwnedNewsletterSubmitPath(path: string) {
   return /^\/forms\/[a-zA-Z0-9_-]+\/submissions$/.test(path);
+}
+
+function isPrivateOrCredentialedUrl(url: URL) {
+  if (url.username || url.password) return true;
+  const host = url.hostname.toLowerCase();
+  return (
+    host === "localhost" ||
+    host === "::1" ||
+    host === "[::1]" ||
+    host.endsWith(".local") ||
+    /^127\./.test(host) ||
+    /^10\./.test(host) ||
+    /^169\.254\./.test(host) ||
+    /^192\.168\./.test(host) ||
+    /^172\.(1[6-9]|2\d|3[0-1])\./.test(host) ||
+    /^\[?(fc|fd|fe80:)/.test(host)
+  );
 }
 
 function resolveNewsletterTransport(integration: NewsletterIntegration) {
@@ -126,9 +145,10 @@ Error handling:
 - Invalid action URLs render no `action` attribute and set
   `data-newsletter-action-status="invalid"`.
 - Bare domains remain invalid until the user adds `https://`.
-- `http:`, protocol-relative `//`, `/admin/*`, and unknown relative paths are
-  invalid. Only HTTPS external targets and approved Coderso-owned public submit
-  paths are valid.
+- `http:`, protocol-relative `//`, `/admin/*`, unknown relative paths,
+  credentialed URLs, localhost, `.local`, loopback, and private-network hosts
+  are invalid. Only HTTPS external targets and approved Coderso-owned public
+  submit paths are valid.
 - Webhook mode ignores action URL at runtime but keeps the stored value for
   backward-compatible editing.
 - If method is `get`, hidden fields and consent names must still be safe and no
@@ -156,7 +176,10 @@ This leaf does not add API routes.
 - `bun run test:vitest -- tests/vitest/widgets/newsletter.test.tsx` with
   cases for `//evil.example`, `http://example.com`, `example.com`,
   `/admin/forms`, valid `https://example.com/subscribe`, and valid
-  `/forms/:id/submissions`.
+  `/forms/:id/submissions`, plus invalid `https://user:pass@example.com`,
+  `https://localhost/subscribe`, `https://127.0.0.1/subscribe`,
+  `https://10.0.0.1/subscribe`, `https://169.254.1.1/subscribe`,
+  `https://[::1]/subscribe`, and `https://service.local/subscribe`.
 - `bun run test:vitest -- tests/vitest/ui/newsletter-editor-wave.test.tsx`
 - `bun test tests/unit/widgets/validator.test.ts`
 - `bun --cwd core lint`
