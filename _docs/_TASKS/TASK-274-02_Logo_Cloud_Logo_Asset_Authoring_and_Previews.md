@@ -126,6 +126,11 @@ function useLogoMediaSelection({
     updateLogo(latestValueRef.current, onChange, index, patch);
   }
 
+  function clearLogoImage(index: number, logo: LogoCloudLogo) {
+    invalidateLogoMediaRequest(index, logo);
+    commitLogoPatch(index, { image: "", imageAssetId: undefined });
+  }
+
   async function handleLogoAssetChange(
     index: number,
     logo: LogoCloudLogo,
@@ -134,7 +139,7 @@ function useLogoMediaSelection({
     const requestKey = resolveRequestKey(index, logo);
     const requestId = (requestIdsByLogoRef.current[requestKey] ?? 0) + 1;
     requestIdsByLogoRef.current[requestKey] = requestId;
-    if (!assetId) return commitLogoPatch(index, { image: "", imageAssetId: undefined });
+    if (!assetId) return invalidateLogoMediaRequest(index, logo);
     const next = await resolveLogoMediaAsset(assetId);
     if (requestIdsByLogoRef.current[requestKey] !== requestId) return;
     const latestIndex = findLogoIndexByRequestKey(requestKey);
@@ -153,6 +158,7 @@ function useLogoMediaSelection({
     handleLogoAssetChange,
     invalidateLogoMediaRequest,
     invalidateAllLogoMediaRequests,
+    clearLogoImage,
     commitLogoPatch,
   };
 }
@@ -186,7 +192,7 @@ function LogoCloudVisualEditor({ value, onChange }: LogoCloudVisualEditorProps) 
 }
 
 function LogoImageControl({ logo, index, mediaSelection }: LogoImageControlProps) {
-  const { handleLogoAssetChange, invalidateLogoMediaRequest, commitLogoPatch } = mediaSelection;
+  const { handleLogoAssetChange, invalidateLogoMediaRequest, clearLogoImage, commitLogoPatch } = mediaSelection;
 
   return (
     <div>
@@ -214,6 +220,7 @@ function LogoImageControl({ logo, index, mediaSelection }: LogoImageControlProps
         multiple={false}
         accept={["image/*"]}
       />
+      <Button type="button" onClick={() => clearLogoImage(index, logo)}>Clear image</Button>
     </div>
   );
 }
@@ -236,7 +243,9 @@ Editor data flow:
    Adapt `MediaPicker`'s `unknown` `onChange` payload through
    `resolveSingleMediaPickerId` before calling the media resolver.
 5. Manual image URL and link URL entry remain supported for backward
-   compatibility.
+   compatibility. Use an explicit Clear image control for destructive image
+   removal; do not treat malformed or unknown picker payloads as a request to
+   erase an existing manual URL.
 6. Link URL validation UI consumes TASK-256 shared safe-link output when that
    contract exists; do not hand-roll a second link validator in this leaf.
 7. Runtime `img` output uses explicit `logo.alt` when present and falls back to
@@ -251,8 +260,11 @@ Error handling:
 
 - If MediaPicker resolution fails, show an inline error and keep the previous
   logo data unchanged.
-- Unknown or malformed MediaPicker values resolve to `null` and clear only the
-  picker-owned image/asset fields for that row.
+- Unknown or malformed MediaPicker values resolve to `null`, invalidate only the
+  row's pending media request, and keep the previous `image`/`imageAssetId`
+  unchanged. The explicit Clear image control is the only destructive clear
+  path unless a future schema-owned `imageAssetId` contract can prove the image
+  is picker-owned.
 - Guard async media-cache resolution with a per-logo request ID/ref and commit
   resolved patches through a `latestValueRef` helper. After `await`, re-read the
   current logo row/index by stable logo key before applying the image/name patch.
@@ -286,6 +298,9 @@ Regression-test shape:
 - Assert a manual image URL edit invalidates an in-flight media selection for
   that row and clears any stale `imageAssetId` unless schema-owned persistence
   explicitly keeps it.
+- Assert malformed or unknown MediaPicker payloads do not clear an existing
+  manual image URL, while the explicit Clear image control clears `image` and
+  `imageAssetId`.
 - Assert unrelated logo edits made while media resolution is pending are
   preserved when the media selection resolves, proving the commit path uses the
   latest editor value.
