@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 239 tasks
+- **To Do:** 245 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1542 tasks
 
@@ -78,6 +78,12 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-283-06 | Section Responsive Spacing and Mobile Density | Medium | Large | Add mobile/desktop spacing overrides and density presets through bounded Section layout tokens |
 | TASK-283-07 | Section Custom Region Labels and Structure UX | Medium | Large | Add editor-only custom region labels while preserving `region:<id>` slot storage and public placeholder boundaries |
 | TASK-283-08 | Section Report Docs Changelog and Closure | Medium | Medium | Refresh Section report/docs/changelog/board and final validation evidence |
+| TASK-284 | Spacer Widget Playwright Product Followups | High | Very Large | Spacer-only follow-up family for `REPORT_SPACER_WIDGET.md`, excluding TASK-256 shared-contract scope |
+| TASK-284-01 | Spacer Editor Guidance and Input Accessibility | High | Medium | Add fixed-mode guidance, breakpoint copy, custom numeric input help, and explicit height-field accessibility after TASK-256 token work |
+| TASK-284-02 | Spacer Viewport and Fluid Length Units | Medium | Large | Add bounded viewport and fluid length grammar without arbitrary CSS passthrough |
+| TASK-284-03 | Spacer Named Rhythm Presets | Medium | Medium | Add named vertical rhythm presets that map to safe height values without global style-manager scope |
+| TASK-284-04 | Spacer Horizontal Orientation Contract | Low | Large | Decide and implement or explicitly defer horizontal Spacer behavior without flex-filler or page-builder rewrite scope |
+| TASK-284-05 | Spacer Report Docs Changelog and Closure | Medium | Medium | Refresh Spacer report/docs/changelog/board and final validation evidence |
 | TASK-278 | Pricing Plans Widget Playwright Product Followups | High | Very Large | Pricing Plans-only follow-up family for `REPORT_PRICING_PLANS_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-278-01 | Pricing Plans Card Visual Hierarchy and CTA Styles | High | Large | Add plan description, plan-level surface, badge tone, highlighted banner, and CTA style controls after TASK-256 shared safety |
 | TASK-278-02 | Pricing Plans Content Wizard and Destructive Edit UX | High | Large | Expand Wizard content authoring, Advanced reset copy, highlight indicators, disabled billing label UX, remove confirmation/undo, and feature autofocus |
