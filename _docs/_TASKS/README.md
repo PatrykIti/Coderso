@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 143 tasks
+- **To Do:** 152 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1542 tasks
 
@@ -38,6 +38,15 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-278 | Pricing Plans Widget Playwright Product Followups | High | Very Large | Pricing Plans-only follow-up family for `REPORT_PRICING_PLANS_WIDGET.md`, excluding TASK-256 shared-contract scope |
+| TASK-278-01 | Pricing Plans Card Visual Hierarchy and CTA Styles | High | Large | Add plan description, plan-level surface, badge tone, highlighted banner, and CTA style controls after TASK-256 shared safety |
+| TASK-278-02 | Pricing Plans Content Wizard and Destructive Edit UX | High | Large | Expand Wizard content authoring, Advanced reset copy, highlight indicators, disabled billing label UX, remove confirmation/undo, and feature autofocus |
+| TASK-278-03 | Pricing Plans Billing Value Copy and Price Semantics | High | Large | Add explicit savings copy, free/custom display, and structured price semantics after TASK-256 billing interactivity |
+| TASK-278-04 | Pricing Plans Feature Marker and Feature Metadata | Medium | Large | Replace placeholder icon marker with bounded feature metadata and safe icon/status presets |
+| TASK-278-05 | Pricing Plans Comparison Rows Product Table | High | Large | Add comparison header hierarchy, optional header CTA/badges, and sticky header behavior after TASK-256 table ARIA |
+| TASK-278-06 | Pricing Plans Section Layout Typography and Notes | Medium | Large | Add bounded max-width, typography presets, and plain-text pricing notes |
+| TASK-278-07 | Pricing Plans Two-Plan Variant and Pack Docs | Medium | Medium | Add a dedicated two-plan variant with registry/editor/runtime/tests/docs coverage after TASK-256 count sync |
+| TASK-278-08 | Pricing Plans Report, Docs, Changelog, and Closure | Medium | Medium | Refresh Pricing Plans report/docs/changelog/board and final validation evidence |
 | TASK-272 | Hero Widget Playwright Product Followups | High | Very Large | Hero-only follow-up family for `REPORT_HERO_WIDGET.md`, excluding TASK-256 shared-contract and page-shell scope |
 | TASK-272-01 | Hero Centered Media Control and CTA Placeholder Polish | High | Medium | Hide centered-only irrelevant inline media frame controls and align Hero CTA URL placeholder copy |
 | TASK-272-02 | Hero Video Poster and Media Metadata | High | Large | Add Hero video poster, title/description, and video-specific editor/runtime semantics |
