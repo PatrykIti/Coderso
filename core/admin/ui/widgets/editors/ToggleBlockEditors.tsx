@@ -207,9 +207,17 @@ function LabelsSection({
         </div>
       </div>
       <div className="space-y-2">
-        <p className="text-sm font-medium">Helper text</p>
+        <ClearableFieldHeader
+          label="Helper text"
+          value={normalized.labels?.helper}
+          onClear={() =>
+            updateLabels(value, onChange, {
+              helper: "",
+            })
+          }
+        />
         <Input
-          value={normalized.labels?.helper ?? toggleBlockDefaults.labels?.helper ?? ""}
+          value={normalized.labels?.helper ?? ""}
           onChange={(event) =>
             updateLabels(value, onChange, {
               helper: event.target.value,
@@ -277,7 +285,11 @@ function BehaviorSection({
           />
         </div>
         <div className="space-y-2">
-          <p className="text-sm font-medium">Border color</p>
+          <ClearableFieldHeader
+            label="Border color"
+            value={normalized.style?.borderColor}
+            onClear={() => clearStyleField(value, onChange, "borderColor")}
+          />
           <Input
             value={normalized.style?.borderColor ?? toggleBlockDefaults.style?.borderColor ?? ""}
             onChange={(event) =>
@@ -289,7 +301,11 @@ function BehaviorSection({
           />
         </div>
         <div className="space-y-2">
-          <p className="text-sm font-medium">Accent color</p>
+          <ClearableFieldHeader
+            label="Accent color"
+            value={normalized.style?.accentColor}
+            onClear={() => clearStyleField(value, onChange, "accentColor")}
+          />
           <Input
             value={normalized.style?.accentColor ?? toggleBlockDefaults.style?.accentColor ?? ""}
             onChange={(event) =>

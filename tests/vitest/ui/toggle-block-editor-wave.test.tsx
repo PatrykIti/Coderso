@@ -319,7 +319,7 @@ test("ToggleBlock wizard editor covers variant fallback and label normalization"
       labels: {
         primary: "Overview",
         secondary: "View B",
-        helper: "Switch between two content views.",
+        helper: "",
       },
       options: {
         defaultState: "primary",
@@ -375,14 +375,20 @@ test("ToggleBlock visual editor covers behavior controls and style token normali
     const surfaceInput = findInputByPlaceholder(behaviorSection, "var(--color-surface)");
     const borderInput = findInputByPlaceholder(behaviorSection, "var(--color-border)");
     const accentInput = findInputByPlaceholder(behaviorSection, "var(--color-text)");
+    const clearButtons = Array.from(behaviorSection.querySelectorAll("button")).filter(
+      (button) => button.textContent === "Clear"
+    );
 
     expect(stateSelect.value).toBe("secondary");
     expect(view.container.textContent).not.toContain("Diagnostics");
+    expect(clearButtons).toHaveLength(3);
 
     setSelectValue(stateSelect, "primary");
     setInputValue(surfaceInput, " #fafafa ");
     setInputValue(borderInput, "   ");
     setInputValue(accentInput, " #ff5500 ");
+    clickButton(clearButtons[1]);
+    clickButton(clearButtons[2]);
 
     expect(view.getValue()).toEqual({
       labels: {
@@ -396,7 +402,7 @@ test("ToggleBlock visual editor covers behavior controls and style token normali
       style: {
         surfaceColor: "#fafafa",
         borderColor: "var(--color-border)",
-        accentColor: "#ff5500",
+        accentColor: "var(--color-text)",
       },
     });
     expect(view.onChangeSpy).toHaveBeenCalled();
@@ -440,7 +446,7 @@ test("ToggleBlock advanced editor renders diagnostics from normalized data and t
       labels: {
         primary: "Overview",
         secondary: "View B",
-        helper: "Switch between two content views.",
+        helper: "",
       },
       options: {
         defaultState: "secondary",

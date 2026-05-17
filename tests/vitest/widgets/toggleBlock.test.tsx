@@ -53,6 +53,18 @@ test("toggle block normalization applies defaults", () => {
   expect(normalized.labels?.secondary).toBe("Details");
 });
 
+test("toggle block preserves an intentional empty helper state", () => {
+  const normalized = normalizeToggleBlockData({
+    labels: {
+      helper: "",
+    },
+  });
+  const html = renderToString(<ToggleBlock data={normalized} variant="switch" />);
+
+  expect(normalized.labels?.helper).toBe("");
+  expect(html).not.toContain("Switch between two content views.");
+});
+
 test("toggle block validator accepts schema", () => {
   clearWidgets();
   const widget = createToggleBlockWidget({

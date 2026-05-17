@@ -98,6 +98,10 @@ const resolveVariant = (variant: string): ToggleBlockVariantId => {
 
 export function normalizeToggleBlockData(data: ToggleBlockData): ToggleBlockData {
   const hasStyleObject = data.style !== undefined;
+  const hasExplicitHelper =
+    typeof data.labels === "object" &&
+    data.labels !== null &&
+    Object.prototype.hasOwnProperty.call(data.labels, "helper");
 
   return {
     labels: {
@@ -107,8 +111,9 @@ export function normalizeToggleBlockData(data: ToggleBlockData): ToggleBlockData
         toTrimmedString(data.labels?.secondary) ??
         toggleBlockDefaults.labels?.secondary ??
         "View B",
-      helper:
-        toTrimmedString(data.labels?.helper) ?? toggleBlockDefaults.labels?.helper ?? undefined,
+      helper: hasExplicitHelper
+        ? (toTrimmedString(data.labels?.helper) ?? "")
+        : (toggleBlockDefaults.labels?.helper ?? undefined),
     },
     options: {
       defaultState: data.options?.defaultState === "secondary" ? "secondary" : "primary",
