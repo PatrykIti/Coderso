@@ -418,6 +418,7 @@ test("Testimonials editors cover variant changes, content edits, ordering, color
     ])[0];
     setSelectValue(variantSelect, "spotlight");
     expect(currentVariant).toBe("spotlight");
+    expect(latestValue.testimonials).toHaveLength(2);
 
     const countSelect = findSelectsByOptions(view.container, [
       "2",
@@ -461,9 +462,20 @@ test("Testimonials editors cover variant changes, content edits, ordering, color
     setInputValue(findInputsByPlaceholder(view.container, "var(--color-border)")[0], "#222222");
     setInputValue(findInputsByPlaceholder(view.container, "var(--color-text)")[0], "#f3f4f6");
     setInputValue(findInputsByPlaceholder(view.container, "var(--color-primary)")[0], "#2563eb");
+    const emphasisSection = findSectionByTitle(view.container, "Colors and emphasis");
+    const clearButtons = Array.from(emphasisSection?.querySelectorAll("button") ?? []).filter(
+      (button) => button.textContent === "Clear"
+    );
 
     const spacingSelect = findSelectsByOptions(view.container, ["none", "sm", "md", "lg"])[0];
     setSelectValue(spacingSelect, "lg");
+    expect(clearButtons).toHaveLength(4);
+    clickButton(clearButtons[2]);
+    clickButton(clearButtons[3]);
+    expect(latestValue.style?.textColor).toBe("var(--color-text)");
+    expect(latestValue.style?.accentColor).toBe("var(--color-primary)");
+    setInputValue(findInputsByPlaceholder(view.container, "var(--color-text)")[0], "#f3f4f6");
+    setInputValue(findInputsByPlaceholder(view.container, "var(--color-primary)")[0], "#2563eb");
 
     clickButton(findButtonsByText(view.container, "Normalize list to variant baseline")[0]);
     clickButton(findButtonsByText(view.container, "Normalize full payload")[0]);

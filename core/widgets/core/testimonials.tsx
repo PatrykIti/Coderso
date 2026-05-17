@@ -316,6 +316,7 @@ function Avatar({
       <img
         src={src}
         alt={author}
+        loading="lazy"
         className="h-10 w-10 rounded-full border border-[var(--color-border)] object-cover"
       />
     );
@@ -357,7 +358,10 @@ export function TestimonialsBlock({ data, variant }: { data: TestimonialsData; v
 
   const listClassName =
     resolvedVariant === "slider-static"
-      ? joinClasses("flex overflow-x-auto pb-2", spacingClassMap[resolvedSpacing])
+      ? joinClasses(
+          "flex overflow-x-auto snap-x snap-mandatory pb-2",
+          spacingClassMap[resolvedSpacing]
+        )
       : resolvedVariant === "spotlight"
         ? joinClasses("grid grid-cols-1 lg:grid-cols-2", spacingClassMap[resolvedSpacing])
         : joinClasses(
@@ -367,6 +371,7 @@ export function TestimonialsBlock({ data, variant }: { data: TestimonialsData; v
 
   return (
     <section
+      aria-label={(normalizedData.header?.title ?? "").trim() || "Testimonials"}
       className="mx-auto w-full max-w-6xl px-4 py-8"
       data-testimonials-variant={resolvedVariant}
       data-testimonials-spacing={resolvedSpacing}
@@ -380,9 +385,9 @@ export function TestimonialsBlock({ data, variant }: { data: TestimonialsData; v
             </p>
           ) : null}
           {(normalizedData.header?.title ?? "").trim().length > 0 ? (
-            <h3 className="text-2xl font-semibold text-[var(--color-text)]">
+            <h2 className="text-2xl font-semibold text-[var(--color-text)]">
               {normalizedData.header?.title}
-            </h3>
+            </h2>
           ) : null}
           {(normalizedData.header?.description ?? "").trim().length > 0 ? (
             <p className="text-sm text-[var(--color-text)]/75">
@@ -402,6 +407,7 @@ export function TestimonialsBlock({ data, variant }: { data: TestimonialsData; v
 
           return (
             <article
+              aria-label={`Testimonial ${index + 1}: ${author}`}
               key={item.id ?? `testimonial-${index + 1}`}
               className={joinClasses(
                 "flex h-full flex-col gap-4 rounded-xl border p-5",

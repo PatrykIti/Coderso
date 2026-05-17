@@ -29,6 +29,7 @@ test("testimonials renders defaults", () => {
   expect(html).toContain(testimonialsDefaults.header?.title ?? "");
   expect(html).toContain('data-testimonials-variant="grid"');
   expect(html).toContain('data-testimonials-count="3"');
+  expect(html).toContain('aria-label="Trusted by teams that ship fast"');
 });
 
 test("testimonials normalization keeps deterministic ids and clamps ratings", () => {
@@ -120,6 +121,43 @@ test("testimonials cleared card surfaces omit background and border color styles
   expect(html).toContain('data-testimonials-variant="grid"');
   expect(html).not.toContain("background-color:");
   expect(html).not.toContain("border-color:");
+});
+
+test("testimonials slider-static adds scroll snap and lazy avatars", () => {
+  const html = renderToString(
+    <TestimonialsBlock
+      data={{
+        ...testimonialsDefaults,
+        testimonials: [
+          {
+            id: "t-1",
+            quote: "Excellent experience.",
+            author: "Alice",
+            avatar: "https://cdn.example.com/a.jpg",
+            rating: 5,
+          },
+          {
+            id: "t-2",
+            quote: "Great speed.",
+            author: "Bob",
+            rating: 4,
+          },
+          {
+            id: "t-3",
+            quote: "Clear workflow.",
+            author: "Cara",
+            rating: 5,
+          },
+        ],
+      }}
+      variant="slider-static"
+    />
+  );
+
+  expect(html).toContain("snap-x");
+  expect(html).toContain("snap-mandatory");
+  expect(html).toContain('loading="lazy"');
+  expect(html).toContain('aria-label="Testimonial 1: Alice"');
 });
 
 test("testimonials validator rejects invalid variant", () => {

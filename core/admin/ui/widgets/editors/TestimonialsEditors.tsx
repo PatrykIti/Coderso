@@ -312,6 +312,19 @@ function moveTestimonial(
   });
 }
 
+function buildVariantSyncedTestimonialsValue(
+  value: TestimonialsData,
+  nextVariant: string
+): TestimonialsData {
+  const normalized = normalizeValue(value);
+  const resolvedVariant = resolveTestimonialsVariant(nextVariant);
+  const nextCount = resolveTestimonialsCountForVariant(resolvedVariant);
+  return {
+    ...normalized,
+    testimonials: normalizeTestimonialsItems(normalized.testimonials, nextCount),
+  };
+}
+
 function DiagnosticsSnapshot({ value }: { value: TestimonialsData }) {
   return (
     <pre className="max-h-64 overflow-auto rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
@@ -325,18 +338,30 @@ export function TestimonialsWizardEditor({
   onChange,
   variant,
   onVariantChange,
+  onBlockPatch,
 }: WidgetEditorProps<TestimonialsData>) {
   const normalized = normalizeValue(value);
   const testimonials = normalizeTestimonialsItems(normalized.testimonials);
+  const handleVariantChange = (next: string) => {
+    if (!onVariantChange && !onBlockPatch) return;
+    const nextValue = buildVariantSyncedTestimonialsValue(value, next);
+    if (onBlockPatch) {
+      onBlockPatch((current) => ({
+        ...current,
+        variant: next,
+        data: nextValue,
+      }));
+      return;
+    }
+    onVariantChange?.(next);
+    onChange(nextValue);
+  };
 
   return (
     <div className="space-y-4">
       <div className="space-y-2">
         <p className="text-sm font-medium">Testimonials style</p>
-        <Select
-          value={resolveTestimonialsVariant(variant)}
-          onValueChange={(next) => onVariantChange?.(next)}
-        >
+        <Select value={resolveTestimonialsVariant(variant)} onValueChange={handleVariantChange}>
           <SelectTrigger>
             <SelectValue placeholder="Select variant" />
           </SelectTrigger>
@@ -414,10 +439,25 @@ export function TestimonialsVisualEditor({
   onChange,
   variant,
   onVariantChange,
+  onBlockPatch,
 }: WidgetEditorProps<TestimonialsData>) {
   const normalized = normalizeValue(value);
   const resolvedVariant = resolveTestimonialsVariant(variant);
   const testimonials = normalizeTestimonialsItems(normalized.testimonials);
+  const handleVariantChange = (next: string) => {
+    if (!onVariantChange && !onBlockPatch) return;
+    const nextValue = buildVariantSyncedTestimonialsValue(value, next);
+    if (onBlockPatch) {
+      onBlockPatch((current) => ({
+        ...current,
+        variant: next,
+        data: nextValue,
+      }));
+      return;
+    }
+    onVariantChange?.(next);
+    onChange(nextValue);
+  };
 
   return (
     <div className="space-y-4">
@@ -425,7 +465,7 @@ export function TestimonialsVisualEditor({
         title="Variant and layout structure"
         description="Choose display style and baseline spacing for testimonial cards."
       >
-        <VariantCards value={resolvedVariant} onChange={onVariantChange} />
+        <VariantCards value={resolvedVariant} onChange={handleVariantChange} />
 
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-2">
@@ -660,6 +700,7 @@ export function TestimonialsVisualEditor({
           label="Text color"
           value={normalized.style?.textColor}
           onChange={(next) => updateStyle(value, onChange, { textColor: next })}
+          onClear={() => clearStyleField(value, onChange, "textColor")}
           placeholder="var(--color-text)"
           pickerFallback="#0f172a"
         />
@@ -668,6 +709,7 @@ export function TestimonialsVisualEditor({
           label="Accent color"
           value={normalized.style?.accentColor}
           onChange={(next) => updateStyle(value, onChange, { accentColor: next })}
+          onClear={() => clearStyleField(value, onChange, "accentColor")}
           placeholder="var(--color-primary)"
           pickerFallback="#1d4ed8"
         />
