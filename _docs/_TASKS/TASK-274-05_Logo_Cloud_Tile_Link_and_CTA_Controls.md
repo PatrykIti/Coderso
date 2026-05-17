@@ -34,6 +34,9 @@ Precondition:
   leaf implements link target or CTA rendering. If that helper is missing, stop
   and finish or split the TASK-256 shared helper first. TASK-274-05 must not add
   shared helper ownership locally.
+- At current drafting HEAD the live helper is only `normalizeWidgetSafeHref`.
+  Treat this leaf as dependency-blocked until TASK-256 exports a shared
+  attribute resolver that owns `href`, optional `target`, and safe `rel`.
 
 ## Files to Change
 
@@ -63,9 +66,28 @@ type LogoCloudCta = {
   target?: LogoCloudLinkTarget;
 };
 
-function resolveLogoLinkAttrs(href: string | undefined, target: LogoCloudLinkTarget) {
-  // Provided by TASK-256-06-02; do not implement the shared helper in this leaf.
-  return resolveWidgetLinkAttrs(href, {
+type Task256WidgetLinkAttrs = false | {
+  href: string;
+  target?: "_blank";
+  rel?: string;
+};
+
+type Task256WidgetLinkAttrsResolver = (
+  href: string | undefined,
+  options: {
+    allowRelative: true,
+    allowHash: true,
+    allowHttp: true,
+    target?: "_blank",
+  },
+  ) => Task256WidgetLinkAttrs;
+
+function resolveLogoLinkAttrs(
+  resolveWidgetLinkAttrsFromTask256: Task256WidgetLinkAttrsResolver,
+  href: string | undefined,
+  target: LogoCloudLinkTarget,
+) {
+  return resolveWidgetLinkAttrsFromTask256(href, {
     allowRelative: true,
     allowHash: true,
     allowHttp: true,
@@ -73,8 +95,8 @@ function resolveLogoLinkAttrs(href: string | undefined, target: LogoCloudLinkTar
   });
 }
 
-function LogoCloudItem({ logo, linkTarget }: LogoCloudItemProps) {
-  const attrs = resolveLogoLinkAttrs(logo.href, linkTarget);
+function LogoCloudItem({ logo, linkTarget, resolveWidgetLinkAttrs }: LogoCloudItemProps) {
+  const attrs = resolveLogoLinkAttrs(resolveWidgetLinkAttrs, logo.href, linkTarget);
   if (!attrs) return <div>{content}</div>;
   return <a {...attrs}>{content}</a>;
 }
@@ -96,10 +118,15 @@ Editor data flow:
 3. Add CTA controls with enable toggle, label, href, and target. Use shared safe
    href feedback when TASK-256 exposes it.
 4. Render CTA only when enabled, label is present, and safe href resolves.
+5. Before implementation, replace `resolveWidgetLinkAttrsFromTask256` with the
+   exact exported TASK-256 helper name/signature. If TASK-256 exposes a
+   different shape, update this task before coding rather than adapting locally.
 
 Error handling:
 
 - Unsafe logo/CTA href values must fail closed through the shared safe helper.
+- If the shared TASK-256 helper is absent or returns only a normalized href
+  string, do not implement link target/CTA rendering in TASK-274-05 yet.
 - Unknown radius/width/target values normalize to defaults.
 - Disabled CTA preserves data but does not render.
 - Empty CTA label or href does not render a blank or broken link.

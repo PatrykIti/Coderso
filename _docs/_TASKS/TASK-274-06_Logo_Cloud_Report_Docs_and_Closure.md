@@ -140,6 +140,7 @@ Minimum final family gate:
   link target/CTA behavior consumes TASK-256 shared link attributes.
 - `bun test tests/unit/widgets/validator.test.ts` only when intentionally adding
   Logo Cloud coverage to the generic Bun validator suite.
+- `bun run gates:coderso`
 - `bun run scan:security:strict`
 - `bun run precommit`
 

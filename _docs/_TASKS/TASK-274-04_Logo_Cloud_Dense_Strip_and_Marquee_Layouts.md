@@ -34,6 +34,8 @@ Explicitly out of scope:
 |---|---|
 | `core/widgets/core/logoCloud.tsx` | Add bounded layout mode fields, defaults, normalizer, responsive classes, scroll/marquee rendering, and runtime markers. |
 | `core/admin/ui/widgets/editors/LogoCloudEditors.tsx` | Add Visual controls for row/wrap/marquee behavior with clear product copy and disabled states where variant-specific. |
+| `core/site/styles/site.css` | Add the public-runtime `@keyframes` / utility class for Logo Cloud marquee if no shared animation token already exists. |
+| `core/admin/styles/globals.css` | Add or import the same marquee class for admin/editor preview so Visual mode and public runtime render consistently. |
 | `tests/vitest/widgets/logoCloud.test.tsx` | Cover dense max-count classes, strip single-row scroll, marquee markers, and reduced-motion fallback markers. |
 | `tests/vitest/ui/logo-cloud-editor-wave.test.tsx` | Cover layout mode controls and variant gating. |
 | `tests/vitest/widgets/renderer.test.tsx` | Update if shared renderer output markers change. |
@@ -87,7 +89,10 @@ Renderer data flow:
    or item min-width changes over unbounded custom columns.
 4. For marquee, duplicate visual items only for animation, not in persisted
    `logos[]`; expose deterministic runtime markers for tests.
-5. Respect reduced motion and pause on hover/focus.
+5. Define the marquee keyframes/class in both public runtime and admin preview
+   style owners, unless a shared imported style owner is introduced in the same
+   implementation commit.
+6. Respect reduced motion and pause on hover/focus.
 
 Error handling:
 
@@ -95,6 +100,8 @@ Error handling:
 - Marquee with fewer than two logos falls back to static strip.
 - Single-row overflow must be horizontal only and not create page-wide overflow.
 - Server rendering must not depend on browser APIs or timers.
+- If the public runtime and admin preview do not load the same marquee class,
+  disable the marquee option in the editor until the style owners are aligned.
 
 ## Sub-Tasks
 

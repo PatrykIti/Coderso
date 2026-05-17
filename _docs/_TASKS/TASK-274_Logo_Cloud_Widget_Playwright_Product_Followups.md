@@ -67,7 +67,6 @@ TASK-256 already owns them as shared widget-contract drift.
 | BUG-03 section `aria-label` / `aria-labelledby` | `REPORT_LOGO_CLOUD_WIDGET.md:135-140,260,298` | TASK-256-06-02 | Logo Cloud slice of the shared runtime landmark accessibility baseline. |
 | BUG-04 / UX-01 `hoverColor` active without grayscale | `REPORT_LOGO_CLOUD_WIDGET.md:142-160,265,304` | TASK-256-06-02 | Shared truthful-control and output-class repair. |
 | BUG-05 `logoHeight: "none"` unbounded image height | `REPORT_LOGO_CLOUD_WIDGET.md:147-150` | TASK-256-06-02 | Shared size-token safety and clear/none semantics adjacency. |
-| UX-05 separate logo `alt` baseline | `REPORT_LOGO_CLOUD_WIDGET.md:180-183,264` | TASK-256-06-02 | Shared media accessibility model. TASK-274 can consume the resulting field but must not define a second alt contract. |
 | UX-07 Advanced duplicates Visual controls | `REPORT_LOGO_CLOUD_WIDGET.md:190-193` | TASK-256-01 | Shared editor-mode ownership and Advanced scope. |
 | BF-10 raw link URL validation and safe feedback | `REPORT_LOGO_CLOUD_WIDGET.md:246-248,324` | TASK-256-06-02 | Shared link validation and safe href feedback. Image URL preview/unavailable feedback stays in TASK-274-02 as Logo Cloud asset-authoring UX. |
 
@@ -80,6 +79,7 @@ inside its own implementation leaves.
 |---|---|---|
 | UX-03 Wizard missing image and link fields | TASK-274-02 | Logo Cloud starter-logo authoring for image URL and basic href entry. Link safety and validation feedback remain TASK-256-06-02. |
 | UX-04 missing image thumbnail preview | TASK-274-02 | Editor-only Logo Cloud asset confidence. |
+| UX-05 separate logo `alt` field | TASK-274-02 | Logo Cloud-specific media accessibility field; TASK-256-06-02 does not currently own this Logo Cloud schema/editor expansion. |
 | UX-06 missing Media Library picker | TASK-274-02 | Use existing `MediaPicker` and media cache contract. |
 | BF-10 image URL validation/preview feedback | TASK-274-02 | Image URL unavailable/broken-preview feedback is Logo Cloud asset-authoring UX. Shared link URL validation remains TASK-256-06-02. |
 | UX-02 remove without confirm/undo | TASK-274-03 | Repeated Logo Cloud item lifecycle UX. |
@@ -180,6 +180,7 @@ Implementation leaves:
   `tests/vitest/widgets/logoCloud.test.tsx`.
 - `bun test tests/unit/widgets/registry.test.ts` if variant registration or widget
   registry wiring changes.
+- `bun run gates:coderso`
 - `bun run scan:security:strict`
 - `bun run precommit`
 

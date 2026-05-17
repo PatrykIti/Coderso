@@ -13,20 +13,19 @@
 ## Overview
 
 Make Logo Cloud starter/logo authoring useful without forcing users to leave the
-editor canvas to configure image URLs, basic link URLs, or media-picked logo
-assets.
+editor canvas to configure image URLs, alt text, basic link URLs, or
+media-picked logo assets.
 
 Source report findings:
 
 - UX-03 Wizard missing Image URL and Link URL per logo
 - UX-04 missing thumbnail preview
+- UX-05 missing separate `alt` text per logo
 - UX-06 missing Media Library picker
 - BF-10 image URL validation/preview feedback
 
 Explicitly out of scope:
 
-- Defining a separate Logo Cloud `alt` field; TASK-256 owns the media
-  accessibility baseline.
 - Defining generic link URL validation or safe href behavior; TASK-256 owns
   shared link feedback. This leaf may wire the Logo Cloud `href` authoring
   surface and display TASK-256 validation output once available.
@@ -36,14 +35,15 @@ Explicitly out of scope:
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/logoCloud.tsx` | Extend logo item schema only if the existing `image` string must gain a paired `assetId` or source field. Keep legacy `image` URL support. |
-| `core/admin/ui/widgets/editors/LogoCloudEditors.tsx` | Add Wizard image/link inputs or picker entry points, Visual thumbnails, MediaPicker integration, and image preview feedback for logo images. |
+| `core/widgets/core/logoCloud.tsx` | Add optional per-logo `alt` text, render `alt || name`, and prefer keeping persisted image ownership to the existing `image` URL plus `href`; add `imageAssetId` only if schema-owned persistence is explicitly accepted and validator-tested. Keep legacy `image` URL support. |
+| `core/admin/ui/widgets/editors/LogoCloudEditors.tsx` | Add Wizard image/link/alt inputs or picker entry points, Visual thumbnails, MediaPicker integration, and image preview feedback for logo images. |
 | `core/admin/ui/media/MediaPicker.tsx` | Reuse only; do not fork or add Logo Cloud-specific picker behavior unless the shared picker lacks required typed output. |
-| `tests/vitest/ui/logo-cloud-editor-wave.test.tsx` | Cover Wizard image/link updates, Visual thumbnail rendering, MediaPicker selection flow, image unavailable/error feedback, and TASK-256 link-feedback integration when available. |
+| `core/admin/services/mediaClient.ts` | Reuse `listMediaCached` as the media cache seam and mock it in editor tests; do not duplicate media fetching in the Logo Cloud editor. |
+| `tests/vitest/ui/logo-cloud-editor-wave.test.tsx` | Cover Wizard image/link/alt updates, Visual thumbnail rendering, MediaPicker selection flow, image unavailable/error feedback, and TASK-256 link-feedback integration when available. |
 | `tests/vitest/widgets/logoCloud.test.tsx` | Cover backward-compatible normalization if schema changes. |
 | `tests/unit/widgets/validator.test.ts` | Cover accepted/rejected logo item fields only if intentionally expanding the generic Bun validator suite. |
 | `_docs/_WIDGETS/LOGO_CLOUD.md` | Document image source behavior and editor ownership. |
-| `_docs/PLAYWRIGHT/REPORT_LOGO_CLOUD_WIDGET.md` | Record fixed evidence for UX-03/UX-04/UX-06 and the BF-10 image-feedback slice. |
+| `_docs/PLAYWRIGHT/REPORT_LOGO_CLOUD_WIDGET.md` | Record fixed evidence for UX-03/UX-04/UX-05/UX-06 and the BF-10 image-feedback slice. |
 
 ## Implementation Pseudocode
 
@@ -51,9 +51,16 @@ Explicitly out of scope:
 type LogoCloudLogo = {
   id?: string;
   name?: string;
+  alt?: string;
   image?: string;
   imageAssetId?: string;
   href?: string;
+};
+
+type UseLogoMediaSelectionOptions = {
+  value: LogoCloudData;
+  onChange: (next: LogoCloudData) => void;
+  persistAssetId: boolean;
 };
 
 async function resolveLogoMediaAsset(assetId: string) {
@@ -64,6 +71,31 @@ async function resolveLogoMediaAsset(assetId: string) {
     imageAssetId: assetId,
     image: match.url,
     name: match.title?.trim() || match.originalName?.trim(),
+  };
+}
+
+function useLogoMediaSelection({
+  value,
+  onChange,
+  persistAssetId,
+}: UseLogoMediaSelectionOptions) {
+  const requestIdRef = useRef(0);
+
+  return async function handleLogoAssetChange(
+    index: number,
+    logo: LogoCloudLogo,
+    assetId: string | null,
+  ) {
+    const requestId = ++requestIdRef.current;
+    if (!assetId) return updateLogo(value, onChange, index, { image: "", imageAssetId: undefined });
+    const next = await resolveLogoMediaAsset(assetId);
+    if (requestId !== requestIdRef.current) return;
+    updateLogo(value, onChange, index, {
+      image: next.image,
+      // Persist only when TASK-274-02 makes imageAssetId schema-owned.
+      imageAssetId: persistAssetId ? assetId : undefined,
+      name: logo.name?.trim() ? logo.name : next.name,
+    });
   };
 }
 
@@ -78,12 +110,16 @@ function LogoImageControl({ logo, index }: LogoImageControlProps) {
         onChange={(event) => updateLogo(value, onChange, index, { image: event.target.value })}
       />
       <Input
+        value={logo.alt ?? ""}
+        onChange={(event) => updateLogo(value, onChange, index, { alt: event.target.value })}
+      />
+      <Input
         value={logo.href ?? ""}
         onChange={(event) => updateLogo(value, onChange, index, { href: event.target.value })}
       />
       <MediaPicker
         value={logo.imageAssetId ?? null}
-        onChange={(next) => void handleLogoAssetChange(index, next)}
+        onChange={(next) => void handleLogoAssetChange(index, logo, next)}
         multiple={false}
         accept={["image/*"]}
       />
@@ -95,27 +131,35 @@ function LogoImageControl({ logo, index }: LogoImageControlProps) {
 Editor data flow:
 
 1. Wizard keeps its minimal setup role, but each visible logo row gets compact
-   image and link fields or an image-picker affordance next to the name field.
+   image, alt, and link fields or an image-picker affordance next to the name
+   field.
 2. Visual repeated logo cards reuse the same image control and show a bounded
    thumbnail preview when `logo.image` is non-empty.
 3. MediaPicker selection resolves the public media URL through
-   `listMediaCached`; store only the public URL and optional stable asset ID if
-   schema ownership accepts it.
+   `listMediaCached`. Store the public URL by default; store `imageAssetId` only
+   if `logoCloud.tsx` makes that field schema-owned, normalized, documented, and
+   tested.
 4. Manual image URL and link URL entry remain supported for backward
    compatibility.
 5. Link URL validation UI consumes TASK-256 shared safe-link output when that
    contract exists; do not hand-roll a second link validator in this leaf.
+6. Runtime `img` output uses explicit `logo.alt` when present and falls back to
+   `logo.name` for backward compatibility.
 
 Error handling:
 
 - If MediaPicker resolution fails, show an inline error and keep the previous
   logo data unchanged.
+- Guard async media-cache resolution with a request ID/ref so stale picker
+  results cannot overwrite a later logo edit or selection.
 - If selected media is unavailable, keep the selected ID out of persisted data
   unless a public URL was resolved.
 - Broken external image URLs must not crash the editor; thumbnail fallback should
   show a compact unavailable state.
 - Link URL feedback must consume TASK-256 shared validation/safe href results;
   unsafe hrefs are not locally classified here.
+- Empty `alt` normalizes to omitted/empty and runtime falls back to `name`; it
+  must not render `"undefined"` or duplicate placeholder copy.
 - Legacy logo entries with only `image` keep rendering and editing.
 
 Regression-test shape:
@@ -124,10 +168,12 @@ Regression-test shape:
   shape used by the real picker.
 - Mock the media cache client used by the editor, including success,
   not-found, and failure cases for `listMediaCached`.
-- Assert Wizard edits persist both `logos[index].image` and
+- Assert Wizard edits persist `logos[index].image`, `logos[index].alt`, and
   `logos[index].href`.
 - Assert Visual thumbnails render success and unavailable states without
   mutating saved logo data.
+- Assert runtime rendering uses explicit alt text when present and `name`
+  fallback for legacy payloads.
 
 ## Sub-Tasks
 
@@ -167,10 +213,9 @@ No API routes are added.
 
 ## Acceptance Criteria
 
-- Wizard can seed real logo images and basic link URLs without requiring a
-  Visual-mode round trip.
+- Wizard can seed real logo images, alt text, and basic link URLs without
+  requiring a Visual-mode round trip.
 - Visual logo cards show bounded thumbnails for configured images.
 - Media Library picking uses existing media ownership and failure handling.
 - Existing manual image URL payloads still normalize and render.
-- No TASK-256 link validation, safe href, or alt-text contract is duplicated in
-  this leaf.
+- No TASK-256 link validation or safe href contract is duplicated in this leaf.
