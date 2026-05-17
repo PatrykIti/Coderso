@@ -90,7 +90,7 @@ that part back to TASK-256 instead of hiding it in this family.
 | Area | Current owners | Current tests | New or changed tests |
 |---|---|---|---|
 | Stats KPI schema/defaults/normalizer/runtime | `core/widgets/core/statsKpi.tsx:6-502` | `tests/vitest/widgets/statsKpi.test.tsx`, `tests/vitest/widgets/renderer.test.tsx`, `tests/vitest/widgets/styleNoneTokens.test.tsx` | Add schema, normalization, SSR, data-marker, safe-link, layout, typography, trend, and icon presentation assertions. |
-| Stats KPI editors | `core/admin/ui/widgets/editors/StatsKpiEditors.tsx:33-724` | `tests/vitest/ui/stats-kpi-editor-wave.test.tsx` | Add Wizard content, variant cards, header clear, repeated-item management, IA grouping, and Advanced cleanup assertions. |
+| Stats KPI editors | `core/admin/ui/widgets/editors/StatsKpiEditors.tsx:33-724` | `tests/vitest/ui/stats-kpi-editor-wave.test.tsx` | Add Wizard variant-card/guidance, header clear, repeated-item management, and Visual IA grouping assertions. C3 baseline Wizard content and Advanced cleanup remain TASK-256-owned. |
 | Widget validator/registry | `core/widgets/validator.ts`, registry via `createStatsKpiWidget()` | `tests/unit/widgets/validator.test.ts`, `tests/unit/widgets/registry.test.ts` | Run validator tests whenever persisted fields are added; registry only if definition metadata or variants change. |
 | Widget docs/report | `_docs/_WIDGETS/STATS_KPI.md`, `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md` | docs diff checks | Update fixed/deferred evidence after implementation leaves land. |
 

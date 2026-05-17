@@ -42,7 +42,7 @@ write endpoint or arbitrary action system.
 | `core/widgets/core/statsKpi.tsx` | Extend item schema/defaults/normalizer and card renderer for optional `link.href`, `link.label`, and target policy using the finalized shared safe-link helper. |
 | `core/widgets/core/widgetSafeHref.ts` | Do not extend this shared helper in TASK-287. In the current checkout it only exports `normalizeWidgetSafeHref`; if TASK-256-06-02 has not added a safe attribute helper, keep target/open-in-new-tab behavior deferred in TASK-287-06 rather than duplicating target/rel logic in `statsKpi.tsx`. |
 | `core/admin/ui/widgets/editors/StatsKpiEditors.tsx` | Add Visual controls for metric link URL, optional link label, and safe target choice after the safe-href owner exists. |
-| `tests/vitest/widgets/statsKpi.test.tsx` | Cover safe internal/external link rendering, blocked unsafe hrefs, target/rel behavior, and non-linked card compatibility. |
+| `tests/vitest/widgets/statsKpi.test.tsx` | Cover safe internal/external link rendering, blocked unsafe hrefs, non-linked card compatibility, and target/rel behavior only when the TASK-256-06-02 shared helper provides it. |
 | `tests/vitest/ui/stats-kpi-editor-wave.test.tsx` | Cover metric link editor controls and persistence shape. |
 | `tests/vitest/widgets/widgetSafeHref.test.ts` | Run or update if Stats KPI needs a new safe-href mode. |
 | `tests/unit/widgets/validator.test.ts` | Add schema accept/reject coverage for link fields. |
@@ -76,7 +76,7 @@ function StatsKpiCard({ item }: { item: StatsKpiItem }) {
     allowHttp: true,
   });
   const linkAttrs = safeHref
-    ? resolveSharedWidgetLinkAttrs({ href: safeHref, openInNewTab: item.link?.openInNewTab })
+    ? resolveTask256SharedLinkAttrs({ href: safeHref, openInNewTab: item.link?.openInNewTab })
     : undefined;
   return linkAttrs
     ? <a {...linkAttrs}>{cardContent}</a>
@@ -89,9 +89,11 @@ Data flow:
 - Editor writes item link data under the item, not under global style.
 - Normalizer keeps links optional and omits empty URL payloads.
 - Renderer first uses the current shared URL normalizer, then asks the
-  TASK-256-06-02-owned helper for safe target/rel attributes. If that attribute
-  helper does not exist yet, this leaf must defer target/open-in-new-tab output
-  instead of implementing a Stats KPI-only helper.
+  TASK-256-06-02-owned helper for safe target/rel attributes. The
+  `resolveTask256SharedLinkAttrs` call above is a placeholder for that shared
+  helper contract, not a Stats KPI-owned API. If that attribute helper does not
+  exist yet, this leaf must defer target/open-in-new-tab output instead of
+  implementing a Stats KPI-only helper.
 - Unsafe links leave the metric rendered as a non-clickable card and expose a
   deterministic test marker or diagnostics string if the existing helper
   supports one.
@@ -101,7 +103,9 @@ Error handling:
 - Unsafe protocols such as `javascript:` must never render as clickable links.
 - Missing link label falls back to the metric label/value for accessible text
   after TASK-256 accessibility labels are in place.
-- Opening in a new tab must emit safe `rel` attributes through the shared helper.
+- Opening in a new tab must emit safe `rel` attributes through the shared helper
+  when that helper exists; otherwise defer open-in-new-tab output in
+  TASK-287-06 instead of adding local target/rel logic.
 - Do not add button-like actions, form submissions, analytics mutations, or
   public write behavior to Stats KPI metrics.
 
@@ -113,9 +117,10 @@ No API routes are added.
 - Auth/RBAC/CSRF/rate-limit: unchanged admin editing and public rendering.
 - Reject-unknown validation: link fields must be schema-bound with
   `additionalProperties: false`.
-- Anti-abuse: use the existing safe-href helper for URL normalization, target,
-  and rel. Reject or omit unsafe hrefs; do not allow raw HTML, scripts, inline
-  handlers, or arbitrary protocols.
+- Anti-abuse: use the existing safe-href helper for URL normalization and the
+  TASK-256-06-02 helper for target/rel when available. Reject or omit unsafe
+  hrefs; do not allow raw HTML, scripts, inline handlers, or arbitrary
+  protocols.
 - Secret handling: do not store secrets, signed URLs, private tokens, or provider
   keys in metric link fields, DOM markers, diagnostics, or reports.
 
@@ -140,6 +145,8 @@ No API routes are added.
 
 - Metrics can be linked through schema-owned, optional, safe link fields.
 - Unsafe URLs do not render clickable output.
-- External links use safe target/rel behavior from the shared helper.
+- External links use safe target/rel behavior from the shared helper when it is
+  available; otherwise target/open-in-new-tab behavior is explicitly deferred
+  rather than reimplemented inside Stats KPI.
 - Stats KPI remains a presentational/read-navigation widget, not an action or
   public-write widget.
