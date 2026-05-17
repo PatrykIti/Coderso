@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 189 tasks
+- **To Do:** 196 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1542 tasks
 
@@ -75,6 +75,13 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-275-05-03 | Navigation Visual Style Tokens | Medium | Large | Add bounded hover/active colors, underline, letter spacing, shadow, backdrop blur, dropdown direction, and motion tokens |
 | TASK-275-05-04 | Navigation Brand CTA and Logo Controls | Medium | Medium | Add logo-size, CTA-radius/separator, and bounded secondary-CTA policy without broad platform expansion |
 | TASK-275-06 | Navigation Report Docs Changelog and Closure | Medium | Medium | Refresh Navigation report/docs/changelog/board and final validation evidence after implementation leaves land |
+| TASK-274 | Logo Cloud Widget Playwright Product Followups | High | Very Large | Logo Cloud-only follow-up family for `REPORT_LOGO_CLOUD_WIDGET.md`, excluding TASK-256 shared-contract scope |
+| TASK-274-01 | Logo Cloud Header Background and Typography | High | Large | Add Logo Cloud eyebrow, section background, and bounded header typography controls after shared heading/ARIA fixes |
+| TASK-274-02 | Logo Cloud Logo Asset Authoring and Previews | High | Large | Add Wizard logo image/alt/link authoring, Visual thumbnails, and Media Library picking without duplicating TASK-256 link contracts |
+| TASK-274-03 | Logo Cloud Item Management and Reorder | High | Large | Add inline Undo remove behavior and drag reorder while keeping Move button fallback |
+| TASK-274-04 | Logo Cloud Dense Strip and Marquee Layouts | Medium | Large | Add dense overflow repair, strip single-row scroll, and optional marquee with reduced-motion safety |
+| TASK-274-05 | Logo Cloud Tile Link and CTA Controls | Medium | Large | Add bounded tile shape, open-new-tab product control, and optional CTA through shared safe href helpers |
+| TASK-274-06 | Logo Cloud Report Docs and Closure | Medium | Medium | Refresh Logo Cloud report evidence, widget docs, changelog, board, and final validation |
 | TASK-273 | Listing Filters Widget Playwright Product Followups | High | Very Large | Listing Filters-only follow-up family for `REPORT_LISTING_FILTERS_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-273-01 | Admin Canvas, Facet Draft State, and Query Loading | High | Large | Repair canvas query fallback, visible editable facet drafts, duplicate-id feedback, and transient query-load handling |
 | TASK-273-02 | Facet Field, Operator, Options, and Preview Editors | High | Large | Add query-aware field suggestions, kind-scoped operators, structured option/sort rows, inline validation, and facet previews |
