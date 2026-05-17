@@ -787,6 +787,61 @@ test("ContentList visual editor switches between listing and legacy sources, per
   }
 });
 
+test("ContentList visual editor updates pagination controls", async () => {
+  const { ContentListVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/ContentListEditors");
+
+  const onChangeSpy = vi.fn();
+
+  const Harness = () => {
+    const [value, setValue] = useState<ContentListData>({} as ContentListData);
+
+    return (
+      <ContentListVisualEditor
+        value={value}
+        onChange={(next) => {
+          onChangeSpy(next);
+          setValue(next);
+        }}
+        variant="cards"
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    await flush();
+
+    React.act(() => {
+      setSelectValue(
+        findSelectsByOptions(view.container, ["none", "paged", "load-more", "view-all"])[0],
+        "view-all"
+      );
+    });
+    await flush();
+
+    React.act(() => {
+      setInputValue(findNumberInputs(view.container)[0], "8");
+      setInputValue(findInputByPlaceholder(view.container, "/articles"), "/projects");
+      setInputValue(findInputByPlaceholder(view.container, "View all"), "Browse everything");
+    });
+
+    expect(onChangeSpy.mock.lastCall?.[0]).toEqual(
+      expect.objectContaining({
+        pagination: expect.objectContaining({
+          mode: "view-all",
+          pageSize: 8,
+          viewAllHref: "/projects",
+          viewAllLabel: "Browse everything",
+        }),
+      })
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("ContentList wizard editor tolerates unresolved listing and content type selections during source transitions", async () => {
   const { ContentListWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/ContentListEditors");

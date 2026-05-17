@@ -32,6 +32,7 @@ import {
   type ContentListCardStyle,
   type ContentListData,
   type ContentListImageAspect,
+  type ContentListPaginationMode,
   type ContentListGap,
   type ContentListSort,
   type ContentListStatusScope,
@@ -96,6 +97,13 @@ const gapOptions: Array<{ id: ContentListGap; label: string }> = [
   { id: "sm", label: "Compact" },
   { id: "md", label: "Default" },
   { id: "lg", label: "Spacious" },
+];
+
+const paginationModeOptions: Array<{ id: ContentListPaginationMode; label: string }> = [
+  { id: "none", label: "No navigation" },
+  { id: "paged", label: "Previous / next" },
+  { id: "load-more", label: "Load more" },
+  { id: "view-all", label: "View all link" },
 ];
 
 const cardStyleOptions: Array<{ id: ContentListCardStyle; label: string }> = [
@@ -637,6 +645,7 @@ function updateValue(
 
 type SourceData = NonNullable<ContentListData["source"]>;
 type FilterData = NonNullable<ContentListData["filters"]>;
+type PaginationData = NonNullable<ContentListData["pagination"]>;
 type FieldData = NonNullable<ContentListData["fields"]>;
 type EmptyStateData = NonNullable<ContentListData["emptyState"]>;
 type StyleData = NonNullable<ContentListData["style"]>;
@@ -690,6 +699,20 @@ function updateFilters(
     ...current,
     filters: {
       ...current.filters,
+      ...patch,
+    },
+  }));
+}
+
+function updatePagination(
+  value: ContentListData,
+  onChange: (next: ContentListData) => void,
+  patch: Partial<PaginationData>
+) {
+  updateValue(value, onChange, (current) => ({
+    ...current,
+    pagination: {
+      ...current.pagination,
       ...patch,
     },
   }));
@@ -1042,6 +1065,88 @@ export function ContentListVisualEditor({
         <p className="text-xs text-muted-foreground">
           Builder canvas shows saved resolved data. Save or open Preview to refresh live results.
         </p>
+      </EditorSection>
+
+      <EditorSection
+        title="Pagination and actions"
+        description="Control page navigation and the follow-up action shown below the list."
+      >
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Navigation mode</p>
+          <Select
+            value={resolved.pagination?.mode ?? "none"}
+            onValueChange={(next) =>
+              updatePagination(value, onChange, { mode: next as ContentListPaginationMode })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Navigation mode" />
+            </SelectTrigger>
+            <SelectContent>
+              {paginationModeOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        {(resolved.pagination?.mode ?? "none") !== "none" ? (
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Page size</p>
+            <Input
+              type="number"
+              min={1}
+              max={24}
+              value={String(resolved.pagination?.pageSize ?? resolved.source?.limit ?? 6)}
+              onChange={(event) =>
+                updatePagination(value, onChange, {
+                  pageSize: normalizeContentListLimit(Number(event.target.value)),
+                })
+              }
+            />
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            No navigation keeps the current item-limit behavior from the source setup.
+          </p>
+        )}
+        {(resolved.pagination?.mode ?? "none") === "load-more" ? (
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Load more label</p>
+            <Input
+              value={resolved.pagination?.loadMoreLabel ?? "Load more"}
+              onChange={(event) =>
+                updatePagination(value, onChange, { loadMoreLabel: event.target.value })
+              }
+              placeholder="Load more"
+            />
+          </div>
+        ) : null}
+        {(resolved.pagination?.mode ?? "none") === "view-all" ? (
+          <>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">View all link</p>
+              <Input
+                value={resolved.pagination?.viewAllHref ?? ""}
+                onChange={(event) =>
+                  updatePagination(value, onChange, { viewAllHref: event.target.value })
+                }
+                placeholder="/articles"
+              />
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">View all label</p>
+              <Input
+                value={resolved.pagination?.viewAllLabel ?? "View all"}
+                onChange={(event) =>
+                  updatePagination(value, onChange, { viewAllLabel: event.target.value })
+                }
+                placeholder="View all"
+              />
+            </div>
+          </>
+        ) : null}
       </EditorSection>
 
       <EditorSection

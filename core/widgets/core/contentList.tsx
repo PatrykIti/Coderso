@@ -2,6 +2,7 @@ import type { CSSProperties, ComponentType } from "react";
 
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
+import { normalizeWidgetSafeHref } from "./widgetSafeHref";
 
 export type ContentListVariantId = "cards" | "list" | "compact";
 export type ContentListStatusScope = "published" | "all" | "draft" | "scheduled" | "archived";
@@ -17,6 +18,7 @@ export type ContentListColumns = "1" | "2" | "3";
 export type ContentListGap = "none" | "sm" | "md" | "lg";
 export type ContentListCardStyle = "outlined" | "elevated" | "minimal";
 export type ContentListImageAspect = "compact" | "standard" | "wide" | "square";
+export type ContentListPaginationMode = "none" | "paged" | "load-more" | "view-all";
 
 export type ContentListRuntimeItem = {
   id?: string;
@@ -50,6 +52,13 @@ export type ContentListData = {
   };
   title?: string;
   description?: string;
+  pagination?: {
+    mode?: ContentListPaginationMode;
+    pageSize?: number;
+    viewAllHref?: string;
+    viewAllLabel?: string;
+    loadMoreLabel?: string;
+  };
   fields?: {
     showImage?: boolean;
     showExcerpt?: boolean;
@@ -75,6 +84,7 @@ export type ContentListData = {
     total?: number;
     sourceTypeId?: string;
     sourceTypeSlug?: string;
+    listPath?: string;
     listingQueryId?: string;
     listingTemplateId?: string;
     resolvedAt?: string;
@@ -82,6 +92,10 @@ export type ContentListData = {
       rejectedTokens?: string[];
       searchQuery?: string;
       page?: number;
+      pageSize?: number;
+      totalPages?: number;
+      previousPageHref?: string;
+      nextPageHref?: string;
     };
     error?: string;
   };
@@ -130,6 +144,17 @@ export const contentListSchema = {
     },
     title: { type: "string" },
     description: { type: "string" },
+    pagination: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        mode: { enum: ["none", "paged", "load-more", "view-all"] },
+        pageSize: { type: "number", minimum: contentListLimitMin, maximum: contentListLimitMax },
+        viewAllHref: { type: "string" },
+        viewAllLabel: { type: "string" },
+        loadMoreLabel: { type: "string" },
+      },
+    },
     fields: {
       type: "object",
       additionalProperties: false,
@@ -192,6 +217,7 @@ export const contentListSchema = {
         total: { type: "number" },
         sourceTypeId: { type: "string" },
         sourceTypeSlug: { type: "string" },
+        listPath: { type: "string" },
         listingQueryId: { type: "string" },
         listingTemplateId: { type: "string" },
         resolvedAt: { type: "string" },
@@ -205,6 +231,10 @@ export const contentListSchema = {
             },
             searchQuery: { type: "string" },
             page: { type: "number" },
+            pageSize: { type: "number" },
+            totalPages: { type: "number" },
+            previousPageHref: { type: "string" },
+            nextPageHref: { type: "string" },
           },
         },
         error: { type: "string" },
@@ -343,6 +373,11 @@ const resolveContentListCardStyle = (value: string | undefined): ContentListCard
   return "outlined";
 };
 
+const resolveContentListPaginationMode = (value: string | undefined): ContentListPaginationMode => {
+  if (value === "paged" || value === "load-more" || value === "view-all") return value;
+  return "none";
+};
+
 const resolveContentListImageAspect = (value: string | undefined): ContentListImageAspect => {
   if (value === "compact" || value === "wide" || value === "square") return value;
   return "standard";
@@ -398,6 +433,13 @@ export function normalizeContentListData(data: ContentListData): ContentListData
     searchQuery: "",
     authorId: "",
   };
+  const paginationDefaults = contentListDefaults.pagination ?? {
+    mode: "none" as const,
+    pageSize: 6,
+    viewAllHref: "",
+    viewAllLabel: "View all",
+    loadMoreLabel: "Load more",
+  };
   const fieldDefaults = contentListDefaults.fields ?? {
     showImage: true,
     showExcerpt: true,
@@ -424,6 +466,24 @@ export function normalizeContentListData(data: ContentListData): ContentListData
     ...data,
     title: resolveTrimmedOptionalString(data.title),
     description: resolveTrimmedOptionalString(data.description),
+    pagination: {
+      mode: resolveContentListPaginationMode(data.pagination?.mode),
+      pageSize: normalizeContentListLimit(
+        data.pagination?.pageSize ?? data.source?.limit ?? paginationDefaults.pageSize ?? 6
+      ),
+      viewAllHref: resolveString(
+        data.pagination?.viewAllHref,
+        paginationDefaults.viewAllHref ?? ""
+      ),
+      viewAllLabel: resolveString(
+        data.pagination?.viewAllLabel,
+        paginationDefaults.viewAllLabel ?? "View all"
+      ),
+      loadMoreLabel: resolveString(
+        data.pagination?.loadMoreLabel,
+        paginationDefaults.loadMoreLabel ?? "Load more"
+      ),
+    },
     source: {
       mode: resolveContentListSourceMode(data.source?.mode, data.source?.listingQueryId),
       listingQueryId: resolveString(data.source?.listingQueryId, ""),
@@ -491,6 +551,7 @@ export function normalizeContentListData(data: ContentListData): ContentListData
           : 0,
       sourceTypeId: resolveString(data.resolved?.sourceTypeId, ""),
       sourceTypeSlug: resolveString(data.resolved?.sourceTypeSlug, ""),
+      listPath: resolveString(data.resolved?.listPath, ""),
       listingQueryId: resolveString(data.resolved?.listingQueryId, ""),
       listingTemplateId: resolveString(data.resolved?.listingTemplateId, ""),
       resolvedAt: resolveString(data.resolved?.resolvedAt, ""),
@@ -509,6 +570,22 @@ export function normalizeContentListData(data: ContentListData): ContentListData
           }
           return Math.max(1, Math.floor(runtimePage));
         })(),
+        pageSize: (() => {
+          const runtimePageSize = data.resolved?.runtime?.pageSize;
+          if (typeof runtimePageSize !== "number" || !Number.isFinite(runtimePageSize)) {
+            return undefined;
+          }
+          return normalizeContentListLimit(runtimePageSize);
+        })(),
+        totalPages: (() => {
+          const runtimeTotalPages = data.resolved?.runtime?.totalPages;
+          if (typeof runtimeTotalPages !== "number" || !Number.isFinite(runtimeTotalPages)) {
+            return undefined;
+          }
+          return Math.max(1, Math.floor(runtimeTotalPages));
+        })(),
+        previousPageHref: resolveTrimmedOptionalString(data.resolved?.runtime?.previousPageHref),
+        nextPageHref: resolveTrimmedOptionalString(data.resolved?.runtime?.nextPageHref),
       },
       error: resolveOptionalString(data.resolved?.error),
     },
@@ -643,6 +720,91 @@ function ContentListItemCard({
   );
 }
 
+function ContentListPaginationActions({
+  pagination,
+  resolved,
+  state,
+}: {
+  pagination: NonNullable<ContentListData["pagination"]>;
+  resolved: NonNullable<ContentListData["resolved"]>;
+  state: "missing-source" | "ready" | "empty";
+}) {
+  const normalizePaginationHref = (value: string | undefined) => {
+    if (!value) return undefined;
+    const trimmed = value.trim();
+    if (!trimmed) return undefined;
+    if (trimmed.startsWith("?")) return trimmed;
+    return normalizeWidgetSafeHref(trimmed, {
+      allowRelative: true,
+      allowHttp: true,
+    });
+  };
+
+  const mode = pagination.mode ?? "none";
+  const previousPageHref = normalizePaginationHref(resolved.runtime?.previousPageHref);
+  const nextPageHref = normalizePaginationHref(resolved.runtime?.nextPageHref);
+  const viewAllHref =
+    normalizeWidgetSafeHref(pagination.viewAllHref, {
+      allowRelative: true,
+      allowHttp: true,
+    }) ??
+    normalizeWidgetSafeHref(resolved.listPath, {
+      allowRelative: true,
+      allowHttp: true,
+    });
+  const currentPage = resolved.runtime?.page ?? 1;
+  const totalPages = resolved.runtime?.totalPages ?? 1;
+
+  if (mode === "paged" && state === "ready" && (previousPageHref || nextPageHref)) {
+    return (
+      <nav
+        className="mt-6 flex items-center justify-between gap-3 text-sm"
+        aria-label="Content list pagination"
+      >
+        {previousPageHref ? (
+          <a href={previousPageHref} className="font-medium underline-offset-4 hover:underline">
+            Previous
+          </a>
+        ) : (
+          <span className="font-medium opacity-60">Previous</span>
+        )}
+        <span className="text-[var(--color-text)]/75">
+          Page {currentPage} of {totalPages}
+        </span>
+        {nextPageHref ? (
+          <a href={nextPageHref} className="font-medium underline-offset-4 hover:underline">
+            Next
+          </a>
+        ) : (
+          <span className="font-medium opacity-60">Next</span>
+        )}
+      </nav>
+    );
+  }
+
+  if (mode === "load-more" && state === "ready" && nextPageHref) {
+    return (
+      <div className="mt-6">
+        <a href={nextPageHref} className="text-sm font-medium underline-offset-4 hover:underline">
+          {pagination.loadMoreLabel ?? "Load more"}
+        </a>
+      </div>
+    );
+  }
+
+  if (mode === "view-all" && viewAllHref) {
+    return (
+      <div className="mt-6">
+        <a href={viewAllHref} className="text-sm font-medium underline-offset-4 hover:underline">
+          {pagination.viewAllLabel ?? "View all"}
+        </a>
+      </div>
+    );
+  }
+
+  return null;
+}
+
 export function ContentListBlock({
   data,
   variant,
@@ -655,6 +817,7 @@ export function ContentListBlock({
   const normalized = normalizeContentListData(data);
   const resolvedVariant = resolveContentListVariant(variant);
   const source = normalized.source ?? contentListDefaults.source!;
+  const pagination = normalized.pagination ?? contentListDefaults.pagination!;
   const fields = normalized.fields ?? contentListDefaults.fields!;
   const style = normalized.style ?? contentListDefaults.style!;
   const resolvedItems = normalizeContentListRuntimeItems(normalized.resolved?.items);
@@ -732,18 +895,25 @@ export function ContentListBlock({
             : "Choose a content type in widget settings to render entries here."}
         </div>
       ) : hasItems ? (
-        <div className={wrapperClassName}>
-          {resolvedItems.map((item, index) => (
-            <ContentListItemCard
-              key={item.id ?? `${item.slug ?? "item"}-${index + 1}`}
-              item={item}
-              index={index}
-              variant={resolvedVariant}
-              fields={fields}
-              style={style}
-            />
-          ))}
-        </div>
+        <>
+          <div className={wrapperClassName}>
+            {resolvedItems.map((item, index) => (
+              <ContentListItemCard
+                key={item.id ?? `${item.slug ?? "item"}-${index + 1}`}
+                item={item}
+                index={index}
+                variant={resolvedVariant}
+                fields={fields}
+                style={style}
+              />
+            ))}
+          </div>
+          <ContentListPaginationActions
+            pagination={pagination}
+            resolved={normalized.resolved ?? { items: [] }}
+            state={state}
+          />
+        </>
       ) : (
         <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-10 text-center">
           <p className="text-base font-semibold text-[var(--color-text)]">

@@ -204,6 +204,100 @@ test("content list renders image aspect classes and CTA fallback label when href
   expect(html).not.toContain('href="/blog/release-notes"');
 });
 
+test("content list renders paged navigation and view-all actions", () => {
+  const pagedHtml = renderToString(
+    <ContentListBlock
+      blockId="content-list-1"
+      variant="cards"
+      data={normalizeContentListData({
+        ...contentListDefaults,
+        source: {
+          contentTypeId: "blog-type-id",
+          statusScope: "published",
+          limit: 3,
+          sort: "published-desc",
+        },
+        pagination: {
+          mode: "paged",
+          pageSize: 2,
+          viewAllHref: "",
+          viewAllLabel: "View all",
+          loadMoreLabel: "Load more",
+        },
+        resolved: {
+          items: [
+            {
+              id: "entry-1",
+              title: "Release notes",
+              href: "/blog/release-notes",
+              excerpt: "Latest platform updates.",
+              publishedAt: "2026-02-08T09:00:00.000Z",
+              status: "published",
+            },
+          ],
+          total: 5,
+          sourceTypeId: "blog-type-id",
+          sourceTypeSlug: "blog",
+          resolvedAt: "2026-02-08T09:10:00.000Z",
+          runtime: {
+            page: 2,
+            pageSize: 2,
+            totalPages: 3,
+            previousPageHref: "?cl.content-list-1.page=1",
+            nextPageHref: "?cl.content-list-1.page=3",
+          },
+        },
+      })}
+    />
+  );
+
+  const viewAllHtml = renderToString(
+    <ContentListBlock
+      variant="cards"
+      data={normalizeContentListData({
+        ...contentListDefaults,
+        source: {
+          contentTypeId: "blog-type-id",
+          statusScope: "published",
+          limit: 3,
+          sort: "published-desc",
+        },
+        pagination: {
+          mode: "view-all",
+          pageSize: 3,
+          viewAllHref: "",
+          viewAllLabel: "Browse all",
+          loadMoreLabel: "Load more",
+        },
+        resolved: {
+          items: [
+            {
+              id: "entry-1",
+              title: "Release notes",
+              href: "/blog/release-notes",
+              excerpt: "Latest platform updates.",
+              publishedAt: "2026-02-08T09:00:00.000Z",
+              status: "published",
+            },
+          ],
+          total: 5,
+          sourceTypeId: "blog-type-id",
+          sourceTypeSlug: "blog",
+          listPath: "/articles",
+          resolvedAt: "2026-02-08T09:10:00.000Z",
+        },
+      })}
+    />
+  );
+
+  expect(pagedHtml).toContain('aria-label="Content list pagination"');
+  expect(pagedHtml.replace(/<!-- -->/g, "")).toContain("Page 2 of 3");
+  expect(pagedHtml).toContain('href="?cl.content-list-1.page=1"');
+  expect(pagedHtml).toContain('href="?cl.content-list-1.page=3"');
+  expect(viewAllHtml).toContain('href="/articles"');
+  expect(viewAllHtml).toContain("Browse all");
+});
+
 test("content list preserves none gap token", () => {
   const normalized = normalizeContentListData({
     ...contentListDefaults,
