@@ -31,6 +31,7 @@ test("team renders defaults", () => {
   expect(html).toContain(teamDefaults.header?.title ?? "");
   expect(html).toContain('data-team-variant="cards"');
   expect(html).toContain('data-team-count="3"');
+  expect(html).toContain('aria-label="Meet the team"');
 });
 
 test("team normalization keeps deterministic ids and bounds", () => {
@@ -42,7 +43,7 @@ test("team normalization keeps deterministic ids and bounds", () => {
         role: "R",
         bio: "B",
         socialLinks: [
-          { id: "same-social", label: "LinkedIn", url: "#" },
+          { id: "same-social", label: "LinkedIn", url: "https://example.com/profile" },
           { id: "same-social", label: "", url: "" },
         ],
       },
@@ -61,7 +62,7 @@ test("team normalization keeps deterministic ids and bounds", () => {
   expect(socialLinks[0]?.id).toBe("same-social");
   expect(socialLinks[1]?.id).toBe("social-2");
   expect(socialLinks[1]?.label).toBeTruthy();
-  expect(socialLinks[1]?.url).toBeTruthy();
+  expect(socialLinks[1]?.url).toBeUndefined();
 
   expect(normalizeTeamMemberCount(999)).toBe(teamMemberMax);
   expect(normalizeTeamMemberCount(0)).toBe(1);
@@ -97,7 +98,7 @@ test("team validator accepts expanded model", () => {
             role: "Head of Product",
             bio: "Leads product strategy.",
             photo: "https://cdn.example.com/anna.jpg",
-            socialLinks: [{ id: "social-1", label: "LinkedIn", url: "#" }],
+            socialLinks: [{ id: "social-1", label: "LinkedIn", url: "https://example.com/anna" }],
           },
           {
             id: "member-2",
@@ -105,7 +106,7 @@ test("team validator accepts expanded model", () => {
             role: "Engineering Lead",
             bio: "Owns architecture and release quality.",
             photo: "https://cdn.example.com/marek.jpg",
-            socialLinks: [{ id: "social-1", label: "X", url: "#" }],
+            socialLinks: [{ id: "social-1", label: "X", url: "https://example.com/marek" }],
           },
         ],
         style: {
@@ -134,6 +135,33 @@ test("team cleared card surfaces omit card background and border color styles", 
   expect(html).toContain('data-team-variant="cards"');
   expect(html).not.toContain("background-color:");
   expect(html).not.toContain("border-color:");
+});
+
+test("team social links stay safe and member photos lazy-load", () => {
+  const html = renderToString(
+    <TeamBlock
+      data={{
+        header: { title: "Leadership" },
+        members: [
+          {
+            name: "Ada",
+            role: "CTO",
+            photo: "https://cdn.example.com/ada.jpg",
+            socialLinks: [
+              { label: "Safe", url: "https://example.com/team/ada" },
+              { label: "Unsafe", url: "javascript:alert(1)" },
+            ],
+          },
+        ],
+      }}
+      variant="spotlight"
+    />
+  );
+
+  expect(html).toContain('loading="lazy"');
+  expect(html).toContain('target="_blank"');
+  expect(html).toContain('rel="noopener noreferrer"');
+  expect(html).not.toContain("javascript:");
 });
 
 test("team validator rejects invalid variant", () => {

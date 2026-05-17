@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 
 import {
   normalizeTeamData,
+  normalizeTeamMemberCount,
   normalizeTeamMembers,
   normalizeTeamSocialLinks,
   resolveTeamVariant,
@@ -29,6 +30,7 @@ import {
   type TeamSocialLink,
   type TeamVariantId,
 } from "../../../../widgets/core/team";
+import { normalizeWidgetSafeHref } from "../../../../widgets/core/widgetSafeHref";
 import type { WidgetEditorProps } from "../../../../widgets/types";
 import { ClearableFieldHeader } from "./ClearableFields";
 import { WidgetEditorSection } from "./WidgetEditorControls";
@@ -287,6 +289,17 @@ function updateMemberSocialLink(
   });
 }
 
+function hasConfiguredTeamMember(member: TeamMember | undefined) {
+  if (!member) return false;
+  if ((member.name ?? "").trim().length > 0) return true;
+  if ((member.role ?? "").trim().length > 0) return true;
+  if ((member.bio ?? "").trim().length > 0) return true;
+  if ((member.photo ?? "").trim().length > 0) return true;
+  return normalizeTeamSocialLinks(member.socialLinks).some(
+    (link) => (link.label ?? "").trim().length > 0 || (link.url ?? "").trim().length > 0
+  );
+}
+
 function addMemberSocialLink(
   value: TeamData,
   onChange: (next: TeamData) => void,
@@ -301,7 +314,7 @@ function addMemberSocialLink(
     if (links.length >= teamSocialLinksMax) return current;
 
     const nextLinks = normalizeTeamSocialLinks(
-      [...links, { label: "LinkedIn", url: "#" }],
+      [...links, { label: "LinkedIn", url: "" }],
       links.length + 1
     );
 
@@ -346,10 +359,36 @@ function removeMemberSocialLink(
 }
 
 function setMembersCount(value: TeamData, onChange: (next: TeamData) => void, count: number) {
-  updateValue(value, onChange, (current) => ({
-    ...current,
-    members: normalizeTeamMembers(current.members, count),
-  }));
+  updateValue(value, onChange, (current) => {
+    const nextCount = normalizeTeamMemberCount(count);
+    const members = normalizeTeamMembers(current.members);
+    if (nextCount >= members.length) {
+      return {
+        ...current,
+        members: normalizeTeamMembers(members, nextCount),
+      };
+    }
+
+    const removedMembers = members.slice(nextCount);
+    const shouldConfirm =
+      !removedMembers.some(hasConfiguredTeamMember) ||
+      typeof window === "undefined" ||
+      typeof window.confirm !== "function" ||
+      window.confirm(
+        `Reducing the member count will remove the last ${removedMembers.length} profile${
+          removedMembers.length === 1 ? "" : "s"
+        }. Continue?`
+      );
+
+    if (!shouldConfirm) {
+      return current;
+    }
+
+    return {
+      ...current,
+      members: normalizeTeamMembers(members, nextCount),
+    };
+  });
 }
 
 function addMember(value: TeamData, onChange: (next: TeamData) => void) {
@@ -425,18 +464,37 @@ export function TeamWizardEditor({
   onChange,
   variant,
   onVariantChange,
+  onBlockPatch,
 }: WidgetEditorProps<TeamData>) {
   const normalized = normalizeValue(value);
   const members = normalizeTeamMembers(normalized.members);
+  const handleVariantChange = (next: string) => {
+    if (next !== "spotlight" || members.length <= 6) {
+      onVariantChange?.(next);
+      return;
+    }
+
+    const nextValue = {
+      ...normalized,
+      members: normalizeTeamMembers(normalized.members, 3),
+    };
+    if (onBlockPatch) {
+      onBlockPatch((current) => ({
+        ...current,
+        variant: next,
+        data: nextValue,
+      }));
+      return;
+    }
+    onVariantChange?.(next);
+    onChange(nextValue);
+  };
 
   return (
     <div className="space-y-4">
       <div className="space-y-2">
         <p className="text-sm font-medium">Team layout</p>
-        <Select
-          value={resolveTeamVariant(variant)}
-          onValueChange={(next) => onVariantChange?.(next)}
-        >
+        <Select value={resolveTeamVariant(variant)} onValueChange={handleVariantChange}>
           <SelectTrigger>
             <SelectValue placeholder="Select variant" />
           </SelectTrigger>
@@ -472,12 +530,22 @@ export function TeamWizardEditor({
       <div className="space-y-2">
         <p className="text-sm font-medium">Primary member names</p>
         {members.slice(0, 3).map((member, index) => (
-          <Input
-            key={member.id}
-            value={member.name}
-            onChange={(event) => updateMember(value, onChange, index, { name: event.target.value })}
-            placeholder={`Member ${index + 1} name`}
-          />
+          <div key={member.id} className="grid gap-3 sm:grid-cols-2">
+            <Input
+              value={member.name ?? ""}
+              onChange={(event) =>
+                updateMember(value, onChange, index, { name: event.target.value })
+              }
+              placeholder={`Member ${index + 1} name`}
+            />
+            <Input
+              value={member.role ?? ""}
+              onChange={(event) =>
+                updateMember(value, onChange, index, { role: event.target.value })
+              }
+              placeholder={`Member ${index + 1} role`}
+            />
+          </div>
         ))}
       </div>
     </div>
@@ -494,6 +562,7 @@ export function TeamVisualEditor({
   const header = normalized.header ?? teamDefaults.header!;
   const style = normalized.style ?? teamDefaults.style!;
   const members = normalizeTeamMembers(normalized.members);
+  const resolvedVariant = resolveTeamVariant(variant);
 
   return (
     <div className="space-y-4">
@@ -501,7 +570,7 @@ export function TeamVisualEditor({
         title="Variant and member structure"
         description="Choose team presentation mode and deterministic member count."
       >
-        <VariantCards value={resolveTeamVariant(variant)} onChange={onVariantChange} />
+        <VariantCards value={resolvedVariant} onChange={onVariantChange} />
 
         <div className="space-y-2">
           <p className="text-sm font-medium">Members count</p>
@@ -623,6 +692,16 @@ export function TeamVisualEditor({
                 }
                 placeholder="https://images.unsplash.com/..."
               />
+              {(member.photo ?? "").trim().length > 0 &&
+              !normalizeWidgetSafeHref(member.photo, {
+                allowRelative: true,
+                allowHttp: true,
+              }) ? (
+                <p className="text-xs text-amber-700">
+                  Use a relative path or http/https image URL. Invalid values fall back to initials
+                  in runtime.
+                </p>
+              ) : null}
             </div>
           </div>
         ))}
@@ -681,7 +760,7 @@ export function TeamVisualEditor({
                         placeholder="LinkedIn"
                       />
                       <Input
-                        value={link.url}
+                        value={link.url ?? ""}
                         onChange={(event) =>
                           updateMemberSocialLink(value, onChange, memberIndex, socialIndex, {
                             url: event.target.value,
@@ -689,6 +768,17 @@ export function TeamVisualEditor({
                         }
                         placeholder="https://..."
                       />
+                      {(link.url ?? "").trim().length > 0 &&
+                      !normalizeWidgetSafeHref(link.url, {
+                        allowRelative: true,
+                        allowHash: true,
+                        allowHttp: true,
+                      }) ? (
+                        <p className="text-xs text-amber-700 sm:col-span-2">
+                          Use a relative path, hash, or http/https URL. Unsafe links are not
+                          rendered publicly.
+                        </p>
+                      ) : null}
                       <Button
                         type="button"
                         variant="outline"
@@ -729,6 +819,12 @@ export function TeamVisualEditor({
               ))}
             </SelectContent>
           </Select>
+          {resolvedVariant === "spotlight" ? (
+            <p className="text-xs text-muted-foreground">
+              Spotlight now applies the selected 1-4 supporting columns instead of collapsing 2, 3,
+              and 4 into the same layout.
+            </p>
+          ) : null}
         </div>
         <div className="space-y-2">
           <p className="text-sm font-medium">Gap</p>

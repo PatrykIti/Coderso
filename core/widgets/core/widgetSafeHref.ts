@@ -3,6 +3,7 @@ export type WidgetSafeHrefOptions = {
   allowHash?: boolean;
   allowHttp?: boolean;
   openInNewTab?: boolean;
+  openExternalInNewTab?: boolean;
 };
 
 export type WidgetLinkAttrs = {
@@ -52,6 +53,7 @@ export function resolveWidgetLinkAttrs(
   if (href.startsWith("http://") || href.startsWith("https://")) {
     return {
       href,
+      target: options.openExternalInNewTab ? "_blank" : undefined,
       rel: "noopener noreferrer",
     };
   }

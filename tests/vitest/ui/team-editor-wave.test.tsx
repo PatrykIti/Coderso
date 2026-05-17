@@ -306,14 +306,19 @@ test("Team wizard editor covers variant fallback, count changes, and primary mem
     expect(findInputsByPlaceholder(view.container, "Member 1 name")).toHaveLength(1);
     expect(findInputsByPlaceholder(view.container, "Member 2 name")).toHaveLength(1);
     expect(findInputsByPlaceholder(view.container, "Member 3 name")).toHaveLength(1);
-    expect(view.container.querySelectorAll("input")).toHaveLength(3);
+    expect(findInputsByPlaceholder(view.container, "Member 1 role")).toHaveLength(1);
+    expect(findInputsByPlaceholder(view.container, "Member 2 role")).toHaveLength(1);
+    expect(findInputsByPlaceholder(view.container, "Member 3 role")).toHaveLength(1);
+    expect(view.container.querySelectorAll("input")).toHaveLength(6);
 
     setInputValue(findInputByPlaceholder(view.container, "Member 1 name"), " Alice ");
+    setInputValue(findInputByPlaceholder(view.container, "Member 1 role"), " Architect ");
     setInputValue(findInputByPlaceholder(view.container, "Member 2 name"), "");
     setInputValue(findInputByPlaceholder(view.container, "Member 3 name"), "Cara");
 
     expect(onChangeSpy).toHaveBeenCalled();
     expect(latestValue.members[0]?.name).toBe("Alice");
+    expect(latestValue.members[0]?.role).toBe("Architect");
     expect(latestValue.members[1]?.name).toBe("Team Member 2");
     expect(latestValue.members[2]?.name).toBe("Cara");
     expect(latestValue.members[3]?.name).toBe("Team Member 4");
@@ -421,7 +426,7 @@ test("Team visual editor covers member structure, social link branching, and sty
     clickButtonByText(socialLinksSection as ParentNode, "Add link");
     expect(latestValue.members[0]?.socialLinks).toHaveLength(1);
     expect(latestValue.members[0]?.socialLinks?.[0]?.label).toBe("LinkedIn");
-    expect(latestValue.members[0]?.socialLinks?.[0]?.url).toBe("#");
+    expect(latestValue.members[0]?.socialLinks?.[0]?.url).toBeUndefined();
 
     setInputValue(findInputsByPlaceholder(view.container, "LinkedIn")[0], "GitHub");
     setInputValue(
@@ -644,7 +649,7 @@ test("Team visual editor covers member-count expansion, social add-link, and raw
     expect(latestValue.members[0]?.socialLinks?.[0]).toEqual(
       expect.objectContaining({
         label: "LinkedIn",
-        url: "#",
+        url: undefined,
       })
     );
 
@@ -666,6 +671,48 @@ test("Team visual editor covers member-count expansion, social add-link, and raw
     );
   } finally {
     view.cleanup();
+  }
+});
+
+test("Team visual editor confirms before destructive member-count reduction", async () => {
+  const { TeamVisualEditor } = await import("../../../core/admin/ui/widgets/editors/TeamEditors");
+
+  const confirmSpy = vi.fn();
+  vi.stubGlobal("confirm", confirmSpy);
+  let latestValue: TeamData = teamDefaults;
+
+  const Harness = () => {
+    const [value, setValue] = useState<TeamData>(latestValue);
+    return (
+      <TeamVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="cards"
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    const structureSection = findSectionByTitle(view.container, "Variant and member structure");
+    const memberCountSelect = findSelectByOptions(structureSection as ParentNode, ["1", "12"]);
+
+    confirmSpy.mockReturnValue(false);
+    setSelectValue(memberCountSelect, "2");
+    expect(confirmSpy).toHaveBeenCalledTimes(1);
+    expect(latestValue.members).toHaveLength(3);
+
+    confirmSpy.mockReturnValue(true);
+    setSelectValue(memberCountSelect, "2");
+    expect(confirmSpy).toHaveBeenCalledTimes(2);
+    expect(latestValue.members).toHaveLength(2);
+  } finally {
+    view.cleanup();
+    vi.unstubAllGlobals();
   }
 });
 

@@ -1,6 +1,9 @@
 import { expect, test } from "vitest";
 
-import { normalizeWidgetSafeHref } from "../../../core/widgets/core/widgetSafeHref";
+import {
+  normalizeWidgetSafeHref,
+  resolveWidgetLinkAttrs,
+} from "../../../core/widgets/core/widgetSafeHref";
 
 test("normalizeWidgetSafeHref keeps allowed relative, hash, and http urls", () => {
   expect(
@@ -38,4 +41,30 @@ test("normalizeWidgetSafeHref rejects unsafe or unsupported protocols", () => {
   expect(normalizeWidgetSafeHref("vbscript:msgbox(1)", options)).toBeUndefined();
   expect(normalizeWidgetSafeHref("//evil.example", options)).toBeUndefined();
   expect(normalizeWidgetSafeHref("mailto:test@example.com", options)).toBeUndefined();
+});
+
+test("resolveWidgetLinkAttrs can open only external links in a new tab", () => {
+  expect(
+    resolveWidgetLinkAttrs("https://example.com/pricing", {
+      allowRelative: true,
+      allowHash: true,
+      allowHttp: true,
+      openExternalInNewTab: true,
+    })
+  ).toEqual({
+    href: "https://example.com/pricing",
+    target: "_blank",
+    rel: "noopener noreferrer",
+  });
+
+  expect(
+    resolveWidgetLinkAttrs("/pricing", {
+      allowRelative: true,
+      allowHash: true,
+      allowHttp: true,
+      openExternalInNewTab: true,
+    })
+  ).toEqual({
+    href: "/pricing",
+  });
 });

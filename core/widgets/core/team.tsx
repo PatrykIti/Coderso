@@ -2,6 +2,7 @@ import type { CSSProperties, ComponentType } from "react";
 
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
+import { normalizeWidgetSafeHref, resolveWidgetLinkAttrs } from "./widgetSafeHref";
 
 export type TeamVariantId = "cards" | "compact-list" | "spotlight";
 export type TeamColumns = "1" | "2" | "3" | "4";
@@ -58,8 +59,8 @@ const columnsClassMap: Record<TeamColumns, string> = {
 const spotlightRestColumnsClassMap: Record<TeamColumns, string> = {
   "1": "grid-cols-1",
   "2": "grid-cols-1 sm:grid-cols-2",
-  "3": "grid-cols-1 sm:grid-cols-2",
-  "4": "grid-cols-1 sm:grid-cols-2",
+  "3": "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
+  "4": "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4",
 };
 
 const radiusClassMap: Record<TeamRadius, string> = {
@@ -242,7 +243,7 @@ export function normalizeTeamSocialLinks(
         typeof base.label === "string" && base.label.trim().length > 0
           ? base.label.trim()
           : (fallbackLabels[index] ?? `Social ${index + 1}`),
-      url: typeof base.url === "string" && base.url.trim().length > 0 ? base.url.trim() : "#",
+      url: typeof base.url === "string" && base.url.trim().length > 0 ? base.url.trim() : undefined,
     });
   }
 
@@ -356,8 +357,12 @@ function Avatar({ name, photo, radius }: { name: string; photo?: string; radius:
     "h-16 w-16 border border-[var(--color-border)] object-cover",
     radiusClassMap[radius]
   );
-  if (typeof photo === "string" && photo.trim().length > 0) {
-    return <img src={photo} alt={name} className={baseClassName} />;
+  const safePhoto = normalizeWidgetSafeHref(photo, {
+    allowRelative: true,
+    allowHttp: true,
+  });
+  if (safePhoto) {
+    return <img src={safePhoto} alt={name} loading="lazy" className={baseClassName} />;
   }
 
   return (
@@ -374,13 +379,23 @@ function Avatar({ name, photo, radius }: { name: string; photo?: string; radius:
 }
 
 function SocialLinks({ links }: { links: TeamSocialLink[] }) {
-  if (links.length === 0) return null;
+  const renderableLinks = links.flatMap((link, index) => {
+    const linkAttrs = resolveWidgetLinkAttrs(link.url, {
+      allowRelative: true,
+      allowHash: true,
+      allowHttp: true,
+      openExternalInNewTab: true,
+    });
+    if (!linkAttrs) return [];
+    return [{ index, link, linkAttrs }] as const;
+  });
+  if (renderableLinks.length === 0) return null;
   return (
     <ul className="mt-3 flex flex-wrap gap-2 text-xs">
-      {links.map((link, index) => (
+      {renderableLinks.map(({ index, link, linkAttrs }) => (
         <li key={link.id ?? `social-link-${index + 1}`}>
           <a
-            href={link.url ?? "#"}
+            {...linkAttrs}
             className="inline-flex rounded-md border border-[var(--color-border)] px-2 py-1 text-[var(--color-text)]/80 transition hover:border-[var(--color-primary)] hover:text-[var(--color-text)]"
           >
             {link.label}
@@ -469,6 +484,7 @@ export function TeamBlock({ data, variant }: { data: TeamData; variant: string }
 
   return (
     <section
+      aria-label={(normalized.header?.title ?? "").trim() || "Team section"}
       className="mx-auto w-full max-w-6xl px-4 py-8"
       data-team-variant={resolvedVariant}
       data-team-count={String(members.length)}
@@ -479,9 +495,9 @@ export function TeamBlock({ data, variant }: { data: TeamData; variant: string }
       {showHeader ? (
         <header className="mx-auto mb-6 max-w-3xl space-y-2 text-center">
           {(normalized.header?.title ?? "").trim().length > 0 ? (
-            <h3 className="text-2xl font-semibold text-[var(--color-text)]">
+            <h2 className="text-2xl font-semibold text-[var(--color-text)]">
               {normalized.header?.title}
-            </h3>
+            </h2>
           ) : null}
           {(normalized.header?.description ?? "").trim().length > 0 ? (
             <p className="text-sm text-[var(--color-text)]/75">{normalized.header?.description}</p>
