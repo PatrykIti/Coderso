@@ -29,15 +29,21 @@ scope and must not patch Section/page-shell sticky blockers.
 - `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:74-78` - `collapseOnScroll`
   persists only a data attribute. Current widget docs also describe this as v1
   behavior, so this is a Navigation product-contract expansion.
-- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:97-123` - hover/active state,
-  second CTA, CTA radius, logo size, and CTA separator controls are missing.
-- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:127-161` - letter spacing,
-  shadow, backdrop blur, dropdown animation/direction, target/rel, active
-  highlighting, and mobile animation controls are missing.
-- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:201,226-235` - active state and
-  visual market-standard gaps.
-- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:403-407,431-442,452-455` -
-  prioritized P0/P3 backlog rows.
+- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:97-102` - hover/active colors
+  and underline controls are missing.
+- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:104-114,122-123` - second CTA,
+  CTA radius, logo size, and CTA separator controls are missing.
+- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:127-140,147-149` - letter
+  spacing, shadow, backdrop blur, dropdown animation, and dropdown direction
+  controls are missing.
+- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:151-157,201,227,439,442` -
+  target/rel and active-link highlighting rows belong to TASK-275-05-02.
+- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:183,185` - Wizard CTA helper
+  copy and Navigation-local hex color live validation need explicit editor
+  ownership.
+- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:406,433-440` - collapse,
+  visual-token, CTA/logo, target/rel, and dropdown-animation backlog rows are
+  split across the child leaves below.
 
 ## Sub-Tasks
 

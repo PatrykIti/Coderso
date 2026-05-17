@@ -19,13 +19,13 @@ mega-menu, search, or dark-mode systems.
 
 ## Source Findings
 
-- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:97-123` - second CTA, CTA
-  radius, logo size, and CTA separator controls are missing.
+- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:104-114,122-123` - second CTA,
+  CTA radius, logo size, and CTA separator controls are missing.
 - `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:183` - Wizard CTA inputs are
   hidden when `ctaEnabled=false`, but the helper text is misleading and needs
   Navigation-specific copy.
-- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:403-407,431-442` - logo and CTA
-  polish rows are prioritized in report follow-ups.
+- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:434-435` - CTA radius and logo
+  size appear in lower-priority backlog rows.
 - `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:228-233` - mega-menu/search/dark
   switch comparisons are out of current Navigation v1 scope.
 

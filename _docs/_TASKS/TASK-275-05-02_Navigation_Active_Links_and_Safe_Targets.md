@@ -18,12 +18,12 @@ change global link policy.
 
 ## Source Findings
 
-- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:127-137` - active-link
-  highlighting and target/rel controls are missing.
-- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:201,226-235` - active state and
-  market-standard link behavior gaps are visible.
-- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:431-442` - target/rel and
-  active styling appear in lower-priority backlog rows.
+- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:151-157` - target/rel controls
+  and active-link highlighting are missing.
+- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:201,227` - active state is a
+  visible runtime and market-standard gap.
+- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:439,442` - target/rel and
+  active highlighting appear in lower-priority backlog rows.
 
 ## Sub-Tasks
 

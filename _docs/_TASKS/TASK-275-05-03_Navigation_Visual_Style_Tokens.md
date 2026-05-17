@@ -19,15 +19,19 @@ owns styling and direction controls.
 
 ## Source Findings
 
-- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:97-123` - hover/active state
-  and visual styling controls are missing.
-- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:146-161` - dropdown direction,
-  letter spacing, shadow, backdrop blur, and motion controls are missing.
-- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:215,226-235` - contrast and
-  market-standard visual gaps are noted; generic contrast validation remains
-  TASK-256/shared scope.
-- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:431-442,452-455` - visual-token
-  rows appear in lower-priority backlog.
+- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:97-102` - hover color, active
+  color, and underline controls are missing. Active-link detection itself is
+  owned by TASK-275-05-02.
+- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:127-140,147-149` - letter
+  spacing, shadow, backdrop blur, dropdown animation, and dropdown direction
+  controls are missing.
+- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:185` - Navigation color inputs
+  allow manual hex entry without live validation feedback.
+- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:215,226,234-235` - contrast,
+  dropdown animation, letter spacing, and backdrop blur market-standard gaps are
+  noted; generic contrast validation remains TASK-256/shared scope.
+- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:433,436-438,440` -
+  visual-token and dropdown-animation rows appear in lower-priority backlog.
 
 ## Sub-Tasks
 
@@ -38,9 +42,9 @@ owns styling and direction controls.
 | File | Required change |
 |---|---|
 | `core/widgets/core/navigation.tsx` | Add schema/default/normalizer/render support for bounded style tokens such as `linkHoverColor`, `linkActiveColor`, `linkUnderline`, `letterSpacing`, `shadow`, `backdropBlur`, `dropdownDirection`, and bounded motion. Use tokenized classes or validated color values only. |
-| `core/admin/ui/widgets/editors/NavigationEditors.tsx` | Add Visual controls with clear behavior for optional tokens. Keep Advanced technical-only unless TASK-256 changes mode ownership. |
+| `core/admin/ui/widgets/editors/NavigationEditors.tsx` | Add Visual controls with clear behavior for optional tokens and Navigation-local live validation feedback for manual hex color inputs. Keep Advanced technical-only unless TASK-256 changes mode ownership. |
 | `tests/vitest/widgets/navigation.test.tsx` | Assert style tokens render deterministic output and unknown values normalize safely. |
-| `tests/vitest/ui/navigation-editor-wave.test.tsx` | Assert controls update and clear token fields without serializing empty sentinels. |
+| `tests/vitest/ui/navigation-editor-wave.test.tsx` | Assert controls update and clear token fields without serializing empty sentinels, and manual hex color fields show deterministic live validation feedback. |
 | `tests/vitest/widgets/styleNoneTokens.test.tsx` | Run/update if new fields interact with `none` or clearable token semantics. |
 | `tests/unit/widgets/validator.test.ts` | Update schema/default assertions for persisted token fields. |
 | `_docs/_WIDGETS/NAVIGATION.md` | Document visual token ranges, clear behavior, dropdown direction, and motion policy. |
@@ -78,18 +82,25 @@ Error handling:
 - Clear controls remove optional keys rather than serializing empty strings.
 - Color fields must use existing validated color input patterns; no raw CSS
   blocks, arbitrary classes, or style object passthrough.
+- Navigation-local hex feedback must not become a shared color-input framework
+  unless TASK-256 creates that owner.
 - Dropdown direction changes must not reimplement submenu click/touch state from
   TASK-275-03.
 
 ## Data Flow
 
-1. Admin edits bounded Visual controls for Navigation visual style.
+1. Admin edits bounded Visual controls for Navigation visual style and color
+   values.
 2. `navigationSchema` and `normalizeNavigationData()` clamp tokens and optional
    color values.
-3. `navigation.tsx` maps normalized values to deterministic classes/styles and
+3. `NavigationEditors.tsx` gives immediate Navigation-local feedback for manual
+   hex color values while persistence still goes through schema/normalizer
+   checks.
+4. `navigation.tsx` maps normalized values to deterministic classes/styles and
    root/submenu data attributes.
-4. Vitest validates normalized output, clear behavior, and SSR rendering.
-5. Docs/report distinguish Navigation-owned style controls from shared generic
+5. Vitest validates normalized output, clear behavior, editor feedback, and SSR
+   rendering.
+6. Docs/report distinguish Navigation-owned style controls from shared generic
    contrast validation.
 
 ## Security Contract
@@ -130,6 +141,8 @@ No API routes are added.
 - Visual style fields are bounded, schema-backed, normalized, tested, and
   documented.
 - Clear controls do not persist empty sentinels.
+- Manual hex color inputs provide Navigation-local live validation feedback
+  without introducing a shared color framework.
 - Dropdown direction is implemented as styling/direction only; interaction state
   remains TASK-275-03.
 - Shared contrast validation remains routed outside TASK-275.
