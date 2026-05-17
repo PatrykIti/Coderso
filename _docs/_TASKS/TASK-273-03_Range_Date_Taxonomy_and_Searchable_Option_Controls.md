@@ -74,12 +74,26 @@ function normalizeListingFacetUiConfig(facet: unknown, kind: ListingFacetKind) {
 function ListingRangeFacetControl({ metric, config }: Props) {
   const [min, max] = splitActiveRange(metric.range?.active);
   return (
-    <fieldset data-listing-range-control>
+    <fieldset data-listing-range-control data-listing-range-token={metric.token}>
       <input type="number" data-listing-range-part="min" defaultValue={min} />
       <input type="number" data-listing-range-part="max" defaultValue={max} />
+      <input type="hidden" data-listing-token={metric.token} value={joinRangeToken(min, max)} />
       {config.rangeInputMode !== "inputs" ? <RangeSlider metric={metric} /> : null}
     </fieldset>
   );
+}
+
+function bindListingRangeControls(root: ParentNode) {
+  root.querySelectorAll("[data-listing-range-control]").forEach((control) => {
+    const hidden = control.querySelector<HTMLInputElement>("[data-listing-token]");
+    const parts = Array.from(control.querySelectorAll<HTMLInputElement>("[data-listing-range-part]"));
+    parts.forEach((part) => {
+      part.addEventListener("input", () => {
+        if (!hidden) return;
+        hidden.value = joinRangeToken(readPart(parts, "min"), readPart(parts, "max"));
+      });
+    });
+  });
 }
 
 function ListingSearchableOptionControl({ metric }: Props) {
@@ -139,7 +153,8 @@ Data flow:
 - Runtime tokens remain `lq.<queryId>.<field>.<operator>` and use the current
   URL sync path.
 - Range/date controls serialize the same comma-separated pair currently used by
-  the backend token parser, while exposing separate inputs for users.
+  the backend token parser by updating one hidden canonical
+  `data-listing-token` input from visible min/max or start/end inputs.
 - Taxonomy hierarchy is presentation metadata for option nesting; query
   execution still receives selected option values.
 
