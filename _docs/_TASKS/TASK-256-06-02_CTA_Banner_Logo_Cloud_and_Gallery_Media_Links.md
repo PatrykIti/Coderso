@@ -14,17 +14,19 @@
 
 Repair media/link/clear/accessibility drift for `cta-banner`, `logo-cloud`, and
 `gallery-mosaic`. These widgets expose public-facing marketing links and media,
-so the repair must preserve safe-href normalization, clear semantics, alt text,
-and truthful editor controls.
+so the repair must preserve safe-href normalization, clear semantics, existing
+media alt fallbacks, and truthful editor controls. Logo Cloud per-logo `alt`
+schema/editor expansion is deferred to TASK-274-02.
 
 ## Drift Evidence
 
 - `_docs/PLAYWRIGHT/REPORT_CTA_BANNER_WIDGET.md:132-161,175-185,223-241` for
   empty badge, description color, border/clear, action labels, URL validation,
   focus state, and priority fixes.
-- `_docs/PLAYWRIGHT/REPORT_LOGO_CLOUD_WIDGET.md:38-116,134-153` for missing
-  link `rel`, heading/section ARIA, hoverColor truthfulness, logo height, Wizard
-  image/link gaps, alt text, and image picker scope.
+- `_docs/PLAYWRIGHT/REPORT_LOGO_CLOUD_WIDGET.md:119-153,260-262` for missing
+  safe link `rel`, heading/section ARIA, hoverColor truthfulness, and logo
+  height safety. Wizard image/link gaps, per-logo `alt`, image picker, marquee,
+  drag/drop, and product shell fields are deferred to TASK-274.
 - `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md:54-94,195-220,274-281` for
   media type ambiguity, overlay alpha loss, alt/caption semantics, video picker
   scope, feature-left minimum handling, link security, and hover-caption
@@ -39,8 +41,8 @@ and truthful editor controls.
 |---|---|---|---|
 | CTA empty badge/text/focus/clear drift | Fix here | `CtaBannerEditors.tsx`, `ctaBanner.tsx` | None |
 | CTA BF/accessibility list beyond current controls, including animation, icon controls, and broad layout additions | Future product scope unless the current control already exists and is misleading | Future CTA task | TASK-256-08 records deferral |
-| Logo Cloud link `rel`, section aria, hoverColor truthfulness | Fix here | `LogoCloudEditors.tsx`, `logoCloud.tsx` | None |
-| Logo Cloud image picker, drag/drop, marquee, eyebrow/background | Future product scope unless needed to repair broken current flow | Future widget task | TASK-256-08 records deferral |
+| Logo Cloud safe href/`rel`, section aria, heading semantics, `logoHeight: "none"` safety, and hoverColor truthfulness | Fix here | `LogoCloudEditors.tsx`, `logoCloud.tsx` | None |
+| Logo Cloud image picker, drag/drop, marquee, eyebrow/background, per-logo `alt`, Wizard image/link authoring, and open-new-tab product control | Future product scope unless needed to repair broken current flow | TASK-274 family | TASK-274 owns the physical follow-up leaves; TASK-256 only supplies shared safe link attributes. |
 | Gallery Mosaic overlay alpha loss and image/video ambiguity | Fix here because current controls can destroy data or mislead users | `GalleryMosaicEditors.tsx` | None |
 | Gallery Mosaic alt text and link security | Fix here | `galleryMosaic.tsx`, editor tests | None |
 | Gallery Mosaic video `title`, hover-caption keyboard/touch access, and autoplay control | Fix here when it changes current runtime semantics; otherwise create explicit accessibility follow-up | `galleryMosaic.tsx`, `GalleryMosaicEditors.tsx` | TASK-256-08 creates follow-up if schema expansion is required |
@@ -65,14 +67,14 @@ and truthful editor controls.
 |---|---:|---|
 | `core/admin/ui/widgets/editors/CtaBannerEditors.tsx` | 250-550 | Visual clear controls, action labels, URL feedback, and focus-state controls. |
 | `core/widgets/core/ctaBanner.tsx` | 185-200, 333-389 | Empty badge suppression, description color, border class, focus-visible, and safe link output. |
-| `core/admin/ui/widgets/editors/LogoCloudEditors.tsx` | 284-694 | Wizard image/link scope decisions, hoverColor gating, alt/link fields if model changes, and Advanced duplicate controls. |
+| `core/admin/ui/widgets/editors/LogoCloudEditors.tsx` | 284-694 | Shared-contract Logo Cloud repairs only: hoverColor gating, link feedback from the shared safe-href helper, and Advanced duplicate-control cleanup. Per-logo `alt`, image picker, and Wizard image/link authoring stay in TASK-274. |
 | `core/widgets/core/logoCloud.tsx` | 268-401 | Link `rel`/target handling, section labels, heading semantics, logo height fallback, and hoverColor output. |
 | `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx` | 92-98, 448, 559-598, 720-832 | Overlay alpha-safe editing, image/video type clarity, video media picker scope, and duplicated Advanced controls. |
 | `core/widgets/core/galleryMosaic.tsx` | 159-275, 314-507 | Explicit resolver defaults, feature-left one-item handling, link safety, alt/figure semantics, and redundant row-span cleanup. |
 | `core/widgets/core/widgetSafeHref.ts` | 1-25 | Extend the shared href owner with a tested helper such as `resolveWidgetLinkAttrs(href, options)` that returns normalized `href`, `target`, and safe `rel` attributes. Do not duplicate external-link detection in individual widgets. |
 | `tests/vitest/ui/cta-banner-editor-wave.test.tsx` | existing suite | Add clear/action/focus/url regressions. |
 | `tests/vitest/widgets/ctaBanner.test.tsx` | existing suite | Add badge/color/focus/link regressions. |
-| `tests/vitest/ui/logo-cloud-editor-wave.test.tsx` | existing suite | Add hoverColor/alt/link/Wizard regressions. |
+| `tests/vitest/ui/logo-cloud-editor-wave.test.tsx` | existing suite | Add hoverColor/link feedback regressions for shared TASK-256 behavior. Per-logo `alt` and Wizard image/link regressions stay in TASK-274-02. |
 | `tests/vitest/widgets/logoCloud.test.tsx` | existing suite | Add link/ARIA/height regressions. |
 | `tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx` | existing suite | Add overlay/media-type/Advanced regressions. |
 | `tests/vitest/widgets/galleryMosaic.test.tsx` | existing suite | Add alt/link/feature-left/figure regressions. |
@@ -117,8 +119,9 @@ Error handling:
 - Overlay color pickers must not replace `rgba(...)` or CSS variables with hex
   fallback values unless the user explicitly chooses a new color.
 - Existing CTA/logo/gallery URLs normalize through the same safe-href owner.
-- If adding `alt` fields requires schema migration, keep fallback behavior
-  backward compatible and update validator tests.
+- If adding media `alt` fields in a TASK-256-owned widget requires schema
+  migration, keep fallback behavior backward compatible and update validator
+  tests. Logo Cloud per-logo `alt` field work is TASK-274-02.
 
 ## Git Scope Safeguards
 
@@ -172,5 +175,7 @@ No API routes are added.
 - CTA, Logo Cloud, and Gallery Mosaic links stay safe and accessible.
 - Media editors do not destroy alpha/CSS variable values accidentally.
 - Public output has meaningful alt/ARIA semantics or documented deferrals.
+- Logo Cloud per-logo `alt` schema/editor work remains a documented TASK-274-02
+  deferral, not part of this shared-contract leaf.
 - Major new media-product features are deferred with physical follow-up tasks
   during TASK-256-08 closure.

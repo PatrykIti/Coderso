@@ -43,27 +43,57 @@ Explicitly out of scope:
 type PendingLogoRemoval = {
   logo: LogoCloudLogo;
   index: number;
+  editVersion: number;
 } | null;
 
+function LogoCloudVisualEditor(props: LogoCloudEditorProps) {
+  const [pendingRemoval, setPendingRemoval] = useState<PendingLogoRemoval>(null);
+  const editVersionRef = useRef(0);
+
+  function commitLogoEdit(updater: (current: LogoCloudData) => LogoCloudData) {
+    editVersionRef.current += 1;
+    setPendingRemoval(null);
+    updateValue(value, onChange, updater);
+  }
+}
+
 function removeLogoWithUndo(index: number) {
+  const editVersion = editVersionRef.current + 1;
   updateValue(value, onChange, (current) => {
     const logos = normalizeLogoCloudLogos(current.logos);
     const removed = logos[index];
     if (!removed || logos.length <= 1) return current;
-    setPendingRemoval({ logo: removed, index });
+    editVersionRef.current = editVersion;
+    setPendingRemoval({ logo: removed, index, editVersion });
     return { ...current, logos: normalizeLogoCloudLogos(logos.filter((_, i) => i !== index), logos.length - 1) };
   });
 }
 
 function restoreRemovedLogo() {
   if (!pendingRemoval) return;
+  if (pendingRemoval.editVersion !== editVersionRef.current) {
+    setPendingRemoval(null);
+    return;
+  }
   updateValue(value, onChange, (current) => {
     const logos = normalizeLogoCloudLogos(current.logos);
     const nextLogos = [...logos];
     nextLogos.splice(Math.min(pendingRemoval.index, nextLogos.length), 0, pendingRemoval.logo);
     return { ...current, logos: normalizeLogoCloudLogos(nextLogos, nextLogos.length) };
   });
+  editVersionRef.current += 1;
   setPendingRemoval(null);
+}
+
+function LogoRemovalUndoNotice() {
+  if (!pendingRemoval) return null;
+  return (
+    <div role="status" data-widget-control="logo-cloud-remove-undo">
+      <span>{pendingRemoval.logo.name || "Logo removed"}</span>
+      <Button type="button" onClick={restoreRemovedLogo}>Undo</Button>
+      <Button type="button" onClick={() => setPendingRemoval(null)}>Dismiss</Button>
+    </div>
+  );
 }
 
 function handleLogoDrop(fromIndex: number, toIndex: number) {
@@ -77,11 +107,14 @@ Editor data flow:
 1. Keep `moveLogo` as the canonical reorder helper.
 2. Add a drag handle per logo card with `draggable`, `aria-label`, and stable
    `data-widget-control` metadata.
-3. Store only transient drag state in React local state; persisted order changes
-   flow through `onChange` once a valid drop occurs.
+3. Store only transient drag and pending-removal state in `LogoCloudVisualEditor`
+   local state; persisted order changes flow through `onChange` once a valid
+   drop occurs.
 4. Use immediate remove with inline Undo that restores the exact removed item at
    its previous index. Do not also add a confirmation dialog in this leaf.
-5. Preserve `logos.length >= 1` and `logos.length <= logoCloudLogoMax`.
+5. Route every non-restore logo edit through `commitLogoEdit`, which clears
+   pending removal and increments `editVersionRef`.
+6. Preserve `logos.length >= 1` and `logos.length <= logoCloudLogoMax`.
 
 Error handling:
 
@@ -91,6 +124,16 @@ Error handling:
 - Keep the existing order if remove is attempted while only one logo remains.
 - Restore button must no-op safely after another edit invalidates the pending
   removal.
+
+Regression-test shape:
+
+- Removing a logo shows one inline Undo notice and immediately removes the item
+  from the emitted value.
+- Clicking Undo restores the exact logo at its previous index when no later edit
+  invalidated the pending removal.
+- A later logo edit, add, move, drag/drop, or second removal clears the pending
+  removal; a stale Undo click no-ops.
+- Removing the only remaining logo no-ops and does not show an Undo notice.
 
 ## Sub-Tasks
 

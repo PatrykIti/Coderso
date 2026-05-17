@@ -36,6 +36,7 @@ Explicitly out of scope:
 | `core/admin/ui/widgets/editors/LogoCloudEditors.tsx` | Add Visual controls for row/wrap/marquee behavior with clear product copy and disabled states where variant-specific. |
 | `core/site/styles/site.css` | Add the public-runtime `@keyframes` / utility class for Logo Cloud marquee if no shared animation token already exists. |
 | `core/admin/styles/globals.css` | Add or import the same marquee class for admin/editor preview so Visual mode and public runtime render consistently. |
+| `tests/vitest/widgets/logoCloudStyles.test.ts` | Add static CSS parity coverage that reads the public/admin style owners and asserts both define or import the same Logo Cloud marquee keyframe/class. |
 | `tests/vitest/widgets/logoCloud.test.tsx` | Cover dense max-count classes, strip single-row scroll, marquee markers, and reduced-motion fallback markers. |
 | `tests/vitest/ui/logo-cloud-editor-wave.test.tsx` | Cover layout mode controls and variant gating. |
 | `tests/vitest/widgets/renderer.test.tsx` | Update if shared renderer output markers change. |
@@ -126,7 +127,8 @@ No API routes are added.
 - `bun run test:vitest -- tests/vitest/ui/logo-cloud-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` when renderer
   output markers change.
-- Add a static assertion or closure check that `core/site/styles/site.css` and
+- `bun run test:vitest -- tests/vitest/widgets/logoCloudStyles.test.ts` when
+  adding marquee CSS. The test must assert `core/site/styles/site.css` and
   `core/admin/styles/globals.css` both define or import the same
   `logo-cloud-marquee` keyframe/class.
 - `bun test tests/unit/widgets/validator.test.ts` only when intentionally adding

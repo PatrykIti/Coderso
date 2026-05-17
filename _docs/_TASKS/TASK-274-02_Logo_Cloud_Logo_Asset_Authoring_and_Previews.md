@@ -79,17 +79,28 @@ function useLogoMediaSelection({
   onChange,
   persistAssetId,
 }: UseLogoMediaSelectionOptions) {
-  const requestIdRef = useRef(0);
+  const requestIdsByLogoRef = useRef<Record<string, number>>({});
+
+  function resolveRequestKey(index: number, logo: LogoCloudLogo) {
+    return logo.id?.trim() || `index:${index}`;
+  }
+
+  function invalidateLogoMediaRequest(index: number, logo: LogoCloudLogo) {
+    const requestKey = resolveRequestKey(index, logo);
+    requestIdsByLogoRef.current[requestKey] = (requestIdsByLogoRef.current[requestKey] ?? 0) + 1;
+  }
 
   return async function handleLogoAssetChange(
     index: number,
     logo: LogoCloudLogo,
     assetId: string | null,
   ) {
-    const requestId = ++requestIdRef.current;
+    const requestKey = resolveRequestKey(index, logo);
+    const requestId = (requestIdsByLogoRef.current[requestKey] ?? 0) + 1;
+    requestIdsByLogoRef.current[requestKey] = requestId;
     if (!assetId) return updateLogo(value, onChange, index, { image: "", imageAssetId: undefined });
     const next = await resolveLogoMediaAsset(assetId);
-    if (requestId !== requestIdRef.current) return;
+    if (requestIdsByLogoRef.current[requestKey] !== requestId) return;
     updateLogo(value, onChange, index, {
       image: next.image,
       // Persist only when TASK-274-02 makes imageAssetId schema-owned.
@@ -107,7 +118,10 @@ function LogoImageControl({ logo, index }: LogoImageControlProps) {
       ) : null}
       <Input
         value={logo.image ?? ""}
-        onChange={(event) => updateLogo(value, onChange, index, { image: event.target.value })}
+        onChange={(event) => {
+          invalidateLogoMediaRequest(index, logo);
+          updateLogo(value, onChange, index, { image: event.target.value, imageAssetId: undefined });
+        }}
       />
       <Input
         value={logo.alt ?? ""}
@@ -150,8 +164,9 @@ Error handling:
 
 - If MediaPicker resolution fails, show an inline error and keep the previous
   logo data unchanged.
-- Guard async media-cache resolution with a request ID/ref so stale picker
-  results cannot overwrite a later logo edit or selection.
+- Guard async media-cache resolution with a per-logo request ID/ref so stale
+  picker results cannot overwrite a later edit or selection for the same logo
+  row, while concurrent selections on different rows can still complete.
 - If selected media is unavailable, keep the selected ID out of persisted data
   unless a public URL was resolved.
 - Broken external image URLs must not crash the editor; thumbnail fallback should
@@ -169,8 +184,13 @@ Regression-test shape:
 - Mock the media cache client used by the editor, including success,
   not-found, and failure cases for `listMediaCached`.
 - Assert stale media-cache races do not overwrite newer selections: trigger two
-  picker selections, resolve the first request last, and verify the second
-  selection remains persisted.
+  picker selections for the same logo, resolve the first request last, and
+  verify the second selection remains persisted.
+- Assert cross-row media selections resolve independently and a late request for
+  one row does not discard a valid selection on another row.
+- Assert a manual image URL edit invalidates an in-flight media selection for
+  that row and clears any stale `imageAssetId` unless schema-owned persistence
+  explicitly keeps it.
 - Assert Wizard edits persist `logos[index].image`, `logos[index].alt`, and
   `logos[index].href`.
 - Assert Visual thumbnails render success and unavailable states without

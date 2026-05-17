@@ -33,7 +33,6 @@ Live owners inspected while drafting:
 - `core/admin/ui/widgets/editors/LogoCloudEditors.tsx`
 - `core/widgets/core/widgetSafeHref.ts`
 - `core/admin/ui/media/MediaPicker.tsx`
-- `core/admin/ui/shared/ConfirmActionDialog.tsx`
 - `tests/vitest/widgets/logoCloud.test.tsx`
 - `tests/vitest/ui/logo-cloud-editor-wave.test.tsx`
 - `tests/vitest/widgets/renderer.test.tsx`
@@ -62,7 +61,7 @@ TASK-256 already owns them as shared widget-contract drift.
 
 | Report finding | Evidence | Owner task | Reason |
 |---|---|---|---|
-| BUG-01 base safe link rendering, `rel`, unsafe href rejection | `REPORT_LOGO_CLOUD_WIDGET.md:119-125,260-263,296` | TASK-256-06-02 | Shared marketing-widget safe href contract and `widgetSafeHref` ownership. |
+| BUG-01 base safe link rendering, `rel`, unsafe href rejection | `REPORT_LOGO_CLOUD_WIDGET.md:119-125,260-262,296` | TASK-256-06-02 | Shared marketing-widget safe href contract and `widgetSafeHref` ownership. The A4/target option slice is TASK-274-05 after the shared helper exists. |
 | BUG-02 hardcoded heading semantics and BF-09 `headingLevel` baseline | `REPORT_LOGO_CLOUD_WIDGET.md:127-133,242-244,261,297` | TASK-256-06-02 | Logo Cloud slice of the shared runtime heading hierarchy repair. TASK-274 may consume the resulting field but must not define a second heading contract. |
 | BUG-03 section `aria-label` / `aria-labelledby` | `REPORT_LOGO_CLOUD_WIDGET.md:135-140,260,298` | TASK-256-06-02 | Logo Cloud slice of the shared runtime landmark accessibility baseline. |
 | BUG-04 / UX-01 `hoverColor` active without grayscale | `REPORT_LOGO_CLOUD_WIDGET.md:142-160,265,304` | TASK-256-06-02 | Shared truthful-control and output-class repair. |
@@ -90,7 +89,7 @@ inside its own implementation leaves.
 | BF-03 dense overflow | TASK-274-04 | Logo Cloud layout product behavior at max count. |
 | BF-04 strip nowrap/scroll option | TASK-274-04 | Logo Cloud strip layout product behavior. |
 | BF-05 strip marquee / auto-scroll | TASK-274-04 | Optional bounded mode with reduced-motion fallback. |
-| UX-09 open links in new tab option | TASK-274-05 | User-facing product toggle that must call TASK-256 safe link attrs. |
+| UX-09 / A4 open links in new tab option | TASK-274-05 | User-facing product toggle that must call TASK-256 safe link attrs after the shared helper exists. |
 | BF-08 tile radius and border width | TASK-274-05 | Logo Cloud tile styling beyond existing background/border color. |
 | BF-11 CTA below logo section | TASK-274-05 | Logo Cloud-specific trust-section CTA, through shared safe href. |
 | Report fixed/deferred notes, widget docs, changelog, board closure | TASK-274-06 | Final documentation and evidence pass. |
