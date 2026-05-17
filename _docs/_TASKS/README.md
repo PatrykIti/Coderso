@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 272 tasks
+- **To Do:** 283 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1542 tasks
 
@@ -38,6 +38,17 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-281 | Product Table Widget Playwright Product Followups | High | Very Large | Product Table-only follow-up family for `REPORT_PRODUCT_TABLE_WIDGET.md`, excluding TASK-256 shared-contract scope |
+| TASK-281-01 | Product Table Admin Preview Resolver Parity | High | Large | Hydrate Product Table admin canvas with commerce rows using the existing query contract without persisting preview-only data |
+| TASK-281-02 | Product Table Column Labels and Visibility Model | High | Large | Complete schema-owned label controls and decide bounded title/price visibility behavior |
+| TASK-281-03 | Product Table Status Stock and Row State Presentation | High | Large | Add status badges, stock quantity display, and bounded row-state treatment |
+| TASK-281-04 | Product Table Product Links and Action Column | High | Large | Add safe product navigation and optional action column without public admin actions |
+| TASK-281-05 | Product Table Accessibility and Runtime Semantics | High | Medium | Add Product Table captions/scopes, alert/live semantics, and section/table labels |
+| TASK-281-06 | Product Table Media Excerpt and Section Header Context | High | Large | Add optional thumbnails, excerpts, and section header fields from runtime-safe product data |
+| TASK-281-07 | Product Table Pagination Search Filter and Sorting UX | High | Very Large | Add bounded public query controls with explicit route/security policy |
+| TASK-281-08 | Product Table Variants Density Layout and Sticky Header | Medium | Large | Add compact/striped variants, density, zebra/hover, width, typography, and sticky header controls |
+| TASK-281-09 | Product Table Export Currency and Advanced Diagnostics | Medium | Large | Add safe visible-row export, locale-aware money formatting, and read-only runtime diagnostics |
+| TASK-281-10 | Product Table Report Docs Changelog and Closure | Medium | Medium | Refresh Product Table report/docs/changelog/board and final validation evidence |
 | TASK-290 | Testimonials Widget Playwright Product Followups | High | Very Large | Testimonials-only follow-up family for `REPORT_TESTIMONIALS_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-290-01 | Testimonials Wizard Header and Social Proof Authoring | High | Large | Expand Wizard header and social-proof fields after TASK-256 variant/count updates are stable |
 | TASK-290-02 | Testimonials Destructive Item Management and Spotlight Pin | High | Large | Add safer removal and explicit spotlight selection without duplicating shared editor update fixes |
