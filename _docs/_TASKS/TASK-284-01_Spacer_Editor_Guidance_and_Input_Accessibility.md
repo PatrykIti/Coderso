@@ -51,15 +51,16 @@ and editor copy.
   `48px` is also valid.
 - [ ] Add accessible names or `aria-describedby` help for each custom height
   input.
-- [ ] Keep the editor copy short enough for narrow inspector panels and update
-  tests to prevent wrapping-sensitive regressions.
+- [ ] Keep the editor copy short enough for narrow inspector panels; cover the
+  final strings and `aria-describedby` wiring in Vitest, and reserve actual
+  wrapping/layout evidence for a Playwright or manual visual pass.
 
 ## Files to Change
 
 | File | Required change |
 |---|---|
 | `core/admin/ui/widgets/editors/SpacerEditors.tsx` | Add Spacer-specific helper text and accessible label/description wiring around `HeightField`, without changing shared token semantics. |
-| `tests/vitest/ui/spacer-editor-wave.test.tsx` | Add assertions for fixed-mode Wizard hint, breakpoint help text, and custom input accessible names/descriptions. |
+| `tests/vitest/ui/spacer-editor-wave.test.tsx` | Add assertions for fixed-mode Wizard hint, breakpoint help text, exact concise helper strings, and custom input accessible names/descriptions. |
 | `tests/vitest/widgets/spacer.test.tsx` | Add SSR editor smoke coverage only if the copy is rendered in server-side editor snapshots. |
 | `_docs/_WIDGETS/SPACER.md` | Document the final author-facing meaning of fixed mode, breakpoints, and custom numeric values. |
 

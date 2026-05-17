@@ -64,7 +64,7 @@ Out of scope:
 | `_docs/WIDGET_PACK_MATRIX.md` | Update only if Spacer pack readiness/completeness changed. |
 | `_docs/_TASKS/TASK-284*.md` | Move completed tasks to `Done` with dates and validation notes. |
 | `_docs/_TASKS/README.md` | Move completed rows and recompute statistics. |
-| `_docs/_CHANGELOG/NNN-YYYY-MM-DD-task-284-spacer-widget-playwright-product-followups.md` | Add final changelog entry. |
+| Next numeric TASK-284 changelog file, recomputed from `_docs/_CHANGELOG/README.md` immediately before closure; current example if landing on 2026-05-17 is `_docs/_CHANGELOG/845-2026-05-17-task-284-spacer-widget-playwright-product-followups.md` | Add final changelog entry. |
 | `_docs/_CHANGELOG/README.md` | Add the changelog entry to the index. |
 
 ## Implementation Pseudocode

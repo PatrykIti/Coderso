@@ -178,8 +178,9 @@ Implementation leaves:
   `none`, token, custom length, or style-token adjacency changes.
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` when public
   renderer markers, orientation, or SSR wrapper output changes.
-- `bun test tests/unit/widgets/validator.test.ts` when schema/defaults/normalizer
-  fields change.
+- `bun test tests/unit/widgets/validator.test.ts` when schema/defaults change.
+  Normalizer-only Spacer safety changes belong in
+  `tests/vitest/widgets/spacer.test.tsx` and renderer/CSS marker assertions.
 - `bun test tests/unit/widgets/registry.test.ts` if variant registration or
   widget definition metadata changes.
 - `bun run gates:coderso`

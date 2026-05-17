@@ -32,7 +32,9 @@ In scope:
 - editor help or controls that expose viewport/fluid values without raw CSS
   surprises;
 - deterministic CSS custom-property output for public runtime;
-- validator and runtime tests for accepted/rejected values.
+- normalizer and runtime tests for accepted values and unsafe-value fallback.
+  Validator tests are required only if this leaf intentionally narrows the
+  schema beyond the current strict object/string-field shape.
 
 Out of scope:
 
@@ -50,8 +52,8 @@ Out of scope:
 - [ ] Keep invalid values falling back to deterministic defaults without
   throwing in render paths.
 - [ ] Update editor copy or controls so authors know which units are accepted.
-- [ ] Add runtime and editor tests for accepted viewport/fluid values and
-  rejected unsafe CSS strings.
+- [ ] Add runtime/normalizer and editor tests for accepted viewport/fluid values
+  and unsafe CSS strings falling back before they reach CSS custom properties.
 
 ## Files to Change
 
@@ -61,15 +63,15 @@ Out of scope:
 | `core/admin/ui/widgets/editors/SpacerEditors.tsx` | Add unit help or bounded controls for viewport/fluid values after TASK-256 token UI is stable. |
 | `tests/vitest/widgets/spacer.test.tsx` | Add normalization and SSR assertions for `10vh`, `50dvh`, `5svh`, `12vw`, safe `clamp()`, and rejected CSS payloads. |
 | `tests/vitest/ui/spacer-editor-wave.test.tsx` | Add editor assertions for unit help and value entry. |
-| `tests/unit/widgets/validator.test.ts` | Run or update if schema semantics change beyond string fields. |
+| `tests/unit/widgets/validator.test.ts` | Run or update only if this leaf changes schema semantics beyond strict string fields. The default safety boundary is `normalizeSpacerData()` plus render output tests. |
 | `_docs/_WIDGETS/SPACER.md` | Document the final length grammar and examples. |
 
 ## Implementation Pseudocode
 
 ```ts
-const viewportLengthPattern = /^\d+(?:\.\d+)?(?:vh|dvh|svh|lvh|vw)$/i;
+const viewportLengthPattern = /^\d+(?:\.\d+)?(?:vh|dvh|svh|vw)$/i;
 const clampLengthPattern =
-  /^clamp\(\s*(\d+(?:\.\d+)?(?:px|rem|vh|dvh|svh|lvh|vw))\s*,\s*(\d+(?:\.\d+)?(?:px|rem|vh|dvh|svh|lvh|vw))\s*,\s*(\d+(?:\.\d+)?(?:px|rem|vh|dvh|svh|lvh|vw))\s*\)$/i;
+  /^clamp\(\s*(\d+(?:\.\d+)?(?:px|rem|vh|dvh|svh|vw))\s*,\s*(\d+(?:\.\d+)?(?:px|rem|vh|dvh|svh|vw))\s*,\s*(\d+(?:\.\d+)?(?:px|rem|vh|dvh|svh|vw))\s*\)$/i;
 
 function normalizeSpacerLength(value: string | undefined, fallback: string): string {
   const trimmed = value?.trim() ?? "";
@@ -90,11 +92,16 @@ Data flow:
    custom properties.
 3. `resolveSpacerCssHeight()` maps known tokens to rem values and returns already
    validated custom values unchanged.
+4. Unsafe custom strings are rejected at the Spacer normalizer/render contract
+   by falling back to breakpoint defaults. Do not rely on AJV to reject them
+   unless this leaf deliberately replaces the current string-field schema with a
+   narrower schema and updates validator tests at the same time.
 
 Error handling:
 
 - Reject `calc()`, `url()`, semicolons, CSS variables, negative lengths,
-  unbounded units, and malformed `clamp()` by falling back to the relevant
+  unbounded units, including unscoped units such as `lvh`, and malformed
+  `clamp()` by falling back to the relevant
   default.
 - Do not throw during render for legacy malformed payloads.
 - Preserve existing `none` and pixel behavior until TASK-256 changes the shared
@@ -105,8 +112,10 @@ Error handling:
 No API routes are added.
 
 - Endpoint visibility/auth/RBAC/CSRF/rate limit: unchanged.
-- Reject-unknown validation: schema remains strict; if a more specific length
-  schema is added, update validator tests.
+- Reject-unknown validation: schema remains strict for object shape and known
+  string fields. Unsafe CSS value safety is enforced by Spacer normalization by
+  default; if a more specific length schema is added, update validator tests and
+  document the schema-level rejection decision.
 - Anti-abuse: accepted length values must be grammar-limited and cannot contain
   raw CSS declarations, URLs, scripts, comments, semicolons, CSS variables, or
   unbounded class names.
@@ -121,7 +130,8 @@ No API routes are added.
   markers or wrapper output change.
 - `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` when
   token adjacency changes.
-- `bun test tests/unit/widgets/validator.test.ts` when schema/defaults change.
+- `bun test tests/unit/widgets/validator.test.ts` only when schema/defaults
+  change. Unsafe CSS fallback alone belongs in Spacer normalizer/runtime tests.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - If this leaf is committed or moved to `Done` separately from TASK-284-05, also
