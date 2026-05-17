@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Data Model
 **Estimated Effort:** Large
 **Dependencies:** TASK-260, TASK-260-01, TASK-260-02
-**Status:** To Do
+**Status:** Done (2026-05-17)
 
 ---
 
@@ -17,6 +17,11 @@ Add Compare Timeline-specific axis and step-content controls from
 
 This leaf covers C4, C5, W6, W10, and W12. It keeps the axis model bounded and
 schema-owned instead of creating a generic timeline/content-list contract.
+
+`W6`, `W10`, and `W12` are approved Compare Timeline-local contract expansion.
+They intentionally evolve the current v1 `3-6`/label-only axis surface and must
+ship with synchronized schema/editor/runtime/tests/docs updates rather than as
+an implicit shared-widget change.
 
 ## Sub-Tasks
 

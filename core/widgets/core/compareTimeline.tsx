@@ -1,27 +1,36 @@
-import type { CSSProperties, ComponentType } from "react";
+import type { CSSProperties, ComponentType, ReactNode } from "react";
 
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
 import { compactObject, resolveClearableStyleValue } from "./clearableStyle";
+import { normalizeWidgetSafeHref } from "./widgetSafeHref";
 
 export type CompareTimelineVariantId = "dual-track" | "dual-track-highlight";
 export type CompareTimelineGuideStyle = "solid" | "dashed";
 export type CompareTimelineTrackSpacing = "none" | "sm" | "md" | "lg" | "xl";
 export type CompareTimelineLabelPosition = "top" | "bottom";
+export type CompareTimelineMaxWidth = "none" | "4xl" | "5xl" | "6xl" | "7xl";
+export type CompareTimelinePadding = "sm" | "md" | "lg";
+export type CompareTimelineTrackOrder = "a-first" | "b-first";
 export type CompareTimelineHighlightLabelStyle = "solid" | "outline" | "subtle";
 export type CompareTimelineTrackLabelSize = "none" | "sm" | "base" | "lg";
 export type CompareTimelineStepLabelSize = "none" | "xs" | "sm" | "base";
 export type CompareTimelineSegmentLabelSize = "none" | "xs" | "sm" | "base";
+export type CompareTimelineFontWeight = "normal" | "medium" | "semibold" | "bold";
+export type CompareTimelineMarkerShape = "rounded" | "circle" | "numbered" | "check";
 
 export type CompareAxisStep = {
   id?: string;
   label: string;
   description?: string;
+  icon?: string;
+  href?: string;
 };
 
 export type CompareTrackSegment = {
   from: number;
   to: number;
   label?: string;
+  href?: string;
 };
 
 export type CompareTrack = {
@@ -32,15 +41,23 @@ export type CompareTrack = {
 };
 
 export type CompareTimelineData = {
+  header?: {
+    title?: string;
+    subtitle?: string;
+  };
   axis: { steps: CompareAxisStep[] };
   tracks: CompareTrack[];
   guides?: { enabled?: boolean; style?: CompareTimelineGuideStyle };
   layout?: {
     trackSpacing?: CompareTimelineTrackSpacing;
     labelPosition?: CompareTimelineLabelPosition;
+    maxWidth?: CompareTimelineMaxWidth;
+    padding?: CompareTimelinePadding;
+    trackOrder?: CompareTimelineTrackOrder;
   };
   highlight?: {
     targetTrackId?: string;
+    targetTrackIds?: string[];
   };
   style?: {
     highlightColor?: string;
@@ -50,17 +67,33 @@ export type CompareTimelineData = {
     stepLabelColor?: string;
     mutedStepColor?: string;
     guideColor?: string;
+    trackBackgroundColor?: string;
     trackLabelSize?: CompareTimelineTrackLabelSize;
     stepLabelSize?: CompareTimelineStepLabelSize;
     segmentLabelSize?: CompareTimelineSegmentLabelSize;
+    trackLabelFontWeight?: CompareTimelineFontWeight;
+    stepLabelFontWeight?: CompareTimelineFontWeight;
+    segmentLabelFontWeight?: CompareTimelineFontWeight;
+    markerShape?: CompareTimelineMarkerShape;
   };
 };
 
 export const compareAxisStepMin = 3;
-export const compareAxisStepMax = 6;
+export const compareAxisStepMax = 10;
 
 const joinClasses = (...classes: Array<string | undefined | false>) =>
   classes.filter(Boolean).join(" ");
+
+const compareMaxWidthOptions = ["none", "4xl", "5xl", "6xl", "7xl"] as const;
+const comparePaddingOptions = ["sm", "md", "lg"] as const;
+const compareTrackOrderOptions = ["a-first", "b-first"] as const;
+const compareFontWeightOptions = ["normal", "medium", "semibold", "bold"] as const;
+const compareMarkerShapeOptions = ["rounded", "circle", "numbered", "check"] as const;
+const widgetHrefOptions = {
+  allowRelative: true,
+  allowHash: true,
+  allowHttp: true,
+} as const;
 
 const trackSpacingClassMap = {
   none: "space-y-0",
@@ -68,6 +101,20 @@ const trackSpacingClassMap = {
   md: "space-y-4",
   lg: "space-y-6",
   xl: "space-y-8",
+} as const;
+
+const maxWidthClassMap = {
+  none: "max-w-none",
+  "4xl": "max-w-4xl",
+  "5xl": "max-w-5xl",
+  "6xl": "max-w-6xl",
+  "7xl": "max-w-7xl",
+} as const;
+
+const paddingClassMap = {
+  sm: "px-4 py-6",
+  md: "px-4 py-8",
+  lg: "px-6 py-10",
 } as const;
 
 const trackLabelSizeClassMap = {
@@ -91,15 +138,73 @@ const segmentLabelSizeClassMap = {
   base: "text-base",
 } as const;
 
+const fontWeightClassMap = {
+  normal: "font-normal",
+  medium: "font-medium",
+  semibold: "font-semibold",
+  bold: "font-bold",
+} as const;
+
 const labelIdFallback = (index: number) => `step-${index + 1}`;
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+
+const isEnumValue = <T extends string>(value: unknown, options: readonly T[]): value is T =>
+  typeof value === "string" && options.includes(value as T);
+
+const resolveTrimmedOptionalString = (value: unknown) =>
+  typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
+
+const resolveCompareIcon = (value: unknown) => {
+  const trimmed = resolveTrimmedOptionalString(value);
+  return trimmed ? trimmed.slice(0, 16) : undefined;
+};
+
+const resolveCompareHighlightFallback = (value: string) => {
+  const trimmed = value.trim();
+  const hex = trimmed.startsWith("#") ? trimmed.slice(1) : trimmed;
+  if (!/^[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$/.test(hex)) {
+    return trimmed;
+  }
+  const normalized =
+    hex.length === 3
+      ? hex
+          .split("")
+          .map((part) => part + part)
+          .join("")
+      : hex;
+  const red = Number.parseInt(normalized.slice(0, 2), 16);
+  const green = Number.parseInt(normalized.slice(2, 4), 16);
+  const blue = Number.parseInt(normalized.slice(4, 6), 16);
+  return `rgba(${red}, ${green}, ${blue}, 0.18)`;
+};
+
+const resolveCompareStepLink = (href: string | undefined) => {
+  if (!href) return undefined;
+  const normalized = normalizeWidgetSafeHref(href, widgetHrefOptions);
+  if (!normalized) return undefined;
+  return {
+    href: normalized,
+    rel:
+      normalized.startsWith("http://") || normalized.startsWith("https://")
+        ? "noopener noreferrer"
+        : undefined,
+  };
+};
 
 export const compareTimelineSchema = {
   type: "object",
   additionalProperties: false,
   required: ["axis", "tracks"],
   properties: {
+    header: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        title: { type: "string" },
+        subtitle: { type: "string" },
+      },
+    },
     axis: {
       type: "object",
       additionalProperties: false,
@@ -117,6 +222,8 @@ export const compareTimelineSchema = {
               id: { type: "string" },
               label: { type: "string" },
               description: { type: "string" },
+              icon: { type: "string" },
+              href: { type: "string" },
             },
           },
         },
@@ -148,6 +255,7 @@ export const compareTimelineSchema = {
                 from: { type: "integer" },
                 to: { type: "integer" },
                 label: { type: "string" },
+                href: { type: "string" },
               },
             },
           },
@@ -168,6 +276,9 @@ export const compareTimelineSchema = {
       properties: {
         trackSpacing: { enum: ["none", "sm", "md", "lg", "xl"] },
         labelPosition: { enum: ["top", "bottom"] },
+        maxWidth: { enum: [...compareMaxWidthOptions] },
+        padding: { enum: [...comparePaddingOptions] },
+        trackOrder: { enum: [...compareTrackOrderOptions] },
       },
     },
     highlight: {
@@ -175,6 +286,11 @@ export const compareTimelineSchema = {
       additionalProperties: false,
       properties: {
         targetTrackId: { type: "string" },
+        targetTrackIds: {
+          type: "array",
+          uniqueItems: true,
+          items: { type: "string" },
+        },
       },
     },
     style: {
@@ -188,9 +304,14 @@ export const compareTimelineSchema = {
         stepLabelColor: { type: "string" },
         mutedStepColor: { type: "string" },
         guideColor: { type: "string" },
+        trackBackgroundColor: { type: "string" },
         trackLabelSize: { enum: ["none", "sm", "base", "lg"] },
         stepLabelSize: { enum: ["none", "xs", "sm", "base"] },
         segmentLabelSize: { enum: ["none", "xs", "sm", "base"] },
+        trackLabelFontWeight: { enum: [...compareFontWeightOptions] },
+        stepLabelFontWeight: { enum: [...compareFontWeightOptions] },
+        segmentLabelFontWeight: { enum: [...compareFontWeightOptions] },
+        markerShape: { enum: [...compareMarkerShapeOptions] },
       },
     },
   },
@@ -215,8 +336,14 @@ export const compareTimelineDefaults: CompareTimelineData = {
     },
   ],
   guides: { enabled: true, style: "dashed" },
-  layout: { trackSpacing: "md", labelPosition: "top" },
-  highlight: { targetTrackId: "b" },
+  layout: {
+    trackSpacing: "md",
+    labelPosition: "top",
+    maxWidth: "6xl",
+    padding: "md",
+    trackOrder: "a-first",
+  },
+  highlight: { targetTrackId: "b", targetTrackIds: ["b"] },
   style: {
     highlightColor: "#f59e0b",
     highlightLabelStyle: "solid",
@@ -228,12 +355,123 @@ export const compareTimelineDefaults: CompareTimelineData = {
     trackLabelSize: "base",
     stepLabelSize: "xs",
     segmentLabelSize: "xs",
+    trackLabelFontWeight: "semibold",
+    stepLabelFontWeight: "semibold",
+    segmentLabelFontWeight: "normal",
+    markerShape: "rounded",
   },
 };
 
 const resolveStepFallbackLabel = (index: number) => {
-  const defaults = ["Plan", "Build", "Deliver", "Optimize", "Scale", "Review"];
+  const defaults = [
+    "Plan",
+    "Build",
+    "Deliver",
+    "Optimize",
+    "Scale",
+    "Review",
+    "Approve",
+    "Launch",
+    "Measure",
+    "Iterate",
+  ];
   return defaults[index] ?? `Step ${index + 1}`;
+};
+
+const normalizeCompareHeader = (header: CompareTimelineData["header"]) =>
+  compactObject({
+    title: resolveTrimmedOptionalString(header?.title),
+    subtitle: resolveTrimmedOptionalString(header?.subtitle),
+  });
+
+const normalizeCompareSafeHref = (value: unknown) =>
+  normalizeWidgetSafeHref(value, widgetHrefOptions);
+
+const normalizeCompareLayout = (
+  layout: CompareTimelineData["layout"]
+): NonNullable<CompareTimelineData["layout"]> => ({
+  trackSpacing: layout?.trackSpacing ?? compareTimelineDefaults.layout?.trackSpacing,
+  labelPosition: layout?.labelPosition ?? compareTimelineDefaults.layout?.labelPosition,
+  maxWidth: isEnumValue(layout?.maxWidth, compareMaxWidthOptions)
+    ? layout.maxWidth
+    : (compareTimelineDefaults.layout?.maxWidth ?? "6xl"),
+  padding: isEnumValue(layout?.padding, comparePaddingOptions)
+    ? layout.padding
+    : (compareTimelineDefaults.layout?.padding ?? "md"),
+  trackOrder: isEnumValue(layout?.trackOrder, compareTrackOrderOptions)
+    ? layout.trackOrder
+    : (compareTimelineDefaults.layout?.trackOrder ?? "a-first"),
+});
+
+const normalizeCompareHighlight = (
+  highlight: CompareTimelineData["highlight"],
+  tracks: CompareTrack[]
+): NonNullable<CompareTimelineData["highlight"]> => {
+  const ids = tracks.map((track) => track.id);
+  const legacyTarget =
+    typeof highlight?.targetTrackId === "string" && ids.includes(highlight.targetTrackId)
+      ? highlight.targetTrackId
+      : (tracks[1]?.id ?? tracks[0]?.id ?? "a");
+  const requestedIds = Array.isArray(highlight?.targetTrackIds)
+    ? highlight.targetTrackIds.filter((id): id is string => ids.includes(id))
+    : [];
+  const uniqueTargetIds = requestedIds.filter((id, index) => requestedIds.indexOf(id) === index);
+  const targetTrackIds = uniqueTargetIds.length > 0 ? uniqueTargetIds : [legacyTarget];
+
+  return {
+    targetTrackId: targetTrackIds.includes(legacyTarget)
+      ? legacyTarget
+      : (targetTrackIds[0] ?? legacyTarget),
+    targetTrackIds,
+  };
+};
+
+const normalizeCompareStyle = (
+  style: CompareTimelineData["style"]
+): NonNullable<CompareTimelineData["style"]> => {
+  const hasStyleObject = style !== undefined;
+  const clearableStyle = hasStyleObject
+    ? compactObject({
+        highlightColor: resolveClearableStyleValue(style?.highlightColor),
+        markerColor: resolveClearableStyleValue(style?.markerColor),
+        trackLabelColor: resolveClearableStyleValue(style?.trackLabelColor),
+        stepLabelColor: resolveClearableStyleValue(style?.stepLabelColor),
+        mutedStepColor: resolveClearableStyleValue(style?.mutedStepColor),
+        guideColor: resolveClearableStyleValue(style?.guideColor),
+        trackBackgroundColor: resolveClearableStyleValue(style?.trackBackgroundColor),
+      })
+    : compactObject({
+        highlightColor: resolveClearableStyleValue(compareTimelineDefaults.style?.highlightColor),
+        markerColor: resolveClearableStyleValue(compareTimelineDefaults.style?.markerColor),
+        trackLabelColor: resolveClearableStyleValue(compareTimelineDefaults.style?.trackLabelColor),
+        stepLabelColor: resolveClearableStyleValue(compareTimelineDefaults.style?.stepLabelColor),
+        mutedStepColor: resolveClearableStyleValue(compareTimelineDefaults.style?.mutedStepColor),
+        guideColor: resolveClearableStyleValue(compareTimelineDefaults.style?.guideColor),
+        trackBackgroundColor: resolveClearableStyleValue(
+          compareTimelineDefaults.style?.trackBackgroundColor
+        ),
+      });
+
+  return {
+    highlightLabelStyle:
+      style?.highlightLabelStyle ?? compareTimelineDefaults.style?.highlightLabelStyle,
+    trackLabelSize: style?.trackLabelSize ?? compareTimelineDefaults.style?.trackLabelSize,
+    stepLabelSize: style?.stepLabelSize ?? compareTimelineDefaults.style?.stepLabelSize,
+    segmentLabelSize: style?.segmentLabelSize ?? compareTimelineDefaults.style?.segmentLabelSize,
+    trackLabelFontWeight: isEnumValue(style?.trackLabelFontWeight, compareFontWeightOptions)
+      ? style.trackLabelFontWeight
+      : (compareTimelineDefaults.style?.trackLabelFontWeight ?? "semibold"),
+    stepLabelFontWeight: isEnumValue(style?.stepLabelFontWeight, compareFontWeightOptions)
+      ? style.stepLabelFontWeight
+      : (compareTimelineDefaults.style?.stepLabelFontWeight ?? "semibold"),
+    segmentLabelFontWeight: isEnumValue(style?.segmentLabelFontWeight, compareFontWeightOptions)
+      ? style.segmentLabelFontWeight
+      : (compareTimelineDefaults.style?.segmentLabelFontWeight ?? "normal"),
+    markerShape: isEnumValue(style?.markerShape, compareMarkerShapeOptions)
+      ? style.markerShape
+      : (compareTimelineDefaults.style?.markerShape ?? "rounded"),
+    ...(clearableStyle ?? {}),
+  };
 };
 
 export const normalizeCompareStepCount = (value: number) => {
@@ -277,10 +515,9 @@ export function normalizeCompareAxisSteps(
     normalized.push({
       id,
       label,
-      description:
-        typeof base.description === "string" && base.description.trim().length > 0
-          ? base.description
-          : undefined,
+      description: resolveTrimmedOptionalString(base.description),
+      icon: resolveCompareIcon(base.icon),
+      href: normalizeCompareSafeHref(base.href),
     });
   }
 
@@ -322,12 +559,13 @@ export function normalizeCompareTrackSegments(
       typeof segment.label === "string" && segment.label.trim().length > 0
         ? segment.label.trim()
         : undefined;
+    const href = normalizeCompareSafeHref(segment.href);
 
-    const signature = `${from}:${to}:${label ?? ""}`;
+    const signature = `${from}:${to}:${label ?? ""}:${href ?? ""}`;
     if (seen.has(signature)) continue;
     seen.add(signature);
 
-    normalized.push({ from, to, label });
+    normalized.push({ from, to, label, href });
   }
 
   return normalized.sort((left, right) => {
@@ -371,31 +609,11 @@ export function normalizeCompareTimelineData(data: CompareTimelineData): Compare
   const axisSteps = normalizeCompareAxisSteps(data.axis?.steps);
   const stepCount = axisSteps.length;
   const tracks = normalizeCompareTracks(data.tracks, stepCount);
-  const targetTrackId = data.highlight?.targetTrackId;
-  const resolvedTargetTrackId = tracks.some((track) => track.id === targetTrackId)
-    ? targetTrackId
-    : (tracks[1]?.id ?? tracks[0]?.id);
-  const hasStyleObject = data.style !== undefined;
-  const clearableStyle = hasStyleObject
-    ? compactObject({
-        highlightColor: resolveClearableStyleValue(data.style?.highlightColor),
-        markerColor: resolveClearableStyleValue(data.style?.markerColor),
-        trackLabelColor: resolveClearableStyleValue(data.style?.trackLabelColor),
-        stepLabelColor: resolveClearableStyleValue(data.style?.stepLabelColor),
-        mutedStepColor: resolveClearableStyleValue(data.style?.mutedStepColor),
-        guideColor: resolveClearableStyleValue(data.style?.guideColor),
-      })
-    : compactObject({
-        highlightColor: resolveClearableStyleValue(compareTimelineDefaults.style?.highlightColor),
-        markerColor: resolveClearableStyleValue(compareTimelineDefaults.style?.markerColor),
-        trackLabelColor: resolveClearableStyleValue(compareTimelineDefaults.style?.trackLabelColor),
-        stepLabelColor: resolveClearableStyleValue(compareTimelineDefaults.style?.stepLabelColor),
-        mutedStepColor: resolveClearableStyleValue(compareTimelineDefaults.style?.mutedStepColor),
-        guideColor: resolveClearableStyleValue(compareTimelineDefaults.style?.guideColor),
-      });
+  const normalizedHeader = normalizeCompareHeader(data.header);
 
   return {
     ...data,
+    header: normalizedHeader ?? undefined,
     axis: {
       steps: axisSteps,
     },
@@ -404,22 +622,9 @@ export function normalizeCompareTimelineData(data: CompareTimelineData): Compare
       enabled: data.guides?.enabled ?? compareTimelineDefaults.guides?.enabled,
       style: data.guides?.style ?? compareTimelineDefaults.guides?.style,
     },
-    layout: {
-      trackSpacing: data.layout?.trackSpacing ?? compareTimelineDefaults.layout?.trackSpacing,
-      labelPosition: data.layout?.labelPosition ?? compareTimelineDefaults.layout?.labelPosition,
-    },
-    highlight: {
-      targetTrackId: resolvedTargetTrackId,
-    },
-    style: {
-      highlightLabelStyle:
-        data.style?.highlightLabelStyle ?? compareTimelineDefaults.style?.highlightLabelStyle,
-      trackLabelSize: data.style?.trackLabelSize ?? compareTimelineDefaults.style?.trackLabelSize,
-      stepLabelSize: data.style?.stepLabelSize ?? compareTimelineDefaults.style?.stepLabelSize,
-      segmentLabelSize:
-        data.style?.segmentLabelSize ?? compareTimelineDefaults.style?.segmentLabelSize,
-      ...(clearableStyle ?? {}),
-    },
+    layout: normalizeCompareLayout(data.layout),
+    highlight: normalizeCompareHighlight(data.highlight, tracks),
+    style: normalizeCompareStyle(data.style),
   };
 }
 
@@ -431,28 +636,98 @@ const stepIsWithinSegment = (segments: CompareTrackSegment[] | undefined, index:
   return segments.some((segment) => index >= segment.from && index <= segment.to);
 };
 
+const resolveCompareGridStyle = (stepCount: number) =>
+  ({
+    "--compare-grid-columns": `repeat(${Math.max(compareAxisStepMin, stepCount)}, minmax(0, 1fr))`,
+  }) as CSSProperties;
+
+const resolveCompareTracksForRender = (
+  tracks: CompareTrack[],
+  trackOrder: CompareTimelineTrackOrder | undefined
+) => {
+  if (trackOrder !== "b-first") return tracks;
+  return [...tracks].reverse();
+};
+
+const resolveMarkerBadgeContent = (
+  markerShape: CompareTimelineMarkerShape,
+  markerActive: boolean,
+  index: number
+) => {
+  if (markerShape === "numbered") return String(index + 1);
+  if (markerShape === "check") return markerActive ? "✓" : "○";
+  return "•";
+};
+
+const renderLinkedCompareContent = (
+  attrs: { href: string; rel?: string } | undefined,
+  ariaLabel: string | undefined,
+  className: string,
+  children: ReactNode
+) => {
+  if (!attrs) return <div className={className}>{children}</div>;
+  return (
+    <a href={attrs.href} rel={attrs.rel} aria-label={ariaLabel} className={className}>
+      {children}
+    </a>
+  );
+};
+
 function CompareAxisRow({
   steps,
   stepLabelColor,
+  stepLabelWeightClass,
 }: {
   steps: CompareAxisStep[];
   stepLabelColor: string;
+  stepLabelWeightClass: string;
 }) {
+  const gridStyle = resolveCompareGridStyle(steps.length);
+
   return (
-    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3" data-compare-axis="true">
+    <div
+      className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:[grid-template-columns:var(--compare-grid-columns)]"
+      data-compare-axis="true"
+      style={gridStyle}
+    >
       {steps.map((step, index) => (
         <div
           key={step.id ?? `${step.label}-${index}`}
-          className="rounded-md border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2"
+          className="min-h-[5rem] overflow-hidden rounded-md border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2"
         >
-          <p className="text-xs font-semibold" style={{ color: stepLabelColor }}>
-            {step.label}
-          </p>
-          {step.description ? (
-            <p className="mt-1 text-xs opacity-80" style={{ color: stepLabelColor }}>
-              {step.description}
-            </p>
-          ) : null}
+          {renderLinkedCompareContent(
+            resolveCompareStepLink(step.href),
+            step.href ? `Open step ${step.label}` : undefined,
+            "block space-y-1 no-underline",
+            <>
+              <div className="flex items-start gap-2">
+                {step.icon ? (
+                  <span
+                    aria-hidden="true"
+                    className="inline-flex min-h-6 min-w-6 items-center justify-center rounded-full border border-[var(--color-border)] px-2 text-xs"
+                  >
+                    {step.icon}
+                  </span>
+                ) : null}
+                <div className="min-w-0">
+                  <p
+                    className={joinClasses("break-words text-xs", stepLabelWeightClass)}
+                    style={{ color: stepLabelColor }}
+                  >
+                    {step.label}
+                  </p>
+                  {step.description ? (
+                    <p
+                      className="mt-1 break-words text-xs opacity-80"
+                      style={{ color: stepLabelColor }}
+                    >
+                      {step.description}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            </>
+          )}
         </div>
       ))}
     </div>
@@ -463,29 +738,39 @@ function CompareTrackRow({
   track,
   steps,
   variant,
-  targetTrackId,
+  targetTrackIds,
   guides,
   style,
 }: {
   track: CompareTrack;
   steps: CompareAxisStep[];
   variant: CompareTimelineVariantId;
-  targetTrackId: string;
+  targetTrackIds: string[];
   guides: Required<NonNullable<CompareTimelineData["guides"]>>;
   style: Required<NonNullable<CompareTimelineData["style"]>>;
 }) {
-  const trackIsHighlighted = variant === "dual-track-highlight" && track.id === targetTrackId;
+  const trackIsHighlighted =
+    variant === "dual-track-highlight" && targetTrackIds.includes(track.id);
   const markerColor = style.markerColor ?? "var(--color-primary)";
   const highlightColor = style.highlightColor ?? "#f59e0b";
   const stepLabelColor = style.stepLabelColor ?? "var(--color-text)";
   const mutedStepColor = style.mutedStepColor ?? "var(--color-text)";
   const trackLabelColor = style.trackLabelColor ?? "var(--color-text)";
   const guideColor = style.guideColor ?? "var(--color-border)";
+  const trackBackgroundColor = style.trackBackgroundColor ?? "transparent";
   const trackLabelSizeClass = trackLabelSizeClassMap[style.trackLabelSize ?? "base"];
   const stepLabelSizeClass = stepLabelSizeClassMap[style.stepLabelSize ?? "xs"];
   const segmentLabelSizeClass = segmentLabelSizeClassMap[style.segmentLabelSize ?? "xs"];
+  const trackLabelWeightClass = fontWeightClassMap[style.trackLabelFontWeight ?? "semibold"];
+  const stepLabelWeightClass = fontWeightClassMap[style.stepLabelFontWeight ?? "semibold"];
+  const segmentLabelWeightClass = fontWeightClassMap[style.segmentLabelFontWeight ?? "normal"];
+  const markerShape = style.markerShape ?? "rounded";
+  const trackGridStyle = resolveCompareGridStyle(steps.length);
 
-  const segmentLabelBaseClass = "rounded-full border px-2 py-1 text-xs";
+  const segmentLabelBaseClass = joinClasses(
+    "rounded-full border px-2 py-1 text-xs",
+    segmentLabelWeightClass
+  );
   const segmentLabelStyle: CSSProperties =
     style.highlightLabelStyle === "outline"
       ? {
@@ -508,47 +793,102 @@ function CompareTrackRow({
 
   return (
     <div
-      className="rounded-lg border p-4"
+      className="overflow-hidden rounded-lg border p-4"
+      data-compare-track={track.id}
+      aria-label={`${track.label} track`}
       style={{
-        borderStyle: guides.enabled ? guides.style : "solid",
-        borderColor: guideColor,
+        borderStyle: guides.enabled ? guides.style : "none",
+        borderColor: guides.enabled ? guideColor : "transparent",
+        backgroundColor: trackBackgroundColor,
       }}
     >
       <p
-        className={joinClasses("font-semibold", trackLabelSizeClass)}
+        className={joinClasses("break-words", trackLabelSizeClass, trackLabelWeightClass)}
         style={{ color: trackLabelColor }}
       >
         {track.label}
       </p>
 
-      <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+      <div
+        className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:[grid-template-columns:var(--compare-grid-columns)]"
+        style={trackGridStyle}
+      >
         {steps.map((step, index) => {
           const markerActive = track.markers.includes(index);
           const inHighlightSegment =
             trackIsHighlighted && stepIsWithinSegment(track.segments, index);
+          const stepLink = resolveCompareStepLink(step.href);
+          const markerBadgeClass =
+            markerShape === "circle" || markerShape === "numbered" || markerShape === "check"
+              ? "inline-flex h-6 w-6 items-center justify-center rounded-full border text-[0.7rem]"
+              : "inline-flex min-w-6 items-center justify-center rounded-md border px-2 py-0.5 text-[0.7rem]";
+
           return (
             <div
               key={`${track.id}-${step.id ?? index}`}
-              className="rounded-md border px-3 py-2"
+              className={joinClasses(
+                "min-h-[5rem] overflow-hidden border px-3 py-2",
+                markerShape === "circle" ? "rounded-[1.5rem]" : "rounded-md"
+              )}
+              aria-label={`${track.label}: ${step.label}, ${markerActive ? "active marker" : "inactive marker"}${inHighlightSegment ? ", highlighted segment" : ""}`}
               style={{
                 borderColor: inHighlightSegment ? highlightColor : "var(--color-border)",
                 backgroundColor: markerActive
                   ? markerColor
                   : inHighlightSegment
-                    ? `color-mix(in oklab, ${highlightColor} 18%, transparent)`
+                    ? resolveCompareHighlightFallback(highlightColor)
                     : "transparent",
+                backgroundImage:
+                  !markerActive && inHighlightSegment
+                    ? `linear-gradient(color-mix(in oklab, ${highlightColor} 18%, transparent), color-mix(in oklab, ${highlightColor} 18%, transparent))`
+                    : undefined,
                 color: markerActive ? "var(--color-bg)" : stepLabelColor,
               }}
             >
-              <p className={joinClasses("font-semibold", stepLabelSizeClass)}>{step.label}</p>
-              {step.description ? (
-                <p
-                  className="mt-1 text-xs"
-                  style={{ color: markerActive ? "var(--color-bg)" : mutedStepColor }}
-                >
-                  {step.description}
-                </p>
-              ) : null}
+              {renderLinkedCompareContent(
+                stepLink,
+                stepLink ? `Open ${step.label} for ${track.label}` : undefined,
+                "block no-underline",
+                <div className="flex items-start gap-2">
+                  <span
+                    aria-hidden="true"
+                    data-compare-marker-shape={markerShape}
+                    className={markerBadgeClass}
+                    style={{
+                      borderColor: markerActive ? "var(--color-bg)" : "var(--color-border)",
+                      color: markerActive ? "var(--color-bg)" : stepLabelColor,
+                      backgroundColor:
+                        markerShape === "circle" && !markerActive
+                          ? "transparent"
+                          : markerActive
+                            ? "transparent"
+                            : "var(--color-bg)",
+                    }}
+                  >
+                    {resolveMarkerBadgeContent(markerShape, markerActive, index)}
+                  </span>
+
+                  <div className="min-w-0">
+                    <p
+                      className={joinClasses(
+                        "break-words",
+                        stepLabelSizeClass,
+                        stepLabelWeightClass
+                      )}
+                    >
+                      {step.label}
+                    </p>
+                    {step.description ? (
+                      <p
+                        className="mt-1 break-words text-xs"
+                        style={{ color: markerActive ? "var(--color-bg)" : mutedStepColor }}
+                      >
+                        {step.description}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+              )}
             </div>
           );
         })}
@@ -557,14 +897,26 @@ function CompareTrackRow({
       {trackIsHighlighted && (track.segments?.length ?? 0) > 0 ? (
         <div className="mt-3 flex flex-wrap gap-2" data-compare-segments="true">
           {track.segments?.map((segment, index) => (
-            <span
+            <div
               key={`${track.id}-${segment.from}-${segment.to}-${index}`}
               data-compare-segment={`${segment.from}-${segment.to}`}
-              className={joinClasses(segmentLabelBaseClass, segmentLabelSizeClass)}
-              style={segmentLabelStyle}
             >
-              {segment.label ?? `Steps ${segment.from + 1}-${segment.to + 1}`}
-            </span>
+              {renderLinkedCompareContent(
+                resolveCompareStepLink(segment.href),
+                `Open ${track.label} segment ${segment.label ?? `Steps ${segment.from + 1}-${segment.to + 1}`}`,
+                joinClasses(
+                  "inline-flex max-w-full break-words no-underline",
+                  segmentLabelBaseClass,
+                  segmentLabelSizeClass
+                ),
+                <span
+                  aria-label={`${track.label} segment ${segment.label ?? `Steps ${segment.from + 1}-${segment.to + 1}`}`}
+                  style={segmentLabelStyle}
+                >
+                  {segment.label ?? `Steps ${segment.from + 1}-${segment.to + 1}`}
+                </span>
+              )}
+            </div>
           ))}
         </div>
       ) : null}
@@ -590,6 +942,9 @@ export function CompareTimelineBlock({
   const layout: Required<NonNullable<CompareTimelineData["layout"]>> = {
     trackSpacing: normalizedData.layout?.trackSpacing ?? "md",
     labelPosition: normalizedData.layout?.labelPosition ?? "top",
+    maxWidth: normalizedData.layout?.maxWidth ?? "6xl",
+    padding: normalizedData.layout?.padding ?? "md",
+    trackOrder: normalizedData.layout?.trackOrder ?? "a-first",
   };
   const style: Required<NonNullable<CompareTimelineData["style"]>> = {
     highlightColor: normalizedData.style?.highlightColor ?? "#f59e0b",
@@ -599,24 +954,61 @@ export function CompareTimelineBlock({
     stepLabelColor: normalizedData.style?.stepLabelColor ?? "var(--color-text)",
     mutedStepColor: normalizedData.style?.mutedStepColor ?? "var(--color-text)",
     guideColor: normalizedData.style?.guideColor ?? "var(--color-border)",
+    trackBackgroundColor: normalizedData.style?.trackBackgroundColor ?? "transparent",
     trackLabelSize: normalizedData.style?.trackLabelSize ?? "base",
     stepLabelSize: normalizedData.style?.stepLabelSize ?? "xs",
     segmentLabelSize: normalizedData.style?.segmentLabelSize ?? "xs",
+    trackLabelFontWeight: normalizedData.style?.trackLabelFontWeight ?? "semibold",
+    stepLabelFontWeight: normalizedData.style?.stepLabelFontWeight ?? "semibold",
+    segmentLabelFontWeight: normalizedData.style?.segmentLabelFontWeight ?? "normal",
+    markerShape: normalizedData.style?.markerShape ?? "rounded",
   };
   const targetTrackId = normalizedData.highlight?.targetTrackId ?? tracks[1]?.id ?? tracks[0]?.id;
+  const targetTrackIds = normalizedData.highlight?.targetTrackIds ?? [targetTrackId];
+  const renderedTracks = resolveCompareTracksForRender(tracks, layout.trackOrder);
+  const sectionTitle = normalizedData.header?.title?.trim();
+  const sectionSubtitle = normalizedData.header?.subtitle?.trim();
+  const sectionHeadingId = sectionTitle ? "compare-timeline-heading" : undefined;
+  const stepLabelWeightClass = fontWeightClassMap[style.stepLabelFontWeight ?? "semibold"];
 
   return (
-    <section className="px-4 py-8">
+    <section
+      className={paddingClassMap[layout.padding ?? "md"]}
+      aria-labelledby={sectionHeadingId}
+      aria-label={sectionHeadingId ? undefined : "Compare Timeline"}
+    >
       <div
-        className="mx-auto w-full max-w-6xl space-y-4"
+        className={joinClasses(
+          "mx-auto w-full space-y-4",
+          maxWidthClassMap[layout.maxWidth ?? "6xl"]
+        )}
         data-compare-variant={resolvedVariant}
         data-compare-label-position={layout.labelPosition}
         data-compare-target-track={targetTrackId}
+        data-compare-target-tracks={targetTrackIds.join(",")}
+        data-compare-max-width={layout.maxWidth}
+        data-compare-padding={layout.padding}
+        data-compare-track-order={layout.trackOrder}
+        data-compare-marker-shape={style.markerShape}
       >
+        {sectionTitle || sectionSubtitle ? (
+          <div className="space-y-2">
+            {sectionTitle ? (
+              <h2 id={sectionHeadingId} className="text-2xl font-semibold text-foreground">
+                {sectionTitle}
+              </h2>
+            ) : null}
+            {sectionSubtitle ? (
+              <p className="max-w-3xl text-sm text-foreground/80">{sectionSubtitle}</p>
+            ) : null}
+          </div>
+        ) : null}
+
         {layout.labelPosition === "top" ? (
           <CompareAxisRow
             steps={steps}
             stepLabelColor={style.stepLabelColor ?? "var(--color-text)"}
+            stepLabelWeightClass={stepLabelWeightClass}
           />
         ) : null}
 
@@ -626,13 +1018,13 @@ export function CompareTimelineBlock({
             trackSpacingClassMap[layout.trackSpacing ?? "md"]
           )}
         >
-          {tracks.map((track) => (
+          {renderedTracks.map((track) => (
             <CompareTrackRow
               key={track.id}
               track={track}
               steps={steps}
               variant={resolvedVariant}
-              targetTrackId={targetTrackId}
+              targetTrackIds={targetTrackIds}
               guides={guides}
               style={style}
             />
@@ -643,6 +1035,7 @@ export function CompareTimelineBlock({
           <CompareAxisRow
             steps={steps}
             stepLabelColor={style.stepLabelColor ?? "var(--color-text)"}
+            stepLabelWeightClass={stepLabelWeightClass}
           />
         ) : null}
       </div>
@@ -669,7 +1062,7 @@ export function createCompareTimelineWidget(editors: {
       {
         id: "dual-track-highlight",
         label: "Highlight",
-        description: "Emphasize key segments on the selected track.",
+        description: "Emphasize key segments on one or both tracks.",
       },
     ],
     schema: compareTimelineSchema,

@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Data Model
 **Estimated Effort:** Large
 **Dependencies:** TASK-260, TASK-260-01
-**Status:** To Do
+**Status:** Done (2026-05-17)
 
 ---
 
@@ -19,6 +19,11 @@ contract.
 This leaf covers C1, C2, C3, W1, U2, U3, U6, U7, and U8. It keeps segment
 data schema-owned by `core/widgets/core/compareTimeline.tsx` and editor UX owned
 by `CompareTimelineEditors.tsx`.
+
+`W1` and `C3` intentionally evolve the current Compare Timeline-local contract.
+They are not shared TASK-256 drift. When this leaf lands, update the widget
+doc/source report closure notes to make the new highlight and Wizard ownership
+explicit.
 
 ## Sub-Tasks
 

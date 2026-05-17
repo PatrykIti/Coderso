@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Runtime Render + Visual Design
 **Estimated Effort:** Large
 **Dependencies:** TASK-260, TASK-260-01, TASK-260-03
-**Status:** To Do
+**Status:** Done (2026-05-17)
 
 ---
 
@@ -15,9 +15,13 @@
 Add Compare Timeline-specific layout, typography, and visual polish from
 `REPORT_COMPARE_TIMELINE_WIDGET.md`.
 
-This leaf covers W2, W3, W4, W5, W9, W13, W14, U1, and U9. Shared `Clear`,
-`none`, duplicated mode controls, W7 color validation, global color validation,
-and W8 scroll-triggered motion remain TASK-256/future product scope.
+This leaf covers W2, W3, W4, W5, W9, W13, W14, U1, U5, U9, and U10. Shared
+`none` semantics remain TASK-256-02 scope. `W7` color validation is routed to
+`TASK-299`, and `W8` motion remains deferred to `TASK-300`.
+
+TASK-256-02 already landed the shared clearable-color contract and TASK-256-01
+already settled shared mode ownership. This leaf consumes those settled
+contracts locally in Compare Timeline without reopening the shared family.
 
 ## Sub-Tasks
 
@@ -30,9 +34,12 @@ and W8 scroll-triggered motion remain TASK-256/future product scope.
 - [ ] Add render-only track order controls with
   `layout.trackOrder: "a-first" | "b-first"` so public display order can change
   without swapping normalized track data or rewriting deterministic IDs.
-- [ ] Leave W8 scroll-triggered motion deferred unless a later product task
-  approves a shared runtime script/motion contract. Do not add a motion preset
-  in this leaf.
+- [ ] Adopt the landed shared `onClear` behavior for Compare Timeline
+  `trackLabelColor`, `stepLabelColor`, and `mutedStepColor` fields.
+- [ ] Remove duplicated Visual/Advanced layout controls by keeping one truthful
+  editor owner for track spacing and axis label position after TASK-256-01.
+- [ ] Leave W8 scroll-triggered motion deferred to `TASK-300`. Do not add a
+  motion preset in this leaf.
 - [ ] Add visual variant preview cards for `dual-track` and
   `dual-track-highlight`.
 - [ ] Add spacing option helper text or tooltips that explain token effect.
@@ -42,7 +49,7 @@ and W8 scroll-triggered motion remain TASK-256/future product scope.
 | File | Required change |
 |---|---|
 | `core/widgets/core/compareTimeline.tsx` | Add bounded heading/layout/style fields and a render-only `layout.trackOrder` token with schema/defaults/normalizer/render support. Do not add runtime script-driven motion in this leaf. |
-| `core/admin/ui/widgets/editors/CompareTimelineEditors.tsx` | Add controls for heading, layout, font weight, track background, marker shape, render order, previews, and helper text. |
+| `core/admin/ui/widgets/editors/CompareTimelineEditors.tsx` | Add controls for heading, layout, font weight, track background, marker shape, render order, previews, helper text, local color clear adoption, and local mode-ownership cleanup. |
 | `tests/vitest/widgets/compareTimeline.test.tsx` | Add SSR/schema/normalizer coverage for new fields, render-only `trackOrder`, track ID preservation, highlight target preservation, and backward compatibility. |
 | `tests/vitest/ui/compare-timeline-editor-wave.test.tsx` | Add editor coverage for new controls, render-order selection, and variant preview cards. |
 | `tests/unit/widgets/validator.test.ts` | Run and update when schema/defaults change. |
@@ -120,8 +127,8 @@ No API routes are added.
 ## Documentation Updates Required
 
 - Update `_docs/PLAYWRIGHT/REPORT_COMPARE_TIMELINE_WIDGET.md` rows W2, W3, W4,
-  W5, W9, W13, W14, U1, and U9 after validation. Mark W7 and W8 deferred to
-  exact future physical owner tasks unless later task files own them.
+  W5, W9, W13, W14, U1, U5, U9, and U10 after validation. Mark W7 routed to
+  `TASK-299` and W8 routed to `TASK-300`.
 - Update `_docs/_WIDGETS/COMPARE_TIMELINE.md` with the final layout, typography,
   and visual options.
 - Update `core/widgets/modulePackMatrix.ts` and `_docs/WIDGET_PACK_MATRIX.md`
@@ -140,4 +147,5 @@ No API routes are added.
   the runtime output they describe.
 - Track order changes affect render order only and do not rewrite normalized
   IDs, markers, segments, or highlight target behavior.
-- No shared TASK-256 clear/none/mode contract is duplicated locally.
+- Compare Timeline consumes the landed shared clear/mode contracts locally
+  without reintroducing duplicated Visual/Advanced controls.

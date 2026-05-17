@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 286 tasks
+- **To Do:** 288 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1575 tasks
+- **Done:** 1581 tasks
 
 ---
 
@@ -38,6 +38,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-300 | Compare Timeline Motion Presets and Reduced Motion Policy | Low | Medium | Exact future owner for `REPORT_COMPARE_TIMELINE_WIDGET.md` row `W8`; keep Compare Timeline static until a reduced-motion-safe motion contract is approved |
+| TASK-299 | Shared Widget Contrast Guidance and Validation | Medium | Large | Exact shared owner for `REPORT_COMPARE_TIMELINE_WIDGET.md` row `W7` and future reusable widget contrast guidance/validation |
 | TASK-298 | Booking Admin Availability Row Draft and Save UX | Medium | Medium | Own the Booking admin Availability-tab `Add row` versus `Save schedules` flow outside TASK-259 widget scope |
 | TASK-297 | Shared Widget Color Picker Residual Controls | Medium | Large | Create a concrete shared owner for late report rows where color-like widget fields still expose raw text inputs |
 | TASK-296 | Shared Interactive Widget Accessibility Residuals | High | Large | Create a concrete shared owner for late interactive widget ARIA/report rows that were classified but never given a physical task |
@@ -303,12 +305,28 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-261-04 | Contact Map Validation, Fallback, and Display Controls | Medium | Medium | Add map title/description, validation, height, fullscreen, and fallback behavior |
 | TASK-261-05 | Contact Layout, Social Links, and Normalizer Polish | Medium | Medium | Add max-width, padding, bounded social links, and explicit default enum normalization |
 | TASK-261-06 | Contact Report, Docs, Changelog, and Closure | Medium | Medium | Refresh Contact report evidence, docs, changelog, board, and final validation |
-| TASK-260 | Compare Timeline Widget Playwright Product Followups | High | Very Large | Widget-specific follow-up family for `REPORT_COMPARE_TIMELINE_WIDGET.md`, excluding TASK-256 shared-contract scope |
-| TASK-260-01 | Compare Timeline Renderer Truthfulness and Accessibility | High | Large | Repair Compare Timeline-local renderer grid, guide, semantic, fallback, min-height, and overflow findings |
-| TASK-260-02 | Compare Timeline Segment Editing and Highlight Model | High | Large | Expand both-track segment editing, Wizard segment setup, preserved segment messaging, range feedback, and friendly track labels |
-| TASK-260-03 | Compare Timeline Axis Steps and Content Controls | High | Large | Add Visual step buttons, step descriptions, bounded range decisions, optional icons, and safe step/segment links |
-| TASK-260-04 | Compare Timeline Layout Typography and Visual Polish | Medium | Large | Add Compare Timeline-owned heading, width, padding, typography, motion, order, background, marker, preview, and spacing help |
-| TASK-260-05 | Compare Timeline Report Docs and Closure | Medium | Medium | Refresh report/docs/changelog/board and final validation for the TASK-260 family |
+| TASK-259 | Booking Calendar Widget Playwright Product Followups | High | Very Large | Widget-specific follow-up family for `REPORT_BOOKING_CALENDAR_WIDGET.md`, excluding TASK-256 shared-contract and TASK-258 Appointment Form scope |
+| TASK-259-01 | Booking Calendar Admin Preview Runtime Catalog Parity | High | Large | Hydrate admin canvas/editor preview with booking services/resources without persisting preview-only tokens |
+| TASK-259-02 | Booking Calendar Date Defaults, Range, and Past-Date Safety | High | Large | Add default/min/max date config and enforce public slots past-date policy |
+| TASK-259-03 | Booking Calendar Service Context and Timezone Copy | High | Large | Show price, duration, description, timezone, and user-facing empty-state copy |
+| TASK-259-04 | Booking Calendar Loading, Concurrency, and Selection UX | High | Large | Add refresh busy state, skeleton, AbortController, stale-response guard, and clear selection |
+| TASK-259-05 | Booking Calendar Availability Calendar and Slot Density | High | Very Large | Add visual date availability signals and non-overlapping slot density mode |
+| TASK-259-06 | Booking Calendar Layout Variants and Mobile Styling | Medium | Large | Add compact/inline/horizontal layouts, mobile control density, and selected-slot style controls |
+| TASK-259-07 | Booking Calendar Default Pickers and Diagnostics | Medium | Medium | Replace raw default IDs with catalog-aware pickers and truthful diagnostics |
+| TASK-259-08 | Booking Calendar Report, Docs, and Closure | Medium | Medium | Refresh report/docs/changelog/board and final validation for the TASK-259 family |
+| TASK-258 | Appointment Form Widget Playwright Follow-Up | High | Very Large | Widget-specific follow-up for `_docs/PLAYWRIGHT/REPORT_APPOINTMENT_FORM_WIDGET.md`; excludes shared TASK-256 contract repairs |
+| TASK-258-01 | Runtime State, Admin Preview, and Submission Feedback | High | Large | Repair no-slot disabled parity, stale errors, loading copy, and post-success slot clearing |
+| TASK-258-02 | Field Validation, Visibility, and Accessibility | High | Large | Add truthful field toggles, required controls, split name, validation attributes, autocomplete, and form labels |
+| TASK-258-03 | Flow Pairing, Slot Context, Locale, and Redirect | High | Large | Add flow-key pairing feedback, service/resource slot summary context, locale formatting, and safe success redirect |
+| TASK-258-04 | Consent, Custom Fields, and Public Write Hardening | High | Large | Add bounded custom fields, consent controls, and backend-owned CAPTCHA bridge for booking submissions |
+| TASK-258-05 | Style, Variants, and Advanced Diagnostics | High | Large | Add Appointment Form variants, submit text color, inherited-style indicators, and read-only runtime diagnostics |
+| TASK-258-06 | Playwright Report, Docs, and Closure | Medium | Medium | Refresh report evidence, widget docs, changelog, board, and validation matrix after implementation |
+| TASK-257 | Accordion Widget Playwright Product Followups | High | Large | Widget-specific follow-up family for `REPORT_ACCORDION_WIDGET.md`, excluding TASK-256 shared-contract and FAQ scope |
+| TASK-257-01 | Accordion Initial Open State Product Options | High | Medium | Add intentional all-collapsed initial state after shared default-open/collapsible fixes land |
+| TASK-257-02 | Accordion Style Layout and Typography Controls | High | Large | Add Accordion-owned body color, padding, radius, max-width, typography, and color-picker controls |
+| TASK-257-03 | Accordion Item Content and Management UX | High | Large | Add item icon/copy/add/reorder UX only where nested slot content stays synchronized |
+| TASK-257-04 | Accordion Motion and Variant Preview Polish | Medium | Medium | Add Accordion-specific motion tokens and visual variant preview cards |
+| TASK-257-05 | Accordion Report Docs and Closure | Medium | Medium | Refresh report/docs/changelog/board and final validation for the TASK-257 family |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
 | TASK-240 | Coderso Multilingual and i18n Umbrella | High | Very Large | Execution-ready locale/translation/runtime routing program superseding TASK-054-21 |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |
@@ -333,6 +351,12 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-260 | Compare Timeline Widget Playwright Product Followups | High | Very Large | Done: Compare Timeline renderer, editor, schema, report, docs, and closure evidence are synchronized; W7/W8 now route to exact follow-up owners `TASK-299` and `TASK-300` |
+| TASK-260-01 | Compare Timeline Renderer Truthfulness and Accessibility | High | Large | Done: responsive grid truthfulness, guide-off behavior, static ARIA labels, fallback highlight fill, and overflow/min-height safety are covered |
+| TASK-260-02 | Compare Timeline Segment Editing and Highlight Model | High | Large | Done: both-track highlight targets, Wizard/Visual segment editing, preserved hidden-segment copy, range feedback, and friendly target labels are landed |
+| TASK-260-03 | Compare Timeline Axis Steps and Content Controls | High | Large | Done: Visual add/remove controls, Wizard/Visual step descriptions, `3-10` axis range, step icons, and safe step/segment links are synchronized |
+| TASK-260-04 | Compare Timeline Layout Typography and Visual Polish | Medium | Large | Done: heading, width, padding, font weights, track order/background, marker shapes, variant previews, shared clear adoption, and layout mode cleanup are synchronized |
+| TASK-260-05 | Compare Timeline Report Docs and Closure | Medium | Medium | Done: report/widget docs/changelog/board/status closure is synchronized with focused validation and exact deferred owner tasks |
 | TASK-259 | Booking Calendar Widget Playwright Product Followups | High | Very Large | Done: admin preview parity, signed date policy, service context, loading/abort/clear selection, week picker, variants, default pickers, docs, and closure evidence are synchronized while residual shared/admin rows stay routed to TASK-296/TASK-297/TASK-298 |
 | TASK-259-01 | Booking Calendar Admin Preview Runtime Catalog Parity | High | Large | Done: page-builder preview hydrates booking catalog data into BlockList/editor context without persisting preview-only `resolved` payloads |
 | TASK-259-02 | Booking Calendar Date Defaults, Range, and Past-Date Safety | High | Large | Done: widget-owned date defaults/range render, signed slots-token claims, and public route/service past-date enforcement are synchronized |

@@ -86,12 +86,27 @@ test("compare timeline validator accepts extended fields", () => {
       variant: "dual-track-highlight",
       data: {
         ...compareTimelineDefaults,
+        header: {
+          title: "Compare rollout paths",
+          subtitle: "Show the contrast before and after adopting the platform.",
+        },
+        axis: {
+          steps: [
+            { label: "Plan", icon: "🧭", href: "/plan" },
+            { label: "Build", description: "Align owners", href: "https://example.com/build" },
+            { label: "Launch", description: "Ship fast" },
+          ],
+        },
         layout: {
           trackSpacing: "lg",
           labelPosition: "bottom",
+          maxWidth: "7xl",
+          padding: "lg",
+          trackOrder: "b-first",
         },
         highlight: {
           targetTrackId: "b",
+          targetTrackIds: ["a", "b"],
         },
         style: {
           highlightColor: "#f59e0b",
@@ -101,9 +116,14 @@ test("compare timeline validator accepts extended fields", () => {
           stepLabelColor: "#0f172a",
           mutedStepColor: "#334155",
           guideColor: "#e2e8f0",
+          trackBackgroundColor: "#ffffff",
           trackLabelSize: "lg",
           stepLabelSize: "sm",
           segmentLabelSize: "base",
+          trackLabelFontWeight: "bold",
+          stepLabelFontWeight: "medium",
+          segmentLabelFontWeight: "semibold",
+          markerShape: "numbered",
         },
       },
     })
@@ -124,10 +144,11 @@ test("compare timeline cleared style colors omit normalized keys while runtime k
   expect(normalized.style?.highlightColor).toBeUndefined();
   expect(normalized.style?.markerColor).toBeUndefined();
   expect(normalized.style?.guideColor).toBeUndefined();
+  expect(normalized.style?.trackBackgroundColor).toBeUndefined();
   expect(html).toContain('data-compare-variant="dual-track-highlight"');
   expect(html).toContain("var(--color-primary)");
   expect(html).toContain("var(--color-border)");
-  expect(html).not.toContain("background-color:transparent");
+  expect(html).toContain("rgba(245, 158, 11, 0.18)");
 });
 
 test("compare timeline validator rejects invalid variant", () => {
@@ -161,6 +182,7 @@ test("compare timeline wizard renders minimal onboarding fields", () => {
   );
 
   expect(html).toContain("Quick setup");
+  expect(html).toContain("Axis copy");
   expect(html).toContain("Track labels");
   expect(html).toContain("Marker baseline");
 });
@@ -186,15 +208,21 @@ test("compare timeline visual renders section-based IA", () => {
 test("compare timeline visual hides segment editor for non-highlight variant", () => {
   const html = renderToString(
     <CompareTimelineVisualEditor
-      value={compareTimelineDefaults}
+      value={{
+        ...compareTimelineDefaults,
+        tracks: [
+          compareTimelineDefaults.tracks[0] ?? { id: "a", label: "Traditional", markers: [] },
+          compareTimelineDefaults.tracks[1] ?? { id: "b", label: "With us", markers: [] },
+        ],
+      }}
       onChange={() => undefined}
       variant="dual-track"
       onVariantChange={() => undefined}
     />
   );
 
-  expect(html).toContain("Segment mapping is available only");
-  expect(html).not.toContain("Highlight target track");
+  expect(html).toContain("Segment mapping is hidden in Dual Track");
+  expect(html).not.toContain("Highlight targets");
 });
 
 test("compare timeline renderer applies typography size tokens", () => {
@@ -208,12 +236,49 @@ test("compare timeline renderer applies typography size tokens", () => {
           trackLabelSize: "lg",
           stepLabelSize: "base",
           segmentLabelSize: "base",
+          trackLabelFontWeight: "bold",
+          stepLabelFontWeight: "medium",
+          segmentLabelFontWeight: "semibold",
         },
       }}
     />
   );
 
-  expect(html).toContain("font-semibold text-base");
+  expect(html).toContain("text-base font-bold");
+  expect(html).toContain("text-base font-medium");
+  expect(html).toContain("font-semibold");
+});
+
+test("compare timeline renderer supports both-track highlight, track order, and safe step links", () => {
+  const html = renderToString(
+    <CompareTimelineBlock
+      variant="dual-track-highlight"
+      data={{
+        ...compareTimelineDefaults,
+        axis: {
+          steps: [
+            { label: "Plan", href: "/plan" },
+            { label: "Build", href: "javascript:alert(1)" },
+            { label: "Ship", icon: "🚀", href: "https://example.com/ship" },
+          ],
+        },
+        highlight: {
+          targetTrackId: "b",
+          targetTrackIds: ["a", "b"],
+        },
+        layout: {
+          ...compareTimelineDefaults.layout,
+          trackOrder: "b-first",
+        },
+      }}
+    />
+  );
+
+  expect(html).toContain('data-compare-target-tracks="a,b"');
+  expect(html).toContain('data-compare-track-order="b-first"');
+  expect(html).toContain('href="/plan"');
+  expect(html).toContain('href="https://example.com/ship"');
+  expect(html).not.toContain("javascript:alert");
 });
 
 test("compare timeline advanced keeps technical-only controls", () => {
@@ -230,4 +295,6 @@ test("compare timeline advanced keeps technical-only controls", () => {
   expect(html).toContain("Raw metadata fields");
   expect(html).toContain("Data normalization");
   expect(html).not.toContain("Colors and typography");
+  expect(html).not.toContain("Track spacing token");
+  expect(html).toContain("Visual so editors have one truthful place to adjust layout");
 });

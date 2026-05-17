@@ -427,3 +427,58 @@ className={`grid gap-2 grid-cols-1 sm:grid-cols-2 lg:${gridClass}`}
   `TASK-256-01`, `TASK-256-02`, `TASK-256-04`, or `TASK-256-06-01`, but
   TASK-256 ships no Compare Timeline-specific code from this report. Final
   widget execution remains deferred to `TASK-260`.
+
+## Status po TASK-260 (2026-05-17)
+
+- Compare Timeline follow-up execution is complete for all rows owned by the
+  `TASK-260` family.
+- Exact out-of-family owners now exist for every remaining non-implemented row:
+  `U4 -> TASK-256-02`, `W7 -> TASK-299`, `W8 -> TASK-300`.
+- No live Playwright replay was run in this isolated worktree because the
+  report environments (`http://localhost:5173/admin`, `http://localhost:3000`)
+  were not booted during this rollout. Closure evidence below comes from
+  targeted SSR/editor-wave/renderer validation:
+  `bun run test:vitest -- tests/vitest/widgets/compareTimeline.test.tsx tests/vitest/ui/compare-timeline-editor-wave.test.tsx`,
+  `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx`,
+  and `bun test tests/unit/widgets/validator.test.ts`.
+
+| Finding | Final status | Owner | Evidence |
+|---|---|---|---|
+| C1 | fixed | TASK-260-02 | Visual and Wizard now expose segment editors on both tracks; editor-wave covers both-track segment edits. |
+| C2 | fixed | TASK-260-02 | Dual Track now keeps preserved segment copy instead of implying data loss. |
+| C3 | fixed | TASK-260-02 | Wizard now includes highlight target + segment authoring when highlight mode is enabled. |
+| C4 | fixed | TASK-260-03 | Visual owns `Add step` / `Remove step` buttons with min/max guard rails. |
+| C5 | fixed | TASK-260-03 | Wizard and Visual both edit rendered step descriptions. |
+| W1 | fixed | TASK-260-02 | `highlight.targetTrackIds` supports one-track or both-track highlighting while preserving legacy `targetTrackId`. |
+| W2 | fixed | TASK-260-04 | Track/step/segment font-weight controls now exist in widget schema/editor/runtime. |
+| W3 | fixed | TASK-260-04 | Compare Timeline now owns bounded section padding tokens instead of hardcoded padding only. |
+| W4 | fixed | TASK-260-04 | Compare Timeline now owns bounded max-width tokens instead of hardcoded `max-w-6xl` only. |
+| W5 | fixed | TASK-260-04 | Optional section heading + subtitle fields now render above the compare block. |
+| W6 | fixed | TASK-260-03 | Axis step range now normalizes through `3-10` across schema/editor/runtime/tests. |
+| W7 | deferred | TASK-299 | Shared contrast guidance/validation is intentionally split into its own physical task. |
+| W8 | deferred | TASK-300 | Motion remains intentionally out of `TASK-260`; exact follow-up task now exists. |
+| W9 | fixed | TASK-260-04 | Render order is now configurable through `layout.trackOrder` without mutating stored track IDs. |
+| W10 | fixed | TASK-260-03 | Axis steps and segment badges now support safe links through widget-safe href normalization. |
+| W11 | fixed | TASK-260-01 | Highlighted segment background now renders a fallback color before the `color-mix(...)` enhancement. |
+| W12 | fixed | TASK-260-03 | Axis steps now support bounded plain-text icon/emoji metadata. |
+| W13 | fixed | TASK-260-04 | Track background color is now configurable through Compare Timeline-owned style fields. |
+| W14 | fixed | TASK-260-04 | Marker shape tokens now support rounded, circle, numbered, and check treatments. |
+| U1 | fixed | TASK-260-04 | Variant cards now include mini visual previews instead of text-only selection. |
+| U2 | fixed | TASK-260-02 | Dual Track explains that hidden segments are preserved and return in highlight mode. |
+| U3 | fixed | TASK-260-02 | Segment editor now surfaces a normalization warning when `from > to`. |
+| U4 | task-256-physical-owner | TASK-256-02 | Shared `none` token semantics remain outside Compare Timeline-local closure. |
+| U5 | fixed | TASK-260-04 | Compare Timeline now consumes the landed shared clear controls for label/background colors. |
+| U6 | fixed | TASK-260-02 | Segment label placeholder/help now makes the fallback `Steps X-Y` copy explicit. |
+| U7 | fixed | TASK-260-02 | Marker grids now warn when a track has no active markers. |
+| U8 | fixed | TASK-260-02 | Advanced highlight target selector now shows label + stable ID and a `Both tracks` option. |
+| U9 | fixed | TASK-260-04 | Visual spacing controls now show token-effect helper copy. |
+| U10 | fixed | TASK-260-04 | Visual owns layout/spacing controls; Advanced no longer duplicates those controls. |
+| R1 | fixed | TASK-260-01 | Desktop axis/track grids now follow the normalized step count instead of hardcoded three columns. |
+| R2 | fixed | TASK-260-01 | The compare section now exposes a readable `aria-label`/`aria-labelledby` contract. |
+| R3 | fixed | TASK-260-01 | Track rows now expose readable labels instead of unlabeled generic containers. |
+| R4 | fixed | TASK-260-01 | Marker cells now expose readable static state labels instead of color-only state. |
+| R5 | fixed | TASK-260-01 | Segment badges now expose readable labels in runtime output. |
+| R6 | fixed | TASK-260-01 | Highlighted segment backgrounds now include a browser-compatible fallback. |
+| R7 | fixed | TASK-260-01 | Track rows and step cells now keep a minimum visible height in sparse states. |
+| R8 | fixed | TASK-260-01 | `guides.enabled=false` now removes borders instead of falling back to solid borders. |
+| R9 | fixed | TASK-260-01 | Track rows and step cells now use overflow-safe rendering for long labels. |

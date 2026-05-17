@@ -6,7 +6,7 @@
 **Category:** Widgets + Content + Admin UI + Runtime Render + Playwright QA
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-252, TASK-256-07
-**Status:** To Do
+**Status:** Done (2026-05-17)
 
 ---
 
@@ -25,6 +25,12 @@ current widget owners:
 - `tests/vitest/ui/compare-timeline-editor-wave.test.tsx`;
 - Compare Timeline docs and report evidence.
 
+This family includes both truthful repairs to the current renderer/editor
+contract and approved Compare Timeline-local contract expansion from the source
+report. When a leaf intentionally evolves the current v1 widget surface
+(`W1`, `C3`, `W6`, `W10`, `W12`), the implementation must update the
+Compare Timeline source-of-truth docs together with schema/editor/runtime/tests.
+
 This family must not hide generic widget-contract repairs inside a
 Compare Timeline patch. If a leaf needs a shared editor helper, global
 `Clear`/`none` rule, shared color-contrast validator, or reusable ARIA/runtime
@@ -39,19 +45,17 @@ TASK-260 explicitly excludes these shared-contract rows unless TASK-256-08
 later assigns them to an exact physical follow-up task:
 
 - U4 `none` token semantics: TASK-256-02 owns `none` vs hidden/default behavior.
-- U5 missing `Clear` controls for `trackLabelColor`, `stepLabelColor`, and
-  `mutedStepColor`: TASK-256-02 owns shared clearable color behavior. A
-  Compare Timeline implementation may only consume the shared helper after it
-  lands.
-- U10 duplicated Visual/Advanced layout controls: TASK-256-08 must create or
-  assign an exact future physical shared-mode task before this row is closed.
-  TASK-260 must not move shared layout-token ownership between modes.
-- W7 color-contrast validation: TASK-256-08 must classify it into an exact
-  shared/future physical owner. TASK-260 does not implement contrast validation
-  or advisory warnings.
-- W8 scroll-triggered motion: deferred from TASK-260 unless a later product
-  task approves a runtime script contract. TASK-260-04 may add only static,
-  SSR-safe visual polish.
+- W7 color-contrast validation: routed to `TASK-299`, which owns the reusable
+  shared contrast-guidance contract. TASK-260 does not implement local-only
+  advisory warnings.
+- W8 scroll-triggered motion: routed to `TASK-300`. TASK-260-04 may add only
+  static, SSR-safe visual polish.
+
+Rows `U5` and `U10` are no longer excluded shared drift. TASK-256-02 already
+landed the shared clearable color behavior and TASK-256-01 already settled the
+shared mode-ownership policy. The remaining Compare Timeline work is local
+adoption inside `CompareTimelineEditors.tsx`, so TASK-260 keeps those rows in
+widget scope instead of reopening the shared family.
 
 ## Report Classification Matrix
 
@@ -60,13 +64,11 @@ later assigns them to an exact physical follow-up task:
 | R1, R6/W11, R7, R8, R9 plus Compare Timeline-local R2-R5 semantics | TASK-260-01 | Repair renderer truthfulness, responsive grids, guide visibility, segment/track semantics, compatibility fallback, min-height, and overflow in `compareTimeline.tsx` without creating shared runtime helpers. |
 | C1, C2, C3, W1, U2, U3, U6, U7, U8 | TASK-260-02 | Expand segment/highlight editing for both tracks, add explicit both-track highlight support, Wizard onboarding, preserved hidden-segment messaging, range validation feedback, marker-empty feedback, and friendly target-track labels. |
 | C4, C5, W6, W10, W12 | TASK-260-03 | Improve axis step editing and step content controls: Visual add/remove buttons, step descriptions, step-count expansion to a bounded `3-10` range, optional plain-text step icons, and optional safe step/segment links through the existing widget safe-href owner. |
-| W2, W3, W4, W5, W9, W13, W14, U1, U9 | TASK-260-04 | Add Compare Timeline-owned layout, heading, typography, track order, track background, marker-shape, variant preview, and spacing help. W7 and W8 stay outside TASK-260. |
+| W2, W3, W4, W5, W9, W13, W14, U1, U5, U9, U10 | TASK-260-04 | Add Compare Timeline-owned layout, heading, typography, track order, track background, marker-shape, variant preview, spacing help, local shared-clear adoption for label colors, and local mode-ownership cleanup after TASK-256-01/02. W7 and W8 stay outside TASK-260. |
 | Source report refresh, widget docs, task-board/changelog closure | TASK-260-05 | Record fixed/deferred evidence after implementation leaves land. |
 | U4 | TASK-256-02 | Excluded from TASK-260. Shared `none` token semantics decide whether size token `none` hides output or means default sizing. |
-| U5 | TASK-256-02 | Excluded from TASK-260. Shared clearable color behavior must cover `trackLabelColor`, `stepLabelColor`, and `mutedStepColor` before Compare Timeline consumes it. |
-| U10 | TASK-256-08 future physical task | Excluded from TASK-260 until TASK-256-08 assigns an exact shared-mode/mode-ownership task for duplicated Visual/Advanced layout controls. |
-| W7 | TASK-256-08 future physical task | Excluded from TASK-260 until a shared or explicit future contrast-validation contract exists. |
-| W8 | Future runtime-motion product task through TASK-256-08 | Excluded from TASK-260 because scroll-triggered reveal needs a broader runtime script/motion contract. |
+| W7 | TASK-299 | Excluded from TASK-260 and routed to the shared contrast-guidance task. |
+| W8 | TASK-300 | Excluded from TASK-260 because motion stays in a separate Compare Timeline follow-up task. |
 
 ## Source Report Ledger
 
@@ -83,8 +85,8 @@ later assigns them to an exact physical follow-up task:
 | W4 | TASK-260-04 | Add bounded max-width tokens. |
 | W5 | TASK-260-04 | Add optional section heading/subtitle fields. |
 | W6 | TASK-260-03 | Expand the step count from `3-6` to bounded `3-10`. |
-| W7 | TASK-256-08 future physical task | Do not implement in TASK-260. |
-| W8 | Future runtime-motion product task through TASK-256-08 | Do not implement in TASK-260. |
+| W7 | TASK-299 | Do not implement in TASK-260. |
+| W8 | TASK-300 | Do not implement in TASK-260. |
 | W9 | TASK-260-04 | Add render-order controls without rewriting canonical track IDs. |
 | W10 | TASK-260-03 | Add optional step/segment links only through `normalizeWidgetSafeHref()`. |
 | W11 | TASK-260-01 | Duplicate evidence for R6; close with the same color fallback proof. |
@@ -95,12 +97,12 @@ later assigns them to an exact physical follow-up task:
 | U2 | TASK-260-02 | Add non-destructive variant-switch copy for preserved segments. |
 | U3 | TASK-260-02 | Add immediate `from > to` feedback before normalization. |
 | U4 | TASK-256-02 | Do not implement in TASK-260. |
-| U5 | TASK-256-02 | Do not implement in TASK-260; includes `trackLabelColor`, `stepLabelColor`, and `mutedStepColor`. |
+| U5 | TASK-260-04 | Adopt the landed TASK-256-02 clearable color behavior for `trackLabelColor`, `stepLabelColor`, and `mutedStepColor` inside Compare Timeline. |
 | U6 | TASK-260-02 | Add fallback-label help for unlabeled segments. |
 | U7 | TASK-260-02 | Warn when a track has no active markers. |
 | U8 | TASK-260-02 | Display Advanced target track labels with stable IDs. |
 | U9 | TASK-260-04 | Add spacing token help text/tooltips. |
-| U10 | TASK-256-08 future physical task | Do not implement in TASK-260. |
+| U10 | TASK-260-04 | Remove duplicated Visual/Advanced layout controls by applying the settled TASK-256-01 mode-ownership policy locally in Compare Timeline. |
 | R1 | TASK-260-01 | Fix step-count-aware desktop grids while preserving mobile single-column output. |
 | R2 | TASK-260-01 | Add static section labeling through `aria-label` or `aria-labelledby`. |
 | R3 | TASK-260-01 | Add static track row semantics and readable labels. |

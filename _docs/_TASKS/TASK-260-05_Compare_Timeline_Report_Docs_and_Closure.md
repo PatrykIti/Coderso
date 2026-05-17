@@ -6,7 +6,7 @@
 **Category:** Widgets + Playwright QA + Documentation + Changelog
 **Estimated Effort:** Medium
 **Dependencies:** TASK-260-01, TASK-260-02, TASK-260-03, TASK-260-04
-**Status:** To Do
+**Status:** Done (2026-05-17)
 
 ---
 
@@ -27,10 +27,9 @@ production fixes by itself.
 - [ ] Mark every source report finding as `fixed`,
   `task-256-physical-owner`, `deferred`, or `not reproducible`, with a concrete
   task ID and reason.
-- [ ] For U4, U5, U10, shared W7, W8, and any other row outside TASK-260,
-  record the exact physical owner task (`TASK-256-01`, `TASK-256-02`,
-  `TASK-256-05`, `TASK-256-08` future physical task, or a later task ID);
-  never close a row with broad `TASK-256` ownership only.
+- [ ] For U4, W7, W8, and any other row outside TASK-260, record the exact
+  physical owner task (`TASK-256-02`, `TASK-299`, `TASK-300`, or a later task
+  ID); never close a row with broad umbrella ownership only.
 - [ ] Update `_docs/_WIDGETS/COMPARE_TIMELINE.md` with final data/editor/runtime
   behavior.
 - [ ] Update `_docs/WIDGETS.md`, `core/widgets/modulePackMatrix.ts`, or
@@ -100,9 +99,10 @@ Error handling:
 
 - If Playwright replay is blocked, record exact blocker and use existing
   Vitest/SSR evidence only when it directly covers the finding.
-- If a finding was actually shared-contract scope, record the exact
-  TASK-256 physical owner task or future physical task ID and do not mark it
-  fixed by TASK-260.
+- If a finding was actually shared-contract or future-scope work, record the
+  exact physical owner task ID and do not mark it fixed by TASK-260. `U5` and
+  `U10` are not shared closure rows anymore once TASK-260-04 adopts the
+  settled shared contracts locally.
 - If broad suites fail for unrelated reasons, isolate with targeted commands
   and record the unrelated failure separately.
 
