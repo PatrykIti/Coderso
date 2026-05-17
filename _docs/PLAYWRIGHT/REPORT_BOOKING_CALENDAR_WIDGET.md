@@ -377,5 +377,6 @@ Widget jest gotowy do **podstawowego użycia** na prostych wdrożeniach, ale wym
   Widget-owned booking runtime and UX behavior continues through the `TASK-259`
   family.
 - Shared rows that match existing TASK-256 mechanisms still route through
-  `TASK-256-03` or `TASK-256-04`; final fixed/deferred closure remains owned
-  by `TASK-256-08`.
+  `TASK-256-03` or `TASK-256-04`, but TASK-256 ships no Booking
+  Calendar-specific code from this report. Final widget execution remains
+  deferred to `TASK-259`.

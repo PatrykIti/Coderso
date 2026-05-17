@@ -306,7 +306,8 @@ Widget CTA Banner to kompaktowy pasek konwersyjny służący do osadzania wezwan
   widget-owned product/editor/runtime follow-ups continue through the
   `TASK-263` family.
 - Shared rows from this report remain split across `TASK-256-02` (generic clear
-  semantics) and `TASK-256-06-02` (shared safe-link helper evidence), with
-  final fixed/deferred closure still owned by `TASK-256-08`.
+  semantics) and `TASK-256-06-02` (shared safe-link helper evidence). TASK-256
+  does not claim CTA-specific implementation beyond those shared owners; final
+  widget execution remains routed to `TASK-263`.
 
 *Raport wygenerowany na podstawie analizy kodu i testów Playwright — 2026-05-16.*

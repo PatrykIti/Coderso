@@ -372,5 +372,6 @@ Newsletter widget to formularz zapisu do newslettera z konfigurowalnymi polami t
   semantics, submit flow, and transport behavior continue through the
   `TASK-276` family.
 - Shared rows that match existing TASK-256 mechanisms still route through
-  `TASK-256-01`, `TASK-256-02`, or `TASK-256-04`; final fixed/deferred closure
-  remains owned by `TASK-256-08`.
+  `TASK-256-01`, `TASK-256-02`, or `TASK-256-04`, but TASK-256 lands no
+  Newsletter-specific code in this report. Final widget execution therefore
+  remains deferred to `TASK-276`.

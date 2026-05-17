@@ -48,6 +48,8 @@ test("accordion renders defaults", () => {
   expect(html).toContain('data-coderso-accordion="1"');
   expect(html).toContain('data-coderso-accordion-variant="soft"');
   expect(html).toContain("Section 1");
+  expect(html).toContain('role="group"');
+  expect(html).toContain('aria-label="Accordion"');
   expect(html).toContain('aria-controls="accordion-1-content-1"');
   expect(html).toContain('aria-expanded="true"');
   expect(html).toContain('aria-labelledby="accordion-1-summary-1"');

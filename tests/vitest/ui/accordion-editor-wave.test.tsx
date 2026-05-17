@@ -363,9 +363,13 @@ test("Accordion visual editor covers behavior controls, style fallbacks, and str
     expect(view.container.innerHTML).toContain(
       'data-widget-editor-section="accordion.behavior-style"'
     );
+    expect(view.container.textContent).not.toContain("Initially open item");
     const surfaceInput = findInputByPlaceholder(view.container, "var(--color-surface)");
     const borderInput = findInputByPlaceholder(view.container, "var(--color-border)");
     const summaryInput = findInputByPlaceholder(view.container, "var(--color-text)");
+    const clearButtons = Array.from(view.container.querySelectorAll("button")).filter((button) =>
+      (button.textContent ?? "").includes("Clear")
+    );
 
     expect((surfaceInput as HTMLInputElement | null | undefined)?.value).toBe(
       accordionDefaults.style?.surfaceColor
@@ -376,6 +380,7 @@ test("Accordion visual editor covers behavior controls, style fallbacks, and str
     expect((summaryInput as HTMLInputElement | null | undefined)?.value).toBe(
       accordionDefaults.style?.summaryTextColor
     );
+    expect(clearButtons).toHaveLength(3);
 
     clickElement(findButtonByText(view.container, "Soft"));
     expect(view.getVariant()).toBe("soft");
@@ -407,6 +412,10 @@ test("Accordion visual editor covers behavior controls, style fallbacks, and str
     setInputValue(surfaceInput, "#101010");
     setInputValue(borderInput, "#202020");
     setInputValue(summaryInput, "#303030");
+    clickElement(clearButtons[1]);
+    clickElement(clearButtons[2]);
+    expect(view.getValue().style?.borderColor).toBe(accordionDefaults.style?.borderColor);
+    expect(view.getValue().style?.summaryTextColor).toBe(accordionDefaults.style?.summaryTextColor);
 
     expect(view.getValue()).toEqual(
       expect.objectContaining({
@@ -419,8 +428,8 @@ test("Accordion visual editor covers behavior controls, style fallbacks, and str
         }),
         style: expect.objectContaining({
           surfaceColor: "#101010",
-          borderColor: "#202020",
-          summaryTextColor: "#303030",
+          borderColor: accordionDefaults.style?.borderColor,
+          summaryTextColor: accordionDefaults.style?.summaryTextColor,
         }),
       })
     );

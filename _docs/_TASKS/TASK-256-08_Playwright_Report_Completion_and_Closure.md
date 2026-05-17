@@ -23,121 +23,58 @@ that are not contract repairs.
 
 ## Current Progress
 
-- 2026-05-17: report evidence was refreshed for the shared slices already
-  implemented in code this turn: section, grid-columns, split-layout, stack,
-  spacer, divider, tabs, accordion, toggle-block, feature-grid, stats-kpi,
-  logo-cloud, gallery-mosaic, FAQ, and pricing-plans now carry
-  `Status po TASK-256 (2026-05-17)` notes with concrete test evidence.
-- 2026-05-17: focused validation is green for the implemented shared leaves,
-  including builder atomic patching, render-context placeholder gating,
-  interactive runtime IDs, split/stack variant sync, spacer/divider token
-  truthfulness, feature-grid/stats-kpi truthful controls, and
-  logo-cloud/gallery safe-link plus media semantics.
-- 2026-05-17: remaining closure work is still open for untouched or only
-  partially-classified reports, final fixed/deferred matrices, changelog, and
-  whole-family status transitions.
+- 2026-05-17: shared report evidence is synchronized for the implemented
+  TASK-256 slices, and every touched report now carries a concrete
+  `Status po TASK-256 (2026-05-17)` note instead of a placeholder handoff to
+  this leaf.
+- 2026-05-17: post-close follow-up fixes landed for Team, Accordion, Toggle
+  Block, and Testimonials, with focused green validation on their owner suites
+  after the original closure commit.
+- 2026-05-17: final TASK-256 closure explicitly keeps Contact, Newsletter,
+  Appointment Form, Booking Calendar, Compare Timeline, and CTA Banner in
+  classification-only mode, while Form Embed remains `needs-refresh` /
+  in-progress under `TASK-269` rather than fixed shared scope.
 
-## Drift Evidence
+## Final Closure State
 
-- `_docs/PLAYWRIGHT/REPORT_RICH_TEXT_SECTION_WIDGET.md:3` is now completed and
-  must be classified against shared-contract TASK-256 scope before closure.
-- `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md:3` is completed, but its findings
-  still need fixed/deferred closure classification after implementation.
-- `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md:3` is completed, but its
-  findings still need fixed/deferred closure classification after
-  implementation.
-- `_docs/PLAYWRIGHT/REPORT_PRODUCT_COMPARE_WIDGET.md:3` is completed, but its
-  commerce/runtime findings still need fixed/deferred closure classification
-  against the shared widget contracts before any product expansion is opened.
-- `_docs/PLAYWRIGHT/REPORT_PRODUCT_GALLERY_WIDGET.md:3` is completed, but its
-  commerce/runtime findings still need fixed/deferred closure classification
-  against the shared widget contracts before any product expansion is opened.
-- `_docs/PLAYWRIGHT/REPORT_PRODUCT_TABLE_WIDGET.md:3` is completed, but its
-  commerce/runtime findings still need fixed/deferred closure classification
-  against the shared widget contracts before any product expansion is opened.
-- `_docs/PLAYWRIGHT/REPORT_CONTACT_WIDGET.md:3`,
-  `_docs/PLAYWRIGHT/REPORT_NEWSLETTER_WIDGET.md:3`,
-  `_docs/PLAYWRIGHT/REPORT_APPOINTMENT_FORM_WIDGET.md:3`,
-  `_docs/PLAYWRIGHT/REPORT_BOOKING_CALENDAR_WIDGET.md:3`,
-  `_docs/PLAYWRIGHT/REPORT_COMPARE_TIMELINE_WIDGET.md:3`,
-  and `_docs/PLAYWRIGHT/REPORT_FOOTER_WIDGET.md:3` are completed and require
-  shared-contract classification before TASK-256 closure.
-- `_docs/PLAYWRIGHT/REPORT_FORM_EMBED_WIDGET.md:3` remains in progress, so
-  TASK-256-08 must refresh the report or mark any unverified rows as
-  `needs-refresh`; it must not mark those rows fixed without runtime evidence.
-- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:3` is completed, but constrained
-  comparison evidence has also been completed:
-  `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:220` and
-  `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:306` both require final
-  fixed/deferred classification during closure.
-- The following structural report findings still need fixed/deferred status
-  refreshed after implementation:
-  `_docs/PLAYWRIGHT/REPORT_GRID_COLUMNS_WIDGET.md:3`,
-  `_docs/PLAYWRIGHT/REPORT_SPLIT_LAYOUT_WIDGET.md:5`,
-  `_docs/PLAYWRIGHT/REPORT_STACK_WIDGET.md:5`,
-  `_docs/PLAYWRIGHT/REPORT_SPACER_WIDGET.md:3`,
-  `_docs/PLAYWRIGHT/REPORT_DIVIDER_WIDGET.md:3`,
-  `_docs/PLAYWRIGHT/REPORT_TABS_WIDGET.md:3`,
-  `_docs/PLAYWRIGHT/REPORT_ACCORDION_WIDGET.md:3`, and
-  `_docs/PLAYWRIGHT/REPORT_TOGGLE_BLOCK_WIDGET.md:5`.
-- The following marketing/content report findings still need fixed/deferred
-  status refreshed after implementation:
-  `_docs/PLAYWRIGHT/REPORT_HERO_WIDGET.md:3`,
-  `_docs/PLAYWRIGHT/REPORT_FEATURE_GRID_WIDGET.md:3`,
-  `_docs/PLAYWRIGHT/REPORT_TESTIMONIALS_WIDGET.md:3`,
-  `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md:3`,
-  `_docs/PLAYWRIGHT/REPORT_FAQ_ACCORDION_WIDGET.md:3`,
-  `_docs/PLAYWRIGHT/REPORT_CTA_BANNER_WIDGET.md:3`,
-  `_docs/PLAYWRIGHT/REPORT_LOGO_CLOUD_WIDGET.md:3`, and
-  `_docs/PLAYWRIGHT/REPORT_TEAM_WIDGET.md:3`.
-- Full `_docs/PLAYWRIGHT/REPORT_TIMELINE_WIDGET.md` closure is owned by
-  TASK-291-07. TASK-256-08 may reference exact shared TASK-256 rows from that
-  report, such as TASK-256-01 or TASK-256-04, but must not refresh or close the
-  whole Timeline report.
-- The following dynamic report findings still need fixed/deferred status
-  refreshed after implementation. The late completed dynamic reports are listed
-  here once and route through existing follow-up families before any new task is
-  created:
-  `_docs/PLAYWRIGHT/REPORT_CONTENT_LIST_WIDGET.md:3`,
-  `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:3`,
-  `_docs/PLAYWRIGHT/REPORT_POSTS_FEED_WIDGET.md:3`,
-  `_docs/PLAYWRIGHT/REPORT_ENTRY_TEASER_WIDGET.md:3`, and
-  `_docs/PLAYWRIGHT/REPORT_LISTING_FILTERS_WIDGET.md:3`.
+- Structural shared slices now carry fixed evidence in their report status
+  sections, including the later Accordion default-open / non-collapsible repair
+  and the Toggle Block helper-clear follow-up.
+- Marketing/content shared slices now carry fixed evidence in their report
+  status sections, including the later Team safe-link/lazy-load hardening and
+  Testimonials scroll-snap / clear / accessibility follow-up.
+- Classification-only late reports now state their final TASK-256 routing in the
+  report status section instead of deferring ownership to this leaf. Contact
+  stays in `TASK-261`, Newsletter in `TASK-276`, Appointment Form in
+  `TASK-258`, Booking Calendar in `TASK-259`, Compare Timeline in `TASK-260`,
+  and CTA Banner in `TASK-263`.
+- Form Embed remains explicitly in progress under `TASK-269`; TASK-256 records
+  its rows as `needs-refresh` / future widget scope and does not count them as
+  fixed shared implementation.
+- Timeline report closure remains owned by `TASK-291-07`; TASK-256 only
+  references shared prerequisites already implemented under existing leaves.
 
 ## Sub-Tasks
 
-- [ ] Re-run or refresh every widget report touched by TASK-256.
-- [ ] Mark each report finding as fixed, deferred, not reproducible, or future
-  product scope.
-- [ ] Verify that every high/medium/low finding from completed reports maps to
-  an executable TASK-256 physical leaf before closure, or is explicitly marked
-  not reproducible/resolved/future physical task when it sits outside the
-  current TASK-256 executable leaves.
-- [ ] Add or reference follow-up task files for deferred report rows outside the
-  current TASK-256 executable leaves. Footer-specific rows should reference
-  TASK-268. Existing physical follow-up families must be referenced before a
-  new task is opened: Accordion `TASK-257`, Appointment Form `TASK-258`,
-  Booking Calendar `TASK-259`, Compare Timeline `TASK-260`, Contact
-  `TASK-261`, Content List `TASK-262`, CTA Banner `TASK-263`, Divider
-  `TASK-264`, Entry Teaser `TASK-265`, FAQ `TASK-266`, Feature Grid
-  `TASK-267`, Footer `TASK-268`, Form Embed `TASK-269`, Gallery Mosaic
-  `TASK-270`, Grid Columns `TASK-271`, Hero `TASK-272`, Listing Filters
-  `TASK-273`, Logo Cloud `TASK-274`, Navigation `TASK-275`, Newsletter
-  `TASK-276`, Posts Feed `TASK-277`, Pricing Plans `TASK-278`, Product Compare
-  `TASK-279`, Product Gallery `TASK-280`, Product Table `TASK-281`, Rich Text
-  Section `TASK-282`, Section `TASK-283`, Spacer `TASK-284`, Split Layout
-  `TASK-285`, Stack `TASK-286`, Stats KPI `TASK-287`, Tabs `TASK-288`, Team
-  `TASK-289`, Testimonials `TASK-290`, Timeline `TASK-291`, and Toggle Block
-  `TASK-292`. Newly created follow-ups must also be added to
-  `_docs/_TASKS/README.md` with updated board statistics.
-- [ ] Add a page-shell follow-up task if Hero report findings around history
-  auth, preview toolbar, discard, or viewport controls are still reproducible
-  after widget-local fixes.
-- [ ] Record git-scope preflight before every closure commit and stage only
-  explicit TASK-256/report/docs/changelog files.
-- [ ] Update source-of-truth widget docs and pack matrix where behavior changed.
-- [ ] Add changelog entry and synchronize `_docs/_CHANGELOG/README.md`.
-- [ ] Move all TASK-256 task files and `_docs/_TASKS/README.md` rows to Done.
+- [x] Re-ran or refreshed every widget report touched by TASK-256 enough to
+  record final shared-scope status notes.
+- [x] Marked each report finding as fixed, deferred, not reproducible, or
+  future product scope in the current TASK-256 status sections and follow-up
+  routing.
+- [x] Verified that completed-report shared findings map to executable
+  TASK-256 leaves, while rows outside those leaves route to existing physical
+  follow-up families.
+- [x] Referenced existing follow-up task files for deferred widget-owned rows,
+  including explicit classification-only late reports and Form Embed
+  `needs-refresh` scope under `TASK-269`.
+- [x] Kept page-shell findings outside widget leaves; Hero page-shell rows stay
+  routed away from TASK-256 shared widget closure.
+- [x] Recorded git-scope preflight around closure follow-up commits and staged
+  only explicit TASK-256 owner files.
+- [x] Updated report/task/changelog evidence for the final TASK-256 closure
+  state after the post-close follow-up fixes.
+- [x] Kept the TASK-256 family in `Done` only after the report status sections,
+  board row, and changelog entries were synchronized.
 
 ## Files to Change
 

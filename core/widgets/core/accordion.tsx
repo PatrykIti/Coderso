@@ -394,6 +394,8 @@ export function AccordionBlock({
 
   return (
     <div
+      role="group"
+      aria-label="Accordion"
       className="space-y-3"
       data-coderso-accordion="1"
       data-coderso-accordion-variant={resolvedVariant}

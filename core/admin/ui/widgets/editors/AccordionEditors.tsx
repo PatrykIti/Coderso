@@ -212,10 +212,12 @@ function StructureSection({
   value,
   onChange,
   context,
+  includeInitialOpenControl = false,
 }: {
   value: AccordionData;
   onChange: (next: AccordionData) => void;
   context?: WidgetEditorProps<AccordionData>["context"];
+  includeInitialOpenControl?: boolean;
 }) {
   const normalized = normalizeValue(value);
   const items = normalizeAccordionItems(normalized.items);
@@ -246,29 +248,31 @@ function StructureSection({
           </Select>
         </div>
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Initially open item</p>
-          <Select
-            value={normalized.options?.initiallyOpenId ?? items[0]?.id ?? "1"}
-            onValueChange={(next) =>
-              updateOptions(value, onChange, {
-                initiallyOpenId: next,
-                defaultOpenIds: [next],
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Choose item" />
-            </SelectTrigger>
-            <SelectContent>
-              {items.map((item) => (
-                <SelectItem key={`accordion-open-${item.id}`} value={item.id}>
-                  {item.title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {includeInitialOpenControl ? (
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Initially open item</p>
+            <Select
+              value={normalized.options?.initiallyOpenId ?? items[0]?.id ?? "1"}
+              onValueChange={(next) =>
+                updateOptions(value, onChange, {
+                  initiallyOpenId: next,
+                  defaultOpenIds: [next],
+                })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Choose item" />
+              </SelectTrigger>
+              <SelectContent>
+                {items.map((item) => (
+                  <SelectItem key={`accordion-open-${item.id}`} value={item.id}>
+                    {item.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : null}
       </div>
 
       <div className="space-y-3">
@@ -426,7 +430,11 @@ function BehaviorSection({
           />
         </div>
         <div className="space-y-2">
-          <p className="text-sm font-medium">Border color</p>
+          <ClearableFieldHeader
+            label="Border color"
+            value={normalized.style?.borderColor}
+            onClear={() => clearStyleField(value, onChange, "borderColor")}
+          />
           <Input
             value={normalized.style?.borderColor ?? accordionDefaults.style?.borderColor ?? ""}
             onChange={(event) => updateStyle(value, onChange, { borderColor: event.target.value })}
@@ -434,7 +442,11 @@ function BehaviorSection({
           />
         </div>
         <div className="space-y-2">
-          <p className="text-sm font-medium">Summary text color</p>
+          <ClearableFieldHeader
+            label="Summary text color"
+            value={normalized.style?.summaryTextColor}
+            onClear={() => clearStyleField(value, onChange, "summaryTextColor")}
+          />
           <Input
             value={
               normalized.style?.summaryTextColor ?? accordionDefaults.style?.summaryTextColor ?? ""
@@ -475,7 +487,7 @@ export function AccordionWizardEditor({
       >
         <VariantCards value={resolveVariant(variant)} onChange={onVariantChange} />
       </EditorSection>
-      <StructureSection value={value} onChange={onChange} />
+      <StructureSection value={value} onChange={onChange} includeInitialOpenControl />
     </div>
   );
 }

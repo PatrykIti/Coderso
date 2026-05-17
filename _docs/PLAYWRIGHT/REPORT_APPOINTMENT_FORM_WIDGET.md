@@ -396,5 +396,6 @@ Form element nie ma `aria-label` ani `aria-describedby`. Screen readery nie iden
 - Current TASK-256 role for Appointment Form is classification only.
   Widget-owned booking/form behavior continues through the `TASK-258` family.
 - Shared rows that match existing TASK-256 mechanisms still route through
-  `TASK-256-03` or `TASK-256-04`; final fixed/deferred closure remains owned
-  by `TASK-256-08`.
+  `TASK-256-03` or `TASK-256-04`, but TASK-256 ships no Appointment
+  Form-specific code from this report. Final widget execution remains deferred
+  to `TASK-258`.

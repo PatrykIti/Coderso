@@ -366,6 +366,11 @@ Testimonials widget służy do wyświetlania cytatów klientów z ocenami gwiazd
 - `TASK-256-06-03`: current Testimonials editor/runtime lanes are green on
   `tests/vitest/ui/testimonials-editor-wave.test.tsx` and
   `tests/vitest/widgets/testimonials.test.tsx`.
+- Follow-up shared-contract repairs after the first closure commit now keep the
+  `slider-static` variant on a truthful scroll-snap container, synchronize
+  variant-owned testimonial counts when the editor owns variant changes, expose
+  `Clear` for `textColor` and `accentColor`, lazy-load avatar images, and add
+  section/card labelling for the current accessibility baseline.
 - Current TASK-256 shared scope stays limited to truthful shared behavior and
   accessibility baselines; richer testimonials product work continues to route
   through the `TASK-290` family.

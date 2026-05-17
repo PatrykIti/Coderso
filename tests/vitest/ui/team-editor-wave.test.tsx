@@ -450,6 +450,7 @@ test("Team visual editor covers member structure, social link branching, and sty
     const membersSection = findSectionByTitle(view.container, "Members content and order");
     clickButtonByText(membersSection as ParentNode, "Add member");
     expect(latestValue.members).toHaveLength(2);
+    expect(latestValue.members[1]?.photo).toBeUndefined();
     setInputValue(findInputsByPlaceholder(view.container, "Anna Kowalska")[1], "Grace");
 
     clickButtonByText(membersSection as ParentNode, "Move down");

@@ -359,5 +359,7 @@ _Zrzut: `contact-13-mobile-375px.png`_
 - Current TASK-256 role for Contact is classification only. Widget-owned product
   and public-write behavior continues through the `TASK-261` family.
 - Shared rows that match existing TASK-256 mechanisms still route through
-  `TASK-256-01`, `TASK-256-02`, or `TASK-256-04`; final fixed/deferred closure
-  remains owned by `TASK-256-08`.
+  `TASK-256-01`, `TASK-256-02`, or `TASK-256-04`, but TASK-256 ships no
+  Contact-specific code in this report. The final TASK-256 closure therefore
+  treats Contact rows as classification-only and leaves widget-owned execution
+  in `TASK-261`.

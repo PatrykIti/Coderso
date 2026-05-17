@@ -405,7 +405,7 @@ function addMember(value: TeamData, onChange: (next: TeamData) => void) {
             name: `Team Member ${members.length + 1}`,
             role: "Role",
             bio: "Short bio describing responsibilities and value.",
-            photo: "",
+            photo: undefined,
             socialLinks: [],
           },
         ],

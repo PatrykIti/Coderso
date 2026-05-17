@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 846 | 2026-05-17 | TASK-256 follow-up drift closure | CMS Widgets/Admin UI/QA |
 | 845 | 2026-05-17 | TASK-256 shared widget contract closure | CMS Widgets/Admin UI/QA |
 | 844 | 2026-05-13 | Admin breadcrumbs and workspace links | CMS Content/Admin UI |
 | 843 | 2026-05-12 | Detail template workspace actions | CMS Content/Admin UI |

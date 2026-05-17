@@ -442,6 +442,10 @@ useEffect(() => {
   runtime output.
 - `TASK-256-04` + `TASK-256-05-04`: accordion summary/content relationships
   now use scoped runtime IDs instead of generic repeated DOM IDs.
+- Follow-up shared-contract repairs after the first closure commit now honor any
+  valid default-open item, keep one item open when `collapsible=false`, sync
+  `aria-expanded` through the runtime helper, and expose the current disclosure
+  affordance with a chevron while preserving the shared TASK-256 scope.
 - Shared evidence from this turn:
   `bun run test:vitest -- tests/vitest/widgets/accordionWidget.test.tsx
   tests/vitest/ui/accordion-editor-wave.test.tsx` passed on 2026-05-17.

@@ -441,6 +441,11 @@ Pełne wyniki w sekcji 3.8 — wszystkie zachowania są identyczne w admin canva
 - `TASK-256-06-04`: current Team editor/runtime lanes are green on
   `tests/vitest/ui/team-editor-wave.test.tsx` and
   `tests/vitest/widgets/team.test.tsx`.
+- Follow-up shared-contract repairs after the first closure commit now keep
+  social links behind the shared safe-href owner, seed new links with empty
+  URLs instead of `#`, warn before destructive member-count reduction, make
+  spotlight supporting columns truthful across 1-4 options, and lazy-load valid
+  member photos while invalid values fall back to initials.
 - Widget-specific product expansion (for example richer photo authoring and
   broader team presentation scope) remains routed to the `TASK-289` family; the
   shared TASK-256 closure only claims the current shared-contract baselines.
