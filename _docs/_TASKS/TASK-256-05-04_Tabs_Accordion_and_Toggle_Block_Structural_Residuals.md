@@ -16,14 +16,17 @@ Repair the structural residuals for interactive slot widgets after the shared
 placeholder and instance/accessibility contracts land.
 
 This leaf does not own the whole interactive runtime contract. TASK-256-04 owns
-the shared ID/binding/ARIA pattern. This leaf applies remaining widget-local
-tabs, accordion, and toggle-block findings that are not handled by the shared
-contract alone.
+the shared ID/binding/ARIA pattern. This leaf applies remaining shared
+structural fixes for tabs, accordion, and toggle-block only where they are not
+handled by the shared contract alone. Tabs-specific product follow-ups from
+`_docs/PLAYWRIGHT/REPORT_TABS_WIDGET.md` now route to TASK-288.
 
 ## Drift Evidence
 
-- `_docs/PLAYWRIGHT/REPORT_TABS_WIDGET.md:63,91,96,117-153,168,287` covers
-  clear controls, slot labels, public placeholders, styling drift, and ARIA.
+- `_docs/PLAYWRIGHT/REPORT_TABS_WIDGET.md:64-65,74-76,103-107,144-155,168,287`
+  covers shared instance-safe IDs, runtime binding prerequisites, ARIA,
+  placeholder gating, and script/runtime transport concerns that TASK-288-03
+  consumes after TASK-256-04 lands.
 - `_docs/PLAYWRIGHT/REPORT_ACCORDION_WIDGET.md:96,106-116,138,163-170,240,286`
   covers slot labels, default-open/collapsible behavior, placeholder leakage,
   clear controls, chevron, and ARIA.
@@ -35,8 +38,8 @@ contract alone.
 
 | Finding | TASK-256 action | Owner | Follow-up policy |
 |---|---|---|---|
-| Tabs missing clear controls, technical slot labels, public placeholders, ID collisions, runtime `hidden` conflict, and ARIA gaps | Fix here plus TASK-256-02/03/04 shared helpers | `TabsEditors.tsx`, `tabs.tsx` | None |
-| Tabs per-trigger icons, vertical alignment semantics, Wizard layout shortcut, per-tab description placement, animations, visual variant previews, label polish | Fix here only if a current visible control is misleading; otherwise future UX/product scope | `TabsEditors.tsx`, `tabs.tsx` | TASK-256-08 records deferrals |
+| Tabs shared structural residuals: technical slot labels, public placeholders, instance-safe ID/ARIA prerequisites, and shared runtime binding prerequisites | Fix here plus TASK-256-02/03/04 shared helpers | `TabsEditors.tsx`, `tabs.tsx` | TASK-288 consumes the final shared contract. |
+| Tabs product rows: inactive text color, Wizard layout shortcut, trigger metadata, disabled tabs, vertical alignment semantics, overflow/typography/spacing, animations, visual previews, label polish, and admin-preview activation | Do not fix here | `TASK-288*` | TASK-288 owns implementation and final fixed/deferred evidence. |
 | Accordion slot labels, default-open/collapsible behavior, placeholder leakage, clear controls, chevron, and ARIA gaps | Fix here plus TASK-256-02/03/04 shared helpers | `AccordionEditors.tsx`, `accordion.tsx` | None |
 | Toggle Block helper clear, missing clear controls, pane labels, placeholders, duplicate IDs, and ARIA/runtime root scope | Fix here plus TASK-256-02/03/04 shared helpers | `ToggleBlockEditors.tsx`, `toggleBlock.tsx` | None |
 | Toggle Block accent-contrast, weak switch/cards visual distinction, placeholder CTA, Wizard naming, color-token picker, reset-to-defaults, localized aria label | Fix here only where current controls are broken; otherwise future UX/product scope | `ToggleBlockEditors.tsx`, `toggleBlock.tsx` | TASK-256-08 records deferrals |
@@ -53,9 +56,8 @@ contract alone.
   and runtime.
 - [ ] Apply TASK-256-02 clear/normalizer repair to toggle-block helper text,
   `borderColor`, and `accentColor`.
-- [ ] Classify Tabs icon/alignment/layout/description/animation rows and Toggle
-  Block accent-contrast/visual-distinction/reset/localization rows as fixed or
-  deferred during TASK-256-08 closure.
+- [ ] Route Tabs product rows to TASK-288 and keep TASK-256-08 focused on shared
+  contract closure plus any remaining Toggle Block shared/product deferrals.
 
 ## Files to Change
 

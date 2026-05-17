@@ -116,9 +116,11 @@ No API routes are added.
 
 - Endpoint visibility/auth/RBAC/CSRF/rate limit: unchanged.
 - Reject-unknown validation: unchanged unless clearability/schema changes.
-- Anti-abuse: do not allow raw CSS declarations, scripts, or arbitrary HTML in
-  color fields; keep values as bounded strings processed by existing style
-  helpers.
+- Anti-abuse: preserve the current token/free-string React style-value contract
+  unless this leaf explicitly adds schema/normalizer restrictions. Do not allow
+  scripts, arbitrary HTML, or inline event handlers in color fields; if values
+  become bounded, update `tabsSchema`, `normalizeTabsData()`, and validator
+  coverage in the same change.
 - Secret handling: no secrets or private tokens in editor diagnostics.
 
 ## Testing Requirements
@@ -126,7 +128,8 @@ No API routes are added.
 - `bun run test:vitest -- tests/vitest/ui/tabs-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/tabs.test.tsx` if defaults or
   clearability change
-- `bun test tests/unit/widgets/validator.test.ts` if schema changes
+- `bun test tests/unit/widgets/validator.test.ts` if schema/value validation
+  changes, including any decision to bound color strings
 - `git diff --check`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`

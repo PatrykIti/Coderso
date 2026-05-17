@@ -52,7 +52,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-288-02 | Tabs Wizard Layout, Default Tab, and Slot Guidance | High | Large | Add Wizard layout shortcuts, default-tab preview, panel-slot guidance, and safe tab-count impact copy |
 | TASK-288-03 | Tabs Admin Preview and Runtime Activation | High | Large | Make admin preview switch panels and prevent duplicate Tabs runtime payload after TASK-256 instance-safe selectors |
 | TASK-288-04 | Tabs Trigger Metadata and Disabled Tab Model | High | Large | Add bounded trigger icon/description semantics and disabled-tab behavior with schema/editor/runtime/tests |
-| TASK-288-05 | Tabs Layout Overflow Typography and Spacing | High | Very Large | Add vertical alignment fix plus bounded overflow, typography, spacing, padding, and max-width controls |
+| TASK-288-05 | Tabs Layout Overflow Typography and Spacing | High | Very Large | Add vertical alignment fix plus bounded overflow, typography, spacing, padding, and inner/panel width controls |
 | TASK-288-06 | Tabs Motion Variant Previews and Polish | Medium | Large | Add reduced-motion-safe transitions and visual variant previews after activation/layout leaves land |
 | TASK-288-07 | Tabs Report Docs and Closure | Medium | Medium | Refresh Tabs report/docs/changelog/board and final validation evidence |
 | TASK-286 | Stack Widget Playwright Product Followups | High | Very Large | Stack-only follow-up family for `REPORT_STACK_WIDGET.md`, excluding TASK-256 shared-contract scope |

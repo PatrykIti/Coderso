@@ -59,7 +59,7 @@ this family.
 | W2, U4, U5, U9 | TASK-288-02 | Add Wizard layout shortcuts, default-tab preview, panel-slot guidance, and safe slot-removal impact copy. |
 | C3, W6, R5 | TASK-288-03 | Repair Tabs-specific admin preview activation and runtime script duplication/type behavior after TASK-256 finalizes the shared instance contract. |
 | W1, W7, W10, U3 | TASK-288-04 | Add trigger metadata, description semantics, and disabled-tab product behavior. |
-| W3, W8, W9, W12, U6, R1 | TASK-288-05 | Add Tabs-owned vertical alignment, overflow, typography, max-width, padding, and gap controls. |
+| W3, W8, W9, W12, U6, R1 | TASK-288-05 | Add Tabs-owned vertical alignment, overflow, typography, spacing, and any inner/panel width controls without duplicating shared `layout.container`. |
 | W11, U1 | TASK-288-06 | Add reduced-motion-safe transitions and visual variant previews after the functional model lands. |
 | Final fixed/deferred evidence, report refresh, docs/changelog/board closure | TASK-288-07 | Update report/docs/changelog/board after implementation leaves finish. |
 

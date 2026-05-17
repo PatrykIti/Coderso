@@ -52,8 +52,8 @@ here.
 | File | Required change |
 |---|---|
 | `core/widgets/core/tabs.tsx` | Add a Tabs-local preview activation path or consume shared runtime helper; remove duplicate script output once shared path exists. |
-| `tests/vitest/widgets/tabs.test.tsx` | Add SSR marker/script de-duplication, state marker, and hidden-state assertions. |
-| `tests/vitest/ui/tabs-editor-wave.test.tsx` | Add admin-preview interaction coverage if the preview behavior is testable through the editor/renderer harness. |
+| `tests/vitest/widgets/tabs.test.tsx` | Add SSR marker/script de-duplication, state marker, hidden-state assertions, and a happy-dom/client-render preview activation test that renders `TabsBlock` or `WidgetRenderer` with `previewDevice`. |
+| `tests/vitest/ui/tabs-editor-wave.test.tsx` | Keep editor-form coverage only unless the suite is intentionally expanded beyond editor controls; do not rely on this suite as the sole admin-preview interaction proof. |
 
 ## Implementation Pseudocode
 
@@ -62,9 +62,27 @@ function normalizeTabsRootId(blockId: string | undefined) {
   return `tabs-${(blockId ?? "preview").replace(/[^a-zA-Z0-9_-]/g, "-")}`;
 }
 
-function TabsBlock({ data, variant, slots, previewDevice, blockId }: TabsBlockProps) {
-  const panels = resolveTabsPanels(data, slots);
-  const initialActiveId = resolveInitialActiveId(data, panels);
+function TabsBlock({
+  data,
+  variant,
+  slots,
+  previewDevice,
+  blockId,
+}: {
+  data: TabsData;
+  variant: string;
+  slots?: Record<string, WidgetBlock[]>;
+  previewDevice?: DeviceTarget;
+  blockId?: string;
+}) {
+  const slotMap = slots && typeof slots === "object" && !Array.isArray(slots) ? slots : {};
+  const panels = resolvePanels(data, slotMap);
+  const normalized = normalizeTabsData(data, panels.length);
+  const initialActiveId =
+    normalized.options?.defaultItemId &&
+    panels.some((panel) => panel.instanceId === normalized.options?.defaultItemId)
+      ? normalized.options.defaultItemId
+      : (panels[0]?.instanceId ?? "1");
   const [previewActiveId, setPreviewActiveId] = useState(initialActiveId);
   const isReactPreview = Boolean(previewDevice);
   const activeId = isReactPreview ? previewActiveId : initialActiveId;
@@ -87,7 +105,9 @@ function TabsBlock({ data, variant, slots, previewDevice, blockId }: TabsBlockPr
           hidden={panel.instanceId !== activeId}
         />
       ))}
-      {!isReactPreview ? <TabsRuntimeScript /> : null}
+      {!isReactPreview ? (
+        <script type="text/javascript" dangerouslySetInnerHTML={{ __html: getTabsRuntimeClientScript() }} />
+      ) : null}
     </div>
   );
 }
@@ -117,8 +137,10 @@ No API routes are added.
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/widgets/tabs.test.tsx`
-- `bun run test:vitest -- tests/vitest/ui/tabs-editor-wave.test.tsx` if the
-  admin preview behavior is covered through the UI harness
+- `bun run test:vitest -- tests/vitest/ui/tabs-editor-wave.test.tsx` only for
+  unchanged editor-form regressions; add the admin-preview interaction proof to
+  `tests/vitest/widgets/tabs.test.tsx` or a dedicated UI integration harness that
+  client-renders `TabsBlock`/`WidgetRenderer` with `previewDevice`
 - `git diff --check`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
