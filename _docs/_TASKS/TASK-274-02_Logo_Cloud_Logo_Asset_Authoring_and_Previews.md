@@ -247,6 +247,7 @@ function useLogoCloudEditCoordinator({
 }
 
 function LogoCloudWizardEditor({ value, onChange }: LogoCloudEditorProps) {
+  const logos = normalizeLogoCloudLogos(normalizeValue(value).logos);
   const { commitLogoMutation, mediaSelection } = useLogoCloudEditCoordinator({
     value,
     onChange,
@@ -274,6 +275,7 @@ function LogoCloudWizardEditor({ value, onChange }: LogoCloudEditorProps) {
 }
 
 function LogoCloudVisualEditor({ value, onChange }: LogoCloudEditorProps) {
+  const logos = normalizeLogoCloudLogos(normalizeValue(value).logos);
   const { commitLogoMutation, mediaSelection } = useLogoCloudEditCoordinator({
     value,
     onChange,
