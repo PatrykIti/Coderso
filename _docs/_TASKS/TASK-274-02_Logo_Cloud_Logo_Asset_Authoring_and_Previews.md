@@ -64,7 +64,7 @@ type UseLogoMediaSelectionOptions = {
 };
 
 async function resolveLogoMediaAsset(assetId: string) {
-  const items = await listMediaCached({ force: true });
+  const items = await listMediaCached({ force: false });
   const match = items.find((item) => item.id === assetId);
   if (!match?.url) throw new Error("logo_cloud_media_not_found");
   return {
@@ -80,6 +80,8 @@ function useLogoMediaSelection({
   persistAssetId,
 }: UseLogoMediaSelectionOptions) {
   const requestIdsByLogoRef = useRef<Record<string, number>>({});
+  const latestValueRef = useRef(value);
+  latestValueRef.current = value;
 
   function resolveRequestKey(index: number, logo: LogoCloudLogo) {
     return logo.id?.trim() || `index:${index}`;
@@ -90,7 +92,11 @@ function useLogoMediaSelection({
     requestIdsByLogoRef.current[requestKey] = (requestIdsByLogoRef.current[requestKey] ?? 0) + 1;
   }
 
-  return async function handleLogoAssetChange(
+  function commitLogoPatch(index: number, patch: Partial<LogoCloudLogo>) {
+    updateLogo(latestValueRef.current, onChange, index, patch);
+  }
+
+  async function handleLogoAssetChange(
     index: number,
     logo: LogoCloudLogo,
     assetId: string | null,
@@ -98,19 +104,27 @@ function useLogoMediaSelection({
     const requestKey = resolveRequestKey(index, logo);
     const requestId = (requestIdsByLogoRef.current[requestKey] ?? 0) + 1;
     requestIdsByLogoRef.current[requestKey] = requestId;
-    if (!assetId) return updateLogo(value, onChange, index, { image: "", imageAssetId: undefined });
+    if (!assetId) return commitLogoPatch(index, { image: "", imageAssetId: undefined });
     const next = await resolveLogoMediaAsset(assetId);
     if (requestIdsByLogoRef.current[requestKey] !== requestId) return;
-    updateLogo(value, onChange, index, {
+    commitLogoPatch(index, {
       image: next.image,
       // Persist only when TASK-274-02 makes imageAssetId schema-owned.
       imageAssetId: persistAssetId ? assetId : undefined,
       name: logo.name?.trim() ? logo.name : next.name,
     });
-  };
+  }
+
+  return { handleLogoAssetChange, invalidateLogoMediaRequest, commitLogoPatch };
 }
 
-function LogoImageControl({ logo, index }: LogoImageControlProps) {
+function LogoImageControl({ logo, index, value, onChange, persistAssetId }: LogoImageControlProps) {
+  const { handleLogoAssetChange, invalidateLogoMediaRequest, commitLogoPatch } = useLogoMediaSelection({
+    value,
+    onChange,
+    persistAssetId,
+  });
+
   return (
     <div>
       {logo.image ? (
@@ -120,16 +134,16 @@ function LogoImageControl({ logo, index }: LogoImageControlProps) {
         value={logo.image ?? ""}
         onChange={(event) => {
           invalidateLogoMediaRequest(index, logo);
-          updateLogo(value, onChange, index, { image: event.target.value, imageAssetId: undefined });
+          commitLogoPatch(index, { image: event.target.value, imageAssetId: undefined });
         }}
       />
       <Input
         value={logo.alt ?? ""}
-        onChange={(event) => updateLogo(value, onChange, index, { alt: event.target.value })}
+        onChange={(event) => commitLogoPatch(index, { alt: event.target.value })}
       />
       <Input
         value={logo.href ?? ""}
-        onChange={(event) => updateLogo(value, onChange, index, { href: event.target.value })}
+        onChange={(event) => commitLogoPatch(index, { href: event.target.value })}
       />
       <MediaPicker
         value={logo.imageAssetId ?? null}
@@ -149,10 +163,10 @@ Editor data flow:
    field.
 2. Visual repeated logo cards reuse the same image control and show a bounded
    thumbnail preview when `logo.image` is non-empty.
-3. MediaPicker selection resolves the public media URL through
-   `listMediaCached`. Store the public URL by default; store `imageAssetId` only
-   if `logoCloud.tsx` makes that field schema-owned, normalized, documented, and
-   tested.
+3. MediaPicker selection resolves the public media URL through cache-first
+   `listMediaCached({ force: false })` or the equivalent default call. Store the
+   public URL by default; store `imageAssetId` only if `logoCloud.tsx` makes that
+   field schema-owned, normalized, documented, and tested.
 4. Manual image URL and link URL entry remain supported for backward
    compatibility.
 5. Link URL validation UI consumes TASK-256 shared safe-link output when that
@@ -164,9 +178,9 @@ Error handling:
 
 - If MediaPicker resolution fails, show an inline error and keep the previous
   logo data unchanged.
-- Guard async media-cache resolution with a per-logo request ID/ref so stale
-  picker results cannot overwrite a later edit or selection for the same logo
-  row, while concurrent selections on different rows can still complete.
+- Guard async media-cache resolution with a per-logo request ID/ref and commit
+  resolved patches through a `latestValueRef` helper. Do not call `updateLogo`
+  with a stale `value` captured before `await`.
 - If selected media is unavailable, keep the selected ID out of persisted data
   unless a public URL was resolved.
 - Broken external image URLs must not crash the editor; thumbnail fallback should
@@ -191,6 +205,9 @@ Regression-test shape:
 - Assert a manual image URL edit invalidates an in-flight media selection for
   that row and clears any stale `imageAssetId` unless schema-owned persistence
   explicitly keeps it.
+- Assert unrelated logo edits made while media resolution is pending are
+  preserved when the media selection resolves, proving the commit path uses the
+  latest editor value.
 - Assert Wizard edits persist `logos[index].image`, `logos[index].alt`, and
   `logos[index].href`.
 - Assert Visual thumbnails render success and unavailable states without

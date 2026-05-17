@@ -134,6 +134,12 @@ Regression-test shape:
 - A later logo edit, add, move, drag/drop, or second removal clears the pending
   removal; a stale Undo click no-ops.
 - Removing the only remaining logo no-ops and does not show an Undo notice.
+- Happy-dom/event-level drag tests move logo A after logo C and assert the
+  emitted `logos[]` order changes once on drop.
+- Invalid drag/drop tests cover same-index drops, out-of-range targets, missing
+  drag payloads, and stale drag state without changing order.
+- Move up / Move down fallback tests remain alongside drag tests so keyboard
+  reorder behavior stays covered.
 
 ## Sub-Tasks
 

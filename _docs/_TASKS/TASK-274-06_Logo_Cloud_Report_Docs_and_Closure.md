@@ -134,6 +134,8 @@ Minimum final family gate:
 - `bun run test:vitest -- tests/vitest/widgets/logoCloud.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/logo-cloud-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/logoCloudStyles.test.ts` if the
+  family adds marquee CSS.
 - `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` if any
   style/clear/none behavior changed in the family.
 - `bun run test:vitest -- tests/vitest/widgets/widgetSafeHref.test.ts` when
