@@ -68,6 +68,9 @@ This leaf covers:
   and consent payloads.
 - [ ] Update both route normalization and JSON schema validation so unknown
   reservation metadata keys are rejected before service persistence.
+- [ ] Expand public route-boundary coverage so known schema, nonce/signature,
+  CAPTCHA, and mapped booking-domain failures are asserted at
+  `handlePublicBookingApi` before persistence.
 
 ## Implementation Pseudocode
 
@@ -236,11 +239,17 @@ This leaf can affect the existing public booking write route.
 - `bun test tests/integration/runtime/appointment-form-runtime-hydration.test.ts`
   to prove public CAPTCHA metadata is injected into Appointment Form runtime
   markup and provider secrets are not rendered.
+- `bun test tests/integration/runtime/detail-page-runtime-lite.test.ts` or the
+  current public-request entrypoint suite when `publicSite.tsx` request
+  dispatch changes, so the public runtime still reaches the booking API family
+  through `handlePublicRequest`.
 - `set -a && source .env && set +a` before DB-backed public booking API tests.
 - `bun test tests/unit/server/publicBookingApi.test.ts`; confirm the DB-backed
-  reservation assertions ran. If `DATABASE_URL` is unavailable or `canConnect()`
-  skips them, record the blocker and add non-DB schema/normalization evidence for
-  bounded metadata.
+  reservation assertions ran and add route-boundary coverage for schema
+  rejection, nonce/signature enforcement, CAPTCHA enforcement, and
+  `mapBookingError` translation. If `DATABASE_URL` is unavailable or
+  `canConnect()` skips them, record the blocker and add non-DB
+  schema/normalization evidence for bounded metadata.
 - `bun test tests/security/codersoSecurityGate.test.ts`
 - `bun run scan:security:strict` before closure because this leaf touches
   public-write hardening.
@@ -264,4 +273,5 @@ This leaf can affect the existing public booking write route.
 - Public runtime sends bounded custom field and consent metadata.
 - CAPTCHA token acquisition remains backend-owned and never exposes secrets in
   widget data.
-- Bun public API and security tests cover accepted and rejected payloads.
+- Bun public API boundary and security tests cover accepted payloads, rejected
+  payloads, and mapped public-route failures.

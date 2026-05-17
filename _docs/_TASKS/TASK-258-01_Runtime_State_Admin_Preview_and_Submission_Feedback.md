@@ -128,8 +128,8 @@ No route is added and the public booking request shape remains unchanged.
 - Endpoint visibility: unchanged existing public `POST /api/booking/reservations`.
 - Auth model: unchanged public/internal booking access evaluator.
 - RBAC: unchanged.
-- CSRF: unchanged booking nonce requirement when policy requires public
-  protection.
+- CSRF: unchanged booking nonce/signature requirement when policy requires
+  public protection.
 - Rate-limit bucket: unchanged `public_write`.
 - Reject-unknown validation: unchanged; no new public payload fields in this
   leaf unless loading copy is rendered only as widget data attributes.

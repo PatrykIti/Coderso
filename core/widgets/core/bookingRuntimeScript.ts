@@ -14,7 +14,11 @@ const runtimeClientScript = String.raw`(() => {
 
   const setSelection = (flowId, selection) => {
     if (!flowId) return;
-    state.selections[flowId] = selection;
+    if (selection) {
+      state.selections[flowId] = selection;
+    } else {
+      delete state.selections[flowId];
+    }
     window.dispatchEvent(new CustomEvent(SLOT_EVENT_NAME, { detail: { flowId, selection } }));
   };
 
@@ -23,19 +27,22 @@ const runtimeClientScript = String.raw`(() => {
     return state.selections[flowId] || null;
   };
 
-  const toTimeLabel = (iso) => {
+  const toTimeLabel = (iso, locale) => {
     try {
       const date = new Date(iso);
-      return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      return date.toLocaleTimeString(locale ? [locale] : undefined, {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
     } catch {
       return iso;
     }
   };
 
-  const toDateLabel = (iso) => {
+  const toDateLabel = (iso, locale) => {
     try {
       const date = new Date(iso);
-      return date.toLocaleDateString([], {
+      return date.toLocaleDateString(locale ? [locale] : undefined, {
         year: "numeric",
         month: "short",
         day: "2-digit",
@@ -102,6 +109,7 @@ const runtimeClientScript = String.raw`(() => {
     const statusNode = root.querySelector("[data-booking-slots-status]");
     const selectedNode = root.querySelector("[data-booking-selected-summary]");
     const refreshButton = root.querySelector("[data-booking-refresh]");
+    let currentItems = [];
 
     if (!(serviceSelect instanceof HTMLSelectElement)) return;
     if (!(resourceSelect instanceof HTMLSelectElement)) return;
@@ -129,8 +137,9 @@ const runtimeClientScript = String.raw`(() => {
     };
 
     const renderSlots = (items) => {
+      currentItems = Array.isArray(items) ? items : [];
       slotsNode.innerHTML = "";
-      if (!Array.isArray(items) || items.length === 0) {
+      if (currentItems.length === 0) {
         slotsNode.innerHTML =
           "<p class=\"text-xs text-[var(--color-text)]/65\">" +
           (slotsNode.dataset.empty || "No available slots for selected date.") +
@@ -140,7 +149,7 @@ const runtimeClientScript = String.raw`(() => {
 
       const selection = getSelection(flowId);
 
-      items.forEach((slot) => {
+      currentItems.forEach((slot) => {
         const button = document.createElement("button");
         button.type = "button";
         button.className =
@@ -159,17 +168,26 @@ const runtimeClientScript = String.raw`(() => {
           const timezone = selectedResourceOption?.dataset.timezone || slot.timezone || "UTC";
           const nextSelection = {
             serviceId: serviceSelect.value,
+            serviceName: serviceSelect.selectedOptions[0]?.textContent?.trim() || "",
             resourceId: resourceSelect.value,
+            resourceName: resourceSelect.selectedOptions[0]?.textContent?.trim() || "",
             startsAt: slot.startsAt,
             endsAt: slot.endsAt,
             timezone,
           };
           setSelection(flowId, nextSelection);
           renderSelectedSummary(nextSelection);
-          renderSlots(items);
+          renderSlots(currentItems);
         });
         slotsNode.appendChild(button);
       });
+    };
+
+    const onSlotSelected = (event) => {
+      const detail = event?.detail;
+      if (!detail || detail.flowId !== flowId) return;
+      renderSelectedSummary(detail.selection || null);
+      renderSlots(currentItems);
     };
 
     const loadSlots = async () => {
@@ -252,6 +270,7 @@ const runtimeClientScript = String.raw`(() => {
       });
     }
 
+    window.addEventListener(SLOT_EVENT_NAME, onSlotSelected);
     renderSelectedSummary(getSelection(flowId));
     void loadSlots();
   };
@@ -271,6 +290,8 @@ const runtimeClientScript = String.raw`(() => {
     const summaryNode = form.querySelector("[data-booking-selected-slot]");
     const errorNode = form.querySelector("[data-booking-form-error]");
     const successNode = form.querySelector("[data-booking-form-success]");
+    const notesInput = form.querySelector('textarea[name="notes"]');
+    const notesCounter = form.querySelector("[data-booking-notes-counter]");
     const submitButton =
       form.querySelector("[data-booking-submit]") || form.querySelector('button[type="submit"]');
 
@@ -284,9 +305,54 @@ const runtimeClientScript = String.raw`(() => {
       node.classList.remove("hidden");
     };
 
+    const clearError = () => {
+      hide(errorNode);
+    };
+
+    const locale = (form.dataset.locale || "").trim();
+    const showServiceInSummary = form.dataset.showServiceInSummary !== "false";
+    const showResourceInSummary = form.dataset.showResourceInSummary !== "false";
+
+    const resolveSafeRedirect = (raw) => {
+      if (!raw || !raw.trim()) return null;
+      try {
+        const url = new URL(raw, window.location.origin);
+        if (url.origin !== window.location.origin) return null;
+        return url.pathname + url.search + url.hash;
+      } catch {
+        return null;
+      }
+    };
+
+    const renderNotesCounter = () => {
+      if (!(notesInput instanceof HTMLTextAreaElement)) return;
+      if (!(notesCounter instanceof HTMLElement)) return;
+      if (!Number.isFinite(notesInput.maxLength) || notesInput.maxLength <= 0) return;
+      notesCounter.textContent = notesInput.value.length + " / " + notesInput.maxLength + " characters";
+    };
+
+    const buildCustomerName = (formData) => {
+      const fullName = String(formData.get("customerName") || "").trim();
+      if (fullName) return fullName;
+      return [formData.get("customerFirstName"), formData.get("customerLastName")]
+        .map((value) => String(value || "").trim())
+        .filter(Boolean)
+        .join(" ");
+    };
+
+    const setSubmittingState = (submitting) => {
+      form.dataset.submitting = submitting ? "1" : "0";
+      if (!(submitButton instanceof HTMLButtonElement)) return;
+      const idleLabel =
+        submitButton.dataset.idleLabel || submitButton.textContent || "Book appointment";
+      const loadingLabel = (form.dataset.loadingMessage || "Booking...").trim() || "Booking...";
+      submitButton.textContent = submitting ? loadingLabel : idleLabel;
+      submitButton.disabled = submitting || !Boolean(getSelection(flowId));
+    };
+
     const renderSelection = (selection) => {
       const hasSelection = Boolean(selection);
-      if (submitButton instanceof HTMLButtonElement) {
+      if (submitButton instanceof HTMLButtonElement && form.dataset.submitting !== "1") {
         submitButton.disabled = !hasSelection;
       }
       if (!(summaryNode instanceof HTMLElement)) return;
@@ -295,12 +361,23 @@ const runtimeClientScript = String.raw`(() => {
           summaryNode.dataset.empty || "Select a slot in Booking Calendar first.";
         return;
       }
-      summaryNode.textContent =
-        toDateLabel(selection.startsAt) +
+      const serviceLabel =
+        showServiceInSummary && typeof selection.serviceName === "string"
+          ? selection.serviceName.trim()
+          : "";
+      const resourceLabel =
+        showResourceInSummary && typeof selection.resourceName === "string"
+          ? selection.resourceName.trim()
+          : "";
+      const dateAndTime =
+        toDateLabel(selection.startsAt, locale) +
         " • " +
-        toTimeLabel(selection.startsAt) +
+        toTimeLabel(selection.startsAt, locale) +
         " - " +
-        toTimeLabel(selection.endsAt);
+        toTimeLabel(selection.endsAt, locale);
+      summaryNode.textContent = [serviceLabel, resourceLabel, dateAndTime]
+        .filter(Boolean)
+        .join(" - ");
     };
 
     const applySelection = (selection) => {
@@ -315,6 +392,18 @@ const runtimeClientScript = String.raw`(() => {
 
     window.addEventListener(SLOT_EVENT_NAME, onSlotSelected);
     applySelection(getSelection(flowId));
+    setSubmittingState(false);
+    renderNotesCounter();
+
+    form.addEventListener(
+      "input",
+      () => {
+        clearError();
+        renderNotesCounter();
+      },
+      { passive: true }
+    );
+    form.addEventListener("change", clearError, { passive: true });
 
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -332,10 +421,7 @@ const runtimeClientScript = String.raw`(() => {
       hide(successNode);
 
       if (form.dataset.submitting === "1") return;
-      form.dataset.submitting = "1";
-      if (submitButton instanceof HTMLButtonElement) {
-        submitButton.disabled = true;
-      }
+      setSubmittingState(true);
 
       try {
         const formData = new FormData(form);
@@ -345,7 +431,7 @@ const runtimeClientScript = String.raw`(() => {
           startsAt: selection.startsAt,
           endsAt: selection.endsAt,
           timezone: selection.timezone,
-          customerName: String(formData.get("customerName") || ""),
+          customerName: buildCustomerName(formData),
           customerEmail: String(formData.get("customerEmail") || "").trim() || null,
           customerPhone: String(formData.get("customerPhone") || "").trim() || null,
           notes: String(formData.get("notes") || "").trim() || null,
@@ -387,8 +473,13 @@ const runtimeClientScript = String.raw`(() => {
           show(successNode);
         }
 
+        const redirectTarget = resolveSafeRedirect(form.dataset.successRedirect || "");
         form.reset();
-        applySelection(selection);
+        setSelection(flowId, null);
+        applySelection(null);
+        if (redirectTarget) {
+          window.location.assign(redirectTarget);
+        }
       } catch (error) {
         if (errorNode instanceof HTMLElement) {
           errorNode.textContent =
@@ -396,10 +487,7 @@ const runtimeClientScript = String.raw`(() => {
           show(errorNode);
         }
       } finally {
-        form.dataset.submitting = "0";
-        if (submitButton instanceof HTMLButtonElement) {
-          submitButton.disabled = !Boolean(getSelection(flowId));
-        }
+        setSubmittingState(false);
       }
     });
   };

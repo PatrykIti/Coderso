@@ -5,22 +5,26 @@
 **Priority:** High
 **Category:** Widgets + Booking Runtime + Admin UX
 **Estimated Effort:** Large
-**Dependencies:** TASK-258, TASK-258-01, TASK-258-02
+**Dependencies:** TASK-258, TASK-258-01, TASK-258-02, TASK-293
 **Status:** To Do
 
 ---
 
 ## Overview
 
-Make Appointment Form easier to connect to Booking Calendar and make selected
-slot context clearer for visitors.
+Make Appointment Form selected-slot context clearer for visitors and keep the
+post-submit flow deterministic.
 
 This leaf covers:
 
-- UX-02: Flow key has no page-level pairing feedback.
 - BF-06: selected slot summary lacks service/resource context.
 - BF-12: no configurable success redirect after reservation.
 - BF-15: no locale/date formatting configuration.
+
+`UX-02` now depends on the shared `TASK-293` booking flow editor-context seam.
+This leaf only consumes that seam if it lands in the same implementation wave;
+otherwise TASK-258 closure must defer the flow-pairing feedback row to
+`TASK-293` explicitly instead of hiding it inside Appointment Form-local work.
 
 Booking Calendar may be touched only to enrich the selection event payload
 needed by Appointment Form. Calendar editor/product redesign remains outside
@@ -28,12 +32,6 @@ this task.
 
 ## Files to Change
 
-- `core/widgets/types.ts`
-- `core/admin/ui/pages/PageEditor.tsx`
-- `core/admin/ui/widgets/WidgetTemplateEditorPage.tsx` if template editing can
-  provide local block context without fetching.
-- `core/admin/ui/pages/builder/BlockSettings.tsx` only if the editor context
-  needs to pass current sibling block summaries.
 - `core/admin/ui/widgets/editors/AppointmentFormEditors.tsx`
 - `core/widgets/core/appointmentForm.tsx`
 - `core/widgets/core/bookingCalendar.tsx`
@@ -46,11 +44,6 @@ this task.
 
 ## Sub-Tasks
 
-- [ ] Add a narrow editor context path that lets Appointment Form see available
-  Booking Calendar `flowId` values on the same edited surface.
-- [ ] Show matched/missing/duplicate flow-key feedback in the Appointment Form
-  Wizard without forcing a page save.
-- [ ] Preserve plain text `flowId` entry for advanced/manual cases.
 - [ ] Enrich booking slot selections with service and resource names.
 - [ ] Render Appointment Form slot summary with configured service/resource
   context when those values are available.
@@ -58,59 +51,10 @@ this task.
   data and mirrored by the booking runtime script.
 - [ ] Add optional same-origin or relative success redirect after successful
   booking submission.
+- [ ] If shared flow-context plumbing is not implemented in the same wave,
+  record `UX-02` as deferred to `TASK-293` with exact reasoning/evidence.
 
 ## Implementation Pseudocode
-
-```ts
-type BookingFlowContext = {
-  calendars: Array<{
-    blockId: string;
-    flowId: string;
-    label: string;
-  }>;
-};
-
-type WidgetEditorContext = {
-  surface: WidgetSurface;
-  bookingFlows?: BookingFlowContext;
-};
-
-function collectBookingFlowContext(blocks: WidgetBlock[]): BookingFlowContext {
-  return {
-    calendars: flattenBlocks(blocks)
-      .filter((block) => block.type === "booking-calendar")
-      .map((block) => ({
-        blockId: block.id,
-        flowId: normalizeBookingCalendarData(block.data).flowId ?? "booking-flow",
-        label: normalizeBookingCalendarData(block.data).title ?? "Booking Calendar",
-      })),
-  };
-}
-
-function getFlowKeyState(flowId: string, context?: BookingFlowContext) {
-  const matches = context?.calendars.filter((entry) => entry.flowId === flowId) ?? [];
-  if (matches.length === 0) return "missing";
-  if (matches.length > 1) return "duplicate";
-  return "matched";
-}
-
-function buildPageEditorContext(blocks: WidgetBlock[], base: WidgetEditorContext) {
-  return {
-    ...base,
-    bookingFlows: collectBookingFlowContext(blocks),
-  };
-}
-```
-
-Wire this context through the live entrypoints, not just the type:
-
-- `PageEditor.tsx` desktop inspector `BlockSettings` call.
-- `PageEditor.tsx` mobile/sheet `BlockSettings` call.
-- `WidgetTemplateEditorPage.tsx` template `BlockSettings` call when local
-  template blocks can be inspected without a page fetch.
-- `BlockSettings.tsx` remains the pass-through owner for `editorContext`.
-
-Runtime selection payload:
 
 ```ts
 const nextSelection = {
@@ -128,11 +72,7 @@ function renderAppointmentSelection(selection) {
   const resource = form.dataset.showResourceInSummary === "true" ? selection.resourceName : "";
   summaryNode.textContent = [service, resource, dateAndTime].filter(Boolean).join(" - ");
 }
-```
 
-Redirect handling:
-
-```ts
 function resolveSafeRedirect(raw: string, origin: string): string | null {
   if (!raw.trim()) return null;
   const url = new URL(raw, origin);
@@ -143,8 +83,6 @@ function resolveSafeRedirect(raw: string, origin: string): string | null {
 
 Error handling:
 
-- If editor context is unavailable, show neutral helper copy instead of a false
-  missing warning.
 - If service/resource names are unavailable in an old selection payload, keep
   the current time-only summary.
 - If locale is invalid, fall back to browser locale.
@@ -160,8 +98,7 @@ No API route is added.
 - Auth model: unchanged. Admin/template editors require the existing admin
   session, public booking mode uses the booking access evaluator, and internal
   booking mode still requires admin session or API key scope.
-- RBAC: unchanged. Flow pairing diagnostics expose only editor-visible block
-  ids, labels, and flow keys.
+- RBAC: unchanged.
 - CSRF: unchanged for admin editing; public reservation submissions keep the
   existing booking submission nonce/signature check when required.
 - Rate-limit bucket: unchanged `public_write` for public reservations.
@@ -172,8 +109,9 @@ No API route is added.
   external redirect targets from widget data. Locale and summary fields must not
   weaken nonce/signature, optional reCAPTCHA, or internal session/API-key
   checks.
-- Secret handling: flow context must not expose private booking data beyond
-  widget block ids, labels, and flow keys already visible in the editor.
+- Secret handling: locale, summary, and redirect fields must not expose tokens,
+  nonces, or private booking diagnostics. Flow-context exposure, if used in the
+  same wave, is owned by `TASK-293`.
 
 ## Testing Requirements
 
@@ -183,29 +121,30 @@ No API route is added.
 - `bun run test:vitest -- tests/vitest/widgets/appointmentForm.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/bookingCalendar.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/bookingRuntimeScript.appointmentForm.test.ts`
-- `bun run test:vitest -- tests/vitest/pageBuilder/blockSettings-wave.test.tsx`
-  when `BlockSettings` passes the booking flow context to editor modes.
-- `bun run test:vitest -- tests/vitest/ui/page-editor-shell-wave.test.tsx`
-  when desktop/mobile `PageEditor` `BlockSettings` calls collect booking flow
-  context from page blocks.
-- `bun run test:vitest -- tests/vitest/ui/widget-template-editor.test.tsx`
-  when `WidgetTemplateEditorPage` passes local template block context.
+- `bun run test:vitest -- tests/vitest/pageBuilder/blockSettings-wave.test.tsx`,
+  `tests/vitest/ui/page-editor-shell-wave.test.tsx`,
+  `tests/vitest/ui/widget-template-editor.test.tsx`,
+  `tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`, and
+  the current detail-template editor-context suite only when this leaf also
+  lands the shared `TASK-293` plumbing in the same wave.
 
 ## Documentation Updates Required
 
 - `_docs/_WIDGETS/APPOINTMENT_FORM.md`
 - `_docs/PLAYWRIGHT/REPORT_APPOINTMENT_FORM_WIDGET.md` fixed evidence for
   UX-02, BF-06, BF-12, and BF-15.
+- `_docs/_TASKS/TASK-293_Booking_Flow_Editor_Context_Surface_Plumbing.md` when
+  `UX-02` defers to or completes through the shared seam.
 - `_docs/_TASKS/README.md` on status changes.
 - `_docs/_CHANGELOG/` and `_docs/_CHANGELOG/README.md` on completion.
 
 ## Acceptance Criteria
 
-- Appointment Form Wizard reports matched, missing, duplicate, or unknown flow
-  context without blocking manual entry.
 - Selected slot summary can include service/resource names when selected through
   Booking Calendar.
 - Locale/date formatting is deterministic when configured and backward
   compatible when omitted.
 - Success redirect accepts only relative or same-origin targets and is covered
   by tests.
+- If `UX-02` is not landed in the same wave, the closure matrix points it to
+  `TASK-293` explicitly rather than claiming it fixed locally.

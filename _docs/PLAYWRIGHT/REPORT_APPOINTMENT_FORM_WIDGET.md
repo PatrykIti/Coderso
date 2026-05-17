@@ -1,6 +1,6 @@
 # RAPORT: Appointment Form Widget — Analiza UX/UI i brakujące funkcjonalności
 
-> **Status:** Zakończony
+> **Status:** Analiza zakonczona, follow-up otwarty
 > **Data:** 2026-05-16
 > **Sesja:** Playwright (Appointment Form Widget)
 > **Środowisko admin:** http://localhost:5173/admin

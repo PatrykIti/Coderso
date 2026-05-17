@@ -114,10 +114,25 @@ const findLabelTextarea = (container: ParentNode, text: string) =>
     .find((label) => label.textContent?.includes(text))
     ?.querySelector("textarea");
 
+const findLabelSelect = (container: ParentNode, text: string) =>
+  Array.from(container.querySelectorAll("label"))
+    .find((label) => label.textContent?.includes(text))
+    ?.querySelector("select");
+
 const findToggleByText = (container: ParentNode, text: string) =>
   Array.from(container.querySelectorAll('input[type="checkbox"]')).find((element) =>
     element.parentElement?.textContent?.includes(text)
   );
+
+const setSelectValue = (element: Element | null | undefined, value: string) => {
+  if (!(element instanceof HTMLSelectElement)) return;
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
+  React.act(() => {
+    descriptor?.set?.call(element, value);
+    element.dispatchEvent(new Event("input", { bubbles: true }));
+    element.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+};
 
 afterEach(() => {
   document.body.innerHTML = "";
@@ -132,6 +147,7 @@ test("AppointmentForm editors cover normalized defaults, field toggles, copy upd
   } = await import("../../../core/admin/ui/widgets/editors/AppointmentFormEditors");
 
   const onChangeSpy = vi.fn();
+  let latestVariant = "default";
   let latestValue: AppointmentFormData = {
     flowId: "   ",
     title: "",
@@ -150,6 +166,7 @@ test("AppointmentForm editors cover normalized defaults, field toggles, copy upd
 
   const Harness = () => {
     const [value, setValue] = useState<AppointmentFormData>(latestValue);
+    const [variant, setVariant] = useState(latestVariant);
     return (
       <>
         <AppointmentFormWizardEditor
@@ -159,8 +176,11 @@ test("AppointmentForm editors cover normalized defaults, field toggles, copy upd
             onChangeSpy(next);
             setValue(next);
           }}
-          variant="default"
-          onVariantChange={() => undefined}
+          variant={variant}
+          onVariantChange={(next) => {
+            latestVariant = next;
+            setVariant(next);
+          }}
         />
         <AppointmentFormVisualEditor
           value={value}
@@ -169,8 +189,11 @@ test("AppointmentForm editors cover normalized defaults, field toggles, copy upd
             onChangeSpy(next);
             setValue(next);
           }}
-          variant="default"
-          onVariantChange={() => undefined}
+          variant={variant}
+          onVariantChange={(next) => {
+            latestVariant = next;
+            setVariant(next);
+          }}
         />
         <AppointmentFormAdvancedEditor
           value={value}
@@ -179,8 +202,11 @@ test("AppointmentForm editors cover normalized defaults, field toggles, copy upd
             onChangeSpy(next);
             setValue(next);
           }}
-          variant="default"
-          onVariantChange={() => undefined}
+          variant={variant}
+          onVariantChange={(next) => {
+            latestVariant = next;
+            setVariant(next);
+          }}
         />
       </>
     );
@@ -193,56 +219,90 @@ test("AppointmentForm editors cover normalized defaults, field toggles, copy upd
       (findLabelInput(view.container, "Flow key") as HTMLInputElement | null | undefined)?.value
     ).toBe("booking-flow");
 
+    setSelectValue(findLabelSelect(view.container, "Variant"), "sidebar");
     setInputValue(findLabelInput(view.container, "Flow key"), "concierge-flow");
+    setInputValue(findLabelInput(view.container, "Locale override"), "pl-PL");
+    setInputValue(findLabelInput(view.container, "Success redirect URL"), "/booking/confirmed");
     setInputValue(findLabelInput(view.container, "Title"), "Priority booking");
     setTextareaValue(findLabelTextarea(view.container, "Description"), "Reserve a selected slot.");
     setInputValue(findLabelInput(view.container, "Submit button"), "Reserve now");
+    setInputValue(findLabelInput(view.container, "Loading message"), "Submitting booking");
     setInputValue(findLabelInput(view.container, "Success message"), "Reservation confirmed");
 
     setInputValue(findLabelInput(view.container, "Summary label"), "Chosen slot");
-    setInputValue(findLabelInput(view.container, "No selection message"), "Choose a slot first");
-    setInputValue(findLabelInput(view.container, "Name label"), "Contact name");
-    setInputValue(findLabelInput(view.container, "Name placeholder"), "Jamie Doe");
+    setInputValue(findLabelInput(view.container, "Empty summary message"), "Choose a slot first");
+    setInputValue(findLabelInput(view.container, "No selection error"), "No slot selected");
+    setCheckboxValue(findToggleByText(view.container, "Include resource in summary"), false);
+    setSelectValue(findLabelSelect(view.container, "Name mode"), "split");
+    setInputValue(findLabelInput(view.container, "First name label"), "Given name");
+    setInputValue(findLabelInput(view.container, "First name placeholder"), "Jamie");
+    setInputValue(findLabelInput(view.container, "Last name label"), "Family name");
+    setInputValue(findLabelInput(view.container, "Last name placeholder"), "Doe");
+    expect(findLabelInput(view.container, "Phone label")).toBeUndefined();
+    expect(findLabelInput(view.container, "Notes label")).toBeUndefined();
+    setCheckboxValue(findToggleByText(view.container, "Show email field"), false);
+    expect(findLabelInput(view.container, "Email label")).toBeUndefined();
+    setCheckboxValue(findToggleByText(view.container, "Show email field"), true);
+    setCheckboxValue(findToggleByText(view.container, "Require email field"), true);
     setInputValue(findLabelInput(view.container, "Email label"), "Contact email");
     setInputValue(findLabelInput(view.container, "Email placeholder"), "bookings@example.com");
     setCheckboxValue(findToggleByText(view.container, "Show phone field"), true);
+    setCheckboxValue(findToggleByText(view.container, "Require phone field"), true);
     setInputValue(findLabelInput(view.container, "Phone label"), "Mobile number");
     setInputValue(findLabelInput(view.container, "Phone placeholder"), "+48 600 700 800");
+    setInputValue(
+      findLabelInput(view.container, "Phone validation pattern"),
+      "^\\\\+?[0-9 ]{7,20}$"
+    );
+    setInputValue(findLabelInput(view.container, "Phone help text"), "Include country code");
     setCheckboxValue(findToggleByText(view.container, "Show notes field"), true);
     setInputValue(findLabelInput(view.container, "Notes label"), "Additional details");
     setInputValue(findLabelInput(view.container, "Notes placeholder"), "Share context");
+    setInputValue(findLabelInput(view.container, "Notes max length"), "750");
 
     setInputValue(findLabelInput(view.container, "Submission endpoint"), "/api/booking/custom");
-    setInputValue(findLabelInput(view.container, "No selection error"), "No slot selected");
-    setInputValue(findLabelInput(view.container, "Submission nonce"), "nonce-1");
-    setInputValue(findLabelInput(view.container, "Runtime error"), "booking_nonce_unavailable");
 
     expect(onChangeSpy).toHaveBeenCalled();
+    expect(latestVariant).toBe("sidebar");
     expect(latestValue).toMatchObject({
       flowId: "concierge-flow",
+      locale: "pl-PL",
+      successRedirectUrl: "/booking/confirmed",
       title: "Priority booking",
       description: "Reserve a selected slot.",
       submitLabel: "Reserve now",
+      loadingMessage: "Submitting booking",
       successMessage: "Reservation confirmed",
       slotSummaryLabel: "Chosen slot",
       slotSummaryEmptyMessage: "Choose a slot first",
-      customerNameLabel: "Contact name",
-      customerNamePlaceholder: "Jamie Doe",
+      noSelectionMessage: "No slot selected",
+      showServiceInSummary: true,
+      showResourceInSummary: false,
+      nameMode: "split",
+      customerFirstNameLabel: "Given name",
+      customerFirstNamePlaceholder: "Jamie",
+      customerLastNameLabel: "Family name",
+      customerLastNamePlaceholder: "Doe",
+      showEmail: true,
+      requiredEmail: true,
       customerEmailLabel: "Contact email",
       customerEmailPlaceholder: "bookings@example.com",
       showPhone: true,
+      requiredPhone: true,
       customerPhoneLabel: "Mobile number",
       customerPhonePlaceholder: "+48 600 700 800",
+      phonePattern: "^\\\\+?[0-9 ]{7,20}$",
+      phonePatternMessage: "Include country code",
       showNotes: true,
       notesLabel: "Additional details",
       notesPlaceholder: "Share context",
+      notesMaxLength: 750,
       submissionEndpoint: "/api/booking/custom",
-      noSelectionMessage: "No slot selected",
-      resolved: {
-        submissionNonce: "nonce-1",
-        error: "booking_nonce_unavailable",
-      },
     });
+    expect(view.container.textContent).toContain(
+      "Server-injected booking nonce. Read-only in the editor."
+    );
+    expect(view.container.textContent).toContain("No runtime warning");
   } finally {
     view.cleanup();
   }
@@ -263,19 +323,35 @@ test("AppointmentForm editors render safe empty-string fallbacks when normalized
         title: undefined,
         description: undefined,
         submitLabel: undefined,
+        loadingMessage: undefined,
         successMessage: undefined,
+        showServiceInSummary: undefined,
+        showResourceInSummary: undefined,
+        locale: undefined,
+        successRedirectUrl: undefined,
         slotSummaryLabel: undefined,
         slotSummaryEmptyMessage: undefined,
+        customerFirstNameLabel: undefined,
+        customerLastNameLabel: undefined,
         customerNameLabel: undefined,
+        customerFirstNamePlaceholder: undefined,
+        customerLastNamePlaceholder: undefined,
         customerNamePlaceholder: undefined,
+        showEmail: undefined,
+        requiredEmail: undefined,
         customerEmailLabel: undefined,
         customerEmailPlaceholder: undefined,
         showPhone: undefined,
+        requiredPhone: undefined,
+        nameMode: undefined,
         customerPhoneLabel: undefined,
         customerPhonePlaceholder: undefined,
+        phonePattern: undefined,
+        phonePatternMessage: undefined,
         showNotes: undefined,
         notesLabel: undefined,
         notesPlaceholder: undefined,
+        notesMaxLength: undefined,
         submissionEndpoint: undefined,
         noSelectionMessage: undefined,
         resolved: undefined,
@@ -314,7 +390,9 @@ test("AppointmentForm editors render safe empty-string fallbacks when normalized
 
   try {
     const textInputs = Array.from(
-      view.container.querySelectorAll<HTMLInputElement>('input:not([type="checkbox"])')
+      view.container.querySelectorAll<HTMLInputElement>(
+        'input:not([type="checkbox"]):not([type="number"])'
+      )
     );
 
     expect(textInputs.every((input) => input.value === "")).toBe(true);
@@ -323,6 +401,10 @@ test("AppointmentForm editors render safe empty-string fallbacks when normalized
         ?.value
     ).toBe("");
     expect(
+      (findToggleByText(view.container, "Show email field") as HTMLInputElement | null | undefined)
+        ?.checked
+    ).toBe(true);
+    expect(
       (findToggleByText(view.container, "Show phone field") as HTMLInputElement | null | undefined)
         ?.checked
     ).toBe(true);
@@ -330,6 +412,10 @@ test("AppointmentForm editors render safe empty-string fallbacks when normalized
       (findToggleByText(view.container, "Show notes field") as HTMLInputElement | null | undefined)
         ?.checked
     ).toBe(true);
+    expect(
+      (findLabelInput(view.container, "Notes max length") as HTMLInputElement | null | undefined)
+        ?.value
+    ).toBe("500");
   } finally {
     view.cleanup();
     vi.doUnmock("../../../core/widgets/core/appointmentForm");

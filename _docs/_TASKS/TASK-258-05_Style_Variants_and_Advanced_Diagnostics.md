@@ -17,14 +17,14 @@ TASK-256 implementation work.
 
 This leaf covers:
 
-- UX-04: unclear inherited theme style versus configured inline style state.
 - UX-05 and BF-16: resolved nonce is editable and lacks runtime-only warning.
 - UX-06: runtime error diagnostic lacks context.
 - BF-01: only one variant exists.
 - BF-03 and A6: submit text color is hardcoded and can fail contrast.
 
-Do not implement generic `Clear`/`none` helper behavior here. If a shared style
-helper must change, land that in TASK-256-02 first.
+`UX-04` now routes through the existing shared `TASK-256-02` clearable-style
+owner. This leaf may consume the landed shared control later, but it must not
+implement a widget-local inheritance-state workaround.
 
 ## Files to Change
 
@@ -47,8 +47,6 @@ helper must change, land that in TASK-256-02 first.
   `default` payloads.
 - [ ] Add `style.submitTextColor` and render it through the same clearable style
   rules as other Appointment Form surface fields.
-- [ ] Add editor-visible style status indicators for inherited theme defaults
-  versus configured overrides without changing shared `Clear` semantics.
 - [ ] Convert resolved nonce and runtime error controls into read-only
   diagnostics with explanatory copy.
 - [ ] Add runtime diagnostic copy that explains who sets nonce/error values and
@@ -57,8 +55,8 @@ helper must change, land that in TASK-256-02 first.
   editability is later judged unsafe, create a separate public-write/security
   task with migration and backward-compatibility notes.
 - [ ] Do not implement a `multi-step` variant in this leaf. It remains future
-  Appointment Form product scope until a physical task defines step state,
-  keyboard behavior, validation flow, and runtime tests.
+  Appointment Form product scope outside the current report-closure contract; if
+  product later wants it, create a separate named task before implementation.
 
 ## Implementation Pseudocode
 
@@ -107,17 +105,7 @@ function ReadonlyDiagnosticField({ label, value, description }: Props) {
 
 Style status:
 
-```tsx
-function StyleControlWithState(props: ClearableInputFieldProps) {
-  const configured = typeof props.value === "string" && props.value.trim().length > 0;
-  return (
-    <div>
-      <ClearableInputField {...props} />
-      <p>{configured ? "Configured override" : "Using theme default"}</p>
-    </div>
-  );
-}
-```
+Shared configured-vs-default state indicators are owned by `TASK-256-02`.
 
 Error handling:
 
@@ -170,6 +158,8 @@ payloads.
 - `_docs/_WIDGETS/APPOINTMENT_FORM.md`
 - `_docs/PLAYWRIGHT/REPORT_APPOINTMENT_FORM_WIDGET.md` fixed evidence for
   UX-04, UX-05, UX-06, BF-01, BF-03, BF-16, and A6.
+- `_docs/_TASKS/TASK-256-02_Clear_None_Token_and_Design_Token_Controls.md` if
+  `UX-04` defers to or completes through the shared control state owner.
 - `_docs/WIDGET_PACK_MATRIX.md` if variant readiness affects the booking pack.
 - `_docs/_TASKS/README.md` on status changes.
 - `_docs/_CHANGELOG/` and `_docs/_CHANGELOG/README.md` on completion.
@@ -178,12 +168,13 @@ payloads.
 
 - Appointment Form exposes `default`, `compact`, `inline`, `sidebar`, and
   `card-summary` variants with stable render output. Conversational or
-  multi-step appointment intake remains future product scope unless a later
-  physical task defines the state machine, keyboard behavior, validation flow,
-  and tests.
+  multi-step appointment intake is explicitly out of the current TASK-258
+  closure scope and must be handled by a separate named future task if it is
+  ever requested.
 - Submit text color is configurable and can be cleared without serializing
   empty or transparent sentinels.
-- Editor style fields show whether the value is inherited or configured.
 - Runtime nonce and runtime error values are read-only diagnostics. Submission
   endpoint editability is unchanged by this leaf.
 - Existing default payloads render backward compatibly.
+- If `UX-04` is not landed in the same wave, the closure matrix points it to
+  `TASK-256-02` explicitly rather than claiming a widget-local fix.

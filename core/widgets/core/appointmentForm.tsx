@@ -4,7 +4,13 @@ import type { WidgetDefinition, WidgetEditorProps } from "../types";
 import { getBookingRuntimeClientScript } from "./bookingRuntimeScript";
 import { compactObject, compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
-export type AppointmentFormVariantId = "default";
+export type AppointmentFormVariantId =
+  | "default"
+  | "compact"
+  | "inline"
+  | "sidebar"
+  | "card-summary";
+export type AppointmentFormNameMode = "full" | "split";
 
 export type AppointmentFormData = {
   flowId?: string;
@@ -13,18 +19,34 @@ export type AppointmentFormData = {
   slotSummaryLabel?: string;
   slotSummaryEmptyMessage?: string;
   customerNameLabel?: string;
+  customerFirstNameLabel?: string;
+  customerLastNameLabel?: string;
   customerEmailLabel?: string;
   customerPhoneLabel?: string;
   notesLabel?: string;
   customerNamePlaceholder?: string;
+  customerFirstNamePlaceholder?: string;
+  customerLastNamePlaceholder?: string;
   customerEmailPlaceholder?: string;
   customerPhonePlaceholder?: string;
   notesPlaceholder?: string;
   submitLabel?: string;
+  loadingMessage?: string;
   successMessage?: string;
   noSelectionMessage?: string;
+  showServiceInSummary?: boolean;
+  showResourceInSummary?: boolean;
+  locale?: string;
+  successRedirectUrl?: string;
+  showEmail?: boolean;
   showPhone?: boolean;
   showNotes?: boolean;
+  requiredEmail?: boolean;
+  requiredPhone?: boolean;
+  nameMode?: AppointmentFormNameMode;
+  phonePattern?: string;
+  phonePatternMessage?: string;
+  notesMaxLength?: number;
   submissionEndpoint?: string;
   style?: {
     frameBackground?: string;
@@ -32,6 +54,7 @@ export type AppointmentFormData = {
     summaryBackground?: string;
     summaryBorderColor?: string;
     submitBackground?: string;
+    submitTextColor?: string;
   };
   resolved?: {
     submissionNonce?: string | null;
@@ -46,18 +69,33 @@ export const appointmentFormDefaults: AppointmentFormData = {
   slotSummaryLabel: "Selected slot",
   slotSummaryEmptyMessage: "Select a slot in Booking Calendar first.",
   customerNameLabel: "Full name",
+  customerFirstNameLabel: "First name",
+  customerLastNameLabel: "Last name",
   customerEmailLabel: "Email",
   customerPhoneLabel: "Phone",
   notesLabel: "Notes",
   customerNamePlaceholder: "Your name",
+  customerFirstNamePlaceholder: "Jamie",
+  customerLastNamePlaceholder: "Doe",
   customerEmailPlaceholder: "you@example.com",
   customerPhonePlaceholder: "+1 000 000 000",
   notesPlaceholder: "Optional notes",
   submitLabel: "Book appointment",
+  loadingMessage: "Booking...",
   successMessage: "Appointment booked successfully.",
   noSelectionMessage: "Select a slot first.",
+  showServiceInSummary: true,
+  showResourceInSummary: true,
+  locale: "",
+  showEmail: true,
   showPhone: true,
   showNotes: true,
+  requiredEmail: false,
+  requiredPhone: false,
+  nameMode: "full",
+  phonePattern: "^\\+?[0-9()\\-.\\s]{7,20}$",
+  phonePatternMessage: "Use digits, spaces, parentheses, or an optional leading +.",
+  notesMaxLength: 500,
   submissionEndpoint: "/api/booking/reservations",
   style: {
     frameBackground: "color-mix(in srgb, var(--color-bg) 95%, transparent)",
@@ -80,6 +118,17 @@ const optionalText = (value: string | undefined) => {
   return trimmed.length > 0 ? trimmed : undefined;
 };
 
+const bool = (value: boolean | undefined, fallback: boolean) =>
+  typeof value === "boolean" ? value : fallback;
+
+const intInRange = (value: unknown, fallback: number, minimum: number, maximum: number) => {
+  if (!Number.isFinite(value)) return fallback;
+  return Math.min(maximum, Math.max(minimum, Math.floor(Number(value))));
+};
+
+const nameMode = (value: AppointmentFormData["nameMode"]): AppointmentFormNameMode =>
+  value === "split" ? "split" : "full";
+
 export const appointmentFormSchema = {
   type: "object",
   additionalProperties: false,
@@ -90,18 +139,34 @@ export const appointmentFormSchema = {
     slotSummaryLabel: { type: "string" },
     slotSummaryEmptyMessage: { type: "string" },
     customerNameLabel: { type: "string" },
+    customerFirstNameLabel: { type: "string" },
+    customerLastNameLabel: { type: "string" },
     customerEmailLabel: { type: "string" },
     customerPhoneLabel: { type: "string" },
     notesLabel: { type: "string" },
     customerNamePlaceholder: { type: "string" },
+    customerFirstNamePlaceholder: { type: "string" },
+    customerLastNamePlaceholder: { type: "string" },
     customerEmailPlaceholder: { type: "string" },
     customerPhonePlaceholder: { type: "string" },
     notesPlaceholder: { type: "string" },
     submitLabel: { type: "string" },
+    loadingMessage: { type: "string" },
     successMessage: { type: "string" },
     noSelectionMessage: { type: "string" },
+    showServiceInSummary: { type: "boolean" },
+    showResourceInSummary: { type: "boolean" },
+    locale: { type: "string" },
+    successRedirectUrl: { type: "string" },
+    showEmail: { type: "boolean" },
     showPhone: { type: "boolean" },
     showNotes: { type: "boolean" },
+    requiredEmail: { type: "boolean" },
+    requiredPhone: { type: "boolean" },
+    nameMode: { enum: ["full", "split"] },
+    phonePattern: { type: "string" },
+    phonePatternMessage: { type: "string" },
+    notesMaxLength: { type: "integer", minimum: 50, maximum: 2000 },
     submissionEndpoint: { type: "string" },
     style: {
       type: "object",
@@ -112,6 +177,7 @@ export const appointmentFormSchema = {
         summaryBackground: { type: "string" },
         summaryBorderColor: { type: "string" },
         submitBackground: { type: "string" },
+        submitTextColor: { type: "string" },
       },
     },
     resolved: {
@@ -134,6 +200,7 @@ export function normalizeAppointmentFormData(data: AppointmentFormData): Appoint
         summaryBackground: resolveClearableStyleValue(data.style?.summaryBackground),
         summaryBorderColor: resolveClearableStyleValue(data.style?.summaryBorderColor),
         submitBackground: resolveClearableStyleValue(data.style?.submitBackground),
+        submitTextColor: resolveClearableStyleValue(data.style?.submitTextColor),
       }) ?? {})
     : undefined;
 
@@ -157,6 +224,14 @@ export function normalizeAppointmentFormData(data: AppointmentFormData): Appoint
       data.customerNameLabel,
       appointmentFormDefaults.customerNameLabel ?? "Full name"
     ),
+    customerFirstNameLabel: text(
+      data.customerFirstNameLabel,
+      appointmentFormDefaults.customerFirstNameLabel ?? "First name"
+    ),
+    customerLastNameLabel: text(
+      data.customerLastNameLabel,
+      appointmentFormDefaults.customerLastNameLabel ?? "Last name"
+    ),
     customerEmailLabel: text(
       data.customerEmailLabel,
       appointmentFormDefaults.customerEmailLabel ?? "Email"
@@ -169,6 +244,14 @@ export function normalizeAppointmentFormData(data: AppointmentFormData): Appoint
     customerNamePlaceholder: text(
       data.customerNamePlaceholder,
       appointmentFormDefaults.customerNamePlaceholder ?? "Your name"
+    ),
+    customerFirstNamePlaceholder: text(
+      data.customerFirstNamePlaceholder,
+      appointmentFormDefaults.customerFirstNamePlaceholder ?? "Jamie"
+    ),
+    customerLastNamePlaceholder: text(
+      data.customerLastNamePlaceholder,
+      appointmentFormDefaults.customerLastNamePlaceholder ?? "Doe"
     ),
     customerEmailPlaceholder: text(
       data.customerEmailPlaceholder,
@@ -183,6 +266,10 @@ export function normalizeAppointmentFormData(data: AppointmentFormData): Appoint
       appointmentFormDefaults.notesPlaceholder ?? "Optional notes"
     ),
     submitLabel: text(data.submitLabel, appointmentFormDefaults.submitLabel ?? "Book appointment"),
+    loadingMessage: text(
+      data.loadingMessage,
+      appointmentFormDefaults.loadingMessage ?? "Booking..."
+    ),
     successMessage: text(
       data.successMessage,
       appointmentFormDefaults.successMessage ?? "Appointment booked successfully."
@@ -191,14 +278,41 @@ export function normalizeAppointmentFormData(data: AppointmentFormData): Appoint
       data.noSelectionMessage,
       appointmentFormDefaults.noSelectionMessage ?? "Select a slot first."
     ),
-    showPhone:
-      typeof data.showPhone === "boolean"
-        ? data.showPhone
-        : appointmentFormDefaults.showPhone !== false,
-    showNotes:
-      typeof data.showNotes === "boolean"
-        ? data.showNotes
-        : appointmentFormDefaults.showNotes !== false,
+    showServiceInSummary: bool(
+      data.showServiceInSummary,
+      appointmentFormDefaults.showServiceInSummary !== false
+    ),
+    showResourceInSummary: bool(
+      data.showResourceInSummary,
+      appointmentFormDefaults.showResourceInSummary !== false
+    ),
+    locale: optionalText(data.locale),
+    successRedirectUrl: optionalText(data.successRedirectUrl),
+    showEmail: bool(data.showEmail, appointmentFormDefaults.showEmail !== false),
+    showPhone: bool(data.showPhone, appointmentFormDefaults.showPhone !== false),
+    showNotes: bool(data.showNotes, appointmentFormDefaults.showNotes !== false),
+    requiredEmail:
+      bool(data.showEmail, appointmentFormDefaults.showEmail !== false) &&
+      bool(data.requiredEmail, appointmentFormDefaults.requiredEmail === true),
+    requiredPhone:
+      bool(data.showPhone, appointmentFormDefaults.showPhone !== false) &&
+      bool(data.requiredPhone, appointmentFormDefaults.requiredPhone === true),
+    nameMode: nameMode(data.nameMode),
+    phonePattern: text(
+      data.phonePattern,
+      appointmentFormDefaults.phonePattern ?? "^\\+?[0-9()\\-.\\s]{7,20}$"
+    ),
+    phonePatternMessage: text(
+      data.phonePatternMessage,
+      appointmentFormDefaults.phonePatternMessage ??
+        "Use digits, spaces, parentheses, or an optional leading +."
+    ),
+    notesMaxLength: intInRange(
+      data.notesMaxLength,
+      appointmentFormDefaults.notesMaxLength ?? 500,
+      50,
+      2000
+    ),
     submissionEndpoint: text(
       data.submissionEndpoint,
       appointmentFormDefaults.submissionEndpoint ?? "/api/booking/reservations"
@@ -218,7 +332,48 @@ const Field = ({ label, children }: { label: string; children: ReactNode }) => (
   </label>
 );
 
-export function AppointmentFormBlock({ data }: { data: AppointmentFormData; variant: string }) {
+const resolveVariantClasses = (variant: string) => {
+  switch (variant) {
+    case "compact":
+      return {
+        root: "space-y-3 rounded-xl border p-4",
+        header: "space-y-1",
+        form: "space-y-2",
+      };
+    case "inline":
+      return {
+        root: "space-y-4 rounded-xl border p-4 md:p-5",
+        header: "space-y-1",
+        form: "grid gap-3 md:grid-cols-2",
+      };
+    case "sidebar":
+      return {
+        root: "space-y-4 rounded-xl border p-5 lg:grid lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-5",
+        header: "space-y-1 lg:pr-4",
+        form: "space-y-3",
+      };
+    case "card-summary":
+      return {
+        root: "space-y-4 rounded-2xl border p-6 shadow-sm",
+        header: "space-y-2",
+        form: "space-y-3",
+      };
+    default:
+      return {
+        root: "space-y-4 rounded-xl border p-5",
+        header: "space-y-1",
+        form: "space-y-3",
+      };
+  }
+};
+
+export function AppointmentFormBlock({
+  data,
+  variant,
+}: {
+  data: AppointmentFormData;
+  variant: string;
+}) {
   const normalized = normalizeAppointmentFormData(data);
   const submissionNonce = normalized.resolved?.submissionNonce ?? null;
   const submissionEndpoint =
@@ -246,6 +401,22 @@ export function AppointmentFormBlock({ data }: { data: AppointmentFormData; vari
     normalized.customerNamePlaceholder ??
     appointmentFormDefaults.customerNamePlaceholder ??
     "Your name";
+  const customerFirstNameLabel =
+    normalized.customerFirstNameLabel ??
+    appointmentFormDefaults.customerFirstNameLabel ??
+    "First name";
+  const customerLastNameLabel =
+    normalized.customerLastNameLabel ??
+    appointmentFormDefaults.customerLastNameLabel ??
+    "Last name";
+  const customerFirstNamePlaceholder =
+    normalized.customerFirstNamePlaceholder ??
+    appointmentFormDefaults.customerFirstNamePlaceholder ??
+    "Jamie";
+  const customerLastNamePlaceholder =
+    normalized.customerLastNamePlaceholder ??
+    appointmentFormDefaults.customerLastNamePlaceholder ??
+    "Doe";
   const customerEmailPlaceholder =
     normalized.customerEmailPlaceholder ??
     appointmentFormDefaults.customerEmailPlaceholder ??
@@ -258,10 +429,33 @@ export function AppointmentFormBlock({ data }: { data: AppointmentFormData; vari
     normalized.notesPlaceholder ?? appointmentFormDefaults.notesPlaceholder ?? "Optional notes";
   const submitLabel =
     normalized.submitLabel ?? appointmentFormDefaults.submitLabel ?? "Book appointment";
+  const loadingMessage =
+    normalized.loadingMessage ?? appointmentFormDefaults.loadingMessage ?? "Booking...";
   const noSelectionMessage =
     normalized.noSelectionMessage ??
     appointmentFormDefaults.noSelectionMessage ??
     "Select a slot first.";
+  const titleText = normalized.title ?? appointmentFormDefaults.title ?? "Appointment details";
+  const descriptionText =
+    normalized.description ??
+    appointmentFormDefaults.description ??
+    "Provide contact details and confirm the selected slot.";
+  const showEmail = normalized.showEmail !== false;
+  const showPhone = normalized.showPhone !== false;
+  const showNotes = normalized.showNotes !== false;
+  const isSplitName = normalized.nameMode === "split";
+  const phonePattern =
+    normalized.phonePattern ?? appointmentFormDefaults.phonePattern ?? "^\\+?[0-9()\\-.\\s]{7,20}$";
+  const phonePatternMessage =
+    normalized.phonePatternMessage ??
+    appointmentFormDefaults.phonePatternMessage ??
+    "Use digits, spaces, parentheses, or an optional leading +.";
+  const notesMaxLength = normalized.notesMaxLength ?? appointmentFormDefaults.notesMaxLength ?? 500;
+  const formLabel = titleText.trim().length > 0 ? titleText.trim() : "Appointment form";
+  const formDescription =
+    descriptionText.trim().length > 0
+      ? descriptionText.trim()
+      : "Provide your contact details and confirm the selected slot.";
   const frameStyle: CSSProperties | undefined = compactStyle({
     backgroundColor: resolveClearableStyleValue(normalized.style?.frameBackground),
     borderColor: resolveClearableStyleValue(normalized.style?.frameBorderColor),
@@ -272,16 +466,19 @@ export function AppointmentFormBlock({ data }: { data: AppointmentFormData; vari
   });
   const submitStyle: CSSProperties | undefined = compactStyle({
     backgroundColor: resolveClearableStyleValue(normalized.style?.submitBackground),
+    color: resolveClearableStyleValue(normalized.style?.submitTextColor),
   });
+  const variantClasses = resolveVariantClasses(variant);
   const legacyFrameClass =
     normalized.style === undefined ? "border-[var(--color-border)] bg-[var(--color-bg)]/95" : "";
   const legacySummaryClass =
     normalized.style === undefined ? "border-[var(--color-border)]/70 bg-[var(--color-bg)]/70" : "";
   const legacySubmitClass = normalized.style === undefined ? "bg-[var(--color-primary)]" : "";
+  const legacySubmitTextClass = normalized.style?.submitTextColor ? "" : "text-[var(--color-bg)]";
 
   return (
-    <section className={`space-y-4 rounded-xl border p-5 ${legacyFrameClass}`} style={frameStyle}>
-      <div className="space-y-1">
+    <section className={`${variantClasses.root} ${legacyFrameClass}`} style={frameStyle}>
+      <div className={variantClasses.header}>
         <h3 className="text-lg font-semibold text-[var(--color-text)]">{normalized.title}</h3>
         <p className="text-sm text-[var(--color-text)]/70">{normalized.description}</p>
       </div>
@@ -295,11 +492,20 @@ export function AppointmentFormBlock({ data }: { data: AppointmentFormData; vari
       <form
         action={submissionEndpoint}
         method="post"
-        className="space-y-3"
+        className={variantClasses.form}
         data-nextless-appointment-form="1"
         data-flow-id={normalized.flowId}
         data-submission-endpoint={submissionEndpoint}
+        data-loading-message={loadingMessage}
+        data-locale={normalized.locale ?? ""}
+        data-show-service-in-summary={normalized.showServiceInSummary === false ? "false" : "true"}
+        data-show-resource-in-summary={
+          normalized.showResourceInSummary === false ? "false" : "true"
+        }
+        data-success-redirect={normalized.successRedirectUrl ?? ""}
         data-success-message={successMessage}
+        aria-label={formLabel}
+        aria-description={formDescription}
       >
         <div
           className={`rounded-md border px-3 py-2 text-xs text-[var(--color-text)]/80 ${legacySummaryClass}`}
@@ -313,42 +519,84 @@ export function AppointmentFormBlock({ data }: { data: AppointmentFormData; vari
           </p>
         </div>
 
-        <Field label={customerNameLabel}>
-          <input
-            required
-            name="customerName"
-            placeholder={customerNamePlaceholder}
-            className="w-full rounded-md border border-[var(--color-border)] bg-transparent px-3 py-2 text-sm text-[var(--color-text)]"
-          />
-        </Field>
+        {isSplitName ? (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label={customerFirstNameLabel}>
+              <input
+                required
+                name="customerFirstName"
+                placeholder={customerFirstNamePlaceholder}
+                autoComplete="given-name"
+                className="w-full rounded-md border border-[var(--color-border)] bg-transparent px-3 py-2 text-sm text-[var(--color-text)]"
+              />
+            </Field>
 
-        <Field label={customerEmailLabel}>
-          <input
-            type="email"
-            name="customerEmail"
-            placeholder={customerEmailPlaceholder}
-            className="w-full rounded-md border border-[var(--color-border)] bg-transparent px-3 py-2 text-sm text-[var(--color-text)]"
-          />
-        </Field>
-
-        {normalized.showPhone ? (
-          <Field label={customerPhoneLabel}>
+            <Field label={customerLastNameLabel}>
+              <input
+                required
+                name="customerLastName"
+                placeholder={customerLastNamePlaceholder}
+                autoComplete="family-name"
+                className="w-full rounded-md border border-[var(--color-border)] bg-transparent px-3 py-2 text-sm text-[var(--color-text)]"
+              />
+            </Field>
+          </div>
+        ) : (
+          <Field label={customerNameLabel}>
             <input
-              type="tel"
-              name="customerPhone"
-              placeholder={customerPhonePlaceholder}
+              required
+              name="customerName"
+              placeholder={customerNamePlaceholder}
+              autoComplete="name"
+              className="w-full rounded-md border border-[var(--color-border)] bg-transparent px-3 py-2 text-sm text-[var(--color-text)]"
+            />
+          </Field>
+        )}
+
+        {showEmail ? (
+          <Field label={customerEmailLabel}>
+            <input
+              type="email"
+              name="customerEmail"
+              required={normalized.requiredEmail === true}
+              placeholder={customerEmailPlaceholder}
+              autoComplete="email"
               className="w-full rounded-md border border-[var(--color-border)] bg-transparent px-3 py-2 text-sm text-[var(--color-text)]"
             />
           </Field>
         ) : null}
 
-        {normalized.showNotes ? (
+        {showPhone ? (
+          <Field label={customerPhoneLabel}>
+            <input
+              type="tel"
+              name="customerPhone"
+              required={normalized.requiredPhone === true}
+              pattern={phonePattern}
+              title={phonePatternMessage}
+              placeholder={customerPhonePlaceholder}
+              autoComplete="tel"
+              className="w-full rounded-md border border-[var(--color-border)] bg-transparent px-3 py-2 text-sm text-[var(--color-text)]"
+            />
+            <p className="text-[11px] text-[var(--color-text)]/65">{phonePatternMessage}</p>
+          </Field>
+        ) : null}
+
+        {showNotes ? (
           <Field label={notesLabel}>
             <textarea
               name="notes"
               placeholder={notesPlaceholder}
+              maxLength={notesMaxLength}
               className="min-h-24 w-full rounded-md border border-[var(--color-border)] bg-transparent px-3 py-2 text-sm text-[var(--color-text)]"
             />
+            <p
+              aria-live="polite"
+              className="text-[11px] text-[var(--color-text)]/65"
+              data-booking-notes-counter
+            >
+              0 / {notesMaxLength} characters
+            </p>
           </Field>
         ) : null}
 
@@ -371,7 +619,9 @@ export function AppointmentFormBlock({ data }: { data: AppointmentFormData; vari
         <button
           type="submit"
           data-booking-submit
-          className={`rounded-md px-4 py-2 text-sm font-semibold text-[var(--color-bg)] ${legacySubmitClass}`}
+          data-idle-label={submitLabel}
+          disabled
+          className={`rounded-md px-4 py-2 text-sm font-semibold ${legacySubmitClass} ${legacySubmitTextClass}`}
           style={submitStyle}
         >
           {submitLabel}
@@ -398,6 +648,26 @@ export function createAppointmentFormWidget(editors: {
         id: "default",
         label: "Default",
         description: "Standard appointment confirmation form.",
+      },
+      {
+        id: "compact",
+        label: "Compact",
+        description: "Tighter spacing for short appointment forms.",
+      },
+      {
+        id: "inline",
+        label: "Inline",
+        description: "Balanced two-column form layout for wider surfaces.",
+      },
+      {
+        id: "sidebar",
+        label: "Sidebar",
+        description: "Emphasize the booking summary beside the form.",
+      },
+      {
+        id: "card-summary",
+        label: "Card summary",
+        description: "Larger framed presentation with extra summary emphasis.",
       },
     ],
     schema: appointmentFormSchema,

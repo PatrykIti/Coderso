@@ -24,23 +24,6 @@ const update = (
   );
 };
 
-const updateResolved = (
-  value: AppointmentFormData,
-  onChange: (next: AppointmentFormData) => void,
-  patch: Partial<NonNullable<AppointmentFormData["resolved"]>>
-) => {
-  const current = normalizeAppointmentFormData(value);
-  onChange(
-    normalizeAppointmentFormData({
-      ...current,
-      resolved: {
-        ...current.resolved,
-        ...patch,
-      },
-    })
-  );
-};
-
 const updateStyle = (
   value: AppointmentFormData,
   onChange: (next: AppointmentFormData) => void,
@@ -118,6 +101,62 @@ function TextField({
   );
 }
 
+function SelectField({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange: (next: string) => void;
+  options: Array<{ value: string; label: string }>;
+}) {
+  return (
+    <label className="space-y-1 text-sm">
+      <span className="font-medium text-foreground">{label}</span>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function NumberField({
+  label,
+  value,
+  onChange,
+  min,
+  max,
+}: {
+  label: string;
+  value: number;
+  onChange: (next: number) => void;
+  min: number;
+  max: number;
+}) {
+  return (
+    <label className="space-y-1 text-sm">
+      <span className="font-medium text-foreground">{label}</span>
+      <Input
+        type="number"
+        min={min}
+        max={max}
+        value={value}
+        onChange={(event) => onChange(Number(event.target.value || value))}
+      />
+    </label>
+  );
+}
+
 function ToggleField({
   label,
   checked,
@@ -179,6 +218,13 @@ function SurfaceFields({
         onClear={() => clearStyle(value, onChange, "submitBackground")}
         placeholder="var(--color-primary)"
       />
+      <ClearableInputField
+        label="Submit text color"
+        value={value.style?.submitTextColor}
+        onChange={(next) => updateStyle(value, onChange, { submitTextColor: next })}
+        onClear={() => clearStyle(value, onChange, "submitTextColor")}
+        placeholder="var(--color-bg)"
+      />
     </Section>
   );
 }
@@ -186,6 +232,8 @@ function SurfaceFields({
 export function AppointmentFormWizardEditor({
   value,
   onChange,
+  variant,
+  onVariantChange,
 }: WidgetEditorProps<AppointmentFormData>) {
   const normalized = normalizeAppointmentFormData(value);
 
@@ -195,11 +243,35 @@ export function AppointmentFormWizardEditor({
         title="Flow"
         description="Use the same flow key as Booking Calendar to receive selected slot."
       >
+        <SelectField
+          label="Variant"
+          value={variant}
+          onChange={(next) => onVariantChange?.(next)}
+          options={[
+            { value: "default", label: "Default" },
+            { value: "compact", label: "Compact" },
+            { value: "inline", label: "Inline" },
+            { value: "sidebar", label: "Sidebar" },
+            { value: "card-summary", label: "Card summary" },
+          ]}
+        />
         <TextField
           label="Flow key"
           value={normalized.flowId}
           onChange={(next) => update(normalized, onChange, { flowId: next })}
           placeholder="booking-flow"
+        />
+        <TextField
+          label="Locale override"
+          value={normalized.locale}
+          onChange={(next) => update(normalized, onChange, { locale: next })}
+          placeholder="e.g. en-GB"
+        />
+        <TextField
+          label="Success redirect URL"
+          value={normalized.successRedirectUrl}
+          onChange={(next) => update(normalized, onChange, { successRedirectUrl: next })}
+          placeholder="/booking/confirmed"
         />
       </Section>
 
@@ -223,6 +295,11 @@ export function AppointmentFormWizardEditor({
           onChange={(next) => update(normalized, onChange, { submitLabel: next })}
         />
         <TextField
+          label="Loading message"
+          value={normalized.loadingMessage}
+          onChange={(next) => update(normalized, onChange, { loadingMessage: next })}
+        />
+        <TextField
           label="Success message"
           value={normalized.successMessage}
           onChange={(next) => update(normalized, onChange, { successMessage: next })}
@@ -238,73 +315,183 @@ export function AppointmentFormVisualEditor({
   onChange,
 }: WidgetEditorProps<AppointmentFormData>) {
   const normalized = normalizeAppointmentFormData(value);
+  const showEmail = normalized.showEmail !== false;
+  const showPhone = normalized.showPhone !== false;
+  const showNotes = normalized.showNotes !== false;
+  const splitName = normalized.nameMode === "split";
 
   return (
     <div className="space-y-4">
-      <Section title="Slot summary" description="Copy shown before a user selects a slot.">
+      <Section
+        title="Slot summary"
+        description="Copy shown before a user selects a slot or submits without one."
+      >
         <TextField
           label="Summary label"
           value={normalized.slotSummaryLabel}
           onChange={(next) => update(normalized, onChange, { slotSummaryLabel: next })}
         />
         <TextField
-          label="No selection message"
+          label="Empty summary message"
           value={normalized.slotSummaryEmptyMessage}
           onChange={(next) => update(normalized, onChange, { slotSummaryEmptyMessage: next })}
+        />
+        <TextField
+          label="No selection error"
+          value={normalized.noSelectionMessage}
+          onChange={(next) => update(normalized, onChange, { noSelectionMessage: next })}
+        />
+        <ToggleField
+          label="Include service in summary"
+          checked={normalized.showServiceInSummary !== false}
+          onCheckedChange={(next) => update(normalized, onChange, { showServiceInSummary: next })}
+        />
+        <ToggleField
+          label="Include resource in summary"
+          checked={normalized.showResourceInSummary !== false}
+          onCheckedChange={(next) => update(normalized, onChange, { showResourceInSummary: next })}
         />
       </Section>
 
       <Section title="Fields" description="Labels/placeholders for customer details.">
-        <TextField
-          label="Name label"
-          value={normalized.customerNameLabel}
-          onChange={(next) => update(normalized, onChange, { customerNameLabel: next })}
+        <SelectField
+          label="Name mode"
+          value={normalized.nameMode ?? "full"}
+          onChange={(next) =>
+            update(normalized, onChange, {
+              nameMode: next === "split" ? "split" : "full",
+            })
+          }
+          options={[
+            { value: "full", label: "Full name" },
+            { value: "split", label: "First and last name" },
+          ]}
         />
-        <TextField
-          label="Name placeholder"
-          value={normalized.customerNamePlaceholder}
-          onChange={(next) => update(normalized, onChange, { customerNamePlaceholder: next })}
+        {splitName ? (
+          <>
+            <TextField
+              label="First name label"
+              value={normalized.customerFirstNameLabel}
+              onChange={(next) => update(normalized, onChange, { customerFirstNameLabel: next })}
+            />
+            <TextField
+              label="First name placeholder"
+              value={normalized.customerFirstNamePlaceholder}
+              onChange={(next) =>
+                update(normalized, onChange, { customerFirstNamePlaceholder: next })
+              }
+            />
+            <TextField
+              label="Last name label"
+              value={normalized.customerLastNameLabel}
+              onChange={(next) => update(normalized, onChange, { customerLastNameLabel: next })}
+            />
+            <TextField
+              label="Last name placeholder"
+              value={normalized.customerLastNamePlaceholder}
+              onChange={(next) =>
+                update(normalized, onChange, { customerLastNamePlaceholder: next })
+              }
+            />
+          </>
+        ) : (
+          <>
+            <TextField
+              label="Name label"
+              value={normalized.customerNameLabel}
+              onChange={(next) => update(normalized, onChange, { customerNameLabel: next })}
+            />
+            <TextField
+              label="Name placeholder"
+              value={normalized.customerNamePlaceholder}
+              onChange={(next) => update(normalized, onChange, { customerNamePlaceholder: next })}
+            />
+          </>
+        )}
+        <ToggleField
+          label="Show email field"
+          checked={showEmail}
+          onCheckedChange={(next) => update(normalized, onChange, { showEmail: next })}
         />
-        <TextField
-          label="Email label"
-          value={normalized.customerEmailLabel}
-          onChange={(next) => update(normalized, onChange, { customerEmailLabel: next })}
-        />
-        <TextField
-          label="Email placeholder"
-          value={normalized.customerEmailPlaceholder}
-          onChange={(next) => update(normalized, onChange, { customerEmailPlaceholder: next })}
-        />
+        {showEmail ? (
+          <>
+            <ToggleField
+              label="Require email field"
+              checked={normalized.requiredEmail === true}
+              onCheckedChange={(next) => update(normalized, onChange, { requiredEmail: next })}
+            />
+            <TextField
+              label="Email label"
+              value={normalized.customerEmailLabel}
+              onChange={(next) => update(normalized, onChange, { customerEmailLabel: next })}
+            />
+            <TextField
+              label="Email placeholder"
+              value={normalized.customerEmailPlaceholder}
+              onChange={(next) => update(normalized, onChange, { customerEmailPlaceholder: next })}
+            />
+          </>
+        ) : null}
         <ToggleField
           label="Show phone field"
-          checked={normalized.showPhone !== false}
+          checked={showPhone}
           onCheckedChange={(next) => update(normalized, onChange, { showPhone: next })}
         />
-        <TextField
-          label="Phone label"
-          value={normalized.customerPhoneLabel}
-          onChange={(next) => update(normalized, onChange, { customerPhoneLabel: next })}
-        />
-        <TextField
-          label="Phone placeholder"
-          value={normalized.customerPhonePlaceholder}
-          onChange={(next) => update(normalized, onChange, { customerPhonePlaceholder: next })}
-        />
+        {showPhone ? (
+          <>
+            <ToggleField
+              label="Require phone field"
+              checked={normalized.requiredPhone === true}
+              onCheckedChange={(next) => update(normalized, onChange, { requiredPhone: next })}
+            />
+            <TextField
+              label="Phone label"
+              value={normalized.customerPhoneLabel}
+              onChange={(next) => update(normalized, onChange, { customerPhoneLabel: next })}
+            />
+            <TextField
+              label="Phone placeholder"
+              value={normalized.customerPhonePlaceholder}
+              onChange={(next) => update(normalized, onChange, { customerPhonePlaceholder: next })}
+            />
+            <TextField
+              label="Phone validation pattern"
+              value={normalized.phonePattern}
+              onChange={(next) => update(normalized, onChange, { phonePattern: next })}
+            />
+            <TextField
+              label="Phone help text"
+              value={normalized.phonePatternMessage}
+              onChange={(next) => update(normalized, onChange, { phonePatternMessage: next })}
+            />
+          </>
+        ) : null}
         <ToggleField
           label="Show notes field"
-          checked={normalized.showNotes !== false}
+          checked={showNotes}
           onCheckedChange={(next) => update(normalized, onChange, { showNotes: next })}
         />
-        <TextField
-          label="Notes label"
-          value={normalized.notesLabel}
-          onChange={(next) => update(normalized, onChange, { notesLabel: next })}
-        />
-        <TextField
-          label="Notes placeholder"
-          value={normalized.notesPlaceholder}
-          onChange={(next) => update(normalized, onChange, { notesPlaceholder: next })}
-        />
+        {showNotes ? (
+          <>
+            <TextField
+              label="Notes label"
+              value={normalized.notesLabel}
+              onChange={(next) => update(normalized, onChange, { notesLabel: next })}
+            />
+            <TextField
+              label="Notes placeholder"
+              value={normalized.notesPlaceholder}
+              onChange={(next) => update(normalized, onChange, { notesPlaceholder: next })}
+            />
+            <NumberField
+              label="Notes max length"
+              value={normalized.notesMaxLength ?? 500}
+              min={50}
+              max={2000}
+              onChange={(next) => update(normalized, onChange, { notesMaxLength: next })}
+            />
+          </>
+        ) : null}
       </Section>
       <SurfaceFields value={normalized} onChange={onChange} />
     </div>
@@ -328,42 +515,25 @@ export function AppointmentFormAdvancedEditor({
         />
       </Section>
 
-      <Section
-        title="Errors"
-        description="Message shown if user tries to submit without selected slot."
-      >
-        <TextField
-          label="No selection error"
-          value={normalized.noSelectionMessage}
-          onChange={(next) => update(normalized, onChange, { noSelectionMessage: next })}
-        />
-      </Section>
-
       <Section title="Resolved runtime payload" description="Injected by server runtime resolver.">
-        <label className="space-y-1 text-sm">
-          <span className="font-medium text-foreground">Submission nonce</span>
-          <Input
-            value={normalized.resolved?.submissionNonce ?? ""}
-            onChange={(event) =>
-              updateResolved(normalized, onChange, {
-                submissionNonce: event.target.value,
-              })
-            }
-            placeholder="runtime nonce"
-          />
-        </label>
-        <label className="space-y-1 text-sm">
-          <span className="font-medium text-foreground">Runtime error</span>
-          <Input
-            value={normalized.resolved?.error ?? ""}
-            onChange={(event) =>
-              updateResolved(normalized, onChange, {
-                error: event.target.value,
-              })
-            }
-            placeholder="e.g. booking_nonce_unavailable"
-          />
-        </label>
+        <div className="space-y-1 text-sm">
+          <p className="font-medium text-foreground">Submission nonce</p>
+          <code className="block rounded-md border border-border/60 bg-muted/40 px-3 py-2 text-xs">
+            {normalized.resolved?.submissionNonce || "Not injected in this preview"}
+          </code>
+          <p className="text-xs text-muted-foreground">
+            Server-injected booking nonce. Read-only in the editor.
+          </p>
+        </div>
+        <div className="space-y-1 text-sm">
+          <p className="font-medium text-foreground">Runtime error</p>
+          <code className="block rounded-md border border-border/60 bg-muted/40 px-3 py-2 text-xs">
+            {normalized.resolved?.error || "No runtime warning"}
+          </code>
+          <p className="text-xs text-muted-foreground">
+            Diagnostic value from the runtime resolver when booking data cannot be hydrated safely.
+          </p>
+        </div>
       </Section>
     </div>
   );
