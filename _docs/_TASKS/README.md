@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 205 tasks
+- **To Do:** 214 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1542 tasks
 
@@ -38,6 +38,15 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-290 | Testimonials Widget Playwright Product Followups | High | Very Large | Testimonials-only follow-up family for `REPORT_TESTIMONIALS_WIDGET.md`, excluding TASK-256 shared-contract scope |
+| TASK-290-01 | Testimonials Wizard Header and Social Proof Authoring | High | Large | Expand Wizard header and social-proof fields after TASK-256 variant/count updates are stable |
+| TASK-290-02 | Testimonials Destructive Item Management and Spotlight Pin | High | Large | Add safer removal and explicit spotlight selection without duplicating shared editor update fixes |
+| TASK-290-03 | Testimonials Avatar Media Picker and URL Validation | High | Large | Add avatar Media Library picking and safe URL feedback while TASK-256 owns lazy/alt baseline |
+| TASK-290-04 | Testimonials Slider Navigation and Rating Semantics | High | Large | Add Testimonials-only slider product controls and rating-zero semantics after TASK-256 slider baseline |
+| TASK-290-05 | Testimonials Section Surface Typography and Card Styles | Medium | Large | Add bounded section background, header typography, card radius/border width, and contrast guidance |
+| TASK-290-06 | Testimonials CTA and Rich Quote Content | Medium | Large | Add a safe CTA and bounded rich quote formatting for Testimonials sections |
+| TASK-290-07 | Testimonials Large Set Import Export and Pagination | Low | Very Large | Decide large-set policy and add safe local import/export or pagination without external provider connectors |
+| TASK-290-08 | Testimonials Report Docs Changelog and Closure | Medium | Medium | Refresh Testimonials report/docs/changelog/board and final validation evidence |
 | TASK-286 | Stack Widget Playwright Product Followups | High | Very Large | Stack-only follow-up family for `REPORT_STACK_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-286-01 | Stack Flex Alignment Token Expansion | Medium | Medium | Add Stack-owned `baseline`, `space-around`, and `space-evenly` tokens with schema/editor/runtime/tests/docs coverage |
 | TASK-286-02 | Stack Responsive Axis and Wrap Controls | High | Large | Add responsive align/justify/wrap controls while preserving legacy scalar payload compatibility |
