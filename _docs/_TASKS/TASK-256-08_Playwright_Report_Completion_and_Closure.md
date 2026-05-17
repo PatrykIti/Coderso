@@ -261,6 +261,8 @@ No API routes are added by this closure task.
   `bun test tests/unit/widgets/registry.test.ts`, and
   `bun test tests/unit/widgets/runtimeRegistry.test.ts` when any widget
   schema/default/runtime registration changed.
+- Run `bun test tests/unit/widgets/modulePackMatrix.test.ts` when
+  `core/widgets/modulePackMatrix.ts` or `_docs/WIDGET_PACK_MATRIX.md` changes.
 - If DB-backed or network-backed gates are unavailable, record the exact blocker
   and rerun before final closure.
 

@@ -201,6 +201,7 @@ No API routes are added.
 - If this classification creates product-scope follow-up task files, verify
   `_docs/_TASKS/README.md` statistics and table rows.
 - No production tests are required for classification-only edits.
+- Run `bun run precommit` before any manual commit or task closure commit.
 - TASK-256-08 remains responsible for running the targeted production suites
   after implementation leaves land.
 

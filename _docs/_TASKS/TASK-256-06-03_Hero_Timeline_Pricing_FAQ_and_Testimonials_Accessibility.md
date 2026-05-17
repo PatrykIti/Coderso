@@ -53,7 +53,7 @@ be split by TASK-256-08 into a page-shell follow-up if still reproducible.
 | FAQ single-open, chevron, ARIA, spacing resolver, and `spacing="none"` double-border behavior | Fix here plus TASK-256-04 | `FaqAccordionEditors.tsx`, `faqAccordion.tsx` | FAQ clear/CSS-variable picker work stays in TASK-256-02; question-aware default-open labels stay in TASK-266-04. |
 | FAQ `spacing="none"` double-border renderer defect | Fix here with renderer spacing/border regression | `faqAccordion.tsx` | None |
 | FAQ animation, SEO JSON-LD, rich text answers, max-width/layout typography, and remove confirmation | Product scope in TASK-266; TASK-256 only fixes current single-open, chevron, spacing, and ARIA contract drift | `TASK-266-01`, `TASK-266-02`, `TASK-266-03`, `TASK-266-05`, `TASK-266-06` | TASK-256-08 references TASK-266 instead of creating duplicate FAQ follow-ups. |
-| Testimonials slider-static lacks scroll-snap behavior | Fix here or rename/static-proof the variant so the control is truthful | `testimonials.tsx` | None |
+| Testimonials slider-static lacks scroll-snap behavior | Add scroll-snap runtime behavior for the current `slider-static` variant without adding carousel controls | `testimonials.tsx` | True carousel controls route to TASK-290-04 |
 | Testimonials clear gaps for text/accent colors | Fix through TASK-256-02 helpers | `TestimonialsEditors.tsx` | None |
 | Testimonials Wizard rating/role/avatar/source gaps, avatar media picker, remove confirmation, and rating-0 semantics | Future product/editor UX scope unless a current visible control is misleading | `TASK-290-01`, `TASK-290-02`, `TASK-290-03`, `TASK-290-04`, `TASK-290-08` | TASK-256-08 references TASK-290 instead of creating duplicate testimonials follow-ups. |
 | Testimonials true carousel, drag/drop, rich media picker | Future product scope unless current `slider-static` label is misleading | `TASK-290-03`, `TASK-290-04`, `TASK-290-07`, `TASK-290-08` | TASK-256-08 references TASK-290 instead of creating duplicate testimonials follow-ups. |
@@ -70,8 +70,7 @@ be split by TASK-256-08 into a page-shell follow-up if still reproducible.
 - [ ] Fix FAQ single-open behavior, expand indicator, spacing resolver, and ARIA.
 - [ ] Fix FAQ `spacing="none"` double-border output.
 - [ ] Make testimonials `slider-static` truthful by adding scroll-snap behavior
-  for the current variant or renaming/static-proofing the variant without
-  adding carousel product controls.
+  for the current variant without adding carousel product controls.
 - [ ] Add testimonial avatar/image lazy and alt assertions.
 - [ ] Add testimonials clear-control ownership for `textColor` and
   `accentColor`; defer Wizard/media-picker/remove-confirm expansions through
