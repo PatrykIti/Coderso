@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 214 tasks
+- **To Do:** 223 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1542 tasks
 
@@ -53,6 +53,15 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-286-03 | Stack Wizard Gap Scale and Layout Guidance | Medium | Medium | Improve Wizard layout controls, all-breakpoint gap copy, and gap scale context after TASK-256 token cleanup |
 | TASK-286-04 | Stack Variant Miniatures and Empty Slot Guidance | Low | Medium | Add variant miniatures and admin-safe empty-slot guidance without leaking public admin CTAs |
 | TASK-286-05 | Stack Report Docs Changelog and Closure | Medium | Medium | Refresh Stack report/docs/changelog/board and final validation evidence |
+| TASK-279 | Product Compare Widget Playwright Product Followups | High | Very Large | Product Compare-only follow-up family for `REPORT_PRODUCT_COMPARE_WIDGET.md`, excluding TASK-256 shared-contract scope |
+| TASK-279-01 | Product Compare Source Selection and Limit Contract | High | Large | Add deterministic selected-product comparison and align Product Compare limit max across schema, editor, normalizer, and runtime query |
+| TASK-279-02 | Product Compare Attribute Rows Labels and Formatting | High | Large | Add schema-owned attribute rows, all labels, row visibility, locale/stock/quantity formatting, and legacy-compatible row normalization |
+| TASK-279-03 | Product Compare Column Media Links and CTAs | High | Large | Add product header images, safe product title links, and bounded per-product CTA behavior without public-write scope |
+| TASK-279-04 | Product Compare Featured Column and Responsive Layouts | Medium | Large | Add featured product highlighting, responsive layout variants, and sticky compare context after base source/row/media contracts land |
+| TASK-279-05 | Product Compare Section Header and Table Accessibility | High | Large | Add section title/description, table caption/scopes, named section, alert semantics, empty-state semantics, and keyboard-scroll focus |
+| TASK-279-06 | Product Compare Admin Preview Resolve and Diagnostics | High | Very Large | Make runtime diagnostics read-only and add truthful resolved-count/refresh behavior through backend-owned preview resolution |
+| TASK-279-07 | Product Compare Editor IA and Source Guidance | Medium | Medium | Apply shared editor-mode policy locally, move advanced surfaces out of Wizard, and add dense-limit/source filter guidance |
+| TASK-279-08 | Product Compare Report Docs Changelog and Closure | Medium | Medium | Refresh Product Compare report/docs/changelog/board and final validation evidence |
 | TASK-278 | Pricing Plans Widget Playwright Product Followups | High | Very Large | Pricing Plans-only follow-up family for `REPORT_PRICING_PLANS_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-278-01 | Pricing Plans Card Visual Hierarchy and CTA Styles | High | Large | Add plan description, plan-level surface, badge tone, highlighted banner, and CTA style controls after TASK-256 shared safety |
 | TASK-278-02 | Pricing Plans Content Wizard and Destructive Edit UX | High | Large | Expand Wizard content authoring, Advanced reset copy, highlight indicators, disabled billing label UX, remove confirmation/undo, and feature autofocus |
