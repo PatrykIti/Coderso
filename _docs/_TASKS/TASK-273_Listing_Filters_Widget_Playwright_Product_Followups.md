@@ -83,9 +83,9 @@ TASK-256 already owns them as shared widget-contract drift or global policy.
   TASK-273-05 must carry current page, page size, total items, and total pages
   through that path before the widget renders pagination UI.
 - New runtime-script coverage must live in
-  `tests/vitest/widgets/listingRuntimeScript.test.ts` and cover Listing
-  Filters plus Search Box listing-mode interactions whenever shared script
-  behavior changes.
+  a new `tests/vitest/widgets/listingRuntimeScript.test.ts` suite and cover
+  Listing Filters plus Search Box listing-mode interactions whenever shared
+  script behavior changes.
 
 ## Sub-Tasks
 
@@ -168,9 +168,9 @@ Implementation leaves:
 - `bun test tests/unit/widgets/registry.test.ts` if variant registration or
   widget registry wiring changes.
 - `bun run test:vitest -- tests/vitest/widgets/listingRuntimeScript.test.ts`
-  when `getListingRuntimeClientScript` URL/query/reset/loading/error behavior
-  changes; include Search Box listing-mode no-regression cases because the
-  script is shared.
+  after creating that new suite when `getListingRuntimeClientScript`
+  URL/query/reset/loading/error behavior changes; include Search Box
+  listing-mode no-regression cases because the script is shared.
 - `bun run scan:security:strict`
 - `bun run precommit`
 

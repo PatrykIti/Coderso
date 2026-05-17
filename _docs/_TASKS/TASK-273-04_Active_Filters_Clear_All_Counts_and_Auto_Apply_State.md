@@ -121,8 +121,8 @@ No API routes are added.
 - `bun run test:vitest -- tests/vitest/widgets/listingFilters.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/listing-filters-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/listingRuntimeScript.test.ts`
-  for clear-all URL behavior, unrelated parameter preservation, and Search Box
-  listing-mode no-regression coverage.
+  after creating that new suite for clear-all URL behavior, unrelated parameter
+  preservation, and Search Box listing-mode no-regression coverage.
 - `bun test tests/unit/widgets/validator.test.ts` if behavior schema fields are
   added.
 - `bun --cwd core lint`

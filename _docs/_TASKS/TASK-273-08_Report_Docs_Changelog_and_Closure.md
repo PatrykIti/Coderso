@@ -100,6 +100,7 @@ This closure leaf does not add API routes.
 - `bun --cwd core lint:types`
 - `bun run test:vitest -- tests/vitest/widgets/listingFilters.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/listingRuntimeScript.test.ts`
+  after the implementation leaves create the new shared runtime-script suite.
 - `bun run test:vitest -- tests/vitest/ui/listing-filters-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/listing-filters-query-parser.test.ts`
 - Any new runtime-script, validator, registry, renderer, or Playwright replay

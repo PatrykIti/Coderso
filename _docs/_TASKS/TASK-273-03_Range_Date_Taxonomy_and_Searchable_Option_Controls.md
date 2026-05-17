@@ -43,7 +43,7 @@ unbounded arbitrary widgets inside facets.
 | `core/admin/ui/widgets/editors/ListingFiltersEditors.tsx` | Add editor controls for numeric/date ranges, taxonomy hierarchy, and searchable option mode. |
 | `core/widgets/core/listingRuntimeScript.ts` | Bind Listing Filters-scoped option-search filtering and read multi-value/select/range/date controls through existing token sync without breaking current checkbox/radio/sort or Search Box listing-mode behavior. |
 | `tests/vitest/widgets/listingFilters.test.tsx` | Cover rendered range/date/taxonomy/searchable controls and legacy payload fallbacks. |
-| `tests/vitest/widgets/listingRuntimeScript.test.ts` | Cover local option-search filtering, range/date/searchable multi-select serialization, and Search Box listing-mode no-regression cases when shared script behavior changes. |
+| `tests/vitest/widgets/listingRuntimeScript.test.ts` | Create this new suite when first touching shared runtime-script behavior; cover local option-search filtering, range/date/searchable multi-select serialization, and Search Box listing-mode no-regression cases. |
 | `tests/vitest/ui/listing-filters-editor-wave.test.tsx` | Cover editor controls and validation for new control metadata. |
 | `tests/unit/widgets/validator.test.ts` | Cover schema validation when new persisted fields are added. |
 | `_docs/_WIDGETS/LISTING_FILTERS.md` | Document the new control modes and bounds. |

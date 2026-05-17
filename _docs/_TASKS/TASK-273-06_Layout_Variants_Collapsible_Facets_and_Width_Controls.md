@@ -119,8 +119,9 @@ No API routes are added.
 - `bun test tests/unit/widgets/validator.test.ts`
 - `bun test tests/unit/widgets/registry.test.ts` when variant registration changes.
 - `bun run test:vitest -- tests/vitest/widgets/listingRuntimeScript.test.ts`
-  when drawer/collapsible JS is introduced; include Search Box listing-mode
-  no-regression coverage if shared script behavior changes.
+  after creating that new suite when drawer/collapsible JS is introduced;
+  include Search Box listing-mode no-regression coverage if shared script
+  behavior changes.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 

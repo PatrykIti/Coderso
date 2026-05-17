@@ -53,7 +53,7 @@ header.
 | `core/widgets/core/listingRuntimeScript.ts` | Add page-reset rules, pagination binding, busy state, stale-response guard, and inline error rendering; scope Listing Filters-only behavior to local markers or prove Search Box no-regression. |
 | `core/services/search/filterContract.ts` | Reuse `listingRuntimeTokens.page`; add helpers only if needed for consistent page token names. |
 | `tests/vitest/widgets/listingFilters.test.tsx` | Cover pagination markup and runtime markers. |
-| `tests/vitest/widgets/listingRuntimeScript.test.ts` | Cover page reset, pagination clicks, busy/error state, stale response guard, unrelated-param preservation, and Search Box listing-mode no-regression cases. |
+| `tests/vitest/widgets/listingRuntimeScript.test.ts` | Create this new suite when first touching shared runtime-script behavior; cover page reset, pagination clicks, busy/error state, stale response guard, unrelated-param preservation, and Search Box listing-mode no-regression cases. |
 | `tests/vitest/search/filterEngine.test.ts` | Cover `__page` parsing, clamping, and offset application in the filter engine lane. |
 | `tests/vitest/search/listingRuntimeService.test.ts` | Cover pagination metadata returned with runtime totals and page/page-size inputs. |
 | `tests/vitest/ui/listing-filters-query-parser.test.ts` | Touch only if admin query-string extraction changes; it is not the runtime page-token owner. |
