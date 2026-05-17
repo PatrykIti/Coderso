@@ -43,7 +43,7 @@ landed.
 | `_docs/WIDGET_PACK_MATRIX.md` | Update only if pack readiness/completeness changed. |
 | `_docs/_TASKS/TASK-283*.md` | Mark completed leaves and umbrella `Done` with dates, or record explicit deferrals. |
 | `_docs/_TASKS/README.md` | Move completed TASK-283 rows from To Do to Done and update statistics. |
-| `_docs/_CHANGELOG/{N}-2026-05-17-task-283-section-widget-followups.md` | Add final user-facing changelog entry. |
+| `_docs/_CHANGELOG/{N}-{completion-date}-task-283-section-widget-followups.md` | Add final user-facing changelog entry using the actual completion date. |
 | `_docs/_CHANGELOG/README.md` | Add the new changelog index row with the next unused number. |
 
 ## Implementation Pseudocode

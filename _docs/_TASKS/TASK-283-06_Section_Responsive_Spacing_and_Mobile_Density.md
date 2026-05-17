@@ -38,8 +38,8 @@ Out of scope:
 
 ## Source Findings
 
-- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:66` - W6 responsive padding missing.
-- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:299-307` - current mobile test shows
+- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:70` - W6 responsive padding missing.
+- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:292-300` - current mobile test shows
   fixed `px-6` behavior.
 
 ## Sub-Tasks
@@ -121,6 +121,8 @@ No API routes are added.
 - `bun test tests/unit/widgets/validator.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso`
+- `bun run scan:security:strict`
 - `bun run precommit`
 
 ## Documentation Updates Required

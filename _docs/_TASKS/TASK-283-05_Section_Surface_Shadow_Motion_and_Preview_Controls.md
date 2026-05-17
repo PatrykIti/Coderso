@@ -40,21 +40,23 @@ Out of scope:
 
 ## Source Findings
 
-- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:61` - W2 shadows missing.
-- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:62` - W3 animation/scroll effects
+- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:66,170,281,319,359` - configurable
+  shadow controls are missing beyond the current `contained` hardcoded
+  `shadow-sm` output.
+- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:67` - W3 animation/scroll effects
   missing.
-- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:242` - U2 numeric-only angle and
+- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:92,141,146,355` - U2 numeric-only angle and
   opacity controls.
-- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:245` - U5 gradient/overlay preview
+- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:95` - U5 gradient/overlay preview
   missing.
 
 ## Sub-Tasks
 
 - [ ] Extend `SectionData.style` with bounded shadow and motion/effect tokens.
 - [ ] Add resolver helpers that default to current output for legacy payloads.
-- [ ] Render shadows through class maps and motion through safe class/data
-  markers, avoiding runtime scripts unless a reusable safe animation owner
-  exists.
+- [ ] Render shadows through class maps and motion through bounded classes or
+  inert data markers owned by `section.tsx`; defer scroll-observer effects to
+  TASK-283-08 unless an existing safe runtime owner is identified first.
 - [ ] Replace or augment number inputs for gradient angle and overlay opacity
   with slider/stepper controls in the owning editor section.
 - [ ] Add a preview swatch that derives from normalized Section data rather than
@@ -87,6 +89,12 @@ const sectionShadowClassMap: Record<SectionShadow, string> = {
   lg: "shadow-lg",
   xl: "shadow-xl",
 };
+
+const sectionMotionClassMap: Record<SectionMotion, string> = {
+  none: "",
+  fade: "motion-safe:animate-in motion-safe:fade-in",
+  "slide-up": "motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2",
+};
 ```
 
 Preview data:
@@ -106,8 +114,10 @@ function resolveSectionSurfacePreview(style: SectionData["style"]): CSSPropertie
 Error handling:
 
 - Unknown shadow/motion values normalize to current defaults.
-- Motion must become `none` or no-op when reduced-motion support cannot be
-  proven in tests.
+- Motion must use `motion-safe:*` classes or become `none` when reduced-motion
+  support cannot be proven in tests.
+- Scroll-triggered effects are deferred unless this leaf identifies and tests an
+  existing shared observer/runtime owner.
 - Preview controls must not persist preview-only keys.
 
 ## Security Contract
@@ -130,6 +140,8 @@ No API routes are added.
 - `bun test tests/unit/widgets/validator.test.ts` when schema/defaults change.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso`
+- `bun run scan:security:strict`
 - `bun run precommit`
 
 ## Documentation Updates Required

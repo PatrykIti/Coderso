@@ -5,7 +5,7 @@
 **Priority:** Medium
 **Category:** Widgets + Section + Admin UI + Workflow
 **Estimated Effort:** Large
-**Dependencies:** TASK-256-05-01, TASK-283, TASK-283-01, TASK-283-03
+**Dependencies:** TASK-256-02, TASK-256-05-01, TASK-283, TASK-283-01, TASK-283-03
 **Status:** To Do
 
 ---
@@ -43,14 +43,14 @@ Out of scope:
 
 ## Source Findings
 
-- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:60` - W1 presets missing.
-- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:243` - U3 max-width labels are
+- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:65` - W1 presets missing.
+- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:93,354` - U3 max-width labels are
   technical Tailwind names.
-- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:244` - U4 gradient/background
+- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:94` - U4 gradient/background
   override guidance missing.
-- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:246` - U6 Wizard and Visual variant
+- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:96,119-130` - U6 Wizard and Visual variant
   UI mismatch.
-- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:208-216,373` - bleed behavior is
+- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:171-174,334,350,378` - bleed behavior is
   confusing, but baseline truthfulness stays in TASK-256.
 
 ## Sub-Tasks
@@ -137,6 +137,8 @@ No API routes are added.
   helpers move into the widget owner.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso`
+- `bun run scan:security:strict`
 - `bun run precommit`
 
 ## Documentation Updates Required

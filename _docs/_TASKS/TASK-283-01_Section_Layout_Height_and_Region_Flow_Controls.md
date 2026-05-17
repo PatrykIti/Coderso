@@ -45,12 +45,10 @@ Out of scope:
 
 ## Source Findings
 
-- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:46` - C1 min-height/fullscreen gap.
-- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:50,276-279` - C5 regions always
+- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:55` - C1 min-height/fullscreen gap.
+- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:59,200,212,264,290` - C5 regions always
   render as `flex-col`.
-- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:67-68` - W7/W8 hardcoded gaps.
-- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:283-284` - DOM confirmation of
-  hardcoded region flow.
+- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:71-72` - W7/W8 hardcoded gaps.
 
 ## Sub-Tasks
 
@@ -145,9 +143,9 @@ No API routes are added.
 - `bun test tests/unit/widgets/validator.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- If this leaf is committed or moved to `Done` separately from TASK-283-08,
-  also run root `bun run lint`, the targeted Vitest/Bun lane above,
-  `bun run scan:security:strict`, and `bun run precommit`.
+- `bun run gates:coderso`
+- `bun run scan:security:strict`
+- `bun run precommit`
 
 ## Documentation Updates Required
 

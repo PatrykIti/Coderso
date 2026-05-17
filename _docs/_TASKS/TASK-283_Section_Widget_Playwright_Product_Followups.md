@@ -49,16 +49,16 @@ baseline repair.
 
 | Report finding | Evidence | Owner task | Reason |
 |---|---|---|---|
-| Public `Empty region.` placeholder leakage | `REPORT_SECTION_WIDGET.md:270-298,315-348` | TASK-256-03, TASK-256-05-01 | Shared editor-vs-public placeholder contract. |
-| Invalid `anchorId` accepted and emitted | `REPORT_SECTION_WIDGET.md:74,138-139,283-284` | TASK-256-05-01 | Baseline safe DOM ID validation. |
-| Gradient start/end lack Clear buttons | `REPORT_SECTION_WIDGET.md:73,141-142,371-372` | TASK-256-02, TASK-256-05-01 | Shared clear-control and token behavior. |
-| CSS variable color picker overwrites token values | `REPORT_SECTION_WIDGET.md:81,148-149` | TASK-256-02, TASK-256-05-01 | Shared token-aware picker contract. |
-| `resolveSectionBorderWidth` and `resolveSectionRadius` fallback drift | `REPORT_SECTION_WIDGET.md:77-80,365-366` | TASK-256-05-01 | Structural normalizer/default repair for current fields. |
-| Duplicate `gradientAngle` and `overlayOpacity` in Advanced | `REPORT_SECTION_WIDGET.md:80,173-174,364` | TASK-256-05-01 | Current editor ownership cleanup, not new product expansion. |
-| `content` and `wide` render identical CSS | `REPORT_SECTION_WIDGET.md:79,136-137,367` | TASK-256-05-01 | Existing control truthfulness must be repaired before new width presets. |
-| Bleed variant copy/truthfulness baseline | `REPORT_SECTION_WIDGET.md:208-216,373` | TASK-256-05-01 | Existing variant promise must be made truthful before TASK-283 adds guided presets. |
-| Hardcoded heading hierarchy baseline | `REPORT_SECTION_WIDGET.md:55,276-279,368` | TASK-256-05-01 | Baseline semantic repair is already classified in the shared structural leaf. TASK-283 may add richer heading product controls after that baseline lands. |
-| Generic color/URL/text field validation | `REPORT_SECTION_WIDGET.md:247` | TASK-256-02, TASK-256-05-01 | Shared validation/control behavior when it applies across widgets. |
+| Public `Empty region.` placeholder leakage and U8 public empty-region behavior | `REPORT_SECTION_WIDGET.md:43,98,288,300,325,332,384` | TASK-256-03, TASK-256-05-01 | Shared editor-vs-public placeholder contract. If product later wants a user-facing empty-region message, that must be a separate Section product task after the placeholder leak is fixed. |
+| Invalid `anchorId` accepted and emitted | `REPORT_SECTION_WIDGET.md:74,133,213,379` | TASK-256-05-01 | Baseline safe DOM ID validation. |
+| Gradient start/end lack Clear buttons | `REPORT_SECTION_WIDGET.md:73,140,348,380` | TASK-256-02, TASK-256-05-01 | Shared clear-control and token behavior. |
+| CSS variable color picker overwrites token values | `REPORT_SECTION_WIDGET.md:85,142` | TASK-256-02, TASK-256-05-01 | Shared token-aware picker contract. |
+| `resolveSectionBorderWidth` and `resolveSectionRadius` fallback drift | `REPORT_SECTION_WIDGET.md:81-82,343` | TASK-256-05-01 | Structural normalizer/default repair for current fields. |
+| Duplicate `gradientAngle` and `overlayOpacity` in Advanced | `REPORT_SECTION_WIDGET.md:84,157-158,342,381` | TASK-256-05-01 | Current editor ownership cleanup, not new product expansion. |
+| `content` and `wide` render identical CSS | `REPORT_SECTION_WIDGET.md:83,135,214,347,385` | TASK-256-05-01 | Existing control truthfulness must be repaired before new width presets. |
+| Bleed variant copy/truthfulness baseline | `REPORT_SECTION_WIDGET.md:171-174,334,350,378` | TASK-256-05-01 | Existing variant promise must be made truthful before TASK-283 adds guided presets. |
+| Hardcoded heading hierarchy baseline | `REPORT_SECTION_WIDGET.md:58,197,211,289,346,382` | TASK-256-05-01 | Baseline semantic repair is already classified in the shared structural leaf. TASK-283 may add richer heading product controls after that baseline lands. |
+| Current color/text field format validation | `REPORT_SECTION_WIDGET.md:97` | TASK-256-02, TASK-256-05-01 | Shared color/token validation and current text-field validation belong with baseline control safety. |
 
 If a TASK-283 implementation leaf discovers that a desired Section feature
 requires a shared helper, generic editor control, or cross-widget runtime
@@ -74,6 +74,7 @@ this family.
 | W7 heading-to-regions gap | TASK-283-01 | Section layout spacing around owned heading/region wrapper. |
 | W8 region gap controls | TASK-283-01 | Section-owned gap tokens for repeated regions. |
 | C2 image/video background support | TASK-283-02 | Section-owned media background model using existing safe media patterns. |
+| Future background media source/URL validation from U7 | TASK-283-02 | Applies only if TASK-283-02 adds library or external media sources; current Section data has no URL field. |
 | W11 layer z-index controls | TASK-283-02 | Bounded overlay/content layering only for Section surface layers. |
 | C3 heading text color and size controls | TASK-283-03 | Product typography controls after TASK-256 resolves heading semantic baseline. |
 | W5 heading alignment | TASK-283-03 | Section heading layout/typography. |
@@ -98,6 +99,10 @@ this family.
 | Region add/remove min/max behavior | No TASK-283 task | The report confirms min 1, max 8, and disabled add state work. |
 | Raw payload snapshot | No TASK-283 task | The report confirms normalized JSON output works. |
 | Admin/global Layout and Visibility panels in Advanced | No TASK-283 task | They are global editor wrapper controls, not Section data fields. |
+| Expected admin/frontend theme variable differences | No TASK-283 task | `REPORT_SECTION_WIDGET.md:326-333` confirms CSS variables resolve differently in admin and public themes as expected; the picker overwrite issue remains TASK-256. |
+| Current URL validation part of U7 | No TASK-283 task until TASK-283-02 | Current `SectionData` has no URL field. TASK-283-02 must add media source validation if it introduces media URLs or asset references. |
+| Confirmed basic render, section/div switch, max-width, padding, border, overlay, gradient, and mobile no-overflow behavior | No TASK-283 task | The report marks these as working; keep existing tests unless a future TASK-283 leaf changes the related contract. |
+| Prior 401 session-limit note | No TASK-283 task | `REPORT_SECTION_WIDGET.md:227,389` records a Playwright environment/session-limit setup issue that was resolved by raising the active-session limit; the current Section widget session completed and no widget implementation task is required. |
 
 ## Sub-Tasks
 

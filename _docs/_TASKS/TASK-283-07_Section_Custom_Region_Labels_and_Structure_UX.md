@@ -27,7 +27,8 @@ In scope:
   regions;
 - normalized region metadata keyed by stable region instance ID;
 - editor UI that lets authors rename regions without changing slot IDs or
-  deleting child blocks;
+  deleting child blocks, coordinated across `BlockSettings`,
+  `VisualPanelSlotControls`, `BlockList`, and insert-slot option generation;
 - optional safe data markers for runtime diagnostics only when they do not leak
   admin-only copy to public users;
 - regression tests proving labels survive add/remove/reorder decisions.
@@ -42,11 +43,11 @@ Out of scope:
 
 ## Source Findings
 
-- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:63` - W4 custom region names
+- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:68` - W4 custom region names
   missing.
-- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:35-36` - current repeatable region
+- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:16,42` - current repeatable region
   slot model.
-- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:146-153` - add/remove min/max
+- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:147-149` - add/remove min/max
   behavior already works and must be preserved.
 
 ## Sub-Tasks
@@ -55,13 +56,25 @@ Out of scope:
   stable region instance IDs to author labels without replacing the slot map.
 - [ ] Add normalizer logic that keeps metadata for existing slots and ignores or
   prunes orphan labels only through an explicit safe rule.
-- [ ] Add editor controls for region labels near the builder-owned repeatable
-  slot controls or in a Section-owned structure panel, following existing
-  `WidgetEditorContext.slotTargets` patterns if available.
+- [ ] Add editor controls for region labels by extending the current
+  `BlockSettings` -> `VisualPanelSlotControls` projection, or by passing an
+  explicit Section-owned slot metadata callback; do not assume
+  `WidgetEditorContext` already exposes slot targets.
+- [ ] Use `section.tsx` as the persisted metadata owner and add a small pure
+  Section slot-label resolver that shared builder owners can call without
+  learning Section internals.
+- [ ] Use `BlockSettings.tsx` as the edit projection owner: resolve slot
+  targets, derive editor fallback labels, pass editable label values into
+  `VisualPanelSlotControls.items`, and write changes back to
+  `block.data.regions` without recreating `block.slots`.
+- [ ] Thread the same derived labels through `BlockList.tsx` and insert-slot
+  options so canvas slot labels, empty-slot add buttons, and the
+  `WidgetInsertDialog` target selector do not keep showing stale generic
+  `Region N` labels after a Section region is renamed.
 - [ ] Render labels only in admin/editor affordances unless a user-facing region
   caption field is explicitly added in a future leaf.
-- [ ] Add tests for label normalization, add/remove behavior, and no public
-  admin-copy leakage.
+- [ ] Add tests for label normalization, add/remove behavior, builder slot-label
+  projection, VisualPanel rename controls, and no public admin-copy leakage.
 
 ## Files to Change
 
@@ -69,9 +82,18 @@ Out of scope:
 |---|---|
 | `core/widgets/core/section.tsx` | Extend schema/types/defaults/normalizer with region metadata and safe render markers if needed. |
 | `core/admin/ui/widgets/editors/SectionEditors.tsx` | Add region label controls or integrate with existing slot target context. |
-| `core/admin/ui/pages/builder/BlockSettings.tsx` | Touch only if Section labels must flow through shared repeatable slot target metadata. |
+| `core/admin/ui/pages/builder/BlockSettings.tsx` | Current owner of `resolveWidgetSlotTargets(...)` for block slot targets; extend only if Section labels must flow through shared repeatable slot metadata. |
+| `core/admin/ui/pages/builder/VisualPanel.tsx` | Current `VisualPanelSlotControls` owner; extend only if the shared slot controls need label edit callbacks. |
+| `core/admin/ui/pages/builder/BlockList.tsx` | Use the same Section slot-label resolver when rendering nested slot labels and empty-slot insert buttons. |
+| `core/admin/ui/widgets/widgetInsertUtils.ts` | Use the same Section slot-label resolver when building target slot options for a selected Section block. |
+| `core/admin/ui/widgets/WidgetInsertDialog.tsx` | Keep target-slot copy truthful through `buildSlotOptions`; touch only if the existing option contract needs additive metadata. |
 | `tests/vitest/widgets/section.test.tsx` | Add normalization/render assertions for custom labels and public leakage. |
 | `tests/vitest/ui/section-editor-wave.test.tsx` | Add editor coverage for label editing and metadata preservation. |
+| `tests/vitest/pageBuilder/blockSettings-wave.test.tsx` | Add coverage that BlockSettings derives editable Section slot labels from `block.data.regions` and writes changes without replacing slots. |
+| `tests/vitest/pageBuilder/visualPanel.test.tsx` | Add coverage for the rendered rename control/callback contract in `VisualPanelSlotControls.items`. |
+| `tests/vitest/pageBuilder/blockList.test.tsx` | Add coverage that nested Section slot labels and empty-slot add copy use custom region labels. |
+| `tests/vitest/ui/widgetInsertUtils.test.ts` | Add coverage that `buildSlotOptions` returns custom Section region labels without changing slot ids/counts/disabled behavior. |
+| `tests/vitest/ui/page-editor-slot-insert-flow.test.tsx` | Run or update if `WidgetInsertDialog` target-slot rendering changes beyond the pure option helper. |
 
 ## Implementation Pseudocode
 
@@ -92,17 +114,43 @@ Normalizer flow:
 
 ```ts
 function normalizeSectionRegions(
-  regions: unknown,
-  slotTargets: Array<{ slotId: string }>
+  regions: unknown
 ): SectionRegionMeta[] {
-  const existingById = new Map(parseRegionMeta(regions).map((region) => [region.id, region]));
-  return slotTargets.map((target, index) => {
-    const id = parseRepeatableSlotId(target.slotId)?.instanceId ?? String(index + 1);
-    return {
-      id,
-      label: normalizePlainText(existingById.get(id)?.label),
-    };
-  });
+  return parseRegionMeta(regions).map((region) => ({
+    id: normalizeRegionInstanceId(region.id),
+    label: normalizePlainText(region.label),
+  })).filter((region) => region.id.length > 0);
+}
+
+function resolveSectionSlotLabel(
+  slot: ResolvedWidgetSlot,
+  regions: SectionRegionMeta[]
+): string {
+  const id = slot.instanceId ?? parseRepeatableSlotId(slot.slotId)?.instanceId ?? "";
+  const label = regions.find((region) => region.id === id)?.label?.trim();
+  return label || slot.label;
+}
+
+function resolveSectionSlotLabelsForBlock(block: BlockLike): Map<string, string> {
+  const regions = normalizeSectionRegions(block.data?.regions);
+  return new Map(
+    resolveWidgetSlotTargets([sectionRegionSlot], getSlotMap(block)).map((slot) => [
+      slot.slotId,
+      resolveSectionSlotLabel(slot, regions),
+    ])
+  );
+}
+
+function updateSectionRegionLabel(block: Block, slotId: string, label: string): Block {
+  const parsed = parseRepeatableSlotId(slotId);
+  if (!parsed) return block;
+  return {
+    ...block,
+    data: {
+      ...block.data,
+      regions: upsertRegionMeta(block.data.regions, parsed.instanceId, label),
+    },
+  };
 }
 ```
 
@@ -113,6 +161,14 @@ Error handling:
 - Unknown region IDs in metadata are ignored in render and preserved only if the
   existing editor pattern preserves legacy slot metadata.
 - Region label edits must not recreate slot IDs or reorder child content.
+- If shared slot controls are extended, keep the change additive so other
+  widget editors that use `WidgetEditorContext` continue to import without slot
+  metadata requirements.
+- If `BlockList` or insert-slot helpers are updated, preserve existing slot
+  IDs, item counts, disabled reasons, drag/drop payloads, and allowed-type
+  checks; only the display label should change.
+- Removing a region slot should not delete unrelated metadata immediately unless
+  the normalizer or projection has a tested orphan-pruning rule.
 
 ## Security Contract
 
@@ -129,8 +185,17 @@ No API routes are added.
 
 - `bun run test:vitest -- tests/vitest/widgets/section.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/section-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/pageBuilder/blockSettings-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/pageBuilder/visualPanel.test.tsx`
+- `bun run test:vitest -- tests/vitest/pageBuilder/blockList.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/widgetInsertUtils.test.ts`
+- `bun run test:vitest -- tests/vitest/ui/page-editor-slot-insert-flow.test.tsx` if
+  `WidgetInsertDialog` rendering changes beyond the pure option helper.
+- `bun test tests/unit/widgets/validator.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso`
+- `bun run scan:security:strict`
 - `bun run precommit`
 
 ## Documentation Updates Required

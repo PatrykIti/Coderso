@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Section + Typography + Admin UI + Runtime Render
 **Estimated Effort:** Large
-**Dependencies:** TASK-256-05-01, TASK-283
+**Dependencies:** TASK-256-02, TASK-256-05-01, TASK-283
 **Status:** To Do
 
 ---
@@ -29,8 +29,8 @@ In scope:
   TASK-256 token/color-picker contract is available;
 - Wizard `Label` input so the quick setup can produce the same heading model as
   Visual;
-- optional product-level heading-level selection only after TASK-256 lands or
-  explicitly delegates the baseline semantic repair to this leaf.
+- product-level heading-level selection only if TASK-256 explicitly delegates
+  the hardcoded `<h3>` semantic repair to this leaf in a prior committed update.
 
 Out of scope:
 
@@ -41,11 +41,11 @@ Out of scope:
 
 ## Source Findings
 
-- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:48,276-279,368` - C3 and C4
+- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:57-58,197,211,289,346,382` - C3 and C4
   heading rendering observations.
-- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:65` - W5 heading alignment missing.
-- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:241` - U1 Wizard lacks label field.
-- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:230-239` - admin/frontend heading
+- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:69` - W5 heading alignment missing.
+- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:91,123,349` - U1 Wizard lacks label field.
+- `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:195-198,260-262,310-317` - admin/frontend heading
   parity and current hardcoded classes.
 
 ## Sub-Tasks
@@ -53,7 +53,9 @@ Out of scope:
 - [ ] Extend `SectionData.heading` with bounded typography/alignment fields
   without changing persisted label/title/description strings.
 - [ ] Add resolver helpers and class maps for heading alignment, label size,
-  title size, description size, and optional heading level if delegated.
+  title size, and description size.
+- [ ] Do not add heading-level fields in this leaf unless TASK-256-05-01 is
+  updated first to delegate C4 with schema, render, and test ownership.
 - [ ] Add safe inline color output only through existing clearable/token
   helpers after TASK-256 establishes the final color-field behavior.
 - [ ] Add a Wizard `Label` control and keep Wizard/Visual updates atomic through
@@ -67,7 +69,7 @@ Out of scope:
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/section.tsx` | Extend heading schema/types/defaults/normalizer and render bounded alignment, typography, and optional level classes. |
+| `core/widgets/core/section.tsx` | Extend heading schema/types/defaults/normalizer and render bounded alignment and typography classes. Do not add heading-level fields/classes unless TASK-256-05-01 delegates C4 in a committed update. |
 | `core/admin/ui/widgets/editors/SectionEditors.tsx` | Add Wizard label and Visual typography/alignment controls without duplicating shared color-picker fixes. |
 | `tests/vitest/widgets/section.test.tsx` | Add render/normalization coverage for heading typography/alignment and legacy defaults. |
 | `tests/vitest/ui/section-editor-wave.test.tsx` | Add Wizard label and Visual heading-control interaction coverage. |
@@ -90,6 +92,7 @@ type SectionHeadingData = {
   labelColor?: string;
   titleColor?: string;
   descriptionColor?: string;
+  // headingLevel intentionally stays out of this leaf unless TASK-256 delegates C4.
 };
 ```
 
@@ -114,9 +117,9 @@ Renderer flow:
 
 ```tsx
 <header className={joinClasses("space-y-2", headingAlignClassMap[heading.align])}>
-  <HeadingElement className={joinClasses("font-semibold", titleSizeClassMap[heading.titleSize])}>
+  <h3 className={joinClasses("font-semibold", titleSizeClassMap[heading.titleSize])}>
     {heading.title}
-  </HeadingElement>
+  </h3>
 </header>
 ```
 
@@ -125,8 +128,9 @@ Error handling:
 - Unknown typography/alignment tokens normalize to the current left-aligned
   `text-2xl` behavior.
 - Empty color values are omitted instead of serialized as unsafe sentinels.
-- Heading-level work must not create skipped levels without either TASK-256
-  baseline coverage or explicit documentation in this leaf.
+- Heading-level work is blocked unless TASK-256-05-01 is first changed to
+  delegate C4. If delegated, add explicit `headingLevel` schema, renderer, and
+  accessibility tests before implementation.
 
 ## Security Contract
 
@@ -146,14 +150,16 @@ No API routes are added.
 - `bun test tests/unit/widgets/validator.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso`
+- `bun run scan:security:strict`
 - `bun run precommit`
 
 ## Documentation Updates Required
 
 - Update `_docs/_WIDGETS/SECTION.md` with heading typography/alignment fields.
 - Update `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md` rows C3, W5, and U1 after
-  validation. Reference TASK-256 for baseline heading-level repair unless that
-  work is explicitly delegated here.
+  validation. Reference TASK-256 for C4 baseline heading-level repair unless
+  that work is explicitly delegated here before implementation.
 
 ## Acceptance Criteria
 
