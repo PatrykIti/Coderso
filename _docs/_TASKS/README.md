@@ -28,8 +28,8 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 292 tasks
-- **In Progress:** 4 tasks
+- **To Do:** 294 tasks
+- **In Progress:** 5 tasks
 - **Done:** 1566 tasks
 
 ---
@@ -38,6 +38,9 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-298 | Booking Admin Availability Row Draft and Save UX | Medium | Medium | Own the Booking admin Availability-tab `Add row` versus `Save schedules` flow outside TASK-259 widget scope |
+| TASK-297 | Shared Widget Color Picker Residual Controls | Medium | Large | Create a concrete shared owner for late report rows where color-like widget fields still expose raw text inputs |
+| TASK-296 | Shared Interactive Widget Accessibility Residuals | High | Large | Create a concrete shared owner for late interactive widget ARIA/report rows that were classified but never given a physical task |
 | TASK-295 | Appointment Form Custom Field Product Surface | Medium | Large | Widget-local custom field authoring/render/payload follow-up after the bounded booking metadata boundary lands |
 | TASK-294 | Booking Flow Editor Context Surface Plumbing | High | Large | Shared `WidgetEditorContext.bookingFlows` plumbing for page/template/custom-screen/detail-template booking surfaces without persisting preview-only data |
 | TASK-293 | Shared Repeatable Slot Metadata Sync and Instance Reorder | High | Large | Builder-owned shared follow-up for repeatable-slot add/reorder operations that must keep widget metadata aligned with slot instances |
@@ -306,7 +309,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-260-03 | Compare Timeline Axis Steps and Content Controls | High | Large | Add Visual step buttons, step descriptions, bounded range decisions, optional icons, and safe step/segment links |
 | TASK-260-04 | Compare Timeline Layout Typography and Visual Polish | Medium | Large | Add Compare Timeline-owned heading, width, padding, typography, motion, order, background, marker, preview, and spacing help |
 | TASK-260-05 | Compare Timeline Report Docs and Closure | Medium | Medium | Refresh report/docs/changelog/board and final validation for the TASK-260 family |
-| TASK-259 | Booking Calendar Widget Playwright Product Followups | High | Very Large | Widget-specific follow-up family for `REPORT_BOOKING_CALENDAR_WIDGET.md`, excluding TASK-256 shared-contract and TASK-258 Appointment Form scope |
 | TASK-259-01 | Booking Calendar Admin Preview Runtime Catalog Parity | High | Large | Hydrate admin canvas/editor preview with booking services/resources without persisting preview-only tokens |
 | TASK-259-02 | Booking Calendar Date Defaults, Range, and Past-Date Safety | High | Large | Add default/min/max date config and enforce public slots past-date policy |
 | TASK-259-03 | Booking Calendar Service Context and Timezone Copy | High | Large | Show price, duration, description, timezone, and user-facing empty-state copy |
@@ -329,6 +331,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-259 | Booking Calendar Widget Playwright Product Followups | High | Very Large | In progress: shared/admin drift is extracted to TASK-296/TASK-297/TASK-298 and the family is now moving into widget implementation/validation |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |

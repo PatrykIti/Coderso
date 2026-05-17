@@ -5,8 +5,8 @@
 **Priority:** High
 **Category:** Widgets + Booking + Admin UI + Runtime + Public Read API + Playwright QA
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-252-07-10, TASK-256-07
-**Status:** To Do
+**Dependencies:** TASK-252-07-10
+**Status:** In Progress (2026-05-17)
 
 ---
 
@@ -71,22 +71,21 @@ Out of scope for TASK-259:
   TASK-256-07/TASK-256-08 names a concrete Booking Calendar owner path and test
   lane.
 - Generic `Clear`, `none`, token picker, and shared design-token/color-picker
-  controls, owned by TASK-256-02 only when TASK-256-07/TASK-256-08 names a
-  concrete Booking Calendar owner path and test lane.
+  controls that still need a late physical owner. Booking Calendar's remaining
+  generic frame picker row is split to TASK-297 instead of being patched inside
+  TASK-259.
 - Generic slot/nested-content placeholder gating, owned by TASK-256-03 only when
   TASK-256-07/TASK-256-08 names a concrete Booking Calendar owner path and test
   lane.
-- Generic duplicate-ID/scoped-runtime/ARIA repairs for interactive widgets,
-  owned by TASK-256-04 only after TASK-256-07/TASK-256-08 names a physical
-  Booking Calendar owner path and test lane. TASK-259 may add accessible labels
+- Generic duplicate-ID/scoped-runtime/ARIA repairs for interactive widgets that
+  now need a new physical shared owner outside TASK-256 closure. Booking
+  Calendar's remaining ARIA row is split to TASK-296. TASK-259 may add labels
   for new Booking Calendar product controls, but it must not claim the report's
-  shared ARIA row fixed through a generic TASK-256 reference.
-- Generic frame color-picker controls, owned by TASK-256-02 only after
-  TASK-256-07/TASK-256-08 names a physical Booking Calendar owner path and test
-  lane.
+  shared ARIA row fixed through a stale TASK-256 reference.
+- Generic frame color-picker controls remain shared follow-up scope in TASK-297.
 - Booking Availability admin "Add row -> Save schedules" UX from report section
-  7.4. That is a Booking admin page workflow, not a widget task; create a
-  separate Booking Admin UX task if it remains actionable.
+  7.4. That is a Booking admin page workflow, not a widget task; it is now
+  split to TASK-298.
 - Appointment Form runtime submission, consent, field visibility, or public
   write behavior, owned by TASK-258.
 
@@ -100,10 +99,10 @@ Out of scope for TASK-259:
 | 3.5, 3.6, 3.17, 3.18, 5.2, recommendations 7, 8, 15: refresh/loading, skeleton, clear selection, AbortController | TASK-259-04 | Add calendar-owned loading/concurrency/selection UX in the runtime script and renderer markers. |
 | 3.1, 3.8, 7.2: visual date navigation, availability signals, and overlapping slot density | TASK-259-05 | Add visual calendar/date navigation, availability signals, and non-overlapping slot density mode. |
 | 3.7, 3.13, 3.16, recommendations 12, 14: layout variants, selected/hover styling, mobile controls | TASK-259-06 | Add Booking Calendar variants, mobile control layout, and selected-slot style tokens. |
-| 3.15, 4.4, 7.5, recommendation 9: default service/resource raw IDs and stale diagnostics | TASK-259-07 | Replace raw default IDs with catalog-aware pickers and make diagnostics truthful. |
-| 3.12, 5.6, recommendation 3: shared slot/status ARIA baseline | TASK-256-07/TASK-256-08 pending concrete physical owner | Excluded from TASK-259 implementation, but TASK-259-08 must record the exact TASK-256 physical owner ID before closure. Do not cite TASK-256-04 as fixed unless it names Booking Calendar owners/tests. |
-| 3.14, recommendation 11: generic color picker for frame background/border text fields | TASK-256-07/TASK-256-08 pending concrete physical owner | Excluded from TASK-259 implementation, but TASK-259-08 must record the exact TASK-256 physical owner ID before closure. Do not cite TASK-256-02 as fixed unless it names Booking Calendar owners/tests. |
-| 7.4: Booking admin availability "Add row -> Save" UX | Future Booking Admin UX task | Excluded because it is not the Booking Calendar widget surface. |
+| 3.15, 4.4, 7.5, recommendation 9: default service/resource raw IDs and stale diagnostics | TASK-259-01 plus TASK-259-07 | Keep preview-catalog truth in TASK-259-01 and editor picker/diagnostic UX in TASK-259-07. |
+| 3.12, 5.6, recommendation 3: shared slot/status ARIA baseline | TASK-296 | Excluded from TASK-259 implementation and routed to the new shared physical task. Do not cite TASK-256-04 as fixed for Booking Calendar. |
+| 3.14, recommendation 11: generic color picker for frame background/border text fields | TASK-297 | Excluded from TASK-259 implementation and routed to the new shared physical task. |
+| 7.4: Booking admin availability "Add row -> Save" UX | TASK-298 | Excluded because it is a Booking admin workflow, not the Booking Calendar widget surface. |
 
 ## Current Owner and Test Matrix
 
@@ -113,7 +112,7 @@ Out of scope for TASK-259:
 | Booking Calendar editors | `core/admin/ui/widgets/editors/BookingCalendarEditors.tsx` | `tests/vitest/ui/booking-calendar-editor-wave.test.tsx` | Add default pickers, date-range controls, diagnostics, and style/variant editor coverage. |
 | Admin canvas/editor preview hydration | `core/admin/ui/pages/PageEditor.tsx`, `core/admin/ui/pages/builder/BlockList.tsx`, `core/admin/ui/pages/builder/BlockSettings.tsx`, `core/widgets/renderers/widgetRenderer.tsx`, booking admin cached clients | Current page-editor shell tests cover surrounding editor state but mock `BlockList`; current booking client tests cover cached reads | Add `tests/vitest/ui/booking-calendar-admin-preview.test.tsx` as the required real `BlockList -> WidgetRenderer` hydration proof; update page-editor/editor coverage where the preview catalog is loaded or passed to selected editors. |
 | Calendar runtime script | `core/widgets/core/bookingRuntimeScript.ts` | Appointment/booking widget render tests indirectly cover markers | Add a focused happy-dom runtime script suite for Booking Calendar refresh, abort, clear selection, and slot state. |
-| Public slots endpoint and service | `core/server/publicBookingApi.ts`, `core/server/validation/bookingSchemas.ts`, `core/services/booking/bookingService.ts` | `tests/unit/server/publicBookingApi.test.ts`, `tests/unit/booking/bookingService.test.ts`, `tests/vitest/validation/bookingSchemas.test.ts` | Add past-date/range/non-overlap and any new availability query assertions in the Bun-owned DB/route lanes. |
+| Public slots endpoint and service | `core/server/publicBookingApi.ts`, `core/server/routes/bookingRoutes.ts`, `core/server/validation/bookingSchemas.ts`, `core/services/booking/bookingService.ts`, `core/services/booking/bookingSlotsToken.ts` | `tests/unit/server/publicBookingApi.test.ts`, `tests/unit/booking/bookingService.test.ts`, `tests/integration/routes/bookingRoutes.test.ts` | Add past-date/range/non-overlap assertions in the Bun-owned DB/route lanes and extend `tests/vitest/validation/bookingSchemas.test.ts` with `bookingPublicSlotQuerySchema` coverage before relying on it for public slot proof. |
 | Widget docs/report | `_docs/_WIDGETS/BOOKING_CALENDAR.md`, `_docs/PLAYWRIGHT/REPORT_BOOKING_CALENDAR_WIDGET.md` | docs diff checks | Update fixed/deferred evidence and final Booking Calendar contract. |
 
 ## Sub-Tasks
@@ -129,8 +128,9 @@ Out of scope for TASK-259:
 
 ## Implementation Order
 
-1. Complete TASK-256-07 classification before implementing TASK-259 fixes so
-   shared-contract rows do not drift into this family.
+1. Keep residual shared/admin rows out of widget scope by referencing the
+   physical follow-up tasks TASK-296, TASK-297, and TASK-298 before
+   implementing TASK-259 fixes.
 2. Complete TASK-259-01 first because preview catalog data is also useful for
    editor default pickers and diagnostics.
 3. Complete TASK-259-02 before calendar availability signals so date range
@@ -199,10 +199,13 @@ This umbrella may affect the existing public read endpoint
   - `bun test tests/unit/booking/bookingService.test.ts` when slot generation,
     date policy, or interval/non-overlap behavior changes.
   - `bun run test:vitest -- tests/vitest/validation/bookingSchemas.test.ts`
-    when route/admin schemas change.
-  - Appointment smoke only when the shared runtime script selection event or
-    state payload changes:
-    `bun run test:vitest -- tests/vitest/widgets/appointmentForm.test.tsx`.
+    when route/admin schemas change. Extend this suite with
+    `bookingPublicSlotQuerySchema` coverage before using it as public slot
+    proof.
+  - Extend
+    `tests/vitest/widgets/bookingRuntimeScript.bookingCalendar.test.ts` with
+    linked Appointment Form event-consumption assertions when the shared runtime
+    selection payload changes.
   - `bun run gates:coderso`, `bun run scan:security:strict`, and
     `bun run precommit` before final family closure.
 
@@ -230,10 +233,9 @@ DB-backed Bun tests require `DATABASE_URL`; load repo env first with
 
 ## Acceptance Criteria
 
-- Every Booking Calendar report finding is fixed, excluded to TASK-256,
-  excluded to TASK-258, excluded to a future Booking Admin UX task, or deferred
-  to a named future task with a reason. TASK-256 exclusions must name a concrete
-  physical TASK-256 owner ID from TASK-256-07/TASK-256-08, not only the umbrella.
+- Every Booking Calendar report finding is fixed, excluded to TASK-258,
+  excluded to TASK-296/TASK-297/TASK-298, or deferred to a named future task
+  with a reason.
 - Booking Calendar schema, defaults, normalizer, render, editor, runtime script,
   tests, and docs move together for every new product field.
 - Public slot reads reject or omit disallowed past/out-of-range dates through

@@ -26,6 +26,11 @@ related gaps:
 This leaf must keep public availability requests bounded and compatible with the
 date policy from TASK-259-02 and request cancellation from TASK-259-04.
 
+`TASK-252-07-10` documented earlier research around Booking Calendar
+`displayMode`, but the current live widget does not expose that field. This leaf
+supersedes that unlanded research for the current codebase: do not resurrect the
+old `displayMode` contract unless this task is explicitly revised.
+
 V1 product decision: ship a bounded `week` visual picker with `native` as the
 backward-compatible fallback. Defer a full month grid to a future task unless a
 later product decision explicitly expands this leaf. V1 availability markers
@@ -40,9 +45,8 @@ This leaf does not own:
 
 - public slot past-date safety, owned by TASK-259-02;
 - refresh loading/AbortController primitives, owned by TASK-259-04;
-- generic interactive widget ARIA baseline from TASK-256-04 unless
-  TASK-256-07/TASK-256-08 names a concrete Booking Calendar owner/test path;
-  this leaf may still add labels for new Booking Calendar calendar controls;
+- generic interactive widget ARIA baseline now routed to TASK-296; this leaf
+  may still add labels for new Booking Calendar calendar controls;
 - Booking admin Availability tab row editing UX from report section 7.4.
 
 ## Sub-Tasks
@@ -150,6 +154,8 @@ This leaf may extend public read behavior.
 - Create or extend
   `tests/vitest/widgets/bookingRuntimeScript.bookingCalendar.test.ts`, then run
   `bun run test:vitest -- tests/vitest/widgets/bookingRuntimeScript.bookingCalendar.test.ts`
+- `bun test tests/unit/widgets/validator.test.ts` when widget schema/defaults
+  change.
 - `bun test tests/unit/booking/bookingService.test.ts`
 - `bun test tests/unit/server/publicBookingApi.test.ts` if route/query behavior
   changes.

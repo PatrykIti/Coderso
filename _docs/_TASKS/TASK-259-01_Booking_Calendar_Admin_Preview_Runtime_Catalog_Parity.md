@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Booking + Admin UI + Runtime Preview
 **Estimated Effort:** Large
-**Dependencies:** TASK-256-07, TASK-259
+**Dependencies:** TASK-259
 **Status:** To Do
 
 ---
@@ -32,8 +32,7 @@ admin preview data is catalog-only.
 This leaf does not own:
 
 - generic widget preview resolver architecture outside Booking Calendar;
-- shared interactive ARIA fixes from TASK-256-04 only after
-  TASK-256-07/TASK-256-08 names a concrete Booking Calendar owner/test path;
+- shared interactive ARIA fixes now routed to TASK-296;
 - Appointment Form admin preview behavior from TASK-258;
 - Booking admin Availability "Add row" UX from report section 7.4.
 
@@ -70,6 +69,7 @@ before implementing this leaf.
 | `core/admin/ui/pages/PageEditor.tsx` | Load booking catalog preview data through existing admin clients/cache events and pass hydrated preview blocks plus editor context into the builder. |
 | `core/admin/ui/pages/builder/BlockList.tsx` | Accept hydrated preview blocks or a preview resolver result before real `WidgetRenderer` rendering; do not hide the path behind a mocked shell-only test. |
 | `core/admin/ui/pages/builder/BlockSettings.tsx` | Pass Booking Calendar preview catalog diagnostics to the selected editor via `WidgetEditorContext` or a narrow extension. |
+| `core/widgets/types.ts` | Extend `WidgetEditorContext` only if Booking Calendar preview catalog data needs a typed editor-context seam. |
 | `core/admin/services/bookingClient.ts` | Reuse existing cached list/service-resource reads; add no new write behavior. |
 | `core/admin/ui/widgets/editors/BookingCalendarEditors.tsx` | Keep diagnostics truthful when preview catalog data exists; do not store preview-only token data. |
 | `core/widgets/core/bookingCalendar.tsx` | Update render only if the empty-state behavior must distinguish no catalog from preview-loading/error. |

@@ -225,7 +225,10 @@ This leaf changes the existing public read endpoint `GET /api/booking/slots`.
   `tests/vitest/widgets/bookingRuntimeScript.bookingCalendar.test.ts`, then run
   `bun run test:vitest -- tests/vitest/widgets/bookingRuntimeScript.bookingCalendar.test.ts`
 - `bun run test:vitest -- tests/vitest/validation/bookingSchemas.test.ts` if
-  validation schemas change.
+  validation schemas change. Extend this suite with
+  `bookingPublicSlotQuerySchema` coverage before using it as public slot proof.
+- `bun test tests/unit/widgets/validator.test.ts` when widget schema/defaults
+  change.
 - `bun test tests/unit/server/publicBookingApi.test.ts`
 - `bun test tests/unit/booking/bookingService.test.ts`
 - Route registration and `mapBookingError` coverage in the current server route

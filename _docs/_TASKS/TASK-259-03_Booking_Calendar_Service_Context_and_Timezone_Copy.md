@@ -26,8 +26,7 @@ the empty state uses developer-facing copy.
 
 This leaf does not own:
 
-- generic public ARIA baseline from TASK-256-04 only after
-  TASK-256-07/TASK-256-08 names a concrete Booking Calendar owner/test path;
+- generic public ARIA baseline now routed to TASK-296;
 - visual calendar availability indicators from TASK-259-05;
 - Appointment Form slot summary, locale, redirect, or flow-pairing behavior
   from TASK-258. If the shared selection payload is extended for calendar-owned
@@ -64,7 +63,7 @@ This leaf does not own:
 | `tests/vitest/widgets/bookingCalendar.test.tsx` | Add render/normalizer coverage for price, duration, description, timezone, summary formatting fields, and empty state. |
 | `tests/vitest/ui/booking-calendar-editor-wave.test.tsx` | Add editor coverage for display toggles, summary locale/date controls, and empty-state copy. |
 | `tests/vitest/widgets/bookingRuntimeScript.bookingCalendar.test.ts` | Create or extend this happy-dom runtime script suite with selected summary locale/timezone update coverage if runtime script changes. |
-| `tests/vitest/widgets/appointmentForm.test.tsx` | Smoke only if the shared booking selection payload changes. |
+| `tests/vitest/widgets/bookingRuntimeScript.bookingCalendar.test.ts` | Extend linked Appointment Form runtime-event assertions if the shared booking selection payload changes. |
 
 ## Implementation Pseudocode
 
@@ -158,8 +157,10 @@ No API routes are added.
   `tests/vitest/widgets/bookingRuntimeScript.bookingCalendar.test.ts`, then run
   `bun run test:vitest -- tests/vitest/widgets/bookingRuntimeScript.bookingCalendar.test.ts`
   if runtime summary locale/timezone behavior changes.
-- `bun run test:vitest -- tests/vitest/widgets/appointmentForm.test.tsx` if the
-  shared selection payload changes.
+- Extend
+  `tests/vitest/widgets/bookingRuntimeScript.bookingCalendar.test.ts` with
+  linked Appointment Form event-consumption assertions if the shared selection
+  payload changes.
 - `bun test tests/unit/widgets/validator.test.ts` if schema/defaults change.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`

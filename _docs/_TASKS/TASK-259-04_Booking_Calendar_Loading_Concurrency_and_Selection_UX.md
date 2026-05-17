@@ -25,9 +25,8 @@ cleared.
 
 This leaf does not own:
 
-- generic ARIA baseline from TASK-256-04 unless TASK-256-07/TASK-256-08 names a
-  concrete Booking Calendar owner/test path; this leaf may still add accessible
-  labels for newly introduced Booking Calendar controls;
+- generic ARIA baseline now routed to TASK-296; this leaf may still add
+  accessible labels for newly introduced Booking Calendar controls;
 - visual calendar day availability and slot-count prefetching from TASK-259-05;
 - Appointment Form submit/reset behavior from TASK-258, except for the shared
   selection event staying backward compatible.
@@ -59,7 +58,7 @@ This leaf does not own:
 | `tests/vitest/widgets/bookingCalendar.test.tsx` | Add marker/render coverage for loading and clear-selection controls. |
 | `tests/vitest/widgets/bookingRuntimeScript.bookingCalendar.test.ts` | New runtime script DOM tests for refresh busy state, abort/stale response, selection preservation, and clear event payload. |
 | `tests/vitest/ui/booking-calendar-editor-wave.test.tsx` | Add editor coverage for new copy fields if added. |
-| `tests/vitest/widgets/appointmentForm.test.tsx` | Smoke only if null-selection event handling changes Appointment Form state. |
+| `tests/vitest/widgets/bookingRuntimeScript.bookingCalendar.test.ts` | Extend linked Appointment Form runtime-event assertions if null-selection handling changes the shared selection payload. |
 
 ## Implementation Pseudocode
 
@@ -125,8 +124,10 @@ No API routes are added.
   `bun run test:vitest -- tests/vitest/widgets/bookingRuntimeScript.bookingCalendar.test.ts`
 - `bun run test:vitest -- tests/vitest/ui/booking-calendar-editor-wave.test.tsx`
   if copy/schema fields change.
-- `bun run test:vitest -- tests/vitest/widgets/appointmentForm.test.tsx` if
-  null-selection payload behavior is changed.
+- Extend
+  `tests/vitest/widgets/bookingRuntimeScript.bookingCalendar.test.ts` with
+  linked Appointment Form event-consumption assertions if null-selection
+  behavior changes the shared selection payload.
 - `bun test tests/unit/widgets/validator.test.ts` if schema/defaults change.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`

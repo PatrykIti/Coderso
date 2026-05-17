@@ -15,27 +15,28 @@
 Close the TASK-259 Booking Calendar-specific follow-up family with source-report
 evidence, widget docs, task-board sync, changelog, and final validation.
 
-This closure leaf must keep TASK-259 separate from TASK-256 and TASK-258:
-shared-contract rows stay attributed to TASK-256, Appointment Form rows stay
-attributed to TASK-258, and only Booking Calendar product-scope rows are marked
-fixed by TASK-259.
+This closure leaf must keep TASK-259 separate from TASK-258 and the concrete
+shared/admin follow-up tasks opened for residual drift. Shared rows stay
+attributed to TASK-296/TASK-297, Appointment Form rows stay attributed to
+TASK-258, Booking admin workflow rows stay attributed to TASK-298, and only
+Booking Calendar product-scope rows are marked fixed by TASK-259.
 
 ## Sub-Tasks
 
 - [ ] Refresh `_docs/PLAYWRIGHT/REPORT_BOOKING_CALENDAR_WIDGET.md` with
   fixed/deferred/excluded statuses for every source finding.
 - [ ] Record the exact task owner for excluded rows:
-  - concrete TASK-256 physical owner IDs from TASK-256-07/TASK-256-08 for
-    shared editor/clear/placeholder/ARIA contract rows;
+  - TASK-296 for the shared Booking Calendar ARIA row;
+  - TASK-297 for the shared Booking Calendar frame color-picker row;
   - TASK-258 for Appointment Form behavior affected by shared booking runtime
     script changes;
-  - future Booking Admin UX task for Availability "Add row -> Save" workflow.
+  - TASK-298 for Availability "Add row -> Save" workflow.
 - [ ] Update `_docs/_WIDGETS/BOOKING_CALENDAR.md` with final data/editor/runtime
   behavior.
 - [ ] Repair existing Booking Calendar widget-doc drift while updating the
-  final contract: Visual currently owns copy/surface/status messages, Advanced
-  owns defaults/diagnostics, and both `style.frameBackground` and
-  `style.frameBorderColor` are clearable today.
+  final contract: Wizard currently owns flow/copy/surface/interval basics,
+  Visual owns status messages, Advanced owns defaults/diagnostics, and both
+  `style.frameBackground` and `style.frameBorderColor` are clearable today.
 - [ ] Update `_docs/WIDGET_PACK_MATRIX.md` only if final Booking Calendar
   behavior changes booking pack readiness.
 - [ ] Update `_docs/_TASKS/README.md` statuses and statistics when the family
@@ -55,8 +56,8 @@ fixed by TASK-259.
 | Visual calendar/availability/slot density | Fixed by TASK-259-05 or deferred with reason | Runtime script tests plus route/service tests for any API changes. |
 | Layout variants/mobile/styling | Fixed by TASK-259-06 or deferred with reason | Widget/editor/schema tests and rendered evidence. |
 | Default pickers/diagnostics | Fixed by TASK-259-07 or deferred with reason | Editor picker tests and diagnostics evidence. |
-| Shared ARIA/color-picker rows | Excluded | Link to the concrete TASK-256 physical owner named by TASK-256-07/TASK-256-08; do not mark fixed by TASK-259 or by a generic TASK-256 umbrella reference. |
-| Booking admin Availability Add row UX | Excluded | Link to a future Booking Admin UX task if still actionable. |
+| Shared ARIA/color-picker rows | Excluded | Link to TASK-296 and TASK-297; do not mark fixed by TASK-259 or by a generic TASK-256 umbrella reference. |
+| Booking admin Availability Add row UX | Excluded | Link to TASK-298 while it remains outside widget scope. |
 
 ## Files to Change
 
@@ -78,7 +79,7 @@ fixed by TASK-259.
 | Finding | Status | Owner | Evidence |
 |---|---|---|---|
 | Admin preview empty catalog | Fixed | TASK-259-01 | `bun run test:vitest -- ...` |
-| Slot ARIA baseline | Excluded | TASK-256-07/TASK-256-08 concrete physical owner ID | Shared-contract row, not TASK-259 scope |
+| Slot ARIA baseline | Excluded | TASK-296 | Shared-contract row, not TASK-259 scope |
 ```
 
 Closure status flow:
@@ -92,9 +93,9 @@ Error handling:
 
 - Do not mark a report finding fixed unless the code/test evidence exists or the
   row was verified as no longer reproducible.
-- Do not mark a report finding excluded to TASK-256 unless the closure evidence
-  names a concrete TASK-256 physical owner ID that lists Booking Calendar owner
-  files/tests, or a TASK-256-08 future physical task for that exact row.
+- Do not mark a report finding excluded to shared/admin scope unless the
+  closure evidence names the concrete physical follow-up task that owns it
+  (`TASK-296`, `TASK-297`, `TASK-298`, or an explicit successor task).
 - If a broad gate fails for unrelated reasons, isolate the targeted TASK-259
   suites and record the blocker before closure.
 - If `_docs/_TASKS/README.md` has parallel-agent conflicts, resolve by
@@ -129,9 +130,12 @@ This closure task adds no API routes.
 - Route registration and `mapBookingError` coverage when public/internal booking
   route handlers or known booking error mappings changed.
 - `bun run test:vitest -- tests/vitest/validation/bookingSchemas.test.ts` when
-  route schemas changed.
-- Appointment smoke if shared runtime selection payload changed:
-  `bun run test:vitest -- tests/vitest/widgets/appointmentForm.test.tsx`.
+  route schemas changed. Extend this suite with
+  `bookingPublicSlotQuerySchema` coverage before using it as public slot proof.
+- Extend
+  `tests/vitest/widgets/bookingRuntimeScript.bookingCalendar.test.ts` with
+  linked Appointment Form event-consumption assertions if the shared runtime
+  selection payload changed.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run gates:coderso`
@@ -155,9 +159,9 @@ This closure task adds no API routes.
 ## Acceptance Criteria
 
 - TASK-259 rows are Done only after validation and changelog evidence exists.
-- The Booking Calendar report clearly separates TASK-259 fixes from TASK-256
-  shared-contract fixes and TASK-258 Appointment Form ownership, with concrete
-  physical TASK-256 owner IDs for excluded shared rows.
+- The Booking Calendar report clearly separates TASK-259 fixes from shared/admin
+  follow-up fixes and TASK-258 Appointment Form ownership, with concrete
+  physical task IDs for excluded shared/admin rows.
 - No PNG screenshots or temporary Playwright artifacts are committed.
 - `_docs/_TASKS/README.md` statistics match the final visible task rows after
   resolving any parallel-agent board edits.

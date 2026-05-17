@@ -23,9 +23,7 @@ and mobile control layout stacks four controls vertically before slot results.
 
 This leaf does not own:
 
-- generic frame background/border color-picker behavior from TASK-256-02 only
-  after TASK-256-07/TASK-256-08 names a concrete Booking Calendar owner/test
-  path;
+- generic frame background/border color-picker behavior now routed to TASK-297;
 - visual calendar availability UI from TASK-259-05;
 - shared widget mode atomic update behavior from TASK-256-01.
 
@@ -51,7 +49,6 @@ This leaf does not own:
 |---|---|
 | `core/widgets/core/bookingCalendar.tsx` | Add variant ids, variant class maps, selected/hover style fields, schema/defaults/normalizer, and mobile layout classes. |
 | `core/admin/ui/widgets/editors/BookingCalendarEditors.tsx` | Add Visual variant controls and selected-slot style controls; do not duplicate shared frame color-picker work. |
-| `core/widgets/core/index.ts` | Update editor capability only if Booking Calendar owns Visual variant selection. |
 | `tests/vitest/widgets/bookingCalendar.test.tsx` | Add variant render and style clear coverage. |
 | `tests/vitest/ui/booking-calendar-editor-wave.test.tsx` | Add editor coverage for variant and selected-slot style controls. |
 | `tests/unit/widgets/validator.test.ts` | Run/update when schema/defaults change. |
@@ -82,6 +79,11 @@ const slotStyleVars = compactStyle({
   "--booking-slot-hover-border": resolveClearableStyleValue(style.slotHoverBorderColor),
 });
 ```
+
+If Visual mode owns variant selection, set
+`editorCapabilities.visualOwnsVariantSelection = true` on the Booking Calendar
+`WidgetDefinition` in `core/widgets/core/bookingCalendar.tsx`; no separate
+registry file owns that capability today.
 
 Error handling:
 
