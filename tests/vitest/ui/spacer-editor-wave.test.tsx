@@ -125,7 +125,7 @@ vi.mock("@/lib/utils", () => ({
 }));
 
 const variantSelectValues = ["responsive", "fixed"];
-const heightSelectValues = [...spacerHeightTokens, "custom"];
+const heightSelectValues = [...spacerHeightTokens.filter((token) => token !== "0"), "custom"];
 
 const mount = (node: React.ReactNode) => {
   const container = document.createElement("div");
@@ -355,9 +355,9 @@ test("Spacer wizard editor covers legacy variant fallback, token/custom height c
     expect(view.getVariant()).toBe("fixed");
     expect(view.onVariantChangeSpy).toHaveBeenLastCalledWith("fixed");
 
-    const unchangedCalls = view.onChangeSpy.mock.calls.length;
     setSelectValue(findSelectsByOptions(view.container, heightSelectValues)[0], "custom");
-    expect(view.onChangeSpy).toHaveBeenCalledTimes(unchangedCalls);
+    expect(findSelectsByOptions(view.container, heightSelectValues)[0]?.value).toBe("custom");
+    expect(normalizeText(view.container.textContent)).toContain("enter a custom px value");
 
     setSelectValue(findSelectsByOptions(view.container, heightSelectValues)[0], "20");
     expect(view.getValue()).toEqual({
@@ -368,6 +368,18 @@ test("Spacer wizard editor covers legacy variant fallback, token/custom height c
       },
       showGuideInEditor: true,
     });
+
+    setSelectValue(findSelectsByOptions(view.container, heightSelectValues)[0], "custom");
+    setInputValue(findInputByPlaceholder(view.container, "e.g. 48px"), "bad-value");
+    expect(view.getValue()).toEqual({
+      height: {
+        desktop: "20",
+        tablet: "24",
+        mobile: "40px",
+      },
+      showGuideInEditor: true,
+    });
+    expect(normalizeText(view.container.textContent)).toContain("invalid custom value");
 
     setInputValue(findInputByPlaceholder(view.container, "e.g. 48px"), "48");
     expect(view.getValue()).toEqual({

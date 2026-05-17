@@ -365,6 +365,7 @@ test("Divider editors cover visual label input, color picker changes, custom spa
     await import("../../../core/admin/ui/widgets/editors/DividerEditors");
 
   let latestValue: DividerData = {
+    color: "var(--color-border)",
     width: "container",
     marginTop: "custom-margin",
     marginBottom: "bad",
@@ -428,6 +429,14 @@ test("Divider editors cover visual label input, color picker changes, custom spa
       findColorInputForPlaceholder(lineSection as ParentNode, "var(--color-border)"),
       "#94a3b8"
     );
+    expect(latestValue.color).toBe("var(--color-border)");
+    expect(normalizeText((lineSection as ParentNode).textContent)).toContain(
+      "css token preserved in data"
+    );
+    setInputValue(
+      findInputByPlaceholder(lineSection as ParentNode, "var(--color-border)"),
+      "#94a3b8"
+    );
     const widthModeSelect = findSelectsByOptions(lineSection as ParentNode, [
       "full",
       "container",
@@ -437,6 +446,17 @@ test("Divider editors cover visual label input, color picker changes, custom spa
     setInputValue(findInputByPlaceholder(lineSection as ParentNode, "e.g. 320px or 60%"), "55%");
 
     const spacingSection = findSectionByTitle(view.container, "Spacing around divider");
+    const spacingSelects = Array.from((spacingSection as ParentNode).querySelectorAll("select"));
+    setSelectValue(spacingSelects[0], "custom");
+    expect(spacingSelects[0]?.value).toBe("custom");
+    expect(normalizeText((spacingSection as ParentNode).textContent)).toContain(
+      "enter a custom px value"
+    );
+    setInputValue(findInputByPlaceholder(spacingSection as ParentNode, "e.g. 32px"), "bad-value");
+    expect(latestValue.marginTop).toBe("6");
+    expect(normalizeText((spacingSection as ParentNode).textContent)).toContain(
+      "invalid custom value"
+    );
     setInputValue(findInputByPlaceholder(spacingSection as ParentNode, "e.g. 32px"), "40px");
 
     const advancedSection = findSectionByTitle(view.container, "Technical divider tokens");

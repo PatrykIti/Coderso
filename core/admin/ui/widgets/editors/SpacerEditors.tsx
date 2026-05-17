@@ -1,7 +1,6 @@
 import { type ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -20,10 +19,10 @@ import {
   spacerHeightCssValueMap,
   spacerHeightTokens,
   type SpacerData,
-  type SpacerHeightToken,
   type SpacerVariantId,
 } from "../../../../widgets/core/spacer";
 import type { WidgetEditorProps } from "../../../../widgets/types";
+import { buildVisibleOffTokenOptions, TokenOrPixelField } from "./TokenOrPixelField";
 import { WidgetEditorSection } from "./WidgetEditorControls";
 
 const variantOptions: Array<{
@@ -43,13 +42,12 @@ const variantOptions: Array<{
   },
 ];
 
-const heightTokenOptions = spacerHeightTokens.map((token) => ({
-  id: token,
-  label: token === "none" ? "None" : `${token} (${spacerHeightCssValueMap[token]})`,
-}));
-
-const isSpacerHeightToken = (value: string): value is SpacerHeightToken =>
-  spacerHeightTokens.includes(value as SpacerHeightToken);
+const heightTokenOptions = buildVisibleOffTokenOptions(
+  spacerHeightTokens.map((token) => ({
+    id: token,
+    label: token === "none" ? "None" : `${token} (${spacerHeightCssValueMap[token]})`,
+  }))
+);
 
 function normalizeValue(value: SpacerData, variant: string): SpacerData {
   return normalizeSpacerData(value, variant);
@@ -163,39 +161,19 @@ function HeightField({
   value: string;
   onChange: (next: string) => void;
 }) {
-  const token = isSpacerHeightToken(value) ? value : "custom";
-
   return (
-    <div className="space-y-2 rounded-md border p-3">
-      <p className="text-sm font-medium">{label}</p>
-      <Select
-        value={token}
-        onValueChange={(next) => {
-          if (next === "custom") return;
-          onChange(next);
-        }}
-      >
-        <SelectTrigger>
-          <SelectValue placeholder="Quick token" />
-        </SelectTrigger>
-        <SelectContent>
-          {heightTokenOptions.map((option) => (
-            <SelectItem key={`${label}-${option.id}`} value={option.id}>
-              {option.label}
-            </SelectItem>
-          ))}
-          <SelectItem value="custom">Custom px</SelectItem>
-        </SelectContent>
-      </Select>
-      <Input
-        value={isSpacerHeightToken(value) ? "" : value}
-        placeholder="e.g. 48px"
-        onChange={(event) => onChange(event.target.value)}
-      />
-      <p className="text-xs text-muted-foreground">
-        Token or px value. Resolved: {resolveSpacerCssHeight(value)}
-      </p>
-    </div>
+    <TokenOrPixelField
+      label={label}
+      value={value}
+      onChange={onChange}
+      tokenOptions={heightTokenOptions}
+      isToken={(candidate) =>
+        spacerHeightTokens.includes(candidate as (typeof spacerHeightTokens)[number])
+      }
+      resolveCss={resolveSpacerCssHeight}
+      selectPlaceholder="Quick token"
+      inputPlaceholder="e.g. 48px"
+    />
   );
 }
 

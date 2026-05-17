@@ -28,12 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 273 tasks
-- **In Progress:** 4 tasks
-- **Done:** 1598 tasks
-- **To Do:** 266 tasks
-- **In Progress:** 4 tasks
-- **Done:** 1605 tasks
+- **To Do:** 297 tasks
+- **In Progress:** 5 tasks
+- **Done:** 1611 tasks
 
 ---
 
@@ -344,6 +341,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-293 | Divider and Spacer Residual Shared Token Control Adoption | High | Medium | In progress: reopen the narrow TASK-256 residual slice so Divider/Spacer token and color controls match the landed shared contract before TASK-264 product work continues |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |

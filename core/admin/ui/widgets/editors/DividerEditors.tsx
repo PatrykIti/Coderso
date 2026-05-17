@@ -18,11 +18,11 @@ import {
   resolveDividerSpaceCss,
   resolveDividerVariant,
   type DividerData,
-  type DividerSpaceToken,
   type DividerVariantId,
   type DividerWidthMode,
 } from "../../../../widgets/core/divider";
 import type { WidgetEditorProps } from "../../../../widgets/types";
+import { buildVisibleOffTokenOptions, TokenOrPixelField } from "./TokenOrPixelField";
 import { WidgetEditorSection } from "./WidgetEditorControls";
 
 const variantOptions: Array<{
@@ -58,18 +58,17 @@ const thicknessOptions = Array.from({ length: 8 }, (_, index) => {
   return { id: value, label: `${value}px` };
 });
 
-const marginTokenOptions = dividerSpaceTokens.map((token) => ({
-  id: token,
-  label: token === "none" ? "None" : `${token} (${dividerSpaceCssValueMap[token]})`,
-}));
+const marginTokenOptions = buildVisibleOffTokenOptions(
+  dividerSpaceTokens.map((token) => ({
+    id: token,
+    label: token === "none" ? "None" : `${token} (${dividerSpaceCssValueMap[token]})`,
+  }))
+);
 
 const hexColorPattern = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
 
 const resolvePickerColor = (value: string | undefined, fallback: string) =>
   value && hexColorPattern.test(value) ? value : fallback;
-
-const isDividerSpaceToken = (value: string): value is DividerSpaceToken =>
-  dividerSpaceTokens.includes(value as DividerSpaceToken);
 
 function normalizeValue(value: DividerData): DividerData {
   return normalizeDividerData(value);
@@ -163,7 +162,10 @@ function ColorField({
         <Input
           type="color"
           value={resolvePickerColor(value, "#e2e8f0")}
-          onChange={(event) => onChange(event.target.value)}
+          onChange={(event) => {
+            const currentValue = value?.trim();
+            onChange(currentValue?.startsWith("var(") ? currentValue : event.target.value);
+          }}
           className="h-9 w-10 p-1"
         />
         <Input
@@ -172,6 +174,11 @@ function ColorField({
           placeholder="var(--color-border)"
         />
       </div>
+      {typeof value === "string" && value.trim().startsWith("var(") ? (
+        <p className="text-xs text-muted-foreground">
+          CSS token preserved in data; edit the text field to replace it with a fixed color.
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -185,37 +192,19 @@ function SpacingField({
   value: string;
   onChange: (next: string) => void;
 }) {
-  const token = isDividerSpaceToken(value) ? value : "custom";
-
   return (
-    <div className="space-y-2 rounded-md border p-3">
-      <p className="text-sm font-medium">{label}</p>
-      <Select
-        value={token}
-        onValueChange={(next) => {
-          if (next === "custom") return;
-          onChange(next);
-        }}
-      >
-        <SelectTrigger>
-          <SelectValue placeholder="Spacing token" />
-        </SelectTrigger>
-        <SelectContent>
-          {marginTokenOptions.map((option) => (
-            <SelectItem key={`${label}-${option.id}`} value={option.id}>
-              {option.label}
-            </SelectItem>
-          ))}
-          <SelectItem value="custom">Custom px</SelectItem>
-        </SelectContent>
-      </Select>
-      <Input
-        value={isDividerSpaceToken(value) ? "" : value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder="e.g. 32px"
-      />
-      <p className="text-xs text-muted-foreground">Resolved: {resolveDividerSpaceCss(value)}</p>
-    </div>
+    <TokenOrPixelField
+      label={label}
+      value={value}
+      onChange={onChange}
+      tokenOptions={marginTokenOptions}
+      isToken={(candidate) =>
+        dividerSpaceTokens.includes(candidate as (typeof dividerSpaceTokens)[number])
+      }
+      resolveCss={resolveDividerSpaceCss}
+      selectPlaceholder="Spacing token"
+      inputPlaceholder="e.g. 32px"
+    />
   );
 }
 
