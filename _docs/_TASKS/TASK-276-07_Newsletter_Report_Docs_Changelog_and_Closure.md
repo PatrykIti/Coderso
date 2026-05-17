@@ -53,7 +53,10 @@ This leaf does not own:
   behavior.
 - [ ] Update `_docs/WIDGETS.md` or `_docs/WIDGET_PACK_MATRIX.md` only if final
   behavior changes those global contracts.
-- [ ] Add a changelog entry and update `_docs/_CHANGELOG/README.md`.
+- [ ] Add a changelog entry and update `_docs/_CHANGELOG/README.md`. The
+  changelog entry `Tasks:` field must list every task row moved to `Done`
+  (`TASK-276`, `TASK-276-01` through `TASK-276-07`) or use separate leaf
+  entries for the exact completed subset.
 - [ ] Move TASK-276 task files and `_docs/_TASKS/README.md` rows to `Done`
   with dates.
 - [ ] Run final targeted validation, `bun run gates:coderso`,
@@ -145,8 +148,9 @@ No API routes are added by this closure leaf.
   - `bun run gates:coderso`
   - `bun run scan:security:strict`
   - `bun run precommit`
-- Docs-only closure corrections before implementation lands: `git diff --check`
-  is sufficient only when task statuses remain `To Do`.
+- Docs-only closure corrections before implementation lands: run
+  `git diff --check` and `bun run precommit` before manual commit unless the
+  configured hook runs automatically and that proof is recorded.
 
 ## Documentation Updates Required
 
@@ -164,6 +168,9 @@ No API routes are added by this closure leaf.
   updates `_docs/_CHANGELOG/README.md`.
 - If implementation lands as multiple commits, the final changelog entry must
   list every completed TASK-276 leaf.
+- A single final entry may cover the whole family, but its `Tasks:` field must
+  list every completed row. If only a subset completes, list exactly that subset
+  or create separate leaf entries.
 
 ## Acceptance Criteria
 

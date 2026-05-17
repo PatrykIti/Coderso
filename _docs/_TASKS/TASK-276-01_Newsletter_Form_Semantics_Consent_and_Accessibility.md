@@ -54,7 +54,9 @@ This leaf does not own:
 - [ ] Normalize field names through a helper that accepts safe form key syntax
   and falls back to defaults for empty/unsafe values.
 - [ ] Render a deterministic email `id` and `<label htmlFor>` or an explicit
-  `aria-label` when visual label is hidden.
+  `aria-label` when visual label is hidden. The ID must include a sanitized
+  widget instance key because `WidgetRenderer` passes
+  `blockId={normalized.id}` and pages may render multiple Newsletter blocks.
 - [ ] Render `name={emailFieldName}` and `autocomplete="email"` on the email
   input.
 - [ ] Move the consent label and checkbox inside the `<form>`, preserving the
@@ -106,9 +108,14 @@ function normalizeNewsletterFormData(input: NewsletterData["form"]): Required<Ne
 Renderer shape:
 
 ```tsx
-const form = normalizeNewsletterFormData(normalized.form);
-const emailId = `newsletter-${safeFieldId(form.emailFieldName)}-${resolvedVariant}`;
-const canSubmit = Boolean(formAction || (integrationMode === "webhook" && webhookId));
+function NewsletterBlock({ data, variant, blockId }: NewsletterRenderProps) {
+  const form = normalizeNewsletterFormData(data.form);
+  const resolvedVariant = resolveNewsletterVariant(variant);
+  const instanceId = createNewsletterInstanceId(blockId, resolvedVariant);
+  const emailId = `${instanceId}-${safeFieldId(form.emailFieldName)}`;
+  const canSubmit = Boolean(formAction || (integrationMode === "webhook" && webhookId));
+  // render form...
+}
 
 <form method={canSubmit ? "post" : undefined} action={formAction}>
   <label htmlFor={emailId} className={form.showEmailLabel ? undefined : "sr-only"}>
@@ -147,6 +154,8 @@ Error handling:
   `data-newsletter-submit-ready="false"`.
 - Legacy payloads without `form` metadata must render the current visible copy
   with improved semantics.
+- Renderer regression tests must render two Newsletter blocks with the same
+  variant through `WidgetRenderer` and assert unique input IDs/htmlFor values.
 
 ## Security Contract
 

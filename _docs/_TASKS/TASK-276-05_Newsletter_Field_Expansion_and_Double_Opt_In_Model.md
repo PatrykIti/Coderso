@@ -15,8 +15,9 @@
 Add bounded Newsletter product fields only after the base form, submit state,
 and integration contracts are stable.
 
-The report asks for configurable email `name`, additional fields such as first
-name, and double opt-in configuration. This leaf keeps that expansion
+The report asks for additional fields such as first name and double opt-in
+configuration. The base configurable email `name` belongs to TASK-276-01. This
+leaf keeps the remaining expansion
 Newsletter-specific and bounded so schema/default/render/editor/tests move
 together.
 
@@ -24,8 +25,6 @@ together.
 
 This leaf owns:
 
-- Configurable email field name if TASK-276-01 implements only the fixed
-  default in its first pass.
 - Optional first-name field and a small bounded custom-field model for
   Newsletter use cases.
 - Required/optional state, labels, placeholders, autocomplete, field names, and
@@ -38,6 +37,8 @@ This leaf does not own:
 - Generic form builder replacement. Complex forms should use `form-embed`.
 - Unlimited arbitrary fields, raw HTML, custom scripts, custom validation code,
   or provider secret mapping.
+- Redefining `form.emailFieldName`; TASK-276-01 owns base email name, label,
+  ID, and autocomplete semantics.
 - Backend email delivery or provider API implementation unless a separate
   route/service task is created.
 
@@ -46,8 +47,9 @@ This leaf does not own:
 - [ ] Define a bounded `NewsletterFieldConfig` model for `email`, optional
   `firstName`, and at most a small number of additional safe text/select/checkbox
   fields if approved by research.
-- [ ] Preserve `email` as always present and required unless a later product
-  task explicitly changes the core Newsletter purpose.
+- [ ] Preserve `email` as always present and required, reusing the
+  `form.emailFieldName` normalized by TASK-276-01 for the base email field,
+  unless a later product task explicitly changes the core Newsletter purpose.
 - [ ] Add first-name label, placeholder, `name`, autocomplete, required flag,
   and render output.
 - [ ] Add editor controls for enabled fields and field metadata.

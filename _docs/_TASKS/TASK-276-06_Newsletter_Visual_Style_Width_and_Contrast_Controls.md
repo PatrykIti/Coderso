@@ -46,7 +46,8 @@ This leaf does not own:
 - [ ] Add `style.width?: "narrow" | "default" | "wide" | "full"` with
   backward-compatible default matching current `max-w-xl`.
 - [ ] Add bounded `style.textColor`, `style.buttonBackground`, and
-  `style.buttonTextColor` fields using existing clearable style helpers.
+  `style.buttonTextColor` fields using a Newsletter-local color normalizer;
+  use existing clearable style helpers only for clear/remove semantics.
 - [ ] Add editor controls for those fields with clear behavior aligned to
   TASK-256-02 if the shared helper has landed.
 - [ ] Add a non-blocking contrast diagnostic that flags likely WCAG AA failures
@@ -97,6 +98,15 @@ function resolveNewsletterSpacing(value: string | undefined): NewsletterSpacing 
   }
   return "md";
 }
+
+function normalizeNewsletterColor(value: unknown) {
+  const text = resolveClearableStyleValue(value);
+  if (!text) return undefined;
+  if (text === "transparent") return text;
+  if (/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(text)) return text;
+  if (/^var\(--color-[a-z0-9-]+\)$/.test(text)) return text;
+  return undefined;
+}
 ```
 
 Contrast diagnostic shape:
@@ -119,8 +129,9 @@ function getNewsletterContrastDiagnostic(style: NewsletterStyle): ContrastDiagno
 
 Error handling:
 
-- Invalid colors resolve through existing clearable style behavior and never
-  render raw unsafe CSS values.
+- Invalid colors are dropped by `normalizeNewsletterColor` and never render raw
+  unsafe CSS values. The clearable helper only owns blank/cleared values, not
+  color sanitization.
 - Width options are enum-only; missing legacy width maps to current `max-w-xl`.
 - Contrast diagnostics are advisory and must not block saves unless a later
   accessibility policy explicitly requires it.
@@ -141,7 +152,9 @@ No API routes are added.
 
 ## Testing Requirements
 
-- `bun run test:vitest -- tests/vitest/widgets/newsletter.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/newsletter.test.tsx` with
+  render/normalizer coverage proving arbitrary CSS strings and free-form unsafe
+  colors do not render.
 - `bun run test:vitest -- tests/vitest/ui/newsletter-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx`
 - `bun test tests/unit/widgets/validator.test.ts`

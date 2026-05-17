@@ -228,6 +228,9 @@ Implementation leaves:
 
 - This task must not move to `Done` until a changelog entry lists TASK-276 and
   `_docs/_CHANGELOG/README.md` is updated.
+- When the full family closes through one final entry, its `Tasks:` field must
+  include `TASK-276` and every completed leaf ID (`TASK-276-01` through
+  `TASK-276-07`).
 - Leaves may share one final TASK-276 changelog entry if the implementation is
   landed as one family; otherwise each completed leaf must be listed.
 

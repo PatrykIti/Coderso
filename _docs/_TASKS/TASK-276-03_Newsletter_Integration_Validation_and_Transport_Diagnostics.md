@@ -51,6 +51,8 @@ This leaf does not own:
   current provider references require method configurability.
 - [ ] Normalize `integration.actionUrl` to accepted safe values: HTTPS absolute
   URLs and explicit relative paths only when the route is Coderso-owned.
+- [ ] Reject protocol-relative URLs, `http:` URLs, bare domains,
+  admin/internal relative paths, and unknown relative paths.
 - [ ] Reject or surface editor diagnostics for bare domains such as
   `example.com`.
 - [ ] Keep `webhookId` as a safe identifier only; do not treat it as a secret or
@@ -87,7 +89,12 @@ type NewsletterIntegration = {
 function normalizeNewsletterActionUrl(value: unknown) {
   const text = typeof value === "string" ? value.trim() : "";
   if (text.length === 0) return { value: "", status: "empty" as const };
-  if (text.startsWith("/")) return { value: text, status: "valid" as const };
+  if (text.startsWith("//")) return { value: "", status: "invalid" as const };
+  if (text.startsWith("/")) {
+    return isCodersoOwnedNewsletterSubmitPath(text)
+      ? { value: text, status: "valid" as const }
+      : { value: "", status: "invalid" as const };
+  }
   try {
     const url = new URL(text);
     if (url.protocol === "https:") return { value: url.toString(), status: "valid" as const };
@@ -95,6 +102,10 @@ function normalizeNewsletterActionUrl(value: unknown) {
     return { value: "", status: "invalid" as const };
   }
   return { value: "", status: "invalid" as const };
+}
+
+function isCodersoOwnedNewsletterSubmitPath(path: string) {
+  return /^\/forms\/[a-zA-Z0-9_-]+\/submissions$/.test(path);
 }
 
 function resolveNewsletterTransport(integration: NewsletterIntegration) {
@@ -115,6 +126,9 @@ Error handling:
 - Invalid action URLs render no `action` attribute and set
   `data-newsletter-action-status="invalid"`.
 - Bare domains remain invalid until the user adds `https://`.
+- `http:`, protocol-relative `//`, `/admin/*`, and unknown relative paths are
+  invalid. Only HTTPS external targets and approved Coderso-owned public submit
+  paths are valid.
 - Webhook mode ignores action URL at runtime but keeps the stored value for
   backward-compatible editing.
 - If method is `get`, hidden fields and consent names must still be safe and no
@@ -139,7 +153,10 @@ This leaf does not add API routes.
 
 ## Testing Requirements
 
-- `bun run test:vitest -- tests/vitest/widgets/newsletter.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/newsletter.test.tsx` with
+  cases for `//evil.example`, `http://example.com`, `example.com`,
+  `/admin/forms`, valid `https://example.com/subscribe`, and valid
+  `/forms/:id/submissions`.
 - `bun run test:vitest -- tests/vitest/ui/newsletter-editor-wave.test.tsx`
 - `bun test tests/unit/widgets/validator.test.ts`
 - `bun --cwd core lint`
