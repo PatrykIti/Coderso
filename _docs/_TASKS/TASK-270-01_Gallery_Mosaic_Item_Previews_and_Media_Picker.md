@@ -43,7 +43,7 @@ after that contract lands and uses its final media-field semantics.
 | File | Required change |
 |---|---|
 | `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx` | Add a per-item media preview component, import/reuse `MediaPicker`, track editor-local selected media ids by stable `item.id` with a normalized-id fallback for newly created items, resolve media through `listMediaCached({ force: false })`, and persist only schema-owned runtime fields into `items[]`. |
-| `tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx` | Extend existing media-client and MediaPicker mocks to assert selecting media updates the correct item, preview state reflects image/video/placeholder, failures are visible without clearing current data, and selected media remains attached after reorder/remove flows from TASK-270-02. |
+| `tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx` | Extend existing media-client and MediaPicker mocks to assert selecting media updates the correct item, preview state reflects image/video/placeholder, failures are visible without clearing current data, and editor-local picker state is keyed by stable item id. Use a synthetic reordered normalized item array or existing helper-level move assertion only; full drag/remove UI remains TASK-270-02. |
 | `core/widgets/core/galleryMosaic.tsx` | Change only if TASK-256 final media semantics require an owner helper for preview-safe fields; otherwise keep runtime output unchanged in this leaf. |
 | `tests/vitest/widgets/galleryMosaic.test.tsx` | Update only if normalizer/runtime behavior changes. |
 | `_docs/_WIDGETS/GALLERY_MOSAIC.md` | Document Visual per-item picker and preview behavior. |
@@ -58,6 +58,15 @@ type GalleryItemPreviewState = {
   label: string;
 };
 
+type GalleryMosaicMediaAsset = {
+  id: string;
+  url?: string | null;
+  type?: string | null;
+  mimeType?: string | null;
+  title?: string | null;
+  filename?: string | null;
+};
+
 function resolveGalleryItemPreview(item: GalleryMosaicItem): GalleryItemPreviewState {
   if (item.video?.trim()) return { mediaType: "video", src: item.video, label: item.caption ?? "Video" };
   if (item.image?.trim()) return { mediaType: "image", src: item.image, label: item.caption ?? "Image" };
@@ -66,6 +75,22 @@ function resolveGalleryItemPreview(item: GalleryMosaicItem): GalleryItemPreviewS
 
 function getItemMediaStateKey(item: GalleryMosaicItem, index: number) {
   return item.id?.trim() || `gallery-pending-${index + 1}`;
+}
+
+function inferGalleryMosaicMediaKind(media: GalleryMosaicMediaAsset): "image" | "video" | null {
+  const declaredType = media.type?.toLowerCase() ?? "";
+  const mimeType = media.mimeType?.toLowerCase() ?? "";
+  if (declaredType === "video" || mimeType.startsWith("video/")) return "video";
+  if (declaredType === "image" || mimeType.startsWith("image/")) return "image";
+  return null;
+}
+
+function mapMediaToGalleryItemPatch(media: GalleryMosaicMediaAsset): Partial<GalleryMosaicItem> {
+  const url = media.url?.trim();
+  const kind = inferGalleryMosaicMediaKind(media);
+  if (!url || !kind) throw new Error("gallery_mosaic_media_unsupported");
+  if (kind === "video") return { video: url, image: "" };
+  return { image: url, video: "" };
 }
 
 async function handleItemMediaSelection(index: number, nextValue: unknown) {
@@ -94,8 +119,17 @@ Error handling:
 
 - Media lookup failures show a local editor error and keep the existing item
   image/video/caption/link untouched.
+- Unsupported media types or missing public URLs produce
+  `gallery_mosaic_media_unsupported` and do not patch the item.
+- Image assets update only `image` and clear `video`; video assets update only
+  `video` and clear `image`, using the TASK-256 media truthfulness contract
+  rather than persisting an ambiguous image+video pair.
+- Media asset `title`/`filename` may be used for editor-only preview labels
+  when the item caption is empty, but this leaf must not persist caption, alt,
+  or title fields from media metadata.
 - Media picker state is keyed by stable normalized item id, not raw index, so
-  reorder/remove operations do not attach a selected media id to the wrong item.
+  synthetic reordered-item tests can prove state lookup stability before
+  TASK-270-02 adds full drag/remove UI.
 - The editor stores only public runtime fields already accepted by the
   `galleryMosaicSchema`; do not persist media ids unless a later schema task
   explicitly adds and migrates them.
@@ -146,7 +180,8 @@ No API routes are added.
 - Each item can select media from the existing media library without hand-copying
   a URL.
 - Media resolution failures are visible and non-destructive.
-- Media picker state stays attached to the same normalized item after reorder or
-  removal.
+- Media picker state lookup is keyed by normalized item id and survives a
+  synthetic reordered item list; full drag/remove UI coverage lands in
+  TASK-270-02.
 - The leaf does not reimplement TASK-256 image/video priority or safe-media
   output logic.

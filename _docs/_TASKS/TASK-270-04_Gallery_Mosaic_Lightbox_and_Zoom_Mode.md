@@ -46,6 +46,7 @@ cross-widget modal framework.
 | `core/widgets/core/galleryMosaic.tsx` | Add a bounded `interaction` config, a widget-local idempotent runtime script patterned after `tabsRuntimeClientScript`/`toggleRuntimeClientScript`, safe trigger attributes, a hidden dialog region, focus return, Escape close, backdrop close, and deterministic data markers without unsafe inline handlers. |
 | `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx` | Add Visual controls for lightbox disabled/enabled mode and bounded zoom behavior; show when link behavior takes precedence if both href and lightbox are configured. |
 | `tests/vitest/widgets/galleryMosaic.test.tsx` | Assert lightbox-disabled default, schema normalization, lightbox-enabled trigger/dialog markers, safe labels, href precedence behavior, and embedded runtime script output. |
+| `tests/vitest/widgets/galleryMosaicLightboxRuntime.test.ts` | New `// @vitest-environment happy-dom` suite that imports an extractable `getGalleryMosaicLightboxRuntimeScript()` helper or evaluates the exported runtime script against rendered fixture DOM, then asserts trigger open, close-button focus return, backdrop close, Escape close, idempotent double-bind behavior, and link-item precedence. |
 | `tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx` | Assert editor controls patch the lightbox config and explain interaction precedence. |
 | `tests/unit/widgets/validator.test.ts` | Add mandatory strict schema coverage for the interaction config and invalid enum rejection. |
 | `tests/vitest/widgets/renderer.test.tsx` | Update only if shared renderer snapshot/markers need awareness of the new interaction output. |
@@ -84,7 +85,7 @@ function renderGalleryLightboxTrigger(item: GalleryMosaicItem, index: number) {
   };
 }
 
-const galleryMosaicLightboxRuntimeScript = `
+export const galleryMosaicLightboxRuntimeScript = `
 (() => {
   if (typeof window === "undefined") return;
   if (window.__codersoGalleryMosaicLightboxBound === true) return;
@@ -112,6 +113,10 @@ const galleryMosaicLightboxRuntimeScript = `
   });
 })();
 `;
+
+export function getGalleryMosaicLightboxRuntimeScript() {
+  return galleryMosaicLightboxRuntimeScript;
+}
 ```
 
 Error handling:
@@ -124,6 +129,12 @@ Error handling:
 - Keyboard and focus behavior must be tested: trigger opens the dialog, close
   returns focus to the trigger, Escape closes the dialog, and link items keep
   navigation precedence.
+- Test the runtime script in a happy-dom/browser-style suite, not only through
+  server `renderToString` assertions. The suite must create fixture markup with
+  `[data-gallery-lightbox-trigger]`, `[data-gallery-lightbox-dialog]`,
+  `[data-gallery-lightbox-close]`, and `[data-gallery-lightbox-backdrop]`,
+  evaluate `getGalleryMosaicLightboxRuntimeScript()`, dispatch click/keydown
+  events, and assert visible state plus `document.activeElement`.
 - If a shared public runtime lightbox owner exists by implementation time, reuse
   it; otherwise keep the script local to `gallery-mosaic` and idempotently bound
   like the existing tabs/toggle widget scripts.
@@ -151,6 +162,7 @@ No API routes are added.
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/widgets/galleryMosaic.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/galleryMosaicLightboxRuntime.test.ts`
 - `bun run test:vitest -- tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if shared
   renderer assertions change.
