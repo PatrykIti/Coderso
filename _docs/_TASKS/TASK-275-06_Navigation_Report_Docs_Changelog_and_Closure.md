@@ -117,8 +117,15 @@ This closure leaf does not add API routes.
   variants, slots, or editor capabilities changed.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- `bun run gates:coderso` plus targeted release-gate suites when runtime output,
-  accessibility, security, performance, or reliability contracts changed.
+- `bun run gates:coderso`
+- `bun scripts/coderso-release-gates.ts --gate ux` when editor/public UX or
+  accessibility semantics changed.
+- `bun scripts/coderso-release-gates.ts --gate security` when link safety or
+  public markup safety changed.
+- `bun scripts/coderso-release-gates.ts --gate reliability` when interactive
+  runtime state, focus, scroll, or idempotent script binding changed.
+- `bun scripts/coderso-release-gates.ts --gate performance` when scroll or
+  motion behavior changed.
 - `bun run scan:security:strict`
 - `bun run precommit`
 - `git diff --check`

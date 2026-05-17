@@ -24,11 +24,12 @@ Navigation-safe href behavior and keeps unsafe schemes rejected.
 
 - `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:117-120` - `logo.href` is
   defined but not used by the renderer.
-- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:179-186` - logo link inputs are
-  unlabeled in Wizard and Visual.
-- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:261-281` - `#` menu links show
-  false editor validation errors while runtime accepts hashes.
-- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:401-408,424` - prioritized
+- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:179-180,186` - logo link inputs
+  are unlabeled in Wizard and Visual.
+- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:261,266,271-273,279,281,329` -
+  logo-link and `#` validation rows show missing labels and false editor
+  validation errors while runtime accepts hashes.
+- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:403,407,424` - prioritized
   logo, hash validation, and logo-label fixes.
 
 ## Sub-Tasks
@@ -116,8 +117,11 @@ No API routes are added.
   change.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- `bun run gates:coderso` plus targeted accessibility/security gates when the
-  linked logo changes public runtime output classification.
+- `bun run gates:coderso`
+- `bun scripts/coderso-release-gates.ts --gate ux` when the linked logo changes
+  public UX/accessibility classification.
+- `bun scripts/coderso-release-gates.ts --gate security` when logo or link
+  output changes safe-href behavior.
 - `bun run scan:security:strict`
 - `bun run precommit`
 - `git diff --check`

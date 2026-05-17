@@ -57,11 +57,11 @@ against the source-of-truth docs before the contract change.
 
 | Report finding | Evidence | Owner task or boundary | Reason |
 |---|---|---|---|
-| Missing live preview in all editor modes | `REPORT_NAVIGATION_WIDGET.md:179-188` | TASK-275-06 routed-pending-owner gate, then TASK-256-08 or a new shared page-builder preview physical task before closure | A live preview bridge is a shared editor/page-builder surface, not a Navigation-only renderer change. TASK-275-06 must name the exact shared owner task or keep the row open as `routed-pending-owner`; it must not claim the finding closed from Navigation-only work. |
-| Sticky nav blocked on published frontend by Section `overflow-hidden` | `REPORT_NAVIGATION_WIDGET.md:378-393,403-405` | TASK-275-06 routed-pending-owner gate, then TASK-256-08 or a new shared Section/page-shell physical task before closure | The report identifies `Section`/layout wrapper ownership. TASK-275 may record evidence, but must not patch Section inside a Navigation task or close the sticky frontend row without an exact shared owner task. |
+| Missing live preview in all editor modes | `REPORT_NAVIGATION_WIDGET.md:181` | TASK-275-06 routed-pending-owner gate, then TASK-256-08 or a new shared page-builder preview physical task before closure | A live preview bridge is a shared editor/page-builder surface, not a Navigation-only renderer change. TASK-275-06 must name the exact shared owner task or keep the row open as `routed-pending-owner`; it must not claim the finding closed from Navigation-only work. |
+| Sticky nav blocked on published frontend by Section `overflow-hidden` | `REPORT_NAVIGATION_WIDGET.md:378-393,405` | TASK-275-06 routed-pending-owner gate, then TASK-256-08 or a new shared Section/page-shell physical task before closure | The report identifies `Section`/layout wrapper ownership. TASK-275 may record evidence, but must not patch Section inside a Navigation task or close the sticky frontend row without an exact shared owner task. |
 | Generic contrast validation for configurable colors | `REPORT_NAVIGATION_WIDGET.md:215` | TASK-256-08 future shared validation owner | Contrast warnings should be shared across configurable color widgets. |
 | Generic safe-href sanitizer semantics | TASK-256 shared link/media hardening | TASK-256 | TASK-275 may consume existing safe-href helpers and align Navigation editor validation, but must not fork a new sanitizer. |
-| Global Advanced/Visual mode ownership rules | TASK-256 editor-mode scope | TASK-256-01 | Navigation-specific copy can improve, but broad mode ownership belongs to TASK-256. |
+| Global Advanced/Visual mode ownership rules | TASK-256 editor-mode scope | TASK-256-01 | Navigation-specific copy can improve in TASK-275 leaves, but broad mode ownership belongs to TASK-256. |
 | Arbitrary mega-menu/search/dark-mode platform expansion | `REPORT_NAVIGATION_WIDGET.md:228-233` | Future product task only if approved | These are market comparisons, not fixes required to make the current Navigation contract truthful. |
 
 ## TASK-275 Scope Matrix
@@ -77,6 +77,7 @@ against the source-of-truth docs before the contract change.
 | `NavigationItemMeta.icon`, `description`, and `badge` exist but are not fully editable/rendered | TASK-275-03 | Navigation schema already has fields; add editor and runtime surface without arbitrary rich menu blocks. |
 | Main links cannot be reordered, link limit lacks feedback, sub-link hierarchy is weak, Wizard shows only the first three quick links without overflow state, and menu-source mode lacks preview | TASK-275-04 | Navigation editor repeated-item, Wizard summary/count, and read-only preview management. |
 | `collapseOnScroll` persists only a data attribute | TASK-275-05-01 | Product-contract expansion from current docs; implement only after the runtime script shape is stable. Sticky failures caused by Section/page-shell overflow stay routed outside TASK-275. |
+| Surface and Runtime Behavior note is confusing because sticky/collapse controls live in Advanced | TASK-275-05-01 | Navigation-local helper copy for collapse/sticky limitations belongs with the collapse runtime contract. Global editor-mode IA stays excluded to TASK-256-01. |
 | Active-link detection plus safe target/rel controls are missing | TASK-275-05-02 | Navigation-owned link behavior that consumes existing safe-href helpers instead of forking sanitizer logic. |
 | Hover/active colors, underline, letter spacing, shadow, blur, dropdown direction, dropdown animation tokens, and Navigation-local hex color live validation are missing | TASK-275-05-03 | Navigation-owned optional visual-token expansion. Dropdown click/touch/a11y state stays in TASK-275-03; mobile panel animation stays in TASK-275-02. |
 | CTA radius/separator, logo size, Wizard CTA helper copy, and bounded secondary-CTA policy are missing or misleading | TASK-275-05-04 | Navigation-owned brand/action controls and CTA editor copy. Arbitrary mega-menu/search/dark-mode platform expansion remains out of scope. |
@@ -179,8 +180,16 @@ Implementation leaves:
   variants, slots, or editor capabilities change.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- `bun run gates:coderso` plus targeted accessibility/security/reliability
-  lanes when a leaf changes public runtime output or release-gated behavior.
+- `bun run gates:coderso`
+- `bun scripts/coderso-release-gates.ts --gate ux` when a leaf changes public
+  runtime UX, editor UX, or accessibility semantics.
+- `bun scripts/coderso-release-gates.ts --gate security` when a leaf changes
+  link safety, target/rel output, or security-sensitive public markup.
+- `bun scripts/coderso-release-gates.ts --gate reliability` when a leaf changes
+  interactive runtime state, focus policy, scroll behavior, or idempotent
+  client-script binding.
+- `bun scripts/coderso-release-gates.ts --gate performance` when a leaf changes
+  scroll or motion behavior with performance risk.
 - `bun run scan:security:strict`
 - `bun run precommit`
 

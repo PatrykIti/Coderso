@@ -14,8 +14,9 @@
 
 Add bounded Navigation-owned visual tokens: hover/active colors, underline
 policy, letter spacing, shadow, backdrop blur, dropdown direction, and bounded
-motion tokens. Click/touch submenu behavior stays in TASK-275-03; this leaf only
-owns styling and direction controls.
+motion tokens. Click/touch submenu behavior and baseline state hooks stay in
+TASK-275-03; this leaf owns configurable styling, direction, and animation
+tokens that consume those hooks.
 
 ## Source Findings
 
@@ -86,6 +87,8 @@ Error handling:
   unless TASK-256 creates that owner.
 - Dropdown direction changes must not reimplement submenu click/touch state from
   TASK-275-03.
+- Dropdown animation tokens must consume TASK-275-03 state hooks instead of
+  adding a second submenu controller.
 
 ## Data Flow
 
@@ -123,8 +126,10 @@ No API routes are added.
 - `bun test tests/unit/widgets/validator.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- `bun run gates:coderso` plus targeted accessibility/performance gates when
-  public runtime output or motion behavior changes.
+- `bun run gates:coderso`
+- `bun scripts/coderso-release-gates.ts --gate ux`
+- `bun scripts/coderso-release-gates.ts --gate performance` when public motion
+  behavior changes.
 - `bun run scan:security:strict`
 - `bun run precommit`
 - `git diff --check`

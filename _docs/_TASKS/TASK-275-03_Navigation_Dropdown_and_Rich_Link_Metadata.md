@@ -25,11 +25,12 @@ later product task approves them.
 
 - `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:63-72` - `icon` and
   `description` are defined but unused.
-- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:138-145` - dropdown animation
-  and click/touch state are missing. Dropdown direction controls are owned by
+- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:142-145` - click/touch submenu
+  state is missing. Dropdown animation and direction controls are owned by
   TASK-275-05-03.
-- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:195,198,209-214` - hover-only
-  dropdowns and unused metadata are visible runtime/accessibility issues.
+- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:195,198,209-210,213` -
+  hover-only dropdowns, missing nav label, submenu role semantics, and unused
+  metadata are visible runtime/accessibility issues.
 - `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:213` - submenu `role="menu"` /
   `role="menuitem"` absence is called out. This leaf must make an explicit
   semantic decision; for ordinary site navigation, prefer `<nav>` + lists/links
@@ -37,8 +38,8 @@ later product task approves them.
   review proves a true menu pattern is required.
 - `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:262-263,317-321` - browser tests
   confirm desktop hover works but click/touch does not.
-- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:415,417,440,458-460` -
-  prioritized dropdown and metadata rows.
+- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:415,417` - prioritized dropdown
+  touch and metadata rows.
 
 ## Sub-Tasks
 
@@ -48,7 +49,7 @@ later product task approves them.
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/navigation.tsx` | Render the root `<nav>` with an accessible `aria-label`, submenu trigger controls for items with children, root-scoped submenu IDs, `aria-expanded`, `aria-controls`, stable data attributes, reduced-motion-friendly transition classes, and plain-text icon/badge/description output for top-level and child links. Decide and document whether submenu roles remain semantic site navigation or adopt ARIA menu roles; do not add `role="menu"` mechanically. |
+| `core/widgets/core/navigation.tsx` | Render the root `<nav>` with an accessible `aria-label`, submenu trigger controls for items with children, root-scoped submenu IDs, `aria-expanded`, `aria-controls`, stable data attributes, state hooks that TASK-275-05-03 can style, and plain-text icon/badge/description output for top-level and child links. Decide and document whether submenu roles remain semantic site navigation or adopt ARIA menu roles; do not add `role="menu"` mechanically. |
 | `core/widgets/core/navigation.tsx` | Extend `navigationRuntimeClientScript` to toggle submenus on click/touch, close on Escape/outside click, and close sibling menus in the same Navigation root. |
 | `core/admin/ui/widgets/editors/NavigationEditors.tsx` | Add manual-link and sub-link metadata editors for icon text, description, badge label/tone, and visibility. Keep menu-source metadata read-only if TASK-275-04 has not landed. |
 | `core/services/navigation/navigationRuntimeResolver.ts` | Update only if resolved menu/page metadata shape changes. Existing deterministic metadata mapping should stay intact. |
@@ -140,8 +141,8 @@ No API routes are added.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run gates:coderso`
-- Targeted accessibility and reliability release gates for the public
-  interactive submenu output.
+- `bun scripts/coderso-release-gates.ts --gate ux`
+- `bun scripts/coderso-release-gates.ts --gate reliability`
 - `bun run scan:security:strict`
 - `bun run precommit`
 - `git diff --check`

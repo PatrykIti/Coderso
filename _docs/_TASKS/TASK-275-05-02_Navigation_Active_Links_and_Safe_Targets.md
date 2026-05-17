@@ -103,8 +103,9 @@ No API routes are added.
   output assumptions change.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- `bun run gates:coderso` plus targeted security/accessibility gates for public
-  link output changes.
+- `bun run gates:coderso`
+- `bun scripts/coderso-release-gates.ts --gate ux`
+- `bun scripts/coderso-release-gates.ts --gate security`
 - `bun run scan:security:strict`
 - `bun run precommit`
 - `git diff --check`

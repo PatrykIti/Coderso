@@ -27,12 +27,12 @@ unless TASK-256 creates that shared owner first.
   are rendered identically.
 - `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:159-169` - mobile panel lacks
   animation, hamburger/close icon, and explicit action label.
-- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:196-200,212-214` - mobile mode
-  and toggle accessibility issues.
+- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:196,199-200,212,214` - mobile
+  mode, toggle, animation, and focus accessibility issues.
 - `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:301-315,327-328` - mobile CTA
   duplication and unchanged "Menu" state are confirmed in browser tests.
-- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:404,414,416,441,453-456` -
-  prioritized mobile fixes.
+- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:404,408,414,416,441,453,455-456`
+  - prioritized mobile fixes.
 
 ## Sub-Tasks
 
@@ -122,8 +122,10 @@ No API routes are added.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run gates:coderso`
-- Targeted accessibility and reliability release gates for the public
-  interactive runtime change.
+- `bun scripts/coderso-release-gates.ts --gate ux`
+- `bun scripts/coderso-release-gates.ts --gate reliability`
+- `bun scripts/coderso-release-gates.ts --gate performance` if drawer
+  animation changes runtime motion costs.
 - `bun run scan:security:strict`
 - `bun run precommit`
 - `git diff --check`

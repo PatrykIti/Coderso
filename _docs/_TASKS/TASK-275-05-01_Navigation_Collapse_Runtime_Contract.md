@@ -24,7 +24,10 @@ physical owner before closure.
 
 - `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:74-78` - `collapseOnScroll`
   persists only a data attribute.
-- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:378-393,403-405` - sticky
+- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:187,285-289` - the
+  Surface/Runtime Behavior and Advanced editor copy makes sticky/collapse
+  ownership unclear for Navigation users.
+- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:378-393,405` - sticky
   frontend failures involve Section/layout ownership and must not be patched by
   this task.
 - `_docs/_WIDGETS/NAVIGATION.md` - current docs describe this as v1 data-only
@@ -39,7 +42,7 @@ physical owner before closure.
 | File | Required change |
 |---|---|
 | `core/widgets/core/navigation.tsx` | Extend the root-scoped Navigation runtime script so roots with `data-collapse-on-scroll="true"` toggle a deterministic collapsed state/class while scrolling. Keep the behavior passive, idempotent, and scoped to each Navigation root. |
-| `core/admin/ui/widgets/editors/NavigationEditors.tsx` | Update collapse helper copy after behavior is implemented; do not imply this fixes Section/page-shell sticky blockers. |
+| `core/admin/ui/widgets/editors/NavigationEditors.tsx` | Update collapse/sticky helper copy after behavior is implemented; explain the Navigation-local collapse behavior and Section/page-shell sticky limitation without changing global editor-mode IA. |
 | `tests/vitest/widgets/navigation.test.tsx` | Assert collapse attributes/classes/hooks render only when enabled and legacy payloads remain unchanged when disabled. |
 | `_docs/_WIDGETS/NAVIGATION.md` | Document collapse behavior, no-JS fallback, reduced-motion expectations, and sticky placement limitations. |
 | `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md` | Mark the collapse data-only row fixed only for Navigation runtime behavior and keep Section/page-shell sticky rows routed. |
@@ -107,7 +110,9 @@ No API routes are added.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run gates:coderso`
-- Targeted reliability/accessibility release gates for public scroll behavior.
+- `bun scripts/coderso-release-gates.ts --gate ux`
+- `bun scripts/coderso-release-gates.ts --gate reliability`
+- `bun scripts/coderso-release-gates.ts --gate performance`
 - `bun run scan:security:strict`
 - `bun run precommit`
 - `git diff --check`

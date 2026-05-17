@@ -120,9 +120,15 @@ No API routes are added.
   - `bun --cwd core lint:types`
   - `bun run scan:security:strict`
   - `bun run precommit`
-  - `bun run gates:coderso` when the child changes public runtime output,
-    interactive behavior, accessibility, security, performance, or reliability
-    contract.
+  - `bun run gates:coderso`
+  - `bun scripts/coderso-release-gates.ts --gate ux` when the child changes
+    editor/public UX or accessibility semantics.
+  - `bun scripts/coderso-release-gates.ts --gate security` when the child
+    changes link or public markup safety.
+  - `bun scripts/coderso-release-gates.ts --gate reliability` when the child
+    changes runtime state, focus, scroll, or idempotent script binding.
+  - `bun scripts/coderso-release-gates.ts --gate performance` when the child
+    changes scroll or motion behavior.
 
 ## Documentation Updates Required
 
