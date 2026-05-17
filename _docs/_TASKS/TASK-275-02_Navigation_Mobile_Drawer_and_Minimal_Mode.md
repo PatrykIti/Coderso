@@ -89,6 +89,20 @@ Error handling:
 - Focus containment applies only while drawer mode panel is open. Minimal mode
   must not bind drawer behavior.
 
+## Data Flow
+
+1. Admin chooses `behavior.mobileMode` and CTA mobile visibility in the
+   Navigation editor.
+2. `normalizeNavigationData()` keeps existing payloads backward-compatible while
+   mapping `drawer`, `minimal`, and `expanded` to explicit renderer branches.
+3. `navigation.tsx` emits root-scoped toggle/panel IDs, mobile CTA placement,
+   state attributes, and reduced-motion classes for drawer mode only.
+4. `navigationRuntimeClientScript` binds only roots that expose
+   `data-navigation-mobile-toggle`, toggles DOM state, and no-ops on malformed
+   roots.
+5. Widget and editor tests assert SSR branch differences, state markup, CTA
+   duplication policy, and persisted editor copy.
+
 ## Security Contract
 
 No API routes are added.
@@ -107,8 +121,12 @@ No API routes are added.
   injection or renderer assumptions change.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- `bun run gates:coderso` or targeted accessibility/reliability gate if
-  release-gate mapping requires it for public interactive runtime changes.
+- `bun run gates:coderso`
+- Targeted accessibility and reliability release gates for the public
+  interactive runtime change.
+- `bun run scan:security:strict`
+- `bun run precommit`
+- `git diff --check`
 
 ## Documentation Updates Required
 

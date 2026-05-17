@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 76 tasks
+- **To Do:** 80 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1542 tasks
 
@@ -43,7 +43,11 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-275-02 | Navigation Mobile Drawer and Minimal Mode | High | Large | Make minimal/drawer behavior explicit, remove mobile CTA duplication, add toggle state, icons, labels, animation, and focus policy |
 | TASK-275-03 | Navigation Dropdown and Rich Link Metadata | High | Large | Add touch/keyboard dropdown behavior plus schema-backed icon, badge, and description rendering/editing |
 | TASK-275-04 | Navigation Link Management UX | Medium | Large | Add reorder controls, limit feedback, sub-link hierarchy, and read-only synced menu preview |
-| TASK-275-05 | Navigation Optional Style and Product Controls | Medium | Very Large | Add lower-priority Navigation-owned style/product controls or split them before implementation if too broad |
+| TASK-275-05 | Navigation Optional Style and Product Controls | Medium | Very Large | Parent for lower-priority Navigation-owned style/product follow-ups; implementation lives in physical child leaves |
+| TASK-275-05-01 | Navigation Collapse Runtime Contract | Medium | Medium | Make `collapseOnScroll` a real root-scoped Navigation runtime behavior without patching Section/page-shell sticky blockers |
+| TASK-275-05-02 | Navigation Active Links and Safe Targets | Medium | Medium | Add active-link highlighting and safe target/rel controls through existing safe-href ownership |
+| TASK-275-05-03 | Navigation Visual Style Tokens | Medium | Large | Add bounded hover/active colors, underline, letter spacing, shadow, backdrop blur, dropdown direction, and motion tokens |
+| TASK-275-05-04 | Navigation Brand CTA and Logo Controls | Medium | Medium | Add logo-size, CTA-radius/separator, and bounded secondary-CTA policy without broad platform expansion |
 | TASK-275-06 | Navigation Report Docs Changelog and Closure | Medium | Medium | Refresh Navigation report/docs/changelog/board and final validation evidence after implementation leaves land |
 | TASK-267 | Feature Grid Widget Playwright Product Followups | High | Very Large | Feature Grid-only follow-up family for `REPORT_FEATURE_GRID_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-267-01 | Feature Grid Variant Preview and Responsive Cards-4 Layout | High | Medium | Add variant preview affordances, repair cards-4 responsive product behavior, and keep columns truthfulness in TASK-256 |

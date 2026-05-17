@@ -41,9 +41,9 @@ without approval.
 
 | File | Required change |
 |---|---|
-| `core/admin/ui/widgets/editors/NavigationEditors.tsx` | Add move-up/move-down controls for top-level links and sub-links, visible limit helper text, disabled-state reasons, clearer parent/child grouping, and read-only menu-source previews for current synced `items`. |
+| `core/admin/ui/widgets/editors/NavigationEditors.tsx` | Add move-up/move-down controls for top-level links and sub-links, visible limit helper text, disabled-state reasons, clearer parent/child grouping, Wizard quick-link count/overflow summary, and read-only menu-source previews for current synced `items`. |
 | `core/widgets/core/navigation.tsx` | Update constants or schema only if link/sub-link limits become persisted or normalized. Prefer editor-only limits if runtime already supports existing payloads safely. |
-| `tests/vitest/ui/navigation-editor-wave.test.tsx` | Assert reorder operations preserve item data, child reorder operations are scoped to the parent, limit feedback appears, menu previews show synced links, and remove controls remain bounded. |
+| `tests/vitest/ui/navigation-editor-wave.test.tsx` | Assert reorder operations preserve item data, child reorder operations are scoped to the parent, limit feedback appears, Wizard quick-link count/overflow state is truthful, menu previews show synced links, and remove controls remain bounded. |
 | `tests/vitest/widgets/navigation.test.tsx` | Run/update only if normalization, runtime ordering, or limits change. |
 | `_docs/_WIDGETS/NAVIGATION.md` | Document link management limits, reorder behavior, and synced-menu preview. |
 | `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md` | Record fixed/deferred evidence for reorder, limit, preview, and editor grouping findings. |
@@ -95,6 +95,18 @@ Error handling:
 - Keep the existing minimum item count unless the task explicitly changes and
   tests the policy.
 
+## Data Flow
+
+1. Manual editor state owns reorder actions for top-level `items[]` and nested
+   `children[]` arrays.
+2. Wizard mode derives a first-three quick-link summary plus an overflow count
+   from the same `items[]` array instead of hiding additional configured links.
+3. Menu-source mode consumes the resolved `items[]` payload as read-only
+   preview data; preview rendering never mutates or persists source-menu data.
+4. Editor updates call the existing widget update path with reordered arrays.
+5. Focused Vitest coverage asserts item order, child scope, disabled-state copy,
+   Wizard overflow state, and synced preview output.
+
 ## Security Contract
 
 No API routes are added.
@@ -113,6 +125,9 @@ No API routes are added.
 - `bun test tests/unit/widgets/validator.test.ts` if schema/defaults change.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run scan:security:strict`
+- `bun run precommit`
+- `git diff --check`
 
 ## Documentation Updates Required
 
@@ -125,6 +140,8 @@ No API routes are added.
 
 - Top-level links and sub-links can be reordered without manual retyping.
 - Limit states explain why an add action is disabled.
+- Wizard quick links show truthful count/overflow state when more than three
+  links exist.
 - Parent link rows and sub-link rows are visually distinct in the editor.
 - Menu-source mode shows read-only synced links and child counts.
 - Reorder, preview, and limit behavior is covered by focused editor tests.

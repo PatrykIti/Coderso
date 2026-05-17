@@ -84,6 +84,19 @@ Error handling:
 - Hash-only links must be valid in editor feedback but still pass through the
   same runtime normalization path.
 
+## Data Flow
+
+1. Admin edits `logo.href` and manual link `href` values in Wizard/Visual.
+2. `NavigationEditors.tsx` validates feedback with the same allowed destination
+   classes as the Navigation runtime: empty, `/`, `#`, `http://`, and
+   `https://`.
+3. Persisted widget data continues through `navigationSchema` and
+   `normalizeNavigationData()` without adding shared sanitizer behavior.
+4. `navigation.tsx` resolves `logo.href` through the existing safe-href helper
+   before rendering the logo anchor.
+5. Vitest asserts editor feedback, normalized hash links, linked logo SSR
+   output, and unsafe destination fallback.
+
 ## Security Contract
 
 No API routes are added.
@@ -103,6 +116,11 @@ No API routes are added.
   change.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` plus targeted accessibility/security gates when the
+  linked logo changes public runtime output classification.
+- `bun run scan:security:strict`
+- `bun run precommit`
+- `git diff --check`
 
 ## Documentation Updates Required
 

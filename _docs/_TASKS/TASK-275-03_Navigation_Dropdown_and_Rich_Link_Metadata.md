@@ -25,8 +25,9 @@ later product task approves them.
 
 - `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:63-72` - `icon` and
   `description` are defined but unused.
-- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:138-149` - dropdown animation,
-  click/touch state, and direction controls are missing.
+- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:138-145` - dropdown animation
+  and click/touch state are missing. Dropdown direction controls are owned by
+  TASK-275-05-03.
 - `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:195,198,209-214` - hover-only
   dropdowns and unused metadata are visible runtime/accessibility issues.
 - `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:262-263,317-321` - browser tests
@@ -42,7 +43,7 @@ later product task approves them.
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/navigation.tsx` | Render submenu trigger controls for items with children, root-scoped submenu IDs, `aria-expanded`, `aria-controls`, stable data attributes, reduced-motion-friendly transition classes, and plain-text icon/badge/description output for top-level and child links. |
+| `core/widgets/core/navigation.tsx` | Render the root `<nav>` with an accessible `aria-label`, submenu trigger controls for items with children, root-scoped submenu IDs, `aria-expanded`, `aria-controls`, stable data attributes, reduced-motion-friendly transition classes, and plain-text icon/badge/description output for top-level and child links. |
 | `core/widgets/core/navigation.tsx` | Extend `navigationRuntimeClientScript` to toggle submenus on click/touch, close on Escape/outside click, and close sibling menus in the same Navigation root. |
 | `core/admin/ui/widgets/editors/NavigationEditors.tsx` | Add manual-link and sub-link metadata editors for icon text, description, badge label/tone, and visibility. Keep menu-source metadata read-only if TASK-275-04 has not landed. |
 | `core/services/navigation/navigationRuntimeResolver.ts` | Update only if resolved menu/page metadata shape changes. Existing deterministic metadata mapping should stay intact. |
@@ -100,6 +101,19 @@ Error handling:
 - Visibility values remain persisted but do not become an auth gate in this
   leaf unless a separate access task owns runtime auth context.
 
+## Data Flow
+
+1. Manual Navigation items and child items carry existing `meta` fields through
+   the editor form.
+2. `normalizeNavigationData()` trims empty `icon`, `description`, and `badge`
+   values and preserves strict item/child shapes.
+3. `navigation.tsx` renders a labelled root `<nav>`, text-only metadata, and
+   submenu controls with root-scoped IDs.
+4. `navigationRuntimeClientScript` toggles only submenu elements inside the
+   current Navigation root and closes sibling/open menus from the same root.
+5. Resolver tests run only if menu/page-source metadata mapping changes;
+   otherwise Vitest covers renderer/editor ownership.
+
 ## Security Contract
 
 No API routes are added.
@@ -120,8 +134,12 @@ No API routes are added.
 - `bun test tests/unit/widgets/validator.test.ts` if schema/defaults change.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- `bun run gates:coderso` or targeted accessibility/reliability gate if
-  required for public interactive output.
+- `bun run gates:coderso`
+- Targeted accessibility and reliability release gates for the public
+  interactive submenu output.
+- `bun run scan:security:strict`
+- `bun run precommit`
+- `git diff --check`
 
 ## Documentation Updates Required
 
@@ -134,6 +152,8 @@ No API routes are added.
 
 - Items with children expose a click/touch submenu trigger with
   `aria-expanded` and `aria-controls`.
+- The root Navigation element has an accessible `aria-label` covered by SSR
+  tests.
 - Keyboard and touch users can access child links without relying on hover.
 - Existing metadata fields are editable for manual links and render as
   accessible plain text.

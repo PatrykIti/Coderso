@@ -57,8 +57,8 @@ against the source-of-truth docs before the contract change.
 
 | Report finding | Evidence | Owner task or boundary | Reason |
 |---|---|---|---|
-| Missing live preview in all editor modes | `REPORT_NAVIGATION_WIDGET.md:179-188` | TASK-256 or page-builder preview follow-up | A live preview bridge is a shared editor/page-builder surface, not a Navigation-only renderer change. |
-| Sticky nav blocked on published frontend by Section `overflow-hidden` | `REPORT_NAVIGATION_WIDGET.md:378-393,403-405` | TASK-256 structural/page-shell owner or future Section task | The report identifies `Section`/layout wrapper ownership. TASK-275 may record evidence, but must not patch Section inside a Navigation task. |
+| Missing live preview in all editor modes | `REPORT_NAVIGATION_WIDGET.md:179-188` | TASK-275-06 routed-pending-owner gate, then TASK-256-08 or a new shared page-builder preview physical task before closure | A live preview bridge is a shared editor/page-builder surface, not a Navigation-only renderer change. TASK-275-06 must name the exact shared owner task or keep the row open as `routed-pending-owner`; it must not claim the finding closed from Navigation-only work. |
+| Sticky nav blocked on published frontend by Section `overflow-hidden` | `REPORT_NAVIGATION_WIDGET.md:378-393,403-405` | TASK-275-06 routed-pending-owner gate, then TASK-256-08 or a new shared Section/page-shell physical task before closure | The report identifies `Section`/layout wrapper ownership. TASK-275 may record evidence, but must not patch Section inside a Navigation task or close the sticky frontend row without an exact shared owner task. |
 | Generic contrast validation for configurable colors | `REPORT_NAVIGATION_WIDGET.md:215` | TASK-256-08 future shared validation owner | Contrast warnings should be shared across configurable color widgets. |
 | Generic safe-href sanitizer semantics | TASK-256 shared link/media hardening | TASK-256 | TASK-275 may consume existing safe-href helpers and align Navigation editor validation, but must not fork a new sanitizer. |
 | Global Advanced/Visual mode ownership rules | TASK-256 editor-mode scope | TASK-256-01 | Navigation-specific copy can improve, but broad mode ownership belongs to TASK-256. |
@@ -73,11 +73,13 @@ against the source-of-truth docs before the contract change.
 | `minimal` mobile mode is currently equivalent to `drawer` | TASK-275-02 | Intentional Navigation product-contract change from current docs. |
 | Mobile CTA duplicates between header and open panel | TASK-275-02 | Navigation renderer policy for drawer/mobile-only CTA placement. |
 | Mobile trigger is text-only, has no state change, no explicit action label, no animation, and no focus safety | TASK-275-02 | Navigation runtime script and render markup. |
-| Dropdown works only on hover/focus-within and lacks accessible expanded state | TASK-275-03 | Navigation submenu runtime behavior. |
+| Dropdown works only on hover/focus-within and lacks accessible expanded state | TASK-275-03 | Navigation submenu runtime behavior, including root `<nav aria-label>` output needed by the report. Dropdown direction is owned by TASK-275-05-03. |
 | `NavigationItemMeta.icon`, `description`, and `badge` exist but are not fully editable/rendered | TASK-275-03 | Navigation schema already has fields; add editor and runtime surface without arbitrary rich menu blocks. |
-| Main links cannot be reordered, link limit lacks feedback, sub-link hierarchy is weak, and menu-source mode lacks preview | TASK-275-04 | Navigation editor repeated-item and read-only preview management. |
-| `collapseOnScroll` persists only a data attribute | TASK-275-05 or a split child | Product-contract expansion from current docs; implement only after the runtime script shape is stable. |
-| Hover/active colors, underline, active-link detection, CTA radius/separator, logo size, letter spacing, shadow, blur, target/rel, dropdown direction, and bounded animation controls are missing | TASK-275-05 | Navigation-owned optional style/product expansion. Split before implementation if too broad. |
+| Main links cannot be reordered, link limit lacks feedback, sub-link hierarchy is weak, Wizard shows only the first three quick links without overflow state, and menu-source mode lacks preview | TASK-275-04 | Navigation editor repeated-item, Wizard summary/count, and read-only preview management. |
+| `collapseOnScroll` persists only a data attribute | TASK-275-05-01 | Product-contract expansion from current docs; implement only after the runtime script shape is stable. Sticky failures caused by Section/page-shell overflow stay routed outside TASK-275. |
+| Active-link detection plus safe target/rel controls are missing | TASK-275-05-02 | Navigation-owned link behavior that consumes existing safe-href helpers instead of forking sanitizer logic. |
+| Hover/active colors, underline, letter spacing, shadow, blur, dropdown direction, and bounded animation controls are missing | TASK-275-05-03 | Navigation-owned optional visual-token expansion. Dropdown click/touch/a11y state stays in TASK-275-03. |
+| CTA radius/separator, logo size, and bounded secondary-CTA policy are missing | TASK-275-05-04 | Navigation-owned brand/action controls. Arbitrary mega-menu/search/dark-mode platform expansion remains out of scope. |
 | Report fixed/deferred notes, widget docs, changelog, and board closure | TASK-275-06 | Final evidence and status synchronization. |
 
 ## Current Owner and Test Matrix
@@ -97,6 +99,10 @@ against the source-of-truth docs before the contract change.
 - [ ] TASK-275-03: Navigation Dropdown and Rich Link Metadata
 - [ ] TASK-275-04: Navigation Link Management UX
 - [ ] TASK-275-05: Navigation Optional Style and Product Controls
+  - [ ] TASK-275-05-01: Navigation Collapse Runtime Contract
+  - [ ] TASK-275-05-02: Navigation Active Links and Safe Targets
+  - [ ] TASK-275-05-03: Navigation Visual Style Tokens
+  - [ ] TASK-275-05-04: Navigation Brand CTA and Logo Controls
 - [ ] TASK-275-06: Navigation Report, Docs, Changelog, and Closure
 
 ## Implementation Order
@@ -111,10 +117,12 @@ against the source-of-truth docs before the contract change.
    does not duplicate event binding.
 5. Complete TASK-275-04 after metadata/link rendering is stable. It touches the
    same repeated item editor surface.
-6. Complete TASK-275-05 after functional behavior lands. Split it into
-   additional physical leaves before coding if the optional style/product work
-   is too broad for one implementation pass.
-7. Complete TASK-275-06 last with report evidence, docs, changelog, board sync,
+6. Do not implement TASK-275-05 directly. Complete its physical child leaves in
+   this order: TASK-275-05-01 collapse, TASK-275-05-02 active/target links,
+   TASK-275-05-03 visual tokens/dropdown direction/motion, and TASK-275-05-04
+   brand CTA/logo controls.
+7. Complete TASK-275-06 last with report evidence, exact shared owner IDs for
+   live-preview and sticky routed rows, docs, changelog, board sync,
    and final validation.
 
 ## Git Scope Safeguards
@@ -202,6 +210,9 @@ Implementation leaves:
 - Every finding in `REPORT_NAVIGATION_WIDGET.md` is either implemented by a
   TASK-275 physical leaf, explicitly excluded to TASK-256/shared ownership, or
   deferred by TASK-275-06 with a reason.
+- Live-preview and sticky frontend rows are not marked closed by TASK-275 unless
+  TASK-275-06 names an exact shared physical owner task; otherwise their status
+  remains `routed-pending-owner`.
 - TASK-275 docs do not duplicate TASK-256 shared-contract implementation scope.
 - Each implementation leaf names concrete files, data flow, error handling,
   regression tests, documentation updates, and validation commands.
