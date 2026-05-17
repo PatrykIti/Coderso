@@ -102,6 +102,10 @@ No API routes are added.
 - `bun run test:vitest -- tests/vitest/ui/split-layout-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` when renderer
   output changed during the family
+- `bun run test:vitest -- tests/vitest/pageBuilder/visualPanel.test.tsx` when
+  the family consumes the TASK-256 shared variant helper through VisualPanel
+- `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` when
+  the family consumes final TASK-256 token semantics
 - `bun test tests/unit/widgets/validator.test.ts` when schema/defaults changed
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`

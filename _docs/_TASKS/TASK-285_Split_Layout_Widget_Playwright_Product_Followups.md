@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Layout + Admin UI + Runtime Render + Playwright QA
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-252-05-04, TASK-256-02, TASK-256-03, TASK-256-05-02
+**Dependencies:** TASK-252-05-04, TASK-256-01, TASK-256-02, TASK-256-03, TASK-256-05-02
 **Status:** To Do
 
 ---
@@ -46,16 +46,17 @@ excludes these shared-contract rows:
 - Public empty-slot placeholder gating stays in TASK-256-03. TASK-285 may add
   Split Layout admin/editor guidance only through the final preview-context
   contract.
-- Any generic Wizard/Visual/Advanced mode reassignment stays in TASK-256-01 or
-  TASK-256-08. TASK-285 may make Split Layout Advanced diagnostics useful
-  without moving shared ownership rules.
+- Any generic Wizard/Visual/Advanced mode reassignment stays in TASK-256-01.
+  TASK-256-08 may record final routed/deferred status, but it is not the
+  implementation owner. TASK-285 may make Split Layout Advanced diagnostics
+  useful without moving shared ownership rules.
 
 ## Report Classification Matrix
 
 | Report finding | Owner | TASK-285 action |
 |---|---|---|
 | BUG-01 | TASK-256-05-02 / TASK-256-01 | Excluded. Atomic variant+ratio persistence is shared editor contract repair. |
-| BUG-02 | TASK-256-02 / TASK-256-05-02 | Excluded. Duplicate zero/off token semantics are shared token-contract repair. |
+| BUG-02 | TASK-256-02 | Excluded. Duplicate zero/off token semantics are shared token-contract repair. |
 | BUG-03 | TASK-285-01 | Add Split Layout-only mobile ratio/product copy so `keep` mode is explicit and not silently coupled to tablet ratio. |
 | BUG-04 | TASK-285-01 | Add contextual reverse-on-mobile behavior, labels, and preview feedback without changing shared editor mode ownership. |
 | ISSUE-01 | TASK-256-05-02 plus TASK-285-02 | Shared data sync stays TASK-256; TASK-285 adds Split Layout-specific variant miniatures and current-ratio disclosure after sync lands. |

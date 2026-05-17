@@ -250,7 +250,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-256-04 | Interactive Runtime Instance and Accessibility Contract | High | Large | Add instance-safe IDs, scoped runtime binding, and ARIA repairs for interactive widgets |
 | TASK-256-05 | Structural Widget Report Findings | High | Very Large | Parent for shared structural contract repairs; widget-specific product findings stay deferred |
 | TASK-256-05-01 | Section and Grid Columns Structural Findings | High | Medium | Repair section placeholders/anchors and grid slot/config/public-label drift |
-| TASK-256-05-02 | Split Layout and Stack Variant Data Sync | High | Medium | Repair variant-bound ratio/direction data sync and duplicate zero-token UX |
+| TASK-256-05-02 | Split Layout and Stack Variant Data Sync | High | Medium | Repair shared variant-bound ratio/direction data sync; token UX stays TASK-256-02 and Split Layout product polish stays TASK-285 |
 | TASK-256-05-03 | Spacer and Divider Token Control Findings | High | Medium | Repair spacer/divider token controls, inert Advanced state, and divider ARIA |
 | TASK-256-05-04 | Tabs, Accordion, and Toggle Block Structural Residuals | High | Medium | Apply remaining slot-label, placeholder, clear, and interactive structural fixes |
 | TASK-256-06 | Marketing Widget Report Findings | High | Very Large | Parent for shared marketing/content contract repairs across the listed child leaves |

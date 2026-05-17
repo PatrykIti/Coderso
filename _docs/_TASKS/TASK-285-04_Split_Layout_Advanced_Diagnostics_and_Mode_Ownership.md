@@ -93,6 +93,9 @@ No API routes are added.
   diagnostics helpers are exported
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- Before a manual commit for this leaf, also run the TASK-285 implementation
+  baseline: `bun run gates:coderso`, `bun run scan:security:strict`, and
+  `bun run precommit`.
 
 ## Documentation Updates Required
 

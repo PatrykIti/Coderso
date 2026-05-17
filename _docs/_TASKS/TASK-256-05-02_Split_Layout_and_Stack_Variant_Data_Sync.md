@@ -18,12 +18,16 @@ but persisted `data` can disagree with what the renderer shows.
 
 ## Drift Evidence
 
-- `_docs/PLAYWRIGHT/REPORT_SPLIT_LAYOUT_WIDGET.md:95,121-125,133,153,161`
-  covers ratio/data desync, duplicate zero tokens, and mobile ratio/reverse
-  behavior.
-- `_docs/PLAYWRIGHT/REPORT_SPLIT_LAYOUT_WIDGET.md:174-182,202,209-214` covers
-  redundant slot sections, Advanced duplication, `keep` tablet/mobile ratio
-  communication, reverse-on-mobile truthfulness, and closure checklist.
+- `_docs/PLAYWRIGHT/REPORT_SPLIT_LAYOUT_WIDGET.md:95,161` covers
+  split-layout variant/data ratio desync.
+- `_docs/PLAYWRIGHT/REPORT_SPLIT_LAYOUT_WIDGET.md:121-125` is routed to
+  TASK-256-02 for shared `none`/zero token semantics; this leaf may only consume
+  that final shared helper if variant controls need the resolved token state.
+- `_docs/PLAYWRIGHT/REPORT_SPLIT_LAYOUT_WIDGET.md:133,153,174-182,202,209-214`
+  is routed out of this shared leaf: mobile/reverse product behavior belongs to
+  TASK-285-01, pane-slot guidance and Split Layout empty-state copy belong to
+  TASK-285-03 after TASK-256-03 lands the render-context gate, and Split Layout
+  Advanced diagnostics belong to TASK-285-04.
 - `_docs/PLAYWRIGHT/REPORT_STACK_WIDGET.md:111-165,219-225` covers
   variant/data direction desync, duplicate zero tokens, Wizard mobile direction,
   Advanced variant drift, and the matching critical/high-priority summary rows.
@@ -34,37 +38,43 @@ but persisted `data` can disagree with what the renderer shows.
 - [ ] Make stack variant changes emit an atomic variant+direction data patch.
 - [ ] Preserve legacy ratio/direction fields that are not active, but do not
   show them as active controls for the wrong variant.
-- [ ] Remove duplicate `None`/`0` token choices or normalize them through
-  TASK-256-02.
-- [ ] Communicate or block split-layout `keep` behavior where tablet ratio
-  becomes the mobile ratio and `Reverse on mobile` has no effect.
-- [ ] Replace redundant slot instructions with TASK-256-03 editor labels and
-  public placeholder gating.
+- [ ] Consume TASK-256-02 token helpers only where this leaf must avoid
+  contradictory variant-adjacent token state; do not add Split Layout gap-label
+  product copy here.
+- [ ] Leave Split Layout `keep` mobile-ratio communication and
+  `Reverse on mobile` product guidance to TASK-285-01.
+- [ ] Leave Split Layout pane-slot copy to TASK-285-03 and shared public
+  placeholder gating to TASK-256-03.
 
 ## Files to Change
 
 | File | Lines | Required change |
 |---|---:|---|
-| `core/admin/ui/widgets/editors/SplitLayoutEditors.tsx` | variant, ratio, mobile behavior, Advanced sections | Emit atomic variant+data patches, hide duplicate zero choices, make `keep` mobile behavior truthful, and make Advanced ownership explicit. |
-| `core/widgets/core/splitLayout.tsx` | 247-270 | Gate empty pane placeholders through render context and avoid public editor copy. |
+| `core/admin/ui/widgets/editors/SplitLayoutEditors.tsx` | variant and ratio controls | Emit atomic variant+data patches through the shared TASK-256-01 path; do not own mobile/reverse copy, Split Layout gap labels, pane-slot guidance, or Advanced diagnostics here. |
+| `core/widgets/core/splitLayout.tsx` | normalizer/default helpers only if needed | Reuse owner normalization for variant ratio defaults; do not implement public placeholder gating or mobile product behavior in this leaf. |
 | `core/admin/ui/widgets/editors/StackEditors.tsx` | variant, direction, Wizard/Advanced sections | Emit atomic variant+data patches and make mobile direction controls truthful. |
 | `core/widgets/core/stack.tsx` | renderer data resolution | Keep rendered direction deterministic and aligned with normalized data. |
-| `tests/vitest/ui/split-layout-editor-wave.test.tsx` | existing suite | Add variant/ratio, `keep` mobile behavior, reverse-on-mobile, and duplicate-token regressions. |
-| `tests/vitest/widgets/splitLayout.test.tsx` | existing suite | Add public placeholder, ratio, and mobile-behavior assertions. |
+| `tests/vitest/ui/split-layout-editor-wave.test.tsx` | existing suite | Add variant/ratio atomic-update regressions only. |
+| `tests/vitest/widgets/splitLayout.test.tsx` | existing suite | Add ratio/default helper assertions only if owner helpers change. |
 | `tests/vitest/ui/stack-editor-wave.test.tsx` | existing suite | Add variant/direction and Advanced ownership assertions. |
-| `tests/vitest/widgets/stack.test.tsx` | existing suite | Add direction and public placeholder assertions. |
+| `tests/vitest/widgets/stack.test.tsx` | existing suite | Add direction/default helper assertions only if owner helpers change. |
 
 ## Implementation Pseudocode
 
 ```tsx
 function handleSplitVariantChange(nextVariant: SplitLayoutVariantId) {
-  const nextData = normalizeSplitLayoutData({
-    ...value,
-    layout: {
-      ...value.layout,
-      ratio: resolveDefaultRatioForVariant(nextVariant, value.layout?.ratio),
+  const current = normalizeSplitLayoutData(value, variant);
+  const nextData = normalizeSplitLayoutData(
+    {
+      ...current,
+      ratio: {
+        ...current.ratio,
+        desktop: nextVariant,
+        tablet: nextVariant,
+      },
     },
-  });
+    nextVariant
+  );
   applyVariantDataPatch(nextVariant, nextData);
 }
 
@@ -97,7 +107,8 @@ Error handling:
   legacy fields.
 - Hidden inactive fields stay in data until normalization or explicit editor
   action removes them.
-- Public placeholders render `null` unless TASK-256-03 context says preview.
+- Split Layout mobile/reverse, pane-slot copy, and Advanced diagnostics are
+  intentionally left to TASK-285 leaves after this shared variant patch exists.
 
 ## Git Scope Safeguards
 
@@ -142,7 +153,10 @@ No API routes are added.
 
 ## Acceptance Criteria
 
-- Split-layout variant changes cannot leave stale ratio data visible as active.
+- Split-layout variant changes cannot leave stale desktop/tablet ratio data
+  visible as active.
 - Stack variant changes cannot leave stale direction data visible as active.
-- Duplicate zero/off token choices are resolved consistently.
-- Public runtime does not leak editor slot instructions.
+- Duplicate zero/off token choices are resolved by TASK-256-02 and consumed here
+  only if they affect variant-adjacent state.
+- Public slot placeholder safety is resolved by TASK-256-03; Split Layout
+  product copy is resolved by TASK-285-03.

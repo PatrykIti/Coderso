@@ -41,7 +41,7 @@ previews after that shared behavior exists.
 | `core/widgets/core/splitLayout.tsx` | Expose or reuse a pure ratio-span display helper so editor miniatures stay tied to the widget owner. |
 | `core/admin/ui/widgets/editors/SplitLayoutEditors.tsx` | Add ratio miniatures, effective-ratio copy, override indicators, and call the final shared variant patch path. |
 | `tests/vitest/ui/split-layout-editor-wave.test.tsx` | Assert miniatures, selected/override states, ratio summary copy, and atomic helper consumption behavior. |
-| `tests/vitest/widgets/splitLayout.test.tsx` | Update only if widget definition metadata or SSR markers change. |
+| `tests/vitest/widgets/splitLayout.test.tsx` | Update if widget definition metadata, SSR markers, or exported pure ratio helpers change. |
 | `tests/vitest/pageBuilder/visualPanel.test.tsx` | Run/update only if consuming the shared atomic helper changes VisualPanel behavior. |
 
 ## Implementation Pseudocode
@@ -59,14 +59,20 @@ function SplitRatioMiniature({ ratio }: { ratio: SplitLayoutRatio }) {
 
 function getRatioDisclosure(data: SplitLayoutData, variant: SplitLayoutVariantId) {
   const normalized = normalizeSplitLayoutData(data, variant);
+  const rawRatio = data.ratio as
+    | (NonNullable<SplitLayoutData["ratio"]> & { mobile?: SplitLayoutRatio })
+    | undefined;
+  const desktop = normalized.ratio?.desktop ?? variant;
+  const tablet = normalized.ratio?.tablet ?? desktop;
+  const mobile = normalized.ratio?.mobile ?? tablet;
+  const hasExplicitMobile = typeof rawRatio?.mobile !== "undefined";
+
   return {
-    desktop: normalized.ratio?.desktop ?? variant,
-    tablet: normalized.ratio?.tablet ?? normalized.ratio?.desktop ?? variant,
-    mobile: normalized.ratio?.mobile ?? normalized.ratio?.tablet ?? variant,
+    desktop,
+    tablet,
+    mobile,
     hasOverride:
-      normalized.ratio?.desktop !== variant ||
-      normalized.ratio?.tablet !== variant ||
-      normalized.ratio?.mobile !== undefined,
+      desktop !== variant || tablet !== variant || (hasExplicitMobile && mobile !== variant),
   };
 }
 ```
@@ -99,11 +105,14 @@ No API routes are added.
 
 - `bun run test:vitest -- tests/vitest/ui/split-layout-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/splitLayout.test.tsx` if widget
-  metadata changes
+  metadata, SSR markers, or pure ratio helpers change
 - `bun run test:vitest -- tests/vitest/pageBuilder/visualPanel.test.tsx` if the
   shared variant helper contract is consumed through VisualPanel
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- Before a manual commit for this leaf, also run the TASK-285 implementation
+  baseline: `bun run gates:coderso`, `bun run scan:security:strict`, and
+  `bun run precommit`.
 
 ## Documentation Updates Required
 

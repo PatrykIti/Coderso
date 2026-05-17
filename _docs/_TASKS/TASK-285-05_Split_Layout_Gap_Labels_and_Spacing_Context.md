@@ -50,18 +50,33 @@ type SplitLayoutGapOption = {
   description: string;
 };
 
-function getSplitLayoutGapOptions(tokenMeta: DesignTokenMeta): SplitLayoutGapOption[] {
+const splitLayoutGapDescriptions: Record<SplitLayoutGap, string> = {
+  none: "No pane gap",
+  "0": "Legacy zero pane gap",
+  "1": "Compact pane gap",
+  "2": "Small pane gap",
+  "3": "Small-medium pane gap",
+  "4": "Medium pane gap",
+  "5": "Medium-large pane gap",
+  "6": "Default pane gap",
+  "8": "Large pane gap",
+  "10": "Extra-large pane gap",
+  "12": "Max pane gap",
+};
+
+function getSplitLayoutGapOptions(): SplitLayoutGapOption[] {
   return splitLayoutGapTokens.map((token) => ({
     id: token,
-    label: formatGapTokenLabel(token, tokenMeta),
-    description: token === "none" ? "No pane gap" : `Pane gap: ${tokenMeta.spacing[token]}`,
+    label: token === "none" ? "None" : `Gap ${token}`,
+    description: splitLayoutGapDescriptions[token],
   }));
 }
 ```
 
 Editor flow:
 
-1. Consume the final TASK-256 token metadata/labeling helper if available.
+1. Consume the final TASK-256 token metadata/labeling helper only if TASK-256
+   ships one; otherwise keep the Split Layout resolver static and owner-local.
 2. Build the Split Layout options from `splitLayoutGapTokens`, not a separate
    editor-only token list.
 3. Show labels/descriptions in Wizard, Visual, and Advanced wherever a gap
@@ -95,6 +110,9 @@ No API routes are added.
   final TASK-256 token semantics are consumed
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- Before a manual commit for this leaf, also run the TASK-285 implementation
+  baseline: `bun run gates:coderso`, `bun run scan:security:strict`, and
+  `bun run precommit`.
 
 ## Documentation Updates Required
 

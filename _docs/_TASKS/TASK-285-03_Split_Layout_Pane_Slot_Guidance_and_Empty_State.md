@@ -47,8 +47,8 @@ copy in public runtime output.
 ## Implementation Pseudocode
 
 ```tsx
-function renderSplitPaneEmptyState(side: "left" | "right", context: WidgetRenderContext) {
-  if (context.surface !== "editor-preview") {
+function renderSplitPaneEmptyState(side: "left" | "right", context?: WidgetRenderContext) {
+  if (!shouldRenderSlotPlaceholder(context?.mode)) {
     return null;
   }
 
@@ -72,7 +72,8 @@ function SplitLayoutVisualEditor() {
 Flow:
 
 1. Read the final TASK-256-03 render-context API before editing.
-2. Render empty guidance only when the context confirms an editor/admin preview.
+2. Render empty guidance only when `WidgetRenderContext.mode` confirms an
+   editor/admin preview.
 3. In public SSR, render no admin instruction for empty panes or keep the final
    TASK-256 null/placeholder behavior.
 4. Keep the editor copy aligned with the shared slot insert/Structure UI.
@@ -102,6 +103,9 @@ No API routes are added.
   render-context behavior changes
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- Before a manual commit for this leaf, also run the TASK-285 implementation
+  baseline: `bun run gates:coderso`, `bun run scan:security:strict`, and
+  `bun run precommit`.
 
 ## Documentation Updates Required
 

@@ -59,7 +59,7 @@ TASK-256 and are recorded by TASK-256-08.
 | Child | Evidence scope | Primary owner files | Required shared-contract change |
 |---|---|---|---|
 | TASK-256-05-01 | `section`, `grid-columns` | `core/widgets/core/section.tsx`; `SectionEditors.tsx`; `core/widgets/core/gridColumns.tsx`; `GridColumnsEditors.tsx` | Hide public placeholders, validate section anchors/default tokens, sync grid slots/config, and classify public column labels as editor metadata unless a caption field is intentionally added. |
-| TASK-256-05-02 | `split-layout`, `stack` | `core/widgets/core/splitLayout.tsx`; `SplitLayoutEditors.tsx`; `core/widgets/core/stack.tsx`; `StackEditors.tsx` | Repair variant-bound ratio/direction data sync, duplicate zero-token choices, and redundant Advanced controls. |
+| TASK-256-05-02 | `split-layout`, `stack` | `core/widgets/core/splitLayout.tsx`; `SplitLayoutEditors.tsx`; `core/widgets/core/stack.tsx`; `StackEditors.tsx` | Repair shared variant-bound ratio/direction data sync; duplicate zero-token UX stays with TASK-256-02 and Split Layout product diagnostics/guidance stay with TASK-285. |
 | TASK-256-05-03 | `spacer`, `divider` | `core/widgets/core/spacer.tsx`; `SpacerEditors.tsx`; `core/widgets/core/divider.tsx`; `DividerEditors.tsx` | Repair fixed/responsive Advanced behavior, custom token UX, inert variant select, and divider ARIA. |
 | TASK-256-05-04 | `tabs`, `accordion`, `toggle-block` | `core/widgets/core/tabs.tsx`; `TabsEditors.tsx`; `core/widgets/core/accordion.tsx`; `AccordionEditors.tsx`; `core/widgets/core/toggleBlock.tsx`; `ToggleBlockEditors.tsx` | Apply remaining slot-label, clear-control, placeholder, default-open/collapsible, and interactive structural residuals after TASK-256-03/04. |
 

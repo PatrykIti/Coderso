@@ -60,8 +60,12 @@ function normalizeSplitLayoutRatio(
   ratio: SplitLayoutRatioSet | undefined,
   variant: SplitLayoutVariantId
 ): Required<SplitLayoutRatioSet> {
+  const defaultRatio = splitLayoutDefaults.ratio ?? {
+    desktop: variant,
+    tablet: "50-50",
+  };
   const desktop = resolveSplitLayoutRatio(ratio?.desktop, variant);
-  const tablet = resolveSplitLayoutRatio(ratio?.tablet, desktop);
+  const tablet = resolveSplitLayoutRatio(ratio?.tablet, defaultRatio.tablet ?? "50-50");
   return {
     desktop,
     tablet,
@@ -116,6 +120,9 @@ No API routes are added.
 - `bun test tests/unit/widgets/validator.test.ts` when schema/defaults change
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- Before a manual commit for this leaf, also run the TASK-285 implementation
+  baseline: `bun run gates:coderso`, `bun run scan:security:strict`, and
+  `bun run precommit`.
 
 ## Documentation Updates Required
 
