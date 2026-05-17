@@ -54,6 +54,8 @@ work rather than Posts Feed-only product work.
 | A3 generic "Read more" links lack screen-reader context | `REPORT_POSTS_FEED_WIDGET.md:259` | TASK-256 dynamic report classification / shared Content List renderer follow-up | The CTA anchor is emitted by `ContentListBlock`, not the Posts Feed owner. |
 | UX-07 columns remain active for list/compact variants | `REPORT_POSTS_FEED_WIDGET.md:209-212,352` | TASK-256 truthful-control contract | This is the same shared variant/control truthfulness class already routed through TASK-256 for other widgets. |
 | UX-08 Clear without undo | `REPORT_POSTS_FEED_WIDGET.md:214-216` | TASK-256-02 / existing clear-control contract | Undo/toast behavior for `Clear` is a shared editor pattern, not a Posts Feed-only behavior. |
+| BF-09 image aspect-ratio controls | `REPORT_POSTS_FEED_WIDGET.md:245-246` | TASK-256 dynamic report classification / shared Content List renderer follow-up | Posts Feed delegates card image rendering to `ContentListBlock`, whose image aspect behavior is shared by `content-list` and `posts-feed`. |
+| A4 tag links as navigational anchors | `REPORT_POSTS_FEED_WIDGET.md:260` | TASK-256 dynamic report classification / shared Content List renderer follow-up | TASK-277 may supply bounded tag data, but rendering those tags as navigational links changes shared Content List metadata semantics. |
 | BUG-06 CSRF/session expiry while editing | `REPORT_POSTS_FEED_WIDGET.md:155-160,289` | Future admin auth/session resilience task | Token refresh, expired-session modals, and unsaved-change protection are global admin/page-editor concerns. |
 | BUG-09 root cause: authenticated `GET /api/posts` returns 401 after session drift | `REPORT_POSTS_FEED_WIDGET.md:176-180,298,346` | Future admin auth/session resilience task for token refresh; TASK-277-03 owns only local picker error/retry UX | TASK-277 must not implement a one-off auth refresh path inside a widget editor. |
 
@@ -71,8 +73,7 @@ Posts Feed files.
 | BUG-02 `style.textColor` exists but is not exposed in the editor | TASK-277-06 | Posts Feed editor/style control gap. |
 | BUG-04 / BF-01 hardcoded `showImage: false` | TASK-277-02 | Add Posts Feed-owned thumbnail field and editor toggle before mapping to Content List. |
 | BUG-05 / A2 resolver does not map `imageSrc` / `imageAlt` | TASK-277-02 | Map safe post thumbnail data into the runtime item contract. |
-| BF-05 / A4 `tags: []` is hardcoded | TASK-277-02 | Map bounded post tags for existing Content List metadata display. |
-| BF-09 image aspect-ratio controls | TASK-277-02 | Add bounded Posts Feed image presentation fields only after thumbnail mapping lands. |
+| BF-05 / A4 tag data is hardcoded empty | TASK-277-02 | Map bounded post tags for existing Content List metadata display; shared navigational tag-link rendering stays outside TASK-277. |
 | BUG-09 local picker failure UX | TASK-277-03 | Improve picker error state, retry, and re-auth guidance while leaving global token refresh outside scope. |
 | UX-04 manual picker search | TASK-277-03 | Add local filtering over the fetched post catalog. |
 | UX-05 manual picker reorder | TASK-277-03 | Preserve manual order through keyboard controls and optional drag-and-drop. |

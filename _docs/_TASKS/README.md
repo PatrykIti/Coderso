@@ -57,7 +57,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-276-07 | Newsletter Report, Docs, Changelog, and Closure | Medium | Medium | Refresh Newsletter report/docs/changelog/board and final validation evidence |
 | TASK-277 | Posts Feed Widget Playwright Product Followups | High | Very Large | Posts Feed-only follow-up family for `REPORT_POSTS_FEED_WIDGET.md`, excluding TASK-256 shared-contract and global auth/session scope |
 | TASK-277-01 | Posts Feed Source Mode, Route, and Filter Truthfulness | High | Large | Repair manual-sort truthfulness, category filter copy/parsing, and post detail-route fallback behavior |
-| TASK-277-02 | Posts Feed Media, Tags, and Card Metadata | High | Large | Add show-image, thumbnail/alt mapping, bounded tags, and image aspect controls for posts-feed cards |
+| TASK-277-02 | Posts Feed Media, Tags, and Card Metadata | High | Large | Add show-image, media-resolved thumbnail/alt mapping, and bounded tag data for posts-feed cards |
 | TASK-277-03 | Posts Feed Manual Picker Search, Reorder, and Accessibility | High | Large | Add picker search, selected-order controls, accessible labels/live state, and local retry/error UX |
 | TASK-277-04 | Posts Feed Admin Preview and Runtime Status | High | Large | Hydrate admin canvas preview with bounded post data and expose readable sync/runtime status |
 | TASK-277-05 | Posts Feed Section Header, View All, and Editorial Chrome | Medium | Large | Add optional section heading, safe View All link, and bounded posts-feed visual motion |
