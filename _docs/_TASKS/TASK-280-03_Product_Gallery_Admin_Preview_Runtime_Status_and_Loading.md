@@ -67,6 +67,8 @@ Out of scope:
 | `core/server/routes/commerceRoutes.ts` | Reuse or extend the internal `/commerce/products/query` route only through the existing permissioned commerce-read contract. |
 | `tests/vitest/widgets/productGallery.test.tsx` | Cover runtime warning/loading/status markers if render output changes. |
 | `tests/vitest/ui/product-gallery-editor-wave.test.tsx` | Cover resolver status, refresh loading, error, and count copy in the editor. |
+| `tests/vitest/ui/page-editor.test.tsx` | Add a focused Product Gallery preview/canvas case if preview data is threaded through `PageEditor` or `BlockList`. |
+| `tests/vitest/ui/widget-template-editor.test.tsx` | Add a focused Product Gallery template preview case if `WidgetTemplateEditorPage` preview hydration changes. |
 | `tests/vitest/admin/commerceClient.test.ts` | Cover `previewCommerceProductsQuery()` request shape if the admin preview client is reused or extended. |
 | `tests/unit/commerce/commerceWidgetRuntime.test.ts` | Cover preview hydration behavior and error mapping. |
 | `tests/integration/routes/commerceRoutes.test.ts` | Extend route/permission coverage if the commerce query preview route changes or a Product Gallery preview endpoint is introduced. |
@@ -103,6 +105,9 @@ Editor flow:
 - Page-builder canvas rendering continues through `BlockList` and
   `WidgetRenderer`; Product Gallery preview data is supplied as normalized
   block data rather than by bypassing the widget registry.
+- If Product Gallery preview data is threaded through `PageEditor`, `BlockList`,
+  or `WidgetTemplateEditorPage`, add the matching admin canvas/template UI test
+  instead of relying only on the Product Gallery editor unit.
 - Admin query refresh should prefer `previewCommerceProductsQuery()` and the
   existing permissioned commerce query route before adding a new endpoint.
 
@@ -130,11 +135,16 @@ test("ProductGallery editor surfaces resolved preview status", async () => {
 ## Security Contract
 
 If no route is added, existing auth/RBAC/CSRF/rate-limit behavior is unchanged.
-If an admin preview route is required, it must follow this contract:
+Preferred preview reads should reuse `previewCommerceProductsQuery()` and the
+existing `/admin/api/commerce/products/query` route, whose live permission
+boundary is `commerce:read`. If a Product Gallery-specific admin preview route
+is required instead, it must follow this contract:
 
 - Endpoint visibility: internal admin only, under `/admin/api/*`.
 - Auth model: authenticated admin session.
-- RBAC: same page/template/widget edit permission required by the page builder.
+- RBAC: `commerce:read` when reusing the existing commerce query route; same
+  page/template/widget edit permission only for a new page-builder/template
+  preview route that does not expose arbitrary commerce query access.
 - CSRF: GET/read-only route does not mutate state; any mutation is out of
   scope. If POST is required for payload size, enforce existing admin CSRF.
 - Rate-limit bucket: existing admin preview/read bucket.
@@ -148,6 +158,10 @@ If an admin preview route is required, it must follow this contract:
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/ui/product-gallery-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/page-editor.test.tsx` if preview
+  data is threaded through `PageEditor` / page-builder canvas state.
+- `bun run test:vitest -- tests/vitest/ui/widget-template-editor.test.tsx` if
+  widget-template preview hydration changes.
 - `bun run test:vitest -- tests/vitest/widgets/productGallery.test.tsx`
 - `bun run test:vitest -- tests/vitest/admin/commerceClient.test.ts` if
   `previewCommerceProductsQuery()` is reused or extended.

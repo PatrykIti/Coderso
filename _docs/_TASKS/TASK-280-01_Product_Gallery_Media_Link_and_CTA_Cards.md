@@ -62,6 +62,7 @@ Out of scope:
 | File | Required change |
 |---|---|
 | `core/widgets/core/productGallery.tsx` | Extend schema/types/defaults/normalizer for link/media/CTA fields and render safe card links/images. |
+| `core/widgets/core/widgetSafeHref.ts` | Reuse `normalizeWidgetSafeHref()` for Product Gallery base path / joined slug sanitization; do not change the generic helper contract in this leaf. |
 | `core/widgets/core/commerceWidgetShared.ts` | Add Product Gallery-specific runtime card media metadata only if the resolver can supply safe URL/alt fields without changing other widgets unexpectedly. |
 | `core/services/commerce/commerceRuntimeResolver.ts` | Map product media metadata into runtime cards if media URL/alt data already exists in commerce records or an approved media lookup seam is available. |
 | `core/services/commerce/commerceWidgetRuntime.ts` | Preserve Product Gallery resolved media/link payloads during hydration. |
@@ -113,7 +114,8 @@ Data flow:
   legacy payloads on the current no-image/no-CTA behavior unless defaults are
   intentionally changed in this leaf.
 - `ProductGalleryBlock` builds `href = joinProductGalleryProductHref(basePath,
-  item.slug)` through a safe path helper.
+  item.slug)` through `normalizeWidgetSafeHref()` after joining the Product
+  Gallery-owned base path and product slug.
 - Cards use a single semantic link target for image/title/CTA, with `rel` set
   for new-tab links.
 
@@ -157,14 +159,17 @@ No API routes are added by default.
 - Reject-unknown validation: new link/media/CTA fields must be schema-owned and
   reject unknown fields.
 - Anti-abuse: hrefs must be safe relative URLs or approved absolute URLs through
-  the existing safe-href contract. No raw HTML, inline events, script URLs, or
-  provider secrets in widget data.
+  the existing `normalizeWidgetSafeHref()` contract. No raw HTML, inline events,
+  script URLs, or provider secrets in widget data.
 - Secret handling: media URLs must be public-safe resolved URLs only. Private
   provider/media credentials remain backend-owned.
 
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/widgets/productGallery.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/widgetSafeHref.test.ts` only if
+  the shared safe-href helper behavior changes; Product Gallery-specific base
+  path / slug join behavior belongs in `productGallery.test.tsx`.
 - `bun run test:vitest -- tests/vitest/ui/product-gallery-editor-wave.test.tsx`
 - `bun test tests/unit/commerce/commerceWidgetRuntime.test.ts`
 - `bun test tests/unit/commerce/commerceRuntimeResolver.test.ts` when resolver
