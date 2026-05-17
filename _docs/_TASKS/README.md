@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 199 tasks
+- **To Do:** 205 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1542 tasks
 
@@ -38,6 +38,12 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-286 | Stack Widget Playwright Product Followups | High | Very Large | Stack-only follow-up family for `REPORT_STACK_WIDGET.md`, excluding TASK-256 shared-contract scope |
+| TASK-286-01 | Stack Flex Alignment Token Expansion | Medium | Medium | Add Stack-owned `baseline`, `space-around`, and `space-evenly` tokens with schema/editor/runtime/tests/docs coverage |
+| TASK-286-02 | Stack Responsive Axis and Wrap Controls | High | Large | Add responsive align/justify/wrap controls while preserving legacy scalar payload compatibility |
+| TASK-286-03 | Stack Wizard Gap Scale and Layout Guidance | Medium | Medium | Improve Wizard layout controls, all-breakpoint gap copy, and gap scale context after TASK-256 token cleanup |
+| TASK-286-04 | Stack Variant Miniatures and Empty Slot Guidance | Low | Medium | Add variant miniatures and admin-safe empty-slot guidance without leaking public admin CTAs |
+| TASK-286-05 | Stack Report Docs Changelog and Closure | Medium | Medium | Refresh Stack report/docs/changelog/board and final validation evidence |
 | TASK-278 | Pricing Plans Widget Playwright Product Followups | High | Very Large | Pricing Plans-only follow-up family for `REPORT_PRICING_PLANS_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-278-01 | Pricing Plans Card Visual Hierarchy and CTA Styles | High | Large | Add plan description, plan-level surface, badge tone, highlighted banner, and CTA style controls after TASK-256 shared safety |
 | TASK-278-02 | Pricing Plans Content Wizard and Destructive Edit UX | High | Large | Expand Wizard content authoring, Advanced reset copy, highlight indicators, disabled billing label UX, remove confirmation/undo, and feature autofocus |

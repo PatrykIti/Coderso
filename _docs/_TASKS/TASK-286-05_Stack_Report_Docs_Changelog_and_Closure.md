@@ -1,0 +1,149 @@
+# TASK-286-05: Stack Report Docs Changelog and Closure
+
+# FileName: TASK-286-05_Stack_Report_Docs_Changelog_and_Closure.md
+
+**Priority:** Medium
+**Category:** Widgets + QA + Documentation + Changelog
+**Estimated Effort:** Medium
+**Dependencies:** TASK-286-01, TASK-286-02, TASK-286-03, TASK-286-04, TASK-286
+**Status:** To Do
+
+---
+
+## Overview
+
+Close the Stack-specific Playwright follow-up family after TASK-286
+implementation leaves land.
+
+This leaf owns final report evidence, docs/changelog/task-board sync, and the
+fixed/deferred classification that proves `REPORT_STACK_WIDGET.md` has no
+unrouted Stack-specific drift.
+
+## Scope Boundary
+
+This closure leaf must not mark TASK-256 findings as fixed unless the relevant
+TASK-256 implementation is actually complete and verified. For TASK-286 closure,
+BUG-01, BUG-02, ISSUE-01, and ISSUE-02 may be marked as "owned by TASK-256" or
+"fixed by TASK-256 commit <hash>" only with real evidence.
+
+Do not move TASK-286 to `Done` until every TASK-286 implementation leaf is done
+or explicitly deferred with a reason in both the report and this closure doc.
+
+## Sub-Tasks
+
+- [ ] Re-audit `_docs/PLAYWRIGHT/REPORT_STACK_WIDGET.md` finding by finding.
+- [ ] Mark each finding as fixed, deferred, or TASK-256-owned with evidence.
+- [ ] Update `_docs/_WIDGETS/STACK.md` with the final Stack data/editor/runtime
+  behavior.
+- [ ] Update `_docs/WIDGETS.md` only for shared contract changes that actually
+  landed.
+- [ ] Add a changelog entry under `_docs/_CHANGELOG/` that lists TASK-286 and
+  all completed TASK-286 leaves.
+- [ ] Update `_docs/_CHANGELOG/README.md`.
+- [ ] Move TASK-286 and completed leaves in `_docs/_TASKS/README.md` and
+  recompute task statistics.
+- [ ] Record final validation commands and any skipped suites with blockers.
+
+## Files to Change
+
+| File | Required change |
+|---|---|
+| `_docs/PLAYWRIGHT/REPORT_STACK_WIDGET.md` | Add final fixed/deferred/TASK-256-owned evidence for every finding. |
+| `_docs/_WIDGETS/STACK.md` | Document final Stack schema, editor modes, responsive behavior, and placeholder policy. |
+| `_docs/WIDGETS.md` | Update only if TASK-286 landed a shared widget-contract change. |
+| `_docs/_TASKS/TASK-286*.md` | Update statuses, completion dates, and final validation notes. |
+| `_docs/_TASKS/README.md` | Move completed rows and recompute statistics. |
+| `_docs/_CHANGELOG/<next>-2026-..-task-286-stack-widget-playwright-product-followups.md` | Add final changelog entry. |
+| `_docs/_CHANGELOG/README.md` | Index the changelog entry. |
+
+## Implementation Pseudocode
+
+```md
+## Closure Evidence
+
+| Report finding | Final status | Evidence |
+|---|---|---|
+| BUG-01 | TASK-256-owned | TASK-256-05-02 commit <hash>, tests <commands> |
+| ISSUE-03 | Fixed | TASK-286-02 commit <hash>, tests <commands> |
+| ISSUE-09 | Deferred | Public CTA would duplicate TASK-256-03 slot contract; admin-only guidance landed in <file>. |
+```
+
+Board update flow:
+
+```text
+1. Count To Do, In Progress, and Done rows after moving TASK-286 rows.
+2. Update the statistics header.
+3. Verify the table contains each TASK-286 row exactly once.
+4. Run git diff --check.
+```
+
+Validation flow:
+
+```text
+1. Run focused Stack Vitest suites.
+2. Run validator/registry suites if schema or metadata changed.
+3. Run bun --cwd core lint and bun --cwd core lint:types.
+4. Run bun run gates:coderso.
+5. Run bun run scan:security:strict.
+6. Run bun run precommit before the final manual commit.
+```
+
+Error handling:
+
+- If a TASK-256 dependency is still open, report it as TASK-256-owned rather
+  than silently claiming it under TASK-286.
+- If a broad validation command fails for unrelated legacy reasons, isolate the
+  focused Stack suites and record the exact unrelated blocker.
+- If `_docs/_TASKS/README.md` conflicts with other agents, preserve all task
+  families and recompute counts from the final table.
+
+## Security Contract
+
+No API routes are added by this closure leaf.
+
+- Endpoint visibility: none.
+- Auth model: unchanged.
+- RBAC: unchanged.
+- CSRF: unchanged.
+- Rate-limit bucket: unchanged.
+- Reject-unknown validation: summarize final validator coverage for any schema
+  fields added by TASK-286.
+- Anti-abuse: summarize final proof that Stack still rejects arbitrary CSS and
+  does not expose admin-only placeholder actions publicly.
+- Secret handling: ensure report/changelog evidence contains no secrets,
+  private URLs, tokens, or privileged settings.
+
+## Testing Requirements
+
+- `git diff --check`
+- `bun run test:vitest -- tests/vitest/widgets/stack.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/stack-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/widget-template-editor.test.tsx` if
+  Stack editor shell behavior changed
+- `bun test tests/unit/widgets/validator.test.ts` if schema/defaults changed
+- `bun test tests/unit/widgets/registry.test.ts` if widget metadata changed
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run gates:coderso`
+- `bun run scan:security:strict`
+- `bun run precommit`
+
+## Documentation Updates Required
+
+- `_docs/PLAYWRIGHT/REPORT_STACK_WIDGET.md`
+- `_docs/_WIDGETS/STACK.md`
+- `_docs/WIDGETS.md` only for shared contract changes
+- `_docs/_TASKS/TASK-286*.md`
+- `_docs/_TASKS/README.md`
+- `_docs/_CHANGELOG/README.md`
+- new `_docs/_CHANGELOG/*task-286-stack-widget-playwright-product-followups.md`
+
+## Acceptance Criteria
+
+- Every finding in `REPORT_STACK_WIDGET.md` has a final owner/status/evidence
+  row.
+- TASK-286 does not overclaim TASK-256 scope.
+- Stack source-of-truth docs match the final code and tests.
+- Task board statistics are recomputed and contain each TASK-286 row once.
+- Changelog and final validation evidence are present before the family is
+  marked `Done`.
