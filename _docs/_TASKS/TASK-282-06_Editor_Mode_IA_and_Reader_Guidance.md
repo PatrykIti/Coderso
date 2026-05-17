@@ -5,7 +5,7 @@
 **Priority:** Medium
 **Category:** Widgets + Admin UI + Content UX
 **Estimated Effort:** Medium
-**Dependencies:** TASK-282, TASK-282-01, TASK-282-02, TASK-282-03, TASK-282-04, TASK-282-05
+**Dependencies:** TASK-282, TASK-282-01, TASK-282-02, TASK-282-03, TASK-282-04, TASK-282-05, TASK-282-08, TASK-282-09
 **Status:** To Do
 
 ---
