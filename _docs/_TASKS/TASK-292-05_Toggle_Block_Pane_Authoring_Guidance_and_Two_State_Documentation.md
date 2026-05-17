@@ -44,6 +44,9 @@ changing public placeholder safety, which remains TASK-256 scope.
   broadening this family.
 - Ensure public runtime does not leak admin-only guidance after TASK-256
   placeholder gating lands.
+- Keep page-builder/editor automation metadata on the existing
+  `data-widget-control` contract or accessible roles/names. Do not add
+  editor-only `data-coderso-*` markers.
 
 ## Out of Scope
 
@@ -76,6 +79,7 @@ changing public placeholder safety, which remains TASK-256 scope.
 | `tests/vitest/widgets/toggleBlock.test.tsx` | Cover public/runtime absence of admin-only guidance and preview-safe guidance if renderer changes. |
 | `tests/vitest/ui/toggle-block-editor-wave.test.tsx` | Cover pane guidance and two-state copy in editor modes. |
 | `tests/vitest/ui/page-editor-slot-insert-flow.test.tsx` | Run and update only if Toggle Block pane guidance opens the existing slot Insert Dialog. |
+| `tests/vitest/pageBuilder/blockList.test.tsx` | Run and update if `BlockList` empty-slot CTA behavior changes. |
 | `_docs/_WIDGETS/TOGGLE_BLOCK.md` | Document fixed two-state contract and pane authoring flow. |
 | `_docs/PLAYWRIGHT/REPORT_TOGGLE_BLOCK_WIDGET.md` | Record fixed/deferred status for empty pane and 3+ state rows. |
 
@@ -83,10 +87,12 @@ changing public placeholder safety, which remains TASK-256 scope.
 
 ```tsx
 function ToggleBlockPaneEmptyState({
+  paneId,
   paneLabel,
   canOpenInsertDialog,
   onInsert,
 }: {
+  paneId: ToggleBlockStateId;
   paneLabel: string;
   canOpenInsertDialog: boolean;
   onInsert?: () => void;
@@ -96,7 +102,11 @@ function ToggleBlockPaneEmptyState({
   }
 
   return (
-    <button type="button" onClick={onInsert} data-coderso-toggle-pane-insert>
+    <button
+      type="button"
+      onClick={onInsert}
+      data-widget-control={`toggle-block.pane.${paneId}.insert`}
+    >
       Add widget to {paneLabel}
     </button>
   );
@@ -130,6 +140,8 @@ Regression-test shape:
 - `page-editor-slot-insert-flow` tests prove the pane CTA opens the existing
   library and inserts into the selected Toggle Block pane when that callback is
   wired.
+- `blockList.test.tsx` covers any direct `BlockList` empty-slot CTA contract
+  changes.
 - Runtime tests prove public output does not include admin-only guidance.
 
 ## Security Contract
@@ -149,6 +161,8 @@ No API routes are added.
 - `bun run test:vitest -- tests/vitest/ui/toggle-block-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/page-editor-slot-insert-flow.test.tsx`
   only if page-builder slot insertion changes
+- `bun run test:vitest -- tests/vitest/pageBuilder/blockList.test.tsx` only if
+  `BlockList` empty-slot CTA behavior changes
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 

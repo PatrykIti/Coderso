@@ -43,6 +43,9 @@ Clear/color behavior instead of inventing a one-off picker.
   confirmation or an undo-safe local pattern if destructive.
 - Add a visible active/default-state preview indicator in the editor.
 - Adopt TASK-256 shared color/token controls only after they exist.
+- Keep editor-only automation metadata on the existing `data-widget-editor*`
+  and `data-widget-control` contract or accessible roles/names; reserve
+  `data-coderso-*` for runtime markers owned by TASK-256.
 
 ## Out of Scope
 
@@ -80,7 +83,7 @@ function ToggleBlockVariantPreview({ variant }: { variant: ToggleBlockVariantId 
     <span
       aria-hidden="true"
       className={variant === "cards" ? "grid rounded-md border p-2" : "rounded-full border p-1"}
-      data-coderso-toggle-variant-preview={variant}
+      data-widget-control={`toggle-block.variant-preview.${variant}`}
     >
       <span className={variant === "cards" ? "rounded-sm border p-1" : "rounded-full border"} />
       <span className={variant === "cards" ? "rounded-sm border p-1" : "rounded-full border"} />
@@ -95,7 +98,7 @@ function resetToggleBlockData(): ToggleBlockData {
 function ToggleBlockDefaultStateNotice({ value }: { value: ToggleBlockData }) {
   const normalized = normalizeToggleBlockData(value);
   const state = normalized.options?.defaultState === "secondary" ? "Secondary" : "Primary";
-  return <p data-coderso-toggle-default-state-preview>{state} pane is shown first.</p>;
+  return <p data-widget-control="toggle-block.default-state.preview">{state} pane is shown first.</p>;
 }
 ```
 
@@ -122,6 +125,9 @@ Regression-test shape:
   repository's confirmation or undo-safe pattern.
 - Shared-control tests prove TASK-256 color/token helpers are imported when
   adopted and no local color picker is introduced.
+- Automation tests use existing `data-widget-editor*` / `data-widget-control`
+  markers or accessible roles/names instead of adding editor-local
+  `data-coderso-*` attributes.
 
 ## Security Contract
 
