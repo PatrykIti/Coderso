@@ -13,14 +13,17 @@
 ## Overview
 
 Add bounded brand/action controls for the Navigation widget: logo size, CTA
-radius, CTA separator, and a documented secondary-CTA policy. This leaf must
-avoid arbitrary platform expansion such as mega-menu, search, or dark-mode
-systems.
+radius, CTA separator, truthful Wizard CTA helper copy, and a documented
+secondary-CTA policy. This leaf must avoid arbitrary platform expansion such as
+mega-menu, search, or dark-mode systems.
 
 ## Source Findings
 
 - `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:97-123` - second CTA, CTA
   radius, logo size, and CTA separator controls are missing.
+- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:183` - Wizard CTA inputs are
+  hidden when `ctaEnabled=false`, but the helper text is misleading and needs
+  Navigation-specific copy.
 - `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:403-407,431-442` - logo and CTA
   polish rows are prioritized in report follow-ups.
 - `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:228-233` - mega-menu/search/dark
@@ -35,9 +38,9 @@ systems.
 | File | Required change |
 |---|---|
 | `core/widgets/core/navigation.tsx` | Add schema/default/normalizer/render support for bounded logo height, CTA radius, CTA separator, and chosen secondary-CTA policy. Prefer the existing `right` slot when that keeps the product contract simpler; if a persisted secondary CTA is approved, make it schema-backed and safe-href normalized. |
-| `core/admin/ui/widgets/editors/NavigationEditors.tsx` | Add Visual controls for logo size and CTA shape/separation. Add editor copy explaining the secondary-CTA policy without implying mega-menu/search/dark-mode support. |
+| `core/admin/ui/widgets/editors/NavigationEditors.tsx` | Add Visual controls for logo size and CTA shape/separation. Fix Wizard CTA helper copy so disabled CTA state is truthful. Add editor copy explaining the secondary-CTA policy without implying mega-menu/search/dark-mode support. |
 | `tests/vitest/widgets/navigation.test.tsx` | Assert logo-size classes/styles, CTA radius/separator output, safe secondary-CTA behavior if added, and legacy payload normalization. |
-| `tests/vitest/ui/navigation-editor-wave.test.tsx` | Assert brand/action controls persist and clear safely. |
+| `tests/vitest/ui/navigation-editor-wave.test.tsx` | Assert brand/action controls persist and clear safely, and Wizard CTA helper copy is truthful when CTA fields are hidden. |
 | `tests/unit/widgets/validator.test.ts` | Update if persisted fields are added. |
 | `_docs/_WIDGETS/NAVIGATION.md` | Document logo/CTA control ranges and secondary-CTA policy. |
 | `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md` | Record fixed/deferred evidence for brand/CTA rows and defer arbitrary platform expansions with reason. |
@@ -77,13 +80,16 @@ Error handling:
 ## Data Flow
 
 1. Admin configures brand/action controls in Visual mode.
-2. `navigationSchema` and `normalizeNavigationData()` clamp tokens and optional
+2. Wizard derives CTA helper copy from `ctaEnabled` so hidden inputs do not look
+   like always-visible required fields.
+3. `navigationSchema` and `normalizeNavigationData()` clamp tokens and optional
    CTA data.
-3. `navigation.tsx` renders logo size and CTA shape/separator from normalized
+4. `navigation.tsx` renders logo size and CTA shape/separator from normalized
    values and safe-href-normalized CTA destinations.
-4. Tests cover renderer output, editor persistence, validator strictness, and
+5. Tests cover renderer output, editor persistence, truthful Wizard copy,
+   validator strictness, and
    legacy payload behavior.
-5. Docs/report record the chosen secondary-CTA policy and defer out-of-scope
+6. Docs/report record the chosen secondary-CTA policy and defer out-of-scope
    platform expansion rows.
 
 ## Security Contract
@@ -124,6 +130,7 @@ No API routes are added.
 
 - Logo-size and CTA shape/separator controls are bounded, tested, and
   documented.
+- Wizard CTA helper copy accurately reflects disabled/enabled CTA state.
 - Secondary CTA policy is explicit: either use the existing `right` slot or add
   a schema-backed safe field with tests.
 - Arbitrary mega-menu/search/dark-mode expansion remains deferred outside this

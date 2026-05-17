@@ -73,13 +73,13 @@ against the source-of-truth docs before the contract change.
 | `minimal` mobile mode is currently equivalent to `drawer` | TASK-275-02 | Intentional Navigation product-contract change from current docs. |
 | Mobile CTA duplicates between header and open panel | TASK-275-02 | Navigation renderer policy for drawer/mobile-only CTA placement. |
 | Mobile trigger is text-only, has no state change, no explicit action label, no animation, and no focus safety | TASK-275-02 | Navigation runtime script and render markup. |
-| Dropdown works only on hover/focus-within and lacks accessible expanded state | TASK-275-03 | Navigation submenu runtime behavior, including root `<nav aria-label>` output needed by the report. Dropdown direction is owned by TASK-275-05-03. |
+| Dropdown works only on hover/focus-within, lacks accessible expanded state, and the report asks about `role="menu"` / `role="menuitem"` | TASK-275-03 | Navigation submenu runtime behavior, including root `<nav aria-label>` output needed by the report. TASK-275-03 must explicitly decide menu-role semantics; default is semantic site navigation with links/buttons, not ARIA application-menu roles. Dropdown direction is owned by TASK-275-05-03. |
 | `NavigationItemMeta.icon`, `description`, and `badge` exist but are not fully editable/rendered | TASK-275-03 | Navigation schema already has fields; add editor and runtime surface without arbitrary rich menu blocks. |
 | Main links cannot be reordered, link limit lacks feedback, sub-link hierarchy is weak, Wizard shows only the first three quick links without overflow state, and menu-source mode lacks preview | TASK-275-04 | Navigation editor repeated-item, Wizard summary/count, and read-only preview management. |
 | `collapseOnScroll` persists only a data attribute | TASK-275-05-01 | Product-contract expansion from current docs; implement only after the runtime script shape is stable. Sticky failures caused by Section/page-shell overflow stay routed outside TASK-275. |
 | Active-link detection plus safe target/rel controls are missing | TASK-275-05-02 | Navigation-owned link behavior that consumes existing safe-href helpers instead of forking sanitizer logic. |
 | Hover/active colors, underline, letter spacing, shadow, blur, dropdown direction, and bounded animation controls are missing | TASK-275-05-03 | Navigation-owned optional visual-token expansion. Dropdown click/touch/a11y state stays in TASK-275-03. |
-| CTA radius/separator, logo size, and bounded secondary-CTA policy are missing | TASK-275-05-04 | Navigation-owned brand/action controls. Arbitrary mega-menu/search/dark-mode platform expansion remains out of scope. |
+| CTA radius/separator, logo size, Wizard CTA helper copy, and bounded secondary-CTA policy are missing or misleading | TASK-275-05-04 | Navigation-owned brand/action controls and CTA editor copy. Arbitrary mega-menu/search/dark-mode platform expansion remains out of scope. |
 | Report fixed/deferred notes, widget docs, changelog, and board closure | TASK-275-06 | Final evidence and status synchronization. |
 
 ## Current Owner and Test Matrix

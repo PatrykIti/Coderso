@@ -30,6 +30,11 @@ later product task approves them.
   TASK-275-05-03.
 - `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:195,198,209-214` - hover-only
   dropdowns and unused metadata are visible runtime/accessibility issues.
+- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:213` - submenu `role="menu"` /
+  `role="menuitem"` absence is called out. This leaf must make an explicit
+  semantic decision; for ordinary site navigation, prefer `<nav>` + lists/links
+  + button disclosure semantics over ARIA application-menu roles unless code
+  review proves a true menu pattern is required.
 - `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:262-263,317-321` - browser tests
   confirm desktop hover works but click/touch does not.
 - `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:415,417,440,458-460` -
@@ -43,15 +48,15 @@ later product task approves them.
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/navigation.tsx` | Render the root `<nav>` with an accessible `aria-label`, submenu trigger controls for items with children, root-scoped submenu IDs, `aria-expanded`, `aria-controls`, stable data attributes, reduced-motion-friendly transition classes, and plain-text icon/badge/description output for top-level and child links. |
+| `core/widgets/core/navigation.tsx` | Render the root `<nav>` with an accessible `aria-label`, submenu trigger controls for items with children, root-scoped submenu IDs, `aria-expanded`, `aria-controls`, stable data attributes, reduced-motion-friendly transition classes, and plain-text icon/badge/description output for top-level and child links. Decide and document whether submenu roles remain semantic site navigation or adopt ARIA menu roles; do not add `role="menu"` mechanically. |
 | `core/widgets/core/navigation.tsx` | Extend `navigationRuntimeClientScript` to toggle submenus on click/touch, close on Escape/outside click, and close sibling menus in the same Navigation root. |
 | `core/admin/ui/widgets/editors/NavigationEditors.tsx` | Add manual-link and sub-link metadata editors for icon text, description, badge label/tone, and visibility. Keep menu-source metadata read-only if TASK-275-04 has not landed. |
 | `core/services/navigation/navigationRuntimeResolver.ts` | Update only if resolved menu/page metadata shape changes. Existing deterministic metadata mapping should stay intact. |
-| `tests/vitest/widgets/navigation.test.tsx` | Assert submenu triggers, ARIA attributes, root-scoped IDs, metadata rendering, and safe text output. |
+| `tests/vitest/widgets/navigation.test.tsx` | Assert submenu triggers, ARIA attributes, root-scoped IDs, metadata rendering, safe text output, and the chosen submenu role policy. |
 | `tests/vitest/ui/navigation-editor-wave.test.tsx` | Assert metadata fields update the right item/child and menu metadata remains deterministic. |
 | `tests/unit/navigation/navigationRuntimeResolver.test.ts` | Run/update only if resolver mapping changes. |
-| `_docs/_WIDGETS/NAVIGATION.md` | Document dropdown interaction and metadata authoring/rendering. |
-| `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md` | Record fixed/deferred evidence for dropdown and metadata findings. |
+| `_docs/_WIDGETS/NAVIGATION.md` | Document dropdown interaction, metadata authoring/rendering, and submenu role semantics. |
+| `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md` | Record fixed/deferred evidence for dropdown, metadata, and submenu role findings. |
 
 ## Implementation Pseudocode
 
@@ -108,7 +113,7 @@ Error handling:
 2. `normalizeNavigationData()` trims empty `icon`, `description`, and `badge`
    values and preserves strict item/child shapes.
 3. `navigation.tsx` renders a labelled root `<nav>`, text-only metadata, and
-   submenu controls with root-scoped IDs.
+   submenu controls with root-scoped IDs and the chosen role policy.
 4. `navigationRuntimeClientScript` toggles only submenu elements inside the
    current Navigation root and closes sibling/open menus from the same root.
 5. Resolver tests run only if menu/page-source metadata mapping changes;
@@ -154,6 +159,10 @@ No API routes are added.
   `aria-expanded` and `aria-controls`.
 - The root Navigation element has an accessible `aria-label` covered by SSR
   tests.
+- Submenu role semantics are explicit and tested: either semantic site
+  navigation remains without `role="menu"` / `role="menuitem"` for documented
+  reasons, or true ARIA menu roles are implemented with the required keyboard
+  model.
 - Keyboard and touch users can access child links without relying on hover.
 - Existing metadata fields are editable for manual links and render as
   accessible plain text.
