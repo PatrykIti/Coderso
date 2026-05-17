@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Runtime Accessibility
 **Estimated Effort:** Large
 **Dependencies:** TASK-258, TASK-258-01
-**Status:** To Do
+**Status:** In Progress (2026-05-17)
 
 ---
 

@@ -6,7 +6,7 @@
 **Category:** Widgets + Booking Runtime + Admin UX
 **Estimated Effort:** Large
 **Dependencies:** TASK-258, TASK-258-01, TASK-258-02, TASK-293
-**Status:** To Do
+**Status:** In Progress (2026-05-17)
 
 ---
 

@@ -6,7 +6,7 @@
 **Category:** Widgets + Booking Runtime + Admin Preview
 **Estimated Effort:** Large
 **Dependencies:** TASK-258
-**Status:** To Do
+**Status:** In Progress (2026-05-17)
 
 ---
 

@@ -6,7 +6,7 @@
 **Category:** Widgets + Public Write Security + Booking API
 **Estimated Effort:** Large
 **Dependencies:** TASK-258, TASK-258-01, TASK-258-02
-**Status:** To Do
+**Status:** In Progress (2026-05-17)
 
 ---
 
