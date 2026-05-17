@@ -5,7 +5,7 @@
 **Priority:** Medium
 **Category:** Widgets + Stats KPI + Admin UI
 **Estimated Effort:** Large
-**Dependencies:** TASK-256-01, TASK-256-02, TASK-287, TASK-287-01, TASK-287-02, TASK-287-03
+**Dependencies:** TASK-256-01, TASK-256-02, TASK-287, TASK-287-01, TASK-287-02, TASK-287-03, TASK-287-04
 **Status:** To Do
 
 ---
@@ -14,26 +14,24 @@
 
 Polish Stats KPI editor workflows after the content/style/link fields are
 stable: metric drag/drop or efficient reorder controls, safer remove/undo or
-confirmation, clearer Visual IA grouping, and Stats KPI-local Advanced cleanup
-that follows the TASK-256-01 editor-mode policy.
+confirmation, and clearer Visual IA grouping.
 
 This leaf must preserve the existing keyboard-friendly Move up/Move down
-fallback even if drag/drop is added.
+fallback even if drag/drop is added. It must not change Stats KPI Advanced
+ownership; TASK-256-01 owns the shared Advanced duplicate-control policy.
 
 ## Source Findings
 
-- `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md:85-88` - U6, U7, U8, U9 editor
-  IA issues.
+- `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md:86-88` - U7, U8, U9 editor IA
+  issues that remain after TASK-256-owned Advanced policy is excluded.
 - `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md:262` - drag/drop is a medium
   priority issue.
 - `core/admin/ui/widgets/editors/StatsKpiEditors.tsx:435-525` - current metric
   repeated item management owner.
 - `core/admin/ui/widgets/editors/StatsKpiEditors.tsx:527-619` - current mixed
   text/surface/layout Visual grouping owner.
-- `core/admin/ui/widgets/editors/StatsKpiEditors.tsx:624-724` - current
-  Advanced duplicate controls owner.
 - `_docs/WIDGETS.md:83-88` - Advanced should not duplicate basic Visual
-  content/style fields.
+  content/style fields; TASK-256-01 owns that shared policy.
 
 ## Sub-Tasks
 
@@ -43,12 +41,12 @@ fallback even if drag/drop is added.
 
 | File | Required change |
 |---|---|
-| `core/admin/ui/widgets/editors/StatsKpiEditors.tsx` | Add efficient metric reorder workflow, safer removal recovery/confirmation, split Visual groups into text/style/surface/layout, and align Advanced with TASK-256-01 policy. |
+| `core/admin/ui/widgets/editors/StatsKpiEditors.tsx` | Add efficient metric reorder workflow, merge-safe removal recovery/confirmation, and split Visual groups into text/style/surface/layout. Do not change Advanced controls in this leaf. |
 | `core/widgets/core/statsKpi.tsx` | Export focused reorder/remove helpers only if editor tests need pure helper coverage; do not add runtime-only fields for editor state. |
-| `tests/vitest/ui/stats-kpi-editor-wave.test.tsx` | Cover reorder workflow, keyboard fallback, removal recovery/confirmation, Visual group labels, and Advanced cleanup. |
+| `tests/vitest/ui/stats-kpi-editor-wave.test.tsx` | Cover reorder workflow, keyboard fallback, removal recovery/confirmation, and Visual group labels. |
 | `tests/vitest/widgets/statsKpi.test.tsx` | Update only if pure helpers or normalized ordering behavior changes. |
 | `_docs/_WIDGETS/STATS_KPI.md` | Document editor mode ownership and metric-management behavior. |
-| `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md` | Mark U6/U7/U8/U9 fixed or record deferral evidence. |
+| `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md` | Mark U7/U8/U9 fixed or record deferral evidence; keep U6 assigned to TASK-256-01. |
 
 ## Implementation Pseudocode
 
@@ -67,10 +65,22 @@ function reorderStatsKpiItems(
   return next;
 }
 
-function removeMetricWithUndo(index: number) {
-  const removed = current.items[index];
-  patchItems(current.items.filter((_, itemIndex) => itemIndex !== index));
-  showInlineUndo(() => restoreMetric(index, removed));
+type RemovedMetricSnapshot = {
+  item: StatsKpiItem;
+  previousIndex: number;
+  removedAtVersion: number;
+};
+
+function restoreRemovedMetric(snapshot: RemovedMetricSnapshot) {
+  updateValue(value, onChange, (latest) => {
+    const items = normalizeStatsKpiItems(latest.items);
+    if (items.length >= statsKpiItemMax) return latest;
+    if (items.some((item) => item.id === snapshot.item.id)) return latest;
+    const insertAt = Math.min(snapshot.previousIndex, items.length);
+    const nextItems = [...items];
+    nextItems.splice(insertAt, 0, snapshot.item);
+    return { ...latest, items: normalizeStatsKpiItems(nextItems, nextItems.length) };
+  });
 }
 ```
 
@@ -81,15 +91,16 @@ Data flow:
   metadata in widget JSON.
 - Visual IA groups text/value controls, metric card surfaces, and layout controls
   into separate sections so field ownership is explicit.
-- Advanced keeps raw payload/normalization diagnostics and only the technical
-  controls allowed by the final TASK-256-01 policy.
+- Advanced ownership stays unchanged by this leaf. If TASK-256-01 later changes
+  Advanced, adapt only after that shared policy lands.
 
 Error handling:
 
 - Reorder operations outside item bounds are no-ops.
 - The widget must keep at least one metric.
-- Undo/confirmation must not resurrect stale unrelated fields or overwrite
-  concurrent editor changes.
+- Undo/confirmation must re-read the latest item list, restore by stable item
+  id when absent, respect the 12-item cap, and avoid overwriting concurrent
+  editor changes.
 - Keyboard Move up/Move down buttons remain available and tested even when
   pointer drag/drop exists.
 
@@ -117,8 +128,8 @@ No API routes are added.
 ## Documentation Updates Required
 
 - `_docs/_WIDGETS/STATS_KPI.md`
-- `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md` with U6/U7/U8/U9 evidence or
-  deferral notes.
+- `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md` with U7/U8/U9 evidence or
+  deferral notes, and a pointer that U6 remains TASK-256-01-owned.
 - `_docs/_TASKS/TASK-287-05_Stats_KPI_Metric_Management_and_Editor_IA_Polish.md`
 - `_docs/_TASKS/README.md` on status changes.
 
@@ -129,5 +140,4 @@ No API routes are added.
 - Removal is recoverable or confirmed, and the one-metric minimum is preserved.
 - Visual editor groups text, surface, icon, and layout controls by real product
   ownership.
-- Advanced no longer duplicates Visual controls beyond the policy approved by
-  TASK-256-01.
+- Advanced duplicate-control cleanup remains owned by TASK-256-01.

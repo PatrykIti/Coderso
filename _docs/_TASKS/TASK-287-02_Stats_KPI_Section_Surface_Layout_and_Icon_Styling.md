@@ -44,7 +44,7 @@ It only owns the inner Stats KPI `<section>` and per-metric icon presentation.
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/statsKpi.tsx` | Add bounded `sectionBackground`, `maxWidth`, `padding`, `minHeight`, `iconSize`, `iconSurface`, `iconBorderColor`, and optional `dividerIntensity` fields. Map them through explicit class/style maps. |
+| `core/widgets/core/statsKpi.tsx` | Add bounded flat style fields: `sectionBackground`, `maxWidth`, `padding`, `minHeight`, `iconSize`, `iconSurface`, `iconBorderColor`, and optional `dividerIntensity`. Map them through explicit class/style maps. |
 | `core/admin/ui/widgets/editors/StatsKpiEditors.tsx` | Add Visual controls for section surface/layout and icon styling, separated from text color controls. |
 | `tests/vitest/widgets/statsKpi.test.tsx` | Cover section surface styles, max-width/padding/min-height class output, icon style output, and divider-intensity fallback if added. |
 | `tests/vitest/ui/stats-kpi-editor-wave.test.tsx` | Cover editor updates for section surface/layout and icon presentation controls. |
@@ -78,9 +78,9 @@ function resolveStatsKpiSectionStyle(style: StatsKpiStyle): CSSProperties | unde
 
 Data flow:
 
-- Visual editor writes section-level fields under `style` and icon fields either
-  under `style.icon` or explicit `style.icon*` fields, depending on the existing
-  schema pattern chosen during implementation.
+- Visual editor writes section-level fields and icon fields as flat `style`
+  properties. Do not introduce a nested `style.icon` object unless a separate
+  schema migration task explicitly changes the Stats KPI style shape.
 - Normalizer applies bounded enum defaults and omits cleared surface colors.
 - `StatsKpiBlock` applies width/padding/min-height classes to the inner section,
   not to the page builder wrapper.

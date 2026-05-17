@@ -69,9 +69,9 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-287 | Stats KPI Widget Playwright Product Followups | High | Very Large | Stats KPI-only follow-up family for `REPORT_STATS_KPI_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-287-01 | Stats KPI Value Typography and Metric Semantics | High | Large | Add value-size, description color, prefix/suffix, per-metric accent, and static trend fields after TASK-256 shared safety |
 | TASK-287-02 | Stats KPI Section Surface Layout and Icon Styling | Medium | Large | Add inner section surface, max-width, padding, sparse density, icon styling, and optional divider intensity after TASK-256 truthfulness |
-| TASK-287-03 | Stats KPI Wizard Content and Variant Onboarding | High | Large | Expand Wizard to visual variant cards, header fields, metric label/description/icon, header clear, icon guidance, and spacing help |
+| TASK-287-03 | Stats KPI Wizard Variant Cards and Guidance | High | Medium | Add Wizard visual variant cards, header clear/guidance, icon guidance, and spacing help after TASK-256 baseline content fields land |
 | TASK-287-04 | Stats KPI Metric Links and Safe Click Semantics | Medium | Large | Add optional safe per-metric links using shared safe-href behavior without public-write or action scope |
-| TASK-287-05 | Stats KPI Metric Management and Editor IA Polish | Medium | Large | Add efficient reorder, safer removal, Visual IA grouping, and Stats KPI-local Advanced cleanup after TASK-256 editor policy |
+| TASK-287-05 | Stats KPI Metric Management and Editor IA Polish | Medium | Large | Add efficient reorder, merge-safe removal recovery, and Visual IA grouping after content/style/link fields settle |
 | TASK-287-06 | Stats KPI Report Docs Changelog and Closure | Medium | Medium | Refresh Stats KPI report/docs/changelog/board and final validation evidence |
 | TASK-286 | Stack Widget Playwright Product Followups | High | Very Large | Stack-only follow-up family for `REPORT_STACK_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-286-01 | Stack Flex Alignment Token Expansion | Medium | Medium | Add Stack-owned `baseline`, `space-around`, and `space-evenly` tokens with schema/editor/runtime/tests/docs coverage |

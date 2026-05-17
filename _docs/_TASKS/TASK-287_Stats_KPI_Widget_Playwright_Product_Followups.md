@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Stats KPI + Admin UI + Runtime Render + Playwright QA
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-252-06-08, TASK-256, TASK-256-01, TASK-256-02, TASK-256-04, TASK-256-06-01, TASK-256-08
+**Dependencies:** TASK-252-06-08, TASK-256, TASK-256-01, TASK-256-02, TASK-256-04, TASK-256-06-01, TASK-256-06-02, TASK-256-08
 **Status:** To Do
 
 ---
@@ -56,7 +56,8 @@ TASK-256 already owns them as shared widget-contract drift.
 | R1/R2/R3/R4 section, article, icon, and heading semantics | `REPORT_STATS_KPI_WIDGET.md:94-99,165-175,200-226,300-315` | TASK-256-04, TASK-256-06-01 | Baseline runtime accessibility belongs to the shared widget contract. |
 | U2 CSS-variable color picker fallback | `REPORT_STATS_KPI_WIDGET.md:81,177-183,258` | TASK-256-02 | Generic color/token editor semantics must be fixed once for all widgets. |
 | U3 divider switch context | `REPORT_STATS_KPI_WIDGET.md:82,137-139,259` | TASK-256-06-01 | Divider visibility/disablement is the same truthful-control bug as C1. |
-| Advanced generic ownership policy | `REPORT_STATS_KPI_WIDGET.md:43-45,85,185-188` | TASK-256-01 | Shared editor-mode ownership policy decides what belongs in Advanced globally. |
+| C3 baseline Wizard content fields | `REPORT_STATS_KPI_WIDGET.md:57,115-124,254,317-321`; `TASK-256-06-01_Feature_Grid_and_Stats_KPI_Truthful_Controls.md:25-29,68,72` | TASK-256-06-01 | The shared truthful setup leaf owns adding the missing Wizard header/metric content fields. |
+| U6 Advanced duplicate-control policy | `REPORT_STATS_KPI_WIDGET.md:43-45,85,185-188`; `TASK-256-01_Shared_Editor_Mode_and_Atomic_Update_Contract.md:41-44,61-64,88` | TASK-256-01 | Shared editor-mode ownership decides whether Stats KPI Advanced controls become raw-token controls, read-only diagnostics, or are removed. |
 
 TASK-287 implementation may touch the same Stats KPI files after TASK-256 lands,
 but only for product fields and local editor UX. If a TASK-287 leaf needs a
@@ -76,12 +77,11 @@ that part back to TASK-256 instead of hiding it in this family.
 | W7 icon surface/border/size | TASK-287-02 | Add bounded icon presentation fields. |
 | R7 min-height for sparse KPI sections | TASK-287-02 | Add bounded min-height or density behavior with mobile-safe defaults. |
 | R8 divider intensity | TASK-287-02 | Optional Stats KPI-local divider intensity only after TASK-256 divider semantics are truthful. |
-| C3/U1 Wizard lacks full content and visual variant cards | TASK-287-03 | Product onboarding expansion after TASK-256 editor update contract. |
-| U4/U5/U9 header clear, icon guidance, spacing help | TASK-287-03 | Stats KPI-local editor guidance and quick authoring. |
+| U1 Wizard variant cards | TASK-287-03 | Stats KPI-local onboarding polish after TASK-256 adds the missing Wizard content fields. |
+| U4/U5/U9 header clear, icon guidance, spacing help | TASK-287-03 | Stats KPI-local guidance and affordances for fields owned by TASK-256/TASK-287-01. |
 | W9 per-metric CTA/link | TASK-287-04 | Add safe per-metric link semantics using existing safe-href ownership. |
 | U7 drag/drop reorder | TASK-287-05 | Improve repeated metric management while preserving keyboard move controls. |
 | U8 mixed color/surface editor grouping | TASK-287-05 | Split Stats KPI Visual IA into text, card surface, and layout groups. |
-| U6 Stats KPI Advanced duplication cleanup | TASK-287-05 | Apply the TASK-256-01 Advanced policy locally after it is settled. |
 | W12 count-up animation | TASK-287-06 | No implementation by default; closure must record reject/defer unless a later perf/accessibility task approves it. |
 | Report fixed/deferred evidence, widget docs, changelog, board closure | TASK-287-06 | Final documentation and validation pass. |
 
@@ -98,7 +98,7 @@ that part back to TASK-256 instead of hiding it in this family.
 
 - [ ] TASK-287-01: Stats KPI Value Typography and Metric Semantics
 - [ ] TASK-287-02: Stats KPI Section Surface Layout and Icon Styling
-- [ ] TASK-287-03: Stats KPI Wizard Content and Variant Onboarding
+- [ ] TASK-287-03: Stats KPI Wizard Variant Cards and Guidance
 - [ ] TASK-287-04: Stats KPI Metric Links and Safe Click Semantics
 - [ ] TASK-287-05: Stats KPI Metric Management and Editor IA Polish
 - [ ] TASK-287-06: Stats KPI Report Docs Changelog and Closure
@@ -111,12 +111,12 @@ that part back to TASK-256 instead of hiding it in this family.
    accent fields define the item model used by editor and link work.
 3. Complete TASK-287-02 after the core item model is stable so section and icon
    presentation fields can reuse the same bounded token maps.
-4. Complete TASK-287-03 before broad editor polish so Wizard authoring covers the
-   expanded content model.
-5. Complete TASK-287-04 after safe-href behavior from TASK-256 is available and
-   after item semantics from TASK-287-01 are stable.
+4. Complete TASK-287-03 after TASK-256-06-01 lands the baseline Wizard content
+   fields, then add only Stats KPI-local variant cards and guidance affordances.
+5. Complete TASK-287-04 after TASK-256-06-02 exposes the final safe-link helper
+   shape and after item semantics from TASK-287-01 are stable.
 6. Complete TASK-287-05 after content/style/link fields settle so repeated-item
-   management and Visual/Advanced IA do not churn.
+   management and Visual IA do not churn.
 7. Complete TASK-287-06 last after code, tests, report evidence, widget docs,
    changelog, and board state are synchronized.
 

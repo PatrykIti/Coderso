@@ -26,8 +26,9 @@ implementation leaf or required validation lane remains open.
 - `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md:248-263` - priority summary that
   must be reconciled before closure.
 - `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md:267-321` - suggested fixes for
-  divider/grid/ARIA/Wizard. Divider/grid/ARIA remain TASK-256-owned; Wizard
-  product work is TASK-287-03.
+  divider/grid/ARIA/Wizard. Divider/grid/ARIA and baseline Wizard content fields
+  remain TASK-256-owned; TASK-287-03 only owns Stats KPI Wizard guidance and
+  variant-card polish after that baseline lands.
 - `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md:74,263` - W12 count-up animation,
   which should remain rejected/deferred unless a later accessibility/performance
   task approves it.

@@ -12,10 +12,11 @@
 
 ## Overview
 
-Add optional per-metric links for Stats KPI cards using the existing safe-href
-contract. A metric may link to an internal path or safe external URL, with
-explicit label/copy and safe target/rel behavior. This leaf must not create a
-public write endpoint or arbitrary action system.
+Add optional per-metric links for Stats KPI cards using the safe-href contract
+that TASK-256-06-02 finalizes. A metric may link to an internal path or safe
+external URL, with explicit label/copy and safe target/rel behavior only after
+the shared helper supports those attributes. This leaf must not create a public
+write endpoint or arbitrary action system.
 
 ## Source Findings
 
@@ -38,8 +39,8 @@ public write endpoint or arbitrary action system.
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/statsKpi.tsx` | Extend item schema/defaults/normalizer and card renderer for optional `href`, `linkLabel`, and target policy using the shared safe-href helper. |
-| `core/widgets/core/widgetSafeHref.ts` | Reuse only if TASK-256-06-02 has landed the helper. Do not duplicate URL parsing in `statsKpi.tsx`. |
+| `core/widgets/core/statsKpi.tsx` | Extend item schema/defaults/normalizer and card renderer for optional `link.href`, `link.label`, and target policy using the finalized shared safe-link helper. |
+| `core/widgets/core/widgetSafeHref.ts` | Do not extend this shared helper in TASK-287. In the current checkout it only exports `normalizeWidgetSafeHref`; if TASK-256-06-02 has not added a safe attribute helper, keep target/open-in-new-tab behavior deferred in TASK-287-06 rather than duplicating target/rel logic in `statsKpi.tsx`. |
 | `core/admin/ui/widgets/editors/StatsKpiEditors.tsx` | Add Visual controls for metric link URL, optional link label, and safe target choice after the safe-href owner exists. |
 | `tests/vitest/widgets/statsKpi.test.tsx` | Cover safe internal/external link rendering, blocked unsafe hrefs, target/rel behavior, and non-linked card compatibility. |
 | `tests/vitest/ui/stats-kpi-editor-wave.test.tsx` | Cover metric link editor controls and persistence shape. |
@@ -69,9 +70,14 @@ function normalizeStatsKpiItemLink(input: StatsKpiItem["link"]): StatsKpiItemLin
 }
 
 function StatsKpiCard({ item }: { item: StatsKpiItem }) {
-  const linkAttrs = resolveWidgetLinkAttrs(item.link?.href, {
-    openInNewTab: item.link?.openInNewTab,
+  const safeHref = normalizeWidgetSafeHref(item.link?.href, {
+    allowRelative: true,
+    allowHash: true,
+    allowHttp: true,
   });
+  const linkAttrs = safeHref
+    ? resolveSharedWidgetLinkAttrs({ href: safeHref, openInNewTab: item.link?.openInNewTab })
+    : undefined;
   return linkAttrs
     ? <a {...linkAttrs}>{cardContent}</a>
     : <article>{cardContent}</article>;
@@ -82,7 +88,10 @@ Data flow:
 
 - Editor writes item link data under the item, not under global style.
 - Normalizer keeps links optional and omits empty URL payloads.
-- Renderer asks the shared safe-href helper for sanitized attributes.
+- Renderer first uses the current shared URL normalizer, then asks the
+  TASK-256-06-02-owned helper for safe target/rel attributes. If that attribute
+  helper does not exist yet, this leaf must defer target/open-in-new-tab output
+  instead of implementing a Stats KPI-only helper.
 - Unsafe links leave the metric rendered as a non-clickable card and expose a
   deterministic test marker or diagnostics string if the existing helper
   supports one.
