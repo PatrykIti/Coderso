@@ -235,12 +235,21 @@ Po zwiększeniu limitu aktywnych sesji per user w CMS do 30 — zapis i publikac
 | Brak controls na `<video>` | ✗ Bug (A4) | Brak atrybutu `controls` — użytkownik nie może zatrzymać autoodtwarzającego się wideo. Naruszenie WCAG 2.2 SC 2.2.2 |
 | Brak poster image | ✗ Bug (BF-13) | `<video>` bez `poster` — czarny ekran przy ładowaniu |
 
+> **Aktualizacja 2026-05-17 — TASK-293-02:** shared current-runtime baseline
+> renderuje teraz `controls` na wideo oraz semanticzne `figure/figcaption`
+> dla istniejącego modelu danych. `poster` pozostaje zakresem `TASK-270-03`.
+
 ### 5.6 Błędy CODE-04, CODE-07 na frontendzie
 
 | Bug | Wynik | Szczegóły |
 |-----|-------|-----------|
 | CODE-04 — pusta prawa kolumna feature-left + 1 item | ✓ Potwierdzone na frontendzie | HTML: `<div class="flex flex-col gap-4"></div>` — prawa kolumna pusta, wizualnie duży pusty obszar po prawej |
 | CODE-07 — caption jako alt text | ✓ Potwierdzone na frontendzie | `alt="Caption item 1"` == widoczny caption tekst. Duplikacja semantyczna w HTML źródle |
+
+> **Aktualizacja 2026-05-17 — TASK-293-02:** shared runtime cleanup
+> doprecyzował jawne resolvery `4:3/md/lg`, usunął redundant `row-span`
+> z kart Gallery Mosaic i dodał semanticzne `figure/figcaption` dla
+> bieżącego outputu. Dedykowane `alt` authoring nadal pozostaje w `TASK-270-03`.
 
 ### 5.7 Dostępność na frontendzie
 
@@ -361,6 +370,11 @@ Po zwiększeniu limitu aktywnych sesji per user w CMS do 30 — zapis i publikac
 | A4 | `<video>` z `autoPlay` bez opcji wyłączenia | WCAG 2.2 SC 2.2.2 | Wysoki | Zidentyfikowane w kodzie |
 | A5 | Brak `<figure>` + `<figcaption>` (semantyka galerii) | HTML5 | Średni | Zidentyfikowane w kodzie |
 | A6 | Brak atrybutu `title` na elementach wideo | WCAG 1.2 | Średni | Zidentyfikowane w kodzie |
+
+> **Aktualizacja 2026-05-17 — TASK-293-02:** A4/A5/A6 są zamknięte w shared
+> baseline dla obecnego modelu danych: wideo ma `controls`, runtime renderuje
+> `figure/figcaption`, a bieżące `title`/caption-derived semantics pozostają
+> aktywne do czasu osobnego `alt` authoring w `TASK-270-03`.
 
 ---
 

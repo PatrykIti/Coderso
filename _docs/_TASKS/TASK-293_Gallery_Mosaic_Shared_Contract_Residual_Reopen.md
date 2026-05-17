@@ -86,7 +86,7 @@ Out of scope:
 ## Sub-Tasks
 
 - [x] TASK-293-01: Gallery Mosaic Shared Editor Truthfulness Residuals
-- [ ] TASK-293-02: Gallery Mosaic Shared Runtime Semantics Residuals
+- [x] TASK-293-02: Gallery Mosaic Shared Runtime Semantics Residuals
 - [ ] TASK-293-03: Gallery Mosaic Shared Residual Closure
 
 ## Implementation Order

@@ -64,6 +64,11 @@ for ratio, gap, radius, caption position, and overlay.
   - `video` when video URL exists
   - otherwise `image`
   - otherwise placeholder tile
+- Shared runtime semantics currently use semantic `<figure>` / `<figcaption>`
+  wrappers for gallery media and keep current caption-derived naming/title
+  behavior until dedicated per-item `alt` authoring lands in `TASK-270-03`.
+- Current video runtime keeps visible controls available in the shared baseline.
+  Poster image and richer video product fields remain follow-up scope.
 
 ## Clear Controls
 

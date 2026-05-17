@@ -158,17 +158,17 @@ const resolveOptionalString = (value: string | undefined) =>
   typeof value === "string" ? value : undefined;
 
 const resolveGalleryMosaicRatio = (value: string | undefined): GalleryMosaicRatio => {
-  if (value === "1:1" || value === "16:9" || value === "3:4") return value;
+  if (value === "1:1" || value === "4:3" || value === "16:9" || value === "3:4") return value;
   return "4:3";
 };
 
 const resolveGalleryMosaicGap = (value: string | undefined): GalleryMosaicGap => {
-  if (value === "none" || value === "sm" || value === "lg") return value;
+  if (value === "none" || value === "sm" || value === "md" || value === "lg") return value;
   return "md";
 };
 
 const resolveGalleryMosaicRadius = (value: string | undefined): GalleryMosaicRadius => {
-  if (value === "none" || value === "md" || value === "xl") return value;
+  if (value === "none" || value === "md" || value === "lg" || value === "xl") return value;
   return "lg";
 };
 
@@ -293,11 +293,15 @@ function renderCaption({
   if (!captionText) return null;
 
   if (captionPosition === "below") {
-    return <p className="mt-2 text-xs font-medium text-[var(--color-text)]/80">{captionText}</p>;
+    return (
+      <figcaption className="mt-2 text-xs font-medium text-[var(--color-text)]/80">
+        {captionText}
+      </figcaption>
+    );
   }
 
   return (
-    <div
+    <figcaption
       className={joinClasses(
         "pointer-events-none absolute inset-x-0 bottom-0 px-3 py-2 text-xs font-medium text-white",
         captionPosition === "hover"
@@ -308,7 +312,7 @@ function renderCaption({
       data-gallery-caption-inside={String(index + 1)}
     >
       {captionText}
-    </div>
+    </figcaption>
   );
 }
 
@@ -319,7 +323,6 @@ function GalleryCard({
   radius,
   captionPosition,
   overlay,
-  featured,
 }: {
   item: GalleryMosaicItem;
   index: number;
@@ -327,7 +330,6 @@ function GalleryCard({
   radius: GalleryMosaicRadius;
   captionPosition: GalleryMosaicCaptionPosition;
   overlay: string | undefined;
-  featured?: boolean;
 }) {
   const hasVideo = typeof item.video === "string" && item.video.trim().length > 0;
   const hasImage = !hasVideo && typeof item.image === "string" && item.image.trim().length > 0;
@@ -345,6 +347,7 @@ function GalleryCard({
       title={accessibleCaption}
       aria-label={accessibleCaption}
       className="h-full w-full object-cover"
+      controls
       playsInline
       muted
       loop
@@ -364,19 +367,18 @@ function GalleryCard({
   );
 
   const frame = (
-    <div
+    <figure
       className={joinClasses(
         "group relative w-full overflow-hidden border border-[var(--color-border)]/70 bg-[var(--color-bg)]",
         ratioClassMap[ratio],
-        radiusClassMap[radius],
-        featured ? "lg:row-span-2" : undefined
+        radiusClassMap[radius]
       )}
       data-gallery-item={String(index + 1)}
       data-gallery-media-type={hasVideo ? "video" : hasImage ? "image" : "placeholder"}
     >
       {media}
       {renderCaption({ item, index, captionPosition, overlay })}
-    </div>
+    </figure>
   );
 
   if (hasLink && linkAttrs) {
@@ -454,7 +456,6 @@ export function GalleryMosaicBlock({
               radius={radius}
               captionPosition={captionPosition}
               overlay={overlay}
-              featured
             />
           </div>
           {hasSupportingItems ? (
@@ -521,7 +522,6 @@ export function GalleryMosaicBlock({
               radius={radius}
               captionPosition={captionPosition}
               overlay={overlay}
-              featured={resolvedVariant === "mosaic" && index === 0}
             />
           </div>
         ))}

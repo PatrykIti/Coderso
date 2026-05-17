@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 297 tasks
+- **To Do:** 296 tasks
 - **In Progress:** 5 tasks
-- **Done:** 1560 tasks
+- **Done:** 1561 tasks
 
 ---
 
@@ -45,7 +45,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-292-04 | Toggle Block Editor Mode Flow, Variant Previews, and Reset UX | High | Large | Add variant thumbnails, clearer Wizard/Visual/Advanced ownership, reset defaults, and active default-state messaging |
 | TASK-292-05 | Toggle Block Pane Authoring Guidance and Two-State Documentation | Medium | Medium | Add builder-facing pane guidance and document the intentional two-state Toggle Block boundary |
 | TASK-292-06 | Toggle Block Report Docs Changelog and Closure | Medium | Medium | Refresh Toggle Block report/docs/changelog/board and final validation evidence |
-| TASK-293-02 | Gallery Mosaic Shared Runtime Semantics Residuals | High | Large | Finish the missing shared Gallery Mosaic resolver cleanup plus current figure/video semantics using the existing data model only |
 | TASK-293-03 | Gallery Mosaic Shared Residual Closure | Medium | Medium | Refresh the Gallery Mosaic report/docs/changelog/board for the reopened shared residual family and final validation evidence |
 | TASK-291 | Timeline Widget Playwright Product Followups | High | Very Large | Timeline-only follow-up family for `REPORT_TIMELINE_WIDGET.md`, excluding shared TASK-256 mechanisms |
 | TASK-291-01 | Timeline Wizard Step Authoring and Status UX | High | Large | Expand Wizard all-step editing, status authoring, icon/accent controls, remove UX, and hidden-title warning after shared atomic updates |
@@ -352,6 +351,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-293-02 | Gallery Mosaic Shared Runtime Semantics Residuals | High | Large | Done: Gallery Mosaic runtime now uses explicit resolver branches, semantic figure/figcaption output, and current video controls without widening into TASK-270 product fields |
 | TASK-293-01 | Gallery Mosaic Shared Editor Truthfulness Residuals | High | Large | Done: Advanced is diagnostic-only, Wizard current-contract media selection now accepts image/video assets, and Visual exposes explicit current-media ownership copy |
 | TASK-256 | Widget Shared Contract Playwright Drift Repair | High | Very Large | Done: shared builder patching, placeholder gating, interactive runtime IDs, structural shared fixes, marketing truthfulness repairs, report routing, and closure evidence are synchronized |
 | TASK-256-01 | Shared Editor Mode and Atomic Update Contract | High | Large | Done: builder hosts and shared panels use atomic block patching, and variant/data sync regressions are covered across the affected widget editors |

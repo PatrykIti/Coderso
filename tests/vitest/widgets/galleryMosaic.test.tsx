@@ -139,6 +139,51 @@ test("gallery mosaic validator rejects invalid variant", () => {
   ).toThrow("widget_invalid_variant");
 });
 
+test("gallery mosaic feature-left avoids empty support column and redundant featured row span", () => {
+  const html = renderToString(
+    <GalleryMosaicBlock
+      data={{
+        ...galleryMosaicDefaults,
+        items: [
+          {
+            id: "only-item",
+            image: "https://cdn.example.com/one.jpg",
+            caption: "Solo frame",
+          },
+        ],
+      }}
+      variant="feature-left"
+    />
+  );
+
+  expect(html).not.toContain("flex flex-col gap-4");
+  expect(html).not.toContain("lg:row-span-2");
+});
+
+test("gallery mosaic renders figure semantics and current video controls", () => {
+  const html = renderToString(
+    <GalleryMosaicBlock
+      data={{
+        ...galleryMosaicDefaults,
+        items: [
+          {
+            id: "video-item",
+            video: "https://cdn.example.com/video.mp4",
+            caption: "Video frame",
+          },
+        ],
+      }}
+      variant="uniform-grid"
+    />
+  );
+
+  expect(html).toContain("<figure");
+  expect(html).toContain("<figcaption");
+  expect(html).toContain('data-gallery-media-type="video"');
+  expect(html).toContain("controls");
+  expect(html).toContain('title="Video frame"');
+});
+
 test("gallery mosaic wizard renders onboarding fields", () => {
   const html = renderToString(
     <GalleryMosaicWizardEditor

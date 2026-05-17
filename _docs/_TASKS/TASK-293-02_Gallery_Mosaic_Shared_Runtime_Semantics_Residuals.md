@@ -6,7 +6,7 @@
 **Category:** Widgets + Gallery Mosaic + Shared Contract + Runtime Render + Accessibility
 **Estimated Effort:** Large
 **Dependencies:** TASK-293-01
-**Status:** To Do
+**Status:** Done (2026-05-17)
 
 ---
 
@@ -143,3 +143,15 @@ No API routes are added.
   redundant featured classes.
 - Current caption/video semantics are accessible and test-covered before
   `TASK-270` adds new product-owned fields.
+
+## Completion Notes
+
+- 2026-05-17: Gallery Mosaic runtime now uses explicit resolver branches,
+  semantic `figure/figcaption`, visible video controls, and no redundant
+  per-card featured row-span for the current shared contract.
+- Validation:
+  - `set -a && source /Users/pciechanski/Documents/_moje_projekty/Coderso/.env && set +a && NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/galleryMosaic.test.tsx tests/vitest/widgets/renderer.test.tsx`
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun run gates:coderso`
+  - `bun run scan:security:strict` (rerun on the host because sandbox trust-store/network blocked Semgrep and `bun audit`)
