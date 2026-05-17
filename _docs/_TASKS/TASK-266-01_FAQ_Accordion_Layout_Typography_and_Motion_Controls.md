@@ -41,20 +41,20 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Extend `FaqAccordionData.style` with bounded layout/style fields:
+- [x] Extend `FaqAccordionData.style` with bounded layout/style fields:
   `maxWidth`, `headerAlign`, `sectionPaddingX`, `sectionPaddingY`,
   `questionTextColor`, `answerTextColor`, `headerTitleColor`,
   `headerDescriptionColor`, `panelRadius`, `borderWidth`, `headerTitleSize`,
   and `motion`.
-- [ ] Add explicit enums/maps for every non-color token so render output cannot
+- [x] Add explicit enums/maps for every non-color token so render output cannot
   emit arbitrary classes.
-- [ ] Keep legacy payloads backward compatible by defaulting missing fields to
+- [x] Keep legacy payloads backward compatible by defaulting missing fields to
   current behavior.
-- [ ] Render style fields in `FaqAccordionBlock` through compact class/style
+- [x] Render style fields in `FaqAccordionBlock` through compact class/style
   maps and `compactStyle()` where inline colors are intentional.
-- [ ] Add Visual controls for day-to-day style/layout choices and Advanced raw
+- [x] Add Visual controls for day-to-day style/layout choices and Advanced raw
   token diagnostics only where the field is truly technical.
-- [ ] Ensure motion is disabled by `motion="none"` and does not depend on unsafe
+- [x] Ensure motion is disabled by `motion="none"` and does not depend on unsafe
   inline scripts.
 
 ## Files to Change

@@ -75,12 +75,12 @@ this family.
 
 ## Sub-Tasks
 
-- [ ] TASK-266-01: FAQ Accordion Layout Typography and Motion Controls
-- [ ] TASK-266-02: FAQ Accordion Rich Answers and Item Icon Model
-- [ ] TASK-266-03: FAQ Accordion SEO Structured Data Contract
-- [ ] TASK-266-04: FAQ Accordion Wizard and Open State Editor UX
-- [ ] TASK-266-05: FAQ Accordion Item Management and Variant Preview Polish
-- [ ] TASK-266-06: FAQ Accordion Report Docs and Closure
+- [x] TASK-266-01: FAQ Accordion Layout Typography and Motion Controls
+- [x] TASK-266-02: FAQ Accordion Rich Answers and Item Icon Model
+- [x] TASK-266-03: FAQ Accordion SEO Structured Data Contract
+- [x] TASK-266-04: FAQ Accordion Wizard and Open State Editor UX
+- [x] TASK-266-05: FAQ Accordion Item Management and Variant Preview Polish
+- [x] TASK-266-06: FAQ Accordion Report Docs and Closure
 
 ## Implementation Order
 
@@ -166,8 +166,8 @@ This umbrella does not add API routes.
 ## Acceptance Criteria
 
 - Every finding in `_docs/PLAYWRIGHT/REPORT_FAQ_ACCORDION_WIDGET.md` is either
-  routed to TASK-256, implemented by a TASK-266 leaf, or explicitly deferred in
-  the closure leaf with a reason.
+  routed to TASK-256 or TASK-293, implemented by a TASK-266 leaf, or explicitly
+  deferred in the closure leaf with a reason.
 - TASK-266 leaves do not duplicate implementation already owned by TASK-256.
 - FAQ Accordion schema, defaults, normalizer, render, editor, tests, docs, and
   report evidence move together for every new product field.

@@ -37,14 +37,14 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Add `header.description` to Wizard while preserving the minimal onboarding
+- [x] Add `header.description` to Wizard while preserving the minimal onboarding
   flow.
-- [ ] Add a `current/total` item count in Visual Q/A management.
-- [ ] Build a helper such as `getFaqItemLabel(item, index)` that returns a
+- [x] Add a `current/total` item count in Visual Q/A management.
+- [x] Build a helper such as `getFaqItemLabel(item, index)` that returns a
   short question-aware label with a stable fallback.
-- [ ] Use question-aware labels in Visual default-open controls and Advanced
+- [x] Use question-aware labels in Visual default-open controls and Advanced
   controls.
-- [ ] Replace the raw Advanced number-only workflow with bounded options when
+- [x] Replace the raw Advanced number-only workflow with bounded options when
   the current item list is available, while still preserving a technical
   fallback for malformed payload inspection.
 

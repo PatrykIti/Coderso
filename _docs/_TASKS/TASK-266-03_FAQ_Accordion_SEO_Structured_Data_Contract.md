@@ -36,14 +36,14 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Add a small `seo` object to `FaqAccordionData` with an explicit
+- [x] Add a small `seo` object to `FaqAccordionData` with an explicit
   `emitFaqJsonLd` boolean.
-- [ ] Add `buildFaqAccordionJsonLd()` next to the FAQ domain contract so render
+- [x] Add `buildFaqAccordionJsonLd()` next to the FAQ domain contract so render
   and tests use one owner.
-- [ ] Use TASK-266-02 plain-text extraction for rich answers.
-- [ ] Render a single `<script type="application/ld+json">` only when enabled
+- [x] Use TASK-266-02 plain-text extraction for rich answers.
+- [x] Render a single `<script type="application/ld+json">` only when enabled
   and at least one normalized Q/A pair is non-empty.
-- [ ] Add a Visual editor control with copy that explains the public
+- [x] Add a Visual editor control with copy that explains the public
   output without exposing implementation details.
 
 ## Files to Change

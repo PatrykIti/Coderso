@@ -40,14 +40,14 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Add a local remove confirmation or undo affordance that prevents
+- [x] Add a local remove confirmation or undo affordance that prevents
   accidental immediate deletion while preserving the min-one-item guard.
-- [ ] Replace long text-only move/remove controls with icon+tooltip or compact
+- [x] Replace long text-only move/remove controls with icon+tooltip or compact
   accessible buttons following existing admin UI patterns.
-- [ ] Add small static variant preview miniatures inside `VariantCards`.
-- [ ] Implement local native drag/drop reorder with keyboard-safe Move Up/Down
+- [x] Add small static variant preview miniatures inside `VariantCards`.
+- [x] Implement local native drag/drop reorder with keyboard-safe Move Up/Down
   fallback and direct test coverage.
-- [ ] Implement bounded bulk delete with selected-question preview and a guard
+- [x] Implement bounded bulk delete with selected-question preview and a guard
   that always leaves at least one FAQ item.
 
 ## Files to Change

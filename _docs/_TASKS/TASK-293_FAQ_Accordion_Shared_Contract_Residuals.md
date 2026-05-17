@@ -50,15 +50,15 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Add FAQ runtime section labeling and per-item accessibility semantics
+- [x] Add FAQ runtime section labeling and per-item accessibility semantics
   without introducing page-global IDs or public placeholder leakage.
-- [ ] Add a visible chevron affordance and synchronize `aria-expanded` on FAQ
+- [x] Add a visible chevron affordance and synchronize `aria-expanded` on FAQ
   summaries after native `<details>` toggles.
-- [ ] Fix the `spacing="md"` guard and collapse `spacing="none"` panel borders
+- [x] Fix the `spacing="md"` guard and collapse `spacing="none"` panel borders
   so stacked FAQ items do not render doubled separators.
-- [ ] Adopt shared clear controls for `style.border` and `style.divider` in the
+- [x] Adopt shared clear controls for `style.border` and `style.divider` in the
   FAQ Visual editor and keep CSS-variable/token text entry intact.
-- [ ] Update focused FAQ widget/editor tests so the shared residual rows have
+- [x] Update focused FAQ widget/editor tests so the shared residual rows have
   direct evidence instead of relying on stale report prose.
 
 ## Files to Change

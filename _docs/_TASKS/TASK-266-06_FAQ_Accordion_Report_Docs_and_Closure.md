@@ -38,17 +38,17 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Re-run or refresh the FAQ Accordion report evidence after TASK-266 leaves
+- [x] Re-run or refresh the FAQ Accordion report evidence after TASK-266 leaves
   land.
-- [ ] Mark each FAQ report row as fixed, TASK-256-owned, deferred, or future
+- [x] Mark each FAQ report row as fixed, TASK-256-owned, deferred, or future
   scope.
-- [ ] Record exact admin/frontend evidence for runtime-facing changes.
-- [ ] Update `_docs/_WIDGETS/FAQ.md` with the final data/editor/runtime/SEO
+- [x] Record exact admin/frontend evidence for runtime-facing changes.
+- [x] Update `_docs/_WIDGETS/FAQ.md` with the final data/editor/runtime/SEO
   contract.
-- [ ] Move TASK-266 task files and `_docs/_TASKS/README.md` rows to `Done` only
+- [x] Move TASK-266 task files and `_docs/_TASKS/README.md` rows to `Done` only
   after implementation and validation are complete.
-- [ ] Add a changelog entry listing TASK-266 and every completed leaf.
-- [ ] Keep screenshot filenames as textual evidence only; do not commit PNG
+- [x] Add a changelog entry listing TASK-266 and every completed leaf.
+- [x] Keep screenshot filenames as textual evidence only; do not commit PNG
   artifacts from `_docs/PLAYWRIGHT/`.
 
 ## Files to Change
@@ -70,9 +70,9 @@ Report closure table:
 
 | Finding | Status | Owner | Validation evidence | Notes |
 |---|---|---|---|---|
-| W9 SEO JSON-LD | fixed | TASK-266-03 | `bun run test:vitest -- tests/vitest/widgets/faqAccordion.test.tsx` | JSON-LD enabled/disabled cases covered. |
-| C1 single-open | TASK-256-owned | TASK-256-06-03 | <TASK-256 evidence> | Not duplicated by TASK-266. |
-| C2 chevron + ARIA residuals | TASK-293-owned | TASK-293 | <TASK-293 evidence> | Shared FAQ residuals stay outside TASK-266 leaves. |
+| W9 SEO JSON-LD | fixed | TASK-266-03 | `bun run test:vitest -- tests/vitest/widgets/faqAccordion.test.tsx` | JSON-LD enabled/disabled cases and script-safe serialization are covered. |
+| C1 single-open | TASK-256-owned | TASK-256-06-03 | Live grouped-details contract remains in `core/widgets/core/faqAccordion.tsx` without TASK-266 duplication. | Shared single-open behavior stays out of this family. |
+| C2 chevron + ARIA residuals | TASK-293-owned | TASK-293 | `bun run test:vitest -- tests/vitest/widgets/faqAccordion.test.tsx`; `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` | Shared FAQ residuals stay outside TASK-266 leaves. |
 ```
 
 Closure helper shape:
@@ -173,6 +173,7 @@ No API routes are added by this closure task.
 - Every row from the FAQ Accordion report has a final owner and status.
 - TASK-266 fixed rows have matching code, tests, docs, and textual
   admin/frontend evidence where applicable.
-- TASK-256-owned rows are not duplicated or mislabeled as TASK-266 fixes.
+- TASK-256-owned and TASK-293-owned rows are not duplicated or mislabeled as
+  TASK-266 fixes.
 - Changelog, task board, task files, widget docs, and validation evidence are
   synchronized.

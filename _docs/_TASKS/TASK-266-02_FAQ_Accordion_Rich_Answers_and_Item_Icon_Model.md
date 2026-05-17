@@ -36,21 +36,21 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Extend `FaqAccordionItem` with `icon?: string` and `answerFormat?: "plain" | "markdown"`.
-- [ ] Add explicit schema and normalizer bounds for FAQ text and markdown:
+- [x] Extend `FaqAccordionItem` with `icon?: string` and `answerFormat?: "plain" | "markdown"`.
+- [x] Add explicit schema and normalizer bounds for FAQ text and markdown:
   question length, answer length, icon length, link href length, markdown token
   count, list item count, and rendered node count.
-- [ ] Add a safe FAQ answer renderer that supports only a bounded markdown
+- [x] Add a safe FAQ answer renderer that supports only a bounded markdown
   subset. Prefer a small FAQ-local parser that renders React nodes; if HTML is
   introduced internally, route it through the existing
   `sanitizeRichTextHtml()` / `sanitizeHtmlWithPolicy()` owner before output.
-- [ ] Add `extractFaqAnswerPlainText()` so SEO JSON-LD can use sanitized text
+- [x] Add `extractFaqAnswerPlainText()` so SEO JSON-LD can use sanitized text
   instead of duplicating markdown parsing.
-- [ ] Add Wizard/Visual controls for item icon and rich answer mode without
+- [x] Add Wizard/Visual controls for item icon and rich answer mode without
   making the Wizard feel technical.
-- [ ] Keep Advanced diagnostics technical-only and avoid duplicating the Visual
+- [x] Keep Advanced diagnostics technical-only and avoid duplicating the Visual
   rich-answer controls there.
-- [ ] Preserve legacy `answer` strings as plain text by default.
+- [x] Preserve legacy `answer` strings as plain text by default.
 
 ## Files to Change
 
