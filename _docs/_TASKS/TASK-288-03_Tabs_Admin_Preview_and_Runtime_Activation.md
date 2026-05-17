@@ -58,15 +58,20 @@ here.
 ## Implementation Pseudocode
 
 ```tsx
-function TabsBlock({ data, variant, slots, previewDevice }: TabsBlockProps) {
+function normalizeTabsRootId(blockId: string | undefined) {
+  return `tabs-${(blockId ?? "preview").replace(/[^a-zA-Z0-9_-]/g, "-")}`;
+}
+
+function TabsBlock({ data, variant, slots, previewDevice, blockId }: TabsBlockProps) {
   const panels = resolveTabsPanels(data, slots);
   const initialActiveId = resolveInitialActiveId(data, panels);
   const [previewActiveId, setPreviewActiveId] = useState(initialActiveId);
   const isReactPreview = Boolean(previewDevice);
   const activeId = isReactPreview ? previewActiveId : initialActiveId;
+  const rootId = normalizeTabsRootId(blockId);
 
   return (
-    <div data-nextless-tabs={instanceId} data-nextless-tabs-active-id={activeId}>
+    <div data-nextless-tabs={rootId} data-nextless-tabs-active-id={activeId}>
       {panels.map((panel) => (
         <button
           type="button"
@@ -92,6 +97,8 @@ Error handling:
 
 - Preview state must reset to a valid panel if item count changes and the active
   preview panel disappears.
+- `blockId` comes from the shared `WidgetDefinition.render` contract and
+  `WidgetRenderer`; do not invent a second instance-id source inside Tabs.
 - Missing panel slots still fall back to normalized panels.
 - Runtime selectors must ignore unknown or malformed roots rather than throwing.
 - Multiple Tabs widgets on one page must not share mutable active state.

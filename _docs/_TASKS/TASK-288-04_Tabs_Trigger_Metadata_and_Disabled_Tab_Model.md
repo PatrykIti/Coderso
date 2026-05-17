@@ -154,4 +154,3 @@ No API routes are added.
 - Disabled tabs are announced, skipped by activation, and cannot become the only
   unreachable active panel.
 - No unsafe HTML/script path is introduced through item metadata.
-

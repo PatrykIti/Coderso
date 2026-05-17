@@ -57,22 +57,65 @@ not exist, split that helper to TASK-256 instead of adding a Tabs-only duplicate
 ## Implementation Pseudocode
 
 ```tsx
+type TabsAlignment = NonNullable<NonNullable<TabsData["options"]>["alignment"]>;
+
+const wizardOrientationOptions = [
+  { value: "horizontal", label: "Horizontal" },
+  { value: "vertical", label: "Vertical" },
+] as const;
+
+const wizardAlignmentOptions = [
+  { value: "start", label: "Start" },
+  { value: "center", label: "Center" },
+  { value: "end", label: "End" },
+] as const;
+
 function TabsWizardLayoutSection({ value, onChange }: TabsSectionProps) {
   const normalized = normalizeTabsData(value);
   return (
     <WidgetEditorSection id="tabs.wizard-layout" title="Layout">
-      <SegmentedSelect
-        label="Orientation"
-        value={normalized.options?.orientation ?? "horizontal"}
-        options={orientationOptions}
-        onChange={(orientation) => updateOptions(value, onChange, { orientation })}
-      />
-      <SegmentedSelect
-        label="Alignment"
-        value={normalized.options?.alignment ?? "start"}
-        options={alignmentOptions}
-        onChange={(alignment) => updateOptions(value, onChange, { alignment })}
-      />
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Orientation</p>
+          <Select
+            value={normalized.options?.orientation ?? "horizontal"}
+            onValueChange={(orientation) =>
+              updateOptions(value, onChange, { orientation: orientation as TabsOrientation })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Choose orientation" />
+            </SelectTrigger>
+            <SelectContent>
+              {wizardOrientationOptions.map((option) => (
+                <SelectItem key={`tabs-wizard-orientation-${option.value}`} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Alignment</p>
+          <Select
+            value={normalized.options?.alignment ?? "start"}
+            onValueChange={(alignment) =>
+              updateOptions(value, onChange, { alignment: alignment as TabsAlignment })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Choose alignment" />
+            </SelectTrigger>
+            <SelectContent>
+              {wizardAlignmentOptions.map((option) => (
+                <SelectItem key={`tabs-wizard-alignment-${option.value}`} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
     </WidgetEditorSection>
   );
 }
@@ -135,4 +178,3 @@ No API routes are added.
 - Tab-count reduction clearly communicates panel impact before data is removed.
 - The leaf does not modify the shared repeatable-slot contract outside the
   existing owner.
-

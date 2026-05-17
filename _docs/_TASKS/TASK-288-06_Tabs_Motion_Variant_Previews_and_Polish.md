@@ -126,4 +126,3 @@ No API routes are added.
 - Tabs motion is optional, bounded, reduced-motion-safe, and tested.
 - Inactive panels remain inaccessible according to the final activation model.
 - No global animation or preview system is invented for this Tabs-only scope.
-

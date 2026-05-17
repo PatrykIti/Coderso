@@ -50,7 +50,7 @@ helper instead of adding another Tabs-only color widget.
 
 | File | Required change |
 |---|---|
-| `core/admin/ui/widgets/editors/TabsEditors.tsx` | Expose inactive text color, split section labels, title-case select copy, and add contrast guidance through the shared helper if available. |
+| `core/admin/ui/widgets/editors/TabsEditors.tsx` | Expose inactive text color, split section labels, title-case select copy, and add a local contrast-hint helper unless TASK-256-02 has already shipped a shared helper. |
 | `tests/vitest/ui/tabs-editor-wave.test.tsx` | Add editor assertions for inactive text color, label copy, section split, and contrast warning behavior. |
 | `tests/vitest/widgets/tabs.test.tsx` | Add or update SSR/normalization assertions only if field defaults or clearability change. |
 
@@ -63,33 +63,39 @@ const alignmentOptions = [
   { value: "end", label: "End" },
 ] as const;
 
+function resolveTabsContrastWarning(
+  pairs: Array<[label: string, foreground: string | undefined, background: string | undefined]>
+) {
+  const unreadable = pairs.find(([, foreground, background]) => foreground && foreground === background);
+  return unreadable ? `${unreadable[0]} foreground matches its background.` : null;
+}
+
 function TabsColorsSection({ value, onChange }: TabsSectionProps) {
   const normalized = normalizeTabsData(value);
   const style = normalized.style ?? tabsDefaults.style ?? {};
-  const contrastPairs = [
-    {
-      id: "active",
-      foreground: style.activeTextColor,
-      background: style.activeBackgroundColor,
-      label: "Active tab",
-    },
-    {
-      id: "inactive",
-      foreground: style.inactiveTextColor,
-      background: style.surfaceColor,
-      label: "Inactive tab",
-    },
-  ];
+  const contrastWarning = resolveTabsContrastWarning([
+    ["Active tab", style.activeTextColor, style.activeBackgroundColor],
+    ["Inactive tab", style.inactiveTextColor, style.surfaceColor],
+  ]);
 
   return (
     <WidgetEditorSection id="tabs.colors" title="Colors">
-      <TokenColorInput
-        label="Inactive text color"
-        value={style.inactiveTextColor}
-        fallback={tabsDefaults.style?.inactiveTextColor}
-        onChange={(inactiveTextColor) => updateStyle(value, onChange, { inactiveTextColor })}
+      <div className="space-y-2">
+        <p className="text-sm font-medium">Inactive text color</p>
+        <Input
+          value={style.inactiveTextColor ?? tabsDefaults.style?.inactiveTextColor ?? ""}
+          onChange={(event) =>
+            updateStyle(value, onChange, { inactiveTextColor: event.target.value })
+          }
+          placeholder={tabsDefaults.style?.inactiveTextColor ?? "var(--color-text)"}
+        />
+      </div>
+      <ClearableFieldHeader
+        label="Surface color"
+        value={style.surfaceColor}
+        onClear={() => clearStyleField(value, onChange, "surfaceColor")}
       />
-      <ContrastWarnings pairs={contrastPairs} />
+      {contrastWarning ? <p className="text-xs text-warning">{contrastWarning}</p> : null}
     </WidgetEditorSection>
   );
 }
@@ -146,4 +152,3 @@ No API routes are added.
 - Layout and color controls are no longer mixed under one vague section.
 - Contrast guidance is present without weakening the shared design-token
   contract from TASK-256-02.
-

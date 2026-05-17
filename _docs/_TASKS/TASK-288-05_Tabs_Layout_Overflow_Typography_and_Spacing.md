@@ -19,8 +19,10 @@ The current renderer uses `justify-*` for both horizontal and vertical tablists.
 That works for a horizontal row but is misleading for vertical orientation
 because it aligns along the column main axis instead of positioning triggers
 horizontally. Several other visual choices are also hardcoded:
-`text-sm`, `font-medium`, `space-y-4`, `p-4`, `gap-2`, wrapping behavior, and
-full-width container layout.
+`text-sm`, `font-medium`, `space-y-4`, `p-4`, and `gap-2`. The outer widget
+container width is already owned by the shared `WidgetBlock.layout.container`
+contract, so this leaf may only add Tabs-internal width controls where they do
+not duplicate that renderer wrapper.
 
 ## Scope Boundary
 
@@ -40,7 +42,10 @@ spacing/size token helper lands there, this leaf must consume it.
 - [ ] Add bounded trigger typography fields for size and weight.
 - [ ] Add bounded spacing fields for container padding, tablist gap, and
   tablist-to-panel gap.
-- [ ] Add a bounded `maxWidth` field for the Tabs container.
+- [ ] Decide W12 against the existing shared `WidgetBlock.layout.container`
+  owner; only add a bounded Tabs-owned `innerMaxWidth` or `panelMaxWidth` field
+  if the needed control is inside the Tabs chrome rather than the outer widget
+  wrapper.
 - [ ] Update editor controls in Visual/Advanced and only expose beginner-safe
   choices in Wizard if TASK-288-02 decides they belong there.
 - [ ] Preserve existing default rendering for legacy payloads.
@@ -49,9 +54,9 @@ spacing/size token helper lands there, this leaf must consume it.
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/tabs.tsx` | Extend schema/defaults/normalizer and runtime class maps for alignment, overflow, typography, spacing, and max-width. |
+| `core/widgets/core/tabs.tsx` | Extend schema/defaults/normalizer and runtime class maps for alignment, overflow, typography, spacing, and any Tabs-internal width field. |
 | `core/admin/ui/widgets/editors/TabsEditors.tsx` | Add bounded controls with labels that explain orientation-specific alignment. |
-| `tests/vitest/widgets/tabs.test.tsx` | Add normalization and SSR assertions for vertical alignment, overflow, typography, spacing, and max-width. |
+| `tests/vitest/widgets/tabs.test.tsx` | Add normalization and SSR assertions for vertical alignment, overflow, typography, spacing, and any Tabs-internal width field. |
 | `tests/vitest/ui/tabs-editor-wave.test.tsx` | Add editor coverage for new controls and enum persistence. |
 | `tests/unit/widgets/validator.test.ts` | Run and update for new schema fields. |
 
@@ -88,7 +93,7 @@ Data model shape:
 ```ts
 type TabsLayoutOptions = {
   triggerOverflow?: "wrap" | "scroll";
-  maxWidth?: "full" | "3xl" | "5xl" | "readable";
+  innerMaxWidth?: "full" | "3xl" | "5xl" | "readable";
   containerPadding?: "sm" | "md" | "lg";
   triggerGap?: "sm" | "md" | "lg";
   panelGap?: "sm" | "md" | "lg";
@@ -104,6 +109,8 @@ Error handling:
   hide active triggers from horizontal scrolling.
 - Vertical orientation must ignore horizontal wrapping choices that do not
   apply.
+- Tabs-owned width fields must be named and rendered as inner/panel width only;
+  use the existing `layout.container` wrapper for outer widget width.
 - No raw Tailwind class names are persisted.
 
 ## Security Contract
@@ -130,7 +137,7 @@ No API routes are added.
 ## Documentation Updates Required
 
 - Update `_docs/_WIDGETS/TABS.md` with new layout, overflow, typography,
-  spacing, and max-width fields.
+  spacing, and any Tabs-internal width fields.
 - Update `_docs/PLAYWRIGHT/REPORT_TABS_WIDGET.md` rows W3, W8, W9, W12, U6,
   and R1 after validation.
 
@@ -142,8 +149,8 @@ No API routes are added.
 ## Acceptance Criteria
 
 - Vertical Tabs alignment behaves according to the visible alignment control.
-- Overflow, typography, spacing, and max-width controls are bounded and tested.
+- Overflow, typography, spacing, and any Tabs-internal width controls are
+  bounded and tested.
 - Legacy Tabs render with the same default visual shape unless users opt into
   new fields.
 - No raw class-string persistence or shared token duplication is introduced.
-
