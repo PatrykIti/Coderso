@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 297 tasks
+- **To Do:** 304 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1542 tasks
 
@@ -38,6 +38,13 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-292 | Toggle Block Widget Playwright Product Followups | High | Very Large | Toggle Block-only follow-up family for `REPORT_TOGGLE_BLOCK_WIDGET.md`, excluding TASK-256 shared-contract scope |
+| TASK-292-01 | Toggle Block Variant Visual Hierarchy, Contrast, and Pane Styling | High | Large | Add Toggle Block-owned cards distinction, active contrast, and bounded pane style controls after TASK-256 shared style semantics |
+| TASK-292-02 | Toggle Block Motion and Pane Transition Contract | Medium | Medium | Add bounded fade/slide/no-motion options without weakening TASK-256 interactive runtime semantics |
+| TASK-292-03 | Toggle Block Accessible Label Localization and Status Copy | High | Medium | Add widget-owned localized radiogroup and selected-state copy while TASK-256 owns structural ARIA/ID repairs |
+| TASK-292-04 | Toggle Block Editor Mode Flow, Variant Previews, and Reset UX | High | Large | Add variant thumbnails, clearer Wizard/Visual/Advanced ownership, reset defaults, and active default-state messaging |
+| TASK-292-05 | Toggle Block Pane Authoring Guidance and Two-State Documentation | Medium | Medium | Add builder-facing pane guidance and document the intentional two-state Toggle Block boundary |
+| TASK-292-06 | Toggle Block Report Docs Changelog and Closure | Medium | Medium | Refresh Toggle Block report/docs/changelog/board and final validation evidence |
 | TASK-281 | Product Table Widget Playwright Product Followups | High | Very Large | Product Table-only follow-up family for `REPORT_PRODUCT_TABLE_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-281-01 | Product Table Admin Preview Resolver Parity | High | Large | Hydrate Product Table admin canvas with commerce rows using the existing query contract without persisting preview-only data |
 | TASK-281-02 | Product Table Column Labels and Visibility Model | High | Large | Complete schema-owned label controls and decide bounded title/price visibility behavior |
