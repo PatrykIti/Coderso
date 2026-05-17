@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 245 tasks
+- **To Do:** 253 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1542 tasks
 
@@ -84,6 +84,14 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-284-03 | Spacer Named Rhythm Presets | Medium | Medium | Add named vertical rhythm presets that map to safe height values without global style-manager scope |
 | TASK-284-04 | Spacer Horizontal Orientation Contract | Low | Large | Decide and implement or explicitly defer horizontal Spacer behavior without flex-filler or page-builder rewrite scope |
 | TASK-284-05 | Spacer Report Docs Changelog and Closure | Medium | Medium | Refresh Spacer report/docs/changelog/board and final validation evidence |
+| TASK-282 | Rich Text Section Widget Playwright Product Followups | High | Very Large | Rich Text Section-only follow-up family for `REPORT_RICH_TEXT_SECTION_WIDGET.md`, excluding TASK-256 shared-contract scope |
+| TASK-282-01 | Rich Text Output Mode and Wizard Ownership | High | Large | Make HTML/blocks source ownership truthful, prevent silent Wizard outputMode resets, and add mode-aware editor feedback |
+| TASK-282-02 | Rich Text WYSIWYG HTML Body and Sanitizer Feedback | High | Very Large | Replace raw HTML-first beginner editing with safe rich-text authoring and explicit sanitizer feedback for dropped tags |
+| TASK-282-03 | Rich Text Structured Blocks Rich Content and Scale UX | High | Large | Add rich block content, safe heading hierarchy, recoverable destructive actions, and scalable 20-block editing |
+| TASK-282-04 | Rich Text Article Width Title and TOC Accessibility | High | Large | Repair article max-width, heading-level semantics, section labeling, and visible TOC focus states |
+| TASK-282-05 | Rich Text Inline Media and Safe Content Model | High | Very Large | Add bounded inline media support using existing media ownership without opening unsafe embeds or scripts |
+| TASK-282-06 | Rich Text Editor Mode IA and Reader Guidance | Medium | Medium | Align Wizard/Visual/Advanced mode IA, variant controls, dropcap guidance, and technical token duplication |
+| TASK-282-07 | Rich Text Report Docs Changelog and Closure | Medium | Medium | Refresh Rich Text Section report/docs/changelog/board and final validation evidence |
 | TASK-278 | Pricing Plans Widget Playwright Product Followups | High | Very Large | Pricing Plans-only follow-up family for `REPORT_PRICING_PLANS_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-278-01 | Pricing Plans Card Visual Hierarchy and CTA Styles | High | Large | Add plan description, plan-level surface, badge tone, highlighted banner, and CTA style controls after TASK-256 shared safety |
 | TASK-278-02 | Pricing Plans Content Wizard and Destructive Edit UX | High | Large | Expand Wizard content authoring, Advanced reset copy, highlight indicators, disabled billing label UX, remove confirmation/undo, and feature autofocus |
