@@ -45,6 +45,8 @@ artifacts and must not be staged.
   `not-reproducible`, or `deferred`.
 - [ ] For every deferred Footer-specific row, create or reference a physical
   future task with concrete owner/test paths.
+- [ ] Do not close a Footer-owned backlog row as generic prose only; `deferred`
+  means a named physical task exists by the time TASK-268 moves to `Done`.
 - [ ] Refresh `_docs/_WIDGETS/FOOTER.md` so it matches the implemented schema,
   defaults, render contract, editor modes, slots, and validation behavior.
 - [ ] Update `_docs/WIDGETS.md` and `_docs/WIDGET_PACK_MATRIX.md` only when the
@@ -103,6 +105,9 @@ Error handling:
   rendered DOM/test evidence; rerun Playwright when the environment is restored.
 - If broad suites fail for unrelated reasons, isolate targeted Footer suites and
   record unrelated failures separately.
+- Report rows that are actually shared-scope contract decisions must cite the
+  exact owner task (for example TASK-256-02 or TASK-194-04-02) rather than a
+  generic “shared task later” note.
 
 ## Security Contract
 
@@ -149,6 +154,8 @@ No API routes are added.
 ## Acceptance Criteria
 
 - Every row in the Footer report has a documented final state and evidence.
+- Shared-scope and deferred rows cite concrete existing or future task IDs,
+  not generic prose.
 - Footer docs match the implemented contract.
 - Task board and changelog index are synchronized with final task statuses.
 - Required Footer-focused tests and repo gates are recorded with command names

@@ -22,25 +22,36 @@ code in `FooterEditors.tsx`. It must not alter global page-builder mode
 navigation or shared editor primitives unless those changes have already landed
 through TASK-256.
 
+This leaf also owns Footer-local adoption of already-landed shared clear/reset
+helpers where Footer still uses placeholder-only or reset-less color fields. It
+does not redefine the shared primitive from TASK-256-02.
+
 ## Scope Boundary
 
 This leaf owns:
 
 - Footer Advanced select labels and one-control-per-line inspector layout where
   required by `_docs/WIDGETS.md`.
+- Footer Advanced discoverability for `align` / `legalAlign` through explicit
+  labels, descriptions, and one-control-per-line layout while keeping those
+  technical layout tokens in Advanced by design.
 - A single owner for Footer `sectionPaddingY`; prefer Advanced for layout tokens
   unless product decides Visual should own it and Advanced becomes read-only.
 - Wizard disclosure for first-link-only quick setup, including hidden-link
   counts or a direct Visual handoff copy if available locally.
 - Footer-local link and column reordering controls that are accessible and
   deterministic, such as move up/down buttons.
-- Editor labels for Footer color/link/social fields introduced by earlier
-  TASK-268 leaves.
+- Visible labels for Footer-local Visual fields that currently rely on
+  placeholders, including existing text/link color inputs plus Footer
+  color/link/social fields introduced by earlier TASK-268 leaves.
+- Footer-local adoption of `ClearableFieldHeader` on existing color inputs where
+  the shared helper already exists but Footer has not wired it yet.
 
 This leaf does not own:
 
 - Global Wizard/Visual/Advanced tabs being hidden before the first Continue
-  action. That is a page-builder/editor-shell concern, not a Footer editor file.
+  action. That is covered by the existing shared builder transition contract in
+  TASK-194-04-02, not a Footer editor file.
 - Generic drag-and-drop infrastructure unless already approved elsewhere.
 - Generic `Clear`/color-picker semantics from TASK-256-02.
 
@@ -48,6 +59,9 @@ This leaf does not own:
 
 - [ ] Add visible labels around Footer Advanced controls for columns alignment,
   legal row alignment, max width, column gap, and section padding.
+- [ ] Keep `align` / `legalAlign` in Advanced intentionally, but make their
+  purpose explicit through labels and supporting copy so the report
+  discoverability complaint closes without moving technical ownership.
 - [ ] Remove or relocate the Visual `sectionPaddingY` control so exactly one
   Footer editor mode owns that setting.
 - [ ] Add Wizard quick-setup copy or per-column hidden-link count that tells the
@@ -57,6 +71,9 @@ This leaf does not own:
   reordering only if it does not break variant-bound hidden column preservation.
 - [ ] Keep all link updates immutable and preserve hidden columns when editing a
   smaller active variant.
+- [ ] Add visible labels plus shared clear/reset helper adoption for existing
+  Footer-local Visual color fields that currently rely on placeholders or lack a
+  reset affordance.
 - [ ] Update UI tests to assert labels, ownership, and reorder behavior.
 
 ## Files to Change
@@ -153,9 +170,13 @@ No API routes are added.
 ## Acceptance Criteria
 
 - Footer Advanced controls have visible labels in the rendered editor UI.
+- Footer Advanced keeps layout tokens in Advanced intentionally, but no control
+  depends on placeholder-only identification.
 - Footer `sectionPaddingY` has one clear editor owner.
 - Wizard quick setup makes first-link-only scope explicit and does not hide
   existing additional links without context.
+- Existing Footer-local Visual color fields have visible labels and shared
+  clear/reset affordances where the shared helper already exists.
 - Link reordering is possible through deterministic accessible controls or is
   explicitly deferred with a concrete reason if column/slot preservation blocks
   it.

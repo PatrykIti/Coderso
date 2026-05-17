@@ -39,21 +39,26 @@ In scope for TASK-268:
 - Footer runtime semantics: `<footer>` accessible name, column heading levels,
   minimal variant output, and optional legal/social strip visibility.
 - Footer editor IA that lives only in `FooterEditors.tsx`: labeled Advanced
-  controls, removal of Footer-local duplicate layout controls, Wizard quick-link
-  disclosure, and Footer link/social management.
+  controls, labeled Footer Visual fields, removal of Footer-local duplicate
+  layout controls, Wizard quick-link disclosure, local adoption of already
+  landed shared clear/reset helpers where Footer still misses them, and Footer
+  link/social management.
 - Footer-owned layout/style options: horizontal padding, responsive column
-  breakpoint, link hover/underline/typography, and link target controls.
+  breakpoint, link hover/underline/typography, link target controls, and local
+  adoption of already landed shared color-picker patterns for Footer style
+  fields.
 - Final Footer report/docs/changelog/board closure.
 
 Out of scope for TASK-268:
 
 - Shared editor atomic update helpers, mode tab discovery, and page-builder
-  first-open mode navigation, owned by TASK-256-01 or a later shared
-  page-builder task.
+  first-open mode navigation, owned by TASK-256-01 only where that task already
+  applies, or by the existing builder transition contract in TASK-194-04-02 for
+  the first-open Wizard handoff behavior.
 - Generic `Clear`, `none`, color-token, CSS-variable preservation, and reusable
-  color-picker primitives, owned by TASK-256-02. TASK-268 may only wire Footer
-  fields to already-approved shared helpers; it must not redefine their
-  semantics.
+  color-picker primitives, owned by TASK-256-02. TASK-268 must only wire Footer
+  fields to already-approved shared helpers/patterns where Footer still lacks
+  adoption; it must not redefine their semantics or invent a second primitive.
 - Generic slot placeholder/public runtime gating, owned by TASK-256-03.
 - Generic interactive widget instance ID helpers, owned by TASK-256-04.
 - Login/admin rate limiting from the report environment note. That is not a
@@ -74,10 +79,10 @@ shared task before continuing with the Footer-only implementation.
 | Hardcoded Privacy/Terms labels, missing brand/logo/tagline, Footer landmark label, column headings | TASK-268-02 |
 | Minimal variant is just one column, legal strip always renders, social/legal empty-state visibility | TASK-268-03 |
 | Wizard first-link limitations/disclosure, Advanced unlabeled selects, Footer-local `sectionPaddingY` duplication, link/social reordering and editor IA | TASK-268-04 |
-| Footer horizontal padding, responsive breakpoint, link hover/active/underline, link typography, open-in-new-tab controls, and market-only utility backlog such as newsletter/address/contact/back-to-top | TASK-268-05 or TASK-268-06 deferral |
+| Footer horizontal padding, responsive breakpoint, link hover/active/underline, link typography, open-in-new-tab controls, local shared color-picker adoption, and market-only utility backlog such as newsletter/address/contact/back-to-top | TASK-268-05, with TASK-268-06 required to name a physical future task before closure for any deferred Footer-owned backlog row |
 | Fixed/deferred evidence, docs, changelog, board, Playwright report refresh, final validation | TASK-268-06 |
-| Generic clear/color-token/color-picker semantics | TASK-256-02 first; TASK-268 only applies final shared helper to Footer if needed |
-| First-open Wizard/Visual/Advanced tab discovery outside Footer editor files | Shared page-builder/editor task, not TASK-268 |
+| Generic clear/color-token/color-picker semantics | Shared primitive ownership stays in TASK-256-02; Footer-local adoption of the landed clear/reset helper lives in TASK-268-04 and Footer-local color-picker adoption lives in TASK-268-05 |
+| First-open Wizard/Visual/Advanced tab discovery outside Footer editor files | Existing shared builder transition contract in TASK-194-04-02, not TASK-268; TASK-268-06 should mark this row shared/not-footer-scope unless a fresh repro proves a new regression |
 | Login 429/rate-limit environment note | Out of scope for Footer |
 
 ## Current Owner and Test Matrix
@@ -87,8 +92,8 @@ shared task before continuing with the Footer-only implementation.
 | TASK-268-01 | Social rows only: report lines 67-71, 91-95, 99-103, 181, 191, 193, 207-208, 217, 220-221, 271, 318, 321, 383, 386, 403, 427, social-link portion of 433, and 446. | `core/widgets/core/footer.tsx`, `core/admin/ui/widgets/editors/FooterEditors.tsx`, `tests/vitest/widgets/footer.test.tsx`, `tests/vitest/ui/footer-editor-wave.test.tsx` | Vitest widget render, UI editor wave, renderer smoke when public output changes, validator test when schema changes |
 | TASK-268-02 | Legal/brand/semantic rows only: report lines 73-89, 173-175, 183, 192, 194-206, 218-219, 317-320, 384-385, 392-394, 429-432, Footer `aria-label` portion of 433, and 445. Clear/color rows stay TASK-256-02. | `footer.tsx`, `FooterEditors.tsx`, Footer docs, validator tests when schema changes | Vitest widget render/schema/editor, renderer smoke for nested slots if brand affects layout |
 | TASK-268-03 | Minimal/visibility rows only: report lines 155-163, 184, 197, 301-305, 334, and 411. | `footer.tsx`, `FooterEditors.tsx`, Footer docs | Vitest widget render for variants/visibility, editor wave for toggles, renderer smoke when slots/legal row behavior changes |
-| TASK-268-04 | Footer-editor rows only: report lines 112-116, 129-137, 177, 179-180, 182, 260-261, 264, 267, 269-270, 272-276, 332-333, and 401. Clear/color rows 176, 178, 268, and 402 stay TASK-256-02; modern social platform rows 181 and 271 stay TASK-268-01; first-open tab discovery at line 331 stays shared editor-shell scope. | `FooterEditors.tsx`, `tests/vitest/ui/footer-editor-wave.test.tsx`, `tests/vitest/widgets/footer.test.tsx` | Vitest UI editor wave; widget render only when editor changes require schema/default changes |
-| TASK-268-05 | Footer layout/style/link rows only: report lines 105-110, 139-153, 196, 222, 404, 410, 414, 416-417, and 447. Color picker line 402 stays TASK-256-02; market-only newsletter/address/contact/back-to-top rows 225-226, 230, 413, and 415 are deferred through TASK-268-06 unless product creates a new physical task. | `footer.tsx`, `FooterEditors.tsx`, Footer docs, pack matrix only if readiness changes | Vitest widget render/editor, validator when schema changes, renderer smoke for link target/styling output |
+| TASK-268-04 | Footer-editor rows only: report lines 112-116, 129-137, 177, 179-180, 182, 260-261, 264, 267, 269-270, 272-276, 332-333, and 401. Shared clear/reset primitive ownership stays TASK-256-02, but local Footer adoption for rows 176, 178, and 268 lands here; modern social platform rows 181 and 271 stay TASK-268-01; first-open tab discovery at line 331 is classified through TASK-194-04-02 shared builder behavior, not Footer code. | `FooterEditors.tsx`, `tests/vitest/ui/footer-editor-wave.test.tsx`, `tests/vitest/widgets/footer.test.tsx` | Vitest UI editor wave; widget render only when editor changes require schema/default changes |
+| TASK-268-05 | Footer layout/style/link rows only: report lines 105-110, 139-153, 196, 222, 404, 410, 414, 416-417, and 447. Shared color-picker primitive ownership stays TASK-256-02, but local Footer adoption for line 402 lands here; market-only newsletter/address/contact/back-to-top rows 225-226, 230, 413, and 415 must end with a named physical future task before TASK-268 closes if they stay deferred. | `footer.tsx`, `FooterEditors.tsx`, Footer docs, pack matrix only if readiness changes | Vitest widget render/editor, validator when schema changes, renderer smoke for link target/styling output |
 | TASK-268-06 | Report artifact rows 339-357 and admin/frontend parity rows 361-373, plus all final fixed/deferred/not-scope evidence from lines 377-452. | `_docs/PLAYWRIGHT/REPORT_FOOTER_WIDGET.md`, `_docs/_WIDGETS/FOOTER.md`, `_docs/WIDGETS.md` if shared wording changes, board/changelog/docs | `git diff --check`, targeted production lanes after implementation leaves, final precommit/security gate |
 
 ## Sub-Tasks

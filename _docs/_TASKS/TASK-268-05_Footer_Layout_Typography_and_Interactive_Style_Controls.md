@@ -22,6 +22,10 @@ lists broader market backlog ideas. This leaf adds the bounded Footer controls
 that can be expressed safely in the existing widget model and explicitly defers
 market-only utilities that would create a larger product surface.
 
+This leaf also owns Footer-local adoption of already-landed shared color-picker
+patterns for Footer style inputs. It does not redefine the shared primitive from
+TASK-256-02.
+
 ## Scope Boundary
 
 This leaf owns:
@@ -34,6 +38,8 @@ This leaf owns:
 - Footer link font-weight and letter-spacing controls from fixed enums.
 - Footer link target controls for column and legal links, preserving safe href
   normalization and external-link safety.
+- Footer-local adoption of already-landed shared color-picker patterns for
+  Footer style fields that still expose text-only color entry.
 
 This leaf does not own:
 
@@ -60,9 +66,11 @@ This leaf does not own:
   editor, renderer, and tests that preserve safe `rel` behavior.
 - [ ] Update Footer editors with labeled controls in Visual or Advanced based
   on final mode ownership.
-- [ ] Explicitly record market-only rows such as newsletter slot,
-  address/contact block, and back-to-top as deferred/future scope in TASK-268-06
-  unless product approves a new physical task.
+- [ ] Adopt the existing shared color-picker pattern for Footer style fields
+  that still expose text-only color entry.
+- [ ] If market-only rows such as newsletter slot, address/contact block, or
+  back-to-top remain deferred, TASK-268-06 must create or reference a physical
+  future task before TASK-268 closes; report-only backlog prose is not enough.
 
 ## Files to Change
 
@@ -220,7 +228,8 @@ No API routes are added.
 - Update `_docs/PLAYWRIGHT/REPORT_FOOTER_WIDGET.md` rows for padding,
   responsive grid, hover states, link typography, and open-in-new-tab after
   validation.
-- Record market-only deferrals, if any, in TASK-268-06 closure notes.
+- Record market-only deferrals, if any, through named future task IDs in
+  TASK-268-06 closure notes.
 
 ## Changelog Policy
 
@@ -236,4 +245,5 @@ No API routes are added.
 - Link target behavior for column and legal links preserves safe href
   normalization and rel hardening.
 - Market-only utility ideas are not silently implemented without an approved
-  security and product contract.
+  security and product contract, and any deferred Footer-owned row ends with a
+  named future task before closure.
