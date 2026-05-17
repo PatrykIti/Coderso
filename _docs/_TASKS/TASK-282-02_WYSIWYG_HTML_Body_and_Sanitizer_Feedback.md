@@ -48,8 +48,14 @@ Out of scope:
 - [ ] Support the current sanitizer allowlist: `p`, `br`, `strong`, `em`, `u`,
   `s`, `a`, `ul`, `ol`, `li`, `blockquote`, `code`, `pre`, `h2`, `h3`, `h4`,
   `hr`, and `span`.
-- [ ] Add `sanitizeRichTextHtmlWithDiagnostics(rawHtml)` or equivalent so the
-  editor can report removed tags/attributes without duplicating sanitizer logic.
+- [ ] Add `sanitizeRichTextHtmlWithDiagnostics(rawHtml)` or equivalent by
+  reusing the existing Bun-free tokenizer/sanitizer helpers from
+  `core/services/posts/editor/postRichTextHtmlUtils.ts`. The current
+  `sanitizeHtmlWithPolicy()` contract has no drop callbacks, so diagnostics
+  must be derived from `tokenizeHtml()`, `parseHtmlAttributes()`, the Rich Text
+  allowlist, `dangerousHtmlContentTagSet`, and the same attribute sanitizer used
+  by runtime rendering, or the shared sanitizer helper must first be extended
+  with typed diagnostics and tests.
 - [ ] Surface friendly diagnostics for stripped `<img>`, stripped `<h1>`, unsafe
   hrefs, event handlers, scripts, iframes, and unsupported attributes.
 - [ ] Keep Advanced raw HTML editing technical-only with sanitize-now behavior,
@@ -60,7 +66,7 @@ Out of scope:
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/richTextSection.tsx` | Add sanitizer diagnostics helper and bounds for stored HTML length/diagnostic count if needed. Keep `sanitizeRichTextHtml()` as the runtime-safe render helper. |
+| `core/widgets/core/richTextSection.tsx` | Add sanitizer diagnostics helper and bounds for stored HTML length/diagnostic count if needed. Keep `sanitizeRichTextHtml()` as the runtime-safe render helper. Do not call nonexistent sanitizer callbacks. |
 | `core/admin/ui/widgets/editors/RichTextSectionEditors.tsx` | Replace Visual raw textarea as the primary body authoring UI with the chosen safe rich editor; move raw HTML to Advanced or a technical disclosure. |
 | `core/admin/ui/posts/editor/richtext/*` | Reuse only Bun-free editor parts if integration is direct. Do not import server/runtime adapters. |
 | `core/services/posts/editor/*` | Reuse serializer/sanitizer helpers only when they match Rich Text Section storage. |
@@ -79,18 +85,42 @@ export type RichTextSanitizerDiagnosticCode =
   | "href_rewritten";
 
 export function sanitizeRichTextHtmlWithDiagnostics(rawHtml: string) {
-  const diagnostics: RichTextSanitizerDiagnostic[] = [];
+  const diagnostics = collectRichTextSanitizerDiagnostics(rawHtml);
   const html = sanitizeHtmlWithPolicy(rawHtml, {
     allowedTags: allowedTagSet,
     selfClosingTags: selfClosingTagSet,
     dropContentTags: dangerousHtmlContentTagSet,
-    onDropTag: (tagName) => diagnostics.push({ code: "tag_removed", tagName }),
-    onDropAttribute: (tagName, attributeName) =>
-      diagnostics.push({ code: "attribute_removed", tagName, attributeName }),
     sanitizeAttributes: sanitizeTagAttributes,
   });
 
   return { html, diagnostics: clampDiagnostics(diagnostics) };
+}
+
+function collectRichTextSanitizerDiagnostics(rawHtml: string) {
+  const diagnostics: RichTextSanitizerDiagnostic[] = [];
+  for (const token of tokenizeHtml(rawHtml)) {
+    if (token.kind !== "tag" || token.closing) continue;
+    if (dangerousHtmlContentTagSet.has(token.name) || !allowedTagSet.has(token.name)) {
+      diagnostics.push({ code: "tag_removed", tagName: token.name });
+      continue;
+    }
+    const rawAttributeNames = collectRawHtmlAttributeNames(token.rawAttrs);
+    const sanitizedAttributes = parseHtmlAttributes(
+      sanitizeTagAttributes(token.name, token.rawAttrs) ?? ""
+    );
+    for (const attributeName of rawAttributeNames) {
+      if (!sanitizedAttributes.has(attributeName)) {
+        diagnostics.push({ code: "attribute_removed", tagName: token.name, attributeName });
+      }
+    }
+  }
+  return clampDiagnostics(diagnostics);
+}
+
+function collectRawHtmlAttributeNames(rawAttrs: string) {
+  return [...rawAttrs.matchAll(/([a-zA-Z0-9:-]+)(?:\s*=|\s|$)/g)].map((match) =>
+    (match[1] ?? "").toLowerCase()
+  );
 }
 ```
 
@@ -143,6 +173,8 @@ No API routes are added.
 - `bun test tests/unit/widgets/validator.test.ts` if schema/defaults change
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this leaf `Done` or committing it
+  independently
 - If committed independently, also run root `bun run lint`,
   `bun run scan:security:strict`, and `bun run precommit`.
 

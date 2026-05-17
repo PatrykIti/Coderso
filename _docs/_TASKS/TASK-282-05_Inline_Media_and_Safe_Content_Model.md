@@ -43,10 +43,17 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Decide the persisted shape, preferring explicit structured media blocks or
-  inline media tokens over raw `<img>` HTML pasted by users.
-- [ ] Add schema/default/normalizer coverage for media id/source, alt, caption,
-  link href, width, alignment, and bounded object position if supported.
+- [ ] Persist explicit structured image references, not raw `<img>` HTML and not
+  private/signed URLs. The default shape is `mediaId` plus editor-authored
+  presentation metadata; any stored `src` is allowed only as a sanitized legacy
+  public-url adapter with a documented deprecation path.
+- [ ] Add schema/default/normalizer coverage for `mediaId`, optional legacy
+  public `src`, alt, decorative flag, caption, safe link href, width, alignment,
+  and bounded object position if supported.
+- [ ] Add a safe media resolver/renderer decision before implementation: either
+  public runtime resolves `mediaId` through an existing public media projection
+  before render, or the widget stores only stable public media URLs copied from
+  the media service. Do not persist admin-only/private/signed media URLs.
 - [ ] Add a safe media renderer that escapes captions, normalizes hrefs, and
   omits unsafe or unresolved media.
 - [ ] Add Visual editor media picker controls and preview thumbnails.
@@ -58,9 +65,9 @@ Out of scope:
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/richTextSection.tsx` | Add media schema/types/normalizer and safe renderer or safe HTML projection. Keep sanitizer as the public boundary. |
-| `core/admin/ui/widgets/editors/RichTextSectionEditors.tsx` | Add media picker/preview controls for the selected content model. |
-| existing media admin components/services | Reuse only established media picker/upload clients; do not create one-off media routes. |
+| `core/widgets/core/richTextSection.tsx` | Add media schema/types/normalizer and safe renderer or safe HTML projection. Keep sanitizer as the public boundary and keep the render path sync-safe unless an existing public media projection is explicitly wired before render. |
+| `core/admin/ui/widgets/editors/RichTextSectionEditors.tsx` | Add media picker/preview controls for `mediaId` and editor-authored alt/caption/link metadata. |
+| `core/admin/ui/media/MediaPicker.tsx`, `core/admin/services/mediaClient.ts` | Reuse established media picker/list clients for admin selection only. Do not persist private/admin-only values from the picker into public widget JSON. |
 | `tests/vitest/widgets/richTextSection.test.tsx` | Add SSR assertions for valid media, missing media fallback, alt/caption escaping, unsafe link omission, and legacy payloads. |
 | `tests/vitest/ui/rich-text-section-editor-wave.test.tsx` | Add media picker/preview/editor state assertions. |
 | `tests/unit/widgets/validator.test.ts` | Run/update when media schema fields are added. |
@@ -74,8 +81,13 @@ type RichTextSectionMediaBlock = {
   id?: string;
   kind: "image";
   mediaId?: string;
+  /**
+   * Legacy/public-url fallback only. New editor writes should prefer mediaId
+   * plus backend-owned/public media projection.
+   */
   src?: string;
   alt?: string;
+  decorative?: boolean;
   caption?: string;
   href?: string;
   width?: "content" | "wide" | "full";
@@ -88,13 +100,14 @@ Normalizer:
 ```ts
 function normalizeRichTextMediaBlock(input: unknown): RichTextSectionMediaBlock | null {
   const mediaId = normalizeOptionalId(input.mediaId);
-  const src = normalizeSafeMediaSrc(input.src);
+  const src = normalizeLegacyPublicMediaSrc(input.src);
   if (!mediaId && !src) return null;
   return {
     kind: "image",
     mediaId,
     src,
     alt: clampText(input.alt, 160),
+    decorative: Boolean(input.decorative),
     caption: clampText(input.caption, 240),
     href: normalizeRichTextMediaHref(input.href),
     width: resolveRichTextMediaWidth(input.width),
@@ -122,6 +135,9 @@ function RichTextMediaFigure({ media }: { media: RichTextSectionMediaBlock }) {
 
 - Missing or unauthorized media references render as omitted media with editor
   diagnostics, not broken public image placeholders.
+- Media IDs must resolve through an existing public projection before render, or
+  the renderer must omit the item. It must not fetch admin APIs from public
+  render or persist temporary signed URLs.
 - Empty alt is allowed only for decorative images; the editor must make that
   choice explicit if supported.
 - Unsafe hrefs are omitted or normalized through the existing safe href helper.
@@ -152,6 +168,8 @@ No new API routes are introduced by default.
 - media picker/client tests if reused components are modified
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this leaf `Done` or committing it
+  independently
 - If committed independently, also run root `bun run lint`,
   `bun run scan:security:strict`, and `bun run precommit`.
 
@@ -172,6 +190,9 @@ No new API routes are introduced by default.
 ## Acceptance Criteria
 
 - Editors can add safe inline images without typing raw `<img>` HTML.
+- The persisted media contract is explicit: new data stores `mediaId` and
+  bounded presentation metadata, while any `src` support is legacy/public-only
+  and never a private or signed URL.
 - Public output never executes user-authored scripts or arbitrary embeds.
 - Missing/unsafe media fails closed and is explained in the editor.
 - Media schema, normalizer, renderer, editor, tests, docs, and report evidence

@@ -56,7 +56,7 @@ Out of scope:
 | File | Required change |
 |---|---|
 | `core/admin/ui/widgets/editors/RichTextSectionEditors.tsx` | Align Wizard/Visual variant UI, add dropcap guidance, refine Advanced diagnostics, and reduce duplicated typography confusion. |
-| `core/widgets/core/richTextSection.tsx` | Add derived helpers only if needed for dropcap paragraph/source detection; prefer non-persisted derived state. |
+| `core/widgets/core/richTextSection.tsx` | Add derived helpers only if needed for dropcap paragraph/source detection; prefer non-persisted derived state. If this leaf needs rendered HTML, TASK-282-01 or this leaf must extract the current inline raw-HTML selection logic into an exported `resolveRichTextRenderedHtml(data)` helper and reuse it in `RichTextSectionBlock`. |
 | `tests/vitest/ui/rich-text-section-editor-wave.test.tsx` | Add mode IA, dropcap guidance, variant UI, and Advanced diagnostic assertions. |
 | `tests/vitest/widgets/richTextSection.test.tsx` | Add derived helper/runtime assertions only if runtime helpers change. |
 
@@ -123,6 +123,8 @@ No API routes are added.
   derived runtime helpers change
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this leaf `Done` or committing it
+  independently
 - If committed independently, also run root `bun run lint`,
   `bun run scan:security:strict`, and `bun run precommit`.
 
@@ -141,6 +143,9 @@ No API routes are added.
 
 - Wizard and Visual no longer present conflicting variant-selection metaphors.
 - Dropcap behavior is understandable before publishing.
+- Any rendered-HTML/dropcap helper used by the editor exists in the runtime
+  owner and is reused by render/tests instead of duplicating inline selection
+  logic.
 - Advanced mode has a clear technical purpose and does not duplicate Visual
   controls without explanation.
 - Not-a-bug TOC behavior is documented, not reimplemented accidentally.

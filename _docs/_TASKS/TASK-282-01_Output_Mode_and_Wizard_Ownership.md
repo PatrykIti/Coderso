@@ -135,6 +135,8 @@ No API routes are added.
 - `bun run test:vitest -- tests/vitest/ui/rich-text-section-editor-wave.test.tsx`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this leaf `Done` or committing it
+  independently
 - If committed independently, also run root `bun run lint`,
   `bun run scan:security:strict`, and `bun run precommit`.
 

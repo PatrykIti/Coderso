@@ -53,8 +53,12 @@ Out of scope for TASK-282:
 - Shared editor atomic update helpers, owned by TASK-256-01.
 - Generic `Clear`, `none`, token picker, CSS-variable preservation, and shared
   color-picker semantics, owned by TASK-256-02. `REPORT_RICH_TEXT_SECTION_WIDGET`
-  KOD-10 for `textColor` clear is classified there unless TASK-256-02 later
-  exposes a shared helper that needs a Rich Text Section-only call-site update.
+  KOD-10 for `textColor` clear is classified there only when TASK-256-07/08
+  names a concrete physical owner for
+  `core/admin/ui/widgets/editors/RichTextSectionEditors.tsx` plus focused tests.
+  If TASK-256 closure does not name that owner, TASK-282-07 must leave KOD-10 as
+  excluded-pending and create or reference a named future adoption task instead
+  of claiming the row is closed by a generic umbrella.
 - Generic slot placeholder gating, owned by TASK-256-03.
 - Shared interactive runtime binding helpers outside this widget, owned by
   TASK-256-04.
@@ -75,7 +79,7 @@ Rich Text Section-only work.
 | KOD-08, KOD-09, A11Y-01, section label; report lines 157-181, 321-328, 365-376, 435, 445, 449 | TASK-282-04 |
 | KOD-13; report lines 213-217, 436 | TASK-282-05 |
 | KOD-05, KOD-07, KOD-WIZ, KOD-DUP; report lines 125-153, 286-299, 385-399, 455, 457, 459-460 | TASK-282-06 |
-| KOD-10 | TASK-256-02, not TASK-282 |
+| KOD-10 | TASK-256-02/TASK-256-07 only with exact Rich Text Section editor owner/tests; otherwise TASK-282-07 must name a future adoption task |
 | Final screenshot/report/docs/changelog/board evidence | TASK-282-07 |
 
 ## Current Owner and Test Matrix
@@ -162,6 +166,9 @@ This umbrella does not add API routes.
   - touched post-richtext Vitest lanes when existing rich-text helpers are reused
   - `bun run gates:coderso`, `bun run scan:security:strict`, and
     `bun run precommit` before final family closure
+  - If a leaf is implemented, marked `Done`, or committed independently before
+    TASK-282-07, run `bun run gates:coderso` for that leaf as well, or keep the
+    leaf `To Do/In Progress` and explicitly defer closure to TASK-282-07.
 
 ## Documentation Updates Required
 

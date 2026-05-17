@@ -43,8 +43,10 @@ Out of scope:
 
 - [ ] Build a finding-by-finding closure table for every KOD/A11Y/observation row
   in `REPORT_RICH_TEXT_SECTION_WIDGET.md`.
-- [ ] Mark KOD-10 as TASK-256-02 unless a later Rich Text Section-only adoption
-  patch exists and is validated.
+- [ ] Mark KOD-10 as TASK-256-02 only if TASK-256-07/08 names the exact Rich
+  Text Section physical owner path and tests. If that owner is not named, record
+  KOD-10 as excluded-pending and create or reference a named future adoption
+  task before TASK-282 closure.
 - [ ] Record any deferred items with a named future task or explicit reason.
 - [ ] Update `_docs/_WIDGETS/RICH_TEXT_SECTION.md` with the final schema,
   editor, runtime, security, media, and accessibility contract.
@@ -75,7 +77,7 @@ Closure matrix:
 | Finding | Final status | Evidence | Owner |
 |---|---|---|---|
 | KOD-01 | Fixed | TASK-282-01 commit + Vitest evidence | TASK-282 |
-| KOD-10 | Excluded | TASK-256-02 shared clear contract | TASK-256 |
+| KOD-10 | Excluded only with exact owner | TASK-256-02 plus TASK-256-07/08 Rich Text Section editor/test owner; otherwise named future adoption task | TASK-256 / future task |
 ```
 
 Board update:
@@ -126,6 +128,10 @@ No API routes are added by this closure leaf.
 - `bun run gates:coderso`
 - `bun run scan:security:strict`
 - `bun run precommit`
+- If any implementation leaf landed independently before this closure leaf,
+  verify that leaf's own commit recorded `bun run gates:coderso`; otherwise run
+  it here and leave the leaf out of `Done` until the missing validation is
+  resolved.
 
 ## Documentation Updates Required
 
