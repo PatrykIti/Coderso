@@ -46,7 +46,8 @@ using existing admin post catalog reads and a user-readable runtime status.
 | `core/admin/ui/widgets/editors/PostsFeedEditors.tsx` | Add readable preview/runtime status and reuse picker/catalog state where possible. |
 | `core/widgets/core/postsFeed.tsx` | Add preview-safe diagnostics only if needed by the renderer. |
 | `tests/vitest/ui/posts-feed-editor-wave.test.tsx` | Cover visible runtime status and no raw-only status dependency. |
-| `tests/vitest/ui/page-editor-shell-wave.test.tsx` or a focused new `tests/vitest/ui/page-editor-posts-feed-preview.test.tsx` | Cover admin canvas preview showing sample posts and not persisting preview-only payloads. |
+| `tests/vitest/ui/page-editor-posts-feed-preview.test.tsx` | Add a focused unmocked preview suite that exercises `PageEditor` -> `BlockList` -> `WidgetRenderer` -> `PostsFeedBlock` and proves admin canvas sample posts render without persisting preview-only payloads. |
+| `tests/vitest/ui/page-editor-shell-wave.test.tsx` | Use only for PageEditor persistence/plumbing coverage if needed; do not rely on it for UX-01 canvas render proof because it mocks `BlockList`. |
 | `tests/unit/widgets/postsFeedWidget.test.tsx` | Cover mapping if preview diagnostics change. |
 | `_docs/_WIDGETS/POSTS_FEED.md` | Document admin preview vs public SSR behavior. |
 | `_docs/PLAYWRIGHT/REPORT_POSTS_FEED_WIDGET.md` | Mark UX-01/UX-06 fixed/deferred with evidence. |
@@ -128,8 +129,9 @@ No new API routes are required by default.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run test:vitest -- tests/vitest/ui/posts-feed-editor-wave.test.tsx`
-- `bun run test:vitest -- tests/vitest/ui/page-editor-shell-wave.test.tsx` or
-  the focused new page-editor Posts Feed preview suite added by the leaf.
+- `bun run test:vitest -- tests/vitest/ui/page-editor-posts-feed-preview.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/page-editor-shell-wave.test.tsx` only
+  if persistence/plumbing logic changes outside the focused preview suite.
 - `bun test tests/unit/widgets/postsFeedWidget.test.tsx`
 - `bun run scan:security:strict`
 - `bun run precommit`

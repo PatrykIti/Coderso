@@ -55,6 +55,8 @@ with TASK-256/shared Content List scope.
 | `core/services/content/postsFeedResolver.ts` | Resolve bounded image src/alt through the shared media lookup seam and map bounded tag arrays from `PostSummary.tags`. |
 | `core/admin/ui/widgets/editors/PostsFeedEditors.tsx` | Add `Show image` toggle only; do not add image aspect controls in this Posts Feed leaf. |
 | `tests/unit/widgets/postsFeedWidget.test.tsx` | Cover normalizer, media-id-to-url resolution, URL candidate handling, tag mapping, showImage handoff, and legacy payload fallback. |
+| `tests/unit/content/contentMediaResolver.test.ts` | Cover shared media candidate parsing, media-id lookup, URL candidate passthrough, alt fallback, malformed values, and cache reuse. |
+| `tests/unit/content/contentListResolver.test.ts` | Add a regression proving existing Content List image media-id resolution still emits URL/alt after the helper extraction. |
 | `tests/vitest/ui/posts-feed-editor-wave.test.tsx` | Cover the editor image toggle and absence of Posts Feed-local aspect-ratio controls. |
 | `_docs/_WIDGETS/POSTS_FEED.md` | Document media/tag fields and runtime mapping. |
 | `_docs/PLAYWRIGHT/REPORT_POSTS_FEED_WIDGET.md` | Record fixed evidence for media/tag data findings and defer shared aspect/tag-link renderer findings to TASK-256. |
@@ -134,6 +136,8 @@ No API routes are added by this leaf.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun test tests/unit/widgets/postsFeedWidget.test.tsx`
+- `bun test tests/unit/content/contentMediaResolver.test.ts`
+- `bun test tests/unit/content/contentListResolver.test.ts`
 - `bun run test:vitest -- tests/vitest/ui/posts-feed-editor-wave.test.tsx`
 - `bun test tests/unit/widgets/validator.test.ts`
 - `bun run test:vitest -- tests/vitest/site/publicRenderer.test.tsx` if public

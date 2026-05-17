@@ -42,7 +42,7 @@ intentionally deferred.
 | `_docs/WIDGET_PACK_MATRIX.md` | Update only if Posts Feed pack completeness/readiness changes. |
 | `_docs/_TASKS/TASK-277*.md` | Mark completed leaves with dates and final validation notes. |
 | `_docs/_TASKS/README.md` | Move completed TASK-277 rows to Done and update statistics. |
-| `_docs/_CHANGELOG/{N}-2026-05-16-task-277-posts-feed-widget-followups.md` | Add the final changelog entry. |
+| `_docs/_CHANGELOG/{N}-{YYYY-MM-DD}-task-277-posts-feed-widget-followups.md` | Add the final changelog entry using the actual completion date and monotonic `{N}` from the changelog index. |
 | `_docs/_CHANGELOG/README.md` | Add the changelog index row. |
 
 ## Implementation Pseudocode
@@ -112,7 +112,7 @@ No API routes are added by this docs/closure leaf.
 - `_docs/WIDGET_PACK_MATRIX.md` only for pack readiness changes
 - `_docs/_TASKS/TASK-277*.md`
 - `_docs/_TASKS/README.md`
-- `_docs/_CHANGELOG/{N}-2026-05-16-task-277-posts-feed-widget-followups.md`
+- `_docs/_CHANGELOG/{N}-{YYYY-MM-DD}-task-277-posts-feed-widget-followups.md`
 - `_docs/_CHANGELOG/README.md`
 
 ## Acceptance Criteria
