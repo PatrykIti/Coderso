@@ -30,8 +30,11 @@ prevents the requested output.
   `max-w-6xl px-4 py-8` constraint without fighting the page-level container.
 - [ ] Add a background mode model for `solid`, `gradient`, and `image` without
   breaking existing `style.background` payloads.
-- [ ] Reuse existing media picker/admin components for background image
-  selection; do not introduce a new media storage or upload contract.
+- [ ] Reuse existing ID-based media picker/admin components for background
+  image selection; do not introduce a new media storage or upload contract.
+- [ ] Model media-library selections as an asset ID plus resolved public URL
+  metadata, following the existing Hero background-media pattern instead of
+  treating `MediaPicker` as a raw `src` picker.
 - [ ] Add allowlisted image fit/position fields for background media.
 - [ ] Add bounded motion preset fields for entrance effects. Prefer CSS classes
   or data attributes already used by the runtime over custom scripts.
@@ -43,9 +46,11 @@ prevents the requested output.
 |---|---|
 | `core/widgets/core/ctaBanner.tsx` | Add width/background/motion schema, defaults, normalizer, and render output. |
 | `core/admin/ui/widgets/editors/CtaBannerEditors.tsx` | Add Visual controls for full-width, background mode, gradient/image settings, and motion preset. |
-| Existing media picker components | Reuse only if background image selection is implemented; do not create a new media API. |
+| `core/admin/ui/media/MediaPicker.tsx` | Reuse for background image selection if media selection is implemented; do not create a new media API. |
+| `core/admin/ui/widgets/editors/HeroEditors.tsx` | Use only as an existing background-media editor pattern reference; do not couple CTA Banner to Hero code. |
 | `tests/vitest/widgets/ctaBanner.test.tsx` | Cover width mode, gradient style, image style, motion attrs/classes, and legacy fallback. |
 | `tests/vitest/ui/cta-banner-editor-wave.test.tsx` | Cover editor controls and mode-specific field visibility. |
+| `tests/vitest/ui/media-picker.test.tsx` | Run/update only if this leaf changes `MediaPicker` behavior instead of only consuming it. |
 | `tests/unit/widgets/validator.test.ts` | Update when schema/defaults change. |
 | `_docs/_WIDGETS/CTA_BANNER.md` | Document layout, background, media, and motion options. |
 | `_docs/WIDGET_PACK_MATRIX.md` | Update only if CTA Banner readiness/completeness changes. |
@@ -69,6 +74,7 @@ type CtaBannerData = {
       direction?: "to-r" | "to-br" | "to-b";
     };
     image?: {
+      assetId?: string;
       src?: string;
       alt?: string;
       fit?: "cover" | "contain";
@@ -79,6 +85,24 @@ type CtaBannerData = {
     preset?: CtaMotionPreset;
   };
 };
+```
+
+Editor media selection flow:
+
+```ts
+async function resolveBackgroundImageSelection(assetId: string | null) {
+  if (!assetId) return { assetId: undefined, src: undefined, alt: undefined };
+  requestIdRef.current += 1;
+  const requestId = requestIdRef.current;
+  const items = await listMediaCached({ force: true });
+  if (requestId !== requestIdRef.current) return null;
+  const asset = items.find((item) => item.id === assetId);
+  return {
+    assetId,
+    src: asset?.url,
+    alt: asset?.alt ?? asset?.title ?? asset?.originalName ?? "",
+  };
+}
 ```
 
 Renderer helpers:
@@ -101,7 +125,9 @@ Error handling:
 
 - If `layout.width` conflicts with page-level layout, document the precedence and
   keep output deterministic.
-- Missing or unsafe media URLs fall back to solid background.
+- `MediaPicker` emits media IDs or `null`; CTA editor code must resolve IDs
+  through the existing cached media lookup before writing any `src` snapshot.
+- Missing or unsafe resolved media URLs fall back to solid background.
 - Gradient colors use existing color/token validation behavior; no arbitrary CSS
   function passthrough unless already accepted by the style contract.
 - Motion presets are fixed enums and must not inject custom JavaScript.
@@ -125,8 +151,8 @@ No API routes are added.
 - `bun run test:vitest -- tests/vitest/widgets/ctaBanner.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/cta-banner-editor-wave.test.tsx`
 - `bun test tests/unit/widgets/validator.test.ts` when schema changes
-- Media picker focused test if this leaf reuses a picker and changes its
-  integration behavior
+- `bun run test:vitest -- tests/vitest/ui/media-picker.test.tsx` if this leaf
+  changes `MediaPicker` behavior instead of only consuming it
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 

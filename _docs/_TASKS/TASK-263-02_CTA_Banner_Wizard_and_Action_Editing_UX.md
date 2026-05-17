@@ -32,6 +32,9 @@ without changing the shared editor mode contract owned by TASK-256-01.
   fields in Visual.
 - [ ] Add CTA-local URL validation feedback that uses the same safe-href rules
   as `normalizeCtaBannerData()` before persistence.
+- [ ] Keep a CTA-editor raw/draft href value for invalid input so validation
+  feedback can describe the rejected value before `normalizeAction()` converts
+  persisted unsafe URLs to `#`.
 - [ ] Preserve existing saved values when toggling secondary CTA off and on
   unless the user explicitly clears the values.
 - [ ] Keep Advanced editor technical-only; do not move action editing into
@@ -73,8 +76,8 @@ function normalizeAction(action: CtaBannerAction | undefined, fallback: Required
 URL feedback:
 
 ```ts
-function getCtaHrefWarning(value: string | undefined) {
-  const raw = (value ?? "").trim();
+function getCtaHrefWarning(rawHref: string | undefined) {
+  const raw = (rawHref ?? "").trim();
   if (!raw) return null;
   return normalizeWidgetSafeHref(raw, safeHrefOptions) ? null : "Use a relative, hash, http, or https URL.";
 }
@@ -83,8 +86,20 @@ function getCtaHrefWarning(value: string | undefined) {
 Editor flow:
 
 ```tsx
+function initHrefDraft(sourceHref: string) {
+  return { sourceHref, value: sourceHref };
+}
+
+function hrefDraftReducer(state: HrefDraftState, action: HrefDraftAction) {
+  if (action.type === "draft") return { sourceHref: action.sourceHref, value: action.value };
+  return state;
+}
+
 function ActionFields({ title, action, onPatch }: ActionFieldsProps) {
-  const warning = getCtaHrefWarning(action.href);
+  const sourceHref = action.href ?? "";
+  const [hrefDraft, dispatchHrefDraft] = useReducer(hrefDraftReducer, sourceHref, initHrefDraft);
+  const draftHref = hrefDraft.sourceHref === sourceHref ? hrefDraft.value : sourceHref;
+  const warning = getCtaHrefWarning(draftHref);
   return (
     <fieldset>
       <legend>{title}</legend>
@@ -94,7 +109,15 @@ function ActionFields({ title, action, onPatch }: ActionFieldsProps) {
       </label>
       <label>
         URL
-        <Input value={action.href ?? ""} aria-invalid={Boolean(warning)} onChange={...} />
+        <Input
+          value={draftHref}
+          aria-invalid={Boolean(warning)}
+          onChange={(event) => {
+            const next = event.target.value;
+            dispatchHrefDraft({ type: "draft", sourceHref, value: next });
+            if (!getCtaHrefWarning(next)) onPatch({ href: next });
+          }}
+        />
       </label>
       {warning ? <p role="status">{warning}</p> : null}
     </fieldset>
@@ -106,6 +129,11 @@ Error handling:
 
 - Invalid URLs show editor feedback and still normalize to the safe fallback
   before render.
+- Invalid raw href input remains visible in the editor draft while persisted
+  widget data keeps the previous safe href or normalized fallback.
+- Reset local draft href state when the selected block, normalized action href,
+  secondary toggle restore, or explicit reset changes `action.href` externally;
+  tests must cover stale draft cleanup as well as invalid-input retention.
 - Secondary CTA disabled state hides runtime output but does not destroy the
   user's draft label/href values.
 - Sparse legacy actions normalize to current defaults.

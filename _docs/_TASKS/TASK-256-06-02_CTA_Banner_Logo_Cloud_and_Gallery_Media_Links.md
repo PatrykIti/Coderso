@@ -12,16 +12,19 @@
 
 ## Overview
 
-Repair media/link/clear/accessibility drift for `cta-banner`, `logo-cloud`, and
-`gallery-mosaic`. These widgets expose public-facing marketing links and media,
-so the repair must preserve safe-href normalization, clear semantics, alt text,
-and truthful editor controls.
+Repair shared media/link/clear/accessibility drift for `logo-cloud` and
+`gallery-mosaic`, plus any cross-widget helper work that CTA Banner must consume
+later. CTA Banner product/runtime/editor fixes from the same report are now
+owned by TASK-263. This leaf must not also implement CTA-specific empty badge,
+description color, action-label, URL-feedback, focus, layout, icon, or motion
+work; it may only provide shared helper contracts that TASK-263 explicitly
+depends on.
 
 ## Drift Evidence
 
-- `_docs/PLAYWRIGHT/REPORT_CTA_BANNER_WIDGET.md:132-161,175-185,223-241` for
-  empty badge, description color, border/clear, action labels, URL validation,
-  focus state, and priority fixes.
+- `_docs/PLAYWRIGHT/REPORT_CTA_BANNER_WIDGET.md:162-164` for generic Clear
+  semantics (TASK-256-02) and `:199-200` only if target/rel needs a reusable
+  shared safe-link attribute helper. CTA-specific rows are planned in TASK-263.
 - `_docs/PLAYWRIGHT/REPORT_LOGO_CLOUD_WIDGET.md:38-116,134-153` for missing
   link `rel`, heading/section ARIA, hoverColor truthfulness, logo height, Wizard
   image/link gaps, alt text, and image picker scope.
@@ -40,8 +43,10 @@ and truthful editor controls.
 
 | Finding | TASK-256 action | Owner | Follow-up policy |
 |---|---|---|---|
-| CTA empty badge/text/focus/clear drift | Fix here | `CtaBannerEditors.tsx`, `ctaBanner.tsx` | None |
-| CTA BF/accessibility list beyond current controls, including animation, icon controls, and broad layout additions | Future product scope unless the current control already exists and is misleading | Future CTA task | TASK-256-08 records deferral |
+| CTA empty badge/text/focus/action-label/url-feedback drift | Reclassified to TASK-263 | `TASK-263-01`, `TASK-263-02` | TASK-256-08 records the reclassification, not implementation ownership |
+| CTA Clear drift | Generic Clear semantics stay in TASK-256-02; CTA field wiring is TASK-263-03 only if TASK-256-02 leaves a CTA-local hook | `TASK-256-02`, `TASK-263-03` | Do not implement a CTA-only Clear model here |
+| CTA target/rel helper need | Provide a shared helper only if target/rel behavior must be reusable across widgets | `widgetSafeHref.ts`, `widgetSafeHref.test.ts` | CTA adoption and CTA product controls stay in TASK-263-04 |
+| CTA BF/accessibility list beyond current controls, including animation, icon controls, and broad layout additions | Product scope | TASK-263 | TASK-256-08 records the route |
 | Logo Cloud link `rel`, section aria, hoverColor truthfulness | Fix here | `LogoCloudEditors.tsx`, `logoCloud.tsx` | None |
 | Logo Cloud image picker, drag/drop, marquee, eyebrow/background | Future product scope unless needed to repair broken current flow | Future widget task | TASK-256-08 records deferral |
 | Gallery Mosaic overlay alpha loss and image/video ambiguity | Fix here because current controls can destroy data or mislead users | `GalleryMosaicEditors.tsx` | None |
@@ -53,9 +58,12 @@ and truthful editor controls.
 
 ## Sub-Tasks
 
-- [ ] Hide empty CTA badge spans and apply configured description text color.
-- [ ] Add CTA Visual clear controls and action-field labels.
-- [ ] Add CTA button focus-visible and safe URL validation feedback.
+- [ ] Do not implement CTA Banner product/runtime/editor fixes in this leaf;
+  keep those rows routed to TASK-263.
+- [ ] If several widgets need target/rel output, add a shared
+  `resolveWidgetLinkAttrs()` helper in `widgetSafeHref.ts` and focused tests.
+- [ ] Keep generic color Clear semantics in TASK-256-02; do not wire CTA field
+  Clear controls here.
 - [ ] Add Logo Cloud safe external-link output and section/header ARIA.
 - [ ] Gate Logo Cloud `hoverColor` controls when grayscale is inactive.
 - [ ] Preserve Gallery Mosaic overlay alpha and add opacity-aware editing.
@@ -72,15 +80,15 @@ and truthful editor controls.
 
 | File | Lines | Required change |
 |---|---:|---|
-| `core/admin/ui/widgets/editors/CtaBannerEditors.tsx` | 250-550 | Visual clear controls, action labels, URL feedback, and focus-state controls. |
-| `core/widgets/core/ctaBanner.tsx` | 185-200, 333-389 | Empty badge suppression, description color, border class, focus-visible, and safe link output. |
+| `core/admin/ui/widgets/editors/CtaBannerEditors.tsx` | n/a | Do not edit for CTA-specific rows in this leaf; TASK-263 owns CTA editor changes. |
+| `core/widgets/core/ctaBanner.tsx` | n/a | Do not edit for CTA-specific rows in this leaf; TASK-263 owns CTA renderer changes. |
 | `core/admin/ui/widgets/editors/LogoCloudEditors.tsx` | 284-694 | Wizard image/link scope decisions, hoverColor gating, alt/link fields if model changes, and Advanced duplicate controls. |
 | `core/widgets/core/logoCloud.tsx` | 268-401 | Link `rel`/target handling, section labels, heading semantics, logo height fallback, and hoverColor output. |
 | `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx` | 92-98, 448, 559-598, 720-832 | Overlay alpha-safe editing, current image/video type clarity, Wizard video media picker scope, and duplicated Advanced controls. Visual per-item media picker is TASK-270-01. |
 | `core/widgets/core/galleryMosaic.tsx` | 159-275, 314-507 | Explicit resolver defaults, feature-left one-item handling, link safety, alt/figure semantics, video title/control behavior, and redundant row-span cleanup. Poster image remains TASK-270-03. |
 | `core/widgets/core/widgetSafeHref.ts` | 1-25 | Extend the shared href owner with a tested helper such as `resolveWidgetLinkAttrs(href, options)` that returns normalized `href`, `target`, and safe `rel` attributes. Do not duplicate external-link detection in individual widgets. |
-| `tests/vitest/ui/cta-banner-editor-wave.test.tsx` | existing suite | Add clear/action/focus/url regressions. |
-| `tests/vitest/widgets/ctaBanner.test.tsx` | existing suite | Add badge/color/focus/link regressions. |
+| `tests/vitest/ui/cta-banner-editor-wave.test.tsx` | n/a | Do not edit for CTA-specific rows in this leaf; TASK-263 owns CTA editor coverage. |
+| `tests/vitest/widgets/ctaBanner.test.tsx` | n/a | Do not edit for CTA-specific rows in this leaf; TASK-263 owns CTA runtime coverage. |
 | `tests/vitest/ui/logo-cloud-editor-wave.test.tsx` | existing suite | Add hoverColor/alt/link/Wizard regressions. |
 | `tests/vitest/widgets/logoCloud.test.tsx` | existing suite | Add link/ARIA/height regressions. |
 | `tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx` | existing suite | Add overlay/current media-type/Wizard-video/Advanced regressions. |
@@ -88,11 +96,19 @@ and truthful editor controls.
 
 ## Implementation Pseudocode
 
-CTA badge:
+Shared link attrs, only if multiple widgets need the same target/rel policy:
 
-```tsx
-function shouldRenderBadge(data: CtaBannerData, variant: CtaBannerVariantId) {
-  return variant === "with-badge" && Boolean(data.badge?.label?.trim());
+```ts
+function resolveWidgetLinkAttrs(
+  value: string | undefined,
+  options: WidgetSafeHrefOptions & { openInNewTab?: boolean } = {},
+) {
+  const href = normalizeWidgetSafeHref(value, options);
+  if (!href) return undefined;
+  if (options.openInNewTab) {
+    return { href, target: "_blank", rel: "noopener noreferrer" } as const;
+  }
+  return { href } as const;
 }
 ```
 
@@ -125,7 +141,8 @@ Error handling:
 
 - Overlay color pickers must not replace `rgba(...)` or CSS variables with hex
   fallback values unless the user explicitly chooses a new color.
-- Existing CTA/logo/gallery URLs normalize through the same safe-href owner.
+- Existing logo/gallery URLs normalize through the same safe-href owner. CTA
+  adoption of the helper belongs to TASK-263-04.
 - If adding `alt` fields requires schema migration, keep fallback behavior
   backward compatible and update validator tests.
 
@@ -152,7 +169,11 @@ No API routes are added.
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/ui/cta-banner-editor-wave.test.tsx`
-- `bun run test:vitest -- tests/vitest/widgets/ctaBanner.test.tsx`
+  only if a shared helper change needs CTA compatibility coverage; CTA-specific
+  editor regressions stay in TASK-263.
+- `bun run test:vitest -- tests/vitest/widgets/ctaBanner.test.tsx` only if a
+  shared helper change needs CTA runtime compatibility coverage; CTA-specific
+  renderer regressions stay in TASK-263.
 - `bun run test:vitest -- tests/vitest/ui/logo-cloud-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/logoCloud.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx`

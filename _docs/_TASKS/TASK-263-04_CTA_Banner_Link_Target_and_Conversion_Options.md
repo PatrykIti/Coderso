@@ -18,8 +18,9 @@ This leaf covers the product features from the CTA report that are specific to
 CTA actions: new-tab target policy, safe rel output, button icons, optional
 tertiary text CTA, and description visibility. If target/rel handling needs a
 shared `resolveWidgetLinkAttrs()` helper, land that through TASK-256-06-02 or a
-new shared safe-link task first instead of duplicating external-link detection
-inside CTA Banner.
+new shared safe-link task first. This leaf may call that helper after it exists,
+but must not define a CTA-local link-attribute resolver or duplicate
+external-link detection inside CTA Banner.
 
 ## Sub-Tasks
 
@@ -72,17 +73,15 @@ type CtaBannerData = {
 };
 ```
 
-Safe link attrs:
+Safe link attrs after the shared helper exists:
 
 ```ts
-function resolveCtaLinkAttrs(action: CtaBannerAction) {
-  const href = normalizeWidgetSafeHref(action.href, safeHrefOptions);
-  if (!href) return null;
-  if (action.target === "new-tab") {
-    return { href, target: "_blank", rel: "noopener noreferrer" };
-  }
-  return { href };
-}
+const attrs = resolveWidgetLinkAttrs(action.href, {
+  allowHash: true,
+  allowHttp: true,
+  allowRelative: true,
+  openInNewTab: action.target === "new-tab",
+});
 ```
 
 Renderer flow:
@@ -90,7 +89,7 @@ Renderer flow:
 ```tsx
 const actions = [primaryCta, secondaryCta, tertiaryCta]
   .filter((action) => isEnabledAction(action))
-  .map((action) => ({ action, attrs: resolveCtaLinkAttrs(action) }))
+  .map((action) => ({ action, attrs: resolveWidgetLinkAttrs(action.href, toLinkOptions(action)) }))
   .filter((entry) => entry.attrs);
 ```
 

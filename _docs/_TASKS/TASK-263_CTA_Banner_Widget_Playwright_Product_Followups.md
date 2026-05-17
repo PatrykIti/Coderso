@@ -16,7 +16,10 @@ Create the CTA Banner-only follow-up family for
 `_docs/PLAYWRIGHT/REPORT_CTA_BANNER_WIDGET.md`.
 
 TASK-256 owns shared widget-contract repairs from the Playwright report wave.
-TASK-263 deliberately keeps only the CTA Banner product/runtime/editor scope:
+TASK-263 deliberately keeps only the CTA Banner product/runtime/editor scope.
+TASK-256-06-02 is a dependency only for shared helper prerequisites such as a
+reusable safe-link attribute helper; it must not also implement the CTA-specific
+rows planned here:
 
 - `core/widgets/core/ctaBanner.tsx`
 - `core/admin/ui/widgets/editors/CtaBannerEditors.tsx`
@@ -64,6 +67,9 @@ Out of scope for TASK-263:
   helper contracts, owned by TASK-256-04. CTA may use the final shared helper,
   but must not invent a competing one.
 - Logo Cloud and Gallery Mosaic scope from TASK-256-06-02.
+- Any CTA-specific implementation still listed in TASK-256-06-02 before its
+  reclassification note is updated; resolve that ownership drift before
+  starting implementation so the same rows are not closed twice.
 - Any arbitrary user-authored HTML, SVG, script, event handler, class-name, or
   raw rel/target string field in CTA widget JSON.
 
@@ -87,8 +93,8 @@ Out of scope for TASK-263:
 | TASK-263-01 | Report lines 66-71, 123-131, 139-158, 230-236, 244-248 | `ctaBanner.tsx`, CTA docs | `tests/vitest/widgets/ctaBanner.test.tsx`, `tests/vitest/widgets/renderer.test.tsx` if shared renderer assertions change |
 | TASK-263-02 | Report lines 62-64, 89-91, 108-113, 170-192, 254-258, 292-294 | `CtaBannerEditors.tsx`, `ctaBanner.tsx` for schema fields needed by editor UX | `tests/vitest/ui/cta-banner-editor-wave.test.tsx`, `tests/vitest/widgets/ctaBanner.test.tsx`, validator tests when schema changes |
 | TASK-263-03 | Report lines 99, 125, 166-168, 196-198, 214-215, 255, 265, 267; line 125 uses `BUG-05` as a button-radius alias for BF-01 | `CtaBannerEditors.tsx`, `ctaBanner.tsx`; shared Clear helper only after TASK-256-02 leaves a CTA-only hook | `tests/vitest/ui/cta-banner-editor-wave.test.tsx`, `tests/vitest/widgets/ctaBanner.test.tsx`, `tests/vitest/widgets/styleNoneTokens.test.tsx` only when shared style semantics are touched |
-| TASK-263-04 | Report lines 186-192, 199-203, 217-221, 264, 268, 270 | `ctaBanner.tsx`, `CtaBannerEditors.tsx`, `widgetSafeHref.ts` only if a shared helper already owns target/rel attrs | CTA widget/editor tests, `tests/vitest/widgets/widgetSafeHref.test.ts` if shared link attrs change, validator tests when schema changes |
-| TASK-263-05 | Report lines 68, 205-212, 223-224, 266, 269 | `ctaBanner.tsx`, `CtaBannerEditors.tsx`, media picker owners only if existing picker components are reused | CTA widget/editor tests, validator tests, media-picker UI test only when a media control is introduced |
+| TASK-263-04 | Report lines 199-203, 217-221, 264, 268, 270 | `ctaBanner.tsx`, `CtaBannerEditors.tsx`, `widgetSafeHref.ts` only if a shared helper already owns target/rel attrs | CTA widget/editor tests, `tests/vitest/widgets/widgetSafeHref.test.ts` if shared link attrs change, validator tests when schema changes |
+| TASK-263-05 | Report lines 68, 205-212, 223-224, 266, 269 | `ctaBanner.tsx`, `CtaBannerEditors.tsx`, `MediaPicker.tsx` only if picker behavior changes | CTA widget/editor tests, validator tests, `media-picker.test.tsx` only if picker behavior changes |
 | TASK-263-06 | Report lines 274-303 and every fixed/deferred row | `_docs/PLAYWRIGHT/REPORT_CTA_BANNER_WIDGET.md`, `_docs/_WIDGETS/CTA_BANNER.md`, board/changelog/docs | `git diff --check`, targeted production lanes after implementation leaves |
 
 ## Sub-Tasks
