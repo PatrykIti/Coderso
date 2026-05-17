@@ -352,8 +352,7 @@ export function AccordionBlock({
         const shouldOpen =
           openMode === "multiple"
             ? defaultOpenIds.includes(item.instanceId)
-            : item.instanceId === (defaultOpenIds[0] ?? resolvedItems[0]?.instanceId) &&
-              index === 0;
+            : item.instanceId === (defaultOpenIds[0] ?? resolvedItems[0]?.instanceId);
 
         return (
           <details

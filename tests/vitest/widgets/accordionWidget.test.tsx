@@ -51,6 +51,32 @@ test("accordion normalization resolves defaults", () => {
   expect(normalized.options?.allowMultiple).toBe(true);
 });
 
+test("accordion honors a default-open item beyond the first position", () => {
+  const normalized = normalizeAccordionData({
+    ...accordionDefaults,
+    options: {
+      openMode: "single",
+      defaultOpenIds: ["2"],
+      collapsible: true,
+      initiallyOpenId: "2",
+      allowMultiple: false,
+    },
+  });
+  const html = renderToString(
+    <AccordionBlock
+      data={normalized}
+      variant="soft"
+      slots={{
+        "item:1": [],
+        "item:2": [],
+      }}
+    />
+  );
+
+  expect(html).not.toMatch(/<details[^>]*open=""[^>]*data-coderso-accordion-item="1"/);
+  expect(html).toMatch(/<details[^>]*open=""[^>]*data-coderso-accordion-item="2"/);
+});
+
 test("accordion validator accepts schema", () => {
   clearWidgets();
   const widget = createAccordionWidget({
