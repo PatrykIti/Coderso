@@ -24,9 +24,9 @@ but persisted `data` can disagree with what the renderer shows.
 - `_docs/PLAYWRIGHT/REPORT_SPLIT_LAYOUT_WIDGET.md:174-182,202,209-214` covers
   redundant slot sections, Advanced duplication, `keep` tablet/mobile ratio
   communication, reverse-on-mobile truthfulness, and closure checklist.
-- `_docs/PLAYWRIGHT/REPORT_STACK_WIDGET.md:111,141,157,163,169-187,220-223`
-  covers variant/data direction desync, duplicate zero tokens, Wizard mobile
-  direction, and Advanced variant drift.
+- `_docs/PLAYWRIGHT/REPORT_STACK_WIDGET.md:111-165,219-225` covers
+  variant/data direction desync, duplicate zero tokens, Wizard mobile direction,
+  Advanced variant drift, and the matching critical/high-priority summary rows.
 
 ## Sub-Tasks
 
