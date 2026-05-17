@@ -44,7 +44,7 @@ Out of scope:
 |---|---|
 | `core/widgets/core/entryTeaser.tsx` | Extend schema/defaults/types/normalizer/render with section heading, separate section/entry heading levels, media settings, tag limit, max-width, icon/logo mode, image dimensions, and explicit enum guards. |
 | `core/admin/ui/widgets/editors/EntryTeaserEditors.tsx` | Add Wizard/Visual/Advanced controls for section heading, entry title heading level, layout width, media, and tags according to final editor IA. |
-| `tests/vitest/widgets/entryTeaser.test.tsx` | Add Bun-free render, schema, and normalizer coverage for every new field and legacy default. |
+| `tests/vitest/widgets/entryTeaser.test.tsx` | Create or extend Bun-free render, schema, and normalizer coverage for every new field and legacy default. |
 | `tests/vitest/ui/entry-teaser-editor-wave.test.tsx` | Add editor coverage for controls and fixed token updates. |
 | `tests/vitest/site/publicRenderer.test.tsx` | Add public HTML coverage for heading level, image dimensions, tag limit, and width markers/classes. |
 | `_docs/_WIDGETS/ENTRY_TEASER.md` | Update data model, runtime behavior, accessibility, and editor notes. |
@@ -149,7 +149,10 @@ Regression-test shape:
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- `bun run test:vitest -- tests/vitest/widgets/entryTeaser.test.tsx`
+- if this leaf creates or extends `tests/vitest/widgets/entryTeaser.test.tsx`,
+  run `bun run test:vitest -- tests/vitest/widgets/entryTeaser.test.tsx`
+- `bun test tests/unit/widgets/entryTeaser.test.tsx` while render/normalizer
+  assertions still remain in the Bun-owned suite
 - `bun run test:vitest -- tests/vitest/ui/entry-teaser-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/site/publicRenderer.test.tsx`
 - Entry Teaser schema rejection coverage belongs in

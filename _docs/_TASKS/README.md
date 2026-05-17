@@ -29,7 +29,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 - **To Do:** 295 tasks
-- **In Progress:** 4 tasks
+- **In Progress:** 5 tasks
 - **Done:** 1559 tasks
 
 ---
@@ -38,6 +38,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-293 | Shared Color Control Text and Swatch Contract | High | Medium | Define the missing shared swatch-plus-text color control so widget-local adoption tasks stop cloning picker logic |
 | TASK-292 | Toggle Block Widget Playwright Product Followups | High | Very Large | Toggle Block-only follow-up family for `REPORT_TOGGLE_BLOCK_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-292-01 | Toggle Block Variant Visual Hierarchy, Contrast, and Pane Styling | High | Large | Add Toggle Block-owned cards distinction, active contrast, and bounded pane style controls after TASK-256 shared style semantics |
 | TASK-292-02 | Toggle Block Motion and Pane Transition Contract | Medium | Medium | Add bounded fade/slide/no-motion options without weakening TASK-256 interactive runtime semantics |
@@ -260,12 +261,11 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-266-04 | FAQ Accordion Wizard and Open State Editor UX | Medium | Medium | Add Wizard description, item counters, question-aware open labels, and clearer all-collapsed Advanced UX |
 | TASK-266-05 | FAQ Accordion Item Management and Variant Preview Polish | Medium | Large | Add safer removal flow, compact accessible item actions, variant miniatures, and bounded reorder/bulk decisions |
 | TASK-266-06 | FAQ Accordion Report Docs and Closure | Medium | Medium | Refresh FAQ report/docs/changelog/board and final validation for the TASK-266 family |
-| TASK-265 | Entry Teaser Widget Playwright Product Followups | High | Very Large | Widget-specific follow-up family for `REPORT_ENTRY_TEASER_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-265-01 | Entry Teaser Source Resolution and Admin Preview | High | Large | Add resolved admin preview, source picker recovery, content-type dedupe, compact status labels, and listing source semantics |
 | TASK-265-02 | Entry Teaser Editor IA, Fallback, and Variant Preview | High | Large | Repair source labels/ownership, variant thumbnails, fallback grouping, field preview hints, Auto URL help, and snapshot copy |
 | TASK-265-03 | Entry Teaser CTA Link and URL Feedback | High | Medium | Add custom URL validation, empty-input behavior, new-tab safe rel, and fixed CTA style variants |
 | TASK-265-04 | Entry Teaser Layout, Media, Tags, and Heading Controls | High | Large | Add section heading, media sizing, tag limits, max-width, optional icon/logo mode, image dimensions, and heading controls |
-| TASK-265-06 | Entry Teaser Shared Color Control Adoption | Medium | Medium | Adopt the TASK-256-02 shared color-control hook for Entry Teaser surface/border fields without duplicating generic picker behavior |
+| TASK-265-06 | Entry Teaser Shared Color Control Adoption | Medium | Medium | Adopt the TASK-293 shared color-control hook for Entry Teaser surface/border fields without duplicating generic picker behavior |
 | TASK-265-05 | Entry Teaser Report, Docs, and Closure | Medium | Medium | Refresh Entry Teaser report/docs/changelog/board and final validation for the TASK-265 family |
 | TASK-264 | Divider Widget Playwright Product Followups | High | Large | Divider-specific follow-up family for `REPORT_DIVIDER_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-264-01 | Divider Label Color Typography and Gap Controls | High | Medium | Add label-center color, typography, nowrap, gap, truthful labels, and clear-label UX |
@@ -339,6 +339,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-265 | Entry Teaser Widget Playwright Product Followups | High | Very Large | In progress: task-family drift was tightened against the live checkout and the remaining shared blocker was extracted into TASK-293 before widget-local implementation |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |

@@ -132,11 +132,12 @@ Regression-test shape:
 - `git diff --check`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- `bun run test:vitest -- tests/vitest/widgets/entryTeaser.test.tsx`
+- if the family has introduced or extended `tests/vitest/widgets/entryTeaser.test.tsx`,
+  run `bun run test:vitest -- tests/vitest/widgets/entryTeaser.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/entry-teaser-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/site/publicRenderer.test.tsx`
-- `bun test tests/unit/widgets/entryTeaser.test.tsx` only if the legacy suite
-  still contains a retained Bun-coupled comparison/runtime case during closure.
+- `bun test tests/unit/widgets/entryTeaser.test.tsx` remains required at closure
+  while the legacy suite still owns any render, normalizer, or runtime coverage.
 - Entry Teaser schema rejection coverage belongs in the Vitest widget suite;
   touch generic validator suites only if a completed leaf changed shared
   validator behavior.
