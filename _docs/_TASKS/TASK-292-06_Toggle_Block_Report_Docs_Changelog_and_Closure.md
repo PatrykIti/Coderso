@@ -91,6 +91,14 @@ function assertClosureCoverage(findings: ToggleBlockFinding[]) {
     throw new Error(`Uncovered Toggle Block findings: ${uncovered.map((item) => item.id).join(", ")}`);
   }
 }
+
+function assertValidationEvidence(evidence: ValidationEvidence) {
+  requireCommand(evidence, "git diff --check");
+  requireCommand(evidence, "bun --cwd core lint");
+  requireCommand(evidence, "bun --cwd core lint:types");
+  requireCommand(evidence, "bun run precommit");
+  requireTargetedToggleBlockSuites(evidence);
+}
 ```
 
 Data flow:
@@ -100,7 +108,9 @@ Data flow:
    two-state product boundary, or deferred future product scope.
 3. Mirror the classification in the report, widget docs, task files, changelog,
    and task-board rows.
-4. Run validation and record exact command evidence in task/changelog notes.
+4. Run validation and record exact command evidence in task/changelog notes,
+   including the AGENTS baseline and targeted Toggle Block suites before any
+   row moves to Done.
 
 Error handling:
 
@@ -110,6 +120,18 @@ Error handling:
   TASK-256-08 instead of marking it fixed by TASK-292.
 - If board stats conflict after other agents land rows, preserve all rows and
   recompute counts from the current README state.
+- If AGENTS baseline commands or targeted Toggle Block suites are missing from
+  the evidence, keep TASK-292 open even if docs/report classification is
+  complete.
+
+Regression-test shape:
+
+- Closure review checks every report row appears exactly once in the final
+  fixed/routed/deferred classification.
+- Task-board checks recompute README statistics after moving TASK-292 rows.
+- Validation evidence checks include `git diff --check`, AGENTS baseline lint
+  commands, targeted Toggle Block suites, gates/security scans where required,
+  and `bun run precommit`.
 
 ## Security Contract
 
@@ -126,6 +148,8 @@ No API routes are added.
 ## Testing Requirements
 
 - `git diff --check`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
 - `bun run test:vitest -- tests/vitest/widgets/toggleBlock.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/toggle-block-editor-wave.test.tsx`
 - `bun test tests/unit/widgets/validator.test.ts` if any TASK-292 leaf changed

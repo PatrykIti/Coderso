@@ -39,6 +39,9 @@ This leaf owns product-level visual fields. It does not own the shared Clear,
   and framing changes that do not alter slot ownership.
 - Add optional pane-level style controls only for bounded values such as surface
   token, padding token, radius token, and border emphasis.
+- Keep pane styling independent for `primary` and `secondary` so the report row
+  is either implemented as per-pane controls or explicitly deferred in
+  TASK-292-06 instead of being collapsed into one global pane style.
 - Preserve existing `style.surfaceColor`, `style.borderColor`, and
   `style.accentColor` semantics from TASK-256.
 - Keep arbitrary CSS strings out of new pane-specific fields unless an existing
@@ -83,16 +86,46 @@ This leaf owns product-level visual fields. It does not own the shared Clear,
 ```ts
 type ToggleBlockPaneStyleToken = "default" | "soft" | "contrast";
 type ToggleBlockPanePaddingToken = "compact" | "comfortable" | "spacious";
+type ToggleBlockPaneRadiusToken = "sm" | "md" | "lg";
+
+type ToggleBlockPaneStyle = {
+  surface: ToggleBlockPaneStyleToken;
+  padding: ToggleBlockPanePaddingToken;
+  radius: ToggleBlockPaneRadiusToken;
+  borderEmphasis: "subtle" | "strong";
+};
 
 const toggleBlockStyleDefaults = {
   accentContrastColor: "var(--color-background)",
-  paneSurface: "default",
-  panePadding: "comfortable",
-  paneRadius: "md",
+  panes: {
+    primary: {
+      surface: "default",
+      padding: "comfortable",
+      radius: "md",
+      borderEmphasis: "subtle",
+    },
+    secondary: {
+      surface: "default",
+      padding: "comfortable",
+      radius: "md",
+      borderEmphasis: "subtle",
+    },
+  },
 } satisfies NonNullable<ToggleBlockData["style"]>;
+
+function normalizeToggleBlockPaneStyle(value: unknown): ToggleBlockPaneStyle {
+  const current = isRecord(value) ? value : {};
+  return {
+    surface: resolveEnum(current.surface, paneSurfaceOptions, "default"),
+    padding: resolveEnum(current.padding, panePaddingOptions, "comfortable"),
+    radius: resolveEnum(current.radius, paneRadiusOptions, "md"),
+    borderEmphasis: resolveEnum(current.borderEmphasis, paneBorderOptions, "subtle"),
+  };
+}
 
 function normalizeToggleBlockStyle(style: unknown): ToggleBlockData["style"] {
   const current = isRecord(style) ? style : {};
+  const panes = isRecord(current.panes) ? current.panes : {};
   return {
     surfaceColor: resolveClearableStyleValue(current.surfaceColor),
     borderColor: normalizeSharedStyleField(current.borderColor, "var(--color-border)"),
@@ -101,19 +134,26 @@ function normalizeToggleBlockStyle(style: unknown): ToggleBlockData["style"] {
       current.accentContrastColor,
       "var(--color-background)"
     ),
-    paneSurface: resolveEnum(current.paneSurface, paneSurfaceOptions, "default"),
-    panePadding: resolveEnum(current.panePadding, panePaddingOptions, "comfortable"),
-    paneRadius: resolveEnum(current.paneRadius, paneRadiusOptions, "md"),
+    panes: {
+      primary: normalizeToggleBlockPaneStyle(panes.primary),
+      secondary: normalizeToggleBlockPaneStyle(panes.secondary),
+    },
   };
 }
 
-function resolvePaneClass(variant: ToggleBlockVariantId, style: NormalizedToggleBlockStyle) {
+function resolvePaneClass(
+  variant: ToggleBlockVariantId,
+  state: ToggleBlockStateId,
+  style: NormalizedToggleBlockStyle
+) {
+  const paneStyle = style.panes[state];
   return joinClasses(
     "border",
     variant === "cards" && "shadow-sm",
-    paneSurfaceClass[style.paneSurface],
-    panePaddingClass[style.panePadding],
-    paneRadiusClass[style.paneRadius]
+    paneSurfaceClass[paneStyle.surface],
+    panePaddingClass[paneStyle.padding],
+    paneRadiusClass[paneStyle.radius],
+    paneBorderClass[paneStyle.borderEmphasis]
   );
 }
 ```
@@ -130,8 +170,18 @@ Data flow:
 Error handling:
 
 - Unknown enum values fall back to defaults.
+- Missing per-pane overrides fall back independently, so a bad `secondary`
+  value does not erase a valid `primary` style.
 - Empty color fields use the shared style resolver behavior.
 - Invalid pane style tokens are never rendered as raw classes.
+
+Regression-test shape:
+
+- Widget tests cover default per-pane styles, invalid per-pane fallback, and
+  distinct `primary`/`secondary` class output.
+- Editor tests prove updating one pane style does not mutate the other pane.
+- Validator tests accept the bounded pane object and reject unknown pane keys,
+  raw class strings, or unsupported enum values.
 
 ## Security Contract
 

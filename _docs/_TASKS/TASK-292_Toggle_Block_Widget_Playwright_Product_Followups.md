@@ -56,9 +56,9 @@ define a weaker local replacement for a shared contract.
 | Global `window.__nextlessToggleBlockBound` risk (`2.2`) | TASK-256-04 unless TASK-256-08 leaves a Toggle-only residual | Excluded from initial product leaves; closure records the final TASK-256 status. |
 | Helper text cannot be cleared (`2.3`, `3.1`, `4.1`, `4.2`, `5.1`, summary) | TASK-256-02 and TASK-256-05-04 | Excluded. TASK-292 must not duplicate the sentinel/normalizer repair. |
 | Missing Clear controls for `borderColor` and `accentColor` (`2.4`, `4.2`, summary) | TASK-256-02 and TASK-256-05-04 | Excluded. TASK-292 may only adopt the final shared control in local UX after TASK-256 lands. |
-| Hardcoded accent contrast, minimal `cards` distinction, per-pane styling (`2.5`, `2.8`, `2.9`, `4.1`, `5.1`, summary) | TASK-292-01 | Add Toggle Block-owned visual hierarchy, contrast, and pane style controls. |
+| Hardcoded accent contrast, minimal `cards` distinction, per-pane styling (`2.5`, `2.8`, `2.9`, `4.1`, `5.1`, summary) | TASK-292-01 | Add Toggle Block-owned visual hierarchy, contrast, and independent `primary`/`secondary` pane style controls. |
 | Panel transition/motion behavior (`2.7`, low-priority summary) | TASK-292-02 | Add bounded motion options without weakening hidden/ARIA state semantics. |
-| Hardcoded radiogroup label and selected-state copy (`2.10`, `5.1`, medium summary) | TASK-292-03 after TASK-256 structural ARIA scope is settled | Add widget-owned localized accessible labels and status copy while ID relationships stay TASK-256. |
+| Hardcoded radiogroup label and selected-state copy (`2.10`, `5.1`, medium summary) | TASK-256-04 for structural/fallback ARIA wiring; TASK-292-03 only for new persisted localization fields after that seam is settled | Do not duplicate TASK-256 ID, fallback label, scoped runtime, or structural ARIA work. Add only widget-owned localized copy fields if TASK-256 leaves product scope for them. |
 | Variant previews, Wizard depth, repeated Variant section, reset defaults, active default-state preview (`3.2`, `3.3`, `3.4`, `3.6`, `3.8`) | TASK-292-04 | Improve mode-specific editor flow and reset UX. |
 | Empty pane authoring CTA and explicit two-state limit (`2.6`, `3.7`, future summary) | TASK-292-05 | Add builder-facing guidance and docs; do not change public placeholder gating. |
 | Color picker/token list request (`3.5`) | TASK-256-02 first; TASK-292-04 may consume the shared control | Do not implement a one-off color picker. Record final adoption status in closure. |
@@ -71,7 +71,7 @@ define a weaker local replacement for a shared contract.
 | Toggle Block schema/defaults/normalizer/runtime | `core/widgets/core/toggleBlock.tsx` | `tests/vitest/widgets/toggleBlock.test.tsx` | Add schema, normalizer, SSR, style, contrast, motion, label, and two-state contract coverage for new fields. |
 | Toggle Block editors | `core/admin/ui/widgets/editors/ToggleBlockEditors.tsx` | `tests/vitest/ui/toggle-block-editor-wave.test.tsx` | Add mode-specific tests for variant previews, reset defaults, active-state messaging, pane guidance, and any shared control adoption. |
 | Widget validator/registry | `core/widgets/validator.ts`, registry through `createToggleBlockWidget()` | `tests/unit/widgets/validator.test.ts`, `tests/unit/widgets/registry.test.ts` | Run validator tests whenever schema/defaults change; registry only if definition metadata changes. |
-| Page-builder pane authoring | Existing builder slot controls, only if a leaf adds an Insert Dialog entry point | `tests/vitest/pageBuilder/blockSettings-wave.test.tsx`, `tests/vitest/pageBuilder/visualPanel.test.tsx` | Touch only when the implementation reuses existing builder APIs for pane guidance. |
+| Page-builder pane authoring | `core/admin/ui/pages/PageEditor.tsx`, `core/admin/ui/pages/builder/BlockList.tsx`, only if a leaf adds an Insert Dialog entry point | `tests/vitest/ui/page-editor-slot-insert-flow.test.tsx` | Touch only when the implementation reuses existing builder APIs for pane guidance. |
 | Widget docs/report | `_docs/_WIDGETS/TOGGLE_BLOCK.md`, `_docs/PLAYWRIGHT/REPORT_TOGGLE_BLOCK_WIDGET.md` | docs diff checks | Update contract docs and fixed/deferred evidence after implementation leaves land. |
 
 ## Sub-Tasks
@@ -183,10 +183,8 @@ This umbrella does not add API routes.
   - `bun test tests/unit/widgets/validator.test.ts` when schema/defaults change
   - `bun test tests/unit/widgets/registry.test.ts` if widget definition metadata
     changes
-  - `bun run test:vitest -- tests/vitest/pageBuilder/blockSettings-wave.test.tsx`
-    only if a leaf touches page-builder slot controls
-  - `bun run test:vitest -- tests/vitest/pageBuilder/visualPanel.test.tsx` only
-    if a leaf changes visual-panel slot action rendering
+  - `bun run test:vitest -- tests/vitest/ui/page-editor-slot-insert-flow.test.tsx`
+    only if a leaf touches page-builder slot insertion
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`
   - `bun run gates:coderso` before family closure

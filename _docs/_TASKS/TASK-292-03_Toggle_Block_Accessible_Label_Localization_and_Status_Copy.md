@@ -15,10 +15,10 @@
 Expose Toggle Block-owned accessible copy so the radiogroup label and selected
 state announcement are not hardcoded English strings.
 
-This leaf owns configurable copy only after TASK-256 structural ARIA work lands
-or TASK-256-08 confirms the label-localization row as Toggle Block product
-scope. TASK-256 still owns the structural ARIA relationship repairs,
-instance-safe IDs, and runtime binding.
+TASK-256-04 owns the immediate structural/fallback radiogroup label wiring
+while it fixes scoped IDs, ARIA relationships, and runtime binding. This leaf
+owns configurable copy only after that helper seam lands or TASK-256-08
+confirms the remaining localization row as Toggle Block product scope.
 
 ## Source Evidence
 
@@ -32,11 +32,12 @@ instance-safe IDs, and runtime binding.
 ## Scope
 
 - Add a schema-backed `labels.ariaLabel` field or similarly named accessible
-  label field.
+  label field only after TASK-256 structural/fallback label wiring is settled.
 - Add selected-state announcement copy if needed, for example a template or a
   bounded suffix such as `"selected"`.
-- Derive accessible defaults from current English copy so legacy payloads keep
-  rendering correctly.
+- Derive accessible defaults through the final TASK-256 fallback helper so
+  legacy payloads keep rendering correctly without duplicating structural ARIA
+  ownership.
 - Add editor controls in Visual/Advanced; Wizard may show only a concise
   accessibility summary unless UX requires direct editing.
 - Keep screen-reader copy plain text only.
@@ -51,8 +52,8 @@ instance-safe IDs, and runtime binding.
 ## Sub-Tasks
 
 - [ ] Add schema/default/normalizer support for Toggle Block accessible copy.
-- [ ] Render the radiogroup label and selected-state announcement from
-  normalized plain-text values.
+- [ ] Render the radiogroup label and selected-state announcement through the
+  final TASK-256 ARIA helper plus normalized plain-text values.
 - [ ] Add editor controls in Visual/Advanced and a Wizard-safe summary if
   needed.
 - [ ] Add runtime/editor/validator tests for default, custom, empty, and invalid
@@ -94,6 +95,13 @@ function normalizeToggleBlockLabels(labels: unknown): Required<ToggleBlockLabels
   };
 }
 
+function resolveToggleBlockAriaLabel(labels: Required<ToggleBlockLabels>) {
+  return resolveTask256ScopedRadiogroupLabel({
+    fallback: "Toggle content view",
+    override: labels.ariaLabel,
+  });
+}
+
 function resolveSelectedAnnouncement(labels: Required<ToggleBlockLabels>, state: ToggleBlockStateId) {
   const activeLabel = state === "secondary" ? labels.secondary : labels.primary;
   return `${activeLabel} ${labels.selectedSuffix}`;
@@ -103,7 +111,8 @@ function resolveSelectedAnnouncement(labels: Required<ToggleBlockLabels>, state:
 Data flow:
 
 1. Normalize new accessible copy next to existing labels.
-2. Render `aria-label` from normalized data.
+2. Render `aria-label` through the final TASK-256 scoped-label helper, not by
+   replacing TASK-256 scoped IDs or runtime binding.
 3. Render live status from normalized state label plus selected copy.
 4. Keep editor controls in the labels/accessibility section and avoid hidden
    duplicated state outside the normalized payload.
@@ -114,6 +123,14 @@ Error handling:
 - Very long labels should be clamped or treated with existing text input limits
   if the repo has a local pattern.
 - Plain text only; no HTML interpolation.
+
+Regression-test shape:
+
+- Widget tests cover the TASK-256 fallback label path plus custom persisted
+  localized radiogroup and selected-status copy.
+- Editor tests cover accessible-copy controls and diagnostics without changing
+  structural ARIA or scoped runtime binding.
+- Validator tests reject unknown, non-string, or unsafe label fields.
 
 ## Security Contract
 

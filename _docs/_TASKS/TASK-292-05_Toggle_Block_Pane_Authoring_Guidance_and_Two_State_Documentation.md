@@ -36,8 +36,9 @@ changing public placeholder safety, which remains TASK-256 scope.
 
 - Add builder-facing guidance for empty `primary` and `secondary` panes using
   existing slot insertion UI patterns.
-- Add an Insert Dialog entry point only if an existing page-builder owner
-  already exposes a safe, reusable API for slot insertion.
+- Add an Insert Dialog entry point only through the existing page-builder slot
+  owners, currently `PageEditor` (`handleOpenSlotInsert` /
+  `handleInsertIntoSlot`) and the `BlockList` empty-slot CTA.
 - Document that Toggle Block is intentionally limited to two panes in v1.
 - Route 3+ state requirements to Tabs or a future separate task instead of
   broadening this family.
@@ -53,7 +54,8 @@ changing public placeholder safety, which remains TASK-256 scope.
 
 ## Sub-Tasks
 
-- [ ] Audit the current builder slot insertion owner before adding any pane CTA.
+- [ ] Audit `PageEditor` and `BlockList` slot insertion owners before adding
+  any pane CTA.
 - [ ] Add Toggle Block pane guidance that uses user-facing pane labels instead
   of technical slot IDs.
 - [ ] Keep public runtime placeholder output aligned with TASK-256 placeholder
@@ -69,11 +71,11 @@ changing public placeholder safety, which remains TASK-256 scope.
 |---|---|
 | `core/widgets/core/toggleBlock.tsx` | Render only safe authoring guidance in editor/preview context after TASK-256 placeholder gating is available. |
 | `core/admin/ui/widgets/editors/ToggleBlockEditors.tsx` | Add concise pane authoring guidance and two-pane model copy if editor context owns it. |
-| `core/admin/ui/pages/builder/BlockSettings.tsx` | Touch only if reusing an existing slot insertion CTA owner is required. |
+| `core/admin/ui/pages/PageEditor.tsx` | Touch only if wiring an existing slot insertion callback into Toggle Block pane guidance is required. |
+| `core/admin/ui/pages/builder/BlockList.tsx` | Touch only if reusing the existing empty-slot CTA for Toggle Block pane insertion is required. |
 | `tests/vitest/widgets/toggleBlock.test.tsx` | Cover public/runtime absence of admin-only guidance and preview-safe guidance if renderer changes. |
 | `tests/vitest/ui/toggle-block-editor-wave.test.tsx` | Cover pane guidance and two-state copy in editor modes. |
-| `tests/vitest/pageBuilder/blockSettings-wave.test.tsx` | Run and update only if slot insertion controls change. |
-| `tests/vitest/pageBuilder/visualPanel.test.tsx` | Run and update only if visual panel slot actions change. |
+| `tests/vitest/ui/page-editor-slot-insert-flow.test.tsx` | Run and update only if Toggle Block pane guidance opens the existing slot Insert Dialog. |
 | `_docs/_WIDGETS/TOGGLE_BLOCK.md` | Document fixed two-state contract and pane authoring flow. |
 | `_docs/PLAYWRIGHT/REPORT_TOGGLE_BLOCK_WIDGET.md` | Record fixed/deferred status for empty pane and 3+ state rows. |
 
@@ -94,7 +96,7 @@ function ToggleBlockPaneEmptyState({
   }
 
   return (
-    <button type="button" onClick={onInsert} data-toggle-block-pane-insert>
+    <button type="button" onClick={onInsert} data-coderso-toggle-pane-insert>
       Add widget to {paneLabel}
     </button>
   );
@@ -111,13 +113,24 @@ Data flow:
 2. Render authoring guidance only where builder/editor context permits it.
 3. If no safe Insert Dialog callback exists, document guidance without adding a
    fake CTA.
-4. Keep public runtime empty slots governed by TASK-256 placeholder rules.
+4. If `PageEditor`/`BlockList` cannot supply the existing slot callback, keep
+   this leaf to guidance/docs instead of inventing a second insertion route.
+5. Keep public runtime empty slots governed by TASK-256 placeholder rules.
 
 Error handling:
 
 - Missing slot controls fall back to non-interactive guidance.
 - Unknown extra slots remain ignored by the fixed two-state renderer.
 - Guidance copy must not expose technical slot IDs to end users.
+
+Regression-test shape:
+
+- Widget/editor tests cover pane guidance copy with user-facing labels and no
+  leaked technical slot IDs.
+- `page-editor-slot-insert-flow` tests prove the pane CTA opens the existing
+  library and inserts into the selected Toggle Block pane when that callback is
+  wired.
+- Runtime tests prove public output does not include admin-only guidance.
 
 ## Security Contract
 
@@ -134,10 +147,8 @@ No API routes are added.
 
 - `bun run test:vitest -- tests/vitest/widgets/toggleBlock.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/toggle-block-editor-wave.test.tsx`
-- `bun run test:vitest -- tests/vitest/pageBuilder/blockSettings-wave.test.tsx`
-  only if page-builder slot controls change
-- `bun run test:vitest -- tests/vitest/pageBuilder/visualPanel.test.tsx` only
-  if visual-panel slot action rendering changes
+- `bun run test:vitest -- tests/vitest/ui/page-editor-slot-insert-flow.test.tsx`
+  only if page-builder slot insertion changes
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 

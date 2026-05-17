@@ -34,6 +34,11 @@ presentation only if the final TASK-256 interactive contract remains correct.
 - Keep keyboard and click behavior scoped to the final TASK-256 runtime root.
 - Preserve one active pane at a time with correct `data-state` markers.
 - Render transition classes from enum values only.
+- Use the final TASK-256 runtime namespace for any new markers, for example
+  `data-coderso-*`. Do not add new `data-nextless-*` markers in TASK-292.
+- If a safe two-phase pane lifecycle cannot be layered on the final TASK-256
+  binding, keep this leaf to class-only/no-motion polish and record fade/slide
+  as deferred in TASK-292-06.
 
 ## Out of Scope
 
@@ -86,12 +91,49 @@ function resolvePaneMotionClass(motion: ToggleBlockMotion) {
   return "";
 }
 
-function renderPane({ active, motion }: { active: boolean; motion: ToggleBlockMotion }) {
+function resolvePaneLifecycle({
+  active,
+  leaving,
+  motion,
+  transitionFinished,
+}: {
+  active: boolean;
+  leaving: boolean;
+  motion: ToggleBlockMotion;
+  transitionFinished: boolean;
+}) {
+  if (motion === "none" || transitionFinished) {
+    return { hidden: !active, ariaHidden: !active, exiting: false };
+  }
+  return {
+    hidden: false,
+    ariaHidden: !active,
+    exiting: leaving,
+  };
+}
+
+function renderPane({
+  active,
+  leaving,
+  motion,
+}: {
+  active: boolean;
+  leaving: boolean;
+  motion: ToggleBlockMotion;
+}) {
+  const lifecycle = resolvePaneLifecycle({
+    active,
+    leaving,
+    motion,
+    transitionFinished: false,
+  });
   return (
     <div
-      hidden={!active}
+      hidden={lifecycle.hidden}
+      aria-hidden={lifecycle.ariaHidden}
       data-state={active ? "active" : "inactive"}
-      data-nextless-toggle-motion={motion}
+      data-coderso-toggle-motion={motion}
+      data-coderso-toggle-exiting={lifecycle.exiting ? "true" : undefined}
       className={resolvePaneMotionClass(motion)}
     />
   );
@@ -103,15 +145,29 @@ Data flow:
 1. Add `options.motion` or `style.motion` only after deciding which owner best
    matches existing Toggle Block data shape.
 2. Normalize unknown values to `none`.
-3. Render only bounded classes and data markers.
-4. Update the editor through the existing `updateOptions` or `updateStyle`
+3. Render only bounded classes and `data-coderso-*` markers.
+4. For animated modes, keep a leaving pane unhidden only until
+   `transitionend`; reduced-motion and `none` use immediate hidden state.
+5. Update the editor through the existing `updateOptions` or `updateStyle`
    helper, not by mutating raw payloads.
 
 Error handling:
 
 - Unknown persisted motion values fall back to `none`.
+- Missing transition events, reduced-motion mode, or unsupported motion values
+  collapse to the immediate hidden/inactive state.
 - If TASK-256 runtime changes the pane lifecycle, keep this leaf as a pure
   presentation layer on top of the final active/inactive state markers.
+
+Regression-test shape:
+
+- Widget tests assert new markers use `data-coderso-*` and do not introduce
+  new `data-nextless-*` attributes.
+- Runtime DOM tests cover immediate hidden behavior for `none` and the
+  two-phase inactive/leaving state for animated modes without focusable
+  inactive panes.
+- Editor tests cover the motion selector, enum fallback diagnostics, and
+  reduced-motion-safe copy.
 
 ## Security Contract
 

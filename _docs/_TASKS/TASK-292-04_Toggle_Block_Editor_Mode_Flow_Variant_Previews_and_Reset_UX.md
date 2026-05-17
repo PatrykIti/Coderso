@@ -80,7 +80,7 @@ function ToggleBlockVariantPreview({ variant }: { variant: ToggleBlockVariantId 
     <span
       aria-hidden="true"
       className={variant === "cards" ? "grid rounded-md border p-2" : "rounded-full border p-1"}
-      data-toggle-block-variant-preview={variant}
+      data-coderso-toggle-variant-preview={variant}
     >
       <span className={variant === "cards" ? "rounded-sm border p-1" : "rounded-full border"} />
       <span className={variant === "cards" ? "rounded-sm border p-1" : "rounded-full border"} />
@@ -95,7 +95,7 @@ function resetToggleBlockData(): ToggleBlockData {
 function ToggleBlockDefaultStateNotice({ value }: { value: ToggleBlockData }) {
   const normalized = normalizeToggleBlockData(value);
   const state = normalized.options?.defaultState === "secondary" ? "Secondary" : "Primary";
-  return <p data-toggle-block-default-state-preview>{state} pane is shown first.</p>;
+  return <p data-coderso-toggle-default-state-preview>{state} pane is shown first.</p>;
 }
 ```
 
@@ -113,6 +113,15 @@ Error handling:
   unchanged.
 - Reset must be explicit enough to avoid accidental data loss.
 - Unknown variant still falls back to `switch`.
+
+Regression-test shape:
+
+- Editor tests cover thumbnails, Wizard/Visual/Advanced ownership, and active
+  default-state messaging without duplicated sections.
+- Reset tests prove the action writes normalized defaults and follows the
+  repository's confirmation or undo-safe pattern.
+- Shared-control tests prove TASK-256 color/token helpers are imported when
+  adopted and no local color picker is introduced.
 
 ## Security Contract
 
