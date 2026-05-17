@@ -92,6 +92,15 @@ function useLogoMediaSelection({
     requestIdsByLogoRef.current[requestKey] = (requestIdsByLogoRef.current[requestKey] ?? 0) + 1;
   }
 
+  function findLogoIndexByRequestKey(requestKey: string) {
+    const logos = normalizeLogoCloudLogos(latestValueRef.current.logos);
+    if (!requestKey.startsWith("index:")) {
+      return logos.findIndex((item) => item.id === requestKey);
+    }
+    const fallbackIndex = Number(requestKey.slice("index:".length));
+    return Number.isInteger(fallbackIndex) ? fallbackIndex : -1;
+  }
+
   function commitLogoPatch(index: number, patch: Partial<LogoCloudLogo>) {
     updateLogo(latestValueRef.current, onChange, index, patch);
   }
@@ -107,11 +116,15 @@ function useLogoMediaSelection({
     if (!assetId) return commitLogoPatch(index, { image: "", imageAssetId: undefined });
     const next = await resolveLogoMediaAsset(assetId);
     if (requestIdsByLogoRef.current[requestKey] !== requestId) return;
-    commitLogoPatch(index, {
+    const latestIndex = findLogoIndexByRequestKey(requestKey);
+    if (latestIndex < 0) return;
+    const latestLogo = normalizeLogoCloudLogos(latestValueRef.current.logos)[latestIndex];
+    if (!latestLogo) return;
+    commitLogoPatch(latestIndex, {
       image: next.image,
       // Persist only when TASK-274-02 makes imageAssetId schema-owned.
       imageAssetId: persistAssetId ? assetId : undefined,
-      name: logo.name?.trim() ? logo.name : next.name,
+      name: latestLogo.name?.trim() ? latestLogo.name : next.name,
     });
   }
 
@@ -179,8 +192,10 @@ Error handling:
 - If MediaPicker resolution fails, show an inline error and keep the previous
   logo data unchanged.
 - Guard async media-cache resolution with a per-logo request ID/ref and commit
-  resolved patches through a `latestValueRef` helper. Do not call `updateLogo`
-  with a stale `value` captured before `await`.
+  resolved patches through a `latestValueRef` helper. After `await`, re-read the
+  current logo row/index by stable logo key before applying the image/name patch.
+  Do not call `updateLogo` with a stale `value`, captured index, or captured
+  `logo.name` from before `await`.
 - If selected media is unavailable, keep the selected ID out of persisted data
   unless a public URL was resolved.
 - Broken external image URLs must not crash the editor; thumbnail fallback should
@@ -208,6 +223,9 @@ Regression-test shape:
 - Assert unrelated logo edits made while media resolution is pending are
   preserved when the media selection resolves, proving the commit path uses the
   latest editor value.
+- Assert moving or removing a logo while media resolution is pending does not
+  patch the wrong row; stable-ID rows update in their new position, and removed
+  rows no-op.
 - Assert Wizard edits persist `logos[index].image`, `logos[index].alt`, and
   `logos[index].href`.
 - Assert Visual thumbnails render success and unavailable states without

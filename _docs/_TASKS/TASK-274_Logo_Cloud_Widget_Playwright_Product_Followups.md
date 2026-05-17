@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Logo Cloud + Admin UI + Runtime Render + Playwright QA
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-252, TASK-256, TASK-256-01, TASK-256-02, TASK-256-06-02, TASK-256-08
+**Dependencies:** TASK-252, TASK-256, TASK-256-02, TASK-256-06-02, TASK-256-08
 **Status:** To Do
 
 ---
@@ -52,7 +52,8 @@ Current live code facts:
   inputs plus Move up, Move down, Remove, and Add logo actions.
 - Wizard currently renders variant, section title, count, and logo names only.
 - Advanced currently duplicates `logoHeight`, `gap`, and `alignment` controls;
-  TASK-256-01 owns that shared mode-ownership repair.
+  TASK-256-06-02 owns the Logo Cloud cleanup for that shared mode-ownership
+  repair.
 
 ## TASK-256 Exclusion Matrix
 
@@ -66,7 +67,7 @@ TASK-256 already owns them as shared widget-contract drift.
 | BUG-03 section `aria-label` / `aria-labelledby` | `REPORT_LOGO_CLOUD_WIDGET.md:135-140,260,298` | TASK-256-06-02 | Logo Cloud slice of the shared runtime landmark accessibility baseline. |
 | BUG-04 / UX-01 `hoverColor` active without grayscale | `REPORT_LOGO_CLOUD_WIDGET.md:142-160,265,304` | TASK-256-06-02 | Shared truthful-control and output-class repair. |
 | BUG-05 `logoHeight: "none"` unbounded image height | `REPORT_LOGO_CLOUD_WIDGET.md:147-150` | TASK-256-06-02 | Shared size-token safety and clear/none semantics adjacency. |
-| UX-07 Advanced duplicates Visual controls | `REPORT_LOGO_CLOUD_WIDGET.md:190-193` | TASK-256-01 | Shared editor-mode ownership and Advanced scope. |
+| UX-07 Advanced duplicates Visual controls | `REPORT_LOGO_CLOUD_WIDGET.md:190-193` | TASK-256-06-02 | Logo Cloud cleanup for shared editor-mode ownership and Advanced scope. |
 | BF-10 raw link URL validation and safe feedback | `REPORT_LOGO_CLOUD_WIDGET.md:246-248,324` | TASK-256-06-02 | Shared link validation and safe href feedback. Image URL preview/unavailable feedback stays in TASK-274-02 as Logo Cloud asset-authoring UX. |
 
 TASK-274 may depend on TASK-256 results, but it must not restage those repairs
