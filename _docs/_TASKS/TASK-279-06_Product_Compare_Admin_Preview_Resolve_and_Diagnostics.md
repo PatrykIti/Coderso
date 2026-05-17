@@ -51,12 +51,20 @@ Out of scope:
 - `core/admin/ui/widgets/editors/ProductCompareEditors.tsx`
 - `core/widgets/core/productCompare.tsx`
 - `core/services/commerce/commerceWidgetRuntime.ts`
-- Existing admin preview/page builder route owners if an internal preview route
-  is introduced.
+- `core/server/routes/commerceRoutes.ts` for the existing authenticated
+  `/commerce/products/query` preview/search seam or any new internal preview
+  route.
+- `core/server/validation/commerceSchemas.ts` for query/preview payload
+  validation.
+- `core/admin/services/commerceClient.ts` for the existing
+  `previewCommerceProductsQuery` admin client seam.
 - `tests/vitest/ui/product-compare-editor-wave.test.tsx`
 - `tests/vitest/widgets/productCompare.test.tsx`
 - `tests/unit/commerce/commerceWidgetRuntime.test.ts`
-- Route registration and security tests when a preview endpoint is added.
+- `tests/integration/routes/commerceRoutes.test.ts` when the existing commerce
+  query route or a new preview endpoint is used.
+- `tests/vitest/validation/commerceSchemas.test.ts` when query/preview schema
+  changes.
 
 ## Implementation Pseudocode
 
@@ -82,7 +90,17 @@ function ProductCompareAdvancedEditor({ value }: WidgetEditorProps<ProductCompar
 async function resolveProductComparePreview(input: ProductCompareData, session: AdminSession) {
   assertAdminPreviewAccess(session);
   const normalized = normalizeProductCompareData(input);
-  return hydrateProductCompareRuntimeData(normalized, { preview: true, cache: new Map() });
+  const query = buildProductCompareQueryInput(normalized);
+  const result = await previewCommerceProductsQuery(query);
+  const payload = buildCommerceComparePayload(result.rows);
+  return {
+    ...normalized,
+    resolved: {
+      rows: payload.rows,
+      total: result.total,
+      resolvedAt: payload.generatedAt,
+    },
+  };
 }
 ```
 
@@ -92,14 +110,21 @@ Error handling:
   through a text input.
 - Preview refresh failures show a bounded machine-readable error and keep the
   last safe preview state.
-- If the preview route is unavailable, Wizard/Visual still show the current
-  resolved count and stale status from normalized data.
+- Prefer the existing authenticated `/commerce/products/query` seam when it can
+  satisfy Product Compare preview safely. If a dedicated preview route is still
+  needed, add it as an internal admin route with explicit registration,
+  validation, CSRF/session, and error mapping tests.
+- If live preview resolution is unavailable, Wizard/Visual still show the
+  current resolved count and stale status from normalized data.
 
 Regression shape:
 
 - Editor tests prove `Runtime error flag` is no longer editable.
 - Editor tests prove Wizard/Visual display resolved rows/total/stale status.
-- If a preview route is introduced, route registration tests prove auth,
+- If the existing commerce query route is reused, route/schema tests prove the
+  payload is accepted only for bounded Product Compare query fields and still
+  rejects unknown keys.
+- If a new preview route is introduced, route registration tests prove auth,
   CSRF/session expectations, validation, rate limit, and known error mapping.
 - Runtime tests prove preview hydration uses the same query input as frontend
   SSR.

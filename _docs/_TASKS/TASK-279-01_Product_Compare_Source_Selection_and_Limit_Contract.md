@@ -48,14 +48,25 @@ Out of scope:
 
 - `core/widgets/core/productCompare.tsx`
 - `core/widgets/core/commerceWidgetShared.ts`
+- `core/services/commerce/commerceTypes.ts`
 - `core/services/commerce/commerceWidgetRuntime.ts`
 - `core/services/commerce/commerceRuntimeResolver.ts`
 - `core/services/commerce/commerceQueryService.ts`
+- `core/server/validation/commerceSchemas.ts` when selected IDs are accepted
+  by the admin/runtime commerce query payload.
+- `core/server/routes/commerceRoutes.ts` when `/commerce/products/query`
+  receives selected IDs for admin preview or picker flows.
+- `core/admin/services/commerceClient.ts` when admin query payload typing
+  exposes selected IDs.
 - `core/admin/ui/widgets/editors/ProductCompareEditors.tsx`
 - `tests/vitest/widgets/productCompare.test.tsx`
 - `tests/vitest/ui/product-compare-editor-wave.test.tsx`
 - `tests/unit/commerce/commerceWidgetRuntime.test.ts`
 - `tests/unit/commerce/commerceQueryService.test.ts`
+- `tests/vitest/validation/commerceSchemas.test.ts` when `commerceQuerySchema`
+  accepts selected IDs.
+- `tests/integration/routes/commerceRoutes.test.ts` when the admin query route
+  accepts selected IDs.
 - `tests/unit/widgets/validator.test.ts`
 
 ## Implementation Pseudocode
@@ -76,12 +87,15 @@ function normalizeProductCompareProductIds(value: unknown): string[] {
 }
 
 function normalizeProductCompareData(value: ProductCompareData): ProductCompareData {
-  const source = normalizeCommerceWidgetSource(value.source, {
+  const sharedSource = normalizeCommerceWidgetSource(value.source, {
     limit: productCompareDefaults.source?.limit ?? 3,
-    maxLimit: PRODUCT_COMPARE_MAX_PRODUCTS,
     sortField: "title",
     sortDir: "asc",
   });
+  const source = {
+    ...sharedSource,
+    limit: Math.min(sharedSource.limit, PRODUCT_COMPARE_MAX_PRODUCTS),
+  };
   const productIds = normalizeProductCompareProductIds(value.source?.productIds);
 
   return {
@@ -96,11 +110,28 @@ function normalizeProductCompareData(value: ProductCompareData): ProductCompareD
 
 function buildProductCompareQueryInput(value: ProductCompareData) {
   const normalized = normalizeProductCompareData(value);
+  const productIds = normalized.source?.productIds ?? [];
   return {
     ...buildCommerceWidgetQueryInput(normalized.source),
-    productIds: normalized.source?.productIds ?? [],
-    manualOrderIds: normalized.source?.productIds ?? [],
+    ...(productIds.length > 0 ? { productIds } : {}),
   };
+}
+
+function normalizeCommerceExecutionPlan(input: CommerceQueryInput): CommerceExecutionPlan {
+  const productIds = normalizeProductIds(input.productIds);
+  return {
+    ...existingPlan,
+    productIds,
+  };
+}
+
+function applyProductIdSelection(rows: CommerceProduct[], productIds: string[]) {
+  if (productIds.length === 0) return rows;
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  return productIds.flatMap((id) => {
+    const row = byId.get(id);
+    return row ? [row] : [];
+  });
 }
 ```
 
@@ -109,6 +140,12 @@ Error handling:
 - Invalid product IDs normalize away and never reach runtime query execution.
 - If selected IDs are missing or unavailable, runtime returns the available
   rows in deterministic selected order plus a bounded resolved total.
+- Do not emit `productIds` or a separate `manualOrderIds` key from
+  `buildProductCompareQueryInput` until `CommerceQuery`,
+  `CommerceQueryInput`, `commerceQuerySchema`, `executeCommerceQuery`, and the
+  `/commerce/products/query` route all accept the field. The selected order is
+  the `productIds` array order; do not introduce a second ordering field unless
+  the route schema and query service prove why it is necessary.
 - If the implementation extends the shared commerce query type, add tests that
   prove Product Gallery and Product Table still use their current query shape.
 
@@ -119,6 +156,9 @@ Regression shape:
   keep their current limit behavior.
 - Runtime query tests prove selected IDs are filtered before pagination and
   preserve manual order.
+- Validation and route tests prove `/commerce/products/query` rejects unknown
+  fields but accepts bounded `productIds` only after the route contract is
+  intentionally extended.
 - Editor wave tests prove the limit input advertises max 12 and cannot produce
   normalized values above 12.
 

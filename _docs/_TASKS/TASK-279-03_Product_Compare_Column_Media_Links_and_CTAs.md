@@ -30,6 +30,12 @@ In scope:
 - Extend `CommerceWidgetRuntimeCompareRow` with safe public display fields such
   as image URL/media metadata, title, slug-derived product URL, and public
   excerpt where needed by TASK-279-02.
+- Derive image URLs from the existing media storage/public URL owners; do not
+  assume `mediaIds` are directly renderable URLs.
+- Derive product links from an explicit public commerce product route owner.
+  If no such route exists when this leaf starts, ship title-link/CTA controls as
+  disabled/read-only with clear diagnostics instead of inventing a guessed
+  `/products/:slug` path.
 - Add Product Compare renderer/editor options for showing image, product link,
   and CTA label/mode.
 - Use existing safe href/link normalization patterns for rendered anchors.
@@ -54,10 +60,18 @@ Out of scope:
 - `core/services/commerce/commerceWidgetRuntime.ts`
 - `core/services/commerce/commerceRuntimeResolver.ts`
 - `core/services/commerce/commerceTypes.ts`
+- `core/services/commerce/commerceProductLinks.ts` (new pure helper) if the
+  leaf introduces a commerce product href contract.
+- `core/services/media/mediaService.ts`
+- `core/services/media/storage/adapter.ts`
+- `core/db/schema.ts`
+- `core/services/settings/settingsService.ts` only if the commerce product href
+  contract needs a configurable public base path.
 - `core/admin/ui/widgets/editors/ProductCompareEditors.tsx`
 - `tests/vitest/widgets/productCompare.test.tsx`
 - `tests/vitest/ui/product-compare-editor-wave.test.tsx`
 - `tests/unit/commerce/commerceWidgetRuntime.test.ts`
+- Media service/storage tests when media URL hydration changes.
 - `tests/vitest/widgets/widgetSafeHref.test.ts` when safe href behavior changes.
 
 ## Implementation Pseudocode
@@ -90,8 +104,27 @@ function normalizeProductCompareHeaderOptions(value: unknown): ProductCompareHea
   };
 }
 
+async function enrichCompareRowsWithMediaAndLinks(products: CommerceProduct[]) {
+  return Promise.all(
+    products.map(async (product) => {
+      const primaryMedia = await resolvePublicMediaForProduct(product.mediaIds[0]);
+      return {
+        ...baseCompareRow(product),
+        productHref: resolveCommerceProductHref(product.slug),
+        imageUrl: primaryMedia?.url ?? null,
+        imageAlt: primaryMedia?.alt ?? product.title,
+      };
+    })
+  );
+}
+
+function resolveCommerceProductHref(slug: string, options: CommerceProductLinkOptions) {
+  if (!options.enabled || !options.basePath) return null;
+  return joinSafeCommerceProductPath(options.basePath, slug);
+}
+
 function renderProductHeader(row: CommerceWidgetRuntimeCompareRow, options: HeaderOptions) {
-  const href = normalizeWidgetSafeHref(row.productHref ?? productHrefFromSlug(row.slug));
+  const href = normalizeWidgetSafeHref(row.productHref);
   return (
     <div>
       {options.showImages && row.imageUrl ? <img src={row.imageUrl} alt={row.imageAlt ?? row.title} /> : null}
@@ -105,6 +138,8 @@ function renderProductHeader(row: CommerceWidgetRuntimeCompareRow, options: Head
 Error handling:
 
 - Missing media renders the existing text-only header.
+- Missing public commerce product-route ownership renders text-only titles and
+  disables link/CTA output; do not guess a route from slug alone.
 - Invalid product hrefs normalize to no link and no CTA.
 - `checkout_redirect` stays disabled unless an existing backend-owned checkout
   adapter provides a safe public read/navigation contract.
@@ -113,6 +148,9 @@ Regression shape:
 
 - Renderer tests prove image alt text, safe title links, and no-link fallback.
 - Runtime tests prove compare rows include only public media/link fields.
+- Media/link tests prove image URLs come from the storage-backed media owner and
+  product links come from the explicit commerce route owner or render disabled
+  when that route is absent.
 - Editor tests prove header options normalize and render previews without raw
   URL/script fields.
 

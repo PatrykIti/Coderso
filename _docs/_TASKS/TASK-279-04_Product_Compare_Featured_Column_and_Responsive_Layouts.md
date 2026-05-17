@@ -63,19 +63,32 @@ type ProductCompareLayout = {
   density?: "comfortable" | "compact";
 };
 
-function normalizeFeaturedProductId(value: unknown, rows: CommerceWidgetRuntimeCompareRow[]) {
+function normalizeFeaturedProductId(value: unknown) {
   const candidate = toText(value);
+  return candidate.length > 0 ? candidate : "";
+}
+
+function resolveFeaturedProductId(
+  candidate: string,
+  rows: CommerceWidgetRuntimeCompareRow[]
+) {
+  if (!candidate) return "";
   return rows.some((row) => row.id === candidate) ? candidate : "";
 }
 
 function ProductCompareBlock({ data, variant }: Props) {
   const normalized = normalizeProductCompareData(data);
+  const rows = normalized.resolved?.rows ?? [];
+  const featuredProductId = resolveFeaturedProductId(
+    normalized.layout?.featuredProductId ?? "",
+    rows
+  );
   if (variant === "cards") return <ProductCompareCards data={normalized} />;
   return (
     <ScrollableCompareTable
-      rows={normalized.resolved?.rows ?? []}
+      rows={rows}
       stickyHeader={normalized.layout?.stickyHeader === true}
-      featuredProductId={normalized.layout?.featuredProductId}
+      featuredProductId={featuredProductId}
       density={normalized.layout?.density ?? "comfortable"}
     />
   );
@@ -85,7 +98,10 @@ function ProductCompareBlock({ data, variant }: Props) {
 Error handling:
 
 - Unknown variants fall back to `matrix`.
-- Missing featured product ID renders no highlighted column.
+- Empty featured product ID renders no highlighted column.
+- Unknown-but-nonempty featured product IDs are preserved in normalized widget
+  data because admin canvas can have empty `resolved.rows`; highlight rendering
+  only activates after runtime resolution confirms a matching row.
 - Sticky header must disable gracefully in layouts where it harms mobile or
   keyboard navigation.
 
@@ -96,6 +112,8 @@ Regression shape:
   `tabindex`, caption, scope, and visible product context.
 - Editor wave tests prove variant previews, featured product selection, and
   density/sticky controls are bounded and do not overwrite selected products.
+- Normalizer tests prove a configured featured product ID is not dropped just
+  because admin preview has not resolved rows yet.
 
 ## Security Contract
 
