@@ -263,7 +263,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-267-06 | Feature Grid CTA Enablement, Target, and Rich Description Authoring | Medium | Large | Add explicit CTA enablement, safe target choice, and bounded rich description authoring after TASK-256 link safety |
 | TASK-267-07 | Feature Grid Wizard Guidance and Editor Entry Flow | Medium | Medium | Add Wizard scope guidance and decide first-open flow after Visual expansion |
 | TASK-267-08 | Feature Grid Report, Docs, Changelog, and Closure | Medium | Medium | Refresh Feature Grid report/docs/changelog/board and final validation evidence |
-| TASK-266 | FAQ Accordion Widget Playwright Product Followups | High | Very Large | FAQ-only follow-up family for `REPORT_FAQ_ACCORDION_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-266-01 | FAQ Accordion Layout Typography and Motion Controls | High | Large | Add FAQ-owned max-width, alignment, padding, text colors, radius, border-width, title size, and motion controls |
 | TASK-266-02 | FAQ Accordion Rich Answers and Item Icon Model | High | Large | Add safe bounded rich-answer formatting, per-item icons, and plain-text extraction for SEO |
 | TASK-266-03 | FAQ Accordion SEO Structured Data Contract | High | Medium | Add optional FAQPage JSON-LD output derived from normalized safe FAQ data |
@@ -342,6 +341,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-293 | FAQ Accordion Shared Contract Residuals | High | Large | In progress: FAQ chevron/ARIA, spacing guard/border collapse, and clear/token adoption residuals are being repaired outside TASK-266 so the widget family stays product-scoped |
+| TASK-266 | FAQ Accordion Widget Playwright Product Followups | High | Very Large | In progress: FAQ-local product/editor/SEO follow-ups now depend on TASK-293 for the still-live shared residual rows before the family can close cleanly |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |

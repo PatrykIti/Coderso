@@ -26,9 +26,10 @@ In scope:
 - compact icon-forward move/remove/add controls with accessible labels;
 - variant preview miniatures that explain single-column, two-column, and compact
   layouts visually;
-- drag/drop reorder if it can be implemented locally in
-  `FaqAccordionEditors.tsx` without adding a shared DnD framework;
-- bounded bulk delete only if it stays local, accessible, and easy to test.
+- local native drag/drop reorder with keyboard-safe Move Up/Down fallback and
+  no new shared DnD framework;
+- bounded bulk delete that previews the selected questions and never allows the
+  final remaining FAQ item to be removed.
 
 Out of scope:
 
@@ -44,12 +45,10 @@ Out of scope:
 - [ ] Replace long text-only move/remove controls with icon+tooltip or compact
   accessible buttons following existing admin UI patterns.
 - [ ] Add small static variant preview miniatures inside `VariantCards`.
-- [ ] Evaluate whether native drag/drop reorder can be implemented locally with
-  keyboard-safe fallbacks. If not, document deferral in TASK-266-06 and keep
-  Move Up/Down as the supported control.
-- [ ] Evaluate bounded bulk delete. If implemented, keep a preview of selected
-  questions and prevent deleting all items. If not, document deferral in
-  TASK-266-06.
+- [ ] Implement local native drag/drop reorder with keyboard-safe Move Up/Down
+  fallback and direct test coverage.
+- [ ] Implement bounded bulk delete with selected-question preview and a guard
+  that always leaves at least one FAQ item.
 
 ## Files to Change
 
@@ -90,7 +89,7 @@ function FaqVariantPreview({ variant }: { variant: FaqAccordionVariantId }) {
 }
 ```
 
-Optional local drag/drop:
+Local drag/drop:
 
 ```tsx
 function handleDrop(fromIndex: number, toIndex: number) {
@@ -120,10 +119,11 @@ No API routes are added.
 - `bun run test:vitest -- tests/vitest/ui/faq-accordion-editor-wave.test.tsx`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- If this leaf is committed or moved to `Done` separately from TASK-266-06,
-  also run root `bun run lint`, the targeted Vitest/Bun lane above,
-  `bun run scan:security:strict`, and `bun run precommit`; otherwise keep this
-  leaf open until TASK-266-06 runs the final family gate.
+- Before any manual commit that includes this leaf, also run:
+  - `bun run lint`
+  - `bun run gates:coderso`
+  - `bun run scan:security:strict`
+  - `bun run precommit`
 
 ## Documentation Updates Required
 
@@ -142,5 +142,5 @@ No API routes are added.
 - Item action controls remain compact and accessible in the right inspector.
 - Variant choices include a visual preview that does not depend on public
   runtime screenshots.
-- Drag/drop and bulk actions are either implemented with tests or explicitly
-  deferred with reasons in TASK-266-06.
+- Drag/drop and bulk actions are implemented locally with tests and keep the
+  min-one-item FAQ guard intact.

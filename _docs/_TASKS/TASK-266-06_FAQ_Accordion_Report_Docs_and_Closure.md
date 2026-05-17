@@ -5,7 +5,7 @@
 **Priority:** Medium
 **Category:** QA + Documentation + Changelog
 **Estimated Effort:** Medium
-**Dependencies:** TASK-266-01, TASK-266-02, TASK-266-03, TASK-266-04, TASK-266-05
+**Dependencies:** TASK-293, TASK-266-01, TASK-266-02, TASK-266-03, TASK-266-04, TASK-266-05
 **Status:** To Do
 
 ---
@@ -72,12 +72,18 @@ Report closure table:
 |---|---|---|---|---|
 | W9 SEO JSON-LD | fixed | TASK-266-03 | `bun run test:vitest -- tests/vitest/widgets/faqAccordion.test.tsx` | JSON-LD enabled/disabled cases covered. |
 | C1 single-open | TASK-256-owned | TASK-256-06-03 | <TASK-256 evidence> | Not duplicated by TASK-266. |
+| C2 chevron + ARIA residuals | TASK-293-owned | TASK-293 | <TASK-293 evidence> | Shared FAQ residuals stay outside TASK-266 leaves. |
 ```
 
 Closure helper shape:
 
 ```ts
-type FaqReportStatus = "fixed" | "task-256-owned" | "deferred" | "future-scope";
+type FaqReportStatus =
+  | "fixed"
+  | "task-256-owned"
+  | "task-293-owned"
+  | "deferred"
+  | "future-scope";
 
 function classifyFaqClosureRow(row: FaqReportFinding): FaqReportStatus {
   if (implementedByTask266(row)) return "fixed";
@@ -125,9 +131,9 @@ No API routes are added by this closure task.
   - `bun run lint`
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`
-  - `bun run gates:coderso`
-  - `bun run scan:security:strict`
-  - `bun run precommit`
+- `bun run gates:coderso`
+- `bun run scan:security:strict`
+- `bun run precommit`
 - For docs-only status updates before implementation, run `git diff --check`.
 
 ## Documentation Updates Required

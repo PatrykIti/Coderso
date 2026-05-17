@@ -43,7 +43,7 @@ Out of scope:
 - [ ] Use TASK-266-02 plain-text extraction for rich answers.
 - [ ] Render a single `<script type="application/ld+json">` only when enabled
   and at least one normalized Q/A pair is non-empty.
-- [ ] Add Visual or Advanced editor control with copy that explains the public
+- [ ] Add a Visual editor control with copy that explains the public
   output without exposing implementation details.
 
 ## Files to Change
@@ -127,10 +127,11 @@ No API routes are added.
 - `bun test tests/unit/widgets/validator.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- If this leaf is committed or moved to `Done` separately from TASK-266-06,
-  also run root `bun run lint`, the targeted Vitest/Bun lane above,
-  `bun run scan:security:strict`, and `bun run precommit`; otherwise keep this
-  leaf open until TASK-266-06 runs the final family gate.
+- Before any manual commit that includes this leaf, also run:
+  - `bun run lint`
+  - `bun run gates:coderso`
+  - `bun run scan:security:strict`
+  - `bun run precommit`
 
 ## Documentation Updates Required
 

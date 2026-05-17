@@ -77,7 +77,12 @@ function renderFaqAnswer(item: FaqAccordionItem) {
   return renderFaqMarkdownNodes(item.answer ?? "", {
     allowedInline: ["strong", "em", "code", "a"],
     allowedBlocks: ["p", "ul", "ol", "li"],
-    sanitizeHref: normalizeFaqAnswerHref,
+    sanitizeHref: (href) =>
+      normalizeWidgetSafeHref(href, {
+        allowRelative: true,
+        allowHash: true,
+        allowHttp: true,
+      }),
     allowRawHtml: false,
   });
 }
@@ -144,10 +149,11 @@ No API routes are added.
   long hrefs, and JSON-LD text truncation/omission policy.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- If this leaf is committed or moved to `Done` separately from TASK-266-06,
-  also run root `bun run lint`, the targeted Vitest/Bun lane above,
-  `bun run scan:security:strict`, and `bun run precommit`; otherwise keep this
-  leaf open until TASK-266-06 runs the final family gate.
+- Before any manual commit that includes this leaf, also run:
+  - `bun run lint`
+  - `bun run gates:coderso`
+  - `bun run scan:security:strict`
+  - `bun run precommit`
 
 ## Documentation Updates Required
 
