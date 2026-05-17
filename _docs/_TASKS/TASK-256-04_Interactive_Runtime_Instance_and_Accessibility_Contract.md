@@ -52,6 +52,7 @@ leaves expand it.
 
 | File | Lines | Required change |
 |---|---:|---|
+| `core/widgets/core/widgetInstanceIds.ts` | new file | Own `createWidgetInstanceId`, `scopedId`, and sanitization rules so tabs, toggle, accordion, FAQ, and pricing do not hand-roll incompatible ID formats. |
 | `core/widgets/core/tabs.tsx` | 271-371 | Make script binding idempotent per root and safe across repeated renders/navigation. |
 | `core/widgets/core/tabs.tsx` | 432-505 | Prefix `tabs-trigger-*` and `tabs-panel-*` IDs with a root instance ID and rename legacy external-project `data-*`/global binding names to the `data-coderso-*` namespace. |
 | `core/widgets/core/toggleBlock.tsx` | 141-250 | Make script binding idempotent per root and safe across repeated renders/navigation. |
@@ -61,6 +62,7 @@ leaves expand it.
 | `core/widgets/core/faqAccordion.tsx` | 316-365 | Add section labelling, summary/content IDs, visible expand indicator, and single-open behavior if `allowMultipleOpen=false`. |
 | `core/widgets/core/pricingPlans.tsx` | 682-727 | Make billing toggle interactive if it remains rendered as a toggle; otherwise downgrade to static copy. Add table/plan ARIA where missing. |
 | `core/widgets/core/divider.tsx` | separator render | Add appropriate `role="separator"` or `aria-hidden` behavior depending on labelled vs decorative variants. |
+| `tests/vitest/widgets/widgetInstanceIds.test.ts` | new suite | Assert deterministic IDs, unsafe character normalization, block-id fallback behavior, and descendant scoping. |
 
 Timeline-specific `core/widgets/core/timeline.tsx` ARIA implementation is
 intentionally not in this file list; TASK-291-03 owns those concrete renderer
@@ -144,16 +146,26 @@ No API routes are added.
 - `bun run test:vitest -- tests/vitest/widgets/accordionWidget.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/faqAccordion.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/pricingPlans.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/widgetInstanceIds.test.ts`
 - Timeline-specific renderer tests run through TASK-291-03 when that physical
   leaf implements `core/widgets/core/timeline.tsx` changes.
 - `bun run test:vitest -- tests/vitest/widgets/divider.test.tsx`
 - Add duplicate-ID assertions for rendering two instances of each interactive
   widget on one page.
-- Add keyboard/ARIA assertions for tabs and toggle block.
+- Add happy-dom DOM execution assertions for tabs, toggle block, accordion,
+  FAQ, and pricing runtime scripts so idempotent binding and keyboard behavior
+  are exercised, not only asserted through static `renderToString` output.
+- Add keyboard/ARIA assertions for tabs and toggle block, including arrow-key
+  navigation, active state synchronization, and `aria-controls`/`aria-labelledby`
+  relationships after the runtime script runs.
 - Add pricing/FAQ tests for interactive behavior if those controls remain
-  interactive.
+  interactive; otherwise assert that the rendered output is static and does not
+  expose an inert control.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso`
+- `bun run scan:security:strict`
+- `bun run precommit`
 
 ## Documentation Updates Required
 

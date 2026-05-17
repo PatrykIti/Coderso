@@ -27,7 +27,8 @@ This task owns marketing/content shared-contract repairs for report evidence in:
 - `testimonials`
 - `pricing-plans`
 - `faq-accordion`
-- `cta-banner`
+- `cta-banner` only for generic TASK-256 Clear classification and any reusable
+  safe-link helper consumed by TASK-263
 - `logo-cloud`
 - `gallery-mosaic`
 - `stats-kpi`
@@ -47,7 +48,9 @@ owner/docs/tests.
 - `_docs/PLAYWRIGHT/REPORT_TESTIMONIALS_WIDGET.md:136-180,291-304`
 - `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md:154-200,206-236,286-294,320-347`
 - `_docs/PLAYWRIGHT/REPORT_FAQ_ACCORDION_WIDGET.md:97-99,119,126-127,141-145,179-185,303-305,310-311,328-338`
-- `_docs/PLAYWRIGHT/REPORT_CTA_BANNER_WIDGET.md:132-161,175-185,223-241`
+- `_docs/PLAYWRIGHT/REPORT_CTA_BANNER_WIDGET.md:162-164,199-200` only as
+  generic Clear/safe-link evidence; CTA-specific bug, UX, accessibility, and
+  product rows are routed to TASK-263.
 - `_docs/PLAYWRIGHT/REPORT_LOGO_CLOUD_WIDGET.md:38-116,134-153`
 - `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md:54-94,195-225,239-243,274-281,342-347`
 - `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md:42-116,170-206`
@@ -68,15 +71,16 @@ owner/docs/tests.
 | Broken/misleading existing controls | Fix in the relevant child leaf when the drift matches a TASK-256 shared contract | Widget editor/runtime owner | None |
 | Public link/media security and ARIA | Fix in the relevant child leaf through shared safe-output/accessibility contracts | Widget renderer plus editor tests | None |
 | Current Gallery Mosaic renderer/editor bugs that make existing controls misleading, including feature-left one-item empty column, redundant row-span cleanup, resolver readability, overlay alpha loss, media type ambiguity, Wizard video scope, link safety, and current alt/figure/video-title semantics | Fix in TASK-256-06-02 only for the current contract fields already named by that leaf | `GalleryMosaicEditors.tsx`, `galleryMosaic.tsx`, `widgetSafeHref.ts` | Product additions such as Visual per-item picker, poster image, per-item ratio, object-position, lightbox, motion, responsive layout presets, and import/export stay in TASK-270 |
+| CTA Banner report rows | Classify generic Clear semantics through TASK-256-02 and reusable target/rel helper behavior through TASK-256-06-02 only when the helper is shared across widgets | `ClearableFields.tsx`/TASK-256-02 and `widgetSafeHref.ts`/TASK-256-06-02 | CTA-specific empty badge, description color, focus styling, action labels, URL feedback, layout, media, and product controls stay in TASK-263. |
 | Page-shell issues found while testing a widget, such as history auth, toolbar aria, discard, or viewport controls | Do not patch inside widget leaves | `core/admin/ui/pages/PageEditor.tsx`, `core/admin/ui/pages/PageRevisionDrawer.tsx`, shared preview toolbar owners | TASK-256-08 must create a separate page-shell follow-up before closure if still reproducible |
-| Major new features such as drag-and-drop, true carousel/lightbox, marquee, rich text, per-item advanced typography, or SEO schema | Defer unless needed to make an existing control truthful | Future product task | TASK-256-08 records future scope |
+| Major new features such as drag-and-drop, true carousel/lightbox, marquee, rich text, per-item advanced typography, or SEO schema | Defer unless needed to make an existing control truthful | Existing TASK-263/TASK-266/TASK-267/TASK-270/TASK-274/TASK-287/TASK-289/TASK-290/TASK-291 follow-up families where applicable | TASK-256-08 records future scope without creating duplicate tasks |
 
 ## Files to Change
 
 | Child | Evidence scope | Primary owner files | Required shared-contract change |
 |---|---|---|---|
 | TASK-256-06-01 | `feature-grid`, `stats-kpi` | `FeatureGridEditors.tsx`, `featureGrid.tsx`, `StatsKpiEditors.tsx`, `statsKpi.tsx` | Fix truthful columns/count/divider controls, variant-bound item counts, grid layout holes, clear controls, and KPI ARIA. |
-| TASK-256-06-02 | `cta-banner`, `logo-cloud`, `gallery-mosaic` | `CtaBannerEditors.tsx`, `ctaBanner.tsx`, `LogoCloudEditors.tsx`, `logoCloud.tsx`, `GalleryMosaicEditors.tsx`, `galleryMosaic.tsx` | Fix empty badges, clear controls, link/media security, alt/ARIA, hover/focus behavior, Gallery Mosaic feature-left one-item handling, and media type truthfulness for current fields only. |
+| TASK-256-06-02 | `logo-cloud`, `gallery-mosaic`; CTA only as shared-helper classification evidence | `widgetSafeHref.ts`, `LogoCloudEditors.tsx`, `logoCloud.tsx`, `GalleryMosaicEditors.tsx`, `galleryMosaic.tsx` | Fix shared link/media security, alt/ARIA, hover behavior, Gallery Mosaic feature-left one-item handling, and media type truthfulness for current fields only. Do not implement CTA-specific rows here; TASK-263 owns CTA editor/runtime adoption and product behavior. |
 | TASK-256-06-03 | `hero`, `pricing-plans`, `faq-accordion`, `testimonials`; Timeline only through exact shared TASK-256 prerequisites | `HeroEditors.tsx`, `hero.tsx`, `PricingPlansEditors.tsx`, `pricingPlans.tsx`, `FaqAccordionEditors.tsx`, `faqAccordion.tsx`, `TestimonialsEditors.tsx`, `testimonials.tsx` | Fix residual contract bugs around media/alt/link safety, pricing toggle/semantics, FAQ single-open/ARIA, and testimonial media/slider scope. Timeline editor/runtime product work is TASK-291-owned; TASK-256 only supplies exact shared owners such as TASK-256-01 and TASK-256-04. |
 | TASK-256-06-04 | `team` | `TeamEditors.tsx`, `team.tsx` | Fix spotlight columns truthfulness, social link safety, section/header ARIA, photo lazy loading, and Wizard/profile UX drift. |
 
@@ -189,14 +193,20 @@ No API routes are added.
   may reference them only as exact shared TASK-256 prerequisite proof.
 - Run targeted Vitest suites, relevant Bun validator/registry suites, lint, and
   type lint.
+- Run `bun run gates:coderso` for the completed implementation leaf.
+- Run `bun run scan:security:strict`.
+- Run `bun run precommit` before any manual commit or task closure commit.
 
 ## Documentation Updates Required
 
 - Update touched widget docs under `_docs/_WIDGETS/*.md`.
 - Update `_docs/WIDGETS.md` only for shared contract adjustments.
 - Update Playwright reports with fixed/deferred evidence.
-- Add follow-up tasks for deferred product expansions that are not contract
-  repairs.
+- Reference existing follow-up task families for deferred product expansions
+  before creating new files: CTA `TASK-263`, Gallery Mosaic `TASK-270`, Logo
+  Cloud `TASK-274`, FAQ `TASK-266`, Feature Grid `TASK-267`, Stats KPI
+  `TASK-287`, Team `TASK-289`, Testimonials `TASK-290`, Timeline `TASK-291`.
+  Create a new follow-up only if no existing physical family owns the row.
 
 ## Changelog Policy
 

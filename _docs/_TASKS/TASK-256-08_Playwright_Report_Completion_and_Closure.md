@@ -36,15 +36,6 @@ that are not contract repairs.
 - `_docs/PLAYWRIGHT/REPORT_PRODUCT_GALLERY_WIDGET.md:3` is completed, but its
   commerce/runtime findings still need fixed/deferred closure classification
   against the shared widget contracts before any product expansion is opened.
-- `_docs/PLAYWRIGHT/REPORT_LISTING_FILTERS_WIDGET.md:3` is completed, but its
-  dynamic/runtime findings still need fixed/deferred closure classification
-  against the shared widget contracts before any product expansion is opened.
-- `_docs/PLAYWRIGHT/REPORT_POSTS_FEED_WIDGET.md:3` is completed, but its
-  dynamic/runtime findings still need fixed/deferred closure classification
-  against the shared widget contracts before any product expansion is opened.
-- `_docs/PLAYWRIGHT/REPORT_ENTRY_TEASER_WIDGET.md:3` is completed, but its
-  dynamic/runtime findings still need fixed/deferred closure classification
-  against the shared widget contracts before any product expansion is opened.
 - `_docs/PLAYWRIGHT/REPORT_PRODUCT_TABLE_WIDGET.md:3` is completed, but its
   commerce/runtime findings still need fixed/deferred closure classification
   against the shared widget contracts before any product expansion is opened.
@@ -88,7 +79,9 @@ that are not contract repairs.
   report, such as TASK-256-01 or TASK-256-04, but must not refresh or close the
   whole Timeline report.
 - The following dynamic report findings still need fixed/deferred status
-  refreshed after implementation:
+  refreshed after implementation. The late completed dynamic reports are listed
+  here once and route through existing follow-up families before any new task is
+  created:
   `_docs/PLAYWRIGHT/REPORT_CONTENT_LIST_WIDGET.md:3`,
   `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:3`,
   `_docs/PLAYWRIGHT/REPORT_POSTS_FEED_WIDGET.md:3`,
@@ -106,7 +99,20 @@ that are not contract repairs.
   current TASK-256 executable leaves.
 - [ ] Add or reference follow-up task files for deferred report rows outside the
   current TASK-256 executable leaves. Footer-specific rows should reference
-  TASK-268; newly created follow-ups must also be added to
+  TASK-268. Existing physical follow-up families must be referenced before a
+  new task is opened: Accordion `TASK-257`, Appointment Form `TASK-258`,
+  Booking Calendar `TASK-259`, Compare Timeline `TASK-260`, Contact
+  `TASK-261`, Content List `TASK-262`, CTA Banner `TASK-263`, Divider
+  `TASK-264`, Entry Teaser `TASK-265`, FAQ `TASK-266`, Feature Grid
+  `TASK-267`, Footer `TASK-268`, Form Embed `TASK-269`, Gallery Mosaic
+  `TASK-270`, Grid Columns `TASK-271`, Hero `TASK-272`, Listing Filters
+  `TASK-273`, Logo Cloud `TASK-274`, Navigation `TASK-275`, Newsletter
+  `TASK-276`, Posts Feed `TASK-277`, Pricing Plans `TASK-278`, Product Compare
+  `TASK-279`, Product Gallery `TASK-280`, Product Table `TASK-281`, Rich Text
+  Section `TASK-282`, Section `TASK-283`, Spacer `TASK-284`, Split Layout
+  `TASK-285`, Stack `TASK-286`, Stats KPI `TASK-287`, Tabs `TASK-288`, Team
+  `TASK-289`, Testimonials `TASK-290`, Timeline `TASK-291`, and Toggle Block
+  `TASK-292`. Newly created follow-ups must also be added to
   `_docs/_TASKS/README.md` with updated board statistics.
 - [ ] Add a page-shell follow-up task if Hero report findings around history
   auth, preview toolbar, discard, or viewport controls are still reproducible
@@ -124,7 +130,7 @@ that are not contract repairs.
 | `_docs/PLAYWRIGHT/REPORT_*_WIDGET.md` | Add final textual admin/frontend evidence, fixed/deferred status, and run URLs/log snippets where applicable. Screenshot filenames may remain as local capture labels, but PNG files under `_docs/PLAYWRIGHT` are temporary and must not be committed. |
 | `_docs/_WIDGETS/*.md` | Update widget contracts for changed schema/editor/runtime behavior. |
 | `_docs/WIDGETS.md` | Update only if shared contracts changed. |
-| `_docs/WIDGET_PACK_MATRIX.md` | Update only if readiness/completeness changes. |
+| `core/widgets/modulePackMatrix.ts` and `_docs/WIDGET_PACK_MATRIX.md` | Update both only if readiness/completeness changes; do not update docs without the source pack contract owner. |
 | `_docs/_TASKS/TASK-256*.md` | Update status, dates, validation evidence, and remaining follow-ups. |
 | `_docs/_TASKS/README.md` | Move TASK-256 rows from To Do/In Progress to Done, add any newly created follow-up task rows, and update statistics. |
 | `_docs/_CHANGELOG/*.md` and `_docs/_CHANGELOG/README.md` | Add final TASK-256 changelog entry. |
@@ -189,10 +195,12 @@ No API routes are added by this closure task.
 
 - Run every targeted suite listed in completed TASK-256 leaves.
 - Late-report closure must follow the TASK-256-07 execution routing matrix:
-  when a report row is classified as `future physical task`, create that task
-  with owner/test rows before marking it deferred; when a row is classified as
-  fixed by an existing TASK-256 physical leaf, run that leaf's exact suites plus
-  the matching report-group smoke listed below.
+  when a report row is classified as `future physical task`, first reference
+  the existing TASK-257 through TASK-292 follow-up family that owns it; create a
+  new task with owner/test rows only if no existing family applies before
+  marking it deferred. When a row is classified as fixed by an existing
+  TASK-256 physical leaf, run that leaf's exact suites plus the matching
+  report-group smoke listed below.
 - Forms/public-write report smoke, when TASK-256 marks any form row fixed:
   - `bun run test:vitest -- tests/vitest/widgets/contact.test.tsx`
   - `bun run test:vitest -- tests/vitest/widgets/newsletter.test.tsx`

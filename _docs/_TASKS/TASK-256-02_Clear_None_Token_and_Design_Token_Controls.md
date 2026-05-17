@@ -40,14 +40,15 @@ The reports show repeated drift from the documented contract:
   `_docs/PLAYWRIGHT/REPORT_FAQ_ACCORDION_WIDGET.md:126-127,183-185,310-311`
   report missing clear controls for border/divider-like fields and
   CSS-variable color-picker fallback drift.
-- `_docs/PLAYWRIGHT/REPORT_CONTENT_LIST_WIDGET.md:77,147,160,269-280` reports
-  a missing `textColor` clear control.
+- `_docs/PLAYWRIGHT/REPORT_CONTENT_LIST_WIDGET.md:81,269-280` reports a
+  missing `textColor` clear control and its closure priority.
 - `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md:179-183` reports missing
   `highlightRing` clear.
 - `_docs/PLAYWRIGHT/REPORT_FEATURE_GRID_WIDGET.md:275-276` reports missing
   `borderColor` clear.
-- `_docs/PLAYWRIGHT/REPORT_CTA_BANNER_WIDGET.md:155-161` reports missing clear
-  controls for CTA banner text/button color fields.
+- `_docs/PLAYWRIGHT/REPORT_CTA_BANNER_WIDGET.md:162-164` reports missing clear
+  controls for CTA banner text/button color fields. TASK-256-02 owns only the
+  shared Clear semantics; broader CTA product rows remain TASK-263-owned.
 - `_docs/PLAYWRIGHT/REPORT_TOGGLE_BLOCK_WIDGET.md:43-52,149,165-166`
   reports helper-text clear drift and missing clear controls for `borderColor`
   and `accentColor`.
@@ -84,13 +85,26 @@ The reports show repeated drift from the documented contract:
 | `core/admin/ui/widgets/editors/ContentListEditors.tsx` | style controls | Add clear control for `textColor` and hide token controls with no runtime effect. |
 | `core/admin/ui/widgets/editors/PricingPlansEditors.tsx` | 965-971 | Add `onClear` for `highlightRing`. |
 | `core/admin/ui/widgets/editors/FeatureGridEditors.tsx` | 668-683 | Add `onClear` for `borderColor` if the normalizer/render contract supports omission. |
-| `core/admin/ui/widgets/editors/CtaBannerEditors.tsx` | 413-486 | Add `onClear` for text, badge text, primary/secondary button text, and border-like color fields where omission is supported. |
+| `core/admin/ui/widgets/editors/CtaBannerEditors.tsx` | 413-486 | Use only as shared Clear evidence if TASK-256-02 introduces a reusable clearable-field hook consumed across widgets; route CTA-specific field adoption, action labels, badge behavior, and focus styling to TASK-263-03. |
 | `core/admin/ui/widgets/editors/ToggleBlockEditors.tsx` | 102-114, 209-219, 262-302 | Add clear/visibility handling for helper text and use existing clear helpers for `borderColor` and `accentColor`. |
 | `core/widgets/core/toggleBlock.tsx` | 91-104, 298-345 | Preserve an intentional hidden helper state separately from missing legacy data; keep omitted style fields falling back through defaults. |
 | `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx` | 92-98, 178, 720-832 | Preserve `rgba(...)`/CSS variable overlay values and make duplicated Advanced style controls explicitly technical or read-only. |
 | `core/admin/ui/widgets/editors/LogoCloudEditors.tsx` | 510-594, 616-694 | Gate hoverColor when grayscale is inactive, keep logo-height `none` truthful, and make duplicated Advanced token controls explicit. |
 | `core/admin/ui/widgets/editors/StatsKpiEditors.tsx` | 570-713 | Preserve CSS variable color values and make duplicated Advanced spacing/alignment/color tokens explicit. |
-| `core/widgets/core/*` clearable style owners | per widget | Normalize omitted style fields through `resolveClearableStyleValue` and `compactStyle` where needed. |
+| `core/widgets/core/divider.tsx` | style render | Keep omitted spacing/color values falling back through defaults without serializing fake clear sentinels. |
+| `core/widgets/core/spacer.tsx` | style render | Keep omitted height/custom values falling back through defaults while preserving `0` token compatibility. |
+| `core/widgets/core/splitLayout.tsx` | style render | Keep omitted gap values and explicit zero/off tokens distinguishable in runtime output. |
+| `core/widgets/core/tabs.tsx` | style render | Normalize omitted inactive/active style fields through shared clearable style helpers where needed. |
+| `core/widgets/core/accordion.tsx` | style render | Normalize omitted border/summary style fields through shared clearable style helpers where needed. |
+| `core/widgets/core/faqAccordion.tsx` | style render | Normalize omitted border/divider style fields through shared clearable style helpers where needed. |
+| `core/widgets/core/contentList.tsx` | style render | Keep omitted `textColor` falling back through defaults and avoid inline styles for cleared values. |
+| `core/widgets/core/pricingPlans.tsx` | style render | Keep omitted `highlightRing` falling back through defaults and avoid inline styles for cleared values. |
+| `core/widgets/core/featureGrid.tsx` | style render | Keep omitted `borderColor` falling back through defaults and avoid inline styles for cleared values. |
+| `core/widgets/core/ctaBanner.tsx` | shared Clear fallback only | Keep omitted CTA color fields falling back through defaults only if TASK-256-02 touches the generic Clear path; CTA-specific action, badge, focus, and layout product rows stay in TASK-263. |
+| `core/widgets/core/toggleBlock.tsx` | 91-104, 298-345 | Preserve an intentional hidden helper state separately from missing legacy data; keep omitted style fields falling back through defaults. |
+| `core/widgets/core/galleryMosaic.tsx` | overlay/style render | Preserve alpha/CSS variable overlay values and avoid hex-only clear sentinels. |
+| `core/widgets/core/logoCloud.tsx` | hover/style render | Keep hover and height token output truthful when editor controls are gated. |
+| `core/widgets/core/statsKpi.tsx` | style render | Preserve omitted/CSS variable style values and avoid duplicated inline style fallbacks. |
 
 ## Implementation Pseudocode
 
@@ -185,15 +199,23 @@ No API routes are added.
 - `bun run test:vitest -- tests/vitest/ui/content-list-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/pricing-plans-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/feature-grid-editor-wave.test.tsx`
-- `bun run test:vitest -- tests/vitest/ui/cta-banner-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/cta-banner-editor-wave.test.tsx` only
+  if the generic Clear helper is adopted in the CTA editor; CTA-only editor
+  regressions stay with TASK-263.
 - `bun run test:vitest -- tests/vitest/ui/toggle-block-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/logo-cloud-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/stats-kpi-editor-wave.test.tsx`
-- `bun run test:vitest -- tests/vitest/widgets/divider.test.tsx tests/vitest/widgets/spacer.test.tsx tests/vitest/widgets/splitLayout.test.tsx tests/vitest/widgets/tabs.test.tsx tests/vitest/widgets/accordionWidget.test.tsx tests/vitest/widgets/faqAccordion.test.tsx tests/vitest/widgets/pricingPlans.test.tsx tests/vitest/widgets/featureGrid.test.tsx tests/vitest/widgets/ctaBanner.test.tsx tests/vitest/widgets/toggleBlock.test.tsx tests/vitest/widgets/galleryMosaic.test.tsx tests/vitest/widgets/logoCloud.test.tsx tests/vitest/widgets/statsKpi.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/divider.test.tsx tests/vitest/widgets/spacer.test.tsx tests/vitest/widgets/splitLayout.test.tsx tests/vitest/widgets/tabs.test.tsx tests/vitest/widgets/accordionWidget.test.tsx tests/vitest/widgets/faqAccordion.test.tsx tests/vitest/widgets/pricingPlans.test.tsx tests/vitest/widgets/featureGrid.test.tsx tests/vitest/widgets/toggleBlock.test.tsx tests/vitest/widgets/galleryMosaic.test.tsx tests/vitest/widgets/logoCloud.test.tsx tests/vitest/widgets/statsKpi.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/ctaBanner.test.tsx` only if
+  TASK-256-02 changes shared Clear fallback behavior consumed by CTA Banner;
+  CTA-only runtime regressions stay with TASK-263.
 - `bun test tests/unit/widgets/validator.test.ts` if schemas/defaults change.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso`
+- `bun run scan:security:strict`
+- `bun run precommit`
 
 ## Documentation Updates Required
 

@@ -84,20 +84,21 @@ findings that must be classified before closure:
   implementation out of TASK-256.
 - [ ] Mark resolved/non-bug findings explicitly so they cannot silently re-enter
   implementation leaves.
-- [ ] Add future physical task files only when a deferred finding is
-  product-scope or is shared-contract drift that no current TASK-256 physical
-  leaf owns executably.
+- [ ] Reference existing physical follow-up families first (`TASK-257` through
+  `TASK-292`) when a deferred finding is product-scope or is shared-contract
+  drift that no current TASK-256 physical leaf owns executably; create a new
+  task only when no existing family owns the row.
 - [ ] Update TASK-256-08 with the final classification evidence before closure.
 
 ## Classification Matrix
 
 | Report group | Current TASK-256 executable route | Future family boundary |
 |---|---|---|
-| Form widgets: contact, newsletter, form-embed | Only rows that exactly match TASK-256-01 mode update, TASK-256-02 clear/token repair, or TASK-256-04 generic accessibility/state wiring already owned by those leaves. | Form `name`/autocomplete, consent/form containment, public submission anti-abuse, nonce, captcha, form-builder behavior, integrations, analytics, and double opt-in must become a future forms/public-write widget family. |
-| Booking widgets: booking-calendar, appointment-form | Only rows that exactly match TASK-256-03 placeholder gating or TASK-256-04 generic scoped runtime/a11y wiring already owned by those leaves. | Admin-preview vs public booking resolver parity, stale runtime errors, past-date safety, runtime request behavior, calendar UX, service pricing, and consent/captcha policy must become a future booking widget family. |
-| Shell/content composites: footer, compare-timeline, rich-text-section | Only rows that map to existing physical leaves with the exact owner file already named there. | Footer-specific product behavior is routed to TASK-268; Rich Text editor/WYSIWYG behavior, Compare Timeline product behavior, SEO schemas, drag/drop, and advanced typography must become future shell/content widget families. |
-| Commerce widgets: product-gallery, product-compare, product-table | Only rows that map to existing physical safe-output or accessibility leaves with the exact owner file already named there. | Catalog behavior, merchandising layouts, filters, product-table product scope, commerce runtime flows, and advanced commerce validation must become future commerce widget families. |
-| Dynamic widgets: content-list, navigation, posts-feed, entry-teaser, listing-filters | Current TASK-256 can use existing shared link/a11y/truthful-control leaves plus TASK-256-08 dynamic validation when the exact owner/test path is named. | Pagination widgets, taxonomy pickers, active chips, complex menu IA, broad content-query expansion, and dynamic runtime behavior outside current owners must become future dynamic content widget families. |
+| Form widgets: contact, newsletter, form-embed | Only rows that exactly match TASK-256-01 mode update, TASK-256-02 clear/token repair, or TASK-256-04 generic accessibility/state wiring already owned by those leaves. | Contact routes to TASK-261, Newsletter to TASK-276, and Form Embed to TASK-269. Create a new forms/public-write task only if a report row sits outside those existing families. |
+| Booking widgets: booking-calendar, appointment-form | Only rows that exactly match TASK-256-03 placeholder gating or TASK-256-04 generic scoped runtime/a11y wiring already owned by those leaves. | Appointment Form routes to TASK-258 and Booking Calendar to TASK-259. Create a new booking task only if a report row sits outside those existing families. |
+| Shell/content composites: footer, compare-timeline, rich-text-section | Only rows that map to existing physical leaves with the exact owner file already named there. | Footer-specific product behavior routes to TASK-268, Compare Timeline to TASK-260, and Rich Text Section to TASK-282. Create a new shell/content task only if a report row sits outside those existing families. |
+| Commerce widgets: product-gallery, product-compare, product-table | Only rows that map to existing physical safe-output or accessibility leaves with the exact owner file already named there. | Product Compare routes to TASK-279, Product Gallery to TASK-280, and Product Table to TASK-281. Create a new commerce task only if a report row sits outside those existing families. |
+| Dynamic widgets: content-list, navigation, posts-feed, entry-teaser, listing-filters | Current TASK-256 can use existing shared link/a11y/truthful-control leaves plus TASK-256-08 dynamic validation when the exact owner/test path is named. | Content List routes to TASK-262, Entry Teaser to TASK-265, Listing Filters to TASK-273, Navigation to TASK-275, and Posts Feed to TASK-277. Create a new dynamic task only if a report row sits outside those existing families. |
 
 Footer, Compare Timeline, and Rich Text Section reports enter TASK-256 only
 when a row maps to an existing physical TASK-256 owner. Safe link and media
@@ -117,11 +118,11 @@ TASK-256 physical leaf or must leave TASK-256 as a future physical family.
 
 | Report group | TASK-256 implementation route | Required closure output |
 |---|---|---|
-| Contact, Newsletter, Form Embed | Classification only unless a row is exactly a TASK-256-01 mode update, TASK-256-02 clear/token repair, or TASK-256-04 accessibility/runtime-state repair already covered by those physical leaf owners. Public submission, nonce, consent, autocomplete, and form-builder behavior must become a future forms/public-write widget task. | TASK-256-08 records fixed/deferred status and creates a future task with form widget owners/tests before marking any unowned row deferred. |
-| Appointment Form, Booking Calendar | Classification only unless a row is exactly a TASK-256-03 slot placeholder or TASK-256-04 scoped runtime/a11y repair already covered by those physical leaf owners. Booking service, past-date request safety, calendar UX, and runtime request behavior must become a future booking widget task. | TASK-256-08 records fixed/deferred status and creates a future task with booking widget, booking route, and booking service tests before marking any unowned row deferred. |
-| Footer, Compare Timeline, Rich Text Section | Classification only unless a row maps to an existing physical leaf with the exact owner file already named there. Footer-specific product behavior is now routed to TASK-268; Rich Text editing/WYSIWYG scope and Compare Timeline product behavior must become future shell/content widget tasks. | TASK-256-08 records fixed/deferred status and references TASK-268 for Footer-specific rows while creating future shell/content task files for other unowned rows. |
-| Product Gallery, Product Compare, Product Table | Classification only unless a row maps to an existing physical safe-output or accessibility leaf with the exact owner file already named there. Catalog, merchandising, filters, and commerce runtime behavior must become future commerce widget tasks. | TASK-256-08 records fixed/deferred status and creates future commerce widget tasks for unowned rows. |
-| Content List, Navigation, Posts Feed, Entry Teaser, Listing Filters | Classification plus the explicit dynamic/content validation in TASK-256-08. Any row outside current shared link/a11y/truthful-control owners becomes a future dynamic content widget task. | TASK-256-08 runs the dynamic/content validation commands and creates future dynamic task files for unowned rows. |
+| Contact, Newsletter, Form Embed | Classification only unless a row is exactly a TASK-256-01 mode update, TASK-256-02 clear/token repair, or TASK-256-04 accessibility/runtime-state repair already covered by those physical leaf owners. Public submission, nonce, consent, autocomplete, and form-builder behavior route to TASK-261, TASK-276, or TASK-269. | TASK-256-08 records fixed/deferred status and references the existing form follow-up family before creating any new task. |
+| Appointment Form, Booking Calendar | Classification only unless a row is exactly a TASK-256-03 slot placeholder or TASK-256-04 scoped runtime/a11y repair already covered by those physical leaf owners. Booking service, past-date request safety, calendar UX, and runtime request behavior route to TASK-258 or TASK-259. | TASK-256-08 records fixed/deferred status and references the existing booking follow-up family before creating any new task. |
+| Footer, Compare Timeline, Rich Text Section | Classification only unless a row maps to an existing physical leaf with the exact owner file already named there. Footer-specific product behavior routes to TASK-268, Rich Text editing/WYSIWYG scope to TASK-282, and Compare Timeline product behavior to TASK-260. | TASK-256-08 records fixed/deferred status and references existing shell/content follow-up families before creating any new task. |
+| Product Gallery, Product Compare, Product Table | Classification only unless a row maps to an existing physical safe-output or accessibility leaf with the exact owner file already named there. Catalog, merchandising, filters, and commerce runtime behavior route to TASK-280, TASK-279, or TASK-281. | TASK-256-08 records fixed/deferred status and references existing commerce follow-up families before creating any new task. |
+| Content List, Navigation, Posts Feed, Entry Teaser, Listing Filters | Classification plus the explicit dynamic/content validation in TASK-256-08. Any row outside current shared link/a11y/truthful-control owners routes to TASK-262, TASK-275, TASK-277, TASK-265, or TASK-273. | TASK-256-08 runs the dynamic/content validation commands and references existing dynamic follow-up families before creating any new task. |
 
 ## Files to Change
 
@@ -130,7 +131,7 @@ TASK-256 physical leaf or must leave TASK-256 as a future physical family.
 | `_docs/_TASKS/TASK-256_Widget_Shared_Contract_Playwright_Drift_Repair.md` | Keep the source report list complete and describe reports as evidence for shared contracts, not per-widget implementation families. |
 | `_docs/_TASKS/TASK-256-08_Playwright_Report_Completion_and_Closure.md` | Add final classification evidence and future task IDs for product-scope deferrals. |
 | `_docs/PLAYWRIGHT/REPORT_*_WIDGET.md` | During closure only: add textual fixed/deferred/not-reproducible status rows. |
-| Future `_docs/_TASKS/TASK-*.md` | Create only for deferred report rows outside the current TASK-256 executable leaves; include concrete owner/test rows and keep `_docs/_TASKS/README.md` statistics synchronized. |
+| Existing or future `_docs/_TASKS/TASK-*.md` | Reference existing TASK-257 through TASK-292 families first for deferred report rows outside the current TASK-256 executable leaves. Create a new physical task only when no existing family owns the row; include concrete owner/test rows and keep `_docs/_TASKS/README.md` statistics synchronized. |
 
 ## Implementation Pseudocode
 

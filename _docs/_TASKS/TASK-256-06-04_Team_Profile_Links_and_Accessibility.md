@@ -34,10 +34,10 @@ unless they are needed to fix a broken existing control.
 |---|---|---|---|
 | Spotlight columns selector has little/no effect | Fix or disable with clear variant context | `TeamEditors.tsx`, `team.tsx` | None |
 | Social links lack safe external-link behavior | Fix here | `team.tsx`, `widgetSafeHref.test.ts` | None |
-| Section lacks accessible label and hardcoded `h3` may break hierarchy | Fix here if current model can support it without breaking compatibility; otherwise document heading-level follow-up | `team.tsx` | TASK-256-08 creates follow-up if schema expansion is required |
+| Section lacks accessible label and hardcoded `h3` may break hierarchy | Fix here if current model can support it without breaking compatibility; otherwise document heading-level follow-up | `team.tsx` | TASK-256-08 references TASK-289 if schema expansion is required |
 | Photo URL validation and lazy loading | Fix here for lazy loading and safe editor feedback | `TeamEditors.tsx`, `team.tsx` | Media picker is future scope |
 | Member-count reduction data loss, social default `#`, and spotlight lead badge | Fix here because current controls can destroy data or mislead editors | `TeamEditors.tsx` | None |
-| Drag/drop, section background, CTA, contact buttons, department filters, contrast validator, and configurable lead member | Future product scope unless needed for existing-control truthfulness | Future widget task | TASK-256-08 records deferral |
+| Drag/drop, section background, CTA, contact buttons, department filters, contrast validator, and configurable lead member | Future product scope unless needed for existing-control truthfulness | `TASK-289` family | TASK-256-08 references TASK-289 instead of creating duplicate Team follow-ups |
 
 ## Sub-Tasks
 
@@ -128,6 +128,9 @@ No API routes are added.
 - `bun test tests/unit/widgets/validator.test.ts` if schemas/defaults change.
 - `bun test tests/unit/widgets/registry.test.ts` if registry/default wiring changes.
 - Run `bun --cwd core lint` and `bun --cwd core lint:types`.
+- Run `bun run gates:coderso` for the completed implementation leaf.
+- Run `bun run scan:security:strict`.
+- Run `bun run precommit` before any manual commit or task closure commit.
 
 ## Documentation Updates Required
 

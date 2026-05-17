@@ -169,6 +169,9 @@ No API routes are added.
 - `bun test tests/unit/widgets/validator.test.ts` if schemas/defaults change.
 - `bun test tests/unit/widgets/registry.test.ts` if registry/default wiring changes.
 - Run `bun --cwd core lint` and `bun --cwd core lint:types`.
+- Run `bun run gates:coderso` for the completed implementation leaf.
+- Run `bun run scan:security:strict`.
+- Run `bun run precommit` before any manual commit or task closure commit.
 
 ## Documentation Updates Required
 

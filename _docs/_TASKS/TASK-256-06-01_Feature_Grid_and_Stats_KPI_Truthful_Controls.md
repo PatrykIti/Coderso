@@ -38,11 +38,11 @@ runtime output that is semantically incomplete.
 | Feature Grid columns dropdown has no runtime effect | Fix or disable with explicit variant explanation | `FeatureGridEditors.tsx`, `featureGrid.tsx` | None |
 | Feature Grid variant/card count desync | Fix through TASK-256-01 atomic variant+data update | `FeatureGridEditors.tsx` | None |
 | Feature Grid external CTA missing rel | Fix through TASK-256-06-02 safe link renderer | `featureGrid.tsx`, `widgetSafeHref.ts`, `widgetSafeHref.test.ts` | None |
-| Feature Grid image media picker, drag/drop, rich text | Future product scope unless needed for broken existing control | Widget editor future task | TASK-256-08 creates task if retained |
+| Feature Grid image media picker, drag/drop, rich text | Future product scope unless needed for broken existing control | `TASK-267` family | TASK-256-08 references TASK-267 instead of creating duplicate Feature Grid follow-ups |
 | Stats KPI divider toggle only affects inline | Hide/disable outside inline or make renderer honor it | `StatsKpiEditors.tsx`, `statsKpi.tsx` | None |
 | Stats KPI cards grid holes | Fix deterministic grid class or expose a real columns option | `statsKpi.tsx` | None |
 | Stats KPI value-size, split secondary grid, section/article ARIA, and emoji semantics | Fix ARIA here; fix grid truthfulness here; defer typography controls if they add new schema scope | `statsKpi.tsx`, `StatsKpiEditors.tsx` | TASK-256-08 records typography follow-up if not fixed |
-| Stats KPI count-up/trend/per-item accent/CTA | Future product scope | Future task | TASK-256-08 records deferral |
+| Stats KPI count-up/trend/per-item accent/CTA | Future product scope | `TASK-287` family | TASK-256-08 references TASK-287 instead of creating duplicate Stats KPI follow-ups |
 
 ## Sub-Tasks
 
@@ -145,6 +145,9 @@ No API routes are added.
 - `bun test tests/unit/widgets/validator.test.ts` if schemas/defaults change.
 - `bun test tests/unit/widgets/registry.test.ts` if registry/default wiring changes.
 - Run `bun --cwd core lint` and `bun --cwd core lint:types`.
+- Run `bun run gates:coderso` for the completed implementation leaf.
+- Run `bun run scan:security:strict`.
+- Run `bun run precommit` before any manual commit or task closure commit.
 
 ## Documentation Updates Required
 

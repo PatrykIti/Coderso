@@ -140,6 +140,9 @@ No API routes are added.
 - `bun run test:vitest -- tests/vitest/widgets/toggleBlock.test.tsx`
 - Run duplicate-ID assertions from TASK-256-04 when renderers change.
 - Run `bun --cwd core lint` and `bun --cwd core lint:types`.
+- Run `bun run gates:coderso` for the completed implementation leaf.
+- Run `bun run scan:security:strict`.
+- Run `bun run precommit` before any manual commit or task closure commit.
 
 ## Documentation Updates Required
 
