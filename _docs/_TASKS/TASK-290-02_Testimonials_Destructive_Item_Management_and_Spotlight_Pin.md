@@ -28,8 +28,8 @@ In scope:
 
 - Add a confirmation or recoverable undo pattern for testimonial removal.
 - Keep the minimum two-item guard.
-- Add a schema-owned spotlight selection model such as `spotlightItemId` or a
-  bounded per-item `spotlight` flag.
+- Add schema-owned spotlight selection under the explicit
+  `TestimonialsData.layout.spotlightItemId` namespace.
 - Render the selected spotlight item first/highlighted without silently dropping
   item data.
 - Preserve Move up / Move down keyboard-friendly controls.
@@ -43,7 +43,8 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Choose one spotlight data model and add it to schema/types/defaults.
+- [ ] Add `layout.spotlightItemId` to schema/types/defaults and
+  `normalizeTestimonialsData`.
 - [ ] Normalize invalid or stale spotlight references to the first visible item.
 - [ ] Add Visual controls to set a testimonial as the spotlight item when the
   `spotlight` variant is active.
@@ -56,7 +57,7 @@ Out of scope:
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/testimonials.tsx` | Add spotlight field normalization and renderer selection logic. |
+| `core/widgets/core/testimonials.tsx` | Add `layout.spotlightItemId` schema/types/defaults/normalizer ownership and renderer selection logic. |
 | `core/admin/ui/widgets/editors/TestimonialsEditors.tsx` | Add spotlight controls and removal confirmation/undo UI. |
 | `tests/vitest/widgets/testimonials.test.tsx` | Add normalization/render tests for selected spotlight and stale references. |
 | `tests/vitest/ui/testimonials-editor-wave.test.tsx` | Add editor tests for remove confirmation/undo and spotlight controls. |

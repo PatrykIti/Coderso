@@ -27,7 +27,8 @@ In scope:
 - Refresh `_docs/PLAYWRIGHT/REPORT_TESTIMONIALS_WIDGET.md` with textual fixed,
   no-action, TASK-256-owned, or deferred notes.
 - Update `_docs/_WIDGETS/TESTIMONIALS.md` with final schema/editor/runtime
-  behavior.
+  behavior, and correct any stale data model examples that still use `items`
+  instead of the live `testimonials` key.
 - Update `_docs/WIDGET_PACK_MATRIX.md` if engagement pack readiness changes.
 - Add the TASK-290 changelog entry and update `_docs/_CHANGELOG/README.md`.
 - Move TASK-290 physical task files and `_docs/_TASKS/README.md` rows to the
@@ -49,6 +50,9 @@ Out of scope:
   correct TASK-256 owner.
 - [ ] Update Testimonials widget docs and any pack matrix text affected by the
   implemented leaves.
+- [ ] Replace stale `_docs/_WIDGETS/TESTIMONIALS.md` `items` examples with the
+  live `testimonials` data key and include the current `header` and `style`
+  fields before adding TASK-290-specific fields.
 - [ ] Add changelog entry and changelog index row.
 - [ ] Move task statuses and board statistics only after evidence is complete.
 
@@ -57,7 +61,7 @@ Out of scope:
 | File | Required change |
 |---|---|
 | `_docs/PLAYWRIGHT/REPORT_TESTIMONIALS_WIDGET.md` | Add final fixed/deferred/TASK-256-owned status notes for every relevant report row. |
-| `_docs/_WIDGETS/TESTIMONIALS.md` | Document final schema, editor mode, runtime, import/export, CTA, style, and rating behavior. |
+| `_docs/_WIDGETS/TESTIMONIALS.md` | Document final schema, editor mode, runtime, import/export, CTA, style, and rating behavior; replace stale `items` examples with `testimonials`. |
 | `_docs/WIDGET_PACK_MATRIX.md` | Update only if engagement pack readiness/completeness changes. |
 | `_docs/_CHANGELOG/<next>-2026-05-17-task-290-testimonials-widget-product-followups.md` | Add final changelog entry when TASK-290 closes. |
 | `_docs/_CHANGELOG/README.md` | Add the changelog index row. |
@@ -71,7 +75,8 @@ Closure matrix:
 ```md
 | Report row | Final owner | Evidence | Status |
 |---|---|---|---|
-| UX-04 | TASK-290-01 | test command + file refs | Fixed |
+| UX-04 rating/role/source | TASK-290-01 | test command + file refs | Fixed |
+| UX-04 avatar | TASK-290-03 | test command + file refs | Fixed |
 | BUG-03 | TASK-256-06-03 | task ref | Excluded from TASK-290 |
 ```
 

@@ -20,7 +20,7 @@ This leaf covers:
 
 - `REPORT_TESTIMONIALS_WIDGET.md:199-204` BF-01 slider-static has no
   navigation.
-- `REPORT_TESTIMONIALS_WIDGET.md:173-175,260-262` UX-03/A6 rating `0` renders
+- `REPORT_TESTIMONIALS_WIDGET.md:173-175,263` UX-03/A6 rating `0` renders
   as five empty stars with unclear meaning.
 
 BUG-01 scroll-snap itself is excluded because TASK-256 owns the baseline
@@ -36,6 +36,9 @@ In scope:
   to the Testimonials widget root and respect reduced motion.
 - Add `ratingDisplay` semantics for hiding unknown ratings or showing a
   clearly labeled "No rating" state.
+- Use explicit `TestimonialsData.behavior` schema ownership for slider and
+  rating display options, for example `behavior.sliderControls` and
+  `behavior.ratingDisplay`.
 - Preserve existing non-zero rating `aria-label` behavior.
 
 Out of scope:
@@ -51,7 +54,7 @@ Out of scope:
 - [ ] Classify final `slider-static` product direction after TASK-256: rename,
   keep as scroll strip, or add opt-in navigation.
 - [ ] Add schema/defaults/normalizer fields only for the chosen Testimonials
-  product behavior.
+  product behavior under the chosen `behavior` namespace.
 - [ ] Render navigation controls with root-scoped selectors and keyboard-safe
   buttons when enabled.
 - [ ] Add rating-zero policy: hide stars, render "No rating", or expose an
@@ -62,7 +65,7 @@ Out of scope:
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/testimonials.tsx` | Add rating display policy and any Testimonials-only slider navigation output. |
+| `core/widgets/core/testimonials.tsx` | Add `behavior` schema/types/defaults/normalizer ownership, rating display policy, and any Testimonials-only slider navigation output. |
 | `core/admin/ui/widgets/editors/TestimonialsEditors.tsx` | Add Visual/Advanced controls for rating semantics and slider product options. |
 | `tests/vitest/widgets/testimonials.test.tsx` | Add SSR assertions for rating-zero and slider/navigation output. |
 | `tests/vitest/ui/testimonials-editor-wave.test.tsx` | Add editor tests for new controls. |

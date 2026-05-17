@@ -16,15 +16,18 @@ Expand Testimonials Wizard authoring so first-time users can configure the
 section header and essential social-proof fields without switching immediately
 to Visual mode.
 
-This leaf covers `REPORT_TESTIMONIALS_WIDGET.md:177-182`:
+This leaf covers the non-avatar parts of
+`REPORT_TESTIMONIALS_WIDGET.md:177-182`:
 
-- UX-04: Wizard exposes only quote and author, while rating, role, avatar, and
-  source label stay hidden in Visual.
+- UX-04: Wizard exposes only quote and author, while rating, role, and source
+  label stay hidden in Visual.
 - UX-05: Wizard exposes only the section title, while eyebrow and description
   stay hidden in Visual.
 
 This leaf does not own BUG-02 variant/count desync; TASK-256 handles that shared
-atomic editor update contract.
+atomic editor update contract. It also does not own the avatar portion of
+UX-04; TASK-290-03 implements Wizard and Visual avatar authoring together with
+Media Library picking and URL validation.
 
 ## Scope Boundary
 
@@ -32,17 +35,15 @@ In scope:
 
 - Add Wizard fields for section `eyebrow` and `description`.
 - Add Wizard fields for testimonial `rating` and `sourceLabel`.
-- Decide whether `role` belongs in Wizard as a default-visible field or an
-  optional disclosure; document the decision in tests and widget docs.
-- Keep avatar authoring minimal in this leaf unless TASK-290-03 has already
-  landed the Media Library picker and URL validation model.
+- Add Wizard fields for testimonial `role`.
 - Preserve the current Wizard count control and repeated item structure.
 
 Out of scope:
 
 - Variant/count atomic updates owned by TASK-256.
 - Shared editor mode IA or Advanced duplicate-token policy owned by TASK-256.
-- Media Library picker and avatar URL validation owned by TASK-290-03.
+- Wizard and Visual avatar authoring, Media Library picker, and avatar URL
+  validation owned by TASK-290-03.
 - Rich quote formatting owned by TASK-290-06.
 
 ## Sub-Tasks
@@ -51,8 +52,7 @@ Out of scope:
   `description` in a compact beginner-friendly order.
 - [ ] Add per-testimonial rating controls in Wizard using the existing bounded
   `ratingOptions` model.
-- [ ] Add per-testimonial source label controls and either include role controls
-  or document why role remains Visual-only.
+- [ ] Add per-testimonial role and source label controls.
 - [ ] Ensure every Wizard field updates the same normalized
   `TestimonialsData` model used by Visual and Advanced.
 - [ ] Keep count and item normalization backward compatible for existing pages.
@@ -62,7 +62,7 @@ Out of scope:
 | File | Required change |
 |---|---|
 | `core/admin/ui/widgets/editors/TestimonialsEditors.tsx` | Extend `TestimonialsWizardEditor` controls and reuse `updateHeader`, `updateItem`, and rating options. |
-| `tests/vitest/ui/testimonials-editor-wave.test.tsx` | Add Wizard interaction coverage for eyebrow, description, rating, source label, and any role decision. |
+| `tests/vitest/ui/testimonials-editor-wave.test.tsx` | Add Wizard interaction coverage for eyebrow, description, rating, role, and source label. |
 | `tests/vitest/widgets/testimonials.test.tsx` | Update SSR editor smoke expectations if Wizard section labels change. |
 | `_docs/_WIDGETS/TESTIMONIALS.md` | Document final Wizard field coverage. |
 

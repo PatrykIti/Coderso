@@ -50,11 +50,11 @@ TASK-256 already owns them as shared widget-contract drift.
 |---|---|---|---|
 | BUG-01 slider-static snap points without container snap | `REPORT_TESTIMONIALS_WIDGET.md:135-141,199-204,276-277,293` | TASK-256-06-03 / TASK-256-04 | Shared truthful static-vs-interactive runtime contract for widget variants. |
 | BUG-02 Wizard variant change does not update count | `REPORT_TESTIMONIALS_WIDGET.md:143-146,302-304` | TASK-256-01 / TASK-256-06-03 | Shared atomic editor update and truthful control baseline. |
-| BUG-03 / BF-12 hardcoded heading level | `REPORT_TESTIMONIALS_WIDGET.md:148-153,248-250,259,294` | TASK-256-06-03 / TASK-256-04 | Shared runtime heading/ARIA baseline. TASK-290 may add typography controls but not baseline hierarchy repair. |
+| BUG-03 / BF-12 hardcoded heading level | `REPORT_TESTIMONIALS_WIDGET.md:148-153,248-250,260,294` | TASK-256-06-03 / TASK-256-04 | Shared runtime heading/ARIA baseline. TASK-290 may add typography controls but not baseline hierarchy repair. |
 | BUG-04 section and article accessible names | `REPORT_TESTIMONIALS_WIDGET.md:155-158,257-259,295` | TASK-256-06-03 / TASK-256-04 | Shared public runtime accessibility baseline. |
 | UX-02 text/accent clear controls | `REPORT_TESTIMONIALS_WIDGET.md:169-171,301-304` | TASK-256-02 / TASK-256-06-03 | Shared clear-control semantics and design token behavior. |
 | UX-08 duplicated spacing token in Visual and Advanced | `REPORT_TESTIMONIALS_WIDGET.md:191-193` | TASK-256-01 | Shared editor mode ownership and Advanced-mode policy. |
-| BF-05 / A4 avatar `loading="lazy"` and A5 avatar alt context | `REPORT_TESTIMONIALS_WIDGET.md:219-222,260-262` | TASK-256-06-03 | Shared media accessibility/performance baseline already listed in TASK-256. |
+| BF-05 / A4 avatar `loading="lazy"` and A5 avatar alt context | `REPORT_TESTIMONIALS_WIDGET.md:219-222,261-262` | TASK-256-06-03 | Shared media accessibility/performance baseline already listed in TASK-256. |
 
 If a TASK-290 implementation leaf discovers that a desired Testimonials product
 feature requires a shared editor helper, generic runtime script policy, global
@@ -65,7 +65,8 @@ back to TASK-256 instead of hiding it inside this family.
 
 | Report finding | TASK-290 owner | Notes |
 |---|---|---|
-| UX-04 Wizard lacks rating, role, avatar, and source fields | TASK-290-01 | Testimonials Wizard social-proof authoring. |
+| UX-04 Wizard lacks rating, role, and source fields | TASK-290-01 | Testimonials Wizard social-proof authoring, excluding avatar source controls. |
+| UX-04 Wizard lacks avatar authoring | TASK-290-03 | Wizard avatar authoring is implemented with the same Media Library and URL validation model as Visual avatar controls. |
 | UX-05 Wizard lacks eyebrow and description | TASK-290-01 | Testimonials header onboarding. |
 | UX-01 remove testimonial has no confirmation/undo | TASK-290-02 | Destructive repeated-item editing. |
 | BF-04 spotlight always uses first item | TASK-290-02 | Testimonials-only spotlight pinning. |
@@ -75,7 +76,7 @@ back to TASK-256 instead of hiding it inside this family.
 | UX-03 rating `0` renders as five empty stars | TASK-290-04 | Testimonials rating semantics, labels, and optional hidden-state behavior. |
 | BF-02 section background controls | TASK-290-05 | Testimonials section surface styling. |
 | BF-03 header typography align/size controls | TASK-290-05 | Product typography controls, not shared heading hierarchy. |
-| BF-06 contrast validator | TASK-290-05 | Testimonials-local contrast guidance unless a shared helper is required. |
+| BF-06 contrast validator | TASK-290-05 | Non-blocking Testimonials-local contrast warnings only; no shared validator is created in this family. |
 | BF-08 card radius and border-width controls | TASK-290-05 | Bounded card style fields. |
 | BF-07 CTA below testimonials | TASK-290-06 | Testimonials conversion CTA using safe href behavior. |
 | BF-11 rich text for quote | TASK-290-06 | Bounded quote formatting, no raw HTML. |

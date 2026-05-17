@@ -30,6 +30,11 @@ In scope:
   explicit editor/runtime large-set behavior.
 - Add local JSON/CSV import/export for widget-owned testimonial data if the
   product decision allows it.
+- Own `parseTestimonialsImport`, `serializeTestimonialsExport`, and
+  `TestimonialsImportError` in a Bun-free production owner:
+  `core/widgets/core/testimonials.tsx` if the helpers stay small, or a new pure
+  `core/widgets/core/testimonialsImportExport.ts` module if the parser grows.
+  `TestimonialsEditors.tsx` must only orchestrate UI/file input.
 - Add optional pagination or load-more rendering for large sets.
 - Keep all imported data normalized through `normalizeTestimonialsData`.
 
@@ -58,8 +63,9 @@ Out of scope:
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/testimonials.tsx` | Adjust max/count normalization only if product decision changes the limit; add pagination fields if needed. |
-| `core/admin/ui/widgets/editors/TestimonialsEditors.tsx` | Add import/export controls and invalid-row feedback if included. |
+| `core/widgets/core/testimonials.tsx` | Adjust max/count normalization only if product decision changes the limit; add pagination fields if needed; own small import/export helpers if no separate module is required. |
+| `core/widgets/core/testimonialsImportExport.ts` | Create only if import/export helpers need a dedicated pure parser/serializer owner. |
+| `core/admin/ui/widgets/editors/TestimonialsEditors.tsx` | Add import/export controls and invalid-row feedback if included; do not own parser/serializer logic here. |
 | `tests/vitest/widgets/testimonials.test.tsx` | Add parser/serializer, count, and renderer tests. |
 | `tests/vitest/ui/testimonials-editor-wave.test.tsx` | Add editor tests for import/export and large-set controls. |
 | `_docs/_WIDGETS/TESTIMONIALS.md` | Document final large-set and import/export policy. |
@@ -70,7 +76,7 @@ Local import parser:
 
 ```ts
 function parseTestimonialsImport(input: string) {
-  const rows = parseCsvOrJson(input);
+  const rows = parseTestimonialsCsvOrJson(input);
   return rows.map((row, index) => ({
     id: normalizeImportedId(row.id, index),
     quote: normalizeRequiredText(row.quote),
@@ -98,6 +104,8 @@ Error handling:
 - Duplicate imported IDs are replaced with deterministic IDs.
 - Unknown import fields are ignored or rejected according to the final parser
   policy, but never persisted silently.
+- Parser/serializer helpers remain Bun-free and importable by Vitest without
+  admin UI, DB, or runtime side effects.
 
 ## Security Contract
 

@@ -17,6 +17,8 @@ picker patterns and by validating manually entered avatar URLs.
 
 This leaf covers:
 
+- The avatar portion of `REPORT_TESTIMONIALS_WIDGET.md:177-180` UX-04, where
+  Wizard cannot author avatar data.
 - `REPORT_TESTIMONIALS_WIDGET.md:184-186` UX-06 Avatar URL lacks a Media
   Library picker.
 - `REPORT_TESTIMONIALS_WIDGET.md:188-189` UX-07 Avatar URL accepts invalid text
@@ -31,10 +33,12 @@ In scope:
 
 - Add an avatar source decision that can support external URL and Media Library
   asset picking without breaking legacy `avatar` URL payloads.
+- Add the same safe avatar authoring path to Wizard and Visual. Wizard may keep
+  the control compact, but it must not leave the UX-04 avatar gap unowned.
 - Reuse `MediaPicker` and `listMediaCached` patterns already used by Hero and
   Gallery Mosaic.
-- Validate external avatar URLs with a safe `http`, `https`, or relative-path
-  policy matching existing media/link helpers.
+- Validate external avatar URLs with a safe `http`, `https`, or single-slash
+  relative-path policy matching existing media/link helpers.
 - Add editor feedback for invalid URLs and failed media lookup.
 - Keep runtime rendering free of browser-only media service imports.
 
@@ -48,12 +52,13 @@ Out of scope:
 
 - [ ] Decide whether to extend each item with `avatarSource`/`avatarAssetId` or
   keep `avatar` as the normalized URL plus optional media metadata.
-- [ ] Add Visual controls for Media Library selection and manual URL entry.
+- [ ] Add Wizard and Visual controls for Media Library selection and manual URL
+  entry.
 - [ ] Add inline invalid URL feedback and preserve fallback initials when an
   avatar cannot be used.
 - [ ] Ensure legacy `avatar` strings keep rendering.
-- [ ] Add UI tests with mocked `MediaPicker` and renderer tests for normalized
-  media-backed avatar data.
+- [ ] Add UI tests with mocked `MediaPicker` for Wizard and Visual avatar
+  authoring, plus renderer tests for normalized media-backed avatar data.
 
 ## Files to Change
 
@@ -61,7 +66,7 @@ Out of scope:
 |---|---|
 | `core/widgets/core/testimonials.tsx` | Extend item schema/types/normalizer if media metadata is added; preserve legacy `avatar`. |
 | `core/admin/ui/widgets/editors/TestimonialsEditors.tsx` | Add MediaPicker integration and URL validation feedback. |
-| `tests/vitest/ui/testimonials-editor-wave.test.tsx` | Mock MediaPicker and test avatar source selection, invalid URL feedback, and fallback behavior. |
+| `tests/vitest/ui/testimonials-editor-wave.test.tsx` | Mock MediaPicker and test Wizard plus Visual avatar source selection, invalid URL feedback, and fallback behavior. |
 | `tests/vitest/widgets/testimonials.test.tsx` | Add normalization/render assertions for media-backed or URL-backed avatars. |
 | `tests/vitest/ui/media-picker.test.tsx` | Run if MediaPicker integration props change. |
 
@@ -72,6 +77,7 @@ URL validation helper:
 ```ts
 function isValidAvatarUrl(value: string | undefined) {
   if (!value || value.trim().length === 0) return true;
+  if (value.startsWith("//")) return false;
   if (value.startsWith("/")) return true;
   try {
     const parsed = new URL(value);
@@ -100,6 +106,8 @@ Media picker flow:
 Error handling:
 
 - Invalid external URLs do not crash the editor and produce inline feedback.
+- Tests must cover `//evil.example`, `javascript:...`, `data:...`,
+  `/media/avatar.jpg`, and `https://...`.
 - Failed media lookup keeps the previous avatar and shows a non-blocking error.
 - Runtime rendering still falls back to initials when no valid avatar URL is
   present.
