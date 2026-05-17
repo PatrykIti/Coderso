@@ -126,13 +126,17 @@ No API routes are added by this closure leaf.
   - `bun test tests/unit/widgets/validator.test.ts` when schema changed
 - Forms/public-write additions:
   - `bun run test:vitest -- tests/vitest/forms/formRuntimeResolver.test.ts`
+    when Contact runtime hydration changes
   - `bun test tests/integration/runtime/pages-runtime.test.ts` when Contact
     runtime hydration changes `publicSite.tsx`
   - `bun run test:vitest -- tests/vitest/widgets/formEmbed.test.tsx` when
     shared Forms runtime script/status attributes change
-  - `bun test tests/integration/routes/forms.test.ts`
-  - `bun test tests/unit/forms/submissionService.test.ts`
-  - `bun test tests/security/codersoSecurityGate.test.ts`
+  - `bun test tests/integration/routes/forms.test.ts` when Contact changes
+    submission payload/action/public-write route behavior
+  - `bun test tests/unit/forms/submissionService.test.ts` when submitted data
+    normalization or backend-owned anti-abuse handling changes
+  - `bun test tests/security/codersoSecurityGate.test.ts` when
+    nonce/CAPTCHA/public-write hardening changes
 - Final family closure:
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`

@@ -65,13 +65,16 @@ TASK-256-02.
   normalization changed the payload.
 - [ ] Keep Advanced technical; add only Contact-specific diagnostics/reset
   actions that map to actual schema fields.
+- [ ] Redact transient `resolved` nonce/token-like runtime values from the
+  Advanced diagnostics snapshot once `TASK-261-02-03` hydrates Contact runtime
+  data.
 
 ## Files to Change
 
 | File | Required change |
 |---|---|
-| `core/admin/ui/widgets/editors/ContactEditors.tsx` | Update Wizard/Visual/Advanced sections and Contact-local editor helpers. |
-| `tests/vitest/ui/contact-editor-wave.test.tsx` | Cover Wizard hours, variant cards, minimal hidden form controls, split required/order UX, hints, and normalization feedback. |
+| `core/admin/ui/widgets/editors/ContactEditors.tsx` | Update Wizard/Visual/Advanced sections, Contact-local editor helpers, and diagnostics redaction. |
+| `tests/vitest/ui/contact-editor-wave.test.tsx` | Cover Wizard hours, variant cards, minimal hidden form controls, split required/order UX, hints, normalization feedback, and diagnostics redaction. |
 | `tests/vitest/widgets/contact.test.tsx` | Add render smoke only if editor changes require new normalized defaults. |
 | `_docs/_WIDGETS/CONTACT.md` | Document final editor mode responsibilities. |
 
@@ -152,13 +155,16 @@ No API routes are added.
   defaults or render-facing fields change
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso`
+- `bun run scan:security:strict`
+- `bun run precommit`
 
 ## Documentation Updates Required
 
 - Update `_docs/_WIDGETS/CONTACT.md` with final Wizard, Visual, and Advanced
   responsibilities.
-- Update `_docs/PLAYWRIGHT/REPORT_CONTACT_WIDGET.md` rows C5, W8, U1, U3, U4,
-  U5, U6, U7, U8, U9, and U10 after validation/classification.
+- Update `_docs/PLAYWRIGHT/REPORT_CONTACT_WIDGET.md` rows C5, W8, W11, U1, U3,
+  U4, U5, U6, U7, U8, U9, and U10 after validation/classification.
 
 ## Changelog Policy
 
@@ -176,3 +182,5 @@ No API routes are added.
   working button-ordering behavior.
 - Advanced normalization gives visible feedback and stays technical without
   duplicating everyday Visual editing.
+- Advanced diagnostics never expose runtime nonce or token-like values after
+  Contact runtime hydration exists.

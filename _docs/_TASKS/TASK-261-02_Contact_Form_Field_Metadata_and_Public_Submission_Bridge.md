@@ -23,8 +23,9 @@ rediscovering the full public-write strategy:
 - `TASK-261-02-01`: Contact field metadata and accessible HTML.
 - `TASK-261-02-02`: presentational/static form behavior and no native GET
   reload.
-- `TASK-261-02-03`: optional bridge to existing Forms runtime submission,
-  nonce/CAPTCHA/access checks, and public-write tests.
+- `TASK-261-02-03`: optional bridge to the current public-compatible Forms
+  runtime projection, Contact-safe field mapping, and focused public-write
+  tests.
 
 `REPORT_CONTACT_WIDGET.md` confirms that Contact inputs currently have no
 `name`, no explicit `id`, no `autocomplete`, and the form defaults to native GET
@@ -42,13 +43,13 @@ In scope across the children:
 - Explicit `<label htmlFor>` relationships and form accessible naming.
 - A safe non-submitting state for presentational Contact blocks.
 - Optional binding to an existing Forms record for real submission through the
-  existing `POST /forms/:id/submissions` route, nonce, CAPTCHA, runtime script,
-  and status-node contract.
+  existing `POST /forms/:id/submissions` route and whatever safe runtime
+  projection the shared Forms owners currently expose.
 - A narrow runtime-only Contact `resolved` schema/type allowance when
   `publicSite.tsx` hydrates Forms data for rendering. Do not loosen Contact to
   arbitrary additional properties.
-- `data-form-submit` / `aria-busy` compatibility when the Forms runtime script
-  owns submission.
+- `data-form-submit` / idle `aria-busy="false"` compatibility when the shared
+  Forms runtime script owns submission.
 
 Out of scope:
 
@@ -56,6 +57,10 @@ Out of scope:
 - Storing arbitrary endpoint URLs, provider secrets, CAPTCHA settings, nonce
   secrets, raw submissions, or email routing in Contact widget JSON.
 - Replacing Form Embed or the Forms builder.
+- Shared Forms runtime busy/live-region/CAPTCHA projection gaps that are not
+  already exposed through the current runtime contract; route those to
+  `TASK-269-05` or a future Forms/public-write task instead of fixing them
+  locally inside Contact.
 - Generic Forms route redesign beyond focused integration coverage required by
   Contact.
 
@@ -75,7 +80,7 @@ Out of scope:
 | `core/widgets/core/contact.tsx` | Shared Contact schema/default/normalizer/render owner touched by all children; TASK-261-02-03 may add a narrow render-only `resolved` schema/type field. |
 | `core/admin/ui/widgets/editors/ContactEditors.tsx` | Editor controls for child-owned Contact form fields and runtime binding. |
 | `core/server/publicSite.tsx` | Touched only by TASK-261-02-03 when runtime Forms data must be hydrated for Contact. |
-| `core/widgets/core/formRuntimeScript.ts` | Reuse as-is if possible; change only through TASK-261-02-03 if the selector/status/submit-button `aria-busy` contract must become Contact-compatible. |
+| `core/widgets/core/formRuntimeScript.ts` | Reuse as-is if possible; touch only through TASK-261-02-03 when a shared runtime task has already generalized selectors/status behavior and Contact needs to consume it without a local fork. |
 | `core/services/forms/formRuntimeResolver.ts` | Reuse as-is if possible; add focused adapter coverage only through TASK-261-02-03. |
 
 ## Implementation Order
@@ -169,8 +174,9 @@ Parent validation after any child lands:
 - `bun run test:vitest -- tests/vitest/widgets/contact.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/contact-editor-wave.test.tsx`
 - `bun test tests/unit/widgets/validator.test.ts` when Contact schema changes.
-- Contact validator coverage must prove hydrated `resolved` render data is
-  accepted while an unrelated unknown Contact field is still rejected.
+- After `TASK-261-02-03` lands, Contact validator coverage must prove hydrated
+  `resolved` render data is accepted while an unrelated unknown Contact field is
+  still rejected.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 
@@ -180,8 +186,8 @@ Additional Forms/public-write validation is owned by `TASK-261-02-03`.
 
 - Update `_docs/_WIDGETS/CONTACT.md` with final field metadata, static state,
   Forms runtime binding, nonce/CAPTCHA boundary, and accepted field settings.
-- Update `_docs/PLAYWRIGHT/REPORT_CONTACT_WIDGET.md` rows C3, C4, W2, W3, W11,
-  W12, R2, R3, R4, and R10 after validation.
+- Update `_docs/PLAYWRIGHT/REPORT_CONTACT_WIDGET.md` rows C3, C4, W2, W3, W12,
+  R2, R3, R4, and R10 after validation.
 - Update `_docs/SECURITY_SPEC.md` only if the existing Forms public-write
   contract changes, not for Contact simply reusing it.
 - Keep `_docs/_TASKS/README.md` synchronized when child task rows change state.

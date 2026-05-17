@@ -15,11 +15,12 @@
 Make Contact form controls real, accessible HTML controls without changing
 submission behavior yet.
 
-`REPORT_CONTACT_WIDGET.md` rows C3, W2, W3, W12, R2, R3, R4, and R10 show that
-the current renderer uses hardcoded labels/placeholders, lacks `name`, `id`,
-and `autocomplete`, and gives the form/button no accessible submit-state
-metadata. This leaf adds the Contact-owned field model and renderer/editor
-controls that later leaves can reuse.
+`REPORT_CONTACT_WIDGET.md` rows C3, W2, W3, W12, R2, R3, R4, and the static
+Contact-side prerequisites of R10 show that the current renderer uses hardcoded
+labels/placeholders, lacks `name`, `id`, and `autocomplete`, and gives the
+form/button no accessible submit-state metadata. This leaf adds the
+Contact-owned field model and renderer/editor controls that later leaves can
+reuse.
 
 ## Scope Boundary
 
@@ -140,16 +141,21 @@ No API routes are added.
 
 - `bun run test:vitest -- tests/vitest/widgets/contact.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/contact-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` when public
+  renderer integration changes
 - `bun test tests/unit/widgets/validator.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso`
+- `bun run scan:security:strict`
+- `bun run precommit`
 
 ## Documentation Updates Required
 
 - Update `_docs/_WIDGETS/CONTACT.md` with Contact field metadata and accessible
   HTML output.
 - Update `_docs/PLAYWRIGHT/REPORT_CONTACT_WIDGET.md` rows C3, W2, W3, W12, R2,
-  R3, R4, and R10 after validation.
+  R3, R4, and the Contact-side static-marker portion of R10 after validation.
 
 ## Changelog Policy
 

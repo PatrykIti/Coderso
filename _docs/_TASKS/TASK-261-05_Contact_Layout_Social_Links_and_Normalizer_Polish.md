@@ -171,6 +171,9 @@ No API routes are added.
 - `bun test tests/unit/widgets/validator.test.ts` when schema changes
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso`
+- `bun run scan:security:strict`
+- `bun run precommit`
 
 ## Documentation Updates Required
 

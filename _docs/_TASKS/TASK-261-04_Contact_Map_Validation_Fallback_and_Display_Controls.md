@@ -28,9 +28,10 @@ This leaf owns:
 - Inline admin validation for map embed URLs.
 - Runtime `allowFullScreen`, accessible iframe title, and invalid/unavailable
   fallback output.
-- HTTPS-only rendered iframe URLs. Current `http`/`https` acceptance is
-  tightened here because the report asks the editor to explain accepted
-  `https://` embed URLs; docs and tests must move together.
+- Safe rendered iframe URLs. Current `http`/`https` acceptance stays
+  backward-compatible here; editor copy may recommend `https://`, but this leaf
+  must not silently break existing safe `http://` embeds without a separate
+  architecture/security task.
 
 This leaf does not own:
 
@@ -56,9 +57,9 @@ This leaf does not own:
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/contact.tsx` | Extend map schema/defaults/normalizer and render map title/description/height/fallback/fullscreen with HTTPS-only iframe output. |
+| `core/widgets/core/contact.tsx` | Extend map schema/defaults/normalizer and render map title/description/height/fallback/fullscreen with safe HTTP(S)-only iframe output. |
 | `core/admin/ui/widgets/editors/ContactEditors.tsx` | Add map title/description/height controls and URL validation feedback. |
-| `tests/vitest/widgets/contact.test.tsx` | Cover map height, title, iframe fullscreen, invalid URL fallback, HTTPS-only iframe rendering, and safe URL handling. |
+| `tests/vitest/widgets/contact.test.tsx` | Cover map height, title, iframe fullscreen, invalid URL fallback, safe HTTP(S) iframe rendering, and URL handling. |
 | `tests/vitest/ui/contact-editor-wave.test.tsx` | Cover editor validation feedback and map display controls. |
 | `tests/unit/widgets/validator.test.ts` | Update when schema fields are added. |
 | `_docs/_WIDGETS/CONTACT.md` | Document map display behavior. |
@@ -87,7 +88,7 @@ const mapHeightClassMap: Record<ContactMapHeight, string> = {
 function resolveMapEmbedUrl(value: string | undefined) {
   const url = parseUrl(value);
   if (!url) return "";
-  return url.protocol === "https:" ? url.toString() : "";
+  return url.protocol === "http:" || url.protocol === "https:" ? url.toString() : "";
 }
 ```
 
@@ -128,9 +129,9 @@ Renderer shape:
 Error handling:
 
 - Invalid URLs must not render an iframe.
-- `http://` map URLs must be treated as invalid for rendered iframes after this
-  task, even though legacy data may preserve the raw text until the editor
-  normalizes or the user edits it.
+- Non-HTTP(S) map URLs must be treated as invalid for rendered iframes.
+- Existing safe `http://` and `https://` embeds remain renderable in this leaf
+  unless a later shared security task tightens that protocol policy.
 - Invalid URLs may remain in editor state until normalization, but the editor
   must show a clear validation message.
 - Fallback copy is plain text only.
@@ -142,8 +143,8 @@ No API routes are added.
 - Endpoint visibility/auth/RBAC/CSRF/rate limit: unchanged.
 - Reject-unknown validation: map schema must reject unknown fields and invalid
   enum values.
-- Anti-abuse: only safe `https` iframe URLs render; no raw `srcdoc`, script,
-  provider key, or arbitrary iframe attributes.
+- Anti-abuse: only safe `http` / `https` iframe URLs render; no raw `srcdoc`,
+  script, provider key, or arbitrary iframe attributes.
 - Secret handling: map fields must not store private provider keys, signed URLs,
   or secret-like config.
 
@@ -154,6 +155,9 @@ No API routes are added.
 - `bun test tests/unit/widgets/validator.test.ts` when schema changes
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso`
+- `bun run scan:security:strict`
+- `bun run precommit`
 
 ## Documentation Updates Required
 
@@ -169,8 +173,9 @@ No API routes are added.
 
 ## Acceptance Criteria
 
-- Map URL issues are visible in the editor and invalid URLs do not render unsafe
-  iframes, including legacy `http://` values.
+- Map URL issues are visible in the editor and invalid or non-HTTP(S) URLs do
+  not render unsafe iframes while existing safe `http://` / `https://` embeds
+  remain backward-compatible.
 - Runtime map output supports title/description, approved heights,
   `allowFullScreen`, and fallback copy.
 - No map provider secrets or arbitrary iframe attributes enter widget data.

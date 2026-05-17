@@ -69,8 +69,9 @@ work.
 | Report finding | Route |
 |---|---|
 | C1, C2, W1, W4, W5, R1, R5, R6, R7 | TASK-261-01 |
-| C3, C4, W2, W3, W11, W12, R2, R3, R4, R10 | TASK-261-02 parent; execution leaves TASK-261-02-01 through TASK-261-02-03 |
-| C5, W8, U1, U3, U4, U5, U6, U7, U8, U9, U10 | TASK-261-03; W8 is current button-ordering/future drag-and-drop classification, not required DnD implementation |
+| C3, C4, W2, W3, W12, R2, R3, R4 | TASK-261-02 parent; execution leaves TASK-261-02-01 through TASK-261-02-03 |
+| R10 | TASK-261-02 for Contact-side submit markers and static-safe fallback; shared busy/live-region/CAPTCHA projection routes to TASK-269-05 or a future Forms/public-write task when the generic runtime contract is missing |
+| C5, W8, W11, U1, U3, U4, U5, U6, U7, U8, U9, U10 | TASK-261-03; W8 is current button-ordering/future drag-and-drop classification, not required DnD implementation |
 | W9, W10, W14, W15, R8, R9 | TASK-261-04 |
 | W6, W7, W13, R11, R12 | TASK-261-05 |
 | U2 and CSS-variable swatch drift | TASK-256-02, not TASK-261, unless final shared helper needs a Contact-only hook |
@@ -81,10 +82,10 @@ work.
 | Leaf | Current drift evidence | Owner files | Required test lanes |
 |---|---|---|---|
 | TASK-261-01 | Report lines 57-60, 67-73, 104, 108-110, 200-203, 227-240, 294, 307, 310 | `contact.tsx`, `ContactEditors.tsx`, Contact docs | Vitest widget render, editor wave when editors expose labels/icons |
-| TASK-261-02 | Report lines 61-62, 70-71, 79-80, 105-107, 113, 181-198, 248-253, 295-296, 300, 309, 320 | Parent only; child leaves own implementation files | Child leaf lanes plus parent Contact/widget validator smoke |
-| TASK-261-02-01 | Field metadata rows C3, W2, W3, W12, R2, R3, R4, R10 | `contact.tsx`, `ContactEditors.tsx`, Contact docs | Contact Vitest widget/editor and widget validator tests |
+| TASK-261-02 | Report lines 61-62, 70-71, 79-80, 105-107, 181-198, 248-253, 295-296, 300, 309, 320 | Parent only; child leaves own implementation files | Child leaf lanes plus parent Contact/widget validator smoke |
+| TASK-261-02-01 | Field metadata rows C3, W2, W3, W12, R2, R3, R4, plus static R10 submit markers/idle state | `contact.tsx`, `ContactEditors.tsx`, Contact docs | Contact Vitest widget/editor and widget validator tests |
 | TASK-261-02-02 | No-GET static submit row C4 before active Forms binding | `contact.tsx`, `ContactEditors.tsx`, Contact docs | Contact Vitest widget/editor and widget validator tests |
-| TASK-261-02-03 | Active Forms runtime/public-write portion of C4/R10 | `contact.tsx`, `ContactEditors.tsx`, `publicSite.tsx`, `formRuntimeScript.ts`, Forms runtime owners when needed | Contact Vitest widget/editor, widget validator, `pages-runtime` Bun smoke, Forms route/submission/security tests; Form Embed regression for shared busy-state/script behavior |
+| TASK-261-02-03 | Active Forms runtime/public-write portion of C4 plus Contact-side runtime prerequisites for R10; shared busy/live-region/CAPTCHA projection stays shared scope | `contact.tsx`, `ContactEditors.tsx`, `publicSite.tsx`, `formRuntimeScript.ts`, Forms runtime owners when needed | Contact Vitest widget/editor, widget validator, `pages-runtime` Bun smoke, Forms route/submission/security tests; Form Embed regression only when shared runtime behavior is generalized outside Contact |
 | TASK-261-03 | Report lines 47-49, 63, 76, 89, 91-98, 131-156, 170-175, 297, 299, 311 | `ContactEditors.tsx` plus shared editor controls only when already available | Vitest editor wave, widget render smoke for minimal behavior |
 | TASK-261-04 | Report lines 77-78, 82-83, 111-112, 161-168, 301, 319 | `contact.tsx`, `ContactEditors.tsx` | Vitest widget/editor and validator when schema changes |
 | TASK-261-05 | Report lines 74-75, 81, 114-115, 317-320 | `contact.tsx`, `ContactEditors.tsx`, docs, pack matrix only if readiness changes | Vitest widget/editor, validator when schema changes |
@@ -206,8 +207,8 @@ existing Forms public-write route instead of introducing an arbitrary endpoint.
 ## Acceptance Criteria
 
 - Every finding in `_docs/PLAYWRIGHT/REPORT_CONTACT_WIDGET.md` is fixed,
-  explicitly excluded as TASK-256 shared scope, or deferred to a named future
-  task with a reason.
+  explicitly excluded as TASK-256 shared scope, confirmed not reproducible with
+  evidence, or deferred to a named future/shared task with a reason.
 - Contact schema, defaults, normalizer, render, editor, tests, and docs move
   together for every new user-facing option.
 - Contact form submission does not silently GET the current page. It either

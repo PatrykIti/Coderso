@@ -12,38 +12,46 @@
 
 ## Overview
 
-Enable Contact to submit only by binding to an existing Forms record and
-reusing the current Forms runtime contract.
+Enable Contact to submit only by binding to an existing public-compatible Forms
+record, preserving Contact-owned field metadata, and reusing the current Forms
+runtime contract without a Contact-specific submit fork.
 
 This leaf owns the high-risk public-write part of `REPORT_CONTACT_WIDGET.md`
-row C4 and the status-state part of R10. It must reuse Forms runtime hardening
-instead of adding a Contact-specific public endpoint or storing an arbitrary
-endpoint URL in widget JSON.
+row C4 and only the Contact-side runtime prerequisites of R10. It must reuse
+Forms runtime hardening instead of adding a Contact-specific public endpoint or
+storing an arbitrary endpoint URL in widget JSON.
 
 ## Scope Boundary
 
 This leaf owns:
 
 - A Contact submission binding such as `form.submission.formId`.
-- A strict field mapping between the four Contact field IDs and real
-  `NormalizedFormField.name` values, or a renderer path that uses resolved Forms
-  fields directly.
+- A strict compatible field mapping between the four Contact field IDs and real
+  `NormalizedFormField.name` values while preserving the Contact-owned
+  label/placeholder/autocomplete/span contract from `TASK-261-02-01`.
 - Admin picker/read behavior for existing Forms records.
 - Public render hydration through `resolveFormRuntimeData()`.
 - A narrow runtime-only `resolved` schema/type allowance on Contact so hydrated
   public render blocks pass widget validation without accepting arbitrary
   unknown fields.
-- Runtime form attributes compatible with `getFormRuntimeClientScript()`.
-- Success/error/status nodes compatible with the existing Forms client script,
-  including dynamic submit-button busy state for the R10 loading-state finding.
+- Runtime form attributes compatible with the current
+  `getFormRuntimeClientScript()` marker contract.
+- Existing success/error/status nodes and idle `aria-busy="false"` /
+  `data-form-submit="1"` markup required for Contact to consume the shared
+  runtime script when generic runtime behavior already exists.
 - Focused route/security tests when Contact changes public submit assumptions.
 
 This leaf does not own:
 
 - New public Contact endpoints.
+- Shared runtime busy/live-region/CAPTCHA projection gaps already owned by
+  `TASK-269-05` or a future Forms/public-write task.
 - Email provider routing, CAPTCHA secrets, nonce secrets, or integration keys in
   widget data.
 - Forms builder redesign or Form Embed replacement.
+- Internal-form public submit UX. Internal Forms bindings must remain
+  static-safe on public pages and show diagnostic copy in admin/editor rather
+  than a working-looking public submit path.
 - Analytics, CRM sync, or automation changes unless the existing Forms route
   already owns them.
 
@@ -51,14 +59,14 @@ This leaf does not own:
 
 - [ ] Add `form.submission.formId` and normalize it as an optional Forms record
   reference, not an endpoint URL.
-- [ ] Choose and document one strict field strategy:
-  - render the resolved Forms fields directly, preserving Forms-owned field
-    names and validation; or
-  - add `form.submission.fieldMap` from `ContactFieldId` to resolved
-    `NormalizedFormField.name`, reject mappings to missing/duplicate Forms
-    fields, and hide/drop unmapped Contact fields in active mode.
+- [ ] Add `form.submission.fieldMap` from `ContactFieldId` to resolved
+  `NormalizedFormField.name`, preserve Contact-owned labels/placeholders/
+  autocomplete/span metadata from `TASK-261-02-01`, reject mappings to
+  missing/duplicate/incompatible Forms fields, and fall back to the static-safe
+  state when the selected Forms field set exceeds Contact's supported subset.
 - [ ] Add admin picker/copy for selecting a Forms record; respect existing
-  Forms read permissions and cached client patterns.
+  Forms read permissions and cached client patterns, and make public-vs-internal
+  compatibility explicit.
 - [ ] Hydrate Contact public render data from `resolveFormRuntimeData()` in
   `core/server/publicSite.tsx`.
 - [ ] Add an explicit Contact schema/type allowance for the render-only
@@ -66,28 +74,28 @@ This leaf does not own:
   while unrelated unknown fields still reject.
 - [ ] Render `method="post"`, `action="/forms/:id/submissions"`,
   `data-nextless-form-runtime="1"`, hidden `__nl_form_nonce`, status nodes, and
-  `data-form-submit="1"` only when the binding is valid and runtime data is
-  available.
-- [ ] Reuse `getFormRuntimeClientScript()` without a Contact-only runtime script
-  unless the existing selector/status node contract must be generalized.
-- [ ] Close R10 dynamic loading-state behavior by making the shared Forms
-  runtime script set/clear `aria-busy` on `[data-form-submit]`; if this is
-  deliberately deferred, create a named follow-up task and mark R10 deferred
-  instead of fixed.
+  `data-form-submit="1"` only when the binding is valid,
+  `resolved.submissionAccess === "public"`, runtime data is available, and the
+  mapped fields remain compatible with Contact's supported subset.
+- [ ] Reuse `getFormRuntimeClientScript()` and the existing
+  `data-form-embed-success` / `data-form-embed-error` markers without a
+  Contact-only runtime script. If the generic selector/status/busy behavior is
+  still missing, link `TASK-269-05` or a future Forms/public-write task instead
+  of patching that shared runtime locally here.
 - [ ] Add tests for missing, unpublished, public, and internal Forms bindings.
 
 ## Files to Change
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/contact.tsx` | Add runtime binding fields, strict Forms field mapping or Forms-field rendering, a narrow render-only `resolved` schema/type allowance, and Forms-compatible submit/status markup. |
-| `core/admin/ui/widgets/editors/ContactEditors.tsx` | Add Forms binding controls, field-map UI if mapping is chosen, and static-vs-submit state copy. |
+| `core/widgets/core/contact.tsx` | Add runtime binding fields, strict compatible Forms field mapping, a narrow render-only `resolved` schema/type allowance, and Forms-compatible submit/status markup that preserves Contact-owned field metadata. |
+| `core/admin/ui/widgets/editors/ContactEditors.tsx` | Add Forms binding controls, required field-map UI, internal/public compatibility warnings, and static-vs-submit state copy. |
 | `core/server/publicSite.tsx` | Hydrate Contact runtime data with `resolveFormRuntimeData()` for public rendering. |
-| `core/widgets/core/formRuntimeScript.ts` | Update the shared script to set/clear submit-button `aria-busy` when it owns a Forms runtime submit. Keep selectors generic for Form Embed and Contact. |
-| `core/widgets/core/formEmbed.tsx` | Touch only if `formRuntimeScript.ts` selector/status attributes are generalized; keep Form Embed behavior unchanged and covered by regression tests. |
+| `core/widgets/core/formRuntimeScript.ts` | Touch only if a shared runtime task has already generalized selectors/status behavior and Contact needs to consume it; do not land Contact-only busy/CAPTCHA logic here. |
+| `core/widgets/core/formEmbed.tsx` | Touch only if shared runtime selectors/status attributes are generalized; keep Form Embed behavior unchanged and covered by regression tests. |
 | `core/services/forms/formRuntimeResolver.ts` | Reuse as-is; add adapter only if Contact needs a small typed wrapper. |
 | `tests/vitest/widgets/contact.test.tsx` | Cover active Forms-runtime markup, strict field mapping/Forms-field names, and missing/unavailable fallback. |
-| `tests/vitest/ui/contact-editor-wave.test.tsx` | Cover Forms picker/state copy and field-map UI if added. |
+| `tests/vitest/ui/contact-editor-wave.test.tsx` | Cover Forms picker/state copy, internal/public compatibility warnings, and required field-map UI. |
 | `tests/vitest/widgets/formEmbed.test.tsx` | Run/update for shared `formRuntimeScript.ts` busy-state/status behavior so Form Embed does not regress. |
 | `tests/vitest/forms/formRuntimeResolver.test.ts` | Add Contact hydration coverage if resolver/adapter logic changes. |
 | `tests/unit/widgets/validator.test.ts` | Prove the Contact schema accepts render-only `resolved` data and still rejects unrelated unknown fields. |
@@ -117,11 +125,17 @@ function resolveContactRuntimeFields(
   resolvedFields: NormalizedFormField[],
   fieldMap: Partial<Record<ContactFieldId, string>>
 ) {
+  const supportedTypes = new Set(["text", "email", "tel", "textarea"]);
   const byName = new Map(resolvedFields.map((field) => [field.name, field]));
+  const usedNames = new Set<string>();
   return contactFields.flatMap((contactField) => {
     const formFieldName = fieldMap[contactField];
     const formField = formFieldName ? byName.get(formFieldName) : undefined;
-    return formField ? [{ contactField, formField }] : [];
+    if (!formField) return [];
+    if (usedNames.has(formField.name)) return [];
+    if (!supportedTypes.has(formField.type)) return [];
+    usedNames.add(formField.name);
+    return [{ contactField, formField }];
   });
 }
 ```
@@ -178,6 +192,7 @@ const canSubmit =
   submission.formId &&
   resolved &&
   !resolved.error &&
+  resolved.submissionAccess === "public" &&
   resolved.fields.length > 0 &&
   runtimeFields.length > 0;
 
@@ -186,17 +201,20 @@ const canSubmit =
   action={canSubmit ? `/forms/${encodeURIComponent(submission.formId)}/submissions` : undefined}
   data-form-id={canSubmit ? submission.formId : undefined}
   data-nextless-form-runtime={canSubmit ? "1" : undefined}
+  data-form-success-message={successMessage}
 >
   {canSubmit && resolved.submissionNonce ? (
     <input type="hidden" name="__nl_form_nonce" value={resolved.submissionNonce} />
   ) : null}
   {runtimeFields.map(({ contactField, formField }) => (
-    <input
-      key={contactField}
-      name={formField.name}
-      required={formField.required}
-      data-contact-field={contactField}
-    />
+    renderContactField(contactField, {
+      name: formField.name,
+      required: formField.required,
+      label: fieldSettings[contactField].label,
+      placeholder: fieldSettings[contactField].placeholder,
+      autocomplete: fieldSettings[contactField].autocomplete,
+      span: fieldSettings[contactField].span,
+    })
   ))}
   <button type={canSubmit ? "submit" : "button"} data-form-submit="1" aria-busy="false">
     {submitLabel}
@@ -211,16 +229,22 @@ Error handling:
 
 - Missing or unpublished Forms bindings render the static-safe state from
   `TASK-261-02-02`, not a GET submit.
+- Internal Forms bindings, incompatible field types, duplicate mappings, or
+  missing field mappings also render the same static-safe state on public pages.
 - Contact schema validation must accept only the runtime `resolved` key added by
   hydration and continue rejecting unrelated unknown fields.
 - Contact fixed field IDs must never be submitted as raw payload keys unless
   they match the selected Forms field names through the strict mapping contract.
 - Unknown submitted fields remain rejected by the existing Forms schemas.
-- Internal Forms mode requires admin session or API key scope `forms.submit`.
-- The shared runtime script must set submit-button `aria-busy="true"` while a
-  Forms submission is in flight and restore `aria-busy="false"` on success,
-  failure, or thrown network errors. The existing `data-submitting` behavior may
-  remain, but it is not enough by itself to close R10.
+- Internal Forms mode still requires admin session or API key scope
+  `forms.submit`; Contact must not render that as a public working submit path.
+- If `TASK-269-05` or another shared Forms/public-write task has not landed the
+  generic busy/live-region contract yet, Contact still renders existing marker
+  compatibility plus idle `aria-busy="false"` and records R10 as a shared
+  dependency instead of forking the runtime script locally.
+- If shared Forms runtime projection does not yet expose the safe CAPTCHA/public
+  metadata required by current security settings, Contact must stay static-safe
+  rather than invent widget-owned anti-abuse switches.
 - Runtime diagnostics and final reports must redact nonce values.
 
 ## Security Contract
@@ -230,8 +254,10 @@ runtime integration. It must not introduce a new public endpoint.
 
 - Endpoint visibility: existing public `POST /forms/:id/submissions`; admin
   editing remains internal.
-- Auth model: public mode uses existing Forms nonce and CAPTCHA policy; internal
-  mode requires admin session or API key scope `forms.submit`.
+- Auth model: active public Contact submit is allowed only for bindings whose
+  resolved `submissionAccess` is `public`; internal bindings remain
+  static/informational on public pages and still require admin session or API
+  key scope `forms.submit` outside this widget family.
 - RBAC: admin configuration changes use existing page/template/widget-template
   permissions and Forms read permissions for picker data.
 - CSRF: admin writes keep CSRF; public form submission uses HMAC nonce
@@ -243,7 +269,8 @@ runtime integration. It must not introduce a new public endpoint.
   unknown submission fields.
 - Anti-abuse: nonce + signature/HMAC remain required for public submit when
   access policy requires it; optional reCAPTCHA remains backend-owned through
-  security settings.
+  security settings and must arrive through a shared Forms projection before
+  Contact can rely on it.
 - Secret handling: widget JSON, admin diagnostics, reports, and changelog notes
   must not store nonce secrets, CAPTCHA secrets, provider keys, raw submission
   payloads, or arbitrary endpoint URLs.
@@ -253,7 +280,8 @@ runtime integration. It must not introduce a new public endpoint.
 - `bun run test:vitest -- tests/vitest/widgets/contact.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/contact-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/formEmbed.test.tsx` for shared
-  Forms runtime busy-state/status behavior.
+  Forms runtime/status behavior only when a shared runtime task changes generic
+  selectors or markers consumed by Contact.
 - `bun run test:vitest -- tests/vitest/forms/formRuntimeResolver.test.ts` when
   runtime hydration changes.
 - `bun test tests/integration/runtime/pages-runtime.test.ts` when
@@ -268,13 +296,18 @@ runtime integration. It must not introduce a new public endpoint.
   public-write hardening changes.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso`
+- `bun run scan:security:strict`
+- `bun run precommit`
 
 ## Documentation Updates Required
 
 - Update `_docs/_WIDGETS/CONTACT.md` with Forms runtime binding, field mapping,
   and nonce/CAPTCHA boundary.
 - Update `_docs/PLAYWRIGHT/REPORT_CONTACT_WIDGET.md` rows C4 and R10 after
-  validation.
+  validation. If dynamic busy/live-region/CAPTCHA projection still depends on
+  shared runtime work, link `TASK-269-05` or the follow-up Forms/public-write
+  task instead of marking that shared portion fixed under Contact.
 - Update `_docs/SECURITY_SPEC.md` only if the existing Forms public-write
   contract changes.
 
@@ -286,10 +319,17 @@ runtime integration. It must not introduce a new public endpoint.
 ## Acceptance Criteria
 
 - Contact submits only through an existing Forms record and route.
-- Active mode submits Forms-owned field names, either by rendering resolved
-  Forms fields directly or by a strict Contact-to-Forms field map.
-- Valid runtime bindings render Forms-compatible markup, nonce, status nodes,
-  submit-button `aria-busy` transitions, and client script behavior.
+- Active mode uses a strict Contact-to-Forms field map, preserves Contact-owned
+  field metadata, and submits Forms-owned field names only for compatible
+  public bindings.
+- Valid public runtime bindings render Forms-compatible markup, nonce, existing
+  shared status markers, and client script behavior without a Contact-only
+  runtime fork.
 - Missing/unavailable bindings fall back to the static-safe state without
   native GET behavior.
+- Internal/incompatible bindings also fall back to the static-safe state on
+  public pages instead of a working-looking submit UI.
+- R10 dynamic busy/live-region behavior is marked fixed only when the shared
+  runtime owner has landed it; otherwise Contact-side marker compatibility and
+  fallback behavior are fixed while the shared dependency is explicitly linked.
 - Public-write route/security lanes are green or documented with exact blockers.
