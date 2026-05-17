@@ -6,7 +6,7 @@
 **Category:** Widgets + Layout + Design Tokens + Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-256-02, TASK-257-01, TASK-257
-**Status:** To Do
+**Status:** Done (2026-05-17)
 
 ---
 
@@ -50,17 +50,17 @@ tokens and preserve current variant defaults for legacy payloads.
 
 ## Sub-Tasks
 
-- [ ] Define Accordion style/layout field names and token sets in
+- [x] Define Accordion style/layout field names and token sets in
   `accordion.tsx` before touching the editor.
-- [ ] Extend `accordionSchema`, `accordionDefaults`, and
+- [x] Extend `accordionSchema`, `accordionDefaults`, and
   `normalizeAccordionData()` with backward-compatible defaults.
-- [ ] Render the new fields without replacing current variant defaults for
+- [x] Render the new fields without replacing current variant defaults for
   existing saved payloads.
-- [ ] Add color picker + text input pairs for Accordion color fields, matching
+- [x] Add color picker + text input pairs for Accordion color fields, matching
   the FAQ editor pattern without copying FAQ data ownership.
-- [ ] Add Visual controls for beginner-safe fields and Advanced raw-token
+- [x] Add Visual controls for beginner-safe fields and Advanced raw-token
   overrides only where needed.
-- [ ] Keep field labels short enough for the right inspector and avoid
+- [x] Keep field labels short enough for the right inspector and avoid
   multi-column input groups that truncate labels.
 
 ## Files to Change

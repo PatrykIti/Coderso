@@ -6,7 +6,7 @@
 **Category:** Widgets + Layout + Runtime Render + Admin UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-256-04, TASK-256-05-04, TASK-257
-**Status:** To Do
+**Status:** Done (2026-05-17)
 
 ---
 
@@ -36,22 +36,22 @@ again, repair it under shared-task scope before modifying TASK-257-01.
 
 ## Sub-Tasks
 
-- [ ] Extend the Accordion data contract to represent an intentional empty
+- [x] Extend the Accordion data contract to represent an intentional empty
   `defaultOpenIds` state without using an invalid item ID sentinel.
-- [ ] Update `normalizeAccordionData()` so it preserves an empty
+- [x] Update `normalizeAccordionData()` so it preserves an empty
   `defaultOpenIds` only when `options.collapsible !== false`; otherwise it
   still selects a valid item.
-- [ ] Distinguish explicit `defaultOpenIds: []` from stale non-empty
+- [x] Distinguish explicit `defaultOpenIds: []` from stale non-empty
   `defaultOpenIds` whose IDs no longer match slot instances. Stale IDs must use
   the existing valid-item fallback instead of becoming an intentional
   all-collapsed state.
-- [ ] Update Wizard/Visual/Advanced controls so editors can choose:
+- [x] Update Wizard/Visual/Advanced controls so editors can choose:
   - "None - start collapsed" when all-closed is allowed;
   - a concrete item title when one should be open;
   - multiple concrete item titles when `openMode="multiple"`.
-- [ ] Preserve backward compatibility for legacy `initiallyOpenId` and
+- [x] Preserve backward compatibility for legacy `initiallyOpenId` and
   `allowMultiple` payloads.
-- [ ] Ensure item count changes keep the explicit all-collapsed state instead
+- [x] Ensure item count changes keep the explicit all-collapsed state instead
   of silently reverting to the first item.
 
 ## Files to Change

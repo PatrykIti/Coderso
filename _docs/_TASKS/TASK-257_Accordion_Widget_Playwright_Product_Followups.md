@@ -6,7 +6,7 @@
 **Category:** Widgets + Layout + Admin UI + Runtime Render + Playwright QA
 **Estimated Effort:** Large
 **Dependencies:** TASK-252, TASK-256
-**Status:** In Progress (2026-05-17)
+**Status:** Done (2026-05-17)
 
 ---
 
@@ -70,11 +70,11 @@ change out instead of hiding it inside TASK-257.
 
 ## Sub-Tasks
 
-- [ ] TASK-257-01: Accordion Initial Open State Product Options
-- [ ] TASK-257-02: Accordion Style Layout and Typography Controls
-- [ ] TASK-257-03: Accordion Item Content and Management UX
-- [ ] TASK-257-04: Accordion Motion and Variant Preview Polish
-- [ ] TASK-257-05: Accordion Report Docs and Closure
+- [x] TASK-257-01: Accordion Initial Open State Product Options
+- [x] TASK-257-02: Accordion Style Layout and Typography Controls
+- [x] TASK-257-03: Accordion Item Content and Management UX
+- [x] TASK-257-04: Accordion Motion and Variant Preview Polish
+- [x] TASK-257-05: Accordion Report Docs and Closure
 
 ## Implementation Order
 

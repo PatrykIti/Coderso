@@ -6,7 +6,7 @@
 **Category:** Widgets + Documentation + Playwright QA + Changelog
 **Estimated Effort:** Medium
 **Dependencies:** TASK-257-01, TASK-257-02, TASK-257-03, TASK-257-04
-**Status:** To Do
+**Status:** Done (2026-05-17)
 
 ---
 
@@ -22,21 +22,21 @@ fixed by TASK-257.
 
 ## Sub-Tasks
 
-- [ ] Refresh `_docs/PLAYWRIGHT/REPORT_ACCORDION_WIDGET.md` with fixed/deferred
+- [x] Refresh `_docs/PLAYWRIGHT/REPORT_ACCORDION_WIDGET.md` with fixed/deferred
   statuses for every TASK-257-owned row.
-- [ ] Remove or rewrite stale historical priority/fix sections in the report so
+- [x] Remove or rewrite stale historical priority/fix sections in the report so
   the current owner matrix does not conflict with resolved TASK-256 scope.
-- [ ] Record the exact task owner for excluded rows:
+- [x] Record the exact task owner for excluded rows:
   - TASK-256 for shared-contract rows;
   - TASK-256-06-03 or future FAQ task for FAQ rows;
   - TASK-293 for the shared repeatable-slot sync/reorder blocker on U5/U6.
-- [ ] Update `_docs/_WIDGETS/ACCORDION.md` with final data/editor/runtime
+- [x] Update `_docs/_WIDGETS/ACCORDION.md` with final data/editor/runtime
   behavior.
-- [ ] Update `_docs/_TASKS/README.md` statuses and statistics when the family
+- [x] Update `_docs/_TASKS/README.md` statuses and statistics when the family
   moves to `Done`.
-- [ ] Add a changelog entry in `_docs/_CHANGELOG/` and update
+- [x] Add a changelog entry in `_docs/_CHANGELOG/` and update
   `_docs/_CHANGELOG/README.md`.
-- [ ] Run final targeted validation and record skipped gates or blockers.
+- [x] Run final targeted validation and record skipped gates or blockers.
 
 ## Final Evidence Matrix
 
@@ -118,6 +118,17 @@ No API routes are added.
 
 - This leaf owns the final TASK-257 changelog entry unless an earlier leaf
   already created a changelog that explicitly lists all TASK-257 task IDs.
+
+## Validation Evidence
+
+- `git diff --check` passed.
+- `bun run test:vitest -- tests/vitest/widgets/accordionWidget.test.tsx tests/vitest/ui/accordion-editor-wave.test.tsx` passed with `15/15` tests green.
+- `bun test tests/unit/widgets/validator.test.ts` passed with `6/6` tests green.
+- `bun --cwd core lint` passed.
+- `bun --cwd core lint:types` passed.
+- `bun run gates:coderso` passed; the existing gate-owned DB suites remained skipped per their current contract.
+- `bun run scan:security:strict` passed after rerunning outside the sandbox so Semgrep, `bun audit`, and Trivy could use the host trust store and network access.
+- `bun run precommit` passed.
 
 ## Acceptance Criteria
 

@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 295 tasks
-- **In Progress:** 5 tasks
-- **Done:** 1559 tasks
+- **To Do:** 290 tasks
+- **In Progress:** 4 tasks
+- **Done:** 1565 tasks
 
 ---
 
@@ -320,11 +320,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-258-04 | Consent, Custom Fields, and Public Write Hardening | High | Large | Add bounded custom fields, consent controls, and backend-owned CAPTCHA bridge for booking submissions |
 | TASK-258-05 | Style, Variants, and Advanced Diagnostics | High | Large | Add Appointment Form variants, submit text color, inherited-style indicators, and read-only runtime diagnostics |
 | TASK-258-06 | Playwright Report, Docs, and Closure | Medium | Medium | Refresh report evidence, widget docs, changelog, board, and validation matrix after implementation |
-| TASK-257-01 | Accordion Initial Open State Product Options | High | Medium | Add intentional all-collapsed initial state after shared default-open/collapsible fixes land |
-| TASK-257-02 | Accordion Style Layout and Typography Controls | High | Large | Add Accordion-owned body color, padding, radius, max-width, typography, and color-picker controls |
-| TASK-257-03 | Accordion Item Content and Management UX | High | Large | Add Accordion item icon + copy now and route shared add/reorder blockers to TASK-293 |
-| TASK-257-04 | Accordion Motion and Variant Preview Polish | Medium | Medium | Add Accordion-specific motion tokens and visual variant preview cards |
-| TASK-257-05 | Accordion Report Docs and Closure | Medium | Medium | Refresh report/docs/changelog/board and final validation for the TASK-257 family |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
 | TASK-240 | Coderso Multilingual and i18n Umbrella | High | Very Large | Execution-ready locale/translation/runtime routing program superseding TASK-054-21 |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |
@@ -339,7 +334,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-257 | Accordion Widget Playwright Product Followups | High | Large | In progress: docs drift is rebased to the live TASK-256 baseline, TASK-293 now owns the shared repeatable-slot blocker, and the Accordion implementation/closure loop is active |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
@@ -350,6 +344,12 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-257 | Accordion Widget Playwright Product Followups | High | Large | Done: Accordion-specific product follow-ups are closed with explicit all-collapsed state, local style/typography/motion controls, icon/copy polish, and U5/U6 deferred to TASK-293 |
+| TASK-257-01 | Accordion Initial Open State Product Options | High | Medium | Done: Accordion now preserves intentional all-collapsed initial state when all-closed behavior is allowed |
+| TASK-257-02 | Accordion Style Layout and Typography Controls | High | Large | Done: Accordion now ships body color, max-width, padding, radius, title typography, and color-picker parity controls |
+| TASK-257-03 | Accordion Item Content and Management UX | High | Large | Done: Accordion item icons and clearer all-closed copy landed; shared add/reorder remains explicitly deferred to TASK-293 |
+| TASK-257-04 | Accordion Motion and Variant Preview Polish | Medium | Medium | Done: Accordion now exposes bounded motion presets and visual variant preview cards |
+| TASK-257-05 | Accordion Report Docs and Closure | Medium | Medium | Done: report/docs/board/changelog are synchronized with final fixed/deferred ownership and validation evidence |
 | TASK-256 | Widget Shared Contract Playwright Drift Repair | High | Very Large | Done: shared builder patching, placeholder gating, interactive runtime IDs, structural shared fixes, marketing truthfulness repairs, report routing, and closure evidence are synchronized |
 | TASK-256-01 | Shared Editor Mode and Atomic Update Contract | High | Large | Done: builder hosts and shared panels use atomic block patching, and variant/data sync regressions are covered across the affected widget editors |
 | TASK-256-02 | Clear, None Token, and Design Token Controls | High | Large | Done: shared clear/token semantics are synchronized with the implemented widget surfaces and validated through the focused clear/token suites |

@@ -13,9 +13,16 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 
 import {
-  accordionDefaults,
   accordionItemMax,
   accordionItemMin,
+  accordionMaxWidthTokens,
+  accordionMotionTokens,
+  accordionPaddingTokens,
+  accordionRadiusTokens,
+  accordionSummaryFontSizeTokens,
+  accordionSummaryFontWeightTokens,
+  accordionVariantFallbackTokenMap,
+  accordionVariantFallbackClassMap,
   normalizeAccordionData,
   normalizeAccordionItems,
   type AccordionData,
@@ -52,10 +59,46 @@ const itemCountOptions = Array.from(
   (_, index) => String(accordionItemMin + index)
 );
 
+const accordionMotionOptions = accordionMotionTokens.map((id) => ({
+  id,
+  label: id === "none" ? "None" : id === "subtle" ? "Subtle" : "Smooth",
+}));
+
+const accordionPaddingOptions = accordionPaddingTokens.map((id) => ({
+  id,
+  label: id === "sm" ? "Compact" : id === "md" ? "Default" : "Spacious",
+}));
+
+const accordionRadiusOptions = accordionRadiusTokens.map((id) => ({
+  id,
+  label: id === "sm" ? "Small" : id === "md" ? "Medium" : id === "lg" ? "Large" : "Extra large",
+}));
+
+const accordionSummaryFontSizeOptions = accordionSummaryFontSizeTokens.map((id) => ({
+  id,
+  label: id === "sm" ? "Small" : id === "base" ? "Default" : "Large",
+}));
+
+const accordionSummaryFontWeightOptions = accordionSummaryFontWeightTokens.map((id) => ({
+  id,
+  label: id === "medium" ? "Medium" : id === "semibold" ? "Semibold" : "Bold",
+}));
+
+const accordionMaxWidthOptions = accordionMaxWidthTokens.map((id) => ({
+  id,
+  label: id === "sm" ? "Medium" : id === "md" ? "Wide" : id === "lg" ? "Extra wide" : "Full width",
+}));
+
+const accordionNoneOpenValue = "__none__";
+const hexColorPattern = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
+
 function resolveVariant(variant: string): AccordionVariantId {
   if (variant === "bordered" || variant === "compact") return variant;
   return "soft";
 }
+
+const resolvePickerColor = (value: string | undefined, fallback: string) =>
+  value && hexColorPattern.test(value) ? value : fallback;
 
 function normalizeValue(value: AccordionData, desiredCount?: number): AccordionData {
   return normalizeAccordionData(value, desiredCount);
@@ -74,11 +117,22 @@ function updateValue(
 function setCount(value: AccordionData, onChange: (next: AccordionData) => void, count: number) {
   const current = normalizeValue(value, count);
   const items = normalizeAccordionItems(current.items, count);
-  const initiallyOpenId =
-    current.options?.initiallyOpenId &&
-    items.some((item) => item.id === current.options?.initiallyOpenId)
-      ? current.options.initiallyOpenId
-      : items[0]?.id;
+  const itemIds = new Set(items.map((item) => item.id));
+  const currentDefaultOpenIds = (current.options?.defaultOpenIds ?? []).filter((id) =>
+    itemIds.has(id)
+  );
+  const keepsAllCollapsed =
+    (current.options?.collapsible ?? true) && (current.options?.defaultOpenIds?.length ?? 0) === 0;
+  const nextDefaultOpenIds = keepsAllCollapsed
+    ? []
+    : currentDefaultOpenIds.length > 0
+      ? current.options?.openMode === "multiple"
+        ? currentDefaultOpenIds
+        : [currentDefaultOpenIds[0]!]
+      : items[0]?.id
+        ? [items[0].id]
+        : [];
+  const initiallyOpenId = nextDefaultOpenIds[0];
 
   onChange(
     normalizeValue(
@@ -87,6 +141,7 @@ function setCount(value: AccordionData, onChange: (next: AccordionData) => void,
         items,
         options: {
           ...current.options,
+          defaultOpenIds: nextDefaultOpenIds,
           initiallyOpenId,
         },
       },
@@ -99,11 +154,12 @@ function updateItem(
   value: AccordionData,
   onChange: (next: AccordionData) => void,
   itemId: string,
-  patch: { title?: string; description?: string }
+  patch: { title?: string; description?: string; icon?: string },
+  desiredCount?: number
 ) {
   updateValue(value, onChange, (current) => ({
     ...current,
-    items: normalizeAccordionItems(current.items).map((item) =>
+    items: normalizeAccordionItems(current.items, desiredCount).map((item) =>
       item.id === itemId
         ? {
             ...item,
@@ -123,6 +179,20 @@ function updateOptions(
     ...current,
     options: {
       ...current.options,
+      ...patch,
+    },
+  }));
+}
+
+function updateLayout(
+  value: AccordionData,
+  onChange: (next: AccordionData) => void,
+  patch: Partial<NonNullable<AccordionData["layout"]>>
+) {
+  updateValue(value, onChange, (current) => ({
+    ...current,
+    layout: {
+      ...current.layout,
       ...patch,
     },
   }));
@@ -156,6 +226,46 @@ function clearStyleField(
   });
 }
 
+function ColorField({
+  label,
+  value,
+  onChange,
+  placeholder,
+  pickerFallback,
+  onClear,
+}: {
+  label: string;
+  value: string | undefined;
+  onChange: (next: string) => void;
+  placeholder: string;
+  pickerFallback: string;
+  onClear: () => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <ClearableFieldHeader label={label} value={value} onClear={onClear} />
+      <div className="grid grid-cols-[2.5rem_1fr] gap-2">
+        <Input
+          type="color"
+          value={resolvePickerColor(value, pickerFallback)}
+          onChange={(event) => onChange(event.target.value)}
+          className="h-9 w-10 p-1"
+        />
+        <Input
+          value={value ?? ""}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={placeholder}
+        />
+      </div>
+      {typeof value === "string" && value.trim().startsWith("var(") ? (
+        <p className="text-xs text-muted-foreground">
+          CSS token is preserved in data; the swatch shows a safe preview color.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 function EditorSection({
   id,
   title,
@@ -172,6 +282,12 @@ function EditorSection({
       {children}
     </WidgetEditorSection>
   );
+}
+
+function resolveAccordionSlotTargetCount(
+  context: WidgetEditorProps<AccordionData>["context"] | undefined
+) {
+  return context?.slotTargets?.filter((target) => target.definitionId === "item").length ?? 0;
 }
 
 function VariantCards({
@@ -201,6 +317,33 @@ function VariantCards({
               {value === option.id ? "Selected" : "Pick"}
             </Badge>
           </div>
+          <div
+            className={cn(
+              "mt-3 overflow-hidden border bg-muted/20",
+              accordionVariantFallbackClassMap[option.id].radiusClass
+            )}
+          >
+            <div
+              className={cn(
+                "border-b bg-background/80",
+                accordionVariantFallbackClassMap[option.id].summaryPaddingClass
+              )}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="h-2 w-20 rounded bg-foreground/70" />
+                <div className="h-2 w-2 rounded-full bg-foreground/40" />
+              </div>
+            </div>
+            <div
+              className={cn(
+                "space-y-2 bg-background/50",
+                accordionVariantFallbackClassMap[option.id].contentPaddingClass
+              )}
+            >
+              <div className="h-2 w-full rounded bg-foreground/20" />
+              <div className="h-2 w-4/5 rounded bg-foreground/10" />
+            </div>
+          </div>
           <p className="mt-1 text-xs text-muted-foreground">{option.description}</p>
         </button>
       ))}
@@ -219,8 +362,15 @@ function StructureSection({
   context?: WidgetEditorProps<AccordionData>["context"];
   includeInitialOpenControl?: boolean;
 }) {
-  const normalized = normalizeValue(value);
-  const items = normalizeAccordionItems(normalized.items);
+  const slotTargetCount = resolveAccordionSlotTargetCount(context);
+  const desiredCount =
+    !includeInitialOpenControl && slotTargetCount > 0 ? slotTargetCount : undefined;
+  const normalized = normalizeValue(value, desiredCount);
+  const items = normalizeAccordionItems(normalized.items, desiredCount);
+  const defaultOpenIds = normalized.options?.defaultOpenIds ?? [];
+  const allowsAllClosed = normalized.options?.collapsible ?? true;
+  const initialOpenValue =
+    defaultOpenIds[0] ?? (allowsAllClosed ? accordionNoneOpenValue : (items[0]?.id ?? "1"));
 
   return (
     <EditorSection
@@ -229,41 +379,61 @@ function StructureSection({
       description="Set titles and helper text for each item."
     >
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Number of items</p>
-          <Select
-            value={String(items.length)}
-            onValueChange={(next) => setCount(value, onChange, Number(next))}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select count" />
-            </SelectTrigger>
-            <SelectContent>
-              {itemCountOptions.map((option) => (
-                <SelectItem key={`accordion-count-${option}`} value={option}>
-                  {option}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {includeInitialOpenControl ? (
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Number of items</p>
+            <Select
+              value={String(items.length)}
+              onValueChange={(next) => setCount(value, onChange, Number(next))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select count" />
+              </SelectTrigger>
+              <SelectContent>
+                {itemCountOptions.map((option) => (
+                  <SelectItem key={`accordion-count-${option}`} value={option}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Item count</p>
+            <p className="rounded-md border bg-muted/30 p-3 text-sm text-muted-foreground">
+              Use the shared Structure controls in Visual mode to add or remove Accordion items.
+              Advanced mode reflects the current slot-backed item count.
+            </p>
+          </div>
+        )}
 
         {includeInitialOpenControl ? (
           <div className="space-y-2">
             <p className="text-sm font-medium">Initially open item</p>
             <Select
-              value={normalized.options?.initiallyOpenId ?? items[0]?.id ?? "1"}
-              onValueChange={(next) =>
+              value={initialOpenValue}
+              onValueChange={(next) => {
+                if (next === accordionNoneOpenValue) {
+                  updateOptions(value, onChange, {
+                    initiallyOpenId: undefined,
+                    defaultOpenIds: [],
+                  });
+                  return;
+                }
                 updateOptions(value, onChange, {
                   initiallyOpenId: next,
                   defaultOpenIds: [next],
-                })
-              }
+                });
+              }}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Choose item" />
               </SelectTrigger>
               <SelectContent>
+                {allowsAllClosed ? (
+                  <SelectItem value={accordionNoneOpenValue}>None - start collapsed</SelectItem>
+                ) : null}
                 {items.map((item) => (
                   <SelectItem key={`accordion-open-${item.id}`} value={item.id}>
                     {item.title}
@@ -284,18 +454,39 @@ function StructureSection({
             <Input
               value={item.title}
               onChange={(event) =>
-                updateItem(value, onChange, item.id, { title: event.target.value })
+                updateItem(value, onChange, item.id, { title: event.target.value }, items.length)
               }
               placeholder={`Section ${index + 1}`}
             />
             <Input
               value={item.description ?? ""}
               onChange={(event) =>
-                updateItem(value, onChange, item.id, {
-                  description: event.target.value,
-                })
+                updateItem(
+                  value,
+                  onChange,
+                  item.id,
+                  {
+                    description: event.target.value,
+                  },
+                  items.length
+                )
               }
               placeholder="Optional summary text"
+            />
+            <Input
+              value={item.icon ?? ""}
+              onChange={(event) =>
+                updateItem(
+                  value,
+                  onChange,
+                  item.id,
+                  {
+                    icon: event.target.value,
+                  },
+                  items.length
+                )
+              }
+              placeholder="Optional icon or emoji"
             />
           </div>
         ))}
@@ -307,20 +498,30 @@ function StructureSection({
 function BehaviorSection({
   value,
   onChange,
+  variant,
+  context,
 }: {
   value: AccordionData;
   onChange: (next: AccordionData) => void;
+  variant: AccordionVariantId;
+  context?: WidgetEditorProps<AccordionData>["context"];
 }) {
-  const normalized = normalizeValue(value);
-  const items = normalizeAccordionItems(normalized.items);
+  const slotTargetCount = resolveAccordionSlotTargetCount(context);
+  const desiredCount = slotTargetCount > 0 ? slotTargetCount : undefined;
+  const normalized = normalizeValue(value, desiredCount);
+  const items = normalizeAccordionItems(normalized.items, desiredCount);
   const openMode = normalized.options?.openMode ?? "single";
   const defaultOpenIds = normalized.options?.defaultOpenIds ?? [];
+  const allowsAllClosed = normalized.options?.collapsible ?? true;
+  const singleOpenValue =
+    defaultOpenIds[0] ?? (allowsAllClosed ? accordionNoneOpenValue : (items[0]?.id ?? "1"));
+  const fallbackTokens = accordionVariantFallbackTokenMap[variant];
 
   return (
     <EditorSection
       id="accordion.behavior-style"
       title="Behavior and Style"
-      description="Control opening behavior and panel colors."
+      description="Control open state, layout, styling, and motion."
     >
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="space-y-2">
@@ -349,9 +550,9 @@ function BehaviorSection({
 
         <div className="flex items-center justify-between rounded-md border p-3">
           <div>
-            <p className="text-sm font-medium">Allow all closed</p>
+            <p className="text-sm font-medium">Allow all sections to close</p>
             <p className="text-xs text-muted-foreground">
-              Keep disclosure state collapsible after the default open state.
+              Turn this on if visitors should be able to collapse every section.
             </p>
           </div>
           <Switch
@@ -365,18 +566,28 @@ function BehaviorSection({
         <div className="space-y-2">
           <p className="text-sm font-medium">Default open item</p>
           <Select
-            value={defaultOpenIds[0] ?? items[0]?.id ?? "1"}
-            onValueChange={(next) =>
+            value={singleOpenValue}
+            onValueChange={(next) => {
+              if (next === accordionNoneOpenValue) {
+                updateOptions(value, onChange, {
+                  defaultOpenIds: [],
+                  initiallyOpenId: undefined,
+                });
+                return;
+              }
               updateOptions(value, onChange, {
                 defaultOpenIds: [next],
                 initiallyOpenId: next,
-              })
-            }
+              });
+            }}
           >
             <SelectTrigger>
               <SelectValue placeholder="Choose item" />
             </SelectTrigger>
             <SelectContent>
+              {allowsAllClosed ? (
+                <SelectItem value={accordionNoneOpenValue}>None - start collapsed</SelectItem>
+              ) : null}
               {items.map((item) => (
                 <SelectItem key={`accordion-default-open-${item.id}`} value={item.id}>
                   {item.title}
@@ -403,9 +614,11 @@ function BehaviorSection({
                       const nextIds = nextChecked
                         ? Array.from(new Set([...defaultOpenIds, item.id]))
                         : defaultOpenIds.filter((entry) => entry !== item.id);
+                      const resolvedIds =
+                        nextIds.length === 0 && !allowsAllClosed ? [item.id] : nextIds;
                       updateOptions(value, onChange, {
-                        defaultOpenIds: nextIds,
-                        initiallyOpenId: nextIds[0] ?? item.id,
+                        defaultOpenIds: resolvedIds,
+                        initiallyOpenId: resolvedIds[0],
                       });
                     }}
                   />
@@ -416,49 +629,210 @@ function BehaviorSection({
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="space-y-2">
-          <ClearableFieldHeader
-            label="Surface color"
-            value={normalized.style?.surfaceColor}
-            onClear={() => clearStyleField(value, onChange, "surfaceColor")}
-          />
-          <Input
-            value={normalized.style?.surfaceColor ?? accordionDefaults.style?.surfaceColor ?? ""}
-            onChange={(event) => updateStyle(value, onChange, { surfaceColor: event.target.value })}
-            placeholder="var(--color-surface)"
-          />
-        </div>
-        <div className="space-y-2">
-          <ClearableFieldHeader
-            label="Border color"
-            value={normalized.style?.borderColor}
-            onClear={() => clearStyleField(value, onChange, "borderColor")}
-          />
-          <Input
-            value={normalized.style?.borderColor ?? accordionDefaults.style?.borderColor ?? ""}
-            onChange={(event) => updateStyle(value, onChange, { borderColor: event.target.value })}
-            placeholder="var(--color-border)"
-          />
-        </div>
-        <div className="space-y-2">
-          <ClearableFieldHeader
-            label="Summary text color"
-            value={normalized.style?.summaryTextColor}
-            onClear={() => clearStyleField(value, onChange, "summaryTextColor")}
-          />
-          <Input
-            value={
-              normalized.style?.summaryTextColor ?? accordionDefaults.style?.summaryTextColor ?? ""
-            }
-            onChange={(event) =>
-              updateStyle(value, onChange, {
-                summaryTextColor: event.target.value,
+          <p className="text-sm font-medium">Motion</p>
+          <Select
+            value={normalized.options?.motion ?? "none"}
+            onValueChange={(next) =>
+              updateOptions(value, onChange, {
+                motion: next as NonNullable<NonNullable<AccordionData["options"]>["motion"]>,
               })
             }
-            placeholder="var(--color-text)"
-          />
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Choose motion" />
+            </SelectTrigger>
+            <SelectContent>
+              {accordionMotionOptions.map((option) => (
+                <SelectItem key={`accordion-motion-${option.id}`} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Max width</p>
+          <Select
+            value={normalized.layout?.maxWidth ?? "full"}
+            onValueChange={(next) =>
+              updateLayout(value, onChange, {
+                maxWidth: next as NonNullable<NonNullable<AccordionData["layout"]>["maxWidth"]>,
+              })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Choose width" />
+            </SelectTrigger>
+            <SelectContent>
+              {accordionMaxWidthOptions.map((option) => (
+                <SelectItem key={`accordion-max-width-${option.id}`} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Summary padding</p>
+          <Select
+            value={normalized.style?.summaryPadding ?? fallbackTokens.summaryPadding}
+            onValueChange={(next) =>
+              updateStyle(value, onChange, {
+                summaryPadding: next as NonNullable<
+                  NonNullable<AccordionData["style"]>["summaryPadding"]
+                >,
+              })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Choose summary padding" />
+            </SelectTrigger>
+            <SelectContent>
+              {accordionPaddingOptions.map((option) => (
+                <SelectItem key={`accordion-summary-padding-${option.id}`} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Content padding</p>
+          <Select
+            value={normalized.style?.contentPadding ?? fallbackTokens.contentPadding}
+            onValueChange={(next) =>
+              updateStyle(value, onChange, {
+                contentPadding: next as NonNullable<
+                  NonNullable<AccordionData["style"]>["contentPadding"]
+                >,
+              })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Choose content padding" />
+            </SelectTrigger>
+            <SelectContent>
+              {accordionPaddingOptions.map((option) => (
+                <SelectItem key={`accordion-content-padding-${option.id}`} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Corner radius</p>
+          <Select
+            value={normalized.style?.radius ?? fallbackTokens.radius}
+            onValueChange={(next) =>
+              updateStyle(value, onChange, {
+                radius: next as NonNullable<NonNullable<AccordionData["style"]>["radius"]>,
+              })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Choose radius" />
+            </SelectTrigger>
+            <SelectContent>
+              {accordionRadiusOptions.map((option) => (
+                <SelectItem key={`accordion-radius-${option.id}`} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Title size</p>
+          <Select
+            value={normalized.style?.summaryFontSize ?? fallbackTokens.summaryFontSize}
+            onValueChange={(next) =>
+              updateStyle(value, onChange, {
+                summaryFontSize: next as NonNullable<
+                  NonNullable<AccordionData["style"]>["summaryFontSize"]
+                >,
+              })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Choose title size" />
+            </SelectTrigger>
+            <SelectContent>
+              {accordionSummaryFontSizeOptions.map((option) => (
+                <SelectItem key={`accordion-title-size-${option.id}`} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Title weight</p>
+          <Select
+            value={normalized.style?.summaryFontWeight ?? fallbackTokens.summaryFontWeight}
+            onValueChange={(next) =>
+              updateStyle(value, onChange, {
+                summaryFontWeight: next as NonNullable<
+                  NonNullable<AccordionData["style"]>["summaryFontWeight"]
+                >,
+              })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Choose title weight" />
+            </SelectTrigger>
+            <SelectContent>
+              {accordionSummaryFontWeightOptions.map((option) => (
+                <SelectItem key={`accordion-title-weight-${option.id}`} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <ColorField
+          label="Surface color"
+          value={normalized.style?.surfaceColor}
+          onChange={(next) => updateStyle(value, onChange, { surfaceColor: next })}
+          placeholder="var(--color-surface)"
+          pickerFallback="#ffffff"
+          onClear={() => clearStyleField(value, onChange, "surfaceColor")}
+        />
+        <ColorField
+          label="Border color"
+          value={normalized.style?.borderColor}
+          onChange={(next) => updateStyle(value, onChange, { borderColor: next })}
+          placeholder="var(--color-border)"
+          pickerFallback="#d4d4d8"
+          onClear={() => clearStyleField(value, onChange, "borderColor")}
+        />
+        <ColorField
+          label="Summary text color"
+          value={normalized.style?.summaryTextColor}
+          onChange={(next) => updateStyle(value, onChange, { summaryTextColor: next })}
+          placeholder="var(--color-text)"
+          pickerFallback="#111827"
+          onClear={() => clearStyleField(value, onChange, "summaryTextColor")}
+        />
+        <ColorField
+          label="Body text color"
+          value={normalized.style?.descriptionTextColor}
+          onChange={(next) => updateStyle(value, onChange, { descriptionTextColor: next })}
+          placeholder="var(--color-text)"
+          pickerFallback="#6b7280"
+          onClear={() => clearStyleField(value, onChange, "descriptionTextColor")}
+        />
       </div>
     </EditorSection>
   );
@@ -505,7 +879,12 @@ export function AccordionVisualEditor({
         <VariantCards value={resolveVariant(variant)} onChange={onVariantChange} />
       </EditorSection>
       <StructureSection value={value} onChange={onChange} context={context} />
-      <BehaviorSection value={value} onChange={onChange} />
+      <BehaviorSection
+        value={value}
+        onChange={onChange}
+        variant={resolveVariant(variant)}
+        context={context}
+      />
     </div>
   );
 }
@@ -527,7 +906,12 @@ export function AccordionAdvancedEditor({
         <VariantCards value={resolveVariant(variant)} onChange={onVariantChange} />
       </EditorSection>
       <StructureSection value={value} onChange={onChange} context={context} />
-      <BehaviorSection value={value} onChange={onChange} />
+      <BehaviorSection
+        value={value}
+        onChange={onChange}
+        variant={resolveVariant(variant)}
+        context={context}
+      />
       <EditorSection
         id="accordion.diagnostics"
         title="Diagnostics"

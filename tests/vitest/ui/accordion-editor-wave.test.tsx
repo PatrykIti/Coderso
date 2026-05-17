@@ -9,6 +9,7 @@ import {
   accordionItemMax,
   type AccordionData,
 } from "../../../core/widgets/core/accordion";
+import type { WidgetEditorProps } from "../../../core/widgets/types";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -194,6 +195,11 @@ const findAllInputsByPlaceholder = (container: ParentNode, placeholder: string) 
       element instanceof HTMLInputElement && element.getAttribute("placeholder") === placeholder
   );
 
+const findInputsByType = (container: ParentNode, type: string) =>
+  Array.from(container.querySelectorAll("input")).filter(
+    (element) => element instanceof HTMLInputElement && element.type === type
+  );
+
 const findButtonByText = (container: ParentNode, text: string) =>
   Array.from(container.querySelectorAll("button")).find((element) =>
     (element.textContent ?? "").includes(text)
@@ -220,10 +226,12 @@ const renderEditor = async ({
   editor,
   initialValue,
   initialVariant = "soft",
+  initialContext,
 }: {
   editor: EditorKind;
   initialValue: AccordionData;
   initialVariant?: string;
+  initialContext?: WidgetEditorProps<AccordionData>["context"];
 }) => {
   const { AccordionAdvancedEditor, AccordionVisualEditor, AccordionWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/AccordionEditors");
@@ -259,6 +267,7 @@ const renderEditor = async ({
           onVariantChangeSpy(next);
           setVariant(next);
         }}
+        context={initialContext}
       />
     );
   };
@@ -324,12 +333,14 @@ test("Accordion wizard editor resolves legacy variants, preserves a valid open i
 
     setInputValue(findInputByPlaceholder(view.container, "Section 4"), "Support");
     setInputValue(findAllInputsByPlaceholder(view.container, "Optional summary text")[3], "SLA");
+    setInputValue(findAllInputsByPlaceholder(view.container, "Optional icon or emoji")[3], "✨");
 
     expect(view.getValue().items?.[3]).toEqual(
       expect.objectContaining({
         id: "4",
         title: "Support",
         description: "SLA",
+        icon: "✨",
       })
     );
     expect(view.onChangeSpy).toHaveBeenCalled();
@@ -342,6 +353,32 @@ test("Accordion visual editor covers behavior controls, style fallbacks, and str
   const view = await renderEditor({
     editor: "visual",
     initialVariant: "compact",
+    initialContext: {
+      surface: "page-builder",
+      slotTargets: [
+        {
+          definitionId: "item",
+          slotId: "item:1",
+          label: "Item 1",
+          kind: "repeatable",
+          instanceId: "1",
+        },
+        {
+          definitionId: "item",
+          slotId: "item:2",
+          label: "Item 2",
+          kind: "repeatable",
+          instanceId: "2",
+        },
+        {
+          definitionId: "item",
+          slotId: "item:3",
+          label: "Item 3",
+          kind: "repeatable",
+          instanceId: "3",
+        },
+      ],
+    },
     initialValue: {
       items: [
         { id: "alpha", title: "Alpha", description: "First item" },
@@ -364,54 +401,73 @@ test("Accordion visual editor covers behavior controls, style fallbacks, and str
       'data-widget-editor-section="accordion.behavior-style"'
     );
     expect(view.container.textContent).not.toContain("Initially open item");
+    expect(view.container.textContent).toContain(
+      "Use the shared Structure controls in Visual mode"
+    );
+    expect(
+      findSelectByOptions(view.container, ["2", "3", "4", String(accordionItemMax)])
+    ).toBeUndefined();
     const surfaceInput = findInputByPlaceholder(view.container, "var(--color-surface)");
     const borderInput = findInputByPlaceholder(view.container, "var(--color-border)");
-    const summaryInput = findInputByPlaceholder(view.container, "var(--color-text)");
+    const [summaryInput, bodyInput] = findAllInputsByPlaceholder(
+      view.container,
+      "var(--color-text)"
+    );
     const clearButtons = Array.from(view.container.querySelectorAll("button")).filter((button) =>
       (button.textContent ?? "").includes("Clear")
     );
+    const colorPickers = findInputsByType(view.container, "color");
 
-    expect((surfaceInput as HTMLInputElement | null | undefined)?.value).toBe(
-      accordionDefaults.style?.surfaceColor
-    );
+    expect((surfaceInput as HTMLInputElement | null | undefined)?.value).toBe("");
     expect((borderInput as HTMLInputElement | null | undefined)?.value).toBe(
       accordionDefaults.style?.borderColor
     );
     expect((summaryInput as HTMLInputElement | null | undefined)?.value).toBe(
       accordionDefaults.style?.summaryTextColor
     );
-    expect(clearButtons).toHaveLength(3);
+    expect((bodyInput as HTMLInputElement | null | undefined)?.value).toBe("");
+    expect(clearButtons).toHaveLength(4);
+    expect(colorPickers).toHaveLength(4);
 
     clickElement(findButtonByText(view.container, "Soft"));
     expect(view.getVariant()).toBe("soft");
     expect(view.onVariantChangeSpy).toHaveBeenCalledWith("soft");
 
-    setSelectValue(
-      findSelectByOptions(view.container, ["2", "3", "4", String(accordionItemMax)]),
-      "3"
-    );
+    expect(view.getValue().items).toHaveLength(2);
+    expect(findInputByPlaceholder(view.container, "Section 3")).toBeTruthy();
+
+    setInputValue(findInputByPlaceholder(view.container, "Section 3"), "Delivery");
+    setInputValue(findAllInputsByPlaceholder(view.container, "Optional icon or emoji")[2], "🔥");
     expect(view.getValue().items).toHaveLength(3);
     expect(view.getValue().items?.[2]).toEqual(
       expect.objectContaining({
         id: "3",
-        title: "Section 3",
+        title: "Delivery",
+        icon: "🔥",
       })
     );
-
-    setSelectValue(findSelectByOptions(view.container, ["alpha", "beta", "3"]), "3");
-    expect(view.getValue().options?.initiallyOpenId).toBe("3");
-
-    setInputValue(findInputByPlaceholder(view.container, "Section 3"), "Delivery");
-    expect(view.getValue().items?.[2]?.title).toBe("Delivery");
+    setSelectValue(
+      findSelectByOptions(view.container, ["__none__", "alpha", "beta", "3"]),
+      "__none__"
+    );
+    expect(view.getValue().options?.defaultOpenIds).toEqual([]);
+    expect(view.getValue().options?.initiallyOpenId).toBeUndefined();
 
     setSelectValue(findSelectByOptions(view.container, ["single", "multiple"]), "multiple");
 
     expect(view.getValue().options?.openMode).toBe("multiple");
-    expect(view.getValue().options?.defaultOpenIds).toEqual(["3"]);
+    expect(view.getValue().options?.defaultOpenIds).toEqual([]);
+
+    setSelectValue(findSelectByOptions(view.container, ["none", "subtle", "smooth"]), "smooth");
+    setSelectValue(findSelectByOptions(view.container, ["sm", "md", "lg", "full"]), "sm");
+    setSelectValue(findSelectByOptions(view.container, ["sm", "md", "lg", "xl"]), "xl");
+    setSelectValue(findSelectByOptions(view.container, ["sm", "base", "lg"]), "lg");
+    setSelectValue(findSelectByOptions(view.container, ["medium", "semibold", "bold"]), "bold");
 
     setInputValue(surfaceInput, "#101010");
     setInputValue(borderInput, "#202020");
     setInputValue(summaryInput, "#303030");
+    setInputValue(bodyInput, "#404040");
     clickElement(clearButtons[1]);
     clickElement(clearButtons[2]);
     expect(view.getValue().style?.borderColor).toBe(accordionDefaults.style?.borderColor);
@@ -421,15 +477,22 @@ test("Accordion visual editor covers behavior controls, style fallbacks, and str
       expect.objectContaining({
         options: expect.objectContaining({
           openMode: "multiple",
-          defaultOpenIds: ["3"],
+          defaultOpenIds: [],
           collapsible: true,
           allowMultiple: true,
-          initiallyOpenId: "3",
+          motion: "smooth",
+        }),
+        layout: expect.objectContaining({
+          maxWidth: "sm",
         }),
         style: expect.objectContaining({
           surfaceColor: "#101010",
           borderColor: accordionDefaults.style?.borderColor,
           summaryTextColor: accordionDefaults.style?.summaryTextColor,
+          descriptionTextColor: "#404040",
+          radius: "xl",
+          summaryFontSize: "lg",
+          summaryFontWeight: "bold",
         }),
       })
     );
@@ -442,6 +505,32 @@ test("Accordion advanced editor shows normalized diagnostics and keeps the previ
   const view = await renderEditor({
     editor: "advanced",
     initialVariant: "unknown",
+    initialContext: {
+      surface: "page-builder",
+      slotTargets: [
+        {
+          definitionId: "item",
+          slotId: "item:1",
+          label: "Item 1",
+          kind: "repeatable",
+          instanceId: "1",
+        },
+        {
+          definitionId: "item",
+          slotId: "item:2",
+          label: "Item 2",
+          kind: "repeatable",
+          instanceId: "2",
+        },
+        {
+          definitionId: "item",
+          slotId: "item:3",
+          label: "Item 3",
+          kind: "repeatable",
+          instanceId: "3",
+        },
+      ],
+    },
     initialValue: {
       items: [
         { id: " ", title: " ", description: " " },
@@ -472,10 +561,14 @@ test("Accordion advanced editor shows normalized diagnostics and keeps the previ
         collapsible: true,
         initiallyOpenId: "1",
         allowMultiple: false,
+        motion: "none",
       },
       style: {
         borderColor: "accent-border",
         summaryTextColor: accordionDefaults.style?.summaryTextColor,
+      },
+      layout: {
+        maxWidth: "full",
       },
     });
 
@@ -484,17 +577,19 @@ test("Accordion advanced editor shows normalized diagnostics and keeps the previ
       "3"
     );
     setInputValue(findInputByPlaceholder(view.container, "Section 3"), "Rollout");
+    setInputValue(findAllInputsByPlaceholder(view.container, "Optional icon or emoji")[2], "📌");
     setSelectValue(findSelectByOptions(view.container, ["single", "multiple"]), "multiple");
     setInputValue(
-      findInputByPlaceholder(view.container, "var(--color-text)"),
+      findAllInputsByPlaceholder(view.container, "var(--color-text)")[0],
       "var(--color-muted)"
     );
+    setSelectValue(findSelectByOptions(view.container, ["none", "subtle", "smooth"]), "subtle");
 
     expect(readDiagnostics(view.container)).toEqual({
       items: [
         { id: "1", title: "Section 1" },
         { id: "2", title: "Custom title", description: "Helpful details" },
-        { id: "3", title: "Rollout" },
+        { id: "3", title: "Rollout", icon: "📌" },
       ],
       options: {
         openMode: "multiple",
@@ -502,10 +597,14 @@ test("Accordion advanced editor shows normalized diagnostics and keeps the previ
         collapsible: true,
         initiallyOpenId: "1",
         allowMultiple: true,
+        motion: "subtle",
       },
       style: {
         borderColor: "accent-border",
         summaryTextColor: "var(--color-muted)",
+      },
+      layout: {
+        maxWidth: "full",
       },
     });
     expect(view.onChangeSpy).toHaveBeenCalled();

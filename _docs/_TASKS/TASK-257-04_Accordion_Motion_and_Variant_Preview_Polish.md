@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Runtime Render + UX Polish
 **Estimated Effort:** Medium
 **Dependencies:** TASK-256-04, TASK-256-05-04, TASK-257-02, TASK-257-03, TASK-257
-**Status:** To Do
+**Status:** Done (2026-05-17)
 
 ---
 
@@ -33,15 +33,15 @@ mode, not a TASK-242 visual-off token.
 
 ## Sub-Tasks
 
-- [ ] Define a small Accordion motion model, such as `none`, `subtle`, and
+- [x] Define a small Accordion motion model, such as `none`, `subtle`, and
   `smooth`, with `none` as an accessible opt-out.
-- [ ] Implement motion with CSS/classes only. If a future animation requires
+- [x] Implement motion with CSS/classes only. If a future animation requires
   instance-scoped runtime script behavior, split that into a separate runtime
   task with Bun-owned validation before implementing it.
-- [ ] Respect `prefers-reduced-motion` for any animated state.
-- [ ] Replace text-only variant cards with compact visual previews for `soft`,
+- [x] Respect `prefers-reduced-motion` for any animated state.
+- [x] Replace text-only variant cards with compact visual previews for `soft`,
   `bordered`, and `compact`.
-- [ ] Keep variant preview cards generated from the same token names used by the
+- [x] Keep variant preview cards generated from the same token names used by the
   runtime so previews do not drift from rendered output.
 
 ## Files to Change

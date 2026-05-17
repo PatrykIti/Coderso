@@ -12,7 +12,7 @@
 > **Status aktualny (2026-05-17):**
 > Tabele w sekcjach 3-6 zachowują historyczny wynik audytu Playwright z
 > 2026-05-16. Bieżący owner/status jest śledzony niżej w sekcji
-> `Current ownership after TASK-256` i to ona jest źródłem prawdy dla TASK-257.
+> `Current closure state` i to ona jest źródłem prawdy dla TASK-257.
 > Shared Accordion naprawy z TASK-256 nie są już otwartym zakresem tego raportu.
 
 ## 1. Przegląd widgetów
@@ -49,9 +49,10 @@ FAQ Accordion to specjalistyczny widget do sekcji FAQ — pary pytanie/odpowied�
 
 | Sekcja | Pola |
 |--------|------|
-| **Elementy** | `id`, `title`, `description` (na każdy item) |
-| **Opcje** | `openMode` (single/multiple), `defaultOpenIds[]`, `collapsible`, `initiallyOpenId`, `allowMultiple` |
-| **Styl** | `surfaceColor`, `borderColor`, `summaryTextColor` |
+| **Elementy** | `id`, `title`, `description`, `icon` (na każdy item) |
+| **Opcje** | `openMode` (single/multiple), `defaultOpenIds[]`, `collapsible`, `motion`, `initiallyOpenId`, `allowMultiple` |
+| **Styl** | `surfaceColor`, `borderColor`, `summaryTextColor`, `descriptionTextColor`, `summaryPadding`, `contentPadding`, `radius`, `summaryFontSize`, `summaryFontWeight` |
+| **Layout** | `maxWidth` |
 
 ### 2.2 Model danych — FAQ Accordion
 
@@ -65,8 +66,8 @@ FAQ Accordion to specjalistyczny widget do sekcji FAQ — pary pytanie/odpowied�
 ### 2.3 Tryby edytora
 
 #### Accordion
-- **Wizard** — wariant + structure (count, initially-open, title/description per item) + przycisk "Continue to layout and styling"
-- **Visual** — Wizard + BehaviorSection (openMode, collapsible, default open, kolory)
+- **Wizard** — wariant + structure (count, start state, icon/title/description per item) + przycisk "Continue to layout and styling"
+- **Visual** — Wizard + BehaviorSection (openMode, collapsible, motion, max width, padding/radius, title typography, color pickers)
 - **Advanced** — Visual + Diagnostics (JSON snapshot)
 
 #### FAQ Accordion
@@ -307,7 +308,7 @@ Accordion poprawnie responsywny — `space-y-3` sprawia, że items stackują si�
 
 ---
 
-## 8. Current ownership after TASK-256 (2026-05-17)
+## 8. Current closure state (2026-05-17)
 
 - `TASK-256-03` + `TASK-256-05-04`: public accordion placeholder copy is now
   gated by the shared render-context contract and no longer leaks to frontend
@@ -318,21 +319,33 @@ Accordion poprawnie responsywny — `space-y-3` sprawia, że items stackują si�
   valid default-open item, keep one item open when `collapsible=false`, sync
   `aria-expanded` through the runtime helper, and expose the current disclosure
   affordance with a chevron while preserving the shared TASK-256 scope.
-- Shared evidence from this turn:
+- TASK-257 now adds the Accordion-owned follow-up slice: an explicit
+  all-collapsed initial state, Accordion-local style/layout/typography fields,
+  plain-text item icons, clearer all-closed copy, motion options, and visual
+  variant preview cards.
+- Shared repeatable-slot add/reorder remains deferred to TASK-293 so slot
+  instance mutations can be solved once at the builder seam instead of being
+  reimplemented inside Accordion.
+- Validation evidence from this turn:
   `bun run test:vitest -- tests/vitest/widgets/accordionWidget.test.tsx
-  tests/vitest/ui/accordion-editor-wave.test.tsx` passed on 2026-05-17.
+  tests/vitest/ui/accordion-editor-wave.test.tsx` (`15/15`), `bun test
+  tests/unit/widgets/validator.test.ts` (`6/6`), `bun --cwd core lint`,
+  `bun --cwd core lint:types`, `bun run gates:coderso`, and `bun run precommit`
+  all passed on 2026-05-17. `bun run scan:security:strict` also passed after an
+  outside-sandbox rerun so the scanners could access the host trust store and
+  network.
 
 ### 8.1 Current owner matrix
 
-| Finding rows | Current status | Owner |
+| Finding rows | Current status | Owner | Evidence |
 |---|---|---|
-| C1, C3, Accordion part of C4, U1, U2, U7, R1, R6, R7, Accordion parts of R2-R4 | Fixed on the shared baseline | TASK-256-04 / TASK-256-05-04 |
-| C2, W4, W8, W9, W10, W13, W14, U9, R5, FAQ parts of W1/W7/W12/U4/C4/R2-R4 | Accordion report reference only; out of scope for this widget family | TASK-256-06-03 or a future FAQ task |
-| W11 | Open | TASK-257-01 |
-| W3, W5, W6, Accordion part of W7, Accordion part of W12, U8 | Open | TASK-257-02 |
-| W2, U3 | Open | TASK-257-03 |
-| U5, U6 | Deferred shared blocker | TASK-293 |
-| Accordion part of W1, Accordion part of U4 | Open | TASK-257-04 |
+| C1, C3, Accordion part of C4, U1, U2, U7, R1, R6, R7, Accordion parts of R2-R4 | Fixed on the shared baseline | TASK-256-04 / TASK-256-05-04 | Shared closure evidence in changelog `845-846`; focused suites remain green on 2026-05-17. |
+| C2, W4, W8, W9, W10, W13, W14, U9, R5, FAQ parts of W1/W7/W12/U4/C4/R2-R4 | Accordion report reference only; out of scope for this widget family | TASK-256-06-03 or a future FAQ task | Routed outside the layout Accordion family. |
+| W11 | Fixed | TASK-257-01 | `tests/vitest/widgets/accordionWidget.test.tsx`; `tests/vitest/ui/accordion-editor-wave.test.tsx` |
+| W3, W5, W6, Accordion part of W7, Accordion part of W12, U8 | Fixed | TASK-257-02 | `tests/vitest/widgets/accordionWidget.test.tsx`; `tests/vitest/ui/accordion-editor-wave.test.tsx` |
+| W2, U3 | Fixed | TASK-257-03 | `tests/vitest/widgets/accordionWidget.test.tsx`; `tests/vitest/ui/accordion-editor-wave.test.tsx` |
+| U5, U6 | Deferred shared blocker | TASK-293 | Shared slot/data sync and repeatable-slot reorder remain builder-owned follow-up work. |
+| Accordion part of W1, Accordion part of U4 | Fixed | TASK-257-04 | `tests/vitest/widgets/accordionWidget.test.tsx`; `tests/vitest/ui/accordion-editor-wave.test.tsx` |
 
 ### 8.2 TASK-257 / TASK-293 implementation notes
 

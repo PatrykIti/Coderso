@@ -75,6 +75,8 @@ test("accordion normalization resolves defaults", () => {
   expect(normalized.options?.collapsible).toBe(true);
   expect(normalized.options?.initiallyOpenId).toBe("2");
   expect(normalized.options?.allowMultiple).toBe(true);
+  expect(normalized.options?.motion).toBe("none");
+  expect(normalized.layout?.maxWidth).toBe("full");
 });
 
 test("accordion honors a default-open item beyond the first position", () => {
@@ -92,6 +94,50 @@ test("accordion honors a default-open item beyond the first position", () => {
 
   expect(details[0]?.open).toBe(false);
   expect(details[1]?.open).toBe(true);
+});
+
+test("accordion preserves an intentional all-collapsed default state when collapsible is enabled", () => {
+  const normalized = normalizeAccordionData({
+    ...accordionDefaults,
+    options: {
+      openMode: "single",
+      defaultOpenIds: [],
+      collapsible: true,
+      allowMultiple: false,
+    },
+  });
+  const details = renderAccordionDom(normalized) as HTMLDetailsElement[];
+
+  expect(normalized.options?.defaultOpenIds).toEqual([]);
+  expect(normalized.options?.initiallyOpenId).toBeUndefined();
+  expect(details[0]?.open).toBe(false);
+  expect(details[1]?.open).toBe(false);
+});
+
+test("accordion falls back to the first valid item when saved open ids are stale or disallowed", () => {
+  const staleDefaults = normalizeAccordionData({
+    ...accordionDefaults,
+    options: {
+      openMode: "single",
+      defaultOpenIds: ["missing"],
+      collapsible: true,
+      allowMultiple: false,
+    },
+  });
+  const lockedAllClosed = normalizeAccordionData({
+    ...accordionDefaults,
+    options: {
+      openMode: "single",
+      defaultOpenIds: [],
+      collapsible: false,
+      allowMultiple: false,
+    },
+  });
+
+  expect(staleDefaults.options?.defaultOpenIds).toEqual(["1"]);
+  expect(staleDefaults.options?.initiallyOpenId).toBe("1");
+  expect(lockedAllClosed.options?.defaultOpenIds).toEqual(["1"]);
+  expect(lockedAllClosed.options?.initiallyOpenId).toBe("1");
 });
 
 test("accordion keeps one item open when collapsible is disabled", () => {
@@ -161,6 +207,47 @@ test("accordion cleared panel surface omits background style", () => {
   expect(html).not.toContain("background-color:");
 });
 
+test("accordion renders icon, motion, max width, and extended style tokens", () => {
+  const html = renderToString(
+    <AccordionBlock
+      data={normalizeAccordionData({
+        ...accordionDefaults,
+        items: [
+          { id: "1", title: "Section 1", description: "Copy", icon: "🔥" },
+          { id: "2", title: "Section 2", description: "More copy" },
+        ],
+        options: {
+          ...accordionDefaults.options,
+          motion: "smooth",
+        },
+        style: {
+          ...accordionDefaults.style,
+          descriptionTextColor: "#445566",
+          summaryPadding: "lg",
+          contentPadding: "lg",
+          radius: "xl",
+          summaryFontSize: "lg",
+          summaryFontWeight: "bold",
+        },
+        layout: {
+          maxWidth: "sm",
+        },
+      })}
+      variant="soft"
+    />
+  );
+
+  expect(html).toContain('data-coderso-accordion-motion="smooth"');
+  expect(html).toContain("max-w-2xl");
+  expect(html).toContain("px-5 py-4");
+  expect(html).toContain("p-5");
+  expect(html).toContain("rounded-2xl");
+  expect(html).toContain("text-lg");
+  expect(html).toContain("font-bold");
+  expect(html).toContain('style="color:#445566"');
+  expect(html).toContain("🔥");
+});
+
 test("accordion shows empty-item placeholders only in editor preview", () => {
   const publicHtml = renderToString(<AccordionBlock data={accordionDefaults} variant="soft" />);
   const previewHtml = renderToString(
@@ -189,6 +276,7 @@ test("accordion visual editor renders key sections", () => {
   expect(html).toContain("Behavior and Style");
   expect(html).toContain('data-widget-editor-section="accordion.items"');
   expect(html).toContain('data-widget-editor-section="accordion.behavior-style"');
+  expect(html).toContain("Optional icon or emoji");
 });
 
 const editors = [AccordionWizardEditor, AccordionAdvancedEditor];

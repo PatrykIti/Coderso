@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Page Builder
 **Estimated Effort:** Large
 **Dependencies:** TASK-256-03, TASK-257-01, TASK-257
-**Status:** To Do
+**Status:** Done (2026-05-17)
 
 ---
 
@@ -62,18 +62,18 @@ Live owner constraint:
 
 ## Sub-Tasks
 
-- [ ] Add optional `icon` or `leadingIcon` to Accordion item schema/defaults and
+- [x] Add optional `icon` or `leadingIcon` to Accordion item schema/defaults and
   normalizer.
-- [ ] Render item icons in `<summary>` as decorative by default, with no
+- [x] Render item icons in `<summary>` as decorative by default, with no
   user-authored HTML.
-- [ ] Add Wizard/Visual controls for per-item icon text that accept short emoji
+- [x] Add Wizard/Visual controls for per-item icon text that accept short emoji
   or icon labels and normalize overlong values.
-- [ ] Replace the current technical collapsible helper copy with editor-facing
+- [x] Replace the current technical collapsible helper copy with editor-facing
   language after TASK-256 fixes behavior truthfulness.
-- [ ] Link U6 to TASK-293 in the current checkout because `BlockSettings` can
+- [x] Link U6 to TASK-293 in the current checkout because `BlockSettings` can
   create `item:<id>` slots but no shared owner syncs `block.data.items[]`
   metadata for the editor.
-- [ ] Link U5 reorder to TASK-293 in the current checkout because no shared
+- [x] Link U5 reorder to TASK-293 in the current checkout because no shared
   repeatable-slot reorder owner currently rebuilds slot order and matching
   widget metadata together.
 
