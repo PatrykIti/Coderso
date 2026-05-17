@@ -57,25 +57,33 @@ type CommitLogoEditResult = {
   pendingRemoval?: PendingLogoRemoval;
 };
 
+type CommitLogoEditOptions = {
+  structural?: boolean;
+};
+
 function LogoCloudVisualEditor({ value, onChange }: LogoCloudEditorProps) {
   const [pendingRemoval, setPendingRemoval] = useState<PendingLogoRemoval>(null);
   const [dragState, setDragState] = useState<LogoDragState>(null);
   const editVersionRef = useRef(0);
-  const mediaSelection = useLogoMediaSelection({ value, onChange, persistAssetId });
+  const mediaSelectionRef = useRef<ReturnType<typeof useLogoMediaSelection> | null>(null);
 
   function commitLogoEdit(
-    updater: (current: LogoCloudData, nextEditVersion: number) => LogoCloudData | CommitLogoEditResult
+    updater: (current: LogoCloudData, nextEditVersion: number) => LogoCloudData | CommitLogoEditResult,
+    options: CommitLogoEditOptions = {}
   ) {
     const current = normalizeValue(value);
     const nextEditVersion = editVersionRef.current + 1;
     const result = updater(current, nextEditVersion);
     const next = "next" in result ? result.next : result;
     if (next === current) return;
-    mediaSelection.invalidateAllLogoMediaRequests();
+    if (options.structural) mediaSelectionRef.current?.invalidateAllLogoMediaRequests();
     editVersionRef.current = nextEditVersion;
     setPendingRemoval("next" in result ? (result.pendingRemoval ?? null) : null);
     onChange(normalizeValue(next));
   }
+
+  const mediaSelection = useLogoMediaSelection({ value, commitLogoMutation: commitLogoEdit, persistAssetId });
+  mediaSelectionRef.current = mediaSelection;
 }
 
 function removeLogoWithUndo(index: number) {
@@ -87,7 +95,7 @@ function removeLogoWithUndo(index: number) {
       next: { ...current, logos: normalizeLogoCloudLogos(logos.filter((_, i) => i !== index), logos.length - 1) },
       pendingRemoval: { logo: removed, index, editVersion: nextEditVersion },
     };
-  });
+  }, { structural: true });
 }
 
 function restoreRemovedLogo() {
@@ -101,7 +109,7 @@ function restoreRemovedLogo() {
     const nextLogos = [...logos];
     nextLogos.splice(Math.min(pendingRemoval.index, nextLogos.length), 0, pendingRemoval.logo);
     return { ...current, logos: normalizeLogoCloudLogos(nextLogos, nextLogos.length) };
-  });
+  }, { structural: true });
 }
 
 function LogoRemovalUndoNotice() {
@@ -130,7 +138,7 @@ function handleLogoDrop(toIndex: number) {
     if (!item) return current;
     nextLogos.splice(toIndex, 0, item);
     return { ...current, logos: nextLogos };
-  });
+  }, { structural: true });
   setDragState(null);
 }
 ```
@@ -147,12 +155,13 @@ Editor data flow:
    `onChange` once a valid drop occurs.
 4. Use immediate remove with inline Undo that restores the exact removed item at
    its previous index. Do not also add a confirmation dialog in this leaf.
-5. Route every logo list edit, including add, remove, move, drag/drop, and
-   restore, through `commitLogoEdit`. The helper must call the TASK-274-02
-   media-selection helper's `invalidateAllLogoMediaRequests` before committing
-   the structural `logos[]` change, then increment `editVersionRef`. Ordinary
-   edits clear pending removal; `removeLogoWithUndo` uses the helper's
-   `pendingRemoval` result shape so the Undo notice survives the remove commit.
+5. Route every logo mutation through `commitLogoEdit`: TASK-274-02 row patches
+   call it with the default non-structural options, while add, remove, move,
+   drag/drop, count, and restore call it with `{ structural: true }`. Structural
+   calls must invoke the media-selection helper's
+   `invalidateAllLogoMediaRequests` before committing the `logos[]` change.
+   Every committed mutation increments `editVersionRef` and clears pending Undo
+   unless `removeLogoWithUndo` returns the helper's `pendingRemoval` result shape.
 6. Preserve `logos.length >= 1` and `logos.length <= logoCloudLogoMax`.
 
 Error handling:
@@ -163,6 +172,8 @@ Error handling:
 - Keep the existing order if remove is attempted while only one logo remains.
 - Restore button must no-op safely after another edit invalidates the pending
   removal.
+- Non-structural row edits from TASK-274-02 must clear pending Undo without
+  clearing unrelated in-flight media requests; structural list edits clear both.
 
 Regression-test shape:
 
@@ -170,8 +181,8 @@ Regression-test shape:
   from the emitted value.
 - Clicking Undo restores the exact logo at its previous index when no later edit
   invalidated the pending removal.
-- A later logo edit, add, move, drag/drop, or second removal clears the pending
-  removal; a stale Undo click no-ops.
+- A later logo row edit, add, move, drag/drop, or second removal clears the
+  pending removal; a stale Undo click no-ops.
 - Removing the only remaining logo no-ops and does not show an Undo notice.
 - Happy-dom/event-level drag tests move logo A after logo C and assert the
   emitted `logos[]` order changes once on drop.

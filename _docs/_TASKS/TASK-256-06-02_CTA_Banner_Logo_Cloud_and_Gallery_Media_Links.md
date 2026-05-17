@@ -67,7 +67,7 @@ schema/editor expansion is deferred to TASK-274-02.
 |---|---:|---|
 | `core/admin/ui/widgets/editors/CtaBannerEditors.tsx` | 250-550 | Visual clear controls, action labels, URL feedback, and focus-state controls. |
 | `core/widgets/core/ctaBanner.tsx` | 185-200, 333-389 | Empty badge suppression, description color, border class, focus-visible, and safe link output. |
-| `core/admin/ui/widgets/editors/LogoCloudEditors.tsx` | 284-694 | Shared-contract Logo Cloud repairs only: hoverColor gating, link feedback from the shared safe-href helper, and Advanced duplicate-control cleanup. Per-logo `alt`, image picker, and Wizard image/link authoring stay in TASK-274. |
+| `core/admin/ui/widgets/editors/LogoCloudEditors.tsx` | 284-694 | Shared-contract Logo Cloud repairs only: hoverColor gating and link feedback from the shared safe-href helper. Advanced duplicate-control cleanup stays in TASK-256-01; per-logo `alt`, image picker, and Wizard image/link authoring stay in TASK-274. |
 | `core/widgets/core/logoCloud.tsx` | 268-401 | Link `rel`/target handling, section labels, heading semantics, logo height fallback, and hoverColor output. |
 | `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx` | 92-98, 448, 559-598, 720-832 | Overlay alpha-safe editing, image/video type clarity, video media picker scope, and duplicated Advanced controls. |
 | `core/widgets/core/galleryMosaic.tsx` | 159-275, 314-507 | Explicit resolver defaults, feature-left one-item handling, link safety, alt/figure semantics, and redundant row-span cleanup. |

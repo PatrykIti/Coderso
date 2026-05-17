@@ -57,9 +57,19 @@ type LogoCloudLogo = {
   href?: string;
 };
 
+type LogoMediaPickerChange =
+  | { kind: "select"; assetId: string }
+  | { kind: "clear" }
+  | { kind: "invalid" };
+
+type CommitLogoMutation = (
+  updater: (current: LogoCloudData) => LogoCloudData,
+  options?: { structural?: boolean }
+) => void;
+
 type UseLogoMediaSelectionOptions = {
   value: LogoCloudData;
-  onChange: (next: LogoCloudData) => void;
+  commitLogoMutation: CommitLogoMutation;
   persistAssetId: boolean;
 };
 
@@ -74,22 +84,29 @@ async function resolveLogoMediaAsset(assetId: string) {
   };
 }
 
-function resolveSingleMediaPickerId(value: unknown): string | null {
-  if (typeof value === "string") return value;
-  if (Array.isArray(value)) {
-    const [first] = value;
-    return typeof first === "string" ? first : null;
+function resolveLogoMediaPickerChange(value: unknown): LogoMediaPickerChange {
+  if (value === null) return { kind: "clear" };
+  if (typeof value === "string" && value.trim()) {
+    return { kind: "select", assetId: value };
   }
-  if (value && typeof value === "object" && "id" in value) {
-    const id = (value as { id?: unknown }).id;
-    return typeof id === "string" ? id : null;
-  }
-  return null;
+  return { kind: "invalid" };
+}
+
+function patchLogoCloudLogo(
+  current: LogoCloudData,
+  index: number,
+  patch: Partial<LogoCloudLogo>
+) {
+  const logos = normalizeLogoCloudLogos(current.logos);
+  if (!logos[index]) return current;
+  const nextLogos = [...logos];
+  nextLogos[index] = { ...nextLogos[index], ...patch };
+  return { ...current, logos: nextLogos };
 }
 
 function useLogoMediaSelection({
   value,
-  onChange,
+  commitLogoMutation,
   persistAssetId,
 }: UseLogoMediaSelectionOptions) {
   const requestIdsByLogoRef = useRef<Record<string, number>>({});
@@ -123,7 +140,7 @@ function useLogoMediaSelection({
   }
 
   function commitLogoPatch(index: number, patch: Partial<LogoCloudLogo>) {
-    updateLogo(latestValueRef.current, onChange, index, patch);
+    commitLogoMutation((current) => patchLogoCloudLogo(current, index, patch));
   }
 
   function clearLogoImage(index: number, logo: LogoCloudLogo) {
@@ -134,12 +151,20 @@ function useLogoMediaSelection({
   async function handleLogoAssetChange(
     index: number,
     logo: LogoCloudLogo,
-    assetId: string | null,
+    change: LogoMediaPickerChange,
   ) {
+    if (change.kind === "clear") {
+      clearLogoImage(index, logo);
+      return;
+    }
+    if (change.kind === "invalid") {
+      invalidateLogoMediaRequest(index, logo);
+      return;
+    }
+    const assetId = change.assetId;
     const requestKey = resolveRequestKey(index, logo);
     const requestId = (requestIdsByLogoRef.current[requestKey] ?? 0) + 1;
     requestIdsByLogoRef.current[requestKey] = requestId;
-    if (!assetId) return invalidateLogoMediaRequest(index, logo);
     const next = await resolveLogoMediaAsset(assetId);
     if (requestIdsByLogoRef.current[requestKey] !== requestId) return;
     const latestIndex = findLogoIndexByRequestKey(requestKey);
@@ -164,15 +189,20 @@ function useLogoMediaSelection({
 }
 
 function LogoCloudVisualEditor({ value, onChange }: LogoCloudVisualEditorProps) {
+  const mediaSelectionRef = useRef<ReturnType<typeof useLogoMediaSelection> | null>(null);
+  const commitLogoMutation: CommitLogoMutation = (updater, options) => {
+    if (options?.structural) mediaSelectionRef.current?.invalidateAllLogoMediaRequests();
+    updateValue(value, onChange, updater);
+  };
   const mediaSelection = useLogoMediaSelection({
     value,
-    onChange,
+    commitLogoMutation,
     persistAssetId,
   });
+  mediaSelectionRef.current = mediaSelection;
 
   function handleLogoStructureEdit(updater: (current: LogoCloudData) => LogoCloudData) {
-    mediaSelection.invalidateAllLogoMediaRequests();
-    updateValue(value, onChange, updater);
+    commitLogoMutation(updater, { structural: true });
   }
 
   return (
@@ -216,7 +246,7 @@ function LogoImageControl({ logo, index, mediaSelection }: LogoImageControlProps
       />
       <MediaPicker
         value={logo.imageAssetId ?? null}
-        onChange={(next) => void handleLogoAssetChange(index, logo, resolveSingleMediaPickerId(next))}
+        onChange={(next) => void handleLogoAssetChange(index, logo, resolveLogoMediaPickerChange(next))}
         multiple={false}
         accept={["image/*"]}
       />
@@ -239,37 +269,46 @@ Editor data flow:
 4. MediaPicker selection resolves the public media URL through cache-first
    `listMediaCached({ force: false })` or the equivalent default call. Store the
    public URL by default; store `imageAssetId` only if `logoCloud.tsx` makes that
-   field schema-owned, normalized, documented, and tested.
-   Adapt `MediaPicker`'s `unknown` `onChange` payload through
-   `resolveSingleMediaPickerId` before calling the media resolver.
+   field schema-owned, normalized, documented, and tested. Adapt
+   `MediaPicker`'s `unknown` `onChange` payload through
+   `resolveLogoMediaPickerChange` before calling the media resolver: string
+   selects an asset, `null` is the real single-select picker clear event, and
+   every other payload is invalid/no-op.
 5. Manual image URL and link URL entry remain supported for backward
-   compatibility. Use an explicit Clear image control for destructive image
-   removal; do not treat malformed or unknown picker payloads as a request to
-   erase an existing manual URL.
+   compatibility. Use an explicit Clear image control and the MediaPicker's
+   trusted single-select remove event for destructive image removal; do not
+   treat malformed or unknown non-null picker payloads as a request to erase an
+   existing manual URL.
 6. Link URL validation UI consumes TASK-256 shared safe-link output when that
    contract exists; do not hand-roll a second link validator in this leaf.
 7. Runtime `img` output uses explicit `logo.alt` when present and falls back to
    `logo.name` for backward compatibility.
 8. Parent-owned add, remove, count, move, drag/drop, and other structural
-   `logos[]` edits must route through a parent helper such as
-   `handleLogoStructureEdit`, which calls `invalidateAllLogoMediaRequests`
-   before changing `logos[]`. Manual image URL edits use the row-level
-   invalidation helper.
+   `logos[]` edits must route through a parent `commitLogoMutation` helper with
+   `{ structural: true }`, which calls `invalidateAllLogoMediaRequests` before
+   changing `logos[]`. Non-structural row edits use the same coordinator without
+   the structural flag so TASK-274-03 pending Undo state is cleared consistently.
+   Manual image URL edits also use the row-level invalidation helper.
+9. Replace the current side-effect-only `updateLogo(value, onChange, ...)` call
+   sites with a pure `patchLogoCloudLogo(current, index, patch)` helper inside
+   the coordinator path. When TASK-274-03 is present, `commitLogoMutation` should
+   delegate to its `commitLogoEdit` implementation rather than maintaining a
+   second mutation path.
 
 Error handling:
 
 - If MediaPicker resolution fails, show an inline error and keep the previous
   logo data unchanged.
-- Unknown or malformed MediaPicker values resolve to `null`, invalidate only the
-  row's pending media request, and keep the previous `image`/`imageAssetId`
-  unchanged. The explicit Clear image control is the only destructive clear
-  path unless a future schema-owned `imageAssetId` contract can prove the image
-  is picker-owned.
+- The MediaPicker's trusted single-select remove event emits `null` and clears
+  `image` plus `imageAssetId`. Unknown or malformed non-null MediaPicker values
+  resolve to `invalid`, invalidate only the row's pending media request, and keep
+  the previous `image`/`imageAssetId` unchanged.
 - Guard async media-cache resolution with a per-logo request ID/ref and commit
   resolved patches through a `latestValueRef` helper. After `await`, re-read the
   current logo row/index by stable logo key before applying the image/name patch.
-  Do not call `updateLogo` with a stale `value`, captured index, or captured
-  `logo.name` from before `await`.
+  Do not call the current side-effect `updateLogo(value, onChange, ...)` helper
+  with a stale `value`, captured index, or captured `logo.name` from before
+  `await`.
 - Structural list edits bump `structureVersionRef` and clear request IDs so
   remove-then-add cannot let reused fallback ids such as `logo-1` receive an old
   media resolution.
@@ -287,7 +326,7 @@ Regression-test shape:
 
 - Mock `MediaPicker` at the editor import seam to emit the selected image ID
   shape used by the real picker, plus malformed payloads that must resolve to
-  `null`.
+  `invalid` and the real single-select remove event that emits `null`.
 - Mock the media cache client used by the editor, including success,
   not-found, and failure cases for `listMediaCached`.
 - Assert stale media-cache races do not overwrite newer selections: trigger two
@@ -298,9 +337,9 @@ Regression-test shape:
 - Assert a manual image URL edit invalidates an in-flight media selection for
   that row and clears any stale `imageAssetId` unless schema-owned persistence
   explicitly keeps it.
-- Assert malformed or unknown MediaPicker payloads do not clear an existing
-  manual image URL, while the explicit Clear image control clears `image` and
-  `imageAssetId`.
+- Assert malformed or unknown non-null MediaPicker payloads do not clear an
+  existing manual image URL, while both the real picker `null` remove event and
+  the explicit Clear image control clear `image` and `imageAssetId`.
 - Assert unrelated logo edits made while media resolution is pending are
   preserved when the media selection resolves, proving the commit path uses the
   latest editor value.
