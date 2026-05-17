@@ -98,6 +98,38 @@ test("appointment form renders phone validation and notes bounds when optional f
   expect(html).toContain('data-booking-notes-counter="true"');
 });
 
+test("appointment form renders consent controls and captcha bridge data when available", () => {
+  const html = renderToString(
+    <AppointmentFormBlock
+      variant="default"
+      data={normalizeAppointmentFormData({
+        ...appointmentFormDefaults,
+        consent: {
+          enabled: true,
+          label: "I agree to the booking terms.",
+          required: true,
+          privacyUrl: "/privacy",
+          termsUrl: "/terms",
+        },
+        resolved: {
+          captcha: {
+            provider: "recaptcha_v3",
+            siteKey: "site-key-1",
+            action: "public_write",
+          },
+        },
+      })}
+    />
+  );
+
+  expect(html).toContain('name="consentAccepted"');
+  expect(html).toContain("I agree to the booking terms.");
+  expect(html).toContain('href="/privacy"');
+  expect(html).toContain('href="/terms"');
+  expect(html).toContain('data-captcha-site-key="site-key-1"');
+  expect(html).toContain('data-captcha-action="public_write"');
+});
+
 test("appointment form cleared frame and summary styles omit decorative backgrounds", () => {
   const html = renderToString(
     <AppointmentFormBlock

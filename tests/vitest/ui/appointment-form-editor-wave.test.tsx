@@ -259,6 +259,11 @@ test("AppointmentForm editors cover normalized defaults, field toggles, copy upd
     setInputValue(findLabelInput(view.container, "Notes label"), "Additional details");
     setInputValue(findLabelInput(view.container, "Notes placeholder"), "Share context");
     setInputValue(findLabelInput(view.container, "Notes max length"), "750");
+    setCheckboxValue(findToggleByText(view.container, "Show consent checkbox"), true);
+    setInputValue(findLabelInput(view.container, "Consent label"), "I agree to the booking terms");
+    setCheckboxValue(findToggleByText(view.container, "Require consent"), true);
+    setInputValue(findLabelInput(view.container, "Privacy URL"), "/privacy");
+    setInputValue(findLabelInput(view.container, "Terms URL"), "/terms");
 
     setInputValue(findLabelInput(view.container, "Submission endpoint"), "/api/booking/custom");
 
@@ -297,6 +302,13 @@ test("AppointmentForm editors cover normalized defaults, field toggles, copy upd
       notesLabel: "Additional details",
       notesPlaceholder: "Share context",
       notesMaxLength: 750,
+      consent: {
+        enabled: true,
+        label: "I agree to the booking terms",
+        required: true,
+        privacyUrl: "/privacy",
+        termsUrl: "/terms",
+      },
       submissionEndpoint: "/api/booking/custom",
     });
     expect(view.container.textContent).toContain(
@@ -352,6 +364,7 @@ test("AppointmentForm editors render safe empty-string fallbacks when normalized
         notesLabel: undefined,
         notesPlaceholder: undefined,
         notesMaxLength: undefined,
+        consent: undefined,
         submissionEndpoint: undefined,
         noSelectionMessage: undefined,
         resolved: undefined,

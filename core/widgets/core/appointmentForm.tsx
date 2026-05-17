@@ -11,6 +11,18 @@ export type AppointmentFormVariantId =
   | "sidebar"
   | "card-summary";
 export type AppointmentFormNameMode = "full" | "split";
+export type AppointmentFormConsent = {
+  enabled?: boolean;
+  label?: string;
+  required?: boolean;
+  privacyUrl?: string;
+  termsUrl?: string;
+};
+export type AppointmentFormResolvedCaptcha = {
+  provider?: "recaptcha_v3";
+  siteKey?: string;
+  action?: "public_write";
+};
 
 export type AppointmentFormData = {
   flowId?: string;
@@ -47,6 +59,7 @@ export type AppointmentFormData = {
   phonePattern?: string;
   phonePatternMessage?: string;
   notesMaxLength?: number;
+  consent?: AppointmentFormConsent;
   submissionEndpoint?: string;
   style?: {
     frameBackground?: string;
@@ -59,6 +72,7 @@ export type AppointmentFormData = {
   resolved?: {
     submissionNonce?: string | null;
     error?: string;
+    captcha?: AppointmentFormResolvedCaptcha | null;
   };
 };
 
@@ -96,6 +110,13 @@ export const appointmentFormDefaults: AppointmentFormData = {
   phonePattern: "^\\+?[0-9()\\-.\\s]{7,20}$",
   phonePatternMessage: "Use digits, spaces, parentheses, or an optional leading +.",
   notesMaxLength: 500,
+  consent: {
+    enabled: false,
+    label: "I agree to the booking terms.",
+    required: true,
+    privacyUrl: "",
+    termsUrl: "",
+  },
   submissionEndpoint: "/api/booking/reservations",
   style: {
     frameBackground: "color-mix(in srgb, var(--color-bg) 95%, transparent)",
@@ -128,6 +149,21 @@ const intInRange = (value: unknown, fallback: number, minimum: number, maximum: 
 
 const nameMode = (value: AppointmentFormData["nameMode"]): AppointmentFormNameMode =>
   value === "split" ? "split" : "full";
+
+const bookingLink = (value: string | undefined) => {
+  const normalized = optionalText(value);
+  if (!normalized) return undefined;
+  if (normalized.startsWith("/")) return normalized;
+  try {
+    const url = new URL(normalized);
+    if (url.protocol === "http:" || url.protocol === "https:") {
+      return url.toString();
+    }
+  } catch {
+    return undefined;
+  }
+  return undefined;
+};
 
 export const appointmentFormSchema = {
   type: "object",
@@ -167,6 +203,17 @@ export const appointmentFormSchema = {
     phonePattern: { type: "string" },
     phonePatternMessage: { type: "string" },
     notesMaxLength: { type: "integer", minimum: 50, maximum: 2000 },
+    consent: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        enabled: { type: "boolean" },
+        label: { type: "string" },
+        required: { type: "boolean" },
+        privacyUrl: { type: "string" },
+        termsUrl: { type: "string" },
+      },
+    },
     submissionEndpoint: { type: "string" },
     style: {
       type: "object",
@@ -186,6 +233,15 @@ export const appointmentFormSchema = {
       properties: {
         submissionNonce: { type: ["string", "null"] },
         error: { type: "string" },
+        captcha: {
+          type: ["object", "null"],
+          additionalProperties: false,
+          properties: {
+            provider: { enum: ["recaptcha_v3"] },
+            siteKey: { type: "string" },
+            action: { enum: ["public_write"] },
+          },
+        },
       },
     },
   },
@@ -313,6 +369,18 @@ export function normalizeAppointmentFormData(data: AppointmentFormData): Appoint
       50,
       2000
     ),
+    consent: {
+      enabled: bool(data.consent?.enabled, appointmentFormDefaults.consent?.enabled === true),
+      label: text(
+        data.consent?.label,
+        appointmentFormDefaults.consent?.label ?? "I agree to the booking terms."
+      ),
+      required:
+        bool(data.consent?.enabled, appointmentFormDefaults.consent?.enabled === true) &&
+        bool(data.consent?.required, appointmentFormDefaults.consent?.required !== false),
+      privacyUrl: bookingLink(data.consent?.privacyUrl),
+      termsUrl: bookingLink(data.consent?.termsUrl),
+    },
     submissionEndpoint: text(
       data.submissionEndpoint,
       appointmentFormDefaults.submissionEndpoint ?? "/api/booking/reservations"
@@ -321,6 +389,15 @@ export function normalizeAppointmentFormData(data: AppointmentFormData): Appoint
     resolved: {
       submissionNonce: optionalText(data.resolved?.submissionNonce ?? undefined) ?? null,
       ...(optionalText(data.resolved?.error) ? { error: text(data.resolved?.error, "") } : {}),
+      ...(data.resolved?.captcha?.siteKey
+        ? {
+            captcha: {
+              provider: "recaptcha_v3" as const,
+              siteKey: text(data.resolved.captcha.siteKey, ""),
+              action: "public_write" as const,
+            },
+          }
+        : {}),
     },
   };
 }
@@ -451,6 +528,8 @@ export function AppointmentFormBlock({
     appointmentFormDefaults.phonePatternMessage ??
     "Use digits, spaces, parentheses, or an optional leading +.";
   const notesMaxLength = normalized.notesMaxLength ?? appointmentFormDefaults.notesMaxLength ?? 500;
+  const consent = normalized.consent ?? appointmentFormDefaults.consent ?? {};
+  const showConsent = (consent.enabled ?? false) && (consent.label ?? "").trim().length > 0;
   const formLabel = titleText.trim().length > 0 ? titleText.trim() : "Appointment form";
   const formDescription =
     descriptionText.trim().length > 0
@@ -502,6 +581,8 @@ export function AppointmentFormBlock({
         data-show-resource-in-summary={
           normalized.showResourceInSummary === false ? "false" : "true"
         }
+        data-captcha-site-key={normalized.resolved?.captcha?.siteKey ?? ""}
+        data-captcha-action={normalized.resolved?.captcha?.action ?? ""}
         data-success-redirect={normalized.successRedirectUrl ?? ""}
         data-success-message={successMessage}
         aria-label={formLabel}
@@ -598,6 +679,43 @@ export function AppointmentFormBlock({
               0 / {notesMaxLength} characters
             </p>
           </Field>
+        ) : null}
+
+        {showConsent ? (
+          <label className="flex items-start gap-2 rounded-md border border-[var(--color-border)]/70 px-3 py-2 text-xs text-[var(--color-text)]/80">
+            <input
+              type="checkbox"
+              name="consentAccepted"
+              required={consent.required === true}
+              className="mt-0.5"
+              data-booking-consent-input
+              data-booking-consent-label={consent.label ?? ""}
+            />
+            <span>
+              {consent.label}
+              {consent.privacyUrl ? (
+                <>
+                  {" "}
+                  <a
+                    className="underline"
+                    href={consent.privacyUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Privacy policy
+                  </a>
+                </>
+              ) : null}
+              {consent.termsUrl ? (
+                <>
+                  {" "}
+                  <a className="underline" href={consent.termsUrl} target="_blank" rel="noreferrer">
+                    Terms
+                  </a>
+                </>
+              ) : null}
+            </span>
+          </label>
         ) : null}
 
         {submissionNonce ? <input type="hidden" name="formNonce" value={submissionNonce} /> : null}

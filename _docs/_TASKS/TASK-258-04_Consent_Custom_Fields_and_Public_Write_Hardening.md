@@ -12,16 +12,17 @@
 
 ## Overview
 
-Add Appointment Form product fields that affect legal consent, custom intake
-data, and public write anti-abuse without moving security secrets into widget
-data.
+Add Appointment Form product fields that affect legal consent and public-write
+anti-abuse without moving security secrets into widget data.
 
 This leaf covers:
 
-- BF-05: no custom fields.
 - BF-07: no GDPR/terms consent checkbox.
 - BF-08: booking public API accepts `captchaToken`, but Appointment Form runtime
   has no UI/runtime bridge to produce or submit it.
+
+`BF-05` now routes to `TASK-294`, which owns the actual custom-field product
+surface once the bounded public metadata contract exists.
 
 ## Files to Change
 
@@ -52,10 +53,6 @@ This leaf covers:
 
 ## Sub-Tasks
 
-- [ ] Add bounded custom field schema/defaults/normalizer/render/editor support
-  for text, email, phone, select, checkbox, and textarea fields.
-- [ ] Serialize custom fields into bounded reservation metadata rather than
-  top-level unknown public API fields.
 - [ ] Add consent configuration with visible label, required flag, and safe
   privacy/terms links.
 - [ ] Render consent checkbox and include consent acceptance metadata in the
@@ -75,16 +72,6 @@ This leaf covers:
 ## Implementation Pseudocode
 
 ```ts
-type AppointmentCustomField = {
-  id: string;
-  label: string;
-  type: "text" | "email" | "phone" | "select" | "checkbox" | "textarea";
-  required: boolean;
-  placeholder?: string;
-  options?: Array<{ value: string; label: string }>;
-  maxLength?: number;
-};
-
 type AppointmentConsent = {
   enabled: boolean;
   required: boolean;
@@ -93,16 +80,8 @@ type AppointmentConsent = {
   termsUrl?: string;
 };
 
-function normalizeAppointmentCustomFields(input: unknown): AppointmentCustomField[] {
-  return toArray(input)
-    .slice(0, APPOINTMENT_CUSTOM_FIELD_LIMIT)
-    .map(normalizeField)
-    .filter((field) => field.id && field.label);
-}
-
 function collectAppointmentMetadata(formData: FormData) {
   return {
-    customFields: collectBoundedCustomFields(formData, "custom."),
     consent: {
       accepted: formData.get("consentAccepted") === "on",
       label: String(formData.get("consentLabel") || "").slice(0, 240),
@@ -158,11 +137,6 @@ const bookingReservationMetadataSchema = {
         label: { type: "string", maxLength: 240 },
       },
     },
-    customFields: {
-      type: "array",
-      maxItems: 12,
-      items: appointmentCustomFieldSubmissionSchema,
-    },
   },
 };
 ```
@@ -188,10 +162,6 @@ bridge:
 
 Error handling:
 
-- If custom field ids collide, normalize to stable unique ids before rendering.
-- If custom select options are empty, reject/drop that custom field during
-  Appointment Form normalization and surface an editor warning; do not silently
-  render it as a different field type.
 - If consent is required and unchecked, HTML `required` blocks normal browser
   submission; the runtime must also avoid sending a payload when the checkbox is
   absent or false.
@@ -258,7 +228,9 @@ This leaf can affect the existing public booking write route.
 
 - `_docs/_WIDGETS/APPOINTMENT_FORM.md`
 - `_docs/PLAYWRIGHT/REPORT_APPOINTMENT_FORM_WIDGET.md` fixed evidence for
-  BF-05, BF-07, and BF-08.
+  BF-07 and BF-08.
+- `_docs/_TASKS/TASK-294_Appointment_Form_Custom_Field_Product_Surface.md` when
+  BF-05 defers to the custom-field follow-up owner.
 - `_docs/SECURITY_SPEC.md` only if public booking anti-abuse behavior changes
   beyond the existing policy.
 - `_docs/_TASKS/README.md` on status changes.
@@ -266,8 +238,6 @@ This leaf can affect the existing public booking write route.
 
 ## Acceptance Criteria
 
-- Admin can configure bounded custom fields without raw scripts or arbitrary
-  public payload keys.
 - Rendered Appointment Form includes consent controls when configured, with safe
   terms/privacy links.
 - Public runtime sends bounded custom field and consent metadata.
@@ -275,3 +245,5 @@ This leaf can affect the existing public booking write route.
   widget data.
 - Bun public API boundary and security tests cover accepted payloads, rejected
   payloads, and mapped public-route failures.
+- If BF-05 is not implemented in the same wave, the closure matrix points it to
+  `TASK-294` explicitly rather than claiming it landed through the consent/CAPTCHA slice.

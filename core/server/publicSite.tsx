@@ -61,6 +61,7 @@ import {
   type BookingCalendarData,
 } from "../widgets/core/bookingCalendar";
 import {
+  appointmentFormSchema,
   normalizeAppointmentFormData,
   type AppointmentFormData,
 } from "../widgets/core/appointmentForm";
@@ -206,6 +207,14 @@ const ensureRecord = (value: unknown): Record<string, unknown> => {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   return value as Record<string, unknown>;
 };
+
+const appointmentFormSupportsRuntimeCaptchaHydration = (() => {
+  const properties = ensureRecord((appointmentFormSchema as { properties?: unknown }).properties);
+  const resolvedSchema = ensureRecord(
+    (properties.resolved as { properties?: unknown } | undefined)?.properties
+  );
+  return Object.prototype.hasOwnProperty.call(resolvedSchema, "captcha");
+})();
 
 type RuntimeHydrationCache = {
   booking?: Awaited<ReturnType<typeof resolveBookingRuntimeData>>;
@@ -410,6 +419,7 @@ const hydrateRuntimeBlock = async (
         ...normalizedData,
         resolved: {
           submissionNonce: resolved.submissionNonce,
+          ...(appointmentFormSupportsRuntimeCaptchaHydration ? { captcha: resolved.captcha } : {}),
           ...(resolved.error ? { error: resolved.error } : {}),
         },
       },

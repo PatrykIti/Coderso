@@ -52,6 +52,34 @@ const runtimeClientScript = String.raw`(() => {
     }
   };
 
+  let recaptchaLoader = null;
+
+  const ensureRecaptchaClient = (siteKey) => {
+    if (window.grecaptcha?.execute) return Promise.resolve();
+    if (recaptchaLoader) return recaptchaLoader;
+    recaptchaLoader = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = "https://www.google.com/recaptcha/api.js?render=" + encodeURIComponent(siteKey);
+      script.async = true;
+      script.defer = true;
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error("recaptcha_load_failed"));
+      document.head.appendChild(script);
+    });
+    return recaptchaLoader;
+  };
+
+  const resolveCaptchaToken = async (form) => {
+    const siteKey = (form.dataset.captchaSiteKey || "").trim();
+    const action = (form.dataset.captchaAction || "public_write").trim() || "public_write";
+    if (!siteKey) return undefined;
+    await ensureRecaptchaClient(siteKey);
+    if (!window.grecaptcha?.execute) {
+      throw new Error("recaptcha_unavailable");
+    }
+    return window.grecaptcha.execute(siteKey, { action });
+  };
+
   const syncResourceOptions = (serviceSelect, resourceSelect) => {
     if (!(serviceSelect instanceof HTMLSelectElement)) return;
     if (!(resourceSelect instanceof HTMLSelectElement)) return;
@@ -340,6 +368,15 @@ const runtimeClientScript = String.raw`(() => {
         .join(" ");
     };
 
+    const collectConsentMetadata = (formData) => {
+      const consentInput = form.querySelector("[data-booking-consent-input]");
+      if (!(consentInput instanceof HTMLInputElement)) return undefined;
+      return {
+        accepted: formData.get("consentAccepted") === "on",
+        label: (consentInput.dataset.bookingConsentLabel || "").trim(),
+      };
+    };
+
     const setSubmittingState = (submitting) => {
       form.dataset.submitting = submitting ? "1" : "0";
       if (!(submitButton instanceof HTMLButtonElement)) return;
@@ -425,6 +462,8 @@ const runtimeClientScript = String.raw`(() => {
 
       try {
         const formData = new FormData(form);
+        const consent = collectConsentMetadata(formData);
+        const captchaToken = await resolveCaptchaToken(form);
         const payload = {
           serviceId: selection.serviceId,
           resourceId: selection.resourceId,
@@ -437,10 +476,11 @@ const runtimeClientScript = String.raw`(() => {
           notes: String(formData.get("notes") || "").trim() || null,
           formNonce:
             String(formData.get("formNonce") || formData.get("__nl_booking_nonce") || "") || "",
-          captchaToken: String(formData.get("captchaToken") || "").trim() || undefined,
+          captchaToken,
           metadata: {
             flowId,
             pathname: window.location.pathname,
+            ...(consent ? { consent } : {}),
           },
         };
 
@@ -483,7 +523,12 @@ const runtimeClientScript = String.raw`(() => {
       } catch (error) {
         if (errorNode instanceof HTMLElement) {
           errorNode.textContent =
-            error instanceof Error ? error.message : "Unable to submit booking right now.";
+            error instanceof Error
+              ? error.message === "recaptcha_load_failed" ||
+                error.message === "recaptcha_unavailable"
+                ? "Verification failed. Please try again."
+                : error.message
+              : "Unable to submit booking right now.";
           show(errorNode);
         }
       } finally {

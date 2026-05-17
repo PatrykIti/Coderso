@@ -493,6 +493,78 @@ export function AppointmentFormVisualEditor({
           </>
         ) : null}
       </Section>
+
+      <Section
+        title="Consent and protection"
+        description="Control visible consent copy and runtime verification behavior."
+      >
+        <ToggleField
+          label="Show consent checkbox"
+          checked={normalized.consent?.enabled === true}
+          onCheckedChange={(next) =>
+            update(normalized, onChange, {
+              consent: {
+                ...normalized.consent,
+                enabled: next,
+              },
+            })
+          }
+        />
+        {normalized.consent?.enabled ? (
+          <>
+            <TextField
+              label="Consent label"
+              value={normalized.consent?.label}
+              onChange={(next) =>
+                update(normalized, onChange, {
+                  consent: {
+                    ...normalized.consent,
+                    label: next,
+                  },
+                })
+              }
+            />
+            <ToggleField
+              label="Require consent"
+              checked={normalized.consent?.required === true}
+              onCheckedChange={(next) =>
+                update(normalized, onChange, {
+                  consent: {
+                    ...normalized.consent,
+                    required: next,
+                  },
+                })
+              }
+            />
+            <TextField
+              label="Privacy URL"
+              value={normalized.consent?.privacyUrl}
+              onChange={(next) =>
+                update(normalized, onChange, {
+                  consent: {
+                    ...normalized.consent,
+                    privacyUrl: next,
+                  },
+                })
+              }
+              placeholder="/privacy"
+            />
+            <TextField
+              label="Terms URL"
+              value={normalized.consent?.termsUrl}
+              onChange={(next) =>
+                update(normalized, onChange, {
+                  consent: {
+                    ...normalized.consent,
+                    termsUrl: next,
+                  },
+                })
+              }
+              placeholder="/terms"
+            />
+          </>
+        ) : null}
+      </Section>
       <SurfaceFields value={normalized} onChange={onChange} />
     </div>
   );

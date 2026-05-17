@@ -97,6 +97,7 @@ afterEach(() => {
       __nextlessBookingRuntimeClient?: boolean;
       __nextlessBookingRuntimeState?: unknown;
       fetch?: unknown;
+      grecaptcha?: unknown;
     }
   ).__nextlessBookingRuntimeClient;
   delete (
@@ -104,8 +105,17 @@ afterEach(() => {
       __nextlessBookingRuntimeClient?: boolean;
       __nextlessBookingRuntimeState?: unknown;
       fetch?: unknown;
+      grecaptcha?: unknown;
     }
   ).__nextlessBookingRuntimeState;
+  delete (
+    window as Window & {
+      __nextlessBookingRuntimeClient?: boolean;
+      __nextlessBookingRuntimeState?: unknown;
+      fetch?: unknown;
+      grecaptcha?: unknown;
+    }
+  ).grecaptcha;
   vi.restoreAllMocks();
 });
 
@@ -319,5 +329,77 @@ test("appointment form runtime composes split-name payload and updates notes cou
   expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toMatchObject({
     customerName: "Jamie Doe",
     notes: "Bring previous invoice",
+  });
+});
+
+test("appointment form runtime executes recaptcha and submits consent metadata", async () => {
+  const execute = vi.fn().mockResolvedValue("captcha-token-1");
+  (
+    window as Window & {
+      grecaptcha?: {
+        execute: (siteKey: string, options: { action: string }) => Promise<string>;
+      };
+    }
+  ).grecaptcha = { execute };
+
+  const fetchMock = vi.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ({
+      runtime: {
+        successMessage: "Reservation confirmed",
+      },
+    }),
+  });
+  window.fetch = fetchMock as unknown as typeof window.fetch;
+
+  const view = renderAppointmentFormDom(
+    normalizeAppointmentFormData({
+      ...appointmentFormDefaults,
+      consent: {
+        enabled: true,
+        label: "I agree to the booking terms.",
+        required: true,
+        privacyUrl: "/privacy",
+        termsUrl: "/terms",
+      },
+      resolved: {
+        captcha: {
+          provider: "recaptcha_v3",
+          siteKey: "site-key-1",
+          action: "public_write",
+        },
+      },
+    })
+  );
+
+  const consentInput = view.form.querySelector('input[name="consentAccepted"]');
+  if (!(consentInput instanceof HTMLInputElement)) {
+    throw new Error("Consent input missing from runtime test.");
+  }
+
+  consentInput.checked = true;
+  consentInput.dispatchEvent(new Event("change", { bubbles: true }));
+
+  setRuntimeSelection({
+    serviceId: "service-1",
+    resourceId: "resource-1",
+    startsAt: "2030-01-15T12:00:00.000Z",
+    endsAt: "2030-01-15T12:30:00.000Z",
+    timezone: "UTC",
+  });
+  await flushPromises();
+
+  submitForm(view.form);
+  await flushPromises();
+
+  expect(execute).toHaveBeenCalledWith("site-key-1", { action: "public_write" });
+  expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toMatchObject({
+    captchaToken: "captcha-token-1",
+    metadata: {
+      consent: {
+        accepted: true,
+        label: "I agree to the booking terms.",
+      },
+    },
   });
 });

@@ -75,7 +75,8 @@ Out of scope for TASK-258:
 | UX-01, UX-03, BF-02, BF-04, BF-10, BF-11, BF-14, BF-17, BF-18, A1-A5 | TASK-258-02 |
 | UX-02 | TASK-293 |
 | BF-06, BF-12, BF-15 | TASK-258-03 |
-| BF-05, BF-07, BF-08 | TASK-258-04 |
+| BF-05 | TASK-294 |
+| BF-07, BF-08 | TASK-258-04 |
 | UX-04 | TASK-256-02 |
 | UX-05, UX-06, BF-01, BF-03, BF-16, A6 | TASK-258-05 |
 | Final fixed/deferred evidence, report refresh, docs/changelog/board closure | TASK-258-06 |
@@ -87,7 +88,7 @@ Out of scope for TASK-258:
 | TASK-258-01 | Report IDs: BUG-01, BUG-02, UX-07, BF-09, BF-13 | `appointmentForm.tsx`, `AppointmentFormEditors.tsx`, `bookingRuntimeScript.ts` | Vitest widget render, editor wave for `loadingMessage`, new booking runtime script DOM suite, Bun public API only if payload changes |
 | TASK-258-02 | Report IDs: UX-01, UX-03, BF-02, BF-04, BF-10, BF-11, BF-14, BF-17, BF-18, A1-A5 | `appointmentForm.tsx`, `AppointmentFormEditors.tsx`, `bookingRuntimeScript.ts` | Vitest widget render, editor wave, validator, runtime payload DOM assertions |
 | TASK-258-03 | Report IDs: BF-06, BF-12, BF-15 | `AppointmentFormEditors.tsx`, `bookingRuntimeScript.ts`, `bookingCalendar.tsx`, `appointmentForm.tsx` | Vitest editor wave plus booking runtime script/widget render assertions for summary context, locale formatting, and safe redirect |
-| TASK-258-04 | Report IDs: BF-05, BF-07, BF-08 | `appointmentForm.tsx`, `AppointmentFormEditors.tsx`, `bookingRuntimeScript.ts`, `publicSite.tsx`, `publicBookingApi.ts`, `bookingSchemas.ts`, `bookingRuntimeResolver.ts`, `securitySettings.ts`, optional shared CAPTCHA helper only if extracted | Vitest widget/editor, booking schema validation, public runtime hydration, Bun public booking API route-boundary coverage including known error mapping, current public request entrypoint coverage when dispatch changes, security gate |
+| TASK-258-04 | Report IDs: BF-07, BF-08 | `appointmentForm.tsx`, `AppointmentFormEditors.tsx`, `bookingRuntimeScript.ts`, `publicSite.tsx`, `publicBookingApi.ts`, `bookingSchemas.ts`, `bookingRuntimeResolver.ts`, `securitySettings.ts`, optional shared CAPTCHA helper only if extracted | Vitest widget/editor, booking schema validation, public runtime hydration, Bun public booking API route-boundary coverage including known error mapping, current public request entrypoint coverage when dispatch changes, security gate |
 | TASK-258-05 | Report IDs: UX-05, UX-06, BF-01, BF-03, BF-16, A6 | `appointmentForm.tsx`, `AppointmentFormEditors.tsx`, widget registry/docs only when Appointment Form variants or docs metadata change | Vitest widget/editor, validator coverage when variant/style schema changes, style clear adjacency only if shared styles change |
 | TASK-258-06 | Report closure table plus every fixed/deferred source row | `_docs/PLAYWRIGHT/REPORT_APPOINTMENT_FORM_WIDGET.md`, `_docs/_WIDGETS/APPOINTMENT_FORM.md`, board/changelog/docs | `git diff --check`, targeted production lanes after implementation leaves, `gates:coderso`, `scan:security:strict`, `precommit`, and Playwright replay or exact blocker note |
 
