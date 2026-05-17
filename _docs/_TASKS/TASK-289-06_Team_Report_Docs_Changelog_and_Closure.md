@@ -1,0 +1,133 @@
+# TASK-289-06: Team Report Docs Changelog and Closure
+
+# FileName: TASK-289-06_Team_Report_Docs_Changelog_and_Closure.md
+
+**Priority:** Medium
+**Category:** Widgets + Team + Documentation + QA
+**Estimated Effort:** Medium
+**Dependencies:** TASK-289, TASK-289-01, TASK-289-02, TASK-289-03, TASK-289-04, TASK-289-05, TASK-256-08
+**Status:** To Do
+
+---
+
+## Overview
+
+Close the Team widget-specific Playwright follow-up family after all
+implementation leaves are complete or explicitly deferred.
+
+This leaf owns final report evidence, widget docs, task-board state, changelog
+entry, and validation matrix for TASK-289. It must not mark TASK-256 shared
+findings fixed unless the TASK-256 implementation and evidence have landed.
+
+## Source Findings
+
+- `_docs/PLAYWRIGHT/REPORT_TEAM_WIDGET.md:328-393` - accessibility table,
+  priority matrix, and summary statistics.
+- `_docs/_TASKS/TASK-289_Team_Widget_Playwright_Product_Followups.md` -
+  TASK-256 exclusion and TASK-289 scope matrices.
+- `_docs/_TASKS/README.md` - board/statistics owner.
+- `_docs/_CHANGELOG/README.md` - changelog numbering/index owner.
+
+## Sub-Tasks
+
+- None. This is an execution leaf.
+
+## Files to Change
+
+| File | Required change |
+|---|---|
+| `_docs/PLAYWRIGHT/REPORT_TEAM_WIDGET.md` | Add final textual status for each Team finding: fixed, deferred, moved to TASK-256, or no action. Do not commit PNG files. |
+| `_docs/_WIDGETS/TEAM.md` | Synchronize final schema/editor/runtime behavior. |
+| `_docs/WIDGETS.md` | Update only if global widget inventory or contract text changed. |
+| `_docs/WIDGET_PACK_MATRIX.md` | Update only if pack readiness/completeness changed. |
+| `_docs/_TASKS/TASK-289*.md` | Mark completed leaves and umbrella `Done` with dates, or record explicit deferrals. |
+| `_docs/_TASKS/README.md` | Move completed TASK-289 rows from To Do to Done and update statistics. |
+| `_docs/_CHANGELOG/{N}-2026-05-17-task-289-team-widget-followups.md` | Add final user-facing changelog entry. |
+| `_docs/_CHANGELOG/README.md` | Add the new changelog index row with the next unused number. |
+
+## Implementation Pseudocode
+
+```md
+## Final TASK-289 Status
+
+| Report item | Status | Evidence |
+|---|---|---|
+| UX-01 | Fixed by TASK-289-01 | tests + commit |
+| BUG-06 | TASK-256 | shared contract evidence |
+| BF-04 | Fixed by TASK-289-02 or deferred there | tests + commit or owner/reason |
+```
+
+Data flow:
+
+- Read the final TASK-289 scope matrix and every implementation leaf status.
+- Update the source report with one textual status row per finding:
+  TASK-256 exclusion, TASK-289 fixed evidence, TASK-289 deferral, or no action.
+- Synchronize widget docs, changelog entry, and task-board rows after report
+  evidence is complete.
+- Record exact validation commands and commit SHAs in the closure leaf.
+
+Error handling:
+
+- If a TASK-289 leaf remains intentionally deferred, keep the umbrella open or
+  mark only that leaf To Do with an explicit reason. Do not move the umbrella to
+  Done while unresolved owned findings remain.
+- If a TASK-256 shared finding is still open, keep it classified as TASK-256
+  and do not claim it in the Team closure report.
+- If broad validation fails for unrelated legacy reasons, record exact command
+  output and run targeted Team suites before deciding closure.
+
+## Security Contract
+
+No API routes are added.
+
+- Endpoint visibility: none.
+- Auth/RBAC/CSRF/rate-limit: unchanged.
+- Reject-unknown validation: closure must reference validator tests that cover
+  any new schema fields.
+- Anti-abuse: closure must confirm no raw HTML/script, unsafe link, arbitrary
+  class name, or secret-bearing browser payload was introduced.
+
+## Testing Requirements
+
+Before marking TASK-289 `Done`, run and record:
+
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run test:vitest -- tests/vitest/widgets/team.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/team-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer
+  output markers or shared widget rendering changed.
+- `bun run test:vitest -- tests/vitest/widgets/widgetSafeHref.test.ts` if Team
+  social/CTA safe-link behavior changed.
+- `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` if
+  Team style-token adjacency changed.
+- `bun test tests/unit/widgets/validator.test.ts` if schema/defaults changed.
+- `bun test tests/unit/widgets/registry.test.ts` if variant registration changed.
+- `bun run gates:coderso`
+- `bun run scan:security:strict`
+- `bun run precommit`
+
+Docs-only closure validation:
+
+- `git diff --check`
+- `bun run precommit`
+
+## Documentation Updates Required
+
+- `_docs/PLAYWRIGHT/REPORT_TEAM_WIDGET.md`
+- `_docs/_WIDGETS/TEAM.md`
+- `_docs/WIDGETS.md` if global inventory changed
+- `_docs/WIDGET_PACK_MATRIX.md` if pack readiness changed
+- `_docs/_TASKS/README.md`
+- `_docs/_CHANGELOG/README.md`
+- New changelog entry under `_docs/_CHANGELOG/`
+
+## Acceptance Criteria
+
+- Every Team report finding is mapped to fixed evidence, a TASK-256 exclusion,
+  no-action, or a documented TASK-289 deferral with owner and reason.
+- TASK-289 task statuses, board rows/statistics, docs, report, and changelog
+  are synchronized.
+- Validation output proves the changed Team contracts, not just generic
+  repository health.
+- No screenshots or generated binary Playwright artifacts are committed.

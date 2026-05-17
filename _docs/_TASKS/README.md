@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 290 tasks
+- **To Do:** 297 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1542 tasks
 
@@ -58,6 +58,13 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-290-06 | Testimonials CTA and Rich Quote Content | Medium | Large | Add a safe CTA and bounded rich quote formatting for Testimonials sections |
 | TASK-290-07 | Testimonials Large Set Import Export and Pagination | Low | Very Large | Decide large-set policy and add safe local import/export or pagination without external provider connectors |
 | TASK-290-08 | Testimonials Report Docs Changelog and Closure | Medium | Medium | Refresh Testimonials report/docs/changelog/board and final validation evidence |
+| TASK-289 | Team Widget Playwright Product Followups | High | Very Large | Team-only follow-up family for `REPORT_TEAM_WIDGET.md`, excluding TASK-256 shared-contract scope |
+| TASK-289-01 | Team Member Editor IA and Destructive Edit UX | High | Large | Colocate member social links, add recoverable/confirmed removals, and add efficient top member actions after TASK-256 safety |
+| TASK-289-02 | Team Spotlight Lead and Variant Guidance | Medium | Large | Add stable spotlight lead selection after TASK-256 resolves spotlight count/columns truthfulness |
+| TASK-289-03 | Team Photo Authoring and Media Picker | High | Large | Add Team photo picker, preview, and clear behavior while keeping URL validation/media safety in TASK-256 |
+| TASK-289-04 | Team Header Surface Typography and CTA Controls | Medium | Very Large | Add Team section background, eyebrow, typography, CTA, border-width, and contrast feedback after TASK-256 baselines |
+| TASK-289-05 | Team Large Team and Compact Mobile Presentation | Low | Large | Decide and implement or explicitly defer bounded large-team and compact-mobile presentation behavior |
+| TASK-289-06 | Team Report Docs Changelog and Closure | Medium | Medium | Refresh Team report/docs/changelog/board and final validation evidence |
 | TASK-288 | Tabs Widget Playwright Product Followups | High | Very Large | Tabs-only follow-up family for `REPORT_TABS_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-288-01 | Tabs Visual Color Parity and Editor IA | High | Large | Add inactive text color, readable labels, section IA, and contrast guidance through shared color-control policy |
 | TASK-288-02 | Tabs Wizard Layout, Default Tab, and Slot Guidance | High | Large | Add Wizard layout shortcuts, default-tab preview, panel-slot guidance, and safe tab-count impact copy |
