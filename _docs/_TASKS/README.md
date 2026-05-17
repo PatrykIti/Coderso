@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 299 tasks
-- **In Progress:** 4 tasks
-- **Done:** 1559 tasks
+- **To Do:** 297 tasks
+- **In Progress:** 5 tasks
+- **Done:** 1560 tasks
 
 ---
 
@@ -45,8 +45,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-292-04 | Toggle Block Editor Mode Flow, Variant Previews, and Reset UX | High | Large | Add variant thumbnails, clearer Wizard/Visual/Advanced ownership, reset defaults, and active default-state messaging |
 | TASK-292-05 | Toggle Block Pane Authoring Guidance and Two-State Documentation | Medium | Medium | Add builder-facing pane guidance and document the intentional two-state Toggle Block boundary |
 | TASK-292-06 | Toggle Block Report Docs Changelog and Closure | Medium | Medium | Refresh Toggle Block report/docs/changelog/board and final validation evidence |
-| TASK-293 | Gallery Mosaic Shared Contract Residual Reopen | High | Large | Reopen the missing Gallery Mosaic shared prerequisites that TASK-270 currently assumes are already landed from TASK-256 |
-| TASK-293-01 | Gallery Mosaic Shared Editor Truthfulness Residuals | High | Large | Finish the missing shared editor-mode, current media truthfulness, and Wizard current-contract media handling for Gallery Mosaic |
 | TASK-293-02 | Gallery Mosaic Shared Runtime Semantics Residuals | High | Large | Finish the missing shared Gallery Mosaic resolver cleanup plus current figure/video semantics using the existing data model only |
 | TASK-293-03 | Gallery Mosaic Shared Residual Closure | Medium | Medium | Refresh the Gallery Mosaic report/docs/changelog/board for the reopened shared residual family and final validation evidence |
 | TASK-291 | Timeline Widget Playwright Product Followups | High | Very Large | Timeline-only follow-up family for `REPORT_TIMELINE_WIDGET.md`, excluding shared TASK-256 mechanisms |
@@ -343,6 +341,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-293 | Gallery Mosaic Shared Contract Residual Reopen | High | Large | In progress: reopened residual Gallery Mosaic shared prerequisites after the TASK-270 drift audit; editor truthfulness is closed first and runtime semantics remain next |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
@@ -353,6 +352,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-293-01 | Gallery Mosaic Shared Editor Truthfulness Residuals | High | Large | Done: Advanced is diagnostic-only, Wizard current-contract media selection now accepts image/video assets, and Visual exposes explicit current-media ownership copy |
 | TASK-256 | Widget Shared Contract Playwright Drift Repair | High | Very Large | Done: shared builder patching, placeholder gating, interactive runtime IDs, structural shared fixes, marketing truthfulness repairs, report routing, and closure evidence are synchronized |
 | TASK-256-01 | Shared Editor Mode and Atomic Update Contract | High | Large | Done: builder hosts and shared panels use atomic block patching, and variant/data sync regressions are covered across the affected widget editors |
 | TASK-256-02 | Clear, None Token, and Design Token Controls | High | Large | Done: shared clear/token semantics are synchronized with the implemented widget surfaces and validated through the focused clear/token suites |

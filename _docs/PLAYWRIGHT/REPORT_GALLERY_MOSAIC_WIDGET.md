@@ -117,6 +117,11 @@ Gallery Mosaic to widget do tworzenia sekcji galerii mediów — zdjęć i film�
 | "Allowed: image/*" — tylko obrazy | ✓ Potwierdzone | Brak obsługi wideo w Wizard |
 | Continue to layout and styling | ✓ Działa | Przechodzi do Visual tab |
 
+> **Aktualizacja 2026-05-17 — TASK-293-01:** shared current-contract Wizard
+> MediaPicker akceptuje teraz `image/*` i `video/*`, a wybrany asset zapisuje
+> się truthfully do `image` albo `video` bez wymuszania ręcznego fallbacku do
+> Visual. Per-item Visual MediaPicker nadal pozostaje zakresem `TASK-270-01`.
+
 ### 4.3 Visual editor
 
 | Test | Wynik | Uwagi |
@@ -156,6 +161,11 @@ Gallery Mosaic to widget do tworzenia sekcji galerii mediów — zdjęć i film�
 | Raw payload snapshot | ✓ Działa | Aktualny JSON z danymi widgetu |
 | Dodatkowa sekcja Layout (Container/Padding/Margin) | ✓ Dostępna | Nie jest w Visual editor |
 | Visibility toggles (Desktop/Tablet/Mobile) | ✓ Działa | |
+
+> **Aktualizacja 2026-05-17 — TASK-293-01:** UX-01 jest zamknięty w shared
+> baseline. Advanced nie renderuje już drugiego edytowalnego ownera dla
+> ratio/gap/radius/caption/overlay; pozostał tylko read-only summary plus
+> Normalize/Reset i raw payload snapshot.
 
 ### 4.5 Zapis strony
 
@@ -309,6 +319,12 @@ Po zwiększeniu limitu aktywnych sesji per user w CMS do 30 — zapis i publikac
 
 #### UX-07 — Wizard Allowed: image/* — wykluczenie wideo bez wyjaśnienia
 **Opis:** MediaPicker w Wizard przyjmuje tylko obrazy, ale model danych i Visual editor obsługują wideo. Użytkownik, który chce dodać wideo przez Wizard, nie ma takiej możliwości — musi przejść do Visual i ręcznie wpisać URL.
+
+> **Aktualizacja 2026-05-17 — TASK-293-01:** UX-06 i UX-07 są już zamknięte w
+> shared baseline. Visual pokazuje badge `Current media: Image|Video|Placeholder`
+> oraz copy wyjaśniające który URL obecnie wygrywa, a Wizard current-contract
+> picker przyjmuje także `video/*`. UX-05 pozostaje otwarte, bo per-item Visual
+> MediaPicker to lokalny follow-up `TASK-270-01`.
 
 ---
 

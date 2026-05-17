@@ -6,7 +6,7 @@
 **Category:** Widgets + Gallery Mosaic + Shared Contract + Admin UI + Runtime Render
 **Estimated Effort:** Large
 **Dependencies:** TASK-256, TASK-256-01, TASK-256-04, TASK-256-06-02, TASK-270
-**Status:** To Do
+**Status:** In Progress (2026-05-17)
 
 ---
 
@@ -85,7 +85,7 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] TASK-293-01: Gallery Mosaic Shared Editor Truthfulness Residuals
+- [x] TASK-293-01: Gallery Mosaic Shared Editor Truthfulness Residuals
 - [ ] TASK-293-02: Gallery Mosaic Shared Runtime Semantics Residuals
 - [ ] TASK-293-03: Gallery Mosaic Shared Residual Closure
 

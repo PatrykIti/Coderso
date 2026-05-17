@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { listMediaCached } from "@/services/mediaClient";
+import { listMediaCached, type MediaRecord } from "@/services/mediaClient";
 import { MediaPicker } from "@/ui/media/MediaPicker";
 
 import {
@@ -95,6 +95,7 @@ const rgbColorPattern =
 
 type HeaderData = NonNullable<GalleryMosaicData["header"]>;
 type StyleData = NonNullable<GalleryMosaicData["style"]>;
+type GalleryMosaicResolvedMediaType = "image" | "video" | "placeholder";
 
 const resolvePickerColor = (value: string | undefined, fallback: string) => {
   if (!value) return fallback;
@@ -108,6 +109,44 @@ const resolvePickerColor = (value: string | undefined, fallback: string) => {
 
 function normalizeValue(value: GalleryMosaicData): GalleryMosaicData {
   return normalizeGalleryMosaicData(value);
+}
+
+function resolveGalleryMediaKind(media: Pick<MediaRecord, "mimeType"> | undefined) {
+  const mimeType = media?.mimeType?.trim().toLowerCase() ?? "";
+  if (mimeType.startsWith("video/")) return "video" as const;
+  if (mimeType.startsWith("image/")) return "image" as const;
+  return null;
+}
+
+function resolveGalleryCurrentMediaType(item: GalleryMosaicItem): GalleryMosaicResolvedMediaType {
+  if (item.video?.trim()) return "video";
+  if (item.image?.trim()) return "image";
+  return "placeholder";
+}
+
+function resolveGalleryCurrentMediaSummary(item: GalleryMosaicItem) {
+  const currentType = resolveGalleryCurrentMediaType(item);
+  if (currentType === "video") {
+    return item.image?.trim()
+      ? {
+          label: "Video",
+          description: "Video URL is currently active. Clear it to switch back to the image URL.",
+        }
+      : {
+          label: "Video",
+          description: "Video URL is currently active for this item.",
+        };
+  }
+  if (currentType === "image") {
+    return {
+      label: "Image",
+      description: "Image URL is currently active for this item.",
+    };
+  }
+  return {
+    label: "Placeholder",
+    description: "No image or video URL is set yet.",
+  };
 }
 
 function EditorSection({
@@ -371,6 +410,46 @@ function DiagnosticsSnapshot({ value }: { value: GalleryMosaicData }) {
   );
 }
 
+function TechnicalStyleSummary({ value }: { value: GalleryMosaicData }) {
+  const normalized = normalizeValue(value);
+  const style = normalized.style ?? galleryMosaicDefaults.style;
+
+  return (
+    <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
+      <div className="space-y-1">
+        <p className="text-sm font-medium">Visual owns the current shared style fields.</p>
+        <p className="text-xs text-muted-foreground">
+          Ratio, gap, radius, caption position, and overlay stay editable in Visual for Gallery
+          Mosaic. Advanced remains diagnostic-only so shared fields do not have two competing
+          editors.
+        </p>
+      </div>
+      <dl className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+        <div>
+          <dt className="font-medium text-foreground">Ratio</dt>
+          <dd>{style?.ratio ?? "4:3"}</dd>
+        </div>
+        <div>
+          <dt className="font-medium text-foreground">Gap</dt>
+          <dd>{style?.gap ?? "md"}</dd>
+        </div>
+        <div>
+          <dt className="font-medium text-foreground">Radius</dt>
+          <dd>{style?.radius ?? "lg"}</dd>
+        </div>
+        <div>
+          <dt className="font-medium text-foreground">Caption</dt>
+          <dd>{style?.captionPosition ?? "inside"}</dd>
+        </div>
+        <div className="col-span-2">
+          <dt className="font-medium text-foreground">Overlay</dt>
+          <dd>{style?.overlay ?? "cleared"}</dd>
+        </div>
+      </dl>
+    </div>
+  );
+}
+
 export function GalleryMosaicWizardEditor({
   value,
   onChange,
@@ -390,6 +469,7 @@ export function GalleryMosaicWizardEditor({
     try {
       const mediaItems = await listMediaCached({ force: false });
       const mediaById = new Map(mediaItems.map((item) => [item.id, item]));
+      let unsupportedSelection = false;
       updateValue(value, onChange, (current) => {
         const currentItems = normalizeGalleryMosaicItems(
           current.items,
@@ -398,10 +478,15 @@ export function GalleryMosaicWizardEditor({
         const nextItems = [...currentItems];
         ids.forEach((id, index) => {
           const media = mediaById.get(id);
-          if (!media?.url) return;
+          const mediaKind = resolveGalleryMediaKind(media);
+          if (!media?.url || !mediaKind) {
+            unsupportedSelection = true;
+            return;
+          }
           nextItems[index] = {
             ...nextItems[index],
-            image: media.url,
+            image: mediaKind === "image" ? media.url : undefined,
+            video: mediaKind === "video" ? media.url : undefined,
             caption:
               media.title?.trim() ||
               media.caption?.trim() ||
@@ -415,6 +500,9 @@ export function GalleryMosaicWizardEditor({
           items: normalizeGalleryMosaicItems(nextItems, nextItems.length),
         };
       });
+      if (unsupportedSelection) {
+        setMediaPickerError("Gallery Mosaic currently supports image and video assets only.");
+      }
     } catch {
       setMediaPickerError("Failed to resolve selected media.");
     }
@@ -477,11 +565,11 @@ export function GalleryMosaicWizardEditor({
             void handleMediaSelection(next);
           }}
           multiple
-          accept={["image/*"]}
+          accept={["image/*", "video/*"]}
           maxItems={galleryMosaicItemMax}
         />
         <p className="text-xs text-muted-foreground">
-          Selected media is saved as public image URLs in gallery items.
+          Selected media is saved as public image or video URLs in gallery items.
         </p>
         {mediaPickerError ? <p className="text-xs text-destructive">{mediaPickerError}</p> : null}
       </div>
@@ -552,86 +640,96 @@ export function GalleryMosaicVisualEditor({
         title="Media items and links"
         description="Manage image/video URLs, captions, and target links."
       >
-        {items.map((item, index) => (
-          <div
-            key={item.id ?? `gallery-item-${index + 1}`}
-            className="space-y-3 rounded-lg border p-3"
-          >
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-semibold">Item {index + 1}</p>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => moveItem(value, onChange, index, index - 1)}
-                  disabled={index === 0}
-                >
-                  Move up
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => moveItem(value, onChange, index, index + 1)}
-                  disabled={index === items.length - 1}
-                >
-                  Move down
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => removeItem(value, onChange, index)}
-                  disabled={items.length <= 1}
-                >
-                  Remove
-                </Button>
+        {items.map((item, index) => {
+          const currentMedia = resolveGalleryCurrentMediaSummary(item);
+
+          return (
+            <div
+              key={item.id ?? `gallery-item-${index + 1}`}
+              className="space-y-3 rounded-lg border p-3"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold">Item {index + 1}</p>
+                    <Badge variant="outline">Current media: {currentMedia.label}</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{currentMedia.description}</p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => moveItem(value, onChange, index, index - 1)}
+                    disabled={index === 0}
+                  >
+                    Move up
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => moveItem(value, onChange, index, index + 1)}
+                    disabled={index === items.length - 1}
+                  >
+                    Move down
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => removeItem(value, onChange, index)}
+                    disabled={items.length <= 1}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Image URL</p>
+                <Input
+                  value={item.image ?? ""}
+                  onChange={(event) =>
+                    updateItem(value, onChange, index, { image: event.target.value })
+                  }
+                  placeholder="https://cdn.example.com/photo.jpg"
+                />
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Video URL</p>
+                <Input
+                  value={item.video ?? ""}
+                  onChange={(event) =>
+                    updateItem(value, onChange, index, { video: event.target.value })
+                  }
+                  placeholder="https://cdn.example.com/clip.mp4"
+                />
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Caption</p>
+                <Input
+                  value={item.caption ?? ""}
+                  onChange={(event) =>
+                    updateItem(value, onChange, index, { caption: event.target.value })
+                  }
+                  placeholder={`Media ${index + 1}`}
+                />
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Link URL</p>
+                <Input
+                  value={item.href ?? ""}
+                  onChange={(event) =>
+                    updateItem(value, onChange, index, { href: event.target.value })
+                  }
+                  placeholder="#"
+                />
               </div>
             </div>
-
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Image URL</p>
-              <Input
-                value={item.image ?? ""}
-                onChange={(event) =>
-                  updateItem(value, onChange, index, { image: event.target.value })
-                }
-                placeholder="https://cdn.example.com/photo.jpg"
-              />
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Video URL</p>
-              <Input
-                value={item.video ?? ""}
-                onChange={(event) =>
-                  updateItem(value, onChange, index, { video: event.target.value })
-                }
-                placeholder="https://cdn.example.com/clip.mp4"
-              />
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Caption</p>
-              <Input
-                value={item.caption ?? ""}
-                onChange={(event) =>
-                  updateItem(value, onChange, index, { caption: event.target.value })
-                }
-                placeholder={`Media ${index + 1}`}
-              />
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Link URL</p>
-              <Input
-                value={item.href ?? ""}
-                onChange={(event) =>
-                  updateItem(value, onChange, index, { href: event.target.value })
-                }
-                placeholder="#"
-              />
-            </div>
-          </div>
-        ))}
+          );
+        })}
 
         <Button
           type="button"
@@ -766,98 +864,9 @@ export function GalleryMosaicAdvancedEditor({
     <div className="space-y-4">
       <EditorSection
         title="Technical ratio and layout tokens"
-        description="Low-level style tokens for ratio, spacing, radius, and captions."
+        description="Visual owns the live shared style fields for Gallery Mosaic. Advanced stays diagnostic-only."
       >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Ratio</p>
-          <Select
-            value={normalized.style?.ratio ?? "4:3"}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, { ratio: next as GalleryMosaicRatio })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select ratio" />
-            </SelectTrigger>
-            <SelectContent>
-              {ratioOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Gap</p>
-          <Select
-            value={normalized.style?.gap ?? "md"}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, { gap: next as GalleryMosaicGap })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select gap" />
-            </SelectTrigger>
-            <SelectContent>
-              {gapOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Radius</p>
-          <Select
-            value={normalized.style?.radius ?? "lg"}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, { radius: next as GalleryMosaicRadius })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select radius" />
-            </SelectTrigger>
-            <SelectContent>
-              {radiusOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Caption position</p>
-          <Select
-            value={normalized.style?.captionPosition ?? "inside"}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, {
-                captionPosition: next as GalleryMosaicCaptionPosition,
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select caption position" />
-            </SelectTrigger>
-            <SelectContent>
-              {captionPositionOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Overlay token</p>
-          <Input
-            value={normalized.style?.overlay ?? ""}
-            onChange={(event) => updateStyle(value, onChange, { overlay: event.target.value })}
-            placeholder="rgba(15, 23, 42, 0.35)"
-          />
-        </div>
+        <TechnicalStyleSummary value={value} />
       </EditorSection>
 
       <EditorSection

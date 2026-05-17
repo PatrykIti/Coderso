@@ -6,7 +6,7 @@
 **Category:** Widgets + Gallery Mosaic + Shared Contract + Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-293
-**Status:** To Do
+**Status:** Done (2026-05-17)
 
 ---
 
@@ -140,3 +140,15 @@ No API routes are added.
   truthfully for the existing schema.
 - Visual communicates which current media type actually wins for each item
   without introducing new product-only fields.
+
+## Completion Notes
+
+- 2026-05-17: Advanced shared style controls were downgraded to a diagnostic
+  summary, Wizard current-contract media selection now accepts image/video
+  assets, and Visual item cards show explicit current-media ownership copy.
+- Validation:
+  - `set -a && source /Users/pciechanski/Documents/_moje_projekty/Coderso/.env && set +a && NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx tests/vitest/widgets/galleryMosaic.test.tsx`
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun run gates:coderso`
+  - `bun run scan:security:strict` (rerun on the host because sandbox trust-store/network blocked Semgrep and `bun audit`)

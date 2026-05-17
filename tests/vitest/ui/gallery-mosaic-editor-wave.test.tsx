@@ -164,14 +164,61 @@ vi.mock("@/services/mediaClient", () => ({
       caption: null,
       createdAt: "2026-04-26T00:00:00.000Z",
     },
+    {
+      id: "media-2",
+      key: "media/launch.mp4",
+      url: "/media/launch.mp4",
+      originalName: "launch.mp4",
+      type: "file",
+      mimeType: "video/mp4",
+      size: 2048,
+      title: "Launch clip",
+      caption: null,
+      createdAt: "2026-04-26T00:00:00.000Z",
+    },
+    {
+      id: "media-3",
+      key: "media/brochure.pdf",
+      url: "/media/brochure.pdf",
+      originalName: "brochure.pdf",
+      type: "file",
+      mimeType: "application/pdf",
+      size: 1024,
+      title: "Brochure",
+      caption: null,
+      createdAt: "2026-04-26T00:00:00.000Z",
+    },
   ]),
 }));
 
 vi.mock("@/ui/media/MediaPicker", () => ({
-  MediaPicker: ({ onChange }: { onChange: (value: unknown) => void }) => (
-    <button type="button" onClick={() => onChange(["media-1"])}>
-      Pick media
-    </button>
+  MediaPicker: ({
+    value,
+    onChange,
+    accept,
+  }: {
+    value: unknown;
+    onChange: (value: unknown) => void;
+    accept?: string[];
+  }) => (
+    <div data-media-picker="true">
+      <button type="button" onClick={() => onChange(["media-1"])}>
+        pick-image-media
+      </button>
+      <button type="button" onClick={() => onChange(["media-2"])}>
+        pick-video-media
+      </button>
+      <button type="button" onClick={() => onChange(["media-3"])}>
+        pick-unsupported-media
+      </button>
+      <button type="button" onClick={() => onChange([])}>
+        clear-media
+      </button>
+      <span>
+        {Array.isArray(value) ? value.join(",") : typeof value === "string" ? value : "none"}
+      </span>
+      <span>{(accept ?? []).join(",")}</span>
+    </div>
   ),
 }));
 
@@ -346,13 +393,16 @@ test("GalleryMosaic wizard normalizes the variant selector and seeds determinist
       "Visual detail",
       "Story frame",
     ]);
+    expect(view.container.textContent).toContain("image/*,video/*");
 
     await React.act(async () => {
-      findButtonByText(view.container, "Pick media")?.click();
+      findButtonByText(view.container, "pick-video-media")?.click();
+      await Promise.resolve();
       await Promise.resolve();
     });
-    expect(latestValue.items[0]?.image).toBe("/media/hero.jpg");
-    expect(latestValue.items[0]?.caption).toBe("Hero media");
+    expect(latestValue.items[0]?.video).toBe("/media/launch.mp4");
+    expect(latestValue.items[0]?.image).toBeUndefined();
+    expect(latestValue.items[0]?.caption).toBe("Launch clip");
   } finally {
     view.cleanup();
   }
@@ -419,6 +469,9 @@ test("GalleryMosaic visual editor covers variant cards, item reordering, removal
   const view = mount(<Harness />);
 
   try {
+    expect(view.container.textContent).toContain("Current media: Image");
+    expect(view.container.textContent).toContain("Current media: Placeholder");
+
     clickElement(findButtonByText(view.container, "Feature Left"));
     expect(onVariantChangeSpy).toHaveBeenLastCalledWith("feature-left");
 
@@ -441,6 +494,7 @@ test("GalleryMosaic visual editor covers variant cards, item reordering, removal
     );
     setInputValue(findInputByPlaceholder(view.container, "Media 2"), "Motion close-up");
     setInputValue(findAllInputsByPlaceholder(view.container, "#")[1], "/motion-updated");
+    expect(view.container.textContent).toContain("Current media: Video");
 
     clickElement(findButtonsByText(view.container, "Move up")[1]);
     expect(latestValue.items.map((item) => item.caption)).toEqual([
@@ -494,7 +548,7 @@ test("GalleryMosaic visual editor covers variant cards, item reordering, removal
   }
 });
 
-test("GalleryMosaic advanced editor normalizes malformed payloads, applies token edits, and resets to defaults", async () => {
+test("GalleryMosaic advanced editor keeps diagnostics-only shared style ownership while still supporting normalize and reset", async () => {
   const { GalleryMosaicAdvancedEditor } =
     await import("../../../core/admin/ui/widgets/editors/GalleryMosaicEditors");
 
@@ -541,6 +595,7 @@ test("GalleryMosaic advanced editor normalizes malformed payloads, applies token
   const view = mount(<Harness />);
 
   try {
+    expect(view.container.textContent).toContain("Visual owns the current shared style fields.");
     const preview = view.container.querySelector("pre");
     expect(preview?.textContent).toContain('"ratio": "4:3"');
     expect(preview?.textContent).toContain('"gap": "md"');
@@ -574,25 +629,8 @@ test("GalleryMosaic advanced editor normalizes malformed payloads, applies token
       overlay: undefined,
       captionPosition: "inside",
     });
-
-    const selects = Array.from(view.container.querySelectorAll("select"));
-    expect(selects).toHaveLength(4);
-    setSelectValue(selects[0], "1:1");
-    setSelectValue(selects[1], "sm");
-    setSelectValue(selects[2], "none");
-    setSelectValue(selects[3], "below");
-    setInputValue(
-      findInputByPlaceholder(view.container, "rgba(15, 23, 42, 0.35)"),
-      "rgba(0, 0, 0, 0.6)"
-    );
-
-    expect(latestValue.style).toEqual({
-      ratio: "1:1",
-      gap: "sm",
-      radius: "none",
-      overlay: "rgba(0, 0, 0, 0.6)",
-      captionPosition: "below",
-    });
+    expect(view.container.querySelectorAll("select")).toHaveLength(0);
+    expect(view.container.querySelector('input[placeholder="rgba(15, 23, 42, 0.35)"]')).toBeNull();
 
     clickElement(findButtonByText(view.container, "Reset to defaults"));
     expect(latestValue).toEqual(galleryMosaicDefaults);

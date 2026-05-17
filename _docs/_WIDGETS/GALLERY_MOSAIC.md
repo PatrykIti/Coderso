@@ -22,10 +22,10 @@ Media storytelling section for portfolios, product highlights, and campaigns.
 - Initial media count
 - Shared MediaPicker-backed media selection
 
-Wizard media selection currently uses the admin media cache for image assets and
-persists selected media as schema-owned public `image` URLs plus caption copy.
-Video selection and per-item Visual media picking are follow-up work owned by
-the TASK-256/TASK-270 planning split.
+Wizard media selection currently uses the admin media cache for current-contract
+image and video assets and persists selected media as schema-owned public
+`image` or `video` URLs plus caption copy. Per-item Visual media picking stays
+in `TASK-270-01`.
 
 ### Visual (primary editing mode)
 Sections:
@@ -38,11 +38,17 @@ Sections:
 Notes:
 - Gallery Mosaic owns variant selection in Visual (`visualOwnsVariantSelection = true`).
 - Generic Visual variant selector is suppressed.
+- Each item now shows a shared-contract current-media badge (`Image`, `Video`,
+  `Placeholder`) so the existing image/video priority is visible before richer
+  Gallery-local authoring lands.
 
 ### Advanced (technical-only)
-- Technical ratio and layout tokens
+- Shared style ownership summary (read-only)
 - Normalization and safeguards
 - Raw payload snapshot
+
+Advanced no longer duplicates the live shared style controls that Visual owns
+for ratio, gap, radius, caption position, and overlay.
 
 ## Runtime Behavior Notes
 
