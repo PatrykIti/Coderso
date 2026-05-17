@@ -41,7 +41,10 @@ that look editable but either duplicate Visual or do nothing.
 - `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md:48,153,292-293`,
   `_docs/PLAYWRIGHT/REPORT_LOGO_CLOUD_WIDGET.md:94-100`, and
   `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md:82-89` report duplicated
-  Advanced style controls that need an explicit owner decision.
+  Advanced style controls that need an explicit owner decision. TASK-256-01 is
+  the sole owner for this duplicated Advanced-control cleanup; TASK-256-02 and
+  media/link leaves may only consume the settled mode contract while fixing
+  their own clear, token, media, and runtime semantics.
 - `_docs/WIDGETS.md:54-105` is the source contract for mode ownership and
   stable editor metadata.
 

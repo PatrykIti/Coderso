@@ -38,21 +38,23 @@ handled by the shared contract alone. Tabs-specific product follow-ups from
 
 | Finding | TASK-256 action | Owner | Follow-up policy |
 |---|---|---|---|
-| Tabs shared structural residuals: technical slot labels, public placeholders, instance-safe ID/ARIA prerequisites, and shared runtime binding prerequisites | Fix here plus TASK-256-02/03/04 shared helpers | `TabsEditors.tsx`, `tabs.tsx` | TASK-288 consumes the final shared contract. |
+| Tabs shared structural residuals: technical slot labels, public placeholders, instance-safe ID/ARIA prerequisites, and shared runtime binding prerequisites | Consume TASK-256-03 slot/placeholder metadata and TASK-256-04 instance/ARIA/runtime helpers; this leaf only verifies Tabs-specific report closure after those prerequisites land | TASK-256-03 and TASK-256-04 shared owners; `TabsEditors.tsx`/`tabs.tsx` only adopt the shared helpers in the same dependency slice | TASK-288 consumes the final shared contract. |
 | Tabs product rows: inactive text color, Wizard layout shortcut, trigger metadata, disabled tabs, vertical alignment semantics, overflow/typography/spacing, animations, visual previews, label polish, and admin-preview activation | Do not fix here | `TASK-288*` | TASK-288 owns implementation and final fixed/deferred evidence. |
-| Accordion slot labels, default-open/collapsible behavior, placeholder leakage, clear controls, chevron, and ARIA gaps | Fix here plus TASK-256-02/03/04 shared helpers | `AccordionEditors.tsx`, `accordion.tsx` | None |
-| Toggle Block helper clear, missing clear controls, pane labels, placeholders, duplicate IDs, and ARIA/runtime root scope | Fix here plus TASK-256-02/03/04 shared helpers | `ToggleBlockEditors.tsx`, `toggleBlock.tsx` | None |
+| Accordion slot labels, default-open/collapsible behavior, placeholder leakage, clear controls, chevron, and ARIA gaps | TASK-256-03 owns slot labels/placeholders, TASK-256-02 owns clear controls, and TASK-256-04 owns instance IDs/ARIA. This leaf owns only Accordion default-open/collapsible and chevron behavior not covered by those shared helpers. | `AccordionEditors.tsx`, `accordion.tsx` for Accordion-only behavior; shared helpers stay with TASK-256-02, TASK-256-03, and TASK-256-04 | None |
+| Toggle Block helper clear, missing clear controls, pane labels, placeholders, duplicate IDs, and ARIA/runtime root scope | TASK-256-02 owns helper clear/style clear, TASK-256-03 owns pane labels/placeholders, and TASK-256-04 owns duplicate IDs/ARIA/runtime root scope. This leaf verifies Toggle Block adoption without redefining the shared contracts. | `ToggleBlockEditors.tsx`, `toggleBlock.tsx` only for widget-local adoption and residual cleanup | None |
 | Toggle Block accent-contrast, color-token picker, and reset-to-defaults correctness | Fix current TASK-256 shared-control defects through TASK-256-02 and the Toggle Block owners | `ToggleBlockEditors.tsx`, `toggleBlock.tsx` | None |
 | Toggle Block weak switch/cards visual distinction, placeholder CTA, Wizard naming polish, and localized aria label | Product/UX scope in TASK-292 | `TASK-292` family | TASK-256-08 references TASK-292 instead of creating duplicate Toggle Block follow-ups |
 
 ## Sub-Tasks
 
-- [ ] Replace technical slot IDs in tabs and accordion editors with
-  user-facing labels plus stable metadata.
-- [ ] Add missing clear controls for tab/accordion style fields through
-  TASK-256-02 helpers.
-- [ ] Apply TASK-256-03 placeholder gating to tabs, accordion, and toggle panes.
-- [ ] Apply TASK-256-04 instance-safe ID and ARIA work to widget-local renderers.
+- [ ] Consume TASK-256-03 user-facing slot labels/stable metadata in tabs and
+  accordion editors.
+- [ ] Consume TASK-256-02 clear helpers for tab/accordion style fields without
+  creating widget-local clear semantics.
+- [ ] Verify TASK-256-03 placeholder gating for tabs, accordion, and toggle
+  panes.
+- [ ] Verify TASK-256-04 instance-safe ID and ARIA adoption in widget-local
+  renderers.
 - [ ] Keep accordion default-open/collapsible controls consistent between editor
   and runtime.
 - [ ] Apply TASK-256-02 clear/normalizer repair to toggle-block helper text,
@@ -64,12 +66,12 @@ handled by the shared contract alone. Tabs-specific product follow-ups from
 
 | File | Lines | Required change |
 |---|---:|---|
-| `core/admin/ui/widgets/editors/TabsEditors.tsx` | 277-302, 370-430 | Friendly panel labels, missing clear controls, and no duplicated misleading controls. |
-| `core/widgets/core/tabs.tsx` | 432-505 | Public placeholder gating and widget-local ARIA/ID application. |
-| `core/admin/ui/widgets/editors/AccordionEditors.tsx` | 272-430 | Friendly item labels, default-open/collapsible truthfulness, and clear controls. |
-| `core/widgets/core/accordion.tsx` | 361-368 and item render | Public placeholder gating, chevron/expanded semantics, and default-open/collapsible runtime behavior. |
-| `core/admin/ui/widgets/editors/ToggleBlockEditors.tsx` | 102-114, 209-219, 262-302, editor sections | Friendly pane labels, helper clear/visibility, color clear controls, and remaining mode ownership cleanup. |
-| `core/widgets/core/toggleBlock.tsx` | 91-104, 298-389 | Helper visibility normalization, public placeholder gating, and widget-local ID/ARIA application. |
+| `core/admin/ui/widgets/editors/TabsEditors.tsx` | 277-302, 370-430 | Consume TASK-256-03 friendly panel labels and TASK-256-02 clear helpers; no duplicated misleading controls. |
+| `core/widgets/core/tabs.tsx` | 432-505 | Adopt TASK-256-03 public placeholder gating and TASK-256-04 widget-local ARIA/ID helpers; do not define a second shared runtime pattern here. |
+| `core/admin/ui/widgets/editors/AccordionEditors.tsx` | 272-430 | Consume TASK-256-03 friendly item labels and TASK-256-02 clear helpers; own only Accordion default-open/collapsible truthfulness in this leaf. |
+| `core/widgets/core/accordion.tsx` | 361-368 and item render | Adopt TASK-256-03 public placeholder gating and TASK-256-04 ARIA/ID helpers; own only Accordion chevron/expanded semantics and default-open/collapsible runtime behavior in this leaf. |
+| `core/admin/ui/widgets/editors/ToggleBlockEditors.tsx` | 102-114, 209-219, 262-302, editor sections | Consume TASK-256-03 friendly pane labels and TASK-256-02 helper/color clear helpers; remaining mode ownership cleanup only. |
+| `core/widgets/core/toggleBlock.tsx` | 91-104, 298-389 | Consume TASK-256-02 helper visibility, TASK-256-03 public placeholder gating, and TASK-256-04 ID/ARIA helpers; no second shared contract. |
 | `tests/vitest/ui/tabs-editor-wave.test.tsx` | existing suite | Add slot-label and clear-control regressions. |
 | `tests/vitest/widgets/tabs.test.tsx` | existing suite | Add placeholder/ID/ARIA regressions. |
 | `tests/vitest/ui/accordion-editor-wave.test.tsx` | existing suite | Add item-label/default-open/clear regressions. |

@@ -55,9 +55,13 @@ The reports show repeated drift from the documented contract:
 - `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md:76-79,140-141,272-275,322,359,378` reports
   overlay alpha loss through the hex-only picker.
 - `_docs/PLAYWRIGHT/REPORT_LOGO_CLOUD_WIDGET.md:94-100,112-116` reports
-  duplicated Advanced token controls and hover/height token truthfulness.
+  duplicated Advanced token controls plus hover/height token truthfulness.
+  TASK-256-02 owns only the clear/token truthfulness; duplicated Advanced
+  ownership stays in TASK-256-01.
 - `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md:82-89,100-116,192-204`
   reports duplicated Advanced tokens and CSS-variable color picker drift.
+  TASK-256-02 owns only CSS-variable and clear/token preservation; duplicated
+  Advanced ownership stays in TASK-256-01.
 
 ## Sub-Tasks
 
@@ -89,9 +93,9 @@ The reports show repeated drift from the documented contract:
 | `core/admin/ui/widgets/editors/CtaBannerEditors.tsx` | 413-486 | Use only as shared Clear evidence if TASK-256-02 introduces a reusable clearable-field hook consumed across widgets; route CTA-specific field adoption, action labels, badge behavior, and focus styling to TASK-263-03. |
 | `core/admin/ui/widgets/editors/ToggleBlockEditors.tsx` | 102-114, 209-219, 262-302 | Add clear/visibility handling for helper text and use existing clear helpers for `borderColor` and `accentColor`. |
 | `core/widgets/core/toggleBlock.tsx` | 91-104, 298-345 | Preserve an intentional hidden helper state separately from missing legacy data; keep omitted style fields falling back through defaults. |
-| `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx` | 92-98, 178, 720-832 | Preserve `rgba(...)`/CSS variable overlay values and make duplicated Advanced style controls explicitly technical or read-only. |
-| `core/admin/ui/widgets/editors/LogoCloudEditors.tsx` | 510-594, 616-694 | Gate hoverColor when grayscale is inactive, keep logo-height `none` truthful, and make duplicated Advanced token controls explicit. |
-| `core/admin/ui/widgets/editors/StatsKpiEditors.tsx` | 570-713 | Preserve CSS variable color values and make duplicated Advanced spacing/alignment/color tokens explicit. |
+| `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx` | 92-98, 178, 720-832 | Preserve `rgba(...)`/CSS variable overlay values; duplicated Advanced-control cleanup is TASK-256-01. |
+| `core/admin/ui/widgets/editors/LogoCloudEditors.tsx` | 510-594, 616-694 | Gate hoverColor when grayscale is inactive and keep logo-height `none` truthful; duplicated Advanced-control cleanup is TASK-256-01. |
+| `core/admin/ui/widgets/editors/StatsKpiEditors.tsx` | 570-713 | Preserve CSS variable color values; duplicated Advanced-control cleanup is TASK-256-01. |
 | `core/widgets/core/divider.tsx` | style render | Keep omitted spacing/color values falling back through defaults without serializing fake clear sentinels. |
 | `core/widgets/core/spacer.tsx` | style render | Keep omitted height/custom values falling back through defaults while preserving `0` token compatibility. |
 | `core/widgets/core/splitLayout.tsx` | style render | Keep omitted gap values and explicit zero/off tokens distinguishable in runtime output. |

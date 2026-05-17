@@ -39,7 +39,7 @@ This leaf owns two contract classes:
 
 | Finding | TASK-256 action | Owner | Follow-up policy |
 |---|---|---|---|
-| Section `Empty region.` in public output | Fix here through TASK-256-03 render context | `section.tsx` | None |
+| Section `Empty region.` in public output | Consume TASK-256-03 render-context placeholder gating and verify this report closes for Section | TASK-256-03 owns the shared placeholder contract; `section.tsx` may only adopt that helper in the same dependency slice | None |
 | Section anchor accepts invalid IDs | Fix here with schema/editor validation and tests | `SectionEditors.tsx`, `section.tsx` | None |
 | Section resolver fallback and duplicated Advanced style controls | Fix here because current controls/defaults are misleading | `SectionEditors.tsx`, `section.tsx` | None |
 | Section `Wide`/`Content` duplicate semantics and bleed variant copy | Relabel or disable the existing duplicated controls so the editor matches current runtime behavior; do not add new layout semantics here | `SectionEditors.tsx`, `section.tsx` | Product-level layout semantics route to TASK-283 |
@@ -49,13 +49,13 @@ This leaf owns two contract classes:
 | Grid `masonry-lite` forces cardized render while switch stays off | Fix here by synchronizing switch state, disabling the switch with explanation, or making renderer honor the visible switch | `GridColumnsEditors.tsx`, `gridColumns.tsx` | None |
 | Grid color picker does not represent CSS variables | Fix here through token-aware picker display that preserves `var(...)` values | `GridColumnsEditors.tsx`, shared picker helper if reused | None |
 | Grid span preview and span-sum validation | Add warning/disabled-state feedback for current span controls that can create broken layouts; richer preview UX routes to TASK-271 | `GridColumnsEditors.tsx` | TASK-256-08 references TASK-271 for expanded editor UX |
-| Grid `Column 1/2` public labels | Treat as editor metadata and hide publicly unless a real caption field is introduced | `gridColumns.tsx` | Caption feature routes to TASK-271 |
-| Grid slot/config count drift | Fix here | `GridColumnsEditors.tsx`, `VisualPanel.tsx` slot metadata | None |
+| Grid `Column 1/2` public labels | Consume TASK-256-03 editor-metadata/public-placeholder gating and verify this report closes for Grid Columns | TASK-256-03 owns shared slot label/placeholder metadata; `gridColumns.tsx` may only adopt that helper in the same dependency slice | Caption feature routes to TASK-271 |
+| Grid slot/config count drift | Consume TASK-256-03 repeatable slot-target metadata and reconcile Grid Columns editor data against it | `GridColumnsEditors.tsx`; `BlockSettings.tsx`/`core/widgets/slots.ts` stay TASK-256-03 owners for shared metadata shape | None |
 
 ## Sub-Tasks
 
-- [ ] Gate `section` public empty-region output through the TASK-256-03 render
-  context.
+- [ ] Verify `section` public empty-region output after TASK-256-03 render
+  context lands; do not create a second placeholder contract in this leaf.
 - [ ] Add section anchor validation in the editor and keep runtime output safe
   for legacy anchors.
 - [ ] Relabel or disable duplicated section style/default controls,
@@ -66,8 +66,8 @@ This leaf owns two contract classes:
   the shared-contract repair.
 - [ ] Add explicit default-token guards for section style values without
   rejecting valid CSS variables.
-- [ ] Reconcile `grid-columns` config rows with slot targets or add an explicit
-  sync action that does not silently delete legacy config.
+- [ ] Reconcile `grid-columns` config rows with TASK-256-03 slot targets or add
+  an explicit sync action that does not silently delete legacy config.
 - [ ] Make `asymmetric` and `masonry-lite` variants truthful for existing saved
   columns by either updating spans/switch state atomically or showing an
   explicit inactive-control warning.
@@ -75,7 +75,8 @@ This leaf owns two contract classes:
   picker controls.
 - [ ] Add span-sum validation or disabled-state feedback for current controls;
   leave richer preview UX to TASK-271.
-- [ ] Hide public grid column labels that are editor metadata.
+- [ ] Verify public grid column labels are hidden through TASK-256-03 editor
+  metadata/public-placeholder gating.
 - [ ] Keep cardize-only Advanced controls hidden or disabled when cardized
   styling is inactive.
 
@@ -83,12 +84,12 @@ This leaf owns two contract classes:
 
 | File | Lines | Required change |
 |---|---:|---|
-| `core/widgets/core/section.tsx` | 180-207, 380-413 | Normalize style defaults explicitly, label headings safely, and render `Empty region.` only for editor/admin preview. |
+| `core/widgets/core/section.tsx` | 180-207, 380-413 | Normalize style defaults explicitly and label headings safely. Public `Empty region.` gating is owned by TASK-256-03; this leaf verifies Section adoption instead of redefining the contract. |
 | `core/admin/ui/widgets/editors/SectionEditors.tsx` | 485-498, 651-667, 826-850 | Validate anchor IDs, add missing gradient clear controls, and avoid duplicated Advanced controls that mirror Visual without extra ownership. |
-| `core/widgets/core/gridColumns.tsx` | 452-503 | Hide public `Empty column.` and `Column N` editor labels unless a real caption is configured. |
-| `core/admin/ui/pages/builder/BlockSettings.tsx` | slot target helpers around 42 and editor context assembly | Provide repeatable grid column targets to widget editors through `WidgetEditorContext.slotTargets` or run sync before invoking `GridColumnsEditors`. |
-| `core/widgets/slots.ts` | slot topology helpers | Use the shared slot topology owner for repeated grid column targets; update this file only when the slot target shape/helper contract changes. |
-| `core/admin/ui/widgets/editors/GridColumnsEditors.tsx` | variant, span, color, and cardize controls | Reconcile repeated column configs from `context.slotTargets`, preserve CSS variable picker values, make `asymmetric` span changes truthful, add span feedback, and gate cardized-only controls for `masonry-lite`. |
+| `core/widgets/core/gridColumns.tsx` | 452-503 | Adopt TASK-256-03 public placeholder/label gating and verify no `Empty column.` or `Column N` editor labels leak publicly unless a real caption is configured. |
+| `core/admin/ui/pages/builder/BlockSettings.tsx` | slot target helpers around 42 and editor context assembly | Shared repeatable slot target owner for TASK-256-03 only; this leaf consumes the resulting `WidgetEditorContext.slotTargets` contract. |
+| `core/widgets/slots.ts` | slot topology helpers | Shared slot topology owner for TASK-256-03 only; this leaf must not introduce a second repeated-slot metadata shape. |
+| `core/admin/ui/widgets/editors/GridColumnsEditors.tsx` | variant, span, color, and cardize controls | Reconcile repeated column configs from TASK-256-03 `context.slotTargets`, preserve CSS variable picker values, make `asymmetric` span changes truthful, add span feedback, and gate cardized-only controls for `masonry-lite`. |
 | `tests/vitest/ui/section-editor-wave.test.tsx` | existing suite | Add anchor, clear, and duplicated-control assertions. |
 | `tests/vitest/widgets/section.test.tsx` | existing suite | Add public vs editor placeholder assertions. |
 | `tests/vitest/ui/grid-columns-editor-wave.test.tsx` | existing suite | Add slot/config sync, CSS-variable picker, span validation/preview, and cardize-control assertions. |
