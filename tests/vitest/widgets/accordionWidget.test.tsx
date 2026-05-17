@@ -1,3 +1,5 @@
+// @vitest-environment happy-dom
+
 import React from "react";
 import type { ComponentType } from "react";
 import { expect, test } from "vitest";
@@ -21,6 +23,25 @@ import type { WidgetEditorProps } from "../../../core/widgets/types";
 
 const StubEditor: ComponentType<WidgetEditorProps<AccordionData>> = () => null;
 
+const renderAccordionDom = (data: AccordionData) => {
+  document.body.innerHTML = renderToString(
+    <AccordionBlock
+      data={data}
+      variant="soft"
+      slots={{
+        "item:1": [],
+        "item:2": [],
+      }}
+    />
+  );
+  const script = document.querySelector("script");
+  if (script?.textContent) {
+    // eslint-disable-next-line no-eval
+    eval(script.textContent);
+  }
+  return Array.from(document.querySelectorAll("details"));
+};
+
 test("accordion renders defaults", () => {
   const html = renderToString(<AccordionBlock data={accordionDefaults} variant="soft" />);
 
@@ -28,8 +49,11 @@ test("accordion renders defaults", () => {
   expect(html).toContain('data-coderso-accordion-variant="soft"');
   expect(html).toContain("Section 1");
   expect(html).toContain('aria-controls="accordion-1-content-1"');
+  expect(html).toContain('aria-expanded="true"');
   expect(html).toContain('aria-labelledby="accordion-1-summary-1"');
+  expect(html).toContain('role="region"');
   expect(html).not.toContain("Add widgets to this accordion item.");
+  expect(html).toContain("codersoAccordionBound");
 });
 
 test("accordion normalization resolves defaults", () => {
@@ -62,19 +86,33 @@ test("accordion honors a default-open item beyond the first position", () => {
       allowMultiple: false,
     },
   });
-  const html = renderToString(
-    <AccordionBlock
-      data={normalized}
-      variant="soft"
-      slots={{
-        "item:1": [],
-        "item:2": [],
-      }}
-    />
-  );
+  const details = renderAccordionDom(normalized) as HTMLDetailsElement[];
 
-  expect(html).not.toMatch(/<details[^>]*open=""[^>]*data-coderso-accordion-item="1"/);
-  expect(html).toMatch(/<details[^>]*open=""[^>]*data-coderso-accordion-item="2"/);
+  expect(details[0]?.open).toBe(false);
+  expect(details[1]?.open).toBe(true);
+});
+
+test("accordion keeps one item open when collapsible is disabled", () => {
+  const details = renderAccordionDom(
+    normalizeAccordionData({
+      ...accordionDefaults,
+      options: {
+        openMode: "single",
+        defaultOpenIds: ["1"],
+        collapsible: false,
+        initiallyOpenId: "1",
+        allowMultiple: false,
+      },
+    })
+  ) as HTMLDetailsElement[];
+
+  const first = details[0];
+  expect(first?.open).toBe(true);
+  if (first) {
+    first.open = false;
+    first.dispatchEvent(new Event("toggle"));
+  }
+  expect(first?.open).toBe(true);
 });
 
 test("accordion validator accepts schema", () => {

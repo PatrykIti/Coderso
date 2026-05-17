@@ -288,13 +288,63 @@ const resolveContainerClass = (variant: AccordionVariantId) => {
 
 const resolveSummaryClass = (variant: AccordionVariantId) => {
   if (variant === "bordered") {
-    return "cursor-pointer list-none px-4 py-3 text-sm font-semibold";
+    return "flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold";
   }
   if (variant === "compact") {
-    return "cursor-pointer list-none px-3 py-2 text-sm font-medium";
+    return "flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-sm font-medium";
   }
-  return "cursor-pointer list-none px-4 py-3.5 text-base font-semibold";
+  return "flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3.5 text-base font-semibold";
 };
+
+const accordionRuntimeClientScript = `
+(() => {
+  if (typeof document === "undefined") return;
+
+  const syncState = (root) => {
+    const items = Array.from(root.querySelectorAll("[data-coderso-accordion-item-details]")).filter(
+      (node) => node instanceof HTMLDetailsElement,
+    );
+
+    items.forEach((details) => {
+      const summary = details.querySelector("[data-coderso-accordion-summary]");
+      if (!(summary instanceof HTMLElement)) return;
+      summary.setAttribute("aria-expanded", details.open ? "true" : "false");
+    });
+
+    return items;
+  };
+
+  const ensureOpenItem = (root, preferred) => {
+    if (root.dataset.codersoAccordionCollapsible !== "false") return;
+    const items = syncState(root);
+    if (items.some((details) => details.open)) return;
+    const fallback =
+      preferred instanceof HTMLDetailsElement ? preferred : items[0];
+    if (!(fallback instanceof HTMLDetailsElement)) return;
+    fallback.open = true;
+    syncState(root);
+  };
+
+  document.querySelectorAll("[data-coderso-accordion='1']").forEach((root) => {
+    if (!(root instanceof HTMLElement)) return;
+    if (root.dataset.codersoAccordionBound === "true") return;
+    root.dataset.codersoAccordionBound = "true";
+
+    const items = syncState(root);
+    items.forEach((details) => {
+      details.addEventListener("toggle", () => {
+        ensureOpenItem(root, details);
+        syncState(root);
+      });
+    });
+
+    ensureOpenItem(root, items.find((details) => details.open));
+    syncState(root);
+  });
+})();
+`;
+
+const getAccordionRuntimeClientScript = () => accordionRuntimeClientScript;
 
 export function AccordionBlock({
   data,
@@ -318,6 +368,7 @@ export function AccordionBlock({
   const normalized = normalizeAccordionData(data, resolvedItems.length);
   const resolvedVariant = resolveVariant(variant);
   const openMode = normalized.options?.openMode ?? "single";
+  const collapsible = normalized.options?.collapsible ?? true;
   const defaultOpenIds =
     normalized.options?.defaultOpenIds?.filter((id) =>
       resolvedItems.some((item) => item.instanceId === id)
@@ -347,6 +398,8 @@ export function AccordionBlock({
       data-coderso-accordion="1"
       data-coderso-accordion-variant={resolvedVariant}
       data-coderso-accordion-count={String(resolvedItems.length)}
+      data-coderso-accordion-open-mode={openMode}
+      data-coderso-accordion-collapsible={String(collapsible)}
     >
       {resolvedItems.map((item, index) => {
         const shouldOpen =
@@ -356,23 +409,30 @@ export function AccordionBlock({
 
         return (
           <details
-            key={item.slotId}
+            key={`${item.slotId}-${openMode}-${collapsible ? "collapsible" : "locked"}-${shouldOpen ? "open" : "closed"}`}
             open={shouldOpen}
             name={openMode === "multiple" ? undefined : detailsGroupName}
             className={resolveContainerClass(resolvedVariant)}
             style={containerStyle}
             data-coderso-accordion-item={item.instanceId}
+            data-coderso-accordion-item-details
           >
             <summary
               id={scopedId(rootInstanceId, `summary-${item.instanceId}`)}
               aria-controls={scopedId(rootInstanceId, `content-${item.instanceId}`)}
+              aria-expanded={shouldOpen ? "true" : "false"}
               className={resolveSummaryClass(resolvedVariant)}
               style={summaryStyle}
+              data-coderso-accordion-summary
             >
-              {item.title}
+              <span>{item.title}</span>
+              <span aria-hidden="true" className="text-xs text-[var(--color-text)]/60">
+                ▾
+              </span>
             </summary>
             <div
               id={scopedId(rootInstanceId, `content-${item.instanceId}`)}
+              role="region"
               aria-labelledby={scopedId(rootInstanceId, `summary-${item.instanceId}`)}
               className={joinClasses(
                 "space-y-4 border-t",
@@ -401,6 +461,7 @@ export function AccordionBlock({
           </details>
         );
       })}
+      <script dangerouslySetInnerHTML={{ __html: getAccordionRuntimeClientScript() }} />
     </div>
   );
 }
