@@ -52,30 +52,39 @@ type LogoDragState = {
   editVersion: number;
 } | null;
 
+type CommitLogoEditResult = {
+  next: LogoCloudData;
+  pendingRemoval?: PendingLogoRemoval;
+};
+
 function LogoCloudVisualEditor(props: LogoCloudEditorProps) {
   const [pendingRemoval, setPendingRemoval] = useState<PendingLogoRemoval>(null);
   const [dragState, setDragState] = useState<LogoDragState>(null);
   const editVersionRef = useRef(0);
 
-  function commitLogoEdit(updater: (current: LogoCloudData) => LogoCloudData) {
+  function commitLogoEdit(
+    updater: (current: LogoCloudData, nextEditVersion: number) => LogoCloudData | CommitLogoEditResult
+  ) {
     const current = normalizeValue(value);
-    const next = updater(current);
+    const nextEditVersion = editVersionRef.current + 1;
+    const result = updater(current, nextEditVersion);
+    const next = "next" in result ? result.next : result;
     if (next === current) return;
-    editVersionRef.current += 1;
-    setPendingRemoval(null);
+    editVersionRef.current = nextEditVersion;
+    setPendingRemoval("next" in result ? (result.pendingRemoval ?? null) : null);
     onChange(normalizeValue(next));
   }
 }
 
 function removeLogoWithUndo(index: number) {
-  const editVersion = editVersionRef.current + 1;
-  commitLogoEdit((current) => {
+  commitLogoEdit((current, nextEditVersion) => {
     const logos = normalizeLogoCloudLogos(current.logos);
     const removed = logos[index];
     if (!removed || logos.length <= 1) return current;
-    editVersionRef.current = editVersion;
-    setPendingRemoval({ logo: removed, index, editVersion });
-    return { ...current, logos: normalizeLogoCloudLogos(logos.filter((_, i) => i !== index), logos.length - 1) };
+    return {
+      next: { ...current, logos: normalizeLogoCloudLogos(logos.filter((_, i) => i !== index), logos.length - 1) },
+      pendingRemoval: { logo: removed, index, editVersion: nextEditVersion },
+    };
   });
 }
 
@@ -138,8 +147,10 @@ Editor data flow:
    `onChange` once a valid drop occurs.
 4. Use immediate remove with inline Undo that restores the exact removed item at
    its previous index. Do not also add a confirmation dialog in this leaf.
-5. Route every non-restore logo edit through `commitLogoEdit`, which clears
-   pending removal and increments `editVersionRef`.
+5. Route every non-restore logo edit through `commitLogoEdit`, which increments
+   `editVersionRef`. Ordinary edits clear pending removal; `removeLogoWithUndo`
+   uses the helper's `pendingRemoval` result shape so the Undo notice survives
+   the remove commit.
 6. Preserve `logos.length >= 1` and `logos.length <= logoCloudLogoMax`.
 
 Error handling:

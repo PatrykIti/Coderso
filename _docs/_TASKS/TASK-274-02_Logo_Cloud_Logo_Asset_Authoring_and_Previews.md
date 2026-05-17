@@ -289,9 +289,9 @@ Regression-test shape:
 - Assert unrelated logo edits made while media resolution is pending are
   preserved when the media selection resolves, proving the commit path uses the
   latest editor value.
-- Assert moving or removing a logo while media resolution is pending does not
-  patch the wrong row; stable-ID rows update in their new position, and removed
-  rows no-op.
+- Assert moving, removing, adding, or changing logo count while media resolution
+  is pending invalidates in-flight selections and does not patch any row; users
+  can select media again after the structural edit.
 - Assert remove-then-add before media resolution does not patch the new row even
   when the normalizer reuses a fallback id such as `logo-1`.
 - Assert Wizard edits persist `logos[index].image`, `logos[index].alt`, and
