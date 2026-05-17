@@ -132,6 +132,65 @@ function updateMeta(
   }));
 }
 
+function getDirectionDefaultsForVariant(
+  variant: StackVariantId
+): Required<NonNullable<StackData["direction"]>> {
+  if (variant === "horizontal") {
+    return {
+      desktop: "row",
+      tablet: "row",
+      mobile: "row",
+    };
+  }
+  if (variant === "responsive") {
+    return {
+      desktop: "row",
+      tablet: "row",
+      mobile: "column",
+    };
+  }
+  return {
+    desktop: "column",
+    tablet: "column",
+    mobile: "column",
+  };
+}
+
+function buildVariantSyncedStackData(value: StackData, nextVariant: StackVariantId): StackData {
+  const current = normalizeValue(value, nextVariant);
+  return normalizeValue(
+    {
+      ...current,
+      direction: getDirectionDefaultsForVariant(nextVariant),
+    },
+    nextVariant
+  );
+}
+
+function applyVariantDataPatch(
+  nextVariant: StackVariantId,
+  nextData: StackData,
+  onChange: (next: StackData) => void,
+  onVariantChange?: (next: string) => void,
+  onBlockPatch?: WidgetEditorProps<StackData>["onBlockPatch"]
+) {
+  if (onBlockPatch) {
+    onBlockPatch((current) => ({
+      ...current,
+      variant: nextVariant,
+      data: nextData,
+    }));
+    return;
+  }
+
+  if (!onVariantChange) {
+    return;
+  }
+
+  onChange(nextData);
+  onVariantChange(nextVariant);
+}
+
 function EditorSection({
   id,
   title,
@@ -336,6 +395,7 @@ export function StackWizardEditor({
   onChange,
   variant,
   onVariantChange,
+  onBlockPatch,
 }: WidgetEditorProps<StackData>) {
   const normalized = normalizeValue(value, variant);
 
@@ -345,7 +405,15 @@ export function StackWizardEditor({
         <p className="text-sm font-medium">Stack style</p>
         <Select
           value={resolveStackVariant(variant)}
-          onValueChange={(next) => onVariantChange?.(next)}
+          onValueChange={(next) =>
+            applyVariantDataPatch(
+              next as StackVariantId,
+              buildVariantSyncedStackData(value, next as StackVariantId),
+              onChange,
+              onVariantChange,
+              onBlockPatch
+            )
+          }
         >
           <SelectTrigger>
             <SelectValue placeholder="Select variant" />
@@ -419,6 +487,7 @@ export function StackVisualEditor({
   onChange,
   variant,
   onVariantChange,
+  onBlockPatch,
 }: WidgetEditorProps<StackData>) {
   const normalized = normalizeValue(value, variant);
 
@@ -428,7 +497,18 @@ export function StackVisualEditor({
         title="Variant and flow"
         description="Choose stack behavior and overall flow preset."
       >
-        <VariantCards value={resolveStackVariant(variant)} onChange={onVariantChange} />
+        <VariantCards
+          value={resolveStackVariant(variant)}
+          onChange={(next) =>
+            applyVariantDataPatch(
+              next as StackVariantId,
+              buildVariantSyncedStackData(value, next as StackVariantId),
+              onChange,
+              onVariantChange,
+              onBlockPatch
+            )
+          }
+        />
       </EditorSection>
 
       <EditorSection

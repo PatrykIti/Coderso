@@ -499,3 +499,14 @@ TOC linki używają `href="#slug"` gdzie slug jest generowany przez `slugifyHead
 ---
 
 *Raport zakończony — 2026-05-16. Testy przeprowadzone przez Playwright CLI w osobnej sesji przeglądarki `rts`. Admin i frontend renderują widget identycznie. Znaleziono 1 krytyczny problem, 5 wysokich, 7 średnich, 4 niskie.*
+
+---
+
+## Status po TASK-256 (2026-05-17)
+
+- Current TASK-256 role for Rich Text Section is classification only.
+  Rich Text-specific product/editor/runtime follow-up scope continues through
+  the `TASK-282` family.
+- Shared rows that match existing TASK-256 clear, accessibility, or
+  mode-ownership mechanisms remain referenced by `TASK-256-07` and
+  `TASK-256-08`.

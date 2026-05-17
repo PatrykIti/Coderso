@@ -281,4 +281,15 @@ Nie wykryto żadnych rozbieżności między admin canvas preview a frontendem (`
 
 ---
 
+## Status po TASK-256 (2026-05-17)
+
+- `TASK-256-05-03`: the Advanced variant select no longer behaves like a live
+  control; it is rendered as a disabled technical field with explicit guidance
+  that variant ownership lives in Visual mode.
+- `TASK-256-04` + `TASK-256-05-03`: unlabeled divider output now exposes
+  separator semantics instead of a plain presentational block.
+- Shared evidence from this turn:
+  `bun run test:vitest -- tests/vitest/ui/divider-editor-wave.test.tsx
+  tests/vitest/widgets/divider.test.tsx` passed on 2026-05-17.
+
 *Raport zakończony — 2026-05-16.*

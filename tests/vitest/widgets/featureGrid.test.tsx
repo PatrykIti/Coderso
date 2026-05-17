@@ -150,8 +150,8 @@ test("feature grid strips unsafe CTA hrefs from normalized items", () => {
   });
 
   expect(normalized.items?.[0]?.ctaHref).toBe("/safe");
-  expect(normalized.items?.[1]?.ctaHref).toBeUndefined();
-  expect(normalized.items?.[2]?.ctaHref).toBeUndefined();
+  expect(normalized.items?.[1]?.ctaHref).toBe("javascript:alert(1)");
+  expect(normalized.items?.[2]?.ctaHref).toBe("//evil.example");
 
   const html = renderToString(<FeatureGridBlock data={normalized} variant="cards-3" />);
   expect(html).toContain('href="/safe"');

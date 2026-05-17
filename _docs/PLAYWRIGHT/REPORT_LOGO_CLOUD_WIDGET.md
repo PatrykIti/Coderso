@@ -362,4 +362,18 @@ Logo Cloud widget służy do prezentacji logotypów partnerów i klientów w cel
 
 ---
 
+## Status po TASK-256 (2026-05-17)
+
+- `TASK-256-06-02`: logo links now resolve through the shared safe-href helper
+  and external URLs emit safe `rel="noopener noreferrer"` attributes.
+- `TASK-256-06-02`: `hoverColor` is now truthful. When grayscale mode is off,
+  the editor locks the toggle with an explicit explanation and runtime no
+  longer claims active hover-color behavior.
+- Shared evidence from this turn:
+  `bun run test:vitest -- tests/vitest/ui/logo-cloud-editor-wave.test.tsx
+  tests/vitest/widgets/logoCloud.test.tsx
+  tests/vitest/widgets/widgetSafeHref.test.ts` passed on 2026-05-17.
+
+---
+
 *Raport wygenerowany na podstawie analizy kodu i testów Playwright — 2026-05-16.*

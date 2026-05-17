@@ -582,10 +582,13 @@ export function LogoCloudVisualEditor({
           <div>
             <p className="text-sm font-medium">Colorize on hover</p>
             <p className="text-xs text-muted-foreground">
-              Removes grayscale effect when hovering a logo.
+              {style.grayscale
+                ? "Removes grayscale effect when hovering a logo."
+                : "Requires grayscale mode. Without grayscale this toggle has no visible effect."}
             </p>
           </div>
           <Switch
+            disabled={!style.grayscale}
             checked={style.hoverColor}
             onCheckedChange={(checked) =>
               updateStyle(value, onChange, { hoverColor: Boolean(checked) })

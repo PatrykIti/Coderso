@@ -193,6 +193,8 @@ export function DividerBlock({ data, variant }: { data: DividerData; variant: st
         </div>
       ) : (
         <div
+          role="separator"
+          aria-orientation="horizontal"
           className={joinClasses("mx-auto border-t")}
           style={{ ...lineStyle, width: widthCss }}
         />

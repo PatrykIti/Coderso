@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
 import {
+  sanitizeSectionAnchorId,
   type SectionContainerWidth,
   normalizeSectionData,
   resolveSectionVariant,
@@ -488,7 +489,9 @@ export function SectionVisualEditor({
               id={fieldProps.id}
               value={normalized.semantics?.anchorId ?? ""}
               onChange={(event) =>
-                updateSemantics(value, onChange, { anchorId: event.target.value })
+                updateSemantics(value, onChange, {
+                  anchorId: sanitizeSectionAnchorId(event.target.value),
+                })
               }
               placeholder="pricing-section"
               aria-labelledby={fieldProps["aria-labelledby"]}
@@ -631,6 +634,10 @@ export function SectionVisualEditor({
             )}
           </WidgetControlRow>
         </div>
+        <p className="text-xs text-muted-foreground">
+          `Wide` keeps the same base wrapper as `Content`; increase max width below when you want a
+          visibly wider section without switching to full bleed.
+        </p>
       </WidgetEditorSection>
 
       <WidgetEditorSection
@@ -653,6 +660,7 @@ export function SectionVisualEditor({
           label="Gradient start"
           value={normalized.style?.gradientFrom}
           onChange={(next) => updateStyle(value, onChange, { gradientFrom: next })}
+          onClear={() => clearStyleField(value, onChange, "gradientFrom")}
           placeholder="#ffffff"
           pickerFallback="#ffffff"
         />
@@ -662,6 +670,7 @@ export function SectionVisualEditor({
           label="Gradient end"
           value={normalized.style?.gradientTo}
           onChange={(next) => updateStyle(value, onChange, { gradientTo: next })}
+          onClear={() => clearStyleField(value, onChange, "gradientTo")}
           placeholder="#f1f5f9"
           pickerFallback="#f1f5f9"
         />
@@ -797,7 +806,9 @@ export function SectionAdvancedEditor({ value, onChange }: WidgetEditorProps<Sec
                 id={fieldProps.id}
                 value={normalized.semantics?.anchorId ?? ""}
                 onChange={(event) =>
-                  updateSemantics(value, onChange, { anchorId: event.target.value })
+                  updateSemantics(value, onChange, {
+                    anchorId: sanitizeSectionAnchorId(event.target.value),
+                  })
                 }
                 placeholder="section-anchor"
                 aria-labelledby={fieldProps["aria-labelledby"]}

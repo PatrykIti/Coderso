@@ -40,6 +40,7 @@ import { BlockList } from "@/ui/pages/builder/BlockList";
 import { BlockSettings } from "@/ui/pages/builder/BlockSettings";
 import { LibraryPanel } from "@/ui/pages/builder/LibraryPanel";
 import {
+  applyWidgetBlockPatch,
   appendSlotBlock,
   createBlock,
   deleteBlockById,
@@ -315,6 +316,7 @@ export function DetailTemplateEditorPage() {
   );
   const [sampleEntriesLoading, setSampleEntriesLoading] = useState(false);
   const [sampleEntriesError, setSampleEntriesError] = useState<string | null>(null);
+  const blocksRef = useRef(blocks);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const hasUnsavedChangesRef = useRef(false);
   const [remoteUpdatePending, setRemoteUpdatePending] = useState(false);
@@ -587,6 +589,7 @@ export function DetailTemplateEditorPage() {
   };
 
   const updateBlocks = (next: Block[]) => {
+    blocksRef.current = next;
     setBlocks(next);
     setDocument((current) => (current ? { ...current, blocks: next } : current));
     markDraftChanged();
@@ -683,6 +686,17 @@ export function DetailTemplateEditorPage() {
 
   const handleChangeBlock = (next: Block) => {
     updateBlocks(updateBlockById(blocks, next.id, () => next));
+  };
+
+  const handlePatchBlock = (
+    blockId: string,
+    patch: Parameters<typeof applyWidgetBlockPatch>[1]
+  ) => {
+    updateBlocks(
+      updateBlockById(blocksRef.current, blockId, (current) =>
+        applyWidgetBlockPatch(current, patch)
+      )
+    );
   };
 
   const handleNameChange = (next: string) => {
@@ -970,6 +984,9 @@ export function DetailTemplateEditorPage() {
               block={selectedBlock}
               widget={selectedWidget}
               onChange={handleChangeBlock}
+              onBlockPatch={
+                selectedBlock ? (patch) => handlePatchBlock(selectedBlock.id, patch) : undefined
+              }
               editorContext={detailTemplateWidgetContext}
             />
           </section>

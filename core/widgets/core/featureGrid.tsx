@@ -243,12 +243,7 @@ export function normalizeFeatureGridItems(
       title,
       description: resolveOptionalString(base.description),
       ctaLabel: resolveOptionalString(base.ctaLabel),
-      ctaHref:
-        normalizeWidgetSafeHref(base.ctaHref, {
-          allowRelative: true,
-          allowHash: true,
-          allowHttp: true,
-        }) ?? undefined,
+      ctaHref: resolveOptionalString(base.ctaHref),
     });
   }
 
@@ -325,11 +320,9 @@ export function FeatureGridBlock({ data, variant }: { data: FeatureGridData; var
   const style = normalizedData.style ?? featureGridDefaults.style!;
 
   const resolvedColumns =
-    resolvedVariant === "cards-3"
+    resolvedVariant === "highlight-first"
       ? "3"
-      : resolvedVariant === "cards-4"
-        ? "4"
-        : resolveFeatureGridColumns(style.columns, variantDefaultColumnsMap[resolvedVariant]);
+      : resolveFeatureGridColumns(style.columns, variantDefaultColumnsMap[resolvedVariant]);
 
   const resolvedGap = resolveFeatureGridGap(style.gap);
   const resolvedBorderWidth = resolveFeatureGridBorderWidth(style.borderWidth);
@@ -388,11 +381,16 @@ export function FeatureGridBlock({ data, variant }: { data: FeatureGridData; var
           const hasIcon = !hasImage && typeof item.icon === "string" && item.icon.trim().length > 0;
           const hasDescription =
             typeof item.description === "string" && item.description.trim().length > 0;
+          const safeCtaHref = normalizeWidgetSafeHref(item.ctaHref, {
+            allowRelative: true,
+            allowHash: true,
+            allowHttp: true,
+          });
           const hasCta =
             typeof item.ctaLabel === "string" &&
             item.ctaLabel.trim().length > 0 &&
-            typeof item.ctaHref === "string" &&
-            item.ctaHref.trim().length > 0;
+            typeof safeCtaHref === "string" &&
+            safeCtaHref.trim().length > 0;
           const highlighted = resolvedVariant === "highlight-first" && index === 0;
 
           return (
@@ -411,6 +409,7 @@ export function FeatureGridBlock({ data, variant }: { data: FeatureGridData; var
                 <img
                   src={item.image}
                   alt={item.title ?? `Feature ${index + 1}`}
+                  loading={highlighted ? "eager" : "lazy"}
                   className={joinClasses(
                     "h-40 w-full object-cover",
                     radiusClassMap[resolvedRadius]
@@ -433,7 +432,8 @@ export function FeatureGridBlock({ data, variant }: { data: FeatureGridData; var
               {hasCta ? (
                 <a
                   className="mt-auto inline-flex w-fit rounded-md border border-[var(--color-border)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text)] transition hover:border-[var(--color-primary)]"
-                  href={item.ctaHref}
+                  href={safeCtaHref}
+                  rel={safeCtaHref?.startsWith("http") ? "noopener noreferrer" : undefined}
                 >
                   {item.ctaLabel}
                 </a>

@@ -341,4 +341,15 @@ Każdy `<article>` ma `borderWidth: 1px` ze wszystkich stron. Przy `gap=0` (spac
 
 ---
 
+## Status po TASK-256 (2026-05-17)
+
+- `TASK-256-04` + `TASK-256-06-03`: FAQ items now use scoped summary/content
+  IDs and single-open grouping semantics in runtime output.
+- `TASK-256-06-03`: the current shared FAQ accessibility and single-open
+  contract is covered by focused editor/runtime tests, while richer product
+  scope stays deferred to `TASK-266`.
+- Shared evidence from this turn:
+  `bun run test:vitest -- tests/vitest/ui/faq-accordion-editor-wave.test.tsx
+  tests/vitest/widgets/faqAccordion.test.tsx` passed on 2026-05-17.
+
 *Raport zakończony — 2026-05-16, sesja `faq-accordion-audit`.*

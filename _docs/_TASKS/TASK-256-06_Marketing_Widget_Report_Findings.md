@@ -6,7 +6,7 @@
 **Category:** Widgets + Marketing Content + Runtime Render + Admin UI
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-256-01, TASK-256-02, TASK-256-03, TASK-256-04, TASK-256-07
-**Status:** To Do
+**Status:** Done (2026-05-17)
 
 ---
 

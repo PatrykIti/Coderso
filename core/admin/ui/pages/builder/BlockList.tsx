@@ -86,11 +86,7 @@ export function BlockList({
     onMove(listPath, from, to);
   };
 
-  const handleDragStart = (
-    event: React.DragEvent<HTMLElement>,
-    index: number,
-    blockId: string
-  ) => {
+  const handleDragStart = (event: React.DragEvent<HTMLElement>, index: number, blockId: string) => {
     event.dataTransfer.setData("text/plain", `${listToken}:${String(index)}`);
     event.dataTransfer.setData("block-id", blockId);
     event.dataTransfer.effectAllowed = "move";
@@ -117,10 +113,7 @@ export function BlockList({
                 label: slotId === "default" ? "Default slot" : slotId,
                 kind: "fixed" as const,
               }));
-        const nestedCount = Object.values(slotMap).reduce(
-          (sum, items) => sum + items.length,
-          0
-        );
+        const nestedCount = Object.values(slotMap).reduce((sum, items) => sum + items.length, 0);
         return (
           <div
             key={block.id}
@@ -129,8 +122,7 @@ export function BlockList({
               "cursor-pointer rounded-xl border bg-background p-4 shadow-sm",
               level > 0 && "border-dashed bg-muted/20",
               selectedId === block.id && "border-primary/50 ring-2 ring-primary/10",
-              highlightedId === block.id &&
-                "border-emerald-500/40 ring-2 ring-emerald-500/20",
+              highlightedId === block.id && "border-emerald-500/40 ring-2 ring-emerald-500/20",
               hoverIndex === index && dragIndex !== null && "border-primary/40"
             )}
             draggable
@@ -230,7 +222,11 @@ export function BlockList({
               </div>
             </div>
             <div className="border-t bg-muted/5">
-              <WidgetRenderer block={block} pageDefaults={pageDefaults} />
+              <WidgetRenderer
+                block={block}
+                pageDefaults={pageDefaults}
+                renderContext={{ mode: "editor-preview" }}
+              />
             </div>
             {slotTargets.length > 0 ? (
               <div className="border-t p-4 space-y-4">
@@ -244,9 +240,7 @@ export function BlockList({
                       key={`${block.id}-slot-${slot.slotId}`}
                       className="space-y-2"
                       onDragOver={(event) => {
-                        const hasWidget = Boolean(
-                          event.dataTransfer.getData("widget-type")
-                        );
+                        const hasWidget = Boolean(event.dataTransfer.getData("widget-type"));
                         const hasBlock = Boolean(event.dataTransfer.getData("block-id"));
                         if (!hasWidget && !hasBlock) return;
                         event.preventDefault();
@@ -313,8 +307,7 @@ export function BlockList({
                                   Add widget to {slot.label}
                                 </span>
                                 <span className="block text-muted-foreground">
-                                  Drag from the library or choose a widget from the
-                                  widgets tab.
+                                  Drag from the library or choose a widget from the widgets tab.
                                 </span>
                               </span>
                             </button>

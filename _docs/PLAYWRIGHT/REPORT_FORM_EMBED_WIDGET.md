@@ -317,3 +317,13 @@ FormEmbedResolvedData {
 ---
 
 *Raport w toku — 2026-05-16, sesja `form-embed-audit`.*
+
+---
+
+## Status po TASK-256 (2026-05-17)
+
+- Report remains in progress. TASK-256 must not mark Form Embed rows fixed
+  without refreshed runtime evidence.
+- Current TASK-256 role is still classification-only for shared rows that match
+  existing TASK-256 mechanisms; widget-owned behavior continues through the
+  `TASK-269` family and final closure remains owned by `TASK-256-08`.

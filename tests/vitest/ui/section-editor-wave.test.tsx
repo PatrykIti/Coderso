@@ -902,6 +902,25 @@ test("Section editors fall back to sparse normalized token fields and contract d
   }
 });
 
+test("Section editors sanitize invalid anchor characters before persisting", async () => {
+  const view = await renderEditors({
+    initialValue: {},
+    initialVariant: "default",
+  });
+
+  try {
+    const semanticsSection = findSectionByTitle(view.container, "Semantics and anchor");
+    setInputValue(
+      findInputByPlaceholder(semanticsSection ?? view.container, "pricing-section"),
+      " team overview / 2026 "
+    );
+
+    expect(view.getLatestValue().semantics?.anchorId).toBe("team-overview-2026");
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("Section editors use hardcoded select fallbacks when sparse defaults omit semantics and surface options", async () => {
   await mockSectionContract({
     normalizedValue: {

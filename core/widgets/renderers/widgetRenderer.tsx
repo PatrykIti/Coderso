@@ -8,6 +8,7 @@ import type {
   SpacingToken,
   WidgetBlock,
   WidgetLayoutDefaults,
+  WidgetRenderContext,
 } from "../types";
 
 const containerClassMap: Record<ContainerToken, string> = {
@@ -107,12 +108,14 @@ export function WidgetRenderer({
   block,
   pageDefaults,
   previewDevice,
+  renderContext: incomingRenderContext,
   renderBlock,
 }: {
   block: WidgetBlock;
   pageDefaults?: WidgetRendererPageDefaults;
   previewDevice?: DeviceTarget;
-  renderBlock?: (block: WidgetBlock) => ReactNode;
+  renderContext?: WidgetRenderContext;
+  renderBlock?: (block: WidgetBlock, context?: WidgetRenderContext) => ReactNode;
 }) {
   const def = getWidget(block.type);
   if (!def) {
@@ -187,6 +190,24 @@ export function WidgetRenderer({
   const wrapperClass = joinClasses(containerClassMap[container]);
 
   const WidgetComponent = def.render;
+  const renderContext = incomingRenderContext ?? {
+    mode: "public",
+    previewDevice,
+  };
+  const renderBlockWithContext = (
+    child: WidgetBlock,
+    nextRenderContext: WidgetRenderContext = renderContext
+  ) =>
+    renderBlock ? (
+      renderBlock(child, nextRenderContext)
+    ) : (
+      <WidgetRenderer
+        block={child}
+        pageDefaults={pageDefaults}
+        previewDevice={previewDevice}
+        renderContext={nextRenderContext}
+      />
+    );
 
   return (
     <section className={sectionClass} style={backgroundStyle}>
@@ -198,22 +219,13 @@ export function WidgetRenderer({
           previewDevice={previewDevice}
           pageDefaults={pageDefaults}
           blockId={normalized.id}
-          renderBlock={renderBlock}
+          renderContext={renderContext}
+          renderBlock={renderBlockWithContext}
         />
         {!hasSlotDefinitions && legacyChildren.length ? (
           <div className="mt-6 flex flex-col gap-6">
             {legacyChildren.map((child) => (
-              <div key={child.id}>
-                {renderBlock ? (
-                  renderBlock(child)
-                ) : (
-                  <WidgetRenderer
-                    block={child}
-                    pageDefaults={pageDefaults}
-                    previewDevice={previewDevice}
-                  />
-                )}
-              </div>
+              <div key={child.id}>{renderBlockWithContext(child)}</div>
             ))}
           </div>
         ) : null}

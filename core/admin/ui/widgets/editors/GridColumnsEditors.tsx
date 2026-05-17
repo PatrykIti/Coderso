@@ -196,6 +196,11 @@ function ColorField({
           placeholder={placeholder}
         />
       </div>
+      {typeof value === "string" && value.trim().startsWith("var(") ? (
+        <p className="text-xs text-muted-foreground">
+          CSS token preserved in data; the picker preview falls back to a safe swatch.
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -305,6 +310,15 @@ function DiagnosticsSnapshot({ value }: { value: GridColumnsData }) {
     <pre className="max-h-64 overflow-auto rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
       {JSON.stringify(value, null, 2)}
     </pre>
+  );
+}
+
+function getResolvedSlotTargetCount(
+  context: WidgetEditorProps<GridColumnsData>["context"]
+): number {
+  return (
+    context?.slotTargets?.filter((target) => target.definitionId === "column").length ??
+    gridColumnsColumnMin
   );
 }
 
@@ -425,12 +439,16 @@ function ColumnSizingGrid({
 function ColumnsCountControl({
   value,
   onChange,
+  context,
 }: {
   value: GridColumnsData;
   onChange: (next: GridColumnsData) => void;
+  context?: WidgetEditorProps<GridColumnsData>["context"];
 }) {
   const normalized = normalizeValue(value);
   const count = normalized.columns?.length ?? gridColumnsColumnMin;
+  const slotTargetCount = getResolvedSlotTargetCount(context);
+  const hasSlotDrift = slotTargetCount !== count;
   const countOptions = Array.from(
     { length: gridColumnsColumnMax - gridColumnsColumnMin + 1 },
     (_, index) => String(index + gridColumnsColumnMin)
@@ -455,9 +473,14 @@ function ColumnsCountControl({
         </SelectContent>
       </Select>
       <p className="text-xs text-muted-foreground">
-        Slot count is controlled in the Slots panel. Keep this in sync with `column` slot instances
-        for predictable sizing.
+        Slot count is controlled in the Slots panel. Current slot instances: {slotTargetCount}.
       </p>
+      {hasSlotDrift ? (
+        <p className="text-xs text-amber-700">
+          Column configs and slot instances are out of sync. Preview uses the slot count until the
+          structure is reconciled.
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -467,6 +490,7 @@ export function GridColumnsWizardEditor({
   onChange,
   variant,
   onVariantChange,
+  context,
 }: WidgetEditorProps<GridColumnsData>) {
   const normalized = normalizeValue(value);
   const columns = normalized.columns ?? [];
@@ -494,7 +518,7 @@ export function GridColumnsWizardEditor({
         </Select>
       </div>
 
-      <ColumnsCountControl value={value} onChange={onChange} />
+      <ColumnsCountControl value={value} onChange={onChange} context={context} />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="space-y-2">
@@ -566,9 +590,13 @@ export function GridColumnsVisualEditor({
   onChange,
   variant,
   onVariantChange,
+  context,
 }: WidgetEditorProps<GridColumnsData>) {
   const normalized = normalizeValue(value);
   const style = normalized.style ?? gridColumnsDefaults.style!;
+  const resolvedVariant = resolveGridColumnsVariant(variant);
+  const effectiveCardizeColumns =
+    resolvedVariant === "masonry-lite" || Boolean(style.cardizeColumns);
 
   return (
     <div className="space-y-4">
@@ -576,9 +604,9 @@ export function GridColumnsVisualEditor({
         title="Variant and layout structure"
         description="Choose grid behavior, alignment, and configuration count."
       >
-        <VariantCards value={resolveGridColumnsVariant(variant)} onChange={onVariantChange} />
+        <VariantCards value={resolvedVariant} onChange={onVariantChange} />
 
-        <ColumnsCountControl value={value} onChange={onChange} />
+        <ColumnsCountControl value={value} onChange={onChange} context={context} />
 
         <div className="space-y-2">
           <p className="text-sm font-medium">Cross-axis alignment</p>
@@ -698,15 +726,22 @@ export function GridColumnsVisualEditor({
               </p>
             </div>
             <Switch
-              checked={Boolean(style.cardizeColumns)}
+              checked={effectiveCardizeColumns}
+              disabled={resolvedVariant === "masonry-lite"}
               onCheckedChange={(checked) =>
                 updateStyle(value, onChange, { cardizeColumns: checked })
               }
             />
           </div>
         </div>
+        {resolvedVariant === "masonry-lite" ? (
+          <p className="text-xs text-muted-foreground">
+            Masonry Lite always renders cardized column wrappers, so this toggle is locked on for
+            truthful preview behavior.
+          </p>
+        ) : null}
 
-        {style.cardizeColumns ? (
+        {effectiveCardizeColumns ? (
           <>
             <ColorField
               label="Column background"

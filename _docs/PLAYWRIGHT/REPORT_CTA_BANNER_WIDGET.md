@@ -300,4 +300,13 @@ Widget CTA Banner to kompaktowy pasek konwersyjny służący do osadzania wezwan
 
 ---
 
+## Status po TASK-256 (2026-05-17)
+
+- Current TASK-256 role for CTA Banner is shared-contract routing only. CTA
+  widget-owned product/editor/runtime follow-ups continue through the
+  `TASK-263` family.
+- Shared rows from this report remain split across `TASK-256-02` (generic clear
+  semantics) and `TASK-256-06-02` (shared safe-link helper evidence), with
+  final fixed/deferred closure still owned by `TASK-256-08`.
+
 *Raport wygenerowany na podstawie analizy kodu i testów Playwright — 2026-05-16.*

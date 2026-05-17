@@ -238,6 +238,15 @@ Wybierając "Gap 0": lg:gap-0
 
 ---
 
+## Status po TASK-256 (2026-05-17)
+
+- `TASK-256-05-02`: Wizard and Visual variant changes now keep stack direction
+  defaults aligned with the selected variant through the shared atomic patch
+  path.
+- Shared evidence from this turn:
+  `bun run test:vitest -- tests/vitest/ui/stack-editor-wave.test.tsx
+  tests/vitest/widgets/stack.test.tsx` passed on 2026-05-17.
+
 ## 6. Admin vs Frontend: Porównanie
 
 **Wynik: Frontend i Admin preview są w 100% spójne.**

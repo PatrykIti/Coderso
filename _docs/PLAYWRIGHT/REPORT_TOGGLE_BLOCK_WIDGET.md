@@ -267,4 +267,18 @@ URL testowy: `http://localhost:3000/test-toggle-block-0516`
 
 ---
 
+## Status po TASK-256 (2026-05-17)
+
+- `TASK-256-03` + `TASK-256-05-04`: public empty-pane placeholder copy is now
+  gated by the shared render-context contract and no longer leaks to frontend
+  runtime output.
+- `TASK-256-04` + `TASK-256-05-04`: toggle runtime now uses scoped `coderso`
+  IDs/selectors for trigger/pane relationships instead of page-global repeated
+  IDs.
+- Shared evidence from this turn:
+  `bun run test:vitest -- tests/vitest/widgets/toggleBlock.test.tsx
+  tests/vitest/ui/toggle-block-editor-wave.test.tsx` passed on 2026-05-17.
+
+---
+
 *Raport zakończony. Sekcje statyczne i weryfikacja Playwright zostały uzupełnione.*

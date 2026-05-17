@@ -2,6 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 import type { Block, WidgetDefinition, WidgetEditorContext } from "./types";
+import { applyWidgetBlockPatch } from "./blockUtils";
 import {
   WidgetEditorModeRoot,
   WidgetEditorSection,
@@ -34,6 +35,9 @@ export type VisualPanelProps = {
   widget: WidgetDefinition;
   block: Block;
   onChange: (next: Block) => void;
+  onBlockPatch?: Parameters<typeof applyWidgetBlockPatch>[1] extends never
+    ? never
+    : (patch: Parameters<typeof applyWidgetBlockPatch>[1]) => void;
   editorContext?: WidgetEditorContext;
   slotControls?: VisualPanelSlotControls;
 };
@@ -42,12 +46,18 @@ export function VisualPanel({
   widget,
   block,
   onChange,
+  onBlockPatch,
   editorContext,
   slotControls,
 }: VisualPanelProps) {
   const variant = block.variant ?? widget.variants[0]?.id ?? "";
   const Editor = widget.editor.visual;
   const visualOwnsVariantSelection = Boolean(widget.editorCapabilities?.visualOwnsVariantSelection);
+  const patchBlock =
+    onBlockPatch ??
+    ((patch: Parameters<typeof applyWidgetBlockPatch>[1]) => {
+      onChange(applyWidgetBlockPatch(block, patch));
+    });
 
   return (
     <WidgetEditorModeRoot widgetType={widget.type} mode="visual">
@@ -65,7 +75,7 @@ export function VisualPanel({
               <button
                 key={variant.id}
                 type="button"
-                onClick={() => onChange({ ...block, variant: variant.id })}
+                onClick={() => patchBlock({ variant: variant.id })}
                 className={
                   block.variant === variant.id
                     ? "rounded-lg border border-primary bg-primary/5 p-3 text-left"
@@ -93,9 +103,15 @@ export function VisualPanel({
       ) : null}
       <Editor
         value={block.data as Record<string, unknown>}
-        onChange={(data) => onChange({ ...block, data })}
+        onChange={(data) =>
+          patchBlock((current) => ({
+            ...current,
+            data,
+          }))
+        }
         variant={variant}
-        onVariantChange={(next) => onChange({ ...block, variant: next })}
+        onVariantChange={(next) => patchBlock({ variant: next })}
+        onBlockPatch={patchBlock}
         context={editorContext}
       />
       {slotControls ? (

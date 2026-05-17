@@ -225,6 +225,17 @@ mobileStack ? "col-span-1" : mobileKeepLeftSpanMap[ratio.tablet ?? "50-50"],
 
 ---
 
+## Status po TASK-256 (2026-05-17)
+
+- `TASK-256-05-02`: split-layout variant changes now use the shared atomic
+  patch path, so selected variant and persisted ratio data no longer drift
+  apart in the editor.
+- `TASK-256-03`: public empty-pane placeholders now fail closed through the
+  shared render-context contract instead of leaking into frontend output.
+- Shared evidence from this turn:
+  `bun run test:vitest -- tests/vitest/ui/split-layout-editor-wave.test.tsx
+  tests/vitest/widgets/splitLayout.test.tsx` passed on 2026-05-17.
+
 ## 6. Admin vs Frontend: Porównanie
 
 **Wynik: Frontend i Admin preview są w 100% spójne.**

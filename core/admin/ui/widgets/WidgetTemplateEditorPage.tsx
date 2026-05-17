@@ -57,6 +57,7 @@ import { BlockList } from "@/ui/pages/builder/BlockList";
 import { BlockSettings } from "@/ui/pages/builder/BlockSettings";
 import { MediaPicker } from "@/ui/media/MediaPicker";
 import {
+  applyWidgetBlockPatch,
   appendSlotBlock,
   createBlock,
   deleteBlockById,
@@ -783,6 +784,16 @@ export function WidgetTemplateEditorPage() {
         block={selectedBlock}
         widget={selectedWidget}
         onChange={(next) => setBlocks((prev) => updateBlockById(prev, next.id, () => next))}
+        onBlockPatch={
+          selectedBlock
+            ? (patch) =>
+                setBlocks((prev) =>
+                  updateBlockById(prev, selectedBlock.id, (current) =>
+                    applyWidgetBlockPatch(current, patch)
+                  )
+                )
+            : undefined
+        }
       />
     </div>
   );

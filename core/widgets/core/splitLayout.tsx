@@ -1,7 +1,9 @@
-import type { ComponentType } from "react";
+import type { ComponentType, ReactNode } from "react";
 
+import { renderEditorPlaceholder } from "../renderContext";
 import { WidgetRenderer } from "../renderers/widgetRenderer";
 import type { DeviceTarget, WidgetBlock, WidgetDefinition, WidgetEditorProps } from "../types";
+import type { WidgetRenderContext } from "../types";
 
 export const splitLayoutRatioTokens = ["50-50", "40-60", "60-40"] as const;
 export const splitLayoutCollapseTokens = ["stack", "keep"] as const;
@@ -186,11 +188,15 @@ export function SplitLayoutBlock({
   variant,
   slots,
   previewDevice,
+  renderContext,
+  renderBlock,
 }: {
   data: SplitLayoutData;
   variant: string;
   slots?: Record<string, WidgetBlock[]>;
   previewDevice?: DeviceTarget;
+  renderContext?: WidgetRenderContext;
+  renderBlock?: (block: WidgetBlock, context?: WidgetRenderContext) => ReactNode;
 }) {
   const resolvedVariant = resolveSplitLayoutVariant(variant);
   const normalized = normalizeSplitLayoutData(data, resolvedVariant);
@@ -247,28 +253,42 @@ export function SplitLayoutBlock({
       <div className={leftClassName} data-split-side="left">
         {leftBlocks.length > 0 ? (
           <div className="space-y-4">
-            {leftBlocks.map((block) => (
-              <WidgetRenderer key={block.id} block={block} previewDevice={previewDevice} />
-            ))}
+            {leftBlocks.map((block) =>
+              renderBlock ? (
+                <div key={block.id}>{renderBlock(block, renderContext)}</div>
+              ) : (
+                <WidgetRenderer
+                  key={block.id}
+                  block={block}
+                  previewDevice={previewDevice}
+                  renderContext={renderContext}
+                />
+              )
+            )}
           </div>
         ) : (
-          <div className="rounded-md border border-dashed border-[var(--color-border)]/70 bg-[var(--color-bg)]/50 px-3 py-2 text-xs text-[var(--color-text)]/70">
-            Empty left pane.
-          </div>
+          renderEditorPlaceholder("Empty left pane.", renderContext)
         )}
       </div>
 
       <div className={rightClassName} data-split-side="right">
         {rightBlocks.length > 0 ? (
           <div className="space-y-4">
-            {rightBlocks.map((block) => (
-              <WidgetRenderer key={block.id} block={block} previewDevice={previewDevice} />
-            ))}
+            {rightBlocks.map((block) =>
+              renderBlock ? (
+                <div key={block.id}>{renderBlock(block, renderContext)}</div>
+              ) : (
+                <WidgetRenderer
+                  key={block.id}
+                  block={block}
+                  previewDevice={previewDevice}
+                  renderContext={renderContext}
+                />
+              )
+            )}
           </div>
         ) : (
-          <div className="rounded-md border border-dashed border-[var(--color-border)]/70 bg-[var(--color-bg)]/50 px-3 py-2 text-xs text-[var(--color-text)]/70">
-            Empty right pane.
-          </div>
+          renderEditorPlaceholder("Empty right pane.", renderContext)
         )}
       </div>
     </div>

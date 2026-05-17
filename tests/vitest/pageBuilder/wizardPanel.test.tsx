@@ -153,6 +153,36 @@ test("WizardPanel forwards editor data, variant updates, and completion", () => 
   }
 });
 
+test("WizardPanel prefers atomic block patches when provided", () => {
+  const onChange = vi.fn();
+  const onBlockPatch = vi.fn();
+
+  const view = mount(
+    <WizardPanel
+      widget={widget}
+      block={block}
+      onChange={onChange}
+      onBlockPatch={onBlockPatch}
+      onComplete={() => {}}
+    />
+  );
+
+  try {
+    const buttons = Array.from(view.container.querySelectorAll("button"));
+    React.act(() => {
+      buttons.find((button) => button.textContent === "change-data")?.click();
+      buttons.find((button) => button.textContent === "change-variant")?.click();
+    });
+
+    expect(onChange).not.toHaveBeenCalled();
+    expect(onBlockPatch).toHaveBeenCalledTimes(2);
+    expect(onBlockPatch).toHaveBeenNthCalledWith(1, expect.any(Function));
+    expect(onBlockPatch).toHaveBeenNthCalledWith(2, { variant: "beta" });
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("WizardPanel falls back to first widget variant or empty string", () => {
   const variantlessBlock: Block = {
     ...block,

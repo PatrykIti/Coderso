@@ -355,7 +355,7 @@ export function SpacerAdvancedEditor({ value, onChange, variant }: WidgetEditorP
         title="Technical height tokens"
         description="Direct token/px editing for desktop, tablet and mobile heights."
       >
-        <ResponsiveHeights value={value} variant="responsive" onChange={onChange} />
+        <ResponsiveHeights value={value} variant={variant} onChange={onChange} />
       </EditorSection>
 
       <EditorSection

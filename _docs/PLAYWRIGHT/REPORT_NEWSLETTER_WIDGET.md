@@ -363,3 +363,14 @@ Newsletter widget to formularz zapisu do newslettera z konfigurowalnymi polami t
 ---
 
 *Raport wygenerowany na podstawie analizy kodu i testów Playwright — 2026-05-16.*
+
+---
+
+## Status po TASK-256 (2026-05-17)
+
+- Current TASK-256 role for Newsletter is classification only. Widget-owned
+  semantics, submit flow, and transport behavior continue through the
+  `TASK-276` family.
+- Shared rows that match existing TASK-256 mechanisms still route through
+  `TASK-256-01`, `TASK-256-02`, or `TASK-256-04`; final fixed/deferred closure
+  remains owned by `TASK-256-08`.

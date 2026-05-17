@@ -2,6 +2,7 @@ import type { CSSProperties, ComponentType } from "react";
 
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
 import { resolveClearableStyleValue } from "./clearableStyle";
+import { resolveWidgetLinkAttrs } from "./widgetSafeHref";
 
 export type GalleryMosaicVariantId = "mosaic" | "uniform-grid" | "feature-left";
 export type GalleryMosaicRatio = "1:1" | "4:3" | "16:9" | "3:4";
@@ -300,7 +301,7 @@ function renderCaption({
       className={joinClasses(
         "pointer-events-none absolute inset-x-0 bottom-0 px-3 py-2 text-xs font-medium text-white",
         captionPosition === "hover"
-          ? "opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+          ? "opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100"
           : undefined
       )}
       style={overlay ? { background: overlay } : undefined}
@@ -330,11 +331,19 @@ function GalleryCard({
 }) {
   const hasVideo = typeof item.video === "string" && item.video.trim().length > 0;
   const hasImage = !hasVideo && typeof item.image === "string" && item.image.trim().length > 0;
-  const hasLink = typeof item.href === "string" && item.href.trim().length > 0;
+  const linkAttrs = resolveWidgetLinkAttrs(item.href, {
+    allowRelative: true,
+    allowHash: true,
+    allowHttp: true,
+  });
+  const hasLink = Boolean(linkAttrs);
+  const accessibleCaption = (item.caption ?? "").trim() || `Gallery item ${index + 1}`;
 
   const media = hasVideo ? (
     <video
       src={item.video}
+      title={accessibleCaption}
+      aria-label={accessibleCaption}
       className="h-full w-full object-cover"
       playsInline
       muted
@@ -344,7 +353,7 @@ function GalleryCard({
   ) : hasImage ? (
     <img
       src={item.image}
-      alt={item.caption ?? `Gallery item ${index + 1}`}
+      alt={accessibleCaption}
       className="h-full w-full object-cover"
       loading="lazy"
     />
@@ -370,9 +379,9 @@ function GalleryCard({
     </div>
   );
 
-  if (hasLink) {
+  if (hasLink && linkAttrs) {
     return (
-      <a href={item.href} className="block">
+      <a {...linkAttrs} aria-label={accessibleCaption} className="block">
         {frame}
       </a>
     );
@@ -405,6 +414,7 @@ export function GalleryMosaicBlock({
 
   if (resolvedVariant === "feature-left") {
     const [lead, ...rest] = items;
+    const hasSupportingItems = rest.length > 0;
     return (
       <section
         className="mx-auto w-full max-w-6xl px-4 py-8"
@@ -429,8 +439,14 @@ export function GalleryMosaicBlock({
           </header>
         ) : null}
 
-        <div className={joinClasses("grid grid-cols-1 lg:grid-cols-3", gapClassMap[gap])}>
-          <div className="lg:col-span-2">
+        <div
+          className={joinClasses(
+            "grid grid-cols-1",
+            hasSupportingItems ? "lg:grid-cols-3" : undefined,
+            gapClassMap[gap]
+          )}
+        >
+          <div className={hasSupportingItems ? "lg:col-span-2" : undefined}>
             <GalleryCard
               item={lead ?? {}}
               index={0}
@@ -441,19 +457,21 @@ export function GalleryMosaicBlock({
               featured
             />
           </div>
-          <div className={joinClasses("flex flex-col", gapClassMap[gap])}>
-            {rest.map((item, index) => (
-              <GalleryCard
-                key={item.id ?? `gallery-side-${index + 2}`}
-                item={item}
-                index={index + 1}
-                ratio={ratio}
-                radius={radius}
-                captionPosition={captionPosition}
-                overlay={overlay}
-              />
-            ))}
-          </div>
+          {hasSupportingItems ? (
+            <div className={joinClasses("flex flex-col", gapClassMap[gap])}>
+              {rest.map((item, index) => (
+                <GalleryCard
+                  key={item.id ?? `gallery-side-${index + 2}`}
+                  item={item}
+                  index={index + 1}
+                  ratio={ratio}
+                  radius={radius}
+                  captionPosition={captionPosition}
+                  overlay={overlay}
+                />
+              ))}
+            </div>
+          ) : null}
         </div>
       </section>
     );

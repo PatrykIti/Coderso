@@ -5,6 +5,8 @@ export {
   type DeviceTarget,
   type EditorMode,
   type SpacingToken,
+  type WidgetBlockPatch,
+  type WidgetBlockPatcher,
   type WidgetBlock as Block,
   type WidgetDefinition,
   type WidgetEditorContext,

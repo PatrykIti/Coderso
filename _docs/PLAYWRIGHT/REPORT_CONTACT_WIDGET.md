@@ -351,3 +351,13 @@ _Zrzut: `contact-13-mobile-375px.png`_
 | `contact-12-one-column-layout.png` | Układ jednokolumnowy — form i details w jednej kolumnie |
 | `contact-13-mobile-375px.png` | Mobile 375px — poprawny stacking pionowy |
 | `contact-14-field-reorder.png` | Reordering pól — kolejność Name → Message → Email po Move down |
+
+---
+
+## Status po TASK-256 (2026-05-17)
+
+- Current TASK-256 role for Contact is classification only. Widget-owned product
+  and public-write behavior continues through the `TASK-261` family.
+- Shared rows that match existing TASK-256 mechanisms still route through
+  `TASK-256-01`, `TASK-256-02`, or `TASK-256-04`; final fixed/deferred closure
+  remains owned by `TASK-256-08`.

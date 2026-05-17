@@ -391,3 +391,12 @@ Frontend (localhost:3000)
 ---
 
 _Raport ukończony po pełnym cyklu testów: analiza kodu + testy Admin UI + testy Frontend + porównanie._
+
+---
+
+## Status po TASK-256 (2026-05-17)
+
+- Current TASK-256 role for Listing Filters is classification only.
+  Widget-owned follow-up scope continues through the `TASK-273` family.
+- Shared rows that match existing TASK-256 truthful-control or accessibility
+  mechanisms remain referenced by `TASK-256-07` and `TASK-256-08`.

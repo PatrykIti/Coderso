@@ -2,6 +2,7 @@ import type { ComponentType, CSSProperties } from "react";
 
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
 import { compactObject, compactStyle, resolveClearableStyleValue } from "./clearableStyle";
+import { resolveWidgetLinkAttrs } from "./widgetSafeHref";
 
 export type LogoCloudVariantId = "grid" | "strip" | "dense";
 export type LogoCloudHeight = "none" | "sm" | "md" | "lg" | "xl";
@@ -282,6 +283,11 @@ function LogoCloudItem({
 }) {
   const hasImage = typeof logo.image === "string" && logo.image.trim().length > 0;
   const hasLink = typeof logo.href === "string" && logo.href.trim().length > 0;
+  const linkAttrs = resolveWidgetLinkAttrs(logo.href, {
+    allowRelative: true,
+    allowHash: true,
+    allowHttp: true,
+  });
   const imageClassName = joinClasses(
     "w-auto max-w-full object-contain",
     logoHeightClassMap[logoHeight],
@@ -303,10 +309,11 @@ function LogoCloudItem({
   const wrapperClassName =
     "group inline-flex min-h-[4.5rem] min-w-[8.5rem] items-center justify-center rounded-lg border px-3 py-2";
 
-  if (hasLink) {
+  if (hasLink && linkAttrs) {
     return (
       <a
-        href={logo.href}
+        {...linkAttrs}
+        aria-label={logo.name ?? `Logo ${index + 1}`}
         className={wrapperClassName}
         style={tileStyle}
         data-logo-cloud-item={String(index + 1)}
@@ -338,7 +345,7 @@ export function LogoCloudBlock({ data, variant }: { data: LogoCloudData; variant
   const gap = resolveLogoCloudGap(style.gap);
   const alignment = resolveLogoCloudAlignment(style.alignment);
   const grayscale = Boolean(style.grayscale);
-  const hoverColor = Boolean(style.hoverColor);
+  const hoverColor = grayscale && Boolean(style.hoverColor);
   const logos = normalizeLogoCloudLogos(normalized.logos);
   const tileStyle = compactStyle({
     backgroundColor: resolveClearableStyleValue(style.tileBackground),
@@ -374,6 +381,7 @@ export function LogoCloudBlock({ data, variant }: { data: LogoCloudData; variant
 
   return (
     <section
+      aria-label={(normalized.header?.title ?? "").trim() || "Partner logos"}
       className="mx-auto w-full max-w-6xl px-4 py-8"
       data-logo-cloud-variant={resolvedVariant}
       data-logo-cloud-gap={gap}

@@ -6,7 +6,7 @@
 **Category:** Widgets + Page Builder + Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-256
-**Status:** To Do
+**Status:** Done (2026-05-17)
 
 ---
 

@@ -34,7 +34,39 @@ test("grid columns renders defaults", () => {
   expect(html).toContain('data-grid-columns-variant="equal"');
   expect(html).toContain('data-grid-columns-count="2"');
   expect(html).toContain('data-grid-column="column:1"');
-  expect(html).toContain("Empty column.");
+  expect(html).not.toContain("Empty column.");
+});
+
+test("grid columns render empty-column placeholders only in editor preview", () => {
+  const publicHtml = renderToString(
+    <GridColumnsBlock data={gridColumnsDefaults} variant="equal" />
+  );
+  const previewHtml = renderToString(
+    <GridColumnsBlock
+      data={gridColumnsDefaults}
+      variant="equal"
+      renderContext={{ mode: "editor-preview" }}
+    />
+  );
+
+  expect(publicHtml).not.toContain("Empty column.");
+  expect(previewHtml).toContain("Empty column.");
+});
+
+test("grid columns keep technical labels out of public runtime", () => {
+  const publicHtml = renderToString(
+    <GridColumnsBlock data={gridColumnsDefaults} variant="equal" />
+  );
+  const previewHtml = renderToString(
+    <GridColumnsBlock
+      data={gridColumnsDefaults}
+      variant="equal"
+      renderContext={{ mode: "editor-preview" }}
+    />
+  );
+
+  expect(publicHtml).not.toContain("Column 1");
+  expect(previewHtml).toContain("Column 1");
 });
 
 test("grid columns normalization keeps deterministic ids and bounds", () => {

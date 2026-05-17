@@ -360,4 +360,13 @@ style={{ flexGrow: 1, minWidth: "1rem", maxWidth: "6rem", ... }}
 
 ---
 
+## Status po TASK-256 (2026-05-17)
+
+- Full Timeline widget closure is intentionally outside this umbrella and
+  continues through the `TASK-291` family.
+- Current TASK-256 ownership is limited to shared prerequisites already handled
+  in `TASK-256-01` (atomic editor patch path) and `TASK-256-04`
+  (interactive-runtime accessibility policy). Timeline-specific editor and
+  renderer rows remain with `TASK-291-01` through `TASK-291-03`.
+
 *Raport zakończony. Wszystkie testy wykonane 2026-05-16.*

@@ -24,17 +24,17 @@ const StubEditor: ComponentType<WidgetEditorProps<ToggleBlockData>> = () => null
 test("toggle block renders defaults", () => {
   const html = renderToString(<ToggleBlock data={toggleBlockDefaults} variant="switch" />);
 
-  expect(html).toContain('data-nextless-toggle-block="1"');
-  expect(html).toContain('data-nextless-toggle-state="primary"');
+  expect(html).toContain('data-coderso-toggle-block="1"');
+  expect(html).toContain('data-coderso-toggle-state="primary"');
   expect(html).toContain('role="radiogroup"');
   expect(html).toContain('role="radio"');
-  expect(html).toContain('aria-controls="toggle-pane-primary"');
-  expect(html).toContain('aria-controls="toggle-pane-secondary"');
-  expect(html).toContain('aria-labelledby="toggle-trigger-primary"');
-  expect(html).toContain('aria-labelledby="toggle-trigger-secondary"');
-  expect(html).toContain("data-nextless-toggle-status");
-  expect(html).toContain("Add widgets for the primary view.");
-  expect(html).toContain("__nextlessToggleBlockBound");
+  expect(html).toContain('aria-controls="toggle-block-primary-pane-primary"');
+  expect(html).toContain('aria-controls="toggle-block-primary-pane-secondary"');
+  expect(html).toContain('aria-labelledby="toggle-block-primary-trigger-primary"');
+  expect(html).toContain('aria-labelledby="toggle-block-primary-trigger-secondary"');
+  expect(html).toContain("data-coderso-toggle-status");
+  expect(html).not.toContain("Add widgets for the primary view.");
+  expect(html).toContain("codersoToggleBound");
 });
 
 test("toggle block normalization applies defaults", () => {
@@ -92,8 +92,22 @@ test("toggle block cleared surface omits background style", () => {
   const html = renderToString(<ToggleBlock data={normalized} variant="switch" />);
 
   expect(normalized.style?.surfaceColor).toBeUndefined();
-  expect(html).toContain('data-nextless-toggle-block="1"');
+  expect(html).toContain('data-coderso-toggle-block="1"');
   expect(html).not.toContain("background-color:");
+});
+
+test("toggle block shows empty-pane placeholders only in editor preview", () => {
+  const publicHtml = renderToString(<ToggleBlock data={toggleBlockDefaults} variant="switch" />);
+  const previewHtml = renderToString(
+    <ToggleBlock
+      data={toggleBlockDefaults}
+      variant="switch"
+      renderContext={{ mode: "editor-preview" }}
+    />
+  );
+
+  expect(publicHtml).not.toContain("Add widgets for the primary view.");
+  expect(previewHtml).toContain("Add widgets for the primary view.");
 });
 
 test("toggle block visual editor renders key sections", () => {

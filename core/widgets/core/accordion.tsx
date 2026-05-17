@@ -1,9 +1,17 @@
-import type { ComponentType, CSSProperties } from "react";
+import type { ComponentType, CSSProperties, ReactNode } from "react";
 
+import { renderEditorPlaceholder } from "../renderContext";
 import { WidgetRenderer } from "../renderers/widgetRenderer";
 import { parseRepeatableSlotId, resolveWidgetSlotTargets } from "../slots";
-import type { DeviceTarget, WidgetBlock, WidgetDefinition, WidgetEditorProps } from "../types";
+import type {
+  DeviceTarget,
+  WidgetBlock,
+  WidgetDefinition,
+  WidgetEditorProps,
+  WidgetRenderContext,
+} from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
+import { createWidgetInstanceId, scopedId } from "./widgetInstanceIds";
 
 export type AccordionVariantId = "soft" | "bordered" | "compact";
 
@@ -293,11 +301,17 @@ export function AccordionBlock({
   variant,
   slots,
   previewDevice,
+  renderContext,
+  renderBlock,
+  blockId,
 }: {
   data: AccordionData;
   variant: string;
   slots?: Record<string, WidgetBlock[]>;
   previewDevice?: DeviceTarget;
+  renderContext?: WidgetRenderContext;
+  renderBlock?: (block: WidgetBlock, context?: WidgetRenderContext) => ReactNode;
+  blockId?: string;
 }) {
   const slotMap = slots && typeof slots === "object" && !Array.isArray(slots) ? slots : {};
   const resolvedItems = resolveAccordionItems(data, slotMap);
@@ -308,8 +322,13 @@ export function AccordionBlock({
     normalized.options?.defaultOpenIds?.filter((id) =>
       resolvedItems.some((item) => item.instanceId === id)
     ) ?? [];
-  const detailsGroupName = `nextless-accordion-${resolvedItems[0]?.instanceId ?? "group"}`;
   const style = normalized.style ?? accordionDefaults.style!;
+  const rootInstanceId = createWidgetInstanceId(
+    "accordion",
+    blockId,
+    resolvedItems[0]?.instanceId ?? "group"
+  );
+  const detailsGroupName = scopedId(rootInstanceId, "group");
 
   const containerStyle: CSSProperties =
     compactStyle({
@@ -325,9 +344,9 @@ export function AccordionBlock({
   return (
     <div
       className="space-y-3"
-      data-nextless-accordion="1"
-      data-nextless-accordion-variant={resolvedVariant}
-      data-nextless-accordion-count={String(resolvedItems.length)}
+      data-coderso-accordion="1"
+      data-coderso-accordion-variant={resolvedVariant}
+      data-coderso-accordion-count={String(resolvedItems.length)}
     >
       {resolvedItems.map((item, index) => {
         const shouldOpen =
@@ -343,12 +362,19 @@ export function AccordionBlock({
             name={openMode === "multiple" ? undefined : detailsGroupName}
             className={resolveContainerClass(resolvedVariant)}
             style={containerStyle}
-            data-nextless-accordion-item={item.instanceId}
+            data-coderso-accordion-item={item.instanceId}
           >
-            <summary className={resolveSummaryClass(resolvedVariant)} style={summaryStyle}>
+            <summary
+              id={scopedId(rootInstanceId, `summary-${item.instanceId}`)}
+              aria-controls={scopedId(rootInstanceId, `content-${item.instanceId}`)}
+              className={resolveSummaryClass(resolvedVariant)}
+              style={summaryStyle}
+            >
               {item.title}
             </summary>
             <div
+              id={scopedId(rootInstanceId, `content-${item.instanceId}`)}
+              aria-labelledby={scopedId(rootInstanceId, `summary-${item.instanceId}`)}
               className={joinClasses(
                 "space-y-4 border-t",
                 resolvedVariant === "compact" ? "p-3" : "p-4"
@@ -358,15 +384,20 @@ export function AccordionBlock({
               {item.description ? (
                 <p className="text-sm text-[var(--color-text)]/70">{item.description}</p>
               ) : null}
-              {item.blocks.length > 0 ? (
-                item.blocks.map((block) => (
-                  <WidgetRenderer key={block.id} block={block} previewDevice={previewDevice} />
-                ))
-              ) : (
-                <div className="rounded-md border border-dashed px-4 py-5 text-sm text-muted-foreground">
-                  Add widgets to this accordion item.
-                </div>
-              )}
+              {item.blocks.length > 0
+                ? item.blocks.map((block) =>
+                    renderBlock ? (
+                      <div key={block.id}>{renderBlock(block, renderContext)}</div>
+                    ) : (
+                      <WidgetRenderer
+                        key={block.id}
+                        block={block}
+                        previewDevice={previewDevice}
+                        renderContext={renderContext}
+                      />
+                    )
+                  )
+                : renderEditorPlaceholder("Add widgets to this accordion item.", renderContext)}
             </div>
           </details>
         );

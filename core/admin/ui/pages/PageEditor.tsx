@@ -37,6 +37,7 @@ import { LibraryPanel } from "./builder/LibraryPanel";
 import { PageRevisionDrawer } from "./PageRevisionDrawer";
 import { PageSettingsDrawer, type PageSettingsValue } from "./PageSettingsDrawer";
 import {
+  applyWidgetBlockPatch,
   applyWizardSelection,
   appendSlotBlock,
   createBlock,
@@ -308,6 +309,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
   const [selectedId, setSelectedId] = useState<string | null>(blocks[0]?.id ?? null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const hasUnsavedChangesRef = useRef(false);
+  const blocksRef = useRef(blocks);
   const setUnsavedChanges = (value: boolean) => {
     hasUnsavedChangesRef.current = value;
     setHasUnsavedChanges(value);
@@ -342,6 +344,10 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
   const [highlightedBlockId, setHighlightedBlockId] = useState<string | null>(null);
   const [pendingScrollBlockId, setPendingScrollBlockId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    blocksRef.current = blocks;
+  }, [blocks]);
 
   const selectedBlock = findBlockById(blocks, selectedId);
   const selectedWidget = useMemo(() => {
@@ -404,6 +410,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     const nextData = result.currentData ?? { blocks: defaultBlocks };
     setPageData(nextData as Record<string, unknown>);
     const nextBlocks = normalizeBlocks(result.currentData as Record<string, unknown>);
+    blocksRef.current = nextBlocks;
     setBlocks(nextBlocks);
     setSelectedId((current) => {
       if (options?.preserveSelection && current) {
@@ -622,6 +629,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
   }, [hasUnsavedChanges]);
 
   const updateBlocks = (next: Block[]) => {
+    blocksRef.current = next;
     setBlocks(next);
     setPageData((prev) => ({ ...prev, blocks: next }));
     setUnsavedChanges(true);
@@ -740,6 +748,17 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
 
   const handleChangeBlock = (next: Block) => {
     updateBlocks(updateBlockById(blocks, next.id, () => next));
+  };
+
+  const handlePatchBlock = (
+    blockId: string,
+    patch: Parameters<typeof applyWidgetBlockPatch>[1]
+  ) => {
+    updateBlocks(
+      updateBlockById(blocksRef.current, blockId, (current) =>
+        applyWidgetBlockPatch(current, patch)
+      )
+    );
   };
 
   const handleSaveDraft = async () => {
@@ -967,7 +986,14 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       activeHref="/admin/pages"
       leftPanel={renderLibraryPanel()}
       rightPanel={
-        <BlockSettings block={selectedBlock} widget={selectedWidget} onChange={handleChangeBlock} />
+        <BlockSettings
+          block={selectedBlock}
+          widget={selectedWidget}
+          onChange={handleChangeBlock}
+          onBlockPatch={
+            selectedBlock ? (patch) => handlePatchBlock(selectedBlock.id, patch) : undefined
+          }
+        />
       }
       rightPanelClassName="p-6"
       breadcrumbs={["Pages", title]}
@@ -1206,6 +1232,9 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
               block={selectedBlock}
               widget={selectedWidget}
               onChange={handleChangeBlock}
+              onBlockPatch={
+                selectedBlock ? (patch) => handlePatchBlock(selectedBlock.id, patch) : undefined
+              }
             />
           </div>
         </SheetContent>

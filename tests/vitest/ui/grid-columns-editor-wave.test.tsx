@@ -130,14 +130,17 @@ vi.mock("@/components/ui/select", () => {
 vi.mock("@/components/ui/switch", () => ({
   Switch: ({
     checked,
+    disabled,
     onCheckedChange,
   }: {
     checked?: boolean;
+    disabled?: boolean;
     onCheckedChange?: (checked: boolean) => void;
   }) => (
     <input
       type="checkbox"
       checked={Boolean(checked)}
+      disabled={disabled}
       onChange={(event) => onCheckedChange?.(event.target.checked)}
     />
   ),
@@ -271,11 +274,13 @@ const renderEditor = async ({
   initialValue,
   initialVariant = "equal",
   withVariantChange = true,
+  context,
 }: {
   editor: EditorKind;
   initialValue: GridColumnsData;
   initialVariant?: string;
   withVariantChange?: boolean;
+  context?: import("../../../core/widgets/types").WidgetEditorProps<GridColumnsData>["context"];
 }) => {
   const { GridColumnsAdvancedEditor, GridColumnsVisualEditor, GridColumnsWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/GridColumnsEditors");
@@ -315,6 +320,7 @@ const renderEditor = async ({
               }
             : undefined
         }
+        context={context}
       />
     );
   };
@@ -544,9 +550,13 @@ test("GridColumns visual editor covers variant cards, column sizing controls, an
     setSelectValue(gapSelects[0], "8");
     setSelectValue(gapSelects[1], "2");
 
+    clickButton(findButtonsByText(variantSection, "Masonry Lite")[0]);
+    expect(view.getVariant()).toBe("masonry-lite");
+
     const cardizeToggle = surfaceSection.querySelector('input[type="checkbox"]');
-    setCheckboxValue(cardizeToggle ?? undefined, true);
-    expect(view.getValue().style?.cardizeColumns).toBe(true);
+    expect((cardizeToggle as HTMLInputElement | null | undefined)?.disabled).toBe(true);
+    expect(normalizeText(surfaceSection.textContent)).toContain("masonry lite always renders");
+    expect(view.getValue().style?.cardizeColumns).toBe(false);
 
     const backgroundTokenInput = findInputByPlaceholder(surfaceSection, "var(--color-surface)");
     const borderTokenInput = findInputByPlaceholder(surfaceSection, "var(--color-border)");
@@ -584,7 +594,7 @@ test("GridColumns visual editor covers variant cards, column sizing controls, an
           }),
         ]),
         style: expect.objectContaining({
-          cardizeColumns: true,
+          cardizeColumns: false,
           columnBackground: "#111827",
           columnBorderColor: "#334155",
           columnBorderWidth: "2",
@@ -596,7 +606,38 @@ test("GridColumns visual editor covers variant cards, column sizing controls, an
 
     setCheckboxValue(surfaceSection.querySelector('input[type="checkbox"]') ?? undefined, false);
     expect(view.getValue().style?.cardizeColumns).toBe(false);
-    expect(queryInputByPlaceholder(surfaceSection, "var(--color-surface)")).toBeUndefined();
+    expect(queryInputByPlaceholder(surfaceSection, "var(--color-surface)")).toBeInstanceOf(
+      HTMLInputElement
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("GridColumns visual editor surfaces slot/config mismatch warnings when structure drift exists", async () => {
+  const view = await renderEditor({
+    editor: "visual",
+    initialVariant: "equal",
+    initialValue: {
+      columns: [
+        { id: "1", label: "Main" },
+        { id: "2", label: "Aside" },
+        { id: "3", label: "Extra" },
+      ],
+    },
+    context: {
+      surface: "page-builder",
+      slotTargets: [
+        { definitionId: "column", slotId: "column:1", label: "Column 1", kind: "repeatable" },
+        { definitionId: "column", slotId: "column:2", label: "Column 2", kind: "repeatable" },
+      ],
+    },
+  });
+
+  try {
+    const variantSection = getSectionByTitle(view.container, "Variant and layout structure");
+    expect(normalizeText(variantSection.textContent)).toContain("current slot instances: 2");
+    expect(normalizeText(variantSection.textContent)).toContain("out of sync");
   } finally {
     view.cleanup();
   }

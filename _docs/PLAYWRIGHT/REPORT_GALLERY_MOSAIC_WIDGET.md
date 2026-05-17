@@ -444,4 +444,21 @@ Strona testowa `GALLERY-MOSAIC-TEST-0516` (`/gallery-mosaic-test-0516`) opubliko
 
 ---
 
+## Status po TASK-256 (2026-05-17)
+
+- `TASK-256-06-02`: overlay color picking now preserves the alpha channel from
+  existing `rgba(...)` values instead of flattening overlays to solid hex
+  colors.
+- `TASK-256-06-02`: gallery links now resolve through the shared safe-href
+  helper, hover captions are focus-visible for linked tiles, and media output
+  uses explicit accessible labels derived from existing caption data.
+- `TASK-256-06-02`: `feature-left` no longer renders an empty supporting column
+  when only the lead item exists.
+- Shared evidence from this turn:
+  `bun run test:vitest -- tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx
+  tests/vitest/widgets/galleryMosaic.test.tsx
+  tests/vitest/widgets/widgetSafeHref.test.ts` passed on 2026-05-17.
+
+---
+
 *Raport zakończony (sesja 1: 2026-05-16, sesja 2 frontend: 2026-05-16). Testy przeprowadzone w sesjach Playwright `gallery-mosaic` (admin) i `gallery-mosaic-frontend` (frontend).*

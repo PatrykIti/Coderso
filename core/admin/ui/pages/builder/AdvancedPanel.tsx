@@ -3,7 +3,7 @@ import { Switch } from "@/components/ui/switch";
 
 import type { Block, DeviceTarget, WidgetDefinition, WidgetEditorContext } from "./types";
 import { LayoutPanel } from "./LayoutPanel";
-import { sanitizeLayout } from "./blockUtils";
+import { applyWidgetBlockPatch, sanitizeLayout } from "./blockUtils";
 import { WidgetEditorModeRoot } from "../../widgets/editors/WidgetEditorControls";
 
 const deviceLabels: { id: DeviceTarget; label: string }[] = [
@@ -16,35 +16,53 @@ export type AdvancedPanelProps = {
   block: Block;
   widget: WidgetDefinition;
   onChange: (next: Block) => void;
+  onBlockPatch?: (patch: Parameters<typeof applyWidgetBlockPatch>[1]) => void;
   editorContext?: WidgetEditorContext;
 };
 
-export function AdvancedPanel({ block, widget, onChange, editorContext }: AdvancedPanelProps) {
+export function AdvancedPanel({
+  block,
+  widget,
+  onChange,
+  onBlockPatch,
+  editorContext,
+}: AdvancedPanelProps) {
   const Editor = widget.editor.advanced;
   const layoutValue = sanitizeLayout(block.layout);
+  const patchBlock =
+    onBlockPatch ??
+    ((patch: Parameters<typeof applyWidgetBlockPatch>[1]) => {
+      onChange(applyWidgetBlockPatch(block, patch));
+    });
 
   const devices = block.visibility?.devices ?? ["desktop", "tablet", "mobile"];
   const toggleDevice = (device: DeviceTarget) => {
     const nextDevices = devices.includes(device)
       ? devices.filter((entry) => entry !== device)
       : [...devices, device];
-    onChange({
-      ...block,
+    patchBlock((current) => ({
+      ...current,
       visibility: {
-        ...block.visibility,
+        ...current.visibility,
         devices: nextDevices,
-        enabled: block.visibility?.enabled ?? true,
+        enabled: current.visibility?.enabled ?? true,
       },
-    });
+    }));
   };
 
   return (
     <WidgetEditorModeRoot widgetType={widget.type} mode="advanced" className="space-y-6">
       <Editor
         value={block.data as Record<string, unknown>}
-        onChange={(data) => onChange({ ...block, data })}
+        onChange={(data) =>
+          patchBlock((current) => ({
+            ...current,
+            data,
+          }))
+        }
         variant={block.variant ?? widget.variants[0]?.id ?? ""}
-        onVariantChange={(next) => onChange({ ...block, variant: next })}
+        onVariantChange={(next) => patchBlock({ variant: next })}
+        onBlockPatch={patchBlock}
         context={editorContext}
       />
       <div>
@@ -57,7 +75,7 @@ export function AdvancedPanel({ block, widget, onChange, editorContext }: Advanc
           </Badge>
         </div>
         <div className="mt-3">
-          <LayoutPanel value={layoutValue} onChange={(layout) => onChange({ ...block, layout })} />
+          <LayoutPanel value={layoutValue} onChange={(layout) => patchBlock({ layout })} />
         </div>
       </div>
       <div>

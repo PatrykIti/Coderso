@@ -24,15 +24,15 @@ const StubEditor: ComponentType<WidgetEditorProps<TabsData>> = () => null;
 test("tabs renders defaults with runtime marker", () => {
   const html = renderToString(<TabsBlock data={tabsDefaults} variant="pills" />);
 
-  expect(html).toContain('data-nextless-tabs="1"');
-  expect(html).toContain('data-nextless-tabs-variant="pills"');
-  expect(html).toContain('data-nextless-tabs-orientation="horizontal"');
+  expect(html).toContain('data-coderso-tabs="1"');
+  expect(html).toContain('data-coderso-tabs-variant="pills"');
+  expect(html).toContain('data-coderso-tabs-orientation="horizontal"');
   expect(html).toContain('role="tablist"');
   expect(html).toContain('role="tabpanel"');
-  expect(html).toContain('aria-controls="tabs-panel-1"');
-  expect(html).toContain('aria-labelledby="tabs-trigger-1"');
-  expect(html).toContain("Add widgets to this tab panel.");
-  expect(html).toContain("__nextlessTabsBound");
+  expect(html).toContain('aria-controls="tabs-1-panel-1"');
+  expect(html).toContain('aria-labelledby="tabs-1-trigger-1"');
+  expect(html).not.toContain("Add widgets to this tab panel.");
+  expect(html).toContain("codersoTabsBound");
 });
 
 test("tabs normalization keeps valid default tab, alignment, and orientation", () => {
@@ -105,8 +105,18 @@ test("tabs cleared surfaces omit tab and panel background styles", () => {
   expect(normalized.style?.surfaceColor).toBeUndefined();
   expect(normalized.style?.activeBackgroundColor).toBeUndefined();
   expect(normalized.style?.panelBackgroundColor).toBeUndefined();
-  expect(html).toContain('data-nextless-tabs-variant="pills"');
+  expect(html).toContain('data-coderso-tabs-variant="pills"');
   expect(html).not.toContain("background-color:");
+});
+
+test("tabs render editor placeholders only in preview contexts", () => {
+  const publicHtml = renderToString(<TabsBlock data={tabsDefaults} variant="pills" />);
+  const previewHtml = renderToString(
+    <TabsBlock data={tabsDefaults} variant="pills" renderContext={{ mode: "editor-preview" }} />
+  );
+
+  expect(publicHtml).not.toContain("Add widgets to this tab panel.");
+  expect(previewHtml).toContain("Add widgets to this tab panel.");
 });
 
 test("tabs visual editor renders structure sections", () => {

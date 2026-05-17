@@ -2,6 +2,7 @@ import type { CSSProperties, ComponentType } from "react";
 
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
+import { createWidgetInstanceId, scopedId } from "./widgetInstanceIds";
 
 export type FaqAccordionVariantId = "single-column" | "two-column" | "compact";
 export type FaqAccordionSpacing = "none" | "sm" | "md" | "lg";
@@ -276,7 +277,15 @@ export function normalizeFaqAccordionData(data: FaqAccordionData): FaqAccordionD
   };
 }
 
-export function FaqAccordionBlock({ data, variant }: { data: FaqAccordionData; variant: string }) {
+export function FaqAccordionBlock({
+  data,
+  variant,
+  blockId,
+}: {
+  data: FaqAccordionData;
+  variant: string;
+  blockId?: string;
+}) {
   const resolvedVariant = resolveFaqAccordionVariant(variant);
   const normalizedData = normalizeFaqAccordionData(data);
   const style = normalizedData.style ?? faqAccordionDefaults.style!;
@@ -312,6 +321,8 @@ export function FaqAccordionBlock({ data, variant }: { data: FaqAccordionData; v
         : panelPaddingClassMap[spacing];
   const summaryClassName = compact ? "text-sm font-semibold" : "text-base font-semibold";
   const answerClassName = compact ? "text-xs leading-relaxed" : "text-sm leading-relaxed";
+  const rootInstanceId = createWidgetInstanceId("faq-accordion", blockId, "faq");
+  const detailsGroupName = scopedId(rootInstanceId, "group");
 
   return (
     <section
@@ -346,6 +357,8 @@ export function FaqAccordionBlock({ data, variant }: { data: FaqAccordionData; v
       <div className={listClassName}>
         {normalizedData.items.map((item, index) => {
           const open = defaultOpenIndex === index;
+          const summaryId = scopedId(rootInstanceId, `summary-${item.id ?? index + 1}`);
+          const contentId = scopedId(rootInstanceId, `content-${item.id ?? index + 1}`);
           return (
             <article
               key={item.id ?? `faq-item-${index + 1}`}
@@ -354,8 +367,10 @@ export function FaqAccordionBlock({ data, variant }: { data: FaqAccordionData; v
               data-faq-item={String(index + 1)}
               data-faq-item-open={String(open)}
             >
-              <details open={open}>
+              <details open={open} name={allowMultipleOpen ? undefined : detailsGroupName}>
                 <summary
+                  id={summaryId}
+                  aria-controls={contentId}
                   className={joinClasses(
                     "cursor-pointer list-none",
                     panelPaddingClass,
@@ -365,6 +380,8 @@ export function FaqAccordionBlock({ data, variant }: { data: FaqAccordionData; v
                   {item.question}
                 </summary>
                 <div
+                  id={contentId}
+                  aria-labelledby={summaryId}
                   className={joinClasses(
                     panelPaddingClass,
                     answerClassName,

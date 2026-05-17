@@ -198,6 +198,97 @@ test("AdvancedPanel wires editor, layout, and visibility callbacks", () => {
   }
 });
 
+test("AdvancedPanel routes data, variant, layout, and visibility edits through block patches", () => {
+  const onChange = vi.fn();
+  const onBlockPatch = vi.fn();
+  const block: Block = {
+    id: "block-1",
+    type: "hero",
+    variant: "primary",
+    data: { title: "Hello" },
+    layout: {
+      container: "default",
+      padding: { top: "xl", bottom: "xl" },
+      margin: { top: "none", bottom: "none" },
+      background: { color: "transparent", image: null },
+    },
+    visibility: {
+      enabled: true,
+      devices: ["desktop", "mobile"],
+    },
+    editor: {
+      mode: "visual",
+      wizardCompleted: true,
+    },
+  };
+
+  const widget = {
+    type: "hero",
+    title: "Hero",
+    description: "Hero block",
+    category: "layout",
+    complexity: "composite",
+    audience: "beginner",
+    module: "marketing",
+    variants: [
+      { id: "primary", label: "Primary" },
+      { id: "secondary", label: "Secondary" },
+    ],
+    defaults: {},
+    schema: { type: "object", additionalProperties: true },
+    editor: {
+      wizard: () => null,
+      visual: () => null,
+      advanced: ({
+        onChange: onDataChange,
+        variant,
+        onVariantChange,
+      }: WidgetEditorProps<Record<string, unknown>>) => (
+        <div>
+          <span>{variant}</span>
+          <button type="button" onClick={() => onDataChange({ title: "Updated" })}>
+            change-data
+          </button>
+          <button type="button" onClick={() => onVariantChange?.("secondary")}>
+            change-variant
+          </button>
+        </div>
+      ),
+    },
+    render: () => null,
+  } satisfies WidgetDefinition;
+
+  const { container, cleanup } = mount(
+    <AdvancedPanel block={block} widget={widget} onChange={onChange} onBlockPatch={onBlockPatch} />
+  );
+
+  try {
+    const byText = (label: string) =>
+      Array.from(container.querySelectorAll("button")).find(
+        (element) => element.textContent === label
+      );
+
+    React.act(() => {
+      byText("change-data")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      byText("change-variant")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      container
+        .querySelector("button[data-layout-panel='true']")
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    const switches = Array.from(container.querySelectorAll("button[data-switch-checked]"));
+    React.act(() => {
+      switches[0]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      switches[1]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(onChange).not.toHaveBeenCalled();
+    expect(onBlockPatch).toHaveBeenCalled();
+  } finally {
+    cleanup();
+  }
+});
+
 test("AdvancedPanel falls back for missing variant, visibility, and invalid layout", () => {
   const onChange = vi.fn();
   const block = {

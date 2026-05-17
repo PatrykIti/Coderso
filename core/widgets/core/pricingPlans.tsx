@@ -702,27 +702,22 @@ export function PricingPlansBlock({ data, variant }: { data: PricingPlansData; v
       {billingToggle.enabled ? (
         <div
           className="mb-4 flex items-center justify-center gap-2"
-          data-pricing-billing-toggle="1"
+          data-pricing-billing-toggle="static"
           data-pricing-cycle={billingToggle.defaultCycle ?? "monthly"}
+          aria-label="Billing cycle options"
         >
-          <button
-            type="button"
+          <span
             className="rounded-full border px-3 py-1 text-xs font-semibold"
-            data-pricing-cycle-trigger="monthly"
-            aria-pressed={billingToggle.defaultCycle !== "annual" ? "true" : "false"}
             data-state={billingToggle.defaultCycle !== "annual" ? "active" : "inactive"}
           >
             {billingToggle.monthlyLabel}
-          </button>
-          <button
-            type="button"
+          </span>
+          <span
             className="rounded-full border px-3 py-1 text-xs font-semibold"
-            data-pricing-cycle-trigger="annual"
-            aria-pressed={billingToggle.defaultCycle === "annual" ? "true" : "false"}
             data-state={billingToggle.defaultCycle === "annual" ? "active" : "inactive"}
           >
             {billingToggle.annualLabel}
-          </button>
+          </span>
         </div>
       ) : null}
 

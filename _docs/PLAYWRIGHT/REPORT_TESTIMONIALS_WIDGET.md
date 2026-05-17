@@ -361,4 +361,15 @@ Testimonials widget służy do wyświetlania cytatów klientów z ocenami gwiazd
 
 ---
 
+## Status po TASK-256 (2026-05-17)
+
+- `TASK-256-06-03`: current Testimonials editor/runtime lanes are green on
+  `tests/vitest/ui/testimonials-editor-wave.test.tsx` and
+  `tests/vitest/widgets/testimonials.test.tsx`.
+- Current TASK-256 shared scope stays limited to truthful shared behavior and
+  accessibility baselines; richer testimonials product work continues to route
+  through the `TASK-290` family.
+
+---
+
 *Raport wygenerowany na podstawie analizy kodu i testów Playwright — 2026-05-16.*

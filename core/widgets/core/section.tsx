@@ -1,8 +1,15 @@
-import type { CSSProperties, ComponentType } from "react";
+import type { CSSProperties, ComponentType, ReactNode } from "react";
 
+import { renderEditorPlaceholder } from "../renderContext";
 import { WidgetRenderer } from "../renderers/widgetRenderer";
 import { resolveWidgetSlotTargets } from "../slots";
-import type { DeviceTarget, WidgetBlock, WidgetDefinition, WidgetEditorProps } from "../types";
+import type {
+  DeviceTarget,
+  WidgetBlock,
+  WidgetDefinition,
+  WidgetEditorProps,
+  WidgetRenderContext,
+} from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export type SectionVariantId = "default" | "contained" | "bleed";
@@ -217,6 +224,16 @@ const resolveGradientAngle = (value: number | undefined) => {
   return Math.max(0, Math.min(360, Math.round(value ?? 180)));
 };
 
+export const sanitizeSectionAnchorId = (value: string | undefined) => {
+  if (typeof value !== "string") return "";
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  return trimmed
+    .replace(/[^a-zA-Z0-9_-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+};
+
 export function resolveSectionVariant(variant: string): SectionVariantId {
   if (variant === "contained" || variant === "bleed") return variant;
   return "default";
@@ -273,7 +290,7 @@ export function normalizeSectionData(data: SectionData): SectionData {
     },
     semantics: {
       element: data.semantics?.element === "div" ? "div" : "section",
-      anchorId: data.semantics?.anchorId ?? semanticsDefaults.anchorId,
+      anchorId: sanitizeSectionAnchorId(data.semantics?.anchorId ?? semanticsDefaults.anchorId),
       ariaLabel: data.semantics?.ariaLabel ?? semanticsDefaults.ariaLabel,
     },
     style: {
@@ -297,11 +314,15 @@ export function SectionBlock({
   variant,
   slots,
   previewDevice,
+  renderContext,
+  renderBlock,
 }: {
   data: SectionData;
   variant: string;
   slots?: Record<string, WidgetBlock[]>;
   previewDevice?: DeviceTarget;
+  renderContext?: WidgetRenderContext;
+  renderBlock?: (block: WidgetBlock, context?: WidgetRenderContext) => ReactNode;
 }) {
   const resolvedVariant = resolveSectionVariant(variant);
   const normalized = normalizeSectionData(data);
@@ -386,7 +407,7 @@ export function SectionBlock({
                 </p>
               ) : null}
               {(heading.title ?? "").trim().length > 0 ? (
-                <h3 className="text-2xl font-semibold text-[var(--color-text)]">{heading.title}</h3>
+                <h2 className="text-2xl font-semibold text-[var(--color-text)]">{heading.title}</h2>
               ) : null}
               {(heading.description ?? "").trim().length > 0 ? (
                 <p className="text-sm text-[var(--color-text)]/75">{heading.description}</p>
@@ -402,15 +423,20 @@ export function SectionBlock({
 
               return (
                 <div key={target.slotId} className="space-y-4" data-section-region={target.slotId}>
-                  {slotBlocks.length > 0 ? (
-                    slotBlocks.map((block) => (
-                      <WidgetRenderer key={block.id} block={block} previewDevice={previewDevice} />
-                    ))
-                  ) : (
-                    <div className="rounded-md border border-dashed border-[var(--color-border)]/70 bg-[var(--color-bg)]/50 px-3 py-2 text-xs text-[var(--color-text)]/70">
-                      Empty region.
-                    </div>
-                  )}
+                  {slotBlocks.length > 0
+                    ? slotBlocks.map((block) =>
+                        renderBlock ? (
+                          <div key={block.id}>{renderBlock(block, renderContext)}</div>
+                        ) : (
+                          <WidgetRenderer
+                            key={block.id}
+                            block={block}
+                            previewDevice={previewDevice}
+                            renderContext={renderContext}
+                          />
+                        )
+                      )
+                    : renderEditorPlaceholder("Empty region.", renderContext)}
                 </div>
               );
             })}

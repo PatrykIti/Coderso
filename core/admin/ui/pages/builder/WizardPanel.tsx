@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
 import type { Block, WidgetDefinition, WidgetEditorContext } from "./types";
+import { applyWidgetBlockPatch } from "./blockUtils";
 import { InfoTip } from "../../shared/InfoTip";
 import { WidgetEditorModeRoot } from "../../widgets/editors/WidgetEditorControls";
 
@@ -9,6 +10,7 @@ export type WizardPanelProps = {
   widget: WidgetDefinition;
   block: Block;
   onChange: (next: Block) => void;
+  onBlockPatch?: (patch: Parameters<typeof applyWidgetBlockPatch>[1]) => void;
   onComplete: () => void;
   editorContext?: WidgetEditorContext;
 };
@@ -17,11 +19,17 @@ export function WizardPanel({
   widget,
   block,
   onChange,
+  onBlockPatch,
   onComplete,
   editorContext,
 }: WizardPanelProps) {
   const Editor = widget.editor.wizard;
   const variant = block.variant ?? widget.variants[0]?.id ?? "";
+  const patchBlock =
+    onBlockPatch ??
+    ((patch: Parameters<typeof applyWidgetBlockPatch>[1]) => {
+      onChange(applyWidgetBlockPatch(block, patch));
+    });
 
   return (
     <WidgetEditorModeRoot widgetType={widget.type} mode="wizard">
@@ -54,9 +62,15 @@ export function WizardPanel({
       </div>
       <Editor
         value={block.data as Record<string, unknown>}
-        onChange={(data) => onChange({ ...block, data })}
+        onChange={(data) =>
+          patchBlock((current) => ({
+            ...current,
+            data,
+          }))
+        }
         variant={variant}
-        onVariantChange={(next) => onChange({ ...block, variant: next })}
+        onVariantChange={(next) => patchBlock({ variant: next })}
+        onBlockPatch={patchBlock}
         context={editorContext}
       />
       <Button className="w-full" onClick={onComplete}>

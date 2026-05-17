@@ -214,9 +214,11 @@ function VariantCards({
 function TabsStructureSection({
   value,
   onChange,
+  context,
 }: {
   value: TabsData;
   onChange: (next: TabsData) => void;
+  context?: WidgetEditorProps<TabsData>["context"];
 }) {
   const normalized = normalizeValue(value);
   const items = normalizeTabsItems(normalized.items);
@@ -278,7 +280,7 @@ function TabsStructureSection({
         {items.map((item, index) => (
           <div key={item.id} className="space-y-2 rounded-md border p-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Tab {index + 1} (slot id: {item.id})
+              {context?.slotTargets?.[index]?.label ?? `Tab ${index + 1}`}
             </p>
             <Input
               value={item.label}
@@ -472,13 +474,14 @@ export function TabsVisualEditor({
   onChange,
   variant,
   onVariantChange,
+  context,
 }: WidgetEditorProps<TabsData>) {
   return (
     <div className="space-y-4">
       <EditorSection id="tabs.variant" title="Variant" description="Choose tab presentation style.">
         <VariantCards value={resolveVariant(variant)} onChange={onVariantChange} />
       </EditorSection>
-      <TabsStructureSection value={value} onChange={onChange} />
+      <TabsStructureSection value={value} onChange={onChange} context={context} />
       <TabsBehaviorSection value={value} onChange={onChange} />
     </div>
   );
@@ -489,6 +492,7 @@ export function TabsAdvancedEditor({
   onChange,
   variant,
   onVariantChange,
+  context,
 }: WidgetEditorProps<TabsData>) {
   return (
     <div className="space-y-4">
@@ -499,7 +503,7 @@ export function TabsAdvancedEditor({
       >
         <VariantCards value={resolveVariant(variant)} onChange={onVariantChange} />
       </EditorSection>
-      <TabsStructureSection value={value} onChange={onChange} />
+      <TabsStructureSection value={value} onChange={onChange} context={context} />
       <TabsBehaviorSection value={value} onChange={onChange} />
       <EditorSection
         id="tabs.diagnostics"

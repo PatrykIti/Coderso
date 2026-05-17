@@ -262,7 +262,7 @@ test("pricing plans render annual cycle and feature marker when billing toggle i
     />
   );
 
-  expect(html).toContain('data-pricing-billing-toggle="1"');
+  expect(html).toContain('data-pricing-billing-toggle="static"');
   expect(html).toContain('data-pricing-cycle="annual"');
   expect(html).toContain("Yearly");
   expect(html).toContain("$190");

@@ -61,6 +61,13 @@ const justifyClassMap: Record<StatsKpiAlignment, string> = {
   end: "justify-end",
 };
 
+const getStatsKpiCardsGridClass = (count: number) => {
+  if (count <= 2) return "lg:grid-cols-2";
+  if (count === 3) return "lg:grid-cols-3";
+  if (count <= 6) return "lg:grid-cols-3";
+  return "lg:grid-cols-4";
+};
+
 const statsKpiItemMin = 1;
 export const statsKpiItemMax = 12;
 
@@ -331,6 +338,7 @@ function StatsKpiCard({
 
   return (
     <article
+      aria-label={item.label ?? `Metric ${index + 1}`}
       className={wrapperClassName}
       style={variant === "inline" ? undefined : cardStyle}
       data-stats-kpi-item={String(index + 1)}
@@ -338,7 +346,10 @@ function StatsKpiCard({
     >
       <div className="space-y-2">
         {hasIcon ? (
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[var(--color-border)]/70 text-base">
+          <span
+            aria-hidden="true"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[var(--color-border)]/70 text-base"
+          >
             {item.icon}
           </span>
         ) : null}
@@ -382,7 +393,11 @@ export function StatsKpiBlock({ data, variant }: { data: StatsKpiData; variant: 
 
   const containerClassName =
     resolvedVariant === "cards"
-      ? joinClasses("grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4", cardsGridClassMap[spacing])
+      ? joinClasses(
+          "grid grid-cols-1 sm:grid-cols-2",
+          getStatsKpiCardsGridClass(items.length),
+          cardsGridClassMap[spacing]
+        )
       : resolvedVariant === "inline"
         ? joinClasses("flex flex-wrap", spacingClassMap[spacing], justifyClassMap[alignment])
         : joinClasses("grid grid-cols-1 lg:grid-cols-3", spacingClassMap[spacing]);
@@ -391,6 +406,7 @@ export function StatsKpiBlock({ data, variant }: { data: StatsKpiData; variant: 
 
   return (
     <section
+      aria-label={(normalized.header?.title ?? "").trim() || "Key performance metrics"}
       className={joinClasses("mx-auto w-full max-w-6xl px-4 py-8", alignmentClassMap[alignment])}
       data-stats-kpi-variant={resolvedVariant}
       data-stats-kpi-count={String(items.length)}

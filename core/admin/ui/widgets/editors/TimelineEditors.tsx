@@ -332,10 +332,21 @@ function updateMode(
   value: TimelineData,
   onChange: (next: TimelineData) => void,
   nextMode: TimelineMode,
-  onVariantChange?: (next: string) => void
+  onVariantChange?: (next: string) => void,
+  onBlockPatch?: WidgetEditorProps<TimelineData>["onBlockPatch"]
 ) {
-  onChange({ ...value, mode: nextMode });
-  onVariantChange?.(preferredVariantForMode(nextMode));
+  const nextVariant = preferredVariantForMode(nextMode);
+  const nextValue = { ...value, mode: nextMode };
+  if (onBlockPatch) {
+    onBlockPatch((current) => ({
+      ...current,
+      variant: nextVariant,
+      data: nextValue,
+    }));
+    return;
+  }
+  onChange(nextValue);
+  onVariantChange?.(nextVariant);
 }
 
 function updateGuides(
@@ -462,12 +473,14 @@ function TimelineStructureFields({
   value,
   onChange,
   onVariantChange,
+  onBlockPatch,
   variant = "milestones",
   includeStepCount = true,
 }: {
   value: TimelineData;
   onChange: (next: TimelineData) => void;
   onVariantChange?: (next: string) => void;
+  onBlockPatch?: WidgetEditorProps<TimelineData>["onBlockPatch"];
   variant?: string;
   includeStepCount?: boolean;
 }) {
@@ -502,7 +515,7 @@ function TimelineStructureFields({
         <Select
           value={mode}
           onValueChange={(next) =>
-            updateMode(value, onChange, next as TimelineMode, onVariantChange)
+            updateMode(value, onChange, next as TimelineMode, onVariantChange, onBlockPatch)
           }
         >
           <SelectTrigger>
@@ -871,6 +884,7 @@ export function TimelineWizardEditor({
   onChange,
   variant,
   onVariantChange,
+  onBlockPatch,
 }: WidgetEditorProps<TimelineData>) {
   const steps = getNormalizedSteps(value);
   const mode = resolveTimelineMode(value.mode, variant);
@@ -884,7 +898,7 @@ export function TimelineWizardEditor({
         <Select
           value={mode}
           onValueChange={(next) =>
-            updateMode(value, onChange, next as TimelineMode, onVariantChange)
+            updateMode(value, onChange, next as TimelineMode, onVariantChange, onBlockPatch)
           }
         >
           <SelectTrigger>
@@ -978,6 +992,7 @@ export function TimelineVisualEditor({
   onChange,
   variant,
   onVariantChange,
+  onBlockPatch,
 }: WidgetEditorProps<TimelineData>) {
   const steps = getNormalizedSteps(value);
 
@@ -993,6 +1008,7 @@ export function TimelineVisualEditor({
           value={value}
           onChange={onChange}
           onVariantChange={onVariantChange}
+          onBlockPatch={onBlockPatch}
           variant={variant}
         />
       </EditorSection>

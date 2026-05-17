@@ -90,12 +90,21 @@ const itemCountOptions = Array.from({ length: galleryMosaicItemMax }, (_, index)
 );
 
 const hexColorPattern = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
+const rgbColorPattern =
+  /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*(?:0|1|0?\.\d+))?\s*\)$/i;
 
 type HeaderData = NonNullable<GalleryMosaicData["header"]>;
 type StyleData = NonNullable<GalleryMosaicData["style"]>;
 
-const resolvePickerColor = (value: string | undefined, fallback: string) =>
-  value && hexColorPattern.test(value) ? value : fallback;
+const resolvePickerColor = (value: string | undefined, fallback: string) => {
+  if (!value) return fallback;
+  if (hexColorPattern.test(value)) return value;
+  const rgbMatch = value.match(rgbColorPattern);
+  if (!rgbMatch) return fallback;
+  const [, red, green, blue] = rgbMatch;
+  const toHex = (channel: string) => Number.parseInt(channel, 10).toString(16).padStart(2, "0");
+  return `#${toHex(red)}${toHex(green)}${toHex(blue)}`;
+};
 
 function normalizeValue(value: GalleryMosaicData): GalleryMosaicData {
   return normalizeGalleryMosaicData(value);
@@ -158,6 +167,7 @@ function ColorField({
   label,
   value,
   onChange,
+  onPickerChange,
   placeholder,
   pickerFallback,
   onClear,
@@ -165,6 +175,7 @@ function ColorField({
   label: string;
   value: string | undefined;
   onChange: (next: string) => void;
+  onPickerChange?: (next: string) => void;
   placeholder: string;
   pickerFallback: string;
   onClear?: () => void;
@@ -176,7 +187,7 @@ function ColorField({
         <Input
           type="color"
           value={resolvePickerColor(value, pickerFallback)}
-          onChange={(event) => onChange(event.target.value)}
+          onChange={(event) => (onPickerChange ?? onChange)(event.target.value)}
           className="h-9 w-10 p-1"
         />
         <Input
@@ -239,6 +250,29 @@ function clearStyleField(
       style,
     };
   });
+}
+
+function applyColorWithExistingAlpha(currentValue: string | undefined, nextHex: string): string {
+  const match = currentValue?.match(
+    /^rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*(0|1|0?\.\d+)\s*\)$/i
+  );
+  if (!match) {
+    return nextHex;
+  }
+
+  const alpha = match[1];
+  const hex = nextHex.replace("#", "");
+  const normalizedHex =
+    hex.length === 3
+      ? hex
+          .split("")
+          .map((entry) => `${entry}${entry}`)
+          .join("")
+      : hex;
+  const red = Number.parseInt(normalizedHex.slice(0, 2), 16);
+  const green = Number.parseInt(normalizedHex.slice(2, 4), 16);
+  const blue = Number.parseInt(normalizedHex.slice(4, 6), 16);
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
 }
 
 function updateItem(
@@ -640,6 +674,11 @@ export function GalleryMosaicVisualEditor({
           label="Overlay color"
           value={normalized.style?.overlay}
           onChange={(next) => updateStyle(value, onChange, { overlay: next })}
+          onPickerChange={(next) =>
+            updateStyle(value, onChange, {
+              overlay: applyColorWithExistingAlpha(normalized.style?.overlay, next),
+            })
+          }
           onClear={() => clearStyleField(value, onChange, "overlay")}
           placeholder="rgba(15, 23, 42, 0.35)"
           pickerFallback="#0f172a"

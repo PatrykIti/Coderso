@@ -363,8 +363,8 @@ test("Spacer wizard editor covers legacy variant fallback, token/custom height c
     expect(view.getValue()).toEqual({
       height: {
         desktop: "20",
-        tablet: "20",
-        mobile: "20",
+        tablet: "24",
+        mobile: "40px",
       },
       showGuideInEditor: true,
     });
@@ -373,8 +373,8 @@ test("Spacer wizard editor covers legacy variant fallback, token/custom height c
     expect(view.getValue()).toEqual({
       height: {
         desktop: "48px",
-        tablet: "48px",
-        mobile: "48px",
+        tablet: "24",
+        mobile: "40px",
       },
       showGuideInEditor: true,
     });
@@ -385,8 +385,8 @@ test("Spacer wizard editor covers legacy variant fallback, token/custom height c
     expect(view.getValue()).toEqual({
       height: {
         desktop: "48px",
-        tablet: "48px",
-        mobile: "48px",
+        tablet: "24",
+        mobile: "40px",
       },
       showGuideInEditor: false,
     });
@@ -463,7 +463,7 @@ test("Spacer visual editor covers fixed-mode fallback, responsive per-breakpoint
   }
 });
 
-test("Spacer advanced editor keeps technical per-breakpoint controls while snapshot follows the active variant", async () => {
+test("Spacer advanced editor matches the active variant while preserving hidden breakpoint values", async () => {
   const view = await renderEditor({
     editor: "advanced",
     initialVariant: "fixed",
@@ -480,37 +480,16 @@ test("Spacer advanced editor keeps technical per-breakpoint controls while snaps
     const getTechnicalSection = () => getSectionByTitle(view.container, "Technical height tokens");
 
     expect(normalizeText(getTechnicalSection().textContent)).toContain("desktop height");
-    expect(normalizeText(getTechnicalSection().textContent)).toContain("tablet height");
-    expect(normalizeText(getTechnicalSection().textContent)).toContain("mobile height");
-    expect(findSelectsByOptions(getTechnicalSection(), heightSelectValues)).toHaveLength(3);
+    expect(findSelectsByOptions(getTechnicalSection(), heightSelectValues)).toHaveLength(1);
     expect(
       findSelectsByOptions(getTechnicalSection(), heightSelectValues).map((select) => select.value)
-    ).toEqual(["16", "24", "8"]);
+    ).toEqual(["16"]);
 
     expect(getDiagnosticsSnapshot(view.container)).toEqual({
       height: {
         desktop: "16",
-        tablet: "16",
-        mobile: "16",
-      },
-      showGuideInEditor: true,
-    });
-
-    setInputValue(findInputsByPlaceholder(getTechnicalSection(), "e.g. 48px")[1], "44");
-    setSelectValue(findSelectsByOptions(getTechnicalSection(), heightSelectValues)[2], "20");
-    expect(view.getValue()).toEqual({
-      height: {
-        desktop: "16",
-        tablet: "44px",
-        mobile: "20",
-      },
-      showGuideInEditor: true,
-    });
-    expect(getDiagnosticsSnapshot(view.container)).toEqual({
-      height: {
-        desktop: "16",
-        tablet: "16",
-        mobile: "16",
+        tablet: "24",
+        mobile: "8",
       },
       showGuideInEditor: true,
     });
@@ -519,16 +498,16 @@ test("Spacer advanced editor keeps technical per-breakpoint controls while snaps
     expect(view.getValue()).toEqual({
       height: {
         desktop: "52px",
-        tablet: "44px",
-        mobile: "20",
+        tablet: "24",
+        mobile: "8",
       },
       showGuideInEditor: true,
     });
     expect(getDiagnosticsSnapshot(view.container)).toEqual({
       height: {
         desktop: "52px",
-        tablet: "52px",
-        mobile: "52px",
+        tablet: "24",
+        mobile: "8",
       },
       showGuideInEditor: true,
     });

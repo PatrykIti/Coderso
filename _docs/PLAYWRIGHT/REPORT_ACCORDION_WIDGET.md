@@ -435,4 +435,17 @@ useEffect(() => {
 
 ---
 
+## Status po TASK-256 (2026-05-17)
+
+- `TASK-256-03` + `TASK-256-05-04`: public accordion placeholder copy is now
+  gated by the shared render-context contract and no longer leaks to frontend
+  runtime output.
+- `TASK-256-04` + `TASK-256-05-04`: accordion summary/content relationships
+  now use scoped runtime IDs instead of generic repeated DOM IDs.
+- Shared evidence from this turn:
+  `bun run test:vitest -- tests/vitest/widgets/accordionWidget.test.tsx
+  tests/vitest/ui/accordion-editor-wave.test.tsx` passed on 2026-05-17.
+
+---
+
 *Raport zakończony. Wszystkie testy wykonane 2026-05-16.*

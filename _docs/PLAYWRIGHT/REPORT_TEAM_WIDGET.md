@@ -436,4 +436,15 @@ Pełne wyniki w sekcji 3.8 — wszystkie zachowania są identyczne w admin canva
 
 ---
 
+## Status po TASK-256 (2026-05-17)
+
+- `TASK-256-06-04`: current Team editor/runtime lanes are green on
+  `tests/vitest/ui/team-editor-wave.test.tsx` and
+  `tests/vitest/widgets/team.test.tsx`.
+- Widget-specific product expansion (for example richer photo authoring and
+  broader team presentation scope) remains routed to the `TASK-289` family; the
+  shared TASK-256 closure only claims the current shared-contract baselines.
+
+---
+
 *Raport wygenerowany na podstawie analizy kodu (`team.tsx`, `TeamEditors.tsx`) i testów Playwright (sesja `team-audit`, strona `/test-team-0516`) — 2026-05-16.*

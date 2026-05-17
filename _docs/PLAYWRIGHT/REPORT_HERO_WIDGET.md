@@ -332,4 +332,16 @@ Różnica nie jest wyjaśniona. Użytkownik może nie wiedzieć, który padding 
 
 ---
 
+## Status po TASK-256 (2026-05-17)
+
+- `TASK-256-06-03`: current Hero editor/runtime lanes are green on
+  `tests/vitest/ui/hero-editor-wave.test.tsx` and
+  `tests/vitest/widgets/hero.test.tsx`.
+- Widget-local shared-contract closure remains separate from page-shell defects:
+  history auth, preview toolbar, discard, and viewport-control rows are still
+  routed to the page-shell follow-up path owned by `TASK-256-08`, not silently
+  closed under the Hero widget.
+
+---
+
 *Raport wygenerowany na podstawie analizy kodu i testów Playwright — 2026-05-16.*

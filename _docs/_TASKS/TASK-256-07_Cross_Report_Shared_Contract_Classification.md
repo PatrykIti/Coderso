@@ -6,7 +6,7 @@
 **Category:** Widgets + Playwright QA + Contract Classification
 **Estimated Effort:** Medium
 **Dependencies:** TASK-256-01, TASK-256-02, TASK-256-03, TASK-256-04
-**Status:** To Do
+**Status:** Done (2026-05-17)
 
 ---
 
@@ -37,6 +37,18 @@ task instead of widening this family into a per-widget implementation backlog.
   TASK-256-06 leaves.
 - `TASK-256-08`: closure evidence, explicit non-reproducible rows, or physical
   future tasks for report rows outside the current TASK-256 executable leaves.
+
+## Current Progress
+
+- 2026-05-17: current executable shared-contract slices are no longer purely
+  hypothetical. The branch now contains concrete implementation and green
+  validation for shared builder atomic patching, placeholder gating, interactive
+  runtime IDs, split/stack sync, spacer/divider truthfulness, feature-grid /
+  stats-kpi truthful controls, and logo-cloud / gallery safe-link semantics.
+- 2026-05-17: report routing is partially reflected in report-local
+  `Status po TASK-256 (2026-05-17)` notes for the slices that already have
+  matching code and tests. Remaining late reports still need explicit
+  fixed/deferred/future-scope closure rows in TASK-256-08.
 
 ## Drift Evidence
 

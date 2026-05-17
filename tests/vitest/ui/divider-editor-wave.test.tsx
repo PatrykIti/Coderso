@@ -360,7 +360,7 @@ test("Divider editors cover variant changes, width modes, spacing tokens, and ad
   }
 });
 
-test("Divider editors cover visual label input, color picker changes, custom spacing text input, and advanced variant no-op", async () => {
+test("Divider editors cover visual label input, color picker changes, custom spacing text input, and disabled advanced variant control", async () => {
   const { DividerAdvancedEditor, DividerVisualEditor, DividerWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/DividerEditors");
 
@@ -445,6 +445,7 @@ test("Divider editors cover visual label input, color picker changes, custom spa
       "dashed",
       "label-center",
     ])[0];
+    expect(variantSelect?.disabled).toBe(true);
     setSelectValue(variantSelect, "line");
     const advancedSpacingInputs = Array.from(
       (advancedSection as ParentNode).querySelectorAll("input[placeholder='e.g. 32px']")

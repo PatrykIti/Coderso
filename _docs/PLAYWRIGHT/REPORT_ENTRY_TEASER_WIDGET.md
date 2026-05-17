@@ -275,3 +275,12 @@ Widget `entry-teaser` służy do wyróżnionego podglądu jednego wybranego, naj
 | `18-frontend-horizontal-real-content.png` | Frontend — rzeczywista treść w horizontal |
 | `19-frontend-vertical-variant.png` | Frontend — wariant vertical |
 | `20-frontend-minimal-variant.png` | Frontend — wariant minimal |
+
+---
+
+## Status po TASK-256 (2026-05-17)
+
+- Current TASK-256 role for Entry Teaser is classification only. Widget-owned
+  follow-up scope continues through the `TASK-265` family.
+- Shared rows that match existing TASK-256 clear/link/accessibility mechanisms
+  remain referenced by `TASK-256-07` and `TASK-256-08`.

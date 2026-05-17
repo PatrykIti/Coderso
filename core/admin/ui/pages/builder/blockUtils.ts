@@ -1,6 +1,7 @@
 import type {
   Block,
   LayoutValue,
+  WidgetBlockPatch,
   WidgetDefinition,
   WidgetEditorState,
   WidgetVisibility,
@@ -104,10 +105,7 @@ const findBlockLocation = (
     const slots = getSlotMap(block);
     for (const [slotId, slotBlocks] of Object.entries(slots)) {
       if (slotBlocks.length === 0) continue;
-      const found = findBlockLocation(slotBlocks, id, [
-        ...listPath,
-        { index, slotId },
-      ]);
+      const found = findBlockLocation(slotBlocks, id, [...listPath, { index, slotId }]);
       if (found) return found;
     }
   }
@@ -117,14 +115,15 @@ const findBlockLocation = (
 const cloneBlockTree = (block: Block): Block => {
   const editorState = block.editor ?? { mode: "visual", wizardCompleted: true };
   const children = Array.isArray(block.children) ? block.children : [];
-  const slots = block.slots && typeof block.slots === "object" && !Array.isArray(block.slots)
-    ? Object.fromEntries(
-        Object.entries(block.slots).map(([key, value]) => [
-          key,
-          Array.isArray(value) ? (value as Block[]).map(cloneBlockTree) : [],
-        ])
-      )
-    : undefined;
+  const slots =
+    block.slots && typeof block.slots === "object" && !Array.isArray(block.slots)
+      ? Object.fromEntries(
+          Object.entries(block.slots).map(([key, value]) => [
+            key,
+            Array.isArray(value) ? (value as Block[]).map(cloneBlockTree) : [],
+          ])
+        )
+      : undefined;
   return {
     ...block,
     id: crypto.randomUUID(),
@@ -207,11 +206,7 @@ export function findBlockById(blocks: Block[], id?: string | null) {
   return location?.block ?? null;
 }
 
-export function updateBlockById(
-  blocks: Block[],
-  id: string,
-  updater: (block: Block) => Block
-) {
+export function updateBlockById(blocks: Block[], id: string, updater: (block: Block) => Block) {
   const location = findBlockLocation(blocks, id);
   if (!location) return blocks;
   return updateBlockListAtPath(blocks, location.parentListPath, (items) => {
@@ -219,6 +214,10 @@ export function updateBlockById(
     next[location.index] = updater(items[location.index]);
     return next;
   });
+}
+
+export function applyWidgetBlockPatch(block: Block, patch: WidgetBlockPatch): Block {
+  return typeof patch === "function" ? patch(block) : { ...block, ...patch };
 }
 
 export function deleteBlockById(blocks: Block[], id: string) {
@@ -260,11 +259,7 @@ export function appendChildBlock(blocks: Block[], parentId: string, child: Block
   return appendSlotBlock(blocks, parentId, "default", child);
 }
 
-export function addRepeatableSlotInstance(
-  blocks: Block[],
-  parentId: string,
-  definitionId: string
-) {
+export function addRepeatableSlotInstance(blocks: Block[], parentId: string, definitionId: string) {
   return updateBlockById(blocks, parentId, (block) => {
     const definition = getRegisteredWidget(block.type);
     const slot = definition?.slots?.find((item) => item.id === definitionId);
@@ -272,10 +267,7 @@ export function addRepeatableSlotInstance(
 
     const slots = getSlotMap(block);
     const existing = getRepeatableSlotIds(slot, slots);
-    if (
-      Number.isFinite(slot.maxItems) &&
-      existing.length >= Math.floor(slot.maxItems ?? 0)
-    ) {
+    if (Number.isFinite(slot.maxItems) && existing.length >= Math.floor(slot.maxItems ?? 0)) {
       return block;
     }
 
@@ -291,11 +283,7 @@ export function addRepeatableSlotInstance(
   });
 }
 
-export function removeRepeatableSlotInstance(
-  blocks: Block[],
-  parentId: string,
-  slotId: string
-) {
+export function removeRepeatableSlotInstance(blocks: Block[], parentId: string, slotId: string) {
   return updateBlockById(blocks, parentId, (block) => {
     const parsed = parseRepeatableSlotId(slotId);
     if (!parsed) return block;
@@ -368,9 +356,7 @@ export function reorderBlocksAtPath(
   fromIndex: number,
   toIndex: number
 ) {
-  return updateBlockListAtPath(blocks, path, (items) =>
-    reorderBlocks(items, fromIndex, toIndex)
-  );
+  return updateBlockListAtPath(blocks, path, (items) => reorderBlocks(items, fromIndex, toIndex));
 }
 
 export function flattenBlocks(blocks: Block[]) {

@@ -251,4 +251,19 @@ div[data-grid-column] > div.className = "h-full min-h-[6rem] border p-4 rounded-
 
 ---
 
+## Status po TASK-256 (2026-05-17)
+
+- `TASK-256-03` + `TASK-256-05-01`: public runtime no longer renders the
+  editor-only `Empty column.` placeholder. Empty-column guidance is now gated
+  by the shared render-context contract.
+- `TASK-256-05-01`: technical public `Column N` labels are now hidden outside
+  editor-preview surfaces, and the editor surfaces an explicit mismatch warning
+  when column configs drift from actual slot instances.
+- `TASK-256-05-01`: `masonry-lite` now keeps the cardized wrapper contract
+  truthful by locking the cardize toggle on with an explanation instead of
+  pretending the runtime can render it off.
+- Shared evidence from this turn:
+  `bun run test:vitest -- tests/vitest/widgets/gridColumns.test.tsx
+  tests/vitest/ui/grid-columns-editor-wave.test.tsx` passed on 2026-05-17.
+
 *Raport zakończony. Sesja Playwright #3 — 2026-05-16.*

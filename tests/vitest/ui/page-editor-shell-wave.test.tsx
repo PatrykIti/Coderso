@@ -197,15 +197,18 @@ vi.mock("@/ui/layouts/EditorShell", () => ({
     breadcrumbs,
     leftPanel,
     rightPanel,
+    topbarActions,
     children,
   }: {
     breadcrumbs?: React.ReactNode;
     leftPanel?: React.ReactNode;
     rightPanel?: React.ReactNode;
+    topbarActions?: React.ReactNode;
     children: React.ReactNode;
   }) => (
     <div>
       <div>{breadcrumbs}</div>
+      <div>{topbarActions}</div>
       <div>{leftPanel}</div>
       <div>{rightPanel}</div>
       <div>{children}</div>

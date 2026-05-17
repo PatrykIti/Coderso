@@ -487,3 +487,12 @@ Tytuł to statyczny tekst, nie `<a href>`. Użytkownik nie może kliknąć na pr
 ---
 
 *Raport generowany na podstawie analizy kodu i testów Playwright — 2026-05-16.*
+
+---
+
+## Status po TASK-256 (2026-05-17)
+
+- Current TASK-256 role for Product Compare is classification only.
+  Commerce/product-specific behavior continues through the `TASK-279` family.
+- Shared rows that match existing TASK-256 safe-output or accessibility
+  mechanisms remain referenced by `TASK-256-07` and `TASK-256-08`.

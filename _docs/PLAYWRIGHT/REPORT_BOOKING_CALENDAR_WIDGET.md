@@ -368,3 +368,14 @@ Widget `booking-calendar` jest **funkcjonalny na froncie** — sloty ładują si
 5. **Nakładające się sloty** — domyślny interwał 15 min z serwisem 30 min generuje chaotyczną siatkę slotów.
 
 Widget jest gotowy do **podstawowego użycia** na prostych wdrożeniach, ale wymaga ww. poprawek przed użyciem produkcyjnym w środowiskach wymagających wysokiej jakości UX lub dostępności.
+
+---
+
+## Status po TASK-256 (2026-05-17)
+
+- Current TASK-256 role for Booking Calendar is classification only.
+  Widget-owned booking runtime and UX behavior continues through the `TASK-259`
+  family.
+- Shared rows that match existing TASK-256 mechanisms still route through
+  `TASK-256-03` or `TASK-256-04`; final fixed/deferred closure remains owned
+  by `TASK-256-08`.

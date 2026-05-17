@@ -203,16 +203,19 @@ vi.mock("@/ui/layouts/EditorShell", () => ({
     breadcrumbs,
     leftPanel,
     rightPanel,
+    topbarActions,
     children,
   }: {
     activeHref?: string;
     breadcrumbs?: React.ReactNode;
     leftPanel?: React.ReactNode;
     rightPanel?: React.ReactNode;
+    topbarActions?: React.ReactNode;
     children: React.ReactNode;
   }) => (
     <div data-active-href={activeHref}>
       <div>{breadcrumbs}</div>
+      <div>{topbarActions}</div>
       <aside>{leftPanel}</aside>
       <aside>{rightPanel}</aside>
       <main>{children}</main>

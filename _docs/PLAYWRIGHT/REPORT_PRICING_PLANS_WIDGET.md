@@ -509,4 +509,16 @@ Tabela porównawcza renderuje się poprawnie: features per plan, checkmarks (✓
 
 ---
 
+## Status po TASK-256 (2026-05-17)
+
+- `TASK-256-04` + `TASK-256-06-03`: the billing-cycle surface is now truthful.
+  When pricing stays static, runtime renders a non-interactive status display
+  instead of inert toggle buttons.
+- `TASK-256-04`: pricing output now keeps the shared accessibility contract
+  landed in this umbrella while plan-count/product expansion continues to route
+  through the dedicated `TASK-278` family.
+- Shared evidence from this turn:
+  `bun run test:vitest -- tests/vitest/ui/pricing-plans-editor-wave.test.tsx
+  tests/vitest/widgets/pricingPlans.test.tsx` passed on 2026-05-17.
+
 *Raport generowany na podstawie analizy kodu i testów Playwright — 2026-05-16.*

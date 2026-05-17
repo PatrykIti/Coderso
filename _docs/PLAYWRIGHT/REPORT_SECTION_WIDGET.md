@@ -389,3 +389,16 @@ Zmieniono wariant na `contained`, opublikowano i sprawdzono frontend:
 - Sesja Playwright #3 (Admin UI) była ograniczona błędem 401 spowodowanym limitem sesji per user w CMS — limit zwiększony do 30.
 - Sesja Playwright #3b (Frontend) — zakończona w pełni: strona `Section Widget Test` opublikowana, przetestowana na desktop i mobile (375px).
 - Kluczowy wynik: **wszystkie 3 potencjalne problemy frontendowe z poprzedniej sesji zostały potwierdzone** (Empty region. widoczny, h3 hardcoded, flex-col).
+
+---
+
+## Status po TASK-256 (2026-05-17)
+
+- `TASK-256-03` + `TASK-256-05-01`: public runtime no longer renders the
+  editor-only `Empty region.` placeholder. Builder affordances are now gated by
+  the shared render-context path and stay visible only in editor/admin preview.
+- `TASK-256-05-01`: anchor IDs are now sanitized before persistence/render, and
+  the default section heading level moved off the hardcoded `<h3>` path.
+- Shared evidence from this turn:
+  `bun run test:vitest -- tests/vitest/widgets/section.test.tsx
+  tests/vitest/pageBuilder/visualPanel.test.tsx` passed on 2026-05-17.

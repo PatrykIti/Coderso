@@ -7,9 +7,9 @@ import { SiteSettingsPage } from "../../../core/admin/ui/site/SiteSettingsPage";
 test("SiteSettingsPage renders section navigation and actions", () => {
   const html = renderAdminUi(<SiteSettingsPage />);
 
-  expect(html).toContain("Site Settings");
   expect(html).toContain("Base URLs");
   expect(html).toContain("Homepage");
+  expect(html).toContain("404");
   expect(html).toContain("Preview access");
   expect(html).toContain("Content routes");
   expect(html).toContain("Cache settings");

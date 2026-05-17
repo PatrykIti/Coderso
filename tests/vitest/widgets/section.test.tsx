@@ -32,7 +32,38 @@ test("section renders defaults", () => {
   expect(html).toContain('data-section-container-width="content"');
   expect(html).toContain('data-section-max-width="6xl"');
   expect(html).toContain('data-section-regions="1"');
-  expect(html).toContain("Empty region.");
+  expect(html).not.toContain("Empty region.");
+});
+
+test("section heading uses a safe default level", () => {
+  const html = renderToString(
+    <SectionBlock
+      data={{
+        ...sectionDefaults,
+        heading: {
+          title: "Conversion section",
+        },
+      }}
+      variant="default"
+    />
+  );
+
+  expect(html).toContain("<h2");
+  expect(html).not.toContain("<h3");
+});
+
+test("section renders empty-region placeholders only in editor preview", () => {
+  const publicHtml = renderToString(<SectionBlock data={sectionDefaults} variant="default" />);
+  const previewHtml = renderToString(
+    <SectionBlock
+      data={sectionDefaults}
+      variant="default"
+      renderContext={{ mode: "editor-preview" }}
+    />
+  );
+
+  expect(publicHtml).not.toContain("Empty region.");
+  expect(previewHtml).toContain("Empty region.");
 });
 
 test("section normalization keeps deterministic style bounds", () => {

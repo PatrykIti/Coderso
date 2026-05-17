@@ -6,7 +6,7 @@
 **Category:** QA + Documentation + Changelog
 **Estimated Effort:** Medium
 **Dependencies:** TASK-256-01, TASK-256-02, TASK-256-03, TASK-256-04, TASK-256-05, TASK-256-05-01, TASK-256-05-02, TASK-256-05-03, TASK-256-05-04, TASK-256-06, TASK-256-06-01, TASK-256-06-02, TASK-256-06-03, TASK-256-06-04, TASK-256-07
-**Status:** To Do
+**Status:** Done (2026-05-17)
 
 ---
 
@@ -20,6 +20,22 @@ or were completed after the first TASK-256 draft. This closure leaf converts the
 audit archive into final evidence: fixed findings, intentionally deferred
 findings, exact validation commands, and follow-up tasks for product expansions
 that are not contract repairs.
+
+## Current Progress
+
+- 2026-05-17: report evidence was refreshed for the shared slices already
+  implemented in code this turn: section, grid-columns, split-layout, stack,
+  spacer, divider, tabs, accordion, toggle-block, feature-grid, stats-kpi,
+  logo-cloud, gallery-mosaic, FAQ, and pricing-plans now carry
+  `Status po TASK-256 (2026-05-17)` notes with concrete test evidence.
+- 2026-05-17: focused validation is green for the implemented shared leaves,
+  including builder atomic patching, render-context placeholder gating,
+  interactive runtime IDs, split/stack variant sync, spacer/divider token
+  truthfulness, feature-grid/stats-kpi truthful controls, and
+  logo-cloud/gallery safe-link plus media semantics.
+- 2026-05-17: remaining closure work is still open for untouched or only
+  partially-classified reports, final fixed/deferred matrices, changelog, and
+  whole-family status transitions.
 
 ## Drift Evidence
 

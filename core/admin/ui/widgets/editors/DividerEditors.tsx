@@ -432,7 +432,7 @@ export function DividerAdvancedEditor({
       >
         <div className="space-y-2">
           <p className="text-sm font-medium">Variant</p>
-          <Select value={resolvedVariant} onValueChange={() => undefined}>
+          <Select value={resolvedVariant} disabled onValueChange={() => undefined}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>

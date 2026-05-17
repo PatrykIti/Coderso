@@ -333,4 +333,17 @@ Użytkownik edytuje wartości tablet/mobile w Advanced myśląc że ma efekt, al
 
 ---
 
+## Status po TASK-256 (2026-05-17)
+
+- `TASK-256-05-03`: `SpacerAdvancedEditor` is now variant-aware instead of
+  always rendering responsive breakpoint controls in fixed mode.
+- `TASK-256-05-03`: fixed-mode normalization preserves hidden tablet/mobile
+  values so users can switch back to responsive mode without destructive data
+  loss. Runtime still resolves fixed output from the desktop token.
+- `TASK-256-05-03`: `Show guide in editor` is now truthful for editor-preview
+  surfaces through the shared render-context path.
+- Shared evidence from this turn:
+  `bun run test:vitest -- tests/vitest/ui/spacer-editor-wave.test.tsx
+  tests/vitest/widgets/spacer.test.tsx` passed on 2026-05-17.
+
 *Raport wygenerowany na podstawie analizy kodu i testów Playwright — 2026-05-16.*

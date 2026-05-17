@@ -321,3 +321,12 @@ Product Gallery to widget commerce wyświetlający karty produktów z dynamiczny
 | S-11 | Frontend — widok mobile (375px) — 1 kolumna | `PRODUCT_GALLERY_11_frontend_mobile.png` |
 | S-12 | Frontend — cena ukryta (Show price = false) | `PRODUCT_GALLERY_12_frontend_no_price.png` |
 | S-13 | Frontend — Media hint włączony ("No primary media attached") | `PRODUCT_GALLERY_13_frontend_media_hint.png` |
+
+---
+
+## Status po TASK-256 (2026-05-17)
+
+- Current TASK-256 role for Product Gallery is classification only.
+  Commerce/product-specific behavior continues through the `TASK-280` family.
+- Shared rows that match existing TASK-256 safe-output or accessibility
+  mechanisms remain referenced by `TASK-256-07` and `TASK-256-08`.

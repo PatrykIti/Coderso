@@ -388,3 +388,13 @@ Form element nie ma `aria-label` ani `aria-describedby`. Screen readery nie iden
 ---
 
 *Raport wygenerowany na podstawie analizy kodu i testów Playwright — 2026-05-16.*
+
+---
+
+## Status po TASK-256 (2026-05-17)
+
+- Current TASK-256 role for Appointment Form is classification only.
+  Widget-owned booking/form behavior continues through the `TASK-258` family.
+- Shared rows that match existing TASK-256 mechanisms still route through
+  `TASK-256-03` or `TASK-256-04`; final fixed/deferred closure remains owned
+  by `TASK-256-08`.

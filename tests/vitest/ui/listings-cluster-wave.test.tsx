@@ -508,6 +508,10 @@ vi.mock("@/services/listingsClient", () => ({
 
 vi.mock("@/ui/contexts/AdminRouterContext", () => ({
   useAdminRouter: () => ({
+    path:
+      typeof window !== "undefined"
+        ? `${window.location.pathname}${window.location.search}`
+        : "/admin/advanced/listings",
     navigate: (path: string) => listingsState.navigateCalls.push(path),
   }),
 }));

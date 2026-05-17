@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Runtime Render
 **Estimated Effort:** Large
 **Dependencies:** TASK-256
-**Status:** To Do
+**Status:** Done (2026-05-17)
 
 ---
 

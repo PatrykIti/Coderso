@@ -1,9 +1,17 @@
-import type { ComponentType, CSSProperties } from "react";
+import type { ComponentType, CSSProperties, ReactNode } from "react";
 
+import { renderEditorPlaceholder } from "../renderContext";
 import { WidgetRenderer } from "../renderers/widgetRenderer";
 import { parseRepeatableSlotId, resolveWidgetSlotTargets } from "../slots";
-import type { DeviceTarget, WidgetBlock, WidgetDefinition, WidgetEditorProps } from "../types";
+import type {
+  DeviceTarget,
+  WidgetBlock,
+  WidgetDefinition,
+  WidgetEditorProps,
+  WidgetRenderContext,
+} from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
+import { createWidgetInstanceId, scopedId } from "./widgetInstanceIds";
 
 export type TabsVariantId = "pills" | "underline" | "minimal";
 export type TabsOrientation = "horizontal" | "vertical";
@@ -270,28 +278,26 @@ const resolvePanels = (
 
 const tabsRuntimeClientScript = `
 (() => {
-  if (typeof window === "undefined") return;
-  if (window.__nextlessTabsBound === true) return;
-  window.__nextlessTabsBound = true;
+  if (typeof document === "undefined") return;
 
   const getTriggers = (root) =>
-    Array.from(root.querySelectorAll("[data-nextless-tabs-trigger]")).filter(
+    Array.from(root.querySelectorAll("[data-coderso-tabs-trigger]")).filter(
       (node) => node instanceof HTMLElement,
     );
 
   const syncState = (root, activeId) => {
-    root.setAttribute("data-nextless-tabs-active-id", activeId);
+    root.setAttribute("data-coderso-tabs-active-id", activeId);
 
     getTriggers(root).forEach((trigger) => {
-      const id = trigger.getAttribute("data-nextless-tabs-id");
+      const id = trigger.getAttribute("data-coderso-tabs-id");
       const isActive = id === activeId;
       trigger.setAttribute("aria-selected", isActive ? "true" : "false");
       trigger.setAttribute("data-state", isActive ? "active" : "inactive");
       trigger.setAttribute("tabindex", isActive ? "0" : "-1");
     });
 
-    root.querySelectorAll("[data-nextless-tabs-panel]").forEach((panel) => {
-      const id = panel.getAttribute("data-nextless-tabs-id");
+    root.querySelectorAll("[data-coderso-tabs-panel]").forEach((panel) => {
+      const id = panel.getAttribute("data-coderso-tabs-id");
       const isActive = id === activeId;
       if (isActive) {
         panel.removeAttribute("hidden");
@@ -304,41 +310,41 @@ const tabsRuntimeClientScript = `
   };
 
   const focusAndActivate = (root, trigger) => {
-    const activeId = trigger.getAttribute("data-nextless-tabs-id");
+    const activeId = trigger.getAttribute("data-coderso-tabs-id");
     if (!activeId) return;
     syncState(root, activeId);
     trigger.focus();
   };
 
-  document.addEventListener("click", (event) => {
+  const handleClick = (event) => {
     const target = event.target;
     if (!(target instanceof Element)) return;
-    const trigger = target.closest("[data-nextless-tabs-trigger]");
+    const trigger = target.closest("[data-coderso-tabs-trigger]");
     if (!(trigger instanceof HTMLElement)) return;
 
-    const root = trigger.closest("[data-nextless-tabs='1']");
+    const root = trigger.closest("[data-coderso-tabs='1']");
     if (!(root instanceof HTMLElement)) return;
 
-    const activeId = trigger.getAttribute("data-nextless-tabs-id");
+    const activeId = trigger.getAttribute("data-coderso-tabs-id");
     if (!activeId) return;
 
     syncState(root, activeId);
-  });
+  };
 
-  document.addEventListener("keydown", (event) => {
+  const handleKeydown = (event) => {
     const target = event.target;
     if (!(target instanceof HTMLElement)) return;
-    const trigger = target.closest("[data-nextless-tabs-trigger]");
+    const trigger = target.closest("[data-coderso-tabs-trigger]");
     if (!(trigger instanceof HTMLElement)) return;
 
-    const root = trigger.closest("[data-nextless-tabs='1']");
+    const root = trigger.closest("[data-coderso-tabs='1']");
     if (!(root instanceof HTMLElement)) return;
 
     const triggers = getTriggers(root);
     const currentIndex = triggers.indexOf(trigger);
     if (currentIndex < 0) return;
 
-    const orientation = root.getAttribute("data-nextless-tabs-orientation") === "vertical"
+    const orientation = root.getAttribute("data-coderso-tabs-orientation") === "vertical"
       ? "vertical"
       : "horizontal";
 
@@ -367,6 +373,20 @@ const tabsRuntimeClientScript = `
     const nextIndex = (currentIndex + delta + triggers.length) % triggers.length;
     const next = triggers[nextIndex];
     if (next) focusAndActivate(root, next);
+  };
+
+  document.querySelectorAll("[data-coderso-tabs='1']").forEach((root) => {
+    if (!(root instanceof HTMLElement)) return;
+    if (root.dataset.codersoTabsBound === "true") return;
+    root.dataset.codersoTabsBound = "true";
+    root.addEventListener("click", handleClick);
+    root.addEventListener("keydown", handleKeydown);
+    const activeId =
+      root.getAttribute("data-coderso-tabs-active-id") ||
+      getTriggers(root)[0]?.getAttribute("data-coderso-tabs-id");
+    if (activeId) {
+      syncState(root, activeId);
+    }
   });
 })();
 `;
@@ -388,11 +408,17 @@ export function TabsBlock({
   variant,
   slots,
   previewDevice,
+  renderContext,
+  renderBlock,
+  blockId,
 }: {
   data: TabsData;
   variant: string;
   slots?: Record<string, WidgetBlock[]>;
   previewDevice?: DeviceTarget;
+  renderContext?: WidgetRenderContext;
+  renderBlock?: (block: WidgetBlock, context?: WidgetRenderContext) => ReactNode;
+  blockId?: string;
 }) {
   const slotMap = slots && typeof slots === "object" && !Array.isArray(slots) ? slots : {};
   const panels = resolvePanels(data, slotMap);
@@ -405,6 +431,7 @@ export function TabsBlock({
       : (panels[0]?.instanceId ?? "1");
   const style = normalized.style ?? tabsDefaults.style!;
   const orientation = normalized.options?.orientation ?? "horizontal";
+  const rootInstanceId = createWidgetInstanceId("tabs", blockId, activeId || "tabs");
 
   const containerStyle: CSSProperties =
     compactStyle({
@@ -433,11 +460,11 @@ export function TabsBlock({
     <div
       className="space-y-4 rounded-xl border p-4"
       style={containerStyle}
-      data-nextless-tabs="1"
-      data-nextless-tabs-variant={resolvedVariant}
-      data-nextless-tabs-active-id={activeId}
-      data-nextless-tabs-panels={String(panels.length)}
-      data-nextless-tabs-orientation={orientation}
+      data-coderso-tabs="1"
+      data-coderso-tabs-variant={resolvedVariant}
+      data-coderso-tabs-active-id={activeId}
+      data-coderso-tabs-panels={String(panels.length)}
+      data-coderso-tabs-orientation={orientation}
     >
       <div
         role="tablist"
@@ -449,16 +476,16 @@ export function TabsBlock({
       >
         {panels.map((panel) => {
           const isActive = panel.instanceId === activeId;
-          const triggerId = `tabs-trigger-${panel.instanceId}`;
-          const panelId = `tabs-panel-${panel.instanceId}`;
+          const triggerId = scopedId(rootInstanceId, `trigger-${panel.instanceId}`);
+          const panelId = scopedId(rootInstanceId, `panel-${panel.instanceId}`);
           return (
             <button
               key={panel.slotId}
               id={triggerId}
               type="button"
               role="tab"
-              data-nextless-tabs-trigger
-              data-nextless-tabs-id={panel.instanceId}
+              data-coderso-tabs-trigger
+              data-coderso-tabs-id={panel.instanceId}
               data-state={isActive ? "active" : "inactive"}
               aria-selected={isActive ? "true" : "false"}
               aria-controls={panelId}
@@ -477,15 +504,15 @@ export function TabsBlock({
 
       {panels.map((panel) => {
         const isActive = panel.instanceId === activeId;
-        const triggerId = `tabs-trigger-${panel.instanceId}`;
-        const panelId = `tabs-panel-${panel.instanceId}`;
+        const triggerId = scopedId(rootInstanceId, `trigger-${panel.instanceId}`);
+        const panelId = scopedId(rootInstanceId, `panel-${panel.instanceId}`);
         return (
           <div
             key={`${panel.slotId}-panel`}
             id={panelId}
             role="tabpanel"
-            data-nextless-tabs-panel
-            data-nextless-tabs-id={panel.instanceId}
+            data-coderso-tabs-panel
+            data-coderso-tabs-id={panel.instanceId}
             data-state={isActive ? "active" : "inactive"}
             aria-labelledby={triggerId}
             hidden={!isActive}
@@ -495,15 +522,20 @@ export function TabsBlock({
             {panel.description ? (
               <p className="mb-3 text-sm text-[var(--color-text)]/70">{panel.description}</p>
             ) : null}
-            {panel.blocks.length > 0 ? (
-              panel.blocks.map((block) => (
-                <WidgetRenderer key={block.id} block={block} previewDevice={previewDevice} />
-              ))
-            ) : (
-              <div className="rounded-md border border-dashed px-4 py-5 text-sm text-muted-foreground">
-                Add widgets to this tab panel.
-              </div>
-            )}
+            {panel.blocks.length > 0
+              ? panel.blocks.map((block) =>
+                  renderBlock ? (
+                    <div key={block.id}>{renderBlock(block, renderContext)}</div>
+                  ) : (
+                    <WidgetRenderer
+                      key={block.id}
+                      block={block}
+                      previewDevice={previewDevice}
+                      renderContext={renderContext}
+                    />
+                  )
+                )
+              : renderEditorPlaceholder("Add widgets to this tab panel.", renderContext)}
           </div>
         );
       })}

@@ -6,7 +6,7 @@
 **Category:** Widgets + Page Builder + Admin UI + Runtime Render + Playwright QA
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-252, TASK-244, TASK-242
-**Status:** To Do
+**Status:** Done (2026-05-17)
 
 ---
 
@@ -28,6 +28,24 @@ published widget surfaces that drifted from the shared contract documented in
 - interactive runtime widgets generate instance-safe IDs and accessible state;
 - every repaired widget has matching Vitest/Bun coverage and refreshed
   Playwright report evidence.
+
+## Current Progress
+
+- 2026-05-17: shared builder atomic patching landed across `PageEditor`,
+  `CustomScreenEditorPage`, `DetailTemplateEditorPage`,
+  `WidgetTemplateEditorPage`, and `WidgetDetailsDrawer`, including the shared
+  `onBlockPatch` contract for `Wizard`, `Visual`, and `Advanced` panels.
+- 2026-05-17: public placeholder gating now fails closed through the shared
+  render-context path for structural widgets, and interactive widgets use
+  instance-safe `coderso` runtime IDs/selectors instead of global `nextless`
+  selectors.
+- 2026-05-17: shared structural/marketing slices landed for split-layout/stack
+  variant-data sync, spacer/divider variant-aware token behavior, feature-grid
+  and stats-kpi truthful controls, plus logo-cloud/gallery safe-link and media
+  semantics.
+- 2026-05-17: targeted Vitest and `core` lint/type lanes are green for the
+  implemented slices, but TASK-256-07/TASK-256-08 report/changelog/board
+  closure is still pending.
 
 ## Shared Contract Boundary
 

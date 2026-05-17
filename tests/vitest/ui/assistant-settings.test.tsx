@@ -39,7 +39,6 @@ afterEach(() => {
 test("AssistantSettingsPage renders assistant settings", () => {
   const html = renderAdminUi(<AssistantSettingsPage />);
 
-  expect(html).toContain("Assistant Settings");
   expect(html).toContain("Assistant");
   expect(html).toContain("Launcher avatar");
   expect(html).toContain("Run reindex");

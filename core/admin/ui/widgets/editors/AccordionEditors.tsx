@@ -211,9 +211,11 @@ function VariantCards({
 function StructureSection({
   value,
   onChange,
+  context,
 }: {
   value: AccordionData;
   onChange: (next: AccordionData) => void;
+  context?: WidgetEditorProps<AccordionData>["context"];
 }) {
   const normalized = normalizeValue(value);
   const items = normalizeAccordionItems(normalized.items);
@@ -273,7 +275,7 @@ function StructureSection({
         {items.map((item, index) => (
           <div key={item.id} className="space-y-2 rounded-md border p-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Item {index + 1} (slot id: {item.id})
+              {context?.slotTargets?.[index]?.label ?? `Item ${index + 1}`}
             </p>
             <Input
               value={item.title}
@@ -483,13 +485,14 @@ export function AccordionVisualEditor({
   onChange,
   variant,
   onVariantChange,
+  context,
 }: WidgetEditorProps<AccordionData>) {
   return (
     <div className="space-y-4">
       <EditorSection id="accordion.variant" title="Variant" description="Choose accordion style.">
         <VariantCards value={resolveVariant(variant)} onChange={onVariantChange} />
       </EditorSection>
-      <StructureSection value={value} onChange={onChange} />
+      <StructureSection value={value} onChange={onChange} context={context} />
       <BehaviorSection value={value} onChange={onChange} />
     </div>
   );
@@ -500,6 +503,7 @@ export function AccordionAdvancedEditor({
   onChange,
   variant,
   onVariantChange,
+  context,
 }: WidgetEditorProps<AccordionData>) {
   return (
     <div className="space-y-4">
@@ -510,7 +514,7 @@ export function AccordionAdvancedEditor({
       >
         <VariantCards value={resolveVariant(variant)} onChange={onVariantChange} />
       </EditorSection>
-      <StructureSection value={value} onChange={onChange} />
+      <StructureSection value={value} onChange={onChange} context={context} />
       <BehaviorSection value={value} onChange={onChange} />
       <EditorSection
         id="accordion.diagnostics"

@@ -6,7 +6,7 @@
 **Category:** Widgets + Runtime Render + Accessibility
 **Estimated Effort:** Large
 **Dependencies:** TASK-256, TASK-256-03
-**Status:** To Do
+**Status:** Done (2026-05-17)
 
 ---
 

@@ -1,8 +1,15 @@
-import type { ComponentType, CSSProperties } from "react";
+import type { ComponentType, CSSProperties, ReactNode } from "react";
 
+import { renderEditorPlaceholder } from "../renderContext";
 import { WidgetRenderer } from "../renderers/widgetRenderer";
 import { parseRepeatableSlotId, resolveWidgetSlotTargets } from "../slots";
-import type { DeviceTarget, WidgetBlock, WidgetDefinition, WidgetEditorProps } from "../types";
+import type {
+  DeviceTarget,
+  WidgetBlock,
+  WidgetDefinition,
+  WidgetEditorProps,
+  WidgetRenderContext,
+} from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export const gridColumnsSpanTokens = [
@@ -422,11 +429,15 @@ export function GridColumnsBlock({
   variant,
   slots,
   previewDevice,
+  renderContext,
+  renderBlock,
 }: {
   data: GridColumnsData;
   variant: string;
   slots?: Record<string, WidgetBlock[]>;
   previewDevice?: DeviceTarget;
+  renderContext?: WidgetRenderContext;
+  renderBlock?: (block: WidgetBlock, context?: WidgetRenderContext) => ReactNode;
 }) {
   const resolvedVariant = resolveGridColumnsVariant(variant);
   const normalized = normalizeGridColumnsData(data);
@@ -487,19 +498,29 @@ export function GridColumnsBlock({
               )}
               style={columnStyle}
             >
-              <div className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-text)]/65">
-                {column.label}
-              </div>
+              {renderContext?.mode === "editor-preview" ||
+              renderContext?.mode === "admin-preview" ? (
+                <div className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-text)]/65">
+                  {column.label}
+                </div>
+              ) : null}
               {column.blocks.length > 0 ? (
                 <div className="space-y-4">
-                  {column.blocks.map((block) => (
-                    <WidgetRenderer key={block.id} block={block} previewDevice={previewDevice} />
-                  ))}
+                  {column.blocks.map((block) =>
+                    renderBlock ? (
+                      <div key={block.id}>{renderBlock(block, renderContext)}</div>
+                    ) : (
+                      <WidgetRenderer
+                        key={block.id}
+                        block={block}
+                        previewDevice={previewDevice}
+                        renderContext={renderContext}
+                      />
+                    )
+                  )}
                 </div>
               ) : (
-                <div className="rounded-md border border-dashed border-[var(--color-border)]/70 bg-[var(--color-bg)]/50 px-3 py-2 text-xs text-[var(--color-text)]/70">
-                  Empty column.
-                </div>
+                renderEditorPlaceholder("Empty column.", renderContext)
               )}
             </div>
           </div>

@@ -383,4 +383,18 @@ className={joinClasses(
 
 ---
 
+## Status po TASK-256 (2026-05-17)
+
+- `TASK-256-03` + `TASK-256-05-04`: public empty-panel placeholder copy is now
+  gated by the shared render-context contract and no longer leaks to frontend
+  runtime output.
+- `TASK-256-04` + `TASK-256-05-04`: tabs now use instance-safe `coderso`
+  runtime IDs/selectors instead of page-global `nextless` IDs for
+  `aria-controls` / `aria-labelledby`.
+- Shared evidence from this turn:
+  `bun run test:vitest -- tests/vitest/widgets/tabs.test.tsx
+  tests/vitest/ui/tabs-editor-wave.test.tsx` passed on 2026-05-17.
+
+---
+
 *Raport zakończony. Sekcje 4-6 zostały uzupełnione po testach przeglądarki.*

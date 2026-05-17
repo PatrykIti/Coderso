@@ -45,11 +45,31 @@ export type WidgetSlotDefinition = {
   allowedTypes?: string[];
 };
 
+export type WidgetRenderMode = "public" | "editor-preview" | "admin-preview";
+
+export type WidgetRenderContext = {
+  mode: WidgetRenderMode;
+  previewDevice?: DeviceTarget;
+};
+
+export type WidgetEditorSlotTarget = {
+  definitionId: string;
+  slotId: string;
+  label: string;
+  kind: "fixed" | "repeatable";
+  instanceId?: string;
+};
+
+export type WidgetBlockPatch = Partial<WidgetBlock> | ((current: WidgetBlock) => WidgetBlock);
+
+export type WidgetBlockPatcher = (patch: WidgetBlockPatch) => void;
+
 export type WidgetEditorProps<T> = {
   value: T;
   onChange: (next: T) => void;
   variant: string;
   onVariantChange?: (next: string) => void;
+  onBlockPatch?: WidgetBlockPatcher;
   context?: WidgetEditorContext;
 };
 
@@ -57,6 +77,7 @@ export type WidgetEditorContext = {
   surface: WidgetSurface;
   jumpToBindingPropPath?: (propPath: string) => void;
   getBindingState?: (propPath: string) => "literal" | "bound" | "mixed";
+  slotTargets?: WidgetEditorSlotTarget[];
 };
 
 export type WidgetSlotControlSection = {
@@ -102,7 +123,8 @@ export type WidgetDefinition<T = Record<string, unknown>> = {
     previewDevice?: DeviceTarget;
     pageDefaults?: WidgetLayoutDefaults;
     blockId?: string;
-    renderBlock?: (block: WidgetBlock) => ReactNode;
+    renderContext?: WidgetRenderContext;
+    renderBlock?: (block: WidgetBlock, context?: WidgetRenderContext) => ReactNode;
   }>;
 };
 

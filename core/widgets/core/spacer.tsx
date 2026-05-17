@@ -1,6 +1,11 @@
 import type { CSSProperties, ComponentType } from "react";
 
-import type { DeviceTarget, WidgetDefinition, WidgetEditorProps } from "../types";
+import type {
+  DeviceTarget,
+  WidgetDefinition,
+  WidgetEditorProps,
+  WidgetRenderContext,
+} from "../types";
 
 export const spacerHeightTokens = [
   "none",
@@ -104,7 +109,6 @@ export function resolveSpacerVariant(variant: string): SpacerVariantId {
 }
 
 export function normalizeSpacerData(data: SpacerData, variant: string = "responsive"): SpacerData {
-  const resolvedVariant = resolveSpacerVariant(variant);
   const fallbackDesktop = spacerDefaults.height?.desktop ?? "16";
   const fallbackTablet = spacerDefaults.height?.tablet ?? "12";
   const fallbackMobile = spacerDefaults.height?.mobile ?? "8";
@@ -113,14 +117,8 @@ export function normalizeSpacerData(data: SpacerData, variant: string = "respons
   return {
     height: {
       desktop,
-      tablet:
-        resolvedVariant === "fixed"
-          ? desktop
-          : resolveHeightTokenOrPx(data.height?.tablet, fallbackTablet),
-      mobile:
-        resolvedVariant === "fixed"
-          ? desktop
-          : resolveHeightTokenOrPx(data.height?.mobile, fallbackMobile),
+      tablet: resolveHeightTokenOrPx(data.height?.tablet, fallbackTablet),
+      mobile: resolveHeightTokenOrPx(data.height?.mobile, fallbackMobile),
     },
     showGuideInEditor:
       typeof data.showGuideInEditor === "boolean"
@@ -142,10 +140,12 @@ export function SpacerBlock({
   data,
   variant,
   previewDevice,
+  renderContext,
 }: {
   data: SpacerData;
   variant: string;
   previewDevice?: DeviceTarget;
+  renderContext?: WidgetRenderContext;
 }) {
   const resolvedVariant = resolveSpacerVariant(variant);
   const normalized = normalizeSpacerData(data, resolvedVariant);
@@ -155,10 +155,21 @@ export function SpacerBlock({
     mobile: "8",
   };
   const desktop = height.desktop ?? "16";
-  const tablet = height.tablet ?? "12";
-  const mobile = height.mobile ?? "8";
-  const showGuide = Boolean(normalized.showGuideInEditor) && Boolean(previewDevice);
-  const previewHeight = resolvePreviewHeight(height, previewDevice);
+  const tablet = resolvedVariant === "fixed" ? desktop : (height.tablet ?? "12");
+  const mobile = resolvedVariant === "fixed" ? desktop : (height.mobile ?? "8");
+  const showGuide =
+    Boolean(normalized.showGuideInEditor) &&
+    (Boolean(previewDevice) ||
+      renderContext?.mode === "editor-preview" ||
+      renderContext?.mode === "admin-preview");
+  const previewHeight = resolvePreviewHeight(
+    {
+      desktop,
+      tablet,
+      mobile,
+    },
+    previewDevice
+  );
 
   return (
     <div

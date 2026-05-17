@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 312 tasks
+- **To Do:** 295 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1542 tasks
+- **Done:** 1559 tasks
 
 ---
 
@@ -325,23 +325,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-257-03 | Accordion Item Content and Management UX | High | Large | Add item icon/copy/add/reorder UX only where nested slot content stays synchronized |
 | TASK-257-04 | Accordion Motion and Variant Preview Polish | Medium | Medium | Add Accordion-specific motion tokens and visual variant preview cards |
 | TASK-257-05 | Accordion Report Docs and Closure | Medium | Medium | Refresh report/docs/changelog/board and final validation for the TASK-257 family |
-| TASK-256 | Widget Shared Contract Playwright Drift Repair | High | Very Large | New umbrella for shared widget contract drift found in `_docs/PLAYWRIGHT/REPORT_*_WIDGET.md` |
-| TASK-256-01 | Shared Editor Mode and Atomic Update Contract | High | Large | Repair mode update races, inert Advanced controls, and variant-aware editor ownership |
-| TASK-256-02 | Clear, None Token, and Design Token Controls | High | Large | Normalize Clear vs `none` semantics, zero/custom token UX, and clearable style fields |
-| TASK-256-03 | Slot Nested Content and Public Placeholder Safety | High | Large | Keep editor slot affordances while removing admin-only placeholders from public runtime output |
-| TASK-256-04 | Interactive Runtime Instance and Accessibility Contract | High | Large | Add instance-safe IDs, scoped runtime binding, and ARIA repairs for interactive widgets |
-| TASK-256-05 | Structural Widget Report Findings | High | Very Large | Parent for shared structural contract repairs; widget-specific product findings stay deferred |
-| TASK-256-05-01 | Section and Grid Columns Structural Findings | High | Medium | Repair section placeholders/anchors and grid slot/config/public-label drift |
-| TASK-256-05-02 | Split Layout and Stack Variant Data Sync | High | Medium | Repair shared variant-bound ratio/direction data sync; token UX stays TASK-256-02 and Split Layout product polish stays TASK-285 |
-| TASK-256-05-03 | Spacer and Divider Token Control Findings | High | Medium | Repair spacer/divider token controls, inert Advanced state, and divider ARIA |
-| TASK-256-05-04 | Tabs, Accordion, and Toggle Block Structural Residuals | High | Medium | Apply remaining slot-label, placeholder, clear, and interactive structural fixes |
-| TASK-256-06 | Marketing Widget Report Findings | High | Very Large | Parent for shared marketing/content contract repairs across the listed child leaves |
-| TASK-256-06-01 | Feature Grid and Stats KPI Truthful Controls | High | Medium | Repair columns/count/divider truthfulness, grid layout, clear controls, and ARIA |
-| TASK-256-06-02 | CTA Banner, Logo Cloud, and Gallery Media Links | High | Large | Keep shared CTA helper prerequisites while Logo Cloud/Gallery own link, media, alpha, alt, and accessibility drift |
-| TASK-256-06-03 | Hero, Timeline, Pricing, FAQ, and Testimonials Accessibility | High | Large | Repair residual hero/pricing/FAQ/testimonials shared contract findings and route Timeline-specific implementation to TASK-291 |
-| TASK-256-06-04 | Team Profile Links and Accessibility | High | Medium | Repair team spotlight columns, social link safety, photo lazy loading, and section/header ARIA |
-| TASK-256-07 | Cross-Report Shared Contract Classification | High | Medium | Route all completed widget reports into shared TASK-256 contracts or future product-scope follow-ups |
-| TASK-256-08 | Playwright Report Completion and Closure | Medium | Medium | Refresh reports, docs, changelog, board, and validation evidence after implementation leaves |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
 | TASK-240 | Coderso Multilingual and i18n Umbrella | High | Very Large | Execution-ready locale/translation/runtime routing program superseding TASK-054-21 |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |
@@ -366,6 +349,23 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-256 | Widget Shared Contract Playwright Drift Repair | High | Very Large | Done: shared builder patching, placeholder gating, interactive runtime IDs, structural shared fixes, marketing truthfulness repairs, report routing, and closure evidence are synchronized |
+| TASK-256-01 | Shared Editor Mode and Atomic Update Contract | High | Large | Done: builder hosts and shared panels use atomic block patching, and variant/data sync regressions are covered across the affected widget editors |
+| TASK-256-02 | Clear, None Token, and Design Token Controls | High | Large | Done: shared clear/token semantics are synchronized with the implemented widget surfaces and validated through the focused clear/token suites |
+| TASK-256-03 | Slot Nested Content and Public Placeholder Safety | High | Large | Done: public placeholder leakage now fails closed through shared render context while editor-preview keeps structural affordances |
+| TASK-256-04 | Interactive Runtime Instance and Accessibility Contract | High | Large | Done: interactive widgets use scoped runtime IDs/selectors and shared accessibility relationships instead of page-global collisions |
+| TASK-256-05 | Structural Widget Report Findings | High | Very Large | Done: the structural shared-contract slices landed across section/grid, split/stack, spacer/divider, and tabs/accordion/toggle |
+| TASK-256-05-01 | Section and Grid Columns Structural Findings | High | Medium | Done: section anchors and heading baseline are hardened, grid public technical labels are hidden, and structure drift is surfaced truthfully in the editor |
+| TASK-256-05-02 | Split Layout and Stack Variant Data Sync | High | Medium | Done: split-layout and stack variant changes now keep persisted data aligned with the selected variant |
+| TASK-256-05-03 | Spacer and Divider Token Control Findings | High | Medium | Done: spacer fixed/responsive behavior is truthful, divider advanced controls are no longer inert, and runtime separator semantics are covered |
+| TASK-256-05-04 | Tabs, Accordion, and Toggle Block Structural Residuals | High | Medium | Done: interactive structural placeholders, slot labels, and scoped runtime relationships are aligned with shared TASK-256 contracts |
+| TASK-256-06 | Marketing Widget Report Findings | High | Very Large | Done: shared marketing/content contract repairs landed across the covered child leaves without widening into widget-specific product backlogs |
+| TASK-256-06-01 | Feature Grid and Stats KPI Truthful Controls | High | Medium | Done: feature-grid and stats-kpi controls now match runtime behavior, including variant/count, divider, grid, and accessibility truthfulness |
+| TASK-256-06-02 | CTA Banner, Logo Cloud, and Gallery Media Links | High | Large | Done: shared safe-link/media semantics now cover logo-cloud and gallery-mosaic while CTA-specific product scope stays routed to TASK-263 |
+| TASK-256-06-03 | Hero, Timeline, Pricing, FAQ, and Testimonials Accessibility | High | Large | Done: shared Hero/Pricing/FAQ/Testimonials closure evidence is synchronized while Timeline-specific implementation remains routed to TASK-291 |
+| TASK-256-06-04 | Team Profile Links and Accessibility | High | Medium | Done: current shared Team accessibility baseline is synchronized and richer team product scope remains routed to TASK-289 |
+| TASK-256-07 | Cross-Report Shared Contract Classification | High | Medium | Done: late report groups are routed to executable TASK-256 shared slices or existing widget-specific follow-up families instead of widening the umbrella |
+| TASK-256-08 | Playwright Report Completion and Closure | Medium | Medium | Done: touched reports now carry 2026-05-17 closure notes, task-board sync is complete, and validation evidence plus remaining future-scope routing are recorded |
 | TASK-255 | Admin Breadcrumb Renderer and Workspace Resource Links | High | Medium | Done: TopBar renders clickable shorthand/structured breadcrumbs, existing admin pages use label arrays, and collection workspace cards link to their owner surfaces |
 | TASK-254 | Detail Template Workspace Create Delete Actions | High | Medium | Done: content-type editor links to collection workspace, which can create, route-link, open, confirm-delete, and unlink canonical detail templates with shared admin notifications |
 | TASK-253 | Detail Template Content Field Bindings | High | Medium | Done: detail template editor exposes Data bindings for selected blocks so widget copy stays fallback while public detail runtime overlays linked entry values |

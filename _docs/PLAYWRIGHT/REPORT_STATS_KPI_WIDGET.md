@@ -322,4 +322,18 @@ Dodać pola `label` i `icon` per metrykę w Wizard obok `value`, oraz skrócone 
 
 ---
 
+## Status po TASK-256 (2026-05-17)
+
+- `TASK-256-06-01`: divider controls are now variant-aware and locked outside
+  the `inline` renderer path where divider output is meaningful.
+- `TASK-256-06-01`: cards-grid runtime classes now scale with metric count
+  instead of hardcoding the four-column desktop layout for every cards variant.
+- `TASK-256-06-01`: KPI runtime semantics now include section labels,
+  per-article labels, and decorative icon `aria-hidden`.
+- Shared evidence from this turn:
+  `bun run test:vitest -- tests/vitest/ui/stats-kpi-editor-wave.test.tsx
+  tests/vitest/widgets/statsKpi.test.tsx` passed on 2026-05-17.
+
+---
+
 *Raport zakończony na podstawie analizy kodu i testów Playwright — 2026-05-16.*

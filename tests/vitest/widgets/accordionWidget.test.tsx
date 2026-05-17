@@ -24,10 +24,12 @@ const StubEditor: ComponentType<WidgetEditorProps<AccordionData>> = () => null;
 test("accordion renders defaults", () => {
   const html = renderToString(<AccordionBlock data={accordionDefaults} variant="soft" />);
 
-  expect(html).toContain('data-nextless-accordion="1"');
-  expect(html).toContain('data-nextless-accordion-variant="soft"');
+  expect(html).toContain('data-coderso-accordion="1"');
+  expect(html).toContain('data-coderso-accordion-variant="soft"');
   expect(html).toContain("Section 1");
-  expect(html).toContain("Add widgets to this accordion item.");
+  expect(html).toContain('aria-controls="accordion-1-content-1"');
+  expect(html).toContain('aria-labelledby="accordion-1-summary-1"');
+  expect(html).not.toContain("Add widgets to this accordion item.");
 });
 
 test("accordion normalization resolves defaults", () => {
@@ -89,8 +91,22 @@ test("accordion cleared panel surface omits background style", () => {
   const html = renderToString(<AccordionBlock data={normalized} variant="soft" />);
 
   expect(normalized.style?.surfaceColor).toBeUndefined();
-  expect(html).toContain('data-nextless-accordion-variant="soft"');
+  expect(html).toContain('data-coderso-accordion-variant="soft"');
   expect(html).not.toContain("background-color:");
+});
+
+test("accordion shows empty-item placeholders only in editor preview", () => {
+  const publicHtml = renderToString(<AccordionBlock data={accordionDefaults} variant="soft" />);
+  const previewHtml = renderToString(
+    <AccordionBlock
+      data={accordionDefaults}
+      variant="soft"
+      renderContext={{ mode: "editor-preview" }}
+    />
+  );
+
+  expect(publicHtml).not.toContain("Add widgets to this accordion item.");
+  expect(previewHtml).toContain("Add widgets to this accordion item.");
 });
 
 test("accordion visual editor renders key sections", () => {

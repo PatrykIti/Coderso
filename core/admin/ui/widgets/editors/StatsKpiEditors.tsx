@@ -304,6 +304,22 @@ function moveItem(
   });
 }
 
+function applyVariantDataPatch(
+  nextVariant: StatsKpiVariantId,
+  onVariantChange?: (next: string) => void,
+  onBlockPatch?: WidgetEditorProps<StatsKpiData>["onBlockPatch"]
+) {
+  if (onBlockPatch) {
+    onBlockPatch((current) => ({
+      ...current,
+      variant: nextVariant,
+    }));
+    return;
+  }
+
+  onVariantChange?.(nextVariant);
+}
+
 function DiagnosticsSnapshot({ value }: { value: StatsKpiData }) {
   return (
     <pre className="max-h-64 overflow-auto rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
@@ -317,6 +333,7 @@ export function StatsKpiWizardEditor({
   onChange,
   variant,
   onVariantChange,
+  onBlockPatch,
 }: WidgetEditorProps<StatsKpiData>) {
   const normalized = normalizeValue(value);
   const items = normalizeStatsKpiItems(normalized.items);
@@ -327,7 +344,9 @@ export function StatsKpiWizardEditor({
         <p className="text-sm font-medium">Stats layout</p>
         <Select
           value={resolveStatsKpiVariant(variant)}
-          onValueChange={(next) => onVariantChange?.(next)}
+          onValueChange={(next) =>
+            applyVariantDataPatch(next as StatsKpiVariantId, onVariantChange, onBlockPatch)
+          }
         >
           <SelectTrigger>
             <SelectValue placeholder="Select variant" />
@@ -381,9 +400,11 @@ export function StatsKpiVisualEditor({
   onChange,
   variant,
   onVariantChange,
+  onBlockPatch,
 }: WidgetEditorProps<StatsKpiData>) {
   const normalized = normalizeValue(value);
   const items = normalizeStatsKpiItems(normalized.items);
+  const resolvedVariant = resolveStatsKpiVariant(variant);
 
   return (
     <div className="space-y-4">
@@ -391,7 +412,12 @@ export function StatsKpiVisualEditor({
         title="Variant and metric structure"
         description="Choose KPI arrangement and deterministic metric count."
       >
-        <VariantCards value={resolveStatsKpiVariant(variant)} onChange={onVariantChange} />
+        <VariantCards
+          value={resolvedVariant}
+          onChange={(next) =>
+            applyVariantDataPatch(next as StatsKpiVariantId, onVariantChange, onBlockPatch)
+          }
+        />
 
         <div className="space-y-2">
           <p className="text-sm font-medium">Metrics count</p>
@@ -606,10 +632,13 @@ export function StatsKpiVisualEditor({
           <div>
             <p className="text-sm font-medium">Show dividers</p>
             <p className="text-xs text-muted-foreground">
-              Used mainly by inline variant to separate metric blocks.
+              {resolvedVariant === "inline"
+                ? "Used by the inline variant to separate metric blocks."
+                : "Inline-only. Other variants ignore divider output, so this toggle is locked."}
             </p>
           </div>
           <Switch
+            disabled={resolvedVariant !== "inline"}
             checked={Boolean(normalized.style?.divider)}
             onCheckedChange={(checked) =>
               updateStyle(value, onChange, { divider: Boolean(checked) })

@@ -415,3 +415,14 @@ className={`grid gap-2 grid-cols-1 sm:grid-cols-2 lg:${gridClass}`}
 ---
 
 *Raport zakończony. Wszystkie testy wykonane 2026-05-16.*
+
+---
+
+## Status po TASK-256 (2026-05-17)
+
+- Current TASK-256 role for Compare Timeline is classification only.
+  Compare Timeline-owned widget behavior and closure continue through the
+  `TASK-260` family.
+- Shared rows that match existing TASK-256 mechanisms still route through
+  `TASK-256-01`, `TASK-256-02`, `TASK-256-04`, or `TASK-256-06-01`; final
+  fixed/deferred closure remains owned by `TASK-256-08`.

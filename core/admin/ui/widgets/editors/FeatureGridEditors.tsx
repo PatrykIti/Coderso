@@ -326,6 +326,48 @@ function moveItem(
   });
 }
 
+function buildVariantSyncedFeatureGridData(
+  value: FeatureGridData,
+  nextVariant: FeatureGridVariantId
+): FeatureGridData {
+  const current = normalizeValue(value);
+  return normalizeValue({
+    ...current,
+    items: normalizeFeatureGridItems(
+      current.items,
+      resolveFeatureGridItemCountForVariant(nextVariant)
+    ),
+    style: {
+      ...current.style,
+      columns: nextVariant === "highlight-first" ? "3" : nextVariant === "cards-4" ? "4" : "3",
+    },
+  });
+}
+
+function applyVariantDataPatch(
+  nextVariant: FeatureGridVariantId,
+  nextData: FeatureGridData,
+  onChange: (next: FeatureGridData) => void,
+  onVariantChange?: (next: string) => void,
+  onBlockPatch?: WidgetEditorProps<FeatureGridData>["onBlockPatch"]
+) {
+  if (onBlockPatch) {
+    onBlockPatch((current) => ({
+      ...current,
+      variant: nextVariant,
+      data: nextData,
+    }));
+    return;
+  }
+
+  if (!onVariantChange) {
+    return;
+  }
+
+  onChange(nextData);
+  onVariantChange(nextVariant);
+}
+
 function DiagnosticsSnapshot({ value }: { value: FeatureGridData }) {
   return (
     <pre className="max-h-64 overflow-auto rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
@@ -339,6 +381,7 @@ export function FeatureGridWizardEditor({
   onChange,
   variant,
   onVariantChange,
+  onBlockPatch,
 }: WidgetEditorProps<FeatureGridData>) {
   const normalized = normalizeValue(value);
   const items = normalizeFeatureGridItems(normalized.items);
@@ -349,7 +392,15 @@ export function FeatureGridWizardEditor({
         <p className="text-sm font-medium">Feature grid style</p>
         <Select
           value={resolveFeatureGridVariant(variant)}
-          onValueChange={(next) => onVariantChange?.(next)}
+          onValueChange={(next) =>
+            applyVariantDataPatch(
+              next as FeatureGridVariantId,
+              buildVariantSyncedFeatureGridData(value, next as FeatureGridVariantId),
+              onChange,
+              onVariantChange,
+              onBlockPatch
+            )
+          }
         >
           <SelectTrigger>
             <SelectValue placeholder="Select variant" />
@@ -430,6 +481,7 @@ export function FeatureGridVisualEditor({
   onChange,
   variant,
   onVariantChange,
+  onBlockPatch,
 }: WidgetEditorProps<FeatureGridData>) {
   const normalized = normalizeValue(value);
   const resolvedVariant = resolveFeatureGridVariant(variant);
@@ -441,13 +493,29 @@ export function FeatureGridVisualEditor({
         title="Variant and layout structure"
         description="Choose card arrangement and baseline density for runtime preview."
       >
-        <VariantCards value={resolvedVariant} onChange={onVariantChange} />
+        <VariantCards
+          value={resolvedVariant}
+          onChange={(next) =>
+            applyVariantDataPatch(
+              next as FeatureGridVariantId,
+              buildVariantSyncedFeatureGridData(value, next as FeatureGridVariantId),
+              onChange,
+              onVariantChange,
+              onBlockPatch
+            )
+          }
+        />
 
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-2">
             <p className="text-sm font-medium">Columns</p>
             <Select
-              value={normalized.style?.columns ?? featureGridDefaults.style?.columns ?? "3"}
+              value={
+                resolvedVariant === "highlight-first"
+                  ? "3"
+                  : (normalized.style?.columns ?? featureGridDefaults.style?.columns ?? "3")
+              }
+              disabled={resolvedVariant === "highlight-first"}
               onValueChange={(next) =>
                 updateStyle(value, onChange, { columns: next as FeatureGridColumns })
               }
@@ -463,6 +531,12 @@ export function FeatureGridVisualEditor({
                 ))}
               </SelectContent>
             </Select>
+            {resolvedVariant === "highlight-first" ? (
+              <p className="text-xs text-muted-foreground">
+                Highlight First uses a fixed spotlight layout, so columns stay locked to the shared
+                runtime structure.
+              </p>
+            ) : null}
           </div>
 
           <div className="space-y-2">
@@ -678,6 +752,7 @@ export function FeatureGridVisualEditor({
           label="Card border color"
           value={normalized.style?.borderColor}
           onChange={(next) => updateStyle(value, onChange, { borderColor: next })}
+          onClear={() => clearStyleField(value, onChange, "borderColor")}
           placeholder="var(--color-border)"
           pickerFallback="#e2e8f0"
         />

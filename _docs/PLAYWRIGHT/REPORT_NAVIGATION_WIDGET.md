@@ -462,3 +462,12 @@ Widget jest **solidnym fundamentem** z dobrą architekturą (3 tryby edytora, sc
 ---
 
 *Ostatnia aktualizacja: 2026-05-16 (analiza statyczna kodu + testy Playwright)*
+
+---
+
+## Status po TASK-256 (2026-05-17)
+
+- Current TASK-256 role for Navigation is classification only. Widget-owned
+  follow-up scope continues through the `TASK-275` family.
+- Shared rows that match existing TASK-256 link/runtime mechanisms remain
+  referenced by `TASK-256-07` and `TASK-256-08`.

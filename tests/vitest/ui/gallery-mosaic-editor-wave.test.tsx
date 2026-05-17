@@ -433,7 +433,7 @@ test("GalleryMosaic visual editor covers variant cards, item reordering, removal
 
     const colorPicker = view.container.querySelector('input[type="color"]');
     expect(colorPicker).toBeInstanceOf(HTMLInputElement);
-    expect((colorPicker as HTMLInputElement).value).toBe("#0f172a");
+    expect((colorPicker as HTMLInputElement).value).toBe("#010203");
 
     setInputValue(
       findAllInputsByPlaceholder(view.container, "https://cdn.example.com/clip.mp4")[1],
@@ -483,7 +483,7 @@ test("GalleryMosaic visual editor covers variant cards, item reordering, removal
       ratio: "16:9",
       gap: "lg",
       radius: "xl",
-      overlay: "#112233",
+      overlay: "rgba(17, 34, 51, 0.5)",
       captionPosition: "hover",
     });
     expect((view.container.querySelector('input[type="color"]') as HTMLInputElement).value).toBe(

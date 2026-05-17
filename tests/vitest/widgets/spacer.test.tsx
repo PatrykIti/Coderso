@@ -61,10 +61,23 @@ test("spacer normalization keeps deterministic defaults", () => {
     "fixed"
   );
   expect(normalizedFixed.height?.desktop).toBe("48px");
-  expect(normalizedFixed.height?.tablet).toBe("48px");
-  expect(normalizedFixed.height?.mobile).toBe("48px");
+  expect(normalizedFixed.height?.tablet).toBe("10");
+  expect(normalizedFixed.height?.mobile).toBe("8");
   expect(normalizedFixed.showGuideInEditor).toBe(false);
   expect(resolveSpacerVariant("unknown")).toBe("responsive");
+});
+
+test("spacer shows guide in editor preview without requiring previewDevice", () => {
+  const html = renderToString(
+    <SpacerBlock
+      data={spacerDefaults}
+      variant="responsive"
+      renderContext={{ mode: "editor-preview" }}
+    />
+  );
+
+  expect(html).toContain('data-spacer-preview-height="16"');
+  expect(html).toContain("4rem");
 });
 
 test("spacer validator accepts expanded model", () => {

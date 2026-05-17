@@ -6,7 +6,7 @@
 **Category:** Widgets + Page Builder + Runtime Render
 **Estimated Effort:** Large
 **Dependencies:** TASK-256, TASK-256-01
-**Status:** To Do
+**Status:** Done (2026-05-17)
 
 ---
 

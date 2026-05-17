@@ -29,6 +29,7 @@ test("divider renders defaults", () => {
   expect(html).toContain('data-divider-variant="line"');
   expect(html).toContain('data-divider-thickness="1"');
   expect(html).toContain('data-divider-width-mode="full"');
+  expect(html).toContain('role="separator"');
 });
 
 test("divider normalization keeps deterministic defaults", () => {

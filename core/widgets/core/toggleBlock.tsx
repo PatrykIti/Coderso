@@ -1,8 +1,16 @@
-import type { ComponentType, CSSProperties } from "react";
+import type { ComponentType, CSSProperties, ReactNode } from "react";
 
+import { renderEditorPlaceholder } from "../renderContext";
 import { WidgetRenderer } from "../renderers/widgetRenderer";
-import type { DeviceTarget, WidgetBlock, WidgetDefinition, WidgetEditorProps } from "../types";
+import type {
+  DeviceTarget,
+  WidgetBlock,
+  WidgetDefinition,
+  WidgetEditorProps,
+  WidgetRenderContext,
+} from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
+import { createWidgetInstanceId, scopedId } from "./widgetInstanceIds";
 
 export type ToggleBlockVariantId = "switch" | "cards";
 export type ToggleBlockStateId = "primary" | "secondary";
@@ -140,21 +148,19 @@ function resolveToggleStates(data: ToggleBlockData): ToggleBlockState[] {
 
 const toggleRuntimeClientScript = `
 (() => {
-  if (typeof window === "undefined") return;
-  if (window.__nextlessToggleBlockBound === true) return;
-  window.__nextlessToggleBlockBound = true;
+  if (typeof document === "undefined") return;
 
   const getTriggers = (root) =>
-    Array.from(root.querySelectorAll("[data-nextless-toggle-trigger]")).filter(
+    Array.from(root.querySelectorAll("[data-coderso-toggle-trigger]")).filter(
       (node) => node instanceof HTMLElement,
     );
 
   const sync = (root, state, options = {}) => {
     const normalized = state === "secondary" ? "secondary" : "primary";
-    root.setAttribute("data-nextless-toggle-state", normalized);
+    root.setAttribute("data-coderso-toggle-state", normalized);
 
     getTriggers(root).forEach((button) => {
-      const stateId = button.getAttribute("data-nextless-toggle-state-id");
+      const stateId = button.getAttribute("data-coderso-toggle-state-id");
       const isActive = stateId === normalized;
       button.setAttribute("data-state", isActive ? "active" : "inactive");
       button.setAttribute("aria-checked", isActive ? "true" : "false");
@@ -164,8 +170,8 @@ const toggleRuntimeClientScript = `
       }
     });
 
-    root.querySelectorAll("[data-nextless-toggle-pane]").forEach((pane) => {
-      const paneId = pane.getAttribute("data-nextless-toggle-pane");
+    root.querySelectorAll("[data-coderso-toggle-pane]").forEach((pane) => {
+      const paneId = pane.getAttribute("data-coderso-toggle-pane");
       const isVisible = paneId === normalized;
       if (isVisible) {
         pane.removeAttribute("hidden");
@@ -176,9 +182,9 @@ const toggleRuntimeClientScript = `
       }
     });
 
-    const statusTarget = root.querySelector("[data-nextless-toggle-status]");
+    const statusTarget = root.querySelector("[data-coderso-toggle-status]");
     const activeTrigger = getTriggers(root).find(
-      (button) => button.getAttribute("data-nextless-toggle-state-id") === normalized,
+      (button) => button.getAttribute("data-coderso-toggle-state-id") === normalized,
     );
     if (statusTarget instanceof HTMLElement && activeTrigger instanceof HTMLElement) {
       statusTarget.textContent = (activeTrigger.textContent || normalized) + " selected";
@@ -188,7 +194,7 @@ const toggleRuntimeClientScript = `
   const resolveNextState = (root, current, key) => {
     const triggers = getTriggers(root);
     const states = triggers
-      .map((trigger) => trigger.getAttribute("data-nextless-toggle-state-id"))
+      .map((trigger) => trigger.getAttribute("data-coderso-toggle-state-id"))
       .filter((value) => value === "primary" || value === "secondary");
     const currentIndex = states.indexOf(current);
     if (currentIndex < 0 || states.length === 0) return current;
@@ -203,26 +209,26 @@ const toggleRuntimeClientScript = `
     return current;
   };
 
-  document.addEventListener("click", (event) => {
+  const handleClick = (event) => {
     const target = event.target;
     if (!(target instanceof Element)) return;
-    const trigger = target.closest("[data-nextless-toggle-trigger]");
+    const trigger = target.closest("[data-coderso-toggle-trigger]");
     if (!(trigger instanceof HTMLElement)) return;
 
-    const root = trigger.closest("[data-nextless-toggle-block='1']");
+    const root = trigger.closest("[data-coderso-toggle-block='1']");
     if (!(root instanceof HTMLElement)) return;
 
     const next =
-      trigger.getAttribute("data-nextless-toggle-state-id") === "secondary"
+      trigger.getAttribute("data-coderso-toggle-state-id") === "secondary"
         ? "secondary"
         : "primary";
     sync(root, next, { focus: true });
-  });
+  };
 
-  document.addEventListener("keydown", (event) => {
+  const handleKeydown = (event) => {
     const target = event.target;
     if (!(target instanceof HTMLElement)) return;
-    const trigger = target.closest("[data-nextless-toggle-trigger]");
+    const trigger = target.closest("[data-coderso-toggle-trigger]");
     if (!(trigger instanceof HTMLElement)) return;
 
     if (
@@ -236,16 +242,25 @@ const toggleRuntimeClientScript = `
       return;
     }
 
-    const root = trigger.closest("[data-nextless-toggle-block='1']");
+    const root = trigger.closest("[data-coderso-toggle-block='1']");
     if (!(root instanceof HTMLElement)) return;
 
     const current =
-      trigger.getAttribute("data-nextless-toggle-state-id") === "secondary"
+      trigger.getAttribute("data-coderso-toggle-state-id") === "secondary"
         ? "secondary"
         : "primary";
     const next = resolveNextState(root, current, event.key);
     event.preventDefault();
     sync(root, next, { focus: true });
+  };
+
+  document.querySelectorAll("[data-coderso-toggle-block='1']").forEach((root) => {
+    if (!(root instanceof HTMLElement)) return;
+    if (root.dataset.codersoToggleBound === "true") return;
+    root.dataset.codersoToggleBound = "true";
+    root.addEventListener("click", handleClick);
+    root.addEventListener("keydown", handleKeydown);
+    sync(root, root.getAttribute("data-coderso-toggle-state") || "primary");
   });
 })();
 `;
@@ -267,11 +282,17 @@ export function ToggleBlock({
   variant,
   slots,
   previewDevice,
+  renderContext,
+  renderBlock,
+  blockId,
 }: {
   data: ToggleBlockData;
   variant: string;
   slots?: Record<string, WidgetBlock[]>;
   previewDevice?: DeviceTarget;
+  renderContext?: WidgetRenderContext;
+  renderBlock?: (block: WidgetBlock, context?: WidgetRenderContext) => ReactNode;
+  blockId?: string;
 }) {
   const normalized = normalizeToggleBlockData(data);
   const resolvedVariant = resolveVariant(variant);
@@ -279,6 +300,11 @@ export function ToggleBlock({
   const style = normalized.style ?? toggleBlockDefaults.style!;
   const labels = normalized.labels ?? toggleBlockDefaults.labels!;
   const states = resolveToggleStates(normalized);
+  const rootInstanceId = createWidgetInstanceId("toggle-block", blockId, state);
+  const primaryTriggerId = scopedId(rootInstanceId, "trigger-primary");
+  const secondaryTriggerId = scopedId(rootInstanceId, "trigger-secondary");
+  const primaryPaneId = scopedId(rootInstanceId, "pane-primary");
+  const secondaryPaneId = scopedId(rootInstanceId, "pane-secondary");
 
   const slotMap = slots && typeof slots === "object" && !Array.isArray(slots) ? slots : {};
   const primaryBlocks = Array.isArray(slotMap.primary) ? slotMap.primary : [];
@@ -303,9 +329,9 @@ export function ToggleBlock({
         ["--nextless-toggle-accent" as string]: style.accentColor,
         ["--nextless-toggle-accent-contrast" as string]: "var(--color-background)",
       }}
-      data-nextless-toggle-block="1"
-      data-nextless-toggle-variant={resolvedVariant}
-      data-nextless-toggle-state={state}
+      data-coderso-toggle-block="1"
+      data-coderso-toggle-variant={resolvedVariant}
+      data-coderso-toggle-state={state}
     >
       <div className="flex flex-col gap-3">
         <div
@@ -318,15 +344,15 @@ export function ToggleBlock({
             return (
               <button
                 key={toggleState.id}
-                id={`toggle-trigger-${toggleState.id}`}
+                id={toggleState.id === "secondary" ? secondaryTriggerId : primaryTriggerId}
                 type="button"
                 role="radio"
                 className={joinClasses("transition", resolveTriggerClass(resolvedVariant))}
-                data-nextless-toggle-trigger
-                data-nextless-toggle-state-id={toggleState.id}
+                data-coderso-toggle-trigger
+                data-coderso-toggle-state-id={toggleState.id}
                 data-state={isActive ? "active" : "inactive"}
                 aria-checked={isActive ? "true" : "false"}
-                aria-controls={`toggle-pane-${toggleState.slotId}`}
+                aria-controls={toggleState.id === "secondary" ? secondaryPaneId : primaryPaneId}
                 tabIndex={isActive ? 0 : -1}
                 style={triggerStyle}
               >
@@ -335,7 +361,7 @@ export function ToggleBlock({
             );
           })}
         </div>
-        <span className="sr-only" aria-live="polite" data-nextless-toggle-status>
+        <span className="sr-only" aria-live="polite" data-coderso-toggle-status>
           {state === "primary" ? labels.primary : labels.secondary} selected
         </span>
       </div>
@@ -345,45 +371,55 @@ export function ToggleBlock({
       ) : null}
 
       <div
-        id="toggle-pane-primary"
+        id={primaryPaneId}
         role="region"
-        aria-labelledby="toggle-trigger-primary"
+        aria-labelledby={primaryTriggerId}
         className={resolvedVariant === "cards" ? "rounded-lg border p-4" : "rounded-md border p-4"}
         style={{ borderColor: style.borderColor }}
-        data-nextless-toggle-pane="primary"
+        data-coderso-toggle-pane="primary"
         data-state={state === "primary" ? "active" : "inactive"}
         hidden={state !== "primary"}
       >
-        {primaryBlocks.length > 0 ? (
-          primaryBlocks.map((block) => (
-            <WidgetRenderer key={block.id} block={block} previewDevice={previewDevice} />
-          ))
-        ) : (
-          <div className="rounded-md border border-dashed px-4 py-5 text-sm text-muted-foreground">
-            Add widgets for the primary view.
-          </div>
-        )}
+        {primaryBlocks.length > 0
+          ? primaryBlocks.map((block) =>
+              renderBlock ? (
+                <div key={block.id}>{renderBlock(block, renderContext)}</div>
+              ) : (
+                <WidgetRenderer
+                  key={block.id}
+                  block={block}
+                  previewDevice={previewDevice}
+                  renderContext={renderContext}
+                />
+              )
+            )
+          : renderEditorPlaceholder("Add widgets for the primary view.", renderContext)}
       </div>
 
       <div
-        id="toggle-pane-secondary"
+        id={secondaryPaneId}
         role="region"
-        aria-labelledby="toggle-trigger-secondary"
+        aria-labelledby={secondaryTriggerId}
         className={resolvedVariant === "cards" ? "rounded-lg border p-4" : "rounded-md border p-4"}
         style={{ borderColor: style.borderColor }}
-        data-nextless-toggle-pane="secondary"
+        data-coderso-toggle-pane="secondary"
         data-state={state === "secondary" ? "active" : "inactive"}
         hidden={state !== "secondary"}
       >
-        {secondaryBlocks.length > 0 ? (
-          secondaryBlocks.map((block) => (
-            <WidgetRenderer key={block.id} block={block} previewDevice={previewDevice} />
-          ))
-        ) : (
-          <div className="rounded-md border border-dashed px-4 py-5 text-sm text-muted-foreground">
-            Add widgets for the secondary view.
-          </div>
-        )}
+        {secondaryBlocks.length > 0
+          ? secondaryBlocks.map((block) =>
+              renderBlock ? (
+                <div key={block.id}>{renderBlock(block, renderContext)}</div>
+              ) : (
+                <WidgetRenderer
+                  key={block.id}
+                  block={block}
+                  previewDevice={previewDevice}
+                  renderContext={renderContext}
+                />
+              )
+            )
+          : renderEditorPlaceholder("Add widgets for the secondary view.", renderContext)}
       </div>
 
       <script dangerouslySetInnerHTML={{ __html: getToggleRuntimeClientScript() }} />

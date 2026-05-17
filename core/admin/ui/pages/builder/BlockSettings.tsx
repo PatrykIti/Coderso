@@ -10,20 +10,33 @@ import {
   resolveWidgetSlotTargets,
 } from "../../../../widgets/slots";
 
-import type { Block, EditorMode, WidgetDefinition, WidgetEditorContext } from "./types";
+import type {
+  Block,
+  EditorMode,
+  WidgetBlockPatcher,
+  WidgetDefinition,
+  WidgetEditorContext,
+} from "./types";
 import { AdvancedPanel } from "./AdvancedPanel";
 import { VisualPanel, type VisualPanelSlotControls } from "./VisualPanel";
 import { WizardPanel } from "./WizardPanel";
-import { applyWizardSelection } from "./blockUtils";
+import { applyWidgetBlockPatch, applyWizardSelection } from "./blockUtils";
 
 export type BlockSettingsProps = {
   block?: Block | null;
   widget?: WidgetDefinition;
   onChange: (next: Block) => void;
+  onBlockPatch?: WidgetBlockPatcher;
   editorContext?: WidgetEditorContext;
 };
 
-export function BlockSettings({ block, widget, onChange, editorContext }: BlockSettingsProps) {
+export function BlockSettings({
+  block,
+  widget,
+  onChange,
+  onBlockPatch,
+  editorContext,
+}: BlockSettingsProps) {
   if (!block || !widget) {
     return (
       <div className="rounded-lg border bg-muted/30 p-4 text-sm text-muted-foreground">
@@ -49,8 +62,19 @@ export function BlockSettings({ block, widget, onChange, editorContext }: BlockS
     (sum, items) => sum + (Array.isArray(items) ? items.length : 0),
     0
   );
+  const patchBlock =
+    onBlockPatch ??
+    ((patch) => {
+      onChange(applyWidgetBlockPatch(block, patch));
+    });
   const supportsChildren = Boolean(widget.canHaveChildren);
   const slotControlSection = widget.editorCapabilities?.slotControlSection;
+  const resolvedEditorContext = editorContext
+    ? {
+        ...editorContext,
+        slotTargets,
+      }
+    : undefined;
 
   const handleAddRepeatableSlotInstance = (definitionId: string) => {
     const definition = slotDefinitions.find((slot) => slot.id === definitionId);
@@ -63,8 +87,7 @@ export function BlockSettings({ block, widget, onChange, editorContext }: BlockS
 
     const nextInstanceId = getNextRepeatableSlotInstanceId(definitionId, slotMap);
     const nextSlotId = buildRepeatableSlotId(definitionId, nextInstanceId);
-    onChange({
-      ...block,
+    patchBlock({
       slots: {
         ...slotMap,
         [nextSlotId]: [],
@@ -88,8 +111,7 @@ export function BlockSettings({ block, widget, onChange, editorContext }: BlockS
 
     const nextSlots = { ...slotMap };
     delete nextSlots[slotId];
-    onChange({
-      ...block,
+    patchBlock({
       slots: nextSlots,
       children: undefined,
     });
@@ -158,8 +180,9 @@ export function BlockSettings({ block, widget, onChange, editorContext }: BlockS
         widget={widget}
         block={block}
         onChange={onChange}
+        onBlockPatch={patchBlock}
         onComplete={() => onChange(applyWizardSelection(block))}
-        editorContext={editorContext}
+        editorContext={resolvedEditorContext}
       />
     );
   }
@@ -191,10 +214,10 @@ export function BlockSettings({ block, widget, onChange, editorContext }: BlockS
       <Tabs
         value={editorState.mode}
         onValueChange={(mode) =>
-          onChange({
-            ...block,
-            editor: { ...editorState, mode: mode as EditorMode },
-          })
+          patchBlock((current) => ({
+            ...current,
+            editor: { ...(current.editor ?? editorState), mode: mode as EditorMode },
+          }))
         }
         className="gap-4"
       >
@@ -208,8 +231,9 @@ export function BlockSettings({ block, widget, onChange, editorContext }: BlockS
             widget={widget}
             block={block}
             onChange={onChange}
+            onBlockPatch={patchBlock}
             onComplete={() => onChange(applyWizardSelection(block))}
-            editorContext={editorContext}
+            editorContext={resolvedEditorContext}
           />
         </TabsContent>
         <TabsContent value="visual">
@@ -217,7 +241,8 @@ export function BlockSettings({ block, widget, onChange, editorContext }: BlockS
             widget={widget}
             block={block}
             onChange={onChange}
-            editorContext={editorContext}
+            onBlockPatch={patchBlock}
+            editorContext={resolvedEditorContext}
             slotControls={slotControls}
           />
         </TabsContent>
@@ -226,7 +251,8 @@ export function BlockSettings({ block, widget, onChange, editorContext }: BlockS
             block={block}
             widget={widget}
             onChange={onChange}
-            editorContext={editorContext}
+            onBlockPatch={patchBlock}
+            editorContext={resolvedEditorContext}
           />
         </TabsContent>
       </Tabs>

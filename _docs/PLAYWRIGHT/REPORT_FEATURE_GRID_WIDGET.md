@@ -456,4 +456,20 @@ Wszystkie trafiają do fallback który zwraca domyślną wartość, więc dział
 
 ---
 
+## Status po TASK-256 (2026-05-17)
+
+- `TASK-256-06-01`: variant changes now use the shared atomic builder patch
+  path, so Feature Grid variant and item-count defaults no longer drift apart.
+- `TASK-256-06-01`: the `Columns` control is now truthful. It remains active
+  only where runtime honors it, and it is explicitly locked for
+  `highlight-first`.
+- `TASK-256-06-01`: raw CTA hrefs remain visible in editor data for user
+  correction, while runtime output continues to reject unsafe targets through
+  the safe-href guard.
+- Shared evidence from this turn:
+  `bun run test:vitest -- tests/vitest/ui/feature-grid-editor-wave.test.tsx
+  tests/vitest/widgets/featureGrid.test.tsx` passed on 2026-05-17.
+
+---
+
 *Raport wygenerowany na podstawie analizy kodu i testów Playwright — 2026-05-16.*

@@ -117,6 +117,48 @@ function updateMeta(
   }));
 }
 
+function applyVariantDataPatch(
+  nextVariant: SplitLayoutVariantId,
+  nextData: SplitLayoutData,
+  onChange: (next: SplitLayoutData) => void,
+  onVariantChange?: (next: string) => void,
+  onBlockPatch?: WidgetEditorProps<SplitLayoutData>["onBlockPatch"]
+) {
+  if (onBlockPatch) {
+    onBlockPatch((current) => ({
+      ...current,
+      variant: nextVariant,
+      data: nextData,
+    }));
+    return;
+  }
+
+  if (!onVariantChange) {
+    return;
+  }
+
+  onChange(nextData);
+  onVariantChange(nextVariant);
+}
+
+function buildVariantSyncedSplitLayoutData(
+  value: SplitLayoutData,
+  nextVariant: SplitLayoutVariantId
+): SplitLayoutData {
+  const current = normalizeValue(value, nextVariant);
+  return normalizeValue(
+    {
+      ...current,
+      ratio: {
+        ...current.ratio,
+        desktop: nextVariant,
+        tablet: nextVariant,
+      },
+    },
+    nextVariant
+  );
+}
+
 function EditorSection({
   id,
   title,
@@ -183,6 +225,7 @@ export function SplitLayoutWizardEditor({
   onChange,
   variant,
   onVariantChange,
+  onBlockPatch,
 }: WidgetEditorProps<SplitLayoutData>) {
   const normalized = normalizeValue(value, variant);
 
@@ -192,7 +235,15 @@ export function SplitLayoutWizardEditor({
         <p className="text-sm font-medium">Split preset</p>
         <Select
           value={resolveSplitLayoutVariant(variant)}
-          onValueChange={(next) => onVariantChange?.(next)}
+          onValueChange={(next) =>
+            applyVariantDataPatch(
+              next as SplitLayoutVariantId,
+              buildVariantSyncedSplitLayoutData(value, next as SplitLayoutVariantId),
+              onChange,
+              onVariantChange,
+              onBlockPatch
+            )
+          }
         >
           <SelectTrigger>
             <SelectValue placeholder="Select split preset" />
@@ -263,6 +314,7 @@ export function SplitLayoutVisualEditor({
   onChange,
   variant,
   onVariantChange,
+  onBlockPatch,
 }: WidgetEditorProps<SplitLayoutData>) {
   const normalized = normalizeValue(value, variant);
 
@@ -272,7 +324,18 @@ export function SplitLayoutVisualEditor({
         title="Variant and pane ratio"
         description="Pick split preset and override desktop/tablet pane ratios."
       >
-        <VariantCards value={resolveSplitLayoutVariant(variant)} onChange={onVariantChange} />
+        <VariantCards
+          value={resolveSplitLayoutVariant(variant)}
+          onChange={(next) =>
+            applyVariantDataPatch(
+              next as SplitLayoutVariantId,
+              buildVariantSyncedSplitLayoutData(value, next as SplitLayoutVariantId),
+              onChange,
+              onVariantChange,
+              onBlockPatch
+            )
+          }
+        />
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="space-y-2">
