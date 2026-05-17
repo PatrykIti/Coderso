@@ -16,10 +16,10 @@ Add an explicit all-collapsed initial state for the layout `accordion` widget.
 
 `REPORT_ACCORDION_WIDGET.md` row W11 identifies that Accordion cannot start with
 all panels closed because the current normalizer always falls back to the first
-item. TASK-256 owns the correctness bug for default-open and collapsible runtime
-behavior. This leaf adds the product option that remains after that shared
-contract is fixed: editors can intentionally save "none open by default" when
-the accordion is collapsible.
+item. TASK-256 already repaired the shared default-open and collapsible runtime
+behavior in the live checkout. This leaf adds the remaining product option:
+editors can intentionally save "none open by default" when the accordion is
+collapsible.
 
 ## Scope Boundary
 
@@ -30,9 +30,9 @@ This leaf does not own:
 - R1-R4 ARIA wiring or chevron state;
 - R7 instance-safe details group naming.
 
-Those stay in TASK-256-05-04 and TASK-256-04. This leaf starts after those fixes
-or must be rebased on their final model. Do not implement this leaf while the
-live renderer still contains the TASK-256 default-open and collapsible bugs.
+Those stay in TASK-256-05-04 and TASK-256-04. This leaf assumes the live
+checkout already contains those shared fixes. If that shared baseline drifts
+again, repair it under shared-task scope before modifying TASK-257-01.
 
 ## Sub-Tasks
 

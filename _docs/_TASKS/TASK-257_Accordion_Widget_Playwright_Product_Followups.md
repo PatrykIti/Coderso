@@ -6,7 +6,7 @@
 **Category:** Widgets + Layout + Admin UI + Runtime Render + Playwright QA
 **Estimated Effort:** Large
 **Dependencies:** TASK-252, TASK-256
-**Status:** To Do
+**Status:** In Progress (2026-05-17)
 
 ---
 
@@ -19,6 +19,11 @@ TASK-256 owns shared widget-contract drift from the Playwright reports. This
 family deliberately excludes those shared-contract repairs and keeps only the
 Accordion product surface that is specific to `core/widgets/core/accordion.tsx`
 and `core/admin/ui/widgets/editors/AccordionEditors.tsx`.
+
+The live checkout already contains the shared TASK-256 Accordion baseline:
+default-open truthfulness, non-collapsible enforcement, scoped IDs/ARIA,
+public placeholder gating, chevron affordance, and shared clear-button parity
+are no longer open work here. TASK-257 starts from that repaired baseline.
 
 The report also mentions `faq-accordion`, but that is a separate content widget
 with its own report (`_docs/PLAYWRIGHT/REPORT_FAQ_ACCORDION_WIDGET.md`) and
@@ -50,7 +55,7 @@ change out instead of hiding it inside TASK-257.
 | C2, W4, FAQ parts of W1/W7/W12/U4, W8, W9, W10, W13, W14, U9, R5, FAQ parts of C4/R2-R4 | TASK-256-06-03 or future FAQ task | Excluded from TASK-257 because they target `faq-accordion`. |
 | W11 | TASK-257-01 | Add an explicit Accordion all-collapsed initial state after TASK-256 fixes default-open truthfulness. |
 | W3, W5, W6, Accordion part of W7, Accordion part of W12, U8 | TASK-257-02 | Add Accordion-owned style/layout/typography controls and consistent color-picking UX. |
-| W2, U3, U5, U6 | TASK-257-03 | Add Accordion item content affordances and item-management UX where it can be done without a shared slot-contract change. |
+| W2, U3, U5, U6 | TASK-257-03 | Add Accordion item icon + editor-copy affordances now; route U5/U6 to TASK-293 until the shared repeatable-slot sync/reorder owner lands. |
 | Accordion part of W1, Accordion part of U4 | TASK-257-04 | Add Accordion-specific motion and variant preview polish after the functional product controls land. |
 | Report refresh and docs closure | TASK-257-05 | Update report/docs/changelog/board with fixed/deferred evidence after implementation leaves finish. |
 
@@ -60,7 +65,7 @@ change out instead of hiding it inside TASK-257.
 |---|---|---|---|
 | Accordion schema/defaults/normalizer | `core/widgets/core/accordion.tsx` | `tests/vitest/widgets/accordionWidget.test.tsx` | Add schema/normalizer/runtime coverage for new option/style fields. |
 | Accordion editors | `core/admin/ui/widgets/editors/AccordionEditors.tsx` | `tests/vitest/ui/accordion-editor-wave.test.tsx` | Add mode-specific editor assertions for new controls and UX copy. |
-| Repeatable slot item controls | `core/admin/ui/pages/builder/BlockSettings.tsx` for existing add-item label/discovery polish only | `tests/vitest/pageBuilder/blockSettings-wave.test.tsx`; `tests/vitest/pageBuilder/visualPanel.test.tsx` only if slot-control rendering changes | Do not add shared repeatable-slot reorder helpers in TASK-257; split reorder into a shared slot task unless an owner already exists. |
+| Repeatable slot item controls | `core/admin/ui/pages/builder/BlockSettings.tsx` + `core/admin/ui/pages/builder/VisualPanel.tsx` for the already-landed shared add/remove controls; TASK-293 owns shared slot/data sync and repeatable-slot reorder | `tests/vitest/pageBuilder/blockSettings-wave.test.tsx`; `tests/vitest/pageBuilder/visualPanel.test.tsx` when TASK-293 changes shared controls | Do not hide shared slot/data sync or reorder inside Accordion-local mutations. |
 | Widget docs/report | `_docs/_WIDGETS/ACCORDION.md`, `_docs/PLAYWRIGHT/REPORT_ACCORDION_WIDGET.md` | docs diff checks | Update fixed/deferred evidence and new contract docs. |
 
 ## Sub-Tasks
@@ -80,7 +85,7 @@ change out instead of hiding it inside TASK-257.
 3. Complete TASK-257-02 before visual preview polish because preview cards must
    reflect the final style token model.
 4. Complete TASK-257-03 after verifying whether item-management requests can be
-   implemented without a shared slot-order helper.
+   closed locally or must stay deferred behind TASK-293.
 5. Complete TASK-257-04 after functional controls land.
 6. Complete TASK-257-05 last with report evidence, widget docs, task-board, and
    changelog updates.
@@ -147,7 +152,7 @@ No API routes are added.
 
 - Every Accordion-specific report row is either implemented by a TASK-257 leaf,
   explicitly excluded as TASK-256 shared-contract scope, explicitly routed to
-  FAQ scope, or deferred with a documented reason.
+  FAQ scope, or deferred with a documented reason such as TASK-293.
 - Accordion schema, defaults, normalizer, render, editor, tests, and docs stay
   synchronized for every new product field.
 - No TASK-257 leaf weakens shared slot, accessibility, clear/none, or runtime

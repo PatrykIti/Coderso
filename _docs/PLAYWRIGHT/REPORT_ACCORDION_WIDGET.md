@@ -9,6 +9,12 @@
 
 ---
 
+> **Status aktualny (2026-05-17):**
+> Tabele w sekcjach 3-6 zachowują historyczny wynik audytu Playwright z
+> 2026-05-16. Bieżący owner/status jest śledzony niżej w sekcji
+> `Current ownership after TASK-256` i to ona jest źródłem prawdy dla TASK-257.
+> Shared Accordion naprawy z TASK-256 nie są już otwartym zakresem tego raportu.
+
 ## 1. Przegląd widgetów
 
 Projekt zawiera **dwa oddzielne widgety akordeonowe** z różnymi modelami danych i przeznaczeniami:
@@ -279,7 +285,7 @@ Accordion poprawnie responsywny — `space-y-3` sprawia, że items stackują si�
 
 ---
 
-## 7. Podsumowanie priorytetów
+## 7. Historyczny snapshot priorytetów (2026-05-16)
 
 | Priorytet | ID | Problem | Wpływ |
 |-----------|---|---------|-------|
@@ -301,141 +307,7 @@ Accordion poprawnie responsywny — `space-y-3` sprawia, że items stackują si�
 
 ---
 
-## 8. Sugerowane naprawy
-
-### 8.1 Naprawa C1 — shouldOpen (KRYTYCZNE)
-
-**Plik:** `core/widgets/core/accordion.tsx`
-
-```js
-// Obecny błędny kod:
-const shouldOpen =
-  openMode === "multiple"
-    ? defaultOpenIds.includes(item.instanceId)
-    : item.instanceId === (defaultOpenIds[0] ?? resolvedItems[0]?.instanceId) &&
-      index === 0;
-
-// Naprawiony kod:
-const shouldOpen =
-  openMode === "multiple"
-    ? defaultOpenIds.includes(item.instanceId)
-    : item.instanceId === (defaultOpenIds[0] ?? resolvedItems[0]?.instanceId);
-```
-
-### 8.2 Naprawa C4 — Dodaj chevron do `<summary>` (KRYTYCZNE)
-
-**Plik:** `core/widgets/core/accordion.tsx` — `AccordionBlock`
-
-```jsx
-// W <summary>:
-<summary className={resolveSummaryClass(resolvedVariant)} style={summaryStyle}>
-  <span className="flex-1">{item.title}</span>
-  <svg
-    className="h-4 w-4 shrink-0 transition-transform duration-200 [[open]_&]:rotate-180"
-    fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"
-  >
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-  </svg>
-</summary>
-// Zmienić klasę summary na: flex items-center justify-between gap-2 ...
-```
-
-### 8.3 Naprawa R6 — Ukryj placeholder na froncie (KRYTYCZNE)
-
-**Plik:** `core/widgets/core/accordion.tsx`
-
-```jsx
-// Obecny kod renderuje placeholder gdy brak bloków:
-{item.blocks.length > 0 ? (
-  item.blocks.map(...)
-) : (
-  <div className="rounded-md border border-dashed ...">
-    Add widgets to this accordion item.
-  </div>
-)}
-
-// Naprawa — nie renderuj placeholder gdy nie jesteśmy w admin context:
-// Opcja 1: Przekazać props `isEditing` i warunkować placeholder
-// Opcja 2: Sprawdzić environment/context
-// Opcja 3: Nie renderować niczego gdy brak bloków (null zamiast placeholder):
-{item.blocks.length > 0
-  ? item.blocks.map((block) => <WidgetRenderer key={block.id} block={block} previewDevice={previewDevice} />)
-  : null
-}
-```
-
-### 8.4 Naprawa R1–R4 — ARIA (WYSOKI)
-
-**Plik:** `core/widgets/core/accordion.tsx`
-
-```jsx
-// Kontener:
-<div
-  className="space-y-3"
-  data-nextless-accordion="1"
-  role="region"           // ← dodać
-  aria-label="Accordion"  // ← dodać
-  ...
->
-
-// Summary:
-<summary
-  className={resolveSummaryClass(resolvedVariant)}
-  style={summaryStyle}
-  id={`accordion-summary-${item.instanceId}`}  // ← dodać
->
-
-// Content div:
-<div
-  className={...}
-  role="region"                                                      // ← dodać
-  aria-labelledby={`accordion-summary-${item.instanceId}`}          // ← dodać
->
-```
-
-### 8.5 Naprawa U1 — Ukryj slot ID w edytorze
-
-**Plik:** `core/admin/ui/widgets/editors/AccordionEditors.tsx` — `StructureSection`
-
-```jsx
-// Zamiast:
-<p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-  Item {index + 1} (slot id: {item.id})
-</p>
-
-// Powinno być:
-<p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-  Item {index + 1}
-</p>
-```
-
-### 8.6 Naprawa U2 — Usuń zduplikowane pole "Initially open item" z ITEMS sekcji
-
-**Plik:** `core/admin/ui/widgets/editors/AccordionEditors.tsx` — `StructureSection`
-
-Usunąć z StructureSection dropdown "Initially open item" — zostaje tylko "Default open item" w BehaviorSection.
-
-### 8.7 Naprawa C3 — Egzekwuj collapsible=false przez JavaScript
-
-**Plik:** `core/widgets/core/accordion.tsx`
-
-```jsx
-// Dodać event listener na toggle dla wyłączonego collapsible:
-useEffect(() => {
-  if (collapsible === false && openMode === "single") {
-    const details = containerRef.current?.querySelectorAll("details");
-    const handleToggle = (e) => {
-      if (!e.target.open) e.target.open = true; // prevent closing
-    };
-    details?.forEach(d => d.addEventListener("toggle", handleToggle));
-    return () => details?.forEach(d => d.removeEventListener("toggle", handleToggle));
-  }
-}, [collapsible, openMode]);
-```
-
----
-
-## Status po TASK-256 (2026-05-17)
+## 8. Current ownership after TASK-256 (2026-05-17)
 
 - `TASK-256-03` + `TASK-256-05-04`: public accordion placeholder copy is now
   gated by the shared render-context contract and no longer leaks to frontend
@@ -450,6 +322,28 @@ useEffect(() => {
   `bun run test:vitest -- tests/vitest/widgets/accordionWidget.test.tsx
   tests/vitest/ui/accordion-editor-wave.test.tsx` passed on 2026-05-17.
 
+### 8.1 Current owner matrix
+
+| Finding rows | Current status | Owner |
+|---|---|---|
+| C1, C3, Accordion part of C4, U1, U2, U7, R1, R6, R7, Accordion parts of R2-R4 | Fixed on the shared baseline | TASK-256-04 / TASK-256-05-04 |
+| C2, W4, W8, W9, W10, W13, W14, U9, R5, FAQ parts of W1/W7/W12/U4/C4/R2-R4 | Accordion report reference only; out of scope for this widget family | TASK-256-06-03 or a future FAQ task |
+| W11 | Open | TASK-257-01 |
+| W3, W5, W6, Accordion part of W7, Accordion part of W12, U8 | Open | TASK-257-02 |
+| W2, U3 | Open | TASK-257-03 |
+| U5, U6 | Deferred shared blocker | TASK-293 |
+| Accordion part of W1, Accordion part of U4 | Open | TASK-257-04 |
+
+### 8.2 TASK-257 / TASK-293 implementation notes
+
+- `TASK-257-03` should implement only the Accordion-local icon and editor-copy
+  slice in the current checkout.
+- Do not add Accordion-local add/reorder controls while shared repeatable-slot
+  operations still mutate slot IDs without matching `items[]` metadata.
+- `TASK-293` owns the shared repeatable-slot metadata-sync and instance-reorder
+  seam needed for Accordion U5/U6 and other slot-backed widgets.
+
 ---
 
-*Raport zakończony. Wszystkie testy wykonane 2026-05-16.*
+*Historical Playwright audit captured on 2026-05-16. Current owner/status notes
+updated on 2026-05-17.*

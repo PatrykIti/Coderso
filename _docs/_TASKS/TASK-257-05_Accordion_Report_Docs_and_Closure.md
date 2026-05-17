@@ -24,11 +24,12 @@ fixed by TASK-257.
 
 - [ ] Refresh `_docs/PLAYWRIGHT/REPORT_ACCORDION_WIDGET.md` with fixed/deferred
   statuses for every TASK-257-owned row.
+- [ ] Remove or rewrite stale historical priority/fix sections in the report so
+  the current owner matrix does not conflict with resolved TASK-256 scope.
 - [ ] Record the exact task owner for excluded rows:
   - TASK-256 for shared-contract rows;
   - TASK-256-06-03 or future FAQ task for FAQ rows;
-  - a future shared slot task if item reorder cannot be implemented safely in
-    TASK-257-03.
+  - TASK-293 for the shared repeatable-slot sync/reorder blocker on U5/U6.
 - [ ] Update `_docs/_WIDGETS/ACCORDION.md` with final data/editor/runtime
   behavior.
 - [ ] Update `_docs/_TASKS/README.md` statuses and statistics when the family
@@ -43,7 +44,8 @@ fixed by TASK-257.
 |---|---|---|
 | W11 | fixed by TASK-257-01 or deferred with reason | Normalizer/editor/runtime test names plus manual or rendered evidence. |
 | W3, W5, W6, Accordion part of W7, Accordion part of W12, U8 | fixed by TASK-257-02 or deferred with reason | Schema/editor/runtime tests and docs update. |
-| W2, U3, U5, U6 | fixed by TASK-257-03 or deferred with reason | Item editor/runtime tests; slot-safety note for add/reorder. |
+| W2, U3 | fixed by TASK-257-03 or deferred with reason | Item editor/runtime tests and updated editor copy evidence. |
+| U5, U6 | deferred to TASK-293 unless the shared owner lands first | Shared slot-contract blocker note and follow-up task link. |
 | Accordion part of W1, Accordion part of U4 | fixed by TASK-257-04 or deferred with reason | Motion/preview tests and reduced-motion note. |
 | TASK-256-owned rows | excluded | Link to TASK-256 child owner and do not mark as fixed by TASK-257. |
 | FAQ rows and FAQ portions of W1/W7/W12/U4/C4/R2-R4 | excluded | Link to FAQ owner and do not mark as fixed by TASK-257. |
@@ -121,5 +123,5 @@ No API routes are added.
 
 - TASK-257 rows are Done only after validation and changelog evidence exists.
 - The report clearly separates TASK-257 fixes from TASK-256 shared-contract
-  fixes and FAQ ownership.
+  fixes, FAQ ownership, and TASK-293 shared slot blockers.
 - No PNG screenshots or temporary Playwright artifacts are committed.

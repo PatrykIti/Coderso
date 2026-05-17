@@ -29,7 +29,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 - **To Do:** 295 tasks
-- **In Progress:** 4 tasks
+- **In Progress:** 5 tasks
 - **Done:** 1559 tasks
 
 ---
@@ -38,6 +38,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-293 | Shared Repeatable Slot Metadata Sync and Instance Reorder | High | Large | Builder-owned shared follow-up for repeatable-slot add/reorder operations that must keep widget metadata aligned with slot instances |
 | TASK-292 | Toggle Block Widget Playwright Product Followups | High | Very Large | Toggle Block-only follow-up family for `REPORT_TOGGLE_BLOCK_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-292-01 | Toggle Block Variant Visual Hierarchy, Contrast, and Pane Styling | High | Large | Add Toggle Block-owned cards distinction, active contrast, and bounded pane style controls after TASK-256 shared style semantics |
 | TASK-292-02 | Toggle Block Motion and Pane Transition Contract | Medium | Medium | Add bounded fade/slide/no-motion options without weakening TASK-256 interactive runtime semantics |
@@ -319,10 +320,9 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-258-04 | Consent, Custom Fields, and Public Write Hardening | High | Large | Add bounded custom fields, consent controls, and backend-owned CAPTCHA bridge for booking submissions |
 | TASK-258-05 | Style, Variants, and Advanced Diagnostics | High | Large | Add Appointment Form variants, submit text color, inherited-style indicators, and read-only runtime diagnostics |
 | TASK-258-06 | Playwright Report, Docs, and Closure | Medium | Medium | Refresh report evidence, widget docs, changelog, board, and validation matrix after implementation |
-| TASK-257 | Accordion Widget Playwright Product Followups | High | Large | Widget-specific follow-up family for `REPORT_ACCORDION_WIDGET.md`, excluding TASK-256 shared-contract and FAQ scope |
 | TASK-257-01 | Accordion Initial Open State Product Options | High | Medium | Add intentional all-collapsed initial state after shared default-open/collapsible fixes land |
 | TASK-257-02 | Accordion Style Layout and Typography Controls | High | Large | Add Accordion-owned body color, padding, radius, max-width, typography, and color-picker controls |
-| TASK-257-03 | Accordion Item Content and Management UX | High | Large | Add item icon/copy/add/reorder UX only where nested slot content stays synchronized |
+| TASK-257-03 | Accordion Item Content and Management UX | High | Large | Add Accordion item icon + copy now and route shared add/reorder blockers to TASK-293 |
 | TASK-257-04 | Accordion Motion and Variant Preview Polish | Medium | Medium | Add Accordion-specific motion tokens and visual variant preview cards |
 | TASK-257-05 | Accordion Report Docs and Closure | Medium | Medium | Refresh report/docs/changelog/board and final validation for the TASK-257 family |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
@@ -339,6 +339,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-257 | Accordion Widget Playwright Product Followups | High | Large | In progress: docs drift is rebased to the live TASK-256 baseline, TASK-293 now owns the shared repeatable-slot blocker, and the Accordion implementation/closure loop is active |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |

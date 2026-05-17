@@ -24,8 +24,8 @@ editor.
 ## Scope Boundary
 
 This leaf does not replace TASK-256 runtime accessibility work. Motion must
-respect the final accessible details/summary behavior from TASK-256 and must
-not introduce keyboard traps, duplicate IDs, runtime scripts, or
+respect the already-landed accessible details/summary behavior from TASK-256
+and must not introduce keyboard traps, duplicate IDs, runtime scripts, or
 hydration-sensitive behavior.
 
 Persist motion as `options.motion`. The `"none"` value in this enum is a motion
@@ -87,8 +87,8 @@ Error handling:
 - TASK-257-04 must not add runtime scripts. Any script-based behavior requires a
   separate task and Bun runtime-kernel tests.
 - Variant previews are visual only and must not duplicate live editor controls.
-- If TASK-256 changes the final `<details>/<summary>` runtime shape, rebase the
-  motion implementation on that shape before adding animation.
+- If the shared Accordion runtime shape drifts again, rebase the motion
+  implementation on that shape before adding animation.
 
 ## Security Contract
 

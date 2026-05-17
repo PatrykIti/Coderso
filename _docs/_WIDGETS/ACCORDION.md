@@ -56,15 +56,18 @@ Notes:
 - `openMode=single` uses a shared details-group name so only one item stays
   open at a time; `openMode=multiple` allows multiple open items.
 - Runtime emits deterministic markers:
-  - `data-nextless-accordion`
-  - `data-nextless-accordion-variant`
-  - `data-nextless-accordion-count`
-  - `data-nextless-accordion-item`
+  - `data-coderso-accordion`
+  - `data-coderso-accordion-variant`
+  - `data-coderso-accordion-count`
+  - `data-coderso-accordion-item`
 
 ## Clear Controls
 
-- `style.surfaceColor` is clearable. Clear removes the field and the runtime no
-  longer forces a background color for item containers.
+- `style.surfaceColor`, `style.borderColor`, and `style.summaryTextColor` are
+  clearable in the current editor.
+- Clearing `surfaceColor` removes the background override from item containers.
+- Clearing `borderColor` or `summaryTextColor` falls back to the shared
+  Accordion defaults until TASK-257 adds richer style controls.
 
 ## Data Model (summary)
 

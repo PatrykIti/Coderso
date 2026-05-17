@@ -25,6 +25,12 @@ This leaf covers Accordion-specific product/editor findings from
 - U6: explicit add-item affordance, but only if a shared slot+data sync owner
   can create the slot and expose editable metadata for the new item.
 
+The current checkout already exposes shared repeatable-slot add/remove controls
+through `BlockSettings` and `VisualPanel`, but those shared controls only mutate
+slot IDs. They do not create or reorder matching `block.data.items[]` metadata
+for slot-backed widgets. In this checkout, TASK-257-03 is execution-ready for
+the Accordion-only icon/copy slice and for routing U5/U6 to TASK-293.
+
 ## Scope Boundary
 
 Accordion item order is not just an `items[]` array concern. Each item owns a
@@ -35,22 +41,24 @@ This leaf may only implement item add when it delegates to the existing
 page-builder repeatable-slot owner and a shared data-sync path that keeps
 `block.slots["item:<id>"]` and `block.data.items[]` aligned. It must not
 implement item reorder unless a shared repeatable-slot reorder contract already
-exists before this leaf starts. If add/reorder still requires a new shared
-helper in `BlockSettings`, `VisualPanel`, or `blockUtils`, create a separate
-shared slot task and mark U5/U6 deferred from TASK-257.
+exists before this leaf starts. In the current checkout, that shared owner is
+missing and the follow-up is now tracked explicitly as TASK-293. TASK-257-03
+must not hide U5/U6 inside Accordion-local mutations.
 
 Live owner constraint:
 
-- `AccordionEditors.tsx` receives only `block.data` through `VisualPanel`, so it
-  must not implement item add/reorder by mutating `items[]` alone.
+- `AccordionEditors.tsx` already receives `onBlockPatch` and `context`, but its
+  current item-management path still mutates `items[]` alone and does not
+  consume the shared slot-control seam.
 - `AccordionBlock` renders concrete panels from repeatable `slots` via
   `resolveWidgetSlotTargets()`, then resolves copy by item ID.
 - `BlockSettings` currently adds/removes repeatable slot IDs but does not update
   `block.data.items[]`.
 - The existing Accordion item count selector in `AccordionEditors.tsx` is a
   data-only mutation path. TASK-257-03 must not extend that selector for U6. If
-  U6 is implemented, replace/remove the data-only count selector with the shared
-  slot+data owner and tests; otherwise leave U6 deferred.
+  U6 is implemented in a later task, replace/remove the data-only count selector
+  with the shared slot+data owner and tests. In this checkout, leave U6
+  deferred to TASK-293.
 
 ## Sub-Tasks
 
@@ -62,25 +70,22 @@ Live owner constraint:
   or icon labels and normalize overlong values.
 - [ ] Replace the current technical collapsible helper copy with editor-facing
   language after TASK-256 fixes behavior truthfulness.
-- [ ] Classify U6 during implementation. In the current checkout, mark U6
-  deferred because `BlockSettings` can create `item:<id>` slots but no shared
-  owner syncs `block.data.items[]` metadata for the editor. Implement U6 only if
-  a shared slot+data sync owner lands first.
-- [ ] Classify U5 reorder during implementation. If a shared repeatable-slot
-  reorder owner already exists, use it with Accordion metadata sync tests. If it
-  does not exist, create/link a separate shared slot follow-up and do not ship
-  reorder in TASK-257.
+- [ ] Link U6 to TASK-293 in the current checkout because `BlockSettings` can
+  create `item:<id>` slots but no shared owner syncs `block.data.items[]`
+  metadata for the editor.
+- [ ] Link U5 reorder to TASK-293 in the current checkout because no shared
+  repeatable-slot reorder owner currently rebuilds slot order and matching
+  widget metadata together.
 
 ## Files to Change
 
 | File | Required change |
 |---|---|
 | `core/widgets/core/accordion.tsx` | Add item icon schema/defaults/normalizer/rendering. |
-| `core/admin/ui/widgets/editors/AccordionEditors.tsx` | Add item icon controls and clearer behavior copy; if U6 is implemented through a shared owner, remove/replace the data-only item count selector. |
-| `core/admin/ui/pages/builder/BlockSettings.tsx` | Touch only if a shared slot+data sync owner already exists; do not ship copy-only add-item polish that creates slots without editable metadata. |
+| `core/admin/ui/widgets/editors/AccordionEditors.tsx` | Add item icon controls and clearer behavior copy; document that U5/U6 stay deferred behind TASK-293. |
 | `tests/vitest/widgets/accordionWidget.test.tsx` | Add item icon render/normalizer coverage. |
 | `tests/vitest/ui/accordion-editor-wave.test.tsx` | Add item icon and copy regression coverage. |
-| `tests/vitest/pageBuilder/blockSettings-wave.test.tsx` | Add only if page-builder slot controls change. |
+| `_docs/PLAYWRIGHT/REPORT_ACCORDION_WIDGET.md` | Route U5/U6 to TASK-293 in the Accordion report. |
 
 ## Implementation Pseudocode
 
@@ -102,51 +107,25 @@ function normalizeAccordionItem(raw: AccordionItem, index: number) {
 }
 ```
 
-Slot-safe add/reorder decision gates:
+Current-checkout blocker map:
 
 ```ts
-function resolveAccordionAddItemPlan(capabilities: PageBuilderSlotCapabilities) {
-  if (!capabilities.canAddRepeatableSlotWithDataSync) {
-    return {
-      action: "defer",
-      followUp:
-        "Create shared repeatable-slot data-sync task before fixing Accordion U6.",
-    };
-  }
-
+function resolveAccordionItemManagementPlan() {
   return {
-    action: "use-shared-owner",
-    requirements: [
-      "create block.slots['item:<instanceId>']",
-      "create or align block.data.items[] metadata for the same instance id",
-      "replace/remove AccordionEditors data-only item count selector",
-      "expose title/description/icon controls for the new item",
-    ],
-  };
-}
-
-function handleAccordionAddItemFromSharedOwner(block: WidgetBlock, slot: WidgetSlotDefinition) {
-  return addRepeatableSlotWithDataSync(block, slot, {
-    getDefaultItem(instanceId) {
-      return { id: instanceId, title: `Section ${instanceId}` };
-    },
-  });
-}
-
-function resolveAccordionReorderPlan(capabilities: PageBuilderSlotCapabilities) {
-  if (!capabilities.canReorderRepeatableSlots) {
-    return {
-      action: "defer",
-      followUp: "Create shared repeatable-slot reorder task before fixing U5.",
-    };
-  }
-
-  return {
-    action: "use-shared-owner",
-    requirements: [
-      "move repeatable slot content",
-      "sync Accordion item metadata by slot instance id",
-      "cover BlockSettings and Accordion editor regressions",
+    implementNow: ["icon", "copy"],
+    defer: [
+      {
+        finding: "U6",
+        taskId: "TASK-293",
+        blocker:
+          "shared repeatable-slot add currently creates slot IDs without matching Accordion item metadata",
+      },
+      {
+        finding: "U5",
+        taskId: "TASK-293",
+        blocker:
+          "shared repeatable-slot reorder helper and generic move controls do not exist yet",
+      },
     ],
   };
 }
@@ -155,18 +134,15 @@ function resolveAccordionReorderPlan(capabilities: PageBuilderSlotCapabilities) 
 Error handling:
 
 - Icons are plain text only; trim empty values to `undefined`.
-- Add-item controls must respect `accordionItemMax`, create the repeatable slot,
-  and create editable Accordion metadata for the same instance ID in one shared
-  mutation.
+- `AccordionEditors.tsx` must not render Accordion-local add/reorder controls in
+  this checkout because the shared builder seam still lacks slot/data sync and
+  repeatable-slot reorder ownership.
 - Copy-only `BlockSettings` changes are not enough for U6 because they would add
   a slot without giving the Accordion editor editable metadata for that item.
-- `AccordionEditors.tsx` must not render an add-item button or keep a data-only
-  count selector for implemented U6 unless it receives a shared page-builder
-  slot+data mutation callback in a future task.
-- Reorder controls are not rendered from TASK-257 unless a shared repeatable-slot
-  reorder owner already exists.
-- If no shared add/reorder owner exists, U5/U6 must be deferred to a separate
-  shared repeatable-slot task and recorded in TASK-257-05.
+- If the shared slot owner lands later, it should replace the data-only count
+  selector instead of duplicating cardinality controls.
+- U5/U6 must be deferred to TASK-293 and recorded in TASK-257-05 unless that
+  shared task lands first.
 
 ## Security Contract
 
@@ -181,10 +157,6 @@ No API routes are added.
 
 - `bun run test:vitest -- tests/vitest/widgets/accordionWidget.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/accordion-editor-wave.test.tsx`
-- `bun run test:vitest -- tests/vitest/pageBuilder/blockSettings-wave.test.tsx`
-  if a shared slot+data owner exists and U6 is implemented
-- `bun run test:vitest -- tests/vitest/pageBuilder/visualPanel.test.tsx` if
-  page-builder slot-control rendering changes
 - `bun test tests/unit/widgets/validator.test.ts` if schema/defaults change
 - `git diff --check`
 - `bun --cwd core lint`
@@ -197,8 +169,7 @@ No API routes are added.
   item-management status.
 - Update `_docs/PLAYWRIGHT/REPORT_ACCORDION_WIDGET.md` rows W2, U3, U5, and U6
   with fixed/deferred evidence.
-- If add or reorder is deferred because it needs a shared slot-contract task,
-  document the exact blocker and follow-up task ID in the report.
+- Document the exact TASK-293 blocker for U5/U6 in the report and closure leaf.
 
 ## Changelog Policy
 
@@ -209,9 +180,6 @@ No API routes are added.
 
 - Accordion supports safe plain-text item icons when configured.
 - Editor copy for all-closed behavior is understandable to content editors.
-- U6 is either deferred with a shared slot+data blocker, or the add-item
-  affordance creates the repeatable slot, preserves nested slot content, and
-  exposes editable title/description/icon metadata for the new item.
-- Reorder affordances either work with nested slot content preserved through an
-  existing shared owner or are explicitly deferred with a shared slot-contract
-  blocker.
+- U6 is deferred to TASK-293 with the shared slot+data blocker documented.
+- U5 is deferred to TASK-293 with the shared repeatable-slot reorder blocker
+  documented.
