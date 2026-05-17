@@ -59,6 +59,15 @@ landed.
 | A1/A4 | No action | report marked existing labels OK |
 ```
 
+Data flow:
+
+- Read the final TASK-278 scope matrix and each implementation leaf status.
+- Update the source report with one textual status row per finding:
+  TASK-256 exclusion, TASK-278 fixed evidence, TASK-278 deferral, or no action.
+- Synchronize widget docs, changelog entry, and task-board rows after report
+  evidence is complete.
+- Record the exact validation commands and commit SHAs in the closure leaf.
+
 Error handling:
 
 - If a TASK-278 leaf remains intentionally deferred, keep the umbrella open or
@@ -94,6 +103,7 @@ Before marking TASK-278 `Done`, run and record:
   adjacency changed.
 - `bun test tests/unit/widgets/validator.test.ts` if schema/defaults changed.
 - `bun test tests/unit/widgets/registry.test.ts` if variant registration changed.
+- `bun run gates:coderso`
 - `bun run scan:security:strict`
 - `bun run precommit`
 

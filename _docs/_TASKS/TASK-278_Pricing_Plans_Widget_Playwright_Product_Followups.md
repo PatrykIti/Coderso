@@ -49,13 +49,11 @@ TASK-256 already owns them as shared widget-contract drift.
 
 | Report finding | Evidence | Owner task | Reason |
 |---|---|---|---|
-| BUG-01 billing default resolver clarity | `REPORT_PRICING_PLANS_WIDGET.md:141-152` | TASK-256-06-03 | Shared normalizer/default guard cleanup. |
 | BUG-02 explicit spacing/radius resolver values | `REPORT_PRICING_PLANS_WIDGET.md:154-165` | TASK-256-06-03 | Shared token resolver truthfulness. |
 | BUG-03 variant changes truncate hidden plans without warning | `REPORT_PRICING_PLANS_WIDGET.md:167-171,331-339` | TASK-256-01, TASK-256-06-03 | Shared atomic variant/update and hidden-data preservation contract. |
 | BUG-04 / UX-02 plan count selector desync | `REPORT_PRICING_PLANS_WIDGET.md:173-177,210-212,319-327` | TASK-256-01, TASK-256-06-03 | Shared truthful editor control contract. |
 | BUG-05 missing `highlightRing` clear | `REPORT_PRICING_PLANS_WIDGET.md:179-183,349-351` | TASK-256-02, TASK-256-06-03 | Shared clear-control semantics. |
 | BUG-08 / BF-01 static billing toggle click behavior | `REPORT_PRICING_PLANS_WIDGET.md:196-200,242-243,304-315,408-419` | TASK-256-04, TASK-256-06-03 | Shared interactive runtime instance contract. |
-| UX-01 Advanced duplicates Visual token controls | `REPORT_PRICING_PLANS_WIDGET.md:206-208,372-374` | TASK-256-01 | Shared editor-mode ownership and Advanced scope. |
 | A3/A5/A6/A7/A8/A9 baseline pricing ARIA/table semantics | `REPORT_PRICING_PLANS_WIDGET.md:292-298,425-433` | TASK-256-04, TASK-256-06-03 | Shared runtime accessibility baseline. |
 
 TASK-278 may depend on the TASK-256 result, but it must not restage these
@@ -73,11 +71,13 @@ to Pricing Plans product fields, copy, and layout behavior.
 | BF-05 per-plan description/subline | TASK-278-01 | Pricing Plans card content hierarchy and schema-owned plan summary. |
 | BF-07 "Most popular" top banner | TASK-278-01 | Highlighted-card product treatment. |
 | UX-04 Wizard lacks badge, CTA, features, period | TASK-278-02 | Pricing Plans onboarding/editor flow. |
+| UX-01 Advanced duplicates Visual token controls | TASK-278-02 | Pricing Plans-local Advanced cleanup after TASK-256 shared mode ownership policy. |
 | UX-05 Advanced "Normalization and safeguards" copy is unclear | TASK-278-02 | Pricing Plans-local reset/fix copy after TASK-256 Advanced ownership is settled. |
 | UX-06 remove plan without confirmation or undo | TASK-278-02 | Pricing Plans repeated-plan destructive edit UX. |
 | UX-07 missing highlighted indicator in plan list | TASK-278-02 | Editor list affordance. |
 | UX-08 billing labels visible while toggle disabled | TASK-278-02 | Local billing editor copy/visibility only; toggle runtime is TASK-256. |
 | Observation: added feature does not focus new field | TASK-278-02 | Pricing Plans editor efficiency. |
+| BUG-01 billing default resolver clarity | TASK-278-03 | Pricing Plans-local billing default expression clarity; runtime toggle behavior stays TASK-256. |
 | BF-04 annual savings badge | TASK-278-03 | Billing value copy after TASK-256 runtime toggle works. |
 | BF-13 currency and price format support | TASK-278-03 | Schema-first price semantics with legacy string compatibility. |
 | BF-14 Free plan / `$0` graceful handling | TASK-278-03 | Price display policy. |
@@ -95,7 +95,7 @@ to Pricing Plans product fields, copy, and layout behavior.
 
 | Report finding | Decision | Reason |
 |---|---|---|
-| A1 CTA link accessible name | No TASK-278 task | The report marks the existing CTA link label as OK. Keep covered by existing accessibility tests unless implementation changes CTA rendering. |
+| A1 billing toggle button type | No TASK-278 task | The report marks the existing `type="button"` output as OK. Keep covered by existing accessibility tests unless implementation changes billing-toggle rendering. |
 | A4 Included/Not included comparison labels | No TASK-278 task | The report marks the existing comparison labels as OK. TASK-278-05 may extend table hierarchy but must preserve this baseline. |
 
 ## Sub-Tasks
@@ -182,6 +182,7 @@ Implementation leaves:
   fields change.
 - `bun test tests/unit/widgets/registry.test.ts` if variant registration or widget
   registry wiring changes.
+- `bun run gates:coderso`
 - `bun run scan:security:strict`
 - `bun run precommit`
 

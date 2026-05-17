@@ -14,7 +14,8 @@
 
 Add Pricing Plans-owned value copy and price semantics around the billing model:
 annual savings badges, optional structured currency/amount fields, and graceful
-free/custom price display.
+free/custom price display. Also make Pricing Plans-local billing default
+normalization explicit so future default changes cannot invert the toggle state.
 
 This leaf must not implement the TASK-256 billing-toggle interactivity repair.
 It starts after TASK-256 makes the toggle truthful and then adds Pricing
@@ -22,6 +23,8 @@ Plans-specific product semantics around the working cycle state.
 
 ## Source Findings
 
+- `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md:141-152` - BUG-01 billing
+  toggle default resolver expression is currently correct but fragile/confusing.
 - `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md:251-252` - BF-04 annual
   savings badge.
 - `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md:254-255` - BF-05 per-plan
@@ -44,13 +47,13 @@ Plans-specific product semantics around the working cycle state.
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/pricingPlans.tsx` | Add schema/default/normalizer support for explicit savings labels and optional structured price metadata while preserving legacy `price` and `prices.*` strings. |
+| `core/widgets/core/pricingPlans.tsx` | Add schema/default/normalizer support for explicit savings labels and optional structured price metadata while preserving legacy `price` and `prices.*` strings; rewrite billing default normalization as an explicit boolean default path. |
 | `core/admin/ui/widgets/editors/PricingPlansEditors.tsx` | Add plan-level controls for savings copy, free/custom display text, and optional currency/amount fields if the schema introduces them. |
-| `tests/vitest/widgets/pricingPlans.test.tsx` | Cover savings label rendering, free/custom price fallbacks, structured price normalization, and legacy string compatibility. |
+| `tests/vitest/widgets/pricingPlans.test.tsx` | Cover savings label rendering, free/custom price fallbacks, structured price normalization, legacy string compatibility, and billing default normalization when `billingToggle` is omitted. |
 | `tests/vitest/ui/pricing-plans-editor-wave.test.tsx` | Cover editor controls for savings/free/custom/currency behavior. |
 | `tests/unit/widgets/validator.test.ts` | Cover reject-unknown and accepted structured price payloads if schema changes. |
 | `_docs/_WIDGETS/PRICING_PLANS.md` | Document explicit savings copy and price semantics. |
-| `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md` | Mark BF-04/BF-13/BF-14 fixed or deferred. |
+| `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md` | Mark BUG-01/BF-04/BF-13/BF-14 fixed or deferred. |
 
 ## Implementation Pseudocode
 
@@ -82,6 +85,8 @@ Data flow:
   price fields.
 - `normalizePricingPlansData` preserves legacy `price` and `prices.*` strings
   while deriving a safe render model for new fields.
+- `normalizePricingPlansData` resolves omitted `billingToggle.enabled` from the
+  explicit Pricing Plans default instead of relying on an inverted comparison.
 - `PricingPlansBlock` receives the active cycle from TASK-256 runtime state and
   resolves display text without doing discount math.
 - Renderer emits text-only price, savings, free, and custom labels.
@@ -95,6 +100,8 @@ Error handling:
   fall back to the legacy text price; define the exact behavior in tests.
 - Existing saved payloads without `priceDisplay` render exactly through the
   current string path.
+- Omitted `billingToggle` payloads use the documented default state, and future
+  default changes must be covered by tests before changing runtime behavior.
 
 ## Security Contract
 
@@ -126,6 +133,8 @@ No API routes are added.
 
 - Annual savings copy is explicit, author-owned, and rendered only when relevant
   to the active billing cycle.
+- Billing toggle default normalization is explicit and covered for omitted
+  `billingToggle` payloads.
 - Free and custom plans render intentionally instead of falling through to an
   awkward `$0` default.
 - Structured price support, if added, remains backward compatible with existing
