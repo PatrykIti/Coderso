@@ -13,7 +13,9 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { isApiClientError } from "@/services/apiClient";
+import { listAdminUsers, type AdminUser } from "@/services/adminUsersClient";
 import { listContentTypesCached, type ContentTypeSummary } from "@/services/contentTypesClient";
+import { getTaxonomyOverview, type ContentTerm } from "@/services/taxonomyClient";
 import {
   listListingQueriesCached,
   listListingTemplatesCached,
@@ -62,8 +64,8 @@ const variantOptions: Array<{
 ];
 
 const sourceModeOptions: Array<{ id: ContentListSourceMode; label: string }> = [
-  { id: "legacy", label: "Legacy content type source" },
-  { id: "listing", label: "Listings query source" },
+  { id: "legacy", label: "By content type" },
+  { id: "listing", label: "By listing query" },
 ];
 
 const statusScopeOptions: Array<{ id: ContentListStatusScope; label: string }> = [
@@ -206,6 +208,65 @@ function ColorField({
   );
 }
 
+type ContentTypeOption = {
+  id: string;
+  label: string;
+  searchText: string;
+};
+
+type AuthorOption = {
+  id: string;
+  label: string;
+  searchText: string;
+};
+
+const technicalContentTypeSuffixPattern = /\s+[0-9a-f]{8,}$/i;
+const TAXONOMY_DATALIST_ID = "content-list-taxonomy-suggestions";
+const NO_AUTHOR_VALUE = "__no_author__";
+
+const collapseWhitespace = (value: string) => value.replace(/\s+/g, " ").trim();
+
+const resolveFriendlyContentTypeBaseLabel = (entry: ContentTypeSummary) => {
+  const strippedName = collapseWhitespace(
+    entry.name.replace(technicalContentTypeSuffixPattern, "")
+  );
+  if (strippedName.length > 0) return strippedName;
+  return collapseWhitespace(entry.slug) || entry.id;
+};
+
+function buildContentTypeOptions(types: ContentTypeSummary[]) {
+  const counts = new Map<string, number>();
+  types.forEach((entry) => {
+    const baseLabel = resolveFriendlyContentTypeBaseLabel(entry).toLowerCase();
+    counts.set(baseLabel, (counts.get(baseLabel) ?? 0) + 1);
+  });
+
+  return types.map((entry) => {
+    const baseLabel = resolveFriendlyContentTypeBaseLabel(entry);
+    const duplicateCount = counts.get(baseLabel.toLowerCase()) ?? 0;
+    const label = duplicateCount > 1 ? `${baseLabel} (${entry.slug})` : baseLabel;
+    return {
+      id: entry.id,
+      label,
+      searchText: `${label} ${entry.name} ${entry.slug} ${entry.id}`.toLowerCase(),
+    } satisfies ContentTypeOption;
+  });
+}
+
+function buildAuthorOptions(users: AdminUser[]) {
+  return [...users]
+    .sort((left, right) => {
+      const leftLabel = (left.name?.trim() || left.email).toLowerCase();
+      const rightLabel = (right.name?.trim() || right.email).toLowerCase();
+      return leftLabel.localeCompare(rightLabel);
+    })
+    .map((user) => ({
+      id: user.id,
+      label: user.name?.trim() || user.email,
+      searchText: `${user.name ?? ""} ${user.email} ${user.id}`.toLowerCase(),
+    })) satisfies AuthorOption[];
+}
+
 function ContentTypeSelect({
   value,
   onChange,
@@ -216,6 +277,7 @@ function ContentTypeSelect({
   const [types, setTypes] = useState<ContentTypeSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -241,15 +303,26 @@ function ContentTypeSelect({
     };
   }, []);
 
+  const options = buildContentTypeOptions(types);
+  const searchText = search.trim().toLowerCase();
+  const filteredOptions =
+    searchText.length > 0
+      ? options.filter((entry) => entry.searchText.includes(searchText))
+      : options;
   const selectValue = value.trim().length > 0 ? value : NO_CONTENT_TYPE_VALUE;
   const selectedLabel =
     selectValue === NO_CONTENT_TYPE_VALUE
       ? "No content type selected"
-      : (types.find((entry) => entry.id === selectValue)?.name ?? "Selected content type");
+      : (options.find((entry) => entry.id === selectValue)?.label ?? "Selected content type");
 
   return (
     <div className="space-y-2">
       <p className="text-sm font-medium">Content type</p>
+      <Input
+        value={search}
+        onChange={(event) => setSearch(event.target.value)}
+        placeholder="Search content types"
+      />
       <Select
         value={selectValue}
         onValueChange={(next) => onChange(next === NO_CONTENT_TYPE_VALUE ? "" : next)}
@@ -259,14 +332,173 @@ function ContentTypeSelect({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value={NO_CONTENT_TYPE_VALUE}>No content type selected</SelectItem>
-          {types.map((entry) => (
+          {filteredOptions.map((entry) => (
             <SelectItem key={entry.id} value={entry.id}>
-              {entry.name}
+              {entry.label}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
       {loading ? <p className="text-xs text-muted-foreground">Loading content types...</p> : null}
+      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+    </div>
+  );
+}
+
+function TaxonomySuggestionsInput({
+  contentTypeId,
+  value,
+  onChange,
+}: {
+  contentTypeId: string;
+  value: string;
+  onChange: (next: string) => void;
+}) {
+  const trimmedContentTypeId = contentTypeId.trim();
+  const [suggestions, setSuggestions] = useState<ContentTerm[]>([]);
+  const [loading, setLoading] = useState(trimmedContentTypeId.length > 0);
+  const [error, setError] = useState<string | null>(null);
+  const resolvedSuggestions = trimmedContentTypeId.length === 0 ? [] : suggestions;
+  const resolvedLoading = trimmedContentTypeId.length === 0 ? false : loading;
+  const resolvedError = trimmedContentTypeId.length === 0 ? null : error;
+
+  useEffect(() => {
+    if (trimmedContentTypeId.length === 0) {
+      return;
+    }
+
+    let active = true;
+    getTaxonomyOverview(trimmedContentTypeId)
+      .then((overview) => {
+        if (!active) return;
+        const merged = [...overview.terms.categories, ...overview.terms.tags];
+        const unique = new Map<string, ContentTerm>();
+        merged.forEach((term) => {
+          const key = term.name.trim().toLowerCase();
+          if (!key) return;
+          if (!unique.has(key)) unique.set(key, term);
+        });
+        setSuggestions(
+          [...unique.values()].sort((left, right) => left.name.localeCompare(right.name))
+        );
+      })
+      .catch((err) => {
+        if (!active) return;
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load taxonomy suggestions.");
+        }
+      })
+      .finally(() => {
+        if (!active) return;
+        setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [trimmedContentTypeId]);
+
+  return (
+    <div className="space-y-2">
+      <p className="text-sm font-medium">Taxonomy/tag filter</p>
+      <Input
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder="e.g. featured or case-study"
+        list={resolvedSuggestions.length > 0 ? TAXONOMY_DATALIST_ID : undefined}
+      />
+      {resolvedSuggestions.length > 0 ? (
+        <datalist id={TAXONOMY_DATALIST_ID}>
+          {resolvedSuggestions.map((term) => (
+            <option key={term.id} value={term.name} />
+          ))}
+        </datalist>
+      ) : null}
+      {resolvedLoading ? (
+        <p className="text-xs text-muted-foreground">Loading taxonomy suggestions...</p>
+      ) : null}
+      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      {!resolvedLoading &&
+      !resolvedError &&
+      resolvedSuggestions.length === 0 &&
+      trimmedContentTypeId.length > 0 ? (
+        <p className="text-xs text-muted-foreground">
+          No taxonomy suggestions available for this content type.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function AuthorSelect({ value, onChange }: { value: string; onChange: (next: string) => void }) {
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    listAdminUsers()
+      .then((items) => {
+        if (!active) return;
+        setUsers(items);
+      })
+      .catch((err) => {
+        if (!active) return;
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load authors.");
+        }
+      })
+      .finally(() => {
+        if (!active) return;
+        setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const options = buildAuthorOptions(users);
+  const searchText = search.trim().toLowerCase();
+  const filteredOptions =
+    searchText.length > 0
+      ? options.filter((entry) => entry.searchText.includes(searchText))
+      : options;
+  const selectValue = value.trim().length > 0 ? value : NO_AUTHOR_VALUE;
+  const selectedLabel =
+    selectValue === NO_AUTHOR_VALUE
+      ? "No author filter"
+      : (options.find((entry) => entry.id === selectValue)?.label ?? "Selected author");
+
+  return (
+    <div className="space-y-2">
+      <p className="text-sm font-medium">Author filter</p>
+      <Input
+        value={search}
+        onChange={(event) => setSearch(event.target.value)}
+        placeholder="Search authors"
+      />
+      <Select
+        value={selectValue}
+        onValueChange={(next) => onChange(next === NO_AUTHOR_VALUE ? "" : next)}
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="Select author">{selectedLabel}</SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={NO_AUTHOR_VALUE}>No author filter</SelectItem>
+          {filteredOptions.map((entry) => (
+            <SelectItem key={entry.id} value={entry.id}>
+              {entry.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {loading ? <p className="text-xs text-muted-foreground">Loading authors...</p> : null}
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
     </div>
   );
@@ -434,9 +666,18 @@ function updateSourceMode(
       ...current.source,
       mode,
       ...(mode === "listing"
-        ? { contentTypeId: "" }
+        ? { contentTypeId: "", statusScope: "published" as const }
         : { listingQueryId: "", listingTemplateId: "" }),
     },
+    filters:
+      mode === "listing"
+        ? {
+            ...current.filters,
+            authorId: "",
+            searchQuery: "",
+            featuredOnly: false,
+          }
+        : current.filters,
   }));
 }
 
@@ -695,25 +936,12 @@ export function ContentListVisualEditor({
         title="Source and filters"
         description="Configure data source and basic filtering behavior."
       >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Source mode</p>
-          <Select
-            value={sourceMode}
-            onValueChange={(next) =>
-              updateSourceMode(value, onChange, next as ContentListSourceMode)
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select source mode" />
-            </SelectTrigger>
-            <SelectContent>
-              {sourceModeOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="rounded-md border border-border/70 px-3 py-2 text-xs text-muted-foreground">
+          Source mode:{" "}
+          <span className="font-medium text-foreground">
+            {sourceMode === "listing" ? "By listing query" : "By content type"}
+          </span>
+          . Change source mode in Wizard or Advanced.
         </div>
         {sourceMode === "listing" ? (
           <ListingSourceSelect
@@ -770,18 +998,50 @@ export function ContentListVisualEditor({
                 </Select>
               </div>
             </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Taxonomy/tag filter</p>
-              <Input
-                value={resolved.filters?.taxonomy ?? ""}
-                onChange={(event) =>
-                  updateFilters(value, onChange, { taxonomy: event.target.value })
-                }
-                placeholder="e.g. featured or case-study"
-              />
-            </div>
+            <TaxonomySuggestionsInput
+              key={resolved.source?.contentTypeId ?? ""}
+              contentTypeId={resolved.source?.contentTypeId ?? ""}
+              value={resolved.filters?.taxonomy ?? ""}
+              onChange={(next) => updateFilters(value, onChange, { taxonomy: next })}
+            />
           </>
         )}
+      </EditorSection>
+
+      <EditorSection
+        title="Section context"
+        description="Optional heading copy plus guidance for the saved-data canvas preview."
+      >
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Section title</p>
+          <Input
+            value={resolved.title ?? ""}
+            onChange={(event) =>
+              updateValue(value, onChange, (current) => ({
+                ...current,
+                title: event.target.value,
+              }))
+            }
+            placeholder="Optional section title"
+          />
+        </div>
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Section description</p>
+          <Textarea
+            value={resolved.description ?? ""}
+            onChange={(event) =>
+              updateValue(value, onChange, (current) => ({
+                ...current,
+                description: event.target.value,
+              }))
+            }
+            rows={3}
+            placeholder="Optional section description"
+          />
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Builder canvas shows saved resolved data. Save or open Preview to refresh live results.
+        </p>
       </EditorSection>
 
       <EditorSection
@@ -909,63 +1169,61 @@ export function ContentListAdvancedEditor({ value, onChange }: WidgetEditorProps
             </SelectContent>
           </Select>
         </div>
-        {sourceMode === "listing" ? (
-          <ListingSourceSelect
-            queryId={resolved.source?.listingQueryId ?? ""}
-            templateId={resolved.source?.listingTemplateId ?? ""}
-            onQueryChange={(next) => updateSource(value, onChange, { listingQueryId: next })}
-            onTemplateChange={(next) => updateSource(value, onChange, { listingTemplateId: next })}
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Item limit</p>
+          <Input
+            type="number"
+            min={1}
+            max={24}
+            value={String(resolved.source?.limit ?? 6)}
+            onChange={(event) =>
+              updateSource(value, onChange, {
+                limit: normalizeContentListLimit(Number(event.target.value)),
+              })
+            }
           />
-        ) : null}
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Item limit</p>
-            <Input
-              type="number"
-              min={1}
-              max={24}
-              value={String(resolved.source?.limit ?? 6)}
-              onChange={(event) =>
-                updateSource(value, onChange, {
-                  limit: normalizeContentListLimit(Number(event.target.value)),
-                })
+        </div>
+        {sourceMode === "listing" ? (
+          <>
+            <ListingSourceSelect
+              queryId={resolved.source?.listingQueryId ?? ""}
+              templateId={resolved.source?.listingTemplateId ?? ""}
+              onQueryChange={(next) => updateSource(value, onChange, { listingQueryId: next })}
+              onTemplateChange={(next) =>
+                updateSource(value, onChange, { listingTemplateId: next })
               }
             />
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Author id filter</p>
-            <Input
+            <p className="text-xs text-muted-foreground">
+              Listing mode uses filters and sorting from the selected Listings query.
+            </p>
+          </>
+        ) : (
+          <>
+            <AuthorSelect
               value={resolved.filters?.authorId ?? ""}
-              onChange={(event) => updateFilters(value, onChange, { authorId: event.target.value })}
-              placeholder="Optional author UUID"
-              disabled={sourceMode === "listing"}
+              onChange={(next) => updateFilters(value, onChange, { authorId: next })}
             />
-          </div>
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Search query</p>
-          <Input
-            value={resolved.filters?.searchQuery ?? ""}
-            onChange={(event) =>
-              updateFilters(value, onChange, { searchQuery: event.target.value })
-            }
-            placeholder="Title, excerpt, tags"
-            disabled={sourceMode === "listing"}
-          />
-        </div>
-        <label className="flex items-center justify-between rounded-md border border-border/70 px-3 py-2">
-          <span className="text-sm">Featured only</span>
-          <Switch
-            checked={resolved.filters?.featuredOnly ?? false}
-            onCheckedChange={(checked) => updateFilters(value, onChange, { featuredOnly: checked })}
-            disabled={sourceMode === "listing"}
-          />
-        </label>
-        {sourceMode === "listing" ? (
-          <p className="text-xs text-muted-foreground">
-            Listing mode uses filters and sorting from the selected Listings query.
-          </p>
-        ) : null}
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Search query</p>
+              <Input
+                value={resolved.filters?.searchQuery ?? ""}
+                onChange={(event) =>
+                  updateFilters(value, onChange, { searchQuery: event.target.value })
+                }
+                placeholder="Title, excerpt, tags"
+              />
+            </div>
+            <label className="flex items-center justify-between rounded-md border border-border/70 px-3 py-2">
+              <span className="text-sm">Featured only</span>
+              <Switch
+                checked={resolved.filters?.featuredOnly ?? false}
+                onCheckedChange={(checked) =>
+                  updateFilters(value, onChange, { featuredOnly: checked })
+                }
+              />
+            </label>
+          </>
+        )}
       </EditorSection>
 
       <EditorSection

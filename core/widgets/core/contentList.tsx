@@ -48,6 +48,8 @@ export type ContentListData = {
     searchQuery?: string;
     authorId?: string;
   };
+  title?: string;
+  description?: string;
   fields?: {
     showImage?: boolean;
     showExcerpt?: boolean;
@@ -126,6 +128,8 @@ export const contentListSchema = {
         authorId: { type: "string" },
       },
     },
+    title: { type: "string" },
+    description: { type: "string" },
     fields: {
       type: "object",
       additionalProperties: false,
@@ -253,6 +257,11 @@ export const contentListDefaults: ContentListData = {
     resolvedAt: "",
   },
 };
+
+const defaultContentListEmptyDescription =
+  "Adjust filters or publish entries for this content type.";
+const defaultContentListListingEmptyDescription =
+  "Adjust the listing query or publish matching entries.";
 
 const joinClasses = (...classes: Array<string | undefined | false>) =>
   classes.filter(Boolean).join(" ");
@@ -397,7 +406,7 @@ export function normalizeContentListData(data: ContentListData): ContentListData
   };
   const emptyStateDefaults = contentListDefaults.emptyState ?? {
     title: "No items found",
-    description: "Adjust filters or publish entries for this content type.",
+    description: defaultContentListEmptyDescription,
   };
   const styleDefaults = contentListDefaults.style ?? {
     columns: "3" as const,
@@ -413,6 +422,8 @@ export function normalizeContentListData(data: ContentListData): ContentListData
 
   return {
     ...data,
+    title: resolveTrimmedOptionalString(data.title),
+    description: resolveTrimmedOptionalString(data.description),
     source: {
       mode: resolveContentListSourceMode(data.source?.mode, data.source?.listingQueryId),
       listingQueryId: resolveString(data.source?.listingQueryId, ""),
@@ -453,7 +464,7 @@ export function normalizeContentListData(data: ContentListData): ContentListData
       title: resolveString(data.emptyState?.title, emptyStateDefaults.title ?? "No items found"),
       description: resolveString(
         data.emptyState?.description,
-        emptyStateDefaults.description ?? "Adjust filters or publish entries for this content type."
+        emptyStateDefaults.description ?? defaultContentListEmptyDescription
       ),
     },
     style: {
@@ -509,6 +520,18 @@ const formatRuntimeDate = (value: string | undefined) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return undefined;
   return date.toISOString().slice(0, 10);
+};
+
+const resolveContentListEmptyDescription = (
+  sourceMode: ContentListSourceMode,
+  configuredDescription: string | undefined
+) => {
+  const trimmed = resolveTrimmedOptionalString(configuredDescription);
+  if (trimmed && !(sourceMode === "listing" && trimmed === defaultContentListEmptyDescription)) {
+    return trimmed;
+  }
+  if (sourceMode === "listing") return defaultContentListListingEmptyDescription;
+  return trimmed ?? defaultContentListEmptyDescription;
 };
 
 const buildMetaLine = (item: ContentListRuntimeItem) => {
@@ -643,6 +666,15 @@ export function ContentListBlock({
   const hasItems = resolvedItems.length > 0;
   const state = !hasSource ? "missing-source" : hasItems ? "ready" : "empty";
   const errorText = normalized.resolved?.error;
+  const sectionTitle = resolveTrimmedOptionalString(normalized.title);
+  const sectionDescription = resolveTrimmedOptionalString(normalized.description);
+  const headingIdBase = (blockId ?? "content-list").trim() || "content-list";
+  const sectionTitleId = `${headingIdBase}-title`;
+  const sectionDescriptionId = `${headingIdBase}-description`;
+  const emptyDescription = resolveContentListEmptyDescription(
+    sourceMode,
+    normalized.emptyState?.description
+  );
 
   const wrapperClassName =
     resolvedVariant === "list"
@@ -656,6 +688,9 @@ export function ContentListBlock({
   return (
     <section
       className="mx-auto w-full max-w-6xl px-4 py-8"
+      aria-labelledby={sectionTitle ? sectionTitleId : undefined}
+      aria-describedby={sectionDescription ? sectionDescriptionId : undefined}
+      aria-label={sectionTitle ? undefined : "Content list"}
       data-content-list-variant={resolvedVariant}
       data-content-list-source-mode={sourceMode}
       data-content-list-source={
@@ -672,6 +707,23 @@ export function ContentListBlock({
         <div className="mb-4 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
           {errorText}
         </div>
+      ) : null}
+      {sectionTitle ? (
+        <h2 id={sectionTitleId} className="text-2xl font-semibold text-[var(--color-text)]">
+          {sectionTitle}
+        </h2>
+      ) : null}
+      {sectionDescription ? (
+        <p
+          id={sectionDescriptionId}
+          className={joinClasses(
+            "text-sm text-[var(--color-text)]/75",
+            sectionTitle ? "mt-2" : undefined,
+            "mb-6"
+          )}
+        >
+          {sectionDescription}
+        </p>
       ) : null}
       {!hasSource ? (
         <div className="rounded-lg border border-dashed border-[var(--color-border)] px-4 py-8 text-sm text-[var(--color-text)]/80">
@@ -697,10 +749,7 @@ export function ContentListBlock({
           <p className="text-base font-semibold text-[var(--color-text)]">
             {normalized.emptyState?.title ?? "No items found"}
           </p>
-          <p className="mt-2 text-sm text-[var(--color-text)]/75">
-            {normalized.emptyState?.description ??
-              "Adjust filters or publish entries for this content type."}
-          </p>
+          <p className="mt-2 text-sm text-[var(--color-text)]/75">{emptyDescription}</p>
         </div>
       )}
     </section>

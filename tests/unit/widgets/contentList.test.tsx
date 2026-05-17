@@ -85,6 +85,39 @@ test("content list renders listing source placeholder when listing query is miss
   expect(html).toContain('data-content-list-state="missing-source"');
 });
 
+test("content list renders section heading and listing-aware empty description", () => {
+  const html = renderToString(
+    <ContentListBlock
+      blockId="content-list-1"
+      variant="cards"
+      data={normalizeContentListData({
+        ...contentListDefaults,
+        title: "Latest work",
+        description: "Fresh additions from the listing query.",
+        source: {
+          ...contentListDefaults.source,
+          mode: "listing",
+          listingQueryId: "query-1",
+          listingTemplateId: "template-1",
+        },
+        resolved: {
+          items: [],
+          total: 0,
+          listingQueryId: "query-1",
+          listingTemplateId: "template-1",
+          resolvedAt: "2026-02-08T09:10:00.000Z",
+        },
+      })}
+    />
+  );
+
+  expect(html).toContain('aria-labelledby="content-list-1-title"');
+  expect(html).toContain("Latest work");
+  expect(html).toContain("Fresh additions from the listing query.");
+  expect(html).toContain("Adjust the listing query or publish matching entries.");
+  expect(html).not.toContain("Adjust filters or publish entries for this content type.");
+});
+
 test("content list renders resolved items and runtime markers", () => {
   const html = renderToString(
     <ContentListBlock

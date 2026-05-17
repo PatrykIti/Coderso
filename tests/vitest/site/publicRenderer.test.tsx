@@ -359,6 +359,73 @@ test("renderPublicPageHtml renders content list image aspect and CTA fallback ma
   expect(html).not.toContain('href="/blog/first-post"');
 });
 
+test("renderPublicPageHtml renders content list section context and listing empty copy", () => {
+  clearWidgets();
+  registerWidget(
+    createContentListWidget({
+      wizard: StubContentListEditor,
+      visual: StubContentListEditor,
+      advanced: StubContentListEditor,
+    })
+  );
+
+  const html = renderPublicPageHtml({
+    title: "Blog",
+    blocks: [
+      {
+        id: "content-list-3",
+        type: "content-list",
+        variant: "cards",
+        data: {
+          title: "Latest work",
+          description: "Fresh additions from the listing query.",
+          source: {
+            mode: "listing",
+            listingQueryId: "query-1",
+            listingTemplateId: "template-1",
+            contentTypeId: "",
+            statusScope: "published",
+            limit: 6,
+            sort: "published-desc",
+          },
+          filters: {},
+          fields: {
+            showImage: false,
+            showExcerpt: true,
+            showMeta: true,
+            showCta: true,
+          },
+          emptyState: {
+            title: "No posts",
+            description: "Adjust filters or publish entries for this content type.",
+          },
+          style: {
+            columns: "2",
+            gap: "md",
+            cardStyle: "outlined",
+            ctaLabel: "Read post",
+            backgroundColor: "var(--color-bg)",
+            borderColor: "var(--color-border)",
+          },
+          resolved: {
+            items: [],
+            total: 0,
+            listingQueryId: "query-1",
+            listingTemplateId: "template-1",
+            resolvedAt: "2026-02-08T10:01:00.000Z",
+          },
+        },
+      },
+    ],
+  });
+
+  expect(html).toContain('aria-labelledby="content-list-3-title"');
+  expect(html).toContain("Latest work");
+  expect(html).toContain("Fresh additions from the listing query.");
+  expect(html).toContain("Adjust the listing query or publish matching entries.");
+  expect(html).not.toContain("Adjust filters or publish entries for this content type.");
+});
+
 test("renderPublicPageHtml renders entry teaser resolved payload deterministically", () => {
   clearWidgets();
   registerWidget(
