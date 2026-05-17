@@ -34,7 +34,8 @@ Advanced controls, custom pixel UX, and divider accessibility.
 | Spacer guide option is invisible in main canvas or has misleading copy | Fix here by either rendering the guide in the intended editor context or relabeling the control to runtime-preview-only | `SpacerEditors.tsx`, `spacer.tsx`, page-builder preview context if needed | None |
 | Divider inert Advanced variant select, duplicate `none`/zero/custom-pixel, CSS variable color loss | Fix here through TASK-256-02 token helpers and editor truthfulness | `DividerEditors.tsx`, `divider.tsx` | None |
 | Divider `<div>` vs semantic separator and missing separator/hidden ARIA | Fix here plus TASK-256-04 ARIA assertions | `divider.tsx` | None |
-| Divider label color, nowrap, inline preview, custom-width validation, hardcoded container width, and label typography controls | Fix here only where an existing visible control is broken; otherwise classify as future editor/style scope | `DividerEditors.tsx`, `divider.tsx` | TASK-256-08 records deferrals |
+| Divider label color, nowrap, inline preview, and custom-width validation | Fix here because the current visible controls can mislead editors or produce invalid runtime output | `DividerEditors.tsx`, `divider.tsx` | None |
+| Divider hardcoded container width and expanded label typography controls | Product/style scope in TASK-264 | `TASK-264` family | TASK-256-08 references TASK-264 instead of rediscovering scope |
 
 ## Sub-Tasks
 
@@ -49,9 +50,9 @@ Advanced controls, custom pixel UX, and divider accessibility.
   represent them.
 - [ ] Add divider separator semantics according to decorative vs labelled
   variants.
-- [ ] Classify divider label-color, nowrap, inline-preview, custom-width
-  validation, container-width, and typography rows as fixed or future scope
-  during report closure.
+- [ ] Fix divider label-color, nowrap, inline-preview, and custom-width
+  validation rows in this leaf; record container-width and typography product
+  rows against TASK-264 during report closure.
 
 ## Files to Change
 

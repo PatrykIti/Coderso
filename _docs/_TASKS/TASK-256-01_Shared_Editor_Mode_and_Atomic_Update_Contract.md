@@ -116,22 +116,17 @@ function createBlockChangeHandlers(onBlockPatch: (patch: WidgetBlockPatch) => vo
 Routing through the live owner chain:
 
 ```tsx
-type BlocksPatch = Block[] | ((currentBlocks: Block[]) => Block[]);
-
-function updateBlocks(patch: BlocksPatch) {
-  setBlocks((currentBlocks) => {
-    const nextBlocks =
-      typeof patch === "function" ? patch(currentBlocks) : patch;
-    setPageData((currentPage) => ({ ...currentPage, blocks: nextBlocks }));
-    setUnsavedChanges(true);
-    return nextBlocks;
-  });
+function commitBlocks(nextBlocks: Block[]) {
+  setBlocks(nextBlocks);
+  setPageData((currentPage) => ({ ...currentPage, blocks: nextBlocks }));
+  setUnsavedChanges(true);
 }
 
 function handlePatchBlock(id: string, patch: WidgetBlockPatch) {
-  updateBlocks((currentBlocks) =>
-    updateBlockById(currentBlocks, id, (current) => applyWidgetBlockPatch(current, patch))
+  const nextBlocks = updateBlockById(blocks, id, (current) =>
+    applyWidgetBlockPatch(current, patch)
   );
+  commitBlocks(nextBlocks);
 }
 
 <BlockSettings
@@ -175,6 +170,9 @@ Error handling:
 
 - If an editor receives an unsupported variant, normalize through the widget
   owner and keep the previous data fields that are still valid.
+- Keep `commitBlocks` as the single owner for `blocks`, `pageData.blocks`, and
+  dirty-state updates; do not call `setPageData` or `setUnsavedChanges` inside
+  a `setBlocks` updater.
 - Keep the existing `onVariantChange(next: string)` signature backward
   compatible for editors that only change the variant. Atomic variant+data edits
   use the new block patch callback.

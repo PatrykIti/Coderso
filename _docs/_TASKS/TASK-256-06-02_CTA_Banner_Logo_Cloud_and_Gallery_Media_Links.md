@@ -55,7 +55,7 @@ controls are deferred to the TASK-274 family.
 | Logo Cloud image picker, drag/drop, marquee, eyebrow/background, per-logo `alt`, Wizard image/link authoring, and open-new-tab product control | Product scope in TASK-274; TASK-256 only fixes current safe-link, hover, height, and ARIA truthfulness | TASK-274 family | TASK-274 owns the physical follow-up leaves; TASK-256 only supplies shared safe link attributes. |
 | Gallery Mosaic overlay alpha loss and image/video ambiguity | Fix here because current controls can destroy data or mislead users | `GalleryMosaicEditors.tsx` | None |
 | Gallery Mosaic feature-left one-item empty column plus redundant row-span/resolver cleanup | Fix here because current runtime output is visibly misleading for an existing variant | `galleryMosaic.tsx`, `tests/vitest/widgets/galleryMosaic.test.tsx` | None |
-| Gallery Mosaic alt text and link security | Fix here | `galleryMosaic.tsx`, editor tests | None |
+| Gallery Mosaic alt text and link security | Fix current renderer alt/figure semantics using existing image/video title, caption, and fallback fields; route new per-item alt authoring schema to TASK-270-03 | `galleryMosaic.tsx`, `galleryMosaic.test.tsx` | Per-item alt authoring product controls stay in TASK-270 |
 | Gallery Mosaic Wizard video support and current media-type truthfulness | Fix here for Wizard media accept rules and the current image/video priority controls only | `GalleryMosaicEditors.tsx`, `tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx` | Visual per-item MediaPicker remains TASK-270-01 |
 | Gallery Mosaic video `title`, hover-caption keyboard/touch access, and autoplay control | Fix current runtime semantics for existing video title/caption data; route new autoplay or expanded caption controls to TASK-270 | `galleryMosaic.tsx`, `GalleryMosaicEditors.tsx` | TASK-256-08 references TASK-270 if schema expansion is required |
 | Gallery Mosaic Visual per-item MediaPicker, lightbox, drag/drop, per-item ratio, object-position, video poster image, responsive columns, motion, and import/export | Future product scope | TASK-270 | Excluded from TASK-256 and implemented or deferred by physical TASK-270 leaves |
@@ -78,8 +78,9 @@ controls are deferred to the TASK-274 family.
   redundant row-span/resolver drift without adding new product fields.
 - [ ] Limit Gallery Mosaic Wizard media picker repair to current contract video
   support; Visual per-item picker remains TASK-270-01.
-- [ ] Add separate alt/figure semantics for Gallery Mosaic images where the
-  data model changes are accepted.
+- [ ] Add Gallery Mosaic image/video alt and figure semantics from existing
+  title/caption/fallback fields; leave new per-item alt authoring schema to
+  TASK-270-03.
 
 ## Files to Change
 
@@ -90,7 +91,7 @@ controls are deferred to the TASK-274 family.
 | `core/admin/ui/widgets/editors/LogoCloudEditors.tsx` | 284-694 | Shared-contract Logo Cloud repairs only: hoverColor gating and link feedback from the shared safe-href helper. Advanced duplicate-control cleanup stays in TASK-256-01; per-logo `alt`, image picker, and Wizard image/link authoring stay in TASK-274. |
 | `core/widgets/core/logoCloud.tsx` | 268-401 | Link `rel`/target handling, section labels, heading semantics, logo height fallback, and hoverColor output. |
 | `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx` | 92-98, 448, 559-598, 720-832 | Overlay alpha-safe editing, current image/video type clarity, Wizard video media picker scope, and duplicated Advanced controls. Visual per-item media picker is TASK-270-01. |
-| `core/widgets/core/galleryMosaic.tsx` | 159-275, 314-507 | Explicit resolver defaults, feature-left one-item handling, link safety, alt/figure semantics, video title/control behavior, and redundant row-span cleanup. Poster image remains TASK-270-03. |
+| `core/widgets/core/galleryMosaic.tsx` | schema/default/normalizer owners plus 159-275, 314-507 | Explicit resolver defaults, feature-left one-item handling, link safety, current alt/figure semantics using existing fields, video title/control behavior, and redundant row-span cleanup. New per-item alt authoring and poster image fields remain TASK-270-03. |
 | `core/widgets/core/widgetSafeHref.ts` | 1-25 | Extend the shared href owner with a tested helper such as `resolveWidgetLinkAttrs(href, options)` that returns normalized `href`, `target`, and safe `rel` attributes. Do not duplicate external-link detection in individual widgets. |
 | `tests/vitest/ui/cta-banner-editor-wave.test.tsx` | n/a | Do not edit for CTA-specific rows in this leaf; TASK-263 owns CTA editor coverage. |
 | `tests/vitest/widgets/ctaBanner.test.tsx` | n/a | Do not edit for CTA-specific rows in this leaf; TASK-263 owns CTA runtime coverage. |
@@ -140,6 +141,12 @@ function resolveGalleryMediaType(item: GalleryMosaicItem): "image" | "video" | "
   if (item.video) return "video";
   return "empty";
 }
+
+function resolveGalleryMediaA11y(item: GalleryMosaicItem) {
+  const alt = item.alt?.trim() || item.title?.trim() || item.caption?.trim() || "";
+  const title = item.videoTitle?.trim() || item.title?.trim() || alt;
+  return { alt, title };
+}
 ```
 
 Error handling:
@@ -148,9 +155,10 @@ Error handling:
   fallback values unless the user explicitly chooses a new color.
 - Existing logo/gallery URLs normalize through the same safe-href owner. CTA
   adoption of the helper belongs to TASK-263-04.
-- If adding media `alt` fields in a TASK-256-owned widget requires schema
-  migration, keep fallback behavior backward compatible and update validator
-  tests. Logo Cloud per-logo `alt` field work is TASK-274-02.
+- TASK-256 does not add new Gallery Mosaic per-item alt authoring fields; if
+  closure confirms that new schema is required, route it to TASK-270-03 and keep
+  this leaf limited to backward-compatible fallback semantics. Logo Cloud
+  per-logo `alt` field work is TASK-274-02.
 
 ## Git Scope Safeguards
 
