@@ -74,6 +74,19 @@ async function resolveLogoMediaAsset(assetId: string) {
   };
 }
 
+function resolveSingleMediaPickerId(value: unknown): string | null {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) {
+    const [first] = value;
+    return typeof first === "string" ? first : null;
+  }
+  if (value && typeof value === "object" && "id" in value) {
+    const id = (value as { id?: unknown }).id;
+    return typeof id === "string" ? id : null;
+  }
+  return null;
+}
+
 function useLogoMediaSelection({
   value,
   onChange,
@@ -160,7 +173,7 @@ function LogoImageControl({ logo, index, value, onChange, persistAssetId }: Logo
       />
       <MediaPicker
         value={logo.imageAssetId ?? null}
-        onChange={(next) => void handleLogoAssetChange(index, logo, next)}
+        onChange={(next) => void handleLogoAssetChange(index, logo, resolveSingleMediaPickerId(next))}
         multiple={false}
         accept={["image/*"]}
       />
@@ -180,6 +193,8 @@ Editor data flow:
    `listMediaCached({ force: false })` or the equivalent default call. Store the
    public URL by default; store `imageAssetId` only if `logoCloud.tsx` makes that
    field schema-owned, normalized, documented, and tested.
+   Adapt `MediaPicker`'s `unknown` `onChange` payload through
+   `resolveSingleMediaPickerId` before calling the media resolver.
 4. Manual image URL and link URL entry remain supported for backward
    compatibility.
 5. Link URL validation UI consumes TASK-256 shared safe-link output when that
@@ -191,6 +206,8 @@ Error handling:
 
 - If MediaPicker resolution fails, show an inline error and keep the previous
   logo data unchanged.
+- Unknown or malformed MediaPicker values resolve to `null` and clear only the
+  picker-owned image/asset fields for that row.
 - Guard async media-cache resolution with a per-logo request ID/ref and commit
   resolved patches through a `latestValueRef` helper. After `await`, re-read the
   current logo row/index by stable logo key before applying the image/name patch.
@@ -209,7 +226,8 @@ Error handling:
 Regression-test shape:
 
 - Mock `MediaPicker` at the editor import seam to emit the selected image ID
-  shape used by the real picker.
+  shape used by the real picker, plus malformed payloads that must resolve to
+  `null`.
 - Mock the media cache client used by the editor, including success,
   not-found, and failure cases for `listMediaCached`.
 - Assert stale media-cache races do not overwrite newer selections: trigger two
