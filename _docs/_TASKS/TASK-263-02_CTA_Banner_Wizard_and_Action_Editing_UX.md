@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Editor UX + Validation
 **Estimated Effort:** Large
 **Dependencies:** TASK-263, TASK-263-01, TASK-256-01, TASK-256-07
-**Status:** To Do
+**Status:** Done (2026-05-17)
 
 ---
 
@@ -27,7 +27,9 @@ without changing the shared editor mode contract owned by TASK-256-01.
 - [ ] Add Wizard fields for primary CTA URL, secondary CTA label, and secondary
   CTA URL.
 - [ ] Add an explicit secondary CTA enablement toggle so hiding the secondary
-  action does not require clearing both label and href.
+  action does not require clearing both label and href. Prefer editor-local
+  hidden/restored draft state first; add a persisted `enabled` field only if
+  runtime semantics truly require hidden-but-preserved state in saved data.
 - [ ] Add visible `Label` and `URL` labels for primary and secondary action
   fields in Visual.
 - [ ] Add CTA-local URL validation feedback that uses the same safe-href rules
@@ -53,7 +55,8 @@ without changing the shared editor mode contract owned by TASK-256-01.
 
 ## Implementation Pseudocode
 
-Action enablement model, only if a persisted toggle is required:
+Prefer editor-local hidden/restored draft state first. Use a persisted action
+flag only if runtime semantics require it:
 
 ```ts
 type CtaBannerAction = {
@@ -146,7 +149,8 @@ No API routes are added.
 
 - Endpoint visibility/auth/RBAC/CSRF/rate limit: unchanged.
 - Reject-unknown validation: update `ctaBannerSchema` for any persisted
-  `enabled` field and keep `additionalProperties: false`.
+  `enabled` field only if the implementation proves editor-local draft state is
+  insufficient. Keep `additionalProperties: false`.
 - Anti-abuse: URL feedback must use the same safe-href allowlist as runtime
   normalization. Do not allow `javascript:`, unsafe data URLs, raw scripts, or
   custom click handlers.
@@ -180,4 +184,4 @@ No API routes are added.
 - Visual action fields have explicit `Label` and `URL` labels.
 - Unsafe URLs produce inline editor feedback and still render safely.
 - Secondary CTA visibility is controlled intentionally without destructive
-  clearing.
+  clearing or a new persisted field unless runtime semantics truly require it.

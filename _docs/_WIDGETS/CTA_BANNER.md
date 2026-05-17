@@ -1,4 +1,4 @@
-# CTA Banner Widget (v1)
+# CTA Banner Widget (v2)
 
 ## Purpose
 
@@ -8,51 +8,80 @@ Compact conversion strip between sections with clear CTA actions.
 
 `cta-banner`
 
-## Variants (v1)
+## Variants
 
 - `centered`: centered copy and CTA actions
-- `split`: copy on left, actions on right
-- `with-badge`: highlighted badge above title
+- `split`: copy on the left and actions on the right
+- `with-badge`: highlighted badge above the title
 
-## Editor Modes (current after TASK-050-12-05)
+## Editor Modes (current after TASK-263)
 
-### Wizard (minimal onboarding)
-- Banner layout variant
+### Wizard
+
+- Variant cards
 - Headline
 - Primary CTA label
+- Primary CTA URL
+- Secondary CTA enable toggle
+- Secondary CTA label and URL
 
-### Visual (primary editing mode)
+### Visual
+
 Sections:
+
 1. Variant and layout structure
 2. Content copy
 3. Actions
 4. Colors and button styles
 5. Border and spacing
+6. Background and motion
 
 Notes:
+
 - CTA Banner owns variant selection in Visual (`visualOwnsVariantSelection = true`).
+- Shared block full-width stays in the block Layout panel (`WidgetBlock.layout.container`).
+  CTA Banner no longer hardcodes an inner `max-w-6xl`.
 - Generic Visual variant selector is suppressed.
 
-### Advanced (technical-only)
-- Technical style tokens
-- Normalization and safeguards
+### Advanced
+
+- Background/text/border token inputs
+- Normalize now
+- Reset to defaults
 - Raw payload snapshot
 
 ## Runtime Behavior Notes
 
-- Invalid/unknown variant falls back to `centered`.
-- Renderer outputs deterministic markers:
+- Invalid or unknown variants fall back to `centered`.
+- The renderer uses `blockId` for `aria-labelledby` and falls back to
+  `aria-label="Call to action"` when no title is present.
+- Badge markup renders only when trimmed badge copy is non-empty.
+- Description visibility is controlled by `content.showDescription`; the support
+  line follows the configured `style.text` path with reduced emphasis.
+- Primary, secondary, and tertiary CTA links render only when:
+  - `enabled !== false`
+  - label text is non-empty
+  - the URL resolves through the safe CTA href allowlist
+- `openInNewTab` derives safe `target="_blank"` and `rel="noopener noreferrer"`
+  through the shared widget safe-link helper.
+- Button radius and size are CTA-owned controls; when not configured, existing
+  saved pages keep the legacy `rounded-md` / `text-sm` behavior.
+- Background color, gradient, image, and motion are optional and bounded.
+- The renderer emits deterministic markers:
   - `data-cta-banner-variant`
   - `data-cta-banner-padding`
   - `data-cta-banner-border-width`
-- Buttons render only when both label and href are non-empty.
+  - `data-cta-banner-motion`
+  - `data-cta-button`
 
 ## Clear Controls
 
-- `style.background`, `style.badgeBackground`, `style.primaryButtonBg`, and
-  `style.secondaryButtonBg` are clearable. Clear removes the configured style key
-  and does not save `transparent` as an off-state sentinel.
-- Border/text fields and CTA link behavior remain independent of surface clear.
+- `style.text`, `style.badgeBackground`, `style.badgeText`,
+  `style.primaryButtonBg`, `style.primaryButtonText`,
+  `style.secondaryButtonBg`, and `style.secondaryButtonText` are clearable.
+- `background.color` and `background.gradient` are clearable.
+- Clear removes the configured field from widget data and does not serialize
+  `transparent` or an empty string as an off-state sentinel.
 
 ## Data Model (summary)
 
@@ -61,11 +90,31 @@ Notes:
   "content": {
     "badge": "Limited offer",
     "title": "Ready to launch your next campaign?",
-    "description": "Use reusable sections and publish faster with consistent design."
+    "description": "Use reusable sections and publish faster with consistent design.",
+    "showDescription": true
   },
   "actions": {
-    "primaryCta": { "label": "Get started", "href": "#" },
-    "secondaryCta": { "label": "Contact sales", "href": "#" }
+    "primaryCta": {
+      "label": "Get started",
+      "href": "#",
+      "enabled": true,
+      "openInNewTab": false,
+      "icon": "none"
+    },
+    "secondaryCta": {
+      "label": "Contact sales",
+      "href": "#",
+      "enabled": true,
+      "openInNewTab": false,
+      "icon": "none"
+    },
+    "tertiaryCta": {
+      "label": "",
+      "href": "",
+      "enabled": false,
+      "openInNewTab": false,
+      "icon": "none"
+    }
   },
   "style": {
     "background": "var(--color-surface)",
@@ -79,9 +128,26 @@ Notes:
     "primaryButtonBg": "var(--color-primary)",
     "primaryButtonText": "var(--color-bg)",
     "primaryButtonBorder": "transparent",
-    "secondaryButtonBg": "var(--color-bg)",
+    "secondaryButtonBg": "transparent",
     "secondaryButtonText": "var(--color-text)",
-    "secondaryButtonBorder": "var(--color-border)"
+    "secondaryButtonBorder": "var(--color-border)",
+    "primaryButtonSize": "md",
+    "secondaryButtonSize": "md"
+  },
+  "background": {
+    "color": "var(--color-surface)",
+    "gradient": "linear-gradient(135deg, #0f172a, #475569)",
+    "media": {
+      "type": "image",
+      "source": "external",
+      "assetId": "asset-1",
+      "src": "/hero.png",
+      "fit": "cover",
+      "position": "center"
+    }
+  },
+  "motion": {
+    "preset": "none"
   }
 }
 ```

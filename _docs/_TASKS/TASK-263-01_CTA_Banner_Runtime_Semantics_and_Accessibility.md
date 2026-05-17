@@ -6,7 +6,7 @@
 **Category:** Widgets + Runtime Render + Accessibility
 **Estimated Effort:** Large
 **Dependencies:** TASK-263, TASK-256-07
-**Status:** To Do
+**Status:** Done (2026-05-17)
 
 ---
 
@@ -36,8 +36,9 @@ runtime/a11y helper that belongs in TASK-256-04.
   `resolveCtaBannerPadding` explicitly accept their default enum values.
 - [ ] Add section `aria-labelledby` when a title exists and deterministic
   `aria-label` fallback when it does not.
-- [ ] Add action `aria-label` support only if it can be derived from CTA-owned
-  data or a new allowlisted field; do not infer unsafe rich labels.
+- [ ] Keep CTA action accessible names derived from visible CTA copy unless a
+  concrete icon-only or ambiguous-label case is proven during implementation;
+  do not add a persisted raw `aria-label` field for this leaf.
 - [ ] Treat the badge as a visual CTA label with explicit semantics: either
   expose it as plain contextual text tied to the heading area or mark decorative
   output consistently if the final design treats badge copy as non-essential.
@@ -119,9 +120,9 @@ Error handling:
 No API routes are added.
 
 - Endpoint visibility/auth/RBAC/CSRF/rate limit: unchanged.
-- Reject-unknown validation: unchanged unless this leaf adds a persisted
-  accessible-label field, which must update `ctaBannerSchema` and validator
-  coverage.
+- Reject-unknown validation: unchanged. This leaf should not add a persisted
+  action `aria-label` field unless a later concrete accessibility bug proves it
+  is necessary and the task is explicitly re-scoped.
 - Anti-abuse: accessible labels and badge semantics must be plain React text. Do
   not add raw HTML, scripts, event handlers, arbitrary classes, or unsafe href
   behavior.
@@ -142,7 +143,8 @@ No API routes are added.
 - Update `_docs/_WIDGETS/CTA_BANNER.md` with empty badge, section labelling,
   description color, border width, and focus-visible behavior.
 - Update `_docs/PLAYWRIGHT/REPORT_CTA_BANNER_WIDGET.md` rows BUG-01, BUG-02,
-  BUG-03, BUG-04, A1, A2, A3, A4, and A5 after validation.
+  BUG-03, BUG-04, A1, A3, A4, and A5 after validation. Reclassify A2 only if a
+  concrete ambiguous-label case appears during implementation.
 
 ## Changelog Policy
 
@@ -155,7 +157,9 @@ No API routes are added.
 - Description text follows the configured CTA text color while preserving the
   support-line visual hierarchy.
 - `borderWidth="0"` produces no semantic border class or visible border.
-- CTA section and actions expose meaningful accessible names.
+- CTA section exposes a meaningful accessible name, and CTA actions keep
+  meaningful accessible names from visible copy without raw aria-label
+  persistence unless new concrete evidence requires more.
 - Badge and description accessibility findings have explicit tests instead of
   relying on visual-only evidence.
 - Keyboard focus state is visible without relying only on browser defaults.

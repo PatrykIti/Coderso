@@ -6,7 +6,7 @@
 **Category:** Widgets + Documentation + Playwright QA + Changelog
 **Estimated Effort:** Medium
 **Dependencies:** TASK-263-01, TASK-263-02, TASK-263-03, TASK-263-04, TASK-263-05
-**Status:** To Do
+**Status:** Done (2026-05-17)
 
 ---
 
@@ -57,7 +57,7 @@ Coverage matrix:
 | Report ID | Final status | Evidence | Owner |
 |---|---|---|---|
 | BUG-01 | Fixed | test + DOM excerpt | TASK-263-01 |
-| UX-01 | Routed | shared Clear helper evidence | TASK-256-02, plus TASK-263-03 only if a CTA-local hook was explicitly left |
+| UX-01 | Fixed | CTA text/button Clear wiring using the landed shared helper contract | TASK-263-03 consuming TASK-256-02 |
 | BF-10 | Deferred | named future task if motion is intentionally postponed | TASK-263-05 or future task |
 ```
 

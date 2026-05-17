@@ -6,7 +6,7 @@
 **Category:** Widgets + Runtime Render + Admin UI + Link Safety
 **Estimated Effort:** Large
 **Dependencies:** TASK-263, TASK-263-02, TASK-256-06-02, TASK-256-07
-**Status:** To Do
+**Status:** Done (2026-05-17)
 
 ---
 
@@ -16,19 +16,18 @@ Add CTA Banner-owned conversion options for action links and action presentation
 
 This leaf covers the product features from the CTA report that are specific to
 CTA actions: new-tab target policy, safe rel output, button icons, optional
-tertiary text CTA, and description visibility. If target/rel handling needs a
-shared `resolveWidgetLinkAttrs()` helper, land that through TASK-256-06-02 or a
-new shared safe-link task first. This leaf may call that helper after it exists,
-but must not define a CTA-local link-attribute resolver or duplicate
-external-link detection inside CTA Banner.
+tertiary text CTA, and description visibility. TASK-256-06-02 already landed
+the shared `resolveWidgetLinkAttrs()` owner, so this leaf must consume that
+helper directly and must not define a CTA-local link-attribute resolver or
+duplicate external-link detection inside CTA Banner.
 
 ## Sub-Tasks
 
 - [ ] Add an allowlisted new-tab policy for each CTA action. Prefer a boolean
   `openInNewTab` or enum over raw `target` strings.
-- [ ] Derive safe `rel` attributes from the target policy and URL kind; do not
-  persist arbitrary raw `rel` text unless a shared link helper explicitly owns
-  that contract.
+- [ ] Derive safe `rel` attributes from the target policy and URL kind through
+  the existing shared `resolveWidgetLinkAttrs()` helper; do not persist
+  arbitrary raw `rel` text.
 - [ ] Add allowlisted icon placement for primary and secondary CTA buttons.
 - [ ] Add optional tertiary text CTA with label, href, target policy, and safe
   link normalization.
@@ -43,7 +42,7 @@ external-link detection inside CTA Banner.
 |---|---|
 | `core/widgets/core/ctaBanner.tsx` | Extend action schema/defaults/normalizer for target policy, icons, tertiary CTA, and description visibility; render safe link attrs. |
 | `core/admin/ui/widgets/editors/CtaBannerEditors.tsx` | Add Visual/Wizard controls for target policy, icons, tertiary CTA, and description visibility. |
-| `core/widgets/core/widgetSafeHref.ts` | Touch only if a shared safe-link attr helper already owns target/rel behavior or this leaf first splits a shared task. |
+| `core/widgets/core/widgetSafeHref.ts` | Touch only if this leaf must extend the shared owner/tested behavior itself; the default path is to consume the existing helper without redefining it. |
 | `tests/vitest/widgets/ctaBanner.test.tsx` | Cover safe target/rel output, icon enum rendering, tertiary CTA visibility, description toggle, and backwards compatibility. |
 | `tests/vitest/ui/cta-banner-editor-wave.test.tsx` | Cover editor controls for target policy, icon fields, tertiary CTA, and description toggle. |
 | `tests/vitest/widgets/widgetSafeHref.test.ts` | Run/update only if shared target/rel helper behavior changes. |

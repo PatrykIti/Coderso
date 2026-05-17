@@ -31,6 +31,9 @@ Task board for project work. Keep task files and this board in sync.
 - **To Do:** 273 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1598 tasks
+- **To Do:** 266 tasks
+- **In Progress:** 4 tasks
+- **Done:** 1605 tasks
 
 ---
 
@@ -283,13 +286,28 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-264-04 | Divider Editor Preview Reset and Wizard UX | Medium | Medium | Add inline preview, compact Wizard controls, and reset/normalize actions after shared fixes land |
 | TASK-264-05 | Divider Runtime DOM Marker Hygiene | Medium | Small | Remove or sanitize raw Divider style-token data markers from public DOM output |
 | TASK-264-06 | Divider Report Docs and Closure | Medium | Medium | Refresh Divider report/docs/changelog/board and final validation for the TASK-264 family |
-| TASK-263 | CTA Banner Widget Playwright Product Followups | High | Very Large | CTA Banner-only follow-up family for `REPORT_CTA_BANNER_WIDGET.md`, excluding TASK-256 shared-contract scope |
-| TASK-263-01 | CTA Banner Runtime Semantics and Accessibility | High | Large | Repair CTA-local empty badge, description color, border semantics, resolver defaults, section/action labels, and focus-visible output |
-| TASK-263-02 | CTA Banner Wizard and Action Editing UX | High | Large | Add Wizard CTA URL/secondary controls, variant cards, explicit action labels, invalid URL feedback, and secondary toggle |
-| TASK-263-03 | CTA Banner Visual Style and Button Controls | High | Large | Add CTA visual button border controls, optional TASK-256-02 Clear hook, and button radius/size options |
-| TASK-263-04 | CTA Banner Link Target and Conversion Options | Medium | Large | Add safe target/rel policy, icon enums, tertiary CTA, and description visibility controls |
-| TASK-263-05 | CTA Banner Layout Media and Motion Options | Medium | Large | Add CTA-local width, gradient, background media, and bounded motion options where page layout does not already own them |
-| TASK-263-06 | CTA Banner Report Docs and Closure | Medium | Medium | Refresh CTA report/docs/changelog/board and final validation for the TASK-263 family |
+| TASK-262 | Content List Widget Playwright Product Followups | High | Very Large | Content List-only follow-up family for `REPORT_CONTENT_LIST_WIDGET.md`, excluding TASK-256 shared-contract scope |
+| TASK-262-01 | Content List Source Picker and Filter Editor IA | High | Large | Repair source picker labels/deduplication/search, taxonomy/author editor barriers, and listing-mode filter feedback |
+| TASK-262-02 | Content List Section Empty State and Static Canvas Guidance | High | Large | Add section heading, source-aware empty copy, missing-source guidance, and saved-data canvas messaging |
+| TASK-262-03 | Content List Pagination and View All Navigation | High | Very Large | Add bounded page navigation and View all/Load more behavior without public-write or arbitrary endpoint scope |
+| TASK-262-04 | Content List Layout Media Tags and Card Preview Controls | High | Large | Repair Content List-local layout truthfulness, image ratio controls, tag badges, CTA fallback, and card/variant previews |
+| TASK-262-05 | Content List Report Docs and Closure | Medium | Medium | Refresh report/docs/changelog/board and final validation for the TASK-262 family |
+| TASK-261 | Contact Widget Playwright Product Followups | High | Very Large | Contact-only follow-up family for `REPORT_CONTACT_WIDGET.md`, excluding TASK-256 shared-contract scope |
+| TASK-261-01 | Contact Header, Details Links, and Semantic Output | High | Large | Add Contact section headings, panel headings, semantic details, and safe tel/mailto output |
+| TASK-261-02 | Contact Form Field Metadata and Public Submission Bridge | High | Very Large | Add field names/ids/autocomplete/custom labels and route active submits through existing Forms runtime hardening |
+| TASK-261-02-01 | Contact Field Metadata and Accessible HTML | High | Large | Add Contact-owned field labels/placeholders, names, ids, autocomplete, and layout metadata |
+| TASK-261-02-02 | Contact Static Form State and No-GET Safety | High | Medium | Prevent presentational Contact forms from native GET submission before Forms binding is enabled |
+| TASK-261-02-03 | Contact Forms Runtime Bridge and Public-Write Hardening | High | Large | Bind Contact to existing Forms records with strict field mapping, runtime hydration, nonce, and route/security proof |
+| TASK-261-03 | Contact Editor Mode Parity and Minimal Variant UX | High | Large | Repair Contact Wizard/Visual/Advanced UX, Wizard hours, minimal form controls, hints, and normalization feedback |
+| TASK-261-04 | Contact Map Validation, Fallback, and Display Controls | Medium | Medium | Add map title/description, validation, height, fullscreen, and fallback behavior |
+| TASK-261-05 | Contact Layout, Social Links, and Normalizer Polish | Medium | Medium | Add max-width, padding, bounded social links, and explicit default enum normalization |
+| TASK-261-06 | Contact Report, Docs, Changelog, and Closure | Medium | Medium | Refresh Contact report evidence, docs, changelog, board, and final validation |
+| TASK-260 | Compare Timeline Widget Playwright Product Followups | High | Very Large | Widget-specific follow-up family for `REPORT_COMPARE_TIMELINE_WIDGET.md`, excluding TASK-256 shared-contract scope |
+| TASK-260-01 | Compare Timeline Renderer Truthfulness and Accessibility | High | Large | Repair Compare Timeline-local renderer grid, guide, semantic, fallback, min-height, and overflow findings |
+| TASK-260-02 | Compare Timeline Segment Editing and Highlight Model | High | Large | Expand both-track segment editing, Wizard segment setup, preserved segment messaging, range feedback, and friendly track labels |
+| TASK-260-03 | Compare Timeline Axis Steps and Content Controls | High | Large | Add Visual step buttons, step descriptions, bounded range decisions, optional icons, and safe step/segment links |
+| TASK-260-04 | Compare Timeline Layout Typography and Visual Polish | Medium | Large | Add Compare Timeline-owned heading, width, padding, typography, motion, order, background, marker, preview, and spacing help |
+| TASK-260-05 | Compare Timeline Report Docs and Closure | Medium | Medium | Refresh report/docs/changelog/board and final validation for the TASK-260 family |
 | TASK-259 | Booking Calendar Widget Playwright Product Followups | High | Very Large | Widget-specific follow-up family for `REPORT_BOOKING_CALENDAR_WIDGET.md`, excluding TASK-256 shared-contract and TASK-258 Appointment Form scope |
 | TASK-259-01 | Booking Calendar Admin Preview Runtime Catalog Parity | High | Large | Hydrate admin canvas/editor preview with booking services/resources without persisting preview-only tokens |
 | TASK-259-02 | Booking Calendar Date Defaults, Range, and Past-Date Safety | High | Large | Add default/min/max date config and enforce public slots past-date policy |
@@ -337,6 +355,13 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-302 | Content List Block Shared Renderer and Color Control Residuals | High | Large | Done: shared `ContentListBlock` / `PostsFeedBlock` truthfulness, image/CTA renderer residuals, and Content List text-color clear/picker adoption are synchronized and validated |
+| TASK-263 | CTA Banner Widget Playwright Product Followups | High | Very Large | Done: CTA runtime, Wizard/Visual UX, button styling, safe CTA conversion options, shared-layout full-width parity, background/media/motion controls, report/docs sync, and closure validation are complete |
+| TASK-263-01 | CTA Banner Runtime Semantics and Accessibility | High | Large | Done: empty badge suppression, section labelling, focus-visible CTA links, truthful description color, and border-width semantics are covered |
+| TASK-263-02 | CTA Banner Wizard and Action Editing UX | High | Large | Done: Wizard variant cards, primary/secondary URLs, labelled action fields, invalid URL feedback, and intentional secondary visibility landed |
+| TASK-263-03 | CTA Banner Visual Style and Button Controls | High | Large | Done: CTA text/button clear adoption, button border controls, and independent button radius/size controls landed in Visual mode |
+| TASK-263-04 | CTA Banner Link Target and Conversion Options | Medium | Large | Done: safe new-tab link attrs, icon enums, tertiary CTA, and description visibility are synchronized across runtime and editor |
+| TASK-263-05 | CTA Banner Layout Media and Motion Options | Medium | Large | Done: CTA wrapper cleanup now honors shared block full-width, while CTA-owned gradient, background media, and CSS-safe motion controls are documented and tested |
+| TASK-263-06 | CTA Banner Report Docs and Closure | Medium | Medium | Done: CTA report matrix, widget docs, changelog, board rows, and final validation evidence are synchronized |
 | TASK-262 | Content List Widget Playwright Product Followups | High | Very Large | Done: source/filter IA, section context, saved-data canvas guidance, bounded pagination actions, tag badges, preview cards, report refresh, board sync, and changelog closure are aligned |
 | TASK-262-01 | Content List Source Picker and Filter Editor IA | High | Large | Done: source labels are friendly, content types are searchable/deduplicated, taxonomy suggestions use the taxonomy overview seam, and author filtering uses a picker/search flow |
 | TASK-262-02 | Content List Section Empty State and Static Canvas Guidance | High | Large | Done: Content List owns section heading/description, source-aware empty copy, and editor-side saved-data canvas guidance |

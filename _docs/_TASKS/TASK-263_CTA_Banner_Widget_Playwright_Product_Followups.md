@@ -6,7 +6,7 @@
 **Category:** Widgets + Content + Admin UI + Runtime Render + Accessibility + Playwright QA
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-252-06-05, TASK-256-07
-**Status:** To Do
+**Status:** Done (2026-05-17)
 
 ---
 
@@ -30,6 +30,16 @@ rows planned here:
 - `tests/unit/widgets/validator.test.ts` when the CTA schema changes
 - CTA Banner source docs and report evidence
 
+Shared prerequisites from TASK-256 are now landed:
+
+- TASK-256-02 owns the generic Clear/none/token semantics already implemented in
+  shared helpers. TASK-263 must only wire CTA-owned fields through that landed
+  contract.
+- TASK-256-04 already provides the shared `blockId` render contract through
+  `WidgetRenderer`; CTA accessibility labelling is now a local renderer follow-up.
+- TASK-256-06-02 already provides `resolveWidgetLinkAttrs()` for safe target/rel
+  output; CTA action adoption is now a local conversion follow-up.
+
 This family must not hide generic widget-contract fixes inside a CTA patch. If a
 leaf needs a shared editor update helper, generic Clear/none behavior, a shared
 safe-link helper, or a global accessibility/runtime ID primitive, route that work
@@ -47,12 +57,18 @@ In scope for TASK-263:
   feedback, and a clear secondary CTA enablement toggle.
 - CTA Banner style and button controls: Visual exposure for CTA-owned button
   border fields plus CTA-local button radius/size options. Generic Clear
-  behavior remains TASK-256-02; TASK-263 may only add CTA-local wiring if
-  TASK-256-02 explicitly leaves that hook after the shared contract lands.
+  behavior remains TASK-256-02; TASK-263 should now wire CTA-owned text/button
+  fields through the landed shared Clear contract without redefining generic
+  semantics.
 - CTA Banner conversion options: target/new-tab policy, safe rel generation,
-  button icon enums, optional tertiary text CTA, and description visibility.
+  button icon enums, optional tertiary text CTA, and description visibility,
+  consuming the landed shared `resolveWidgetLinkAttrs()` helper instead of
+  duplicating link-attribute logic locally.
 - CTA Banner layout/media/motion options: full-width mode, gradient background,
   background media, and bounded entrance effects when they stay inside CTA data.
+  BF-05 is satisfied through the existing shared block Layout panel
+  (`WidgetBlock.layout.container`) plus CTA internal-wrapper cleanup. Do not add
+  widget-local width state for this family.
 - Final CTA report/docs/changelog/board closure.
 
 Out of scope for TASK-263:
@@ -79,7 +95,7 @@ Out of scope for TASK-263:
 |---|---|
 | BUG-01, BUG-02, BUG-03, BUG-04, A1, A2, A3, A4, A5 | TASK-263-01, using TASK-256-04 only for any shared helper that already exists |
 | UX-03, UX-04, UX-05, UX-06, UX-07, UX-08 | TASK-263-02 |
-| UX-01 | TASK-256-02; TASK-263-03 may only add a CTA-local hook if TASK-256-02 explicitly leaves one |
+| UX-01 | TASK-263-03, wiring CTA-owned text/button fields through the landed TASK-256-02 Clear contract without reopening generic semantics |
 | UX-02, BUG-05 report alias for button radius, BF-01, BF-07 | TASK-263-03 |
 | BF-02, BF-03, BF-08, BF-09 | TASK-263-04 |
 | BF-04, BF-05, BF-06, BF-10 | TASK-263-05 |

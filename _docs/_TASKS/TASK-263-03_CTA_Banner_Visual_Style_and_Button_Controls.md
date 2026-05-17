@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Runtime Render + Style Controls
 **Estimated Effort:** Large
 **Dependencies:** TASK-263, TASK-263-01, TASK-256-02, TASK-256-07
-**Status:** To Do
+**Status:** Done (2026-05-17)
 
 ---
 
@@ -17,15 +17,15 @@ Add CTA Banner-owned Visual style controls and button shape/emphasis options.
 This leaf covers CTA-specific field wiring and product controls. It does not own
 the shared Clear/none/token semantics from TASK-256-02. If TASK-256-02 has not
 landed the final shared helper, do not invent a CTA-only replacement; keep the
-CTA wiring blocked or split the shared helper first. `UX-01` from the source
-report is routed to TASK-256-02 unless that shared task explicitly leaves a
-CTA-only hook after the generic Clear behavior is available.
+CTA wiring blocked or split the shared helper first. TASK-256-02 is now landed,
+so `UX-01` in this leaf means consuming that shared Clear contract for CTA-owned
+text/button fields, not redefining generic Clear behavior inside CTA Banner.
 
 ## Sub-Tasks
 
-- [ ] If TASK-256-02 leaves a CTA-only follow-up hook, wire `onClear` for CTA
-  text color fields: `text`, `badgeText`, `primaryButtonText`, and
-  `secondaryButtonText`. Otherwise keep `UX-01` entirely in TASK-256-02.
+- [ ] Wire `onClear` for CTA-owned text color fields: `text`, `badgeText`,
+  `primaryButtonText`, and `secondaryButtonText`, using the landed shared
+  Clear helpers from TASK-256-02 without redefining generic semantics.
 - [ ] Move CTA-owned `primaryButtonBorder` and `secondaryButtonBorder` controls
   from Advanced-only scope into Visual while leaving Advanced as raw token
   editing.
@@ -43,7 +43,7 @@ CTA-only hook after the generic Clear behavior is available.
 | File | Required change |
 |---|---|
 | `core/widgets/core/ctaBanner.tsx` | Add button radius/size enums, defaults, schema, normalizer, and runtime class/style resolution. |
-| `core/admin/ui/widgets/editors/CtaBannerEditors.tsx` | Add Visual controls for button borders, radius, and size/emphasis; add Clear wiring only if TASK-256-02 leaves a CTA-local hook. |
+| `core/admin/ui/widgets/editors/CtaBannerEditors.tsx` | Add Visual controls for button borders, radius, and size/emphasis; wire CTA-owned text/button Clear actions through the landed TASK-256-02 helper contract. |
 | `tests/vitest/widgets/ctaBanner.test.tsx` | Cover schema/normalizer/runtime classes for button radius and size plus clearable text fields only if CTA-local Clear wiring is explicitly in scope. |
 | `tests/vitest/ui/cta-banner-editor-wave.test.tsx` | Cover Visual controls, Advanced raw token retention, and no duplicate/no-op style rows. |
 | `tests/vitest/widgets/styleNoneTokens.test.tsx` | Run/update only if this leaf touches shared Clear/none semantics after TASK-256-02. |
@@ -53,8 +53,8 @@ CTA-only hook after the generic Clear behavior is available.
 ## Implementation Pseudocode
 
 ```ts
-type CtaButtonRadius = "inherit" | "none" | "md" | "lg" | "xl" | "pill";
-type CtaButtonSize = "sm" | "md" | "lg";
+type CtaButtonRadius = "inherit" | "none" | "md" | "lg" | "xl" | "2xl" | "pill";
+type CtaButtonSize = "none" | "sm" | "md" | "lg";
 
 type CtaBannerData = {
   style?: {
@@ -69,22 +69,31 @@ Class resolvers:
 
 ```ts
 function resolveButtonRadius(value: string | undefined, container: CtaBannerRadius) {
-  if (value === "inherit") return radiusClassMap[container] || "rounded-md";
+  if (value === "inherit") {
+    return container === "none" ? "" : radiusClassMap[container] || "rounded-md";
+  }
   if (value === "pill") return "rounded-full";
-  if (value === "none" || value === "md" || value === "lg" || value === "xl") {
+  if (
+    value === "none" ||
+    value === "md" ||
+    value === "lg" ||
+    value === "xl" ||
+    value === "2xl"
+  ) {
     return buttonRadiusClassMap[value];
   }
   return "rounded-md";
 }
 
 function resolveButtonSize(value: string | undefined) {
+  if (value === "none") return "";
   if (value === "sm") return "px-3 py-1.5 text-xs";
-  if (value === "lg") return "px-5 py-3 text-base";
+  if (value === "lg") return "px-5 py-2.5 text-base";
   return "px-4 py-2 text-sm";
 }
 ```
 
-CTA-local Clear hook, only when TASK-256-02 explicitly leaves it:
+Shared Clear wiring using the landed TASK-256-02 contract:
 
 ```tsx
 <ColorField
@@ -129,8 +138,8 @@ No API routes are added.
 ## Documentation Updates Required
 
 - Update `_docs/_WIDGETS/CTA_BANNER.md` with button border, button radius, and
-  button size controls; document Clear fields only if TASK-256-02 leaves a
-  CTA-local hook.
+  button size controls; document CTA-owned text/button Clear wiring as a
+  consumption of the landed TASK-256-02 contract.
 - Update `_docs/PLAYWRIGHT/REPORT_CTA_BANNER_WIDGET.md` rows UX-02, BUG-05
   report alias for BF-01, BF-01, and BF-07 after validation. UX-01 remains
   routed to TASK-256-02 unless explicitly reclassified.
@@ -144,8 +153,8 @@ No API routes are added.
 
 - CTA Visual mode exposes all day-to-day button colors/borders without forcing
   users into Advanced.
-- CTA text color Clear behavior is either proven through TASK-256-02 or wired
-  here only when TASK-256-02 explicitly leaves a CTA-local hook.
+- CTA text/button Clear behavior is wired here through the landed TASK-256-02
+  helper contract without redefining generic semantics.
 - Primary and secondary buttons can differ in emphasis and shape without
   breaking existing saved pages.
 - New style controls are schema-owned, normalized, documented, and tested.

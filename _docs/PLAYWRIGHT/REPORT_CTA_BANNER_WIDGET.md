@@ -1,6 +1,6 @@
 # RAPORT: CTA Banner Widget — Analiza UX/UI i brakujące funkcjonalności
 
-> **Status:** Zakończony
+> **Status:** Zamkniety po TASK-263 (2026-05-17)
 > **Data:** 2026-05-16
 > **Sesja:** Playwright #1 (CTA Banner Widget)
 > **Środowisko:** http://localhost:5173/admin · http://localhost:3000
@@ -300,14 +300,50 @@ Widget CTA Banner to kompaktowy pasek konwersyjny służący do osadzania wezwan
 
 ---
 
-## Status po TASK-256 (2026-05-17)
+## Status po TASK-263 (2026-05-17)
 
-- Current TASK-256 role for CTA Banner is shared-contract routing only. CTA
-  widget-owned product/editor/runtime follow-ups continue through the
-  `TASK-263` family.
-- Shared rows from this report remain split across `TASK-256-02` (generic clear
-  semantics) and `TASK-256-06-02` (shared safe-link helper evidence). TASK-256
-  does not claim CTA-specific implementation beyond those shared owners; final
-  widget execution remains routed to `TASK-263`.
+### Final matrix
+
+| ID | Final status | Evidence | Owner |
+|---|---|---|---|
+| BUG-01 | Fixed | Empty badge pill no longer renders when badge copy is blank; covered in `tests/vitest/widgets/ctaBanner.test.tsx`. | TASK-263-01 |
+| BUG-02 | Fixed | Description now follows the configured CTA text-color path instead of hardcoding `var(--color-text)`; covered in `tests/vitest/widgets/ctaBanner.test.tsx`. | TASK-263-01 |
+| BUG-03 | Fixed | CTA container removes the semantic `border` class when `borderWidth="0"`; covered in `tests/vitest/widgets/ctaBanner.test.tsx`. | TASK-263-01 |
+| BUG-04 | Fixed | CTA border/radius/padding resolvers now accept current default enum values explicitly; covered in `tests/vitest/widgets/ctaBanner.test.tsx`. | TASK-263-01 |
+| UX-01 | Fixed | CTA text/button clear wiring now consumes the landed shared Clear contract from TASK-256-02. | TASK-263-03 consuming TASK-256-02 |
+| UX-02 | Fixed | `primaryButtonBorder` and `secondaryButtonBorder` moved into Visual mode. | TASK-263-03 |
+| UX-03 | Fixed | Wizard now includes the primary CTA URL field. | TASK-263-02 |
+| UX-04 | Fixed | Wizard now exposes secondary CTA enablement plus label/URL fields. | TASK-263-02 |
+| UX-05 | Fixed | Wizard uses CTA variant cards instead of the old dropdown-only flow. | TASK-263-02 |
+| UX-06 | Fixed | Action editors now use explicit `Label` and `URL` labels. | TASK-263-02 |
+| UX-07 | Fixed | Invalid URLs stay in draft state with inline feedback instead of silently collapsing to `#`. | TASK-263-02 |
+| UX-08 | Fixed | Secondary CTA visibility is controlled intentionally through an explicit toggle. | TASK-263-02 |
+| BF-01 | Fixed | CTA button radius is now configurable without changing banner radius. | TASK-263-03 |
+| BF-02 | Fixed | CTA links now support bounded new-tab behavior and derived safe `rel` attributes. | TASK-263-04 |
+| BF-03 | Fixed | CTA actions now support allowlisted icon enums. | TASK-263-04 |
+| BF-04 | Fixed | CTA background now supports bounded linear gradients in Visual mode. | TASK-263-05 |
+| BF-05 | Fixed | Full-width now routes through the shared block Layout panel (`WidgetBlock.layout.container`) plus CTA wrapper cleanup; no CTA-local width schema was added. | TASK-263-05 |
+| BF-06 | Fixed | CTA background now supports safe image selection and external image URLs. | TASK-263-05 |
+| BF-07 | Fixed | Primary and secondary CTA button sizes can now differ intentionally. | TASK-263-03 |
+| BF-08 | Fixed | CTA now supports an optional tertiary text CTA. | TASK-263-04 |
+| BF-09 | Fixed | Description visibility is now controlled by a dedicated toggle. | TASK-263-04 |
+| BF-10 | Fixed | CTA now supports CSS-only, reduced-motion-safe `fade-in` and `slide-up` presets. | TASK-263-05 |
+| A1 | Fixed | CTA section now exposes `aria-labelledby` or `aria-label`. | TASK-263-01 |
+| A2 | Reclassified | Visible CTA text already provides accessible link names in the current product scope; no persisted raw `aria-label` field was added. | TASK-263-01 report closure |
+| A3 | Fixed | Badge output is now intentional plain text only when badge copy exists. | TASK-263-01 |
+| A4 | Fixed | CTA links now include CTA-local `focus-visible` classes. | TASK-263-01 |
+| A5 | Fixed | Description contrast path now respects the configured CTA text color. | TASK-263-01 |
+
+### Validation
+
+- `bun run test:vitest -- tests/vitest/widgets/ctaBanner.test.tsx` - PASS
+- `bun run test:vitest -- tests/vitest/ui/cta-banner-editor-wave.test.tsx` - PASS
+- `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` - PASS
+- `bun test tests/unit/widgets/validator.test.ts` - PASS
+- `bun --cwd core lint` - PASS
+- `bun --cwd core lint:types` - PASS
+- `bun run gates:coderso` - PASS
+- `bun run scan:security:strict` - PASS
+- `bun run precommit` - PASS
 
 *Raport wygenerowany na podstawie analizy kodu i testów Playwright — 2026-05-16.*
