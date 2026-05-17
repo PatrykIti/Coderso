@@ -103,6 +103,25 @@ vi.mock("@/components/ui/select", () => {
   };
 });
 
+vi.mock("@/components/ui/switch", () => ({
+  Switch: ({
+    checked,
+    onCheckedChange,
+    ...props
+  }: {
+    checked?: boolean;
+    onCheckedChange?: (checked: boolean) => void;
+    [key: string]: unknown;
+  }) => (
+    <input
+      type="checkbox"
+      checked={checked}
+      onChange={(event) => onCheckedChange?.(event.target.checked)}
+      {...props}
+    />
+  ),
+}));
+
 const mount = (node: React.ReactNode) => {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -154,27 +173,11 @@ const clickByText = (container: ParentNode, text: string, index = 0) => {
   });
 };
 
-const findInputByPlaceholder = (container: ParentNode, placeholder: string) =>
-  Array.from(container.querySelectorAll("input")).find(
-    (element) =>
-      element instanceof HTMLInputElement && element.getAttribute("placeholder") === placeholder
-  );
-
-const findInputsByPlaceholder = (container: ParentNode, placeholder: string) =>
-  Array.from(container.querySelectorAll("input")).filter(
-    (element) =>
-      element instanceof HTMLInputElement && element.getAttribute("placeholder") === placeholder
-  );
-
-const findSelectsByOptions = (container: ParentNode, values: string[]) =>
-  Array.from(container.querySelectorAll("select")).filter((element) => {
-    if (!(element instanceof HTMLSelectElement)) return false;
-    const optionValues = Array.from(element.options).map((option) => option.value);
-    return values.every((value) => optionValues.includes(value));
-  });
-
 const normalizeText = (value: string | null | undefined) =>
   (value ?? "").replace(/\s+/g, " ").trim().toLowerCase();
+
+const hasExactText = (element: Element, text: string) =>
+  normalizeText(element.textContent) === normalizeText(text);
 
 const findPanelByTitle = (container: ParentNode, title: string) =>
   Array.from(container.querySelectorAll("div")).find((panel) =>
@@ -183,22 +186,96 @@ const findPanelByTitle = (container: ParentNode, title: string) =>
     )
   );
 
+const findSectionCard = (container: ParentNode, title: string, index = 0) =>
+  Array.from(container.querySelectorAll("div"))
+    .filter(
+      (candidate) =>
+        Array.from(candidate.querySelectorAll("p")).some((paragraph) =>
+          hasExactText(paragraph, title)
+        ) && Boolean(candidate.querySelector("select") || candidate.querySelector("input"))
+    )
+    .sort((left, right) => left.querySelectorAll("*").length - right.querySelectorAll("*").length)[
+    index
+  ];
+
+const findInputByLabel = (container: ParentNode, label: string, index = 0) =>
+  Array.from(container.querySelectorAll("label"))
+    .filter((candidate) => hasExactText(candidate, label))
+    .map((candidate) => candidate.querySelector('input:not([type="color"])'))
+    .filter((candidate): candidate is HTMLInputElement => candidate instanceof HTMLInputElement)[
+    index
+  ];
+
+const findSelectByLabel = (container: ParentNode, label: string, index = 0) =>
+  Array.from(container.querySelectorAll("div"))
+    .filter((candidate) => {
+      const directTextChild = Array.from(candidate.children).find(
+        (child) =>
+          (child instanceof HTMLParagraphElement || child instanceof HTMLSpanElement) &&
+          hasExactText(child, label)
+      );
+      return Boolean(directTextChild && candidate.querySelector("select"));
+    })
+    .map((candidate) => candidate.querySelector("select"))
+    .filter((candidate): candidate is HTMLSelectElement => candidate instanceof HTMLSelectElement)[
+    index
+  ];
+
+const findCheckboxByLabel = (container: ParentNode, label: string, index = 0) =>
+  Array.from(container.querySelectorAll("div"))
+    .filter(
+      (candidate) =>
+        Boolean(candidate.querySelector('input[type="checkbox"]')) &&
+        Array.from(candidate.querySelectorAll("p")).some((paragraph) =>
+          hasExactText(paragraph, label)
+        )
+    )
+    .sort((left, right) => left.querySelectorAll("*").length - right.querySelectorAll("*").length)
+    .map((candidate) => candidate.querySelector('input[type="checkbox"]'))
+    .filter((candidate): candidate is HTMLInputElement => candidate instanceof HTMLInputElement)[
+    index
+  ];
+
+const findColorFieldByLabel = (container: ParentNode, label: string, index = 0) =>
+  Array.from(container.querySelectorAll("div"))
+    .filter((candidate) => {
+      const labelNode = Array.from(candidate.querySelectorAll("p")).find((paragraph) =>
+        hasExactText(paragraph, label)
+      );
+      return Boolean(labelNode && candidate.querySelector('input[type="color"]'));
+    })
+    .sort((left, right) => left.querySelectorAll("*").length - right.querySelectorAll("*").length)[
+    index
+  ];
+
+const findColorInputByLabel = (container: ParentNode, label: string, index = 0) =>
+  findColorFieldByLabel(container, label, index)?.querySelector('input[type="color"]');
+
+const findColorTextInputByLabel = (container: ParentNode, label: string, index = 0) =>
+  findColorFieldByLabel(container, label, index)?.querySelector('input:not([type="color"])');
+
 afterEach(() => {
   document.body.innerHTML = "";
   vi.restoreAllMocks();
 });
 
-test("Footer editors cover quick setup, visual content edits, social links, and advanced layout tokens", async () => {
-  const { FooterAdvancedEditor, FooterVisualEditor, FooterWizardEditor } =
+test("FooterWizardEditor exposes hidden-link guidance, brand basics, and modern social controls", async () => {
+  const { FooterWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/FooterEditors");
 
-  const onChangeSpy = vi.fn();
   let latestValue: FooterData = {
     columns: [
-      { title: "", links: [{ label: "", href: "" }] },
-      { title: "", links: [] },
+      {
+        title: "Company",
+        links: [
+          { label: "Docs", href: "/docs" },
+          { label: "API", href: "/api" },
+        ],
+      },
+      { title: "Resources", links: [] },
       { title: "Hidden", links: [{ label: "Legacy", href: "/legacy" }] },
     ],
+    legal: {},
     social: [],
   };
   let currentVariant = "columns-2";
@@ -208,219 +285,95 @@ test("Footer editors cover quick setup, visual content edits, social links, and 
     const [variant, setVariant] = useState(currentVariant);
 
     return (
-      <>
-        <FooterWizardEditor
-          value={value}
-          onChange={(next) => {
-            latestValue = next;
-            onChangeSpy(next);
-            setValue(next);
-          }}
-          variant={variant}
-          onVariantChange={(next) => {
-            currentVariant = next;
-            setVariant(next);
-          }}
-        />
-        <FooterVisualEditor
-          value={value}
-          onChange={(next) => {
-            latestValue = next;
-            onChangeSpy(next);
-            setValue(next);
-          }}
-          variant={variant}
-          onVariantChange={(next) => {
-            currentVariant = next;
-            setVariant(next);
-          }}
-        />
-        <FooterAdvancedEditor
-          value={value}
-          onChange={(next) => {
-            latestValue = next;
-            onChangeSpy(next);
-            setValue(next);
-          }}
-          variant={variant}
-          onVariantChange={() => undefined}
-        />
-      </>
+      <FooterWizardEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant={variant}
+        onVariantChange={(next) => {
+          currentVariant = next;
+          setVariant(next);
+        }}
+      />
     );
   };
 
   const view = mount(<Harness />);
 
   try {
-    const variantSelect = findSelectsByOptions(view.container, [
-      "columns-2",
-      "columns-3",
-      "minimal",
-    ])[0];
-    setSelectValue(variantSelect, "minimal");
-    expect(currentVariant).toBe("minimal");
+    expect(view.container.textContent).toContain("Brand basics");
+    expect(view.container.textContent).toContain(
+      "1 additional link stays available in Visual mode."
+    );
 
-    setInputValue(findInputByPlaceholder(view.container, "Column 1 title"), "Company");
-    setInputValue(findInputByPlaceholder(view.container, "First link label"), "Docs");
-    setInputValue(findInputByPlaceholder(view.container, "First link URL"), "/docs");
-    setInputValue(findInputByPlaceholder(view.container, "© 2026 Company name"), "© 2026 Example");
-    setInputValue(findInputByPlaceholder(view.container, "Privacy URL"), "/privacy");
-    setInputValue(findInputByPlaceholder(view.container, "Terms URL"), "/terms");
+    setSelectValue(findSelectByLabel(view.container, "Footer variant"), "minimal");
+    setInputValue(findInputByLabel(view.container, "Brand name"), "Coderso");
+    setInputValue(findInputByLabel(view.container, "Tagline"), "Build confidently");
+    setInputValue(findInputByLabel(view.container, "Privacy label"), "Polityka");
+    expect(findCheckboxByLabel(view.container, "Show social links")).toBeInstanceOf(
+      HTMLInputElement
+    );
 
     clickByText(view.container, "Add social");
-    setSelectValue(
-      findSelectsByOptions(view.container, [
-        "linkedin",
-        "twitter",
-        "github",
-        "youtube",
-        "facebook",
-        "instagram",
-      ])[0],
-      "github"
+    const socialCard = findSectionCard(view.container, "Social link 1");
+    setSelectValue(findSelectByLabel(socialCard as ParentNode, "Platform"), "custom");
+    const updatedSocialCard = findSectionCard(view.container, "Social link 1");
+    setInputValue(
+      findInputByLabel(updatedSocialCard as ParentNode, "URL"),
+      "https://community.example"
     );
     setInputValue(
-      findInputByPlaceholder(view.container, "Social URL"),
-      "https://github.com/example"
+      findInputByLabel(updatedSocialCard as ParentNode, "Accessible label"),
+      "Community"
     );
 
-    expect(latestValue.legal).toMatchObject({
-      copyright: "© 2026 Example",
-      privacy: "/privacy",
-      terms: "/terms",
+    expect(currentVariant).toBe("minimal");
+    expect(latestValue.brand).toMatchObject({
+      logoText: "Coderso",
+      tagline: "Build confidently",
     });
+    expect(latestValue.legal?.privacyLabel).toBe("Polityka");
     expect(latestValue.social?.[0]).toEqual({
-      type: "github",
-      href: "https://github.com/example",
-    });
-
-    setSelectValue(variantSelect, "columns-3");
-    expect(currentVariant).toBe("columns-3");
-
-    const columnsPanel = findPanelByTitle(view.container, "Columns and links");
-    clickByText(columnsPanel as ParentNode, "Add link", 1);
-    setInputValue(findInputsByPlaceholder(columnsPanel as ParentNode, "Label").at(-1), "API");
-    setInputValue(findInputsByPlaceholder(columnsPanel as ParentNode, "URL").at(-1), "/api");
-    clickByText(columnsPanel as ParentNode, "Remove", 0);
-
-    const socialPanel = findPanelByTitle(view.container, "Social links and icon style");
-    clickByText(socialPanel as ParentNode, "Add social");
-    setSelectValue(
-      findSelectsByOptions(socialPanel as ParentNode, [
-        "linkedin",
-        "twitter",
-        "github",
-        "youtube",
-        "facebook",
-        "instagram",
-      ]).at(-1),
-      "youtube"
-    );
-    setInputValue(
-      findInputsByPlaceholder(socialPanel as ParentNode, "Social URL").at(-1),
-      "https://youtube.com/example"
-    );
-    setInputValue(
-      findInputByPlaceholder(socialPanel as ParentNode, "Social color (e.g. #0f172a)"),
-      "#111111"
-    );
-
-    const colorsPanel = findPanelByTitle(view.container, "Colors and borders");
-    setInputValue(findInputByPlaceholder(colorsPanel as ParentNode, "Surface color"), "#ffffff");
-    setInputValue(findInputByPlaceholder(colorsPanel as ParentNode, "Border color"), "#e5e7eb");
-    setInputValue(findInputByPlaceholder(colorsPanel as ParentNode, "Text color"), "#0f172a");
-    setInputValue(findInputByPlaceholder(colorsPanel as ParentNode, "Link color"), "#2563eb");
-    setSelectValue(findSelectsByOptions(colorsPanel as ParentNode, ["0", "1", "2", "3"])[0], "2");
-
-    const typoPanel = findPanelByTitle(view.container, "Typography and spacing");
-    setInputValue(findInputByPlaceholder(typoPanel as ParentNode, "Heading color"), "#111827");
-    setInputValue(findInputByPlaceholder(typoPanel as ParentNode, "Legal text color"), "#6b7280");
-    setSelectValue(
-      findSelectsByOptions(typoPanel as ParentNode, ["none", "xs", "sm", "base"])[0],
-      "base"
-    );
-    setSelectValue(
-      findSelectsByOptions(typoPanel as ParentNode, ["none", "uppercase", "capitalize"])[0],
-      "capitalize"
-    );
-    setSelectValue(
-      findSelectsByOptions(typoPanel as ParentNode, ["none", "8", "10", "12"])[0],
-      "12"
-    );
-
-    const layoutPanel = findPanelByTitle(view.container, "Layout tokens");
-    const alignSelects = findSelectsByOptions(layoutPanel as ParentNode, [
-      "left",
-      "center",
-      "right",
-    ]);
-    setSelectValue(alignSelects[0], "center");
-    setSelectValue(alignSelects[1], "left");
-    setSelectValue(
-      findSelectsByOptions(layoutPanel as ParentNode, ["none", "5xl", "6xl", "7xl"])[0],
-      "7xl"
-    );
-    setSelectValue(
-      findSelectsByOptions(layoutPanel as ParentNode, ["none", "4", "6", "8"])[0],
-      "8"
-    );
-    setSelectValue(
-      findSelectsByOptions(layoutPanel as ParentNode, ["none", "8", "10", "12"])[0],
-      "8"
-    );
-
-    expect(onChangeSpy).toHaveBeenCalled();
-    expect(latestValue.columns[0]).toMatchObject({
-      title: "Company",
-    });
-    expect(
-      latestValue.columns.some((column) =>
-        column.links.some((link) => link.label === "API" && link.href === "/api")
-      )
-    ).toBe(true);
-    expect(latestValue.social).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ type: "github", href: "https://github.com/example" }),
-        expect.objectContaining({ type: "youtube", href: "https://youtube.com/example" }),
-      ])
-    );
-    expect(latestValue.style).toMatchObject({
-      socialColor: "#111111",
-      surfaceColor: "#ffffff",
-      borderColor: "#e5e7eb",
-      textColor: "#0f172a",
-      linkColor: "#2563eb",
-      borderTopWidth: "2",
-      headingColor: "#111827",
-      legalTextColor: "#6b7280",
-      fontSize: "base",
-      headingTransform: "capitalize",
-    });
-    expect(latestValue.layout).toMatchObject({
-      align: "center",
-      legalAlign: "left",
-      maxWidth: "7xl",
-      columnGap: "8",
-      sectionPaddingY: "8",
+      type: "custom",
+      href: "https://community.example",
+      label: "Community",
     });
   } finally {
     view.cleanup();
   }
 });
 
-test("Footer visual editor updates visible column titles and removes social links", async () => {
+test("FooterVisualEditor keeps link ordering deterministic and exposes labeled clearable color controls", async () => {
   const { FooterVisualEditor } =
     await import("../../../core/admin/ui/widgets/editors/FooterEditors");
 
   let latestValue: FooterData = {
     columns: [
-      { title: "Company", links: [{ label: "Docs", href: "/docs" }] },
-      { title: "Product", links: [{ label: "API", href: "/api" }] },
+      {
+        title: "Company",
+        links: [
+          { label: "Docs", href: "/docs", target: "_self" },
+          { label: "API", href: "/api", target: "_blank" },
+        ],
+      },
+      { title: "Resources", links: [{ label: "Blog", href: "/blog" }] },
     ],
-    social: [
-      { type: "linkedin", href: "https://linkedin.com/company/example" },
-      { type: "github", href: "https://github.com/example" },
-    ],
+    legal: {
+      enabled: true,
+      privacy: "/privacy",
+      privacyLabel: "Privacy",
+      terms: "/terms",
+      termsLabel: "Terms",
+    },
+    socialEnabled: true,
+    social: [{ type: "linkedin", href: "https://linkedin.com/company/example" }],
+    style: {
+      textColor: "#111827",
+      linkColor: "#2563eb",
+      surfaceColor: "#ffffff",
+    },
   };
 
   const Harness = () => {
@@ -441,70 +394,87 @@ test("Footer visual editor updates visible column titles and removes social link
   const view = mount(<Harness />);
 
   try {
-    setInputValue(findInputByPlaceholder(view.container, "Column 1 title"), "Platform");
+    expect(view.container.textContent).toContain("Column order stays slot-bound");
+    expect(findSelectByLabel(view.container, "Section padding")).toBeUndefined();
 
-    const firstSocialUrlInput = findInputsByPlaceholder(view.container, "Social URL")[0];
-    const firstSocialRow = firstSocialUrlInput?.closest("div.grid");
-    const socialRemoveButton = firstSocialRow?.querySelector("button");
-    if (!(socialRemoveButton instanceof HTMLButtonElement)) {
-      throw new Error("Missing social remove button");
-    }
-    React.act(() => {
-      socialRemoveButton.click();
-    });
+    const firstLinkCard = findSectionCard(view.container, "Link 1");
+    clickByText(firstLinkCard as ParentNode, "Move down");
+    const movedFirstLinkCard = findSectionCard(view.container, "Link 1");
+    setSelectValue(findSelectByLabel(movedFirstLinkCard as ParentNode, "Link target"), "_blank");
 
-    expect(latestValue.columns[0]).toMatchObject({
-      title: "Platform",
+    const brandPanel = findPanelByTitle(view.container, "Brand and legal");
+    setInputValue(findInputByLabel(brandPanel as ParentNode, "Brand name"), "Coderso");
+    setInputValue(findInputByLabel(brandPanel as ParentNode, "Privacy label"), "Privacy policy");
+    expect(findCheckboxByLabel(brandPanel as ParentNode, "Show legal strip")).toBeInstanceOf(
+      HTMLInputElement
+    );
+
+    const colorsPanel = findPanelByTitle(view.container, "Colors and borders");
+    expect(findColorInputByLabel(colorsPanel as ParentNode, "Text color")).toBeInstanceOf(
+      HTMLInputElement
+    );
+    expect(findColorInputByLabel(colorsPanel as ParentNode, "Link color")).toBeInstanceOf(
+      HTMLInputElement
+    );
+    setInputValue(findColorTextInputByLabel(colorsPanel as ParentNode, "Link color"), "#1d4ed8");
+    clickByText(
+      findColorFieldByLabel(colorsPanel as ParentNode, "Text color") as ParentNode,
+      "Clear"
+    );
+
+    const typographyPanel = findPanelByTitle(view.container, "Typography and link styling");
+    setSelectValue(findSelectByLabel(typographyPanel as ParentNode, "Link underline"), "always");
+    setSelectValue(
+      findSelectByLabel(typographyPanel as ParentNode, "Link font weight"),
+      "semibold"
+    );
+    setSelectValue(findSelectByLabel(typographyPanel as ParentNode, "Link letter spacing"), "wide");
+    setInputValue(
+      findColorTextInputByLabel(typographyPanel as ParentNode, "Link hover color"),
+      "#2563eb"
+    );
+
+    expect(latestValue.columns[0]?.links[0]).toMatchObject({
+      label: "API",
+      href: "/api",
+      target: "_blank",
     });
-    expect(latestValue.social).toEqual([
-      {
-        type: "github",
-        href: "https://github.com/example",
-      },
-    ]);
+    expect(latestValue.brand?.logoText).toBe("Coderso");
+    expect(latestValue.legal?.privacyLabel).toBe("Privacy policy");
+    expect(latestValue.style).toMatchObject({
+      linkColor: "#1d4ed8",
+      linkUnderline: "always",
+      linkFontWeight: "semibold",
+      linkLetterSpacing: "wide",
+      linkHoverColor: "#2563eb",
+    });
+    expect(latestValue.style?.textColor).toBeUndefined();
   } finally {
     view.cleanup();
   }
 });
 
-test("Footer editors fall back safely for sparse columns, social, layout, and style data", async () => {
-  const { FooterAdvancedEditor, FooterVisualEditor, FooterWizardEditor } =
+test("FooterAdvancedEditor keeps layout tokens labeled and owns the only section padding control", async () => {
+  const { FooterAdvancedEditor, FooterVisualEditor } =
     await import("../../../core/admin/ui/widgets/editors/FooterEditors");
 
   let latestValue: FooterData = {
-    columns: [{ title: "", links: [] }],
+    columns: [{ title: "Company", links: [] }],
+    layout: {},
   };
-  let currentVariant = "minimal";
 
   const Harness = () => {
     const [value, setValue] = useState<FooterData>(latestValue);
-    const [variant, setVariant] = useState(currentVariant);
 
     return (
       <>
-        <FooterWizardEditor
-          value={value}
-          onChange={(next) => {
-            latestValue = next;
-            setValue(next);
-          }}
-          variant={variant}
-          onVariantChange={(next) => {
-            currentVariant = next;
-            setVariant(next);
-          }}
-        />
         <FooterVisualEditor
           value={value}
           onChange={(next) => {
             latestValue = next;
             setValue(next);
           }}
-          variant={variant}
-          onVariantChange={(next) => {
-            currentVariant = next;
-            setVariant(next);
-          }}
+          variant="minimal"
         />
         <FooterAdvancedEditor
           value={value}
@@ -512,7 +482,7 @@ test("Footer editors fall back safely for sparse columns, social, layout, and st
             latestValue = next;
             setValue(next);
           }}
-          variant={variant}
+          variant="minimal"
           onVariantChange={() => undefined}
         />
       </>
@@ -522,91 +492,37 @@ test("Footer editors fall back safely for sparse columns, social, layout, and st
   const view = mount(<Harness />);
 
   try {
-    expect(
-      (
-        findSelectsByOptions(view.container, ["columns-2", "columns-3", "minimal"])[0] as
-          | HTMLSelectElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("minimal");
-    expect(
-      (
-        findInputByPlaceholder(view.container, "Column 1 title") as
-          | HTMLInputElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("Column 1");
-    expect(view.container.textContent).toContain("No social links configured.");
-
-    const visualColumnsPanel = findPanelByTitle(view.container, "Columns and links");
-    clickByText(visualColumnsPanel as ParentNode, "Add link");
-    setInputValue(findInputByPlaceholder(visualColumnsPanel as ParentNode, "Label"), "Docs");
-    setInputValue(findInputByPlaceholder(visualColumnsPanel as ParentNode, "URL"), "/docs");
-
-    expect(latestValue.columns[0]?.links).toEqual([{ label: "Docs", href: "/docs" }]);
-
-    clickByText(visualColumnsPanel as ParentNode, "Remove");
-    expect(latestValue.columns[0]?.links).toEqual([]);
-
-    const socialPanel = findPanelByTitle(view.container, "Social links and icon style");
-    clickByText(socialPanel as ParentNode, "Add social");
-    const socialTypeSelect = findSelectsByOptions(socialPanel as ParentNode, [
-      "linkedin",
-      "twitter",
-      "github",
-      "youtube",
-      "facebook",
-      "instagram",
-    ])[0];
-    setSelectValue(socialTypeSelect, "twitter");
-    setInputValue(
-      findInputByPlaceholder(socialPanel as ParentNode, "Social URL"),
-      "https://x.com/example"
+    expect(Array.from(view.container.textContent?.matchAll(/Section padding/g) ?? [])).toHaveLength(
+      1
     );
 
-    expect(latestValue.social).toEqual([
-      {
-        type: "twitter",
-        href: "https://x.com/example",
-      },
-    ]);
+    const advancedPanel = findPanelByTitle(view.container, "Layout tokens");
+    expect(findSelectByLabel(advancedPanel as ParentNode, "Columns alignment")).toBeInstanceOf(
+      HTMLSelectElement
+    );
+    expect(findSelectByLabel(advancedPanel as ParentNode, "Legal row alignment")).toBeInstanceOf(
+      HTMLSelectElement
+    );
+    expect(findSelectByLabel(advancedPanel as ParentNode, "Horizontal padding")).toBeInstanceOf(
+      HTMLSelectElement
+    );
+    expect(findSelectByLabel(advancedPanel as ParentNode, "Column breakpoint")).toBeInstanceOf(
+      HTMLSelectElement
+    );
 
-    const advancedLayoutPanel = findPanelByTitle(view.container, "Layout tokens");
-    const selects = findSelectsByOptions(advancedLayoutPanel as ParentNode, [
-      "left",
-      "center",
-      "right",
-    ]);
-    expect((selects[0] as HTMLSelectElement | null | undefined)?.value).toBe("left");
-    expect((selects[1] as HTMLSelectElement | null | undefined)?.value).toBe("right");
-    expect(
-      (
-        findSelectsByOptions(advancedLayoutPanel as ParentNode, [
-          "none",
-          "5xl",
-          "6xl",
-          "7xl",
-        ])[0] as HTMLSelectElement | null | undefined
-      )?.value
-    ).toBe("6xl");
-    expect(
-      (
-        findSelectsByOptions(advancedLayoutPanel as ParentNode, ["none", "4", "6", "8"])[0] as
-          | HTMLSelectElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("6");
-    expect(
-      (
-        findSelectsByOptions(advancedLayoutPanel as ParentNode, ["none", "8", "10", "12"])[0] as
-          | HTMLSelectElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("10");
+    setSelectValue(findSelectByLabel(advancedPanel as ParentNode, "Columns alignment"), "center");
+    setSelectValue(findSelectByLabel(advancedPanel as ParentNode, "Legal row alignment"), "left");
+    setSelectValue(findSelectByLabel(advancedPanel as ParentNode, "Horizontal padding"), "8");
+    setSelectValue(findSelectByLabel(advancedPanel as ParentNode, "Column breakpoint"), "lg");
+    setSelectValue(findSelectByLabel(advancedPanel as ParentNode, "Section padding"), "12");
+
+    expect(latestValue.layout).toMatchObject({
+      align: "center",
+      legalAlign: "left",
+      paddingX: "8",
+      columnBreakpoint: "lg",
+      sectionPaddingY: "12",
+    });
   } finally {
     view.cleanup();
   }

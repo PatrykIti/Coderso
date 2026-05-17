@@ -417,6 +417,7 @@ test("hero, navigation, footer, and timelines accept none as visual off tokens",
           ...footerDefaults.layout,
           maxWidth: "none",
           columnGap: "none",
+          paddingX: "none",
           sectionPaddingY: "none",
         },
         style: {
@@ -427,6 +428,7 @@ test("hero, navigation, footer, and timelines accept none as visual off tokens",
       variant="columns-2"
     />
   );
+  expect(footerHtml).toContain("px-0");
   expect(footerHtml).toContain("py-0");
   expect(footerHtml).toContain("gap-0");
 

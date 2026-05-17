@@ -2,7 +2,8 @@
 
 ## Purpose
 
-Site footer with structured columns, legal strip, and social links.
+Site footer with structured columns, optional brand block, legal links, and
+icon-based social actions.
 
 ## Widget ID
 
@@ -11,40 +12,52 @@ Site footer with structured columns, legal strip, and social links.
 ## Variants (v1)
 
 - `columns-2`
+  Two visible footer columns plus an optional lower legal/actions strip.
 - `columns-3`
+  Three visible footer columns plus an optional lower legal/actions strip.
 - `minimal`
+  Compact footer row that reuses the first column links inline, keeps brand /
+  legal / social content visible when enabled, and preserves hidden columns in
+  data without rendering them as a fake one-column grid.
 
 ## Slots
 
 - `column-1` (`Column 1`)  
-  Renders inside first footer column.
+  Renders inside the first visible footer column. In `minimal`, this slot is
+  rendered below the compact row.
 - `column-2` (`Column 2`)  
-  Renders inside second footer column.
+  Renders inside the second visible footer column.
 - `column-3` (`Column 3`)  
-  Renders inside third footer column (for `columns-3`).
+  Renders inside the third visible footer column (for `columns-3`).
 - `bottom` (`Bottom Strip`)  
-  Renders in the lower legal/actions strip.
+  Renders in the lower legal/actions strip for column variants, or below the
+  compact row in `minimal`.
 
-## Editor Modes (current after TASK-050-07-02)
+## Editor Modes
 
 ### Wizard
 - Layout variant selection.
-- Quick setup for visible columns (title + first link label/href with
-  per-field labels).
-- Legal basics (copyright/privacy/terms).
-- Basic social links setup with labeled platform/URL fields and support for up
-  to 8 quick social entries.
+- Quick setup for visible columns: title plus the first link per visible column,
+  with explicit disclosure that additional links stay in Visual mode.
+- Brand basics: brand name, tagline, logo URL, and logo alt text.
+- Legal basics: visibility toggle, copyright, localized Privacy/Terms labels,
+  and URLs.
+- Social basics: visibility toggle, labeled platform / URL fields, custom
+  platform label support, and up to 8 quick social entries.
 
 ### Visual
 - Primary editing mode (Footer owns variant selection in Visual).
 - Sections:
   - Variant and structure
   - Columns and links
-  - Legal strip
+  - Brand and legal
   - Social links and icon style
   - Colors and borders
-  - Typography and spacing
+  - Typography and link styling
   - Slots overview and insertion hints
+- Visual owns content, legal, social, and user-facing link/style controls.
+- Link reordering is supported. Column reordering remains deferred because slot
+  ownership is positional (`column-1/2/3`).
 
 ### Advanced
 - Technical-only scope.
@@ -53,27 +66,60 @@ Site footer with structured columns, legal strip, and social links.
   - legal row alignment
   - max width
   - column gap
+  - horizontal padding
+  - column breakpoint
   - section vertical padding
 - Content/style editing is intentionally excluded from Advanced.
+- Footer keeps one labeled control per line in Advanced.
 
 ## Runtime behavior notes
 
 - Column count is normalized by variant:
-  - `minimal` -> 1 column
   - `columns-2` -> 2 columns
   - `columns-3` -> 3 columns
+  - `minimal` -> the first column remains the data source for inline links, but
+    runtime renders a dedicated compact row instead of a one-column grid.
 - Footer uses deterministic fallback columns when payload is incomplete.
-- Slot content is rendered in column regions and bottom strip with nested widget support.
+- Slot content is rendered in column regions and bottom strip with nested widget
+  support.
+- Footer landmark naming:
+  - uses `aria-labelledby` when visible brand text exists,
+  - otherwise falls back to `aria-label="Site footer"`.
+- Column titles render as headings.
+- Social links render icon buttons with accessible names and safe external-link
+  attributes.
+- Privacy/Terms labels are configurable and fallback to the current defaults
+  when the user leaves labels empty.
+- `legal.enabled` and `socialEnabled` hide runtime output without deleting the
+  stored data.
+- Empty legal/social wrappers are omitted from public output.
+- Footer column/legal links support bounded target controls (`_self` / `_blank`)
+  with `noopener noreferrer` when appropriate.
 - Runtime style/layout fields are additive and backward-compatible:
-  - `layout.align`, `layout.legalAlign`, `layout.maxWidth`, `layout.columnGap`, `layout.sectionPaddingY`
-  - `style.surfaceColor`, `style.borderColor`, `style.borderTopWidth`, `style.textColor`, `style.headingColor`, `style.linkColor`, `style.legalTextColor`, `style.socialColor`, `style.fontSize`, `style.headingTransform`
+  - `layout.align`, `layout.legalAlign`, `layout.maxWidth`,
+    `layout.columnGap`, `layout.columnBreakpoint`, `layout.paddingX`,
+    `layout.sectionPaddingY`
+  - `style.surfaceColor`, `style.borderColor`, `style.borderTopWidth`,
+    `style.textColor`, `style.headingColor`, `style.linkColor`,
+    `style.legalTextColor`, `style.socialColor`, `style.fontSize`,
+    `style.headingTransform`, `style.linkHoverColor`,
+    `style.linkActiveColor`, `style.linkUnderline`,
+    `style.linkFontWeight`, `style.linkLetterSpacing`
+
+## Social Platforms
+
+- Known icon-backed types:
+  `linkedin`, `twitter`, `x`, `github`, `youtube`, `facebook`, `instagram`,
+  `tiktok`, `discord`, `pinterest`, `mastodon`, `twitch`, `snapchat`
+- `custom`
+  Uses a plain-text accessible label and a safe generic icon fallback.
 
 ## Clear Controls
 
-- `style.surfaceColor` is clearable; clear removes the footer background field
-  and the renderer omits a forced footer surface style.
-- Link, legal, social, typography, and border fields keep their existing
-  authored-color behavior.
+- Footer color fields use the shared clear/reset header and color-picker pattern
+  already adopted elsewhere in the widget library.
+- Clearing `style.surfaceColor` removes the forced footer background color from
+  runtime output.
 
 ## Data model (summary)
 
@@ -84,23 +130,38 @@ Site footer with structured columns, legal strip, and social links.
     {
       "title": "Company",
       "links": [
-        { "label": "About", "href": "/about" }
+        { "label": "About", "href": "/about", "target": "_self" }
       ]
     }
   ],
+  "brand": {
+    "logoText": "Coderso",
+    "tagline": "Build confidently with modular content.",
+    "logoUrl": "/media/footer-logo.svg",
+    "logoAlt": "Coderso logo"
+  },
   "legal": {
+    "enabled": true,
     "copyright": "© 2026 Coderso",
     "privacy": "/privacy",
-    "terms": "/terms"
+    "privacyLabel": "Privacy",
+    "privacyTarget": "_blank",
+    "terms": "/terms",
+    "termsLabel": "Terms",
+    "termsTarget": "_self"
   },
+  "socialEnabled": true,
   "social": [
-    { "type": "linkedin", "href": "https://linkedin.com/company/coderso" }
+    { "type": "linkedin", "href": "https://linkedin.com/company/coderso" },
+    { "type": "custom", "href": "/community", "label": "Community" }
   ],
   "layout": {
     "align": "left",
     "legalAlign": "right",
     "maxWidth": "6xl",
     "columnGap": "6",
+    "columnBreakpoint": "md",
+    "paddingX": "6",
     "sectionPaddingY": "10"
   },
   "style": {
@@ -113,7 +174,12 @@ Site footer with structured columns, legal strip, and social links.
     "legalTextColor": "#334155",
     "socialColor": "#0f172a",
     "fontSize": "sm",
-    "headingTransform": "uppercase"
+    "headingTransform": "uppercase",
+    "linkHoverColor": "#2563eb",
+    "linkActiveColor": "var(--color-primary)",
+    "linkUnderline": "hover",
+    "linkFontWeight": "medium",
+    "linkLetterSpacing": "normal"
   }
 }
 ```

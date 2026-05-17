@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
 
 import { contactDefaults, createContactWidget } from "../../../core/widgets/core/contact";
+import { createFooterWidget } from "../../../core/widgets/core/footer";
 import {
   createFeatureGridWidget,
   featureGridDefaults,
@@ -289,4 +290,74 @@ test("normalizeWidgetBlock accepts feature grid imageAlt authoring", () => {
   expect((normalized.data as FeatureGridData).style?.hoverEffect).toBe("lift");
   expect((normalized.data as FeatureGridData).items[0]?.descriptionMode).toBe("rich");
   expect((normalized.data as FeatureGridData).items[0]?.ctaTarget).toBe("new-tab");
+});
+
+test("normalizeWidgetBlock accepts footer brand, visibility, and target extensions", () => {
+  registerWidget(
+    createFooterWidget({
+      wizard: Dummy,
+      visual: Dummy,
+      advanced: Dummy,
+    })
+  );
+
+  const normalized = normalizeWidgetBlock({
+    id: "footer-1",
+    type: "footer",
+    variant: "columns-2",
+    data: {
+      columns: [{ title: "Company", links: [{ label: "Docs", href: "/docs", target: "_blank" }] }],
+      brand: {
+        logoText: "Coderso",
+        tagline: "Build confidently",
+      },
+      legal: {
+        enabled: false,
+        privacy: "/privacy",
+        privacyLabel: "Privacy policy",
+        privacyTarget: "_blank",
+      },
+      socialEnabled: true,
+      social: [{ type: "custom", href: "https://community.example", label: "Community" }],
+      layout: {
+        paddingX: "8",
+        columnBreakpoint: "lg",
+      },
+      style: {
+        linkUnderline: "always",
+        linkFontWeight: "semibold",
+        linkLetterSpacing: "wide",
+      },
+    },
+  });
+
+  expect(normalized.data.brand).toBeDefined();
+  expect(normalized.data.layout).toMatchObject({
+    paddingX: "8",
+    columnBreakpoint: "lg",
+  });
+});
+
+test("normalizeWidgetBlock rejects unknown footer keys", () => {
+  registerWidget(
+    createFooterWidget({
+      wizard: Dummy,
+      visual: Dummy,
+      advanced: Dummy,
+    })
+  );
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "footer-2",
+      type: "footer",
+      variant: "columns-2",
+      data: {
+        columns: [{ title: "Company", links: [] }],
+        style: {
+          mysteryColor: "#ffffff",
+        },
+      },
+    })
+  ).toThrow("widget_schema_invalid");
 });

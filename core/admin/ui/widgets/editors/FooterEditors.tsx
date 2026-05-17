@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -7,12 +9,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 
 import {
+  footerSocialTypes,
   resolveFooterColumnCount,
   resolveFooterColumnsForVariant,
+  resolveFooterSocialLabel,
+  resolveFooterSocialType,
   type FooterColumn,
   type FooterData,
+  type FooterLink,
+  type FooterLinkTarget,
   type FooterSocial,
 } from "../../../../widgets/core/footer";
 import type { WidgetEditorProps } from "../../../../widgets/types";
@@ -38,6 +46,19 @@ const maxWidthOptions = [
 ];
 
 const columnGapOptions = [
+  { id: "none", label: "None" },
+  { id: "4", label: "Compact" },
+  { id: "6", label: "Default" },
+  { id: "8", label: "Spacious" },
+];
+
+const columnBreakpointOptions = [
+  { id: "sm", label: "Small screens" },
+  { id: "md", label: "Medium screens" },
+  { id: "lg", label: "Large screens" },
+];
+
+const paddingXOptions = [
   { id: "none", label: "None" },
   { id: "4", label: "Compact" },
   { id: "6", label: "Default" },
@@ -71,11 +92,50 @@ const headingTransformOptions = [
   { id: "capitalize", label: "Capitalize" },
 ];
 
-const socialTypeOptions = ["linkedin", "twitter", "github", "youtube", "facebook", "instagram"];
+const linkTargetOptions = [
+  { id: "_self", label: "Same tab" },
+  { id: "_blank", label: "Open in new tab" },
+];
+
+const linkUnderlineOptions = [
+  { id: "none", label: "No underline" },
+  { id: "hover", label: "Underline on hover" },
+  { id: "always", label: "Always underlined" },
+];
+
+const linkFontWeightOptions = [
+  { id: "normal", label: "Normal" },
+  { id: "medium", label: "Medium" },
+  { id: "semibold", label: "Semibold" },
+];
+
+const linkLetterSpacingOptions = [
+  { id: "normal", label: "Normal" },
+  { id: "wide", label: "Wide" },
+];
+
+const socialTypeOptions = footerSocialTypes.map((type) => ({
+  id: type,
+  label: resolveFooterSocialLabel(type),
+}));
 
 const emptySocialLink: FooterSocial = {
   type: "linkedin",
   href: "https://",
+};
+
+const resolvePickerColor = (value: string | undefined, fallback: string) => {
+  const normalized = value?.trim();
+  return normalized && /^#[0-9a-fA-F]{6}$/.test(normalized) ? normalized : fallback;
+};
+
+const moveItem = <T,>(items: T[], fromIndex: number, toIndex: number) => {
+  if (fromIndex === toIndex || toIndex < 0 || toIndex >= items.length) return items;
+  const next = [...items];
+  const [item] = next.splice(fromIndex, 1);
+  if (item === undefined) return items;
+  next.splice(toIndex, 0, item);
+  return next;
 };
 
 export const resolveEditableFooterColumns = (value: FooterData, variant: string) => {
@@ -86,6 +146,20 @@ export const resolveEditableFooterColumns = (value: FooterData, variant: string)
       ? value.columns.slice(visibleCount)
       : [];
   return [...visibleColumns, ...hiddenColumns];
+};
+
+const updateFooterBrand = (
+  value: FooterData,
+  onChange: (next: FooterData) => void,
+  patch: Partial<NonNullable<FooterData["brand"]>>
+) => {
+  onChange({
+    ...value,
+    brand: {
+      ...value.brand,
+      ...patch,
+    },
+  });
 };
 
 const updateFooterLegal = (
@@ -170,18 +244,38 @@ const updateColumnLink = (
   variant: string,
   columnIndex: number,
   linkIndex: number,
-  patch: Partial<{ label: string; href: string }>
+  patch: Partial<FooterLink>
 ) => {
   const columns = resolveEditableFooterColumns(value, variant);
   const nextColumns = [...columns];
   const target = nextColumns[columnIndex];
   const links = Array.isArray(target.links) ? [...target.links] : [];
-  const base = links[linkIndex] ?? { label: "Link", href: "#" };
+  const base = links[linkIndex] ?? { label: "Link", href: "#", target: "_self" };
   links[linkIndex] = {
     label: patch.label ?? base.label,
     href: patch.href ?? base.href,
+    target: patch.target ?? base.target,
   };
   nextColumns[columnIndex] = { ...target, links };
+  onChange({ ...value, columns: nextColumns });
+};
+
+const moveColumnLink = (
+  value: FooterData,
+  onChange: (next: FooterData) => void,
+  variant: string,
+  columnIndex: number,
+  linkIndex: number,
+  direction: -1 | 1
+) => {
+  const columns = resolveEditableFooterColumns(value, variant);
+  const nextColumns = [...columns];
+  const target = nextColumns[columnIndex];
+  const links = Array.isArray(target.links) ? [...target.links] : [];
+  nextColumns[columnIndex] = {
+    ...target,
+    links: moveItem(links, linkIndex, linkIndex + direction),
+  };
   onChange({ ...value, columns: nextColumns });
 };
 
@@ -195,7 +289,7 @@ const addColumnLink = (
   const nextColumns = [...columns];
   const target = nextColumns[columnIndex];
   const links = Array.isArray(target.links) ? [...target.links] : [];
-  links.push({ label: `Link ${links.length + 1}`, href: "#" });
+  links.push({ label: `Link ${links.length + 1}`, href: "#", target: "_self" });
   nextColumns[columnIndex] = { ...target, links };
   onChange({ ...value, columns: nextColumns });
 };
@@ -218,6 +312,116 @@ const removeColumnLink = (
   onChange({ ...value, columns: nextColumns });
 };
 
+function FieldLabel({
+  label,
+  description,
+  children,
+}: {
+  label: string;
+  description?: string;
+  children: ReactNode;
+}) {
+  return (
+    <label className="space-y-1 text-sm">
+      <span className="font-medium text-foreground">{label}</span>
+      {description ? (
+        <span className="block text-xs text-muted-foreground">{description}</span>
+      ) : null}
+      {children}
+    </label>
+  );
+}
+
+function LabeledSelectField({
+  label,
+  description,
+  value,
+  onValueChange,
+  options,
+}: {
+  label: string;
+  description?: string;
+  value: string;
+  onValueChange: (next: string) => void;
+  options: Array<{ id: string; label: string }>;
+}) {
+  return (
+    <div className="space-y-2">
+      <p className="text-sm font-medium">{label}</p>
+      {description ? <p className="text-xs text-muted-foreground">{description}</p> : null}
+      <Select value={value} onValueChange={onValueChange}>
+        <SelectTrigger>
+          <SelectValue placeholder={label} />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((option) => (
+            <SelectItem key={option.id} value={option.id}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+function SwitchField({
+  label,
+  description,
+  checked,
+  onCheckedChange,
+}: {
+  label: string;
+  description: string;
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-3 rounded-lg border p-3">
+      <div className="space-y-1">
+        <p className="text-sm font-medium">{label}</p>
+        <p className="text-xs text-muted-foreground">{description}</p>
+      </div>
+      <Switch checked={checked} onCheckedChange={onCheckedChange} />
+    </div>
+  );
+}
+
+function ColorField({
+  label,
+  value,
+  onChange,
+  placeholder,
+  pickerFallback = "#111827",
+  onClear,
+}: {
+  label: string;
+  value: string | undefined;
+  onChange: (next: string) => void;
+  placeholder: string;
+  pickerFallback?: string;
+  onClear?: () => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <ClearableFieldHeader label={label} value={value} onClear={onClear} />
+      <div className="grid grid-cols-[2.5rem_1fr] gap-2">
+        <Input
+          type="color"
+          value={resolvePickerColor(value, pickerFallback)}
+          onChange={(event) => onChange(event.target.value)}
+          className="h-9 w-10 p-1"
+        />
+        <Input
+          value={value ?? ""}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={placeholder}
+        />
+      </div>
+    </div>
+  );
+}
+
 function FooterVariantSelect({
   value,
   onChange,
@@ -226,20 +430,153 @@ function FooterVariantSelect({
   onChange?: (next: string) => void;
 }) {
   return (
-    <div className="space-y-2">
-      <p className="text-sm font-medium">Footer variant</p>
-      <Select value={value} onValueChange={(next) => onChange?.(next)}>
-        <SelectTrigger>
-          <SelectValue placeholder="Choose variant" />
-        </SelectTrigger>
-        <SelectContent>
-          {variantOptions.map((option) => (
-            <SelectItem key={option.id} value={option.id}>
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+    <LabeledSelectField
+      label="Footer variant"
+      value={value}
+      onValueChange={(next) => onChange?.(next)}
+      options={variantOptions}
+    />
+  );
+}
+
+function BrandEditor({
+  value,
+  onChange,
+}: {
+  value: FooterData;
+  onChange: (next: FooterData) => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <FieldLabel label="Brand name">
+        <Input
+          value={value.brand?.logoText ?? ""}
+          onChange={(event) => updateFooterBrand(value, onChange, { logoText: event.target.value })}
+          placeholder="Coderso"
+        />
+      </FieldLabel>
+      <FieldLabel label="Tagline">
+        <Input
+          value={value.brand?.tagline ?? ""}
+          onChange={(event) => updateFooterBrand(value, onChange, { tagline: event.target.value })}
+          placeholder="Build confidently with modular content."
+        />
+      </FieldLabel>
+      <FieldLabel label="Logo URL">
+        <Input
+          value={value.brand?.logoUrl ?? ""}
+          onChange={(event) => updateFooterBrand(value, onChange, { logoUrl: event.target.value })}
+          placeholder="/media/footer-logo.svg"
+        />
+      </FieldLabel>
+      <FieldLabel
+        label="Logo alt text"
+        description="Used when the footer shows a logo image without visible brand copy."
+      >
+        <Input
+          value={value.brand?.logoAlt ?? ""}
+          onChange={(event) => updateFooterBrand(value, onChange, { logoAlt: event.target.value })}
+          placeholder="Coderso logo"
+        />
+      </FieldLabel>
+    </div>
+  );
+}
+
+function LegalEditor({
+  value,
+  onChange,
+  showTargets,
+  showVisibilityToggle,
+}: {
+  value: FooterData;
+  onChange: (next: FooterData) => void;
+  showTargets?: boolean;
+  showVisibilityToggle?: boolean;
+}) {
+  return (
+    <div className="space-y-3">
+      {showVisibilityToggle ? (
+        <SwitchField
+          label="Show legal strip"
+          description="Hide the legal row without deleting its current copyright or link data."
+          checked={value.legal?.enabled !== false}
+          onCheckedChange={(checked) => updateFooterLegal(value, onChange, { enabled: checked })}
+        />
+      ) : null}
+      <FieldLabel label="Copyright">
+        <Input
+          value={value.legal?.copyright ?? ""}
+          onChange={(event) =>
+            updateFooterLegal(value, onChange, { copyright: event.target.value })
+          }
+          placeholder="© 2026 Company name"
+        />
+      </FieldLabel>
+      <div className="grid gap-3 lg:grid-cols-2">
+        <div className="space-y-3 rounded-lg border p-3">
+          <p className="text-sm font-semibold">Privacy link</p>
+          <FieldLabel label="Privacy label">
+            <Input
+              value={value.legal?.privacyLabel ?? ""}
+              onChange={(event) =>
+                updateFooterLegal(value, onChange, { privacyLabel: event.target.value })
+              }
+              placeholder="Privacy"
+            />
+          </FieldLabel>
+          <FieldLabel label="Privacy URL">
+            <Input
+              value={value.legal?.privacy ?? ""}
+              onChange={(event) =>
+                updateFooterLegal(value, onChange, { privacy: event.target.value })
+              }
+              placeholder="/privacy"
+            />
+          </FieldLabel>
+          {showTargets ? (
+            <LabeledSelectField
+              label="Link target"
+              value={value.legal?.privacyTarget ?? "_self"}
+              onValueChange={(next) =>
+                updateFooterLegal(value, onChange, { privacyTarget: next as FooterLinkTarget })
+              }
+              options={linkTargetOptions}
+            />
+          ) : null}
+        </div>
+        <div className="space-y-3 rounded-lg border p-3">
+          <p className="text-sm font-semibold">Terms link</p>
+          <FieldLabel label="Terms label">
+            <Input
+              value={value.legal?.termsLabel ?? ""}
+              onChange={(event) =>
+                updateFooterLegal(value, onChange, { termsLabel: event.target.value })
+              }
+              placeholder="Terms"
+            />
+          </FieldLabel>
+          <FieldLabel label="Terms URL">
+            <Input
+              value={value.legal?.terms ?? ""}
+              onChange={(event) =>
+                updateFooterLegal(value, onChange, { terms: event.target.value })
+              }
+              placeholder="/terms"
+            />
+          </FieldLabel>
+          {showTargets ? (
+            <LabeledSelectField
+              label="Link target"
+              value={value.legal?.termsTarget ?? "_self"}
+              onValueChange={(next) =>
+                updateFooterLegal(value, onChange, { termsTarget: next as FooterLinkTarget })
+              }
+              options={linkTargetOptions}
+            />
+          ) : null}
+        </div>
+      </div>
     </div>
   );
 }
@@ -261,15 +598,21 @@ function ColumnsQuickSetup({
 
   return (
     <div className="space-y-4">
+      {variant === "minimal" ? (
+        <p className="text-xs text-muted-foreground">
+          Minimal footer reuses the first column links as a compact inline row. Extra columns stay
+          preserved in Visual mode.
+        </p>
+      ) : null}
       {visibleColumns.map((column, index) => {
         const firstLink = column.links[0] ?? { label: "", href: "" };
+        const hiddenLinkCount = Math.max(column.links.length - 1, 0);
         return (
-          <div key={`${column.title}-${index}`} className="space-y-2 rounded-lg border p-3">
+          <div key={`${column.title}-${index}`} className="space-y-3 rounded-lg border p-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Column {index + 1}
             </p>
-            <label className="space-y-1 text-sm">
-              <span className="font-medium text-foreground">Column {index + 1} title</span>
+            <FieldLabel label={`Column ${index + 1} title`}>
               <Input
                 value={column.title}
                 onChange={(event) =>
@@ -279,12 +622,9 @@ function ColumnsQuickSetup({
                 }
                 placeholder={`Column ${index + 1} title`}
               />
-            </label>
+            </FieldLabel>
             <div className="grid gap-2 sm:grid-cols-2">
-              <label className="space-y-1 text-sm">
-                <span className="font-medium text-foreground">
-                  Column {index + 1} first link label
-                </span>
+              <FieldLabel label={`Column ${index + 1} first link label`}>
                 <Input
                   value={firstLink.label}
                   onChange={(event) =>
@@ -294,11 +634,8 @@ function ColumnsQuickSetup({
                   }
                   placeholder="First link label"
                 />
-              </label>
-              <label className="space-y-1 text-sm">
-                <span className="font-medium text-foreground">
-                  Column {index + 1} first link URL
-                </span>
+              </FieldLabel>
+              <FieldLabel label={`Column ${index + 1} first link URL`}>
                 <Input
                   value={firstLink.href}
                   onChange={(event) =>
@@ -308,8 +645,14 @@ function ColumnsQuickSetup({
                   }
                   placeholder="First link URL"
                 />
-              </label>
+              </FieldLabel>
             </div>
+            {hiddenLinkCount > 0 ? (
+              <p className="text-xs text-muted-foreground">
+                {hiddenLinkCount} additional {hiddenLinkCount === 1 ? "link stays" : "links stay"}{" "}
+                available in Visual mode.
+              </p>
+            ) : null}
           </div>
         );
       })}
@@ -333,10 +676,17 @@ function SocialLinksEditor({
     updateFooterSocial(value, onChange, (social) => {
       const next = [...social];
       const base = next[index] ?? emptySocialLink;
-      next[index] = {
-        type: patch.type ?? base.type,
+      const nextType = patch.type ?? base.type;
+      const nextItem: FooterSocial = {
+        type: nextType,
         href: patch.href ?? base.href,
       };
+      const nextLabel =
+        patch.label ?? (resolveFooterSocialType(nextType) === "custom" ? base.label : undefined);
+      if (resolveFooterSocialType(nextType) === "custom" && nextLabel) {
+        nextItem.label = nextLabel;
+      }
+      next[index] = nextItem;
       return next;
     });
   };
@@ -348,6 +698,10 @@ function SocialLinksEditor({
     });
   };
 
+  const moveSocial = (index: number, direction: -1 | 1) => {
+    updateFooterSocial(value, onChange, (social) => moveItem(social, index, index + direction));
+  };
+
   const removeSocial = (index: number) => {
     updateFooterSocial(value, onChange, (social) =>
       social.filter((_, itemIndex) => itemIndex !== index)
@@ -355,40 +709,81 @@ function SocialLinksEditor({
   };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
+      <p className="text-xs text-muted-foreground">
+        External social links open in a new tab automatically. Relative or hash URLs stay in the
+        current tab.
+      </p>
       {visibleItems.length === 0 ? (
         <p className="text-xs text-muted-foreground">No social links configured.</p>
       ) : null}
-      {visibleItems.map((item, index) => (
-        <div key={`${item.type}-${index}`} className="grid gap-2 sm:grid-cols-[1fr_2fr_auto]">
-          <label className="space-y-1 text-sm">
-            <span className="font-medium text-foreground">Social {index + 1} platform</span>
-            <Select value={item.type} onValueChange={(next) => updateSocial(index, { type: next })}>
-              <SelectTrigger>
-                <SelectValue placeholder="Type" />
-              </SelectTrigger>
-              <SelectContent>
-                {socialTypeOptions.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {type}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </label>
-          <label className="space-y-1 text-sm">
-            <span className="font-medium text-foreground">Social {index + 1} URL</span>
-            <Input
-              value={item.href}
-              onChange={(event) => updateSocial(index, { href: event.target.value })}
-              placeholder="Social URL"
-            />
-          </label>
-          <Button type="button" size="sm" variant="ghost" onClick={() => removeSocial(index)}>
-            Remove
-          </Button>
-        </div>
-      ))}
+      {visibleItems.map((item, index) => {
+        const selectedType = resolveFooterSocialType(item.type);
+        return (
+          <div key={`${item.type}-${index}`} className="space-y-3 rounded-lg border p-3">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-sm font-semibold">Social link {index + 1}</p>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => moveSocial(index, -1)}
+                  disabled={index === 0}
+                >
+                  Move up
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => moveSocial(index, 1)}
+                  disabled={index === visibleItems.length - 1}
+                >
+                  Move down
+                </Button>
+                <Button type="button" size="sm" variant="ghost" onClick={() => removeSocial(index)}>
+                  Remove
+                </Button>
+              </div>
+            </div>
+            <div className="grid gap-3 lg:grid-cols-2">
+              <LabeledSelectField
+                label="Platform"
+                value={selectedType}
+                onValueChange={(next) =>
+                  updateSocial(index, {
+                    type: next,
+                    label:
+                      next === "custom"
+                        ? resolveFooterSocialLabel(item.type, item.label)
+                        : undefined,
+                  })
+                }
+                options={socialTypeOptions}
+              />
+              <FieldLabel label="URL">
+                <Input
+                  value={item.href}
+                  onChange={(event) => updateSocial(index, { href: event.target.value })}
+                  placeholder="https://example.com/profile"
+                />
+              </FieldLabel>
+            </div>
+            {selectedType === "custom" ? (
+              <FieldLabel label="Accessible label">
+                <Input
+                  value={item.label ?? resolveFooterSocialLabel(item.type, item.label)}
+                  onChange={(event) =>
+                    updateSocial(index, { type: "custom", label: event.target.value })
+                  }
+                  placeholder="Community"
+                />
+              </FieldLabel>
+            ) : null}
+          </div>
+        );
+      })}
       <Button
         type="button"
         size="sm"
@@ -398,36 +793,6 @@ function SocialLinksEditor({
       >
         Add social
       </Button>
-    </div>
-  );
-}
-
-function LegalEditor({
-  value,
-  onChange,
-}: {
-  value: FooterData;
-  onChange: (next: FooterData) => void;
-}) {
-  return (
-    <div className="space-y-2">
-      <Input
-        value={value.legal?.copyright ?? ""}
-        onChange={(event) => updateFooterLegal(value, onChange, { copyright: event.target.value })}
-        placeholder="© 2026 Company name"
-      />
-      <div className="grid gap-2 sm:grid-cols-2">
-        <Input
-          value={value.legal?.privacy ?? ""}
-          onChange={(event) => updateFooterLegal(value, onChange, { privacy: event.target.value })}
-          placeholder="Privacy URL"
-        />
-        <Input
-          value={value.legal?.terms ?? ""}
-          onChange={(event) => updateFooterLegal(value, onChange, { terms: event.target.value })}
-          placeholder="Terms URL"
-        />
-      </div>
     </div>
   );
 }
@@ -445,18 +810,30 @@ export function FooterWizardEditor({
       <div className="space-y-2">
         <p className="text-sm font-medium">Columns quick setup</p>
         <p className="text-xs text-muted-foreground">
-          Configure titles and first links. Full link editing is available in Visual mode.
+          Configure titles and the first link for each visible column. Additional links stay
+          preserved and remain editable in Visual mode.
         </p>
         <ColumnsQuickSetup value={value} onChange={onChange} variant={variant} />
       </div>
 
       <div className="space-y-2">
+        <p className="text-sm font-medium">Brand basics</p>
+        <BrandEditor value={value} onChange={onChange} />
+      </div>
+
+      <div className="space-y-2">
         <p className="text-sm font-medium">Legal basics</p>
-        <LegalEditor value={value} onChange={onChange} />
+        <LegalEditor value={value} onChange={onChange} showVisibilityToggle />
       </div>
 
       <div className="space-y-2">
         <p className="text-sm font-medium">Social basics</p>
+        <SwitchField
+          label="Show social links"
+          description="Hide social icons without deleting the current platform entries."
+          checked={value.socialEnabled !== false}
+          onCheckedChange={(checked) => onChange({ ...value, socialEnabled: checked })}
+        />
         <SocialLinksEditor value={value} onChange={onChange} limit={8} />
       </div>
     </div>
@@ -481,58 +858,115 @@ export function FooterVisualEditor({
         <p className="text-sm font-semibold">Variant and structure</p>
         <FooterVariantSelect value={variant} onChange={onVariantChange} />
         <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
-          Runtime columns: {visibleCount}. Variant controls are owned by Footer Visual mode.
+          Runtime columns: {visibleCount}. Footer Visual mode owns the variant selector. Minimal
+          reuses the first column links as a compact inline row while preserving hidden columns and
+          slots.
         </div>
       </div>
 
       <div className="space-y-3 rounded-xl border p-4">
         <p className="text-sm font-semibold">Columns and links</p>
+        <p className="text-xs text-muted-foreground">
+          Link order is editable here. Column order stays slot-bound for now so nested slot content
+          does not silently detach from `column-1`, `column-2`, or `column-3`.
+        </p>
         <div className="space-y-4">
           {visibleColumns.map((column, columnIndex) => (
-            <div key={`${column.title}-${columnIndex}`} className="space-y-2 rounded-lg border p-3">
-              <Input
-                value={column.title}
-                onChange={(event) =>
-                  updateColumn(value, onChange, variant, columnIndex, {
-                    title: event.target.value,
-                  })
-                }
-                placeholder={`Column ${columnIndex + 1} title`}
-              />
-              <div className="space-y-2">
+            <div key={`${column.title}-${columnIndex}`} className="space-y-3 rounded-lg border p-3">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-semibold">Column {columnIndex + 1}</p>
+                <p className="text-xs text-muted-foreground">
+                  Hidden columns remain preserved when the active variant shows fewer columns.
+                </p>
+              </div>
+              <FieldLabel label="Column title">
+                <Input
+                  value={column.title}
+                  onChange={(event) =>
+                    updateColumn(value, onChange, variant, columnIndex, {
+                      title: event.target.value,
+                    })
+                  }
+                  placeholder={`Column ${columnIndex + 1} title`}
+                />
+              </FieldLabel>
+              <div className="space-y-3">
                 {column.links.map((link, linkIndex) => (
                   <div
                     key={`${link.label}-${linkIndex}`}
-                    className="grid gap-2 sm:grid-cols-[1fr_2fr_auto]"
+                    className="space-y-3 rounded-lg border p-3"
                   >
-                    <Input
-                      value={link.label}
-                      onChange={(event) =>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-semibold">Link {linkIndex + 1}</p>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            moveColumnLink(value, onChange, variant, columnIndex, linkIndex, -1)
+                          }
+                          disabled={linkIndex === 0}
+                        >
+                          Move up
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            moveColumnLink(value, onChange, variant, columnIndex, linkIndex, 1)
+                          }
+                          disabled={linkIndex === column.links.length - 1}
+                        >
+                          Move down
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() =>
+                            removeColumnLink(value, onChange, variant, columnIndex, linkIndex)
+                          }
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="grid gap-3 lg:grid-cols-2">
+                      <FieldLabel label="Link label">
+                        <Input
+                          value={link.label}
+                          onChange={(event) =>
+                            updateColumnLink(value, onChange, variant, columnIndex, linkIndex, {
+                              label: event.target.value,
+                            })
+                          }
+                          placeholder="About"
+                        />
+                      </FieldLabel>
+                      <FieldLabel label="Link URL">
+                        <Input
+                          value={link.href}
+                          onChange={(event) =>
+                            updateColumnLink(value, onChange, variant, columnIndex, linkIndex, {
+                              href: event.target.value,
+                            })
+                          }
+                          placeholder="/about"
+                        />
+                      </FieldLabel>
+                    </div>
+                    <LabeledSelectField
+                      label="Link target"
+                      value={link.target ?? "_self"}
+                      onValueChange={(next) =>
                         updateColumnLink(value, onChange, variant, columnIndex, linkIndex, {
-                          label: event.target.value,
+                          target: next as FooterLinkTarget,
                         })
                       }
-                      placeholder="Label"
+                      options={linkTargetOptions}
                     />
-                    <Input
-                      value={link.href}
-                      onChange={(event) =>
-                        updateColumnLink(value, onChange, variant, columnIndex, linkIndex, {
-                          href: event.target.value,
-                        })
-                      }
-                      placeholder="URL"
-                    />
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      onClick={() =>
-                        removeColumnLink(value, onChange, variant, columnIndex, linkIndex)
-                      }
-                    >
-                      Remove
-                    </Button>
                   </div>
                 ))}
                 <Button
@@ -550,174 +984,184 @@ export function FooterVisualEditor({
       </div>
 
       <div className="space-y-3 rounded-xl border p-4">
-        <p className="text-sm font-semibold">Legal strip</p>
-        <LegalEditor value={value} onChange={onChange} />
+        <p className="text-sm font-semibold">Brand and legal</p>
+        <p className="text-xs text-muted-foreground">
+          Brand text names the footer landmark when present. Privacy and Terms labels stay
+          configurable for localization.
+        </p>
+        <BrandEditor value={value} onChange={onChange} />
+        <LegalEditor value={value} onChange={onChange} showTargets showVisibilityToggle />
       </div>
 
       <div className="space-y-3 rounded-xl border p-4">
         <p className="text-sm font-semibold">Social links and icon style</p>
-        <SocialLinksEditor value={value} onChange={onChange} />
-        <Input
-          value={value.style?.socialColor ?? ""}
-          onChange={(event) =>
-            updateFooterStyle(value, onChange, { socialColor: event.target.value })
-          }
-          placeholder="Social color (e.g. #0f172a)"
+        <SwitchField
+          label="Show social links"
+          description="Hide social icons without deleting the current platform entries."
+          checked={value.socialEnabled !== false}
+          onCheckedChange={(checked) => onChange({ ...value, socialEnabled: checked })}
         />
+        <SocialLinksEditor value={value} onChange={onChange} />
       </div>
 
       <div className="space-y-3 rounded-xl border p-4">
         <p className="text-sm font-semibold">Colors and borders</p>
-        <div className="grid gap-2 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <ClearableFieldHeader
-              label="Surface color"
-              value={value.style?.surfaceColor}
-              onClear={() => clearFooterStyle(value, onChange, "surfaceColor")}
-            />
-            <Input
-              value={value.style?.surfaceColor ?? ""}
-              onChange={(event) =>
-                updateFooterStyle(value, onChange, { surfaceColor: event.target.value })
-              }
-              placeholder="Surface color"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <ClearableFieldHeader
-              label="Border color"
-              value={value.style?.borderColor}
-              onClear={() => clearFooterStyle(value, onChange, "borderColor")}
-            />
-            <Input
-              value={value.style?.borderColor ?? ""}
-              onChange={(event) =>
-                updateFooterStyle(value, onChange, { borderColor: event.target.value })
-              }
-              placeholder="Border color"
-            />
-          </div>
-          <Input
-            value={value.style?.textColor ?? ""}
-            onChange={(event) =>
-              updateFooterStyle(value, onChange, { textColor: event.target.value })
-            }
-            placeholder="Text color"
+        <div className="grid gap-3 lg:grid-cols-2">
+          <ColorField
+            label="Surface color"
+            value={value.style?.surfaceColor}
+            onChange={(next) => updateFooterStyle(value, onChange, { surfaceColor: next })}
+            onClear={() => clearFooterStyle(value, onChange, "surfaceColor")}
+            placeholder="var(--color-bg)"
+            pickerFallback="#ffffff"
           />
-          <Input
-            value={value.style?.linkColor ?? ""}
-            onChange={(event) =>
-              updateFooterStyle(value, onChange, { linkColor: event.target.value })
-            }
-            placeholder="Link color"
+          <ColorField
+            label="Border color"
+            value={value.style?.borderColor}
+            onChange={(next) => updateFooterStyle(value, onChange, { borderColor: next })}
+            onClear={() => clearFooterStyle(value, onChange, "borderColor")}
+            placeholder="var(--color-border)"
+            pickerFallback="#e2e8f0"
+          />
+          <ColorField
+            label="Text color"
+            value={value.style?.textColor}
+            onChange={(next) => updateFooterStyle(value, onChange, { textColor: next })}
+            onClear={() => clearFooterStyle(value, onChange, "textColor")}
+            placeholder="var(--color-text)"
+            pickerFallback="#111827"
+          />
+          <ColorField
+            label="Heading color"
+            value={value.style?.headingColor}
+            onChange={(next) => updateFooterStyle(value, onChange, { headingColor: next })}
+            onClear={() => clearFooterStyle(value, onChange, "headingColor")}
+            placeholder="var(--color-text)"
+            pickerFallback="#111827"
+          />
+          <ColorField
+            label="Link color"
+            value={value.style?.linkColor}
+            onChange={(next) => updateFooterStyle(value, onChange, { linkColor: next })}
+            onClear={() => clearFooterStyle(value, onChange, "linkColor")}
+            placeholder="var(--color-text)"
+            pickerFallback="#2563eb"
+          />
+          <ColorField
+            label="Legal text color"
+            value={value.style?.legalTextColor}
+            onChange={(next) => updateFooterStyle(value, onChange, { legalTextColor: next })}
+            onClear={() => clearFooterStyle(value, onChange, "legalTextColor")}
+            placeholder="var(--color-text)"
+            pickerFallback="#6b7280"
+          />
+          <ColorField
+            label="Social icon color"
+            value={value.style?.socialColor}
+            onChange={(next) => updateFooterStyle(value, onChange, { socialColor: next })}
+            onClear={() => clearFooterStyle(value, onChange, "socialColor")}
+            placeholder="var(--color-text)"
+            pickerFallback="#111827"
           />
         </div>
-        <Select
+        <LabeledSelectField
+          label="Top border width"
           value={value.style?.borderTopWidth ?? "1"}
           onValueChange={(next) =>
             updateFooterStyle(value, onChange, {
               borderTopWidth: next as NonNullable<FooterData["style"]>["borderTopWidth"],
             })
           }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Top border width" />
-          </SelectTrigger>
-          <SelectContent>
-            {borderTopWidthOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          options={borderTopWidthOptions}
+        />
       </div>
 
       <div className="space-y-3 rounded-xl border p-4">
-        <p className="text-sm font-semibold">Typography and spacing</p>
-        <div className="grid gap-2 sm:grid-cols-2">
-          <Input
-            value={value.style?.headingColor ?? ""}
-            onChange={(event) =>
-              updateFooterStyle(value, onChange, { headingColor: event.target.value })
-            }
-            placeholder="Heading color"
-          />
-          <Input
-            value={value.style?.legalTextColor ?? ""}
-            onChange={(event) =>
-              updateFooterStyle(value, onChange, { legalTextColor: event.target.value })
-            }
-            placeholder="Legal text color"
-          />
-        </div>
-        <div className="grid gap-2 sm:grid-cols-3">
-          <Select
+        <p className="text-sm font-semibold">Typography and link styling</p>
+        <p className="text-xs text-muted-foreground">
+          Footer link hover, active, underline, and typography controls live here. Container spacing
+          and alignment stay in Advanced.
+        </p>
+        <div className="grid gap-3 lg:grid-cols-2">
+          <LabeledSelectField
+            label="Font size"
             value={value.style?.fontSize ?? "sm"}
             onValueChange={(next) =>
               updateFooterStyle(value, onChange, {
                 fontSize: next as NonNullable<FooterData["style"]>["fontSize"],
               })
             }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Font size" />
-            </SelectTrigger>
-            <SelectContent>
-              {fontSizeOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select
+            options={fontSizeOptions}
+          />
+          <LabeledSelectField
+            label="Heading transform"
             value={value.style?.headingTransform ?? "uppercase"}
             onValueChange={(next) =>
               updateFooterStyle(value, onChange, {
                 headingTransform: next as NonNullable<FooterData["style"]>["headingTransform"],
               })
             }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Heading transform" />
-            </SelectTrigger>
-            <SelectContent>
-              {headingTransformOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select
-            value={value.layout?.sectionPaddingY ?? "10"}
+            options={headingTransformOptions}
+          />
+          <LabeledSelectField
+            label="Link font weight"
+            value={value.style?.linkFontWeight ?? "normal"}
             onValueChange={(next) =>
-              updateFooterLayout(value, onChange, {
-                sectionPaddingY: next as NonNullable<FooterData["layout"]>["sectionPaddingY"],
+              updateFooterStyle(value, onChange, {
+                linkFontWeight: next as NonNullable<FooterData["style"]>["linkFontWeight"],
               })
             }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Section spacing" />
-            </SelectTrigger>
-            <SelectContent>
-              {sectionPaddingOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            options={linkFontWeightOptions}
+          />
+          <LabeledSelectField
+            label="Link letter spacing"
+            value={value.style?.linkLetterSpacing ?? "normal"}
+            onValueChange={(next) =>
+              updateFooterStyle(value, onChange, {
+                linkLetterSpacing: next as NonNullable<FooterData["style"]>["linkLetterSpacing"],
+              })
+            }
+            options={linkLetterSpacingOptions}
+          />
+          <LabeledSelectField
+            label="Link underline"
+            value={value.style?.linkUnderline ?? "hover"}
+            onValueChange={(next) =>
+              updateFooterStyle(value, onChange, {
+                linkUnderline: next as NonNullable<FooterData["style"]>["linkUnderline"],
+              })
+            }
+            options={linkUnderlineOptions}
+          />
+        </div>
+        <div className="grid gap-3 lg:grid-cols-2">
+          <ColorField
+            label="Link hover color"
+            value={value.style?.linkHoverColor}
+            onChange={(next) => updateFooterStyle(value, onChange, { linkHoverColor: next })}
+            onClear={() => clearFooterStyle(value, onChange, "linkHoverColor")}
+            placeholder="var(--color-primary)"
+            pickerFallback="#2563eb"
+          />
+          <ColorField
+            label="Link active color"
+            value={value.style?.linkActiveColor}
+            onChange={(next) => updateFooterStyle(value, onChange, { linkActiveColor: next })}
+            onClear={() => clearFooterStyle(value, onChange, "linkActiveColor")}
+            placeholder="var(--color-primary)"
+            pickerFallback="#1d4ed8"
+          />
         </div>
       </div>
 
       <div className="space-y-3 rounded-xl border p-4">
         <p className="text-sm font-semibold">Slots overview and insertion hints</p>
         <ul className="space-y-1 text-xs text-muted-foreground">
-          <li>`column-1`, `column-2`, `column-3` render inside footer columns.</li>
-          <li>`bottom` renders in the lower legal/actions strip.</li>
-          <li>Use Insert dialog on canvas to place widgets into those slots.</li>
+          <li>`column-1`, `column-2`, and `column-3` render inside the visible footer columns.</li>
+          <li>
+            `bottom` renders in the lower legal/actions strip, or below the compact row in Minimal.
+          </li>
+          <li>Use the Insert dialog on canvas to place widgets into those slots.</li>
         </ul>
       </div>
     </div>
@@ -730,104 +1174,83 @@ export function FooterAdvancedEditor({ value, onChange }: WidgetEditorProps<Foot
       <div className="space-y-3 rounded-xl border p-4">
         <p className="text-sm font-semibold">Layout tokens</p>
         <p className="text-xs text-muted-foreground">
-          Technical layout controls. Content and style editing stays in Visual mode.
+          Technical layout controls stay in Advanced. Footer keeps one control per line here so
+          every token is labeled explicitly.
         </p>
-        <div className="grid gap-2 sm:grid-cols-2">
-          <Select
+        <div className="space-y-3">
+          <LabeledSelectField
+            label="Columns alignment"
+            description="Controls the text alignment inside the visible footer columns."
             value={value.layout?.align ?? "left"}
             onValueChange={(next) =>
               updateFooterLayout(value, onChange, {
                 align: next as NonNullable<FooterData["layout"]>["align"],
               })
             }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Columns alignment" />
-            </SelectTrigger>
-            <SelectContent>
-              {alignOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select
+            options={alignOptions}
+          />
+          <LabeledSelectField
+            label="Legal row alignment"
+            description="Controls where the lower copyright, legal links, and social actions sit."
             value={value.layout?.legalAlign ?? "right"}
             onValueChange={(next) =>
               updateFooterLayout(value, onChange, {
                 legalAlign: next as NonNullable<FooterData["layout"]>["legalAlign"],
               })
             }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Legal row alignment" />
-            </SelectTrigger>
-            <SelectContent>
-              {alignOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select
+            options={alignOptions}
+          />
+          <LabeledSelectField
+            label="Max width"
             value={value.layout?.maxWidth ?? "6xl"}
             onValueChange={(next) =>
               updateFooterLayout(value, onChange, {
                 maxWidth: next as NonNullable<FooterData["layout"]>["maxWidth"],
               })
             }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Max width" />
-            </SelectTrigger>
-            <SelectContent>
-              {maxWidthOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select
+            options={maxWidthOptions}
+          />
+          <LabeledSelectField
+            label="Column gap"
             value={value.layout?.columnGap ?? "6"}
             onValueChange={(next) =>
               updateFooterLayout(value, onChange, {
                 columnGap: next as NonNullable<FooterData["layout"]>["columnGap"],
               })
             }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Column gap" />
-            </SelectTrigger>
-            <SelectContent>
-              {columnGapOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select
+            options={columnGapOptions}
+          />
+          <LabeledSelectField
+            label="Horizontal padding"
+            value={value.layout?.paddingX ?? "6"}
+            onValueChange={(next) =>
+              updateFooterLayout(value, onChange, {
+                paddingX: next as NonNullable<FooterData["layout"]>["paddingX"],
+              })
+            }
+            options={paddingXOptions}
+          />
+          <LabeledSelectField
+            label="Column breakpoint"
+            description="Choose when multi-column variants stop stacking vertically."
+            value={value.layout?.columnBreakpoint ?? "md"}
+            onValueChange={(next) =>
+              updateFooterLayout(value, onChange, {
+                columnBreakpoint: next as NonNullable<FooterData["layout"]>["columnBreakpoint"],
+              })
+            }
+            options={columnBreakpointOptions}
+          />
+          <LabeledSelectField
+            label="Section padding"
             value={value.layout?.sectionPaddingY ?? "10"}
             onValueChange={(next) =>
               updateFooterLayout(value, onChange, {
                 sectionPaddingY: next as NonNullable<FooterData["layout"]>["sectionPaddingY"],
               })
             }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Section padding" />
-            </SelectTrigger>
-            <SelectContent>
-              {sectionPaddingOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            options={sectionPaddingOptions}
+          />
         </div>
       </div>
 

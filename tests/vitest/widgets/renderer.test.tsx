@@ -74,11 +74,7 @@ import {
   statsKpiDefaults,
   type StatsKpiData,
 } from "../../../core/widgets/core/statsKpi";
-import {
-  createTeamWidget,
-  teamDefaults,
-  type TeamData,
-} from "../../../core/widgets/core/team";
+import { createTeamWidget, teamDefaults, type TeamData } from "../../../core/widgets/core/team";
 import {
   createRichTextSectionWidget,
   richTextSectionDefaults,
@@ -94,11 +90,7 @@ import {
   gridColumnsDefaults,
   type GridColumnsData,
 } from "../../../core/widgets/core/gridColumns";
-import {
-  createStackWidget,
-  stackDefaults,
-  type StackData,
-} from "../../../core/widgets/core/stack";
+import { createStackWidget, stackDefaults, type StackData } from "../../../core/widgets/core/stack";
 import {
   createSplitLayoutWidget,
   splitLayoutDefaults,
@@ -119,8 +111,7 @@ import { WidgetRenderer } from "../../../core/widgets/renderers/widgetRenderer";
 import type { WidgetEditorProps, WidgetBlock } from "../../../core/widgets/types";
 
 const StubEditor: ComponentType<WidgetEditorProps<HeroData>> = () => null;
-const StubCompareTimelineEditor: ComponentType<WidgetEditorProps<CompareTimelineData>> = () =>
-  null;
+const StubCompareTimelineEditor: ComponentType<WidgetEditorProps<CompareTimelineData>> = () => null;
 const StubTimelineEditor: ComponentType<WidgetEditorProps<TimelineData>> = () => null;
 const StubNavigationEditor: ComponentType<WidgetEditorProps<NavigationData>> = () => null;
 const StubFooterEditor: ComponentType<WidgetEditorProps<FooterData>> = () => null;
@@ -129,22 +120,17 @@ const StubContactEditor: ComponentType<WidgetEditorProps<ContactData>> = () => n
 const StubFeatureGridEditor: ComponentType<WidgetEditorProps<FeatureGridData>> = () => null;
 const StubTestimonialsEditor: ComponentType<WidgetEditorProps<TestimonialsData>> = () => null;
 const StubPricingPlansEditor: ComponentType<WidgetEditorProps<PricingPlansData>> = () => null;
-const StubFaqAccordionEditor: ComponentType<WidgetEditorProps<FaqAccordionData>> = () =>
-  null;
+const StubFaqAccordionEditor: ComponentType<WidgetEditorProps<FaqAccordionData>> = () => null;
 const StubCtaBannerEditor: ComponentType<WidgetEditorProps<CtaBannerData>> = () => null;
 const StubLogoCloudEditor: ComponentType<WidgetEditorProps<LogoCloudData>> = () => null;
-const StubGalleryMosaicEditor: ComponentType<WidgetEditorProps<GalleryMosaicData>> = () =>
-  null;
+const StubGalleryMosaicEditor: ComponentType<WidgetEditorProps<GalleryMosaicData>> = () => null;
 const StubStatsKpiEditor: ComponentType<WidgetEditorProps<StatsKpiData>> = () => null;
 const StubTeamEditor: ComponentType<WidgetEditorProps<TeamData>> = () => null;
-const StubRichTextSectionEditor: ComponentType<WidgetEditorProps<RichTextSectionData>> = () =>
-  null;
+const StubRichTextSectionEditor: ComponentType<WidgetEditorProps<RichTextSectionData>> = () => null;
 const StubSectionEditor: ComponentType<WidgetEditorProps<SectionData>> = () => null;
-const StubGridColumnsEditor: ComponentType<WidgetEditorProps<GridColumnsData>> = () =>
-  null;
+const StubGridColumnsEditor: ComponentType<WidgetEditorProps<GridColumnsData>> = () => null;
 const StubStackEditor: ComponentType<WidgetEditorProps<StackData>> = () => null;
-const StubSplitLayoutEditor: ComponentType<WidgetEditorProps<SplitLayoutData>> = () =>
-  null;
+const StubSplitLayoutEditor: ComponentType<WidgetEditorProps<SplitLayoutData>> = () => null;
 const StubSpacerEditor: ComponentType<WidgetEditorProps<SpacerData>> = () => null;
 const StubDividerEditor: ComponentType<WidgetEditorProps<DividerData>> = () => null;
 const StubUnknownEditor: ComponentType<WidgetEditorProps<Record<string, unknown>>> = () => null;
@@ -199,12 +185,8 @@ test("renderer respects visibility devices in runtime preview", () => {
     visibility: { enabled: true, devices: ["mobile"] },
   };
 
-  const desktopHtml = renderToString(
-    <WidgetRenderer block={block} previewDevice="desktop" />
-  );
-  const mobileHtml = renderToString(
-    <WidgetRenderer block={block} previewDevice="mobile" />
-  );
+  const desktopHtml = renderToString(<WidgetRenderer block={block} previewDevice="desktop" />);
+  const mobileHtml = renderToString(<WidgetRenderer block={block} previewDevice="mobile" />);
 
   expect(desktopHtml).toBe("");
   expect(mobileHtml).toContain("Build your system with Coderso");
@@ -228,9 +210,7 @@ test("renderer hides widget when visibility devices are empty", () => {
     visibility: { enabled: true, devices: [] },
   };
 
-  const html = renderToString(
-    <WidgetRenderer block={block} previewDevice="desktop" />
-  );
+  const html = renderToString(<WidgetRenderer block={block} previewDevice="desktop" />);
 
   expect(html).toBe("");
 });
@@ -358,9 +338,7 @@ test("renderer passes slots to widget render", () => {
     schema: { type: "object", additionalProperties: true },
     defaults: {},
     editor: { wizard: StubEditor, visual: StubEditor, advanced: StubEditor },
-    render: ({ slots }) => (
-      <div>Slots:{slots?.main?.length ?? 0}</div>
-    ),
+    render: ({ slots }) => <div>Slots:{slots?.main?.length ?? 0}</div>,
   });
 
   const block: WidgetBlock = {
@@ -757,6 +735,11 @@ test("renderer renders footer column and bottom slot content", () => {
 
   expect(html).toContain("Column slot item");
   expect(html).toContain("Bottom slot item");
+  expect(html).toContain('aria-label="Site footer"');
+  expect(html).toContain("<h3");
+  expect(html).toContain('aria-label="Twitter (opens in new tab)"');
+  expect(html).toContain('target="_blank"');
+  expect(html).not.toContain(">twitter<");
 });
 
 test("renderer outputs timeline variant and orientation markers", () => {
