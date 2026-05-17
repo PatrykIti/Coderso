@@ -5,7 +5,7 @@
 **Priority:** Medium
 **Category:** Widgets + Listing Filters + Playwright QA + Documentation
 **Estimated Effort:** Medium
-**Dependencies:** TASK-273-01, TASK-273-02, TASK-273-03, TASK-273-04, TASK-273-05, TASK-273-06, TASK-273-07
+**Dependencies:** TASK-256-08, TASK-273-01, TASK-273-02, TASK-273-03, TASK-273-04, TASK-273-05, TASK-273-06, TASK-273-07
 **Status:** To Do
 
 ---
@@ -66,10 +66,12 @@ Closure flow:
 1. Re-read `REPORT_LISTING_FILTERS_WIDGET.md`, all `TASK-273*` files, current
    Listing Filters owner files, and tests.
 2. Build a finding-to-owner checklist from the umbrella matrices.
-3. Run targeted validation for every implemented leaf.
-4. Run required repo gates before closure.
-5. Update report/docs/task-board/changelog together.
-6. Verify no PNG screenshots or unrelated files are staged.
+3. Confirm `TASK-256-08` is closed or has current evidence for all
+   TASK-256-owned Listing Filters exclusions referenced by TASK-273.
+4. Run targeted validation for every implemented leaf.
+5. Run required repo gates before closure.
+6. Update report/docs/task-board/changelog together.
+7. Verify no PNG screenshots or unrelated files are staged.
 
 Error handling:
 
@@ -97,6 +99,7 @@ This closure leaf does not add API routes.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run test:vitest -- tests/vitest/widgets/listingFilters.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/listingRuntimeScript.test.ts`
 - `bun run test:vitest -- tests/vitest/ui/listing-filters-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/listing-filters-query-parser.test.ts`
 - Any new runtime-script, validator, registry, renderer, or Playwright replay

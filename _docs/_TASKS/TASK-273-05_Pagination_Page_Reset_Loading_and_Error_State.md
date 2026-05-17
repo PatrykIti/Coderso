@@ -46,11 +46,14 @@ header.
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/listingFilters.tsx` | Add pagination render contract and loading/error containers or markers. |
-| `core/widgets/core/listingRuntimeScript.ts` | Add page-reset rules, pagination binding, busy state, stale-response guard, and inline error rendering. |
+| `core/widgets/core/listingFilters.tsx` | Extend `resolved` schema/data with current page, page size, total items, total pages, pagination render contract, and loading/error containers or markers. |
+| `core/services/search/listingRuntimeService.ts` | Preserve runtime result `total`/pagination metadata, clamp page/page-size inputs, and return metadata needed by the widget. |
+| `core/server/publicSite.tsx` | Pass pagination metadata from the listing runtime service into `ListingFiltersData.resolved` during public runtime rendering. |
+| `core/widgets/core/listingRuntimeScript.ts` | Add page-reset rules, pagination binding, busy state, stale-response guard, and inline error rendering; scope Listing Filters-only behavior to local markers or prove Search Box no-regression. |
 | `core/services/search/filterContract.ts` | Reuse `listingRuntimeTokens.page`; add helpers only if needed for consistent page token names. |
 | `tests/vitest/widgets/listingFilters.test.tsx` | Cover pagination markup and runtime markers. |
-| `tests/vitest/ui/listing-filters-query-parser.test.ts` or a new focused runtime-script suite | Cover page reset, unrelated param preservation, loading state, stale response, and error state. |
+| `tests/vitest/widgets/listingRuntimeScript.test.ts` | Cover page reset, pagination clicks, busy/error state, stale response guard, unrelated-param preservation, and Search Box listing-mode no-regression cases. |
+| `tests/vitest/ui/listing-filters-query-parser.test.ts` | Cover page-token parsing, clamping, and reset behavior in the pure query parser lane. |
 | `_docs/_WIDGETS/LISTING_FILTERS.md` | Document pagination and refresh behavior. |
 | `_docs/PLAYWRIGHT/REPORT_LISTING_FILTERS_WIDGET.md` | Mark B-02, B-08, B-09, B-11, and T-09 fixed or record deferral evidence. |
 
@@ -60,9 +63,20 @@ header.
 type ListingFiltersPagination = {
   enabled?: boolean;
   currentPage?: number;
+  pageSize?: number;
+  totalItems?: number;
   totalPages?: number;
   previousLabel?: string;
   nextLabel?: string;
+};
+
+type ListingFiltersResolved = {
+  listingQueryId?: string;
+  metrics?: ListingFacetMetric[];
+  searchQuery?: string;
+  rejectedTokens?: string[];
+  pagination?: ListingFiltersPagination;
+  error?: string;
 };
 
 function syncListingFormToUrl(form, url, reason) {
@@ -96,6 +110,9 @@ async function runListingRefresh(queryId, targetUrl, pushHistory) {
 Data flow:
 
 - Pagination writes only `lq.<queryId>.__page`.
+- Public SSR passes `currentPage`, `pageSize`, `totalItems`, and `totalPages`
+  from `listingRuntimeService` through `publicSite` into
+  `ListingFiltersData.resolved.pagination`.
 - Filter/search/sort changes remove `__page` so the listing starts again from
   page 1.
 - Busy and error states are scoped by `data-listing-query-id`, not global page
@@ -126,9 +143,8 @@ No API routes are added.
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/widgets/listingFilters.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/listingRuntimeScript.test.ts`
 - `bun run test:vitest -- tests/vitest/ui/listing-filters-query-parser.test.ts`
-- Add a focused `listingRuntimeScript` test if no current suite can execute the
-  client script behavior.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 
@@ -143,6 +159,8 @@ No API routes are added.
 
 - Users can navigate listing pages through the widget without manually editing
   `__page`.
+- Pagination controls are backed by server-provided page/total metadata through
+  the public runtime render path.
 - Changing any non-page filter/search/sort control resets the page token.
 - Runtime refresh visibly enters and exits a busy state.
 - HTTP/network failures surface inline with retry/fallback behavior and do not

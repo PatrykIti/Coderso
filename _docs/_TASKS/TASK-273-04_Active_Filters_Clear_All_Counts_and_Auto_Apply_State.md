@@ -46,7 +46,7 @@ control that needs local labels.
 | File | Required change |
 |---|---|
 | `core/widgets/core/listingFilters.tsx` | Add active summary/chips/clear-all markup, distinguish missing metrics from zero counts, and adjust auto-apply submit/copy behavior. |
-| `core/widgets/core/listingRuntimeScript.ts` | Bind clear-all action to remove `lq.<queryId>.*` params and refresh linked listing blocks. |
+| `core/widgets/core/listingRuntimeScript.ts` | Bind clear-all action to Listing Filters-specific markers, remove `lq.<queryId>.*` params, and refresh linked listing blocks without changing Search Box listing-mode forms accidentally. |
 | `core/admin/ui/widgets/editors/ListingFiltersEditors.tsx` | Add labels/toggles for active summary, clear-all label, count visibility/unknown-state copy only if product wants them configurable. |
 | `tests/vitest/widgets/listingFilters.test.tsx` | Cover active chips, clear-all marker, missing versus zero counts, and auto-apply/manual button behavior. |
 | `tests/vitest/ui/listing-filters-editor-wave.test.tsx` | Cover any new editor controls. |
@@ -120,7 +120,9 @@ No API routes are added.
 
 - `bun run test:vitest -- tests/vitest/widgets/listingFilters.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/listing-filters-editor-wave.test.tsx`
-- Add focused runtime-script regression for clear-all URL behavior.
+- `bun run test:vitest -- tests/vitest/widgets/listingRuntimeScript.test.ts`
+  for clear-all URL behavior, unrelated parameter preservation, and Search Box
+  listing-mode no-regression coverage.
 - `bun test tests/unit/widgets/validator.test.ts` if behavior schema fields are
   added.
 - `bun --cwd core lint`

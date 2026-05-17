@@ -62,15 +62,29 @@ function resolveListingFiltersRuntimeQueryId(data: ListingFiltersData) {
   return resolveOptionalText(data.resolved?.listingQueryId) ?? resolveOptionalText(data.listingQueryId);
 }
 
-function normalizeListingFiltersEditorDraft(value: ListingFiltersData): ListingFiltersData {
+type ListingFacetDraft = ListingFacetConfig & {
+  field: string;
+};
+
+type ListingFacetDraftValidation = {
+  facetId: string;
+  errors: string[];
+};
+
+function normalizeListingFiltersEditorDraft(value: ListingFiltersData) {
   const persisted = normalizeListingFiltersData(value);
+  const drafts = normalizeListingFacetDrafts(value.facets, persisted.facets);
   return {
-    ...persisted,
-    facets: normalizeListingFacetDrafts(value.facets, persisted.facets),
+    persistedData: {
+      ...persisted,
+      facets: normalizeListingFacetConfigs(drafts.map(stripDraftOnlyFields)),
+    },
+    drafts,
+    validation: validateListingFacetDrafts(drafts),
   };
 }
 
-function normalizeListingFacetDrafts(rawFacets: unknown, persistedFacets: ListingFacetConfig[]) {
+function normalizeListingFacetDrafts(rawFacets: unknown, persistedFacets: ListingFacetConfig[]): ListingFacetDraft[] {
   if (!Array.isArray(rawFacets)) return persistedFacets;
   return rawFacets.map((entry, index) => ({
     id: normalizeDraftId(entry.id, `facet-${index + 1}`),
@@ -80,7 +94,6 @@ function normalizeListingFacetDrafts(rawFacets: unknown, persistedFacets: Listin
     op: resolveDefaultOperator(normalizeDraftKind(entry.kind)),
     options: normalizeDraftOptions(entry.options),
     sortOptions: normalizeDraftSortOptions(entry.sortOptions),
-    validation: validateListingFacetDraft(entry, index),
   }));
 }
 
@@ -98,6 +111,9 @@ Data flow:
   preview.
 - Editor state uses draft normalization for incomplete rows; only save/runtime
   validation uses `normalizeListingFacetConfigs`.
+- Draft validation is parallel editor state, not part of `ListingFacetConfig`;
+  it must be stripped before `onChange`, save, persistence, or
+  `ListingFiltersData` runtime rendering.
 - Duplicate tokenized IDs are detected in editor state before persistence, with
   the canonical token shown next to the user-entered ID.
 - `kind` changes keep the row visible, set the default operator for the target

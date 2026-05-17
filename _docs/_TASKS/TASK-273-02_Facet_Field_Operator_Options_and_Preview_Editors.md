@@ -45,7 +45,8 @@ listing services. It only improves admin authoring of the `facets` model.
 |---|---|
 | `core/admin/ui/widgets/editors/ListingFiltersEditors.tsx` | Add query-field picker/suggestions, kind-scoped operator options, structured option/sort rows, inline validation, and facet preview. |
 | `core/services/search/filterContract.ts` | Export kind/operator helper metadata if needed so editor and runtime normalization share allowed combinations without duplicating literals. |
-| `core/services/listingsClient.ts` or existing listing admin client owner | Reuse existing listing-query records to derive field candidates; do not add a second route if the current response already has enough schema/query fields. |
+| `core/admin/services/listingsClient.ts` | Reuse existing listing-query records to derive field candidates; do not add a second route if the current response already has enough schema/query fields. |
+| `core/server/routes/listingsRoutes.ts` | Touch only if the current admin listing-query response cannot safely expose field candidates; add route-registration and `map*Error` coverage when a helper route is introduced. |
 | `tests/vitest/ui/listing-filters-editor-wave.test.tsx` | Cover field suggestions, kind/operator restrictions, option row add/remove/reorder, invalid sort rows, and preview output. |
 | `tests/vitest/widgets/listingFilters.test.tsx` | Cover normalized persisted facet output for options/sort rows when helper metadata moves to the shared contract. |
 | `_docs/_WIDGETS/LISTING_FILTERS.md` | Document editor field/operator/option authoring. |
@@ -117,7 +118,8 @@ No API routes are added unless current listing-query responses cannot expose
 field candidates safely.
 
 - Endpoint visibility: none by default; if a new helper route becomes necessary,
-  it must be internal admin-only.
+  it must be internal admin-only, registered with the existing listings route
+  family, and covered by route-registration tests.
 - Auth model: unchanged authenticated admin UI.
 - RBAC: unchanged listing-query read permissions.
 - CSRF: unchanged because this leaf should not add writes.
@@ -134,8 +136,8 @@ field candidates safely.
 - `bun run test:vitest -- tests/vitest/widgets/listingFilters.test.tsx`
 - `bun test tests/unit/widgets/validator.test.ts` if schema/defaults/normalizer
   fields change.
-- Add route/map-error coverage only if a new internal field-candidate route is
-  introduced.
+- Add route-registration and centralized `map*Error` coverage only if a new
+  internal field-candidate route is introduced.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 

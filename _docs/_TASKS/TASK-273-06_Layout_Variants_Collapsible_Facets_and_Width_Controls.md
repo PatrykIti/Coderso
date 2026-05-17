@@ -46,7 +46,7 @@ shared mode-switch behavior.
 |---|---|
 | `core/widgets/core/listingFilters.tsx` | Add variant/layout/width/collapsible schema, defaults, normalizer, class maps, and renderer output. |
 | `core/admin/ui/widgets/editors/ListingFiltersEditors.tsx` | Add visual layout selection, width controls, collapsible settings, and drawer/mobile guidance. |
-| `core/widgets/core/listingRuntimeScript.ts` | Bind drawer/collapsible controls idempotently if the renderer needs runtime interactivity. |
+| `core/widgets/core/listingRuntimeScript.ts` | Bind drawer/collapsible controls idempotently through Listing Filters-specific markers if the renderer needs runtime interactivity, without changing Search Box listing-mode forms. |
 | `tests/vitest/widgets/listingFilters.test.tsx` | Cover variant rendering, width normalization, collapsible markup, and backward-compatible defaults. |
 | `tests/vitest/ui/listing-filters-editor-wave.test.tsx` | Cover layout/width/collapsible editor controls. |
 | `tests/unit/widgets/registry.test.ts` | Cover variant registry changes if new variants are registered. |
@@ -118,7 +118,9 @@ No API routes are added.
 - `bun run test:vitest -- tests/vitest/ui/listing-filters-editor-wave.test.tsx`
 - `bun test tests/unit/widgets/validator.test.ts`
 - `bun test tests/unit/widgets/registry.test.ts` when variant registration changes.
-- Add focused runtime-script tests when drawer/collapsible JS is introduced.
+- `bun run test:vitest -- tests/vitest/widgets/listingRuntimeScript.test.ts`
+  when drawer/collapsible JS is introduced; include Search Box listing-mode
+  no-regression coverage if shared script behavior changes.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 

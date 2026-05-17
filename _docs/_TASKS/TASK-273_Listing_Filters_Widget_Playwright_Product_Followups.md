@@ -69,6 +69,24 @@ TASK-256 already owns them as shared widget-contract drift or global policy.
 | Wizard facet onboarding, runtime diagnostics outside Advanced, and editor entry guidance | TASK-273-07 | Mode content only; shared mode-update mechanics remain TASK-256. |
 | Report fixed/deferred evidence, widget docs, changelog, board closure | TASK-273-08 | Final family closure and validation record. |
 
+## Shared Owner Safeguards
+
+- `core/widgets/core/listingRuntimeScript.ts` is shared by `listing-filters`
+  and `search-box` (`SearchBoxBlock` renders `data-listing-runtime-form` and
+  imports `getListingRuntimeClientScript`). TASK-273 changes in that file must
+  either scope behavior through Listing Filters-specific data markers or prove
+  the shared listing-mode behavior with explicit Search Box regressions.
+- Pagination is a server-to-widget contract, not only a client URL control.
+  `core/services/search/listingRuntimeService.ts` computes runtime `total`
+  values, while `core/server/publicSite.tsx` currently chooses the
+  `ListingFiltersData.resolved` fields passed into the public widget render.
+  TASK-273-05 must carry current page, page size, total items, and total pages
+  through that path before the widget renders pagination UI.
+- New runtime-script coverage must live in
+  `tests/vitest/widgets/listingRuntimeScript.test.ts` and cover Listing
+  Filters plus Search Box listing-mode interactions whenever shared script
+  behavior changes.
+
 ## Sub-Tasks
 
 - [ ] TASK-273-01: Admin Canvas, Facet Draft State, and Query Loading
@@ -149,8 +167,10 @@ Implementation leaves:
   fields change.
 - `bun test tests/unit/widgets/registry.test.ts` if variant registration or
   widget registry wiring changes.
-- Add a focused regression for `getListingRuntimeClientScript` when
-  URL/query/reset/loading/error behavior changes.
+- `bun run test:vitest -- tests/vitest/widgets/listingRuntimeScript.test.ts`
+  when `getListingRuntimeClientScript` URL/query/reset/loading/error behavior
+  changes; include Search Box listing-mode no-regression cases because the
+  script is shared.
 - `bun run scan:security:strict`
 - `bun run precommit`
 

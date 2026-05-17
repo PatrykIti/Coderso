@@ -14,7 +14,7 @@
 
 Make non-sort Listing Filters controls practical for real catalogs: numeric
 range controls, date-range controls, nested taxonomy presentation, and a
-bounded searchable/multi-select option mode for large option sets.
+bounded searchable multi-select option mode for large option sets.
 
 This leaf owns Listing Filters schema/defaults/normalizer/render/editor/tests
 for these controls. It must not introduce client-owned search provider config or
@@ -41,8 +41,9 @@ unbounded arbitrary widgets inside facets.
 | `core/widgets/core/listingFilters.tsx` | Extend schema/defaults/types for bounded control presentation settings and render range/date/taxonomy/searchable option controls. |
 | `core/services/search/filterContract.ts` | Extend facet config types only when the new control metadata belongs in the query token contract. Preserve existing token names. |
 | `core/admin/ui/widgets/editors/ListingFiltersEditors.tsx` | Add editor controls for numeric/date ranges, taxonomy hierarchy, and searchable option mode. |
-| `core/widgets/core/listingRuntimeScript.ts` | Read multi-value/select/range/date controls through existing token sync without breaking current checkbox/radio/sort behavior. |
+| `core/widgets/core/listingRuntimeScript.ts` | Read multi-value/select/range/date controls through existing token sync without breaking current checkbox/radio/sort or Search Box listing-mode behavior. |
 | `tests/vitest/widgets/listingFilters.test.tsx` | Cover rendered range/date/taxonomy/searchable controls and legacy payload fallbacks. |
+| `tests/vitest/widgets/listingRuntimeScript.test.ts` | Cover range/date/searchable multi-select serialization and Search Box listing-mode no-regression cases when shared script behavior changes. |
 | `tests/vitest/ui/listing-filters-editor-wave.test.tsx` | Cover editor controls and validation for new control metadata. |
 | `tests/unit/widgets/validator.test.ts` | Cover schema validation when new persisted fields are added. |
 | `_docs/_WIDGETS/LISTING_FILTERS.md` | Document the new control modes and bounds. |
@@ -82,7 +83,30 @@ function ListingRangeFacetControl({ metric, config }: Props) {
 }
 
 function ListingSearchableOptionControl({ metric }: Props) {
-  return <select multiple data-listing-token={metric.token}>{/* bounded options */}</select>;
+  const [query, setQuery] = useState("");
+  const visibleOptions = filterBoundedOptions(metric.options, query, { limit: 50 });
+  return (
+    <div data-listing-searchable-options>
+      <input
+        type="search"
+        data-listing-option-search
+        value={query}
+        onChange={(event) => setQuery(event.currentTarget.value)}
+      />
+      {visibleOptions.map((option) => (
+        <label key={option.value}>
+          <input
+            type="checkbox"
+            name={metric.token}
+            value={option.value}
+            defaultChecked={option.active}
+            data-listing-token={metric.token}
+          />
+          {option.label}
+        </label>
+      ))}
+    </div>
+  );
 }
 ```
 
@@ -101,8 +125,9 @@ Error handling:
 
 - Invalid range/date bounds normalize to empty active state, not a broken URL.
 - Unsupported control modes fall back to the current inline option rendering.
-- Large option lists remain bounded by schema limits; do not add remote
-  typeahead until a backend-owned search endpoint exists.
+- Large option lists must include local bounded search/filter UI plus
+  multi-select serialization; do not add remote typeahead until a backend-owned
+  search endpoint exists.
 
 ## Security Contract
 
@@ -122,8 +147,9 @@ No public write or provider endpoint is added.
 
 - `bun run test:vitest -- tests/vitest/widgets/listingFilters.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/listing-filters-editor-wave.test.tsx`
-- Add/update focused runtime-script tests when range/date/select serialization
-  changes.
+- `bun run test:vitest -- tests/vitest/widgets/listingRuntimeScript.test.ts`
+  when range/date/searchable multi-select serialization changes; include Search
+  Box listing-mode no-regression cases because the script is shared.
 - `bun test tests/unit/widgets/validator.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
@@ -141,6 +167,6 @@ No public write or provider endpoint is added.
   strings.
 - Taxonomy options can express a visible parent-child hierarchy while preserving
   the current option-value token contract.
-- Large option sets have a bounded searchable or select-style control that
-  remains schema-owned.
+- Large option sets have a bounded searchable multi-select control that remains
+  schema-owned.
 - Existing checkbox/radio/sort payloads render unchanged.
