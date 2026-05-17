@@ -17,8 +17,8 @@ Add Divider-owned line style, opacity, and visibility options from
 
 This leaf covers:
 
-- W5: alpha/opacity control for line and label styling without replacing the
-  shared CSS-variable picker contract;
+- W5: an editor-visible transparency authoring path for line and label styling
+  without requiring raw CSS-only workarounds or a global alpha-picker rewrite;
 - W10: bounded dash-pattern and dotted line-style polish beyond the current
   browser-default dashed variant;
 - W11: schema-backed `visibility: "spacer-only"` mode for intentional vertical
@@ -27,9 +27,11 @@ This leaf covers:
 ## Scope Boundary
 
 This leaf must not implement a global color picker or global opacity control.
-Use bounded Divider fields such as opacity tokens and line-style variants. If a
-shared alpha-aware color input is required, split it back to TASK-256 before
-continuing.
+Use a Divider-local transparency authoring path such as bounded opacity tokens
+paired with the existing color fields, or another explicit editor affordance
+that lets authors set transparency without dropping to undocumented raw values.
+If a shared alpha-aware color input is required, split it back to TASK-256
+before continuing.
 
 The spacer-only mode is Divider-specific product behavior. It must not change
 the separate Spacer widget or shared slot/spacing contracts.
@@ -43,7 +45,7 @@ the separate Spacer widget or shared slot/spacing contracts.
 - [ ] Add runtime rendering for `solid`, `dashed`, `dotted`, bounded
   dash-pattern tokens, and optional spacer-only visibility without leaking
   editor-only placeholders.
-- [ ] Add editor controls for opacity, line style, and dash pattern in
+- [ ] Add editor controls for transparency, line style, and dash pattern in
   Visual/Advanced.
 - [ ] Model spacer-only as a schema-backed `visibility` field, not a new
   variant, so existing `line`, `dashed`, and `label-center` variant ownership
@@ -107,6 +109,8 @@ Error handling:
 
 - Unknown opacity/style/dash-pattern/visibility values normalize to current
   default line output.
+- The task must not close while transparency still requires a hidden
+  text-input-only workaround; W5 needs a truthful authoring path in the editor.
 - Spacer-only still renders the configured top/bottom margins and deterministic
   markers, but no visible border.
 - Label-center with spacer-only should either hide the label or block the
@@ -165,8 +169,10 @@ No API routes are added.
 
 ## Acceptance Criteria
 
-- Divider supports bounded opacity, line-style, and dash-pattern controls
+- Divider supports bounded transparency, line-style, and dash-pattern controls
   without raw CSS.
+- Authors can set Divider transparency through the editor without relying on
+  undocumented raw CSS-only input.
 - Spacer-only behavior is deterministic, documented, and tested.
 - Current saved Divider payloads render as before unless the new fields are
   configured.

@@ -5,7 +5,7 @@
 **Priority:** Medium
 **Category:** Widgets + Playwright QA + Documentation + Changelog
 **Estimated Effort:** Medium
-**Dependencies:** TASK-264-01, TASK-264-02, TASK-264-03, TASK-264-04, TASK-264-05
+**Dependencies:** TASK-256-08, TASK-264-01, TASK-264-02, TASK-264-03, TASK-264-04, TASK-264-05
 **Status:** To Do
 
 ---
@@ -26,8 +26,11 @@ by itself except for documentation-only corrections discovered during closure.
 - [ ] Re-run or refresh frontend evidence for each completed TASK-264 row.
 - [ ] Mark every source report finding as `fixed`, `TASK-256`, `deferred`,
   `excluded`, or `not reproducible`, with a concrete task ID and reason.
-- [ ] Keep C1/C2/C3/U1/U7/U8/W6/W7/R1/R2 routed to TASK-256 unless TASK-256-08
-  explicitly reclassifies them.
+- [ ] Keep C2/C3/U1/U7 and the spacing side of U6 routed to TASK-256. Record
+  C1/U8/W6 and U5 as current-state verified report drift when the live shared
+  contract already satisfies them.
+- [ ] Keep W7/R1/R2 aligned to the landed TASK-256-04 plus TASK-256-05-03
+  contract unless the final audit opens a new shared accessibility follow-up.
 - [ ] Record section 8.1 admin-session expiry as excluded CMS/session scope.
 - [ ] Update `_docs/_WIDGETS/DIVIDER.md` with final data/editor/runtime
   behavior.
@@ -82,7 +85,8 @@ function buildDividerClosureMatrix(rows: DividerClosureRow[]) {
 
 Closure flow:
 
-1. Read all TASK-264 leaves, TASK-256-05-03, and the source report.
+1. Read all TASK-264 leaves, TASK-256-04, TASK-256-05-03, TASK-256-08, and
+   the source report.
 2. Build a finding-by-finding closure matrix.
 3. Update report evidence with textual DOM/admin/frontend results; do not add
    Playwright PNG artifacts.
@@ -99,6 +103,9 @@ Error handling:
   evidence only when it directly covers the finding.
 - If a finding is TASK-256 scope, record the TASK-256 owner task and do not mark
   it fixed by TASK-264.
+- If a report row is already satisfied by the live contract, record it as
+  `not-reproducible` or current-state verified with exact evidence instead of
+  forcing a fake product fix.
 - If broad suites fail for unrelated reasons, isolate with targeted commands and
   record the unrelated failure separately.
 
@@ -118,6 +125,8 @@ No API routes are added.
 - `git diff --check`
 - `bun run test:vitest -- tests/vitest/widgets/divider.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/divider-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/widget-template-editor.test.tsx`
+  when Divider section structure or mode ownership copy changes
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if any leaf
   changes shared renderer output
 - `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` if any
@@ -149,7 +158,8 @@ No API routes are added.
 ## Acceptance Criteria
 
 - Every row from `REPORT_DIVIDER_WIDGET.md` has an explicit final status and
-  owner.
+  owner, including report rows that are already satisfied by the current live
+  shared contract.
 - Divider docs reflect the final schema/editor/runtime behavior.
 - Task board, task files, changelog, and report evidence are synchronized.
 - Required validation is green or the exact blocker is documented before any

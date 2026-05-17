@@ -39,12 +39,12 @@ repairs remain TASK-256 scope. Do not hide those repairs inside this leaf.
 - [ ] Show the preview in Visual and Advanced, and decide whether Wizard gets
   the same preview or a smaller read-only preview row.
 - [ ] Add Wizard controls for the highest-value Divider decisions that do not
-  overload first-run setup: line color/tone, width mode, and top/bottom spacing
-  only after TASK-256 shared controls are available.
+  overload first-run setup: line color/tone, width mode, and top/bottom
+  spacing, using the shared TASK-256 controls rather than leaving U4 unresolved
+  in Visual mode.
 - [ ] Add reset actions for style, spacing, label, and all Divider data using a
   single normalized defaults source.
-- [ ] Add tests proving reset does not change variant unless the explicit
-  all-reset action is selected.
+- [ ] Add tests proving reset actions are data-only and do not change variant.
 
 ## Files to Change
 
@@ -68,7 +68,7 @@ function DividerPreview({ value, variant }: { value: DividerData; variant: strin
   );
 }
 
-function resetDividerSection(section: "label" | "style" | "spacing" | "all") {
+function resetDividerSection(section: "label" | "style" | "spacing" | "all-data") {
   updateValue(value, onChange, (current) => {
     if (section === "label") return { ...current, label: dividerDefaults.label };
     if (section === "spacing") {
@@ -91,8 +91,11 @@ Error handling:
 - Preview must tolerate invalid persisted values by rendering normalized data.
 - Reset actions must not erase unrelated fields unless their button explicitly
   says it resets all Divider data.
-- Wizard must remain short; if controls become dense, keep them in Visual and
-  document the deferral in TASK-264-06.
+- Reset actions are data-only; variant remains owned by `onVariantChange` and
+  must never be mutated by reset buttons.
+- Wizard must remain short, but U4 must still land here. If the minimum Wizard
+  control set cannot fit cleanly, split a follow-up before closure instead of
+  silently keeping the report row unresolved.
 
 ## Security Contract
 
@@ -143,7 +146,7 @@ No API routes are added.
 
 - Divider editors show a truthful inline preview based on normalized current
   data.
-- Wizard exposes only compact, high-value controls and does not duplicate shared
-  broken token/color behavior.
-- Reset actions are explicit, tested, and preserve variant unless the selected
-  reset action intentionally changes all data.
+- Wizard exposes compact, high-value controls for line color, width mode, and
+  top/bottom spacing once shared TASK-256 controls are available.
+- Reset actions are explicit, tested, and data-only; no reset action changes
+  the Divider variant.

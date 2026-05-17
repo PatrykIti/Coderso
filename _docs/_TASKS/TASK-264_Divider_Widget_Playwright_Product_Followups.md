@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Layout + Admin UI + Runtime Render + Playwright QA
 **Estimated Effort:** Large
-**Dependencies:** TASK-252, TASK-256-02, TASK-256-05-03
+**Dependencies:** TASK-252, TASK-256-02, TASK-256-04, TASK-256-05-03
 **Status:** To Do
 
 ---
@@ -43,8 +43,9 @@ editor UX. It must not duplicate TASK-256 shared-contract fixes:
   TASK-256-05-03.
 - CSS variable preservation in native color pickers remains TASK-256-02 and
   TASK-256-05-03.
-- Divider `<hr>`/`role="separator"`/decorative `aria-hidden` baseline remains
-  TASK-256-05-03.
+- Shared unlabeled-divider separator semantics and decorative segment
+  `aria-hidden` baseline remain TASK-256-04 and TASK-256-05-03; TASK-264 must
+  consume that live contract instead of redefining it locally.
 - Shared spacing-token validation and resolved-value copy remain TASK-256-02
   unless TASK-256 exposes a helper that this family can consume.
 
@@ -59,7 +60,7 @@ contract task.
 |---|---|---|
 | C1, C2, C3, U1, U7, U8, W6, W7, R1, R2 | TASK-256-01, TASK-256-02, TASK-256-05-03 | Excluded from TASK-264. Use the final shared-contract behavior as a dependency before implementing adjacent Divider polish. |
 | W1, W2, W8, W9, U2, U9, R4 | TASK-264-01 | Add Divider-owned label color, typography, nowrap, label gap, clearer label copy, and clear-label affordance. |
-| W3, W4, U5 and the custom-width part of U6 | TASK-264-02 | Add Divider-owned container width, horizontal alignment, and custom-width validation feedback without changing shared spacing semantics. |
+| W3, W4, and the custom-width part of U6 | TASK-264-02 | Add Divider-owned container width, horizontal alignment, and custom-width validation feedback without changing shared spacing semantics. U5 is closure-only because `%` width support is already present in the live parser. |
 | W5, W10, W11 | TASK-264-03 | Add Divider-owned opacity/alpha, bounded dash-pattern or dotted style controls, and spacer-only visibility mode using bounded schema fields. |
 | U3, U4, W12 | TASK-264-04 | Add inline Divider preview, Wizard comfort controls, and reset/normalize actions after shared token/color behavior is available. |
 | R3 | TASK-264-05 | Remove or sanitize raw style-token data markers such as `data-divider-color="var(--color-border)"`. |
@@ -70,9 +71,9 @@ contract task.
 
 | Area | Current owners | Current tests | New or changed tests |
 |---|---|---|---|
-| Schema, defaults, normalizer, renderer | `core/widgets/core/divider.tsx` | `tests/vitest/widgets/divider.test.tsx` | Add schema/normalizer/runtime assertions for each new bounded field and DOM marker change. |
-| Wizard/Visual/Advanced editors | `core/admin/ui/widgets/editors/DividerEditors.tsx` | `tests/vitest/ui/divider-editor-wave.test.tsx` | Add editor-flow assertions for new controls, inline preview, reset, validation feedback, and label clearing. |
-| Shared token/color/ARIA adjacency | TASK-256 leaves | `tests/vitest/widgets/styleNoneTokens.test.tsx`, shared editor tests, Divider suites listed in TASK-256-05-03 | Do not duplicate in TASK-264. Run only when a Divider leaf consumes already-landed shared helpers. |
+| Schema, defaults, normalizer, renderer | `core/widgets/core/divider.tsx` | `tests/vitest/widgets/divider.test.tsx`, `tests/vitest/widgets/renderer.test.tsx`, `tests/vitest/widgets/styleNoneTokens.test.tsx` | Add schema/normalizer/runtime assertions for each new bounded field, renderer marker change, and any `none` token behavior touched by Divider-owned fields. |
+| Wizard/Visual/Advanced editors | `core/admin/ui/widgets/editors/DividerEditors.tsx` | `tests/vitest/ui/divider-editor-wave.test.tsx`, `tests/vitest/ui/widget-template-editor.test.tsx` | Add editor-flow assertions for new controls, inline preview, reset, validation feedback, label clearing, and any Block Settings section changes. |
+| Shared token/color/ARIA adjacency | TASK-256 leaves | shared editor tests plus the Divider coverage listed above | Do not duplicate shared fixes in TASK-264. Run shared-adjacent suites only when a Divider leaf consumes already-landed shared helpers or verifies routed rows during closure. |
 | Widget docs and source report | `_docs/_WIDGETS/DIVIDER.md`, `_docs/PLAYWRIGHT/REPORT_DIVIDER_WIDGET.md` | docs diff checks | Update fixed/deferred/routed status and final usage contract after implementation leaves. |
 
 ## Sub-Tasks
@@ -86,8 +87,9 @@ contract task.
 
 ## Implementation Order
 
-1. Complete TASK-256-02 and TASK-256-05-03 first, or verify that the selected
-   TASK-264 leaf is not touching shared token/color/ARIA behavior.
+1. Complete TASK-256-02, TASK-256-04, and TASK-256-05-03 first, or verify that
+   the selected TASK-264 leaf is not touching shared token/color/ARIA
+   behavior.
 2. Complete TASK-264-01 before preview/editor polish so the preview can reflect
    final label behavior.
 3. Complete TASK-264-02 before broad layout preview polish because width and
@@ -138,10 +140,13 @@ No API routes are added.
 - For implementation leaves:
   - `bun run test:vitest -- tests/vitest/widgets/divider.test.tsx`
   - `bun run test:vitest -- tests/vitest/ui/divider-editor-wave.test.tsx`
+  - `bun run test:vitest -- tests/vitest/ui/widget-template-editor.test.tsx`
+    when Divider section structure or mode ownership copy changes
   - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` when shared
     SSR renderer output changes
   - `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` only
-    when a leaf consumes or extends landed TASK-256 token semantics
+    when a leaf consumes or extends landed TASK-256 token semantics or changes
+    Divider-owned spacing markers
   - `bun test tests/unit/widgets/validator.test.ts` when schema/defaults change
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`

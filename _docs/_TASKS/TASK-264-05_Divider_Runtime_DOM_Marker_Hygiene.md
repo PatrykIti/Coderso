@@ -5,7 +5,7 @@
 **Priority:** Medium
 **Category:** Widgets + Runtime Render + Security Hygiene
 **Estimated Effort:** Small
-**Dependencies:** TASK-256-05-03, TASK-264
+**Dependencies:** TASK-256-04, TASK-256-05-03, TASK-264-01, TASK-264-02, TASK-264-03, TASK-264
 **Status:** To Do
 
 ---
@@ -18,7 +18,9 @@ Clean up Divider runtime data markers from
 The current renderer exposes raw style values such as
 `data-divider-color="var(--color-border)"`. The report classifies this as a
 DOM tech leak. This leaf decides and implements the Divider-local marker policy
-without changing shared widget analytics or testing markers.
+for the current Divider markers and any new style-bearing markers introduced by
+earlier TASK-264 leaves, without changing shared widget analytics or testing
+markers.
 
 ## Scope Boundary
 
@@ -26,8 +28,8 @@ This leaf does not remove deterministic markers that tests, QA, or runtime
 diagnostics legitimately use. It removes or sanitizes only raw style-token
 markers that expose implementation details without user value.
 
-Shared separator semantics remain TASK-256-05-03. This leaf should run after
-that baseline so DOM evidence is collected once.
+Shared separator semantics remain TASK-256-04 and TASK-256-05-03. This leaf
+should run after that baseline so DOM evidence is collected once.
 
 ## Sub-Tasks
 
@@ -36,10 +38,10 @@ that baseline so DOM evidence is collected once.
   style leak.
 - [ ] Remove raw style-value markers or replace them with bounded categories
   such as `data-divider-color-kind="token|hex|custom"`.
-- [ ] Apply that marker policy to every style-bearing marker, including current
-  raw color, resolved width, custom width, top/bottom margins, and future style
-  fields. Keep raw values only when the task documents why the value is not
-  user-authored or is required for QA.
+- [ ] Apply that marker policy to current raw color, resolved width, custom
+  width, top/bottom margins, and any new style-bearing markers introduced by
+  TASK-264-01/02/03. Keep raw values only when the task documents why the value
+  is not user-authored or is required for QA.
 - [ ] Keep stable non-style markers for variant, thickness, width mode, and
   label presence unless tests/docs prove they are unnecessary.
 - [ ] Update SSR tests and report evidence with the final marker policy.
@@ -50,6 +52,8 @@ that baseline so DOM evidence is collected once.
 |---|---|
 | `core/widgets/core/divider.tsx` | Remove or sanitize raw color, width, margin, and other style-bearing data markers while preserving useful deterministic QA markers. |
 | `tests/vitest/widgets/divider.test.tsx` | Add assertions that raw CSS variable/custom style values are not emitted in data attributes and required QA markers remain. |
+| `tests/vitest/widgets/renderer.test.tsx` | Update the public `WidgetRenderer` marker assertions when Divider marker names or values change. |
+| `tests/vitest/widgets/styleNoneTokens.test.tsx` | Update Divider `none` token assertions if margin markers are removed or sanitized. |
 | `_docs/_WIDGETS/DIVIDER.md` | Document final runtime marker contract. |
 | `_docs/PLAYWRIGHT/REPORT_DIVIDER_WIDGET.md` | Mark R3 as fixed/deferred with DOM evidence after validation. |
 
@@ -110,6 +114,8 @@ No API routes are added.
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/widgets/divider.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/divider-editor-wave.test.tsx` only if
   editor diagnostics copy changes
 - `bun --cwd core lint`
@@ -133,7 +139,8 @@ No API routes are added.
 - Public Divider DOM no longer exposes raw CSS variable or custom color values
   through `data-divider-*` attributes.
 - Public Divider DOM no longer exposes raw user-authored style values through
-  width, margin, or future style-bearing `data-divider-*` attributes unless the
-  final report explicitly documents a bounded, non-sensitive QA reason.
+  width, margin, or TASK-264-introduced style-bearing `data-divider-*`
+  attributes unless the final report explicitly documents a bounded,
+  non-sensitive QA reason.
 - Existing visible rendering and useful QA markers remain stable.
 - Runtime tests cover the final marker policy.

@@ -71,6 +71,7 @@ function normalizeDividerLabelStyle(data: DividerData) {
     labelSize: resolveToken(data.labelSize, "xs", dividerLabelSizeTokens),
     labelWeight: resolveToken(data.labelWeight, "medium", dividerLabelWeightTokens),
     labelTransform: resolveToken(data.labelTransform, "uppercase", dividerLabelTransformTokens),
+    labelLetterSpacing: resolveToken(data.labelLetterSpacing, "wide", dividerLabelLetterSpacingTokens),
     labelGap: resolveToken(data.labelGap, "3", dividerLabelGapTokens),
   };
 }
@@ -84,7 +85,16 @@ function renderLabelCenterDivider(normalized: DividerData) {
   return (
     <div className={labelGapClassMap[labelStyle.labelGap]}>
       <span aria-hidden="true" className="block flex-1 border-t" />
-      <span className="shrink-0 whitespace-nowrap px-1" style={{ color: labelStyle.labelColor }}>
+      <span
+        className={cn(
+          "shrink-0 whitespace-nowrap px-1",
+          labelSizeClassMap[labelStyle.labelSize],
+          labelWeightClassMap[labelStyle.labelWeight],
+          labelTransformClassMap[labelStyle.labelTransform],
+          labelLetterSpacingClassMap[labelStyle.labelLetterSpacing]
+        )}
+        style={{ color: labelStyle.labelColor }}
+      >
         {normalized.label?.trim()}
       </span>
       <span aria-hidden="true" className="block flex-1 border-t" />
@@ -98,6 +108,8 @@ Error handling:
 - Unknown label style tokens normalize to defaults without dropping the label.
 - Empty label color falls back to the existing line color until the user
   configures a separate label color.
+- Typography token maps must stay explicit in `divider.tsx`; do not hide W2
+  behind ad-hoc string concatenation or undocumented Tailwind fragments.
 - Clear-label removes `label` only; it must not switch variants or delete style
   fields.
 

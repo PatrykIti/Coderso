@@ -13,7 +13,8 @@
 ## Overview
 
 Repair spacer and divider report findings around token clarity, variant-aware
-Advanced controls, custom pixel UX, and divider accessibility.
+Advanced controls, shared color/token truthfulness, and unlabeled-divider
+accessibility semantics.
 
 ## Drift Evidence
 
@@ -34,7 +35,7 @@ Advanced controls, custom pixel UX, and divider accessibility.
 | Spacer guide option is invisible in main canvas or has misleading copy | Fix here by either rendering the guide in the intended editor context or relabeling the control to runtime-preview-only | `SpacerEditors.tsx`, `spacer.tsx`, page-builder preview context if needed | None |
 | Divider inert Advanced variant select, duplicate `none`/zero/custom-pixel, CSS variable color loss | Fix here through TASK-256-02 token helpers and editor truthfulness | `DividerEditors.tsx`, `divider.tsx` | None |
 | Divider `<div>` vs semantic separator and missing separator/hidden ARIA | Fix here plus TASK-256-04 ARIA assertions | `divider.tsx` | None |
-| Divider label color, nowrap, inline preview, and custom-width validation | Fix here because the current visible controls can mislead editors or produce invalid runtime output | `DividerEditors.tsx`, `divider.tsx` | None |
+| Divider label color, nowrap, inline preview, Wizard comfort controls, custom-width validation, and DOM marker hygiene | Product/editor follow-up scope in TASK-264 | `TASK-264` family | TASK-256-08 references TASK-264 instead of overclaiming shared closure |
 | Divider hardcoded container width and expanded label typography controls | Product/style scope in TASK-264 | `TASK-264` family | TASK-256-08 references TASK-264 instead of rediscovering scope |
 
 ## Sub-Tasks
@@ -48,11 +49,10 @@ Advanced controls, custom pixel UX, and divider accessibility.
 - [ ] Remove or wire the divider Advanced variant select.
 - [ ] Preserve CSS variable/custom token strings when color pickers cannot
   represent them.
-- [ ] Add divider separator semantics according to decorative vs labelled
-  variants.
-- [ ] Fix divider label-color, nowrap, inline-preview, and custom-width
-  validation rows in this leaf; record container-width and typography product
-  rows against TASK-264 during report closure.
+- [ ] Add divider separator semantics according to the shared unlabeled-divider
+  baseline and decorative segment rules.
+- [ ] Record remaining Divider product/editor rows against TASK-264 during
+  report closure instead of re-owning them here.
 
 ## Files to Change
 
@@ -61,7 +61,7 @@ Advanced controls, custom pixel UX, and divider accessibility.
 | `core/admin/ui/widgets/editors/SpacerEditors.tsx` | 46-55, 157-205, guide controls, Advanced variant controls | Single visible zero/off choice, custom token state, breakpoint-preserving mode transitions, truthful guide copy, and variant-aware Advanced controls. |
 | `core/widgets/core/spacer.tsx` | renderer, normalizer, guide render | Preserve explicit `none` semantics, deterministic height output, breakpoint values, and truthful guide visibility. |
 | `core/admin/ui/widgets/editors/DividerEditors.tsx` | 61-69, 179-217, 433-445 | Remove inert controls, preserve CSS variable values, and expose clear/custom token state truthfully. |
-| `core/widgets/core/divider.tsx` | separator render | Add `role="separator"` or `aria-hidden` according to the rendered divider type. |
+| `core/widgets/core/divider.tsx` | separator render | Add the shared unlabeled-divider separator semantics and decorative segment ARIA baseline; do not widen into Divider-only product controls here. |
 | `tests/vitest/ui/spacer-editor-wave.test.tsx` | existing suite | Add fixed/responsive value preservation, guide-copy, variant-aware Advanced, and token regressions. |
 | `tests/vitest/widgets/spacer.test.tsx` | existing suite | Add height/token/guide output regressions. |
 | `tests/vitest/ui/divider-editor-wave.test.tsx` | existing suite | Add no-op select and CSS variable regressions. |
@@ -141,4 +141,6 @@ No API routes are added.
 - Spacer Advanced controls match the active variant.
 - Divider Advanced no longer contains inert controls.
 - CSS variables/custom values are not silently destroyed by color pickers.
-- Divider output has correct accessibility semantics.
+- Divider shared token/color truthfulness and unlabeled divider accessibility
+  semantics are fixed without swallowing Divider-only product backlog items
+  that belong to TASK-264.

@@ -20,8 +20,12 @@ This leaf covers:
 - W3: replace the hardcoded `container` width with a configurable bounded
   container-width token or value;
 - W4: add horizontal alignment for `container` and `custom` width modes;
-- U5 and the custom-width portion of U6: show clear validation feedback for
-  custom width values instead of silently falling back to defaults.
+- the custom-width portion of U6: show clear validation feedback for custom
+  width values instead of silently falling back to defaults.
+
+U5 is already current-state verified because `%` width values are accepted by
+the live parser; TASK-264-06 should record that row as report drift or
+`not-reproducible`, not recreate the parser surface here.
 
 ## Scope Boundary
 
@@ -45,9 +49,10 @@ introduce a new shared `SpacingField` state machine.
   normalizes safely. The current editor calls `normalizeValue()` before
   `onChange`, so this leaf must add local raw draft state or a
   non-normalizing field update path for the custom-width input.
-- [ ] Update editor controls and tests for valid `%`, `px`, `rem`, `em`, and
-  numeric width values plus invalid raw input that remains visible with
-  fallback copy.
+- [ ] Update editor controls and tests for valid `%`, `px`, `rem`, and `em`
+  values plus invalid raw input that remains visible with fallback copy.
+- [ ] Preserve backward compatibility for already-saved bare-number payloads
+  without widening the editor authoring contract beyond explicit CSS lengths.
 
 ## Files to Change
 
@@ -75,8 +80,15 @@ function validateDividerWidthInput(value: string | undefined) {
   if (trimmed.length === 0) {
     return { status: "empty", css: dividerDefaults.customWidth, message: "Using default width." };
   }
-  if (cssLengthPattern.test(trimmed) || numberPattern.test(trimmed)) {
+  if (cssLengthPattern.test(trimmed)) {
     return { status: "valid", css: normalizeCssLength(trimmed), message: "Resolved width." };
+  }
+  if (legacyNumberPattern.test(trimmed)) {
+    return {
+      status: "legacy-number",
+      css: `${trimmed}px`,
+      message: "Add a unit such as px, rem, em, or % to keep the value explicit.",
+    };
   }
   return { status: "invalid", css: dividerDefaults.customWidth, message: "Invalid width; using default." };
 }
@@ -119,6 +131,9 @@ Error handling:
 - Invalid raw custom-width text must remain visible in the input until the user
   corrects it or commits a valid value; do not immediately replace it through
   the current normalized `updateData()` path.
+- Already-saved bare-number payloads may normalize to `px` for backward
+  compatibility, but the editor must not silently widen the authoring contract
+  by treating unitless numbers as the preferred new input format.
 - Existing payloads without `align` or `containerWidth` render exactly as the
   current centered `48rem` container until the user configures new fields.
 
@@ -158,8 +173,9 @@ No API routes are added.
 ## Documentation Updates Required
 
 - Update `_docs/_WIDGETS/DIVIDER.md`.
-- Update `_docs/PLAYWRIGHT/REPORT_DIVIDER_WIDGET.md` rows W3, W4, U5, and the
-  custom-width portion of U6 after validation.
+- Update `_docs/PLAYWRIGHT/REPORT_DIVIDER_WIDGET.md` rows W3, W4, and the
+  custom-width portion of U6 after validation. Record U5 only if validation
+  proves the current `%` support claim regressed.
 
 ## Changelog Policy
 
@@ -173,4 +189,7 @@ No API routes are added.
 - Invalid custom widths show clear editor feedback and still normalize safely.
 - Invalid custom-width drafts remain visible long enough for the user to fix
   them instead of being overwritten by `normalizeDividerData()`.
+- New editor authoring stays explicit to CSS lengths (`%`, `px`, `rem`, `em`);
+  legacy bare numbers may be normalized for compatibility but are not the new
+  documented contract.
 - Existing Divider payloads remain backward compatible.
