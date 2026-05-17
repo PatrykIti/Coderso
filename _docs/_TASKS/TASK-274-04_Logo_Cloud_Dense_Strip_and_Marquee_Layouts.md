@@ -126,8 +126,12 @@ No API routes are added.
 - `bun run test:vitest -- tests/vitest/ui/logo-cloud-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` when renderer
   output markers change.
+- Add a static assertion or closure check that `core/site/styles/site.css` and
+  `core/admin/styles/globals.css` both define or import the same
+  `logo-cloud-marquee` keyframe/class.
 - `bun test tests/unit/widgets/validator.test.ts` only when intentionally adding
   Logo Cloud coverage to the generic Bun validator suite.
+- `bun run gates:coderso`
 - `bun run scan:security:strict`
 - `bun run precommit`
 

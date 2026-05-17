@@ -101,7 +101,7 @@ Closure error handling:
   not-applicable evidence, keep TASK-274 open and add or repair the owner leaf
   before moving statuses.
 - If TASK-256 shared safe-link, heading, ARIA, hoverColor, `logoHeight: "none"`,
-  alt, or Advanced-mode work has not landed, mark the affected rows as
+  or Advanced-mode work has not landed, mark the affected rows as
   `task-256-owned` with the exact remaining task ID instead of claiming a
   TASK-274 fix.
 - If validation cannot run because of database, network, or environment

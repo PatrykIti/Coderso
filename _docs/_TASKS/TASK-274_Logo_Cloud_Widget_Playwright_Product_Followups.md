@@ -95,6 +95,16 @@ inside its own implementation leaves.
 | BF-11 CTA below logo section | TASK-274-05 | Logo Cloud-specific trust-section CTA, through shared safe href. |
 | Report fixed/deferred notes, widget docs, changelog, board closure | TASK-274-06 | Final documentation and evidence pass. |
 
+## Current-State / Not-Applicable Matrix
+
+These report rows do not need implementation leaves, but TASK-274-06 must keep
+their evidence visible during closure.
+
+| Report finding | Status | Evidence |
+|---|---|---|
+| BF-06 container controls | Not applicable | `REPORT_LOGO_CLOUD_WIDGET.md:230-232` states Advanced already exposes padding, margin, container, and breakpoint visibility controls. |
+| A7 image lazy loading | Current-state OK | `REPORT_LOGO_CLOUD_WIDGET.md:266` marks `loading="lazy"` on images as OK. |
+
 ## Sub-Tasks
 
 - [ ] TASK-274-01: Logo Cloud Header Background and Typography
@@ -107,8 +117,10 @@ inside its own implementation leaves.
 ## Implementation Order
 
 1. Finish or rebase over TASK-256 shared fixes first. TASK-274 leaves must build
-   on the shared safe-href, ARIA, heading, hoverColor, alt, and Advanced-mode
-   contracts instead of duplicating them.
+   on the shared safe-href, ARIA, heading, hoverColor, and Advanced-mode
+   contracts instead of duplicating them. Logo Cloud per-logo `alt` authoring is
+   owned by TASK-274-02 because TASK-256-06-02 does not currently own that
+   schema/editor expansion.
 2. Complete TASK-274-01 first because header/background/typography define the
    section shell used by later media and layout work.
 3. Complete TASK-274-02 before item management so thumbnail/media-picker tests

@@ -168,6 +168,9 @@ Regression-test shape:
   shape used by the real picker.
 - Mock the media cache client used by the editor, including success,
   not-found, and failure cases for `listMediaCached`.
+- Assert stale media-cache races do not overwrite newer selections: trigger two
+  picker selections, resolve the first request last, and verify the second
+  selection remains persisted.
 - Assert Wizard edits persist `logos[index].image`, `logos[index].alt`, and
   `logos[index].href`.
 - Assert Visual thumbnails render success and unavailable states without
@@ -200,6 +203,7 @@ No API routes are added.
 - `bun run test:vitest -- tests/vitest/widgets/logoCloud.test.tsx`
 - `bun test tests/unit/widgets/validator.test.ts` only when intentionally adding
   Logo Cloud coverage to the generic Bun validator suite.
+- `bun run gates:coderso`
 - `bun run scan:security:strict`
 - `bun run precommit`
 

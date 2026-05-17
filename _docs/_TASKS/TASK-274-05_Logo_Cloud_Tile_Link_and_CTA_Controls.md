@@ -101,9 +101,9 @@ function LogoCloudItem({ logo, linkTarget, resolveWidgetLinkAttrs }: LogoCloudIt
   return <a {...attrs}>{content}</a>;
 }
 
-function LogoCloudCta({ cta }: { cta: LogoCloudCta }) {
+function LogoCloudCta({ cta, resolveWidgetLinkAttrs }: LogoCloudCtaProps) {
   if (!cta.enabled || !cta.label?.trim()) return null;
-  const attrs = resolveLogoLinkAttrs(cta.href, cta.target ?? "same-tab");
+  const attrs = resolveLogoLinkAttrs(resolveWidgetLinkAttrs, cta.href, cta.target ?? "same-tab");
   if (!attrs) return null;
   return <a {...attrs} data-logo-cloud-cta="true">{cta.label}</a>;
 }
@@ -161,6 +161,7 @@ No API routes are added.
   output markers change.
 - `bun test tests/unit/widgets/validator.test.ts` only when intentionally adding
   Logo Cloud coverage to the generic Bun validator suite.
+- `bun run gates:coderso`
 - `bun run scan:security:strict`
 - `bun run precommit`
 

@@ -23,6 +23,7 @@ Source report findings:
 Explicitly out of scope:
 
 - Adding a global document undo stack.
+- Adding a confirmation-dialog remove flow; this leaf uses inline Undo instead.
 - Removing existing Move up / Move down controls; they remain the keyboard and
   deterministic fallback.
 - Reusing menu/tree nesting behavior; Logo Cloud owns a flat list only.
@@ -31,9 +32,8 @@ Explicitly out of scope:
 
 | File | Required change |
 |---|---|
-| `core/admin/ui/widgets/editors/LogoCloudEditors.tsx` | Add confirm/undo remove behavior, drag handle reorder, drag state, drop targets, and stable metadata for logo item actions. |
-| `core/admin/ui/shared/ConfirmActionDialog.tsx` | Reuse only when choosing confirm-dialog flow. Do not fork it. |
-| `tests/vitest/ui/logo-cloud-editor-wave.test.tsx` | Cover confirm/undo, drag reorder, Move fallback, min/max count boundaries, and no accidental deletion. |
+| `core/admin/ui/widgets/editors/LogoCloudEditors.tsx` | Add inline undo remove behavior, drag handle reorder, drag state, drop targets, and stable metadata for logo item actions. |
+| `tests/vitest/ui/logo-cloud-editor-wave.test.tsx` | Cover inline undo, drag reorder, Move fallback, min/max count boundaries, and no accidental deletion. |
 | `_docs/_WIDGETS/LOGO_CLOUD.md` | Document repeated-item management behavior. |
 | `_docs/PLAYWRIGHT/REPORT_LOGO_CLOUD_WIDGET.md` | Record fixed evidence for UX-02/UX-08. |
 
@@ -79,9 +79,8 @@ Editor data flow:
    `data-widget-control` metadata.
 3. Store only transient drag state in React local state; persisted order changes
    flow through `onChange` once a valid drop occurs.
-4. Choose one destructive-action pattern:
-   - confirmation dialog before removing, or
-   - immediate remove with inline Undo that restores the exact removed item.
+4. Use immediate remove with inline Undo that restores the exact removed item at
+   its previous index. Do not also add a confirmation dialog in this leaf.
 5. Preserve `logos.length >= 1` and `logos.length <= logoCloudLogoMax`.
 
 Error handling:
@@ -89,7 +88,7 @@ Error handling:
 - Ignore drops with missing, same, out-of-range, or stale indices.
 - Do not normalize duplicate IDs into a different item until final persisted
   value passes through the existing normalizer.
-- Keep the existing order if remove confirmation is cancelled.
+- Keep the existing order if remove is attempted while only one logo remains.
 - Restore button must no-op safely after another edit invalidates the pending
   removal.
 
@@ -114,6 +113,7 @@ No API routes are added.
 - `bun run test:vitest -- tests/vitest/ui/logo-cloud-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/logoCloud.test.tsx` if
   normalization/order behavior changes.
+- `bun run gates:coderso`
 - `bun run scan:security:strict`
 - `bun run precommit`
 
@@ -127,7 +127,8 @@ No API routes are added.
 
 ## Acceptance Criteria
 
-- Removing a logo is recoverable or confirmed before data loss.
+- Removing a logo is recoverable through inline Undo before data loss becomes
+  irreversible.
 - Drag reorder works for long logo lists and keeps Move buttons as fallback.
 - Min/max logo count protections remain intact.
 - Editor tests prove reorder/remove behavior without relying on browser-only

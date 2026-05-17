@@ -138,6 +138,7 @@ No API routes are added.
   clearable background semantics touch style-none adjacency.
 - `bun test tests/unit/widgets/validator.test.ts` only when intentionally adding
   Logo Cloud coverage to the generic Bun validator suite.
+- `bun run gates:coderso`
 - `bun run scan:security:strict`
 - `bun run precommit`
 
