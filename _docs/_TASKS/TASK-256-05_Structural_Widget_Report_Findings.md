@@ -142,7 +142,8 @@ No API routes are added.
 - Update touched structural widget docs in `_docs/_WIDGETS/*.md`, including
   `_docs/_WIDGETS/SECTION.md` when section behavior changes.
 - Update structural Playwright reports with fixed/deferred status.
-- Update `_docs/WIDGET_PACK_MATRIX.md` only if readiness changes.
+- Update `core/widgets/modulePackMatrix.ts` and `_docs/WIDGET_PACK_MATRIX.md`
+  together only if readiness changes.
 
 ## Changelog Policy
 

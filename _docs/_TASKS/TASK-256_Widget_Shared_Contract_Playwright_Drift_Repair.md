@@ -40,8 +40,9 @@ href/media handling, or preview/runtime parity.
 
 Findings that do not fit one of those shared classes must stay out of the
 implementation leaves until TASK-256-08 either documents an intentional deferral
-or creates a future task. This keeps TASK-256 focused on the widget contract that
-already exists in the repo instead of widening into per-widget feature expansion.
+or references an existing physical follow-up family before creating any missing
+future task. This keeps TASK-256 focused on the widget contract that already
+exists in the repo instead of widening into per-widget feature expansion.
 
 ## Business Requirements
 
@@ -214,7 +215,8 @@ This umbrella does not add API routes.
 ## Acceptance Criteria
 
 - Every report drift assigned in the matrix is either fixed with tests or
-  explicitly deferred to a new follow-up task with a documented reason.
+  explicitly deferred to an existing or newly created physical follow-up task
+  with a documented reason.
 - Shared editor mode updates preserve current widget data and do not re-open the
   timeline-style race in any widget with editor-owned variant selection.
 - `Clear` and `none` semantics are consistent with `_docs/WIDGETS.md:185-227`.

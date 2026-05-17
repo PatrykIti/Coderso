@@ -42,14 +42,14 @@ This leaf owns two contract classes:
 | Section `Empty region.` in public output | Fix here through TASK-256-03 render context | `section.tsx` | None |
 | Section anchor accepts invalid IDs | Fix here with schema/editor validation and tests | `SectionEditors.tsx`, `section.tsx` | None |
 | Section resolver fallback and duplicated Advanced style controls | Fix here because current controls/defaults are misleading | `SectionEditors.tsx`, `section.tsx` | None |
-| Section `Wide`/`Content` duplicate semantics and bleed variant copy | Fix or relabel if existing controls imply runtime behavior that is not true | `SectionEditors.tsx`, `section.tsx` | TASK-256-08 creates follow-up if this requires product-level layout semantics |
-| Section heading level control | Fix if existing report confirms hardcoded invalid hierarchy; otherwise defer with report note | `section.tsx` | TASK-256-08 creates future task if it becomes product scope |
-| Section fullscreen/min-height, horizontal region layouts, text typography controls, background media, presets, responsive padding, shadows, custom region names | Future product scope unless a current visible control already promises it | Future section task | TASK-256-08 records deferral |
+| Section `Wide`/`Content` duplicate semantics and bleed variant copy | Fix or relabel if existing controls imply runtime behavior that is not true | `SectionEditors.tsx`, `section.tsx` | TASK-256-08 references TASK-283 if this requires product-level layout semantics |
+| Section heading level control | Fix if existing report confirms hardcoded invalid hierarchy; otherwise defer with report note | `section.tsx` | TASK-256-08 references TASK-283 if it becomes product scope |
+| Section fullscreen/min-height, horizontal region layouts, text typography controls, background media, presets, responsive padding, shadows, custom region names | Future product scope unless a current visible control already promises it | `TASK-283` family | TASK-256-08 references TASK-283 instead of creating duplicate Section follow-ups |
 | Grid `asymmetric` variant does not update existing explicit spans | Fix here through variant-aware span reconciliation or editor warning | `GridColumnsEditors.tsx`, `gridColumns.tsx` | None |
 | Grid `masonry-lite` forces cardized render while switch stays off | Fix here by synchronizing switch state, disabling the switch with explanation, or making renderer honor the visible switch | `GridColumnsEditors.tsx`, `gridColumns.tsx` | None |
 | Grid color picker does not represent CSS variables | Fix here through token-aware picker display that preserves `var(...)` values | `GridColumnsEditors.tsx`, shared picker helper if reused | None |
-| Grid span preview and span-sum validation | Fix here if current span controls permit broken layouts without feedback; otherwise defer as editor UX enhancement | `GridColumnsEditors.tsx` | TASK-256-08 records deferral if not part of contract repair |
-| Grid `Column 1/2` public labels | Treat as editor metadata and hide publicly unless a real caption field is introduced | `gridColumns.tsx` | Caption feature is future scope |
+| Grid span preview and span-sum validation | Fix here if current span controls permit broken layouts without feedback; otherwise defer as editor UX enhancement | `GridColumnsEditors.tsx` | TASK-256-08 references TASK-271 if not part of contract repair |
+| Grid `Column 1/2` public labels | Treat as editor metadata and hide publicly unless a real caption field is introduced | `gridColumns.tsx` | Caption feature routes to TASK-271 |
 | Grid slot/config count drift | Fix here | `GridColumnsEditors.tsx`, `VisualPanel.tsx` slot metadata | None |
 
 ## Sub-Tasks
@@ -61,8 +61,8 @@ This leaf owns two contract classes:
 - [ ] Fix or relabel duplicated section style/default controls, `Wide`/`Content`
   ambiguity, and bleed copy so editor-visible choices match runtime behavior.
 - [ ] Record section fullscreen/layout/media/preset/responsive-padding feature
-  requests as future scope during TASK-256-08 if they remain outside the
-  shared-contract repair.
+  requests as TASK-283 future scope during TASK-256-08 if they remain outside
+  the shared-contract repair.
 - [ ] Add explicit default-token guards for section style values without
   rejecting valid CSS variables.
 - [ ] Reconcile `grid-columns` config rows with slot targets or add an explicit

@@ -270,7 +270,8 @@ No API routes are added by this closure task.
 - All touched widget source-of-truth docs.
 - `_docs/_TASKS/README.md`.
 - `_docs/_CHANGELOG/README.md` and the new changelog entry.
-- `_docs/WIDGET_PACK_MATRIX.md` only if readiness changed.
+- `core/widgets/modulePackMatrix.ts` and `_docs/WIDGET_PACK_MATRIX.md` together
+  only if readiness changed.
 
 ## Changelog Policy
 

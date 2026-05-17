@@ -183,7 +183,9 @@ No API routes are added.
   - `tests/vitest/widgets/testimonials.test.tsx`
   - `tests/vitest/widgets/pricingPlans.test.tsx`
   - `tests/vitest/widgets/faqAccordion.test.tsx`
-  - `tests/vitest/widgets/ctaBanner.test.tsx`
+  - `tests/vitest/widgets/ctaBanner.test.tsx` only if a shared TASK-256 helper
+    is adopted in CTA Banner; CTA-specific runtime regressions stay in
+    TASK-263.
   - `tests/vitest/widgets/logoCloud.test.tsx`
   - `tests/vitest/widgets/galleryMosaic.test.tsx`
   - `tests/vitest/widgets/team.test.tsx`

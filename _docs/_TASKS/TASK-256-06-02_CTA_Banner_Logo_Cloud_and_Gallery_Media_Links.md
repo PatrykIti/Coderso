@@ -57,7 +57,7 @@ controls are deferred to the TASK-274 family.
 | Gallery Mosaic feature-left one-item empty column plus redundant row-span/resolver cleanup | Fix here because current runtime output is visibly misleading for an existing variant | `galleryMosaic.tsx`, `tests/vitest/widgets/galleryMosaic.test.tsx` | None |
 | Gallery Mosaic alt text and link security | Fix here | `galleryMosaic.tsx`, editor tests | None |
 | Gallery Mosaic Wizard video support and current media-type truthfulness | Fix here for Wizard media accept rules and the current image/video priority controls only | `GalleryMosaicEditors.tsx`, `tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx` | Visual per-item MediaPicker remains TASK-270-01 |
-| Gallery Mosaic video `title`, hover-caption keyboard/touch access, and autoplay control | Fix here when it changes current runtime semantics; otherwise create explicit accessibility follow-up | `galleryMosaic.tsx`, `GalleryMosaicEditors.tsx` | TASK-256-08 creates follow-up if schema expansion is required |
+| Gallery Mosaic video `title`, hover-caption keyboard/touch access, and autoplay control | Fix here when it changes current runtime semantics; otherwise route to the existing Gallery Mosaic follow-up family | `galleryMosaic.tsx`, `GalleryMosaicEditors.tsx` | TASK-256-08 references TASK-270 if schema expansion is required |
 | Gallery Mosaic Visual per-item MediaPicker, lightbox, drag/drop, per-item ratio, object-position, video poster image, responsive columns, motion, and import/export | Future product scope | TASK-270 | Excluded from TASK-256 and implemented or deferred by physical TASK-270 leaves |
 
 ## Sub-Tasks
