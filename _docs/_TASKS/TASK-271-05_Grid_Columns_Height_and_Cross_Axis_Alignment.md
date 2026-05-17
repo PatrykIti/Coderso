@@ -74,14 +74,25 @@ type GridColumnsColumn = {
 Runtime class merge:
 
 ```ts
-function resolveColumnShellClasses(column: ResolvedGridColumn, layout: LayoutData) {
+function resolveGridColumnsWrapperClasses(layout: LayoutData) {
+  return joinClasses(
+    "grid",
+    layout.align ? alignClassMap[layout.align] : undefined
+  );
+}
+
+function resolveColumnGridItemClasses(column: ResolvedGridColumn) {
   const alignSelf = column.alignSelf === "inherit" ? undefined : column.alignSelf;
   return joinClasses(
     "h-full",
+    alignSelf ? selfAlignClassMap[alignSelf] : undefined
+  );
+}
+
+function resolveColumnShellClasses(column: ResolvedGridColumn) {
+  return joinClasses(
     minHeightClassMap[column.minHeight ?? "md"],
-    mobileMinHeightClassMap[column.mobileMinHeight ?? column.minHeight ?? "md"],
-    alignSelf ? selfAlignClassMap[alignSelf] : undefined,
-    layout.align ? alignClassMap[layout.align] : undefined
+    mobileMinHeightClassMap[column.mobileMinHeight ?? column.minHeight ?? "md"]
   );
 }
 ```
@@ -91,6 +102,10 @@ Error handling:
 - `none` min-height must not collapse columns with nested content.
 - If per-column align is `inherit`, renderer must continue using global
   `layout.align`.
+- Keep global `items-*` classes on the grid wrapper. Per-column alignment must
+  use `self-*` classes on the outer grid item, or the implementation must
+  document an equivalent flex/grid shell context and cover exact class placement
+  in runtime tests.
 - Existing payloads must render the same default height until the user changes
   the token.
 
@@ -128,3 +143,6 @@ No API routes are added.
 - A single column can override vertical alignment while other columns inherit
   the global alignment.
 - Runtime and editor tests cover default, changed, and invalid-token behavior.
+- Runtime tests prove global alignment remains on the wrapper while per-column
+  alignment is emitted only on the column grid item/shell owner selected by the
+  implementation.

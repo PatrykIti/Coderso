@@ -52,10 +52,12 @@ Out of scope:
 |---|---|
 | `core/admin/ui/widgets/editors/GridColumnsEditors.tsx` | Add dynamic Wizard labels, clearer column-count copy, variant miniatures, and preset buttons/selectors. |
 | `core/widgets/core/gridColumns.tsx` | Add bounded preset metadata only if the editor needs a schema-owned helper; do not persist preset names unless required. |
-| `tests/vitest/ui/grid-columns-editor-wave.test.tsx` | Cover dynamic Wizard labels, copy, gap labels, variant miniatures, and preset application. |
+| `tests/vitest/ui/grid-columns-editor-wave.test.tsx` | Cover dynamic Wizard labels, copy, variant miniatures, and preset application. |
 | `tests/vitest/widgets/gridColumns.test.tsx` | Cover any new exported preset helper or normalizer behavior if added. |
+| `core/admin/ui/pages/builder/BlockSettings.tsx` or page-builder slot owner | Required only if a preset can change the column count; route that path through the TASK-256 slot-sync/remap seam instead of data-only editor updates. |
+| `tests/vitest/pageBuilder/blockSettings-wave.test.tsx` | Required only if count-changing presets are implemented; cover no nested slot content is orphaned. |
 | `_docs/_WIDGETS/GRID_COLUMNS.md` | Document Wizard all-column editing and layout presets after implementation. |
-| `_docs/PLAYWRIGHT/REPORT_GRID_COLUMNS_WIDGET.md` | Mark C3/U1/U2/U5/U8 fixed or deferred with textual evidence. |
+| `_docs/PLAYWRIGHT/REPORT_GRID_COLUMNS_WIDGET.md` | Mark C3/U2/U5/U8 fixed or deferred with textual evidence. |
 
 ## Implementation Pseudocode
 
@@ -78,23 +80,34 @@ function ColumnLabelInputs({ value, onChange }: GridColumnsEditorStateProps) {
 Preset application:
 
 ```ts
+type GridColumnsPresetResult =
+  | { ok: true; data: GridColumnsData }
+  | { ok: false; data: GridColumnsData; error: "preset_column_count_mismatch" };
+
 type GridColumnsPreset = {
   id: "two-equal" | "one-third-two-thirds" | "two-thirds-one-third" | "three-equal" | "quarter-half-quarter";
   label: string;
   columns: Array<{ desktopSpan: GridColumnsSpan; tabletSpan: GridColumnsSpan; mobileSpan: GridColumnsSpan }>;
 };
 
-function applyGridColumnsPreset(data: GridColumnsData, preset: GridColumnsPreset): GridColumnsData {
+function applyGridColumnsPreset(data: GridColumnsData, preset: GridColumnsPreset): GridColumnsPresetResult {
   const current = normalizeGridColumnsData(data);
-  return normalizeGridColumnsData({
-    ...current,
-    columns: preset.columns.map((shape, index) => ({
-      ...(current.columns?.[index] ?? {}),
-      id: current.columns?.[index]?.id ?? String(index + 1),
-      label: current.columns?.[index]?.label ?? `Column ${index + 1}`,
-      ...shape,
-    })),
-  });
+  const columns = current.columns ?? [];
+  if (preset.columns.length !== columns.length) {
+    return { ok: false, data: current, error: "preset_column_count_mismatch" };
+  }
+  return {
+    ok: true,
+    data: normalizeGridColumnsData({
+      ...current,
+      columns: columns.map((column, index) => ({
+        ...column,
+        id: column.id ?? String(index + 1),
+        label: column.label ?? `Column ${index + 1}`,
+        ...preset.columns[index],
+      })),
+    }),
+  };
 }
 ```
 
@@ -102,8 +115,11 @@ Error handling:
 
 - Presets must clamp to `gridColumnsColumnMin` and `gridColumnsColumnMax`.
 - Presets must not delete existing labels where the same column index remains.
-- If TASK-256 exposes a slot-target sync helper, call that helper before applying
-  a preset so preset count and slot count stay aligned.
+- Default preset buttons must be current-count-only: a 3-column preset is shown
+  or enabled only when the normalized data already has 3 synchronized columns.
+- Count-changing presets require the TASK-256 slot sync/remap callback first,
+  a confirmation that names added/removed slots, and page-builder tests proving
+  nested slot content is not orphaned.
 - Do not change gap labels here; TASK-271-06 owns U1 together with token
   expansion.
 
@@ -144,3 +160,5 @@ No API routes are added.
   third-party assets.
 - Layout presets apply bounded span data through the Grid Columns normalizer and
   preserve existing labels where possible.
+- Preset application never creates a column count/slot count mismatch from a
+  data-only editor update.

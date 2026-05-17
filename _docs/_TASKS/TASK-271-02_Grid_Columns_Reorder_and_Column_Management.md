@@ -49,10 +49,15 @@ Out of scope:
 | File | Required change |
 |---|---|
 | `core/admin/ui/widgets/editors/GridColumnsEditors.tsx` | Add reorder controls in `ColumnSizingGrid` and wire them through a column reorder helper. |
-| `core/admin/ui/pages/builder/BlockSettings.tsx` or page-builder block update owner | If current editor props cannot update slots, add a narrow reorder callback or context hook through the existing builder seam. |
+| `core/widgets/types.ts` | Extend `WidgetEditorContext` with a narrow Grid Columns reorder/slot-sync callback if the editor cannot update slots through existing props. |
+| `core/admin/ui/pages/builder/VisualPanel.tsx` | Pass the page-builder-owned reorder callback through editor context; do not keep this as a data-only `onChange` update. |
+| `core/admin/ui/pages/builder/BlockSettings.tsx` or page-builder block update owner | Own the atomic block update that changes Grid Columns data and slots together. |
+| `core/admin/ui/pages/builder/blockUtils.ts` | Add or extend a pure builder helper that remaps only explicit slot id changes and preserves unmatched slots. |
 | `core/widgets/core/gridColumns.tsx` | Add pure `reorderGridColumnsData` helper only if it can stay Bun-free and schema-owned. |
 | `tests/vitest/ui/grid-columns-editor-wave.test.tsx` | Cover move up/down controls, disabled states, and data preservation. |
 | `tests/vitest/widgets/gridColumns.test.tsx` | Cover pure reorder helper if added. |
+| `tests/vitest/pageBuilder/blockSettings-wave.test.tsx` | Cover atomic reorder from the builder seam and preservation of nested slot content. |
+| `tests/vitest/pageBuilder/blockList.test.tsx` | Cover no accidental child deletion when block slots contain legacy or unmatched entries. |
 | `_docs/_WIDGETS/GRID_COLUMNS.md` | Document column reorder behavior after implementation. |
 | `_docs/PLAYWRIGHT/REPORT_GRID_COLUMNS_WIDGET.md` | Mark W7 fixed/deferred with textual evidence. |
 
@@ -75,17 +80,54 @@ function reorderGridColumnsData(
 }
 ```
 
-Builder slot reorder seam:
+Builder-owned atomic update:
 
 ```ts
-function reorderGridColumnSlots(block: WidgetBlock, orderedColumnIds: string[]): WidgetBlock {
-  const nextSlots: Record<string, WidgetBlock[]> = {};
-  orderedColumnIds.forEach((columnId, index) => {
-    const sourceSlotId = `column:${columnId}`;
-    const targetSlotId = `column:${index + 1}`;
-    nextSlots[targetSlotId] = block.slots?.[sourceSlotId] ?? [];
+type GridColumnReorderPlan = {
+  fromIndex: number;
+  toIndex: number;
+  nextColumnIds: string[];
+  idMap?: Record<string, string>;
+};
+
+function remapGridColumnSlots(
+  slots: WidgetBlock["slots"],
+  plan: GridColumnReorderPlan
+): { slots: WidgetBlock["slots"]; warnings: Array<"unmatched_grid_column_slot"> } {
+  const currentSlots = slots ?? {};
+  const nextSlots = { ...currentSlots };
+  const expectedSlotIds = new Set(plan.nextColumnIds.map((columnId) => `column:${columnId}`));
+  const consumedSlotIds = new Set<string>();
+
+  Object.entries(plan.idMap ?? {}).forEach(([fromColumnId, toColumnId]) => {
+    const sourceSlotId = `column:${fromColumnId}`;
+    const targetSlotId = `column:${toColumnId}`;
+    if (!currentSlots[sourceSlotId] || sourceSlotId === targetSlotId) return;
+    nextSlots[targetSlotId] = currentSlots[sourceSlotId];
+    delete nextSlots[sourceSlotId];
+    consumedSlotIds.add(sourceSlotId);
+    consumedSlotIds.add(targetSlotId);
   });
-  return { ...block, slots: nextSlots };
+
+  const hasUnmatchedGridSlot = Object.keys(currentSlots).some(
+    (slotId) =>
+      slotId.startsWith("column:") &&
+      !expectedSlotIds.has(slotId) &&
+      !consumedSlotIds.has(slotId)
+  );
+  return {
+    slots: nextSlots,
+    warnings: hasUnmatchedGridSlot ? ["unmatched_grid_column_slot"] : [],
+  };
+}
+
+function reorderGridColumnsBlock(block: WidgetBlock, plan: GridColumnReorderPlan) {
+  const data = reorderGridColumnsData(block.data as GridColumnsData, plan.fromIndex, plan.toIndex);
+  const slotResult = remapGridColumnSlots(block.slots, plan);
+  return {
+    block: { ...block, data, slots: slotResult.slots },
+    warnings: slotResult.warnings,
+  };
 }
 ```
 
@@ -95,6 +137,10 @@ Error handling:
   and surface a non-destructive editor warning.
 - Do not mutate column ids unless the builder slot owner explicitly rewrites the
   matching slots in the same update.
+- Prefer stable column ids; when only `columns[]` order changes, preserve slot
+  keys and nested children exactly as they are.
+- Never rebuild `slots` from `orderedColumnIds` or ordinal keys; carry all
+  unmatched legacy slots forward and remap only through an explicit `idMap`.
 - If drag-and-drop is added, retain move buttons as the deterministic fallback
   and the primary test target.
 
@@ -134,3 +180,5 @@ No API routes are added.
 - Reorder keeps nested column content attached to the intended column.
 - Move controls are keyboard-accessible and disabled at valid boundaries.
 - Tests cover data preservation and no accidental slot-child deletion.
+- Legacy or unmatched `column:*` slots survive reorder and produce a visible
+  non-destructive warning instead of being silently deleted.

@@ -61,13 +61,36 @@ Out of scope:
 
 ## Implementation Pseudocode
 
+## Value Contract
+
+Column-level color values are public render data and must stay strictly bounded.
+Use a schema/normalizer-owned `GridColumnsColorValue` that allows only:
+
+- approved design-token variables matching `var(--color-<token>)`;
+- hex colors matching `#rgb`, `#rgba`, `#rrggbb`, or `#rrggbbaa`;
+- omitted values, which mean "inherit the global Grid Columns value".
+
+Reject raw class names, arbitrary CSS property maps, `url(...)`, `expression(...)`,
+semicolon-separated declarations, angle brackets, script-like fragments, objects,
+arrays, and unapproved CSS functions before data is persisted or rendered.
+
 Column style shape:
 
 ```ts
+type GridColumnsColorValue = string & { readonly __gridColumnsColorValue: unique symbol };
+
+function normalizeGridColumnsColorValue(value: unknown): GridColumnsColorValue | undefined {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  if (/^#[0-9a-fA-F]{3,8}$/.test(trimmed)) return trimmed as GridColumnsColorValue;
+  if (/^var\(--color-[a-z0-9-]+\)$/.test(trimmed)) return trimmed as GridColumnsColorValue;
+  return undefined;
+}
+
 type GridColumnsColumnStyle = {
   cardize?: boolean;
-  background?: string;
-  borderColor?: string;
+  background?: GridColumnsColorValue;
+  borderColor?: GridColumnsColorValue;
   borderWidth?: GridColumnsBorderWidth;
   radius?: GridColumnsRadius;
   padding?: GridColumnsPadding;
@@ -87,9 +110,13 @@ type GridColumnsColumn = {
 Runtime merge:
 
 ```ts
-function resolveColumnSurface(global: StyleData, column: ResolvedGridColumn) {
+function resolveColumnSurface(
+  global: StyleData,
+  column: ResolvedGridColumn,
+  resolvedVariant: GridColumnsVariant
+) {
   const override = column.style ?? {};
-  const cardized = override.cardize ?? global.cardizeColumns ?? false;
+  const cardized = override.cardize ?? global.cardizeColumns ?? (resolvedVariant === "masonry-lite");
   return {
     cardized,
     backgroundColor: resolveClearableStyleValue(override.background ?? global.columnBackground),
@@ -108,7 +135,10 @@ Error handling:
 - Clear actions remove the override field and fall back to the global value.
 - If per-column cardize is disabled, surface-only controls are hidden or disabled
   consistently with TASK-256.
-- Color fields must preserve valid CSS variables after TASK-256 picker work.
+- Color fields must preserve valid design-token variables after TASK-256 picker
+  work and reject unsafe strings through schema/normalizer tests.
+- Preserve the current `masonry-lite` forced-cardized behavior unless TASK-256
+  intentionally replaces that contract first.
 
 ## Security Contract
 
@@ -146,3 +176,7 @@ No API routes are added.
 - Global cardized styling remains backward compatible.
 - Clear removes only the override and returns to the global/default value.
 - Overflow behavior is bounded to approved tokens and covered by runtime tests.
+- Validator tests reject invalid color strings, raw classes, CSS functions with
+  URLs, and script-like fragments.
+- A regression test proves `masonry-lite` still renders cardized surfaces when
+  no per-column override disables it.

@@ -62,7 +62,7 @@ implemented in TASK-271.
 | `_docs/_WIDGETS/GRID_COLUMNS.md` | Reflect final Grid Columns schema/editor/runtime behavior. |
 | `_docs/_TASKS/TASK-271*.md` | Update statuses and closure notes. |
 | `_docs/_TASKS/README.md` | Move TASK-271 rows through board state and update statistics. |
-| `_docs/_CHANGELOG/<next>-2026-05-16-task-271-grid-columns-widget-followups.md` | New changelog entry when the family is complete. |
+| `_docs/_CHANGELOG/<next>-<completion-date>-task-271-grid-columns-widget-followups.md` | New changelog entry when the family is complete. |
 | `_docs/_CHANGELOG/README.md` | Add the changelog index entry. |
 | `_docs/WIDGET_PACK_MATRIX.md` | Update only if Grid Columns pack readiness/completeness changes. |
 
