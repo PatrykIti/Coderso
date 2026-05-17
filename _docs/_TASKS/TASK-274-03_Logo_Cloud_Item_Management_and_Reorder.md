@@ -46,14 +46,24 @@ type PendingLogoRemoval = {
   editVersion: number;
 } | null;
 
+type LogoDragState = {
+  logoId: string;
+  fromIndex: number;
+  editVersion: number;
+} | null;
+
 function LogoCloudVisualEditor(props: LogoCloudEditorProps) {
   const [pendingRemoval, setPendingRemoval] = useState<PendingLogoRemoval>(null);
+  const [dragState, setDragState] = useState<LogoDragState>(null);
   const editVersionRef = useRef(0);
 
   function commitLogoEdit(updater: (current: LogoCloudData) => LogoCloudData) {
+    const current = normalizeValue(value);
+    const next = updater(current);
+    if (next === current) return;
     editVersionRef.current += 1;
     setPendingRemoval(null);
-    updateValue(value, onChange, updater);
+    onChange(normalizeValue(next));
   }
 }
 
@@ -96,20 +106,36 @@ function LogoRemovalUndoNotice() {
   );
 }
 
-function handleLogoDrop(fromIndex: number, toIndex: number) {
-  if (fromIndex === toIndex) return;
-  moveLogo(value, onChange, fromIndex, toIndex);
+function handleLogoDragStart(index: number, logo: LogoCloudLogo) {
+  setDragState({ logoId: logo.id, fromIndex: index, editVersion: editVersionRef.current });
+}
+
+function handleLogoDrop(toIndex: number) {
+  if (!dragState || dragState.editVersion !== editVersionRef.current) return;
+  commitLogoEdit((current) => {
+    const logos = normalizeLogoCloudLogos(current.logos);
+    const fromIndex = logos.findIndex((item) => item.id === dragState.logoId);
+    if (fromIndex < 0 || fromIndex === toIndex || toIndex < 0 || toIndex >= logos.length) return current;
+    const nextLogos = [...logos];
+    const [item] = nextLogos.splice(fromIndex, 1);
+    if (!item) return current;
+    nextLogos.splice(toIndex, 0, item);
+    return { ...current, logos: nextLogos };
+  });
+  setDragState(null);
 }
 ```
 
 Editor data flow:
 
-1. Keep `moveLogo` as the canonical reorder helper.
+1. Keep `moveLogo` as the button fallback. Drag/drop may reuse its move logic,
+   but it must route through `commitLogoEdit` so pending Undo state is
+   invalidated.
 2. Add a drag handle per logo card with `draggable`, `aria-label`, and stable
    `data-widget-control` metadata.
-3. Store only transient drag and pending-removal state in `LogoCloudVisualEditor`
-   local state; persisted order changes flow through `onChange` once a valid
-   drop occurs.
+3. Store only transient id/version-based drag and pending-removal state in
+   `LogoCloudVisualEditor` local state; persisted order changes flow through
+   `onChange` once a valid drop occurs.
 4. Use immediate remove with inline Undo that restores the exact removed item at
    its previous index. Do not also add a confirmation dialog in this leaf.
 5. Route every non-restore logo edit through `commitLogoEdit`, which clears

@@ -93,11 +93,13 @@ function useLogoMediaSelection({
   persistAssetId,
 }: UseLogoMediaSelectionOptions) {
   const requestIdsByLogoRef = useRef<Record<string, number>>({});
+  const structureVersionRef = useRef(0);
   const latestValueRef = useRef(value);
   latestValueRef.current = value;
 
   function resolveRequestKey(index: number, logo: LogoCloudLogo) {
-    return logo.id?.trim() || `index:${index}`;
+    const rowKey = logo.id?.trim() || `index:${index}`;
+    return `${structureVersionRef.current}:${rowKey}`;
   }
 
   function invalidateLogoMediaRequest(index: number, logo: LogoCloudLogo) {
@@ -105,12 +107,18 @@ function useLogoMediaSelection({
     requestIdsByLogoRef.current[requestKey] = (requestIdsByLogoRef.current[requestKey] ?? 0) + 1;
   }
 
+  function invalidateAllLogoMediaRequests() {
+    structureVersionRef.current += 1;
+    requestIdsByLogoRef.current = {};
+  }
+
   function findLogoIndexByRequestKey(requestKey: string) {
     const logos = normalizeLogoCloudLogos(latestValueRef.current.logos);
-    if (!requestKey.startsWith("index:")) {
-      return logos.findIndex((item) => item.id === requestKey);
+    const rowKey = requestKey.slice(requestKey.indexOf(":") + 1);
+    if (!rowKey.startsWith("index:")) {
+      return logos.findIndex((item) => item.id === rowKey);
     }
-    const fallbackIndex = Number(requestKey.slice("index:".length));
+    const fallbackIndex = Number(rowKey.slice("index:".length));
     return Number.isInteger(fallbackIndex) ? fallbackIndex : -1;
   }
 
@@ -141,15 +149,44 @@ function useLogoMediaSelection({
     });
   }
 
-  return { handleLogoAssetChange, invalidateLogoMediaRequest, commitLogoPatch };
+  return {
+    handleLogoAssetChange,
+    invalidateLogoMediaRequest,
+    invalidateAllLogoMediaRequests,
+    commitLogoPatch,
+  };
 }
 
-function LogoImageControl({ logo, index, value, onChange, persistAssetId }: LogoImageControlProps) {
-  const { handleLogoAssetChange, invalidateLogoMediaRequest, commitLogoPatch } = useLogoMediaSelection({
+function LogoCloudVisualEditor({ value, onChange }: LogoCloudVisualEditorProps) {
+  const mediaSelection = useLogoMediaSelection({
     value,
     onChange,
     persistAssetId,
   });
+
+  function handleLogoStructureEdit(updater: (current: LogoCloudData) => LogoCloudData) {
+    mediaSelection.invalidateAllLogoMediaRequests();
+    updateValue(value, onChange, updater);
+  }
+
+  return (
+    <>
+      <LogoCountSelect onChange={(count) => handleLogoStructureEdit((current) => setLogoCountInData(current, count))} />
+      {logos.map((logo, index) => (
+        <LogoImageControl
+          key={logo.id}
+          logo={logo}
+          index={index}
+          mediaSelection={mediaSelection}
+        />
+      ))}
+      <Button onClick={() => handleLogoStructureEdit(addLogoToData)}>Add logo</Button>
+    </>
+  );
+}
+
+function LogoImageControl({ logo, index, mediaSelection }: LogoImageControlProps) {
+  const { handleLogoAssetChange, invalidateLogoMediaRequest, commitLogoPatch } = mediaSelection;
 
   return (
     <div>
@@ -187,20 +224,28 @@ Editor data flow:
 1. Wizard keeps its minimal setup role, but each visible logo row gets compact
    image, alt, and link fields or an image-picker affordance next to the name
    field.
-2. Visual repeated logo cards reuse the same image control and show a bounded
+2. Visual and Wizard parent editors create one `useLogoMediaSelection` instance
+   and pass its handlers into repeated logo rows. Do not instantiate the hook in
+   `LogoImageControl`; row unmounts must not freeze `latestValueRef`.
+3. Visual repeated logo cards reuse the same image control and show a bounded
    thumbnail preview when `logo.image` is non-empty.
-3. MediaPicker selection resolves the public media URL through cache-first
+4. MediaPicker selection resolves the public media URL through cache-first
    `listMediaCached({ force: false })` or the equivalent default call. Store the
    public URL by default; store `imageAssetId` only if `logoCloud.tsx` makes that
    field schema-owned, normalized, documented, and tested.
    Adapt `MediaPicker`'s `unknown` `onChange` payload through
    `resolveSingleMediaPickerId` before calling the media resolver.
-4. Manual image URL and link URL entry remain supported for backward
+5. Manual image URL and link URL entry remain supported for backward
    compatibility.
-5. Link URL validation UI consumes TASK-256 shared safe-link output when that
+6. Link URL validation UI consumes TASK-256 shared safe-link output when that
    contract exists; do not hand-roll a second link validator in this leaf.
-6. Runtime `img` output uses explicit `logo.alt` when present and falls back to
+7. Runtime `img` output uses explicit `logo.alt` when present and falls back to
    `logo.name` for backward compatibility.
+8. Parent-owned add, remove, count, move, drag/drop, and other structural
+   `logos[]` edits must route through a parent helper such as
+   `handleLogoStructureEdit`, which calls `invalidateAllLogoMediaRequests`
+   before changing `logos[]`. Manual image URL edits use the row-level
+   invalidation helper.
 
 Error handling:
 
@@ -213,6 +258,9 @@ Error handling:
   current logo row/index by stable logo key before applying the image/name patch.
   Do not call `updateLogo` with a stale `value`, captured index, or captured
   `logo.name` from before `await`.
+- Structural list edits bump `structureVersionRef` and clear request IDs so
+  remove-then-add cannot let reused fallback ids such as `logo-1` receive an old
+  media resolution.
 - If selected media is unavailable, keep the selected ID out of persisted data
   unless a public URL was resolved.
 - Broken external image URLs must not crash the editor; thumbnail fallback should
@@ -244,6 +292,8 @@ Regression-test shape:
 - Assert moving or removing a logo while media resolution is pending does not
   patch the wrong row; stable-ID rows update in their new position, and removed
   rows no-op.
+- Assert remove-then-add before media resolution does not patch the new row even
+  when the normalizer reuses a fallback id such as `logo-1`.
 - Assert Wizard edits persist `logos[index].image`, `logos[index].alt`, and
   `logos[index].href`.
 - Assert Visual thumbnails render success and unavailable states without
