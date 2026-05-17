@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 223 tasks
+- **To Do:** 230 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1542 tasks
 
@@ -62,6 +62,13 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-279-06 | Product Compare Admin Preview Resolve and Diagnostics | High | Very Large | Make runtime diagnostics read-only and add truthful resolved-count/refresh behavior through backend-owned preview resolution |
 | TASK-279-07 | Product Compare Editor IA and Source Guidance | Medium | Medium | Apply shared editor-mode policy locally, move advanced surfaces out of Wizard, and add dense-limit/source filter guidance |
 | TASK-279-08 | Product Compare Report Docs Changelog and Closure | Medium | Medium | Refresh Product Compare report/docs/changelog/board and final validation evidence |
+| TASK-285 | Split Layout Widget Playwright Product Followups | High | Very Large | Split Layout-only follow-up family for `REPORT_SPLIT_LAYOUT_WIDGET.md`, excluding TASK-256 shared-contract scope |
+| TASK-285-01 | Split Layout Mobile Ratio and Reverse Behavior | High | Large | Add Split Layout-owned mobile ratio/reverse behavior clarity after TASK-256 shared variant sync |
+| TASK-285-02 | Split Layout Variant Card Preview and Ratio Disclosure | Medium | Medium | Add ratio miniatures and effective breakpoint disclosure without duplicating TASK-256 atomic variant updates |
+| TASK-285-03 | Split Layout Pane Slot Guidance and Empty State | Medium | Medium | Replace redundant slot copy and add preview-only empty-pane guidance through TASK-256 placeholder gating |
+| TASK-285-04 | Split Layout Advanced Diagnostics and Mode Ownership | Medium | Medium | Make Advanced useful through Split Layout responsive diagnostics after shared mode rules land |
+| TASK-285-05 | Split Layout Gap Labels and Spacing Context | Low | Medium | Add Split Layout gap scale labels/help after TASK-256 resolves none/zero token semantics |
+| TASK-285-06 | Split Layout Report Docs and Closure | Medium | Medium | Refresh Split Layout report/docs/changelog/board and final validation evidence |
 | TASK-278 | Pricing Plans Widget Playwright Product Followups | High | Very Large | Pricing Plans-only follow-up family for `REPORT_PRICING_PLANS_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-278-01 | Pricing Plans Card Visual Hierarchy and CTA Styles | High | Large | Add plan description, plan-level surface, badge tone, highlighted banner, and CTA style controls after TASK-256 shared safety |
 | TASK-278-02 | Pricing Plans Content Wizard and Destructive Edit UX | High | Large | Expand Wizard content authoring, Advanced reset copy, highlight indicators, disabled billing label UX, remove confirmation/undo, and feature autofocus |
