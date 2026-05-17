@@ -180,6 +180,6 @@ No API routes are added.
 
 - Widget-owned findings are fixed with focused editor/runtime tests.
 - Page-shell findings are not hidden inside widget closure.
-- Timeline, pricing, FAQ, and testimonials expose truthful interactive/static
-  behavior.
+- Pricing, FAQ, and testimonials expose truthful interactive/static behavior;
+  Timeline-specific truthfulness is verified by TASK-291.
 - Public runtime output has accessible names, states, and safe links/media.

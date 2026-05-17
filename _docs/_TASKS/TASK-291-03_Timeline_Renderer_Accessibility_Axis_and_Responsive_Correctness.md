@@ -113,6 +113,8 @@ No API routes are added.
 - `bun --cwd core lint:types`
 - Include accessibility/reliability suites selected by `bun run gates:coderso`
   before closure when public runtime output changes.
+- `bun run scan:security:strict` before committing or closing this leaf
+- `bun run precommit` before committing or closing this leaf
 
 ## Documentation Updates Required
 

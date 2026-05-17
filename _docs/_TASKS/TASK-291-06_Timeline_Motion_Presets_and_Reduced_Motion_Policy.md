@@ -99,6 +99,8 @@ No API routes are added.
 - `bun test tests/unit/widgets/validator.test.ts` if schema changes
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run scan:security:strict` before committing or closing this leaf
+- `bun run precommit` before committing or closing this leaf
 
 ## Documentation Updates Required
 

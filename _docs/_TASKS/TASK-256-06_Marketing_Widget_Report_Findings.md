@@ -57,8 +57,8 @@ owner/docs/tests.
 
 - [ ] TASK-256-06-01: Feature Grid and Stats KPI Truthful Controls.
 - [ ] TASK-256-06-02: CTA Banner, Logo Cloud, and Gallery Media Links.
-- [ ] TASK-256-06-03: Hero, Timeline, Pricing, FAQ, and Testimonials
-  Accessibility.
+- [ ] TASK-256-06-03: Hero, Pricing, FAQ, and Testimonials Accessibility;
+  Timeline only through exact shared TASK-256 prerequisites.
 - [ ] TASK-256-06-04: Team Profile Links and Accessibility.
 
 ## Scope Decision Matrix
@@ -77,7 +77,7 @@ owner/docs/tests.
 |---|---|---|---|
 | TASK-256-06-01 | `feature-grid`, `stats-kpi` | `FeatureGridEditors.tsx`, `featureGrid.tsx`, `StatsKpiEditors.tsx`, `statsKpi.tsx` | Fix truthful columns/count/divider controls, variant-bound item counts, grid layout holes, clear controls, and KPI ARIA. |
 | TASK-256-06-02 | `cta-banner`, `logo-cloud`, `gallery-mosaic` | `CtaBannerEditors.tsx`, `ctaBanner.tsx`, `LogoCloudEditors.tsx`, `logoCloud.tsx`, `GalleryMosaicEditors.tsx`, `galleryMosaic.tsx` | Fix empty badges, clear controls, link/media security, alt/ARIA, hover/focus behavior, Gallery Mosaic feature-left one-item handling, and media type truthfulness for current fields only. |
-| TASK-256-06-03 | `hero`, `timeline`, `pricing-plans`, `faq-accordion`, `testimonials` | `HeroEditors.tsx`, `hero.tsx`, `TimelineEditors.tsx`, `timeline.tsx`, `PricingPlansEditors.tsx`, `pricingPlans.tsx`, `FaqAccordionEditors.tsx`, `faqAccordion.tsx`, `TestimonialsEditors.tsx`, `testimonials.tsx` | Fix residual contract bugs around media/alt/link safety, timeline mode/status/wizard, pricing toggle/semantics, FAQ single-open/ARIA, and testimonial media/slider scope. |
+| TASK-256-06-03 | `hero`, `pricing-plans`, `faq-accordion`, `testimonials`; Timeline only through exact shared TASK-256 prerequisites | `HeroEditors.tsx`, `hero.tsx`, `PricingPlansEditors.tsx`, `pricingPlans.tsx`, `FaqAccordionEditors.tsx`, `faqAccordion.tsx`, `TestimonialsEditors.tsx`, `testimonials.tsx` | Fix residual contract bugs around media/alt/link safety, pricing toggle/semantics, FAQ single-open/ARIA, and testimonial media/slider scope. Timeline editor/runtime product work is TASK-291-owned; TASK-256 only supplies exact shared owners such as TASK-256-01 and TASK-256-04. |
 | TASK-256-06-04 | `team` | `TeamEditors.tsx`, `team.tsx` | Fix spotlight columns truthfulness, social link safety, section/header ARIA, photo lazy loading, and Wizard/profile UX drift. |
 
 ## Implementation Pseudocode
