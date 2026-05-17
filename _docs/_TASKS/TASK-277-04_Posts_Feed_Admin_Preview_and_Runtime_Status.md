@@ -39,11 +39,14 @@ using existing admin post catalog reads and a user-readable runtime status.
 
 | File | Required change |
 |---|---|
+| `core/admin/ui/pages/PageEditor.tsx` | Own preview catalog state, derive preview-decorated blocks for the canvas, and strip preview-only `data.resolved` before save/autosave/publish payloads. |
+| `core/admin/ui/pages/builder/BlockList.tsx` | Render preview-decorated blocks through the existing canvas renderer without mutating canonical page state. |
+| `core/admin/ui/pages/builder/blockUtils.ts` | Add a narrow helper to strip Posts Feed preview `resolved` payloads recursively before persistence if PageEditor needs a shared save helper. |
+| `core/widgets/renderers/widgetRenderer.tsx` | Keep public rendering unchanged; only pass through preview-decorated block data already present on the block. |
 | `core/admin/ui/widgets/editors/PostsFeedEditors.tsx` | Add readable preview/runtime status and reuse picker/catalog state where possible. |
-| Page-builder/admin preview owner discovered during implementation | Hydrate selected Posts Feed blocks with preview-only `resolved.items` without writing them into saved page data. |
 | `core/widgets/core/postsFeed.tsx` | Add preview-safe diagnostics only if needed by the renderer. |
 | `tests/vitest/ui/posts-feed-editor-wave.test.tsx` | Cover visible runtime status and no raw-only status dependency. |
-| Relevant page-builder Vitest test | Cover admin canvas preview showing sample posts and not persisting preview-only payloads. |
+| `tests/vitest/ui/page-editor-shell-wave.test.tsx` or a focused new `tests/vitest/ui/page-editor-posts-feed-preview.test.tsx` | Cover admin canvas preview showing sample posts and not persisting preview-only payloads. |
 | `tests/unit/widgets/postsFeedWidget.test.tsx` | Cover mapping if preview diagnostics change. |
 | `_docs/_WIDGETS/POSTS_FEED.md` | Document admin preview vs public SSR behavior. |
 | `_docs/PLAYWRIGHT/REPORT_POSTS_FEED_WIDGET.md` | Mark UX-01/UX-06 fixed/deferred with evidence. |
@@ -76,6 +79,25 @@ function applyPreviewResolvedData(block: WidgetBlock, preview: PostsFeedPreviewS
     },
   };
 }
+
+function buildPostsFeedPreviewBlocks(
+  blocks: WidgetBlock[],
+  previewsByBlockId: Map<string, PostsFeedPreviewState>
+) {
+  return blocks.map((block) =>
+    block.type === "posts-feed" && previewsByBlockId.has(block.id)
+      ? applyPreviewResolvedData(block, previewsByBlockId.get(block.id)!)
+      : mapNestedBlocks(block, (children) => buildPostsFeedPreviewBlocks(children, previewsByBlockId))
+  );
+}
+
+function stripPostsFeedPreviewResolved(blocks: WidgetBlock[]) {
+  return blocks.map((block) =>
+    block.type === "posts-feed"
+      ? { ...block, data: omitKey(block.data, "resolved") }
+      : mapNestedBlocks(block, stripPostsFeedPreviewResolved)
+  );
+}
 ```
 
 Error handling:
@@ -106,8 +128,8 @@ No new API routes are required by default.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run test:vitest -- tests/vitest/ui/posts-feed-editor-wave.test.tsx`
-- Add/run the focused page-builder/admin preview Vitest suite for the owner file
-  discovered during implementation.
+- `bun run test:vitest -- tests/vitest/ui/page-editor-shell-wave.test.tsx` or
+  the focused new page-editor Posts Feed preview suite added by the leaf.
 - `bun test tests/unit/widgets/postsFeedWidget.test.tsx`
 - `bun run scan:security:strict`
 - `bun run precommit`

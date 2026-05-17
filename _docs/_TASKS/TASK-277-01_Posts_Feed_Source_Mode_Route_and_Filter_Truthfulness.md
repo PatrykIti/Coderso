@@ -40,7 +40,7 @@ resolver does not execute, or where the resolver creates broken post links.
 
 | File | Required change |
 |---|---|
-| `core/services/content/postsFeedResolver.ts` | Make category filtering and detail-route fallback deterministic and tested. Preserve manual order while documenting that sort is ignored for manual mode. |
+| `core/services/content/postsFeedResolver.ts` | Make category filtering and detail-route fallback deterministic and tested. Preserve manual order while documenting that sort is ignored for manual mode, and omit CTA hrefs when no enabled posts detail route exists. |
 | `core/admin/ui/widgets/editors/PostsFeedEditors.tsx` | Hide or disable Sort in manual mode with the hint `Order is determined by your selection.`; align category placeholder with resolver behavior. |
 | `core/widgets/core/postsFeed.tsx` | Update schema/defaults only if the selected category strategy adds fields. |
 | `tests/unit/widgets/postsFeedWidget.test.tsx` | Cover manual-sort suppression, category term behavior, and detail href fallback/configured route behavior. |
@@ -70,8 +70,13 @@ function filterByCategory(posts: PostSummary[], category: string) {
 
 function resolvePostsDetailPathPattern(routes: ContentRouteSetting[]) {
   const route = routes.find((item) => item.enabled && isPostsRouteType(item.type));
-  if (route?.detailPath) return route.detailPath;
-  return "/posts/:slug"; // only if this matches the current public route contract
+  return route?.detailPath ?? null;
+}
+
+function resolvePostsFeedHref(post: PostSummary, routes: ContentRouteSetting[]) {
+  const pattern = resolvePostsDetailPathPattern(routes);
+  if (!pattern) return undefined;
+  return buildDetailHref(pattern, post.slug, post.id);
 }
 ```
 
@@ -82,9 +87,9 @@ ambiguous.
 
 Error handling:
 
-- If no configured post detail route exists, do not generate a link that is known
-  to 404. Prefer a documented deterministic fallback that matches the current
-  public posts route, or suppress CTA links and surface a report/docs note.
+- If no enabled post detail route exists in `site.contentRoutes`, do not generate
+  a link that is known to 404. Suppress CTA hrefs for that item/list and surface
+  the missing-route condition through report/docs evidence.
 - If a configured route does not contain `:slug` or `:id`, preserve the existing
   safe fallback behavior and add regression coverage.
 
@@ -121,8 +126,7 @@ No API routes are added by this leaf.
 
 - Manual mode no longer presents Sort as an active effective control.
 - Category UI copy matches actual resolver behavior.
-- Posts Feed detail links either resolve through `site.contentRoutes` or a tested
-  route-compatible fallback; the report no longer reproduces the `/post/:slug`
-  404.
+- Posts Feed detail links resolve through enabled `site.contentRoutes`; when no
+  route exists, CTA hrefs are omitted instead of falling back to `/post/:slug`.
 - Tests cover configured route, fallback/no-route behavior, manual mode, and the
   chosen category strategy.
