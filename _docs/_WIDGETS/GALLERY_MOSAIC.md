@@ -22,8 +22,10 @@ Media storytelling section for portfolios, product highlights, and campaigns.
 - Initial media count
 - Shared MediaPicker-backed media selection
 
-Wizard media selection uses admin media cache and persists only schema-owned
-public runtime fields such as `image`, `video`, `caption`, and `href`.
+Wizard media selection currently uses the admin media cache for image assets and
+persists selected media as schema-owned public `image` URLs plus caption copy.
+Video selection and per-item Visual media picking are follow-up work owned by
+the TASK-256/TASK-270 planning split.
 
 ### Visual (primary editing mode)
 Sections:
