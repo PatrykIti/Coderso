@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Booking Runtime + Admin UX
 **Estimated Effort:** Large
-**Dependencies:** TASK-258, TASK-258-01, TASK-258-02, TASK-293
+**Dependencies:** TASK-258, TASK-258-01, TASK-258-02, TASK-294
 **Status:** Done (2026-05-18)
 
 ---
@@ -21,10 +21,10 @@ This leaf covers:
 - BF-12: no configurable success redirect after reservation.
 - BF-15: no locale/date formatting configuration.
 
-`UX-02` now depends on the shared `TASK-293` booking flow editor-context seam.
+`UX-02` now depends on the shared `TASK-294` booking flow editor-context seam.
 This leaf only consumes that seam if it lands in the same implementation wave;
 otherwise TASK-258 closure must defer the flow-pairing feedback row to
-`TASK-293` explicitly instead of hiding it inside Appointment Form-local work.
+`TASK-294` explicitly instead of hiding it inside Appointment Form-local work.
 
 Booking Calendar may be touched only to enrich the selection event payload
 needed by Appointment Form. Calendar editor/product redesign remains outside
@@ -52,7 +52,7 @@ this task.
 - [x] Add optional same-origin or relative success redirect after successful
   booking submission.
 - [x] If shared flow-context plumbing is not implemented in the same wave,
-  record `UX-02` as deferred to `TASK-293` with exact reasoning/evidence.
+  record `UX-02` as deferred to `TASK-294` with exact reasoning/evidence.
 
 ## Implementation Pseudocode
 
@@ -111,7 +111,7 @@ No API route is added.
   checks.
 - Secret handling: locale, summary, and redirect fields must not expose tokens,
   nonces, or private booking diagnostics. Flow-context exposure, if used in the
-  same wave, is owned by `TASK-293`.
+  same wave, is owned by `TASK-294`.
 
 ## Testing Requirements
 
@@ -126,14 +126,14 @@ No API route is added.
   `tests/vitest/ui/widget-template-editor.test.tsx`,
   `tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`, and
   the current detail-template editor-context suite only when this leaf also
-  lands the shared `TASK-293` plumbing in the same wave.
+  lands the shared `TASK-294` plumbing in the same wave.
 
 ## Documentation Updates Required
 
 - `_docs/_WIDGETS/APPOINTMENT_FORM.md`
 - `_docs/PLAYWRIGHT/REPORT_APPOINTMENT_FORM_WIDGET.md` fixed evidence for
   UX-02, BF-06, BF-12, and BF-15.
-- `_docs/_TASKS/TASK-293_Booking_Flow_Editor_Context_Surface_Plumbing.md` when
+- `_docs/_TASKS/TASK-294_Booking_Flow_Editor_Context_Surface_Plumbing.md` when
   `UX-02` defers to or completes through the shared seam.
 - `_docs/_TASKS/README.md` on status changes.
 - `_docs/_CHANGELOG/` and `_docs/_CHANGELOG/README.md` on completion.
@@ -147,4 +147,4 @@ No API route is added.
 - Success redirect accepts only relative or same-origin targets and is covered
   by tests.
 - If `UX-02` is not landed in the same wave, the closure matrix points it to
-  `TASK-293` explicitly rather than claiming it fixed locally.
+  `TASK-294` explicitly rather than claiming it fixed locally.

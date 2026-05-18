@@ -122,7 +122,7 @@ shared control state is routed to `TASK-256-02`.
 
 ## Deferred Follow-Ups
 
-- `UX-02` flow-key pairing feedback now routes through `TASK-293`.
-- `BF-05` custom fields now route through `TASK-294`.
+- `UX-02` flow-key pairing feedback now routes through `TASK-294`.
+- `BF-05` custom fields now route through `TASK-295`.
 - `UX-04` clearable style inheritance-state indicators route through
   `TASK-256-02`.

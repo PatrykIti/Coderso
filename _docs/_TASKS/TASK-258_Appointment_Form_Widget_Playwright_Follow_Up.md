@@ -73,9 +73,9 @@ Out of scope for TASK-258:
 |---|---|
 | BUG-01, BUG-02, UX-07, BF-09, BF-13 | TASK-258-01 |
 | UX-01, UX-03, BF-02, BF-04, BF-10, BF-11, BF-14, BF-17, BF-18, A1-A5 | TASK-258-02 |
-| UX-02 | TASK-293 |
+| UX-02 | TASK-294 |
 | BF-06, BF-12, BF-15 | TASK-258-03 |
-| BF-05 | TASK-294 |
+| BF-05 | TASK-295 |
 | BF-07, BF-08 | TASK-258-04 |
 | UX-04 | TASK-256-02 |
 | UX-05, UX-06, BF-01, BF-03, BF-16, A6 | TASK-258-05 |

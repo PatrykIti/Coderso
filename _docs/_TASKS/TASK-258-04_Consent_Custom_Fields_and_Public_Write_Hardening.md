@@ -21,7 +21,7 @@ This leaf covers:
 - BF-08: booking public API accepts `captchaToken`, but Appointment Form runtime
   has no UI/runtime bridge to produce or submit it.
 
-`BF-05` now routes to `TASK-294`, which owns the actual custom-field product
+`BF-05` now routes to `TASK-295`, which owns the actual custom-field product
 surface once the bounded public metadata contract exists.
 
 ## Files to Change
@@ -229,7 +229,7 @@ This leaf can affect the existing public booking write route.
 - `_docs/_WIDGETS/APPOINTMENT_FORM.md`
 - `_docs/PLAYWRIGHT/REPORT_APPOINTMENT_FORM_WIDGET.md` fixed evidence for
   BF-07 and BF-08.
-- `_docs/_TASKS/TASK-294_Appointment_Form_Custom_Field_Product_Surface.md` when
+- `_docs/_TASKS/TASK-295_Appointment_Form_Custom_Field_Product_Surface.md` when
   BF-05 defers to the custom-field follow-up owner.
 - `_docs/SECURITY_SPEC.md` only if public booking anti-abuse behavior changes
   beyond the existing policy.
@@ -242,10 +242,10 @@ This leaf can affect the existing public booking write route.
   terms/privacy links.
 - Public runtime sends bounded consent metadata, and the bounded booking
   metadata contract is ready for the future custom-field surface owned by
-  `TASK-294`.
+  `TASK-295`.
 - CAPTCHA token acquisition remains backend-owned and never exposes secrets in
   widget data.
 - Bun public API boundary and security tests cover accepted payloads, rejected
   payloads, and mapped public-route failures.
 - If BF-05 is not implemented in the same wave, the closure matrix points it to
-  `TASK-294` explicitly rather than claiming it landed through the consent/CAPTCHA slice.
+  `TASK-295` explicitly rather than claiming it landed through the consent/CAPTCHA slice.
