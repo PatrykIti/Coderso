@@ -16,6 +16,10 @@ Finish the Gallery Mosaic shared runtime semantics and accessibility cleanup
 that the `TASK-256-04` and `TASK-256-06-02` contracts already claimed, using
 only the current data model.
 
+Current checkout note: this leaf captures the shared runtime baseline before
+the later `TASK-270` product rollout landed. References below to future
+`TASK-270-*` scope are reopen-time boundaries only.
+
 This leaf covers current shared semantics only:
 
 - resolver/runtime cleanup for the existing ratio/gap/radius/featured logic;
@@ -23,20 +27,22 @@ This leaf covers current shared semantics only:
 - current video semantics such as accessible naming and stop/control behavior
   using existing fields only.
 
-It must not absorb new product fields or new interaction models. Dedicated
-per-item `alt`, poster images, lightbox, and motion remain in `TASK-270`.
+It must not absorb new product fields or new interaction models. At reopen
+time, dedicated per-item `alt`, poster images, lightbox, and motion remained in
+`TASK-270`.
 
 ## Source Findings
 
 - `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md:56-73` - CODE-01 through
   CODE-04 capture current resolver/runtime cleanup drift.
-- `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md:205,225,241-243,344-347` -
-  A3 through A6 capture current runtime accessibility/semantic gaps.
+- `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md` - rows `A4`, `A5`, and
+  `A6` capture the shared current-runtime accessibility/semantic gaps this leaf
+  closed. The final live closure routes `A3` to `TASK-270-07`.
 - `_docs/_TASKS/TASK-256-04_Interactive_Runtime_Instance_and_Accessibility_Contract.md`
   - shared runtime semantics must consume the established accessibility pattern.
 - `_docs/_TASKS/TASK-256-06-02_CTA_Banner_Logo_Cloud_and_Gallery_Media_Links.md`
   - Gallery Mosaic current alt/figure/video semantics belong to the shared
-  contract, while new authoring fields stay in `TASK-270-03`.
+  contract, while new authoring fields stayed in `TASK-270-03` at reopen time.
 
 ## Sub-Tasks
 
@@ -49,7 +55,7 @@ per-item `alt`, poster images, lightbox, and motion remain in `TASK-270`.
 | `core/widgets/core/galleryMosaic.tsx` | Make resolver defaults explicit, remove redundant featured/runtime classes, render current caption/media semantics through shared-accessible figure/video behavior, and settle current video control behavior without adding new schema fields. |
 | `tests/vitest/widgets/galleryMosaic.test.tsx` | Add focused coverage for explicit resolver fallbacks, feature-left/runtime cleanup, figure/figcaption semantics, and current video behavior. |
 | `tests/vitest/widgets/renderer.test.tsx` | Extend shared renderer assertions for Gallery Mosaic semantic/runtime markers when output structure changes. |
-| `_docs/_WIDGETS/GALLERY_MOSAIC.md` | Document the settled shared runtime semantics that now exist before `TASK-270` adds new product fields. |
+| `_docs/_WIDGETS/GALLERY_MOSAIC.md` | Document the settled shared runtime semantics that existed before the later `TASK-270` product fields landed. |
 | `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md` | Record the fixed/deferred status for the reopened current runtime semantics rows. |
 
 ## Implementation Pseudocode

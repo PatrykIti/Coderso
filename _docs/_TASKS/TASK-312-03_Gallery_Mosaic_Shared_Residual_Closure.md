@@ -15,6 +15,11 @@
 Close the reopened Gallery Mosaic shared residual family with report evidence,
 widget docs, board sync, changelog, and final validation.
 
+Current checkout note: this leaf remains the closure record for the shared
+reopen. The later `TASK-270` product rollout is now also closed in the live
+checkout, so references below to future `TASK-270` work are reopen-time
+boundaries only.
+
 This leaf must explicitly distinguish:
 
 - residual shared-contract repairs landed under `TASK-312`;
@@ -40,21 +45,21 @@ This leaf must explicitly distinguish:
 | `_docs/_WIDGETS/GALLERY_MOSAIC.md` | Reflect the final shared baseline before product follow-ups continue. |
 | `_docs/_TASKS/TASK-312*.md` | Mark the reopened shared leaves with final status, dates, validation notes, and evidence. |
 | `_docs/_TASKS/README.md` | Sync the board and statistics. |
-| `_docs/_CHANGELOG/{N}-2026-05-17-task-293-gallery-mosaic-shared-residuals.md` | Add the changelog entry. |
+| `_docs/_CHANGELOG/{N}-2026-05-18-task-312-gallery-mosaic-shared-residuals.md` | Add the changelog entry. |
 | `_docs/_CHANGELOG/README.md` | Add the changelog index row. |
 
 ## Implementation Pseudocode
 
 ```ts
 type GalleryMosaicSharedResidualStatus =
-  | "fixed-task-293"
+  | "fixed-task-312"
   | "fixed-task-256"
   | "task-270-product-scope"
   | "deferred";
 
 const residualFindingMap = [
-  { id: "UX-01", status: "fixed-task-293" },
-  { id: "UX-07", status: "fixed-task-293" },
+  { id: "UX-01", status: "fixed-task-312" },
+  { id: "UX-07", status: "fixed-task-312" },
   { id: "BF-01", status: "task-270-product-scope" },
 ];
 
@@ -103,7 +108,7 @@ No API routes are added by this closure leaf.
 - `_docs/_WIDGETS/GALLERY_MOSAIC.md`
 - `_docs/_TASKS/TASK-312*.md`
 - `_docs/_TASKS/README.md`
-- `_docs/_CHANGELOG/{N}-2026-05-17-task-293-gallery-mosaic-shared-residuals.md`
+- `_docs/_CHANGELOG/{N}-2026-05-18-task-312-gallery-mosaic-shared-residuals.md`
 - `_docs/_CHANGELOG/README.md`
 
 ## Acceptance Criteria
@@ -119,8 +124,9 @@ No API routes are added by this closure leaf.
   `_docs/_WIDGETS/GALLERY_MOSAIC.md`, `_docs/_TASKS/README.md`, and the new
   changelog entry now all point to `TASK-312` as the owner for reopened shared
   residual repairs.
-- Remaining open Gallery Mosaic product scope stays explicitly routed to
-  `TASK-270`.
+- The later `TASK-270` product rollout has since landed and is now tracked by
+  its own closed family. This leaf remains the closure record for the shared
+  reopen only.
 - Final validation:
   - `git diff --check`
   - `set -a && source /Users/pciechanski/Documents/_moje_projekty/Coderso/.env && set +a && NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx tests/vitest/widgets/galleryMosaic.test.tsx tests/vitest/widgets/renderer.test.tsx`

@@ -27,8 +27,9 @@ This task owns:
 
 - public page cache policy for runtime-hydrated Forms widgets that inject
   `submissionNonce`
-- shared nonce freshness behavior for Form Embed, Contact, and any future
-  Forms-backed public widget that reuses `resolveFormRuntimeData()`
+- shared nonce freshness behavior for the current Form Embed, Contact, and
+  Appointment Form public runtime bridges, plus any future public widget that
+  later reuses `resolveFormRuntimeData()`
 - focused runtime tests that prove cached public HTML does not reuse expired or
   stale nonce markup
 
@@ -46,10 +47,11 @@ This task does not own:
   - bypass site HTML caching when a page contains Forms runtime nonce data, or
   - strip nonce-bearing widgets from cached HTML and inject fresh runtime data
     per request through an approved shared seam.
-- [ ] Keep the solution shared across Form Embed, Contact, and future
-  Forms-backed public widgets; do not add widget-local cache exceptions.
-- [ ] Add runtime coverage that proves cached pages do not reuse stale nonce
-  markup.
+- [ ] Keep the solution shared across the current Form Embed, Contact, and
+  Appointment Form bridges, and make future widget adopters opt into the same
+  seam instead of adding widget-local cache exceptions.
+- [ ] Add a cache-hit runtime proof with HTML caching enabled (`TTL > 0`) so
+  the suite covers stale-markup reuse rather than only fresh render output.
 - [ ] Re-run route/security suites only if the shared nonce/access contract
   changes beyond cache freshness.
 
@@ -61,10 +63,11 @@ This task does not own:
 | `core/site/cache/siteCache.ts` | Update cache keys/bypass rules only if the shared solution requires cache-level awareness. |
 | `core/widgets/core/formEmbed.tsx` | Consume the shared result only if runtime metadata shape changes. |
 | `core/widgets/core/contact.tsx` | Consume the shared result only if runtime metadata shape changes. |
-| `core/widgets/core/newsletter.tsx` | Touch only if this widget reuses the shared nonce-bearing Forms runtime seam. |
+| `core/widgets/core/appointmentForm.tsx` | Consume the shared result only if runtime metadata shape changes. |
 | `tests/integration/runtime/pages-runtime.test.ts` | Add shared cache/nonces runtime proof. |
 | `tests/vitest/widgets/formEmbed.test.tsx` | Re-run/update if widget runtime metadata shape changes. |
 | `tests/vitest/widgets/contact.test.tsx` | Re-run/update if widget runtime metadata shape changes. |
+| `tests/vitest/widgets/appointmentForm.test.tsx` | Re-run/update if widget runtime metadata shape changes. |
 | `tests/security/codersoSecurityGate.test.ts` | Re-run/update if nonce lifecycle or access semantics change. |
 
 ## Implementation Pseudocode
@@ -74,7 +77,8 @@ function pageUsesFormsRuntimeNonce(blocks: WidgetBlock[]): boolean {
   return blocks.some((block) => {
     if (block.type === "form-embed") return Boolean(block.data?.resolved?.submissionNonce);
     if (block.type === "contact") return Boolean(block.data?.resolved?.submissionNonce);
-    if (block.type === "newsletter") return Boolean(block.data?.resolved?.submissionNonce);
+    if (block.type === "appointment-form")
+      return Boolean(block.data?.resolved?.submissionNonce);
     return false;
   });
 }
@@ -145,7 +149,7 @@ This task affects shared public-write hardening through runtime cache behavior.
 
 - Public pages do not serve stale `submissionNonce` values from cached HTML for
   Forms-backed widgets.
-- The fix is shared across current Forms-backed public widgets, not patched
-  widget-by-widget.
+- The fix is shared across the current Contact + Appointment Form + Form Embed
+  public runtime bridges, not patched widget-by-widget.
 - Runtime/security proof demonstrates the new cache policy under the real
-  public render path.
+  public render path, including a cache-hit path with HTML caching enabled.

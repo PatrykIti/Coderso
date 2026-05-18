@@ -5,39 +5,41 @@
 **Priority:** High
 **Category:** Widgets + Admin UI + Shared Design Tokens
 **Estimated Effort:** Large
-**Dependencies:** TASK-256-02
+**Dependencies:** TASK-256-02, TASK-305
 **Status:** In Progress (2026-05-17)
 
 ---
 
 ## Overview
 
-Repair the leftover shared color-field drift that survived TASK-256-02.
+Repair the leftover shared color-field adoption drift that survived
+`TASK-256-02`, even after the concrete shared owner landed under `TASK-305`.
 
-The TASK-269 audit confirmed that Form Embed report rows U3/U4 are not
-widget-local defects:
+The TASK-269 audit confirmed that the old `resolvePickerColor()` / local
+`ColorField` pattern survived in multiple widget editors even after the shared
+owner seam existed:
 
 - the hex-only `resolvePickerColor()` pattern is still duplicated across many
   widget editors, so CSS-variable/custom token values fall back to the picker
   swatch default instead of remaining truthful in the UI;
-- Form Embed still lacks the final `borderColor` clear adoption even though the
-  shared clear/token contract is already supposed to own that behavior.
+- Form Embed already closed its shared rows by consuming the new helper, which
+  means the remaining work is now strictly about the still-local adopters.
 
-This task creates the shared owner seam for token-aware color inputs and fixes
-the remaining border-clear adoption through that seam before TASK-269 continues
-with widget-local styling work.
+This task now owns the remaining adoption wave: reuse or lightly extend the
+landed shared helper surface (`ClearableFields.tsx` plus
+`SharedColorControl.tsx`) across editors that still duplicate local swatch/text
+logic before widget-local styling work continues. The remaining live adopters
+still include Accordion, Content List, Footer, and the other editors listed in
+the file matrix below.
 
 ## Scope Boundary
 
 This task owns:
 
-- shared token-aware color-input helper behavior for editor swatches vs text
-  values;
-- shared configured/fallback/clear semantics for color fields;
+- additive shared helper work only when a remaining adopter cannot consume the
+  landed helper surface as-is;
 - adoption in widget editors that still duplicate the old
-  `resolvePickerColor()` / local `ColorField` pattern;
-- the remaining Form Embed `borderColor` clear adoption because it is a shared
-  clear-contract regression, not a Form Embed-local feature.
+  `resolvePickerColor()` / local `ColorField` pattern.
 
 This task does not own widget-local variant/product styling, runtime typography,
 public accessibility semantics, or any new schema fields outside the existing
@@ -45,15 +47,10 @@ color/clear contract.
 
 ## Sub-Tasks
 
-- [ ] Add a shared color-field helper that keeps the swatch on a safe fallback
-  when the text value is a CSS variable/custom token, without overwriting that
-  text value.
-- [ ] Extend shared clearable-field helpers so color rows can distinguish
-  configured vs fallback state consistently.
+- [ ] Reuse the landed shared color-field helper surface where possible and
+  extend it only when a remaining adopter cannot consume it cleanly.
 - [ ] Replace duplicated local `resolvePickerColor()` / `ColorField` patterns
   in the current widget editors that still use them.
-- [ ] Wire the remaining Form Embed `borderColor` clear adoption through the
-  shared helper instead of a widget-local special case.
 - [ ] Add focused UI tests that prove CSS-variable/custom token text survives
   color-swatch interaction and that clear actions remove configured values.
 
@@ -61,14 +58,17 @@ color/clear contract.
 
 | File | Required change |
 |---|---|
-| `core/admin/ui/widgets/editors/ClearableFields.tsx` | Add the shared token-aware color-field helper and configured/fallback state helpers. |
+| `core/admin/ui/widgets/editors/ClearableFields.tsx` | Extend the landed token-aware helper surface only when the remaining adopters need additive shared behavior. |
+| `core/admin/ui/widgets/editors/SharedColorControl.tsx` | Keep the swatch-plus-text owner aligned with the adoption wave when a remaining consumer needs that API instead of the lower-level helper. |
 | `core/admin/ui/widgets/editors/CompareTimelineEditors.tsx` | Replace local color-field helper usage with the shared helper. |
 | `core/admin/ui/widgets/editors/ContactEditors.tsx` | Replace local color-field helper usage with the shared helper. |
 | `core/admin/ui/widgets/editors/CtaBannerEditors.tsx` | Replace local color-field helper usage with the shared helper where the existing contract already owns those fields. |
 | `core/admin/ui/widgets/editors/DividerEditors.tsx` | Replace local color-field helper usage with the shared helper. |
+| `core/admin/ui/widgets/editors/AccordionEditors.tsx` | Replace the local color-field helper usage with the shared helper. |
+| `core/admin/ui/widgets/editors/ContentListEditors.tsx` | Replace the local color-field helper usage with the shared helper where shared renderer/style work still owns those fields. |
+| `core/admin/ui/widgets/editors/FooterEditors.tsx` | Replace the local color-field helper usage with the shared helper for the remaining shared footer color controls. |
 | `core/admin/ui/widgets/editors/FaqAccordionEditors.tsx` | Replace local color-field helper usage with the shared helper. |
 | `core/admin/ui/widgets/editors/FeatureGridEditors.tsx` | Replace local color-field helper usage with the shared helper. |
-| `core/admin/ui/widgets/editors/FormEmbedEditors.tsx` | Consume the shared helper and add the missing `borderColor` clear adoption. |
 | `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx` | Replace local color-field helper usage with the shared helper. |
 | `core/admin/ui/widgets/editors/GridColumnsEditors.tsx` | Replace local color-field helper usage with the shared helper. |
 | `core/admin/ui/widgets/editors/HeroEditors.tsx` | Replace local color-field helper usage with the shared helper. |
@@ -140,7 +140,6 @@ No API routes are added.
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/ui/clearable-fields.test.tsx`
-- `bun run test:vitest -- tests/vitest/ui/form-embed-editor-wave.test.tsx`
 - targeted editor-wave suites for every adopted editor whose old assertions
   depend on the local helper behavior
 - `bun --cwd core lint`
@@ -164,5 +163,5 @@ No API routes are added.
 - CSS-variable/custom token color values no longer appear to “reset” just
   because the swatch cannot represent them.
 - Shared color-field clear semantics are consistent across the adopted editors.
-- Form Embed `borderColor` clear is fixed through the shared owner seam, not a
-  local one-off patch.
+- The remaining editors adopt the landed shared owner seam instead of cloning
+  another local swatch/text implementation.

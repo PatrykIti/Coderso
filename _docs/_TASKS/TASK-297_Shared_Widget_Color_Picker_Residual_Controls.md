@@ -5,22 +5,24 @@
 **Priority:** Medium
 **Category:** Widgets + Admin UI + Shared Controls
 **Estimated Effort:** Large
-**Dependencies:** TASK-256-02
+**Dependencies:** TASK-305
 **Status:** To Do
 
 ---
 
 ## Overview
 
-Create the post-TASK-256 shared follow-up for generic widget style fields that
-still expose raw text inputs where the product expects a color-picker-level
+Adopt the already-landed shared color-control owner in the late widget surfaces
+that still expose raw text inputs where the product expects a color-picker-level
 control.
 
 The first actionable seed is Booking Calendar report row 3.14 in
 `_docs/PLAYWRIGHT/REPORT_BOOKING_CALENDAR_WIDGET.md`, where
 `style.frameBackground` and `style.frameBorderColor` are still plain text
-inputs. This remains shared editor-control work and must not be patched inside
-TASK-259.
+inputs. The shared swatch-plus-text owner now already exists under `TASK-305`,
+so this task should consume or lightly extend that seam instead of reopening
+shared-control design from scratch. This remains shared editor-control work and
+must not be patched inside TASK-259.
 
 ## Scope Boundary
 
@@ -33,10 +35,10 @@ This task does not own:
 
 ## Sub-Tasks
 
-- [ ] Decide the shared color-input contract for late widgets that still use
-  `ClearableInputField` for color-like surface fields.
-- [ ] Add the shared control plumbing needed for bounded color-picker UX
-  without removing the existing token/custom-value escape hatch.
+- [ ] Reuse the landed shared color-input contract for late widgets that still
+  use `ClearableInputField` for color-like surface fields.
+- [ ] Extend the current shared owner only if Booking Calendar frame fields
+  need a small additive helper, not a second control contract.
 - [ ] Adopt the shared control in Booking Calendar frame fields as the first
   executable owner path.
 - [ ] Add focused shared-control and Booking Calendar editor coverage.
@@ -47,7 +49,8 @@ This task does not own:
 
 | File | Required change |
 |---|---|
-| `core/admin/ui/widgets/editors/ClearableFields.tsx` | Add or extend the shared clearable color-input control used by late widget editors. |
+| `core/admin/ui/widgets/editors/SharedColorControl.tsx` | Reuse the landed swatch-plus-text owner for Booking Calendar frame fields; touch only if the current API needs a small additive extension. |
+| `core/admin/ui/widgets/editors/ClearableFields.tsx` | Touch only if Booking Calendar adoption needs an additive helper that belongs in the shared owner seam. |
 | `core/admin/ui/widgets/editors/BookingCalendarEditors.tsx` | Adopt the shared color-picker control for frame fields without changing Booking Calendar-specific style semantics. |
 | `tests/vitest/ui/clearable-fields.test.tsx` | Add focused coverage for the shared color-picker behavior. |
 | `tests/vitest/ui/booking-calendar-editor-wave.test.tsx` | Add Booking Calendar editor coverage for the shared frame color control. |
@@ -57,17 +60,20 @@ This task does not own:
 ## Implementation Pseudocode
 
 ```tsx
-function ClearableColorField(props: {
+function BookingFrameColorField(props: {
+  label: string;
   value?: string;
   onChange: (next: string) => void;
   onClear: () => void;
 }) {
   return (
-    <ClearableInputField
-      {...props}
-      inputMode="color-or-token"
-      showColorPicker
-      allowTokenFallback
+    <SharedColorControl
+      label={props.label}
+      value={props.value}
+      onChange={props.onChange}
+      onClear={props.onClear}
+      placeholder="var(--color-bg)"
+      pickerFallback="#ffffff"
     />
   );
 }
@@ -98,6 +104,8 @@ Error handling:
 
 - Booking Calendar no longer relies on stale TASK-256 references for the shared
   color-picker row this task owns.
+- Booking Calendar reuses the landed shared control instead of reopening shared
+  color-input design from scratch.
 - The shared control preserves clear/token/custom-value semantics while adding
   a bounded picker UX.
 - Later widget-only closure tasks can point to TASK-297 as the concrete

@@ -16,6 +16,10 @@ Finish the Gallery Mosaic shared editor-mode and current-media truthfulness
 repairs that were routed to `TASK-256-01` and `TASK-256-06-02` but are still
 missing in the live checkout.
 
+Current checkout note: this leaf records the shared editor baseline that was
+repaired before the later `TASK-270` product rollout. References below to
+future `TASK-270-*` scope are reopen-time boundaries, not current open backlog.
+
 This leaf covers only the current shared contract for existing fields:
 
 - duplicated Advanced controls that should no longer pretend to be a second
@@ -28,18 +32,16 @@ preview thumbnails, dedicated `alt` authoring, drag-and-drop, or import/export.
 
 ## Source Findings
 
-- `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md:81-84` - CODE-06 confirms
-  the current image/video ambiguity.
-- `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md:91-94,310-312` - CODE-08
-  and UX-07 confirm Wizard is image-only for the current contract.
-- `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md:153,292-293` - UX-01
-  confirms duplicated Advanced controls.
+- `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md` - rows `UX-01`, `UX-06`,
+  and `UX-07` capture the shared editor-mode and current-media truthfulness
+  residuals this leaf closed.
 - `_docs/_TASKS/TASK-256-01_Shared_Editor_Mode_and_Atomic_Update_Contract.md`
   - shared Advanced ownership already closed on paper and must be reflected in
   the live owner.
 - `_docs/_TASKS/TASK-256-06-02_CTA_Banner_Logo_Cloud_and_Gallery_Media_Links.md`
   - Gallery Mosaic current media truthfulness and Wizard video scope belong to
-  the shared contract, while per-item Visual MediaPicker stays in `TASK-270-01`.
+  the shared contract, while per-item Visual MediaPicker stayed in
+  `TASK-270-01` at reopen time.
 
 ## Sub-Tasks
 

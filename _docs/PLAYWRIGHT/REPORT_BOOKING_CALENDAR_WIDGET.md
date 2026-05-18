@@ -394,9 +394,9 @@ Widget jest gotowy do **podstawowego użycia** na prostych wdrożeniach, ale wym
 | 3.1, 3.8, 7.2 week picker, availability signals, slot density | Fixed | TASK-259-05 | `tests/vitest/widgets/bookingRuntimeScript.bookingCalendar.test.ts` |
 | 3.7, 3.13, 3.16 warianty, mobile, selected/hover styles | Fixed | TASK-259-06 | `tests/vitest/widgets/bookingCalendar.test.tsx`, `tests/vitest/ui/booking-calendar-editor-wave.test.tsx` |
 | 3.15, 4.4, 7.5 default pickers i truthful diagnostics | Fixed | TASK-259-07 | `tests/vitest/ui/booking-calendar-editor-wave.test.tsx`, `tests/vitest/ui/booking-calendar-admin-preview.test.tsx` |
-| 3.12, 5.6 shared ARIA baseline | Excluded from TASK-259 | TASK-293 | osobny shared follow-up po TASK-256 |
-| 3.14 shared frame color picker | Excluded from TASK-259 | TASK-294 | osobny shared follow-up po TASK-256 |
-| 7.4 Booking admin `Add row -> Save schedules` UX | Excluded from TASK-259 | TASK-295 | osobny admin follow-up poza surface widgetu |
+| 3.12, 5.6 shared ARIA baseline | Excluded from TASK-259 | TASK-296 | osobny shared accessibility follow-up po TASK-256 |
+| 3.14 shared frame color picker | Excluded from TASK-259 | TASK-297 | osobny shared color-control adoption follow-up po TASK-305 |
+| 7.4 Booking admin `Add row -> Save schedules` UX | Excluded from TASK-259 | TASK-298 | osobny admin follow-up poza surface widgetu |
 
 ### Walidacja lokalna
 

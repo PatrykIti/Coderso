@@ -12,9 +12,9 @@
 
 ## Overview
 
-Create the shared `WidgetEditorContext` plumbing that exposes same-surface
-Booking Calendar flow summaries to booking widget editors without persisting
-preview-only data into widget JSON.
+Extend the existing `WidgetEditorContext` plumbing so it can expose
+same-surface Booking Calendar flow summaries to booking widget editors without
+persisting preview-only data into widget JSON.
 
 This task exists because Appointment Form `UX-02` and Booking Calendar preview
 diagnostics both need a shared booking-aware editor context. The owner is the
@@ -23,16 +23,22 @@ page-builder surface contract, not a widget-local fallback in
 
 This task owns only the shared admin/context seam:
 
-- typed `bookingFlows` metadata on `WidgetEditorContext`
+- typed `bookingFlows` metadata on `WidgetEditorContext`, layered onto the
+  already-landed preview-state and `widgetPreviewData` seam
 - block-tree collection of same-surface Booking Calendar summaries
 - propagation through page, widget-template, custom-screen, and detail-template
   `BlockSettings` entrypoints
+- preservation of existing booking preview diagnostics already threaded through
+  `widgetPreviewData`
+- the minimal same-surface Appointment Form consumer feedback needed to close
+  `UX-02` once the shared flow summaries exist
 - preservation of the existing `surface`, `jumpToBindingPropPath`,
-  `getBindingState`, and `slotTargets` contract
+  `getBindingState`, `slotTargets`, and `widgetPreviewData` contract
 
 It does not own:
 
-- Appointment Form copy, labels, or local flow-feedback UI
+- broad Appointment Form copy redesign beyond truthful same-surface flow
+  pairing feedback
 - Booking Calendar runtime/public catalog hydration
 - any public runtime or public-write behavior
 
@@ -46,10 +52,12 @@ It does not own:
 - `core/admin/ui/widgets/WidgetTemplateEditorPage.tsx`
 - `core/admin/ui/custom-screens/CustomScreenEditorPage.tsx`
 - `core/admin/ui/content-types/DetailTemplateEditorPage.tsx`
+- `core/admin/ui/widgets/editors/AppointmentFormEditors.tsx`
 - `tests/vitest/pageBuilder/blockSettings-wave.test.tsx`
 - `tests/vitest/ui/page-editor-shell-wave.test.tsx`
 - `tests/vitest/ui/widget-template-editor.test.tsx`
 - `tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`
+- `tests/vitest/ui/appointment-form-editor-wave.test.tsx`
 - `tests/vitest/content/detailPageBindingResolver.test.ts` or the current
   detail-template editor-context suite
 - `_docs/_TASKS/README.md`
@@ -61,14 +69,21 @@ It does not own:
 ## Sub-Tasks
 
 - [ ] Extend `WidgetEditorContext` with a typed `bookingFlows` payload that is
-  additive to the current context contract.
+  additive to the current context contract instead of introducing a parallel
+  preview-only transport.
 - [ ] Build a shared helper that collects same-surface Booking Calendar flow
   summaries from the current block tree.
+- [ ] Merge the new summaries into the current `widgetPreviewData` /
+  preview-state plumbing without dropping existing Booking Calendar preview
+  diagnostics.
 - [ ] Pass the merged editor context through `PageEditor` desktop and mobile
   `BlockSettings` entrypoints.
 - [ ] Pass the merged editor context through `WidgetTemplateEditorPage`.
 - [ ] Preserve and merge existing binding-aware context in
   `CustomScreenEditorPage` and `DetailTemplateEditorPage`.
+- [ ] Consume the shared flow summaries in `AppointmentFormEditors.tsx` with
+  truthful same-surface pairing feedback so `UX-02` can close under this owner
+  without widening into unrelated widget-local booking work.
 - [ ] Keep `BlockSettings` slot-target augmentation intact while forwarding the
   shared booking flow summaries to editors.
 
@@ -106,6 +121,7 @@ function mergeBookingFlowEditorContext(
 ): WidgetEditorContext {
   return {
     ...base,
+    widgetPreviewData: base.widgetPreviewData,
     bookingFlows: {
       calendars: collectBookingFlowSummaries(blocks),
     },
@@ -121,6 +137,8 @@ Error handling:
   Booking Calendar normalizer before exposing the summary.
 - Never replace or drop `jumpToBindingPropPath`, `getBindingState`, or
   `slotTargets` while adding booking flow data.
+- Preserve existing `widgetPreviewData.bookingCalendarResolved` diagnostics
+  where they already exist today.
 
 ## Security Contract
 
@@ -148,7 +166,6 @@ This is internal admin/editor context only.
   or the current detail-template editor-context suite when that surface is
   touched
 - `bun run test:vitest -- tests/vitest/ui/appointment-form-editor-wave.test.tsx`
-  only if consumer-facing Appointment Form copy changes in the same slice
 - `bun run test:vitest -- tests/vitest/ui/booking-calendar-editor-wave.test.tsx`
   only if Booking Calendar diagnostics copy changes in the same slice
 - `bun --cwd core lint`
@@ -169,6 +186,8 @@ This is internal admin/editor context only.
 - `PageEditor`, `WidgetTemplateEditorPage`, `CustomScreenEditorPage`, and
   `DetailTemplateEditorPage` all pass the merged context through
   `BlockSettings`.
+- Appointment Form consumes the merged shared context with truthful same-surface
+  pairing feedback instead of a raw flow-key-only UX.
 - `BlockSettings` still augments `slotTargets` while preserving the merged
   booking flow summaries.
 - No tokens, nonces, or private booking runtime data are exposed through the

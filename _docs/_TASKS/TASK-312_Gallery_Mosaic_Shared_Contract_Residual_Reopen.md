@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Gallery Mosaic + Shared Contract + Admin UI + Runtime Render
 **Estimated Effort:** Large
-**Dependencies:** TASK-256, TASK-256-01, TASK-256-04, TASK-256-06-02, TASK-270
+**Dependencies:** TASK-256, TASK-256-01, TASK-256-04, TASK-256-06-02
 **Status:** Done (2026-05-18)
 
 ---
@@ -14,6 +14,12 @@
 
 Reopen the residual shared-contract rows that `TASK-270` assumes are already
 landed, but that are still missing in the live Gallery Mosaic checkout.
+
+Current checkout note: this family remains the historical record of the shared
+prerequisite repair that unblocked `TASK-270` at reopen time. The live checkout
+now also includes the later `TASK-270` product work, so references below to
+future `TASK-270-*` scope should be read as reopen-time routing, not current
+open backlog.
 
 This family exists to close the gap between the documented `TASK-256` closure
 and the actual current code before `TASK-270` expands Gallery Mosaic with new
@@ -70,10 +76,11 @@ Live owners inspected while reopening:
 | UX-06 current media-type ambiguity for existing image/video fields | TASK-312-01 | Shared truthful-current-controls residual from TASK-256-06-02. |
 | UX-07 Wizard current-contract video handling | TASK-312-01 | Shared Wizard current-contract fix from TASK-256-06-02. |
 | CODE-01, CODE-02, CODE-03 current resolver/runtime cleanup | TASK-312-02 | Shared runtime cleanup still missing in the live owner. |
-| A3, A4, A5, A6 current runtime accessibility and semantic cleanup using existing fields | TASK-312-02 | Shared runtime semantics residual from TASK-256-04/TASK-256-06-02. |
+| A4, A5, A6 current runtime accessibility and semantic cleanup using existing fields | TASK-312-02 | Shared runtime semantics residual from TASK-256-04/TASK-256-06-02. |
+| A3 hover-caption keyboard accessibility | TASK-270-07 | Final live closure now routes the focus/hover caption affordance to the later product closure leaf. |
 | Report/docs/changelog/board refresh for the reopened shared residuals | TASK-312-03 | Closure evidence must state that these are residual shared-contract repairs, not new TASK-270 product work. |
 
-Out of scope:
+Historical out-of-scope routing at reopen time:
 
 - `TASK-270-01`: per-item preview and Visual per-item MediaPicker.
 - `TASK-270-02`: drag-and-drop reorder, item-count/remove UX, `feature-left`
@@ -82,6 +89,9 @@ Out of scope:
   ratio, object position.
 - `TASK-270-04` to `TASK-270-06`: lightbox, motion/density presets, and
   import/export.
+
+Those surfaces have since landed under the now-closed `TASK-270` family; they
+remain listed here only to preserve the original shared-vs-product boundary.
 
 ## Sub-Tasks
 
@@ -145,7 +155,7 @@ This reopening family does not add API routes.
 - `_docs/_WIDGETS/GALLERY_MOSAIC.md`
 - `_docs/_TASKS/TASK-312*.md`
 - `_docs/_TASKS/README.md`
-- `_docs/_CHANGELOG/{N}-2026-05-17-task-293-gallery-mosaic-shared-residuals.md`
+- `_docs/_CHANGELOG/{N}-2026-05-18-task-312-gallery-mosaic-shared-residuals.md`
 - `_docs/_CHANGELOG/README.md`
 
 ## Acceptance Criteria
@@ -164,8 +174,9 @@ This reopening family does not add API routes.
   - `TASK-312-01` for shared editor truthfulness,
   - `TASK-312-02` for shared runtime semantics,
   - `TASK-312-03` for report/docs/changelog/board closure.
-- Remaining Gallery Mosaic work is now intentionally routed to `TASK-270`
-  product leaves only.
+- The later `TASK-270` product rollout has since landed in the live checkout.
+  `TASK-312` remains the shared-baseline repair record that made that rollout
+  honest at the time of reopening.
 - Final validation:
   - `git diff --check`
   - `set -a && source /Users/pciechanski/Documents/_moje_projekty/Coderso/.env && set +a && NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx tests/vitest/widgets/galleryMosaic.test.tsx tests/vitest/widgets/renderer.test.tsx`

@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 265 tasks
+- **To Do:** 286 tasks
 - **In Progress:** 5 tasks
 - **Done:** 1671 tasks
 
@@ -42,11 +42,11 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-309 | Footer Market Utility Expansion | Low | Very Large | Future owner for newsletter/address/contact/back-to-top footer utilities that TASK-268 explicitly deferred |
 | TASK-308 | Footer Column Reorder and Slot Cohesion | Medium | Large | Future owner for truthful footer column reorder once slot/data coupling has an explicit contract |
 | TASK-304 | Entry Teaser Listing Manual Picker | Medium | Medium | Add a deterministic manual listing-row selection contract for Entry Teaser after TASK-265 closes latest/featured listing semantics |
-| TASK-301 | Forms Public Runtime Nonce Cache Freshness | High | Large | Shared follow-up for stale cached `submissionNonce` drift across nonce-bearing Forms runtime widgets |
+| TASK-301 | Forms Public Runtime Nonce Cache Freshness | High | Large | Shared follow-up for stale cached `submissionNonce` drift across the current Contact + Appointment Form + Form Embed runtime HTML bridge |
 | TASK-300 | Compare Timeline Motion Presets and Reduced Motion Policy | Low | Medium | Exact future owner for `REPORT_COMPARE_TIMELINE_WIDGET.md` row `W8`; keep Compare Timeline static until a reduced-motion-safe motion contract is approved |
 | TASK-299 | Shared Widget Contrast Guidance and Validation | Medium | Large | Exact shared owner for `REPORT_COMPARE_TIMELINE_WIDGET.md` row `W7` and future reusable widget contrast guidance/validation |
 | TASK-298 | Booking Admin Availability Row Draft and Save UX | Medium | Medium | Own the Booking admin Availability-tab `Add row` versus `Save schedules` flow outside TASK-259 widget scope |
-| TASK-297 | Shared Widget Color Picker Residual Controls | Medium | Large | Create a concrete shared owner for late report rows where color-like widget fields still expose raw text inputs |
+| TASK-297 | Shared Widget Color Picker Residual Controls | Medium | Large | Adopt the landed shared swatch-plus-text color owner in Booking Calendar frame fields and close the lingering raw-text report row |
 | TASK-296 | Shared Interactive Widget Accessibility Residuals | High | Large | Create a concrete shared owner for late interactive widget ARIA/report rows that were classified but never given a physical task |
 | TASK-295 | Appointment Form Custom Field Product Surface | Medium | Large | Widget-local custom field authoring/render/payload follow-up after the bounded booking metadata boundary lands |
 | TASK-294 | Booking Flow Editor Context Surface Plumbing | High | Large | Shared `WidgetEditorContext.bookingFlows` plumbing for page/template/custom-screen/detail-template booking surfaces without persisting preview-only data |
@@ -330,7 +330,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-310 | Shared Color Picker CSS Variable and Border Clear Regression | High | Large | In progress: shared color-field helper/adoption work from the TASK-269 audit is transferred onto feature/corrections for the remaining widget consumers |
+| TASK-310 | Shared Color Picker CSS Variable and Border Clear Regression | High | Large | In progress: the landed shared color-field seam is being extended across the remaining widget-local `resolvePickerColor` adopters; Form Embed shared rows are already closed |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
@@ -341,8 +341,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-312 | Gallery Mosaic Shared Contract Residual Reopen | High | Large | Done: reopened Gallery Mosaic shared prerequisites are now truly closed under TASK-312, with editor/runtime residuals landed and remaining product work routed to TASK-270 |
-| TASK-312-03 | Gallery Mosaic Shared Residual Closure | Medium | Medium | Done: report/docs/changelog/board closure now distinguishes reopened shared residuals from the remaining Gallery Mosaic product backlog |
+| TASK-312 | Gallery Mosaic Shared Contract Residual Reopen | High | Large | Done: reopened Gallery Mosaic shared prerequisites were closed under TASK-312, and the later TASK-270 product rollout is now also landed in the live checkout |
+| TASK-312-03 | Gallery Mosaic Shared Residual Closure | Medium | Medium | Done: report/docs/changelog/board closure captured the shared reopen, while the later TASK-270 product rollout is now independently closed in the live checkout |
 | TASK-312-02 | Gallery Mosaic Shared Runtime Semantics Residuals | High | Large | Done: Gallery Mosaic runtime now uses explicit resolver branches, semantic figure/figcaption output, and current video controls without widening into TASK-270 product fields |
 | TASK-312-01 | Gallery Mosaic Shared Editor Truthfulness Residuals | High | Large | Done: Advanced is diagnostic-only, Wizard current-contract media selection now accepts image/video assets, and Visual exposes explicit current-media ownership copy |
 | TASK-270 | Gallery Mosaic Widget Playwright Product Followups | High | Very Large | Done: all Gallery Mosaic report findings are now mapped to shared fixes, TASK-270 leaves, session/setup resolution, or an explicit defer reason, and the final report/docs/changelog closure is synchronized |
