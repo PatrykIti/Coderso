@@ -40,18 +40,25 @@ This task does not own:
 - Replacing existing Newsletter or Contact widget contracts.
 - Generic site-shell scroll behavior outside the approved Footer scope.
 
+This umbrella is not implementation-ready by itself. Execute it through the
+physical child tasks below so newsletter, address/contact, and back-to-top
+scope can land independently without re-opening the whole Footer surface at
+once.
+
 ## Sub-Tasks
 
-- [ ] Decide whether newsletter belongs in Footer as slot composition,
-  Footer-owned config, or not at all.
-- [ ] If newsletter is supported, route submission through the existing
-  newsletter/form security contract or a named future public-write task; do not
-  add inline secret-bearing config to Footer data.
-- [ ] Decide whether address/contact information should be Footer-owned fields
-  or composed from existing widgets/slots.
-- [ ] Define back-to-top behavior only if the scroll/runtime contract is
-  explicit, reduced-motion safe, and does not invent a shell-global side effect.
-- [ ] Add focused tests/docs/report updates for whichever utilities are approved.
+- [ ] TASK-309-01: Footer Newsletter Composition and Submission Contract
+- [ ] TASK-309-02: Footer Address and Contact Utility Surface
+- [ ] TASK-309-03: Footer Back-to-Top Runtime Policy
+
+## Implementation Order
+
+1. Land `TASK-309-01` first because newsletter is the highest-risk utility from
+   a public-write and composition standpoint.
+2. Land `TASK-309-02` next because address/contact fields are read-only and can
+   extend the settled Footer layout contract safely.
+3. Land `TASK-309-03` last because back-to-top behavior depends on the final
+   lower-strip/footer action layout and reduced-motion policy.
 
 ## Files to Change
 

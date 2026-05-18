@@ -35,17 +35,25 @@ This task owns:
 This task does not hide that work inside TASK-269, Contact, Newsletter, or any
 other widget-local follow-up family.
 
+This umbrella is not implementation-ready by itself. Execute it through the
+physical child tasks below so field-type families can land with focused
+validation and route-security review.
+
 ## Sub-Tasks
 
-- [ ] Decide the supported next-wave field types and document the exact contract
-  for each (`radio`, `number`, `time`, `hidden`, `file`, `range`, `rating`).
-- [ ] Extend Forms validation/normalization owners for the approved field
-  types.
-- [ ] Add or update admin builder/editor support for the approved field types.
-- [ ] Add runtime resolver and submission validation coverage for the approved
-  field types.
-- [ ] Add widget-renderer follow-through only after the Forms owner contract is
-  executable and tested.
+- [ ] TASK-311-01: Forms Choice Field Expansion for Radio and Grouped Options
+- [ ] TASK-311-02: Forms Numeric, Temporal, Range, and Rating Field Expansion
+- [ ] TASK-311-03: Forms Hidden and File Field Public-Write Contract
+
+## Implementation Order
+
+1. Land `TASK-311-01` first because choice-field semantics affect grouped
+   accessibility and the current Form Embed deferred rows directly.
+2. Land `TASK-311-02` next because numeric/time/range/rating controls extend
+   the same builder/runtime/value collection path without the higher-risk file
+   upload surface.
+3. Land `TASK-311-03` last because hidden/file fields need the strictest route,
+   nonce, and storage/security review.
 
 ## Files to Change
 

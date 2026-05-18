@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 286 tasks
+- **To Do:** 292 tasks
 - **In Progress:** 5 tasks
 - **Done:** 1671 tasks
 
@@ -39,7 +39,13 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-311 | Forms Field Model Expansion for Choice File and Typed Controls | High | Very Large | Future Forms-owner task for `radio`, `number`, `time`, `hidden`, `file`, `range`, and `rating` so widget families stop carrying report-only unsupported-field debt locally |
+| TASK-311-01 | Forms Choice Field Expansion for Radio and Grouped Options | High | Large | First execution leaf for `radio` and any approved grouped choice semantics before widgets can close current unsupported-field debt |
+| TASK-311-02 | Forms Numeric, Temporal, Range, and Rating Field Expansion | Medium | Large | Typed-control owner leaf for `number`, `time`, `range`, and `rating` across validation, admin, runtime, and first-widget adoption |
+| TASK-311-03 | Forms Hidden and File Field Public-Write Contract | High | Large | Security-first owner leaf for `hidden` and `file` fields before any widget can expose them |
 | TASK-309 | Footer Market Utility Expansion | Low | Very Large | Future owner for newsletter/address/contact/back-to-top footer utilities that TASK-268 explicitly deferred |
+| TASK-309-01 | Footer Newsletter Composition and Submission Contract | Medium | Large | Decide whether Footer newsletter is composed, supported, or rejected without inventing a second public-write system |
+| TASK-309-02 | Footer Address and Contact Utility Surface | Low | Medium | Decide whether Footer owns bounded read-only address/contact presentation or stays composition-only |
+| TASK-309-03 | Footer Back-to-Top Runtime Policy | Low | Medium | Decide whether Footer exposes a reduced-motion-safe back-to-top action or rejects it explicitly |
 | TASK-308 | Footer Column Reorder and Slot Cohesion | Medium | Large | Future owner for truthful footer column reorder once slot/data coupling has an explicit contract |
 | TASK-304 | Entry Teaser Listing Manual Picker | Medium | Medium | Add a deterministic manual listing-row selection contract for Entry Teaser after TASK-265 closes latest/featured listing semantics |
 | TASK-301 | Forms Public Runtime Nonce Cache Freshness | High | Large | Shared follow-up for stale cached `submissionNonce` drift across the current Contact + Appointment Form + Form Embed runtime HTML bridge |

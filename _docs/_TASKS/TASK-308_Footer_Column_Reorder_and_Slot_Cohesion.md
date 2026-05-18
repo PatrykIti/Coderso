@@ -62,6 +62,55 @@ generic repeatable-slot remapping outside Footer, or any new public route.
 | `tests/vitest/widgets/renderer.test.tsx` | Add integration proof if slot remapping changes `WidgetRenderer` behavior. |
 | `_docs/_WIDGETS/FOOTER.md` | Document the final column reorder policy and slot implications. |
 
+## Implementation Pseudocode
+
+```ts
+type FooterColumnMovePlan =
+  | { mode: "blocked"; reason: "slot-content-present" | "unsupported-policy" }
+  | {
+      mode: "remap";
+      fromIndex: number;
+      toIndex: number;
+      dataOrder: FooterColumn[];
+      slotOrder: FooterColumnSlotId[];
+    };
+
+function resolveFooterColumnMovePlan(input: {
+  columns: FooterColumn[];
+  slots: Record<string, WidgetBlock[]>;
+  fromIndex: number;
+  toIndex: number;
+}): FooterColumnMovePlan {
+  const slotIds = ["column-1", "column-2", "column-3"] as const;
+  const sourceSlot = slotIds[input.fromIndex];
+  const targetSlot = slotIds[input.toIndex];
+  const sourceHasSlotContent = (input.slots[sourceSlot] ?? []).length > 0;
+  const targetHasSlotContent = (input.slots[targetSlot] ?? []).length > 0;
+
+  if (sourceHasSlotContent || targetHasSlotContent) {
+    return { mode: "blocked", reason: "slot-content-present" };
+  }
+
+  return {
+    mode: "remap",
+    fromIndex: input.fromIndex,
+    toIndex: input.toIndex,
+    dataOrder: moveItem(input.columns, input.fromIndex, input.toIndex),
+    slotOrder: moveItem([...slotIds], input.fromIndex, input.toIndex),
+  };
+}
+```
+
+Error handling:
+
+- If the chosen product policy blocks reorder while slot content exists, the UI
+  must explain that reason explicitly instead of silently disabling move
+  buttons.
+- If the chosen product policy allows reorder, column data and slot content
+  must move as one atomic contract.
+- Do not introduce hidden runtime fallback that re-sorts columns independently
+  from the editor-visible order.
+
 ## Security Contract
 
 No API routes are added.
