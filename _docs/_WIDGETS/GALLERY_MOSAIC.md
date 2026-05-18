@@ -26,6 +26,9 @@ Wizard media selection currently uses the admin media cache for current-contract
 image and video assets and persists selected media as schema-owned public
 `image` or `video` URLs plus caption copy. Per-item Visual media picking stays
 in `TASK-270-01`.
+Wizard now also points authors toward the final flow: Visual owns per-item
+alt/poster/lightbox/density/motion controls, while Advanced owns JSON
+import/export for the schema payload.
 
 ### Visual (primary editing mode)
 Sections:
@@ -64,11 +67,14 @@ Notes:
 
 ### Advanced (technical-only)
 - Shared style ownership summary (read-only)
+- Configuration import and export
 - Normalization and safeguards
 - Raw payload snapshot
 
 Advanced no longer duplicates the live shared style controls that Visual owns
-for ratio, gap, radius, caption position, and overlay.
+for ratio, gap, radius, caption position, and overlay. It now owns a bounded
+JSON import/export surface that validates unknown fields and invalid enum values
+before applying a config.
 
 ## Runtime Behavior Notes
 
@@ -100,6 +106,9 @@ for ratio, gap, radius, caption position, and overlay.
   class maps for each variant.
 - Motion presets are opt-in and use static Tailwind `motion-safe:*` /
   `motion-reduce:*` classes. `none` remains the default.
+- Advanced import/export uses the normalized Gallery Mosaic payload only. Invalid
+  JSON, unknown nested fields, or invalid enum values are rejected
+  non-destructively with machine-readable error codes and paths.
 - Shared runtime semantics currently use semantic `<figure>` / `<figcaption>`
   wrappers for gallery media and keep current caption-derived naming/title
   behavior unless a dedicated per-item `alt` value overrides them.

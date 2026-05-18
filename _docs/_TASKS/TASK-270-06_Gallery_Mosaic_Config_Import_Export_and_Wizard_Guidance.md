@@ -6,7 +6,7 @@
 **Category:** Widgets + Gallery Mosaic + Admin UI + Authoring Workflow
 **Estimated Effort:** Medium
 **Dependencies:** TASK-256-01, TASK-256-06-02, TASK-270-01, TASK-270-02, TASK-270-03, TASK-270-04, TASK-270-05
-**Status:** To Do
+**Status:** Done (2026-05-18)
 
 ---
 
@@ -19,6 +19,18 @@ model.
 This leaf does not own Wizard video picker functionality from TASK-256-06-02.
 It may add copy or guidance only to explain the final product workflow and must
 not create an alternate schema parser outside the widget owner module.
+
+Landed implementation:
+
+- `core/widgets/core/galleryMosaic.tsx` now exports pure
+  `exportGalleryMosaicConfig()` and `importGalleryMosaicConfig()` helpers with
+  manual schema-owned validation for JSON shape, unknown fields, invalid enum
+  values, and machine-readable error paths.
+- `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx` adds final Wizard
+  guidance and an Advanced import/export section that keeps invalid imports
+  non-destructive while exposing the normalized payload for export.
+- Tests now cover round-trip export/import, invalid JSON, unknown nested field
+  rejection, invalid enum rejection, and Advanced editor import behavior.
 
 ## Source Findings
 

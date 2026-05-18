@@ -10,10 +10,12 @@ import {
 } from "../../../core/admin/ui/widgets/editors/GalleryMosaicEditors";
 import {
   createGalleryMosaicWidget,
+  exportGalleryMosaicConfig,
   galleryMosaicDefaults,
   galleryMosaicItemMax,
   GalleryMosaicBlock,
   getGalleryMosaicLightboxRuntimeScript,
+  importGalleryMosaicConfig,
   normalizeGalleryMosaicData,
   normalizeGalleryMosaicItemCount,
   normalizeGalleryMosaicItems,
@@ -293,6 +295,78 @@ test("gallery mosaic density and motion presets stay bounded and render determin
   expect(html).toContain("motion-reduce:transition-none");
 });
 
+test("gallery mosaic import and export stay schema-owned and machine-readable", () => {
+  const exported = exportGalleryMosaicConfig({
+    ...galleryMosaicDefaults,
+    items: [
+      {
+        id: "gallery-1",
+        image: "https://cdn.example.com/one.jpg",
+        caption: "Lead frame",
+      },
+    ],
+    style: {
+      ...galleryMosaicDefaults.style,
+      layoutDensity: "compact",
+      motionPreset: "fade",
+    },
+  });
+
+  const imported = importGalleryMosaicConfig(exported);
+  const invalidJson = importGalleryMosaicConfig("{not-json");
+  const unknownField = importGalleryMosaicConfig(
+    JSON.stringify({
+      items: [
+        {
+          id: "gallery-1",
+          image: "https://cdn.example.com/one.jpg",
+          privateToken: "secret",
+        },
+      ],
+    })
+  );
+  const invalidValue = importGalleryMosaicConfig(
+    JSON.stringify({
+      items: [
+        {
+          id: "gallery-1",
+          image: "https://cdn.example.com/one.jpg",
+        },
+      ],
+      style: {
+        motionPreset: "bounce",
+      },
+    })
+  );
+
+  expect(exported).toContain('"layoutDensity": "compact"');
+  expect(exported).toContain('"motionPreset": "fade"');
+  expect(imported).toEqual({
+    ok: true,
+    data: expect.objectContaining({
+      items: [expect.objectContaining({ id: "gallery-1", caption: "Lead frame" })],
+      style: expect.objectContaining({
+        layoutDensity: "compact",
+        motionPreset: "fade",
+      }),
+    }),
+  });
+  expect(invalidJson).toEqual({
+    ok: false,
+    code: "gallery_mosaic_import_invalid_json",
+  });
+  expect(unknownField).toEqual({
+    ok: false,
+    code: "gallery_mosaic_import_unknown_field",
+    path: "items[0].privateToken",
+  });
+  expect(invalidValue).toEqual({
+    ok: false,
+    code: "gallery_mosaic_import_invalid_value",
+    path: "style.motionPreset",
+  });
+});
+
 test("gallery mosaic cleared overlay omits caption background style", () => {
   const normalized = normalizeGalleryMosaicData({
     ...galleryMosaicDefaults,
@@ -384,6 +458,7 @@ test("gallery mosaic wizard renders onboarding fields", () => {
   expect(html).toContain("Gallery layout");
   expect(html).toContain("Section title");
   expect(html).toContain("Initial media count");
+  expect(html).toContain("import/export JSON");
 });
 
 test("gallery mosaic visual renders section-based IA", () => {
@@ -416,6 +491,7 @@ test("gallery mosaic advanced keeps technical-only scope", () => {
   );
 
   expect(html).toContain("Technical ratio and layout tokens");
+  expect(html).toContain("Configuration import and export");
   expect(html).toContain("Normalization and safeguards");
   expect(html).toContain("Raw payload snapshot");
   expect(html).not.toContain("Media items and links");

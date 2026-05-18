@@ -364,11 +364,17 @@ Po zwiększeniu limitu aktywnych sesji per user w CMS do 30 — zapis i publikac
 > oraz opt-in `motionPreset` (`none` / `fade` / `slide-up`) oparty o
 > `motion-safe` / `motion-reduce` klasy bez naruszania backward compatibility.
 
+> **Aktualizacja 2026-05-18 — TASK-270-06:** BF-16 jest zamknięty. Advanced
+> udostępnia teraz bounded JSON export/import dla schema-owned payloadu z
+> machine-readable błędami (`gallery_mosaic_import_*`) dla invalid JSON,
+> unknown nested fields i invalid enum values, a Wizard guidance kieruje autora
+> do końcowego flow po shared video support z `TASK-256-06-02`.
+
 > **Closure note 2026-05-18 — TASK-293-03:** reopened shared residual family is
-> now fully closed in docs/changelog/board state as well. `TASK-270` is the
-> only remaining owner for product gaps such as import/export and final closure,
-> while preview/picker, reorder UX, dedicated `alt`, poster, lightbox, and
-> bounded motion/density slices are already landed.
+> now fully closed in docs/changelog/board state as well. `TASK-270` now
+> remains only as the final report/docs/changelog closure pass, while
+> preview/picker, reorder UX, dedicated `alt`, poster, lightbox, bounded
+> motion/density, and import/export slices are already landed.
 
 ---
 
@@ -391,7 +397,7 @@ Po zwiększeniu limitu aktywnych sesji per user w CMS do 30 — zapis i publikac
 | BF-13 | Brak video poster image field (czarny ekran przy ładowaniu) | Niski |
 | BF-14 | ✓ Zamknięte — opt-in animacje wejścia (`fade`, `slide-up`) z reduced-motion fallback | Niski |
 | BF-15 | ✓ Zamknięte — bounded preset `layoutDensity` zamiast surowej mapy breakpointów | Średni |
-| BF-16 | Brak eksportu/importu konfiguracji galerii | Niski |
+| BF-16 | ✓ Zamknięte — bounded JSON eksport/import konfiguracji galerii | Niski |
 
 ---
 

@@ -16,6 +16,21 @@ export type GalleryMosaicInteractionMode = "none" | "lightbox";
 export type GalleryMosaicLightboxZoom = "fit" | "fill";
 export type GalleryMosaicLayoutDensity = "auto" | "compact" | "balanced" | "dense";
 export type GalleryMosaicMotionPreset = "none" | "fade" | "slide-up";
+export type GalleryMosaicImportErrorCode =
+  | "gallery_mosaic_import_invalid_json"
+  | "gallery_mosaic_import_invalid_payload"
+  | "gallery_mosaic_import_unknown_field"
+  | "gallery_mosaic_import_invalid_value";
+export type GalleryMosaicImportResult =
+  | {
+      ok: true;
+      data: GalleryMosaicData;
+    }
+  | {
+      ok: false;
+      code: GalleryMosaicImportErrorCode;
+      path?: string;
+    };
 
 export type GalleryMosaicItem = {
   id?: string;
@@ -137,6 +152,30 @@ const motionPresetClassMap: Record<GalleryMosaicMotionPreset, string> = {
   "slide-up":
     "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300 motion-reduce:transform-none motion-reduce:transition-none",
 };
+
+const galleryMosaicTopLevelKeys = new Set(["header", "items", "interaction", "style"]);
+const galleryMosaicHeaderKeys = new Set(["title", "description"]);
+const galleryMosaicItemKeys = new Set([
+  "id",
+  "image",
+  "video",
+  "alt",
+  "poster",
+  "caption",
+  "href",
+  "objectPosition",
+  "ratio",
+]);
+const galleryMosaicInteractionKeys = new Set(["mode", "zoom"]);
+const galleryMosaicStyleKeys = new Set([
+  "ratio",
+  "gap",
+  "radius",
+  "overlay",
+  "captionPosition",
+  "layoutDensity",
+  "motionPreset",
+]);
 
 const galleryMosaicItemMin = 1;
 export const galleryMosaicItemMax = 16;
@@ -429,6 +468,219 @@ export function normalizeGalleryMosaicData(data: GalleryMosaicData): GalleryMosa
       motionPreset: resolveGalleryMosaicMotionPreset(data.style?.motionPreset),
     },
   };
+}
+
+function isGalleryMosaicPlainObject(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function buildGalleryMosaicImportPath(parent: string, key: string | number) {
+  if (typeof key === "number") {
+    return `${parent}[${key}]`;
+  }
+  return parent ? `${parent}.${key}` : key;
+}
+
+function createGalleryMosaicImportError(
+  code: GalleryMosaicImportErrorCode,
+  path?: string
+): GalleryMosaicImportResult {
+  return { ok: false, code, path };
+}
+
+function validateGalleryMosaicKnownKeys(
+  value: Record<string, unknown>,
+  allowedKeys: Set<string>,
+  parentPath = ""
+): GalleryMosaicImportResult | null {
+  for (const key of Object.keys(value)) {
+    if (!allowedKeys.has(key)) {
+      return createGalleryMosaicImportError(
+        "gallery_mosaic_import_unknown_field",
+        buildGalleryMosaicImportPath(parentPath, key)
+      );
+    }
+  }
+  return null;
+}
+
+function validateGalleryMosaicOptionalString(
+  value: unknown,
+  path: string
+): GalleryMosaicImportResult | null {
+  if (value === undefined || typeof value === "string") return null;
+  return createGalleryMosaicImportError("gallery_mosaic_import_invalid_value", path);
+}
+
+function validateGalleryMosaicEnum<T extends string>(
+  value: unknown,
+  allowedValues: readonly T[],
+  path: string
+): GalleryMosaicImportResult | null {
+  if (value === undefined) return null;
+  if (typeof value === "string" && allowedValues.includes(value as T)) return null;
+  return createGalleryMosaicImportError("gallery_mosaic_import_invalid_value", path);
+}
+
+function validateGalleryMosaicImportPayload(value: unknown): GalleryMosaicImportResult | null {
+  if (!isGalleryMosaicPlainObject(value)) {
+    return createGalleryMosaicImportError("gallery_mosaic_import_invalid_payload");
+  }
+
+  const rootKeyError = validateGalleryMosaicKnownKeys(value, galleryMosaicTopLevelKeys);
+  if (rootKeyError) return rootKeyError;
+
+  if (!Array.isArray(value.items)) {
+    return createGalleryMosaicImportError("gallery_mosaic_import_invalid_payload", "items");
+  }
+  if (value.items.length < galleryMosaicItemMin || value.items.length > galleryMosaicItemMax) {
+    return createGalleryMosaicImportError("gallery_mosaic_import_invalid_value", "items");
+  }
+
+  if (value.header !== undefined) {
+    if (!isGalleryMosaicPlainObject(value.header)) {
+      return createGalleryMosaicImportError("gallery_mosaic_import_invalid_payload", "header");
+    }
+    const headerKeyError = validateGalleryMosaicKnownKeys(
+      value.header,
+      galleryMosaicHeaderKeys,
+      "header"
+    );
+    if (headerKeyError) return headerKeyError;
+    const titleError = validateGalleryMosaicOptionalString(value.header.title, "header.title");
+    if (titleError) return titleError;
+    const descriptionError = validateGalleryMosaicOptionalString(
+      value.header.description,
+      "header.description"
+    );
+    if (descriptionError) return descriptionError;
+  }
+
+  for (let index = 0; index < value.items.length; index += 1) {
+    const item = value.items[index];
+    const itemPath = buildGalleryMosaicImportPath("items", index);
+    if (!isGalleryMosaicPlainObject(item)) {
+      return createGalleryMosaicImportError("gallery_mosaic_import_invalid_payload", itemPath);
+    }
+    const itemKeyError = validateGalleryMosaicKnownKeys(item, galleryMosaicItemKeys, itemPath);
+    if (itemKeyError) return itemKeyError;
+    const stringKeys = ["id", "image", "video", "alt", "poster", "caption", "href"] as const;
+    for (const key of stringKeys) {
+      const fieldError = validateGalleryMosaicOptionalString(
+        item[key],
+        buildGalleryMosaicImportPath(itemPath, key)
+      );
+      if (fieldError) return fieldError;
+    }
+    const objectPositionError = validateGalleryMosaicEnum(
+      item.objectPosition,
+      ["center", "top", "bottom", "left", "right"] as const,
+      buildGalleryMosaicImportPath(itemPath, "objectPosition")
+    );
+    if (objectPositionError) return objectPositionError;
+    const ratioError = validateGalleryMosaicEnum(
+      item.ratio,
+      ["inherit", "1:1", "4:3", "16:9", "3:4"] as const,
+      buildGalleryMosaicImportPath(itemPath, "ratio")
+    );
+    if (ratioError) return ratioError;
+  }
+
+  if (value.interaction !== undefined) {
+    if (!isGalleryMosaicPlainObject(value.interaction)) {
+      return createGalleryMosaicImportError("gallery_mosaic_import_invalid_payload", "interaction");
+    }
+    const interactionKeyError = validateGalleryMosaicKnownKeys(
+      value.interaction,
+      galleryMosaicInteractionKeys,
+      "interaction"
+    );
+    if (interactionKeyError) return interactionKeyError;
+    const modeError = validateGalleryMosaicEnum(
+      value.interaction.mode,
+      ["none", "lightbox"] as const,
+      "interaction.mode"
+    );
+    if (modeError) return modeError;
+    const zoomError = validateGalleryMosaicEnum(
+      value.interaction.zoom,
+      ["fit", "fill"] as const,
+      "interaction.zoom"
+    );
+    if (zoomError) return zoomError;
+  }
+
+  if (value.style !== undefined) {
+    if (!isGalleryMosaicPlainObject(value.style)) {
+      return createGalleryMosaicImportError("gallery_mosaic_import_invalid_payload", "style");
+    }
+    const styleKeyError = validateGalleryMosaicKnownKeys(
+      value.style,
+      galleryMosaicStyleKeys,
+      "style"
+    );
+    if (styleKeyError) return styleKeyError;
+    const ratioError = validateGalleryMosaicEnum(
+      value.style.ratio,
+      ["1:1", "4:3", "16:9", "3:4"] as const,
+      "style.ratio"
+    );
+    if (ratioError) return ratioError;
+    const gapError = validateGalleryMosaicEnum(
+      value.style.gap,
+      ["none", "sm", "md", "lg"] as const,
+      "style.gap"
+    );
+    if (gapError) return gapError;
+    const radiusError = validateGalleryMosaicEnum(
+      value.style.radius,
+      ["none", "md", "lg", "xl"] as const,
+      "style.radius"
+    );
+    if (radiusError) return radiusError;
+    const overlayError = validateGalleryMosaicOptionalString(value.style.overlay, "style.overlay");
+    if (overlayError) return overlayError;
+    const captionError = validateGalleryMosaicEnum(
+      value.style.captionPosition,
+      ["inside", "below", "hover"] as const,
+      "style.captionPosition"
+    );
+    if (captionError) return captionError;
+    const densityError = validateGalleryMosaicEnum(
+      value.style.layoutDensity,
+      ["auto", "compact", "balanced", "dense"] as const,
+      "style.layoutDensity"
+    );
+    if (densityError) return densityError;
+    const motionError = validateGalleryMosaicEnum(
+      value.style.motionPreset,
+      ["none", "fade", "slide-up"] as const,
+      "style.motionPreset"
+    );
+    if (motionError) return motionError;
+  }
+
+  return null;
+}
+
+export function exportGalleryMosaicConfig(data: GalleryMosaicData): string {
+  return JSON.stringify(normalizeGalleryMosaicData(data), null, 2);
+}
+
+export function importGalleryMosaicConfig(source: string): GalleryMosaicImportResult {
+  try {
+    const parsed = JSON.parse(source) as unknown;
+    const validationError = validateGalleryMosaicImportPayload(parsed);
+    if (validationError) {
+      return validationError;
+    }
+    return {
+      ok: true,
+      data: normalizeGalleryMosaicData(parsed as GalleryMosaicData),
+    };
+  } catch {
+    return createGalleryMosaicImportError("gallery_mosaic_import_invalid_json");
+  }
 }
 
 function renderCaption({

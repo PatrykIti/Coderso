@@ -18,8 +18,10 @@ import { FileImage, GripVertical, Video } from "lucide-react";
 import { reorderItemsById, resolveDropIndexFromPointer } from "@/ui/posts/editor/blocks/blockDnD";
 
 import {
+  exportGalleryMosaicConfig,
   galleryMosaicDefaults,
   galleryMosaicItemMax,
+  importGalleryMosaicConfig,
   normalizeGalleryMosaicData,
   normalizeGalleryMosaicItems,
   resolveGalleryMosaicVariant,
@@ -730,6 +732,10 @@ export function GalleryMosaicWizardEditor({
         <p className="text-xs text-muted-foreground">
           Selected media is saved as public image or video URLs in gallery items.
         </p>
+        <p className="text-xs text-muted-foreground">
+          After Wizard, use Visual for per-item alt, poster, lightbox, density, and motion controls,
+          or Advanced to import/export JSON.
+        </p>
         {mediaPickerError ? <p className="text-xs text-destructive">{mediaPickerError}</p> : null}
       </div>
     </div>
@@ -1404,6 +1410,30 @@ export function GalleryMosaicAdvancedEditor({
   onChange,
 }: WidgetEditorProps<GalleryMosaicData>) {
   const normalized = normalizeValue(value);
+  const [configDraft, setConfigDraft] = useState(() => exportGalleryMosaicConfig(normalized));
+  const [configStatus, setConfigStatus] = useState<string | null>(null);
+  const [configError, setConfigError] = useState<string | null>(null);
+
+  const handleExportConfig = () => {
+    const nextDraft = exportGalleryMosaicConfig(normalizeValue(value));
+    setConfigDraft(nextDraft);
+    setConfigError(null);
+    setConfigStatus("Exported the current config to the JSON field.");
+  };
+
+  const handleImportConfig = () => {
+    const result = importGalleryMosaicConfig(configDraft);
+    if (!result.ok) {
+      setConfigStatus(null);
+      setConfigError(`Import error: ${result.code}${result.path ? ` at ${result.path}` : ""}`);
+      return;
+    }
+
+    onChange(result.data);
+    setConfigDraft(exportGalleryMosaicConfig(result.data));
+    setConfigError(null);
+    setConfigStatus("Imported Gallery Mosaic config.");
+  };
 
   return (
     <div className="space-y-4">
@@ -1415,14 +1445,59 @@ export function GalleryMosaicAdvancedEditor({
       </EditorSection>
 
       <EditorSection
+        title="Configuration import and export"
+        description="Use the schema-owned JSON payload for safe Gallery Mosaic import/export."
+      >
+        <Textarea
+          value={configDraft}
+          onChange={(event) => {
+            setConfigDraft(event.target.value);
+            setConfigError(null);
+            setConfigStatus(null);
+          }}
+          placeholder="Paste a Gallery Mosaic JSON config."
+          rows={12}
+        />
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="outline" onClick={handleExportConfig}>
+            Export current config
+          </Button>
+          <Button type="button" variant="outline" onClick={handleImportConfig}>
+            Import config
+          </Button>
+        </div>
+        {configError ? <p className="text-xs text-destructive">{configError}</p> : null}
+        {configStatus ? <p className="text-xs text-muted-foreground">{configStatus}</p> : null}
+      </EditorSection>
+
+      <EditorSection
         title="Normalization and safeguards"
         description="Apply deterministic fallback data for media items and styles."
       >
         <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="outline" onClick={() => onChange(normalizeValue(value))}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              const next = normalizeValue(value);
+              onChange(next);
+              setConfigDraft(exportGalleryMosaicConfig(next));
+              setConfigError(null);
+              setConfigStatus("Normalized the current Gallery Mosaic config.");
+            }}
+          >
             Normalize now
           </Button>
-          <Button type="button" variant="outline" onClick={() => onChange(galleryMosaicDefaults)}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              onChange(galleryMosaicDefaults);
+              setConfigDraft(exportGalleryMosaicConfig(galleryMosaicDefaults));
+              setConfigError(null);
+              setConfigStatus("Reset Gallery Mosaic to defaults.");
+            }}
+          >
             Reset to defaults
           </Button>
         </div>
