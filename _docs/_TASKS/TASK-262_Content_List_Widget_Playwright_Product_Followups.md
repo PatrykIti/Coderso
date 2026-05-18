@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Dynamic Content + Admin UI + Runtime Render + Listings + Playwright QA
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-252-07-01, TASK-256-07, TASK-293
+**Dependencies:** TASK-252-07-01, TASK-256-07, TASK-302
 **Status:** Done (2026-05-17)
 
 ---
@@ -47,7 +47,7 @@ Out of scope for TASK-262:
 
 - Shared editor atomic update helpers, owned by TASK-256-01.
 - Shared `ContentListBlock` / `PostsFeedBlock` renderer truthfulness and residual
-  color-control adoption discovered after TASK-256 closure, owned by TASK-293.
+  color-control adoption discovered after TASK-256 closure, owned by TASK-302.
   The `Columns` truthfulness rows, shared image/CTA renderer residuals, and the
   stale `TASK-256-02` `textColor` clear/color-picker routing must be fixed
   there instead of being patched only inside the Content List family.
@@ -57,7 +57,7 @@ Out of scope for TASK-262:
 - Broad content query/listing platform changes outside the Content List widget.
 
 If a TASK-262 leaf discovers a missing shared helper, stop and route that helper
-through TASK-293 or a new shared task before continuing with Content List-only
+through TASK-302 or a new shared task before continuing with Content List-only
 work.
 
 ## Source Report Coverage
@@ -68,7 +68,7 @@ work.
 | B-02, T-02 canvas/preview communication, T-05, static canvas discovery | TASK-262-02 |
 | B-01, B-03, runtime `resolved.runtime.page` navigation behavior | TASK-262-03 |
 | B-06, E-07, E-10 | TASK-262-04 |
-| B-04, B-05, E-01, E-05, E-08, T-01 | TASK-293, not TASK-262 |
+| B-04, B-05, E-01, E-05, E-08, T-01 | TASK-302, not TASK-262 |
 | E-09, T-03 | Already fixed / no longer reproducible at current HEAD; verify again during TASK-262-05 closure before marking fixed in the report |
 | Final fixed/deferred evidence, report refresh, docs/changelog/board closure | TASK-262-05 |
 
@@ -180,7 +180,7 @@ This umbrella does not add API routes.
 ## Acceptance Criteria
 
 - Every finding in `_docs/PLAYWRIGHT/REPORT_CONTENT_LIST_WIDGET.md` is fixed,
-  explicitly excluded as TASK-293 shared scope or another named shared/future
+  explicitly excluded as TASK-302 shared scope or another named shared/future
   task, or deferred with a reason.
 - Content List schema, defaults, normalizer, render, editor, tests, and docs
   move together for every new user-facing option.

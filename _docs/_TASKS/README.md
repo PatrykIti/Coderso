@@ -343,13 +343,13 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-293 | Content List Block Shared Renderer and Color Control Residuals | High | Large | Done: shared `ContentListBlock` / `PostsFeedBlock` truthfulness, image/CTA renderer residuals, and Content List text-color clear/picker adoption are synchronized and validated |
+| TASK-302 | Content List Block Shared Renderer and Color Control Residuals | High | Large | Done: shared `ContentListBlock` / `PostsFeedBlock` truthfulness, image/CTA renderer residuals, and Content List text-color clear/picker adoption are synchronized and validated |
 | TASK-262 | Content List Widget Playwright Product Followups | High | Very Large | Done: source/filter IA, section context, saved-data canvas guidance, bounded pagination actions, tag badges, preview cards, report refresh, board sync, and changelog closure are aligned |
 | TASK-262-01 | Content List Source Picker and Filter Editor IA | High | Large | Done: source labels are friendly, content types are searchable/deduplicated, taxonomy suggestions use the taxonomy overview seam, and author filtering uses a picker/search flow |
 | TASK-262-02 | Content List Section Empty State and Static Canvas Guidance | High | Large | Done: Content List owns section heading/description, source-aware empty copy, and editor-side saved-data canvas guidance |
 | TASK-262-03 | Content List Pagination and View All Navigation | High | Very Large | Done: bounded `paged` / `load-more` / `view-all` actions land across schema, resolver, public output, and editor controls without introducing a second listing parser |
-| TASK-262-04 | Content List Layout Media Tags and Card Preview Controls | High | Large | Done: tag badges plus variant/card-style preview cards are local to Content List after shared renderer residuals moved to TASK-293 |
-| TASK-262-05 | Content List Report Docs and Closure | Medium | Medium | Done: the report, widget docs, task board, changelog, and final validation evidence are synchronized for TASK-262 and TASK-293 |
+| TASK-262-04 | Content List Layout Media Tags and Card Preview Controls | High | Large | Done: tag badges plus variant/card-style preview cards are local to Content List after shared renderer residuals moved to TASK-302 |
+| TASK-262-05 | Content List Report Docs and Closure | Medium | Medium | Done: the report, widget docs, task board, changelog, and final validation evidence are synchronized for TASK-262 and TASK-302 |
 | TASK-256 | Widget Shared Contract Playwright Drift Repair | High | Very Large | Done: shared builder patching, placeholder gating, interactive runtime IDs, structural shared fixes, marketing truthfulness repairs, report routing, and closure evidence are synchronized |
 | TASK-256-01 | Shared Editor Mode and Atomic Update Contract | High | Large | Done: builder hosts and shared panels use atomic block patching, and variant/data sync regressions are covered across the affected widget editors |
 | TASK-256-02 | Clear, None Token, and Design Token Controls | High | Large | Done: shared clear/token semantics are synchronized with the implemented widget surfaces and validated through the focused clear/token suites |

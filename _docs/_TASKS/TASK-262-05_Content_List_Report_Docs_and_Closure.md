@@ -17,7 +17,7 @@ land.
 
 This leaf owns textual evidence refresh, source-of-truth docs, changelog, board
 state, and final validation. It must not implement remaining product behavior
-directly; any unfixed report row must be routed to TASK-293 shared scope or a
+directly; any unfixed report row must be routed to TASK-302 shared scope or a
 named future task before the family can move to `Done`.
 
 ## Scope Boundary
@@ -38,7 +38,7 @@ reopen the relevant implementation leaf or create a future task.
 ## Sub-Tasks
 
 - [ ] Re-read `REPORT_CONTENT_LIST_WIDGET.md` and mark each finding as fixed,
-  TASK-293 shared scope, deferred future scope, or not reproducible with a
+  TASK-302 shared scope, deferred future scope, or not reproducible with a
   reason.
 - [ ] Verify TASK-262 implementation leaves updated all required source files,
   tests, and docs listed in their `Files to Change` tables.
@@ -79,7 +79,7 @@ type ContentListReportClosure = {
 
 function closeContentListFinding(finding: ReportFinding): ContentListReportClosure {
   if (finding.isSharedContentListBlockOrResidualColorContract) {
-    return routeToSharedTask(finding, "TASK-293");
+    return routeToSharedTask(finding, "TASK-302");
   }
   if (finding.hasPassingValidation) return markFixed(finding);
   if (finding.needsFutureScope) return createFutureTaskReference(finding);
@@ -132,7 +132,7 @@ No API routes are added by this closure leaf.
   public output changed
 - `bun test tests/unit/widgets/postsFeedWidget.test.tsx` when shared
   `ContentListBlock` / `postsFeed.tsx` compatibility changes land through
-  TASK-293 or any TASK-262 leaf touches `core/widgets/core/postsFeed.tsx`
+  TASK-302 or any TASK-262 leaf touches `core/widgets/core/postsFeed.tsx`
 - `bun test tests/unit/widgets/validator.test.ts` when schema changed
 - `bun run test:vitest -- tests/vitest/search/filterEngine.test.ts` when
   pagination or listing runtime query parsing changed
@@ -156,7 +156,7 @@ No API routes are added by this closure leaf.
 
 ## Acceptance Criteria
 
-- Every Content List report row is fixed, explicitly routed to TASK-293 or another named shared/future task, or
+- Every Content List report row is fixed, explicitly routed to TASK-302 or another named shared/future task, or
   deferred to a named future task with a reason.
 - Rows already fixed or no longer reproducible at current HEAD, such as E-09 /
   T-03, are still re-verified and classified with concrete evidence instead of

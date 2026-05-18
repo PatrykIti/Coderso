@@ -18,7 +18,7 @@ shared `ContentListBlock` / `PostsFeedBlock` residuals are routed out.
 The report confirms that tags are still collapsed into a meta line and that
 variant/card-style choices still lack meaningful previews. Shared renderer
 truthfulness such as `Columns`, hardcoded image height, and CTA fallback must be
-handled through TASK-293 instead of being patched only in this widget family.
+handled through TASK-302 instead of being patched only in this widget family.
 
 ## Scope Boundary
 
@@ -31,7 +31,7 @@ This leaf owns Content List item presentation that stays local to this widget:
 This leaf does not own the generic `Clear` behavior for `textColor`, generic
 color pickers, shared renderer truthfulness in `ContentListBlock`, or
 `PostsFeed` compatibility fixes that require the same runtime/editor contract.
-Those rows move through TASK-293.
+Those rows move through TASK-302.
 
 ## Sub-Tasks
 
@@ -40,13 +40,13 @@ Those rows move through TASK-293.
 - [ ] Replace text-only variant/card-style controls with Content List-local
   previews that show cards/list/compact and outlined/elevated/minimal effects.
 - [ ] If implementation uncovers another `ContentListBlock` / `PostsFeedBlock`
-  shared renderer dependency, stop and route it to TASK-293 before continuing.
+  shared renderer dependency, stop and route it to TASK-302 before continuing.
 
 ## Files to Change
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/contentList.tsx` | Add tag presentation fields, normalizer, renderer output, and bounded badge rendering without widening the shared renderer contract routed to TASK-293. |
+| `core/widgets/core/contentList.tsx` | Add tag presentation fields, normalizer, renderer output, and bounded badge rendering without widening the shared renderer contract routed to TASK-302. |
 | `core/admin/ui/widgets/editors/ContentListEditors.tsx` | Add local tag presentation controls plus variant/card-style preview cards without re-owning shared renderer truthfulness. |
 | `tests/unit/widgets/contentList.test.tsx` | Cover tag badge mode, local preview-driven schema defaults, and renderer output that remains in TASK-262 scope. |
 | `tests/vitest/ui/content-list-editor-wave.test.tsx` | Cover editor visibility/previews and new controls. |
@@ -110,7 +110,7 @@ No API routes are added.
 
 - Update `_docs/_WIDGETS/CONTENT_LIST.md` with tag presentation and local preview behavior.
 - Update `_docs/PLAYWRIGHT/REPORT_CONTENT_LIST_WIDGET.md` rows B-06, E-07, and
-  E-10 after validation. Route B-04, B-05, E-01, and T-01 through TASK-293.
+  E-10 after validation. Route B-04, B-05, E-01, and T-01 through TASK-302.
 
 ## Changelog Policy
 

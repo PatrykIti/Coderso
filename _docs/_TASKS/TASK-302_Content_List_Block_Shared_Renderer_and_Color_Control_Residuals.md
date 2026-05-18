@@ -1,6 +1,6 @@
-# TASK-293: Content List Block Shared Renderer and Color Control Residuals
+# TASK-302: Content List Block Shared Renderer and Color Control Residuals
 
-# FileName: TASK-293_Content_List_Block_Shared_Renderer_and_Color_Control_Residuals.md
+# FileName: TASK-302_Content_List_Block_Shared_Renderer_and_Color_Control_Residuals.md
 
 **Priority:** High
 **Category:** Widgets + Admin UI + Runtime Render + Shared Contracts
