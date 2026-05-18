@@ -1,8 +1,4 @@
-<<<<<<<< HEAD:_docs/_CHANGELOG/854-2026-05-18-task-303-divider-spacer-shared-controls.md
 # 854 - TASK-303 divider spacer shared controls
-========
-# 847 - TASK-303 divider spacer shared controls
->>>>>>>> bac9846f (docs: renumber divider shared residual task):_docs/_CHANGELOG/847-2026-05-17-task-303-divider-spacer-shared-controls.md
 
 **Date:** 2026-05-18
 **Version:** Unreleased
