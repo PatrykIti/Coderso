@@ -28,7 +28,7 @@ Tasks: TASK-260, TASK-260-01, TASK-260-02, TASK-260-03, TASK-260-04, TASK-260-05
   and report closure notes so every report row now ends as fixed, routed to an
   exact shared owner, or deferred to a concrete future task.
 - Created exact deferred follow-up owners for the remaining non-landed rows:
-  `TASK-293` for shared widget contrast guidance/validation and `TASK-294` for
+  `TASK-299` for shared widget contrast guidance/validation and `TASK-300` for
   Compare Timeline motion presets/reduced-motion policy.
 - Added focused coverage for the new Compare Timeline schema/editor/runtime
   contract through `compareTimeline.test.tsx`,
