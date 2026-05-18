@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { listMediaCached, type MediaRecord } from "@/services/mediaClient";
 import { MediaPicker } from "@/ui/media/MediaPicker";
+import { FileImage, Video } from "lucide-react";
 
 import {
   galleryMosaicDefaults,
@@ -96,6 +97,11 @@ const rgbColorPattern =
 type HeaderData = NonNullable<GalleryMosaicData["header"]>;
 type StyleData = NonNullable<GalleryMosaicData["style"]>;
 type GalleryMosaicResolvedMediaType = "image" | "video" | "placeholder";
+type GalleryItemPreviewState = {
+  mediaType: GalleryMosaicResolvedMediaType;
+  src?: string;
+  label: string;
+};
 
 const resolvePickerColor = (value: string | undefined, fallback: string) => {
   if (!value) return fallback;
@@ -146,6 +152,28 @@ function resolveGalleryCurrentMediaSummary(item: GalleryMosaicItem) {
   return {
     label: "Placeholder",
     description: "No image or video URL is set yet.",
+  };
+}
+
+function resolveGalleryItemPreview(item: GalleryMosaicItem): GalleryItemPreviewState {
+  const caption = item.caption?.trim();
+  if (item.video?.trim()) {
+    return {
+      mediaType: "video",
+      src: item.video,
+      label: caption || "Video asset",
+    };
+  }
+  if (item.image?.trim()) {
+    return {
+      mediaType: "image",
+      src: item.image,
+      label: caption || "Image asset",
+    };
+  }
+  return {
+    mediaType: "placeholder",
+    label: caption || "Media item",
   };
 }
 
@@ -410,6 +438,53 @@ function DiagnosticsSnapshot({ value }: { value: GalleryMosaicData }) {
   );
 }
 
+function GalleryItemPreview({ item }: { item: GalleryMosaicItem }) {
+  const preview = resolveGalleryItemPreview(item);
+
+  if (preview.mediaType === "image" && preview.src) {
+    return (
+      <div className="flex items-center gap-3 rounded-lg border bg-muted/10 p-3">
+        <img
+          src={preview.src}
+          alt={preview.label}
+          className="h-16 w-20 rounded-md object-cover"
+          loading="lazy"
+        />
+        <div className="min-w-0">
+          <p className="text-sm font-medium">Image preview</p>
+          <p className="truncate text-xs text-muted-foreground">{preview.label}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (preview.mediaType === "video" && preview.src) {
+    return (
+      <div className="flex items-center gap-3 rounded-lg border bg-muted/10 p-3">
+        <div className="flex h-16 w-20 items-center justify-center rounded-md border bg-muted/30">
+          <Video className="h-6 w-6 text-muted-foreground" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-medium">Video preview</p>
+          <p className="truncate text-xs text-muted-foreground">{preview.label}</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-3 rounded-lg border border-dashed bg-muted/10 p-3">
+      <div className="flex h-16 w-20 items-center justify-center rounded-md border border-dashed bg-background">
+        <FileImage className="h-6 w-6 text-muted-foreground" />
+      </div>
+      <div className="min-w-0">
+        <p className="text-sm font-medium">Placeholder preview</p>
+        <p className="truncate text-xs text-muted-foreground">{preview.label}</p>
+      </div>
+    </div>
+  );
+}
+
 function TechnicalStyleSummary({ value }: { value: GalleryMosaicData }) {
   const normalized = normalizeValue(value);
   const style = normalized.style ?? galleryMosaicDefaults.style;
@@ -585,6 +660,65 @@ export function GalleryMosaicVisualEditor({
 }: WidgetEditorProps<GalleryMosaicData>) {
   const normalized = normalizeValue(value);
   const items = normalizeGalleryMosaicItems(normalized.items);
+  const [selectedMediaIdsByItemId, setSelectedMediaIdsByItemId] = useState<Record<string, string>>(
+    {}
+  );
+  const [itemMediaPickerErrors, setItemMediaPickerErrors] = useState<Record<string, string>>({});
+
+  const setItemMediaError = (itemId: string, message?: string) => {
+    setItemMediaPickerErrors((current) => {
+      if (!message) {
+        const next = { ...current };
+        delete next[itemId];
+        return next;
+      }
+      return {
+        ...current,
+        [itemId]: message,
+      };
+    });
+  };
+
+  const handleItemMediaSelection = async (itemId: string, index: number, nextValue: unknown) => {
+    const normalizedItems = normalizeGalleryMosaicItems(value.items);
+    const item = normalizedItems[index];
+    if (!item?.id) return;
+
+    const mediaId = typeof nextValue === "string" && nextValue.trim().length > 0 ? nextValue : null;
+    if (!mediaId) {
+      setSelectedMediaIdsByItemId((current) => {
+        const next = { ...current };
+        delete next[itemId];
+        return next;
+      });
+      setItemMediaError(itemId);
+      return;
+    }
+
+    setItemMediaError(itemId);
+    try {
+      const mediaItems = await listMediaCached({ force: false });
+      const media = mediaItems.find((candidate) => candidate.id === mediaId);
+      if (!media?.url) {
+        throw new Error("gallery_mosaic_media_missing_url");
+      }
+      const mediaKind = resolveGalleryMediaKind(media);
+      if (!mediaKind) {
+        throw new Error("gallery_mosaic_media_unsupported");
+      }
+
+      updateItem(value, onChange, index, {
+        image: mediaKind === "image" ? media.url : undefined,
+        video: mediaKind === "video" ? media.url : undefined,
+      });
+      setSelectedMediaIdsByItemId((current) => ({
+        ...current,
+        [itemId]: mediaId,
+      }));
+    } catch {
+      setItemMediaError(itemId, `Item ${index + 1}: failed to resolve selected media.`);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -685,6 +819,27 @@ export function GalleryMosaicVisualEditor({
                     Remove
                   </Button>
                 </div>
+              </div>
+
+              <GalleryItemPreview item={item} />
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Media library</p>
+                <MediaPicker
+                  value={selectedMediaIdsByItemId[item.id ?? ""] ?? null}
+                  onChange={(next) => {
+                    if (!item.id) return;
+                    void handleItemMediaSelection(item.id, index, next);
+                  }}
+                  multiple={false}
+                  accept={["image/*", "video/*"]}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Selecting an asset updates the current image or video URL for this item.
+                </p>
+                {item.id && itemMediaPickerErrors[item.id] ? (
+                  <p className="text-xs text-destructive">{itemMediaPickerErrors[item.id]}</p>
+                ) : null}
               </div>
 
               <div className="space-y-2">

@@ -6,7 +6,7 @@
 **Category:** Widgets + Gallery Mosaic + Admin UI + Runtime Render + Playwright QA
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-252, TASK-256, TASK-256-01, TASK-256-02, TASK-256-04, TASK-256-06-02, TASK-256-08
-**Status:** To Do
+**Status:** In Progress (2026-05-18)
 
 ---
 
@@ -79,7 +79,7 @@ repairs inside its own implementation leaves.
 
 ## Sub-Tasks
 
-- [ ] TASK-270-01: Gallery Mosaic Item Previews and Media Picker
+- [x] TASK-270-01: Gallery Mosaic Item Previews and Media Picker
 - [ ] TASK-270-02: Gallery Mosaic Reorder, Count, and Removal UX
 - [ ] TASK-270-03: Gallery Mosaic Per-Item Media Presentation Fields
 - [ ] TASK-270-04: Gallery Mosaic Lightbox and Zoom Mode

@@ -6,7 +6,7 @@
 **Category:** Widgets + Gallery Mosaic + Admin UI + Media
 **Estimated Effort:** Large
 **Dependencies:** TASK-256-06-02, TASK-270
-**Status:** To Do
+**Status:** Done (2026-05-18)
 
 ---
 
@@ -195,3 +195,17 @@ No API routes are added.
   TASK-270-02.
 - The leaf does not reimplement TASK-256 image/video priority or safe-media
   output logic.
+
+## Completion Notes
+
+- 2026-05-18: Gallery Mosaic Visual now exposes per-item preview state and a
+  per-item MediaPicker that updates the active `image` or `video` URL while
+  keeping lookup failures local and non-destructive.
+- Validation:
+  - `git diff --check`
+  - `set -a && source /Users/pciechanski/Documents/_moje_projekty/Coderso/.env && set +a && NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx tests/vitest/widgets/galleryMosaic.test.tsx`
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun run gates:coderso`
+  - `bun run scan:security:strict`
+  - `bun run precommit`

@@ -41,6 +41,9 @@ Notes:
 - Each item now shows a shared-contract current-media badge (`Image`, `Video`,
   `Placeholder`) so the existing image/video priority is visible before richer
   Gallery-local authoring lands.
+- Visual item cards now include a local preview panel plus a per-item
+  MediaPicker that can replace the current image or video URL without forcing
+  hand-copied asset links.
 
 ### Advanced (technical-only)
 - Shared style ownership summary (read-only)

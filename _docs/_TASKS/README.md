@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 295 tasks
-- **In Progress:** 4 tasks
-- **Done:** 1563 tasks
+- **To Do:** 293 tasks
+- **In Progress:** 5 tasks
+- **Done:** 1564 tasks
 
 ---
 
@@ -222,8 +222,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-271-05 | Grid Columns Height and Cross-Axis Alignment | Medium | Large | Replace hardcoded min-height with tokens and add per-column alignment overrides |
 | TASK-271-06 | Grid Columns Gap Tokens and Density Controls | Medium | Medium | Expand bounded gap tokens, keep independent gapX/gapY, and improve spacing labels |
 | TASK-271-07 | Grid Columns Report, Docs, Changelog, and Closure | Medium | Medium | Refresh Grid Columns report/docs/changelog/board and final validation evidence |
-| TASK-270 | Gallery Mosaic Widget Playwright Product Followups | High | Very Large | Gallery Mosaic-only product follow-up family for `REPORT_GALLERY_MOSAIC_WIDGET.md`, excluding TASK-256 shared-contract scope |
-| TASK-270-01 | Gallery Mosaic Item Previews and Media Picker | High | Large | Add per-item media previews and Visual media picker after TASK-256 safe media behavior lands |
 | TASK-270-02 | Gallery Mosaic Reorder, Count, and Removal UX | High | Large | Add efficient reorder, clear count/add/remove semantics, recoverable or confirmed item removal, and `feature-left` one-item guidance |
 | TASK-270-03 | Gallery Mosaic Per-Item Media Presentation Fields | Medium | Large | Add dedicated `alt`, bounded object-position, per-item ratio, and video poster fields without re-owning TASK-256 current fallback semantics |
 | TASK-270-04 | Gallery Mosaic Lightbox and Zoom Mode | Medium | Large | Add optional safe lightbox/zoom presentation using existing accessible runtime patterns |
@@ -339,6 +337,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-270 | Gallery Mosaic Widget Playwright Product Followups | High | Very Large | In progress: shared prerequisites are closed, per-item preview/picker is landed, and the next slices are repeated-item UX plus per-item media fields |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
@@ -349,6 +348,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-270-01 | Gallery Mosaic Item Previews and Media Picker | High | Large | Done: Visual item cards now show local preview state and a per-item MediaPicker with non-destructive asset lookup failures |
 | TASK-293 | Gallery Mosaic Shared Contract Residual Reopen | High | Large | Done: reopened Gallery Mosaic shared prerequisites are now truly closed under TASK-293, with editor/runtime residuals landed and remaining product work routed to TASK-270 |
 | TASK-293-03 | Gallery Mosaic Shared Residual Closure | Medium | Medium | Done: report/docs/changelog/board closure now distinguishes reopened shared residuals from the remaining Gallery Mosaic product backlog |
 | TASK-293-02 | Gallery Mosaic Shared Runtime Semantics Residuals | High | Large | Done: Gallery Mosaic runtime now uses explicit resolver branches, semantic figure/figcaption output, and current video controls without widening into TASK-270 product fields |

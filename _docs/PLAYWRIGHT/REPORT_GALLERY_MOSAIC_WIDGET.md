@@ -335,6 +335,12 @@ Po zwiększeniu limitu aktywnych sesji per user w CMS do 30 — zapis i publikac
 > picker przyjmuje także `video/*`. UX-05 pozostaje otwarte, bo per-item Visual
 > MediaPicker to lokalny follow-up `TASK-270-01`.
 
+> **Aktualizacja 2026-05-18 — TASK-270-01:** UX-02, UX-05, BF-02 i BF-07 są
+> zamknięte. Każdy item w Visual ma teraz lokalny preview panel (`Image`,
+> `Video`, `Placeholder`) oraz własny `MediaPicker`, który aktualizuje aktualny
+> `image` albo `video` URL bez ręcznego kopiowania asset linków. Błędy lookupu
+> są widoczne per item i nie czyszczą istniejących danych.
+
 > **Closure note 2026-05-18 — TASK-293-03:** reopened shared residual family is
 > now fully closed in docs/changelog/board state as well. `TASK-270` is the
 > only remaining owner for product gaps such as per-item preview/picker,

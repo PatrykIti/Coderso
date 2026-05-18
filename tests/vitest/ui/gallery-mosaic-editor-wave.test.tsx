@@ -196,22 +196,24 @@ vi.mock("@/ui/media/MediaPicker", () => ({
     value,
     onChange,
     accept,
+    multiple,
   }: {
     value: unknown;
     onChange: (value: unknown) => void;
     accept?: string[];
+    multiple?: boolean;
   }) => (
     <div data-media-picker="true">
-      <button type="button" onClick={() => onChange(["media-1"])}>
+      <button type="button" onClick={() => onChange(multiple ? ["media-1"] : "media-1")}>
         pick-image-media
       </button>
-      <button type="button" onClick={() => onChange(["media-2"])}>
+      <button type="button" onClick={() => onChange(multiple ? ["media-2"] : "media-2")}>
         pick-video-media
       </button>
-      <button type="button" onClick={() => onChange(["media-3"])}>
+      <button type="button" onClick={() => onChange(multiple ? ["media-3"] : "media-3")}>
         pick-unsupported-media
       </button>
-      <button type="button" onClick={() => onChange([])}>
+      <button type="button" onClick={() => onChange(multiple ? [] : null)}>
         clear-media
       </button>
       <span>
@@ -312,6 +314,9 @@ const findButtonByText = (container: ParentNode, text: string) =>
   Array.from(container.querySelectorAll("button")).find((element) =>
     normalizeText(element.textContent).includes(normalizeText(text))
   );
+
+const findMediaPickers = (container: ParentNode) =>
+  Array.from(container.querySelectorAll('[data-media-picker="true"]'));
 
 const findButtonsByText = (container: ParentNode, text: string) =>
   Array.from(container.querySelectorAll("button")).filter(
@@ -471,6 +476,8 @@ test("GalleryMosaic visual editor covers variant cards, item reordering, removal
   try {
     expect(view.container.textContent).toContain("Current media: Image");
     expect(view.container.textContent).toContain("Current media: Placeholder");
+    expect(view.container.textContent).toContain("Image preview");
+    expect(view.container.textContent).toContain("Placeholder preview");
 
     clickElement(findButtonByText(view.container, "Feature Left"));
     expect(onVariantChangeSpy).toHaveBeenLastCalledWith("feature-left");
@@ -488,6 +495,14 @@ test("GalleryMosaic visual editor covers variant cards, item reordering, removal
     expect(colorPicker).toBeInstanceOf(HTMLInputElement);
     expect((colorPicker as HTMLInputElement).value).toBe("#010203");
 
+    const mediaPickers = findMediaPickers(view.container);
+    expect(mediaPickers).toHaveLength(3);
+    clickElement(findButtonsByText(mediaPickers[1]!, "pick-video-media")[0]);
+    await React.act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
     setInputValue(
       findAllInputsByPlaceholder(view.container, "https://cdn.example.com/clip.mp4")[1],
       "https://cdn.example.com/item-2.mp4"
@@ -495,6 +510,7 @@ test("GalleryMosaic visual editor covers variant cards, item reordering, removal
     setInputValue(findInputByPlaceholder(view.container, "Media 2"), "Motion close-up");
     setInputValue(findAllInputsByPlaceholder(view.container, "#")[1], "/motion-updated");
     expect(view.container.textContent).toContain("Current media: Video");
+    expect(view.container.textContent).toContain("Video preview");
 
     clickElement(findButtonsByText(view.container, "Move up")[1]);
     expect(latestValue.items.map((item) => item.caption)).toEqual([
@@ -515,6 +531,14 @@ test("GalleryMosaic visual editor covers variant cards, item reordering, removal
       "Story frame",
       "Media 3",
     ]);
+
+    const refreshedMediaPickers = findMediaPickers(view.container);
+    clickElement(findButtonsByText(refreshedMediaPickers[2]!, "pick-unsupported-media")[0]);
+    await React.act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(view.container.textContent).toContain("Item 3: failed to resolve selected media.");
 
     setSelectValue(selects[1], "hover");
     setInputValue(colorPicker, "#112233");
