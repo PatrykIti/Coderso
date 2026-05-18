@@ -6,7 +6,7 @@
 **Category:** Widgets + Layout + Design Tokens + Runtime Render
 **Estimated Effort:** Medium
 **Dependencies:** TASK-256-02, TASK-256-05-03, TASK-264
-**Status:** To Do
+**Status:** Done (2026-05-17)
 
 ---
 
@@ -38,19 +38,19 @@ the separate Spacer widget or shared slot/spacing contracts.
 
 ## Sub-Tasks
 
-- [ ] Define line visibility/style/opacity/dash-pattern fields in
+- [x] Define line visibility/style/opacity/dash-pattern fields in
   `divider.tsx`.
-- [ ] Extend schema/defaults/normalizer with safe defaults that preserve current
+- [x] Extend schema/defaults/normalizer with safe defaults that preserve current
   `line`, `dashed`, and `label-center` output.
-- [ ] Add runtime rendering for `solid`, `dashed`, `dotted`, bounded
+- [x] Add runtime rendering for `solid`, `dashed`, `dotted`, bounded
   dash-pattern tokens, and optional spacer-only visibility without leaking
   editor-only placeholders.
-- [ ] Add editor controls for transparency, line style, and dash pattern in
+- [x] Add editor controls for transparency, line style, and dash pattern in
   Visual/Advanced.
-- [ ] Model spacer-only as a schema-backed `visibility` field, not a new
+- [x] Model spacer-only as a schema-backed `visibility` field, not a new
   variant, so existing `line`, `dashed`, and `label-center` variant ownership
   remains stable.
-- [ ] Add tests for opacity style output, dotted line output, dash-pattern
+- [x] Add tests for opacity style output, dotted line output, dash-pattern
   output, and spacer-only output.
 
 ## Files to Change

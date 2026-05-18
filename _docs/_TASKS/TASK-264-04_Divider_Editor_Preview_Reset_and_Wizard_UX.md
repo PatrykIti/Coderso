@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Editor UX
 **Estimated Effort:** Medium
 **Dependencies:** TASK-256-01, TASK-256-02, TASK-256-05-03, TASK-264-01, TASK-264-02, TASK-264-03
-**Status:** To Do
+**Status:** Done (2026-05-17)
 
 ---
 
@@ -34,17 +34,17 @@ repairs remain TASK-256 scope. Do not hide those repairs inside this leaf.
 
 ## Sub-Tasks
 
-- [ ] Add a compact inline preview component that renders the normalized Divider
+- [x] Add a compact inline preview component that renders the normalized Divider
   with the active variant and current data.
-- [ ] Show the preview in Visual and Advanced, and decide whether Wizard gets
+- [x] Show the preview in Visual and Advanced, and decide whether Wizard gets
   the same preview or a smaller read-only preview row.
-- [ ] Add Wizard controls for the highest-value Divider decisions that do not
+- [x] Add Wizard controls for the highest-value Divider decisions that do not
   overload first-run setup: line color/tone, width mode, and top/bottom
   spacing, using the shared TASK-256 controls rather than leaving U4 unresolved
   in Visual mode.
-- [ ] Add reset actions for style, spacing, label, and all Divider data using a
+- [x] Add reset actions for style, spacing, label, and all Divider data using a
   single normalized defaults source.
-- [ ] Add tests proving reset actions are data-only and do not change variant.
+- [x] Add tests proving reset actions are data-only and do not change variant.
 
 ## Files to Change
 

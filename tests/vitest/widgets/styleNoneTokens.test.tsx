@@ -122,8 +122,8 @@ test("utility widgets preserve none token values in rendered markers", () => {
   expect(divider.marginTop).toBe("none");
   expect(divider.marginBottom).toBe("none");
   const dividerHtml = renderToString(<DividerBlock data={divider} variant="line" />);
-  expect(dividerHtml).toContain('data-divider-margin-top="none"');
-  expect(dividerHtml).toContain('data-divider-margin-bottom="none"');
+  expect(dividerHtml).toContain('data-divider-margin-top-kind="none"');
+  expect(dividerHtml).toContain('data-divider-margin-bottom-kind="none"');
 
   const spacer = normalizeSpacerData(
     {

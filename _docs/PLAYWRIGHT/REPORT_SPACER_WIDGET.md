@@ -346,4 +346,23 @@ Użytkownik edytuje wartości tablet/mobile w Advanced myśląc że ma efekt, al
   `bun run test:vitest -- tests/vitest/ui/spacer-editor-wave.test.tsx
   tests/vitest/widgets/spacer.test.tsx` passed on 2026-05-17.
 
-*Raport wygenerowany na podstawie analizy kodu i testów Playwright — 2026-05-16.*
+## Status po TASK-303 (2026-05-17)
+
+Shared evidence from the closure pass:
+- `bun run test:vitest -- tests/vitest/ui/spacer-editor-wave.test.tsx tests/vitest/widgets/styleNoneTokens.test.tsx`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run gates:coderso`
+- `bun run scan:security:strict`
+
+| Row | Final status | Owner | Evidence |
+|---|---|---|---|
+| BUG-01 | `fixed` | `TASK-303` | Visible token options now collapse the legacy `0` duplicate behind canonical `None`. |
+| UX-02 | `fixed` | `TASK-303` | Choosing `Custom px` now enters explicit custom-edit mode instead of silently no-oping. |
+| UX-03 | `fixed` | `TASK-303` | Token/custom fields now show resolved or invalid-state guidance even when the custom input is empty. |
+
+The remaining Spacer product backlog stays with `TASK-284` or the already-landed
+shared TASK-256 slices; `TASK-303` only closed the residual Divider/Spacer
+token-control drift that stayed live after TASK-256 closure.
+
+*Raport wygenerowany na podstawie analizy kodu i testów Playwright — 2026-05-16; shared closure refreshed — 2026-05-17.*

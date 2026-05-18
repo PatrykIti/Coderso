@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 297 tasks
-- **In Progress:** 5 tasks
-- **Done:** 1611 tasks
+- **To Do:** 290 tasks
+- **In Progress:** 4 tasks
+- **Done:** 1619 tasks
 
 ---
 
@@ -276,13 +276,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-265-04 | Entry Teaser Layout, Media, Tags, and Heading Controls | High | Large | Add section heading, media sizing, tag limits, max-width, optional icon/logo mode, image dimensions, and heading controls |
 | TASK-265-06 | Entry Teaser Shared Color Control Adoption | Medium | Medium | Adopt the TASK-256-02 shared color-control hook for Entry Teaser surface/border fields without duplicating generic picker behavior |
 | TASK-265-05 | Entry Teaser Report, Docs, and Closure | Medium | Medium | Refresh Entry Teaser report/docs/changelog/board and final validation for the TASK-265 family |
-| TASK-264 | Divider Widget Playwright Product Followups | High | Large | Divider-specific follow-up family for `REPORT_DIVIDER_WIDGET.md`, excluding TASK-256 shared-contract scope |
-| TASK-264-01 | Divider Label Color Typography and Gap Controls | High | Medium | Add label-center color, typography, nowrap, gap, truthful labels, and clear-label UX |
-| TASK-264-02 | Divider Width Alignment and Custom Validation | High | Medium | Add container width, left/center/right alignment, and custom-width validation feedback |
-| TASK-264-03 | Divider Line Style Opacity and Spacer Only Mode | Medium | Medium | Add bounded opacity, dotted/dashed style polish, and spacer-only visibility mode |
-| TASK-264-04 | Divider Editor Preview Reset and Wizard UX | Medium | Medium | Add inline preview, compact Wizard controls, and reset/normalize actions after shared fixes land |
-| TASK-264-05 | Divider Runtime DOM Marker Hygiene | Medium | Small | Remove or sanitize raw Divider style-token data markers from public DOM output |
-| TASK-264-06 | Divider Report Docs and Closure | Medium | Medium | Refresh Divider report/docs/changelog/board and final validation for the TASK-264 family |
 | TASK-262 | Content List Widget Playwright Product Followups | High | Very Large | Content List-only follow-up family for `REPORT_CONTENT_LIST_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-262-01 | Content List Source Picker and Filter Editor IA | High | Large | Repair source picker labels/deduplication/search, taxonomy/author editor barriers, and listing-mode filter feedback |
 | TASK-262-02 | Content List Section Empty State and Static Canvas Guidance | High | Large | Add section heading, source-aware empty copy, missing-source guidance, and saved-data canvas messaging |
@@ -341,7 +334,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-293 | Divider and Spacer Residual Shared Token Control Adoption | High | Medium | In progress: reopen the narrow TASK-256 residual slice so Divider/Spacer token and color controls match the landed shared contract before TASK-264 product work continues |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
@@ -352,6 +344,14 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-303 | Divider and Spacer Residual Shared Token Control Adoption | High | Medium | Done: Divider/Spacer shared token-custom controls now collapse duplicate off-states, enter explicit custom mode, and preserve Divider CSS-variable color tokens |
+| TASK-264 | Divider Widget Playwright Product Followups | High | Large | Done: Divider label styling, width/alignment, transparency, spacer-only mode, preview/reset UX, DOM marker hygiene, and closure evidence are synchronized |
+| TASK-264-01 | Divider Label Color Typography and Gap Controls | High | Medium | Done: `label-center` now supports separate label color, bounded typography, nowrap, configurable gap, and clear-label UX |
+| TASK-264-02 | Divider Width Alignment and Custom Validation | High | Medium | Done: container width is tokenized, non-full dividers align left/center/right, and custom-width drafts keep visible validation feedback |
+| TASK-264-03 | Divider Line Style Opacity and Spacer Only Mode | Medium | Medium | Done: Divider exposes bounded transparency, dotted/dashed dash-pattern choices, and spacer-only visibility without new raw CSS surfaces |
+| TASK-264-04 | Divider Editor Preview Reset and Wizard UX | Medium | Medium | Done: Wizard/Visual/Advanced now render live preview, Wizard owns compact color/width/spacing controls, and reset actions stay data-only |
+| TASK-264-05 | Divider Runtime DOM Marker Hygiene | Medium | Small | Done: public Divider DOM now emits bounded marker kinds instead of raw color/width/margin strings |
+| TASK-264-06 | Divider Report Docs and Closure | Medium | Medium | Done: Divider report, widget doc, changelog, board, and validation evidence now reflect the final shipped contract |
 | TASK-302 | Content List Block Shared Renderer and Color Control Residuals | High | Large | Done: shared `ContentListBlock` / `PostsFeedBlock` truthfulness, image/CTA renderer residuals, and Content List text-color clear/picker adoption are synchronized and validated |
 | TASK-263 | CTA Banner Widget Playwright Product Followups | High | Very Large | Done: CTA runtime, Wizard/Visual UX, button styling, safe CTA conversion options, shared-layout full-width parity, background/media/motion controls, report/docs sync, and closure validation are complete |
 | TASK-263-01 | CTA Banner Runtime Semantics and Accessibility | High | Large | Done: empty badge suppression, section labelling, focus-visible CTA links, truthful description color, and border-width semantics are covered |

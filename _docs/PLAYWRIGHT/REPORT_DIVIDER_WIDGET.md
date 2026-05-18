@@ -292,4 +292,49 @@ Nie wykryto żadnych rozbieżności między admin canvas preview a frontendem (`
   `bun run test:vitest -- tests/vitest/ui/divider-editor-wave.test.tsx
   tests/vitest/widgets/divider.test.tsx` passed on 2026-05-17.
 
-*Raport zakończony — 2026-05-16.*
+## Status po TASK-303 i TASK-264 (2026-05-17)
+
+Validation from the closure pass:
+- `bun run test:vitest -- tests/vitest/widgets/divider.test.tsx tests/vitest/ui/divider-editor-wave.test.tsx tests/vitest/widgets/renderer.test.tsx tests/vitest/widgets/styleNoneTokens.test.tsx tests/vitest/ui/widget-template-editor.test.tsx`
+- `bun test tests/unit/widgets/validator.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run gates:coderso`
+- `bun run scan:security:strict`
+
+| Row | Final status | Owner | Evidence |
+|---|---|---|---|
+| C1 | `TASK-256` | `TASK-256-05-03` | Advanced variant is now disabled/read-only with explicit Visual ownership guidance. |
+| C2 | `fixed` | `TASK-303` | Shared spacing token fields now enter explicit custom mode instead of silently no-oping. |
+| C3 | `fixed` | `TASK-303` | Divider swatches no longer overwrite CSS-variable values; token replacement stays on the text input. |
+| W1 | `fixed` | `TASK-264-01` | `label-center` now has a separate label color field and runtime label-color output. |
+| W2 | `fixed` | `TASK-264-01` | Label typography is schema-backed for size, weight, transform, and letter spacing. |
+| W3 | `fixed` | `TASK-264-02` | `container` width now uses bounded `sm/md/lg` tokens instead of a hardcoded `48rem`. |
+| W4 | `fixed` | `TASK-264-02` | Non-full dividers now support `left`, `center`, and `right` alignment. |
+| W5 | `fixed` | `TASK-264-03` | Divider now exposes bounded transparency authoring through editor-owned opacity tokens. |
+| W6 | `TASK-256` | `TASK-256-04` + `TASK-256-05-03` | Unlabeled divider output keeps the shared separator semantics baseline; no local reopening was needed. |
+| W7 | `TASK-256` | `TASK-256-04` + `TASK-256-05-03` | The live shared baseline keeps separator semantics on the current runtime contract instead of reopening a literal `<hr>` task here. |
+| W8 | `fixed` | `TASK-264-01` | Label output now includes `whitespace-nowrap` and preserves line-label-line layout. |
+| W9 | `fixed` | `TASK-264-01` | Label gap is now configurable through bounded gap tokens. |
+| W10 | `fixed` | `TASK-264-03` | Divider exposes bounded `dashed`/`dotted` line styles and dash-pattern choices. |
+| W11 | `fixed` | `TASK-264-03` | Divider now supports `visibility="spacer-only"` for intentional rhythm without a visible line. |
+| W12 | `fixed` | `TASK-264-04` | Advanced now exposes normalize/reset actions without mutating the active variant. |
+| U1 | `fixed` | `TASK-303` | Visible token choices now collapse the legacy `0` duplicate behind canonical `None`. |
+| U2 | `fixed` | `TASK-264-01` | Visual/Advanced now distinguish `Line color` from `Label color` when `label-center` is active. |
+| U3 | `fixed` | `TASK-264-04` | Wizard, Visual, and Advanced now render inline Divider preview. |
+| U4 | `fixed` | `TASK-264-04` | Wizard now includes line color, width-mode, alignment, and spacing controls. |
+| U5 | `not reproducible` | `TASK-264-06` | `%` custom widths were already accepted by the live parser; closure keeps this row as historical report drift. |
+| U6 | `fixed` | `TASK-303` + `TASK-264-02` | Shared spacing drafts now show invalid-state feedback, and custom-width drafts stay visible until corrected. |
+| U7 | `fixed` | `TASK-303` | Shared token/custom fields now show explicit invalid-state copy instead of fallback-only `Resolved` text. |
+| U8 | `TASK-256` | `TASK-256-05-03` | Advanced keeps a disabled technical variant field instead of a fake-interactive control. |
+| U9 | `fixed` | `TASK-264-01` | Center label fields now expose a clear action. |
+| R1 | `TASK-256` | `TASK-256-04` + `TASK-256-05-03` | Unlabeled output keeps shared separator semantics while decorative line segments stay hidden from assistive tech. |
+| R2 | `TASK-256` | `TASK-256-04` + `TASK-256-05-03` | Closure keeps the shared separator baseline and does not reopen a Divider-local semantic rewrite. |
+| R3 | `fixed` | `TASK-264-05` | Public DOM now exposes bounded marker kinds instead of raw style strings. |
+| R4 | `fixed` | `TASK-264-01` | Label text now stays on one line through runtime `whitespace-nowrap`. |
+
+Additional closure notes:
+- `8.1` remains `excluded` CMS/session scope.
+- `_docs/_WIDGETS/tmp/divider/MATRIX.md` remains archived research reference; no new research pass was required to close the shipped Divider contract.
+
+*Raport zakończony — 2026-05-16; closure refreshed — 2026-05-17.*

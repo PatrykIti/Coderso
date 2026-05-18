@@ -6,7 +6,7 @@
 **Category:** Widgets + Runtime Render + Security Hygiene
 **Estimated Effort:** Small
 **Dependencies:** TASK-256-04, TASK-256-05-03, TASK-264-01, TASK-264-02, TASK-264-03, TASK-264
-**Status:** To Do
+**Status:** Done (2026-05-17)
 
 ---
 
@@ -33,18 +33,18 @@ should run after that baseline so DOM evidence is collected once.
 
 ## Sub-Tasks
 
-- [ ] Inventory current `data-divider-*` markers in `DividerBlock`.
-- [ ] Classify each marker as required QA marker, useful resolved marker, or raw
+- [x] Inventory current `data-divider-*` markers in `DividerBlock`.
+- [x] Classify each marker as required QA marker, useful resolved marker, or raw
   style leak.
-- [ ] Remove raw style-value markers or replace them with bounded categories
+- [x] Remove raw style-value markers or replace them with bounded categories
   such as `data-divider-color-kind="token|hex|custom"`.
-- [ ] Apply that marker policy to current raw color, resolved width, custom
+- [x] Apply that marker policy to current raw color, resolved width, custom
   width, top/bottom margins, and any new style-bearing markers introduced by
   TASK-264-01/02/03. Keep raw values only when the task documents why the value
   is not user-authored or is required for QA.
-- [ ] Keep stable non-style markers for variant, thickness, width mode, and
+- [x] Keep stable non-style markers for variant, thickness, width mode, and
   label presence unless tests/docs prove they are unnecessary.
-- [ ] Update SSR tests and report evidence with the final marker policy.
+- [x] Update SSR tests and report evidence with the final marker policy.
 
 ## Files to Change
 

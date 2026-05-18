@@ -5,8 +5,8 @@
 **Priority:** High
 **Category:** Widgets + Layout + Admin UI + Runtime Render + Playwright QA
 **Estimated Effort:** Large
-**Dependencies:** TASK-252, TASK-256-02, TASK-256-04, TASK-256-05-03
-**Status:** To Do
+**Dependencies:** TASK-252, TASK-256-04, TASK-256-05-03, TASK-303
+**Status:** Done (2026-05-17)
 
 ---
 
@@ -39,10 +39,10 @@ TASK-264 implements only Divider-specific product behavior, renderer polish, and
 editor UX. It must not duplicate TASK-256 shared-contract fixes:
 
 - Advanced no-op variant select remains TASK-256-01 and TASK-256-05-03.
-- Shared `Clear`/`none`/custom-spacing semantics remain TASK-256-02 and
-  TASK-256-05-03.
-- CSS variable preservation in native color pickers remains TASK-256-02 and
-  TASK-256-05-03.
+- Shared `Clear`/`none`/custom-spacing semantics now route through TASK-303 as
+  the residual shared closure extracted after TASK-256.
+- CSS variable preservation in native color pickers now routes through
+  TASK-303 for the late Divider/Spacer adoption slice.
 - Shared unlabeled-divider separator semantics and decorative segment
   `aria-hidden` baseline remain TASK-256-04 and TASK-256-05-03; TASK-264 must
   consume that live contract instead of redefining it locally.
@@ -58,7 +58,8 @@ contract task.
 
 | Report rows | Owner | TASK-264 action |
 |---|---|---|
-| C1, C2, C3, U1, U7, U8, W6, W7, R1, R2 | TASK-256-01, TASK-256-02, TASK-256-05-03 | Excluded from TASK-264. Use the final shared-contract behavior as a dependency before implementing adjacent Divider polish. |
+| C1, U8, W6, W7, R1, R2 | TASK-256-04, TASK-256-05-03 | Excluded from TASK-264. Use the final shared-contract behavior as a dependency before implementing adjacent Divider polish. |
+| C2, C3, U1, U7 and the spacing half of U6 | TASK-303 | Excluded from TASK-264. The late residual shared token/color-control slice now closes these rows before Divider-local product work. |
 | W1, W2, W8, W9, U2, U9, R4 | TASK-264-01 | Add Divider-owned label color, typography, nowrap, label gap, clearer label copy, and clear-label affordance. |
 | W3, W4, and the custom-width part of U6 | TASK-264-02 | Add Divider-owned container width, horizontal alignment, and custom-width validation feedback without changing shared spacing semantics. U5 is closure-only because `%` width support is already present in the live parser. |
 | W5, W10, W11 | TASK-264-03 | Add Divider-owned opacity/alpha, bounded dash-pattern or dotted style controls, and spacer-only visibility mode using bounded schema fields. |
@@ -78,16 +79,16 @@ contract task.
 
 ## Sub-Tasks
 
-- [ ] TASK-264-01: Divider Label Color Typography and Gap Controls
-- [ ] TASK-264-02: Divider Width Alignment and Custom Validation
-- [ ] TASK-264-03: Divider Line Style Opacity and Spacer Only Mode
-- [ ] TASK-264-04: Divider Editor Preview Reset and Wizard UX
-- [ ] TASK-264-05: Divider Runtime DOM Marker Hygiene
-- [ ] TASK-264-06: Divider Report Docs and Closure
+- [x] TASK-264-01: Divider Label Color Typography and Gap Controls
+- [x] TASK-264-02: Divider Width Alignment and Custom Validation
+- [x] TASK-264-03: Divider Line Style Opacity and Spacer Only Mode
+- [x] TASK-264-04: Divider Editor Preview Reset and Wizard UX
+- [x] TASK-264-05: Divider Runtime DOM Marker Hygiene
+- [x] TASK-264-06: Divider Report Docs and Closure
 
 ## Implementation Order
 
-1. Complete TASK-256-02, TASK-256-04, and TASK-256-05-03 first, or verify that
+1. Complete TASK-256-04, TASK-256-05-03, and TASK-303 first, or verify that
    the selected TASK-264 leaf is not touching shared token/color/ARIA
    behavior.
 2. Complete TASK-264-01 before preview/editor polish so the preview can reflect

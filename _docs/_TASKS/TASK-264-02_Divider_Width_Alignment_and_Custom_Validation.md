@@ -6,7 +6,7 @@
 **Category:** Widgets + Layout + Admin UI + Runtime Render
 **Estimated Effort:** Medium
 **Dependencies:** TASK-264
-**Status:** To Do
+**Status:** Done (2026-05-17)
 
 ---
 
@@ -36,22 +36,22 @@ introduce a new shared `SpacingField` state machine.
 
 ## Sub-Tasks
 
-- [ ] Define bounded width-alignment fields in `divider.tsx`.
-- [ ] Extend `dividerSchema`, `dividerDefaults`, and `normalizeDividerData()`
+- [x] Define bounded width-alignment fields in `divider.tsx`.
+- [x] Extend `dividerSchema`, `dividerDefaults`, and `normalizeDividerData()`
   without changing existing `full`, `container`, or `custom` payload meanings.
-- [ ] Replace `resolveDividerWidthCss("container")` hardcoding with a normalized
+- [x] Replace `resolveDividerWidthCss("container")` hardcoding with a normalized
   `containerWidth` value or token.
-- [ ] Add `left`, `center`, and `right` alignment mapping for non-full widths.
-- [ ] Add custom-width validation helpers that can return both persisted
+- [x] Add `left`, `center`, and `right` alignment mapping for non-full widths.
+- [x] Add custom-width validation helpers that can return both persisted
   normalized value and editor feedback.
-- [ ] Refactor the current `DividerEditors.tsx` update path so invalid raw
+- [x] Refactor the current `DividerEditors.tsx` update path so invalid raw
   custom-width input remains visible while the persisted payload still
   normalizes safely. The current editor calls `normalizeValue()` before
   `onChange`, so this leaf must add local raw draft state or a
   non-normalizing field update path for the custom-width input.
-- [ ] Update editor controls and tests for valid `%`, `px`, `rem`, and `em`
+- [x] Update editor controls and tests for valid `%`, `px`, `rem`, and `em`
   values plus invalid raw input that remains visible with fallback copy.
-- [ ] Preserve backward compatibility for already-saved bare-number payloads
+- [x] Preserve backward compatibility for already-saved bare-number payloads
   without widening the editor authoring contract beyond explicit CSS lengths.
 
 ## Files to Change

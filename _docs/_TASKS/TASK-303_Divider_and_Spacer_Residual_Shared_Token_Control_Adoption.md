@@ -1,12 +1,12 @@
-# TASK-293: Divider and Spacer Residual Shared Token Control Adoption
+# TASK-303: Divider and Spacer Residual Shared Token Control Adoption
 
-# FileName: TASK-293_Divider_and_Spacer_Residual_Shared_Token_Control_Adoption.md
+# FileName: TASK-303_Divider_and_Spacer_Residual_Shared_Token_Control_Adoption.md
 
 **Priority:** High
 **Category:** Widgets + Admin UI + Runtime Render
 **Estimated Effort:** Medium
 **Dependencies:** TASK-256-02, TASK-256-04, TASK-256-05-03, TASK-264
-**Status:** In Progress (2026-05-17)
+**Status:** Done (2026-05-17)
 
 ---
 
@@ -55,16 +55,16 @@ to the owners below.
 
 ## Sub-Tasks
 
-- [ ] Add a shared editor helper or local shared logic for token/custom fields
+- [x] Add a shared editor helper or local shared logic for token/custom fields
   that keeps one visible off-state, makes the custom path explicit, and
   surfaces validation/resolved feedback truthfully.
-- [ ] Adopt that behavior in `DividerEditors.tsx` spacing fields.
-- [ ] Adopt that behavior in `SpacerEditors.tsx` height fields.
-- [ ] Make Divider color inputs preserve CSS-variable text values unless the
+- [x] Adopt that behavior in `DividerEditors.tsx` spacing fields.
+- [x] Adopt that behavior in `SpacerEditors.tsx` height fields.
+- [x] Make Divider color inputs preserve CSS-variable text values unless the
   user intentionally edits the text field away from the token.
-- [ ] Add or update focused editor tests for Divider and Spacer shared control
+- [x] Add or update focused editor tests for Divider and Spacer shared control
   behavior.
-- [ ] Re-run the shared `styleNoneTokens` coverage if the Divider marker
+- [x] Re-run the shared `styleNoneTokens` coverage if the Divider marker
   contract changes while preserving `none` token runtime compatibility.
 
 ## Files to Change

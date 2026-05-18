@@ -51,6 +51,38 @@ test("divider normalization keeps deterministic defaults", () => {
   expect(resolveDividerVariant("unknown")).toBe("line");
 });
 
+test("divider normalization expands label and layout defaults without breaking legacy payloads", () => {
+  const normalized = normalizeDividerData({
+    labelColor: "#0f172a",
+    labelSize: "sm",
+    labelWeight: "bold",
+    labelTransform: "none",
+    labelLetterSpacing: "normal",
+    labelGap: "6",
+    containerWidth: "lg",
+    align: "right",
+    lineStyle: "dotted",
+    opacity: "50",
+    dashPattern: "wide",
+    visibility: "spacer-only",
+    customWidth: "320",
+  });
+
+  expect(normalized.labelColor).toBe("#0f172a");
+  expect(normalized.labelSize).toBe("sm");
+  expect(normalized.labelWeight).toBe("bold");
+  expect(normalized.labelTransform).toBe("none");
+  expect(normalized.labelLetterSpacing).toBe("normal");
+  expect(normalized.labelGap).toBe("6");
+  expect(normalized.containerWidth).toBe("lg");
+  expect(normalized.align).toBe("right");
+  expect(normalized.lineStyle).toBe("dotted");
+  expect(normalized.opacity).toBe("50");
+  expect(normalized.dashPattern).toBe("wide");
+  expect(normalized.visibility).toBe("spacer-only");
+  expect(normalized.customWidth).toBe("320px");
+});
+
 test("divider validator accepts expanded model", () => {
   clearWidgets();
   const widget = createDividerWidget({
@@ -69,8 +101,18 @@ test("divider validator accepts expanded model", () => {
         label: "Features",
         thickness: 2,
         color: "#cbd5e1",
+        labelColor: "#0f172a",
+        labelSize: "sm",
+        labelWeight: "semibold",
+        labelTransform: "none",
+        labelLetterSpacing: "normal",
+        labelGap: "4",
         width: "custom",
         customWidth: "60%",
+        align: "right",
+        lineStyle: "dashed",
+        opacity: "75",
+        dashPattern: "wide",
         marginTop: "8",
         marginBottom: "12",
       },
@@ -105,6 +147,18 @@ test("divider label-center variant renders label marker and text", () => {
       data={{
         ...dividerDefaults,
         label: "Features",
+        labelColor: "#0f172a",
+        labelSize: "sm",
+        labelWeight: "bold",
+        labelTransform: "none",
+        labelLetterSpacing: "normal",
+        labelGap: "6",
+        width: "container",
+        containerWidth: "lg",
+        align: "right",
+        lineStyle: "dashed",
+        opacity: "75",
+        dashPattern: "short",
       }}
       variant="label-center"
     />
@@ -112,7 +166,33 @@ test("divider label-center variant renders label marker and text", () => {
 
   expect(html).toContain('data-divider-variant="label-center"');
   expect(html).toContain('data-divider-has-label="true"');
+  expect(html).toContain('data-divider-color-kind="token"');
+  expect(html).toContain('data-divider-width-kind="container-lg"');
+  expect(html).toContain('data-divider-line-style="dashed"');
+  expect(html).toContain('data-divider-visibility="line"');
+  expect(html).not.toContain('data-divider-color="');
+  expect(html).not.toContain('data-divider-width-resolved="');
+  expect(html).toContain("whitespace-nowrap");
+  expect(html).toContain("tracking-normal");
   expect(html).toContain("Features");
+});
+
+test("divider spacer-only mode keeps markers but hides visible line and label output", () => {
+  const html = renderToString(
+    <DividerBlock
+      data={{
+        ...dividerDefaults,
+        label: "Hidden label",
+        visibility: "spacer-only",
+      }}
+      variant="label-center"
+    />
+  );
+
+  expect(html).toContain('data-divider-visibility="spacer-only"');
+  expect(html).toContain('data-divider-has-label="false"');
+  expect(html).not.toContain('role="separator"');
+  expect(html).not.toContain("Hidden label");
 });
 
 test("divider editors render expected sections", () => {
@@ -138,6 +218,7 @@ test("divider editors render expected sections", () => {
   expect(visualHtml).toContain("Variant and label");
   expect(visualHtml).toContain("Line style and width");
   expect(visualHtml).toContain("Spacing around divider");
+  expect(visualHtml).toContain("Live divider preview");
 
   const advancedHtml = renderToString(
     <DividerAdvancedEditor
@@ -148,5 +229,6 @@ test("divider editors render expected sections", () => {
     />
   );
   expect(advancedHtml).toContain("Technical divider tokens");
+  expect(advancedHtml).toContain("Normalization and safeguards");
   expect(advancedHtml).toContain("Raw payload snapshot");
 });

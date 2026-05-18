@@ -6,7 +6,7 @@
 **Category:** Widgets + Layout + Design Tokens + Admin UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-256-02, TASK-256-05-03, TASK-264
-**Status:** To Do
+**Status:** Done (2026-05-17)
 
 ---
 
@@ -35,16 +35,16 @@ TASK-256-02 rather than creating a second local color picker contract.
 
 ## Sub-Tasks
 
-- [ ] Define label style field names in `core/widgets/core/divider.tsx`.
-- [ ] Extend `dividerSchema`, `dividerDefaults`, and `normalizeDividerData()`
+- [x] Define label style field names in `core/widgets/core/divider.tsx`.
+- [x] Extend `dividerSchema`, `dividerDefaults`, and `normalizeDividerData()`
   with backward-compatible label style defaults.
-- [ ] Render `label-center` with a nowrap label, configurable label color,
+- [x] Render `label-center` with a nowrap label, configurable label color,
   typography, and label gap.
-- [ ] Keep line-only and dashed variants visually unchanged for existing
+- [x] Keep line-only and dashed variants visually unchanged for existing
   payloads.
-- [ ] Add Visual controls for beginner-safe label style fields and Advanced
+- [x] Add Visual controls for beginner-safe label style fields and Advanced
   raw-token controls only where needed.
-- [ ] Add a clear-label action that removes the label value without changing the
+- [x] Add a clear-label action that removes the label value without changing the
   selected variant.
 
 ## Files to Change

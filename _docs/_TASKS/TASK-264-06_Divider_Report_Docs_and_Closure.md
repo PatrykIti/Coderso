@@ -5,8 +5,8 @@
 **Priority:** Medium
 **Category:** Widgets + Playwright QA + Documentation + Changelog
 **Estimated Effort:** Medium
-**Dependencies:** TASK-256-08, TASK-264-01, TASK-264-02, TASK-264-03, TASK-264-04, TASK-264-05
-**Status:** To Do
+**Dependencies:** TASK-256-08, TASK-264-01, TASK-264-02, TASK-264-03, TASK-264-04, TASK-264-05, TASK-303
+**Status:** Done (2026-05-17)
 
 ---
 
@@ -22,26 +22,26 @@ by itself except for documentation-only corrections discovered during closure.
 
 ## Sub-Tasks
 
-- [ ] Re-run or refresh admin preview evidence for each completed TASK-264 row.
-- [ ] Re-run or refresh frontend evidence for each completed TASK-264 row.
-- [ ] Mark every source report finding as `fixed`, `TASK-256`, `deferred`,
+- [x] Re-run or refresh admin preview evidence for each completed TASK-264 row.
+- [x] Re-run or refresh frontend evidence for each completed TASK-264 row.
+- [x] Mark every source report finding as `fixed`, `TASK-256`, `deferred`,
   `excluded`, or `not reproducible`, with a concrete task ID and reason.
-- [ ] Keep C2/C3/U1/U7 and the spacing side of U6 routed to TASK-256. Record
+- [x] Keep C2/C3/U1/U7 and the spacing side of U6 routed to TASK-303. Record
   C1/U8/W6 and U5 as current-state verified report drift when the live shared
   contract already satisfies them.
-- [ ] Keep W7/R1/R2 aligned to the landed TASK-256-04 plus TASK-256-05-03
+- [x] Keep W7/R1/R2 aligned to the landed TASK-256-04 plus TASK-256-05-03
   contract unless the final audit opens a new shared accessibility follow-up.
-- [ ] Record section 8.1 admin-session expiry as excluded CMS/session scope.
-- [ ] Update `_docs/_WIDGETS/DIVIDER.md` with final data/editor/runtime
+- [x] Record section 8.1 admin-session expiry as excluded CMS/session scope.
+- [x] Update `_docs/_WIDGETS/DIVIDER.md` with final data/editor/runtime
   behavior.
-- [ ] Review `_docs/_WIDGETS/tmp/divider/MATRIX.md` and either update it if the
+- [x] Review `_docs/_WIDGETS/tmp/divider/MATRIX.md` and either update it if the
   research archive remains active for Divider decisions, or explicitly record it
   as archived research with orientation and accessibility decisions routed or
   deferred.
-- [ ] Update `_docs/WIDGETS.md` or `_docs/WIDGET_PACK_MATRIX.md` only when an
+- [x] Update `_docs/WIDGETS.md` or `_docs/WIDGET_PACK_MATRIX.md` only when an
   implementation leaf changed those source-of-truth contracts.
-- [ ] Add a changelog entry and update `_docs/_CHANGELOG/README.md`.
-- [ ] Move TASK-264 and completed leaves to `Done`, update dates, and sync
+- [x] Add a changelog entry and update `_docs/_CHANGELOG/README.md`.
+- [x] Move TASK-264 and completed leaves to `Done`, update dates, and sync
   `_docs/_TASKS/README.md` statistics.
 
 ## Files to Change
@@ -85,8 +85,8 @@ function buildDividerClosureMatrix(rows: DividerClosureRow[]) {
 
 Closure flow:
 
-1. Read all TASK-264 leaves, TASK-256-04, TASK-256-05-03, TASK-256-08, and
-   the source report.
+1. Read all TASK-264 leaves, TASK-256-04, TASK-256-05-03, TASK-256-08,
+   TASK-303, and the source report.
 2. Build a finding-by-finding closure matrix.
 3. Update report evidence with textual DOM/admin/frontend results; do not add
    Playwright PNG artifacts.
