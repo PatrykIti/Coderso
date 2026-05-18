@@ -6,7 +6,7 @@
 **Category:** Widgets + Gallery Mosaic + Shared Contract + Admin UI + Runtime Render
 **Estimated Effort:** Large
 **Dependencies:** TASK-256, TASK-256-01, TASK-256-04, TASK-256-06-02, TASK-270
-**Status:** In Progress (2026-05-17)
+**Status:** Done (2026-05-18)
 
 ---
 
@@ -87,7 +87,7 @@ Out of scope:
 
 - [x] TASK-293-01: Gallery Mosaic Shared Editor Truthfulness Residuals
 - [x] TASK-293-02: Gallery Mosaic Shared Runtime Semantics Residuals
-- [ ] TASK-293-03: Gallery Mosaic Shared Residual Closure
+- [x] TASK-293-03: Gallery Mosaic Shared Residual Closure
 
 ## Implementation Order
 
@@ -156,3 +156,21 @@ This reopening family does not add API routes.
   without widening into `TASK-270` product scope.
 - Closure evidence clearly distinguishes reopened shared repairs from new
   Gallery Mosaic product work.
+
+## Completion Notes
+
+- 2026-05-18: `TASK-293` is fully closed. The reopened Gallery Mosaic shared
+  baseline now has:
+  - `TASK-293-01` for shared editor truthfulness,
+  - `TASK-293-02` for shared runtime semantics,
+  - `TASK-293-03` for report/docs/changelog/board closure.
+- Remaining Gallery Mosaic work is now intentionally routed to `TASK-270`
+  product leaves only.
+- Final validation:
+  - `git diff --check`
+  - `set -a && source /Users/pciechanski/Documents/_moje_projekty/Coderso/.env && set +a && NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx tests/vitest/widgets/galleryMosaic.test.tsx tests/vitest/widgets/renderer.test.tsx`
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun run gates:coderso`
+  - `bun run scan:security:strict`
+  - `bun run precommit`

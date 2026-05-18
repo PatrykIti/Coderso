@@ -335,6 +335,11 @@ Po zwiększeniu limitu aktywnych sesji per user w CMS do 30 — zapis i publikac
 > picker przyjmuje także `video/*`. UX-05 pozostaje otwarte, bo per-item Visual
 > MediaPicker to lokalny follow-up `TASK-270-01`.
 
+> **Closure note 2026-05-18 — TASK-293-03:** reopened shared residual family is
+> now fully closed in docs/changelog/board state as well. `TASK-270` is the
+> only remaining owner for product gaps such as per-item preview/picker,
+> reorder UX, dedicated `alt`, poster, lightbox, motion, and import/export.
+
 ---
 
 ## 7. Braki funkcjonalne

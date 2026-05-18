@@ -6,7 +6,7 @@
 **Category:** Widgets + Gallery Mosaic + Shared Contract + Playwright QA + Documentation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-293-01, TASK-293-02, TASK-256-08
-**Status:** To Do
+**Status:** Done (2026-05-18)
 
 ---
 
@@ -112,3 +112,20 @@ No API routes are added by this closure leaf.
 - `TASK-270` can proceed without depending on false shared-closure assumptions.
 - Final validation and report evidence distinguish shared residual repairs from
   Gallery-local product work.
+
+## Completion Notes
+
+- 2026-05-18: `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md`,
+  `_docs/_WIDGETS/GALLERY_MOSAIC.md`, `_docs/_TASKS/README.md`, and the new
+  changelog entry now all point to `TASK-293` as the owner for reopened shared
+  residual repairs.
+- Remaining open Gallery Mosaic product scope stays explicitly routed to
+  `TASK-270`.
+- Final validation:
+  - `git diff --check`
+  - `set -a && source /Users/pciechanski/Documents/_moje_projekty/Coderso/.env && set +a && NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx tests/vitest/widgets/galleryMosaic.test.tsx tests/vitest/widgets/renderer.test.tsx`
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun run gates:coderso`
+  - `bun run scan:security:strict`
+  - `bun run precommit`
