@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Content + Admin UI + Runtime Render + SEO + Playwright QA
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-252-06-04, TASK-256, TASK-293
+**Dependencies:** TASK-252-06-04, TASK-256, TASK-306
 **Status:** Done (2026-05-17)
 
 ---
@@ -37,10 +37,10 @@ TASK-256:
 - `allowMultipleOpen=false` single-open runtime enforcement remains
   TASK-256-06-03 plus the shared runtime/ARIA contract in TASK-256-04;
 - summary IDs and single-open runtime behavior remain closed by TASK-256, while
-  the still-live FAQ chevron/ARIA residuals are repaired in TASK-293 before
+  the still-live FAQ chevron/ARIA residuals are repaired in TASK-306 before
   the FAQ product leaves land;
 - clear controls for `border`/`divider`, FAQ token-picker truthfulness, and the
-  still-live FAQ spacing residuals now route through TASK-293 instead of being
+  still-live FAQ spacing residuals now route through TASK-306 instead of being
   hidden inside TASK-266 leaves;
 - report-wide fixed/deferred classification for TASK-256 remains TASK-256-08.
 
@@ -54,9 +54,9 @@ this family.
 | Report rows | Owner | TASK-266 action |
 |---|---|---|
 | C1, W13 | TASK-256-06-03 / TASK-256-04 | Excluded. Single-open enforcement is a shared interactive runtime contract. |
-| C2, A1-A5 | TASK-293 | Excluded. Live chevron and FAQ ARIA residuals stay in the dedicated shared follow-up task. |
-| C3, W15 | TASK-293 | Excluded. Live FAQ spacing guard and double-border residuals stay in the dedicated shared follow-up task. |
-| U2, U3 | TASK-293 | Excluded. Live FAQ clear/token adoption residuals stay in the dedicated shared follow-up task. |
+| C2, A1-A5 | TASK-306 | Excluded. Live chevron and FAQ ARIA residuals stay in the dedicated shared follow-up task. |
+| C3, W15 | TASK-306 | Excluded. Live FAQ spacing guard and double-border residuals stay in the dedicated shared follow-up task. |
+| U2, U3 | TASK-306 | Excluded. Live FAQ clear/token adoption residuals stay in the dedicated shared follow-up task. |
 | W1, W2, W3, W4, W5, W6, W7, W8, W12, W14 | TASK-266-01 | Add FAQ-owned layout, typography, color, radius, border-width, and motion options. |
 | W10, W11 | TASK-266-02 | Add safe rich answer formatting and optional item icon data. |
 | W9 | TASK-266-03 | Add safe FAQPage JSON-LD output and editor control. |
@@ -84,7 +84,7 @@ this family.
 
 ## Implementation Order
 
-1. Complete TASK-293 before implementing FAQ-local product leaves so the still
+1. Complete TASK-306 before implementing FAQ-local product leaves so the still
    live shared FAQ residuals are repaired outside the widget-specific family.
 2. Complete TASK-266-01 first because layout, typography, and motion fields
    define the style model used by later preview and docs work.
@@ -166,7 +166,7 @@ This umbrella does not add API routes.
 ## Acceptance Criteria
 
 - Every finding in `_docs/PLAYWRIGHT/REPORT_FAQ_ACCORDION_WIDGET.md` is either
-  routed to TASK-256 or TASK-293, implemented by a TASK-266 leaf, or explicitly
+  routed to TASK-256 or TASK-306, implemented by a TASK-266 leaf, or explicitly
   deferred in the closure leaf with a reason.
 - TASK-266 leaves do not duplicate implementation already owned by TASK-256.
 - FAQ Accordion schema, defaults, normalizer, render, editor, tests, docs, and
@@ -176,7 +176,7 @@ This umbrella does not add API routes.
 
 ## Completion Notes
 
-- TASK-266 landed end-to-end after TASK-293 repaired the still-live shared FAQ
+- TASK-266 landed end-to-end after TASK-306 repaired the still-live shared FAQ
   residuals outside the widget-specific family.
 - Validation evidence:
   - `bun run test:vitest -- tests/vitest/widgets/faqAccordion.test.tsx`

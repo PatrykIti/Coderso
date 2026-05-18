@@ -413,7 +413,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-257-03 | Accordion Item Content and Management UX | High | Large | Done: Accordion item icons and clearer all-closed copy landed; shared add/reorder remains explicitly deferred to TASK-293 |
 | TASK-257-04 | Accordion Motion and Variant Preview Polish | Medium | Medium | Done: Accordion now exposes bounded motion presets and visual variant preview cards |
 | TASK-257-05 | Accordion Report Docs and Closure | Medium | Medium | Done: report/docs/board/changelog are synchronized with final fixed/deferred ownership and validation evidence |
-| TASK-293 | FAQ Accordion Shared Contract Residuals | High | Large | Done: FAQ chevron/ARIA, spacing guard/border collapse, and border/divider clear adoption are now repaired as a dedicated shared follow-up outside TASK-266 |
+| TASK-306 | FAQ Accordion Shared Contract Residuals | High | Large | Done: FAQ chevron/ARIA, spacing guard/border collapse, and border/divider clear adoption are now repaired as a dedicated shared follow-up outside TASK-266 |
 | TASK-266 | FAQ Accordion Widget Playwright Product Followups | High | Very Large | Done: FAQ-local layout, rich answers, JSON-LD, editor UX, item management, docs, and closure evidence are synchronized |
 | TASK-266-01 | FAQ Accordion Layout Typography and Motion Controls | High | Large | Done: FAQ now exposes bounded width, alignment, padding, typography, radius, border-width, and motion controls across schema, editor, runtime, and tests |
 | TASK-266-02 | FAQ Accordion Rich Answers and Item Icon Model | High | Large | Done: FAQ answers support a bounded markdown subset, per-item icons, and shared safe-href link handling with plain-text extraction for SEO |

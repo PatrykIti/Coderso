@@ -1,6 +1,6 @@
-# TASK-293: FAQ Accordion Shared Contract Residuals
+# TASK-306: FAQ Accordion Shared Contract Residuals
 
-# FileName: TASK-293_FAQ_Accordion_Shared_Contract_Residuals.md
+# FileName: TASK-306_FAQ_Accordion_Shared_Contract_Residuals.md
 
 **Priority:** High
 **Category:** Widgets + Admin UI + Runtime Render + Accessibility
@@ -40,11 +40,11 @@ Out of scope:
 
 ## Report Classification Matrix
 
-| Report rows | Owner | TASK-293 action |
+| Report rows | Owner | TASK-306 action |
 |---|---|---|
-| C2, A1-A5 | TASK-293 | Add section labeling, explicit chevron affordance, summary/content relationships, and runtime `aria-expanded` sync. |
-| C3, W15 | TASK-293 | Repair `spacing="md"` normalization guard and collapse double borders for `spacing="none"`. |
-| U2, U3 | TASK-293 | Adopt shared clear hooks for `border`/`divider` and keep CSS-variable token entry truthful. |
+| C2, A1-A5 | TASK-306 | Add section labeling, explicit chevron affordance, summary/content relationships, and runtime `aria-expanded` sync. |
+| C3, W15 | TASK-306 | Repair `spacing="md"` normalization guard and collapse double borders for `spacing="none"`. |
+| U2, U3 | TASK-306 | Adopt shared clear hooks for `border`/`divider` and keep CSS-variable token entry truthful. |
 | C1, W13 | TASK-256-06-03 / TASK-256-04 | Already shared-contract owned and must not be re-opened here unless live evidence shows a fresh regression outside the current FAQ residual set. |
 | W1-W14, U1, U4-U11 | TASK-266 | Remain in the FAQ product follow-up family. |
 

@@ -5,7 +5,7 @@
 **Priority:** Medium
 **Category:** QA + Documentation + Changelog
 **Estimated Effort:** Medium
-**Dependencies:** TASK-293, TASK-266-01, TASK-266-02, TASK-266-03, TASK-266-04, TASK-266-05
+**Dependencies:** TASK-306, TASK-266-01, TASK-266-02, TASK-266-03, TASK-266-04, TASK-266-05
 **Status:** Done (2026-05-17)
 
 ---
@@ -72,7 +72,7 @@ Report closure table:
 |---|---|---|---|---|
 | W9 SEO JSON-LD | fixed | TASK-266-03 | `bun run test:vitest -- tests/vitest/widgets/faqAccordion.test.tsx` | JSON-LD enabled/disabled cases and script-safe serialization are covered. |
 | C1 single-open | TASK-256-owned | TASK-256-06-03 | Live grouped-details contract remains in `core/widgets/core/faqAccordion.tsx` without TASK-266 duplication. | Shared single-open behavior stays out of this family. |
-| C2 chevron + ARIA residuals | TASK-293-owned | TASK-293 | `bun run test:vitest -- tests/vitest/widgets/faqAccordion.test.tsx`; `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` | Shared FAQ residuals stay outside TASK-266 leaves. |
+| C2 chevron + ARIA residuals | TASK-306-owned | TASK-306 | `bun run test:vitest -- tests/vitest/widgets/faqAccordion.test.tsx`; `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` | Shared FAQ residuals stay outside TASK-266 leaves. |
 ```
 
 Closure helper shape:
@@ -173,7 +173,7 @@ No API routes are added by this closure task.
 - Every row from the FAQ Accordion report has a final owner and status.
 - TASK-266 fixed rows have matching code, tests, docs, and textual
   admin/frontend evidence where applicable.
-- TASK-256-owned and TASK-293-owned rows are not duplicated or mislabeled as
+- TASK-256-owned and TASK-306-owned rows are not duplicated or mislabeled as
   TASK-266 fixes.
 - Changelog, task board, task files, widget docs, and validation evidence are
   synchronized.

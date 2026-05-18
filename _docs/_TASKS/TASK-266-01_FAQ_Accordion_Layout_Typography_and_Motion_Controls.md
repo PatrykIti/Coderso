@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Content + Runtime Render + Admin UI
 **Estimated Effort:** Large
-**Dependencies:** TASK-293, TASK-266
+**Dependencies:** TASK-306, TASK-266
 **Status:** Done (2026-05-17)
 
 ---
@@ -17,7 +17,7 @@ motion options requested by the FAQ Playwright report.
 
 This leaf covers report rows W1, W2, W3, W4, W5, W6, W7, W8, W12, and W14.
 It does not own `spacing="none"` double-border behavior, clear/token semantics,
-or ARIA/chevron repairs because those stay in TASK-293.
+or ARIA/chevron repairs because those stay in TASK-306.
 
 ## Scope Boundary
 
@@ -29,13 +29,13 @@ In scope:
 - question, answer, header title, and header description text colors;
 - panel radius and border-width controls;
 - header title size controls;
-- optional motion profile for FAQ open/close transitions after TASK-293 finishes
+- optional motion profile for FAQ open/close transitions after TASK-306 finishes
   the FAQ shared residual runtime contract.
 
 Out of scope:
 
-- TASK-293 clear/none/token picker repairs;
-- TASK-293 ARIA, section labeling, chevron, and the remaining FAQ shared
+- TASK-306 clear/none/token picker repairs;
+- TASK-306 ARIA, section labeling, chevron, and the remaining FAQ shared
   runtime script;
 - adding free-form arbitrary class names or raw CSS.
 

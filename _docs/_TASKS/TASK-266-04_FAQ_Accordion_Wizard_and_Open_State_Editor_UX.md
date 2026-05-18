@@ -5,7 +5,7 @@
 **Priority:** Medium
 **Category:** Widgets + Content + Admin UI
 **Estimated Effort:** Medium
-**Dependencies:** TASK-293, TASK-266
+**Dependencies:** TASK-306, TASK-266
 **Status:** Done (2026-05-17)
 
 ---
