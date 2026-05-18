@@ -6,7 +6,7 @@
 **Category:** Widgets + Gallery Mosaic + Admin UI + Runtime Render + Playwright QA
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-252, TASK-256, TASK-256-01, TASK-256-02, TASK-256-04, TASK-256-06-02, TASK-256-08
-**Status:** In Progress (2026-05-18)
+**Status:** Done (2026-05-18)
 
 ---
 
@@ -189,3 +189,13 @@ Implementation leaves:
   payloads unless the leaf documents and tests a migration/normalizer path.
 - Final closure records report evidence, task status updates, changelog, and the
   exact validation output.
+
+## Completion Notes
+
+- 2026-05-18: `TASK-270` is fully closed. Local product leaves landed in this
+  family as commits `850c3861`, `2ac2271c`, `3a2bc064`, `8adcf322`,
+  `f7e2f1a6`, and `a2de66c8`, with shared prerequisites closed separately
+  under `TASK-293`.
+- 2026-05-18: the final closure pass rewrote the report into a full finding
+  map, synchronized widget/task/changelog docs, and hardened the local A3
+  hover-caption focus path for linked, lightbox, and static hover tiles.

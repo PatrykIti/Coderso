@@ -31,6 +31,12 @@ Gallery Mosaic to widget do tworzenia sekcji galerii mediów — zdjęć i film�
 | **Items (1–16)** | `id`, `image` (URL), `video` (URL), `caption`, `href` |
 | **Style** | `ratio` (4 opcje), `gap` (4 opcje), `radius` (4 opcje), `overlay` (RGBA), `captionPosition` (3 opcje) |
 
+> **Aktualizacja 2026-05-18 — current shipped contract:** końcowy model danych
+> rozszerzył ten snapshot o per-item `alt`, `poster`, `objectPosition`,
+> `ratio`, top-level `interaction` (`mode`, `zoom`) oraz style
+> `layoutDensity` i `motionPreset`. Szczegóły finalnego stanu są zmapowane w
+> sekcji 11 oraz w `_docs/_WIDGETS/GALLERY_MOSAIC.md`.
+
 ### 2.2 Warianty layoutu
 
 | Wariant | Opis | Siatka |
@@ -46,6 +52,12 @@ Gallery Mosaic to widget do tworzenia sekcji galerii mediów — zdjęć i film�
 | **Wizard** | Wariant, tytuł sekcji, liczba elementów, media library picker |
 | **Visual** | Wariant + liczba, header copy, lista elementów (image/video/caption/href), overlay+caption, ratio/gap/radius |
 | **Advanced** | Zduplikowane tokeny stylu (ratio/gap/radius/captionPosition/overlay), normalizacja, JSON snapshot, układ kontenera, widoczność |
+
+> **Aktualizacja 2026-05-18 — current shipped editor IA:** Wizard pozostaje
+> onboardingiem dla wariantu, tytułu, count i shared media selection; Visual
+> ma teraz sekcje `Interaction`, `Density and motion` oraz per-item media
+> presentation fields; Advanced jest technical-only i dodatkowo owns bounded
+> JSON import/export dla schema-owned payloadu.
 
 ---
 
@@ -380,6 +392,9 @@ Po zwiększeniu limitu aktywnych sesji per user w CMS do 30 — zapis i publikac
 
 ## 7. Braki funkcjonalne
 
+> **Uwaga:** tabela poniżej zachowuje pierwotny snapshot z raportu Playwright.
+> Aktualny stan domknięcia wszystkich findingów jest zmapowany w sekcji 11.
+
 | ID | Opis | Priorytet |
 |----|------|-----------|
 | BF-01 | Brak pola `alt` jako osobnego tekstu (caption ≠ alt text) | Wysoki |
@@ -417,9 +432,17 @@ Po zwiększeniu limitu aktywnych sesji per user w CMS do 30 — zapis i publikac
 > `figure/figcaption`, a bieżące `title`/caption-derived semantics pozostają
 > aktywne do czasu osobnego `alt` authoring w `TASK-270-03`.
 
+> **Aktualizacja 2026-05-18 — TASK-270-07:** A3 jest zamknięte lokalnie w
+> Gallery Mosaic. Hover captions reagują teraz na focus linked/lightbox tiles,
+> a statyczne hover tiles są focusable, więc caption nie pozostaje już tylko
+> pod `:hover`.
+
 ---
 
 ## 9. Podsumowanie — macierz priorytetów
+
+> **Uwaga:** sekcja poniżej zachowuje pierwotną macierz priorytetów z dnia
+> raportu. Finalny mapping fix/defer znajduje się w sekcji 11.
 
 ### Błędy do naprawy natychmiast
 
@@ -467,6 +490,75 @@ Po zwiększeniu limitu aktywnych sesji per user w CMS do 30 — zapis i publikac
 | **Łącznie** | **42** |
 
 ---
+
+## 11. Finalny mapping zamknięcia (stan 2026-05-18)
+
+### Code Bugs
+
+| ID | Current status | Owner | Evidence |
+|----|----------------|-------|----------|
+| CODE-01 | ✓ Fixed — shared current-runtime cleanup | TASK-256/TASK-293 | `galleryMosaic.tsx` uses explicit ratio/gap/radius resolvers. |
+| CODE-02 | ✓ Fixed — shared current-runtime cleanup | TASK-256/TASK-293 | Redundant `lg:row-span-2` was removed from runtime output. |
+| CODE-03 | ✓ Fixed — shared current-runtime cleanup | TASK-256/TASK-293 | `feature-left` no longer ships the redundant featured row-span path. |
+| CODE-04 | ✓ Fixed — shared current-runtime cleanup | TASK-256/TASK-293 | `feature-left` avoids rendering an empty support column for one item. |
+| CODE-05 | ✓ Fixed — shared editor truthfulness | TASK-256/TASK-293 | Overlay picker now resolves hex from rgba and preserves alpha when the color changes. |
+| CODE-06 | ✓ Fixed — shared media truthfulness | TASK-256/TASK-293 | Visual now shows current-media ownership and keeps image/video selection truthful. |
+| CODE-07 | ✓ Fixed — dedicated alt authoring | TASK-270-03 | Per-item `alt` now overrides caption-derived fallback semantics. |
+| CODE-08 | ✓ Fixed — shared Wizard media scope | TASK-256/TASK-293 | Wizard `MediaPicker` now accepts `image/*` and `video/*`. |
+
+### Bugs
+
+| ID | Current status | Owner | Evidence |
+|----|----------------|-------|----------|
+| BUG-01 | ✓ Resolved — system/session setup | Out of widget scope | Report notes the active-session limit increase that removed the `Not authenticated` Wizard failure. |
+| BUG-02 | ✓ Resolved — system/session setup | Out of widget scope | Report notes the same session-limit fix for Publish / Save Draft. |
+| BUG-03 | ✓ Fixed — shared editor truthfulness | TASK-256/TASK-293 | Overlay picker synchronizes with rgba instead of resetting to a fallback hex. |
+| BUG-04 | ✓ Fixed — shared current-runtime cleanup | TASK-256/TASK-293 | `feature-left` one-item runtime no longer renders the empty right column. |
+| BUG-05 | ✓ Fixed — shared safe-link output | TASK-256/TASK-293 | Gallery links keep the shared safe `rel="noopener noreferrer"` contract. |
+
+### UX
+
+| ID | Current status | Owner | Evidence |
+|----|----------------|-------|----------|
+| UX-01 | ✓ Fixed — shared editor-mode ownership | TASK-256/TASK-293 | Advanced is diagnostic-only and no longer duplicates Visual style controls. |
+| UX-02 | ✓ Fixed | TASK-270-01 | Visual item cards now show local preview state. |
+| UX-03 | ✓ Fixed | TASK-270-02 | Drag reorder plus `Alt` + arrow fallback are covered in the Visual editor and tests. |
+| UX-04 | ✓ Fixed | TASK-270-02 | Count reduction now confirms destructive trims and coexists cleanly with Add/Remove. |
+| UX-05 | ✓ Fixed | TASK-270-01 | Visual item rows now expose a per-item `MediaPicker`. |
+| UX-06 | ✓ Fixed — shared media truthfulness | TASK-256/TASK-293 | Current-media badges make the active image/video/placeholder state explicit. |
+| UX-07 | ✓ Fixed — shared Wizard media scope + local guidance | TASK-256/TASK-293, TASK-270-06 | Wizard accepts video assets and now points the author toward the final Visual/Advanced flow. |
+
+### Braki funkcjonalne
+
+| ID | Current status | Owner | Evidence |
+|----|----------------|-------|----------|
+| BF-01 | ✓ Fixed | TASK-270-03 | Dedicated per-item `alt` exists end-to-end through schema, editor, and runtime. |
+| BF-02 | ✓ Fixed | TASK-270-01 | Per-item Visual `MediaPicker` landed with non-destructive failures. |
+| BF-03 | ✓ Fixed — shared Wizard media scope | TASK-256/TASK-293 | Wizard accepts video assets from the media library. |
+| BF-04 | Deferred | Shared follow-up outside TASK-270 | Shared alpha-safe overlay behavior shipped, but a dedicated opacity slider is not part of the final Gallery Mosaic product surface. |
+| BF-05 | ✓ Fixed — shared safe-link output | TASK-256/TASK-293 | Links keep the shared safe href contract. |
+| BF-06 | ✓ Fixed | TASK-270-02 | Drag reorder landed with button and keyboard fallback. |
+| BF-07 | ✓ Fixed | TASK-270-01 | Item previews are visible directly in Visual. |
+| BF-08 | ✓ Fixed — shared media truthfulness | TASK-256/TASK-293 | Current-media ownership is explicit via badges and picker behavior, so the ambiguity no longer requires a separate toggle. |
+| BF-09 | ✓ Fixed | TASK-270-02 | `feature-left` warns when only one lead tile remains. |
+| BF-10 | ✓ Fixed | TASK-270-04 | Lightbox/zoom is opt-in, instance-scoped, and runtime-tested. |
+| BF-11 | ✓ Fixed | TASK-270-03 | Per-item `objectPosition` landed in schema, editor, and runtime. |
+| BF-12 | ✓ Fixed | TASK-270-03 | Per-item ratio override landed end-to-end. |
+| BF-13 | ✓ Fixed | TASK-270-03 | Video `poster` field landed end-to-end. |
+| BF-14 | ✓ Fixed | TASK-270-05 | Opt-in `fade` / `slide-up` entrances landed with reduced-motion-safe classes. |
+| BF-15 | ✓ Fixed | TASK-270-05 | Responsive density now uses bounded presets instead of raw breakpoint maps. |
+| BF-16 | ✓ Fixed | TASK-270-06 | Advanced now owns bounded JSON export/import with machine-readable import errors. |
+
+### Accessibility
+
+| ID | Current status | Owner | Evidence |
+|----|----------------|-------|----------|
+| A1 | ✓ Fixed | TASK-270-03 | Dedicated `alt` authoring replaces caption-only semantics. |
+| A2 | ✓ Fixed — shared safe-link output | TASK-256/TASK-293 | Shared safe href output adds `rel="noopener noreferrer"` where needed. |
+| A3 | ✓ Fixed | TASK-270-07 | Hover captions now react to keyboard focus for linked/lightbox tiles, and static hover tiles are focusable. |
+| A4 | ✓ Fixed — shared current-runtime baseline | TASK-256/TASK-293 | Runtime video keeps visible `controls`. |
+| A5 | ✓ Fixed — shared current-runtime baseline | TASK-256/TASK-293 | Runtime uses semantic `figure` / `figcaption`. |
+| A6 | ✓ Fixed — shared current-runtime baseline | TASK-256/TASK-293 | Current video runtime keeps `title` semantics for the shipped model. |
 
 ## 11. Screenshoty
 

@@ -948,6 +948,10 @@ function GalleryCard({
         radiusClassMap[radius],
         motionPresetClassMap[motionPreset]
       )}
+      tabIndex={captionPosition === "hover" && interactionType === "none" ? 0 : undefined}
+      aria-label={
+        captionPosition === "hover" && interactionType === "none" ? accessibleCaption : undefined
+      }
       data-gallery-item={String(index + 1)}
       data-gallery-media-type={hasVideo ? "video" : hasImage ? "image" : "placeholder"}
       data-gallery-item-interaction={interactionType}
@@ -960,7 +964,7 @@ function GalleryCard({
 
   if (interactionType === "link" && linkAttrs) {
     return (
-      <a {...linkAttrs} aria-label={accessibleCaption} className="block">
+      <a {...linkAttrs} aria-label={accessibleCaption} className="group block">
         {frame}
       </a>
     );
@@ -995,7 +999,7 @@ function GalleryCard({
       <>
         <button
           type="button"
-          className="block w-full cursor-zoom-in bg-transparent p-0 text-left"
+          className="group block w-full cursor-zoom-in bg-transparent p-0 text-left"
           data-gallery-lightbox-trigger={lightboxDialogId}
           aria-haspopup="dialog"
           aria-controls={lightboxDialogId}

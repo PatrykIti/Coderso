@@ -210,3 +210,19 @@ No API routes are added.
   expectations, and link precedence.
 - Runtime output remains deterministic, safe, and testable without committing
   screenshots.
+
+## Completion Notes
+
+- 2026-05-18: Gallery Mosaic now ships an opt-in widget-local lightbox with
+  instance-scoped ids, `fit` / `fill` zoom, href precedence, and `happy-dom`
+  runtime coverage for open/close/focus behavior.
+- Validation:
+  - `git diff --check`
+  - `bun run test:vitest -- tests/vitest/widgets/galleryMosaic.test.tsx tests/vitest/widgets/galleryMosaicLightboxRuntime.test.ts tests/vitest/widgets/renderer.test.tsx`
+  - `bun run test:vitest -- tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx`
+  - `bun test tests/unit/widgets/validator.test.ts`
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun run gates:coderso`
+  - `bun run scan:security:strict`
+  - `bun run precommit`

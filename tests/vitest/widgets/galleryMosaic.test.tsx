@@ -445,6 +445,38 @@ test("gallery mosaic renders figure semantics and current video controls", () =>
   expect(html).toContain('title="Video frame"');
 });
 
+test("gallery mosaic hover captions stay keyboard reachable for linked and static tiles", () => {
+  const html = renderToString(
+    <GalleryMosaicBlock
+      data={{
+        ...galleryMosaicDefaults,
+        items: [
+          {
+            id: "gallery-1",
+            image: "https://cdn.example.com/one.jpg",
+            caption: "Linked frame",
+            href: "/details",
+          },
+          {
+            id: "gallery-2",
+            image: "https://cdn.example.com/two.jpg",
+            caption: "Static frame",
+          },
+        ],
+        style: {
+          ...galleryMosaicDefaults.style,
+          captionPosition: "hover",
+        },
+      }}
+      variant="mosaic"
+    />
+  );
+
+  expect(html).toContain('class="group block"');
+  expect(html).toContain('tabindex="0"');
+  expect(html).toContain('aria-label="Static frame"');
+});
+
 test("gallery mosaic wizard renders onboarding fields", () => {
   const html = renderToString(
     <GalleryMosaicWizardEditor

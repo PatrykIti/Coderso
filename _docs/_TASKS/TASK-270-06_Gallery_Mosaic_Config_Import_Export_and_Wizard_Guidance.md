@@ -151,3 +151,19 @@ No API routes are added.
   error codes and paths before normalization.
 - Wizard guidance reflects the final TASK-256 media contract without owning that
   shared fix.
+
+## Completion Notes
+
+- 2026-05-18: Wizard now points to the final Gallery Mosaic flow, and Advanced
+  owns bounded JSON export/import with machine-readable validation errors and
+  non-destructive failures.
+- Validation:
+  - `git diff --check`
+  - `bun run test:vitest -- tests/vitest/widgets/galleryMosaic.test.tsx tests/vitest/widgets/galleryMosaicLightboxRuntime.test.ts tests/vitest/widgets/renderer.test.tsx`
+  - `bun run test:vitest -- tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx`
+  - `bun test tests/unit/widgets/validator.test.ts`
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun run gates:coderso`
+  - `bun run scan:security:strict`
+  - `bun run precommit`

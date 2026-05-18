@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 291 tasks
-- **In Progress:** 5 tasks
-- **Done:** 1566 tasks
+- **To Do:** 287 tasks
+- **In Progress:** 4 tasks
+- **Done:** 1568 tasks
 
 ---
 
@@ -222,10 +222,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-271-05 | Grid Columns Height and Cross-Axis Alignment | Medium | Large | Replace hardcoded min-height with tokens and add per-column alignment overrides |
 | TASK-271-06 | Grid Columns Gap Tokens and Density Controls | Medium | Medium | Expand bounded gap tokens, keep independent gapX/gapY, and improve spacing labels |
 | TASK-271-07 | Grid Columns Report, Docs, Changelog, and Closure | Medium | Medium | Refresh Grid Columns report/docs/changelog/board and final validation evidence |
-| TASK-270-04 | Gallery Mosaic Lightbox and Zoom Mode | Medium | Large | Add optional safe lightbox/zoom presentation using existing accessible runtime patterns |
-| TASK-270-05 | Gallery Mosaic Responsive Columns and Motion Presets | Medium | Large | Add bounded responsive column and reduced-motion-safe animation presets |
-| TASK-270-06 | Gallery Mosaic Config Import Export and Wizard Guidance | Low | Medium | Add safe config import/export and post-TASK-256 Wizard guidance |
-| TASK-270-07 | Gallery Mosaic Report Docs Changelog and Closure | Medium | Medium | Refresh Gallery Mosaic report/docs/changelog/board and final validation evidence |
 | TASK-269 | Form Embed Widget Playwright Product Followups | High | Very Large | Form Embed-only follow-up family for `REPORT_FORM_EMBED_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-269-01 | Form Selection, Editor Modes, and Admin Diagnostics | High | Large | Split Form Embed editor modes and add selected-form status/error/field diagnostics |
 | TASK-269-02 | Field Type Rendering and Field Accessibility | High | Large | Render Form Embed CMS field types truthfully with stable IDs, labels, helpers, and group semantics |
@@ -335,7 +331,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-270 | Gallery Mosaic Widget Playwright Product Followups | High | Very Large | In progress: shared prerequisites plus previews, reorder UX, per-item media fields, lightbox, bounded density/motion presets, and import/export are landed; only final report/docs/changelog closure remains |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
@@ -346,6 +341,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-270 | Gallery Mosaic Widget Playwright Product Followups | High | Very Large | Done: all Gallery Mosaic report findings are now mapped to shared fixes, TASK-270 leaves, session/setup resolution, or an explicit defer reason, and the final report/docs/changelog closure is synchronized |
+| TASK-270-07 | Gallery Mosaic Report Docs Changelog and Closure | Medium | Medium | Done: the final closure pass mapped every report finding, synchronized widget/task/changelog docs, and hardened hover-caption keyboard access |
 | TASK-270-06 | Gallery Mosaic Config Import Export and Wizard Guidance | Low | Medium | Done: Wizard now points to the final authoring flow, and Advanced owns bounded JSON import/export with machine-readable validation errors |
 | TASK-270-05 | Gallery Mosaic Responsive Columns and Motion Presets | Medium | Large | Done: Gallery Mosaic now uses bounded responsive density presets and reduced-motion-safe `fade` / `slide-up` entrances instead of raw breakpoint maps |
 | TASK-270-04 | Gallery Mosaic Lightbox and Zoom Mode | Medium | Large | Done: Gallery Mosaic now has opt-in widget-local lightbox/zoom with instance-scoped ids, href precedence guidance, and happy-dom runtime coverage |
