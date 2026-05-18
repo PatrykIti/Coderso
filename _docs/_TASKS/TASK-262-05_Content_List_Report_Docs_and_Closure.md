@@ -6,7 +6,7 @@
 **Category:** Widgets + Documentation + Playwright QA + Release Notes
 **Estimated Effort:** Medium
 **Dependencies:** TASK-262-01, TASK-262-02, TASK-262-03, TASK-262-04
-**Status:** To Do
+**Status:** Done (2026-05-17)
 
 ---
 
@@ -17,7 +17,7 @@ land.
 
 This leaf owns textual evidence refresh, source-of-truth docs, changelog, board
 state, and final validation. It must not implement remaining product behavior
-directly; any unfixed report row must be routed to TASK-256 shared scope or a
+directly; any unfixed report row must be routed to TASK-302 shared scope or a
 named future task before the family can move to `Done`.
 
 ## Scope Boundary
@@ -38,7 +38,7 @@ reopen the relevant implementation leaf or create a future task.
 ## Sub-Tasks
 
 - [ ] Re-read `REPORT_CONTENT_LIST_WIDGET.md` and mark each finding as fixed,
-  TASK-256 shared scope, deferred future scope, or not reproducible with a
+  TASK-302 shared scope, deferred future scope, or not reproducible with a
   reason.
 - [ ] Verify TASK-262 implementation leaves updated all required source files,
   tests, and docs listed in their `Files to Change` tables.
@@ -48,8 +48,9 @@ reopen the relevant implementation leaf or create a future task.
   guidance.
 - [ ] Update `_docs/WIDGET_PACK_MATRIX.md` only if Content List pack readiness
   changes.
-- [ ] Add `_docs/_CHANGELOG/{N}-2026-05-16-task-262-content-list-widget-followups.md`
-  or the current next changelog number, and update the changelog index.
+- [ ] Add `_docs/_CHANGELOG/{N}-{current-completion-date}-task-262-content-list-widget-followups.md`
+  using the current next changelog number and the actual completion date, then
+  update the changelog index.
 - [ ] Move completed TASK-262 rows from To Do/In Progress to Done and
   recompute board statistics.
 
@@ -70,15 +71,15 @@ reopen the relevant implementation leaf or create a future task.
 ```ts
 type ContentListReportClosure = {
   findingId: string;
-  status: "fixed" | "task-256-shared" | "future-task" | "not-reproducible";
+  status: "fixed" | "task-293-shared" | "future-task" | "not-reproducible";
   evidence: string;
   validation?: string[];
   followUpTaskId?: string;
 };
 
 function closeContentListFinding(finding: ReportFinding): ContentListReportClosure {
-  if (finding.isSharedClearOrTokenContract) {
-    return routeToTask256(finding, "TASK-256-02");
+  if (finding.isSharedContentListBlockOrResidualColorContract) {
+    return routeToSharedTask(finding, "TASK-302");
   }
   if (finding.hasPassingValidation) return markFixed(finding);
   if (finding.needsFutureScope) return createFutureTaskReference(finding);
@@ -129,6 +130,9 @@ No API routes are added by this closure leaf.
 - `bun run test:vitest -- tests/vitest/ui/content-list-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/site/publicRenderer.test.tsx` when
   public output changed
+- `bun test tests/unit/widgets/postsFeedWidget.test.tsx` when shared
+  `ContentListBlock` / `postsFeed.tsx` compatibility changes land through
+  TASK-302 or any TASK-262 leaf touches `core/widgets/core/postsFeed.tsx`
 - `bun test tests/unit/widgets/validator.test.ts` when schema changed
 - `bun run test:vitest -- tests/vitest/search/filterEngine.test.ts` when
   pagination or listing runtime query parsing changed
@@ -152,8 +156,11 @@ No API routes are added by this closure leaf.
 
 ## Acceptance Criteria
 
-- Every Content List report row is fixed, explicitly routed to TASK-256, or
+- Every Content List report row is fixed, explicitly routed to TASK-302 or another named shared/future task, or
   deferred to a named future task with a reason.
+- Rows already fixed or no longer reproducible at current HEAD, such as E-09 /
+  T-03, are still re-verified and classified with concrete evidence instead of
+  being inferred from the old report banner.
 - Source-of-truth docs match the final code behavior.
 - Board rows, statistics, changelog, and task statuses are synchronized.
 - Required validation lanes pass or any unrelated blockers are clearly isolated

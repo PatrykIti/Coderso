@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 279 tasks
+- **To Do:** 273 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1591 tasks
+- **Done:** 1598 tasks
 
 ---
 
@@ -290,12 +290,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-263-04 | CTA Banner Link Target and Conversion Options | Medium | Large | Add safe target/rel policy, icon enums, tertiary CTA, and description visibility controls |
 | TASK-263-05 | CTA Banner Layout Media and Motion Options | Medium | Large | Add CTA-local width, gradient, background media, and bounded motion options where page layout does not already own them |
 | TASK-263-06 | CTA Banner Report Docs and Closure | Medium | Medium | Refresh CTA report/docs/changelog/board and final validation for the TASK-263 family |
-| TASK-262 | Content List Widget Playwright Product Followups | High | Very Large | Content List-only follow-up family for `REPORT_CONTENT_LIST_WIDGET.md`, excluding TASK-256 shared-contract scope |
-| TASK-262-01 | Content List Source Picker and Filter Editor IA | High | Large | Repair source picker labels/deduplication/search, taxonomy/author editor barriers, and listing-mode filter feedback |
-| TASK-262-02 | Content List Section Empty State and Static Canvas Guidance | High | Large | Add section heading, source-aware empty copy, missing-source guidance, and saved-data canvas messaging |
-| TASK-262-03 | Content List Pagination and View All Navigation | High | Very Large | Add bounded page navigation and View all/Load more behavior without public-write or arbitrary endpoint scope |
-| TASK-262-04 | Content List Layout Media Tags and Card Preview Controls | High | Large | Repair Content List-local layout truthfulness, image ratio controls, tag badges, CTA fallback, and card/variant previews |
-| TASK-262-05 | Content List Report Docs and Closure | Medium | Medium | Refresh report/docs/changelog/board and final validation for the TASK-262 family |
 | TASK-259 | Booking Calendar Widget Playwright Product Followups | High | Very Large | Widget-specific follow-up family for `REPORT_BOOKING_CALENDAR_WIDGET.md`, excluding TASK-256 shared-contract and TASK-258 Appointment Form scope |
 | TASK-259-01 | Booking Calendar Admin Preview Runtime Catalog Parity | High | Large | Hydrate admin canvas/editor preview with booking services/resources without persisting preview-only tokens |
 | TASK-259-02 | Booking Calendar Date Defaults, Range, and Past-Date Safety | High | Large | Add default/min/max date config and enforce public slots past-date policy |
@@ -342,6 +336,13 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-302 | Content List Block Shared Renderer and Color Control Residuals | High | Large | Done: shared `ContentListBlock` / `PostsFeedBlock` truthfulness, image/CTA renderer residuals, and Content List text-color clear/picker adoption are synchronized and validated |
+| TASK-262 | Content List Widget Playwright Product Followups | High | Very Large | Done: source/filter IA, section context, saved-data canvas guidance, bounded pagination actions, tag badges, preview cards, report refresh, board sync, and changelog closure are aligned |
+| TASK-262-01 | Content List Source Picker and Filter Editor IA | High | Large | Done: source labels are friendly, content types are searchable/deduplicated, taxonomy suggestions use the taxonomy overview seam, and author filtering uses a picker/search flow |
+| TASK-262-02 | Content List Section Empty State and Static Canvas Guidance | High | Large | Done: Content List owns section heading/description, source-aware empty copy, and editor-side saved-data canvas guidance |
+| TASK-262-03 | Content List Pagination and View All Navigation | High | Very Large | Done: bounded `paged` / `load-more` / `view-all` actions land across schema, resolver, public output, and editor controls without introducing a second listing parser |
+| TASK-262-04 | Content List Layout Media Tags and Card Preview Controls | High | Large | Done: tag badges plus variant/card-style preview cards are local to Content List after shared renderer residuals moved to TASK-302 |
+| TASK-262-05 | Content List Report Docs and Closure | Medium | Medium | Done: the report, widget docs, task board, changelog, and final validation evidence are synchronized for TASK-262 and TASK-302 |
 | TASK-261 | Contact Widget Playwright Product Followups | High | Very Large | Done: Contact header/detail semantics, static-safe form behavior, Forms runtime bridge, editor parity, map/layout/social options, docs, and closure evidence are synchronized |
 | TASK-261-01 | Contact Header, Details Links, and Semantic Output | High | Large | Done: Contact exposes section/panel headings, semantic detail markup, bounded icons, and safe tel/mailto links |
 | TASK-261-02 | Contact Form Field Metadata and Public Submission Bridge | High | Very Large | Done: Contact field metadata, static no-GET safety, and Forms runtime bridge landed through the physical child leaves |

@@ -3,7 +3,12 @@ import { expect, test } from "bun:test";
 import {
   mapEntriesToContentListItems,
   resolveContentListRuntimeData,
+  resolveContentListRuntimeNavigationMeta,
 } from "../../../core/services/content/contentListResolver";
+import {
+  buildListingRuntimeParamName,
+  listingRuntimeTokens,
+} from "../../../core/services/search/filterContract";
 
 const createEntry = (data: Record<string, unknown>) => ({
   id: "entry-1",
@@ -70,6 +75,23 @@ test("mapEntriesToContentListItems keeps explicit excerpt priority", async () =>
   );
 
   expect(item?.excerpt).toBe("Explicit excerpt wins.");
+});
+
+test("resolveContentListRuntimeNavigationMeta preserves query state for shared listing pages", () => {
+  const pageKey = buildListingRuntimeParamName("query-1", listingRuntimeTokens.page);
+  const meta = resolveContentListRuntimeNavigationMeta({
+    page: 2,
+    pageSize: 6,
+    total: 15,
+    runtimeSearchParams: new URLSearchParams("filter=active"),
+    pageKey,
+  });
+
+  expect(meta.page).toBe(2);
+  expect(meta.pageSize).toBe(6);
+  expect(meta.totalPages).toBe(3);
+  expect(meta.previousPageHref).toBe("?filter=active");
+  expect(meta.nextPageHref).toBe(`?filter=active&${pageKey}=3`);
 });
 
 test("resolveContentListRuntimeData omits undefined listing runtime keys", async () => {
@@ -167,8 +189,22 @@ test("resolveContentListRuntimeData omits undefined listing runtime keys", async
     }
   );
 
-  const runtime = "runtime" in result ? result.runtime : undefined;
+  const runtime = ("runtime" in result ? result.runtime : undefined) as
+    | {
+        rejectedTokens?: string[];
+        searchQuery?: string;
+        page?: number;
+        pageSize?: number;
+        totalPages?: number;
+        previousPageHref?: string;
+        nextPageHref?: string;
+      }
+    | undefined;
   expect(runtime?.rejectedTokens).toEqual([]);
   expect(Object.prototype.hasOwnProperty.call(runtime ?? {}, "searchQuery")).toBe(false);
-  expect(Object.prototype.hasOwnProperty.call(runtime ?? {}, "page")).toBe(false);
+  expect(runtime?.page).toBe(1);
+  expect(runtime?.pageSize).toBe(6);
+  expect(runtime?.totalPages).toBe(1);
+  expect(Object.prototype.hasOwnProperty.call(runtime ?? {}, "previousPageHref")).toBe(false);
+  expect(Object.prototype.hasOwnProperty.call(runtime ?? {}, "nextPageHref")).toBe(false);
 });

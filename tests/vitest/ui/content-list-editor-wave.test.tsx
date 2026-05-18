@@ -4,19 +4,21 @@ import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
+import type { AdminUser } from "../../../core/admin/services/adminUsersClient";
 import type { ContentTypeSummary } from "../../../core/admin/services/contentTypesClient";
 import type {
   ListingQueryRecord,
   ListingTemplateRecord,
 } from "../../../core/admin/services/listingsClient";
+import type { TaxonomyOverview } from "../../../core/admin/services/taxonomyClient";
 import type { ContentListData } from "../../../core/widgets/core/contentList";
 
 const contentListState = vi.hoisted(() => ({
   contentTypes: [
     {
       id: "articles",
-      name: "Articles",
-      slug: "articles",
+      name: "News",
+      slug: "news-main",
       status: "published",
       schema: {
         type: "object",
@@ -26,7 +28,107 @@ const contentListState = vi.hoisted(() => ({
       createdAt: "2026-03-08T10:00:00.000Z",
       updatedAt: "2026-03-08T10:00:00.000Z",
     },
+    {
+      id: "articles-secondary",
+      name: "News",
+      slug: "news-secondary",
+      status: "published",
+      schema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {},
+      },
+      createdAt: "2026-03-08T10:00:00.000Z",
+      updatedAt: "2026-03-08T10:00:00.000Z",
+    },
+    {
+      id: "screen-2dcaeaad",
+      name: "Screen 2dcaeaad",
+      slug: "screen-two-dcaeaad",
+      status: "draft",
+      schema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {},
+      },
+      createdAt: "2026-03-08T10:00:00.000Z",
+      updatedAt: "2026-03-08T10:00:00.000Z",
+    },
   ] satisfies ContentTypeSummary[],
+  adminUsers: [
+    {
+      id: "user-1",
+      name: "Ada Lovelace",
+      email: "ada@example.com",
+      status: "active",
+      roleIds: [],
+      createdAt: "2026-03-08T10:00:00.000Z",
+      updatedAt: "2026-03-08T10:00:00.000Z",
+      lastLoginAt: null,
+    },
+    {
+      id: "user-2",
+      name: null,
+      email: "editor@example.com",
+      status: "active",
+      roleIds: [],
+      createdAt: "2026-03-08T10:00:00.000Z",
+      updatedAt: "2026-03-08T10:00:00.000Z",
+      lastLoginAt: null,
+    },
+  ] satisfies AdminUser[],
+  taxonomyOverview: {
+    taxonomies: {
+      category: {
+        id: "taxonomy-category",
+        typeId: "articles",
+        name: "Categories",
+        slug: "categories",
+        kind: "category",
+        createdAt: "2026-03-08T10:00:00.000Z",
+        updatedAt: "2026-03-08T10:00:00.000Z",
+      },
+      tag: {
+        id: "taxonomy-tag",
+        typeId: "articles",
+        name: "Tags",
+        slug: "tags",
+        kind: "tag",
+        createdAt: "2026-03-08T10:00:00.000Z",
+        updatedAt: "2026-03-08T10:00:00.000Z",
+      },
+    },
+    terms: {
+      categories: [
+        {
+          id: "term-1",
+          taxonomyId: "taxonomy-category",
+          name: "Automotive",
+          slug: "automotive",
+          createdAt: "2026-03-08T10:00:00.000Z",
+          updatedAt: "2026-03-08T10:00:00.000Z",
+        },
+      ],
+      tags: [
+        {
+          id: "term-2",
+          taxonomyId: "taxonomy-tag",
+          name: "featured",
+          slug: "featured",
+          createdAt: "2026-03-08T10:00:00.000Z",
+          updatedAt: "2026-03-08T10:00:00.000Z",
+        },
+        {
+          id: "term-3",
+          taxonomyId: "taxonomy-tag",
+          name: "case-study",
+          slug: "case-study",
+          createdAt: "2026-03-08T10:00:00.000Z",
+          updatedAt: "2026-03-08T10:00:00.000Z",
+        },
+      ],
+    },
+  } satisfies TaxonomyOverview,
   listingQueries: [
     {
       id: "query-1",
@@ -72,9 +174,13 @@ const contentListState = vi.hoisted(() => ({
   ] satisfies ListingTemplateRecord[],
   contentTypesError: null as unknown,
   listingsError: null as unknown,
+  authorsError: null as unknown,
+  taxonomyError: null as unknown,
   reset() {
     this.contentTypesError = null;
     this.listingsError = null;
+    this.authorsError = null;
+    this.taxonomyError = null;
   },
 }));
 
@@ -278,6 +384,20 @@ vi.mock("@/services/listingsClient", () => ({
   }),
 }));
 
+vi.mock("@/services/adminUsersClient", () => ({
+  listAdminUsers: vi.fn(async () => {
+    if (contentListState.authorsError) throw contentListState.authorsError;
+    return contentListState.adminUsers;
+  }),
+}));
+
+vi.mock("@/services/taxonomyClient", () => ({
+  getTaxonomyOverview: vi.fn(async () => {
+    if (contentListState.taxonomyError) throw contentListState.taxonomyError;
+    return contentListState.taxonomyOverview;
+  }),
+}));
+
 const mount = (node: React.ReactNode) => {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -411,11 +531,22 @@ test("ContentList wizard editor normalizes invalid variant, clamps item limit, a
 
     const variantSelect = findSelectsByOptions(view.container, ["cards", "list", "compact"])[0];
     expect((variantSelect as HTMLSelectElement | null | undefined)?.value).toBe("cards");
+    expect(view.container.textContent).toContain("By content type");
+    expect(view.container.textContent).toContain("By listing query");
+    expect(view.container.textContent).toContain("News (news-main)");
+    expect(view.container.textContent).toContain("News (news-secondary)");
+    expect(view.container.textContent).not.toContain("Legacy content type source");
 
     React.act(() => {
+      setInputValue(findInputByPlaceholder(view.container, "Search content types"), "secondary");
       setSelectValue(
-        findSelectsByOptions(view.container, ["__no_content_type__", "articles"])[0],
-        "articles"
+        findSelectsByOptions(view.container, [
+          "__no_content_type__",
+          "articles",
+          "articles-secondary",
+          "screen-2dcaeaad",
+        ])[0],
+        "articles-secondary"
       );
       setSelectValue(findSelectsByOptions(view.container, ["legacy", "listing"])[0], "listing");
     });
@@ -452,7 +583,7 @@ test("ContentList wizard editor normalizes invalid variant, clamps item limit, a
 });
 
 test("ContentList visual editor switches between listing and legacy sources, persists empty state content, and updates presentation fields", async () => {
-  const { ContentListVisualEditor } =
+  const { ContentListVisualEditor, ContentListWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/ContentListEditors");
 
   const onChangeSpy = vi.fn();
@@ -463,18 +594,32 @@ test("ContentList visual editor switches between listing and legacy sources, per
     const [variant, setVariant] = useState("cards");
 
     return (
-      <ContentListVisualEditor
-        value={value}
-        onChange={(next) => {
-          onChangeSpy(next);
-          setValue(next);
-        }}
-        variant={variant}
-        onVariantChange={(next) => {
-          onVariantChangeSpy(next);
-          setVariant(next);
-        }}
-      />
+      <>
+        <ContentListWizardEditor
+          value={value}
+          onChange={(next) => {
+            onChangeSpy(next);
+            setValue(next);
+          }}
+          variant={variant}
+          onVariantChange={(next) => {
+            onVariantChangeSpy(next);
+            setVariant(next);
+          }}
+        />
+        <ContentListVisualEditor
+          value={value}
+          onChange={(next) => {
+            onChangeSpy(next);
+            setValue(next);
+          }}
+          variant={variant}
+          onVariantChange={(next) => {
+            onVariantChangeSpy(next);
+            setVariant(next);
+          }}
+        />
+      </>
     );
   };
 
@@ -484,17 +629,24 @@ test("ContentList visual editor switches between listing and legacy sources, per
     await flush();
 
     React.act(() => {
-      clickElement(findButtonByText(view.container, "Compact"));
       setSelectValue(findSelectsByOptions(view.container, ["1", "2", "3"])[0], "2");
       setSelectValue(findSelectsByOptions(view.container, ["none", "sm", "md", "lg"])[0], "lg");
+      clickElement(findButtonByText(view.container, "Elevated"));
       setSelectValue(
-        findSelectsByOptions(view.container, ["outlined", "elevated", "minimal"])[0],
-        "elevated"
+        findSelectsByOptions(view.container, ["standard", "wide", "square", "compact"])[0],
+        "wide"
       );
       setInputValue(findInputByPlaceholder(view.container, "Read more"), "View entry");
+      clickElement(findButtonByText(view.container, "Compact"));
       setSelectValue(findSelectsByOptions(view.container, ["legacy", "listing"])[0], "listing");
     });
     await flush();
+
+    expect(view.container.textContent).toContain("Columns only affect the cards variant.");
+    expect(findSelectsByOptions(view.container, ["1", "2", "3"])).toHaveLength(0);
+    expect(view.container.textContent).toContain(
+      "Builder canvas shows saved resolved data. Save or open Preview to refresh live results."
+    );
 
     React.act(() => {
       setSelectValue(
@@ -551,6 +703,14 @@ test("ContentList visual editor switches between listing and legacy sources, per
         findInputByPlaceholder(view.container, "e.g. featured or case-study"),
         "case-study"
       );
+      setInputValue(
+        findInputByPlaceholder(view.container, "Optional section title"),
+        "Latest updates"
+      );
+      setTextareaValue(
+        findTextareaByPlaceholder(view.container, "Optional section description"),
+        "Saved preview guidance for editors."
+      );
       setInputValue(findInputByPlaceholder(view.container, "No items found"), "Nothing here yet");
       setTextareaValue(
         findTextareaByPlaceholder(
@@ -561,6 +721,11 @@ test("ContentList visual editor switches between listing and legacy sources, per
       );
     });
     await flush();
+
+    const taxonomySuggestions = Array.from(view.container.querySelectorAll("datalist option")).map(
+      (option) => option.getAttribute("value")
+    );
+    expect(taxonomySuggestions).toEqual(expect.arrayContaining(["featured", "case-study"]));
 
     const showImageToggle = findCheckboxByLabelText(view.container, "Show image");
     const showExcerptToggle = findCheckboxByLabelText(view.container, "Show excerpt");
@@ -599,6 +764,8 @@ test("ContentList visual editor switches between listing and legacy sources, per
           showMeta: false,
           showCta: false,
         }),
+        title: "Latest updates",
+        description: "Saved preview guidance for editors.",
         emptyState: expect.objectContaining({
           title: "Nothing here yet",
           description: "Publish a case study to populate this block.",
@@ -606,7 +773,7 @@ test("ContentList visual editor switches between listing and legacy sources, per
         style: expect.objectContaining({
           columns: "2",
           gap: "lg",
-          cardStyle: "elevated",
+          imageAspect: "wide",
           ctaLabel: "View entry",
         }),
       })
@@ -616,8 +783,114 @@ test("ContentList visual editor switches between listing and legacy sources, per
   }
 });
 
-test("ContentList visual editor tolerates unresolved listing and content type selections during source transitions", async () => {
+test("ContentList visual editor updates pagination controls", async () => {
   const { ContentListVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/ContentListEditors");
+
+  const onChangeSpy = vi.fn();
+
+  const Harness = () => {
+    const [value, setValue] = useState<ContentListData>({} as ContentListData);
+
+    return (
+      <ContentListVisualEditor
+        value={value}
+        onChange={(next) => {
+          onChangeSpy(next);
+          setValue(next);
+        }}
+        variant="cards"
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    await flush();
+
+    React.act(() => {
+      setSelectValue(
+        findSelectsByOptions(view.container, ["none", "paged", "load-more", "view-all"])[0],
+        "view-all"
+      );
+    });
+    await flush();
+
+    React.act(() => {
+      setInputValue(findNumberInputs(view.container)[0], "8");
+      setInputValue(findInputByPlaceholder(view.container, "/articles"), "/projects");
+      setInputValue(findInputByPlaceholder(view.container, "View all"), "Browse everything");
+    });
+
+    expect(onChangeSpy.mock.lastCall?.[0]).toEqual(
+      expect.objectContaining({
+        pagination: expect.objectContaining({
+          mode: "view-all",
+          pageSize: 8,
+          viewAllHref: "/projects",
+          viewAllLabel: "Browse everything",
+        }),
+      })
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("ContentList visual editor updates card style and tag display controls", async () => {
+  const { ContentListVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/ContentListEditors");
+
+  const onChangeSpy = vi.fn();
+
+  const Harness = () => {
+    const [value, setValue] = useState<ContentListData>({} as ContentListData);
+
+    return (
+      <ContentListVisualEditor
+        value={value}
+        onChange={(next) => {
+          onChangeSpy(next);
+          setValue(next);
+        }}
+        variant="cards"
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    await flush();
+
+    clickElement(findButtonByText(view.container, "Elevated"));
+    React.act(() => {
+      setSelectValue(
+        findSelectsByOptions(view.container, ["meta-line", "badges", "hidden"])[0],
+        "badges"
+      );
+      setInputValue(findNumberInputs(view.container)[0], "4");
+    });
+
+    expect(onChangeSpy.mock.lastCall?.[0]).toEqual(
+      expect.objectContaining({
+        style: expect.objectContaining({
+          cardStyle: "elevated",
+          tagMode: "badges",
+          tagLimit: 4,
+        }),
+      })
+    );
+    expect(view.container.textContent).toContain("Outlined card");
+    expect(view.container.textContent).toContain("Elevated card");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("ContentList wizard editor tolerates unresolved listing and content type selections during source transitions", async () => {
+  const { ContentListWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/ContentListEditors");
 
   const onChangeSpy = vi.fn();
@@ -633,7 +906,7 @@ test("ContentList visual editor tolerates unresolved listing and content type se
     } as ContentListData);
 
     return (
-      <ContentListVisualEditor
+      <ContentListWizardEditor
         value={value}
         onChange={(next) => {
           onChangeSpy(next);
@@ -661,13 +934,23 @@ test("ContentList visual editor tolerates unresolved listing and content type se
     });
     await flush();
 
-    expect(findSelectsByOptions(view.container, ["__no_content_type__", "articles"])).toHaveLength(
-      1
-    );
+    expect(
+      findSelectsByOptions(view.container, [
+        "__no_content_type__",
+        "articles",
+        "articles-secondary",
+        "screen-2dcaeaad",
+      ])
+    ).toHaveLength(1);
 
     React.act(() => {
       setSelectValue(
-        findSelectsByOptions(view.container, ["__no_content_type__", "articles"])[0],
+        findSelectsByOptions(view.container, [
+          "__no_content_type__",
+          "articles",
+          "articles-secondary",
+          "screen-2dcaeaad",
+        ])[0],
         "__no_content_type__"
       );
     });
@@ -724,19 +1007,16 @@ test("ContentList advanced editor handles listing query controls, disabled filte
     });
     await flush();
 
-    const authorInputInListingMode = findInputByPlaceholder(view.container, "Optional author UUID");
+    const authorSearchInListingMode = findInputByPlaceholder(view.container, "Search authors");
     const searchInputInListingMode = findInputByPlaceholder(view.container, "Title, excerpt, tags");
     const featuredOnlyToggleInListingMode = findCheckboxByLabelText(
       view.container,
       "Featured only"
     );
 
-    expect(authorInputInListingMode).toBeInstanceOf(HTMLInputElement);
-    expect((authorInputInListingMode as HTMLInputElement).disabled).toBe(true);
-    expect(searchInputInListingMode).toBeInstanceOf(HTMLInputElement);
-    expect((searchInputInListingMode as HTMLInputElement).disabled).toBe(true);
-    expect(featuredOnlyToggleInListingMode).toBeInstanceOf(HTMLInputElement);
-    expect((featuredOnlyToggleInListingMode as HTMLInputElement).disabled).toBe(true);
+    expect(authorSearchInListingMode).toBeUndefined();
+    expect(searchInputInListingMode).toBeUndefined();
+    expect(featuredOnlyToggleInListingMode).toBeUndefined();
     expect(view.container.textContent).toContain(
       "Listing mode uses filters and sorting from the selected Listings query."
     );
@@ -755,22 +1035,34 @@ test("ContentList advanced editor handles listing query controls, disabled filte
     });
     await flush();
 
-    const authorInput = findInputByPlaceholder(view.container, "Optional author UUID");
+    const authorSearchInput = findInputByPlaceholder(view.container, "Search authors");
+    const authorSelect = findSelectsByOptions(view.container, [
+      "__no_author__",
+      "user-1",
+      "user-2",
+    ])[0];
     const searchInput = findInputByPlaceholder(view.container, "Title, excerpt, tags");
     const featuredOnlyToggle = findCheckboxByLabelText(view.container, "Featured only");
 
-    expect((authorInput as HTMLInputElement).disabled).toBe(false);
-    expect((searchInput as HTMLInputElement).disabled).toBe(false);
-    expect((featuredOnlyToggle as HTMLInputElement).disabled).toBe(false);
+    expect(authorSearchInput).toBeInstanceOf(HTMLInputElement);
+    expect(authorSelect).toBeInstanceOf(HTMLSelectElement);
+    expect(searchInput).toBeInstanceOf(HTMLInputElement);
+    expect(featuredOnlyToggle).toBeInstanceOf(HTMLInputElement);
 
     React.act(() => {
-      setInputValue(authorInput, "author-123");
+      setInputValue(authorSearchInput, "editor");
+      setSelectValue(authorSelect, "user-2");
       setInputValue(searchInput, "launch");
       clickElement(featuredOnlyToggle);
       setInputValue(findInputByPlaceholder(view.container, "var(--color-bg)"), "#101820");
       setInputValue(findInputByPlaceholder(view.container, "var(--color-border)"), "#d1d5db");
       setInputValue(findInputByPlaceholder(view.container, "var(--color-text)"), "#f9fafb");
     });
+
+    const clearButtons = Array.from(view.container.querySelectorAll("button")).filter((button) =>
+      normalizeText(button.textContent).includes("clear")
+    );
+    expect(clearButtons).toHaveLength(3);
 
     expect(onChangeSpy.mock.lastCall?.[0]).toEqual(
       expect.objectContaining({
@@ -781,7 +1073,7 @@ test("ContentList advanced editor handles listing query controls, disabled filte
           limit: 24,
         }),
         filters: expect.objectContaining({
-          authorId: "author-123",
+          authorId: "user-2",
           searchQuery: "launch",
           featuredOnly: true,
         }),
@@ -794,6 +1086,15 @@ test("ContentList advanced editor handles listing query controls, disabled filte
     );
     expect(view.container.textContent).toContain('"title": "Launch note"');
     expect(view.container.textContent).toContain('"page": 2');
+
+    clickElement(clearButtons[2]);
+    expect(onChangeSpy.mock.lastCall?.[0]).toEqual(
+      expect.objectContaining({
+        style: expect.objectContaining({
+          textColor: undefined,
+        }),
+      })
+    );
   } finally {
     view.cleanup();
   }
@@ -1041,13 +1342,10 @@ test("ContentList editors fall back to default source, style, field, and runtime
           | undefined
       )?.value
     ).toBe("md");
-    expect(
-      (
-        findSelectsByOptions(view.container, ["outlined", "elevated", "minimal"])[0] as
-          | HTMLSelectElement
-          | undefined
-      )?.value
-    ).toBe("outlined");
+    const outlinedStyleButton = Array.from(view.container.querySelectorAll("button")).find(
+      (button) => normalizeText(button.textContent).includes("outlined")
+    );
+    expect(normalizeText(outlinedStyleButton?.textContent)).toContain("selected");
     expect(
       (
         findSelectsByOptions(view.container, [

@@ -13,7 +13,9 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { isApiClientError } from "@/services/apiClient";
+import { listAdminUsers, type AdminUser } from "@/services/adminUsersClient";
 import { listContentTypesCached, type ContentTypeSummary } from "@/services/contentTypesClient";
+import { getTaxonomyOverview, type ContentTerm } from "@/services/taxonomyClient";
 import {
   listListingQueriesCached,
   listListingTemplatesCached,
@@ -29,13 +31,16 @@ import {
   resolveContentListVariant,
   type ContentListCardStyle,
   type ContentListData,
+  type ContentListImageAspect,
+  type ContentListPaginationMode,
+  type ContentListTagMode,
   type ContentListGap,
   type ContentListSort,
   type ContentListStatusScope,
   type ContentListVariantId,
 } from "../../../../widgets/core/contentList";
 import type { WidgetEditorProps } from "../../../../widgets/types";
-import { ClearableInputField } from "./ClearableFields";
+import { ClearableFieldHeader, ClearableInputField } from "./ClearableFields";
 import { WidgetEditorSection } from "./WidgetEditorControls";
 
 const variantOptions: Array<{
@@ -61,8 +66,8 @@ const variantOptions: Array<{
 ];
 
 const sourceModeOptions: Array<{ id: ContentListSourceMode; label: string }> = [
-  { id: "legacy", label: "Legacy content type source" },
-  { id: "listing", label: "Listings query source" },
+  { id: "legacy", label: "By content type" },
+  { id: "listing", label: "By listing query" },
 ];
 
 const statusScopeOptions: Array<{ id: ContentListStatusScope; label: string }> = [
@@ -95,11 +100,36 @@ const gapOptions: Array<{ id: ContentListGap; label: string }> = [
   { id: "lg", label: "Spacious" },
 ];
 
+const paginationModeOptions: Array<{ id: ContentListPaginationMode; label: string }> = [
+  { id: "none", label: "No navigation" },
+  { id: "paged", label: "Previous / next" },
+  { id: "load-more", label: "Load more" },
+  { id: "view-all", label: "View all link" },
+];
+
 const cardStyleOptions: Array<{ id: ContentListCardStyle; label: string }> = [
   { id: "outlined", label: "Outlined" },
   { id: "elevated", label: "Elevated" },
   { id: "minimal", label: "Minimal" },
 ];
+
+const imageAspectOptions: Array<{ id: ContentListImageAspect; label: string }> = [
+  { id: "standard", label: "Standard" },
+  { id: "wide", label: "Wide 16:9" },
+  { id: "square", label: "Square" },
+  { id: "compact", label: "Compact height" },
+];
+
+const tagModeOptions: Array<{ id: ContentListTagMode; label: string }> = [
+  { id: "meta-line", label: "Meta line" },
+  { id: "badges", label: "Badges" },
+  { id: "hidden", label: "Hidden" },
+];
+
+const hexColorPattern = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
+
+const resolvePickerColor = (value: string | undefined, fallback: string) =>
+  value && hexColorPattern.test(value) ? value : fallback;
 
 const NO_CONTENT_TYPE_VALUE = "__no_content_type__";
 const NO_LISTING_QUERY_VALUE = "__no_listing_query__";
@@ -151,11 +181,172 @@ function VariantCards({
               {value === option.id ? "Selected" : "Pick"}
             </Badge>
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">{option.description}</p>
+          <div className="mt-3 flex gap-2" aria-hidden="true">
+            {option.id === "cards" ? (
+              <>
+                <span className="h-10 flex-1 rounded-md border border-border/70 bg-muted/30" />
+                <span className="h-10 flex-1 rounded-md border border-border/70 bg-muted/10" />
+              </>
+            ) : option.id === "list" ? (
+              <span className="h-10 w-full rounded-md border border-border/70 bg-muted/15" />
+            ) : (
+              <>
+                <span className="h-6 flex-1 rounded-md border border-border/70 bg-muted/20" />
+                <span className="h-6 flex-1 rounded-md border border-border/70 bg-muted/10" />
+                <span className="h-6 flex-1 rounded-md border border-border/70 bg-muted/5" />
+              </>
+            )}
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">{option.description}</p>
         </button>
       ))}
     </div>
   );
+}
+
+function CardStyleCards({
+  value,
+  onChange,
+}: {
+  value: ContentListCardStyle;
+  onChange?: (next: ContentListCardStyle) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      {cardStyleOptions.map((option) => (
+        <button
+          key={option.id}
+          type="button"
+          onClick={() => onChange?.(option.id)}
+          className={cn(
+            "w-full rounded-lg border p-3 text-left transition",
+            value === option.id
+              ? "border-primary bg-primary/5"
+              : "border-border bg-background hover:border-primary/50"
+          )}
+        >
+          <div className="flex items-start justify-between gap-2">
+            <p className="min-w-0 text-sm font-semibold leading-tight">{option.label}</p>
+            <Badge className="shrink-0" variant={value === option.id ? "default" : "outline"}>
+              {value === option.id ? "Selected" : "Pick"}
+            </Badge>
+          </div>
+          <div
+            className="mt-3 rounded-md border p-3 text-xs text-muted-foreground shadow-sm"
+            aria-hidden="true"
+          >
+            {option.id === "minimal" ? (
+              <div className="border border-dashed border-border/60 bg-transparent p-3">
+                Minimal card
+              </div>
+            ) : option.id === "elevated" ? (
+              <div className="rounded-md border border-border/70 bg-background p-3 shadow-md">
+                Elevated card
+              </div>
+            ) : (
+              <div className="rounded-md border border-border/70 bg-muted/15 p-3">
+                Outlined card
+              </div>
+            )}
+          </div>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function ColorField({
+  label,
+  value,
+  onChange,
+  placeholder,
+  pickerFallback,
+  onClear,
+}: {
+  label: string;
+  value: string | undefined;
+  onChange: (next: string) => void;
+  placeholder: string;
+  pickerFallback: string;
+  onClear?: () => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <ClearableFieldHeader label={label} value={value} onClear={onClear} />
+      <div className="grid grid-cols-[2.5rem_1fr] gap-2">
+        <Input
+          type="color"
+          value={resolvePickerColor(value, pickerFallback)}
+          onChange={(event) => onChange(event.target.value)}
+          className="h-9 w-10 p-1"
+        />
+        <Input
+          value={value ?? ""}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={placeholder}
+        />
+      </div>
+    </div>
+  );
+}
+
+type ContentTypeOption = {
+  id: string;
+  label: string;
+  searchText: string;
+};
+
+type AuthorOption = {
+  id: string;
+  label: string;
+  searchText: string;
+};
+
+const technicalContentTypeSuffixPattern = /\s+[0-9a-f]{8,}$/i;
+const TAXONOMY_DATALIST_ID = "content-list-taxonomy-suggestions";
+const NO_AUTHOR_VALUE = "__no_author__";
+
+const collapseWhitespace = (value: string) => value.replace(/\s+/g, " ").trim();
+
+const resolveFriendlyContentTypeBaseLabel = (entry: ContentTypeSummary) => {
+  const strippedName = collapseWhitespace(
+    entry.name.replace(technicalContentTypeSuffixPattern, "")
+  );
+  if (strippedName.length > 0) return strippedName;
+  return collapseWhitespace(entry.slug) || entry.id;
+};
+
+function buildContentTypeOptions(types: ContentTypeSummary[]) {
+  const counts = new Map<string, number>();
+  types.forEach((entry) => {
+    const baseLabel = resolveFriendlyContentTypeBaseLabel(entry).toLowerCase();
+    counts.set(baseLabel, (counts.get(baseLabel) ?? 0) + 1);
+  });
+
+  return types.map((entry) => {
+    const baseLabel = resolveFriendlyContentTypeBaseLabel(entry);
+    const duplicateCount = counts.get(baseLabel.toLowerCase()) ?? 0;
+    const label = duplicateCount > 1 ? `${baseLabel} (${entry.slug})` : baseLabel;
+    return {
+      id: entry.id,
+      label,
+      searchText: `${label} ${entry.name} ${entry.slug} ${entry.id}`.toLowerCase(),
+    } satisfies ContentTypeOption;
+  });
+}
+
+function buildAuthorOptions(users: AdminUser[]) {
+  return [...users]
+    .sort((left, right) => {
+      const leftLabel = (left.name?.trim() || left.email).toLowerCase();
+      const rightLabel = (right.name?.trim() || right.email).toLowerCase();
+      return leftLabel.localeCompare(rightLabel);
+    })
+    .map((user) => ({
+      id: user.id,
+      label: user.name?.trim() || user.email,
+      searchText: `${user.name ?? ""} ${user.email} ${user.id}`.toLowerCase(),
+    })) satisfies AuthorOption[];
 }
 
 function ContentTypeSelect({
@@ -168,6 +359,7 @@ function ContentTypeSelect({
   const [types, setTypes] = useState<ContentTypeSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -193,15 +385,26 @@ function ContentTypeSelect({
     };
   }, []);
 
+  const options = buildContentTypeOptions(types);
+  const searchText = search.trim().toLowerCase();
+  const filteredOptions =
+    searchText.length > 0
+      ? options.filter((entry) => entry.searchText.includes(searchText))
+      : options;
   const selectValue = value.trim().length > 0 ? value : NO_CONTENT_TYPE_VALUE;
   const selectedLabel =
     selectValue === NO_CONTENT_TYPE_VALUE
       ? "No content type selected"
-      : (types.find((entry) => entry.id === selectValue)?.name ?? "Selected content type");
+      : (options.find((entry) => entry.id === selectValue)?.label ?? "Selected content type");
 
   return (
     <div className="space-y-2">
       <p className="text-sm font-medium">Content type</p>
+      <Input
+        value={search}
+        onChange={(event) => setSearch(event.target.value)}
+        placeholder="Search content types"
+      />
       <Select
         value={selectValue}
         onValueChange={(next) => onChange(next === NO_CONTENT_TYPE_VALUE ? "" : next)}
@@ -211,14 +414,173 @@ function ContentTypeSelect({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value={NO_CONTENT_TYPE_VALUE}>No content type selected</SelectItem>
-          {types.map((entry) => (
+          {filteredOptions.map((entry) => (
             <SelectItem key={entry.id} value={entry.id}>
-              {entry.name}
+              {entry.label}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
       {loading ? <p className="text-xs text-muted-foreground">Loading content types...</p> : null}
+      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+    </div>
+  );
+}
+
+function TaxonomySuggestionsInput({
+  contentTypeId,
+  value,
+  onChange,
+}: {
+  contentTypeId: string;
+  value: string;
+  onChange: (next: string) => void;
+}) {
+  const trimmedContentTypeId = contentTypeId.trim();
+  const [suggestions, setSuggestions] = useState<ContentTerm[]>([]);
+  const [loading, setLoading] = useState(trimmedContentTypeId.length > 0);
+  const [error, setError] = useState<string | null>(null);
+  const resolvedSuggestions = trimmedContentTypeId.length === 0 ? [] : suggestions;
+  const resolvedLoading = trimmedContentTypeId.length === 0 ? false : loading;
+  const resolvedError = trimmedContentTypeId.length === 0 ? null : error;
+
+  useEffect(() => {
+    if (trimmedContentTypeId.length === 0) {
+      return;
+    }
+
+    let active = true;
+    getTaxonomyOverview(trimmedContentTypeId)
+      .then((overview) => {
+        if (!active) return;
+        const merged = [...overview.terms.categories, ...overview.terms.tags];
+        const unique = new Map<string, ContentTerm>();
+        merged.forEach((term) => {
+          const key = term.name.trim().toLowerCase();
+          if (!key) return;
+          if (!unique.has(key)) unique.set(key, term);
+        });
+        setSuggestions(
+          [...unique.values()].sort((left, right) => left.name.localeCompare(right.name))
+        );
+      })
+      .catch((err) => {
+        if (!active) return;
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load taxonomy suggestions.");
+        }
+      })
+      .finally(() => {
+        if (!active) return;
+        setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [trimmedContentTypeId]);
+
+  return (
+    <div className="space-y-2">
+      <p className="text-sm font-medium">Taxonomy/tag filter</p>
+      <Input
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder="e.g. featured or case-study"
+        list={resolvedSuggestions.length > 0 ? TAXONOMY_DATALIST_ID : undefined}
+      />
+      {resolvedSuggestions.length > 0 ? (
+        <datalist id={TAXONOMY_DATALIST_ID}>
+          {resolvedSuggestions.map((term) => (
+            <option key={term.id} value={term.name} />
+          ))}
+        </datalist>
+      ) : null}
+      {resolvedLoading ? (
+        <p className="text-xs text-muted-foreground">Loading taxonomy suggestions...</p>
+      ) : null}
+      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      {!resolvedLoading &&
+      !resolvedError &&
+      resolvedSuggestions.length === 0 &&
+      trimmedContentTypeId.length > 0 ? (
+        <p className="text-xs text-muted-foreground">
+          No taxonomy suggestions available for this content type.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function AuthorSelect({ value, onChange }: { value: string; onChange: (next: string) => void }) {
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    listAdminUsers()
+      .then((items) => {
+        if (!active) return;
+        setUsers(items);
+      })
+      .catch((err) => {
+        if (!active) return;
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load authors.");
+        }
+      })
+      .finally(() => {
+        if (!active) return;
+        setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const options = buildAuthorOptions(users);
+  const searchText = search.trim().toLowerCase();
+  const filteredOptions =
+    searchText.length > 0
+      ? options.filter((entry) => entry.searchText.includes(searchText))
+      : options;
+  const selectValue = value.trim().length > 0 ? value : NO_AUTHOR_VALUE;
+  const selectedLabel =
+    selectValue === NO_AUTHOR_VALUE
+      ? "No author filter"
+      : (options.find((entry) => entry.id === selectValue)?.label ?? "Selected author");
+
+  return (
+    <div className="space-y-2">
+      <p className="text-sm font-medium">Author filter</p>
+      <Input
+        value={search}
+        onChange={(event) => setSearch(event.target.value)}
+        placeholder="Search authors"
+      />
+      <Select
+        value={selectValue}
+        onValueChange={(next) => onChange(next === NO_AUTHOR_VALUE ? "" : next)}
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="Select author">{selectedLabel}</SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={NO_AUTHOR_VALUE}>No author filter</SelectItem>
+          {filteredOptions.map((entry) => (
+            <SelectItem key={entry.id} value={entry.id}>
+              {entry.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {loading ? <p className="text-xs text-muted-foreground">Loading authors...</p> : null}
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
     </div>
   );
@@ -357,6 +719,7 @@ function updateValue(
 
 type SourceData = NonNullable<ContentListData["source"]>;
 type FilterData = NonNullable<ContentListData["filters"]>;
+type PaginationData = NonNullable<ContentListData["pagination"]>;
 type FieldData = NonNullable<ContentListData["fields"]>;
 type EmptyStateData = NonNullable<ContentListData["emptyState"]>;
 type StyleData = NonNullable<ContentListData["style"]>;
@@ -386,9 +749,18 @@ function updateSourceMode(
       ...current.source,
       mode,
       ...(mode === "listing"
-        ? { contentTypeId: "" }
+        ? { contentTypeId: "", statusScope: "published" as const }
         : { listingQueryId: "", listingTemplateId: "" }),
     },
+    filters:
+      mode === "listing"
+        ? {
+            ...current.filters,
+            authorId: "",
+            searchQuery: "",
+            featuredOnly: false,
+          }
+        : current.filters,
   }));
 }
 
@@ -401,6 +773,20 @@ function updateFilters(
     ...current,
     filters: {
       ...current.filters,
+      ...patch,
+    },
+  }));
+}
+
+function updatePagination(
+  value: ContentListData,
+  onChange: (next: ContentListData) => void,
+  patch: Partial<PaginationData>
+) {
+  updateValue(value, onChange, (current) => ({
+    ...current,
+    pagination: {
+      ...current.pagination,
       ...patch,
     },
   }));
@@ -560,6 +946,8 @@ export function ContentListVisualEditor({
   const resolved = normalizeValue(value);
   const resolvedVariant = resolveContentListVariant(variant);
   const sourceMode = resolved.source?.mode ?? "legacy";
+  const supportsColumns = resolvedVariant === "cards";
+  const showImage = resolved.fields?.showImage ?? true;
 
   return (
     <div className="space-y-4">
@@ -569,26 +957,35 @@ export function ContentListVisualEditor({
       >
         <VariantCards value={resolvedVariant} onChange={onVariantChange} />
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Columns</p>
-            <Select
-              value={resolved.style?.columns ?? "3"}
-              onValueChange={(next) =>
-                updateStyle(value, onChange, { columns: next as "1" | "2" | "3" })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Columns" />
-              </SelectTrigger>
-              <SelectContent>
-                {columnsOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {supportsColumns ? (
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Columns</p>
+              <Select
+                value={resolved.style?.columns ?? "3"}
+                onValueChange={(next) =>
+                  updateStyle(value, onChange, { columns: next as "1" | "2" | "3" })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Columns" />
+                </SelectTrigger>
+                <SelectContent>
+                  {columnsOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Columns</p>
+              <div className="rounded-md border border-dashed border-border/70 px-3 py-2 text-xs text-muted-foreground">
+                Columns only affect the cards variant.
+              </div>
+            </div>
+          )}
           <div className="space-y-2">
             <p className="text-sm font-medium">Gap</p>
             <Select
@@ -612,23 +1009,10 @@ export function ContentListVisualEditor({
         </div>
         <div className="space-y-2">
           <p className="text-sm font-medium">Card style</p>
-          <Select
+          <CardStyleCards
             value={resolved.style?.cardStyle ?? "outlined"}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, { cardStyle: next as ContentListCardStyle })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Card style" />
-            </SelectTrigger>
-            <SelectContent>
-              {cardStyleOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            onChange={(next) => updateStyle(value, onChange, { cardStyle: next })}
+          />
         </div>
       </EditorSection>
 
@@ -636,25 +1020,12 @@ export function ContentListVisualEditor({
         title="Source and filters"
         description="Configure data source and basic filtering behavior."
       >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Source mode</p>
-          <Select
-            value={sourceMode}
-            onValueChange={(next) =>
-              updateSourceMode(value, onChange, next as ContentListSourceMode)
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select source mode" />
-            </SelectTrigger>
-            <SelectContent>
-              {sourceModeOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="rounded-md border border-border/70 px-3 py-2 text-xs text-muted-foreground">
+          Source mode:{" "}
+          <span className="font-medium text-foreground">
+            {sourceMode === "listing" ? "By listing query" : "By content type"}
+          </span>
+          . Change source mode in Wizard or Advanced.
         </div>
         {sourceMode === "listing" ? (
           <ListingSourceSelect
@@ -711,18 +1082,132 @@ export function ContentListVisualEditor({
                 </Select>
               </div>
             </div>
+            <TaxonomySuggestionsInput
+              key={resolved.source?.contentTypeId ?? ""}
+              contentTypeId={resolved.source?.contentTypeId ?? ""}
+              value={resolved.filters?.taxonomy ?? ""}
+              onChange={(next) => updateFilters(value, onChange, { taxonomy: next })}
+            />
+          </>
+        )}
+      </EditorSection>
+
+      <EditorSection
+        title="Section context"
+        description="Optional heading copy plus guidance for the saved-data canvas preview."
+      >
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Section title</p>
+          <Input
+            value={resolved.title ?? ""}
+            onChange={(event) =>
+              updateValue(value, onChange, (current) => ({
+                ...current,
+                title: event.target.value,
+              }))
+            }
+            placeholder="Optional section title"
+          />
+        </div>
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Section description</p>
+          <Textarea
+            value={resolved.description ?? ""}
+            onChange={(event) =>
+              updateValue(value, onChange, (current) => ({
+                ...current,
+                description: event.target.value,
+              }))
+            }
+            rows={3}
+            placeholder="Optional section description"
+          />
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Builder canvas shows saved resolved data. Save or open Preview to refresh live results.
+        </p>
+      </EditorSection>
+
+      <EditorSection
+        title="Pagination and actions"
+        description="Control page navigation and the follow-up action shown below the list."
+      >
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Navigation mode</p>
+          <Select
+            value={resolved.pagination?.mode ?? "none"}
+            onValueChange={(next) =>
+              updatePagination(value, onChange, { mode: next as ContentListPaginationMode })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Navigation mode" />
+            </SelectTrigger>
+            <SelectContent>
+              {paginationModeOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        {(resolved.pagination?.mode ?? "none") !== "none" ? (
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Page size</p>
+            <Input
+              type="number"
+              min={1}
+              max={24}
+              value={String(resolved.pagination?.pageSize ?? resolved.source?.limit ?? 6)}
+              onChange={(event) =>
+                updatePagination(value, onChange, {
+                  pageSize: normalizeContentListLimit(Number(event.target.value)),
+                })
+              }
+            />
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            No navigation keeps the current item-limit behavior from the source setup.
+          </p>
+        )}
+        {(resolved.pagination?.mode ?? "none") === "load-more" ? (
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Load more label</p>
+            <Input
+              value={resolved.pagination?.loadMoreLabel ?? "Load more"}
+              onChange={(event) =>
+                updatePagination(value, onChange, { loadMoreLabel: event.target.value })
+              }
+              placeholder="Load more"
+            />
+          </div>
+        ) : null}
+        {(resolved.pagination?.mode ?? "none") === "view-all" ? (
+          <>
             <div className="space-y-2">
-              <p className="text-sm font-medium">Taxonomy/tag filter</p>
+              <p className="text-sm font-medium">View all link</p>
               <Input
-                value={resolved.filters?.taxonomy ?? ""}
+                value={resolved.pagination?.viewAllHref ?? ""}
                 onChange={(event) =>
-                  updateFilters(value, onChange, { taxonomy: event.target.value })
+                  updatePagination(value, onChange, { viewAllHref: event.target.value })
                 }
-                placeholder="e.g. featured or case-study"
+                placeholder="/articles"
+              />
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">View all label</p>
+              <Input
+                value={resolved.pagination?.viewAllLabel ?? "View all"}
+                onChange={(event) =>
+                  updatePagination(value, onChange, { viewAllLabel: event.target.value })
+                }
+                placeholder="View all"
               />
             </div>
           </>
-        )}
+        ) : null}
       </EditorSection>
 
       <EditorSection
@@ -758,6 +1243,70 @@ export function ContentListVisualEditor({
               onCheckedChange={(checked) => updateFields(value, onChange, { showCta: checked })}
             />
           </label>
+        </div>
+        {showImage ? (
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Image ratio</p>
+            <Select
+              value={resolved.style?.imageAspect ?? "standard"}
+              onValueChange={(next) =>
+                updateStyle(value, onChange, { imageAspect: next as ContentListImageAspect })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Image ratio" />
+              </SelectTrigger>
+              <SelectContent>
+                {imageAspectOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Enable &quot;Show image&quot; to configure image ratio.
+          </p>
+        )}
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Tag display</p>
+            <Select
+              value={resolved.style?.tagMode ?? "meta-line"}
+              onValueChange={(next) =>
+                updateStyle(value, onChange, { tagMode: next as ContentListTagMode })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Tag display" />
+              </SelectTrigger>
+              <SelectContent>
+                {tagModeOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {(resolved.style?.tagMode ?? "meta-line") !== "hidden" ? (
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Tag limit</p>
+              <Input
+                type="number"
+                min={1}
+                max={4}
+                value={String(resolved.style?.tagLimit ?? 2)}
+                onChange={(event) =>
+                  updateStyle(value, onChange, {
+                    tagLimit: Math.min(4, Math.max(1, Math.floor(Number(event.target.value) || 1))),
+                  })
+                }
+              />
+            </div>
+          ) : null}
         </div>
         <div className="space-y-2">
           <p className="text-sm font-medium">CTA label</p>
@@ -824,63 +1373,61 @@ export function ContentListAdvancedEditor({ value, onChange }: WidgetEditorProps
             </SelectContent>
           </Select>
         </div>
-        {sourceMode === "listing" ? (
-          <ListingSourceSelect
-            queryId={resolved.source?.listingQueryId ?? ""}
-            templateId={resolved.source?.listingTemplateId ?? ""}
-            onQueryChange={(next) => updateSource(value, onChange, { listingQueryId: next })}
-            onTemplateChange={(next) => updateSource(value, onChange, { listingTemplateId: next })}
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Item limit</p>
+          <Input
+            type="number"
+            min={1}
+            max={24}
+            value={String(resolved.source?.limit ?? 6)}
+            onChange={(event) =>
+              updateSource(value, onChange, {
+                limit: normalizeContentListLimit(Number(event.target.value)),
+              })
+            }
           />
-        ) : null}
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Item limit</p>
-            <Input
-              type="number"
-              min={1}
-              max={24}
-              value={String(resolved.source?.limit ?? 6)}
-              onChange={(event) =>
-                updateSource(value, onChange, {
-                  limit: normalizeContentListLimit(Number(event.target.value)),
-                })
+        </div>
+        {sourceMode === "listing" ? (
+          <>
+            <ListingSourceSelect
+              queryId={resolved.source?.listingQueryId ?? ""}
+              templateId={resolved.source?.listingTemplateId ?? ""}
+              onQueryChange={(next) => updateSource(value, onChange, { listingQueryId: next })}
+              onTemplateChange={(next) =>
+                updateSource(value, onChange, { listingTemplateId: next })
               }
             />
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Author id filter</p>
-            <Input
+            <p className="text-xs text-muted-foreground">
+              Listing mode uses filters and sorting from the selected Listings query.
+            </p>
+          </>
+        ) : (
+          <>
+            <AuthorSelect
               value={resolved.filters?.authorId ?? ""}
-              onChange={(event) => updateFilters(value, onChange, { authorId: event.target.value })}
-              placeholder="Optional author UUID"
-              disabled={sourceMode === "listing"}
+              onChange={(next) => updateFilters(value, onChange, { authorId: next })}
             />
-          </div>
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Search query</p>
-          <Input
-            value={resolved.filters?.searchQuery ?? ""}
-            onChange={(event) =>
-              updateFilters(value, onChange, { searchQuery: event.target.value })
-            }
-            placeholder="Title, excerpt, tags"
-            disabled={sourceMode === "listing"}
-          />
-        </div>
-        <label className="flex items-center justify-between rounded-md border border-border/70 px-3 py-2">
-          <span className="text-sm">Featured only</span>
-          <Switch
-            checked={resolved.filters?.featuredOnly ?? false}
-            onCheckedChange={(checked) => updateFilters(value, onChange, { featuredOnly: checked })}
-            disabled={sourceMode === "listing"}
-          />
-        </label>
-        {sourceMode === "listing" ? (
-          <p className="text-xs text-muted-foreground">
-            Listing mode uses filters and sorting from the selected Listings query.
-          </p>
-        ) : null}
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Search query</p>
+              <Input
+                value={resolved.filters?.searchQuery ?? ""}
+                onChange={(event) =>
+                  updateFilters(value, onChange, { searchQuery: event.target.value })
+                }
+                placeholder="Title, excerpt, tags"
+              />
+            </div>
+            <label className="flex items-center justify-between rounded-md border border-border/70 px-3 py-2">
+              <span className="text-sm">Featured only</span>
+              <Switch
+                checked={resolved.filters?.featuredOnly ?? false}
+                onCheckedChange={(checked) =>
+                  updateFilters(value, onChange, { featuredOnly: checked })
+                }
+              />
+            </label>
+          </>
+        )}
       </EditorSection>
 
       <EditorSection
@@ -903,14 +1450,14 @@ export function ContentListAdvancedEditor({ value, onChange }: WidgetEditorProps
             placeholder="var(--color-border)"
           />
         </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Text color</p>
-          <Input
-            value={resolved.style?.textColor ?? ""}
-            onChange={(event) => updateStyle(value, onChange, { textColor: event.target.value })}
-            placeholder="var(--color-text)"
-          />
-        </div>
+        <ColorField
+          label="Text color"
+          value={resolved.style?.textColor}
+          onChange={(next) => updateStyle(value, onChange, { textColor: next })}
+          onClear={() => clearStyle(value, onChange, "textColor")}
+          placeholder="var(--color-text)"
+          pickerFallback="#0f172a"
+        />
       </EditorSection>
 
       <EditorSection

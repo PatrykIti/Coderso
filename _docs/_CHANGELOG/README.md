@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 852 | 2026-05-18 | TASK-262 content list followups | CMS Widgets/Admin UI/QA |
 | 851 | 2026-05-18 | TASK-261 contact widget closure | CMS Widgets/Admin UI/QA |
 | 850 | 2026-05-17 | TASK-260 compare timeline widget followups | CMS Widgets/Admin UI/QA |
 | 849 | 2026-05-18 | TASK-259 booking calendar closure | CMS Widgets/Admin UI/QA |

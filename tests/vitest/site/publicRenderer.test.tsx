@@ -4,20 +4,16 @@ import React from "react";
 import { expect, test } from "vitest";
 import type { ComponentType } from "react";
 
-import { renderPublicPageHtml, renderPublicPageRuntimeHtml } from "../../../core/site/renderPublicPage";
 import {
-  createHeroWidget,
-  heroDefaults,
-  type HeroData,
-} from "../../../core/widgets/core/hero";
+  renderPublicPageHtml,
+  renderPublicPageRuntimeHtml,
+} from "../../../core/site/renderPublicPage";
+import { createHeroWidget, heroDefaults, type HeroData } from "../../../core/widgets/core/hero";
 import {
   createContentListWidget,
   type ContentListData,
 } from "../../../core/widgets/core/contentList";
-import {
-  createPostsFeedWidget,
-  type PostsFeedData,
-} from "../../../core/widgets/core/postsFeed";
+import { createPostsFeedWidget, type PostsFeedData } from "../../../core/widgets/core/postsFeed";
 import {
   createEntryTeaserWidget,
   type EntryTeaserData,
@@ -30,15 +26,11 @@ import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import type { WidgetEditorProps } from "../../../core/widgets/types";
 
 const StubEditor: ComponentType<WidgetEditorProps<HeroData>> = () => null;
-const StubContentListEditor: ComponentType<WidgetEditorProps<ContentListData>> = () =>
-  null;
-const StubPostsFeedEditor: ComponentType<WidgetEditorProps<PostsFeedData>> = () =>
-  null;
-const StubEntryTeaserEditor: ComponentType<WidgetEditorProps<EntryTeaserData>> = () =>
-  null;
+const StubContentListEditor: ComponentType<WidgetEditorProps<ContentListData>> = () => null;
+const StubPostsFeedEditor: ComponentType<WidgetEditorProps<PostsFeedData>> = () => null;
+const StubEntryTeaserEditor: ComponentType<WidgetEditorProps<EntryTeaserData>> = () => null;
 
-const StubTemplateSectionEditor: ComponentType<WidgetEditorProps<TemplateSectionData>> = () =>
-  null;
+const StubTemplateSectionEditor: ComponentType<WidgetEditorProps<TemplateSectionData>> = () => null;
 
 const DummyWidgetEditor: ComponentType<WidgetEditorProps<Record<string, unknown>>> = () => null;
 
@@ -54,8 +46,8 @@ test("renderPublicPageHtml renders title and preview banner", () => {
   expect(html).toContain("<title>About Us</title>");
   expect(html).toContain("Preview mode");
   expect(html).toContain("/site/assets/site.css");
-  expect(html).toContain("rel=\"preload\"");
-  expect(html).toContain("as=\"style\"");
+  expect(html).toContain('rel="preload"');
+  expect(html).toContain('as="style"');
   expect(html).toContain("body{opacity:0}");
   expect(html).toContain("--color-bg:#ffffff");
 });
@@ -73,7 +65,7 @@ test("renderPublicPageHtml includes dev module scripts when provided", () => {
 
   expect(html).toContain("http://localhost:5174/site/@vite/client");
   expect(html).toContain("http://localhost:5174/site/main.ts");
-  expect(html).toContain("type=\"module\"");
+  expect(html).toContain('type="module"');
 });
 
 test("renderPublicPageHtml hides preview until load when using dev modules", () => {
@@ -296,6 +288,216 @@ test("renderPublicPageHtml renders content list resolved payload deterministical
   expect(html).toContain('data-content-list-state="ready"');
 });
 
+test("renderPublicPageHtml renders content list image aspect and CTA fallback markers", () => {
+  clearWidgets();
+  registerWidget(
+    createContentListWidget({
+      wizard: StubContentListEditor,
+      visual: StubContentListEditor,
+      advanced: StubContentListEditor,
+    })
+  );
+
+  const html = renderPublicPageHtml({
+    title: "Blog",
+    blocks: [
+      {
+        id: "content-list-2",
+        type: "content-list",
+        variant: "cards",
+        data: {
+          source: {
+            contentTypeId: "blog-type-id",
+            statusScope: "published",
+            limit: 6,
+            sort: "published-desc",
+          },
+          filters: {},
+          fields: {
+            showImage: true,
+            showExcerpt: true,
+            showMeta: true,
+            showCta: true,
+          },
+          emptyState: {
+            title: "No posts",
+            description: "Publish your first post.",
+          },
+          style: {
+            columns: "2",
+            gap: "md",
+            cardStyle: "outlined",
+            imageAspect: "wide",
+            ctaLabel: "Read post",
+            backgroundColor: "var(--color-bg)",
+            borderColor: "var(--color-border)",
+          },
+          resolved: {
+            items: [
+              {
+                id: "post-1",
+                title: "First post",
+                excerpt: "Post summary.",
+                imageSrc: "/media/first-post.jpg",
+                status: "published",
+                publishedAt: "2026-02-08T10:00:00.000Z",
+              },
+            ],
+            total: 1,
+            sourceTypeId: "blog-type-id",
+            sourceTypeSlug: "blog",
+            resolvedAt: "2026-02-08T10:01:00.000Z",
+          },
+        },
+      },
+    ],
+  });
+
+  expect(html).toContain("aspect-[16/9]");
+  expect(html).toContain('aria-disabled="true"');
+  expect(html).toContain("Read post");
+  expect(html).not.toContain('href="/blog/first-post"');
+});
+
+test("renderPublicPageHtml renders content list section context and listing empty copy", () => {
+  clearWidgets();
+  registerWidget(
+    createContentListWidget({
+      wizard: StubContentListEditor,
+      visual: StubContentListEditor,
+      advanced: StubContentListEditor,
+    })
+  );
+
+  const html = renderPublicPageHtml({
+    title: "Blog",
+    blocks: [
+      {
+        id: "content-list-3",
+        type: "content-list",
+        variant: "cards",
+        data: {
+          title: "Latest work",
+          description: "Fresh additions from the listing query.",
+          source: {
+            mode: "listing",
+            listingQueryId: "query-1",
+            listingTemplateId: "template-1",
+            contentTypeId: "",
+            statusScope: "published",
+            limit: 6,
+            sort: "published-desc",
+          },
+          filters: {},
+          fields: {
+            showImage: false,
+            showExcerpt: true,
+            showMeta: true,
+            showCta: true,
+          },
+          emptyState: {
+            title: "No posts",
+            description: "Adjust filters or publish entries for this content type.",
+          },
+          style: {
+            columns: "2",
+            gap: "md",
+            cardStyle: "outlined",
+            ctaLabel: "Read post",
+            backgroundColor: "var(--color-bg)",
+            borderColor: "var(--color-border)",
+          },
+          resolved: {
+            items: [],
+            total: 0,
+            listingQueryId: "query-1",
+            listingTemplateId: "template-1",
+            resolvedAt: "2026-02-08T10:01:00.000Z",
+          },
+        },
+      },
+    ],
+  });
+
+  expect(html).toContain('aria-labelledby="content-list-3-title"');
+  expect(html).toContain("Latest work");
+  expect(html).toContain("Fresh additions from the listing query.");
+  expect(html).toContain("Adjust the listing query or publish matching entries.");
+  expect(html).not.toContain("Adjust filters or publish entries for this content type.");
+});
+
+test("renderPublicPageHtml renders content list tag badges when configured", () => {
+  clearWidgets();
+  registerWidget(
+    createContentListWidget({
+      wizard: StubContentListEditor,
+      visual: StubContentListEditor,
+      advanced: StubContentListEditor,
+    })
+  );
+
+  const html = renderPublicPageHtml({
+    title: "Blog",
+    blocks: [
+      {
+        id: "content-list-4",
+        type: "content-list",
+        variant: "cards",
+        data: {
+          source: {
+            contentTypeId: "blog-type-id",
+            statusScope: "published",
+            limit: 6,
+            sort: "published-desc",
+          },
+          filters: {},
+          fields: {
+            showImage: false,
+            showExcerpt: true,
+            showMeta: true,
+            showCta: true,
+          },
+          emptyState: {
+            title: "No posts",
+            description: "Publish your first post.",
+          },
+          style: {
+            columns: "2",
+            gap: "md",
+            cardStyle: "outlined",
+            tagMode: "badges",
+            tagLimit: 1,
+            ctaLabel: "Read post",
+            backgroundColor: "var(--color-bg)",
+            borderColor: "var(--color-border)",
+            textColor: "var(--color-text)",
+          },
+          resolved: {
+            items: [
+              {
+                id: "post-1",
+                title: "First post",
+                href: "/blog/first-post",
+                excerpt: "Post summary.",
+                tags: ["featured", "news"],
+                status: "published",
+                publishedAt: "2026-02-08T10:00:00.000Z",
+              },
+            ],
+            total: 1,
+            sourceTypeId: "blog-type-id",
+            sourceTypeSlug: "blog",
+            resolvedAt: "2026-02-08T10:01:00.000Z",
+          },
+        },
+      },
+    ],
+  });
+
+  expect(html).toContain("featured");
+  expect(html).not.toContain("featured, news");
+});
+
 test("renderPublicPageHtml renders entry teaser resolved payload deterministically", () => {
   clearWidgets();
   registerWidget(
@@ -461,7 +663,6 @@ test("renderPublicPageRuntimeHtml normalizes template keys for runtime markers",
   expect(html).toContain('data-template="page-about-us"');
 });
 
-
 test("renderPublicPageHtml renders template sections deterministically", () => {
   clearWidgets();
   registerWidget(
@@ -498,9 +699,7 @@ test("renderPublicPageHtml renders template sections deterministically", () => {
           templateId: "template-1",
           templateName: "Hero Cluster",
           resolved: {
-            blocks: [
-              { id: "dummy-1", type: "dummy", variant: "default", data: {} },
-            ],
+            blocks: [{ id: "dummy-1", type: "dummy", variant: "default", data: {} }],
           },
         },
       },

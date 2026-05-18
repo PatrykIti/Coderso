@@ -240,6 +240,7 @@ const hydrateRuntimeBlock = async (
       preview: options.preview,
       contentRoutes: options.contentRoutes,
       runtimeSearchParams: options.runtimeSearchParams,
+      blockId: block.id,
     });
     nextBlock = {
       ...block,
