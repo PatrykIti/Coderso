@@ -6,7 +6,7 @@
 **Category:** Widgets + Documentation + Playwright QA + Changelog
 **Estimated Effort:** Medium
 **Dependencies:** TASK-265-01, TASK-265-02, TASK-265-03, TASK-265-04, TASK-265-06
-**Status:** To Do
+**Status:** Done (2026-05-18)
 
 ---
 

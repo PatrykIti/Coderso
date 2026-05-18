@@ -4,19 +4,13 @@ import { listEntries } from "./entryService";
 import { POST_CONTENT_TYPE_SLUG } from "./postsService";
 import { getContentType, getContentTypeBySlug } from "./typeService";
 import { getListingQuery } from "./listingQueriesService";
-import {
-  getListingTemplate,
-  type ListingTemplateRecord,
-} from "./listingTemplatesService";
+import { getListingTemplate, type ListingTemplateRecord } from "./listingTemplatesService";
 import {
   findListingBindingState,
   resolveListingBindingIndex,
   type ListingRuntimeBindingState,
 } from "./listingRuntimeResolver";
-import {
-  executeListingQuery,
-  type ListingQuery,
-} from "./queryBuilderService";
+import { executeListingQuery, type ListingQuery } from "./queryBuilderService";
 import {
   parseListingRuntimeOverrides,
   resolveListingRuntimeOverrides,
@@ -67,8 +61,7 @@ const sanitizeHref = (value: string) =>
     ? value
     : "#";
 
-const normalizeText = (value: string | undefined) =>
-  (value ?? "").trim().toLowerCase();
+const normalizeText = (value: string | undefined) => (value ?? "").trim().toLowerCase();
 
 const trimToOptional = (value: string | undefined) => {
   if (!value) return undefined;
@@ -99,13 +92,7 @@ const resolveExcerpt = (entry: ListEntriesRow) => {
   const data = isRecord(entry.data) ? entry.data : {};
   const runtimeExcerpt = resolvePostRuntimeExcerpt(data, excerptMaxLength);
   if (runtimeExcerpt) return runtimeExcerpt;
-  const candidates = [
-    data.summary,
-    data.description,
-    data.lead,
-    data.intro,
-    data.content,
-  ];
+  const candidates = [data.summary, data.description, data.lead, data.intro, data.content];
   for (const candidate of candidates) {
     if (typeof candidate !== "string") continue;
     const plain = stripHtml(candidate);
@@ -125,9 +112,7 @@ const readMediaCandidate = (value: unknown): MediaCandidate | null => {
   if (typeof value === "string") {
     const trimmed = value.trim();
     if (!trimmed) return null;
-    return isLikelyUrl(trimmed)
-      ? { url: trimmed }
-      : { mediaId: trimmed };
+    return isLikelyUrl(trimmed) ? { url: trimmed } : { mediaId: trimmed };
   }
   if (Array.isArray(value)) {
     for (const candidate of value) {
@@ -193,11 +178,7 @@ const resolveSortableTime = (entry: ListEntriesRow, mode: "published" | "updated
 };
 
 const normalizeTagList = (tags: string[] | undefined) =>
-  Array.isArray(tags)
-    ? tags
-        .map((tag) => tag.trim())
-        .filter(Boolean)
-    : [];
+  Array.isArray(tags) ? tags.map((tag) => tag.trim()).filter(Boolean) : [];
 
 const isFeaturedEntry = (entry: ListEntriesRow) => {
   const tags = normalizeTagList(entry.tags as string[] | undefined);
@@ -292,10 +273,7 @@ export function sortContentListRuntimeEntries(
   );
 }
 
-const resolveDetailPathPattern = (
-  routes: ContentRouteSetting[],
-  typeSlug: string
-) => {
+const resolveDetailPathPattern = (routes: ContentRouteSetting[], typeSlug: string) => {
   const route = routes.find((entry) => entry.type === typeSlug && entry.enabled);
   return route?.detailPath ?? `/${typeSlug}/:slug`;
 };
@@ -394,10 +372,7 @@ const resolveTagsFromTemplateOrPaths = (
   row: Record<string, unknown>,
   bindingIndex: Record<string, ListingRuntimeBindingState>
 ) => {
-  const templateFieldState = resolveTemplateFieldState(bindingIndex, [
-    "tags",
-    "categories",
-  ]);
+  const templateFieldState = resolveTemplateFieldState(bindingIndex, ["tags", "categories"]);
   if (templateFieldState.matched) {
     if (!templateFieldState.visible) return [];
     return toStringList(templateFieldState.value);
@@ -436,10 +411,7 @@ const resolveImageCandidateFromListingRow = (
   return null;
 };
 
-const interpolateTemplateHref = (
-  template: string,
-  row: Record<string, unknown>
-) =>
+const interpolateTemplateHref = (template: string, row: Record<string, unknown>) =>
   template.replace(/\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}/g, (_, path: string) => {
     const value = readPathValue(row, path);
     return toDisplayString(value) ?? "";
@@ -458,8 +430,8 @@ const resolveTemplateActionHref = (
 };
 
 const resolvePostsRouteType = (contentRoutes: ContentRouteSetting[]) =>
-  contentRoutes.find((entry) => entry.enabled && isPostContentTypeSlug(entry.type))
-    ?.type ?? POST_CONTENT_TYPE_SLUG;
+  contentRoutes.find((entry) => entry.enabled && isPostContentTypeSlug(entry.type))?.type ??
+  POST_CONTENT_TYPE_SLUG;
 
 const resolveListingRouteMeta = async (
   query: ListingQuery,
@@ -522,7 +494,8 @@ async function resolveItemImage(
   candidate: MediaCandidate | null,
   cache: Map<string, { url: string; alt?: string } | null>
 ) {
-  if (!candidate) return { src: undefined as string | undefined, alt: undefined as string | undefined };
+  if (!candidate)
+    return { src: undefined as string | undefined, alt: undefined as string | undefined };
   if (candidate.url) {
     return { src: candidate.url, alt: candidate.alt };
   }
@@ -568,17 +541,13 @@ export async function mapEntriesToContentListItems(
 
   return Promise.all(
     entries.map(async (entry) => {
-      const imageCandidate = options.showImage
-        ? resolveImageCandidateFromEntry(entry)
-        : null;
+      const imageCandidate = options.showImage ? resolveImageCandidateFromEntry(entry) : null;
       const resolvedImage = await resolveItemImage(imageCandidate, mediaCache);
       return {
         id: entry.id,
         title: entry.title,
         slug: entry.slug,
-        href: sanitizeHref(
-          buildDetailHref(options.detailPathPattern, entry.slug, entry.id)
-        ),
+        href: sanitizeHref(buildDetailHref(options.detailPathPattern, entry.slug, entry.id)),
         excerpt: resolveExcerpt(entry),
         imageSrc: resolvedImage.src,
         imageAlt: resolvedImage.alt,
@@ -605,23 +574,10 @@ export async function mapListingRowsToContentListItems(
 
   return Promise.all(
     rows.map(async (row, index) => {
-      const bindingIndex = resolveListingBindingIndex(
-        row,
-        options.template?.config.fields
-      );
+      const bindingIndex = resolveListingBindingIndex(row, options.template?.config.fields);
 
-      const id = resolveStringFromTemplateOrPaths(
-        row,
-        bindingIndex,
-        ["id"],
-        ["id"]
-      );
-      const slug = resolveStringFromTemplateOrPaths(
-        row,
-        bindingIndex,
-        ["slug"],
-        ["slug"]
-      );
+      const id = resolveStringFromTemplateOrPaths(row, bindingIndex, ["id"], ["id"]);
+      const slug = resolveStringFromTemplateOrPaths(row, bindingIndex, ["slug"], ["slug"]);
       const title = resolveStringFromTemplateOrPaths(
         row,
         bindingIndex,
@@ -640,34 +596,21 @@ export async function mapListingRowsToContentListItems(
         ["author", "authorName"],
         ["author.name", "authorName", "name"]
       );
-      const status = resolveStringFromTemplateOrPaths(
-        row,
-        bindingIndex,
-        ["status"],
-        ["status"]
-      );
-      const publishedAtBinding = resolveTemplateFieldState(bindingIndex, [
-        "publishedAt",
-        "date",
-      ]);
-      const publishedAt =
-        publishedAtBinding.matched
-          ? publishedAtBinding.visible
-            ? toIsoDateString(publishedAtBinding.value)
-            : undefined
-          : toIsoDateString(readPathValue(row, "publishedAt")) ??
-            toIsoDateString(readPathValue(row, "updatedAt")) ??
-            toIsoDateString(readPathValue(row, "createdAt"));
+      const status = resolveStringFromTemplateOrPaths(row, bindingIndex, ["status"], ["status"]);
+      const publishedAtBinding = resolveTemplateFieldState(bindingIndex, ["publishedAt", "date"]);
+      const publishedAt = publishedAtBinding.matched
+        ? publishedAtBinding.visible
+          ? toIsoDateString(publishedAtBinding.value)
+          : undefined
+        : (toIsoDateString(readPathValue(row, "publishedAt")) ??
+          toIsoDateString(readPathValue(row, "updatedAt")) ??
+          toIsoDateString(readPathValue(row, "createdAt")));
 
       const hrefBinding = resolveTemplateFieldState(bindingIndex, ["href", "url"]);
       const hrefFromBindingRaw =
-        hrefBinding.matched && hrefBinding.visible
-          ? toDisplayString(hrefBinding.value)
-          : undefined;
+        hrefBinding.matched && hrefBinding.visible ? toDisplayString(hrefBinding.value) : undefined;
       const hrefFromBinding =
-        hrefFromBindingRaw !== undefined
-          ? sanitizeHref(hrefFromBindingRaw)
-          : undefined;
+        hrefFromBindingRaw !== undefined ? sanitizeHref(hrefFromBindingRaw) : undefined;
       const templateHref =
         !hrefBinding.matched && hrefFromBinding === undefined
           ? resolveTemplateActionHref(row, options.template ?? null)
@@ -676,8 +619,7 @@ export async function mapListingRowsToContentListItems(
         !hrefBinding.matched && hrefFromBinding === undefined
           ? resolveStringFromTemplateOrPaths(row, bindingIndex, ["href", "url"], ["href", "url"])
           : undefined;
-      const hrefFromRow =
-        hrefFromRowRaw !== undefined ? sanitizeHref(hrefFromRowRaw) : undefined;
+      const hrefFromRow = hrefFromRowRaw !== undefined ? sanitizeHref(hrefFromRowRaw) : undefined;
       const detailHref =
         !hrefBinding.matched && options.detailPathPattern && (slug || id)
           ? sanitizeHref(
@@ -733,6 +675,7 @@ export async function resolveListingContentListRuntimeData(
   if (!listingQueryId) {
     return {
       items: [],
+      rawRows: [],
       total: 0,
       sourceTypeId: "",
       sourceTypeSlug: "",
@@ -746,6 +689,7 @@ export async function resolveListingContentListRuntimeData(
   if (!listingQuery) {
     return {
       items: [],
+      rawRows: [],
       total: 0,
       sourceTypeId: "",
       sourceTypeSlug: "",
@@ -762,6 +706,7 @@ export async function resolveListingContentListRuntimeData(
   if (listingTemplateId && !listingTemplate) {
     return {
       items: [],
+      rawRows: [],
       total: 0,
       sourceTypeId: "",
       sourceTypeSlug: "",
@@ -778,30 +723,27 @@ export async function resolveListingContentListRuntimeData(
     : parseListingRuntimeOverrides(new URLSearchParams(), listingQueryId);
   const runtime = resolveListingRuntimeOverrides(baseQuery, runtimeDraft);
   const execution = await runtimeDeps.executeListing(runtime.query);
+  const rawRows = execution.rows as Record<string, unknown>[];
   const routeMeta = await resolveListingRouteMeta(
     listingQuery.query,
     options.contentRoutes,
     runtimeDeps
   );
-  const items = await mapListingRowsToContentListItems(
-    execution.rows as Record<string, unknown>[],
-    {
-      detailPathPattern: routeMeta.detailPathPattern,
-      showImage: Boolean(normalized.fields?.showImage),
-      template: listingTemplate,
-    }
-  );
+  const items = await mapListingRowsToContentListItems(rawRows, {
+    detailPathPattern: routeMeta.detailPathPattern,
+    showImage: Boolean(normalized.fields?.showImage),
+    template: listingTemplate,
+  });
 
   const runtimeMeta = {
     rejectedTokens: runtime.rejectedTokens,
-    ...(typeof runtime.searchQuery === "string"
-      ? { searchQuery: runtime.searchQuery }
-      : {}),
+    ...(typeof runtime.searchQuery === "string" ? { searchQuery: runtime.searchQuery } : {}),
     ...(typeof runtime.page === "number" ? { page: runtime.page } : {}),
   };
 
   return {
     items,
+    rawRows,
     total: execution.total,
     sourceTypeId: routeMeta.sourceTypeId,
     sourceTypeSlug: routeMeta.sourceTypeSlug,
@@ -857,16 +799,10 @@ export async function resolveContentListRuntimeData(
   const filtered = applyContentListRuntimeFilters(entries, normalized, {
     preview: options.preview,
   });
-  const sorted = sortContentListRuntimeEntries(
-    filtered,
-    source.sort ?? "published-desc"
-  );
+  const sorted = sortContentListRuntimeEntries(filtered, source.sort ?? "published-desc");
   const limit = normalizeContentListLimit(source.limit ?? 6);
   const sliced = sorted.slice(0, limit);
-  const detailPathPattern = resolveDetailPathPattern(
-    options.contentRoutes,
-    contentType.slug
-  );
+  const detailPathPattern = resolveDetailPathPattern(options.contentRoutes, contentType.slug);
   const items = await mapEntriesToContentListItems(sliced, {
     detailPathPattern,
     showImage: Boolean(normalized.fields?.showImage),

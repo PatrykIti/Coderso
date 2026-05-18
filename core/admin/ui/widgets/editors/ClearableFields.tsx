@@ -1,9 +1,18 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
+const colorSwatchPattern = /^#[0-9a-fA-F]{6}$/;
+const defaultColorSwatchFallback = "#000000";
+
 export function hasClearableFieldValue(value: unknown) {
   if (typeof value === "string") return value.trim().length > 0;
   return value !== undefined && value !== null;
+}
+
+export function resolveColorSwatchValue(value: string | undefined, fallback?: string) {
+  if (value && colorSwatchPattern.test(value)) return value;
+  if (fallback && colorSwatchPattern.test(fallback)) return fallback;
+  return defaultColorSwatchFallback;
 }
 
 export function ClearableFieldHeader({

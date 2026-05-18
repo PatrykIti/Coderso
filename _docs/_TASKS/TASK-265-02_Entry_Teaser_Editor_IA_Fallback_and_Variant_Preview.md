@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Editor IA
 **Estimated Effort:** Large
 **Dependencies:** TASK-265-01
-**Status:** To Do
+**Status:** Done (2026-05-18)
 
 ---
 

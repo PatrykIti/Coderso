@@ -6,7 +6,7 @@
 **Category:** Widgets + Runtime Render + Admin UI + Safe Links
 **Estimated Effort:** Medium
 **Dependencies:** TASK-265-01, TASK-265-02
-**Status:** To Do
+**Status:** Done (2026-05-18)
 
 ---
 

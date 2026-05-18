@@ -15,16 +15,12 @@ import { contentListDefaults, type ContentListData } from "../../widgets/core/co
 
 const featuredTagToken = "featured";
 
-const normalizeText = (value: string | undefined) =>
-  (value ?? "").trim().toLowerCase();
+const normalizeText = (value: string | undefined) => (value ?? "").trim().toLowerCase();
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-const resolveDetailPathPattern = (
-  routes: ContentRouteSetting[],
-  typeSlug: string
-) => {
+const resolveDetailPathPattern = (routes: ContentRouteSetting[], typeSlug: string) => {
   const route = routes.find((entry) => entry.type === typeSlug && entry.enabled);
   return route?.detailPath ?? `/${typeSlug}/:slug`;
 };
@@ -43,23 +39,26 @@ const isFeaturedEntry = (entry: ContentListResolverEntry) => {
   return entry.data.featured === true;
 };
 
+const isFeaturedListingRow = (row: Record<string, unknown>) => {
+  const tags = Array.isArray(row.tags)
+    ? row.tags
+        .filter((tag): tag is string => typeof tag === "string")
+        .map((tag) => normalizeText(tag))
+    : [];
+  if (tags.includes(featuredTagToken)) return true;
+  if (row.featured === true) return true;
+  if (!isRecord(row.data)) return false;
+  return row.data.featured === true;
+};
+
 const sortByFreshness = (entries: ContentListResolverEntry[]) =>
   [...entries].sort((a, b) => {
-    const aTs =
-      a.publishedAt?.getTime() ??
-      a.updatedAt.getTime() ??
-      0;
-    const bTs =
-      b.publishedAt?.getTime() ??
-      b.updatedAt.getTime() ??
-      0;
+    const aTs = a.publishedAt?.getTime() ?? a.updatedAt.getTime() ?? 0;
+    const bTs = b.publishedAt?.getTime() ?? b.updatedAt.getTime() ?? 0;
     return bTs - aTs;
   });
 
-const chooseTeaserEntry = (
-  entries: ContentListResolverEntry[],
-  config: EntryTeaserData
-) => {
+const chooseTeaserEntry = (entries: ContentListResolverEntry[], config: EntryTeaserData) => {
   const sourceMode = config.sourceMode ?? "latest";
   const sourceEntryId = config.source?.entryId?.trim();
   const sorted = sortByFreshness(entries);
@@ -79,6 +78,26 @@ const chooseTeaserEntry = (
   }
 
   return sorted[0] ?? null;
+};
+
+const chooseListingTeaserItem = (
+  items: EntryTeaserRuntimeItem[],
+  rawRows: Record<string, unknown>[],
+  config: EntryTeaserData
+) => {
+  const sourceMode = config.sourceMode ?? "latest";
+  if (sourceMode === "featured") {
+    const featuredIndex = rawRows.findIndex((row) => isFeaturedListingRow(row));
+    if (featuredIndex >= 0) {
+      return items[featuredIndex] ?? null;
+    }
+    if (config.fallback?.fallbackToLatest) {
+      return items[0] ?? null;
+    }
+    return null;
+  }
+
+  return items[0] ?? null;
 };
 
 export async function resolveEntryTeaserRuntimeData(
@@ -121,8 +140,13 @@ export async function resolveEntryTeaserRuntimeData(
       options,
       deps
     );
+    const listingItem = chooseListingTeaserItem(
+      listingResolved.items,
+      listingResolved.rawRows ?? [],
+      normalized
+    );
     return {
-      item: listingResolved.items[0] ?? null,
+      item: listingItem,
       sourceTypeId: listingResolved.sourceTypeId,
       sourceTypeSlug: listingResolved.sourceTypeSlug,
       listingQueryId: listingResolved.listingQueryId,
@@ -155,9 +179,7 @@ export async function resolveEntryTeaserRuntimeData(
   }
 
   const entries = await listEntries(contentType.id);
-  const available = options.preview
-    ? entries
-    : entries.filter((entry) => isPublishedEntry(entry));
+  const available = options.preview ? entries : entries.filter((entry) => isPublishedEntry(entry));
   const selected = chooseTeaserEntry(available, normalized);
   if (!selected) {
     return {
@@ -168,10 +190,7 @@ export async function resolveEntryTeaserRuntimeData(
     };
   }
 
-  const detailPathPattern = resolveDetailPathPattern(
-    options.contentRoutes,
-    contentType.slug
-  );
+  const detailPathPattern = resolveDetailPathPattern(options.contentRoutes, contentType.slug);
   const mapped = await mapEntriesToContentListItems([selected], {
     detailPathPattern,
     showImage: Boolean(normalized.fields?.showImage),

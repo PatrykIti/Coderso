@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Design Tokens + Shared Contract
 **Estimated Effort:** Medium
 **Dependencies:** TASK-256, TASK-256-02
-**Status:** To Do
+**Status:** Done (2026-05-18)
 
 ---
 

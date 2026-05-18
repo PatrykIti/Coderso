@@ -161,7 +161,10 @@ export function registerAllRoutes(router: Router, deps: RouteDeps) {
     validate: deps.validate,
   });
   registerUserSettingsRoutes(router, { requireAuth: deps.requireAuth, validate: deps.validate });
-  registerWidgetRoutes(router, { requirePermission: deps.requirePermission });
+  registerWidgetRoutes(router, {
+    requirePermission: deps.requirePermission,
+    validate: deps.validate,
+  });
   registerWidgetTemplateRoutes(router, {
     requirePermission: deps.requirePermission,
     validate: deps.validate,

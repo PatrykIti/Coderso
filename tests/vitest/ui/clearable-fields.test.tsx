@@ -7,6 +7,7 @@ import { afterEach, expect, test, vi } from "vitest";
 import {
   ClearableInputField,
   hasClearableFieldValue,
+  resolveColorSwatchValue,
 } from "../../../core/admin/ui/widgets/editors/ClearableFields";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -77,6 +78,12 @@ test("clearable field helper detects real values without treating empty text as 
   expect(hasClearableFieldValue("   ")).toBe(false);
   expect(hasClearableFieldValue("transparent")).toBe(true);
   expect(hasClearableFieldValue("#ffffff")).toBe(true);
+});
+
+test("shared swatch helper prefers configured hex and falls back for non-hex text authority", () => {
+  expect(resolveColorSwatchValue("#112233", "#445566")).toBe("#112233");
+  expect(resolveColorSwatchValue("rgba(10, 20, 30, 0.4)", "#445566")).toBe("#445566");
+  expect(resolveColorSwatchValue(undefined, "var(--color-border)")).toBe("#000000");
 });
 
 test("clearable input disables empty clear and delegates configured clear behavior", () => {

@@ -59,7 +59,12 @@ import {
   type PageMaxWidthToken,
 } from "../../../services/pages/layoutSettings";
 import { normalizePageRevisionRetentionValue } from "../../../services/pages/revisionRetention";
-import { type ContainerToken, type SpacingToken } from "../../../widgets/types";
+import {
+  type ContainerToken,
+  type SpacingToken,
+  type WidgetEditorContext,
+  type WidgetPreviewState,
+} from "../../../widgets/types";
 
 const heroBlockDefaults = createBlock("hero");
 const defaultBlocks: Block[] = [
@@ -343,6 +348,9 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
   const [slotInsertTarget, setSlotInsertTarget] = useState<SlotInsertTarget | null>(null);
   const [highlightedBlockId, setHighlightedBlockId] = useState<string | null>(null);
   const [pendingScrollBlockId, setPendingScrollBlockId] = useState<string | null>(null);
+  const [widgetPreviewStates, setWidgetPreviewStates] = useState<
+    Record<string, WidgetPreviewState | undefined>
+  >({});
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -354,6 +362,35 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     if (!selectedBlock) return undefined;
     return getWidgetRegistry().find((widget) => widget.type === selectedBlock.type);
   }, [selectedBlock]);
+  const activeWidgetPreviewStates = useMemo(() => {
+    if (!selectedBlock || selectedBlock.type !== "entry-teaser") {
+      return {} as Record<string, WidgetPreviewState | undefined>;
+    }
+    const previewState = widgetPreviewStates[selectedBlock.id];
+    return previewState
+      ? { [selectedBlock.id]: previewState }
+      : ({} as Record<string, WidgetPreviewState | undefined>);
+  }, [selectedBlock, widgetPreviewStates]);
+  const selectedBlockPreviewState = selectedBlock
+    ? (activeWidgetPreviewStates[selectedBlock.id] ?? null)
+    : null;
+  const pageBuilderWidgetContext = useMemo<WidgetEditorContext | undefined>(() => {
+    if (!selectedBlock) return undefined;
+    return {
+      surface: "page-builder",
+      blockId: selectedBlock.id,
+      editorMode: selectedBlock.editor?.mode ?? "wizard",
+      previewState: selectedBlockPreviewState,
+      setPreviewState:
+        selectedBlock.type === "entry-teaser"
+          ? (state) =>
+              setWidgetPreviewStates((current) => ({
+                ...current,
+                [selectedBlock.id]: state ?? undefined,
+              }))
+          : undefined,
+    };
+  }, [selectedBlock, selectedBlockPreviewState]);
   const pageSettings = useMemo(() => resolvePageSettings(pageData), [pageData]);
   const pageLayout = pageSettings.layout;
   const wrapperPaddingClass = joinClasses(
@@ -993,6 +1030,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
           onBlockPatch={
             selectedBlock ? (patch) => handlePatchBlock(selectedBlock.id, patch) : undefined
           }
+          editorContext={pageBuilderWidgetContext}
         />
       }
       rightPanelClassName="p-6"
@@ -1156,6 +1194,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
                 onInsert={handleInsertIntoSlot}
                 onMoveToSlot={handleMoveIntoSlot}
                 onOpenSlotInsert={handleOpenSlotInsert}
+                previewStatesByBlockId={activeWidgetPreviewStates}
               />
             </div>
           </div>
@@ -1235,6 +1274,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
               onBlockPatch={
                 selectedBlock ? (patch) => handlePatchBlock(selectedBlock.id, patch) : undefined
               }
+              editorContext={pageBuilderWidgetContext}
             />
           </div>
         </SheetContent>
