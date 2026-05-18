@@ -6,7 +6,7 @@
 **Category:** Widgets + Booking + Admin UI + Runtime + Public Write Security + Playwright QA
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-252-07-11, TASK-256-07
-**Status:** In Progress (2026-05-17)
+**Status:** Done (2026-05-18)
 
 ---
 
@@ -94,12 +94,12 @@ Out of scope for TASK-258:
 
 ## Sub-Tasks
 
-- [ ] TASK-258-01: Runtime State, Admin Preview, and Submission Feedback
-- [ ] TASK-258-02: Field Validation, Visibility, and Accessibility
-- [ ] TASK-258-03: Flow Pairing, Slot Context, Locale, and Redirect
-- [ ] TASK-258-04: Consent, Custom Fields, and Public Write Hardening
-- [ ] TASK-258-05: Style, Variants, and Advanced Diagnostics
-- [ ] TASK-258-06: Playwright Report, Docs, and Closure
+- [x] TASK-258-01: Runtime State, Admin Preview, and Submission Feedback
+- [x] TASK-258-02: Field Validation, Visibility, and Accessibility
+- [x] TASK-258-03: Flow Pairing, Slot Context, Locale, and Redirect
+- [x] TASK-258-04: Consent, Custom Fields, and Public Write Hardening
+- [x] TASK-258-05: Style, Variants, and Advanced Diagnostics
+- [x] TASK-258-06: Playwright Report, Docs, and Closure
 
 ## Implementation Order
 

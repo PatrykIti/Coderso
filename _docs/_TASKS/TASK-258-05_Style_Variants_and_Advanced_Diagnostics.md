@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Runtime Rendering + Accessibility
 **Estimated Effort:** Large
 **Dependencies:** TASK-258, TASK-256-02, TASK-258-02, TASK-258-04
-**Status:** In Progress (2026-05-17)
+**Status:** Done (2026-05-18)
 
 ---
 
@@ -41,20 +41,20 @@ implement a widget-local inheritance-state workaround.
 
 ## Sub-Tasks
 
-- [ ] Add Appointment Form variants: `default`, `compact`, `inline`,
+- [x] Add Appointment Form variants: `default`, `compact`, `inline`,
   `sidebar`, and `card-summary`.
-- [ ] Keep variant behavior schema-owned and backward compatible for existing
+- [x] Keep variant behavior schema-owned and backward compatible for existing
   `default` payloads.
-- [ ] Add `style.submitTextColor` and render it through the same clearable style
+- [x] Add `style.submitTextColor` and render it through the same clearable style
   rules as other Appointment Form surface fields.
-- [ ] Convert resolved nonce and runtime error controls into read-only
+- [x] Convert resolved nonce and runtime error controls into read-only
   diagnostics with explanatory copy.
-- [ ] Add runtime diagnostic copy that explains who sets nonce/error values and
+- [x] Add runtime diagnostic copy that explains who sets nonce/error values and
   what the admin can do when a resolver warning appears.
-- [ ] Leave custom submission endpoint policy unchanged in this leaf. If endpoint
+- [x] Leave custom submission endpoint policy unchanged in this leaf. If endpoint
   editability is later judged unsafe, create a separate public-write/security
   task with migration and backward-compatibility notes.
-- [ ] Do not implement a `multi-step` variant in this leaf. It remains future
+- [x] Do not implement a `multi-step` variant in this leaf. It remains future
   Appointment Form product scope outside the current report-closure contract; if
   product later wants it, create a separate named task before implementation.
 
@@ -157,7 +157,8 @@ payloads.
 
 - `_docs/_WIDGETS/APPOINTMENT_FORM.md`
 - `_docs/PLAYWRIGHT/REPORT_APPOINTMENT_FORM_WIDGET.md` fixed evidence for
-  UX-04, UX-05, UX-06, BF-01, BF-03, BF-16, and A6.
+  UX-05, UX-06, BF-01, BF-03, BF-16, and A6, plus explicit shared deferral for
+  `UX-04`.
 - `_docs/_TASKS/TASK-256-02_Clear_None_Token_and_Design_Token_Controls.md` if
   `UX-04` defers to or completes through the shared control state owner.
 - `_docs/WIDGET_PACK_MATRIX.md` if variant readiness affects the booking pack.

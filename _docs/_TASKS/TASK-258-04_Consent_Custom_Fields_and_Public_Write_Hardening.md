@@ -6,7 +6,7 @@
 **Category:** Widgets + Public Write Security + Booking API
 **Estimated Effort:** Large
 **Dependencies:** TASK-258, TASK-258-01, TASK-258-02
-**Status:** In Progress (2026-05-17)
+**Status:** Done (2026-05-18)
 
 ---
 
@@ -53,19 +53,19 @@ surface once the bounded public metadata contract exists.
 
 ## Sub-Tasks
 
-- [ ] Add consent configuration with visible label, required flag, and safe
+- [x] Add consent configuration with visible label, required flag, and safe
   privacy/terms links.
-- [ ] Render consent checkbox and include consent acceptance metadata in the
+- [x] Render consent checkbox and include consent acceptance metadata in the
   public reservation payload.
-- [ ] Keep CAPTCHA provider settings backend-owned; expose only the resolved
+- [x] Keep CAPTCHA provider settings backend-owned; expose only the resolved
   runtime public site key/action data when needed.
-- [ ] Update the booking runtime script to obtain a CAPTCHA token from the
+- [x] Update the booking runtime script to obtain a CAPTCHA token from the
   backend-owned provider bridge and send it as `captchaToken`.
-- [ ] Tighten public booking metadata validation enough to bound custom field
+- [x] Tighten public booking metadata validation enough to bound custom field
   and consent payloads.
-- [ ] Update both route normalization and JSON schema validation so unknown
+- [x] Update both route normalization and JSON schema validation so unknown
   reservation metadata keys are rejected before service persistence.
-- [ ] Expand public route-boundary coverage so known schema, nonce/signature,
+- [x] Expand public route-boundary coverage so known schema, nonce/signature,
   CAPTCHA, and mapped booking-domain failures are asserted at
   `handlePublicBookingApi` before persistence.
 
@@ -240,7 +240,9 @@ This leaf can affect the existing public booking write route.
 
 - Rendered Appointment Form includes consent controls when configured, with safe
   terms/privacy links.
-- Public runtime sends bounded custom field and consent metadata.
+- Public runtime sends bounded consent metadata, and the bounded booking
+  metadata contract is ready for the future custom-field surface owned by
+  `TASK-294`.
 - CAPTCHA token acquisition remains backend-owned and never exposes secrets in
   widget data.
 - Bun public API boundary and security tests cover accepted payloads, rejected

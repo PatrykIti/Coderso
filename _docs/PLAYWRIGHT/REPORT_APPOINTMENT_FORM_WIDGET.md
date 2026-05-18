@@ -1,6 +1,6 @@
 # RAPORT: Appointment Form Widget — Analiza UX/UI i brakujące funkcjonalności
 
-> **Status:** Analiza zakonczona, follow-up otwarty
+> **Status:** Audit snapshot closed, implementation status synchronized
 > **Data:** 2026-05-16
 > **Sesja:** Playwright (Appointment Form Widget)
 > **Środowisko admin:** http://localhost:5173/admin
@@ -19,6 +19,10 @@
 **Złożoność:** intermediate
 
 Widget formularza umówienia wizyty — zbiera dane klienta i wysyła rezerwację do API po uprzednim wybraniu slotu w powiązanym Booking Calendar. Komunikacja między widgetami odbywa się przez wspólny `flowId` i mechanizm `CustomEvent` (`nextless:booking-slot-selected`), z globalnym stanem `window.__nextlessBookingRuntimeState`.
+
+> Uwaga: sekcje 1-9 dokumentują stan audytu Playwright z 2026-05-16. Aktualny
+> status implementacji/future-task routing jest zapisany w sekcji
+> `Status po TASK-258`.
 
 ---
 
@@ -391,11 +395,65 @@ Form element nie ma `aria-label` ani `aria-describedby`. Screen readery nie iden
 
 ---
 
-## Status po TASK-256 (2026-05-17)
+## Status po TASK-258 (2026-05-18)
 
-- Current TASK-256 role for Appointment Form is classification only.
-  Widget-owned booking/form behavior continues through the `TASK-258` family.
-- Shared rows that match existing TASK-256 mechanisms still route through
-  `TASK-256-03` or `TASK-256-04`, but TASK-256 ships no Appointment
-  Form-specific code from this report. Final widget execution remains deferred
-  to `TASK-258`.
+### Closure matrix
+
+| ID | Status | Owner | Evidence |
+|---|---|---|---|
+| BUG-01 | Fixed | `TASK-258-01` | SSR/admin markup now starts disabled and runtime keeps the same no-slot contract; covered by `tests/vitest/widgets/appointmentForm.test.tsx` and `tests/vitest/widgets/bookingRuntimeScript.appointmentForm.test.ts`. |
+| BUG-02 | Fixed | `TASK-258-01` | Runtime clears stale API errors on first input/change; covered by `tests/vitest/widgets/bookingRuntimeScript.appointmentForm.test.ts`. |
+| UX-01 | Fixed | `TASK-258-02` | Phone/notes controls are gated by their visibility toggles in the Visual editor; covered by `tests/vitest/ui/appointment-form-editor-wave.test.tsx`. |
+| UX-02 | Deferred | `TASK-293` | Shared `WidgetEditorContext.bookingFlows` plumbing is widget-agnostic builder work and is explicitly routed to `TASK-293`. |
+| UX-03 | Fixed | `TASK-258-02` | `noSelectionMessage` moved into Visual/slot-summary ownership; covered by `tests/vitest/ui/appointment-form-editor-wave.test.tsx`. |
+| UX-04 | Deferred | `TASK-256-02` | Shared configured-vs-default style state remains owned by the clearable control contract, not a widget-local workaround. |
+| UX-05 | Fixed | `TASK-258-05` | Resolved nonce is now read-only diagnostic copy in Advanced; covered by `tests/vitest/ui/appointment-form-editor-wave.test.tsx`. |
+| UX-06 | Fixed | `TASK-258-05` | Runtime error is now read-only diagnostic copy with context in Advanced; covered by `tests/vitest/ui/appointment-form-editor-wave.test.tsx`. |
+| UX-07 | Fixed | `TASK-258-01` | Runtime clears error state on first user interaction after failure; covered by `tests/vitest/widgets/bookingRuntimeScript.appointmentForm.test.ts`. |
+| BF-01 | Fixed | `TASK-258-05` | Appointment Form now exposes `default`, `compact`, `inline`, `sidebar`, and `card-summary` variants; render/registry covered by `tests/vitest/widgets/appointmentForm.test.tsx`. |
+| BF-02 | Fixed | `TASK-258-02` | Email required behavior is now configurable instead of hard-coded optional; covered by widget/editor tests. |
+| BF-03 | Fixed | `TASK-258-05` | `style.submitTextColor` is schema-owned and clearable; covered by widget/editor tests. |
+| BF-04 | Fixed | `TASK-258-02` | Split-name mode is now part of the widget contract and runtime payload composition; covered by widget/runtime/editor tests. |
+| BF-05 | Deferred | `TASK-294` | Bounded backend metadata exists, but the widget-local custom-field authoring/render surface is intentionally split to `TASK-294`. |
+| BF-06 | Fixed | `TASK-258-03` | Slot summary can include service/resource context; covered by runtime and editor tests. |
+| BF-07 | Fixed | `TASK-258-04` | Consent checkbox with required flag and privacy/terms links is landed; covered by widget/editor/runtime tests. |
+| BF-08 | Fixed | `TASK-258-04` | Backend-owned CAPTCHA bridge is hydrated and executed from public site key/action only; covered by runtime hydration, route-boundary, and runtime DOM tests. |
+| BF-09 | Fixed | `TASK-258-01` | Loading copy is configurable and rendered during submission; covered by runtime DOM tests. |
+| BF-10 | Fixed | `TASK-258-02` | Phone pattern/help text are schema-owned and rendered; covered by widget/editor tests. |
+| BF-11 | Fixed | `TASK-258-02` | Notes `maxLength` and visible counter are landed; covered by widget/runtime/editor tests. |
+| BF-12 | Fixed | `TASK-258-03` | Safe same-origin/relative redirect is implemented; covered by runtime DOM tests. |
+| BF-13 | Fixed | `TASK-258-01` | Successful submission clears shared booking selection state; covered by runtime DOM tests. |
+| BF-14 | Fixed | `TASK-258-02` | `showEmail` is part of the widget contract and editor gating; covered by widget/editor tests. |
+| BF-15 | Fixed | `TASK-258-03` | Locale override is part of the widget contract and runtime formatting path; covered by runtime/editor tests. |
+| BF-16 | Fixed | `TASK-258-05` | Submission nonce is no longer author-editable; covered by editor tests. |
+| BF-17 | Fixed | `TASK-258-02` | Form fields now render browser autocomplete hints; covered by widget tests. |
+| BF-18 | Fixed | `TASK-258-02` | Form now renders accessible name/description metadata; covered by widget tests. |
+| A1 | Fixed | `TASK-258-02` | Autocomplete hints are now rendered on form fields. |
+| A2 | Fixed | `TASK-258-02` | Form has accessible name/description metadata. |
+| A3 | Fixed | `TASK-258-02` | Required email/phone behavior is now configurable and normalized safely. |
+| A4 | Fixed | `TASK-258-02` | Tel input now uses schema-owned format validation. |
+| A5 | Fixed | `TASK-258-02` | Notes input now has bounded length and a visible counter. |
+| A6 | Fixed | `TASK-258-05` | Submit text color is no longer hardcoded. |
+
+### Validation used for closure
+
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun --cwd store lint`
+- `./node_modules/.bin/tsc -p packages/sdk/tsconfig.json --noEmit`
+- `./node_modules/.bin/tsc -p tsconfig.json --noEmit`
+- `bun run test:vitest -- tests/vitest/widgets/appointmentForm.test.tsx tests/vitest/ui/appointment-form-editor-wave.test.tsx tests/vitest/widgets/bookingRuntimeScript.appointmentForm.test.ts tests/vitest/validation/bookingSchemas.test.ts`
+- `bun test tests/unit/widgets/validator.test.ts`
+- `bun test tests/integration/runtime/appointment-form-runtime-hydration.test.ts`
+- `set -a && source .env && set +a && bun test tests/unit/server/publicBookingApi.test.ts`
+  DB-backed reservation cases remain skipped by the suite connectivity probe.
+- `bun run gates:coderso`
+- `bun run scan:security:strict`
+  Trivy and both Gitleaks scans passed; strict still reports environment blockers
+  in this worktree for `semgrep` trust anchors and `bun audit` connectivity.
+
+### Shared-task routing confirmed
+
+- `UX-02` -> `TASK-293`
+- `BF-05` -> `TASK-294`
+- `UX-04` -> `TASK-256-02`

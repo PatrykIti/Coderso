@@ -6,7 +6,7 @@
 **Category:** Widgets + Booking Runtime + Admin Preview
 **Estimated Effort:** Large
 **Dependencies:** TASK-258
-**Status:** In Progress (2026-05-17)
+**Status:** Done (2026-05-18)
 
 ---
 
@@ -42,17 +42,17 @@ This leaf covers:
 
 ## Sub-Tasks
 
-- [ ] Render Appointment Form submit disabled by default so SSR/admin canvas
+- [x] Render Appointment Form submit disabled by default so SSR/admin canvas
   matches the no-slot public runtime state.
-- [ ] Add schema/default/normalizer/render/editor support for configurable
+- [x] Add schema/default/normalizer/render/editor support for configurable
   `loadingMessage` without adding a new API route.
-- [ ] Update `bindAppointmentForm` to hide stale error text on first
+- [x] Update `bindAppointmentForm` to hide stale error text on first
   visitor input/change after a failed submission.
-- [ ] Update submission state so the submit button exposes loading copy while
+- [x] Update submission state so the submit button exposes loading copy while
   the request is in flight and restores the configured label afterward.
-- [ ] Clear the selected booking runtime state after successful submission and
+- [x] Clear the selected booking runtime state after successful submission and
   dispatch the existing booking slot event with `selection: null`.
-- [ ] Add runtime-script DOM tests that exercise no-slot disabled state,
+- [x] Add runtime-script DOM tests that exercise no-slot disabled state,
   selection enablement, API error clearing, loading copy, and success slot clear.
 
 ## Implementation Pseudocode

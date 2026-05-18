@@ -6,7 +6,7 @@
 **Category:** Widgets + Docs + QA + Changelog
 **Estimated Effort:** Medium
 **Dependencies:** TASK-258-01, TASK-258-02, TASK-258-03, TASK-258-04, TASK-258-05
-**Status:** To Do
+**Status:** Done (2026-05-18)
 
 ---
 
@@ -38,18 +38,18 @@ marked fixed, not reproducible, or deferred to a named physical future task.
 
 ## Sub-Tasks
 
-- [ ] Build a finding-by-finding closure matrix for BUG-01, BUG-02, UX-01
+- [x] Build a finding-by-finding closure matrix for BUG-01, BUG-02, UX-01
   through UX-07, BF-01 through BF-18, and A1 through A6.
-- [ ] Mark each finding as fixed, not reproducible, or deferred to a named
+- [x] Mark each finding as fixed, not reproducible, or deferred to a named
   future task with reason and owner.
-- [ ] Refresh `_docs/PLAYWRIGHT/REPORT_APPOINTMENT_FORM_WIDGET.md` with textual
+- [x] Refresh `_docs/PLAYWRIGHT/REPORT_APPOINTMENT_FORM_WIDGET.md` with textual
   admin/frontend evidence; do not commit PNG screenshots.
-- [ ] Update `_docs/_WIDGETS/APPOINTMENT_FORM.md` for final schema, editor,
+- [x] Update `_docs/_WIDGETS/APPOINTMENT_FORM.md` for final schema, editor,
   variants, public write, consent, CAPTCHA, and runtime-state behavior.
-- [ ] Update source-of-truth docs only where final implementation changed a
+- [x] Update source-of-truth docs only where final implementation changed a
   source-of-truth contract.
-- [ ] Add changelog entry and update changelog index.
-- [ ] Move TASK-258 leaves and umbrella to `Done` only after all required
+- [x] Add changelog entry and update changelog index.
+- [x] Move TASK-258 leaves and umbrella to `Done` only after all required
   validation is green or a user-approved blocker is recorded.
 
 ## Implementation Pseudocode

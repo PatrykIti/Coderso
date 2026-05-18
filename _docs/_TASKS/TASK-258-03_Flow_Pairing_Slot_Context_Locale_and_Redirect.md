@@ -6,7 +6,7 @@
 **Category:** Widgets + Booking Runtime + Admin UX
 **Estimated Effort:** Large
 **Dependencies:** TASK-258, TASK-258-01, TASK-258-02, TASK-293
-**Status:** In Progress (2026-05-17)
+**Status:** Done (2026-05-18)
 
 ---
 
@@ -44,14 +44,14 @@ this task.
 
 ## Sub-Tasks
 
-- [ ] Enrich booking slot selections with service and resource names.
-- [ ] Render Appointment Form slot summary with configured service/resource
+- [x] Enrich booking slot selections with service and resource names.
+- [x] Render Appointment Form slot summary with configured service/resource
   context when those values are available.
-- [ ] Add locale/date format configuration owned by Appointment Form runtime
+- [x] Add locale/date format configuration owned by Appointment Form runtime
   data and mirrored by the booking runtime script.
-- [ ] Add optional same-origin or relative success redirect after successful
+- [x] Add optional same-origin or relative success redirect after successful
   booking submission.
-- [ ] If shared flow-context plumbing is not implemented in the same wave,
+- [x] If shared flow-context plumbing is not implemented in the same wave,
   record `UX-02` as deferred to `TASK-293` with exact reasoning/evidence.
 
 ## Implementation Pseudocode

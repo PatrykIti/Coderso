@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Runtime Accessibility
 **Estimated Effort:** Large
 **Dependencies:** TASK-258, TASK-258-01
-**Status:** In Progress (2026-05-17)
+**Status:** Done (2026-05-18)
 
 ---
 
@@ -44,21 +44,21 @@ This leaf covers:
 
 ## Sub-Tasks
 
-- [ ] Replace top-level author-facing `showPhone` and `showNotes` controls with
+- [x] Replace top-level author-facing `showPhone` and `showNotes` controls with
   a normalized field-visibility model while preserving legacy payload reads.
-- [ ] Add `showEmail`, `requiredEmail`, and `requiredPhone` controls with
+- [x] Add `showEmail`, `requiredEmail`, and `requiredPhone` controls with
   backward-compatible defaults.
-- [ ] Add a `nameMode` contract for `full` versus `split` name entry, with
+- [x] Add a `nameMode` contract for `full` versus `split` name entry, with
   labels/placeholders and runtime payload composition into the existing
   `customerName` API field.
-- [ ] Add phone pattern/configured help copy and render it only when phone is
+- [x] Add phone pattern/configured help copy and render it only when phone is
   visible.
-- [ ] Add notes max length plus optional counter copy and render it only when
+- [x] Add notes max length plus optional counter copy and render it only when
   notes is visible.
-- [ ] Move `noSelectionMessage` editing to Visual beside slot summary copy.
-- [ ] Hide or disable phone/notes label and placeholder controls when their
+- [x] Move `noSelectionMessage` editing to Visual beside slot summary copy.
+- [x] Hide or disable phone/notes label and placeholder controls when their
   field is off; do the same for email-specific controls when email is hidden.
-- [ ] Render autocomplete attributes and a form accessible name/description.
+- [x] Render autocomplete attributes and a form accessible name/description.
 
 ## Implementation Pseudocode
 

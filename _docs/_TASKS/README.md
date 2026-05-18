@@ -30,7 +30,7 @@ Task board for project work. Keep task files and this board in sync.
 
 - **To Do:** 292 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1565 tasks
+- **Done:** 1566 tasks
 
 ---
 
@@ -315,7 +315,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-259-06 | Booking Calendar Layout Variants and Mobile Styling | Medium | Large | Add compact/inline/horizontal layouts, mobile control density, and selected-slot style controls |
 | TASK-259-07 | Booking Calendar Default Pickers and Diagnostics | Medium | Medium | Replace raw default IDs with catalog-aware pickers and truthful diagnostics |
 | TASK-259-08 | Booking Calendar Report, Docs, and Closure | Medium | Medium | Refresh report/docs/changelog/board and final validation for the TASK-259 family |
-| TASK-258-06 | Playwright Report, Docs, and Closure | Medium | Medium | Refresh report evidence, widget docs, changelog, board, and validation matrix after implementation |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
 | TASK-240 | Coderso Multilingual and i18n Umbrella | High | Very Large | Execution-ready locale/translation/runtime routing program superseding TASK-054-21 |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |
@@ -334,18 +333,19 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
 | TASK-105-06 | Widget Editor New Tests Wave | High | Large | In progress: widget editors are now 100% lines in the full-lane report; remaining work is branch-only hardening plus barrel import ownership noise |
-| TASK-258 | Appointment Form Widget Playwright Follow-Up | High | Very Large | In progress: task-doc drift is repaired, local slices `01/02/03/05` and consent/CAPTCHA boundary work are committed in `83dfd92d` and `56844285`, with `UX-02` routed to `TASK-293`, `UX-04` to `TASK-256-02`, and `BF-05` to `TASK-294` |
-| TASK-258-01 | Runtime State, Admin Preview, and Submission Feedback | High | Large | In progress: disabled parity, loading copy, stale-error reset, and selection clearing are landed with the new runtime DOM suite |
-| TASK-258-02 | Field Validation, Visibility, and Accessibility | High | Large | In progress: truthful field toggles, split-name mode, required flags, phone pattern, notes bounds, autocomplete, and form naming are landed locally |
-| TASK-258-03 | Flow Pairing, Slot Context, Locale, and Redirect | High | Large | In progress: summary context, locale formatting, and safe redirect are landed locally; `UX-02` shared editor-context plumbing is routed to `TASK-293` |
-| TASK-258-04 | Consent, Custom Fields, and Public Write Hardening | High | Large | In progress: consent UI, public CAPTCHA bridge, bounded metadata schema, runtime hydration, and public route-boundary hardening are landed; `BF-05` custom fields now route to `TASK-294` |
-| TASK-258-05 | Style, Variants, and Advanced Diagnostics | High | Large | In progress: local variants, submit text color, and read-only diagnostics are landed; `UX-04` shared clearable-state indicators route to `TASK-256-02` |
 ---
 
 ## Done
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-258 | Appointment Form Widget Playwright Follow-Up | High | Very Large | Done: runtime/editor/public-write follow-up is synchronized with focused validation, report closure, named deferrals (`TASK-294`, `TASK-295`, `TASK-256-02`), and changelog evidence |
+| TASK-258-01 | Runtime State, Admin Preview, and Submission Feedback | High | Large | Done: disabled parity, loading copy, stale-error reset, and selection clearing are landed with the runtime DOM suite |
+| TASK-258-02 | Field Validation, Visibility, and Accessibility | High | Large | Done: truthful field toggles, split-name mode, required flags, phone pattern, notes bounds, autocomplete, and form naming are landed |
+| TASK-258-03 | Flow Pairing, Slot Context, Locale, and Redirect | High | Large | Done: summary context, locale formatting, and safe redirect are landed locally; shared flow-key editor context is deferred to `TASK-294` |
+| TASK-258-04 | Consent, Custom Fields, and Public Write Hardening | High | Large | Done: consent UI, public CAPTCHA bridge, bounded metadata schema, runtime hydration, and public route-boundary hardening are landed; custom-field surface is deferred to `TASK-295` |
+| TASK-258-05 | Style, Variants, and Advanced Diagnostics | High | Large | Done: local variants, submit text color, and read-only diagnostics are landed; shared clearable-state indicators stay routed to `TASK-256-02` |
+| TASK-258-06 | Playwright Report, Docs, and Closure | Medium | Medium | Done: widget docs, report closure matrix, changelog, board sync, and final validation evidence are synchronized |
 | TASK-257 | Accordion Widget Playwright Product Followups | High | Large | Done: Accordion-specific product follow-ups are closed with explicit all-collapsed state, local style/typography/motion controls, icon/copy polish, and U5/U6 deferred to TASK-293 |
 | TASK-257-01 | Accordion Initial Open State Product Options | High | Medium | Done: Accordion now preserves intentional all-collapsed initial state when all-closed behavior is allowed |
 | TASK-257-02 | Accordion Style Layout and Typography Controls | High | Large | Done: Accordion now ships body color, max-width, padding, radius, title typography, and color-picker parity controls |
