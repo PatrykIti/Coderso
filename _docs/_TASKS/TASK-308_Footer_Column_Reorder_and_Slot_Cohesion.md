@@ -1,6 +1,6 @@
-# TASK-293: Footer Column Reorder and Slot Cohesion
+# TASK-308: Footer Column Reorder and Slot Cohesion
 
-# FileName: TASK-293_Footer_Column_Reorder_and_Slot_Cohesion.md
+# FileName: TASK-308_Footer_Column_Reorder_and_Slot_Cohesion.md
 
 **Priority:** Medium
 **Category:** Widgets + Admin UI + Slot Contract

@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 859 | 2026-05-18 | TASK-268 footer widget Playwright followups | CMS Widgets/Admin UI/QA |
 | 858 | 2026-05-17 | TASK-267 feature grid widget followups | CMS Widgets/Admin UI/QA |
 | 857 | 2026-05-17 | FAQ accordion shared and product follow-ups | CMS Widgets/Admin UI/SEO/QA |
 | 856 | 2026-05-18 | TASK-265 entry teaser closure | CMS Widgets/Admin UI/QA |

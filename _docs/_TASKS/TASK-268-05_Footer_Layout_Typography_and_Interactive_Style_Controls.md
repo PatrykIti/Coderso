@@ -6,7 +6,7 @@
 **Category:** Widgets + Runtime Render + Admin UI + Design Tokens
 **Estimated Effort:** Large
 **Dependencies:** TASK-268, TASK-268-03, TASK-268-04
-**Status:** To Do
+**Status:** Done (2026-05-18)
 
 ---
 

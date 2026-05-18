@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 284 tasks
+- **To Do:** 279 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1645 tasks
+- **Done:** 1652 tasks
 
 ---
 
@@ -38,6 +38,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-309 | Footer Market Utility Expansion | Low | Very Large | Future owner for newsletter/address/contact/back-to-top footer utilities that TASK-268 explicitly deferred |
+| TASK-308 | Footer Column Reorder and Slot Cohesion | Medium | Large | Future owner for truthful footer column reorder once slot/data coupling has an explicit contract |
 | TASK-304 | Entry Teaser Listing Manual Picker | Medium | Medium | Add a deterministic manual listing-row selection contract for Entry Teaser after TASK-265 closes latest/featured listing semantics |
 | TASK-301 | Forms Public Runtime Nonce Cache Freshness | High | Large | Shared follow-up for stale cached `submissionNonce` drift across nonce-bearing Forms runtime widgets |
 | TASK-300 | Compare Timeline Motion Presets and Reduced Motion Policy | Low | Medium | Exact future owner for `REPORT_COMPARE_TIMELINE_WIDGET.md` row `W8`; keep Compare Timeline static until a reduced-motion-safe motion contract is approved |
@@ -247,13 +249,15 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-269-04 | Multi-Step Controls and Stored Progress | High | Large | Add multi-step labels, progress indicator, and saved-progress expiry for Form Embed |
 | TASK-269-05 | Submission Runtime Feedback and Public Write Projection | High | Large | Add Form Embed busy/success/error feedback and backend-owned anti-abuse projection |
 | TASK-269-06 | Form Embed Report, Docs, and Closure | Medium | Medium | Refresh Form Embed report/docs/changelog/board and final validation |
-| TASK-268 | Footer Widget Playwright Product Followups | High | Very Large | Footer-only follow-up family for `REPORT_FOOTER_WIDGET.md`, excluding TASK-256 shared-contract scope |
-| TASK-268-01 | Footer Social Icons and External Link Safety | High | Large | Replace text social output with safe icons, platform labels, accessible names, and external-link hardening |
-| TASK-268-02 | Footer Legal, Brand, and Landmark Semantics | High | Large | Add legal labels, brand/logo/tagline, Footer landmark naming, and heading semantics |
-| TASK-268-03 | Footer Minimal Variant and Visibility Controls | High | Medium | Make minimal variant truthful and add non-destructive legal/social visibility controls |
-| TASK-268-04 | Footer Editor Mode IA and Link Management | High | Large | Label Advanced controls, remove duplicate layout ownership, improve Wizard disclosure, and add deterministic link management |
-| TASK-268-05 | Footer Layout, Typography, and Interactive Style Controls | Medium | Large | Add bounded padding, responsive, hover, link typography, and target controls while deferring market-only utilities |
-| TASK-268-06 | Footer Report, Docs, Changelog, and Closure | Medium | Medium | Refresh Footer report/docs/changelog/board and final validation for the TASK-268 family |
+| TASK-267 | Feature Grid Widget Playwright Product Followups | High | Very Large | Feature Grid-only follow-up family for `REPORT_FEATURE_GRID_WIDGET.md`, excluding TASK-256 shared-contract scope |
+| TASK-267-01 | Feature Grid Variant Preview and Responsive Cards-4 Layout | High | Medium | Add variant preview affordances, repair cards-4 responsive product behavior, and keep columns truthfulness in TASK-256 |
+| TASK-267-02 | Feature Grid Card Reorder, Remove, and Item Management | High | Medium | Add drag reorder plus recoverable remove flow while preserving keyboard move fallback |
+| TASK-267-03 | Feature Grid Media Picker, Emoji Picker, and Image Priority UX | High | Large | Add media-library card image picking, bounded emoji presets, and image-over-icon guidance |
+| TASK-267-04 | Feature Grid Card Layout, Density, and Alignment Controls | High | Large | Add bounded card layout, padding, alignment, media-size, horizontal, and hero-card decisions |
+| TASK-267-05 | Feature Grid Section Typography, Container, and Hover Controls | Medium | Large | Add Feature Grid-local section background, max-width, typography, and hover controls |
+| TASK-267-06 | Feature Grid CTA Enablement, Target, and Rich Description Authoring | Medium | Large | Add explicit CTA enablement, safe target choice, and bounded rich description authoring after TASK-256 link safety |
+| TASK-267-07 | Feature Grid Wizard Guidance and Editor Entry Flow | Medium | Medium | Add Wizard scope guidance and decide first-open flow after Visual expansion |
+| TASK-267-08 | Feature Grid Report, Docs, Changelog, and Closure | Medium | Medium | Refresh Feature Grid report/docs/changelog/board and final validation evidence |
 | TASK-266 | FAQ Accordion Widget Playwright Product Followups | High | Very Large | FAQ-only follow-up family for `REPORT_FAQ_ACCORDION_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-266-01 | FAQ Accordion Layout Typography and Motion Controls | High | Large | Add FAQ-owned max-width, alignment, padding, text colors, radius, border-width, title size, and motion controls |
 | TASK-266-02 | FAQ Accordion Rich Answers and Item Icon Model | High | Large | Add safe bounded rich-answer formatting, per-item icons, and plain-text extraction for SEO |
@@ -351,6 +355,13 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-307 | Feature Grid Shared Contract Residuals | High | Medium | Done: invalid image/CTA feedback, safe image fallback, emoji ARIA, and Advanced diagnostics-only cleanup are now closed as shared follow-up work discovered during TASK-267 |
+| TASK-268 | Footer Widget Playwright Product Followups | High | Very Large | Done: footer runtime/editor/docs/report closure is synchronized, while deferred utility and column-reorder backlog now have explicit follow-up tasks |
+| TASK-268-01 | Footer Social Icons and External Link Safety | High | Large | Done: footer social links now use icon buttons, accessible naming, modern platform options, and external-link hardening |
+| TASK-268-02 | Footer Legal, Brand, and Landmark Semantics | High | Large | Done: footer legal labels are configurable, brand/logo/tagline landed, and landmark/heading semantics are explicit |
+| TASK-268-03 | Footer Minimal Variant and Visibility Controls | High | Medium | Done: minimal footer is a dedicated compact layout and legal/social visibility is non-destructive |
+| TASK-268-04 | Footer Editor Mode IA and Link Management | High | Large | Done: footer controls are labeled, section padding has one owner, wizard guidance is truthful, and link/social reorder is available |
+| TASK-268-05 | Footer Layout, Typography, and Interactive Style Controls | Medium | Large | Done: footer now supports bounded padding, breakpoint, hover, link typography, target controls, and local shared color-picker adoption |
+| TASK-268-06 | Footer Report, Docs, Changelog, and Closure | Medium | Medium | Done: footer report/docs/board/changelog are synchronized with validation evidence and named deferred follow-up owners |
 | TASK-267 | Feature Grid Widget Playwright Product Followups | High | Very Large | Done: Feature Grid report-driven follow-ups now cover variant previews, drag/remove UX, media picker + alt authoring, bounded layout/style controls, safe CTA/rich descriptions, Wizard guidance, and final closure sync |
 | TASK-267-01 | Feature Grid Variant Preview and Responsive Cards-4 Layout | High | Medium | Done: Variant cards now show visual miniatures and cards-4 reaches its four-column desktop baseline at `lg` |
 | TASK-267-02 | Feature Grid Card Reorder, Remove, and Item Management | High | Medium | Done: Card rows now support drag-handle reorder, button fallback, and confirm-remove UX |

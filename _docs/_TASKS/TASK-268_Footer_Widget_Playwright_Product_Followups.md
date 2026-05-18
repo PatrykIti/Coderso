@@ -6,7 +6,7 @@
 **Category:** Widgets + Navigation/Shell + Admin UI + Runtime Render + Accessibility + Playwright QA
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-252-07-15, TASK-256-07
-**Status:** To Do
+**Status:** Done (2026-05-18)
 
 ---
 
@@ -98,12 +98,12 @@ shared task before continuing with the Footer-only implementation.
 
 ## Sub-Tasks
 
-- [ ] TASK-268-01: Footer Social Icons and External Link Safety
-- [ ] TASK-268-02: Footer Legal, Brand, and Landmark Semantics
-- [ ] TASK-268-03: Footer Minimal Variant and Visibility Controls
-- [ ] TASK-268-04: Footer Editor Mode IA and Link Management
-- [ ] TASK-268-05: Footer Layout, Typography, and Interactive Style Controls
-- [ ] TASK-268-06: Footer Report, Docs, Changelog, and Closure
+- [x] TASK-268-01: Footer Social Icons and External Link Safety
+- [x] TASK-268-02: Footer Legal, Brand, and Landmark Semantics
+- [x] TASK-268-03: Footer Minimal Variant and Visibility Controls
+- [x] TASK-268-04: Footer Editor Mode IA and Link Management
+- [x] TASK-268-05: Footer Layout, Typography, and Interactive Style Controls
+- [x] TASK-268-06: Footer Report, Docs, Changelog, and Closure
 
 ## Implementation Order
 

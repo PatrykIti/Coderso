@@ -1,12 +1,67 @@
 # Footer Widget — Raport UX/UI
 
-> **Status:** Zakończony (analiza kodu + testy w przeglądarce)
-> **Data:** 2026-05-16
-> **Zakres:** Widget `footer` — analiza statyczna kodu + testy manualne w panelu admina i na froncie
+> **Status:** Zamkniete po implementacji `TASK-268` i walidacji z 2026-05-18
+> **Data pierwotnego audytu:** 2026-05-16
+> **Zakres pierwotnego audytu:** Widget `footer` — analiza statyczna kodu +
+> testy manualne w panelu admina i na froncie
+> **Zakres zamkniecia:** Footer-owned runtime/editor/docs work landed in
+> `TASK-268`; shared primitive ownership stayed with `TASK-256-02`, and the
+> shared first-open builder handoff contract stayed with `TASK-194-04-02`
 
 ---
 
-## 1. Podsumowanie
+## 0. Closure Summary
+
+- Social links render icon buttons with accessible names, safe external-link
+  attributes, and support for modern platforms plus `custom`.
+- Footer supports localized legal labels, brand/logo/tagline content, explicit
+  landmark naming, and heading semantics.
+- `minimal` is now a dedicated compact layout instead of a fake one-column
+  grid.
+- Legal/social visibility is non-destructive and empty wrappers are omitted.
+- Footer Visual/Advanced controls are labeled, `sectionPaddingY` has one owner,
+  link reorder is supported, and Footer reuses the shared clear/reset and
+  color-picker patterns.
+- Footer now exposes bounded layout, typography, hover, underline, and target
+  controls without arbitrary CSS/class injection.
+
+## 0.1 Closure Matrix
+
+| Report lines | Finding | Final state | Owner | Evidence |
+|---|---|---|---|---|
+| 67-71, 191, 217, 220-221, 318, 321, 383, 427, 446 | Social links rendered as plain text with no accessible naming | `fixed` | `TASK-268-01` | [footer.tsx](/Users/pciechanski/Documents/_moje_projekty/Coderso/core/widgets/core/footer.tsx:1) now renders icon buttons with accessible names; [footer.test.tsx](/Users/pciechanski/Documents/_moje_projekty/Coderso/tests/vitest/widgets/footer.test.tsx:1) and [renderer.test.tsx](/Users/pciechanski/Documents/_moje_projekty/Coderso/tests/vitest/widgets/renderer.test.tsx:706) assert icon output and no raw `twitter` / `linkedin` body text. |
+| 91-95, 205, 433 | External social links lacked safe `target` / `rel` and new-tab context | `fixed` | `TASK-268-01` | Social links now add `_blank`, `noopener noreferrer`, and `(opens in new tab)` accessible copy in [footer.tsx](/Users/pciechanski/Documents/_moje_projekty/Coderso/core/widgets/core/footer.tsx:1); covered by [footer.test.tsx](/Users/pciechanski/Documents/_moje_projekty/Coderso/tests/vitest/widgets/footer.test.tsx:1) and [renderer.test.tsx](/Users/pciechanski/Documents/_moje_projekty/Coderso/tests/vitest/widgets/renderer.test.tsx:706). |
+| 99-103, 181, 271, 386, 403 | Footer social options lacked modern platforms and custom labeling | `fixed` | `TASK-268-01` | [footer.tsx](/Users/pciechanski/Documents/_moje_projekty/Coderso/core/widgets/core/footer.tsx:1) and [FooterEditors.tsx](/Users/pciechanski/Documents/_moje_projekty/Coderso/core/admin/ui/widgets/editors/FooterEditors.tsx:1) now support `x`, `tiktok`, `discord`, `pinterest`, `mastodon`, `twitch`, `snapchat`, and `custom`; covered by [footer.test.tsx](/Users/pciechanski/Documents/_moje_projekty/Coderso/tests/vitest/widgets/footer.test.tsx:1) and [footer-editor-wave.test.tsx](/Users/pciechanski/Documents/_moje_projekty/Coderso/tests/vitest/ui/footer-editor-wave.test.tsx:1). |
+| 73-80, 192, 429-432 | Legal labels were hardcoded and Footer had no brand/logo/tagline area | `fixed` | `TASK-268-02` | `FooterLegal` now owns `privacyLabel` / `termsLabel`, `FooterBrand` landed, and docs/test coverage moved with it in [footer.tsx](/Users/pciechanski/Documents/_moje_projekty/Coderso/core/widgets/core/footer.tsx:1), [FooterEditors.tsx](/Users/pciechanski/Documents/_moje_projekty/Coderso/core/admin/ui/widgets/editors/FooterEditors.tsx:1), [footer.test.tsx](/Users/pciechanski/Documents/_moje_projekty/Coderso/tests/vitest/widgets/footer.test.tsx:1), and [FOOTER.md](/Users/pciechanski/Documents/_moje_projekty/Coderso/_docs/_WIDGETS/FOOTER.md:1). |
+| 86, 194-206, 218-219, 317-320, 384-385, 445 | Footer landmark had weak semantics and column titles were not headings | `fixed` | `TASK-268-02` | `<footer>` now uses `aria-labelledby` or `aria-label="Site footer"`, column titles render as `<h3>`, and the tests assert those semantics. |
+| 155-163, 197, 301-305, 411 | `minimal` rendered as one normal column and legal/social strips always showed | `fixed` | `TASK-268-03` | [footer.tsx](/Users/pciechanski/Documents/_moje_projekty/Coderso/core/widgets/core/footer.tsx:1) now renders a compact minimal row, `legal.enabled` / `socialEnabled` landed, and [footer.test.tsx](/Users/pciechanski/Documents/_moje_projekty/Coderso/tests/vitest/widgets/footer.test.tsx:1) covers hidden strip behavior. |
+| 112-116, 176-180, 182, 264, 267-270, 332-333, 401-402 | Footer editor labels were inconsistent; `sectionPaddingY` was duplicated; Footer had not adopted shared clear/reset/color-picker patterns | `fixed` | `TASK-268-04`, `TASK-268-05` | Visual/Advanced fields are labeled, Advanced is one-control-per-line, `sectionPaddingY` exists only in Advanced, and Footer now reuses the shared clear/reset + color picker pattern. [footer-editor-wave.test.tsx](/Users/pciechanski/Documents/_moje_projekty/Coderso/tests/vitest/ui/footer-editor-wave.test.tsx:1) covers label-driven selectors instead of placeholder-only lookups. |
+| 129-137, 260-261 | Wizard only exposed the first link without clear disclosure | `fixed` | `TASK-268-04` | Wizard now explains that only the first link is edited there and shows hidden-link counts; covered by [footer-editor-wave.test.tsx](/Users/pciechanski/Documents/_moje_projekty/Coderso/tests/vitest/ui/footer-editor-wave.test.tsx:1). |
+| 134-137 | Link reordering was missing | `fixed` | `TASK-268-04` | Footer Visual now supports deterministic move up/down for links and social items; covered by [footer-editor-wave.test.tsx](/Users/pciechanski/Documents/_moje_projekty/Coderso/tests/vitest/ui/footer-editor-wave.test.tsx:1). |
+| 134-137 | Column reordering was missing | `deferred` | `TASK-308` | `TASK-268` deliberately left column reorder out because slot ownership is positional (`column-1/2/3`). [TASK-308](/Users/pciechanski/Documents/_moje_projekty/Coderso/_docs/_TASKS/TASK-308_Footer_Column_Reorder_and_Slot_Cohesion.md:1) now owns a truthful slot-safe reorder contract. |
+| 139-153, 404, 410, 416-417, 447 | Footer lacked horizontal padding, responsive breakpoint, hover/active/underline, link typography, and bounded link targets | `fixed` | `TASK-268-05` | [footer.tsx](/Users/pciechanski/Documents/_moje_projekty/Coderso/core/widgets/core/footer.tsx:1) now supports `paddingX`, `columnBreakpoint`, hover/active colors, underline mode, font weight, letter spacing, and `_self` / `_blank` link targets; covered by [footer.test.tsx](/Users/pciechanski/Documents/_moje_projekty/Coderso/tests/vitest/widgets/footer.test.tsx:1), [footer-editor-wave.test.tsx](/Users/pciechanski/Documents/_moje_projekty/Coderso/tests/vitest/ui/footer-editor-wave.test.tsx:1), and [styleNoneTokens.test.tsx](/Users/pciechanski/Documents/_moje_projekty/Coderso/tests/vitest/widgets/styleNoneTokens.test.tsx:392). |
+| 225-226, 230, 413, 415 | Newsletter/address/contact/back-to-top backlog | `deferred` | `TASK-309` | These market-style utilities remain outside the current Footer contract. [TASK-309](/Users/pciechanski/Documents/_moje_projekty/Coderso/_docs/_TASKS/TASK-309_Footer_Market_Utility_Expansion.md:1) is the named future owner. |
+| 331, 441 | Wizard/Visual/Advanced tabs were hidden before the first Continue action | `not-footer-scope` | `TASK-194-04-02` | This is the existing shared builder transition contract, not a Footer-specific bug. `TASK-268` did not change the first-open page-builder shell behavior. |
+| 182 | `align` / `legalAlign` felt hidden in Advanced | `fixed` | `TASK-268-04` | Ownership stays in Advanced intentionally, but the controls are now explicitly labeled and stacked one per line so the discoverability problem is gone without moving technical tokens into Visual. |
+| 327-334, 450 | Login 429 / rate-limit behavior seen during multi-agent testing | `not-footer-scope` | n/a | Environment / infrastructure note only. No Footer code or route contract changed here. |
+
+## 0.2 Deferred Task Links
+
+- [TASK-308_Footer_Column_Reorder_and_Slot_Cohesion.md](/Users/pciechanski/Documents/_moje_projekty/Coderso/_docs/_TASKS/TASK-308_Footer_Column_Reorder_and_Slot_Cohesion.md:1)
+- [TASK-309_Footer_Market_Utility_Expansion.md](/Users/pciechanski/Documents/_moje_projekty/Coderso/_docs/_TASKS/TASK-309_Footer_Market_Utility_Expansion.md:1)
+
+## 0.3 Validation
+
+- `git diff --check`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `NODE_ENV=test bunx vitest run --config vitest.config.ts tests/vitest/widgets/footer.test.tsx tests/vitest/ui/footer-editor-wave.test.tsx tests/vitest/widgets/renderer.test.tsx tests/vitest/widgets/styleNoneTokens.test.tsx`
+- `bun test tests/unit/widgets/validator.test.ts`
+- `bun run gates:coderso`
+- `bun run precommit`
+- `bun run scan:security:strict`
+
+## 1. Archived Audit Snapshot
 
 Widget `footer` jest widgetem kompozytowym odpowiedzialnym za wyświetlanie stopki na stronach serwisu. Posiada trzy tryby edycji (Wizard / Visual / Advanced) oraz trzy warianty layoutu (Columns 2 / Columns 3 / Minimal). Analiza obejmuje plik główny komponentu (`footer.tsx`, ~477 linii) oraz edytory (`FooterEditors.tsx`, ~841 linii).
 

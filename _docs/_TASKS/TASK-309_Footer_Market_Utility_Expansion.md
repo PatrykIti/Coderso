@@ -1,6 +1,6 @@
-# TASK-294: Footer Market Utility Expansion
+# TASK-309: Footer Market Utility Expansion
 
-# FileName: TASK-294_Footer_Market_Utility_Expansion.md
+# FileName: TASK-309_Footer_Market_Utility_Expansion.md
 
 **Priority:** Low
 **Category:** Widgets + Footer + Product Expansion

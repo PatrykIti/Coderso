@@ -6,7 +6,7 @@
 **Category:** Widgets + Documentation + Playwright QA + Release Notes
 **Estimated Effort:** Medium
 **Dependencies:** TASK-268-01, TASK-268-02, TASK-268-03, TASK-268-04, TASK-268-05
-**Status:** To Do
+**Status:** Done (2026-05-18)
 
 ---
 
@@ -39,21 +39,21 @@ artifacts and must not be staged.
 
 ## Sub-Tasks
 
-- [ ] Build a row-by-row closure matrix from
+- [x] Build a row-by-row closure matrix from
   `_docs/PLAYWRIGHT/REPORT_FOOTER_WIDGET.md`.
-- [ ] Mark every row as `fixed`, `TASK-256/shared`, `not-footer-scope`,
+- [x] Mark every row as `fixed`, `TASK-256/shared`, `not-footer-scope`,
   `not-reproducible`, or `deferred`.
-- [ ] For every deferred Footer-specific row, create or reference a physical
+- [x] For every deferred Footer-specific row, create or reference a physical
   future task with concrete owner/test paths.
-- [ ] Do not close a Footer-owned backlog row as generic prose only; `deferred`
+- [x] Do not close a Footer-owned backlog row as generic prose only; `deferred`
   means a named physical task exists by the time TASK-268 moves to `Done`.
-- [ ] Refresh `_docs/_WIDGETS/FOOTER.md` so it matches the implemented schema,
+- [x] Refresh `_docs/_WIDGETS/FOOTER.md` so it matches the implemented schema,
   defaults, render contract, editor modes, slots, and validation behavior.
-- [ ] Update `_docs/WIDGETS.md` and `_docs/WIDGET_PACK_MATRIX.md` only when the
+- [x] Update `_docs/WIDGETS.md` and `_docs/WIDGET_PACK_MATRIX.md` only when the
   final implementation changes their source-of-truth contracts.
-- [ ] Add changelog entry and update changelog index when any TASK-268 task
+- [x] Add changelog entry and update changelog index when any TASK-268 task
   moves to `Done`.
-- [ ] Move task statuses and board rows only after validation evidence exists.
+- [x] Move task statuses and board rows only after validation evidence exists.
 
 ## Files to Change
 

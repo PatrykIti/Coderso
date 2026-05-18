@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Editor UX
 **Estimated Effort:** Large
 **Dependencies:** TASK-268, TASK-268-01, TASK-268-02, TASK-268-03
-**Status:** To Do
+**Status:** Done (2026-05-18)
 
 ---
 
