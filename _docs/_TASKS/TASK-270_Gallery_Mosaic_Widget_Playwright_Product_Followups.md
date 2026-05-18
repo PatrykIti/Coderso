@@ -83,7 +83,7 @@ repairs inside its own implementation leaves.
 - [x] TASK-270-02: Gallery Mosaic Reorder, Count, and Removal UX
 - [x] TASK-270-03: Gallery Mosaic Per-Item Media Presentation Fields
 - [x] TASK-270-04: Gallery Mosaic Lightbox and Zoom Mode
-- [ ] TASK-270-05: Gallery Mosaic Responsive Columns and Motion Presets
+- [x] TASK-270-05: Gallery Mosaic Responsive Columns and Motion Presets
 - [ ] TASK-270-06: Gallery Mosaic Config Import Export and Wizard Guidance
 - [ ] TASK-270-07: Gallery Mosaic Report, Docs, Changelog, and Closure
 

@@ -177,6 +177,11 @@ test("normalizeWidgetBlock accepts gallery mosaic per-item media presentation fi
         mode: "lightbox",
         zoom: "fill",
       },
+      style: {
+        ...galleryMosaicDefaults.style,
+        layoutDensity: "dense",
+        motionPreset: "slide-up",
+      },
       items: [
         {
           id: "gallery-a",
@@ -252,6 +257,32 @@ test("normalizeWidgetBlock rejects invalid gallery mosaic interaction enums", ()
         interaction: {
           mode: "modal",
           zoom: "explode",
+        },
+      } as unknown as GalleryMosaicData,
+    })
+  ).toThrow("widget_schema_invalid");
+});
+
+test("normalizeWidgetBlock rejects invalid gallery mosaic density and motion enums", () => {
+  registerWidget(
+    createGalleryMosaicWidget({
+      wizard: Dummy as never,
+      visual: Dummy as never,
+      advanced: Dummy as never,
+    })
+  );
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "gallery-4",
+      type: "gallery-mosaic",
+      variant: "mosaic",
+      data: {
+        ...galleryMosaicDefaults,
+        style: {
+          ...galleryMosaicDefaults.style,
+          layoutDensity: "fluid",
+          motionPreset: "bounce",
         },
       } as unknown as GalleryMosaicData,
     })

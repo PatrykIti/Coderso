@@ -35,6 +35,7 @@ Sections:
 4. Interaction
 5. Overlay and caption controls
 6. Layout style
+7. Density and motion
 
 Notes:
 - Gallery Mosaic owns variant selection in Visual (`visualOwnsVariantSelection = true`).
@@ -56,6 +57,10 @@ Notes:
   `fit` / `fill` zoom behavior. Items with `href` keep navigation precedence,
   and Visual explains that the link must be cleared before that tile can open
   the lightbox.
+- Density and motion now stay in bounded product presets: `layoutDensity`
+  (`auto`, `compact`, `balanced`, `dense`) changes responsive packing through
+  static variant-owned class maps, and `motionPreset` (`none`, `fade`,
+  `slide-up`) stays reduced-motion safe.
 
 ### Advanced (technical-only)
 - Shared style ownership summary (read-only)
@@ -76,6 +81,8 @@ for ratio, gap, radius, caption position, and overlay.
   - `data-gallery-mosaic-caption-position`
   - `data-gallery-mosaic-interaction`
   - `data-gallery-mosaic-zoom`
+  - `data-gallery-mosaic-layout-density`
+  - `data-gallery-mosaic-motion`
   - `data-gallery-media-type`
 - Media priority per item:
   - `video` when video URL exists
@@ -87,6 +94,12 @@ for ratio, gap, radius, caption position, and overlay.
   button, or `Escape`, and return focus to the originating trigger.
 - Tiles with `href` keep the shared safe-link runtime contract and do not open
   the lightbox.
+- Responsive layout density stays bounded to variant-owned presets instead of
+  raw breakpoint maps. `auto` preserves the legacy layout, while `compact`,
+  `balanced`, and `dense` switch only between pre-approved tablet/desktop
+  class maps for each variant.
+- Motion presets are opt-in and use static Tailwind `motion-safe:*` /
+  `motion-reduce:*` classes. `none` remains the default.
 - Shared runtime semantics currently use semantic `<figure>` / `<figcaption>`
   wrappers for gallery media and keep current caption-derived naming/title
   behavior unless a dedicated per-item `alt` value overrides them.
@@ -126,7 +139,9 @@ for ratio, gap, radius, caption position, and overlay.
     "gap": "md",
     "radius": "lg",
     "overlay": "rgba(15, 23, 42, 0.35)",
-    "captionPosition": "inside"
+    "captionPosition": "inside",
+    "layoutDensity": "auto",
+    "motionPreset": "none"
   }
 }
 ```

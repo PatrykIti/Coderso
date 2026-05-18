@@ -29,6 +29,8 @@ import {
   type GalleryMosaicInteractionMode,
   type GalleryMosaicItem,
   type GalleryMosaicLightboxZoom,
+  type GalleryMosaicLayoutDensity,
+  type GalleryMosaicMotionPreset,
   type GalleryMosaicItemRatio,
   type GalleryMosaicObjectPosition,
   type GalleryMosaicRadius,
@@ -115,6 +117,19 @@ const interactionModeOptions: Array<{ id: GalleryMosaicInteractionMode; label: s
 const interactionZoomOptions: Array<{ id: GalleryMosaicLightboxZoom; label: string }> = [
   { id: "fit", label: "Fit inside dialog" },
   { id: "fill", label: "Fill dialog frame" },
+];
+
+const layoutDensityOptions: Array<{ id: GalleryMosaicLayoutDensity; label: string }> = [
+  { id: "auto", label: "Auto" },
+  { id: "compact", label: "Compact" },
+  { id: "balanced", label: "Balanced" },
+  { id: "dense", label: "Dense" },
+];
+
+const motionPresetOptions: Array<{ id: GalleryMosaicMotionPreset; label: string }> = [
+  { id: "none", label: "No motion" },
+  { id: "fade", label: "Fade in" },
+  { id: "slide-up", label: "Slide up" },
 ];
 
 const itemCountOptions = Array.from({ length: galleryMosaicItemMax }, (_, index) =>
@@ -576,6 +591,14 @@ function TechnicalStyleSummary({ value }: { value: GalleryMosaicData }) {
         <div>
           <dt className="font-medium text-foreground">Caption</dt>
           <dd>{style?.captionPosition ?? "inside"}</dd>
+        </div>
+        <div>
+          <dt className="font-medium text-foreground">Density</dt>
+          <dd>{style?.layoutDensity ?? "auto"}</dd>
+        </div>
+        <div>
+          <dt className="font-medium text-foreground">Motion</dt>
+          <dd>{style?.motionPreset ?? "none"}</dd>
         </div>
         <div className="col-span-2">
           <dt className="font-medium text-foreground">Overlay</dt>
@@ -1311,6 +1334,65 @@ export function GalleryMosaicVisualEditor({
               ))}
             </SelectContent>
           </Select>
+        </div>
+      </EditorSection>
+
+      <EditorSection
+        title="Density and motion"
+        description="Choose bounded responsive density presets and reduced-motion-safe entrances."
+      >
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Layout density</p>
+          <Select
+            value={normalized.style?.layoutDensity ?? "auto"}
+            onValueChange={(next) =>
+              updateStyle(value, onChange, {
+                layoutDensity: next as GalleryMosaicLayoutDensity,
+              })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select density" />
+            </SelectTrigger>
+            <SelectContent>
+              {layoutDensityOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            Density stays bounded to product presets. Gallery Mosaic does not accept raw
+            per-breakpoint column maps in widget data.
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Motion preset</p>
+          <Select
+            value={normalized.style?.motionPreset ?? "none"}
+            onValueChange={(next) =>
+              updateStyle(value, onChange, {
+                motionPreset: next as GalleryMosaicMotionPreset,
+              })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select motion" />
+            </SelectTrigger>
+            <SelectContent>
+              {motionPresetOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            Motion presets respect reduced-motion preferences and stay off by default for backward
+            compatibility.
+          </p>
         </div>
       </EditorSection>
     </div>

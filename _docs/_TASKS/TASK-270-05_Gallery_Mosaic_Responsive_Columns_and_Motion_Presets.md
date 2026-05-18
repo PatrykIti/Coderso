@@ -6,7 +6,7 @@
 **Category:** Widgets + Gallery Mosaic + Layout + Runtime Render
 **Estimated Effort:** Large
 **Dependencies:** TASK-256-01, TASK-256-06-02, TASK-270-03, TASK-270-04
-**Status:** To Do
+**Status:** Done (2026-05-18)
 
 ---
 
@@ -22,6 +22,19 @@ It intentionally resolves the report's breakpoint-column request through
 approved density presets instead of arbitrary raw breakpoint maps. If a future
 product decision needs explicit per-breakpoint column authoring, that must be
 split to a separate task rather than claimed as silently completed here.
+
+Landed implementation:
+
+- `core/widgets/core/galleryMosaic.tsx` now owns schema-backed
+  `style.layoutDensity` (`auto` / `compact` / `balanced` / `dense`) and
+  `style.motionPreset` (`none` / `fade` / `slide-up`) with bounded,
+  variant-scoped class maps and reduced-motion-safe motion classes.
+- `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx` adds Visual controls
+  for density and motion and explicitly documents that Gallery Mosaic does not
+  accept raw per-breakpoint column maps in widget data.
+- Tests now cover normalizer fallback, deterministic data markers, motion-safe
+  class output, editor patching, and strict validator rejection for invalid
+  density/motion enums.
 
 ## Source Findings
 

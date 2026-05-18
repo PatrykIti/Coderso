@@ -358,11 +358,17 @@ Po zwiększeniu limitu aktywnych sesji per user w CMS do 30 — zapis i publikac
 > przez `Escape` i backdrop, oraz powrotem focusa do triggera. Itemy z `href`
 > zachowują pierwszeństwo bezpiecznej nawigacji i nie otwierają lightboxa.
 
+> **Aktualizacja 2026-05-18 — TASK-270-05:** BF-14 i BF-15 są zamknięte.
+> Gallery Mosaic ma teraz bounded preset `layoutDensity`
+> (`auto` / `compact` / `balanced` / `dense`) zamiast surowej mapy breakpointów
+> oraz opt-in `motionPreset` (`none` / `fade` / `slide-up`) oparty o
+> `motion-safe` / `motion-reduce` klasy bez naruszania backward compatibility.
+
 > **Closure note 2026-05-18 — TASK-293-03:** reopened shared residual family is
 > now fully closed in docs/changelog/board state as well. `TASK-270` is the
-> only remaining owner for product gaps such as motion/density presets and
-> import/export, while preview/picker, reorder UX, dedicated `alt`, poster,
-> and lightbox slices are already landed.
+> only remaining owner for product gaps such as import/export and final closure,
+> while preview/picker, reorder UX, dedicated `alt`, poster, lightbox, and
+> bounded motion/density slices are already landed.
 
 ---
 
@@ -383,8 +389,8 @@ Po zwiększeniu limitu aktywnych sesji per user w CMS do 30 — zapis i publikac
 | BF-11 | Brak kontroli `object-position` (punkt skupienia zdjęcia) | Średni |
 | BF-12 | Brak per-item ratio (wszystkie kafelki mają jeden ratio) | Niski |
 | BF-13 | Brak video poster image field (czarny ekran przy ładowaniu) | Niski |
-| BF-14 | Brak animacji wejścia kafelków (fade, slide) | Niski |
-| BF-15 | Brak breakpoint per-column (np. 2 kol. mobile, 4 kol. desktop) | Średni |
+| BF-14 | ✓ Zamknięte — opt-in animacje wejścia (`fade`, `slide-up`) z reduced-motion fallback | Niski |
+| BF-15 | ✓ Zamknięte — bounded preset `layoutDensity` zamiast surowej mapy breakpointów | Średni |
 | BF-16 | Brak eksportu/importu konfiguracji galerii | Niski |
 
 ---
@@ -438,7 +444,7 @@ Po zwiększeniu limitu aktywnych sesji per user w CMS do 30 — zapis i publikac
 | BF-09 | Średni | Warning przy feature-left + 1 element |
 | BF-10 | Średni | ✓ Zamknięte — opt-in lightbox / zoom na kliknięcie |
 | BF-11 | Średni | Object-position (focus point) |
-| BF-15 | Średni | Konfiguracja breakpoint kolumn |
+| BF-15 | Średni | ✓ Zamknięte — bounded preset `layoutDensity` zamiast ręcznej konfiguracji breakpointów |
 | BF-13 | Niski | Video poster image |
 
 ---

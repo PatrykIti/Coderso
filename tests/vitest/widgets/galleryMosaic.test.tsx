@@ -107,6 +107,8 @@ test("gallery mosaic validator accepts expanded model", () => {
           radius: "xl",
           overlay: "rgba(15, 23, 42, 0.5)",
           captionPosition: "hover",
+          layoutDensity: "dense",
+          motionPreset: "slide-up",
         },
       },
     })
@@ -252,6 +254,45 @@ test("gallery mosaic lightbox stays opt-in, normalizes interaction defaults, and
   expect(getGalleryMosaicLightboxRuntimeScript()).toContain("data-gallery-lightbox-root='1'");
 });
 
+test("gallery mosaic density and motion presets stay bounded and render deterministic markers", () => {
+  const normalized = normalizeGalleryMosaicData({
+    ...galleryMosaicDefaults,
+    style: {
+      ...galleryMosaicDefaults.style,
+      layoutDensity: "invalid" as never,
+      motionPreset: "bounce" as never,
+    },
+  });
+
+  const html = renderToString(
+    <GalleryMosaicBlock
+      data={{
+        ...galleryMosaicDefaults,
+        style: {
+          ...galleryMosaicDefaults.style,
+          layoutDensity: "dense",
+          motionPreset: "slide-up",
+        },
+      }}
+      variant="mosaic"
+    />
+  );
+
+  expect(normalized.style).toEqual(
+    expect.objectContaining({
+      layoutDensity: "auto",
+      motionPreset: "none",
+    })
+  );
+  expect(html).toContain('data-gallery-mosaic-layout-density="dense"');
+  expect(html).toContain('data-gallery-mosaic-motion="slide-up"');
+  expect(html).toContain('data-gallery-item-motion="slide-up"');
+  expect(html).toContain("sm:grid-cols-3");
+  expect(html).toContain("lg:grid-cols-5");
+  expect(html).toContain("motion-safe:slide-in-from-bottom-2");
+  expect(html).toContain("motion-reduce:transition-none");
+});
+
 test("gallery mosaic cleared overlay omits caption background style", () => {
   const normalized = normalizeGalleryMosaicData({
     ...galleryMosaicDefaults,
@@ -361,6 +402,7 @@ test("gallery mosaic visual renders section-based IA", () => {
   expect(html).toContain("Interaction");
   expect(html).toContain("Overlay and caption controls");
   expect(html).toContain("Layout style");
+  expect(html).toContain("Density and motion");
 });
 
 test("gallery mosaic advanced keeps technical-only scope", () => {

@@ -623,12 +623,25 @@ test("GalleryMosaic visual editor covers variant cards, item reordering, removal
       "Feature Left works best with one lead tile plus at least one supporting item."
     );
 
-    selects = Array.from(view.container.querySelectorAll("select"));
-    setSelectValue(selects[selects.length - 4], "hover");
+    const overlaySection = findSectionByTitle(view.container, "Overlay and caption controls");
+    const overlaySelect = overlaySection?.querySelector("select");
+    setSelectValue(overlaySelect, "hover");
     setInputValue(colorPicker, "#112233");
-    setSelectValue(selects[selects.length - 3], "16:9");
-    setSelectValue(selects[selects.length - 2], "lg");
-    setSelectValue(selects[selects.length - 1], "xl");
+    const layoutStyleSection = findSectionByTitle(view.container, "Layout style");
+    const layoutStyleSelects = Array.from(
+      layoutStyleSection?.querySelectorAll("select") ?? []
+    ) as HTMLSelectElement[];
+    expect(layoutStyleSelects).toHaveLength(3);
+    setSelectValue(layoutStyleSelects[0], "16:9");
+    setSelectValue(layoutStyleSelects[1], "lg");
+    setSelectValue(layoutStyleSelects[2], "xl");
+    const densitySection = findSectionByTitle(view.container, "Density and motion");
+    const densitySelects = Array.from(densitySection?.querySelectorAll("select") ?? []) as
+      | HTMLSelectElement[]
+      | [];
+    expect(densitySelects).toHaveLength(2);
+    setSelectValue(densitySelects[0], "dense");
+    setSelectValue(densitySelects[1], "slide-up");
 
     expect(onChangeSpy).toHaveBeenCalled();
     expect(latestValue.header).toEqual({
@@ -656,6 +669,8 @@ test("GalleryMosaic visual editor covers variant cards, item reordering, removal
       radius: "xl",
       overlay: "rgba(17, 34, 51, 0.5)",
       captionPosition: "hover",
+      layoutDensity: "dense",
+      motionPreset: "slide-up",
     });
     expect((view.container.querySelector('input[type="color"]') as HTMLInputElement).value).toBe(
       "#112233"
@@ -688,6 +703,8 @@ test("GalleryMosaic advanced editor keeps diagnostics-only shared style ownershi
       radius: "round",
       overlay: "",
       captionPosition: "floating",
+      layoutDensity: "fluid",
+      motionPreset: "bounce",
     },
   } as unknown as GalleryMosaicData;
 
@@ -719,6 +736,8 @@ test("GalleryMosaic advanced editor keeps diagnostics-only shared style ownershi
     expect(preview?.textContent).toContain('"gap": "md"');
     expect(preview?.textContent).toContain('"radius": "lg"');
     expect(preview?.textContent).toContain('"captionPosition": "inside"');
+    expect(preview?.textContent).toContain('"layoutDensity": "auto"');
+    expect(preview?.textContent).toContain('"motionPreset": "none"');
     expect(preview?.textContent).toContain('"id": "gallery-2"');
 
     clickElement(findButtonByText(view.container, "Normalize now"));
@@ -754,6 +773,8 @@ test("GalleryMosaic advanced editor keeps diagnostics-only shared style ownershi
       radius: "lg",
       overlay: undefined,
       captionPosition: "inside",
+      layoutDensity: "auto",
+      motionPreset: "none",
     });
     expect(view.container.querySelectorAll("select")).toHaveLength(0);
     expect(view.container.querySelector('input[placeholder="rgba(15, 23, 42, 0.35)"]')).toBeNull();

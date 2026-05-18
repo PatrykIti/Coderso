@@ -335,7 +335,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-270 | Gallery Mosaic Widget Playwright Product Followups | High | Very Large | In progress: shared prerequisites plus previews, reorder UX, per-item media fields, and lightbox are landed; next slices are responsive density/motion, import/export, and final closure |
+| TASK-270 | Gallery Mosaic Widget Playwright Product Followups | High | Very Large | In progress: shared prerequisites plus previews, reorder UX, per-item media fields, lightbox, and bounded density/motion presets are landed; remaining slices are import/export and final closure |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
@@ -346,6 +346,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-270-05 | Gallery Mosaic Responsive Columns and Motion Presets | Medium | Large | Done: Gallery Mosaic now uses bounded responsive density presets and reduced-motion-safe `fade` / `slide-up` entrances instead of raw breakpoint maps |
 | TASK-270-04 | Gallery Mosaic Lightbox and Zoom Mode | Medium | Large | Done: Gallery Mosaic now has opt-in widget-local lightbox/zoom with instance-scoped ids, href precedence guidance, and happy-dom runtime coverage |
 | TASK-270-03 | Gallery Mosaic Per-Item Media Presentation Fields | Medium | Large | Done: per-item `alt`, focus point, ratio override, and video poster fields now exist end-to-end through schema, editor, and runtime output |
 | TASK-270-02 | Gallery Mosaic Reorder, Count, and Removal UX | High | Large | Done: Visual supports drag reorder with keyboard fallback, confirms destructive count/remove changes, and warns when `feature-left` is left with one item |

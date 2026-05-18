@@ -14,6 +14,8 @@ export type GalleryMosaicObjectPosition = "center" | "top" | "bottom" | "left" |
 export type GalleryMosaicItemRatio = "inherit" | GalleryMosaicRatio;
 export type GalleryMosaicInteractionMode = "none" | "lightbox";
 export type GalleryMosaicLightboxZoom = "fit" | "fill";
+export type GalleryMosaicLayoutDensity = "auto" | "compact" | "balanced" | "dense";
+export type GalleryMosaicMotionPreset = "none" | "fade" | "slide-up";
 
 export type GalleryMosaicItem = {
   id?: string;
@@ -43,6 +45,8 @@ export type GalleryMosaicData = {
     radius?: GalleryMosaicRadius;
     overlay?: string;
     captionPosition?: GalleryMosaicCaptionPosition;
+    layoutDensity?: GalleryMosaicLayoutDensity;
+    motionPreset?: GalleryMosaicMotionPreset;
   };
 };
 
@@ -78,6 +82,61 @@ const objectPositionStyleMap: Record<GalleryMosaicObjectPosition, CSSProperties[
     left: "left center",
     right: "right center",
   };
+
+const layoutDensityGridClassMap: Record<
+  Exclude<GalleryMosaicVariantId, "feature-left">,
+  Record<GalleryMosaicLayoutDensity, string>
+> = {
+  mosaic: {
+    auto: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4",
+    compact: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
+    balanced: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4",
+    dense: "grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5",
+  },
+  "uniform-grid": {
+    auto: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
+    compact: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2",
+    balanced: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
+    dense: "grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4",
+  },
+};
+
+const featureLeftLayoutDensityMap: Record<
+  GalleryMosaicLayoutDensity,
+  {
+    container: string;
+    lead: string;
+    support: string;
+  }
+> = {
+  auto: {
+    container: "grid grid-cols-1 lg:grid-cols-3",
+    lead: "lg:col-span-2",
+    support: "flex flex-col",
+  },
+  compact: {
+    container: "grid grid-cols-1 lg:grid-cols-2",
+    lead: "",
+    support: "flex flex-col",
+  },
+  balanced: {
+    container: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
+    lead: "sm:col-span-2 lg:col-span-2",
+    support: "flex flex-col",
+  },
+  dense: {
+    container: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4",
+    lead: "sm:col-span-2 lg:col-span-2",
+    support: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2",
+  },
+};
+
+const motionPresetClassMap: Record<GalleryMosaicMotionPreset, string> = {
+  none: "",
+  fade: "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-300 motion-reduce:transform-none motion-reduce:transition-none",
+  "slide-up":
+    "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300 motion-reduce:transform-none motion-reduce:transition-none",
+};
 
 const galleryMosaicItemMin = 1;
 export const galleryMosaicItemMax = 16;
@@ -132,6 +191,8 @@ export const galleryMosaicSchema = {
         radius: { enum: ["none", "md", "lg", "xl"] },
         overlay: { type: "string" },
         captionPosition: { enum: ["inside", "below", "hover"] },
+        layoutDensity: { enum: ["auto", "compact", "balanced", "dense"] },
+        motionPreset: { enum: ["none", "fade", "slide-up"] },
       },
     },
   },
@@ -184,6 +245,8 @@ export const galleryMosaicDefaults: GalleryMosaicData = {
     radius: "lg",
     overlay: "rgba(15, 23, 42, 0.35)",
     captionPosition: "inside",
+    layoutDensity: "auto",
+    motionPreset: "none",
   },
 };
 
@@ -239,6 +302,18 @@ const resolveGalleryMosaicInteractionMode = (
 const resolveGalleryMosaicLightboxZoom = (value: string | undefined): GalleryMosaicLightboxZoom => {
   if (value === "fill") return "fill";
   return "fit";
+};
+
+const resolveGalleryMosaicLayoutDensity = (
+  value: string | undefined
+): GalleryMosaicLayoutDensity => {
+  if (value === "compact" || value === "balanced" || value === "dense") return value;
+  return "auto";
+};
+
+const resolveGalleryMosaicMotionPreset = (value: string | undefined): GalleryMosaicMotionPreset => {
+  if (value === "fade" || value === "slide-up") return value;
+  return "none";
 };
 
 export const resolveGalleryMosaicVariant = (variant: string): GalleryMosaicVariantId => {
@@ -326,6 +401,8 @@ export function normalizeGalleryMosaicData(data: GalleryMosaicData): GalleryMosa
     radius: "lg",
     overlay: "rgba(15, 23, 42, 0.35)",
     captionPosition: "inside",
+    layoutDensity: "auto",
+    motionPreset: "none",
   };
   const hasStyleObject = data.style !== undefined;
 
@@ -348,6 +425,8 @@ export function normalizeGalleryMosaicData(data: GalleryMosaicData): GalleryMosa
         ? resolveClearableStyleValue(data.style?.overlay)
         : styleDefaults.overlay,
       captionPosition: resolveGalleryMosaicCaptionPosition(data.style?.captionPosition),
+      layoutDensity: resolveGalleryMosaicLayoutDensity(data.style?.layoutDensity),
+      motionPreset: resolveGalleryMosaicMotionPreset(data.style?.motionPreset),
     },
   };
 }
@@ -542,6 +621,7 @@ function GalleryCard({
   overlay,
   interactionMode,
   lightboxZoom,
+  motionPreset,
   rootInstanceId,
 }: {
   item: GalleryMosaicItem;
@@ -552,6 +632,7 @@ function GalleryCard({
   overlay: string | undefined;
   interactionMode: GalleryMosaicInteractionMode;
   lightboxZoom: GalleryMosaicLightboxZoom;
+  motionPreset: GalleryMosaicMotionPreset;
   rootInstanceId: string;
 }) {
   const hasVideo = typeof item.video === "string" && item.video.trim().length > 0;
@@ -612,11 +693,13 @@ function GalleryCard({
       className={joinClasses(
         "group relative w-full overflow-hidden border border-[var(--color-border)]/70 bg-[var(--color-bg)]",
         ratioClassMap[resolvedRatio],
-        radiusClassMap[radius]
+        radiusClassMap[radius],
+        motionPresetClassMap[motionPreset]
       )}
       data-gallery-item={String(index + 1)}
       data-gallery-media-type={hasVideo ? "video" : hasImage ? "image" : "placeholder"}
       data-gallery-item-interaction={interactionType}
+      data-gallery-item-motion={motionPreset}
     >
       {media}
       {renderCaption({ item, index, captionPosition, overlay })}
@@ -739,6 +822,8 @@ export function GalleryMosaicBlock({
   const items = normalizeGalleryMosaicItems(normalized.items);
   const interactionMode = resolveGalleryMosaicInteractionMode(interaction.mode);
   const lightboxZoom = resolveGalleryMosaicLightboxZoom(interaction.zoom);
+  const layoutDensity = resolveGalleryMosaicLayoutDensity(style.layoutDensity);
+  const motionPreset = resolveGalleryMosaicMotionPreset(style.motionPreset);
   const rootInstanceId = createWidgetInstanceId(
     "gallery-mosaic",
     blockId,
@@ -766,6 +851,8 @@ export function GalleryMosaicBlock({
         data-gallery-mosaic-caption-position={captionPosition}
         data-gallery-mosaic-interaction={interactionMode}
         data-gallery-mosaic-zoom={lightboxZoom}
+        data-gallery-mosaic-layout-density={layoutDensity}
+        data-gallery-mosaic-motion={motionPreset}
         data-gallery-lightbox-root={hasLightboxDialogs ? "1" : undefined}
         data-gallery-lightbox-count={hasLightboxDialogs ? String(lightboxItemCount) : undefined}
       >
@@ -787,11 +874,15 @@ export function GalleryMosaicBlock({
         <div
           className={joinClasses(
             "grid grid-cols-1",
-            hasSupportingItems ? "lg:grid-cols-3" : undefined,
+            hasSupportingItems ? featureLeftLayoutDensityMap[layoutDensity].container : undefined,
             gapClassMap[gap]
           )}
         >
-          <div className={hasSupportingItems ? "lg:col-span-2" : undefined}>
+          <div
+            className={
+              hasSupportingItems ? featureLeftLayoutDensityMap[layoutDensity].lead : undefined
+            }
+          >
             <GalleryCard
               item={lead ?? {}}
               index={0}
@@ -801,11 +892,17 @@ export function GalleryMosaicBlock({
               overlay={overlay}
               interactionMode={interactionMode}
               lightboxZoom={lightboxZoom}
+              motionPreset={motionPreset}
               rootInstanceId={rootInstanceId}
             />
           </div>
           {hasSupportingItems ? (
-            <div className={joinClasses("flex flex-col", gapClassMap[gap])}>
+            <div
+              className={joinClasses(
+                featureLeftLayoutDensityMap[layoutDensity].support,
+                gapClassMap[gap]
+              )}
+            >
               {rest.map((item, index) => (
                 <GalleryCard
                   key={item.id ?? `gallery-side-${index + 2}`}
@@ -817,6 +914,7 @@ export function GalleryMosaicBlock({
                   overlay={overlay}
                   interactionMode={interactionMode}
                   lightboxZoom={lightboxZoom}
+                  motionPreset={motionPreset}
                   rootInstanceId={rootInstanceId}
                 />
               ))}
@@ -830,10 +928,12 @@ export function GalleryMosaicBlock({
     );
   }
 
-  const gridClassName =
-    resolvedVariant === "uniform-grid"
-      ? joinClasses("grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3", gapClassMap[gap])
-      : joinClasses("grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4", gapClassMap[gap]);
+  const gridClassName = joinClasses(
+    layoutDensityGridClassMap[resolvedVariant === "uniform-grid" ? "uniform-grid" : "mosaic"][
+      layoutDensity
+    ],
+    gapClassMap[gap]
+  );
 
   return (
     <section
@@ -845,6 +945,8 @@ export function GalleryMosaicBlock({
       data-gallery-mosaic-caption-position={captionPosition}
       data-gallery-mosaic-interaction={interactionMode}
       data-gallery-mosaic-zoom={lightboxZoom}
+      data-gallery-mosaic-layout-density={layoutDensity}
+      data-gallery-mosaic-motion={motionPreset}
       data-gallery-lightbox-root={hasLightboxDialogs ? "1" : undefined}
       data-gallery-lightbox-count={hasLightboxDialogs ? String(lightboxItemCount) : undefined}
     >
@@ -880,6 +982,7 @@ export function GalleryMosaicBlock({
               overlay={overlay}
               interactionMode={interactionMode}
               lightboxZoom={lightboxZoom}
+              motionPreset={motionPreset}
               rootInstanceId={rootInstanceId}
             />
           </div>
