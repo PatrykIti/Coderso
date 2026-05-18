@@ -32,6 +32,27 @@ import {
 
 type ListEntriesRow = Awaited<ReturnType<typeof listEntries>>[number];
 export type ContentListResolverEntry = ListEntriesRow;
+type ContentListResolvedRuntimeMeta = NonNullable<
+  NonNullable<ContentListData["resolved"]>["runtime"]
+>;
+export type ContentListResolvedRuntimeData = {
+  items: ContentListRuntimeItem[];
+  total: number;
+  sourceTypeId: string;
+  sourceTypeSlug: string;
+  listPath?: string;
+  listingQueryId?: string;
+  listingTemplateId?: string;
+  resolvedAt: string;
+  runtime?: ContentListResolvedRuntimeMeta;
+  error?: string;
+};
+export type ListingContentListResolvedRuntimeData = ContentListResolvedRuntimeData & {
+  rawRows: Record<string, unknown>[];
+  listPath: string;
+  listingQueryId: string;
+  listingTemplateId: string;
+};
 
 const featuredTagToken = "featured";
 const excerptMaxLength = 220;
@@ -734,7 +755,7 @@ export async function resolveListingContentListRuntimeData(
     blockId?: string;
   },
   deps: Partial<ContentListListingRuntimeDeps> = {}
-) {
+): Promise<ListingContentListResolvedRuntimeData> {
   const runtimeDeps: ContentListListingRuntimeDeps = {
     ...defaultListingRuntimeDeps,
     ...deps,
@@ -752,6 +773,7 @@ export async function resolveListingContentListRuntimeData(
       total: 0,
       sourceTypeId: "",
       sourceTypeSlug: "",
+      listPath: "",
       listingQueryId: "",
       listingTemplateId: listingTemplateId,
       resolvedAt: new Date().toISOString(),
@@ -766,6 +788,7 @@ export async function resolveListingContentListRuntimeData(
       total: 0,
       sourceTypeId: "",
       sourceTypeSlug: "",
+      listPath: "",
       listingQueryId,
       listingTemplateId,
       resolvedAt: new Date().toISOString(),
@@ -783,6 +806,7 @@ export async function resolveListingContentListRuntimeData(
       total: 0,
       sourceTypeId: "",
       sourceTypeSlug: "",
+      listPath: "",
       listingQueryId,
       listingTemplateId,
       resolvedAt: new Date().toISOString(),
@@ -863,14 +887,16 @@ export async function resolveContentListRuntimeData(
     blockId?: string;
   },
   deps: Partial<ContentListListingRuntimeDeps> = {}
-) {
+): Promise<ContentListResolvedRuntimeData> {
   const normalized = normalizeContentListData(input);
   const source = normalized.source ?? contentListDefaults.source!;
   const pagination = normalized.pagination ?? contentListDefaults.pagination!;
   const sourceMode: ContentListSourceMode = source.mode ?? "legacy";
 
   if (sourceMode === "listing") {
-    return resolveListingContentListRuntimeData(input, options, deps);
+    const listingResolved = await resolveListingContentListRuntimeData(input, options, deps);
+    const { rawRows: _rawRows, ...resolved } = listingResolved;
+    return resolved;
   }
 
   const contentTypeId = source.contentTypeId?.trim();

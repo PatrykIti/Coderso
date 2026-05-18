@@ -8,7 +8,7 @@ export function hasClearableFieldValue(value: unknown) {
 
 const hexColorPattern = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
 const rgbColorPattern =
-  /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*(?:0|1|0?\.\d+))?\s*\)$/i;
+  /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*((?:0|1|0?\.\d+)))?\s*\)$/i;
 
 export function isHexColorValue(value: string | undefined) {
   return typeof value === "string" && hexColorPattern.test(value);
@@ -21,7 +21,9 @@ export function resolveColorPickerValue(value: string | undefined, fallback: str
   const rgbMatch = value.match(rgbColorPattern);
   if (!rgbMatch) return fallback;
 
-  const [, red, green, blue] = rgbMatch;
+  const [, red, green, blue, alpha] = rgbMatch;
+  // Alpha-aware rgba values cannot round-trip through an HTML color input.
+  if (typeof alpha === "string" && alpha.length > 0) return fallback;
   const toHex = (channel: string) => Number.parseInt(channel, 10).toString(16).padStart(2, "0");
   return `#${toHex(red)}${toHex(green)}${toHex(blue)}`;
 }

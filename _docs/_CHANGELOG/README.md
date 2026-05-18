@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 862 | 2026-05-18 | TASK-257 to TASK-270 regression fixes | QA/CMS Widgets/Assistant |
 | 861 | 2026-05-18 | TASK-270 Gallery Mosaic widget follow-ups | CMS Widgets/Admin UI/Runtime/QA |
 | 860 | 2026-05-18 | TASK-312 Gallery Mosaic shared residuals | CMS Widgets/Admin UI/Runtime/QA |
 | 847 | 2026-05-18 | TASK-269 Form Embed closure | CMS Widgets/Forms/Admin UI/QA |

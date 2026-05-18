@@ -82,9 +82,10 @@ test("clearable field helper detects real values without treating empty text as 
   expect(hasClearableFieldValue("#ffffff")).toBe(true);
 });
 
-test("shared color picker resolves hex and rgb values but falls back for custom tokens", () => {
+test("shared color picker resolves hex and rgb values but falls back for rgba and custom tokens", () => {
   expect(resolveColorPickerValue("#112233", "#ffffff")).toBe("#112233");
   expect(resolveColorPickerValue("rgb(17, 34, 51)", "#ffffff")).toBe("#112233");
+  expect(resolveColorPickerValue("rgba(17, 34, 51, 0.4)", "#ffffff")).toBe("#ffffff");
   expect(resolveColorPickerValue("var(--color-border)", "#ffffff")).toBe("#ffffff");
 });
 

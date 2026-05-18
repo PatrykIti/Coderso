@@ -512,7 +512,7 @@ test("ContentList editors cover legacy/listing source modes and visual options",
   );
 
   try {
-    expect(view.container.textContent).toContain("Legacy content type source");
+    expect(view.container.textContent).toContain("Source setup");
 
     const selects = Array.from(view.container.querySelectorAll("select"));
     const inputs = Array.from(view.container.querySelectorAll("input"));

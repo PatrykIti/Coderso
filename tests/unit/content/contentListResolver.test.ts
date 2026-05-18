@@ -207,4 +207,5 @@ test("resolveContentListRuntimeData omits undefined listing runtime keys", async
   expect(runtime?.totalPages).toBe(1);
   expect(Object.prototype.hasOwnProperty.call(runtime ?? {}, "previousPageHref")).toBe(false);
   expect(Object.prototype.hasOwnProperty.call(runtime ?? {}, "nextPageHref")).toBe(false);
+  expect(Object.prototype.hasOwnProperty.call(result, "rawRows")).toBe(false);
 });
