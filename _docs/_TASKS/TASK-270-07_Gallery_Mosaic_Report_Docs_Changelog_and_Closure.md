@@ -147,3 +147,10 @@ No API routes are added by this docs/closure leaf.
   - `bun run gates:coderso`
   - `bun run scan:security:strict`
   - `bun run precommit`
+- Results:
+  - `tests/vitest/widgets/galleryMosaic.test.tsx`, `galleryMosaicLightboxRuntime.test.ts`, and `renderer.test.tsx`: `47/47` passing.
+  - `tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx`: `5/5` passing.
+  - `tests/unit/widgets/validator.test.ts`: `10/10` passing.
+  - `bun run gates:coderso`: all gates `PASS`.
+  - `bun run scan:security:strict`: all scanners completed cleanly with `0` blocking findings.
+  - `bun run precommit`: completed cleanly before the closure commit.
