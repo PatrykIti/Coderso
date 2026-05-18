@@ -295,6 +295,34 @@ const clickElement = (element: Element | null | undefined) => {
   });
 };
 
+const dispatchDragEvent = (target: Element, type: string, options: { clientY?: number } = {}) => {
+  const dragStore = new Map<string, string>();
+  const event = new DragEvent(type, {
+    bubbles: true,
+    cancelable: true,
+    clientY: options.clientY ?? 0,
+  });
+  Object.defineProperty(event, "dataTransfer", {
+    configurable: true,
+    value: {
+      effectAllowed: "",
+      dropEffect: "move",
+      setDragImage: vi.fn(),
+      setData: vi.fn((key: string, value: string) => {
+        dragStore.set(key, value);
+      }),
+      getData: vi.fn((key: string) => dragStore.get(key) ?? ""),
+    },
+  });
+  Object.defineProperty(event, "clientY", {
+    configurable: true,
+    value: options.clientY ?? 0,
+  });
+  React.act(() => {
+    target.dispatchEvent(event);
+  });
+};
+
 const findInputByPlaceholder = (container: ParentNode, placeholder: string) =>
   Array.from(container.querySelectorAll("input")).find(
     (element) => element.getAttribute("placeholder") === placeholder
@@ -317,6 +345,9 @@ const findButtonByText = (container: ParentNode, text: string) =>
 
 const findMediaPickers = (container: ParentNode) =>
   Array.from(container.querySelectorAll('[data-media-picker="true"]'));
+
+const findDragHandles = (container: ParentNode) =>
+  Array.from(container.querySelectorAll("[data-gallery-drag-handle]"));
 
 const findButtonsByText = (container: ParentNode, text: string) =>
   Array.from(container.querySelectorAll("button")).filter(
@@ -419,6 +450,8 @@ test("GalleryMosaic visual editor covers variant cards, item reordering, removal
 
   const onChangeSpy = vi.fn();
   const onVariantChangeSpy = vi.fn();
+  const confirmSpy = vi.fn(() => true);
+  vi.stubGlobal("confirm", confirmSpy);
   let latestValue: GalleryMosaicData = {
     header: {
       title: "Launch assets",
@@ -485,6 +518,7 @@ test("GalleryMosaic visual editor covers variant cards, item reordering, removal
     const selects = Array.from(view.container.querySelectorAll("select"));
     expect(selects).toHaveLength(5);
     setSelectValue(selects[0], "3");
+    expect(view.container.textContent).toContain("Item count grows or trims from the end.");
 
     setTextareaValue(
       findTextareaByPlaceholder(view.container, "Visual storytelling block with media tiles."),
@@ -512,22 +546,43 @@ test("GalleryMosaic visual editor covers variant cards, item reordering, removal
     expect(view.container.textContent).toContain("Current media: Video");
     expect(view.container.textContent).toContain("Video preview");
 
+    const dragHandles = findDragHandles(view.container);
+    expect(dragHandles).toHaveLength(3);
+    vi.spyOn(dragHandles[1]!, "getBoundingClientRect").mockReturnValue({
+      x: 0,
+      y: 0,
+      width: 200,
+      height: 40,
+      top: 0,
+      left: 0,
+      right: 200,
+      bottom: 40,
+      toJSON: () => ({}),
+    } as DOMRect);
+    dispatchDragEvent(dragHandles[0]!, "dragstart");
+    dispatchDragEvent(dragHandles[1]!, "dragover", { clientY: 32 });
+    dispatchDragEvent(dragHandles[1]!, "drop", { clientY: 32 });
+
+    expect(latestValue.items.map((item) => item.id)).toEqual([
+      "gallery-b",
+      "gallery-a",
+      "gallery-3",
+    ]);
+
     clickElement(findButtonsByText(view.container, "Move up")[1]);
     expect(latestValue.items.map((item) => item.caption)).toEqual([
-      "Motion close-up",
       "Lead frame",
+      "Motion close-up",
       "Story frame",
     ]);
 
     clickElement(findButtonsByText(view.container, "Remove")[1]);
-    expect(latestValue.items.map((item) => item.caption)).toEqual([
-      "Motion close-up",
-      "Story frame",
-    ]);
+    expect(confirmSpy).toHaveBeenCalledTimes(1);
+    expect(latestValue.items.map((item) => item.caption)).toEqual(["Lead frame", "Story frame"]);
 
     clickElement(findButtonByText(view.container, "Add item"));
     expect(latestValue.items.map((item) => item.caption)).toEqual([
-      "Motion close-up",
+      "Lead frame",
       "Story frame",
       "Media 3",
     ]);
@@ -540,6 +595,13 @@ test("GalleryMosaic visual editor covers variant cards, item reordering, removal
     });
     expect(view.container.textContent).toContain("Item 3: failed to resolve selected media.");
 
+    setSelectValue(selects[0], "1");
+    expect(confirmSpy).toHaveBeenCalledTimes(2);
+    expect(latestValue.items).toHaveLength(1);
+    expect(view.container.textContent).toContain(
+      "Feature Left works best with one lead tile plus at least one supporting item."
+    );
+
     setSelectValue(selects[1], "hover");
     setInputValue(colorPicker, "#112233");
     setSelectValue(selects[2], "16:9");
@@ -551,11 +613,12 @@ test("GalleryMosaic visual editor covers variant cards, item reordering, removal
       title: "Launch assets",
       description: "Updated supporting copy",
     });
+    expect(latestValue.items).toHaveLength(1);
     expect(latestValue.items[0]).toMatchObject({
-      id: "gallery-b",
-      video: "https://cdn.example.com/item-2.mp4",
-      caption: "Motion close-up",
-      href: "/motion-updated",
+      id: "gallery-a",
+      image: "/lead.jpg",
+      caption: "Lead frame",
+      href: "/lead",
     });
     expect(latestValue.style).toEqual({
       ratio: "16:9",
@@ -569,6 +632,7 @@ test("GalleryMosaic visual editor covers variant cards, item reordering, removal
     );
   } finally {
     view.cleanup();
+    vi.unstubAllGlobals();
   }
 });
 

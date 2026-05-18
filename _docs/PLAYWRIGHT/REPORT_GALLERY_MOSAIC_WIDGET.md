@@ -341,6 +341,12 @@ Po zwiększeniu limitu aktywnych sesji per user w CMS do 30 — zapis i publikac
 > `image` albo `video` URL bez ręcznego kopiowania asset linków. Błędy lookupu
 > są widoczne per item i nie czyszczą istniejących danych.
 
+> **Aktualizacja 2026-05-18 — TASK-270-02:** UX-03, UX-04, BF-06 i BF-09 są
+> zamknięte. Visual wspiera teraz drag reorder z klawiaturowym fallbackiem
+> (`Alt` + strzałki), redukcja `Items count` oraz `Remove` potwierdzają
+> destrukcyjne usunięcie skonfigurowanych itemów, a wariant `feature-left`
+> pokazuje ostrzeżenie, gdy zostaje tylko pojedynczy lead tile.
+
 > **Closure note 2026-05-18 — TASK-293-03:** reopened shared residual family is
 > now fully closed in docs/changelog/board state as well. `TASK-270` is the
 > only remaining owner for product gaps such as per-item preview/picker,

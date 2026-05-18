@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useState, type DragEvent, type KeyboardEvent, type ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { listMediaCached, type MediaRecord } from "@/services/mediaClient";
 import { MediaPicker } from "@/ui/media/MediaPicker";
-import { FileImage, Video } from "lucide-react";
+import { FileImage, GripVertical, Video } from "lucide-react";
+import { reorderItemsById, resolveDropIndexFromPointer } from "@/ui/posts/editor/blocks/blockDnD";
 
 import {
   galleryMosaicDefaults,
@@ -400,6 +401,24 @@ function removeItem(
     const items = normalizeGalleryMosaicItems(current.items);
     if (items.length <= 1) return current;
 
+    const removedItem = items[index];
+    if (!removedItem) return current;
+
+    const shouldConfirm =
+      !(
+        removedItem.image?.trim() ||
+        removedItem.video?.trim() ||
+        removedItem.caption?.trim() ||
+        removedItem.href?.trim()
+      ) ||
+      typeof window === "undefined" ||
+      typeof window.confirm !== "function" ||
+      window.confirm(`Remove item ${index + 1}? This action cannot be undone.`);
+
+    if (!shouldConfirm) {
+      return current;
+    }
+
     const nextItems = items.filter((_, currentIndex) => currentIndex !== index);
     return {
       ...current,
@@ -411,17 +430,14 @@ function removeItem(
 function moveItem(
   value: GalleryMosaicData,
   onChange: (next: GalleryMosaicData) => void,
-  fromIndex: number,
+  itemId: string,
   toIndex: number
 ) {
   updateValue(value, onChange, (current) => {
     const items = normalizeGalleryMosaicItems(current.items);
-    if (toIndex < 0 || toIndex >= items.length) return current;
-
-    const nextItems = [...items];
-    const [item] = nextItems.splice(fromIndex, 1);
-    if (!item) return current;
-    nextItems.splice(toIndex, 0, item);
+    const keyedItems = items as Array<GalleryMosaicItem & { id: string }>;
+    const nextItems = reorderItemsById(keyedItems, itemId, toIndex);
+    if (nextItems === items) return current;
 
     return {
       ...current,
@@ -664,6 +680,13 @@ export function GalleryMosaicVisualEditor({
     {}
   );
   const [itemMediaPickerErrors, setItemMediaPickerErrors] = useState<Record<string, string>>({});
+  const [draggingItemId, setDraggingItemId] = useState<string | null>(null);
+  const [dropIndex, setDropIndex] = useState<number | null>(null);
+
+  const featureLeftWarning =
+    resolveGalleryMosaicVariant(variant) === "feature-left" && items.length === 1
+      ? "Feature Left works best with one lead tile plus at least one supporting item."
+      : null;
 
   const setItemMediaError = (itemId: string, message?: string) => {
     setItemMediaPickerErrors((current) => {
@@ -720,6 +743,84 @@ export function GalleryMosaicVisualEditor({
     }
   };
 
+  const clearDragState = () => {
+    setDraggingItemId(null);
+    setDropIndex(null);
+  };
+
+  const handleItemDragStart = (event: DragEvent<HTMLButtonElement>, itemId: string) => {
+    event.dataTransfer.setData("text/plain", itemId);
+    event.dataTransfer.effectAllowed = "move";
+    setDraggingItemId(itemId);
+    setDropIndex(null);
+  };
+
+  const handleItemDragOver = (event: DragEvent<HTMLButtonElement>, index: number) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    const rect = event.currentTarget.getBoundingClientRect();
+    setDropIndex(resolveDropIndexFromPointer(index, event.clientY, rect));
+  };
+
+  const handleItemDrop = (event: DragEvent<HTMLButtonElement>, fallbackIndex: number) => {
+    event.preventDefault();
+    const droppedId = event.dataTransfer.getData("text/plain") || draggingItemId;
+    if (!droppedId) {
+      clearDragState();
+      return;
+    }
+
+    moveItem(value, onChange, droppedId, dropIndex ?? fallbackIndex);
+    clearDragState();
+  };
+
+  const handleItemKeyDown = (
+    event: KeyboardEvent<HTMLButtonElement>,
+    itemId: string,
+    index: number
+  ) => {
+    if (event.altKey && event.key === "ArrowUp") {
+      event.preventDefault();
+      moveItem(value, onChange, itemId, index - 1);
+      return;
+    }
+
+    if (event.altKey && event.key === "ArrowDown") {
+      event.preventDefault();
+      moveItem(value, onChange, itemId, index + 2);
+    }
+  };
+
+  const handleCountChange = (next: string) => {
+    const nextCount = Number(next);
+    if (!Number.isFinite(nextCount)) return;
+
+    if (nextCount >= items.length) {
+      setItemCount(value, onChange, nextCount);
+      return;
+    }
+
+    const removedItems = items.slice(nextCount);
+    const shouldConfirm =
+      !removedItems.some(
+        (item) =>
+          item.image?.trim() || item.video?.trim() || item.caption?.trim() || item.href?.trim()
+      ) ||
+      typeof window === "undefined" ||
+      typeof window.confirm !== "function" ||
+      window.confirm(
+        `Reducing the item count will remove the last ${removedItems.length} gallery item${
+          removedItems.length === 1 ? "" : "s"
+        }. Continue?`
+      );
+
+    if (!shouldConfirm) {
+      return;
+    }
+
+    setItemCount(value, onChange, nextCount);
+  };
+
   return (
     <div className="space-y-4">
       <EditorSection
@@ -730,10 +831,7 @@ export function GalleryMosaicVisualEditor({
 
         <div className="space-y-2">
           <p className="text-sm font-medium">Items count</p>
-          <Select
-            value={String(items.length)}
-            onValueChange={(next) => setItemCount(value, onChange, Number(next))}
-          >
+          <Select value={String(items.length)} onValueChange={handleCountChange}>
             <SelectTrigger>
               <SelectValue placeholder="Select count" />
             </SelectTrigger>
@@ -745,7 +843,16 @@ export function GalleryMosaicVisualEditor({
               ))}
             </SelectContent>
           </Select>
+          <p className="text-xs text-muted-foreground">
+            Item count grows or trims from the end. Use Add item and Remove for intentional per-item
+            edits.
+          </p>
         </div>
+        {featureLeftWarning ? (
+          <p className="rounded-md border border-amber-300/60 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+            {featureLeftWarning}
+          </p>
+        ) : null}
       </EditorSection>
 
       <EditorSection
@@ -776,112 +883,132 @@ export function GalleryMosaicVisualEditor({
       >
         {items.map((item, index) => {
           const currentMedia = resolveGalleryCurrentMediaSummary(item);
+          const showDropBefore = dropIndex === index;
+          const showDropAfter = dropIndex === index + 1;
+          const stableItemId = item.id ?? `gallery-item-${index + 1}`;
 
           return (
-            <div
-              key={item.id ?? `gallery-item-${index + 1}`}
-              className="space-y-3 rounded-lg border p-3"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold">Item {index + 1}</p>
-                    <Badge variant="outline">Current media: {currentMedia.label}</Badge>
+            <div key={stableItemId} className="space-y-1 rounded-lg">
+              {showDropBefore ? <div className="h-0.5 rounded bg-primary" /> : null}
+              <div className="space-y-3 rounded-lg border p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold">Item {index + 1}</p>
+                      <Badge variant="outline">Current media: {currentMedia.label}</Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{currentMedia.description}</p>
                   </div>
-                  <p className="text-xs text-muted-foreground">{currentMedia.description}</p>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      draggable
+                      data-gallery-drag-handle={stableItemId}
+                      onDragStart={(event) => handleItemDragStart(event, stableItemId)}
+                      onDragOver={(event) => handleItemDragOver(event, index)}
+                      onDrop={(event) => handleItemDrop(event, index)}
+                      onDragEnd={clearDragState}
+                      onKeyDown={(event) => handleItemKeyDown(event, stableItemId, index)}
+                      aria-label={`Reorder item ${index + 1}`}
+                      title="Drag to reorder. Keyboard: Alt + Arrow keys."
+                    >
+                      <GripVertical className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => moveItem(value, onChange, stableItemId, index - 1)}
+                      disabled={index === 0}
+                    >
+                      Move up
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => moveItem(value, onChange, stableItemId, index + 2)}
+                      disabled={index === items.length - 1}
+                    >
+                      Move down
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => removeItem(value, onChange, index)}
+                      disabled={items.length <= 1}
+                    >
+                      Remove
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => moveItem(value, onChange, index, index - 1)}
-                    disabled={index === 0}
-                  >
-                    Move up
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => moveItem(value, onChange, index, index + 1)}
-                    disabled={index === items.length - 1}
-                  >
-                    Move down
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => removeItem(value, onChange, index)}
-                    disabled={items.length <= 1}
-                  >
-                    Remove
-                  </Button>
+
+                <GalleryItemPreview item={item} />
+
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Media library</p>
+                  <MediaPicker
+                    value={selectedMediaIdsByItemId[item.id ?? ""] ?? null}
+                    onChange={(next) => {
+                      if (!item.id) return;
+                      void handleItemMediaSelection(item.id, index, next);
+                    }}
+                    multiple={false}
+                    accept={["image/*", "video/*"]}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Selecting an asset updates the current image or video URL for this item.
+                  </p>
+                  {item.id && itemMediaPickerErrors[item.id] ? (
+                    <p className="text-xs text-destructive">{itemMediaPickerErrors[item.id]}</p>
+                  ) : null}
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Image URL</p>
+                  <Input
+                    value={item.image ?? ""}
+                    onChange={(event) =>
+                      updateItem(value, onChange, index, { image: event.target.value })
+                    }
+                    placeholder="https://cdn.example.com/photo.jpg"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Video URL</p>
+                  <Input
+                    value={item.video ?? ""}
+                    onChange={(event) =>
+                      updateItem(value, onChange, index, { video: event.target.value })
+                    }
+                    placeholder="https://cdn.example.com/clip.mp4"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Caption</p>
+                  <Input
+                    value={item.caption ?? ""}
+                    onChange={(event) =>
+                      updateItem(value, onChange, index, { caption: event.target.value })
+                    }
+                    placeholder={`Media ${index + 1}`}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Link URL</p>
+                  <Input
+                    value={item.href ?? ""}
+                    onChange={(event) =>
+                      updateItem(value, onChange, index, { href: event.target.value })
+                    }
+                    placeholder="#"
+                  />
                 </div>
               </div>
-
-              <GalleryItemPreview item={item} />
-
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Media library</p>
-                <MediaPicker
-                  value={selectedMediaIdsByItemId[item.id ?? ""] ?? null}
-                  onChange={(next) => {
-                    if (!item.id) return;
-                    void handleItemMediaSelection(item.id, index, next);
-                  }}
-                  multiple={false}
-                  accept={["image/*", "video/*"]}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Selecting an asset updates the current image or video URL for this item.
-                </p>
-                {item.id && itemMediaPickerErrors[item.id] ? (
-                  <p className="text-xs text-destructive">{itemMediaPickerErrors[item.id]}</p>
-                ) : null}
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Image URL</p>
-                <Input
-                  value={item.image ?? ""}
-                  onChange={(event) =>
-                    updateItem(value, onChange, index, { image: event.target.value })
-                  }
-                  placeholder="https://cdn.example.com/photo.jpg"
-                />
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Video URL</p>
-                <Input
-                  value={item.video ?? ""}
-                  onChange={(event) =>
-                    updateItem(value, onChange, index, { video: event.target.value })
-                  }
-                  placeholder="https://cdn.example.com/clip.mp4"
-                />
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Caption</p>
-                <Input
-                  value={item.caption ?? ""}
-                  onChange={(event) =>
-                    updateItem(value, onChange, index, { caption: event.target.value })
-                  }
-                  placeholder={`Media ${index + 1}`}
-                />
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Link URL</p>
-                <Input
-                  value={item.href ?? ""}
-                  onChange={(event) =>
-                    updateItem(value, onChange, index, { href: event.target.value })
-                  }
-                  placeholder="#"
-                />
-              </div>
+              {showDropAfter ? <div className="h-0.5 rounded bg-primary" /> : null}
             </div>
           );
         })}

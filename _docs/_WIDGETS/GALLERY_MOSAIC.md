@@ -44,6 +44,10 @@ Notes:
 - Visual item cards now include a local preview panel plus a per-item
   MediaPicker that can replace the current image or video URL without forcing
   hand-copied asset links.
+- Visual item rows now support drag reorder with keyboard fallback
+  (`Alt` + arrow keys), explicit confirmation before destructive count
+  reductions or row removal, and a `feature-left` warning when only a single
+  lead tile remains.
 
 ### Advanced (technical-only)
 - Shared style ownership summary (read-only)

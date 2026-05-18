@@ -6,7 +6,7 @@
 **Category:** Widgets + Gallery Mosaic + Admin UI + Repeated Items
 **Estimated Effort:** Large
 **Dependencies:** TASK-270-01
-**Status:** To Do
+**Status:** Done (2026-05-18)
 
 ---
 
@@ -173,3 +173,17 @@ No API routes are added.
 - Removing populated items is recoverable or explicitly confirmed.
 - Authors get visible guidance when `feature-left` is configured with only one
   item and therefore no supporting column exists.
+
+## Completion Notes
+
+- 2026-05-18: Gallery Mosaic Visual now supports drag reorder plus keyboard
+  fallback, confirms destructive count reductions and configured row removals,
+  and surfaces a `feature-left` single-item warning in the structure section.
+- Validation:
+  - `git diff --check`
+  - `set -a && source /Users/pciechanski/Documents/_moje_projekty/Coderso/.env && set +a && NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx tests/vitest/widgets/galleryMosaic.test.tsx`
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun run gates:coderso`
+  - `bun run scan:security:strict`
+  - `bun run precommit`
