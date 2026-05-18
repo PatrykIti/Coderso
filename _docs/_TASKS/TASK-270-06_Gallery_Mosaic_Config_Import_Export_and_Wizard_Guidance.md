@@ -5,8 +5,8 @@
 **Priority:** Low
 **Category:** Widgets + Gallery Mosaic + Admin UI + Authoring Workflow
 **Estimated Effort:** Medium
-**Dependencies:** TASK-256-01, TASK-256-06-02, TASK-270-01, TASK-270-02, TASK-270-03, TASK-270-05
-**Status:** To Do
+**Dependencies:** TASK-256-01, TASK-256-06-02, TASK-270-01, TASK-270-02, TASK-270-03, TASK-270-04, TASK-270-05
+**Status:** Done (2026-05-18)
 
 ---
 
@@ -19,6 +19,18 @@ model.
 This leaf does not own Wizard video picker functionality from TASK-256-06-02.
 It may add copy or guidance only to explain the final product workflow and must
 not create an alternate schema parser outside the widget owner module.
+
+Landed implementation:
+
+- `core/widgets/core/galleryMosaic.tsx` now exports pure
+  `exportGalleryMosaicConfig()` and `importGalleryMosaicConfig()` helpers with
+  manual schema-owned validation for JSON shape, unknown fields, invalid enum
+  values, and machine-readable error paths.
+- `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx` adds final Wizard
+  guidance and an Advanced import/export section that keeps invalid imports
+  non-destructive while exposing the normalized payload for export.
+- Tests now cover round-trip export/import, invalid JSON, unknown nested field
+  rejection, invalid enum rejection, and Advanced editor import behavior.
 
 ## Source Findings
 
@@ -139,3 +151,19 @@ No API routes are added.
   error codes and paths before normalization.
 - Wizard guidance reflects the final TASK-256 media contract without owning that
   shared fix.
+
+## Completion Notes
+
+- 2026-05-18: Wizard now points to the final Gallery Mosaic flow, and Advanced
+  owns bounded JSON export/import with machine-readable validation errors and
+  non-destructive failures.
+- Validation:
+  - `git diff --check`
+  - `bun run test:vitest -- tests/vitest/widgets/galleryMosaic.test.tsx tests/vitest/widgets/galleryMosaicLightboxRuntime.test.ts tests/vitest/widgets/renderer.test.tsx`
+  - `bun run test:vitest -- tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx`
+  - `bun test tests/unit/widgets/validator.test.ts`
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun run gates:coderso`
+  - `bun run scan:security:strict`
+  - `bun run precommit`

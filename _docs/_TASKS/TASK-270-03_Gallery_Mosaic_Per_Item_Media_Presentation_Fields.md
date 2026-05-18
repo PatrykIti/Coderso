@@ -5,23 +5,26 @@
 **Priority:** Medium
 **Category:** Widgets + Gallery Mosaic + Schema + Runtime Render
 **Estimated Effort:** Large
-**Dependencies:** TASK-256-06-02, TASK-270-01, TASK-270-02
-**Status:** To Do
+**Dependencies:** TASK-256-04, TASK-256-06-02, TASK-270-01, TASK-270-02
+**Status:** Done (2026-05-18)
 
 ---
 
 ## Overview
 
-Add Gallery Mosaic-specific per-item media presentation fields for focal point,
-tile ratio override, and video poster image.
+Add Gallery Mosaic-specific per-item media authoring and presentation fields
+for dedicated alt text, focal point, tile ratio override, and video poster
+image.
 
-This leaf does not own the shared alt/caption accessibility repair, safe media
-output, or autoplay controls. Those remain TASK-256. It adds optional product
-fields that make Gallery Mosaic media composition more precise after the shared
-accessibility and media contracts are stable.
+This leaf does not own the shared current alt/caption fallback semantics, safe
+media output, or autoplay controls. Those remain TASK-256. It adds optional
+product fields that make Gallery Mosaic media composition more precise after the
+shared accessibility and media contracts are stable.
 
 ## Source Findings
 
+- `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md:319,377` - BF-01 reports a
+  missing dedicated `alt` field distinct from the visible caption text.
 - `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md:226` - BF-13 reports video
   without poster image.
 - `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md:329-331` - BF-11,
@@ -41,9 +44,9 @@ accessibility and media contracts are stable.
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/galleryMosaic.tsx` | Extend `GalleryMosaicItem` and `galleryMosaicSchema` with bounded optional fields such as `objectPosition`, `ratio`, and `poster`; normalize invalid values to defaults; apply `object-position`, per-item ratio class, and video poster output without breaking existing payloads. |
-| `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx` | Add Visual per-item controls for focal point/object position, optional item ratio override, and poster URL/media picker after TASK-270-01 media picker is available. |
-| `tests/vitest/widgets/galleryMosaic.test.tsx` | Add schema, normalizer, renderer, poster, object-position, and per-item ratio coverage. |
+| `core/widgets/core/galleryMosaic.tsx` | Extend `GalleryMosaicItem` and `galleryMosaicSchema` with bounded optional fields such as `alt`, `objectPosition`, `ratio`, and `poster`; normalize invalid values to defaults; use dedicated alt text when present; apply `object-position`, per-item ratio class, and video poster output without breaking existing payloads. |
+| `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx` | Add Visual per-item controls for dedicated alt text, focal point/object position, optional item ratio override, and poster URL/media picker after TASK-270-01 media picker is available. |
+| `tests/vitest/widgets/galleryMosaic.test.tsx` | Add schema, normalizer, renderer, alt, poster, object-position, and per-item ratio coverage. |
 | `tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx` | Assert editor controls patch the right item and preserve existing media fields. |
 | `tests/unit/widgets/validator.test.ts` | Add mandatory schema validation coverage for accepting valid new fields, rejecting unknown nested `items[]` fields, and rejecting invalid enum values. |
 | `_docs/_WIDGETS/GALLERY_MOSAIC.md` | Document the new optional fields and default behavior. |
@@ -59,6 +62,7 @@ type GalleryMosaicItem = {
   id?: string;
   image?: string;
   video?: string;
+  alt?: string;
   poster?: string;
   caption?: string;
   href?: string;
@@ -74,12 +78,21 @@ function resolveGalleryMosaicObjectPosition(value: string | undefined): GalleryM
 function resolveItemRatio(item: GalleryMosaicItem, sectionRatio: GalleryMosaicRatio) {
   return item.ratio && item.ratio !== "inherit" ? resolveGalleryMosaicRatio(item.ratio) : sectionRatio;
 }
+
+function resolveGalleryMosaicAltText(item: GalleryMosaicItem, index: number) {
+  const explicitAlt = item.alt?.trim();
+  if (explicitAlt) return explicitAlt;
+  const caption = item.caption?.trim();
+  return caption || `Gallery item ${index + 1}`;
+}
 ```
 
 Error handling:
 
 - Invalid or legacy values normalize to safe defaults without deleting existing
   item media.
+- `alt` is optional, trimmed, and plain-text only; it must not accept raw HTML
+  or be backfilled from private media metadata.
 - `poster` is optional and used only for video output.
 - `objectPosition` maps to a bounded class/style owner; do not allow arbitrary
   CSS values or class names.
@@ -110,9 +123,8 @@ No API routes are added.
 
 - `bun run test:vitest -- tests/vitest/widgets/galleryMosaic.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx`
 - `bun test tests/unit/widgets/validator.test.ts`
-- `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer
-  output markers or shared rendering assertions change.
 - `git diff --check`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
@@ -129,7 +141,24 @@ No API routes are added.
 ## Acceptance Criteria
 
 - Existing Gallery Mosaic payloads still normalize and render.
+- Individual items can store dedicated alt text without breaking the current
+  TASK-256 fallback semantics when `alt` is absent.
 - Individual items can override focal point and ratio through bounded options.
 - Video items can provide a poster image without requiring a new public route.
 - Tests prove schema acceptance, invalid-value rejection, normalization, editor
   patching, and runtime output.
+
+## Completion Notes
+
+- 2026-05-18: Gallery Mosaic owner data now supports per-item `alt`,
+  `objectPosition`, ratio override, and `poster`, with corresponding Visual
+  controls and runtime output that remains backward-compatible for legacy
+  payloads.
+- Validation:
+  - `git diff --check`
+  - `set -a && source /Users/pciechanski/Documents/_moje_projekty/Coderso/.env && set +a && NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx tests/vitest/widgets/galleryMosaic.test.tsx tests/unit/widgets/validator.test.ts`
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun run gates:coderso`
+  - `bun run scan:security:strict`
+  - `bun run precommit`

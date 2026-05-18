@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 273 tasks
+- **To Do:** 265 tasks
 - **In Progress:** 5 tasks
-- **Done:** 1659 tasks
+- **Done:** 1671 tasks
 
 ---
 
@@ -235,14 +235,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-271-05 | Grid Columns Height and Cross-Axis Alignment | Medium | Large | Replace hardcoded min-height with tokens and add per-column alignment overrides |
 | TASK-271-06 | Grid Columns Gap Tokens and Density Controls | Medium | Medium | Expand bounded gap tokens, keep independent gapX/gapY, and improve spacing labels |
 | TASK-271-07 | Grid Columns Report, Docs, Changelog, and Closure | Medium | Medium | Refresh Grid Columns report/docs/changelog/board and final validation evidence |
-| TASK-270 | Gallery Mosaic Widget Playwright Product Followups | High | Very Large | Gallery Mosaic-only product follow-up family for `REPORT_GALLERY_MOSAIC_WIDGET.md`, excluding TASK-256 shared-contract scope |
-| TASK-270-01 | Gallery Mosaic Item Previews and Media Picker | High | Large | Add per-item media previews and Visual media picker after TASK-256 safe media behavior lands |
-| TASK-270-02 | Gallery Mosaic Reorder, Count, and Removal UX | High | Large | Add efficient reorder, clear count/add/remove semantics, and recoverable or confirmed item removal |
-| TASK-270-03 | Gallery Mosaic Per-Item Media Presentation Fields | Medium | Large | Add bounded object-position, per-item ratio, and video poster fields without taking over TASK-256 accessibility scope |
-| TASK-270-04 | Gallery Mosaic Lightbox and Zoom Mode | Medium | Large | Add optional safe lightbox/zoom presentation using existing accessible runtime patterns |
-| TASK-270-05 | Gallery Mosaic Responsive Columns and Motion Presets | Medium | Large | Add bounded responsive column and reduced-motion-safe animation presets |
-| TASK-270-06 | Gallery Mosaic Config Import Export and Wizard Guidance | Low | Medium | Add safe config import/export and post-TASK-256 Wizard guidance |
-| TASK-270-07 | Gallery Mosaic Report Docs Changelog and Closure | Medium | Medium | Refresh Gallery Mosaic report/docs/changelog/board and final validation evidence |
 | TASK-267 | Feature Grid Widget Playwright Product Followups | High | Very Large | Feature Grid-only follow-up family for `REPORT_FEATURE_GRID_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-267-01 | Feature Grid Variant Preview and Responsive Cards-4 Layout | High | Medium | Add variant preview affordances, repair cards-4 responsive product behavior, and keep columns truthfulness in TASK-256 |
 | TASK-267-02 | Feature Grid Card Reorder, Remove, and Item Management | High | Medium | Add drag reorder plus recoverable remove flow while preserving keyboard move fallback |
@@ -349,6 +341,18 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-312 | Gallery Mosaic Shared Contract Residual Reopen | High | Large | Done: reopened Gallery Mosaic shared prerequisites are now truly closed under TASK-312, with editor/runtime residuals landed and remaining product work routed to TASK-270 |
+| TASK-312-03 | Gallery Mosaic Shared Residual Closure | Medium | Medium | Done: report/docs/changelog/board closure now distinguishes reopened shared residuals from the remaining Gallery Mosaic product backlog |
+| TASK-312-02 | Gallery Mosaic Shared Runtime Semantics Residuals | High | Large | Done: Gallery Mosaic runtime now uses explicit resolver branches, semantic figure/figcaption output, and current video controls without widening into TASK-270 product fields |
+| TASK-312-01 | Gallery Mosaic Shared Editor Truthfulness Residuals | High | Large | Done: Advanced is diagnostic-only, Wizard current-contract media selection now accepts image/video assets, and Visual exposes explicit current-media ownership copy |
+| TASK-270 | Gallery Mosaic Widget Playwright Product Followups | High | Very Large | Done: all Gallery Mosaic report findings are now mapped to shared fixes, TASK-270 leaves, session/setup resolution, or an explicit defer reason, and the final report/docs/changelog closure is synchronized |
+| TASK-270-07 | Gallery Mosaic Report Docs Changelog and Closure | Medium | Medium | Done: the final closure pass mapped every report finding, synchronized widget/task/changelog docs, and hardened hover-caption keyboard access |
+| TASK-270-06 | Gallery Mosaic Config Import Export and Wizard Guidance | Low | Medium | Done: Wizard now points to the final authoring flow, and Advanced owns bounded JSON import/export with machine-readable validation errors |
+| TASK-270-05 | Gallery Mosaic Responsive Columns and Motion Presets | Medium | Large | Done: Gallery Mosaic now uses bounded responsive density presets and reduced-motion-safe `fade` / `slide-up` entrances instead of raw breakpoint maps |
+| TASK-270-04 | Gallery Mosaic Lightbox and Zoom Mode | Medium | Large | Done: Gallery Mosaic now has opt-in widget-local lightbox/zoom with instance-scoped ids, href precedence guidance, and happy-dom runtime coverage |
+| TASK-270-03 | Gallery Mosaic Per-Item Media Presentation Fields | Medium | Large | Done: per-item `alt`, focus point, ratio override, and video poster fields now exist end-to-end through schema, editor, and runtime output |
+| TASK-270-02 | Gallery Mosaic Reorder, Count, and Removal UX | High | Large | Done: Visual supports drag reorder with keyboard fallback, confirms destructive count/remove changes, and warns when `feature-left` is left with one item |
+| TASK-270-01 | Gallery Mosaic Item Previews and Media Picker | High | Large | Done: Visual item cards now show local preview state and a per-item MediaPicker with non-destructive asset lookup failures |
 | TASK-307 | Feature Grid Shared Contract Residuals | High | Medium | Done: invalid image/CTA feedback, safe image fallback, emoji ARIA, and Advanced diagnostics-only cleanup are now closed as shared follow-up work discovered during TASK-267 |
 | TASK-268 | Footer Widget Playwright Product Followups | High | Very Large | Done: footer runtime/editor/docs/report closure is synchronized, while deferred utility and column-reorder backlog now have explicit follow-up tasks |
 | TASK-268-01 | Footer Social Icons and External Link Safety | High | Large | Done: footer social links now use icon buttons, accessible naming, modern platform options, and external-link hardening |

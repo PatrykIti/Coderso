@@ -6,7 +6,7 @@
 **Category:** Widgets + Gallery Mosaic + Playwright QA + Documentation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-270-01, TASK-270-02, TASK-270-03, TASK-270-04, TASK-270-05, TASK-270-06, TASK-256-08
-**Status:** To Do
+**Status:** Done (2026-05-18)
 
 ---
 
@@ -23,7 +23,7 @@ intentionally deferred with a reason.
 ## Source Findings
 
 - Entire `_docs/PLAYWRIGHT/REPORT_GALLERY_MOSAIC_WIDGET.md`, especially the
-  summary tables at lines `319-383` and screenshot labels at lines `419-433`.
+  summary/update sections and screenshot labels.
 - TASK-270 umbrella scope and exclusion matrices.
 - TASK-256 final fixed/deferred notes after TASK-256-08 lands.
 
@@ -57,7 +57,7 @@ const findingMap = [
   { id: "BUG-03", status: "fixed-task-256", evidence: "TASK-256-06-02 validation" },
   { id: "BF-10", status: "fixed-task-270", evidence: "TASK-270-04 validation" },
   { id: "BUG-01", status: "resolved-session-setup", evidence: "report notes session limit increased" },
-  { id: "BF-16", status: "deferred", reason: "product chooses not to ship import/export yet" },
+  { id: "BF-16", status: "fixed-task-270", evidence: "TASK-270-06 validation" },
 ];
 
 function assertEveryReportFindingMapped(findings: string[]) {
@@ -96,6 +96,8 @@ No API routes are added by this docs/closure leaf.
 - `bun --cwd core lint:types`
 - `bun run test:vitest -- tests/vitest/widgets/galleryMosaic.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/galleryMosaicLightboxRuntime.test.ts`
+  when TASK-270-04 lands
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if any
   renderer output changed in the family.
 - `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` if
@@ -103,6 +105,7 @@ No API routes are added by this docs/closure leaf.
 - `bun test tests/unit/widgets/validator.test.ts` if schema/defaults changed.
 - `bun test tests/unit/widgets/registry.test.ts` if registry/variant wiring
   changed.
+- `bun run gates:coderso`
 - `bun run scan:security:strict`
 - `bun run precommit`
 
@@ -125,3 +128,29 @@ No API routes are added by this docs/closure leaf.
   evidence.
 - Changelog and board statistics are synchronized.
 - Final validation is recorded with exact commands and results.
+
+## Completion Notes
+
+- 2026-05-18: the final report now preserves the Playwright snapshot while
+  mapping every `CODE`, `BUG`, `UX`, `BF`, and `A*` finding to shared fixes,
+  `TASK-270` leaves, session/setup resolution, or an explicit defer reason.
+- 2026-05-18: `_docs/_WIDGETS/GALLERY_MOSAIC.md`, `_docs/_TASKS/TASK-270*.md`,
+  `_docs/_TASKS/README.md`, `_docs/_CHANGELOG/848-2026-05-18-task-270-gallery-mosaic-widget-followups.md`,
+  and `_docs/_CHANGELOG/README.md` are synchronized to the shipped contract.
+- Validation:
+  - `git diff --check`
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun run test:vitest -- tests/vitest/widgets/galleryMosaic.test.tsx tests/vitest/widgets/galleryMosaicLightboxRuntime.test.ts tests/vitest/widgets/renderer.test.tsx`
+  - `bun run test:vitest -- tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx`
+  - `bun test tests/unit/widgets/validator.test.ts`
+  - `bun run gates:coderso`
+  - `bun run scan:security:strict`
+  - `bun run precommit`
+- Results:
+  - `tests/vitest/widgets/galleryMosaic.test.tsx`, `galleryMosaicLightboxRuntime.test.ts`, and `renderer.test.tsx`: `47/47` passing.
+  - `tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx`: `5/5` passing.
+  - `tests/unit/widgets/validator.test.ts`: `10/10` passing.
+  - `bun run gates:coderso`: all gates `PASS`.
+  - `bun run scan:security:strict`: all scanners completed cleanly with `0` blocking findings.
+  - `bun run precommit`: completed cleanly before the closure commit.

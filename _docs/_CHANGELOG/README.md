@@ -25,6 +25,8 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 861 | 2026-05-18 | TASK-270 Gallery Mosaic widget follow-ups | CMS Widgets/Admin UI/Runtime/QA |
+| 860 | 2026-05-18 | TASK-312 Gallery Mosaic shared residuals | CMS Widgets/Admin UI/Runtime/QA |
 | 847 | 2026-05-18 | TASK-269 Form Embed closure | CMS Widgets/Forms/Admin UI/QA |
 | 846 | 2026-05-17 | TASK-256 follow-up drift closure | CMS Widgets/Admin UI/QA |
 | 845 | 2026-05-17 | TASK-256 shared widget contract closure | CMS Widgets/Admin UI/QA |

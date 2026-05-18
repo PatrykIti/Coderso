@@ -6,7 +6,7 @@
 **Category:** Widgets + Gallery Mosaic + Layout + Runtime Render
 **Estimated Effort:** Large
 **Dependencies:** TASK-256-01, TASK-256-06-02, TASK-270-03, TASK-270-04
-**Status:** To Do
+**Status:** Done (2026-05-18)
 
 ---
 
@@ -18,6 +18,23 @@ layout density and tile entrance motion.
 This leaf must not duplicate shared truthful-control repairs from TASK-256. It
 adds new Gallery Mosaic-specific options only after current variant/layout
 behavior is truthful and stable.
+It intentionally resolves the report's breakpoint-column request through
+approved density presets instead of arbitrary raw breakpoint maps. If a future
+product decision needs explicit per-breakpoint column authoring, that must be
+split to a separate task rather than claimed as silently completed here.
+
+Landed implementation:
+
+- `core/widgets/core/galleryMosaic.tsx` now owns schema-backed
+  `style.layoutDensity` (`auto` / `compact` / `balanced` / `dense`) and
+  `style.motionPreset` (`none` / `fade` / `slide-up`) with bounded,
+  variant-scoped class maps and reduced-motion-safe motion classes.
+- `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx` adds Visual controls
+  for density and motion and explicitly documents that Gallery Mosaic does not
+  accept raw per-breakpoint column maps in widget data.
+- Tests now cover normalizer fallback, deterministic data markers, motion-safe
+  class output, editor patching, and strict validator rejection for invalid
+  density/motion enums.
 
 ## Source Findings
 
@@ -122,6 +139,24 @@ No API routes are added.
 
 - Gallery Mosaic has bounded variant-scoped layout density presets, not
   arbitrary class input or standalone raw column maps.
+- BF-15 closure evidence explicitly states that the shipped control is bounded
+  density presets rather than a literal raw breakpoint-column matrix.
 - Motion presets are opt-in, reduced-motion safe, and off by default.
 - Existing variants still render with current defaults when new fields are
   absent.
+
+## Completion Notes
+
+- 2026-05-18: Gallery Mosaic now uses bounded `layoutDensity` presets instead
+  of raw breakpoint maps and opt-in reduced-motion-safe `motionPreset`
+  entrances.
+- Validation:
+  - `git diff --check`
+  - `bun run test:vitest -- tests/vitest/widgets/galleryMosaic.test.tsx tests/vitest/widgets/galleryMosaicLightboxRuntime.test.ts tests/vitest/widgets/renderer.test.tsx`
+  - `bun run test:vitest -- tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx`
+  - `bun test tests/unit/widgets/validator.test.ts`
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun run gates:coderso`
+  - `bun run scan:security:strict`
+  - `bun run precommit`

@@ -7,6 +7,11 @@ import {
   featureGridDefaults,
   type FeatureGridData,
 } from "../../../core/widgets/core/featureGrid";
+import {
+  createGalleryMosaicWidget,
+  galleryMosaicDefaults,
+  type GalleryMosaicData,
+} from "../../../core/widgets/core/galleryMosaic";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { clearWidgetValidators, normalizeWidgetBlock } from "../../../core/widgets/validator";
 import type { WidgetDefinition, WidgetBlock } from "../../../core/widgets/types";
@@ -358,6 +363,137 @@ test("normalizeWidgetBlock rejects unknown footer keys", () => {
           mysteryColor: "#ffffff",
         },
       },
+    })
+  ).toThrow("widget_schema_invalid");
+});
+
+test("normalizeWidgetBlock accepts gallery mosaic per-item media presentation fields", () => {
+  registerWidget(
+    createGalleryMosaicWidget({
+      wizard: Dummy as never,
+      visual: Dummy as never,
+      advanced: Dummy as never,
+    })
+  );
+
+  const block: WidgetBlock = {
+    id: "gallery-1",
+    type: "gallery-mosaic",
+    variant: "mosaic",
+    data: {
+      ...galleryMosaicDefaults,
+      interaction: {
+        mode: "lightbox",
+        zoom: "fill",
+      },
+      style: {
+        ...galleryMosaicDefaults.style,
+        layoutDensity: "dense",
+        motionPreset: "slide-up",
+      },
+      items: [
+        {
+          id: "gallery-a",
+          image: "https://cdn.example.com/one.jpg",
+          alt: "Accessible alt",
+          poster: "https://cdn.example.com/poster.jpg",
+          objectPosition: "right",
+          ratio: "1:1",
+        },
+      ],
+    } satisfies GalleryMosaicData,
+  };
+
+  const normalized = normalizeWidgetBlock(block);
+  expect(normalized.data).toEqual(
+    expect.objectContaining({
+      items: [
+        expect.objectContaining({
+          alt: "Accessible alt",
+          poster: "https://cdn.example.com/poster.jpg",
+          objectPosition: "right",
+          ratio: "1:1",
+        }),
+      ],
+    })
+  );
+});
+
+test("normalizeWidgetBlock rejects invalid gallery mosaic media presentation enums", () => {
+  registerWidget(
+    createGalleryMosaicWidget({
+      wizard: Dummy as never,
+      visual: Dummy as never,
+      advanced: Dummy as never,
+    })
+  );
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "gallery-2",
+      type: "gallery-mosaic",
+      variant: "mosaic",
+      data: {
+        ...galleryMosaicDefaults,
+        items: [
+          {
+            id: "gallery-a",
+            image: "https://cdn.example.com/one.jpg",
+            objectPosition: "diagonal",
+          },
+        ],
+      },
+    })
+  ).toThrow("widget_schema_invalid");
+});
+
+test("normalizeWidgetBlock rejects invalid gallery mosaic interaction enums", () => {
+  registerWidget(
+    createGalleryMosaicWidget({
+      wizard: Dummy as never,
+      visual: Dummy as never,
+      advanced: Dummy as never,
+    })
+  );
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "gallery-3",
+      type: "gallery-mosaic",
+      variant: "mosaic",
+      data: {
+        ...galleryMosaicDefaults,
+        interaction: {
+          mode: "modal",
+          zoom: "explode",
+        },
+      } as unknown as GalleryMosaicData,
+    })
+  ).toThrow("widget_schema_invalid");
+});
+
+test("normalizeWidgetBlock rejects invalid gallery mosaic density and motion enums", () => {
+  registerWidget(
+    createGalleryMosaicWidget({
+      wizard: Dummy as never,
+      visual: Dummy as never,
+      advanced: Dummy as never,
+    })
+  );
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "gallery-4",
+      type: "gallery-mosaic",
+      variant: "mosaic",
+      data: {
+        ...galleryMosaicDefaults,
+        style: {
+          ...galleryMosaicDefaults.style,
+          layoutDensity: "fluid",
+          motionPreset: "bounce",
+        },
+      } as unknown as GalleryMosaicData,
     })
   ).toThrow("widget_schema_invalid");
 });
