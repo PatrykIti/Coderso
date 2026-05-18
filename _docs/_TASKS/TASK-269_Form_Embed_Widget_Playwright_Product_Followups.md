@@ -5,8 +5,8 @@
 **Priority:** High
 **Category:** Widgets + Forms + Admin UI + Runtime Render + Public Write Security + Playwright QA
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-252-07-12, TASK-256-07
-**Status:** To Do
+**Dependencies:** TASK-252-07-12, TASK-256-07, TASK-310
+**Status:** Done (2026-05-18)
 
 ---
 
@@ -56,8 +56,8 @@ Out of scope for TASK-269:
 
 - Cross-widget editor atomic update helpers, owned by TASK-256-01.
 - Generic `Clear`, `none`, color-picker, token-picker, and CSS-variable
-  preservation helpers, owned by TASK-256-02. Report rows U3 and U4 stay there
-  unless TASK-256-02 explicitly leaves a Form Embed-only final wiring task.
+  preservation helpers. Report rows U3 and U4 are routed through TASK-310
+  shared scope, not TASK-269 widget-local implementation.
 - Generic slot/nested-content placeholder gating, owned by TASK-256-03.
 - Shared instance-ID/runtime-binding helpers for unrelated widgets, owned by
   TASK-256-04. TASK-269 may add Form Embed-owned field IDs and ARIA links, but
@@ -77,13 +77,15 @@ work.
 | Report finding | Route |
 |---|---|
 | C3, C4, U1, U2, U5, U6, U9, U10, W12 | TASK-269-01 |
-| W17, A3, A4, A5, A6, A7, A10 | TASK-269-02 |
-| C2, W1 | TASK-269-02 for current supported-field diagnostics only; adding `radio`, `number`, `time`, `hidden`, `file`, `range`, or `rating` to the Forms model is future Forms field-model scope outside TASK-269 |
+| W17, A3, A4, A5, A6, A7 | TASK-269-02 |
+| A10 | TASK-269-02 only if the current Forms model exposes grouped checkbox/radio semantics during this family; otherwise record it as not applicable for the current single-checkbox contract in TASK-269-06 |
+| C2, W1 | TASK-269-02 for current supported-field diagnostics only; adding `radio`, `number`, `time`, `hidden`, `file`, `range`, or `rating` to the Forms model routes to TASK-311 outside TASK-269 |
 | C1, W4, W5, W6, W7, W8, W9, W10, A1, A2 | TASK-269-03 |
 | W13, W14, W16, U7, U8 | TASK-269-04 |
-| W2, W3, W15, A8, A9 | TASK-269-05 |
-| W11 | TASK-269-05 only for current backend-owned nonce projection; missing CAPTCHA/honeypot policy is future Forms/public-write scope outside TASK-269 |
-| U3, U4 | TASK-256-02 shared scope, not TASK-269 |
+| W2, W3, A8, A9 | TASK-269-05 |
+| W15 | TASK-269-05 as verification-first scope only; the current submit route already maps `successRedirectUrl -> runtime.redirectUrl`, so code changes are required only if that live owner proof fails |
+| W11 | TASK-269-05 for the existing backend-owned captcha + nonce bridge; any remaining honeypot or broader backend policy gaps are future Forms/public-write scope outside TASK-269 |
+| U3, U4 | TASK-310 shared scope, not TASK-269 |
 | Final fixed/deferred evidence, report refresh, docs/changelog/board closure | TASK-269-06 |
 
 ## Current Owner and Test Matrix
@@ -94,7 +96,7 @@ work.
 | TASK-269-02 | Report lines 183, 206-210, 213, 300 plus C2/W1 unsupported-field classification from lines 90-105, 159, 167, 295, 309 | `formEmbed.tsx`, `formRuntimeScript.ts` for value collection only when a currently supported control needs runtime handling, validator when schema changes | Vitest widget render, runtime script DOM/value tests if added, validator when schema changes |
 | TASK-269-03 | Report lines 16, 84-88, 107-123, 158, 170-176, 204-205, 294, 299 | `formEmbed.tsx`, `FormEmbedEditors.tsx`, widget registry/docs, pack matrix only if readiness changes | Vitest widget render, editor wave, validator when schema/variants change, style adjacency tests if shared style semantics are touched |
 | TASK-269-04 | Report lines 143-148, 179-182, 194-196, 306, 308 | `formEmbed.tsx`, `formRuntimeScript.ts`, `FormEmbedEditors.tsx` | Vitest widget render, editor wave, runtime script DOM/localStorage tests |
-| TASK-269-05 | Report lines 168-169, 181, 211-212, 297-298, 301 plus W11 nonce-projection evidence from line 177 | `formEmbed.tsx`, `formRuntimeScript.ts`, `publicSite.tsx` / Forms runtime resolver only if resolved redirect or current nonce projection changes, existing Forms public route/security owners only if payload policy changes | Vitest widget/runtime script, Forms runtime resolver projection, Bun Forms route/security tests when public payload/nonce/CAPTCHA changes |
+| TASK-269-05 | Report lines 168-169, 177, 181, 211-212, 297-298, 301 plus W11 public-write bridge evidence | `formEmbed.tsx`, `formRuntimeScript.ts`, `publicSite.tsx` / Forms runtime resolver when safe captcha-site-key, redirect, or nonce projection changes, existing Forms public route/security owners when payload policy changes | Vitest widget/runtime script, resolved-data consumer tests, and Bun Forms route/runtime/security tests when public payload/nonce/CAPTCHA changes |
 | TASK-269-06 | Report lines 217-319 and every fixed/deferred row | `_docs/PLAYWRIGHT/REPORT_FORM_EMBED_WIDGET.md`, `_docs/_WIDGETS/FORM_EMBED.md`, board/changelog/docs | `git diff --check`, targeted production lanes after implementation leaves |
 
 ## Sub-Tasks

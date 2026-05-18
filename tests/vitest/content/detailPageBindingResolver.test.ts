@@ -307,6 +307,11 @@ test("resolveDetailPageBlocks mirrors resolveFormRuntimeData for formContext bin
     settings: getDefaultFormSettings(),
     submissionAccess: "public" as const,
     submissionNonce: "nonce-1",
+    botProtection: {
+      provider: "recaptcha_v3" as const,
+      siteKey: "site-key-1",
+      action: "public_write" as const,
+    },
     fields: [],
   }));
   const document = createDocument({
@@ -353,6 +358,11 @@ test("resolveDetailPageBlocks mirrors resolveFormRuntimeData for formContext bin
     resolved: {
       formId: "form-1",
       submissionNonce: "nonce-1",
+      botProtection: {
+        provider: "recaptcha_v3",
+        siteKey: "site-key-1",
+        action: "public_write",
+      },
     },
   });
 });

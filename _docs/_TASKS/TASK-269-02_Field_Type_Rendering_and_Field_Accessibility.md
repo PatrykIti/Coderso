@@ -6,7 +6,7 @@
 **Category:** Widgets + Runtime Render + Forms + Accessibility
 **Estimated Effort:** Large
 **Dependencies:** TASK-269-01
-**Status:** To Do
+**Status:** Done (2026-05-18)
 
 ---
 
@@ -21,7 +21,10 @@ validation contract in `core/services/forms/validation.ts` accepts only `text`,
 leaf fixes Form Embed-owned rendering and field-level accessibility for the
 currently supported field types, and it records report rows C2/W1 as future
 Forms field-model scope when they require adding new field types before Form
-Embed can render them.
+Embed can render them. Those expansions route to TASK-311. A10 is only
+actionable when the live Forms model exposes an actual grouped choice control;
+the current single-checkbox contract does not justify synthetic
+`fieldset`/`legend` wrappers.
 
 ## Scope Boundary
 
@@ -36,6 +39,9 @@ Forms fields:
 - `label htmlFor`, `aria-label` fallback when labels are hidden,
   `aria-required`, and helper text `aria-describedby`;
 - checkbox inline label placement parity with other field types;
+- grouped `fieldset` / `legend` semantics only for real grouped choice controls
+  if the current Forms model grows them during this family; not for the current
+  single-checkbox field model;
 - select option labels and helper text as plain text only.
 
 This leaf does not add new Forms field types, invent a file upload endpoint,
@@ -194,7 +200,8 @@ No API routes are added by this leaf.
   matrix, accessibility behavior, and future Forms field-model boundary.
 - Update `_docs/PLAYWRIGHT/REPORT_FORM_EMBED_WIDGET.md` rows W17, A3-A7, and
   A10 after validation. Mark C2/W1 fixed only for current supported-field
-  diagnostics; route new field type support to a future Forms field-model task.
+  diagnostics; route new field type support to TASK-311, and mark A10 not
+  applicable if no grouped choice control exists in the live Forms contract.
 
 ## Changelog Policy
 
@@ -207,9 +214,12 @@ No API routes are added by this leaf.
   to text inputs.
 - Report-only field types that the current Forms model rejects are explicitly
   classified as future Forms field-model scope or rendered as non-submitting
-  unsupported diagnostics for legacy/resolved payloads.
+  unsupported diagnostics for legacy/resolved payloads, with the actual model
+  expansion routed to TASK-311.
 - Field labels, IDs, helper text, required state, and hidden-label fallback are
   programmatically connected.
+- Group semantics are added only when the current Forms model exposes a real
+  grouped choice control; single checkboxes remain single-control semantics.
 - File and hidden-like unsupported fields never expose or submit secrets.
 - Conditional logic and progress hydration still work for currently supported
   controls.

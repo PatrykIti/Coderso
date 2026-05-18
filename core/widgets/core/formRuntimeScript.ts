@@ -4,6 +4,35 @@ const runtimeClientScript = String.raw`(() => {
   (window).__nextlessFormRuntimeClient = true;
 
   const FORM_SELECTOR = 'form[data-nextless-form-runtime="1"]';
+  let recaptchaScriptPromise = null;
+
+  const loadRecaptcha = (siteKey) => {
+    if (!siteKey) return Promise.reject(new Error("recaptcha_site_key_missing"));
+    if (window.grecaptcha && typeof window.grecaptcha.execute === "function") {
+      return Promise.resolve();
+    }
+    if (recaptchaScriptPromise) return recaptchaScriptPromise;
+
+    recaptchaScriptPromise = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = "https://www.google.com/recaptcha/api.js?render=" + encodeURIComponent(siteKey);
+      script.async = true;
+      script.defer = true;
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error("recaptcha_load_failed"));
+      document.head.appendChild(script);
+    });
+
+    return recaptchaScriptPromise;
+  };
+
+  const executeRecaptcha = async (siteKey, action) => {
+    await loadRecaptcha(siteKey);
+    if (!window.grecaptcha || typeof window.grecaptcha.execute !== "function") {
+      throw new Error("recaptcha_unavailable");
+    }
+    return window.grecaptcha.execute(siteKey, { action: action || "public_write" });
+  };
 
   const readNamedValue = (input) => {
     if (input instanceof HTMLInputElement) {
@@ -36,6 +65,7 @@ const runtimeClientScript = String.raw`(() => {
       }
       if (!element.name) return false;
       if (element.name === "__nl_form_nonce") return false;
+      if (element.name === "captchaToken") return false;
       return true;
     });
 
@@ -126,6 +156,12 @@ const runtimeClientScript = String.raw`(() => {
     return "nextless:form-progress:" + formId + ":" + window.location.pathname;
   };
 
+  const getProgressTtlDays = (form) => {
+    const parsed = Number.parseInt(form.dataset.formProgressTtlDays || "7", 10);
+    if (!Number.isFinite(parsed)) return 7;
+    return Math.min(30, Math.max(1, parsed));
+  };
+
   const persistProgress = (form) => {
     if (form.dataset.formSaveProgress !== "1") return;
     const key = getProgressKey(form);
@@ -175,6 +211,12 @@ const runtimeClientScript = String.raw`(() => {
     }
 
     if (!payload || typeof payload !== "object") return;
+    const savedAt = Number(payload.savedAt);
+    const ttlMs = getProgressTtlDays(form) * 24 * 60 * 60 * 1000;
+    if (!Number.isFinite(savedAt) || Date.now() - savedAt > ttlMs) {
+      clearProgress(form);
+      return;
+    }
     const values = payload.values;
     if (!values || typeof values !== "object") return;
 
@@ -281,16 +323,31 @@ const runtimeClientScript = String.raw`(() => {
     if (submitButton instanceof HTMLElement) {
       submitButton.hidden = hasSteps && currentStep < steps.length;
     }
+
+    const progressText = form.querySelector('[data-form-progress-text="true"]');
+    if (progressText instanceof HTMLElement && hasSteps) {
+      progressText.textContent = "Step " + currentStep + " of " + steps.length;
+    }
+
+    const progressBar = form.querySelector('[data-form-progress-bar="true"]');
+    if (progressBar instanceof HTMLElement && hasSteps) {
+      progressBar.style.width = Math.round((currentStep / steps.length) * 100) + "%";
+    }
   };
 
   const toPayload = (form) => {
     const formData = new FormData(form);
     const data = {};
     let formNonce = null;
+    let captchaToken = null;
 
     for (const [key, value] of formData.entries()) {
       if (key === "__nl_form_nonce") {
         formNonce = String(value);
+        continue;
+      }
+      if (key === "captchaToken") {
+        captchaToken = String(value).trim() || null;
         continue;
       }
       if (value instanceof File) continue;
@@ -300,6 +357,7 @@ const runtimeClientScript = String.raw`(() => {
     return {
       data,
       formNonce,
+      captchaToken: captchaToken || undefined,
     };
   };
 
@@ -311,6 +369,41 @@ const runtimeClientScript = String.raw`(() => {
   const showNode = (node) => {
     if (!(node instanceof HTMLElement)) return;
     node.classList.remove("hidden");
+  };
+
+  const setSubmitting = (form, submitting) => {
+    form.dataset.submitting = submitting ? "1" : "0";
+    form.setAttribute("aria-busy", submitting ? "true" : "false");
+
+    const submitButton = form.querySelector('[data-form-submit="1"]');
+    const backButton = form.querySelector('[data-form-nav="back"]');
+    const nextButton = form.querySelector('[data-form-nav="next"]');
+    const loadingLabel = (form.dataset.formLoadingLabel || "Sending...").trim();
+    const submitLabel = (form.dataset.formSubmitLabel || submitButton?.textContent || "").trim();
+
+    [submitButton, backButton, nextButton].forEach((node) => {
+      if (!(node instanceof HTMLButtonElement)) return;
+      node.disabled = submitting;
+    });
+
+    if (submitButton instanceof HTMLButtonElement) {
+      submitButton.setAttribute("aria-busy", submitting ? "true" : "false");
+      submitButton.textContent = submitting ? loadingLabel : submitLabel;
+    }
+  };
+
+  const hideFormBody = (form) => {
+    const body = form.querySelector("[data-form-embed-form-body='true']");
+    if (body instanceof HTMLElement) {
+      body.hidden = true;
+    }
+  };
+
+  const showFormBody = (form) => {
+    const body = form.querySelector("[data-form-embed-form-body='true']");
+    if (body instanceof HTMLElement) {
+      body.hidden = false;
+    }
   };
 
   const bindForm = (form) => {
@@ -365,11 +458,21 @@ const runtimeClientScript = String.raw`(() => {
       if (!validateCurrentStep(form)) return;
 
       if (form.dataset.submitting === "1") return;
-      form.dataset.submitting = "1";
-
+      setSubmitting(form, true);
       hideNode(errorNode);
+      hideNode(successNode);
 
       try {
+        const siteKey = (form.dataset.formCaptchaSiteKey || "").trim();
+        const action = (form.dataset.formCaptchaAction || "public_write").trim();
+        if (siteKey) {
+          const token = await executeRecaptcha(siteKey, action);
+          const tokenInput = form.querySelector('input[name="captchaToken"]');
+          if (tokenInput instanceof HTMLInputElement) {
+            tokenInput.value = token;
+          }
+        }
+
         const payload = toPayload(form);
         const response = await fetch(form.action, {
           method: "POST",
@@ -380,11 +483,18 @@ const runtimeClientScript = String.raw`(() => {
           body: JSON.stringify(payload),
         });
 
+        const result = await response.json().catch(() => null);
         if (!response.ok) {
-          throw new Error("form_submit_failed");
+          const message =
+            result &&
+            typeof result === "object" &&
+            result.error &&
+            typeof result.error.message === "string"
+              ? result.error.message
+              : "Unable to submit the form. Please try again.";
+          throw new Error(message);
         }
 
-        const result = await response.json();
         const runtime = result && typeof result === "object" ? result.runtime || {} : {};
         const redirectUrl =
           runtime && typeof runtime.redirectUrl === "string"
@@ -413,16 +523,26 @@ const runtimeClientScript = String.raw`(() => {
         }
 
         clearProgress(form);
-        form.reset();
-        setCurrentStep(form, 1);
-        refreshFieldLogic(form);
-        refreshStepUi(form);
-      } catch {
+        const successBehavior = form.dataset.formSuccessBehavior || "show-message-hide-form";
+        if (successBehavior === "show-message-reset-form") {
+          form.reset();
+          showFormBody(form);
+          setCurrentStep(form, 1);
+          refreshFieldLogic(form);
+          refreshStepUi(form);
+        } else if (successBehavior === "show-message-keep-form") {
+          showFormBody(form);
+        } else {
+          hideFormBody(form);
+        }
+      } catch (error) {
         if (errorNode instanceof HTMLElement) {
+          errorNode.textContent =
+            error instanceof Error ? error.message : "Unable to submit the form. Please try again.";
           showNode(errorNode);
         }
       } finally {
-        form.dataset.submitting = "0";
+        setSubmitting(form, false);
       }
     });
   };

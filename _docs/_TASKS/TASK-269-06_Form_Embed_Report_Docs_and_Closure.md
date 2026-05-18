@@ -6,7 +6,7 @@
 **Category:** QA + Documentation + Changelog
 **Estimated Effort:** Medium
 **Dependencies:** TASK-269-01, TASK-269-02, TASK-269-03, TASK-269-04, TASK-269-05
-**Status:** To Do
+**Status:** Done (2026-05-18)
 
 ---
 
@@ -71,9 +71,12 @@ follow-up before marking the row deferred.
 
 | Finding | Status | Fix owner | Test evidence | Notes |
 |---|---|---|---|---|
-| C2 radio fields | future Forms field-model scope | TASK-269-02 classification plus future Forms field-model task | validation owner evidence | current Forms model rejects radio |
-| U3 CSS var picker | TASK-256 shared scope | TASK-256-02 | recorded TASK-256-02 validation evidence | not implemented in TASK-269 |
-| W11 CAPTCHA/honeypot | nonce projection fixed / CAPTCHA-honeypot policy deferred | TASK-269-05 plus future Forms/public-write task if needed | route/security/runtime command list | current resolver projects `submissionNonce`; no widget-owned switches |
+| C2 radio fields | future Forms field-model scope | TASK-269-02 classification plus TASK-311 | validation owner evidence | current Forms model rejects radio |
+| A10 grouped fieldset/legend | not applicable unless the Forms model gains grouped choice controls | TASK-269-02 classification | supported-field validation evidence | current live model exposes a single checkbox field, not grouped checkbox/radio sets |
+| U3 CSS var picker | shared scope | TASK-310 | shared helper/adoption validation evidence | not implemented in TASK-269 widget-local code |
+| U4 border clear | shared scope | TASK-310 | shared helper/adoption validation evidence | remaining shared clear adoption, not widget-local Form Embed logic |
+| W11 CAPTCHA bridge | existing backend captcha + nonce contract bridged into Form Embed runtime | TASK-269-05 | route/security/runtime command list | public Forms submits already require `captchaToken`; TASK-269 must bridge safe site-key/token flow without widget-owned policy switches |
+| W15 redirect projection | verify current owner proof first | TASK-269-05 | route/runtime test evidence | submit route already maps `successRedirectUrl` to `runtime.redirectUrl`; only code-fix if live proof fails |
 ```
 
 Closure helper shape:
@@ -102,8 +105,9 @@ Error handling:
 
 - Do not mark a finding fixed without code/test/runtime evidence or a verified
   not-reproducible note.
-- Do not mark U3/U4 fixed under TASK-269 unless TASK-256-02 landed the shared
-  helper and this family only wired a Form Embed-specific final hook.
+- Do not mark U3/U4 fixed under TASK-269 unless TASK-310 landed the shared
+  helper/adoption work and this family only wired a Form Embed-specific final
+  hook.
 - If public-write anti-abuse needs backend route changes outside Form Embed,
   create or link a future Forms task before marking W11 deferred.
 - If broad gates fail for unrelated reasons, isolate targeted Form Embed lanes

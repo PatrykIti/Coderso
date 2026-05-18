@@ -173,8 +173,19 @@ const formsState = vi.hoisted(() => ({
   },
 }));
 
+const detailState = vi.hoisted(() => ({
+  current: {} as Record<
+    string,
+    { form: FormRecord; fields: Array<Record<string, unknown>> } | null
+  >,
+}));
+
 vi.mock("@/ui/forms/hooks/useForms", () => ({
   useForms: () => formsState.current,
+}));
+
+vi.mock("@/services/formsClient", () => ({
+  getFormDetailCached: vi.fn(async (formId: string) => detailState.current[formId] ?? null),
 }));
 
 const mount = (node: React.ReactNode) => {
@@ -200,6 +211,14 @@ const mount = (node: React.ReactNode) => {
       container.remove();
     },
   };
+};
+
+const flushAsyncWork = async () => {
+  await React.act(async () => {
+    await (
+      window as Window & { happyDOM?: { waitUntilComplete?: () => Promise<void> } }
+    ).happyDOM?.waitUntilComplete?.();
+  });
 };
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
@@ -359,12 +378,16 @@ const renderEditor = async ({
   };
 
   const view = mount(<Harness />);
+  await flushAsyncWork();
 
   return {
     ...view,
     onChangeSpy,
     getLatestValue: () => latestValue,
-    rerender: () => view.rerender(<Harness />),
+    rerender: async () => {
+      view.rerender(<Harness />);
+      await flushAsyncWork();
+    },
   };
 };
 
@@ -376,6 +399,7 @@ afterEach(() => {
     error: null,
     refresh: vi.fn(),
   };
+  detailState.current = {};
   vi.restoreAllMocks();
 });
 
@@ -434,7 +458,13 @@ test("FormEmbed wizard editor normalizes content defaults and updates layout and
 
     expect(Array.from(layoutSelects[1]!.options).map((option) => option.value)).toContain("none");
     expect(Array.from(layoutSelects[2]!.options).map((option) => option.value)).toContain("none");
-    expect(layoutSelects.map((select) => select.value)).toEqual(["start", "md", "md", "start"]);
+    expect(layoutSelects.slice(0, 4).map((select) => select.value)).toEqual([
+      "start",
+      "md",
+      "md",
+      "start",
+    ]);
+    expect(layoutSelects.slice(4).map((select) => select.value)).toEqual(["sm", "md", "md"]);
 
     const fieldsSection = getSectionByTitle(view.container, "Field labels");
     const fieldToggles = getCheckboxes(fieldsSection);
@@ -568,9 +598,11 @@ test("FormEmbed visual editor shows the internal access warning and updates styl
     expect(backgroundTextInput.value).toBe("not-a-color");
     expect(surfaceTextInput.value).toBe("");
     expect(borderTextInput.value).toBe("#112233");
+    expect(styleSection.textContent).toContain("Custom token active");
     expect(Array.from(styleSelects[1]!.options).map((option) => option.value)).toContain("none");
     expect(Array.from(styleSelects[2]!.options).map((option) => option.value)).toContain("none");
-    expect(styleSelects.map((select) => select.value)).toEqual(["1", "md", "md"]);
+    expect(styleSelects.slice(0, 3).map((select) => select.value)).toEqual(["1", "md", "md"]);
+    expect(styleSelects.slice(3).map((select) => select.value)).toEqual(["md", "semibold", "2"]);
 
     setSelectValue(
       getSelects(getSectionByTitle(view.container, "Form selection"))[0],
@@ -616,6 +648,21 @@ test("FormEmbed visual editor shows the internal access warning and updates styl
         inputSize: "sm",
       },
     });
+
+    const clearButtons = Array.from(styleSection.querySelectorAll("button"));
+    React.act(() => {
+      (clearButtons[2] as HTMLButtonElement | undefined)?.click();
+    });
+
+    expect(view.getLatestValue()).toMatchObject({
+      style: {
+        background: "#abcdef",
+        surface: "var(--surface-card)",
+        borderWidth: "2",
+        radius: "lg",
+        inputSize: "sm",
+      },
+    });
   } finally {
     view.cleanup();
   }
@@ -656,7 +703,7 @@ test("FormEmbed advanced editor covers loading and empty form states before sele
       refresh: vi.fn(),
     };
 
-    view.rerender();
+    await view.rerender();
 
     expect(view.container.textContent).toContain("Select form");
 
@@ -672,5 +719,118 @@ test("FormEmbed advanced editor covers loading and empty form states before sele
     expect(view.container.textContent).toContain("Internal submissions require");
   } finally {
     view.cleanup();
+  }
+});
+
+test("FormEmbed modes split diagnostics and multi-step metadata using fetched form detail", async () => {
+  const publicForm = makeForm({
+    id: "form-public",
+    name: "Lead intake",
+    status: "draft",
+    submissionAccess: "public",
+    settings: {
+      layoutMode: "multi_step",
+      saveProgress: true,
+      stepTitles: ["Contact", "Details"],
+      preset: "contact",
+      automationRetry: {
+        enabled: false,
+        maxAttempts: 3,
+        baseDelayMs: 1000,
+        maxDelayMs: 5000,
+      },
+    },
+  });
+
+  formsState.current = {
+    items: [publicForm],
+    isLoading: false,
+    error: null,
+    refresh: vi.fn(),
+  };
+  detailState.current = {
+    "form-public": {
+      form: publicForm,
+      fields: [
+        {
+          id: "field-1",
+          type: "text",
+          label: "Name",
+          name: "name",
+          required: true,
+          settings: {},
+        },
+        {
+          id: "field-2",
+          type: "textarea",
+          label: "Notes",
+          name: "notes",
+          required: false,
+          settings: {},
+        },
+      ],
+    },
+  };
+
+  const wizard = await renderEditor({
+    editor: "wizard",
+    initialValue: {
+      formId: "form-public",
+      resolved: {
+        error: "form_unpublished",
+      },
+    },
+  });
+
+  try {
+    expect(wizard.container.textContent).toContain("Field count: 2");
+    expect(wizard.container.textContent).toContain("text, textarea");
+    expect(wizard.container.textContent).toContain("Multi-step");
+    expect(wizard.container.textContent).toContain("Save progress");
+    expect(wizard.container.textContent).toContain("Runtime resolver reports: form_unpublished");
+    expect(wizard.container.textContent).toContain("Content");
+    expect(wizard.container.textContent).not.toContain("Style");
+  } finally {
+    wizard.cleanup();
+  }
+
+  const visual = await renderEditor({
+    editor: "visual",
+    initialValue: {
+      formId: "form-public",
+    },
+  });
+
+  try {
+    expect(visual.container.textContent).toContain("Style");
+    expect(visual.container.textContent).toContain("Submit behavior");
+    expect(visual.container.textContent).toContain("Multi-step navigation");
+    expect(visual.container.textContent).toContain("Title color");
+  } finally {
+    visual.cleanup();
+  }
+
+  const advanced = await renderEditor({
+    editor: "advanced",
+    initialValue: {
+      formId: "form-public",
+      resolved: {
+        botProtection: {
+          provider: "recaptcha_v3",
+          siteKey: "site-key-1",
+          action: "public_write",
+        },
+      },
+    },
+  });
+
+  try {
+    expect(advanced.container.textContent).toContain("Diagnostics");
+    expect(advanced.container.textContent).toContain("Normalized payload snapshot");
+    expect(advanced.container.textContent).toContain("Selected form id: form-public");
+    expect(advanced.container.textContent).toContain("Detail cache status: loaded");
+    expect(advanced.container.textContent).toContain("Captcha site key projected: yes");
+  } finally {
+    advanced.cleanup();
   }
 });

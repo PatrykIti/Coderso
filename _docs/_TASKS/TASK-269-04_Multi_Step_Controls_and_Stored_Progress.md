@@ -6,7 +6,7 @@
 **Category:** Widgets + Runtime Script + Admin UI + Accessibility
 **Estimated Effort:** Large
 **Dependencies:** TASK-269-02
-**Status:** To Do
+**Status:** Done (2026-05-18)
 
 ---
 

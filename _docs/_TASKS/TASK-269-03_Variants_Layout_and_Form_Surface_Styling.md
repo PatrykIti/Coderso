@@ -5,27 +5,31 @@
 **Priority:** High
 **Category:** Widgets + Runtime Render + Admin UI + Design Tokens
 **Estimated Effort:** Large
-**Dependencies:** TASK-269-02, TASK-256-02
-**Status:** To Do
+**Dependencies:** TASK-269-02, TASK-310
+**Status:** Done (2026-05-18)
 
 ---
 
 ## Overview
 
-Make the Form Embed visual contract match the widget documentation.
+Make the Form Embed visual contract truthful.
 
 `_docs/_WIDGETS/FORM_EMBED.md` documents `standard`, `card`, and `inline`
 variants, but `formEmbed.tsx` currently normalizes every variant to `standard`.
 The report also calls out hardcoded section padding, coupled spacing/gap, title
 typography, label/helper colors, submit button colors, and section semantics.
-This leaf implements Form Embed-owned visual/product controls while leaving
-generic clear/color-token behavior to TASK-256-02.
+This leaf must first reconcile the variant contract across docs, registry,
+renderer, and tests. Stale docs alone are not approval for product expansion:
+either implement extra variants with clear product proof or narrow the docs and
+tests back to the truthful `standard` contract before landing the rest of the
+Form Embed-owned visual controls. Generic clear/color-token behavior stays in
+TASK-310 shared scope.
 
 ## Scope Boundary
 
 This leaf owns Form Embed visual output:
 
-- `standard`, `card`, and `inline` variants;
+- truthful variant contract across docs, widget registry, renderer, and tests;
 - independent section max-width, horizontal/vertical padding, and field gap
   controls where they are Form Embed-specific;
 - title heading level/typography/color controls constrained to safe enums;
@@ -37,15 +41,18 @@ This leaf owns Form Embed visual output:
 
 This leaf does not own the shared color picker CSS-variable fallback, generic
 clear controls, global heading hierarchy helpers, or unrelated widget variants.
-Rows U3 and U4 stay in TASK-256-02 unless that task leaves a Form Embed-only
-adapter after the shared helper lands.
+Rows U3 and U4 stay in TASK-310 shared scope; this leaf may only consume the
+shared helper/adoption result and must not re-implement widget-local picker or
+clear semantics.
 
 ## Sub-Tasks
 
-- [ ] Extend `FormEmbedVariantId`, widget registry variants, schema/defaults,
-  and normalizer to accept `standard`, `card`, and `inline`.
-- [ ] Define variant-specific class composition without destructive legacy data
-  rewrites.
+- [ ] Reconcile the live variant contract first: either implement extra
+  variants with explicit product proof or narrow docs/registry/tests back to
+  the truthful `standard` owner contract.
+- [ ] If extra variants remain in scope after that reconciliation, extend
+  `FormEmbedVariantId`, widget registry variants, schema/defaults, and
+  normalizer without destructive legacy data rewrites.
 - [ ] Split layout spacing into safe Form Embed controls for section padding and
   internal field gap; preserve legacy `layout.spacing` as a backward-compatible
   adapter.
@@ -166,8 +173,8 @@ No API routes are added.
 
 ## Acceptance Criteria
 
-- `card` and `inline` are real Form Embed variants, not aliases silently forced
-  to `standard`.
+- The Form Embed variant contract is truthful across docs, widget registry,
+  renderer, and tests; stale docs alone do not force product expansion.
 - Layout controls can change section padding/max width and form density without
   corrupting existing `layout.spacing` data.
 - Title, label, helper, border, and submit button styles are configurable

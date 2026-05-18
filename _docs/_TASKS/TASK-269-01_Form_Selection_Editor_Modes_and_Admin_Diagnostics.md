@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Forms + Playwright QA
 **Estimated Effort:** Large
 **Dependencies:** TASK-269, TASK-256-01
-**Status:** To Do
+**Status:** Done (2026-05-18)
 
 ---
 
@@ -43,7 +43,7 @@ color picker behavior, generic clear controls, or Forms route policy.
 - [ ] Keep Wizard focused on selected form, title/description, and beginner-safe
   submit/success copy. Hide advanced style controls from Wizard.
 - [ ] Keep Visual focused on layout, visible field labels, selected-form
-  preview summary, and styling controls that are not shared TASK-256-02 scope.
+  preview summary, and styling controls that are not shared TASK-310 scope.
 - [ ] Add an Advanced view with normalized payload snapshot, selected form
   diagnostics, submission access, runtime resolver error, and read-only runtime
   data summary.
@@ -212,6 +212,8 @@ No API routes are added.
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/ui/form-embed-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/admin/formsClient.test.ts` when
+  `getFormDetailCached()` / `listFormFields()` ownership changes
 - `bun run test:vitest -- tests/vitest/widgets/formEmbed.test.tsx` when
   normalizer/default behavior changes
 - `bun --cwd core lint`

@@ -1,4 +1,4 @@
-import type { CSSProperties, ComponentType } from "react";
+import { useId, type CSSProperties, type ComponentType } from "react";
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 import { getFormRuntimeClientScript } from "./formRuntimeScript";
@@ -14,6 +14,10 @@ export type FormEmbedLayout = {
   alignment?: "start" | "center" | "end";
   width?: "none" | "sm" | "md" | "lg" | "xl";
   spacing?: "none" | "sm" | "md" | "lg" | "xl";
+  sectionPaddingX?: "sm" | "md" | "lg";
+  sectionPaddingY?: "none" | "sm" | "md" | "lg" | "xl";
+  fieldGap?: "sm" | "md" | "lg";
+  headingLevel?: "2" | "3" | "4";
   buttonAlignment?: "start" | "center" | "end";
 };
 
@@ -24,11 +28,30 @@ export type FormEmbedStyle = {
   borderWidth?: "0" | "1" | "2";
   radius?: "none" | "sm" | "md" | "lg";
   inputSize?: "none" | "sm" | "md" | "lg";
+  titleColor?: string;
+  titleSize?: "sm" | "md" | "lg";
+  titleWeight?: "medium" | "semibold" | "bold";
+  labelColor?: string;
+  helperColor?: string;
+  submitBackground?: string;
+  submitTextColor?: string;
 };
 
 export type FormEmbedFields = {
   showLabels?: boolean;
   showRequiredIndicator?: boolean;
+};
+
+export type FormEmbedNavigation = {
+  backLabel?: string;
+  nextLabel?: string;
+  showProgress?: boolean;
+  savedProgressTtlDays?: number;
+};
+
+export type FormEmbedSubmitBehavior = {
+  loadingLabel?: string;
+  successBehavior?: "show-message-hide-form" | "show-message-reset-form" | "show-message-keep-form";
 };
 
 export type ResolvedFormField = {
@@ -57,6 +80,11 @@ export type FormEmbedResolvedData = {
   successRedirectUrl?: string | null;
   submissionAccess?: "public" | "internal";
   submissionNonce?: string | null;
+  botProtection?: {
+    provider?: "recaptcha_v3";
+    siteKey?: string | null;
+    action?: "public_write";
+  };
   settings?: {
     layoutMode?: "single" | "multi_step";
     saveProgress?: boolean;
@@ -75,15 +103,20 @@ export type FormEmbedData = {
   layout?: FormEmbedLayout;
   style?: FormEmbedStyle;
   fields?: FormEmbedFields;
+  navigation?: FormEmbedNavigation;
+  submitBehavior?: FormEmbedSubmitBehavior;
   resolved?: FormEmbedResolvedData;
 };
 
-const spacingClassMap: Record<NonNullable<FormEmbedLayout["spacing"]>, string> = {
-  none: "gap-0 py-0",
-  sm: "gap-4 py-6",
-  md: "gap-6 py-8",
-  lg: "gap-8 py-10",
-  xl: "gap-10 py-12",
+const spacingClassMap: Record<
+  NonNullable<FormEmbedLayout["spacing"]>,
+  { fieldGap: string; sectionPaddingY: NonNullable<FormEmbedLayout["sectionPaddingY"]> }
+> = {
+  none: { fieldGap: "gap-0", sectionPaddingY: "none" },
+  sm: { fieldGap: "gap-4", sectionPaddingY: "sm" },
+  md: { fieldGap: "gap-6", sectionPaddingY: "md" },
+  lg: { fieldGap: "gap-8", sectionPaddingY: "lg" },
+  xl: { fieldGap: "gap-10", sectionPaddingY: "xl" },
 };
 
 const widthClassMap: Record<NonNullable<FormEmbedLayout["width"]>, string> = {
@@ -106,6 +139,26 @@ const buttonAlignClassMap: Record<NonNullable<FormEmbedLayout["buttonAlignment"]
   end: "justify-end",
 };
 
+const sectionPaddingXClassMap: Record<NonNullable<FormEmbedLayout["sectionPaddingX"]>, string> = {
+  sm: "px-4",
+  md: "px-6",
+  lg: "px-8",
+};
+
+const sectionPaddingYClassMap: Record<NonNullable<FormEmbedLayout["sectionPaddingY"]>, string> = {
+  none: "py-0",
+  sm: "py-6",
+  md: "py-8",
+  lg: "py-10",
+  xl: "py-12",
+};
+
+const fieldGapClassMap: Record<NonNullable<FormEmbedLayout["fieldGap"]>, string> = {
+  sm: "gap-4",
+  md: "gap-6",
+  lg: "gap-8",
+};
+
 const radiusClassMap: Record<NonNullable<FormEmbedStyle["radius"]>, string> = {
   none: "",
   sm: "rounded-md",
@@ -118,6 +171,18 @@ const inputSizeClassMap: Record<NonNullable<FormEmbedStyle["inputSize"]>, string
   sm: "px-3 py-2 text-sm",
   md: "px-3 py-2.5 text-sm",
   lg: "px-4 py-3 text-base",
+};
+
+const titleSizeClassMap: Record<NonNullable<FormEmbedStyle["titleSize"]>, string> = {
+  sm: "text-lg",
+  md: "text-xl",
+  lg: "text-2xl",
+};
+
+const titleWeightClassMap: Record<NonNullable<FormEmbedStyle["titleWeight"]>, string> = {
+  medium: "font-medium",
+  semibold: "font-semibold",
+  bold: "font-bold",
 };
 
 const borderWidthClassMap: Record<NonNullable<FormEmbedStyle["borderWidth"]>, string> = {
@@ -142,10 +207,16 @@ const resolveOptionalString = (value: string | undefined) => {
 };
 
 const resolveLayout = (value?: FormEmbedLayout): Required<FormEmbedLayout> => {
+  const rawSpacing = value?.spacing ?? "md";
+  const spacing = isSpacing(rawSpacing) ? rawSpacing : "md";
   return {
     alignment: value?.alignment ?? "start",
     width: value?.width ?? "md",
-    spacing: value?.spacing ?? "md",
+    spacing,
+    sectionPaddingX: value?.sectionPaddingX ?? "sm",
+    sectionPaddingY: value?.sectionPaddingY ?? spacingClassMap[spacing].sectionPaddingY,
+    fieldGap: value?.fieldGap ?? "md",
+    headingLevel: value?.headingLevel ?? "2",
     buttonAlignment: value?.buttonAlignment ?? "start",
   };
 };
@@ -158,6 +229,13 @@ const resolveStyle = (value?: FormEmbedStyle): Required<FormEmbedStyle> => {
     borderWidth: value?.borderWidth ?? "1",
     radius: value?.radius ?? "md",
     inputSize: value?.inputSize ?? "md",
+    titleColor: value?.titleColor ?? "var(--color-text)",
+    titleSize: value?.titleSize ?? "md",
+    titleWeight: value?.titleWeight ?? "semibold",
+    labelColor: value?.labelColor ?? "var(--color-text)",
+    helperColor: value?.helperColor ?? "var(--color-text)",
+    submitBackground: value?.submitBackground ?? "var(--color-primary)",
+    submitTextColor: value?.submitTextColor ?? "var(--color-bg)",
   };
 };
 
@@ -165,6 +243,30 @@ const resolveFields = (value?: FormEmbedFields): Required<FormEmbedFields> => {
   return {
     showLabels: value?.showLabels ?? true,
     showRequiredIndicator: value?.showRequiredIndicator ?? true,
+  };
+};
+
+const resolveNavigation = (value?: FormEmbedNavigation): Required<FormEmbedNavigation> => {
+  const ttl =
+    typeof value?.savedProgressTtlDays === "number" ? Math.round(value.savedProgressTtlDays) : 7;
+  return {
+    backLabel: resolveNonEmptyString(value?.backLabel, "Back"),
+    nextLabel: resolveNonEmptyString(value?.nextLabel, "Next"),
+    showProgress: value?.showProgress ?? true,
+    savedProgressTtlDays: Math.min(30, Math.max(1, Number.isFinite(ttl) ? ttl : 7)),
+  };
+};
+
+const resolveSubmitBehavior = (
+  value?: FormEmbedSubmitBehavior
+): Required<FormEmbedSubmitBehavior> => {
+  const successBehavior = value?.successBehavior;
+  return {
+    loadingLabel: resolveNonEmptyString(value?.loadingLabel, "Sending..."),
+    successBehavior:
+      successBehavior === "show-message-reset-form" || successBehavior === "show-message-keep-form"
+        ? successBehavior
+        : "show-message-hide-form",
   };
 };
 
@@ -186,6 +288,28 @@ const isWidth = (value: string): value is NonNullable<FormEmbedLayout["width"]> 
 const isSpacing = (value: string): value is NonNullable<FormEmbedLayout["spacing"]> =>
   value === "none" || value === "sm" || value === "md" || value === "lg" || value === "xl";
 
+const isSectionPaddingX = (
+  value: string
+): value is NonNullable<FormEmbedLayout["sectionPaddingX"]> =>
+  value === "sm" || value === "md" || value === "lg";
+
+const isSectionPaddingY = (
+  value: string
+): value is NonNullable<FormEmbedLayout["sectionPaddingY"]> =>
+  value === "none" || value === "sm" || value === "md" || value === "lg" || value === "xl";
+
+const isFieldGap = (value: string): value is NonNullable<FormEmbedLayout["fieldGap"]> =>
+  value === "sm" || value === "md" || value === "lg";
+
+const isHeadingLevel = (value: string): value is NonNullable<FormEmbedLayout["headingLevel"]> =>
+  value === "2" || value === "3" || value === "4";
+
+const isTitleSize = (value: string): value is NonNullable<FormEmbedStyle["titleSize"]> =>
+  value === "sm" || value === "md" || value === "lg";
+
+const isTitleWeight = (value: string): value is NonNullable<FormEmbedStyle["titleWeight"]> =>
+  value === "medium" || value === "semibold" || value === "bold";
+
 export const formEmbedSchema = {
   type: "object",
   additionalProperties: false,
@@ -202,6 +326,10 @@ export const formEmbedSchema = {
         alignment: { enum: ["start", "center", "end"] },
         width: { enum: ["none", "sm", "md", "lg", "xl"] },
         spacing: { enum: ["none", "sm", "md", "lg", "xl"] },
+        sectionPaddingX: { enum: ["sm", "md", "lg"] },
+        sectionPaddingY: { enum: ["none", "sm", "md", "lg", "xl"] },
+        fieldGap: { enum: ["sm", "md", "lg"] },
+        headingLevel: { enum: ["2", "3", "4"] },
         buttonAlignment: { enum: ["start", "center", "end"] },
       },
     },
@@ -215,6 +343,13 @@ export const formEmbedSchema = {
         borderWidth: { enum: ["0", "1", "2"] },
         radius: { enum: ["none", "sm", "md", "lg"] },
         inputSize: { enum: ["none", "sm", "md", "lg"] },
+        titleColor: { type: "string" },
+        titleSize: { enum: ["sm", "md", "lg"] },
+        titleWeight: { enum: ["medium", "semibold", "bold"] },
+        labelColor: { type: "string" },
+        helperColor: { type: "string" },
+        submitBackground: { type: "string" },
+        submitTextColor: { type: "string" },
       },
     },
     fields: {
@@ -223,6 +358,26 @@ export const formEmbedSchema = {
       properties: {
         showLabels: { type: "boolean" },
         showRequiredIndicator: { type: "boolean" },
+      },
+    },
+    navigation: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        backLabel: { type: "string" },
+        nextLabel: { type: "string" },
+        showProgress: { type: "boolean" },
+        savedProgressTtlDays: { type: "number", minimum: 1, maximum: 30 },
+      },
+    },
+    submitBehavior: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        loadingLabel: { type: "string" },
+        successBehavior: {
+          enum: ["show-message-hide-form", "show-message-reset-form", "show-message-keep-form"],
+        },
       },
     },
     resolved: {
@@ -239,6 +394,10 @@ export const formEmbedDefaults: FormEmbedData = {
     alignment: "start",
     width: "md",
     spacing: "md",
+    sectionPaddingX: "sm",
+    sectionPaddingY: "md",
+    fieldGap: "md",
+    headingLevel: "2",
     buttonAlignment: "start",
   },
   style: {
@@ -248,10 +407,27 @@ export const formEmbedDefaults: FormEmbedData = {
     borderWidth: "1",
     radius: "md",
     inputSize: "md",
+    titleColor: "var(--color-text)",
+    titleSize: "md",
+    titleWeight: "semibold",
+    labelColor: "var(--color-text)",
+    helperColor: "var(--color-text)",
+    submitBackground: "var(--color-primary)",
+    submitTextColor: "var(--color-bg)",
   },
   fields: {
     showLabels: true,
     showRequiredIndicator: true,
+  },
+  navigation: {
+    backLabel: "Back",
+    nextLabel: "Next",
+    showProgress: true,
+    savedProgressTtlDays: 7,
+  },
+  submitBehavior: {
+    loadingLabel: "Sending...",
+    successBehavior: "show-message-hide-form",
   },
 };
 
@@ -259,12 +435,18 @@ export function normalizeFormEmbedData(data: FormEmbedData): FormEmbedData {
   const layout = resolveLayout(data.layout);
   const style = resolveStyle(data.style);
   const fields = resolveFields(data.fields);
+  const navigation = resolveNavigation(data.navigation);
+  const submitBehavior = resolveSubmitBehavior(data.submitBehavior);
   const hasStyleObject = data.style !== undefined;
 
   const normalizedLayout: Required<FormEmbedLayout> = {
     alignment: isAlignment(layout.alignment) ? layout.alignment : "start",
     width: isWidth(layout.width) ? layout.width : "md",
     spacing: isSpacing(layout.spacing) ? layout.spacing : "md",
+    sectionPaddingX: isSectionPaddingX(layout.sectionPaddingX) ? layout.sectionPaddingX : "sm",
+    sectionPaddingY: isSectionPaddingY(layout.sectionPaddingY) ? layout.sectionPaddingY : "md",
+    fieldGap: isFieldGap(layout.fieldGap) ? layout.fieldGap : "md",
+    headingLevel: isHeadingLevel(layout.headingLevel) ? layout.headingLevel : "2",
     buttonAlignment: isAlignment(layout.buttonAlignment) ? layout.buttonAlignment : "start",
   };
 
@@ -279,6 +461,13 @@ export function normalizeFormEmbedData(data: FormEmbedData): FormEmbedData {
     borderWidth: isBorderWidthValue(style.borderWidth) ? style.borderWidth : "1",
     radius: isRadius(style.radius) ? style.radius : "md",
     inputSize: isInputSize(style.inputSize) ? style.inputSize : "md",
+    titleColor: resolveOptionalString(style.titleColor),
+    titleSize: isTitleSize(style.titleSize) ? style.titleSize : "md",
+    titleWeight: isTitleWeight(style.titleWeight) ? style.titleWeight : "semibold",
+    labelColor: resolveOptionalString(style.labelColor),
+    helperColor: resolveOptionalString(style.helperColor),
+    submitBackground: resolveOptionalString(style.submitBackground),
+    submitTextColor: resolveOptionalString(style.submitTextColor),
   };
 
   const resolvedSuccessMessage =
@@ -296,6 +485,8 @@ export function normalizeFormEmbedData(data: FormEmbedData): FormEmbedData {
     layout: normalizedLayout,
     style: normalizedStyle,
     fields,
+    navigation,
+    submitBehavior,
   };
 }
 
@@ -312,6 +503,38 @@ const resolveTitle = (data: FormEmbedData, resolved?: FormEmbedResolvedData) => 
 const resolveDescription = (data: FormEmbedData, resolved?: FormEmbedResolvedData) => {
   return data.description ?? resolved?.description ?? "";
 };
+
+const slugify = (value: string) =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)+/g, "");
+
+const resolveFieldIdPrefix = (widgetId: string, field: ResolvedFormField) => {
+  return slugify(field.id || field.name || field.label || "field") || "field";
+};
+
+const resolveFieldDomIds = (widgetId: string, field: ResolvedFormField) => {
+  const prefix = resolveFieldIdPrefix(widgetId, field);
+  return {
+    inputId: `${widgetId}-${prefix}`,
+    labelId: `${widgetId}-${prefix}-label`,
+    helperId: field.settings?.helper ? `${widgetId}-${prefix}-helper` : undefined,
+  };
+};
+
+const supportedFieldTypes = new Set([
+  "text",
+  "email",
+  "phone",
+  "date",
+  "textarea",
+  "checkbox",
+  "select",
+]);
+
+const resolveUnsupportedFieldLabel = (field: ResolvedFormField) => field.type.trim() || "unknown";
 
 const normalizeRuntimeStep = (value: unknown) => {
   if (typeof value !== "number" || !Number.isFinite(value)) return 1;
@@ -339,22 +562,29 @@ const resolveFieldGridSpanClass = (field: ResolvedFormField) => {
 function renderFieldControl(
   field: ResolvedFormField,
   options: {
+    widgetId: string;
     showLabels: boolean;
     showRequiredIndicator: boolean;
     inputClassName: string;
     borderClassName: string;
     radiusClassName: string;
     borderColor: string;
+    labelColor: string;
+    helperColor: string;
   }
 ) {
   const {
+    widgetId,
     showLabels,
     showRequiredIndicator,
     inputClassName,
     borderClassName,
     radiusClassName,
     borderColor,
+    labelColor,
+    helperColor,
   } = options;
+  const ids = resolveFieldDomIds(widgetId, field);
   const placeholder = field.settings?.placeholder ?? "";
   const helper = field.settings?.helper;
   const required = Boolean(field.required);
@@ -368,19 +598,40 @@ function renderFieldControl(
 
   const renderLabel = () =>
     !labelHidden ? (
-      <label className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text)]/70">
+      <label
+        id={ids.labelId}
+        htmlFor={ids.inputId}
+        className="text-xs font-semibold uppercase tracking-wide"
+        style={{ color: labelColor }}
+      >
         {field.label}
         {labelSuffix}
       </label>
     ) : null;
+
+  if (!supportedFieldTypes.has(field.type)) {
+    return (
+      <div
+        className="rounded-md border border-dashed px-3 py-2 text-sm text-[var(--color-text)]/70"
+        data-form-field-unsupported={field.type}
+      >
+        Unsupported form field type: {resolveUnsupportedFieldLabel(field)}
+      </div>
+    );
+  }
 
   if (field.type === "textarea") {
     return (
       <div className={wrapperClassName}>
         {renderLabel()}
         <textarea
+          id={ids.inputId}
           name={field.name}
           required={required}
+          aria-required={required ? "true" : undefined}
+          aria-label={labelHidden ? field.label : undefined}
+          aria-labelledby={labelHidden ? undefined : ids.labelId}
+          aria-describedby={ids.helperId}
           data-required-original={required ? "1" : "0"}
           placeholder={placeholder}
           className={joinClasses(
@@ -392,28 +643,76 @@ function renderFieldControl(
           style={{ borderColor }}
           rows={4}
         />
-        {helper ? <p className="text-xs text-[var(--color-text)]/60">{helper}</p> : null}
+        {helper ? (
+          <p id={ids.helperId} className="text-xs" style={{ color: helperColor }}>
+            {helper}
+          </p>
+        ) : null}
       </div>
     );
   }
 
   if (field.type === "checkbox") {
+    if (inlineLabel) {
+      return (
+        <div className={wrapperClassName}>
+          {renderLabel()}
+          <div className="space-y-2">
+            <input
+              id={ids.inputId}
+              type="checkbox"
+              name={field.name}
+              required={required}
+              aria-required={required ? "true" : undefined}
+              aria-labelledby={labelHidden ? undefined : ids.labelId}
+              aria-label={labelHidden ? field.label : undefined}
+              aria-describedby={ids.helperId}
+              data-required-original={required ? "1" : "0"}
+              defaultChecked={Boolean(field.settings?.defaultValue)}
+              className={joinClasses("h-4 w-4", borderClassName, radiusClassName)}
+              style={{ borderColor }}
+            />
+            {helper ? (
+              <p id={ids.helperId} className="text-xs" style={{ color: helperColor }}>
+                {helper}
+              </p>
+            ) : null}
+          </div>
+        </div>
+      );
+    }
+
     return (
-      <label className="flex items-center gap-2 text-sm text-[var(--color-text)]">
-        <input
-          type="checkbox"
-          name={field.name}
-          required={required}
-          data-required-original={required ? "1" : "0"}
-          defaultChecked={Boolean(field.settings?.defaultValue)}
-          className={joinClasses("h-4 w-4", borderClassName, radiusClassName)}
-          style={{ borderColor }}
-        />
-        <span>
-          {!labelHidden ? field.label : "Checkbox"}
-          {labelSuffix}
-        </span>
-      </label>
+      <div className="space-y-2">
+        {renderLabel()}
+        <div className="flex items-center gap-2 text-sm text-[var(--color-text)]">
+          <input
+            id={ids.inputId}
+            type="checkbox"
+            name={field.name}
+            required={required}
+            aria-required={required ? "true" : undefined}
+            aria-labelledby={labelHidden ? undefined : ids.labelId}
+            aria-label={labelHidden ? field.label : undefined}
+            aria-describedby={ids.helperId}
+            data-required-original={required ? "1" : "0"}
+            defaultChecked={Boolean(field.settings?.defaultValue)}
+            className={joinClasses("h-4 w-4", borderClassName, radiusClassName)}
+            style={{ borderColor }}
+          />
+          {labelHidden ? (
+            <span>
+              {field.label}
+              {labelSuffix}
+            </span>
+          ) : null}
+        </div>
+        {helper ? (
+          <p id={ids.helperId} className="text-xs" style={{ color: helperColor }}>
+            {helper}
+          </p>
+        ) : null}
+      </div>
     );
   }
 
@@ -423,8 +722,13 @@ function renderFieldControl(
       <div className={wrapperClassName}>
         {renderLabel()}
         <select
+          id={ids.inputId}
           name={field.name}
           required={required}
+          aria-required={required ? "true" : undefined}
+          aria-label={labelHidden ? field.label : undefined}
+          aria-labelledby={labelHidden ? undefined : ids.labelId}
+          aria-describedby={ids.helperId}
           data-required-original={required ? "1" : "0"}
           className={joinClasses(
             "w-full border bg-transparent",
@@ -434,15 +738,22 @@ function renderFieldControl(
           )}
           style={{ borderColor }}
           defaultValue={field.settings?.defaultValue as string | undefined}
+          disabled={optionsList.length === 0}
         >
-          <option value="">Select an option</option>
+          <option value="">
+            {optionsList.length === 0 ? "No options configured" : "Select an option"}
+          </option>
           {optionsList.map((option) => (
             <option key={option} value={option}>
               {option}
             </option>
           ))}
         </select>
-        {helper ? <p className="text-xs text-[var(--color-text)]/60">{helper}</p> : null}
+        {helper ? (
+          <p id={ids.helperId} className="text-xs" style={{ color: helperColor }}>
+            {helper}
+          </p>
+        ) : null}
       </div>
     );
   }
@@ -460,9 +771,14 @@ function renderFieldControl(
     <div className={wrapperClassName}>
       {renderLabel()}
       <input
+        id={ids.inputId}
         type={inputType}
         name={field.name}
         required={required}
+        aria-required={required ? "true" : undefined}
+        aria-label={labelHidden ? field.label : undefined}
+        aria-labelledby={labelHidden ? undefined : ids.labelId}
+        aria-describedby={ids.helperId}
         data-required-original={required ? "1" : "0"}
         placeholder={placeholder}
         defaultValue={field.settings?.defaultValue as string | undefined}
@@ -475,12 +791,17 @@ function renderFieldControl(
         )}
         style={{ borderColor }}
       />
-      {helper ? <p className="text-xs text-[var(--color-text)]/60">{helper}</p> : null}
+      {helper ? (
+        <p id={ids.helperId} className="text-xs" style={{ color: helperColor }}>
+          {helper}
+        </p>
+      ) : null}
     </div>
   );
 }
 
 export function FormEmbedBlock({ data, variant }: { data: FormEmbedData; variant: string }) {
+  const widgetId = useId().replace(/:/g, "");
   const normalizedData = normalizeFormEmbedData(data);
   const resolvedVariant: FormEmbedVariantId = variant === "standard" ? "standard" : "standard";
   const resolved = normalizedData.resolved;
@@ -490,6 +811,8 @@ export function FormEmbedBlock({ data, variant }: { data: FormEmbedData; variant
     ...(normalizedData.style ?? {}),
   };
   const fieldsConfig = resolveFields(normalizedData.fields);
+  const navigation = resolveNavigation(normalizedData.navigation);
+  const submitBehavior = resolveSubmitBehavior(normalizedData.submitBehavior);
   const fields = Array.isArray(resolved?.fields) ? resolved?.fields : [];
   const runtimeLayoutMode =
     resolved?.settings?.layoutMode === "multi_step" ? "multi_step" : "single";
@@ -512,20 +835,43 @@ export function FormEmbedBlock({ data, variant }: { data: FormEmbedData; variant
   const borderClassName = borderWidthClassMap[style.borderWidth];
   const radiusClassName = radiusClassMap[style.radius];
   const inputClassName = inputSizeClassMap[style.inputSize];
-
   const title = resolveTitle(normalizedData, resolved);
   const description = resolveDescription(normalizedData, resolved);
+  const titleClassName = joinClasses(
+    titleSizeClassMap[style.titleSize ?? "md"],
+    titleWeightClassMap[style.titleWeight ?? "semibold"]
+  );
+  const sectionLabelId = title.trim().length > 0 ? `${widgetId}-title` : undefined;
+  const resolvedHeadingLevel = layout.headingLevel ?? "2";
+  const titleStyle = compactStyle({ color: style.titleColor }) ?? {};
+  const descriptionStyle = compactStyle({ color: style.helperColor ?? "var(--color-text)" }) ?? {};
+  const labelColor = style.labelColor ?? "var(--color-text)";
+  const helperColor = style.helperColor ?? "var(--color-text)";
+  const submitButtonStyle =
+    compactStyle({
+      backgroundColor: style.submitBackground,
+      color: style.submitTextColor,
+    }) ?? {};
+
   const showDescription = description.trim().length > 0;
   const showSuccessMessage = (normalizedData.successMessage ?? "").trim().length > 0;
   const formAction = buildFormAction(normalizedData.formId);
   const hasMultipleSteps = runtimeLayoutMode === "multi_step" && stepGroups.length > 1;
   const hasRuntimeFormReference = Boolean(normalizedData.formId);
   const runtimeDataMissing = hasRuntimeFormReference && resolved === undefined;
+  const showProgress = hasMultipleSteps && navigation.showProgress;
+  const HeadingTag = `h${resolvedHeadingLevel}` as "h2" | "h3" | "h4";
 
   return (
     <section
-      className={joinClasses("mx-auto flex w-full flex-col px-4", spacingClassMap[layout.spacing])}
+      className={joinClasses(
+        "mx-auto flex w-full flex-col",
+        sectionPaddingXClassMap[layout.sectionPaddingX],
+        sectionPaddingYClassMap[layout.sectionPaddingY]
+      )}
       style={sectionStyle}
+      aria-labelledby={sectionLabelId}
+      aria-label={sectionLabelId ? undefined : "Form"}
       data-form-embed-variant={resolvedVariant}
       data-form-embed-spacing={layout.spacing}
     >
@@ -544,9 +890,13 @@ export function FormEmbedBlock({ data, variant }: { data: FormEmbedData; variant
           data-form-embed-input-size={style.inputSize}
         >
           <div className="space-y-2">
-            <h3 className="text-xl font-semibold text-[var(--color-text)]">{title}</h3>
+            <HeadingTag id={sectionLabelId} className={titleClassName} style={titleStyle}>
+              {title}
+            </HeadingTag>
             {showDescription ? (
-              <p className="text-sm text-[var(--color-text)]/70">{description}</p>
+              <p className="text-sm" style={descriptionStyle}>
+                {description}
+              </p>
             ) : null}
           </div>
           {resolved?.error ? (
@@ -569,114 +919,162 @@ export function FormEmbedBlock({ data, variant }: { data: FormEmbedData; variant
               data-form-layout-mode={runtimeLayoutMode}
               data-form-save-progress={saveProgressEnabled ? "1" : "0"}
               data-form-success-message={normalizedData.successMessage ?? ""}
+              data-form-success-behavior={submitBehavior.successBehavior}
+              data-form-loading-label={submitBehavior.loadingLabel}
+              data-form-submit-label={normalizedData.submitLabel}
+              data-form-progress-ttl-days={String(navigation.savedProgressTtlDays)}
+              data-form-captcha-site-key={resolved?.botProtection?.siteKey ?? ""}
+              data-form-captcha-action={resolved?.botProtection?.action ?? ""}
+              data-form-root="true"
             >
               {resolved?.submissionNonce ? (
                 <input type="hidden" name="__nl_form_nonce" value={resolved.submissionNonce} />
               ) : null}
-              {runtimeLayoutMode === "multi_step" ? (
-                <div className="space-y-4">
-                  {stepGroups.map((group, index) => (
+              {showProgress ? (
+                <div className="space-y-2" data-form-progress-root="true">
+                  <p
+                    className="text-xs font-medium text-[var(--color-text)]/70"
+                    data-form-progress-text="true"
+                  >
+                    Step 1 of {stepGroups.length}
+                  </p>
+                  <div className="h-1.5 rounded-full bg-[var(--color-border)]/40">
                     <div
-                      key={`step-${group.step}`}
-                      data-nextless-form-step="1"
-                      data-step-index={group.step}
-                      className={joinClasses("space-y-4", index === 0 ? undefined : "hidden")}
-                    >
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--color-text)]/60">
-                        {runtimeStepTitles[group.step - 1]?.trim() || `Step ${group.step}`}
-                      </p>
-                      <div className="grid gap-4 md:grid-cols-2">
-                        {group.fields.map((field) => (
-                          <div
-                            key={field.id}
-                            className={resolveFieldGridSpanClass(field)}
-                            data-form-field={field.name}
-                            data-logic-operator={field.settings?.logic?.operator}
-                            data-logic-field={field.settings?.logic?.field}
-                            data-logic-value={field.settings?.logic?.value}
-                          >
-                            {renderFieldControl(field, {
-                              showLabels: fieldsConfig.showLabels,
-                              showRequiredIndicator: fieldsConfig.showRequiredIndicator,
-                              inputClassName,
-                              borderClassName,
-                              radiusClassName,
-                              borderColor: style.borderColor,
-                            })}
-                          </div>
-                        ))}
+                      className="h-full rounded-full bg-[var(--color-primary)]"
+                      data-form-progress-bar="true"
+                      style={{ width: `${Math.round(100 / stepGroups.length)}%` }}
+                    />
+                  </div>
+                </div>
+              ) : null}
+              <div data-form-embed-form-body="true" className="space-y-4">
+                {runtimeLayoutMode === "multi_step" ? (
+                  <div className="space-y-4">
+                    {stepGroups.map((group, index) => (
+                      <div
+                        key={`step-${group.step}`}
+                        data-nextless-form-step="1"
+                        data-step-index={group.step}
+                        className={joinClasses("space-y-4", index === 0 ? undefined : "hidden")}
+                      >
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--color-text)]/60">
+                          {runtimeStepTitles[group.step - 1]?.trim() || `Step ${group.step}`}
+                        </p>
+                        <div
+                          className={joinClasses(
+                            "grid md:grid-cols-2",
+                            fieldGapClassMap[layout.fieldGap]
+                          )}
+                        >
+                          {group.fields.map((field) => (
+                            <div
+                              key={field.id}
+                              className={resolveFieldGridSpanClass(field)}
+                              data-form-field={field.name}
+                              data-logic-operator={field.settings?.logic?.operator}
+                              data-logic-field={field.settings?.logic?.field}
+                              data-logic-value={field.settings?.logic?.value}
+                            >
+                              {renderFieldControl(field, {
+                                widgetId,
+                                showLabels: fieldsConfig.showLabels,
+                                showRequiredIndicator: fieldsConfig.showRequiredIndicator,
+                                inputClassName,
+                                borderClassName,
+                                radiusClassName,
+                                borderColor: style.borderColor,
+                                labelColor,
+                                helperColor,
+                              })}
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="grid gap-4 md:grid-cols-2">
-                  {fields.map((field) => (
-                    <div
-                      key={field.id}
-                      className={resolveFieldGridSpanClass(field)}
-                      data-form-field={field.name}
-                      data-logic-operator={field.settings?.logic?.operator}
-                      data-logic-field={field.settings?.logic?.field}
-                      data-logic-value={field.settings?.logic?.value}
+                    ))}
+                  </div>
+                ) : (
+                  <div
+                    className={joinClasses(
+                      "grid md:grid-cols-2",
+                      fieldGapClassMap[layout.fieldGap]
+                    )}
+                  >
+                    {fields.map((field) => (
+                      <div
+                        key={field.id}
+                        className={resolveFieldGridSpanClass(field)}
+                        data-form-field={field.name}
+                        data-logic-operator={field.settings?.logic?.operator}
+                        data-logic-field={field.settings?.logic?.field}
+                        data-logic-value={field.settings?.logic?.value}
+                      >
+                        {renderFieldControl(field, {
+                          widgetId,
+                          showLabels: fieldsConfig.showLabels,
+                          showRequiredIndicator: fieldsConfig.showRequiredIndicator,
+                          inputClassName,
+                          borderClassName,
+                          radiusClassName,
+                          borderColor: style.borderColor,
+                          labelColor,
+                          helperColor,
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className={joinClasses("flex", buttonAlignClassMap[layout.buttonAlignment])}>
+                  {hasMultipleSteps ? (
+                    <button
+                      type="button"
+                      data-form-nav="back"
+                      hidden
+                      className={joinClasses(
+                        "border border-[var(--color-border)] px-4 py-2 text-sm font-medium text-[var(--color-text)]",
+                        radiusClassName
+                      )}
                     >
-                      {renderFieldControl(field, {
-                        showLabels: fieldsConfig.showLabels,
-                        showRequiredIndicator: fieldsConfig.showRequiredIndicator,
-                        inputClassName,
-                        borderClassName,
-                        radiusClassName,
-                        borderColor: style.borderColor,
-                      })}
-                    </div>
-                  ))}
+                      {navigation.backLabel}
+                    </button>
+                  ) : null}
+                  {hasMultipleSteps ? (
+                    <button
+                      type="button"
+                      data-form-nav="next"
+                      className={joinClasses("px-5 py-2 text-sm font-semibold", radiusClassName)}
+                      style={submitButtonStyle}
+                    >
+                      {navigation.nextLabel}
+                    </button>
+                  ) : null}
+                  <button
+                    type="submit"
+                    data-form-submit="1"
+                    hidden={hasMultipleSteps}
+                    className={joinClasses("px-5 py-2 text-sm font-semibold", radiusClassName)}
+                    style={submitButtonStyle}
+                  >
+                    {normalizedData.submitLabel}
+                  </button>
                 </div>
-              )}
-              <div className={joinClasses("flex", buttonAlignClassMap[layout.buttonAlignment])}>
-                {hasMultipleSteps ? (
-                  <button
-                    type="button"
-                    data-form-nav="back"
-                    hidden
-                    className={joinClasses(
-                      "border border-[var(--color-border)] px-4 py-2 text-sm font-medium text-[var(--color-text)]",
-                      radiusClassName
-                    )}
-                  >
-                    Back
-                  </button>
-                ) : null}
-                {hasMultipleSteps ? (
-                  <button
-                    type="button"
-                    data-form-nav="next"
-                    className={joinClasses(
-                      "bg-[var(--color-primary)] px-5 py-2 text-sm font-semibold text-[var(--color-bg)]",
-                      radiusClassName
-                    )}
-                  >
-                    Next
-                  </button>
-                ) : null}
-                <button
-                  type="submit"
-                  data-form-submit="1"
-                  hidden={hasMultipleSteps}
-                  className={joinClasses(
-                    "bg-[var(--color-primary)] px-5 py-2 text-sm font-semibold text-[var(--color-bg)]",
-                    radiusClassName
-                  )}
-                >
-                  {normalizedData.submitLabel}
-                </button>
               </div>
+              {resolved?.botProtection?.siteKey ? (
+                <input type="hidden" name="captchaToken" value="" />
+              ) : null}
               <p
                 className="hidden text-xs text-[var(--color-text)]/65"
                 data-form-embed-success="true"
+                role="alert"
+                aria-live="polite"
               >
                 {showSuccessMessage ? normalizedData.successMessage : ""}
               </p>
-              <p className="hidden text-xs text-rose-600" data-form-embed-error="true">
+              <p
+                className="hidden text-xs text-rose-600"
+                data-form-embed-error="true"
+                role="alert"
+                aria-live="assertive"
+              >
                 Unable to submit the form. Please try again.
               </p>
             </form>

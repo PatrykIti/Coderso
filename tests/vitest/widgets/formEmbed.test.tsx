@@ -149,9 +149,99 @@ test("form embed renders multi-step runtime structure", () => {
 
   expect(html).toContain('data-form-layout-mode="multi_step"');
   expect(html).toContain('data-form-save-progress="1"');
+  expect(html).toContain('data-form-progress-ttl-days="7"');
+  expect(html).toContain('data-form-success-behavior="show-message-hide-form"');
   expect(html).toContain('data-nextless-form-step="1"');
   expect(html).toContain("Contact");
   expect(html).toContain("Details");
+});
+
+test("form embed renders accessible field wiring and unsupported-field diagnostics", () => {
+  const html = renderToString(
+    <FormEmbedBlock
+      data={{
+        formId: "form-1",
+        resolved: {
+          formName: "Accessible Form",
+          fields: [
+            {
+              id: "field-name",
+              type: "text",
+              label: "Name",
+              name: "name",
+              required: true,
+              settings: {
+                helper: "Tell us your name",
+              },
+            },
+            {
+              id: "field-consent",
+              type: "checkbox",
+              label: "Consent",
+              name: "consent",
+              required: true,
+              settings: {
+                helper: "Required to continue",
+                style: {
+                  labelPosition: "inline",
+                },
+              },
+            },
+            {
+              id: "field-legacy-number",
+              type: "number",
+              label: "Legacy number",
+              name: "legacyNumber",
+              required: false,
+            },
+          ],
+        },
+      }}
+      variant="standard"
+    />
+  );
+
+  expect(html).toContain('aria-required="true"');
+  expect(html).toContain("aria-describedby=");
+  expect(html).toContain('data-form-field-unsupported="number"');
+  expect(html).toContain("Unsupported form field type:");
+  expect(html).toContain(">number<");
+});
+
+test("form embed renders alert regions and captcha bridge attrs when runtime metadata is available", () => {
+  const html = renderToString(
+    <FormEmbedBlock
+      data={{
+        formId: "form-1",
+        resolved: {
+          formName: "Protected Form",
+          submissionAccess: "public",
+          submissionNonce: "nonce-1",
+          botProtection: {
+            provider: "recaptcha_v3",
+            siteKey: "site-key-1",
+            action: "public_write",
+          },
+          fields: [
+            {
+              id: "field-1",
+              type: "text",
+              label: "Name",
+              name: "name",
+              required: true,
+            },
+          ],
+        },
+      }}
+      variant="standard"
+    />
+  );
+
+  expect(html).toContain('data-form-captcha-site-key="site-key-1"');
+  expect(html).toContain('name="captchaToken"');
+  expect(html).toContain('role="alert"');
+  expect(html).toContain('aria-live="polite"');
+  expect(html).toContain('aria-live="assertive"');
 });
 
 test("form embed applies field style and logic runtime attributes", () => {
@@ -343,22 +433,37 @@ test("form embed editors render core sections", () => {
   );
 
   expect(html).toContain("Form selection");
-  expect(html).toContain("Content");
   expect(html).toContain("Layout");
+  expect(html).toContain("Style");
+  expect(html).toContain("Submit behavior");
 });
 
-const editors = [FormEmbedWizardEditor, FormEmbedAdvancedEditor];
+test("form embed wizard editor renders content flow sections", () => {
+  const html = renderToString(
+    <FormEmbedWizardEditor
+      value={formEmbedDefaults}
+      onChange={() => undefined}
+      variant="standard"
+      onVariantChange={() => undefined}
+    />
+  );
 
-test("form embed wizard/advanced editors render", () => {
-  for (const Editor of editors) {
-    const html = renderToString(
-      <Editor
-        value={formEmbedDefaults}
-        onChange={() => undefined}
-        variant="standard"
-        onVariantChange={() => undefined}
-      />
-    );
-    expect(html).toContain("Form selection");
-  }
+  expect(html).toContain("Form selection");
+  expect(html).toContain("Content");
+  expect(html).toContain("Field labels");
+});
+
+test("form embed advanced editor renders diagnostics sections", () => {
+  const html = renderToString(
+    <FormEmbedAdvancedEditor
+      value={formEmbedDefaults}
+      onChange={() => undefined}
+      variant="standard"
+      onVariantChange={() => undefined}
+    />
+  );
+
+  expect(html).toContain("Form selection");
+  expect(html).toContain("Diagnostics");
+  expect(html).toContain("Normalized payload snapshot");
 });

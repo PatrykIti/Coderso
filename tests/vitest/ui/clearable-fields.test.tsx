@@ -5,9 +5,11 @@ import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
 import {
+  ColorTokenHint,
   ClearableInputField,
+  SharedColorFieldInputs,
   hasClearableFieldValue,
-  resolveColorSwatchValue,
+  resolveColorPickerValue,
 } from "../../../core/admin/ui/widgets/editors/ClearableFields";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -80,10 +82,10 @@ test("clearable field helper detects real values without treating empty text as 
   expect(hasClearableFieldValue("#ffffff")).toBe(true);
 });
 
-test("shared swatch helper prefers configured hex and falls back for non-hex text authority", () => {
-  expect(resolveColorSwatchValue("#112233", "#445566")).toBe("#112233");
-  expect(resolveColorSwatchValue("rgba(10, 20, 30, 0.4)", "#445566")).toBe("#445566");
-  expect(resolveColorSwatchValue(undefined, "var(--color-border)")).toBe("#000000");
+test("shared color picker resolves hex and rgb values but falls back for custom tokens", () => {
+  expect(resolveColorPickerValue("#112233", "#ffffff")).toBe("#112233");
+  expect(resolveColorPickerValue("rgb(17, 34, 51)", "#ffffff")).toBe("#112233");
+  expect(resolveColorPickerValue("var(--color-border)", "#ffffff")).toBe("#ffffff");
 });
 
 test("clearable input disables empty clear and delegates configured clear behavior", () => {
@@ -130,5 +132,51 @@ test("clearable input disables empty clear and delegates configured clear behavi
     expect(onChange).not.toHaveBeenCalledWith("transparent");
   } finally {
     filled.cleanup();
+  }
+});
+
+test("shared color field inputs preserve text tokens while showing a token hint", () => {
+  const onChange = vi.fn();
+  const view = mount(
+    <SharedColorFieldInputs
+      value="var(--color-border)"
+      onChange={onChange}
+      placeholder="var(--color-border)"
+      pickerFallback="#e2e8f0"
+    />
+  );
+
+  try {
+    const inputs = Array.from(view.container.querySelectorAll("input"));
+    const colorInput = inputs.find(
+      (input): input is HTMLInputElement =>
+        input instanceof HTMLInputElement && input.type === "color"
+    );
+    const textInput = inputs.find(
+      (input): input is HTMLInputElement =>
+        input instanceof HTMLInputElement && input.type !== "color"
+    );
+
+    expect(colorInput?.value).toBe("#e2e8f0");
+    expect(textInput?.value).toBe("var(--color-border)");
+    expect(view.container.textContent).toContain("Custom token active");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("color token hint stays hidden for empty and hex values", () => {
+  const empty = mount(<ColorTokenHint value={undefined} />);
+  try {
+    expect(empty.container.textContent).toBe("");
+  } finally {
+    empty.cleanup();
+  }
+
+  const hex = mount(<ColorTokenHint value="#112233" />);
+  try {
+    expect(hex.container.textContent).toBe("");
+  } finally {
+    hex.cleanup();
   }
 });
