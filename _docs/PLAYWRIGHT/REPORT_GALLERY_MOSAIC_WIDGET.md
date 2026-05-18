@@ -352,10 +352,17 @@ Po zwiększeniu limitu aktywnych sesji per user w CMS do 30 — zapis i publikac
 > point (`object-position`), per-item ratio override oraz `poster` dla wideo,
 > z zachowaniem backward compatibility dla istniejących payloadów.
 
+> **Aktualizacja 2026-05-18 — TASK-270-04:** BF-10 jest zamknięty. Gallery
+> Mosaic ma teraz opt-in lightbox/zoom (`fit` albo `fill`) oparty o widget-local
+> runtime script z instance-scoped ids, markerami trigger/dialog, zamknięciem
+> przez `Escape` i backdrop, oraz powrotem focusa do triggera. Itemy z `href`
+> zachowują pierwszeństwo bezpiecznej nawigacji i nie otwierają lightboxa.
+
 > **Closure note 2026-05-18 — TASK-293-03:** reopened shared residual family is
 > now fully closed in docs/changelog/board state as well. `TASK-270` is the
-> only remaining owner for product gaps such as per-item preview/picker,
-> reorder UX, dedicated `alt`, poster, lightbox, motion, and import/export.
+> only remaining owner for product gaps such as motion/density presets and
+> import/export, while preview/picker, reorder UX, dedicated `alt`, poster,
+> and lightbox slices are already landed.
 
 ---
 
@@ -372,7 +379,7 @@ Po zwiększeniu limitu aktywnych sesji per user w CMS do 30 — zapis i publikac
 | BF-07 | Brak thumbnail preview przy elementach w edytorze | Średni |
 | BF-08 | Brak per-item media type toggle (obraz vs wideo) | Średni |
 | BF-09 | Brak walidacji / warning gdy feature-left ma tylko 1 element | Średni |
-| BF-10 | Brak opcji lightbox / zoom na kliknięcie | Średni |
+| BF-10 | ✓ Zamknięte — opt-in lightbox / zoom (`fit` / `fill`) na kliknięcie | Średni |
 | BF-11 | Brak kontroli `object-position` (punkt skupienia zdjęcia) | Średni |
 | BF-12 | Brak per-item ratio (wszystkie kafelki mają jeden ratio) | Niski |
 | BF-13 | Brak video poster image field (czarny ekran przy ładowaniu) | Niski |
@@ -429,7 +436,7 @@ Po zwiększeniu limitu aktywnych sesji per user w CMS do 30 — zapis i publikac
 | BF-01 | Wysoki | Osobne pole `alt` text dla obrazów |
 | BF-04 | Wysoki | Suwak opacity dla overlaya |
 | BF-09 | Średni | Warning przy feature-left + 1 element |
-| BF-10 | Średni | Lightbox / zoom na kliknięcie |
+| BF-10 | Średni | ✓ Zamknięte — opt-in lightbox / zoom na kliknięcie |
 | BF-11 | Średni | Object-position (focus point) |
 | BF-15 | Średni | Konfiguracja breakpoint kolumn |
 | BF-13 | Niski | Video poster image |

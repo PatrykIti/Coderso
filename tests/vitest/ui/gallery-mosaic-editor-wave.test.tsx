@@ -553,6 +553,19 @@ test("GalleryMosaic visual editor covers variant cards, item reordering, removal
     setSelectValue(selects[2], "1:1");
     expect(view.container.textContent).toContain("Current media: Video");
     expect(view.container.textContent).toContain("Video preview");
+    const interactionSection = findSectionByTitle(view.container, "Interaction");
+    const interactionSelects = Array.from(
+      interactionSection?.querySelectorAll("select") ?? []
+    ) as HTMLSelectElement[];
+    expect(interactionSelects).toHaveLength(2);
+    setSelectValue(interactionSelects[0], "lightbox");
+    setSelectValue(interactionSelects[1], "fill");
+    expect(view.container.textContent).toContain(
+      "This item keeps link navigation. Clear the link URL to open it in the lightbox instead."
+    );
+    expect(view.container.textContent).toContain(
+      "linked items still use navigation. Clear each Link URL to open that tile in the lightbox instead."
+    );
 
     const dragHandles = findDragHandles(view.container);
     expect(dragHandles).toHaveLength(3);
@@ -632,6 +645,10 @@ test("GalleryMosaic visual editor covers variant cards, item reordering, removal
       ratio: "1:1",
       caption: "Lead frame",
       href: "/lead",
+    });
+    expect(latestValue.interaction).toEqual({
+      mode: "lightbox",
+      zoom: "fill",
     });
     expect(latestValue.style).toEqual({
       ratio: "16:9",

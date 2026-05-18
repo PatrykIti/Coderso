@@ -32,8 +32,9 @@ Sections:
 1. Variant and media structure
 2. Header copy
 3. Media items and links
-4. Overlay and caption controls
-5. Layout style
+4. Interaction
+5. Overlay and caption controls
+6. Layout style
 
 Notes:
 - Gallery Mosaic owns variant selection in Visual (`visualOwnsVariantSelection = true`).
@@ -51,6 +52,10 @@ Notes:
 - Per-item media presentation fields now include dedicated `alt` text,
   poster-image URL for video, bounded focus point (`center/top/bottom/left/right`),
   and an optional per-item ratio override that can inherit the section ratio.
+- Interaction controls now include an opt-in lightbox mode plus bounded
+  `fit` / `fill` zoom behavior. Items with `href` keep navigation precedence,
+  and Visual explains that the link must be cleared before that tile can open
+  the lightbox.
 
 ### Advanced (technical-only)
 - Shared style ownership summary (read-only)
@@ -69,11 +74,19 @@ for ratio, gap, radius, caption position, and overlay.
   - `data-gallery-mosaic-ratio`
   - `data-gallery-mosaic-count`
   - `data-gallery-mosaic-caption-position`
+  - `data-gallery-mosaic-interaction`
+  - `data-gallery-mosaic-zoom`
   - `data-gallery-media-type`
 - Media priority per item:
   - `video` when video URL exists
   - otherwise `image`
   - otherwise placeholder tile
+- Opt-in lightbox is widget-local and off by default for backward
+  compatibility. When enabled, non-linked media tiles render deterministic
+  trigger/dialog markers, use instance-scoped ids, close via backdrop, close
+  button, or `Escape`, and return focus to the originating trigger.
+- Tiles with `href` keep the shared safe-link runtime contract and do not open
+  the lightbox.
 - Shared runtime semantics currently use semantic `<figure>` / `<figcaption>`
   wrappers for gallery media and keep current caption-derived naming/title
   behavior unless a dedicated per-item `alt` value overrides them.
@@ -104,6 +117,10 @@ for ratio, gap, radius, caption position, and overlay.
       "href": "#"
     }
   ],
+  "interaction": {
+    "mode": "none",
+    "zoom": "fit"
+  },
   "style": {
     "ratio": "4:3",
     "gap": "md",

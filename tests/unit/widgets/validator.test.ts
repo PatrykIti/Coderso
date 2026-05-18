@@ -173,6 +173,10 @@ test("normalizeWidgetBlock accepts gallery mosaic per-item media presentation fi
     variant: "mosaic",
     data: {
       ...galleryMosaicDefaults,
+      interaction: {
+        mode: "lightbox",
+        zoom: "fill",
+      },
       items: [
         {
           id: "gallery-a",
@@ -225,6 +229,31 @@ test("normalizeWidgetBlock rejects invalid gallery mosaic media presentation enu
           },
         ],
       },
+    })
+  ).toThrow("widget_schema_invalid");
+});
+
+test("normalizeWidgetBlock rejects invalid gallery mosaic interaction enums", () => {
+  registerWidget(
+    createGalleryMosaicWidget({
+      wizard: Dummy as never,
+      visual: Dummy as never,
+      advanced: Dummy as never,
+    })
+  );
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "gallery-3",
+      type: "gallery-mosaic",
+      variant: "mosaic",
+      data: {
+        ...galleryMosaicDefaults,
+        interaction: {
+          mode: "modal",
+          zoom: "explode",
+        },
+      } as unknown as GalleryMosaicData,
     })
   ).toThrow("widget_schema_invalid");
 });

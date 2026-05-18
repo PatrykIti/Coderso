@@ -13,6 +13,7 @@ import {
   galleryMosaicDefaults,
   galleryMosaicItemMax,
   GalleryMosaicBlock,
+  getGalleryMosaicLightboxRuntimeScript,
   normalizeGalleryMosaicData,
   normalizeGalleryMosaicItemCount,
   normalizeGalleryMosaicItems,
@@ -96,6 +97,10 @@ test("gallery mosaic validator accepts expanded model", () => {
             href: "#",
           },
         ],
+        interaction: {
+          mode: "lightbox",
+          zoom: "fill",
+        },
         style: {
           ratio: "16:9",
           gap: "lg",
@@ -172,6 +177,79 @@ test("gallery mosaic per-item media presentation fields normalize and render", (
   expect(html).toContain("object-position:right center");
   expect(html).toContain('poster="https://cdn.example.com/two-poster.jpg"');
   expect(html).toContain("aspect-square");
+});
+
+test("gallery mosaic lightbox stays opt-in, normalizes interaction defaults, and preserves link precedence", () => {
+  const normalized = normalizeGalleryMosaicData({
+    items: [
+      {
+        id: "gallery-1",
+        image: "https://cdn.example.com/one.jpg",
+        caption: "Lead frame",
+      },
+    ],
+  });
+
+  const fallback = normalizeGalleryMosaicData({
+    items: [
+      {
+        id: "gallery-1",
+        image: "https://cdn.example.com/one.jpg",
+      },
+    ],
+    interaction: {
+      mode: "modal" as never,
+      zoom: "explode" as never,
+    },
+  });
+
+  const html = renderToString(
+    <GalleryMosaicBlock
+      data={{
+        ...galleryMosaicDefaults,
+        items: [
+          {
+            id: "gallery-1",
+            image: "https://cdn.example.com/one.jpg",
+            caption: "Lead frame",
+          },
+          {
+            id: "gallery-2",
+            image: "https://cdn.example.com/two.jpg",
+            caption: "Linked frame",
+            href: "/details",
+          },
+        ],
+        interaction: {
+          mode: "lightbox",
+          zoom: "fill",
+        },
+      }}
+      variant="mosaic"
+      blockId="gallery-mosaic-runtime"
+    />
+  );
+
+  expect(normalized.interaction).toEqual({
+    mode: "none",
+    zoom: "fit",
+  });
+  expect(fallback.interaction).toEqual({
+    mode: "none",
+    zoom: "fit",
+  });
+  expect(html).toContain('data-gallery-mosaic-interaction="lightbox"');
+  expect(html).toContain('data-gallery-mosaic-zoom="fill"');
+  expect(html).toContain('data-gallery-lightbox-root="1"');
+  expect(html).toContain(
+    'data-gallery-lightbox-trigger="gallery-mosaic-gallery-mosaic-runtime-lightbox-gallery-1"'
+  );
+  expect(html).toContain('aria-haspopup="dialog"');
+  expect(html).toContain('data-gallery-item-interaction="link"');
+  expect(html).toContain('href="/details"');
+  expect(html).toContain("data-gallery-lightbox-dialog");
+  expect(html).toContain("galleryLightboxBound");
+  expect(getGalleryMosaicLightboxRuntimeScript()).toContain("data-gallery-lightbox-root='1'");
 });
 
 test("gallery mosaic cleared overlay omits caption background style", () => {
@@ -280,6 +358,7 @@ test("gallery mosaic visual renders section-based IA", () => {
   expect(html).toContain("Variant and media structure");
   expect(html).toContain("Header copy");
   expect(html).toContain("Media items and links");
+  expect(html).toContain("Interaction");
   expect(html).toContain("Overlay and caption controls");
   expect(html).toContain("Layout style");
 });

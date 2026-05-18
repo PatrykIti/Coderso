@@ -2,6 +2,7 @@ import type { CSSProperties, ComponentType } from "react";
 
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
 import { resolveClearableStyleValue } from "./clearableStyle";
+import { createWidgetInstanceId, scopedId } from "./widgetInstanceIds";
 import { resolveWidgetLinkAttrs } from "./widgetSafeHref";
 
 export type GalleryMosaicVariantId = "mosaic" | "uniform-grid" | "feature-left";
@@ -11,6 +12,8 @@ export type GalleryMosaicRadius = "none" | "md" | "lg" | "xl";
 export type GalleryMosaicCaptionPosition = "inside" | "below" | "hover";
 export type GalleryMosaicObjectPosition = "center" | "top" | "bottom" | "left" | "right";
 export type GalleryMosaicItemRatio = "inherit" | GalleryMosaicRatio;
+export type GalleryMosaicInteractionMode = "none" | "lightbox";
+export type GalleryMosaicLightboxZoom = "fit" | "fill";
 
 export type GalleryMosaicItem = {
   id?: string;
@@ -30,6 +33,10 @@ export type GalleryMosaicData = {
     description?: string;
   };
   items: GalleryMosaicItem[];
+  interaction?: {
+    mode?: GalleryMosaicInteractionMode;
+    zoom?: GalleryMosaicLightboxZoom;
+  };
   style?: {
     ratio?: GalleryMosaicRatio;
     gap?: GalleryMosaicGap;
@@ -108,6 +115,14 @@ export const galleryMosaicSchema = {
         },
       },
     },
+    interaction: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        mode: { enum: ["none", "lightbox"] },
+        zoom: { enum: ["fit", "fill"] },
+      },
+    },
     style: {
       type: "object",
       additionalProperties: false,
@@ -159,6 +174,10 @@ export const galleryMosaicDefaults: GalleryMosaicData = {
       href: "#",
     },
   ],
+  interaction: {
+    mode: "none",
+    zoom: "fit",
+  },
   style: {
     ratio: "4:3",
     gap: "md",
@@ -208,6 +227,18 @@ const resolveGalleryMosaicObjectPosition = (
 const resolveGalleryMosaicItemRatio = (value: string | undefined): GalleryMosaicItemRatio => {
   if (value === "1:1" || value === "4:3" || value === "16:9" || value === "3:4") return value;
   return "inherit";
+};
+
+const resolveGalleryMosaicInteractionMode = (
+  value: string | undefined
+): GalleryMosaicInteractionMode => {
+  if (value === "lightbox") return "lightbox";
+  return "none";
+};
+
+const resolveGalleryMosaicLightboxZoom = (value: string | undefined): GalleryMosaicLightboxZoom => {
+  if (value === "fill") return "fill";
+  return "fit";
 };
 
 export const resolveGalleryMosaicVariant = (variant: string): GalleryMosaicVariantId => {
@@ -285,6 +316,10 @@ export function normalizeGalleryMosaicData(data: GalleryMosaicData): GalleryMosa
     title: "",
     description: "",
   };
+  const interactionDefaults = galleryMosaicDefaults.interaction ?? {
+    mode: "none",
+    zoom: "fit",
+  };
   const styleDefaults = galleryMosaicDefaults.style ?? {
     ratio: "4:3",
     gap: "md",
@@ -301,6 +336,10 @@ export function normalizeGalleryMosaicData(data: GalleryMosaicData): GalleryMosa
       description: resolveString(data.header?.description, headerDefaults.description ?? ""),
     },
     items: normalizeGalleryMosaicItems(data.items),
+    interaction: {
+      mode: resolveGalleryMosaicInteractionMode(data.interaction?.mode ?? interactionDefaults.mode),
+      zoom: resolveGalleryMosaicLightboxZoom(data.interaction?.zoom ?? interactionDefaults.zoom),
+    },
     style: {
       ratio: resolveGalleryMosaicRatio(data.style?.ratio),
       gap: resolveGalleryMosaicGap(data.style?.gap),
@@ -358,6 +397,142 @@ function resolveGalleryMosaicAltText(item: GalleryMosaicItem, index: number) {
   return caption || `Gallery item ${index + 1}`;
 }
 
+function hasGalleryMosaicMedia(item: GalleryMosaicItem) {
+  return Boolean(item.video?.trim() || item.image?.trim());
+}
+
+function resolveGalleryMosaicInteractionType(
+  item: GalleryMosaicItem,
+  interactionMode: GalleryMosaicInteractionMode
+) {
+  if (item.href?.trim()) return "link" as const;
+  if (interactionMode === "lightbox" && hasGalleryMosaicMedia(item)) return "lightbox" as const;
+  return "none" as const;
+}
+
+function resolveGalleryMosaicLightboxTitle(item: GalleryMosaicItem, index: number) {
+  const caption = item.caption?.trim();
+  if (caption) return caption;
+  return resolveGalleryMosaicAltText(item, index);
+}
+
+const galleryMosaicLightboxRuntimeScript = `
+(() => {
+  if (typeof document === "undefined") return;
+
+  const lastTriggerByRoot = new WeakMap();
+
+  const setDialogState = (root, dialog, isOpen) => {
+    if (!(dialog instanceof HTMLElement)) return;
+    if (isOpen) {
+      dialog.removeAttribute("hidden");
+      dialog.setAttribute("data-state", "active");
+      dialog.setAttribute("aria-hidden", "false");
+      root.setAttribute("data-gallery-lightbox-open", "true");
+    } else {
+      dialog.setAttribute("hidden", "");
+      dialog.setAttribute("data-state", "inactive");
+      dialog.setAttribute("aria-hidden", "true");
+      const stillOpen = root.querySelector("[data-gallery-lightbox-dialog]:not([hidden])");
+      root.setAttribute("data-gallery-lightbox-open", stillOpen ? "true" : "false");
+    }
+  };
+
+  const closeDialog = (root, dialog, options = {}) => {
+    if (!(root instanceof HTMLElement) || !(dialog instanceof HTMLElement)) return;
+    setDialogState(root, dialog, false);
+    if (options.focusReturn === false) return;
+    const lastTrigger = lastTriggerByRoot.get(root);
+    if (lastTrigger instanceof HTMLElement) {
+      lastTrigger.focus();
+    }
+  };
+
+  const openDialog = (root, trigger, dialog) => {
+    if (!(root instanceof HTMLElement) || !(trigger instanceof HTMLElement) || !(dialog instanceof HTMLElement)) {
+      return;
+    }
+    root.querySelectorAll("[data-gallery-lightbox-dialog]").forEach((candidate) => {
+      if (candidate instanceof HTMLElement && candidate !== dialog) {
+        closeDialog(root, candidate, { focusReturn: false });
+      }
+    });
+    lastTriggerByRoot.set(root, trigger);
+    setDialogState(root, dialog, true);
+    const closeButton = dialog.querySelector("[data-gallery-lightbox-close]");
+    if (closeButton instanceof HTMLElement) {
+      closeButton.focus();
+      return;
+    }
+    dialog.focus();
+  };
+
+  const handleClick = (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const root = target.closest("[data-gallery-lightbox-root='1']");
+    if (!(root instanceof HTMLElement)) return;
+
+    const trigger = target.closest("[data-gallery-lightbox-trigger]");
+    if (trigger instanceof HTMLElement) {
+      const dialogId = trigger.getAttribute("aria-controls");
+      const dialog = dialogId ? document.getElementById(dialogId) : null;
+      if (dialog instanceof HTMLElement) {
+        openDialog(root, trigger, dialog);
+      }
+      return;
+    }
+
+    const closeButton = target.closest("[data-gallery-lightbox-close]");
+    if (closeButton instanceof HTMLElement) {
+      const dialog = closeButton.closest("[data-gallery-lightbox-dialog]");
+      if (dialog instanceof HTMLElement) {
+        closeDialog(root, dialog);
+      }
+      return;
+    }
+
+    const backdrop = target.closest("[data-gallery-lightbox-backdrop]");
+    if (backdrop instanceof HTMLElement) {
+      const dialog = backdrop.closest("[data-gallery-lightbox-dialog]");
+      if (dialog instanceof HTMLElement) {
+        closeDialog(root, dialog);
+      }
+    }
+  };
+
+  const handleKeydown = (event) => {
+    if (event.key !== "Escape") return;
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const root = target.closest("[data-gallery-lightbox-root='1']");
+    if (!(root instanceof HTMLElement)) return;
+    const dialog = root.querySelector("[data-gallery-lightbox-dialog]:not([hidden])");
+    if (!(dialog instanceof HTMLElement)) return;
+    event.preventDefault();
+    closeDialog(root, dialog);
+  };
+
+  document.querySelectorAll("[data-gallery-lightbox-root='1']").forEach((root) => {
+    if (!(root instanceof HTMLElement)) return;
+    if (root.dataset.galleryLightboxBound === "true") return;
+    root.dataset.galleryLightboxBound = "true";
+    root.addEventListener("click", handleClick);
+    root.addEventListener("keydown", handleKeydown);
+    root.setAttribute("data-gallery-lightbox-open", "false");
+    root.querySelectorAll("[data-gallery-lightbox-dialog]").forEach((dialog) => {
+      if (dialog instanceof HTMLElement) {
+        setDialogState(root, dialog, false);
+      }
+    });
+  });
+})();
+`;
+
+export function getGalleryMosaicLightboxRuntimeScript() {
+  return galleryMosaicLightboxRuntimeScript;
+}
+
 function GalleryCard({
   item,
   index,
@@ -365,6 +540,9 @@ function GalleryCard({
   radius,
   captionPosition,
   overlay,
+  interactionMode,
+  lightboxZoom,
+  rootInstanceId,
 }: {
   item: GalleryMosaicItem;
   index: number;
@@ -372,6 +550,9 @@ function GalleryCard({
   radius: GalleryMosaicRadius;
   captionPosition: GalleryMosaicCaptionPosition;
   overlay: string | undefined;
+  interactionMode: GalleryMosaicInteractionMode;
+  lightboxZoom: GalleryMosaicLightboxZoom;
+  rootInstanceId: string;
 }) {
   const hasVideo = typeof item.video === "string" && item.video.trim().length > 0;
   const hasImage = !hasVideo && typeof item.image === "string" && item.image.trim().length > 0;
@@ -380,12 +561,23 @@ function GalleryCard({
     allowHash: true,
     allowHttp: true,
   });
-  const hasLink = Boolean(linkAttrs);
   const accessibleCaption = resolveGalleryMosaicAltText(item, index);
+  const interactionType = resolveGalleryMosaicInteractionType(item, interactionMode);
   const resolvedRatio =
     item.ratio && item.ratio !== "inherit" ? resolveGalleryMosaicRatio(item.ratio) : ratio;
   const objectPosition =
     objectPositionStyleMap[resolveGalleryMosaicObjectPosition(item.objectPosition)];
+  const lightboxTitle = resolveGalleryMosaicLightboxTitle(item, index);
+  const lightboxDialogId = scopedId(rootInstanceId, `lightbox-${item.id ?? index + 1}`);
+  const lightboxTitleId = scopedId(rootInstanceId, `lightbox-title-${item.id ?? index + 1}`);
+  const lightboxDescriptionId = scopedId(
+    rootInstanceId,
+    `lightbox-description-${item.id ?? index + 1}`
+  );
+  const lightboxMediaClassName =
+    lightboxZoom === "fill"
+      ? "h-[min(80vh,42rem)] w-full object-cover"
+      : "max-h-[80vh] w-full object-contain";
 
   const media = hasVideo ? (
     <video
@@ -424,17 +616,101 @@ function GalleryCard({
       )}
       data-gallery-item={String(index + 1)}
       data-gallery-media-type={hasVideo ? "video" : hasImage ? "image" : "placeholder"}
+      data-gallery-item-interaction={interactionType}
     >
       {media}
       {renderCaption({ item, index, captionPosition, overlay })}
     </figure>
   );
 
-  if (hasLink && linkAttrs) {
+  if (interactionType === "link" && linkAttrs) {
     return (
       <a {...linkAttrs} aria-label={accessibleCaption} className="block">
         {frame}
       </a>
+    );
+  }
+
+  if (interactionType === "lightbox") {
+    const lightboxMedia = hasVideo ? (
+      <video
+        src={item.video}
+        poster={item.poster}
+        title={accessibleCaption}
+        aria-label={accessibleCaption}
+        className={lightboxMediaClassName}
+        style={{ objectPosition }}
+        controls
+        playsInline
+        muted
+        loop
+        autoPlay
+      />
+    ) : hasImage ? (
+      <img
+        src={item.image}
+        alt={accessibleCaption}
+        className={lightboxMediaClassName}
+        style={{ objectPosition }}
+        loading="lazy"
+      />
+    ) : null;
+
+    return (
+      <>
+        <button
+          type="button"
+          className="block w-full cursor-zoom-in bg-transparent p-0 text-left"
+          data-gallery-lightbox-trigger={lightboxDialogId}
+          aria-haspopup="dialog"
+          aria-controls={lightboxDialogId}
+          aria-label={`Open ${lightboxTitle}`}
+        >
+          {frame}
+        </button>
+        <div
+          id={lightboxDialogId}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={lightboxTitleId}
+          aria-describedby={lightboxDescriptionId}
+          tabIndex={-1}
+          hidden
+          data-gallery-lightbox-dialog
+          data-gallery-lightbox-dialog-id={lightboxDialogId}
+          data-gallery-lightbox-zoom={lightboxZoom}
+          data-gallery-media-type={hasVideo ? "video" : hasImage ? "image" : "placeholder"}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        >
+          <div className="absolute inset-0 bg-black/80" data-gallery-lightbox-backdrop />
+          <div className="relative z-10 flex w-full max-w-5xl flex-col gap-4 rounded-2xl bg-[var(--color-bg)] p-4 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0 space-y-1">
+                <p
+                  id={lightboxTitleId}
+                  className="truncate text-sm font-semibold text-[var(--color-text)]"
+                >
+                  {lightboxTitle}
+                </p>
+                <p id={lightboxDescriptionId} className="text-xs text-[var(--color-text)]/70">
+                  {lightboxZoom === "fill"
+                    ? "Fill zoom crops the media inside the dialog frame."
+                    : "Fit zoom keeps the full media visible inside the dialog."}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="rounded-full border px-3 py-1.5 text-xs font-medium text-[var(--color-text)]"
+                data-gallery-lightbox-close
+                aria-label={`Close ${lightboxTitle}`}
+              >
+                Close
+              </button>
+            </div>
+            <div className="overflow-hidden rounded-xl bg-black/90 p-2">{lightboxMedia}</div>
+          </div>
+        </div>
+      </>
     );
   }
 
@@ -444,12 +720,15 @@ function GalleryCard({
 export function GalleryMosaicBlock({
   data,
   variant,
+  blockId,
 }: {
   data: GalleryMosaicData;
   variant: string;
+  blockId?: string;
 }) {
   const resolvedVariant = resolveGalleryMosaicVariant(variant);
   const normalized = normalizeGalleryMosaicData(data);
+  const interaction = normalized.interaction ?? galleryMosaicDefaults.interaction!;
   const style = normalized.style ?? galleryMosaicDefaults.style!;
 
   const ratio = resolveGalleryMosaicRatio(style.ratio);
@@ -458,6 +737,17 @@ export function GalleryMosaicBlock({
   const captionPosition = resolveGalleryMosaicCaptionPosition(style.captionPosition);
   const overlay = resolveClearableStyleValue(style.overlay);
   const items = normalizeGalleryMosaicItems(normalized.items);
+  const interactionMode = resolveGalleryMosaicInteractionMode(interaction.mode);
+  const lightboxZoom = resolveGalleryMosaicLightboxZoom(interaction.zoom);
+  const rootInstanceId = createWidgetInstanceId(
+    "gallery-mosaic",
+    blockId,
+    items[0]?.id ?? resolvedVariant
+  );
+  const lightboxItemCount = items.filter(
+    (item) => resolveGalleryMosaicInteractionType(item, interactionMode) === "lightbox"
+  ).length;
+  const hasLightboxDialogs = lightboxItemCount > 0;
 
   const showHeader =
     (normalized.header?.title ?? "").trim().length > 0 ||
@@ -474,6 +764,10 @@ export function GalleryMosaicBlock({
         data-gallery-mosaic-ratio={ratio}
         data-gallery-mosaic-count={String(items.length)}
         data-gallery-mosaic-caption-position={captionPosition}
+        data-gallery-mosaic-interaction={interactionMode}
+        data-gallery-mosaic-zoom={lightboxZoom}
+        data-gallery-lightbox-root={hasLightboxDialogs ? "1" : undefined}
+        data-gallery-lightbox-count={hasLightboxDialogs ? String(lightboxItemCount) : undefined}
       >
         {showHeader ? (
           <header className="mx-auto mb-6 max-w-3xl space-y-2 text-center">
@@ -505,6 +799,9 @@ export function GalleryMosaicBlock({
               radius={radius}
               captionPosition={captionPosition}
               overlay={overlay}
+              interactionMode={interactionMode}
+              lightboxZoom={lightboxZoom}
+              rootInstanceId={rootInstanceId}
             />
           </div>
           {hasSupportingItems ? (
@@ -518,11 +815,17 @@ export function GalleryMosaicBlock({
                   radius={radius}
                   captionPosition={captionPosition}
                   overlay={overlay}
+                  interactionMode={interactionMode}
+                  lightboxZoom={lightboxZoom}
+                  rootInstanceId={rootInstanceId}
                 />
               ))}
             </div>
           ) : null}
         </div>
+        {hasLightboxDialogs ? (
+          <script dangerouslySetInnerHTML={{ __html: getGalleryMosaicLightboxRuntimeScript() }} />
+        ) : null}
       </section>
     );
   }
@@ -540,6 +843,10 @@ export function GalleryMosaicBlock({
       data-gallery-mosaic-ratio={ratio}
       data-gallery-mosaic-count={String(items.length)}
       data-gallery-mosaic-caption-position={captionPosition}
+      data-gallery-mosaic-interaction={interactionMode}
+      data-gallery-mosaic-zoom={lightboxZoom}
+      data-gallery-lightbox-root={hasLightboxDialogs ? "1" : undefined}
+      data-gallery-lightbox-count={hasLightboxDialogs ? String(lightboxItemCount) : undefined}
     >
       {showHeader ? (
         <header className="mx-auto mb-6 max-w-3xl space-y-2 text-center">
@@ -571,10 +878,16 @@ export function GalleryMosaicBlock({
               radius={radius}
               captionPosition={captionPosition}
               overlay={overlay}
+              interactionMode={interactionMode}
+              lightboxZoom={lightboxZoom}
+              rootInstanceId={rootInstanceId}
             />
           </div>
         ))}
       </div>
+      {hasLightboxDialogs ? (
+        <script dangerouslySetInnerHTML={{ __html: getGalleryMosaicLightboxRuntimeScript() }} />
+      ) : null}
     </section>
   );
 }

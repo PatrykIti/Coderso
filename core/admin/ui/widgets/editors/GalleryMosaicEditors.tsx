@@ -26,7 +26,9 @@ import {
   type GalleryMosaicCaptionPosition,
   type GalleryMosaicData,
   type GalleryMosaicGap,
+  type GalleryMosaicInteractionMode,
   type GalleryMosaicItem,
+  type GalleryMosaicLightboxZoom,
   type GalleryMosaicItemRatio,
   type GalleryMosaicObjectPosition,
   type GalleryMosaicRadius,
@@ -105,6 +107,16 @@ const itemRatioOptions: Array<{ id: GalleryMosaicItemRatio; label: string }> = [
   { id: "3:4", label: "3:4" },
 ];
 
+const interactionModeOptions: Array<{ id: GalleryMosaicInteractionMode; label: string }> = [
+  { id: "none", label: "Static tiles" },
+  { id: "lightbox", label: "Open lightbox on click" },
+];
+
+const interactionZoomOptions: Array<{ id: GalleryMosaicLightboxZoom; label: string }> = [
+  { id: "fit", label: "Fit inside dialog" },
+  { id: "fill", label: "Fill dialog frame" },
+];
+
 const itemCountOptions = Array.from({ length: galleryMosaicItemMax }, (_, index) =>
   String(index + 1)
 );
@@ -114,6 +126,7 @@ const rgbColorPattern =
   /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*(?:0|1|0?\.\d+))?\s*\)$/i;
 
 type HeaderData = NonNullable<GalleryMosaicData["header"]>;
+type InteractionData = NonNullable<GalleryMosaicData["interaction"]>;
 type StyleData = NonNullable<GalleryMosaicData["style"]>;
 type GalleryMosaicResolvedMediaType = "image" | "video" | "placeholder";
 type GalleryItemPreviewState = {
@@ -305,6 +318,20 @@ function updateHeader(
     ...current,
     header: {
       ...current.header,
+      ...patch,
+    },
+  }));
+}
+
+function updateInteraction(
+  value: GalleryMosaicData,
+  onChange: (next: GalleryMosaicData) => void,
+  patch: Partial<InteractionData>
+) {
+  updateValue(value, onChange, (current) => ({
+    ...current,
+    interaction: {
+      ...current.interaction,
       ...patch,
     },
   }));
@@ -694,6 +721,7 @@ export function GalleryMosaicVisualEditor({
 }: WidgetEditorProps<GalleryMosaicData>) {
   const normalized = normalizeValue(value);
   const items = normalizeGalleryMosaicItems(normalized.items);
+  const interactionMode = normalized.interaction?.mode ?? "none";
   const [selectedMediaIdsByItemId, setSelectedMediaIdsByItemId] = useState<Record<string, string>>(
     {}
   );
@@ -705,6 +733,8 @@ export function GalleryMosaicVisualEditor({
     resolveGalleryMosaicVariant(variant) === "feature-left" && items.length === 1
       ? "Feature Left works best with one lead tile plus at least one supporting item."
       : null;
+  const linkedLightboxItems =
+    interactionMode === "lightbox" ? items.filter((item) => item.href?.trim()).length : 0;
 
   const setItemMediaError = (itemId: string, message?: string) => {
     setItemMediaPickerErrors((current) => {
@@ -1034,6 +1064,12 @@ export function GalleryMosaicVisualEditor({
                     }
                     placeholder="#"
                   />
+                  {interactionMode === "lightbox" && item.href?.trim() ? (
+                    <p className="text-xs text-muted-foreground">
+                      This item keeps link navigation. Clear the link URL to open it in the lightbox
+                      instead.
+                    </p>
+                  ) : null}
                 </div>
                 <div className="space-y-2">
                   <p className="text-sm font-medium">Poster image URL</p>
@@ -1103,6 +1139,69 @@ export function GalleryMosaicVisualEditor({
         >
           Add item
         </Button>
+      </EditorSection>
+
+      <EditorSection
+        title="Interaction"
+        description="Choose whether gallery items stay static or open a widget-local lightbox."
+      >
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Interaction mode</p>
+          <Select
+            value={interactionMode}
+            onValueChange={(next) =>
+              updateInteraction(value, onChange, {
+                mode: next as GalleryMosaicInteractionMode,
+              })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select interaction mode" />
+            </SelectTrigger>
+            <SelectContent>
+              {interactionModeOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Lightbox zoom</p>
+          <Select
+            value={normalized.interaction?.zoom ?? "fit"}
+            onValueChange={(next) =>
+              updateInteraction(value, onChange, {
+                zoom: next as GalleryMosaicLightboxZoom,
+              })
+            }
+            disabled={interactionMode !== "lightbox"}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select lightbox zoom" />
+            </SelectTrigger>
+            <SelectContent>
+              {interactionZoomOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            Lightbox stays off by default so existing gallery payloads keep the current click
+            behavior.
+          </p>
+        </div>
+
+        {linkedLightboxItems > 0 ? (
+          <p className="rounded-md border border-amber-300/60 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+            {linkedLightboxItems} linked item{linkedLightboxItems === 1 ? "" : "s"} still use
+            navigation. Clear each Link URL to open that tile in the lightbox instead.
+          </p>
+        ) : null}
       </EditorSection>
 
       <EditorSection

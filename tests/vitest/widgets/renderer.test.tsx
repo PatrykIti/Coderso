@@ -1271,6 +1271,8 @@ test("renderer outputs gallery mosaic variant and caption markers", () => {
   expect(html).toContain('data-gallery-mosaic-gap="lg"');
   expect(html).toContain('data-gallery-mosaic-ratio="16:9"');
   expect(html).toContain('data-gallery-mosaic-caption-position="hover"');
+  expect(html).toContain('data-gallery-mosaic-interaction="none"');
+  expect(html).toContain('data-gallery-mosaic-zoom="fit"');
   expect(html).toContain('data-gallery-media-type="video"');
   expect(html).toContain("<figure");
   expect(html).toContain("<figcaption");

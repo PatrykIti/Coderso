@@ -6,7 +6,7 @@
 **Category:** Widgets + Gallery Mosaic + Runtime Render + Accessibility
 **Estimated Effort:** Large
 **Dependencies:** TASK-256-04, TASK-256-06-02, TASK-270-03
-**Status:** To Do
+**Status:** Done (2026-05-18)
 
 ---
 
@@ -22,6 +22,21 @@ checkout has admin-only Radix dialogs and public widget runtime scripts in
 `tabs.tsx` and `toggleBlock.tsx`, but no shared public lightbox/modal helper.
 This leaf therefore stays Gallery Mosaic-local and must not introduce a generic
 cross-widget modal framework.
+
+Landed implementation:
+
+- `core/widgets/core/galleryMosaic.tsx` now owns schema-backed
+  `interaction.mode` / `interaction.zoom`, instance-scoped lightbox ids, a
+  widget-local idempotent runtime script, and deterministic SSR markers for
+  opt-in trigger/dialog output.
+- `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx` adds Visual
+  interaction controls and item-level precedence guidance when `href` keeps
+  navigation instead of opening the lightbox.
+- Runtime coverage now includes
+  `tests/vitest/widgets/galleryMosaicLightboxRuntime.test.ts`, which executes
+  the embedded script in `happy-dom` and asserts open/close, focus return,
+  Escape close, backdrop close, idempotent double-bind behavior, and link
+  precedence.
 
 ## Source Findings
 
