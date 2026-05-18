@@ -6,7 +6,7 @@
 **Category:** Widgets + Booking + Admin UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-259-01, TASK-259-02, TASK-259
-**Status:** To Do
+**Status:** Done (2026-05-18)
 
 ---
 

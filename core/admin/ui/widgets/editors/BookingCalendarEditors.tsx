@@ -72,6 +72,17 @@ const clearStyle = (
   );
 };
 
+const readPreviewResolved = (context: WidgetEditorProps<BookingCalendarData>["context"]) => {
+  const preview = context?.widgetPreviewData?.bookingCalendarResolved;
+  if (!preview || typeof preview !== "object" || Array.isArray(preview)) {
+    return null;
+  }
+
+  return normalizeBookingCalendarData({
+    resolved: preview as BookingCalendarData["resolved"],
+  }).resolved;
+};
+
 function Section({
   title,
   description,
@@ -105,7 +116,7 @@ function TextField({
   value?: string;
   onChange: (next: string) => void;
   placeholder?: string;
-  type?: "text" | "number";
+  type?: "text" | "number" | "date";
 }) {
   return (
     <label className="space-y-1 text-sm">
@@ -116,6 +127,63 @@ function TextField({
         placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
       />
+    </label>
+  );
+}
+
+function SelectField({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: Array<{ value: string; label: string }>;
+  onChange: (next: string) => void;
+}) {
+  return (
+    <label className="space-y-1 text-sm">
+      <span className="font-medium text-foreground">{label}</span>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function ToggleField({
+  label,
+  description,
+  checked,
+  onChange,
+}: {
+  label: string;
+  description?: string;
+  checked: boolean;
+  onChange: (next: boolean) => void;
+}) {
+  return (
+    <label className="flex items-start gap-3 rounded-md border border-border/70 px-3 py-2 text-sm">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+      />
+      <span className="space-y-1">
+        <span className="block font-medium text-foreground">{label}</span>
+        {description ? (
+          <span className="block text-xs text-muted-foreground">{description}</span>
+        ) : null}
+      </span>
     </label>
   );
 }
@@ -191,6 +259,27 @@ function SurfaceFields({
         onClear={() => clearStyle(value, onChange, "frameBorderColor")}
         placeholder="var(--color-border)"
       />
+      <ClearableInputField
+        label="Selected slot background"
+        value={value.style?.selectedSlotBackground}
+        onChange={(next) => updateStyle(value, onChange, { selectedSlotBackground: next })}
+        onClear={() => clearStyle(value, onChange, "selectedSlotBackground")}
+        placeholder="var(--color-primary)"
+      />
+      <ClearableInputField
+        label="Selected slot border"
+        value={value.style?.selectedSlotBorderColor}
+        onChange={(next) => updateStyle(value, onChange, { selectedSlotBorderColor: next })}
+        onClear={() => clearStyle(value, onChange, "selectedSlotBorderColor")}
+        placeholder="var(--color-primary)"
+      />
+      <ClearableInputField
+        label="Slot hover border"
+        value={value.style?.slotHoverBorderColor}
+        onChange={(next) => updateStyle(value, onChange, { slotHoverBorderColor: next })}
+        onClear={() => clearStyle(value, onChange, "slotHoverBorderColor")}
+        placeholder="var(--color-primary)"
+      />
     </Section>
   );
 }
@@ -231,6 +320,32 @@ export function BookingCalendarWizardEditor({
           }}
         />
       </Section>
+
+      <Section
+        title="Date policy"
+        description="Choose the initial date and optional allowed range for this calendar."
+      >
+        <TextField
+          label="Default date"
+          type="date"
+          value={normalized.defaultDate}
+          onChange={(next) => update(normalized, onChange, { defaultDate: next })}
+        />
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+          <TextField
+            label="Minimum date"
+            type="date"
+            value={normalized.minDate}
+            onChange={(next) => update(normalized, onChange, { minDate: next })}
+          />
+          <TextField
+            label="Maximum date"
+            type="date"
+            value={normalized.maxDate}
+            onChange={(next) => update(normalized, onChange, { maxDate: next })}
+          />
+        </div>
+      </Section>
     </div>
   );
 }
@@ -238,11 +353,28 @@ export function BookingCalendarWizardEditor({
 export function BookingCalendarVisualEditor({
   value,
   onChange,
+  variant,
+  onVariantChange,
 }: WidgetEditorProps<BookingCalendarData>) {
   const normalized = normalizeBookingCalendarData(value);
 
   return (
     <div className="space-y-4">
+      {onVariantChange ? (
+        <Section title="Variant" description="Choose a layout that fits the available space.">
+          <SelectField
+            label="Layout variant"
+            value={variant || "default"}
+            options={[
+              { value: "default", label: "Default" },
+              { value: "compact", label: "Compact" },
+              { value: "inline", label: "Inline" },
+              { value: "horizontal", label: "Horizontal" },
+            ]}
+            onChange={onVariantChange}
+          />
+        </Section>
+      ) : null}
       <CopyFields value={normalized} onChange={onChange} />
       <SurfaceFields value={normalized} onChange={onChange} />
 
@@ -275,6 +407,87 @@ export function BookingCalendarVisualEditor({
           value={normalized.selectedSlotEmptyMessage}
           onChange={(next) => update(normalized, onChange, { selectedSlotEmptyMessage: next })}
         />
+        <TextField
+          label="Empty state"
+          value={normalized.emptyStateMessage}
+          onChange={(next) => update(normalized, onChange, { emptyStateMessage: next })}
+        />
+      </Section>
+
+      <Section
+        title="Service context"
+        description="Control how much pricing and timezone context is visible before selection."
+      >
+        <ToggleField
+          label="Show service price"
+          checked={normalized.showServicePrice ?? true}
+          onChange={(next) => update(normalized, onChange, { showServicePrice: next })}
+        />
+        <ToggleField
+          label="Show duration and buffers"
+          checked={normalized.showServiceDuration ?? true}
+          onChange={(next) => update(normalized, onChange, { showServiceDuration: next })}
+        />
+        <ToggleField
+          label="Show service description"
+          checked={normalized.showServiceDescription ?? false}
+          onChange={(next) => update(normalized, onChange, { showServiceDescription: next })}
+        />
+        <ToggleField
+          label="Show timezone"
+          checked={normalized.showTimezone ?? true}
+          onChange={(next) => update(normalized, onChange, { showTimezone: next })}
+        />
+        <TextField
+          label="Summary locale"
+          value={normalized.summaryLocale}
+          onChange={(next) => update(normalized, onChange, { summaryLocale: next })}
+          placeholder="Leave blank to use browser locale"
+        />
+        <SelectField
+          label="Summary date style"
+          value={normalized.summaryDateStyle ?? "short"}
+          options={[
+            { value: "short", label: "Short" },
+            { value: "medium", label: "Medium" },
+            { value: "long", label: "Long" },
+          ]}
+          onChange={(next) =>
+            update(normalized, onChange, {
+              summaryDateStyle: next as BookingCalendarData["summaryDateStyle"],
+            })
+          }
+        />
+      </Section>
+
+      <Section title="Date picker" description="Choose how dates and slot density are presented.">
+        <SelectField
+          label="Date picker mode"
+          value={normalized.datePickerMode ?? "native"}
+          options={[
+            { value: "native", label: "Native date input" },
+            { value: "week", label: "Week picker" },
+          ]}
+          onChange={(next) =>
+            update(normalized, onChange, {
+              datePickerMode: next as BookingCalendarData["datePickerMode"],
+            })
+          }
+        />
+        <SelectField
+          label="Slot interval mode"
+          value={normalized.slotIntervalMode ?? "fixed"}
+          options={[
+            { value: "fixed", label: "Fixed interval" },
+            { value: "service-duration", label: "Service duration" },
+            { value: "non-overlapping", label: "Non-overlapping" },
+          ]}
+          onChange={(next) =>
+            update(normalized, onChange, {
+              slotIntervalMode: next as BookingCalendarData["slotIntervalMode"],
+            })
+          }
+        />
       </Section>
     </div>
   );
@@ -283,10 +496,33 @@ export function BookingCalendarVisualEditor({
 export function BookingCalendarAdvancedEditor({
   value,
   onChange,
+  context,
 }: WidgetEditorProps<BookingCalendarData>) {
   const normalized = normalizeBookingCalendarData(value);
-  const services = normalized.resolved?.services ?? [];
-  const resources = normalized.resolved?.resources ?? [];
+  const previewResolved = readPreviewResolved(context);
+  const services = previewResolved?.services ?? normalized.resolved?.services ?? [];
+  const resources = previewResolved?.resources ?? normalized.resolved?.resources ?? [];
+  const previewError = previewResolved?.error;
+  const selectedService =
+    services.find((service) => service.id === normalized.defaultServiceId) ?? services[0] ?? null;
+  const staleServiceId =
+    normalized.defaultServiceId &&
+    !services.some((service) => service.id === normalized.defaultServiceId)
+      ? normalized.defaultServiceId
+      : null;
+  const resourceOptions = selectedService
+    ? resources.filter(
+        (resource) =>
+          selectedService.resourceIds.length === 0 ||
+          selectedService.resourceIds.includes(resource.id)
+      )
+    : resources;
+  const staleResourceId =
+    normalized.defaultResourceId &&
+    !resourceOptions.some((resource) => resource.id === normalized.defaultResourceId)
+      ? normalized.defaultResourceId
+      : null;
+  const selectedResourceId = staleResourceId ?? normalized.defaultResourceId ?? "";
 
   return (
     <div className="space-y-4">
@@ -303,16 +539,54 @@ export function BookingCalendarAdvancedEditor({
         title="Defaults"
         description="Optional fallback IDs if you need deterministic selection."
       >
-        <TextField
-          label="Default service ID"
-          value={normalized.defaultServiceId}
-          onChange={(next) => update(normalized, onChange, { defaultServiceId: next })}
-        />
-        <TextField
-          label="Default resource ID"
-          value={normalized.defaultResourceId}
-          onChange={(next) => update(normalized, onChange, { defaultResourceId: next })}
-        />
+        {services.length > 0 ? (
+          <SelectField
+            label="Default service ID"
+            value={staleServiceId ?? normalized.defaultServiceId ?? "__auto__"}
+            options={[
+              { value: "__auto__", label: "Auto-select first available service" },
+              ...(staleServiceId
+                ? [{ value: staleServiceId, label: `Saved but unavailable: ${staleServiceId}` }]
+                : []),
+              ...services.map((service) => ({ value: service.id, label: service.name })),
+            ]}
+            onChange={(next) =>
+              update(normalized, onChange, {
+                defaultServiceId: next === "__auto__" ? undefined : next,
+              })
+            }
+          />
+        ) : (
+          <TextField
+            label="Default service ID"
+            value={normalized.defaultServiceId}
+            onChange={(next) => update(normalized, onChange, { defaultServiceId: next })}
+          />
+        )}
+        {resourceOptions.length > 0 ? (
+          <SelectField
+            label="Default resource ID"
+            value={selectedResourceId || "__auto__"}
+            options={[
+              { value: "__auto__", label: "Auto-select first available resource" },
+              ...(staleResourceId
+                ? [{ value: staleResourceId, label: `Saved but unavailable: ${staleResourceId}` }]
+                : []),
+              ...resourceOptions.map((resource) => ({ value: resource.id, label: resource.name })),
+            ]}
+            onChange={(next) =>
+              update(normalized, onChange, {
+                defaultResourceId: next === "__auto__" ? undefined : next,
+              })
+            }
+          />
+        ) : (
+          <TextField
+            label="Default resource ID"
+            value={normalized.defaultResourceId}
+            onChange={(next) => update(normalized, onChange, { defaultResourceId: next })}
+          />
+        )}
       </Section>
 
       <Section
@@ -322,6 +596,11 @@ export function BookingCalendarAdvancedEditor({
         <div className="rounded-md border border-border/70 bg-background p-2 text-xs text-muted-foreground">
           Services: {services.length} · Resources: {resources.length}
         </div>
+        {previewError ? (
+          <div className="rounded-md border border-amber-300 bg-amber-50 px-2 py-1 text-xs text-amber-900">
+            Preview catalog error: {previewError}
+          </div>
+        ) : null}
         <label className="space-y-1 text-sm">
           <span className="font-medium text-foreground">Runtime error flag</span>
           <Input

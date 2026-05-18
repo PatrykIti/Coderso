@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-import { registerBookingRoutes } from "../../../core/server/routes/bookingRoutes";
+import { mapBookingError, registerBookingRoutes } from "../../../core/server/routes/bookingRoutes";
 
 type RouteContext = {
   params: Record<string, string>;
@@ -65,5 +65,14 @@ test("registerBookingRoutes wires booking endpoints", () => {
       "POST /booking/reservations",
       "PATCH /booking/reservations/:id/status",
     ])
+  );
+});
+
+test("mapBookingError exposes booking date policy codes", () => {
+  expect(mapBookingError(new Error("booking_slot_date_in_past"))?.code).toBe(
+    "booking_slot_date_in_past"
+  );
+  expect(mapBookingError(new Error("booking_slot_date_out_of_range"))?.code).toBe(
+    "booking_slot_date_out_of_range"
   );
 });

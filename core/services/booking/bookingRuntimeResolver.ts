@@ -4,7 +4,7 @@ import {
   listBookingServices,
 } from "./bookingService";
 import { createBookingSubmissionNonce } from "./bookingSubmissionNonce";
-import { createBookingSlotsToken } from "./bookingSlotsToken";
+import { createBookingSlotsToken, type BookingSlotsPolicyClaims } from "./bookingSlotsToken";
 import { resolveBookingAccessModeFromSettings } from "./bookingAccess";
 import {
   getSecuritySettingsPublic,
@@ -64,7 +64,10 @@ const resolveRuntimeCaptcha = (
   };
 };
 
-export async function resolveBookingRuntimeData(options: { preview: boolean }) {
+export async function resolveBookingRuntimeData(options: {
+  preview: boolean;
+  slotPolicy?: BookingSlotsPolicyClaims;
+}) {
   const [serviceRows, resourceRows] = await Promise.all([
     listBookingServices(),
     listBookingResources(),
@@ -146,7 +149,7 @@ export async function resolveBookingRuntimeData(options: { preview: boolean }) {
 
   if (runtimeServices.length > 0) {
     try {
-      slotsToken = createBookingSlotsToken();
+      slotsToken = createBookingSlotsToken(options.slotPolicy);
     } catch {
       slotsToken = null;
       errorFlags.push("booking_slots_token_unavailable");

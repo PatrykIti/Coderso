@@ -26,7 +26,9 @@ test("booking calendar renders empty-state when resolver payload is missing", ()
     <BookingCalendarBlock data={bookingCalendarDefaults} variant="default" />
   );
 
-  expect(html).toContain("No active booking services/resources configured yet");
+  expect(html).toContain(
+    "Booking is currently unavailable. Please try another service or contact us."
+  );
   expect(html).toContain('data-nextless-booking-calendar="1"');
 });
 
@@ -86,6 +88,63 @@ test("booking calendar normalization clamps runtime interval", () => {
   expect(normalizedHigh.intervalMinutes).toBe(180);
 });
 
+test("booking calendar normalizes date policy and renders clamped date attributes", () => {
+  const normalized = normalizeBookingCalendarData({
+    ...bookingCalendarDefaults,
+    defaultDate: " 2030-01-05 ",
+    minDate: "2030-01-10",
+    maxDate: "2030-01-20",
+  });
+
+  expect(normalized.defaultDate).toBe("2030-01-05");
+  expect(normalized.minDate).toBe("2030-01-10");
+  expect(normalized.maxDate).toBe("2030-01-20");
+
+  const html = renderToString(
+    <BookingCalendarBlock
+      variant="default"
+      data={normalizeBookingCalendarData({
+        ...bookingCalendarDefaults,
+        defaultDate: "2030-01-05",
+        minDate: "2030-01-10",
+        maxDate: "2030-01-20",
+        resolved: {
+          slotsToken: "slots-token",
+          services: [
+            {
+              id: "service-1",
+              name: "Oil change",
+              description: null,
+              durationMinutes: 30,
+              bufferBeforeMinutes: 0,
+              bufferAfterMinutes: 0,
+              priceCents: null,
+              currency: null,
+              resourceIds: ["resource-1"],
+            },
+          ],
+          resources: [
+            {
+              id: "resource-1",
+              name: "Bay A",
+              type: "bay",
+              timezone: "UTC",
+              capacity: 1,
+            },
+          ],
+        },
+      })}
+    />
+  );
+
+  expect(html).toContain('data-default-date="2030-01-05"');
+  expect(html).toContain('data-min-date="2030-01-10"');
+  expect(html).toContain('data-max-date="2030-01-20"');
+  expect(html).toContain('min="2030-01-10"');
+  expect(html).toContain('max="2030-01-20"');
+  expect(html).toContain('value="2030-01-10"');
+});
+
 test("booking calendar cleared frame style omits decorative background", () => {
   const html = renderToString(
     <BookingCalendarBlock
@@ -96,6 +155,79 @@ test("booking calendar cleared frame style omits decorative background", () => {
 
   expect(html).not.toContain("bg-[var(--color-bg)]/95");
   expect(html).not.toContain("background-color:transparent");
+});
+
+test("booking calendar supports compact and horizontal variants", () => {
+  const compactHtml = renderToString(
+    <BookingCalendarBlock
+      data={normalizeBookingCalendarData({
+        ...bookingCalendarDefaults,
+        resolved: {
+          slotsToken: "token",
+          services: [
+            {
+              id: "service-1",
+              name: "Oil change",
+              description: null,
+              durationMinutes: 30,
+              bufferBeforeMinutes: 0,
+              bufferAfterMinutes: 0,
+              priceCents: null,
+              currency: null,
+              resourceIds: ["resource-1"],
+            },
+          ],
+          resources: [
+            {
+              id: "resource-1",
+              name: "Bay A",
+              type: "bay",
+              timezone: "UTC",
+              capacity: 1,
+            },
+          ],
+        },
+      })}
+      variant="compact"
+    />
+  );
+
+  const horizontalHtml = renderToString(
+    <BookingCalendarBlock
+      data={normalizeBookingCalendarData({
+        ...bookingCalendarDefaults,
+        resolved: {
+          slotsToken: "token",
+          services: [
+            {
+              id: "service-1",
+              name: "Oil change",
+              description: null,
+              durationMinutes: 30,
+              bufferBeforeMinutes: 0,
+              bufferAfterMinutes: 0,
+              priceCents: null,
+              currency: null,
+              resourceIds: ["resource-1"],
+            },
+          ],
+          resources: [
+            {
+              id: "resource-1",
+              name: "Bay A",
+              type: "bay",
+              timezone: "UTC",
+              capacity: 1,
+            },
+          ],
+        },
+      })}
+      variant="horizontal"
+    />
+  );
+
+  expect(compactHtml).toContain("rounded-lg border p-4");
+  expect(horizontalHtml).toContain("lg:grid-cols-[minmax(0,1.3fr)_minmax(0,0.7fr)]");
 });
 
 test("booking calendar validator accepts resolved runtime payload", () => {
@@ -115,6 +247,9 @@ test("booking calendar validator accepts resolved runtime payload", () => {
       variant: "default",
       data: {
         ...bookingCalendarDefaults,
+        defaultDate: "2030-01-15",
+        minDate: "2030-01-10",
+        maxDate: "2030-01-20",
         resolved: {
           slotsToken: "runtime-token",
           services: [

@@ -71,13 +71,25 @@ export const mapBookingError = (error: unknown) => {
     case "booking_reservation_not_found":
       return new ApiError("booking_reservation_not_found", "Booking reservation not found", 404);
     case "booking_resource_slug_exists":
-      return new ApiError("booking_resource_slug_exists", "Booking resource slug already exists", 409);
+      return new ApiError(
+        "booking_resource_slug_exists",
+        "Booking resource slug already exists",
+        409
+      );
     case "booking_service_slug_exists":
-      return new ApiError("booking_service_slug_exists", "Booking service slug already exists", 409);
+      return new ApiError(
+        "booking_service_slug_exists",
+        "Booking service slug already exists",
+        409
+      );
     case "booking_slot_unavailable":
       return new ApiError("booking_slot_unavailable", "Selected slot is not available", 409);
     case "booking_blackout_conflict":
-      return new ApiError("booking_blackout_conflict", "Selected slot overlaps a blackout window", 409);
+      return new ApiError(
+        "booking_blackout_conflict",
+        "Selected slot overlaps a blackout window",
+        409
+      );
     case "booking_service_resource_not_allowed":
       return new ApiError(
         "booking_service_resource_not_allowed",
@@ -90,6 +102,10 @@ export const mapBookingError = (error: unknown) => {
       return new ApiError("booking_resource_inactive", "Resource is inactive", 400);
     case "booking_slot_date_invalid":
       return new ApiError("booking_slot_date_invalid", "Slot date is invalid", 400);
+    case "booking_slot_date_in_past":
+      return new ApiError("booking_slot_date_in_past", "Slot date is in the past", 400);
+    case "booking_slot_date_out_of_range":
+      return new ApiError("booking_slot_date_out_of_range", "Slot date is out of range", 400);
     default:
       if (error.message.startsWith("booking_")) {
         return new ApiError(error.message, "Invalid booking payload", 400);
@@ -196,42 +212,30 @@ export function registerBookingRoutes(router: Router, deps: BookingRouteDeps) {
     });
   });
 
-  router.get(
-    "/booking/services/:id/resources",
-    requirePermission("booking:read"),
-    async (ctx) => {
-      return withBookingErrors(async () => {
-        const items = await listBookingServiceResources(ctx.params.id);
-        return { items };
-      });
-    }
-  );
+  router.get("/booking/services/:id/resources", requirePermission("booking:read"), async (ctx) => {
+    return withBookingErrors(async () => {
+      const items = await listBookingServiceResources(ctx.params.id);
+      return { items };
+    });
+  });
 
-  router.put(
-    "/booking/services/:id/resources",
-    requirePermission("booking:write"),
-    async (ctx) => {
-      return withBookingErrors(async () => {
-        validate(bookingServiceResourcesSchema, ctx.body ?? []);
-        const items = await setBookingServiceResources(
-          ctx.params.id,
-          (ctx.body ?? []) as BookingServiceResourceInput[]
-        );
-        return { items };
-      });
-    }
-  );
+  router.put("/booking/services/:id/resources", requirePermission("booking:write"), async (ctx) => {
+    return withBookingErrors(async () => {
+      validate(bookingServiceResourcesSchema, ctx.body ?? []);
+      const items = await setBookingServiceResources(
+        ctx.params.id,
+        (ctx.body ?? []) as BookingServiceResourceInput[]
+      );
+      return { items };
+    });
+  });
 
-  router.get(
-    "/booking/resources/:id/schedules",
-    requirePermission("booking:read"),
-    async (ctx) => {
-      return withBookingErrors(async () => {
-        const items = await listBookingSchedules(ctx.params.id);
-        return { items };
-      });
-    }
-  );
+  router.get("/booking/resources/:id/schedules", requirePermission("booking:read"), async (ctx) => {
+    return withBookingErrors(async () => {
+      const items = await listBookingSchedules(ctx.params.id);
+      return { items };
+    });
+  });
 
   router.put(
     "/booking/resources/:id/schedules",
@@ -239,7 +243,10 @@ export function registerBookingRoutes(router: Router, deps: BookingRouteDeps) {
     async (ctx) => {
       return withBookingErrors(async () => {
         validate(bookingSchedulesSchema, ctx.body ?? []);
-        const items = await setBookingSchedules(ctx.params.id, (ctx.body ?? []) as BookingScheduleInput[]);
+        const items = await setBookingSchedules(
+          ctx.params.id,
+          (ctx.body ?? []) as BookingScheduleInput[]
+        );
         return { items };
       });
     }

@@ -472,7 +472,8 @@ export async function listBookingServiceResourcesCached(
     const cached = readLocalCache(
       cacheKeys.bookingServiceResources(serviceId),
       cacheTtlMs.detail,
-      (value): value is BookingServiceResourceRecord[] => isList<BookingServiceResourceRecord>(value)
+      (value): value is BookingServiceResourceRecord[] =>
+        isList<BookingServiceResourceRecord>(value)
     );
     if (cached) return cached;
   }
@@ -494,6 +495,7 @@ export async function setBookingServiceResources(
   );
   const items = payload.items ?? [];
   writeLocalCache(cacheKeys.bookingServiceResources(serviceId), items);
+  broadcastCacheEvent({ key: cacheKeys.bookingServiceResources(serviceId), action: "update" });
   return items;
 }
 
@@ -509,7 +511,10 @@ export async function listBookingSchedules(resourceId: string) {
   return items;
 }
 
-export async function listBookingSchedulesCached(resourceId: string, options?: { force?: boolean }) {
+export async function listBookingSchedulesCached(
+  resourceId: string,
+  options?: { force?: boolean }
+) {
   if (!options?.force) {
     const cached = readLocalCache(
       cacheKeys.bookingResourceSchedules(resourceId),
@@ -656,10 +661,7 @@ export async function createBookingReservation(input: BookingReservationInput) {
   return created;
 }
 
-export async function updateBookingReservationStatus(
-  id: string,
-  status: BookingReservationStatus
-) {
+export async function updateBookingReservationStatus(id: string, status: BookingReservationStatus) {
   const updated = await apiRequest<BookingReservationRecord>(
     `/booking/reservations/${id}/status`,
     {

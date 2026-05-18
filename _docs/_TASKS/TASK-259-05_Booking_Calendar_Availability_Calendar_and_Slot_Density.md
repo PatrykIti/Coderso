@@ -6,7 +6,7 @@
 **Category:** Widgets + Booking + Runtime UX + Public Read API
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-259-02, TASK-259-04, TASK-259
-**Status:** To Do
+**Status:** Done (2026-05-18)
 
 ---
 

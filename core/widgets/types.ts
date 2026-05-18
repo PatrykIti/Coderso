@@ -78,6 +78,7 @@ export type WidgetEditorContext = {
   jumpToBindingPropPath?: (propPath: string) => void;
   getBindingState?: (propPath: string) => "literal" | "bound" | "mixed";
   slotTargets?: WidgetEditorSlotTarget[];
+  widgetPreviewData?: Record<string, unknown>;
 };
 
 export type WidgetSlotControlSection = {

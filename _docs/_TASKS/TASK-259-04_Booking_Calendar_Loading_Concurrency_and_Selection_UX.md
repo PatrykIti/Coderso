@@ -6,7 +6,7 @@
 **Category:** Widgets + Booking + Runtime Script + UX
 **Estimated Effort:** Large
 **Dependencies:** TASK-259-02, TASK-259-03, TASK-259
-**Status:** To Do
+**Status:** Done (2026-05-18)
 
 ---
 

@@ -1,16 +1,4 @@
-import {
-  and,
-  asc,
-  desc,
-  eq,
-  gt,
-  gte,
-  inArray,
-  isNull,
-  lt,
-  lte,
-  or,
-} from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, inArray, isNull, lt, lte, or } from "drizzle-orm";
 
 import { db } from "../../db/client";
 import {
@@ -102,6 +90,12 @@ export type BookingSlotPreviewInput = {
   intervalMinutes?: number;
 };
 
+export type BookingSlotPreviewPolicy = {
+  minDate?: string;
+  maxDate?: string;
+  now?: Date;
+};
+
 export type BookingSlot = {
   startsAt: string;
   endsAt: string;
@@ -190,7 +184,10 @@ const normalizeServiceSettings = (
   value: unknown,
   fallbackAccessMode: BookingAccessMode = bookingAccessDefaults.mode
 ): Record<string, unknown> => {
-  if (value !== undefined && (typeof value !== "object" || value === null || Array.isArray(value))) {
+  if (
+    value !== undefined &&
+    (typeof value !== "object" || value === null || Array.isArray(value))
+  ) {
     throw new Error("booking_service_settings_invalid");
   }
 
@@ -270,11 +267,34 @@ const getZonedParts = (date: Date, timezone: string) => {
   };
 };
 
-const resolveUtcFromLocal = (
-  dateValue: string,
-  minuteOfDay: number,
-  timezone: string
-): Date => {
+const toDateOnlyInTimezone = (date: Date, timezone: string) => {
+  const parts = getZonedParts(date, timezone);
+  return [
+    String(parts.year).padStart(4, "0"),
+    String(parts.month).padStart(2, "0"),
+    String(parts.day).padStart(2, "0"),
+  ].join("-");
+};
+
+const assertBookingSlotDateAllowed = (params: {
+  date: string;
+  timezone: string;
+  minDate?: string;
+  maxDate?: string;
+  now?: Date;
+}) => {
+  parseDateOnly(params.date);
+  const today = toDateOnlyInTimezone(params.now ?? new Date(), params.timezone);
+  if (params.date < today) throw new Error("booking_slot_date_in_past");
+  if (params.minDate && params.date < params.minDate) {
+    throw new Error("booking_slot_date_out_of_range");
+  }
+  if (params.maxDate && params.date > params.maxDate) {
+    throw new Error("booking_slot_date_out_of_range");
+  }
+};
+
+const resolveUtcFromLocal = (dateValue: string, minuteOfDay: number, timezone: string): Date => {
   const { year, month, day } = parseDateOnly(dateValue);
   const hour = Math.floor(minuteOfDay / 60);
   const minute = minuteOfDay % 60;
@@ -284,14 +304,7 @@ const resolveUtcFromLocal = (
 
   for (let index = 0; index < 5; index += 1) {
     const parts = getZonedParts(new Date(timestamp), timezone);
-    const current = Date.UTC(
-      parts.year,
-      parts.month - 1,
-      parts.day,
-      parts.hour,
-      parts.minute,
-      0
-    );
+    const current = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, 0);
     const delta = desired - current;
     if (delta === 0) break;
     timestamp += delta;
@@ -337,7 +350,13 @@ export async function createBookingResource(input: BookingResourceInput) {
     "booking_resource_status_invalid"
   );
   const timezone = assertTimezone(normalizeText(input.timezone));
-  const capacity = normalizePositiveInteger(input.capacity, "booking_resource_capacity", 1, 1, 10000);
+  const capacity = normalizePositiveInteger(
+    input.capacity,
+    "booking_resource_capacity",
+    1,
+    1,
+    10000
+  );
   const settings =
     input.settings && typeof input.settings === "object" && !Array.isArray(input.settings)
       ? input.settings
@@ -418,11 +437,21 @@ export async function updateBookingResource(id: string, input: Partial<BookingRe
   }
 
   if (input.capacity !== undefined) {
-    update.capacity = normalizePositiveInteger(input.capacity, "booking_resource_capacity", 1, 1, 10000);
+    update.capacity = normalizePositiveInteger(
+      input.capacity,
+      "booking_resource_capacity",
+      1,
+      1,
+      10000
+    );
   }
 
   if (input.settings !== undefined) {
-    if (typeof input.settings !== "object" || input.settings === null || Array.isArray(input.settings)) {
+    if (
+      typeof input.settings !== "object" ||
+      input.settings === null ||
+      Array.isArray(input.settings)
+    ) {
       throw new Error("booking_resource_settings_invalid");
     }
     update.settings = input.settings;
@@ -438,7 +467,10 @@ export async function updateBookingResource(id: string, input: Partial<BookingRe
 }
 
 export async function deleteBookingResource(id: string) {
-  const [deleted] = await db.delete(bookingResources).where(eq(bookingResources.id, id)).returning();
+  const [deleted] = await db
+    .delete(bookingResources)
+    .where(eq(bookingResources.id, id))
+    .returning();
   return deleted ?? null;
 }
 
@@ -486,7 +518,13 @@ export async function createBookingService(input: BookingServiceInput) {
   const priceCents =
     input.priceCents === undefined || input.priceCents === null
       ? null
-      : normalizePositiveInteger(input.priceCents, "booking_service_price_cents", 0, 0, 1_000_000_000);
+      : normalizePositiveInteger(
+          input.priceCents,
+          "booking_service_price_cents",
+          0,
+          0,
+          1_000_000_000
+        );
   const currency = normalizeNullableText(input.currency);
   const settings = normalizeServiceSettings(input.settings, bookingAccessDefaults.mode);
 
@@ -592,7 +630,13 @@ export async function updateBookingService(id: string, input: Partial<BookingSer
     update.priceCents =
       input.priceCents === null
         ? null
-        : normalizePositiveInteger(input.priceCents, "booking_service_price_cents", 0, 0, 1_000_000_000);
+        : normalizePositiveInteger(
+            input.priceCents,
+            "booking_service_price_cents",
+            0,
+            0,
+            1_000_000_000
+          );
   }
 
   if (input.currency !== undefined) {
@@ -665,8 +709,10 @@ export async function setBookingServiceResources(
 
   const now = new Date();
   const inserted = await db.transaction(async (tx) => {
-    await tx.delete(bookingServiceResources).where(eq(bookingServiceResources.serviceId, serviceId));
-    if (deduplicated.length === 0) return [] as typeof bookingServiceResources.$inferSelect[];
+    await tx
+      .delete(bookingServiceResources)
+      .where(eq(bookingServiceResources.serviceId, serviceId));
+    if (deduplicated.length === 0) return [] as (typeof bookingServiceResources.$inferSelect)[];
     return tx
       .insert(bookingServiceResources)
       .values(
@@ -680,10 +726,7 @@ export async function setBookingServiceResources(
       .returning();
   });
 
-  await db
-    .update(bookingServices)
-    .set({ updatedAt: now })
-    .where(eq(bookingServices.id, serviceId));
+  await db.update(bookingServices).set({ updatedAt: now }).where(eq(bookingServices.id, serviceId));
 
   return inserted;
 }
@@ -706,7 +749,13 @@ export async function setBookingSchedules(resourceId: string, schedules: Booking
   if (!resource) throw new Error("booking_resource_not_found");
 
   const normalized = schedules.map((entry) => {
-    const dayOfWeek = normalizePositiveInteger(entry.dayOfWeek, "booking_schedule_day_of_week", undefined, 0, 6);
+    const dayOfWeek = normalizePositiveInteger(
+      entry.dayOfWeek,
+      "booking_schedule_day_of_week",
+      undefined,
+      0,
+      6
+    );
     const startMinute = normalizePositiveInteger(
       entry.startMinute,
       "booking_schedule_start_minute",
@@ -754,7 +803,7 @@ export async function setBookingSchedules(resourceId: string, schedules: Booking
   const now = new Date();
   const inserted = await db.transaction(async (tx) => {
     await tx.delete(bookingSchedules).where(eq(bookingSchedules.resourceId, resourceId));
-    if (normalized.length === 0) return [] as typeof bookingSchedules.$inferSelect[];
+    if (normalized.length === 0) return [] as (typeof bookingSchedules.$inferSelect)[];
     return tx
       .insert(bookingSchedules)
       .values(
@@ -816,7 +865,10 @@ export async function createBookingBlackout(input: BookingBlackoutInput) {
 }
 
 export async function deleteBookingBlackout(id: string) {
-  const [deleted] = await db.delete(bookingBlackouts).where(eq(bookingBlackouts.id, id)).returning();
+  const [deleted] = await db
+    .delete(bookingBlackouts)
+    .where(eq(bookingBlackouts.id, id))
+    .returning();
   return deleted ?? null;
 }
 
@@ -838,7 +890,9 @@ export async function listBookings(input?: {
           "booking_reservation_status_invalid"
         )
       : null;
-  const from = input?.from ? parseIsoDateTime(input.from, "booking_reservation_from_invalid") : null;
+  const from = input?.from
+    ? parseIsoDateTime(input.from, "booking_reservation_from_invalid")
+    : null;
   const to = input?.to ? parseIsoDateTime(input.to, "booking_reservation_to_invalid") : null;
 
   return db
@@ -986,7 +1040,10 @@ export async function updateBookingReservationStatus(id: string, status: Booking
   return updated ?? null;
 }
 
-export async function previewBookingSlots(input: BookingSlotPreviewInput): Promise<BookingSlot[]> {
+export async function previewBookingSlots(
+  input: BookingSlotPreviewInput,
+  policy: BookingSlotPreviewPolicy = {}
+): Promise<BookingSlot[]> {
   const serviceId = normalizeText(input.serviceId);
   if (!serviceId) throw new Error("booking_service_required");
   const resourceId = normalizeText(input.resourceId);
@@ -1007,7 +1064,13 @@ export async function previewBookingSlots(input: BookingSlotPreviewInput): Promi
   );
 
   const date = input.date;
-  parseDateOnly(date);
+  assertBookingSlotDateAllowed({
+    date,
+    timezone,
+    minDate: policy.minDate,
+    maxDate: policy.maxDate,
+    now: policy.now,
+  });
   const dayOfWeek = new Date(`${date}T00:00:00.000Z`).getUTCDay();
 
   const schedules = await db

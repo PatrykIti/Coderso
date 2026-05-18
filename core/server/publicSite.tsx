@@ -386,10 +386,21 @@ const hydrateRuntimeBlock = async (
     const normalizedData = normalizeBookingCalendarData(
       ensureRecord(block.data) as BookingCalendarData
     );
+    const slotPolicy = {
+      ...(normalizedData.minDate ? { minDate: normalizedData.minDate } : {}),
+      ...(normalizedData.maxDate ? { maxDate: normalizedData.maxDate } : {}),
+    };
+    const shouldReuseBookingCache = !slotPolicy.minDate && !slotPolicy.maxDate;
     const resolved =
-      options.runtimeCache.booking ??
-      (await resolveBookingRuntimeData({ preview: options.preview }));
-    options.runtimeCache.booking = resolved;
+      shouldReuseBookingCache && options.runtimeCache.booking
+        ? options.runtimeCache.booking
+        : await resolveBookingRuntimeData({
+            preview: options.preview,
+            ...(shouldReuseBookingCache ? {} : { slotPolicy }),
+          });
+    if (shouldReuseBookingCache) {
+      options.runtimeCache.booking = resolved;
+    }
 
     nextBlock = {
       ...block,

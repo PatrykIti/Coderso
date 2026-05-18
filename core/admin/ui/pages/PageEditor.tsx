@@ -5,6 +5,17 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { isApiClientError } from "@/services/apiClient";
+import {
+  getCachedBookingResources,
+  getCachedBookingServices,
+  listBookingResourcesCached,
+  listBookingServiceResourcesCached,
+  listBookingServicesCached,
+} from "@/services/bookingClient";
+import {
+  buildBookingCalendarPreviewResolved,
+  type BookingCalendarPreviewResolved,
+} from "@/services/bookingCalendarPreview";
 import { cacheKeys } from "@/services/cachePolicy";
 import {
   autosavePage,
@@ -59,7 +70,11 @@ import {
   type PageMaxWidthToken,
 } from "../../../services/pages/layoutSettings";
 import { normalizePageRevisionRetentionValue } from "../../../services/pages/revisionRetention";
-import { type ContainerToken, type SpacingToken } from "../../../widgets/types";
+import {
+  type ContainerToken,
+  type SpacingToken,
+  type WidgetEditorContext,
+} from "../../../widgets/types";
 
 const heroBlockDefaults = createBlock("hero");
 const defaultBlocks: Block[] = [
@@ -278,6 +293,74 @@ const applyPageSettings = (
   };
 };
 
+const blockContainsType = (block: Block, type: string): boolean => {
+  if (block.type === type) return true;
+
+  if (
+    Array.isArray(block.children) &&
+    block.children.some((child) => blockContainsType(child, type))
+  ) {
+    return true;
+  }
+
+  if (block.slots && typeof block.slots === "object" && !Array.isArray(block.slots)) {
+    return Object.values(block.slots).some(
+      (items) =>
+        Array.isArray(items) && items.some((child) => blockContainsType(child as Block, type))
+    );
+  }
+
+  return false;
+};
+
+const blocksContainType = (blocks: Block[], type: string) =>
+  blocks.some((block) => blockContainsType(block, type));
+
+const hydrateBookingCalendarPreviewBlocks = (
+  blocks: Block[],
+  resolved: BookingCalendarPreviewResolved | null
+): Block[] => {
+  if (!resolved) return blocks;
+
+  const mapBlock = (block: Block): Block => {
+    const nextChildren = Array.isArray(block.children)
+      ? block.children.map(mapBlock)
+      : block.children;
+    const nextSlots =
+      block.slots && typeof block.slots === "object" && !Array.isArray(block.slots)
+        ? Object.fromEntries(
+            Object.entries(block.slots).map(([key, value]) => [
+              key,
+              Array.isArray(value) ? (value as Block[]).map(mapBlock) : [],
+            ])
+          )
+        : block.slots;
+
+    if (block.type !== "booking-calendar") {
+      if (nextChildren === block.children && nextSlots === block.slots) {
+        return block;
+      }
+      return {
+        ...block,
+        ...(nextChildren !== block.children ? { children: nextChildren } : {}),
+        ...(nextSlots !== block.slots ? { slots: nextSlots } : {}),
+      };
+    }
+
+    return {
+      ...block,
+      data: {
+        ...(isRecord(block.data) ? block.data : {}),
+        resolved,
+      },
+      ...(nextChildren !== block.children ? { children: nextChildren } : {}),
+      ...(nextSlots !== block.slots ? { slots: nextSlots } : {}),
+    };
+  };
+
+  return blocks.map(mapBlock);
+};
+
 export type PageEditorProps = {
   pageId?: string;
   initialPage?: PageDetail | null;
@@ -344,16 +427,40 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
   const [highlightedBlockId, setHighlightedBlockId] = useState<string | null>(null);
   const [pendingScrollBlockId, setPendingScrollBlockId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [bookingCalendarPreviewResolved, setBookingCalendarPreviewResolved] =
+    useState<BookingCalendarPreviewResolved | null>(null);
 
   useEffect(() => {
     blocksRef.current = blocks;
   }, [blocks]);
 
   const selectedBlock = findBlockById(blocks, selectedId);
+  const hasBookingCalendar = useMemo(() => blocksContainType(blocks, "booking-calendar"), [blocks]);
   const selectedWidget = useMemo(() => {
     if (!selectedBlock) return undefined;
     return getWidgetRegistry().find((widget) => widget.type === selectedBlock.type);
   }, [selectedBlock]);
+  const previewBlocks = useMemo(
+    () =>
+      hasBookingCalendar
+        ? hydrateBookingCalendarPreviewBlocks(blocks, bookingCalendarPreviewResolved)
+        : blocks,
+    [blocks, bookingCalendarPreviewResolved, hasBookingCalendar]
+  );
+  const pageEditorWidgetContext = useMemo<WidgetEditorContext | undefined>(() => {
+    if (!selectedBlock) return undefined;
+
+    return {
+      surface: "page-builder",
+      ...(selectedBlock.type === "booking-calendar" && bookingCalendarPreviewResolved
+        ? {
+            widgetPreviewData: {
+              bookingCalendarResolved: bookingCalendarPreviewResolved,
+            },
+          }
+        : {}),
+    };
+  }, [bookingCalendarPreviewResolved, selectedBlock]);
   const pageSettings = useMemo(() => resolvePageSettings(pageData), [pageData]);
   const pageLayout = pageSettings.layout;
   const wrapperPaddingClass = joinClasses(
@@ -518,6 +625,80 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       refreshPage({ setLoading: false }).catch(() => undefined);
     });
   }, [pageId, refreshPage]);
+
+  useEffect(() => {
+    let active = true;
+
+    if (!hasBookingCalendar) {
+      return () => {
+        active = false;
+      };
+    }
+
+    const loadPreview = async (force = false) => {
+      try {
+        const [services, resources] = await Promise.all([
+          listBookingServicesCached({ force }),
+          listBookingResourcesCached({ force }),
+        ]);
+        let catalogError: string | undefined;
+        const serviceResourcesEntries = await Promise.all(
+          services
+            .filter((service) => service.status === "active")
+            .map(async (service) => {
+              try {
+                return [
+                  service.id,
+                  await listBookingServiceResourcesCached(service.id, { force }),
+                ] as const;
+              } catch {
+                catalogError = "booking_preview_catalog_unavailable";
+                return [service.id, []] as const;
+              }
+            })
+        );
+
+        if (!active) return;
+
+        setBookingCalendarPreviewResolved(
+          buildBookingCalendarPreviewResolved({
+            services,
+            resources,
+            serviceResourcesByServiceId: Object.fromEntries(serviceResourcesEntries),
+            ...(catalogError ? { error: catalogError } : {}),
+          })
+        );
+      } catch {
+        if (!active) return;
+
+        setBookingCalendarPreviewResolved(
+          buildBookingCalendarPreviewResolved({
+            services: getCachedBookingServices() ?? [],
+            resources: getCachedBookingResources() ?? [],
+            serviceResourcesByServiceId: {},
+            error: "booking_preview_catalog_unavailable",
+          })
+        );
+      }
+    };
+
+    void loadPreview(false);
+
+    const unsubscribe = subscribeCacheEvents((event) => {
+      if (
+        event.key === cacheKeys.bookingResourcesList ||
+        event.key === cacheKeys.bookingServicesList ||
+        (event.key.startsWith("booking:services:") && event.key.endsWith(":resources"))
+      ) {
+        void loadPreview(true);
+      }
+    });
+
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [hasBookingCalendar]);
 
   const loadTemplateOptions = useCallback(async () => {
     setTemplateOptionsLoading(true);
@@ -993,6 +1174,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
           onBlockPatch={
             selectedBlock ? (patch) => handlePatchBlock(selectedBlock.id, patch) : undefined
           }
+          editorContext={pageEditorWidgetContext}
         />
       }
       rightPanelClassName="p-6"
@@ -1144,7 +1326,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
               )}
             >
               <BlockList
-                blocks={blocks}
+                blocks={previewBlocks}
                 className={spacingTokenToListSpaceClassMap[pageLayout.sections.gap]}
                 pageDefaults={pageLayout.sections.defaults}
                 selectedId={selectedId}
@@ -1235,6 +1417,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
               onBlockPatch={
                 selectedBlock ? (patch) => handlePatchBlock(selectedBlock.id, patch) : undefined
               }
+              editorContext={pageEditorWidgetContext}
             />
           </div>
         </SheetContent>

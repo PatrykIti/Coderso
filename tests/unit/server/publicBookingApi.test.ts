@@ -282,6 +282,69 @@ testIfDb(
 );
 
 testIfDb(
+  "public booking slots endpoint rejects past dates and signed out-of-range claims",
+  async () => {
+    const resource = await createBookingResource({
+      name: `Bay ${randomUUID()}`,
+      type: "bay",
+      timezone: "UTC",
+      capacity: 1,
+    });
+    const service = await createBookingService({
+      name: `Inspection ${randomUUID()}`,
+      durationMinutes: 30,
+    });
+
+    await setBookingServiceResources(service.id, [{ resourceId: resource.id }]);
+
+    const pastUrl = new URL("http://localhost/api/booking/slots");
+    pastUrl.searchParams.set("serviceId", service.id);
+    pastUrl.searchParams.set("resourceId", resource.id);
+    pastUrl.searchParams.set("date", "2020-01-06");
+    pastUrl.searchParams.set("runtimeToken", createBookingSlotsToken());
+
+    const pastResponse = await handlePublicBookingApi(new Request(pastUrl.toString()), {
+      url: pastUrl,
+      security: getSecurity(),
+      ip: "127.0.0.1",
+      userAgent: "test",
+    });
+
+    expect(pastResponse).not.toBeNull();
+    expect(pastResponse?.status).toBe(400);
+    expect(((await pastResponse?.json()) as { error: { code: string } }).error.code).toBe(
+      "booking_slot_date_in_past"
+    );
+
+    const outOfRangeUrl = new URL("http://localhost/api/booking/slots");
+    outOfRangeUrl.searchParams.set("serviceId", service.id);
+    outOfRangeUrl.searchParams.set("resourceId", resource.id);
+    outOfRangeUrl.searchParams.set("date", "2030-01-18");
+    outOfRangeUrl.searchParams.set(
+      "runtimeToken",
+      createBookingSlotsToken({
+        minDate: "2030-01-19",
+        maxDate: "2030-01-20",
+      })
+    );
+
+    const outOfRangeResponse = await handlePublicBookingApi(new Request(outOfRangeUrl.toString()), {
+      url: outOfRangeUrl,
+      security: getSecurity(),
+      ip: "127.0.0.1",
+      userAgent: "test",
+    });
+
+    expect(outOfRangeResponse).not.toBeNull();
+    expect(outOfRangeResponse?.status).toBe(400);
+    expect(((await outOfRangeResponse?.json()) as { error: { code: string } }).error.code).toBe(
+      "booking_slot_date_out_of_range"
+    );
+  },
+  DB_TEST_TIMEOUT_MS
+);
+
+testIfDb(
   "internal booking slots endpoint requires auth or API key",
   async () => {
     const resource = await createBookingResource({

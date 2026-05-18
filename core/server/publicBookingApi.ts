@@ -291,12 +291,10 @@ export async function handlePublicBookingApi(
         authorizationHeader,
         requiredPermission: "booking:read",
       });
+      const slotPolicyClaims =
+        runtimeToken || access.requireCaptcha ? assertBookingSlotsToken(runtimeToken) : {};
 
-      if (access.requireCaptcha) {
-        assertBookingSlotsToken(runtimeToken);
-      }
-
-      const items = await previewBookingSlots(previewInput);
+      const items = await previewBookingSlots(previewInput, slotPolicyClaims);
       return jsonResponse({ items });
     } catch (error) {
       return errorResponse(error);

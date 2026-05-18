@@ -380,3 +380,32 @@ Widget jest gotowy do **podstawowego użycia** na prostych wdrożeniach, ale wym
   `TASK-256-03` or `TASK-256-04`, but TASK-256 ships no Booking
   Calendar-specific code from this report. Final widget execution remains
   deferred to `TASK-259`.
+
+---
+
+## Status po TASK-259 (2026-05-18)
+
+| Zakres | Status | Owner | Dowód |
+|--------|--------|-------|------|
+| 4.5, 6, 7.1 admin preview katalogu | Fixed | TASK-259-01 | `tests/vitest/admin/bookingCalendarPreview.test.ts`, `tests/vitest/ui/booking-calendar-admin-preview.test.tsx` |
+| 3.9, 3.10, 5.4, 7.3 date policy i signed range | Fixed | TASK-259-02 | `tests/vitest/widgets/bookingCalendar.test.tsx`, `tests/vitest/widgets/bookingRuntimeScript.bookingCalendar.test.ts`, `tests/vitest/validation/bookingSchemas.test.ts`, route smoke w Bun |
+| 3.2, 3.3, 3.4, 3.11, 5.3, 5.7 kontekst serwisu, TZ, summary locale | Fixed | TASK-259-03 | `tests/vitest/widgets/bookingCalendar.test.tsx`, `tests/vitest/ui/booking-calendar-editor-wave.test.tsx`, runtime summary coverage |
+| 3.5, 3.6, 3.17, 3.18, 5.2 loading, abort, clear selection | Fixed | TASK-259-04 | `tests/vitest/widgets/bookingRuntimeScript.bookingCalendar.test.ts` |
+| 3.1, 3.8, 7.2 week picker, availability signals, slot density | Fixed | TASK-259-05 | `tests/vitest/widgets/bookingRuntimeScript.bookingCalendar.test.ts` |
+| 3.7, 3.13, 3.16 warianty, mobile, selected/hover styles | Fixed | TASK-259-06 | `tests/vitest/widgets/bookingCalendar.test.tsx`, `tests/vitest/ui/booking-calendar-editor-wave.test.tsx` |
+| 3.15, 4.4, 7.5 default pickers i truthful diagnostics | Fixed | TASK-259-07 | `tests/vitest/ui/booking-calendar-editor-wave.test.tsx`, `tests/vitest/ui/booking-calendar-admin-preview.test.tsx` |
+| 3.12, 5.6 shared ARIA baseline | Excluded from TASK-259 | TASK-293 | osobny shared follow-up po TASK-256 |
+| 3.14 shared frame color picker | Excluded from TASK-259 | TASK-294 | osobny shared follow-up po TASK-256 |
+| 7.4 Booking admin `Add row -> Save schedules` UX | Excluded from TASK-259 | TASK-295 | osobny admin follow-up poza surface widgetu |
+
+### Walidacja lokalna
+
+- Zielone:
+  - `git diff --check`
+  - `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/bookingCalendarPreview.test.ts tests/vitest/ui/booking-calendar-admin-preview.test.tsx tests/vitest/ui/booking-calendar-editor-wave.test.tsx tests/vitest/widgets/bookingCalendar.test.tsx tests/vitest/widgets/bookingRuntimeScript.bookingCalendar.test.ts tests/vitest/validation/bookingSchemas.test.ts`
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun run gates:coderso`
+- Środowiskowe blokery:
+  - `bun run scan:security:strict` nadal wpada na lokalne trust anchors w `semgrep` i brak połączenia dla `bun audit`
+  - DB-backed Booking Bun suites pozostają `skip` po `source .env`, bo `canConnect()` nie widzi osiągalnego DB w tej worktree

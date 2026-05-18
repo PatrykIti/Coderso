@@ -6,7 +6,7 @@
 **Category:** Widgets + Booking + Admin UI + Runtime + Public Read API + Playwright QA
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-252-07-10
-**Status:** In Progress (2026-05-17)
+**Status:** Done (2026-05-18)
 
 ---
 

@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 294 tasks
-- **In Progress:** 5 tasks
-- **Done:** 1566 tasks
+- **To Do:** 286 tasks
+- **In Progress:** 4 tasks
+- **Done:** 1575 tasks
 
 ---
 
@@ -309,14 +309,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-260-03 | Compare Timeline Axis Steps and Content Controls | High | Large | Add Visual step buttons, step descriptions, bounded range decisions, optional icons, and safe step/segment links |
 | TASK-260-04 | Compare Timeline Layout Typography and Visual Polish | Medium | Large | Add Compare Timeline-owned heading, width, padding, typography, motion, order, background, marker, preview, and spacing help |
 | TASK-260-05 | Compare Timeline Report Docs and Closure | Medium | Medium | Refresh report/docs/changelog/board and final validation for the TASK-260 family |
-| TASK-259-01 | Booking Calendar Admin Preview Runtime Catalog Parity | High | Large | Hydrate admin canvas/editor preview with booking services/resources without persisting preview-only tokens |
-| TASK-259-02 | Booking Calendar Date Defaults, Range, and Past-Date Safety | High | Large | Add default/min/max date config and enforce public slots past-date policy |
-| TASK-259-03 | Booking Calendar Service Context and Timezone Copy | High | Large | Show price, duration, description, timezone, and user-facing empty-state copy |
-| TASK-259-04 | Booking Calendar Loading, Concurrency, and Selection UX | High | Large | Add refresh busy state, skeleton, AbortController, stale-response guard, and clear selection |
-| TASK-259-05 | Booking Calendar Availability Calendar and Slot Density | High | Very Large | Add visual date availability signals and non-overlapping slot density mode |
-| TASK-259-06 | Booking Calendar Layout Variants and Mobile Styling | Medium | Large | Add compact/inline/horizontal layouts, mobile control density, and selected-slot style controls |
-| TASK-259-07 | Booking Calendar Default Pickers and Diagnostics | Medium | Medium | Replace raw default IDs with catalog-aware pickers and truthful diagnostics |
-| TASK-259-08 | Booking Calendar Report, Docs, and Closure | Medium | Medium | Refresh report/docs/changelog/board and final validation for the TASK-259 family |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
 | TASK-240 | Coderso Multilingual and i18n Umbrella | High | Very Large | Execution-ready locale/translation/runtime routing program superseding TASK-054-21 |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |
@@ -331,7 +323,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-259 | Booking Calendar Widget Playwright Product Followups | High | Very Large | In progress: shared/admin drift is extracted to TASK-296/TASK-297/TASK-298 and the family is now moving into widget implementation/validation |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
@@ -342,6 +333,15 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-259 | Booking Calendar Widget Playwright Product Followups | High | Very Large | Done: admin preview parity, signed date policy, service context, loading/abort/clear selection, week picker, variants, default pickers, docs, and closure evidence are synchronized while residual shared/admin rows stay routed to TASK-296/TASK-297/TASK-298 |
+| TASK-259-01 | Booking Calendar Admin Preview Runtime Catalog Parity | High | Large | Done: page-builder preview hydrates booking catalog data into BlockList/editor context without persisting preview-only `resolved` payloads |
+| TASK-259-02 | Booking Calendar Date Defaults, Range, and Past-Date Safety | High | Large | Done: widget-owned date defaults/range render, signed slots-token claims, and public route/service past-date enforcement are synchronized |
+| TASK-259-03 | Booking Calendar Service Context and Timezone Copy | High | Large | Done: service price/duration/description, timezone copy, summary locale/date style, and user-facing empty-state copy are product-owned and covered |
+| TASK-259-04 | Booking Calendar Loading, Concurrency, and Selection UX | High | Large | Done: runtime loading skeleton, abort/stale-response guard, refresh busy state, and clear-selection flow are synchronized |
+| TASK-259-05 | Booking Calendar Availability Calendar and Slot Density | High | Very Large | Done: bounded week picker availability signals and slot-density interval modes are synchronized without widening into a new public summary route |
+| TASK-259-06 | Booking Calendar Layout Variants and Mobile Styling | Medium | Large | Done: compact/inline/horizontal variants, mobile control layout, and selected/hover slot styling are widget-owned and tested |
+| TASK-259-07 | Booking Calendar Default Pickers and Diagnostics | Medium | Medium | Done: admin preview catalog data now powers default service/resource pickers and truthful runtime diagnostics |
+| TASK-259-08 | Booking Calendar Report, Docs, and Closure | Medium | Medium | Done: report/docs/changelog/board and final validation evidence are synchronized for the TASK-259 family |
 | TASK-258 | Appointment Form Widget Playwright Follow-Up | High | Very Large | Done: runtime/editor/public-write follow-up is synchronized with focused validation, report closure, named deferrals (`TASK-294`, `TASK-295`, `TASK-256-02`), and changelog evidence |
 | TASK-258-01 | Runtime State, Admin Preview, and Submission Feedback | High | Large | Done: disabled parity, loading copy, stale-error reset, and selection clearing are landed with the runtime DOM suite |
 | TASK-258-02 | Field Validation, Visibility, and Accessibility | High | Large | Done: truthful field toggles, split-name mode, required flags, phone pattern, notes bounds, autocomplete, and form naming are landed |

@@ -8,6 +8,7 @@ import {
   bookingCalendarDefaults,
   type BookingCalendarData,
 } from "../../../core/widgets/core/bookingCalendar";
+import type { WidgetEditorContext } from "../../../core/widgets/types";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -102,6 +103,16 @@ const findInputByLabel = (container: ParentNode, text: string) =>
 
 const findTextareaByLabel = (container: ParentNode, text: string) =>
   findLabeledField(container, text, "textarea");
+
+const findSelectByLabel = (container: ParentNode, text: string) =>
+  Array.from(container.querySelectorAll("label"))
+    .find((label) => normalizeText(label.textContent).startsWith(normalizeText(text)))
+    ?.querySelector("select");
+
+const findCheckboxByLabel = (container: ParentNode, text: string) =>
+  Array.from(container.querySelectorAll("label"))
+    .find((label) => normalizeText(label.textContent).startsWith(normalizeText(text)))
+    ?.querySelector('input[type="checkbox"]');
 
 type EditorKind = "wizard" | "visual" | "advanced";
 
@@ -202,6 +213,9 @@ test("BookingCalendar wizard editor normalizes defaults and clamps interval chan
     setInputValue(findInputByLabel(view.container, "Date label"), " Visit date ");
     setInputValue(findInputByLabel(view.container, "Refresh button"), " Reload slots ");
     setInputValue(findInputByLabel(view.container, "Slot interval (minutes)"), "not-a-number");
+    setInputValue(findInputByLabel(view.container, "Default date"), "2030-02-15");
+    setInputValue(findInputByLabel(view.container, "Minimum date"), "2030-02-10");
+    setInputValue(findInputByLabel(view.container, "Maximum date"), "2030-02-20");
 
     expect(view.onChangeSpy).toHaveBeenCalled();
     expect(
@@ -221,6 +235,9 @@ test("BookingCalendar wizard editor normalizes defaults and clamps interval chan
       dateLabel: "Visit date",
       refreshLabel: "Reload slots",
       intervalMinutes: 5,
+      defaultDate: "2030-02-15",
+      minDate: "2030-02-10",
+      maxDate: "2030-02-20",
     });
   } finally {
     view.cleanup();
@@ -353,11 +370,11 @@ test("BookingCalendar advanced editor normalizes resolved payload and runtime er
         ?.value
     ).toBe(bookingCalendarDefaults.slotsEndpoint);
     expect(
-      (findInputByLabel(view.container, "Default service ID") as HTMLInputElement | undefined)
+      (findSelectByLabel(view.container, "Default service ID") as HTMLSelectElement | undefined)
         ?.value
     ).toBe("svc-2");
     expect(
-      (findInputByLabel(view.container, "Default resource ID") as HTMLInputElement | undefined)
+      (findSelectByLabel(view.container, "Default resource ID") as HTMLSelectElement | undefined)
         ?.value
     ).toBe("res-2");
     expect(
@@ -366,14 +383,24 @@ test("BookingCalendar advanced editor normalizes resolved payload and runtime er
     ).toBe("resolver-timeout");
 
     setInputValue(findInputByLabel(view.container, "Slots endpoint"), " /api/proxy/booking/slots ");
-    setInputValue(findInputByLabel(view.container, "Default service ID"), " primary-service ");
-    setInputValue(findInputByLabel(view.container, "Default resource ID"), " room-a ");
+    React.act(() => {
+      const serviceSelect = findSelectByLabel(view.container, "Default service ID");
+      if (serviceSelect instanceof HTMLSelectElement) {
+        serviceSelect.value = "__auto__";
+        serviceSelect.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      const resourceSelect = findSelectByLabel(view.container, "Default resource ID");
+      if (resourceSelect instanceof HTMLSelectElement) {
+        resourceSelect.value = "__auto__";
+        resourceSelect.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    });
     setInputValue(findInputByLabel(view.container, "Runtime error flag"), "   ");
 
     const withoutError = view.getLatestValue();
     expect(withoutError.slotsEndpoint).toBe("/api/proxy/booking/slots");
-    expect(withoutError.defaultServiceId).toBe("primary-service");
-    expect(withoutError.defaultResourceId).toBe("room-a");
+    expect(withoutError.defaultServiceId).toBeUndefined();
+    expect(withoutError.defaultResourceId).toBeUndefined();
     expect(withoutError.resolved?.slotsToken).toBeNull();
     expect(withoutError.resolved?.services).toEqual([
       {
@@ -408,6 +435,103 @@ test("BookingCalendar advanced editor normalizes resolved payload and runtime er
     );
 
     expect(view.getLatestValue().resolved?.error).toBe("booking_nonce_unavailable");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("BookingCalendar advanced editor prefers preview catalog counts from editor context", async () => {
+  const { BookingCalendarAdvancedEditor } =
+    await import("../../../core/admin/ui/widgets/editors/BookingCalendarEditors");
+
+  const context: WidgetEditorContext = {
+    surface: "page-builder",
+    widgetPreviewData: {
+      bookingCalendarResolved: {
+        services: [
+          {
+            id: "service-1",
+            name: "Oil Change",
+            description: null,
+            durationMinutes: 30,
+            bufferBeforeMinutes: 0,
+            bufferAfterMinutes: 0,
+            priceCents: 5000,
+            currency: "PLN",
+            status: "active",
+            submissionAccess: "public",
+            resourceIds: ["resource-1"],
+          },
+        ],
+        resources: [
+          {
+            id: "resource-1",
+            name: "Mechanic",
+            type: "staff",
+            timezone: "Europe/Warsaw",
+            capacity: 1,
+            status: "active",
+          },
+        ],
+        slotsToken: null,
+      },
+    },
+  };
+
+  const view = mount(
+    <BookingCalendarAdvancedEditor
+      value={{}}
+      onChange={() => undefined}
+      variant="default"
+      context={context}
+    />
+  );
+
+  try {
+    expect(normalizeText(view.container.textContent)).toContain(
+      normalizeText("Services: 1 · Resources: 1")
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("BookingCalendar visual editor updates context and date-picker controls", async () => {
+  const view = await renderEditor({
+    editor: "visual",
+    initialValue: {},
+  });
+
+  try {
+    React.act(() => {
+      const datePickerMode = findSelectByLabel(view.container, "Date picker mode");
+      if (datePickerMode instanceof HTMLSelectElement) {
+        datePickerMode.value = "week";
+        datePickerMode.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      const slotIntervalMode = findSelectByLabel(view.container, "Slot interval mode");
+      if (slotIntervalMode instanceof HTMLSelectElement) {
+        slotIntervalMode.value = "non-overlapping";
+        slotIntervalMode.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      const showDescription = findCheckboxByLabel(view.container, "Show service description");
+      if (showDescription instanceof HTMLInputElement) {
+        showDescription.click();
+      }
+    });
+    setInputValue(findInputByLabel(view.container, "Summary locale"), "pl-PL");
+    setInputValue(
+      findInputByLabel(view.container, "Empty state"),
+      "Contact us for manual booking."
+    );
+
+    expect(view.getLatestValue()).toMatchObject({
+      datePickerMode: "week",
+      slotIntervalMode: "non-overlapping",
+      showServiceDescription: true,
+      summaryLocale: "pl-PL",
+      emptyStateMessage: "Contact us for manual booking.",
+    });
   } finally {
     view.cleanup();
   }

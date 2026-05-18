@@ -12,6 +12,11 @@ const runtimeClientScript = String.raw`(() => {
   };
   window.__nextlessBookingRuntimeState = state;
 
+  const slotRequests = new WeakMap();
+  const availabilityRequests = new WeakMap();
+  const lastRenderedSlots = new WeakMap();
+  const weekAnchors = new WeakMap();
+
   const setSelection = (flowId, selection) => {
     if (!flowId) return;
     if (selection) {
@@ -27,25 +32,27 @@ const runtimeClientScript = String.raw`(() => {
     return state.selections[flowId] || null;
   };
 
-  const toTimeLabel = (iso, locale) => {
+  const toTimeLabel = (iso, options = {}) => {
     try {
       const date = new Date(iso);
-      return date.toLocaleTimeString(locale ? [locale] : undefined, {
+      return date.toLocaleTimeString(options.locale ? [options.locale] : [], {
         hour: "2-digit",
         minute: "2-digit",
+        ...(options.timezone ? { timeZone: options.timezone } : {}),
       });
     } catch {
       return iso;
     }
   };
 
-  const toDateLabel = (iso, locale) => {
+  const toDateLabel = (iso, options = {}) => {
     try {
       const date = new Date(iso);
-      return date.toLocaleDateString(locale ? [locale] : undefined, {
+      return date.toLocaleDateString(options.locale ? [options.locale] : [], {
         year: "numeric",
-        month: "short",
+        month: options.dateStyle || "short",
         day: "2-digit",
+        ...(options.timezone ? { timeZone: options.timezone } : {}),
       });
     } catch {
       return iso;
@@ -80,6 +87,29 @@ const runtimeClientScript = String.raw`(() => {
     return window.grecaptcha.execute(siteKey, { action });
   };
 
+  const toWeekdayLabel = (dateValue, locale) => {
+    try {
+      return new Date(dateValue + "T00:00:00.000Z").toLocaleDateString(
+        locale ? [locale] : [],
+        {
+          weekday: "short",
+          day: "2-digit",
+        }
+      );
+    } catch {
+      return dateValue;
+    }
+  };
+
+  const addDays = (dateValue, days) => {
+    const [year, month, day] = dateValue.split("-").map((value) => Number(value));
+    const date = new Date(Date.UTC(year, month - 1, day));
+    date.setUTCDate(date.getUTCDate() + days);
+    return date.toISOString().slice(0, 10);
+  };
+
+  const buildWeekDates = (anchorDate) =>
+    Array.from({ length: 7 }, (_, index) => addDays(anchorDate, index));
   const syncResourceOptions = (serviceSelect, resourceSelect) => {
     if (!(serviceSelect instanceof HTMLSelectElement)) return;
     if (!(resourceSelect instanceof HTMLSelectElement)) return;
@@ -120,6 +150,23 @@ const runtimeClientScript = String.raw`(() => {
     return yyyy + "-" + mm + "-" + dd;
   };
 
+  const readDatePolicy = (root) => ({
+    defaultDate: (root.dataset.defaultDate || "").trim() || undefined,
+    minDate: (root.dataset.minDate || "").trim() || undefined,
+    maxDate: (root.dataset.maxDate || "").trim() || undefined,
+  });
+
+  const clampDateToPolicy = (value, policy, today) => {
+    const requested = (value || "").trim();
+    const minDate = policy.minDate || today;
+    const maxDate = policy.maxDate;
+    const base = requested || policy.defaultDate || today;
+
+    if (base < minDate) return minDate;
+    if (maxDate && base > maxDate) return maxDate;
+    return base;
+  };
+
   const bindCalendar = (root) => {
     if (!(root instanceof HTMLElement)) return;
     if (root.dataset.bookingCalendarBound === "1") return;
@@ -129,6 +176,14 @@ const runtimeClientScript = String.raw`(() => {
     const endpoint = (root.dataset.slotsEndpoint || "/api/booking/slots").trim();
     const slotsToken = (root.dataset.slotsToken || "").trim();
     const interval = Number.parseInt(root.dataset.slotInterval || "15", 10);
+    const summaryLocale = (root.dataset.summaryLocale || "").trim() || undefined;
+    const summaryDateStyle = (root.dataset.summaryDateStyle || "short").trim() || "short";
+    const datePickerMode = (root.dataset.datePickerMode || "native").trim() || "native";
+    const slotIntervalMode = (root.dataset.slotIntervalMode || "fixed").trim() || "fixed";
+    const showServicePrice = root.dataset.showServicePrice !== "false";
+    const showServiceDuration = root.dataset.showServiceDuration !== "false";
+    const showServiceDescription = root.dataset.showServiceDescription === "true";
+    const showTimezone = root.dataset.showTimezone !== "false";
 
     const serviceSelect = root.querySelector("[data-booking-service]");
     const resourceSelect = root.querySelector("[data-booking-resource]");
@@ -136,36 +191,198 @@ const runtimeClientScript = String.raw`(() => {
     const slotsNode = root.querySelector("[data-booking-slots]");
     const statusNode = root.querySelector("[data-booking-slots-status]");
     const selectedNode = root.querySelector("[data-booking-selected-summary]");
+    const sidebarSelectedNode = root.querySelector("[data-booking-selected-summary-sidebar]");
     const refreshButton = root.querySelector("[data-booking-refresh]");
-    let currentItems = [];
+    const clearSelectionButton = root.querySelector("[data-booking-clear-selection]");
+    const skeletonNode = root.querySelector("[data-booking-loading-skeleton]");
+    const serviceContextNode = root.querySelector("[data-booking-service-context]");
+    const timezoneNode = root.querySelector("[data-booking-resource-timezone]");
+    const weekLabelNode = root.querySelector("[data-booking-week-label]");
+    const weekDaysNode = root.querySelector("[data-booking-week-days]");
+    const weekPrevButton = root.querySelector("[data-booking-week-prev]");
+    const weekNextButton = root.querySelector("[data-booking-week-next]");
 
     if (!(serviceSelect instanceof HTMLSelectElement)) return;
     if (!(resourceSelect instanceof HTMLSelectElement)) return;
     if (!(dateInput instanceof HTMLInputElement)) return;
     if (!(slotsNode instanceof HTMLElement)) return;
 
-    if (!dateInput.value) {
-      dateInput.value = todayDateInputValue();
+    const today = todayDateInputValue();
+    const datePolicy = readDatePolicy(root);
+    dateInput.min = datePolicy.minDate || today;
+    if (datePolicy.maxDate) {
+      dateInput.max = datePolicy.maxDate;
+    } else {
+      dateInput.removeAttribute("max");
     }
+    dateInput.value = clampDateToPolicy(dateInput.value, datePolicy, today);
 
     syncResourceOptions(serviceSelect, resourceSelect);
 
+    const resolveIntervalMinutes = () => {
+      const selectedServiceOption = serviceSelect.selectedOptions[0];
+      const serviceDuration = Number.parseInt(selectedServiceOption?.dataset.durationMinutes || "", 10);
+      const safeDuration =
+        Number.isFinite(serviceDuration) && serviceDuration > 0 ? serviceDuration : interval;
+
+      if (slotIntervalMode === "service-duration") return safeDuration;
+      if (slotIntervalMode === "non-overlapping") return Math.max(interval, safeDuration);
+      return interval;
+    };
+
+    const buildTargetUrl = (dateValue) => {
+      const target = new URL(endpoint, window.location.origin);
+      target.searchParams.set("serviceId", serviceSelect.value);
+      target.searchParams.set("resourceId", resourceSelect.value);
+      target.searchParams.set("date", dateValue);
+      if (slotsToken) {
+        target.searchParams.set("runtimeToken", slotsToken);
+      }
+      const resolvedInterval = resolveIntervalMinutes();
+      if (Number.isFinite(resolvedInterval) && resolvedInterval > 0) {
+        target.searchParams.set("intervalMinutes", String(resolvedInterval));
+      }
+      const resourceOption = resourceSelect.selectedOptions[0];
+      const timezone = resourceOption?.dataset.timezone;
+      if (timezone) {
+        target.searchParams.set("timezone", timezone);
+      }
+      return target;
+    };
+
+    const renderServiceContext = () => {
+      const serviceOption = serviceSelect.selectedOptions[0];
+      const resourceOption = resourceSelect.selectedOptions[0];
+
+      if (serviceContextNode instanceof HTMLElement) {
+        const metaParts = [];
+        const duration = Number.parseInt(serviceOption?.dataset.durationMinutes || "", 10);
+        const bufferBefore = Number.parseInt(serviceOption?.dataset.bufferBeforeMinutes || "", 10);
+        const bufferAfter = Number.parseInt(serviceOption?.dataset.bufferAfterMinutes || "", 10);
+        const priceCents = Number.parseInt(serviceOption?.dataset.priceCents || "", 10);
+        const currency = (serviceOption?.dataset.currency || "").trim();
+
+        if (showServiceDuration && Number.isFinite(duration) && duration > 0) {
+          const bufferTotal =
+            (Number.isFinite(bufferBefore) ? bufferBefore : 0) +
+            (Number.isFinite(bufferAfter) ? bufferAfter : 0);
+          metaParts.push(
+            bufferTotal > 0 ? duration + " min + " + bufferTotal + " min buffer" : duration + " min"
+          );
+        }
+
+        if (showServicePrice && Number.isFinite(priceCents) && currency) {
+          try {
+            metaParts.push(
+              new Intl.NumberFormat(summaryLocale ? [summaryLocale] : [], {
+                style: "currency",
+                currency: currency.toUpperCase(),
+              }).format(priceCents / 100)
+            );
+          } catch {
+            metaParts.push((priceCents / 100).toFixed(2) + " " + currency.toUpperCase());
+          }
+        }
+
+        const description = (serviceOption?.dataset.description || "").trim();
+        serviceContextNode.innerHTML =
+          "<p class=\"text-sm font-medium text-[var(--color-text)]\">" +
+          (serviceOption?.textContent?.trim() || "No service selected") +
+          "</p>" +
+          (metaParts.length > 0
+            ? "<p class=\"text-xs text-[var(--color-text)]/70\">" + metaParts.join(" · ") + "</p>"
+            : "") +
+          (showServiceDescription && description
+            ? "<p class=\"text-xs text-[var(--color-text)]/70\">" + description + "</p>"
+            : "");
+      }
+
+      if (timezoneNode instanceof HTMLElement) {
+        const timezone = (resourceOption?.dataset.timezone || "").trim();
+        timezoneNode.textContent = showTimezone && timezone ? "Timezone: " + timezone : "";
+      }
+    };
+
+    const renderClearSelectionState = (selection) => {
+      if (clearSelectionButton instanceof HTMLButtonElement) {
+        clearSelectionButton.disabled = !selection;
+      }
+    };
+
     const renderSelectedSummary = (selection) => {
-      if (!(selectedNode instanceof HTMLElement)) return;
       if (!selection) {
-        selectedNode.textContent = selectedNode.dataset.empty || "No slot selected yet.";
+        const emptyText =
+          selectedNode instanceof HTMLElement
+            ? selectedNode.dataset.empty || "No slot selected yet."
+            : "No slot selected yet.";
+        if (selectedNode instanceof HTMLElement) {
+          selectedNode.textContent = emptyText;
+        }
+        if (sidebarSelectedNode instanceof HTMLElement) {
+          sidebarSelectedNode.textContent = emptyText;
+        }
+        renderClearSelectionState(null);
         return;
       }
-      selectedNode.textContent =
-        toDateLabel(selection.startsAt) +
+
+      const summaryText =
+        toDateLabel(selection.startsAt, {
+          locale: summaryLocale,
+          dateStyle: summaryDateStyle,
+          timezone: selection.timezone,
+        }) +
         " • " +
-        toTimeLabel(selection.startsAt) +
+        toTimeLabel(selection.startsAt, {
+          locale: summaryLocale,
+          timezone: selection.timezone,
+        }) +
         " - " +
-        toTimeLabel(selection.endsAt);
+        toTimeLabel(selection.endsAt, {
+          locale: summaryLocale,
+          timezone: selection.timezone,
+        }) +
+        (selection.timezone ? " • " + selection.timezone : "");
+
+      if (selectedNode instanceof HTMLElement) {
+        selectedNode.textContent = summaryText;
+      }
+      if (sidebarSelectedNode instanceof HTMLElement) {
+        sidebarSelectedNode.textContent = summaryText;
+      }
+      renderClearSelectionState(selection);
+    };
+
+    const setBusy = (busy) => {
+      if (refreshButton instanceof HTMLButtonElement) {
+        refreshButton.disabled = busy;
+      }
+      if (skeletonNode instanceof HTMLElement) {
+        skeletonNode.hidden = !busy;
+      }
+    };
+
+    const applyButtonVisualState = (button, isSelected) => {
+      button.style.backgroundColor = "";
+      button.style.borderColor = "";
+      if (isSelected) {
+        button.style.backgroundColor = "var(--booking-slot-selected-bg)";
+        button.style.borderColor = "var(--booking-slot-selected-border)";
+      }
+      button.onmouseenter = () => {
+        if (!isSelected) {
+          button.style.borderColor = "var(--booking-slot-hover-border)";
+        }
+      };
+      button.onmouseleave = () => {
+        if (!isSelected) {
+          button.style.borderColor = "";
+        }
+      };
     };
 
     const renderSlots = (items) => {
-      currentItems = Array.isArray(items) ? items : [];
+      const currentItems = Array.isArray(items) ? items : [];
+      lastRenderedSlots.set(root, currentItems);
       slotsNode.innerHTML = "";
       if (currentItems.length === 0) {
         slotsNode.innerHTML =
@@ -181,16 +398,25 @@ const runtimeClientScript = String.raw`(() => {
         const button = document.createElement("button");
         button.type = "button";
         button.className =
-          "rounded-md border border-[var(--color-border)] px-3 py-2 text-xs font-medium text-[var(--color-text)] transition hover:border-[var(--color-primary)]";
-        button.textContent = toTimeLabel(slot.startsAt) + " - " + toTimeLabel(slot.endsAt);
-        if (
-          selection &&
+          "rounded-md border border-[var(--color-border)] px-3 py-2 text-xs font-medium text-[var(--color-text)] transition";
+        button.textContent =
+          toTimeLabel(slot.startsAt, {
+            locale: summaryLocale,
+            timezone: slot.timezone,
+          }) +
+          " - " +
+          toTimeLabel(slot.endsAt, {
+            locale: summaryLocale,
+            timezone: slot.timezone,
+          });
+
+        const isSelected =
+          Boolean(selection) &&
           selection.startsAt === slot.startsAt &&
           selection.endsAt === slot.endsAt &&
-          selection.resourceId === resourceSelect.value
-        ) {
-          button.classList.add("border-[var(--color-primary)]", "bg-[var(--color-primary)]/10");
-        }
+          selection.resourceId === resourceSelect.value;
+        applyButtonVisualState(button, isSelected);
+
         button.addEventListener("click", () => {
           const selectedResourceOption = resourceSelect.selectedOptions[0];
           const timezone = selectedResourceOption?.dataset.timezone || slot.timezone || "UTC";
@@ -207,6 +433,7 @@ const runtimeClientScript = String.raw`(() => {
           renderSelectedSummary(nextSelection);
           renderSlots(currentItems);
         });
+
         slotsNode.appendChild(button);
       });
     };
@@ -215,13 +442,109 @@ const runtimeClientScript = String.raw`(() => {
       const detail = event?.detail;
       if (!detail || detail.flowId !== flowId) return;
       renderSelectedSummary(detail.selection || null);
-      renderSlots(currentItems);
+      renderSlots(lastRenderedSlots.get(root) || []);
+    };
+
+    const renderWeekPicker = (availabilityMap = new Map()) => {
+      if (!(weekDaysNode instanceof HTMLElement) || !(weekLabelNode instanceof HTMLElement)) return;
+
+      const anchorDate = weekAnchors.get(root) || dateInput.value || today;
+      weekAnchors.set(root, anchorDate);
+      const dates = buildWeekDates(anchorDate).map((dateValue) =>
+        clampDateToPolicy(dateValue, datePolicy, today)
+      );
+      weekLabelNode.textContent = dates[0] + " - " + dates[dates.length - 1];
+      weekDaysNode.innerHTML = "";
+
+      dates.forEach((dateValue) => {
+        const availability = availabilityMap.get(dateValue) || { count: null };
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className =
+          "rounded-md border border-[var(--color-border)] px-2 py-2 text-left text-xs text-[var(--color-text)]";
+        button.innerHTML =
+          "<span class=\"block font-medium\">" +
+          toWeekdayLabel(dateValue, summaryLocale) +
+          "</span>" +
+          "<span class=\"block text-[11px] text-[var(--color-text)]/65\">" +
+          (availability.count === null
+            ? "Check availability"
+            : availability.count > 0
+              ? availability.count + " slots"
+              : "No slots") +
+          "</span>";
+
+        if (dateInput.value === dateValue) {
+          button.style.backgroundColor = "var(--booking-slot-selected-bg)";
+          button.style.borderColor = "var(--booking-slot-selected-border)";
+        }
+        button.disabled = availability.count === 0;
+        button.addEventListener("click", () => {
+          dateInput.value = dateValue;
+          weekAnchors.set(root, dateValue);
+          renderWeekPicker(availabilityMap);
+          void loadSlots();
+        });
+        weekDaysNode.appendChild(button);
+      });
+    };
+
+    const refreshAvailability = async () => {
+      if (datePickerMode !== "week" || !(weekDaysNode instanceof HTMLElement)) return;
+      const serviceId = serviceSelect.value;
+      const resourceId = resourceSelect.value;
+      const anchorDate = weekAnchors.get(root) || dateInput.value || today;
+      weekAnchors.set(root, anchorDate);
+
+      if (!serviceId || !resourceId) {
+        renderWeekPicker(new Map());
+        return;
+      }
+
+      availabilityRequests.get(root)?.abort();
+      const controller = new AbortController();
+      availabilityRequests.set(root, controller);
+      const dates = buildWeekDates(anchorDate).map((dateValue) =>
+        clampDateToPolicy(dateValue, datePolicy, today)
+      );
+
+      try {
+        const entries = await Promise.all(
+          dates.map(async (dateValue) => {
+            const response = await fetch(buildTargetUrl(dateValue).toString(), {
+              signal: controller.signal,
+              headers: { Accept: "application/json" },
+            });
+            if (!response.ok) {
+              return [dateValue, { count: null }];
+            }
+            const payload = await response.json();
+            const items = Array.isArray(payload?.items) ? payload.items : [];
+            return [dateValue, { count: items.length }];
+          })
+        );
+
+        if (availabilityRequests.get(root) !== controller) return;
+        renderWeekPicker(new Map(entries));
+      } catch (error) {
+        if (error?.name === "AbortError") return;
+        renderWeekPicker(new Map());
+      } finally {
+        if (availabilityRequests.get(root) === controller) {
+          availabilityRequests.delete(root);
+        }
+      }
     };
 
     const loadSlots = async () => {
       const serviceId = serviceSelect.value;
       const resourceId = resourceSelect.value;
-      const date = dateInput.value;
+      const date = clampDateToPolicy(dateInput.value, datePolicy, today);
+      if (dateInput.value !== date) {
+        dateInput.value = date;
+      }
+
+      renderServiceContext();
 
       if (statusNode instanceof HTMLElement) {
         statusNode.textContent = statusNode.dataset.loading || "Loading slots...";
@@ -233,28 +556,19 @@ const runtimeClientScript = String.raw`(() => {
           (slotsNode.dataset.missing || "Choose service, resource, and date first.") +
           "</p>";
         if (statusNode instanceof HTMLElement) statusNode.textContent = "";
+        renderSelectedSummary(null);
         return;
       }
 
-      const target = new URL(endpoint, window.location.origin);
-      target.searchParams.set("serviceId", serviceId);
-      target.searchParams.set("resourceId", resourceId);
-      target.searchParams.set("date", date);
-      if (slotsToken) {
-        target.searchParams.set("runtimeToken", slotsToken);
-      }
-      if (Number.isFinite(interval) && interval > 0) {
-        target.searchParams.set("intervalMinutes", String(interval));
-      }
-
-      const resourceOption = resourceSelect.selectedOptions[0];
-      const timezone = resourceOption?.dataset.timezone;
-      if (timezone) {
-        target.searchParams.set("timezone", timezone);
-      }
+      const previousSelection = getSelection(flowId);
+      slotRequests.get(root)?.abort();
+      const controller = new AbortController();
+      slotRequests.set(root, controller);
+      setBusy(true);
 
       try {
-        const response = await fetch(target.toString(), {
+        const response = await fetch(buildTargetUrl(date).toString(), {
+          signal: controller.signal,
           headers: {
             Accept: "application/json",
           },
@@ -265,30 +579,55 @@ const runtimeClientScript = String.raw`(() => {
         }
 
         const payload = await response.json();
+        if (slotRequests.get(root) !== controller) return;
         const items = Array.isArray(payload?.items) ? payload.items : [];
+        const nextSelection =
+          previousSelection &&
+          items.some(
+            (slot) =>
+              slot.startsAt === previousSelection.startsAt &&
+              slot.endsAt === previousSelection.endsAt &&
+              previousSelection.resourceId === resourceSelect.value
+          )
+            ? previousSelection
+            : null;
+        if (previousSelection && !nextSelection) {
+          setSelection(flowId, null);
+        }
+        renderSelectedSummary(nextSelection);
         renderSlots(items);
         if (statusNode instanceof HTMLElement) {
           statusNode.textContent = "";
         }
-      } catch {
+        void refreshAvailability();
+      } catch (error) {
+        if (error?.name === "AbortError") return;
         slotsNode.innerHTML =
           "<p class=\"text-xs text-rose-600\">" +
           (slotsNode.dataset.error || "Unable to load slots right now.") +
           "</p>";
         if (statusNode instanceof HTMLElement) statusNode.textContent = "";
+      } finally {
+        if (slotRequests.get(root) === controller) {
+          slotRequests.delete(root);
+        }
+        setBusy(false);
       }
     };
 
     serviceSelect.addEventListener("change", () => {
       syncResourceOptions(serviceSelect, resourceSelect);
+      weekAnchors.set(root, clampDateToPolicy(dateInput.value, datePolicy, today));
       void loadSlots();
     });
 
     resourceSelect.addEventListener("change", () => {
+      weekAnchors.set(root, clampDateToPolicy(dateInput.value, datePolicy, today));
       void loadSlots();
     });
 
     dateInput.addEventListener("change", () => {
+      weekAnchors.set(root, clampDateToPolicy(dateInput.value, datePolicy, today));
       void loadSlots();
     });
 
@@ -299,7 +638,34 @@ const runtimeClientScript = String.raw`(() => {
     }
 
     window.addEventListener(SLOT_EVENT_NAME, onSlotSelected);
+
+    if (clearSelectionButton instanceof HTMLElement) {
+      clearSelectionButton.addEventListener("click", () => {
+        setSelection(flowId, null);
+        renderSelectedSummary(null);
+        renderSlots(lastRenderedSlots.get(root) || []);
+      });
+    }
+
+    if (weekPrevButton instanceof HTMLElement) {
+      weekPrevButton.addEventListener("click", () => {
+        weekAnchors.set(root, addDays(weekAnchors.get(root) || dateInput.value || today, -7));
+        void refreshAvailability();
+      });
+    }
+
+    if (weekNextButton instanceof HTMLElement) {
+      weekNextButton.addEventListener("click", () => {
+        weekAnchors.set(root, addDays(weekAnchors.get(root) || dateInput.value || today, 7));
+        void refreshAvailability();
+      });
+    }
+
+    renderServiceContext();
     renderSelectedSummary(getSelection(flowId));
+    renderClearSelectionState(getSelection(flowId));
+    weekAnchors.set(root, clampDateToPolicy(dateInput.value, datePolicy, today));
+    void refreshAvailability();
     void loadSlots();
   };
 
@@ -407,11 +773,21 @@ const runtimeClientScript = String.raw`(() => {
           ? selection.resourceName.trim()
           : "";
       const dateAndTime =
-        toDateLabel(selection.startsAt, locale) +
+        toDateLabel(selection.startsAt, {
+          locale,
+          timezone: selection.timezone,
+        }) +
         " • " +
-        toTimeLabel(selection.startsAt, locale) +
+        toTimeLabel(selection.startsAt, {
+          locale,
+          timezone: selection.timezone,
+        }) +
         " - " +
-        toTimeLabel(selection.endsAt, locale);
+        toTimeLabel(selection.endsAt, {
+          locale,
+          timezone: selection.timezone,
+        }) +
+        (selection.timezone ? " • " + selection.timezone : "");
       summaryNode.textContent = [serviceLabel, resourceLabel, dateAndTime]
         .filter(Boolean)
         .join(" - ");
