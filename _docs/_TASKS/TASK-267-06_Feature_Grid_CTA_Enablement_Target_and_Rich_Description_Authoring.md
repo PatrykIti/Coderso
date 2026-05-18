@@ -6,7 +6,7 @@
 **Category:** Widgets + Feature Grid + Schema + Runtime Render + Admin UI + Security
 **Estimated Effort:** Large
 **Dependencies:** TASK-256-06-02, TASK-267-04
-**Status:** To Do
+**Status:** Done (2026-05-17)
 
 ---
 
@@ -128,6 +128,13 @@ No API routes are added, but this leaf touches public HTML/link output.
 - `_docs/PLAYWRIGHT/REPORT_FEATURE_GRID_WIDGET.md`
 - `_docs/_TASKS/TASK-267-06_Feature_Grid_CTA_Enablement_Target_and_Rich_Description_Authoring.md`
 - `_docs/_TASKS/README.md` on status changes
+
+## Completion Notes
+
+- Done (2026-05-17). Cards now expose explicit CTA enablement, safe target
+  selection, and sanitized rich description authoring while preserving backward
+  compatibility for plain descriptions.
+- Final family validation is recorded in `TASK-267-08`.
 
 ## Acceptance Criteria
 

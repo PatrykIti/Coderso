@@ -2,6 +2,7 @@ import type { CSSProperties, ComponentType } from "react";
 
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
+import { sanitizeRichTextHtml } from "./richTextSection";
 import { normalizeWidgetSafeHref, resolveWidgetLinkAttrs } from "./widgetSafeHref";
 
 export type FeatureGridVariantId = "cards-3" | "cards-4" | "highlight-first";
@@ -9,15 +10,29 @@ export type FeatureGridColumns = "2" | "3" | "4";
 export type FeatureGridGap = "none" | "sm" | "md" | "lg";
 export type FeatureGridBorderWidth = "0" | "1" | "2" | "3";
 export type FeatureGridRadius = "none" | "md" | "lg" | "xl";
+export type FeatureGridTextAlign = "left" | "center" | "right";
+export type FeatureGridCardPadding = "compact" | "default" | "spacious";
+export type FeatureGridMediaSize = "sm" | "md" | "lg";
+export type FeatureGridCardLayout = "vertical" | "horizontal";
+export type FeatureGridMaxWidth = "5xl" | "6xl" | "7xl" | "full";
+export type FeatureGridHeaderSize = "sm" | "md" | "lg";
+export type FeatureGridCardTitleSize = "sm" | "md" | "lg";
+export type FeatureGridHoverEffect = "none" | "lift" | "border";
+export type FeatureGridCtaTarget = "same-tab" | "new-tab";
+export type FeatureGridDescriptionMode = "plain" | "rich";
 
 export type FeatureGridItem = {
   id?: string;
   icon?: string;
   image?: string;
+  imageAlt?: string;
   title?: string;
   description?: string;
+  descriptionMode?: FeatureGridDescriptionMode;
+  ctaEnabled?: boolean;
   ctaLabel?: string;
   ctaHref?: string;
+  ctaTarget?: FeatureGridCtaTarget;
 };
 
 export type FeatureGridData = {
@@ -31,9 +46,18 @@ export type FeatureGridData = {
     columns?: FeatureGridColumns;
     gap?: FeatureGridGap;
     surfaceColor?: string;
+    sectionBackground?: string;
     borderColor?: string;
     borderWidth?: FeatureGridBorderWidth;
     radius?: FeatureGridRadius;
+    textAlign?: FeatureGridTextAlign;
+    cardPadding?: FeatureGridCardPadding;
+    mediaSize?: FeatureGridMediaSize;
+    cardLayout?: FeatureGridCardLayout;
+    maxWidth?: FeatureGridMaxWidth;
+    headerSize?: FeatureGridHeaderSize;
+    cardTitleSize?: FeatureGridCardTitleSize;
+    hoverEffect?: FeatureGridHoverEffect;
   };
 };
 
@@ -62,7 +86,7 @@ const gapClassMap: Record<FeatureGridGap, string> = {
 const columnsClassMap: Record<FeatureGridColumns, string> = {
   "2": "sm:grid-cols-2",
   "3": "sm:grid-cols-2 lg:grid-cols-3",
-  "4": "sm:grid-cols-2 xl:grid-cols-4",
+  "4": "sm:grid-cols-2 lg:grid-cols-4",
 };
 
 const borderWidthValueMap: Record<FeatureGridBorderWidth, string> = {
@@ -77,6 +101,61 @@ const radiusClassMap: Record<FeatureGridRadius, string> = {
   md: "rounded-md",
   lg: "rounded-lg",
   xl: "rounded-xl",
+};
+
+const textAlignClassMap: Record<FeatureGridTextAlign, string> = {
+  left: "items-start text-left",
+  center: "items-center text-center",
+  right: "items-end text-right",
+};
+
+const cardPaddingClassMap: Record<FeatureGridCardPadding, string> = {
+  compact: "p-3",
+  default: "p-4",
+  spacious: "p-6",
+};
+
+const verticalImageClassMap: Record<FeatureGridMediaSize, string> = {
+  sm: "h-28",
+  md: "h-40",
+  lg: "h-52",
+};
+
+const horizontalImageClassMap: Record<FeatureGridMediaSize, string> = {
+  sm: "w-full sm:h-24 sm:w-24",
+  md: "w-full sm:h-32 sm:w-32",
+  lg: "w-full sm:h-40 sm:w-40",
+};
+
+const iconClassMap: Record<FeatureGridMediaSize, string> = {
+  sm: "h-8 w-8 text-base",
+  md: "h-10 w-10 text-lg",
+  lg: "h-12 w-12 text-xl",
+};
+
+const maxWidthClassMap: Record<FeatureGridMaxWidth, string> = {
+  "5xl": "max-w-5xl",
+  "6xl": "max-w-6xl",
+  "7xl": "max-w-7xl",
+  full: "max-w-none",
+};
+
+const headerSizeClassMap: Record<FeatureGridHeaderSize, string> = {
+  sm: "text-xl",
+  md: "text-2xl",
+  lg: "text-3xl",
+};
+
+const cardTitleSizeClassMap: Record<FeatureGridCardTitleSize, string> = {
+  sm: "text-base",
+  md: "text-lg",
+  lg: "text-xl",
+};
+
+const hoverEffectClassMap: Record<FeatureGridHoverEffect, string> = {
+  none: "",
+  lift: "transition-transform transition-shadow motion-reduce:transform-none hover:-translate-y-1 hover:shadow-md",
+  border: "transition-colors hover:border-[var(--color-primary)]",
 };
 
 const featureGridItemMin = 1;
@@ -107,10 +186,14 @@ export const featureGridSchema = {
           id: { type: "string" },
           icon: { type: "string" },
           image: { type: "string" },
+          imageAlt: { type: "string" },
           title: { type: "string" },
           description: { type: "string" },
+          descriptionMode: { enum: ["plain", "rich"] },
+          ctaEnabled: { type: "boolean" },
           ctaLabel: { type: "string" },
           ctaHref: { type: "string" },
+          ctaTarget: { enum: ["same-tab", "new-tab"] },
         },
       },
     },
@@ -121,9 +204,18 @@ export const featureGridSchema = {
         columns: { enum: ["2", "3", "4"] },
         gap: { enum: ["none", "sm", "md", "lg"] },
         surfaceColor: { type: "string" },
+        sectionBackground: { type: "string" },
         borderColor: { type: "string" },
         borderWidth: { enum: ["0", "1", "2", "3"] },
         radius: { enum: ["none", "md", "lg", "xl"] },
+        textAlign: { enum: ["left", "center", "right"] },
+        cardPadding: { enum: ["compact", "default", "spacious"] },
+        mediaSize: { enum: ["sm", "md", "lg"] },
+        cardLayout: { enum: ["vertical", "horizontal"] },
+        maxWidth: { enum: ["5xl", "6xl", "7xl", "full"] },
+        headerSize: { enum: ["sm", "md", "lg"] },
+        cardTitleSize: { enum: ["sm", "md", "lg"] },
+        hoverEffect: { enum: ["none", "lift", "border"] },
       },
     },
   },
@@ -168,6 +260,14 @@ export const featureGridDefaults: FeatureGridData = {
     borderColor: "var(--color-border)",
     borderWidth: "1",
     radius: "lg",
+    textAlign: "left",
+    cardPadding: "default",
+    mediaSize: "md",
+    cardLayout: "vertical",
+    maxWidth: "6xl",
+    headerSize: "md",
+    cardTitleSize: "md",
+    hoverEffect: "none",
   },
 };
 
@@ -240,10 +340,14 @@ export function normalizeFeatureGridItems(
       id,
       icon: resolveOptionalString(base.icon),
       image: resolveOptionalString(base.image),
+      imageAlt: resolveOptionalString(base.imageAlt),
       title,
       description: resolveOptionalString(base.description),
+      descriptionMode: base.descriptionMode === "rich" ? "rich" : "plain",
+      ctaEnabled: base.ctaEnabled ?? Boolean(base.ctaLabel || base.ctaHref),
       ctaLabel: resolveOptionalString(base.ctaLabel),
       ctaHref: resolveOptionalString(base.ctaHref),
+      ctaTarget: base.ctaTarget === "new-tab" ? "new-tab" : "same-tab",
     });
   }
 
@@ -259,18 +363,58 @@ const resolveFeatureGridColumns = (
 };
 
 const resolveFeatureGridGap = (value: string | undefined): FeatureGridGap => {
-  if (value === "none" || value === "sm" || value === "lg") return value;
+  if (value === "none" || value === "sm" || value === "md" || value === "lg") return value;
   return "md";
 };
 
 const resolveFeatureGridBorderWidth = (value: string | undefined): FeatureGridBorderWidth => {
-  if (value === "0" || value === "2" || value === "3") return value;
+  if (value === "0" || value === "1" || value === "2" || value === "3") return value;
   return "1";
 };
 
 const resolveFeatureGridRadius = (value: string | undefined): FeatureGridRadius => {
-  if (value === "none" || value === "md" || value === "xl") return value;
+  if (value === "none" || value === "md" || value === "lg" || value === "xl") return value;
   return "lg";
+};
+
+const resolveFeatureGridTextAlign = (value: string | undefined): FeatureGridTextAlign => {
+  if (value === "center" || value === "right") return value;
+  return "left";
+};
+
+const resolveFeatureGridCardPadding = (value: string | undefined): FeatureGridCardPadding => {
+  if (value === "compact" || value === "spacious") return value;
+  return "default";
+};
+
+const resolveFeatureGridMediaSize = (value: string | undefined): FeatureGridMediaSize => {
+  if (value === "sm" || value === "lg") return value;
+  return "md";
+};
+
+const resolveFeatureGridCardLayout = (value: string | undefined): FeatureGridCardLayout => {
+  if (value === "horizontal") return value;
+  return "vertical";
+};
+
+const resolveFeatureGridMaxWidth = (value: string | undefined): FeatureGridMaxWidth => {
+  if (value === "5xl" || value === "7xl" || value === "full") return value;
+  return "6xl";
+};
+
+const resolveFeatureGridHeaderSize = (value: string | undefined): FeatureGridHeaderSize => {
+  if (value === "sm" || value === "lg") return value;
+  return "md";
+};
+
+const resolveFeatureGridCardTitleSize = (value: string | undefined): FeatureGridCardTitleSize => {
+  if (value === "sm" || value === "lg") return value;
+  return "md";
+};
+
+const resolveFeatureGridHoverEffect = (value: string | undefined): FeatureGridHoverEffect => {
+  if (value === "lift" || value === "border") return value;
+  return "none";
 };
 
 export function normalizeFeatureGridData(data: FeatureGridData): FeatureGridData {
@@ -286,6 +430,14 @@ export function normalizeFeatureGridData(data: FeatureGridData): FeatureGridData
     borderColor: "var(--color-border)",
     borderWidth: "1",
     radius: "lg",
+    textAlign: "left",
+    cardPadding: "default",
+    mediaSize: "md",
+    cardLayout: "vertical",
+    maxWidth: "6xl",
+    headerSize: "md",
+    cardTitleSize: "md",
+    hoverEffect: "none",
   };
   const hasStyleObject = data.style !== undefined;
 
@@ -303,19 +455,29 @@ export function normalizeFeatureGridData(data: FeatureGridData): FeatureGridData
       surfaceColor: hasStyleObject
         ? resolveClearableStyleValue(data.style?.surfaceColor)
         : styleDefaults.surfaceColor,
+      sectionBackground: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.sectionBackground)
+        : styleDefaults.sectionBackground,
       borderColor: resolveString(
         data.style?.borderColor,
         styleDefaults.borderColor ?? "var(--color-border)"
       ),
       borderWidth: resolveFeatureGridBorderWidth(data.style?.borderWidth),
       radius: resolveFeatureGridRadius(data.style?.radius),
+      textAlign: resolveFeatureGridTextAlign(data.style?.textAlign),
+      cardPadding: resolveFeatureGridCardPadding(data.style?.cardPadding),
+      mediaSize: resolveFeatureGridMediaSize(data.style?.mediaSize),
+      cardLayout: resolveFeatureGridCardLayout(data.style?.cardLayout),
+      maxWidth: resolveFeatureGridMaxWidth(data.style?.maxWidth),
+      headerSize: resolveFeatureGridHeaderSize(data.style?.headerSize),
+      cardTitleSize: resolveFeatureGridCardTitleSize(data.style?.cardTitleSize),
+      hoverEffect: resolveFeatureGridHoverEffect(data.style?.hoverEffect),
     },
   };
 }
 
 export function FeatureGridBlock({ data, variant }: { data: FeatureGridData; variant: string }) {
   const resolvedVariant = resolveFeatureGridVariant(variant);
-  const visibleItemCount = resolveFeatureGridItemCountForVariant(resolvedVariant);
   const normalizedData = normalizeFeatureGridData(data);
   const style = normalizedData.style ?? featureGridDefaults.style!;
 
@@ -327,7 +489,15 @@ export function FeatureGridBlock({ data, variant }: { data: FeatureGridData; var
   const resolvedGap = resolveFeatureGridGap(style.gap);
   const resolvedBorderWidth = resolveFeatureGridBorderWidth(style.borderWidth);
   const resolvedRadius = resolveFeatureGridRadius(style.radius);
-  const items = normalizeFeatureGridItems(normalizedData.items, visibleItemCount);
+  const resolvedTextAlign = resolveFeatureGridTextAlign(style.textAlign);
+  const resolvedCardPadding = resolveFeatureGridCardPadding(style.cardPadding);
+  const resolvedMediaSize = resolveFeatureGridMediaSize(style.mediaSize);
+  const resolvedCardLayout = resolveFeatureGridCardLayout(style.cardLayout);
+  const resolvedMaxWidth = resolveFeatureGridMaxWidth(style.maxWidth);
+  const resolvedHeaderSize = resolveFeatureGridHeaderSize(style.headerSize);
+  const resolvedCardTitleSize = resolveFeatureGridCardTitleSize(style.cardTitleSize);
+  const resolvedHoverEffect = resolveFeatureGridHoverEffect(style.hoverEffect);
+  const items = normalizeFeatureGridItems(normalizedData.items);
 
   const showHeader =
     (normalizedData.header?.eyebrow ?? "").trim().length > 0 ||
@@ -347,9 +517,15 @@ export function FeatureGridBlock({ data, variant }: { data: FeatureGridData; var
       borderWidth: borderWidthValueMap[resolvedBorderWidth] ?? "1px",
     }) ?? {};
 
+  const sectionStyle: CSSProperties =
+    compactStyle({
+      backgroundColor: resolveClearableStyleValue(style.sectionBackground),
+    }) ?? {};
+
   return (
     <section
-      className="mx-auto w-full max-w-6xl px-4 py-8"
+      className={joinClasses("mx-auto w-full px-4 py-8", maxWidthClassMap[resolvedMaxWidth])}
+      style={sectionStyle}
       data-feature-grid-variant={resolvedVariant}
       data-feature-grid-columns={resolvedColumns}
       data-feature-grid-gap={resolvedGap}
@@ -363,7 +539,12 @@ export function FeatureGridBlock({ data, variant }: { data: FeatureGridData; var
             </p>
           ) : null}
           {(normalizedData.header?.title ?? "").trim().length > 0 ? (
-            <h3 className="text-2xl font-semibold text-[var(--color-text)]">
+            <h3
+              className={joinClasses(
+                headerSizeClassMap[resolvedHeaderSize],
+                "font-semibold text-[var(--color-text)]"
+              )}
+            >
               {normalizedData.header?.title}
             </h3>
           ) : null}
@@ -389,8 +570,10 @@ export function FeatureGridBlock({ data, variant }: { data: FeatureGridData; var
             allowRelative: true,
             allowHash: true,
             allowHttp: true,
+            openInNewTab: item.ctaTarget === "new-tab",
           });
           const hasCta =
+            item.ctaEnabled !== false &&
             typeof item.ctaLabel === "string" &&
             item.ctaLabel.trim().length > 0 &&
             ctaLink !== undefined;
@@ -400,7 +583,12 @@ export function FeatureGridBlock({ data, variant }: { data: FeatureGridData; var
             <article
               key={item.id ?? `item-${index + 1}`}
               className={joinClasses(
-                "flex h-full flex-col gap-3 border p-4",
+                "flex h-full gap-3 border",
+                resolvedCardLayout === "horizontal"
+                  ? "flex-col sm:flex-row sm:items-start"
+                  : "flex-col",
+                cardPaddingClassMap[resolvedCardPadding],
+                hoverEffectClassMap[resolvedHoverEffect],
                 radiusClassMap[resolvedRadius],
                 highlighted ? "md:col-span-2" : undefined
               )}
@@ -411,38 +599,67 @@ export function FeatureGridBlock({ data, variant }: { data: FeatureGridData; var
               {hasImage ? (
                 <img
                   src={safeImageHref}
-                  alt={item.title ?? `Feature ${index + 1}`}
+                  alt={item.imageAlt ?? item.title ?? `Feature ${index + 1}`}
                   loading={highlighted ? "eager" : "lazy"}
                   className={joinClasses(
-                    "h-40 w-full object-cover",
+                    "shrink-0 object-cover",
+                    resolvedCardLayout === "horizontal"
+                      ? horizontalImageClassMap[resolvedMediaSize]
+                      : verticalImageClassMap[resolvedMediaSize],
                     radiusClassMap[resolvedRadius]
                   )}
                 />
               ) : hasIcon ? (
                 <span
                   aria-hidden="true"
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-[var(--color-border)] bg-[var(--color-bg)] text-lg"
+                  className={joinClasses(
+                    "inline-flex shrink-0 items-center justify-center rounded-md border border-[var(--color-border)] bg-[var(--color-bg)]",
+                    iconClassMap[resolvedMediaSize]
+                  )}
                 >
                   {item.icon}
                 </span>
               ) : (
-                <span className="inline-flex h-2 w-8 rounded-full bg-[var(--color-primary)]/30" />
+                <span className="inline-flex shrink-0 h-2 w-8 rounded-full bg-[var(--color-primary)]/30" />
               )}
 
-              <h4 className="text-lg font-semibold text-[var(--color-text)]">{item.title}</h4>
-
-              {hasDescription ? (
-                <p className="text-sm text-[var(--color-text)]/75">{item.description}</p>
-              ) : null}
-
-              {hasCta ? (
-                <a
-                  {...ctaLink}
-                  className="mt-auto inline-flex w-fit rounded-md border border-[var(--color-border)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text)] transition hover:border-[var(--color-primary)]"
+              <div
+                className={joinClasses(
+                  "min-w-0 flex flex-1 flex-col gap-3",
+                  textAlignClassMap[resolvedTextAlign]
+                )}
+              >
+                <h4
+                  className={joinClasses(
+                    cardTitleSizeClassMap[resolvedCardTitleSize],
+                    "font-semibold text-[var(--color-text)]"
+                  )}
                 >
-                  {item.ctaLabel}
-                </a>
-              ) : null}
+                  {item.title}
+                </h4>
+
+                {hasDescription ? (
+                  item.descriptionMode === "rich" ? (
+                    <div
+                      className="text-sm text-[var(--color-text)]/75"
+                      dangerouslySetInnerHTML={{
+                        __html: sanitizeRichTextHtml(item.description),
+                      }}
+                    />
+                  ) : (
+                    <p className="text-sm text-[var(--color-text)]/75">{item.description}</p>
+                  )
+                ) : null}
+
+                {hasCta ? (
+                  <a
+                    {...ctaLink}
+                    className="mt-auto inline-flex w-fit rounded-md border border-[var(--color-border)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text)] transition hover:border-[var(--color-primary)]"
+                  >
+                    {item.ctaLabel}
+                  </a>
+                ) : null}
+              </div>
             </article>
           );
         })}

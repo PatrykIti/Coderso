@@ -6,7 +6,7 @@
 **Category:** Widgets + Feature Grid + Admin UI + Runtime Render + Playwright QA
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-252, TASK-256, TASK-256-01, TASK-256-02, TASK-256-04, TASK-256-06-01, TASK-256-06-02, TASK-256-08
-**Status:** In Progress (2026-05-17)
+**Status:** Done (2026-05-17)
 
 ---
 
@@ -81,14 +81,14 @@ inside its own implementation leaves.
 
 ## Sub-Tasks
 
-- [ ] TASK-267-01: Feature Grid Variant Preview and Responsive Cards-4 Layout
-- [ ] TASK-267-02: Feature Grid Card Reorder, Remove, and Item Management
-- [ ] TASK-267-03: Feature Grid Media Picker, Emoji Picker, and Image Priority UX
-- [ ] TASK-267-04: Feature Grid Card Layout, Density, and Alignment Controls
-- [ ] TASK-267-05: Feature Grid Section Typography, Container, and Hover Controls
-- [ ] TASK-267-06: Feature Grid CTA Enablement, Target, and Rich Description Authoring
-- [ ] TASK-267-07: Feature Grid Wizard Guidance and Editor Entry Flow
-- [ ] TASK-267-08: Feature Grid Report, Docs, Changelog, and Closure
+- [x] TASK-267-01: Feature Grid Variant Preview and Responsive Cards-4 Layout
+- [x] TASK-267-02: Feature Grid Card Reorder, Remove, and Item Management
+- [x] TASK-267-03: Feature Grid Media Picker, Emoji Picker, and Image Priority UX
+- [x] TASK-267-04: Feature Grid Card Layout, Density, and Alignment Controls
+- [x] TASK-267-05: Feature Grid Section Typography, Container, and Hover Controls
+- [x] TASK-267-06: Feature Grid CTA Enablement, Target, and Rich Description Authoring
+- [x] TASK-267-07: Feature Grid Wizard Guidance and Editor Entry Flow
+- [x] TASK-267-08: Feature Grid Report, Docs, Changelog, and Closure
 
 ## Implementation Order
 
@@ -190,3 +190,9 @@ Implementation leaves:
   payloads unless the leaf documents and tests a migration/normalizer path.
 - Final closure records report evidence, task status updates, changelog, and the
   exact validation output.
+
+## Completion Notes
+
+- Done (2026-05-17). Shared residuals were split to `TASK-307`, widget-local
+  product follow-ups landed across TASK-267-01 through TASK-267-07, and final
+  report/docs/changelog closure is recorded in TASK-267-08.

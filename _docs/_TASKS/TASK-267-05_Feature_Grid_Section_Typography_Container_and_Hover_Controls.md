@@ -6,7 +6,7 @@
 **Category:** Widgets + Feature Grid + Schema + Runtime Render + Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-267-04
-**Status:** To Do
+**Status:** Done (2026-05-17)
 
 ---
 
@@ -111,6 +111,12 @@ No API routes are added.
 - `_docs/PLAYWRIGHT/REPORT_FEATURE_GRID_WIDGET.md`
 - `_docs/_TASKS/TASK-267-05_Feature_Grid_Section_Typography_Container_and_Hover_Controls.md`
 - `_docs/_TASKS/README.md` on status changes
+
+## Completion Notes
+
+- Done (2026-05-17). Added Feature Grid-local section background, container
+  width, header/card title sizing, and hover-effect controls with bounded maps.
+- Final family validation is recorded in `TASK-267-08`.
 
 ## Acceptance Criteria
 

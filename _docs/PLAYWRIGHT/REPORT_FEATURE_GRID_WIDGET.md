@@ -471,6 +471,9 @@ Wszystkie trafiają do fallback który zwraca domyślną wartość, więc dział
 
 - `TASK-256-06-01`: variant changes now use the shared atomic builder patch
   path, so Feature Grid variant and item-count defaults no longer drift apart.
+- `TASK-267-02`: runtime now renders the authored `Cards count` instead of
+  silently clamping output back to the variant baseline, so manual item-count
+  editing stays truthful across editor, preview, and frontend.
 - `TASK-256-06-01`: the `Columns` control is now truthful. It remains active
   only where runtime honors it, and it is explicitly locked for
   `highlight-first`.
@@ -489,6 +492,32 @@ Wszystkie trafiają do fallback który zwraca domyślną wartość, więc dział
 - `TASK-307`: decorative emoji icons now render with `aria-hidden=\"true\"`.
 - `TASK-307`: Advanced no longer duplicates editable layout token controls that
   belong to Visual; it now exposes diagnostics plus normalization actions only.
+- `TASK-267-01`: Variant cards now render visual miniatures in the selector,
+  and `cards-4` reaches its four-column desktop baseline at `lg`.
+- `TASK-267-02`: Feature cards now support drag-handle reorder, button fallback,
+  and a shared confirm-remove flow instead of immediate destructive deletion.
+- `TASK-267-03`: Cards can now pick media from the shared library, store
+  explicit `imageAlt`, choose bounded emoji presets, and show clear image-over-
+  icon guidance.
+- `TASK-267-03`: media-picker selection now stays attached to stable
+  `items[].id` values, so reorder/remove flows do not leak a picked asset onto
+  a different card.
+- `TASK-267-04` / `TASK-267-05`: Feature Grid now owns bounded card alignment,
+  padding, media size, horizontal layout, section background, width, title
+  scales, and hover controls in schema/editor/runtime together.
+- `TASK-267-06`: Cards now expose explicit CTA enablement, safe target choice,
+  and sanitized rich description authoring.
+- `TASK-267-07`: Wizard now explicitly tells authors that descriptions, media,
+  CTA, layout, and styling continue in Visual.
+- `KOD-03` / `KOD-04` / `KOD-05`: resolver helpers now explicitly accept the
+  default `gap`, `borderWidth`, and `radius` tokens (`md`, `1`, `lg`) instead
+  of depending on fallback-only behavior, so the normalization path is
+  readable and deterministic.
+- Deferred or shared follow-up only:
+  `BF-02` hero-card-above-grid variant remains deferred,
+  `A4/A5` heading hierarchy remains shared follow-up territory,
+  and `UX-10` first-open editor-mode policy remains a shared builder decision
+  rather than a widget-local patch.
 - Shared evidence from this turn:
   `bun run test:vitest -- tests/vitest/ui/feature-grid-editor-wave.test.tsx
   tests/vitest/widgets/featureGrid.test.tsx` passed on 2026-05-17.

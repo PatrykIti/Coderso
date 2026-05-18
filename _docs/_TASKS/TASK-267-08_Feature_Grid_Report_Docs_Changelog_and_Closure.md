@@ -6,7 +6,7 @@
 **Category:** Widgets + Feature Grid + Playwright QA + Documentation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-307, TASK-267-01, TASK-267-02, TASK-267-03, TASK-267-04, TASK-267-05, TASK-267-06, TASK-267-07, TASK-256-08
-**Status:** To Do
+**Status:** Done (2026-05-17)
 
 ---
 
@@ -130,3 +130,28 @@ No API routes are added by this docs/closure leaf.
 - All TASK-267 files are `Done` with dates, validation notes, and final evidence.
 - Changelog and board statistics are synchronized.
 - Final validation is recorded with exact commands and results.
+
+## Final Validation
+
+- `git diff --check`
+  - Passed on `2026-05-18`.
+- `bun --cwd core lint`
+  - Passed on `2026-05-18`.
+- `bun --cwd core lint:types`
+  - Passed on `2026-05-18`.
+- `set -a && source .env && set +a && NODE_ENV=test bunx vitest run --config vitest.config.ts tests/vitest/widgets/featureGrid.test.tsx tests/vitest/ui/feature-grid-editor-wave.test.tsx tests/vitest/widgets/renderer.test.tsx`
+  - Passed: `3` files, `52` tests, `0` failures, duration `4.36s`.
+- `set -a && source .env && set +a && bun test tests/unit/widgets/validator.test.ts`
+  - Passed: `7` tests, `0` failures.
+- `set -a && source .env && set +a && bun run gates:coderso`
+  - Passed with summary `functional: PASS`, `ux: PASS`, `performance: PASS`,
+    `security: PASS`, `reliability: PASS`.
+- `set -a && source .env && set +a && bun run scan:security:strict`
+  - Sandbox run failed because `semgrep` could not load system trust anchors
+    and `bun audit` could not reach the advisory service from the isolated
+    environment.
+  - Host rerun outside the sandbox passed cleanly with
+    `semgrep-sast`, `bun-audit`, `trivy-vuln`, `trivy-config`,
+    `trivy-secret`, `gitleaks-history`, and `gitleaks-worktree` all `ok`.
+- `set -a && source .env && set +a && bun run precommit`
+  - Passed on `2026-05-18`.

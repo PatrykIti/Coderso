@@ -2,74 +2,114 @@
 
 ## Purpose
 
-Marketing grid for feature cards with optional highlighted first item.
+Marketing grid for feature cards with optional highlighted-first emphasis,
+media-first cards, CTA actions, and bounded layout/style controls.
 
 ## Widget ID
 
 `feature-grid`
 
-## Variants (v1)
+## Variants
 
-- `cards-3`: three balanced feature cards
-- `cards-4`: four-card grid for broader coverage
-- `highlight-first`: first card emphasized, remaining cards secondary
+- `cards-3`: three balanced cards with the default three-column desktop rhythm
+- `cards-4`: four-card layout that now reaches the four-column desktop baseline
+  at `lg`
+- `highlight-first`: first card expands across two desktop columns while the
+  remaining cards stay secondary
 
 ## Editor Modes
 
 ### Wizard
 
 - variant
-- header text
-- item count
+- section title and description
+- cards count
+- basic card labels
+- guidance that richer card/media/layout editing lives in `Visual`
 
 ### Visual
 
-- layout columns and gap
-- feature cards
-- colors, radius, and borders
-- inline invalid URL feedback for card images and CTA links
+- variant preview cards
+- truthful columns, gap, and cards count
+- card management: drag handle, move button fallback, confirm-remove flow
+- per-card title, description mode (`plain` / `rich`), and rich-text card copy
+- icon input plus bounded emoji presets
+- media picker, image URL, image alt text, and image-over-icon guidance
+- explicit CTA enablement, URL, and target selection
+- card layout, text alignment, padding, media sizing, and horizontal layout
+- surface/border colors
+- section background, width, header size, card title size, and hover behavior
 
 ### Advanced
 
-- read-only layout diagnostics, normalization actions, and raw payload snapshot
+- read-only layout diagnostics
+- normalization actions
+- raw normalized payload snapshot
 
-## None Token Support
+## Data Model
 
-- `style.gap`: `none` renders zero card gap.
-- `style.radius`: `none` removes forced card rounding.
+### Header
 
-## Clear Controls
+- `eyebrow`
+- `title`
+- `description`
 
-- `style.surfaceColor` is clearable; clear removes the card background field and
-  the renderer omits forced card background output.
-- `style.borderColor` is also clearable; clear removes the forced border color
-  field and lets runtime fall back to the shared border token.
+### Items
+
+- `id`
+- `icon`
+- `image`
+- `imageAlt`
+- `title`
+- `description`
+- `descriptionMode`: `plain` | `rich`
+- `ctaEnabled`
+- `ctaLabel`
+- `ctaHref`
+- `ctaTarget`: `same-tab` | `new-tab`
+
+### Style
+
+- `columns`: `2` | `3` | `4`
+- `gap`: `none` | `sm` | `md` | `lg`
+- `surfaceColor`
+- `sectionBackground`
+- `borderColor`
+- `borderWidth`: `0` | `1` | `2` | `3`
+- `radius`: `none` | `md` | `lg` | `xl`
+- `textAlign`: `left` | `center` | `right`
+- `cardPadding`: `compact` | `default` | `spacious`
+- `mediaSize`: `sm` | `md` | `lg`
+- `cardLayout`: `vertical` | `horizontal`
+- `maxWidth`: `5xl` | `6xl` | `7xl` | `full`
+- `headerSize`: `sm` | `md` | `lg`
+- `cardTitleSize`: `sm` | `md` | `lg`
+- `hoverEffect`: `none` | `lift` | `border`
+
+## None And Clear Semantics
+
+- `style.gap = "none"` removes card spacing
+- `style.radius = "none"` removes forced card rounding
+- `style.surfaceColor` is clearable
+- `style.borderColor` is clearable
+- `style.sectionBackground` is clearable
 
 ## Shared Safety Baseline
 
-- invalid `items[].image` values stay visible in the editor for correction, but
-  runtime output skips unsafe image URLs instead of rendering broken media
-  elements
-- invalid `items[].ctaHref` values stay visible in the editor with inline
-  feedback while public output continues to reject unsafe links
+- invalid `items[].image` values stay visible in admin for correction, but
+  runtime output skips unsafe image URLs
+- invalid `items[].ctaHref` values stay visible in admin with inline feedback,
+  while runtime output rejects unsafe links
+- external CTA links reuse shared safe-link attributes
 - decorative emoji output is marked `aria-hidden="true"`
+- rich descriptions are sanitized before runtime HTML output
 
-## Data Model (summary)
+## Current Deferred Or Shared-Follow-Up Scope
 
-```json
-{
-  "header": {
-    "title": "Features",
-    "description": "Key product capabilities."
-  },
-  "items": [],
-  "style": {
-    "columns": "3",
-    "gap": "md",
-    "radius": "lg",
-    "borderWidth": "1",
-    "surfaceColor": "var(--color-bg)",
-    "borderColor": "var(--color-border)"
-  }
-}
-```
+- `hero-card-above-grid` remains a deferred product variant; current Feature
+  Grid stays within the three documented variants
+- heading hierarchy policy (`A4` / `A5`) is not solved locally here and should
+  route through a shared follow-up if product wants a cross-widget heading
+  contract
+- first-open editor mode policy (`UX-10`) is not a widget-local contract; this
+  doc only reflects local Wizard guidance

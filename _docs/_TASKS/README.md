@@ -29,8 +29,8 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 - **To Do:** 284 tasks
-- **In Progress:** 6 tasks
-- **Done:** 1635 tasks
+- **In Progress:** 4 tasks
+- **Done:** 1645 tasks
 
 ---
 
@@ -254,14 +254,20 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-268-04 | Footer Editor Mode IA and Link Management | High | Large | Label Advanced controls, remove duplicate layout ownership, improve Wizard disclosure, and add deterministic link management |
 | TASK-268-05 | Footer Layout, Typography, and Interactive Style Controls | Medium | Large | Add bounded padding, responsive, hover, link typography, and target controls while deferring market-only utilities |
 | TASK-268-06 | Footer Report, Docs, Changelog, and Closure | Medium | Medium | Refresh Footer report/docs/changelog/board and final validation for the TASK-268 family |
-| TASK-267-01 | Feature Grid Variant Preview and Responsive Cards-4 Layout | High | Medium | Add variant preview affordances, repair cards-4 responsive product behavior, and keep columns truthfulness in TASK-256 |
-| TASK-267-02 | Feature Grid Card Reorder, Remove, and Item Management | High | Medium | Add drag reorder plus recoverable remove flow while preserving keyboard move fallback |
-| TASK-267-03 | Feature Grid Media Picker, Emoji Picker, and Image Priority UX | High | Large | Add media-library card image picking, bounded emoji presets, and image-over-icon guidance |
-| TASK-267-04 | Feature Grid Card Layout, Density, and Alignment Controls | High | Large | Add bounded card layout, padding, alignment, media-size, horizontal, and hero-card decisions |
-| TASK-267-05 | Feature Grid Section Typography, Container, and Hover Controls | Medium | Large | Add Feature Grid-local section background, max-width, typography, and hover controls |
-| TASK-267-06 | Feature Grid CTA Enablement, Target, and Rich Description Authoring | Medium | Large | Add explicit CTA enablement, safe target choice, and bounded rich description authoring after TASK-256 link safety |
-| TASK-267-07 | Feature Grid Wizard Guidance and Editor Entry Flow | Medium | Medium | Add Wizard scope guidance and decide first-open flow after Visual expansion |
-| TASK-267-08 | Feature Grid Report, Docs, Changelog, and Closure | Medium | Medium | Refresh Feature Grid report/docs/changelog/board and final validation evidence |
+| TASK-266 | FAQ Accordion Widget Playwright Product Followups | High | Very Large | FAQ-only follow-up family for `REPORT_FAQ_ACCORDION_WIDGET.md`, excluding TASK-256 shared-contract scope |
+| TASK-266-01 | FAQ Accordion Layout Typography and Motion Controls | High | Large | Add FAQ-owned max-width, alignment, padding, text colors, radius, border-width, title size, and motion controls |
+| TASK-266-02 | FAQ Accordion Rich Answers and Item Icon Model | High | Large | Add safe bounded rich-answer formatting, per-item icons, and plain-text extraction for SEO |
+| TASK-266-03 | FAQ Accordion SEO Structured Data Contract | High | Medium | Add optional FAQPage JSON-LD output derived from normalized safe FAQ data |
+| TASK-266-04 | FAQ Accordion Wizard and Open State Editor UX | Medium | Medium | Add Wizard description, item counters, question-aware open labels, and clearer all-collapsed Advanced UX |
+| TASK-266-05 | FAQ Accordion Item Management and Variant Preview Polish | Medium | Large | Add safer removal flow, compact accessible item actions, variant miniatures, and bounded reorder/bulk decisions |
+| TASK-266-06 | FAQ Accordion Report Docs and Closure | Medium | Medium | Refresh FAQ report/docs/changelog/board and final validation for the TASK-266 family |
+| TASK-265 | Entry Teaser Widget Playwright Product Followups | High | Very Large | Widget-specific follow-up family for `REPORT_ENTRY_TEASER_WIDGET.md`, excluding TASK-256 shared-contract scope |
+| TASK-265-01 | Entry Teaser Source Resolution and Admin Preview | High | Large | Add resolved admin preview, source picker recovery, content-type dedupe, compact status labels, and listing source semantics |
+| TASK-265-02 | Entry Teaser Editor IA, Fallback, and Variant Preview | High | Large | Repair source labels/ownership, variant thumbnails, fallback grouping, field preview hints, Auto URL help, and snapshot copy |
+| TASK-265-03 | Entry Teaser CTA Link and URL Feedback | High | Medium | Add custom URL validation, empty-input behavior, new-tab safe rel, and fixed CTA style variants |
+| TASK-265-04 | Entry Teaser Layout, Media, Tags, and Heading Controls | High | Large | Add section heading, media sizing, tag limits, max-width, optional icon/logo mode, image dimensions, and heading controls |
+| TASK-265-06 | Entry Teaser Shared Color Control Adoption | Medium | Medium | Adopt the TASK-256-02 shared color-control hook for Entry Teaser surface/border fields without duplicating generic picker behavior |
+| TASK-265-05 | Entry Teaser Report, Docs, and Closure | Medium | Medium | Refresh Entry Teaser report/docs/changelog/board and final validation for the TASK-265 family |
 | TASK-264 | Divider Widget Playwright Product Followups | High | Large | Divider-specific follow-up family for `REPORT_DIVIDER_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-264-01 | Divider Label Color Typography and Gap Controls | High | Medium | Add label-center color, typography, nowrap, gap, truthful labels, and clear-label UX |
 | TASK-264-02 | Divider Width Alignment and Custom Validation | High | Medium | Add container width, left/center/right alignment, and custom-width validation feedback |
@@ -334,8 +340,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-307 | Feature Grid Shared Contract Residuals | High | Medium | In progress: TASK-267 audit found still-live shared rows for invalid image/CTA feedback, safe image fallback, emoji ARIA, and duplicated Advanced token ownership |
-| TASK-267 | Feature Grid Widget Playwright Product Followups | High | Very Large | In progress: shared residuals were split to TASK-307 first; local Feature Grid leaves continue on this worktree after shared cleanup lands |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
@@ -346,6 +350,16 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-307 | Feature Grid Shared Contract Residuals | High | Medium | Done: invalid image/CTA feedback, safe image fallback, emoji ARIA, and Advanced diagnostics-only cleanup are now closed as shared follow-up work discovered during TASK-267 |
+| TASK-267 | Feature Grid Widget Playwright Product Followups | High | Very Large | Done: Feature Grid report-driven follow-ups now cover variant previews, drag/remove UX, media picker + alt authoring, bounded layout/style controls, safe CTA/rich descriptions, Wizard guidance, and final closure sync |
+| TASK-267-01 | Feature Grid Variant Preview and Responsive Cards-4 Layout | High | Medium | Done: Variant cards now show visual miniatures and cards-4 reaches its four-column desktop baseline at `lg` |
+| TASK-267-02 | Feature Grid Card Reorder, Remove, and Item Management | High | Medium | Done: Card rows now support drag-handle reorder, button fallback, and confirm-remove UX |
+| TASK-267-03 | Feature Grid Media Picker, Emoji Picker, and Image Priority UX | High | Large | Done: Cards now support media-library picking, bounded emoji presets, explicit `imageAlt`, and image-over-icon guidance |
+| TASK-267-04 | Feature Grid Card Layout, Density, and Alignment Controls | High | Large | Done: Added bounded card alignment, padding, media sizing, and horizontal layout controls; hero-top remains explicitly deferred |
+| TASK-267-05 | Feature Grid Section Typography, Container, and Hover Controls | Medium | Large | Done: Added section background, width, header/card title sizing, and hover controls with fixed maps |
+| TASK-267-06 | Feature Grid CTA Enablement, Target, and Rich Description Authoring | Medium | Large | Done: Added explicit CTA enablement, safe target selection, and sanitized rich description authoring |
+| TASK-267-07 | Feature Grid Wizard Guidance and Editor Entry Flow | Medium | Medium | Done: Wizard now explicitly routes richer editing to Visual; first-open mode remains a shared builder decision |
+| TASK-267-08 | Feature Grid Report, Docs, Changelog, and Closure | Medium | Medium | Done: Feature Grid report, widget doc, task board, changelog, and final validation evidence are synchronized |
 | TASK-305 | Shared Color Control Text and Swatch Contract | High | Medium | Done: the shared swatch-plus-text color contract now exists and Entry Teaser consumes it through widget-local adoption and tests |
 | TASK-303 | Divider and Spacer Residual Shared Token Control Adoption | High | Medium | Done: Divider/Spacer shared token-custom controls now collapse duplicate off-states, enter explicit custom mode, and preserve Divider CSS-variable color tokens |
 | TASK-265 | Entry Teaser Widget Playwright Product Followups | High | Very Large | Done: admin preview hydration, editor IA cleanup, CTA safety, layout/media controls, shared color adoption, docs closure, and validation evidence are synchronized; manual listing-row picking is deferred to TASK-304 |

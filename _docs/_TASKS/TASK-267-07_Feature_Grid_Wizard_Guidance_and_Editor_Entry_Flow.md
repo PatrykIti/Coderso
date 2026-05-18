@@ -6,7 +6,7 @@
 **Category:** Widgets + Feature Grid + Admin UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-267-02, TASK-267-03, TASK-267-04, TASK-267-05, TASK-267-06
-**Status:** To Do
+**Status:** Done (2026-05-17)
 
 ---
 
@@ -95,6 +95,13 @@ No API routes are added.
 - `_docs/PLAYWRIGHT/REPORT_FEATURE_GRID_WIDGET.md`
 - `_docs/_TASKS/TASK-267-07_Feature_Grid_Wizard_Guidance_and_Editor_Entry_Flow.md`
 - `_docs/_TASKS/README.md` on status changes
+
+## Completion Notes
+
+- Done (2026-05-17). Wizard now explicitly routes richer card/media/layout work
+  to Visual without inventing a widget-local shared builder policy.
+- `UX-10` remains documented as a shared builder follow-up decision rather than
+  a local hack.
 
 ## Acceptance Criteria
 

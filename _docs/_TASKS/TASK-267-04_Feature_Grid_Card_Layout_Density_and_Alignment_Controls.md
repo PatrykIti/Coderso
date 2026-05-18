@@ -6,7 +6,7 @@
 **Category:** Widgets + Feature Grid + Schema + Runtime Render + Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-267-01, TASK-267-03
-**Status:** To Do
+**Status:** Done (2026-05-17)
 
 ---
 
@@ -128,6 +128,13 @@ No API routes are added.
 - `_docs/PLAYWRIGHT/REPORT_FEATURE_GRID_WIDGET.md`
 - `_docs/_TASKS/TASK-267-04_Feature_Grid_Card_Layout_Density_and_Alignment_Controls.md`
 - `_docs/_TASKS/README.md` on status changes
+
+## Completion Notes
+
+- Done (2026-05-17). Added bounded card alignment, padding, media sizing, and
+  horizontal layout controls without introducing free-form class inputs.
+- `BF-02` hero-card-above-grid remains explicitly deferred and is recorded in
+  the report closure notes.
 
 ## Acceptance Criteria
 

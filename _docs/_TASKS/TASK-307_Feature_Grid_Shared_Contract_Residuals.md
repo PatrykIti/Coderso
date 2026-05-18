@@ -6,7 +6,7 @@
 **Category:** Widgets + Shared Contract + Admin UI + Runtime Render + Accessibility
 **Estimated Effort:** Medium
 **Dependencies:** TASK-256-01, TASK-256-04, TASK-256-06-01, TASK-267
-**Status:** In Progress (2026-05-17)
+**Status:** Done (2026-05-17)
 
 ---
 
@@ -144,6 +144,14 @@ No API routes are added.
 - `_docs/_TASKS/TASK-267-07_Feature_Grid_Wizard_Guidance_and_Editor_Entry_Flow.md` if shared mode ownership wording changes
 - `_docs/_TASKS/TASK-267-08_Feature_Grid_Report_Docs_Changelog_and_Closure.md`
 - `_docs/_TASKS/README.md`
+
+## Completion Notes
+
+- Done (2026-05-17). Closed the shared Feature Grid residuals discovered during
+  the TASK-267 audit: invalid image/CTA feedback, safe image fallback, emoji
+  decorative semantics, and Advanced-mode diagnostics-only cleanup.
+- Final family validation is recorded in
+  `_docs/_TASKS/TASK-267-08_Feature_Grid_Report_Docs_Changelog_and_Closure.md`.
 
 ## Acceptance Criteria
 

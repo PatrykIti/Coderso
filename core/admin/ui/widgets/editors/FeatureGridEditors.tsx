@@ -1,4 +1,5 @@
-import { type ReactNode } from "react";
+import { GripVertical } from "lucide-react";
+import { type ReactNode, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,8 +11,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { listMediaCached } from "@/services/mediaClient";
+import { MediaPicker } from "@/ui/media/MediaPicker";
+import { PostRichTextAdapter } from "@/ui/posts/editor/richtext/PostRichTextAdapter";
 
 import {
   featureGridDefaults,
@@ -25,11 +30,22 @@ import {
   type FeatureGridData,
   type FeatureGridGap,
   type FeatureGridItem,
+  type FeatureGridCardLayout,
+  type FeatureGridCardPadding,
+  type FeatureGridCardTitleSize,
+  type FeatureGridCtaTarget,
   type FeatureGridRadius,
+  type FeatureGridDescriptionMode,
+  type FeatureGridHeaderSize,
+  type FeatureGridHoverEffect,
+  type FeatureGridMaxWidth,
+  type FeatureGridMediaSize,
+  type FeatureGridTextAlign,
   type FeatureGridVariantId,
 } from "../../../../widgets/core/featureGrid";
 import { normalizeWidgetSafeHref } from "../../../../widgets/core/widgetSafeHref";
 import type { WidgetEditorProps } from "../../../../widgets/types";
+import { ConfirmActionDialog } from "../../shared/ConfirmActionDialog";
 import { ClearableFieldHeader } from "./ClearableFields";
 import { WidgetEditorSection } from "./WidgetEditorControls";
 
@@ -68,6 +84,8 @@ const columnsOptions: Array<{ id: FeatureGridColumns; label: string }> = [
   { id: "4", label: "4 columns" },
 ];
 
+const featureGridEmojiOptions = ["⚡", "🧩", "📈", "🔒", "🚀", "✨", "💬", "🎯"];
+
 const borderWidthOptions: Array<{ id: FeatureGridBorderWidth; label: string }> = [
   { id: "0", label: "0px" },
   { id: "1", label: "1px" },
@@ -80,6 +98,64 @@ const radiusOptions: Array<{ id: FeatureGridRadius; label: string }> = [
   { id: "md", label: "Medium" },
   { id: "lg", label: "Large" },
   { id: "xl", label: "Extra large" },
+];
+
+const textAlignOptions: Array<{ id: FeatureGridTextAlign; label: string }> = [
+  { id: "left", label: "Left" },
+  { id: "center", label: "Center" },
+  { id: "right", label: "Right" },
+];
+
+const cardPaddingOptions: Array<{ id: FeatureGridCardPadding; label: string }> = [
+  { id: "compact", label: "Compact" },
+  { id: "default", label: "Default" },
+  { id: "spacious", label: "Spacious" },
+];
+
+const mediaSizeOptions: Array<{ id: FeatureGridMediaSize; label: string }> = [
+  { id: "sm", label: "Small" },
+  { id: "md", label: "Default" },
+  { id: "lg", label: "Large" },
+];
+
+const cardLayoutOptions: Array<{ id: FeatureGridCardLayout; label: string }> = [
+  { id: "vertical", label: "Vertical" },
+  { id: "horizontal", label: "Horizontal" },
+];
+
+const maxWidthOptions: Array<{ id: FeatureGridMaxWidth; label: string }> = [
+  { id: "5xl", label: "5xl" },
+  { id: "6xl", label: "6xl" },
+  { id: "7xl", label: "7xl" },
+  { id: "full", label: "Full" },
+];
+
+const headerSizeOptions: Array<{ id: FeatureGridHeaderSize; label: string }> = [
+  { id: "sm", label: "Small" },
+  { id: "md", label: "Default" },
+  { id: "lg", label: "Large" },
+];
+
+const cardTitleSizeOptions: Array<{ id: FeatureGridCardTitleSize; label: string }> = [
+  { id: "sm", label: "Small" },
+  { id: "md", label: "Default" },
+  { id: "lg", label: "Large" },
+];
+
+const hoverEffectOptions: Array<{ id: FeatureGridHoverEffect; label: string }> = [
+  { id: "none", label: "None" },
+  { id: "lift", label: "Lift" },
+  { id: "border", label: "Border" },
+];
+
+const ctaTargetOptions: Array<{ id: FeatureGridCtaTarget; label: string }> = [
+  { id: "same-tab", label: "Same tab" },
+  { id: "new-tab", label: "New tab" },
+];
+
+const descriptionModeOptions: Array<{ id: FeatureGridDescriptionMode; label: string }> = [
+  { id: "plain", label: "Plain" },
+  { id: "rich", label: "Rich" },
 ];
 
 const itemCountOptions = Array.from({ length: featureGridItemMax }, (_, index) =>
@@ -139,6 +215,12 @@ function VariantCards({
   value: FeatureGridVariantId;
   onChange?: (next: string) => void;
 }) {
+  const previewRows: Record<FeatureGridVariantId, number[]> = {
+    "cards-3": [1, 1, 1],
+    "cards-4": [1, 1, 1, 1],
+    "highlight-first": [2, 1, 1],
+  };
+
   return (
     <div className="space-y-2">
       {variantOptions.map((option) => (
@@ -146,6 +228,7 @@ function VariantCards({
           key={option.id}
           type="button"
           onClick={() => onChange?.(option.id)}
+          data-widget-control={`feature-grid-variant-${option.id}`}
           className={cn(
             "w-full rounded-lg border p-3 text-left transition",
             value === option.id
@@ -160,6 +243,23 @@ function VariantCards({
             </Badge>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">{option.description}</p>
+          <span
+            aria-hidden="true"
+            data-widget-control={`feature-grid-variant-preview-${option.id}`}
+            className="mt-3 block rounded-md border border-border/60 bg-muted/30 p-2"
+          >
+            <span className="grid grid-cols-4 gap-1">
+              {previewRows[option.id].map((span, index) => (
+                <span
+                  key={`${option.id}-${index + 1}`}
+                  className={cn(
+                    "h-4 rounded-sm border border-border/60 bg-background",
+                    span === 2 ? "col-span-2" : undefined
+                  )}
+                />
+              ))}
+            </span>
+          </span>
         </button>
       ))}
     </div>
@@ -488,6 +588,10 @@ export function FeatureGridWizardEditor({
           </div>
         ))}
       </div>
+
+      <p className="text-xs text-muted-foreground">
+        Use Visual for card descriptions, media, CTA links, layout, and styling.
+      </p>
     </div>
   );
 }
@@ -502,6 +606,61 @@ export function FeatureGridVisualEditor({
   const normalized = normalizeValue(value);
   const resolvedVariant = resolveFeatureGridVariant(variant);
   const items = normalizeFeatureGridItems(normalized.items);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [pendingRemoveIndex, setPendingRemoveIndex] = useState<number | null>(null);
+  const [selectedMediaIds, setSelectedMediaIds] = useState<Record<string, string | null>>({});
+  const [mediaPickerError, setMediaPickerError] = useState<string | null>(null);
+  const pendingRemoveItem =
+    typeof pendingRemoveIndex === "number" ? items[pendingRemoveIndex] : undefined;
+
+  const handleCardDragStart = (event: React.DragEvent<HTMLButtonElement>, index: number) => {
+    event.dataTransfer.setData("text/plain", `feature-grid:${index}`);
+    event.dataTransfer.effectAllowed = "move";
+    setDraggedIndex(index);
+  };
+
+  const handleCardDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+  };
+
+  const handleCardDrop = (event: React.DragEvent<HTMLDivElement>, toIndex: number) => {
+    event.preventDefault();
+    const payload = event.dataTransfer.getData("text/plain");
+    const [, rawIndex] = payload.split(":");
+    const fromIndex = Number(rawIndex);
+    setDraggedIndex(null);
+    if (!Number.isInteger(fromIndex) || fromIndex === toIndex) return;
+    moveItem(value, onChange, fromIndex, toIndex);
+  };
+
+  const handleItemMediaSelection = async (index: number, itemId: string, nextValue: unknown) => {
+    const mediaId = typeof nextValue === "string" ? nextValue : null;
+    setSelectedMediaIds((current) => ({ ...current, [itemId]: mediaId }));
+    setMediaPickerError(null);
+
+    if (!mediaId) {
+      updateItem(value, onChange, index, { image: undefined });
+      return;
+    }
+
+    try {
+      const mediaItems = await listMediaCached({ force: false });
+      const media = mediaItems.find((item) => item.id === mediaId);
+      if (!media?.url) throw new Error("missing_media_url");
+      const fallbackAlt =
+        media.alt?.trim() ||
+        media.title?.trim() ||
+        media.caption?.trim() ||
+        media.originalName?.trim();
+      updateItem(value, onChange, index, {
+        image: media.url,
+        imageAlt: items[index]?.imageAlt?.trim() ? items[index]?.imageAlt : fallbackAlt,
+      });
+    } catch {
+      setMediaPickerError(`Card ${index + 1}: failed to resolve selected media.`);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -633,124 +792,258 @@ export function FeatureGridVisualEditor({
         title="Feature cards and actions"
         description="Manage card content, visuals, CTA links, and ordering."
       >
-        {items.map((item, index) => (
-          <div
-            key={item.id ?? `feature-item-${index + 1}`}
-            className="space-y-3 rounded-lg border p-3"
-          >
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-semibold">Card {index + 1}</p>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => moveItem(value, onChange, index, index - 1)}
-                  disabled={index === 0}
-                >
-                  Move up
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => moveItem(value, onChange, index, index + 1)}
-                  disabled={index === items.length - 1}
-                >
-                  Move down
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => removeItem(value, onChange, index)}
-                  disabled={items.length <= 1}
-                >
-                  Remove
-                </Button>
+        {items.map((item, index) => {
+          const itemMediaSelectionKey = item.id ?? `feature-item-${index + 1}`;
+
+          return (
+            <div
+              key={item.id ?? `feature-item-${index + 1}`}
+              className={cn(
+                "space-y-3 rounded-lg border p-3",
+                draggedIndex === index ? "border-primary/60 bg-primary/5" : undefined
+              )}
+              onDragOver={handleCardDragOver}
+              onDrop={(event) => handleCardDrop(event, index)}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-semibold">Card {index + 1}</p>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    draggable
+                    onDragStart={(event) => handleCardDragStart(event, index)}
+                    onDragEnd={() => setDraggedIndex(null)}
+                    aria-label={`Drag card ${index + 1}`}
+                    title={`Drag card ${index + 1}`}
+                  >
+                    <GripVertical className="h-4 w-4" aria-hidden="true" />
+                    <span className="sr-only">{`Drag card ${index + 1}`}</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => moveItem(value, onChange, index, index - 1)}
+                    disabled={index === 0}
+                  >
+                    Move up
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => moveItem(value, onChange, index, index + 1)}
+                    disabled={index === items.length - 1}
+                  >
+                    Move down
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPendingRemoveIndex(index)}
+                    disabled={items.length <= 1}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-2 sm:col-span-2">
+                  <p className="text-sm font-medium">Title</p>
+                  <Input
+                    value={item.title ?? ""}
+                    onChange={(event) =>
+                      updateItem(value, onChange, index, { title: event.target.value })
+                    }
+                    placeholder={`Feature ${index + 1}`}
+                  />
+                </div>
+
+                <div className="space-y-2 sm:col-span-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-medium">Description</p>
+                    <Select
+                      value={item.descriptionMode ?? "plain"}
+                      onValueChange={(next) =>
+                        updateItem(value, onChange, index, {
+                          descriptionMode: next as FeatureGridDescriptionMode,
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Description format" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {descriptionModeOptions.map((option) => (
+                          <SelectItem key={option.id} value={option.id}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {(item.descriptionMode ?? "plain") === "rich" ? (
+                    <PostRichTextAdapter
+                      value={item.description ?? ""}
+                      onChange={(next) => updateItem(value, onChange, index, { description: next })}
+                      toolbarProfile="paragraph"
+                      minHeightClassName="min-h-[8rem]"
+                      className="bg-muted/30"
+                      placeholder="Write concise rich card copy..."
+                    />
+                  ) : (
+                    <Textarea
+                      value={item.description ?? ""}
+                      onChange={(event) =>
+                        updateItem(value, onChange, index, { description: event.target.value })
+                      }
+                      placeholder="Describe this feature in one short paragraph."
+                    />
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Icon</p>
+                  <Input
+                    value={item.icon ?? ""}
+                    onChange={(event) =>
+                      updateItem(value, onChange, index, { icon: event.target.value })
+                    }
+                    placeholder="⚡"
+                  />
+                  <div className="flex flex-wrap gap-2">
+                    {featureGridEmojiOptions.map((icon) => (
+                      <Button
+                        key={`${item.id ?? index}-${icon}`}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => updateItem(value, onChange, index, { icon })}
+                        aria-pressed={item.icon === icon}
+                      >
+                        {icon}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Image URL</p>
+                  <Input
+                    value={item.image ?? ""}
+                    onChange={(event) =>
+                      updateItem(value, onChange, index, { image: event.target.value })
+                    }
+                    placeholder="https://cdn.example.com/feature.jpg"
+                  />
+                  {(item.image ?? "").trim().length > 0 &&
+                  !isValidFeatureGridImageUrl(item.image) ? (
+                    <p className="text-xs text-amber-700">
+                      Use a relative path or full URL. Unsafe media URLs are not rendered publicly.
+                    </p>
+                  ) : null}
+                  <MediaPicker
+                    value={selectedMediaIds[itemMediaSelectionKey] ?? null}
+                    onChange={(next) => {
+                      void handleItemMediaSelection(index, itemMediaSelectionKey, next);
+                    }}
+                    multiple={false}
+                    accept={["image/*"]}
+                  />
+                  {mediaPickerError?.startsWith(`Card ${index + 1}:`) ? (
+                    <p className="text-xs text-destructive">{mediaPickerError}</p>
+                  ) : null}
+                  <Input
+                    value={item.imageAlt ?? ""}
+                    onChange={(event) =>
+                      updateItem(value, onChange, index, { imageAlt: event.target.value })
+                    }
+                    placeholder="Describe image for screen readers"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    If both image and icon are set, the image is used in preview and runtime.
+                  </p>
+                </div>
+
+                <div className="space-y-3 sm:col-span-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-medium">Enable CTA</p>
+                    <Switch
+                      checked={item.ctaEnabled !== false}
+                      onCheckedChange={(checked) =>
+                        updateItem(value, onChange, index, { ctaEnabled: checked })
+                      }
+                    />
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">CTA label</p>
+                      <Input
+                        value={item.ctaLabel ?? ""}
+                        disabled={item.ctaEnabled === false}
+                        onChange={(event) =>
+                          updateItem(value, onChange, index, { ctaLabel: event.target.value })
+                        }
+                        placeholder="Learn more"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">CTA URL</p>
+                      <Input
+                        value={item.ctaHref ?? ""}
+                        disabled={item.ctaEnabled === false}
+                        onChange={(event) =>
+                          updateItem(value, onChange, index, { ctaHref: event.target.value })
+                        }
+                        placeholder="/features"
+                      />
+                      {(item.ctaHref ?? "").trim().length > 0 &&
+                      !isValidFeatureGridCtaUrl(item.ctaHref) ? (
+                        <p className="text-xs text-amber-700">
+                          Use a relative path, hash, or full URL. Unsafe links are not rendered
+                          publicly.
+                        </p>
+                      ) : null}
+                    </div>
+
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">CTA target</p>
+                      <Select
+                        value={item.ctaTarget ?? "same-tab"}
+                        onValueChange={(next) =>
+                          updateItem(value, onChange, index, {
+                            ctaTarget: next as FeatureGridCtaTarget,
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="CTA target" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ctaTargetOptions.map((option) => (
+                            <SelectItem key={option.id} value={option.id}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  {item.ctaEnabled === false ? (
+                    <p className="text-xs text-muted-foreground">
+                      CTA copy and URL stay stored while the action is disabled.
+                    </p>
+                  ) : null}
+                </div>
               </div>
             </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-2 sm:col-span-2">
-                <p className="text-sm font-medium">Title</p>
-                <Input
-                  value={item.title ?? ""}
-                  onChange={(event) =>
-                    updateItem(value, onChange, index, { title: event.target.value })
-                  }
-                  placeholder={`Feature ${index + 1}`}
-                />
-              </div>
-
-              <div className="space-y-2 sm:col-span-2">
-                <p className="text-sm font-medium">Description</p>
-                <Textarea
-                  value={item.description ?? ""}
-                  onChange={(event) =>
-                    updateItem(value, onChange, index, { description: event.target.value })
-                  }
-                  placeholder="Describe this feature in one short paragraph."
-                />
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Icon</p>
-                <Input
-                  value={item.icon ?? ""}
-                  onChange={(event) =>
-                    updateItem(value, onChange, index, { icon: event.target.value })
-                  }
-                  placeholder="⚡"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Image URL</p>
-                <Input
-                  value={item.image ?? ""}
-                  onChange={(event) =>
-                    updateItem(value, onChange, index, { image: event.target.value })
-                  }
-                  placeholder="https://cdn.example.com/feature.jpg"
-                />
-                {(item.image ?? "").trim().length > 0 && !isValidFeatureGridImageUrl(item.image) ? (
-                  <p className="text-xs text-amber-700">
-                    Use a relative path or full URL. Unsafe media URLs are not rendered publicly.
-                  </p>
-                ) : null}
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-sm font-medium">CTA label</p>
-                <Input
-                  value={item.ctaLabel ?? ""}
-                  onChange={(event) =>
-                    updateItem(value, onChange, index, { ctaLabel: event.target.value })
-                  }
-                  placeholder="Learn more"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-sm font-medium">CTA URL</p>
-                <Input
-                  value={item.ctaHref ?? ""}
-                  onChange={(event) =>
-                    updateItem(value, onChange, index, { ctaHref: event.target.value })
-                  }
-                  placeholder="/features"
-                />
-                {(item.ctaHref ?? "").trim().length > 0 &&
-                !isValidFeatureGridCtaUrl(item.ctaHref) ? (
-                  <p className="text-xs text-amber-700">
-                    Use a relative path, hash, or full URL. Unsafe links are not rendered publicly.
-                  </p>
-                ) : null}
-              </div>
-            </div>
-          </div>
-        ))}
+          );
+        })}
 
         <Button
           type="button"
@@ -760,6 +1053,126 @@ export function FeatureGridVisualEditor({
         >
           Add card
         </Button>
+        <ConfirmActionDialog
+          open={pendingRemoveIndex !== null}
+          onOpenChange={(open) => {
+            if (!open) setPendingRemoveIndex(null);
+          }}
+          title="Remove feature card"
+          description={
+            pendingRemoveItem
+              ? `Remove ${pendingRemoveItem.title ?? `Card ${pendingRemoveIndex! + 1}`}? This cannot be undone.`
+              : "Remove this card? This cannot be undone."
+          }
+          confirmLabel="Remove"
+          onConfirm={() => {
+            if (pendingRemoveIndex === null) return;
+            const pendingItemId =
+              items[pendingRemoveIndex]?.id ?? `feature-item-${pendingRemoveIndex + 1}`;
+            removeItem(value, onChange, pendingRemoveIndex);
+            setSelectedMediaIds((current) => {
+              const next = { ...current };
+              delete next[pendingItemId];
+              return next;
+            });
+            setPendingRemoveIndex(null);
+          }}
+        />
+      </EditorSection>
+
+      <EditorSection
+        title="Card layout and density"
+        description="Control card alignment, padding, media sizing, and horizontal flow."
+      >
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Card layout</p>
+            <Select
+              value={
+                normalized.style?.cardLayout ?? featureGridDefaults.style?.cardLayout ?? "vertical"
+              }
+              onValueChange={(next) =>
+                updateStyle(value, onChange, { cardLayout: next as FeatureGridCardLayout })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Card layout" />
+              </SelectTrigger>
+              <SelectContent>
+                {cardLayoutOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Text align</p>
+            <Select
+              value={normalized.style?.textAlign ?? featureGridDefaults.style?.textAlign ?? "left"}
+              onValueChange={(next) =>
+                updateStyle(value, onChange, { textAlign: next as FeatureGridTextAlign })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Text align" />
+              </SelectTrigger>
+              <SelectContent>
+                {textAlignOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Card padding</p>
+            <Select
+              value={
+                normalized.style?.cardPadding ?? featureGridDefaults.style?.cardPadding ?? "default"
+              }
+              onValueChange={(next) =>
+                updateStyle(value, onChange, { cardPadding: next as FeatureGridCardPadding })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Card padding" />
+              </SelectTrigger>
+              <SelectContent>
+                {cardPaddingOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Media size</p>
+            <Select
+              value={normalized.style?.mediaSize ?? featureGridDefaults.style?.mediaSize ?? "md"}
+              onValueChange={(next) =>
+                updateStyle(value, onChange, { mediaSize: next as FeatureGridMediaSize })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Media size" />
+              </SelectTrigger>
+              <SelectContent>
+                {mediaSizeOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
       </EditorSection>
 
       <EditorSection
@@ -819,6 +1232,112 @@ export function FeatureGridVisualEditor({
               </SelectTrigger>
               <SelectContent>
                 {radiusOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </EditorSection>
+
+      <EditorSection
+        title="Section typography and container"
+        description="Tune section width, background, title scales, and card hover behavior."
+      >
+        <ColorField
+          label="Section background"
+          value={normalized.style?.sectionBackground}
+          onChange={(next) => updateStyle(value, onChange, { sectionBackground: next })}
+          onClear={() => clearStyleField(value, onChange, "sectionBackground")}
+          placeholder="var(--color-surface)"
+          pickerFallback="#ffffff"
+        />
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Container width</p>
+            <Select
+              value={normalized.style?.maxWidth ?? featureGridDefaults.style?.maxWidth ?? "6xl"}
+              onValueChange={(next) =>
+                updateStyle(value, onChange, { maxWidth: next as FeatureGridMaxWidth })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Container width" />
+              </SelectTrigger>
+              <SelectContent>
+                {maxWidthOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Header size</p>
+            <Select
+              value={normalized.style?.headerSize ?? featureGridDefaults.style?.headerSize ?? "md"}
+              onValueChange={(next) =>
+                updateStyle(value, onChange, { headerSize: next as FeatureGridHeaderSize })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Header size" />
+              </SelectTrigger>
+              <SelectContent>
+                {headerSizeOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Card title size</p>
+            <Select
+              value={
+                normalized.style?.cardTitleSize ?? featureGridDefaults.style?.cardTitleSize ?? "md"
+              }
+              onValueChange={(next) =>
+                updateStyle(value, onChange, {
+                  cardTitleSize: next as FeatureGridCardTitleSize,
+                })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Card title size" />
+              </SelectTrigger>
+              <SelectContent>
+                {cardTitleSizeOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Hover effect</p>
+            <Select
+              value={
+                normalized.style?.hoverEffect ?? featureGridDefaults.style?.hoverEffect ?? "none"
+              }
+              onValueChange={(next) =>
+                updateStyle(value, onChange, { hoverEffect: next as FeatureGridHoverEffect })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Hover effect" />
+              </SelectTrigger>
+              <SelectContent>
+                {hoverEffectOptions.map((option) => (
                   <SelectItem key={option.id} value={option.id}>
                     {option.label}
                   </SelectItem>

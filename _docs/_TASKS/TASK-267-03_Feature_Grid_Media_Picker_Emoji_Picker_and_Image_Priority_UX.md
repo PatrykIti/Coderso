@@ -6,7 +6,7 @@
 **Category:** Widgets + Feature Grid + Admin UI + Media
 **Estimated Effort:** Large
 **Dependencies:** TASK-307, TASK-267-02
-**Status:** To Do
+**Status:** Done (2026-05-17)
 
 ---
 
@@ -139,6 +139,13 @@ No API routes are added.
 - `_docs/PLAYWRIGHT/REPORT_FEATURE_GRID_WIDGET.md`
 - `_docs/_TASKS/TASK-267-03_Feature_Grid_Media_Picker_Emoji_Picker_and_Image_Priority_UX.md`
 - `_docs/_TASKS/README.md` on status changes
+
+## Completion Notes
+
+- Done (2026-05-17). Feature cards now support shared media-library picking,
+  bounded emoji presets, explicit `imageAlt`, and clear image-over-icon
+  guidance.
+- Final family validation is recorded in `TASK-267-08`.
 
 ## Acceptance Criteria
 

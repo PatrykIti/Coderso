@@ -6,7 +6,7 @@
 **Category:** Widgets + Feature Grid + Admin UI + Runtime Render
 **Estimated Effort:** Medium
 **Dependencies:** TASK-256-01, TASK-256-06-01, TASK-267
-**Status:** To Do
+**Status:** Done (2026-05-17)
 
 ---
 
@@ -108,6 +108,12 @@ No API routes are added.
 - `_docs/PLAYWRIGHT/REPORT_FEATURE_GRID_WIDGET.md`
 - `_docs/_TASKS/TASK-267-01_Feature_Grid_Variant_Preview_and_Responsive_Cards4.md`
 - `_docs/_TASKS/README.md` on status changes
+
+## Completion Notes
+
+- Done (2026-05-17). Added variant miniatures in Visual, moved the `cards-4`
+  responsive desktop baseline to `lg`, and kept the resolver defaults explicit.
+- Final family validation is recorded in `TASK-267-08`.
 
 ## Acceptance Criteria
 

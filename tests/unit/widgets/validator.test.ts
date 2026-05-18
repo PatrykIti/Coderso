@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
 
 import { contactDefaults, createContactWidget } from "../../../core/widgets/core/contact";
+import {
+  createFeatureGridWidget,
+  featureGridDefaults,
+  type FeatureGridData,
+} from "../../../core/widgets/core/featureGrid";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { clearWidgetValidators, normalizeWidgetBlock } from "../../../core/widgets/validator";
 import type { WidgetDefinition, WidgetBlock } from "../../../core/widgets/types";
@@ -232,4 +237,56 @@ test("normalizeWidgetBlock migrates legacy repeatable key and enforces max slots
   expect(
     Object.keys(normalized.slots ?? {}).filter((key) => key.startsWith("column:"))
   ).toHaveLength(3);
+});
+
+test("normalizeWidgetBlock accepts feature grid imageAlt authoring", () => {
+  registerWidget(
+    createFeatureGridWidget({
+      wizard: Dummy as never,
+      visual: Dummy as never,
+      advanced: Dummy as never,
+    })
+  );
+
+  const block: WidgetBlock = {
+    id: "feature-grid-1",
+    type: "feature-grid",
+    variant: "cards-3",
+    data: {
+      ...featureGridDefaults,
+      items: [
+        {
+          id: "feature-1",
+          title: "Media ready",
+          image: "/media/feature.jpg",
+          imageAlt: "Readable feature screenshot",
+          description: "<p><strong>Rich</strong> copy</p>",
+          descriptionMode: "rich",
+          ctaEnabled: true,
+          ctaLabel: "Open",
+          ctaHref: "https://example.com",
+          ctaTarget: "new-tab",
+        },
+      ],
+      style: {
+        textAlign: "center",
+        cardPadding: "spacious",
+        mediaSize: "lg",
+        cardLayout: "horizontal",
+        maxWidth: "7xl",
+        headerSize: "lg",
+        cardTitleSize: "lg",
+        hoverEffect: "lift",
+      },
+    } satisfies FeatureGridData,
+  };
+
+  const normalized = normalizeWidgetBlock(block);
+  expect((normalized.data as FeatureGridData).items[0]?.imageAlt).toBe(
+    "Readable feature screenshot"
+  );
+  expect((normalized.data as FeatureGridData).style?.cardLayout).toBe("horizontal");
+  expect((normalized.data as FeatureGridData).style?.hoverEffect).toBe("lift");
+  expect((normalized.data as FeatureGridData).items[0]?.descriptionMode).toBe("rich");
+  expect((normalized.data as FeatureGridData).items[0]?.ctaTarget).toBe("new-tab");
 });

@@ -6,7 +6,7 @@
 **Category:** Widgets + Feature Grid + Admin UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-267-01
-**Status:** To Do
+**Status:** Done (2026-05-17)
 
 ---
 
@@ -113,6 +113,12 @@ No API routes are added.
 - `_docs/PLAYWRIGHT/REPORT_FEATURE_GRID_WIDGET.md`
 - `_docs/_TASKS/TASK-267-02_Feature_Grid_Card_Reorder_Remove_and_Item_Management.md`
 - `_docs/_TASKS/README.md` on status changes
+
+## Completion Notes
+
+- Done (2026-05-17). Card rows now support drag-handle reorder, keep the move
+  button fallback, and use the shared confirm dialog for destructive removal.
+- Final family validation is recorded in `TASK-267-08`.
 
 ## Acceptance Criteria
 
