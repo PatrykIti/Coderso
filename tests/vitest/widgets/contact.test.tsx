@@ -121,6 +121,317 @@ test("contact minimal variant hides the form and shows safe map fallback copy", 
   expect(html).not.toContain("<iframe");
 });
 
+test("contact drops unsafe social profile hrefs from rendered output", () => {
+  const html = renderToString(
+    <ContactBlock
+      data={{
+        ...contactDefaults,
+        contact: {
+          ...contactDefaults.contact,
+          phone: "",
+          email: "",
+          address: "",
+          hours: "",
+          social: [
+            { id: "social-1", platform: "custom", label: "Mail", href: "mailto:test@example.com" },
+            { id: "social-2", platform: "custom", label: "Phone", href: "tel:+1555123456" },
+            { id: "social-3", platform: "custom", label: "Hash", href: "#team" },
+            { id: "social-4", platform: "custom", label: "Relative", href: "/team" },
+            { id: "social-5", platform: "custom", label: "Proto relative", href: "//example.com" },
+            { id: "social-6", platform: "custom", label: "Script", href: "javascript:alert(1)" },
+          ],
+        },
+      }}
+      variant="form-left"
+    />
+  );
+
+  expect(html).not.toContain("mailto:test@example.com");
+  expect(html).not.toContain("tel:+1555123456");
+  expect(html).not.toContain('href="#team"');
+  expect(html).not.toContain('href="/team"');
+  expect(html).not.toContain('href="//example.com"');
+  expect(html).not.toContain("javascript:alert(1)");
+  expect(html).toContain('data-contact-social-count="0"');
+});
+
+test("contact reuses Forms runtime markup when a public binding exactly matches the visible Contact fields", () => {
+  const html = renderToString(
+    <ContactBlock
+      blockId="contact-runtime"
+      data={{
+        ...contactDefaults,
+        form: {
+          ...contactDefaults.form,
+          fields: ["name", "email", "message"],
+          submission: {
+            ...contactDefaults.form?.submission,
+            mode: "forms-runtime",
+            formId: "form-public",
+            fieldMap: {
+              name: "full_name",
+              email: "reply_email",
+              phone: "",
+              message: "message_body",
+            },
+            successMessage: "We got it.",
+            errorMessage: "Please try again.",
+          },
+        },
+        resolved: {
+          formId: "form-public",
+          formName: "Support",
+          status: "published",
+          submissionAccess: "public",
+          submissionNonce: "signed-nonce",
+          fields: [
+            {
+              id: "field-1",
+              type: "text",
+              label: "Full name",
+              name: "full_name",
+              required: true,
+              orderIndex: 0,
+              settings: {},
+            },
+            {
+              id: "field-2",
+              type: "email",
+              label: "Reply email",
+              name: "reply_email",
+              required: true,
+              orderIndex: 1,
+              settings: {},
+            },
+            {
+              id: "field-3",
+              type: "textarea",
+              label: "Message",
+              name: "message_body",
+              required: true,
+              orderIndex: 2,
+              settings: {},
+            },
+          ],
+        },
+      }}
+      variant="form-left"
+    />
+  );
+
+  expect(html).toContain('data-contact-form-mode="forms-runtime"');
+  expect(html).toContain('method="post"');
+  expect(html).toContain('action="/forms/form-public/submissions"');
+  expect(html).toContain('data-nextless-form-runtime="1"');
+  expect(html).toContain('data-form-id="form-public"');
+  expect(html).toContain('name="full_name"');
+  expect(html).toContain('name="reply_email"');
+  expect(html).toContain('name="message_body"');
+  expect(html).toContain('name="__nl_form_nonce"');
+  expect(html).toContain('value="signed-nonce"');
+  expect(html).toContain('data-form-embed-success="true"');
+  expect(html).toContain('data-form-embed-error="true"');
+  expect(html).toContain("We got it.");
+  expect(html).toContain("Please try again.");
+  expect(html).not.toContain("This contact form is not connected yet.");
+});
+
+test("contact keeps forms-runtime bindings static when the resolved form is missing, unpublished, internal, or exceeds the Contact field surface", () => {
+  const cases: Array<{
+    label: string;
+    resolved: NonNullable<ContactData["resolved"]>;
+  }> = [
+    {
+      label: "missing",
+      resolved: {
+        formId: "form-missing",
+        formName: "",
+        status: "missing",
+        submissionAccess: "public",
+        submissionNonce: null,
+        fields: [],
+        error: "form_not_found",
+      },
+    },
+    {
+      label: "unpublished",
+      resolved: {
+        formId: "form-draft",
+        formName: "Draft support",
+        status: "draft",
+        submissionAccess: "public",
+        submissionNonce: "signed-nonce",
+        fields: [],
+        error: "form_unpublished",
+      },
+    },
+    {
+      label: "internal",
+      resolved: {
+        formId: "form-internal",
+        formName: "Internal support",
+        status: "published",
+        submissionAccess: "internal",
+        submissionNonce: null,
+        fields: [
+          {
+            id: "field-1",
+            type: "text",
+            label: "Full name",
+            name: "full_name",
+            required: true,
+            orderIndex: 0,
+            settings: {},
+          },
+          {
+            id: "field-2",
+            type: "email",
+            label: "Reply email",
+            name: "reply_email",
+            required: true,
+            orderIndex: 1,
+            settings: {},
+          },
+          {
+            id: "field-3",
+            type: "textarea",
+            label: "Message",
+            name: "message_body",
+            required: true,
+            orderIndex: 2,
+            settings: {},
+          },
+        ],
+      },
+    },
+    {
+      label: "extra field",
+      resolved: {
+        formId: "form-extra",
+        formName: "Extended support",
+        status: "published",
+        submissionAccess: "public",
+        submissionNonce: "signed-nonce",
+        fields: [
+          {
+            id: "field-1",
+            type: "text",
+            label: "Full name",
+            name: "full_name",
+            required: true,
+            orderIndex: 0,
+            settings: {},
+          },
+          {
+            id: "field-2",
+            type: "email",
+            label: "Reply email",
+            name: "reply_email",
+            required: true,
+            orderIndex: 1,
+            settings: {},
+          },
+          {
+            id: "field-3",
+            type: "textarea",
+            label: "Message",
+            name: "message_body",
+            required: true,
+            orderIndex: 2,
+            settings: {},
+          },
+          {
+            id: "field-4",
+            type: "checkbox",
+            label: "Consent",
+            name: "consent",
+            required: true,
+            orderIndex: 3,
+            settings: {},
+          },
+        ],
+      },
+    },
+    {
+      label: "conditional logic",
+      resolved: {
+        formId: "form-logic",
+        formName: "Logic support",
+        status: "published",
+        submissionAccess: "public",
+        submissionNonce: "signed-nonce",
+        fields: [
+          {
+            id: "field-1",
+            type: "text",
+            label: "Full name",
+            name: "full_name",
+            required: true,
+            orderIndex: 0,
+            settings: {},
+          },
+          {
+            id: "field-2",
+            type: "email",
+            label: "Reply email",
+            name: "reply_email",
+            required: true,
+            orderIndex: 1,
+            settings: {},
+          },
+          {
+            id: "field-3",
+            type: "textarea",
+            label: "Message",
+            name: "message_body",
+            required: true,
+            orderIndex: 2,
+            settings: {
+              logic: {
+                operator: "equals",
+                field: "full_name",
+                value: "support",
+              },
+            },
+          },
+        ],
+      },
+    },
+  ];
+
+  for (const testCase of cases) {
+    const html = renderToString(
+      <ContactBlock
+        data={{
+          ...contactDefaults,
+          form: {
+            ...contactDefaults.form,
+            fields: ["name", "email", "message"],
+            submission: {
+              ...contactDefaults.form?.submission,
+              mode: "forms-runtime",
+              formId: testCase.resolved.formId,
+              fieldMap: {
+                name: "full_name",
+                email: "reply_email",
+                phone: "",
+                message: "message_body",
+              },
+            },
+          },
+          resolved: testCase.resolved,
+        }}
+        variant="form-left"
+      />
+    );
+
+    expect(html).not.toContain('data-nextless-form-runtime="1"');
+    expect(html).not.toContain('action="/forms/');
+    expect(html).toContain('type="button"');
+    expect(html).toContain("This contact form is not connected yet.");
+  }
+});
+
 test("contact normalization keeps bounded defaults, field metadata, and static submission state", () => {
   const normalized = normalizeContactData({
     form: {

@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 288 tasks
+- **To Do:** 279 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1581 tasks
+- **Done:** 1591 tasks
 
 ---
 
@@ -46,6 +46,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-295 | Appointment Form Custom Field Product Surface | Medium | Large | Widget-local custom field authoring/render/payload follow-up after the bounded booking metadata boundary lands |
 | TASK-294 | Booking Flow Editor Context Surface Plumbing | High | Large | Shared `WidgetEditorContext.bookingFlows` plumbing for page/template/custom-screen/detail-template booking surfaces without persisting preview-only data |
 | TASK-293 | Shared Repeatable Slot Metadata Sync and Instance Reorder | High | Large | Builder-owned shared follow-up for repeatable-slot add/reorder operations that must keep widget metadata aligned with slot instances |
+| TASK-301 | Forms Public Runtime Nonce Cache Freshness | High | Large | Shared follow-up for stale cached `submissionNonce` drift across nonce-bearing Forms runtime widgets |
 | TASK-292 | Toggle Block Widget Playwright Product Followups | High | Very Large | Toggle Block-only follow-up family for `REPORT_TOGGLE_BLOCK_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-292-01 | Toggle Block Variant Visual Hierarchy, Contrast, and Pane Styling | High | Large | Add Toggle Block-owned cards distinction, active contrast, and bounded pane style controls after TASK-256 shared style semantics |
 | TASK-292-02 | Toggle Block Motion and Pane Transition Contract | Medium | Medium | Add bounded fade/slide/no-motion options without weakening TASK-256 interactive runtime semantics |
@@ -295,16 +296,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-262-03 | Content List Pagination and View All Navigation | High | Very Large | Add bounded page navigation and View all/Load more behavior without public-write or arbitrary endpoint scope |
 | TASK-262-04 | Content List Layout Media Tags and Card Preview Controls | High | Large | Repair Content List-local layout truthfulness, image ratio controls, tag badges, CTA fallback, and card/variant previews |
 | TASK-262-05 | Content List Report Docs and Closure | Medium | Medium | Refresh report/docs/changelog/board and final validation for the TASK-262 family |
-| TASK-261 | Contact Widget Playwright Product Followups | High | Very Large | Contact-only follow-up family for `REPORT_CONTACT_WIDGET.md`, excluding TASK-256 shared-contract scope |
-| TASK-261-01 | Contact Header, Details Links, and Semantic Output | High | Large | Add Contact section headings, panel headings, semantic details, and safe tel/mailto output |
-| TASK-261-02 | Contact Form Field Metadata and Public Submission Bridge | High | Very Large | Add field names/ids/autocomplete/custom labels and route active submits through existing Forms runtime hardening |
-| TASK-261-02-01 | Contact Field Metadata and Accessible HTML | High | Large | Add Contact-owned field labels/placeholders, names, ids, autocomplete, and layout metadata |
-| TASK-261-02-02 | Contact Static Form State and No-GET Safety | High | Medium | Prevent presentational Contact forms from native GET submission before Forms binding is enabled |
-| TASK-261-02-03 | Contact Forms Runtime Bridge and Public-Write Hardening | High | Large | Bind Contact to existing Forms records with strict field mapping, runtime hydration, nonce, and route/security proof |
-| TASK-261-03 | Contact Editor Mode Parity and Minimal Variant UX | High | Large | Repair Contact Wizard/Visual/Advanced UX, Wizard hours, minimal form controls, hints, and normalization feedback |
-| TASK-261-04 | Contact Map Validation, Fallback, and Display Controls | Medium | Medium | Add map title/description, validation, height, fullscreen, and fallback behavior |
-| TASK-261-05 | Contact Layout, Social Links, and Normalizer Polish | Medium | Medium | Add max-width, padding, bounded social links, and explicit default enum normalization |
-| TASK-261-06 | Contact Report, Docs, Changelog, and Closure | Medium | Medium | Refresh Contact report evidence, docs, changelog, board, and final validation |
 | TASK-259 | Booking Calendar Widget Playwright Product Followups | High | Very Large | Widget-specific follow-up family for `REPORT_BOOKING_CALENDAR_WIDGET.md`, excluding TASK-256 shared-contract and TASK-258 Appointment Form scope |
 | TASK-259-01 | Booking Calendar Admin Preview Runtime Catalog Parity | High | Large | Hydrate admin canvas/editor preview with booking services/resources without persisting preview-only tokens |
 | TASK-259-02 | Booking Calendar Date Defaults, Range, and Past-Date Safety | High | Large | Add default/min/max date config and enforce public slots past-date policy |
@@ -351,6 +342,16 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-261 | Contact Widget Playwright Product Followups | High | Very Large | Done: Contact header/detail semantics, static-safe form behavior, Forms runtime bridge, editor parity, map/layout/social options, docs, and closure evidence are synchronized |
+| TASK-261-01 | Contact Header, Details Links, and Semantic Output | High | Large | Done: Contact exposes section/panel headings, semantic detail markup, bounded icons, and safe tel/mailto links |
+| TASK-261-02 | Contact Form Field Metadata and Public Submission Bridge | High | Very Large | Done: Contact field metadata, static no-GET safety, and Forms runtime bridge landed through the physical child leaves |
+| TASK-261-02-01 | Contact Field Metadata and Accessible HTML | High | Large | Done: Contact fields emit stable ids/names/autocomplete plus schema-owned labels, placeholders, and layout spans |
+| TASK-261-02-02 | Contact Static Form State and No-GET Safety | High | Medium | Done: presentational Contact forms no longer native-GET the current page and now show explicit static state copy |
+| TASK-261-02-03 | Contact Forms Runtime Bridge and Public-Write Hardening | High | Large | Done: Contact can bind to existing Forms records with strict type-safe mapping, public-only runtime gating, nonce hydration, and route/security proof |
+| TASK-261-03 | Contact Editor Mode Parity and Minimal Variant UX | High | Large | Done: Wizard/Visual/Advanced mode ownership is clearer, minimal-form UX is truthful, and diagnostics/normalization feedback are synchronized |
+| TASK-261-04 | Contact Map Validation, Fallback, and Display Controls | Medium | Medium | Done: Contact map title/description, height, validation, fullscreen, and fallback behavior are landed |
+| TASK-261-05 | Contact Layout, Social Links, and Normalizer Polish | Medium | Medium | Done: bounded width/padding/social controls and explicit default normalizer handling are synchronized |
+| TASK-261-06 | Contact Report, Docs, Changelog, and Closure | Medium | Medium | Done: Contact report status matrix, widget docs, board/changelog sync, and final validation evidence are recorded |
 | TASK-260 | Compare Timeline Widget Playwright Product Followups | High | Very Large | Done: Compare Timeline renderer, editor, schema, report, docs, and closure evidence are synchronized; W7/W8 now route to exact follow-up owners `TASK-299` and `TASK-300` |
 | TASK-260-01 | Compare Timeline Renderer Truthfulness and Accessibility | High | Large | Done: responsive grid truthfulness, guide-off behavior, static ARIA labels, fallback highlight fill, and overflow/min-height safety are covered |
 | TASK-260-02 | Compare Timeline Segment Editing and Highlight Model | High | Large | Done: both-track highlight targets, Wizard/Visual segment editing, preserved hidden-segment copy, range feedback, and friendly target labels are landed |

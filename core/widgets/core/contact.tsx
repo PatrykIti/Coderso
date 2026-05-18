@@ -2,7 +2,9 @@ import type { CSSProperties, ComponentType } from "react";
 
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
+import { getFormRuntimeClientScript } from "./formRuntimeScript";
 import { resolveWidgetLinkAttrs } from "./widgetSafeHref";
+import type { NormalizedFormField } from "../../services/forms/validation";
 
 export const contactFieldOptions = ["name", "email", "phone", "message"] as const;
 export const contactDetailOptions = ["phone", "email", "address", "hours"] as const;
@@ -51,6 +53,23 @@ export type ContactSocialLink = {
 export type ContactSubmissionSettings = {
   mode?: ContactSubmissionMode;
   staticMessage?: string;
+  formId?: string;
+  fieldMap?: Partial<Record<ContactFieldId, string>>;
+  successMessage?: string;
+  errorMessage?: string;
+};
+
+export type ContactResolvedRuntimeData = {
+  formId?: string;
+  formName?: string;
+  description?: string | null;
+  status?: string;
+  successMessage?: string | null;
+  successRedirectUrl?: string | null;
+  submissionAccess?: "public" | "internal";
+  submissionNonce?: string | null;
+  fields?: NormalizedFormField[];
+  error?: string;
 };
 
 export type ContactData = {
@@ -92,6 +111,7 @@ export type ContactData = {
     maxWidth?: ContactMaxWidth;
     paddingX?: ContactPaddingX;
   };
+  resolved?: ContactResolvedRuntimeData;
 };
 
 const contactFieldLabelMap: Record<ContactFieldId, string> = {
@@ -120,6 +140,13 @@ const contactFieldAutocompleteMap: Record<ContactFieldId, ContactFieldAutocomple
   email: "email",
   phone: "tel",
   message: "off",
+};
+
+export const contactRuntimeFieldTypeMap: Record<ContactFieldId, NormalizedFormField["type"]> = {
+  name: "text",
+  email: "email",
+  phone: "phone",
+  message: "textarea",
 };
 
 const contactDetailLabelMap: Record<ContactDetailKey, string> = {
@@ -329,6 +356,18 @@ const normalizeContactSubmission = (value: ContactSubmissionSettings | undefined
     value?.staticMessage,
     "This contact form is not connected yet."
   ),
+  formId: resolveString(value?.formId, ""),
+  fieldMap: {
+    name: resolveString(value?.fieldMap?.name, ""),
+    email: resolveString(value?.fieldMap?.email, ""),
+    phone: resolveString(value?.fieldMap?.phone, ""),
+    message: resolveString(value?.fieldMap?.message, ""),
+  },
+  successMessage: resolveNonEmptyString(value?.successMessage, "Thanks for your message."),
+  errorMessage: resolveNonEmptyString(
+    value?.errorMessage,
+    "Unable to send your message. Please try again."
+  ),
 });
 
 const resolveMapEmbedUrl = (value: string | undefined) => {
@@ -455,6 +494,19 @@ export const contactSchema = {
           properties: {
             mode: { enum: ["static", "forms-runtime"] },
             staticMessage: { type: "string" },
+            formId: { type: "string" },
+            fieldMap: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                name: { type: "string" },
+                email: { type: "string" },
+                phone: { type: "string" },
+                message: { type: "string" },
+              },
+            },
+            successMessage: { type: "string" },
+            errorMessage: { type: "string" },
           },
         },
       },
@@ -549,6 +601,37 @@ export const contactSchema = {
         paddingX: { enum: ["none", "sm", "md", "lg"] },
       },
     },
+    resolved: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        formId: { type: "string" },
+        formName: { type: "string" },
+        description: { type: ["string", "null"] },
+        status: { type: "string" },
+        successMessage: { type: ["string", "null"] },
+        successRedirectUrl: { type: ["string", "null"] },
+        submissionAccess: { enum: ["public", "internal"] },
+        submissionNonce: { type: ["string", "null"] },
+        error: { type: "string" },
+        fields: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              id: { type: "string" },
+              type: { type: "string" },
+              label: { type: "string" },
+              name: { type: "string" },
+              required: { type: "boolean" },
+              orderIndex: { type: "number" },
+              settings: { type: "object", additionalProperties: true },
+            },
+          },
+        },
+      },
+    },
   },
 } as const;
 
@@ -590,6 +673,15 @@ export const contactDefaults: ContactData = {
     submission: {
       mode: "static",
       staticMessage: "This contact form is not connected yet.",
+      formId: "",
+      fieldMap: {
+        name: "",
+        email: "",
+        phone: "",
+        message: "",
+      },
+      successMessage: "Thanks for your message.",
+      errorMessage: "Unable to send your message. Please try again.",
     },
   },
   contact: {
@@ -767,6 +859,7 @@ function ContactIcon({ icon }: ContactIconProps) {
 
 const phoneHrefPattern = /[^\d+]/g;
 const emailHrefPattern = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+const supportedRuntimeFieldTypes = new Set(["text", "email", "phone", "textarea"]);
 
 const toContactHref = (key: ContactDetailKey, value: string) => {
   const text = value.trim();
@@ -784,11 +877,38 @@ const toContactHref = (key: ContactDetailKey, value: string) => {
   return undefined;
 };
 
+type ContactRuntimeFieldMatch = {
+  contactField: ContactFieldId;
+  formField: NormalizedFormField;
+};
+
+const resolveContactRuntimeFields = (
+  contactFields: ContactFieldId[],
+  resolvedFields: NormalizedFormField[],
+  fieldMap: Partial<Record<ContactFieldId, string>> | undefined
+): ContactRuntimeFieldMatch[] => {
+  const byName = new Map(resolvedFields.map((field) => [field.name, field]));
+  const usedNames = new Set<string>();
+
+  return contactFields.flatMap((contactField) => {
+    const mappedName = resolveString(fieldMap?.[contactField], contactField).trim();
+    if (!mappedName) return [];
+    const formField = byName.get(mappedName);
+    if (!formField) return [];
+    if (usedNames.has(formField.name)) return [];
+    if (!supportedRuntimeFieldTypes.has(formField.type)) return [];
+    if (formField.type !== contactRuntimeFieldTypeMap[contactField]) return [];
+    usedNames.add(formField.name);
+    return [{ contactField, formField }];
+  });
+};
+
 type ContactFieldControlProps = {
   field: ContactFieldId;
   idBase: string;
   settings: ContactFieldSettings;
   required: boolean;
+  name?: string;
   twoColumn: boolean;
 };
 
@@ -797,9 +917,11 @@ function ContactFieldControl({
   idBase,
   settings,
   required,
+  name,
   twoColumn,
 }: ContactFieldControlProps) {
   const fieldId = `${idBase}-${field}`;
+  const fieldName = name ?? field;
   const wrapperClassName =
     twoColumn && settings.span !== "half" ? "md:col-span-2 space-y-1" : "space-y-1";
 
@@ -811,7 +933,7 @@ function ContactFieldControl({
       {field === "message" ? (
         <textarea
           id={fieldId}
-          name={field}
+          name={fieldName}
           required={required}
           rows={5}
           autoComplete={settings.autocomplete}
@@ -822,7 +944,7 @@ function ContactFieldControl({
       ) : (
         <input
           id={fieldId}
-          name={field}
+          name={fieldName}
           type={contactFieldInputTypeMap[field]}
           required={required}
           autoComplete={settings.autocomplete}
@@ -890,6 +1012,61 @@ export function ContactBlock({
   const showMap = Boolean(map.enabled) && mapUrlState.valid;
   const showForm = resolvedVariant !== "minimal";
   const twoColumnFields = form.fieldLayout === "two";
+  const resolved = normalizedData.resolved;
+  const visibleFields = form.fields ?? [];
+  const resolvedFields = resolved?.fields ?? [];
+  const hasConditionalRuntimeFields = resolvedFields.some((field) => {
+    const operator =
+      field.settings &&
+      typeof field.settings === "object" &&
+      "logic" in field.settings &&
+      field.settings.logic &&
+      typeof field.settings.logic === "object" &&
+      "operator" in field.settings.logic
+        ? field.settings.logic.operator
+        : undefined;
+    return typeof operator === "string" && operator !== "always";
+  });
+  const hasMultiStepRuntimeFields = resolvedFields.some((field) => {
+    const step =
+      field.settings && typeof field.settings === "object" && "step" in field.settings
+        ? field.settings.step
+        : undefined;
+    return typeof step === "number" && Number.isFinite(step) && step > 1;
+  });
+  const runtimeFields = resolveContactRuntimeFields(
+    visibleFields,
+    resolvedFields,
+    form.submission?.fieldMap
+  );
+  const canSubmit =
+    showForm &&
+    form.submission?.mode === "forms-runtime" &&
+    (form.submission?.formId ?? "").trim().length > 0 &&
+    resolved !== undefined &&
+    !resolved.error &&
+    resolved.submissionAccess === "public" &&
+    !hasConditionalRuntimeFields &&
+    !hasMultiStepRuntimeFields &&
+    runtimeFields.length > 0 &&
+    runtimeFields.length === visibleFields.length &&
+    runtimeFields.length === resolvedFields.length;
+  const formSuccessMessage = (
+    form.submission?.successMessage ||
+    resolved?.successMessage ||
+    contactDefaults.form?.submission?.successMessage ||
+    ""
+  ).trim();
+  const formErrorMessage = (
+    form.submission?.errorMessage ||
+    contactDefaults.form?.submission?.errorMessage ||
+    "Unable to send your message. Please try again."
+  ).trim();
+  const staticMessage = (
+    form.submission?.staticMessage ||
+    contactDefaults.form?.submission?.staticMessage ||
+    ""
+  ).trim();
 
   const detailsOrderClass = resolvedVariant === "form-right" ? "md:order-1" : "md:order-2";
   const formOrderClass = resolvedVariant === "form-right" ? "md:order-2" : "md:order-1";
@@ -1010,38 +1187,102 @@ export function ContactBlock({
               {form.title}
             </h3>
           ) : null}
-          <div
-            className={joinClasses("grid gap-4", twoColumnFields ? "md:grid-cols-2" : undefined)}
-          >
-            {(form.fields ?? []).map((field) => (
-              <ContactFieldControl
-                key={field}
-                field={field}
-                idBase={`${contactIdBase}-field`}
-                settings={
-                  form.fieldSettings?.[field] ?? normalizeContactFieldSettings(field, undefined)
-                }
-                required={requiredFields.has(field)}
-                twoColumn={twoColumnFields}
-              />
-            ))}
-          </div>
-          <div className="space-y-2">
-            <button
-              type="button"
-              data-form-submit="1"
-              aria-busy="false"
-              className="rounded-md bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-bg)]"
+          {canSubmit ? (
+            <form
+              method="post"
+              action={`/forms/${encodeURIComponent(form.submission?.formId ?? "")}/submissions`}
+              data-form-id={form.submission?.formId ?? ""}
+              data-nextless-form-runtime="1"
+              data-form-success-message={formSuccessMessage}
+              className="space-y-4"
+              aria-labelledby={formTitleId}
+              aria-label={formTitleId ? undefined : "Contact form"}
             >
-              {form.submitLabel}
-            </button>
-            {(form.submission?.mode ?? "static") === "static" &&
-            (form.submission?.staticMessage ?? "").trim().length > 0 ? (
-              <p className="text-xs text-[var(--color-text)]/65" role="status">
-                {form.submission?.staticMessage}
-              </p>
-            ) : null}
-          </div>
+              <div
+                className={joinClasses(
+                  "grid gap-4",
+                  twoColumnFields ? "md:grid-cols-2" : undefined
+                )}
+              >
+                {runtimeFields.map(({ contactField, formField }) => (
+                  <ContactFieldControl
+                    key={contactField}
+                    field={contactField}
+                    idBase={`${contactIdBase}-field`}
+                    settings={
+                      form.fieldSettings?.[contactField] ??
+                      normalizeContactFieldSettings(contactField, undefined)
+                    }
+                    required={formField.required}
+                    name={formField.name}
+                    twoColumn={twoColumnFields}
+                  />
+                ))}
+              </div>
+              {resolved?.submissionNonce ? (
+                <input type="hidden" name="__nl_form_nonce" value={resolved.submissionNonce} />
+              ) : null}
+              <div className="space-y-2">
+                <button
+                  type="submit"
+                  data-form-submit="1"
+                  aria-busy="false"
+                  className="rounded-md bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-bg)]"
+                >
+                  {form.submitLabel}
+                </button>
+                <p
+                  className="hidden text-xs text-[var(--color-text)]/65"
+                  data-form-embed-success="true"
+                >
+                  {formSuccessMessage}
+                </p>
+                <p className="hidden text-xs text-rose-600" data-form-embed-error="true">
+                  {formErrorMessage}
+                </p>
+              </div>
+            </form>
+          ) : (
+            <>
+              <div
+                className={joinClasses(
+                  "grid gap-4",
+                  twoColumnFields ? "md:grid-cols-2" : undefined
+                )}
+              >
+                {visibleFields.map((field) => (
+                  <ContactFieldControl
+                    key={field}
+                    field={field}
+                    idBase={`${contactIdBase}-field`}
+                    settings={
+                      form.fieldSettings?.[field] ?? normalizeContactFieldSettings(field, undefined)
+                    }
+                    required={requiredFields.has(field)}
+                    twoColumn={twoColumnFields}
+                  />
+                ))}
+              </div>
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  data-form-submit="1"
+                  aria-busy="false"
+                  className="rounded-md bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-bg)]"
+                >
+                  {form.submitLabel}
+                </button>
+                {staticMessage.length > 0 ? (
+                  <p className="text-xs text-[var(--color-text)]/65" role="status">
+                    {staticMessage}
+                  </p>
+                ) : null}
+              </div>
+            </>
+          )}
+          {canSubmit ? (
+            <script dangerouslySetInnerHTML={{ __html: getFormRuntimeClientScript() }} />
+          ) : null}
         </div>
       ) : null}
 

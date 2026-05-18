@@ -6,7 +6,7 @@
 **Category:** Widgets + Runtime Render + Accessibility + Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-261
-**Status:** To Do
+**Status:** Done (2026-05-18)
 
 ---
 
@@ -36,18 +36,18 @@ helpers, generic icon systems, or arbitrary rich text in contact details.
 
 ## Sub-Tasks
 
-- [ ] Extend `ContactData` with `title`, `description`,
+- [x] Extend `ContactData` with `title`, `description`,
   `form.title`, `contact.title`, and Contact detail display metadata.
-- [ ] Add fixed allowlists for contact detail labels and icon identifiers; do
+- [x] Add fixed allowlists for contact detail labels and icon identifiers; do
   not allow arbitrary SVG/HTML/icon script data in widget JSON.
-- [ ] Normalize missing legacy values to the current visible defaults so old
+- [x] Normalize missing legacy values to the current visible defaults so old
   Contact blocks render unchanged except for improved semantics.
-- [ ] Render section headings with stable IDs and connect the `<section>` via
+- [x] Render section headings with stable IDs and connect the `<section>` via
   `aria-labelledby` when a title exists; otherwise use a deterministic
   `aria-label`.
-- [ ] Render details as `<address>` containing a description list; use safe
+- [x] Render details as `<address>` containing a description list; use safe
   `tel:` and `mailto:` href generation for phone/email.
-- [ ] Update Contact Wizard/Visual editor controls only for fields introduced
+- [x] Update Contact Wizard/Visual editor controls only for fields introduced
   by this leaf.
 
 ## Files to Change

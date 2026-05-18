@@ -6,6 +6,8 @@ import { db } from "../../../core/db/client";
 import {
   contentEntries,
   contentTypes,
+  formFields,
+  forms,
   pageRevisions,
   pages,
   previewTokens,
@@ -13,6 +15,7 @@ import {
 } from "../../../core/db/schema";
 import { createEntry } from "../../../core/services/content/entryService";
 import { createContentType } from "../../../core/services/content/typeService";
+import { createForm, setFormFields } from "../../../core/services/forms/formsService";
 import { createPage, publishPage, updatePage } from "../../../core/services/pages/pageService";
 import { createPreviewToken } from "../../../core/services/pages/previewService";
 import {
@@ -24,6 +27,7 @@ import {
 import { clearSiteCache } from "../../../core/site/cache/siteCache";
 import { handlePublicRequest } from "../../../core/server/publicSite";
 import { resetRateLimitBuckets } from "../../../core/server/middleware/rateLimit";
+import { contactDefaults } from "../../../core/widgets/core/contact";
 
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
 const testIfDb = hasDb ? test : test.skip;
@@ -47,6 +51,7 @@ const trackedPageIds = new Set<string>();
 const trackedUserIds = new Set<string>();
 const trackedContentEntryIds = new Set<string>();
 const trackedContentTypeIds = new Set<string>();
+const trackedFormIds = new Set<string>();
 const settingSnapshots = new Map<string, { exists: boolean; value: unknown }>();
 
 const trackPage = (id: string | undefined | null) => {
@@ -63,6 +68,10 @@ const trackContentEntry = (id: string | undefined | null) => {
 
 const trackContentType = (id: string | undefined | null) => {
   if (id) trackedContentTypeIds.add(id);
+};
+
+const trackForm = (id: string | undefined | null) => {
+  if (id) trackedFormIds.add(id);
 };
 
 const rememberSetting = async (key: string) => {
@@ -95,6 +104,7 @@ const cleanupTrackedRows = async () => {
   const userIds = [...trackedUserIds];
   const contentEntryIds = [...trackedContentEntryIds];
   const contentTypeIds = [...trackedContentTypeIds];
+  const formIds = [...trackedFormIds];
 
   if (pageIds.length > 0) {
     await db.delete(previewTokens).where(inArray(previewTokens.targetId, pageIds));
@@ -111,6 +121,11 @@ const cleanupTrackedRows = async () => {
     await db.delete(contentTypes).where(inArray(contentTypes.id, contentTypeIds));
   }
 
+  if (formIds.length > 0) {
+    await db.delete(formFields).where(inArray(formFields.formId, formIds));
+    await db.delete(forms).where(inArray(forms.id, formIds));
+  }
+
   if (userIds.length > 0) {
     await db.delete(users).where(inArray(users.id, userIds));
   }
@@ -119,6 +134,7 @@ const cleanupTrackedRows = async () => {
   trackedUserIds.clear();
   trackedContentEntryIds.clear();
   trackedContentTypeIds.clear();
+  trackedFormIds.clear();
 };
 
 afterEach(async () => {
@@ -284,6 +300,98 @@ testIfDb(
     const brokenResponse = await requestPublicPath(publishedWithoutData.slug);
     expect(brokenResponse.status).toBe(404);
   }
+);
+
+testIfDbWithOptions(
+  "public page runtime hydrates Contact bindings through the shared Forms runtime",
+  async () => {
+    resetRateLimitBuckets();
+    await setTestSetting("site.cacheTtlSeconds", 0);
+    await setTestSetting("site.contentRoutes", []);
+
+    const previousNonceSecret = process.env.FORM_SUBMIT_NONCE_SECRET;
+    process.env.FORM_SUBMIT_NONCE_SECRET = previousNonceSecret || "contact-runtime-secret";
+    try {
+      const actor = await createActor();
+      const form = await createForm({
+        name: `Contact Runtime ${randomUUID()}`,
+        status: "published",
+        submissionAccess: "public",
+      });
+      trackForm(form?.id);
+      if (!form?.id) throw new Error("missing_test_form");
+
+      await setFormFields(form.id, [
+        { type: "text", label: "Full name", name: "full_name", required: true },
+        { type: "email", label: "Reply email", name: "reply_email", required: true },
+        { type: "textarea", label: "Message", name: "message_body", required: true },
+      ]);
+
+      const token = randomUUID().slice(0, 8);
+      const slug = `/contact-runtime-${token}`;
+      const data = {
+        blocks: [
+          {
+            id: "contact-runtime",
+            type: "contact",
+            variant: "form-left",
+            data: {
+              ...contactDefaults,
+              form: {
+                ...contactDefaults.form,
+                fields: ["name", "email", "message"],
+                submission: {
+                  ...contactDefaults.form?.submission,
+                  mode: "forms-runtime",
+                  formId: form.id,
+                  fieldMap: {
+                    name: "full_name",
+                    email: "reply_email",
+                    phone: "",
+                    message: "message_body",
+                  },
+                },
+              },
+            },
+          },
+        ],
+        settings: {
+          template: "landing",
+          showInNav: true,
+        },
+        seo: {
+          description: `Contact runtime ${token}`,
+        },
+      };
+
+      const page = await createPage({
+        title: `Contact Runtime ${token}`,
+        slug,
+        authorId: actor.id,
+        data,
+      });
+      trackPage(page?.id);
+      if (!page?.id) throw new Error("missing_test_page");
+
+      await publishPage(page.id, actor.id, data);
+
+      const response = await requestPublicPath(slug);
+      expect(response.status).toBe(200);
+      const html = await response.text();
+
+      expect(html).toContain(`action="/forms/${form.id}/submissions"`);
+      expect(html).toContain('data-nextless-form-runtime="1"');
+      expect(html).toContain('data-form-id="' + form.id + '"');
+      expect(html).toContain('name="full_name"');
+      expect(html).toContain('name="reply_email"');
+      expect(html).toContain('name="message_body"');
+      expect(html).toContain('name="__nl_form_nonce"');
+      expect(html).not.toContain("This contact form is not connected yet.");
+    } finally {
+      process.env.FORM_SUBMIT_NONCE_SECRET = previousNonceSecret;
+    }
+  },
+  { timeout: dbRuntimeTimeout }
 );
 
 testIfDb(

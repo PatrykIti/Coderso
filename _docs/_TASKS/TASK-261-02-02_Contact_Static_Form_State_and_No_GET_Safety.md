@@ -6,7 +6,7 @@
 **Category:** Widgets + Runtime Render + Admin UI + UX Safety
 **Estimated Effort:** Medium
 **Dependencies:** TASK-261-02-01
-**Status:** To Do
+**Status:** Done (2026-05-18)
 
 ---
 
@@ -40,16 +40,16 @@ This leaf does not own:
 
 ## Sub-Tasks
 
-- [ ] Add normalized Contact submission mode with static as the legacy/default
+- [x] Add normalized Contact submission mode with static as the legacy/default
   behavior.
-- [ ] Render static Contact with a non-form wrapper such as
+- [x] Render static Contact with a non-form wrapper such as
   `<div role="group">`, or otherwise guarantee that neither button click nor
   Enter key can trigger native GET in static SSR output.
-- [ ] Add inline/static status copy such as "Contact details only" or a
+- [x] Add inline/static status copy such as "Contact details only" or a
   configured presentational note where appropriate.
-- [ ] Add editor guidance so users know the form is presentational until a
+- [x] Add editor guidance so users know the form is presentational until a
   Forms runtime binding is selected by TASK-261-02-03.
-- [ ] Test static renderer output and minimal-variant interactions.
+- [x] Test static renderer output and minimal-variant interactions.
 
 ## Files to Change
 

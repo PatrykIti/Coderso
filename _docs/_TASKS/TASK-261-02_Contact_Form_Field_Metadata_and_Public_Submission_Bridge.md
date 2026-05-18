@@ -6,7 +6,7 @@
 **Category:** Widgets + Forms + Runtime Render + Public Write Security + Admin UI
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-261, TASK-261-01
-**Status:** To Do
+**Status:** Done (2026-05-18)
 
 ---
 
@@ -66,9 +66,9 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] TASK-261-02-01: Contact Field Metadata and Accessible HTML
-- [ ] TASK-261-02-02: Contact Static Form State and No-GET Safety
-- [ ] TASK-261-02-03: Contact Forms Runtime Bridge and Public-Write Hardening
+- [x] TASK-261-02-01: Contact Field Metadata and Accessible HTML
+- [x] TASK-261-02-02: Contact Static Form State and No-GET Safety
+- [x] TASK-261-02-03: Contact Forms Runtime Bridge and Public-Write Hardening
 
 ## Files to Change
 

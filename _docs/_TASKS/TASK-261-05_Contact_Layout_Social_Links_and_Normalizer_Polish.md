@@ -6,7 +6,7 @@
 **Category:** Widgets + Runtime Render + Admin UI + Schema
 **Estimated Effort:** Medium
 **Dependencies:** TASK-261, TASK-261-01, TASK-261-04
-**Status:** To Do
+**Status:** Done (2026-05-18)
 
 ---
 
@@ -41,20 +41,20 @@ This leaf does not own:
 
 ## Sub-Tasks
 
-- [ ] Add strict `maxWidth` and horizontal padding options to Contact style.
-- [ ] Render section width/padding from approved token maps instead of hardcoded
+- [x] Add strict `maxWidth` and horizontal padding options to Contact style.
+- [x] Render section width/padding from approved token maps instead of hardcoded
   `max-w-5xl px-4`.
-- [ ] Add a bounded `contact.social[]` model with platform enum, label, URL,
+- [x] Add a bounded `contact.social[]` model with platform enum, label, URL,
   and optional visibility/order fields.
-- [ ] Normalize social URLs through existing `normalizeWidgetSafeHref` behavior
+- [x] Normalize social URLs through existing `normalizeWidgetSafeHref` behavior
   for public web profile links via `normalizeContactSocialHref(value)`. Use
   `{ allowHttp: true }` so absolute `https://` profile links survive, but keep
   `mailto:`, `tel:`, relative, hash-only, protocol-relative, and scriptable
   schemes rejected for social rows. `tel:`/`mailto:` contact-detail links stay
   owned by TASK-261-01.
-- [ ] Add editor controls for max width, padding, and social links without
+- [x] Add editor controls for max width, padding, and social links without
   creating a broad social-link platform.
-- [ ] Update `resolveContactSpacing()` and `resolveContactBorderWidth()` to
+- [x] Update `resolveContactSpacing()` and `resolveContactBorderWidth()` to
   explicitly accept their default values while still falling back for invalid
   input.
 

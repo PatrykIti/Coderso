@@ -6,7 +6,7 @@
 **Category:** QA + Documentation + Changelog
 **Estimated Effort:** Medium
 **Dependencies:** TASK-261-01, TASK-261-02, TASK-261-03, TASK-261-04, TASK-261-05
-**Status:** To Do
+**Status:** Done (2026-05-18)
 
 ---
 
@@ -34,19 +34,43 @@ follow-up before marking the row deferred.
 
 ## Sub-Tasks
 
-- [ ] Review every Contact report row and mark it `fixed`, `deferred`,
+- [x] Review every Contact report row and mark it `fixed`, `deferred`,
   `not-reproducible`, `TASK-256 shared scope`, or `future physical task`.
-- [ ] Add textual admin preview and frontend runtime evidence for high/medium
+- [x] Add textual admin preview and frontend runtime evidence for high/medium
   rows; screenshot filenames may remain local labels, but do not commit PNGs.
-- [ ] Update `_docs/_WIDGETS/CONTACT.md` with final schema/editor/runtime
+- [x] Update `_docs/_WIDGETS/CONTACT.md` with final schema/editor/runtime
   behavior.
-- [ ] Update `_docs/WIDGETS.md` only if a general Contact listing or shared
+- [x] Update `_docs/WIDGETS.md` only if a general Contact listing or shared
   widget contract changed.
-- [ ] Update `_docs/WIDGET_PACK_MATRIX.md` only if Contact readiness changes.
-- [ ] Add changelog entry and update `_docs/_CHANGELOG/README.md`.
-- [ ] Move TASK-261 rows to Done in `_docs/_TASKS/README.md` and update
+- [x] Update `_docs/WIDGET_PACK_MATRIX.md` only if Contact readiness changes.
+- [x] Add changelog entry and update `_docs/_CHANGELOG/README.md`.
+- [x] Move TASK-261 rows to Done in `_docs/_TASKS/README.md` and update
   statistics.
-- [ ] Record final validation commands and any unavoidable blockers.
+- [x] Record final validation commands and any unavoidable blockers.
+
+## Final Closure Notes
+
+- `TASK-261` is now closed with Contact-local product/runtime work landed under
+  TASK-261-01 through TASK-261-05 and synchronized through this closure leaf.
+- Shared runtime busy/live-region/CAPTCHA behavior remains outside Contact owner
+  scope and stays routed to the existing Forms runtime/public-write owners.
+- A new shared runtime/cache drift was discovered during closure: cached public
+  HTML can reuse stale Forms `submissionNonce` values for nonce-bearing widgets.
+  This is now split into `TASK-301` instead of being patched locally inside
+  Contact.
+
+## Final Validation Evidence
+
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run test:vitest -- tests/vitest/widgets/contact.test.tsx tests/vitest/ui/contact-editor-wave.test.tsx tests/vitest/forms/formRuntimeResolver.test.ts tests/vitest/widgets/renderer.test.tsx`
+- `bun test tests/unit/widgets/validator.test.ts`
+- `set -a && source .env && set +a && bun test tests/integration/runtime/pages-runtime.test.ts tests/unit/forms/submissionService.test.ts`
+- `bun test tests/integration/routes/forms.test.ts`
+- `bun test tests/security/codersoSecurityGate.test.ts`
+- `bun run gates:coderso`
+- `bun run precommit`
+- `bun run scan:security:strict`
 
 ## Files to Change
 

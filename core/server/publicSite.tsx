@@ -55,6 +55,7 @@ import { normalizeEntryTeaserData, type EntryTeaserData } from "../widgets/core/
 import { type ProductGalleryData } from "../widgets/core/productGallery";
 import { type ProductCompareData } from "../widgets/core/productCompare";
 import { type ProductTableData } from "../widgets/core/productTable";
+import { normalizeContactData, type ContactData } from "../widgets/core/contact";
 import { normalizeFormEmbedData, type FormEmbedData } from "../widgets/core/formEmbed";
 import {
   normalizeBookingCalendarData,
@@ -379,6 +380,37 @@ const hydrateRuntimeBlock = async (
       data: {
         ...normalizedData,
         resolved,
+      },
+    };
+  }
+  if (block.type === "contact") {
+    const normalizedData = normalizeContactData(ensureRecord(block.data) as ContactData);
+    const submission = normalizedData.form?.submission;
+    const formId = submission?.mode === "forms-runtime" ? (submission.formId ?? "").trim() : "";
+    const resolvedData = formId
+      ? await resolveFormRuntimeData(formId, {
+          preview: options.preview,
+        })
+      : undefined;
+    const resolved = resolvedData
+      ? {
+          formId: resolvedData.formId,
+          formName: resolvedData.formName,
+          description: resolvedData.description,
+          status: resolvedData.status,
+          successMessage: resolvedData.successMessage,
+          successRedirectUrl: resolvedData.successRedirectUrl,
+          submissionAccess: resolvedData.submissionAccess,
+          submissionNonce: resolvedData.submissionNonce ?? null,
+          fields: resolvedData.fields,
+          ...(resolvedData.error ? { error: resolvedData.error } : {}),
+        }
+      : undefined;
+    nextBlock = {
+      ...block,
+      data: {
+        ...normalizedData,
+        ...(resolved ? { resolved } : {}),
       },
     };
   }

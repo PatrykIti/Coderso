@@ -6,7 +6,7 @@
 **Category:** Widgets + Runtime Render + Admin UI + Accessibility
 **Estimated Effort:** Medium
 **Dependencies:** TASK-261, TASK-261-03
-**Status:** To Do
+**Status:** Done (2026-05-18)
 
 ---
 
@@ -42,15 +42,15 @@ This leaf does not own:
 
 ## Sub-Tasks
 
-- [ ] Extend `ContactData.map` with title, description, height, and fallback
+- [x] Extend `ContactData.map` with title, description, height, and fallback
   copy fields using strict enum/string bounds.
-- [ ] Add `resolveContactMapHeight()` with approved values or a clamped custom
+- [x] Add `resolveContactMapHeight()` with approved values or a clamped custom
   pixel model if the repo has an existing local pattern.
-- [ ] Add inline editor validation for invalid map URLs while preserving the
+- [x] Add inline editor validation for invalid map URLs while preserving the
   current non-destructive storage behavior until the user edits or normalizes.
-- [ ] Render map title/description when present.
-- [ ] Add `allowFullScreen` and an accessible iframe title.
-- [ ] Render a fallback message when `map.enabled` is true but the URL is
+- [x] Render map title/description when present.
+- [x] Add `allowFullScreen` and an accessible iframe title.
+- [x] Render a fallback message when `map.enabled` is true but the URL is
   invalid/unavailable, without embedding unsafe raw URL text.
 
 ## Files to Change

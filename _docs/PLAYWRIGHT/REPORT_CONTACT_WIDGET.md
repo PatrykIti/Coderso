@@ -363,3 +363,91 @@ _Zrzut: `contact-13-mobile-375px.png`_
   Contact-specific code in this report. The final TASK-256 closure therefore
   treats Contact rows as classification-only and leaves widget-owned execution
   in `TASK-261`.
+
+## Status po TASK-261 (2026-05-18)
+
+### Final row classification
+
+#### Krytyczne
+
+| ID | Status | Owner | Notes |
+|---|---|---|---|
+| C1 | fixed | TASK-261-01 | Contact now exposes section title/description in the widget payload and render contract. |
+| C2 | fixed | TASK-261-01 | Phone/email now render as safe `tel:` / `mailto:` links when values are valid. |
+| C3 | fixed | TASK-261-02-01 | Contact fields now emit stable `id`, `name`, explicit labels, and metadata-backed placeholders. |
+| C4 | fixed | TASK-261-02-02 + TASK-261-02-03 | Static Contact no longer native-GETs the current page; valid bindings reuse the Forms runtime bridge through `POST /forms/:id/submissions`. |
+| C5 | fixed | TASK-261-03 | Wizard now exposes `hours` with the same Contact-owned normalization path as the other detail fields. |
+
+#### Ważne
+
+| ID | Status | Owner | Notes |
+|---|---|---|---|
+| W1 | fixed | TASK-261-01 | Form and contact panels now accept local headings (`form.title`, `contact.title`). |
+| W2 | fixed | TASK-261-02-01 | Field labels are schema-owned per field through `form.fieldSettings`. |
+| W3 | fixed | TASK-261-02-01 | Placeholders are now configurable per field through `form.fieldSettings`. |
+| W4 | fixed | TASK-261-01 | Contact details now render bounded icon metadata instead of text-only output. |
+| W5 | fixed | TASK-261-01 | Contact detail labels are configurable through Contact-owned detail metadata. |
+| W6 | fixed | TASK-261-05 | Section width is now controlled through bounded `style.maxWidth` tokens. |
+| W7 | fixed | TASK-261-05 | Horizontal section padding is now controlled through bounded `style.paddingX` tokens. |
+| W8 | future physical task | TASK-261-03 classification | Current button-ordering path remains accepted; drag-and-drop was intentionally left out of TASK-261. |
+| W9 | fixed | TASK-261-04 | Map section now supports title and description fields. |
+| W10 | fixed | TASK-261-04 | Map iframe now renders `allowFullScreen`. |
+| W11 | fixed | TASK-261-03 | Wizard submit label now lives in a clearer Contact form section. |
+| W12 | fixed | TASK-261-02-01 | Contact now supports one/two-column field layout and per-field span metadata. |
+| W13 | fixed | TASK-261-05 | Contact now supports bounded social link rows with safe URL normalization. |
+| W14 | fixed | TASK-261-04 | Editor now shows inline map URL validation/help while preserving non-destructive payload storage. |
+| W15 | fixed | TASK-261-04 | Map height is now a bounded Contact-owned option. |
+
+#### UX
+
+| ID | Status | Owner | Notes |
+|---|---|---|---|
+| U1 | fixed | TASK-261-03 | Minimal variant now hides form controls and replaces them with user-facing copy. |
+| U2 | TASK-256 shared scope | TASK-256-02 | Shared clear/token repair owns `borderColor` clear semantics; Contact only consumes the shared result. |
+| U3 | fixed | TASK-261-03 | Wizard now uses Contact-local variant cards instead of a plain select. |
+| U4 | fixed | TASK-261-03 | Advanced now carries normalization feedback and runtime diagnostics instead of a nearly empty shell. |
+| U5 | fixed | TASK-261-03 | Address/map/spacing/submission helper copy now clarifies Contact-specific authoring behavior. |
+| U6 | fixed | TASK-261-03 | Required fields and field order are now separated into distinct controls. |
+| U7 | fixed | TASK-261-03 | Normalization now reports whether the payload changed. |
+| U8 | fixed | TASK-261-03 | Minimal-form copy is now user-facing and explicit instead of technical variant wording. |
+| U9 | fixed | TASK-261-03 | Spacing density now includes Contact-specific helper text. |
+| U10 | future physical task | TASK-261-03 classification | Collapsible editor sections remain optional and depend on a shared primitive; they were not required for TASK-261 closure. |
+
+#### Renderer / accessibility
+
+| ID | Status | Owner | Notes |
+|---|---|---|---|
+| R1 | fixed | TASK-261-01 | Section now exposes stable accessible names through `aria-labelledby` / fallback `aria-label`. |
+| R2 | fixed | TASK-261-02-01 | Form shell now has a stable accessible name. |
+| R3 | fixed | TASK-261-02-01 | Inputs/textarea now emit explicit `id` and `name`. |
+| R4 | fixed | TASK-261-02-01 | Contact fields now emit bounded `autocomplete` metadata. |
+| R5 | fixed | TASK-261-01 | Contact details now use semantic `<address>` output. |
+| R6 | fixed | TASK-261-01 | Label/value pairs now render through `<dl>/<dt>/<dd>`. |
+| R7 | fixed | TASK-261-01 | Details panel now has a stable accessible name. |
+| R8 | fixed | TASK-261-04 | Map iframe now supports fullscreen behavior. |
+| R9 | fixed | TASK-261-04 | Invalid/unavailable maps now render fallback copy instead of an empty frame. |
+| R10 | fixed | TASK-261-02 | Contact now emits `data-form-submit="1"` and idle `aria-busy="false"` for static/runtime compatibility; broader shared busy/live-region/CAPTCHA runtime behavior remains outside Contact owner scope. |
+| R11 | fixed | TASK-261-05 | `resolveContactSpacing()` now explicitly accepts `md`. |
+| R12 | fixed | TASK-261-05 | `resolveContactBorderWidth()` now explicitly accepts `1`. |
+
+### Validation evidence
+
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run test:vitest -- tests/vitest/widgets/contact.test.tsx tests/vitest/ui/contact-editor-wave.test.tsx tests/vitest/forms/formRuntimeResolver.test.ts tests/vitest/widgets/renderer.test.tsx`
+- `bun test tests/unit/widgets/validator.test.ts`
+- `set -a && source .env && set +a && bun test tests/integration/runtime/pages-runtime.test.ts tests/unit/forms/submissionService.test.ts`
+- `bun test tests/integration/routes/forms.test.ts`
+- `bun test tests/security/codersoSecurityGate.test.ts`
+- `bun run gates:coderso`
+- `bun run precommit`
+- `bun run scan:security:strict`
+
+### Shared follow-ups kept out of TASK-261
+
+- Shared busy/live-region/CAPTCHA runtime projection remains routed to
+  `TASK-269-05` and the existing Forms/public-write owners; TASK-261 only lands
+  Contact-local marker compatibility.
+- Public HTML cache freshness for nonce-bearing Forms runtime widgets is a new
+  shared drift discovered during TASK-261 closure and now routes to `TASK-301`
+  instead of being patched locally inside Contact.

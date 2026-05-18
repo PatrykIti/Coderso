@@ -6,7 +6,7 @@
 **Category:** Widgets + Forms + Runtime Render + Public Write Security
 **Estimated Effort:** Large
 **Dependencies:** TASK-261-02-01, TASK-261-02-02
-**Status:** To Do
+**Status:** Done (2026-05-18)
 
 ---
 
@@ -57,32 +57,32 @@ This leaf does not own:
 
 ## Sub-Tasks
 
-- [ ] Add `form.submission.formId` and normalize it as an optional Forms record
+- [x] Add `form.submission.formId` and normalize it as an optional Forms record
   reference, not an endpoint URL.
-- [ ] Add `form.submission.fieldMap` from `ContactFieldId` to resolved
+- [x] Add `form.submission.fieldMap` from `ContactFieldId` to resolved
   `NormalizedFormField.name`, preserve Contact-owned labels/placeholders/
   autocomplete/span metadata from `TASK-261-02-01`, reject mappings to
   missing/duplicate/incompatible Forms fields, and fall back to the static-safe
   state when the selected Forms field set exceeds Contact's supported subset.
-- [ ] Add admin picker/copy for selecting a Forms record; respect existing
+- [x] Add admin picker/copy for selecting a Forms record; respect existing
   Forms read permissions and cached client patterns, and make public-vs-internal
   compatibility explicit.
-- [ ] Hydrate Contact public render data from `resolveFormRuntimeData()` in
+- [x] Hydrate Contact public render data from `resolveFormRuntimeData()` in
   `core/server/publicSite.tsx`.
-- [ ] Add an explicit Contact schema/type allowance for the render-only
+- [x] Add an explicit Contact schema/type allowance for the render-only
   `resolved` key. Validator tests must prove hydrated Contact data is accepted
   while unrelated unknown fields still reject.
-- [ ] Render `method="post"`, `action="/forms/:id/submissions"`,
+- [x] Render `method="post"`, `action="/forms/:id/submissions"`,
   `data-nextless-form-runtime="1"`, hidden `__nl_form_nonce`, status nodes, and
   `data-form-submit="1"` only when the binding is valid,
   `resolved.submissionAccess === "public"`, runtime data is available, and the
   mapped fields remain compatible with Contact's supported subset.
-- [ ] Reuse `getFormRuntimeClientScript()` and the existing
+- [x] Reuse `getFormRuntimeClientScript()` and the existing
   `data-form-embed-success` / `data-form-embed-error` markers without a
   Contact-only runtime script. If the generic selector/status/busy behavior is
   still missing, link `TASK-269-05` or a future Forms/public-write task instead
   of patching that shared runtime locally here.
-- [ ] Add tests for missing, unpublished, public, and internal Forms bindings.
+- [x] Add tests for missing, unpublished, public, and internal Forms bindings.
 
 ## Files to Change
 

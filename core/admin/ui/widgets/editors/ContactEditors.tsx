@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,11 +13,14 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { getFormDetailCached, type FormDetail } from "@/services/formsClient";
+import { useForms } from "@/ui/forms/hooks/useForms";
 
 import {
   contactDefaults,
   contactDetailOptions,
   contactFieldOptions,
+  contactRuntimeFieldTypeMap,
   getContactDiagnosticsSnapshot,
   getContactMapUrlState,
   normalizeContactData,
@@ -135,6 +138,14 @@ const socialPlatformOptions: Array<{ id: ContactSocialPlatform; label: string }>
   { id: "custom", label: "Custom" },
 ];
 
+const submissionModeOptions = [
+  { id: "static", label: "Static" },
+  { id: "forms-runtime", label: "Forms runtime" },
+] as const;
+
+const NO_FORM_VALUE = "__contact-no-form__";
+const supportedRuntimeFieldTypes = new Set<string>(Object.values(contactRuntimeFieldTypeMap));
+
 const variantOptions: Array<{
   id: ContactVariantId;
   label: string;
@@ -166,6 +177,57 @@ type StyleData = NonNullable<ContactData["style"]>;
 
 const resolvePickerColor = (value: string | undefined, fallback: string) =>
   value && hexColorPattern.test(value) ? value : fallback;
+
+function useContactFormDetail(formId: string | undefined) {
+  const trimmedFormId = formId?.trim() ?? "";
+  const [resolved, setResolved] = useState<{
+    formId: string;
+    detail: FormDetail | null;
+    error: string | null;
+  }>({
+    formId: "",
+    detail: null,
+    error: null,
+  });
+
+  useEffect(() => {
+    if (!trimmedFormId) return undefined;
+
+    let active = true;
+
+    getFormDetailCached(trimmedFormId, { force: true })
+      .then((nextDetail) => {
+        if (!active) return;
+        setResolved({
+          formId: trimmedFormId,
+          detail: nextDetail,
+          error: null,
+        });
+      })
+      .catch((err: unknown) => {
+        if (!active) return;
+        setResolved({
+          formId: trimmedFormId,
+          detail: null,
+          error: err instanceof Error && err.message ? err.message : "Failed to load form fields.",
+        });
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [trimmedFormId]);
+
+  if (!trimmedFormId) {
+    return { detail: null, isLoading: false, error: null };
+  }
+
+  return {
+    detail: resolved.formId === trimmedFormId ? resolved.detail : null,
+    isLoading: resolved.formId !== trimmedFormId,
+    error: resolved.formId === trimmedFormId ? resolved.error : null,
+  };
+}
 
 function EditorSection({
   id,
@@ -351,6 +413,27 @@ function updateSubmission(
       submission: {
         ...current.form?.submission,
         ...patch,
+      },
+    },
+  }));
+}
+
+function updateSubmissionFieldMap(
+  value: ContactData,
+  onChange: (next: ContactData) => void,
+  field: ContactFieldId,
+  nextName: string
+) {
+  updateValue(value, onChange, (current) => ({
+    ...current,
+    form: {
+      ...current.form,
+      submission: {
+        ...current.form?.submission,
+        fieldMap: {
+          ...current.form?.submission?.fieldMap,
+          [field]: nextName,
+        },
       },
     },
   }));
@@ -692,6 +775,244 @@ function SectionHeaderControls({
   );
 }
 
+function SubmissionRuntimeSection({
+  value,
+  onChange,
+}: {
+  value: ContactData;
+  onChange: (next: ContactData) => void;
+}) {
+  const normalized = normalizeContactData(value);
+  const submission = normalized.form?.submission;
+  const selectedFields = normalized.form?.fields ?? [];
+  const { items: forms, isLoading } = useForms();
+  const normalizedFormId = submission?.formId?.trim() ?? "";
+  const selectedForm = forms.find((form) => form.id === normalizedFormId) ?? null;
+  const {
+    detail,
+    isLoading: detailLoading,
+    error,
+  } = useContactFormDetail(selectedForm?.id ?? undefined);
+  const resolvedFields = detail?.fields ?? [];
+  const compatibleFieldsByContactField = Object.fromEntries(
+    contactFieldOptions.map((field) => [
+      field,
+      resolvedFields
+        .filter((runtimeField) => runtimeField.type === contactRuntimeFieldTypeMap[field])
+        .sort((left, right) => left.orderIndex - right.orderIndex),
+    ])
+  ) as Record<ContactFieldId, NonNullable<FormDetail["fields"]>>;
+  const hasUnsupportedRuntimeFields = resolvedFields.some(
+    (field) => !supportedRuntimeFieldTypes.has(field.type)
+  );
+  const hasConditionalRuntimeFields = resolvedFields.some((field) => {
+    const logic = field.settings?.logic;
+    const operator =
+      logic && typeof logic === "object" && "operator" in logic ? logic.operator : undefined;
+    return typeof operator === "string" && operator !== "always";
+  });
+  const hasMultiStepRuntimeFields = resolvedFields.some(
+    (field) =>
+      typeof field.settings?.step === "number" &&
+      Number.isFinite(field.settings.step) &&
+      field.settings.step > 1
+  );
+  const hasExactFieldCoverage =
+    resolvedFields.length > 0 &&
+    !hasUnsupportedRuntimeFields &&
+    !hasConditionalRuntimeFields &&
+    !hasMultiStepRuntimeFields &&
+    resolvedFields.length === selectedFields.length;
+
+  return (
+    <EditorSection
+      title="Submission runtime binding"
+      description="Keep Contact static by default or bind it to an existing public-compatible Form."
+    >
+      <div className="space-y-2">
+        <p className="text-sm font-medium">Runtime mode</p>
+        <Select
+          value={submission?.mode ?? "static"}
+          onValueChange={(next) =>
+            updateSubmission(value, onChange, {
+              mode: next as NonNullable<FormData["submission"]>["mode"],
+            })
+          }
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select runtime mode" />
+          </SelectTrigger>
+          <SelectContent>
+            {submissionModeOptions.map((option) => (
+              <SelectItem key={option.id} value={option.id}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-sm font-medium">Static status note</p>
+        <Textarea
+          rows={2}
+          value={submission?.staticMessage ?? ""}
+          onChange={(event) =>
+            updateSubmission(value, onChange, { staticMessage: event.target.value })
+          }
+          placeholder="This contact form is not connected yet."
+        />
+      </div>
+
+      {submission?.mode === "forms-runtime" ? (
+        <>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Bound form</p>
+            <Select
+              value={selectedForm ? selectedForm.id : NO_FORM_VALUE}
+              onValueChange={(formId) =>
+                updateSubmission(value, onChange, {
+                  formId: formId === NO_FORM_VALUE ? "" : formId,
+                })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={isLoading ? "Loading forms..." : "Select form"} />
+              </SelectTrigger>
+              <SelectContent>
+                {selectedForm === null ? (
+                  <SelectItem value={NO_FORM_VALUE} disabled>
+                    {forms.length === 0
+                      ? isLoading
+                        ? "Loading forms..."
+                        : "No forms found"
+                      : "Select form"}
+                  </SelectItem>
+                ) : null}
+                {forms.map((form) => (
+                  <SelectItem key={form.id} value={form.id}>
+                    <div className="flex items-center gap-2">
+                      <span>{form.name}</span>
+                      <Badge variant={form.status === "published" ? "default" : "outline"}>
+                        {form.status}
+                      </Badge>
+                      {form.submissionAccess === "internal" ? (
+                        <Badge variant="outline">Internal</Badge>
+                      ) : null}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {selectedForm?.submissionAccess === "internal" ? (
+            <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+              Internal submissions require an authenticated admin session or an API key with the
+              <span className="font-semibold"> forms.submit </span>scope. Contact should stay static
+              on public pages for this binding.
+            </div>
+          ) : null}
+
+          {detailLoading ? (
+            <p className="text-xs text-muted-foreground">Loading form fields...</p>
+          ) : null}
+          {error ? <p className="text-xs text-destructive">{error}</p> : null}
+          {selectedForm && !detailLoading && resolvedFields.length > 0 && !hasExactFieldCoverage ? (
+            <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+              Contact can submit only when the bound Form uses the same field count as the visible
+              Contact form, every field keeps its matching Contact type, and the Form does not
+              depend on conditional logic or extra steps. This binding will stay static on public
+              pages until the field set matches.
+            </div>
+          ) : null}
+
+          {selectedForm ? (
+            <div className="space-y-3 rounded-lg border p-3">
+              <div className="space-y-1">
+                <p className="text-sm font-medium">Success message override</p>
+                <Input
+                  value={submission?.successMessage ?? ""}
+                  onChange={(event) =>
+                    updateSubmission(value, onChange, { successMessage: event.target.value })
+                  }
+                  placeholder="Thanks for your message."
+                />
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-medium">Error message</p>
+                <Input
+                  value={submission?.errorMessage ?? ""}
+                  onChange={(event) =>
+                    updateSubmission(value, onChange, { errorMessage: event.target.value })
+                  }
+                  placeholder="Unable to send your message. Please try again."
+                />
+              </div>
+            </div>
+          ) : null}
+
+          {resolvedFields.length > 0 ? (
+            <div className="space-y-3">
+              <p className="text-sm font-medium">Field mapping</p>
+              <p className="text-xs text-muted-foreground">
+                Map each visible Contact field to a compatible Form field. Contact keeps its own
+                labels, placeholders, and layout while runtime submission uses the mapped Form field
+                names.
+              </p>
+              {selectedFields.map((field) => {
+                const compatibleFields = compatibleFieldsByContactField[field];
+                const preferredValue =
+                  submission?.fieldMap?.[field]?.trim() ||
+                  (compatibleFields.some((candidate) => candidate.name === field) ? field : "");
+                const selectValue = preferredValue.length > 0 ? preferredValue : NO_FORM_VALUE;
+
+                return (
+                  <div key={field} className="space-y-2 rounded-lg border p-3">
+                    <p className="text-sm font-medium">{fieldLabels[field]}</p>
+                    <Select
+                      value={selectValue}
+                      onValueChange={(next) =>
+                        updateSubmissionFieldMap(
+                          value,
+                          onChange,
+                          field,
+                          next === NO_FORM_VALUE ? "" : next
+                        )
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select form field" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {selectValue === NO_FORM_VALUE ? (
+                          <SelectItem value={NO_FORM_VALUE} disabled>
+                            Select form field
+                          </SelectItem>
+                        ) : null}
+                        {compatibleFields.map((runtimeField) => (
+                          <SelectItem key={runtimeField.id} value={runtimeField.name}>
+                            {runtimeField.label} ({runtimeField.name})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                );
+              })}
+            </div>
+          ) : selectedForm ? (
+            <p className="text-xs text-muted-foreground">
+              No compatible text, email, phone, or textarea fields are available for Contact mapping
+              yet.
+            </p>
+          ) : null}
+        </>
+      ) : null}
+    </EditorSection>
+  );
+}
+
 function SocialLinksEditor({
   value,
   onChange,
@@ -959,20 +1280,6 @@ export function ContactVisualEditor({
                 placeholder="Send message"
               />
             </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Static status note</p>
-              <Textarea
-                rows={2}
-                value={normalized.form?.submission?.staticMessage ?? ""}
-                onChange={(event) =>
-                  updateSubmission(value, onChange, { staticMessage: event.target.value })
-                }
-                placeholder="This contact form is not connected yet."
-              />
-              <p className="text-xs text-muted-foreground">
-                Keep the message honest until the Contact form is bound to a real submit runtime.
-              </p>
-            </div>
           </>
         ) : (
           <div className="rounded-lg border border-dashed bg-muted/20 p-3 text-xs text-muted-foreground">
@@ -1115,6 +1422,8 @@ export function ContactVisualEditor({
           })}
         </EditorSection>
       ) : null}
+
+      {showFormControls ? <SubmissionRuntimeSection value={value} onChange={onChange} /> : null}
 
       <EditorSection
         title="Contact details and business info"

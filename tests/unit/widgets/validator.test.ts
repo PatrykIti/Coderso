@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
 
+import { contactDefaults, createContactWidget } from "../../../core/widgets/core/contact";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { clearWidgetValidators, normalizeWidgetBlock } from "../../../core/widgets/validator";
 import type { WidgetDefinition, WidgetBlock } from "../../../core/widgets/types";
@@ -38,9 +39,7 @@ const repeatableDefinition: WidgetDefinition<{ headline: string }> = {
   audience: "advanced",
   module: "layout",
   variants: [{ id: "equal", label: "Equal" }],
-  slots: [
-    { id: "column", label: "Column", kind: "repeatable", minItems: 2, maxItems: 3 },
-  ],
+  slots: [{ id: "column", label: "Column", kind: "repeatable", minItems: 2, maxItems: 3 }],
   schema: {
     type: "object",
     required: ["headline"],
@@ -116,6 +115,86 @@ test("normalizeWidgetBlock maps legacy children into default slot", () => {
   const normalized = normalizeWidgetBlock(block);
   expect(normalized.slots?.default).toHaveLength(1);
   expect(normalized.children).toBeUndefined();
+});
+
+test("normalizeWidgetBlock accepts Contact runtime hydration data but rejects unknown resolved keys", () => {
+  registerWidget(
+    createContactWidget({
+      wizard: Dummy,
+      visual: Dummy,
+      advanced: Dummy,
+    })
+  );
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "contact-runtime",
+      type: "contact",
+      variant: "form-left",
+      data: {
+        ...contactDefaults,
+        resolved: {
+          formId: "form-public",
+          formName: "Support",
+          status: "published",
+          submissionAccess: "public",
+          submissionNonce: "signed-nonce",
+          fields: [
+            {
+              id: "field-1",
+              type: "text",
+              label: "Full name",
+              name: "full_name",
+              required: true,
+              orderIndex: 0,
+              settings: {},
+            },
+          ],
+        },
+      },
+    })
+  ).not.toThrow();
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "contact-runtime-bad",
+      type: "contact",
+      variant: "form-left",
+      data: {
+        ...contactDefaults,
+        resolved: {
+          formId: "form-public",
+          extra: "nope",
+        },
+      } as never,
+    })
+  ).toThrow("widget_schema_invalid");
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "contact-runtime-field-bad",
+      type: "contact",
+      variant: "form-left",
+      data: {
+        ...contactDefaults,
+        resolved: {
+          formId: "form-public",
+          fields: [
+            {
+              id: "field-1",
+              type: "text",
+              label: "Full name",
+              name: "full_name",
+              required: true,
+              orderIndex: 0,
+              settings: {},
+              extra: "nope",
+            },
+          ],
+        },
+      } as never,
+    })
+  ).toThrow("widget_schema_invalid");
 });
 
 test("normalizeWidgetBlock enforces repeatable minimum slots", () => {

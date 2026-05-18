@@ -6,7 +6,7 @@
 **Category:** Widgets + Runtime Render + Accessibility + Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-261-02
-**Status:** To Do
+**Status:** Done (2026-05-18)
 
 ---
 
@@ -42,13 +42,13 @@ This leaf does not own:
 
 ## Sub-Tasks
 
-- [ ] Extend Contact schema/defaults/normalizer with bounded field metadata.
-- [ ] Render `id`, `name`, `autocomplete`, explicit labels, placeholders, and
+- [x] Extend Contact schema/defaults/normalizer with bounded field metadata.
+- [x] Render `id`, `name`, `autocomplete`, explicit labels, placeholders, and
   field grid spans from normalized metadata.
-- [ ] Keep names restricted to existing `ContactFieldId` values unless a later
+- [x] Keep names restricted to existing `ContactFieldId` values unless a later
   Forms bridge maps to Forms-owned field names.
-- [ ] Add Contact editor controls for label/placeholder/autocomplete/span.
-- [ ] Add renderer/editor tests for metadata, legacy defaults, and unknown key
+- [x] Add Contact editor controls for label/placeholder/autocomplete/span.
+- [x] Add renderer/editor tests for metadata, legacy defaults, and unknown key
   rejection.
 
 ## Files to Change

@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Editor UX
 **Estimated Effort:** Large
 **Dependencies:** TASK-261, TASK-261-01, TASK-261-02
-**Status:** To Do
+**Status:** Done (2026-05-18)
 
 ---
 
@@ -45,27 +45,27 @@ TASK-256-02.
 
 ## Sub-Tasks
 
-- [ ] Add `hours` to Contact Wizard and keep it normalized through existing
+- [x] Add `hours` to Contact Wizard and keep it normalized through existing
   contact details ownership.
-- [ ] Replace or augment the Wizard variant select with Contact variant cards
+- [x] Replace or augment the Wizard variant select with Contact variant cards
   that match Visual behavior and keep `onVariantChange` untouched.
-- [ ] Move Wizard submit label into a clear Contact form section with the field
+- [x] Move Wizard submit label into a clear Contact form section with the field
   toggles it affects.
-- [ ] Hide the Visual "Form fields and required rules" section for `minimal`,
+- [x] Hide the Visual "Form fields and required rules" section for `minimal`,
   replacing it with user-facing copy that explains the variant has no form.
-- [ ] Split RequiredFieldList into separate "Required fields" and "Field order"
+- [x] Split RequiredFieldList into separate "Required fields" and "Field order"
   affordances or make the combined purpose explicit with copy and layout.
-- [ ] Record W8 as current button-ordering behavior with future drag-and-drop
+- [x] Record W8 as current button-ordering behavior with future drag-and-drop
   deferral; do not implement drag-and-drop in this leaf unless a separate
   physical task owns it.
-- [ ] Add helper text for address multiline behavior, map URL requirements,
+- [x] Add helper text for address multiline behavior, map URL requirements,
   spacing density, static/submit-capable states, and field metadata introduced
   by TASK-261-02.
-- [ ] Add inline feedback after "Apply normalization now" showing whether
+- [x] Add inline feedback after "Apply normalization now" showing whether
   normalization changed the payload.
-- [ ] Keep Advanced technical; add only Contact-specific diagnostics/reset
+- [x] Keep Advanced technical; add only Contact-specific diagnostics/reset
   actions that map to actual schema fields.
-- [ ] Redact transient `resolved` nonce/token-like runtime values from the
+- [x] Redact transient `resolved` nonce/token-like runtime values from the
   Advanced diagnostics snapshot once `TASK-261-02-03` hydrates Contact runtime
   data.
 

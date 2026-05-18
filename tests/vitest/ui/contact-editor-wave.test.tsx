@@ -8,6 +8,50 @@ import { contactDefaults, type ContactData } from "../../../core/widgets/core/co
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
+const formsRuntimeMockState = vi.hoisted(() => ({
+  forms: [] as Array<{
+    id: string;
+    name: string;
+    slug: string;
+    status: "draft" | "published" | "archived";
+    description: string | null;
+    successMessage: string | null;
+    successRedirectUrl: string | null;
+    submissionAccess: "public" | "internal";
+    settings: Record<string, unknown>;
+    createdAt: string;
+    updatedAt: string;
+  }>,
+  details: new Map<
+    string,
+    {
+      form: {
+        id: string;
+        name: string;
+        slug: string;
+        status: "draft" | "published" | "archived";
+        description: string | null;
+        successMessage: string | null;
+        successRedirectUrl: string | null;
+        submissionAccess: "public" | "internal";
+        settings: Record<string, unknown>;
+        createdAt: string;
+        updatedAt: string;
+      };
+      fields: Array<{
+        id: string;
+        type: string;
+        label: string;
+        name: string;
+        required: boolean;
+        settings: Record<string, unknown>;
+        orderIndex: number;
+      }>;
+    }
+  >(),
+  errors: new Map<string, Error>(),
+}));
+
 vi.mock("@/components/ui/badge", () => ({
   Badge: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
 }));
@@ -165,6 +209,23 @@ vi.mock("@/components/ui/textarea", () => ({
   ),
 }));
 
+vi.mock("@/ui/forms/hooks/useForms", () => ({
+  useForms: () => ({
+    items: formsRuntimeMockState.forms,
+    isLoading: false,
+    error: null,
+    refresh: async () => undefined,
+  }),
+}));
+
+vi.mock("@/services/formsClient", () => ({
+  getFormDetailCached: vi.fn(async (id: string) => {
+    const error = formsRuntimeMockState.errors.get(id);
+    if (error) throw error;
+    return formsRuntimeMockState.details.get(id) ?? null;
+  }),
+}));
+
 vi.mock("@/lib/utils", () => ({
   cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
 }));
@@ -262,8 +323,17 @@ const findSection = (container: ParentNode, title: string) =>
     element.textContent?.includes(title)
   );
 
+const flushEffects = async () => {
+  await React.act(async () => {
+    await Promise.resolve();
+  });
+};
+
 afterEach(() => {
   document.body.innerHTML = "";
+  formsRuntimeMockState.forms = [];
+  formsRuntimeMockState.details.clear();
+  formsRuntimeMockState.errors.clear();
   vi.restoreAllMocks();
 });
 
@@ -517,6 +587,222 @@ test("ContactAdvancedEditor reports normalization results and redacts diagnostic
       columns: "two",
       borderWidth: "1",
     });
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("ContactVisualEditor exposes Forms runtime binding, mapping, and compatibility warnings", async () => {
+  const { ContactVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/ContactEditors");
+
+  const publishedForm = {
+    id: "form-public",
+    name: "Public support",
+    slug: "public-support",
+    status: "published" as const,
+    description: null,
+    successMessage: null,
+    successRedirectUrl: null,
+    submissionAccess: "public" as const,
+    settings: {},
+    createdAt: "2026-05-18T00:00:00.000Z",
+    updatedAt: "2026-05-18T00:00:00.000Z",
+  };
+  const incompatibleForm = {
+    ...publishedForm,
+    id: "form-incompatible",
+    name: "Incompatible support",
+    slug: "incompatible-support",
+  };
+  const internalForm = {
+    ...publishedForm,
+    id: "form-internal",
+    name: "Internal support",
+    slug: "internal-support",
+    submissionAccess: "internal" as const,
+  };
+
+  formsRuntimeMockState.forms = [publishedForm, incompatibleForm, internalForm];
+  formsRuntimeMockState.details.set(publishedForm.id, {
+    form: publishedForm,
+    fields: [
+      {
+        id: "field-1",
+        type: "text",
+        label: "Full name",
+        name: "full_name",
+        required: true,
+        settings: {},
+        orderIndex: 0,
+      },
+      {
+        id: "field-2",
+        type: "email",
+        label: "Reply email",
+        name: "reply_email",
+        required: true,
+        settings: {},
+        orderIndex: 1,
+      },
+      {
+        id: "field-3",
+        type: "textarea",
+        label: "Message",
+        name: "message_body",
+        required: true,
+        settings: {},
+        orderIndex: 2,
+      },
+    ],
+  });
+  formsRuntimeMockState.details.set(incompatibleForm.id, {
+    form: incompatibleForm,
+    fields: [
+      {
+        id: "field-1",
+        type: "text",
+        label: "Full name",
+        name: "full_name",
+        required: true,
+        settings: {},
+        orderIndex: 0,
+      },
+      {
+        id: "field-2",
+        type: "email",
+        label: "Reply email",
+        name: "reply_email",
+        required: true,
+        settings: {},
+        orderIndex: 1,
+      },
+      {
+        id: "field-3",
+        type: "textarea",
+        label: "Message",
+        name: "message_body",
+        required: true,
+        settings: {},
+        orderIndex: 2,
+      },
+      {
+        id: "field-4",
+        type: "checkbox",
+        label: "Consent",
+        name: "consent",
+        required: true,
+        settings: {},
+        orderIndex: 3,
+      },
+    ],
+  });
+  formsRuntimeMockState.details.set(internalForm.id, {
+    form: internalForm,
+    fields: [
+      {
+        id: "field-1",
+        type: "text",
+        label: "Full name",
+        name: "full_name",
+        required: true,
+        settings: {},
+        orderIndex: 0,
+      },
+      {
+        id: "field-2",
+        type: "email",
+        label: "Reply email",
+        name: "reply_email",
+        required: true,
+        settings: {},
+        orderIndex: 1,
+      },
+      {
+        id: "field-3",
+        type: "textarea",
+        label: "Message",
+        name: "message_body",
+        required: true,
+        settings: {},
+        orderIndex: 2,
+      },
+    ],
+  });
+
+  let latestValue: ContactData = {
+    ...contactDefaults,
+    form: {
+      ...contactDefaults.form,
+      fields: ["name", "email", "message"],
+      submission: {
+        ...contactDefaults.form?.submission,
+        mode: "forms-runtime",
+        formId: publishedForm.id,
+        fieldMap: {
+          name: "full_name",
+          email: "",
+          phone: "",
+          message: "message_body",
+        },
+      },
+    },
+  };
+  let currentVariant = "form-left";
+
+  const Harness = () => {
+    const [value, setValue] = useState<ContactData>(latestValue);
+    const [variant, setVariant] = useState(currentVariant);
+
+    return (
+      <ContactVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant={variant}
+        onVariantChange={(next) => {
+          currentVariant = next;
+          setVariant(next);
+        }}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    await flushEffects();
+
+    let runtimeSection = findSection(view.container, "Submission runtime binding");
+    if (!runtimeSection) throw new Error("Missing runtime section");
+    expect(runtimeSection.textContent).toContain("Field mapping");
+    expect(runtimeSection.textContent).toContain("Success message override");
+
+    let runtimeSelects = Array.from(runtimeSection.querySelectorAll("select"));
+    const nameMappingSelect = runtimeSelects[2] as HTMLSelectElement;
+    expect(Array.from(nameMappingSelect.options).map((option) => option.value)).not.toContain(
+      "reply_email"
+    );
+    setSelectValue(runtimeSelects[3], "reply_email");
+    expect(latestValue.form?.submission?.fieldMap?.email).toBe("reply_email");
+
+    setSelectValue(runtimeSelects[1], incompatibleForm.id);
+    await flushEffects();
+    runtimeSection = findSection(view.container, "Submission runtime binding");
+    if (!runtimeSection) throw new Error("Missing runtime section");
+    expect(runtimeSection.textContent).toContain(
+      "This binding will stay static on public pages until the field set matches."
+    );
+
+    runtimeSelects = Array.from(runtimeSection.querySelectorAll("select"));
+    setSelectValue(runtimeSelects[1], internalForm.id);
+    await flushEffects();
+    runtimeSection = findSection(view.container, "Submission runtime binding");
+    if (!runtimeSection) throw new Error("Missing runtime section");
+    expect(runtimeSection.textContent).toContain("forms.submit");
+    expect(latestValue.form?.submission?.formId).toBe(internalForm.id);
   } finally {
     view.cleanup();
   }

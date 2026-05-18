@@ -6,7 +6,7 @@
 **Category:** Widgets + Forms + Admin UI + Runtime Render + Public Write Security + Playwright QA
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-252-07-13, TASK-256-07
-**Status:** To Do
+**Status:** Done (2026-05-18)
 
 ---
 
@@ -93,15 +93,15 @@ work.
 
 ## Sub-Tasks
 
-- [ ] TASK-261-01: Contact Header, Details Links, and Semantic Output
-- [ ] TASK-261-02: Contact Form Field Metadata and Public Submission Bridge
-  - [ ] TASK-261-02-01: Contact Field Metadata and Accessible HTML
-  - [ ] TASK-261-02-02: Contact Static Form State and No-GET Safety
-  - [ ] TASK-261-02-03: Contact Forms Runtime Bridge and Public-Write Hardening
-- [ ] TASK-261-03: Contact Editor Mode Parity and Minimal Variant UX
-- [ ] TASK-261-04: Contact Map Validation, Fallback, and Display Controls
-- [ ] TASK-261-05: Contact Layout, Social Links, and Normalizer Polish
-- [ ] TASK-261-06: Contact Report, Docs, Changelog, and Closure
+- [x] TASK-261-01: Contact Header, Details Links, and Semantic Output
+- [x] TASK-261-02: Contact Form Field Metadata and Public Submission Bridge
+  - [x] TASK-261-02-01: Contact Field Metadata and Accessible HTML
+  - [x] TASK-261-02-02: Contact Static Form State and No-GET Safety
+  - [x] TASK-261-02-03: Contact Forms Runtime Bridge and Public-Write Hardening
+- [x] TASK-261-03: Contact Editor Mode Parity and Minimal Variant UX
+- [x] TASK-261-04: Contact Map Validation, Fallback, and Display Controls
+- [x] TASK-261-05: Contact Layout, Social Links, and Normalizer Polish
+- [x] TASK-261-06: Contact Report, Docs, Changelog, and Closure
 
 ## Implementation Order
 
