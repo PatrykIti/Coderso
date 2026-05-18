@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 279 tasks
-- **In Progress:** 4 tasks
-- **Done:** 1652 tasks
+- **To Do:** 273 tasks
+- **In Progress:** 5 tasks
+- **Done:** 1659 tasks
 
 ---
 
@@ -38,6 +38,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-311 | Forms Field Model Expansion for Choice File and Typed Controls | High | Very Large | Future Forms-owner task for `radio`, `number`, `time`, `hidden`, `file`, `range`, and `rating` so widget families stop carrying report-only unsupported-field debt locally |
 | TASK-309 | Footer Market Utility Expansion | Low | Very Large | Future owner for newsletter/address/contact/back-to-top footer utilities that TASK-268 explicitly deferred |
 | TASK-308 | Footer Column Reorder and Slot Cohesion | Medium | Large | Future owner for truthful footer column reorder once slot/data coupling has an explicit contract |
 | TASK-304 | Entry Teaser Listing Manual Picker | Medium | Medium | Add a deterministic manual listing-row selection contract for Entry Teaser after TASK-265 closes latest/featured listing semantics |
@@ -242,13 +243,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-270-05 | Gallery Mosaic Responsive Columns and Motion Presets | Medium | Large | Add bounded responsive column and reduced-motion-safe animation presets |
 | TASK-270-06 | Gallery Mosaic Config Import Export and Wizard Guidance | Low | Medium | Add safe config import/export and post-TASK-256 Wizard guidance |
 | TASK-270-07 | Gallery Mosaic Report Docs Changelog and Closure | Medium | Medium | Refresh Gallery Mosaic report/docs/changelog/board and final validation evidence |
-| TASK-269 | Form Embed Widget Playwright Product Followups | High | Very Large | Form Embed-only follow-up family for `REPORT_FORM_EMBED_WIDGET.md`, excluding TASK-256 shared-contract scope |
-| TASK-269-01 | Form Selection, Editor Modes, and Admin Diagnostics | High | Large | Split Form Embed editor modes and add selected-form status/error/field diagnostics |
-| TASK-269-02 | Field Type Rendering and Field Accessibility | High | Large | Render Form Embed CMS field types truthfully with stable IDs, labels, helpers, and group semantics |
-| TASK-269-03 | Variants, Layout, and Form Surface Styling | High | Large | Implement Form Embed `card`/`inline`, section layout, typography, and bounded styling controls |
-| TASK-269-04 | Multi-Step Controls and Stored Progress | High | Large | Add multi-step labels, progress indicator, and saved-progress expiry for Form Embed |
-| TASK-269-05 | Submission Runtime Feedback and Public Write Projection | High | Large | Add Form Embed busy/success/error feedback and backend-owned anti-abuse projection |
-| TASK-269-06 | Form Embed Report, Docs, and Closure | Medium | Medium | Refresh Form Embed report/docs/changelog/board and final validation |
 | TASK-267 | Feature Grid Widget Playwright Product Followups | High | Very Large | Feature Grid-only follow-up family for `REPORT_FEATURE_GRID_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-267-01 | Feature Grid Variant Preview and Responsive Cards-4 Layout | High | Medium | Add variant preview affordances, repair cards-4 responsive product behavior, and keep columns truthfulness in TASK-256 |
 | TASK-267-02 | Feature Grid Card Reorder, Remove, and Item Management | High | Medium | Add drag reorder plus recoverable remove flow while preserving keyboard move fallback |
@@ -344,6 +338,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-310 | Shared Color Picker CSS Variable and Border Clear Regression | High | Large | In progress: shared color-field helper/adoption work from the TASK-269 audit is transferred onto feature/corrections for the remaining widget consumers |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
@@ -464,6 +459,13 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-256-06-04 | Team Profile Links and Accessibility | High | Medium | Done: current shared Team accessibility baseline is synchronized and richer team product scope remains routed to TASK-289 |
 | TASK-256-07 | Cross-Report Shared Contract Classification | High | Medium | Done: late report groups are routed to executable TASK-256 shared slices or existing widget-specific follow-up families instead of widening the umbrella |
 | TASK-256-08 | Playwright Report Completion and Closure | Medium | Medium | Done: report status sections and closure evidence are synchronized after the post-close Team/Accordion/Toggle/Testimonial fixes, while Form Embed remains explicit `needs-refresh` scope under TASK-269 rather than fixed shared implementation |
+| TASK-269 | Form Embed Widget Playwright Product Followups | High | Very Large | Done: Form Embed renderer, runtime script, safe captcha bridge, editor-mode diagnostics, docs, report status matrix, and targeted validation are synchronized |
+| TASK-269-01 | Form Selection, Editor Modes, and Admin Diagnostics | High | Large | Done: Wizard/Visual/Advanced are split and selected-form diagnostics now cover status, field count/types, multi-step, resolver errors, and no-form CTA states |
+| TASK-269-02 | Field Type Rendering and Field Accessibility | High | Large | Done: current supported field types render with stable ids, helper linkage, required semantics, and unsupported-type diagnostics for out-of-model payloads |
+| TASK-269-03 | Variants, Layout, and Form Surface Styling | High | Large | Done: the current variant contract is truthful and Form Embed now owns section padding, field gap, heading, title, helper, and submit-button styling controls |
+| TASK-269-04 | Multi-Step Controls and Stored Progress | High | Large | Done: Back/Next labels, progress indicator, and saved-progress TTL are implemented in runtime and surfaced in the editor |
+| TASK-269-05 | Submission Runtime Feedback and Public Write Projection | High | Large | Done: busy state, success behaviors, redirect handling, live regions, nonce projection, and safe captcha-site-key bridging are aligned to the existing Forms policy |
+| TASK-269-06 | Form Embed Report, Docs, and Closure | Medium | Medium | Done: report rows have final owners/statuses, widget docs are updated, and board/changelog/validation closure is synchronized |
 | TASK-255 | Admin Breadcrumb Renderer and Workspace Resource Links | High | Medium | Done: TopBar renders clickable shorthand/structured breadcrumbs, existing admin pages use label arrays, and collection workspace cards link to their owner surfaces |
 | TASK-254 | Detail Template Workspace Create Delete Actions | High | Medium | Done: content-type editor links to collection workspace, which can create, route-link, open, confirm-delete, and unlink canonical detail templates with shared admin notifications |
 | TASK-253 | Detail Template Content Field Bindings | High | Medium | Done: detail template editor exposes Data bindings for selected blocks so widget copy stays fallback while public detail runtime overlays linked entry values |
