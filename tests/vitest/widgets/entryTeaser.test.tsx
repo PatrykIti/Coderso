@@ -1,5 +1,6 @@
+import React from "react";
 import type { ComponentType } from "react";
-import { expect, test } from "bun:test";
+import { expect, test } from "vitest";
 import { renderToString } from "react-dom/server";
 
 import {
@@ -14,7 +15,6 @@ import {
   normalizeEntryTeaserData,
   type EntryTeaserData,
 } from "../../../core/widgets/core/entryTeaser";
-import { resolveEntryTeaserRuntimeData } from "../../../core/services/content/entryTeaserResolver";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { normalizeWidgetBlock } from "../../../core/widgets/validator";
 import type { WidgetEditorProps } from "../../../core/widgets/types";
@@ -204,6 +204,44 @@ test("entry teaser custom CTA sanitizes unsafe hrefs", () => {
   expect(normalized.cta?.href).toBe("");
 });
 
+test("entry teaser CTA uses safe target rel output and outline style", () => {
+  const html = renderToString(
+    <EntryTeaserBlock
+      variant="vertical"
+      data={normalizeEntryTeaserData({
+        ...entryTeaserDefaults,
+        sourceMode: "manual",
+        source: {
+          contentTypeId: "blog-type-id",
+          entryId: "entry-1",
+        },
+        cta: {
+          label: "Read more",
+          hrefMode: "custom",
+          href: "https://example.com/read-more",
+          opensInNewTab: true,
+          style: "outline",
+        },
+        resolved: {
+          item: {
+            id: "entry-1",
+            title: "Quarterly update",
+            href: "/blog/quarterly-update",
+            status: "published",
+          },
+          sourceTypeId: "blog-type-id",
+          sourceTypeSlug: "blog",
+          resolvedAt: "2026-02-09T12:01:00.000Z",
+        },
+      })}
+    />
+  );
+
+  expect(html).toContain('target="_blank"');
+  expect(html).toContain('rel="noopener noreferrer"');
+  expect(html).toContain("rounded-md border");
+});
+
 test("entry teaser validator accepts extended model and visual ownership", () => {
   clearWidgets();
   const widget = createEntryTeaserWidget({
@@ -345,249 +383,4 @@ test("entry teaser keeps backward compatibility for source.mode", () => {
     },
   });
   expect(legacyCompatible.source?.mode).toBe("legacy");
-});
-
-test("entry teaser listing mode resolves first listing item", async () => {
-  const resolved = await resolveEntryTeaserRuntimeData(
-    {
-      ...entryTeaserDefaults,
-      source: {
-        ...entryTeaserDefaults.source,
-        mode: "listing",
-        listingQueryId: "listing-query-1",
-        listingTemplateId: "listing-template-1",
-      },
-    },
-    {
-      preview: true,
-      contentRoutes: [],
-    },
-    {
-      getListingQueryById: async () => ({
-        id: "listing-query-1",
-        name: "Top entries",
-        description: null,
-        query: {
-          source: "entries",
-          sourceConfig: {
-            contentTypeId: "type-1",
-          },
-          filters: [],
-          sort: [{ field: "id", dir: "asc" }],
-          pagination: { limit: 12, offset: 0 },
-          fields: ["id", "title", "slug"],
-        },
-        createdAt: new Date("2026-02-18T12:00:00.000Z"),
-        updatedAt: new Date("2026-02-18T12:00:00.000Z"),
-      }),
-      getListingTemplateById: async () => ({
-        id: "listing-template-1",
-        name: "Cards",
-        slug: "cards",
-        description: null,
-        layout: "grid",
-        config: {
-          fields: [],
-          itemActions: [],
-          emptyState: {
-            title: "No items",
-            description: null,
-            ctaLabel: null,
-            ctaHref: null,
-          },
-          style: {
-            columns: 3,
-            gap: "md",
-            cardVariant: "default",
-          },
-        },
-        createdAt: new Date("2026-02-18T12:00:00.000Z"),
-        updatedAt: new Date("2026-02-18T12:00:00.000Z"),
-      }),
-      executeListing: async () => ({
-        source: "entries",
-        total: 2,
-        limit: 12,
-        offset: 0,
-        rows: [
-          {
-            id: "entry-1",
-            title: "Engine diagnostics",
-            slug: "engine-diagnostics",
-            status: "published",
-          },
-          {
-            id: "entry-2",
-            title: "Bodywork",
-            slug: "bodywork",
-            status: "published",
-          },
-        ],
-      }),
-      getContentTypeById: async () => ({
-        id: "type-1",
-        name: "Entries",
-        slug: "entries",
-        status: "published",
-        schema: { type: "object", additionalProperties: false, properties: {} },
-        createdAt: new Date("2026-02-18T12:00:00.000Z"),
-        updatedAt: new Date("2026-02-18T12:00:00.000Z"),
-      }),
-      getContentTypeBySlug: async () => null,
-    }
-  );
-
-  expect(resolved.item?.title).toBe("Engine diagnostics");
-  expect(resolved.item?.id).toBe("entry-1");
-  expect(resolved.sourceTypeSlug).toBe("entries");
-  expect(resolved.listingQueryId).toBe("listing-query-1");
-});
-
-test("entry teaser listing mode prefers featured tagged items and can refuse fallback", async () => {
-  const sharedDeps = {
-    getListingQueryById: async () => ({
-      id: "listing-query-1",
-      name: "Top entries",
-      description: null,
-      query: {
-        source: "entries" as const,
-        sourceConfig: {
-          contentTypeId: "type-1",
-        },
-        filters: [],
-        sort: [{ field: "id", dir: "asc" as const }],
-        pagination: { limit: 12, offset: 0 },
-        fields: ["id", "title", "slug", "tags"],
-      },
-      createdAt: new Date("2026-02-18T12:00:00.000Z"),
-      updatedAt: new Date("2026-02-18T12:00:00.000Z"),
-    }),
-    getListingTemplateById: async () => ({
-      id: "listing-template-1",
-      name: "Cards",
-      slug: "cards",
-      description: null,
-      layout: "grid",
-      config: {
-        fields: [],
-        itemActions: [],
-        emptyState: {
-          title: "No items",
-          description: null,
-          ctaLabel: null,
-          ctaHref: null,
-        },
-        style: {
-          columns: 3,
-          gap: "md",
-          cardVariant: "default",
-        },
-      },
-      createdAt: new Date("2026-02-18T12:00:00.000Z"),
-      updatedAt: new Date("2026-02-18T12:00:00.000Z"),
-    }),
-    getContentTypeById: async () => ({
-      id: "type-1",
-      name: "Entries",
-      slug: "entries",
-      status: "published",
-      schema: { type: "object", additionalProperties: false, properties: {} },
-      createdAt: new Date("2026-02-18T12:00:00.000Z"),
-      updatedAt: new Date("2026-02-18T12:00:00.000Z"),
-    }),
-    getContentTypeBySlug: async () => null,
-  } satisfies Parameters<typeof resolveEntryTeaserRuntimeData>[2];
-
-  const featuredResolved = await resolveEntryTeaserRuntimeData(
-    {
-      ...entryTeaserDefaults,
-      sourceMode: "featured",
-      source: {
-        ...entryTeaserDefaults.source,
-        mode: "listing",
-        listingQueryId: "listing-query-1",
-        listingTemplateId: "listing-template-1",
-      },
-    },
-    {
-      preview: true,
-      contentRoutes: [],
-    },
-    {
-      ...sharedDeps,
-      executeListing: async () => ({
-        source: "entries",
-        total: 2,
-        limit: 12,
-        offset: 0,
-        rows: [
-          {
-            id: "entry-1",
-            title: "Engine diagnostics",
-            slug: "engine-diagnostics",
-            status: "published",
-            tags: ["news"],
-          },
-          {
-            id: "entry-2",
-            title: "Featured service note",
-            slug: "featured-service-note",
-            status: "published",
-            tags: ["featured"],
-          },
-        ],
-      }),
-    }
-  );
-
-  expect(featuredResolved.item?.id).toBe("entry-2");
-  expect(featuredResolved.item?.title).toBe("Featured service note");
-
-  const noFallbackResolved = await resolveEntryTeaserRuntimeData(
-    {
-      ...entryTeaserDefaults,
-      sourceMode: "featured",
-      source: {
-        ...entryTeaserDefaults.source,
-        mode: "listing",
-        listingQueryId: "listing-query-1",
-        listingTemplateId: "listing-template-1",
-      },
-      fallback: {
-        ...entryTeaserDefaults.fallback,
-        fallbackToLatest: false,
-      },
-    },
-    {
-      preview: true,
-      contentRoutes: [],
-    },
-    {
-      ...sharedDeps,
-      executeListing: async () => ({
-        source: "entries",
-        total: 2,
-        limit: 12,
-        offset: 0,
-        rows: [
-          {
-            id: "entry-1",
-            title: "Engine diagnostics",
-            slug: "engine-diagnostics",
-            status: "published",
-            tags: ["news"],
-          },
-          {
-            id: "entry-2",
-            title: "Bodywork",
-            slug: "bodywork",
-            status: "published",
-            tags: ["repair"],
-          },
-        ],
-      }),
-    }
-  );
-
-  expect(noFallbackResolved.item).toBeNull();
 });

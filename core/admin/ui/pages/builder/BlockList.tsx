@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { WidgetRenderer } from "../../../../widgets/renderers/widgetRenderer";
 import type { WidgetRendererPageDefaults } from "../../../../widgets/renderers/widgetRenderer";
 import { resolveWidgetSlotTargets } from "../../../../widgets/slots";
+import type { WidgetPreviewState } from "../../../../widgets/types";
 import type { Block, WidgetDefinition } from "./types";
 import { getWidgetRegistry } from "./widgetRegistry";
 import type { BlockPath } from "./blockUtils";
@@ -30,6 +31,7 @@ export type BlockListProps = {
     slotLabel: string;
     allowedTypes?: string[];
   }) => void;
+  previewStatesByBlockId?: Record<string, WidgetPreviewState | undefined>;
   path?: BlockPath;
   depth?: number;
   widgetRegistry?: WidgetDefinition[];
@@ -48,6 +50,7 @@ export function BlockList({
   onInsert,
   onMoveToSlot,
   onOpenSlotInsert,
+  previewStatesByBlockId,
   path,
   depth,
   widgetRegistry: providedWidgetRegistry,
@@ -104,6 +107,17 @@ export function BlockList({
         const widget = widgetRegistry.find((item) => item.type === block.type);
         const label = widget?.title ?? block.type;
         const slotMap = getSlotMap(block);
+        const previewState = previewStatesByBlockId?.[block.id] ?? null;
+        const previewBlock =
+          previewState?.dataPatch && block.data && typeof block.data === "object"
+            ? {
+                ...block,
+                data: {
+                  ...(block.data as Record<string, unknown>),
+                  ...previewState.dataPatch,
+                },
+              }
+            : block;
         const slotTargets =
           widget?.slots && widget.slots.length > 0
             ? resolveWidgetSlotTargets(widget.slots, slotMap)
@@ -223,9 +237,9 @@ export function BlockList({
             </div>
             <div className="border-t bg-muted/5">
               <WidgetRenderer
-                block={block}
+                block={previewBlock}
                 pageDefaults={pageDefaults}
-                renderContext={{ mode: "editor-preview" }}
+                renderContext={{ mode: "editor-preview", previewState }}
               />
             </div>
             {slotTargets.length > 0 ? (
@@ -279,6 +293,7 @@ export function BlockList({
                           onInsert={onInsert}
                           onMoveToSlot={onMoveToSlot}
                           onOpenSlotInsert={onOpenSlotInsert}
+                          previewStatesByBlockId={previewStatesByBlockId}
                           path={[...listPath, { index, slotId: slot.slotId }]}
                           depth={level + 1}
                           widgetRegistry={widgetRegistry}

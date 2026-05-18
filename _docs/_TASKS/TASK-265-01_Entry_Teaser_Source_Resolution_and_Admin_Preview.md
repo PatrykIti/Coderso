@@ -6,7 +6,7 @@
 **Category:** Widgets + Dynamic Content + Admin UI + Runtime Resolver
 **Estimated Effort:** Large
 **Dependencies:** TASK-265, TASK-256-07
-**Status:** To Do
+**Status:** Done (2026-05-18)
 
 ---
 
@@ -59,10 +59,13 @@ Out of scope:
 | `core/admin/ui/widgets/editors/EntryTeaserEditors.tsx` | Add transient resolved preview state, retryable source picker errors, grouped/annotated content type options, and compact entry status labels. |
 | `core/admin/services/entryTeaserPreviewClient.ts` | Create only if an internal preview endpoint is needed; keep it uncached/transient with strict response guards so `_docs/ADMIN_CACHE.md` is not needed. |
 | `core/server/routes/widgetRoutes.ts` or a dedicated route file | Add internal preview route only if needed; route must validate payload, require `content:read`, and resolve content routes server-side. |
-| `tests/vitest/widgets/entryTeaser.test.tsx` | Add Bun-free normalizer/render coverage for listing and legacy preview behavior. |
-| `tests/unit/widgets/entryTeaser.test.tsx` | Keep only Bun-coupled resolver/runtime cases if any remain after migration; otherwise use as a one-time comparison smoke before removal. |
+| `tests/vitest/widgets/entryTeaser.test.tsx` | Introduce Bun-free normalizer/render coverage for listing and legacy preview behavior when the touched assertions are split cleanly out of the Bun suite. |
+| `tests/unit/widgets/entryTeaser.test.tsx` | Keep the authoritative Bun render/normalizer/resolver coverage until migration is complete; retain any runtime-coupled cases afterward. |
 | `tests/vitest/ui/entry-teaser-editor-wave.test.tsx` | Add editor states for resolved preview, retry, auth failure, empty entries, dedupe, and compact status labels. |
-| `tests/integration/routes/widgets.test.ts` | Update route registration/permission coverage if an internal preview route is added. |
+| `core/server/routes/entryTeaserPreviewRoutes.ts` | Create a dedicated internal preview route module if resolved preview cannot stay client-only; keep route orchestration-only and call the existing resolver owner. |
+| `core/server/routes/widgetRoutes.ts` | Register the dedicated preview route module if it is added. |
+| `tests/integration/routes/widgets.test.ts` | Update route registration coverage if the internal preview route is added. |
+| `tests/integration/routes/entryTeaserPreview.test.ts` | Add focused request/permission/validation/error-mapping coverage if the internal preview route is added. |
 | `tests/integration/runtime/*` | Add focused Bun runtime/public-site hydration coverage if `publicSite.tsx` resolver injection changes. |
 
 ## Security Contract
@@ -140,8 +143,8 @@ Error handling:
 
 Regression-test shape:
 
-- Mock content types with duplicate labels and IDs and assert only unique
-  options render.
+- Mock content types with duplicate display names but different IDs and assert
+  the options remain distinct while slug/status annotations disambiguate them.
 - Mock content type 401 and entries 401 separately and assert user-facing copy
   plus retry controls.
 - Assert compact manual picker includes `(published)` or equivalent status.
@@ -169,13 +172,17 @@ Regression-test shape:
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run test:vitest -- tests/vitest/ui/entry-teaser-editor-wave.test.tsx`
-- `bun run test:vitest -- tests/vitest/widgets/entryTeaser.test.tsx`
-- `bun test tests/unit/widgets/entryTeaser.test.tsx` only as a comparison smoke
-  or when a retained resolver/runtime case still depends on Bun.
+- introduce `tests/vitest/widgets/entryTeaser.test.tsx` and run
+  `bun run test:vitest -- tests/vitest/widgets/entryTeaser.test.tsx` when this
+  leaf successfully splits Bun-free assertions out of the legacy suite.
+- `bun test tests/unit/widgets/entryTeaser.test.tsx` is required for this leaf
+  because resolver/runtime assertions still live there today.
 - `bun run test:vitest -- tests/vitest/site/publicRenderer.test.tsx` when
   resolved payload rendering changes.
 - `bun test tests/integration/routes/widgets.test.ts` if an internal preview
   route is added or changed.
+- `bun test tests/integration/routes/entryTeaserPreview.test.ts` if an internal
+  preview route is added or changed.
 - Focused Bun runtime/public-site coverage when `publicSite.tsx` resolver
   injection changes.
 

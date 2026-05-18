@@ -1,6 +1,86 @@
 # REPORT: Entry Teaser Widget
 
-> Status: **UKOŃCZONY** | Data: 2026-05-16 | Autor: Claude Code
+> Status: **CLOSED AFTER TASK-265** | Data: 2026-05-18 | Autor: Claude Code + Codex
+
+---
+
+## Closure Update (2026-05-18)
+
+Poniższe sekcje `1-8` zachowują historyczny raport z 2026-05-16. Ten blok
+jest finalnym matrixem closure po wdrożeniu `TASK-265`, `TASK-305`, i
+powiązanych leafów.
+
+### Finalny status findingów
+
+#### Braki funkcjonalne (`B-*`)
+
+| ID | Status końcowy | Owner | Dowód |
+|---|---|---|---|
+| B-01 | Fixed | TASK-265-04 | `section.title` + `section.headingLevel` w `entryTeaser.tsx`, `Section context` w `EntryTeaserEditors.tsx`, render/testy w widget/public suites |
+| B-02 | Fixed | TASK-265-04 | `media.mode/aspect/height/fit` w `entryTeaser.tsx` i `Layout and media` w `EntryTeaserEditors.tsx` |
+| B-03 | Fixed | TASK-265-04 | `fields.tagLimit` w schema/defaults/normalizer + render/test coverage |
+| B-04 | Fixed | TASK-265-03 | `cta.opensInNewTab` + shared safe-link attrs w `entryTeaser.tsx` i editorze |
+| B-05 | Fixed | TASK-265-03 | `cta.style` (`link`, `filled`, `outline`) w schema/render/editor/tests |
+| B-06 | Fixed | TASK-265-01 | listing `latest`/`featured` semantics w `entryTeaserResolver.ts`; editor exposes tylko te tryby; Bun tests pokrywają fallback/no-fallback |
+| B-07 | Fixed | TASK-265-04 | `layout.maxWidth` fixed-map w schema/render/editor/public HTML tests |
+| B-08 | Fixed | TASK-265-04 | `media.mode = icon` w render/editor/tests; brak bezpiecznego źródła kończy się bez crusha |
+
+#### UX edytora (`E-*`)
+
+| ID | Status końcowy | Owner | Dowód |
+|---|---|---|---|
+| E-01 | Fixed | TASK-265-02 | labelki `Content type` / `Listing query`; usunięte stare techniczne copy |
+| E-02 | Fixed | TASK-265-02 | `VariantCards` mają miniatury `data-variant-thumbnail=*` w Wizard i Visual |
+| E-03 | Fixed | TASK-265-02 | source mutation tylko w Wizard; Visual ma `Source summary`, Advanced nie duplikuje source controls |
+| E-04 | Fixed | TASK-265-02 | `Fallback state` łączy copy i `fallbackToLatest` |
+| E-05 | Fixed | TASK-265-01 | transient preview state + `/widgets/entry-teaser/preview` pokazują resolved teaser w admin canvas |
+| E-06 | Fixed | TASK-265-01 | auth-aware retry dla content types |
+| E-07 | Fixed | TASK-265-01 | auth-aware retry i rozróżnienie empty/error dla manual entry loading |
+| E-08 | Fixed | TASK-265-03 | `Custom URL` startuje pustym draftem zamiast `#` |
+| E-09 | Fixed | TASK-265-02 | lokalny `Field preview` i live canvas preview pokazują efekt toggle’ów |
+| E-10 | Fixed | TASK-265-02 | opis `Auto entry URL uses the resolved entry detail route...` |
+| E-11 | Fixed | TASK-265-03 | realtime validation custom URL z inline komunikatem |
+| E-12 | Fixed | TASK-265-02 | `Runtime payload snapshot` ma `Copy JSON` + failure feedback |
+| E-13 | Fixed | TASK-265-01 | compact manual entry labels zachowują `(status)` |
+| E-14 | Fixed | TASK-265-06 + TASK-305 | shared swatch-plus-text `SharedColorControl` dla surface/border + widget-local adoption test |
+
+#### Techniczne (`T-*`)
+
+| ID | Status końcowy | Owner | Dowód |
+|---|---|---|---|
+| T-01 | Fixed | TASK-265-04 | `resolveEntryTeaserRadius()` explicite akceptuje `lg` |
+| T-02 | Fixed | TASK-265-04 | `resolveEntryTeaserVariant()` ma jawny guard dla `horizontal/vertical/minimal`; fallback do `horizontal` jest testowany jako intencjonalny |
+| T-03 | Fixed | TASK-265-04 | render dodaje deterministyczne `width` i `height` dla obrazów |
+| T-04 | Fixed | TASK-265-03 | `resolveWidgetLinkAttrs(... openInNewTab)` daje `rel="noopener noreferrer"` |
+| T-05 | Fixed | TASK-265-01 | duplikaty content types są oznaczane `slug/status`, a editor wave pokrywa ten case |
+| T-06 | Fixed | TASK-265-04 | oddzielne `section.headingLevel` i `title.headingLevel` w render/editor/tests |
+| T-07 | Fixed | TASK-265-01 | admin preview ma loading state `Loading resolved teaser preview...` |
+
+### Jawnie odroczony scope po TASK-265
+
+- Manualny wybór konkretnego wiersza listingowego nie jest częścią finalnego
+  zakresu `TASK-265`. Został zapisany jako fizyczny follow-up:
+  `TASK-304_Entry_Teaser_Listing_Manual_Picker.md`.
+
+### Finalna walidacja
+
+Zielone w tym worktree:
+
+- `git diff --check`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/widgets/entryTeaser.test.tsx tests/vitest/ui/entry-teaser-editor-wave.test.tsx tests/vitest/site/publicRenderer.test.tsx tests/vitest/ui/shared-color-control.test.tsx tests/vitest/ui/clearable-fields.test.tsx tests/vitest/ui/page-editor-shell-wave.test.tsx tests/vitest/ui/detail-template-editor.test.tsx tests/vitest/widgets/renderer.test.tsx tests/vitest/ui/solution-kits-page.test.tsx tests/vitest/ui/listings-page.test.tsx tests/vitest/ui/booking-page.test.tsx tests/vitest/ui/commerce-page.test.tsx tests/vitest/ui/form-builder.test.tsx`
+- `bun test tests/unit/widgets/entryTeaser.test.tsx tests/integration/routes/entryTeaserPreview.test.ts tests/integration/routes/widgets.test.ts`
+- `bun run gates:coderso`
+- `bun run precommit`
+
+Środowiskowy blocker pozostający poza zakresem widgetu:
+
+- `bun run scan:security:strict`
+  - `semgrep --error ...` pada lokalnie na `ca-certs: empty trust anchors`
+  - `bun audit --audit-level high` pada lokalnie na `ConnectionRefused`
+  - `trivy fs`, `trivy config`, `trivy secret`, `gitleaks git`, i `gitleaks dir`
+    są zielone
 
 ---
 

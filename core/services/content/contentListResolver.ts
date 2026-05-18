@@ -748,6 +748,7 @@ export async function resolveListingContentListRuntimeData(
   if (!listingQueryId) {
     return {
       items: [],
+      rawRows: [],
       total: 0,
       sourceTypeId: "",
       sourceTypeSlug: "",
@@ -761,6 +762,7 @@ export async function resolveListingContentListRuntimeData(
   if (!listingQuery) {
     return {
       items: [],
+      rawRows: [],
       total: 0,
       sourceTypeId: "",
       sourceTypeSlug: "",
@@ -777,6 +779,7 @@ export async function resolveListingContentListRuntimeData(
   if (listingTemplateId && !listingTemplate) {
     return {
       items: [],
+      rawRows: [],
       total: 0,
       sourceTypeId: "",
       sourceTypeSlug: "",
@@ -805,19 +808,17 @@ export async function resolveListingContentListRuntimeData(
     : parseListingRuntimeOverrides(new URLSearchParams(), listingQueryId);
   const runtime = resolveListingRuntimeOverrides(baseQuery, runtimeDraft);
   const execution = await runtimeDeps.executeListing(runtime.query);
+  const rawRows = execution.rows as Record<string, unknown>[];
   const routeMeta = await resolveListingRouteMeta(
     listingQuery.query,
     options.contentRoutes,
     runtimeDeps
   );
-  const items = await mapListingRowsToContentListItems(
-    execution.rows as Record<string, unknown>[],
-    {
-      detailPathPattern: routeMeta.detailPathPattern,
-      showImage: Boolean(normalized.fields?.showImage),
-      template: listingTemplate,
-    }
-  );
+  const items = await mapListingRowsToContentListItems(rawRows, {
+    detailPathPattern: routeMeta.detailPathPattern,
+    showImage: Boolean(normalized.fields?.showImage),
+    template: listingTemplate,
+  });
 
   const runtimeNavigation = resolveContentListRuntimeNavigationMeta({
     page: typeof runtime.page === "number" ? runtime.page : 1,
@@ -841,6 +842,7 @@ export async function resolveListingContentListRuntimeData(
 
   return {
     items,
+    rawRows,
     total: execution.total,
     sourceTypeId: routeMeta.sourceTypeId,
     sourceTypeSlug: routeMeta.sourceTypeSlug,

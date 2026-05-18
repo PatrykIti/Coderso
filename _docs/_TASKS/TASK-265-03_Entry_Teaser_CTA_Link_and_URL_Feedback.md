@@ -5,8 +5,8 @@
 **Priority:** High
 **Category:** Widgets + Runtime Render + Admin UI + Safe Links
 **Estimated Effort:** Medium
-**Dependencies:** TASK-265-01, TASK-265-02, TASK-256-06-02
-**Status:** To Do
+**Dependencies:** TASK-265-01, TASK-265-02
+**Status:** Done (2026-05-18)
 
 ---
 
@@ -19,8 +19,9 @@ This leaf owns report findings E-08, E-11, B-04, B-05, and T-04. It must keep
 custom URL editing user-friendly, validate unsafe URLs before persistence or
 rendering, add optional new-tab behavior with safe `rel`, and add Entry
 Teaser-local CTA style variants without weakening shared safe-href rules. It
-must consume the shared `resolveWidgetLinkAttrs()` helper from TASK-256-06-02
-when adding new-tab output instead of duplicating external-link logic locally.
+must consume the existing shared `resolveWidgetLinkAttrs()` helper from
+`core/widgets/core/widgetSafeHref.ts` when adding new-tab output instead of
+duplicating external-link logic locally.
 
 ## Scope Boundary
 
@@ -36,7 +37,9 @@ In scope:
 
 Out of scope:
 
-- A generic CTA/link helper for all widgets; TASK-256-06-02 owns that helper.
+- A generic CTA/link helper for all widgets; consume the existing shared owner
+  in `core/widgets/core/widgetSafeHref.ts` instead of changing link logic
+  locally without cause.
 - Arbitrary HTML, raw class names, script URLs, or external link allowlist
   changes outside existing `normalizeWidgetSafeHref()` behavior.
 
@@ -44,9 +47,9 @@ Out of scope:
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/entryTeaser.tsx` | Extend CTA schema/defaults/normalizer/render for `opensInNewTab`, `style`, and safe href metadata while using TASK-256-06-02 shared link attrs. |
+| `core/widgets/core/entryTeaser.tsx` | Extend CTA schema/defaults/normalizer/render for `opensInNewTab`, `style`, and safe href metadata while using the existing shared link attrs owner. |
 | `core/admin/ui/widgets/editors/EntryTeaserEditors.tsx` | Add user-friendly custom URL editing, validation feedback, new-tab toggle, and CTA style controls. |
-| `tests/vitest/widgets/entryTeaser.test.tsx` | Cover unsafe href normalization, safe render output, target/rel, schema rejection, and CTA style variants. |
+| `tests/vitest/widgets/entryTeaser.test.tsx` | Create or extend Bun-free coverage for unsafe href normalization, safe render output, target/rel, schema rejection, and CTA style variants. |
 | `tests/vitest/ui/entry-teaser-editor-wave.test.tsx` | Cover custom URL empty field, invalid URL copy, new-tab toggle, and style updates. |
 | `tests/vitest/site/publicRenderer.test.tsx` | Update public HTML assertions when CTA output changes. |
 | `_docs/_WIDGETS/ENTRY_TEASER.md` | Document CTA behavior and safe-link constraints. |
@@ -151,7 +154,10 @@ Regression-test shape:
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- `bun run test:vitest -- tests/vitest/widgets/entryTeaser.test.tsx`
+- if this leaf creates or extends `tests/vitest/widgets/entryTeaser.test.tsx`,
+  run `bun run test:vitest -- tests/vitest/widgets/entryTeaser.test.tsx`
+- `bun test tests/unit/widgets/entryTeaser.test.tsx` while CTA render and
+  normalization assertions still remain in the Bun-owned suite
 - `bun run test:vitest -- tests/vitest/ui/entry-teaser-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/site/publicRenderer.test.tsx`
 - Entry Teaser schema rejection coverage belongs in
@@ -174,6 +180,6 @@ Regression-test shape:
 - Unsafe custom URLs are visible as validation feedback and never render as
   executable links.
 - New-tab CTAs always include safe `rel`.
-- Entry Teaser consumes the shared TASK-256-06-02 link-attribute helper for
+- Entry Teaser consumes the existing shared link-attribute helper for
   target/rel behavior.
 - CTA styles are fixed, schema-backed, and tested.

@@ -9,6 +9,7 @@ const makeRouter = () => {
     routes,
     router: {
       get: (path: string) => routes.push({ method: "GET", path }),
+      post: (path: string) => routes.push({ method: "POST", path }),
     },
   };
 };
@@ -18,9 +19,12 @@ test("registerWidgetRoutes wires endpoints", () => {
 
   registerWidgetRoutes(router, {
     requirePermission: () => async () => undefined,
+    validate: () => undefined,
   });
 
   const paths = routes.map((route) => `${route.method} ${route.path}`);
 
-  expect(paths).toEqual(expect.arrayContaining(["GET /widgets"]));
+  expect(paths).toEqual(
+    expect.arrayContaining(["GET /widgets", "POST /widgets/entry-teaser/preview"])
+  );
 });

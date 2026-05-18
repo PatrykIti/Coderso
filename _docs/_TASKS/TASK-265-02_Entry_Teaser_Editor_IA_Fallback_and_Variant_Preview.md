@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Editor IA
 **Estimated Effort:** Large
 **Dependencies:** TASK-265-01
-**Status:** To Do
+**Status:** Done (2026-05-18)
 
 ---
 
@@ -45,7 +45,7 @@ Out of scope:
 | `core/admin/ui/widgets/editors/EntryTeaserEditors.tsx` | Update labels, section ownership, variant thumbnails, fallback grouping, field preview hints, Auto URL copy, and snapshot copy action. |
 | `core/widgets/core/entryTeaser.tsx` | Add schema/default fields only if editor changes need persisted data. Avoid editor-only persistence. |
 | `tests/vitest/ui/entry-teaser-editor-wave.test.tsx` | Cover source control ownership, thumbnails, fallback grouping, field preview hints, Auto URL copy, and snapshot copy action. |
-| `tests/vitest/widgets/entryTeaser.test.tsx` | Update Bun-free render smoke assertions when labels or preview defaults change. |
+| `tests/vitest/widgets/entryTeaser.test.tsx` | Create or extend Bun-free render smoke assertions when labels or preview defaults change. |
 | `_docs/_WIDGETS/ENTRY_TEASER.md` | Document final Wizard/Visual/Advanced responsibilities. |
 
 ## Security Contract
@@ -145,7 +145,10 @@ Regression-test shape:
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run test:vitest -- tests/vitest/ui/entry-teaser-editor-wave.test.tsx`
-- `bun run test:vitest -- tests/vitest/widgets/entryTeaser.test.tsx`
+- if this leaf creates or extends `tests/vitest/widgets/entryTeaser.test.tsx`,
+  run `bun run test:vitest -- tests/vitest/widgets/entryTeaser.test.tsx`
+- `bun test tests/unit/widgets/entryTeaser.test.tsx` while render/normalizer
+  assertions still remain in the Bun-owned suite
 
 ## Documentation Updates Required
 

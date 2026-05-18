@@ -5,6 +5,7 @@ import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
 import type { EntryTeaserData } from "../../../core/widgets/core/entryTeaser";
+import type { WidgetEditorContext } from "../../../core/widgets/types";
 
 const entryTeaserState = vi.hoisted(() => ({
   contentTypes: [
@@ -12,6 +13,7 @@ const entryTeaserState = vi.hoisted(() => ({
       id: "articles",
       slug: "articles",
       name: "Articles",
+      status: "published",
     },
   ],
   entriesBySlug: {
@@ -76,6 +78,37 @@ const entryTeaserState = vi.hoisted(() => ({
     this.contentTypesError = null;
     this.entriesError = null;
     this.listingsError = null;
+  },
+}));
+
+const previewClientState = vi.hoisted(() => ({
+  calls: [] as EntryTeaserData[],
+  error: null as unknown,
+  response: {
+    item: {
+      id: "entry-1",
+      title: "Launch note",
+      href: "/articles/launch-note",
+      status: "published",
+    },
+    sourceTypeId: "articles",
+    sourceTypeSlug: "articles",
+    resolvedAt: "2026-03-08T10:00:00.000Z",
+  },
+  reset() {
+    this.calls = [];
+    this.error = null;
+    this.response = {
+      item: {
+        id: "entry-1",
+        title: "Launch note",
+        href: "/articles/launch-note",
+        status: "published",
+      },
+      sourceTypeId: "articles",
+      sourceTypeSlug: "articles",
+      resolvedAt: "2026-03-08T10:00:00.000Z",
+    };
   },
 }));
 
@@ -260,6 +293,14 @@ vi.mock("@/services/listingsClient", () => ({
   }),
 }));
 
+vi.mock("@/services/entryTeaserPreviewClient", () => ({
+  previewEntryTeaser: vi.fn(async (input: EntryTeaserData) => {
+    previewClientState.calls.push(input);
+    if (previewClientState.error) throw previewClientState.error;
+    return previewClientState.response;
+  }),
+}));
+
 const mount = (node: React.ReactNode) => {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -376,10 +417,12 @@ const renderEditors = async ({
   initialValue,
   initialVariant = "horizontal",
   withVariantChange = true,
+  context,
 }: {
   initialValue: EntryTeaserData;
   initialVariant?: string;
   withVariantChange?: boolean;
+  context?: WidgetEditorContext;
 }) => {
   const { EntryTeaserAdvancedEditor, EntryTeaserVisualEditor, EntryTeaserWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/EntryTeaserEditors");
@@ -414,18 +457,21 @@ const renderEditors = async ({
           onChange={handleChange}
           variant={variant}
           onVariantChange={handleVariantChange}
+          context={context}
         />
         <EntryTeaserVisualEditor
           value={value}
           onChange={handleChange}
           variant={variant}
           onVariantChange={handleVariantChange}
+          context={context}
         />
         <EntryTeaserAdvancedEditor
           value={value}
           onChange={handleChange}
           variant={variant}
           onVariantChange={handleVariantChange}
+          context={context}
         />
       </>
     );
@@ -461,9 +507,18 @@ const mockEntryTeaserContract = async (normalizedValue: EntryTeaserData) => {
 afterEach(() => {
   vi.restoreAllMocks();
   entryTeaserState.reset();
+  previewClientState.reset();
 });
 
-test("EntryTeaser advanced editor updates source wiring, style tokens, and fallback toggle", async () => {
+test("EntryTeaser advanced editor updates layout/media, style tokens, and runtime snapshot copy", async () => {
+  const clipboardWrite = vi.fn().mockResolvedValue(undefined);
+  Object.defineProperty(globalThis.navigator, "clipboard", {
+    configurable: true,
+    value: {
+      writeText: clipboardWrite,
+    },
+  });
+
   const view = await renderEditors({
     initialValue: {
       sourceMode: "featured",
@@ -494,22 +549,17 @@ test("EntryTeaser advanced editor updates source wiring, style tokens, and fallb
   try {
     await flush();
 
-    const sourceWiringSection = findSectionByTitle(view.container, "Source wiring");
-    if (!(sourceWiringSection instanceof HTMLElement)) {
-      throw new Error("Missing source wiring section");
+    const layoutSection = findSectionByTitle(view.container, "Layout and media");
+    if (!(layoutSection instanceof HTMLElement)) {
+      throw new Error("Missing layout and media section");
     }
 
-    setSelectValue(findSelectByOptions(sourceWiringSection, ["legacy", "listing"]), "listing");
-    await flush();
-
-    setSelectValue(
-      findSelectByOptions(sourceWiringSection, ["__no_listing_query__", "query-1"]),
-      "__no_listing_query__"
-    );
-    setSelectValue(
-      findSelectByOptions(sourceWiringSection, ["__no_listing_template__", "template-1"]),
-      "__no_listing_template__"
-    );
+    setSelectValue(findSelectByOptions(layoutSection, ["sm", "md", "lg", "xl", "full"]), "full");
+    setSelectValue(findSelectByOptions(layoutSection, ["0", "3", "5", "8", "12"]), "12");
+    setSelectValue(findSelectByOptions(layoutSection, ["image", "icon", "none"]), "icon");
+    setSelectValue(findSelectByOptions(layoutSection, ["auto", "16:9", "4:3", "1:1"]), "4:3");
+    setSelectValue(findSelectByOptions(layoutSection, ["auto", "sm", "md", "lg"]), "lg");
+    setSelectValue(findSelectByOptions(layoutSection, ["cover", "contain"]), "contain");
 
     const styleTokensSection = findSectionByTitle(view.container, "Style tokens");
     if (!(styleTokensSection instanceof HTMLElement)) {
@@ -535,20 +585,21 @@ test("EntryTeaser advanced editor updates source wiring, style tokens, and fallb
     setSelectValue(radiusSelect, "sm");
     setSelectValue(spacingSelect, "lg");
 
-    const fallbackSection = findSectionByTitle(view.container, "Fallback behavior");
-    if (!(fallbackSection instanceof HTMLElement)) {
-      throw new Error("Missing fallback behavior section");
-    }
-
-    clickElement(findCheckboxes(fallbackSection)[0]);
+    clickButtonByText(view.container, "Copy JSON");
+    await flush();
 
     expect(view.getLatestValue()).toMatchObject({
-      source: {
-        mode: "listing",
-        contentTypeId: "",
-        entryId: "",
-        listingQueryId: "",
-        listingTemplateId: "",
+      fields: {
+        tagLimit: 12,
+      },
+      layout: {
+        maxWidth: "full",
+      },
+      media: {
+        mode: "icon",
+        aspect: "4:3",
+        height: "lg",
+        fit: "contain",
       },
       style: {
         surface: "var(--teaser-surface)",
@@ -556,13 +607,58 @@ test("EntryTeaser advanced editor updates source wiring, style tokens, and fallb
         radius: "sm",
         spacing: "lg",
       },
-      fallback: {
-        fallbackToLatest: false,
-      },
     });
 
     const snapshot = view.container.querySelector("pre");
     expect(snapshot?.textContent).toContain('"error": "Pending runtime resolution"');
+    expect(clipboardWrite).toHaveBeenCalledWith(
+      expect.stringContaining('"error": "Pending runtime resolution"')
+    );
+    expect(view.container.textContent).toContain("Snapshot copied.");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("EntryTeaser advanced editor adopts shared color swatch, text, and clear controls", async () => {
+  const view = await renderEditors({
+    initialValue: {
+      style: {
+        surface: "#112233",
+        border: "rgba(10, 20, 30, 0.4)",
+        radius: "lg",
+        spacing: "md",
+      },
+    },
+  });
+
+  try {
+    const styleTokensSection = findSectionByTitle(view.container, "Style tokens");
+    if (!(styleTokensSection instanceof HTMLElement)) {
+      throw new Error("Missing style tokens section");
+    }
+
+    const surfaceSwatch = styleTokensSection.querySelector(
+      'input[aria-label="Surface color swatch"]'
+    );
+    const borderValue = styleTokensSection.querySelector('input[aria-label="Border color value"]');
+    expect(surfaceSwatch).toBeTruthy();
+    expect(borderValue).toBeTruthy();
+
+    setInputValue(surfaceSwatch, "#445566");
+    setInputValue(borderValue, "var(--border-strong)");
+
+    const clearButtons = Array.from(styleTokensSection.querySelectorAll("button")).filter(
+      (button) => button.textContent?.includes("Clear")
+    );
+    clickElement(clearButtons[0]);
+
+    expect(view.getLatestValue()).toMatchObject({
+      style: expect.objectContaining({
+        border: "var(--border-strong)",
+      }),
+    });
+    expect(view.getLatestValue().style?.surface).toBeUndefined();
   } finally {
     view.cleanup();
   }
@@ -621,28 +717,23 @@ test("EntryTeaser editors fall back safely for sparse normalized values and igno
     expect(findSelectByOptions(wizardSection, ["latest", "featured", "manual"])?.value).toBe(
       "latest"
     );
-    expect(findSelectByOptions(view.container, ["horizontal", "vertical", "minimal"])?.value).toBe(
-      "horizontal"
-    );
+    expect(view.container.querySelector('[data-variant-thumbnail="horizontal"]')).toBeTruthy();
 
     clickButtonByText(view.container, "Vertical");
     expect(view.getLatestVariant()).toBe("legacy-variant");
     expect(view.onVariantChangeSpy).not.toHaveBeenCalled();
 
-    const visualSection = findSectionByTitle(view.container, "Source configuration");
+    const visualSection = findSectionByTitle(view.container, "Source summary");
     if (!(visualSection instanceof HTMLElement)) {
-      throw new Error("Missing visual source configuration section");
+      throw new Error("Missing visual source summary section");
     }
-    expect(findSelectByOptions(visualSection, ["legacy", "listing"])?.value).toBe("legacy");
-    expect(findSelectByOptions(visualSection, ["latest", "featured", "manual"])?.value).toBe(
-      "latest"
-    );
+    expect(visualSection.textContent).toContain("Content type ID: Not selected");
 
-    expect(
-      findCheckboxes(view.container)
-        .slice(0, 4)
-        .every((checkbox) => checkbox.checked)
-    ).toBe(true);
+    const teaserFieldsSection = findSectionByTitle(view.container, "Teaser content fields");
+    if (!(teaserFieldsSection instanceof HTMLElement)) {
+      throw new Error("Missing teaser content fields section");
+    }
+    expect(findCheckboxes(teaserFieldsSection).every((checkbox) => checkbox.checked)).toBe(true);
     expect(findInputByPlaceholder(view.container, "Read more")?.value).toBe("Read more");
     expect(
       findInputByPlaceholder(view.container, "/blog/entry-slug or https://...")
@@ -669,9 +760,9 @@ test("EntryTeaser editors fall back safely for sparse normalized values and igno
     expect(radiusSelect?.value).toBe("lg");
     expect(spacingSelect?.value).toBe("md");
 
-    const fallbackSection = findSectionByTitle(view.container, "Fallback behavior");
+    const fallbackSection = findSectionByTitle(view.container, "Fallback state");
     if (!(fallbackSection instanceof HTMLElement)) {
-      throw new Error("Missing fallback behavior section");
+      throw new Error("Missing fallback state section");
     }
     expect(findCheckboxes(fallbackSection)[0]?.checked).toBe(true);
 
@@ -750,12 +841,120 @@ test("EntryTeaser editors surface generic listing and entry load failures plus e
   }
 });
 
+test("EntryTeaser visual editor resolves preview through transient context and annotates duplicate content types", async () => {
+  entryTeaserState.contentTypes = [
+    {
+      id: "articles",
+      slug: "articles",
+      name: "Articles",
+      status: "published",
+    },
+    {
+      id: "articles-landing",
+      slug: "articles-landing",
+      name: "Articles",
+      status: "draft",
+    },
+  ];
+  const setPreviewState = vi.fn();
+
+  const view = await renderEditors({
+    initialValue: {
+      sourceMode: "latest",
+      source: {
+        mode: "legacy",
+        contentTypeId: "articles",
+      },
+    },
+    context: {
+      surface: "page-builder",
+      editorMode: "visual",
+      setPreviewState,
+    },
+  });
+
+  try {
+    await flush();
+    expect(previewClientState.calls).toHaveLength(1);
+    expect(setPreviewState).toHaveBeenCalledWith({ status: "loading" });
+    expect(setPreviewState).toHaveBeenLastCalledWith({
+      status: "ready",
+      dataPatch: {
+        resolved: previewClientState.response,
+      },
+    });
+
+    const duplicateOptionLabels = Array.from(view.container.querySelectorAll("option")).map(
+      (option) => option.textContent?.trim()
+    );
+    expect(duplicateOptionLabels).toContain("Articles (articles, published)");
+    expect(duplicateOptionLabels).toContain("Articles (articles-landing, draft)");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("EntryTeaser editors show auth-specific retry affordances for content type and entry loading", async () => {
+  entryTeaserState.contentTypesError = {
+    name: "ApiClientError",
+    status: 401,
+    message: "Not authenticated",
+  };
+
+  const contentTypesView = await renderEditors({
+    initialValue: {
+      sourceMode: "latest",
+      source: {
+        mode: "legacy",
+      },
+    },
+  });
+
+  try {
+    await flush();
+    expect(contentTypesView.container.textContent).toContain(
+      "Your session cannot load content types. Sign in again and retry."
+    );
+    expect(contentTypesView.container.textContent).toContain("Retry content types");
+  } finally {
+    contentTypesView.cleanup();
+  }
+
+  entryTeaserState.reset();
+  entryTeaserState.entriesError = {
+    name: "ApiClientError",
+    status: 403,
+    message: "Forbidden",
+  };
+
+  const entriesView = await renderEditors({
+    initialValue: {
+      sourceMode: "manual",
+      source: {
+        mode: "legacy",
+        contentTypeId: "articles",
+      },
+    },
+  });
+
+  try {
+    await flush();
+    expect(entriesView.container.textContent).toContain(
+      "Your session cannot load entries for this content type. Sign in again and retry."
+    );
+    expect(entriesView.container.textContent).toContain("Retry entries");
+  } finally {
+    entriesView.cleanup();
+  }
+});
+
 test("EntryTeaser editors cover legacy manual mode, style fields, CTA options, and runtime snapshot", async () => {
   const { EntryTeaserAdvancedEditor, EntryTeaserVisualEditor, EntryTeaserWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/EntryTeaserEditors");
 
   const onChangeSpy = vi.fn();
   const onVariantChangeSpy = vi.fn();
+  let latestValue: EntryTeaserData = {} as EntryTeaserData;
 
   const Harness = () => {
     const [value, setValue] = useState<EntryTeaserData>({} as EntryTeaserData);
@@ -765,6 +964,7 @@ test("EntryTeaser editors cover legacy manual mode, style fields, CTA options, a
         <EntryTeaserWizardEditor
           value={value}
           onChange={(next) => {
+            latestValue = next;
             onChangeSpy(next);
             setValue(next);
           }}
@@ -777,6 +977,7 @@ test("EntryTeaser editors cover legacy manual mode, style fields, CTA options, a
         <EntryTeaserVisualEditor
           value={value}
           onChange={(next) => {
+            latestValue = next;
             onChangeSpy(next);
             setValue(next);
           }}
@@ -789,6 +990,7 @@ test("EntryTeaser editors cover legacy manual mode, style fields, CTA options, a
         <EntryTeaserAdvancedEditor
           value={value}
           onChange={(next) => {
+            latestValue = next;
             onChangeSpy(next);
             setValue(next);
           }}
@@ -830,13 +1032,10 @@ test("EntryTeaser editors cover legacy manual mode, style fields, CTA options, a
 
     React.act(() => {
       setSelectValue(findSelectByOptions(view.container, ["__no_entry__", "entry-1"]), "entry-1");
-      setSelectValue(
-        findSelectByOptions(view.container, ["horizontal", "vertical", "minimal"]),
-        "minimal"
-      );
       setInputValue(findInputByPlaceholder(view.container, "Read more"), "Read article");
     });
     await flush();
+    clickButtonByText(view.container, "Minimal");
 
     React.act(() => {
       setSelectValue(findSelectByOptions(view.container, ["auto", "custom"]), "custom");
@@ -850,39 +1049,42 @@ test("EntryTeaser editors cover legacy manual mode, style fields, CTA options, a
       );
       setSelectValue(findSelectByOptions(view.container, ["none", "sm", "md", "lg"]), "lg");
       setSelectValue(findSelectByOptions(view.container, ["none", "sm", "md", "lg", "xl"]), "xl");
+      setSelectValue(findSelectByOptions(view.container, ["link", "filled", "outline"]), "outline");
       setTextareaValue(
         findTextareaByPlaceholder(view.container, "Choose a source mode and content type."),
         "Nothing ready"
       );
     });
 
-    const checkboxes = Array.from(view.container.querySelectorAll("input[type='checkbox']"));
-    clickElement(checkboxes[0]);
-    clickElement(checkboxes[1]);
-    clickElement(checkboxes[2]);
-    clickElement(checkboxes[3]);
+    const ctaSection = findSectionByTitle(view.container, "CTA behavior");
+    if (!(ctaSection instanceof HTMLElement)) {
+      throw new Error("Missing CTA behavior section");
+    }
+    clickElement(findCheckboxes(ctaSection)[0]);
 
-    const matchingCall = [...onChangeSpy.mock.calls]
-      .reverse()
-      .find(
-        ([arg]) =>
-          arg?.sourceMode === "manual" &&
-          arg?.source?.mode === "legacy" &&
-          arg?.source?.contentTypeId === "articles" &&
-          arg?.source?.entryId === "entry-1" &&
-          arg?.cta?.hrefMode === "custom" &&
-          arg?.cta?.href === "/custom-entry"
-      );
-    expect(matchingCall?.[0]).toEqual(
-      expect.objectContaining({
-        cta: expect.objectContaining({
-          label: "Read article",
-        }),
-        style: expect.objectContaining({
-          radius: "xl",
-        }),
-      })
-    );
+    const teaserFieldsSection = findSectionByTitle(view.container, "Teaser content fields");
+    if (!(teaserFieldsSection instanceof HTMLElement)) {
+      throw new Error("Missing teaser content fields section");
+    }
+    const contentFieldCheckboxes = findCheckboxes(teaserFieldsSection);
+    clickElement(contentFieldCheckboxes[0]);
+    clickElement(contentFieldCheckboxes[1]);
+    clickElement(contentFieldCheckboxes[2]);
+    clickElement(contentFieldCheckboxes[3]);
+
+    expect(latestValue).toMatchObject({
+      sourceMode: "manual",
+      cta: expect.objectContaining({
+        hrefMode: "custom",
+        href: "/custom-entry",
+        label: "Read article",
+        opensInNewTab: true,
+        style: "outline",
+      }),
+      style: expect.objectContaining({
+        radius: "xl",
+      }),
+    });
     expect(onVariantChangeSpy).toHaveBeenCalledWith("minimal");
   } finally {
     view.cleanup();
@@ -992,7 +1194,7 @@ test("EntryTeaser editors cover listing mode and content/listings loading errors
   }
 });
 
-test("EntryTeaser visual source controls cover generic content-type failure, API entry failure, and fallback title updates", async () => {
+test("EntryTeaser wizard source controls cover generic content-type failure, API entry failure, and fallback title updates", async () => {
   entryTeaserState.contentTypesError = new Error("types transport failed");
 
   const typesErrorView = await renderEditors({
@@ -1031,20 +1233,20 @@ test("EntryTeaser visual source controls cover generic content-type failure, API
 
   entryTeaserState.reset();
 
-  const visualView = await renderEditors({
+  const sourceOwnerView = await renderEditors({
     initialValue: {},
   });
 
   try {
-    const visualSection = findSectionByTitle(visualView.container, "Source configuration");
-    if (!(visualSection instanceof HTMLElement)) {
-      throw new Error("Missing visual source configuration section");
+    const wizardSection = findSectionByTitle(sourceOwnerView.container, "Source mode");
+    if (!(wizardSection instanceof HTMLElement)) {
+      throw new Error("Missing wizard source mode section");
     }
 
-    setSelectValue(findSelectByOptions(visualSection, ["legacy", "listing"]), "listing");
+    setSelectValue(findSelectByOptions(wizardSection, ["legacy", "listing"]), "listing");
     await flush();
 
-    expect(visualView.getLatestValue()).toMatchObject({
+    expect(sourceOwnerView.getLatestValue()).toMatchObject({
       source: {
         mode: "listing",
         contentTypeId: "",
@@ -1052,12 +1254,12 @@ test("EntryTeaser visual source controls cover generic content-type failure, API
       },
     });
 
-    setSelectValue(findSelectByOptions(visualSection, ["legacy", "listing"]), "legacy");
+    setSelectValue(findSelectByOptions(wizardSection, ["legacy", "listing"]), "legacy");
     await flush();
-    setSelectValue(findSelectByOptions(visualSection, ["latest", "featured", "manual"]), "manual");
+    setSelectValue(findSelectByOptions(wizardSection, ["latest", "featured", "manual"]), "manual");
     await flush();
 
-    const fallbackSection = findSectionByTitle(visualView.container, "Empty state copy");
+    const fallbackSection = findSectionByTitle(sourceOwnerView.container, "Fallback state");
     if (!(fallbackSection instanceof HTMLElement)) {
       throw new Error("Missing fallback section");
     }
@@ -1067,7 +1269,7 @@ test("EntryTeaser visual source controls cover generic content-type failure, API
       "Choose teaser content"
     );
 
-    expect(visualView.getLatestValue()).toMatchObject({
+    expect(sourceOwnerView.getLatestValue()).toMatchObject({
       sourceMode: "manual",
       source: {
         mode: "legacy",
@@ -1080,6 +1282,6 @@ test("EntryTeaser visual source controls cover generic content-type failure, API
       },
     });
   } finally {
-    visualView.cleanup();
+    sourceOwnerView.cleanup();
   }
 });

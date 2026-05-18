@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 290 tasks
+- **To Do:** 284 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1619 tasks
+- **Done:** 1627 tasks
 
 ---
 
@@ -38,6 +38,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-304 | Entry Teaser Listing Manual Picker | Medium | Medium | Add a deterministic manual listing-row selection contract for Entry Teaser after TASK-265 closes latest/featured listing semantics |
+| TASK-301 | Forms Public Runtime Nonce Cache Freshness | High | Large | Shared follow-up for stale cached `submissionNonce` drift across nonce-bearing Forms runtime widgets |
 | TASK-300 | Compare Timeline Motion Presets and Reduced Motion Policy | Low | Medium | Exact future owner for `REPORT_COMPARE_TIMELINE_WIDGET.md` row `W8`; keep Compare Timeline static until a reduced-motion-safe motion contract is approved |
 | TASK-299 | Shared Widget Contrast Guidance and Validation | Medium | Large | Exact shared owner for `REPORT_COMPARE_TIMELINE_WIDGET.md` row `W7` and future reusable widget contrast guidance/validation |
 | TASK-298 | Booking Admin Availability Row Draft and Save UX | Medium | Medium | Own the Booking admin Availability-tab `Add row` versus `Save schedules` flow outside TASK-259 widget scope |
@@ -46,7 +48,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-295 | Appointment Form Custom Field Product Surface | Medium | Large | Widget-local custom field authoring/render/payload follow-up after the bounded booking metadata boundary lands |
 | TASK-294 | Booking Flow Editor Context Surface Plumbing | High | Large | Shared `WidgetEditorContext.bookingFlows` plumbing for page/template/custom-screen/detail-template booking surfaces without persisting preview-only data |
 | TASK-293 | Shared Repeatable Slot Metadata Sync and Instance Reorder | High | Large | Builder-owned shared follow-up for repeatable-slot add/reorder operations that must keep widget metadata aligned with slot instances |
-| TASK-301 | Forms Public Runtime Nonce Cache Freshness | High | Large | Shared follow-up for stale cached `submissionNonce` drift across nonce-bearing Forms runtime widgets |
 | TASK-292 | Toggle Block Widget Playwright Product Followups | High | Very Large | Toggle Block-only follow-up family for `REPORT_TOGGLE_BLOCK_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-292-01 | Toggle Block Variant Visual Hierarchy, Contrast, and Pane Styling | High | Large | Add Toggle Block-owned cards distinction, active contrast, and bounded pane style controls after TASK-256 shared style semantics |
 | TASK-292-02 | Toggle Block Motion and Pane Transition Contract | Medium | Medium | Add bounded fade/slide/no-motion options without weakening TASK-256 interactive runtime semantics |
@@ -269,13 +270,20 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-266-04 | FAQ Accordion Wizard and Open State Editor UX | Medium | Medium | Add Wizard description, item counters, question-aware open labels, and clearer all-collapsed Advanced UX |
 | TASK-266-05 | FAQ Accordion Item Management and Variant Preview Polish | Medium | Large | Add safer removal flow, compact accessible item actions, variant miniatures, and bounded reorder/bulk decisions |
 | TASK-266-06 | FAQ Accordion Report Docs and Closure | Medium | Medium | Refresh FAQ report/docs/changelog/board and final validation for the TASK-266 family |
-| TASK-265 | Entry Teaser Widget Playwright Product Followups | High | Very Large | Widget-specific follow-up family for `REPORT_ENTRY_TEASER_WIDGET.md`, excluding TASK-256 shared-contract scope |
-| TASK-265-01 | Entry Teaser Source Resolution and Admin Preview | High | Large | Add resolved admin preview, source picker recovery, content-type dedupe, compact status labels, and listing source semantics |
-| TASK-265-02 | Entry Teaser Editor IA, Fallback, and Variant Preview | High | Large | Repair source labels/ownership, variant thumbnails, fallback grouping, field preview hints, Auto URL help, and snapshot copy |
-| TASK-265-03 | Entry Teaser CTA Link and URL Feedback | High | Medium | Add custom URL validation, empty-input behavior, new-tab safe rel, and fixed CTA style variants |
-| TASK-265-04 | Entry Teaser Layout, Media, Tags, and Heading Controls | High | Large | Add section heading, media sizing, tag limits, max-width, optional icon/logo mode, image dimensions, and heading controls |
-| TASK-265-06 | Entry Teaser Shared Color Control Adoption | Medium | Medium | Adopt the TASK-256-02 shared color-control hook for Entry Teaser surface/border fields without duplicating generic picker behavior |
-| TASK-265-05 | Entry Teaser Report, Docs, and Closure | Medium | Medium | Refresh Entry Teaser report/docs/changelog/board and final validation for the TASK-265 family |
+| TASK-264 | Divider Widget Playwright Product Followups | High | Large | Divider-specific follow-up family for `REPORT_DIVIDER_WIDGET.md`, excluding TASK-256 shared-contract scope |
+| TASK-264-01 | Divider Label Color Typography and Gap Controls | High | Medium | Add label-center color, typography, nowrap, gap, truthful labels, and clear-label UX |
+| TASK-264-02 | Divider Width Alignment and Custom Validation | High | Medium | Add container width, left/center/right alignment, and custom-width validation feedback |
+| TASK-264-03 | Divider Line Style Opacity and Spacer Only Mode | Medium | Medium | Add bounded opacity, dotted/dashed style polish, and spacer-only visibility mode |
+| TASK-264-04 | Divider Editor Preview Reset and Wizard UX | Medium | Medium | Add inline preview, compact Wizard controls, and reset/normalize actions after shared fixes land |
+| TASK-264-05 | Divider Runtime DOM Marker Hygiene | Medium | Small | Remove or sanitize raw Divider style-token data markers from public DOM output |
+| TASK-264-06 | Divider Report Docs and Closure | Medium | Medium | Refresh Divider report/docs/changelog/board and final validation for the TASK-264 family |
+| TASK-263 | CTA Banner Widget Playwright Product Followups | High | Very Large | CTA Banner-only follow-up family for `REPORT_CTA_BANNER_WIDGET.md`, excluding TASK-256 shared-contract scope |
+| TASK-263-01 | CTA Banner Runtime Semantics and Accessibility | High | Large | Repair CTA-local empty badge, description color, border semantics, resolver defaults, section/action labels, and focus-visible output |
+| TASK-263-02 | CTA Banner Wizard and Action Editing UX | High | Large | Add Wizard CTA URL/secondary controls, variant cards, explicit action labels, invalid URL feedback, and secondary toggle |
+| TASK-263-03 | CTA Banner Visual Style and Button Controls | High | Large | Add CTA visual button border controls, optional TASK-256-02 Clear hook, and button radius/size options |
+| TASK-263-04 | CTA Banner Link Target and Conversion Options | Medium | Large | Add safe target/rel policy, icon enums, tertiary CTA, and description visibility controls |
+| TASK-263-05 | CTA Banner Layout Media and Motion Options | Medium | Large | Add CTA-local width, gradient, background media, and bounded motion options where page layout does not already own them |
+| TASK-263-06 | CTA Banner Report Docs and Closure | Medium | Medium | Refresh CTA report/docs/changelog/board and final validation for the TASK-263 family |
 | TASK-262 | Content List Widget Playwright Product Followups | High | Very Large | Content List-only follow-up family for `REPORT_CONTENT_LIST_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-262-01 | Content List Source Picker and Filter Editor IA | High | Large | Repair source picker labels/deduplication/search, taxonomy/author editor barriers, and listing-mode filter feedback |
 | TASK-262-02 | Content List Section Empty State and Static Canvas Guidance | High | Large | Add section heading, source-aware empty copy, missing-source guidance, and saved-data canvas messaging |
@@ -344,7 +352,15 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-305 | Shared Color Control Text and Swatch Contract | High | Medium | Done: the shared swatch-plus-text color contract now exists and Entry Teaser consumes it through widget-local adoption and tests |
 | TASK-303 | Divider and Spacer Residual Shared Token Control Adoption | High | Medium | Done: Divider/Spacer shared token-custom controls now collapse duplicate off-states, enter explicit custom mode, and preserve Divider CSS-variable color tokens |
+| TASK-265 | Entry Teaser Widget Playwright Product Followups | High | Very Large | Done: admin preview hydration, editor IA cleanup, CTA safety, layout/media controls, shared color adoption, docs closure, and validation evidence are synchronized; manual listing-row picking is deferred to TASK-304 |
+| TASK-265-06 | Entry Teaser Shared Color Control Adoption | Medium | Medium | Done: Entry Teaser surface and border fields now use the shared swatch-plus-text control with widget-local adoption coverage |
+| TASK-265-05 | Entry Teaser Report, Docs, and Closure | Medium | Medium | Done: report matrix, widget docs, task board, changelog, and final validation evidence are synchronized for the TASK-265 family |
+| TASK-265-04 | Entry Teaser Layout, Media, Tags, and Heading Controls | High | Large | Done: section heading, heading levels, media mode/aspect/height/fit, tag limits, max-width, and deterministic image dimensions are shipped and tested |
+| TASK-265-03 | Entry Teaser CTA Link and URL Feedback | High | Medium | Done: CTA new-tab safety, CTA style variants, empty custom URLs, and inline URL validation are synchronized across schema, editor, and runtime |
+| TASK-265-02 | Entry Teaser Editor IA, Fallback, and Variant Preview | High | Large | Done: source ownership moved to Wizard, variant thumbnails landed, fallback settings are grouped, field previews are visible, and runtime snapshots are copyable |
+| TASK-265-01 | Entry Teaser Source Resolution and Admin Preview | High | Large | Done: admin preview resolves real teaser data, source pickers recover from auth/loading failures, listing featured semantics are explicit, and compact entry status labels remain visible |
 | TASK-264 | Divider Widget Playwright Product Followups | High | Large | Done: Divider label styling, width/alignment, transparency, spacer-only mode, preview/reset UX, DOM marker hygiene, and closure evidence are synchronized |
 | TASK-264-01 | Divider Label Color Typography and Gap Controls | High | Medium | Done: `label-center` now supports separate label color, bounded typography, nowrap, configurable gap, and clear-label UX |
 | TASK-264-02 | Divider Width Alignment and Custom Validation | High | Medium | Done: container width is tokenized, non-full dividers align left/center/right, and custom-width drafts keep visible validation feedback |

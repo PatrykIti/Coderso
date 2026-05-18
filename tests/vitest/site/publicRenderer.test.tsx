@@ -522,10 +522,27 @@ test("renderPublicPageHtml renders entry teaser resolved payload deterministical
             entryId: "entry-1",
           },
           fields: {
-            showImage: false,
+            showImage: true,
             showExcerpt: true,
             showMeta: true,
             showTags: true,
+            tagLimit: 2,
+          },
+          section: {
+            title: "Featured article",
+            headingLevel: "h2",
+          },
+          title: {
+            headingLevel: "h4",
+          },
+          media: {
+            mode: "image",
+            aspect: "16:9",
+            height: "sm",
+            fit: "cover",
+          },
+          layout: {
+            maxWidth: "full",
           },
           cta: {
             label: "Read post",
@@ -549,6 +566,8 @@ test("renderPublicPageHtml renders entry teaser resolved payload deterministical
               title: "Quarterly update",
               href: "/blog/quarterly-update",
               excerpt: "Highlights from this quarter.",
+              imageSrc: "https://cdn.example.com/quarterly-update.jpg",
+              tags: ["news", "featured", "ops"],
               status: "published",
               publishedAt: "2026-02-09T12:00:00.000Z",
             },
@@ -561,8 +580,20 @@ test("renderPublicPageHtml renders entry teaser resolved payload deterministical
     ],
   });
 
+  expect(html).toContain("Featured article");
   expect(html).toContain("Quarterly update");
   expect(html).toContain("Read post");
+  expect(html).toContain("max-w-none");
+  expect(html).toContain('data-entry-teaser-tag-limit="2"');
+  expect(html).toContain('data-entry-teaser-media-mode="image"');
+  expect(html).toContain('width="640"');
+  expect(html).toContain('height="360"');
+  expect(html).toContain("featured");
+  expect(html).not.toContain(">ops<");
+  expect(html).toContain("<h2");
+  expect(html).toContain("Featured article</h2>");
+  expect(html).toContain("<h4");
+  expect(html).toContain("Quarterly update</h4>");
   expect(html).toContain('data-entry-teaser-variant="horizontal"');
   expect(html).toContain('data-entry-teaser-source-mode="manual"');
   expect(html).toContain('data-entry-teaser-state="ready"');

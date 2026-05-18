@@ -5,8 +5,8 @@
 **Priority:** High
 **Category:** Widgets + Dynamic Content + Admin UI + Runtime Render + Playwright QA
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-252-07-03, TASK-256-07
-**Status:** To Do
+**Dependencies:** TASK-252-07-03, TASK-256-07, TASK-305
+**Status:** Done (2026-05-18)
 
 ---
 
@@ -24,10 +24,12 @@ work that belongs to the current widget owners:
 - `core/services/content/entryTeaserResolver.ts`
 - `core/server/publicSite.tsx` only for Entry Teaser resolver injection
 - admin preview API/client seams only if required for resolved editor preview
-- `tests/vitest/widgets/entryTeaser.test.tsx` for Bun-free schema, normalizer,
-  and render mapping coverage
-- `tests/unit/widgets/entryTeaser.test.tsx` only as a temporary comparison smoke
-  or for any remaining Bun-coupled resolver/runtime case that cannot be moved
+- `tests/vitest/widgets/entryTeaser.test.tsx` to be introduced by TASK-265 for
+  Bun-free schema, normalizer, and render mapping coverage once the owner is
+  split cleanly
+- `tests/unit/widgets/entryTeaser.test.tsx` remains the authoritative
+  render/normalizer/resolver suite until that Vitest lane exists; keep any
+  retained Bun-coupled resolver/runtime cases there afterward
 - `tests/vitest/ui/entry-teaser-editor-wave.test.tsx`
 - `tests/vitest/site/publicRenderer.test.tsx`
 - `_docs/_WIDGETS/ENTRY_TEASER.md`
@@ -49,21 +51,23 @@ In scope for TASK-265:
   mode controls, visual variant thumbnails, grouped fallback copy/behavior,
   field-toggle preview hints, Auto URL help, and runtime snapshot copy action.
 - Entry Teaser CTA behavior: custom URL empty-state editing, live validation,
-  optional new-tab behavior, safe `rel`, and local CTA style options through
-  the shared safe-link helper once TASK-256-06-02 provides it.
+  optional new-tab behavior, safe `rel`, and local CTA style options by
+  consuming the existing shared `resolveWidgetLinkAttrs()` owner in
+  `core/widgets/core/widgetSafeHref.ts`.
 - Entry Teaser renderer/product controls: section heading, heading level,
   media sizing/aspect/object-fit, optional icon/logo media mode, tag limit,
   max-width, image dimensions, and explicit enum hardening.
 - Entry Teaser adoption of the shared color-control hook for surface/border
-  fields after TASK-256-02 defines the generic color-picker contract.
+  fields after TASK-305 defines the generic swatch-plus-text contract.
 - Entry Teaser report/docs/changelog/board closure after implementation.
 
 Out of scope for TASK-265:
 
 - Cross-widget editor atomic update helpers, owned by TASK-256-01.
-- Generic `Clear`, `none`, color-token, and shared color-picker behavior,
-  owned by TASK-256-02. TASK-265-06 may only adopt the resulting shared
-  color-control hook for Entry Teaser surface/border fields.
+- Generic `Clear`, `none`, and closed token semantics remain owned by
+  TASK-256-02. The missing shared swatch-plus-text color-control owner is
+  TASK-305; TASK-265-06 may only adopt that shared control for Entry Teaser
+  surface/border fields.
 - Generic slot/nested-content placeholder gating, owned by TASK-256-03.
 - Generic instance-safe IDs, shared ARIA helpers, and shared runtime binding
   infrastructure, owned by TASK-256-04.
@@ -78,7 +82,7 @@ Out of scope for TASK-265:
 | E-01, E-02, E-03, E-04, E-09, E-10, E-12 | TASK-265-02 |
 | E-08, E-11, B-04, B-05, T-04 | TASK-265-03 |
 | B-01, B-02, B-03, B-07, B-08, T-01, T-02, T-03, T-06 | TASK-265-04 |
-| E-14 | TASK-265-06 after TASK-256-02 defines the shared color-control hook |
+| E-14 | TASK-265-06 after TASK-305 defines the shared color-control hook |
 | Final fixed/routed/deferred evidence, docs/changelog/board closure | TASK-265-05 |
 
 ## Current Owner and Test Matrix
@@ -87,9 +91,9 @@ Out of scope for TASK-265:
 |---|---|---|---|
 | TASK-265-01 | Report sections 3.2 E-05/E-06/E-07/E-13, 3.3 T-05/T-07, 3.1 B-06, admin/frontend parity table | `entryTeaserResolver.ts:84-186`, `EntryTeaserEditors.tsx:151-230,353-575`, optional admin preview route/client, `publicSite.tsx:301-303` | Vitest editor wave, Vitest widget schema/render suite, Bun route tests if an internal preview endpoint is added, Bun resolver tests, Bun runtime hydration when `publicSite.tsx` resolver injection changes, public renderer smoke |
 | TASK-265-02 | Report sections 3.2 E-01/E-02/E-03/E-04/E-09/E-10/E-12 | `EntryTeaserEditors.tsx:68-76,117-149,577-974`, `entryTeaser.tsx` only for schema fields needed by fallback/source ownership | Vitest editor wave, Vitest widget render/normalizer smoke when preview data changes |
-| TASK-265-03 | Report sections 3.1 B-04/B-05, 3.2 E-08/E-11, 3.3 T-04 | `entryTeaser.tsx:43-47,239-249,372-379,455-568`, `EntryTeaserEditors.tsx:781-821`, shared `resolveWidgetLinkAttrs` from TASK-256-06-02 | Vitest widget schema/render suite, Vitest editor wave, security gate only if scanner-relevant href handling changes |
+| TASK-265-03 | Report sections 3.1 B-04/B-05, 3.2 E-08/E-11, 3.3 T-04 | `entryTeaser.tsx:43-47,239-249,372-379,455-568`, `EntryTeaserEditors.tsx:781-821`, shared `resolveWidgetLinkAttrs` in `widgetSafeHref.ts` | Vitest widget schema/render suite once introduced, Bun widget suite until migration lands, Vitest editor wave, security gate only if scanner-relevant href handling changes |
 | TASK-265-04 | Report sections 3.1 B-01/B-02/B-03/B-07/B-08, 3.3 T-01/T-02/T-03/T-06 | `entryTeaser.tsx:7-162,164-201,251-312,431-583`, `EntryTeaserEditors.tsx:745-779,889-948`, docs | Vitest widget schema/render suite, public renderer, Vitest editor wave for new controls |
-| TASK-265-06 | Report section 3.2 E-14 | `EntryTeaserEditors.tsx:889-948`, `entryTeaser.tsx:474-478`, shared TASK-256-02 color-control hook | Vitest editor wave, Vitest widget render smoke, shared color-control tests from TASK-256-02 if touched |
+| TASK-265-06 | Report section 3.2 E-14 | `EntryTeaserEditors.tsx:889-948`, `entryTeaser.tsx:474-478`, shared TASK-305 color-control hook | Vitest editor wave, Vitest widget render suite once introduced, Bun widget suite until migration lands, shared color-control tests from TASK-305 if touched |
 | TASK-265-05 | Report section 7 plus every fixed/routed/deferred row | `_docs/PLAYWRIGHT/REPORT_ENTRY_TEASER_WIDGET.md`, `_docs/_WIDGETS/ENTRY_TEASER.md`, board/changelog/docs | `git diff --check`, targeted production lanes after implementation leaves |
 
 ## Sub-Tasks
@@ -109,12 +113,12 @@ Out of scope for TASK-265:
    errors define what the editor can truthfully display.
 3. Complete TASK-265-02 after source preview behavior is stable so editor IA can
    group real states instead of fallback-only states.
-4. Complete TASK-256-06-02 before TASK-265-03 if new-tab/safe-link work needs
-   the shared `resolveWidgetLinkAttrs()` helper; TASK-265-03 then wires only the
-   Entry Teaser schema/editor/render contract.
+4. Reuse the existing shared `resolveWidgetLinkAttrs()` owner before
+   TASK-265-03; that leaf then wires only the Entry Teaser
+   schema/editor/render contract.
 5. Complete TASK-265-04 after the CTA and source contracts land, then add
    renderer/media/layout controls with schema/default/normalizer coverage.
-6. Complete TASK-265-06 after TASK-256-02 lands the shared color-control
+6. Complete TASK-265-06 after TASK-305 lands the shared color-control
    contract; only adopt it for Entry Teaser surface/border fields.
 7. Complete TASK-265-05 last with report evidence, docs, changelog, board sync,
    and final validation.
@@ -166,11 +170,12 @@ TASK-265 must not add a public write endpoint.
   - `bun --cwd core lint:types`
   - `bun run test:vitest -- tests/vitest/ui/entry-teaser-editor-wave.test.tsx`
   - `bun run test:vitest -- tests/vitest/site/publicRenderer.test.tsx`
-  - `bun run test:vitest -- tests/vitest/widgets/entryTeaser.test.tsx`
-  - migrate or split `tests/unit/widgets/entryTeaser.test.tsx` so Bun-free
-    Entry Teaser schema, normalizer, and render mapping assertions no longer
-    remain Bun-owned; run the legacy Bun suite only as comparison smoke or when
-    a retained case truly depends on Bun/runtime seams
+  - introduce `tests/vitest/widgets/entryTeaser.test.tsx` and run
+    `bun run test:vitest -- tests/vitest/widgets/entryTeaser.test.tsx` when the
+    touched assertions are Bun-free
+  - `bun test tests/unit/widgets/entryTeaser.test.tsx` remains required until
+    render/normalizer/resolver coverage is fully migrated; keep it afterward for
+    any retained Bun/runtime assertions
   - focused `tests/integration/routes/*` coverage when an internal preview route
     is added or changed
   - focused Bun runtime/public-site coverage when `publicSite.tsx` resolver

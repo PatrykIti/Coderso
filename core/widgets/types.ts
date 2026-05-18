@@ -47,9 +47,16 @@ export type WidgetSlotDefinition = {
 
 export type WidgetRenderMode = "public" | "editor-preview" | "admin-preview";
 
+export type WidgetPreviewState = {
+  status: "idle" | "loading" | "ready" | "error";
+  dataPatch?: Record<string, unknown>;
+  message?: string;
+};
+
 export type WidgetRenderContext = {
   mode: WidgetRenderMode;
   previewDevice?: DeviceTarget;
+  previewState?: WidgetPreviewState | null;
 };
 
 export type WidgetEditorSlotTarget = {
@@ -75,6 +82,10 @@ export type WidgetEditorProps<T> = {
 
 export type WidgetEditorContext = {
   surface: WidgetSurface;
+  blockId?: string;
+  editorMode?: EditorMode;
+  previewState?: WidgetPreviewState | null;
+  setPreviewState?: (state: WidgetPreviewState | null) => void;
   jumpToBindingPropPath?: (propPath: string) => void;
   getBindingState?: (propPath: string) => "literal" | "bound" | "mixed";
   slotTargets?: WidgetEditorSlotTarget[];

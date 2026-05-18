@@ -25,6 +25,9 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 856 | 2026-05-18 | TASK-265 entry teaser closure | CMS Widgets/Admin UI/QA |
+| 855 | 2026-05-18 | TASK-264 divider widget followups | CMS Widgets/Admin UI/QA |
+| 854 | 2026-05-18 | TASK-303 divider spacer shared controls | CMS Widgets/Admin UI/QA |
 | 853 | 2026-05-17 | TASK-263 CTA banner follow-up closure | CMS Widgets/Admin UI/QA |
 | 852 | 2026-05-18 | TASK-262 content list followups | CMS Widgets/Admin UI/QA |
 | 851 | 2026-05-18 | TASK-261 contact widget closure | CMS Widgets/Admin UI/QA |
@@ -32,8 +35,6 @@ Project Change Log.
 | 849 | 2026-05-18 | TASK-259 booking calendar closure | CMS Widgets/Admin UI/QA |
 | 848 | 2026-05-18 | TASK-258 appointment form widget follow-up | CMS Widgets/Booking/Admin UI/QA |
 | 847 | 2026-05-17 | TASK-257 accordion product closure | CMS Widgets/Admin UI/QA |
-| 855 | 2026-05-18 | TASK-264 divider widget followups | CMS Widgets/Admin UI/QA |
-| 854 | 2026-05-18 | TASK-303 divider spacer shared controls | CMS Widgets/Admin UI/QA |
 | 846 | 2026-05-17 | TASK-256 follow-up drift closure | CMS Widgets/Admin UI/QA |
 | 845 | 2026-05-17 | TASK-256 shared widget contract closure | CMS Widgets/Admin UI/QA |
 | 844 | 2026-05-13 | Admin breadcrumbs and workspace links | CMS Content/Admin UI |

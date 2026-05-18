@@ -74,6 +74,7 @@ import {
   type ContainerToken,
   type SpacingToken,
   type WidgetEditorContext,
+  type WidgetPreviewState,
 } from "../../../widgets/types";
 
 const heroBlockDefaults = createBlock("hero");
@@ -426,6 +427,9 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
   const [slotInsertTarget, setSlotInsertTarget] = useState<SlotInsertTarget | null>(null);
   const [highlightedBlockId, setHighlightedBlockId] = useState<string | null>(null);
   const [pendingScrollBlockId, setPendingScrollBlockId] = useState<string | null>(null);
+  const [widgetPreviewStates, setWidgetPreviewStates] = useState<
+    Record<string, WidgetPreviewState | undefined>
+  >({});
   const [error, setError] = useState<string | null>(null);
   const [bookingCalendarPreviewResolved, setBookingCalendarPreviewResolved] =
     useState<BookingCalendarPreviewResolved | null>(null);
@@ -452,6 +456,20 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
 
     return {
       surface: "page-builder",
+      blockId: selectedBlock.id,
+      editorMode: selectedBlock.editor?.mode ?? "wizard",
+      previewState:
+        selectedBlock.type === "entry-teaser"
+          ? (widgetPreviewStates[selectedBlock.id] ?? null)
+          : null,
+      setPreviewState:
+        selectedBlock.type === "entry-teaser"
+          ? (state) =>
+              setWidgetPreviewStates((current) => ({
+                ...current,
+                [selectedBlock.id]: state ?? undefined,
+              }))
+          : undefined,
       ...(selectedBlock.type === "booking-calendar" && bookingCalendarPreviewResolved
         ? {
             widgetPreviewData: {
@@ -460,7 +478,16 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
           }
         : {}),
     };
-  }, [bookingCalendarPreviewResolved, selectedBlock]);
+  }, [bookingCalendarPreviewResolved, selectedBlock, widgetPreviewStates]);
+  const activeWidgetPreviewStates = useMemo(() => {
+    if (!selectedBlock || selectedBlock.type !== "entry-teaser") {
+      return {} as Record<string, WidgetPreviewState | undefined>;
+    }
+    const previewState = widgetPreviewStates[selectedBlock.id];
+    return previewState
+      ? { [selectedBlock.id]: previewState }
+      : ({} as Record<string, WidgetPreviewState | undefined>);
+  }, [selectedBlock, widgetPreviewStates]);
   const pageSettings = useMemo(() => resolvePageSettings(pageData), [pageData]);
   const pageLayout = pageSettings.layout;
   const wrapperPaddingClass = joinClasses(
@@ -1338,6 +1365,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
                 onInsert={handleInsertIntoSlot}
                 onMoveToSlot={handleMoveIntoSlot}
                 onOpenSlotInsert={handleOpenSlotInsert}
+                previewStatesByBlockId={activeWidgetPreviewStates}
               />
             </div>
           </div>

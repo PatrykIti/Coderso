@@ -1,15 +1,22 @@
 import type { CSSProperties, ComponentType } from "react";
 
-import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import type { WidgetDefinition, WidgetEditorProps, WidgetRenderContext } from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
-import { normalizeWidgetSafeHref } from "./widgetSafeHref";
+import { normalizeWidgetSafeHref, resolveWidgetLinkAttrs } from "./widgetSafeHref";
 
 export type EntryTeaserVariantId = "horizontal" | "vertical" | "minimal";
 export type EntryTeaserSourceMode = "manual" | "latest" | "featured";
 export type EntryTeaserDataSourceMode = "legacy" | "listing";
 export type EntryTeaserCtaHrefMode = "auto" | "custom";
+export type EntryTeaserCtaStyle = "link" | "filled" | "outline";
 export type EntryTeaserRadius = "none" | "sm" | "md" | "lg" | "xl";
 export type EntryTeaserSpacing = "none" | "sm" | "md" | "lg";
+export type EntryTeaserHeadingLevel = "h2" | "h3" | "h4";
+export type EntryTeaserMediaMode = "image" | "icon" | "none";
+export type EntryTeaserImageAspect = "auto" | "16:9" | "4:3" | "1:1";
+export type EntryTeaserImageHeight = "auto" | "sm" | "md" | "lg";
+export type EntryTeaserObjectFit = "cover" | "contain";
+export type EntryTeaserMaxWidth = "sm" | "md" | "lg" | "xl" | "full";
 
 export type EntryTeaserRuntimeItem = {
   id?: string;
@@ -39,17 +46,36 @@ export type EntryTeaserData = {
     showExcerpt?: boolean;
     showMeta?: boolean;
     showTags?: boolean;
+    tagLimit?: number;
   };
   cta?: {
     label?: string;
     hrefMode?: EntryTeaserCtaHrefMode;
     href?: string;
+    opensInNewTab?: boolean;
+    style?: EntryTeaserCtaStyle;
   };
   style?: {
     surface?: string;
     border?: string;
     radius?: EntryTeaserRadius;
     spacing?: EntryTeaserSpacing;
+  };
+  section?: {
+    title?: string;
+    headingLevel?: EntryTeaserHeadingLevel;
+  };
+  title?: {
+    headingLevel?: EntryTeaserHeadingLevel;
+  };
+  media?: {
+    mode?: EntryTeaserMediaMode;
+    aspect?: EntryTeaserImageAspect;
+    height?: EntryTeaserImageHeight;
+    fit?: EntryTeaserObjectFit;
+  };
+  layout?: {
+    maxWidth?: EntryTeaserMaxWidth;
   };
   fallback?: {
     title?: string;
@@ -91,6 +117,7 @@ export const entryTeaserSchema = {
         showExcerpt: { type: "boolean" },
         showMeta: { type: "boolean" },
         showTags: { type: "boolean" },
+        tagLimit: { type: "integer", minimum: 0, maximum: 12 },
       },
     },
     cta: {
@@ -100,6 +127,8 @@ export const entryTeaserSchema = {
         label: { type: "string" },
         hrefMode: { enum: ["auto", "custom"] },
         href: { type: "string" },
+        opensInNewTab: { type: "boolean" },
+        style: { enum: ["link", "filled", "outline"] },
       },
     },
     style: {
@@ -110,6 +139,38 @@ export const entryTeaserSchema = {
         border: { type: "string" },
         radius: { enum: ["none", "sm", "md", "lg", "xl"] },
         spacing: { enum: ["none", "sm", "md", "lg"] },
+      },
+    },
+    section: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        title: { type: "string" },
+        headingLevel: { enum: ["h2", "h3", "h4"] },
+      },
+    },
+    title: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        headingLevel: { enum: ["h2", "h3", "h4"] },
+      },
+    },
+    media: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        mode: { enum: ["image", "icon", "none"] },
+        aspect: { enum: ["auto", "16:9", "4:3", "1:1"] },
+        height: { enum: ["auto", "sm", "md", "lg"] },
+        fit: { enum: ["cover", "contain"] },
+      },
+    },
+    layout: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        maxWidth: { enum: ["sm", "md", "lg", "xl", "full"] },
       },
     },
     fallback: {
@@ -175,17 +236,36 @@ export const entryTeaserDefaults: EntryTeaserData = {
     showExcerpt: true,
     showMeta: true,
     showTags: true,
+    tagLimit: 5,
   },
   cta: {
     label: "Read more",
     hrefMode: "auto",
     href: "",
+    opensInNewTab: false,
+    style: "link",
   },
   style: {
     surface: "var(--color-bg)",
     border: "var(--color-border)",
     radius: "lg",
     spacing: "md",
+  },
+  section: {
+    title: "",
+    headingLevel: "h2",
+  },
+  title: {
+    headingLevel: "h3",
+  },
+  media: {
+    mode: "image",
+    aspect: "auto",
+    height: "auto",
+    fit: "cover",
+  },
+  layout: {
+    maxWidth: "lg",
   },
   fallback: {
     title: "No entry selected",
@@ -203,6 +283,14 @@ export const entryTeaserDefaults: EntryTeaserData = {
 const joinClasses = (...classes: Array<string | undefined | false>) =>
   classes.filter(Boolean).join(" ");
 
+const ctaStyleClassMap: Record<EntryTeaserCtaStyle, string> = {
+  link: "text-sm font-medium underline-offset-4 hover:underline",
+  filled:
+    "rounded-md bg-[var(--color-text)] px-4 py-2 text-sm font-medium text-[var(--color-bg)] transition hover:opacity-90",
+  outline:
+    "rounded-md border border-[var(--color-border)] px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-[var(--color-bg)]/60",
+};
+
 const spacingClassMap: Record<EntryTeaserSpacing, string> = {
   none: "gap-0",
   sm: "gap-3",
@@ -216,6 +304,74 @@ const radiusClassMap: Record<EntryTeaserRadius, string> = {
   md: "rounded-lg",
   lg: "rounded-xl",
   xl: "rounded-2xl",
+};
+
+const headingLevelOptions = ["h2", "h3", "h4"] as const;
+const mediaModeOptions = ["image", "icon", "none"] as const;
+const mediaAspectOptions = ["auto", "16:9", "4:3", "1:1"] as const;
+const mediaHeightOptions = ["auto", "sm", "md", "lg"] as const;
+const mediaObjectFitOptions = ["cover", "contain"] as const;
+const maxWidthOptions = ["sm", "md", "lg", "xl", "full"] as const;
+
+const maxWidthClassMap: Record<EntryTeaserMaxWidth, string> = {
+  sm: "max-w-2xl",
+  md: "max-w-3xl",
+  lg: "max-w-5xl",
+  xl: "max-w-6xl",
+  full: "max-w-none",
+};
+
+const mediaHeightClassMap: Record<Exclude<EntryTeaserImageHeight, "auto">, string> = {
+  sm: "h-36",
+  md: "h-52",
+  lg: "h-64",
+};
+
+const mediaObjectFitClassMap: Record<EntryTeaserObjectFit, string> = {
+  cover: "object-cover",
+  contain: "object-contain",
+};
+
+const mediaDimensionsMap: Record<
+  Exclude<EntryTeaserImageAspect, "auto">,
+  Record<Exclude<EntryTeaserImageHeight, "auto">, { width: number; height: number }>
+> = {
+  "16:9": {
+    sm: { width: 640, height: 360 },
+    md: { width: 960, height: 540 },
+    lg: { width: 1280, height: 720 },
+  },
+  "4:3": {
+    sm: { width: 480, height: 360 },
+    md: { width: 640, height: 480 },
+    lg: { width: 800, height: 600 },
+  },
+  "1:1": {
+    sm: { width: 360, height: 360 },
+    md: { width: 480, height: 480 },
+    lg: { width: 640, height: 640 },
+  },
+};
+
+const defaultVariantMediaDimensionsMap: Record<
+  EntryTeaserVariantId,
+  Record<Exclude<EntryTeaserImageHeight, "auto">, { width: number; height: number }>
+> = {
+  horizontal: {
+    sm: { width: 640, height: 360 },
+    md: { width: 960, height: 540 },
+    lg: { width: 1280, height: 720 },
+  },
+  vertical: {
+    sm: { width: 640, height: 360 },
+    md: { width: 960, height: 540 },
+    lg: { width: 1280, height: 720 },
+  },
+  minimal: {
+    sm: { width: 480, height: 270 },
+    md: { width: 640, height: 360 },
+    lg: { width: 960, height: 540 },
+  },
 };
 
 const resolveString = (value: string | undefined, fallback: string) =>
@@ -236,21 +392,30 @@ const resolveTrimmedOptionalString = (value: string | undefined) => {
   return trimmed.length > 0 ? trimmed : undefined;
 };
 
-const sanitizeHref = (value: string | undefined) => {
+const normalizeCustomCtaHref = (value: string | undefined) => {
   const trimmed = resolveTrimmedOptionalString(value);
-  if (!trimmed) return "#";
+  if (!trimmed) return "";
   return (
     normalizeWidgetSafeHref(trimmed, {
       allowRelative: true,
       allowHash: true,
       allowHttp: true,
-    }) ?? "#"
+    }) ?? ""
   );
 };
 
 export const resolveEntryTeaserVariant = (variant: string): EntryTeaserVariantId => {
-  if (variant === "vertical" || variant === "minimal") return variant;
+  if (variant === "horizontal" || variant === "vertical" || variant === "minimal") return variant;
   return "horizontal";
+};
+
+const resolveEnum = <T extends string>(
+  value: string | undefined,
+  allowed: readonly T[],
+  fallback: T
+): T => {
+  if (value && allowed.includes(value as T)) return value as T;
+  return fallback;
 };
 
 const resolveEntryTeaserSourceMode = (value: string | undefined): EntryTeaserSourceMode => {
@@ -263,14 +428,45 @@ const resolveEntryTeaserHrefMode = (value: string | undefined): EntryTeaserCtaHr
   return "auto";
 };
 
+const resolveEntryTeaserCtaStyle = (value: string | undefined): EntryTeaserCtaStyle => {
+  if (value === "filled" || value === "outline") return value;
+  return "link";
+};
+
 const resolveEntryTeaserRadius = (value: string | undefined): EntryTeaserRadius => {
-  if (value === "none" || value === "sm" || value === "md" || value === "xl") return value;
+  if (value === "none" || value === "sm" || value === "md" || value === "lg" || value === "xl")
+    return value;
   return "lg";
 };
 
 const resolveEntryTeaserSpacing = (value: string | undefined): EntryTeaserSpacing => {
   if (value === "none" || value === "sm" || value === "lg") return value;
   return "md";
+};
+
+const resolveEntryTeaserHeadingLevel = (
+  value: string | undefined,
+  fallback: EntryTeaserHeadingLevel
+): EntryTeaserHeadingLevel => resolveEnum(value, headingLevelOptions, fallback);
+
+const resolveEntryTeaserMediaMode = (value: string | undefined): EntryTeaserMediaMode =>
+  resolveEnum(value, mediaModeOptions, "image");
+
+const resolveEntryTeaserImageAspect = (value: string | undefined): EntryTeaserImageAspect =>
+  resolveEnum(value, mediaAspectOptions, "auto");
+
+const resolveEntryTeaserImageHeight = (value: string | undefined): EntryTeaserImageHeight =>
+  resolveEnum(value, mediaHeightOptions, "auto");
+
+const resolveEntryTeaserObjectFit = (value: string | undefined): EntryTeaserObjectFit =>
+  resolveEnum(value, mediaObjectFitOptions, "cover");
+
+const resolveEntryTeaserMaxWidth = (value: string | undefined): EntryTeaserMaxWidth =>
+  resolveEnum(value, maxWidthOptions, "lg");
+
+const clampEntryTeaserTagLimit = (value: number | undefined, fallback: number) => {
+  if (!Number.isInteger(value)) return fallback;
+  return Math.max(0, Math.min(12, value ?? fallback));
 };
 
 const resolveEntryTeaserDataSourceMode = (
@@ -303,7 +499,7 @@ const normalizeRuntimeItem = (
           .filter((tag): tag is string => typeof tag === "string")
           .map((tag) => tag.trim())
           .filter(Boolean)
-          .slice(0, 8)
+          .slice(0, 12)
       : [],
     authorName: resolveOptionalString(item.authorName),
     publishedAt: resolveOptionalString(item.publishedAt),
@@ -321,17 +517,36 @@ export function normalizeEntryTeaserData(data: EntryTeaserData): EntryTeaserData
     showExcerpt: true,
     showMeta: true,
     showTags: true,
+    tagLimit: 5,
   };
   const ctaDefaults = entryTeaserDefaults.cta ?? {
     label: "Read more",
     hrefMode: "auto" as const,
     href: "",
+    opensInNewTab: false,
+    style: "link" as const,
   };
   const styleDefaults = entryTeaserDefaults.style ?? {
     surface: "var(--color-bg)",
     border: "var(--color-border)",
     radius: "lg" as const,
     spacing: "md" as const,
+  };
+  const sectionDefaults = entryTeaserDefaults.section ?? {
+    title: "",
+    headingLevel: "h2" as const,
+  };
+  const titleDefaults = entryTeaserDefaults.title ?? {
+    headingLevel: "h3" as const,
+  };
+  const mediaDefaults = entryTeaserDefaults.media ?? {
+    mode: "image" as const,
+    aspect: "auto" as const,
+    height: "auto" as const,
+    fit: "cover" as const,
+  };
+  const layoutDefaults = entryTeaserDefaults.layout ?? {
+    maxWidth: "lg" as const,
   };
   const fallbackDefaults = entryTeaserDefaults.fallback ?? {
     title: "No entry selected",
@@ -368,14 +583,20 @@ export function normalizeEntryTeaserData(data: EntryTeaserData): EntryTeaserData
         typeof data.fields?.showTags === "boolean"
           ? data.fields.showTags
           : Boolean(fieldDefaults.showTags),
+      tagLimit: clampEntryTeaserTagLimit(data.fields?.tagLimit, fieldDefaults.tagLimit ?? 5),
     },
     cta: {
       label: resolveString(data.cta?.label, ctaDefaults.label ?? "Read more"),
       hrefMode: ctaHrefMode,
       href:
         ctaHrefMode === "custom"
-          ? sanitizeHref(data.cta?.href)
+          ? normalizeCustomCtaHref(data.cta?.href)
           : resolveString(data.cta?.href, ctaDefaults.href ?? ""),
+      opensInNewTab:
+        typeof data.cta?.opensInNewTab === "boolean"
+          ? data.cta.opensInNewTab
+          : Boolean(ctaDefaults.opensInNewTab),
+      style: resolveEntryTeaserCtaStyle(data.cta?.style ?? ctaDefaults.style),
     },
     style: {
       surface: hasStyleObject
@@ -386,6 +607,28 @@ export function normalizeEntryTeaserData(data: EntryTeaserData): EntryTeaserData
         : styleDefaults.border,
       radius: resolveEntryTeaserRadius(data.style?.radius),
       spacing: resolveEntryTeaserSpacing(data.style?.spacing),
+    },
+    section: {
+      title: resolveString(data.section?.title, sectionDefaults.title ?? ""),
+      headingLevel: resolveEntryTeaserHeadingLevel(
+        data.section?.headingLevel,
+        sectionDefaults.headingLevel ?? "h2"
+      ),
+    },
+    title: {
+      headingLevel: resolveEntryTeaserHeadingLevel(
+        data.title?.headingLevel,
+        titleDefaults.headingLevel ?? "h3"
+      ),
+    },
+    media: {
+      mode: resolveEntryTeaserMediaMode(data.media?.mode ?? mediaDefaults.mode),
+      aspect: resolveEntryTeaserImageAspect(data.media?.aspect ?? mediaDefaults.aspect),
+      height: resolveEntryTeaserImageHeight(data.media?.height ?? mediaDefaults.height),
+      fit: resolveEntryTeaserObjectFit(data.media?.fit ?? mediaDefaults.fit),
+    },
+    layout: {
+      maxWidth: resolveEntryTeaserMaxWidth(data.layout?.maxWidth ?? layoutDefaults.maxWidth),
     },
     fallback: {
       title: resolveString(data.fallback?.title, fallbackDefaults.title ?? "No entry selected"),
@@ -428,14 +671,41 @@ const buildMetaLine = (item: EntryTeaserRuntimeItem) => {
   return chunks.join(" • ");
 };
 
+const resolveEntryTeaserMediaHeightToken = (
+  value: EntryTeaserImageHeight | undefined,
+  variant: EntryTeaserVariantId
+): Exclude<EntryTeaserImageHeight, "auto"> => {
+  if (value === "sm" || value === "md" || value === "lg") return value;
+  return variant === "minimal" ? "sm" : "md";
+};
+
+const resolveEntryTeaserMediaHeightClass = (
+  value: EntryTeaserImageHeight | undefined,
+  variant: EntryTeaserVariantId
+) => mediaHeightClassMap[resolveEntryTeaserMediaHeightToken(value, variant)];
+
+const resolveEntryTeaserMediaDimensions = (
+  aspect: EntryTeaserImageAspect | undefined,
+  height: EntryTeaserImageHeight | undefined,
+  variant: EntryTeaserVariantId
+) => {
+  const resolvedHeight = resolveEntryTeaserMediaHeightToken(height, variant);
+  if (aspect && aspect !== "auto") {
+    return mediaDimensionsMap[aspect][resolvedHeight];
+  }
+  return defaultVariantMediaDimensionsMap[variant][resolvedHeight];
+};
+
 export function EntryTeaserBlock({
   data,
   variant,
   blockId,
+  renderContext,
 }: {
   data: EntryTeaserData;
   variant: string;
   blockId?: string;
+  renderContext?: WidgetRenderContext;
 }) {
   const normalized = normalizeEntryTeaserData(data);
   const resolvedVariant = resolveEntryTeaserVariant(variant);
@@ -445,6 +715,10 @@ export function EntryTeaserBlock({
   const fields = normalized.fields ?? entryTeaserDefaults.fields!;
   const cta = normalized.cta ?? entryTeaserDefaults.cta!;
   const style = normalized.style ?? entryTeaserDefaults.style!;
+  const section = normalized.section ?? entryTeaserDefaults.section!;
+  const title = normalized.title ?? entryTeaserDefaults.title!;
+  const media = normalized.media ?? entryTeaserDefaults.media!;
+  const layout = normalized.layout ?? entryTeaserDefaults.layout!;
   const item = normalizeRuntimeItem(normalized.resolved?.item ?? null);
   const hasSource =
     sourceDataMode === "listing"
@@ -452,10 +726,12 @@ export function EntryTeaserBlock({
       : (source.contentTypeId ?? "").trim().length > 0;
   const state = !hasSource ? "missing-source" : item ? "ready" : "empty";
   const errorText = normalized.resolved?.error;
-  const href =
-    cta.hrefMode === "custom" && (cta.href ?? "").trim().length > 0
-      ? sanitizeHref(cta.href)
-      : sanitizeHref(item?.href);
+  const ctaLinkAttrs = resolveWidgetLinkAttrs(cta.hrefMode === "custom" ? cta.href : item?.href, {
+    allowRelative: true,
+    allowHash: true,
+    allowHttp: true,
+    openInNewTab: cta.opensInNewTab,
+  });
 
   const wrapperClassName =
     resolvedVariant === "horizontal"
@@ -477,17 +753,41 @@ export function EntryTeaserBlock({
       borderColor: resolveClearableStyleValue(style.border),
     }) ?? {};
   const metaLine = item ? buildMetaLine(item) : "";
+  const visibleTags = item ? (item.tags?.slice(0, fields.tagLimit ?? 5) ?? []) : [];
+  const sectionHeadingText = resolveTrimmedOptionalString(section.title);
+  const SectionHeadingTag = section.headingLevel ?? "h2";
+  const EntryHeadingTag = title.headingLevel ?? "h3";
+  const mediaHeightClassName = resolveEntryTeaserMediaHeightClass(media.height, resolvedVariant);
+  const mediaDimensions = resolveEntryTeaserMediaDimensions(
+    media.aspect,
+    media.height,
+    resolvedVariant
+  );
+  const mediaObjectFitClassName =
+    media.mode === "icon"
+      ? mediaObjectFitClassMap.contain
+      : mediaObjectFitClassMap[media.fit ?? "cover"];
+  const previewState = renderContext?.mode === "editor-preview" ? renderContext.previewState : null;
+  const previewLoading = previewState?.status === "loading" && hasSource && !item;
+  const previewMessage =
+    previewState?.status === "error" && !errorText && hasSource && !item
+      ? previewState.message
+      : null;
 
   return (
     <section
       className={joinClasses(
-        "mx-auto w-full max-w-5xl border p-5",
+        "mx-auto w-full border p-5",
+        maxWidthClassMap[layout.maxWidth ?? "lg"],
         radiusClassMap[style.radius ?? "lg"]
       )}
       style={surfaceStyle}
       data-entry-teaser-variant={resolvedVariant}
       data-entry-teaser-data-source-mode={sourceDataMode}
       data-entry-teaser-source-mode={sourceMode}
+      data-entry-teaser-media-mode={media.mode ?? "image"}
+      data-entry-teaser-max-width={layout.maxWidth ?? "lg"}
+      data-entry-teaser-tag-limit={String(fields.tagLimit ?? 5)}
       data-entry-teaser-source={
         sourceDataMode === "listing" ? (source.listingQueryId ?? "") : (source.contentTypeId ?? "")
       }
@@ -498,9 +798,19 @@ export function EntryTeaserBlock({
         sourceDataMode === "listing" ? (normalized.source?.listingQueryId ?? "") : ""
       }
     >
+      {sectionHeadingText ? (
+        <SectionHeadingTag className="mb-4 text-xl font-semibold text-[var(--color-text)]">
+          {sectionHeadingText}
+        </SectionHeadingTag>
+      ) : null}
       {errorText ? (
         <div className="mb-4 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
           {errorText}
+        </div>
+      ) : null}
+      {previewMessage ? (
+        <div className="mb-4 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-800">
+          {previewMessage}
         </div>
       ) : null}
 
@@ -510,22 +820,31 @@ export function EntryTeaserBlock({
             ? "Select listing query to resolve teaser source."
             : "Select content type to resolve teaser source."}
         </div>
+      ) : previewLoading ? (
+        <div className="rounded-md border border-dashed border-[var(--color-border)] px-4 py-8 text-sm text-[var(--color-text)]/80">
+          Loading resolved teaser preview...
+        </div>
       ) : item ? (
         <article className={wrapperClassName} data-entry-teaser-status={item.status ?? "unknown"}>
-          {fields.showImage && item.imageSrc ? (
+          {fields.showImage && media.mode !== "none" && item.imageSrc ? (
             <div className={imageWrapperClassName}>
               <div
                 className={joinClasses(
                   "overflow-hidden border border-[var(--color-border)]/70",
-                  radiusClassMap[style.radius ?? "lg"]
+                  radiusClassMap[style.radius ?? "lg"],
+                  media.mode === "icon" ? "bg-[var(--color-bg)]/70 p-6" : undefined
                 )}
               >
                 <img
                   src={item.imageSrc}
                   alt={item.imageAlt ?? item.title ?? "Entry teaser"}
+                  width={mediaDimensions.width}
+                  height={mediaDimensions.height}
                   className={joinClasses(
-                    "w-full object-cover",
-                    resolvedVariant === "minimal" ? "h-36" : "h-52"
+                    "w-full",
+                    mediaHeightClassName,
+                    mediaObjectFitClassName,
+                    media.mode === "icon" ? "mx-auto max-w-[12rem]" : undefined
                   )}
                   loading="lazy"
                 />
@@ -533,23 +852,23 @@ export function EntryTeaserBlock({
             </div>
           ) : null}
           <div className={joinClasses(contentWrapperClassName, "space-y-3")}>
-            <h3
+            <EntryHeadingTag
               className={joinClasses(
                 "font-semibold text-[var(--color-text)]",
                 resolvedVariant === "minimal" ? "text-lg" : "text-2xl"
               )}
             >
               {item.title}
-            </h3>
+            </EntryHeadingTag>
             {fields.showMeta && metaLine.length > 0 ? (
               <p className="text-xs text-[var(--color-text)]/70">{metaLine}</p>
             ) : null}
             {fields.showExcerpt && (item.excerpt ?? "").trim().length > 0 ? (
               <p className="text-sm text-[var(--color-text)]/85">{item.excerpt}</p>
             ) : null}
-            {fields.showTags && Array.isArray(item.tags) && item.tags.length > 0 ? (
+            {fields.showTags && visibleTags.length > 0 ? (
               <div className="flex flex-wrap gap-2">
-                {item.tags.slice(0, 5).map((tag) => (
+                {visibleTags.map((tag) => (
                   <span
                     key={tag}
                     className="rounded-full border border-[var(--color-border)]/80 px-2 py-1 text-xs text-[var(--color-text)]/75"
@@ -560,12 +879,26 @@ export function EntryTeaserBlock({
               </div>
             ) : null}
             <div>
-              <a
-                href={href}
-                className="inline-flex items-center text-sm font-medium underline-offset-4 hover:underline"
-              >
-                {resolveTrimmedString(cta.label, "Read more")}
-              </a>
+              {ctaLinkAttrs ? (
+                <a
+                  {...ctaLinkAttrs}
+                  className={joinClasses(
+                    "inline-flex items-center",
+                    ctaStyleClassMap[cta.style ?? "link"]
+                  )}
+                >
+                  {resolveTrimmedString(cta.label, "Read more")}
+                </a>
+              ) : (
+                <span
+                  className={joinClasses(
+                    "inline-flex items-center opacity-70",
+                    ctaStyleClassMap[cta.style ?? "link"]
+                  )}
+                >
+                  {resolveTrimmedString(cta.label, "Read more")}
+                </span>
+              )}
             </div>
           </div>
         </article>

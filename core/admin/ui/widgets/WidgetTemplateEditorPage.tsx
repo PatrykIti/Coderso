@@ -87,6 +87,8 @@ import {
   spacingTokens,
   type ContainerToken,
   type SpacingToken,
+  type WidgetEditorContext,
+  type WidgetPreviewState,
 } from "../../../widgets/types";
 import type { WidgetCategoryId } from "./types";
 import { WidgetTemplatePreviewDialog } from "./WidgetTemplatePreviewDialog";
@@ -289,6 +291,9 @@ export function WidgetTemplateEditorPage() {
   const [revisionsError, setRevisionsError] = useState<string | null>(null);
   const [revisionsLoading, setRevisionsLoading] = useState(false);
   const [restoringRevisionId, setRestoringRevisionId] = useState<string | null>(null);
+  const [widgetPreviewStates, setWidgetPreviewStates] = useState<
+    Record<string, WidgetPreviewState | undefined>
+  >({});
 
   const displayError = error ?? categoriesError;
 
@@ -327,6 +332,35 @@ export function WidgetTemplateEditorPage() {
     if (!selectedBlock) return undefined;
     return getWidgetRegistry().find((widget) => widget.type === selectedBlock.type);
   }, [selectedBlock]);
+  const activeWidgetPreviewStates = useMemo(() => {
+    if (!selectedBlock || selectedBlock.type !== "entry-teaser") {
+      return {} as Record<string, WidgetPreviewState | undefined>;
+    }
+    const previewState = widgetPreviewStates[selectedBlock.id];
+    return previewState
+      ? { [selectedBlock.id]: previewState }
+      : ({} as Record<string, WidgetPreviewState | undefined>);
+  }, [selectedBlock, widgetPreviewStates]);
+  const selectedBlockPreviewState = selectedBlock
+    ? (activeWidgetPreviewStates[selectedBlock.id] ?? null)
+    : null;
+  const widgetTemplateEditorContext = useMemo<WidgetEditorContext | undefined>(() => {
+    if (!selectedBlock) return undefined;
+    return {
+      surface: "page-builder",
+      blockId: selectedBlock.id,
+      editorMode: selectedBlock.editor?.mode ?? "wizard",
+      previewState: selectedBlockPreviewState,
+      setPreviewState:
+        selectedBlock.type === "entry-teaser"
+          ? (state) =>
+              setWidgetPreviewStates((current) => ({
+                ...current,
+                [selectedBlock.id]: state ?? undefined,
+              }))
+          : undefined,
+    };
+  }, [selectedBlock, selectedBlockPreviewState]);
 
   useEffect(() => {
     if (isNew || !templateId) {
@@ -794,6 +828,7 @@ export function WidgetTemplateEditorPage() {
                 )
             : undefined
         }
+        editorContext={widgetTemplateEditorContext}
       />
     </div>
   );
@@ -1419,6 +1454,7 @@ export function WidgetTemplateEditorPage() {
                         }
                         onInsert={handleInsertIntoSlot}
                         onMoveToSlot={handleMoveIntoSlot}
+                        previewStatesByBlockId={activeWidgetPreviewStates}
                       />
                     </div>
                   </div>
