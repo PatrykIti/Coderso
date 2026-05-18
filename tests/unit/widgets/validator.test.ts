@@ -3,6 +3,11 @@ import { afterEach, beforeEach, expect, test } from "bun:test";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { clearWidgetValidators, normalizeWidgetBlock } from "../../../core/widgets/validator";
 import type { WidgetDefinition, WidgetBlock } from "../../../core/widgets/types";
+import {
+  createGalleryMosaicWidget,
+  galleryMosaicDefaults,
+  type GalleryMosaicData,
+} from "../../../core/widgets/core/galleryMosaic";
 
 const Dummy = () => null;
 
@@ -38,9 +43,7 @@ const repeatableDefinition: WidgetDefinition<{ headline: string }> = {
   audience: "advanced",
   module: "layout",
   variants: [{ id: "equal", label: "Equal" }],
-  slots: [
-    { id: "column", label: "Column", kind: "repeatable", minItems: 2, maxItems: 3 },
-  ],
+  slots: [{ id: "column", label: "Column", kind: "repeatable", minItems: 2, maxItems: 3 }],
   schema: {
     type: "object",
     required: ["headline"],
@@ -153,4 +156,75 @@ test("normalizeWidgetBlock migrates legacy repeatable key and enforces max slots
   expect(
     Object.keys(normalized.slots ?? {}).filter((key) => key.startsWith("column:"))
   ).toHaveLength(3);
+});
+
+test("normalizeWidgetBlock accepts gallery mosaic per-item media presentation fields", () => {
+  registerWidget(
+    createGalleryMosaicWidget({
+      wizard: Dummy as never,
+      visual: Dummy as never,
+      advanced: Dummy as never,
+    })
+  );
+
+  const block: WidgetBlock = {
+    id: "gallery-1",
+    type: "gallery-mosaic",
+    variant: "mosaic",
+    data: {
+      ...galleryMosaicDefaults,
+      items: [
+        {
+          id: "gallery-a",
+          image: "https://cdn.example.com/one.jpg",
+          alt: "Accessible alt",
+          poster: "https://cdn.example.com/poster.jpg",
+          objectPosition: "right",
+          ratio: "1:1",
+        },
+      ],
+    } satisfies GalleryMosaicData,
+  };
+
+  const normalized = normalizeWidgetBlock(block);
+  expect(normalized.data).toEqual(
+    expect.objectContaining({
+      items: [
+        expect.objectContaining({
+          alt: "Accessible alt",
+          poster: "https://cdn.example.com/poster.jpg",
+          objectPosition: "right",
+          ratio: "1:1",
+        }),
+      ],
+    })
+  );
+});
+
+test("normalizeWidgetBlock rejects invalid gallery mosaic media presentation enums", () => {
+  registerWidget(
+    createGalleryMosaicWidget({
+      wizard: Dummy as never,
+      visual: Dummy as never,
+      advanced: Dummy as never,
+    })
+  );
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "gallery-2",
+      type: "gallery-mosaic",
+      variant: "mosaic",
+      data: {
+        ...galleryMosaicDefaults,
+        items: [
+          {
+            id: "gallery-a",
+            image: "https://cdn.example.com/one.jpg",
+            objectPosition: "diagonal",
+          },
+        ],
+      },
+    })
+  ).toThrow("widget_schema_invalid");
 });

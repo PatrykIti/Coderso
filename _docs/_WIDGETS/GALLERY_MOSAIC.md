@@ -48,6 +48,9 @@ Notes:
   (`Alt` + arrow keys), explicit confirmation before destructive count
   reductions or row removal, and a `feature-left` warning when only a single
   lead tile remains.
+- Per-item media presentation fields now include dedicated `alt` text,
+  poster-image URL for video, bounded focus point (`center/top/bottom/left/right`),
+  and an optional per-item ratio override that can inherit the section ratio.
 
 ### Advanced (technical-only)
 - Shared style ownership summary (read-only)
@@ -73,9 +76,10 @@ for ratio, gap, radius, caption position, and overlay.
   - otherwise placeholder tile
 - Shared runtime semantics currently use semantic `<figure>` / `<figcaption>`
   wrappers for gallery media and keep current caption-derived naming/title
-  behavior until dedicated per-item `alt` authoring lands in `TASK-270-03`.
+  behavior unless a dedicated per-item `alt` value overrides them.
 - Current video runtime keeps visible controls available in the shared baseline.
-  Poster image and richer video product fields remain follow-up scope.
+  Poster image is now available per item; broader video product fields remain
+  follow-up scope.
 
 ## Clear Controls
 

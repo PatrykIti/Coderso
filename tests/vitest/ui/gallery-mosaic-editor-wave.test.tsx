@@ -515,8 +515,8 @@ test("GalleryMosaic visual editor covers variant cards, item reordering, removal
     clickElement(findButtonByText(view.container, "Feature Left"));
     expect(onVariantChangeSpy).toHaveBeenLastCalledWith("feature-left");
 
-    const selects = Array.from(view.container.querySelectorAll("select"));
-    expect(selects).toHaveLength(5);
+    let selects = Array.from(view.container.querySelectorAll("select"));
+    expect(selects.length).toBeGreaterThanOrEqual(5);
     setSelectValue(selects[0], "3");
     expect(view.container.textContent).toContain("Item count grows or trims from the end.");
 
@@ -543,6 +543,14 @@ test("GalleryMosaic visual editor covers variant cards, item reordering, removal
     );
     setInputValue(findInputByPlaceholder(view.container, "Media 2"), "Motion close-up");
     setInputValue(findAllInputsByPlaceholder(view.container, "#")[1], "/motion-updated");
+    setInputValue(findInputByPlaceholder(view.container, "Gallery item 1"), "Lead alt");
+    setInputValue(
+      findAllInputsByPlaceholder(view.container, "https://cdn.example.com/poster.jpg")[0],
+      "https://cdn.example.com/lead-poster.jpg"
+    );
+    selects = Array.from(view.container.querySelectorAll("select"));
+    setSelectValue(selects[1], "right");
+    setSelectValue(selects[2], "1:1");
     expect(view.container.textContent).toContain("Current media: Video");
     expect(view.container.textContent).toContain("Video preview");
 
@@ -602,11 +610,12 @@ test("GalleryMosaic visual editor covers variant cards, item reordering, removal
       "Feature Left works best with one lead tile plus at least one supporting item."
     );
 
-    setSelectValue(selects[1], "hover");
+    selects = Array.from(view.container.querySelectorAll("select"));
+    setSelectValue(selects[selects.length - 4], "hover");
     setInputValue(colorPicker, "#112233");
-    setSelectValue(selects[2], "16:9");
-    setSelectValue(selects[3], "lg");
-    setSelectValue(selects[4], "xl");
+    setSelectValue(selects[selects.length - 3], "16:9");
+    setSelectValue(selects[selects.length - 2], "lg");
+    setSelectValue(selects[selects.length - 1], "xl");
 
     expect(onChangeSpy).toHaveBeenCalled();
     expect(latestValue.header).toEqual({
@@ -617,6 +626,10 @@ test("GalleryMosaic visual editor covers variant cards, item reordering, removal
     expect(latestValue.items[0]).toMatchObject({
       id: "gallery-a",
       image: "/lead.jpg",
+      alt: "Lead alt",
+      poster: "https://cdn.example.com/lead-poster.jpg",
+      objectPosition: "right",
+      ratio: "1:1",
       caption: "Lead frame",
       href: "/lead",
     });
@@ -699,15 +712,23 @@ test("GalleryMosaic advanced editor keeps diagnostics-only shared style ownershi
         id: "duplicate",
         image: "/lead.jpg",
         video: undefined,
+        alt: undefined,
+        poster: undefined,
         caption: "Media highlight",
         href: undefined,
+        objectPosition: "center",
+        ratio: "inherit",
       },
       {
         id: "gallery-2",
         image: undefined,
         video: undefined,
+        alt: undefined,
+        poster: undefined,
         caption: "Visual detail",
         href: undefined,
+        objectPosition: "center",
+        ratio: "inherit",
       },
     ]);
     expect(latestValue.style).toEqual({

@@ -76,12 +76,16 @@ test("gallery mosaic validator accepts expanded model", () => {
           {
             id: "item-1",
             image: "https://cdn.example.com/one.jpg",
+            alt: "Accessible first frame",
             caption: "Main frame",
             href: "#",
+            objectPosition: "top",
+            ratio: "1:1",
           },
           {
             id: "item-2",
             video: "https://cdn.example.com/two.mp4",
+            poster: "https://cdn.example.com/two-poster.jpg",
             caption: "Video frame",
             href: "#",
           },
@@ -104,6 +108,70 @@ test("gallery mosaic validator accepts expanded model", () => {
   ).not.toThrow();
 
   expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBe(true);
+});
+
+test("gallery mosaic per-item media presentation fields normalize and render", () => {
+  const html = renderToString(
+    <GalleryMosaicBlock
+      data={{
+        ...galleryMosaicDefaults,
+        items: [
+          {
+            id: "gallery-1",
+            image: "https://cdn.example.com/one.jpg",
+            alt: "Explicit alt copy",
+            objectPosition: "right",
+            ratio: "1:1",
+            caption: "Main frame",
+          },
+          {
+            id: "gallery-2",
+            video: "https://cdn.example.com/two.mp4",
+            poster: "https://cdn.example.com/two-poster.jpg",
+            caption: "Video frame",
+          },
+        ],
+      }}
+      variant="mosaic"
+    />
+  );
+
+  const normalized = normalizeGalleryMosaicData({
+    items: [
+      {
+        id: "gallery-1",
+        image: "https://cdn.example.com/one.jpg",
+        alt: "Explicit alt copy",
+        objectPosition: "right",
+        ratio: "1:1",
+      },
+      {
+        id: "gallery-2",
+        video: "https://cdn.example.com/two.mp4",
+        poster: "https://cdn.example.com/two-poster.jpg",
+        objectPosition: "bottom",
+      },
+    ],
+  });
+
+  expect(normalized.items[0]).toEqual(
+    expect.objectContaining({
+      alt: "Explicit alt copy",
+      objectPosition: "right",
+      ratio: "1:1",
+    })
+  );
+  expect(normalized.items[1]).toEqual(
+    expect.objectContaining({
+      poster: "https://cdn.example.com/two-poster.jpg",
+      objectPosition: "bottom",
+      ratio: "inherit",
+    })
+  );
+  expect(html).toContain('alt="Explicit alt copy"');
+  expect(html).toContain("object-position:right center");
+  expect(html).toContain('poster="https://cdn.example.com/two-poster.jpg"');
+  expect(html).toContain("aspect-square");
 });
 
 test("gallery mosaic cleared overlay omits caption background style", () => {

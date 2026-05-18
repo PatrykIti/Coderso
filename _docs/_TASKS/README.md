@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 292 tasks
+- **To Do:** 291 tasks
 - **In Progress:** 5 tasks
-- **Done:** 1565 tasks
+- **Done:** 1566 tasks
 
 ---
 
@@ -222,7 +222,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-271-05 | Grid Columns Height and Cross-Axis Alignment | Medium | Large | Replace hardcoded min-height with tokens and add per-column alignment overrides |
 | TASK-271-06 | Grid Columns Gap Tokens and Density Controls | Medium | Medium | Expand bounded gap tokens, keep independent gapX/gapY, and improve spacing labels |
 | TASK-271-07 | Grid Columns Report, Docs, Changelog, and Closure | Medium | Medium | Refresh Grid Columns report/docs/changelog/board and final validation evidence |
-| TASK-270-03 | Gallery Mosaic Per-Item Media Presentation Fields | Medium | Large | Add dedicated `alt`, bounded object-position, per-item ratio, and video poster fields without re-owning TASK-256 current fallback semantics |
 | TASK-270-04 | Gallery Mosaic Lightbox and Zoom Mode | Medium | Large | Add optional safe lightbox/zoom presentation using existing accessible runtime patterns |
 | TASK-270-05 | Gallery Mosaic Responsive Columns and Motion Presets | Medium | Large | Add bounded responsive column and reduced-motion-safe animation presets |
 | TASK-270-06 | Gallery Mosaic Config Import Export and Wizard Guidance | Low | Medium | Add safe config import/export and post-TASK-256 Wizard guidance |
@@ -347,6 +346,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-270-03 | Gallery Mosaic Per-Item Media Presentation Fields | Medium | Large | Done: per-item `alt`, focus point, ratio override, and video poster fields now exist end-to-end through schema, editor, and runtime output |
 | TASK-270-02 | Gallery Mosaic Reorder, Count, and Removal UX | High | Large | Done: Visual supports drag reorder with keyboard fallback, confirms destructive count/remove changes, and warns when `feature-left` is left with one item |
 | TASK-270-01 | Gallery Mosaic Item Previews and Media Picker | High | Large | Done: Visual item cards now show local preview state and a per-item MediaPicker with non-destructive asset lookup failures |
 | TASK-293 | Gallery Mosaic Shared Contract Residual Reopen | High | Large | Done: reopened Gallery Mosaic shared prerequisites are now truly closed under TASK-293, with editor/runtime residuals landed and remaining product work routed to TASK-270 |

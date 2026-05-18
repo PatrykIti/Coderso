@@ -6,7 +6,7 @@
 **Category:** Widgets + Gallery Mosaic + Schema + Runtime Render
 **Estimated Effort:** Large
 **Dependencies:** TASK-256-04, TASK-256-06-02, TASK-270-01, TASK-270-02
-**Status:** To Do
+**Status:** Done (2026-05-18)
 
 ---
 
@@ -147,3 +147,18 @@ No API routes are added.
 - Video items can provide a poster image without requiring a new public route.
 - Tests prove schema acceptance, invalid-value rejection, normalization, editor
   patching, and runtime output.
+
+## Completion Notes
+
+- 2026-05-18: Gallery Mosaic owner data now supports per-item `alt`,
+  `objectPosition`, ratio override, and `poster`, with corresponding Visual
+  controls and runtime output that remains backward-compatible for legacy
+  payloads.
+- Validation:
+  - `git diff --check`
+  - `set -a && source /Users/pciechanski/Documents/_moje_projekty/Coderso/.env && set +a && NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx tests/vitest/widgets/galleryMosaic.test.tsx tests/unit/widgets/validator.test.ts`
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun run gates:coderso`
+  - `bun run scan:security:strict`
+  - `bun run precommit`

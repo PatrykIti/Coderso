@@ -347,6 +347,11 @@ Po zwiększeniu limitu aktywnych sesji per user w CMS do 30 — zapis i publikac
 > destrukcyjne usunięcie skonfigurowanych itemów, a wariant `feature-left`
 > pokazuje ostrzeżenie, gdy zostaje tylko pojedynczy lead tile.
 
+> **Aktualizacja 2026-05-18 — TASK-270-03:** BF-01, BF-11, BF-12 i BF-13 są
+> zamknięte. Gallery Mosaic ma teraz dedykowane per-item `alt`, bounded focus
+> point (`object-position`), per-item ratio override oraz `poster` dla wideo,
+> z zachowaniem backward compatibility dla istniejących payloadów.
+
 > **Closure note 2026-05-18 — TASK-293-03:** reopened shared residual family is
 > now fully closed in docs/changelog/board state as well. `TASK-270` is the
 > only remaining owner for product gaps such as per-item preview/picker,

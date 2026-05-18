@@ -27,6 +27,8 @@ import {
   type GalleryMosaicData,
   type GalleryMosaicGap,
   type GalleryMosaicItem,
+  type GalleryMosaicItemRatio,
+  type GalleryMosaicObjectPosition,
   type GalleryMosaicRadius,
   type GalleryMosaicRatio,
   type GalleryMosaicVariantId,
@@ -85,6 +87,22 @@ const captionPositionOptions: Array<{
   { id: "inside", label: "Inside tile" },
   { id: "below", label: "Below tile" },
   { id: "hover", label: "On hover" },
+];
+
+const objectPositionOptions: Array<{ id: GalleryMosaicObjectPosition; label: string }> = [
+  { id: "center", label: "Center" },
+  { id: "top", label: "Top" },
+  { id: "bottom", label: "Bottom" },
+  { id: "left", label: "Left" },
+  { id: "right", label: "Right" },
+];
+
+const itemRatioOptions: Array<{ id: GalleryMosaicItemRatio; label: string }> = [
+  { id: "inherit", label: "Inherit section ratio" },
+  { id: "1:1", label: "1:1" },
+  { id: "4:3", label: "4:3" },
+  { id: "16:9", label: "16:9" },
+  { id: "3:4", label: "3:4" },
 ];
 
 const itemCountOptions = Array.from({ length: galleryMosaicItemMax }, (_, index) =>
@@ -998,6 +1016,16 @@ export function GalleryMosaicVisualEditor({
                   />
                 </div>
                 <div className="space-y-2">
+                  <p className="text-sm font-medium">Alt text</p>
+                  <Input
+                    value={item.alt ?? ""}
+                    onChange={(event) =>
+                      updateItem(value, onChange, index, { alt: event.target.value })
+                    }
+                    placeholder={`Gallery item ${index + 1}`}
+                  />
+                </div>
+                <div className="space-y-2">
                   <p className="text-sm font-medium">Link URL</p>
                   <Input
                     value={item.href ?? ""}
@@ -1006,6 +1034,60 @@ export function GalleryMosaicVisualEditor({
                     }
                     placeholder="#"
                   />
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Poster image URL</p>
+                  <Input
+                    value={item.poster ?? ""}
+                    onChange={(event) =>
+                      updateItem(value, onChange, index, { poster: event.target.value })
+                    }
+                    placeholder="https://cdn.example.com/poster.jpg"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Focus point</p>
+                  <Select
+                    value={item.objectPosition ?? "center"}
+                    onValueChange={(next) =>
+                      updateItem(value, onChange, index, {
+                        objectPosition: next as GalleryMosaicObjectPosition,
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select focus point" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {objectPositionOptions.map((option) => (
+                        <SelectItem key={`gallery-object-position-${option.id}`} value={option.id}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Item ratio</p>
+                  <Select
+                    value={item.ratio ?? "inherit"}
+                    onValueChange={(next) =>
+                      updateItem(value, onChange, index, {
+                        ratio: next as GalleryMosaicItemRatio,
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select item ratio" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {itemRatioOptions.map((option) => (
+                        <SelectItem key={`gallery-item-ratio-${option.id}`} value={option.id}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               {showDropAfter ? <div className="h-0.5 rounded bg-primary" /> : null}

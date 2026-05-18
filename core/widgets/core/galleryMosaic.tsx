@@ -9,13 +9,19 @@ export type GalleryMosaicRatio = "1:1" | "4:3" | "16:9" | "3:4";
 export type GalleryMosaicGap = "none" | "sm" | "md" | "lg";
 export type GalleryMosaicRadius = "none" | "md" | "lg" | "xl";
 export type GalleryMosaicCaptionPosition = "inside" | "below" | "hover";
+export type GalleryMosaicObjectPosition = "center" | "top" | "bottom" | "left" | "right";
+export type GalleryMosaicItemRatio = "inherit" | GalleryMosaicRatio;
 
 export type GalleryMosaicItem = {
   id?: string;
   image?: string;
   video?: string;
+  alt?: string;
+  poster?: string;
   caption?: string;
   href?: string;
+  objectPosition?: GalleryMosaicObjectPosition;
+  ratio?: GalleryMosaicItemRatio;
 };
 
 export type GalleryMosaicData = {
@@ -57,6 +63,15 @@ const radiusClassMap: Record<GalleryMosaicRadius, string> = {
   xl: "rounded-xl",
 };
 
+const objectPositionStyleMap: Record<GalleryMosaicObjectPosition, CSSProperties["objectPosition"]> =
+  {
+    center: "center",
+    top: "center top",
+    bottom: "center bottom",
+    left: "left center",
+    right: "right center",
+  };
+
 const galleryMosaicItemMin = 1;
 export const galleryMosaicItemMax = 16;
 
@@ -84,8 +99,12 @@ export const galleryMosaicSchema = {
           id: { type: "string" },
           image: { type: "string" },
           video: { type: "string" },
+          alt: { type: "string" },
+          poster: { type: "string" },
           caption: { type: "string" },
           href: { type: "string" },
+          objectPosition: { enum: ["center", "top", "bottom", "left", "right"] },
+          ratio: { enum: ["inherit", "1:1", "4:3", "16:9", "3:4"] },
         },
       },
     },
@@ -179,6 +198,18 @@ const resolveGalleryMosaicCaptionPosition = (
   return "inside";
 };
 
+const resolveGalleryMosaicObjectPosition = (
+  value: string | undefined
+): GalleryMosaicObjectPosition => {
+  if (value === "top" || value === "bottom" || value === "left" || value === "right") return value;
+  return "center";
+};
+
+const resolveGalleryMosaicItemRatio = (value: string | undefined): GalleryMosaicItemRatio => {
+  if (value === "1:1" || value === "4:3" || value === "16:9" || value === "3:4") return value;
+  return "inherit";
+};
+
 export const resolveGalleryMosaicVariant = (variant: string): GalleryMosaicVariantId => {
   if (variant === "uniform-grid" || variant === "feature-left") return variant;
   return "mosaic";
@@ -234,11 +265,15 @@ export function normalizeGalleryMosaicItems(
       id,
       image: resolveOptionalString(base.image),
       video: resolveOptionalString(base.video),
+      alt: resolveOptionalString(base.alt),
+      poster: resolveOptionalString(base.poster),
       caption:
         typeof base.caption === "string" && base.caption.trim().length > 0
           ? base.caption.trim()
           : (fallbackCaptions[index] ?? `Media ${index + 1}`),
       href: resolveOptionalString(base.href),
+      objectPosition: resolveGalleryMosaicObjectPosition(base.objectPosition),
+      ratio: resolveGalleryMosaicItemRatio(base.ratio),
     });
   }
 
@@ -316,6 +351,13 @@ function renderCaption({
   );
 }
 
+function resolveGalleryMosaicAltText(item: GalleryMosaicItem, index: number) {
+  const explicitAlt = item.alt?.trim();
+  if (explicitAlt) return explicitAlt;
+  const caption = item.caption?.trim();
+  return caption || `Gallery item ${index + 1}`;
+}
+
 function GalleryCard({
   item,
   index,
@@ -339,14 +381,20 @@ function GalleryCard({
     allowHttp: true,
   });
   const hasLink = Boolean(linkAttrs);
-  const accessibleCaption = (item.caption ?? "").trim() || `Gallery item ${index + 1}`;
+  const accessibleCaption = resolveGalleryMosaicAltText(item, index);
+  const resolvedRatio =
+    item.ratio && item.ratio !== "inherit" ? resolveGalleryMosaicRatio(item.ratio) : ratio;
+  const objectPosition =
+    objectPositionStyleMap[resolveGalleryMosaicObjectPosition(item.objectPosition)];
 
   const media = hasVideo ? (
     <video
       src={item.video}
+      poster={item.poster}
       title={accessibleCaption}
       aria-label={accessibleCaption}
       className="h-full w-full object-cover"
+      style={{ objectPosition }}
       controls
       playsInline
       muted
@@ -358,6 +406,7 @@ function GalleryCard({
       src={item.image}
       alt={accessibleCaption}
       className="h-full w-full object-cover"
+      style={{ objectPosition }}
       loading="lazy"
     />
   ) : (
@@ -370,7 +419,7 @@ function GalleryCard({
     <figure
       className={joinClasses(
         "group relative w-full overflow-hidden border border-[var(--color-border)]/70 bg-[var(--color-bg)]",
-        ratioClassMap[ratio],
+        ratioClassMap[resolvedRatio],
         radiusClassMap[radius]
       )}
       data-gallery-item={String(index + 1)}
