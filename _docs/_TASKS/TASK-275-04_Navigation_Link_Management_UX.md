@@ -6,7 +6,7 @@
 **Category:** Widgets + Navigation + Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-275, TASK-275-01, TASK-275-03
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 

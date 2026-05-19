@@ -23,7 +23,15 @@ import {
 import { MediaPicker } from "@/ui/media/MediaPicker";
 import { resolveMenuItemSettings } from "../../../../services/menus/menuItemSettings";
 
-import { navigationDefaults, type NavigationData } from "../../../../widgets/core/navigation";
+import {
+  navigationDefaults,
+  type NavigationActiveLinkMode,
+  type NavigationBadgeTone,
+  type NavigationData,
+  type NavigationItemMeta,
+  type NavigationLinkTarget,
+} from "../../../../widgets/core/navigation";
+import { normalizeWidgetSafeHref } from "../../../../widgets/core/widgetSafeHref";
 import type { WidgetEditorProps } from "../../../../widgets/types";
 import { SharedColorControl } from "./SharedColorControl";
 import { WidgetEditorSection } from "./WidgetEditorControls";
@@ -34,6 +42,7 @@ type NavigationStyle = NonNullable<NavigationData["style"]>;
 type NavigationLogo = NavigationData["logo"];
 type NavigationItem = NavigationData["items"][number];
 type NavigationChild = NonNullable<NavigationItem["children"]>[number];
+type NavigationTargetItem = NavigationItem | NavigationChild;
 
 const variantOptions = [
   {
@@ -77,16 +86,110 @@ const borderWidthOptions = ["0", "1", "2", "3"] as const;
 const fontSizeOptions = ["none", "xs", "sm", "base", "lg"] as const;
 const fontWeightOptions = ["none", "normal", "medium", "semibold", "bold"] as const;
 const textTransformOptions = ["none", "uppercase", "capitalize"] as const;
+const letterSpacingOptions = ["none", "wide", "wider"] as const;
+const shadowOptions = ["none", "sm", "md", "lg"] as const;
+const blurOptions = ["none", "sm", "md"] as const;
+const dropdownDirectionOptions = ["bottom", "top", "auto"] as const;
+const motionOptions = ["none", "subtle", "standard"] as const;
+const logoHeightOptions = ["sm", "md", "lg", "xl"] as const;
+const ctaRadiusOptions = ["sm", "md", "lg", "full"] as const;
+const ctaSeparatorOptions = ["none", "line", "spacing"] as const;
+const activeLinkModeOptions: Array<{ id: NavigationActiveLinkMode; label: string }> = [
+  { id: "none", label: "No active state" },
+  { id: "pathname", label: "Match current path" },
+  { id: "exact", label: "Exact URL match" },
+];
+const linkTargetOptions: Array<{ id: NavigationLinkTarget; label: string }> = [
+  { id: "self", label: "Same tab" },
+  { id: "blank", label: "New tab" },
+];
+const badgeToneOptions: Array<{ id: NavigationBadgeTone; label: string }> = [
+  { id: "default", label: "Default" },
+  { id: "accent", label: "Accent" },
+  { id: "success", label: "Success" },
+  { id: "warning", label: "Warning" },
+  { id: "danger", label: "Danger" },
+];
+const MAX_NAVIGATION_ITEMS = 8;
+const MAX_NAVIGATION_CHILD_ITEMS = 6;
 const NO_MENU_VALUE = "__none__";
 const formatTokenOptionLabel = (option: string) => (option === "none" ? "None" : option);
 
 const variantSupportsCta = (variant: string) => variant === "with-cta" || variant === "split";
 
 const isValidHref = (value: string | undefined) =>
-  !value || value.startsWith("/") || value.startsWith("http");
+  !value ||
+  value.trim().length === 0 ||
+  Boolean(
+    normalizeWidgetSafeHref(value, {
+      allowRelative: true,
+      allowHash: true,
+      allowHttp: true,
+    })
+  );
 
 const isValidImageUrl = (value: string | undefined) =>
-  !value || value.startsWith("http") || value.startsWith("/");
+  !value ||
+  value.trim().length === 0 ||
+  Boolean(
+    normalizeWidgetSafeHref(value, {
+      allowRelative: true,
+      allowHttp: true,
+    })
+  );
+
+const isHexColorValue = (value: string | undefined) =>
+  !value ||
+  value.trim().length === 0 ||
+  value.startsWith("var(") ||
+  /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(value.trim());
+
+const createEmptyNavigationMeta = (): NavigationItemMeta => ({
+  visibility: "all",
+  badge: null,
+  description: null,
+  icon: null,
+});
+
+const createNavigationItemDraft = (label: string): NavigationItem => ({
+  label,
+  href: "/",
+  target: "self",
+});
+
+const createNavigationChildDraft = (): NavigationChild => ({
+  label: "Sub-link",
+  href: "/",
+  target: "self",
+});
+
+const moveArrayItem = <T,>(items: T[], index: number, direction: -1 | 1) => {
+  const target = index + direction;
+  if (target < 0 || target >= items.length) return items;
+  const next = [...items];
+  [next[index], next[target]] = [next[target], next[index]];
+  return next;
+};
+
+const mobileModeDetails: Record<
+  NonNullable<NavigationBehavior["mobileMode"]>,
+  { summary: string; cta: string }
+> = {
+  expanded: {
+    summary: "Keep primary links visible on mobile and skip the drawer toggle.",
+    cta: "Primary CTA stays inline unless `Hide CTA on mobile` is enabled.",
+  },
+  drawer: {
+    summary:
+      "Show a drawer toggle on mobile, keep desktop navigation unchanged, and move the primary CTA into the drawer panel on mobile.",
+    cta: "Drawer mode renders one mobile CTA path inside the panel unless `Hide CTA on mobile` is enabled.",
+  },
+  minimal: {
+    summary:
+      "Keep only brand and right-side actions on mobile. No drawer toggle or mobile link panel is rendered.",
+    cta: "Primary CTA may stay in the mobile header unless `Hide CTA on mobile` is enabled.",
+  },
+};
 
 export function mapMenuNodesToNavigationItems(nodes: MenuItemNode[]): NavigationItem[] {
   return nodes.map((node) => {
@@ -173,6 +276,165 @@ function ColorField({
       placeholder={placeholder}
       pickerFallback={pickerFallback}
     />
+  );
+}
+
+function NavigationItemPreviewList({
+  title,
+  items,
+  emptyLabel,
+}: {
+  title: string;
+  items: NavigationItem[];
+  emptyLabel: string;
+}) {
+  return (
+    <div className="space-y-2 rounded-lg border border-border/70 bg-muted/20 p-3">
+      <p className="text-sm font-medium">{title}</p>
+      {items.length === 0 ? (
+        <p className="text-xs text-muted-foreground">{emptyLabel}</p>
+      ) : (
+        <div className="space-y-2">
+          {items.map((item, index) => (
+            <div
+              key={`${item.href || item.label}-${index}`}
+              className="rounded-md border bg-background/70 p-2"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <span className="min-w-0 truncate text-sm font-medium">{item.label}</span>
+                <span className="truncate text-xs text-muted-foreground">{item.href}</span>
+              </div>
+              {item.children?.length ? (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {item.children.length} sub-link{item.children.length === 1 ? "" : "s"}
+                </p>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function NavigationTargetField({
+  value,
+  onChange,
+}: {
+  value: NavigationLinkTarget | undefined;
+  onChange: (next: NavigationLinkTarget) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+        Link target
+      </p>
+      <Select
+        value={value ?? "self"}
+        onValueChange={(next) => onChange(next as NavigationLinkTarget)}
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="Choose target" />
+        </SelectTrigger>
+        <SelectContent>
+          {linkTargetOptions.map((option) => (
+            <SelectItem key={option.id} value={option.id}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+function NavigationMetadataFields({
+  item,
+  onChange,
+}: {
+  item: NavigationTargetItem;
+  onChange: (patch: Partial<NavigationTargetItem>) => void;
+}) {
+  const meta = item.meta ?? createEmptyNavigationMeta();
+
+  const patchMeta = (patch: Partial<NavigationItemMeta>) =>
+    onChange({
+      meta: {
+        ...meta,
+        ...patch,
+      },
+    });
+
+  const patchBadge = (patch: Partial<NonNullable<NavigationItemMeta["badge"]>>) =>
+    patchMeta({
+      badge: {
+        ...(meta.badge ?? { label: "", tone: "default" }),
+        ...patch,
+      },
+    });
+
+  return (
+    <div className="mt-3 space-y-3 rounded-md border border-dashed border-border/70 bg-muted/15 p-3">
+      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        Link metadata
+      </p>
+      <div className="grid gap-3 md:grid-cols-2">
+        <label className="space-y-1 text-sm">
+          <span className="font-medium text-foreground">Icon text</span>
+          <Input
+            value={meta.icon ?? ""}
+            onChange={(event) => patchMeta({ icon: event.target.value || null })}
+            placeholder="sparkles"
+          />
+        </label>
+        <label className="space-y-1 text-sm">
+          <span className="font-medium text-foreground">Description</span>
+          <Input
+            value={meta.description ?? ""}
+            onChange={(event) => patchMeta({ description: event.target.value || null })}
+            placeholder="Helpful context under the label"
+          />
+        </label>
+        <label className="space-y-1 text-sm">
+          <span className="font-medium text-foreground">Badge label</span>
+          <Input
+            value={meta.badge?.label ?? ""}
+            onChange={(event) => {
+              const nextLabel = event.target.value;
+              if (nextLabel.trim().length === 0) {
+                patchMeta({ badge: null });
+                return;
+              }
+              patchBadge({ label: nextLabel });
+            }}
+            placeholder="New"
+          />
+        </label>
+        <div className="space-y-1 text-sm">
+          <span className="font-medium text-foreground">Badge tone</span>
+          <Select
+            value={meta.badge?.tone ?? "default"}
+            onValueChange={(next) => patchBadge({ tone: next as NavigationBadgeTone })}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Choose tone" />
+            </SelectTrigger>
+            <SelectContent>
+              {badgeToneOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <NavigationTargetField value={item.target} onChange={(next) => onChange({ target: next })} />
+      <p className="text-xs text-muted-foreground">
+        Visibility metadata remains preserved from existing payloads and menu settings, but this
+        editor does not turn it into a runtime auth gate.
+      </p>
+    </div>
   );
 }
 
@@ -472,10 +734,19 @@ export function NavigationWizardEditor({
       </div>
 
       {linksSource === "menu" ? (
-        <MenuSelectField
-          menuId={value.menuKey}
-          onSelectionChange={({ menuId, items }) => update(buildMenuSelectionPatch(menuId, items))}
-        />
+        <div className="space-y-3">
+          <MenuSelectField
+            menuId={value.menuKey}
+            onSelectionChange={({ menuId, items }) =>
+              update(buildMenuSelectionPatch(menuId, items))
+            }
+          />
+          <NavigationItemPreviewList
+            title="Synced menu preview"
+            items={items}
+            emptyLabel="Select a menu to preview its current links."
+          />
+        </div>
       ) : (
         <div className="space-y-2">
           <p className="text-sm font-medium">{usesPagesIndex ? "Fallback links" : "Quick links"}</p>
@@ -511,6 +782,12 @@ export function NavigationWizardEditor({
               </div>
             ))}
           </div>
+          {items.length > 3 ? (
+            <p className="text-xs text-muted-foreground">
+              Showing the first 3 links here. {items.length - 3} additional link
+              {items.length - 3 === 1 ? "" : "s"} continue in Visual mode.
+            </p>
+          ) : null}
         </div>
       )}
 
@@ -548,11 +825,14 @@ export function NavigationWizardEditor({
         ) : (
           <NavigationLogoSourceFields logo={logo} onChange={updateLogo} />
         )}
-        <Input
-          value={logo.href ?? ""}
-          onChange={(event) => updateLogo({ href: event.target.value })}
-          placeholder="Logo link (e.g. /)"
-        />
+        <label className="space-y-1 text-sm">
+          <span className="font-medium text-foreground">Logo link</span>
+          <Input
+            value={logo.href ?? ""}
+            onChange={(event) => updateLogo({ href: event.target.value })}
+            placeholder="Logo link (e.g. /)"
+          />
+        </label>
         {logo.type === "image" ? (
           <Input
             value={logo.alt ?? ""}
@@ -613,7 +893,10 @@ export function NavigationWizardEditor({
           />
         </div>
       ) : (
-        <p className="text-xs text-muted-foreground">Simple variant hides CTA in runtime output.</p>
+        <p className="text-xs text-muted-foreground">
+          Simple variant hides CTA in runtime output. Use the `Right Actions` slot later if the
+          layout needs extra actions without enabling a primary CTA.
+        </p>
       )}
     </div>
   );
@@ -632,6 +915,7 @@ export function NavigationVisualEditor({
   const behavior: NavigationBehavior = {
     mobileMode: "expanded",
     hideCtaOnMobile: false,
+    activeLinkMode: "none",
     ...value.behavior,
   };
   const style: NavigationStyle = { ...value.style };
@@ -672,6 +956,10 @@ export function NavigationVisualEditor({
     update({ items: next });
   };
 
+  const moveItem = (index: number, direction: -1 | 1) => {
+    update({ items: moveArrayItem(items, index, direction) });
+  };
+
   const removeItem = (index: number) => {
     if (items.length <= 2) return;
     update({
@@ -680,25 +968,26 @@ export function NavigationVisualEditor({
   };
 
   const addItem = () => {
-    if (items.length >= 8) return;
+    if (items.length >= MAX_NAVIGATION_ITEMS) return;
     update({
-      items: [...items, { label: `Item ${items.length + 1}`, href: "/" }],
+      items: [...items, createNavigationItemDraft(`Item ${items.length + 1}`)],
     });
   };
 
   const addChild = (itemIndex: number) => {
     const next = [...items];
     const currentChildren = next[itemIndex].children ?? [];
+    if (currentChildren.length >= MAX_NAVIGATION_CHILD_ITEMS) return;
     next[itemIndex] = {
       ...next[itemIndex],
-      children: [...currentChildren, { label: "Sub-link", href: "/" }],
+      children: [...currentChildren, createNavigationChildDraft()],
     };
     update({ items: next });
   };
 
   const updateChild = (itemIndex: number, childIndex: number, patch: Partial<NavigationChild>) => {
     const next = [...items];
-    const currentChildren = next[itemIndex].children ?? [];
+    const currentChildren = [...(next[itemIndex].children ?? [])];
     currentChildren[childIndex] = {
       ...currentChildren[childIndex],
       ...patch,
@@ -716,6 +1005,15 @@ export function NavigationVisualEditor({
     next[itemIndex] = {
       ...next[itemIndex],
       children: currentChildren.filter((_, currentIndex) => currentIndex !== childIndex),
+    };
+    update({ items: next });
+  };
+
+  const moveChild = (itemIndex: number, childIndex: number, direction: -1 | 1) => {
+    const next = [...items];
+    next[itemIndex] = {
+      ...next[itemIndex],
+      children: moveArrayItem(next[itemIndex].children ?? [], childIndex, direction),
     };
     update({ items: next });
   };
@@ -822,11 +1120,14 @@ export function NavigationVisualEditor({
           <NavigationLogoSourceFields logo={logo} onChange={updateLogo} />
         )}
 
-        <Input
-          value={logo.href ?? ""}
-          onChange={(event) => updateLogo({ href: event.target.value })}
-          placeholder="Logo link (e.g. /)"
-        />
+        <label className="space-y-1 text-sm">
+          <span className="font-medium text-foreground">Logo link</span>
+          <Input
+            value={logo.href ?? ""}
+            onChange={(event) => updateLogo({ href: event.target.value })}
+            placeholder="Logo link (e.g. /)"
+          />
+        </label>
         {logo.type === "image" ? (
           <Input
             value={logo.alt ?? ""}
@@ -840,18 +1141,57 @@ export function NavigationVisualEditor({
         title="Navigation Links"
         description="Edit labels, URLs, and first-level dropdown links."
       >
-        {linksSource === "menu" ? (
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Active link state</p>
+          <Select
+            value={behavior.activeLinkMode ?? "none"}
+            onValueChange={(next) =>
+              updateBehavior({ activeLinkMode: next as NavigationBehavior["activeLinkMode"] })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Choose active-link behavior" />
+            </SelectTrigger>
+            <SelectContent>
+              {activeLinkModeOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <p className="text-xs text-muted-foreground">
-            Links are synced from selected menu and can be used as runtime fallback.
+            Active links are detected in runtime from the current browser pathname. Menu and Pages
+            sources stay on same-tab targets until their upstream owners define target metadata.
           </p>
+        </div>
+        {linksSource === "menu" ? (
+          <div className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Links are synced from the selected menu and remain read-only here so this widget does
+              not fork Menu ownership.
+            </p>
+            <NavigationItemPreviewList
+              title="Current synced menu"
+              items={items}
+              emptyLabel="Choose a menu above to preview its current links."
+            />
+          </div>
         ) : (
           <>
             {linksSource === "pages" ? (
-              <p className="text-xs text-muted-foreground">
-                Links are sourced from published pages with{" "}
-                <span className="font-medium">Show in navigation</span> enabled. Manual links below
-                act as fallback when no pages match.
-              </p>
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  Links are sourced from published pages with{" "}
+                  <span className="font-medium">Show in navigation</span> enabled. Manual links
+                  below act as fallback when no pages match.
+                </p>
+                <NavigationItemPreviewList
+                  title="Current fallback links"
+                  items={items}
+                  emptyLabel="Add fallback links for the pages source."
+                />
+              </div>
             ) : null}
             <div className="space-y-2">
               {items.map((item, index) => (
@@ -859,31 +1199,67 @@ export function NavigationVisualEditor({
                   key={`${item.href || item.label}-${index}`}
                   className="rounded-md border border-border/70 p-3"
                 >
-                  <div className="grid gap-2 md:grid-cols-[1fr_1fr_auto]">
-                    <Input
-                      value={item.label}
-                      onChange={(event) => updateItem(index, { label: event.target.value })}
-                      placeholder={`Item ${index + 1} label`}
-                    />
-                    <Input
-                      value={item.href}
-                      onChange={(event) => updateItem(index, { href: event.target.value })}
-                      placeholder="/path"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={items.length <= 2}
-                      onClick={() => removeItem(index)}
-                    >
-                      Remove
-                    </Button>
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold">Link {index + 1}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Parent links can be reordered and may expose one level of sub-links.
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={index === 0}
+                        onClick={() => moveItem(index, -1)}
+                      >
+                        Move up
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={index === items.length - 1}
+                        onClick={() => moveItem(index, 1)}
+                      >
+                        Move down
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={items.length <= 2}
+                        onClick={() => removeItem(index)}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="mt-3 grid gap-2 md:grid-cols-2">
+                    <label className="space-y-1 text-sm">
+                      <span className="font-medium text-foreground">Label</span>
+                      <Input
+                        value={item.label}
+                        onChange={(event) => updateItem(index, { label: event.target.value })}
+                        placeholder={`Item ${index + 1} label`}
+                      />
+                    </label>
+                    <label className="space-y-1 text-sm">
+                      <span className="font-medium text-foreground">URL</span>
+                      <Input
+                        value={item.href}
+                        onChange={(event) => updateItem(index, { href: event.target.value })}
+                        placeholder="/path"
+                      />
+                    </label>
                   </div>
                   {!isValidHref(item.href) ? (
                     <p className="mt-2 text-xs text-destructive">
-                      Use a relative path or full URL.
+                      Use a relative path, `#`, or full URL.
                     </p>
                   ) : null}
+                  <NavigationMetadataFields
+                    item={item}
+                    onChange={(patch) => updateItem(index, patch)}
+                  />
                   <div className="mt-3 space-y-2">
                     <div className="flex items-center justify-between">
                       <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -893,11 +1269,18 @@ export function NavigationVisualEditor({
                         type="button"
                         variant="ghost"
                         size="sm"
+                        disabled={(item.children ?? []).length >= MAX_NAVIGATION_CHILD_ITEMS}
                         onClick={() => addChild(index)}
                       >
                         Add sub-link
                       </Button>
                     </div>
+                    {(item.children ?? []).length >= MAX_NAVIGATION_CHILD_ITEMS ? (
+                      <p className="text-xs text-muted-foreground">
+                        Reached the current limit of {MAX_NAVIGATION_CHILD_ITEMS} sub-links for this
+                        parent.
+                      </p>
+                    ) : null}
                     {(item.children ?? []).length === 0 ? (
                       <p className="text-xs text-muted-foreground">No sub-links yet.</p>
                     ) : (
@@ -905,33 +1288,76 @@ export function NavigationVisualEditor({
                         {(item.children ?? []).map((child, childIndex) => (
                           <div
                             key={`${child.href || child.label}-${childIndex}`}
-                            className="grid gap-2 md:grid-cols-[1fr_1fr_auto]"
+                            className="rounded-md border border-dashed border-border/70 bg-muted/15 p-3"
                           >
-                            <Input
-                              value={child.label}
-                              onChange={(event) =>
-                                updateChild(index, childIndex, {
-                                  label: event.target.value,
-                                })
-                              }
-                              placeholder="Sub-link label"
+                            <div className="flex items-center justify-between gap-3">
+                              <div>
+                                <p className="text-sm font-medium">Sub-link {childIndex + 1}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  Child links stay scoped to this parent.
+                                </p>
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  disabled={childIndex === 0}
+                                  onClick={() => moveChild(index, childIndex, -1)}
+                                >
+                                  Move up
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  disabled={childIndex === (item.children?.length ?? 0) - 1}
+                                  onClick={() => moveChild(index, childIndex, 1)}
+                                >
+                                  Move down
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  onClick={() => removeChild(index, childIndex)}
+                                >
+                                  Remove
+                                </Button>
+                              </div>
+                            </div>
+                            <div className="mt-3 grid gap-2 md:grid-cols-2">
+                              <label className="space-y-1 text-sm">
+                                <span className="font-medium text-foreground">Label</span>
+                                <Input
+                                  value={child.label}
+                                  onChange={(event) =>
+                                    updateChild(index, childIndex, {
+                                      label: event.target.value,
+                                    })
+                                  }
+                                  placeholder="Sub-link label"
+                                />
+                              </label>
+                              <label className="space-y-1 text-sm">
+                                <span className="font-medium text-foreground">URL</span>
+                                <Input
+                                  value={child.href}
+                                  onChange={(event) =>
+                                    updateChild(index, childIndex, {
+                                      href: event.target.value,
+                                    })
+                                  }
+                                  placeholder="/path"
+                                />
+                              </label>
+                            </div>
+                            {!isValidHref(child.href) ? (
+                              <p className="mt-2 text-xs text-destructive">
+                                Use a relative path, `#`, or full URL.
+                              </p>
+                            ) : null}
+                            <NavigationMetadataFields
+                              item={child}
+                              onChange={(patch) => updateChild(index, childIndex, patch)}
                             />
-                            <Input
-                              value={child.href}
-                              onChange={(event) =>
-                                updateChild(index, childIndex, {
-                                  href: event.target.value,
-                                })
-                              }
-                              placeholder="/path"
-                            />
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={() => removeChild(index, childIndex)}
-                            >
-                              Remove
-                            </Button>
                           </div>
                         ))}
                       </div>
@@ -940,11 +1366,16 @@ export function NavigationVisualEditor({
                 </div>
               ))}
             </div>
+            <p className="text-xs text-muted-foreground">
+              {items.length >= MAX_NAVIGATION_ITEMS
+                ? `Reached the current limit of ${MAX_NAVIGATION_ITEMS} top-level links. Reorder existing links or remove one before adding another.`
+                : `You can add up to ${MAX_NAVIGATION_ITEMS} top-level links in this widget.`}
+            </p>
             <Button
               type="button"
               variant="outline"
               onClick={addItem}
-              disabled={items.length >= 8}
+              disabled={items.length >= MAX_NAVIGATION_ITEMS}
               className="w-full"
             >
               Add link item
@@ -991,7 +1422,8 @@ export function NavigationVisualEditor({
           <p className="text-xs text-muted-foreground">CTA is disabled for the Simple variant.</p>
         )}
         <p className="text-xs text-muted-foreground">
-          Use `Right Actions` slot to insert extra widgets like login buttons or language switchers.
+          Use the existing `Right Actions` slot for secondary actions like login buttons or language
+          switchers. This widget keeps only one schema-backed primary CTA.
         </p>
       </EditorSection>
 
@@ -1020,6 +1452,16 @@ export function NavigationVisualEditor({
               ))}
             </SelectContent>
           </Select>
+        </div>
+        <div className="rounded-lg border border-border/70 bg-muted/20 p-3 text-xs text-muted-foreground">
+          <p className="font-medium text-foreground">
+            {mobileModeDetails[behavior.mobileMode ?? "expanded"].summary}
+          </p>
+          <p className="mt-1">{mobileModeDetails[behavior.mobileMode ?? "expanded"].cta}</p>
+          <p className="mt-1">
+            Drawer mode moves focus into the panel on open, loops it while open, and returns focus
+            to the trigger on close.
+          </p>
         </div>
         <div className="flex items-center justify-between rounded-lg border p-3">
           <div>
@@ -1075,6 +1517,35 @@ export function NavigationVisualEditor({
           placeholder="#334155"
           pickerFallback="#334155"
         />
+        {!isHexColorValue(style.linkColor) ? (
+          <p className="text-xs text-destructive">
+            Use a hex color like `#334155` or keep a CSS variable token.
+          </p>
+        ) : null}
+        <ColorField
+          label="Link hover color"
+          value={style.linkHoverColor}
+          onChange={(next) => updateStyle({ linkHoverColor: next })}
+          placeholder="#0f172a"
+          pickerFallback="#0f172a"
+        />
+        {!isHexColorValue(style.linkHoverColor) ? (
+          <p className="text-xs text-destructive">
+            Use a hex color like `#0f172a` or keep a CSS variable token.
+          </p>
+        ) : null}
+        <ColorField
+          label="Link active color"
+          value={style.linkActiveColor}
+          onChange={(next) => updateStyle({ linkActiveColor: next })}
+          placeholder="#1d4ed8"
+          pickerFallback="#1d4ed8"
+        />
+        {!isHexColorValue(style.linkActiveColor) ? (
+          <p className="text-xs text-destructive">
+            Use a hex color like `#1d4ed8` or keep a CSS variable token.
+          </p>
+        ) : null}
         <ColorField
           label="CTA background"
           value={style.ctaBackgroundColor}
@@ -1172,6 +1643,180 @@ export function NavigationVisualEditor({
               </SelectTrigger>
               <SelectContent>
                 {textTransformOptions.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {formatTokenOptionLabel(option)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Letter spacing</p>
+            <Select
+              value={style.letterSpacing ?? "none"}
+              onValueChange={(next) =>
+                updateStyle({ letterSpacing: next as NavigationStyle["letterSpacing"] })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Letter spacing" />
+              </SelectTrigger>
+              <SelectContent>
+                {letterSpacingOptions.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {formatTokenOptionLabel(option)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Link underline</p>
+            <Select
+              value={style.linkUnderline ?? "none"}
+              onValueChange={(next) =>
+                updateStyle({ linkUnderline: next as NavigationStyle["linkUnderline"] })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Underline policy" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                <SelectItem value="hover">On hover + active</SelectItem>
+                <SelectItem value="always">Always</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Surface shadow</p>
+            <Select
+              value={style.shadow ?? "none"}
+              onValueChange={(next) => updateStyle({ shadow: next as NavigationStyle["shadow"] })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Shadow" />
+              </SelectTrigger>
+              <SelectContent>
+                {shadowOptions.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {formatTokenOptionLabel(option)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Backdrop blur</p>
+            <Select
+              value={style.backdropBlur ?? "none"}
+              onValueChange={(next) =>
+                updateStyle({ backdropBlur: next as NavigationStyle["backdropBlur"] })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Backdrop blur" />
+              </SelectTrigger>
+              <SelectContent>
+                {blurOptions.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {formatTokenOptionLabel(option)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Dropdown direction</p>
+            <Select
+              value={style.dropdownDirection ?? "bottom"}
+              onValueChange={(next) =>
+                updateStyle({ dropdownDirection: next as NavigationStyle["dropdownDirection"] })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Direction" />
+              </SelectTrigger>
+              <SelectContent>
+                {dropdownDirectionOptions.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {formatTokenOptionLabel(option)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Motion</p>
+            <Select
+              value={style.motion ?? "subtle"}
+              onValueChange={(next) => updateStyle({ motion: next as NavigationStyle["motion"] })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Motion" />
+              </SelectTrigger>
+              <SelectContent>
+                {motionOptions.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {formatTokenOptionLabel(option)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Logo size</p>
+            <Select
+              value={style.logoHeight ?? "md"}
+              onValueChange={(next) =>
+                updateStyle({ logoHeight: next as NavigationStyle["logoHeight"] })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Logo size" />
+              </SelectTrigger>
+              <SelectContent>
+                {logoHeightOptions.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option.toUpperCase()}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">CTA radius</p>
+            <Select
+              value={style.ctaBorderRadius ?? "md"}
+              onValueChange={(next) =>
+                updateStyle({ ctaBorderRadius: next as NavigationStyle["ctaBorderRadius"] })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="CTA radius" />
+              </SelectTrigger>
+              <SelectContent>
+                {ctaRadiusOptions.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option.toUpperCase()}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">CTA separator</p>
+            <Select
+              value={style.ctaSeparator ?? "none"}
+              onValueChange={(next) =>
+                updateStyle({ ctaSeparator: next as NavigationStyle["ctaSeparator"] })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="CTA separator" />
+              </SelectTrigger>
+              <SelectContent>
+                {ctaSeparatorOptions.map((option) => (
                   <SelectItem key={option} value={option}>
                     {formatTokenOptionLabel(option)}
                   </SelectItem>
@@ -1336,7 +1981,8 @@ export function NavigationAdvancedEditor({ value, onChange }: WidgetEditorProps<
             <div>
               <p className="text-sm font-medium">Collapse on scroll</p>
               <p className="text-xs text-muted-foreground">
-                Store collapse intent for runtime integration.
+                Shrink the Navigation header while scrolling down. Shared Section/page-shell sticky
+                blockers are owned separately.
               </p>
             </div>
             <Switch

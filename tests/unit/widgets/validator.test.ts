@@ -16,6 +16,7 @@ import {
   createListingFiltersWidget,
   listingFiltersDefaults,
 } from "../../../core/widgets/core/listingFilters";
+import { createNavigationWidget, navigationDefaults } from "../../../core/widgets/core/navigation";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { clearWidgetValidators, normalizeWidgetBlock } from "../../../core/widgets/validator";
 import type { WidgetDefinition, WidgetBlock } from "../../../core/widgets/types";
@@ -590,6 +591,157 @@ test("normalizeWidgetBlock rejects invalid gallery mosaic density and motion enu
           motionPreset: "bounce",
         },
       } as unknown as GalleryMosaicData,
+    })
+  ).toThrow("widget_schema_invalid");
+});
+
+test("normalizeWidgetBlock accepts navigation targets, active links, and visual tokens", () => {
+  registerWidget(
+    createNavigationWidget({
+      wizard: Dummy,
+      visual: Dummy,
+      advanced: Dummy,
+    })
+  );
+
+  const normalized = normalizeWidgetBlock({
+    id: "navigation-1",
+    type: "navigation",
+    variant: "with-cta",
+    data: {
+      ...navigationDefaults,
+      logo: {
+        ...navigationDefaults.logo,
+        href: "#top",
+      },
+      items: [
+        {
+          label: "Docs",
+          href: "/docs",
+          target: "blank",
+          meta: {
+            visibility: "all",
+            badge: { label: "New", tone: "accent" },
+            description: "Latest writing",
+            icon: "spark",
+          },
+          children: [
+            {
+              label: "API",
+              href: "/docs/api",
+              target: "self",
+              meta: {
+                visibility: "all",
+                badge: null,
+                description: "Reference",
+                icon: "api",
+              },
+            },
+          ],
+        },
+      ],
+      behavior: {
+        ...navigationDefaults.behavior,
+        activeLinkMode: "pathname",
+        mobileMode: "drawer",
+      },
+      style: {
+        ...navigationDefaults.style,
+        linkUnderline: "always",
+        letterSpacing: "wider",
+        shadow: "lg",
+        backdropBlur: "md",
+        dropdownDirection: "auto",
+        motion: "standard",
+        logoHeight: "xl",
+        ctaBorderRadius: "full",
+        ctaSeparator: "line",
+      },
+    },
+  });
+
+  expect(normalized.data).toEqual(
+    expect.objectContaining({
+      logo: expect.objectContaining({ href: "#top" }),
+      behavior: expect.objectContaining({
+        activeLinkMode: "pathname",
+        mobileMode: "drawer",
+      }),
+      style: expect.objectContaining({
+        linkUnderline: "always",
+        letterSpacing: "wider",
+        shadow: "lg",
+        backdropBlur: "md",
+        dropdownDirection: "auto",
+        motion: "standard",
+        logoHeight: "xl",
+        ctaBorderRadius: "full",
+        ctaSeparator: "line",
+      }),
+      items: [
+        expect.objectContaining({
+          target: "blank",
+          children: [expect.objectContaining({ target: "self" })],
+        }),
+      ],
+    })
+  );
+});
+
+test("normalizeWidgetBlock rejects invalid navigation target and style enums", () => {
+  registerWidget(
+    createNavigationWidget({
+      wizard: Dummy,
+      visual: Dummy,
+      advanced: Dummy,
+    })
+  );
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "navigation-2",
+      type: "navigation",
+      variant: "simple",
+      data: {
+        ...navigationDefaults,
+        items: [
+          {
+            label: "Docs",
+            href: "/docs",
+            target: "popup",
+          },
+        ],
+      } as never,
+    })
+  ).toThrow("widget_schema_invalid");
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "navigation-3",
+      type: "navigation",
+      variant: "simple",
+      data: {
+        ...navigationDefaults,
+        behavior: {
+          ...navigationDefaults.behavior,
+          activeLinkMode: "prefix",
+        },
+      } as never,
+    })
+  ).toThrow("widget_schema_invalid");
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "navigation-4",
+      type: "navigation",
+      variant: "simple",
+      data: {
+        ...navigationDefaults,
+        style: {
+          ...navigationDefaults.style,
+          dropdownDirection: "sideways",
+        },
+      } as never,
     })
   ).toThrow("widget_schema_invalid");
 });

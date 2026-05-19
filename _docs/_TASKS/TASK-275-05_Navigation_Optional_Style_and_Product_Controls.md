@@ -6,7 +6,7 @@
 **Category:** Widgets + Navigation + Admin UI + Runtime Render
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-256-02, TASK-256-04, TASK-275, TASK-275-01, TASK-275-02, TASK-275-03
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -47,10 +47,10 @@ scope and must not patch Section/page-shell sticky blockers.
 
 ## Sub-Tasks
 
-- [ ] TASK-275-05-01: Navigation Collapse Runtime Contract
-- [ ] TASK-275-05-02: Navigation Active Links and Safe Targets
-- [ ] TASK-275-05-03: Navigation Visual Style Tokens
-- [ ] TASK-275-05-04: Navigation Brand CTA and Logo Controls
+- [x] TASK-275-05-01: Navigation Collapse Runtime Contract
+- [x] TASK-275-05-02: Navigation Active Links and Safe Targets
+- [x] TASK-275-05-03: Navigation Visual Style Tokens
+- [x] TASK-275-05-04: Navigation Brand CTA and Logo Controls
 
 ## Files to Change
 

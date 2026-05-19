@@ -10,15 +10,13 @@ import {
   type MenuWithItems,
 } from "../menus/menuService";
 import type { MenuItemNode } from "../menus/treeBuilder";
-import {
-  resolveMenuItemSettings,
-  type ResolvedMenuItemSettings,
-} from "../menus/menuItemSettings";
+import { resolveMenuItemSettings, type ResolvedMenuItemSettings } from "../menus/menuItemSettings";
 import {
   navigationDefaults,
   type NavigationItemMeta,
   type NavigationItem,
   type NavigationData,
+  type NavigationLinkTarget,
 } from "../../widgets/core/navigation";
 
 export type NavigationLinksSource = NonNullable<NavigationData["linksSource"]>;
@@ -53,11 +51,19 @@ const readTrimmedString = (value: unknown) => {
 
 const sanitizeHref = (value: string) => {
   const trimmed = value.trim();
-  if (trimmed.startsWith("/") || trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+  if (
+    trimmed.startsWith("/") ||
+    trimmed.startsWith("#") ||
+    trimmed.startsWith("http://") ||
+    trimmed.startsWith("https://")
+  ) {
     return trimmed;
   }
   return "#";
 };
+
+const normalizeTarget = (value: unknown): NavigationLinkTarget =>
+  value === "blank" ? "blank" : "self";
 
 const normalizeLinksSource = (value: unknown): NavigationLinksSource => {
   if (value === "menu" || value === "pages") return value;
@@ -132,6 +138,7 @@ const normalizeNavigationItems = (value: unknown): NavigationItem[] => {
       normalized.push({
         label,
         href: sanitizeHref(href),
+        target: normalizeTarget(raw.target),
         meta: toNavigationMeta(raw.meta),
         ...(children && children.length > 0 ? { children } : {}),
       });
@@ -172,13 +179,14 @@ const mapMenuNodesToNavigationItems = (
 
       const hrefCandidate =
         readTrimmedString(node.href) ??
-        (node.pageId ? pageSlugsById.get(node.pageId) ?? null : null) ??
+        (node.pageId ? (pageSlugsById.get(node.pageId) ?? null) : null) ??
         "#";
       const href = sanitizeHref(hrefCandidate);
       const children = node.children.length > 0 ? walk(node.children) : undefined;
       mapped.push({
         label,
         href,
+        target: "self",
         meta: menuSettingsToMeta(node.settings),
         ...(children && children.length > 0 ? { children } : {}),
       });

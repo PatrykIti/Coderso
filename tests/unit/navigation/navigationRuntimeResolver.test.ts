@@ -7,14 +7,15 @@ import type { MenuItemNode } from "../../../core/services/menus/treeBuilder";
 test("resolveNavigationRuntimeData keeps manual items when at least one is provided", async () => {
   const resolved = await resolveNavigationRuntimeData({
     linksSource: "manual",
-    items: [{ label: "One", href: "/one" }],
+    items: [{ label: "One", href: "#overview", target: "blank" }],
   });
 
   expect(resolved.linksSource).toBe("manual");
   expect(resolved.items).toEqual([
     {
       label: "One",
-      href: "/one",
+      href: "#overview",
+      target: "blank",
       meta: {
         visibility: "all",
         badge: null,
@@ -117,7 +118,7 @@ test("resolveNavigationRuntimeData resolves menu source and maps pageId to slug"
     undefined,
     {
       getMenuWithItems: async () =>
-        ({ menu: { id: "menu-1", status: "published" }, items: nodes } as any),
+        ({ menu: { id: "menu-1", status: "published" }, items: nodes }) as any,
       getPageSlugsByIds: async () => new Map([["page-about", "/about"]]),
     }
   );
@@ -127,6 +128,7 @@ test("resolveNavigationRuntimeData resolves menu source and maps pageId to slug"
     {
       label: "Home",
       href: "/",
+      target: "self",
       meta: {
         visibility: "all",
         badge: null,
@@ -138,6 +140,7 @@ test("resolveNavigationRuntimeData resolves menu source and maps pageId to slug"
     {
       label: "About",
       href: "/about",
+      target: "self",
       meta: {
         visibility: "all",
         badge: null,
@@ -167,7 +170,7 @@ test("resolveNavigationRuntimeData keeps menu source when only one item exists",
     undefined,
     {
       getMenuWithItems: async () =>
-        ({ menu: { id: "menu-1", status: "published" }, items: nodes } as any),
+        ({ menu: { id: "menu-1", status: "published" }, items: nodes }) as any,
       getPageSlugsByIds: async () => new Map(),
     }
   );
@@ -177,6 +180,7 @@ test("resolveNavigationRuntimeData keeps menu source when only one item exists",
     {
       label: "Home",
       href: "/",
+      target: "self",
       meta: {
         visibility: "all",
         badge: null,
@@ -212,7 +216,7 @@ test("resolveNavigationRuntimeData maps menu metadata to deterministic item meta
     undefined,
     {
       getMenuWithItems: async () =>
-        ({ menu: { id: "menu-1", status: "published" }, items: nodes } as any),
+        ({ menu: { id: "menu-1", status: "published" }, items: nodes }) as any,
       getPageSlugsByIds: async () => new Map(),
     }
   );
@@ -287,7 +291,7 @@ test("resolveNavigationRuntimeData falls back to manual links for draft menus", 
     undefined,
     {
       getMenuWithItems: async () =>
-        ({ menu: { id: "menu-1", status: "draft" }, items: nodes } as any),
+        ({ menu: { id: "menu-1", status: "draft" }, items: nodes }) as any,
       getPageSlugsByIds: async () => new Map(),
     }
   );

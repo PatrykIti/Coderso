@@ -475,6 +475,12 @@ const findInputsByPlaceholder = (container: ParentNode, placeholder: string) =>
       element instanceof HTMLInputElement && element.getAttribute("placeholder") === placeholder
   );
 
+const findInputByAriaLabel = (container: ParentNode, ariaLabel: string) =>
+  Array.from(container.querySelectorAll("input")).find(
+    (element) =>
+      element instanceof HTMLInputElement && element.getAttribute("aria-label") === ariaLabel
+  );
+
 const findSelectsByOptions = (container: ParentNode, values: string[]) =>
   Array.from(container.querySelectorAll("select")).filter((element) => {
     if (!(element instanceof HTMLSelectElement)) return false;
@@ -1081,12 +1087,50 @@ test("NavigationVisualEditor covers manual editing, menu error recovery, CTA val
     );
 
     expect(normalizeText(linksSection?.textContent)).toContain(
-      normalizeText("Use a relative path or full URL.")
+      normalizeText("Use a relative path, `#`, or full URL.")
     );
     expect(latestValue.items[0]).toMatchObject({
       label: "Docs",
       href: "ftp://invalid",
     });
+
+    setInputValue(findInputsByPlaceholder(linksSection ?? view.container, "/path")[0], "#overview");
+    expect(normalizeText(linksSection?.textContent ?? "")).not.toContain(
+      normalizeText("Use a relative path, `#`, or full URL.")
+    );
+
+    setSelectValue(
+      findSelectByOptions(linksSection ?? view.container, ["none", "pathname", "exact"]),
+      "exact"
+    );
+    expect(latestValue.behavior?.activeLinkMode).toBe("exact");
+
+    setInputValue(findInputByPlaceholder(linksSection ?? view.container, "sparkles"), "spark");
+    setInputValue(
+      findInputByPlaceholder(linksSection ?? view.container, "Helpful context under the label"),
+      "Latest writing"
+    );
+    setInputValue(findInputByPlaceholder(linksSection ?? view.container, "New"), "Beta");
+    setSelectValue(findSelectByOptions(linksSection ?? view.container, ["self", "blank"]), "blank");
+    expect(latestValue.items[0]).toMatchObject({
+      target: "blank",
+      meta: {
+        icon: "spark",
+        description: "Latest writing",
+        badge: {
+          label: "Beta",
+          tone: "default",
+        },
+      },
+    });
+
+    setInputValue(
+      findInputsByPlaceholder(linksSection ?? view.container, "/path")[0],
+      "httpx://broken"
+    );
+    expect(normalizeText(linksSection?.textContent)).toContain(
+      normalizeText("Use a relative path, `#`, or full URL.")
+    );
 
     clickByText(linksSection ?? view.container, "Add sub-link", 0);
     setInputValue(findInputByPlaceholder(linksSection ?? view.container, "Sub-link label"), "API");
@@ -1096,6 +1140,7 @@ test("NavigationVisualEditor covers manual editing, menu error recovery, CTA val
       {
         label: "API",
         href: "/api",
+        target: "self",
       },
     ]);
 
@@ -1161,6 +1206,11 @@ test("NavigationVisualEditor covers manual editing, menu error recovery, CTA val
         },
       },
     ]);
+    expect(normalizeText(linksSection?.textContent)).toContain(
+      normalizeText("Current synced menu")
+    );
+    expect(normalizeText(linksSection?.textContent)).toContain(normalizeText("Support"));
+    expect(normalizeText(linksSection?.textContent)).toContain(normalizeText("/support"));
 
     setSelectValue(findSelectByOptions(brandSection ?? view.container, ["text", "image"]), "image");
     setInputValue(
@@ -1213,27 +1263,36 @@ test("NavigationVisualEditor covers manual editing, menu error recovery, CTA val
       hideCtaOnMobile: true,
     });
 
-    setInputValue(findInputByPlaceholder(colorsSection ?? view.container, "#ffffff"), "#f8fafc");
-    setInputValue(findInputByPlaceholder(colorsSection ?? view.container, "#e2e8f0"), "#cbd5e1");
     setInputValue(
-      findInputsByPlaceholder(colorsSection ?? view.container, "#0f172a")[0],
+      findInputByAriaLabel(colorsSection ?? view.container, "Surface color value"),
+      "#f8fafc"
+    );
+    setInputValue(
+      findInputByAriaLabel(colorsSection ?? view.container, "Border color value"),
+      "#cbd5e1"
+    );
+    setInputValue(
+      findInputByAriaLabel(colorsSection ?? view.container, "Text color value"),
       "#0f172b"
     );
     setInputValue(
-      findInputsByPlaceholder(colorsSection ?? view.container, "#0f172a")[1],
+      findInputByAriaLabel(colorsSection ?? view.container, "Logo color value"),
       "#1f2937"
     );
-    setInputValue(findInputByPlaceholder(colorsSection ?? view.container, "#334155"), "#475569");
     setInputValue(
-      findInputsByPlaceholder(colorsSection ?? view.container, "#1d4ed8")[0],
+      findInputByAriaLabel(colorsSection ?? view.container, "Link color value"),
+      "#475569"
+    );
+    setInputValue(
+      findInputByAriaLabel(colorsSection ?? view.container, "CTA background value"),
       "#2563eb"
     );
     setInputValue(
-      findInputsByPlaceholder(colorsSection ?? view.container, "#ffffff")[1],
+      findInputByAriaLabel(colorsSection ?? view.container, "CTA text color value"),
       "#eff6ff"
     );
     setInputValue(
-      findInputsByPlaceholder(colorsSection ?? view.container, "#1d4ed8")[1],
+      findInputByAriaLabel(colorsSection ?? view.container, "CTA border color value"),
       "#1e40af"
     );
     setSelectValue(findSelectByOptions(colorsSection ?? view.container, ["0", "1", "2", "3"]), "2");
@@ -1281,6 +1340,49 @@ test("NavigationVisualEditor covers manual editing, menu error recovery, CTA val
     expect(latestValue.behavior).toMatchObject({
       transparent: true,
     });
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("NavigationVisualEditor reorders top-level links with move controls", async () => {
+  const { NavigationVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/NavigationEditors");
+
+  let latestValue = createNavigationValue({
+    linksSource: "manual",
+  });
+
+  const Harness = () => {
+    const [value, setValue] = useState<NavigationData>(latestValue);
+
+    const handleChange = (next: NavigationData) => {
+      latestValue = next;
+      setValue(next);
+    };
+
+    return (
+      <NavigationVisualEditor
+        value={value}
+        onChange={handleChange}
+        variant="split"
+        onVariantChange={() => undefined}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    const linksSection = findSectionByTitle(view.container, "Navigation Links");
+    const firstLinkCard = Array.from(
+      (linksSection ?? view.container).querySelectorAll(".rounded-md")
+    ).find((candidate) => normalizeText(candidate.textContent).includes(normalizeText("Link 1")));
+
+    clickByText(firstLinkCard ?? linksSection ?? view.container, "Move down");
+    await flush();
+
+    expect(latestValue.items.map((item) => item.label)).toEqual(["Docs", "Home", "Pricing"]);
   } finally {
     view.cleanup();
   }

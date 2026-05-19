@@ -6,7 +6,7 @@
 **Category:** Widgets + Navigation + Admin UI + Runtime Render + Playwright QA
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-252, TASK-256, TASK-256-01, TASK-256-02, TASK-256-04, TASK-256-07, TASK-256-08
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -97,16 +97,16 @@ against the source-of-truth docs before the contract change.
 
 ## Sub-Tasks
 
-- [ ] TASK-275-01: Navigation Logo and Safe Link Parity
-- [ ] TASK-275-02: Navigation Mobile Drawer and Minimal Mode
-- [ ] TASK-275-03: Navigation Dropdown and Rich Link Metadata
-- [ ] TASK-275-04: Navigation Link Management UX
-- [ ] TASK-275-05: Navigation Optional Style and Product Controls
-  - [ ] TASK-275-05-01: Navigation Collapse Runtime Contract
-  - [ ] TASK-275-05-02: Navigation Active Links and Safe Targets
-  - [ ] TASK-275-05-03: Navigation Visual Style Tokens
-  - [ ] TASK-275-05-04: Navigation Brand CTA and Logo Controls
-- [ ] TASK-275-06: Navigation Report, Docs, Changelog, and Closure
+- [x] TASK-275-01: Navigation Logo and Safe Link Parity
+- [x] TASK-275-02: Navigation Mobile Drawer and Minimal Mode
+- [x] TASK-275-03: Navigation Dropdown and Rich Link Metadata
+- [x] TASK-275-04: Navigation Link Management UX
+- [x] TASK-275-05: Navigation Optional Style and Product Controls
+  - [x] TASK-275-05-01: Navigation Collapse Runtime Contract
+  - [x] TASK-275-05-02: Navigation Active Links and Safe Targets
+  - [x] TASK-275-05-03: Navigation Visual Style Tokens
+  - [x] TASK-275-05-04: Navigation Brand CTA and Logo Controls
+- [x] TASK-275-06: Navigation Report, Docs, Changelog, and Closure
 
 ## Implementation Order
 

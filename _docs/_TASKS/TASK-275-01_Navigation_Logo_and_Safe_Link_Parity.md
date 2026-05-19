@@ -6,7 +6,7 @@
 **Category:** Widgets + Navigation + Admin UI + Runtime Render
 **Estimated Effort:** Medium
 **Dependencies:** TASK-256, TASK-275
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 

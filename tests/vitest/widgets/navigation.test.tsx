@@ -31,6 +31,8 @@ test("navigation renders defaults", () => {
   expect(html).toContain("Home");
   expect(html).toContain("About");
   expect(html).toContain("justify-end");
+  expect(html).toContain('aria-label="Primary navigation"');
+  expect(html).toContain('href="/"');
 });
 
 test("navigation reflects sticky and transparent behavior in runtime output", () => {
@@ -43,16 +45,21 @@ test("navigation reflects sticky and transparent behavior in runtime output", ()
           transparent: true,
           collapseOnScroll: true,
           mobileMode: "drawer",
+          activeLinkMode: "pathname",
         },
         style: {
           surfaceColor: "#ffffff",
           borderColor: "#123456",
           borderWidth: "2",
           linkColor: "#334155",
+          linkHoverColor: "#0f172a",
+          linkActiveColor: "#1d4ed8",
           ctaBackgroundColor: "#1d4ed8",
           ctaTextColor: "#ffffff",
           fontSize: "lg",
           textTransform: "uppercase",
+          shadow: "md",
+          backdropBlur: "sm",
         },
       }}
       variant="split"
@@ -63,6 +70,7 @@ test("navigation reflects sticky and transparent behavior in runtime output", ()
   expect(html).toContain('data-navigation-widget="1"');
   expect(html).toContain('data-mobile-mode="drawer"');
   expect(html).toContain('data-collapse-on-scroll="true"');
+  expect(html).toContain('data-navigation-active-mode="pathname"');
   expect(html).toContain("border-bottom-width:2px");
   expect(html).toContain("text-lg");
   expect(html).toContain("uppercase");
@@ -71,6 +79,8 @@ test("navigation reflects sticky and transparent behavior in runtime output", ()
   expect(html).toContain("data-navigation-mobile-panel");
   expect(html).toContain('aria-expanded="false"');
   expect(html).toContain('aria-controls="navigation-mobile-panel"');
+  expect(html).toContain("shadow-md");
+  expect(html).toContain("backdrop-blur-sm");
 });
 
 test("navigation cleared surface and CTA background omit background styles", () => {
@@ -89,7 +99,7 @@ test("navigation cleared surface and CTA background omit background styles", () 
   );
 
   expect(html).toContain("Coderso");
-  expect(html).not.toContain("background-color:");
+  expect(html).toContain("background-color:var(--color-bg)");
 });
 
 test("navigation schema accepts submenu children and image logo metadata", () => {
@@ -200,7 +210,8 @@ test("navigation normalizes unsafe item, child, CTA, and logo hrefs before rende
       {
         label: "Unsafe",
         href: "javascript:alert(2)",
-        children: [{ label: "Child unsafe", href: "//evil.example" }],
+        target: "blank",
+        children: [{ label: "Child unsafe", href: "//evil.example", target: "blank" }],
       },
     ],
     cta: {
@@ -210,7 +221,7 @@ test("navigation normalizes unsafe item, child, CTA, and logo hrefs before rende
   });
 
   expect(normalized.logo.href).toBe("/");
-  expect(normalized.items).toEqual([{ label: "Safe", href: "/safe" }]);
+  expect(normalized.items).toEqual([{ label: "Safe", href: "/safe", target: "self" }]);
   expect(normalized.cta).toBeUndefined();
 
   const html = renderToString(<NavigationBlock data={normalized} variant="with-cta" />);
@@ -220,7 +231,7 @@ test("navigation normalizes unsafe item, child, CTA, and logo hrefs before rende
   expect(html).not.toContain("data:text/html");
 });
 
-test("navigation still renders mobile toggle without CTA or right slot content", () => {
+test("navigation minimal mode skips the mobile drawer toggle and panel", () => {
   const html = renderToString(
     <NavigationBlock
       data={{
@@ -236,9 +247,102 @@ test("navigation still renders mobile toggle without CTA or right slot content",
     />
   );
 
-  expect(html).toContain("data-navigation-mobile-toggle");
-  expect(html).toContain("data-navigation-mobile-panel");
-  expect(html).toContain('id="navigation-mobile-panel"');
+  expect(html).not.toContain("data-navigation-mobile-toggle");
+  expect(html).not.toContain("data-navigation-mobile-panel");
+});
+
+test("navigation renders metadata, target rel, and drawer-only mobile CTA contract", () => {
+  const html = renderToString(
+    <NavigationBlock
+      data={{
+        ...navigationDefaults,
+        items: [
+          {
+            label: "Docs",
+            href: "/docs",
+            target: "blank",
+            meta: {
+              visibility: "all",
+              badge: { label: "New", tone: "accent" },
+              description: "Latest writing",
+              icon: "spark",
+            },
+            children: [
+              {
+                label: "API",
+                href: "/docs/api",
+                meta: {
+                  visibility: "all",
+                  badge: null,
+                  description: "Reference",
+                  icon: "api",
+                },
+              },
+            ],
+          },
+        ],
+        behavior: {
+          ...navigationDefaults.behavior,
+          mobileMode: "drawer",
+        },
+        style: {
+          ...navigationDefaults.style,
+          logoHeight: "lg",
+          ctaBorderRadius: "full",
+          ctaSeparator: "line",
+        },
+      }}
+      variant="with-cta"
+      blockId="meta"
+    />
+  );
+
+  expect(html).toContain("Latest writing");
+  expect(html).toContain("spark");
+  expect(html).toContain("New");
+  expect(html).toContain("Reference");
+  expect(html).toContain('target="_blank"');
+  expect(html).toContain('rel="noopener noreferrer"');
+  expect(html).toContain("rounded-full");
+  expect(html).toContain("border-l");
+  expect(html).toContain("h-8");
+  expect(html).toContain('data-navigation-submenu-toggle="1"');
+});
+
+test("navigation injects submenu runtime in expanded mode and uses image alt for the logo link name", () => {
+  const html = renderToString(
+    <NavigationBlock
+      data={{
+        ...navigationDefaults,
+        logo: {
+          type: "image",
+          value: "https://cdn.example.com/logo.png",
+          alt: "Northwind",
+          href: "/brand",
+          source: "external",
+        },
+        items: [
+          {
+            label: "Docs",
+            href: "/docs",
+            children: [{ label: "API", href: "/docs/api" }],
+          },
+        ],
+        behavior: {
+          ...navigationDefaults.behavior,
+          mobileMode: "expanded",
+          collapseOnScroll: false,
+          activeLinkMode: "none",
+        },
+      }}
+      variant="simple"
+      blockId="submenu"
+    />
+  );
+
+  expect(html).toContain('aria-label="Northwind home"');
+  expect(html).toContain('data-navigation-submenu-toggle="1"');
+  expect(html).toContain("__nextlessNavigationBound");
 });
 
 test("navigation wizard shows CTA fields only for CTA variants", () => {
