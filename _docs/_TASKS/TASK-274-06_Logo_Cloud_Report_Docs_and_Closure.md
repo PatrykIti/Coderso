@@ -5,7 +5,7 @@
 **Priority:** Medium
 **Category:** Widgets + Logo Cloud + QA + Documentation + Changelog
 **Estimated Effort:** Medium
-**Dependencies:** TASK-274-01, TASK-274-02, TASK-274-03, TASK-274-04, TASK-274-05, TASK-256-08
+**Dependencies:** TASK-274-01, TASK-274-02, TASK-274-03, TASK-274-04, TASK-274-05, TASK-256-08, TASK-313-03
 **Status:** To Do
 
 ---
@@ -37,8 +37,8 @@ or an explicit TASK-256/deferred owner.
 
 Source report coverage:
 
-- BUG-01 through BUG-05 are either fixed by TASK-256, verified current-state OK
-  after TASK-256, or explicitly linked to a remaining TASK-256 item.
+- BUG-01 through BUG-05 are either fixed by `TASK-256`, fixed by `TASK-313`,
+  verified current-state OK, or explicitly linked to a remaining shared owner.
 - UX-01 through UX-09 are either fixed by TASK-256, fixed by TASK-274,
   current-state verified, or deferred with a named owner.
 - BF-01 through BF-11 are either fixed by TASK-274, not applicable, already OK,
@@ -100,10 +100,10 @@ Closure error handling:
 - If any report row lacks code, test, docs, TASK-256, deferred, or
   not-applicable evidence, keep TASK-274 open and add or repair the owner leaf
   before moving statuses.
-- If TASK-256 shared safe-link, heading, ARIA, hoverColor, `logoHeight: "none"`,
-  or Advanced-mode work has not landed, mark the affected rows as
-  `task-256-owned` with the exact remaining task ID instead of claiming a
-  TASK-274 fix.
+- If shared safe-link, heading, ARIA, hoverColor, `logoHeight: "none"`, or
+  Advanced-mode work has not landed, mark the affected rows with the exact
+  remaining shared owner (`TASK-256-*` or `TASK-313-*`) instead of claiming a
+  `TASK-274` fix.
 - If validation cannot run because of database, network, or environment
   blockers, record the command, blocker, and retry requirement, and leave status
   unchanged unless the owner explicitly accepts the risk.
@@ -163,7 +163,8 @@ Docs-only closure updates after implementation:
 
 ## Acceptance Criteria
 
-- TASK-274 does not overclaim TASK-256 shared findings as local fixes.
+- TASK-274 does not overclaim `TASK-256` or `TASK-313` shared findings as local
+  fixes.
 - Every report finding has concrete evidence or a named remaining owner.
 - Task files, board statistics, widget docs, report, and changelog are in sync.
 - Final validation commands and any blockers are recorded before status moves to

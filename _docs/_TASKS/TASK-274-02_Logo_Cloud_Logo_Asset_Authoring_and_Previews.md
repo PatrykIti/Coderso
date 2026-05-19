@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Logo Cloud + Media Library + Admin UI
 **Estimated Effort:** Large
-**Dependencies:** TASK-274, TASK-256-06-02
+**Dependencies:** TASK-274, TASK-256-06-02, TASK-313-01
 **Status:** To Do
 
 ---
@@ -27,8 +27,9 @@ Source report findings:
 Explicitly out of scope:
 
 - Defining generic link URL validation or safe href behavior; TASK-256 owns
-  shared link feedback. This leaf may wire the Logo Cloud `href` authoring
-  surface and display TASK-256 validation output once available.
+  the base safe-href helper, while `TASK-313-01` owns the remaining Logo Cloud
+  shared link-feedback residual. This leaf may wire the Logo Cloud `href`
+  authoring surface and display that shared validation output once it lands.
 - Persisting private media metadata, signed URLs, or provider credentials.
 
 ## Files to Change
@@ -39,7 +40,7 @@ Explicitly out of scope:
 | `core/admin/ui/widgets/editors/LogoCloudEditors.tsx` | Add Wizard image/link/alt inputs or picker entry points, Visual thumbnails, MediaPicker integration, and image preview feedback for logo images. |
 | `core/admin/ui/media/MediaPicker.tsx` | Reuse only; do not fork or add Logo Cloud-specific picker behavior unless the shared picker lacks required typed output. |
 | `core/admin/services/mediaClient.ts` | Reuse `listMediaCached` as the media cache seam and mock it in editor tests; do not duplicate media fetching in the Logo Cloud editor. |
-| `tests/vitest/ui/logo-cloud-editor-wave.test.tsx` | Cover Wizard image/link/alt updates, Visual thumbnail rendering, MediaPicker selection flow, image unavailable/error feedback, and TASK-256 link-feedback integration when available. |
+| `tests/vitest/ui/logo-cloud-editor-wave.test.tsx` | Cover Wizard image/link/alt updates, Visual thumbnail rendering, MediaPicker selection flow, image unavailable/error feedback, and `TASK-313-01` shared link-feedback integration when available. |
 | `tests/vitest/widgets/logoCloud.test.tsx` | Cover backward-compatible normalization if schema changes. |
 | `tests/unit/widgets/validator.test.ts` | Cover accepted/rejected logo item fields only if intentionally expanding the generic Bun validator suite. |
 | `_docs/_WIDGETS/LOGO_CLOUD.md` | Document image source behavior and editor ownership. |

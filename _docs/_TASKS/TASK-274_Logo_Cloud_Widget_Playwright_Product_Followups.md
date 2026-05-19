@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Logo Cloud + Admin UI + Runtime Render + Playwright QA
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-252, TASK-256, TASK-256-02, TASK-256-06-02, TASK-256-08
+**Dependencies:** TASK-252, TASK-256, TASK-256-02, TASK-256-06-02, TASK-256-08, TASK-313
 **Status:** To Do
 
 ---
@@ -52,7 +52,18 @@ Current live code facts:
   inputs plus Move up, Move down, Remove, and Add logo actions.
 - Wizard currently renders variant, section title, count, and logo names only.
 - Advanced currently duplicates `logoHeight`, `gap`, and `alignment` controls;
-  TASK-256-01 owns the Logo Cloud cleanup for that shared mode-ownership repair.
+  the live residual reopen is now tracked in `TASK-313-01`.
+
+Shared checkout note:
+
+- `resolveWidgetLinkAttrs()` from `core/widgets/core/widgetSafeHref.ts` is
+  already present at current `HEAD`, so Logo Cloud product-owned target/CTA work
+  is no longer blocked on a missing shared helper.
+- The live checkout still misses several shared prerequisites that the original
+  `TASK-274` drafting assumed were already landed: Advanced duplicate-control
+  cleanup, shared link-input feedback, shared heading semantics, and safe
+  `logoHeight: "none"` output. Those residuals are now tracked under `TASK-313`
+  instead of being patched locally inside `TASK-274`.
 
 ## TASK-256 Exclusion Matrix
 
@@ -61,13 +72,13 @@ TASK-256 already owns them as shared widget-contract drift.
 
 | Report finding | Evidence | Owner task | Reason |
 |---|---|---|---|
-| BUG-01 base safe link rendering, `rel`, unsafe href rejection | `REPORT_LOGO_CLOUD_WIDGET.md:119-125,260-262,296` | TASK-256-06-02 | Shared marketing-widget safe href contract and `widgetSafeHref` ownership. The A4/target option slice is TASK-274-05 after the shared helper exists. |
-| BUG-02 hardcoded heading semantics and BF-09 `headingLevel` baseline | `REPORT_LOGO_CLOUD_WIDGET.md:127-133,242-244,261,297` | TASK-256-06-02 | Logo Cloud slice of the shared runtime heading hierarchy repair. TASK-274 may consume the resulting field but must not define a second heading contract. |
-| BUG-03 section `aria-label` / `aria-labelledby` | `REPORT_LOGO_CLOUD_WIDGET.md:135-140,260,298` | TASK-256-06-02 | Logo Cloud slice of the shared runtime landmark accessibility baseline. |
-| BUG-04 / UX-01 `hoverColor` active without grayscale | `REPORT_LOGO_CLOUD_WIDGET.md:142-160,265,304` | TASK-256-06-02 | Shared truthful-control and output-class repair. |
-| BUG-05 `logoHeight: "none"` unbounded image height | `REPORT_LOGO_CLOUD_WIDGET.md:147-150` | TASK-256-06-02 | Shared size-token safety and clear/none semantics adjacency. |
-| UX-07 Advanced duplicates Visual controls | `REPORT_LOGO_CLOUD_WIDGET.md:190-193` | TASK-256-01 | Logo Cloud cleanup for shared editor-mode ownership and Advanced scope. |
-| BF-10 raw link URL validation and safe feedback | `REPORT_LOGO_CLOUD_WIDGET.md:246-248,324` | TASK-256-06-02 | Shared link validation and safe href feedback. Image URL preview/unavailable feedback stays in TASK-274-02 as Logo Cloud asset-authoring UX. |
+| BUG-01 base safe link rendering, `rel`, unsafe href rejection | `REPORT_LOGO_CLOUD_WIDGET.md:119-125,260-262,296` | TASK-256-06-02 | Shared marketing-widget safe href contract and `widgetSafeHref` ownership are already landed at current `HEAD`. The A4/target option slice stays in `TASK-274-05`. |
+| BUG-02 hardcoded heading semantics and BF-09 `headingLevel` baseline | `REPORT_LOGO_CLOUD_WIDGET.md:127-133,242-244,261,297` | TASK-313-02 | Shared runtime heading-hierarchy residual reopened because the live owner still hardcodes `<h3>`. `TASK-274` may consume the settled baseline but must not define a second heading contract. |
+| BUG-03 section `aria-label` / `aria-labelledby` | `REPORT_LOGO_CLOUD_WIDGET.md:135-140,260,298` | TASK-256-06-02 | Shared runtime landmark accessibility baseline already supplies the fallback section name. `TASK-313-02` may refine `aria-labelledby` while fixing the heading shell, but `TASK-274` must not re-own that contract. |
+| BUG-04 / UX-01 `hoverColor` active without grayscale | `REPORT_LOGO_CLOUD_WIDGET.md:142-160,265,304` | TASK-256-06-02 | Shared truthful-control and output-class repair is already landed at current `HEAD`. |
+| BUG-05 `logoHeight: "none"` unbounded image height | `REPORT_LOGO_CLOUD_WIDGET.md:147-150` | TASK-313-02 | Shared size-token safety residual reopened because current runtime output still leaves the image effectively unbounded. |
+| UX-07 Advanced duplicates Visual controls | `REPORT_LOGO_CLOUD_WIDGET.md:190-193` | TASK-313-01 | Shared editor-mode ownership residual reopened because current Advanced still duplicates live Visual controls. |
+| BF-10 raw link URL validation and safe feedback | `REPORT_LOGO_CLOUD_WIDGET.md:246-248,324` | TASK-313-01 | Shared link validation and safe href feedback residual reopened because current Logo Cloud editor still lacks the shared input feedback. Image URL preview/unavailable feedback stays in `TASK-274-02`. |
 
 TASK-274 may depend on TASK-256 results, but it must not restage those repairs
 inside its own implementation leaves.
@@ -115,11 +126,12 @@ their evidence visible during closure.
 
 ## Implementation Order
 
-1. Finish or rebase over TASK-256 shared fixes first. TASK-274 leaves must build
-   on the shared safe-href, ARIA, heading, hoverColor, and Advanced-mode
-   contracts instead of duplicating them. Logo Cloud per-logo `alt` authoring is
-   owned by TASK-274-02 because TASK-256-06-02 does not currently own that
-   schema/editor expansion.
+1. Finish or rebase over the landed `TASK-256` shared safe-href/hover/landmark
+   fixes plus the reopened `TASK-313` residuals first. `TASK-274` leaves must
+   build on the shared safe-href, link-feedback, heading, `logoHeight: "none"`,
+   and Advanced-mode contracts instead of duplicating them. Logo Cloud per-logo
+   `alt` authoring is owned by `TASK-274-02` because the shared tasks do not own
+   that schema/editor expansion.
 2. Complete TASK-274-01 first because header/background/typography define the
    section shell used by later media and layout work.
 3. Complete TASK-274-02 before item management so thumbnail/media-picker tests
@@ -128,7 +140,9 @@ their evidence visible during closure.
    interactions are stable before high-count layout checks.
 5. Complete TASK-274-04 before TASK-274-05 because row/marquee behavior affects
    tile sizing and CTA placement.
-6. Complete TASK-274-05 after TASK-256 safe link attributes exist.
+6. Complete TASK-274-05 after `TASK-313-01` settles the remaining shared
+   Link URL feedback residuals, while consuming the already-landed safe-link
+   helper from `TASK-256-06-02`.
 7. Complete TASK-274-06 last after code, tests, report evidence, widget docs,
    changelog, and board state are synchronized.
 

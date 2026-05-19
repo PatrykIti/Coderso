@@ -46,11 +46,11 @@ Explicitly out of scope:
 ## Implementation Pseudocode
 
 ```tsx
-type LogoCloudRowMode = "wrap" | "single-row" | "balanced";
+type LogoCloudRowMode = "wrap" | "single-row";
 type LogoCloudMotionMode = "static" | "marquee";
 
 function resolveLogoCloudRowMode(value: unknown): LogoCloudRowMode {
-  return value === "single-row" || value === "balanced" ? value : "wrap";
+  return value === "single-row" ? value : "wrap";
 }
 
 function resolveLogoCloudMotionMode(value: unknown): LogoCloudMotionMode {

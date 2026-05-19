@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 247 tasks
+- **To Do:** 251 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1724 tasks
 
@@ -39,6 +39,10 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-313 | Grid Columns Shared Structural Truthfulness Follow-up | High | Large | Residual shared Grid Columns truthfulness after TASK-256 closure: variant truthfulness, span feedback, CSS-variable picker representation, and inactive cardize controls |
+| TASK-313 | Logo Cloud Shared Contract Residual Reopen | High | Large | Reopen Logo Cloud shared residuals still missing after `TASK-256` closure so `TASK-274` can proceed honestly |
+| TASK-313-01 | Logo Cloud Shared Editor Truthfulness Residuals | High | Large | Remove duplicated Advanced ownership and land shared Link URL feedback left behind by `TASK-256` |
+| TASK-313-02 | Logo Cloud Shared Runtime Semantics Residuals | High | Large | Finish shared heading semantics and safe `logoHeight: "none"` output for Logo Cloud |
+| TASK-313-03 | Logo Cloud Shared Residual Closure | Medium | Medium | Refresh Logo Cloud shared residual report/docs/changelog/board and final validation evidence |
 | TASK-292 | Toggle Block Widget Playwright Product Followups | High | Very Large | Toggle Block-only follow-up family for `REPORT_TOGGLE_BLOCK_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-292-01 | Toggle Block Variant Visual Hierarchy, Contrast, and Pane Styling | High | Large | Add Toggle Block-owned cards distinction, active contrast, and bounded pane style controls after TASK-256 shared style semantics |
 | TASK-292-02 | Toggle Block Motion and Pane Transition Contract | Medium | Medium | Add bounded fade/slide/no-motion options without weakening TASK-256 interactive runtime semantics |

@@ -7,6 +7,19 @@
 > **Sesja przeglądarki:** `logo-cloud-audit` (oddzielna od innych agentów)
 > **Strona testowa:** TEST-LOGO-CLOUD-0516 (`/test-logo-cloud-0516`)
 
+### Routing note — 2026-05-19 current checkout
+
+This report remains the original 2026-05-16 Playwright evidence, but the live
+checkout has moved since then:
+
+- shared safe-href output for external logo links, fallback section naming, and
+  `hoverColor` truthfulness already landed under `TASK-256-06-02`;
+- the remaining shared residuals still missing on current `HEAD` are now
+  reopened under `TASK-313`: Advanced duplicate controls, shared Link URL
+  feedback, shared heading semantics, and safe `logoHeight: "none"` output;
+- `TASK-274` continues to own only Logo Cloud product/UX work that is local to
+  this widget after those shared prerequisites are honest.
+
 ---
 
 ## 1. Przegląd widgetu

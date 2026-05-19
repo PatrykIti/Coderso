@@ -5,7 +5,7 @@
 **Priority:** Medium
 **Category:** Widgets + Logo Cloud + Runtime Render + Admin UI + Link UX
 **Estimated Effort:** Large
-**Dependencies:** TASK-274, TASK-256-02, TASK-256-06-02, TASK-274-04
+**Dependencies:** TASK-274, TASK-256-02, TASK-256-06-02, TASK-274-04, TASK-313-01
 **Status:** To Do
 
 ---
@@ -30,22 +30,21 @@ Explicitly out of scope:
 
 Precondition:
 
-- TASK-256-06-02 must provide the shared safe link attribute helper before this
-  leaf implements link target or CTA rendering. If that helper is missing, stop
-  and finish or split the TASK-256 shared helper first. TASK-274-05 must not add
-  shared helper ownership locally.
-- At current drafting HEAD the live helper is only `normalizeWidgetSafeHref`.
-  Treat this leaf as dependency-blocked until TASK-256 exports a shared
-  attribute resolver that owns `href`, optional `target`, and safe `rel`.
+- `TASK-256-06-02` already provides the shared `resolveWidgetLinkAttrs()`
+  helper at current `HEAD`; this leaf must consume that helper directly instead
+  of recreating safe-href logic locally.
+- `TASK-313-01` still owns the shared Logo Cloud link-input feedback residual.
+  `TASK-274-05` may reuse that feedback once landed, but runtime target/CTA
+  work is not blocked on a missing helper anymore.
 
 ## Files to Change
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/logoCloud.tsx` | Add bounded tile radius/width, link target option, optional CTA schema/default/normalizer/rendering, and runtime markers. |
-| `core/admin/ui/widgets/editors/LogoCloudEditors.tsx` | Add Visual controls for tile radius/width, open-new-tab option, and CTA label/href/visibility. |
+| `core/widgets/core/logoCloud.tsx` | Add bounded tile radius/width, a global Logo Cloud link-target style field, optional CTA schema/default/normalizer/rendering, and runtime markers. |
+| `core/admin/ui/widgets/editors/LogoCloudEditors.tsx` | Add Visual controls for tile radius/width, one global `Open logo links in new tab` switch in `Display style`, and CTA label/href/visibility. |
 | `tests/vitest/widgets/logoCloud.test.tsx` | Cover tile classes/markers, link target behavior through shared helper, CTA rendering, and unsafe CTA omission. |
-| `tests/vitest/widgets/widgetSafeHref.test.ts` | Run as regression after TASK-256 shared link attributes land or when this leaf consumes them; do not edit helper ownership from TASK-274-05. |
+| `tests/vitest/widgets/widgetSafeHref.test.ts` | Run as regression when this leaf consumes the shared helper; do not edit helper ownership from TASK-274-05. |
 | `tests/vitest/ui/logo-cloud-editor-wave.test.tsx` | Cover controls and update flow. |
 | `tests/vitest/widgets/renderer.test.tsx` | Update if shared renderer output assertions change. |
 | `tests/unit/widgets/validator.test.ts` | Cover schema changes only if intentionally expanding the generic Bun validator suite. |
@@ -66,37 +65,37 @@ type LogoCloudCta = {
   target?: LogoCloudLinkTarget;
 };
 
-type Task256WidgetLinkAttrs = false | {
+type SharedWidgetLinkAttrs = false | {
   href: string;
   target?: "_blank";
   rel?: string;
 };
 
-type Task256WidgetLinkAttrsResolver = (
+type SharedWidgetLinkAttrsResolver = (
   href: string | undefined,
   options: {
     allowRelative: true,
     allowHash: true,
     allowHttp: true,
-    target?: "_blank",
+    openInNewTab?: boolean,
   },
-  ) => Task256WidgetLinkAttrs;
+  ) => SharedWidgetLinkAttrs;
 
 function resolveLogoLinkAttrs(
-  resolveWidgetLinkAttrsFromTask256: Task256WidgetLinkAttrsResolver,
+  resolveWidgetLinkAttrs: SharedWidgetLinkAttrsResolver,
   href: string | undefined,
-  target: LogoCloudLinkTarget,
+  openInNewTab: boolean,
 ) {
-  return resolveWidgetLinkAttrsFromTask256(href, {
+  return resolveWidgetLinkAttrs(href, {
     allowRelative: true,
     allowHash: true,
     allowHttp: true,
-    target: target === "new-tab" ? "_blank" : undefined,
+    openInNewTab,
   });
 }
 
-function LogoCloudItem({ logo, linkTarget, resolveWidgetLinkAttrs }: LogoCloudItemProps) {
-  const attrs = resolveLogoLinkAttrs(resolveWidgetLinkAttrs, logo.href, linkTarget);
+function LogoCloudItem({ logo, openLinksInNewTab, resolveWidgetLinkAttrs }: LogoCloudItemProps) {
+  const attrs = resolveLogoLinkAttrs(resolveWidgetLinkAttrs, logo.href, openLinksInNewTab);
   if (!attrs) return <div>{content}</div>;
   return <a {...attrs}>{content}</a>;
 }
@@ -112,21 +111,22 @@ function LogoCloudCta({ cta, resolveWidgetLinkAttrs }: LogoCloudCtaProps) {
 Editor data flow:
 
 1. Add tile radius and border width as bounded selects, not free-form CSS.
-2. Add a global `Open logo links in new tab` switch or per-logo target only if
-   the UX decision explicitly chooses per-logo complexity; default should keep
-   current same-tab behavior.
-3. Add CTA controls with enable toggle, label, href, and target. Use shared safe
-   href feedback when TASK-256 exposes it.
+2. Add one global `Open logo links in new tab` switch in `Display style`; do
+   not widen Logo Cloud into per-logo target complexity when the current owner
+   model only stores `logos[].href`.
+3. Add CTA controls with enable toggle, label, href, and target. Reuse shared
+   safe-href feedback when `TASK-313-01` exposes it.
 4. Render CTA only when enabled, label is present, and safe href resolves.
-5. Before implementation, replace `resolveWidgetLinkAttrsFromTask256` with the
-   exact exported TASK-256 helper name/signature. If TASK-256 exposes a
-   different shape, update this task before coding rather than adapting locally.
+5. Before implementation, bind the pseudocode above to the exact exported
+   `resolveWidgetLinkAttrs()` helper signature. If the shared helper changes
+   under `TASK-313`, update this task before coding rather than adapting
+   locally.
 
 Error handling:
 
 - Unsafe logo/CTA href values must fail closed through the shared safe helper.
-- If the shared TASK-256 helper is absent or returns only a normalized href
-  string, do not implement link target/CTA rendering in TASK-274-05 yet.
+- If the shared helper shape changes unexpectedly, update this task before
+  coding rather than recreating helper ownership locally.
 - Unknown radius/width/target values normalize to defaults.
 - Disabled CTA preserves data but does not render.
 - Empty CTA label or href does not render a blank or broken link.
