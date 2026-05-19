@@ -178,6 +178,16 @@ test("FormCanvas handles single-layout selection, checkbox fallback copy, and re
             style: { width: "half", labelPosition: "above" },
           },
         },
+        {
+          id: "field-hidden",
+          label: "Segment",
+          type: "hidden",
+          required: false,
+          settings: {
+            defaultValue: "enterprise",
+            style: { width: "full", labelPosition: "hidden" },
+          },
+        },
       ]}
       onSelectField={onSelectField}
       onSelectForm={onSelectForm}
@@ -194,6 +204,7 @@ test("FormCanvas handles single-layout selection, checkbox fallback copy, and re
     expect(view.container.textContent).toContain("Phone");
     expect(view.container.textContent).toContain("Priority");
     expect(view.container.textContent).toContain("4");
+    expect(view.container.textContent).toContain("Hidden field submits trusted value: enterprise");
     expect(view.container.textContent).not.toContain("Consent</label>");
     expect(view.container.innerHTML).toContain("md:col-span-1");
     expect(view.container.innerHTML).toContain("md:col-span-2");

@@ -535,6 +535,7 @@ const supportedFieldTypes = new Set([
   "number",
   "range",
   "rating",
+  "hidden",
   "textarea",
   "checkbox",
   "select",
@@ -844,6 +845,18 @@ function renderFieldControl(
           ) : null}
         </div>
       </div>
+    );
+  }
+
+  if (field.type === "hidden") {
+    return (
+      <input
+        id={ids.inputId}
+        type="hidden"
+        name={field.name}
+        value={typeof field.settings?.defaultValue === "string" ? field.settings.defaultValue : ""}
+        data-required-original={required ? "1" : "0"}
+      />
     );
   }
 

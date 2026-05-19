@@ -800,6 +800,17 @@ test("FormRuntimePreviewDialog handles unsaved, multi-step, submit success, and 
             step: 2,
           },
         },
+        {
+          id: "field-5",
+          type: "hidden",
+          label: "Segment",
+          name: "segment",
+          required: false,
+          settings: {
+            defaultValue: "enterprise",
+            step: 2,
+          },
+        },
       ]}
       hasUnsavedChanges={false}
       onOpenLogs={onOpenLogs}
@@ -827,6 +838,7 @@ test("FormRuntimePreviewDialog handles unsaved, multi-step, submit success, and 
     expect(view.container.textContent).toContain("Need invoice");
     expect(view.container.textContent).toContain("Preferred contact");
     expect(view.container.textContent).toContain("Priority");
+    expect(view.container.textContent).toContain("Hidden field submits trusted value:");
 
     await React.act(async () => {
       const radio = Array.from(view.container.querySelectorAll("input")).find(
@@ -853,6 +865,7 @@ test("FormRuntimePreviewDialog handles unsaved, multi-step, submit success, and 
       need_invoice: true,
       contact_method: "Phone",
       priority: "6",
+      segment: "enterprise",
     });
     expect(view.container.textContent).toContain("Submission completed");
     expect(view.container.textContent).toContain("Runtime redirect configured");

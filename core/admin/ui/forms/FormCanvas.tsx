@@ -16,7 +16,7 @@ type FieldPreviewProps = {
   options?: string[];
   selected?: boolean;
   multiline?: boolean;
-  kind?: "text" | "select" | "checkbox" | "radio" | "range";
+  kind?: "text" | "select" | "checkbox" | "radio" | "range" | "hidden";
   labelHidden?: boolean;
   onSelect?: (id: string) => void;
   onRemove?: (id: string) => void;
@@ -111,6 +111,10 @@ function FieldPreview({
             <input type="range" value={value ?? "0"} readOnly className="w-full" />
             <span>{value ?? "0"}</span>
           </div>
+        ) : kind === "hidden" ? (
+          <div className="rounded-md border border-dashed px-3 py-2 text-sm text-muted-foreground">
+            Hidden field submits trusted value: {value ?? "(empty)"}
+          </div>
         ) : (
           <Input
             placeholder={placeholder}
@@ -190,11 +194,13 @@ export function FormCanvas({
         ? "checkbox"
         : field.type === "radio"
           ? "radio"
-          : field.type === "range" || field.type === "rating"
-            ? "range"
-            : field.type === "select"
-              ? "select"
-              : "text";
+          : field.type === "hidden"
+            ? "hidden"
+            : field.type === "range" || field.type === "rating"
+              ? "range"
+              : field.type === "select"
+                ? "select"
+                : "text";
     const multiline = field.type === "textarea";
     const value =
       typeof field.settings.defaultValue === "string" ? field.settings.defaultValue : undefined;

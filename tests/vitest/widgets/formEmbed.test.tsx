@@ -329,6 +329,45 @@ test("form embed renders typed controls for number, time, range, and rating", ()
   expect(html).not.toContain('data-form-field-unsupported="rating"');
 });
 
+test("form embed supports hidden fields and keeps file fields explicitly unsupported", () => {
+  const html = renderToString(
+    <FormEmbedBlock
+      data={{
+        formId: "form-1",
+        resolved: {
+          formName: "Trusted form",
+          fields: [
+            {
+              id: "field-hidden",
+              type: "hidden",
+              label: "Segment",
+              name: "segment",
+              required: false,
+              settings: {
+                defaultValue: "enterprise",
+              },
+            },
+            {
+              id: "field-file",
+              type: "file",
+              label: "Attachment",
+              name: "attachment",
+              required: false,
+            },
+          ],
+        },
+      }}
+      variant="standard"
+    />
+  );
+
+  expect(html).toContain('type="hidden"');
+  expect(html).toContain('name="segment"');
+  expect(html).toContain('value="enterprise"');
+  expect(html).toContain('data-form-field-unsupported="file"');
+  expect(html).toContain("Unsupported form field type:");
+});
+
 test("form embed applies field style and logic runtime attributes", () => {
   const html = renderToString(
     <FormEmbedBlock

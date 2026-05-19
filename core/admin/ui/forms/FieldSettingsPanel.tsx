@@ -67,6 +67,7 @@ const supportsDefault = new Set(["checkbox"]);
 const supportsChoiceDefault = new Set(["select", "radio"]);
 const supportsNumericBounds = new Set(["number", "range", "rating"]);
 const supportsStep = new Set(["number", "range"]);
+const supportsTextDefault = new Set(["hidden"]);
 
 const createLogicPatch = (
   current: FormFieldLogic | undefined,
@@ -286,6 +287,29 @@ export function FieldSettingsPanel({
                       Add options before selecting a default value.
                     </p>
                   )}
+                </div>
+              </>
+            ) : null}
+            {supportsTextDefault.has(field.type) ? (
+              <>
+                <Separator />
+                <div className="space-y-2">
+                  <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                    Trusted default value
+                  </label>
+                  <Input
+                    value={
+                      typeof field.settings.defaultValue === "string"
+                        ? field.settings.defaultValue
+                        : ""
+                    }
+                    onChange={(event) =>
+                      onSettingsChange(field.id, { defaultValue: event.target.value })
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Hidden fields submit this exact value and reject client-side tampering.
+                  </p>
                 </div>
               </>
             ) : null}

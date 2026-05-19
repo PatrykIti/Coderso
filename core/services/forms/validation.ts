@@ -17,6 +17,7 @@ export type FormFieldType =
   | "time"
   | "range"
   | "rating"
+  | "hidden"
   | "checkbox"
   | "textarea"
   | "phone"
@@ -64,6 +65,7 @@ const fieldTypes = new Set<FormFieldType>([
   "time",
   "range",
   "rating",
+  "hidden",
   "checkbox",
   "textarea",
   "phone",
@@ -180,6 +182,14 @@ const normalizeSettings = (
     const defaultValue =
       typeof normalized.defaultValue === "string" ? normalized.defaultValue : undefined;
     if (defaultValue && !timePattern.test(defaultValue)) {
+      throw new Error("form_field_invalid");
+    }
+  }
+
+  if (type === "hidden") {
+    const defaultValue =
+      typeof normalized.defaultValue === "string" ? normalized.defaultValue : undefined;
+    if (!defaultValue) {
       throw new Error("form_field_invalid");
     }
   }
@@ -361,6 +371,18 @@ export function validateSubmissionPayload(payload: unknown, fields: NormalizedFo
           break;
         }
         if (!timePattern.test(text)) {
+          throw new Error("form_payload_invalid");
+        }
+        normalized[field.name] = text;
+        break;
+      }
+      case "hidden": {
+        const text = normalizeString(value);
+        if (!text) throw new Error("form_payload_invalid");
+        if (
+          typeof field.settings.defaultValue !== "string" ||
+          field.settings.defaultValue !== text
+        ) {
           throw new Error("form_payload_invalid");
         }
         normalized[field.name] = text;

@@ -6,6 +6,7 @@ import {
   Gauge,
   CheckSquare,
   Eye,
+  EyeOff,
   ListChecks,
   ListOrdered,
   Timer,
@@ -139,6 +140,13 @@ const fieldLibraryItems: FieldLibraryItem[] = [
     icon: Gauge,
     type: "rating",
     helper: "Collect a 1-to-N rating with bounded scale.",
+  },
+  {
+    id: "hidden",
+    label: "Hidden Field",
+    icon: EyeOff,
+    type: "hidden",
+    helper: "Submit a trusted fixed value without showing a visible control.",
   },
 ];
 

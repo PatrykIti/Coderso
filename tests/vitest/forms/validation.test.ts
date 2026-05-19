@@ -236,3 +236,48 @@ test("typed fields validate number, time, range, and rating constraints", () => 
     )
   ).toThrow("form_payload_invalid");
 });
+
+test("hidden fields require a trusted default and reject tampering", () => {
+  const [field] = normalizeFormFields([
+    {
+      type: "hidden",
+      label: "Segment",
+      name: "segment",
+      settings: {
+        defaultValue: "enterprise",
+      },
+    },
+  ]);
+
+  expect(field?.settings.defaultValue).toBe("enterprise");
+  expect(
+    validateSubmissionPayload(
+      {
+        segment: "enterprise",
+      },
+      [field!]
+    )
+  ).toEqual({
+    segment: "enterprise",
+  });
+
+  expect(() =>
+    validateSubmissionPayload(
+      {
+        segment: "startup",
+      },
+      [field!]
+    )
+  ).toThrow("form_payload_invalid");
+
+  expect(() =>
+    normalizeFormFields([
+      {
+        type: "hidden",
+        label: "Missing default",
+        name: "missing_default",
+        settings: {},
+      },
+    ])
+  ).toThrow("form_field_invalid");
+});
