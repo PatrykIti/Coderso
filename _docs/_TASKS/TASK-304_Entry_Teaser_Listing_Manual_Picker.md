@@ -6,7 +6,7 @@
 **Category:** Widgets + Runtime Render + Admin UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-265
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -103,11 +103,11 @@ function SourcePickerFields(...) {
 
 ## Sub-Tasks
 
-- [ ] Decide the persisted manual-listing target shape.
-- [ ] Add editor support without duplicating source ownership across modes.
-- [ ] Add runtime resolution for listing manual selection.
-- [ ] Add Bun and Vitest regression coverage.
-- [ ] Update widget docs after the contract lands.
+- [x] Decide the persisted manual-listing target shape.
+- [x] Add editor support without duplicating source ownership across modes.
+- [x] Add runtime resolution for listing manual selection.
+- [x] Add Bun and Vitest regression coverage.
+- [x] Update widget docs after the contract lands.
 
 ## Testing Requirements
 

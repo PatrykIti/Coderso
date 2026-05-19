@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Shared Design Tokens
 **Estimated Effort:** Medium
 **Dependencies:** TASK-310, TASK-305
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -41,11 +41,11 @@ This leaf does not own:
 
 ## Sub-Tasks
 
-- [ ] Replace local `resolvePickerColor()` / `ColorField` helpers in Team and
+- [x] Replace local `resolvePickerColor()` / `ColorField` helpers in Team and
   Testimonials editors.
-- [ ] Reuse the landed shared helper seam without changing widget-local schema
+- [x] Reuse the landed shared helper seam without changing widget-local schema
   ownership or style defaults.
-- [ ] Update focused UI tests and shared helper tests only where behavior
+- [x] Update focused UI tests and shared helper tests only where behavior
   changes.
 
 ## Files to Change

@@ -497,14 +497,14 @@ Po zwiększeniu limitu aktywnych sesji per user w CMS do 30 — zapis i publikac
 
 | ID | Current status | Owner | Evidence |
 |----|----------------|-------|----------|
-| CODE-01 | ✓ Fixed — shared current-runtime cleanup | TASK-256/TASK-312 | `galleryMosaic.tsx` uses explicit ratio/gap/radius resolvers. |
-| CODE-02 | ✓ Fixed — shared current-runtime cleanup | TASK-256/TASK-312 | Redundant `lg:row-span-2` was removed from runtime output. |
-| CODE-03 | ✓ Fixed — shared current-runtime cleanup | TASK-256/TASK-312 | `feature-left` no longer ships the redundant featured row-span path. |
+| CODE-01 | ✓ Fixed — shared current-runtime cleanup | TASK-312 | `galleryMosaic.tsx` uses explicit ratio/gap/radius resolvers. |
+| CODE-02 | ✓ Fixed — shared current-runtime cleanup | TASK-312 | Redundant `lg:row-span-2` was removed from runtime output. |
+| CODE-03 | ✓ Fixed — shared current-runtime cleanup | TASK-312 | `feature-left` no longer ships the redundant featured row-span path. |
 | CODE-04 | ✓ Fixed — shared current-runtime cleanup | TASK-256/TASK-312 | `feature-left` avoids rendering an empty support column for one item. |
-| CODE-05 | ✓ Fixed — shared editor truthfulness | TASK-256/TASK-312 | Overlay picker now resolves hex from rgba and preserves alpha when the color changes. |
-| CODE-06 | ✓ Fixed — shared media truthfulness | TASK-256/TASK-312 | Visual now shows current-media ownership and keeps image/video selection truthful. |
+| CODE-05 | ✓ Fixed — shared editor truthfulness | TASK-312 | Overlay picker now resolves hex from rgba and preserves alpha when the color changes. |
+| CODE-06 | ✓ Fixed — shared media truthfulness | TASK-312 | Visual now shows current-media ownership and keeps image/video selection truthful. |
 | CODE-07 | ✓ Fixed — dedicated alt authoring | TASK-270-03 | Per-item `alt` now overrides caption-derived fallback semantics. |
-| CODE-08 | ✓ Fixed — shared Wizard media scope | TASK-256/TASK-312 | Wizard `MediaPicker` now accepts `image/*` and `video/*`. |
+| CODE-08 | ✓ Fixed — shared Wizard media scope | TASK-312 | Wizard `MediaPicker` now accepts `image/*` and `video/*`. |
 
 ### Bugs
 
@@ -512,20 +512,20 @@ Po zwiększeniu limitu aktywnych sesji per user w CMS do 30 — zapis i publikac
 |----|----------------|-------|----------|
 | BUG-01 | ✓ Resolved — system/session setup | Out of widget scope | Report notes the active-session limit increase that removed the `Not authenticated` Wizard failure. |
 | BUG-02 | ✓ Resolved — system/session setup | Out of widget scope | Report notes the same session-limit fix for Publish / Save Draft. |
-| BUG-03 | ✓ Fixed — shared editor truthfulness | TASK-256/TASK-312 | Overlay picker synchronizes with rgba instead of resetting to a fallback hex. |
-| BUG-04 | ✓ Fixed — shared current-runtime cleanup | TASK-256/TASK-312 | `feature-left` one-item runtime no longer renders the empty right column. |
-| BUG-05 | ✓ Fixed — shared safe-link output | TASK-256/TASK-312 | Gallery links keep the shared safe `rel="noopener noreferrer"` contract. |
+| BUG-03 | ✓ Fixed — shared editor truthfulness | TASK-312 | Overlay picker synchronizes with rgba instead of resetting to a fallback hex. |
+| BUG-04 | ✓ Fixed — shared current-runtime cleanup | TASK-312 | `feature-left` one-item runtime no longer renders the empty right column. |
+| BUG-05 | ✓ Fixed — shared safe-link output | TASK-312 | Gallery links keep the shared safe `rel="noopener noreferrer"` contract. |
 
 ### UX
 
 | ID | Current status | Owner | Evidence |
 |----|----------------|-------|----------|
-| UX-01 | ✓ Fixed — shared editor-mode ownership | TASK-256/TASK-312 | Advanced is diagnostic-only and no longer duplicates Visual style controls. |
+| UX-01 | ✓ Fixed — shared editor-mode ownership | TASK-312 | Advanced is diagnostic-only and no longer duplicates Visual style controls. |
 | UX-02 | ✓ Fixed | TASK-270-01 | Visual item cards now show local preview state. |
 | UX-03 | ✓ Fixed | TASK-270-02 | Drag reorder plus `Alt` + arrow fallback are covered in the Visual editor and tests. |
 | UX-04 | ✓ Fixed | TASK-270-02 | Count reduction now confirms destructive trims and coexists cleanly with Add/Remove. |
 | UX-05 | ✓ Fixed | TASK-270-01 | Visual item rows now expose a per-item `MediaPicker`. |
-| UX-06 | ✓ Fixed — shared media truthfulness | TASK-256/TASK-312 | Current-media badges make the active image/video/placeholder state explicit. |
+| UX-06 | ✓ Fixed — shared media truthfulness | TASK-312 | Current-media badges make the active image/video/placeholder state explicit. |
 | UX-07 | ✓ Fixed — shared Wizard media scope + local guidance | TASK-256/TASK-312, TASK-270-06 | Wizard accepts video assets and now points the author toward the final Visual/Advanced flow. |
 
 ### Braki funkcjonalne

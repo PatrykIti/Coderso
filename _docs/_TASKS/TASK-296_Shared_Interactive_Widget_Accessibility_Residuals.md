@@ -6,7 +6,7 @@
 **Category:** Widgets + Accessibility + Runtime
 **Estimated Effort:** Large
 **Dependencies:** TASK-256-04, TASK-256-08
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -42,15 +42,15 @@ This task does not own:
 
 ## Sub-Tasks
 
-- [ ] Define the shared late-report accessibility contract for interactive
+- [x] Define the shared late-report accessibility contract for interactive
   widgets that still lack a concrete TASK-256 owner.
-- [ ] Repair Booking Calendar status live-region semantics without weakening the
+- [x] Repair Booking Calendar status live-region semantics without weakening the
   existing runtime-script scoping contract.
-- [ ] Add list/selected-state semantics for Booking Calendar slot results and
+- [x] Add list/selected-state semantics for Booking Calendar slot results and
   labels for the calendar region.
-- [ ] Decide whether any helper extracted from Booking Calendar is truly shared;
+- [x] Decide whether any helper extracted from Booking Calendar is truly shared;
   if not, keep the implementation narrow but close it as shared follow-up scope.
-- [ ] Refresh report/task/docs evidence so later widget closure tasks can point
+- [x] Refresh report/task/docs evidence so later widget closure tasks can point
   at this physical owner instead of stale TASK-256 references.
 
 ## Files to Change

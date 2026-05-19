@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 296 tasks
-- **In Progress:** 5 tasks
-- **Done:** 1671 tasks
+- **To Do:** 272 tasks
+- **In Progress:** 4 tasks
+- **Done:** 1695 tasks
 
 ---
 
@@ -38,29 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-311 | Forms Field Model Expansion for Choice File and Typed Controls | High | Very Large | Future Forms-owner task for `radio`, `number`, `time`, `hidden`, `file`, `range`, and `rating` so widget families stop carrying report-only unsupported-field debt locally |
-| TASK-311-01 | Forms Choice Field Expansion for Radio and Grouped Options | High | Large | First execution leaf for `radio` and any approved grouped choice semantics before widgets can close current unsupported-field debt |
-| TASK-311-02 | Forms Numeric, Temporal, Range, and Rating Field Expansion | Medium | Large | Typed-control owner leaf for `number`, `time`, `range`, and `rating` across validation, admin, runtime, and first-widget adoption |
-| TASK-311-03 | Forms Hidden and File Field Public-Write Contract | High | Large | Security-first owner leaf for `hidden` and `file` fields before any widget can expose them |
-| TASK-310-01 | Shared Color Picker Layout and Interactive Editor Adoption | High | Large | Replace local color-field clones in Accordion, Compare Timeline, Divider, FAQ Accordion, Grid Columns, Section, and Timeline |
-| TASK-310-02 | Shared Color Picker Content and Marketing Editor Adoption | High | Large | Replace local color-field clones in Content List, CTA Banner, Feature Grid, Hero, Rich Text Section, and Stats KPI |
-| TASK-310-03 | Shared Color Picker Shell and Forms-Adjacent Editor Adoption | Medium | Large | Replace local color-field clones in Contact, Footer, Navigation, Newsletter, and Pricing Plans while keeping widget-local surfaces unchanged |
-| TASK-310-04 | Shared Color Picker Team and Testimonials Editor Adoption | Medium | Medium | Replace local color-field clones in Team and Testimonials without widening people/social-proof product scope |
-| TASK-309 | Footer Market Utility Expansion | Low | Very Large | Future owner for newsletter/address/contact/back-to-top footer utilities that TASK-268 explicitly deferred |
-| TASK-309-01 | Footer Newsletter Composition and Submission Contract | Medium | Large | Decide whether Footer newsletter is composed, supported, or rejected without inventing a second public-write system |
-| TASK-309-02 | Footer Address and Contact Utility Surface | Low | Medium | Decide whether Footer owns bounded read-only address/contact presentation or stays composition-only |
-| TASK-309-03 | Footer Back-to-Top Runtime Policy | Low | Medium | Decide whether Footer exposes a reduced-motion-safe back-to-top action or rejects it explicitly |
-| TASK-308 | Footer Column Reorder and Slot Cohesion | Medium | Large | Future owner for truthful footer column reorder once slot/data coupling has an explicit contract |
-| TASK-304 | Entry Teaser Listing Manual Picker | Medium | Medium | Add a deterministic manual listing-row selection contract for Entry Teaser after TASK-265 closes latest/featured listing semantics |
-| TASK-301 | Forms Public Runtime Nonce Cache Freshness | High | Large | Shared follow-up for stale cached `submissionNonce` drift across the current Contact + Appointment Form + Form Embed runtime HTML bridge |
-| TASK-300 | Compare Timeline Motion Presets and Reduced Motion Policy | Low | Medium | Exact future owner for `REPORT_COMPARE_TIMELINE_WIDGET.md` row `W8`; keep Compare Timeline static until a reduced-motion-safe motion contract is approved |
-| TASK-299 | Shared Widget Contrast Guidance and Validation | Medium | Large | Exact shared owner for the current Compare Timeline + Timeline contrast rows before any broader reusable advisory rollout |
-| TASK-298 | Booking Admin Availability Row Draft and Save UX | Medium | Medium | Own the Booking admin Availability-tab `Add row` versus `Save schedules` flow outside TASK-259 widget scope |
-| TASK-297 | Shared Widget Color Picker Residual Controls | Medium | Large | Booking Calendar-specific adoption leaf for the landed shared swatch-plus-text color seam while the broader remaining adopter wave stays under TASK-310 |
-| TASK-296 | Shared Interactive Widget Accessibility Residuals | High | Large | Current executable consumer is Booking Calendar; later interactive-widget adopters require explicit routed follow-up rows rather than silent scope widening |
-| TASK-295 | Appointment Form Custom Field Product Surface | Medium | Large | Widget-local custom field authoring/render/payload follow-up after the bounded booking metadata boundary lands |
-| TASK-294 | Booking Flow Editor Context Surface Plumbing | High | Large | Shared `WidgetEditorContext.bookingFlows` plumbing for page/template/custom-screen/detail-template booking surfaces without persisting preview-only data |
-| TASK-293 | Shared Repeatable Slot Metadata Sync and Instance Reorder | High | Large | Repo-wide slot/data-sync owner for repeatable-slot add/reorder work currently deferred by Accordion, Tabs, and Footer follow-ups |
 | TASK-292 | Toggle Block Widget Playwright Product Followups | High | Very Large | Toggle Block-only follow-up family for `REPORT_TOGGLE_BLOCK_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-292-01 | Toggle Block Variant Visual Hierarchy, Contrast, and Pane Styling | High | Large | Add Toggle Block-owned cards distinction, active contrast, and bounded pane style controls after TASK-256 shared style semantics |
 | TASK-292-02 | Toggle Block Motion and Pane Transition Contract | Medium | Medium | Add bounded fade/slide/no-motion options without weakening TASK-256 interactive runtime semantics |
@@ -340,7 +317,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-310 | Shared Color Picker CSS Variable and Border Clear Regression | High | Large | In progress: umbrella split into physical adopter leaves; Form Embed and Entry Teaser are already on the landed shared seam, Booking Calendar stays under TASK-297, and Gallery Mosaic remains a separate special-case owner |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
@@ -351,6 +327,30 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-311 | Forms Field Model Expansion for Choice File and Typed Controls | High | Very Large | Done: Forms owners now cover `radio`, `number`, `time`, `range`, `rating`, and trusted `hidden`, while `file` remains explicitly unsupported by the current public-write contract |
+| TASK-311-03 | Forms Hidden and File Field Public-Write Contract | High | Large | Done: hidden fields now submit trusted fixed values end-to-end, and file fields remain explicit unsupported scope until a safe upload/storage seam exists |
+| TASK-311-02 | Forms Numeric, Temporal, Range, and Rating Field Expansion | Medium | Large | Done: typed controls now exist in validation, builder/admin preview, runtime preview, and Form Embed |
+| TASK-311-01 | Forms Choice Field Expansion for Radio and Grouped Options | High | Large | Done: radio fields now exist end-to-end in Forms owners and Form Embed; grouped choice semantics remain explicit non-current-contract scope |
+| TASK-310 | Shared Color Picker CSS Variable and Border Clear Regression | High | Large | Done: remaining widget editors now consume the landed shared color seams instead of local swatch/text clones |
+| TASK-310-04 | Shared Color Picker Team and Testimonials Editor Adoption | Medium | Medium | Done: Team and Testimonials now consume shared color controls with focused editor-wave coverage |
+| TASK-310-03 | Shared Color Picker Shell and Forms-Adjacent Editor Adoption | Medium | Large | Done: Contact, Footer, Navigation, Newsletter, and Pricing Plans now consume shared color controls |
+| TASK-310-02 | Shared Color Picker Content and Marketing Editor Adoption | High | Large | Done: Content List, CTA Banner, Feature Grid, Hero, Rich Text Section, and Stats KPI now consume shared color controls |
+| TASK-310-01 | Shared Color Picker Layout and Interactive Editor Adoption | High | Large | Done: Accordion, Compare Timeline, Divider, FAQ Accordion, Grid Columns, Section, and Timeline now consume shared color controls |
+| TASK-309 | Footer Market Utility Expansion | Low | Very Large | Done: footer utility wave now has bounded newsletter composition, read-only address/contact surface, and anchor-based back-to-top policy |
+| TASK-309-03 | Footer Back-to-Top Runtime Policy | Low | Medium | Done: Footer now exposes a bounded anchor-based back-to-top action with deterministic labeling |
+| TASK-309-02 | Footer Address and Contact Utility Surface | Low | Medium | Done: Footer now supports bounded read-only address/contact presentation with safe tel/mailto rendering |
+| TASK-309-01 | Footer Newsletter Composition and Submission Contract | Medium | Large | Done: Footer newsletter is composition-only and reuses the existing hardened Newsletter/Forms contract |
+| TASK-308 | Footer Column Reorder and Slot Cohesion | Medium | Large | Done: Footer column reorder now remaps visible columns and slot payloads atomically through the live block patch path |
+| TASK-304 | Entry Teaser Listing Manual Picker | Medium | Medium | Done: listing mode now supports deterministic manual row selection without breaking legacy manual/latest/featured entry behavior |
+| TASK-301 | Forms Public Runtime Nonce Cache Freshness | High | Large | Done: site HTML cache now skips nonce-bearing public pages/detail pages across Form Embed, Contact, and Appointment Form |
+| TASK-300 | Compare Timeline Motion Presets and Reduced Motion Policy | Low | Medium | Done: Compare Timeline now exposes bounded motion presets with motion-safe and reduced-motion-aware runtime output |
+| TASK-299 | Shared Widget Contrast Guidance and Validation | Medium | Large | Done: shared editor contrast advisories now cover Compare Timeline and Timeline color surfaces |
+| TASK-298 | Booking Admin Availability Row Draft and Save UX | Medium | Medium | Done: Booking availability draft rows are explicit, resettable, and no longer silently ignored on save |
+| TASK-297 | Shared Widget Color Picker Residual Controls | Medium | Large | Done: Booking Calendar frame fields now consume the landed shared color control seam |
+| TASK-296 | Shared Interactive Widget Accessibility Residuals | High | Large | Done: Booking Calendar now has explicit region/list semantics, live status announcements, and selected-state accessibility wiring |
+| TASK-295 | Appointment Form Custom Field Product Surface | Medium | Large | Done: Appointment Form now supports bounded custom-field authoring, render, and `metadata.customFields` submission mapping |
+| TASK-294 | Booking Flow Editor Context Surface Plumbing | High | Large | Done: builder surfaces now expose same-surface booking flow summaries through shared `WidgetEditorContext.bookingFlows` |
+| TASK-293 | Shared Repeatable Slot Metadata Sync and Instance Reorder | High | Large | Done: repeatable-slot add/remove/reorder now keeps slot order and widget metadata aligned through a shared builder-owned seam |
 | TASK-312 | Gallery Mosaic Shared Contract Residual Reopen | High | Large | Done: reopened Gallery Mosaic shared prerequisites were closed under TASK-312, and the later TASK-270 product rollout is now also landed in the live checkout |
 | TASK-312-03 | Gallery Mosaic Shared Residual Closure | Medium | Medium | Done: report/docs/changelog/board closure captured the shared reopen, while the later TASK-270 product rollout is now independently closed in the live checkout |
 | TASK-312-02 | Gallery Mosaic Shared Runtime Semantics Residuals | High | Large | Done: Gallery Mosaic runtime now uses explicit resolver branches, semantic figure/figcaption output, and current video controls without widening into TASK-270 product fields |
@@ -426,7 +426,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-260-03 | Compare Timeline Axis Steps and Content Controls | High | Large | Done: Visual add/remove controls, Wizard/Visual step descriptions, `3-10` axis range, step icons, and safe step/segment links are synchronized |
 | TASK-260-04 | Compare Timeline Layout Typography and Visual Polish | Medium | Large | Done: heading, width, padding, font weights, track order/background, marker shapes, variant previews, shared clear adoption, and layout mode cleanup are synchronized |
 | TASK-260-05 | Compare Timeline Report Docs and Closure | Medium | Medium | Done: report/widget docs/changelog/board/status closure is synchronized with focused validation and exact deferred owner tasks |
-| TASK-259 | Booking Calendar Widget Playwright Product Followups | High | Very Large | Done: admin preview parity, signed date policy, service context, loading/abort/clear selection, week picker, variants, default pickers, docs, and closure evidence are synchronized while residual shared/admin rows stay routed to TASK-296/TASK-297/TASK-298 |
+| TASK-259 | Booking Calendar Widget Playwright Product Followups | High | Very Large | Done: admin preview parity, signed date policy, service context, loading/abort/clear selection, week picker, variants, default pickers, and the later shared/admin rows are now also landed |
 | TASK-259-01 | Booking Calendar Admin Preview Runtime Catalog Parity | High | Large | Done: page-builder preview hydrates booking catalog data into BlockList/editor context without persisting preview-only `resolved` payloads |
 | TASK-259-02 | Booking Calendar Date Defaults, Range, and Past-Date Safety | High | Large | Done: widget-owned date defaults/range render, signed slots-token claims, and public route/service past-date enforcement are synchronized |
 | TASK-259-03 | Booking Calendar Service Context and Timezone Copy | High | Large | Done: service price/duration/description, timezone copy, summary locale/date style, and user-facing empty-state copy are product-owned and covered |
@@ -435,17 +435,17 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-259-06 | Booking Calendar Layout Variants and Mobile Styling | Medium | Large | Done: compact/inline/horizontal variants, mobile control layout, and selected/hover slot styling are widget-owned and tested |
 | TASK-259-07 | Booking Calendar Default Pickers and Diagnostics | Medium | Medium | Done: admin preview catalog data now powers default service/resource pickers and truthful runtime diagnostics |
 | TASK-259-08 | Booking Calendar Report, Docs, and Closure | Medium | Medium | Done: report/docs/changelog/board and final validation evidence are synchronized for the TASK-259 family |
-| TASK-258 | Appointment Form Widget Playwright Follow-Up | High | Very Large | Done: runtime/editor/public-write follow-up is synchronized with focused validation, report closure, named deferrals (`TASK-294`, `TASK-295`, `TASK-256-02`), and changelog evidence |
+| TASK-258 | Appointment Form Widget Playwright Follow-Up | High | Very Large | Done: runtime/editor/public-write follow-up is synchronized with focused validation, report closure, landed shared booking-flow context, landed custom-field surface, and changelog evidence |
 | TASK-258-01 | Runtime State, Admin Preview, and Submission Feedback | High | Large | Done: disabled parity, loading copy, stale-error reset, and selection clearing are landed with the runtime DOM suite |
 | TASK-258-02 | Field Validation, Visibility, and Accessibility | High | Large | Done: truthful field toggles, split-name mode, required flags, phone pattern, notes bounds, autocomplete, and form naming are landed |
-| TASK-258-03 | Flow Pairing, Slot Context, Locale, and Redirect | High | Large | Done: summary context, locale formatting, and safe redirect are landed locally; shared flow-key editor context is deferred to `TASK-294` |
-| TASK-258-04 | Consent, Custom Fields, and Public Write Hardening | High | Large | Done: consent UI, public CAPTCHA bridge, bounded metadata schema, runtime hydration, and public route-boundary hardening are landed; custom-field surface is deferred to `TASK-295` |
+| TASK-258-03 | Flow Pairing, Slot Context, Locale, and Redirect | High | Large | Done: summary context, locale formatting, safe redirect, and shared same-surface booking-flow editor context are landed |
+| TASK-258-04 | Consent, Custom Fields, and Public Write Hardening | High | Large | Done: consent UI, public CAPTCHA bridge, bounded metadata schema, runtime hydration, and the later custom-field surface are landed |
 | TASK-258-05 | Style, Variants, and Advanced Diagnostics | High | Large | Done: local variants, submit text color, and read-only diagnostics are landed; shared clearable-state indicators stay routed to `TASK-256-02` |
 | TASK-258-06 | Playwright Report, Docs, and Closure | Medium | Medium | Done: widget docs, report closure matrix, changelog, board sync, and final validation evidence are synchronized |
-| TASK-257 | Accordion Widget Playwright Product Followups | High | Large | Done: Accordion-specific product follow-ups are closed with explicit all-collapsed state, local style/typography/motion controls, icon/copy polish, and U5/U6 deferred to TASK-293 |
+| TASK-257 | Accordion Widget Playwright Product Followups | High | Large | Done: Accordion-specific product follow-ups are closed with explicit all-collapsed state, local style/typography/motion controls, icon/copy polish, and the landed shared repeatable-slot seam |
 | TASK-257-01 | Accordion Initial Open State Product Options | High | Medium | Done: Accordion now preserves intentional all-collapsed initial state when all-closed behavior is allowed |
 | TASK-257-02 | Accordion Style Layout and Typography Controls | High | Large | Done: Accordion now ships body color, max-width, padding, radius, title typography, and color-picker parity controls |
-| TASK-257-03 | Accordion Item Content and Management UX | High | Large | Done: Accordion item icons and clearer all-closed copy landed; shared add/reorder remains explicitly deferred to TASK-293 |
+| TASK-257-03 | Accordion Item Content and Management UX | High | Large | Done: Accordion item icons and clearer all-closed copy landed; shared add/reorder now lands through TASK-293 |
 | TASK-257-04 | Accordion Motion and Variant Preview Polish | Medium | Medium | Done: Accordion now exposes bounded motion presets and visual variant preview cards |
 | TASK-257-05 | Accordion Report Docs and Closure | Medium | Medium | Done: report/docs/board/changelog are synchronized with final fixed/deferred ownership and validation evidence |
 | TASK-306 | FAQ Accordion Shared Contract Residuals | High | Large | Done: FAQ chevron/ARIA, spacing guard/border collapse, and border/divider clear adoption are now repaired as a dedicated shared follow-up outside TASK-266 |

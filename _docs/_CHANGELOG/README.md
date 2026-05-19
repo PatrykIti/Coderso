@@ -25,6 +25,11 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 867 | 2026-05-19 | TASK-311 forms field model wave | CMS Forms/Runtime/Admin UI |
+| 866 | 2026-05-19 | TASK-310 shared color adoption wave | CMS Widgets/Admin UI |
+| 865 | 2026-05-19 | TASK-308 and TASK-309 footer owner wave | CMS Footer/Admin UI/Runtime |
+| 864 | 2026-05-19 | TASK-304 Entry Teaser manual listing contract | CMS Widgets/Runtime/Admin UI |
+| 863 | 2026-05-19 | TASK-293 to TASK-301 shared follow-up owners | CMS Widgets/Forms/Admin UI/Runtime |
 | 862 | 2026-05-18 | TASK-257 to TASK-270 regression fixes | QA/CMS Widgets/Assistant |
 | 861 | 2026-05-18 | TASK-270 Gallery Mosaic widget follow-ups | CMS Widgets/Admin UI/Runtime/QA |
 | 860 | 2026-05-18 | TASK-312 Gallery Mosaic shared residuals | CMS Widgets/Admin UI/Runtime/QA |

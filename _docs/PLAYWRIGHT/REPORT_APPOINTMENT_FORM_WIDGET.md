@@ -404,7 +404,7 @@ Form element nie ma `aria-label` ani `aria-describedby`. Screen readery nie iden
 | BUG-01 | Fixed | `TASK-258-01` | SSR/admin markup now starts disabled and runtime keeps the same no-slot contract; covered by `tests/vitest/widgets/appointmentForm.test.tsx` and `tests/vitest/widgets/bookingRuntimeScript.appointmentForm.test.ts`. |
 | BUG-02 | Fixed | `TASK-258-01` | Runtime clears stale API errors on first input/change; covered by `tests/vitest/widgets/bookingRuntimeScript.appointmentForm.test.ts`. |
 | UX-01 | Fixed | `TASK-258-02` | Phone/notes controls are gated by their visibility toggles in the Visual editor; covered by `tests/vitest/ui/appointment-form-editor-wave.test.tsx`. |
-| UX-02 | Deferred | `TASK-294` | Shared `WidgetEditorContext.bookingFlows` plumbing is widget-agnostic builder work and is explicitly routed to `TASK-294`. |
+| UX-02 | Fixed | `TASK-294` | Appointment Form now receives same-surface Booking Calendar flow summaries through shared `WidgetEditorContext.bookingFlows` and shows truthful pairing feedback in the editor. |
 | UX-03 | Fixed | `TASK-258-02` | `noSelectionMessage` moved into Visual/slot-summary ownership; covered by `tests/vitest/ui/appointment-form-editor-wave.test.tsx`. |
 | UX-04 | Deferred | `TASK-256-02` | Shared configured-vs-default style state remains owned by the clearable control contract, not a widget-local workaround. |
 | UX-05 | Fixed | `TASK-258-05` | Resolved nonce is now read-only diagnostic copy in Advanced; covered by `tests/vitest/ui/appointment-form-editor-wave.test.tsx`. |
@@ -414,7 +414,7 @@ Form element nie ma `aria-label` ani `aria-describedby`. Screen readery nie iden
 | BF-02 | Fixed | `TASK-258-02` | Email required behavior is now configurable instead of hard-coded optional; covered by widget/editor tests. |
 | BF-03 | Fixed | `TASK-258-05` | `style.submitTextColor` is schema-owned and clearable; covered by widget/editor tests. |
 | BF-04 | Fixed | `TASK-258-02` | Split-name mode is now part of the widget contract and runtime payload composition; covered by widget/runtime/editor tests. |
-| BF-05 | Deferred | `TASK-295` | Bounded backend metadata exists, but the widget-local custom-field authoring/render surface is intentionally split to `TASK-295`. |
+| BF-05 | Fixed | `TASK-295` | Appointment Form now owns bounded custom-field authoring, runtime rendering, and `metadata.customFields` serialization on top of the existing booking boundary. |
 | BF-06 | Fixed | `TASK-258-03` | Slot summary can include service/resource context; covered by runtime and editor tests. |
 | BF-07 | Fixed | `TASK-258-04` | Consent checkbox with required flag and privacy/terms links is landed; covered by widget/editor/runtime tests. |
 | BF-08 | Fixed | `TASK-258-04` | Backend-owned CAPTCHA bridge is hydrated and executed from public site key/action only; covered by runtime hydration, route-boundary, and runtime DOM tests. |
@@ -454,7 +454,5 @@ Form element nie ma `aria-label` ani `aria-describedby`. Screen readery nie iden
 
 ### Shared-task routing confirmed
 
-- `UX-02` -> `TASK-294`
-- `BF-05` -> `TASK-295`
 - `UX-04` -> `TASK-256-02`
-- shared public runtime nonce-cache freshness -> `TASK-301`
+- shared public runtime nonce-cache freshness -> `TASK-301` (landed)

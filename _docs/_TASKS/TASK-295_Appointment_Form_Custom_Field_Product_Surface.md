@@ -6,7 +6,7 @@
 **Category:** Widgets + Booking + Admin UI + Runtime
 **Estimated Effort:** Large
 **Dependencies:** TASK-258-02, TASK-258-04
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -57,13 +57,13 @@ contract itself must change.
 
 ## Sub-Tasks
 
-- [ ] Add bounded custom field schema/defaults/normalizer support for text,
+- [x] Add bounded custom field schema/defaults/normalizer support for text,
   email, phone, select, checkbox, and textarea field types.
-- [ ] Add editor controls for field label, type, required state, placeholder,
+- [x] Add editor controls for field label, type, required state, placeholder,
   and select options where relevant.
-- [ ] Render custom fields in Appointment Form runtime without leaking admin-only
+- [x] Render custom fields in Appointment Form runtime without leaking admin-only
   metadata into the visible form.
-- [ ] Serialize custom field answers into the existing bounded
+- [x] Serialize custom field answers into the existing bounded
   `metadata.customFields` payload shape.
 
 ## Implementation Pseudocode

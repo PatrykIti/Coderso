@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Shared Controls
 **Estimated Effort:** Large
 **Dependencies:** TASK-305
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -36,15 +36,15 @@ This task does not own:
 
 ## Sub-Tasks
 
-- [ ] Reuse the landed shared color-input contract for late widgets that still
+- [x] Reuse the landed shared color-input contract for late widgets that still
   use `ClearableInputField` for color-like surface fields, starting with
   Booking Calendar.
-- [ ] Extend the current shared owner only if Booking Calendar frame fields
+- [x] Extend the current shared owner only if Booking Calendar frame fields
   need a small additive adapter, not a second control contract.
-- [ ] Adopt the shared control in Booking Calendar frame fields as the first
+- [x] Adopt the shared control in Booking Calendar frame fields as the first
   executable owner path.
-- [ ] Add focused shared-control and Booking Calendar editor coverage.
-- [ ] Refresh report/task/docs evidence so widget tasks can exclude this row to
+- [x] Add focused shared-control and Booking Calendar editor coverage.
+- [x] Refresh report/task/docs evidence so widget tasks can exclude this row to
   a concrete shared owner.
 
 ## Files to Change

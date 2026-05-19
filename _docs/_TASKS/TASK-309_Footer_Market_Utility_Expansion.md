@@ -6,7 +6,7 @@
 **Category:** Widgets + Footer + Product Expansion
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-268
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -47,9 +47,9 @@ once.
 
 ## Sub-Tasks
 
-- [ ] TASK-309-01: Footer Newsletter Composition and Submission Contract
-- [ ] TASK-309-02: Footer Address and Contact Utility Surface
-- [ ] TASK-309-03: Footer Back-to-Top Runtime Policy
+- [x] TASK-309-01: Footer Newsletter Composition and Submission Contract
+- [x] TASK-309-02: Footer Address and Contact Utility Surface
+- [x] TASK-309-03: Footer Back-to-Top Runtime Policy
 
 ## Implementation Order
 

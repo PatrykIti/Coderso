@@ -6,7 +6,7 @@
 **Category:** Forms + Validation + Runtime Render + Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-311
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -35,9 +35,9 @@ This leaf does not own:
 
 ## Sub-Tasks
 
-- [ ] Extend canonical Forms validation for approved typed controls.
-- [ ] Add builder/editor support and runtime projection for typed metadata.
-- [ ] Add submission validation and first-widget adoption only after the Forms
+- [x] Extend canonical Forms validation for approved typed controls.
+- [x] Add builder/editor support and runtime projection for typed metadata.
+- [x] Add submission validation and first-widget adoption only after the Forms
   owner contract is green.
 
 ## Files to Change

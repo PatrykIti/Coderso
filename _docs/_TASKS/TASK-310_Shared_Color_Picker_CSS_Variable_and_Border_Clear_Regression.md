@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Shared Design Tokens
 **Estimated Effort:** Large
 **Dependencies:** TASK-256-02, TASK-305
-**Status:** In Progress (2026-05-17)
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -62,10 +62,10 @@ targeted validation lane.
 
 ## Sub-Tasks
 
-- [ ] TASK-310-01: Shared Color Picker Layout and Interactive Editor Adoption
-- [ ] TASK-310-02: Shared Color Picker Content and Marketing Editor Adoption
-- [ ] TASK-310-03: Shared Color Picker Shell and Forms-Adjacent Editor Adoption
-- [ ] TASK-310-04: Shared Color Picker Team and Testimonials Editor Adoption
+- [x] TASK-310-01: Shared Color Picker Layout and Interactive Editor Adoption
+- [x] TASK-310-02: Shared Color Picker Content and Marketing Editor Adoption
+- [x] TASK-310-03: Shared Color Picker Shell and Forms-Adjacent Editor Adoption
+- [x] TASK-310-04: Shared Color Picker Team and Testimonials Editor Adoption
 
 ## Files to Change
 

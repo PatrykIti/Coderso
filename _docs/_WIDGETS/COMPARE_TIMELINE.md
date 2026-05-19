@@ -77,10 +77,11 @@ Advanced does not duplicate Visual layout controls.
 - Render order is controlled by `layout.trackOrder` without mutating the stored
   track array or deterministic track IDs.
 
-## Deferred Follow-Ups
+## Shared Contract Notes
 
-- Shared contrast guidance/validation for widget color fields: `TASK-299`
-- Compare Timeline motion presets and reduced-motion policy: `TASK-300`
+- Compare Timeline color fields now surface shared contrast advisories.
+- Motion presets are now bounded to `none`, `fade`, and `slide`, and respect
+  reduced-motion preferences.
 
 ## Clear Controls
 

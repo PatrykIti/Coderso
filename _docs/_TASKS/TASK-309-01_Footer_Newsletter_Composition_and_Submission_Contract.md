@@ -6,7 +6,7 @@
 **Category:** Widgets + Footer + Public Write Security
 **Estimated Effort:** Large
 **Dependencies:** TASK-309, TASK-268
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -41,11 +41,11 @@ This leaf does not own:
 
 ## Sub-Tasks
 
-- [ ] Decide whether Footer newsletter is composition-first, Footer-owned, or
+- [x] Decide whether Footer newsletter is composition-first, Footer-owned, or
   rejected.
-- [ ] If supported, keep submission behavior on the existing hardened
+- [x] If supported, keep submission behavior on the existing hardened
   Newsletter / Forms route contract.
-- [ ] Add focused editor/runtime/docs coverage for the chosen policy.
+- [x] Add focused editor/runtime/docs coverage for the chosen policy.
 
 ## Files to Change
 

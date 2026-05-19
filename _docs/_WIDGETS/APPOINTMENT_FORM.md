@@ -120,10 +120,13 @@ shared control state is routed to `TASK-256-02`.
 }
 ```
 
-## Deferred Follow-Ups
+## Shared Contract Notes
 
-- `UX-02` flow-key pairing feedback now routes through `TASK-294`.
-- `BF-05` custom fields now route through `TASK-295`.
-- Shared public runtime nonce-cache freshness now routes through `TASK-301`.
+- Same-surface booking flow pairing feedback is now exposed through shared
+  `WidgetEditorContext.bookingFlows`.
+- Bounded custom-field answers now serialize into `metadata.customFields` using
+  the existing public booking metadata contract.
+- Shared public runtime nonce-cache freshness is handled at the site runtime
+  cache layer.
 - `UX-04` clearable style inheritance-state indicators route through
   `TASK-256-02`.

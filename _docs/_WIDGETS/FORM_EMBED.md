@@ -50,17 +50,19 @@ Current Form Embed runtime support matches the live Forms field model:
 - `email`
 - `phone`
 - `date`
+- `time`
+- `number`
+- `range`
+- `rating`
 - `textarea`
 - `checkbox`
 - `select`
+- `radio`
+- `hidden`
 
 Unsupported legacy/runtime payload types render a visible non-submitting
-diagnostic instead of silently coercing to a different control. Future field
-model expansion for:
-
-- `radio` and grouped choice semantics is routed through `TASK-311-01`
-- `number`, `time`, `range`, and `rating` is routed through `TASK-311-02`
-- `hidden` and `file` is routed through `TASK-311-03`
+diagnostic instead of silently coercing to a different control. `file` remains
+explicit unsupported scope under the current trusted-field contract.
 
 ## Accessibility Contract
 
@@ -89,8 +91,8 @@ model expansion for:
   - reset form after success
   - keep form visible after success
 - Redirects follow `runtime.redirectUrl` from the submit response.
-- Shared public HTML cache freshness for nonce-bearing Form Embed runtime is
-  tracked outside the widget-local surface in `TASK-301`.
+- Shared public HTML cache freshness for nonce-bearing Form Embed runtime now
+  skips site HTML caching at the shared runtime layer.
 
 ## Security Notes
 
@@ -108,8 +110,7 @@ No new public write endpoint is introduced by the widget.
 ## Clear Controls
 
 The current editor exposes clear behavior for the Form Embed-owned color/surface
-fields it controls, while shared CSS-variable swatch behavior remains owned by
-the shared color-field helper introduced through `TASK-310`.
+fields it controls through the landed shared color-field helper seam.
 
 ## Data Model (summary)
 

@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Slot Contract
 **Estimated Effort:** Large
 **Dependencies:** TASK-268
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -40,15 +40,15 @@ generic repeatable-slot remapping outside Footer, or any new public route.
 
 ## Sub-Tasks
 
-- [ ] Decide whether column reorder moves slot content, rebinds slot ids, or is
+- [x] Decide whether column reorder moves slot content, rebinds slot ids, or is
   intentionally unsupported when slot content exists.
-- [ ] If reorder is supported, define the exact slot/data remap policy for
+- [x] If reorder is supported, define the exact slot/data remap policy for
   `column-1`, `column-2`, and `column-3`.
-- [ ] Add accessible move controls or another truthful UI path in
+- [x] Add accessible move controls or another truthful UI path in
   `FooterEditors.tsx`.
-- [ ] Add runtime/editor tests proving column order and slot content remain
+- [x] Add runtime/editor tests proving column order and slot content remain
   aligned.
-- [ ] Update `_docs/_WIDGETS/FOOTER.md`, `_docs/PLAYWRIGHT/REPORT_FOOTER_WIDGET.md`,
+- [x] Update `_docs/_WIDGETS/FOOTER.md`, `_docs/PLAYWRIGHT/REPORT_FOOTER_WIDGET.md`,
   and the task board when this contract lands.
 
 ## Files to Change

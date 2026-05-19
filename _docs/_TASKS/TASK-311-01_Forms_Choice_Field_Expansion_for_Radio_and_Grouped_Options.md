@@ -6,7 +6,7 @@
 **Category:** Forms + Validation + Runtime Render + Accessibility
 **Estimated Effort:** Large
 **Dependencies:** TASK-311, TASK-269-02
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -37,11 +37,11 @@ This leaf does not own:
 
 ## Sub-Tasks
 
-- [ ] Extend canonical Forms field-type validation for `radio`.
-- [ ] Decide whether grouped checkbox/radio semantics are part of the same
+- [x] Extend canonical Forms field-type validation for `radio`.
+- [x] Decide whether grouped checkbox/radio semantics are part of the same
   owner contract.
-- [ ] Add admin builder/editor support and runtime projection.
-- [ ] Add submission validation and first-widget adoption only after the Forms
+- [x] Add admin builder/editor support and runtime projection.
+- [x] Add submission validation and first-widget adoption only after the Forms
   contract is green.
 
 ## Files to Change

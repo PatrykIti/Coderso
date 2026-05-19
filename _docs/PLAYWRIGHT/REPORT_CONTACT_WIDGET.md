@@ -448,6 +448,6 @@ _Zrzut: `contact-13-mobile-375px.png`_
 - Shared busy/live-region/CAPTCHA runtime projection remains routed to
   `TASK-269-05` and the existing Forms/public-write owners; TASK-261 only lands
   Contact-local marker compatibility.
-- Public HTML cache freshness for nonce-bearing Forms runtime widgets is a new
-  shared drift discovered during TASK-261 closure and now routes to `TASK-301`
-  instead of being patched locally inside Contact.
+- Public HTML cache freshness for nonce-bearing Forms runtime widgets was a
+  shared drift discovered during TASK-261 closure and is now closed in the
+  shared runtime cache layer under `TASK-301`.

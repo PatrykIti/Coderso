@@ -323,8 +323,8 @@ Accordion poprawnie responsywny — `space-y-3` sprawia, że items stackują si�
   all-collapsed initial state, Accordion-local style/layout/typography fields,
   plain-text item icons, clearer all-closed copy, motion options, and visual
   variant preview cards.
-- Shared repeatable-slot add/reorder remains deferred to TASK-293 so slot
-  instance mutations can be solved once at the builder seam instead of being
+- Shared repeatable-slot add/reorder is now closed in TASK-293 so slot
+  instance mutations stay solved once at the builder seam instead of being
   reimplemented inside Accordion.
 - Validation evidence from this turn:
   `bun run test:vitest -- tests/vitest/widgets/accordionWidget.test.tsx
@@ -344,17 +344,15 @@ Accordion poprawnie responsywny — `space-y-3` sprawia, że items stackują si�
 | W11 | Fixed | TASK-257-01 | `tests/vitest/widgets/accordionWidget.test.tsx`; `tests/vitest/ui/accordion-editor-wave.test.tsx` |
 | W3, W5, W6, Accordion part of W7, Accordion part of W12, U8 | Fixed | TASK-257-02 | `tests/vitest/widgets/accordionWidget.test.tsx`; `tests/vitest/ui/accordion-editor-wave.test.tsx` |
 | W2, U3 | Fixed | TASK-257-03 | `tests/vitest/widgets/accordionWidget.test.tsx`; `tests/vitest/ui/accordion-editor-wave.test.tsx` |
-| U5, U6 | Deferred shared blocker | TASK-293 | Shared slot/data sync and repeatable-slot reorder remain builder-owned follow-up work. |
+| U5, U6 | Fixed | TASK-293 | Shared slot/data sync and repeatable-slot reorder now land at the builder seam instead of Accordion-local mutations. |
 | Accordion part of W1, Accordion part of U4 | Fixed | TASK-257-04 | `tests/vitest/widgets/accordionWidget.test.tsx`; `tests/vitest/ui/accordion-editor-wave.test.tsx` |
 
 ### 8.2 TASK-257 / TASK-293 implementation notes
 
-- `TASK-257-03` should implement only the Accordion-local icon and editor-copy
-  slice in the current checkout.
-- Do not add Accordion-local add/reorder controls while shared repeatable-slot
-  operations still mutate slot IDs without matching `items[]` metadata.
-- `TASK-293` owns the shared repeatable-slot metadata-sync and instance-reorder
-  seam needed for Accordion U5/U6 and other slot-backed widgets.
+- `TASK-257-03` stayed on the Accordion-local icon and editor-copy slice.
+- `TASK-293` landed the shared repeatable-slot metadata-sync and
+  instance-reorder seam needed for Accordion U5/U6 and other slot-backed
+  widgets.
 
 ---
 

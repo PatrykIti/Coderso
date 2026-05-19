@@ -6,7 +6,7 @@
 **Category:** Widgets + Footer + Runtime Render + Admin UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-309, TASK-268
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -34,9 +34,9 @@ This leaf does not own:
 
 ## Sub-Tasks
 
-- [ ] Decide whether address/contact information is Footer-owned or composed.
-- [ ] If Footer-owned, keep the field model bounded to read-only presentation.
-- [ ] Add focused safe-href tests and editor guidance.
+- [x] Decide whether address/contact information is Footer-owned or composed.
+- [x] If Footer-owned, keep the field model bounded to read-only presentation.
+- [x] Add focused safe-href tests and editor guidance.
 
 ## Files to Change
 

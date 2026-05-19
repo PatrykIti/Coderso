@@ -425,8 +425,9 @@ className={`grid gap-2 grid-cols-1 sm:grid-cols-2 lg:${gridClass}`}
   `TASK-260` family.
 - Shared rows that match existing TASK-256 mechanisms still route through
   `TASK-256-01`, `TASK-256-02`, `TASK-256-04`, or `TASK-256-06-01`, but
-  TASK-256 ships no Compare Timeline-specific code from this report. Final
-  widget execution remains deferred to `TASK-260`.
+  TASK-256 ships no Compare Timeline-specific code from this report. The later
+  widget family `TASK-260` plus shared follow-ups `TASK-299` and `TASK-300`
+  are now landed.
 
 ## Status po TASK-260 (2026-05-17)
 
@@ -459,8 +460,8 @@ className={`grid gap-2 grid-cols-1 sm:grid-cols-2 lg:${gridClass}`}
 | W4 | fixed | TASK-260-04 | Compare Timeline now owns bounded max-width tokens instead of hardcoded `max-w-6xl` only. |
 | W5 | fixed | TASK-260-04 | Optional section heading + subtitle fields now render above the compare block. |
 | W6 | fixed | TASK-260-03 | Axis step range now normalizes through `3-10` across schema/editor/runtime/tests. |
-| W7 | deferred | TASK-299 | Shared contrast guidance/validation is intentionally split into its own physical task. |
-| W8 | deferred | TASK-300 | Motion remains intentionally out of `TASK-260`; exact follow-up task now exists. |
+| W7 | fixed | TASK-299 | Shared contrast advisories now cover Compare Timeline color surfaces in the editor. |
+| W8 | fixed | TASK-300 | Compare Timeline now exposes bounded motion presets with reduced-motion-safe runtime output. |
 | W9 | fixed | TASK-260-04 | Render order is now configurable through `layout.trackOrder` without mutating stored track IDs. |
 | W10 | fixed | TASK-260-03 | Axis steps and segment badges now support safe links through widget-safe href normalization. |
 | W11 | fixed | TASK-260-01 | Highlighted segment background now renders a fallback color before the `color-mix(...)` enhancement. |

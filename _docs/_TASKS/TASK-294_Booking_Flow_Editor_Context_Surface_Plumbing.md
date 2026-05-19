@@ -6,7 +6,7 @@
 **Category:** Shared Builder + Booking Widgets + Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-256-07, TASK-258-03, TASK-259-01
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -70,23 +70,23 @@ It does not own:
 
 ## Sub-Tasks
 
-- [ ] Extend `WidgetEditorContext` with a typed `bookingFlows` payload that is
+- [x] Extend `WidgetEditorContext` with a typed `bookingFlows` payload that is
   additive to the current context contract instead of introducing a parallel
   preview-only transport.
-- [ ] Build a shared helper that collects same-surface Booking Calendar flow
+- [x] Build a shared helper that collects same-surface Booking Calendar flow
   summaries from the current block tree.
-- [ ] Merge the new summaries into the current `widgetPreviewData` /
+- [x] Merge the new summaries into the current `widgetPreviewData` /
   preview-state plumbing without dropping existing Booking Calendar preview
   diagnostics.
-- [ ] Pass the merged editor context through `PageEditor` desktop and mobile
+- [x] Pass the merged editor context through `PageEditor` desktop and mobile
   `BlockSettings` entrypoints.
-- [ ] Pass the merged editor context through `WidgetTemplateEditorPage`.
-- [ ] Preserve and merge existing binding-aware context in
+- [x] Pass the merged editor context through `WidgetTemplateEditorPage`.
+- [x] Preserve and merge existing binding-aware context in
   `CustomScreenEditorPage` and `DetailTemplateEditorPage`.
-- [ ] Consume the shared flow summaries in `AppointmentFormEditors.tsx` with
+- [x] Consume the shared flow summaries in `AppointmentFormEditors.tsx` with
   truthful same-surface pairing feedback so `UX-02` can close under this owner
   without widening into unrelated widget-local booking work.
-- [ ] Keep `BlockSettings` slot-target augmentation intact while forwarding the
+- [x] Keep `BlockSettings` slot-target augmentation intact while forwarding the
   shared booking flow summaries to editors.
 
 ## Implementation Pseudocode

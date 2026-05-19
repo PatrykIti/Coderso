@@ -1,14 +1,14 @@
 # REPORT: Entry Teaser Widget
 
-> Status: **CLOSED AFTER TASK-265** | Data: 2026-05-18 | Autor: Claude Code + Codex
+> Status: **CLOSED AFTER TASK-265 AND TASK-304** | Data: 2026-05-19 | Autor: Claude Code + Codex
 
 ---
 
 ## Closure Update (2026-05-18)
 
 Poniższe sekcje `1-8` zachowują historyczny raport z 2026-05-16. Ten blok
-jest finalnym matrixem closure po wdrożeniu `TASK-265`, `TASK-305`, i
-powiązanych leafów.
+jest finalnym matrixem closure po wdrożeniu `TASK-265`, `TASK-304`, `TASK-305`,
+i powiązanych leafów.
 
 ### Finalny status findingów
 
@@ -56,11 +56,10 @@ powiązanych leafów.
 | T-06 | Fixed | TASK-265-04 | oddzielne `section.headingLevel` i `title.headingLevel` w render/editor/tests |
 | T-07 | Fixed | TASK-265-01 | admin preview ma loading state `Loading resolved teaser preview...` |
 
-### Jawnie odroczony scope po TASK-265
+### Scope domknięty po TASK-304
 
-- Manualny wybór konkretnego wiersza listingowego nie jest częścią finalnego
-  zakresu `TASK-265`. Został zapisany jako fizyczny follow-up:
-  `TASK-304_Entry_Teaser_Listing_Manual_Picker.md`.
+- Listing mode now supports deterministic manual row selection through the
+  landed `TASK-304` contract instead of treating it as a future follow-up.
 
 ### Finalna walidacja
 

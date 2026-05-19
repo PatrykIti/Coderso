@@ -6,7 +6,7 @@
 **Category:** Booking + Admin UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-259
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -30,14 +30,14 @@ This task does not own:
 
 ## Sub-Tasks
 
-- [ ] Make the draft schedule row state visually distinct from saved schedule
+- [x] Make the draft schedule row state visually distinct from saved schedule
   rows.
-- [ ] Add guidance or validation so `Save schedules` cannot silently noop when
+- [x] Add guidance or validation so `Save schedules` cannot silently noop when
   the user has an unsaved draft row.
-- [ ] Decide whether `Save schedules` should auto-commit the current draft row,
+- [x] Decide whether `Save schedules` should auto-commit the current draft row,
   block with inline guidance, or both; document the chosen contract.
-- [ ] Add focused Booking admin tests for the updated Availability-tab flow.
-- [ ] Refresh report/task/docs evidence so TASK-259 closure can point to this
+- [x] Add focused Booking admin tests for the updated Availability-tab flow.
+- [x] Refresh report/task/docs evidence so TASK-259 closure can point to this
   concrete admin owner.
 
 ## Files to Change

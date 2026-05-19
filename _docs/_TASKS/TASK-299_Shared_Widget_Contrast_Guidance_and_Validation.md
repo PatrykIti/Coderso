@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Accessibility
 **Estimated Effort:** Large
 **Dependencies:** TASK-256-02, TASK-260
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -32,18 +32,18 @@ not own a given color surface.
 
 ## Sub-Tasks
 
-- [ ] Define the shared contrast-evaluation contract for color fields that have
+- [x] Define the shared contrast-evaluation contract for color fields that have
   both a configured value and a runtime fallback/background context.
-- [ ] Decide which widget surfaces can support advisory contrast warnings
+- [x] Decide which widget surfaces can support advisory contrast warnings
   truthfully without false certainty when CSS variables or inherited themes are
   involved.
-- [ ] Add reusable editor helper copy/state for advisory warnings rather than a
+- [x] Add reusable editor helper copy/state for advisory warnings rather than a
   Compare Timeline-only inline warning.
-- [ ] Apply the shared helper to Compare Timeline `markerColor`/track surface
+- [x] Apply the shared helper to Compare Timeline `markerColor`/track surface
   ownership only after the generic contract is stable.
-- [ ] Apply the same shared helper to Timeline color surfaces or record an
+- [x] Apply the same shared helper to Timeline color surfaces or record an
   explicit blocked/deferred reason in the Timeline docs/report.
-- [ ] Update the routed source reports/closure notes that now depend on this
+- [x] Update the routed source reports/closure notes that now depend on this
   shared owner.
 
 ## Files to Change

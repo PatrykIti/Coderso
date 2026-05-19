@@ -116,10 +116,10 @@ Regression-test shape:
 
 ## Sub-Tasks
 
-- [ ] Add a shared text-plus-swatch color-control owner.
-- [ ] Keep shared clear semantics intact for the new control.
-- [ ] Add focused shared UI tests.
-- [ ] Repoint dependent task docs to this physical shared owner.
+- [x] Add a shared text-plus-swatch color-control owner.
+- [x] Keep shared clear semantics intact for the new control.
+- [x] Add focused shared UI tests.
+- [x] Repoint dependent task docs to this physical shared owner.
 
 ## Testing Requirements
 

@@ -130,9 +130,8 @@ icon-based social actions.
 
 ## Clear Controls
 
-- Footer color fields currently expose the intended clear/reset + color-picker
-  UX, while the later helper-level convergence onto the shared implementation
-  remains tracked in `TASK-310-03`.
+- Footer color fields now use the landed shared clear/reset + color-picker
+  implementation.
 - Clearing `style.surfaceColor` removes the forced footer background color from
   runtime output.
 

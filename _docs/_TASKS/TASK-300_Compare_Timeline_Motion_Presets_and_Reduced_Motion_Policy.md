@@ -6,7 +6,7 @@
 **Category:** Widgets + Runtime Render + Accessibility
 **Estimated Effort:** Medium
 **Dependencies:** TASK-260
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -23,12 +23,12 @@ explicitly approves it.
 
 ## Sub-Tasks
 
-- [ ] Decide whether Compare Timeline motion can stay CSS-only or whether a
+- [x] Decide whether Compare Timeline motion can stay CSS-only or whether a
   broader runtime motion contract is required first.
-- [ ] Define bounded motion presets (`none`, `fade`, `slide`, or equivalent)
+- [x] Define bounded motion presets (`none`, `fade`, `slide`, or equivalent)
   that remain truthful in SSR output.
-- [ ] Respect `prefers-reduced-motion` and provide a stable no-motion fallback.
-- [ ] Add editor controls, runtime output, tests, and docs only after the final
+- [x] Respect `prefers-reduced-motion` and provide a stable no-motion fallback.
+- [x] Add editor controls, runtime output, tests, and docs only after the final
   motion policy is approved.
 
 ## Files to Change

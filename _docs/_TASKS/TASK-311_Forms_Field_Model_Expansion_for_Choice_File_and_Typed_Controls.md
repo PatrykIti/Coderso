@@ -6,7 +6,7 @@
 **Category:** Forms + Validation + Runtime Render + Public Write
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-269-02
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -62,9 +62,9 @@ Current live owners that child leaves must target explicitly:
 
 ## Sub-Tasks
 
-- [ ] TASK-311-01: Forms Choice Field Expansion for Radio and Grouped Options
-- [ ] TASK-311-02: Forms Numeric, Temporal, Range, and Rating Field Expansion
-- [ ] TASK-311-03: Forms Hidden and File Field Public-Write Contract
+- [x] TASK-311-01: Forms Choice Field Expansion for Radio and Grouped Options
+- [x] TASK-311-02: Forms Numeric, Temporal, Range, and Rating Field Expansion
+- [x] TASK-311-03: Forms Hidden and File Field Public-Write Contract
 
 ## Implementation Order
 

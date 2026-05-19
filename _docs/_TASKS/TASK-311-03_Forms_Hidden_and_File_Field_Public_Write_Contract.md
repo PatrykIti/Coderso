@@ -6,7 +6,7 @@
 **Category:** Forms + Public Write Security + Validation + Runtime
 **Estimated Effort:** Large
 **Dependencies:** TASK-311
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -37,11 +37,11 @@ This leaf does not own:
 
 ## Sub-Tasks
 
-- [ ] Decide whether `hidden` and `file` both belong in the same release wave.
-- [ ] Add canonical validation and runtime projection for the approved fields.
-- [ ] Add any required route/storage/public-write hardening before widget
+- [x] Decide whether `hidden` and `file` both belong in the same release wave.
+- [x] Add canonical validation and runtime projection for the approved fields.
+- [x] Add any required route/storage/public-write hardening before widget
   adoption.
-- [ ] Add first-widget adoption only after the Forms owner contract is green.
+- [x] Add first-widget adoption only after the Forms owner contract is green.
 
 ## Files to Change
 

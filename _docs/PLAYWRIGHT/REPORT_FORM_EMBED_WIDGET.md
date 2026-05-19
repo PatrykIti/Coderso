@@ -3,7 +3,7 @@
 > **Status:** Zamknięty po implementacji i rerunie owner test lanes
 > **Data zamknięcia:** 2026-05-18
 > **Owner task:** `TASK-269`
-> **Shared follow-ups:** `TASK-301`, `TASK-310`, `TASK-311-01`, `TASK-311-02`, `TASK-311-03`
+> **Shared follow-ups:** none for the current shipped contract; grouped choice semantics stay non-current-contract, and file upload remains explicitly unsupported.
 
 ---
 
@@ -19,19 +19,20 @@ Raport został zamknięty po wdrożeniu zmian w:
   resolved-data
 
 `TASK-256` pozostaje poza implementacją widget-local; shared rows U3/U4 zostały
-utrzymane jako shared scope przez `TASK-310`, shared stale-nonce cache
-freshness została nazwana fizycznie w `TASK-301`, a przyszłe rozszerzenie
-modelu pól Forms zostało rozbite fizycznie na `TASK-311-01..03`.
+domknięte przez landed shared color seam, shared stale-nonce cache freshness
+została domknięta w runtime cache layer, a rozszerzenie modelu pól Forms
+zostało wdrożone dla `radio`, `number`, `time`, `range`, `rating`, i trusted
+`hidden` with explicit `file` rejection.
 
 ## 2. Finalna macierz findings
 
 | ID | Status | Owner | Dowód / uwaga końcowa |
 |---|---|---|---|
 | C1 | fixed | TASK-269-03 | Przywrócono truthful contract: current source-of-truth docs opisują tylko `standard`, zamiast obiecywać nieistniejące `card` / `inline`. |
-| C2 | deferred | TASK-311-01 | Obecny model Forms nadal nie wspiera `radio`; Form Embed renderuje unsupported diagnostic dla legacy/runtime payloadów zamiast cichego fallbacku. |
+| C2 | fixed | TASK-311-01 | Current Forms owner contract now supports `radio`; Form Embed renders the control instead of the unsupported diagnostic. |
 | C3 | fixed | TASK-269-01 | Wizard / Visual / Advanced nie są już aliasami jednego widoku; każdy ma osobny zakres odpowiedzialności. |
 | C4 | fixed | TASK-269-01 | Editor pokazuje runtime resolver error oraz selected-form diagnostics bez otwierania preview. |
-| W1 | deferred | TASK-311-02 / TASK-311-03 | `number`, `time`, `range`, `rating` pozostają future typed-control scope pod `TASK-311-02`, a `hidden` / `file` pod trusted-field scope `TASK-311-03`; current widget renderuje unsupported diagnostic. |
+| W1 | fixed | TASK-311-02 / TASK-311-03 | `number`, `time`, `range`, `rating`, and trusted `hidden` are now supported. `file` remains explicit unsupported scope and still renders a visible diagnostic instead of widening public-write behavior. |
 | W2 | fixed | TASK-269-05 | Success behavior jest jawnie sterowalne (`hide`, `reset`, `keep`) i pokryte DOM runtime tests. |
 | W3 | fixed | TASK-269-05 | Submit przechodzi w busy/loading state z przywróceniem stanu po zakończeniu. |
 | W4 | fixed | TASK-269-03 | Layout ma niezależne section padding controls zamiast twardego `px-4`. |
@@ -103,16 +104,11 @@ Admin editor i public runtime są zsynchronizowane na poziomie current contract:
 - submit success / error / redirect flow
 - safe public captcha + nonce bridge
 
-## 5. Named deferred scope
+## 5. Current boundary notes
 
-- `TASK-301`: shared public runtime nonce-cache freshness across Form Embed,
-  Contact, and Appointment Form
-- `TASK-310`: shared color-field helper/adoption work outside widget-local Form
-  Embed ownership
-- `TASK-311-01`: future Forms choice-field expansion for `radio` / grouped
-  choice semantics
-- `TASK-311-02`: future Forms typed-field expansion for `number`, `time`,
-  `range`, and `rating`
-- `TASK-311-03`: future Forms trusted-field expansion for `hidden` and `file`
+- Grouped checkbox/radio semantics remain non-current-contract and are not
+  claimed by the current Form Embed surface.
+- `file` remains explicit unsupported scope until a safe upload/storage seam is
+  approved.
 
-No other anonymous “future” buckets remain in this report.
+No anonymous “future” buckets remain in this report.

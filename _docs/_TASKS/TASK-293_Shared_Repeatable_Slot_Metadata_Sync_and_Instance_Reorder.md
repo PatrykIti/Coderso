@@ -6,7 +6,7 @@
 **Category:** Widgets + Page Builder + Admin UI + Shared Contract
 **Estimated Effort:** Large
 **Dependencies:** TASK-050-15-01, TASK-256-01, TASK-256-03
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -54,18 +54,18 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Add a pure shared helper that can create a repeatable slot instance and
+- [x] Add a pure shared helper that can create a repeatable slot instance and
   matching widget metadata in one atomic patch.
-- [ ] Add a pure shared helper that can reorder repeatable slot instances and
+- [x] Add a pure shared helper that can reorder repeatable slot instances and
   rebuild the `slots` object in the intended visual order while preserving child
   arrays and unmatched legacy slots.
-- [ ] Extend shared VisualPanel slot controls with generic move up/down actions
+- [x] Extend shared VisualPanel slot controls with generic move up/down actions
   for repeatable slot items.
-- [ ] Let widgets opt into shared metadata sync with explicit callbacks or plan
+- [x] Let widgets opt into shared metadata sync with explicit callbacks or plan
   objects instead of inline widget-local slot mutations.
-- [ ] Add shared tests for add/remove/reorder behavior and legacy-slot
+- [x] Add shared tests for add/remove/reorder behavior and legacy-slot
   preservation.
-- [ ] Document the shared contract and link the widgets/tasks that depend on it.
+- [x] Document the shared contract and link the widgets/tasks that depend on it.
 
 ## Files to Change
 

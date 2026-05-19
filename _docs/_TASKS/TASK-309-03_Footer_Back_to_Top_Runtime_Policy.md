@@ -6,7 +6,7 @@
 **Category:** Widgets + Footer + Accessibility + Runtime
 **Estimated Effort:** Medium
 **Dependencies:** TASK-309, TASK-268
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -34,10 +34,10 @@ This leaf does not own:
 
 ## Sub-Tasks
 
-- [ ] Decide whether Footer ships a built-in back-to-top action or rejects it.
-- [ ] If approved, keep the runtime behavior reduced-motion safe and
+- [x] Decide whether Footer ships a built-in back-to-top action or rejects it.
+- [x] If approved, keep the runtime behavior reduced-motion safe and
   Footer-scoped.
-- [ ] Add focused runtime/editor/docs evidence for the final policy.
+- [x] Add focused runtime/editor/docs evidence for the final policy.
 
 ## Files to Change
 

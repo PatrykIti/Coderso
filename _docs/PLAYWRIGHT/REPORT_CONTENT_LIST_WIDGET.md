@@ -332,10 +332,10 @@ _Raport ukończony po pełnym cyklu testów: analiza kodu + testy Admin UI + tes
 | E-02 | fixed | `TASK-262-01` | Visual now shows current source mode and mode-specific controls without owning the mode switch itself |
 | E-03 | fixed | `TASK-262-01` | taxonomy filter now uses suggestions from the taxonomy overview seam |
 | E-04 | fixed | `TASK-262-01` | author filter is now a picker/search flow backed by `admin-users` summaries |
-| E-05 | fixed | `TASK-302` | `textColor` now exposes the intended clear/picker UX; the later shared-helper convergence remains tracked under `TASK-310-02` |
+| E-05 | fixed | `TASK-302` + `TASK-310-02` | `textColor` now uses the landed shared clear/picker implementation |
 | E-06 | fixed | `TASK-262-01` | source-mode labels are editor-friendly (`By content type`, `By listing query`) |
 | E-07 | fixed | `TASK-262-04` | variant selection now includes visual preview cards |
-| E-08 | fixed | `TASK-302` | Content List color controls now include a picker without losing CSS-token text input ownership; the later shared-helper convergence remains tracked under `TASK-310-02` |
+| E-08 | fixed | `TASK-302` + `TASK-310-02` | Content List color controls now include a picker without losing CSS-token text input ownership and use the shared implementation |
 | E-09 | fixed | reverified in `TASK-262-05` | current `missing-source` copy is already source-aware and remained correct after the family landed |
 | E-10 | fixed | `TASK-262-04` | card style now uses visual preview cards instead of a blind dropdown |
 | E-11 | fixed | `TASK-262-01` | content type selection is searchable and duplicate names are disambiguated via friendly labels |

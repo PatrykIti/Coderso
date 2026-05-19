@@ -378,8 +378,9 @@ Widget jest gotowy do **podstawowego użycia** na prostych wdrożeniach, ale wym
   family.
 - Shared rows that match existing TASK-256 mechanisms still route through
   `TASK-256-03` or `TASK-256-04`, but TASK-256 ships no Booking
-  Calendar-specific code from this report. Final widget execution remains
-  deferred to `TASK-259`.
+  Calendar-specific code from this report. The later shared follow-ups
+  `TASK-296`, `TASK-297`, and `TASK-298` are now landed alongside the completed
+  `TASK-259` family.
 
 ---
 
@@ -394,9 +395,9 @@ Widget jest gotowy do **podstawowego użycia** na prostych wdrożeniach, ale wym
 | 3.1, 3.8, 7.2 week picker, availability signals, slot density | Fixed | TASK-259-05 | `tests/vitest/widgets/bookingRuntimeScript.bookingCalendar.test.ts` |
 | 3.7, 3.13, 3.16 warianty, mobile, selected/hover styles | Fixed | TASK-259-06 | `tests/vitest/widgets/bookingCalendar.test.tsx`, `tests/vitest/ui/booking-calendar-editor-wave.test.tsx` |
 | 3.15, 4.4, 7.5 default pickers i truthful diagnostics | Fixed | TASK-259-07 | `tests/vitest/ui/booking-calendar-editor-wave.test.tsx`, `tests/vitest/ui/booking-calendar-admin-preview.test.tsx` |
-| 3.12, 5.6 shared ARIA baseline | Excluded from TASK-259 | TASK-296 | osobny shared accessibility follow-up po TASK-256 |
-| 3.14 shared frame color picker | Excluded from TASK-259 | TASK-297 | osobny shared color-control adoption follow-up po TASK-305 |
-| 7.4 Booking admin `Add row -> Save schedules` UX | Excluded from TASK-259 | TASK-298 | osobny admin follow-up poza surface widgetu |
+| 3.12, 5.6 shared ARIA baseline | Fixed after TASK-259 | TASK-296 | shared accessibility follow-up landed on Booking Calendar region/list semantics, live status updates, and selected-state wiring |
+| 3.14 shared frame color picker | Fixed after TASK-259 | TASK-297 | Booking Calendar frame background/border now consume the landed shared color control |
+| 7.4 Booking admin `Add row -> Save schedules` UX | Fixed after TASK-259 | TASK-298 | Availability draft rows are now explicit and cannot be silently ignored on save |
 
 ### Walidacja lokalna
 

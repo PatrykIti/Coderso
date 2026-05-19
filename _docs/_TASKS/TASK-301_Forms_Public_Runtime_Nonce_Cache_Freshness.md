@@ -6,7 +6,7 @@
 **Category:** Forms + Runtime + Site Cache + Public Write Security
 **Estimated Effort:** Large
 **Dependencies:** TASK-261-02-03, TASK-269-05, TASK-276-02
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -41,18 +41,18 @@ This task does not own:
 
 ## Sub-Tasks
 
-- [ ] Audit every current public widget/runtime owner that serializes
+- [x] Audit every current public widget/runtime owner that serializes
   `resolved.submissionNonce` into cached HTML.
-- [ ] Choose a single shared cache strategy:
+- [x] Choose a single shared cache strategy:
   - bypass site HTML caching when a page contains Forms runtime nonce data, or
   - strip nonce-bearing widgets from cached HTML and inject fresh runtime data
     per request through an approved shared seam.
-- [ ] Keep the solution shared across the current Form Embed, Contact, and
+- [x] Keep the solution shared across the current Form Embed, Contact, and
   Appointment Form bridges, and make future widget adopters opt into the same
   seam instead of adding widget-local cache exceptions.
-- [ ] Add a cache-hit runtime proof with HTML caching enabled (`TTL > 0`) so
+- [x] Add a cache-hit runtime proof with HTML caching enabled (`TTL > 0`) so
   the suite covers stale-markup reuse rather than only fresh render output.
-- [ ] Re-run route/security suites only if the shared nonce/access contract
+- [x] Re-run route/security suites only if the shared nonce/access contract
   changes beyond cache freshness.
 
 ## Files to Change
