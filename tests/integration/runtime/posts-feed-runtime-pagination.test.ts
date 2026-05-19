@@ -17,6 +17,11 @@ import { resetRateLimitBuckets } from "../../../core/server/middleware/rateLimit
 
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
 const testIfDb = hasDb ? test : test.skip;
+const testIfDbWithOptions = testIfDb as unknown as (
+  name: string,
+  fn: () => Promise<void>,
+  options: { timeout: number }
+) => void;
 const dbRuntimeTimeout = 15_000;
 
 async function canConnect() {
@@ -127,7 +132,7 @@ const createActor = async () => {
   return actor;
 };
 
-testIfDb(
+testIfDbWithOptions(
   "posts feed public runtime honors block-scoped pagination params for load-more and view-all",
   async () => {
     resetRateLimitBuckets();

@@ -10,6 +10,7 @@ Pricing table for plans, tiers, and comparison-style rows.
 
 ## Variants (v1)
 
+- `two-plans`: compact two-tier pricing
 - `three-plans`: balanced three-tier pricing
 - `four-plans`: broader four-tier layout
 - `comparison-rows`: row-based comparison view
@@ -20,18 +21,22 @@ Pricing table for plans, tiers, and comparison-style rows.
 
 - variant
 - header text
-- plan count
+- fixed-count layout guidance
+- name, badge, price, billing period, CTA, and feature essentials per visible plan
 
 ### Visual
 
 - plan cards and features
 - billing toggle labels and default cycle
 - highlighted plan
+- plan-level card hierarchy, CTA style, and product copy
+- comparison-table hierarchy, layout, notes, and width controls
 - spacing, radius, colors, and feature marker style
 
 ### Advanced
 
-- technical style tokens and normalized payload snapshot
+- shared diagnostics and fix/reset actions only; active spacing/radius editing
+  stays in Visual mode
 
 ## None Token Support
 
@@ -43,7 +48,51 @@ Pricing table for plans, tiers, and comparison-style rows.
 - `style.cardSurface` and `style.cardBorder` are clearable. Clear removes the
   configured card/table surface or border fields and renderers omit those inline
   style keys.
-- Highlight ring and plan badge semantics remain independent visual fields.
+- `style.highlightRing` is also clearable and restores the documented widget
+  default highlight color.
+
+## Shared Fixed-Count Baseline
+
+- Fixed-count variants preserve hidden authored plans instead of truncating
+  them on variant changes.
+- Wizard and Visual now show truthful layout-count guidance instead of a
+  conflicting writable plan-count selector.
+- Advanced alignment is now the only destructive count-reset path and confirms
+  before trimming preserved hidden plans.
+
+## Billing And Price Semantics
+
+- Billing-cycle rendering is intentionally truthful-static. Runtime announces
+  the active authored cycle instead of pretending the toggle is interactive.
+- `plans[].priceDisplay.mode` supports:
+  - `legacy`: keep existing `price` and `prices.monthly/annual` strings
+  - `structured`: bounded numeric amount + currency + optional annual amount
+  - `free`: explicit free-plan label without awkward `$0` fallback
+  - `custom`: explicit custom-contact label
+- Structured price amounts are normalized as non-negative values and annual
+  cycle rendering updates common monthly period copy such as `/month` to
+  `/year`.
+
+## Plan-Level Product Fields
+
+- `plans[].description`: optional card subline under the plan name
+- `plans[].surface`: optional clearable per-plan card surface
+- `plans[].badgeTone`: `neutral | accent | highlight`
+- `plans[].ctaStyle`: `outline | filled | ghost`
+- `plans[].highlightLabel`: optional top-banner label for highlighted plans
+- `plans[].features[]`: legacy strings remain valid; typed feature items may
+  also carry bounded `status` and `icon` presets
+
+## Comparison And Layout Fields
+
+- `comparison.stickyHeader`: keeps comparison headers visible during long table
+  scrolls
+- `comparison.showHeaderBadges` / `comparison.showHeaderCta`: repeat product
+  hierarchy directly in the comparison header
+- `layout.maxWidth`: `narrow | default | wide`
+- `layout.typography`: `compact | balanced | prominent`
+- `layout.footerNote`: plain-text pricing caveat or contact note rendered below
+  the cards/table
 
 ## Data Model (summary)
 
@@ -59,16 +108,39 @@ Pricing table for plans, tiers, and comparison-style rows.
     "annualLabel": "Annual",
     "defaultCycle": "monthly"
   },
+  "comparison": {
+    "stickyHeader": false,
+    "showHeaderBadges": true,
+    "showHeaderCta": true
+  },
+  "layout": {
+    "maxWidth": "default",
+    "typography": "balanced",
+    "footerNote": "All prices exclude VAT."
+  },
   "plans": [
     {
       "id": "plan-1",
       "name": "Starter",
+      "description": "For small teams getting started",
       "price": "$19",
       "period": "/month",
+      "badgeTone": "neutral",
+      "ctaStyle": "outline",
       "prices": {
         "monthly": "$19",
         "annual": "$190"
       },
+      "priceDisplay": {
+        "mode": "structured",
+        "amount": 19,
+        "annualAmount": 190,
+        "currency": "USD",
+        "annualSavingsLabel": "2 months free"
+      },
+      "features": [
+        { "text": "Email support", "status": "included", "icon": "check" }
+      ],
       "ctaLabel": "Start now",
       "ctaHref": "#",
       "highlighted": false
@@ -79,6 +151,7 @@ Pricing table for plans, tiers, and comparison-style rows.
     "radius": "lg",
     "cardSurface": "var(--color-bg)",
     "cardBorder": "var(--color-border)",
+    "highlightRing": "var(--color-primary)",
     "featureMarker": "bullet"
   }
 }

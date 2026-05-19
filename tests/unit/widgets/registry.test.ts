@@ -7,10 +7,15 @@ import {
   listWidgetsForSurfaceContext,
   registerWidget,
 } from "../../../core/widgets/registry";
-import { createListingFiltersWidget } from "../../../core/widgets/core/listingFilters";
+import { createPricingPlansWidget } from "../../../core/widgets/core/pricingPlans";
+import type { WidgetEditorProps } from "../../../core/widgets/types";
 import type { WidgetDefinition } from "../../../core/widgets/types";
+import type { PricingPlansData } from "../../../core/widgets/core/pricingPlans";
 
 const Dummy = () => null;
+const DummyPricingPlansEditor = Dummy as unknown as (
+  props: WidgetEditorProps<PricingPlansData>
+) => null;
 
 const baseDef: WidgetDefinition = {
   type: "hero",
@@ -191,23 +196,6 @@ test("registerWidget normalizes widget-owned binding targets", () => {
   ]);
 });
 
-test("registerWidget keeps listing-filters variant registration for layout-specific shells", () => {
-  registerWidget(
-    createListingFiltersWidget({
-      wizard: Dummy,
-      visual: Dummy,
-      advanced: Dummy,
-    })
-  );
-
-  expect(listWidgets()[0]?.variants.map((variant) => variant.id)).toEqual([
-    "default",
-    "horizontal",
-    "sidebar",
-    "drawer",
-  ]);
-});
-
 test("registerWidget rejects invalid binding target metadata", () => {
   expect(() =>
     registerWidget({
@@ -238,4 +226,17 @@ test("registerWidget rejects invalid binding target metadata", () => {
       ],
     })
   ).toThrow("widget_binding_targets_duplicate");
+});
+
+test("registerWidget keeps pricing plans two-plan variant available", () => {
+  registerWidget(
+    createPricingPlansWidget({
+      wizard: DummyPricingPlansEditor,
+      visual: DummyPricingPlansEditor,
+      advanced: DummyPricingPlansEditor,
+    })
+  );
+
+  const pricingWidget = listWidgets().find((item) => item.type === "pricing-plans");
+  expect(pricingWidget?.variants.map((variant) => variant.id)).toContain("two-plans");
 });

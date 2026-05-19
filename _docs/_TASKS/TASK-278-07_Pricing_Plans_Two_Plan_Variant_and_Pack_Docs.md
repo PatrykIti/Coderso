@@ -5,8 +5,8 @@
 **Priority:** Medium
 **Category:** Widgets + Pricing Plans + Runtime Render + Admin UI + Widget Packs
 **Estimated Effort:** Medium
-**Dependencies:** TASK-256-01, TASK-256-06-03, TASK-278
-**Status:** To Do
+**Dependencies:** TASK-256-01, TASK-256-06-03, TASK-278, TASK-313
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -16,8 +16,9 @@ Add a dedicated `two-plans` Pricing Plans variant for simple side-by-side
 pricing pages, with schema/registry/editor/runtime/docs coverage and pack
 matrix updates if readiness changes.
 
-This leaf must not use a new variant to hide TASK-256 plan-count drift. It
-starts after the shared variant/count preservation contract is in place.
+This leaf must not use a new variant to hide shared fixed-count logic. It
+builds on the shared variant/count preservation contract already restored by
+`TASK-313` on this branch.
 
 ## Source Findings
 
@@ -39,12 +40,12 @@ starts after the shared variant/count preservation contract is in place.
 | File | Required change |
 |---|---|
 | `core/widgets/core/pricingPlans.tsx` | Add `two-plans` variant, plan-count map entry, variant registration, renderer layout, and backward-compatible normalizer behavior. |
-| `core/admin/ui/widgets/editors/PricingPlansEditors.tsx` | Add the variant to selector cards/dropdown and any variant-specific editor note after TASK-256 count sync lands. |
+| `core/admin/ui/widgets/editors/PricingPlansEditors.tsx` | Add the variant to selector cards/dropdown and any variant-specific editor note after `TASK-313` restores shared fixed-count truthfulness. |
 | `tests/vitest/widgets/pricingPlans.test.tsx` | Cover `two-plans` render markers, count, and layout class. |
 | `tests/vitest/ui/pricing-plans-editor-wave.test.tsx` | Cover selecting `two-plans` and editor count truthfulness after TASK-256. |
 | `tests/vitest/widgets/renderer.test.tsx` | Cover shared renderer registration if needed. |
 | `tests/unit/widgets/validator.test.ts` | Cover new variant acceptance and invalid variant rejection. |
-| `tests/unit/widgets/registry.test.ts` | Run/update if registry assumptions change. |
+| `tests/unit/widgets/registry.test.ts` | Cover variant registration assumptions after `two-plans` is added. |
 | `_docs/_WIDGETS/PRICING_PLANS.md` | Document the `two-plans` variant. |
 | `_docs/WIDGETS.md` | Update widget variant inventory if it lists concrete Pricing Plans variants. |
 | `_docs/WIDGET_PACK_MATRIX.md` | Update only if pack completeness/readiness changes. |
@@ -99,9 +100,15 @@ No API routes are added.
 - `bun run test:vitest -- tests/vitest/ui/pricing-plans-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx`
 - `bun test tests/unit/widgets/validator.test.ts`
-- `bun test tests/unit/widgets/registry.test.ts` if registry wiring changes.
+- `bun test tests/unit/widgets/registry.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso`
+- `bun run scan:security:strict`
+- `bun run precommit`
+- Run the repo-wide closeout gates requested for this wave before any transfer:
+  `bun run lint`, `bun run test:bun`, `bun run test:vitest`,
+  `bun run scan:security:strict`
 
 ## Documentation Updates Required
 

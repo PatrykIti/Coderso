@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 253 tasks
+- **To Do:** 244 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1763 tasks
+- **Done:** 1772 tasks
 
 ---
 
@@ -159,15 +159,34 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-280-06 | Product Gallery Section Header Metadata and Accessibility | Medium | Large | Add section header, status metadata, stock non-color indicators, and accessible product-card names |
 | TASK-280-07 | Product Gallery Pagination Manual Curation and Query Extensions | Medium | Very Large | Add bounded pagination/load-more and manual curated ordering after source/runtime contracts are stable |
 | TASK-280-08 | Product Gallery Report Docs Changelog and Closure | Medium | Medium | Refresh Product Gallery report/docs/changelog/board and final validation evidence |
-| TASK-278 | Pricing Plans Widget Playwright Product Followups | High | Very Large | Pricing Plans-only follow-up family for `REPORT_PRICING_PLANS_WIDGET.md`, excluding TASK-256 shared-contract scope |
-| TASK-278-01 | Pricing Plans Card Visual Hierarchy and CTA Styles | High | Large | Add plan description, plan-level surface, badge tone, highlighted banner, and CTA style controls after TASK-256 shared safety |
-| TASK-278-02 | Pricing Plans Content Wizard and Destructive Edit UX | High | Large | Expand Wizard content authoring, Advanced reset copy, highlight indicators, disabled billing label UX, remove confirmation/undo, and feature autofocus |
-| TASK-278-03 | Pricing Plans Billing Value Copy and Price Semantics | High | Large | Add explicit savings copy, free/custom display, and structured price semantics after TASK-256 billing interactivity |
-| TASK-278-04 | Pricing Plans Feature Marker and Feature Metadata | Medium | Large | Replace placeholder icon marker with bounded feature metadata and safe icon/status presets |
-| TASK-278-05 | Pricing Plans Comparison Rows Product Table | High | Large | Add comparison header hierarchy, optional header CTA/badges, and sticky header behavior after TASK-256 table ARIA |
-| TASK-278-06 | Pricing Plans Section Layout Typography and Notes | Medium | Large | Add bounded max-width, typography presets, and plain-text pricing notes |
-| TASK-278-07 | Pricing Plans Two-Plan Variant and Pack Docs | Medium | Medium | Add a dedicated two-plan variant with registry/editor/runtime/tests/docs coverage after TASK-256 count sync |
-| TASK-278-08 | Pricing Plans Report, Docs, Changelog, and Closure | Medium | Medium | Refresh Pricing Plans report/docs/changelog/board and final validation evidence |
+| TASK-276 | Newsletter Widget Playwright Product Followups | High | Very Large | Newsletter-only follow-up family for `REPORT_NEWSLETTER_WIDGET.md`, excluding TASK-256 shared-contract scope |
+| TASK-276-01 | Newsletter Form Semantics, Consent, and Accessibility | High | Large | Add email field metadata, consent-in-form semantics, accessible labels, autocomplete, and safe no-target submit behavior |
+| TASK-276-02 | Newsletter Submission States and Public Write Hardening | High | Very Large | Add hidden-by-default success/error/loading states and backend-owned anti-abuse for Coderso-owned submissions |
+| TASK-276-03 | Newsletter Integration Validation and Transport Diagnostics | High | Large | Add safe action URL/method validation and Advanced active-transport diagnostics |
+| TASK-276-04 | Newsletter Editor Mode Ownership and Variant Guidance | High | Medium | Align Newsletter editor mode ownership, Minimal description guidance, consent help, mobile copy, and success preview |
+| TASK-276-05 | Newsletter Field Expansion and Double Opt-In Model | Medium | Large | Add bounded extra fields and double opt-in semantics after the base form/transport contract is stable |
+| TASK-276-06 | Newsletter Visual Style, Width, and Contrast Controls | Medium | Large | Add Newsletter-local width/color/contrast controls, background picker clarity, breakpoint decisions, and explicit spacing resolver cleanup |
+| TASK-276-07 | Newsletter Report, Docs, Changelog, and Closure | Medium | Medium | Refresh Newsletter report/docs/changelog/board and final validation evidence |
+| TASK-277 | Posts Feed Widget Playwright Product Followups | High | Very Large | Posts Feed-only follow-up family for `REPORT_POSTS_FEED_WIDGET.md`, excluding TASK-256 shared-contract and global auth/session scope |
+| TASK-277-01 | Posts Feed Source Mode, Route, and Filter Truthfulness | High | Large | Repair manual-sort truthfulness, category filter copy/parsing, and post detail-route fallback behavior |
+| TASK-277-02 | Posts Feed Media, Tags, and Card Metadata | High | Large | Add show-image, media-resolved thumbnail/alt mapping, and bounded tag data for posts-feed cards |
+| TASK-277-03 | Posts Feed Manual Picker Search, Reorder, and Accessibility | High | Large | Add picker search, selected-order controls, accessible labels/live state, and local retry/error UX |
+| TASK-277-04 | Posts Feed Admin Preview and Runtime Status | High | Large | Hydrate admin canvas preview with bounded post data and expose readable sync/runtime status |
+| TASK-277-05 | Posts Feed Section Header, View All, and Editorial Chrome | Medium | Large | Add optional section heading, safe View All link, and bounded posts-feed visual motion |
+| TASK-277-06 | Posts Feed Editor Flow, Variant Previews, and Style Controls | Medium | Large | Add text-color control, variant preview affordances, and progressive Wizard flow |
+| TASK-277-07 | Posts Feed Pagination, Author, Date, and Featured-First Filters | Medium | Very Large | Add or explicitly split bounded pagination/load-more, author/date filters, and featured-first sorting |
+| TASK-277-08 | Posts Feed Report, Docs, Changelog, and Closure | Medium | Medium | Refresh Posts Feed report/docs/changelog/board and final validation evidence |
+| TASK-275 | Navigation Widget Playwright Product Followups | High | Very Large | Navigation-only follow-up family for `REPORT_NAVIGATION_WIDGET.md`, excluding TASK-256 shared-contract and Section/page-shell scope |
+| TASK-275-01 | Navigation Logo and Safe Link Parity | High | Medium | Render logo as a safe link, align hash URL validation with runtime rules, and label logo-link fields |
+| TASK-275-02 | Navigation Mobile Drawer and Minimal Mode | High | Large | Make minimal/drawer behavior explicit, remove mobile CTA duplication, add toggle state, icons, labels, animation, and focus policy |
+| TASK-275-03 | Navigation Dropdown and Rich Link Metadata | High | Large | Add touch/keyboard dropdown behavior plus schema-backed icon, badge, and description rendering/editing |
+| TASK-275-04 | Navigation Link Management UX | Medium | Large | Add reorder controls, limit feedback, sub-link hierarchy, and read-only synced menu preview |
+| TASK-275-05 | Navigation Optional Style and Product Controls | Medium | Very Large | Parent for lower-priority Navigation-owned style/product follow-ups; implementation lives in physical child leaves |
+| TASK-275-05-01 | Navigation Collapse Runtime Contract | Medium | Medium | Make `collapseOnScroll` a real root-scoped Navigation runtime behavior without patching Section/page-shell sticky blockers |
+| TASK-275-05-02 | Navigation Active Links and Safe Targets | Medium | Medium | Add active-link highlighting and safe target/rel controls through existing safe-href ownership |
+| TASK-275-05-03 | Navigation Visual Style Tokens | Medium | Large | Add bounded hover/active colors, underline, letter spacing, shadow, backdrop blur, dropdown direction, and motion tokens |
+| TASK-275-05-04 | Navigation Brand CTA and Logo Controls | Medium | Medium | Add logo-size, CTA-radius/separator, and bounded secondary-CTA policy without broad platform expansion |
+| TASK-275-06 | Navigation Report Docs Changelog and Closure | Medium | Medium | Refresh Navigation report/docs/changelog/board and final validation evidence after implementation leaves land |
 | TASK-274 | Logo Cloud Widget Playwright Product Followups | High | Very Large | Logo Cloud-only follow-up family for `REPORT_LOGO_CLOUD_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-274-01 | Logo Cloud Header Background and Typography | High | Large | Add Logo Cloud eyebrow, section background, and bounded header typography controls after shared heading/ARIA fixes |
 | TASK-274-02 | Logo Cloud Logo Asset Authoring and Previews | High | Large | Add Wizard logo image/alt/link authoring, Visual thumbnails, and Media Library picking without duplicating TASK-256 link contracts |
@@ -307,6 +326,15 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-278 | Pricing Plans Widget Playwright Product Followups | High | Very Large | Done: Pricing Plans now closes its Playwright-local product backlog with richer plan hierarchy, truthful static billing value semantics, bounded comparison/layout controls, a `two-plans` variant, and synchronized report/docs/changelog evidence |
+| TASK-278-08 | Pricing Plans Report, Docs, Changelog, and Closure | Medium | Medium | Done: report findings, widget docs, board rows, changelog, and validation notes are synchronized to the live TASK-278 closure state |
+| TASK-278-07 | Pricing Plans Two-Plan Variant and Pack Docs | Medium | Medium | Done: Pricing Plans exposes a dedicated `two-plans` variant end-to-end and the widget docs now describe the final variant/layout contract |
+| TASK-278-06 | Pricing Plans Section Layout Typography and Notes | Medium | Large | Done: Pricing Plans now exposes bounded max-width, typography presets, and plain-text footer notes without widening into generic slot content |
+| TASK-278-05 | Pricing Plans Comparison Rows Product Table | High | Large | Done: comparison rows now support sticky headers plus badge/CTA hierarchy directly in the table header on top of the shared accessibility baseline |
+| TASK-278-04 | Pricing Plans Feature Marker and Feature Metadata | Medium | Large | Done: feature rows now support bounded status/icon metadata with a legacy string adapter and no placeholder diamond marker |
+| TASK-278-03 | Pricing Plans Billing Value Copy and Price Semantics | High | Large | Done: Pricing Plans now owns structured/free/custom price modes, annual savings copy, clamped numeric amounts, and truthful static billing labels |
+| TASK-278-02 | Pricing Plans Content Wizard and Destructive Edit UX | High | Large | Done: Wizard now covers publishable minimum pricing content while Visual/Advanced tighten destructive actions, highlighted affordances, disabled billing labels, and feature autofocus |
+| TASK-278-01 | Pricing Plans Card Visual Hierarchy and CTA Styles | High | Large | Done: plan descriptions, per-plan surfaces, badge tones, highlight banners, and CTA styles now exist in the schema/editor/runtime contract |
 | TASK-311 | Forms Field Model Expansion for Choice File and Typed Controls | High | Very Large | Done: Forms owners now cover `radio`, `number`, `time`, `range`, `rating`, and trusted `hidden`, while `file` remains explicitly unsupported by the current public-write contract |
 | TASK-311-03 | Forms Hidden and File Field Public-Write Contract | High | Large | Done: hidden fields now submit trusted fixed values end-to-end, and file fields remain explicit unsupported scope until a safe upload/storage seam exists |
 | TASK-311-02 | Forms Numeric, Temporal, Range, and Rating Field Expansion | Medium | Large | Done: typed controls now exist in validation, builder/admin preview, runtime preview, and Form Embed |

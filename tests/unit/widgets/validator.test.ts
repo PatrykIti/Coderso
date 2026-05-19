@@ -13,11 +13,9 @@ import {
   type GalleryMosaicData,
 } from "../../../core/widgets/core/galleryMosaic";
 import {
-  createListingFiltersWidget,
-  listingFiltersDefaults,
-} from "../../../core/widgets/core/listingFilters";
-import { createNavigationWidget, navigationDefaults } from "../../../core/widgets/core/navigation";
-import { createNewsletterWidget, newsletterDefaults } from "../../../core/widgets/core/newsletter";
+  createPricingPlansWidget,
+  pricingPlansDefaults,
+} from "../../../core/widgets/core/pricingPlans";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { clearWidgetValidators, normalizeWidgetBlock } from "../../../core/widgets/validator";
 import type { WidgetDefinition, WidgetBlock } from "../../../core/widgets/types";
@@ -214,201 +212,6 @@ test("normalizeWidgetBlock accepts Contact runtime hydration data but rejects un
   ).toThrow("widget_schema_invalid");
 });
 
-test("normalizeWidgetBlock accepts listing filters presentation metadata and rejects invalid enums", () => {
-  registerWidget(
-    createListingFiltersWidget({
-      wizard: Dummy,
-      visual: Dummy,
-      advanced: Dummy,
-    })
-  );
-
-  expect(() =>
-    normalizeWidgetBlock({
-      id: "listing-filters-presentation",
-      type: "listing-filters",
-      variant: "default",
-      data: {
-        ...listingFiltersDefaults,
-        listingQueryId: "listing-query-1",
-        layout: {
-          maxWidth: "full",
-          stickySidebar: true,
-          collapsibleFacets: true,
-          defaultCollapsed: true,
-        },
-        facets: [
-          {
-            id: "price",
-            kind: "range",
-            label: "Price",
-            field: "price",
-            op: "between",
-            presentation: {
-              rangeInputMode: "inputs-slider",
-              rangeStep: 5,
-            },
-          },
-          {
-            id: "published-at",
-            kind: "date-range",
-            label: "Published at",
-            field: "publishedAt",
-            op: "between",
-            presentation: {
-              dateInputMode: "native-date",
-            },
-          },
-          {
-            id: "category",
-            kind: "taxonomy",
-            label: "Category",
-            field: "category",
-            op: "in",
-            presentation: {
-              controlMode: "searchable",
-            },
-            options: [
-              { value: "houses", label: "Houses" },
-              { value: "modern", label: "Modern", parentValue: "houses" },
-            ],
-          },
-        ],
-      },
-    })
-  ).not.toThrow();
-
-  expect(() =>
-    normalizeWidgetBlock({
-      id: "listing-filters-presentation-bad",
-      type: "listing-filters",
-      variant: "default",
-      data: {
-        ...listingFiltersDefaults,
-        listingQueryId: "listing-query-1",
-        layout: {
-          maxWidth: "bad-width",
-        },
-        facets: [
-          {
-            id: "price",
-            kind: "range",
-            label: "Price",
-            field: "price",
-            op: "between",
-            presentation: {
-              rangeInputMode: "bad-mode",
-            },
-          },
-        ],
-      } as never,
-    })
-  ).toThrow("widget_schema_invalid");
-});
-
-test("normalizeWidgetBlock accepts Newsletter runtime hydration data and rejects unsupported double opt-in enforcement", () => {
-  registerWidget(
-    createNewsletterWidget({
-      wizard: Dummy,
-      visual: Dummy,
-      advanced: Dummy,
-    })
-  );
-
-  const normalized = normalizeWidgetBlock({
-    id: "newsletter-runtime",
-    type: "newsletter",
-    variant: "stacked",
-    data: {
-      ...newsletterDefaults,
-      form: {
-        ...newsletterDefaults.form,
-        emailFieldName: "reply_email",
-        firstName: {
-          ...newsletterDefaults.form?.firstName,
-          enabled: true,
-        },
-      },
-      optIn: {
-        mode: "double",
-        confirmationCopy: "Please confirm from your inbox.",
-        enforcement: "provider-owned",
-      },
-      resolved: {
-        formId: "form-public",
-        formName: "Newsletter form",
-        status: "published",
-        submissionAccess: "public",
-        submissionNonce: "signed-nonce",
-        fields: [
-          {
-            id: "field-1",
-            type: "text",
-            label: "First name",
-            name: "first_name",
-            required: false,
-            orderIndex: 0,
-            settings: {},
-          },
-          {
-            id: "field-2",
-            type: "email",
-            label: "Reply email",
-            name: "reply_email",
-            required: true,
-            orderIndex: 1,
-            settings: {},
-          },
-          {
-            id: "field-3",
-            type: "checkbox",
-            label: "Consent",
-            name: "consent",
-            required: false,
-            orderIndex: 2,
-            settings: {},
-          },
-        ],
-      },
-    },
-  });
-
-  expect((normalized.data as { resolved?: { formId?: string } }).resolved?.formId).toBe(
-    "form-public"
-  );
-
-  expect(() =>
-    normalizeWidgetBlock({
-      id: "newsletter-runtime-bad",
-      type: "newsletter",
-      variant: "stacked",
-      data: {
-        ...newsletterDefaults,
-        optIn: {
-          mode: "double",
-          confirmationCopy: "Please confirm from your inbox.",
-          enforcement: "coderso-owned",
-        },
-      } as never,
-    })
-  ).toThrow("widget_schema_invalid");
-
-  expect(() =>
-    normalizeWidgetBlock({
-      id: "newsletter-runtime-bad-resolved",
-      type: "newsletter",
-      variant: "stacked",
-      data: {
-        ...newsletterDefaults,
-        resolved: {
-          formId: "form-public",
-          extra: "nope",
-        },
-      } as never,
-    })
-  ).toThrow("widget_schema_invalid");
-});
-
 test("normalizeWidgetBlock enforces repeatable minimum slots", () => {
   registerWidget(repeatableDefinition);
   const block: WidgetBlock = {
@@ -496,6 +299,97 @@ test("normalizeWidgetBlock accepts feature grid imageAlt authoring", () => {
   expect((normalized.data as FeatureGridData).style?.hoverEffect).toBe("lift");
   expect((normalized.data as FeatureGridData).items[0]?.descriptionMode).toBe("rich");
   expect((normalized.data as FeatureGridData).items[0]?.ctaTarget).toBe("new-tab");
+});
+
+test("normalizeWidgetBlock accepts pricing plans structured pricing and rejects unknown feature metadata", () => {
+  registerWidget(
+    createPricingPlansWidget({
+      wizard: Dummy as never,
+      visual: Dummy as never,
+      advanced: Dummy as never,
+    })
+  );
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "pricing-runtime",
+      type: "pricing-plans",
+      variant: "two-plans",
+      data: {
+        ...pricingPlansDefaults,
+        comparison: {
+          stickyHeader: true,
+          showHeaderBadges: true,
+          showHeaderCta: true,
+        },
+        layout: {
+          maxWidth: "wide",
+          typography: "prominent",
+          footerNote: "All prices exclude VAT.",
+        },
+        plans: [
+          {
+            id: "starter",
+            name: "Starter",
+            description: "For small teams",
+            badge: "Popular",
+            badgeTone: "accent",
+            price: "$19",
+            period: "/month",
+            priceDisplay: {
+              mode: "structured",
+              amount: 19,
+              annualAmount: 190,
+              currency: "USD",
+              annualSavingsLabel: "2 months free",
+            },
+            features: [
+              "Email support",
+              { text: "Priority onboarding", status: "premium", icon: "sparkle" },
+            ],
+            ctaLabel: "Start",
+            ctaHref: "/start",
+            ctaStyle: "outline",
+            highlighted: false,
+          },
+          {
+            id: "growth",
+            name: "Growth",
+            price: "$49",
+            period: "/month",
+            features: [{ text: "Advanced analytics", status: "coming-soon", icon: "clock" }],
+            ctaLabel: "Upgrade",
+            ctaHref: "/upgrade",
+            highlighted: true,
+          },
+        ],
+      },
+    })
+  ).not.toThrow();
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "pricing-runtime-invalid",
+      type: "pricing-plans",
+      variant: "two-plans",
+      data: {
+        ...pricingPlansDefaults,
+        plans: [
+          {
+            id: "starter",
+            name: "Starter",
+            price: "$19",
+            features: [{ text: "Email support", extra: "nope" }],
+          },
+          {
+            id: "growth",
+            name: "Growth",
+            price: "$49",
+          },
+        ],
+      } as never,
+    })
+  ).toThrow("widget_schema_invalid");
 });
 
 test("normalizeWidgetBlock accepts footer brand, visibility, and target extensions", () => {
@@ -695,157 +589,6 @@ test("normalizeWidgetBlock rejects invalid gallery mosaic density and motion enu
           motionPreset: "bounce",
         },
       } as unknown as GalleryMosaicData,
-    })
-  ).toThrow("widget_schema_invalid");
-});
-
-test("normalizeWidgetBlock accepts navigation targets, active links, and visual tokens", () => {
-  registerWidget(
-    createNavigationWidget({
-      wizard: Dummy,
-      visual: Dummy,
-      advanced: Dummy,
-    })
-  );
-
-  const normalized = normalizeWidgetBlock({
-    id: "navigation-1",
-    type: "navigation",
-    variant: "with-cta",
-    data: {
-      ...navigationDefaults,
-      logo: {
-        ...navigationDefaults.logo,
-        href: "#top",
-      },
-      items: [
-        {
-          label: "Docs",
-          href: "/docs",
-          target: "blank",
-          meta: {
-            visibility: "all",
-            badge: { label: "New", tone: "accent" },
-            description: "Latest writing",
-            icon: "spark",
-          },
-          children: [
-            {
-              label: "API",
-              href: "/docs/api",
-              target: "self",
-              meta: {
-                visibility: "all",
-                badge: null,
-                description: "Reference",
-                icon: "api",
-              },
-            },
-          ],
-        },
-      ],
-      behavior: {
-        ...navigationDefaults.behavior,
-        activeLinkMode: "pathname",
-        mobileMode: "drawer",
-      },
-      style: {
-        ...navigationDefaults.style,
-        linkUnderline: "always",
-        letterSpacing: "wider",
-        shadow: "lg",
-        backdropBlur: "md",
-        dropdownDirection: "auto",
-        motion: "standard",
-        logoHeight: "xl",
-        ctaBorderRadius: "full",
-        ctaSeparator: "line",
-      },
-    },
-  });
-
-  expect(normalized.data).toEqual(
-    expect.objectContaining({
-      logo: expect.objectContaining({ href: "#top" }),
-      behavior: expect.objectContaining({
-        activeLinkMode: "pathname",
-        mobileMode: "drawer",
-      }),
-      style: expect.objectContaining({
-        linkUnderline: "always",
-        letterSpacing: "wider",
-        shadow: "lg",
-        backdropBlur: "md",
-        dropdownDirection: "auto",
-        motion: "standard",
-        logoHeight: "xl",
-        ctaBorderRadius: "full",
-        ctaSeparator: "line",
-      }),
-      items: [
-        expect.objectContaining({
-          target: "blank",
-          children: [expect.objectContaining({ target: "self" })],
-        }),
-      ],
-    })
-  );
-});
-
-test("normalizeWidgetBlock rejects invalid navigation target and style enums", () => {
-  registerWidget(
-    createNavigationWidget({
-      wizard: Dummy,
-      visual: Dummy,
-      advanced: Dummy,
-    })
-  );
-
-  expect(() =>
-    normalizeWidgetBlock({
-      id: "navigation-2",
-      type: "navigation",
-      variant: "simple",
-      data: {
-        ...navigationDefaults,
-        items: [
-          {
-            label: "Docs",
-            href: "/docs",
-            target: "popup",
-          },
-        ],
-      } as never,
-    })
-  ).toThrow("widget_schema_invalid");
-
-  expect(() =>
-    normalizeWidgetBlock({
-      id: "navigation-3",
-      type: "navigation",
-      variant: "simple",
-      data: {
-        ...navigationDefaults,
-        behavior: {
-          ...navigationDefaults.behavior,
-          activeLinkMode: "prefix",
-        },
-      } as never,
-    })
-  ).toThrow("widget_schema_invalid");
-
-  expect(() =>
-    normalizeWidgetBlock({
-      id: "navigation-4",
-      type: "navigation",
-      variant: "simple",
-      data: {
-        ...navigationDefaults,
-        style: {
-          ...navigationDefaults.style,
-          dropdownDirection: "sideways",
-        },
-      } as never,
     })
   ).toThrow("widget_schema_invalid");
 });

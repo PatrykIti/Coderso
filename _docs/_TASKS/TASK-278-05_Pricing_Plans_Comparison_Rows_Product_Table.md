@@ -5,20 +5,22 @@
 **Priority:** High
 **Category:** Widgets + Pricing Plans + Runtime Render + Admin UI
 **Estimated Effort:** Large
-**Dependencies:** TASK-256-04, TASK-256-06-03, TASK-278
-**Status:** To Do
+**Dependencies:** TASK-256-04, TASK-256-06-03, TASK-278, TASK-313
+**Status:** Done (2026-05-19)
 
 ---
 
 ## Overview
 
 Improve the `comparison-rows` Pricing Plans product table with plan hierarchy in
-the header, optional header CTA/badge treatment, and sticky header behavior for
-long comparisons.
+the header, header CTA/badge treatment, and sticky header behavior for long
+feature-derived comparisons.
 
-This leaf starts after TASK-256 repairs baseline table accessibility such as
-caption, `scope`, plan labels, and CTA context. TASK-278-05 owns only the
-Pricing Plans comparison product experience.
+This leaf builds on the shared table accessibility baseline that `TASK-313`
+already restored on this branch, including caption, `scope`, plan labels, and
+CTA context. `TASK-278-05` owns only the Pricing Plans comparison product
+experience on top of the current feature-derived rows; it does not widen into
+explicit comparison-row or mobile collapse redesign.
 
 ## Source Findings
 
@@ -27,11 +29,12 @@ Pricing Plans comparison product experience.
 - `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md:272-273` - BF-11 sticky
   header.
 - `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md:421-433` - comparison rows
-  render is correct, but sticky header and baseline accessibility gaps remain.
+  render is correct after the shared accessibility baseline landed; the
+  remaining open work here is sticky header behavior and product hierarchy.
 - `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md:465` - BF-11 high-priority
   missing functionality.
-- `_docs/_WIDGETS/tmp/pricing-plans/MATRIX.md` - comparison table is Adapt and
-  should only expand with explicit rows and mobile fallback if moved together.
+- `_docs/_WIDGETS/tmp/pricing-plans/MATRIX.md` - comparison table is Adapt, but
+  this leaf stays on the current feature-derived row model.
 
 ## Sub-Tasks
 
@@ -41,13 +44,13 @@ Pricing Plans comparison product experience.
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/pricingPlans.tsx` | Add comparison header hierarchy, optional sticky header flag, and optional explicit comparison-row model only if editor/schema/tests move together. |
+| `core/widgets/core/pricingPlans.tsx` | Add comparison header hierarchy and a bounded sticky-header setting while keeping the current feature-derived row model. |
 | `core/admin/ui/widgets/editors/PricingPlansEditors.tsx` | Add comparison-specific Visual controls and diagnostics only when `comparison-rows` is selected. |
 | `tests/vitest/widgets/pricingPlans.test.tsx` | Cover comparison header badge/CTA hierarchy, sticky header marker/classes, and legacy feature-derived rows. |
 | `tests/vitest/ui/pricing-plans-editor-wave.test.tsx` | Cover comparison-specific editor controls and variant-gated visibility. |
 | `tests/vitest/widgets/renderer.test.tsx` | Update if renderer markers or shared output assumptions change. |
-| `tests/unit/widgets/validator.test.ts` | Cover schema changes if explicit comparison rows or sticky settings are added. |
-| `_docs/_WIDGETS/PRICING_PLANS.md` | Document comparison rows behavior and any explicit-row model. |
+| `tests/unit/widgets/validator.test.ts` | Cover the bounded `comparison` settings schema. |
+| `_docs/_WIDGETS/PRICING_PLANS.md` | Document comparison rows behavior and the bounded comparison settings. |
 | `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md` | Mark BUG-07/BF-11 fixed or deferred. |
 
 ## Implementation Pseudocode
@@ -72,24 +75,23 @@ function PricingComparisonHeaderCell({ plan, settings }) {
 
 Data flow:
 
-- Editor controls patch `comparison` settings only when the selected variant is
-  `comparison-rows`.
-- Normalization preserves current feature-derived row behavior unless explicit
-  comparison rows are introduced in this same leaf.
+- Editor controls patch a bounded `comparison` settings object only when the
+  selected variant is `comparison-rows`.
+- Normalization preserves the current feature-derived row behavior.
 - `PricingComparisonRowsLayout` receives normalized plans, comparison settings,
-  and the active billing cycle from the widget render model.
+  and the shared static billing-cycle/default-cycle state from the widget render
+  model.
 - Renderer emits stable table/header markers for product hierarchy tests.
 
 Error handling:
 
 - If sticky header conflicts with admin canvas clipping, keep the setting off by
   default and document the exact container requirement.
-- Legacy feature-derived comparison rows remain the fallback unless an explicit
-  comparison row schema is introduced in the same leaf.
+- Legacy feature-derived comparison rows remain the only row model in this leaf.
 - Header CTA must reuse the same safe link normalization as plan card CTA.
-- TASK-256 remains responsible for table caption/scope/ARIA baseline; this leaf
-  should not claim those findings as product closure unless the shared task has
-  landed.
+- `TASK-313` already closed the table caption/scope/ARIA baseline; this leaf
+  must not regress or re-claim that shared work while closing the Pricing Plans
+  product hierarchy.
 
 ## Security Contract
 
@@ -97,8 +99,8 @@ No API routes are added.
 
 - Endpoint visibility: none.
 - Auth/RBAC/CSRF/rate-limit: unchanged admin editing and public rendering.
-- Reject-unknown validation: comparison settings and rows must use strict
-  schemas if introduced.
+- Reject-unknown validation: the bounded `comparison` settings object must use
+  a strict schema.
 - Anti-abuse: comparison labels, badges, and CTA copy render as text; links keep
   existing safe-href normalization; no raw HTML or scripts.
 
@@ -108,9 +110,15 @@ No API routes are added.
 - `bun run test:vitest -- tests/vitest/ui/pricing-plans-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer
   markers or shared output assumptions change.
-- `bun test tests/unit/widgets/validator.test.ts` if schema changes.
+- `bun test tests/unit/widgets/validator.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso`
+- `bun run scan:security:strict`
+- `bun run precommit`
+- Run the repo-wide closeout gates requested for this wave before any transfer:
+  `bun run lint`, `bun run test:bun`, `bun run test:vitest`,
+  `bun run scan:security:strict`
 
 ## Documentation Updates Required
 

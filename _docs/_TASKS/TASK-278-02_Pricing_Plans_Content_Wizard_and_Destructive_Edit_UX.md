@@ -5,8 +5,8 @@
 **Priority:** High
 **Category:** Widgets + Pricing Plans + Admin UI
 **Estimated Effort:** Large
-**Dependencies:** TASK-256-01, TASK-256-06-03, TASK-278
-**Status:** To Do
+**Dependencies:** TASK-256-01, TASK-256-06-03, TASK-278, TASK-313
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -19,9 +19,9 @@ not look active, duplicate Advanced token controls must be resolved under the
 shared mode policy, Advanced reset/fix controls must use product-readable copy,
 and newly added feature rows should be ready for immediate editing.
 
-This leaf must not implement the TASK-256 plan-count/variant synchronization
-fix. It assumes that shared contract has landed and keeps this scope to
-Pricing Plans authoring affordances.
+This leaf must not implement the reopened shared fixed-count plan-count/variant
+synchronization work from `TASK-313`. It assumes that shared contract has
+landed and keeps this scope to Pricing Plans authoring affordances.
 
 ## Source Findings
 
@@ -122,6 +122,12 @@ No API routes are added.
   behavior changes.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso`
+- `bun run scan:security:strict`
+- `bun run precommit`
+- Run the repo-wide closeout gates requested for this wave before any transfer:
+  `bun run lint`, `bun run test:bun`, `bun run test:vitest`,
+  `bun run scan:security:strict`
 
 ## Documentation Updates Required
 

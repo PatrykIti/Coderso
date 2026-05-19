@@ -5,8 +5,8 @@
 **Priority:** Medium
 **Category:** Widgets + Pricing Plans + Documentation + QA
 **Estimated Effort:** Medium
-**Dependencies:** TASK-278, TASK-278-01, TASK-278-02, TASK-278-03, TASK-278-04, TASK-278-05, TASK-278-06, TASK-278-07, TASK-256-08
-**Status:** To Do
+**Dependencies:** TASK-278, TASK-278-01, TASK-278-02, TASK-278-03, TASK-278-04, TASK-278-05, TASK-278-06, TASK-278-07, TASK-256-08, TASK-313
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -16,16 +16,21 @@ Close the Pricing Plans widget-specific Playwright follow-up family after all
 implementation leaves are complete or explicitly deferred.
 
 This leaf owns the final report evidence, widget docs, task-board state,
-changelog entry, and validation matrix for TASK-278. It must not mark TASK-256
-shared findings fixed unless the TASK-256 implementation and evidence have
-landed.
+changelog entry, and validation matrix for TASK-278. It must not mark
+shared-task findings fixed unless the relevant `TASK-256` or `TASK-313`
+implementation and evidence have landed in the current checkout.
 
 ## Source Findings
 
 - `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md:437-482` - source report
   priority matrix and statistics.
+- `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md:512-520` - post-`TASK-256`
+  shared status block that must stay synchronized with the live shared-vs-local
+  handoff.
 - `_docs/_TASKS/TASK-278_Pricing_Plans_Widget_Playwright_Product_Followups.md` -
   TASK-256 exclusion and TASK-278 scope matrices.
+- `_docs/_TASKS/TASK-313_Pricing_Plans_Shared_Contract_Residual_Reopen.md` -
+  reopened shared Pricing Plans prerequisite scope.
 - `_docs/_TASKS/README.md` - board/statistics owner.
 - `_docs/_CHANGELOG/README.md` - changelog numbering/index owner.
 
@@ -37,13 +42,13 @@ landed.
 
 | File | Required change |
 |---|---|
-| `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md` | Add final textual status for each TASK-278-owned finding: fixed, deferred, or moved to TASK-256. Do not commit PNG files. |
+| `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md` | Add final textual status for each TASK-278-owned finding: fixed, deferred, or mapped to the correct already-landed shared owner (`TASK-256` / `TASK-313`). Do not commit PNG files. |
 | `_docs/_WIDGETS/PRICING_PLANS.md` | Synchronize final schema/editor/runtime behavior. |
 | `_docs/WIDGETS.md` | Update only if global widget inventory or contract text changed. |
 | `_docs/WIDGET_PACK_MATRIX.md` | Update only if pack readiness/completeness changed. |
 | `_docs/_TASKS/TASK-278*.md` | Mark completed leaves and umbrella `Done` with dates, or record explicit deferrals. |
 | `_docs/_TASKS/README.md` | Move completed TASK-278 rows from To Do to Done and update statistics. |
-| `_docs/_CHANGELOG/{N}-2026-05-16-task-278-pricing-plans-widget-followups.md` | Add final user-facing changelog entry. |
+| `_docs/_CHANGELOG/{N}-{closeout-date}-task-278-pricing-plans-widget-followups.md` | Add final user-facing changelog entry using the real closeout date and next unused number. |
 | `_docs/_CHANGELOG/README.md` | Add the new changelog index row with the next unused number. |
 
 ## Implementation Pseudocode
@@ -54,7 +59,7 @@ landed.
 | Report item | Status | Evidence |
 |---|---|---|
 | BUG-06 | Fixed by TASK-278-01 | tests + commit |
-| BUG-03 | TASK-256 | shared contract evidence |
+| BUG-03 | Shared closure landed in TASK-313 | shared reopen commit + tests |
 | BF-06 | Fixed by TASK-278-04 or deferred there | tests + commit or owner/reason |
 | A1/A4 | No action | report marked existing labels OK |
 ```
@@ -63,7 +68,8 @@ Data flow:
 
 - Read the final TASK-278 scope matrix and each implementation leaf status.
 - Update the source report with one textual status row per finding:
-  TASK-256 exclusion, TASK-278 fixed evidence, TASK-278 deferral, or no action.
+  TASK-256 landed shared evidence, TASK-313 reopened-and-landed shared evidence,
+  TASK-278 fixed evidence, TASK-278 deferral, or no action.
 - Synchronize widget docs, changelog entry, and task-board rows after report
   evidence is complete.
 - Record the exact validation commands and commit SHAs in the closure leaf.
@@ -73,7 +79,7 @@ Error handling:
 - If a TASK-278 leaf remains intentionally deferred, keep the umbrella open or
   mark only that leaf To Do with an explicit reason. Do not move the umbrella to
   Done while unresolved owned findings remain.
-- If a TASK-256 shared finding is still open, keep it classified as TASK-256 and
+- If a shared finding is still open, keep it under the correct shared owner and
   do not claim it in the Pricing Plans closure report.
 - If broad validation fails for unrelated legacy reasons, record exact command
   output and run the targeted Pricing Plans suites before deciding closure.
@@ -106,6 +112,9 @@ Before marking TASK-278 `Done`, run and record:
 - `bun run gates:coderso`
 - `bun run scan:security:strict`
 - `bun run precommit`
+- `bun run lint`
+- `bun run test:bun`
+- `bun run test:vitest`
 
 Docs-only closure validation:
 
@@ -124,8 +133,9 @@ Docs-only closure validation:
 
 ## Acceptance Criteria
 
-- Every report finding is mapped to fixed evidence, a TASK-256 exclusion, or a
-  documented TASK-278 deferral with owner and reason.
+- Every report finding is mapped to fixed evidence, a TASK-256 landed-shared
+  note, a `TASK-313` reopened-and-landed shared note, or a documented TASK-278 deferral
+  with owner and reason.
 - TASK-278 task statuses, board rows/statistics, docs, report, and changelog are
   synchronized.
 - Validation output proves the changed Pricing Plans contracts, not just generic

@@ -164,11 +164,18 @@ const resolvePricingSpacing = (value: string | undefined): PricingPlansSpacing =
 Wartość `"md"` nie jest sprawdzana explicite — trafia do `return "md"` jako fallback. To działa, ALE sprawia że przekazanie np. `"xl"` lub dowolnej nieprawidłowej wartości zwraca `"md"` bez żadnego sygnału błędu. Analogicznie `resolvePricingRadius` pomija `"lg"`.
 **Lokalizacja:** `pricingPlans.tsx:232-239`
 
+**Status (2026-05-19):** Naprawione w `TASK-313`. Resolver spacing/radius ma
+teraz jawne gałęzie dla `md` / `lg`; finding pozostaje tu tylko jako historyczny
+ślad audytu.
+
 #### BUG-03 — Zmiana wariantu wymusza nadpisanie liczby planów bez ostrzeżenia
 **Priorytet:** Wysoki
 **Źródło:** Analiza kodu
 **Opis:** `pricingVariantPlanCountMap` jest sztywny: `three-plans=3`, `four-plans=4`, `comparison-rows=3`. Zmiana wariantu z `four-plans` (4 plany z wypełnioną treścią) na `three-plans` lub `comparison-rows` powoduje **automatyczne ucięcie czwartego planu** przez `normalizePricingPlans(normalizedData.plans, visibleCount)` w `PricingPlansBlock`. Użytkownik nie dostaje żadnego ostrzeżenia że jego dane zostaną utracone.
 **Lokalizacja:** `pricingPlans.tsx:664-671`
+
+**Status (2026-05-19):** Naprawione w `TASK-313`. Hidden plany są zachowywane, a
+editor pokazuje truthful fixed-count guidance zamiast destrukcyjnego flow.
 
 #### BUG-04 — Plan count selector w Visual Editor nie jest zsynchronizowany z wariantem
 **Priorytet:** Wysoki
@@ -176,11 +183,18 @@ Wartość `"md"` nie jest sprawdzana explicite — trafia do `return "md"` jako 
 **Opis:** Visual Editor pokazuje "Plans count" selector (wartości 2–6) niezależnie od wybranego wariantu. Gdy wariant to `three-plans`, użytkownik może ustawić count=5, ale render zawsze pokaże 3 (wymusza `pricingVariantPlanCountMap`). Powoduje to **desynchronizację między edytorem a podglądem** — użytkownik edytuje plany które nie są widoczne.
 **Lokalizacja:** `PricingPlansEditors.tsx:596-616`
 
+**Status (2026-05-19):** Naprawione w `TASK-313`. Selector count został
+zastąpiony przez read-only fixed-count notice z informacją o zachowanych hidden
+planach.
+
 #### BUG-05 — `highlightRing` nie ma opcji `onClear`
 **Priorytet:** Średni
 **Źródło:** Analiza kodu
 **Opis:** `ColorField` dla "Highlight ring" nie ma przekazanego `onClear` (w przeciwieństwie do `cardSurface` i `cardBorder`). Użytkownik nie może zresetować koloru pierścienia do wartości domyślnej `var(--color-primary)`.
 **Lokalizacja:** `PricingPlansEditors.tsx:965-971`
+
+**Status (2026-05-19):** Naprawione w `TASK-313`. `highlightRing` korzysta już z
+tej samej shared clear-control ścieżki co `cardSurface` i `cardBorder`.
 
 #### BUG-06 — Badge planu jest zawsze renderowany w kolorze `highlightRing`
 **Priorytet:** Średni
@@ -198,6 +212,10 @@ Wartość `"md"` nie jest sprawdzana explicite — trafia do `return "md"` jako 
 **Źródło:** Analiza kodu
 **Opis:** Przyciski `Monthly` / `Annual` w `PricingPlansBlock` nie mają obsługi `onClick`. `defaultCycle` jest odczytywany ze stanu danych, ale kliknięcie przycisku nic nie robi — widget jest statyczny. Przełączenie cyklu rozliczeniowego **nie działa po stronie frontu**.
 **Lokalizacja:** `pricingPlans.tsx:708-726`
+
+**Status (2026-05-19):** Zamknięte jako shared truthful-static contract. Runtime
+nie udaje już interaktywnego toggle; renderuje statyczny billing status zgodny
+z aktualnym kontraktem.
 
 ---
 
@@ -285,17 +303,17 @@ Wartość `"md"` nie jest sprawdzana explicite — trafia do `return "md"` jako 
 
 ## 5. Problemy dostępności (Accessibility)
 
-| # | Problem | Standard | Priorytet |
-|---|---------|----------|-----------|
-| A1 | Billing toggle buttons bez `type="button"` (ale jest) — OK | — | — |
-| A2 | Badge plan zawsze w kolorze `highlightRing` — może nie spełniać WCAG 4.5:1 | WCAG 1.4.3 | Wysoki |
-| A3 | Comparison table bez `<caption>` | WCAG 1.3.1 | Wysoki |
-| A4 | Feature check/cross cells mają `aria-label` ("Included"/"Not included") — OK | WCAG 1.1.1 | ✓ OK |
-| A5 | Plan `<article>` bez `aria-labelledby` wskazującego na nazwę planu | WCAG 1.3.1 | Średni |
-| A6 | CTA link bez `aria-label` — "Start now" bez kontekstu planu | WCAG 2.4.6 | Średni |
-| A7 | Billing toggle buttons: brak `aria-controls` wskazującego na sekcję cen | WCAG 4.1.3 | Średni |
-| A8 | Header tabeli comparison bez `scope="col"` na `<th>` | WCAG 1.3.1 | Wysoki |
-| A9 | Brak `role="region"` + `aria-label` na sekcji `<section>` pricing | WCAG 1.3.6 | Niski |
+| # | Problem | Standard | Priorytet | Status 2026-05-19 |
+|---|---------|----------|-----------|-------------------|
+| A1 | Billing toggle buttons bez `type="button"` (ale jest) — OK | — | — | Bez akcji |
+| A2 | Badge plan zawsze w kolorze `highlightRing` — może nie spełniać WCAG 4.5:1 | WCAG 1.4.3 | Wysoki | Naprawione w `TASK-278-01`; niewyróżnione plany nie dziedziczą już obowiązkowo tonu highlight |
+| A3 | Comparison table bez `<caption>` | WCAG 1.3.1 | Wysoki | Naprawione w `TASK-313` |
+| A4 | Feature check/cross cells mają `aria-label` ("Included"/"Not included") — OK | WCAG 1.1.1 | ✓ OK | Bez akcji |
+| A5 | Plan `<article>` bez `aria-labelledby` wskazującego na nazwę planu | WCAG 1.3.1 | Średni | Naprawione w `TASK-313` |
+| A6 | CTA link bez `aria-label` — "Start now" bez kontekstu planu | WCAG 2.4.6 | Średni | Naprawione w `TASK-313` |
+| A7 | Billing toggle buttons: brak `aria-controls` wskazującego na sekcję cen | WCAG 4.1.3 | Średni | Zamknięte wraz z truthful static billing status |
+| A8 | Header tabeli comparison bez `scope="col"` na `<th>` | WCAG 1.3.1 | Wysoki | Naprawione w `TASK-313` |
+| A9 | Brak `role="region"` + `aria-label` na sekcji `<section>` pricing | WCAG 1.3.6 | Niski | Naprawione w `TASK-313` |
 
 ---
 
@@ -434,40 +452,41 @@ Tabela porównawcza renderuje się poprawnie: features per plan, checkmarks (✓
 
 ---
 
-## 8. Podsumowanie — macierz priorytetów
+## 8. Status po TASK-278 i TASK-313
 
-### Błędy do naprawy natychmiast
+### Shared findings already closed outside TASK-278
 
-| ID | Opis | Obszar |
-|----|------|--------|
-| BUG-03 | Zmiana wariantu ucina plany bez ostrzeżenia | Editor |
-| BUG-04 | Plans count desynchronizacja z wariantem | Editor |
-| BUG-08 | Billing toggle nieinteraktywny na froncie | Runtime |
-| BF-01 | Billing toggle — brak onclick na przyciskach | Runtime |
+| Finding | Owner | Status |
+|---------|-------|--------|
+| BUG-02, BUG-03, BUG-04, BUG-05 | `TASK-313` | Zamknięte na tym branchu jako shared Pricing Plans residuals |
+| BUG-08, BF-01 | `TASK-256-04`, `TASK-256-06-03` | Zamknięte jako truthful static billing-cycle contract |
+| A3, A5, A6, A8, A9 | `TASK-313` | Zamknięte na shared accessibility baseline |
+| A7 | shared truthful-static billing status | Zamknięte bez przywracania interaktywności |
 
-### Pilne ulepszenia UX
+### Pricing-local findings closed in TASK-278
 
-| ID | Opis |
-|----|------|
-| UX-02 | Plans count selector ukryć/zablokować gdy wariant sztywny |
-| UX-06 | Confirm dialog przy Remove plan |
-| UX-07 | Wizualny wskaźnik "highlighted" na liście planów |
-| UX-04 | Wizard bez features/CTA/badge |
+| Finding | Owner | Final status |
+|---------|-------|--------------|
+| BUG-01 | `TASK-278-03` | Zamknięte: billing default path jest jawny, structured pricing ma clampy, a runtime nie miesza annual price z monthly period copy |
+| BUG-06, BF-02, BF-03, BF-05, BF-07, A2 | `TASK-278-01` | Zamknięte: plan cards mają description, per-plan surface, bounded badge tones, CTA styles, i highlight banner bez wymuszania tonu highlight na każdym badge |
+| UX-01, UX-04, UX-05, UX-06, UX-07, UX-08, obserwacja 6.12 | `TASK-278-02` | Zamknięte: Wizard pokrywa publishable minimum, Advanced ma product-readable cleanup copy, destructive trims/remove wymagają potwierdzenia, disabled billing labels są read-only, highlight affordance i autofocus działają |
+| UX-03, BF-06 | `TASK-278-04` | Zamknięte: placeholder diamond został zastąpiony bounded status/icon metadata z legacy string adapterem |
+| BUG-07, BF-11 | `TASK-278-05` | Zamknięte: comparison header pokazuje badge/CTA hierarchy, a sticky header jest bounded widget settingiem |
+| BF-08, BF-09, BF-12 | `TASK-278-06` | Zamknięte: widget ma bounded width, typography presets, i plain-text footer note |
+| BF-10 | `TASK-278-07` | Zamknięte: runtime/editor/registry/validator wspierają dedykowany wariant `two-plans` |
+| BF-04, BF-13, BF-14 | `TASK-278-03` | Zamknięte: savings copy, structured/free/custom price modes, i graceful zero/custom handling są schema-owned i testowane |
 
-### Brakujące funkcjonalności
+### Validation evidence for this closure
 
-| ID | Priorytet | Opis |
-|----|-----------|------|
-| BF-02 | Wysoki | Per-plan background color |
-| BF-03 | Wysoki | Per-plan CTA button style |
-| BF-04 | Wysoki | Annual savings badge |
-| BF-05 | Wysoki | Per-plan description |
-| BF-11 | Wysoki | Sticky header w comparison-rows |
-| BF-07 | Średni | "Most popular" top banner |
-| BF-09 | Średni | Footer notes / FAQ slot |
-| BF-12 | Średni | Konfigurowalny max-width |
-| BF-06 | Niski | Custom feature icons |
-| BF-10 | Niski | Wariant two-plans |
+- Passed:
+  - `bun run lint`
+  - `bun run test:vitest -- tests/vitest/widgets/pricingPlans.test.tsx tests/vitest/ui/pricing-plans-editor-wave.test.tsx`
+  - `bun test tests/unit/widgets/validator.test.ts tests/unit/widgets/registry.test.ts`
+  - `bun run scan:security:strict`
+- Attempted broad repo lanes:
+  - `bun run test:bun` surfaced unrelated red suites outside Pricing Plans, including `tests/unit/forms/formsService.test.ts`, `tests/unit/kits/installService.test.ts`, `tests/unit/content/listingTemplatesService.test.ts`, and several detail-page/pages runtime lanes.
+  - `bun run test:vitest` surfaced unrelated broad-lane failures in other widget/admin families before the run was stopped; pricing-scoped suites remained green when executed directly.
+- User instruction on 2026-05-19 accepted scope-based closeout once the TASK-278-specific tests were green, acknowledging likely shared DB/load noise from concurrent work.
 
 ---
 
@@ -514,11 +533,14 @@ Tabela porównawcza renderuje się poprawnie: features per plan, checkmarks (✓
 - `TASK-256-04` + `TASK-256-06-03`: the billing-cycle surface is now truthful.
   When pricing stays static, runtime renders a non-interactive status display
   instead of inert toggle buttons.
-- `TASK-256-04`: pricing output now keeps the shared accessibility contract
-  landed in this umbrella while plan-count/product expansion continues to route
-  through the dedicated `TASK-278` family.
+- `TASK-256-04`: the truthful static billing-cycle contract remains landed.
+- `TASK-313` closure note (2026-05-19): fixed-count plan preservation,
+  desynced plan-count editor controls, `highlightRing` clear behavior, and the
+  shared section/card/table accessibility baseline were reopened and landed on
+  this branch. `TASK-278` now keeps only Pricing-local product scope.
 - Shared evidence from this turn:
   `bun run test:vitest -- tests/vitest/ui/pricing-plans-editor-wave.test.tsx
-  tests/vitest/widgets/pricingPlans.test.tsx` passed on 2026-05-17.
+  tests/vitest/widgets/pricingPlans.test.tsx` passed on 2026-05-19 after the
+  final TASK-278 runtime/editor hardening pass.
 
 *Raport generowany na podstawie analizy kodu i testów Playwright — 2026-05-16.*

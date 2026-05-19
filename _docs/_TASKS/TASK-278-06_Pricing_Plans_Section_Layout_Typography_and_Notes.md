@@ -6,7 +6,7 @@
 **Category:** Widgets + Pricing Plans + Admin UI + Runtime Render
 **Estimated Effort:** Large
 **Dependencies:** TASK-256-01, TASK-256-02, TASK-278
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 

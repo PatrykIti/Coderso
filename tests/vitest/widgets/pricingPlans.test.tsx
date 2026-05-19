@@ -31,6 +31,9 @@ test("pricing plans renders defaults", () => {
   expect(html).toContain(pricingPlansDefaults.header?.title ?? "");
   expect(html).toContain('data-pricing-variant="three-plans"');
   expect(html).toContain('data-pricing-count="3"');
+  expect(html).toContain('data-pricing-hidden-count="0"');
+  expect(html).toContain('role="region"');
+  expect(html).toContain('aria-labelledby="pricing-plans-three-plans-title"');
 });
 
 test("pricing plans comparison rows render deterministic table markers", () => {
@@ -77,6 +80,10 @@ test("pricing plans comparison rows render deterministic table markers", () => {
   expect(html).toContain('data-pricing-comparison="true"');
   expect(html).toContain('data-pricing-feature-row="1"');
   expect(html).toContain("Advanced analytics");
+  expect(html).toContain("<caption");
+  expect(html).toContain('scope="col"');
+  expect(html).toContain('scope="row"');
+  expect(html).toContain('aria-label="Upgrade for Growth"');
 });
 
 test("pricing plans normalization keeps deterministic ids and count bounds", () => {
@@ -103,7 +110,10 @@ test("pricing plans normalization keeps deterministic ids and count bounds", () 
   expect(plans[1]?.id).toBe("plan-2");
   expect(plans[0]?.name).toBeTruthy();
   expect(plans[0]?.price).toBeTruthy();
-  expect(plans[0]?.features).toEqual(["Feature A", "Feature B"]);
+  expect(plans[0]?.features).toEqual([
+    { text: "Feature A", status: "included" },
+    { text: "Feature B", status: "included" },
+  ]);
   expect(normalizePricingPlanCount(99)).toBe(6);
   expect(normalizePricingPlanCount(0)).toBe(2);
 
@@ -117,6 +127,172 @@ test("pricing plans normalization keeps deterministic ids and count bounds", () 
   });
   expect(normalized.style?.spacing).toBe("md");
   expect(normalized.style?.featureMarker).toBe("bullet");
+
+  const invalidTokens = normalizePricingPlansData({
+    plans: [{}, {}] as never,
+    style: { spacing: "bogus" as never, radius: "bogus" as never },
+  });
+  expect(invalidTokens.style?.spacing).toBe("md");
+  expect(invalidTokens.style?.radius).toBe("lg");
+});
+
+test("pricing plans preserve hidden authored plans for fixed-count variants", () => {
+  const html = renderToString(
+    <PricingPlansBlock
+      data={{
+        ...pricingPlansDefaults,
+        plans: [
+          ...pricingPlansDefaults.plans,
+          {
+            id: "enterprise",
+            name: "Enterprise",
+            price: "$199",
+            period: "/month",
+            features: ["Dedicated support"],
+            ctaLabel: "Talk to sales",
+            ctaHref: "#",
+          },
+        ],
+      }}
+      variant="three-plans"
+    />
+  );
+
+  expect(html).toContain('data-pricing-count="3"');
+  expect(html).toContain('data-pricing-hidden-count="1"');
+  expect(html).not.toContain("Enterprise");
+});
+
+test("pricing plans render plan hierarchy, structured pricing, and footer notes", () => {
+  const html = renderToString(
+    <PricingPlansBlock
+      data={{
+        ...pricingPlansDefaults,
+        billingToggle: {
+          enabled: true,
+          monthlyLabel: "Monthly",
+          annualLabel: "Yearly",
+          defaultCycle: "annual",
+        },
+        layout: {
+          maxWidth: "wide",
+          typography: "prominent",
+          footerNote: "All prices exclude VAT.",
+        },
+        plans: [
+          {
+            id: "starter",
+            name: "Starter",
+            description: "For small teams getting started",
+            badge: "For individuals",
+            badgeTone: "accent",
+            price: "$19",
+            period: "/month",
+            ctaLabel: "Start now",
+            ctaHref: "/start",
+            ctaStyle: "outline",
+            features: [
+              { text: "Email support", status: "included", icon: "check" },
+              { text: "Priority onboarding", status: "premium", icon: "sparkle" },
+            ],
+          },
+          {
+            id: "growth",
+            name: "Growth",
+            description: "Best for growing teams",
+            badge: "Most popular",
+            highlightLabel: "Popular choice",
+            price: "$49",
+            period: "/month",
+            priceDisplay: {
+              mode: "structured",
+              amount: 49,
+              annualAmount: 490,
+              currency: "USD",
+              annualSavingsLabel: "2 months free",
+            },
+            ctaLabel: "Choose growth",
+            ctaHref: "/growth",
+            ctaStyle: "filled",
+            surface: "#0f172a",
+            highlighted: true,
+            features: [
+              { text: "Advanced analytics", status: "included", icon: "check" },
+              { text: "Dedicated roadmap access", status: "coming-soon", icon: "clock" },
+            ],
+          },
+        ],
+      }}
+      variant="two-plans"
+    />
+  );
+
+  expect(html).toContain('data-pricing-variant="two-plans"');
+  expect(html).toContain('data-pricing-max-width="wide"');
+  expect(html).toContain('data-pricing-typography="prominent"');
+  expect(html).toContain('data-pricing-highlight-label="Popular choice"');
+  expect(html).toContain('data-pricing-plan-cta-style="filled"');
+  expect(html).toContain("For small teams getting started");
+  expect(html).toContain("$490");
+  expect(html).toContain("2 months free");
+  expect(html).toContain("All prices exclude VAT.");
+  expect(html).toContain("Premium");
+});
+
+test("pricing plans comparison rows render sticky header and header CTA hierarchy", () => {
+  const html = renderToString(
+    <PricingPlansBlock
+      data={{
+        ...pricingPlansDefaults,
+        comparison: {
+          stickyHeader: true,
+          showHeaderBadges: true,
+          showHeaderCta: true,
+        },
+        plans: [
+          {
+            id: "starter",
+            name: "Starter",
+            badge: "For individuals",
+            price: "$19",
+            period: "/month",
+            ctaLabel: "Start",
+            ctaHref: "/start",
+            ctaStyle: "ghost",
+            features: [{ text: "Email support", status: "included", icon: "check" }],
+          },
+          {
+            id: "growth",
+            name: "Growth",
+            badge: "Most popular",
+            highlightLabel: "Top pick",
+            price: "$49",
+            period: "/month",
+            ctaLabel: "Upgrade",
+            ctaHref: "/upgrade",
+            highlighted: true,
+            features: [{ text: "Email support", status: "premium", icon: "sparkle" }],
+          },
+          {
+            id: "scale",
+            name: "Scale",
+            price: "$99",
+            period: "/month",
+            ctaLabel: "Contact",
+            ctaHref: "/contact",
+            features: [{ text: "SLA", status: "coming-soon", icon: "clock" }],
+          },
+        ],
+      }}
+      variant="comparison-rows"
+    />
+  );
+
+  expect(html).toContain('data-pricing-comparison-sticky="true"');
+  expect(html).toContain('data-pricing-comparison-highlighted="true"');
+  expect(html).toContain("Top pick");
+  expect(html).toContain('aria-label="Upgrade for Growth"');
+  expect(html).toContain("For individuals");
 });
 
 test("pricing plans validator accepts expanded model", () => {
@@ -132,7 +308,7 @@ test("pricing plans validator accepts expanded model", () => {
     normalizeWidgetBlock({
       id: "pricing-1",
       type: "pricing-plans",
-      variant: "four-plans",
+      variant: "two-plans",
       data: {
         header: {
           title: "Plans",
@@ -144,18 +320,43 @@ test("pricing plans validator accepts expanded model", () => {
           annualLabel: "Yearly",
           defaultCycle: "annual",
         },
+        comparison: {
+          stickyHeader: true,
+          showHeaderBadges: true,
+          showHeaderCta: true,
+        },
+        layout: {
+          maxWidth: "wide",
+          typography: "prominent",
+          footerNote: "Contact us for enterprise pricing.",
+        },
         plans: [
           {
             id: "starter",
             name: "Starter",
+            description: "For small teams",
             price: "$19",
             period: "/month",
             badge: "New",
+            badgeTone: "accent",
+            ctaStyle: "outline",
+            highlightLabel: "Popular choice",
+            surface: "#ffffff",
             prices: {
               monthly: "$19",
               annual: "$190",
             },
-            features: ["Email support", "Basic analytics"],
+            features: [
+              "Email support",
+              { text: "Basic analytics", status: "premium", icon: "sparkle" },
+            ],
+            priceDisplay: {
+              mode: "structured",
+              amount: 19,
+              annualAmount: 190,
+              currency: "USD",
+              annualSavingsLabel: "2 months free",
+            },
             ctaLabel: "Start",
             ctaHref: "/start",
             highlighted: false,
@@ -166,30 +367,10 @@ test("pricing plans validator accepts expanded model", () => {
             price: "$49",
             period: "/month",
             badge: "Most popular",
-            features: ["Priority support", "Advanced analytics"],
+            features: [{ text: "Priority support", status: "coming-soon", icon: "clock" }],
             ctaLabel: "Choose",
             ctaHref: "/choose",
             highlighted: true,
-          },
-          {
-            id: "scale",
-            name: "Scale",
-            price: "$99",
-            period: "/month",
-            features: ["SLA", "Audit logs"],
-            ctaLabel: "Contact",
-            ctaHref: "/contact",
-            highlighted: false,
-          },
-          {
-            id: "enterprise",
-            name: "Enterprise",
-            price: "Custom",
-            period: "",
-            features: ["Dedicated support"],
-            ctaLabel: "Talk to sales",
-            ctaHref: "/sales",
-            highlighted: false,
           },
         ],
         style: {
@@ -198,7 +379,7 @@ test("pricing plans validator accepts expanded model", () => {
           highlightRing: "#1d4ed8",
           spacing: "lg",
           radius: "xl",
-          featureMarker: "check",
+          featureMarker: "status",
         },
       },
     })
@@ -264,9 +445,51 @@ test("pricing plans render annual cycle and feature marker when billing toggle i
 
   expect(html).toContain('data-pricing-billing-toggle="static"');
   expect(html).toContain('data-pricing-cycle="annual"');
+  expect(html).toContain('aria-label="Billing cycle: Yearly pricing shown"');
   expect(html).toContain("Yearly");
   expect(html).toContain("$190");
+  expect(html).toContain("/year");
   expect(html).toContain("✓");
+  expect(html).toContain('role="status"');
+  expect(html).not.toContain("Scale");
+});
+
+test("pricing plans clamp negative structured amounts to zero", () => {
+  const normalized = normalizePricingPlansData({
+    ...pricingPlansDefaults,
+    billingToggle: {
+      enabled: true,
+      monthlyLabel: "Monthly",
+      annualLabel: "Yearly",
+      defaultCycle: "annual",
+    },
+    plans: [
+      {
+        id: "starter",
+        name: "Starter",
+        price: "$19",
+        period: "/month",
+        priceDisplay: {
+          mode: "structured",
+          amount: -19,
+          annualAmount: -190,
+          currency: "usd",
+        },
+      },
+      pricingPlansDefaults.plans[1] ?? {},
+    ],
+  });
+
+  expect(normalized.plans[0]?.priceDisplay).toMatchObject({
+    mode: "structured",
+    amount: 0,
+    annualAmount: 0,
+    currency: "USD",
+  });
+
+  const html = renderToString(<PricingPlansBlock data={normalized} variant="three-plans" />);
+  expect(html).toContain("$0");
+  expect(html).toContain("/year");
 });
 
 test("pricing plans strip unsafe CTA hrefs from normalized plans", () => {
@@ -330,7 +553,7 @@ test("pricing plans wizard renders onboarding fields", () => {
 
   expect(html).toContain("Pricing layout");
   expect(html).toContain("Section title");
-  expect(html).toContain("Plans count");
+  expect(html).toContain("Layout plan count");
   expect(html).toContain("Basic plan setup");
 });
 
@@ -360,8 +583,8 @@ test("pricing plans advanced keeps technical-only scope", () => {
     />
   );
 
-  expect(html).toContain("Display tokens");
-  expect(html).toContain("Normalization and safeguards");
+  expect(html).toContain("Visual-owned tokens");
+  expect(html).toContain("Fix and reset");
   expect(html).toContain("Raw payload snapshot");
   expect(html).not.toContain("Plans, features, and actions");
 });

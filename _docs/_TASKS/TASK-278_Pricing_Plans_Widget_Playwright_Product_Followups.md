@@ -5,8 +5,8 @@
 **Priority:** High
 **Category:** Widgets + Pricing Plans + Admin UI + Runtime Render + Playwright QA
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-252, TASK-256, TASK-256-01, TASK-256-02, TASK-256-04, TASK-256-06-03, TASK-256-08
-**Status:** To Do
+**Dependencies:** TASK-252, TASK-256, TASK-256-01, TASK-256-02, TASK-256-04, TASK-256-06-03, TASK-256-08, TASK-313
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -16,10 +16,16 @@ Create the widget-specific Pricing Plans follow-up family for
 `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md`.
 
 This family owns only product and UX improvements that are local to
-`pricing-plans`. Shared widget-contract repairs stay in TASK-256. Do not use
-TASK-278 to duplicate the shared fixes for atomic editor updates, clear/none
-semantics, static-vs-interactive runtime contracts, baseline accessibility, or
-Advanced-mode ownership.
+`pricing-plans`. Shared widget-contract repairs stay out of TASK-278. Do not
+use this family to duplicate the shared fixes for atomic editor updates,
+clear/none semantics, truthful billing-cycle presentation, baseline
+accessibility, or fixed-count variant preservation.
+
+Current checkout note: the `TASK-278` audit reopened Pricing Plans shared
+residuals under `TASK-313`, and that shared reopen has now landed on this
+branch. References below to historical `TASK-256` shared closure remain useful
+context, but the remaining open work in this family is now Pricing-local product
+scope.
 
 ## Source Report Boundary
 
@@ -45,18 +51,20 @@ Live owners inspected while drafting:
 ## TASK-256 Exclusion Matrix
 
 The following report findings are intentionally excluded from TASK-278 because
-TASK-256 already owns them as shared widget-contract drift.
+they belong to shared widget-contract scope rather than Pricing-local product
+work.
 
 | Report finding | Evidence | Owner task | Reason |
 |---|---|---|---|
-| BUG-02 explicit spacing/radius resolver values | `REPORT_PRICING_PLANS_WIDGET.md:154-165` | TASK-256-06-03 | Shared token resolver truthfulness. |
-| BUG-03 variant changes truncate hidden plans without warning | `REPORT_PRICING_PLANS_WIDGET.md:167-171,331-339` | TASK-256-01, TASK-256-06-03 | Shared atomic variant/update and hidden-data preservation contract. |
-| BUG-04 / UX-02 plan count selector desync | `REPORT_PRICING_PLANS_WIDGET.md:173-177,210-212,319-327` | TASK-256-01, TASK-256-06-03 | Shared truthful editor control contract. |
-| BUG-05 missing `highlightRing` clear | `REPORT_PRICING_PLANS_WIDGET.md:179-183,349-351` | TASK-256-02, TASK-256-06-03 | Shared clear-control semantics. |
-| BUG-08 / BF-01 static billing toggle click behavior | `REPORT_PRICING_PLANS_WIDGET.md:196-200,242-243,304-315,408-419` | TASK-256-04, TASK-256-06-03 | Shared interactive runtime instance contract. |
-| A3/A5/A6/A7/A8/A9 baseline pricing ARIA/table semantics | `REPORT_PRICING_PLANS_WIDGET.md:292-298,425-433` | TASK-256-04, TASK-256-06-03 | Shared runtime accessibility baseline. |
+| BUG-02 explicit spacing/radius resolver values | `REPORT_PRICING_PLANS_WIDGET.md:154-165` | TASK-313 (landed) | Shared token resolver truthfulness was reopened and fixed on this branch. |
+| BUG-03 variant changes truncate hidden plans without warning | `REPORT_PRICING_PLANS_WIDGET.md:167-171,331-339` | TASK-313 (landed) | Shared fixed-count variant preservation was reopened and fixed on this branch. |
+| BUG-04 / UX-02 plan count selector desync | `REPORT_PRICING_PLANS_WIDGET.md:173-177,210-212,319-327` | TASK-313 (landed) | Shared truthful editor-control contract was reopened and fixed on this branch. |
+| BUG-05 missing `highlightRing` clear | `REPORT_PRICING_PLANS_WIDGET.md:179-183,349-351` | TASK-313 (landed) | Shared clear-control completion was reopened and fixed on this branch. |
+| BUG-08 / BF-01 billing toggle click behavior | `REPORT_PRICING_PLANS_WIDGET.md:196-200,242-243,304-315,408-419` | TASK-256-04, TASK-256-06-03 | Shared billing-cycle surface is intentionally truthful-static now; TASK-278 must not reopen interactivity here. |
+| A3/A5/A6/A7/A8/A9 baseline pricing ARIA/table semantics | `REPORT_PRICING_PLANS_WIDGET.md:292-298,425-433` | TASK-313 (landed) | Shared runtime accessibility baseline was reopened and fixed on this branch. |
 
-TASK-278 may depend on the TASK-256 result, but it must not restage these
+TASK-278 may depend on the already-landed shared static billing-cycle baseline
+plus the landed Pricing Plans shared residuals from `TASK-313`, but it must not restage these
 repairs inside its own implementation leaves. If an implementation leaf touches
 the same file, it must build on the TASK-256 contract and keep the diff limited
 to Pricing Plans product fields, copy, and layout behavior.
@@ -78,13 +86,13 @@ to Pricing Plans product fields, copy, and layout behavior.
 | UX-08 billing labels visible while toggle disabled | TASK-278-02 | Local billing editor copy/visibility only; toggle runtime is TASK-256. |
 | Observation: added feature does not focus new field | TASK-278-02 | Pricing Plans editor efficiency. |
 | BUG-01 billing default resolver clarity | TASK-278-03 | Pricing Plans-local billing default expression clarity; runtime toggle behavior stays TASK-256. |
-| BF-04 annual savings badge | TASK-278-03 | Billing value copy after TASK-256 runtime toggle works. |
+| BF-04 annual savings badge | TASK-278-03 | Billing value copy on top of the landed truthful static billing-cycle contract; runtime interaction stays out of scope. |
 | BF-13 currency and price format support | TASK-278-03 | Schema-first price semantics with legacy string compatibility. |
 | BF-14 Free plan / `$0` graceful handling | TASK-278-03 | Price display policy. |
 | UX-03 icon marker renders a hardcoded diamond placeholder | TASK-278-04 | Pricing Plans feature-marker contract. |
 | BF-06 custom feature icons and per-feature status | TASK-278-04 | Feature metadata expansion without raw icon HTML. |
 | BUG-07 comparison header lacks badge/CTA hierarchy | TASK-278-05 | Pricing comparison product table. |
-| BF-11 sticky header in comparison rows | TASK-278-05 | Product behavior after TASK-256 table ARIA baseline. |
+| BF-11 sticky header in comparison rows | TASK-278-05 | Product behavior after the reopened shared table baseline lands. |
 | BF-08 typography controls | TASK-278-06 | Pricing section/card typography presets. |
 | BF-09 footer notes / FAQ notes below table | TASK-278-06 | Pricing-specific footer copy, not a generic slot system. |
 | BF-12 configurable max-width | TASK-278-06 | Pricing section layout width. |
@@ -118,15 +126,17 @@ to Pricing Plans product fields, copy, and layout behavior.
    visual hierarchy and CTA schema fields used by later leaves.
 3. Complete TASK-278-02 before adding more plan fields so destructive-edit and
    Wizard coverage protect the expanded repeated item model.
-4. Complete TASK-278-03 after TASK-256 billing toggle interactivity lands. This
-   leaf only adds value copy and price semantics around the working toggle.
+4. Complete TASK-278-03 after the shared truthful billing-cycle/default-cycle
+   contract landed on 2026-05-19. This leaf only adds value copy and price semantics
+   around the static-cycle display that already exists today.
 5. Complete TASK-278-04 independently from price semantics, but do not add raw
    icon payloads or unbounded class names.
-6. Complete TASK-278-05 after TASK-256 table ARIA work, then add comparison
-   product hierarchy and sticky behavior.
+6. Complete TASK-278-05 on top of the shared table/section/card semantics
+   baseline already restored by `TASK-313`, then add comparison product
+   hierarchy and sticky behavior.
 7. Complete TASK-278-06 after the card and comparison surfaces stabilize.
-8. Complete TASK-278-07 after the plan-preservation and count contracts from
-   TASK-256 are in place.
+8. Complete TASK-278-07 on top of the shared plan-preservation and fixed-count
+   control contract already restored by `TASK-313`.
 9. Complete TASK-278-08 last after code, tests, report evidence, widget docs,
    changelog, and board state are synchronized.
 
