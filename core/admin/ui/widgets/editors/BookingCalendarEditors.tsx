@@ -9,6 +9,7 @@ import {
 } from "../../../../widgets/core/bookingCalendar";
 import type { WidgetEditorProps } from "../../../../widgets/types";
 import { ClearableInputField } from "./ClearableFields";
+import { SharedColorControl } from "./SharedColorControl";
 
 const update = (
   value: BookingCalendarData,
@@ -245,20 +246,26 @@ function SurfaceFields({
 }) {
   return (
     <Section title="Surface" description="Clear removes decorative frame styles.">
-      <ClearableInputField
-        label="Frame background"
-        value={value.style?.frameBackground}
-        onChange={(next) => updateStyle(value, onChange, { frameBackground: next })}
-        onClear={() => clearStyle(value, onChange, "frameBackground")}
-        placeholder="var(--color-bg)"
-      />
-      <ClearableInputField
-        label="Frame border"
-        value={value.style?.frameBorderColor}
-        onChange={(next) => updateStyle(value, onChange, { frameBorderColor: next })}
-        onClear={() => clearStyle(value, onChange, "frameBorderColor")}
-        placeholder="var(--color-border)"
-      />
+      <div className="grid gap-3 sm:grid-cols-2">
+        <SharedColorControl
+          label="Frame background"
+          value={value.style?.frameBackground}
+          onChange={(next) => updateStyle(value, onChange, { frameBackground: next })}
+          onSwatchChange={(next) => updateStyle(value, onChange, { frameBackground: next })}
+          onClear={() => clearStyle(value, onChange, "frameBackground")}
+          placeholder="var(--color-bg)"
+          pickerFallback="#ffffff"
+        />
+        <SharedColorControl
+          label="Frame border"
+          value={value.style?.frameBorderColor}
+          onChange={(next) => updateStyle(value, onChange, { frameBorderColor: next })}
+          onSwatchChange={(next) => updateStyle(value, onChange, { frameBorderColor: next })}
+          onClear={() => clearStyle(value, onChange, "frameBorderColor")}
+          placeholder="var(--color-border)"
+          pickerFallback="#d4d4d8"
+        />
+      </div>
       <ClearableInputField
         label="Selected slot background"
         value={value.style?.selectedSlotBackground}

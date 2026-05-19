@@ -74,6 +74,54 @@ test("booking calendar renders selectors from resolved payload", () => {
   expect(html).toContain('data-slots-token="slots-token"');
 });
 
+test("booking calendar renders accessibility labels and slot-region semantics", () => {
+  const html = renderToString(
+    <BookingCalendarBlock
+      variant="default"
+      data={normalizeBookingCalendarData({
+        ...bookingCalendarDefaults,
+        flowId: "booking-flow",
+        resolved: {
+          slotsToken: "slots-token",
+          services: [
+            {
+              id: "service-1",
+              name: "Oil change",
+              description: null,
+              durationMinutes: 30,
+              bufferBeforeMinutes: 0,
+              bufferAfterMinutes: 0,
+              priceCents: null,
+              currency: null,
+              resourceIds: ["resource-1"],
+            },
+          ],
+          resources: [
+            {
+              id: "resource-1",
+              name: "Bay A",
+              type: "bay",
+              timezone: "UTC",
+              capacity: 1,
+            },
+          ],
+        },
+      })}
+    />
+  );
+
+  expect(html).toContain('role="region"');
+  expect(html).toContain('aria-labelledby="booking-flow-booking-calendar-title"');
+  expect(html).toContain('id="booking-flow-booking-calendar-title"');
+  expect(html).toContain('role="status"');
+  expect(html).toContain('aria-live="polite"');
+  expect(html).toContain('aria-atomic="true"');
+  expect(html).toContain('role="list"');
+  expect(html).toContain('aria-labelledby="booking-flow-booking-calendar-slots-label"');
+  expect(html).toContain('id="booking-flow-booking-calendar-slots-label"');
+  expect(html).toContain("Available time slots");
+});
+
 test("booking calendar normalization clamps runtime interval", () => {
   const normalized = normalizeBookingCalendarData({
     ...bookingCalendarDefaults,

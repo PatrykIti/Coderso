@@ -2,13 +2,7 @@ import { Loader2, Plus, Trash2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import {
@@ -34,11 +28,7 @@ import type {
 } from "@/services/bookingClient";
 
 import { dayLabel, formatDateTime, toTimeInput } from "../bookingHelpers";
-import {
-  DAY_OPTIONS,
-  type BlackoutFormState,
-  type ScheduleDraftState,
-} from "../bookingTypes";
+import { DAY_OPTIONS, type BlackoutFormState, type ScheduleDraftState } from "../bookingTypes";
 
 type BookingAvailabilityTabProps = {
   resources: BookingResourceRecord[];
@@ -47,11 +37,14 @@ type BookingAvailabilityTabProps = {
   onSelectResource: (id: string) => void;
   scheduleRows: BookingScheduleInput[];
   scheduleDraft: ScheduleDraftState;
+  hasUnsavedScheduleDraft: boolean;
+  scheduleDraftGuidance: string | null;
   scheduleLoading: boolean;
   scheduleSaving: boolean;
   onScheduleDraftChange: (patch: Partial<ScheduleDraftState>) => void;
   onAddScheduleRow: () => void;
   onRemoveScheduleRow: (index: number) => void;
+  onResetScheduleDraft: () => void;
   onSaveSchedules: () => void;
   blackoutForm: BlackoutFormState;
   blackouts: BookingBlackoutRecord[];
@@ -69,11 +62,14 @@ export function BookingAvailabilityTab({
   onSelectResource,
   scheduleRows,
   scheduleDraft,
+  hasUnsavedScheduleDraft,
+  scheduleDraftGuidance,
   scheduleLoading,
   scheduleSaving,
   onScheduleDraftChange,
   onAddScheduleRow,
   onRemoveScheduleRow,
+  onResetScheduleDraft,
   onSaveSchedules,
   blackoutForm,
   blackouts,
@@ -107,66 +103,94 @@ export function BookingAvailabilityTab({
             </Select>
           </div>
 
-          <div className="grid gap-3 rounded-md border p-3 md:grid-cols-2 lg:grid-cols-3">
-            <div className="space-y-2">
-              <label className="text-xs font-medium uppercase text-muted-foreground">Day</label>
-              <Select
-                value={scheduleDraft.dayOfWeek}
-                onValueChange={(value) => onScheduleDraftChange({ dayOfWeek: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Day" />
-                </SelectTrigger>
-                <SelectContent>
-                  {DAY_OPTIONS.map((item) => (
-                    <SelectItem key={item.value} value={String(item.value)}>
-                      {item.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <div className="space-y-3 rounded-md border border-dashed p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="space-y-1">
+                <p className="text-sm font-medium">Draft row</p>
+                <p className="text-xs text-muted-foreground">
+                  Add the draft row to schedules before saving changes for this resource.
+                </p>
+              </div>
+              <Badge variant={hasUnsavedScheduleDraft ? "secondary" : "outline"}>
+                {hasUnsavedScheduleDraft ? "Unsaved draft" : "Ready for a new row"}
+              </Badge>
             </div>
-            <div className="space-y-2">
-              <label className="text-xs font-medium uppercase text-muted-foreground">Start</label>
-              <Input
-                type="time"
-                value={scheduleDraft.startTime}
-                onChange={(event) => onScheduleDraftChange({ startTime: event.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-xs font-medium uppercase text-muted-foreground">End</label>
-              <Input
-                type="time"
-                value={scheduleDraft.endTime}
-                onChange={(event) => onScheduleDraftChange({ endTime: event.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-xs font-medium uppercase text-muted-foreground">
-                Timezone
-              </label>
-              <Input
-                value={scheduleDraft.timezone}
-                onChange={(event) => onScheduleDraftChange({ timezone: event.target.value })}
-              />
-            </div>
-            <div className="flex items-end">
-              <label className="flex items-center gap-2 text-sm">
-                <Checkbox
-                  checked={scheduleDraft.isAvailable}
-                  onCheckedChange={(value) => onScheduleDraftChange({ isAvailable: value === true })}
+
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+              <div className="space-y-2">
+                <label className="text-xs font-medium uppercase text-muted-foreground">Day</label>
+                <Select
+                  value={scheduleDraft.dayOfWeek}
+                  onValueChange={(value) => onScheduleDraftChange({ dayOfWeek: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Day" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DAY_OPTIONS.map((item) => (
+                      <SelectItem key={item.value} value={String(item.value)}>
+                        {item.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-medium uppercase text-muted-foreground">Start</label>
+                <Input
+                  type="time"
+                  value={scheduleDraft.startTime}
+                  onChange={(event) => onScheduleDraftChange({ startTime: event.target.value })}
                 />
-                Available
-              </label>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-medium uppercase text-muted-foreground">End</label>
+                <Input
+                  type="time"
+                  value={scheduleDraft.endTime}
+                  onChange={(event) => onScheduleDraftChange({ endTime: event.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-medium uppercase text-muted-foreground">
+                  Timezone
+                </label>
+                <Input
+                  value={scheduleDraft.timezone}
+                  onChange={(event) => onScheduleDraftChange({ timezone: event.target.value })}
+                />
+              </div>
+              <div className="flex items-end">
+                <label className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={scheduleDraft.isAvailable}
+                    onCheckedChange={(value) =>
+                      onScheduleDraftChange({ isAvailable: value === true })
+                    }
+                  />
+                  Available
+                </label>
+              </div>
+              <div className="flex items-end">
+                <Button variant="outline" onClick={onAddScheduleRow} className="w-full">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add row
+                </Button>
+              </div>
             </div>
-            <div className="flex items-end">
-              <Button variant="outline" onClick={onAddScheduleRow} className="w-full">
-                <Plus className="mr-2 h-4 w-4" />
-                Add row
+
+            <div className="flex flex-wrap gap-2">
+              <Button variant="ghost" onClick={onResetScheduleDraft}>
+                Reset draft
               </Button>
             </div>
           </div>
+
+          {scheduleDraftGuidance ? (
+            <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+              {scheduleDraftGuidance}
+            </div>
+          ) : null}
 
           {scheduleLoading ? (
             <div className="rounded-md border p-3 text-sm text-muted-foreground">
@@ -204,7 +228,11 @@ export function BookingAvailabilityTab({
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button size="icon" variant="outline" onClick={() => onRemoveScheduleRow(index)}>
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          onClick={() => onRemoveScheduleRow(index)}
+                        >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </TableCell>
@@ -299,7 +327,7 @@ export function BookingAvailabilityTab({
                     <div className="space-y-1">
                       <p className="text-sm font-medium">
                         {item.resourceId
-                          ? resourcesById.get(item.resourceId)?.name ?? item.resourceId
+                          ? (resourcesById.get(item.resourceId)?.name ?? item.resourceId)
                           : "All resources"}
                       </p>
                       <p className="text-xs text-muted-foreground">

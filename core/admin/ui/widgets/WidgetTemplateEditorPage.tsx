@@ -56,6 +56,7 @@ import { listRegisteredPageWidgets } from "@/ui/widgets/registry";
 import { BlockList } from "@/ui/pages/builder/BlockList";
 import { BlockSettings } from "@/ui/pages/builder/BlockSettings";
 import { MediaPicker } from "@/ui/media/MediaPicker";
+import { collectBookingFlowSummaries } from "@/ui/pages/builder/bookingFlowContext";
 import {
   applyWidgetBlockPatch,
   appendSlotBlock,
@@ -344,12 +345,14 @@ export function WidgetTemplateEditorPage() {
   const selectedBlockPreviewState = selectedBlock
     ? (activeWidgetPreviewStates[selectedBlock.id] ?? null)
     : null;
+  const bookingFlows = useMemo(() => collectBookingFlowSummaries(blocks), [blocks]);
   const widgetTemplateEditorContext = useMemo<WidgetEditorContext | undefined>(() => {
     if (!selectedBlock) return undefined;
     return {
       surface: "page-builder",
       blockId: selectedBlock.id,
       editorMode: selectedBlock.editor?.mode ?? "wizard",
+      bookingFlows,
       previewState: selectedBlockPreviewState,
       setPreviewState:
         selectedBlock.type === "entry-teaser"
@@ -360,7 +363,7 @@ export function WidgetTemplateEditorPage() {
               }))
           : undefined,
     };
-  }, [selectedBlock, selectedBlockPreviewState]);
+  }, [bookingFlows, selectedBlock, selectedBlockPreviewState]);
 
   useEffect(() => {
     if (isNew || !templateId) {

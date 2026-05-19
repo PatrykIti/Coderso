@@ -38,6 +38,7 @@ import {
 } from "@/ui/assistant/activeSurfaceContext";
 import { BlockList } from "@/ui/pages/builder/BlockList";
 import { BlockSettings } from "@/ui/pages/builder/BlockSettings";
+import { collectBookingFlowSummaries } from "@/ui/pages/builder/bookingFlowContext";
 import { LibraryPanel } from "@/ui/pages/builder/LibraryPanel";
 import {
   applyWidgetBlockPatch,
@@ -355,10 +356,12 @@ export function DetailTemplateEditorPage() {
     () => (selectedContentType ? fieldsFromSchema(selectedContentType.schema) : []),
     [selectedContentType]
   );
+  const bookingFlows = useMemo(() => collectBookingFlowSummaries(blocks), [blocks]);
   const detailTemplateWidgetContext = useMemo<WidgetEditorContext | undefined>(() => {
     if (!selectedBlock) return undefined;
     return {
       surface: "page-builder",
+      bookingFlows,
       jumpToBindingPropPath: (propPath: string) => {
         setActiveDetailsTab("data");
         setFocusedBindingPropPath(propPath);
@@ -366,7 +369,7 @@ export function DetailTemplateEditorPage() {
       getBindingState: (propPath: string) =>
         resolveDetailTemplateBindingState(bindings, selectedId, propPath),
     };
-  }, [bindings, selectedBlock, selectedId]);
+  }, [bindings, bookingFlows, selectedBlock, selectedId]);
 
   const layout = document?.settings.layout;
   const wrapperPaddingClass = layout

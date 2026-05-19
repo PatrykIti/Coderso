@@ -108,6 +108,7 @@ export function BookingPage() {
   );
   const [scheduleLoading, setScheduleLoading] = useState(false);
   const [scheduleSaving, setScheduleSaving] = useState(false);
+  const [scheduleDraftGuidance, setScheduleDraftGuidance] = useState<string | null>(null);
 
   const [serviceResourceIds, setServiceResourceIds] = useState<string[]>([]);
   const [requiredServiceResourceIds, setRequiredServiceResourceIds] = useState<string[]>([]);
@@ -141,6 +142,7 @@ export function BookingPage() {
   }, []);
 
   const patchScheduleDraft = useCallback((patch: Partial<ScheduleDraftState>) => {
+    setScheduleDraftGuidance(null);
     setScheduleDraft((current) => ({ ...current, ...patch }));
   }, []);
 
@@ -167,6 +169,17 @@ export function BookingPage() {
     for (const item of services) map.set(item.id, item);
     return map;
   }, [services]);
+
+  const hasUnsavedScheduleDraft = useMemo(() => {
+    const defaultDraft = defaultScheduleDraftState();
+    return (
+      scheduleDraft.dayOfWeek !== defaultDraft.dayOfWeek ||
+      scheduleDraft.startTime !== defaultDraft.startTime ||
+      scheduleDraft.endTime !== defaultDraft.endTime ||
+      scheduleDraft.timezone.trim() !== defaultDraft.timezone ||
+      scheduleDraft.isAvailable !== defaultDraft.isAvailable
+    );
+  }, [scheduleDraft]);
 
   const refreshResources = useCallback(
     async (options?: { force?: boolean; background?: boolean }) => {
@@ -655,6 +668,7 @@ export function BookingPage() {
       };
       setScheduleRows((current) => [...current, next]);
       setScheduleDraft(defaultScheduleDraftState());
+      setScheduleDraftGuidance(null);
       setFeedback(null);
     } catch (error) {
       setFeedback({
@@ -671,7 +685,12 @@ export function BookingPage() {
 
   const handleSaveSchedules = async () => {
     if (!selectedResourceId) return;
+    if (hasUnsavedScheduleDraft) {
+      setScheduleDraftGuidance("Add the draft row or reset it before saving schedules.");
+      return;
+    }
     setScheduleSaving(true);
+    setScheduleDraftGuidance(null);
     setFeedback(null);
     try {
       await setBookingSchedules(selectedResourceId, scheduleRows);
@@ -690,6 +709,11 @@ export function BookingPage() {
     } finally {
       setScheduleSaving(false);
     }
+  };
+
+  const handleResetScheduleDraft = () => {
+    setScheduleDraft(defaultScheduleDraftState());
+    setScheduleDraftGuidance(null);
   };
 
   const handleCreateBlackout = async () => {
@@ -940,11 +964,14 @@ export function BookingPage() {
               onSelectResource={setSelectedResourceId}
               scheduleRows={scheduleRows}
               scheduleDraft={scheduleDraft}
+              hasUnsavedScheduleDraft={hasUnsavedScheduleDraft}
+              scheduleDraftGuidance={scheduleDraftGuidance}
               scheduleLoading={scheduleLoading}
               scheduleSaving={scheduleSaving}
               onScheduleDraftChange={patchScheduleDraft}
               onAddScheduleRow={handleAddScheduleRow}
               onRemoveScheduleRow={handleRemoveScheduleRow}
+              onResetScheduleDraft={handleResetScheduleDraft}
               onSaveSchedules={handleSaveSchedules}
               blackoutForm={blackoutForm}
               blackouts={blackouts}

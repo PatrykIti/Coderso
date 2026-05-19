@@ -32,11 +32,7 @@ vi.mock("@/components/ui/card", () => ({
 
 vi.mock("@/components/ui/checkbox", () => ({
   Checkbox: ({ checked, defaultChecked }: { checked?: boolean; defaultChecked?: boolean }) => (
-    <input
-      type="checkbox"
-      checked={checked ?? defaultChecked}
-      readOnly
-    />
+    <input type="checkbox" checked={checked ?? defaultChecked} readOnly />
   ),
 }));
 
@@ -55,13 +51,9 @@ vi.mock("@/components/ui/input", () => ({
 vi.mock("@/components/ui/select", () => ({
   Select: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   SelectContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  SelectItem: ({
-    children,
-    value,
-  }: {
-    children: React.ReactNode;
-    value: string;
-  }) => <div data-value={value}>{children}</div>,
+  SelectItem: ({ children, value }: { children: React.ReactNode; value: string }) => (
+    <div data-value={value}>{children}</div>
+  ),
   SelectTrigger: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   SelectValue: ({ placeholder }: { placeholder?: string }) => <span>{placeholder}</span>,
 }));
@@ -69,13 +61,9 @@ vi.mock("@/components/ui/select", () => ({
 vi.mock("@/components/ui/table", () => ({
   Table: ({ children }: { children: React.ReactNode }) => <table>{children}</table>,
   TableBody: ({ children }: { children: React.ReactNode }) => <tbody>{children}</tbody>,
-  TableCell: ({
-    children,
-    colSpan,
-  }: {
-    children: React.ReactNode;
-    colSpan?: number;
-  }) => <td colSpan={colSpan}>{children}</td>,
+  TableCell: ({ children, colSpan }: { children: React.ReactNode; colSpan?: number }) => (
+    <td colSpan={colSpan}>{children}</td>
+  ),
   TableHead: ({ children }: { children: React.ReactNode }) => <th>{children}</th>,
   TableHeader: ({ children }: { children: React.ReactNode }) => <thead>{children}</thead>,
   TableRow: ({ children }: { children: React.ReactNode }) => <tr>{children}</tr>,
@@ -134,11 +122,14 @@ test("BookingAvailabilityTab renders loading, schedules, and blackout states", (
         timezone: "Europe/Warsaw",
         isAvailable: true,
       }}
+      hasUnsavedScheduleDraft={false}
+      scheduleDraftGuidance={null}
       scheduleLoading
       scheduleSaving={false}
       onScheduleDraftChange={() => undefined}
       onAddScheduleRow={() => undefined}
       onRemoveScheduleRow={() => undefined}
+      onResetScheduleDraft={() => undefined}
       onSaveSchedules={() => undefined}
       blackoutForm={{
         resourceId: "all",
@@ -177,11 +168,14 @@ test("BookingAvailabilityTab renders loading, schedules, and blackout states", (
         timezone: "Europe/Warsaw",
         isAvailable: true,
       }}
+      hasUnsavedScheduleDraft
+      scheduleDraftGuidance="Add the draft row or reset it before saving schedules."
       scheduleLoading={false}
       scheduleSaving
       onScheduleDraftChange={() => undefined}
       onAddScheduleRow={() => undefined}
       onRemoveScheduleRow={() => undefined}
+      onResetScheduleDraft={() => undefined}
       onSaveSchedules={() => undefined}
       blackoutForm={{
         resourceId: resource.id,
@@ -210,6 +204,10 @@ test("BookingAvailabilityTab renders loading, schedules, and blackout states", (
   expect(loadingHtml).toContain("Loading schedules...");
   expect(loadingHtml).toContain("Loading blackouts...");
   expect(filledHtml).toContain("Schedules");
+  expect(filledHtml).toContain("Draft row");
+  expect(filledHtml).toContain("Unsaved draft");
+  expect(filledHtml).toContain("Reset draft");
+  expect(filledHtml).toContain("Add the draft row or reset it before saving schedules.");
   expect(filledHtml).toContain("Save schedules");
   expect(filledHtml).toContain("available");
   expect(filledHtml).toContain("Blackout windows");
@@ -232,11 +230,14 @@ test("BookingAvailabilityTab renders empty states, disabled save, and blackout r
         timezone: "Europe/Warsaw",
         isAvailable: false,
       }}
+      hasUnsavedScheduleDraft={false}
+      scheduleDraftGuidance={null}
       scheduleLoading={false}
       scheduleSaving={false}
       onScheduleDraftChange={() => undefined}
       onAddScheduleRow={() => undefined}
       onRemoveScheduleRow={() => undefined}
+      onResetScheduleDraft={() => undefined}
       onSaveSchedules={() => undefined}
       blackoutForm={{
         resourceId: "all",
@@ -267,11 +268,14 @@ test("BookingAvailabilityTab renders empty states, disabled save, and blackout r
         timezone: "UTC",
         isAvailable: true,
       }}
+      hasUnsavedScheduleDraft={false}
+      scheduleDraftGuidance={null}
       scheduleLoading={false}
       scheduleSaving={false}
       onScheduleDraftChange={() => undefined}
       onAddScheduleRow={() => undefined}
       onRemoveScheduleRow={() => undefined}
+      onResetScheduleDraft={() => undefined}
       onSaveSchedules={() => undefined}
       blackoutForm={{
         resourceId: "all",
@@ -306,6 +310,7 @@ test("BookingAvailabilityTab renders empty states, disabled save, and blackout r
   );
 
   expect(emptyHtml).toContain("No schedule rows.");
+  expect(emptyHtml).toContain("Ready for a new row");
   expect(emptyHtml).toContain("No blackout windows yet.");
   expect(emptyHtml).toContain("disabled");
   expect(fallbackHtml).toContain("All resources");

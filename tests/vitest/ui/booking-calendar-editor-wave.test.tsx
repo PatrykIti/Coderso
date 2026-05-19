@@ -114,6 +114,13 @@ const findCheckboxByLabel = (container: ParentNode, text: string) =>
     .find((label) => normalizeText(label.textContent).startsWith(normalizeText(text)))
     ?.querySelector('input[type="checkbox"]');
 
+const findInputByAriaLabel = (container: ParentNode, text: string) =>
+  Array.from(container.querySelectorAll("input")).find(
+    (input) =>
+      input instanceof HTMLInputElement &&
+      normalizeText(input.getAttribute("aria-label")) === normalizeText(text)
+  );
+
 type EditorKind = "wizard" | "visual" | "advanced";
 
 const renderEditor = async ({
@@ -532,6 +539,49 @@ test("BookingCalendar visual editor updates context and date-picker controls", a
       summaryLocale: "pl-PL",
       emptyStateMessage: "Contact us for manual booking.",
     });
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("BookingCalendar surface color controls preserve token text and clear only the targeted frame field", async () => {
+  const view = await renderEditor({
+    editor: "visual",
+    initialValue: {
+      style: {
+        frameBackground: "var(--color-bg)",
+        frameBorderColor: "#112233",
+        selectedSlotBackground: "var(--color-primary)",
+      },
+    },
+  });
+
+  try {
+    const backgroundSwatch = findInputByAriaLabel(view.container, "Frame background swatch");
+    const backgroundText = findInputByAriaLabel(view.container, "Frame background value");
+    const borderSwatch = findInputByAriaLabel(view.container, "Frame border swatch");
+
+    expect((backgroundSwatch as HTMLInputElement | null)?.value).toBe("#ffffff");
+    expect((backgroundText as HTMLInputElement | null)?.value).toBe("var(--color-bg)");
+    expect((borderSwatch as HTMLInputElement | null)?.value).toBe("#112233");
+
+    setInputValue(borderSwatch, "#445566");
+    expect(view.getLatestValue().style).toMatchObject({
+      frameBackground: "var(--color-bg)",
+      frameBorderColor: "#445566",
+      selectedSlotBackground: "var(--color-primary)",
+    });
+
+    const clearButton = backgroundSwatch?.closest(".space-y-2")?.querySelector("button");
+    React.act(() => {
+      clearButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(view.getLatestValue().style).toMatchObject({
+      frameBorderColor: "#445566",
+      selectedSlotBackground: "var(--color-primary)",
+    });
+    expect(view.getLatestValue().style?.frameBackground).toBeUndefined();
   } finally {
     view.cleanup();
   }

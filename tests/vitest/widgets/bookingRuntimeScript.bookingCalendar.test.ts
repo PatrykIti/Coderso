@@ -30,9 +30,17 @@ const mountCalendar = () => {
       </select>
       <input data-booking-date type="date" />
       <button type="button" data-booking-refresh>Refresh</button>
-      <p data-booking-slots-status data-loading="Loading slots..."></p>
+      <p
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        data-booking-slots-status
+        data-loading="Loading slots..."
+      ></p>
       <p data-booking-selected-summary data-empty="No slot selected yet."></p>
       <div
+        role="list"
+        aria-label="Available time slots"
         data-booking-slots
         data-empty="No available slots for selected date."
         data-missing="Choose service, resource, and date first."
@@ -70,6 +78,10 @@ test("booking runtime clamps default and changed dates to the configured policy"
   expect((dateInput as HTMLInputElement).min).toBe("2030-01-10");
   expect((dateInput as HTMLInputElement).max).toBe("2030-01-20");
   expect((dateInput as HTMLInputElement).value).toBe("2030-01-10");
+  expect(document.querySelector("[data-booking-slots]")?.getAttribute("aria-busy")).toBe("false");
+  expect(document.querySelector("[data-booking-slots-status]")?.textContent).toBe(
+    "No available slots for selected date."
+  );
 
   const firstCall = fetchMock.mock.calls[0] as unknown as
     | [RequestInfo | URL, RequestInit?]
@@ -135,10 +147,18 @@ test("booking runtime uses slot interval mode, renders week picker, and clears s
       </div>
       <div data-booking-service-context></div>
       <p data-booking-resource-timezone></p>
-      <p data-booking-slots-status data-loading="Loading slots..."></p>
+      <p
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        data-booking-slots-status
+        data-loading="Loading slots..."
+      ></p>
       <div data-booking-loading-skeleton hidden></div>
       <p data-booking-selected-summary data-empty="No slot selected yet."></p>
       <div
+        role="list"
+        aria-label="Available time slots"
         data-booking-slots
         data-empty="No available slots for selected date."
         data-missing="Choose service, resource, and date first."
@@ -181,14 +201,22 @@ test("booking runtime uses slot interval mode, renders week picker, and clears s
   expect(document.querySelector("[data-booking-resource-timezone]")?.textContent).toContain(
     "Europe/Warsaw"
   );
+  expect(document.querySelector("[data-booking-slots-status]")?.textContent).toBe(
+    "1 available time slot."
+  );
 
   const slotButton = document.querySelector("[data-booking-slots] button");
   expect(slotButton).toBeInstanceOf(HTMLButtonElement);
+  expect(document.querySelector("[data-booking-slots] [role='listitem']")).toBeTruthy();
+  expect(slotButton?.getAttribute("aria-pressed")).toBe("false");
   React.act(() => {
     slotButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 
   expect(slotSelected).toHaveBeenCalled();
+  expect(document.querySelector("[data-booking-slots] button")?.getAttribute("aria-pressed")).toBe(
+    "true"
+  );
   React.act(() => {
     document
       .querySelector("[data-booking-clear-selection]")
@@ -196,4 +224,7 @@ test("booking runtime uses slot interval mode, renders week picker, and clears s
   });
 
   expect(slotSelected.mock.calls.at(-1)?.[0]?.detail?.selection).toBeNull();
+  expect(document.querySelector("[data-booking-slots] button")?.getAttribute("aria-pressed")).toBe(
+    "false"
+  );
 });

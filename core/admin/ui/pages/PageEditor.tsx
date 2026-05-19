@@ -47,6 +47,7 @@ import { BlockSettings } from "./builder/BlockSettings";
 import { LibraryPanel } from "./builder/LibraryPanel";
 import { PageRevisionDrawer } from "./PageRevisionDrawer";
 import { PageSettingsDrawer, type PageSettingsValue } from "./PageSettingsDrawer";
+import { collectBookingFlowSummaries } from "./builder/bookingFlowContext";
 import {
   applyWidgetBlockPatch,
   applyWizardSelection,
@@ -451,6 +452,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
         : blocks,
     [blocks, bookingCalendarPreviewResolved, hasBookingCalendar]
   );
+  const bookingFlows = useMemo(() => collectBookingFlowSummaries(blocks), [blocks]);
   const pageEditorWidgetContext = useMemo<WidgetEditorContext | undefined>(() => {
     if (!selectedBlock) return undefined;
 
@@ -458,6 +460,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       surface: "page-builder",
       blockId: selectedBlock.id,
       editorMode: selectedBlock.editor?.mode ?? "wizard",
+      bookingFlows,
       previewState:
         selectedBlock.type === "entry-teaser"
           ? (widgetPreviewStates[selectedBlock.id] ?? null)
@@ -478,7 +481,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
           }
         : {}),
     };
-  }, [bookingCalendarPreviewResolved, selectedBlock, widgetPreviewStates]);
+  }, [bookingCalendarPreviewResolved, bookingFlows, selectedBlock, widgetPreviewStates]);
   const activeWidgetPreviewStates = useMemo(() => {
     if (!selectedBlock || selectedBlock.type !== "entry-teaser") {
       return {} as Record<string, WidgetPreviewState | undefined>;

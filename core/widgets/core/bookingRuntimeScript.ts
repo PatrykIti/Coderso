@@ -110,6 +110,12 @@ const runtimeClientScript = String.raw`(() => {
 
   const buildWeekDates = (anchorDate) =>
     Array.from({ length: 7 }, (_, index) => addDays(anchorDate, index));
+
+  const setStatusMessage = (statusNode, message) => {
+    if (!(statusNode instanceof HTMLElement)) return;
+    statusNode.textContent = message;
+  };
+
   const syncResourceOptions = (serviceSelect, resourceSelect) => {
     if (!(serviceSelect instanceof HTMLSelectElement)) return;
     if (!(resourceSelect instanceof HTMLSelectElement)) return;
@@ -206,6 +212,8 @@ const runtimeClientScript = String.raw`(() => {
     if (!(resourceSelect instanceof HTMLSelectElement)) return;
     if (!(dateInput instanceof HTMLInputElement)) return;
     if (!(slotsNode instanceof HTMLElement)) return;
+
+    slotsNode.setAttribute("role", "list");
 
     const today = todayDateInputValue();
     const datePolicy = readDatePolicy(root);
@@ -353,6 +361,7 @@ const runtimeClientScript = String.raw`(() => {
     };
 
     const setBusy = (busy) => {
+      slotsNode.setAttribute("aria-busy", busy ? "true" : "false");
       if (refreshButton instanceof HTMLButtonElement) {
         refreshButton.disabled = busy;
       }
@@ -395,6 +404,8 @@ const runtimeClientScript = String.raw`(() => {
       const selection = getSelection(flowId);
 
       currentItems.forEach((slot) => {
+        const item = document.createElement("div");
+        item.setAttribute("role", "listitem");
         const button = document.createElement("button");
         button.type = "button";
         button.className =
@@ -415,6 +426,7 @@ const runtimeClientScript = String.raw`(() => {
           selection.startsAt === slot.startsAt &&
           selection.endsAt === slot.endsAt &&
           selection.resourceId === resourceSelect.value;
+        button.setAttribute("aria-pressed", isSelected ? "true" : "false");
         applyButtonVisualState(button, isSelected);
 
         button.addEventListener("click", () => {
@@ -434,7 +446,8 @@ const runtimeClientScript = String.raw`(() => {
           renderSlots(currentItems);
         });
 
-        slotsNode.appendChild(button);
+        item.appendChild(button);
+        slotsNode.appendChild(item);
       });
     };
 
@@ -546,16 +559,14 @@ const runtimeClientScript = String.raw`(() => {
 
       renderServiceContext();
 
-      if (statusNode instanceof HTMLElement) {
-        statusNode.textContent = statusNode.dataset.loading || "Loading slots...";
-      }
+      setStatusMessage(statusNode, statusNode?.dataset.loading || "Loading slots...");
 
       if (!serviceId || !resourceId || !date) {
         slotsNode.innerHTML =
           "<p class=\"text-xs text-[var(--color-text)]/65\">" +
           (slotsNode.dataset.missing || "Choose service, resource, and date first.") +
           "</p>";
-        if (statusNode instanceof HTMLElement) statusNode.textContent = "";
+        setStatusMessage(statusNode, slotsNode.dataset.missing || "Choose service, resource, and date first.");
         renderSelectedSummary(null);
         return;
       }
@@ -596,9 +607,14 @@ const runtimeClientScript = String.raw`(() => {
         }
         renderSelectedSummary(nextSelection);
         renderSlots(items);
-        if (statusNode instanceof HTMLElement) {
-          statusNode.textContent = "";
-        }
+        setStatusMessage(
+          statusNode,
+          items.length > 0
+            ? items.length === 1
+              ? "1 available time slot."
+              : String(items.length) + " available time slots."
+            : slotsNode.dataset.empty || "No available slots for selected date."
+        );
         void refreshAvailability();
       } catch (error) {
         if (error?.name === "AbortError") return;
@@ -606,7 +622,7 @@ const runtimeClientScript = String.raw`(() => {
           "<p class=\"text-xs text-rose-600\">" +
           (slotsNode.dataset.error || "Unable to load slots right now.") +
           "</p>";
-        if (statusNode instanceof HTMLElement) statusNode.textContent = "";
+        setStatusMessage(statusNode, slotsNode.dataset.error || "Unable to load slots right now.");
       } finally {
         if (slotRequests.get(root) === controller) {
           slotRequests.delete(root);

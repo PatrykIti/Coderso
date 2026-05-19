@@ -54,6 +54,7 @@ import { resolveCustomScreenId } from "./routeParams";
 import { buildCustomScreenAssistantSurface } from "./assistantSurface";
 import { BlockList } from "@/ui/pages/builder/BlockList";
 import { BlockSettings } from "@/ui/pages/builder/BlockSettings";
+import { collectBookingFlowSummaries } from "@/ui/pages/builder/bookingFlowContext";
 import {
   applyWidgetBlockPatch,
   appendSlotBlock,
@@ -274,17 +275,19 @@ export function CustomScreenEditorPage() {
     () => definition.listView.columns.find((column) => column.id === selectedListColumnId) ?? null,
     [definition.listView.columns, selectedListColumnId]
   );
+  const bookingFlows = useMemo(() => collectBookingFlowSummaries(blocks), [blocks]);
   const adminEditorWidgetContext = useMemo<WidgetEditorContext | undefined>(() => {
     if (activeBuilderTab !== "editor-view" || !selectedBlock) return undefined;
     return {
       surface: "admin-editor-view",
+      bookingFlows,
       jumpToBindingPropPath: (propPath: string) => {
         setActiveEditorDetailsTab("data");
         setFocusedBindingPropPath(propPath);
       },
       getBindingState: (propPath: string) => resolveBindingState(bindings, selectedId, propPath),
     };
-  }, [activeBuilderTab, bindings, selectedBlock, selectedId]);
+  }, [activeBuilderTab, bindings, bookingFlows, selectedBlock, selectedId]);
   const availableListFieldOptions = useMemo(() => {
     if (!selectedContentType) return [];
     const selectedKeys = new Set(

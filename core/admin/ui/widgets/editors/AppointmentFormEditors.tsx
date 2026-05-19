@@ -8,7 +8,7 @@ import {
   normalizeAppointmentFormData,
   type AppointmentFormData,
 } from "../../../../widgets/core/appointmentForm";
-import type { WidgetEditorProps } from "../../../../widgets/types";
+import type { WidgetEditorBookingFlowSummary, WidgetEditorProps } from "../../../../widgets/types";
 import { ClearableInputField } from "./ClearableFields";
 
 const update = (
@@ -229,13 +229,63 @@ function SurfaceFields({
   );
 }
 
+function FlowPairingNotice({
+  flowId,
+  calendars,
+}: {
+  flowId: string;
+  calendars: WidgetEditorBookingFlowSummary[];
+}) {
+  if (calendars.length === 0) {
+    return (
+      <div
+        className="rounded-md border border-dashed border-border/70 bg-muted/30 px-3 py-2 text-xs text-muted-foreground"
+        data-appointment-flow-feedback="missing"
+      >
+        No Booking Calendar on this surface uses a shared flow yet. Add one here or reuse this form
+        on a surface that already contains a matching calendar.
+      </div>
+    );
+  }
+
+  const matches = calendars.filter((calendar) => calendar.flowId === flowId);
+  if (matches.length > 0) {
+    const labels = matches.map((calendar) => calendar.label).join(", ");
+    return (
+      <div
+        className="rounded-md border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-700"
+        data-appointment-flow-feedback="matched"
+      >
+        {matches.length === 1
+          ? `Matched Booking Calendar on this surface: ${labels}.`
+          : `Matched ${matches.length} Booking Calendars on this surface: ${labels}.`}
+      </div>
+    );
+  }
+
+  const availableFlowIds = Array.from(new Set(calendars.map((calendar) => calendar.flowId))).join(
+    ", "
+  );
+  return (
+    <div
+      className="rounded-md border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-700"
+      data-appointment-flow-feedback="mismatch"
+    >
+      This flow key does not match a Booking Calendar on this surface. Available flow keys:{" "}
+      {availableFlowIds}.
+    </div>
+  );
+}
+
 export function AppointmentFormWizardEditor({
   value,
   onChange,
   variant,
   onVariantChange,
+  context,
 }: WidgetEditorProps<AppointmentFormData>) {
   const normalized = normalizeAppointmentFormData(value);
+  const calendars = context?.bookingFlows?.calendars ?? [];
 
   return (
     <div className="space-y-4">
@@ -261,6 +311,7 @@ export function AppointmentFormWizardEditor({
           onChange={(next) => update(normalized, onChange, { flowId: next })}
           placeholder="booking-flow"
         />
+        <FlowPairingNotice flowId={normalized.flowId ?? "booking-flow"} calendars={calendars} />
         <TextField
           label="Locale override"
           value={normalized.locale}

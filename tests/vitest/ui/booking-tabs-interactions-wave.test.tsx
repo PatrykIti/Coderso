@@ -251,6 +251,7 @@ test("BookingAvailabilityTab routes draft, schedule, and blackout callbacks", ()
   const onScheduleDraftChange = vi.fn();
   const onAddScheduleRow = vi.fn();
   const onRemoveScheduleRow = vi.fn();
+  const onResetScheduleDraft = vi.fn();
   const onSaveSchedules = vi.fn();
   const onBlackoutFormChange = vi.fn();
   const onCreateBlackout = vi.fn();
@@ -278,11 +279,14 @@ test("BookingAvailabilityTab routes draft, schedule, and blackout callbacks", ()
         timezone: "Europe/Warsaw",
         isAvailable: true,
       }}
+      hasUnsavedScheduleDraft
+      scheduleDraftGuidance="Add the draft row or reset it before saving schedules."
       scheduleLoading={false}
       scheduleSaving={false}
       onScheduleDraftChange={onScheduleDraftChange}
       onAddScheduleRow={onAddScheduleRow}
       onRemoveScheduleRow={onRemoveScheduleRow}
+      onResetScheduleDraft={onResetScheduleDraft}
       onSaveSchedules={onSaveSchedules}
       blackoutForm={{
         resourceId: "all",
@@ -329,6 +333,7 @@ test("BookingAvailabilityTab routes draft, schedule, and blackout callbacks", ()
       checkbox.click();
     });
     clickByText(view.container, "Add row");
+    clickByText(view.container, "Reset draft");
     if (!(iconButtons[0] instanceof HTMLButtonElement)) {
       throw new Error("Missing schedule delete button");
     }
@@ -356,6 +361,7 @@ test("BookingAvailabilityTab routes draft, schedule, and blackout callbacks", ()
     expect(onScheduleDraftChange).toHaveBeenCalledWith({ timezone: "UTC" });
     expect(onScheduleDraftChange).toHaveBeenCalledWith({ isAvailable: false });
     expect(onAddScheduleRow).toHaveBeenCalled();
+    expect(onResetScheduleDraft).toHaveBeenCalled();
     expect(onRemoveScheduleRow).toHaveBeenCalledWith(0);
     expect(onSaveSchedules).toHaveBeenCalled();
     expect(onBlackoutFormChange).toHaveBeenCalledWith({ resourceId: resource.id });

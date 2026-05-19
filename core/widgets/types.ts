@@ -67,6 +67,16 @@ export type WidgetEditorSlotTarget = {
   instanceId?: string;
 };
 
+export type WidgetEditorBookingFlowSummary = {
+  blockId: string;
+  flowId: string;
+  label: string;
+};
+
+export type WidgetEditorBookingFlows = {
+  calendars: WidgetEditorBookingFlowSummary[];
+};
+
 export type WidgetBlockPatch = Partial<WidgetBlock> | ((current: WidgetBlock) => WidgetBlock);
 
 export type WidgetBlockPatcher = (patch: WidgetBlockPatch) => void;
@@ -89,6 +99,7 @@ export type WidgetEditorContext = {
   jumpToBindingPropPath?: (propPath: string) => void;
   getBindingState?: (propPath: string) => "literal" | "bound" | "mixed";
   slotTargets?: WidgetEditorSlotTarget[];
+  bookingFlows?: WidgetEditorBookingFlows;
   widgetPreviewData?: Record<string, unknown>;
 };
 

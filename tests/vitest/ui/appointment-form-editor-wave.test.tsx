@@ -5,6 +5,7 @@ import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
 import type { AppointmentFormData } from "../../../core/widgets/core/appointmentForm";
+import type { WidgetEditorContext } from "../../../core/widgets/types";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -315,6 +316,57 @@ test("AppointmentForm editors cover normalized defaults, field toggles, copy upd
       "Server-injected booking nonce. Read-only in the editor."
     );
     expect(view.container.textContent).toContain("No runtime warning");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AppointmentForm wizard shows same-surface booking flow pairing feedback", async () => {
+  const { AppointmentFormWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/AppointmentFormEditors");
+
+  let latestValue: AppointmentFormData = {
+    flowId: "booking-flow",
+  };
+  const onChangeSpy = vi.fn();
+  const context: WidgetEditorContext = {
+    surface: "page-builder",
+    bookingFlows: {
+      calendars: [
+        { blockId: "calendar-1", flowId: "booking-flow", label: "Primary calendar" },
+        { blockId: "calendar-2", flowId: "concierge-flow", label: "Concierge calendar" },
+      ],
+    },
+  };
+
+  const Harness = () => {
+    const [value, setValue] = useState<AppointmentFormData>(latestValue);
+    return (
+      <AppointmentFormWizardEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          onChangeSpy(next);
+          setValue(next);
+        }}
+        variant="default"
+        onVariantChange={() => undefined}
+        context={context}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    expect(
+      view.container.querySelector('[data-appointment-flow-feedback="matched"]')?.textContent
+    ).toContain("Primary calendar");
+
+    setInputValue(findLabelInput(view.container, "Flow key"), "missing-flow");
+    expect(
+      view.container.querySelector('[data-appointment-flow-feedback="mismatch"]')?.textContent
+    ).toContain("booking-flow, concierge-flow");
   } finally {
     view.cleanup();
   }

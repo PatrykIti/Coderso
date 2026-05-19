@@ -615,6 +615,8 @@ vi.mock("../../../core/admin/ui/booking/components/ServicesTab", () => ({
 vi.mock("../../../core/admin/ui/booking/components/AvailabilityTab", () => ({
   BookingAvailabilityTab: ({
     scheduleRows,
+    hasUnsavedScheduleDraft,
+    scheduleDraftGuidance,
     scheduleLoading,
     scheduleSaving,
     blackouts,
@@ -622,12 +624,15 @@ vi.mock("../../../core/admin/ui/booking/components/AvailabilityTab", () => ({
     onScheduleDraftChange,
     onAddScheduleRow,
     onRemoveScheduleRow,
+    onResetScheduleDraft,
     onSaveSchedules,
     onBlackoutFormChange,
     onCreateBlackout,
     onDeleteBlackout,
   }: {
     scheduleRows: unknown[];
+    hasUnsavedScheduleDraft: boolean;
+    scheduleDraftGuidance: string | null;
     scheduleLoading: boolean;
     scheduleSaving: boolean;
     blackouts: Array<{ id: string }>;
@@ -635,6 +640,7 @@ vi.mock("../../../core/admin/ui/booking/components/AvailabilityTab", () => ({
     onScheduleDraftChange: (patch: Record<string, unknown>) => void;
     onAddScheduleRow: () => void;
     onRemoveScheduleRow: (index: number) => void;
+    onResetScheduleDraft: () => void;
     onSaveSchedules: () => void;
     onBlackoutFormChange: (patch: Record<string, unknown>) => void;
     onCreateBlackout: () => void;
@@ -642,6 +648,8 @@ vi.mock("../../../core/admin/ui/booking/components/AvailabilityTab", () => ({
   }) => (
     <div>
       <span>{`schedules:${scheduleRows.length}`}</span>
+      <span>{`schedule-draft-unsaved:${String(hasUnsavedScheduleDraft)}`}</span>
+      <span>{`schedule-draft-guidance:${scheduleDraftGuidance ?? "none"}`}</span>
       <span>{`schedule-loading:${String(scheduleLoading)}`}</span>
       <span>{`schedule-saving:${String(scheduleSaving)}`}</span>
       <span>{`blackouts:${blackouts.length}`}</span>
@@ -679,6 +687,9 @@ vi.mock("../../../core/admin/ui/booking/components/AvailabilityTab", () => ({
       </button>
       <button type="button" onClick={() => onRemoveScheduleRow(0)}>
         remove-schedule
+      </button>
+      <button type="button" onClick={onResetScheduleDraft}>
+        reset-schedule-draft
       </button>
       <button type="button" onClick={onSaveSchedules}>
         save-schedules
@@ -1124,6 +1135,41 @@ test("BookingPage reports validation errors for invalid schedule, blackout, rese
     clickByText(view.container, "preview-slots");
     await flush();
     expect(view.container.textContent).toContain("Slot preview failed");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("BookingPage blocks schedule save when a draft row is still unsaved and allows reset before saving", async () => {
+  window.history.replaceState({}, "", "/admin/advanced/booking");
+  const { BookingPage } = await import("../../../core/admin/ui/booking/BookingPage");
+  const view = mount(<BookingPage />);
+
+  try {
+    await flush();
+
+    clickByText(view.container, "fill-schedule");
+    await flush();
+    expect(view.container.textContent).toContain("schedule-draft-unsaved:true");
+
+    clickByText(view.container, "save-schedules");
+    await flush();
+    expect(bookingPageState.saveScheduleCalls).toHaveLength(0);
+    expect(view.container.textContent).toContain(
+      "schedule-draft-guidance:Add the draft row or reset it before saving schedules."
+    );
+
+    clickByText(view.container, "reset-schedule-draft");
+    clickByText(view.container, "remove-schedule");
+    await flush();
+    expect(view.container.textContent).toContain("schedule-draft-unsaved:false");
+
+    clickByText(view.container, "save-schedules");
+    await flush();
+    expect(bookingPageState.saveScheduleCalls[0]).toEqual({
+      id: "resource-1",
+      payload: [],
+    });
   } finally {
     view.cleanup();
   }

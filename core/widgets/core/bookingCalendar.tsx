@@ -568,9 +568,14 @@ export function BookingCalendarBlock({
       ? "grid grid-cols-2 gap-2 sm:grid-cols-3"
       : "grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4";
   const rootClass = `${variantClassMap[variantId]} ${legacyFrameClass}`.trim();
+  const flowIdSlug = (normalized.flowId ?? "booking-flow").replace(/[^a-zA-Z0-9_-]+/g, "-");
+  const titleId = `${flowIdSlug}-booking-calendar-title`;
+  const slotsRegionLabelId = `${flowIdSlug}-booking-calendar-slots-label`;
 
   return (
     <section
+      role="region"
+      aria-labelledby={titleId}
       className={rootClass}
       style={frameStyle}
       data-nextless-booking-calendar="1"
@@ -593,7 +598,9 @@ export function BookingCalendarBlock({
     >
       <div className={variantId === "horizontal" ? "space-y-4" : "space-y-4"}>
         <div className="space-y-1">
-          <h3 className="text-lg font-semibold text-[var(--color-text)]">{normalized.title}</h3>
+          <h3 id={titleId} className="text-lg font-semibold text-[var(--color-text)]">
+            {normalized.title}
+          </h3>
           <p className="text-sm text-[var(--color-text)]/70">{normalized.description}</p>
         </div>
 
@@ -731,6 +738,9 @@ export function BookingCalendarBlock({
 
             <p
               className="text-xs text-[var(--color-text)]/65"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
               data-booking-slots-status
               data-loading={normalized.loadingMessage}
             />
@@ -759,11 +769,16 @@ export function BookingCalendarBlock({
 
             <div
               className={slotGridClass}
+              role="list"
+              aria-labelledby={slotsRegionLabelId}
               data-booking-slots
               data-empty={normalized.emptySlotsMessage}
               data-missing={normalized.missingSelectionMessage}
               data-error={normalized.errorMessage}
             />
+            <span id={slotsRegionLabelId} className="sr-only">
+              Available time slots
+            </span>
           </>
         ) : (
           <div className="rounded-md border border-dashed border-[var(--color-border)] px-3 py-4 text-sm text-[var(--color-text)]/70">
