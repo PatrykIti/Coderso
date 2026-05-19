@@ -6,7 +6,7 @@
 **Category:** Widgets + Runtime State + Public Write Security + Accessibility
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-276, TASK-276-01
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -31,11 +31,12 @@ This leaf owns:
 - Button loading/disabled state and duplicate-submit protection.
 - Submit-state copy normalization for loading, success, and error messages.
 - Redirect-after-success configuration when the active transport supports it.
-- Optional analytics event metadata using allowlisted event names and data
-  attributes only, not raw scripts.
+- Optional analytics success-event dispatch using allowlisted event names and
+  shared runtime markers only, not raw scripts.
 - Honeypot/nonce/CAPTCHA bridge only when the submission is Coderso-owned.
 - Reuse of existing Forms public-write owners when Newsletter is bound to a
-  saved Forms record or route.
+  saved Forms record or route. This is the default TASK-276 path; a
+  Newsletter-local route is not the starting design.
 
 This leaf does not own:
 
@@ -47,45 +48,47 @@ This leaf does not own:
 
 ## Sub-Tasks
 
-- [ ] Add `stateCopy.loadingMessage`, `stateCopy.successMessage`, and
+- [x] Add `stateCopy.loadingMessage`, `stateCopy.successMessage`, and
   `stateCopy.errorMessage` or a backward-compatible equivalent that maps the
   existing `submit.successMessage`.
-- [ ] Render success and error messages hidden by default, with `role="status"`
+- [x] Render success and error messages hidden by default, with `role="status"`
   or `aria-live="polite"`.
-- [ ] Add a runtime client path for active Newsletter submissions. If the
+- [x] Add a runtime client path for active Newsletter submissions. If the
   widget is bound to Forms, either render the exact marker contract consumed by
   `getFormRuntimeClientScript()` or generalize that script to support shared
   form-status markers plus Newsletter aliases in the same patch.
-- [ ] Add submit button busy state via `aria-busy`, disabled handling, and
+- [x] Add submit button busy state via `aria-busy`, disabled handling, and
   duplicate-submit prevention.
-- [ ] Add a bounded honeypot field and ensure it is omitted or validated by the
-  backend owner when a Coderso route receives submissions.
-- [ ] If Newsletter writes through Forms, hydrate the runtime with
+- [x] Add a bounded honeypot field only if the existing Forms contract can
+  validate or safely ignore it without new shared backend work; otherwise defer
+  honeypot enforcement to a separate shared Forms/public-write task.
+- [x] If Newsletter writes through Forms, hydrate the runtime with
   `resolveFormRuntimeData()` in `publicSite.tsx` and use existing
   `__nl_form_nonce`, CAPTCHA, and Forms submission routes.
-- [ ] If a dedicated Newsletter route is introduced instead, add route
-  registration, schema validation, nonce assertion, CAPTCHA enforcement, rate
-  limiting, centralized `mapNewsletterError` or reused `mapFormsError`
-  coverage, and service tests in the same leaf.
-- [ ] Add safe redirect configuration and apply it only after a successful
+- [x] If the current Forms runtime cannot be reused without adding a new shared
+  public-write seam, stop and cut that seam into a separate shared physical task
+  before continuing. Do not hide a new generic submit framework inside this
+  Newsletter leaf.
+- [x] Add safe redirect configuration and apply it only after a successful
   backend-confirmed submit.
-- [ ] Add analytics event metadata as safe `data-*` values; do not execute
-  arbitrary scripts from widget JSON.
+- [x] Add analytics success-event support using allowlisted event names and
+  shared runtime markers; do not execute arbitrary scripts from widget JSON.
 
 ## Files to Change
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/newsletter.tsx` | Add submit state copy, hidden status nodes, busy markers, optional runtime data, and anti-abuse data attributes. |
+| `core/widgets/core/newsletter.tsx` | Add submit state copy, hidden status nodes, busy markers, optional runtime data, anti-abuse data attributes, and bounded analytics-event metadata. |
 | `core/admin/ui/widgets/editors/NewsletterEditors.tsx` | Add state-copy, redirect, analytics, and anti-abuse diagnostics controls; the success-preview UI affordance is owned by TASK-276-04 after this leaf defines the state model. |
 | `core/server/publicSite.tsx` | Hydrate Forms runtime data only if Newsletter binds to an existing Forms record. |
 | `core/widgets/core/formRuntimeScript.ts` | Reuse only with existing `data-form-embed-*` marker names, or generalize to shared markers plus Newsletter aliases with tests in the same patch. |
 | `core/services/forms/formRuntimeResolver.ts` | Reuse as-is when possible; add focused adapter coverage only if Newsletter hydration needs it. |
 | `core/server/routes/formsRoutes.ts` | Change only when Newsletter reuses/extends Forms public submission behavior. |
-| `core/server/routes/newsletterRoutes.ts` or equivalent future owner | Add only if a dedicated Newsletter public submit route is approved; include route registration and centralized error mapping. |
 | `tests/vitest/widgets/newsletter.test.tsx` | Cover hidden status nodes, `aria-live`, busy markers, state copy, honeypot markers, and redirect metadata. |
 | `tests/vitest/ui/newsletter-editor-wave.test.tsx` | Cover state-copy, redirect, analytics, and diagnostics controls; success-preview UI coverage belongs to TASK-276-04. |
 | `tests/vitest/widgets/renderer.test.tsx` | Cover public renderer output through `WidgetRenderer`. |
+| `tests/integration/runtime/pages-runtime.test.ts` | Cover public runtime hydration and per-request nonce/runtime wiring when Newsletter binds to shared Forms. |
+| `tests/vitest/widgets/formRuntimeScript.test.ts` | Update whenever shared `data-form-*` markers, busy-state behavior, or runtime status wiring change. |
 | `tests/vitest/forms/formRuntimeResolver.test.ts` | Add coverage only if runtime resolver/adapters change. |
 | `tests/integration/routes/forms.test.ts` | Run/update when Forms public submission behavior changes. |
 | `tests/unit/forms/submissionService.test.ts` | Run/update when submitted data normalization changes. |
@@ -160,14 +163,18 @@ Error handling:
   error.
 - If a backend-owned runtime binding is missing or unpublished, render a clear
   non-submitting fallback instead of silently posting to the current page.
+- If honeypot enforcement needs backend support beyond the current Forms route
+  contract, stop and split that work into a shared Forms/public-write task
+  instead of implementing it as Newsletter-only infrastructure.
 - If Newsletter-specific success/error markers are used, update
   `formRuntimeScript.ts` selectors and tests in the same patch so those nodes
   are not inert.
 - When reusing the current Forms runtime script, status nodes must use the
   existing CSS-class visibility contract (`className="hidden"`), not the HTML
   `hidden` attribute, unless the script is changed to toggle that attribute.
-- Analytics event names are allowlisted and emitted only after success; raw JS
-  snippets and unbounded attributes are rejected.
+- Analytics event names are allowlisted and emitted only after success through
+  the shared runtime client; raw JS snippets and unbounded attributes are
+  rejected.
 
 ## Security Contract
 
@@ -193,9 +200,16 @@ This leaf may add or reuse public write behavior.
 
 ## Testing Requirements
 
+- Inherit the TASK-276 family gate before commit/closure:
+  `bun run lint`, `bun run test:bun`, `bun run test:vitest`,
+  `bun run scan:security:strict`, `bun run precommit`.
 - `bun run test:vitest -- tests/vitest/widgets/newsletter.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/newsletter-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx`
+- `bun test tests/integration/runtime/pages-runtime.test.ts` when Newsletter
+  binds to Forms runtime through `publicSite.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/formRuntimeScript.test.ts` when
+  shared runtime markers or submit-state behavior change
 - `bun run test:vitest -- tests/vitest/forms/formRuntimeResolver.test.ts` when
   Forms hydration changes
 - `bun test tests/integration/routes/forms.test.ts` when Forms public submit
@@ -234,3 +248,5 @@ This leaf may add or reuse public write behavior.
 - Coderso-owned public writes use nonce/CAPTCHA/rate-limit validation and never
   rely on widget-owned secrets.
 - Missing runtime binding degrades to a non-submitting, clearly diagnosed state.
+- Public runtime hydration is covered by the Bun `pages-runtime` lane when
+  `publicSite.tsx` wiring changes.

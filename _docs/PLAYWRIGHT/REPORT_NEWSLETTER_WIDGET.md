@@ -375,3 +375,78 @@ Newsletter widget to formularz zapisu do newslettera z konfigurowalnymi polami t
   `TASK-256-01`, `TASK-256-02`, or `TASK-256-04`, but TASK-256 lands no
   Newsletter-specific code in this report. Final widget execution therefore
   remains deferred to `TASK-276`.
+
+## Status po TASK-276 (2026-05-19)
+
+### Final row classification
+
+#### Błędy funkcjonalne
+
+| ID | Status | Owner | Notes |
+|---|---|---|---|
+| BUG-01 | fixed | TASK-276-01 | Email now renders a stable `name`, `id`, label contract, and `autocomplete="email"`. |
+| BUG-02 | fixed | TASK-276-01 | Consent now renders inside the `<form>` with a bounded checkbox field name/value contract. |
+| BUG-03 | fixed | TASK-276-02 | Success/error nodes are hidden by default and reused by the shared Forms runtime markers. |
+| BUG-04 | fixed | TASK-276-04 | Wizard no longer mutates the variant; Visual remains the single owner. |
+| BUG-05 | fixed | TASK-276-06 | `resolveNewsletterSpacing()` now explicitly accepts `md`. |
+
+#### UX edytora
+
+| ID | Status | Owner | Notes |
+|---|---|---|---|
+| UX-01 | fixed | TASK-276-06 | Background color controls now explain that `transparent` is the saved value and `#ffffff` is only the picker fallback. |
+| UX-02 | fixed | TASK-276-04 | Wizard and Visual now warn that `minimal` keeps description saved but hidden. |
+| UX-03 | fixed | TASK-276-03 | Advanced now explains the active transport field, ignored metadata, method, and readiness. |
+| UX-04 | fixed | TASK-276-03 | Action URL validation now rejects bare domains, insecure/private/admin paths, and invalid relative routes. |
+| UX-05 | fixed | TASK-276-04 | Consent-required help text now states that unchecked consent blocks submit. |
+| UX-06 | fixed | TASK-276-04 | Visual now includes an explicit success-state preview affordance without persisting fake submit state. |
+| UX-07 | fixed | TASK-276-04 | Variant cards now describe mobile stacking behavior directly. |
+
+#### Braki funkcjonalne
+
+| ID | Status | Owner | Notes |
+|---|---|---|---|
+| BF-01 | fixed | TASK-276-01 | The renderer now emits a real email field name so payload submission works. |
+| BF-02 | fixed | TASK-276-06 | Newsletter now exposes bounded text color controls with local contrast guidance. |
+| BF-03 | fixed | TASK-276-06 | Newsletter now exposes bounded button background/text color controls. |
+| BF-04 | fixed | TASK-276-01 | `form.emailFieldName` is now schema-owned and normalized through a safe field-name helper. |
+| BF-05 | fixed | TASK-276-05 | Newsletter now supports a bounded optional first-name field with stable metadata. |
+| BF-06 | fixed | TASK-276-06 | Section width now uses bounded `narrow | default | wide | full` options. |
+| BF-07 | fixed | TASK-276-02 | Redirect behavior now flows through the bound Forms runtime owner and is surfaced as runtime/editor diagnostics instead of a fake widget-local redirect engine. |
+| BF-08 | fixed | TASK-276-02 | Coderso-owned public submit now reuses shared Forms nonce/CAPTCHA/rate-limit handling; static external targets remain provider-owned rather than inventing a widget-local public-write path. |
+| BF-09 | fixed | TASK-276-05 | Newsletter now supports bounded double opt-in copy while correctly keeping enforcement provider-owned in this wave. |
+| BF-10 | fixed | TASK-276-03 | Native external action submit now supports bounded `POST` / `GET` selection. |
+| BF-11 | fixed | TASK-276-02 | Forms-runtime submit now uses shared loading/busy-state handling and duplicate-submit prevention. |
+| BF-12 | fixed | TASK-276-02 | Forms-runtime submit now renders bounded error state through shared runtime markers. |
+| BF-13 | not reproducible | TASK-276-03 | HTML form actions do not use `rel`; external action safety is handled through the URL allowlist plus runtime-owner boundaries. |
+| BF-14 | fixed | TASK-276-02 | Forms-runtime submit now dispatches an allowlisted success `CustomEvent` using the configured analytics name; static external submits keep analytics provider-owned. |
+| BF-15 | future physical task | TASK-319 | TASK-276 made current mobile behavior truthful, but true per-breakpoint variant overrides remain a separate explicit follow-up. |
+
+#### Dostępność
+
+| ID | Status | Owner | Notes |
+|---|---|---|---|
+| A1 | fixed | TASK-276-01 | Email input now participates in the real submitted payload contract. |
+| A2 | fixed | TASK-276-01 | Consent is now semantically part of the form. |
+| A3 | fixed | TASK-276-01 | Email now renders a stable label/`htmlFor`/`id` contract with an accessible hidden-label fallback. |
+| A4 | fixed | TASK-276-02 | Success and error feedback now use hidden-by-default live/status regions. |
+| A5 | fixed | TASK-276-06 | Editor now exposes a non-blocking contrast advisory for text/background and button colors. |
+| A6 | fixed | TASK-276-01 | Email now emits `autocomplete="email"`. |
+
+### Final validation evidence
+
+- `bun run lint` - PASS in the TASK-276 worktree after the final preview/runtime
+  type fixes.
+- `bun run test:vitest -- tests/vitest/widgets/newsletter.test.tsx tests/vitest/ui/newsletter-editor-wave.test.tsx tests/vitest/widgets/renderer.test.tsx tests/vitest/widgets/formRuntimeScript.test.ts` - PASS, `4` files / `53` tests.
+- `set -a && source .env && set +a && bun test tests/unit/widgets/validator.test.ts tests/security/codersoSecurityGate.test.ts` - PASS.
+- `bun run scan:security:strict` - PASS; Semgrep, bun audit, Trivy, and both
+  Gitleaks scans completed cleanly.
+- `bun run test:bun` and `bun run test:vitest` were both executed for repo
+  baseline coverage, but the branch currently carries unrelated DB/runtime
+  timeouts outside Newsletter scope (assistant/forms/detail-page/media/listings
+  lanes).
+- Inside the full `bun run test:bun` execution, the Newsletter-specific runtime
+  smoke `public page runtime bypasses HTML cache when hydrated blocks include
+  submission nonces` passed before later unrelated branch failures terminated
+  the overall suite. A later isolated rerun timed out under the same unstable
+  DB/runtime environment.

@@ -6,7 +6,7 @@
 **Category:** Widgets + Forms + Admin UI + Runtime Render + Public Write Security + Playwright QA
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-252-07-09, TASK-256-07
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -92,20 +92,20 @@ Newsletter-specific wiring.
 | Form current-URL submit drift | TASK-276-01, TASK-276-02 | Safe no-action behavior and active integration behavior must be explicit. |
 | BUG-03, A4, BF-11, BF-12 | TASK-276-02 | Runtime-visible loading/success/error states and status-region behavior. |
 | BF-07, BF-08, BF-14 | TASK-276-02 | Redirect, anti-abuse, and analytics/tracking integration through safe owners. |
-| UX-03, UX-04, BF-10, BF-13 | TASK-276-03 | Integration mode/method/URL validation and Advanced diagnostics. |
+| UX-03, UX-04, BF-10, BF-13 | TASK-276-03 | Integration mode/method/URL validation and Advanced diagnostics; analytics stays in TASK-276-02. |
 | BUG-04, UX-02, UX-05, UX-06, UX-07 | TASK-276-04 | Newsletter-specific editor mode clarity, consent help, and preview guidance. |
 | BF-04 | TASK-276-01 | Base configurable email field `name` belongs to the core form semantics leaf. |
 | BF-05, BF-09 | TASK-276-05 | Custom-field expansion and double opt-in configuration after the base form contract is stable. |
-| UX-01, BUG-05, BF-02, BF-03, BF-06, BF-15, A5 | TASK-276-06 | Style/layout/breakpoint/contrast controls and explicit spacing resolver. |
-| Final fixed/deferred evidence, report refresh, docs/changelog/board closure | TASK-276-07 | Final source-report and docs closure. |
+| UX-01, BUG-05, BF-02, BF-03, BF-06, BF-15, A5 | TASK-276-06 | Style/layout/contrast controls and explicit spacing resolver; BF-15 is reassessed here and deferred physically through TASK-276-07 to `TASK-319`. |
+| Final fixed/deferred evidence, report refresh, docs/changelog/board closure | TASK-276-07 | Final source-report and docs closure, including the named BF-15 follow-up `TASK-319`. |
 
 ## Current Owner and Test Matrix
 
 | Leaf | Current drift evidence | Owner files | Required test lanes |
 |---|---|---|---|
 | TASK-276-01 | Report lines 67-69, 122-124, 140-146, 172-181, 234-235, 285-290, 300-302 | `newsletter.tsx`, `NewsletterEditors.tsx`, validator tests, Newsletter docs | Vitest widget render, editor wave, renderer, Bun validator when schema changes |
-| TASK-276-02 | Report lines 70, 125, 142, 147, 183-186, 222-224, 252-256, 264-268, 273-274, 300-322 | `newsletter.tsx`, optional Forms/public-write runtime owners if reused, security tests | Vitest widget/render/script coverage; Bun Forms/security routes if public writes change |
-| TASK-276-03 | Report lines 67, 74, 113-115, 210-216, 261-274, 328 | `newsletter.tsx`, `NewsletterEditors.tsx`, validator tests, docs | Vitest widget/editor, validator, security scan for URL/analytics sanitization |
+| TASK-276-02 | Report lines 70, 125, 142, 147, 183-186, 222-224, 252-256, 264-274, 300-322 | `newsletter.tsx`, `publicSite.tsx`, optional Forms/public-write runtime owners if reused, security tests | Vitest widget/render/script coverage; Bun runtime render lane; Bun Forms/security routes if public writes change |
+| TASK-276-03 | Report lines 67, 74, 113-115, 210-216, 261-272, 328 | `newsletter.tsx`, `NewsletterEditors.tsx`, validator tests, docs | Vitest widget/editor, validator, security scan for URL sanitization |
 | TASK-276-04 | Report lines 57-61, 87-91, 97-99, 127, 188-191, 206-228, 304-311 | `NewsletterEditors.tsx`, page-builder panel tests only if shared mode helpers are consumed | Vitest editor wave and page-builder panel smoke when mode ownership changes |
 | TASK-276-05 | Report lines 243-247, 258-259, 319-326 | `newsletter.tsx`, `NewsletterEditors.tsx`, validator tests, docs | Vitest widget/editor, Bun validator, public-write/security lanes if new payload fields submit |
 | TASK-276-06 | Report lines 71-75, 105, 193-204, 237-241, 249-250, 276-277, 289, 317-329 | `newsletter.tsx`, `NewsletterEditors.tsx`, style none token suite, docs/pack matrix if readiness changes | Vitest widget/editor/style suites, validator when schema changes |
@@ -113,13 +113,13 @@ Newsletter-specific wiring.
 
 ## Sub-Tasks
 
-- [ ] TASK-276-01: Newsletter Form Semantics, Consent, and Accessibility
-- [ ] TASK-276-02: Newsletter Submission States and Public Write Hardening
-- [ ] TASK-276-03: Newsletter Integration Validation and Transport Diagnostics
-- [ ] TASK-276-04: Newsletter Editor Mode Ownership and Variant Guidance
-- [ ] TASK-276-05: Newsletter Field Expansion and Double Opt-In Model
-- [ ] TASK-276-06: Newsletter Visual Style, Width, and Contrast Controls
-- [ ] TASK-276-07: Newsletter Report, Docs, Changelog, and Closure
+- [x] TASK-276-01: Newsletter Form Semantics, Consent, and Accessibility
+- [x] TASK-276-02: Newsletter Submission States and Public Write Hardening
+- [x] TASK-276-03: Newsletter Integration Validation and Transport Diagnostics
+- [x] TASK-276-04: Newsletter Editor Mode Ownership and Variant Guidance
+- [x] TASK-276-05: Newsletter Field Expansion and Double Opt-In Model
+- [x] TASK-276-06: Newsletter Visual Style, Width, and Contrast Controls
+- [x] TASK-276-07: Newsletter Report, Docs, Changelog, and Closure
 
 ## Implementation Order
 
@@ -251,3 +251,5 @@ Implementation leaves:
   lanes when touched.
 - Widget docs, Playwright report evidence, task board, changelog, and targeted
   validation evidence are synchronized before closure.
+- Deferred findings are named physically; BF-15 closes this family only by
+  moving to `TASK-319`.

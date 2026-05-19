@@ -6,7 +6,7 @@
 **Category:** QA + Documentation + Changelog + Playwright Evidence
 **Estimated Effort:** Medium
 **Dependencies:** TASK-276-01, TASK-276-02, TASK-276-03, TASK-276-04, TASK-276-05, TASK-276-06
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -41,25 +41,25 @@ This leaf does not own:
 
 ## Sub-Tasks
 
-- [ ] Build a finding-by-finding matrix from
+- [x] Build a finding-by-finding matrix from
   `_docs/PLAYWRIGHT/REPORT_NEWSLETTER_WIDGET.md`.
-- [ ] Mark each row as `fixed`, `TASK-256 shared scope`, `deferred to future
+- [x] Mark each row as `fixed`, `TASK-256 shared scope`, `deferred to future
   physical task`, `not reproducible`, or `needs-refresh`.
-- [ ] Verify every fixed row has matching code/test evidence, not just task
+- [x] Verify every fixed row has matching code/test evidence, not just task
   prose.
-- [ ] Update `_docs/PLAYWRIGHT/REPORT_NEWSLETTER_WIDGET.md` with final textual
+- [x] Update `_docs/PLAYWRIGHT/REPORT_NEWSLETTER_WIDGET.md` with final textual
   evidence. Keep PNG screenshot names as labels only; do not commit PNGs.
-- [ ] Update `_docs/_WIDGETS/NEWSLETTER.md` with final schema/editor/runtime
+- [x] Update `_docs/_WIDGETS/NEWSLETTER.md` with final schema/editor/runtime
   behavior.
-- [ ] Update `_docs/WIDGETS.md` or `_docs/WIDGET_PACK_MATRIX.md` only if final
+- [x] Update `_docs/WIDGETS.md` or `_docs/WIDGET_PACK_MATRIX.md` only if final
   behavior changes those global contracts.
-- [ ] Add a changelog entry and update `_docs/_CHANGELOG/README.md`. The
+- [x] Add a changelog entry and update `_docs/_CHANGELOG/README.md`. The
   changelog entry `Tasks:` field must list every task row moved to `Done`
   (`TASK-276`, `TASK-276-01` through `TASK-276-07`) or use separate leaf
   entries for the exact completed subset.
-- [ ] Move TASK-276 task files and `_docs/_TASKS/README.md` rows to `Done`
+- [x] Move TASK-276 task files and `_docs/_TASKS/README.md` rows to `Done`
   with dates.
-- [ ] Run final targeted validation, `bun run gates:coderso`,
+- [x] Run final targeted validation, `bun run gates:coderso`,
   `bun run scan:security:strict`, and `bun run precommit` unless a blocker is
   explicitly recorded and accepted before closure.
 
@@ -140,6 +140,8 @@ No API routes are added by this closure leaf.
   - `bun run test:vitest -- tests/vitest/widgets/newsletter.test.tsx`
   - `bun run test:vitest -- tests/vitest/ui/newsletter-editor-wave.test.tsx`
   - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx`
+  - `bun test tests/integration/runtime/pages-runtime.test.ts` when
+    Newsletter runtime hydration through `publicSite.tsx` changed
   - `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` when
     style/clear/default adjacency changed
   - `bun test tests/unit/widgets/validator.test.ts` when schema/defaults changed
@@ -179,4 +181,6 @@ No API routes are added by this closure leaf.
 - Final report evidence maps directly to code/test proof.
 - Newsletter docs reflect final schema/editor/runtime/security behavior.
 - Board rows, task statuses, changelog, and validation evidence are synchronized.
+- Deferred findings name the physical follow-up task explicitly; BF-15 closes
+  only by pointing to `TASK-319`.
 - No Playwright PNG artifacts or unrelated task/report edits are committed.

@@ -392,6 +392,17 @@ const runtimeClientScript = String.raw`(() => {
     }
   };
 
+  const emitSuccessAnalyticsEvent = (form, detail) => {
+    const eventName = (form.dataset.formAnalyticsEvent || "").trim();
+    if (!eventName) return;
+    const payload = {
+      formId: (form.dataset.formId || "").trim() || null,
+      redirectUrl: typeof detail.redirectUrl === "string" ? detail.redirectUrl : null,
+      successMessage: typeof detail.successMessage === "string" ? detail.successMessage : null,
+    };
+    window.dispatchEvent(new CustomEvent(eventName, { detail: payload }));
+  };
+
   const hideFormBody = (form) => {
     const body = form.querySelector("[data-form-embed-form-body='true']");
     if (body instanceof HTMLElement) {
@@ -500,18 +511,21 @@ const runtimeClientScript = String.raw`(() => {
           runtime && typeof runtime.redirectUrl === "string"
             ? runtime.redirectUrl.trim()
             : "";
-        if (redirectUrl) {
-          clearProgress(form);
-          window.location.assign(redirectUrl);
-          return;
-        }
-
         const successMessageFromRuntime =
           runtime && typeof runtime.successMessage === "string"
             ? runtime.successMessage.trim()
             : "";
         const successMessage =
           successMessageFromRuntime || (form.dataset.formSuccessMessage || "").trim();
+        emitSuccessAnalyticsEvent(form, {
+          redirectUrl: redirectUrl || null,
+          successMessage: successMessage || null,
+        });
+        if (redirectUrl) {
+          clearProgress(form);
+          window.location.assign(redirectUrl);
+          return;
+        }
 
         if (successNode instanceof HTMLElement) {
           if (successMessage) {

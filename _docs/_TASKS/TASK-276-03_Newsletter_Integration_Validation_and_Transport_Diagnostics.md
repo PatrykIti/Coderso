@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Runtime Render + Integration Safety
 **Estimated Effort:** Large
 **Dependencies:** TASK-276, TASK-276-01
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -26,8 +26,10 @@ secrets to widget data.
 This leaf owns:
 
 - Safe action URL normalization and inline editor validation.
-- Bounded method selection where needed for third-party providers (`GET`/`POST`)
-  without changing default behavior.
+- Bounded method selection for pure external native submits only, and only when
+  a provider reference truly requires it. If Newsletter submits through the
+  shared Forms runtime from TASK-276-02, keep the shared runtime `POST`
+  contract and split any broader method support into shared work.
 - Advanced integration diagnostics explaining which field is active for the
   selected mode.
 - External action safety diagnostics where applicable. Do not add invalid HTML
@@ -47,21 +49,23 @@ This leaf does not own:
 
 ## Sub-Tasks
 
-- [ ] Add `integration.method?: "post" | "get"` with default `post` only if
-  current provider references require method configurability.
-- [ ] Normalize `integration.actionUrl` to accepted safe values: HTTPS absolute
+- [x] Add `integration.method?: "post" | "get"` with default `post` only if
+  current provider references require method configurability and the chosen
+  submit path stays a native external form submit rather than the shared Forms
+  runtime.
+- [x] Normalize `integration.actionUrl` to accepted safe values: HTTPS absolute
   URLs and explicit relative paths only when the route is Coderso-owned.
-- [ ] Reject protocol-relative URLs, `http:` URLs, bare domains,
+- [x] Reject protocol-relative URLs, `http:` URLs, bare domains,
   admin/internal relative paths, and unknown relative paths.
-- [ ] Reject or surface editor diagnostics for bare domains such as
+- [x] Reject or surface editor diagnostics for bare domains such as
   `example.com`.
-- [ ] Keep `webhookId` as a safe identifier only; do not treat it as a secret or
+- [x] Keep `webhookId` as a safe identifier only; do not treat it as a secret or
   direct provider URL.
-- [ ] In Advanced, show active transport summary: selected mode, active field,
+- [x] In Advanced, show active transport summary: selected mode, active field,
   ignored field, method, and submit readiness.
-- [ ] Preserve legacy payloads by normalizing missing method to `post` and
+- [x] Preserve legacy payloads by normalizing missing method to `post` and
   missing action URL to a non-submitting state.
-- [ ] Add docs explaining external action URL limitations, the non-applicable
+- [x] Add docs explaining external action URL limitations, the non-applicable
   `rel`/target distinction for forms if confirmed, and the backend-owned path
   for webhook/public write behavior.
 
@@ -153,6 +157,9 @@ Error handling:
   backward-compatible editing.
 - If method is `get`, hidden fields and consent names must still be safe and no
   secret-like values may be included.
+- If the active submit path reuses the shared Forms runtime client, do not
+  treat `GET` as a Newsletter-local toggle; split that runtime change into
+  shared work instead.
 - Advanced diagnostics must describe inactive fields rather than encouraging
   users to fill both.
 
@@ -173,6 +180,9 @@ This leaf does not add API routes.
 
 ## Testing Requirements
 
+- Inherit the TASK-276 family gate before commit/closure:
+  `bun run lint`, `bun run test:bun`, `bun run test:vitest`,
+  `bun run scan:security:strict`, `bun run precommit`.
 - `bun run test:vitest -- tests/vitest/widgets/newsletter.test.tsx` with
   cases for `//evil.example`, `http://example.com`, `example.com`,
   `/admin/forms`, valid `https://example.com/subscribe`, and valid

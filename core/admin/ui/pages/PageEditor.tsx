@@ -455,24 +455,22 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
   const bookingFlows = useMemo(() => collectBookingFlowSummaries(blocks), [blocks]);
   const pageEditorWidgetContext = useMemo<WidgetEditorContext | undefined>(() => {
     if (!selectedBlock) return undefined;
+    const supportsPreviewState =
+      selectedBlock.type === "entry-teaser" || selectedBlock.type === "newsletter";
 
     return {
       surface: "page-builder",
       blockId: selectedBlock.id,
       editorMode: selectedBlock.editor?.mode ?? "wizard",
       bookingFlows,
-      previewState:
-        selectedBlock.type === "entry-teaser"
-          ? (widgetPreviewStates[selectedBlock.id] ?? null)
-          : null,
-      setPreviewState:
-        selectedBlock.type === "entry-teaser"
-          ? (state) =>
-              setWidgetPreviewStates((current) => ({
-                ...current,
-                [selectedBlock.id]: state ?? undefined,
-              }))
-          : undefined,
+      previewState: supportsPreviewState ? (widgetPreviewStates[selectedBlock.id] ?? null) : null,
+      setPreviewState: supportsPreviewState
+        ? (state) =>
+            setWidgetPreviewStates((current) => ({
+              ...current,
+              [selectedBlock.id]: state ?? undefined,
+            }))
+        : undefined,
       ...(selectedBlock.type === "booking-calendar" && bookingCalendarPreviewResolved
         ? {
             widgetPreviewData: {
@@ -483,7 +481,10 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     };
   }, [bookingCalendarPreviewResolved, bookingFlows, selectedBlock, widgetPreviewStates]);
   const activeWidgetPreviewStates = useMemo(() => {
-    if (!selectedBlock || selectedBlock.type !== "entry-teaser") {
+    if (
+      !selectedBlock ||
+      (selectedBlock.type !== "entry-teaser" && selectedBlock.type !== "newsletter")
+    ) {
       return {} as Record<string, WidgetPreviewState | undefined>;
     }
     const previewState = widgetPreviewStates[selectedBlock.id];

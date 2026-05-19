@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Editor UX
 **Estimated Effort:** Medium
 **Dependencies:** TASK-276, TASK-276-01, TASK-276-02, TASK-276-03
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -25,7 +25,8 @@ help text, and there is no controlled preview of the success state.
 
 This leaf owns:
 
-- Newsletter-specific Wizard vs Visual variant ownership decision.
+- Newsletter-specific Wizard alignment to the already-landed Visual variant
+  owner contract.
 - Minimal-variant description visibility guidance.
 - Mobile behavior copy in variant cards.
 - Consent-required explanatory copy.
@@ -42,18 +43,18 @@ This leaf does not own:
 
 ## Sub-Tasks
 
-- [ ] Decide and document whether Newsletter Wizard should remove the variant
-  selector or render it as a guided shortcut that delegates to the shared
-  Visual owner without duplicating state semantics.
-- [ ] If the Wizard selector remains, require TASK-256-01 atomic patch support
-  or prove the selector changes only variant without data races.
-- [ ] Add Minimal description warning in Wizard and Visual when `variant` is
+- [x] Remove the mutating Wizard variant selector and replace it with a read-only
+  current-style summary plus a clear handoff to Visual, because
+  `visualOwnsVariantSelection` is already the active owner contract.
+- [x] Do not keep two mutating variant controls unless a separate shared task
+  intentionally changes the `visualOwnsVariantSelection` owner contract.
+- [x] Add Minimal description warning in Wizard and Visual when `variant` is
   `minimal`.
-- [ ] Add mobile behavior note to the three Newsletter variant cards.
-- [ ] Add consent-required help text near the required switch.
-- [ ] Add a preview success-state control after TASK-276-02 defines hidden
+- [x] Add mobile behavior note to the three Newsletter variant cards.
+- [x] Add consent-required help text near the required switch.
+- [x] Add a preview success-state control after TASK-276-02 defines hidden
   success status behavior.
-- [ ] Keep sparse/default editor rendering stable when `onVariantChange` is
+- [x] Keep sparse/default editor rendering stable when `onVariantChange` is
   absent.
 
 ## Files to Change
@@ -82,7 +83,7 @@ function NewsletterWizardEditor(props: WidgetEditorProps<NewsletterData>) {
   const variant = resolveNewsletterVariant(props.variant);
   return (
     <div>
-      {/* Either remove variant Select or render a read-only summary with a Visual tab handoff. */}
+      {/* Render a read-only variant summary with a Visual tab handoff. */}
       <MinimalDescriptionNotice variant={variant} />
       {/* first-run copy controls */}
     </div>
@@ -130,6 +131,9 @@ No API routes are added.
 
 ## Testing Requirements
 
+- Inherit the TASK-276 family gate before commit/closure:
+  `bun run lint`, `bun run test:bun`, `bun run test:vitest`,
+  `bun run scan:security:strict`, `bun run precommit`.
 - `bun run test:vitest -- tests/vitest/ui/newsletter-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/newsletter.test.tsx`
 - `bun run test:vitest -- tests/vitest/pageBuilder/visualPanel.test.tsx` if

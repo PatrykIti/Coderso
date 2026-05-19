@@ -6,7 +6,7 @@
 **Category:** Widgets + Forms + Admin UI + Runtime Render + Public Write Security
 **Estimated Effort:** Large
 **Dependencies:** TASK-276, TASK-276-01, TASK-276-02, TASK-276-03
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -25,8 +25,8 @@ together.
 
 This leaf owns:
 
-- Optional first-name field and a small bounded custom-field model for
-  Newsletter use cases.
+- Optional first-name field and no broader field-builder scope inside
+  TASK-276.
 - Required/optional state, labels, placeholders, autocomplete, field names, and
   submitted payload semantics for those fields.
 - Double opt-in user-facing configuration as metadata/copy, with backend-owned
@@ -35,6 +35,9 @@ This leaf owns:
 This leaf does not own:
 
 - Generic form builder replacement. Complex forms should use `form-embed`.
+- Additional select/checkbox/custom-field families beyond email plus optional
+  first name. If broader field composition is still needed after TASK-276,
+  split it into a separate physical task instead of widening Newsletter here.
 - Unlimited arbitrary fields, raw HTML, custom scripts, custom validation code,
   or provider secret mapping.
 - Redefining `form.emailFieldName`; TASK-276-01 owns base email name, label,
@@ -44,20 +47,19 @@ This leaf does not own:
 
 ## Sub-Tasks
 
-- [ ] Define a bounded `NewsletterFieldConfig` model for `email`, optional
-  `firstName`, and at most a small number of additional safe text/select/checkbox
-  fields if approved by research.
-- [ ] Preserve `email` as always present and required, reusing the
+- [x] Define a bounded `NewsletterFieldConfig` model for `email` plus optional
+  `firstName` only.
+- [x] Preserve `email` as always present and required, reusing the
   `form.emailFieldName` normalized by TASK-276-01 for the base email field,
   unless a later product task explicitly changes the core Newsletter purpose.
-- [ ] Add first-name label, placeholder, `name`, autocomplete, required flag,
+- [x] Add first-name label, placeholder, `name`, autocomplete, required flag,
   and render output.
-- [ ] Add editor controls for enabled fields and field metadata.
-- [ ] Add double opt-in configuration with visible copy, confirmation note, and
+- [x] Add editor controls for enabled fields and field metadata.
+- [x] Add double opt-in configuration with visible copy, confirmation note, and
   backend-enforcement diagnostics.
-- [ ] If double opt-in is enforced by Coderso, add or link the backend owner
+- [x] If double opt-in is enforced by Coderso, add or link the backend owner
   route/service that sends confirmation and persists pending status.
-- [ ] If no backend owner exists, render double opt-in as provider expectation
+- [x] If no backend owner exists, render double opt-in as provider expectation
   copy only and mark enforcement as external/provider-owned in docs.
 
 ## Files to Change
@@ -66,7 +68,7 @@ This leaf does not own:
 |---|---|
 | `core/widgets/core/newsletter.tsx` | Extend schema/defaults/normalizer/render for bounded fields and double opt-in metadata. |
 | `core/admin/ui/widgets/editors/NewsletterEditors.tsx` | Add field-management and double opt-in controls with diagnostics. |
-| `tests/vitest/widgets/newsletter.test.tsx` | Cover first-name/custom field render, names, autocomplete, required flags, and double opt-in metadata. |
+| `tests/vitest/widgets/newsletter.test.tsx` | Cover first-name render, names, autocomplete, required flags, and double opt-in metadata. |
 | `tests/vitest/ui/newsletter-editor-wave.test.tsx` | Cover field-management and double opt-in editor flows. |
 | `tests/unit/widgets/validator.test.ts` | Cover schema rejection for unknown or oversized field config. |
 | `tests/integration/routes/forms.test.ts` and `tests/security/codersoSecurityGate.test.ts` | Run/update only when backend-owned submission payload changes. |
@@ -75,17 +77,16 @@ This leaf does not own:
 ## Implementation Pseudocode
 
 ```ts
-type NewsletterFieldId = "email" | "firstName" | string;
+type NewsletterFieldId = "email" | "firstName";
 
 type NewsletterFieldConfig = {
   id: NewsletterFieldId;
-  type: "email" | "text" | "checkbox" | "select";
+  type: "email" | "text";
   label: string;
   name: string;
   placeholder?: string;
-  autocomplete?: "email" | "given-name" | "name" | "off";
+  autocomplete?: "email" | "given-name" | "off";
   required?: boolean;
-  options?: Array<{ value: string; label: string }>;
 };
 
 type NewsletterOptIn = {
@@ -95,7 +96,7 @@ type NewsletterOptIn = {
 };
 
 function normalizeNewsletterFields(input: unknown): NewsletterFieldConfig[] {
-  const fields = toArray(input).slice(0, NEWSLETTER_FIELD_LIMIT).map(normalizeField);
+  const fields = toArray(input).slice(0, 2).map(normalizeField);
   return ensureEmailField(fields);
 }
 ```
@@ -117,11 +118,9 @@ Renderer shape:
 
 Error handling:
 
-- Duplicate field names normalize to unique safe names or fail validation with a
-  machine-readable widget validation error.
+- Email and first-name field names must stay unique safe names or fail
+  validation with a machine-readable widget validation error.
 - Unsupported field types are rejected by schema and normalizer tests.
-- Empty custom select options drop the field or surface editor validation; do
-  not silently render a different field type.
 - Double opt-in cannot claim Coderso enforcement unless a backend route/service
   exists and is tested.
 
@@ -146,6 +145,9 @@ Coderso.
 
 ## Testing Requirements
 
+- Inherit the TASK-276 family gate before commit/closure:
+  `bun run lint`, `bun run test:bun`, `bun run test:vitest`,
+  `bun run scan:security:strict`, `bun run precommit`.
 - `bun run test:vitest -- tests/vitest/widgets/newsletter.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/newsletter-editor-wave.test.tsx`
 - `bun test tests/unit/widgets/validator.test.ts`
@@ -169,8 +171,8 @@ Coderso.
 
 ## Acceptance Criteria
 
-- Newsletter can collect the approved additional field data with stable names,
-  labels, and autocomplete attributes.
+- Newsletter can collect approved additional data through email plus optional
+  first name with stable names, labels, and autocomplete attributes.
 - Field expansion remains bounded and schema-validated.
 - Double opt-in behavior is either backend-enforced with tests or clearly
   documented as provider-owned copy.

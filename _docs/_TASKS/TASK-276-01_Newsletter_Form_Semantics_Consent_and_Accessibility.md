@@ -6,7 +6,7 @@
 **Category:** Widgets + Forms + Runtime Render + Accessibility + Public Write Security
 **Estimated Effort:** Large
 **Dependencies:** TASK-276
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -45,25 +45,25 @@ This leaf does not own:
 
 ## Sub-Tasks
 
-- [ ] Extend `NewsletterData` with bounded form field metadata, at minimum
+- [x] Extend `NewsletterData` with bounded form field metadata, at minimum
   `form.emailFieldName`, `form.emailLabel`, and `form.consentFieldName`.
-- [ ] Keep defaults backward-compatible: `email`, visible label fallback, and
+- [x] Keep defaults backward-compatible: `email`, visible label fallback, and
   `consent` for consent field name.
-- [ ] Update `newsletterSchema` with `additionalProperties: false` for the new
+- [x] Update `newsletterSchema` with `additionalProperties: false` for the new
   nested form metadata.
-- [ ] Normalize field names through a helper that accepts safe form key syntax
+- [x] Normalize field names through a helper that accepts safe form key syntax
   and falls back to defaults for empty/unsafe values.
-- [ ] Render a deterministic email `id` and `<label htmlFor>` or an explicit
+- [x] Render a deterministic email `id` and `<label htmlFor>` or an explicit
   `aria-label` when visual label is hidden. The ID must include a sanitized
   widget instance key because `WidgetRenderer` passes
   `blockId={normalized.id}` and pages may render multiple Newsletter blocks.
-- [ ] Render `name={emailFieldName}` and `autocomplete="email"` on the email
+- [x] Render `name={emailFieldName}` and `autocomplete="email"` on the email
   input.
-- [ ] Move the consent label and checkbox inside the `<form>`, preserving the
+- [x] Move the consent label and checkbox inside the `<form>`, preserving the
   current visual placement below input/button when possible.
-- [ ] Render `name={consentFieldName}` and a submitted value such as `"on"` for
+- [x] Render `name={consentFieldName}` and a submitted value such as `"on"` for
   consent.
-- [ ] When no active integration target exists, render a non-submitting button
+- [x] When no active integration target exists, render a non-submitting button
   or prevent the native current-page POST with clear data attributes and editor
   diagnostics.
 

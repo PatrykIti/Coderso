@@ -8,6 +8,50 @@ import { newsletterDefaults, type NewsletterData } from "../../../core/widgets/c
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
+const formsRuntimeMockState = vi.hoisted(() => ({
+  forms: [] as Array<{
+    id: string;
+    name: string;
+    slug: string;
+    status: "draft" | "published" | "archived";
+    description: string | null;
+    successMessage: string | null;
+    successRedirectUrl: string | null;
+    submissionAccess: "public" | "internal";
+    settings: Record<string, unknown>;
+    createdAt: string;
+    updatedAt: string;
+  }>,
+  details: new Map<
+    string,
+    {
+      form: {
+        id: string;
+        name: string;
+        slug: string;
+        status: "draft" | "published" | "archived";
+        description: string | null;
+        successMessage: string | null;
+        successRedirectUrl: string | null;
+        submissionAccess: "public" | "internal";
+        settings: Record<string, unknown>;
+        createdAt: string;
+        updatedAt: string;
+      };
+      fields: Array<{
+        id: string;
+        type: string;
+        label: string;
+        name: string;
+        required: boolean;
+        settings: Record<string, unknown>;
+        orderIndex: number;
+      }>;
+    }
+  >(),
+  errors: new Map<string, Error>(),
+}));
+
 vi.mock("@/components/ui/badge", () => ({
   Badge: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
 }));
@@ -167,6 +211,23 @@ vi.mock("@/components/ui/textarea", () => ({
 
 vi.mock("@/lib/utils", () => ({
   cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
+}));
+
+vi.mock("@/ui/forms/hooks/useForms", () => ({
+  useForms: () => ({
+    items: formsRuntimeMockState.forms,
+    isLoading: false,
+    error: null,
+    refresh: async () => undefined,
+  }),
+}));
+
+vi.mock("@/services/formsClient", () => ({
+  getFormDetailCached: vi.fn(async (id: string) => {
+    const error = formsRuntimeMockState.errors.get(id);
+    if (error) throw error;
+    return formsRuntimeMockState.details.get(id) ?? null;
+  }),
 }));
 
 const mount = (node: React.ReactNode) => {
@@ -354,45 +415,42 @@ const mountNewsletterHarness = ({
 
 afterEach(() => {
   document.body.innerHTML = "";
+  formsRuntimeMockState.forms = [];
+  formsRuntimeMockState.details.clear();
+  formsRuntimeMockState.errors.clear();
   vi.restoreAllMocks();
 });
 
-test("Newsletter wizard editor covers variant fallback, submit normalization, and consent branching", async () => {
+test("Newsletter wizard keeps variant ownership in Visual and updates copy fields", async () => {
   const { NewsletterWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/NewsletterEditors");
 
-  const { cleanup, container, getLatestValue, getLatestVariant, onChangeSpy, onVariantChangeSpy } =
-    mountNewsletterHarness({
-      initialValue: {
-        submit: { label: "" },
-        consent: { enabled: false },
-      },
-      initialVariant: "legacy-newsletter",
-      render: (props) => <NewsletterWizardEditor {...props} />,
-    });
+  const { cleanup, container, getLatestValue, onChangeSpy } = mountNewsletterHarness({
+    initialValue: {
+      submit: { label: "" },
+      consent: { enabled: true },
+    },
+    initialVariant: "minimal",
+    render: (props) => <NewsletterWizardEditor {...props} />,
+  });
 
   try {
-    const variantSelect = getSelectByOptions(container, ["inline", "stacked", "minimal"]);
-    expect(variantSelect.value).toBe("inline");
-    expect(findInputByPlaceholder(container, "I agree to receive updates.")).toBeUndefined();
-
-    setSelectValue(variantSelect, "minimal");
-    expect(getLatestVariant()).toBe("minimal");
-    expect(onVariantChangeSpy).toHaveBeenLastCalledWith("minimal");
+    expect(normalizeText(container.textContent)).toContain("change the variant in visual");
+    expect(normalizeText(container.textContent)).toContain(
+      "description stays saved, but the minimal variant does not render it"
+    );
 
     setInputValue(getInputByPlaceholder(container, "Join our newsletter"), "Weekly dispatch");
     setTextareaValue(
       getTextareaByPlaceholder(container, "Short supporting line"),
       "Product updates every Friday."
     );
-
-    setInputValue(getInputByPlaceholder(container, "Subscribe"), "   ");
-    expect(getLatestValue().submit?.label).toBe(newsletterDefaults.submit?.label);
-
     setInputValue(getInputByPlaceholder(container, "Subscribe"), "Join now");
-    expect(getLatestValue().submit?.label).toBe("Join now");
 
     const consentToggle = getCheckboxes(container)[0];
+    setCheckboxValue(consentToggle, false);
+    expect(findInputByPlaceholder(container, "I agree to receive updates.")).toBeUndefined();
+
     setCheckboxValue(consentToggle, true);
     setInputValue(
       getInputByPlaceholder(container, "I agree to receive updates."),
@@ -414,7 +472,55 @@ test("Newsletter wizard editor covers variant fallback, submit normalization, an
   }
 });
 
-test("Newsletter visual editor covers variant cards, consent gates, integration switching, and color fallback", async () => {
+test("Newsletter visual editor covers forms-runtime binding, semantics, preview, and style controls", async () => {
+  formsRuntimeMockState.forms = [
+    {
+      id: "form-public",
+      name: "Newsletter",
+      slug: "newsletter",
+      status: "published",
+      description: null,
+      successMessage: "Thanks!",
+      successRedirectUrl: null,
+      submissionAccess: "public",
+      settings: {},
+      createdAt: "2026-05-01T00:00:00.000Z",
+      updatedAt: "2026-05-01T00:00:00.000Z",
+    },
+  ];
+  formsRuntimeMockState.details.set("form-public", {
+    form: formsRuntimeMockState.forms[0]!,
+    fields: [
+      {
+        id: "field-1",
+        type: "text",
+        label: "First name",
+        name: "first_name",
+        required: false,
+        settings: {},
+        orderIndex: 0,
+      },
+      {
+        id: "field-2",
+        type: "email",
+        label: "Email",
+        name: "email",
+        required: true,
+        settings: {},
+        orderIndex: 1,
+      },
+      {
+        id: "field-3",
+        type: "checkbox",
+        label: "Consent",
+        name: "consent",
+        required: false,
+        settings: {},
+        orderIndex: 2,
+      },
+    ],
+  });
+
   const { NewsletterVisualEditor } =
     await import("../../../core/admin/ui/widgets/editors/NewsletterEditors");
 
@@ -424,135 +530,166 @@ test("Newsletter visual editor covers variant cards, consent gates, integration 
         title: "Campaign updates",
         description: "Weekly launch notes.",
         placeholder: "team@example.com",
+        stateCopy: {
+          loadingMessage: "Sending...",
+          successMessage: "Done.",
+          errorMessage: "Try again.",
+        },
+        form: {
+          emailFieldName: "email",
+          emailLabel: "Email address",
+          showEmailLabel: false,
+          consentFieldName: "consent",
+          firstName: {
+            enabled: false,
+            label: "First name",
+            placeholder: "Your first name",
+            fieldName: "first_name",
+            required: false,
+          },
+        },
         consent: {
           enabled: true,
           label: "Legacy opt-in",
-        },
-        submit: {
-          label: "Stay posted",
-          successMessage: "",
+          required: false,
         },
         integration: {
-          webhookId: "legacy_hook",
+          mode: "action-url",
+          method: "post",
+          actionUrl: "",
+          webhookId: "",
+        },
+        submission: {
+          mode: "static",
+          formId: "",
+          analyticsEvent: "",
+          successBehavior: "show-message-hide-form",
         },
         style: {
           spacing: "wide" as never,
           alignment: "edge" as never,
+          width: "oversized" as never,
           background: "transparent",
+          textColor: "",
+          buttonBackground: "",
+          buttonTextColor: "",
         },
       },
-      initialVariant: "legacy-variant",
+      initialVariant: "legacy-newsletter",
       render: (props) => <NewsletterVisualEditor {...props} />,
     });
 
   try {
     const variantSection = getSectionByTitle(container, "Variant and form structure");
-    expect(normalizeText(variantSection.textContent)).toContain("inline");
-    expect(normalizeText(variantSection.textContent)).toContain("selected");
-
     clickButton(getButtonsByText(variantSection, "Minimal")[0]);
     expect(getLatestVariant()).toBe("minimal");
 
-    const contentSection = getSectionByTitle(container, "Content and copy");
-    setInputValue(getInputByPlaceholder(contentSection, "Join our newsletter"), "Launch notes");
+    const semanticsSection = getSectionByTitle(container, "Form semantics and consent");
+    setInputValue(getInputByPlaceholder(semanticsSection, "Email address"), "Work email");
+    const showLabelToggle = getCheckboxes(semanticsSection)[0];
+    setCheckboxValue(showLabelToggle, true);
+    setInputValue(getInputByPlaceholder(semanticsSection, "email"), "subscriber_email");
+
+    const firstNameToggle = getCheckboxes(semanticsSection)[1];
+    setCheckboxValue(firstNameToggle, true);
+    setInputValue(getInputByPlaceholder(semanticsSection, "first_name"), "first_name");
+    setCheckboxValue(getCheckboxes(semanticsSection)[2], true);
+
+    const consentCheckboxes = getCheckboxes(semanticsSection);
+    setCheckboxValue(consentCheckboxes[4], true);
+    setInputValue(getInputByPlaceholder(semanticsSection, "consent"), "consent_newsletter");
+    setSelectValue(getSelectByOptions(semanticsSection, ["single", "double"]), "double");
     setTextareaValue(
-      getTextareaByPlaceholder(contentSection, "Short supporting line"),
-      "Monthly digest for operators."
+      getTextareaByPlaceholder(
+        semanticsSection,
+        "Please check your inbox to confirm your subscription."
+      ),
+      "Please confirm from your inbox."
     );
-    setInputValue(getInputByPlaceholder(contentSection, "you@example.com"), "ops@example.com");
-    expect(getLatestValue()).toMatchObject({
-      title: "Launch notes",
-      description: "Monthly digest for operators.",
-      placeholder: "ops@example.com",
-    });
+    expect(normalizeText(semanticsSection.textContent)).toContain(
+      "double opt-in enforcement remains provider-owned"
+    );
 
-    const consentSection = getSectionByTitle(container, "Consent and submit behavior");
-    setInputValue(getInputByPlaceholder(consentSection, "Subscribe"), "Keep me posted");
+    const runtimeSection = getSectionByTitle(container, "Submission runtime");
+    setSelectValue(
+      getSelectByOptions(runtimeSection, ["static", "forms-runtime"]),
+      "forms-runtime"
+    );
+    await React.act(async () => {
+      await (
+        window as Window & { happyDOM?: { waitUntilComplete?: () => Promise<void> } }
+      ).happyDOM?.waitUntilComplete?.();
+    });
+    setSelectValue(getSelectByOptions(runtimeSection, ["form-public"]), "form-public");
+    expect(normalizeText(runtimeSection.textContent)).toContain(
+      "this form does not have a redirect configured"
+    );
+
+    setInputValue(getInputByPlaceholder(runtimeSection, "Sending..."), "Saving...");
     setInputValue(
-      getInputByPlaceholder(consentSection, "Thanks for joining!"),
-      "Check your inbox."
+      getInputByPlaceholder(runtimeSection, "Unable to submit the form. Please try again."),
+      "Retry later."
     );
-    expect(getLatestValue().submit).toMatchObject({
-      label: "Keep me posted",
-      successMessage: "Check your inbox.",
-    });
-
-    let consentCheckboxes = getCheckboxes(consentSection);
-    expect(consentCheckboxes).toHaveLength(2);
-
-    setCheckboxValue(consentCheckboxes[1], true);
-    expect(getLatestValue().consent?.required).toBe(true);
-
-    setCheckboxValue(consentCheckboxes[0], false);
-    expect(getLatestValue().consent?.enabled).toBe(false);
-    expect(findInputByPlaceholder(consentSection, "I agree to receive updates.")).toBeUndefined();
-
-    consentCheckboxes = getCheckboxes(consentSection);
-    expect(consentCheckboxes).toHaveLength(1);
-    setCheckboxValue(consentCheckboxes[0], true);
-    setInputValue(
-      getInputByPlaceholder(consentSection, "I agree to receive updates."),
-      "Permission to email me."
-    );
-
-    expect(getLatestValue().consent).toMatchObject({
-      enabled: true,
-      label: "Permission to email me.",
-      required: true,
-    });
+    setInputValue(getInputByPlaceholder(runtimeSection, "Thanks for joining!"), "Joined!");
+    setInputValue(getInputByPlaceholder(runtimeSection, "newsletter_submit"), "newsletter_signup");
+    clickButton(getButtonsByText(runtimeSection, "Success state")[0]);
+    expect(normalizeText(runtimeSection.textContent)).toContain("joined!");
 
     const integrationSection = getSectionByTitle(container, "Integration target");
-    expect(getInputByPlaceholder(integrationSection, "webhook_newsletter_signup").value).toBe(
-      "legacy_hook"
-    );
-    expect(
-      findInputByPlaceholder(integrationSection, "https://example.com/subscribe")
-    ).toBeUndefined();
-
-    const integrationSelect = getSelectByOptions(integrationSection, ["action-url", "webhook"]);
-    expect(integrationSelect.value).toBe("webhook");
-    setSelectValue(integrationSelect, "action-url");
     setInputValue(
       getInputByPlaceholder(integrationSection, "https://example.com/subscribe"),
-      "https://example.com/newsletter"
+      "example.com"
     );
-    setSelectValue(integrationSelect, "webhook");
-    setInputValue(
-      getInputByPlaceholder(integrationSection, "webhook_newsletter_signup"),
-      "newsletter_sync"
+    expect(normalizeText(integrationSection.textContent)).toContain(
+      "action url must be https:// or an approved"
     );
-
-    expect(getLatestValue().integration).toMatchObject({
-      mode: "webhook",
-      actionUrl: "https://example.com/newsletter",
-      webhookId: "newsletter_sync",
-    });
 
     const colorsSection = getSectionByTitle(container, "Colors and emphasis");
-    const colorInput = Array.from(colorsSection.querySelectorAll('input[type="color"]'))[0];
-    expect((colorInput as HTMLInputElement | null | undefined)?.value).toBe("#ffffff");
-
-    setInputValue(colorInput, "#112233");
-    expect(getLatestValue().style?.background).toBe("#112233");
-    expect((colorInput as HTMLInputElement | null | undefined)?.value).toBe("#112233");
-
-    setInputValue(getInputByPlaceholder(colorsSection, "transparent"), "paper");
-    expect((colorInput as HTMLInputElement | null | undefined)?.value).toBe("#ffffff");
+    setInputValue(getInputByPlaceholder(colorsSection, "transparent"), "#f8fafc");
+    const colorInputs = Array.from(colorsSection.querySelectorAll('input[type="color"]'));
+    setInputValue(colorInputs[1], "#111827");
+    setInputValue(colorInputs[2], "#1d4ed8");
+    setInputValue(colorInputs[3], "#ffffff");
 
     const spacingSection = getSectionByTitle(container, "Spacing and alignment");
-    const spacingSelect = getSelectByOptions(spacingSection, ["none", "sm", "md", "lg", "xl"]);
-    const alignmentSelect = getSelectByOptions(spacingSection, ["start", "center", "end"]);
+    setSelectValue(getSelectByOptions(spacingSection, ["none", "sm", "md", "lg", "xl"]), "xl");
+    setSelectValue(getSelectByOptions(spacingSection, ["start", "center", "end"]), "end");
+    setSelectValue(
+      getSelectByOptions(spacingSection, ["narrow", "default", "wide", "full"]),
+      "wide"
+    );
 
-    expect(spacingSelect.value).toBe("md");
-    expect(alignmentSelect.value).toBe("start");
-
-    setSelectValue(spacingSelect, "xl");
-    setSelectValue(alignmentSelect, "end");
-
-    expect(getLatestValue().style).toMatchObject({
-      spacing: "xl",
-      alignment: "end",
-      background: "paper",
+    expect(getLatestValue()).toMatchObject({
+      form: {
+        emailLabel: "Work email",
+        showEmailLabel: true,
+        emailFieldName: "subscriber_email",
+        consentFieldName: "consent_newsletter",
+        firstName: {
+          enabled: true,
+          fieldName: "first_name",
+          required: true,
+        },
+      },
+      optIn: {
+        mode: "double",
+        confirmationCopy: "Please confirm from your inbox.",
+      },
+      submission: {
+        mode: "forms-runtime",
+        formId: "form-public",
+        analyticsEvent: "newsletter_signup",
+      },
+      stateCopy: {
+        loadingMessage: "Saving...",
+        successMessage: "Joined!",
+        errorMessage: "Retry later.",
+      },
+      style: {
+        spacing: "xl",
+        alignment: "end",
+        width: "wide",
+      },
     });
     expect(onChangeSpy).toHaveBeenCalled();
   } finally {
@@ -560,22 +697,215 @@ test("Newsletter visual editor covers variant cards, consent gates, integration 
   }
 });
 
-test("Newsletter advanced editor covers fallback summary, raw integration metadata, and normalize action", async () => {
+test("Newsletter visual editor warns when a bound form is internal or incompatible", async () => {
+  formsRuntimeMockState.forms = [];
+  formsRuntimeMockState.details.set("form-internal", {
+    form: {
+      id: "form-internal",
+      name: "Internal form",
+      slug: "internal",
+      status: "published",
+      description: null,
+      successMessage: null,
+      successRedirectUrl: null,
+      submissionAccess: "internal",
+      settings: {},
+      createdAt: "2026-05-01T00:00:00.000Z",
+      updatedAt: "2026-05-01T00:00:00.000Z",
+    },
+    fields: [
+      {
+        id: "field-1",
+        type: "email",
+        label: "Reply email",
+        name: "reply_email",
+        required: true,
+        settings: {},
+        orderIndex: 0,
+      },
+      {
+        id: "field-2",
+        type: "text",
+        label: "First name",
+        name: "first_name",
+        required: true,
+        settings: {},
+        orderIndex: 1,
+      },
+    ],
+  });
+
+  const { NewsletterVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/NewsletterEditors");
+
+  const view = mount(
+    <NewsletterVisualEditor
+      value={{
+        ...newsletterDefaults,
+        form: {
+          ...newsletterDefaults.form,
+          emailFieldName: "reply_email",
+          firstName: {
+            ...newsletterDefaults.form?.firstName,
+            enabled: true,
+            required: false,
+          },
+        },
+        submission: {
+          ...newsletterDefaults.submission,
+          mode: "forms-runtime",
+          formId: "form-internal",
+        },
+      }}
+      onChange={() => undefined}
+      variant="inline"
+      onVariantChange={() => undefined}
+    />
+  );
+
+  try {
+    await React.act(async () => {
+      await (
+        window as Window & { happyDOM?: { waitUntilComplete?: () => Promise<void> } }
+      ).happyDOM?.waitUntilComplete?.();
+    });
+    const runtimeSection = getSectionByTitle(view.container, "Submission runtime");
+    expect(normalizeText(runtimeSection.textContent)).toContain("internal submissions require");
+    expect(normalizeText(runtimeSection.textContent)).toContain("missing matching form fields");
+    expect(normalizeText(runtimeSection.textContent)).toContain("must require them too");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Newsletter visual editor publishes page-builder preview hydration for forms-runtime", async () => {
+  formsRuntimeMockState.forms = [
+    {
+      id: "form-preview",
+      name: "Newsletter preview",
+      slug: "newsletter-preview",
+      status: "published",
+      description: "Runtime hydrated",
+      successMessage: "Joined!",
+      successRedirectUrl: "/thanks",
+      submissionAccess: "public",
+      settings: {},
+      createdAt: "2026-05-01T00:00:00.000Z",
+      updatedAt: "2026-05-01T00:00:00.000Z",
+    },
+  ];
+  formsRuntimeMockState.details.set("form-preview", {
+    form: formsRuntimeMockState.forms[0]!,
+    fields: [
+      {
+        id: "field-1",
+        type: "email",
+        label: "Email",
+        name: "email",
+        required: true,
+        settings: {},
+        orderIndex: 0,
+      },
+      {
+        id: "field-2",
+        type: "checkbox",
+        label: "Consent",
+        name: "consent",
+        required: false,
+        settings: {},
+        orderIndex: 1,
+      },
+    ],
+  });
+
+  const { NewsletterVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/NewsletterEditors");
+  const setPreviewState = vi.fn();
+
+  const view = mount(
+    <NewsletterVisualEditor
+      value={{
+        ...newsletterDefaults,
+        submission: {
+          ...newsletterDefaults.submission,
+          mode: "forms-runtime",
+          formId: "form-preview",
+        },
+      }}
+      onChange={() => undefined}
+      variant="inline"
+      onVariantChange={() => undefined}
+      context={{
+        surface: "page-builder",
+        setPreviewState,
+      }}
+    />
+  );
+
+  try {
+    await React.act(async () => {
+      await (
+        window as Window & { happyDOM?: { waitUntilComplete?: () => Promise<void> } }
+      ).happyDOM?.waitUntilComplete?.();
+    });
+
+    expect(setPreviewState).toHaveBeenCalledWith({ status: "loading" });
+    expect(setPreviewState).toHaveBeenLastCalledWith({
+      status: "ready",
+      dataPatch: {
+        resolved: {
+          formId: "form-preview",
+          formName: "Newsletter preview",
+          description: "Runtime hydrated",
+          status: "published",
+          successMessage: "Joined!",
+          successRedirectUrl: "/thanks",
+          submissionAccess: "public",
+          fields: [
+            {
+              id: "field-1",
+              type: "email",
+              label: "Email",
+              name: "email",
+              required: true,
+              settings: {},
+              orderIndex: 0,
+            },
+            {
+              id: "field-2",
+              type: "checkbox",
+              label: "Consent",
+              name: "consent",
+              required: false,
+              settings: {},
+              orderIndex: 1,
+            },
+          ],
+        },
+      },
+    });
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Newsletter advanced editor summarizes the active transport and normalizes payload", async () => {
   const { NewsletterAdvancedEditor } =
     await import("../../../core/admin/ui/widgets/editors/NewsletterEditors");
 
   const { cleanup, container, getLatestValue, onChangeSpy } = mountNewsletterHarness({
     initialValue: {
-      submit: { label: "" },
       integration: {
-        webhookId: "legacy-advanced-hook",
+        mode: "action-url",
+        method: "get",
+        actionUrl: "example.com",
+        webhookId: "legacy-webhook",
       },
-      consent: {
-        enabled: true,
-      },
-      style: {
-        spacing: "wide" as never,
-        alignment: "edge" as never,
+      submission: {
+        mode: "static",
+        formId: "",
+        analyticsEvent: "newsletter_signup",
+        successBehavior: "show-message-hide-form",
       },
     },
     initialVariant: "legacy-newsletter",
@@ -583,162 +913,65 @@ test("Newsletter advanced editor covers fallback summary, raw integration metada
   });
 
   try {
-    expect(normalizeText(container.textContent)).toContain(
-      "resolved variant: inline. resolved integration mode: webhook. consent required: false."
-    );
+    expect(normalizeText(container.textContent)).toContain("active integration field: actionurl");
+    expect(normalizeText(container.textContent)).toContain("action status: invalid");
+    expect(normalizeText(container.textContent)).toContain("ignored field: webhookid");
 
-    const layoutSection = getSectionByTitle(container, "Layout tokens");
-    const spacingSelect = getSelectByOptions(layoutSection, ["none", "sm", "md", "lg", "xl"]);
-    const alignmentSelect = getSelectByOptions(layoutSection, ["start", "center", "end"]);
-
-    expect(spacingSelect.value).toBe("md");
-    expect(alignmentSelect.value).toBe("start");
-
-    setSelectValue(spacingSelect, "xl");
-    setSelectValue(alignmentSelect, "center");
-
-    const integrationSection = getSectionByTitle(container, "Raw integration metadata");
-    const integrationSelect = getSelectByOptions(integrationSection, ["action-url", "webhook"]);
-
-    expect(integrationSelect.value).toBe("webhook");
-    setSelectValue(integrationSelect, "action-url");
+    const metadataSection = getSectionByTitle(container, "Raw integration metadata");
     setInputValue(
-      getInputByPlaceholder(integrationSection, "https://example.com/subscribe"),
-      "https://example.com/raw-signup"
+      getInputByPlaceholder(metadataSection, "https://example.com/subscribe"),
+      "https://example.com/newsletter"
     );
     setInputValue(
-      getInputByPlaceholder(integrationSection, "webhook_newsletter_signup"),
+      getInputByPlaceholder(metadataSection, "webhook_newsletter_signup"),
       "hook_override"
     );
-
-    expect(getLatestValue().integration).toMatchObject({
-      mode: "action-url",
-      actionUrl: "https://example.com/raw-signup",
-      webhookId: "hook_override",
-    });
 
     clickButton(getButtonsByText(container, "Normalize newsletter payload")[0]);
 
     expect(getLatestValue()).toMatchObject({
-      title: newsletterDefaults.title,
-      description: newsletterDefaults.description,
-      placeholder: newsletterDefaults.placeholder,
-      consent: {
-        enabled: true,
-        label: newsletterDefaults.consent?.label,
-        required: false,
-      },
-      submit: {
-        label: newsletterDefaults.submit?.label,
-        successMessage: newsletterDefaults.submit?.successMessage,
-      },
       integration: {
-        mode: "action-url",
-        actionUrl: "https://example.com/raw-signup",
+        actionUrl: "https://example.com/newsletter",
         webhookId: "hook_override",
       },
-      style: {
-        spacing: "xl",
-        alignment: "center",
-        background: undefined,
-      },
     });
-    expect(normalizeText(container.textContent)).toContain(
-      "resolved variant: inline. resolved integration mode: action-url. consent required: false."
-    );
     expect(onChangeSpy).toHaveBeenCalled();
   } finally {
     cleanup();
   }
 });
 
-test("Newsletter editors render sparse defaults and ignore variant changes without a handler", async () => {
-  const { NewsletterAdvancedEditor, NewsletterVisualEditor, NewsletterWizardEditor } =
+test("Newsletter advanced editor explains that forms-runtime owns submit", async () => {
+  const { NewsletterAdvancedEditor } =
     await import("../../../core/admin/ui/widgets/editors/NewsletterEditors");
 
-  const sparseValue: NewsletterData = {
-    title: undefined,
-    description: undefined,
-    placeholder: undefined,
-    consent: {},
-    submit: {},
-    integration: {},
-    style: {},
-  };
-
-  const wizardView = mount(
-    <NewsletterWizardEditor
-      value={sparseValue}
-      onChange={() => undefined}
-      variant="legacy-newsletter"
-    />
-  );
-
-  try {
-    const variantSelect = getSelectByOptions(wizardView.container, [
-      "inline",
-      "stacked",
-      "minimal",
-    ]);
-    expect(variantSelect.value).toBe("inline");
-    expect(getInputByPlaceholder(wizardView.container, "Join our newsletter").value).toBe(
-      newsletterDefaults.title ?? ""
-    );
-    expect(getTextareaByPlaceholder(wizardView.container, "Short supporting line").value).toBe(
-      newsletterDefaults.description ?? ""
-    );
-    setSelectValue(variantSelect, "stacked");
-    expect(variantSelect.value).toBe("inline");
-  } finally {
-    wizardView.cleanup();
-  }
-
-  const visualView = mount(
-    <NewsletterVisualEditor
-      value={sparseValue}
-      onChange={() => undefined}
-      variant="legacy-newsletter"
-    />
-  );
-
-  try {
-    const variantSection = getSectionByTitle(visualView.container, "Variant and form structure");
-    clickButton(getButtonsByText(variantSection, "Minimal")[0]);
-
-    expect(getInputByPlaceholder(visualView.container, "Join our newsletter").value).toBe(
-      newsletterDefaults.title ?? ""
-    );
-    expect(getTextareaByPlaceholder(visualView.container, "Short supporting line").value).toBe(
-      newsletterDefaults.description ?? ""
-    );
-    expect(getInputByPlaceholder(visualView.container, "you@example.com").value).toBe(
-      newsletterDefaults.placeholder ?? ""
-    );
-
-    const integrationSection = getSectionByTitle(visualView.container, "Integration target");
-    expect(getSelectByOptions(integrationSection, ["action-url", "webhook"]).value).toBe(
-      "action-url"
-    );
-    expect(getInputByPlaceholder(integrationSection, "https://example.com/subscribe").value).toBe(
-      ""
-    );
-  } finally {
-    visualView.cleanup();
-  }
-
-  const advancedView = mount(
+  const view = mount(
     <NewsletterAdvancedEditor
-      value={sparseValue}
+      value={{
+        ...newsletterDefaults,
+        submission: {
+          ...newsletterDefaults.submission,
+          mode: "forms-runtime",
+          formId: "form-public",
+        },
+        integration: {
+          mode: "action-url",
+          method: "get",
+          actionUrl: "https://example.com/newsletter",
+          webhookId: "legacy-hook",
+        },
+      }}
       onChange={() => undefined}
-      variant="legacy-newsletter"
+      variant="inline"
     />
   );
 
   try {
-    const layoutSection = getSectionByTitle(advancedView.container, "Layout tokens");
-    expect(getSelectByOptions(layoutSection, ["none", "sm", "md", "lg", "xl"]).value).toBe("md");
-    expect(getSelectByOptions(layoutSection, ["start", "center", "end"]).value).toBe("start");
+    expect(normalizeText(view.container.textContent)).toContain("active integration field: formid");
+    expect(normalizeText(view.container.textContent)).toContain(
+      "ignored field: actionurl and webhookid stay inactive while the bound form owns submit."
+    );
   } finally {
-    advancedView.cleanup();
+    view.cleanup();
   }
 });

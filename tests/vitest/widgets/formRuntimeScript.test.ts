@@ -328,3 +328,60 @@ test("form runtime redirects when the server returns runtime.redirectUrl", async
 
   expect(assignSpy).toHaveBeenCalledWith("/done");
 });
+
+test("form runtime emits a bounded analytics event after successful submit", async () => {
+  const fetchMock = vi.fn(async () => {
+    return new Response(JSON.stringify({ runtime: { successMessage: "Done" } }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  });
+  globalThis.fetch = fetchMock as typeof globalThis.fetch;
+
+  const data: FormEmbedData = {
+    ...formEmbedDefaults,
+    formId: "form-analytics",
+    resolved: {
+      formName: "Analytics form",
+      submissionAccess: "public",
+      submissionNonce: "nonce-analytics",
+      settings: {
+        layoutMode: "single",
+        saveProgress: false,
+        stepTitles: [],
+      },
+      fields: [
+        {
+          id: "field-1",
+          type: "text",
+          label: "Name",
+          name: "name",
+          required: true,
+        },
+      ],
+    },
+  };
+
+  const form = installFormRuntime(data);
+  form.dataset.formAnalyticsEvent = "newsletter_submit";
+  setInputValue('input[name="name"]', "Alice");
+
+  const analyticsSpy = vi.fn();
+  window.addEventListener("newsletter_submit", analyticsSpy as EventListener);
+
+  form.dispatchEvent(new SubmitEvent("submit", { bubbles: true, cancelable: true }));
+  await (
+    window as Window & { happyDOM?: { waitUntilComplete?: () => Promise<void> } }
+  ).happyDOM?.waitUntilComplete?.();
+
+  expect(analyticsSpy).toHaveBeenCalledTimes(1);
+  expect(analyticsSpy.mock.calls[0]?.[0]).toMatchObject({
+    detail: {
+      formId: "form-analytics",
+      redirectUrl: null,
+      successMessage: "Done",
+    },
+  });
+
+  window.removeEventListener("newsletter_submit", analyticsSpy as EventListener);
+});

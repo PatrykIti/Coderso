@@ -811,7 +811,7 @@ test("renderer outputs compare timeline highlight segments", () => {
   expect(html).toContain("Fast lane");
 });
 
-test("renderer outputs newsletter variant and integration markers", () => {
+test("renderer outputs newsletter variant and forms-runtime markers", () => {
   clearWidgets();
   registerWidget(
     createNewsletterWidget({
@@ -830,15 +830,59 @@ test("renderer outputs newsletter variant and integration markers", () => {
         data: {
           ...newsletterDefaults,
           description: "Hidden in minimal variant",
-          consent: {
-            enabled: true,
-            label: "Accept policy",
-            required: true,
+          form: {
+            ...newsletterDefaults.form,
+            firstName: {
+              ...newsletterDefaults.form?.firstName,
+              enabled: true,
+            },
           },
-          integration: {
-            mode: "webhook",
-            webhookId: "webhook_1",
-            actionUrl: "",
+          submission: {
+            ...newsletterDefaults.submission,
+            mode: "forms-runtime",
+            formId: "form-public",
+            analyticsEvent: "newsletter_submit",
+          },
+          stateCopy: {
+            loadingMessage: "Saving...",
+            successMessage: "Joined.",
+            errorMessage: "Try again.",
+          },
+          resolved: {
+            formId: "form-public",
+            formName: "Newsletter",
+            status: "published",
+            submissionAccess: "public",
+            submissionNonce: "nonce-1",
+            fields: [
+              {
+                id: "field-1",
+                type: "text",
+                label: "First name",
+                name: "first_name",
+                required: false,
+                orderIndex: 0,
+                settings: {},
+              },
+              {
+                id: "field-2",
+                type: "email",
+                label: "Email",
+                name: "email",
+                required: true,
+                orderIndex: 1,
+                settings: {},
+              },
+              {
+                id: "field-3",
+                type: "checkbox",
+                label: "Consent",
+                name: "consent",
+                required: false,
+                orderIndex: 2,
+                settings: {},
+              },
+            ],
           },
           style: {
             spacing: "lg",
@@ -851,9 +895,10 @@ test("renderer outputs newsletter variant and integration markers", () => {
   );
 
   expect(html).toContain('data-newsletter-variant="minimal"');
-  expect(html).toContain('data-newsletter-integration-mode="webhook"');
-  expect(html).toContain('data-newsletter-consent-required="true"');
-  expect(html).toContain('name="webhookId"');
+  expect(html).toContain('data-newsletter-submission-mode="forms-runtime"');
+  expect(html).toContain('data-nextless-form-runtime="1"');
+  expect(html).toContain('data-newsletter-submit-ready="true"');
+  expect(html).toContain('name="__nl_form_nonce"');
   expect(html).not.toContain("Hidden in minimal variant");
 });
 

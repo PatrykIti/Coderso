@@ -58,6 +58,7 @@ import { type ProductCompareData } from "../widgets/core/productCompare";
 import { type ProductTableData } from "../widgets/core/productTable";
 import { normalizeContactData, type ContactData } from "../widgets/core/contact";
 import { normalizeFormEmbedData, type FormEmbedData } from "../widgets/core/formEmbed";
+import { normalizeNewsletterData, type NewsletterData } from "../widgets/core/newsletter";
 import {
   normalizeBookingCalendarData,
   type BookingCalendarData,
@@ -404,6 +405,40 @@ const hydrateRuntimeBlock = async (
           successRedirectUrl: resolvedData.successRedirectUrl,
           submissionAccess: resolvedData.submissionAccess,
           submissionNonce: resolvedData.submissionNonce ?? null,
+          fields: resolvedData.fields,
+          ...(resolvedData.error ? { error: resolvedData.error } : {}),
+        }
+      : undefined;
+    nextBlock = {
+      ...block,
+      data: {
+        ...normalizedData,
+        ...(resolved ? { resolved } : {}),
+      },
+    };
+  }
+  if (block.type === "newsletter") {
+    const normalizedData = normalizeNewsletterData(ensureRecord(block.data) as NewsletterData);
+    const formId =
+      normalizedData.submission?.mode === "forms-runtime"
+        ? (normalizedData.submission.formId ?? "").trim()
+        : "";
+    const resolvedData = formId
+      ? await resolveFormRuntimeData(formId, {
+          preview: options.preview,
+        })
+      : undefined;
+    const resolved = resolvedData
+      ? {
+          formId: resolvedData.formId,
+          formName: resolvedData.formName,
+          description: resolvedData.description,
+          status: resolvedData.status,
+          successMessage: resolvedData.successMessage,
+          successRedirectUrl: resolvedData.successRedirectUrl,
+          submissionAccess: resolvedData.submissionAccess,
+          submissionNonce: resolvedData.submissionNonce ?? null,
+          botProtection: resolvedData.botProtection ?? null,
           fields: resolvedData.fields,
           ...(resolvedData.error ? { error: resolvedData.error } : {}),
         }

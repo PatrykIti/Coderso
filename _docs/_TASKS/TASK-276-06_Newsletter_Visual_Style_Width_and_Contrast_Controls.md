@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Runtime Render + Design Tokens + Accessibility
 **Estimated Effort:** Large
 **Dependencies:** TASK-276, TASK-276-01
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -30,8 +30,9 @@ This leaf owns:
   bounded options.
 - Contrast diagnostics for configured text/button/background combinations.
 - Background color picker clarity for `transparent`.
-- Optional breakpoint variant control if the product decision remains valid
-  after base mobile behavior guidance in TASK-276-04.
+- Reassessing BF-15 after TASK-276-04 mobile guidance and, if still needed,
+  deferring it explicitly to the physical follow-up `TASK-319` rather than
+  widening schema in this family.
 - Explicit `"md"` spacing resolver handling and local normalizer cleanup.
 
 This leaf does not own:
@@ -43,28 +44,29 @@ This leaf does not own:
 
 ## Sub-Tasks
 
-- [ ] Add `style.width?: "narrow" | "default" | "wide" | "full"` with
+- [x] Add `style.width?: "narrow" | "default" | "wide" | "full"` with
   backward-compatible default matching current `max-w-xl`.
-- [ ] Add bounded `style.textColor`, `style.buttonBackground`, and
+- [x] Add bounded `style.textColor`, `style.buttonBackground`, and
   `style.buttonTextColor` fields using a Newsletter-local color normalizer;
   use existing clearable style helpers only for clear/remove semantics.
-- [ ] Add editor controls for those fields with clear behavior aligned to
+- [x] Add editor controls for those fields with clear behavior aligned to
   TASK-256-02 if the shared helper has landed.
-- [ ] Add a non-blocking contrast diagnostic that flags likely WCAG AA failures
+- [x] Add a non-blocking contrast diagnostic that flags likely WCAG AA failures
   without storing scanner results in widget JSON.
-- [ ] Make `transparent` background picker state explicit so the user sees that
+- [x] Make `transparent` background picker state explicit so the user sees that
   `#ffffff` is only the picker fallback, not the saved value.
-- [ ] Add explicit `"md"` branch to `resolveNewsletterSpacing`.
-- [ ] Decide whether per-breakpoint variant selection is still needed after
-  variant-card mobile guidance; if implemented, keep it bounded and tested.
+- [x] Add explicit `"md"` branch to `resolveNewsletterSpacing`.
+- [x] Reassess BF-15 after TASK-276-04 mobile guidance and defer true
+  per-breakpoint variant selection to `TASK-319` instead of adding new schema
+  in this family.
 
 ## Files to Change
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/newsletter.tsx` | Extend style schema/defaults/normalizer/render for width/colors/breakpoint variant if approved; add explicit `md` resolver branch. |
+| `core/widgets/core/newsletter.tsx` | Extend style schema/defaults/normalizer/render for width/colors; add explicit `md` resolver branch without widening into breakpoint-owned variants. |
 | `core/admin/ui/widgets/editors/NewsletterEditors.tsx` | Add bounded Visual style controls, background fallback note, and contrast diagnostics. |
-| `tests/vitest/widgets/newsletter.test.tsx` | Cover width/color render, cleared styles, explicit `md`, and mobile variant data if added. |
+| `tests/vitest/widgets/newsletter.test.tsx` | Cover width/color render, cleared styles, explicit `md`, and the absence of new breakpoint-owned variant data in this family. |
 | `tests/vitest/ui/newsletter-editor-wave.test.tsx` | Cover style controls, clear behavior, fallback note, and contrast diagnostics. |
 | `tests/vitest/widgets/styleNoneTokens.test.tsx` | Run/update when clear/default style adjacency changes. |
 | `tests/unit/widgets/validator.test.ts` | Update when schema/defaults change. |
@@ -82,7 +84,6 @@ type NewsletterStyle = {
   textColor?: string;
   buttonBackground?: string;
   buttonTextColor?: string;
-  mobileVariant?: "stacked" | "inherit";
 };
 
 const widthClassMap = {
@@ -135,8 +136,9 @@ Error handling:
 - Width options are enum-only; missing legacy width maps to current `max-w-xl`.
 - Contrast diagnostics are advisory and must not block saves unless a later
   accessibility policy explicitly requires it.
-- Per-breakpoint variant config must not conflict with the base `variant` value;
-  if ambiguous, keep it deferred and document the reason.
+- True per-breakpoint variant config stays out of this family. If the report
+  still needs it after truthful mobile guidance lands, defer it to `TASK-319`
+  instead of widening this schema.
 
 ## Security Contract
 
@@ -152,6 +154,9 @@ No API routes are added.
 
 ## Testing Requirements
 
+- Inherit the TASK-276 family gate before commit/closure:
+  `bun run lint`, `bun run test:bun`, `bun run test:vitest`,
+  `bun run scan:security:strict`, `bun run precommit`.
 - `bun run test:vitest -- tests/vitest/widgets/newsletter.test.tsx` with
   render/normalizer coverage proving arbitrary CSS strings and free-form unsafe
   colors do not render.
@@ -184,3 +189,5 @@ No API routes are added.
 - Contrast diagnostics are visible and do not store privileged or scanner data.
 - `resolveNewsletterSpacing("md")` is explicit and covered.
 - Style additions do not duplicate generic TASK-256 clear/token helper work.
+- BF-15 is either satisfied by truthful mobile guidance or deferred physically
+  to `TASK-319`; it is not silently implemented inside this leaf.

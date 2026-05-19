@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 265 tasks
+- **To Do:** 258 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1746 tasks
+- **Done:** 1754 tasks
 
 ---
 
@@ -38,6 +38,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-319 | Newsletter Per-Breakpoint Variant Overrides | Low | Large | Evaluate or explicitly reject true per-breakpoint Newsletter variant overrides after TASK-276 made current mobile behavior truthful |
 | TASK-318 | Section Surface Overflow and Sticky Child Containment Contract | High | Large | Shared Section/layout owner for sticky child widgets blocked by `overflow-hidden`, including the routed Navigation frontend sticky row |
 | TASK-317 | Widget Editor Live Preview Surface and Preview-State Contract | High | Large | Shared builder/editor owner for widget live-preview rows that need current-block preview without widget-local shell hacks |
 | TASK-313 | Grid Columns Shared Structural Truthfulness Follow-up | High | Large | Residual shared Grid Columns truthfulness after TASK-256 closure: variant truthfulness, span feedback, CSS-variable picker representation, and inactive cardize controls |
@@ -163,14 +164,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-278-06 | Pricing Plans Section Layout Typography and Notes | Medium | Large | Add bounded max-width, typography presets, and plain-text pricing notes |
 | TASK-278-07 | Pricing Plans Two-Plan Variant and Pack Docs | Medium | Medium | Add a dedicated two-plan variant with registry/editor/runtime/tests/docs coverage after TASK-256 count sync |
 | TASK-278-08 | Pricing Plans Report, Docs, Changelog, and Closure | Medium | Medium | Refresh Pricing Plans report/docs/changelog/board and final validation evidence |
-| TASK-276 | Newsletter Widget Playwright Product Followups | High | Very Large | Newsletter-only follow-up family for `REPORT_NEWSLETTER_WIDGET.md`, excluding TASK-256 shared-contract scope |
-| TASK-276-01 | Newsletter Form Semantics, Consent, and Accessibility | High | Large | Add email field metadata, consent-in-form semantics, accessible labels, autocomplete, and safe no-target submit behavior |
-| TASK-276-02 | Newsletter Submission States and Public Write Hardening | High | Very Large | Add hidden-by-default success/error/loading states and backend-owned anti-abuse for Coderso-owned submissions |
-| TASK-276-03 | Newsletter Integration Validation and Transport Diagnostics | High | Large | Add safe action URL/method validation and Advanced active-transport diagnostics |
-| TASK-276-04 | Newsletter Editor Mode Ownership and Variant Guidance | High | Medium | Align Newsletter editor mode ownership, Minimal description guidance, consent help, mobile copy, and success preview |
-| TASK-276-05 | Newsletter Field Expansion and Double Opt-In Model | Medium | Large | Add bounded extra fields and double opt-in semantics after the base form/transport contract is stable |
-| TASK-276-06 | Newsletter Visual Style, Width, and Contrast Controls | Medium | Large | Add Newsletter-local width/color/contrast controls, background picker clarity, breakpoint decisions, and explicit spacing resolver cleanup |
-| TASK-276-07 | Newsletter Report, Docs, Changelog, and Closure | Medium | Medium | Refresh Newsletter report/docs/changelog/board and final validation evidence |
 | TASK-277 | Posts Feed Widget Playwright Product Followups | High | Very Large | Posts Feed-only follow-up family for `REPORT_POSTS_FEED_WIDGET.md`, excluding TASK-256 shared-contract and global auth/session scope |
 | TASK-277-01 | Posts Feed Source Mode, Route, and Filter Truthfulness | High | Large | Repair manual-sort truthfulness, category filter copy/parsing, and post detail-route fallback behavior |
 | TASK-277-02 | Posts Feed Media, Tags, and Card Metadata | High | Large | Add show-image, media-resolved thumbnail/alt mapping, and bounded tag data for posts-feed cards |
@@ -429,6 +422,14 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-275-05-04 | Navigation Brand CTA and Logo Controls | Medium | Medium | Done: logo size, CTA radius/separator, Wizard CTA copy, and the explicit Right Actions secondary-action policy are documented and tested |
 | TASK-275-06 | Navigation Report Docs Changelog and Closure | Medium | Medium | Done: the report, widget docs, changelog, board rows, and scope-local validation evidence are synchronized for the TASK-275 family |
 | TASK-302 | Content List Block Shared Renderer and Color Control Residuals | High | Large | Done: shared `ContentListBlock` / `PostsFeedBlock` truthfulness, image/CTA renderer residuals, and Content List text-color clear/picker adoption are synchronized and validated |
+| TASK-276 | Newsletter Widget Playwright Product Followups | High | Very Large | Done: Newsletter report findings now map to bounded widget/runtime/editor owners, shared Forms runtime reuse, final docs closure, and one explicit deferred responsive follow-up (`TASK-319`) |
+| TASK-276-01 | Newsletter Form Semantics, Consent, and Accessibility | High | Large | Done: email/consent semantics now use stable names, ids, labels, autocomplete, and safe non-submitting fallback behavior |
+| TASK-276-02 | Newsletter Submission States and Public Write Hardening | High | Very Large | Done: Forms-runtime submit now reuses shared loading/success/error/nonce/CAPTCHA behavior with truthful redirect and analytics diagnostics |
+| TASK-276-03 | Newsletter Integration Validation and Transport Diagnostics | High | Large | Done: action URLs are validated, static `/forms/:id/submissions` misuse is blocked, and Advanced transport diagnostics are explicit |
+| TASK-276-04 | Newsletter Editor Mode Ownership and Variant Guidance | High | Medium | Done: Visual is the single variant owner, minimal/mobile/consent guidance is explicit, and success preview is local-only |
+| TASK-276-05 | Newsletter Field Expansion and Double Opt-In Model | Medium | Large | Done: Newsletter now supports bounded first-name metadata and provider-owned double opt-in copy without inventing a fake backend owner |
+| TASK-276-06 | Newsletter Visual Style, Width, and Contrast Controls | Medium | Large | Done: Newsletter now supports bounded width/text/button styling, transparent background guidance, contrast advisories, and explicit spacing handling |
+| TASK-276-07 | Newsletter Report, Docs, Changelog, and Closure | Medium | Medium | Done: report/docs/board/changelog are synchronized with focused evidence and the deferred BF-15 follow-up is now a physical task |
 | TASK-263 | CTA Banner Widget Playwright Product Followups | High | Very Large | Done: CTA runtime, Wizard/Visual UX, button styling, safe CTA conversion options, shared-layout full-width parity, background/media/motion controls, report/docs sync, and closure validation are complete |
 | TASK-263-01 | CTA Banner Runtime Semantics and Accessibility | High | Large | Done: empty badge suppression, section labelling, focus-visible CTA links, truthful description color, and border-width semantics are covered |
 | TASK-263-02 | CTA Banner Wizard and Action Editing UX | High | Large | Done: Wizard variant cards, primary/secondary URLs, labelled action fields, invalid URL feedback, and intentional secondary visibility landed |

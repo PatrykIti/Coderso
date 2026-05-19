@@ -334,7 +334,8 @@ test("widget template block settings render newsletter visual sections", () => {
 
   expect(html).toContain("Variant and form structure");
   expect(html).toContain("Content and copy");
-  expect(html).toContain("Consent and submit behavior");
+  expect(html).toContain("Form semantics and consent");
+  expect(html).toContain("Submission runtime");
   expect(html).toContain("Integration target");
   expect(html).toContain("Spacing and alignment");
 });

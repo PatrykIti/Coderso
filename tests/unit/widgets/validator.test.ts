@@ -17,6 +17,7 @@ import {
   listingFiltersDefaults,
 } from "../../../core/widgets/core/listingFilters";
 import { createNavigationWidget, navigationDefaults } from "../../../core/widgets/core/navigation";
+import { createNewsletterWidget, newsletterDefaults } from "../../../core/widgets/core/newsletter";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { clearWidgetValidators, normalizeWidgetBlock } from "../../../core/widgets/validator";
 import type { WidgetDefinition, WidgetBlock } from "../../../core/widgets/types";
@@ -300,6 +301,109 @@ test("normalizeWidgetBlock accepts listing filters presentation metadata and rej
             },
           },
         ],
+      } as never,
+    })
+  ).toThrow("widget_schema_invalid");
+});
+
+test("normalizeWidgetBlock accepts Newsletter runtime hydration data and rejects unsupported double opt-in enforcement", () => {
+  registerWidget(
+    createNewsletterWidget({
+      wizard: Dummy,
+      visual: Dummy,
+      advanced: Dummy,
+    })
+  );
+
+  const normalized = normalizeWidgetBlock({
+    id: "newsletter-runtime",
+    type: "newsletter",
+    variant: "stacked",
+    data: {
+      ...newsletterDefaults,
+      form: {
+        ...newsletterDefaults.form,
+        emailFieldName: "reply_email",
+        firstName: {
+          ...newsletterDefaults.form?.firstName,
+          enabled: true,
+        },
+      },
+      optIn: {
+        mode: "double",
+        confirmationCopy: "Please confirm from your inbox.",
+        enforcement: "provider-owned",
+      },
+      resolved: {
+        formId: "form-public",
+        formName: "Newsletter form",
+        status: "published",
+        submissionAccess: "public",
+        submissionNonce: "signed-nonce",
+        fields: [
+          {
+            id: "field-1",
+            type: "text",
+            label: "First name",
+            name: "first_name",
+            required: false,
+            orderIndex: 0,
+            settings: {},
+          },
+          {
+            id: "field-2",
+            type: "email",
+            label: "Reply email",
+            name: "reply_email",
+            required: true,
+            orderIndex: 1,
+            settings: {},
+          },
+          {
+            id: "field-3",
+            type: "checkbox",
+            label: "Consent",
+            name: "consent",
+            required: false,
+            orderIndex: 2,
+            settings: {},
+          },
+        ],
+      },
+    },
+  });
+
+  expect((normalized.data as { resolved?: { formId?: string } }).resolved?.formId).toBe(
+    "form-public"
+  );
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "newsletter-runtime-bad",
+      type: "newsletter",
+      variant: "stacked",
+      data: {
+        ...newsletterDefaults,
+        optIn: {
+          mode: "double",
+          confirmationCopy: "Please confirm from your inbox.",
+          enforcement: "coderso-owned",
+        },
+      } as never,
+    })
+  ).toThrow("widget_schema_invalid");
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "newsletter-runtime-bad-resolved",
+      type: "newsletter",
+      variant: "stacked",
+      data: {
+        ...newsletterDefaults,
+        resolved: {
+          formId: "form-public",
+          extra: "nope",
+        },
       } as never,
     })
   ).toThrow("widget_schema_invalid");
