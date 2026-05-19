@@ -64,7 +64,7 @@ Product Compare-only implementation.
 | Report finding | TASK-279 owner | Notes |
 |---|---|---|
 | BF-04 selected products by ID | TASK-279-01 | Product Compare-owned manual selection and query bridging. |
-| BF-15 schema/UI/normalizer limit mismatch | TASK-279-01 | Keep compare max deterministic without changing Product Gallery/Table behavior. |
+| BF-15 schema/UI/normalizer limit mismatch | TASK-279-01 | Keep compare max deterministic without changing Product Gallery/Table behavior; if the live fix must touch shared `CommerceSourceFields`, route it through the shared owner with cross-widget proof or a dedicated shared follow-up. |
 | BF-01 price and stock visibility | TASK-279-02 | Attribute-row model starts from the current local `metrics` array. |
 | BF-05 product excerpt/description row | TASK-279-02 | Requires runtime row payload extension and safe text rendering. |
 | BF-09 custom Attribute header | TASK-279-02 | Add schema/default/label/editor coverage. |
@@ -84,8 +84,8 @@ Product Compare-only implementation.
 | UX-03 editable runtime error flag | TASK-279-06 | Advanced diagnostics must be read-only. |
 | UX-04 raw query preview readability | TASK-279-06 | Keep JSON available only with useful labels or disclosure. |
 | UX-05 resolved product count outside Advanced | TASK-279-06 | Wizard/Visual status must not leak secrets or stale raw payloads. |
-| UX-08 admin refresh/re-resolve | TASK-279-06 | Use backend-owned commerce resolver; no client provider fetches. |
-| UX-02 Wizard surfaces are too advanced | TASK-279-07 | Product Compare-local IA after shared mode policy is settled. |
+| UX-08 admin refresh/re-resolve | TASK-279-06 | Use backend-owned commerce resolver, and cover the full admin preview bridge from builder preview state to renderer parity; no client provider fetches. |
+| UX-02 Wizard surfaces are too advanced | TASK-279-07 | Product Compare-local IA after re-checking the current shared mode policy and landed helpers. |
 | UX-06 limit warning for dense compare tables | TASK-279-07 | Add dynamic warning when limit exceeds readable compare range. |
 | UX-07 source filter placeholder/help copy | TASK-279-07 | Product Compare-specific source guidance. |
 | Report fixed/deferred notes, widget docs, changelog, board closure | TASK-279-08 | Final evidence pass. |
@@ -110,8 +110,11 @@ Product Compare-only implementation.
 
 ## Implementation Order
 
-1. Rebase over relevant TASK-256 shared helpers before implementation leaves
-   touch editor mode policy, clear controls, or shared runtime accessibility.
+1. Re-check the current TASK-256 classification and any already-landed shared
+   helpers before implementation leaves touch editor mode policy, clear
+   controls, shared source fields, or shared runtime accessibility. If the
+   smallest correct fix is still cross-widget, split it into a dedicated shared
+   task instead of patching Product Compare locally.
 2. Complete TASK-279-01 first so selected product ordering and compare limits
    are stable before renderer and preview leaves depend on resolved rows.
 3. Complete TASK-279-02 after source selection because attribute rows and
@@ -123,7 +126,8 @@ Product Compare-only implementation.
    section copy are part of every rendered variant.
 7. Complete TASK-279-06 after runtime query shape is stable so admin refresh and
    diagnostics call the same bounded resolver path.
-8. Complete TASK-279-07 after shared TASK-256 editor-mode policy is available.
+8. Complete TASK-279-07 after confirming the current shared editor-mode policy
+   and whether any shared source-field seam still requires separate ownership.
 9. Complete TASK-279-08 last after report evidence, docs, changelog, board, and
    validation output are synchronized.
 
@@ -216,6 +220,9 @@ Implementation leaves:
   scope.
 - Each implementation leaf names concrete files, data flow, error handling,
   regression tests, documentation updates, and validation commands.
+- Implementation leaves do not hide shared `CommerceSourceFields`,
+  builder-preview, or other cross-widget/admin-preview changes as Product
+  Compare-only work without explicit shared-task routing or cross-widget tests.
 - Runtime changes preserve backward compatibility for existing
   `product-compare` payloads unless the leaf documents and tests a
   normalizer/migration path.

@@ -108,6 +108,8 @@ Error handling:
 Regression shape:
 
 - Renderer tests prove variants render from the same normalized rows.
+- Renderer tests prove at least one new non-`matrix` variant ships with the
+  same normalized row contract instead of leaving `BF-08` unresolved by prose.
 - Accessibility tests in the renderer suite prove sticky/scroll containers keep
   `tabindex`, caption, scope, and visible product context.
 - Editor wave tests prove variant previews, featured product selection, and
@@ -154,7 +156,8 @@ This leaf does not add routes.
 
 - Product Compare can highlight one bounded featured product without breaking
   legacy data.
-- Any new layout variant is registered, documented, editor-visible, rendered,
-  and covered by tests.
+- At least one new supported non-`matrix` Product Compare layout variant lands,
+  is registered, documented, editor-visible, rendered, and covered by tests;
+  otherwise this leaf stays open with an explicit blocker/defer note.
 - Sticky header/context behavior is responsive and keyboard-accessible.
 - No layout option accepts raw class names or arbitrary style payloads.

@@ -32,6 +32,8 @@ In scope:
 - Product count/status summaries in Wizard and Visual.
 - A Product Compare preview refresh/re-resolve flow that uses backend-owned
   commerce resolver logic and bounded query input.
+- A truthful admin preview bridge between the builder preview path and the same
+  normalized commerce-resolution contract used by frontend SSR.
 - Safe stale/error/loading states in admin preview.
 
 Out of scope:
@@ -50,6 +52,14 @@ Out of scope:
 
 - `core/admin/ui/widgets/editors/ProductCompareEditors.tsx`
 - `core/widgets/core/productCompare.tsx`
+- `core/admin/ui/pages/PageEditor.tsx` when Product Compare preview data must be
+  fetched, stored, or passed through existing widget preview state.
+- `core/admin/ui/pages/builder/BlockList.tsx` for the live builder preview
+  bridge into `WidgetRenderer`.
+- `core/widgets/renderers/widgetRenderer.tsx` when Product Compare preview data
+  needs render-context parity rather than direct editor-only state.
+- `core/server/publicSite.tsx` as the SSR hydration owner to mirror for preview
+  parity; do not guess a separate query contract.
 - `core/services/commerce/commerceWidgetRuntime.ts`
 - `core/server/routes/commerceRoutes.ts` for the existing authenticated
   `/commerce/products/query` preview/search seam or any new internal preview
@@ -59,6 +69,10 @@ Out of scope:
 - `core/admin/services/commerceClient.ts` for the existing
   `previewCommerceProductsQuery` admin client seam.
 - `tests/vitest/ui/product-compare-editor-wave.test.tsx`
+- `tests/vitest/ui/product-compare-admin-preview.test.tsx` when this leaf adds
+  Product Compare-specific PageEditor/preview-state coverage.
+- `tests/vitest/pageBuilder/blockList.test.tsx` when preview-state bridging into
+  `WidgetRenderer` changes.
 - `tests/vitest/widgets/productCompare.test.tsx`
 - `tests/unit/commerce/commerceWidgetRuntime.test.ts`
 - `tests/integration/routes/commerceRoutes.test.ts` when the existing commerce
@@ -82,7 +96,10 @@ function ProductCompareAdvancedEditor({ value }: WidgetEditorProps<ProductCompar
     <CommerceEditorSection title="Runtime payload">
       <ProductCompareRuntimeSummary resolved={normalized.resolved} />
       {normalized.resolved?.error ? <ReadOnlyDiagnostic label="Runtime error" value={normalized.resolved.error} /> : null}
-      <QueryPreview query={buildProductCompareQueryInput(normalized)} />
+      <QueryPreviewDisclosure
+        summary={describeProductCompareQuery(buildProductCompareQueryInput(normalized))}
+        query={buildProductCompareQueryInput(normalized)}
+      />
     </CommerceEditorSection>
   );
 }
@@ -102,6 +119,17 @@ async function resolveProductComparePreview(input: ProductCompareData, session: 
     },
   };
 }
+
+function injectProductComparePreviewState(blockId: string, resolved: ProductCompareData["resolved"]) {
+  return {
+    [blockId]: {
+      status: "ready",
+      dataPatch: {
+        resolved,
+      },
+    },
+  };
+}
 ```
 
 Error handling:
@@ -114,6 +142,9 @@ Error handling:
   satisfy Product Compare preview safely. If a dedicated preview route is still
   needed, add it as an internal admin route with explicit registration,
   validation, CSRF/session, and error mapping tests.
+- Do not claim UX-08 resolved by editor-side counters alone; the implementation
+  must address the live PageEditor -> preview state -> BlockList ->
+  `WidgetRenderer` bridge or document an explicit bounded defer.
 - If live preview resolution is unavailable, Wizard/Visual still show the
   current resolved count and stale status from normalized data.
 
@@ -121,6 +152,10 @@ Regression shape:
 
 - Editor tests prove `Runtime error flag` is no longer editable.
 - Editor tests prove Wizard/Visual display resolved rows/total/stale status.
+- Editor/admin-preview tests prove raw query JSON is hidden behind labeled
+  disclosure or paired with human-readable query context that resolves UX-04.
+- Preview bridge tests prove Product Compare resolved preview data reaches the
+  builder canvas through preview state instead of frontend-only SSR.
 - If the existing commerce query route is reused, route/schema tests prove the
   payload is accepted only for bounded Product Compare query fields and still
   rejects unknown keys.
@@ -154,6 +189,10 @@ not already provide one.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run test:vitest -- tests/vitest/ui/product-compare-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/product-compare-admin-preview.test.tsx`
+  when Product Compare preview-state hydration is introduced.
+- `bun run test:vitest -- tests/vitest/pageBuilder/blockList.test.tsx` when the
+  builder preview bridge changes.
 - `bun run test:vitest -- tests/vitest/widgets/productCompare.test.tsx`
 - `bun test tests/unit/commerce/commerceWidgetRuntime.test.ts`
 - Add route registration, validation, CSRF/RBAC, and `map*Error` coverage if a
@@ -175,6 +214,10 @@ not already provide one.
 - Advanced runtime diagnostics are read-only.
 - Wizard and Visual show truthful resolved/matched product status without
   leaking raw provider payloads.
+- Advanced query preview is either hidden behind labeled disclosure or paired
+  with human-readable source/limit/sort context so UX-04 is actually resolved.
 - Admin preview can refresh or clearly explain stale/unavailable resolved data.
+- Admin preview truthfulness is proven against the live builder preview bridge,
+  not only editor-side text state.
 - Any new preview endpoint is internal, authenticated, bounded, CSRF-safe when
   applicable, and covered by route/security tests.

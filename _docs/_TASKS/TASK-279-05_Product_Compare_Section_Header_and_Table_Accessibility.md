@@ -79,6 +79,12 @@ function ProductCompareBlock({ data }: Props) {
     <section aria-labelledby={section.title ? headingId : undefined} aria-label={!section.title ? section.caption : undefined}>
       {section.title ? <h2 id={headingId}>{section.title}</h2> : null}
       {hasError ? <div role="alert">Commerce runtime warning: {error}</div> : null}
+      {rows.length === 0 ? (
+        <div role="status" aria-live="polite">
+          <p>{normalized.emptyState?.title}</p>
+          <p>{normalized.emptyState?.description}</p>
+        </div>
+      ) : null}
       <div tabIndex={0} aria-label="Product comparison table" className="overflow-x-auto">
         <table>
           <caption className={section.hideCaptionVisually ? "sr-only" : undefined}>{section.caption}</caption>
@@ -99,13 +105,14 @@ Error handling:
 
 - Empty title falls back to `aria-label`/caption so the section remains named.
 - Empty caption falls back to title or "Product comparison".
-- Empty state remains visible and gets semantic relationship without changing
-  the existing copy.
+- Empty state remains visible, keeps the existing copy, and exposes a stable
+  semantic status/relationship instead of plain orphan text.
 
 Regression shape:
 
 - Renderer tests assert caption, `scope="col"`, section label/heading,
-  `role="alert"`, and `tabindex="0"` for overflow container.
+  `role="alert"`, empty-state semantics, and `tabindex="0"` for overflow
+  container.
 - Editor tests assert section title/description/caption fields normalize and
   update without breaking empty-state controls.
 - Public renderer smoke covers the same markup when Product Compare is rendered
@@ -148,5 +155,6 @@ This leaf does not add routes.
 - Product Compare can render a section title/description above the comparison.
 - The table has a caption and scoped column headers.
 - The section is named by heading or aria-label.
-- Runtime error and empty-state output are announced semantically.
+- Runtime error and empty-state output are announced semantically with an
+  explicit empty-state role/relationship, not only plain paragraphs.
 - Horizontal table scrolling is reachable by keyboard.

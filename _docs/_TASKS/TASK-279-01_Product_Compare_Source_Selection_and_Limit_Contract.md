@@ -32,11 +32,15 @@ In scope:
   owns the value.
 - Bridge selected product IDs into commerce runtime resolution without changing
   Product Gallery or Product Table behavior.
+- Apply any shared `CommerceSourceFields` limit-control change only through a
+  backward-compatible shared owner contract with explicit cross-widget proof.
 
 Out of scope:
 
 - Broad commerce source helper redesign unless it is backward-compatible and
   covered for all existing callers.
+- Product Compare-only editor overrides that fork the shared
+  `CommerceSourceFields` limit/search/collection/status behavior.
 - Client-side provider fetches or admin browser access to provider credentials.
 - Arbitrary product query DSL, custom filters, or user-authored object paths.
 
@@ -59,8 +63,13 @@ Out of scope:
 - `core/admin/services/commerceClient.ts` when admin query payload typing
   exposes selected IDs.
 - `core/admin/ui/widgets/editors/ProductCompareEditors.tsx`
+- `core/admin/ui/widgets/editors/CommerceWidgetEditorShared.tsx` when the live
+  limit input contract still owns the `max=48` behavior or other shared source
+  control semantics.
 - `tests/vitest/widgets/productCompare.test.tsx`
 - `tests/vitest/ui/product-compare-editor-wave.test.tsx`
+- `tests/vitest/ui/commerce-widget-editor-shared.test.tsx` when shared source
+  field behavior changes.
 - `tests/unit/commerce/commerceWidgetRuntime.test.ts`
 - `tests/unit/commerce/commerceQueryService.test.ts`
 - `tests/vitest/validation/commerceSchemas.test.ts` when `commerceQuerySchema`
@@ -140,6 +149,10 @@ Error handling:
 - Invalid product IDs normalize away and never reach runtime query execution.
 - If selected IDs are missing or unavailable, runtime returns the available
   rows in deterministic selected order plus a bounded resolved total.
+- If the live limit input still comes from shared `CommerceSourceFields`, do
+  not patch it locally inside `ProductCompareEditors.tsx`; either introduce a
+  backward-compatible shared limit contract with cross-widget coverage or split
+  the shared work into a dedicated task first.
 - Do not emit `productIds` or a separate `manualOrderIds` key from
   `buildProductCompareQueryInput` until `CommerceQuery`,
   `CommerceQueryInput`, `commerceQuerySchema`, `executeCommerceQuery`, and the
@@ -161,6 +174,8 @@ Regression shape:
   intentionally extended.
 - Editor wave tests prove the limit input advertises max 12 and cannot produce
   normalized values above 12.
+- Shared `CommerceSourceFields` tests prove any max/help/input-contract change
+  does not silently regress Product Gallery or Product Table.
 
 ## Security Contract
 
@@ -186,6 +201,11 @@ This leaf does not introduce public writes.
 - `bun --cwd core lint:types`
 - `bun run test:vitest -- tests/vitest/widgets/productCompare.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/product-compare-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/commerce-widget-editor-shared.test.tsx`
+  when shared source-field behavior changes.
+- `bun run test:vitest -- tests/vitest/ui/product-gallery-editor-wave.test.tsx`
+  and `bun run test:vitest -- tests/vitest/ui/product-table-editor-wave.test.tsx`
+  when shared commerce editor behavior affects Product Gallery/Table.
 - `bun test tests/unit/commerce/commerceWidgetRuntime.test.ts`
 - `bun test tests/unit/commerce/commerceQueryService.test.ts` when product-id
   filtering reaches query execution.
@@ -206,5 +226,9 @@ This leaf does not introduce public writes.
   builder, and tests.
 - Existing Product Gallery/Product Table source behavior is unchanged unless a
   shared helper extension is explicitly tested for all callers.
+- Shared limit/source-field changes are either covered in
+  `CommerceWidgetEditorShared` plus Product Gallery/Table regressions or split
+  into a dedicated shared follow-up instead of being hidden as Product Compare
+  local behavior.
 - Missing or invalid selected IDs fail safely with deterministic empty/partial
   output and no provider details in browser-visible payloads.
