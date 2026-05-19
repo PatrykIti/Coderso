@@ -18,7 +18,7 @@ but no root-scoped script changes Navigation state while scrolling.
 
 This task must not repair sticky placement failures caused by Section or
 page-shell overflow. Those remain routed through TASK-275-06 to an exact shared
-physical owner before closure.
+physical owner (`TASK-314`) before closure.
 
 ## Source Findings
 
@@ -45,7 +45,8 @@ physical owner before closure.
 | `core/admin/ui/widgets/editors/NavigationEditors.tsx` | Update collapse/sticky helper copy after behavior is implemented; explain the Navigation-local collapse behavior and Section/page-shell sticky limitation without changing global editor-mode IA. |
 | `tests/vitest/widgets/navigation.test.tsx` | Assert collapse attributes/classes/hooks render only when enabled and legacy payloads remain unchanged when disabled. |
 | `_docs/_WIDGETS/NAVIGATION.md` | Document collapse behavior, no-JS fallback, reduced-motion expectations, and sticky placement limitations. |
-| `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md` | Mark the collapse data-only row fixed only for Navigation runtime behavior and keep Section/page-shell sticky rows routed. |
+| `tests/vitest/widgets/navigationRuntimeScript.test.ts` | Assert scroll-driven collapse state, idempotent binding, disabled-state no-op behavior, and legacy non-collapse output. |
+| `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md` | Mark the collapse data-only row fixed only for Navigation runtime behavior and keep Section/page-shell sticky rows routed to `TASK-314`. |
 
 ## Implementation Pseudocode
 
@@ -85,8 +86,9 @@ Error handling:
    roots and includes root-scoped script binding.
 4. The script toggles `data-navigation-collapsed` and an internal class on the
    Navigation root only.
-5. Tests assert enabled/disabled SSR markers and script assumptions; docs/report
-   distinguish Navigation collapse from shared sticky blockers.
+5. Tests assert enabled/disabled SSR markers and real scroll-driven script
+   behavior; docs/report distinguish Navigation collapse from the shared sticky
+   blocker in `TASK-314`.
 
 ## Security Contract
 
@@ -102,6 +104,7 @@ No API routes are added.
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/widgets/navigation.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/navigationRuntimeScript.test.ts`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if script
   injection assumptions change.
 - `bun run test:vitest -- tests/vitest/ui/navigation-editor-wave.test.tsx` if
@@ -130,5 +133,5 @@ No API routes are added.
 - Disabled and legacy payloads render without collapse bindings.
 - The scroll behavior is root-scoped, passive, idempotent, and safe without
   browser globals.
-- Section/page-shell sticky overflow findings remain routed outside TASK-275
-  with exact owner handling in TASK-275-06.
+- Section/page-shell sticky overflow findings remain routed outside TASK-275 to
+  the exact shared owner `TASK-314`.

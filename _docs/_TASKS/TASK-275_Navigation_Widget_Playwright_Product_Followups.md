@@ -57,11 +57,12 @@ against the source-of-truth docs before the contract change.
 
 | Report finding | Evidence | Owner task or boundary | Reason |
 |---|---|---|---|
-| Missing live preview in all editor modes | `REPORT_NAVIGATION_WIDGET.md:181` | TASK-275-06 routed-pending-owner gate, then TASK-256-08 or a new shared page-builder preview physical task before closure | A live preview bridge is a shared editor/page-builder surface, not a Navigation-only renderer change. TASK-275-06 must name the exact shared owner task or keep the row open as `routed-pending-owner`; it must not claim the finding closed from Navigation-only work. |
-| Sticky nav blocked on published frontend by Section `overflow-hidden` | `REPORT_NAVIGATION_WIDGET.md:378-393,405` | TASK-275-06 routed-pending-owner gate, then TASK-256-08 or a new shared Section/page-shell physical task before closure | The report identifies `Section`/layout wrapper ownership. TASK-275 may record evidence, but must not patch Section inside a Navigation task or close the sticky frontend row without an exact shared owner task. |
+| Missing live preview in all editor modes | `REPORT_NAVIGATION_WIDGET.md:181` | TASK-313 | The row is shared editor-preview surface scope. TASK-275 may reference it, but must not claim closure until TASK-313 lands or explicitly keeps the row routed. |
+| Sticky nav blocked on published frontend by Section `overflow-hidden` | `REPORT_NAVIGATION_WIDGET.md:378-393,405` | TASK-314 | The report identifies `Section`/layout wrapper ownership. TASK-275 may record evidence, but must not patch Section inside a Navigation task or close the sticky frontend row without the exact shared owner task. |
 | Generic contrast validation for configurable colors | `REPORT_NAVIGATION_WIDGET.md:215` | TASK-256-08 future shared validation owner | Contrast warnings should be shared across configurable color widgets. |
 | Generic safe-href sanitizer semantics | TASK-256 shared link/media hardening | TASK-256 | TASK-275 may consume existing safe-href helpers and align Navigation editor validation, but must not fork a new sanitizer. |
 | Global Advanced/Visual mode ownership rules | TASK-256 editor-mode scope | TASK-256-01 | Navigation-specific copy can improve in TASK-275 leaves, but broad mode ownership belongs to TASK-256. |
+| Advanced editor feels like secondary settings without visual context | `REPORT_NAVIGATION_WIDGET.md:188` | TASK-256-01 | The broader editor-mode IA and preview-context expectation is shared panel ownership, not a Navigation-only runtime fix. |
 | Arbitrary mega-menu/search/dark-mode platform expansion | `REPORT_NAVIGATION_WIDGET.md:228-233` | Future product task only if approved | These are market comparisons, not fixes required to make the current Navigation contract truthful. |
 
 ## TASK-275 Scope Matrix
@@ -89,6 +90,7 @@ against the source-of-truth docs before the contract change.
 |---|---|---|---|
 | Schema, defaults, normalizer, renderer | `core/widgets/core/navigation.tsx` | `tests/vitest/widgets/navigation.test.tsx`, `tests/vitest/widgets/renderer.test.tsx` | Add SSR assertions for linked logo, mobile modes, dropdown state markup, metadata rendering, collapsed-state attributes/classes, style fields, target/rel output, and backward compatibility. |
 | Wizard/Visual/Advanced editors | `core/admin/ui/widgets/editors/NavigationEditors.tsx` | `tests/vitest/ui/navigation-editor-wave.test.tsx` | Add editor-flow tests for logo labels, `#` validation, metadata fields, reorder/limit controls, menu previews, mobile controls, style controls, and target fields. |
+| Runtime script interactions | `core/widgets/core/navigation.tsx` | none | Add `tests/vitest/widgets/navigationRuntimeScript.test.ts` for drawer focus/label state, submenu click/Escape/outside-click behavior, collapse-on-scroll state changes, and client-side active-link detection. |
 | Runtime menu/pages source resolution | `core/services/navigation/navigationRuntimeResolver.ts` | `tests/unit/navigation/navigationRuntimeResolver.test.ts` | Update only when a leaf changes resolved metadata, link target data, or fallback shape. |
 | Shared safe link helper adjacency | `core/widgets/core/widgetSafeHref.ts` | Shared widget safe-href tests | Do not fork. Run shared tests only if a leaf intentionally extends the helper contract through TASK-256 or an approved shared task. |
 | Widget docs and report evidence | `_docs/_WIDGETS/NAVIGATION.md`, `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md` | docs diff checks | Update fixed/deferred status and user-facing contract after each implementation wave. |
@@ -123,7 +125,7 @@ against the source-of-truth docs before the contract change.
    TASK-275-05-03 visual tokens/dropdown direction/motion, and TASK-275-05-04
    brand CTA/logo controls.
 7. Complete TASK-275-06 last with report evidence, exact shared owner IDs for
-   live-preview and sticky routed rows, docs, changelog, board sync,
+   live-preview (`TASK-313`) and sticky routed rows (`TASK-314`), docs, changelog, board sync,
    and final validation.
 
 ## Git Scope Safeguards
@@ -170,6 +172,7 @@ Docs-only task planning:
 Implementation leaves:
 
 - `bun run test:vitest -- tests/vitest/widgets/navigation.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/navigationRuntimeScript.test.ts`
 - `bun run test:vitest -- tests/vitest/ui/navigation-editor-wave.test.tsx`
 - `bun test tests/unit/navigation/navigationRuntimeResolver.test.ts` when source
   resolution, metadata, or fallback shape changes.
@@ -220,8 +223,8 @@ Implementation leaves:
   TASK-275 physical leaf, explicitly excluded to TASK-256/shared ownership, or
   deferred by TASK-275-06 with a reason.
 - Live-preview and sticky frontend rows are not marked closed by TASK-275 unless
-  TASK-275-06 names an exact shared physical owner task; otherwise their status
-  remains `routed-pending-owner`.
+  TASK-275-06 references the exact shared physical owner tasks (`TASK-313` and
+  `TASK-314`); otherwise their status remains `routed`.
 - TASK-275 docs do not duplicate TASK-256 shared-contract implementation scope.
 - Each implementation leaf names concrete files, data flow, error handling,
   regression tests, documentation updates, and validation commands.

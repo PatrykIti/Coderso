@@ -45,6 +45,7 @@ unless TASK-256 creates that shared owner first.
 | `core/widgets/core/navigation.tsx` | Split mobile branches: `expanded` shows links, `drawer` renders the toggle/panel, and `minimal` renders logo/right actions without link toggle/panel. Render CTA once on mobile for drawer mode. Add toggle icon/state markup, `aria-label`, panel state data attributes, and reduced-motion-friendly animation classes. |
 | `core/admin/ui/widgets/editors/NavigationEditors.tsx` | Clarify mobile-mode descriptions so `minimal`, `drawer`, and `expanded` explain their actual output. Clarify CTA mobile placement and hide policy. |
 | `tests/vitest/widgets/navigation.test.tsx` | Assert drawer vs minimal SSR output, no duplicate mobile CTA in drawer mode, toggle labels/icons/state attributes, and panel hidden/open contract. |
+| `tests/vitest/widgets/navigationRuntimeScript.test.ts` | Assert drawer open/close state, focus handoff, focus loop, Escape close, return-to-trigger behavior, and reduced-motion-safe class/attribute changes. |
 | `tests/vitest/ui/navigation-editor-wave.test.tsx` | Assert mobile mode options and helper copy remain visible and updates persist. |
 | `_docs/_WIDGETS/NAVIGATION.md` | Update mobile mode behavior and CTA placement notes. |
 | `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md` | Record fixed/deferred evidence for mobile mode, CTA duplication, toggle state, animation, and focus behavior. |
@@ -77,6 +78,20 @@ function setNavigationPanelState(trigger: HTMLElement, open: boolean) {
   trigger.setAttribute("aria-label", open ? "Close navigation menu" : "Open navigation menu");
   trigger.dataset.state = open ? "open" : "closed";
   panel?.toggleAttribute("hidden", !open);
+  if (open) focusFirstDrawerTarget(panel, trigger);
+  else trigger.focus();
+}
+
+function trapDrawerFocus(event: KeyboardEvent, panel: HTMLElement, trigger: HTMLElement) {
+  if (event.key === "Escape") {
+    closeDrawer(trigger, panel);
+    trigger.focus();
+    return;
+  }
+
+  if (event.key === "Tab") {
+    loopFocusWithinDrawer(event, [trigger, ...getPanelFocusables(panel)]);
+  }
 }
 ```
 
@@ -86,8 +101,11 @@ Error handling:
   runtime.
 - The script must remain idempotent when multiple Navigation widgets render on
   the same page.
-- Focus containment applies only while drawer mode panel is open. Minimal mode
-  must not bind drawer behavior.
+- Focus containment applies only while drawer mode panel is open: opening the
+  drawer moves focus to the first interactive element in the panel, `Escape`
+  closes and returns focus to the trigger, and `Tab` / `Shift+Tab` loop within
+  the trigger-plus-panel focus ring until the drawer closes. Minimal mode must
+  not bind drawer behavior.
 
 ## Data Flow
 
@@ -100,8 +118,8 @@ Error handling:
 4. `navigationRuntimeClientScript` binds only roots that expose
    `data-navigation-mobile-toggle`, toggles DOM state, and no-ops on malformed
    roots.
-5. Widget and editor tests assert SSR branch differences, state markup, CTA
-   duplication policy, and persisted editor copy.
+5. Widget and runtime-script tests assert SSR branch differences, state markup,
+   CTA duplication policy, focus-loop behavior, and persisted editor copy.
 
 ## Security Contract
 
@@ -116,6 +134,7 @@ No API routes are added.
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/widgets/navigation.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/navigationRuntimeScript.test.ts`
 - `bun run test:vitest -- tests/vitest/ui/navigation-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if script
   injection or renderer assumptions change.
@@ -145,4 +164,5 @@ No API routes are added.
   visible hamburger/close affordance.
 - Drawer open/close animation respects reduced-motion expectations.
 - Keyboard users can open, close, and interact with the drawer according to the
-  documented focus policy.
+  documented focus policy, including focus handoff on open, looped focus while
+  open, and return-to-trigger on close.

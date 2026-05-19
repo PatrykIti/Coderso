@@ -178,7 +178,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-277-06 | Posts Feed Editor Flow, Variant Previews, and Style Controls | Medium | Large | Add text-color control, variant preview affordances, and progressive Wizard flow |
 | TASK-277-07 | Posts Feed Pagination, Author, Date, and Featured-First Filters | Medium | Very Large | Add or explicitly split bounded pagination/load-more, author/date filters, and featured-first sorting |
 | TASK-277-08 | Posts Feed Report, Docs, Changelog, and Closure | Medium | Medium | Refresh Posts Feed report/docs/changelog/board and final validation evidence |
-| TASK-275 | Navigation Widget Playwright Product Followups | High | Very Large | Navigation-only follow-up family for `REPORT_NAVIGATION_WIDGET.md`, excluding TASK-256 shared-contract and Section/page-shell scope |
+| TASK-275 | Navigation Widget Playwright Product Followups | High | Very Large | Navigation-only follow-up family for `REPORT_NAVIGATION_WIDGET.md`, excluding shared TASK-313 preview, TASK-314 sticky containment, and TASK-256 shared-contract scope |
 | TASK-275-01 | Navigation Logo and Safe Link Parity | High | Medium | Render logo as a safe link, align hash URL validation with runtime rules, and label logo-link fields |
 | TASK-275-02 | Navigation Mobile Drawer and Minimal Mode | High | Large | Make minimal/drawer behavior explicit, remove mobile CTA duplication, add toggle state, icons, labels, animation, and focus policy |
 | TASK-275-03 | Navigation Dropdown and Rich Link Metadata | High | Large | Add touch/keyboard dropdown behavior plus schema-backed icon, badge, and description rendering/editing |
@@ -187,7 +187,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-275-05-01 | Navigation Collapse Runtime Contract | Medium | Medium | Make `collapseOnScroll` a real root-scoped Navigation runtime behavior without patching Section/page-shell sticky blockers |
 | TASK-275-05-02 | Navigation Active Links and Safe Targets | Medium | Medium | Add active-link highlighting and safe target/rel controls through existing safe-href ownership |
 | TASK-275-05-03 | Navigation Visual Style Tokens | Medium | Large | Add bounded hover/active colors, underline, letter spacing, shadow, backdrop blur, dropdown direction, and motion tokens |
-| TASK-275-05-04 | Navigation Brand CTA and Logo Controls | Medium | Medium | Add logo-size, CTA-radius/separator, and bounded secondary-CTA policy without broad platform expansion |
+| TASK-275-05-04 | Navigation Brand CTA and Logo Controls | Medium | Medium | Add logo-size, CTA-radius/separator, and explicit right-slot secondary-action policy without broad platform expansion |
 | TASK-275-06 | Navigation Report Docs Changelog and Closure | Medium | Medium | Refresh Navigation report/docs/changelog/board and final validation evidence after implementation leaves land |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
 | TASK-240 | Coderso Multilingual and i18n Umbrella | High | Very Large | Execution-ready locale/translation/runtime routing program superseding TASK-054-21 |

@@ -37,7 +37,7 @@ or split into a new physical task before marking this family done.
 
 | File | Required change |
 |---|---|
-| `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md` | Add final fixed/deferred/routed status for every report finding. Include textual admin/frontend evidence, DOM excerpts, and validation commands. Do not commit PNG files. Live-preview and sticky frontend rows must name exact shared physical owner task IDs or stay `routed-pending-owner`. |
+| `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md` | Add final fixed/deferred/routed status for every report finding. Include textual admin/frontend evidence, DOM excerpts, and validation commands. Do not commit PNG files. Live-preview and sticky frontend rows must route to the exact shared owner task IDs `TASK-313` and `TASK-314` until those tasks land. |
 | `_docs/_WIDGETS/NAVIGATION.md` | Sync final schema, editor, runtime, mobile, dropdown, metadata, and style behavior. |
 | `_docs/WIDGETS.md` | Update only if the Navigation work changed the shared widget source-of-truth contract. |
 | `_docs/WIDGET_PACK_MATRIX.md` and `core/widgets/modulePackMatrix.ts` | Update only if Navigation pack readiness/completeness changes. |
@@ -54,14 +54,16 @@ or split into a new physical task before marking this family done.
 | Finding | Status | Evidence |
 |---|---|---|
 | Logo link | Fixed | SSR test + admin/frontend DOM proof |
-| Missing live preview | routed-pending-owner | Exact shared page-builder task ID required before closing |
-| Sticky frontend blocker | routed-pending-owner | Exact shared Section/page-shell task ID required before closing |
+| Missing live preview | Routed to TASK-313 | Exact shared page-builder preview task now exists |
+| Sticky frontend blocker | Routed to TASK-314 | Exact shared Section/page-shell task now exists |
+| Advanced visual-context row | Routed to TASK-256-01 | Shared editor-mode IA owner |
 | Mega menu/search/dark switch | Deferred | Out of current Navigation v1 contract |
 ```
 
 ```sh
 git status --short --branch
 bun run test:vitest -- tests/vitest/widgets/navigation.test.tsx
+bun run test:vitest -- tests/vitest/widgets/navigationRuntimeScript.test.ts
 bun run test:vitest -- tests/vitest/ui/navigation-editor-wave.test.tsx
 bun test tests/unit/navigation/navigationRuntimeResolver.test.ts
 bun --cwd core lint
@@ -78,7 +80,8 @@ Error handling:
   suites and document the unrelated failure separately.
 - Do not move TASK-275 to Done while any high/medium report row is unclassified.
 - Do not mark live-preview or sticky frontend rows as closed by TASK-275 unless
-  the report names exact shared physical owner tasks and their status.
+  the report names the exact shared physical owner tasks (`TASK-313` and
+  `TASK-314`) and their status.
 
 ## Data Flow
 
@@ -86,9 +89,9 @@ Error handling:
    while it lands.
 2. TASK-275-06 reads the refreshed report rows and classifies every finding as
    `fixed`, `deferred`, `routed`, or `routed-pending-owner`.
-3. Shared-contract rows are mapped to exact TASK-256/shared physical owner IDs
-   before closure; rows without exact owners remain open as
-   `routed-pending-owner`.
+3. Shared-contract rows are mapped to exact physical owner IDs before closure:
+   live preview to `TASK-313`, sticky Section/page-shell overflow to `TASK-314`,
+   and broad editor-mode IA rows to `TASK-256-01`.
 4. Task files and `_docs/_TASKS/README.md` move only rows whose implementation
    and validation have landed.
 5. The changelog entry summarizes the implemented Navigation-only changes and
@@ -108,6 +111,7 @@ This closure leaf does not add API routes.
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/widgets/navigation.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/navigationRuntimeScript.test.ts`
 - `bun run test:vitest -- tests/vitest/ui/navigation-editor-wave.test.tsx`
 - `bun test tests/unit/navigation/navigationRuntimeResolver.test.ts` if any
   implementation leaf touched source resolution or metadata mapping.
@@ -146,8 +150,8 @@ This closure leaf does not add API routes.
 - Every `REPORT_NAVIGATION_WIDGET.md` finding is fixed, deferred, or routed with
   a concrete reason and owner.
 - Live-preview and sticky frontend findings either cite exact shared physical
-  owner task IDs or remain `routed-pending-owner`; they are not closed by
-  Navigation-only work.
+  owner task IDs (`TASK-313` and `TASK-314`) or remain explicitly routed; they
+  are not closed by Navigation-only work.
 - The final report contains textual evidence for admin and frontend behavior.
 - TASK-275 and completed leaves are synchronized across task files, board,
   changelog, and widget docs.
