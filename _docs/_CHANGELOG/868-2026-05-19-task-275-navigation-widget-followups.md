@@ -2,7 +2,7 @@
 
 - Date: 2026-05-19
 - Version: Unreleased
-- Tasks: TASK-275, TASK-275-01, TASK-275-02, TASK-275-03, TASK-275-04, TASK-275-05, TASK-275-05-01, TASK-275-05-02, TASK-275-05-03, TASK-275-05-04, TASK-275-06, TASK-313, TASK-314
+- Tasks: TASK-275, TASK-275-01, TASK-275-02, TASK-275-03, TASK-275-04, TASK-275-05, TASK-275-05-01, TASK-275-05-02, TASK-275-05-03, TASK-275-05-04, TASK-275-06
 
 ## Key Changes
 
@@ -18,3 +18,14 @@
 ### QA And Docs
 - refreshed the Navigation widget source-of-truth doc, final Playwright report classification, task board state, and changelog evidence for the closed TASK-275 family
 - kept shared builder live-preview and Section sticky containment findings routed to `TASK-313` and `TASK-314` instead of masking them with widget-local patches
+
+## Validation
+
+- `bun run lint` - passed, including `bun --cwd core lint`, `bun --cwd core lint:types`, repo ESLint, and repo `tsc --noEmit`
+- `bun run test:vitest -- tests/vitest/widgets/navigation.test.tsx tests/vitest/widgets/navigationRuntimeScript.test.ts tests/vitest/ui/navigation-editor-wave.test.tsx` - passed
+- `bun test tests/unit/navigation/navigationRuntimeResolver.test.ts tests/unit/widgets/validator.test.ts` - passed
+- `bun run gates:coderso` - passed across `functional`, `ux`, `performance`, `security`, and `reliability`
+- `bun run precommit` - passed
+- `bun run test:bun` - sampled and failed outside Navigation ownership in broad shared lanes such as `commerce`, `forms`, `kits`, `content` owner-seam invalidation, and detail-page runtime tests; the run was stopped after repeated unrelated failures once the user accepted scope-local closeout
+- `bun run test:vitest` - failed outside Navigation ownership in `tests/vitest/ui/feature-grid-editor-wave.test.tsx`
+- `bun run scan:security:strict` - started in strict mode, then stopped after the user accepted scope-local closeout instead of waiting on broad shared-lane noise

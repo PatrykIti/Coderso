@@ -30,7 +30,7 @@ tokens that consume those hooks.
   allow manual hex entry without live validation feedback.
 - `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:215,226,234-235` - contrast,
   dropdown animation, letter spacing, and backdrop blur market-standard gaps are
-  noted; generic contrast validation remains TASK-256/shared scope.
+  noted; generic contrast validation remains routed to shared owner `TASK-299`.
 - `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md:433,436-438,440` -
   visual-token and dropdown-animation rows appear in lower-priority backlog.
 
@@ -49,7 +49,7 @@ tokens that consume those hooks.
 | `tests/vitest/widgets/styleNoneTokens.test.tsx` | Run/update if new fields interact with `none` or clearable token semantics. |
 | `tests/unit/widgets/validator.test.ts` | Update schema/default assertions for persisted token fields. |
 | `_docs/_WIDGETS/NAVIGATION.md` | Document visual token ranges, clear behavior, dropdown direction, and motion policy. |
-| `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md` | Record fixed/deferred evidence for visual token rows and keep generic contrast validation routed to TASK-256/shared ownership. |
+| `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md` | Record fixed/deferred evidence for visual token rows and keep generic contrast validation routed to shared owner `TASK-299`. |
 
 ## Implementation Pseudocode
 
@@ -151,4 +151,4 @@ No API routes are added.
   without introducing a shared color framework.
 - Dropdown direction is implemented as styling/direction only; interaction state
   remains TASK-275-03.
-- Shared contrast validation remains routed outside TASK-275.
+- Shared contrast validation remains routed outside TASK-275 through `TASK-299`.

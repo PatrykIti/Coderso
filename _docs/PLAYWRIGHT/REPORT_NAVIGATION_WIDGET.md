@@ -470,7 +470,7 @@ Widget jest **solidnym fundamentem** z dobrą architekturą (3 tryby edytora, sc
 - Current TASK-256 role for Navigation is classification only. Widget-owned
   follow-up scope continues through the `TASK-275` family.
 - Shared rows that match existing TASK-256 link/runtime mechanisms remain
-  referenced by `TASK-256-07` and `TASK-256-08`.
+  referenced by `TASK-256-07` and shared follow-up owners such as `TASK-299`.
 
 ---
 
@@ -487,36 +487,88 @@ Widget jest **solidnym fundamentem** z dobrą architekturą (3 tryby edytora, sc
 | Dropdown works only on hover / touch is broken / no disclosure state | fixed | `TASK-275-03` | submenu buttons now expose `aria-expanded`, `aria-controls`, runtime-managed `aria-hidden`, sibling-close behavior, outside-click close, and root-scoped disclosure state |
 | Root nav lacks explicit accessible label | fixed | `TASK-275-03` | runtime output now renders `aria-label=\"Primary navigation\"` on the root `<nav>` |
 | `icon`, `badge`, and `description` metadata exist but are not editable or rendered | fixed | `TASK-275-03` | manual links and sub-links now expose metadata fields in Visual, and runtime renders those values as plain text without widening to rich menu content |
-| Main links cannot be reordered / limit state has no explanation / menu source has no preview / Wizard hides overflow state | fixed | `TASK-275-04` | move buttons, limit helper text, child grouping, Wizard overflow summary, and read-only synced menu preview are now part of the Navigation editor contract |
+| Main links cannot be reordered / limit state has no explanation / menu source has no preview / Wizard hides overflow state | fixed | `TASK-275-04` | move buttons, limit helper text, child grouping, Wizard overflow summary, and read-only synced menu preview are now part of the Navigation editor contract, including page-backed menu items that resolve to stored page slugs instead of degrading to `#` in the editor snapshot |
 | `collapseOnScroll` is only a data attribute | fixed | `TASK-275-05-01` | Navigation runtime now toggles root-scoped collapsed state and classes while scrolling; no-JS fallback stays expanded instead of claiming hidden behavior |
-| Active link highlighting and safe target/rel controls are missing | fixed | `TASK-275-05-02` | manual links now support bounded `self` / `blank` targets with safe `rel`, while client runtime applies `none` / `pathname` / `exact` active-link modes |
-| Hover/active colors, underline, letter spacing, shadow, blur, dropdown direction, motion, and local color feedback are missing | fixed | `TASK-275-05-03` | Navigation now owns bounded visual tokens for these fields and Visual shows deterministic live feedback for Navigation color inputs |
+| Surface and Runtime Behavior note is confusing because sticky/collapse controls live in Advanced | fixed | `TASK-275-05-01` | Navigation-local helper copy now explains the sticky/collapse boundary in Visual while the broader shared editor-mode IA remains routed separately |
+| Active link highlighting and safe target/rel controls are missing | fixed | `TASK-275-05-02` | manual links now support bounded `self` / `blank` targets with safe `rel`, while client runtime applies `none` / `pathname` / `exact` active-link modes and keeps `aria-current=\"page\"` bounded to one semantic current link per root |
+| Hover/active colors, underline, letter spacing, shadow, blur, dropdown direction, motion, and local color feedback are missing | fixed | `TASK-275-05-03` | Navigation now owns bounded visual tokens for these fields, runtime output emits deterministic CSS variables/classes/data markers for hover/active colors, underline, letter spacing, direction, and motion, and Visual shows deterministic live feedback for Navigation color inputs |
 | CTA radius/separator, logo size, and truthful CTA guidance are missing | fixed | `TASK-275-05-04` | logo size, CTA radius, CTA separator, and explicit Right Actions copy are now schema-backed, normalized, rendered, and documented |
 | Missing live preview inside the widget editors | routed | `TASK-313` | this remains a shared builder/editor preview-surface task and is not closed by widget-local Navigation work |
 | Sticky works in local editor contexts but frontend sticky can be blocked by `Section` / page-shell overflow | routed | `TASK-314` | shared Section/layout containment still owns the frontend sticky blocker; Navigation only implements its local sticky/collapse contract |
 | Global Visual/Advanced editor-mode ownership and lack of shared visual context | routed | `TASK-256-01` | Navigation updated only local copy; the broader editor-mode IA remains shared owner scope |
-| Generic contrast validation for configurable colors | routed | `TASK-256-08` | shared cross-widget contrast validation is still intentionally kept outside TASK-275 |
+| Generic contrast validation for configurable colors | routed | `TASK-299` | shared cross-widget contrast validation is intentionally owned outside TASK-275 by the reusable contrast-guidance task |
 | Mega menu, search, dark-mode switch, and broader platform expansion requests | deferred | future product task | these remain outside the current Navigation v1 surface and are intentionally not claimed as fixed here |
+
+### Representative DOM excerpts
+
+```html
+<nav data-navigation-widget="1" aria-label="Primary navigation" data-navigation-active-mode="pathname">
+  <a href="/" aria-label="Coderso home">Coderso</a>
+  <button data-navigation-mobile-toggle aria-expanded="false" aria-label="Open navigation menu">
+    <span data-navigation-mobile-label>Menu</span>
+  </button>
+</nav>
+```
+
+```html
+<button
+  data-navigation-submenu-toggle="1"
+  aria-expanded="false"
+  aria-controls="tokens-desktop-submenu-0"
+  aria-label="Toggle Docs submenu"
+></button>
+<ul
+  id="tokens-desktop-submenu-0"
+  data-navigation-submenu-panel="1"
+  data-navigation-direction="top"
+  data-navigation-position="top"
+></ul>
+```
 
 ### Validation snapshot
 
-Validated locally on the TASK-275 worktree after the final implementation and doc sync:
+Validated locally on the TASK-275 worktree after the final implementation and
+doc sync:
 
 - `bun run lint` — OK
 - `bun run test:vitest -- tests/vitest/widgets/navigation.test.tsx tests/vitest/widgets/navigationRuntimeScript.test.ts tests/vitest/ui/navigation-editor-wave.test.tsx` — OK
 - `bun test tests/unit/navigation/navigationRuntimeResolver.test.ts tests/unit/widgets/validator.test.ts` — OK
-- `bun run scan:security:strict` — OK
+- `bun run lint` included `bun --cwd core lint`, `bun --cwd core lint:types`,
+  repo ESLint, and repo `tsc --noEmit` — OK
+- `bun run gates:coderso` — OK (`functional`, `ux`, `performance`,
+  `security`, and `reliability` all passed)
+- `bun run precommit` — OK
 
-Full repo-wide commands were also run because this task explicitly asked for them:
+Representative targeted proof after the final drift fixes:
 
-- `bun run test:bun` — failed outside Navigation scope with two existing reds:
-  - `tests/integration/runtime/detail-page-preview-cache.test.ts`:
-    `content route cache invalidates when the linked detail-page template changes`
-  - `tests/integration/server/assistantHouseProjectsCatalogPublicSite.test.ts`:
-    `executed house-projects plan renders public catalog page and entry detail route`
+- `tests/vitest/widgets/navigation.test.tsx`
+- `tests/vitest/widgets/navigationRuntimeScript.test.ts`
+- `tests/vitest/ui/navigation-editor-wave.test.tsx`
+- `tests/unit/navigation/navigationRuntimeResolver.test.ts`
+- `tests/unit/widgets/validator.test.ts`
+
+Broad repo-wide commands were sampled because this task originally asked for
+them, but the resulting reds were outside Navigation ownership:
+
+- `bun run test:bun` — failed outside Navigation scope across shared lanes such
+  as:
+  - `tests/unit/commerce/commerceService.test.ts`
+  - `tests/unit/forms/formsService.test.ts`
+  - `tests/unit/forms/submissionService.test.ts`
+  - `tests/unit/kits/installService.test.ts`
+  - `tests/unit/content/listingQueriesService.test.ts`
+  - `tests/unit/content/listingTemplatesService.test.ts`
+  - `tests/integration/runtime/detail-page-composer-runtime.test.tsx`
+  - `tests/integration/runtime/detail-page-preview-cache.test.ts`
+  - the run was stopped after repeated unrelated failures once the user
+    approved a Navigation-only closeout on this worktree
 - `bun run test:vitest` — failed outside Navigation scope with one existing red:
   - `tests/vitest/ui/feature-grid-editor-wave.test.tsx` timeout in
     `FeatureGrid editors cover variant changes, card editing, style tokens, and advanced normalization`
+- `bun run scan:security:strict` — Semgrep scan was started in `strict` mode,
+  but the repo-wide scan was intentionally stopped after the user accepted a
+  scope-local TASK-275 closeout instead of waiting on broad shared-lane noise
 
 The unrelated failures above do not touch the Navigation owner files changed by
-TASK-275, but they keep the broad repo suites non-green on this worktree.
+TASK-275. Final closure for this family therefore relies on the green
+Navigation-owned suites plus the green full-repo lint lane.

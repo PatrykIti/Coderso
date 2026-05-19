@@ -31,6 +31,15 @@ type TestMenuWithItems = {
   items: TestMenuItemNode[];
 };
 
+type TestPageSummary = {
+  id: string;
+  title: string;
+  slug: string;
+  status: "draft" | "published" | "scheduled" | "archived";
+  updatedAt: string;
+  author: null;
+};
+
 type TestMediaRecord = {
   id: string;
   key: string;
@@ -88,7 +97,7 @@ function createMenuDetails(): Record<string, TestMenuWithItems> {
               id: "nav-1-1",
               label: "Archive",
               href: null,
-              pageId: null,
+              pageId: "page-archive",
               parentId: "nav-1",
               orderIndex: 0,
               settings: {
@@ -127,6 +136,19 @@ function createMenuDetails(): Record<string, TestMenuWithItems> {
       ],
     },
   };
+}
+
+function createPages(): TestPageSummary[] {
+  return [
+    {
+      id: "page-archive",
+      title: "Archive",
+      slug: "blog/archive/",
+      status: "published",
+      updatedAt: "2026-03-08T10:00:00.000Z",
+      author: null,
+    },
+  ];
 }
 
 function createMediaRecords(): TestMediaRecord[] {
@@ -193,6 +215,7 @@ const navigationClientState = vi.hoisted(() => ({
   menuDetails: createMenuDetails(),
   listMenusError: null as unknown,
   menuDetailError: null as unknown,
+  pages: createPages(),
   media: createMediaRecords(),
   mediaError: null as unknown,
   mediaPickerValue: "logo-1" as unknown,
@@ -373,6 +396,13 @@ vi.mock("@/services/mediaClient", () => ({
   }),
 }));
 
+vi.mock("@/services/pagesClient", () => ({
+  listPagesCached: vi.fn(async () => {
+    await Promise.resolve();
+    return navigationClientState.pages;
+  }),
+}));
+
 vi.mock("@/ui/media/MediaPicker", () => ({
   MediaPicker: ({
     value,
@@ -512,6 +542,7 @@ afterEach(() => {
   navigationClientState.menuDetails = createMenuDetails();
   navigationClientState.listMenusError = null;
   navigationClientState.menuDetailError = null;
+  navigationClientState.pages = createPages();
   navigationClientState.media = createMediaRecords();
   navigationClientState.mediaError = null;
   navigationClientState.mediaPickerValue = "logo-1";
@@ -522,7 +553,10 @@ test("Navigation helper exports map menu metadata and selection patches", async 
   const { buildMenuSelectionPatch, mapMenuNodesToNavigationItems } =
     await import("../../../core/admin/ui/widgets/editors/NavigationEditors");
 
-  const mapped = mapMenuNodesToNavigationItems(createMenuDetails()["menu-1"].items);
+  const mapped = mapMenuNodesToNavigationItems(
+    createMenuDetails()["menu-1"].items,
+    new Map(createPages().map((page) => [page.id, page.slug] as const))
+  );
 
   expect(mapped).toEqual([
     {
@@ -537,7 +571,7 @@ test("Navigation helper exports map menu metadata and selection patches", async 
       children: [
         {
           label: "Archive",
-          href: "#",
+          href: "/blog/archive",
           meta: {
             visibility: "logged_out",
             badge: null,
@@ -654,7 +688,7 @@ test("NavigationWizardEditor covers links-source branching, menu sync, logo libr
         children: [
           {
             label: "Archive",
-            href: "#",
+            href: "/blog/archive",
             meta: {
               visibility: "logged_out",
               badge: null,

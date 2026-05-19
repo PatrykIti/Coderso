@@ -9,8 +9,10 @@ import {
   getMenuWithItemsByLocation,
   type MenuWithItems,
 } from "../menus/menuService";
-import type { MenuItemNode } from "../menus/treeBuilder";
-import { resolveMenuItemSettings, type ResolvedMenuItemSettings } from "../menus/menuItemSettings";
+import {
+  collectNavigationMenuPageIds,
+  mapMenuNodesToNavigationItems,
+} from "./navigationMenuMapping";
 import {
   navigationDefaults,
   type NavigationItemMeta,
@@ -113,16 +115,6 @@ const toNavigationMeta = (value: unknown): NavigationItemMeta => {
   };
 };
 
-const menuSettingsToMeta = (value: unknown): NavigationItemMeta => {
-  const settings = resolveMenuItemSettings(value) satisfies ResolvedMenuItemSettings;
-  return {
-    visibility: settings.visibility,
-    badge: settings.badge,
-    description: settings.description,
-    icon: settings.icon,
-  };
-};
-
 const normalizeNavigationItems = (value: unknown): NavigationItem[] => {
   if (!Array.isArray(value)) return [];
 
@@ -154,48 +146,6 @@ const ensureMinimumItems = (
   fallback: NavigationItem[],
   minimumItems = 2
 ) => (items.length >= minimumItems ? items : fallback);
-
-const collectMenuPageIds = (nodes: MenuItemNode[]) => {
-  const ids: string[] = [];
-  const walk = (list: MenuItemNode[]) => {
-    for (const node of list) {
-      if (!node.href && node.pageId) ids.push(node.pageId);
-      if (node.children.length > 0) walk(node.children);
-    }
-  };
-  walk(nodes);
-  return ids;
-};
-
-const mapMenuNodesToNavigationItems = (
-  nodes: MenuItemNode[],
-  pageSlugsById: Map<string, string>
-): NavigationItem[] => {
-  const walk = (list: MenuItemNode[]): NavigationItem[] => {
-    const mapped: NavigationItem[] = [];
-    for (const node of list) {
-      const label = readTrimmedString(node.label);
-      if (!label) continue;
-
-      const hrefCandidate =
-        readTrimmedString(node.href) ??
-        (node.pageId ? (pageSlugsById.get(node.pageId) ?? null) : null) ??
-        "#";
-      const href = sanitizeHref(hrefCandidate);
-      const children = node.children.length > 0 ? walk(node.children) : undefined;
-      mapped.push({
-        label,
-        href,
-        target: "self",
-        meta: menuSettingsToMeta(node.settings),
-        ...(children && children.length > 0 ? { children } : {}),
-      });
-    }
-    return mapped;
-  };
-
-  return walk(nodes);
-};
 
 export async function resolveNavigationRuntimeData(
   input: unknown,
@@ -241,9 +191,11 @@ export async function resolveNavigationRuntimeData(
     return { items: manualItems, linksSource: "manual" };
   }
 
-  const pageIds = collectMenuPageIds(menu.items);
+  const pageIds = collectNavigationMenuPageIds(menu.items);
   const pageSlugsById = await resolvedDeps.getPageSlugsByIds(pageIds);
-  const menuItems = mapMenuNodesToNavigationItems(menu.items, pageSlugsById);
+  const menuItems = mapMenuNodesToNavigationItems(menu.items, pageSlugsById, {
+    includeDefaultTarget: true,
+  });
 
   const safeItems = ensureMinimumItems(menuItems, manualItems, 1);
   return { items: safeItems, linksSource: safeItems === menuItems ? "menu" : "manual" };

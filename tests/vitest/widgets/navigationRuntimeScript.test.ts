@@ -40,6 +40,7 @@ const setScrollY = (value: number) => {
 
 afterEach(() => {
   document.body.innerHTML = "";
+  window.history.replaceState({}, "", "/");
 });
 
 test("navigation runtime drawer updates labels, focus, and close state", () => {
@@ -140,6 +141,7 @@ test("navigation runtime toggles submenus, closes siblings, and clears on outsid
 });
 
 test("navigation runtime updates active links and collapse state safely", () => {
+  window.history.replaceState({}, "", "/");
   setScrollY(0);
   const root = installNavigationRuntime({
     ...navigationDefaults,
@@ -170,4 +172,63 @@ test("navigation runtime updates active links and collapse state safely", () => 
   setScrollY(10);
   window.dispatchEvent(new Event("scroll"));
   expect(root.dataset.navigationCollapsed).toBe("false");
+});
+
+test("navigation runtime keeps pathname and exact active-link state bounded to one semantic current link", () => {
+  window.history.replaceState({}, "", "/docs/api");
+  let root = installNavigationRuntime({
+    ...navigationDefaults,
+    items: [
+      { label: "Docs", href: "/docs" },
+      { label: "API", href: "/docs/api" },
+      { label: "External", href: "https://example.com/docs" },
+    ],
+    behavior: {
+      ...navigationDefaults.behavior,
+      activeLinkMode: "pathname",
+      mobileMode: "expanded",
+    },
+  });
+
+  let anchors = Array.from(root.querySelectorAll<HTMLAnchorElement>('[data-navigation-link="1"]'));
+  expect(anchors[0]?.dataset.navigationActive).toBe("false");
+  expect(anchors[0]?.getAttribute("aria-current")).toBeNull();
+  expect(anchors[1]?.dataset.navigationActive).toBe("true");
+  expect(anchors[1]?.getAttribute("aria-current")).toBe("page");
+  expect(anchors[2]?.dataset.navigationActive).toBe("false");
+
+  root = installNavigationRuntime({
+    ...navigationDefaults,
+    items: [
+      { label: "Docs", href: "/docs" },
+      { label: "API", href: "/docs/api" },
+    ],
+    behavior: {
+      ...navigationDefaults.behavior,
+      activeLinkMode: "exact",
+      mobileMode: "expanded",
+    },
+  });
+
+  anchors = Array.from(root.querySelectorAll<HTMLAnchorElement>('[data-navigation-link="1"]'));
+  expect(anchors[0]?.dataset.navigationActive).toBe("false");
+  expect(anchors[1]?.dataset.navigationActive).toBe("true");
+  expect(anchors[1]?.getAttribute("aria-current")).toBe("page");
+
+  root = installNavigationRuntime({
+    ...navigationDefaults,
+    items: [
+      { label: "Docs", href: "/docs" },
+      { label: "API", href: "/docs/api" },
+    ],
+    behavior: {
+      ...navigationDefaults.behavior,
+      activeLinkMode: "none",
+      mobileMode: "expanded",
+    },
+  });
+
+  anchors = Array.from(root.querySelectorAll<HTMLAnchorElement>('[data-navigation-link="1"]'));
+  expect(anchors.every((anchor) => anchor.dataset.navigationActive === "false")).toBe(true);
+  expect(anchors.every((anchor) => anchor.getAttribute("aria-current") === null)).toBe(true);
 });

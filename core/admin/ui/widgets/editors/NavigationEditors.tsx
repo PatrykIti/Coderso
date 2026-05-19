@@ -14,6 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { isApiClientError } from "@/services/apiClient";
 import { listMediaCached } from "@/services/mediaClient";
+import { listPagesCached } from "@/services/pagesClient";
 import {
   getMenuWithItems,
   listMenus,
@@ -21,7 +22,10 @@ import {
   type MenuSummary,
 } from "@/services/menusClient";
 import { MediaPicker } from "@/ui/media/MediaPicker";
-import { resolveMenuItemSettings } from "../../../../services/menus/menuItemSettings";
+import {
+  collectNavigationMenuPageIds,
+  mapMenuNodesToNavigationItems as mapNavigationMenuNodesToNavigationItems,
+} from "../../../../services/navigation/navigationMenuMapping";
 
 import {
   navigationDefaults,
@@ -191,36 +195,11 @@ const mobileModeDetails: Record<
   },
 };
 
-export function mapMenuNodesToNavigationItems(nodes: MenuItemNode[]): NavigationItem[] {
-  return nodes.map((node) => {
-    const nodeMeta = resolveMenuItemSettings(node.settings);
-    return {
-      label: node.label,
-      href: node.href ?? "#",
-      meta: {
-        visibility: nodeMeta.visibility,
-        badge: nodeMeta.badge,
-        description: nodeMeta.description,
-        icon: nodeMeta.icon,
-      },
-      children:
-        node.children.length > 0
-          ? node.children.map((child) => {
-              const childMeta = resolveMenuItemSettings(child.settings);
-              return {
-                label: child.label,
-                href: child.href ?? "#",
-                meta: {
-                  visibility: childMeta.visibility,
-                  badge: childMeta.badge,
-                  description: childMeta.description,
-                  icon: childMeta.icon,
-                },
-              };
-            })
-          : undefined,
-    };
-  });
+export function mapMenuNodesToNavigationItems(
+  nodes: MenuItemNode[],
+  pagePathById?: ReadonlyMap<string, string>
+): NavigationItem[] {
+  return mapNavigationMenuNodesToNavigationItems(nodes, pagePathById);
 }
 
 export function buildMenuSelectionPatch(
@@ -514,10 +493,17 @@ function MenuSelectField({
     setIsResolvingMenu(true);
     try {
       const payload = await getMenuWithItems(nextValue);
+      const pageIds = collectNavigationMenuPageIds(payload.items);
+      const pagePathById =
+        pageIds.length === 0
+          ? new Map<string, string>()
+          : new Map(
+              (await listPagesCached({ force: true })).map((page) => [page.id, page.slug] as const)
+            );
       if (requestId !== requestIdRef.current) return;
       onSelectionChange({
         menuId: nextValue,
-        items: mapMenuNodesToNavigationItems(payload.items),
+        items: mapNavigationMenuNodesToNavigationItems(payload.items, pagePathById),
       });
     } catch (err) {
       if (requestId !== requestIdRef.current) return;

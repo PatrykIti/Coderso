@@ -443,29 +443,51 @@ const navigationRuntimeClientScript = `
     }
   };
 
-  const matchesCurrentPath = (href, mode) => {
+  const resolveMatchingPath = (href, mode) => {
     const parsed = parseUrl(href);
-    if (!parsed || parsed.origin !== window.location.origin) return false;
+    if (!parsed || parsed.origin !== window.location.origin) return null;
     const currentPath = window.location.pathname.replace(/\\/$/, "") || "/";
     const targetPath = parsed.pathname.replace(/\\/$/, "") || "/";
-    if (mode === "exact") return currentPath === targetPath;
+    if (mode === "exact") return currentPath === targetPath ? targetPath : null;
     if (mode === "pathname") {
-      return targetPath === "/" ? currentPath === "/" : currentPath === targetPath || currentPath.startsWith(targetPath + "/");
+      return targetPath === "/"
+        ? currentPath === "/"
+          ? targetPath
+          : null
+        : currentPath === targetPath || currentPath.startsWith(targetPath + "/")
+          ? targetPath
+          : null;
     }
-    return false;
+    return null;
   };
 
   const updateActiveLinks = (root) => {
     const mode = root.dataset.navigationActiveMode;
     const anchors = Array.from(root.querySelectorAll('[data-navigation-link="1"]'));
+    const matches = [];
     for (const candidate of anchors) {
       if (!(candidate instanceof HTMLAnchorElement)) continue;
-      const active = mode && mode !== "none" ? matchesCurrentPath(candidate.getAttribute("href"), mode) : false;
-      candidate.dataset.navigationActive = active ? "true" : "false";
-      if (active) {
-        candidate.setAttribute("aria-current", "page");
-      } else {
-        candidate.removeAttribute("aria-current");
+      candidate.dataset.navigationActive = "false";
+      candidate.removeAttribute("aria-current");
+      if (!mode || mode === "none") continue;
+      const matchedPath = resolveMatchingPath(candidate.getAttribute("href"), mode);
+      if (!matchedPath) continue;
+      matches.push({ anchor: candidate, path: matchedPath });
+    }
+
+    if (matches.length === 0) return;
+
+    const bestLength = matches.reduce(
+      (longest, match) => Math.max(longest, match.path.length),
+      0
+    );
+    let currentAssigned = false;
+    for (const match of matches) {
+      if (match.path.length !== bestLength) continue;
+      match.anchor.dataset.navigationActive = "true";
+      if (!currentAssigned) {
+        match.anchor.setAttribute("aria-current", "page");
+        currentAssigned = true;
       }
     }
   };

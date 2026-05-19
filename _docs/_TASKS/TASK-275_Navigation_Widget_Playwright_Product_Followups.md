@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Navigation + Admin UI + Runtime Render + Playwright QA
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-252, TASK-256, TASK-256-01, TASK-256-02, TASK-256-04, TASK-256-07, TASK-256-08
+**Dependencies:** TASK-252, TASK-256, TASK-256-01, TASK-256-02, TASK-256-04, TASK-256-07, TASK-299
 **Status:** Done (2026-05-19)
 
 ---
@@ -59,7 +59,7 @@ against the source-of-truth docs before the contract change.
 |---|---|---|---|
 | Missing live preview in all editor modes | `REPORT_NAVIGATION_WIDGET.md:181` | TASK-313 | The row is shared editor-preview surface scope. TASK-275 may reference it, but must not claim closure until TASK-313 lands or explicitly keeps the row routed. |
 | Sticky nav blocked on published frontend by Section `overflow-hidden` | `REPORT_NAVIGATION_WIDGET.md:378-393,405` | TASK-314 | The report identifies `Section`/layout wrapper ownership. TASK-275 may record evidence, but must not patch Section inside a Navigation task or close the sticky frontend row without the exact shared owner task. |
-| Generic contrast validation for configurable colors | `REPORT_NAVIGATION_WIDGET.md:215` | TASK-256-08 future shared validation owner | Contrast warnings should be shared across configurable color widgets. |
+| Generic contrast validation for configurable colors | `REPORT_NAVIGATION_WIDGET.md:215` | TASK-299 shared validation owner | Contrast warnings should be shared across configurable color widgets. |
 | Generic safe-href sanitizer semantics | TASK-256 shared link/media hardening | TASK-256 | TASK-275 may consume existing safe-href helpers and align Navigation editor validation, but must not fork a new sanitizer. |
 | Global Advanced/Visual mode ownership rules | TASK-256 editor-mode scope | TASK-256-01 | Navigation-specific copy can improve in TASK-275 leaves, but broad mode ownership belongs to TASK-256. |
 | Advanced editor feels like secondary settings without visual context | `REPORT_NAVIGATION_WIDGET.md:188` | TASK-256-01 | The broader editor-mode IA and preview-context expectation is shared panel ownership, not a Navigation-only runtime fix. |

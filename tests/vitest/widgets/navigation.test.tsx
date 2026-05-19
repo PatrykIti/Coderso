@@ -83,6 +83,41 @@ test("navigation reflects sticky and transparent behavior in runtime output", ()
   expect(html).toContain("backdrop-blur-sm");
 });
 
+test("navigation renders bounded visual-token classes, variables, and dropdown direction markers", () => {
+  const html = renderToString(
+    <NavigationBlock
+      data={{
+        ...navigationDefaults,
+        items: [
+          {
+            label: "Docs",
+            href: "/docs",
+            children: [{ label: "API", href: "/docs/api" }],
+          },
+        ],
+        style: {
+          linkHoverColor: "#112233",
+          linkActiveColor: "#334455",
+          linkUnderline: "always",
+          letterSpacing: "wider",
+          dropdownDirection: "top",
+          motion: "standard",
+        },
+      }}
+      variant="simple"
+      blockId="tokens"
+    />
+  );
+
+  expect(html).toContain("--navigation-link-hover-color:#112233");
+  expect(html).toContain("--navigation-link-active-color:#334455");
+  expect(html).toContain("tracking-wider");
+  expect(html).toContain("underline underline-offset-4");
+  expect(html).toContain("duration-200");
+  expect(html).toContain('data-navigation-direction="top"');
+  expect(html).toContain('data-navigation-position="top"');
+});
+
 test("navigation cleared surface and CTA background omit background styles", () => {
   const html = renderToString(
     <NavigationBlock
@@ -425,8 +460,8 @@ test("navigation maps selected menu nodes to widget items", () => {
         {
           id: "item-2-1",
           label: "CMS",
-          href: "/products/cms",
-          pageId: null,
+          href: null,
+          pageId: "page-cms",
           parentId: "item-2",
           orderIndex: 0,
           children: [],
@@ -435,7 +470,7 @@ test("navigation maps selected menu nodes to widget items", () => {
     },
   ];
 
-  const mapped = mapMenuNodesToNavigationItems(nodes);
+  const mapped = mapMenuNodesToNavigationItems(nodes, new Map([["page-cms", "products/cms/"]]));
 
   expect(mapped).toEqual([
     {
