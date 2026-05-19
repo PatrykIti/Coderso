@@ -16,9 +16,16 @@ Expand the Grid Columns editor entry path so beginner users can configure all
 columns without switching modes and apply common layout presets without editing
 raw spans.
 
-This leaf owns report findings C3, U2, U5, and U8 after TASK-256 has fixed the
-shared slot/config and span-validation contracts. TASK-271-06 owns U1 gap-label
-copy alongside gap-token expansion.
+This leaf owns report findings C3, U2, U5, and the same-count preset slice of
+U8. TASK-271-06 owns U1 gap-label copy alongside gap-token expansion.
+
+Residual shared structural truthfulness discovered during this audit does not
+belong here:
+
+- existing-variant truthfulness (`asymmetric` with explicit spans) routes to
+  TASK-313;
+- count-changing slot-remap contracts remain out of scope until a shared owner
+  exists for safe column-count and slot-count remapping.
 
 ## Scope
 
@@ -27,9 +34,9 @@ copy alongside gap-token expansion.
 - Rename misleading `Column configs` copy to user-facing column-count wording.
 - Add visual miniatures to the Visual variant cards for `equal`, `asymmetric`,
   and `masonry-lite`.
-- Add predefined layout templates that update `columns[].desktopSpan`,
-  `columns[].tabletSpan`, and `columns[].mobileSpan` through the existing
-  normalizer.
+- Add predefined same-count layout templates that update
+  `columns[].desktopSpan`, `columns[].tabletSpan`, and `columns[].mobileSpan`
+  through the existing normalizer.
 
 Out of scope:
 
@@ -43,7 +50,7 @@ Out of scope:
 - [ ] Add dynamic Wizard label inputs for every configured Grid Columns column.
 - [ ] Rename column-count copy and keep TASK-256 slot-sync guidance accurate.
 - [ ] Add compact variant miniatures to the Visual variant cards.
-- [ ] Add bounded layout preset application through the existing data model.
+- [ ] Add bounded same-count layout preset application through the existing data model.
 - [ ] Update focused editor tests and Grid Columns docs/report evidence.
 
 ## Files to Change
@@ -54,8 +61,8 @@ Out of scope:
 | `core/widgets/core/gridColumns.tsx` | Add bounded preset metadata only if the editor needs a schema-owned helper; do not persist preset names unless required. |
 | `tests/vitest/ui/grid-columns-editor-wave.test.tsx` | Cover dynamic Wizard labels, copy, variant miniatures, and preset application. |
 | `tests/vitest/widgets/gridColumns.test.tsx` | Cover any new exported preset helper or normalizer behavior if added. |
-| `core/admin/ui/pages/builder/BlockSettings.tsx` or page-builder slot owner | Required only if a preset can change the column count; route that path through the TASK-256 slot-sync/remap seam instead of data-only editor updates. |
-| `tests/vitest/pageBuilder/blockSettings-wave.test.tsx` | Required only if count-changing presets are implemented; cover no nested slot content is orphaned. |
+| `core/admin/ui/pages/builder/BlockSettings.tsx` or page-builder slot owner | Out of scope for this leaf. Count-changing presets are deferred until a shared slot-remap owner exists. |
+| `tests/vitest/pageBuilder/blockSettings-wave.test.tsx` | Out of scope for this leaf because count-changing presets are explicitly deferred. |
 | `_docs/_WIDGETS/GRID_COLUMNS.md` | Document Wizard all-column editing and layout presets after implementation. |
 | `_docs/PLAYWRIGHT/REPORT_GRID_COLUMNS_WIDGET.md` | Mark C3/U2/U5/U8 fixed or deferred with textual evidence. |
 
@@ -117,9 +124,8 @@ Error handling:
 - Presets must not delete existing labels where the same column index remains.
 - Default preset buttons must be current-count-only: a 3-column preset is shown
   or enabled only when the normalized data already has 3 synchronized columns.
-- Count-changing presets require the TASK-256 slot sync/remap callback first,
-  a confirmation that names added/removed slots, and page-builder tests proving
-  nested slot content is not orphaned.
+- Count-changing presets are out of scope for this leaf. Do not mutate column
+  count from a data-only editor path until a shared slot-remap owner exists.
 - Do not change gap labels here; TASK-271-06 owns U1 together with token
   expansion.
 
@@ -142,6 +148,7 @@ No API routes are added.
 - `bun test tests/unit/widgets/validator.test.ts` if schema/defaults change.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso`
 - `bun run precommit`
 
 ## Documentation Updates Required
@@ -158,7 +165,7 @@ No API routes are added.
 - Column-count copy no longer implies a second hidden configuration model.
 - Variant cards include compact visual miniatures without relying on copied
   third-party assets.
-- Layout presets apply bounded span data through the Grid Columns normalizer and
-  preserve existing labels where possible.
-- Preset application never creates a column count/slot count mismatch from a
-  data-only editor update.
+- Layout presets apply bounded same-count span data through the Grid Columns
+  normalizer and preserve existing labels where possible.
+- This leaf never creates a column count/slot count mismatch from a data-only
+  preset action.

@@ -12,25 +12,28 @@
 
 ## Overview
 
-Add Grid Columns-local column reorder controls so users can rearrange repeated
-columns without editing JSON or deleting/recreating column configs.
+Add Grid Columns-local reorder behavior that keeps column metadata and repeated
+column slot content in the same order when users rearrange columns.
 
-This leaf owns report finding W7. It must build on TASK-256-05-01 so config
-rows and repeatable slots remain synchronized.
+This leaf owns report finding W7 on top of the shared Structure move controls
+already landed in TASK-293. It must use the existing widget-local block patch
+seam so config rows and repeatable slots stay synchronized.
 
 ## Scope
 
-- Add move up/down controls for keyboard-accessible reorder.
+- Reuse the existing shared Structure move controls or a widget-local
+  presentation affordance, but route the mutation through `onBlockPatch` so the
+  widget can reorder `columns[]` and matching `slots["column:<id>"]`
+  atomically.
 - Add drag-and-drop reorder only if it follows existing admin UI patterns and
   does not introduce a new DnD dependency without approval.
-- Reorder `columns[]` and matching `slots["column:<id>"]` data together through
-  the page-builder owner seam.
 - Rebuild the `slots` object in the intended visual column order, because the
   current renderer derives repeatable slot order from `Object.keys(slotMap)` via
   `resolveWidgetSlotTargets`.
 - Preserve column ids where possible so existing nested blocks remain attached
   to the intended visual column.
-- Add clear disabled states at first/last columns.
+- Reuse the existing TASK-256 mismatch warning contract; do not invent a second
+  unmatched-slot warning surface in this leaf.
 
 Out of scope:
 
@@ -40,10 +43,9 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Add keyboard-accessible move up/down controls for configured columns.
+- [ ] Reuse the shared Structure move controls or add a widget-local reorder affordance that still flows through `onBlockPatch`.
 - [ ] Preserve nested slot content while reordering column data.
 - [ ] Add drag-and-drop only if it fits existing admin UI patterns.
-- [ ] Surface non-destructive warnings for unmatched legacy slots/configs.
 - [ ] Add focused editor/data tests for reorder and boundary disabled states.
 - [ ] Update Grid Columns docs/report evidence.
 
@@ -51,16 +53,14 @@ Out of scope:
 
 | File | Required change |
 |---|---|
-| `core/admin/ui/pages/builder/BlockSettings.tsx` | Own the atomic block update that changes Grid Columns data and the ordered `slots` object together; keep mutation ownership here. |
-| `core/admin/ui/pages/builder/VisualPanel.tsx` | Presentation-only if needed: extend existing `VisualPanelSlotControls` items with generic move handlers rendered from `BlockSettings`; do not add a Grid Columns-specific `WidgetEditorContext` callback. |
-| `core/admin/ui/pages/builder/blockUtils.ts` | Add or extend a pure builder helper that rebuilds ordered slot maps collision-safely and preserves unmatched slots. |
-| `core/widgets/slots.ts` | Add a pure repeatable-slot ordering helper only if `blockUtils.ts` needs shared parsing/building behavior. |
-| `core/admin/ui/widgets/editors/GridColumnsEditors.tsx` | Optional only for copy/desync warnings; do not place slot-mutating reorder controls here unless a generalized slot-operation context exists. |
-| `core/widgets/core/gridColumns.tsx` | Add pure `reorderGridColumnsData` helper only if it can stay Bun-free and schema-owned. |
+| `core/admin/ui/widgets/editors/GridColumnsEditors.tsx` | Primary widget-local owner: reuse `onBlockPatch` plus `context.slotTargets` so reorder changes column metadata and slot order atomically. |
+| `core/widgets/core/gridColumns.tsx` | Add schema-owned reorder/remap helpers and any repeatable-slot sync adapter metadata needed by the widget-local patch path. |
+| `core/admin/ui/pages/builder/BlockSettings.tsx` | No new owner logic expected. Consume the existing shared `onBlockPatch` seam only if wiring changes are truly required. |
+| `core/admin/ui/pages/builder/VisualPanel.tsx` | No new shared move controls expected. Update only if the existing slot-control presentation API needs a narrow extension. |
 | `tests/vitest/ui/grid-columns-editor-wave.test.tsx` | Cover move up/down controls, disabled states, and data preservation. |
 | `tests/vitest/widgets/gridColumns.test.tsx` | Cover runtime visual order if renderer behavior changes or a pure data helper is added. |
-| `tests/vitest/pageBuilder/blockSettings-wave.test.tsx` | Cover atomic reorder from the builder seam and preservation of nested slot content. |
-| `tests/vitest/pageBuilder/blockList.test.tsx` | Cover no accidental child deletion when block slots contain legacy or unmatched entries. |
+| `tests/vitest/pageBuilder/blockSettings-wave.test.tsx` | Update only if Grid Columns consumes the shared block-patch seam in a way that changes builder wiring expectations. |
+| `tests/vitest/pageBuilder/blockList.test.tsx` | Existing shared reorder preservation coverage stays authoritative unless the widget adds a new pure helper. |
 | `_docs/_WIDGETS/GRID_COLUMNS.md` | Document column reorder behavior after implementation. |
 | `_docs/PLAYWRIGHT/REPORT_GRID_COLUMNS_WIDGET.md` | Mark W7 fixed/deferred with textual evidence. |
 
@@ -83,70 +83,25 @@ function reorderGridColumnsData(
 }
 ```
 
-Builder-owned atomic update:
+Widget-local atomic patch:
 
 ```ts
-type GridColumnReorderPlan = {
-  fromIndex: number;
-  toIndex: number;
-  nextColumnIds: string[];
-};
-
-function isSlotIdForDefinition(definitionId: string, slotId: string): boolean {
-  return parseRepeatableSlotId(slotId)?.definitionId === definitionId;
-}
-
-function reorderRepeatableSlotMap(
-  slots: WidgetBlock["slots"],
-  definitionId: string,
-  orderedInstanceIds: string[]
-): { slots: WidgetBlock["slots"]; warnings: Array<"unmatched_grid_column_slot"> } {
-  const currentSlots = slots ?? {};
-  const orderedSlotIds = orderedInstanceIds.map((instanceId) =>
-    buildRepeatableSlotId(definitionId, instanceId)
-  );
-  const orderedSet = new Set(orderedSlotIds);
-  const currentKeys = Object.keys(currentSlots);
-  const nextSlots: NonNullable<WidgetBlock["slots"]> = {};
-
-  for (const slotId of orderedSlotIds) {
-    if (slotId in currentSlots) nextSlots[slotId] = currentSlots[slotId] ?? [];
-  }
-  for (const slotId of currentKeys) {
-    if (isSlotIdForDefinition(definitionId, slotId) && !orderedSet.has(slotId)) {
-      nextSlots[slotId] = currentSlots[slotId] ?? [];
-    }
-  }
-  for (const slotId of currentKeys) {
-    if (!isSlotIdForDefinition(definitionId, slotId)) {
-      nextSlots[slotId] = currentSlots[slotId] ?? [];
-    }
-  }
-
-  const expectedSlotIds = new Set(orderedSlotIds);
-  const hasUnmatchedGridSlot = currentKeys.some(
-    (slotId) => isSlotIdForDefinition(definitionId, slotId) && !expectedSlotIds.has(slotId)
-  );
-  return {
-    slots: nextSlots,
-    warnings: hasUnmatchedGridSlot ? ["unmatched_grid_column_slot"] : [],
-  };
-}
-
-function reorderGridColumnsBlock(block: WidgetBlock, plan: GridColumnReorderPlan) {
-  const data = reorderGridColumnsData(block.data as GridColumnsData, plan.fromIndex, plan.toIndex);
-  const slotResult = reorderRepeatableSlotMap(block.slots, "column", plan.nextColumnIds);
-  return {
-    block: { ...block, data, slots: slotResult.slots },
-    warnings: slotResult.warnings,
-  };
+function applyGridColumnsReorderPatch(
+  block: WidgetBlock,
+  fromIndex: number,
+  toIndex: number
+): WidgetBlock {
+  const nextColumnIds = resolveOrderedGridColumnIds(block);
+  const movedIds = reorderBlocks(nextColumnIds, fromIndex, toIndex);
+  return reorderGridColumnsBlock(block, movedIds);
 }
 ```
 
 Error handling:
 
 - Do not drop slot children when a column id is missing; preserve unmatched slots
-  and surface a non-destructive editor warning.
+  and reuse the existing shared TASK-256 mismatch warning contract instead of
+  adding a second warning surface here.
 - Do not mutate column ids for reorder. Reorder by moving `columns[]` entries and
   reconstructing `slots` insertion order with the same `column:<id>` keys and
   the same nested block arrays.
@@ -183,6 +138,7 @@ No API routes are added.
   the existing slot-control presentation API changes.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso`
 - `bun run precommit`
 
 ## Documentation Updates Required
@@ -200,5 +156,6 @@ No API routes are added.
 - Tests cover data preservation and no accidental slot-child deletion.
 - Runtime/order tests prove the visual column order changes in the same order as
   the ordered repeatable slot keys consumed by `resolveWidgetSlotTargets`.
-- Legacy or unmatched `column:*` slots survive reorder and produce a visible
-  non-destructive warning instead of being silently deleted.
+- Legacy or unmatched `column:*` slots survive reorder without being silently
+  deleted, and the existing shared mismatch warning remains the user-facing
+  explanation when structure still drifts.

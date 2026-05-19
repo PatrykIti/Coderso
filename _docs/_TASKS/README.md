@@ -29,7 +29,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 - **To Do:** 273 tasks
-- **In Progress:** 4 tasks
+- **In Progress:** 5 tasks
 - **Done:** 1695 tasks
 
 ---
@@ -38,6 +38,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-313 | Grid Columns Shared Structural Truthfulness Follow-up | High | Large | Residual shared Grid Columns truthfulness after TASK-256 closure: variant truthfulness, span feedback, CSS-variable picker representation, and inactive cardize controls |
 | TASK-292 | Toggle Block Widget Playwright Product Followups | High | Very Large | Toggle Block-only follow-up family for `REPORT_TOGGLE_BLOCK_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-292-01 | Toggle Block Variant Visual Hierarchy, Contrast, and Pane Styling | High | Large | Add Toggle Block-owned cards distinction, active contrast, and bounded pane style controls after TASK-256 shared style semantics |
 | TASK-292-02 | Toggle Block Motion and Pane Transition Contract | Medium | Medium | Add bounded fade/slide/no-motion options without weakening TASK-256 interactive runtime semantics |
@@ -214,10 +215,9 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-272-07 | Hero Rich Copy and Social Proof Composition | Medium | Very Large | Add safe rich-copy support and a bounded social proof row for conversion Hero sections |
 | TASK-272-08 | Hero Responsive Images and LCP Priority | Medium | Large | Define Hero responsive image, lazy/eager loading, and fetch-priority policy without inventing media variants |
 | TASK-272-09 | Hero Report Docs Changelog and Closure | Medium | Medium | Refresh Hero report/docs/changelog/board and final validation evidence |
-| TASK-271 | Grid Columns Widget Playwright Product Followups | High | Very Large | Grid Columns-only follow-up family for `REPORT_GRID_COLUMNS_WIDGET.md`, excluding TASK-256 shared-contract scope |
-| TASK-271-01 | Grid Columns Wizard, Presets, and Editor Guidance | High | Large | Expand all-column Wizard editing, variant previews, column-count copy, and layout presets |
-| TASK-271-02 | Grid Columns Reorder and Column Management | High | Large | Add reorder controls that preserve nested column slot content after TASK-256 slot/config sync |
-| TASK-271-03 | Grid Columns Responsive Order, Visibility, and Wide Breakpoints | High | Very Large | Add mobile reverse, per-column visibility, wide breakpoint spans, and any residual overflow guardrails |
+| TASK-271-01 | Grid Columns Wizard, Presets, and Editor Guidance | High | Large | Expand all-column Wizard editing, variant previews, column-count copy, and same-count layout presets |
+| TASK-271-02 | Grid Columns Reorder and Column Management | High | Large | Use the existing Structure move seam to keep Grid Columns metadata and slot order aligned during reorder |
+| TASK-271-03 | Grid Columns Responsive Order, Visibility, and Wide Breakpoints | High | Very Large | Add mobile reverse, per-column visibility, and explicit `xl`/`2xl` span support |
 | TASK-271-04 | Grid Columns Per-Column Surface and Overflow | Medium | Large | Add bounded per-column card surface overrides and overflow controls without raw class strings |
 | TASK-271-05 | Grid Columns Height and Cross-Axis Alignment | Medium | Large | Replace hardcoded min-height with tokens and add per-column alignment overrides |
 | TASK-271-06 | Grid Columns Gap Tokens and Density Controls | Medium | Medium | Expand bounded gap tokens, keep independent gapX/gapY, and improve spacing labels |
@@ -317,6 +317,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-271 | Grid Columns Widget Playwright Product Followups | High | Very Large | In progress: TASK-271 is being re-audited against live post-TASK-256/TASK-293 seams, with widget-local scope narrowed to product follow-ups and residual shared structural drift rerouted to TASK-313 |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |

@@ -25,7 +25,7 @@ slots and per-breakpoint span tokens.
 ### Wizard
 - variant selection
 - column config count
-- first column labels
+- first two column labels
 - base horizontal/vertical gap
 
 ### Visual
@@ -37,7 +37,12 @@ Sections:
 
 Notes:
 - Grid Columns owns variant selection in Visual (`visualOwnsVariantSelection = true`).
-- Repeatable slot instance count is managed in Slots panel.
+- Repeatable slot instance count is managed in the shared Structure section / Slots panel.
+- When column configs drift from actual slot instances, the editor shows an
+  explicit warning and the preview continues to follow the real slot count until
+  the structure is reconciled.
+- `masonry-lite` always renders cardized column wrappers, so the Visual cardize
+  toggle is locked on with explanatory copy for truthful preview behavior.
 
 ### Advanced
 - technical layout tokens (align, gap, border width, padding)
@@ -57,6 +62,8 @@ Notes:
   - `data-grid-columns-gap-x`
   - `data-grid-columns-gap-y`
   - `data-grid-column` and `data-grid-column-instance` per slot
+- Technical column labels and `Empty column.` helper copy are editor-only and do
+  not render in public runtime output.
 
 ## Clear Controls
 

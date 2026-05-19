@@ -15,8 +15,11 @@
 Add Grid Columns-specific responsive product controls for mobile ordering,
 per-column visibility, and wide-screen span behavior.
 
-This leaf owns report findings W3, W4, W6, and any residual P3 overflow guard
-that remains after TASK-256 span validation/preview work lands.
+This leaf owns report findings W3, W4, and W6.
+
+Residual span-truthfulness and overflow fallout discovered during this audit are
+shared structural follow-up scope in TASK-313. This leaf does not add a second
+overflow guard while that shared work remains open.
 
 ## Scope
 
@@ -24,11 +27,9 @@ that remains after TASK-256 span validation/preview work lands.
   visual order below the tablet breakpoint.
 - Add per-column visibility controls such as `hideOnMobile`, `hideOnTablet`, and
   `hideOnDesktop` only if their runtime output remains accessible and predictable.
-- Add optional `xlSpan` and/or `2xlSpan` support if the product decision is to
-  support wider monitors beyond the current `lg` desktop span.
+- Add explicit optional `xlSpan` and `2xlSpan` support for wide monitors beyond
+  the current `lg` desktop span.
 - Add runtime class mapping and normalized defaults for new responsive fields.
-- Add overflow containment only if TASK-256 fixes span feedback but invalid
-  legacy payloads can still produce horizontal overflow.
 
 Out of scope:
 
@@ -40,8 +41,7 @@ Out of scope:
 
 - [ ] Add a bounded mobile reverse option to the Grid Columns layout model.
 - [ ] Add per-column breakpoint visibility fields and editor controls.
-- [ ] Add optional wide-breakpoint span support when approved by the product contract.
-- [ ] Add residual overflow containment only if TASK-256 leaves a runtime guard need.
+- [ ] Add explicit `xl` and `2xl` wide-breakpoint span support.
 - [ ] Add schema, runtime, editor, and validator coverage for responsive fields.
 - [ ] Update Grid Columns docs/report evidence.
 
@@ -55,7 +55,7 @@ Out of scope:
 | `tests/vitest/ui/grid-columns-editor-wave.test.tsx` | Cover responsive controls and editor state updates. |
 | `tests/unit/widgets/validator.test.ts` | Add schema acceptance/rejection for any new persisted fields. |
 | `_docs/_WIDGETS/GRID_COLUMNS.md` | Document responsive options and breakpoint behavior. |
-| `_docs/PLAYWRIGHT/REPORT_GRID_COLUMNS_WIDGET.md` | Mark W3/W4/W6/P3 fixed/deferred with textual evidence. |
+| `_docs/PLAYWRIGHT/REPORT_GRID_COLUMNS_WIDGET.md` | Mark W3/W4/W6 fixed/deferred with textual evidence, and route P3 to TASK-313. |
 
 ## Implementation Pseudocode
 
@@ -69,6 +69,7 @@ type GridColumnsColumn = {
   tabletSpan?: GridColumnsSpan;
   mobileSpan?: GridColumnsSpan;
   xlSpan?: GridColumnsSpan;
+  twoXlSpan?: GridColumnsSpan;
   hideOnMobile?: boolean;
   hideOnTablet?: boolean;
   hideOnDesktop?: boolean;
@@ -79,7 +80,6 @@ type GridColumnsLayout = {
   gapY?: GridColumnsGap;
   align?: GridColumnsAlign;
   reverseOnMobile?: boolean;
-  containOverflow?: boolean;
 };
 ```
 
@@ -94,7 +94,8 @@ function resolveColumnResponsiveClasses(column: ResolvedGridColumn) {
     spanClassMap[column.mobileSpan],
     tabletSpanClassMap[column.tabletSpan],
     desktopSpanClassMap[column.desktopSpan],
-    column.xlSpan ? xlSpanClassMap[column.xlSpan] : undefined
+    column.xlSpan ? xlSpanClassMap[column.xlSpan] : undefined,
+    column.twoXlSpan ? twoXlSpanClassMap[column.twoXlSpan] : undefined
   );
 }
 ```
@@ -129,6 +130,7 @@ No API routes are added.
   changes.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso`
 - `bun run precommit`
 
 ## Documentation Updates Required
@@ -136,7 +138,7 @@ No API routes are added.
 - Update `_docs/_WIDGETS/GRID_COLUMNS.md` with responsive ordering, visibility,
   and wide-breakpoint behavior.
 - Update `_docs/PLAYWRIGHT/REPORT_GRID_COLUMNS_WIDGET.md` for W3, W4, W6, and
-  any residual P3 decision.
+  route P3 through TASK-313.
 - Update TASK-271-07 closure matrix.
 
 ## Acceptance Criteria
@@ -144,6 +146,5 @@ No API routes are added.
 - Mobile order can be reversed through a bounded widget-owned option.
 - Per-column visibility is schema-validated, normalized, and covered by runtime
   tests.
-- Wide breakpoint support is optional and backward compatible.
-- Legacy invalid span payloads do not cause uncontrolled horizontal overflow if
-  TASK-256 leaves a residual runtime guard requirement.
+- Wide breakpoint support includes explicit optional `xl` and `2xl` span
+  fields and remains backward compatible.

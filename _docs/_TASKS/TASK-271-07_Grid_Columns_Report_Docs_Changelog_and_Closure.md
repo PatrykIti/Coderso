@@ -43,11 +43,11 @@ implemented in TASK-271.
 
 | Report item | Required closure result |
 |---|---|
-| TASK-256 exclusions from TASK-271 umbrella | Mark fixed by TASK-256, deferred to TASK-256, or still open under TASK-256. Do not claim TASK-271 fixed them. |
-| TASK-256 span feedback exclusions C4/C5/U4 | Mark fixed by TASK-256, deferred to TASK-256, or still open under TASK-256. Do not claim TASK-271 fixed them. |
+| TASK-256 exclusions from TASK-271 umbrella | Mark fixed by TASK-256, deferred to TASK-256, rerouted to TASK-313, or still open under TASK-256. Do not claim TASK-271 fixed them. |
+| TASK-313 shared structural exclusions C2/C4/C5/U3/U4/P3/asymmetric truthfulness | Mark routed to TASK-313 or fixed there later. Do not claim TASK-271 fixed them. |
 | C3, U2, U5, U8 | Fixed/deferred by TASK-271-01 with screenshots or textual DOM/editor evidence. |
 | W7 | Fixed/deferred by TASK-271-02 with editor reorder evidence. |
-| W3, W4, W6, residual P3 | Fixed/deferred by TASK-271-03 with runtime class/DOM evidence. |
+| W3, W4, W6 | Fixed/deferred by TASK-271-03 with runtime class/DOM evidence. |
 | W1, W9 | Fixed/deferred by TASK-271-04 with editor/runtime style evidence. |
 | W2, W5, P4 | Fixed/deferred by TASK-271-05 with runtime class/DOM evidence. |
 | U1, W10 | Fixed/current-state/deferred by TASK-271-06. Must mention current code already has separate `gapX` and `gapY`. |
@@ -126,6 +126,7 @@ No API routes are added.
 - `bun test tests/unit/widgets/validator.test.ts` if schema/defaults changed.
 - `bun test tests/unit/widgets/registry.test.ts` if registry/default wiring
   changed.
+- `bun run gates:coderso`
 - `bun run scan:security:strict`
 - `bun run precommit`
 - `git diff --check`
@@ -141,8 +142,8 @@ No API routes are added.
 ## Acceptance Criteria
 
 - Every source report finding has exactly one final classification: TASK-256,
-  fixed by TASK-271, current-state verified, deferred, or rejected.
-- TASK-271 does not claim to fix TASK-256-owned shared-contract drift.
+  TASK-313, fixed by TASK-271, current-state verified, deferred, or rejected.
+- TASK-271 does not claim to fix TASK-256-owned or TASK-313-owned shared-contract drift.
 - Changelog, board stats, task statuses, and docs agree.
 - Final validation includes exact commands and results.
 - W8 is not silently implemented as raw arbitrary classes.

@@ -6,7 +6,7 @@
 **Category:** Widgets + Grid Columns + Admin UI + Runtime Render + Playwright QA
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-252, TASK-256, TASK-256-05-01, TASK-256-08
-**Status:** To Do
+**Status:** In Progress (2026-05-19)
 
 ---
 
@@ -21,6 +21,24 @@ the TASK-256-05-01 structural leaf that already owns Grid Columns contract drift
 Do not use TASK-271 to duplicate slot/config synchronization, public placeholder
 gating, CSS-variable picker semantics, asymmetric/masonry truthfulness, or
 span-sum validation that TASK-256 already captured.
+
+## Current Shared Baseline (2026-05-19 Audit)
+
+The live checkout already carries the shared seams that TASK-271 must reuse
+instead of reimplementing:
+
+- public runtime no longer leaks `Empty column.` placeholder copy;
+- technical `Column N` labels render only on editor-preview/admin-preview
+  surfaces;
+- `masonry-lite` keeps the cardized contract truthful by locking the toggle on
+  with explanatory copy;
+- the editor surfaces an explicit config-vs-slot mismatch warning instead of
+  silently pretending the structures are synchronized;
+- builder structure surfaces already ship generic repeatable-slot move controls
+  plus slot-order preservation helpers.
+
+Residual structural truthfulness gaps discovered during this audit do not belong
+inside TASK-271. They are routed to TASK-313.
 
 ## Source Report Boundary
 
@@ -48,14 +66,14 @@ TASK-256 already owns them as shared widget-contract drift.
 | Report finding | Evidence | Owner task | Reason |
 |---|---|---|---|
 | C1 slot/config desync and manual synchronization | `REPORT_GRID_COLUMNS_WIDGET.md:63,150-160,217` | TASK-256-03, TASK-256-05-01 | Shared repeatable-slot/config contract. |
-| C2 CSS-variable color picker fallback | `REPORT_GRID_COLUMNS_WIDGET.md:64,132,218` | TASK-256-05-01 | Shared token-aware color control contract when existing controls accept `var(...)`. |
-| C4/C5/U4 span preview, sum validation, and current-sum indicator | `REPORT_GRID_COLUMNS_WIDGET.md:66-67,91,224-225` | TASK-256-05-01 | Shared truthful-control and invalid-layout feedback for existing span controls. |
-| U3 Advanced cardize controls visible when inactive | `REPORT_GRID_COLUMNS_WIDGET.md:90,173,227` | TASK-256-05-01 | Shared mode ownership and inactive-control truthfulness. |
+| C2 CSS-variable color picker fallback | `REPORT_GRID_COLUMNS_WIDGET.md:64,132,218` | TASK-313 | Residual shared color-control truthfulness still open after TASK-256 closeout; do not patch it widget-locally here. |
+| C4/C5/U4 span preview, sum validation, and current-sum indicator | `REPORT_GRID_COLUMNS_WIDGET.md:66-67,91,224-225` | TASK-313 | Residual structural truthfulness for current span controls. TASK-271 must not silently absorb it after TASK-256 closed. |
+| U3 Advanced cardize controls visible when inactive | `REPORT_GRID_COLUMNS_WIDGET.md:90,173,227` | TASK-313 | Residual inactive-control truthfulness stays in the shared structural follow-up. |
 | U6 masonry-lite forces cardize while switch stays off | `REPORT_GRID_COLUMNS_WIDGET.md:93,121-133,216` | TASK-256-05-01 | Existing control/renderer truthfulness. |
 | U7/P1 public column labels | `REPORT_GRID_COLUMNS_WIDGET.md:94,190,214,250` | TASK-256-03, TASK-256-05-01 | Public runtime must not leak editor metadata. |
 | P2 public `Empty column.` placeholder | `REPORT_GRID_COLUMNS_WIDGET.md:104,191,215` | TASK-256-03, TASK-256-05-01 | Public placeholder safety. |
-| P3 overflow caused by invalid span sums | `REPORT_GRID_COLUMNS_WIDGET.md:105` | TASK-256-05-01 first, TASK-271-03 only if residual product guard remains | Validation/preview is shared; optional overflow containment is local only if still needed after TASK-256. |
-| Asymmetric variant has no effect with explicit spans | `REPORT_GRID_COLUMNS_WIDGET.md:121,124,246` | TASK-256-05-01 | Existing variant control truthfulness. |
+| P3 overflow caused by invalid span sums | `REPORT_GRID_COLUMNS_WIDGET.md:105` | TASK-313 | Residual runtime fallout from unresolved shared span-truthfulness work. TASK-271-03 does not add a second guard while TASK-313 is open. |
+| Asymmetric variant has no effect with explicit spans | `REPORT_GRID_COLUMNS_WIDGET.md:121,124,246` | TASK-313 | Residual existing-variant truthfulness stays with the shared structural follow-up, not the product-expansion family. |
 
 TASK-271 may depend on the TASK-256 result, but it must not restage those repairs
 inside its own implementation leaves.
@@ -69,11 +87,10 @@ inside its own implementation leaves.
 | U2 variant cards have no visual miniatures | TASK-271-01 | Grid Columns Visual selector affordance. |
 | U5 `Column configs` label is misleading | TASK-271-01 | Rename to user-facing column count/config copy after TASK-256 sync lands. |
 | U8 predefined layout templates | TASK-271-01 | Grid Columns-local span preset application. |
-| W7 drag-and-drop reorder columns | TASK-271-02 | Local repeated-column management, with keyboard move fallback. |
+| W7 drag-and-drop reorder columns | TASK-271-02 | Shared Structure move controls already exist. TASK-271-02 owns Grid Columns-local metadata/slot parity and any widget-local reorder affordance, with keyboard move fallback. |
 | W3 reverse on mobile | TASK-271-03 | Responsive product behavior for column order. |
 | W4 per-column visibility | TASK-271-03 | Hide/show per breakpoint with safe runtime output. |
-| W6 XL/2XL breakpoint support | TASK-271-03 | Optional schema/render expansion for wide monitors. |
-| P3 overflow containment after span validation | TASK-271-03 | Only if TASK-256 leaves a legitimate residual guardrail. |
+| W6 XL/2XL breakpoint support | TASK-271-03 | Add explicit optional `xl` and `2xl` span fields with schema/runtime/editor coverage. |
 | W1 per-column style overrides | TASK-271-04 | Column surface overrides layered on existing cardized wrapper semantics. |
 | W9 overflow control per column | TASK-271-04 | Local style behavior for cardized/media-heavy columns. |
 | W2 min-height controls and P4 mobile empty space | TASK-271-05 | Height tokens and mobile-safe compact behavior. |
@@ -94,9 +111,10 @@ inside its own implementation leaves.
 
 ## Implementation Order
 
-1. Rebase over or complete TASK-256-05-01 first. TASK-271 leaves must build on
-   its resolved slot/config, placeholder, picker, variant, and span-validation
-   contracts.
+1. Build on the live TASK-256 and TASK-293..301 seams. Do not duplicate public
+   placeholder/label gating, `masonry-lite` cardize truthfulness, shared
+   mismatch warnings, or generic repeatable-slot move controls. Residual shared
+   structural truthfulness routes to TASK-313.
 2. Complete TASK-271-01 first because Wizard copy, presets, and variant
    previews define the editor entry path used by later schema fields.
 3. Complete TASK-271-02 before adding per-column style/responsive fields so
@@ -161,6 +179,7 @@ Implementation leaves:
   fields change.
 - `bun test tests/unit/widgets/registry.test.ts` if widget registry/default
   wiring changes.
+- `bun run gates:coderso`
 - `bun run scan:security:strict`
 - `bun run precommit`
 
@@ -180,7 +199,8 @@ Implementation leaves:
 
 ## Acceptance Criteria
 
-- Every Grid Columns report finding is either owned by TASK-256, covered by a
+- Every Grid Columns report finding is either owned by TASK-256, owned by
+  TASK-313, covered by a
   TASK-271 physical leaf, or explicitly rejected/deferred by TASK-271-07 with a
   reason.
 - TASK-271 task docs do not duplicate TASK-256 shared-contract implementation
