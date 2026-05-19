@@ -60,16 +60,43 @@ This leaf does not own:
 
 ## Implementation Pseudocode
 
-```tsx
-type FooterNewsletterMode = "none" | "slot-composition";
+```ts
+type FooterNewsletterDecision =
+  | {
+      mode: "reject";
+      reason: "footer-contract-stays-content-only" | "no-truthful-composition-path";
+    }
+  | {
+      mode: "compose-existing-slot";
+      slotId: "column-1" | "column-2" | "column-3" | "bottom";
+      guidanceCopy: string;
+    }
+  | {
+      mode: "introduce-new-slot";
+      slotId: "newsletter";
+      requiresSchemaChange: true;
+    };
 
-function resolveFooterNewsletterMode(data: FooterData): FooterNewsletterMode {
-  return data.newsletter?.enabled ? "slot-composition" : "none";
-}
-
-function renderFooterNewsletter(mode: FooterNewsletterMode, slots: Record<string, WidgetBlock[]>) {
-  if (mode !== "slot-composition") return null;
-  return renderSlotBlocks(slots.newsletter ?? []);
+function resolveFooterNewsletterDecision(input: {
+  hasExistingFooterSlots: boolean;
+  wantsDedicatedNewsletterArea: boolean;
+  canReuseExistingNewsletterContract: boolean;
+}): FooterNewsletterDecision {
+  if (!input.canReuseExistingNewsletterContract) {
+    return { mode: "reject", reason: "no-truthful-composition-path" };
+  }
+  if (!input.wantsDedicatedNewsletterArea) {
+    return {
+      mode: "compose-existing-slot",
+      slotId: "bottom",
+      guidanceCopy: "Compose the existing Newsletter widget inside an approved Footer slot.",
+    };
+  }
+  return {
+    mode: "introduce-new-slot",
+    slotId: "newsletter",
+    requiresSchemaChange: true,
+  };
 }
 ```
 
@@ -78,7 +105,7 @@ Error handling:
 - If newsletter is rejected, docs and report must say that explicitly.
 - If newsletter is supported, Footer may compose existing hardened widgets but
   must not own secrets, provider config, or a second submission route.
-- Missing newsletter slot content must fail softly with editor guidance, not a
+- Missing composed slot content must fail softly with editor guidance, not a
   broken empty runtime wrapper.
 
 ## Security Contract

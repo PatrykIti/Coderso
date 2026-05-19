@@ -39,6 +39,27 @@ This umbrella is not implementation-ready by itself. Execute it through the
 physical child tasks below so field-type families can land with focused
 validation and route-security review.
 
+## Concrete Live Owners
+
+Current live owners that child leaves must target explicitly:
+
+- canonical field model and submission normalization:
+  `core/services/forms/validation.ts`,
+  `core/services/forms/submissionService.ts`,
+  `core/services/forms/formRuntimeResolver.ts`
+- route/public-write boundary:
+  `core/server/routes/formsRoutes.ts`
+- admin client and builder surfaces:
+  `core/admin/services/formsClient.ts`,
+  `core/admin/ui/forms/FieldLibrary.tsx`,
+  `core/admin/ui/forms/FieldSettingsPanel.tsx`,
+  `core/admin/ui/forms/FormCanvas.tsx`,
+  `core/admin/ui/forms/FormRuntimePreviewDialog.tsx`,
+  `core/admin/ui/forms/FormBuilderPage.tsx`
+- current first consumer/runtime surface:
+  `core/widgets/core/formEmbed.tsx`,
+  `core/widgets/core/formRuntimeScript.ts`
+
 ## Sub-Tasks
 
 - [ ] TASK-311-01: Forms Choice Field Expansion for Radio and Grouped Options
@@ -60,11 +81,17 @@ validation and route-security review.
 | File | Required change |
 |---|---|
 | `core/services/forms/validation.ts` | Extend the canonical field-type model and submission validation rules. |
-| `core/services/forms/formsService.ts` and related admin owners | Persist and expose the approved field-type metadata. |
+| `core/services/forms/submissionService.ts` | Keep submission normalization aligned with the expanded field-type contract. |
 | `core/services/forms/formRuntimeResolver.ts` | Project any newly supported field types safely into runtime data. |
 | `core/server/routes/formsRoutes.ts` | Update public/internal submission behavior only when new field types require it. |
-| `core/admin/services/formsClient.ts` and Forms admin UI owners | Support the approved field-type metadata in the admin editor flow. |
-| Widget renderers that consume Forms runtime data | Adopt new field types only after the Forms contract is executable. |
+| `core/admin/services/formsClient.ts` | Keep admin client types aligned with the expanded field model. |
+| `core/admin/ui/forms/FieldLibrary.tsx` | Expose approved field types in the builder library only after the leaf contract lands. |
+| `core/admin/ui/forms/FieldSettingsPanel.tsx` | Expose only the settings supported by the approved leaf contract. |
+| `core/admin/ui/forms/FormCanvas.tsx` | Keep builder preview/output truthful for the approved field types. |
+| `core/admin/ui/forms/FormRuntimePreviewDialog.tsx` | Keep runtime-preview behavior truthful for the approved field types. |
+| `core/admin/ui/forms/FormBuilderPage.tsx` | Wire the approved field-library/settings/runtime-preview contract end to end. |
+| `core/widgets/core/formEmbed.tsx` | Adopt new field types only after the Forms contract is executable. |
+| `core/widgets/core/formRuntimeScript.ts` | Update runtime value collection only after the Forms contract is executable. |
 
 ## Security Contract
 
@@ -85,16 +112,25 @@ This task may affect the existing public Forms submission endpoint.
 
 - `bun test tests/integration/routes/forms.test.ts`
 - `bun test tests/unit/forms/submissionService.test.ts`
+- `bun run test:vitest -- tests/vitest/forms/validation.test.ts`
 - `bun run test:vitest -- tests/vitest/forms/formRuntimeResolver.test.ts`
 - field-builder/admin tests for the touched Forms UI owners
+- `bun run test:vitest -- tests/vitest/ui/field-library.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/forms-component-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/form-canvas-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/forms-pages-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui-integration/forms.test.tsx`
 - widget tests only for the widgets that adopt the newly supported field types
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 
 ## Documentation Updates Required
 
-- Update `_docs/CONTENT_TYPES_SPEC.md` and any Forms source-of-truth docs that
-  list supported field types.
+- Update `_docs/_WIDGETS/FORM_EMBED.md` and
+  `_docs/PLAYWRIGHT/REPORT_FORM_EMBED_WIDGET.md` as the current first-consumer
+  source of truth for unsupported vs supported field types.
+- Update `_docs/CMS_API.md` only when public/internal Forms route payloads or
+  submission behavior change.
 - Update widget docs only when a widget actually adopts the new field types.
 - Update the relevant Playwright reports when unsupported-field rows are closed.
 
@@ -110,3 +146,6 @@ This task may affect the existing public Forms submission endpoint.
 - Public-write validation/security remains correct for every adopted field type.
 - Widget families like TASK-269 can reference the Forms owner task instead of
   carrying anonymous “future field-model scope” placeholders.
+- Form Embed remains the current first consumer: unsupported diagnostics stay in
+  place until the relevant leaf lands, then move only with matching Forms-owner
+  proof.

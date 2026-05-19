@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 292 tasks
+- **To Do:** 296 tasks
 - **In Progress:** 5 tasks
 - **Done:** 1671 tasks
 
@@ -42,6 +42,10 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-311-01 | Forms Choice Field Expansion for Radio and Grouped Options | High | Large | First execution leaf for `radio` and any approved grouped choice semantics before widgets can close current unsupported-field debt |
 | TASK-311-02 | Forms Numeric, Temporal, Range, and Rating Field Expansion | Medium | Large | Typed-control owner leaf for `number`, `time`, `range`, and `rating` across validation, admin, runtime, and first-widget adoption |
 | TASK-311-03 | Forms Hidden and File Field Public-Write Contract | High | Large | Security-first owner leaf for `hidden` and `file` fields before any widget can expose them |
+| TASK-310-01 | Shared Color Picker Layout and Interactive Editor Adoption | High | Large | Replace local color-field clones in Accordion, Compare Timeline, Divider, FAQ Accordion, Grid Columns, Section, and Timeline |
+| TASK-310-02 | Shared Color Picker Content and Marketing Editor Adoption | High | Large | Replace local color-field clones in Content List, CTA Banner, Feature Grid, Hero, Rich Text Section, and Stats KPI |
+| TASK-310-03 | Shared Color Picker Shell and Forms-Adjacent Editor Adoption | Medium | Large | Replace local color-field clones in Contact, Footer, Navigation, Newsletter, and Pricing Plans while keeping widget-local surfaces unchanged |
+| TASK-310-04 | Shared Color Picker Team and Testimonials Editor Adoption | Medium | Medium | Replace local color-field clones in Team and Testimonials without widening people/social-proof product scope |
 | TASK-309 | Footer Market Utility Expansion | Low | Very Large | Future owner for newsletter/address/contact/back-to-top footer utilities that TASK-268 explicitly deferred |
 | TASK-309-01 | Footer Newsletter Composition and Submission Contract | Medium | Large | Decide whether Footer newsletter is composed, supported, or rejected without inventing a second public-write system |
 | TASK-309-02 | Footer Address and Contact Utility Surface | Low | Medium | Decide whether Footer owns bounded read-only address/contact presentation or stays composition-only |
@@ -336,7 +340,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-310 | Shared Color Picker CSS Variable and Border Clear Regression | High | Large | In progress: the landed shared color-field seam is being extended across the remaining widget-local `resolvePickerColor` adopters; Form Embed shared rows are already closed |
+| TASK-310 | Shared Color Picker CSS Variable and Border Clear Regression | High | Large | In progress: umbrella split into physical adopter leaves; Form Embed and Entry Teaser are already on the landed shared seam, Booking Calendar stays under TASK-297, and Gallery Mosaic remains a separate special-case owner |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |

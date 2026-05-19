@@ -45,10 +45,17 @@ This leaf does not own:
 | File | Required change |
 |---|---|
 | `core/services/forms/validation.ts` | Add canonical typed-field validation for `number`, `time`, `range`, and `rating`. |
+| `core/services/forms/submissionService.ts` | Keep submission normalization aligned with the expanded typed-field contract. |
 | `core/services/forms/formRuntimeResolver.ts` | Project approved typed-field metadata into runtime data safely. |
 | `core/server/routes/formsRoutes.ts` | Update submission validation only when typed controls change request semantics. |
-| Forms admin UI owners | Add builder/editor support for approved typed-field settings. |
-| widget consumers such as Form Embed | Adopt new typed controls only after the Forms owner slice is executable. |
+| `core/admin/services/formsClient.ts` | Keep admin client types aligned with the expanded typed-field model. |
+| `core/admin/ui/forms/FieldLibrary.tsx` | Add approved typed controls to the builder library only after the contract lands. |
+| `core/admin/ui/forms/FieldSettingsPanel.tsx` | Add approved typed-field settings such as min/max/step or rating scale. |
+| `core/admin/ui/forms/FormCanvas.tsx` | Keep builder preview truthful for approved typed controls. |
+| `core/admin/ui/forms/FormRuntimePreviewDialog.tsx` | Keep runtime preview truthful for approved typed controls. |
+| `core/admin/ui/forms/FormBuilderPage.tsx` | Wire the approved typed-field model through the builder flow end to end. |
+| `core/widgets/core/formEmbed.tsx` | Adopt new typed controls only after the Forms owner slice is executable. |
+| `core/widgets/core/formRuntimeScript.ts` | Update runtime value collection only after the Forms owner slice is executable. |
 
 ## Implementation Pseudocode
 
@@ -89,16 +96,23 @@ This leaf affects the existing Forms public submission endpoint.
 
 - `bun test tests/integration/routes/forms.test.ts`
 - `bun test tests/unit/forms/submissionService.test.ts`
+- `bun run test:vitest -- tests/vitest/forms/validation.test.ts`
 - `bun run test:vitest -- tests/vitest/forms/formRuntimeResolver.test.ts`
-- Forms admin builder/editor tests for the new typed-field UI
-- widget tests only after a widget consumes the supported field type
+- `bun run test:vitest -- tests/vitest/ui/field-library.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/forms-component-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/form-canvas-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/forms-pages-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui-integration/forms.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/formEmbed.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/formRuntimeScript.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 
 ## Documentation Updates Required
 
-- Forms source-of-truth docs that list supported field types
+- `_docs/_WIDGETS/FORM_EMBED.md`
 - `_docs/PLAYWRIGHT/REPORT_FORM_EMBED_WIDGET.md` when current unsupported rows close
+- `_docs/CMS_API.md` only when Forms route payloads or validation behavior change
 - `_docs/_TASKS/README.md`
 
 ## Acceptance Criteria
@@ -108,3 +122,6 @@ This leaf affects the existing Forms public submission endpoint.
 - Validation, runtime projection, admin builder, and docs stay synchronized.
 - Widgets can consume typed controls only after the canonical Forms contract
   exists and is tested.
+- Form Embed can stop rendering the current unsupported diagnostics for
+  `number`, `time`, `range`, and `rating` only when the Forms owner contract
+  and its admin/runtime surfaces are green.

@@ -48,11 +48,19 @@ This leaf does not own:
 | File | Required change |
 |---|---|
 | `core/services/forms/validation.ts` | Add canonical `hidden` / `file` field validation rules. |
+| `core/services/forms/submissionService.ts` | Keep submission normalization aligned with the approved trusted-field contract. |
 | `core/services/forms/formRuntimeResolver.ts` | Project only safe runtime metadata for approved fields. |
 | `core/server/routes/formsRoutes.ts` | Update public/internal submission behavior if these field types require route-level changes. |
+| `core/server/requestBody.ts` | Support multipart/file parsing only if `file` is approved through the Forms route contract. |
 | storage/upload owners used by Forms | Add or extend bounded upload handling only if `file` is approved. |
-| Forms admin UI owners | Add builder/editor support for approved hidden/file settings. |
-| widget consumers such as Form Embed | Adopt only after the Forms owner slice is executable. |
+| `core/admin/services/formsClient.ts` | Keep admin client types aligned with the approved hidden/file model. |
+| `core/admin/ui/forms/FieldLibrary.tsx` | Add hidden/file entries only after the trusted-field contract lands. |
+| `core/admin/ui/forms/FieldSettingsPanel.tsx` | Add only the approved hidden/file settings once the contract lands. |
+| `core/admin/ui/forms/FormCanvas.tsx` | Keep builder preview truthful for approved hidden/file behavior. |
+| `core/admin/ui/forms/FormRuntimePreviewDialog.tsx` | Keep runtime preview truthful for approved hidden/file behavior. |
+| `core/admin/ui/forms/FormBuilderPage.tsx` | Wire the approved trusted-field model through the builder flow end to end. |
+| `core/widgets/core/formEmbed.tsx` | Adopt only after the Forms owner slice is executable. |
+| `core/widgets/core/formRuntimeScript.ts` | Update runtime value collection only after the Forms owner slice is executable. |
 
 ## Implementation Pseudocode
 
@@ -99,17 +107,27 @@ storage/upload changes.
 
 - `bun test tests/integration/routes/forms.test.ts`
 - `bun test tests/unit/forms/submissionService.test.ts`
+- `bun run test:vitest -- tests/vitest/forms/validation.test.ts`
 - `bun run test:vitest -- tests/vitest/forms/formRuntimeResolver.test.ts`
+- `bun run test:vitest -- tests/vitest/server/requestBody.test.ts`
+- `bun run test:vitest -- tests/vitest/ui/field-library.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/forms-component-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/form-canvas-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/forms-pages-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui-integration/forms.test.tsx`
 - route/storage/security suites for the approved hidden/file behavior
 - widget tests only after a widget consumes the supported field type
+- `bun test tests/security/codersoSecurityGate.test.ts` when public-write or
+  storage security semantics change
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 
 ## Documentation Updates Required
 
-- Forms source-of-truth docs that list supported field types and public-write
-  policy
+- `_docs/_WIDGETS/FORM_EMBED.md`
 - `_docs/PLAYWRIGHT/REPORT_FORM_EMBED_WIDGET.md` when current unsupported rows close
+- `_docs/CMS_API.md` when Forms public/internal route payloads or trusted-field
+  validation behavior change
 - `_docs/_TASKS/README.md`
 
 ## Acceptance Criteria
@@ -120,3 +138,6 @@ storage/upload changes.
   synchronized for the approved trusted-field surface.
 - No provider secrets or privileged payload semantics leak into widget-visible
   config.
+- Form Embed can stop rendering the current unsupported diagnostics for
+  `hidden` or `file` only when the trusted-field route/security contract and
+  admin/runtime surfaces are green.

@@ -49,10 +49,17 @@ This leaf does not own:
 | File | Required change |
 |---|---|
 | `core/services/forms/validation.ts` | Add canonical `radio` (and approved grouped choice) field-type validation. |
+| `core/services/forms/submissionService.ts` | Keep submission normalization aligned with the expanded choice-field contract. |
 | `core/services/forms/formRuntimeResolver.ts` | Project supported choice-field metadata safely into runtime data. |
 | `core/server/routes/formsRoutes.ts` | Update submission validation only when the Forms owner contract changes request semantics. |
-| Forms admin UI owners | Add builder/editor support for the approved choice-field model. |
-| widget consumers such as Form Embed | Adopt the new choice-field contract only after the Forms owner slice is executable. |
+| `core/admin/services/formsClient.ts` | Keep admin client types aligned with the expanded choice-field model. |
+| `core/admin/ui/forms/FieldLibrary.tsx` | Add `radio` to the builder library only after the choice-field contract lands. |
+| `core/admin/ui/forms/FieldSettingsPanel.tsx` | Add approved choice-field settings and grouped-choice controls only after the contract lands. |
+| `core/admin/ui/forms/FormCanvas.tsx` | Keep builder preview truthful for the approved choice-field contract. |
+| `core/admin/ui/forms/FormRuntimePreviewDialog.tsx` | Keep runtime preview truthful for the approved choice-field contract. |
+| `core/admin/ui/forms/FormBuilderPage.tsx` | Wire the approved choice-field model through the builder flow end to end. |
+| `core/widgets/core/formEmbed.tsx` | Adopt the new choice-field contract only after the Forms owner slice is executable. |
+| `core/widgets/core/formRuntimeScript.ts` | Update runtime value collection only after the Forms owner slice is executable. |
 
 ## Implementation Pseudocode
 
@@ -100,16 +107,23 @@ This leaf affects the existing Forms public submission endpoint.
 
 - `bun test tests/integration/routes/forms.test.ts`
 - `bun test tests/unit/forms/submissionService.test.ts`
+- `bun run test:vitest -- tests/vitest/forms/validation.test.ts`
 - `bun run test:vitest -- tests/vitest/forms/formRuntimeResolver.test.ts`
-- Forms admin builder/editor tests for the new choice-field UI
-- widget tests only after a widget consumes the supported field type
+- `bun run test:vitest -- tests/vitest/ui/field-library.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/forms-component-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/form-canvas-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/forms-pages-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui-integration/forms.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/formEmbed.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/formRuntimeScript.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 
 ## Documentation Updates Required
 
-- Forms source-of-truth docs that list supported field types
+- `_docs/_WIDGETS/FORM_EMBED.md`
 - `_docs/PLAYWRIGHT/REPORT_FORM_EMBED_WIDGET.md` when current unsupported rows close
+- `_docs/CMS_API.md` only when Forms route payloads or validation behavior change
 - `_docs/_TASKS/README.md`
 
 ## Acceptance Criteria
@@ -120,3 +134,5 @@ This leaf affects the existing Forms public submission endpoint.
   synchronized.
 - Widgets can consume the new choice contract without inventing extra payload
   semantics.
+- Form Embed can stop rendering the current unsupported diagnostic for `radio`
+  only when the Forms owner contract and its admin/runtime surfaces are green.

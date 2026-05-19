@@ -22,15 +22,26 @@ owner seam existed:
 - the hex-only `resolvePickerColor()` pattern is still duplicated across many
   widget editors, so CSS-variable/custom token values fall back to the picker
   swatch default instead of remaining truthful in the UI;
-- Form Embed already closed its shared rows by consuming the new helper, which
-  means the remaining work is now strictly about the still-local adopters.
+- Form Embed already closed its shared rows by consuming the landed lower-level
+  helper surface, so the remaining work is now strictly about still-local
+  adopters.
 
 This task now owns the remaining adoption wave: reuse or lightly extend the
-landed shared helper surface (`ClearableFields.tsx` plus
-`SharedColorControl.tsx`) across editors that still duplicate local swatch/text
-logic before widget-local styling work continues. The remaining live adopters
-still include Accordion, Content List, Footer, and the other editors listed in
-the file matrix below.
+landed shared helper surface (`ClearableFields.tsx`,
+`SharedColorControl.tsx`, and `SharedColorFieldInputs`) across editors that
+still duplicate local swatch/text logic before widget-local styling work
+continues.
+
+Already closed or separately owned and therefore excluded from the remaining
+wave:
+
+- Form Embed: already consumes the landed shared helper surface.
+- Entry Teaser: already consumes `SharedColorControl`.
+- Booking Calendar: routed through `TASK-297` as a widget-specific adoption
+  leaf.
+- Gallery Mosaic: current overlay/current-media special-case behavior was
+  settled under `TASK-312` / `TASK-270` and must not be flattened into a
+  generic no-alpha helper rewrite.
 
 ## Scope Boundary
 
@@ -45,45 +56,30 @@ This task does not own widget-local variant/product styling, runtime typography,
 public accessibility semantics, or any new schema fields outside the existing
 color/clear contract.
 
+This umbrella is no longer implementation-ready by itself. Execute it through
+the physical adopter leaves below so each wave has a bounded write scope and
+targeted validation lane.
+
 ## Sub-Tasks
 
-- [ ] Reuse the landed shared color-field helper surface where possible and
-  extend it only when a remaining adopter cannot consume it cleanly.
-- [ ] Replace duplicated local `resolvePickerColor()` / `ColorField` patterns
-  in the current widget editors that still use them.
-- [ ] Add focused UI tests that prove CSS-variable/custom token text survives
-  color-swatch interaction and that clear actions remove configured values.
+- [ ] TASK-310-01: Shared Color Picker Layout and Interactive Editor Adoption
+- [ ] TASK-310-02: Shared Color Picker Content and Marketing Editor Adoption
+- [ ] TASK-310-03: Shared Color Picker Shell and Forms-Adjacent Editor Adoption
+- [ ] TASK-310-04: Shared Color Picker Team and Testimonials Editor Adoption
 
 ## Files to Change
 
 | File | Required change |
 |---|---|
-| `core/admin/ui/widgets/editors/ClearableFields.tsx` | Extend the landed token-aware helper surface only when the remaining adopters need additive shared behavior. |
-| `core/admin/ui/widgets/editors/SharedColorControl.tsx` | Keep the swatch-plus-text owner aligned with the adoption wave when a remaining consumer needs that API instead of the lower-level helper. |
-| `core/admin/ui/widgets/editors/CompareTimelineEditors.tsx` | Replace local color-field helper usage with the shared helper. |
-| `core/admin/ui/widgets/editors/ContactEditors.tsx` | Replace local color-field helper usage with the shared helper. |
-| `core/admin/ui/widgets/editors/CtaBannerEditors.tsx` | Replace local color-field helper usage with the shared helper where the existing contract already owns those fields. |
-| `core/admin/ui/widgets/editors/DividerEditors.tsx` | Replace local color-field helper usage with the shared helper. |
-| `core/admin/ui/widgets/editors/AccordionEditors.tsx` | Replace the local color-field helper usage with the shared helper. |
-| `core/admin/ui/widgets/editors/ContentListEditors.tsx` | Replace the local color-field helper usage with the shared helper where shared renderer/style work still owns those fields. |
-| `core/admin/ui/widgets/editors/FooterEditors.tsx` | Replace the local color-field helper usage with the shared helper for the remaining shared footer color controls. |
-| `core/admin/ui/widgets/editors/FaqAccordionEditors.tsx` | Replace local color-field helper usage with the shared helper. |
-| `core/admin/ui/widgets/editors/FeatureGridEditors.tsx` | Replace local color-field helper usage with the shared helper. |
-| `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx` | Replace local color-field helper usage with the shared helper. |
-| `core/admin/ui/widgets/editors/GridColumnsEditors.tsx` | Replace local color-field helper usage with the shared helper. |
-| `core/admin/ui/widgets/editors/HeroEditors.tsx` | Replace local color-field helper usage with the shared helper. |
-| `core/admin/ui/widgets/editors/NavigationEditors.tsx` | Replace local color-field helper usage with the shared helper. |
-| `core/admin/ui/widgets/editors/NewsletterEditors.tsx` | Replace local color-field helper usage with the shared helper. |
-| `core/admin/ui/widgets/editors/PricingPlansEditors.tsx` | Replace local color-field helper usage with the shared helper. |
-| `core/admin/ui/widgets/editors/RichTextSectionEditors.tsx` | Replace local color-field helper usage with the shared helper. |
-| `core/admin/ui/widgets/editors/SectionEditors.tsx` | Replace local color-field helper usage with the shared helper. |
-| `core/admin/ui/widgets/editors/StatsKpiEditors.tsx` | Replace local color-field helper usage with the shared helper. |
-| `core/admin/ui/widgets/editors/TeamEditors.tsx` | Replace local color-field helper usage with the shared helper. |
-| `core/admin/ui/widgets/editors/TestimonialsEditors.tsx` | Replace local color-field helper usage with the shared helper. |
-| `core/admin/ui/widgets/editors/TimelineEditors.tsx` | Replace local color-field helper usage with the shared helper. |
+| `core/admin/ui/widgets/editors/ClearableFields.tsx` | Extend the landed token-aware helper surface only when an adopter leaf proves the shared seam still lacks required bounded behavior. |
+| `core/admin/ui/widgets/editors/SharedColorControl.tsx` | Keep the swatch-plus-text owner aligned with the adopter leaves when a consumer needs the full control API instead of the lower-level helper. |
+| `_docs/_TASKS/TASK-310-01_Shared_Color_Picker_Layout_and_Interactive_Editor_Adoption.md` | Physical execution leaf for Accordion, Compare Timeline, Divider, FAQ Accordion, Grid Columns, Section, and Timeline. |
+| `_docs/_TASKS/TASK-310-02_Shared_Color_Picker_Content_and_Marketing_Editor_Adoption.md` | Physical execution leaf for Content List, CTA Banner, Feature Grid, Hero, Rich Text Section, and Stats KPI. |
+| `_docs/_TASKS/TASK-310-03_Shared_Color_Picker_Shell_and_Forms_Adjacent_Editor_Adoption.md` | Physical execution leaf for Contact, Footer, Navigation, Newsletter, and Pricing Plans. |
+| `_docs/_TASKS/TASK-310-04_Shared_Color_Picker_Team_and_Testimonials_Editor_Adoption.md` | Physical execution leaf for Team and Testimonials. |
 | `tests/vitest/ui/clearable-fields.test.tsx` | Add shared helper coverage for CSS variables/custom tokens and clear-state semantics. |
-| `tests/vitest/ui/form-embed-editor-wave.test.tsx` | Cover Form Embed border-color clear and CSS-variable preservation through the shared helper. |
 | Additional touched editor-wave tests | Update only for editors whose expectations currently hardcode the old hex-only swatch fallback. |
+| `_docs/_TASKS/README.md` | Keep the board, notes, and statistics synchronized after the adopter split. |
 
 ## Implementation Pseudocode
 
@@ -147,11 +143,12 @@ No API routes are added.
 
 ## Documentation Updates Required
 
-- Update any touched `_docs/_TASKS/TASK-269*.md` references that still route
-  U3/U4 through closed TASK-256 scope.
-- Update touched widget docs only when visible editor behavior changes.
-- Update the relevant Playwright reports when the shared helper adoption closes
-  a report row.
+- Update `_docs/_TASKS/README.md` for the adopter split and any later status
+  transitions.
+- Update the relevant widget docs or Playwright reports only when a leaf
+  changes visible editor behavior or closes a report row.
+- Update child task docs and the changelog when the full adopter wave is
+  complete.
 
 ## Changelog Policy
 
@@ -163,5 +160,7 @@ No API routes are added.
 - CSS-variable/custom token color values no longer appear to “reset” just
   because the swatch cannot represent them.
 - Shared color-field clear semantics are consistent across the adopted editors.
-- The remaining editors adopt the landed shared owner seam instead of cloning
-  another local swatch/text implementation.
+- The remaining editors are split into physical leaves with bounded write sets
+  instead of one monolithic in-progress task.
+- Form Embed, Entry Teaser, Booking Calendar, and Gallery Mosaic stay excluded
+  from this remaining wave for the explicit reasons documented above.
