@@ -65,6 +65,16 @@ checkout has moved since then:
   editor and do not render a preview. Shared `Link URL` safe-href feedback
   remains owned by the already-landed `TASK-313-01` contract.
 
+### Product closure note — 2026-05-19 (`TASK-274-03`)
+
+- `UX-02` is fixed to the accepted `TASK-274-03` scope: Visual remove actions
+  now delete immediately but surface an inline Undo notice that restores the
+  exact removed logo at its previous index until a later edit invalidates the
+  pending removal.
+- `UX-08` is fixed: Visual repeated-logo cards now expose a drag handle and
+  drop-target reorder path for long lists while keeping Move up / Move down as
+  deterministic fallback controls.
+
 ### Historical baseline note — 2026-05-19
 
 - Sections 1-9 below preserve the original 2026-05-16 Playwright baseline and

@@ -44,6 +44,9 @@ Notes:
 - Visual repeated-logo cards now expose bounded previews, Media Library image
   picking, explicit `Alt text`, and an editor-local unavailable-preview state
   for invalid/broken image URLs.
+- Visual repeated-logo cards now support drag-handle reorder plus inline Undo
+  after removal, while retaining Move up / Move down as deterministic fallback
+  controls.
 
 ### Advanced (technical-only)
 - Technical layout diagnostics

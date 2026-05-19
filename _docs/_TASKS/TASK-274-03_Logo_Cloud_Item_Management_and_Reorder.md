@@ -6,7 +6,7 @@
 **Category:** Widgets + Logo Cloud + Admin UI + Repeated Item UX
 **Estimated Effort:** Large
 **Dependencies:** TASK-274, TASK-274-02
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -253,3 +253,12 @@ No API routes are added.
 - Min/max logo count protections remain intact.
 - Editor tests prove reorder/remove behavior without relying on browser-only
   Playwright evidence.
+
+## Completion Notes
+
+- 2026-05-19: Logo Cloud Visual now keeps repeated-logo lifecycle changes on the
+  shared edit coordinator path, with inline Undo after remove, drag-handle
+  reorder, drop targets, and retained Move up / Move down fallback controls.
+- Validation:
+  - `bun run lint`
+  - `bun run test:vitest -- tests/vitest/ui/logo-cloud-editor-wave.test.tsx`

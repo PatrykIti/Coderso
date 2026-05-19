@@ -49,8 +49,9 @@ Current live code facts:
   `gap`, `alignment`, `sectionBackground`, `tileBackground`,
   `tileBorderColor`, `headerAlign`, and `headerSize`.
 - Visual mode currently renders repeated logo cards with bounded previews,
-  Media Library picking, name/image/alt/href authoring, plus Move up, Move
-  down, Remove, and Add logo actions.
+  Media Library picking, name/image/alt/href authoring, drag-handle reorder,
+  inline Undo after remove, retained Move up / Move down fallback, and Add logo
+  actions.
 - Wizard now renders variant, section title, count, and compact starter-logo
   rows with name/image/alt/href authoring plus Media Library picking.
 - Advanced is diagnostics-only for shared `logoHeight`, `gap`, and
@@ -123,7 +124,7 @@ their evidence visible during closure.
 
 - [x] TASK-274-01: Logo Cloud Header Background and Typography
 - [x] TASK-274-02: Logo Cloud Logo Asset Authoring and Previews
-- [ ] TASK-274-03: Logo Cloud Item Management and Reorder
+- [x] TASK-274-03: Logo Cloud Item Management and Reorder
 - [ ] TASK-274-04: Logo Cloud Dense Strip and Marquee Layouts
 - [ ] TASK-274-05: Logo Cloud Tile Link and CTA Controls
 - [ ] TASK-274-06: Logo Cloud Report Docs and Closure

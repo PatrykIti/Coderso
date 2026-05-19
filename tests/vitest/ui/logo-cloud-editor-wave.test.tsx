@@ -328,6 +328,15 @@ const clickButton = (element: HTMLButtonElement) => {
   });
 };
 
+const dispatchDragEvent = (
+  element: HTMLElement,
+  type: "dragstart" | "dragover" | "drop" | "dragend"
+) => {
+  React.act(() => {
+    element.dispatchEvent(new Event(type, { bubbles: true, cancelable: true }));
+  });
+};
+
 const flushPromises = async () => {
   await React.act(async () => {
     await Promise.resolve();
@@ -429,6 +438,16 @@ const getCheckboxes = (container: ParentNode) =>
   Array.from(container.querySelectorAll('input[type="checkbox"]')).filter(
     (element): element is HTMLInputElement => element instanceof HTMLInputElement
   );
+
+const getElementsByWidgetControl = (container: ParentNode, control: string) => {
+  const elements = Array.from(
+    container.querySelectorAll(`[data-widget-control="${control}"]`)
+  ).filter((element): element is HTMLElement => element instanceof HTMLElement);
+  if (elements.length === 0) {
+    throw new Error(`Missing widget control "${control}"`);
+  }
+  return elements;
+};
 
 const getLogoNameInputs = (container: ParentNode) =>
   Array.from(container.querySelectorAll("input")).filter(
@@ -823,6 +842,7 @@ test("LogoCloud visual covers variant cards, count boundaries, logo CRUD, reorde
 
   clickButton(getButtonsByText(logosSection, "Remove")[1]);
   expect(getLatestValue().logos.map((logo) => logo.name)).toEqual(["Solo updated", "Logo 3"]);
+  expect(logosSection.textContent).toContain("Undo is available.");
 
   setInputValue(getInputByPlaceholder(headerSection, "Our partners"), "Trusted by hundreds");
   setInputValue(
@@ -865,6 +885,64 @@ test("LogoCloud visual covers variant cards, count boundaries, logo CRUD, reorde
     grayscale: false,
     hoverColor: false,
   });
+
+  cleanup();
+});
+
+test("LogoCloud visual supports undo removal and drag reorder safeguards", async () => {
+  const { LogoCloudVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/LogoCloudEditors");
+
+  const initialValue: LogoCloudData = {
+    logos: [
+      { id: "logo-a", name: "Alpha", href: "#" },
+      { id: "logo-b", name: "Beta", href: "#" },
+      { id: "logo-c", name: "Gamma", href: "#" },
+    ],
+  };
+
+  const { cleanup, container, getLatestValue } = mountLogoCloudHarness({
+    initialValue,
+    initialVariant: "grid",
+    render: (props) => <LogoCloudVisualEditor {...props} />,
+  });
+
+  const logosSection = getSectionByTitle(container, "Logos list and links");
+  const getNames = () => getLatestValue().logos.map((logo) => logo.name);
+
+  dispatchDragEvent(getElementsByWidgetControl(logosSection, "logo-cloud-logo-card")[2]!, "drop");
+  expect(getNames()).toEqual(["Alpha", "Beta", "Gamma"]);
+
+  dispatchDragEvent(
+    getElementsByWidgetControl(logosSection, "logo-cloud-drag-handle")[0]!,
+    "dragstart"
+  );
+  setInputValue(getInputByPlaceholder(logosSection, "Logo 1"), "Alpha updated");
+  dispatchDragEvent(getElementsByWidgetControl(logosSection, "logo-cloud-logo-card")[2]!, "drop");
+  expect(getNames()).toEqual(["Alpha updated", "Beta", "Gamma"]);
+
+  dispatchDragEvent(
+    getElementsByWidgetControl(logosSection, "logo-cloud-drag-handle")[0]!,
+    "dragstart"
+  );
+  dispatchDragEvent(
+    getElementsByWidgetControl(logosSection, "logo-cloud-logo-card")[2]!,
+    "dragover"
+  );
+  dispatchDragEvent(getElementsByWidgetControl(logosSection, "logo-cloud-logo-card")[2]!, "drop");
+  expect(getNames()).toEqual(["Beta", "Gamma", "Alpha updated"]);
+
+  clickButton(getButtonsByText(logosSection, "Remove")[1]!);
+  expect(getNames()).toEqual(["Beta", "Alpha updated"]);
+  expect(logosSection.textContent).toContain("Gamma removed. Undo is available.");
+
+  clickButton(getButtonsByText(logosSection, "Undo")[0]!);
+  expect(getNames()).toEqual(["Beta", "Gamma", "Alpha updated"]);
+
+  clickButton(getButtonsByText(logosSection, "Remove")[1]!);
+  expect(getNames()).toEqual(["Beta", "Alpha updated"]);
+  setInputValue(getInputByPlaceholder(logosSection, "Logo 1"), "Beta updated");
+  expect(logosSection.textContent ?? "").not.toContain("Undo is available.");
 
   cleanup();
 });

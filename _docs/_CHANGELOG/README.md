@@ -26,6 +26,7 @@ Project Change Log.
 | No. | Date | Title | Type |
 |-----|------|-------|------|
 | 870 | 2026-05-20 | TASK-273 listing-filters and shared runtime wave | CMS Widgets/Admin UI/Runtime/QA |
+| 871 | 2026-05-19 | TASK-274-03 Logo Cloud item management and reorder | CMS Widgets/Admin UI/QA |
 | 870 | 2026-05-19 | TASK-274-02 Logo Cloud asset authoring and previews | CMS Widgets/Admin UI/Runtime/QA |
 | 869 | 2026-05-19 | TASK-272 Hero widget follow-ups | CMS Widgets/Admin UI/Runtime/QA |
 | 869 | 2026-05-19 | TASK-274-01 Logo Cloud header shell controls | CMS Widgets/Admin UI/Runtime/QA |

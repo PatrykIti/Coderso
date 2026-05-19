@@ -95,6 +95,23 @@ const logoCountOptions = Array.from({ length: logoCloudLogoMax }, (_, index) => 
 
 type HeaderData = NonNullable<LogoCloudData["header"]>;
 type StyleData = NonNullable<LogoCloudData["style"]>;
+type PendingLogoRemoval = {
+  logo: LogoCloudLogo;
+  index: number;
+  editVersion: number;
+} | null;
+type LogoDragState = {
+  logoKey: string;
+  fromIndex: number;
+  editVersion: number;
+} | null;
+type CommitLogoEditResult = {
+  next: LogoCloudData;
+  pendingRemoval?: PendingLogoRemoval;
+};
+type CommitLogoEditOptions = {
+  structural?: boolean;
+};
 type CommitLogoMutation = (
   updater: (current: LogoCloudData) => LogoCloudData,
   options?: { structural?: boolean }
@@ -125,6 +142,10 @@ function resolveLogoMediaPickerChange(value: unknown): LogoMediaPickerChange {
 
 function resolveLogoRowKey(index: number, logo: LogoCloudLogo) {
   return logo.id?.trim() || `index:${index}`;
+}
+
+function resolveLogoDragKey(index: number, logo: LogoCloudLogo) {
+  return resolveLogoRowKey(index, logo);
 }
 
 function resolveLogoPreviewLabel(logo: LogoCloudLogo, index: number) {
@@ -284,17 +305,6 @@ function addLogoToData(current: LogoCloudData) {
       [...logos, { name: `Logo ${logos.length + 1}`, href: "#" }],
       logos.length + 1
     ),
-  };
-}
-
-function removeLogoFromData(current: LogoCloudData, index: number) {
-  const logos = normalizeLogoCloudLogos(current.logos);
-  if (logos.length <= 1) return current;
-
-  const nextLogos = logos.filter((_, currentIndex) => currentIndex !== index);
-  return {
-    ...current,
-    logos: normalizeLogoCloudLogos(nextLogos, nextLogos.length),
   };
 }
 
@@ -489,18 +499,39 @@ function useLogoCloudEditCoordinator({
 }) {
   const latestValueRef = useRef(value);
   const mediaSelectionRef = useRef<ReturnType<typeof useLogoMediaSelection> | null>(null);
+  const editVersionRef = useRef(0);
+  const [pendingRemoval, setPendingRemoval] = useState<PendingLogoRemoval>(null);
+  const [dragState, setDragState] = useState<LogoDragState>(null);
 
   useEffect(() => {
     latestValueRef.current = value;
   }, [value]);
 
-  const commitLogoMutation: CommitLogoMutation = (updater, options) => {
+  const commitLogoEdit = (
+    updater: (
+      current: LogoCloudData,
+      nextEditVersion: number
+    ) => LogoCloudData | CommitLogoEditResult,
+    options: CommitLogoEditOptions = {}
+  ) => {
+    const current = normalizeValue(latestValueRef.current);
+    const nextEditVersion = editVersionRef.current + 1;
+    const result = updater(current, nextEditVersion);
+    const next = "next" in result ? result.next : result;
+    if (next === current) return;
     if (options?.structural) {
       mediaSelectionRef.current?.invalidateAllLogoMediaRequests();
     }
-    const current = normalizeValue(latestValueRef.current);
-    const next = updater(current);
-    onChange(normalizeValue(next));
+    const normalizedNext = normalizeValue(next);
+    editVersionRef.current = nextEditVersion;
+    latestValueRef.current = normalizedNext;
+    setDragState(null);
+    setPendingRemoval("next" in result ? (result.pendingRemoval ?? null) : null);
+    onChange(normalizedNext);
+  };
+
+  const commitLogoMutation: CommitLogoMutation = (updater, options) => {
+    commitLogoEdit((current) => updater(current), options);
   };
 
   const mediaSelection = useLogoMediaSelection({
@@ -512,9 +543,99 @@ function useLogoCloudEditCoordinator({
     mediaSelectionRef.current = mediaSelection;
   }, [mediaSelection]);
 
+  const removeLogoWithUndo = (index: number) => {
+    commitLogoEdit(
+      (current, nextEditVersion) => {
+        const logos = normalizeLogoCloudLogos(current.logos);
+        const removed = logos[index];
+        if (!removed || logos.length <= 1) return current;
+        return {
+          next: {
+            ...current,
+            logos: normalizeLogoCloudLogos(
+              logos.filter((_, currentIndex) => currentIndex !== index),
+              logos.length - 1
+            ),
+          },
+          pendingRemoval: {
+            logo: removed,
+            index,
+            editVersion: nextEditVersion,
+          },
+        };
+      },
+      { structural: true }
+    );
+  };
+
+  const restoreRemovedLogo = () => {
+    const removal = pendingRemoval;
+    if (!removal) return;
+    if (removal.editVersion !== editVersionRef.current) {
+      setPendingRemoval(null);
+      return;
+    }
+    commitLogoEdit(
+      (current) => {
+        const logos = normalizeLogoCloudLogos(current.logos);
+        const nextLogos = [...logos];
+        nextLogos.splice(Math.min(removal.index, nextLogos.length), 0, removal.logo);
+        return {
+          ...current,
+          logos: normalizeLogoCloudLogos(nextLogos, nextLogos.length),
+        };
+      },
+      { structural: true }
+    );
+  };
+
+  const dismissPendingRemoval = () => {
+    setPendingRemoval(null);
+  };
+
+  const startLogoDrag = (index: number, logo: LogoCloudLogo) => {
+    setDragState({
+      logoKey: resolveLogoDragKey(index, logo),
+      fromIndex: index,
+      editVersion: editVersionRef.current,
+    });
+  };
+
+  const endLogoDrag = () => {
+    setDragState(null);
+  };
+
+  const dropLogoAtIndex = (toIndex: number) => {
+    const activeDrag = dragState;
+    if (!activeDrag) return;
+    if (activeDrag.editVersion !== editVersionRef.current) {
+      setDragState(null);
+      return;
+    }
+    const current = normalizeLogoCloudLogos(latestValueRef.current.logos);
+    const fromIndex = current.findIndex(
+      (item, itemIndex) => resolveLogoDragKey(itemIndex, item) === activeDrag.logoKey
+    );
+    if (fromIndex < 0 || fromIndex === toIndex || toIndex < 0 || toIndex >= current.length) {
+      setDragState(null);
+      return;
+    }
+    commitLogoEdit((valueToUpdate) => moveLogoInData(valueToUpdate, fromIndex, toIndex), {
+      structural: true,
+    });
+  };
+
   return {
     commitLogoMutation,
     mediaSelection,
+    pendingRemoval,
+    dismissPendingRemoval,
+    removeLogoWithUndo,
+    restoreRemovedLogo,
+    dragState,
+    startLogoDrag,
+    endLogoDrag,
+    dropLogoAtIndex,
   };
 }
 
@@ -669,6 +790,38 @@ function LogoImageControl({
   );
 }
 
+function LogoRemovalUndoNotice({
+  pendingRemoval,
+  onUndo,
+  onDismiss,
+}: {
+  pendingRemoval: PendingLogoRemoval;
+  onUndo: () => void;
+  onDismiss: () => void;
+}) {
+  if (!pendingRemoval) return null;
+  const label = pendingRemoval.logo.name?.trim() || "Logo removed";
+
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="flex items-center justify-between gap-3 rounded-lg border border-dashed bg-muted/10 p-3"
+      data-widget-control="logo-cloud-remove-undo"
+    >
+      <p className="text-sm text-foreground/80">{label} removed. Undo is available.</p>
+      <div className="flex gap-2">
+        <Button type="button" variant="outline" size="sm" onClick={onUndo}>
+          Undo
+        </Button>
+        <Button type="button" variant="ghost" size="sm" onClick={onDismiss}>
+          Dismiss
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function LogoCloudWizardEditor({
   value,
   onChange,
@@ -775,7 +928,18 @@ export function LogoCloudVisualEditor({
   const header = normalized.header ?? logoCloudDefaults.header!;
   const style = normalized.style ?? logoCloudDefaults.style!;
   const logos = normalizeLogoCloudLogos(normalized.logos);
-  const { commitLogoMutation, mediaSelection } = useLogoCloudEditCoordinator({
+  const {
+    commitLogoMutation,
+    mediaSelection,
+    pendingRemoval,
+    dismissPendingRemoval,
+    removeLogoWithUndo,
+    restoreRemovedLogo,
+    dragState,
+    startLogoDrag,
+    endLogoDrag,
+    dropLogoAtIndex,
+  } = useLogoCloudEditCoordinator({
     value,
     onChange,
   });
@@ -846,15 +1010,51 @@ export function LogoCloudVisualEditor({
         title="Logos list and links"
         description="Manage logo names, image sources, alt text, and optional target links."
       >
+        <LogoRemovalUndoNotice
+          pendingRemoval={pendingRemoval}
+          onUndo={restoreRemovedLogo}
+          onDismiss={dismissPendingRemoval}
+        />
+
         {logos.map((logo, index) => (
-          <div key={logo.id} className="space-y-3 rounded-lg border p-3">
+          <div
+            key={logo.id}
+            className={cn(
+              "space-y-3 rounded-lg border p-3",
+              dragState?.logoKey === resolveLogoDragKey(index, logo)
+                ? "border-primary bg-primary/5"
+                : undefined
+            )}
+            data-widget-control="logo-cloud-logo-card"
+            data-logo-cloud-logo-key={resolveLogoDragKey(index, logo)}
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={(event) => {
+              event.preventDefault();
+              dropLogoAtIndex(index);
+            }}
+          >
             <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-semibold">Logo {index + 1}</p>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  draggable
+                  aria-label={`Drag logo ${index + 1} to reorder`}
+                  data-widget-control="logo-cloud-drag-handle"
+                  onDragStart={() => startLogoDrag(index, logo)}
+                  onDragEnd={endLogoDrag}
+                >
+                  Drag
+                </Button>
+                <p className="text-sm font-semibold">Logo {index + 1}</p>
+              </div>
               <div className="flex gap-2">
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
+                  data-widget-control="logo-cloud-move-up"
                   onClick={() =>
                     commitLogoMutation((current) => moveLogoInData(current, index, index - 1), {
                       structural: true,
@@ -868,6 +1068,7 @@ export function LogoCloudVisualEditor({
                   type="button"
                   variant="outline"
                   size="sm"
+                  data-widget-control="logo-cloud-move-down"
                   onClick={() =>
                     commitLogoMutation((current) => moveLogoInData(current, index, index + 1), {
                       structural: true,
@@ -881,11 +1082,8 @@ export function LogoCloudVisualEditor({
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() =>
-                    commitLogoMutation((current) => removeLogoFromData(current, index), {
-                      structural: true,
-                    })
-                  }
+                  data-widget-control="logo-cloud-remove"
+                  onClick={() => removeLogoWithUndo(index)}
                   disabled={logos.length <= 1}
                 >
                   Remove
