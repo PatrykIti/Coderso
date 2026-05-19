@@ -53,7 +53,7 @@ Out of scope:
 | `core/admin/ui/widgets/editors/GridColumnsEditors.tsx` | Add Visual/Advanced controls for mobile reverse, visibility, and wide spans. |
 | `tests/vitest/widgets/gridColumns.test.tsx` | Cover normalization, class output, legacy fallback, and hidden-column behavior. |
 | `tests/vitest/ui/grid-columns-editor-wave.test.tsx` | Cover responsive controls and editor state updates. |
-| `tests/unit/widgets/validator.test.ts` | Add schema acceptance/rejection for any new persisted fields. |
+| `tests/vitest/widgets/gridColumns.test.tsx` | Add schema acceptance/rejection for any new persisted fields. |
 | `_docs/_WIDGETS/GRID_COLUMNS.md` | Document responsive options and breakpoint behavior. |
 | `_docs/PLAYWRIGHT/REPORT_GRID_COLUMNS_WIDGET.md` | Mark W3/W4/W6 fixed/deferred with textual evidence, and route P3 to TASK-313. |
 
@@ -115,8 +115,9 @@ No API routes are added.
 
 - Endpoint visibility: none.
 - Auth/RBAC/CSRF/rate limit: unchanged.
-- Reject-unknown validation: update `gridColumnsSchema` and validator tests for
-  every new persisted responsive field.
+- Reject-unknown validation: update `gridColumnsSchema` and the focused widget
+  schema assertions in `tests/vitest/widgets/gridColumns.test.tsx` for every
+  new persisted responsive field.
 - Anti-abuse: hidden columns must not be used to hide privileged data; widget
   data remains public render data.
 - Secret handling: no secrets in hidden column content or diagnostics.
@@ -125,7 +126,7 @@ No API routes are added.
 
 - `bun run test:vitest -- tests/vitest/widgets/gridColumns.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/grid-columns-editor-wave.test.tsx`
-- `bun test tests/unit/widgets/validator.test.ts`
+- `bun run test:vitest -- tests/vitest/widgets/gridColumns.test.tsx`
 - `bun test tests/unit/widgets/registry.test.ts` if defaults/registry output
   changes.
 - `bun --cwd core lint`

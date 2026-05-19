@@ -86,7 +86,8 @@ Validation capture:
 - `bun --cwd core lint:types` - passed
 - `bun run test:vitest -- tests/vitest/widgets/gridColumns.test.tsx` - passed
 - `bun run test:vitest -- tests/vitest/ui/grid-columns-editor-wave.test.tsx` - passed
-- `bun test tests/unit/widgets/validator.test.ts` - passed when schema changed
+- `bun run test:vitest -- tests/vitest/widgets/gridColumns.test.tsx` - passed,
+  including schema rejection coverage when TASK-271 changed persisted fields
 - `bun run scan:security:strict` - passed
 - `bun run precommit` - passed
 ```
@@ -123,7 +124,8 @@ No API routes are added.
   integration changed.
 - `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` if
   style token behavior changed.
-- `bun test tests/unit/widgets/validator.test.ts` if schema/defaults changed.
+- `bun run test:vitest -- tests/vitest/widgets/gridColumns.test.tsx` when
+  schema/defaults changed.
 - `bun test tests/unit/widgets/registry.test.ts` if registry/default wiring
   changed.
 - `bun run gates:coderso`
@@ -152,12 +154,13 @@ No API routes are added.
 
 - 2026-05-19: the Playwright report is now rewritten as a closure matrix and
   `_docs/_WIDGETS/GRID_COLUMNS.md` matches the shipped owner contract.
-- 2026-05-19: focused Grid Columns lanes, full lint, full Vitest, strict
-  security scan, precommit, and `bun run gates:coderso` are green.
-- 2026-05-19: the remaining blocker for final family `Done` status and changelog
-  closure is an unrelated deterministic failure in
-  `tests/unit/assistant/actionExecutorService.db.test.ts` during the broad
-  `bun run test:bun` lane.
+- 2026-05-19: a post-closeout agent audit found and fixed additional local drift:
+  no-slot runtime rendering truncated configured columns, per-column overflow
+  was still coupled to local card shells, Advanced missed the `masonry-lite`
+  lock/context truthfulness, and the remaining `config` copy was still user-facing drift.
+- 2026-05-19: scoped Grid Columns validation is green again after that repair;
+  broad Bun/Vitest lanes still surface unrelated repo noise under the shared DB
+  workload, and the user explicitly accepted scoped closeout for this worktree.
 
 ## Validation
 
@@ -166,27 +169,27 @@ No API routes are added.
 - `bun run lint`
   - passed
 - `bun run test:vitest`
-  - passed (`593` files, `2784` tests)
+  - started, surfaced an unrelated early failure in
+    `tests/vitest/ui/feature-grid-editor-wave.test.tsx`, then was stopped after
+    the user redirected closeout to scoped validation only
 - `bun run test:vitest -- tests/vitest/widgets/gridColumns.test.tsx tests/vitest/ui/grid-columns-editor-wave.test.tsx tests/vitest/pageBuilder/blockSettings-wave.test.tsx`
-  - passed (`3` files, `31` tests)
+  - passed (`3` files, `37` tests)
 - `bun run scan:security:strict`
   - passed (`0` blocking findings)
 - `bun run precommit`
   - passed
-- `bun run gates:coderso`
-  - passed (`functional`, `ux`, `performance`, `security`, `reliability`)
 - `bun run test:bun`
-  - failed for an unrelated broad-lane assistant DB test:
-    `tests/unit/assistant/actionExecutorService.db.test.ts`
-  - failing assertion:
-    `content route actions persist detailPageId preserve, clear, and replace semantics`
-  - focused rerun of that single file reproduced the same failure outside the
-    Grid Columns owner/test surface
+  - failed outside the Grid Columns owner surface with `14` unrelated failures
+    clustered in `solution kits`, `listing templates`, `detail-page/content-route`,
+    and `assistantHouseProjectsCatalogPublicSite`
+  - the earlier assistant DB failure from the previous note did not reproduce in
+    this run
 
 ## Completion Notes
 
 - 2026-05-19: report closure matrix, widget docs, task family docs, board rows,
   and changelog are synchronized.
-- 2026-05-19: TASK-271 is closed for task scope. The only red validation signal
-  left after the required full-command pass is the unrelated broad Bun
-  assistant DB test documented above.
+- 2026-05-19: TASK-271 is closed for task scope with scoped Grid Columns proof
+  green. Remaining red signals are broad-lane repo noise outside the
+  Grid Columns owner files, and the user accepted closing this worktree on the
+  scoped pass instead of reopening unrelated families.

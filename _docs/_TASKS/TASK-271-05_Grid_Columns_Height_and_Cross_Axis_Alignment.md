@@ -50,7 +50,7 @@ Out of scope:
 | `core/admin/ui/widgets/editors/GridColumnsEditors.tsx` | Add Visual/Advanced controls for height and per-column alignment. |
 | `tests/vitest/widgets/gridColumns.test.tsx` | Cover default height, min-height tokens, mobile compact behavior, and per-column alignment output. |
 | `tests/vitest/ui/grid-columns-editor-wave.test.tsx` | Cover height and alignment editor controls. |
-| `tests/unit/widgets/validator.test.ts` | Cover new strict schema fields. |
+| `tests/vitest/widgets/gridColumns.test.tsx` | Cover new strict schema fields. |
 | `_docs/_WIDGETS/GRID_COLUMNS.md` | Document height/alignment behavior. |
 | `_docs/PLAYWRIGHT/REPORT_GRID_COLUMNS_WIDGET.md` | Mark W2/W5/P4 fixed/deferred with textual evidence. |
 
@@ -123,7 +123,7 @@ No API routes are added.
 
 - `bun run test:vitest -- tests/vitest/widgets/gridColumns.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/grid-columns-editor-wave.test.tsx`
-- `bun test tests/unit/widgets/validator.test.ts`
+- `bun run test:vitest -- tests/vitest/widgets/gridColumns.test.tsx`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run gates:coderso`

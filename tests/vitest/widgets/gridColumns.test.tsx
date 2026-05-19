@@ -54,6 +54,50 @@ test("grid columns render empty-column placeholders only in editor preview", () 
   expect(previewHtml).toContain("Empty column.");
 });
 
+test("grid columns render every configured column when no live repeatable slots exist", () => {
+  const html = renderToString(
+    <GridColumnsBlock
+      data={{
+        columns: [
+          { id: "1", label: "One", desktopSpan: "4", tabletSpan: "6", mobileSpan: "12" },
+          { id: "2", label: "Two", desktopSpan: "4", tabletSpan: "6", mobileSpan: "12" },
+          { id: "3", label: "Three", desktopSpan: "4", tabletSpan: "6", mobileSpan: "12" },
+        ],
+      }}
+      variant="equal"
+    />
+  );
+
+  expect(html).toContain('data-grid-columns-count="3"');
+  expect(html).toContain('data-grid-column="column:1"');
+  expect(html).toContain('data-grid-column="column:2"');
+  expect(html).toContain('data-grid-column="column:3"');
+});
+
+test("grid columns keep following live slot structure when repeatable slot ids already exist", () => {
+  const html = renderToString(
+    <GridColumnsBlock
+      data={{
+        columns: [
+          { id: "1", label: "One", desktopSpan: "4", tabletSpan: "6", mobileSpan: "12" },
+          { id: "2", label: "Two", desktopSpan: "4", tabletSpan: "6", mobileSpan: "12" },
+          { id: "3", label: "Three", desktopSpan: "4", tabletSpan: "6", mobileSpan: "12" },
+        ],
+      }}
+      slots={{
+        "column:1": [],
+        "column:2": [],
+      }}
+      variant="equal"
+    />
+  );
+
+  expect(html).toContain('data-grid-columns-count="2"');
+  expect(html).toContain('data-grid-column="column:1"');
+  expect(html).toContain('data-grid-column="column:2"');
+  expect(html).not.toContain('data-grid-column="column:3"');
+});
+
 test("grid columns keep technical labels out of public runtime", () => {
   const publicHtml = renderToString(
     <GridColumnsBlock data={gridColumnsDefaults} variant="equal" />
@@ -375,6 +419,41 @@ test("grid columns render per-column surface, overflow, height, and alignment ov
   expect(html).toContain("background-color:#112233");
   expect(html).toContain("border-color:#445566");
   expect(html).toContain("border-width:2px");
+});
+
+test("grid columns allow overflow clipping without forcing a local card shell", () => {
+  const html = renderToString(
+    <GridColumnsBlock
+      variant="equal"
+      data={{
+        columns: [
+          {
+            id: "1",
+            label: "Lead",
+            desktopSpan: "8",
+            tabletSpan: "6",
+            mobileSpan: "12",
+            style: {
+              overflow: "hidden",
+            },
+          },
+          {
+            id: "2",
+            label: "Side",
+            desktopSpan: "4",
+            tabletSpan: "6",
+            mobileSpan: "12",
+          },
+        ],
+      }}
+    />
+  );
+
+  expect(html).toContain("overflow-hidden");
+  expect(html).not.toContain("background-color:");
+  expect(html).not.toContain("border-color:");
+  expect(html).not.toContain("border-width:");
+  expect(html).not.toContain("rounded-xl");
 });
 
 test("grid columns cleared column surface omits background output", () => {

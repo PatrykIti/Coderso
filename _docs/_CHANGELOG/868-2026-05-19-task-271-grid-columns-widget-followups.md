@@ -20,16 +20,19 @@ Tasks: TASK-271, TASK-271-01, TASK-271-02, TASK-271-03, TASK-271-04, TASK-271-05
   overflow control, schema-owned min-height tokens, mobile min-height overrides,
   and per-column vertical alignment.
 - The repeatable-slot adapter now reconciles drifted column metadata safely
-  instead of duplicating phantom configs, and live count controls no longer
-  create new slot/config drift when real repeatable slots already exist.
+  instead of duplicating phantom configs, runtime now renders all configured
+  columns when no live repeatable slots exist yet, and live count controls plus
+  add/remove actions no longer create new slot/config drift when real
+  repeatable slots already exist.
 
 ### Admin UI and QA
 
 - Grid Columns Visual and Advanced editors now expose truthful layout
-  miniatures, column-count guidance, per-column behavior controls, and focused
-  guidance back to the shared Structure owner when slot instances already exist.
+  miniatures, column-count guidance, per-column behavior controls, truthful
+  `masonry-lite` cardize locks, and focused guidance back to the shared
+  Structure owner when slot instances already exist.
 - Added focused runtime, editor-wave, and page-builder coverage for responsive
-  spans, per-column overrides, repeatable-slot sync, and the adapter/count
+  spans, uncoupled overflow behavior, repeatable-slot sync, and the adapter/count
   regressions found during the audit passes.
 
 ### Documentation
@@ -44,10 +47,8 @@ Tasks: TASK-271, TASK-271-01, TASK-271-02, TASK-271-03, TASK-271-04, TASK-271-05
 
 - `git diff --check` - passed
 - `bun run lint` - passed
-- `bun run test:vitest` - passed
-- `bun run test:vitest -- tests/vitest/widgets/gridColumns.test.tsx tests/vitest/ui/grid-columns-editor-wave.test.tsx tests/vitest/pageBuilder/blockSettings-wave.test.tsx` - passed
+- `bun run test:vitest` - surfaced an unrelated early failure in `tests/vitest/ui/feature-grid-editor-wave.test.tsx`, then was stopped after the user redirected closeout to scoped validation
+- `bun run test:vitest -- tests/vitest/widgets/gridColumns.test.tsx tests/vitest/ui/grid-columns-editor-wave.test.tsx tests/vitest/pageBuilder/blockSettings-wave.test.tsx` - passed (`3` files, `37` tests)
 - `bun run scan:security:strict` - passed
 - `bun run precommit` - passed
-- `bun run gates:coderso` - passed
-- `bun run test:bun` - executed, but still fails in unrelated assistant DB coverage outside Grid Columns scope:
-  `tests/unit/assistant/actionExecutorService.db.test.ts`
+- `bun run test:bun` - executed, but still fails outside Grid Columns scope with unrelated `solution kits`, `listing templates`, `detail-page/content-route`, and `assistantHouseProjectsCatalogPublicSite` failures under the shared DB workload; the user accepted scoped closeout for TASK-271

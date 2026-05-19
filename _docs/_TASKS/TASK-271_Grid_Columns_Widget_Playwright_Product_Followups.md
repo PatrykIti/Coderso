@@ -175,8 +175,8 @@ Implementation leaves:
   output markers, slot rendering, or shared renderer context changes.
 - `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` when
   spacing, padding, clear, or token semantics change.
-- `bun test tests/unit/widgets/validator.test.ts` when schema/defaults/normalizer
-  fields change.
+- `bun run test:vitest -- tests/vitest/widgets/gridColumns.test.tsx` when
+  schema/defaults/normalizer fields change.
 - `bun test tests/unit/widgets/registry.test.ts` if widget registry/default
   wiring changes.
 - `bun run gates:coderso`
@@ -221,8 +221,10 @@ Implementation leaves:
   `_docs/PLAYWRIGHT/REPORT_GRID_COLUMNS_WIDGET.md`,
   `_docs/_TASKS/TASK-271*.md`, `_docs/_TASKS/README.md`, and the changelog are
   synchronized to the final TASK-271/TASK-313 owner map.
-- 2026-05-19: all TASK-271-local drift passes were closed. The broad
-  `bun run test:bun` command was executed as required, but it still reports an
-  unrelated assistant DB failure in an unmodified owner outside the Grid
-  Columns scope; that blocker is recorded in `TASK-271-07` rather than treated
-  as a remaining TASK-271 defect.
+- 2026-05-19: a final post-closeout audit repaired the remaining local runtime
+  and editor truthfulness gaps, and the scoped Grid Columns proof is green
+  again (`gridColumns`, editor wave, and `blockSettings`).
+- 2026-05-19: broad repo-wide Bun/Vitest lanes still surface unrelated noise
+  outside the Grid Columns owner files under shared DB load; that status is
+  recorded in `TASK-271-07`, and the user accepted scoped closeout for this
+  worktree.

@@ -48,9 +48,9 @@ Sections:
 Notes:
 
 - Visual owns variant selection (`visualOwnsVariantSelection = true`).
-- When live slot instances already exist, the local count controls are locked
-  and users are redirected to the shared Structure section so slot payloads and
-  column metadata stay aligned.
+- When live slot instances already exist, the local count controls plus add/remove
+  actions are locked and users are redirected to the shared Structure section so
+  slot payloads and column metadata stay aligned.
 - Visual exposes keyboard-safe move up/down controls that reuse the shared
   repeatable-slot reorder seam.
 - `masonry-lite` locks the global cardize toggle on with explicit explanatory
@@ -62,10 +62,15 @@ Notes:
   reverse-on-mobile)
 - per-column override tokens for surface, overflow, height, and alignment
 - normalized payload snapshot
+- `masonry-lite` keeps the global cardize toggle locked on here as well so the
+  advanced editor does not drift from Visual/runtime truthfulness.
 
 ## Runtime Behavior
 
-- resolves repeatable slot targets deterministically through `column:<instanceId>`
+- when no live repeatable slot ids exist yet, the renderer synthesizes
+  `column:<instanceId>` targets from configured columns; once live slot ids
+  exist, runtime follows the slot structure deterministically through
+  `column:<instanceId>`
 - keeps public technical labels and `Empty column.` helper copy gated to
   editor-preview/admin-preview only
 - emits bounded responsive column classes for:
@@ -76,6 +81,7 @@ Notes:
 - supports per-column:
   - `style.surface = "on"` to highlight a single column without forcing the
     whole grid into cardized mode
+  - `style.overflow` to clip column content without forcing a local card shell
   - `style.background`, `style.borderColor`, `style.borderWidth`,
     `style.radius`, `style.padding`, `style.overflow`
   - `minHeight`, `mobileMinHeight`, `alignSelf`

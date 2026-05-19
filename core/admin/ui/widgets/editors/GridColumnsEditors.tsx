@@ -429,8 +429,7 @@ function isColumnSurfaceOverrideEnabled(column: ColumnData): boolean {
     style?.borderColor ||
     style?.borderWidth ||
     style?.radius ||
-    style?.padding ||
-    style?.overflow === "hidden"
+    style?.padding
   );
 }
 
@@ -491,9 +490,16 @@ function setColumnSurfaceOverride(
       const columns = Array.isArray(current.columns) ? [...current.columns] : [];
       const column = columns[index];
       if (!column) return current;
+      const overflow = column.style?.overflow === "hidden" ? "hidden" : undefined;
       columns[index] = {
         ...column,
-        style: undefined,
+        style: normalizeColumnStyleData(
+          overflow
+            ? {
+                overflow,
+              }
+            : undefined
+        ),
       };
       return {
         ...current,
@@ -1014,7 +1020,7 @@ function ColumnBehaviorGrid({
                   />
                 </div>
 
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   <div className="space-y-2">
                     <p className="text-sm font-medium">Border width</p>
                     <Select
@@ -1084,34 +1090,34 @@ function ColumnBehaviorGrid({
                       </SelectContent>
                     </Select>
                   </div>
-
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium">Overflow</p>
-                    <Select
-                      value={row.column.style?.overflow ?? "visible"}
-                      onValueChange={(next) =>
-                        updateColumnStyle(value, onChange, row.dataIndex, {
-                          overflow: next as GridColumnsOverflow,
-                        })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Overflow" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {overflowOptions.map((option) => (
-                          <SelectItem key={`column-overflow-${option.id}`} value={option.id}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
                 </div>
               </div>
             ) : null}
 
-            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Overflow</p>
+                <Select
+                  value={row.column.style?.overflow ?? "visible"}
+                  onValueChange={(next) =>
+                    updateColumnStyle(value, onChange, row.dataIndex, {
+                      overflow: next as GridColumnsOverflow,
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Overflow" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {overflowOptions.map((option) => (
+                      <SelectItem key={`column-overflow-${option.id}`} value={option.id}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="space-y-2">
                 <p className="text-sm font-medium">Minimum height</p>
                 <Select
@@ -1402,7 +1408,7 @@ export function GridColumnsVisualEditor({
   const effectiveCardizeColumns =
     resolvedVariant === "masonry-lite" || Boolean(style.cardizeColumns);
   const hasLiveColumnSlots = Boolean(
-    context?.slotTargets?.some((target) => target.definitionId === "column") && onBlockPatch
+    context?.slotTargets?.some((target) => target.definitionId === "column")
   );
 
   return (
@@ -1481,7 +1487,7 @@ export function GridColumnsVisualEditor({
               hasLiveColumnSlots || (normalized.columns?.length ?? 0) >= gridColumnsColumnMax
             }
           >
-            Add column config
+            Add one column
           </Button>
           <Button
             type="button"
@@ -1498,7 +1504,7 @@ export function GridColumnsVisualEditor({
               hasLiveColumnSlots || (normalized.columns?.length ?? 0) <= gridColumnsColumnMin
             }
           >
-            Remove last config
+            Remove one column
           </Button>
         </div>
         {hasLiveColumnSlots ? (
@@ -1691,9 +1697,17 @@ export function GridColumnsVisualEditor({
   );
 }
 
-export function GridColumnsAdvancedEditor({ value, onChange }: WidgetEditorProps<GridColumnsData>) {
+export function GridColumnsAdvancedEditor({
+  value,
+  onChange,
+  variant,
+  context,
+}: WidgetEditorProps<GridColumnsData>) {
   const normalized = normalizeValue(value);
   const style = normalized.style ?? gridColumnsDefaults.style!;
+  const resolvedVariant = resolveGridColumnsVariant(variant);
+  const effectiveCardizeColumns =
+    resolvedVariant === "masonry-lite" || Boolean(style.cardizeColumns);
 
   return (
     <div className="space-y-4">
@@ -1770,13 +1784,20 @@ export function GridColumnsAdvancedEditor({ value, onChange }: WidgetEditorProps
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium">Cardized columns</p>
             <Switch
-              checked={Boolean(style.cardizeColumns)}
+              checked={effectiveCardizeColumns}
+              disabled={resolvedVariant === "masonry-lite"}
               onCheckedChange={(checked) =>
                 updateStyle(value, onChange, { cardizeColumns: checked })
               }
             />
           </div>
         </div>
+        {resolvedVariant === "masonry-lite" ? (
+          <p className="text-xs text-muted-foreground">
+            Masonry Lite always renders cardized column wrappers, so this toggle is locked on for
+            truthful preview behavior.
+          </p>
+        ) : null}
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="space-y-2">
@@ -1844,7 +1865,7 @@ export function GridColumnsAdvancedEditor({ value, onChange }: WidgetEditorProps
         title="Per-column override tokens"
         description="Advanced fallback path for per-column surface, height, overflow, and alignment overrides."
       >
-        <ColumnBehaviorGrid value={value} onChange={onChange} />
+        <ColumnBehaviorGrid value={value} onChange={onChange} context={context} />
       </EditorSection>
 
       <EditorSection

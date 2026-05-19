@@ -592,8 +592,8 @@ test("GridColumns visual editor covers variant cards, column sizing controls, an
     expect(alignmentSelect.value).toBe("start");
     setSelectValue(alignmentSelect, "stretch");
 
-    const removeButton = findButtonsByText(columnSection, "Remove last config")[0];
-    const addButton = findButtonsByText(columnSection, "Add column config")[0];
+    const removeButton = findButtonsByText(columnSection, "Remove one column")[0];
+    const addButton = findButtonsByText(columnSection, "Add one column")[0];
     expect(removeButton.disabled).toBe(true);
     expect(addButton.disabled).toBe(false);
 
@@ -626,7 +626,7 @@ test("GridColumns visual editor covers variant cards, column sizing controls, an
     setSelectValue(spanSelects[1], "4");
     setSelectValue(spanSelects[2], "12");
 
-    clickButton(findButtonsByText(columnSection, "Remove last config")[0]);
+    clickButton(findButtonsByText(columnSection, "Remove one column")[0]);
     expect(view.getValue().columns).toHaveLength(3);
 
     const gapXSelect = findSelectByLabel(surfaceSection, "Horizontal gap");
@@ -762,9 +762,52 @@ test("GridColumns visual editor locks local column-count controls when live slot
     const columnSection = getSectionByTitle(view.container, "Column sizing and labels");
 
     expect(findSelectByLabel(variantSection, "Column count").disabled).toBe(true);
-    expect(findButtonsByText(columnSection, "Add column config")[0].disabled).toBe(true);
-    expect(findButtonsByText(columnSection, "Remove last config")[0].disabled).toBe(true);
+    expect(findButtonsByText(columnSection, "Add one column")[0].disabled).toBe(true);
+    expect(findButtonsByText(columnSection, "Remove one column")[0].disabled).toBe(true);
     expect(normalizeText(columnSection.textContent)).toContain("shared structure section");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("GridColumns visual editor also locks local count buttons without block patch access", async () => {
+  const view = await renderEditor({
+    editor: "visual",
+    initialVariant: "equal",
+    initialValue: {
+      columns: [
+        { id: "1", label: "Lead", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
+        { id: "2", label: "Side", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
+      ],
+    },
+    context: {
+      surface: "page-builder",
+      slotTargets: [
+        {
+          definitionId: "column",
+          slotId: "column:1",
+          label: "Column 1",
+          kind: "repeatable",
+          instanceId: "1",
+        },
+        {
+          definitionId: "column",
+          slotId: "column:2",
+          label: "Column 2",
+          kind: "repeatable",
+          instanceId: "2",
+        },
+      ],
+    },
+  });
+
+  try {
+    const variantSection = getSectionByTitle(view.container, "Variant and layout structure");
+    const columnSection = getSectionByTitle(view.container, "Column sizing and labels");
+
+    expect(findSelectByLabel(variantSection, "Column count").disabled).toBe(true);
+    expect(findButtonsByText(columnSection, "Add one column")[0].disabled).toBe(true);
+    expect(findButtonsByText(columnSection, "Remove one column")[0].disabled).toBe(true);
   } finally {
     view.cleanup();
   }
@@ -901,6 +944,44 @@ test("GridColumns visual editor updates per-column surface, height, overflow, an
   }
 });
 
+test("GridColumns visual editor keeps overflow independent from local surface highlight", async () => {
+  const view = await renderEditor({
+    editor: "visual",
+    initialVariant: "equal",
+    initialValue: gridColumnsDefaults,
+  });
+
+  try {
+    const behaviorSection = getSectionByTitle(view.container, "Per-column surfaces and behavior");
+    const highlightToggle = findCheckboxByLabel(behaviorSection, "Highlight this column", 0);
+
+    setSelectValue(findSelectByLabel(behaviorSection, "Overflow", 0), "hidden");
+    expect(highlightToggle.checked).toBe(false);
+    expect(view.getValue().columns?.[0]?.style).toEqual(
+      expect.objectContaining({
+        overflow: "hidden",
+      })
+    );
+
+    setCheckboxValue(highlightToggle, true);
+    setCheckboxValue(highlightToggle, false);
+
+    expect(highlightToggle.checked).toBe(false);
+    expect(view.getValue().columns?.[0]?.style).toEqual(
+      expect.objectContaining({
+        overflow: "hidden",
+      })
+    );
+    expect(view.getValue().columns?.[0]?.style).not.toEqual(
+      expect.objectContaining({
+        surface: "on",
+      })
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("GridColumns editors fall back to safe defaults when normalization returns sparse data", async () => {
   vi.resetModules();
   vi.doMock("../../../core/widgets/core/gridColumns", async () => {
@@ -996,8 +1077,8 @@ test("GridColumns editors fall back to safe defaults when normalization returns 
       "Gap and column surface"
     );
     const alignmentSelect = findSelectByLabel(visualVariantSection, "Cross-axis alignment");
-    const addButton = findButtonsByText(visualEmptyView.container, "Add column config")[0];
-    const removeButton = findButtonsByText(visualEmptyView.container, "Remove last config")[0];
+    const addButton = findButtonsByText(visualEmptyView.container, "Add one column")[0];
+    const removeButton = findButtonsByText(visualEmptyView.container, "Remove one column")[0];
     const visualGapXSelect = findSelectByLabel(visualSurfaceSection, "Horizontal gap");
     const visualGapYSelect = findSelectByLabel(visualSurfaceSection, "Vertical gap");
     const visualSpanSelects = findSelectsByOptions(visualColumnSection, allSpanOptions).filter(
@@ -1127,6 +1208,58 @@ test("GridColumns advanced editor covers normalized diagnostics and technical to
     expect(snapshotAfter?.textContent).toContain('"columnBorderWidth": "3"');
     expect(snapshotAfter?.textContent).toContain('"columnPadding": "6"');
     expect(view.onChangeSpy).toHaveBeenCalled();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("GridColumns advanced editor locks masonry-lite cardize and follows live slot order", async () => {
+  const view = await renderEditor({
+    editor: "advanced",
+    initialVariant: "masonry-lite",
+    initialValue: {
+      columns: [
+        { id: "1", label: "Lead", desktopSpan: "8", tabletSpan: "6", mobileSpan: "12" },
+        { id: "2", label: "Side", desktopSpan: "4", tabletSpan: "6", mobileSpan: "12" },
+      ],
+    },
+    context: {
+      surface: "page-builder",
+      slotTargets: [
+        {
+          definitionId: "column",
+          slotId: "column:2",
+          label: "Column 2",
+          kind: "repeatable",
+          instanceId: "2",
+        },
+        {
+          definitionId: "column",
+          slotId: "column:1",
+          label: "Column 1",
+          kind: "repeatable",
+          instanceId: "1",
+        },
+      ],
+    },
+  });
+
+  try {
+    const technicalSection = getSectionByTitle(view.container, "Technical layout tokens");
+    const behaviorSection = getSectionByTitle(view.container, "Per-column override tokens");
+    const cardizeToggle = findCheckboxByLabel(technicalSection, "Cardized columns");
+
+    expect(cardizeToggle.checked).toBe(true);
+    expect(cardizeToggle.disabled).toBe(true);
+    expect(normalizeText(technicalSection.textContent)).toContain("locked on");
+
+    setSelectValue(findSelectByLabel(behaviorSection, "Overflow", 0), "hidden");
+    expect(view.getValue().columns?.[1]?.style).toEqual(
+      expect.objectContaining({
+        overflow: "hidden",
+      })
+    );
+    expect(view.getValue().columns?.[0]?.style).toBeUndefined();
   } finally {
     view.cleanup();
   }

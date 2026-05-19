@@ -54,7 +54,7 @@ Out of scope:
 | `tests/vitest/widgets/gridColumns.test.tsx` | Cover new gap tokens, default fallback, and class output. |
 | `tests/vitest/ui/grid-columns-editor-wave.test.tsx` | Cover new labels and editor value changes. |
 | `tests/vitest/widgets/styleNoneTokens.test.tsx` | Update if shared spacing-token expectations mention Grid Columns. |
-| `tests/unit/widgets/validator.test.ts` | Cover schema acceptance/rejection for new tokens. |
+| `tests/vitest/widgets/gridColumns.test.tsx` | Cover schema acceptance/rejection for new tokens. |
 | `_docs/_WIDGETS/GRID_COLUMNS.md` | Document expanded gap tokens and the existing separate X/Y model. |
 | `_docs/PLAYWRIGHT/REPORT_GRID_COLUMNS_WIDGET.md` | Mark W10 and U1 fixed/current-state/deferred with evidence. |
 
@@ -133,7 +133,7 @@ No API routes are added.
 - `bun run test:vitest -- tests/vitest/ui/grid-columns-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` if
   updated.
-- `bun test tests/unit/widgets/validator.test.ts`
+- `bun run test:vitest -- tests/vitest/widgets/gridColumns.test.tsx`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run gates:coderso`

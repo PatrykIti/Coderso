@@ -37,7 +37,7 @@ Playwright wykrył trzy klasy problemów:
 
 | ID | Snapshot z 2026-05-16 | Finalny status | Owner | Evidence |
 |---|---|---|---|---|
-| C1 | slot/config desync i manualny sync | `current-state/shared`: live editor nie tworzy już lokalnie nowego driftu, bo count controls blokują się przy istniejących slotach i odsyłają do Structure; pełne auto-remap pozostaje poza TASK-271 | TASK-256/TASK-293 seam, plus TASK-271 local guard | `GridColumnsEditors.tsx`, `blockSettings-wave.test.tsx` |
+| C1 | slot/config desync i manualny sync | `current-state/shared`: live editor nie tworzy już lokalnie nowego driftu, bo count controls i local add/remove actions blokują się przy istniejących slotach i odsyłają do Structure; pełne auto-remap pozostaje poza TASK-271 | TASK-256/TASK-293 seam, plus TASK-271 local guard | `GridColumnsEditors.tsx`, `gridColumns.tsx`, `blockSettings-wave.test.tsx`, `grid-columns-editor-wave.test.tsx`, `gridColumns.test.tsx` |
 | C2 | color picker nie pokazuje CSS variables truthfully | `deferred` | TASK-313 | `TASK-271` exclusion matrix, shared color-control truthfulness still open |
 | C3 | Wizard edytuje tylko kolumny 1 i 2 | `fixed` | TASK-271-01 | Wizard renderuje label inputs dla wszystkich aktywnych kolumn; `grid-columns-editor-wave.test.tsx` |
 | C4 | brak wizualnego preview spanów | `deferred` | TASK-313 | shared span-truthfulness intentionally kept out of TASK-271 |
@@ -50,14 +50,14 @@ Playwright wykrył trzy klasy problemów:
 | W6 | brak `xl` / `2xl` spanów | `fixed` | TASK-271-03 | optional `xlSpan` / `twoXlSpan` in schema, runtime, editor |
 | W7 | brak reorderu kolumn | `fixed` (keyboard-safe move controls, nie DnD) | TASK-271-02 | widget-local move buttons + shared repeatable-slot sync; `blockSettings-wave.test.tsx` |
 | W8 | brak custom CSS class per kolumna | `rejected` | TASK-271-07 | no safe class registry/policy; raw class strings intentionally not added |
-| W9 | brak per-column overflow control | `fixed` | TASK-271-04 | per-column `style.overflow`, runtime `overflow-hidden` proof |
+| W9 | brak per-column overflow control | `fixed` | TASK-271-04 | per-column `style.overflow` now stays independent from local surface highlight, with runtime `overflow-hidden` proof |
 | W10 | ograniczone gap tokens | `fixed` | TASK-271-06 | gap set expanded to `none/1/2/3/4/5/6/7/8/10/12` |
 | U1 | gap labels bez px context | `fixed` | TASK-271-06 | labels now include scale copy (`Gap 6 - 24px`) |
 | U2 | variant cards bez miniaturek | `fixed` | TASK-271-01 | visual selector includes compact previews for all variants |
 | U3 | Advanced nie ukrywa inactive cardize controls | `deferred` | TASK-313 | inactive-control truthfulness intentionally remains shared follow-up |
 | U4 | brak wskaźnika bieżącej sumy spanów | `deferred` | TASK-313 | shared span-truthfulness intentionally remains outside TASK-271 |
-| U5 | mylące `Column configs` copy | `fixed` | TASK-271-01 | control and warning copy now use `Column count` wording |
-| U6 | masonry-lite wymusza cardize bez truthful UI | `fixed outside TASK-271` | TASK-256-05-01 | toggle is locked on with explanatory copy |
+| U5 | mylące `Column configs` copy | `fixed` | TASK-271-01 | control, warning, and add/remove action copy now use user-facing column wording |
+| U6 | masonry-lite wymusza cardize bez truthful UI | `fixed` | TASK-256-05-01 + TASK-271 | toggle is locked on with explanatory copy in both Visual and Advanced editors |
 | U7 | label kolumny widoczny publicznie | `fixed outside TASK-271` | TASK-256-03 / TASK-256-05-01 | labels render only on editor/admin preview surfaces |
 | U8 | brak layout presetów | `fixed` | TASK-271-01 | same-count preset buttons for 2-6 column layouts |
 | P1 | publiczny `Column N` helper | `fixed outside TASK-271` | TASK-256-03 / TASK-256-05-01 | `gridColumns.test.tsx` public runtime no longer renders helper labels |
@@ -79,6 +79,9 @@ Playwright wykrył trzy klasy problemów:
 - Grid Columns reorders column metadata and repeatable slot payloads atomically.
 - Accessible move buttons are the shipped solution; drag-and-drop remains
   optional non-required scope.
+- When no live repeatable slot ids exist yet, runtime now synthesizes targets
+  from configured columns instead of truncating back to the repeatable-slot
+  minimum.
 
 ### TASK-271-03
 
@@ -89,7 +92,8 @@ Playwright wykrył trzy klasy problemów:
 ### TASK-271-04
 
 - A single column can now opt into a local cardized surface.
-- Per-column overflow is bounded to `visible` / `hidden`.
+- Per-column overflow is bounded to `visible` / `hidden` and can clip content
+  without forcing a local card shell.
 - Per-column override colors remain restricted to approved token variables or
   hex values.
 
@@ -123,7 +127,9 @@ Playwright wykrył trzy klasy problemów:
 Focused TASK-271 coverage completed during this closure pass:
 
 - `bun run test:vitest -- tests/vitest/widgets/gridColumns.test.tsx tests/vitest/ui/grid-columns-editor-wave.test.tsx tests/vitest/pageBuilder/blockSettings-wave.test.tsx`
-  - `3` files passed, `31` tests passed on 2026-05-19.
+  - `3` files passed, `37` tests passed on 2026-05-19 after the post-closeout
+    audit repaired no-slot runtime rendering, uncoupled overflow, and editor
+    truthfulness drift.
 
 Full family validation is recorded in TASK-271-07 together with lint, full Bun,
 full Vitest, strict security scan, and precommit results.

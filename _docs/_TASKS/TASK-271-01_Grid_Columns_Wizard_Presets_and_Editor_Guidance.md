@@ -145,7 +145,8 @@ No API routes are added.
 - `bun run test:vitest -- tests/vitest/ui/grid-columns-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/gridColumns.test.tsx` if helpers
   move into `gridColumns.tsx`.
-- `bun test tests/unit/widgets/validator.test.ts` if schema/defaults change.
+- `bun run test:vitest -- tests/vitest/widgets/gridColumns.test.tsx` if
+  schema/defaults change.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run gates:coderso`
@@ -173,8 +174,8 @@ No API routes are added.
 ## Completion Notes
 
 - 2026-05-19: Wizard now renders label inputs for every configured column, the
-  count copy is user-facing, and Visual variant cards include compact
-  miniatures plus same-count layout presets.
+  count copy plus add/remove actions use user-facing column wording, and Visual
+  variant cards include compact miniatures plus same-count layout presets.
 - 2026-05-19: when live repeatable slots already exist, local count edits are
   locked to the shared Structure owner instead of creating new Grid Columns
   drift from the editor path.

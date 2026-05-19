@@ -3,6 +3,8 @@ import type { ComponentType, CSSProperties, ReactNode } from "react";
 import { renderEditorPlaceholder } from "../renderContext";
 import { WidgetRenderer } from "../renderers/widgetRenderer";
 import {
+  buildRepeatableSlotId,
+  getRepeatableSlotIds,
   parseRepeatableSlotId,
   reorderRepeatableSlotMap,
   resolveWidgetSlotTargets,
@@ -739,6 +741,19 @@ type ResolvedGridColumn = {
   blocks: WidgetBlock[];
 };
 
+function buildConfiguredGridColumnsTargets(columns: GridColumnsColumn[]) {
+  return columns.map((column, index) => {
+    const instanceId = column.id?.trim() || String(index + 1);
+    return {
+      definitionId: gridColumnsSlot.id,
+      slotId: buildRepeatableSlotId(gridColumnsSlot.id, instanceId),
+      label: `${gridColumnsSlot.label} ${index + 1}`,
+      kind: "repeatable" as const,
+      instanceId,
+    };
+  });
+}
+
 const resolveGridColumnsForSlots = ({
   data,
   variant,
@@ -751,10 +766,12 @@ const resolveGridColumnsForSlots = ({
   const normalized = normalizeGridColumnsData(data);
   const columns = Array.isArray(normalized.columns) ? normalized.columns : [];
   const byId = new Map(columns.map((column) => [column.id ?? "", column]));
-
-  const slotTargets = resolveWidgetSlotTargets([gridColumnsSlot], slotMap).filter(
-    (target) => target.definitionId === gridColumnsSlot.id
-  );
+  const hasLiveColumnSlots = getRepeatableSlotIds(gridColumnsSlot, slotMap).length > 0;
+  const slotTargets = hasLiveColumnSlots
+    ? resolveWidgetSlotTargets([gridColumnsSlot], slotMap).filter(
+        (target) => target.definitionId === gridColumnsSlot.id
+      )
+    : buildConfiguredGridColumnsTargets(columns);
 
   return slotTargets.map((target, index) => {
     const parsed = parseRepeatableSlotId(target.slotId);
@@ -801,8 +818,7 @@ function hasGridColumnsColumnSurfaceOverrides(style: GridColumnsColumnStyle | un
     style.borderColor ||
     style.borderWidth ||
     style.radius ||
-    style.padding ||
-    style.overflow === "hidden"
+    style.padding
   );
 }
 

@@ -57,7 +57,7 @@ Out of scope:
 | `tests/vitest/widgets/gridColumns.test.tsx` | Cover global fallback, per-column override output, clear behavior, and overflow class output. |
 | `tests/vitest/ui/grid-columns-editor-wave.test.tsx` | Cover editor controls for per-column overrides and clearing. |
 | `tests/vitest/widgets/styleNoneTokens.test.tsx` | Update if token/clear semantics touch shared style helpers. |
-| `tests/unit/widgets/validator.test.ts` | Cover new schema fields and reject unknown style properties. |
+| `tests/vitest/widgets/gridColumns.test.tsx` | Cover new schema fields, reject unknown style properties, and prove overflow stays independent from local surface highlight. |
 | `_docs/_WIDGETS/GRID_COLUMNS.md` | Document per-column style behavior. |
 | `_docs/PLAYWRIGHT/REPORT_GRID_COLUMNS_WIDGET.md` | Mark W1/W9 fixed/deferred with evidence. |
 
@@ -153,7 +153,7 @@ No API routes are added.
 - Endpoint visibility: none.
 - Auth/RBAC/CSRF/rate limit: unchanged.
 - Reject-unknown validation: new style fields must be strict and covered by
-  validator tests.
+  focused widget-schema assertions in `tests/vitest/widgets/gridColumns.test.tsx`.
 - Anti-abuse: no arbitrary style maps, raw class names, raw HTML, or scripts.
 - Secret handling: style fields are public render data and must not contain
   secrets.
@@ -164,7 +164,7 @@ No API routes are added.
 - `bun run test:vitest -- tests/vitest/ui/grid-columns-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` if
   shared style behavior changes.
-- `bun test tests/unit/widgets/validator.test.ts`
+- `bun run test:vitest -- tests/vitest/widgets/gridColumns.test.tsx`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run gates:coderso`
@@ -192,6 +192,7 @@ No API routes are added.
 
 - 2026-05-19: per-column surface overrides now support bounded background,
   border, radius, padding, and overflow fields without widening into arbitrary
-  class or style-string scope.
-- 2026-05-19: schema and validator coverage now reject unsafe override payloads
-  such as `url(...)` and unknown nested style keys.
+  class or style-string scope, and overflow can clip content without forcing a
+  local card shell.
+- 2026-05-19: focused widget-schema coverage now rejects unsafe override
+  payloads such as `url(...)` and unknown nested style keys.
