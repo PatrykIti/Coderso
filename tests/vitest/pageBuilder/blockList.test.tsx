@@ -19,6 +19,7 @@ import {
   removeRepeatableSlotInstance,
   reorderBlocks,
   reorderBlocksAtPath,
+  reorderRepeatableSlotInstances,
   stripEditor,
   updateBlockById,
 } from "../../../core/admin/ui/pages/builder/blockUtils";
@@ -553,6 +554,28 @@ test("repeatable slot helpers ignore invalid definitions and slot ids", () => {
   expect(removeRepeatableSlotInstance(original, "missing", "column:1")).toBe(original);
   expect(removeRepeatableSlotInstance(original, "parent", "not-repeatable")).toEqual(original);
   expect(removeRepeatableSlotInstance(original, "parent", "column:9")).toEqual(original);
+});
+
+test("repeatable slot reorder preserves nested child arrays and unmatched slots", () => {
+  registerWidget(repeatableDefinition);
+  const firstChildren = [{ ...createBlock("hero"), id: "column-child-1" }];
+  const secondChildren = [{ ...createBlock("newsletter"), id: "column-child-2" }];
+  const legacyChildren = [{ ...createBlock("timeline"), id: "column-child-legacy" }];
+  const parent: Block = {
+    ...createBlock("layout-columns"),
+    id: "parent",
+    slots: {
+      "column:1": firstChildren,
+      "column:2": secondChildren,
+      "column:legacy": legacyChildren,
+    },
+  };
+
+  const reordered = reorderRepeatableSlotInstances([parent], "parent", "column", ["2", "1"]);
+  expect(Object.keys(reordered[0]?.slots ?? {})).toEqual(["column:2", "column:1", "column:legacy"]);
+  expect(reordered[0]?.slots?.["column:2"]).toBe(secondChildren);
+  expect(reordered[0]?.slots?.["column:1"]).toBe(firstChildren);
+  expect(reordered[0]?.slots?.["column:legacy"]).toBe(legacyChildren);
 });
 
 test("moveBlockIntoSlot blocks moving a parent into its own descendant", () => {

@@ -776,6 +776,18 @@ test("FormRuntimePreviewDialog handles unsaved, multi-step, submit success, and 
             step: 2,
           },
         },
+        {
+          id: "field-3",
+          type: "radio",
+          label: "Preferred contact",
+          name: "contact_method",
+          required: true,
+          settings: {
+            options: ["Email", "Phone"],
+            defaultValue: "Email",
+            step: 2,
+          },
+        },
       ]}
       hasUnsavedChanges={false}
       onOpenLogs={onOpenLogs}
@@ -801,8 +813,16 @@ test("FormRuntimePreviewDialog handles unsaved, multi-step, submit success, and 
 
     expect(onOpenLogs).toHaveBeenCalledOnce();
     expect(view.container.textContent).toContain("Need invoice");
+    expect(view.container.textContent).toContain("Preferred contact");
 
     await React.act(async () => {
+      const radio = Array.from(view.container.querySelectorAll("input")).find(
+        (input) =>
+          input instanceof HTMLInputElement &&
+          input.type === "radio" &&
+          input.getAttribute("value") === "Phone"
+      ) as HTMLInputElement | undefined;
+      radio?.click();
       buttons()
         .find((button) => button.textContent?.includes("Submit preview"))
         ?.click();
@@ -811,6 +831,7 @@ test("FormRuntimePreviewDialog handles unsaved, multi-step, submit success, and 
     expect(formsRuntimeState.submitForm).toHaveBeenCalledWith("form-1", {
       full_name: "Jane Doe",
       need_invoice: true,
+      contact_method: "Phone",
     });
     expect(view.container.textContent).toContain("Submission completed");
     expect(view.container.textContent).toContain("Runtime redirect configured");

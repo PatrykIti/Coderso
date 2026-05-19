@@ -13,9 +13,10 @@ type FieldPreviewProps = {
   label: string;
   placeholder?: string;
   value?: string;
+  options?: string[];
   selected?: boolean;
   multiline?: boolean;
-  kind?: "text" | "select" | "checkbox";
+  kind?: "text" | "select" | "checkbox" | "radio";
   labelHidden?: boolean;
   onSelect?: (id: string) => void;
   onRemove?: (id: string) => void;
@@ -26,6 +27,7 @@ function FieldPreview({
   label,
   placeholder,
   value,
+  options,
   selected = false,
   multiline = false,
   kind = "text",
@@ -42,9 +44,7 @@ function FieldPreview({
       }}
       className={cn(
         "group relative rounded-xl border p-4 transition",
-        selected
-          ? "border-primary/40 bg-primary/5"
-          : "border-transparent hover:border-border/70"
+        selected ? "border-primary/40 bg-primary/5" : "border-transparent hover:border-border/70"
       )}
     >
       <div className="absolute -left-10 top-1/2 hidden -translate-y-1/2 opacity-0 transition group-hover:opacity-100 lg:flex">
@@ -87,15 +87,24 @@ function FieldPreview({
             readOnly
             className={cn(
               "resize-none",
-              selected
-                ? "border-primary/30 bg-background"
-                : "bg-muted/40 text-muted-foreground"
+              selected ? "border-primary/30 bg-background" : "bg-muted/40 text-muted-foreground"
             )}
           />
         ) : kind === "checkbox" ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <span className="h-4 w-4 rounded border bg-background" />
             <span>{value ?? "Yes, I agree"}</span>
+          </div>
+        ) : kind === "radio" ? (
+          <div className="space-y-2 text-sm text-muted-foreground">
+            {(options && options.length > 0 ? options : [value ?? "Option"])
+              .slice(0, 3)
+              .map((option) => (
+                <div key={`${id}-${option}`} className="flex items-center gap-2">
+                  <span className="h-4 w-4 rounded-full border bg-background" />
+                  <span>{option}</span>
+                </div>
+              ))}
           </div>
         ) : (
           <Input
@@ -124,16 +133,17 @@ type FormCanvasProps = {
     label: string;
     type: string;
     required: boolean;
-      settings: {
-        placeholder?: string;
-        helper?: string;
-        defaultValue?: string | boolean;
-        step?: number;
-        style?: {
-          width?: "full" | "half";
-          labelPosition?: "above" | "inline" | "hidden";
-        };
+    settings: {
+      placeholder?: string;
+      helper?: string;
+      options?: string[];
+      defaultValue?: string | boolean;
+      step?: number;
+      style?: {
+        width?: "full" | "half";
+        labelPosition?: "above" | "inline" | "hidden";
       };
+    };
   }>;
   onSelectField: (id: string) => void;
   onSelectForm: () => void;
@@ -173,14 +183,14 @@ export function FormCanvas({
     const kind =
       field.type === "checkbox"
         ? "checkbox"
-        : field.type === "select"
-          ? "select"
-          : "text";
+        : field.type === "radio"
+          ? "radio"
+          : field.type === "select"
+            ? "select"
+            : "text";
     const multiline = field.type === "textarea";
     const value =
-      typeof field.settings.defaultValue === "string"
-        ? field.settings.defaultValue
-        : undefined;
+      typeof field.settings.defaultValue === "string" ? field.settings.defaultValue : undefined;
     const style = resolveFormFieldStyle(field.settings.style);
     return (
       <FieldPreview
@@ -189,6 +199,7 @@ export function FormCanvas({
         label={field.label}
         placeholder={field.settings.placeholder}
         value={value}
+        options={Array.isArray(field.settings.options) ? field.settings.options : undefined}
         selected={selectedFieldId === field.id}
         multiline={multiline}
         kind={kind}
@@ -225,7 +236,10 @@ export function FormCanvas({
               {hasFields ? (
                 layoutMode === "multi_step" ? (
                   sortedSteps.map((step) => (
-                    <div key={`step-${step}`} className="space-y-3 rounded-xl border bg-muted/10 p-4">
+                    <div
+                      key={`step-${step}`}
+                      className="space-y-3 rounded-xl border bg-muted/10 p-4"
+                    >
                       <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                         {stepTitles[step - 1]?.trim() || `Step ${step}`}
                       </p>
@@ -247,8 +261,7 @@ export function FormCanvas({
                   <div className="grid gap-3 md:grid-cols-2">
                     {fields.map((field) => {
                       const style = resolveFormFieldStyle(field.settings.style);
-                      const spanClass =
-                        style.width === "half" ? "md:col-span-1" : "md:col-span-2";
+                      const spanClass = style.width === "half" ? "md:col-span-1" : "md:col-span-2";
                       return (
                         <div key={field.id} className={spanClass}>
                           {renderField(field)}
@@ -260,9 +273,7 @@ export function FormCanvas({
               ) : (
                 <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/60 bg-muted/20 py-10 text-center text-muted-foreground">
                   <CirclePlus className="mb-2 h-6 w-6" />
-                  <p className="text-xs font-medium">
-                    Drop a field here to add to your form
-                  </p>
+                  <p className="text-xs font-medium">Drop a field here to add to your form</p>
                 </div>
               )}
             </div>

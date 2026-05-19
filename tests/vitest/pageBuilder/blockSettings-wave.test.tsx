@@ -103,7 +103,15 @@ vi.mock("../../../core/admin/ui/pages/builder/VisualPanel", () => ({
     slotControls?: {
       title: string;
       addActions: Array<{ label: string; onClick: () => void; disabled: boolean }>;
-      items: Array<{ label: string; canRemove?: boolean; onRemove?: () => void }>;
+      items: Array<{
+        label: string;
+        canRemove?: boolean;
+        canMoveUp?: boolean;
+        canMoveDown?: boolean;
+        onRemove?: () => void;
+        onMoveUp?: () => void;
+        onMoveDown?: () => void;
+      }>;
       childrenHint?: string;
     };
   }) => (
@@ -125,6 +133,16 @@ vi.mock("../../../core/admin/ui/pages/builder/VisualPanel", () => ({
           {slotControls.items.map((item) => (
             <span key={item.label}>
               {item.label}
+              {typeof item.canMoveUp === "boolean" ? (
+                <button type="button" disabled={!item.canMoveUp} onClick={item.onMoveUp}>
+                  {`Move up ${item.label}`}
+                </button>
+              ) : null}
+              {typeof item.canMoveDown === "boolean" ? (
+                <button type="button" disabled={!item.canMoveDown} onClick={item.onMoveDown}>
+                  {`Move down ${item.label}`}
+                </button>
+              ) : null}
               {item.canRemove && item.onRemove ? (
                 <button type="button" onClick={item.onRemove}>
                   Remove
@@ -185,6 +203,7 @@ const createWidget = (
   render: overrides.render ?? Dummy,
   ...(overrides.canHaveChildren ? { canHaveChildren: true } : {}),
   ...(overrides.slots ? { slots: overrides.slots } : {}),
+  ...(overrides.repeatableSlotSync ? { repeatableSlotSync: overrides.repeatableSlotSync } : {}),
 });
 
 const mount = (node: React.ReactNode) => {
@@ -354,6 +373,148 @@ test("BlockSettings manages repeatable slots and editor mode transitions", () =>
     expect(onChangeSpy.mock.lastCall?.[0]).toEqual(
       expect.objectContaining({
         data: expect.objectContaining({ advancedTouched: true }),
+      })
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("BlockSettings keeps repeatable slot metadata in sync across add remove and reorder", () => {
+  const widget = createWidget({
+    type: "accordion",
+    title: "Accordion",
+    slots: [
+      {
+        id: "item",
+        label: "Item",
+        kind: "repeatable",
+        minItems: 1,
+        maxItems: 3,
+      },
+    ],
+    repeatableSlotSync: [
+      {
+        definitionId: "item",
+        buildDefaultItem: (instanceId, nextIndex) => ({
+          id: instanceId,
+          title: `Item ${nextIndex + 1}`,
+        }),
+        appendItem: (data, nextItem) => ({
+          ...data,
+          items: [
+            ...(((data.items as unknown[]) ?? []) as Array<Record<string, unknown>>),
+            nextItem,
+          ],
+        }),
+        removeItemByInstanceId: (data, instanceId) => ({
+          ...data,
+          items: (((data.items as unknown[]) ?? []) as Array<Record<string, unknown>>).filter(
+            (item) => item.id !== instanceId
+          ),
+        }),
+        reorderItemsByInstanceIds: (data, orderedInstanceIds) => {
+          const items = (((data.items as unknown[]) ?? []) as Array<Record<string, unknown>>).map(
+            (item) => [String(item.id ?? ""), item] as const
+          );
+          const byId = new Map(items);
+          return {
+            ...data,
+            items: orderedInstanceIds
+              .map((instanceId) => byId.get(instanceId))
+              .filter((item): item is Record<string, unknown> => Boolean(item)),
+          };
+        },
+      },
+    ],
+  });
+
+  const nestedOne = { ...createBlock("hero"), id: "nested-1" };
+  const nestedTwo = { ...createBlock("newsletter"), id: "nested-2" };
+  const initialBlock: Block = {
+    ...createBlock("accordion"),
+    id: "accordion-1",
+    editor: { mode: "visual", wizardCompleted: true },
+    data: {
+      items: [
+        { id: "1", title: "First" },
+        { id: "2", title: "Second" },
+      ],
+    },
+    slots: {
+      "item:1": [nestedOne],
+      "item:2": [nestedTwo],
+    },
+  };
+
+  const onChangeSpy = vi.fn();
+
+  const Harness = () => {
+    const [block, setBlock] = useState<Block>(initialBlock);
+    return (
+      <BlockSettings
+        block={block}
+        widget={widget}
+        onChange={(next) => {
+          onChangeSpy(next);
+          setBlock(next);
+        }}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    const moveUpFirst = Array.from(view.container.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("Move up Item 1 slot")
+    ) as HTMLButtonElement | undefined;
+    expect(moveUpFirst?.disabled).toBe(true);
+
+    clickByText(view.container, "Add Item");
+    expect(onChangeSpy.mock.lastCall?.[0]).toEqual(
+      expect.objectContaining({
+        slots: expect.objectContaining({
+          "item:1": [nestedOne],
+          "item:2": [nestedTwo],
+          "item:3": [],
+        }),
+        data: {
+          items: [
+            { id: "1", title: "First" },
+            { id: "2", title: "Second" },
+            { id: "3", title: "Item 3" },
+          ],
+        },
+      })
+    );
+
+    clickByText(view.container, "Move down Item 1 slot");
+    const reordered = onChangeSpy.mock.lastCall?.[0] as Block;
+    expect(Object.keys(reordered.slots ?? {})).toEqual(["item:2", "item:1", "item:3"]);
+    expect(reordered.data).toEqual({
+      items: [
+        { id: "2", title: "Second" },
+        { id: "1", title: "First" },
+        { id: "3", title: "Item 3" },
+      ],
+    });
+    expect(reordered.slots?.["item:2"]).toEqual([nestedTwo]);
+    expect(reordered.slots?.["item:1"]).toEqual([nestedOne]);
+
+    clickByText(view.container, "Remove");
+    expect(onChangeSpy.mock.lastCall?.[0]).toEqual(
+      expect.objectContaining({
+        slots: {
+          "item:1": [nestedOne],
+          "item:3": [],
+        },
+        data: {
+          items: [
+            { id: "1", title: "First" },
+            { id: "3", title: "Item 3" },
+          ],
+        },
       })
     );
   } finally {

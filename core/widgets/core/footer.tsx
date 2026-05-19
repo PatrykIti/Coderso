@@ -73,6 +73,17 @@ export type FooterLegal = {
   termsTarget?: FooterLinkTarget;
 };
 
+export type FooterContactInfo = {
+  address?: string;
+  phone?: string;
+  email?: string;
+};
+
+export type FooterBackToTop = {
+  enabled?: boolean;
+  label?: string;
+};
+
 export type FooterLayout = {
   align?: "left" | "center" | "right";
   legalAlign?: "left" | "center" | "right";
@@ -105,6 +116,8 @@ export type FooterData = {
   columns: FooterColumn[];
   brand?: FooterBrand;
   legal?: FooterLegal;
+  contact?: FooterContactInfo;
+  backToTop?: FooterBackToTop;
   social?: FooterSocial[];
   socialEnabled?: boolean;
   layout?: FooterLayout;
@@ -131,6 +144,18 @@ type NormalizedFooterLegal = {
 type NormalizedFooterSocial = {
   type: FooterSocialType;
   href: string;
+  label: string;
+};
+
+type NormalizedFooterContactInfo = {
+  address?: string;
+  phoneLabel?: string;
+  phoneHref?: string;
+  emailLabel?: string;
+  emailHref?: string;
+};
+
+type NormalizedFooterBackToTop = {
   label: string;
 };
 
@@ -213,6 +238,23 @@ export const footerSchema = {
         terms: { type: "string" },
         termsLabel: { type: "string" },
         termsTarget: { enum: ["_self", "_blank"] },
+      },
+    },
+    contact: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        address: { type: "string" },
+        phone: { type: "string" },
+        email: { type: "string" },
+      },
+    },
+    backToTop: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        enabled: { type: "boolean" },
+        label: { type: "string" },
       },
     },
     socialEnabled: { type: "boolean" },
@@ -434,6 +476,23 @@ const borderWidthValueMap = {
 const joinClasses = (...classes: Array<string | undefined | false>) =>
   classes.filter(Boolean).join(" ");
 
+const moveItem = <T,>(items: T[], fromIndex: number, toIndex: number) => {
+  if (
+    fromIndex === toIndex ||
+    fromIndex < 0 ||
+    toIndex < 0 ||
+    fromIndex >= items.length ||
+    toIndex >= items.length
+  ) {
+    return items;
+  }
+  const next = [...items];
+  const [item] = next.splice(fromIndex, 1);
+  if (item === undefined) return items;
+  next.splice(toIndex, 0, item);
+  return next;
+};
+
 const toTrimmedString = (value: unknown) => {
   if (typeof value !== "string") return undefined;
   const trimmed = value.trim();
@@ -588,6 +647,42 @@ const normalizeFooterBrand = (value: unknown): FooterBrand | undefined => {
   };
 };
 
+const footerEmailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const normalizeFooterContactInfo = (value: unknown): NormalizedFooterContactInfo | undefined => {
+  const address = toTrimmedString((value as FooterContactInfo | undefined)?.address);
+  const rawPhone = toTrimmedString((value as FooterContactInfo | undefined)?.phone);
+  const rawEmail = toTrimmedString((value as FooterContactInfo | undefined)?.email);
+
+  const normalizedPhone =
+    rawPhone && /^[+\d][\d\s().-]{2,}$/.test(rawPhone)
+      ? rawPhone.replace(/[\s().-]+/g, "")
+      : undefined;
+  const phoneHref =
+    normalizedPhone && /^\+?\d{3,20}$/.test(normalizedPhone) ? `tel:${normalizedPhone}` : undefined;
+
+  const normalizedEmail =
+    rawEmail && footerEmailPattern.test(rawEmail) ? rawEmail.toLowerCase() : undefined;
+  const emailHref = normalizedEmail ? `mailto:${normalizedEmail}` : undefined;
+
+  if (!address && !phoneHref && !emailHref) return undefined;
+
+  return {
+    address,
+    phoneLabel: phoneHref ? rawPhone : undefined,
+    phoneHref,
+    emailLabel: emailHref ? rawEmail : undefined,
+    emailHref,
+  };
+};
+
+const normalizeFooterBackToTop = (value: unknown): NormalizedFooterBackToTop | undefined => {
+  if ((value as FooterBackToTop | undefined)?.enabled !== true) return undefined;
+  return {
+    label: toTrimmedString((value as FooterBackToTop | undefined)?.label) ?? "Back to top",
+  };
+};
+
 const normalizeFooterSocialEntry = (
   entry: FooterSocial,
   index: number
@@ -736,6 +831,57 @@ export function resolveFooterColumnsForVariant(
   return result;
 }
 
+export function reorderFooterColumnsAndSlots({
+  columns,
+  slots,
+  variant,
+  fromIndex,
+  toIndex,
+}: {
+  columns: FooterColumn[];
+  slots?: Record<string, WidgetBlock[]>;
+  variant: string;
+  fromIndex: number;
+  toIndex: number;
+}): {
+  columns: FooterColumn[];
+  slots?: Record<string, WidgetBlock[]>;
+} {
+  const visibleCount = resolveFooterColumnCount(variant);
+  if (
+    fromIndex < 0 ||
+    toIndex < 0 ||
+    fromIndex >= visibleCount ||
+    toIndex >= visibleCount ||
+    fromIndex === toIndex
+  ) {
+    return { columns, slots };
+  }
+
+  const visibleColumns = resolveFooterColumnsForVariant(columns, variant);
+  const hiddenColumns =
+    Array.isArray(columns) && columns.length > visibleCount ? columns.slice(visibleCount) : [];
+  const reorderedColumns = moveItem(visibleColumns, fromIndex, toIndex);
+  const nextColumns = [...reorderedColumns, ...hiddenColumns];
+
+  if (!slots) {
+    return { columns: nextColumns, slots };
+  }
+
+  const nextSlotOrder = moveItem([...footerColumnSlotIds], fromIndex, toIndex);
+  const nextSlots: Record<string, WidgetBlock[]> = { ...slots };
+
+  footerColumnSlotIds.forEach((slotId, index) => {
+    const sourceSlotId = nextSlotOrder[index] ?? slotId;
+    nextSlots[slotId] = slots[sourceSlotId] ?? [];
+  });
+
+  return {
+    columns: nextColumns,
+    slots: nextSlots,
+  };
+}
+
 export function FooterBlock({
   data,
   variant,
@@ -763,6 +909,8 @@ export function FooterBlock({
   const legalAlign = layout.legalAlign ?? "right";
   const legal = normalizeFooterLegal(data.legal);
   const brand = normalizeFooterBrand(data.brand);
+  const contact = normalizeFooterContactInfo(data.contact);
+  const backToTop = normalizeFooterBackToTop(data.backToTop);
   const social = (Array.isArray(data.social) ? data.social : (footerDefaults.social ?? []))
     .map(normalizeFooterSocialEntry)
     .filter((entry): entry is NormalizedFooterSocial => entry !== null);
@@ -818,7 +966,40 @@ export function FooterBlock({
     "mx-auto w-full",
     maxWidthClassMap[layout.maxWidth ?? "6xl"] ?? "max-w-6xl"
   );
-  const showBottomStrip = showLegalContent || socialVisible || bottomSlotBlocks.length > 0;
+  const showBottomStrip =
+    showLegalContent ||
+    socialVisible ||
+    bottomSlotBlocks.length > 0 ||
+    Boolean(contact) ||
+    Boolean(backToTop);
+
+  const renderContactInfo = () => {
+    if (!contact) return null;
+    return (
+      <address className="flex flex-wrap items-center gap-4 not-italic" style={legalStyle}>
+        {contact.address ? <span className="whitespace-pre-line">{contact.address}</span> : null}
+        {contact.phoneHref && contact.phoneLabel ? (
+          <a href={contact.phoneHref} className={linkClassName} style={linkStyle}>
+            {contact.phoneLabel}
+          </a>
+        ) : null}
+        {contact.emailHref && contact.emailLabel ? (
+          <a href={contact.emailHref} className={linkClassName} style={linkStyle}>
+            {contact.emailLabel}
+          </a>
+        ) : null}
+      </address>
+    );
+  };
+
+  const renderBackToTopLink = () => {
+    if (!backToTop) return null;
+    return (
+      <a href="#top" data-footer-back-to-top="1" className={linkClassName} style={linkStyle}>
+        {backToTop.label}
+      </a>
+    );
+  };
 
   const renderColumnsFooter = () => (
     <>
@@ -890,6 +1071,7 @@ export function FooterBlock({
             <span style={legalStyle}>{legal.copyright}</span>
           ) : null}
           <div className="flex flex-wrap items-center gap-4">
+            {renderContactInfo()}
             {bottomSlotBlocks.map((slotBlock) => (
               <WidgetRenderer key={slotBlock.id} block={slotBlock} previewDevice={previewDevice} />
             ))}
@@ -941,6 +1123,7 @@ export function FooterBlock({
                 })}
               </ul>
             ) : null}
+            {renderBackToTopLink()}
           </div>
         </div>
       ) : null}
@@ -997,6 +1180,7 @@ export function FooterBlock({
               {legal.enabled && legal.copyright ? (
                 <span style={legalStyle}>{legal.copyright}</span>
               ) : null}
+              {renderContactInfo()}
               {legal.enabled && legal.privacy
                 ? (() => {
                     const linkAttrs = resolveFooterLinkAttrs(legal.privacy, legal.privacyTarget);
@@ -1045,6 +1229,7 @@ export function FooterBlock({
                   })}
                 </ul>
               ) : null}
+              {renderBackToTopLink()}
             </div>
           ) : null}
         </div>

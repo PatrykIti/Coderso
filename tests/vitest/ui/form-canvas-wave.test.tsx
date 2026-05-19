@@ -157,6 +157,17 @@ test("FormCanvas handles single-layout selection, checkbox fallback copy, and re
             style: { width: "half", labelPosition: "hidden" },
           },
         },
+        {
+          id: "field-radio",
+          label: "Contact method",
+          type: "radio",
+          required: false,
+          settings: {
+            options: ["Email", "Phone"],
+            defaultValue: "Email",
+            style: { width: "full", labelPosition: "above" },
+          },
+        },
       ]}
       onSelectField={onSelectField}
       onSelectForm={onSelectForm}
@@ -168,6 +179,9 @@ test("FormCanvas handles single-layout selection, checkbox fallback copy, and re
     expect(view.container.textContent).toContain("Lead form");
     expect(view.container.textContent).toContain("Collect leads");
     expect(view.container.textContent).toContain("Yes, I agree");
+    expect(view.container.textContent).toContain("Contact method");
+    expect(view.container.textContent).toContain("Email");
+    expect(view.container.textContent).toContain("Phone");
     expect(view.container.textContent).not.toContain("Consent</label>");
     expect(view.container.innerHTML).toContain("md:col-span-1");
     expect(view.container.innerHTML).toContain("md:col-span-2");

@@ -12,6 +12,7 @@ import {
   createFooterWidget,
   footerDefaults,
   FooterBlock,
+  reorderFooterColumnsAndSlots,
   resolveFooterColumnsForVariant,
   type FooterData,
 } from "../../../core/widgets/core/footer";
@@ -116,6 +117,15 @@ test("footer schema accepts brand, legal, social, visibility, and target fields"
           terms: "/terms",
           termsLabel: "Terms of use",
           termsTarget: "_self",
+        },
+        contact: {
+          address: "123 Market Street",
+          phone: "+1 415 555 0100",
+          email: "hello@example.com",
+        },
+        backToTop: {
+          enabled: true,
+          label: "Back to top",
         },
         socialEnabled: true,
         social: [
@@ -246,6 +256,53 @@ test("footer normalizes unsafe legal, logo, and social hrefs before render", () 
   expect(html).not.toContain(">Privacy<");
 });
 
+test("footer renders bounded contact links and anchor-only back-to-top action", () => {
+  const html = renderToString(
+    <FooterBlock
+      data={{
+        ...footerDefaults,
+        contact: {
+          address: "123 Market Street",
+          phone: "+1 415 555 0100",
+          email: "hello@example.com",
+        },
+        backToTop: {
+          enabled: true,
+          label: "Return to top",
+        },
+      }}
+      variant="columns-2"
+    />
+  );
+
+  expect(html).toContain("123 Market Street");
+  expect(html).toContain('href="tel:+14155550100"');
+  expect(html).toContain('href="mailto:hello@example.com"');
+  expect(html).toContain('data-footer-back-to-top="1"');
+  expect(html).toContain('href="#top"');
+  expect(html).toContain("Return to top");
+});
+
+test("footer omits malformed contact links but keeps safe read-only wrappers bounded", () => {
+  const html = renderToString(
+    <FooterBlock
+      data={{
+        ...footerDefaults,
+        contact: {
+          address: "123 Market Street",
+          phone: "call us maybe",
+          email: "hello at example.com",
+        },
+      }}
+      variant="columns-2"
+    />
+  );
+
+  expect(html).toContain("123 Market Street");
+  expect(html).not.toContain("mailto:");
+  expect(html).not.toContain("tel:");
+});
+
 test("footer renders column and bottom slots", () => {
   clearWidgets();
   registerWidget(
@@ -300,6 +357,70 @@ test("footer renders column and bottom slots", () => {
 
   expect(html).toContain("Column widget");
   expect(html).toContain("Bottom widget");
+});
+
+test("footer column reorder helper keeps slot payloads aligned with moved columns", () => {
+  clearWidgets();
+  registerWidget(
+    createFooterWidget({
+      wizard: StubEditor,
+      visual: StubEditor,
+      advanced: StubEditor,
+    })
+  );
+  registerWidget({
+    type: "badge",
+    title: "Badge",
+    description: "Simple marker",
+    category: "content",
+    variants: [{ id: "default", label: "Default" }],
+    schema: { type: "object", additionalProperties: true },
+    defaults: { label: "Badge" },
+    editor: {
+      wizard: StubUnknownEditor,
+      visual: StubUnknownEditor,
+      advanced: StubUnknownEditor,
+    },
+    render: ({ data }) => <span>{String((data as { label?: string }).label ?? "Badge")}</span>,
+  });
+
+  const reordered = reorderFooterColumnsAndSlots({
+    columns: [
+      { title: "Company", links: [] },
+      { title: "Resources", links: [] },
+      { title: "Product", links: [] },
+    ],
+    variant: "columns-3",
+    fromIndex: 0,
+    toIndex: 1,
+    slots: {
+      "column-1": [{ id: "slot-company", type: "badge", data: { label: "Company slot" } }],
+      "column-2": [{ id: "slot-resources", type: "badge", data: { label: "Resources slot" } }],
+    },
+  });
+
+  const html = renderToString(
+    <WidgetRenderer
+      block={{
+        id: "footer-with-reordered-slots",
+        type: "footer",
+        variant: "columns-3",
+        data: {
+          ...footerDefaults,
+          columns: reordered.columns,
+        },
+        slots: reordered.slots,
+      }}
+    />
+  );
+
+  expect(reordered.columns.map((column) => column.title)).toEqual([
+    "Resources",
+    "Company",
+    "Product",
+  ]);
+  expect(html.indexOf("Resources")).toBeLessThan(html.indexOf("Resources slot"));
+  expect(html.indexOf("Company")).toBeLessThan(html.indexOf("Company slot"));
 });
 
 test("footer minimal variant renders a compact row and hides disabled legal and social strips", () => {
@@ -399,6 +520,7 @@ test("footer visual editor renders section-based IA", () => {
   expect(html).toContain("Variant and structure");
   expect(html).toContain("Columns and links");
   expect(html).toContain("Brand and legal");
+  expect(html).toContain("Utility strip");
   expect(html).toContain("Social links and icon style");
   expect(html).toContain("Colors and borders");
   expect(html).toContain("Typography and link styling");

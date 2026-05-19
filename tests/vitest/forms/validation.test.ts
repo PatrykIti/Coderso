@@ -114,3 +114,43 @@ test("validateSubmissionPayload skips required check for hidden fields", () => {
     category: "sales",
   });
 });
+
+test("radio fields normalize options and accept only allowlisted values", () => {
+  const [field] = normalizeFormFields([
+    {
+      type: "radio",
+      label: "Preferred contact",
+      name: "contact_method",
+      required: true,
+      settings: {
+        options: ["Email", "Phone", "Phone"],
+        defaultValue: "Email",
+      },
+    },
+  ]);
+
+  expect(field?.settings).toEqual({
+    options: ["Email", "Phone"],
+    defaultValue: "Email",
+  });
+
+  expect(
+    validateSubmissionPayload(
+      {
+        contact_method: "Phone",
+      },
+      [field!]
+    )
+  ).toEqual({
+    contact_method: "Phone",
+  });
+
+  expect(() =>
+    validateSubmissionPayload(
+      {
+        contact_method: "SMS",
+      },
+      [field!]
+    )
+  ).toThrow("form_payload_invalid");
+});

@@ -110,6 +110,20 @@ export type WidgetSlotControlSection = {
   mode?: "visual" | "advanced";
 };
 
+export type WidgetRepeatableSlotSyncAdapter = {
+  definitionId: string;
+  buildDefaultItem?: (instanceId: string, nextIndex: number) => unknown;
+  appendItem?: (data: Record<string, unknown>, nextItem: unknown) => Record<string, unknown>;
+  removeItemByInstanceId?: (
+    data: Record<string, unknown>,
+    instanceId: string
+  ) => Record<string, unknown>;
+  reorderItemsByInstanceIds?: (
+    data: Record<string, unknown>,
+    orderedInstanceIds: string[]
+  ) => Record<string, unknown>;
+};
+
 export type WidgetEditorCapabilities = {
   visualOwnsVariantSelection?: boolean;
   slotControlSection?: WidgetSlotControlSection;
@@ -130,6 +144,7 @@ export type WidgetDefinition<T = Record<string, unknown>> = {
   bindingTargets?: WidgetBindingTarget[];
   canHaveChildren?: boolean;
   slots?: WidgetSlotDefinition[];
+  repeatableSlotSync?: WidgetRepeatableSlotSyncAdapter[];
   variants: WidgetVariant[];
   schema: Record<string, unknown>;
   defaults: T;

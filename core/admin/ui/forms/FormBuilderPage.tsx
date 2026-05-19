@@ -2,6 +2,7 @@ import {
   AlignLeft,
   AtSign,
   Calendar,
+  CircleDot,
   CheckSquare,
   Eye,
   ListChecks,
@@ -86,6 +87,13 @@ const fieldLibraryItems: FieldLibraryItem[] = [
     icon: ListChecks,
     type: "select",
     helper: "Choose one option from a list.",
+  },
+  {
+    id: "radio",
+    label: "Radio Group",
+    icon: CircleDot,
+    type: "radio",
+    helper: "Choose one option with explicit radio buttons.",
   },
   {
     id: "textarea",

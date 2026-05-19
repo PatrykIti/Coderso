@@ -2,8 +2,6 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { InfoTip } from "@/ui/shared/InfoTip";
 import {
-  buildRepeatableSlotId,
-  getNextRepeatableSlotInstanceId,
   getRepeatableSlotIds,
   getWidgetSlotKind,
   parseRepeatableSlotId,
@@ -20,7 +18,14 @@ import type {
 import { AdvancedPanel } from "./AdvancedPanel";
 import { VisualPanel, type VisualPanelSlotControls } from "./VisualPanel";
 import { WizardPanel } from "./WizardPanel";
-import { applyWidgetBlockPatch, applyWizardSelection } from "./blockUtils";
+import {
+  addRepeatableSlotInstanceForWidget,
+  applyWidgetBlockPatch,
+  applyWizardSelection,
+  removeRepeatableSlotInstanceForWidget,
+  reorderBlocks,
+  reorderRepeatableSlotInstancesForWidget,
+} from "./blockUtils";
 
 export type BlockSettingsProps = {
   block?: Block | null;
@@ -85,15 +90,7 @@ export function BlockSettings({
       : undefined;
     if (typeof maximum === "number" && existing.length >= maximum) return;
 
-    const nextInstanceId = getNextRepeatableSlotInstanceId(definitionId, slotMap);
-    const nextSlotId = buildRepeatableSlotId(definitionId, nextInstanceId);
-    patchBlock({
-      slots: {
-        ...slotMap,
-        [nextSlotId]: [],
-      },
-      children: undefined,
-    });
+    patchBlock((current) => addRepeatableSlotInstanceForWidget(current, widget, definitionId));
   };
 
   const handleRemoveRepeatableSlotInstance = (slotId: string) => {
@@ -109,12 +106,24 @@ export function BlockSettings({
     if (existing.length <= minimum) return;
     if (!(slotId in slotMap)) return;
 
-    const nextSlots = { ...slotMap };
-    delete nextSlots[slotId];
-    patchBlock({
-      slots: nextSlots,
-      children: undefined,
-    });
+    patchBlock((current) => removeRepeatableSlotInstanceForWidget(current, widget, slotId));
+  };
+
+  const handleReorderRepeatableSlotInstances = (
+    definitionId: string,
+    fromIndex: number,
+    toIndex: number
+  ) => {
+    const definition = slotDefinitions.find((slot) => slot.id === definitionId);
+    if (!definition || getWidgetSlotKind(definition) !== "repeatable") return;
+    const currentIds = getRepeatableSlotIds(definition, slotMap)
+      .map((slotId) => parseRepeatableSlotId(slotId)?.instanceId ?? null)
+      .filter((instanceId): instanceId is string => Boolean(instanceId));
+    const nextIds = reorderBlocks(currentIds, fromIndex, toIndex);
+    if (nextIds === currentIds) return;
+    patchBlock((current) =>
+      reorderRepeatableSlotInstancesForWidget(current, widget, definitionId, nextIds)
+    );
   };
 
   const slotControls: VisualPanelSlotControls | undefined =
@@ -153,6 +162,12 @@ export function BlockSettings({
               repeatableDefinition && Number.isFinite(repeatableDefinition.minItems)
                 ? Math.max(0, Math.floor(repeatableDefinition.minItems ?? 0))
                 : 0;
+            const repeatableSlotIds =
+              repeatableDefinition && slot.kind === "repeatable"
+                ? getRepeatableSlotIds(repeatableDefinition, slotMap)
+                : [];
+            const repeatableIndex =
+              slot.kind === "repeatable" ? repeatableSlotIds.indexOf(slot.slotId) : -1;
             const canRemoveRepeatable =
               slot.kind === "repeatable" &&
               repeatableDefinition &&
@@ -166,6 +181,31 @@ export function BlockSettings({
               onRemove: canRemoveRepeatable
                 ? () => handleRemoveRepeatableSlotInstance(slot.slotId)
                 : undefined,
+              canMoveUp: slot.kind === "repeatable" && repeatableIndex > 0,
+              canMoveDown:
+                slot.kind === "repeatable" &&
+                repeatableIndex >= 0 &&
+                repeatableIndex < repeatableSlotIds.length - 1,
+              onMoveUp:
+                slot.kind === "repeatable" && repeatableIndex > 0
+                  ? () =>
+                      handleReorderRepeatableSlotInstances(
+                        slot.definitionId,
+                        repeatableIndex,
+                        repeatableIndex - 1
+                      )
+                  : undefined,
+              onMoveDown:
+                slot.kind === "repeatable" &&
+                repeatableIndex >= 0 &&
+                repeatableIndex < repeatableSlotIds.length - 1
+                  ? () =>
+                      handleReorderRepeatableSlotInstances(
+                        slot.definitionId,
+                        repeatableIndex,
+                        repeatableIndex + 1
+                      )
+                  : undefined,
             };
           }),
           childrenHint: supportsSlots

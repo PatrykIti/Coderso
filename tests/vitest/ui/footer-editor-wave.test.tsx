@@ -5,6 +5,7 @@ import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
 import type { FooterData } from "../../../core/widgets/core/footer";
+import type { WidgetBlock } from "../../../core/widgets/types";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -394,7 +395,9 @@ test("FooterVisualEditor keeps link ordering deterministic and exposes labeled c
   const view = mount(<Harness />);
 
   try {
-    expect(view.container.textContent).toContain("Column order stays slot-bound");
+    expect(view.container.textContent).toContain(
+      "Column reorder is read-only in static previews because slot remapping requires the live footer block patch path."
+    );
     expect(findSelectByLabel(view.container, "Section padding")).toBeUndefined();
 
     const firstLinkCard = findSectionCard(view.container, "Link 1");
@@ -434,6 +437,24 @@ test("FooterVisualEditor keeps link ordering deterministic and exposes labeled c
       "#2563eb"
     );
 
+    const utilityPanel = findPanelByTitle(view.container, "Utility strip");
+    expect(utilityPanel?.textContent).toContain("Newsletter stays composition-only");
+    setInputValue(findInputByLabel(utilityPanel as ParentNode, "Address"), "123 Market Street");
+    setInputValue(findInputByLabel(utilityPanel as ParentNode, "Phone"), "+1 415 555 0100");
+    setInputValue(findInputByLabel(utilityPanel as ParentNode, "Email"), "hello@example.com");
+    const backToTopToggle = findCheckboxByLabel(
+      utilityPanel as ParentNode,
+      "Show back-to-top action"
+    );
+    expect(backToTopToggle).toBeInstanceOf(HTMLInputElement);
+    React.act(() => {
+      backToTopToggle?.click();
+    });
+    setInputValue(
+      findInputByLabel(utilityPanel as ParentNode, "Back-to-top label"),
+      "Return to top"
+    );
+
     expect(latestValue.columns[0]?.links[0]).toMatchObject({
       label: "API",
       href: "/api",
@@ -448,7 +469,78 @@ test("FooterVisualEditor keeps link ordering deterministic and exposes labeled c
       linkLetterSpacing: "wide",
       linkHoverColor: "#2563eb",
     });
+    expect(latestValue.contact).toMatchObject({
+      address: "123 Market Street",
+      phone: "+1 415 555 0100",
+      email: "hello@example.com",
+    });
+    expect(latestValue.backToTop).toMatchObject({
+      enabled: true,
+      label: "Return to top",
+    });
     expect(latestValue.style?.textColor).toBeUndefined();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("FooterVisualEditor reorders columns through live block patching and keeps slot ownership aligned", async () => {
+  const { FooterVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/FooterEditors");
+
+  type FooterEditorBlock = WidgetBlock & {
+    variant: string;
+    data: FooterData;
+    slots: Record<string, WidgetBlock[]>;
+  };
+
+  let latestBlock: FooterEditorBlock = {
+    id: "footer-live",
+    type: "footer",
+    variant: "columns-2",
+    data: {
+      columns: [
+        { title: "Company", links: [] },
+        { title: "Resources", links: [] },
+      ],
+    } satisfies FooterData,
+    slots: {
+      "column-1": [{ id: "company-slot", type: "badge", data: { label: "Company slot" } }],
+      "column-2": [{ id: "resources-slot", type: "badge", data: { label: "Resources slot" } }],
+    },
+  };
+
+  const Harness = () => {
+    const [block, setBlock] = useState(latestBlock);
+
+    return (
+      <FooterVisualEditor
+        value={block.data}
+        onChange={() => undefined}
+        variant={String(block.variant ?? "columns-2")}
+        onBlockPatch={(patch) => {
+          const next = (
+            typeof patch === "function" ? patch(block) : { ...block, ...patch }
+          ) as FooterEditorBlock;
+          latestBlock = next;
+          setBlock(next);
+        }}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    expect(view.container.textContent).toContain("slot payloads move with the visible columns");
+    clickByText(view.container, "Move right", 0);
+
+    expect(latestBlock.data.columns.map((column) => column.title)).toEqual([
+      "Resources",
+      "Company",
+    ]);
+    expect(latestBlock.slots["column-1"]?.[0]?.id).toBe("resources-slot");
+    expect(latestBlock.slots["column-2"]?.[0]?.id).toBe("company-slot");
   } finally {
     view.cleanup();
   }

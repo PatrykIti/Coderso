@@ -51,13 +51,21 @@ icon-based social actions.
   - Variant and structure
   - Columns and links
   - Brand and legal
+  - Utility strip
   - Social links and icon style
   - Colors and borders
   - Typography and link styling
   - Slots overview and insertion hints
 - Visual owns content, legal, social, and user-facing link/style controls.
-- Link reordering is supported. Column reordering remains deferred because slot
-  ownership is positional (`column-1/2/3`).
+- Link reordering is supported.
+- Column reordering is supported only through the live footer block patch path,
+  where the visible column data and matching `column-1/2/3` slot payloads move
+  together as one atomic contract. Static previews keep those controls
+  read-only.
+- Newsletter remains composition-only: use an existing Newsletter widget in a
+  footer slot instead of storing submission config in Footer JSON.
+- The Utility strip owns bounded read-only `address` / `phone` / `email`
+  presentation and an optional anchor-only back-to-top action.
 
 ### Advanced
 - Technical-only scope.
@@ -82,6 +90,12 @@ icon-based social actions.
 - Footer uses deterministic fallback columns when payload is incomplete.
 - Slot content is rendered in column regions and bottom strip with nested widget
   support.
+- Footer contact fields are read-only only:
+  - `address` renders as plain text,
+  - `phone` renders only when it can be normalized to a safe `tel:` href,
+  - `email` renders only when it can be normalized to a safe `mailto:` href.
+- Back-to-top renders only when enabled, uses `href="#top"`, and does not add
+  JavaScript-only scroll behavior.
 - Footer landmark naming:
   - uses `aria-labelledby` when visible brand text exists,
   - otherwise falls back to `aria-label="Site footer"`.
@@ -150,6 +164,15 @@ icon-based social actions.
     "terms": "/terms",
     "termsLabel": "Terms",
     "termsTarget": "_self"
+  },
+  "contact": {
+    "address": "123 Market Street",
+    "phone": "+1 415 555 0100",
+    "email": "hello@example.com"
+  },
+  "backToTop": {
+    "enabled": true,
+    "label": "Back to top"
   },
   "socialEnabled": true,
   "social": [

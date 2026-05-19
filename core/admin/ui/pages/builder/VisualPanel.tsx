@@ -14,7 +14,11 @@ export type VisualPanelSlotControlItem = {
   count: number;
   empty: boolean;
   canRemove: boolean;
+  canMoveUp?: boolean;
+  canMoveDown?: boolean;
   onRemove?: () => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
 };
 
 export type VisualPanelSlotControls = {
@@ -150,6 +154,30 @@ export function VisualPanel({
                     <span>
                       {item.count} {item.count === 1 ? "item" : "items"}
                     </span>
+                    {typeof item.canMoveUp === "boolean" ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 px-2 text-[10px]"
+                        onClick={item.onMoveUp}
+                        disabled={!item.canMoveUp}
+                      >
+                        Move up
+                      </Button>
+                    ) : null}
+                    {typeof item.canMoveDown === "boolean" ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 px-2 text-[10px]"
+                        onClick={item.onMoveDown}
+                        disabled={!item.canMoveDown}
+                      >
+                        Move down
+                      </Button>
+                    ) : null}
                     {item.canRemove && item.onRemove ? (
                       <Button
                         type="button"

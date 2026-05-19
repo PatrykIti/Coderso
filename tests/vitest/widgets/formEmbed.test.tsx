@@ -244,6 +244,38 @@ test("form embed renders alert regions and captcha bridge attrs when runtime met
   expect(html).toContain('aria-live="assertive"');
 });
 
+test("form embed renders supported radio fields instead of the unsupported diagnostic", () => {
+  const html = renderToString(
+    <FormEmbedBlock
+      data={{
+        formId: "form-1",
+        resolved: {
+          formName: "Survey",
+          fields: [
+            {
+              id: "field-1",
+              type: "radio",
+              label: "Preferred contact",
+              name: "contact_method",
+              required: true,
+              settings: {
+                options: ["Email", "Phone"],
+                defaultValue: "Email",
+              },
+            },
+          ],
+        },
+      }}
+      variant="standard"
+    />
+  );
+
+  expect(html).toContain('type="radio"');
+  expect(html).toContain('value="Email"');
+  expect(html).toContain('value="Phone"');
+  expect(html).not.toContain("Unsupported form field type:");
+});
+
 test("form embed applies field style and logic runtime attributes", () => {
   const html = renderToString(
     <FormEmbedBlock

@@ -532,6 +532,7 @@ const supportedFieldTypes = new Set([
   "textarea",
   "checkbox",
   "select",
+  "radio",
 ]);
 
 const resolveUnsupportedFieldLabel = (field: ResolvedFormField) => field.type.trim() || "unknown";
@@ -754,6 +755,50 @@ function renderFieldControl(
             {helper}
           </p>
         ) : null}
+      </div>
+    );
+  }
+
+  if (field.type === "radio") {
+    const optionsList = Array.isArray(field.settings?.options) ? field.settings.options : [];
+    return (
+      <div className={wrapperClassName}>
+        {renderLabel()}
+        <div className="space-y-2">
+          {optionsList.length === 0 ? (
+            <div className="rounded-md border border-dashed px-3 py-2 text-sm text-[var(--color-text)]/70">
+              No options configured
+            </div>
+          ) : (
+            optionsList.map((option) => (
+              <label
+                key={`${field.id}-${option}`}
+                className="flex items-center gap-2 text-sm text-[var(--color-text)]"
+              >
+                <input
+                  type="radio"
+                  name={field.name}
+                  value={option}
+                  required={required}
+                  aria-required={required ? "true" : undefined}
+                  aria-labelledby={labelHidden ? undefined : ids.labelId}
+                  aria-label={labelHidden ? field.label : undefined}
+                  aria-describedby={ids.helperId}
+                  data-required-original={required ? "1" : "0"}
+                  defaultChecked={field.settings?.defaultValue === option}
+                  className={joinClasses("h-4 w-4", borderClassName, radiusClassName)}
+                  style={{ borderColor }}
+                />
+                <span>{option}</span>
+              </label>
+            ))
+          )}
+          {helper ? (
+            <p id={ids.helperId} className="text-xs" style={{ color: helperColor }}>
+              {helper}
+            </p>
+          ) : null}
+        </div>
       </div>
     );
   }

@@ -12,12 +12,16 @@ import {
 import { Switch } from "@/components/ui/switch";
 
 import {
+  footerColumnSlotIds,
   footerSocialTypes,
+  reorderFooterColumnsAndSlots,
   resolveFooterColumnCount,
   resolveFooterColumnsForVariant,
   resolveFooterSocialLabel,
   resolveFooterSocialType,
+  type FooterBackToTop,
   type FooterColumn,
+  type FooterContactInfo,
   type FooterData,
   type FooterLink,
   type FooterLinkTarget,
@@ -171,6 +175,34 @@ const updateFooterLegal = (
   });
 };
 
+const updateFooterContact = (
+  value: FooterData,
+  onChange: (next: FooterData) => void,
+  patch: Partial<FooterContactInfo>
+) => {
+  onChange({
+    ...value,
+    contact: {
+      ...value.contact,
+      ...patch,
+    },
+  });
+};
+
+const updateFooterBackToTop = (
+  value: FooterData,
+  onChange: (next: FooterData) => void,
+  patch: Partial<FooterBackToTop>
+) => {
+  onChange({
+    ...value,
+    backToTop: {
+      ...value.backToTop,
+      ...patch,
+    },
+  });
+};
+
 const updateFooterLayout = (
   value: FooterData,
   onChange: (next: FooterData) => void,
@@ -305,6 +337,35 @@ const removeColumnLink = (
     links: links.filter((_, index) => index !== linkIndex),
   };
   onChange({ ...value, columns: nextColumns });
+};
+
+const moveFooterColumn = (
+  value: FooterData,
+  variant: string,
+  fromIndex: number,
+  toIndex: number,
+  onBlockPatch?: WidgetEditorProps<FooterData>["onBlockPatch"]
+) => {
+  if (!onBlockPatch) return;
+  onBlockPatch((current) => {
+    const next = reorderFooterColumnsAndSlots({
+      columns: Array.isArray(current.data.columns)
+        ? (current.data.columns as FooterColumn[])
+        : value.columns,
+      slots: current.slots,
+      variant,
+      fromIndex,
+      toIndex,
+    });
+    return {
+      ...current,
+      data: {
+        ...current.data,
+        columns: next.columns,
+      },
+      slots: next.slots,
+    };
+  });
 };
 
 function FieldLabel({
@@ -832,12 +893,14 @@ export function FooterVisualEditor({
   onChange,
   variant,
   onVariantChange,
+  onBlockPatch,
 }: WidgetEditorProps<FooterData>) {
   const visibleCount = resolveFooterColumnCount(variant);
   const visibleColumns = resolveFooterColumnsForVariant(value.columns, variant).slice(
     0,
     visibleCount
   );
+  const canMoveColumns = Boolean(onBlockPatch) && visibleCount > 1;
 
   return (
     <div className="space-y-5">
@@ -854,17 +917,51 @@ export function FooterVisualEditor({
       <div className="space-y-3 rounded-xl border p-4">
         <p className="text-sm font-semibold">Columns and links</p>
         <p className="text-xs text-muted-foreground">
-          Link order is editable here. Column order stays slot-bound for now so nested slot content
-          does not silently detach from `column-1`, `column-2`, or `column-3`.
+          Link order is editable here. Column moves are allowed only through the live block patch
+          path so the matching `column-1`, `column-2`, and `column-3` slot payloads move with the
+          visible columns.
         </p>
+        {!canMoveColumns ? (
+          <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
+            Column reorder is read-only in static previews because slot remapping requires the live
+            footer block patch path.
+          </div>
+        ) : null}
         <div className="space-y-4">
           {visibleColumns.map((column, columnIndex) => (
             <div key={`${column.title}-${columnIndex}`} className="space-y-3 rounded-lg border p-3">
               <div className="flex items-center justify-between gap-2">
-                <p className="text-sm font-semibold">Column {columnIndex + 1}</p>
-                <p className="text-xs text-muted-foreground">
-                  Hidden columns remain preserved when the active variant shows fewer columns.
-                </p>
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold">Column {columnIndex + 1}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Slot owner: `{footerColumnSlotIds[columnIndex] ?? `column-${columnIndex + 1}`}`
+                    . Hidden columns remain preserved when the active variant shows fewer columns.
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      moveFooterColumn(value, variant, columnIndex, columnIndex - 1, onBlockPatch)
+                    }
+                    disabled={!canMoveColumns || columnIndex === 0}
+                  >
+                    Move left
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      moveFooterColumn(value, variant, columnIndex, columnIndex + 1, onBlockPatch)
+                    }
+                    disabled={!canMoveColumns || columnIndex === visibleColumns.length - 1}
+                  >
+                    Move right
+                  </Button>
+                </div>
               </div>
               <FieldLabel label="Column title">
                 <Input
@@ -978,6 +1075,65 @@ export function FooterVisualEditor({
         </p>
         <BrandEditor value={value} onChange={onChange} />
         <LegalEditor value={value} onChange={onChange} showTargets showVisibilityToggle />
+      </div>
+
+      <div className="space-y-3 rounded-xl border p-4">
+        <p className="text-sm font-semibold">Utility strip</p>
+        <p className="text-xs text-muted-foreground">
+          Newsletter stays composition-only: place the existing Newsletter widget into a footer slot
+          instead of storing submission config in Footer JSON. Address/contact fields below are
+          read-only, and back-to-top stays an anchor-only action.
+        </p>
+        <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
+          Recommended newsletter placement: `bottom` for a dedicated lower strip, or one of the
+          visible column slots when the page needs it inline with footer links.
+        </div>
+        <div className="grid gap-3 lg:grid-cols-2">
+          <FieldLabel label="Address">
+            <Input
+              value={value.contact?.address ?? ""}
+              onChange={(event) =>
+                updateFooterContact(value, onChange, { address: event.target.value })
+              }
+              placeholder="123 Market Street, San Francisco, CA"
+            />
+          </FieldLabel>
+          <FieldLabel label="Phone">
+            <Input
+              value={value.contact?.phone ?? ""}
+              onChange={(event) =>
+                updateFooterContact(value, onChange, { phone: event.target.value })
+              }
+              placeholder="+1 415 555 0100"
+            />
+          </FieldLabel>
+          <FieldLabel label="Email">
+            <Input
+              value={value.contact?.email ?? ""}
+              onChange={(event) =>
+                updateFooterContact(value, onChange, { email: event.target.value })
+              }
+              placeholder="hello@example.com"
+            />
+          </FieldLabel>
+        </div>
+        <SwitchField
+          label="Show back-to-top action"
+          description="Uses a plain `#top` anchor so the browser handles scrolling without hidden motion scripts."
+          checked={value.backToTop?.enabled === true}
+          onCheckedChange={(checked) =>
+            updateFooterBackToTop(value, onChange, { enabled: checked })
+          }
+        />
+        <FieldLabel label="Back-to-top label">
+          <Input
+            value={value.backToTop?.label ?? ""}
+            onChange={(event) =>
+              updateFooterBackToTop(value, onChange, { label: event.target.value })
+            }
+            placeholder="Back to top"
+          />
+        </FieldLabel>
       </div>
 
       <div className="space-y-3 rounded-xl border p-4">
@@ -1144,10 +1300,14 @@ export function FooterVisualEditor({
       <div className="space-y-3 rounded-xl border p-4">
         <p className="text-sm font-semibold">Slots overview and insertion hints</p>
         <ul className="space-y-1 text-xs text-muted-foreground">
-          <li>`column-1`, `column-2`, and `column-3` render inside the visible footer columns.</li>
+          <li>
+            `column-1`, `column-2`, and `column-3` render inside the visible footer columns and move
+            with those columns when reorder happens in the live editor.
+          </li>
           <li>
             `bottom` renders in the lower legal/actions strip, or below the compact row in Minimal.
           </li>
+          <li>Compose newsletter widgets through slots; Footer does not own submission routes.</li>
           <li>Use the Insert dialog on canvas to place widgets into those slots.</li>
         </ul>
       </div>

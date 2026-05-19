@@ -151,6 +151,8 @@ test("VisualPanel renders slot controls inside a named structure section", () =>
             count: 0,
             empty: true,
             canRemove: false,
+            canMoveUp: false,
+            canMoveDown: false,
           },
         ],
         childrenHint: "Use the slot add action in the canvas or drag from the widgets tab.",
@@ -162,6 +164,39 @@ test("VisualPanel renders slot controls inside a named structure section", () =>
   expect(html).toContain('data-widget-control="hero.slot.content"');
   expect(html).toContain("Hero Content slot");
   expect(html).toContain("Manage slots in the visual flow.");
+});
+
+test("VisualPanel renders repeatable slot move controls with disabled boundaries", () => {
+  const html = renderAdminUi(
+    <VisualPanel
+      widget={createWidget({ visualOwnsVariantSelection: true })}
+      block={baseBlock}
+      onChange={() => undefined}
+      slotControls={{
+        sectionId: "accordion.structure",
+        title: "Structure",
+        addActions: [],
+        items: [
+          {
+            id: "accordion.slot.item-1",
+            label: "Item 1 slot",
+            count: 1,
+            empty: false,
+            canRemove: true,
+            canMoveUp: false,
+            canMoveDown: true,
+            onMoveUp: () => undefined,
+            onMoveDown: () => undefined,
+            onRemove: () => undefined,
+          },
+        ],
+      }}
+    />
+  );
+
+  expect(html).toContain("Move up");
+  expect(html).toContain("Move down");
+  expect(html).toContain("disabled");
 });
 
 test("VisualPanel uses navigation editor variant controls", () => {

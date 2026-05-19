@@ -45,6 +45,7 @@ test("FieldLibrary renders items and forwards add callbacks", () => {
     <FieldLibrary
       items={[
         { id: "text", label: "Text", icon: Icon as never, type: "text" },
+        { id: "radio", label: "Radio", icon: Icon as never, type: "radio" },
         { id: "checkbox", label: "Checkbox", icon: Icon as never, type: "checkbox" },
       ]}
       onAddField={onAddField}
@@ -57,15 +58,15 @@ test("FieldLibrary renders items and forwards add callbacks", () => {
 
     React.act(() => {
       Array.from(view.container.querySelectorAll("button"))
-        .find((button) => button.textContent?.includes("Checkbox"))
+        .find((button) => button.textContent?.includes("Radio"))
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
 
     expect(onAddField).toHaveBeenCalledWith({
-      id: "checkbox",
-      label: "Checkbox",
+      id: "radio",
+      label: "Radio",
       icon: Icon,
-      type: "checkbox",
+      type: "radio",
     });
   } finally {
     view.cleanup();

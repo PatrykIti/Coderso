@@ -12,6 +12,7 @@ export type FormFieldType =
   | "text"
   | "email"
   | "select"
+  | "radio"
   | "checkbox"
   | "textarea"
   | "phone"
@@ -52,6 +53,7 @@ const fieldTypes = new Set<FormFieldType>([
   "text",
   "email",
   "select",
+  "radio",
   "checkbox",
   "textarea",
   "phone",
@@ -84,9 +86,7 @@ const normalizeFieldName = (value: string) =>
 const normalizeOptions = (value: unknown): string[] => {
   if (value === undefined) return [];
   if (!Array.isArray(value)) throw new Error("form_field_invalid");
-  const options = value
-    .map((entry) => normalizeString(entry))
-    .filter(Boolean) as string[];
+  const options = value.map((entry) => normalizeString(entry)).filter(Boolean) as string[];
   return Array.from(new Set(options));
 };
 
@@ -142,7 +142,7 @@ const normalizeSettings = (
     normalized.step = normalizeFormStep(settings.step);
   }
 
-  if (type === "select") {
+  if (type === "select" || type === "radio") {
     normalized.options = normalizeOptions(settings.options);
   }
 
@@ -219,10 +219,7 @@ export function normalizeFormFields(fields: FormFieldInput[]): NormalizedFormFie
   return normalized;
 }
 
-export function validateSubmissionPayload(
-  payload: unknown,
-  fields: NormalizedFormField[]
-) {
+export function validateSubmissionPayload(payload: unknown, fields: NormalizedFormField[]) {
   if (!assertPlainObject(payload)) throw new Error("form_payload_invalid");
   const data = payload as Record<string, unknown>;
   const normalized: Record<string, unknown> = {};
@@ -256,7 +253,8 @@ export function validateSubmissionPayload(
         normalized[field.name] = parsed;
         break;
       }
-      case "select": {
+      case "select":
+      case "radio": {
         const text = normalizeString(value);
         if (!text) {
           if (field.required) throw new Error("form_payload_required");
