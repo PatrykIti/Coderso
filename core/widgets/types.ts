@@ -51,6 +51,7 @@ export type WidgetPreviewState = {
   status: "idle" | "loading" | "ready" | "error";
   dataPatch?: Record<string, unknown>;
   message?: string;
+  requestKey?: string;
 };
 
 export type WidgetRenderContext = {
@@ -127,6 +128,7 @@ export type WidgetRepeatableSlotSyncAdapter = {
 export type WidgetEditorCapabilities = {
   visualOwnsVariantSelection?: boolean;
   slotControlSection?: WidgetSlotControlSection;
+  supportsPreviewState?: boolean;
 };
 
 export type WidgetDefinition<T = Record<string, unknown>> = {

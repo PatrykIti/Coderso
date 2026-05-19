@@ -7,15 +7,19 @@ import {
   buildProductGalleryQueryInput,
   normalizeProductGalleryData,
   type ProductGalleryData,
+  type ProductGalleryRuntimeItem,
 } from "../../widgets/core/productGallery";
 import {
   buildProductTableQueryInput,
   normalizeProductTableData,
   type ProductTableData,
 } from "../../widgets/core/productTable";
+import { getMediaById } from "../media/mediaService";
+import { listCommerceProducts } from "./commerceService";
 import {
   buildCommerceComparePayload,
   resolveCommerceRuntimeProducts,
+  toCommerceRuntimeCard,
 } from "./commerceRuntimeResolver";
 
 export type CommerceRuntimeCache = Map<
@@ -26,6 +30,8 @@ export type CommerceRuntimeCache = Map<
 type CommerceWidgetRuntimeDeps = {
   resolveRuntimeProducts: typeof resolveCommerceRuntimeProducts;
   buildComparePayload: typeof buildCommerceComparePayload;
+  getMediaById: typeof getMediaById;
+  listProducts: typeof listCommerceProducts;
 };
 
 type CommerceWidgetRuntimeOptions = {
@@ -36,6 +42,8 @@ type CommerceWidgetRuntimeOptions = {
 const defaultDeps: CommerceWidgetRuntimeDeps = {
   resolveRuntimeProducts: resolveCommerceRuntimeProducts,
   buildComparePayload: buildCommerceComparePayload,
+  getMediaById,
+  listProducts: listCommerceProducts,
 };
 
 const readRuntimeErrorCode = (error: unknown) => {
@@ -67,6 +75,101 @@ const resolveWithCache = async (
   return resolved;
 };
 
+const resolveManualProductGalleryItems = async (
+  value: ProductGalleryData,
+  options: CommerceWidgetRuntimeOptions,
+  deps: CommerceWidgetRuntimeDeps
+) => {
+  const normalized = normalizeProductGalleryData(value);
+  const productIds = normalized.curation?.productIds ?? [];
+  if (productIds.length === 0) {
+    return { cards: [] as ProductGalleryRuntimeItem[], total: 0 };
+  }
+
+  const statusFilter = normalized.source?.status ?? [];
+  const allowedStatuses: Array<"draft" | "published" | "archived"> =
+    options.preview || statusFilter.length > 0 ? [...statusFilter] : ["published"];
+  const products = await deps.listProducts();
+  const filteredProducts =
+    allowedStatuses.length > 0
+      ? products.filter((product) => allowedStatuses.includes(product.status))
+      : products;
+  const productMap = new Map(filteredProducts.map((product) => [product.id, product]));
+  const ordered = productIds
+    .map((id) => productMap.get(id))
+    .filter((product): product is NonNullable<typeof product> => Boolean(product));
+  const pageSize = normalized.source?.limit ?? 8;
+  const cards = ordered.slice(0, pageSize).map((product) => toCommerceRuntimeCard(product));
+  return {
+    cards,
+    total: ordered.length,
+  };
+};
+
+const attachProductGalleryMedia = async (
+  cards: ProductGalleryRuntimeItem[],
+  deps: CommerceWidgetRuntimeDeps
+) => {
+  const lookupIds = Array.from(
+    new Set(
+      cards
+        .map((card) => card.primaryMediaId ?? card.mediaIds[0] ?? null)
+        .filter((id): id is string => typeof id === "string" && id.length > 0)
+    )
+  );
+
+  const mediaById = new Map<
+    string,
+    { url: string; alt: string | null; width: number | null; height: number | null } | null
+  >();
+
+  await Promise.all(
+    lookupIds.map(async (id) => {
+      try {
+        const media = await deps.getMediaById(id);
+        if (!media || media.type !== "image" || !media.url) {
+          mediaById.set(id, null);
+          return;
+        }
+        mediaById.set(id, {
+          url: media.url,
+          alt: media.alt ?? media.title ?? null,
+          width: media.width ?? null,
+          height: media.height ?? null,
+        });
+      } catch {
+        mediaById.set(id, null);
+      }
+    })
+  );
+
+  return cards.map((card) => {
+    const mediaId = card.primaryMediaId ?? card.mediaIds[0] ?? null;
+    const media = mediaId ? (mediaById.get(mediaId) ?? null) : null;
+    return {
+      ...card,
+      ...(media ? { media } : {}),
+    } satisfies ProductGalleryRuntimeItem;
+  });
+};
+
+const resolveProductGalleryRuntime = async (
+  value: ProductGalleryData,
+  options: CommerceWidgetRuntimeOptions,
+  deps: CommerceWidgetRuntimeDeps
+) => {
+  const normalized = normalizeProductGalleryData(value);
+  if (normalized.curation?.mode === "manual") {
+    return resolveManualProductGalleryItems(normalized, options, deps);
+  }
+
+  const runtime = await resolveWithCache(options, buildProductGalleryQueryInput(normalized), deps);
+  return {
+    cards: runtime.cards,
+    total: runtime.total,
+  };
+};
+
 export async function hydrateProductGalleryRuntimeData(
   value: ProductGalleryData,
   options: CommerceWidgetRuntimeOptions,
@@ -79,16 +182,13 @@ export async function hydrateProductGalleryRuntimeData(
 
   const normalized = normalizeProductGalleryData(value);
   try {
-    const runtime = await resolveWithCache(
-      options,
-      buildProductGalleryQueryInput(normalized),
-      runtimeDeps
-    );
+    const runtime = await resolveProductGalleryRuntime(normalized, options, runtimeDeps);
+    const items = await attachProductGalleryMedia(runtime.cards, runtimeDeps);
 
     return {
       ...normalized,
       resolved: {
-        items: runtime.cards,
+        items,
         total: runtime.total,
         resolvedAt: new Date().toISOString(),
       },

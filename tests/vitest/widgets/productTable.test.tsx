@@ -85,8 +85,8 @@ test("product table renders rows with configured columns", () => {
 
   expect(html).toContain("Starter Home");
   expect(html).toContain("starter-home");
-  expect(html).toContain("$120,000.00");
-  expect(html).toContain("$130,000.00");
+  expect(html).toContain("$1,200.00");
+  expect(html).toContain("$1,300.00");
   expect(html).toContain("In stock");
   expect(html).toContain("Collections");
 });

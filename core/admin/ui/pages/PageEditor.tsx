@@ -41,6 +41,10 @@ import {
   clearActiveAssistantSurfaceContext,
   setActiveAssistantSurfaceContext,
 } from "@/ui/assistant/activeSurfaceContext";
+import {
+  buildActiveWidgetPreviewStates,
+  widgetSupportsPreviewState,
+} from "@/ui/widgets/previewStateSupport";
 
 import { BlockList } from "./builder/BlockList";
 import { BlockSettings } from "./builder/BlockSettings";
@@ -459,9 +463,18 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     [blocks, bookingCalendarPreviewResolved, hasBookingCalendar]
   );
   const bookingFlows = useMemo(() => collectBookingFlowSummaries(blocks), [blocks]);
+  const selectedWidgetSupportsPreviewState = useMemo(
+    () => widgetSupportsPreviewState(selectedWidget),
+    [selectedWidget]
+  );
+  const previewEnabled = useMemo(
+    () =>
+      Boolean(selectedBlock) &&
+      (supportsTransientWidgetPreview(selectedBlock?.type) || selectedWidgetSupportsPreviewState),
+    [selectedBlock, selectedWidgetSupportsPreviewState]
+  );
   const pageEditorWidgetContext = useMemo<WidgetEditorContext | undefined>(() => {
     if (!selectedBlock) return undefined;
-    const previewEnabled = supportsTransientWidgetPreview(selectedBlock.type);
 
     return {
       surface: "page-builder",
@@ -484,16 +497,31 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
           }
         : {}),
     };
-  }, [bookingCalendarPreviewResolved, bookingFlows, selectedBlock, widgetPreviewStates]);
+  }, [
+    bookingCalendarPreviewResolved,
+    bookingFlows,
+    previewEnabled,
+    selectedBlock,
+    widgetPreviewStates,
+  ]);
   const activeWidgetPreviewStates = useMemo(() => {
-    if (!selectedBlock || !supportsTransientWidgetPreview(selectedBlock.type)) {
+    if (!selectedBlock || !previewEnabled) {
       return {} as Record<string, WidgetPreviewState | undefined>;
+    }
+    if (selectedWidgetSupportsPreviewState) {
+      return buildActiveWidgetPreviewStates(selectedBlock.id, selectedWidget, widgetPreviewStates);
     }
     const previewState = widgetPreviewStates[selectedBlock.id];
     return previewState
       ? { [selectedBlock.id]: previewState }
       : ({} as Record<string, WidgetPreviewState | undefined>);
-  }, [selectedBlock, widgetPreviewStates]);
+  }, [
+    previewEnabled,
+    selectedBlock,
+    selectedWidget,
+    selectedWidgetSupportsPreviewState,
+    widgetPreviewStates,
+  ]);
   const pageSettings = useMemo(() => resolvePageSettings(pageData), [pageData]);
   const pageLayout = pageSettings.layout;
   const wrapperPaddingClass = joinClasses(

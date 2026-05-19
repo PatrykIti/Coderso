@@ -6,7 +6,7 @@
 **Category:** Widgets + Commerce + Runtime Render + Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-256-01, TASK-256-02, TASK-280
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -38,7 +38,7 @@ Out of scope:
 - shared editor atomic update helpers, owned by TASK-256-01;
 - changing `formatCommerceMoney` for Product Compare/Table inside this Product
   Gallery-only leaf. If the cents/unit bug is confirmed in the shared helper,
-  split that shared commerce formatter fix before landing Product Gallery code.
+  hand it off to `TASK-313` before landing Product Gallery code.
 
 ## Source Findings
 
@@ -49,8 +49,9 @@ Out of scope:
 - `CODE-04`: minimal cards can receive inline `borderColor` without a border.
 - `CODE-07`: compare-at price renders even when it is lower than current price.
 - `NEW-02`: frontend rendered `$19,900.00` for a product shown as `$199.00` in
-  Commerce admin; current `CommerceTable` divides by 100 but
-  `formatCommerceMoney` does not.
+  Commerce admin; Product Gallery must verify the symptom locally, but the
+  shared implementation belongs to `TASK-313` because `CommerceTable` divides by
+  100 while shared `formatCommerceMoney()` did not.
 
 ## Sub-Tasks
 
@@ -62,7 +63,7 @@ Out of scope:
 |---|---|
 | `core/widgets/core/productGallery.tsx` | Use variant-specific class maps, remove dead fallback branches, clean minimal-card border handling, compare-at guard, and Product Gallery price display verification hook if local. |
 | `core/admin/ui/widgets/editors/ProductGalleryEditors.tsx` | Add copy/preview labels for compact and minimal surface behavior if editor copy changes. |
-| `tests/vitest/widgets/productGallery.test.tsx` | Add SSR assertions for compact vs cards, no trailing legacy classes, minimal border behavior, compare-at guard, and Product Gallery price formatting expectation. |
+| `tests/vitest/widgets/productGallery.test.tsx` | Add SSR assertions for compact vs cards, no trailing legacy classes, minimal border behavior, compare-at guard, and Product Gallery-local price-display behavior. |
 | `tests/vitest/ui/product-gallery-editor-wave.test.tsx` | Cover editor-facing compact/minimal guidance if controls or copy move. |
 | `tests/unit/commerce/commerceWidgetRuntime.test.ts` | Run when runtime money/card values are remapped before render. |
 | `_docs/_WIDGETS/PRODUCT_GALLERY.md` | Document compact, surface, minimal, compare-at, and price-display behavior. |
@@ -113,8 +114,8 @@ Error handling:
 - Minimal cards must not serialize useless `border-color` unless a visible
   border/ring is intentionally added by this leaf.
 - If the cents/unit bug requires shared formatter changes, stop the leaf and
-  create or link a separate commerce-shared task instead of patching only
-  Product Gallery with a hidden duplicate formatter.
+  link `TASK-313` instead of patching only Product Gallery with a hidden
+  duplicate formatter.
 
 Regression-test shape:
 
@@ -151,6 +152,11 @@ No API routes are added.
   card values or money units are remapped.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run lint`
+- `bun run test:bun`
+- `bun run test:vitest`
+- `bun run scan:security:strict`
+- `bun run precommit`
 
 ## Documentation Updates Required
 
@@ -166,4 +172,5 @@ No API routes are added.
 - Minimal card surface behavior is visible, documented, and not misleading.
 - Compare-at price is shown only for actual discounts.
 - Product Gallery price display is verified against commerce admin amount units,
-  and any cross-commerce formatter fix is split out instead of hidden here.
+  and any cross-commerce formatter fix is tracked under `TASK-313` instead of
+  hidden here.

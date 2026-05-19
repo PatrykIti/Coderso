@@ -6,14 +6,15 @@
 **Category:** Widgets + Commerce + Admin UI + Runtime Query
 **Estimated Effort:** Large
 **Dependencies:** TASK-280-03, TASK-280-04, TASK-280
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
 ## Overview
 
 Repair Product Gallery source-control truthfulness: query normalization,
-collection selection guidance, and bounded Product Gallery filters.
+Product Gallery-local collection guidance around the existing shared picker, and
+bounded Product Gallery filters.
 
 This leaf covers `CODE-05`, `UX-05`, `BF-08`, and `BF-11` from
 `_docs/PLAYWRIGHT/REPORT_PRODUCT_GALLERY_WIDGET.md`.
@@ -24,16 +25,20 @@ In scope:
 
 - remove Product Gallery query double-normalization in
   `buildProductGalleryQueryInput`;
-- improve Product Gallery collection selection UX when collections are loading,
-  empty, or selected by raw ID fallback;
-- add bounded Product Gallery price-filter fields only if the existing commerce
-  query service supports them safely;
+- add Product Gallery-local guidance and selected-ID clarity when the existing
+  shared collection picker is loading, empty, stale, or falling back to raw
+  IDs, without silently rewriting the shared `CommerceSourceFields` contract;
+- wire bounded Product Gallery price-filter fields into the already-supported
+  `pricing.amount` query contract;
 - preserve source field defaults and legacy payload compatibility.
 
 Out of scope:
 
-- changing Product Compare/Product Table behavior accidentally through shared
-  `CommerceSourceFields` without explicit test coverage;
+- changing Product Compare/Product Table collection picker behavior through
+  shared `CommerceSourceFields` without explicit cross-widget coverage or a
+  separate shared task;
+- introducing a brand-new shared collection picker/autocomplete contract inside
+  this Product Gallery-only leaf;
 - arbitrary query operators or unbounded filter JSON;
 - client-side provider fetching.
 
@@ -41,8 +46,10 @@ Out of scope:
 
 - `CODE-05`: `buildProductGalleryQueryInput()` normalizes Product Gallery data,
   then normalizes `source` again.
-- `UX-05` and `BF-08`: collection selection is hard to use when no commerce
-  collections are visible; raw ID fallback remains the only manual option.
+- `UX-05` and `BF-08`: Playwright saw the shared collection picker in an
+  empty-data/fallback state, so Product Gallery needs clearer local guidance and
+  selected-ID visibility when shared collection data is loading, empty, stale,
+  or represented only through fallback IDs.
 - `BF-11`: price min/max filters are missing from Product Gallery source
   controls.
 
@@ -54,9 +61,7 @@ Out of scope:
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/productGallery.tsx` | Simplify query input data flow and add Product Gallery source/filter fields if approved. |
-| `core/widgets/core/commerceWidgetShared.ts` | Extend shared source types only if price filters must be shared; otherwise keep Product Gallery-local fields isolated. |
-| `core/services/commerce/commerceQueryService.ts` | Add allowlisted price filters only if they can be represented safely and tested. |
+| `core/widgets/core/productGallery.tsx` | Simplify query input data flow and add Product Gallery-local source/filter fields that map onto the existing query contract. |
 | `core/services/commerce/commerceWidgetRuntime.ts` | Preserve normalized Product Gallery query input for runtime hydration. |
 | `core/admin/ui/widgets/editors/ProductGalleryEditors.tsx` | Add Product Gallery source UX copy, collection guidance, and filter controls. |
 | `core/admin/ui/widgets/editors/CommerceWidgetEditorShared.tsx` | Touch only if shared collection UI changes are intentional and covered for other commerce widgets. |
@@ -87,17 +92,21 @@ Optional Product Gallery filter model:
 
 ```ts
 type ProductGalleryFilters = {
-  minPrice?: number;
-  maxPrice?: number;
+  minPriceMinor?: number;
+  maxPriceMinor?: number;
 };
 
 function normalizeProductGalleryFilters(value: unknown): ProductGalleryFilters {
-  const minPrice = normalizeOptionalPositiveInteger(readUnknown(value, "minPrice"));
-  const maxPrice = normalizeOptionalPositiveInteger(readUnknown(value, "maxPrice"));
-  if (minPrice !== undefined && maxPrice !== undefined && minPrice > maxPrice) {
-    return { minPrice: maxPrice, maxPrice: minPrice };
+  const minPriceMinor = normalizeOptionalPositiveInteger(readUnknown(value, "minPriceMinor"));
+  const maxPriceMinor = normalizeOptionalPositiveInteger(readUnknown(value, "maxPriceMinor"));
+  if (
+    minPriceMinor !== undefined &&
+    maxPriceMinor !== undefined &&
+    minPriceMinor > maxPriceMinor
+  ) {
+    return { minPriceMinor: maxPriceMinor, maxPriceMinor: minPriceMinor };
   }
-  return compactObject({ minPrice, maxPrice });
+  return compactObject({ minPriceMinor, maxPriceMinor });
 }
 ```
 
@@ -105,14 +114,18 @@ Data flow:
 
 - Editor updates Product Gallery source/filter fields.
 - Normalizer clamps filter values and removes invalid entries.
-- Query builder emits only allowlisted `pricing.amount` filters accepted by
-  `commerceQueryService`.
+- Query builder emits only allowlisted `pricing.amount` filters already accepted
+  by `commerceQueryService`.
 - Runtime hydration uses the normalized query once.
 
 Error handling:
 
 - Invalid numbers are removed or clamped.
-- Empty collection lists show useful copy and preserve selected raw IDs.
+- Price filter inputs use the same integer minor-unit contract as commerce
+  admin (`19900` means `$199.00`) until a separate shared UX task changes that
+  editor convention repo-wide.
+- Empty collection lists show useful Product Gallery-local copy and preserve
+  selected raw IDs.
 - Shared `CommerceSourceFields` changes must include regression coverage for
   Product Compare/Table or be avoided.
 - Query service rejects unknown filter fields and keeps stable error codes.
@@ -159,6 +172,11 @@ No API routes are added.
 - `bun test tests/unit/widgets/validator.test.ts` when schema changes.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run lint`
+- `bun run test:bun`
+- `bun run test:vitest`
+- `bun run scan:security:strict`
+- `bun run precommit`
 
 ## Documentation Updates Required
 
@@ -170,8 +188,12 @@ No API routes are added.
 ## Acceptance Criteria
 
 - Product Gallery query input is normalized once and remains deterministic.
-- Collection source controls are understandable when collections are empty,
-  loading, failed, selected, or represented only by fallback IDs.
+- Collection source controls are understandable when the shared picker is empty,
+  loading, failed, selected, stale, or represented only by fallback IDs.
 - Price filters, if added, are bounded, validated, tested, and backend-owned.
+- Price filter units are explicit and match the current integer minor-unit
+  commerce contract.
+- Any richer shared collection picker/autocomplete requirement is explicitly
+  split or deferred instead of being hidden as a Product Gallery-only fix.
 - Shared commerce editor/query changes are not hidden as Product Gallery-only
   work without explicit cross-widget tests.

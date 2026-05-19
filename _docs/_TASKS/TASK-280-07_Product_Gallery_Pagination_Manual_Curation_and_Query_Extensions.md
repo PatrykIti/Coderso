@@ -6,7 +6,7 @@
 **Category:** Widgets + Commerce + Runtime Query + Admin UI
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-280-03, TASK-280-05, TASK-280
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -22,8 +22,8 @@ This leaf covers `BF-06` and `BF-10` from
 
 In scope:
 
-- Product Gallery pagination/load-more or view-more behavior backed by the
-  existing commerce runtime query model;
+- Product Gallery view-all or explicitly deferred load-more behavior backed by
+  the existing commerce runtime query model;
 - manual curated product ordering only if product IDs can be resolved through
   backend-owned commerce services;
 - editor controls for pagination mode and curated product order;
@@ -34,6 +34,8 @@ Out of scope:
 - arbitrary public API endpoints;
 - client-side provider fetching or client-owned search indices;
 - cart/checkout mutations;
+- shared product-ID query/schema/route extensions unless they are split or
+  explicitly covered as commerce-shared work;
 - Product Compare/Product Table pagination unless split to a commerce-shared
   task.
 
@@ -53,9 +55,10 @@ Out of scope:
 | File | Required change |
 |---|---|
 | `core/widgets/core/productGallery.tsx` | Add pagination/curation schema, defaults, normalizer, query input, and runtime markers. |
-| `core/services/commerce/commerceQueryService.ts` | Add offset/page or explicit product-id ordering only through allowlisted query fields. |
+| `core/services/commerce/commerceQueryService.ts` | Extend only if query-mode pagination needs shared offset semantics beyond the current limit contract. |
+| `core/services/commerce/commerceService.ts` | Reuse backend-owned product listing/get owners if manual curation resolves explicit product IDs without widening the shared query contract. |
 | `core/services/commerce/commerceWidgetRuntime.ts` | Preserve total/page data and curated result ordering. |
-| `core/services/commerce/commerceRuntimeResolver.ts` | Resolve curated product IDs through existing product query owners if required. |
+| `core/services/commerce/commerceRuntimeResolver.ts` | Touch only if runtime card mapping or shared product lookup seams are required for curated IDs. |
 | `core/admin/ui/widgets/editors/ProductGalleryEditors.tsx` | Add pagination and manual curation controls with clear empty/loading states. |
 | `tests/vitest/widgets/productGallery.test.tsx` | Cover pagination markers, load-more/view-more output, and manual order rendering. |
 | `tests/vitest/ui/product-gallery-editor-wave.test.tsx` | Cover pagination/curation editor controls and reorder behavior. |
@@ -90,8 +93,9 @@ type ProductGalleryPagination = {
 Data flow:
 
 - Query mode uses current `source` plus optional pagination settings.
-- Manual mode sends an allowlisted product ID array to the backend resolver,
-  which returns only those products in the selected order.
+- Manual mode resolves an allowlisted product ID array through backend-owned
+  product services; if that requires a shared query/schema/route extension, stop
+  and split the shared piece instead of hiding it in Product Gallery.
 - Runtime stores `resolved.total`, `resolved.items`, and any page metadata
   required by the renderer.
 - Editor reorder controls update `curation.productIds` without touching source
@@ -150,6 +154,11 @@ No public write endpoints are added.
   runtime `load-more` endpoint is added.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run lint`
+- `bun run test:bun`
+- `bun run test:vitest`
+- `bun run scan:security:strict`
+- `bun run precommit`
 
 ## Documentation Updates Required
 
@@ -163,6 +172,7 @@ No public write endpoints are added.
 - Product Gallery has a bounded path for more-than-limit browsing or a clearly
   documented deferral.
 - Manual curation preserves editor-chosen order through backend-owned product
-  resolution.
+  resolution, or the shared extension is explicitly split instead of being
+  hidden in this leaf.
 - Query and curation fields are schema-owned, capped, and tested.
 - No arbitrary public query or provider-fetch surface is introduced.

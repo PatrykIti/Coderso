@@ -6,6 +6,7 @@ import {
   hydrateProductTableRuntimeData,
 } from "../../../core/services/commerce/commerceWidgetRuntime";
 import type { resolveCommerceRuntimeProducts } from "../../../core/services/commerce/commerceRuntimeResolver";
+import { getMediaById as getMediaByIdFn } from "../../../core/services/media/mediaService";
 import { productCompareDefaults } from "../../../core/widgets/core/productCompare";
 import { productGalleryDefaults } from "../../../core/widgets/core/productGallery";
 import { productTableDefaults } from "../../../core/widgets/core/productTable";
@@ -20,6 +21,7 @@ const sampleRows = [
     slug: "starter-home",
     status: "published" as const,
     excerpt: "Compact modern home.",
+    description: null,
     pricing: {
       amount: 120000,
       currency: "USD",
@@ -30,7 +32,7 @@ const sampleRows = [
       quantity: 3,
     },
     collectionIds: ["collection-1"],
-    mediaIds: [],
+    mediaIds: ["media-1"],
     variants: [],
     metadata: {},
     data: {},
@@ -84,20 +86,79 @@ test("hydrateProductGalleryRuntimeData resolves cards and total", async () => {
                 quantity: 3,
                 inStock: true,
               },
-              primaryMediaId: null,
-              mediaIds: [],
+              primaryMediaId: "media-1",
+              mediaIds: ["media-1"],
               collectionIds: ["collection-1"],
             },
           ],
         } as unknown as RuntimeProductsResult;
       },
+      getMediaById: async (id: string) => ({
+        id,
+        key: "media-1.jpg",
+        url: "/media/starter-home.jpg",
+        originalName: "starter-home.jpg",
+        type: "image",
+        mimeType: "image/jpeg",
+        size: 120,
+        width: 1200,
+        height: 900,
+        alt: "Starter Home hero",
+        title: "Starter Home hero",
+        caption: null,
+        createdAt: new Date("2026-02-19T12:00:00.000Z"),
+        updatedAt: new Date("2026-02-19T12:00:00.000Z"),
+        createdBy: null,
+      }),
     }
   );
 
   expect(calls).toHaveLength(1);
   expect((calls[0].pagination as { limit: number }).limit).toBe(4);
   expect(resolved.resolved?.items?.[0]?.title).toBe("Starter Home");
+  expect(resolved.resolved?.items?.[0]?.media).toEqual({
+    url: "/media/starter-home.jpg",
+    alt: "Starter Home hero",
+    width: 1200,
+    height: 900,
+  });
   expect(resolved.resolved?.total).toBe(1);
+});
+
+test("hydrateProductGalleryRuntimeData preserves manual curation order and caps rendered items by limit", async () => {
+  const resolved = await hydrateProductGalleryRuntimeData(
+    {
+      ...productGalleryDefaults,
+      source: {
+        ...productGalleryDefaults.source,
+        limit: 1,
+      },
+      curation: {
+        mode: "manual",
+        productIds: ["product-2", "product-1"],
+      },
+    },
+    {
+      preview: true,
+    },
+    {
+      listProducts: async () => [
+        ...sampleRows,
+        {
+          ...sampleRows[0],
+          id: "product-2",
+          title: "City Loft",
+          slug: "city-loft",
+          mediaIds: [],
+          description: null,
+        },
+      ],
+      getMediaById: (async () => null) as unknown as typeof getMediaByIdFn,
+    }
+  );
+
+  expect(resolved.resolved?.items?.map((item) => item.id)).toEqual(["product-2"]);
+  expect(resolved.resolved?.total).toBe(2);
 });
 
 test("hydrateProductCompareRuntimeData maps compare payload rows", async () => {
@@ -209,13 +270,14 @@ test("commerce widget runtime uses cache between widgets for identical query", a
               quantity: 3,
               inStock: true,
             },
-            primaryMediaId: null,
-            mediaIds: [],
+            primaryMediaId: "media-1",
+            mediaIds: ["media-1"],
             collectionIds: ["collection-1"],
           },
         ],
       } as unknown as RuntimeProductsResult;
     },
+    getMediaById: (async () => null) as unknown as typeof getMediaByIdFn,
   };
 
   await hydrateProductGalleryRuntimeData(productGalleryDefaults, { preview: false, cache }, deps);

@@ -10,6 +10,7 @@ import {
 } from "../../../core/admin/ui/widgets/editors/ProductGalleryEditors";
 import {
   ProductGalleryBlock,
+  buildProductGalleryQueryInput,
   createProductGalleryWidget,
   normalizeProductGalleryData,
   productGalleryDefaults,
@@ -21,28 +22,143 @@ import { normalizeWidgetBlock } from "../../../core/widgets/validator";
 
 const StubEditor: ComponentType<WidgetEditorProps<ProductGalleryData>> = () => null;
 
-test("product gallery renders empty state", () => {
+test("product gallery renders empty state without forcing a blank description", () => {
   const html = renderToString(
     <ProductGalleryBlock
       variant="cards"
       data={normalizeProductGalleryData({
         ...productGalleryDefaults,
+        emptyState: {
+          title: "Nothing here",
+          description: "",
+        },
         resolved: {
           items: [],
           total: 0,
-          resolvedAt: "2026-02-19T12:00:00.000Z",
+          resolvedAt: "2026-05-19T12:00:00.000Z",
         },
       })}
     />
   );
 
-  expect(html).toContain("No products found");
-  expect(html).toContain('data-widget="product-gallery"');
+  expect(html).toContain("Nothing here");
+  expect(html).not.toContain("Adjust query filters or publish products.");
   expect(html).toContain('data-product-gallery-count="0"');
 });
 
-test("product gallery renders resolved cards", () => {
+test("product gallery renders media, links, header, badges, and view-all link", () => {
   const html = renderToString(
+    <ProductGalleryBlock
+      variant="cards"
+      data={normalizeProductGalleryData({
+        ...productGalleryDefaults,
+        header: {
+          title: "Featured homes",
+          description: "Current highlighted catalog entries.",
+        },
+        link: {
+          basePath: "/catalog",
+          ctaLabel: "View details",
+          ctaStyle: "button",
+        },
+        pagination: {
+          mode: "view-all",
+          viewAllHref: "/catalog",
+          viewAllLabel: "Browse full catalog",
+        },
+        fields: {
+          showExcerpt: true,
+          showPrice: true,
+          showStock: true,
+          showStatus: true,
+          showMediaHint: false,
+        },
+        resolved: {
+          items: [
+            {
+              id: "product-1",
+              title: "Starter Home",
+              slug: "starter-home",
+              excerpt: "Compact modern plan.",
+              status: "draft",
+              pricing: {
+                amount: 19900,
+                currency: "USD",
+                compareAtAmount: 24900,
+              },
+              stock: {
+                state: "in_stock",
+                quantity: 3,
+                inStock: true,
+              },
+              primaryMediaId: "media-1",
+              mediaIds: ["media-1"],
+              collectionIds: ["collection-1"],
+              media: {
+                url: "/media/starter-home.jpg",
+                alt: "Starter Home hero",
+                width: 1200,
+                height: 900,
+              },
+            },
+          ],
+          total: 3,
+          resolvedAt: "2026-05-19T12:00:00.000Z",
+        },
+      })}
+    />
+  );
+
+  expect(html).toContain("Featured homes");
+  expect(html).toContain("Current highlighted catalog entries.");
+  expect(html).toContain('src="/media/starter-home.jpg"');
+  expect(html).toContain('alt="Starter Home hero"');
+  expect(html).toContain('href="/catalog/starter-home"');
+  expect(html).toContain("$199.00");
+  expect(html).toContain("$249.00");
+  expect(html).toContain("View details");
+  expect(html).toContain("Status: <!-- -->Draft");
+  expect(html).toContain("Stock: <!-- -->In stock");
+  expect(html).toContain('href="/catalog"');
+  expect(html).toContain("Browse full catalog");
+});
+
+test("product gallery uses block-local accessible title ids", () => {
+  const data = normalizeProductGalleryData({
+    ...productGalleryDefaults,
+    resolved: {
+      items: [
+        {
+          id: "product-1",
+          title: "Starter Home",
+          slug: "starter-home",
+          excerpt: null,
+          status: "published",
+          pricing: { amount: 19900, currency: "USD", compareAtAmount: null },
+          stock: { state: "in_stock", quantity: 3, inStock: true },
+          primaryMediaId: null,
+          mediaIds: [],
+          collectionIds: [],
+        },
+      ],
+      total: 1,
+      resolvedAt: "2026-05-19T12:00:00.000Z",
+    },
+  });
+
+  const first = renderToString(
+    <ProductGalleryBlock blockId="gallery-alpha" variant="cards" data={data} />
+  );
+  const second = renderToString(
+    <ProductGalleryBlock blockId="gallery-beta" variant="cards" data={data} />
+  );
+
+  expect(first).toContain('aria-labelledby="gallery-alpha-title-product-1"');
+  expect(second).toContain('aria-labelledby="gallery-beta-title-product-1"');
+});
+
+test("product gallery compact variant and compare-at guard are truthful", () => {
+  const cards = renderToString(
     <ProductGalleryBlock
       variant="cards"
       data={normalizeProductGalleryData({
@@ -53,12 +169,12 @@ test("product gallery renders resolved cards", () => {
               id: "product-1",
               title: "Starter Home",
               slug: "starter-home",
-              excerpt: "Compact modern plan.",
+              excerpt: null,
               status: "published",
               pricing: {
-                amount: 120000,
+                amount: 19900,
                 currency: "USD",
-                compareAtAmount: 130000,
+                compareAtAmount: 18900,
               },
               stock: {
                 state: "in_stock",
@@ -71,46 +187,21 @@ test("product gallery renders resolved cards", () => {
             },
           ],
           total: 1,
-          resolvedAt: "2026-02-19T12:00:00.000Z",
+          resolvedAt: "2026-05-19T12:00:00.000Z",
         },
       })}
     />
   );
-
-  expect(html).toContain("Starter Home");
-  expect(html).toContain("$120,000.00");
-  expect(html).toContain("In stock");
-  expect(html).toContain('data-product-gallery-count="1"');
-});
-
-test("product gallery cleared card and empty surfaces omit backgrounds", () => {
-  const emptyHtml = renderToString(
+  const compact = renderToString(
     <ProductGalleryBlock
-      variant="cards"
+      variant="compact"
       data={normalizeProductGalleryData({
         ...productGalleryDefaults,
         style: {
           columns: "3",
-          cardStyle: "outlined",
-        },
-        resolved: {
-          items: [],
-          total: 0,
-          resolvedAt: "2026-02-19T12:00:00.000Z",
-        },
-      })}
-    />
-  );
-  expect(emptyHtml).not.toContain("bg-[var(--color-bg)]/70");
-
-  const cardHtml = renderToString(
-    <ProductGalleryBlock
-      variant="cards"
-      data={normalizeProductGalleryData({
-        ...productGalleryDefaults,
-        style: {
-          columns: "3",
-          cardStyle: "outlined",
+          cardStyle: "minimal",
+          cardBackground: "var(--color-bg)",
+          cardBorderColor: "var(--color-border)",
         },
         resolved: {
           items: [
@@ -120,39 +211,95 @@ test("product gallery cleared card and empty surfaces omit backgrounds", () => {
               slug: "starter-home",
               excerpt: null,
               status: "published",
-              pricing: { amount: 120000, currency: "USD", compareAtAmount: null },
-              stock: { state: "in_stock", quantity: 3, inStock: true },
+              pricing: {
+                amount: 19900,
+                currency: "USD",
+                compareAtAmount: 18900,
+              },
+              stock: {
+                state: "in_stock",
+                quantity: 3,
+                inStock: true,
+              },
               primaryMediaId: null,
               mediaIds: [],
               collectionIds: [],
             },
           ],
           total: 1,
-          resolvedAt: "2026-02-19T12:00:00.000Z",
+          resolvedAt: "2026-05-19T12:00:00.000Z",
         },
       })}
     />
   );
-  expect(cardHtml).not.toContain("bg-[var(--color-bg)]");
+
+  expect(cards).toContain("gap-4");
+  expect(compact).toContain("gap-3");
+  expect(compact).not.toContain("line-through");
+  expect(compact).not.toContain("border-color");
 });
 
-test("product gallery normalizes source defaults", () => {
-  const normalized = normalizeProductGalleryData({
+test("product gallery query input adds bounded price filters and keeps shared source defaults", () => {
+  const query = buildProductGalleryQueryInput({
     source: {
       limit: 999,
       sortField: "pricing.amount",
       sortDir: "asc",
-      status: ["published"],
+      minPriceMinor: 49900,
+      maxPriceMinor: 19900,
     },
   });
 
-  expect(normalized.source?.limit).toBe(48);
-  expect(normalized.source?.sortField).toBe("pricing.amount");
-  expect(normalized.source?.sortDir).toBe("asc");
-  expect(normalized.source?.status).toEqual(["published"]);
+  expect(query.pagination.limit).toBe(48);
+  expect(query.sort).toEqual([{ field: "pricing.amount", dir: "asc" }]);
+  expect(query.filters).toEqual([
+    { field: "pricing.amount", op: "gte", value: 19900 },
+    { field: "pricing.amount", op: "lte", value: 49900 },
+  ]);
 });
 
-test("product gallery validator accepts resolved payload", () => {
+test("product gallery media diagnostics stay editor-only", () => {
+  const data = normalizeProductGalleryData({
+    ...productGalleryDefaults,
+    fields: {
+      ...productGalleryDefaults.fields,
+      showMediaHint: true,
+    },
+    resolved: {
+      items: [
+        {
+          id: "product-1",
+          title: "Starter Home",
+          slug: "starter-home",
+          excerpt: null,
+          status: "published",
+          pricing: { amount: 19900, currency: "USD", compareAtAmount: null },
+          stock: { state: "in_stock", quantity: 3, inStock: true },
+          primaryMediaId: "media-1",
+          mediaIds: ["media-1"],
+          collectionIds: [],
+        },
+      ],
+      total: 1,
+      resolvedAt: "2026-05-19T12:00:00.000Z",
+    },
+  });
+
+  const publicHtml = renderToString(<ProductGalleryBlock variant="cards" data={data} />);
+  const editorHtml = renderToString(
+    <ProductGalleryBlock
+      variant="cards"
+      data={data}
+      renderContext={{ mode: "editor-preview", previewState: { status: "loading" } }}
+    />
+  );
+
+  expect(publicHtml).not.toContain("Preview media id");
+  expect(editorHtml).toContain("Preview media id: media-1");
+  expect(editorHtml).toContain("Refreshing Product Gallery preview...");
+});
+
+test("product gallery validator accepts new header, link, pagination, and media fields", () => {
   clearWidgets();
   registerWidget(
     createProductGalleryWidget({
@@ -166,9 +313,26 @@ test("product gallery validator accepts resolved payload", () => {
     normalizeWidgetBlock({
       id: "product-gallery-1",
       type: "product-gallery",
-      variant: "cards",
+      variant: "compact",
       data: {
         ...productGalleryDefaults,
+        link: {
+          basePath: "/catalog",
+          ctaLabel: "Open",
+          ctaStyle: "text",
+          target: "new-tab",
+        },
+        header: {
+          title: "Featured homes",
+        },
+        pagination: {
+          mode: "view-all",
+          viewAllHref: "/catalog",
+        },
+        curation: {
+          mode: "manual",
+          productIds: ["product-1"],
+        },
         resolved: {
           items: [
             {
@@ -178,7 +342,7 @@ test("product gallery validator accepts resolved payload", () => {
               excerpt: null,
               status: "published",
               pricing: {
-                amount: 120000,
+                amount: 19900,
                 currency: "USD",
                 compareAtAmount: null,
               },
@@ -187,17 +351,33 @@ test("product gallery validator accepts resolved payload", () => {
                 quantity: 3,
                 inStock: true,
               },
-              primaryMediaId: null,
-              mediaIds: [],
+              primaryMediaId: "media-1",
+              mediaIds: ["media-1"],
               collectionIds: [],
+              media: {
+                url: "/media/starter-home.jpg",
+                alt: "Starter Home",
+                width: 1200,
+                height: 900,
+              },
             },
           ],
           total: 1,
-          resolvedAt: "2026-02-19T12:00:00.000Z",
+          resolvedAt: "2026-05-19T12:00:00.000Z",
         },
       },
     })
   ).not.toThrow();
+});
+
+test("product gallery widget declares preview-state support at the widget owner", () => {
+  const widget = createProductGalleryWidget({
+    wizard: StubEditor,
+    visual: StubEditor,
+    advanced: StubEditor,
+  });
+
+  expect(widget.editorCapabilities?.supportsPreviewState).toBe(true);
 });
 
 test("product gallery editors render expected panels", () => {
@@ -210,7 +390,8 @@ test("product gallery editors render expected panels", () => {
     />
   );
   expect(wizard).toContain("Product source");
-  expect(wizard).toContain("Layout");
+  expect(wizard).toContain("Price filters");
+  expect(wizard).toContain("Columns preview");
 
   const visual = renderToString(
     <ProductGalleryVisualEditor
@@ -220,8 +401,9 @@ test("product gallery editors render expected panels", () => {
       onVariantChange={() => undefined}
     />
   );
-  expect(visual).toContain("Card content");
-  expect(visual).toContain("Empty state");
+  expect(visual).toContain("Section header");
+  expect(visual).toContain("Product links");
+  expect(visual).toContain("Surfaces");
 
   const advanced = renderToString(
     <ProductGalleryAdvancedEditor
@@ -231,6 +413,7 @@ test("product gallery editors render expected panels", () => {
       onVariantChange={() => undefined}
     />
   );
-  expect(advanced).toContain("Runtime payload");
+  expect(advanced).toContain("Product behavior");
+  expect(advanced).toContain("Preview status");
   expect(advanced).toContain("Query preview");
 });

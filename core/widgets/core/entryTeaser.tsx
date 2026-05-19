@@ -980,6 +980,7 @@ export function createEntryTeaserWidget(editors: {
     editor: editors,
     editorCapabilities: {
       visualOwnsVariantSelection: true,
+      supportsPreviewState: true,
     },
     render: EntryTeaserBlock,
   };

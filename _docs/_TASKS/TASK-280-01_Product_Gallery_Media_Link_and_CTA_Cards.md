@@ -6,7 +6,7 @@
 **Category:** Widgets + Commerce + Runtime Render + Admin UI + Accessibility
 **Estimated Effort:** Large
 **Dependencies:** TASK-252-07-04, TASK-256-04, TASK-280
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -40,6 +40,8 @@ Out of scope:
 
 - client-side provider/media fetching;
 - cart mutations, checkout writes, wishlist writes, or public write endpoints;
+- inventing or hardcoding a public `/products/:slug` route when the live repo
+  does not already own that contract;
 - generic safe-href helper work owned by TASK-256;
 - broad Product Compare/Product Table link/media expansion unless a separate
   commerce-shared task is created.
@@ -69,6 +71,7 @@ Out of scope:
 | `core/services/media/mediaService.ts` | Use `getMediaById()` as backend-owned media URL/alt lookup seam when resolving `primaryMediaId` / `mediaIds`. |
 | `core/admin/ui/widgets/editors/ProductGalleryEditors.tsx` | Add Product Gallery link/CTA and media display controls in the correct editor mode. |
 | `tests/vitest/widgets/productGallery.test.tsx` | Cover linked cards, CTA rendering, safe path fallback, image/alt output, and no image when media is unresolved. |
+| `tests/vitest/widgets/productTable.test.tsx` | Add focused regression coverage if shared runtime card media metadata changes affect Product Table. |
 | `tests/vitest/ui/product-gallery-editor-wave.test.tsx` | Cover link/CTA/media editor controls and normalized payload updates. |
 | `tests/unit/commerce/commerceWidgetRuntime.test.ts` | Cover resolver-to-card media metadata when runtime mapping changes. |
 | `tests/unit/media/mediaService.test.ts` | Extend only if media lookup behavior or returned public-safe metadata changes. |
@@ -92,7 +95,9 @@ type ProductGalleryLinkConfig = {
 };
 
 function normalizeProductGalleryLink(value: unknown): ProductGalleryLinkConfig {
-  const basePath = normalizeSafeBasePath(readString(value, "basePath") ?? "/products");
+  const basePath = normalizeWidgetSafeHref(readString(value, "basePath"), {
+    allowRelative: true,
+  });
   return {
     basePath,
     target: readString(value, "target") === "new-tab" ? "new-tab" : "same-tab",
@@ -121,7 +126,8 @@ Data flow:
 
 Error handling:
 
-- Empty or unsafe `basePath` normalizes to `/products`.
+- Empty or unsafe `basePath` disables linking instead of guessing a public
+  product route.
 - Empty product `slug` keeps the card unlinked instead of rendering `href="#"`.
 - Missing media URL renders the current text-only card and optional media hint;
   it must not render broken `<img>`.
@@ -139,12 +145,12 @@ test("product gallery renders safe product links and media alt text", () => {
     <ProductGalleryBlock
       variant="cards"
       data={normalizeProductGalleryData({
-        link: { basePath: "/products", ctaLabel: "View details" },
+        link: { basePath: "/catalog", ctaLabel: "View details" },
         resolved: { items: [resolvedCardWithMedia] },
       })}
     />
   );
-  expect(html).toContain('href="/products/starter-home"');
+  expect(html).toContain('href="/catalog/starter-home"');
   expect(html).toContain('alt="Starter Home"');
   expect(html).toContain("View details");
 });
@@ -167,6 +173,8 @@ No API routes are added by default.
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/widgets/productGallery.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/productTable.test.tsx` when
+  shared runtime card media metadata changes affect Product Table.
 - `bun run test:vitest -- tests/vitest/widgets/widgetSafeHref.test.ts` only if
   the shared safe-href helper behavior changes; Product Gallery-specific base
   path / slug join behavior belongs in `productGallery.test.tsx`.
@@ -179,6 +187,11 @@ No API routes are added by default.
 - `bun test tests/unit/widgets/validator.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run lint`
+- `bun run test:bun`
+- `bun run test:vitest`
+- `bun run scan:security:strict`
+- `bun run precommit`
 
 ## Documentation Updates Required
 
@@ -194,6 +207,8 @@ No API routes are added by default.
 - Product cards expose keyboard-accessible links to product pages.
 - CTA labels/styles are bounded and do not imply cart behavior unless an
   existing checkout action is wired and tested.
+- When no safe product route prefix is configured, Product Gallery stays
+  intentionally unlinked instead of guessing a public detail-page path.
 - Missing media/link data degrades to safe, non-broken output.
 - Tests prove the schema, normalizer, runtime card mapping, editor controls, and
   renderer stay synchronized.

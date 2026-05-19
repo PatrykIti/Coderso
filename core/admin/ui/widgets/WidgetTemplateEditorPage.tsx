@@ -53,6 +53,10 @@ import { subscribeCacheEvents } from "@/utils/cacheBus";
 import { resolveCacheRefreshBackground } from "@/utils/cacheRefresh";
 import { useAdminBasePath } from "@/ui/contexts/AdminBasePathContext";
 import { listRegisteredPageWidgets } from "@/ui/widgets/registry";
+import {
+  buildActiveWidgetPreviewStates,
+  widgetSupportsPreviewState,
+} from "@/ui/widgets/previewStateSupport";
 import { BlockList } from "@/ui/pages/builder/BlockList";
 import { BlockSettings } from "@/ui/pages/builder/BlockSettings";
 import { MediaPicker } from "@/ui/media/MediaPicker";
@@ -336,22 +340,37 @@ export function WidgetTemplateEditorPage() {
     if (!selectedBlock) return undefined;
     return getWidgetRegistry().find((widget) => widget.type === selectedBlock.type);
   }, [selectedBlock]);
+  const selectedWidgetSupportsPreviewState = useMemo(
+    () => widgetSupportsPreviewState(selectedWidget),
+    [selectedWidget]
+  );
   const activeWidgetPreviewStates = useMemo(() => {
-    if (!selectedBlock || !supportsTransientWidgetPreview(selectedBlock.type)) {
+    const previewEnabled =
+      Boolean(selectedBlock) &&
+      (supportsTransientWidgetPreview(selectedBlock?.type) || selectedWidgetSupportsPreviewState);
+    if (!selectedBlock || !previewEnabled) {
       return {} as Record<string, WidgetPreviewState | undefined>;
+    }
+    if (selectedWidgetSupportsPreviewState) {
+      return buildActiveWidgetPreviewStates(selectedBlock.id, selectedWidget, widgetPreviewStates);
     }
     const previewState = widgetPreviewStates[selectedBlock.id];
     return previewState
       ? { [selectedBlock.id]: previewState }
       : ({} as Record<string, WidgetPreviewState | undefined>);
-  }, [selectedBlock, widgetPreviewStates]);
+  }, [selectedBlock, selectedWidget, selectedWidgetSupportsPreviewState, widgetPreviewStates]);
   const selectedBlockPreviewState = selectedBlock
     ? (activeWidgetPreviewStates[selectedBlock.id] ?? null)
     : null;
   const bookingFlows = useMemo(() => collectBookingFlowSummaries(blocks), [blocks]);
+  const previewEnabled = useMemo(
+    () =>
+      Boolean(selectedBlock) &&
+      (supportsTransientWidgetPreview(selectedBlock?.type) || selectedWidgetSupportsPreviewState),
+    [selectedBlock, selectedWidgetSupportsPreviewState]
+  );
   const widgetTemplateEditorContext = useMemo<WidgetEditorContext | undefined>(() => {
     if (!selectedBlock) return undefined;
-    const previewEnabled = supportsTransientWidgetPreview(selectedBlock.type);
     return {
       surface: "page-builder",
       blockId: selectedBlock.id,
@@ -366,7 +385,7 @@ export function WidgetTemplateEditorPage() {
             }))
         : undefined,
     };
-  }, [bookingFlows, selectedBlock, selectedBlockPreviewState]);
+  }, [bookingFlows, previewEnabled, selectedBlock, selectedBlockPreviewState]);
 
   useEffect(() => {
     if (isNew || !templateId) {

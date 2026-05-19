@@ -6,7 +6,7 @@
 **Category:** Widgets + Commerce + Documentation + QA
 **Estimated Effort:** Medium
 **Dependencies:** TASK-280-01, TASK-280-02, TASK-280-03, TASK-280-04, TASK-280-05, TASK-280-06, TASK-280-07
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -51,7 +51,7 @@ Out of scope:
 | `tests/unit/widgets/modulePackMatrix.test.ts` | Cover pack-readiness changes when `modulePackMatrix.ts` changes. |
 | `_docs/_TASKS/TASK-280*.md` | Move completed/deferred statuses with dates and validation notes. |
 | `_docs/_TASKS/README.md` | Move rows and recompute board statistics. |
-| `_docs/_CHANGELOG/{N}-2026-05-17-task-280-product-gallery-followups.md` | Add final user-facing changelog entry when the family is done. |
+| `_docs/_CHANGELOG/{N}-{YYYY-MM-DD}-task-280-product-gallery-followups.md` | Add final user-facing changelog entry using the actual completion date when the family is done. |
 | `_docs/_CHANGELOG/README.md` | Add the new changelog index row with the next unused number. |
 
 ## Implementation Pseudocode
@@ -131,6 +131,9 @@ This closure leaf does not add API routes.
   readiness/completeness changes in `core/widgets/modulePackMatrix.ts`.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run lint`
+- `bun run test:bun`
+- `bun run test:vitest`
 - `bun run gates:coderso`
 - `bun run scan:security:strict`
 - `bun run precommit`
@@ -147,7 +150,7 @@ This closure leaf does not add API routes.
 - `_docs/_TASKS/TASK-280*.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
-- `_docs/_CHANGELOG/{N}-2026-05-17-task-280-product-gallery-followups.md`
+- `_docs/_CHANGELOG/{N}-{YYYY-MM-DD}-task-280-product-gallery-followups.md`
 
 ## Acceptance Criteria
 
@@ -157,3 +160,28 @@ This closure leaf does not add API routes.
   agree.
 - No Playwright PNG files are committed.
 - Final validation output is recorded before moving the family to `Done`.
+
+## Current Validation Snapshot
+
+2026-05-19 evidence gathered on the task worktree:
+
+- `git diff --check` -> green
+- `bun --cwd core lint` -> green
+- `bun --cwd core lint:types` -> green
+- `bun run test:vitest -- tests/vitest/ui/product-gallery-editor-wave.test.tsx tests/vitest/ui/product-gallery-admin-preview.test.tsx tests/vitest/widgets/productGallery.test.tsx tests/vitest/admin/productGalleryPreviewClient.test.ts tests/vitest/widgets/productCompare.test.tsx tests/vitest/widgets/productTable.test.tsx` -> green
+- `bun test tests/integration/routes/productGalleryPreview.test.ts tests/integration/routes/widgets.test.ts tests/unit/commerce/commerceWidgetRuntime.test.ts` -> green
+- `bun run test:vitest` -> green (`595` files, `2779` tests)
+- `bun run scan:security:strict` -> green
+- `bun run test:bun` -> red on unrelated non-Product-Gallery suites currently living on the branch base:
+  - `tests/unit/assistant/actionExecutorService.db.test.ts`
+  - `tests/unit/forms/submissionService.test.ts`
+  - `tests/unit/kits/installService.test.ts`
+  - `tests/unit/content/listingQueriesService.test.ts`
+  - `tests/unit/content/postsService.test.ts`
+  - `tests/integration/runtime/detail-page-composer-runtime.test.tsx`
+  - `tests/integration/runtime/pages-runtime.test.ts`
+  - `tests/integration/runtime/detail-page-preview-cache.test.ts`
+
+Closure remains blocked on the red full Bun lane and the missing final
+changelog/`Done` bookkeeping, even though the Product Gallery-owned targeted
+runtime suites are green.

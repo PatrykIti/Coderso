@@ -6,7 +6,7 @@
 **Category:** Widgets + Commerce + Runtime Render + Accessibility
 **Estimated Effort:** Large
 **Dependencies:** TASK-256-04, TASK-280-01, TASK-280-02, TASK-280
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -128,6 +128,11 @@ No API routes are added.
 - `bun test tests/unit/widgets/validator.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run lint`
+- `bun run test:bun`
+- `bun run test:vitest`
+- `bun run scan:security:strict`
+- `bun run precommit`
 
 ## Documentation Updates Required
 

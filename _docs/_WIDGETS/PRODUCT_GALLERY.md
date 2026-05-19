@@ -3,7 +3,8 @@
 ## Purpose
 
 Render a resolved commerce product gallery with bounded query fields, optional
-product metadata, and explicit empty-state styling.
+product metadata, safe product links, manual curation, and explicit empty-state
+styling.
 
 ## Widget ID
 
@@ -18,17 +19,18 @@ product metadata, and explicit empty-state styling.
 
 ### Wizard
 - source/query basics
-- visible product fields
+- bounded price filters in commerce minor units
 - gallery density
 
 ### Visual
-- source and filters
-- fields visibility
+- section header
+- card metadata and link controls
 - empty state
 - surfaces
 
 ### Advanced
-- resolved runtime payload
+- manual curation and view-all behavior
+- preview status and refresh
 - query diagnostics
 
 ## Runtime Behavior Notes
@@ -36,14 +38,18 @@ product metadata, and explicit empty-state styling.
 - Runtime emits deterministic markers:
   - `data-widget="product-gallery"`
   - `data-product-gallery-count`
+  - `data-product-gallery-total`
   - `data-product-id` per resolved item
 - Empty-state copy is rendered when no items resolve.
 - Resolved runtime cards stay normalized through the commerce widget shared
   contract.
+- Admin preview resolves products through an internal `/admin/api/widgets/*`
+  route and patches preview data through `WidgetPreviewState.dataPatch`.
 
 ## Clear Controls
 
-- `style.cardBackground` and `style.emptyBackground` are clearable.
+- `style.cardBackground`, `style.cardBorderColor`, `style.emptyBackground`, and
+  `style.emptyBorderColor` are clearable.
 
 ## Data Model (summary)
 
@@ -55,12 +61,34 @@ product metadata, and explicit empty-state styling.
     "collectionIds": [],
     "status": [],
     "sortField": "updatedAt",
-    "sortDir": "desc"
+    "sortDir": "desc",
+    "minPriceMinor": 19900,
+    "maxPriceMinor": 49900
+  },
+  "link": {
+    "basePath": "/catalog",
+    "target": "same-tab",
+    "ctaLabel": "View product",
+    "ctaStyle": "text"
+  },
+  "header": {
+    "title": "Featured products",
+    "description": "Highlighted catalog items."
+  },
+  "pagination": {
+    "mode": "view-all",
+    "viewAllHref": "/catalog",
+    "viewAllLabel": "View all products"
+  },
+  "curation": {
+    "mode": "query",
+    "productIds": []
   },
   "fields": {
     "showExcerpt": true,
     "showPrice": true,
     "showStock": true,
+    "showStatus": false,
     "showMediaHint": false
   },
   "emptyState": {
@@ -74,6 +102,11 @@ product metadata, and explicit empty-state styling.
     "cardBorderColor": "var(--color-border)",
     "emptyBackground": "color-mix(in srgb, var(--color-bg) 70%, transparent)",
     "emptyBorderColor": "var(--color-border)"
+  },
+  "resolved": {
+    "items": [],
+    "total": 0,
+    "resolvedAt": "2026-05-19T12:00:00.000Z"
   }
 }
 ```

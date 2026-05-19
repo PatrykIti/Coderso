@@ -5,6 +5,7 @@ import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
 import type { ProductGalleryData } from "../../../core/widgets/core/productGallery";
+import type { WidgetPreviewState } from "../../../core/widgets/types";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -40,6 +41,24 @@ vi.mock("@/components/ui/textarea", () => ({
   }) => <textarea value={value} onChange={onChange} rows={rows} {...props} />,
 }));
 
+vi.mock("@/components/ui/button", () => ({
+  Button: ({
+    children,
+    onClick,
+    disabled,
+    ...props
+  }: {
+    children: React.ReactNode;
+    onClick?: () => void;
+    disabled?: boolean;
+    [key: string]: unknown;
+  }) => (
+    <button type="button" onClick={onClick} disabled={disabled} {...props}>
+      {children}
+    </button>
+  ),
+}));
+
 vi.mock("@/components/ui/select", () => ({
   Select: ({
     value,
@@ -66,6 +85,39 @@ vi.mock("@/services/commerceClient", () => ({
   listCommerceCollectionsCached: vi.fn(async () => []),
 }));
 
+const previewProductGalleryMock = vi.hoisted(() =>
+  vi.fn(async () => ({
+    items: [
+      {
+        id: "product-1",
+        title: "Preview Home",
+        slug: "preview-home",
+        excerpt: "Preview excerpt",
+        status: "published",
+        pricing: {
+          amount: 19900,
+          currency: "USD",
+          compareAtAmount: null,
+        },
+        stock: {
+          state: "in_stock",
+          quantity: 4,
+          inStock: true,
+        },
+        primaryMediaId: null,
+        mediaIds: [],
+        collectionIds: [],
+      },
+    ],
+    total: 1,
+    resolvedAt: "2026-05-19T12:00:00.000Z",
+  }))
+);
+
+vi.mock("@/services/productGalleryPreviewClient", () => ({
+  previewProductGallery: previewProductGalleryMock,
+}));
+
 const mount = (node: React.ReactNode) => {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -89,9 +141,20 @@ const mount = (node: React.ReactNode) => {
 const normalizeText = (value: string | null | undefined) =>
   (value ?? "").replace(/\s+/g, " ").trim().toLowerCase();
 
+const flushPromises = async () => {
+  await React.act(async () => {
+    await Promise.resolve();
+  });
+};
+
 const setInputValue = (element: Element | null | undefined, value: string) => {
-  if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
+  if (!(element instanceof HTMLInputElement) && !(element instanceof HTMLTextAreaElement)) return;
+  const descriptor = Object.getOwnPropertyDescriptor(
+    element instanceof HTMLTextAreaElement
+      ? HTMLTextAreaElement.prototype
+      : HTMLInputElement.prototype,
+    "value"
+  );
   React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -115,6 +178,16 @@ const toggleCheckbox = (element: Element | null | undefined) => {
   });
 };
 
+const clickButton = (container: ParentNode, label: string) => {
+  const button = Array.from(container.querySelectorAll("button")).find((element) =>
+    normalizeText(element.textContent).includes(normalizeText(label))
+  );
+  if (!(button instanceof HTMLButtonElement)) return;
+  React.act(() => {
+    button.click();
+  });
+};
+
 const findLabeledField = (
   container: ParentNode,
   text: string,
@@ -125,84 +198,85 @@ const findLabeledField = (
     ?.querySelector(selector);
 
 const findInputByLabel = (container: ParentNode, text: string) =>
-  Array.from(container.querySelectorAll("input")).find((element) =>
-    normalizeText(element.closest("label")?.textContent).startsWith(normalizeText(text))
-  );
+  findLabeledField(container, text, "input");
 
 const findSelectByLabel = (container: ParentNode, text: string) =>
   findLabeledField(container, text, "select");
 
-const findSectionByTitle = (container: ParentNode, title: string) =>
-  Array.from(container.querySelectorAll("section")).find((section) =>
-    normalizeText(section.textContent).includes(normalizeText(title))
-  );
+const findTextareaByLabel = (container: ParentNode, text: string) =>
+  findLabeledField(container, text, "textarea");
 
 afterEach(() => {
   vi.restoreAllMocks();
+  previewProductGalleryMock.mockClear();
 });
 
-test("ProductGallery editors cover source, card fields, empty state, and runtime preview", async () => {
+test("ProductGallery editors update source, links, curation, and preview status", async () => {
   const { ProductGalleryAdvancedEditor, ProductGalleryVisualEditor, ProductGalleryWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/ProductGalleryEditors");
 
-  const onChangeSpy = vi.fn();
-  let latestValue: ProductGalleryData = {
-    resolved: {
-      items: [
-        {
-          id: "product-1",
-          title: "City Bike",
-          slug: "city-bike",
-          excerpt: "Light commuting bike",
-          status: "published",
-          pricing: {
-            amount: 199.99,
-            currency: "USD",
-            compareAtAmount: 249.99,
-          },
-          stock: {
-            state: "in_stock",
-            quantity: 12,
-            inStock: true,
-          },
-          primaryMediaId: "media-1",
-          mediaIds: ["media-1"],
-          collectionIds: ["featured"],
-        },
-      ],
-      total: 3,
-      resolvedAt: "2026-03-08T10:00:00.000Z",
-    },
-  };
+  let latestValue: ProductGalleryData = {};
+  let latestPreviewState: WidgetPreviewState | null = null;
 
   const Harness = () => {
     const [value, setValue] = useState<ProductGalleryData>(latestValue);
-
-    const handleChange = (next: ProductGalleryData) => {
-      latestValue = next;
-      onChangeSpy(next);
-      setValue(next);
-    };
+    const [previewState, setPreviewState] = useState<WidgetPreviewState | null>(null);
 
     return (
       <>
         <ProductGalleryWizardEditor
           value={value}
-          onChange={handleChange}
-          variant="gallery"
-          onVariantChange={() => undefined}
+          onChange={(next) => {
+            latestValue = next;
+            setValue(next);
+          }}
+          variant="cards"
+          context={{
+            surface: "page-builder",
+            blockId: "block-1",
+            editorMode: "wizard",
+            previewState,
+            setPreviewState: (next) => {
+              latestPreviewState = next;
+              setPreviewState(next);
+            },
+          }}
         />
         <ProductGalleryVisualEditor
           value={value}
-          onChange={handleChange}
-          variant="gallery"
-          onVariantChange={() => undefined}
+          onChange={(next) => {
+            latestValue = next;
+            setValue(next);
+          }}
+          variant="cards"
+          context={{
+            surface: "page-builder",
+            blockId: "block-1",
+            editorMode: "visual",
+            previewState,
+            setPreviewState: (next) => {
+              latestPreviewState = next;
+              setPreviewState(next);
+            },
+          }}
         />
         <ProductGalleryAdvancedEditor
           value={value}
-          onChange={handleChange}
-          variant="gallery"
-          onVariantChange={() => undefined}
+          onChange={(next) => {
+            latestValue = next;
+            setValue(next);
+          }}
+          variant="cards"
+          context={{
+            surface: "page-builder",
+            blockId: "block-1",
+            editorMode: "advanced",
+            previewState,
+            setPreviewState: (next) => {
+              latestPreviewState = next;
+              setPreviewState(next);
+            },
+          }}
         />
       </>
     );
@@ -211,92 +285,71 @@ test("ProductGallery editors cover source, card fields, empty state, and runtime
   const view = mount(<Harness />);
 
   try {
-    expect(normalizeText(view.container.textContent)).toContain(
-      normalizeText("Resolved items: 1 · Total: 3")
-    );
+    await flushPromises();
+    expect(previewProductGalleryMock).toHaveBeenCalled();
+    expect(normalizeText(view.container.textContent)).toContain(normalizeText("Preview ready"));
 
     setInputValue(findInputByLabel(view.container, "Limit"), "4");
-    setInputValue(findInputByLabel(view.container, "Search"), "bike");
-    setInputValue(
-      findInputByLabel(view.container, "Collection IDs fallback"),
-      "featured, sale, featured"
-    );
-    setSelectValue(findSelectByLabel(view.container, "Sort field"), "pricing.amount");
-    setSelectValue(findSelectByLabel(view.container, "Sort direction"), "asc");
-    toggleCheckbox(findInputByLabel(view.container, "published"));
-    toggleCheckbox(findInputByLabel(view.container, "archived"));
+    setInputValue(findInputByLabel(view.container, "Minimum price (minor units)"), "19900");
+    setInputValue(findInputByLabel(view.container, "Maximum price (minor units)"), "49900");
     setSelectValue(findSelectByLabel(view.container, "Columns"), "4");
-    setSelectValue(findSelectByLabel(view.container, "Card style"), "minimal");
-
-    toggleCheckbox(findInputByLabel(view.container, "Show excerpt"));
-    toggleCheckbox(findInputByLabel(view.container, "Show price"));
-    toggleCheckbox(findInputByLabel(view.container, "Show stock badge"));
-    toggleCheckbox(findInputByLabel(view.container, "Show media hint"));
-
-    const emptyStateSection = findSectionByTitle(
-      view.container,
-      "Shown when query returns no products."
+    setInputValue(findInputByLabel(view.container, "Route prefix"), "/catalog");
+    setInputValue(findInputByLabel(view.container, "CTA label"), "View details");
+    setSelectValue(findSelectByLabel(view.container, "CTA style"), "button");
+    toggleCheckbox(findInputByLabel(view.container, "Show status badge"));
+    setSelectValue(findSelectByLabel(view.container, "Curation mode"), "manual");
+    setInputValue(findTextareaByLabel(view.container, "Product IDs"), "product-2\nproduct-1");
+    setSelectValue(findSelectByLabel(view.container, "Pagination"), "view-all");
+    setInputValue(findInputByLabel(view.container, "View all href"), "/catalog");
+    setInputValue(findInputByLabel(view.container, "View all label"), "Browse catalog");
+    expect(normalizeText(view.container.textContent)).toContain(
+      normalizeText("Preview needs refresh")
     );
-    setInputValue(findInputByLabel(emptyStateSection ?? view.container, "Title"), "Nothing found");
-    const emptyStateInputs = Array.from(
-      (emptyStateSection ?? view.container).querySelectorAll("input")
-    );
-    setInputValue(emptyStateInputs[1], "Adjust query filters or publish products.");
-    setInputValue(findInputByLabel(view.container, "Runtime error flag"), "resolver-timeout");
+    clickButton(view.container, "Refresh products");
+    await flushPromises();
 
-    expect(onChangeSpy).toHaveBeenCalled();
-    expect(latestValue.source).toEqual({
-      limit: 4,
-      search: "bike",
-      collectionIds: ["featured", "sale"],
-      status: ["published", "archived"],
-      sortField: "pricing.amount",
-      sortDir: "asc",
-    });
+    expect(latestValue.source).toEqual(
+      expect.objectContaining({
+        limit: 4,
+        minPriceMinor: 19900,
+        maxPriceMinor: 49900,
+      })
+    );
     expect(latestValue.style).toEqual(
       expect.objectContaining({
         columns: "4",
-        cardStyle: "minimal",
-        cardBackground: "var(--color-bg)",
-        cardBorderColor: "var(--color-border)",
-        emptyBackground: "color-mix(in srgb, var(--color-bg) 70%, transparent)",
-        emptyBorderColor: "var(--color-border)",
       })
     );
-    expect(latestValue.fields).toEqual({
-      showExcerpt: false,
-      showPrice: false,
-      showStock: false,
-      showMediaHint: true,
+    expect(latestValue.link).toEqual(
+      expect.objectContaining({
+        basePath: "/catalog",
+        ctaLabel: "View details",
+        ctaStyle: "button",
+      })
+    );
+    expect(latestValue.fields).toEqual(
+      expect.objectContaining({
+        showStatus: true,
+      })
+    );
+    expect(latestValue.curation).toEqual({
+      mode: "manual",
+      productIds: ["product-2", "product-1"],
     });
-    expect(latestValue.emptyState).toEqual({
-      title: "Nothing found",
-      description: "Adjust query filters or publish products.",
+    expect(latestValue.pagination).toEqual({
+      mode: "view-all",
+      viewAllHref: "/catalog",
+      viewAllLabel: "Browse catalog",
     });
-    expect(latestValue.resolved).toMatchObject({
-      total: 3,
-      resolvedAt: "2026-03-08T10:00:00.000Z",
-      error: "resolver-timeout",
-    });
-    expect(latestValue.resolved?.items).toHaveLength(1);
-
-    const preview = view.container.querySelector("pre");
-    expect(preview?.textContent).toContain('"limit": 4');
-    expect(preview?.textContent).toContain('"field": "pricing.amount"');
-    expect(preview?.textContent).toContain('"dir": "asc"');
-    expect(preview?.textContent).toContain('"search": "bike"');
-    expect(preview?.textContent).toContain('"collectionIds": [');
-    expect(preview?.textContent).toContain('"featured"');
-    expect(preview?.textContent).toContain('"sale"');
-    expect(preview?.textContent).toContain('"status": [');
-    expect(preview?.textContent).toContain('"published"');
-    expect(preview?.textContent).toContain('"archived"');
+    const resolvedPreviewState = latestPreviewState as WidgetPreviewState | null;
+    expect(resolvedPreviewState?.status).toBe("ready");
+    expect(previewProductGalleryMock.mock.calls.length).toBe(2);
   } finally {
     view.cleanup();
   }
 });
 
-test("ProductGallery visual editor updates the empty-state description in isolation", async () => {
+test("ProductGallery visual editor keeps an intentionally blank empty-state description", async () => {
   const { ProductGalleryVisualEditor } =
     await import("../../../core/admin/ui/widgets/editors/ProductGalleryEditors");
 
@@ -312,7 +365,7 @@ test("ProductGallery visual editor updates the empty-state description in isolat
           latestValue = next;
           setValue(next);
         }}
-        variant="gallery"
+        variant="cards"
       />
     );
   };
@@ -320,19 +373,13 @@ test("ProductGallery visual editor updates the empty-state description in isolat
   const view = mount(<Harness />);
 
   try {
-    const emptyStateSection = findSectionByTitle(
-      view.container,
-      "Shown when query returns no products."
+    const descriptionInputs = Array.from(view.container.querySelectorAll("input")).filter(
+      (element) => normalizeText(element.closest("label")?.textContent).startsWith("description")
     );
-    const emptyStateInputs = Array.from(
-      (emptyStateSection ?? view.container).querySelectorAll("input")
-    );
-
-    setInputValue(emptyStateInputs[1], "No catalog items yet.");
-
+    setInputValue(descriptionInputs[descriptionInputs.length - 1], "");
     expect(latestValue.emptyState).toEqual(
       expect.objectContaining({
-        description: "No catalog items yet.",
+        description: "",
       })
     );
   } finally {
@@ -340,64 +387,47 @@ test("ProductGallery visual editor updates the empty-state description in isolat
   }
 });
 
-test("ProductGallery editors fall back to default layout values and empty runtime totals", async () => {
-  const { ProductGalleryAdvancedEditor, ProductGalleryWizardEditor } =
-    await import("../../../core/admin/ui/widgets/editors/ProductGalleryEditors");
+test.each([
+  ["wizard", "ProductGalleryWizardEditor"],
+  ["visual", "ProductGalleryVisualEditor"],
+] as const)(
+  "ProductGallery %s mode defers preview hydration until Advanced is opened",
+  async (editorMode, exportName) => {
+    const editors = await import("../../../core/admin/ui/widgets/editors/ProductGalleryEditors");
+    const Editor = editors[exportName];
 
-  let latestValue: ProductGalleryData = {
-    style: {
-      columns: "bogus" as never,
-      cardStyle: "unknown" as never,
-    },
-  };
+    let latestPreviewState: WidgetPreviewState | null = null;
 
-  const Harness = () => {
-    const [value, setValue] = useState<ProductGalleryData>(latestValue);
+    const Harness = () => {
+      const [previewState, setPreviewState] = useState<WidgetPreviewState | null>(null);
 
-    return (
-      <>
-        <ProductGalleryWizardEditor
-          value={value}
-          onChange={(next) => {
-            latestValue = next;
-            setValue(next);
+      return (
+        <Editor
+          value={{ source: { limit: 4 } }}
+          onChange={() => undefined}
+          variant="cards"
+          context={{
+            surface: "page-builder",
+            blockId: "block-1",
+            editorMode,
+            previewState,
+            setPreviewState: (next) => {
+              latestPreviewState = next;
+              setPreviewState(next);
+            },
           }}
-          variant="gallery"
         />
-        <ProductGalleryAdvancedEditor
-          value={value}
-          onChange={(next) => {
-            latestValue = next;
-            setValue(next);
-          }}
-          variant="gallery"
-        />
-      </>
-    );
-  };
+      );
+    };
 
-  const view = mount(<Harness />);
+    const view = mount(<Harness />);
 
-  try {
-    const columnsSelect = findSelectByLabel(view.container, "Columns");
-    const cardStyleSelect = findSelectByLabel(view.container, "Card style");
-
-    expect((columnsSelect as HTMLSelectElement | null | undefined)?.value).toBe("3");
-    expect((cardStyleSelect as HTMLSelectElement | null | undefined)?.value).toBe("outlined");
-    expect(normalizeText(view.container.textContent)).toContain(
-      normalizeText("Resolved items: 0 · Total: 0")
-    );
-
-    setSelectValue(columnsSelect, "invalid-columns");
-    setSelectValue(cardStyleSelect, "invalid-card-style");
-
-    expect(latestValue.style).toEqual(
-      expect.objectContaining({
-        columns: "3",
-        cardStyle: "outlined",
-      })
-    );
-  } finally {
-    view.cleanup();
+    try {
+      await flushPromises();
+      expect(previewProductGalleryMock).not.toHaveBeenCalled();
+      expect(latestPreviewState).toBeNull();
+    } finally {
+      view.cleanup();
+    }
   }
-});
+);

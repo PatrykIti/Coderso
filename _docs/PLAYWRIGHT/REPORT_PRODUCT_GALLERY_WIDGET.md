@@ -330,3 +330,31 @@ Product Gallery to widget commerce wyświetlający karty produktów z dynamiczny
   Commerce/product-specific behavior continues through the `TASK-280` family.
 - Shared rows that match existing TASK-256 safe-output or accessibility
   mechanisms remain referenced by `TASK-256-07` and `TASK-256-08`.
+
+## Status po TASK-280 / TASK-313 (2026-05-19)
+
+Poniżej znajduje się closure snapshot po wdrożeniu Product Gallery follow-up
+family oraz wydzieleniu shared formatter parity do `TASK-313`.
+
+| Owner | Findings | Final status | Evidence summary |
+|-------|----------|--------------|------------------|
+| `TASK-280-01` | `CODE-06`, `CODE-08`, `BF-01`, `BF-02`, `BF-03`, `BF-12`, `BF-13`, `A1`, `A5` | Fixed | Product cards now render resolved media, safe relative product links, bounded CTA styles, and image alt fallback from media/title. |
+| `TASK-280-02` | `CODE-01`, `CODE-02`, `CODE-03`, `CODE-04`, `CODE-07`, `BF-04` | Fixed | `compact` has its own spacing/media density, trailing dead-class artifacts are removed, minimal cards no longer serialize inert borders, and compare-at prices render only for real discounts. |
+| `TASK-313` | `NEW-02` | Fixed in shared task | Shared `formatCommerceMoney()` now follows the commerce admin minor-unit contract, with Product Gallery, Product Compare, and Product Table expectations updated together. |
+| `TASK-280-03` | `NEW-01`, `UX-06`, `BF-09` | Fixed | Admin preview resolves commerce data through an internal widget-preview route, surfaces loading/empty/ready/stale/error state, supports bounded Advanced-mode refresh, preserves last good preview data, and hydrates the selected canvas block through `WidgetPreviewState.dataPatch`. |
+| `TASK-280-04` | `UX-01`, `UX-02`, `UX-03`, `UX-04`, `BF-14`, `A2`, `A6` | Fixed | Surface styling moved out of Wizard, media IDs stay in Advanced diagnostics, empty descriptions can remain intentionally blank, column choices have a visual preview, and empty states announce themselves in editor preview mode. |
+| `TASK-280-05` | `CODE-05`, `UX-05`, `BF-08`, `BF-11` | Fixed with bounded shared scope | Product Gallery no longer double-normalizes source input, adds explicit minor-unit price filters, and clarifies the existing shared collection-picker fallback path instead of hiding a broader commerce-picker redesign in this widget-only family. |
+| `TASK-280-06` | `BF-05`, `BF-07`, `A3`, `A4` | Fixed | Section header fields, status badges, stock text labels, and labeled card semantics now render in the runtime contract. |
+| `TASK-280-07` | `BF-06`, `BF-10` | Fixed by bounded decision | Product Gallery now supports a bounded `view-all` path and manual curated product ordering. A broader load-more/public query expansion was intentionally not introduced. |
+
+Focused validation tied to these fixes was green on 2026-05-19:
+
+- `bun run test:vitest -- tests/vitest/widgets/productGallery.test.tsx tests/vitest/ui/product-gallery-editor-wave.test.tsx tests/vitest/ui/product-gallery-admin-preview.test.tsx tests/vitest/admin/productGalleryPreviewClient.test.ts tests/vitest/ui/widget-preview-state-support.test.ts tests/vitest/widgets/productCompare.test.tsx tests/vitest/widgets/productTable.test.tsx`
+- `bun test tests/integration/routes/productGalleryPreview.test.ts tests/integration/routes/widgets.test.ts tests/unit/commerce/commerceWidgetRuntime.test.ts tests/unit/widgets/validator.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+
+Repo-wide `bun run lint` / `bun run test:vitest` attempts were started during
+this pass, but the closeout was finalized on the focused Product Gallery lanes
+above after the user explicitly approved a scoped validation finish because the
+shared environment was under heavy parallel-agent / test-DB contention.

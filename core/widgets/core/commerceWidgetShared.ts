@@ -168,15 +168,16 @@ export const normalizeResolvedMeta = (value: CommerceWidgetResolvedMeta | undefi
 export const formatCommerceMoney = (amount: number, currency: string, locale = "en-US") => {
   if (!Number.isFinite(amount)) return "-";
   const normalizedCurrency = toText(currency).toUpperCase() || "USD";
+  const normalizedAmount = amount / 100;
   try {
     return new Intl.NumberFormat(locale, {
       style: "currency",
       currency: normalizedCurrency,
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
-    }).format(amount);
+    }).format(normalizedAmount);
   } catch {
-    return `${amount.toFixed(2)} ${normalizedCurrency}`;
+    return `${normalizedAmount.toFixed(2)} ${normalizedCurrency}`;
   }
 };
 

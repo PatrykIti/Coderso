@@ -29,6 +29,7 @@ test("registerWidgetRoutes wires endpoints", () => {
       "GET /widgets",
       "POST /widgets/entry-teaser/preview",
       "POST /widgets/product-compare/preview",
+      "POST /widgets/product-gallery/preview",
     ])
   );
 });

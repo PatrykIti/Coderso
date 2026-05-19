@@ -6,7 +6,7 @@
 **Category:** Widgets + Commerce + Admin UI + Accessibility
 **Estimated Effort:** Large
 **Dependencies:** TASK-256-01, TASK-256-02, TASK-280
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -133,6 +133,11 @@ No API routes are added.
 - `bun test tests/unit/widgets/validator.test.ts` if schema behavior changes.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run lint`
+- `bun run test:bun`
+- `bun run test:vitest`
+- `bun run scan:security:strict`
+- `bun run precommit`
 
 ## Documentation Updates Required
 

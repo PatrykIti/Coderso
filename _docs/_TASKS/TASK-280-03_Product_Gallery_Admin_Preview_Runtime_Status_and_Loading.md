@@ -6,7 +6,7 @@
 **Category:** Widgets + Commerce + Admin UI + Runtime Preview
 **Estimated Effort:** Large
 **Dependencies:** TASK-256-01, TASK-280-01, TASK-280-02, TASK-280
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -33,7 +33,8 @@ In scope:
 
 Out of scope:
 
-- generic dynamic-widget preview architecture for every widget;
+- generic preview architecture work beyond extending the already-landed
+  preview-state seam to Product Gallery;
 - public write endpoints or checkout/cart mutations;
 - provider credentials in browser code;
 - replacing `publicSite.tsx` runtime hydration for published pages.
@@ -58,21 +59,20 @@ Out of scope:
 | `core/admin/ui/widgets/editors/ProductGalleryEditors.tsx` | Show Product Gallery resolver status, last resolved timestamp, count, refresh affordance, and loading/error copy. |
 | `core/widgets/core/productGallery.tsx` | Add any needed normalized preview status fields only if they belong in persisted widget data; prefer transient admin preview state when possible. |
 | `core/services/commerce/commerceWidgetRuntime.ts` | Reuse Product Gallery runtime hydration for preview mode; keep provider fetch backend-owned. |
-| `core/server/publicSite.tsx` | Confirm public runtime hydration remains unchanged and preview mode semantics stay correct. |
-| `core/admin/ui/pages/builder/BlockList.tsx` | Keep page-builder canvas rendering through the existing `WidgetRenderer` seam while passing Product Gallery preview data into the selected block. |
-| `core/widgets/renderers/widgetRenderer.tsx` | Preserve normalized widget render ownership; do not bypass the registry to special-case Product Gallery. |
 | `core/admin/ui/pages/PageEditor.tsx` | Use the existing page preview/save boundary if Product Gallery preview hydration must refresh page-builder canvas data. |
 | `core/admin/ui/widgets/WidgetTemplateEditorPage.tsx` | Keep widget-template preview behavior aligned if Product Gallery templates need the same runtime-preview hydration path. |
-| `core/admin/services/commerceClient.ts` | Reuse or extend the existing `previewCommerceProductsQuery()` read client for admin-side resolver checks. |
-| `core/server/routes/commerceRoutes.ts` | Reuse or extend the internal `/commerce/products/query` route only through the existing permissioned commerce-read contract. |
+| `core/admin/services/productGalleryPreviewClient.ts` | Add a Product Gallery preview client that posts widget data to the repo-native widget preview route. |
+| `core/server/routes/productGalleryPreviewRoutes.ts` | Add the internal Product Gallery preview route that validates widget data and delegates to backend-owned runtime hydration. |
+| `core/server/routes/widgetRoutes.ts` | Register the Product Gallery preview route alongside the existing widget preview endpoints. |
 | `tests/vitest/widgets/productGallery.test.tsx` | Cover runtime warning/loading/status markers if render output changes. |
 | `tests/vitest/ui/product-gallery-editor-wave.test.tsx` | Cover resolver status, refresh loading, error, and count copy in the editor. |
-| `tests/vitest/ui/page-editor.test.tsx` | Add a focused Product Gallery preview/canvas case if preview data is threaded through `PageEditor` or `BlockList`. |
-| `tests/vitest/ui/widget-template-editor.test.tsx` | Add a focused Product Gallery template preview case if `WidgetTemplateEditorPage` preview hydration changes. |
-| `tests/vitest/admin/commerceClient.test.ts` | Cover `previewCommerceProductsQuery()` request shape if the admin preview client is reused or extended. |
+| `tests/vitest/ui/product-gallery-admin-preview.test.tsx` | Cover async preview hydration, stale-response handling, and canvas patching through `WidgetPreviewState`. |
+| `tests/vitest/ui/page-editor.test.tsx` | Update only if preview-state gating changes need a focused shell assertion beyond the dedicated Product Gallery admin-preview suite. |
+| `tests/vitest/ui/widget-template-editor.test.tsx` | Update only if widget-template preview gating needs a focused shell assertion beyond the dedicated Product Gallery admin-preview suite. |
+| `tests/vitest/admin/productGalleryPreviewClient.test.ts` | Cover Product Gallery preview request shape and payload forwarding. |
 | `tests/unit/commerce/commerceWidgetRuntime.test.ts` | Cover preview hydration behavior and error mapping. |
-| `tests/integration/routes/commerceRoutes.test.ts` | Extend route/permission coverage if the commerce query preview route changes or a Product Gallery preview endpoint is introduced. |
-| `tests/integration/runtime/pages-runtime.test.ts` | Cover public page/runtime preview behavior if Product Gallery hydration changes `handlePublicRequest()` output. |
+| `tests/integration/routes/productGalleryPreview.test.ts` | Cover preview-route validation, permissioning, and backend hydration mapping. |
+| `tests/integration/routes/widgets.test.ts` | Cover widget-route registration for the new Product Gallery preview endpoint. |
 | `_docs/_WIDGETS/PRODUCT_GALLERY.md` | Document admin preview behavior and resolver status. |
 | `_docs/PLAYWRIGHT/REPORT_PRODUCT_GALLERY_WIDGET.md` | Update admin preview findings with textual proof. |
 
@@ -87,15 +87,23 @@ type ProductGalleryPreviewState =
   | { status: "ready"; resolved: ProductGalleryData["resolved"] }
   | { status: "error"; error: string; resolved?: ProductGalleryData["resolved"] };
 
-async function loadProductGalleryPreview(data: ProductGalleryData): Promise<ProductGalleryData> {
-  return hydrateProductGalleryRuntimeData(data, { preview: true });
+async function previewProductGallery(data: ProductGalleryData) {
+  return apiRequest<ProductGalleryPreviewResponse>(
+    "/widgets/product-gallery/preview",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ data }),
+    }
+  ); // apiRequest prefixes this to /admin/api/widgets/product-gallery/preview
 }
 ```
 
 Editor flow:
 
 - The editor initializes from persisted `resolved` data when present.
-- Refresh triggers the existing backend-owned resolver in preview mode.
+- Refresh triggers the Product Gallery widget preview route, which delegates to
+  `hydrateProductGalleryRuntimeData(data, { preview: true })` on the server.
 - Loading state never overwrites dirty editor data.
 - Successful preview data is displayed in canvas/editor state but is not
   persisted unless the existing page save flow intentionally saves normalized
@@ -108,8 +116,8 @@ Editor flow:
 - If Product Gallery preview data is threaded through `PageEditor`, `BlockList`,
   or `WidgetTemplateEditorPage`, add the matching admin canvas/template UI test
   instead of relying only on the Product Gallery editor unit.
-- Admin query refresh should prefer `previewCommerceProductsQuery()` and the
-  existing permissioned commerce query route before adding a new endpoint.
+- Keep preview data inside `WidgetPreviewState.dataPatch` so `BlockList` and the
+  existing widget preview patching contract stay generic.
 
 Error handling:
 
@@ -134,44 +142,45 @@ test("ProductGallery editor surfaces resolved preview status", async () => {
 
 ## Security Contract
 
-If no route is added, existing auth/RBAC/CSRF/rate-limit behavior is unchanged.
-Preferred preview reads should reuse `previewCommerceProductsQuery()` and the
-existing `/admin/api/commerce/products/query` route, whose live permission
-boundary is `commerce:read`. If a Product Gallery-specific admin preview route
-is required instead, it must follow this contract:
+This leaf uses a Product Gallery-specific preview route so preview behavior can
+stay server-owned and match runtime hydration.
 
-- Endpoint visibility: internal admin only, under `/admin/api/*`.
+- Endpoint visibility: internal admin only, under `/admin/api/widgets/*`.
 - Auth model: authenticated admin session.
-- RBAC: `commerce:read` when reusing the existing commerce query route; same
-  page/template/widget edit permission only for a new page-builder/template
-  preview route that does not expose arbitrary commerce query access.
-- CSRF: GET/read-only route does not mutate state; any mutation is out of
-  scope. If POST is required for payload size, enforce existing admin CSRF.
+- RBAC: `widgets:read`, matching the shared widget-editor capability used by
+  both page and widget-template builders.
+- CSRF: POST preview route uses existing admin CSRF enforcement.
 - Rate-limit bucket: existing admin preview/read bucket.
 - Reject-unknown validation: request body must validate Product Gallery data
   through `productGallerySchema` / `normalizeProductGalleryData`.
 - Anti-abuse: no provider secrets or arbitrary query operators in browser
-  payloads; resolver uses server-owned commerce query allowlists.
+  payloads; preview routes only accept the bounded Product Gallery widget
+  contract and delegate to server-owned query allowlists.
 - Secret handling: no private provider keys, database credentials, or privileged
   commerce config in response bodies, logs, diagnostics, or browser cache.
 
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/ui/product-gallery-editor-wave.test.tsx`
-- `bun run test:vitest -- tests/vitest/ui/page-editor.test.tsx` if preview
-  data is threaded through `PageEditor` / page-builder canvas state.
-- `bun run test:vitest -- tests/vitest/ui/widget-template-editor.test.tsx` if
-  widget-template preview hydration changes.
+- `bun run test:vitest -- tests/vitest/ui/product-gallery-admin-preview.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/page-editor.test.tsx` only if
+  preview-state gating changes need a focused shell assertion beyond the
+  dedicated Product Gallery admin-preview suite.
+- `bun run test:vitest -- tests/vitest/ui/widget-template-editor.test.tsx`
+  only if widget-template preview gating needs a focused shell assertion beyond
+  the dedicated Product Gallery admin-preview suite.
 - `bun run test:vitest -- tests/vitest/widgets/productGallery.test.tsx`
-- `bun run test:vitest -- tests/vitest/admin/commerceClient.test.ts` if
-  `previewCommerceProductsQuery()` is reused or extended.
+- `bun run test:vitest -- tests/vitest/admin/productGalleryPreviewClient.test.ts`
 - `bun test tests/unit/commerce/commerceWidgetRuntime.test.ts`
-- `bun test tests/integration/routes/commerceRoutes.test.ts` if the existing
-  commerce query route changes or a new preview endpoint is added.
-- `bun test tests/integration/runtime/pages-runtime.test.ts` if public runtime
-  or preview-mode `handlePublicRequest()` behavior changes.
+- `bun test tests/integration/routes/productGalleryPreview.test.ts`
+- `bun test tests/integration/routes/widgets.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run lint`
+- `bun run test:bun`
+- `bun run test:vitest`
+- `bun run scan:security:strict`
+- `bun run precommit`
 
 ## Documentation Updates Required
 

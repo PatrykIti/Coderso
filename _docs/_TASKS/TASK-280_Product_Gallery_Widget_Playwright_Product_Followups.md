@@ -6,7 +6,7 @@
 **Category:** Widgets + Commerce + Admin UI + Runtime Render + Playwright QA
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-252-07-04, TASK-256, TASK-256-01, TASK-256-02, TASK-256-04, TASK-256-07, TASK-256-08
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -71,7 +71,7 @@ Gallery-specific leaf.
 | CODE-02, CODE-03 | TASK-280-02 | Remove Product Gallery-local dead fallback classes and trailing class artifacts without restaging the shared clear contract. |
 | CODE-04 | TASK-280-02 | Make minimal-card border color behavior truthful in render and editor copy. |
 | CODE-07 | TASK-280-02 | Render compare-at price only when it is higher than current price. |
-| NEW-02 potential cents formatting mismatch | TASK-280-02 | Verify Product Gallery symptoms. If the fix touches `formatCommerceMoney` for Product Compare/Table too, split the shared formatter repair out of TASK-280 before implementation. |
+| NEW-02 potential cents formatting mismatch | TASK-280-02 + TASK-313 | TASK-280 verifies the Product Gallery symptom and documents the outcome. If the mismatch is confirmed in shared `formatCommerceMoney()`, the implementation and closure move to `TASK-313`. |
 | NEW-01, UX-06, BF-09 | TASK-280-03 | Hydrate admin preview/runtime status and add loading/error/refresh affordances for Product Gallery. |
 | UX-01, UX-02, UX-03, UX-04, BF-14, A2, A6 | TASK-280-04 | Rebalance Product Gallery editor modes, empty-state copy, technical media hint, layout preview, and empty-state accessibility. |
 | CODE-05, UX-05, BF-08, BF-11 | TASK-280-05 | Product Gallery source/filter controls, query input cleanup, collection guidance, and bounded price filters. |
@@ -84,7 +84,7 @@ Gallery-specific leaf.
 | Finding | Decision | Reason |
 |---|---|---|
 | Screenshot PNG labels | No task | Report already states PNG files are local Playwright labels and not repo evidence. |
-| Commerce money formatter shared implementation | Out of TASK-280 until proven Product Gallery-only | `formatCommerceMoney` is used by Product Gallery, Product Table, and Product Compare. TASK-280-02 can verify the Product Gallery regression, but a cross-commerce formatter fix must not be hidden in this Product Gallery-only family. |
+| Commerce money formatter shared implementation | Separate shared task (`TASK-313`) | `formatCommerceMoney` is used by Product Gallery, Product Table, and Product Compare. TASK-280-02 can verify the Product Gallery symptom, but shared minor-unit parity must be tracked and landed under `TASK-313` instead of being hidden in this Product Gallery-only family. |
 | Generic collection picker behavior in `CommerceSourceFields` | Conditional | Product Gallery UX can improve copy and selected-state affordances. If the fix changes all commerce widgets, split or explicitly test Product Compare/Table impact. |
 
 ## Current Owner and Test Matrix
@@ -111,9 +111,9 @@ Gallery-specific leaf.
 
 ## Implementation Order
 
-1. Rebase over required TASK-256 shared fixes first. TASK-280 leaves must build
-   on shared editor, clear, and accessibility contracts instead of duplicating
-   them.
+1. Confirm the live checkout already includes the landed TASK-256 shared fixes
+   and build on those shared editor, clear, and accessibility contracts instead
+   of reintroducing them locally.
 2. Complete TASK-280-02 before visual-card expansion so compact/minimal/surface
    behavior is truthful.
 3. Complete TASK-280-01 after media/link ownership is confirmed against
@@ -153,7 +153,8 @@ This planning family does not add public write behavior.
   runtime rendering. Any admin preview route must require the existing admin
   session.
 - RBAC: unchanged page/template/widget write permissions. Preview reads must
-  require the same authenticated admin capability used by the page builder.
+  use the shared widget-editor read capability already required by page and
+  template builders (`widgets:read`).
 - CSRF: unchanged for existing admin writes. New GET-only preview routes do not
   mutate state; any write route is out of scope for TASK-280.
 - Rate-limit bucket: unchanged by default. A new preview route must use the
@@ -191,6 +192,9 @@ Implementation leaves:
   fields change.
 - `bun test tests/unit/widgets/registry.test.ts` if variant registration or
   widget definition metadata changes.
+- `bun run lint`
+- `bun run test:bun`
+- `bun run test:vitest`
 - `bun run gates:coderso`
 - `bun run scan:security:strict`
 - `bun run precommit`
