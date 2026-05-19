@@ -75,6 +75,20 @@ checkout has moved since then:
   drop-target reorder path for long lists while keeping Move up / Move down as
   deterministic fallback controls.
 
+### Product closure note — 2026-05-19 (`TASK-274-04`)
+
+- `BF-03` is fixed to the accepted `TASK-274-04` scope: Dense now eases to
+  `md:grid-cols-4` and only returns to six columns at `xl`, keeping larger logo
+  sets bounded on smaller desktop widths without widening Logo Cloud into
+  arbitrary grid tuning.
+- `BF-04` is fixed: Strip now supports a bounded `single-row` overflow mode
+  through a dedicated row-behavior control instead of always forcing wrapped
+  rows.
+- `BF-05` is fixed: Strip now offers an optional marquee mode that duplicates
+  logo items only for animation, pauses on hover/focus, and disables animation
+  under reduced motion in both public runtime and admin preview styles.
+
+
 ### Historical baseline note — 2026-05-19
 
 - Sections 1-9 below preserve the original 2026-05-16 Playwright baseline and

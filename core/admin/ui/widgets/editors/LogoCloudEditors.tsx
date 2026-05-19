@@ -29,6 +29,8 @@ import {
   type LogoCloudHeaderSize,
   type LogoCloudHeight,
   type LogoCloudLogo,
+  type LogoCloudMotionMode,
+  type LogoCloudRowMode,
   type LogoCloudVariantId,
 } from "../../../../widgets/core/logoCloud";
 import { normalizeWidgetSafeHref } from "../../../../widgets/core/widgetSafeHref";
@@ -89,6 +91,16 @@ const headerSizeOptions: Array<{ id: LogoCloudHeaderSize; label: string }> = [
   { id: "sm", label: "Small" },
   { id: "md", label: "Medium" },
   { id: "lg", label: "Large" },
+];
+
+const rowModeOptions: Array<{ id: LogoCloudRowMode; label: string }> = [
+  { id: "wrap", label: "Wrapped rows" },
+  { id: "single-row", label: "Single row scroll" },
+];
+
+const motionModeOptions: Array<{ id: LogoCloudMotionMode; label: string }> = [
+  { id: "static", label: "Static" },
+  { id: "marquee", label: "Marquee" },
 ];
 
 const logoCountOptions = Array.from({ length: logoCloudLogoMax }, (_, index) => String(index + 1));
@@ -928,6 +940,9 @@ export function LogoCloudVisualEditor({
   const header = normalized.header ?? logoCloudDefaults.header!;
   const style = normalized.style ?? logoCloudDefaults.style!;
   const logos = normalizeLogoCloudLogos(normalized.logos);
+  const resolvedVariant = resolveLogoCloudVariant(variant);
+  const stripLayoutControlsDisabled = resolvedVariant !== "strip";
+  const rowModeDisabled = stripLayoutControlsDisabled || style.motionMode === "marquee";
   const {
     commitLogoMutation,
     mediaSelection,
@@ -950,7 +965,7 @@ export function LogoCloudVisualEditor({
         title="Variant and layout structure"
         description="Choose logo cloud presentation and deterministic logo count."
       >
-        <VariantCards value={resolveLogoCloudVariant(variant)} onChange={onVariantChange} />
+        <VariantCards value={resolvedVariant} onChange={onVariantChange} />
 
         <div className="space-y-2">
           <p className="text-sm font-medium">Logo count</p>
@@ -1211,6 +1226,62 @@ export function LogoCloudVisualEditor({
               ))}
             </SelectContent>
           </Select>
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Strip row behavior</p>
+          <Select
+            value={style.rowMode}
+            disabled={rowModeDisabled}
+            onValueChange={(next) =>
+              updateStyle(value, onChange, { rowMode: next as LogoCloudRowMode })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select row behavior" />
+            </SelectTrigger>
+            <SelectContent>
+              {rowModeOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            {stripLayoutControlsDisabled
+              ? "Single-row overflow is available only in the Strip variant."
+              : style.motionMode === "marquee"
+                ? "Marquee always uses a single horizontal track, so row behavior stays locked."
+                : "Switch between wrapped rows and a single horizontal scroll row."}
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Strip motion</p>
+          <Select
+            value={style.motionMode}
+            disabled={stripLayoutControlsDisabled}
+            onValueChange={(next) =>
+              updateStyle(value, onChange, { motionMode: next as LogoCloudMotionMode })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select motion" />
+            </SelectTrigger>
+            <SelectContent>
+              {motionModeOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            {stripLayoutControlsDisabled
+              ? "Marquee and horizontal overflow are unavailable in Grid and Dense variants."
+              : "Marquee duplicates logos in a reduced-motion-safe scrolling track and pauses on hover or focus."}
+          </p>
         </div>
 
         <div className="flex items-center justify-between rounded-md border px-3 py-2">

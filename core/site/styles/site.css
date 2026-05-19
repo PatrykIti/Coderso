@@ -25,3 +25,38 @@
     font-family: var(--font-sans, system-ui);
   }
 }
+
+@layer utilities {
+  @keyframes logo-cloud-marquee {
+    from {
+      transform: translate3d(0, 0, 0);
+    }
+
+    to {
+      transform: translate3d(-50%, 0, 0);
+    }
+  }
+
+  .logo-cloud-marquee {
+    overflow: hidden;
+  }
+
+  .logo-cloud-marquee-track {
+    display: flex;
+    width: max-content;
+    animation: logo-cloud-marquee 24s linear infinite;
+    will-change: transform;
+  }
+
+  .logo-cloud-marquee:hover .logo-cloud-marquee-track,
+  .logo-cloud-marquee:focus-within .logo-cloud-marquee-track {
+    animation-play-state: paused;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .logo-cloud-marquee-track {
+      animation: none;
+      transform: none;
+    }
+  }
+}

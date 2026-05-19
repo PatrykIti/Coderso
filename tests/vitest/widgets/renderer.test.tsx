@@ -1224,6 +1224,8 @@ test("renderer outputs logo cloud variant and style markers", () => {
   expect(html).toContain('data-logo-cloud-grayscale="true"');
   expect(html).toContain('data-logo-cloud-header-align="end"');
   expect(html).toContain('data-logo-cloud-header-size="lg"');
+  expect(html).toContain('data-logo-cloud-row-mode="wrap"');
+  expect(html).toContain('data-logo-cloud-motion="static"');
   expect(html).toContain("<h2");
   expect(html).toContain("aria-labelledby=");
   expect(html).toContain("North Labs");

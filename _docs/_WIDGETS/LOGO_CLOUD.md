@@ -47,6 +47,8 @@ Notes:
 - Visual repeated-logo cards now support drag-handle reorder plus inline Undo
   after removal, while retaining Move up / Move down as deterministic fallback
   controls.
+- `Display style` now also exposes Strip-only `Row behavior` and `Motion`
+  controls for wrapped rows, single-row overflow, and marquee gating.
 
 ### Advanced (technical-only)
 - Technical layout diagnostics
@@ -69,9 +71,16 @@ plus normalize/reset and raw payload diagnostics.
   - `data-logo-cloud-hover-color`
   - `data-logo-cloud-header-align`
   - `data-logo-cloud-header-size`
+  - `data-logo-cloud-row-mode`
+  - `data-logo-cloud-motion`
 - When a section title is present, the shared section shell renders it as
   `<h2>` and names the region through `aria-labelledby`. When the title is
   empty, the section falls back to `aria-label="Partner logos"`.
+- Dense layout now eases to `md:grid-cols-4` and only returns to six columns at
+  `xl`, keeping max-count logo lists bounded on smaller desktops.
+- Strip can stay wrapped, switch to `overflow-x-auto` single-row scroll, or use
+  a marquee track that pauses on hover/focus and disables animation under
+  reduced motion.
 - Logo cards render as links only when `href` is provided.
 - Logo images render explicit `logos[].alt` when present and fall back to
   `logos[].name` for legacy payloads.
@@ -116,6 +125,8 @@ plus normalize/reset and raw payload diagnostics.
     "alignment": "center",
     "headerAlign": "center",
     "headerSize": "md",
+    "rowMode": "wrap",
+    "motionMode": "static",
     "tileBackground": "var(--color-bg)",
     "tileBorderColor": "color-mix(in srgb, var(--color-border) 60%, transparent)"
   }

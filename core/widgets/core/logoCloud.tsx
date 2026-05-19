@@ -10,6 +10,8 @@ export type LogoCloudGap = "none" | "sm" | "md" | "lg";
 export type LogoCloudAlignment = "start" | "center" | "end";
 export type LogoCloudHeaderAlign = "start" | "center" | "end";
 export type LogoCloudHeaderSize = "sm" | "md" | "lg";
+export type LogoCloudRowMode = "wrap" | "single-row";
+export type LogoCloudMotionMode = "static" | "marquee";
 
 export type LogoCloudLogo = {
   id?: string;
@@ -37,6 +39,8 @@ export type LogoCloudData = {
     tileBorderColor?: string;
     headerAlign?: LogoCloudHeaderAlign;
     headerSize?: LogoCloudHeaderSize;
+    rowMode?: LogoCloudRowMode;
+    motionMode?: LogoCloudMotionMode;
   };
 };
 
@@ -123,6 +127,8 @@ export const logoCloudSchema = {
         tileBorderColor: { type: "string" },
         headerAlign: { enum: ["start", "center", "end"] },
         headerSize: { enum: ["sm", "md", "lg"] },
+        rowMode: { enum: ["wrap", "single-row"] },
+        motionMode: { enum: ["static", "marquee"] },
       },
     },
   },
@@ -150,6 +156,8 @@ export const logoCloudDefaults: LogoCloudData = {
     alignment: "center",
     headerAlign: "center",
     headerSize: "md",
+    rowMode: "wrap",
+    motionMode: "static",
     tileBackground: "var(--color-bg)",
     tileBorderColor: "color-mix(in srgb, var(--color-border) 60%, transparent)",
   },
@@ -186,6 +194,16 @@ const resolveLogoCloudHeaderAlign = (value: string | undefined): LogoCloudHeader
 const resolveLogoCloudHeaderSize = (value: string | undefined): LogoCloudHeaderSize => {
   if (value === "sm" || value === "lg") return value;
   return "md";
+};
+
+const resolveLogoCloudRowMode = (value: string | undefined): LogoCloudRowMode => {
+  if (value === "single-row") return value;
+  return "wrap";
+};
+
+const resolveLogoCloudMotionMode = (value: string | undefined): LogoCloudMotionMode => {
+  if (value === "marquee") return value;
+  return "static";
 };
 
 export const resolveLogoCloudVariant = (variant: string): LogoCloudVariantId => {
@@ -307,6 +325,8 @@ export function normalizeLogoCloudData(data: LogoCloudData): LogoCloudData {
       alignment: resolveLogoCloudAlignment(data.style?.alignment),
       headerAlign: resolveLogoCloudHeaderAlign(data.style?.headerAlign),
       headerSize: resolveLogoCloudHeaderSize(data.style?.headerSize),
+      rowMode: resolveLogoCloudRowMode(data.style?.rowMode),
+      motionMode: resolveLogoCloudMotionMode(data.style?.motionMode),
       ...(clearableStyle ?? {}),
     },
   };
@@ -319,6 +339,7 @@ function LogoCloudItem({
   grayscale,
   hoverColor,
   tileStyle,
+  shrink = false,
 }: {
   logo: LogoCloudLogo;
   index: number;
@@ -326,6 +347,7 @@ function LogoCloudItem({
   grayscale: boolean;
   hoverColor: boolean;
   tileStyle?: CSSProperties;
+  shrink?: boolean;
 }) {
   const hasImage = typeof logo.image === "string" && logo.image.trim().length > 0;
   const hasLink = typeof logo.href === "string" && logo.href.trim().length > 0;
@@ -348,8 +370,10 @@ function LogoCloudItem({
     <span className="text-sm font-semibold text-[var(--color-text)]/75">{logo.name}</span>
   );
 
-  const wrapperClassName =
-    "group inline-flex min-h-[4.5rem] min-w-[8.5rem] items-center justify-center rounded-lg border px-3 py-2";
+  const wrapperClassName = joinClasses(
+    "group inline-flex min-h-[4.5rem] min-w-[8.5rem] items-center justify-center rounded-lg border px-3 py-2",
+    shrink ? "shrink-0" : undefined
+  );
 
   if (hasLink && linkAttrs) {
     return (
@@ -389,9 +413,21 @@ export function LogoCloudBlock({ data, variant }: { data: LogoCloudData; variant
   const alignment = resolveLogoCloudAlignment(style.alignment);
   const headerAlign = resolveLogoCloudHeaderAlign(style.headerAlign);
   const headerSize = resolveLogoCloudHeaderSize(style.headerSize);
+  const rowMode = resolveLogoCloudRowMode(style.rowMode);
+  const motionMode = resolveLogoCloudMotionMode(style.motionMode);
   const grayscale = Boolean(style.grayscale);
   const hoverColor = grayscale && Boolean(style.hoverColor);
   const logos = normalizeLogoCloudLogos(normalized.logos);
+  const resolvedMotionMode =
+    resolvedVariant === "strip" && motionMode === "marquee" && logos.length > 1
+      ? "marquee"
+      : "static";
+  const resolvedRowMode =
+    resolvedVariant === "strip"
+      ? resolvedMotionMode === "marquee"
+        ? "single-row"
+        : rowMode
+      : "wrap";
   const sectionStyle = compactStyle({
     backgroundColor: resolveClearableStyleValue(style.sectionBackground),
   });
@@ -409,10 +445,16 @@ export function LogoCloudBlock({ data, variant }: { data: LogoCloudData; variant
 
   const listClassName =
     resolvedVariant === "strip"
-      ? joinClasses("flex flex-wrap items-center", gapClassMap[gap], alignmentClassMap[alignment])
+      ? resolvedRowMode === "single-row"
+        ? joinClasses(
+            "flex w-full flex-nowrap items-center overflow-x-auto pb-2",
+            gapClassMap[gap],
+            alignmentClassMap[alignment]
+          )
+        : joinClasses("flex flex-wrap items-center", gapClassMap[gap], alignmentClassMap[alignment])
       : resolvedVariant === "dense"
         ? joinClasses(
-            "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6",
+            "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6",
             gapClassMap[gap],
             alignment === "center"
               ? undefined
@@ -445,6 +487,8 @@ export function LogoCloudBlock({ data, variant }: { data: LogoCloudData; variant
       data-logo-cloud-hover-color={String(hoverColor)}
       data-logo-cloud-header-align={headerAlign}
       data-logo-cloud-header-size={headerSize}
+      data-logo-cloud-row-mode={resolvedRowMode}
+      data-logo-cloud-motion={resolvedMotionMode}
     >
       {showHeader ? (
         <header
@@ -475,19 +519,39 @@ export function LogoCloudBlock({ data, variant }: { data: LogoCloudData; variant
         </header>
       ) : null}
 
-      <div className={listClassName}>
-        {logos.map((logo, index) => (
-          <LogoCloudItem
-            key={logo.id ?? `logo-item-${index + 1}`}
-            logo={logo}
-            index={index}
-            logoHeight={logoHeight}
-            grayscale={grayscale}
-            hoverColor={hoverColor}
-            tileStyle={tileStyle}
-          />
-        ))}
-      </div>
+      {resolvedMotionMode === "marquee" ? (
+        <div className="logo-cloud-marquee">
+          <div className={joinClasses("logo-cloud-marquee-track", gapClassMap[gap])}>
+            {[...logos, ...logos].map((logo, index) => (
+              <LogoCloudItem
+                key={`${logo.id ?? `logo-item-${(index % logos.length) + 1}`}-marquee-${index}`}
+                logo={logo}
+                index={index % logos.length}
+                logoHeight={logoHeight}
+                grayscale={grayscale}
+                hoverColor={hoverColor}
+                tileStyle={tileStyle}
+                shrink
+              />
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className={listClassName}>
+          {logos.map((logo, index) => (
+            <LogoCloudItem
+              key={logo.id ?? `logo-item-${index + 1}`}
+              logo={logo}
+              index={index}
+              logoHeight={logoHeight}
+              grayscale={grayscale}
+              hoverColor={hoverColor}
+              tileStyle={tileStyle}
+              shrink={resolvedVariant === "strip" && resolvedRowMode === "single-row"}
+            />
+          ))}
+        </div>
+      )}
     </section>
   );
 }

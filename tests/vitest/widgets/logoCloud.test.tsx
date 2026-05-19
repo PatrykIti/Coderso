@@ -63,6 +63,8 @@ test("logo cloud normalization keeps deterministic ids and bounds", () => {
   expect(normalized.style?.sectionBackground).toBeUndefined();
   expect(normalized.style?.headerAlign).toBe("center");
   expect(normalized.style?.headerSize).toBe("md");
+  expect(normalized.style?.rowMode).toBe("wrap");
+  expect(normalized.style?.motionMode).toBe("static");
 });
 
 test("logo cloud cleared section and tile styles omit forced inline surfaces", () => {
@@ -178,6 +180,55 @@ test("logo cloud falls back to logo name when image alt text is not provided", (
   expect(html).not.toContain('alt="undefined"');
 });
 
+test("logo cloud renders strip single-row and marquee layout markers", () => {
+  const html = renderToString(
+    <LogoCloudBlock
+      data={normalizeLogoCloudData({
+        logos: [
+          { id: "logo-a", name: "Acme", image: "https://cdn.example.com/acme.svg", href: "#" },
+          {
+            id: "logo-b",
+            name: "North Labs",
+            image: "https://cdn.example.com/north.svg",
+            href: "#",
+          },
+        ],
+        style: {
+          ...logoCloudDefaults.style,
+          rowMode: "single-row",
+          motionMode: "marquee",
+        },
+      })}
+      variant="strip"
+    />
+  );
+
+  expect(html).toContain('data-logo-cloud-row-mode="single-row"');
+  expect(html).toContain('data-logo-cloud-motion="marquee"');
+  expect(html).toContain("logo-cloud-marquee-track");
+});
+
+test("logo cloud dense layout keeps six columns for xl while easing smaller breakpoints", () => {
+  const html = renderToString(
+    <LogoCloudBlock
+      data={normalizeLogoCloudData({
+        logos: logoCloudDefaults.logos,
+        style: {
+          ...logoCloudDefaults.style,
+          rowMode: "single-row",
+          motionMode: "marquee",
+        },
+      })}
+      variant="dense"
+    />
+  );
+
+  expect(html).toContain('data-logo-cloud-row-mode="wrap"');
+  expect(html).toContain('data-logo-cloud-motion="static"');
+  expect(html).toContain("md:grid-cols-4");
+  expect(html).toContain("xl:grid-cols-6");
+});
+
 test("logo cloud validator accepts expanded model", () => {
   clearWidgets();
   const widget = createLogoCloudWidget({
@@ -222,6 +273,8 @@ test("logo cloud validator accepts expanded model", () => {
           sectionBackground: "#f8fafc",
           headerAlign: "start",
           headerSize: "lg",
+          rowMode: "single-row",
+          motionMode: "marquee",
         },
       },
     })
@@ -282,6 +335,8 @@ test("logo cloud visual renders section-based IA", () => {
   expect(html).toContain("Header copy");
   expect(html).toContain("Logos list and links");
   expect(html).toContain("Display style");
+  expect(html).toContain("Strip row behavior");
+  expect(html).toContain("Strip motion");
 });
 
 test("logo cloud advanced keeps technical-only scope", () => {

@@ -6,7 +6,7 @@
 **Category:** Widgets + Logo Cloud + Runtime Render + Responsive Layout
 **Estimated Effort:** Large
 **Dependencies:** TASK-274, TASK-274-03, TASK-256-06-02
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -154,3 +154,12 @@ No API routes are added.
 - Marquee, if implemented, pauses safely and respects reduced-motion users.
 - Layout fields are schema-owned, normalized, documented, and covered by
   runtime and editor tests.
+
+## Completion Notes
+
+- 2026-05-19: Logo Cloud now owns bounded `rowMode` and `motionMode` layout
+  fields, safer Dense breakpoints, Strip single-row overflow, and a marquee
+  track that pauses on hover/focus and disables itself under reduced motion.
+- Validation:
+  - `bun run lint`
+  - `bun run test:vitest -- tests/vitest/widgets/logoCloud.test.tsx tests/vitest/ui/logo-cloud-editor-wave.test.tsx tests/vitest/widgets/renderer.test.tsx tests/vitest/widgets/logoCloudStyles.test.ts`

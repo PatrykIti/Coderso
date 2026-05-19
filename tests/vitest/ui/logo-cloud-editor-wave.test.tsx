@@ -947,6 +947,49 @@ test("LogoCloud visual supports undo removal and drag reorder safeguards", async
   cleanup();
 });
 
+test("LogoCloud visual gates strip layout controls by variant and motion mode", async () => {
+  const { LogoCloudVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/LogoCloudEditors");
+
+  const { cleanup, container, getLatestValue, getLatestVariant } = mountLogoCloudHarness({
+    initialValue: {
+      logos: [
+        { id: "logo-1", name: "Acme", href: "#" },
+        { id: "logo-2", name: "North Labs", href: "#" },
+      ],
+    },
+    initialVariant: "grid",
+    render: (props) => <LogoCloudVisualEditor {...props} />,
+  });
+
+  const layoutSection = getSectionByTitle(container, "Variant and layout structure");
+  const styleSection = getSectionByTitle(container, "Display style");
+  const rowModeSelect = getSelectByOptions(styleSection, ["wrap", "single-row"]);
+  const motionModeSelect = getSelectByOptions(styleSection, ["static", "marquee"]);
+
+  expect(rowModeSelect.disabled).toBe(true);
+  expect(motionModeSelect.disabled).toBe(true);
+
+  clickButton(getButtonsByText(layoutSection, "Strip")[0]);
+  expect(getLatestVariant()).toBe("strip");
+  expect(rowModeSelect.disabled).toBe(false);
+  expect(motionModeSelect.disabled).toBe(false);
+
+  setSelectValue(rowModeSelect, "single-row");
+  expect(getLatestValue().style?.rowMode).toBe("single-row");
+
+  setSelectValue(motionModeSelect, "marquee");
+  expect(getLatestValue().style?.motionMode).toBe("marquee");
+  expect(rowModeSelect.disabled).toBe(true);
+
+  clickButton(getButtonsByText(layoutSection, "Dense")[0]);
+  expect(getLatestVariant()).toBe("dense");
+  expect(rowModeSelect.disabled).toBe(true);
+  expect(motionModeSelect.disabled).toBe(true);
+
+  cleanup();
+});
+
 test("LogoCloud advanced covers normalization defaults, technical tokens, and reset safeguards", async () => {
   const { LogoCloudAdvancedEditor } =
     await import("../../../core/admin/ui/widgets/editors/LogoCloudEditors");
