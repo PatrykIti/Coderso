@@ -395,7 +395,7 @@ Form element nie ma `aria-label` ani `aria-describedby`. Screen readery nie iden
 
 ---
 
-## Status po TASK-258 (2026-05-18)
+## Status po TASK-258, TASK-294, TASK-295, i TASK-301 (2026-05-19)
 
 ### Closure matrix
 

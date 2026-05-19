@@ -12,14 +12,12 @@
 
 ## Overview
 
-Create the exact future owner for `REPORT_COMPARE_TIMELINE_WIDGET.md` row `W8`.
+Close the exact owner for `REPORT_COMPARE_TIMELINE_WIDGET.md` row `W8`.
 
-`TASK-260` intentionally ships Compare Timeline with static SSR-safe output.
-This task exists so the deferred motion request has a real physical owner
-instead of a generic “future task” note. The eventual implementation must stay
-CSS-safe by default, respect reduced-motion preferences, and avoid inventing a
-widget-specific client runtime script unless the broader product/runtime policy
-explicitly approves it.
+`TASK-260` intentionally shipped Compare Timeline with static SSR-safe output.
+This follow-up is now landed: motion stays CSS-safe by default, respects
+reduced-motion preferences, and does not introduce a widget-specific client
+runtime script.
 
 ## Sub-Tasks
 
@@ -28,8 +26,8 @@ explicitly approves it.
 - [x] Define bounded motion presets (`none`, `fade`, `slide`, or equivalent)
   that remain truthful in SSR output.
 - [x] Respect `prefers-reduced-motion` and provide a stable no-motion fallback.
-- [x] Add editor controls, runtime output, tests, and docs only after the final
-  motion policy is approved.
+- [x] Add editor controls, runtime output, tests, and docs for the final motion
+  policy.
 
 ## Files to Change
 

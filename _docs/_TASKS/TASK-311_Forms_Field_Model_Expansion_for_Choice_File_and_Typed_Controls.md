@@ -12,15 +12,16 @@
 
 ## Overview
 
-Own the real Forms contract work behind report-only field types that current
-widget families must not implement locally.
+Own the Forms contract work behind field types that widget families must not
+implement locally.
 
-The live Forms model still accepts only `text`, `email`, `select`, `checkbox`,
-`textarea`, `phone`, and `date`. Report rows like Form Embed C2/W1 prove that
-future product work may want `radio`, `number`, `time`, `hidden`, `file`,
-`range`, and `rating`, but that expansion must happen in the Forms owners
-first: validation, builder/admin surfaces, runtime resolver payloads,
-submission validation, public-write safety, and then widget renderers.
+The live Forms model now supports `radio`, `number`, `time`, `range`, `rating`,
+and trusted `hidden` across validation, builder/admin surfaces, runtime preview,
+and Form Embed. `file` remains explicit unsupported scope until a safe
+upload/storage seam is approved. Report rows like Form Embed C2/W1 existed to
+force this expansion to happen in the Forms owners first: validation,
+builder/admin surfaces, runtime resolver payloads, submission validation,
+public-write safety, and only then widget renderers.
 
 ## Scope Boundary
 

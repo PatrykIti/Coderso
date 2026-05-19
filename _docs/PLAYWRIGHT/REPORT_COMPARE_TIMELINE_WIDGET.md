@@ -429,7 +429,7 @@ className={`grid gap-2 grid-cols-1 sm:grid-cols-2 lg:${gridClass}`}
   widget family `TASK-260` plus shared follow-ups `TASK-299` and `TASK-300`
   are now landed.
 
-## Status po TASK-260 (2026-05-17)
+## Status po TASK-260, TASK-299, i TASK-300 (2026-05-19)
 
 - Compare Timeline follow-up execution is complete for all rows owned by the
   `TASK-260` family.

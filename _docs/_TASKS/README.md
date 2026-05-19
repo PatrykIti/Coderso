@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 272 tasks
+- **To Do:** 273 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1695 tasks
 
@@ -382,7 +382,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-267-08 | Feature Grid Report, Docs, Changelog, and Closure | Medium | Medium | Done: Feature Grid report, widget doc, task board, changelog, and final validation evidence are synchronized |
 | TASK-305 | Shared Color Control Text and Swatch Contract | High | Medium | Done: the shared swatch-plus-text color contract now exists and Entry Teaser consumes it through widget-local adoption and tests |
 | TASK-303 | Divider and Spacer Residual Shared Token Control Adoption | High | Medium | Done: Divider/Spacer shared token-custom controls now collapse duplicate off-states, enter explicit custom mode, and preserve Divider CSS-variable color tokens |
-| TASK-265 | Entry Teaser Widget Playwright Product Followups | High | Very Large | Done: admin preview hydration, editor IA cleanup, CTA safety, layout/media controls, shared color adoption, docs closure, and validation evidence are synchronized; manual listing-row picking is deferred to TASK-304 |
+| TASK-265 | Entry Teaser Widget Playwright Product Followups | High | Very Large | Done: admin preview hydration, editor IA cleanup, CTA safety, layout/media controls, shared color adoption, docs closure, validation evidence, and later manual listing-row picking via TASK-304 are synchronized |
 | TASK-265-06 | Entry Teaser Shared Color Control Adoption | Medium | Medium | Done: Entry Teaser surface and border fields now use the shared swatch-plus-text control with widget-local adoption coverage |
 | TASK-265-05 | Entry Teaser Report, Docs, and Closure | Medium | Medium | Done: report matrix, widget docs, task board, changelog, and final validation evidence are synchronized for the TASK-265 family |
 | TASK-265-04 | Entry Teaser Layout, Media, Tags, and Heading Controls | High | Large | Done: section heading, heading levels, media mode/aspect/height/fit, tag limits, max-width, and deterministic image dimensions are shipped and tested |

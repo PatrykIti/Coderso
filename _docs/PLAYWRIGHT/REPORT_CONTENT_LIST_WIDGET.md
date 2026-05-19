@@ -316,7 +316,7 @@ _Raport ukończony po pełnym cyklu testów: analiza kodu + testy Admin UI + tes
 
 ---
 
-## Status po TASK-262 / TASK-302 (2026-05-17)
+## Status po TASK-262 / TASK-302 / TASK-310-02 (2026-05-19)
 
 ### Final classification
 

@@ -384,7 +384,7 @@ Widget jest gotowy do **podstawowego użycia** na prostych wdrożeniach, ale wym
 
 ---
 
-## Status po TASK-259 (2026-05-18)
+## Status po TASK-259, TASK-296, TASK-297, i TASK-298 (2026-05-19)
 
 | Zakres | Status | Owner | Dowód |
 |--------|--------|-------|------|

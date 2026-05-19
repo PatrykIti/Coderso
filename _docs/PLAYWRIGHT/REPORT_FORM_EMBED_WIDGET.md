@@ -68,7 +68,7 @@ zostało wdrożone dla `radio`, `number`, `time`, `range`, `rating`, i trusted
 | A7 | fixed | TASK-269-02 | Helper text jest połączony przez `aria-describedby`. |
 | A8 | fixed | TASK-269-05 | Success/error nodes są live regions. |
 | A9 | fixed | TASK-269-05 | Submit button ustawia i czyści `aria-busy`. |
-| A10 | not-applicable-current-contract | TASK-269-02 / TASK-311-01 | Obecny Forms model nie wystawia grouped checkbox/radio controls; grouped semantics wrócą dopiero z field-model expansion. |
+| A10 | not-applicable-current-contract | TASK-269-02 / TASK-311-01 | Obecny shipped Forms contract nie wystawia grouped checkbox/radio controls; grouped semantics are explicitly outside the current contract. |
 
 ## 3. Dowód owner test lanes
 
