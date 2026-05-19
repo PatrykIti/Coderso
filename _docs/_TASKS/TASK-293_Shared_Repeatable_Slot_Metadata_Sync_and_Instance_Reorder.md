@@ -28,6 +28,9 @@ Accordion still need a shared owner that can:
 
 This task unblocks deferred repeatable-slot findings such as Accordion U5/U6 in
 TASK-257-03 and provides the shared contract later widget families can reuse.
+Current downstream consumers already include Tabs/TASK-288 and the Footer
+slot/data-cohesion follow-up in TASK-308, so this task must stay repo-wide
+rather than Accordion-specific.
 
 ## Scope Boundary
 
@@ -199,7 +202,8 @@ No API routes are added.
 ## Documentation Updates Required
 
 - Update `_docs/PAGE_MODEL.md` if slot persistence or order semantics change.
-- Update each dependent widget task/report when it adopts the shared owner.
+- Update each dependent widget task/report when it adopts the shared owner,
+  including the current downstream families `TASK-288` and `TASK-308`.
 - Add a changelog entry and `_docs/_CHANGELOG/README.md` update when the task is
   completed.
 

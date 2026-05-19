@@ -12,20 +12,25 @@
 
 ## Overview
 
-Add an explicit manual listing picker for the Entry Teaser widget when the
-source type is `listing`.
+Decide and implement an explicit manual listing picker for the Entry Teaser
+widget when the source type is `listing`.
 
-`TASK-265` closes the report-driven `latest` and `featured` listing semantics,
-but intentionally does not introduce a one-off listing-row picker in the same
-slice. This follow-up owns the remaining product question: how editors choose a
-specific listing result deterministically without inventing unsafe or unstable
-row identifiers in widget data.
+The live repo already exposes a global
+`sourceMode: "manual" | "latest" | "featured"` enum for Entry Teaser, but
+listing mode intentionally masks `manual` in the editor and coerces it back to
+`latest` at runtime. `TASK-265` closes the report-driven `latest` and
+`featured` listing semantics, but intentionally does not introduce a one-off
+listing-row picker in the same slice. This follow-up owns the remaining product
+question: how editors choose a specific listing result deterministically without
+inventing unsafe or unstable row identifiers in widget data.
 
 ## Scope Boundary
 
 In scope:
 
-- Decide the persisted contract for a manual listing item target.
+- Decide whether listing mode extends the existing global `manual` source mode
+  with a persisted listing target, or whether source modes split by source
+  type.
 - Extend Entry Teaser editor/runtime/tests/docs for manual listing selection.
 - Keep listing manual selection explicit and deterministic.
 
@@ -71,6 +76,9 @@ type EntryTeaserListingManualTarget = {
 };
 
 function normalizeEntryTeaserData(data: EntryTeaserData): EntryTeaserData {
+  // The existing global sourceMode stays stable for legacy/manual entry
+  // selection. Listing mode adds an explicit target instead of overloading the
+  // current legacy entryId path.
   return {
     ...current,
     source: {
@@ -121,4 +129,6 @@ function SourcePickerFields(...) {
   through a documented contract.
 - Manual listing selection remains deterministic across preview and public
   runtime.
+- Legacy/manual entry selection remains backward compatible; listing mode no
+  longer relies on silently coercing `manual` back to `latest`.
 - Editor ownership stays aligned with `TASK-265` Wizard/Visual/Advanced rules.

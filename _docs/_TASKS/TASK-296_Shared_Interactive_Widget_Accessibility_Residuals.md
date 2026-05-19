@@ -21,6 +21,16 @@ status updates, slot-list semantics, selected-state semantics, and region
 labels. This task exists so widget-owned TASK-259 work can stay focused on
 Booking Calendar product scope instead of quietly absorbing a new shared drift.
 
+## Current Executable Consumer
+
+Current executable consumer: Booking Calendar only.
+
+This task stays under a shared-contract umbrella because the missing semantics
+were discovered as late shared drift, but the current write scope, tests, and
+acceptance criteria are intentionally Booking Calendar-specific. Any later
+interactive widget consumer must add an explicit routed follow-up row instead of
+silently treating TASK-296 as a generic helper implementation bucket.
+
 ## Scope Boundary
 
 This task does not own:

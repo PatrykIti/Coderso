@@ -45,14 +45,14 @@ closure. Those stay with TASK-262.
 
 ## Sub-Tasks
 
-- [ ] Make `Columns` truthful for `content-list` and `posts-feed` variants that
+- [x] Make `Columns` truthful for `content-list` and `posts-feed` variants that
   do not actually use multi-column layout.
-- [ ] Add bounded shared image presentation and CTA fallback behavior in
+- [x] Add bounded shared image presentation and CTA fallback behavior in
   `ContentListBlock` without breaking existing `posts-feed` output.
-- [ ] Replace the plain `textColor` input in `ContentListEditors.tsx` with the
+- [x] Replace the plain `textColor` input in `ContentListEditors.tsx` with the
   existing shared clear/picker pattern expected by the closed TASK-256-02
   contract.
-- [ ] Expand shared tests/docs so Content List and Posts Feed prove the same
+- [x] Expand shared tests/docs so Content List and Posts Feed prove the same
   renderer/style contract after the fix.
 
 ## Files to Change
@@ -157,6 +157,15 @@ No API routes are added.
 
 - Covered by a dedicated changelog entry or the final TASK-262 family changelog
   entry once the shared residual is complete and validated.
+
+## Completion Notes
+
+- Done (2026-05-17). Shared `ContentListBlock` truthfulness, bounded image/CTA
+  renderer behavior, and Content List `textColor` clear/picker adoption are
+  closed and synchronized with the final report/docs state.
+- Final family closure evidence is recorded in
+  `_docs/PLAYWRIGHT/REPORT_CONTENT_LIST_WIDGET.md` and
+  `_docs/_TASKS/TASK-262-05_Content_List_Report_Docs_and_Closure.md`.
 
 ## Acceptance Criteria
 

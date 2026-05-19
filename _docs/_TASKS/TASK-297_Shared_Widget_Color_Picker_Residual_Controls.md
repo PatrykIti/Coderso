@@ -12,22 +12,23 @@
 
 ## Overview
 
-Adopt the already-landed shared color-control owner in the late widget surfaces
-that still expose raw text inputs where the product expects a color-picker-level
-control.
+Use the already-landed shared color-control owner to close the remaining
+Booking Calendar frame-color row without reopening shared helper ownership.
 
 The first actionable seed is Booking Calendar report row 3.14 in
 `_docs/PLAYWRIGHT/REPORT_BOOKING_CALENDAR_WIDGET.md`, where
 `style.frameBackground` and `style.frameBorderColor` are still plain text
 inputs. The shared swatch-plus-text owner now already exists under `TASK-305`,
-so this task should consume or lightly extend that seam instead of reopening
-shared-control design from scratch. This remains shared editor-control work and
-must not be patched inside TASK-259.
+and the broader remaining adopter wave is tracked separately under `TASK-310`.
+This task is therefore the Booking Calendar-specific adoption leaf for that
+already-landed seam, and must not be patched inside TASK-259.
 
 ## Scope Boundary
 
 This task does not own:
 
+- the shared helper contract itself, which remains owned by `TASK-305` and the
+  broader remaining-adopter cleanup in `TASK-310`;
 - widget-local style semantics such as selected-slot colors or layout variants,
   owned by TASK-259-06;
 - shared accessibility/runtime semantics, owned by TASK-296;
@@ -36,9 +37,10 @@ This task does not own:
 ## Sub-Tasks
 
 - [ ] Reuse the landed shared color-input contract for late widgets that still
-  use `ClearableInputField` for color-like surface fields.
+  use `ClearableInputField` for color-like surface fields, starting with
+  Booking Calendar.
 - [ ] Extend the current shared owner only if Booking Calendar frame fields
-  need a small additive helper, not a second control contract.
+  need a small additive adapter, not a second control contract.
 - [ ] Adopt the shared control in Booking Calendar frame fields as the first
   executable owner path.
 - [ ] Add focused shared-control and Booking Calendar editor coverage.
@@ -49,10 +51,10 @@ This task does not own:
 
 | File | Required change |
 |---|---|
-| `core/admin/ui/widgets/editors/SharedColorControl.tsx` | Reuse the landed swatch-plus-text owner for Booking Calendar frame fields; touch only if the current API needs a small additive extension. |
+| `core/admin/ui/widgets/editors/SharedColorControl.tsx` | Reuse the landed swatch-plus-text owner for Booking Calendar frame fields; touch only if the current API needs a small additive extension already consistent with `TASK-305` / `TASK-310`. |
 | `core/admin/ui/widgets/editors/ClearableFields.tsx` | Touch only if Booking Calendar adoption needs an additive helper that belongs in the shared owner seam. |
 | `core/admin/ui/widgets/editors/BookingCalendarEditors.tsx` | Adopt the shared color-picker control for frame fields without changing Booking Calendar-specific style semantics. |
-| `tests/vitest/ui/clearable-fields.test.tsx` | Add focused coverage for the shared color-picker behavior. |
+| `tests/vitest/ui/clearable-fields.test.tsx` | Add focused coverage only if Booking Calendar adoption extends the shared helper surface. |
 | `tests/vitest/ui/booking-calendar-editor-wave.test.tsx` | Add Booking Calendar editor coverage for the shared frame color control. |
 | `_docs/PLAYWRIGHT/REPORT_BOOKING_CALENDAR_WIDGET.md` | Update shared-row ownership/evidence after implementation. |
 | `_docs/_TASKS/README.md` | Keep board status/statistics synchronized when this task moves. |
@@ -105,7 +107,8 @@ Error handling:
 - Booking Calendar no longer relies on stale TASK-256 references for the shared
   color-picker row this task owns.
 - Booking Calendar reuses the landed shared control instead of reopening shared
-  color-input design from scratch.
+  color-input design from scratch, while the broader remaining adopter wave
+  stays routed to `TASK-310`.
 - The shared control preserves clear/token/custom-value semantics while adding
   a bounded picker UX.
 - Later widget-only closure tasks can point to TASK-297 as the concrete

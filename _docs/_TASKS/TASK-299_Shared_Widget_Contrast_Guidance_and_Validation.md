@@ -22,6 +22,14 @@ warn when configured foreground/background pairs become unreadable, while still
 respecting CSS variables, omitted defaults, and widgets that intentionally do
 not own a given color surface.
 
+## Routed Adopters
+
+| Routed row | Current owner here | Notes |
+|---|---|---|
+| Compare Timeline `W7` | Yes | Current concrete deferred adopter from `TASK-260`. |
+| Timeline `W7` / shared contrast closure from `TASK-291` | Yes | Timeline closure already depends on a concrete shared contrast owner rather than generic TASK-256 routing. |
+| Any future widget-local contrast warning | Later explicit row | Do not silently widen scope; add a routed adopter entry first. |
+
 ## Sub-Tasks
 
 - [ ] Define the shared contrast-evaluation contract for color fields that have
@@ -33,6 +41,8 @@ not own a given color surface.
   Compare Timeline-only inline warning.
 - [ ] Apply the shared helper to Compare Timeline `markerColor`/track surface
   ownership only after the generic contract is stable.
+- [ ] Apply the same shared helper to Timeline color surfaces or record an
+  explicit blocked/deferred reason in the Timeline docs/report.
 - [ ] Update the routed source reports/closure notes that now depend on this
   shared owner.
 
@@ -43,9 +53,14 @@ not own a given color surface.
 | `core/admin/ui/widgets/editors/ClearableFields.tsx` or adjacent shared widget editor helpers | Own the reusable advisory state/presentation contract instead of one-off widget copy. |
 | `core/widgets/core/clearableStyle.ts` and any shared contrast helper introduced here | Normalize/resolve the shared contrast input shape without inventing per-widget sentinel values. |
 | `core/admin/ui/widgets/editors/CompareTimelineEditors.tsx` | Consume the shared contrast helper only after the reusable contract lands. |
+| `core/admin/ui/widgets/editors/TimelineEditors.tsx` | Consume the same shared contrast helper for Timeline-owned color surfaces once the routed adopter contract is settled. |
 | `tests/vitest/ui/clearable-fields.test.tsx` or adjacent shared helper suites | Cover warning visibility, CSS-variable fallback behavior, and false-positive guards. |
 | `tests/vitest/ui/compare-timeline-editor-wave.test.tsx` | Cover Compare Timeline adoption once the shared helper is wired. |
-| `_docs/PLAYWRIGHT/REPORT_COMPARE_TIMELINE_WIDGET.md` and any other routed reports | Replace `future shared task` placeholders with final fixed/deferred evidence. |
+| `tests/vitest/ui/timeline-editor-wave.test.tsx` | Cover Timeline adoption or explicit blocked-state copy once the routed adopter path is settled. |
+| `_docs/PLAYWRIGHT/REPORT_COMPARE_TIMELINE_WIDGET.md` | Replace the deferred `W7` placeholder with final fixed/deferred evidence. |
+| `_docs/PLAYWRIGHT/REPORT_TIMELINE_WIDGET.md` | Replace the Timeline shared-contrast placeholder with final fixed/deferred evidence. |
+| `_docs/_WIDGETS/COMPARE_TIMELINE.md` | Keep the Compare Timeline source-of-truth note aligned with the landed shared contrast contract. |
+| `_docs/_WIDGETS/TIMELINE.md` | Keep the Timeline source-of-truth note aligned with the landed shared contrast contract. |
 
 ## Implementation Pseudocode
 
@@ -85,12 +100,16 @@ No API routes are added.
 
 - `bun run test:vitest -- tests/vitest/ui/clearable-fields.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/compare-timeline-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/timeline-editor-wave.test.tsx`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 
 ## Documentation Updates Required
 
 - `_docs/PLAYWRIGHT/REPORT_COMPARE_TIMELINE_WIDGET.md`
+- `_docs/PLAYWRIGHT/REPORT_TIMELINE_WIDGET.md`
+- `_docs/_WIDGETS/COMPARE_TIMELINE.md`
+- `_docs/_WIDGETS/TIMELINE.md`
 - Any additional widget report that is physically routed to this shared task
 - `_docs/WIDGETS.md` only if the shared color-guidance contract becomes a new
   source-of-truth widget rule
@@ -98,6 +117,9 @@ No API routes are added.
 ## Acceptance Criteria
 
 - `W7` from `REPORT_COMPARE_TIMELINE_WIDGET.md` has an exact physical owner.
+- The current Timeline shared-contrast row also has exact fixed/deferred
+  evidence under this task instead of a generic future-task placeholder.
 - Shared contrast guidance is reusable and does not depend on Compare Timeline-
   specific assumptions.
-- Compare Timeline adopts the shared contract only after the helper exists.
+- Compare Timeline and Timeline adopt the shared contract only after the helper
+  exists, or the task records a truthful explicit blocker for either adopter.

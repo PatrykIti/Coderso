@@ -60,6 +60,8 @@ It does not own:
 - `tests/vitest/ui/appointment-form-editor-wave.test.tsx`
 - `tests/vitest/content/detailPageBindingResolver.test.ts` or the current
   detail-template editor-context suite
+- `_docs/_WIDGETS/APPOINTMENT_FORM.md`
+- `_docs/PLAYWRIGHT/REPORT_APPOINTMENT_FORM_WIDGET.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_TASKS/TASK-258-03_Flow_Pairing_Slot_Context_Locale_and_Redirect.md`
   only to point `UX-02` at this shared owner
@@ -178,6 +180,10 @@ This is internal admin/editor context only.
   when `UX-02` depends on or defers to this shared owner
 - `_docs/_TASKS/TASK-259-01_Booking_Calendar_Admin_Preview_Runtime_Catalog_Parity.md`
   when shared context ownership replaces ad hoc local wording
+- `_docs/_WIDGETS/APPOINTMENT_FORM.md` when the current defer note becomes a
+  shipped shared editor-context contract
+- `_docs/PLAYWRIGHT/REPORT_APPOINTMENT_FORM_WIDGET.md` when `UX-02` is no
+  longer deferred to this task
 
 ## Acceptance Criteria
 

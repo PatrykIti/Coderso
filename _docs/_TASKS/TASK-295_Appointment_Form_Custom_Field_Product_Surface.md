@@ -41,6 +41,20 @@ It does not own:
 - `_docs/PLAYWRIGHT/REPORT_APPOINTMENT_FORM_WIDGET.md`
 - `_docs/_TASKS/README.md`
 
+## Read-Only Boundary Owners
+
+This task reuses an already-bounded public metadata contract. These backend
+owners are verification dependencies, not primary write-scope owners for the
+widget slice:
+
+- `core/server/validation/bookingSchemas.ts` owns the allowlisted
+  `metadata.customFields` schema shape.
+- `core/server/publicBookingApi.ts` owns request normalization for the public
+  booking write payload.
+
+Do not widen those backend files here unless the public booking metadata
+contract itself must change.
+
 ## Sub-Tasks
 
 - [ ] Add bounded custom field schema/defaults/normalizer support for text,
@@ -72,8 +86,52 @@ function normalizeAppointmentCustomFields(input: unknown): AppointmentCustomFiel
     .filter((field) => field.id.length > 0 && field.label.length > 0);
 }
 
-function collectCustomFieldMetadata(form: HTMLFormElement) {
-  return Array.from(form.querySelectorAll("[data-appointment-custom-field]")).map(readCustomFieldValue);
+type AppointmentCustomFieldSubmission =
+  | {
+      id: string;
+      label: string;
+      type: Exclude<AppointmentCustomField["type"], "checkbox">;
+      value: string | null;
+    }
+  | {
+      id: string;
+      label: string;
+      type: "checkbox";
+      checked: boolean;
+    };
+
+function collectCustomFieldMetadata(
+  form: HTMLFormElement,
+  fields: AppointmentCustomField[]
+): AppointmentCustomFieldSubmission[] {
+  return fields.slice(0, 12).map((field) => {
+    const element = form.querySelector(`[data-appointment-custom-field="${field.id}"]`);
+    if (
+      !(
+        element instanceof HTMLInputElement ||
+        element instanceof HTMLTextAreaElement ||
+        element instanceof HTMLSelectElement
+      )
+    ) {
+      return field.type === "checkbox"
+        ? { id: field.id, label: field.label, type: "checkbox", checked: false }
+        : { id: field.id, label: field.label, type: field.type, value: null };
+    }
+
+    return field.type === "checkbox"
+      ? {
+          id: field.id,
+          label: field.label,
+          type: "checkbox",
+          checked: element instanceof HTMLInputElement ? element.checked : false,
+        }
+      : {
+          id: field.id,
+          label: field.label,
+          type: field.type,
+          value: element.value.trim() || null,
+        };
+  });
 }
 ```
 
@@ -92,6 +150,7 @@ function collectCustomFieldMetadata(form: HTMLFormElement) {
 - `bun run test:vitest -- tests/vitest/widgets/appointmentForm.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/appointment-form-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/bookingRuntimeScript.appointmentForm.test.ts`
+- `bun run test:vitest -- tests/vitest/validation/bookingSchemas.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 
@@ -106,5 +165,9 @@ function collectCustomFieldMetadata(form: HTMLFormElement) {
 - Appointment Form can render and submit bounded custom field answers through
   `metadata.customFields`.
 - Supported field types stay schema-owned, deterministic, and editor-visible.
+- Runtime serialization stays compatible with the existing public booking
+  metadata shape: non-checkbox fields emit `{ id, label, type, value }`,
+  checkbox emits `{ id, label, type, checked }`, and the widget caps the list
+  at 12 items.
 - No arbitrary metadata keys, scripts, or secrets can be authored through the
   custom-field surface.
