@@ -135,6 +135,19 @@ const setSelectValue = (element: Element | null | undefined, value: string) => {
   });
 };
 
+const clickButtonByText = (container: ParentNode, text: string, index = 0) => {
+  const matches = Array.from(container.querySelectorAll("button")).filter((button) =>
+    button.textContent?.includes(text)
+  );
+  const button = matches[index];
+  if (!(button instanceof HTMLButtonElement)) {
+    throw new Error(`Missing button containing text "${text}" at index ${index}`);
+  }
+  React.act(() => {
+    button.click();
+  });
+};
+
 afterEach(() => {
   document.body.innerHTML = "";
   vi.restoreAllMocks();
@@ -367,6 +380,55 @@ test("AppointmentForm wizard shows same-surface booking flow pairing feedback", 
     expect(
       view.container.querySelector('[data-appointment-flow-feedback="mismatch"]')?.textContent
     ).toContain("booking-flow, concierge-flow");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AppointmentForm visual editor authors bounded custom fields", async () => {
+  const { AppointmentFormVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/AppointmentFormEditors");
+
+  let latestValue: AppointmentFormData = {
+    flowId: "booking-flow",
+  };
+
+  const Harness = () => {
+    const [value, setValue] = useState<AppointmentFormData>(latestValue);
+    return (
+      <AppointmentFormVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="default"
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    clickButtonByText(view.container, "Add custom field");
+
+    expect(view.container.textContent).toContain("Custom field 1");
+    setInputValue(findLabelInput(view.container, "Field label"), "Company");
+    setSelectValue(findLabelSelect(view.container, "Field type"), "select");
+    setTextareaValue(findLabelTextarea(view.container, "Options"), "Email\nPhone");
+    setCheckboxValue(findToggleByText(view.container, "Required field"), true);
+
+    expect(latestValue.customFields?.[0]).toEqual(
+      expect.objectContaining({
+        label: "Company",
+        type: "select",
+        required: true,
+        options: ["Email", "Phone"],
+      })
+    );
+
+    clickButtonByText(view.container, "Remove");
+    expect(latestValue.customFields).toBeUndefined();
   } finally {
     view.cleanup();
   }

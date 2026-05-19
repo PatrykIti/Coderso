@@ -1,11 +1,13 @@
 import type { ReactNode } from "react";
 
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 
 import {
   normalizeAppointmentFormData,
+  type AppointmentCustomField,
   type AppointmentFormData,
 } from "../../../../widgets/core/appointmentForm";
 import type { WidgetEditorBookingFlowSummary, WidgetEditorProps } from "../../../../widgets/types";
@@ -55,6 +57,75 @@ const clearStyle = (
     })
   );
 };
+
+const createCustomFieldDraft = (index: number): AppointmentCustomField => ({
+  id: `custom-field-${index + 1}`,
+  label: `Custom field ${index + 1}`,
+  type: "text",
+  required: false,
+  placeholder: "",
+});
+
+const updateCustomField = (
+  value: AppointmentFormData,
+  onChange: (next: AppointmentFormData) => void,
+  index: number,
+  patch: Partial<AppointmentCustomField>
+) => {
+  const current = normalizeAppointmentFormData(value);
+  const nextFields = [...(current.customFields ?? [])];
+  const existing = nextFields[index];
+  if (!existing) return;
+  nextFields[index] = {
+    ...existing,
+    ...patch,
+  };
+  onChange(
+    normalizeAppointmentFormData({
+      ...current,
+      customFields: nextFields,
+    })
+  );
+};
+
+const addCustomField = (
+  value: AppointmentFormData,
+  onChange: (next: AppointmentFormData) => void
+) => {
+  const current = normalizeAppointmentFormData(value);
+  const nextFields = [...(current.customFields ?? [])];
+  if (nextFields.length >= 12) return;
+  nextFields.push(createCustomFieldDraft(nextFields.length));
+  onChange(
+    normalizeAppointmentFormData({
+      ...current,
+      customFields: nextFields,
+    })
+  );
+};
+
+const removeCustomField = (
+  value: AppointmentFormData,
+  onChange: (next: AppointmentFormData) => void,
+  index: number
+) => {
+  const current = normalizeAppointmentFormData(value);
+  const nextFields = (current.customFields ?? []).filter((_, itemIndex) => itemIndex !== index);
+  onChange(
+    normalizeAppointmentFormData({
+      ...current,
+      customFields: nextFields,
+    })
+  );
+};
+
+const serializeOptionsDraft = (options: string[] | undefined) => (options ?? []).join("\n");
+
+const parseOptionsDraft = (value: string) =>
+  value
+    .split("\n")
+    .map((option) => option.trim())
+    .filter(Boolean);
 
 function Section({
   title,
@@ -543,6 +614,101 @@ export function AppointmentFormVisualEditor({
             />
           </>
         ) : null}
+      </Section>
+
+      <Section
+        title="Custom fields"
+        description="Add bounded intake fields that serialize into metadata.customFields."
+      >
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs text-muted-foreground">
+            Up to 12 widget-owned custom fields. Checkbox stores checked state; other fields store a
+            text value.
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => addCustomField(normalized, onChange)}
+          >
+            Add custom field
+          </Button>
+        </div>
+
+        {(normalized.customFields ?? []).length === 0 ? (
+          <p className="text-sm text-muted-foreground">No custom fields configured yet.</p>
+        ) : null}
+
+        {(normalized.customFields ?? []).map((field, index) => (
+          <div key={field.id} className="space-y-3 rounded-md border border-border/60 p-3">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-medium">Custom field {index + 1}</p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => removeCustomField(normalized, onChange, index)}
+              >
+                Remove
+              </Button>
+            </div>
+            <TextField
+              label="Field label"
+              value={field.label}
+              onChange={(next) => updateCustomField(normalized, onChange, index, { label: next })}
+            />
+            <SelectField
+              label="Field type"
+              value={field.type}
+              onChange={(next) =>
+                updateCustomField(normalized, onChange, index, {
+                  type: next as AppointmentCustomField["type"],
+                  ...(next === "select" ? {} : { options: undefined }),
+                  ...(next === "checkbox" ? { placeholder: undefined } : {}),
+                })
+              }
+              options={[
+                { value: "text", label: "Text" },
+                { value: "email", label: "Email" },
+                { value: "phone", label: "Phone" },
+                { value: "select", label: "Select" },
+                { value: "checkbox", label: "Checkbox" },
+                { value: "textarea", label: "Textarea" },
+              ]}
+            />
+            <ToggleField
+              label="Required field"
+              checked={field.required === true}
+              onCheckedChange={(next) =>
+                updateCustomField(normalized, onChange, index, { required: next })
+              }
+            />
+            {field.type !== "checkbox" ? (
+              <TextField
+                label="Placeholder"
+                value={field.placeholder}
+                onChange={(next) =>
+                  updateCustomField(normalized, onChange, index, { placeholder: next })
+                }
+              />
+            ) : null}
+            {field.type === "select" ? (
+              <label className="space-y-1 text-sm">
+                <span className="font-medium text-foreground">Options</span>
+                <Textarea
+                  rows={4}
+                  value={serializeOptionsDraft(field.options)}
+                  onChange={(event) =>
+                    updateCustomField(normalized, onChange, index, {
+                      options: parseOptionsDraft(event.target.value),
+                    })
+                  }
+                  placeholder={"First option\nSecond option"}
+                />
+              </label>
+            ) : null}
+          </div>
+        ))}
       </Section>
 
       <Section

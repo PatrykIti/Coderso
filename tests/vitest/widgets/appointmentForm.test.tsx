@@ -98,6 +98,44 @@ test("appointment form renders phone validation and notes bounds when optional f
   expect(html).toContain('data-booking-notes-counter="true"');
 });
 
+test("appointment form renders bounded custom fields with deterministic metadata markers", () => {
+  const html = renderToString(
+    <AppointmentFormBlock
+      variant="default"
+      data={normalizeAppointmentFormData({
+        ...appointmentFormDefaults,
+        customFields: [
+          {
+            id: "company",
+            label: "Company",
+            type: "text",
+            placeholder: "Acme",
+          },
+          {
+            id: "contact-method",
+            label: "Preferred contact method",
+            type: "select",
+            options: ["Email", "Phone"],
+          },
+          {
+            id: "nda",
+            label: "NDA required",
+            type: "checkbox",
+          },
+        ],
+      })}
+    />
+  );
+
+  expect(html).toContain('data-appointment-custom-field="company"');
+  expect(html).toContain('data-appointment-custom-field-type="text"');
+  expect(html).toContain('data-appointment-custom-field="contact-method"');
+  expect(html).toContain('data-appointment-custom-field-type="select"');
+  expect(html).toContain(">Email<");
+  expect(html).toContain('data-appointment-custom-field="nda"');
+  expect(html).toContain('data-appointment-custom-field-type="checkbox"');
+});
+
 test("appointment form renders consent controls and captcha bridge data when available", () => {
   const html = renderToString(
     <AppointmentFormBlock

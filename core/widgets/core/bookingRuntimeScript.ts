@@ -759,6 +759,46 @@ const runtimeClientScript = String.raw`(() => {
       };
     };
 
+    const collectCustomFieldMetadata = () => {
+      return Array.from(form.querySelectorAll("[data-appointment-custom-field]")).flatMap((node) => {
+        const id = (node.getAttribute("data-appointment-custom-field") || "").trim();
+        const label = (node.getAttribute("data-appointment-custom-field-label") || "").trim();
+        const type = (node.getAttribute("data-appointment-custom-field-type") || "").trim();
+        if (!id || !label || !type) return [];
+
+        if (type === "checkbox") {
+          if (!(node instanceof HTMLInputElement)) return [];
+          return [
+            {
+              id,
+              label,
+              type,
+              checked: node.checked,
+            },
+          ];
+        }
+
+        if (
+          !(
+            node instanceof HTMLInputElement ||
+            node instanceof HTMLTextAreaElement ||
+            node instanceof HTMLSelectElement
+          )
+        ) {
+          return [];
+        }
+
+        return [
+          {
+            id,
+            label,
+            type,
+            value: node.value.trim() || null,
+          },
+        ];
+      });
+    };
+
     const setSubmittingState = (submitting) => {
       form.dataset.submitting = submitting ? "1" : "0";
       if (!(submitButton instanceof HTMLButtonElement)) return;
@@ -855,6 +895,7 @@ const runtimeClientScript = String.raw`(() => {
       try {
         const formData = new FormData(form);
         const consent = collectConsentMetadata(formData);
+        const customFields = collectCustomFieldMetadata();
         const captchaToken = await resolveCaptchaToken(form);
         const payload = {
           serviceId: selection.serviceId,
@@ -873,6 +914,7 @@ const runtimeClientScript = String.raw`(() => {
             flowId,
             pathname: window.location.pathname,
             ...(consent ? { consent } : {}),
+            ...(customFields.length > 0 ? { customFields } : {}),
           },
         };
 

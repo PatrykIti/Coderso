@@ -332,6 +332,107 @@ test("appointment form runtime composes split-name payload and updates notes cou
   });
 });
 
+test("appointment form runtime serializes custom field metadata into the bounded payload shape", async () => {
+  const fetchMock = vi.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ({
+      runtime: {
+        successMessage: "Reservation confirmed",
+      },
+    }),
+  });
+  window.fetch = fetchMock as unknown as typeof window.fetch;
+
+  const view = renderAppointmentFormDom(
+    normalizeAppointmentFormData({
+      ...appointmentFormDefaults,
+      customFields: [
+        {
+          id: "company",
+          label: "Company",
+          type: "text",
+          placeholder: "Acme",
+        },
+        {
+          id: "contact-method",
+          label: "Preferred contact method",
+          type: "select",
+          options: ["Email", "Phone"],
+        },
+        {
+          id: "nda",
+          label: "NDA required",
+          type: "checkbox",
+        },
+      ],
+    })
+  );
+
+  const companyInput = view.form.querySelector(
+    '[data-appointment-custom-field="company"]'
+  ) as HTMLInputElement | null;
+  const contactMethodInput = view.form.querySelector(
+    '[data-appointment-custom-field="contact-method"]'
+  ) as HTMLSelectElement | null;
+  const ndaInput = view.form.querySelector(
+    '[data-appointment-custom-field="nda"]'
+  ) as HTMLInputElement | null;
+
+  if (!(companyInput instanceof HTMLInputElement)) {
+    throw new Error("Custom text field missing from runtime test.");
+  }
+  if (!(contactMethodInput instanceof HTMLSelectElement)) {
+    throw new Error("Custom select field missing from runtime test.");
+  }
+  if (!(ndaInput instanceof HTMLInputElement)) {
+    throw new Error("Custom checkbox field missing from runtime test.");
+  }
+
+  companyInput.value = "Acme Corp";
+  companyInput.dispatchEvent(new Event("input", { bubbles: true }));
+  contactMethodInput.value = "Phone";
+  contactMethodInput.dispatchEvent(new Event("change", { bubbles: true }));
+  ndaInput.checked = true;
+  ndaInput.dispatchEvent(new Event("change", { bubbles: true }));
+
+  setRuntimeSelection({
+    serviceId: "service-1",
+    resourceId: "resource-1",
+    startsAt: "2030-01-15T12:00:00.000Z",
+    endsAt: "2030-01-15T12:30:00.000Z",
+    timezone: "UTC",
+  });
+  await flushPromises();
+
+  submitForm(view.form);
+  await flushPromises();
+
+  expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toMatchObject({
+    metadata: {
+      customFields: [
+        {
+          id: "company",
+          label: "Company",
+          type: "text",
+          value: "Acme Corp",
+        },
+        {
+          id: "contact-method",
+          label: "Preferred contact method",
+          type: "select",
+          value: "Phone",
+        },
+        {
+          id: "nda",
+          label: "NDA required",
+          type: "checkbox",
+          checked: true,
+        },
+      ],
+    },
+  });
+});
+
 test("appointment form runtime executes recaptcha and submits consent metadata", async () => {
   const execute = vi.fn().mockResolvedValue("captcha-token-1");
   (

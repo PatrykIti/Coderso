@@ -18,6 +18,21 @@ export type AppointmentFormConsent = {
   privacyUrl?: string;
   termsUrl?: string;
 };
+export type AppointmentCustomFieldType =
+  | "text"
+  | "email"
+  | "phone"
+  | "select"
+  | "checkbox"
+  | "textarea";
+export type AppointmentCustomField = {
+  id: string;
+  label: string;
+  type: AppointmentCustomFieldType;
+  required?: boolean;
+  placeholder?: string;
+  options?: string[];
+};
 export type AppointmentFormResolvedCaptcha = {
   provider?: "recaptcha_v3";
   siteKey?: string;
@@ -59,6 +74,7 @@ export type AppointmentFormData = {
   phonePattern?: string;
   phonePatternMessage?: string;
   notesMaxLength?: number;
+  customFields?: AppointmentCustomField[];
   consent?: AppointmentFormConsent;
   submissionEndpoint?: string;
   style?: {
@@ -165,6 +181,65 @@ const bookingLink = (value: string | undefined) => {
   return undefined;
 };
 
+const appointmentCustomFieldTypes = [
+  "text",
+  "email",
+  "phone",
+  "select",
+  "checkbox",
+  "textarea",
+] as const satisfies readonly AppointmentCustomFieldType[];
+
+const normalizeCustomFieldType = (value: unknown): AppointmentCustomFieldType =>
+  typeof value === "string" &&
+  appointmentCustomFieldTypes.includes(value as AppointmentCustomFieldType)
+    ? (value as AppointmentCustomFieldType)
+    : "text";
+
+const normalizeCustomFieldOptions = (value: unknown) => {
+  if (!Array.isArray(value)) return undefined;
+  const options = value
+    .map((entry) => (typeof entry === "string" ? entry.trim() : ""))
+    .filter(Boolean)
+    .slice(0, 12);
+  return options.length > 0 ? options : undefined;
+};
+
+const normalizeAppointmentCustomFields = (value: unknown): AppointmentCustomField[] | undefined => {
+  if (!Array.isArray(value)) return undefined;
+  const usedIds = new Set<string>();
+  const fields = value
+    .map((entry, index) => {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) return null;
+      const field = entry as AppointmentCustomField;
+      const label = optionalText(field.label);
+      if (!label) return null;
+
+      const type = normalizeCustomFieldType(field.type);
+      const baseId = optionalText(field.id) ?? `custom-field-${index + 1}`;
+      let nextId = baseId;
+      let suffix = 2;
+      while (usedIds.has(nextId)) {
+        nextId = `${baseId}-${suffix}`;
+        suffix += 1;
+      }
+      usedIds.add(nextId);
+
+      return compactObject({
+        id: nextId,
+        label,
+        type,
+        required: bool(field.required, false) ? true : undefined,
+        placeholder: type === "checkbox" ? undefined : optionalText(field.placeholder),
+        options: type === "select" ? normalizeCustomFieldOptions(field.options) : undefined,
+      }) as AppointmentCustomField;
+    })
+    .filter((field): field is AppointmentCustomField => Boolean(field))
+    .slice(0, 12);
+
+  return fields.length > 0 ? fields : undefined;
+};
+
 export const appointmentFormSchema = {
   type: "object",
   additionalProperties: false,
@@ -203,6 +278,26 @@ export const appointmentFormSchema = {
     phonePattern: { type: "string" },
     phonePatternMessage: { type: "string" },
     notesMaxLength: { type: "integer", minimum: 50, maximum: 2000 },
+    customFields: {
+      type: "array",
+      maxItems: 12,
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["id", "label", "type"],
+        properties: {
+          id: { type: "string" },
+          label: { type: "string" },
+          type: { enum: [...appointmentCustomFieldTypes] },
+          required: { type: "boolean" },
+          placeholder: { type: "string" },
+          options: {
+            type: "array",
+            items: { type: "string" },
+          },
+        },
+      },
+    },
     consent: {
       type: "object",
       additionalProperties: false,
@@ -249,6 +344,7 @@ export const appointmentFormSchema = {
 
 export function normalizeAppointmentFormData(data: AppointmentFormData): AppointmentFormData {
   const hasStyleObject = data.style !== undefined;
+  const customFields = normalizeAppointmentCustomFields(data.customFields);
   const style = hasStyleObject
     ? (compactObject({
         frameBackground: resolveClearableStyleValue(data.style?.frameBackground),
@@ -369,6 +465,7 @@ export function normalizeAppointmentFormData(data: AppointmentFormData): Appoint
       50,
       2000
     ),
+    ...(customFields ? { customFields } : {}),
     consent: {
       enabled: bool(data.consent?.enabled, appointmentFormDefaults.consent?.enabled === true),
       label: text(
@@ -408,6 +505,80 @@ const Field = ({ label, children }: { label: string; children: ReactNode }) => (
     {children}
   </label>
 );
+
+const renderAppointmentCustomField = (field: AppointmentCustomField) => {
+  const sharedProps = {
+    "data-appointment-custom-field": field.id,
+    "data-appointment-custom-field-label": field.label,
+    "data-appointment-custom-field-type": field.type,
+    className:
+      "w-full rounded-md border border-[var(--color-border)] bg-transparent px-3 py-2 text-sm text-[var(--color-text)]",
+  };
+
+  if (field.type === "textarea") {
+    return (
+      <textarea
+        {...sharedProps}
+        name={`customField:${field.id}`}
+        required={field.required === true}
+        placeholder={field.placeholder}
+        className={`min-h-24 ${sharedProps.className}`}
+      />
+    );
+  }
+
+  if (field.type === "checkbox") {
+    return (
+      <label className="flex items-center gap-2 text-sm text-[var(--color-text)]">
+        <input
+          type="checkbox"
+          name={`customField:${field.id}`}
+          required={field.required === true}
+          data-appointment-custom-field={field.id}
+          data-appointment-custom-field-label={field.label}
+          data-appointment-custom-field-type={field.type}
+          className="h-4 w-4"
+        />
+        <span>{field.placeholder ?? "Select if applicable"}</span>
+      </label>
+    );
+  }
+
+  if (field.type === "select") {
+    return (
+      <select
+        {...sharedProps}
+        name={`customField:${field.id}`}
+        required={field.required === true}
+        defaultValue=""
+      >
+        <option value="" disabled={field.required === true}>
+          {field.placeholder ?? "Choose an option"}
+        </option>
+        {(field.options ?? []).map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+    );
+  }
+
+  const inputType = field.type === "email" ? "email" : field.type === "phone" ? "tel" : "text";
+  const autoComplete =
+    field.type === "email" ? "email" : field.type === "phone" ? "tel" : undefined;
+
+  return (
+    <input
+      {...sharedProps}
+      type={inputType}
+      autoComplete={autoComplete}
+      name={`customField:${field.id}`}
+      required={field.required === true}
+      placeholder={field.placeholder}
+    />
+  );
+};
 
 const resolveVariantClasses = (variant: string) => {
   switch (variant) {
@@ -680,6 +851,22 @@ export function AppointmentFormBlock({
             </p>
           </Field>
         ) : null}
+
+        {(normalized.customFields ?? []).map((field) =>
+          field.type === "checkbox" ? (
+            <div
+              key={field.id}
+              className="space-y-1 text-xs font-medium text-[var(--color-text)]/80"
+            >
+              <span>{field.label}</span>
+              {renderAppointmentCustomField(field)}
+            </div>
+          ) : (
+            <Field key={field.id} label={field.label}>
+              {renderAppointmentCustomField(field)}
+            </Field>
+          )
+        )}
 
         {showConsent ? (
           <label className="flex items-start gap-2 rounded-md border border-[var(--color-border)]/70 px-3 py-2 text-xs text-[var(--color-text)]/80">
