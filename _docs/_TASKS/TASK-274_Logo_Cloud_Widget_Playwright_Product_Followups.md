@@ -44,11 +44,12 @@ Live owners inspected while drafting:
 Current live code facts:
 
 - `LogoCloudData.header` now owns `eyebrow`, `title`, and `description`.
+- `LogoCloudData.cta` now owns `enabled`, `label`, `href`, and `target`.
 - `LogoCloudData.logos[]` now owns `id`, `name`, `alt`, `image`, and `href`.
 - `LogoCloudData.style` now owns `logoHeight`, `grayscale`, `hoverColor`,
   `gap`, `alignment`, `sectionBackground`, `tileBackground`,
-  `tileBorderColor`, `headerAlign`, `headerSize`, `rowMode`, and
-  `motionMode`.
+  `tileBorderColor`, `headerAlign`, `headerSize`, `rowMode`, `motionMode`,
+  `tileRadius`, `tileBorderWidth`, and `openLinksInNewTab`.
 - Visual mode currently renders repeated logo cards with bounded previews,
   Media Library picking, name/image/alt/href authoring, drag-handle reorder,
   inline Undo after remove, retained Move up / Move down fallback, and Add logo
@@ -56,6 +57,9 @@ Current live code facts:
 - Display style now includes Strip-only row behavior and motion controls that
   gate single-row overflow and marquee behavior without widening Grid/Dense into
   arbitrary layout tuning.
+- Display style now also owns bounded tile radius/border width plus one global
+  new-tab toggle for logo links, while Section CTA owns the trust-section CTA
+  label/href/target surface.
 - Wizard now renders variant, section title, count, and compact starter-logo
   rows with name/image/alt/href authoring plus Media Library picking.
 - Advanced is diagnostics-only for shared `logoHeight`, `gap`, and
@@ -130,7 +134,7 @@ their evidence visible during closure.
 - [x] TASK-274-02: Logo Cloud Logo Asset Authoring and Previews
 - [x] TASK-274-03: Logo Cloud Item Management and Reorder
 - [x] TASK-274-04: Logo Cloud Dense Strip and Marquee Layouts
-- [ ] TASK-274-05: Logo Cloud Tile Link and CTA Controls
+- [x] TASK-274-05: Logo Cloud Tile Link and CTA Controls
 - [ ] TASK-274-06: Logo Cloud Report Docs and Closure
 
 ## Implementation Order

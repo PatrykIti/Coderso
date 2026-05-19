@@ -6,7 +6,7 @@
 **Category:** Widgets + Logo Cloud + Runtime Render + Admin UI + Link UX
 **Estimated Effort:** Large
 **Dependencies:** TASK-274, TASK-256-02, TASK-256-06-02, TASK-274-04, TASK-313-01
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -184,3 +184,12 @@ No API routes are added.
   attributes.
 - Optional CTA renders safely and omits unsafe or incomplete links.
 - Tests prove no unsafe href path is reintroduced.
+
+## Completion Notes
+
+- 2026-05-19: Logo Cloud now owns bounded tile radius/border-width fields, one
+  global `openLinksInNewTab` control for logo links, and an optional CTA that
+  renders only when enabled, labeled, and safe under the shared link helper.
+- Validation:
+  - `bun run lint`
+  - `bun run test:vitest -- tests/vitest/widgets/widgetSafeHref.test.ts tests/vitest/widgets/logoCloud.test.tsx tests/vitest/widgets/renderer.test.tsx tests/vitest/ui/logo-cloud-editor-wave.test.tsx`

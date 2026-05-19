@@ -28,9 +28,12 @@ import {
   type LogoCloudHeaderAlign,
   type LogoCloudHeaderSize,
   type LogoCloudHeight,
+  type LogoCloudLinkTarget,
   type LogoCloudLogo,
   type LogoCloudMotionMode,
   type LogoCloudRowMode,
+  type LogoCloudTileBorderWidth,
+  type LogoCloudTileRadius,
   type LogoCloudVariantId,
 } from "../../../../widgets/core/logoCloud";
 import { normalizeWidgetSafeHref } from "../../../../widgets/core/widgetSafeHref";
@@ -103,9 +106,30 @@ const motionModeOptions: Array<{ id: LogoCloudMotionMode; label: string }> = [
   { id: "marquee", label: "Marquee" },
 ];
 
+const tileRadiusOptions: Array<{ id: LogoCloudTileRadius; label: string }> = [
+  { id: "none", label: "None" },
+  { id: "sm", label: "Small" },
+  { id: "md", label: "Medium" },
+  { id: "lg", label: "Large" },
+  { id: "xl", label: "Extra large" },
+  { id: "full", label: "Full" },
+];
+
+const tileBorderWidthOptions: Array<{ id: LogoCloudTileBorderWidth; label: string }> = [
+  { id: "none", label: "None" },
+  { id: "sm", label: "Standard" },
+  { id: "md", label: "Heavy" },
+];
+
+const linkTargetOptions: Array<{ id: LogoCloudLinkTarget; label: string }> = [
+  { id: "same-tab", label: "Same tab" },
+  { id: "new-tab", label: "New tab" },
+];
+
 const logoCountOptions = Array.from({ length: logoCloudLogoMax }, (_, index) => String(index + 1));
 
 type HeaderData = NonNullable<LogoCloudData["header"]>;
+type CtaData = NonNullable<LogoCloudData["cta"]>;
 type StyleData = NonNullable<LogoCloudData["style"]>;
 type PendingLogoRemoval = {
   logo: LogoCloudLogo;
@@ -251,6 +275,20 @@ function updateHeader(
     ...current,
     header: {
       ...current.header,
+      ...patch,
+    },
+  }));
+}
+
+function updateCta(
+  value: LogoCloudData,
+  onChange: (next: LogoCloudData) => void,
+  patch: Partial<CtaData>
+) {
+  updateValue(value, onChange, (current) => ({
+    ...current,
+    cta: {
+      ...current.cta,
       ...patch,
     },
   }));
@@ -938,6 +976,7 @@ export function LogoCloudVisualEditor({
 }: WidgetEditorProps<LogoCloudData>) {
   const normalized = normalizeValue(value);
   const header = normalized.header ?? logoCloudDefaults.header!;
+  const cta = normalized.cta ?? logoCloudDefaults.cta!;
   const style = normalized.style ?? logoCloudDefaults.style!;
   const logos = normalizeLogoCloudLogos(normalized.logos);
   const resolvedVariant = resolveLogoCloudVariant(variant);
@@ -1122,6 +1161,68 @@ export function LogoCloudVisualEditor({
       </EditorSection>
 
       <EditorSection
+        title="Section CTA"
+        description="Optionally render one safe CTA below the logo list."
+      >
+        <div className="flex items-center justify-between rounded-md border px-3 py-2">
+          <div>
+            <p className="text-sm font-medium">Enable CTA</p>
+            <p className="text-xs text-muted-foreground">
+              Only complete and safe CTA links render in the public widget.
+            </p>
+          </div>
+          <Switch
+            checked={Boolean(cta.enabled)}
+            onCheckedChange={(checked) => updateCta(value, onChange, { enabled: Boolean(checked) })}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-sm font-medium">CTA label</p>
+          <Input
+            value={cta.label ?? ""}
+            onChange={(event) => updateCta(value, onChange, { label: event.target.value })}
+            placeholder="Get started"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-sm font-medium">CTA href</p>
+          <Input
+            value={cta.href ?? ""}
+            onChange={(event) => updateCta(value, onChange, { href: event.target.value })}
+            placeholder="#"
+          />
+          {getLogoCloudLinkFeedback(cta.href ?? undefined) ? (
+            <p className="text-xs text-amber-700">
+              {getLogoCloudLinkFeedback(cta.href ?? undefined)}
+            </p>
+          ) : null}
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-sm font-medium">CTA target</p>
+          <Select
+            value={cta.target}
+            onValueChange={(next) =>
+              updateCta(value, onChange, { target: next as LogoCloudLinkTarget })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select CTA target" />
+            </SelectTrigger>
+            <SelectContent>
+              {linkTargetOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </EditorSection>
+
+      <EditorSection
         title="Display style"
         description="Control logo sizing, spacing, alignment, and hover behavior."
       >
@@ -1282,6 +1383,63 @@ export function LogoCloudVisualEditor({
               ? "Marquee and horizontal overflow are unavailable in Grid and Dense variants."
               : "Marquee duplicates logos in a reduced-motion-safe scrolling track and pauses on hover or focus."}
           </p>
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Tile radius</p>
+          <Select
+            value={style.tileRadius}
+            onValueChange={(next) =>
+              updateStyle(value, onChange, { tileRadius: next as LogoCloudTileRadius })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select tile radius" />
+            </SelectTrigger>
+            <SelectContent>
+              {tileRadiusOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Tile border width</p>
+          <Select
+            value={style.tileBorderWidth}
+            onValueChange={(next) =>
+              updateStyle(value, onChange, { tileBorderWidth: next as LogoCloudTileBorderWidth })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select tile border width" />
+            </SelectTrigger>
+            <SelectContent>
+              {tileBorderWidthOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex items-center justify-between rounded-md border px-3 py-2">
+          <div>
+            <p className="text-sm font-medium">Open logo links in new tab</p>
+            <p className="text-xs text-muted-foreground">
+              Applies the shared safe-link new-tab behavior to every logo tile link.
+            </p>
+          </div>
+          <Switch
+            checked={Boolean(style.openLinksInNewTab)}
+            onCheckedChange={(checked) =>
+              updateStyle(value, onChange, { openLinksInNewTab: Boolean(checked) })
+            }
+          />
         </div>
 
         <div className="flex items-center justify-between rounded-md border px-3 py-2">

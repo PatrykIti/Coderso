@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 243 tasks
+- **To Do:** 242 tasks
 - **In Progress:** 5 tasks
-- **Done:** 1732 tasks
+- **Done:** 1733 tasks
 
 ---
 
@@ -189,7 +189,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-275-05-03 | Navigation Visual Style Tokens | Medium | Large | Add bounded hover/active colors, underline, letter spacing, shadow, backdrop blur, dropdown direction, and motion tokens |
 | TASK-275-05-04 | Navigation Brand CTA and Logo Controls | Medium | Medium | Add logo-size, CTA-radius/separator, and bounded secondary-CTA policy without broad platform expansion |
 | TASK-275-06 | Navigation Report Docs Changelog and Closure | Medium | Medium | Refresh Navigation report/docs/changelog/board and final validation evidence after implementation leaves land |
-| TASK-274-05 | Logo Cloud Tile Link and CTA Controls | Medium | Large | Add bounded tile shape, open-new-tab product control, and optional CTA through shared safe href helpers |
 | TASK-274-06 | Logo Cloud Report Docs and Closure | Medium | Medium | Refresh Logo Cloud report evidence, widget docs, changelog, board, and final validation |
 | TASK-267 | Feature Grid Widget Playwright Product Followups | High | Very Large | Feature Grid-only follow-up family for `REPORT_FEATURE_GRID_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-267-01 | Feature Grid Variant Preview and Responsive Cards-4 Layout | High | Medium | Add variant preview affordances, repair cards-4 responsive product behavior, and keep columns truthfulness in TASK-256 |
@@ -480,6 +479,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-274-02 | Logo Cloud Logo Asset Authoring and Previews | High | Large | Done: Wizard and Visual now own logo image/alt/link authoring, Media Library picking, bounded previews, async media failure handling, and runtime alt fallback proof |
 | TASK-274-03 | Logo Cloud Item Management and Reorder | High | Large | Done: Visual now supports drag-handle reorder, inline Undo after remove, stale-drop guards, and retained Move up / Move down fallback controls |
 | TASK-274-04 | Logo Cloud Dense Strip and Marquee Layouts | Medium | Large | Done: Dense now eases smaller breakpoints, Strip supports single-row overflow, and marquee runs through shared admin/runtime style owners with reduced-motion-safe pause behavior |
+| TASK-274-05 | Logo Cloud Tile Link and CTA Controls | Medium | Large | Done: Logo Cloud now owns bounded tile radius/border-width controls, a global new-tab link toggle, and a safe optional CTA below the logo list |
 | TASK-269 | Form Embed Widget Playwright Product Followups | High | Very Large | Done: Form Embed renderer, runtime script, safe captcha bridge, editor-mode diagnostics, docs, report status matrix, and targeted validation are synchronized |
 | TASK-269-01 | Form Selection, Editor Modes, and Admin Diagnostics | High | Large | Done: Wizard/Visual/Advanced are split and selected-form diagnostics now cover status, field count/types, multi-step, resolver errors, and no-form CTA states |
 | TASK-269-02 | Field Type Rendering and Field Accessibility | High | Large | Done: current supported field types render with stable ids, helper linkage, required semantics, and unsupported-type diagnostics for out-of-model payloads |

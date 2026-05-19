@@ -49,6 +49,10 @@ Notes:
   controls.
 - `Display style` now also exposes Strip-only `Row behavior` and `Motion`
   controls for wrapped rows, single-row overflow, and marquee gating.
+- `Section CTA` now owns one optional CTA below the logo list with enable
+  toggle, label, href, and target controls.
+- `Display style` now also owns bounded `Tile radius`, `Tile border width`, and
+  one global `Open logo links in new tab` toggle for logo tiles.
 
 ### Advanced (technical-only)
 - Technical layout diagnostics
@@ -73,6 +77,9 @@ plus normalize/reset and raw payload diagnostics.
   - `data-logo-cloud-header-size`
   - `data-logo-cloud-row-mode`
   - `data-logo-cloud-motion`
+  - `data-logo-cloud-tile-radius`
+  - `data-logo-cloud-tile-border-width`
+  - `data-logo-cloud-open-in-new-tab`
 - When a section title is present, the shared section shell renders it as
   `<h2>` and names the region through `aria-labelledby`. When the title is
   empty, the section falls back to `aria-label="Partner logos"`.
@@ -81,6 +88,10 @@ plus normalize/reset and raw payload diagnostics.
 - Strip can stay wrapped, switch to `overflow-x-auto` single-row scroll, or use
   a marquee track that pauses on hover/focus and disables animation under
   reduced motion.
+- Tile links can opt into shared safe new-tab behavior through one global
+  `openLinksInNewTab` control.
+- CTA renders below the logo list only when enabled, labeled, and resolved to a
+  safe href.
 - Logo cards render as links only when `href` is provided.
 - Logo images render explicit `logos[].alt` when present and fall back to
   `logos[].name` for legacy payloads.
@@ -108,6 +119,12 @@ plus normalize/reset and raw payload diagnostics.
     "title": "Trusted by teams worldwide",
     "description": "Showcase partner and client logos to build instant credibility."
   },
+  "cta": {
+    "enabled": false,
+    "label": "Get started",
+    "href": "#",
+    "target": "same-tab"
+  },
   "logos": [
     {
       "id": "logo-1",
@@ -127,6 +144,9 @@ plus normalize/reset and raw payload diagnostics.
     "headerSize": "md",
     "rowMode": "wrap",
     "motionMode": "static",
+    "tileRadius": "lg",
+    "tileBorderWidth": "sm",
+    "openLinksInNewTab": false,
     "tileBackground": "var(--color-bg)",
     "tileBorderColor": "color-mix(in srgb, var(--color-border) 60%, transparent)"
   }

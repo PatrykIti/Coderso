@@ -68,3 +68,18 @@ test("resolveWidgetLinkAttrs can open only external links in a new tab", () => {
     href: "/pricing",
   });
 });
+
+test("resolveWidgetLinkAttrs can force safe same-origin and external links into a new tab", () => {
+  expect(
+    resolveWidgetLinkAttrs("/pricing", {
+      allowRelative: true,
+      allowHash: true,
+      allowHttp: true,
+      openInNewTab: true,
+    })
+  ).toEqual({
+    href: "/pricing",
+    target: "_blank",
+    rel: "noopener noreferrer",
+  });
+});

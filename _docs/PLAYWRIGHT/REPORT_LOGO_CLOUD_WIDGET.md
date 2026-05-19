@@ -88,6 +88,18 @@ checkout has moved since then:
   logo items only for animation, pauses on hover/focus, and disables animation
   under reduced motion in both public runtime and admin preview styles.
 
+### Product closure note — 2026-05-19 (`TASK-274-05`)
+
+- `UX-09` is fixed: Logo Cloud now exposes one global `Open logo links in new
+  tab` control that routes through the shared `resolveWidgetLinkAttrs()`
+  contract instead of widening the per-logo data model.
+- `BF-08` is fixed: `Display style` now owns bounded `Tile radius` and `Tile
+  border width` controls rather than leaving rounded shape and border weight
+  hardcoded in runtime output.
+- `BF-11` is fixed: Logo Cloud now supports an optional CTA below the logo list
+  and renders it only when enabled, labeled, and resolved to a safe href.
+
+
 
 ### Historical baseline note — 2026-05-19
 

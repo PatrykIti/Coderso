@@ -65,6 +65,11 @@ test("logo cloud normalization keeps deterministic ids and bounds", () => {
   expect(normalized.style?.headerSize).toBe("md");
   expect(normalized.style?.rowMode).toBe("wrap");
   expect(normalized.style?.motionMode).toBe("static");
+  expect(normalized.style?.tileRadius).toBe("lg");
+  expect(normalized.style?.tileBorderWidth).toBe("sm");
+  expect(normalized.style?.openLinksInNewTab).toBe(false);
+  expect(normalized.cta?.enabled).toBe(false);
+  expect(normalized.cta?.target).toBe("same-tab");
 });
 
 test("logo cloud cleared section and tile styles omit forced inline surfaces", () => {
@@ -229,6 +234,66 @@ test("logo cloud dense layout keeps six columns for xl while easing smaller brea
   expect(html).toContain("xl:grid-cols-6");
 });
 
+test("logo cloud renders bounded tile markers plus safe CTA and new-tab link behavior", () => {
+  const html = renderToString(
+    <LogoCloudBlock
+      data={normalizeLogoCloudData({
+        cta: {
+          enabled: true,
+          label: "Talk to sales",
+          href: "https://example.com/contact",
+          target: "new-tab",
+        },
+        logos: [
+          {
+            id: "logo-a",
+            name: "Acme",
+            image: "https://cdn.example.com/acme.svg",
+            href: "/partners/acme",
+          },
+        ],
+        style: {
+          ...logoCloudDefaults.style,
+          tileRadius: "full",
+          tileBorderWidth: "md",
+          openLinksInNewTab: true,
+        },
+      })}
+      variant="grid"
+    />
+  );
+
+  expect(html).toContain('data-logo-cloud-tile-radius="full"');
+  expect(html).toContain('data-logo-cloud-tile-border-width="md"');
+  expect(html).toContain('data-logo-cloud-open-in-new-tab="true"');
+  expect(html).toContain('target="_blank"');
+  expect(html).toContain('rel="noopener noreferrer"');
+  expect(html).toContain('data-logo-cloud-cta="true"');
+  expect(html).toContain("Talk to sales");
+  expect(html).toContain("rounded-full");
+  expect(html).toContain("border-2");
+});
+
+test("logo cloud omits unsafe or incomplete CTA links", () => {
+  const html = renderToString(
+    <LogoCloudBlock
+      data={normalizeLogoCloudData({
+        cta: {
+          enabled: true,
+          label: "Unsafe CTA",
+          href: "javascript:alert(1)",
+          target: "new-tab",
+        },
+        logos: logoCloudDefaults.logos,
+      })}
+      variant="grid"
+    />
+  );
+
+  expect(html).not.toContain('data-logo-cloud-cta="true"');
+  expect(html).not.toContain("Unsafe CTA");
+});
+
 test("logo cloud validator accepts expanded model", () => {
   clearWidgets();
   const widget = createLogoCloudWidget({
@@ -248,6 +313,12 @@ test("logo cloud validator accepts expanded model", () => {
           eyebrow: "Partners",
           title: "Trusted by partners",
           description: "Build confidence with recognisable logos.",
+        },
+        cta: {
+          enabled: true,
+          label: "Talk to sales",
+          href: "/sales",
+          target: "new-tab",
         },
         logos: [
           {
@@ -275,6 +346,9 @@ test("logo cloud validator accepts expanded model", () => {
           headerSize: "lg",
           rowMode: "single-row",
           motionMode: "marquee",
+          tileRadius: "xl",
+          tileBorderWidth: "md",
+          openLinksInNewTab: true,
         },
       },
     })
@@ -334,9 +408,11 @@ test("logo cloud visual renders section-based IA", () => {
   expect(html).toContain("Variant and layout structure");
   expect(html).toContain("Header copy");
   expect(html).toContain("Logos list and links");
+  expect(html).toContain("Section CTA");
   expect(html).toContain("Display style");
   expect(html).toContain("Strip row behavior");
   expect(html).toContain("Strip motion");
+  expect(html).toContain("Open logo links in new tab");
 });
 
 test("logo cloud advanced keeps technical-only scope", () => {

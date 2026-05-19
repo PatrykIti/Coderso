@@ -872,9 +872,9 @@ test("LogoCloud visual covers variant cards, count boundaries, logo CRUD, reorde
   expect(getLatestValue().style?.sectionBackground).toBeUndefined();
 
   const switches = getCheckboxes(styleSection);
-  expect(switches).toHaveLength(2);
-  setCheckboxValue(switches[0]!, false);
+  expect(switches).toHaveLength(3);
   setCheckboxValue(switches[1]!, false);
+  setCheckboxValue(switches[2]!, false);
 
   expect(getLatestValue().style).toMatchObject({
     logoHeight: "xl",
@@ -990,6 +990,64 @@ test("LogoCloud visual gates strip layout controls by variant and motion mode", 
   cleanup();
 });
 
+test("LogoCloud visual controls tile shape, global new-tab links, and section CTA", async () => {
+  const { LogoCloudVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/LogoCloudEditors");
+
+  const { cleanup, container, getLatestValue } = mountLogoCloudHarness({
+    initialValue: {
+      logos: [
+        { id: "logo-1", name: "Acme", href: "/partners/acme" },
+        { id: "logo-2", name: "North Labs", href: "/partners/north-labs" },
+      ],
+    },
+    initialVariant: "grid",
+    render: (props) => <LogoCloudVisualEditor {...props} />,
+  });
+
+  const ctaSection = getSectionByTitle(container, "Section CTA");
+  const styleSection = getSectionByTitle(container, "Display style");
+
+  const ctaSwitches = getCheckboxes(ctaSection);
+  setCheckboxValue(ctaSwitches[0]!, true);
+  expect(getLatestValue().cta?.enabled).toBe(true);
+
+  setInputValue(getInputByPlaceholder(ctaSection, "Get started"), "Talk to sales");
+  setInputValue(getInputByPlaceholder(ctaSection, "#"), "https://example.com/contact");
+  const ctaTargetSelect = getSelectByOptions(ctaSection, ["same-tab", "new-tab"]);
+  setSelectValue(ctaTargetSelect, "new-tab");
+
+  expect(getLatestValue().cta).toMatchObject({
+    enabled: true,
+    label: "Talk to sales",
+    href: "https://example.com/contact",
+    target: "new-tab",
+  });
+
+  const styleSelects = getSelects(styleSection);
+  const tileRadiusSelect = styleSelects[7]!;
+  const tileBorderWidthSelect = styleSelects[8]!;
+  setSelectValue(tileRadiusSelect, "full");
+  setSelectValue(tileBorderWidthSelect, "md");
+
+  const styleSwitches = getCheckboxes(styleSection);
+  expect(styleSwitches).toHaveLength(3);
+  setCheckboxValue(styleSwitches[0]!, true);
+
+  expect(getLatestValue().style).toMatchObject({
+    tileRadius: "full",
+    tileBorderWidth: "md",
+    openLinksInNewTab: true,
+  });
+
+  setInputValue(getInputByPlaceholder(ctaSection, "#"), "javascript:alert(1)");
+  expect(ctaSection.textContent).toContain(
+    "Use a relative path, hash, or full URL. Unsafe links are not rendered publicly."
+  );
+
+  cleanup();
+});
+
 test("LogoCloud advanced covers normalization defaults, technical tokens, and reset safeguards", async () => {
   const { LogoCloudAdvancedEditor } =
     await import("../../../core/admin/ui/widgets/editors/LogoCloudEditors");
@@ -1095,8 +1153,9 @@ test("LogoCloud editors render sparse header and style fallbacks with safe defau
     expect(getInputByPlaceholder(visualHarness.container, "var(--color-surface)").value).toBe("");
 
     const switches = getCheckboxes(styleSection);
-    expect(switches[0]?.checked).toBe(true);
+    expect(switches[0]?.checked).toBe(false);
     expect(switches[1]?.checked).toBe(true);
+    expect(switches[2]?.checked).toBe(true);
   } finally {
     visualHarness.cleanup();
   }
@@ -1228,8 +1287,9 @@ test("LogoCloud editors fall back when normalized header and style are omitted",
     expect(selects[1]?.value).toBe("md");
     expect(selects[2]?.value).toBe("center");
     const switches = getCheckboxes(styleSection);
-    expect(switches[0]?.checked).toBe(true);
+    expect(switches[0]?.checked).toBe(false);
     expect(switches[1]?.checked).toBe(true);
+    expect(switches[2]?.checked).toBe(true);
   } finally {
     visualView.cleanup();
   }

@@ -12,6 +12,9 @@ export type LogoCloudHeaderAlign = "start" | "center" | "end";
 export type LogoCloudHeaderSize = "sm" | "md" | "lg";
 export type LogoCloudRowMode = "wrap" | "single-row";
 export type LogoCloudMotionMode = "static" | "marquee";
+export type LogoCloudTileRadius = "none" | "sm" | "md" | "lg" | "xl" | "full";
+export type LogoCloudTileBorderWidth = "none" | "sm" | "md";
+export type LogoCloudLinkTarget = "same-tab" | "new-tab";
 
 export type LogoCloudLogo = {
   id?: string;
@@ -21,12 +24,20 @@ export type LogoCloudLogo = {
   href?: string;
 };
 
+export type LogoCloudCta = {
+  enabled?: boolean;
+  label?: string;
+  href?: string;
+  target?: LogoCloudLinkTarget;
+};
+
 export type LogoCloudData = {
   header?: {
     eyebrow?: string;
     title?: string;
     description?: string;
   };
+  cta?: LogoCloudCta;
   logos: LogoCloudLogo[];
   style?: {
     logoHeight?: LogoCloudHeight;
@@ -41,6 +52,9 @@ export type LogoCloudData = {
     headerSize?: LogoCloudHeaderSize;
     rowMode?: LogoCloudRowMode;
     motionMode?: LogoCloudMotionMode;
+    tileRadius?: LogoCloudTileRadius;
+    tileBorderWidth?: LogoCloudTileBorderWidth;
+    openLinksInNewTab?: boolean;
   };
 };
 
@@ -80,6 +94,21 @@ const headerSizeClassMap: Record<LogoCloudHeaderSize, string> = {
   lg: "text-3xl",
 };
 
+const tileRadiusClassMap: Record<LogoCloudTileRadius, string> = {
+  none: "rounded-none",
+  sm: "rounded-sm",
+  md: "rounded-md",
+  lg: "rounded-lg",
+  xl: "rounded-xl",
+  full: "rounded-full",
+};
+
+const tileBorderWidthClassMap: Record<LogoCloudTileBorderWidth, string> = {
+  none: "border-0",
+  sm: "border",
+  md: "border-2",
+};
+
 const logoCloudLogoMin = 1;
 export const logoCloudLogoMax = 24;
 
@@ -95,6 +124,16 @@ export const logoCloudSchema = {
         eyebrow: { type: "string" },
         title: { type: "string" },
         description: { type: "string" },
+      },
+    },
+    cta: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        enabled: { type: "boolean" },
+        label: { type: "string" },
+        href: { type: "string" },
+        target: { enum: ["same-tab", "new-tab"] },
       },
     },
     logos: {
@@ -129,6 +168,9 @@ export const logoCloudSchema = {
         headerSize: { enum: ["sm", "md", "lg"] },
         rowMode: { enum: ["wrap", "single-row"] },
         motionMode: { enum: ["static", "marquee"] },
+        tileRadius: { enum: ["none", "sm", "md", "lg", "xl", "full"] },
+        tileBorderWidth: { enum: ["none", "sm", "md"] },
+        openLinksInNewTab: { type: "boolean" },
       },
     },
   },
@@ -139,6 +181,12 @@ export const logoCloudDefaults: LogoCloudData = {
     eyebrow: "",
     title: "Trusted by teams worldwide",
     description: "Showcase partner and client logos to build instant credibility.",
+  },
+  cta: {
+    enabled: false,
+    label: "Get started",
+    href: "#",
+    target: "same-tab",
   },
   logos: [
     { id: "logo-1", name: "Acme", href: "#" },
@@ -158,6 +206,9 @@ export const logoCloudDefaults: LogoCloudData = {
     headerSize: "md",
     rowMode: "wrap",
     motionMode: "static",
+    tileRadius: "lg",
+    tileBorderWidth: "sm",
+    openLinksInNewTab: false,
     tileBackground: "var(--color-bg)",
     tileBorderColor: "color-mix(in srgb, var(--color-border) 60%, transparent)",
   },
@@ -205,6 +256,21 @@ const resolveLogoCloudMotionMode = (value: string | undefined): LogoCloudMotionM
   if (value === "marquee") return value;
   return "static";
 };
+
+const resolveLogoCloudTileRadius = (value: string | undefined): LogoCloudTileRadius => {
+  if (value === "none" || value === "sm" || value === "md" || value === "xl" || value === "full") {
+    return value;
+  }
+  return "lg";
+};
+
+const resolveLogoCloudTileBorderWidth = (value: string | undefined): LogoCloudTileBorderWidth => {
+  if (value === "none" || value === "md") return value;
+  return "sm";
+};
+
+const resolveLogoCloudLinkTarget = (value: string | undefined): LogoCloudLinkTarget =>
+  value === "new-tab" ? "new-tab" : "same-tab";
 
 export const resolveLogoCloudVariant = (variant: string): LogoCloudVariantId => {
   if (variant === "strip" || variant === "dense") return variant;
@@ -281,6 +347,12 @@ export function normalizeLogoCloudData(data: LogoCloudData): LogoCloudData {
     title: "",
     description: "",
   };
+  const ctaDefaults = logoCloudDefaults.cta ?? {
+    enabled: false,
+    label: "",
+    href: "",
+    target: "same-tab",
+  };
   const styleDefaults = logoCloudDefaults.style ?? {
     logoHeight: "md",
     grayscale: true,
@@ -289,6 +361,11 @@ export function normalizeLogoCloudData(data: LogoCloudData): LogoCloudData {
     alignment: "center",
     headerAlign: "center",
     headerSize: "md",
+    rowMode: "wrap",
+    motionMode: "static",
+    tileRadius: "lg",
+    tileBorderWidth: "sm",
+    openLinksInNewTab: false,
   };
   const hasStyleObject = data.style !== undefined;
   const clearableStyle = hasStyleObject
@@ -310,6 +387,13 @@ export function normalizeLogoCloudData(data: LogoCloudData): LogoCloudData {
       title: resolveString(data.header?.title, headerDefaults.title ?? ""),
       description: resolveString(data.header?.description, headerDefaults.description ?? ""),
     },
+    cta: {
+      enabled:
+        typeof data.cta?.enabled === "boolean" ? data.cta.enabled : Boolean(ctaDefaults.enabled),
+      label: resolveString(data.cta?.label, ctaDefaults.label ?? ""),
+      href: resolveString(data.cta?.href, ctaDefaults.href ?? ""),
+      target: resolveLogoCloudLinkTarget(data.cta?.target ?? ctaDefaults.target),
+    },
     logos: normalizeLogoCloudLogos(data.logos),
     style: {
       logoHeight: resolveLogoCloudHeight(data.style?.logoHeight),
@@ -327,6 +411,12 @@ export function normalizeLogoCloudData(data: LogoCloudData): LogoCloudData {
       headerSize: resolveLogoCloudHeaderSize(data.style?.headerSize),
       rowMode: resolveLogoCloudRowMode(data.style?.rowMode),
       motionMode: resolveLogoCloudMotionMode(data.style?.motionMode),
+      tileRadius: resolveLogoCloudTileRadius(data.style?.tileRadius),
+      tileBorderWidth: resolveLogoCloudTileBorderWidth(data.style?.tileBorderWidth),
+      openLinksInNewTab:
+        typeof data.style?.openLinksInNewTab === "boolean"
+          ? data.style.openLinksInNewTab
+          : Boolean(styleDefaults.openLinksInNewTab),
       ...(clearableStyle ?? {}),
     },
   };
@@ -339,6 +429,8 @@ function LogoCloudItem({
   grayscale,
   hoverColor,
   tileStyle,
+  tileClassName,
+  openLinksInNewTab = false,
   shrink = false,
 }: {
   logo: LogoCloudLogo;
@@ -347,6 +439,8 @@ function LogoCloudItem({
   grayscale: boolean;
   hoverColor: boolean;
   tileStyle?: CSSProperties;
+  tileClassName?: string;
+  openLinksInNewTab?: boolean;
   shrink?: boolean;
 }) {
   const hasImage = typeof logo.image === "string" && logo.image.trim().length > 0;
@@ -355,6 +449,7 @@ function LogoCloudItem({
     allowRelative: true,
     allowHash: true,
     allowHttp: true,
+    openInNewTab: openLinksInNewTab,
   });
   const imageClassName = joinClasses(
     "w-auto max-w-full object-contain",
@@ -371,7 +466,8 @@ function LogoCloudItem({
   );
 
   const wrapperClassName = joinClasses(
-    "group inline-flex min-h-[4.5rem] min-w-[8.5rem] items-center justify-center rounded-lg border px-3 py-2",
+    "group inline-flex min-h-[4.5rem] min-w-[8.5rem] items-center justify-center px-3 py-2",
+    tileClassName,
     shrink ? "shrink-0" : undefined
   );
 
@@ -402,6 +498,35 @@ function LogoCloudItem({
   );
 }
 
+function LogoCloudCta({
+  cta,
+  align,
+}: {
+  cta: NonNullable<LogoCloudData["cta"]>;
+  align: LogoCloudAlignment;
+}) {
+  const label = cta.label?.trim() ?? "";
+  const linkAttrs = resolveWidgetLinkAttrs(cta.href, {
+    allowRelative: true,
+    allowHash: true,
+    allowHttp: true,
+    openInNewTab: cta.target === "new-tab",
+  });
+  if (!cta.enabled || !label || !linkAttrs) return null;
+
+  return (
+    <div className={joinClasses("mt-6 flex", alignmentClassMap[align])}>
+      <a
+        {...linkAttrs}
+        className="inline-flex items-center gap-2 rounded-md border px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-[var(--color-surface)]"
+        data-logo-cloud-cta="true"
+      >
+        {label}
+      </a>
+    </div>
+  );
+}
+
 export function LogoCloudBlock({ data, variant }: { data: LogoCloudData; variant: string }) {
   const headingId = useId();
   const resolvedVariant = resolveLogoCloudVariant(variant);
@@ -428,6 +553,10 @@ export function LogoCloudBlock({ data, variant }: { data: LogoCloudData; variant
         ? "single-row"
         : rowMode
       : "wrap";
+  const tileRadius = resolveLogoCloudTileRadius(style.tileRadius);
+  const tileBorderWidth = resolveLogoCloudTileBorderWidth(style.tileBorderWidth);
+  const openLinksInNewTab = Boolean(style.openLinksInNewTab);
+  const cta = normalized.cta ?? logoCloudDefaults.cta!;
   const sectionStyle = compactStyle({
     backgroundColor: resolveClearableStyleValue(style.sectionBackground),
   });
@@ -435,6 +564,10 @@ export function LogoCloudBlock({ data, variant }: { data: LogoCloudData; variant
     backgroundColor: resolveClearableStyleValue(style.tileBackground),
     borderColor: resolveClearableStyleValue(style.tileBorderColor),
   });
+  const tileClassName = joinClasses(
+    tileRadiusClassMap[tileRadius],
+    tileBorderWidthClassMap[tileBorderWidth]
+  );
   const sectionEyebrow = (normalized.header?.eyebrow ?? "").trim();
   const sectionTitle = (normalized.header?.title ?? "").trim();
 
@@ -489,6 +622,9 @@ export function LogoCloudBlock({ data, variant }: { data: LogoCloudData; variant
       data-logo-cloud-header-size={headerSize}
       data-logo-cloud-row-mode={resolvedRowMode}
       data-logo-cloud-motion={resolvedMotionMode}
+      data-logo-cloud-tile-radius={tileRadius}
+      data-logo-cloud-tile-border-width={tileBorderWidth}
+      data-logo-cloud-open-in-new-tab={String(openLinksInNewTab)}
     >
       {showHeader ? (
         <header
@@ -531,6 +667,8 @@ export function LogoCloudBlock({ data, variant }: { data: LogoCloudData; variant
                 grayscale={grayscale}
                 hoverColor={hoverColor}
                 tileStyle={tileStyle}
+                tileClassName={tileClassName}
+                openLinksInNewTab={openLinksInNewTab}
                 shrink
               />
             ))}
@@ -547,11 +685,15 @@ export function LogoCloudBlock({ data, variant }: { data: LogoCloudData; variant
               grayscale={grayscale}
               hoverColor={hoverColor}
               tileStyle={tileStyle}
+              tileClassName={tileClassName}
+              openLinksInNewTab={openLinksInNewTab}
               shrink={resolvedVariant === "strip" && resolvedRowMode === "single-row"}
             />
           ))}
         </div>
       )}
+
+      <LogoCloudCta cta={cta} align={alignment} />
     </section>
   );
 }

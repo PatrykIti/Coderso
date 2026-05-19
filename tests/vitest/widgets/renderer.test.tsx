@@ -1209,8 +1209,17 @@ test("renderer outputs logo cloud variant and style markers", () => {
             alignment: "start",
             headerAlign: "end",
             headerSize: "lg",
+            tileRadius: "full",
+            tileBorderWidth: "md",
+            openLinksInNewTab: true,
             grayscale: true,
             hoverColor: false,
+          },
+          cta: {
+            enabled: true,
+            label: "Talk to sales",
+            href: "https://example.com/contact",
+            target: "new-tab",
           },
         },
       }}
@@ -1226,9 +1235,13 @@ test("renderer outputs logo cloud variant and style markers", () => {
   expect(html).toContain('data-logo-cloud-header-size="lg"');
   expect(html).toContain('data-logo-cloud-row-mode="wrap"');
   expect(html).toContain('data-logo-cloud-motion="static"');
+  expect(html).toContain('data-logo-cloud-tile-radius="full"');
+  expect(html).toContain('data-logo-cloud-tile-border-width="md"');
+  expect(html).toContain('data-logo-cloud-open-in-new-tab="true"');
   expect(html).toContain("<h2");
   expect(html).toContain("aria-labelledby=");
   expect(html).toContain("North Labs");
+  expect(html).toContain('data-logo-cloud-cta="true"');
 });
 
 test("renderer outputs gallery mosaic variant and caption markers", () => {
