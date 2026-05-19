@@ -39,7 +39,7 @@ import {
   type DividerWidthMode,
 } from "../../../../widgets/core/divider";
 import type { WidgetEditorProps } from "../../../../widgets/types";
-import { ClearableInputField } from "./ClearableFields";
+import { ClearableInputField, SharedColorFieldInputs } from "./ClearableFields";
 import { buildVisibleOffTokenOptions, TokenOrPixelField } from "./TokenOrPixelField";
 import { WidgetEditorSection } from "./WidgetEditorControls";
 
@@ -139,11 +139,7 @@ const marginTokenOptions = buildVisibleOffTokenOptions(
   }))
 );
 
-const hexColorPattern = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
 const cssLengthPattern = /^\d+(?:\.\d+)?(?:px|rem|em|%)$/i;
-
-const resolvePickerColor = (value: string | undefined, fallback: string) =>
-  value && hexColorPattern.test(value) ? value : fallback;
 
 function normalizeValue(value: DividerData, variant: string = "line"): DividerData {
   return normalizeDividerData(value, variant);
@@ -241,27 +237,16 @@ function ColorField({
   return (
     <div className="space-y-2">
       <p className="text-sm font-medium">{label}</p>
-      <div className="grid grid-cols-[2.5rem_1fr] gap-2">
-        <Input
-          type="color"
-          value={resolvePickerColor(value, pickerFallback)}
-          onChange={(event) => {
-            const currentValue = value?.trim();
-            onChange(currentValue?.startsWith("var(") ? currentValue : event.target.value);
-          }}
-          className="h-9 w-10 p-1"
-        />
-        <Input
-          value={value ?? ""}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder={placeholder}
-        />
-      </div>
-      {typeof value === "string" && value.trim().startsWith("var(") ? (
-        <p className="text-xs text-muted-foreground">
-          CSS token preserved in data; edit the text field to replace it with a fixed color.
-        </p>
-      ) : null}
+      <SharedColorFieldInputs
+        value={value}
+        onChange={onChange}
+        onPickerChange={(next) => {
+          const currentValue = value?.trim();
+          onChange(currentValue?.startsWith("var(") ? currentValue : next);
+        }}
+        placeholder={placeholder}
+        pickerFallback={pickerFallback}
+      />
     </div>
   );
 }

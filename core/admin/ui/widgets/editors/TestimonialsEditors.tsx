@@ -26,7 +26,7 @@ import {
   type TestimonialItem,
 } from "../../../../widgets/core/testimonials";
 import type { WidgetEditorProps } from "../../../../widgets/types";
-import { ClearableFieldHeader } from "./ClearableFields";
+import { SharedColorControl } from "./SharedColorControl";
 import { WidgetEditorSection } from "./WidgetEditorControls";
 
 const variantOptions: Array<{
@@ -64,13 +64,8 @@ const itemCountOptions = Array.from({ length: testimonialsItemMax - 1 }, (_, ind
 
 const ratingOptions = ["0", "1", "2", "3", "4", "5"] as const;
 
-const hexColorPattern = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
-
 type HeaderData = NonNullable<TestimonialsData["header"]>;
 type StyleData = NonNullable<TestimonialsData["style"]>;
-
-const resolvePickerColor = (value: string | undefined, fallback: string) =>
-  value && hexColorPattern.test(value) ? value : fallback;
 
 function normalizeValue(value: TestimonialsData): TestimonialsData {
   return normalizeTestimonialsData(value);
@@ -145,22 +140,14 @@ function ColorField({
   onClear?: () => void;
 }) {
   return (
-    <div className="space-y-2">
-      <ClearableFieldHeader label={label} value={value} onClear={onClear} />
-      <div className="grid grid-cols-[2.5rem_1fr] gap-2">
-        <Input
-          type="color"
-          value={resolvePickerColor(value, pickerFallback)}
-          onChange={(event) => onChange(event.target.value)}
-          className="h-9 w-10 p-1"
-        />
-        <Input
-          value={value ?? ""}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder={placeholder}
-        />
-      </div>
-    </div>
+    <SharedColorControl
+      label={label}
+      value={value}
+      onChange={onChange}
+      onClear={onClear}
+      placeholder={placeholder}
+      pickerFallback={pickerFallback}
+    />
   );
 }
 

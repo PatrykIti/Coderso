@@ -30,7 +30,7 @@ import {
   type RichTextSectionVariantId,
 } from "../../../../widgets/core/richTextSection";
 import type { WidgetEditorProps } from "../../../../widgets/types";
-import { ClearableFieldHeader } from "./ClearableFields";
+import { SharedColorControl } from "./SharedColorControl";
 import { WidgetEditorSection } from "./WidgetEditorControls";
 
 const variantOptions: Array<{
@@ -92,15 +92,10 @@ const outputModeOptions: Array<{ id: RichTextSectionOutputMode; label: string }>
 const blockCountOptions = Array.from({ length: richTextBlockMax + 1 }, (_, index) => String(index));
 const wizardBlockCount = Math.max(richTextSectionDefaults.body?.blocks?.length ?? 2, 2);
 
-const hexColorPattern = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
-
 type TitleBlockData = NonNullable<RichTextSectionData["titleBlock"]>;
 type BodyData = NonNullable<RichTextSectionData["body"]>;
 type OptionsData = NonNullable<RichTextSectionData["options"]>;
 type StyleData = NonNullable<RichTextSectionData["style"]>;
-
-const resolvePickerColor = (value: string | undefined, fallback: string) =>
-  value && hexColorPattern.test(value) ? value : fallback;
 
 function normalizeValue(value: RichTextSectionData): RichTextSectionData {
   return normalizeRichTextSectionData(value);
@@ -155,41 +150,6 @@ function VariantCards({
           <p className="mt-1 text-xs text-muted-foreground">{option.description}</p>
         </button>
       ))}
-    </div>
-  );
-}
-
-function ColorField({
-  label,
-  value,
-  onChange,
-  placeholder,
-  pickerFallback,
-  onClear,
-}: {
-  label: string;
-  value: string | undefined;
-  onChange: (next: string) => void;
-  placeholder: string;
-  pickerFallback: string;
-  onClear?: () => void;
-}) {
-  return (
-    <div className="space-y-2">
-      <ClearableFieldHeader label={label} value={value} onClear={onClear} />
-      <div className="grid grid-cols-[2.5rem_1fr] gap-2">
-        <Input
-          type="color"
-          value={resolvePickerColor(value, pickerFallback)}
-          onChange={(event) => onChange(event.target.value)}
-          className="h-9 w-10 p-1"
-        />
-        <Input
-          value={value ?? ""}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder={placeholder}
-        />
-      </div>
     </div>
   );
 }
@@ -769,14 +729,14 @@ export function RichTextSectionVisualEditor({
             </SelectContent>
           </Select>
         </div>
-        <ColorField
+        <SharedColorControl
           label="Text color"
           value={normalized.style?.textColor}
           onChange={(next) => updateStyle(value, onChange, { textColor: next })}
           placeholder="var(--color-text)"
           pickerFallback="#0f172a"
         />
-        <ColorField
+        <SharedColorControl
           label="Background color"
           value={normalized.style?.background}
           onChange={(next) => updateStyle(value, onChange, { background: next })}

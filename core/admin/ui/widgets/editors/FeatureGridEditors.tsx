@@ -46,7 +46,7 @@ import {
 import { normalizeWidgetSafeHref } from "../../../../widgets/core/widgetSafeHref";
 import type { WidgetEditorProps } from "../../../../widgets/types";
 import { ConfirmActionDialog } from "../../shared/ConfirmActionDialog";
-import { ClearableFieldHeader } from "./ClearableFields";
+import { SharedColorControl } from "./SharedColorControl";
 import { WidgetEditorSection } from "./WidgetEditorControls";
 
 const variantOptions: Array<{
@@ -162,13 +162,8 @@ const itemCountOptions = Array.from({ length: featureGridItemMax }, (_, index) =
   String(index + 1)
 );
 
-const hexColorPattern = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
-
 type HeaderData = NonNullable<FeatureGridData["header"]>;
 type StyleData = NonNullable<FeatureGridData["style"]>;
-
-const resolvePickerColor = (value: string | undefined, fallback: string) =>
-  value && hexColorPattern.test(value) ? value : fallback;
 
 function normalizeValue(value: FeatureGridData): FeatureGridData {
   return normalizeFeatureGridData(value);
@@ -262,41 +257,6 @@ function VariantCards({
           </span>
         </button>
       ))}
-    </div>
-  );
-}
-
-function ColorField({
-  label,
-  value,
-  onChange,
-  placeholder,
-  pickerFallback,
-  onClear,
-}: {
-  label: string;
-  value: string | undefined;
-  onChange: (next: string) => void;
-  placeholder: string;
-  pickerFallback: string;
-  onClear?: () => void;
-}) {
-  return (
-    <div className="space-y-2">
-      <ClearableFieldHeader label={label} value={value} onClear={onClear} />
-      <div className="grid grid-cols-[2.5rem_1fr] gap-2">
-        <Input
-          type="color"
-          value={resolvePickerColor(value, pickerFallback)}
-          onChange={(event) => onChange(event.target.value)}
-          className="h-9 w-10 p-1"
-        />
-        <Input
-          value={value ?? ""}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder={placeholder}
-        />
-      </div>
     </div>
   );
 }
@@ -1179,7 +1139,7 @@ export function FeatureGridVisualEditor({
         title="Colors and borders"
         description="Customize card surface and border presentation."
       >
-        <ColorField
+        <SharedColorControl
           label="Card background"
           value={normalized.style?.surfaceColor}
           onChange={(next) => updateStyle(value, onChange, { surfaceColor: next })}
@@ -1188,7 +1148,7 @@ export function FeatureGridVisualEditor({
           pickerFallback="#ffffff"
         />
 
-        <ColorField
+        <SharedColorControl
           label="Card border color"
           value={normalized.style?.borderColor}
           onChange={(next) => updateStyle(value, onChange, { borderColor: next })}
@@ -1246,7 +1206,7 @@ export function FeatureGridVisualEditor({
         title="Section typography and container"
         description="Tune section width, background, title scales, and card hover behavior."
       >
-        <ColorField
+        <SharedColorControl
           label="Section background"
           value={normalized.style?.sectionBackground}
           onChange={(next) => updateStyle(value, onChange, { sectionBackground: next })}

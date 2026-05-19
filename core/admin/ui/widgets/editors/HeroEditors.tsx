@@ -33,7 +33,12 @@ import { MediaPicker } from "@/ui/media/MediaPicker";
 import type { HeroBadgePlacement, HeroBadgeTone, HeroData } from "../../../../widgets/core/hero";
 import { normalizeHeroHref } from "../../../../widgets/core/hero";
 import type { WidgetEditorProps } from "../../../../widgets/types";
-import { ClearableFieldHeader, hasClearableFieldValue } from "./ClearableFields";
+import {
+  ClearableFieldHeader,
+  hasClearableFieldValue,
+  resolveColorPickerValue,
+  SharedColorFieldInputs,
+} from "./ClearableFields";
 import { WidgetControlRow, WidgetEditorSection } from "./WidgetEditorControls";
 
 type HeroVariantId = "centered" | "split" | "media-left";
@@ -156,7 +161,6 @@ const borderWidthOptions = ["0", "1", "2", "3"] as const;
 const radiusOptions = ["none", "lg", "xl", "2xl", "3xl"] as const;
 const formatTokenOptionLabel = (option: string) => (option === "none" ? "None" : option);
 const heroPresetLimit = 24;
-const hexColorPattern = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
 const linearGradientPattern =
   /^linear-gradient\(\s*(-?\d+(?:\.\d+)?)deg\s*,\s*(#[0-9a-fA-F]{3,8})\s*,\s*(#[0-9a-fA-F]{3,8})\s*\)$/;
 const defaultGradientStart = "#0f172a";
@@ -514,9 +518,6 @@ const sanitizeHeroPresetList = (value: unknown): HeroPresetSetting[] => {
   return Array.from(byName.values()).slice(0, heroPresetLimit);
 };
 
-const resolvePickerColor = (value: string | undefined, fallback: string) =>
-  value && hexColorPattern.test(value) ? value : fallback;
-
 const resolveBackgroundMedia = (background: HeroData["background"]): HeroBackgroundMedia => {
   const media = background?.media;
   const legacyImage = background?.image;
@@ -547,7 +548,7 @@ function EditorSection({
   );
 }
 
-function ColorField({
+function HeroColorField({
   id,
   label,
   value,
@@ -583,24 +584,15 @@ function ColorField({
       }
     >
       {(fieldProps) => (
-        <div className="grid grid-cols-[2.5rem_1fr] gap-2">
-          <Input
-            type="color"
-            value={resolvePickerColor(value, pickerFallback)}
-            onChange={(event) => onChange(event.target.value)}
-            className="h-9 w-10 p-1"
-            aria-labelledby={fieldProps["aria-labelledby"]}
-            aria-describedby={fieldProps["aria-describedby"]}
-          />
-          <Input
-            id={fieldProps.id}
-            value={value ?? ""}
-            onChange={(event) => onChange(event.target.value)}
-            placeholder={placeholder}
-            aria-labelledby={fieldProps["aria-labelledby"]}
-            aria-describedby={fieldProps["aria-describedby"]}
-          />
-        </div>
+        <SharedColorFieldInputs
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          pickerFallback={pickerFallback}
+          inputId={fieldProps.id}
+          ariaLabelledby={fieldProps["aria-labelledby"]}
+          ariaDescribedby={fieldProps["aria-describedby"]}
+        />
       )}
     </WidgetControlRow>
   );
@@ -622,8 +614,8 @@ function GradientField({
   const parsed = value?.match(linearGradientPattern);
   const angle =
     parsed && Number.isFinite(Number(parsed[1])) ? Number(parsed[1]) : defaultGradientAngle;
-  const start = parsed && hexColorPattern.test(parsed[2]) ? parsed[2] : defaultGradientStart;
-  const end = parsed && hexColorPattern.test(parsed[3]) ? parsed[3] : defaultGradientEnd;
+  const start = parsed ? parsed[2] : defaultGradientStart;
+  const end = parsed ? parsed[3] : defaultGradientEnd;
 
   const emit = (nextAngle: number, nextStart: string, nextEnd: string) => {
     onChange(`linear-gradient(${nextAngle}deg, ${nextStart}, ${nextEnd})`);
@@ -658,7 +650,7 @@ function GradientField({
               <p className="text-xs text-muted-foreground">Start color</p>
               <Input
                 type="color"
-                value={resolvePickerColor(start, defaultGradientStart)}
+                value={resolveColorPickerValue(start, defaultGradientStart)}
                 onChange={(event) => {
                   emit(angle, event.target.value, end);
                 }}
@@ -671,7 +663,7 @@ function GradientField({
               <p className="text-xs text-muted-foreground">End color</p>
               <Input
                 type="color"
-                value={resolvePickerColor(end, defaultGradientEnd)}
+                value={resolveColorPickerValue(end, defaultGradientEnd)}
                 onChange={(event) => {
                   emit(angle, start, event.target.value);
                 }}
@@ -1455,35 +1447,35 @@ export function HeroVisualEditor({
         description="Fine-tune text, button, and frame styling."
       >
         <div className="grid gap-3 md:grid-cols-2">
-          <ColorField
+          <HeroColorField
             id="hero.style.textColor"
             label="Headline color"
             value={style.textColor}
             onChange={(next) => updateStyle({ textColor: next })}
             placeholder="var(--color-text)"
           />
-          <ColorField
+          <HeroColorField
             id="hero.style.subheadColor"
             label="Subhead color"
             value={style.subheadColor}
             onChange={(next) => updateStyle({ subheadColor: next })}
             placeholder="rgba(17, 24, 39, 0.8)"
           />
-          <ColorField
+          <HeroColorField
             id="hero.style.bodyColor"
             label="Body color"
             value={style.bodyColor}
             onChange={(next) => updateStyle({ bodyColor: next })}
             placeholder="rgba(17, 24, 39, 0.7)"
           />
-          <ColorField
+          <HeroColorField
             id="hero.style.borderColor"
             label="Card border color"
             value={style.borderColor}
             onChange={(next) => updateStyle({ borderColor: next })}
             placeholder="var(--color-border)"
           />
-          <ColorField
+          <HeroColorField
             id="hero.style.primaryButtonBg"
             label="Primary button background"
             value={style.primaryButtonBg}
@@ -1491,21 +1483,21 @@ export function HeroVisualEditor({
             onClear={() => clearStyleField("primaryButtonBg")}
             placeholder="var(--color-primary)"
           />
-          <ColorField
+          <HeroColorField
             id="hero.style.primaryButtonText"
             label="Primary button text"
             value={style.primaryButtonText}
             onChange={(next) => updateStyle({ primaryButtonText: next })}
             placeholder="var(--color-bg)"
           />
-          <ColorField
+          <HeroColorField
             id="hero.style.primaryButtonBorder"
             label="Primary button border"
             value={style.primaryButtonBorder}
             onChange={(next) => updateStyle({ primaryButtonBorder: next })}
             placeholder="transparent"
           />
-          <ColorField
+          <HeroColorField
             id="hero.style.secondaryButtonBg"
             label="Secondary button background"
             value={style.secondaryButtonBg}
@@ -1513,21 +1505,21 @@ export function HeroVisualEditor({
             onClear={() => clearStyleField("secondaryButtonBg")}
             placeholder="transparent"
           />
-          <ColorField
+          <HeroColorField
             id="hero.style.secondaryButtonText"
             label="Secondary button text"
             value={style.secondaryButtonText}
             onChange={(next) => updateStyle({ secondaryButtonText: next })}
             placeholder="var(--color-text)"
           />
-          <ColorField
+          <HeroColorField
             id="hero.style.secondaryButtonBorder"
             label="Secondary button border"
             value={style.secondaryButtonBorder}
             onChange={(next) => updateStyle({ secondaryButtonBorder: next })}
             placeholder="var(--color-border)"
           />
-          <ColorField
+          <HeroColorField
             id="hero.style.mediaBorderColor"
             label="Media frame border color"
             value={style.mediaBorderColor}
@@ -1616,7 +1608,7 @@ export function HeroVisualEditor({
         title="Background"
         description="Background can use image/video from library or external URL."
       >
-        <ColorField
+        <HeroColorField
           id="hero.background.color"
           label="Background color"
           value={value.background?.color}
@@ -1875,7 +1867,7 @@ export function HeroAdvancedEditor({ value, onChange }: WidgetEditorProps<HeroDa
         title="Background"
         description="Set color/gradient and optional image or video source."
       >
-        <ColorField
+        <HeroColorField
           id="hero.advanced.background.color"
           label="Background color"
           value={value.background?.color}

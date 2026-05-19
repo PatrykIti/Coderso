@@ -30,7 +30,7 @@ import {
   type PricingPlansVariantId,
 } from "../../../../widgets/core/pricingPlans";
 import type { WidgetEditorProps } from "../../../../widgets/types";
-import { ClearableFieldHeader } from "./ClearableFields";
+import { SharedColorControl } from "./SharedColorControl";
 import { WidgetEditorSection } from "./WidgetEditorControls";
 
 const variantOptions: Array<{
@@ -84,14 +84,9 @@ const planCountOptions = Array.from({ length: pricingPlanMax - 1 }, (_, index) =
   String(index + 2)
 );
 
-const hexColorPattern = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
-
 type HeaderData = NonNullable<PricingPlansData["header"]>;
 type BillingToggleData = NonNullable<PricingPlansData["billingToggle"]>;
 type StyleData = NonNullable<PricingPlansData["style"]>;
-
-const resolvePickerColor = (value: string | undefined, fallback: string) =>
-  value && hexColorPattern.test(value) ? value : fallback;
 
 function normalizeValue(value: PricingPlansData): PricingPlansData {
   return normalizePricingPlansData(value);
@@ -166,22 +161,14 @@ function ColorField({
   onClear?: () => void;
 }) {
   return (
-    <div className="space-y-2">
-      <ClearableFieldHeader label={label} value={value} onClear={onClear} />
-      <div className="grid grid-cols-[2.5rem_1fr] gap-2">
-        <Input
-          type="color"
-          value={resolvePickerColor(value, pickerFallback)}
-          onChange={(event) => onChange(event.target.value)}
-          className="h-9 w-10 p-1"
-        />
-        <Input
-          value={value ?? ""}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder={placeholder}
-        />
-      </div>
-    </div>
+    <SharedColorControl
+      label={label}
+      value={value}
+      onChange={onChange}
+      onClear={onClear}
+      placeholder={placeholder}
+      pickerFallback={pickerFallback}
+    />
   );
 }
 

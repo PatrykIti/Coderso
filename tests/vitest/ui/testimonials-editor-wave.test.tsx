@@ -615,6 +615,22 @@ test("Testimonials editors normalize sparse payloads, preserve token colors, and
       "#1d4ed8"
     );
 
+    setInputValue(findInputByPlaceholder(colorsSection, "var(--color-bg)"), "var(--proof-surface)");
+    setInputValue(
+      findInputByPlaceholder(colorsSection, "var(--color-primary)"),
+      "var(--proof-accent)"
+    );
+    expect(findInputByPlaceholder(colorsSection, "var(--color-bg)")?.value).toBe(
+      "var(--proof-surface)"
+    );
+    expect(findInputByPlaceholder(colorsSection, "var(--color-primary)")?.value).toBe(
+      "var(--proof-accent)"
+    );
+    expect(findColorInputForPlaceholder(colorsSection, "var(--color-bg)").value).toBe("#ffffff");
+    expect(findColorInputForPlaceholder(colorsSection, "var(--color-primary)").value).toBe(
+      "#1d4ed8"
+    );
+
     const advancedSection = findSectionByTitle(view.container, "Display tokens");
     if (!(advancedSection instanceof HTMLElement)) {
       throw new Error("Missing advanced display section");
@@ -626,10 +642,10 @@ test("Testimonials editors normalize sparse payloads, preserve token colors, and
 
     expect(view.onChangeSpy).toHaveBeenCalled();
     expect(view.getLatestValue().style).toMatchObject({
-      cardSurface: "surface-token",
+      cardSurface: "var(--proof-surface)",
       cardBorder: "border-token",
       textColor: "text-token",
-      accentColor: "accent-token",
+      accentColor: "var(--proof-accent)",
       spacing: "lg",
     });
 
@@ -770,6 +786,35 @@ test("Testimonials visual editor covers header copy, card field updates, picker 
       textColor: "#f5f5f5",
       accentColor: "#2563eb",
     });
+
+    const clearButtons = findButtonsByText(colorsSection, "Clear");
+    clickButton(clearButtons[0]);
+    clickButton(clearButtons[1]);
+    clickButton(clearButtons[2]);
+    clickButton(clearButtons[3]);
+
+    expect(view.getLatestValue().style).toMatchObject({
+      cardSurface: undefined,
+      cardBorder: undefined,
+      textColor: "var(--color-text)",
+      accentColor: "var(--color-primary)",
+    });
+    expect(findInputByPlaceholder(colorsSection, "var(--color-bg)")?.value).toBe("");
+    expect(findInputByPlaceholder(colorsSection, "var(--color-border)")?.value).toBe("");
+    expect(findInputByPlaceholder(colorsSection, "var(--color-text)")?.value).toBe(
+      "var(--color-text)"
+    );
+    expect(findInputByPlaceholder(colorsSection, "var(--color-primary)")?.value).toBe(
+      "var(--color-primary)"
+    );
+    expect(findColorInputForPlaceholder(colorsSection, "var(--color-bg)").value).toBe("#ffffff");
+    expect(findColorInputForPlaceholder(colorsSection, "var(--color-border)").value).toBe(
+      "#e2e8f0"
+    );
+    expect(findColorInputForPlaceholder(colorsSection, "var(--color-text)").value).toBe("#0f172a");
+    expect(findColorInputForPlaceholder(colorsSection, "var(--color-primary)").value).toBe(
+      "#1d4ed8"
+    );
 
     const fallbackSection = findSectionByTitle(view.container, "Normalization and fallback");
     if (!(fallbackSection instanceof HTMLElement)) {

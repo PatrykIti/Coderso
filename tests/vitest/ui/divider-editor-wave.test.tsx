@@ -430,9 +430,7 @@ test("Divider editors cover visual label input, color picker changes, custom spa
       "#94a3b8"
     );
     expect(latestValue.color).toBe("var(--color-border)");
-    expect(normalizeText((lineSection as ParentNode).textContent)).toContain(
-      "css token preserved in data"
-    );
+    expect(normalizeText((lineSection as ParentNode).textContent)).toContain("custom token active");
     setInputValue(
       findInputByPlaceholder(lineSection as ParentNode, "var(--color-border)"),
       "#94a3b8"

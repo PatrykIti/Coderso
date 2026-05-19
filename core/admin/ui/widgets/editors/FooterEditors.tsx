@@ -24,7 +24,7 @@ import {
   type FooterSocial,
 } from "../../../../widgets/core/footer";
 import type { WidgetEditorProps } from "../../../../widgets/types";
-import { ClearableFieldHeader } from "./ClearableFields";
+import { SharedColorControl } from "./SharedColorControl";
 
 const variantOptions = [
   { id: "columns-2", label: "Columns 2" },
@@ -122,11 +122,6 @@ const socialTypeOptions = footerSocialTypes.map((type) => ({
 const emptySocialLink: FooterSocial = {
   type: "linkedin",
   href: "https://",
-};
-
-const resolvePickerColor = (value: string | undefined, fallback: string) => {
-  const normalized = value?.trim();
-  return normalized && /^#[0-9a-fA-F]{6}$/.test(normalized) ? normalized : fallback;
 };
 
 const moveItem = <T,>(items: T[], fromIndex: number, toIndex: number) => {
@@ -403,22 +398,14 @@ function ColorField({
   onClear?: () => void;
 }) {
   return (
-    <div className="space-y-2">
-      <ClearableFieldHeader label={label} value={value} onClear={onClear} />
-      <div className="grid grid-cols-[2.5rem_1fr] gap-2">
-        <Input
-          type="color"
-          value={resolvePickerColor(value, pickerFallback)}
-          onChange={(event) => onChange(event.target.value)}
-          className="h-9 w-10 p-1"
-        />
-        <Input
-          value={value ?? ""}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder={placeholder}
-        />
-      </div>
-    </div>
+    <SharedColorControl
+      label={label}
+      value={value}
+      onChange={onChange}
+      onClear={onClear}
+      placeholder={placeholder}
+      pickerFallback={pickerFallback}
+    />
   );
 }
 

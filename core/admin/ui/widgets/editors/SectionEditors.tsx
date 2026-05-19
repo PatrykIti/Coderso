@@ -27,7 +27,7 @@ import {
   type SectionVariantId,
 } from "../../../../widgets/core/section";
 import type { WidgetEditorProps } from "../../../../widgets/types";
-import { hasClearableFieldValue } from "./ClearableFields";
+import { SharedColorFieldInputs, hasClearableFieldValue } from "./ClearableFields";
 import { WidgetControlRow, WidgetEditorSection } from "./WidgetEditorControls";
 
 const variantOptions: Array<{
@@ -99,15 +99,10 @@ const paddingInlineOptions: Array<{ id: SectionPaddingInline; label: string }> =
   { id: "lg", label: "Spacious" },
 ];
 
-const hexColorPattern = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
-
 type HeadingData = NonNullable<SectionData["heading"]>;
 type LayoutData = NonNullable<SectionData["layout"]>;
 type SemanticsData = NonNullable<SectionData["semantics"]>;
 type StyleData = NonNullable<SectionData["style"]>;
-
-const resolvePickerColor = (value: string | undefined, fallback: string) =>
-  value && hexColorPattern.test(value) ? value : fallback;
 
 const clampOpacity = (value: number | undefined) => {
   if (!Number.isFinite(value)) return 0;
@@ -193,24 +188,15 @@ function ColorField({
       }
     >
       {(fieldProps) => (
-        <div className="grid grid-cols-[2.5rem_1fr] gap-2">
-          <Input
-            type="color"
-            value={resolvePickerColor(value, pickerFallback)}
-            onChange={(event) => onChange(event.target.value)}
-            className="h-9 w-10 p-1"
-            aria-labelledby={fieldProps["aria-labelledby"]}
-            aria-describedby={fieldProps["aria-describedby"]}
-          />
-          <Input
-            id={fieldProps.id}
-            value={value ?? ""}
-            onChange={(event) => onChange(event.target.value)}
-            placeholder={placeholder}
-            aria-labelledby={fieldProps["aria-labelledby"]}
-            aria-describedby={fieldProps["aria-describedby"]}
-          />
-        </div>
+        <SharedColorFieldInputs
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          pickerFallback={pickerFallback}
+          inputId={fieldProps.id}
+          ariaLabelledby={fieldProps["aria-labelledby"]}
+          ariaDescribedby={fieldProps["aria-describedby"]}
+        />
       )}
     </WidgetControlRow>
   );

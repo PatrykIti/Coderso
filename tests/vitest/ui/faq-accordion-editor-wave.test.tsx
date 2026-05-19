@@ -537,7 +537,7 @@ test("FaqAccordion visual editor covers FAQ item management, drag/drop, open-sta
     expect((colorInputs[1] as HTMLInputElement | null | undefined)?.value).toBe("#e2e8f0");
     expect((colorInputs[2] as HTMLInputElement | null | undefined)?.value).toBe("#e2e8f0");
     expect(view.container.textContent).toContain(
-      "Token text remains the source of truth when the swatch falls back to a preview color."
+      "Custom token active. Swatch preview uses the fallback until you replace it with a hex color."
     );
 
     clickElement(findButtonByText(view.container, "Two Column"));

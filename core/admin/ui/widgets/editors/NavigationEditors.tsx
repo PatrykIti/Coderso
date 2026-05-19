@@ -25,7 +25,7 @@ import { resolveMenuItemSettings } from "../../../../services/menus/menuItemSett
 
 import { navigationDefaults, type NavigationData } from "../../../../widgets/core/navigation";
 import type { WidgetEditorProps } from "../../../../widgets/types";
-import { ClearableFieldHeader } from "./ClearableFields";
+import { SharedColorControl } from "./SharedColorControl";
 import { WidgetEditorSection } from "./WidgetEditorControls";
 
 type NavigationLayout = NonNullable<NavigationData["layout"]>;
@@ -77,7 +77,6 @@ const borderWidthOptions = ["0", "1", "2", "3"] as const;
 const fontSizeOptions = ["none", "xs", "sm", "base", "lg"] as const;
 const fontWeightOptions = ["none", "normal", "medium", "semibold", "bold"] as const;
 const textTransformOptions = ["none", "uppercase", "capitalize"] as const;
-const hexColorPattern = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
 const NO_MENU_VALUE = "__none__";
 const formatTokenOptionLabel = (option: string) => (option === "none" ? "None" : option);
 
@@ -88,9 +87,6 @@ const isValidHref = (value: string | undefined) =>
 
 const isValidImageUrl = (value: string | undefined) =>
   !value || value.startsWith("http") || value.startsWith("/");
-
-const resolvePickerColor = (value: string | undefined, fallback: string) =>
-  value && hexColorPattern.test(value) ? value : fallback;
 
 export function mapMenuNodesToNavigationItems(nodes: MenuItemNode[]): NavigationItem[] {
   return nodes.map((node) => {
@@ -169,22 +165,14 @@ function ColorField({
   onClear?: () => void;
 }) {
   return (
-    <div className="space-y-2">
-      <ClearableFieldHeader label={label} value={value} onClear={onClear} />
-      <div className="grid grid-cols-[2.5rem_1fr] gap-2">
-        <Input
-          type="color"
-          value={resolvePickerColor(value, pickerFallback)}
-          onChange={(event) => onChange(event.target.value)}
-          className="h-9 w-10 p-1"
-        />
-        <Input
-          value={value ?? ""}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder={placeholder}
-        />
-      </div>
-    </div>
+    <SharedColorControl
+      label={label}
+      value={value}
+      onChange={onChange}
+      onClear={onClear}
+      placeholder={placeholder}
+      pickerFallback={pickerFallback}
+    />
   );
 }
 

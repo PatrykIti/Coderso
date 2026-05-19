@@ -207,6 +207,18 @@ const findInputByPlaceholder = (container: ParentNode, placeholder: string) =>
       element instanceof HTMLInputElement && element.getAttribute("placeholder") === placeholder
   );
 
+const findColorInputForPlaceholder = (container: ParentNode, placeholder: string, index = 0) => {
+  const textInput = findInputsByPlaceholder(container, placeholder)[index];
+  if (!(textInput instanceof HTMLInputElement)) {
+    throw new Error(`Missing input with placeholder "${placeholder}" (${index})`);
+  }
+  const colorInput = textInput.parentElement?.querySelector('input[type="color"]');
+  if (!(colorInput instanceof HTMLInputElement)) {
+    throw new Error(`Missing color input for placeholder "${placeholder}" (${index})`);
+  }
+  return colorInput;
+};
+
 const findInputsByPlaceholder = (container: ParentNode, placeholder: string) =>
   Array.from(container.querySelectorAll("input")).filter(
     (element) =>
@@ -663,6 +675,12 @@ test("Team visual editor covers member-count expansion, social add-link, and raw
       findInputByPlaceholder(styleSection as ParentNode, "var(--color-border)"),
       "var(--team-border)"
     );
+    expect(findColorInputForPlaceholder(styleSection as ParentNode, "var(--color-bg)").value).toBe(
+      "#ffffff"
+    );
+    expect(
+      findColorInputForPlaceholder(styleSection as ParentNode, "var(--color-border)").value
+    ).toBe("#e2e8f0");
 
     expect(latestValue.style).toEqual(
       expect.objectContaining({
@@ -670,6 +688,29 @@ test("Team visual editor covers member-count expansion, social add-link, and raw
         cardBorder: "var(--team-border)",
       })
     );
+
+    const clearButtons = Array.from((styleSection as ParentNode).querySelectorAll("button")).filter(
+      (button) => button.textContent?.includes("Clear")
+    );
+    clickElement(clearButtons[0]);
+    clickElement(clearButtons[1]);
+
+    expect(latestValue.style).toEqual(
+      expect.objectContaining({
+        cardSurface: undefined,
+        cardBorder: undefined,
+      })
+    );
+    expect(findInputByPlaceholder(styleSection as ParentNode, "var(--color-bg)")?.value).toBe("");
+    expect(findInputByPlaceholder(styleSection as ParentNode, "var(--color-border)")?.value).toBe(
+      ""
+    );
+    expect(findColorInputForPlaceholder(styleSection as ParentNode, "var(--color-bg)").value).toBe(
+      "#ffffff"
+    );
+    expect(
+      findColorInputForPlaceholder(styleSection as ParentNode, "var(--color-border)").value
+    ).toBe("#e2e8f0");
   } finally {
     view.cleanup();
   }

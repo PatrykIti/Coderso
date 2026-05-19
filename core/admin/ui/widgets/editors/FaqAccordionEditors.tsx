@@ -37,7 +37,7 @@ import {
 } from "../../../../widgets/core/faqAccordion";
 import type { WidgetEditorProps } from "../../../../widgets/types";
 import { ConfirmActionDialog } from "../../shared/ConfirmActionDialog";
-import { ClearableFieldHeader } from "./ClearableFields";
+import { ClearableFieldHeader, SharedColorFieldInputs } from "./ClearableFields";
 import { WidgetEditorSection } from "./WidgetEditorControls";
 
 const variantOptions: Array<{
@@ -134,14 +134,9 @@ const itemCountOptions = Array.from({ length: faqAccordionItemMax }, (_, index) 
   String(index + 1)
 );
 
-const hexColorPattern = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
-
 type HeaderData = NonNullable<FaqAccordionData["header"]>;
 type OptionsData = NonNullable<FaqAccordionData["options"]>;
 type StyleData = NonNullable<FaqAccordionData["style"]>;
-
-const resolvePickerColor = (value: string | undefined, fallback: string) =>
-  value && hexColorPattern.test(value) ? value : fallback;
 
 function normalizeValue(value: FaqAccordionData): FaqAccordionData {
   return normalizeFaqAccordionData(value);
@@ -236,24 +231,12 @@ function ColorField({
   return (
     <div className="space-y-2">
       <ClearableFieldHeader label={label} value={value} onClear={onClear} />
-      <div className="grid grid-cols-[2.5rem_1fr] gap-2">
-        <Input
-          type="color"
-          value={resolvePickerColor(value, pickerFallback)}
-          onChange={(event) => onChange(event.target.value)}
-          className="h-9 w-10 p-1"
-        />
-        <Input
-          value={value ?? ""}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder={placeholder}
-        />
-      </div>
-      {value && !hexColorPattern.test(value) ? (
-        <p className="text-xs text-muted-foreground">
-          Token text remains the source of truth when the swatch falls back to a preview color.
-        </p>
-      ) : null}
+      <SharedColorFieldInputs
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        pickerFallback={pickerFallback}
+      />
     </div>
   );
 }

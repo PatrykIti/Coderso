@@ -29,7 +29,7 @@ import {
   type AccordionVariantId,
 } from "../../../../widgets/core/accordion";
 import type { WidgetEditorProps } from "../../../../widgets/types";
-import { ClearableFieldHeader } from "./ClearableFields";
+import { ClearableFieldHeader, SharedColorFieldInputs } from "./ClearableFields";
 import { WidgetEditorSection } from "./WidgetEditorControls";
 
 const variantOptions: Array<{
@@ -90,15 +90,10 @@ const accordionMaxWidthOptions = accordionMaxWidthTokens.map((id) => ({
 }));
 
 const accordionNoneOpenValue = "__none__";
-const hexColorPattern = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
-
 function resolveVariant(variant: string): AccordionVariantId {
   if (variant === "bordered" || variant === "compact") return variant;
   return "soft";
 }
-
-const resolvePickerColor = (value: string | undefined, fallback: string) =>
-  value && hexColorPattern.test(value) ? value : fallback;
 
 function normalizeValue(value: AccordionData, desiredCount?: number): AccordionData {
   return normalizeAccordionData(value, desiredCount);
@@ -244,24 +239,12 @@ function ColorField({
   return (
     <div className="space-y-2">
       <ClearableFieldHeader label={label} value={value} onClear={onClear} />
-      <div className="grid grid-cols-[2.5rem_1fr] gap-2">
-        <Input
-          type="color"
-          value={resolvePickerColor(value, pickerFallback)}
-          onChange={(event) => onChange(event.target.value)}
-          className="h-9 w-10 p-1"
-        />
-        <Input
-          value={value ?? ""}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder={placeholder}
-        />
-      </div>
-      {typeof value === "string" && value.trim().startsWith("var(") ? (
-        <p className="text-xs text-muted-foreground">
-          CSS token is preserved in data; the swatch shows a safe preview color.
-        </p>
-      ) : null}
+      <SharedColorFieldInputs
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        pickerFallback={pickerFallback}
+      />
     </div>
   );
 }

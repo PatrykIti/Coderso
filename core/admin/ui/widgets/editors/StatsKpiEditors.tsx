@@ -29,6 +29,7 @@ import {
 import type { WidgetEditorProps } from "../../../../widgets/types";
 import { WidgetEditorSection } from "./WidgetEditorControls";
 import { ClearableInputField } from "./ClearableFields";
+import { SharedColorControl } from "./SharedColorControl";
 
 const variantOptions: Array<{
   id: StatsKpiVariantId;
@@ -67,13 +68,8 @@ const spacingOptions: Array<{ id: StatsKpiSpacing; label: string }> = [
 
 const itemCountOptions = Array.from({ length: statsKpiItemMax }, (_, index) => String(index + 1));
 
-const hexColorPattern = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
-
 type HeaderData = NonNullable<StatsKpiData["header"]>;
 type StyleData = NonNullable<StatsKpiData["style"]>;
-
-const resolvePickerColor = (value: string | undefined, fallback: string) =>
-  value && hexColorPattern.test(value) ? value : fallback;
 
 function normalizeValue(value: StatsKpiData): StatsKpiData {
   return normalizeStatsKpiData(value);
@@ -128,39 +124,6 @@ function VariantCards({
           <p className="mt-1 text-xs text-muted-foreground">{option.description}</p>
         </button>
       ))}
-    </div>
-  );
-}
-
-function ColorField({
-  label,
-  value,
-  onChange,
-  placeholder,
-  pickerFallback,
-}: {
-  label: string;
-  value: string | undefined;
-  onChange: (next: string) => void;
-  placeholder: string;
-  pickerFallback: string;
-}) {
-  return (
-    <div className="space-y-2">
-      <p className="text-sm font-medium">{label}</p>
-      <div className="grid grid-cols-[2.5rem_1fr] gap-2">
-        <Input
-          type="color"
-          value={resolvePickerColor(value, pickerFallback)}
-          onChange={(event) => onChange(event.target.value)}
-          className="h-9 w-10 p-1"
-        />
-        <Input
-          value={value ?? ""}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder={placeholder}
-        />
-      </div>
     </div>
   );
 }
@@ -554,14 +517,14 @@ export function StatsKpiVisualEditor({
         title="Typography and colors"
         description="Tune value and label color styling."
       >
-        <ColorField
+        <SharedColorControl
           label="Value color"
           value={normalized.style?.valueColor}
           onChange={(next) => updateStyle(value, onChange, { valueColor: next })}
           placeholder="var(--color-text)"
           pickerFallback="#0f172a"
         />
-        <ColorField
+        <SharedColorControl
           label="Label color"
           value={normalized.style?.labelColor}
           onChange={(next) => updateStyle(value, onChange, { labelColor: next })}

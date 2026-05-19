@@ -38,7 +38,8 @@ import {
 } from "../../../../widgets/core/ctaBanner";
 import { normalizeWidgetSafeHref } from "../../../../widgets/core/widgetSafeHref";
 import type { WidgetEditorProps } from "../../../../widgets/types";
-import { ClearableFieldHeader } from "./ClearableFields";
+import { ClearableFieldHeader, resolveColorPickerValue } from "./ClearableFields";
+import { SharedColorControl } from "./SharedColorControl";
 import { WidgetEditorSection } from "./WidgetEditorControls";
 
 const variantOptions: Array<{
@@ -144,7 +145,6 @@ const ctaHrefOptions = {
   allowHttp: true,
 } as const;
 
-const hexColorPattern = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
 const linearGradientPattern =
   /^linear-gradient\(\s*(-?\d+(?:\.\d+)?)deg\s*,\s*(#[0-9a-fA-F]{3,8})\s*,\s*(#[0-9a-fA-F]{3,8})\s*\)$/;
 const defaultGradientStart = "#0f172a";
@@ -156,9 +156,6 @@ type ActionsData = NonNullable<CtaBannerData["actions"]>;
 type StyleData = NonNullable<CtaBannerData["style"]>;
 type BackgroundData = NonNullable<CtaBannerData["background"]>;
 type BackgroundMediaData = NonNullable<BackgroundData["media"]>;
-
-const resolvePickerColor = (value: string | undefined, fallback: string) =>
-  value && hexColorPattern.test(value) ? value : fallback;
 
 function normalizeValue(value: CtaBannerData): CtaBannerData {
   return normalizeCtaBannerData(value);
@@ -217,41 +214,6 @@ function VariantCards({
   );
 }
 
-function ColorField({
-  label,
-  value,
-  onChange,
-  placeholder,
-  pickerFallback,
-  onClear,
-}: {
-  label: string;
-  value: string | undefined;
-  onChange: (next: string) => void;
-  placeholder: string;
-  pickerFallback: string;
-  onClear?: () => void;
-}) {
-  return (
-    <div className="space-y-2">
-      <ClearableFieldHeader label={label} value={value} onClear={onClear} />
-      <div className="grid grid-cols-[2.5rem_1fr] gap-2">
-        <Input
-          type="color"
-          value={resolvePickerColor(value, pickerFallback)}
-          onChange={(event) => onChange(event.target.value)}
-          className="h-9 w-10 p-1"
-        />
-        <Input
-          value={value ?? ""}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder={placeholder}
-        />
-      </div>
-    </div>
-  );
-}
-
 function GradientField({
   value,
   onChange,
@@ -264,8 +226,8 @@ function GradientField({
   const parsed = value?.match(linearGradientPattern);
   const angle =
     parsed && Number.isFinite(Number(parsed[1])) ? Number(parsed[1]) : defaultGradientAngle;
-  const start = parsed && hexColorPattern.test(parsed[2]) ? parsed[2] : defaultGradientStart;
-  const end = parsed && hexColorPattern.test(parsed[3]) ? parsed[3] : defaultGradientEnd;
+  const start = parsed ? parsed[2] : defaultGradientStart;
+  const end = parsed ? parsed[3] : defaultGradientEnd;
 
   const emit = (nextAngle: number, nextStart: string, nextEnd: string) => {
     onChange(`linear-gradient(${nextAngle}deg, ${nextStart}, ${nextEnd})`);
@@ -284,7 +246,7 @@ function GradientField({
             <p className="text-xs text-muted-foreground">Start color</p>
             <Input
               type="color"
-              value={resolvePickerColor(start, defaultGradientStart)}
+              value={resolveColorPickerValue(start, defaultGradientStart)}
               onChange={(event) => emit(angle, event.target.value, end)}
               className="h-9 w-full p-1"
             />
@@ -293,7 +255,7 @@ function GradientField({
             <p className="text-xs text-muted-foreground">End color</p>
             <Input
               type="color"
-              value={resolvePickerColor(end, defaultGradientEnd)}
+              value={resolveColorPickerValue(end, defaultGradientEnd)}
               onChange={(event) => emit(angle, start, event.target.value)}
               className="h-9 w-full p-1"
             />
@@ -963,7 +925,7 @@ export function CtaBannerVisualEditor({
         title="Colors and button styles"
         description="Set content palette plus CTA-local button shape and emphasis."
       >
-        <ColorField
+        <SharedColorControl
           label="Text color"
           value={normalized.style?.text}
           onChange={(next) => updateStyle(value, onChange, { text: next })}
@@ -971,7 +933,7 @@ export function CtaBannerVisualEditor({
           placeholder="var(--color-text)"
           pickerFallback="#0f172a"
         />
-        <ColorField
+        <SharedColorControl
           label="Badge background"
           value={normalized.style?.badgeBackground}
           onChange={(next) => updateStyle(value, onChange, { badgeBackground: next })}
@@ -979,7 +941,7 @@ export function CtaBannerVisualEditor({
           placeholder="var(--color-primary)"
           pickerFallback="#1d4ed8"
         />
-        <ColorField
+        <SharedColorControl
           label="Badge text"
           value={normalized.style?.badgeText}
           onChange={(next) => updateStyle(value, onChange, { badgeText: next })}
@@ -987,7 +949,7 @@ export function CtaBannerVisualEditor({
           placeholder="var(--color-bg)"
           pickerFallback="#ffffff"
         />
-        <ColorField
+        <SharedColorControl
           label="Primary button background"
           value={normalized.style?.primaryButtonBg}
           onChange={(next) => updateStyle(value, onChange, { primaryButtonBg: next })}
@@ -995,7 +957,7 @@ export function CtaBannerVisualEditor({
           placeholder="var(--color-primary)"
           pickerFallback="#1d4ed8"
         />
-        <ColorField
+        <SharedColorControl
           label="Primary button text"
           value={normalized.style?.primaryButtonText}
           onChange={(next) => updateStyle(value, onChange, { primaryButtonText: next })}
@@ -1003,14 +965,14 @@ export function CtaBannerVisualEditor({
           placeholder="var(--color-bg)"
           pickerFallback="#ffffff"
         />
-        <ColorField
+        <SharedColorControl
           label="Primary button border"
           value={normalized.style?.primaryButtonBorder}
           onChange={(next) => updateStyle(value, onChange, { primaryButtonBorder: next })}
           placeholder="transparent"
           pickerFallback="#ffffff"
         />
-        <ColorField
+        <SharedColorControl
           label="Secondary button background"
           value={normalized.style?.secondaryButtonBg}
           onChange={(next) => updateStyle(value, onChange, { secondaryButtonBg: next })}
@@ -1018,7 +980,7 @@ export function CtaBannerVisualEditor({
           placeholder="transparent"
           pickerFallback="#ffffff"
         />
-        <ColorField
+        <SharedColorControl
           label="Secondary button text"
           value={normalized.style?.secondaryButtonText}
           onChange={(next) => updateStyle(value, onChange, { secondaryButtonText: next })}
@@ -1026,7 +988,7 @@ export function CtaBannerVisualEditor({
           placeholder="var(--color-text)"
           pickerFallback="#0f172a"
         />
-        <ColorField
+        <SharedColorControl
           label="Secondary button border"
           value={normalized.style?.secondaryButtonBorder}
           onChange={(next) => updateStyle(value, onChange, { secondaryButtonBorder: next })}
@@ -1106,7 +1068,7 @@ export function CtaBannerVisualEditor({
         title="Border and spacing"
         description="Adjust surface border, banner radius, and padding."
       >
-        <ColorField
+        <SharedColorControl
           label="Border color"
           value={normalized.style?.border}
           onChange={(next) => updateStyle(value, onChange, { border: next })}
@@ -1184,7 +1146,7 @@ export function CtaBannerVisualEditor({
         title="Background and motion"
         description="Use background color, gradient, media, and optional CSS-safe motion."
       >
-        <ColorField
+        <SharedColorControl
           label="Background color"
           value={normalized.background?.color ?? normalized.style?.background}
           onChange={(next) => updateSurfaceColor(value, onChange, next)}

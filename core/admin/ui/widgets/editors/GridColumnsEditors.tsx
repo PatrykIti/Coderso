@@ -31,7 +31,7 @@ import {
   type GridColumnsVariantId,
 } from "../../../../widgets/core/gridColumns";
 import type { WidgetEditorProps } from "../../../../widgets/types";
-import { ClearableFieldHeader } from "./ClearableFields";
+import { ClearableFieldHeader, SharedColorFieldInputs } from "./ClearableFields";
 import { WidgetEditorSection } from "./WidgetEditorControls";
 
 const variantOptions: Array<{
@@ -96,14 +96,9 @@ const paddingOptions: Array<{ id: GridColumnsPadding; label: string }> = [
   { id: "6", label: "XL" },
 ];
 
-const hexColorPattern = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
-
 type ColumnData = NonNullable<GridColumnsData["columns"]>[number];
 type LayoutData = NonNullable<GridColumnsData["layout"]>;
 type StyleData = NonNullable<GridColumnsData["style"]>;
-
-const resolvePickerColor = (value: string | undefined, fallback: string) =>
-  value && hexColorPattern.test(value) ? value : fallback;
 
 const clampColumnsCount = (value: number) =>
   Math.max(gridColumnsColumnMin, Math.min(gridColumnsColumnMax, Math.floor(value)));
@@ -183,24 +178,12 @@ function ColorField({
   return (
     <div className="space-y-2">
       <ClearableFieldHeader label={label} value={value} onClear={onClear} />
-      <div className="grid grid-cols-[2.5rem_1fr] gap-2">
-        <Input
-          type="color"
-          value={resolvePickerColor(value, pickerFallback)}
-          onChange={(event) => onChange(event.target.value)}
-          className="h-9 w-10 p-1"
-        />
-        <Input
-          value={value ?? ""}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder={placeholder}
-        />
-      </div>
-      {typeof value === "string" && value.trim().startsWith("var(") ? (
-        <p className="text-xs text-muted-foreground">
-          CSS token preserved in data; the picker preview falls back to a safe swatch.
-        </p>
-      ) : null}
+      <SharedColorFieldInputs
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        pickerFallback={pickerFallback}
+      />
     </div>
   );
 }

@@ -40,7 +40,8 @@ import {
   type ContentListVariantId,
 } from "../../../../widgets/core/contentList";
 import type { WidgetEditorProps } from "../../../../widgets/types";
-import { ClearableFieldHeader, ClearableInputField } from "./ClearableFields";
+import { ClearableInputField } from "./ClearableFields";
+import { SharedColorControl } from "./SharedColorControl";
 import { WidgetEditorSection } from "./WidgetEditorControls";
 
 const variantOptions: Array<{
@@ -125,11 +126,6 @@ const tagModeOptions: Array<{ id: ContentListTagMode; label: string }> = [
   { id: "badges", label: "Badges" },
   { id: "hidden", label: "Hidden" },
 ];
-
-const hexColorPattern = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
-
-const resolvePickerColor = (value: string | undefined, fallback: string) =>
-  value && hexColorPattern.test(value) ? value : fallback;
 
 const NO_CONTENT_TYPE_VALUE = "__no_content_type__";
 const NO_LISTING_QUERY_VALUE = "__no_listing_query__";
@@ -251,41 +247,6 @@ function CardStyleCards({
           </div>
         </button>
       ))}
-    </div>
-  );
-}
-
-function ColorField({
-  label,
-  value,
-  onChange,
-  placeholder,
-  pickerFallback,
-  onClear,
-}: {
-  label: string;
-  value: string | undefined;
-  onChange: (next: string) => void;
-  placeholder: string;
-  pickerFallback: string;
-  onClear?: () => void;
-}) {
-  return (
-    <div className="space-y-2">
-      <ClearableFieldHeader label={label} value={value} onClear={onClear} />
-      <div className="grid grid-cols-[2.5rem_1fr] gap-2">
-        <Input
-          type="color"
-          value={resolvePickerColor(value, pickerFallback)}
-          onChange={(event) => onChange(event.target.value)}
-          className="h-9 w-10 p-1"
-        />
-        <Input
-          value={value ?? ""}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder={placeholder}
-        />
-      </div>
     </div>
   );
 }
@@ -1450,7 +1411,7 @@ export function ContentListAdvancedEditor({ value, onChange }: WidgetEditorProps
             placeholder="var(--color-border)"
           />
         </div>
-        <ColorField
+        <SharedColorControl
           label="Text color"
           value={resolved.style?.textColor}
           onChange={(next) => updateStyle(value, onChange, { textColor: next })}
