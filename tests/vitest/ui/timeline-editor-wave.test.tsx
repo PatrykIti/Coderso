@@ -584,6 +584,42 @@ test("Timeline visual editor covers variant cards, step ordering, color fallback
   }
 });
 
+test("Timeline visual warns when configured marker and text colors collapse into unreadable contrast", async () => {
+  const { TimelineVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/TimelineEditors");
+
+  const view = mount(
+    <TimelineVisualEditor
+      value={{
+        steps: [
+          { id: "alpha", title: "Discover" },
+          { id: "beta", title: "Plan" },
+          { id: "gamma", title: "Deliver" },
+        ],
+        style: {
+          markerColor: "#ffffff",
+          titleColor: "#ffffff",
+          descriptionColor: "#ffffff",
+        },
+        background: {
+          color: "#ffffff",
+        },
+      }}
+      onChange={() => undefined}
+      variant="milestones"
+      onVariantChange={() => undefined}
+    />
+  );
+
+  try {
+    expect(view.container.textContent).toContain("Marker contrast advisory");
+    expect(view.container.textContent).toContain("Text contrast advisory");
+    expect(view.container.textContent).toContain("Configured colors may be hard to read together");
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("Timeline advanced editor covers layout-only controls and payload normalization guard rails", async () => {
   const { TimelineAdvancedEditor } =
     await import("../../../core/admin/ui/widgets/editors/TimelineEditors");

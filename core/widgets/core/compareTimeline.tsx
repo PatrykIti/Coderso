@@ -11,6 +11,7 @@ export type CompareTimelineLabelPosition = "top" | "bottom";
 export type CompareTimelineMaxWidth = "none" | "4xl" | "5xl" | "6xl" | "7xl";
 export type CompareTimelinePadding = "sm" | "md" | "lg";
 export type CompareTimelineTrackOrder = "a-first" | "b-first";
+export type CompareTimelineMotion = "none" | "fade" | "slide";
 export type CompareTimelineHighlightLabelStyle = "solid" | "outline" | "subtle";
 export type CompareTimelineTrackLabelSize = "none" | "sm" | "base" | "lg";
 export type CompareTimelineStepLabelSize = "none" | "xs" | "sm" | "base";
@@ -54,6 +55,7 @@ export type CompareTimelineData = {
     maxWidth?: CompareTimelineMaxWidth;
     padding?: CompareTimelinePadding;
     trackOrder?: CompareTimelineTrackOrder;
+    motion?: CompareTimelineMotion;
   };
   highlight?: {
     targetTrackId?: string;
@@ -87,6 +89,7 @@ const joinClasses = (...classes: Array<string | undefined | false>) =>
 const compareMaxWidthOptions = ["none", "4xl", "5xl", "6xl", "7xl"] as const;
 const comparePaddingOptions = ["sm", "md", "lg"] as const;
 const compareTrackOrderOptions = ["a-first", "b-first"] as const;
+const compareMotionOptions = ["none", "fade", "slide"] as const;
 const compareFontWeightOptions = ["normal", "medium", "semibold", "bold"] as const;
 const compareMarkerShapeOptions = ["rounded", "circle", "numbered", "check"] as const;
 const widgetHrefOptions = {
@@ -115,6 +118,13 @@ const paddingClassMap = {
   sm: "px-4 py-6",
   md: "px-4 py-8",
   lg: "px-6 py-10",
+} as const;
+
+const motionClassMap = {
+  none: undefined,
+  fade: "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-500 motion-reduce:animate-none",
+  slide:
+    "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-500 motion-reduce:animate-none",
 } as const;
 
 const trackLabelSizeClassMap = {
@@ -279,6 +289,7 @@ export const compareTimelineSchema = {
         maxWidth: { enum: [...compareMaxWidthOptions] },
         padding: { enum: [...comparePaddingOptions] },
         trackOrder: { enum: [...compareTrackOrderOptions] },
+        motion: { enum: [...compareMotionOptions] },
       },
     },
     highlight: {
@@ -342,6 +353,7 @@ export const compareTimelineDefaults: CompareTimelineData = {
     maxWidth: "6xl",
     padding: "md",
     trackOrder: "a-first",
+    motion: "none",
   },
   highlight: { targetTrackId: "b", targetTrackIds: ["b"] },
   style: {
@@ -401,6 +413,9 @@ const normalizeCompareLayout = (
   trackOrder: isEnumValue(layout?.trackOrder, compareTrackOrderOptions)
     ? layout.trackOrder
     : (compareTimelineDefaults.layout?.trackOrder ?? "a-first"),
+  motion: isEnumValue(layout?.motion, compareMotionOptions)
+    ? layout.motion
+    : (compareTimelineDefaults.layout?.motion ?? "none"),
 });
 
 const normalizeCompareHighlight = (
@@ -945,6 +960,7 @@ export function CompareTimelineBlock({
     maxWidth: normalizedData.layout?.maxWidth ?? "6xl",
     padding: normalizedData.layout?.padding ?? "md",
     trackOrder: normalizedData.layout?.trackOrder ?? "a-first",
+    motion: normalizedData.layout?.motion ?? "none",
   };
   const style: Required<NonNullable<CompareTimelineData["style"]>> = {
     highlightColor: normalizedData.style?.highlightColor ?? "#f59e0b",
@@ -989,6 +1005,7 @@ export function CompareTimelineBlock({
         data-compare-max-width={layout.maxWidth}
         data-compare-padding={layout.padding}
         data-compare-track-order={layout.trackOrder}
+        data-compare-motion={layout.motion}
         data-compare-marker-shape={style.markerShape}
       >
         {sectionTitle || sectionSubtitle ? (
@@ -1015,7 +1032,8 @@ export function CompareTimelineBlock({
         <div
           className={joinClasses(
             "flex flex-col",
-            trackSpacingClassMap[layout.trackSpacing ?? "md"]
+            trackSpacingClassMap[layout.trackSpacing ?? "md"],
+            motionClassMap[layout.motion ?? "none"]
           )}
         >
           {renderedTracks.map((track) => (

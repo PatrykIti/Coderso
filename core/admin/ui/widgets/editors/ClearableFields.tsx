@@ -32,6 +32,114 @@ export function resolveColorSwatchValue(value: string | undefined, fallback?: st
   return resolveColorPickerValue(value, fallback ?? "#000000");
 }
 
+export type ColorContrastAdvisory = {
+  status: "ok" | "unknown" | "warning";
+  message?: string;
+};
+
+const cssVariablePattern = /var\(/i;
+const colorMixPattern = /color-mix\(/i;
+
+const parseHexChannel = (value: string) => Number.parseInt(value, 16);
+
+const expandHex = (value: string) =>
+  value.length === 3
+    ? value
+        .split("")
+        .map((part) => part + part)
+        .join("")
+    : value;
+
+const parseColor = (value: string | undefined) => {
+  const normalized = value?.trim();
+  if (!normalized) return null;
+  if (
+    normalized === "transparent" ||
+    cssVariablePattern.test(normalized) ||
+    colorMixPattern.test(normalized)
+  ) {
+    return null;
+  }
+
+  if (hexColorPattern.test(normalized)) {
+    const hex = expandHex(normalized.startsWith("#") ? normalized.slice(1) : normalized);
+    return {
+      red: parseHexChannel(hex.slice(0, 2)),
+      green: parseHexChannel(hex.slice(2, 4)),
+      blue: parseHexChannel(hex.slice(4, 6)),
+      alpha: 1,
+    };
+  }
+
+  const rgbMatch = normalized.match(rgbColorPattern);
+  if (!rgbMatch) return null;
+  const [, red, green, blue, alpha] = rgbMatch;
+  return {
+    red: Number.parseInt(red, 10),
+    green: Number.parseInt(green, 10),
+    blue: Number.parseInt(blue, 10),
+    alpha: typeof alpha === "string" && alpha.length > 0 ? Number.parseFloat(alpha) : 1,
+  };
+};
+
+const toLuminanceChannel = (value: number) => {
+  const normalized = value / 255;
+  return normalized <= 0.03928 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+};
+
+const toRelativeLuminance = (color: { red: number; green: number; blue: number }) =>
+  0.2126 * toLuminanceChannel(color.red) +
+  0.7152 * toLuminanceChannel(color.green) +
+  0.0722 * toLuminanceChannel(color.blue);
+
+const toContrastRatio = (
+  foreground: { red: number; green: number; blue: number },
+  background: { red: number; green: number; blue: number }
+) => {
+  const foregroundLuminance = toRelativeLuminance(foreground);
+  const backgroundLuminance = toRelativeLuminance(background);
+  const lighter = Math.max(foregroundLuminance, backgroundLuminance);
+  const darker = Math.min(foregroundLuminance, backgroundLuminance);
+  return (lighter + 0.05) / (darker + 0.05);
+};
+
+export function resolveColorContrastAdvisory(input: {
+  foreground?: string;
+  background?: string;
+  fallbackBackground?: string;
+  threshold?: number;
+}): ColorContrastAdvisory {
+  const foreground = parseColor(input.foreground);
+  const background = parseColor(input.background) ?? parseColor(input.fallbackBackground);
+  if (!foreground || !background) {
+    return {
+      status: "unknown",
+      message: "Contrast depends on inherited theme or transparent colors.",
+    };
+  }
+
+  if (foreground.alpha === 0 || background.alpha === 0) {
+    return {
+      status: "unknown",
+      message: "Contrast depends on transparency or inherited background.",
+    };
+  }
+
+  const threshold = input.threshold ?? 4.5;
+  const ratio = toContrastRatio(foreground, background);
+  if (ratio < threshold) {
+    return {
+      status: "warning",
+      message: "Configured colors may be hard to read together.",
+    };
+  }
+
+  return {
+    status: "ok",
+    message: "Configured colors look readable.",
+  };
+}
+
 export function ClearableFieldHeader({
   label,
   value,
@@ -95,6 +203,28 @@ export function ColorTokenHint({ value }: { value: string | undefined }) {
   return (
     <p className="text-xs text-muted-foreground">
       Custom token active. Swatch preview uses the fallback until you replace it with a hex color.
+    </p>
+  );
+}
+
+export function ColorContrastNotice({
+  advisory,
+  label,
+}: {
+  advisory: ColorContrastAdvisory;
+  label: string;
+}) {
+  if (advisory.status === "ok" || !advisory.message) {
+    return null;
+  }
+
+  return (
+    <p
+      className={
+        advisory.status === "warning" ? "text-xs text-amber-700" : "text-xs text-muted-foreground"
+      }
+    >
+      {label}: {advisory.message}
     </p>
   );
 }

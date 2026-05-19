@@ -71,13 +71,29 @@ const entryTeaserState = vi.hoisted(() => ({
       updatedAt: "2026-03-08T10:00:00.000Z",
     },
   ],
+  listingPreviewRows: [
+    {
+      id: "entry-1",
+      title: "Launch note",
+      slug: "launch-note",
+      status: "published",
+    },
+    {
+      id: "entry-2",
+      title: "Roadmap note",
+      slug: "roadmap-note",
+      status: "published",
+    },
+  ] as Record<string, unknown>[],
   contentTypesError: null as unknown,
   entriesError: null as unknown,
   listingsError: null as unknown,
+  listingPreviewError: null as unknown,
   reset() {
     this.contentTypesError = null;
     this.entriesError = null;
     this.listingsError = null;
+    this.listingPreviewError = null;
   },
 }));
 
@@ -290,6 +306,16 @@ vi.mock("@/services/listingsClient", () => ({
   listListingTemplatesCached: vi.fn(async () => {
     if (entryTeaserState.listingsError) throw entryTeaserState.listingsError;
     return entryTeaserState.listingTemplates;
+  }),
+  previewListingQuery: vi.fn(async () => {
+    if (entryTeaserState.listingPreviewError) throw entryTeaserState.listingPreviewError;
+    return {
+      source: "entries",
+      total: entryTeaserState.listingPreviewRows.length,
+      limit: entryTeaserState.listingPreviewRows.length,
+      offset: 0,
+      rows: entryTeaserState.listingPreviewRows,
+    };
   }),
 }));
 
@@ -1165,6 +1191,14 @@ test("EntryTeaser editors cover listing mode and content/listings loading errors
 
     React.act(() => {
       setSelectValue(
+        findSelectByOptions(successView.container, ["latest", "featured", "manual"]),
+        "manual"
+      );
+    });
+    await flush();
+
+    React.act(() => {
+      setSelectValue(
         findSelectByOptions(successView.container, ["__no_listing_query__", "query-1"]),
         "query-1"
       );
@@ -1173,6 +1207,7 @@ test("EntryTeaser editors cover listing mode and content/listings loading errors
         "template-1"
       );
     });
+    await flush();
 
     const listingCall = onChangeSpy.mock.calls.find(
       ([arg]) =>
@@ -1186,6 +1221,34 @@ test("EntryTeaser editors cover listing mode and content/listings loading errors
           mode: "listing",
           listingQueryId: "query-1",
           listingTemplateId: "template-1",
+        }),
+      })
+    );
+
+    React.act(() => {
+      setSelectValue(
+        findSelectByOptions(successView.container, ["__no_listing_manual__", "entry-1", "entry-2"]),
+        "entry-2"
+      );
+    });
+    await flush();
+
+    const manualListingCall = onChangeSpy.mock.calls.find(
+      ([arg]) =>
+        arg?.sourceMode === "manual" &&
+        arg?.source?.mode === "listing" &&
+        arg?.source?.listingManualTarget?.rowId === "entry-2" &&
+        arg?.source?.listingManualTarget?.entryId === "entry-2"
+    );
+    expect(manualListingCall?.[0]).toEqual(
+      expect.objectContaining({
+        sourceMode: "manual",
+        source: expect.objectContaining({
+          mode: "listing",
+          listingManualTarget: {
+            rowId: "entry-2",
+            entryId: "entry-2",
+          },
         }),
       })
     );
@@ -1257,6 +1320,21 @@ test("EntryTeaser wizard source controls cover generic content-type failure, API
     setSelectValue(findSelectByOptions(wizardSection, ["legacy", "listing"]), "legacy");
     await flush();
     setSelectValue(findSelectByOptions(wizardSection, ["latest", "featured", "manual"]), "manual");
+    await flush();
+
+    setSelectValue(findSelectByOptions(wizardSection, ["legacy", "listing"]), "listing");
+    await flush();
+
+    expect(sourceOwnerView.getLatestValue()).toMatchObject({
+      sourceMode: "manual",
+      source: {
+        mode: "listing",
+        contentTypeId: "",
+        entryId: "",
+      },
+    });
+
+    setSelectValue(findSelectByOptions(wizardSection, ["legacy", "listing"]), "legacy");
     await flush();
 
     const fallbackSection = findSectionByTitle(sourceOwnerView.container, "Fallback state");

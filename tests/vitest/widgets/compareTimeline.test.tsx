@@ -29,6 +29,7 @@ test("compare timeline renders defaults", () => {
   expect(html).toContain(compareTimelineDefaults.tracks[0]?.label ?? "");
   expect(html).toContain('data-compare-variant="dual-track"');
   expect(html).toContain('data-compare-label-position="top"');
+  expect(html).toContain('data-compare-motion="none"');
 });
 
 test("compare timeline normalizes markers and segments safely", () => {
@@ -103,6 +104,7 @@ test("compare timeline validator accepts extended fields", () => {
           maxWidth: "7xl",
           padding: "lg",
           trackOrder: "b-first",
+          motion: "fade",
         },
         highlight: {
           targetTrackId: "b",
@@ -149,6 +151,25 @@ test("compare timeline cleared style colors omit normalized keys while runtime k
   expect(html).toContain("var(--color-primary)");
   expect(html).toContain("var(--color-border)");
   expect(html).toContain("rgba(245, 158, 11, 0.18)");
+});
+
+test("compare timeline renders motion-safe classes when a motion preset is configured", () => {
+  const html = renderToString(
+    <CompareTimelineBlock
+      data={normalizeCompareTimelineData({
+        ...compareTimelineDefaults,
+        layout: {
+          ...compareTimelineDefaults.layout,
+          motion: "slide",
+        },
+      })}
+      variant="dual-track-highlight"
+    />
+  );
+
+  expect(html).toContain('data-compare-motion="slide"');
+  expect(html).toContain("motion-safe:slide-in-from-bottom-2");
+  expect(html).toContain("motion-reduce:animate-none");
 });
 
 test("compare timeline validator rejects invalid variant", () => {

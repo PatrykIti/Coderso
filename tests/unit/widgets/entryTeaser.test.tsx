@@ -347,6 +347,24 @@ test("entry teaser keeps backward compatibility for source.mode", () => {
   expect(legacyCompatible.source?.mode).toBe("legacy");
 });
 
+test("entry teaser normalizes manual listing target defaults", () => {
+  const normalized = normalizeEntryTeaserData({
+    sourceMode: "manual",
+    source: {
+      mode: "listing",
+      listingQueryId: "listing-query-1",
+      listingManualTarget: {
+        rowId: " row-2 ",
+      },
+    },
+  });
+
+  expect(normalized.source?.listingManualTarget).toEqual({
+    rowId: " row-2 ",
+    entryId: "",
+  });
+});
+
 test("entry teaser listing mode resolves first listing item", async () => {
   const resolved = await resolveEntryTeaserRuntimeData(
     {
@@ -590,4 +608,103 @@ test("entry teaser listing mode prefers featured tagged items and can refuse fal
   );
 
   expect(noFallbackResolved.item).toBeNull();
+});
+
+test("entry teaser listing manual mode resolves deterministic selected row", async () => {
+  const resolved = await resolveEntryTeaserRuntimeData(
+    {
+      ...entryTeaserDefaults,
+      sourceMode: "manual",
+      source: {
+        ...entryTeaserDefaults.source,
+        mode: "listing",
+        listingQueryId: "listing-query-1",
+        listingTemplateId: "listing-template-1",
+        listingManualTarget: {
+          rowId: "entry-2",
+          entryId: "entry-2",
+        },
+      },
+    },
+    {
+      preview: true,
+      contentRoutes: [],
+    },
+    {
+      getListingQueryById: async () => ({
+        id: "listing-query-1",
+        name: "Top entries",
+        description: null,
+        query: {
+          source: "entries",
+          sourceConfig: {
+            contentTypeId: "type-1",
+          },
+          filters: [],
+          sort: [{ field: "id", dir: "asc" }],
+          pagination: { limit: 12, offset: 0 },
+          fields: ["id", "title", "slug"],
+        },
+        createdAt: new Date("2026-02-18T12:00:00.000Z"),
+        updatedAt: new Date("2026-02-18T12:00:00.000Z"),
+      }),
+      getListingTemplateById: async () => ({
+        id: "listing-template-1",
+        name: "Cards",
+        slug: "cards",
+        description: null,
+        layout: "grid",
+        config: {
+          fields: [],
+          itemActions: [],
+          emptyState: {
+            title: "No items",
+            description: null,
+            ctaLabel: null,
+            ctaHref: null,
+          },
+          style: {
+            columns: 3,
+            gap: "md",
+            cardVariant: "default",
+          },
+        },
+        createdAt: new Date("2026-02-18T12:00:00.000Z"),
+        updatedAt: new Date("2026-02-18T12:00:00.000Z"),
+      }),
+      executeListing: async () => ({
+        source: "entries",
+        total: 2,
+        limit: 12,
+        offset: 0,
+        rows: [
+          {
+            id: "entry-1",
+            title: "Engine diagnostics",
+            slug: "engine-diagnostics",
+            status: "published",
+          },
+          {
+            id: "entry-2",
+            title: "Bodywork",
+            slug: "bodywork",
+            status: "published",
+          },
+        ],
+      }),
+      getContentTypeById: async () => ({
+        id: "type-1",
+        name: "Entries",
+        slug: "entries",
+        status: "published",
+        schema: { type: "object", additionalProperties: false, properties: {} },
+        createdAt: new Date("2026-02-18T12:00:00.000Z"),
+        updatedAt: new Date("2026-02-18T12:00:00.000Z"),
+      }),
+      getContentTypeBySlug: async () => null,
+    }
+  );
+
+  expect(resolved.item?.id).toBe("entry-2");
+  expect(resolved.item?.title).toBe("Bodywork");
 });

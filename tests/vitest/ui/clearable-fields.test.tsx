@@ -6,9 +6,11 @@ import { afterEach, expect, test, vi } from "vitest";
 
 import {
   ColorTokenHint,
+  ColorContrastNotice,
   ClearableInputField,
   SharedColorFieldInputs,
   hasClearableFieldValue,
+  resolveColorContrastAdvisory,
   resolveColorPickerValue,
 } from "../../../core/admin/ui/widgets/editors/ClearableFields";
 
@@ -179,5 +181,41 @@ test("color token hint stays hidden for empty and hex values", () => {
     expect(hex.container.textContent).toBe("");
   } finally {
     hex.cleanup();
+  }
+});
+
+test("shared contrast advisory warns for low-contrast colors and stays unknown for tokens", () => {
+  expect(
+    resolveColorContrastAdvisory({
+      foreground: "#ffffff",
+      background: "#ffffff",
+    })
+  ).toEqual(
+    expect.objectContaining({
+      status: "warning",
+    })
+  );
+
+  expect(
+    resolveColorContrastAdvisory({
+      foreground: "var(--color-text)",
+      background: "#ffffff",
+    })
+  ).toEqual(
+    expect.objectContaining({
+      status: "unknown",
+    })
+  );
+
+  const advisory = resolveColorContrastAdvisory({
+    foreground: "#ffffff",
+    background: "#ffffff",
+  });
+  const view = mount(<ColorContrastNotice advisory={advisory} label="Marker contrast advisory" />);
+
+  try {
+    expect(view.container.textContent).toContain("Configured colors may be hard to read together");
+  } finally {
+    view.cleanup();
   }
 });

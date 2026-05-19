@@ -7,6 +7,10 @@ import { normalizeWidgetSafeHref, resolveWidgetLinkAttrs } from "./widgetSafeHre
 export type EntryTeaserVariantId = "horizontal" | "vertical" | "minimal";
 export type EntryTeaserSourceMode = "manual" | "latest" | "featured";
 export type EntryTeaserDataSourceMode = "legacy" | "listing";
+export type EntryTeaserListingManualTarget = {
+  rowId?: string;
+  entryId?: string;
+};
 export type EntryTeaserCtaHrefMode = "auto" | "custom";
 export type EntryTeaserCtaStyle = "link" | "filled" | "outline";
 export type EntryTeaserRadius = "none" | "sm" | "md" | "lg" | "xl";
@@ -38,6 +42,7 @@ export type EntryTeaserData = {
     mode?: EntryTeaserDataSourceMode;
     listingQueryId?: string;
     listingTemplateId?: string;
+    listingManualTarget?: EntryTeaserListingManualTarget;
     contentTypeId?: string;
     entryId?: string;
   };
@@ -105,6 +110,14 @@ export const entryTeaserSchema = {
         mode: { enum: ["legacy", "listing"] },
         listingQueryId: { type: "string" },
         listingTemplateId: { type: "string" },
+        listingManualTarget: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            rowId: { type: "string" },
+            entryId: { type: "string" },
+          },
+        },
         contentTypeId: { type: "string" },
         entryId: { type: "string" },
       },
@@ -228,6 +241,10 @@ export const entryTeaserDefaults: EntryTeaserData = {
     mode: "legacy",
     listingQueryId: "",
     listingTemplateId: "",
+    listingManualTarget: {
+      rowId: "",
+      entryId: "",
+    },
     contentTypeId: "",
     entryId: "",
   },
@@ -509,6 +526,10 @@ const normalizeRuntimeItem = (
 
 export function normalizeEntryTeaserData(data: EntryTeaserData): EntryTeaserData {
   const sourceDefaults = entryTeaserDefaults.source ?? {
+    listingManualTarget: {
+      rowId: "",
+      entryId: "",
+    },
     contentTypeId: "",
     entryId: "",
   };
@@ -563,6 +584,16 @@ export function normalizeEntryTeaserData(data: EntryTeaserData): EntryTeaserData
       mode: resolveEntryTeaserDataSourceMode(data.source?.mode, data.source?.listingQueryId),
       listingQueryId: resolveString(data.source?.listingQueryId, ""),
       listingTemplateId: resolveString(data.source?.listingTemplateId, ""),
+      listingManualTarget: {
+        rowId: resolveString(
+          data.source?.listingManualTarget?.rowId,
+          sourceDefaults.listingManualTarget?.rowId ?? ""
+        ),
+        entryId: resolveString(
+          data.source?.listingManualTarget?.entryId,
+          sourceDefaults.listingManualTarget?.entryId ?? ""
+        ),
+      },
       contentTypeId: resolveString(data.source?.contentTypeId, sourceDefaults.contentTypeId ?? ""),
       entryId: resolveString(data.source?.entryId, sourceDefaults.entryId ?? ""),
     },

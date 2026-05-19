@@ -6,6 +6,7 @@ import { ensureRuntimeWidgetsRegistered } from "../widgets/runtime";
 import { renderPublicPageHtml, renderPublicPageRuntimeHtml } from "../site/renderPublicPage";
 import { renderPublicEntryDetailHtml, renderPublicEntryListHtml } from "../site/renderPublicEntry";
 import {
+  blocksAllowSiteHtmlCache,
   buildSiteCacheKey,
   configureSiteCache,
   getSiteCacheEntry,
@@ -550,6 +551,11 @@ const hydrateRuntimeBlocks = async (
 const buildHtmlResponse = (html: string) =>
   new Response(html, { headers: { "Content-Type": "text/html" } });
 
+type PublicHtmlRenderResult = {
+  html: string;
+  cacheable: boolean;
+};
+
 const jsonResponse = (payload: unknown, status = 200) =>
   new Response(JSON.stringify(payload), {
     status,
@@ -687,7 +693,7 @@ const renderPublicPageHtmlInternal = async (
     themeName?: string;
     runtimeSearchParams?: URLSearchParams;
   }
-) => {
+): Promise<PublicHtmlRenderResult> => {
   ensureRuntimeWidgetsRegistered();
 
   const { inlineCss, cssHref, devModuleScripts } = await resolvePublicStyles();
@@ -708,27 +714,30 @@ const renderPublicPageHtmlInternal = async (
     runtimeCache: {},
   });
 
-  return renderPublicPageRuntimeHtml({
-    title: page.title ?? "Page",
-    blocks,
-    cssHref,
-    inlineCss,
-    isPreview: options?.preview ?? false,
-    previewDevice: options?.previewDevice,
-    layoutSettings: getPageLayoutSettingsFromData(sourceData),
-    devModuleScripts,
-    metaDescription,
-    themeName,
-    templateKey: settingsRecord.template,
-  });
+  return {
+    html: await renderPublicPageRuntimeHtml({
+      title: page.title ?? "Page",
+      blocks,
+      cssHref,
+      inlineCss,
+      isPreview: options?.preview ?? false,
+      previewDevice: options?.previewDevice,
+      layoutSettings: getPageLayoutSettingsFromData(sourceData),
+      devModuleScripts,
+      metaDescription,
+      themeName,
+      templateKey: settingsRecord.template,
+    }),
+    cacheable: blocksAllowSiteHtmlCache(blocks),
+  };
 };
 
 export async function renderPublicPage(
   page: PublicPageData,
   options?: { preview?: boolean; previewDevice?: DeviceTarget }
 ) {
-  const html = await renderPublicPageHtmlInternal(page, options);
-  return buildHtmlResponse(html);
+  const result = await renderPublicPageHtmlInternal(page, options);
+  return buildHtmlResponse(result.html);
 }
 
 const resolvePreviewTargetType = (value: string | null): PreviewTargetType | null => {
@@ -870,7 +879,7 @@ const renderEntryDetailHtml = async (
     contentRoutes?: ContentRouteSetting[];
     runtimeSearchParams?: URLSearchParams;
   }
-) => {
+): Promise<PublicHtmlRenderResult | string | null> => {
   const routeParam = options?.routeParam ?? "slug";
 
   if (!options?.preferGenericEntry && isPostContentTypeSlug(typeSlug)) {
@@ -988,26 +997,30 @@ const renderEntryDetailHtml = async (
       entry: entryDetail,
       contentTypeName: contentType.name,
     });
-    return renderPublicPageRuntimeHtml({
-      title: detailSeo.title,
-      blocks: await hydrateRuntimeBlocks(detailPage.blocks, {
-        preview: options?.preview ?? false,
-        contentRoutes,
-        runtimeSearchParams: options?.runtimeSearchParams,
-        runtimeCache: {},
-      }),
-      cssHref,
-      inlineCss,
-      devModuleScripts,
-      isPreview: options?.preview ?? false,
-      previewDevice: options?.previewDevice,
-      layoutSettings: detailPage.document.settings.layout,
-      metaDescription: detailSeo.metaDescription,
-      canonicalUrl: detailSeo.canonicalUrl,
-      imageUrl: detailSeo.imageUrl,
-      themeName: options?.themeName ?? (await resolvePublicThemeName()),
-      templateKey: detailPage.document.settings.template,
+    const blocks = await hydrateRuntimeBlocks(detailPage.blocks, {
+      preview: options?.preview ?? false,
+      contentRoutes,
+      runtimeSearchParams: options?.runtimeSearchParams,
+      runtimeCache: {},
     });
+    return {
+      html: await renderPublicPageRuntimeHtml({
+        title: detailSeo.title,
+        blocks,
+        cssHref,
+        inlineCss,
+        devModuleScripts,
+        isPreview: options?.preview ?? false,
+        previewDevice: options?.previewDevice,
+        layoutSettings: detailPage.document.settings.layout,
+        metaDescription: detailSeo.metaDescription,
+        canonicalUrl: detailSeo.canonicalUrl,
+        imageUrl: detailSeo.imageUrl,
+        themeName: options?.themeName ?? (await resolvePublicThemeName()),
+        templateKey: detailPage.document.settings.template,
+      }),
+      cacheable: blocksAllowSiteHtmlCache(blocks),
+    };
   }
 
   return renderPublicEntryDetailHtml({
@@ -1179,7 +1192,7 @@ export async function handlePublicRequest(req: Request) {
         previewDevice,
         runtimeSearchParams: url.searchParams,
       });
-      return buildHtmlResponse(html);
+      return buildHtmlResponse(html.html);
     }
 
     if (preview.token.targetType === "content") {
@@ -1190,7 +1203,7 @@ export async function handlePublicRequest(req: Request) {
           previewDevice,
         });
         if (!html) return new Response("Not Found", { status: 404 });
-        return buildHtmlResponse(html);
+        return buildHtmlResponse(typeof html === "string" ? html : html.html);
       }
 
       const entry = await getEntry(preview.token.targetId);
@@ -1212,7 +1225,7 @@ export async function handlePublicRequest(req: Request) {
         runtimeSearchParams: url.searchParams,
       });
       if (!html) return new Response("Not Found", { status: 404 });
-      return buildHtmlResponse(html);
+      return buildHtmlResponse(typeof html === "string" ? html : html.html);
     }
 
     if (preview.token.targetType === "detail-page") {
@@ -1266,14 +1279,14 @@ export async function handlePublicRequest(req: Request) {
       if (!page || page.status !== "published" || !page.publishedData) {
         return new Response("Not Found", { status: 404 });
       }
-      const html = await renderPublicPageHtmlInternal(page as PublicPageData, {
+      const result = await renderPublicPageHtmlInternal(page as PublicPageData, {
         themeName,
         runtimeSearchParams: url.searchParams,
       });
-      if (shouldUseCache) {
-        setSiteCacheEntry(cacheKey, html, cacheTtlSeconds);
+      if (shouldUseCache && result.cacheable) {
+        setSiteCacheEntry(cacheKey, result.html, cacheTtlSeconds);
       }
-      return buildHtmlResponse(html);
+      return buildHtmlResponse(result.html);
     }
   }
 
@@ -1292,15 +1305,17 @@ export async function handlePublicRequest(req: Request) {
     }
     const slug = match.params.slug ?? match.params.id ?? "";
     if (!slug) return new Response("Not Found", { status: 404 });
-    const html = await renderEntryDetailHtml(match.type, slug, {
+    const detailHtml = await renderEntryDetailHtml(match.type, slug, {
       themeName,
       routeParam: match.params.slug ? "slug" : "id",
       detailPageId: match.detailPageId,
       contentRoutes,
       runtimeSearchParams: url.searchParams,
     });
-    if (!html) return new Response("Not Found", { status: 404 });
-    if (shouldUseCache) {
+    if (!detailHtml) return new Response("Not Found", { status: 404 });
+    const html = typeof detailHtml === "string" ? detailHtml : detailHtml.html;
+    const canCache = typeof detailHtml === "string" ? true : detailHtml.cacheable;
+    if (shouldUseCache && canCache) {
       setSiteCacheEntry(cacheKey, html, cacheTtlSeconds);
     }
     return buildHtmlResponse(html);
@@ -1310,12 +1325,12 @@ export async function handlePublicRequest(req: Request) {
   if (page.status !== "published" || !page.publishedData) {
     return new Response("Not Found", { status: 404 });
   }
-  const html = await renderPublicPageHtmlInternal(page as PublicPageData, {
+  const result = await renderPublicPageHtmlInternal(page as PublicPageData, {
     themeName,
     runtimeSearchParams: url.searchParams,
   });
-  if (shouldUseCache) {
-    setSiteCacheEntry(cacheKey, html, cacheTtlSeconds);
+  if (shouldUseCache && result.cacheable) {
+    setSiteCacheEntry(cacheKey, result.html, cacheTtlSeconds);
   }
-  return buildHtmlResponse(html);
+  return buildHtmlResponse(result.html);
 }

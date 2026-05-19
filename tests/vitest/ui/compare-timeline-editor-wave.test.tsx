@@ -4,7 +4,10 @@ import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
-import type { CompareTimelineData } from "../../../core/widgets/core/compareTimeline";
+import {
+  compareTimelineDefaults,
+  type CompareTimelineData,
+} from "../../../core/widgets/core/compareTimeline";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -574,6 +577,10 @@ test("CompareTimeline visual editor covers highlight branching, segment editing,
       findSelectByOptions(spacingSection as ParentNode, ["a-first", "b-first"]),
       "b-first"
     );
+    setSelectValue(
+      findSelectByOptions(spacingSection as ParentNode, ["none", "fade", "slide"]),
+      "slide"
+    );
     setInputValue(
       findInputByPlaceholder(spacingSection as ParentNode, "Optional section title"),
       "Compare adoption"
@@ -633,6 +640,7 @@ test("CompareTimeline visual editor covers highlight branching, segment editing,
         maxWidth: "7xl",
         padding: "lg",
         trackOrder: "b-first",
+        motion: "slide",
       })
     );
     expect(latestValue.header).toEqual(
@@ -765,6 +773,7 @@ test("CompareTimeline advanced editor covers normalization, metadata edits, and 
       maxWidth: "6xl",
       padding: "md",
       trackOrder: "a-first",
+      motion: "none",
     });
 
     clickButtonByText(view.container, "Remove step");
@@ -912,5 +921,35 @@ test("CompareTimeline editors cover visual marker toggles, raw color tokens, and
     expect(latestAdvancedValue.highlight).toEqual({ targetTrackId: "b", targetTrackIds: ["b"] });
   } finally {
     advancedView.cleanup();
+  }
+});
+
+test("CompareTimeline visual warns when configured colors collapse into unreadable contrast", async () => {
+  const { CompareTimelineVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/CompareTimelineEditors");
+
+  const view = mount(
+    <CompareTimelineVisualEditor
+      value={{
+        ...compareTimelineDefaults,
+        style: {
+          ...compareTimelineDefaults.style,
+          markerColor: "#ffffff",
+          trackLabelColor: "#ffffff",
+          stepLabelColor: "#ffffff",
+          trackBackgroundColor: "#ffffff",
+        },
+      }}
+      onChange={() => undefined}
+      variant="dual-track-highlight"
+    />
+  );
+
+  try {
+    expect(view.container.textContent).toContain("Marker contrast advisory");
+    expect(view.container.textContent).toContain("Label contrast advisory");
+    expect(view.container.textContent).toContain("Configured colors may be hard to read together");
+  } finally {
+    view.cleanup();
   }
 });

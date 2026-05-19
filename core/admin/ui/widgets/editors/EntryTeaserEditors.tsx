@@ -19,6 +19,7 @@ import { listEntriesCached, type EntrySummary } from "@/services/entriesClient";
 import {
   listListingQueriesCached,
   listListingTemplatesCached,
+  previewListingQuery,
   type ListingQueryRecord,
   type ListingTemplateRecord,
 } from "@/services/listingsClient";
@@ -157,6 +158,7 @@ const NO_CONTENT_TYPE_VALUE = "__no_content_type__";
 const NO_ENTRY_VALUE = "__no_entry__";
 const NO_LISTING_QUERY_VALUE = "__no_listing_query__";
 const NO_LISTING_TEMPLATE_VALUE = "__no_listing_template__";
+const NO_LISTING_MANUAL_VALUE = "__no_listing_manual__";
 
 const buildContentTypeOptionLabel = (
   entry: ContentTypeSummary,
@@ -176,6 +178,55 @@ const buildContentTypeNameCounts = (types: ContentTypeSummary[]) => {
   });
   return counts;
 };
+
+type ListingManualOption = {
+  value: string;
+  label: string;
+  target: {
+    rowId: string;
+    entryId?: string;
+  };
+};
+
+const readStableListingRowId = (row: Record<string, unknown>) => {
+  if (typeof row.id !== "string") return undefined;
+  const trimmed = row.id.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+};
+
+const readListingRowLabel = (row: Record<string, unknown>, index: number) => {
+  const titleCandidate =
+    typeof row.title === "string"
+      ? row.title
+      : typeof row.name === "string"
+        ? row.name
+        : typeof row.slug === "string"
+          ? row.slug
+          : undefined;
+  const title = titleCandidate?.trim();
+  if (title) return title;
+  const rowId = readStableListingRowId(row);
+  if (rowId) return `Row ${index + 1} (${rowId})`;
+  return `Row ${index + 1}`;
+};
+
+const buildListingManualOptions = (query: ListingQueryRecord, rows: Record<string, unknown>[]) =>
+  rows.flatMap((row, index) => {
+    const rowId = readStableListingRowId(row);
+    if (!rowId) return [];
+    const entryId =
+      query.query.source === "entries" || query.query.source === "posts" ? rowId : undefined;
+    return [
+      {
+        value: rowId,
+        label: readListingRowLabel(row, index),
+        target: {
+          rowId,
+          ...(entryId ? { entryId } : {}),
+        },
+      } satisfies ListingManualOption,
+    ];
+  });
 
 const resolveSourcePickerError = (
   error: unknown,
@@ -420,6 +471,63 @@ function useListingOptions() {
   };
 }
 
+function useListingManualOptions(query: ListingQueryRecord | null, active: boolean) {
+  const [items, setItems] = useState<ListingManualOption[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const loadItems = useCallback(
+    async (options?: { markLoading?: boolean }) => {
+      if (!query) {
+        setItems([]);
+        setError(null);
+        setLoading(false);
+        return;
+      }
+      if (options?.markLoading !== false) {
+        setLoading(true);
+      }
+      setError(null);
+      try {
+        const preview = await previewListingQuery(query.query);
+        setItems(buildListingManualOptions(query, preview.rows ?? []));
+      } catch (err) {
+        setItems([]);
+        setError(
+          resolveSourcePickerError(err, {
+            authMessage:
+              "Your session cannot load listing rows for manual selection. Sign in again and retry.",
+            fallbackMessage: "Failed to load listing rows for manual selection.",
+          })
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [query]
+  );
+
+  useEffect(() => {
+    if (!active) return;
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) {
+        void loadItems();
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [active, loadItems]);
+
+  return {
+    items: active ? items : [],
+    error: active ? error : null,
+    loading: active ? loading : false,
+    retry: loadItems,
+  };
+}
+
 function normalizeValue(value: EntryTeaserData): EntryTeaserData {
   return normalizeEntryTeaserData(value);
 }
@@ -470,12 +578,16 @@ function updateSourceDataMode(
       mode,
       ...(mode === "listing"
         ? { contentTypeId: "", entryId: "" }
-        : { listingQueryId: "", listingTemplateId: "" }),
+        : {
+            listingQueryId: "",
+            listingTemplateId: "",
+            listingManualTarget: {
+              rowId: "",
+              entryId: "",
+            },
+          }),
     },
-    sourceMode:
-      mode === "listing" && current.sourceMode === "manual"
-        ? "latest"
-        : (current.sourceMode ?? "latest"),
+    sourceMode: current.sourceMode ?? "latest",
   }));
 }
 
@@ -608,6 +720,14 @@ function updateFallback(
 function canResolveEntryTeaserPreview(normalized: EntryTeaserData) {
   const source = normalized.source ?? {};
   if (source.mode === "listing") {
+    if ((source.listingQueryId ?? "").trim().length === 0) return false;
+    if (
+      normalized.sourceMode === "manual" &&
+      (source.listingManualTarget?.rowId ?? "").trim().length === 0 &&
+      (source.listingManualTarget?.entryId ?? "").trim().length === 0
+    ) {
+      return false;
+    }
     return (source.listingQueryId ?? "").trim().length > 0;
   }
   if ((source.contentTypeId ?? "").trim().length === 0) return false;
@@ -689,11 +809,20 @@ function resolvePreviewResolvedData(
 function buildSourceSummaryLines(normalized: EntryTeaserData) {
   const source = normalized.source ?? {};
   if (source.mode === "listing") {
+    const listingModeLabel =
+      normalized.sourceMode === "manual"
+        ? "Manual row"
+        : normalized.sourceMode === "featured"
+          ? "Featured entry"
+          : "Latest entry";
     return [
       `Listing query ID: ${(source.listingQueryId ?? "").trim() || "Not selected"}`,
       `Template ID: ${(source.listingTemplateId ?? "").trim() || "Optional"}`,
-      `Listing mode: ${normalized.sourceMode === "featured" ? "Featured entry" : "Latest entry"}`,
-    ];
+      `Listing mode: ${listingModeLabel}`,
+      normalized.sourceMode === "manual"
+        ? `Manual target: ${(source.listingManualTarget?.entryId ?? "").trim() || (source.listingManualTarget?.rowId ?? "").trim() || "Not selected"}`
+        : null,
+    ].filter((line): line is string => typeof line === "string");
   }
 
   return [
@@ -723,6 +852,7 @@ function SourcePickerFields({
   const selectedEntryId = normalized.source?.entryId ?? "";
   const selectedListingQueryId = normalized.source?.listingQueryId ?? "";
   const selectedListingTemplateId = normalized.source?.listingTemplateId ?? "";
+  const selectedListingManualRowId = normalized.source?.listingManualTarget?.rowId ?? "";
 
   const loadContentTypes = useCallback(async (options?: { markLoading?: boolean }) => {
     if (options?.markLoading !== false) {
@@ -785,6 +915,18 @@ function SourcePickerFields({
   const selectedType = types.find((entry) => entry.id === selectedTypeId);
   const selectedTypeSlug = selectedType?.slug ?? "";
   const entries = getEntriesForTypeId(selectedTypeId);
+  const selectedListingQuery = queries.find((entry) => entry.id === selectedListingQueryId) ?? null;
+  const {
+    items: listingManualOptions,
+    error: listingManualError,
+    loading: isLoadingListingManualOptions,
+    retry: retryListingManualOptions,
+  } = useListingManualOptions(
+    selectedListingQuery,
+    dataSourceMode === "listing" &&
+      sourceMode === "manual" &&
+      selectedListingQueryId.trim().length > 0
+  );
 
   useEffect(() => {
     if (sourceMode !== "manual") return;
@@ -827,7 +969,15 @@ function SourcePickerFields({
       ? "No template selected (optional)"
       : (templates.find((item) => item.id === selectedListingTemplateValue)?.name ??
         "Selected listing template");
-  const listingSourceMode = sourceMode === "manual" ? "latest" : sourceMode;
+  const selectedListingManualValue =
+    selectedListingManualRowId.trim().length > 0
+      ? selectedListingManualRowId
+      : NO_LISTING_MANUAL_VALUE;
+  const selectedListingManualLabel =
+    selectedListingManualValue === NO_LISTING_MANUAL_VALUE
+      ? "No listing row selected"
+      : (listingManualOptions.find((item) => item.value === selectedListingManualValue)?.label ??
+        "Selected listing row");
 
   return (
     <div className="space-y-3">
@@ -836,11 +986,21 @@ function SourcePickerFields({
           <div className="space-y-2">
             <p className="text-sm font-medium">Source mode</p>
             <Select
-              value={listingSourceMode}
+              value={sourceMode}
               onValueChange={(next) =>
                 updateValue(value, onChange, (current) => ({
                   ...current,
                   sourceMode: next as EntryTeaserSourceMode,
+                  source:
+                    next === "manual"
+                      ? current.source
+                      : {
+                          ...current.source,
+                          listingManualTarget: {
+                            rowId: "",
+                            entryId: "",
+                          },
+                        },
                 }))
               }
             >
@@ -848,18 +1008,16 @@ function SourcePickerFields({
                 <SelectValue placeholder="Select source mode" />
               </SelectTrigger>
               <SelectContent>
-                {sourceModeOptions
-                  .filter((option) => option.id !== "manual")
-                  .map((option) => (
-                    <SelectItem key={option.id} value={option.id}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
+                {sourceModeOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              Listing mode supports latest and featured teaser selection. Manual listing selection
-              stays deferred.
+              Listing mode can resolve the latest result, the first featured result, or one
+              deterministic manual row.
             </p>
           </div>
           <div className="space-y-2">
@@ -869,6 +1027,10 @@ function SourcePickerFields({
               onValueChange={(next) =>
                 updateSource(value, onChange, {
                   listingQueryId: next === NO_LISTING_QUERY_VALUE ? "" : next,
+                  listingManualTarget: {
+                    rowId: "",
+                    entryId: "",
+                  },
                 })
               }
             >
@@ -928,6 +1090,73 @@ function SourcePickerFields({
               >
                 Retry listings
               </Button>
+            </div>
+          ) : null}
+          {sourceMode === "manual" ? (
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Manual listing row</p>
+              <Select
+                value={selectedListingManualValue}
+                onValueChange={(next) => {
+                  const selectedOption = listingManualOptions.find((item) => item.value === next);
+                  updateSource(value, onChange, {
+                    listingManualTarget:
+                      next === NO_LISTING_MANUAL_VALUE || !selectedOption
+                        ? {
+                            rowId: "",
+                            entryId: "",
+                          }
+                        : {
+                            rowId: selectedOption.target.rowId,
+                            entryId: selectedOption.target.entryId ?? "",
+                          },
+                  });
+                }}
+                disabled={!selectedListingQuery}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select listing row">
+                    {selectedListingManualLabel}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NO_LISTING_MANUAL_VALUE}>No listing row selected</SelectItem>
+                  {listingManualOptions.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {!selectedListingQuery ? (
+                <p className="text-xs text-muted-foreground">
+                  Choose a listing query before selecting a manual row.
+                </p>
+              ) : null}
+              {selectedListingQuery && isLoadingListingManualOptions ? (
+                <p className="text-xs text-muted-foreground">Loading listing rows...</p>
+              ) : null}
+              {selectedListingQuery &&
+              !isLoadingListingManualOptions &&
+              !listingManualError &&
+              listingManualOptions.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  This listing preview has no stable row IDs for manual selection.
+                </p>
+              ) : null}
+              {listingManualError ? (
+                <div className="space-y-2">
+                  <p className="text-xs text-destructive">{listingManualError}</p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => void retryListingManualOptions()}
+                  >
+                    Retry listing rows
+                  </Button>
+                </div>
+              ) : null}
             </div>
           ) : null}
         </>

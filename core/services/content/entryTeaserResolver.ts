@@ -51,6 +51,12 @@ const isFeaturedListingRow = (row: Record<string, unknown>) => {
   return row.data.featured === true;
 };
 
+const readStableListingRowId = (row: Record<string, unknown>) => {
+  if (typeof row.id !== "string") return undefined;
+  const trimmed = row.id.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+};
+
 const sortByFreshness = (entries: ContentListResolverEntry[]) =>
   [...entries].sort((a, b) => {
     const aTs = a.publishedAt?.getTime() ?? a.updatedAt.getTime() ?? 0;
@@ -86,6 +92,20 @@ const chooseListingTeaserItem = (
   config: EntryTeaserData
 ) => {
   const sourceMode = config.sourceMode ?? "latest";
+  if (sourceMode === "manual") {
+    const targetEntryId = config.source?.listingManualTarget?.entryId?.trim();
+    if (targetEntryId) {
+      const matchedByEntryId = items.find((item) => item.id === targetEntryId);
+      if (matchedByEntryId) return matchedByEntryId;
+    }
+
+    const targetRowId = config.source?.listingManualTarget?.rowId?.trim();
+    if (!targetRowId) return null;
+
+    const matchedIndex = rawRows.findIndex((row) => readStableListingRowId(row) === targetRowId);
+    return matchedIndex >= 0 ? (items[matchedIndex] ?? null) : null;
+  }
+
   if (sourceMode === "featured") {
     const featuredIndex = rawRows.findIndex((row) => isFeaturedListingRow(row));
     if (featuredIndex >= 0) {

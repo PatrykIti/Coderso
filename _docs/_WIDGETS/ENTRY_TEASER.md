@@ -9,12 +9,10 @@ The widget supports:
 
 - legacy content-type sources with `latest`, `featured`, or `manual` entry
   selection
-- listing-query sources with `latest` or `featured` one-item selection
+- listing-query sources with `latest`, `featured`, or deterministic `manual`
+  row selection
 - admin preview hydration through an internal preview route
 - fixed-map layout/media controls without raw class-name passthrough
-
-Manual listing-row selection is intentionally deferred to
-`TASK-304_Entry_Teaser_Listing_Manual_Picker.md`.
 
 ## Widget ID
 
@@ -35,9 +33,10 @@ Wizard is the single mutable owner for source selection.
 - source type: `Content type` or `Listing query`
 - source mode:
   - legacy: `latest`, `featured`, `manual`
-  - listing: `latest`, `featured`
+  - listing: `latest`, `featured`, `manual`
 - content-type picker and manual entry picker
 - listing query/template picker
+- manual listing-row picker for previewed rows with stable IDs
 - variant thumbnail selection
 
 ### Visual
@@ -88,8 +87,18 @@ Listing source modes:
 
 - `latest`: first listing result
 - `featured`: first listing result tagged/flagged as featured
+- `manual`: selected `source.listingManualTarget`
 - if no listing featured match exists and `fallback.fallbackToLatest === true`,
   runtime falls back to the first listing result
+
+Manual listing targets persist as:
+
+- `source.listingManualTarget.rowId`: stable row identifier from the listing
+  preview/runtime row
+- `source.listingManualTarget.entryId`: duplicated when the listing source is
+  `entries` or `posts`, so runtime can prefer a stable entry/post ID match
+
+Rows without stable IDs are not offered in the manual picker.
 
 ### Admin preview
 
@@ -140,6 +149,10 @@ Listing source modes:
     "mode": "legacy",
     "listingQueryId": "",
     "listingTemplateId": "",
+    "listingManualTarget": {
+      "rowId": "",
+      "entryId": ""
+    },
     "contentTypeId": "",
     "entryId": ""
   },

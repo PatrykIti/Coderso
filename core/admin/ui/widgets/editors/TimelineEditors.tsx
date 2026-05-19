@@ -38,7 +38,12 @@ import {
   type TimelineVariantId,
 } from "../../../../widgets/core/timeline";
 import type { WidgetEditorProps } from "../../../../widgets/types";
-import { ClearableFieldHeader } from "./ClearableFields";
+import {
+  ClearableFieldHeader,
+  ColorContrastNotice,
+  type ColorContrastAdvisory,
+  resolveColorContrastAdvisory,
+} from "./ClearableFields";
 import { WidgetEditorSection } from "./WidgetEditorControls";
 import { normalizeWidgetSafeHref } from "../../../../widgets/core/widgetSafeHref";
 
@@ -164,6 +169,13 @@ type TimelineStepCta = NonNullable<TimelineStep["cta"]>;
 
 const resolvePickerColor = (value: string | undefined, fallback: string) =>
   value && hexColorPattern.test(value) ? value : fallback;
+
+function pickContrastAdvisory(advisories: ColorContrastAdvisory[]) {
+  return (
+    advisories.find((advisory) => advisory.status === "warning") ??
+    advisories.find((advisory) => advisory.status === "unknown") ?? { status: "ok" as const }
+  );
+}
 
 function EditorSection({
   id,
@@ -754,47 +766,68 @@ function TimelineColorFields({
   value: TimelineData;
   onChange: (next: TimelineData) => void;
 }) {
+  const markerContrastAdvisory = resolveColorContrastAdvisory({
+    foreground: value.style?.markerColor,
+    background: value.background?.color,
+  });
+  const textContrastAdvisory = pickContrastAdvisory([
+    resolveColorContrastAdvisory({
+      foreground: value.style?.titleColor,
+      background: value.background?.color,
+    }),
+    resolveColorContrastAdvisory({
+      foreground: value.style?.descriptionColor,
+      background: value.background?.color,
+    }),
+  ]);
+
   return (
-    <div className="grid gap-3 md:grid-cols-2">
-      <ColorField
-        label="Line color"
-        value={value.style?.lineColor}
-        onChange={(next) => updateStyle(value, onChange, { lineColor: next })}
-        onClear={() => clearStyle(value, onChange, "lineColor")}
-        placeholder="#e2e8f0"
-        pickerFallback="#e2e8f0"
-      />
-      <ColorField
-        label="Marker color"
-        value={value.style?.markerColor}
-        onChange={(next) => updateStyle(value, onChange, { markerColor: next })}
-        onClear={() => clearStyle(value, onChange, "markerColor")}
-        placeholder="#1d4ed8"
-        pickerFallback="#1d4ed8"
-      />
-      <ColorField
-        label="Title color"
-        value={value.style?.titleColor}
-        onChange={(next) => updateStyle(value, onChange, { titleColor: next })}
-        placeholder="#0f172a"
-        pickerFallback="#0f172a"
-      />
-      <ColorField
-        label="Description color"
-        value={value.style?.descriptionColor}
-        onChange={(next) => updateStyle(value, onChange, { descriptionColor: next })}
-        placeholder="#334155"
-        pickerFallback="#334155"
-      />
-      <ColorField
-        label="Background color"
-        value={value.background?.color}
-        onChange={(next) => updateBackground(value, onChange, next)}
-        onClear={() => clearBackground(value, onChange)}
-        placeholder="transparent"
-        pickerFallback="#ffffff"
-      />
-    </div>
+    <>
+      <div className="grid gap-3 md:grid-cols-2">
+        <ColorField
+          label="Line color"
+          value={value.style?.lineColor}
+          onChange={(next) => updateStyle(value, onChange, { lineColor: next })}
+          onClear={() => clearStyle(value, onChange, "lineColor")}
+          placeholder="#e2e8f0"
+          pickerFallback="#e2e8f0"
+        />
+        <ColorField
+          label="Marker color"
+          value={value.style?.markerColor}
+          onChange={(next) => updateStyle(value, onChange, { markerColor: next })}
+          onClear={() => clearStyle(value, onChange, "markerColor")}
+          placeholder="#1d4ed8"
+          pickerFallback="#1d4ed8"
+        />
+        <ColorField
+          label="Title color"
+          value={value.style?.titleColor}
+          onChange={(next) => updateStyle(value, onChange, { titleColor: next })}
+          placeholder="#0f172a"
+          pickerFallback="#0f172a"
+        />
+        <ColorField
+          label="Description color"
+          value={value.style?.descriptionColor}
+          onChange={(next) => updateStyle(value, onChange, { descriptionColor: next })}
+          placeholder="#334155"
+          pickerFallback="#334155"
+        />
+        <ColorField
+          label="Background color"
+          value={value.background?.color}
+          onChange={(next) => updateBackground(value, onChange, next)}
+          onClear={() => clearBackground(value, onChange)}
+          placeholder="transparent"
+          pickerFallback="#ffffff"
+        />
+      </div>
+      <div className="space-y-1">
+        <ColorContrastNotice advisory={markerContrastAdvisory} label="Marker contrast advisory" />
+        <ColorContrastNotice advisory={textContrastAdvisory} label="Text contrast advisory" />
+      </div>
+    </>
   );
 }
 

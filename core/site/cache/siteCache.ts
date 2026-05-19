@@ -1,3 +1,4 @@
+import type { WidgetBlock } from "../../widgets/types";
 import type { ContentRouteSetting } from "../../services/settings/settingsService";
 import { getSetting } from "../../services/settings/settingsService";
 import { matchContentRoute } from "../contentRouteMatcher";
@@ -8,6 +9,33 @@ export const SITE_CACHE_MAX_ENTRIES = 200;
 export type SiteCacheEntry = {
   value: string;
   expiresAt: number;
+};
+
+const hasRuntimeSubmissionNonce = (block: WidgetBlock): boolean => {
+  const blockData =
+    block.data && typeof block.data === "object" && !Array.isArray(block.data)
+      ? (block.data as Record<string, unknown>)
+      : null;
+  const resolved =
+    blockData?.resolved &&
+    typeof blockData.resolved === "object" &&
+    !Array.isArray(blockData.resolved)
+      ? (blockData.resolved as Record<string, unknown>)
+      : null;
+  if (typeof resolved?.submissionNonce === "string" && resolved.submissionNonce.trim().length > 0) {
+    return true;
+  }
+
+  const slotBlocks = block.slots ? Object.values(block.slots).flat() : [];
+  if (slotBlocks.some(hasRuntimeSubmissionNonce)) {
+    return true;
+  }
+
+  if (Array.isArray(block.children) && block.children.some(hasRuntimeSubmissionNonce)) {
+    return true;
+  }
+
+  return false;
 };
 
 class LruCache {
@@ -89,6 +117,9 @@ export const getSiteCacheEntry = (key: string, now?: number) => cache.get(key, n
 export const setSiteCacheEntry = (key: string, value: string, ttlSeconds: number, now?: number) => {
   cache.set(key, value, ttlSeconds, now);
 };
+
+export const blocksAllowSiteHtmlCache = (blocks: WidgetBlock[]) =>
+  !blocks.some(hasRuntimeSubmissionNonce);
 
 export const clearSiteCache = () => {
   cache.clear();

@@ -4,6 +4,9 @@ import { eq, inArray, sql } from "drizzle-orm";
 
 import { db } from "../../../core/db/client";
 import {
+  bookingResources,
+  bookingServiceResources,
+  bookingServices,
   contentEntries,
   contentTypes,
   formFields,
@@ -13,9 +16,13 @@ import {
   previewTokens,
   users,
 } from "../../../core/db/schema";
-import { createEntry } from "../../../core/services/content/entryService";
 import { createContentType } from "../../../core/services/content/typeService";
 import { createForm, setFormFields } from "../../../core/services/forms/formsService";
+import {
+  createBookingResource,
+  createBookingService,
+  setBookingServiceResources,
+} from "../../../core/services/booking/bookingService";
 import { createPage, publishPage, updatePage } from "../../../core/services/pages/pageService";
 import { createPreviewToken } from "../../../core/services/pages/previewService";
 import {
@@ -24,7 +31,7 @@ import {
   setSetting,
   type ContentRouteSetting,
 } from "../../../core/services/settings/settingsService";
-import { clearSiteCache } from "../../../core/site/cache/siteCache";
+import { clearSiteCache, getSiteCacheStats } from "../../../core/site/cache/siteCache";
 import { handlePublicRequest } from "../../../core/server/publicSite";
 import { resetRateLimitBuckets } from "../../../core/server/middleware/rateLimit";
 import { contactDefaults } from "../../../core/widgets/core/contact";
@@ -52,6 +59,8 @@ const trackedUserIds = new Set<string>();
 const trackedContentEntryIds = new Set<string>();
 const trackedContentTypeIds = new Set<string>();
 const trackedFormIds = new Set<string>();
+const trackedBookingResourceIds = new Set<string>();
+const trackedBookingServiceIds = new Set<string>();
 const settingSnapshots = new Map<string, { exists: boolean; value: unknown }>();
 
 const trackPage = (id: string | undefined | null) => {
@@ -72,6 +81,14 @@ const trackContentType = (id: string | undefined | null) => {
 
 const trackForm = (id: string | undefined | null) => {
   if (id) trackedFormIds.add(id);
+};
+
+const trackBookingResource = (id: string | undefined | null) => {
+  if (id) trackedBookingResourceIds.add(id);
+};
+
+const trackBookingService = (id: string | undefined | null) => {
+  if (id) trackedBookingServiceIds.add(id);
 };
 
 const rememberSetting = async (key: string) => {
@@ -105,6 +122,8 @@ const cleanupTrackedRows = async () => {
   const contentEntryIds = [...trackedContentEntryIds];
   const contentTypeIds = [...trackedContentTypeIds];
   const formIds = [...trackedFormIds];
+  const bookingResourceIds = [...trackedBookingResourceIds];
+  const bookingServiceIds = [...trackedBookingServiceIds];
 
   if (pageIds.length > 0) {
     await db.delete(previewTokens).where(inArray(previewTokens.targetId, pageIds));
@@ -126,6 +145,17 @@ const cleanupTrackedRows = async () => {
     await db.delete(forms).where(inArray(forms.id, formIds));
   }
 
+  if (bookingServiceIds.length > 0) {
+    await db
+      .delete(bookingServiceResources)
+      .where(inArray(bookingServiceResources.serviceId, bookingServiceIds));
+    await db.delete(bookingServices).where(inArray(bookingServices.id, bookingServiceIds));
+  }
+
+  if (bookingResourceIds.length > 0) {
+    await db.delete(bookingResources).where(inArray(bookingResources.id, bookingResourceIds));
+  }
+
   if (userIds.length > 0) {
     await db.delete(users).where(inArray(users.id, userIds));
   }
@@ -135,6 +165,8 @@ const cleanupTrackedRows = async () => {
   trackedContentEntryIds.clear();
   trackedContentTypeIds.clear();
   trackedFormIds.clear();
+  trackedBookingResourceIds.clear();
+  trackedBookingServiceIds.clear();
 };
 
 afterEach(async () => {
@@ -217,6 +249,11 @@ const requestPublicPath = (path: string) =>
         "x-forwarded-for": `127.0.0.${Math.floor(Math.random() * 200) + 1}`,
       },
     })
+  );
+
+const extractNonceValues = (html: string, fieldName: "__nl_form_nonce" | "__nl_booking_nonce") =>
+  [...html.matchAll(new RegExp(`name="${fieldName}" value="([^"]+)"`, "g"))].map(
+    (match) => match[1] ?? ""
   );
 
 testIfDbWithOptions(
@@ -387,6 +424,146 @@ testIfDbWithOptions(
       expect(html).toContain('name="message_body"');
       expect(html).toContain('name="__nl_form_nonce"');
       expect(html).not.toContain("This contact form is not connected yet.");
+    } finally {
+      process.env.FORM_SUBMIT_NONCE_SECRET = previousNonceSecret;
+    }
+  },
+  { timeout: dbRuntimeTimeout }
+);
+
+testIfDbWithOptions(
+  "public page runtime bypasses HTML cache when hydrated blocks include submission nonces",
+  async () => {
+    resetRateLimitBuckets();
+    await setTestSetting("site.cacheTtlSeconds", 60);
+    await setTestSetting("site.contentRoutes", []);
+
+    const previousNonceSecret = process.env.FORM_SUBMIT_NONCE_SECRET;
+    process.env.FORM_SUBMIT_NONCE_SECRET = previousNonceSecret || "contact-runtime-secret";
+
+    try {
+      const actor = await createActor();
+      const form = await createForm({
+        name: `Public Form ${randomUUID()}`,
+        status: "published",
+        submissionAccess: "public",
+      });
+      trackForm(form?.id);
+      if (!form?.id) throw new Error("missing_test_form");
+
+      await setFormFields(form.id, [
+        { type: "text", label: "Full name", name: "full_name", required: true },
+        { type: "email", label: "Reply email", name: "reply_email", required: true },
+        { type: "textarea", label: "Message", name: "message_body", required: true },
+      ]);
+
+      const bookingResource = await createBookingResource({
+        name: `Runtime Resource ${randomUUID().slice(0, 8)}`,
+        timezone: "UTC",
+        status: "active",
+      });
+      trackBookingResource(bookingResource?.id);
+      if (!bookingResource?.id) throw new Error("missing_booking_resource");
+
+      const bookingService = await createBookingService({
+        name: `Runtime Service ${randomUUID().slice(0, 8)}`,
+        status: "active",
+        durationMinutes: 30,
+        settings: {
+          submissionAccess: "public",
+        },
+      });
+      trackBookingService(bookingService?.id);
+      if (!bookingService?.id) throw new Error("missing_booking_service");
+
+      await setBookingServiceResources(bookingService.id, [{ resourceId: bookingResource.id }]);
+
+      const token = randomUUID().slice(0, 8);
+      const slug = `/nonce-cache-runtime-${token}`;
+      const data = {
+        blocks: [
+          {
+            id: "form-embed-runtime",
+            type: "form-embed",
+            data: {
+              formId: form.id,
+              title: "Form Embed Runtime",
+            },
+          },
+          {
+            id: "contact-runtime",
+            type: "contact",
+            variant: "form-left",
+            data: {
+              ...contactDefaults,
+              form: {
+                ...contactDefaults.form,
+                fields: ["name", "email", "message"],
+                submission: {
+                  ...contactDefaults.form?.submission,
+                  mode: "forms-runtime",
+                  formId: form.id,
+                  fieldMap: {
+                    name: "full_name",
+                    email: "reply_email",
+                    phone: "",
+                    message: "message_body",
+                  },
+                },
+              },
+            },
+          },
+          {
+            id: "appointment-form-runtime",
+            type: "appointment-form",
+            data: {
+              flowId: "booking-flow",
+            },
+          },
+        ],
+        settings: {
+          template: "landing",
+          showInNav: true,
+        },
+        seo: {
+          description: `Nonce cache runtime ${token}`,
+        },
+      };
+
+      const page = await createPage({
+        title: `Nonce Cache Runtime ${token}`,
+        slug,
+        authorId: actor.id,
+        data,
+      });
+      trackPage(page?.id);
+      if (!page?.id) throw new Error("missing_test_page");
+
+      await publishPage(page.id, actor.id, data);
+
+      const firstResponse = await requestPublicPath(slug);
+      expect(firstResponse.status).toBe(200);
+      const firstHtml = await firstResponse.text();
+      const firstFormNonces = extractNonceValues(firstHtml, "__nl_form_nonce");
+      const firstBookingNonces = extractNonceValues(firstHtml, "__nl_booking_nonce");
+
+      expect(firstFormNonces).toHaveLength(2);
+      expect(firstBookingNonces).toHaveLength(1);
+      expect(getSiteCacheStats().size).toBe(0);
+
+      await new Promise((resolve) => setTimeout(resolve, 5));
+
+      const secondResponse = await requestPublicPath(slug);
+      expect(secondResponse.status).toBe(200);
+      const secondHtml = await secondResponse.text();
+      const secondFormNonces = extractNonceValues(secondHtml, "__nl_form_nonce");
+      const secondBookingNonces = extractNonceValues(secondHtml, "__nl_booking_nonce");
+
+      expect(secondFormNonces).toHaveLength(2);
+      expect(secondBookingNonces).toHaveLength(1);
+      expect(secondFormNonces).not.toEqual(firstFormNonces);
+      expect(secondBookingNonces).not.toEqual(firstBookingNonces);
+      expect(getSiteCacheStats().size).toBe(0);
     } finally {
       process.env.FORM_SUBMIT_NONCE_SECRET = previousNonceSecret;
     }

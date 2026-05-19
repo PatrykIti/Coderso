@@ -29,7 +29,12 @@ import {
   type CompareTrackSegment,
 } from "../../../../widgets/core/compareTimeline";
 import type { WidgetEditorProps } from "../../../../widgets/types";
-import { ClearableFieldHeader } from "./ClearableFields";
+import {
+  ClearableFieldHeader,
+  ColorContrastNotice,
+  type ColorContrastAdvisory,
+  resolveColorContrastAdvisory,
+} from "./ClearableFields";
 import { WidgetEditorSection } from "./WidgetEditorControls";
 
 const variantOptions: Array<{
@@ -54,6 +59,7 @@ const labelPositionOptions = ["top", "bottom"] as const;
 const trackSpacingOptions = ["none", "sm", "md", "lg", "xl"] as const;
 const maxWidthOptions = ["none", "4xl", "5xl", "6xl", "7xl"] as const;
 const paddingOptions = ["sm", "md", "lg"] as const;
+const motionOptions = ["none", "fade", "slide"] as const;
 const trackOrderOptions = [
   { id: "a-first", label: "Traditional first" },
   { id: "b-first", label: "With us first" },
@@ -88,6 +94,13 @@ const spacingTokenDescriptions: Record<string, string> = {
 
 const resolvePickerColor = (value: string | undefined, fallback: string) =>
   value && hexColorPattern.test(value) ? value : fallback;
+
+function pickContrastAdvisory(advisories: ColorContrastAdvisory[]) {
+  return (
+    advisories.find((advisory) => advisory.status === "warning") ??
+    advisories.find((advisory) => advisory.status === "unknown") ?? { status: "ok" as const }
+  );
+}
 
 function normalizeValue(value: CompareTimelineData): CompareTimelineData {
   return normalizeCompareTimelineData(value);
@@ -840,6 +853,22 @@ export function CompareTimelineVisualEditor({
 }: WidgetEditorProps<CompareTimelineData>) {
   const normalized = normalizeValue(value);
   const resolvedVariant = resolveCompareTimelineVariant(variant);
+  const markerContrastAdvisory = pickContrastAdvisory([
+    resolveColorContrastAdvisory({
+      foreground: normalized.style?.markerColor,
+      background: normalized.style?.trackBackgroundColor,
+    }),
+  ]);
+  const labelContrastAdvisory = pickContrastAdvisory([
+    resolveColorContrastAdvisory({
+      foreground: normalized.style?.trackLabelColor,
+      background: normalized.style?.trackBackgroundColor,
+    }),
+    resolveColorContrastAdvisory({
+      foreground: normalized.style?.stepLabelColor,
+      background: normalized.style?.trackBackgroundColor,
+    }),
+  ]);
   const highlightEnabled = resolvedVariant === "dual-track-highlight";
   const { highlightMode } = getHighlightContext(normalized);
   const hasPreservedSegments = normalized.tracks.some((track) => (track.segments?.length ?? 0) > 0);
@@ -1163,6 +1192,10 @@ export function CompareTimelineVisualEditor({
             pickerFallback="#ffffff"
           />
         </div>
+        <div className="space-y-1">
+          <ColorContrastNotice advisory={markerContrastAdvisory} label="Marker contrast advisory" />
+          <ColorContrastNotice advisory={labelContrastAdvisory} label="Label contrast advisory" />
+        </div>
 
         <div className="grid gap-3 md:grid-cols-3">
           <div className="space-y-2">
@@ -1465,6 +1498,30 @@ export function CompareTimelineVisualEditor({
               </SelectContent>
             </Select>
           </div>
+
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Motion</p>
+            <Select
+              value={normalized.layout?.motion ?? "none"}
+              onValueChange={(next) =>
+                updateLayout(value, onChange, { motion: next as CompareLayout["motion"] })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Motion" />
+              </SelectTrigger>
+              <SelectContent>
+                {motionOptions.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {formatTokenOptionLabel(option)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Uses CSS-only motion-safe classes and respects reduced-motion preferences.
+            </p>
+          </div>
         </div>
 
         <p className="text-xs text-muted-foreground">
@@ -1489,8 +1546,8 @@ export function CompareTimelineAdvancedEditor({
         description="Technical controls for axis placement, spacing, and guide rendering."
       >
         <p className="text-xs text-muted-foreground">
-          Track spacing, axis label position, max width, padding, and render order are owned by
-          Visual so editors have one truthful place to adjust layout. Advanced keeps only guide
+          Track spacing, axis label position, max width, padding, render order, and motion are owned
+          by Visual so editors have one truthful place to adjust layout. Advanced keeps only guide
           toggles and raw metadata diagnostics.
         </p>
 
