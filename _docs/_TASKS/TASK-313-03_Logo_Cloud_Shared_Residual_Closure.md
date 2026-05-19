@@ -6,7 +6,7 @@
 **Category:** Widgets + Logo Cloud + QA + Documentation + Changelog
 **Estimated Effort:** Medium
 **Dependencies:** TASK-313-01, TASK-313-02
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -125,3 +125,13 @@ No API routes are added by this closure leaf.
 - Every reopened shared row has concrete evidence or an explicit current-state
   note.
 - Task files, board statistics, widget docs, report, and changelog are in sync.
+
+## Completion Notes
+
+- 2026-05-19: `_docs/PLAYWRIGHT/REPORT_LOGO_CLOUD_WIDGET.md`,
+  `_docs/_WIDGETS/LOGO_CLOUD.md`, `_docs/_TASKS/README.md`, and the new
+  changelog entry now all record the reopened shared residual closure before
+  `TASK-274` product implementation proceeds.
+- Validation:
+  - `git diff --check`
+  - `bun run precommit`

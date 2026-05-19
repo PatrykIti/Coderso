@@ -1,4 +1,4 @@
-import type { ComponentType, CSSProperties } from "react";
+import { useId, type ComponentType, type CSSProperties } from "react";
 
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
 import { compactObject, compactStyle, resolveClearableStyleValue } from "./clearableStyle";
@@ -37,7 +37,7 @@ const joinClasses = (...classes: Array<string | undefined | false>) =>
   classes.filter(Boolean).join(" ");
 
 const logoHeightClassMap: Record<LogoCloudHeight, string> = {
-  none: "",
+  none: "h-auto max-h-16",
   sm: "h-8",
   md: "h-10",
   lg: "h-12",
@@ -337,6 +337,7 @@ function LogoCloudItem({
 }
 
 export function LogoCloudBlock({ data, variant }: { data: LogoCloudData; variant: string }) {
+  const headingId = useId();
   const resolvedVariant = resolveLogoCloudVariant(variant);
   const normalized = normalizeLogoCloudData(data);
   const style = normalized.style ?? logoCloudDefaults.style!;
@@ -351,10 +352,10 @@ export function LogoCloudBlock({ data, variant }: { data: LogoCloudData; variant
     backgroundColor: resolveClearableStyleValue(style.tileBackground),
     borderColor: resolveClearableStyleValue(style.tileBorderColor),
   });
+  const sectionTitle = (normalized.header?.title ?? "").trim();
 
   const showHeader =
-    (normalized.header?.title ?? "").trim().length > 0 ||
-    (normalized.header?.description ?? "").trim().length > 0;
+    sectionTitle.length > 0 || (normalized.header?.description ?? "").trim().length > 0;
 
   const listClassName =
     resolvedVariant === "strip"
@@ -381,7 +382,8 @@ export function LogoCloudBlock({ data, variant }: { data: LogoCloudData; variant
 
   return (
     <section
-      aria-label={(normalized.header?.title ?? "").trim() || "Partner logos"}
+      aria-label={sectionTitle.length > 0 ? undefined : "Partner logos"}
+      aria-labelledby={sectionTitle.length > 0 ? headingId : undefined}
       className="mx-auto w-full max-w-6xl px-4 py-8"
       data-logo-cloud-variant={resolvedVariant}
       data-logo-cloud-gap={gap}
@@ -393,10 +395,10 @@ export function LogoCloudBlock({ data, variant }: { data: LogoCloudData; variant
     >
       {showHeader ? (
         <header className="mx-auto mb-6 max-w-3xl space-y-2 text-center">
-          {(normalized.header?.title ?? "").trim().length > 0 ? (
-            <h3 className="text-2xl font-semibold text-[var(--color-text)]">
-              {normalized.header?.title}
-            </h3>
+          {sectionTitle.length > 0 ? (
+            <h2 id={headingId} className="text-2xl font-semibold text-[var(--color-text)]">
+              {sectionTitle}
+            </h2>
           ) : null}
           {(normalized.header?.description ?? "").trim().length > 0 ? (
             <p className="text-sm text-[var(--color-text)]/75">{normalized.header?.description}</p>

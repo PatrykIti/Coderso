@@ -30,6 +30,8 @@ test("logo cloud renders defaults", () => {
   expect(html).toContain(logoCloudDefaults.header?.title ?? "");
   expect(html).toContain('data-logo-cloud-variant="grid"');
   expect(html).toContain('data-logo-cloud-count="6"');
+  expect(html).toContain("<h2");
+  expect(html).toContain("aria-labelledby=");
 });
 
 test("logo cloud normalization keeps deterministic ids and bounds", () => {
@@ -72,6 +74,37 @@ test("logo cloud cleared tile styles omit forced tile backgrounds", () => {
 
   expect(html).not.toContain("bg-[var(--color-bg)]");
   expect(html).not.toContain("background-color:transparent");
+});
+
+test("logo cloud keeps fallback section label and bounds none logo height safely", () => {
+  const html = renderToString(
+    <LogoCloudBlock
+      data={normalizeLogoCloudData({
+        header: {
+          title: "",
+          description: "",
+        },
+        logos: [
+          {
+            id: "logo-a",
+            name: "Acme",
+            image: "https://cdn.example.com/acme-tall.svg",
+            href: "#",
+          },
+        ],
+        style: {
+          ...logoCloudDefaults.style,
+          logoHeight: "none",
+        },
+      })}
+      variant="grid"
+    />
+  );
+
+  expect(html).toContain('aria-label="Partner logos"');
+  expect(html).toContain('data-logo-cloud-height="none"');
+  expect(html).toContain("max-h-16");
+  expect(html).not.toContain("<h3");
 });
 
 test("logo cloud validator accepts expanded model", () => {
@@ -182,8 +215,10 @@ test("logo cloud advanced keeps technical-only scope", () => {
     />
   );
 
-  expect(html).toContain("Technical layout tokens");
+  expect(html).toContain("Technical layout diagnostics");
   expect(html).toContain("Normalization and safeguards");
   expect(html).toContain("Raw payload snapshot");
+  expect(html).toContain("Logo height");
+  expect(html).toContain("Alignment");
   expect(html).not.toContain("Logos list and links");
 });

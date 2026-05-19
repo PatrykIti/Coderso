@@ -6,7 +6,7 @@
 **Category:** Widgets + Logo Cloud + Shared Contract + Admin UI + Runtime Render
 **Estimated Effort:** Large
 **Dependencies:** TASK-256, TASK-256-01, TASK-256-06-02
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -81,9 +81,9 @@ Live owners inspected while reopening:
 
 ## Sub-Tasks
 
-- [ ] TASK-313-01: Logo Cloud Shared Editor Truthfulness Residuals
-- [ ] TASK-313-02: Logo Cloud Shared Runtime Semantics Residuals
-- [ ] TASK-313-03: Logo Cloud Shared Residual Closure
+- [x] TASK-313-01: Logo Cloud Shared Editor Truthfulness Residuals
+- [x] TASK-313-02: Logo Cloud Shared Runtime Semantics Residuals
+- [x] TASK-313-03: Logo Cloud Shared Residual Closure
 
 ## Implementation Order
 
@@ -154,3 +154,18 @@ This reopening family does not add API routes.
   `TASK-274` product scope.
 - Closure evidence clearly distinguishes reopened shared repairs from new Logo
   Cloud product work.
+
+## Completion Notes
+
+- 2026-05-19: `TASK-313` is fully closed. The reopened Logo Cloud shared
+  baseline now has:
+  - `TASK-313-01` for shared editor truthfulness and Link URL feedback,
+  - `TASK-313-02` for shared section-heading and `logoHeight: "none"` runtime
+    semantics,
+  - `TASK-313-03` for report/docs/changelog/board closure.
+- Final validation:
+  - `bun run lint`
+  - `bun run test:bun`
+  - `bun run test:vitest`
+  - `bun run scan:security:strict`
+  - `bun run precommit`

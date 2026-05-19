@@ -487,6 +487,11 @@ test("LogoCloud visual covers variant cards, count boundaries, logo CRUD, reorde
   expect(getLatestValue().logos[0]?.image).toBe("https://cdn.example.com/solo.svg");
   expect(getLatestValue().logos[2]?.href).toBe("/partners/logo-3");
 
+  setInputValue(getInputsByPlaceholder(logosSection, "#")[0], "javascript:alert(1)");
+  expect(logosSection.textContent).toContain(
+    "Use a relative path, hash, or full URL. Unsafe links are not rendered publicly."
+  );
+
   clickButton(getButtonsByText(logosSection, "Move down")[0]);
   expect(getLatestValue().logos.map((logo) => logo.name)).toEqual([
     "North Labs",
@@ -556,7 +561,7 @@ test("LogoCloud advanced covers normalization defaults, technical tokens, and re
     render: (props) => <LogoCloudAdvancedEditor {...props} />,
   });
 
-  const technicalSection = getSectionByTitle(container, "Technical layout tokens");
+  const technicalSection = getSectionByTitle(container, "Technical layout diagnostics");
   const safeguardsSection = getSectionByTitle(container, "Normalization and safeguards");
   const snapshot = container.querySelector("pre");
 
@@ -567,6 +572,9 @@ test("LogoCloud advanced covers normalization defaults, technical tokens, and re
   expect(snapshot?.textContent).toContain('"id": "logo-2"');
   expect(snapshot?.textContent).toContain('"name": "Acme"');
   expect(snapshot?.textContent).toContain('"name": "North Labs"');
+  expect(technicalSection.textContent).toContain("Logo height");
+  expect(technicalSection.textContent).toContain("md");
+  expect(getSelects(technicalSection)).toHaveLength(0);
 
   clickButton(getButtonsByText(safeguardsSection, "Normalize now")[0]);
   expect(getLatestValue().header?.title).toBe(logoCloudDefaults.header?.title);
@@ -574,19 +582,6 @@ test("LogoCloud advanced covers normalization defaults, technical tokens, and re
   expect(getLatestValue().style).toEqual(logoCloudDefaults.style);
   expect(getLatestValue().logos[1]?.id).toBe("logo-2");
   expect(getLatestValue().logos[0]?.name).toBe("Acme");
-
-  const technicalSelects = getSelects(technicalSection);
-  expect(Array.from(technicalSelects[0]!.options).map((option) => option.value)).toContain("none");
-  expect(Array.from(technicalSelects[1]!.options).map((option) => option.value)).toContain("none");
-  setSelectValue(technicalSelects[0]!, "xl");
-  setSelectValue(technicalSelects[1]!, "lg");
-  setSelectValue(technicalSelects[2]!, "end");
-
-  expect(getLatestValue().style).toMatchObject({
-    logoHeight: "xl",
-    gap: "lg",
-    alignment: "end",
-  });
 
   clickButton(getButtonsByText(safeguardsSection, "Reset to defaults")[0]);
   expect(getLatestValue()).toEqual(logoCloudDefaults);
@@ -661,12 +656,12 @@ test("LogoCloud editors render sparse header and style fallbacks with safe defau
   try {
     const technicalSection = getSectionByTitle(
       advancedHarness.container,
-      "Technical layout tokens"
+      "Technical layout diagnostics"
     );
-    const selects = getSelects(technicalSection);
-    expect(selects[0]?.value).toBe("md");
-    expect(selects[1]?.value).toBe("md");
-    expect(selects[2]?.value).toBe("center");
+    expect(technicalSection.textContent).toContain("Logo height");
+    expect(technicalSection.textContent).toContain("md");
+    expect(technicalSection.textContent).toContain("center");
+    expect(getSelects(technicalSection)).toHaveLength(0);
   } finally {
     advancedHarness.cleanup();
   }
@@ -794,11 +789,14 @@ test("LogoCloud editors fall back when normalized header and style are omitted",
   );
 
   try {
-    const technicalSection = getSectionByTitle(advancedView.container, "Technical layout tokens");
-    const selects = getSelects(technicalSection);
-    expect(selects[0]?.value).toBe("md");
-    expect(selects[1]?.value).toBe("md");
-    expect(selects[2]?.value).toBe("center");
+    const technicalSection = getSectionByTitle(
+      advancedView.container,
+      "Technical layout diagnostics"
+    );
+    expect(technicalSection.textContent).toContain("Logo height");
+    expect(technicalSection.textContent).toContain("md");
+    expect(technicalSection.textContent).toContain("center");
+    expect(getSelects(technicalSection)).toHaveLength(0);
   } finally {
     advancedView.cleanup();
     vi.doUnmock("../../../core/widgets/core/logoCloud");

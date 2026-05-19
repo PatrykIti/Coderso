@@ -27,6 +27,7 @@ import {
   type LogoCloudLogo,
   type LogoCloudVariantId,
 } from "../../../../widgets/core/logoCloud";
+import { normalizeWidgetSafeHref } from "../../../../widgets/core/widgetSafeHref";
 import type { WidgetEditorProps } from "../../../../widgets/types";
 import { WidgetEditorSection } from "./WidgetEditorControls";
 import { ClearableInputField } from "./ClearableFields";
@@ -281,6 +282,17 @@ function DiagnosticsSnapshot({ value }: { value: LogoCloudData }) {
   );
 }
 
+function getLogoCloudLinkFeedback(value: string | undefined) {
+  if (!value?.trim()) return null;
+  const safeHref = normalizeWidgetSafeHref(value, {
+    allowRelative: true,
+    allowHash: true,
+    allowHttp: true,
+  });
+  if (safeHref) return null;
+  return "Use a relative path, hash, or full URL. Unsafe links are not rendered publicly.";
+}
+
 export function LogoCloudWizardEditor({
   value,
   onChange,
@@ -484,6 +496,11 @@ export function LogoCloudVisualEditor({
                 }
                 placeholder="#"
               />
+              {getLogoCloudLinkFeedback(logo.href ?? undefined) ? (
+                <p className="text-xs text-amber-700">
+                  {getLogoCloudLinkFeedback(logo.href ?? undefined)}
+                </p>
+              ) : null}
             </div>
           </div>
         ))}
@@ -623,67 +640,29 @@ export function LogoCloudAdvancedEditor({ value, onChange }: WidgetEditorProps<L
   return (
     <div className="space-y-4">
       <EditorSection
-        title="Technical layout tokens"
-        description="Raw technical controls for rendering density and alignment."
+        title="Technical layout diagnostics"
+        description="Read-only summary of shared Logo Cloud tokens and normalization state."
       >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Logo height token</p>
-          <Select
-            value={style.logoHeight}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, { logoHeight: next as LogoCloudHeight })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select height" />
-            </SelectTrigger>
-            <SelectContent>
-              {logoHeightOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Gap token</p>
-          <Select
-            value={style.gap}
-            onValueChange={(next) => updateStyle(value, onChange, { gap: next as LogoCloudGap })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select gap" />
-            </SelectTrigger>
-            <SelectContent>
-              {gapOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Alignment token</p>
-          <Select
-            value={style.alignment}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, { alignment: next as LogoCloudAlignment })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select alignment" />
-            </SelectTrigger>
-            <SelectContent>
-              {alignmentOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <dl className="grid gap-3 sm:grid-cols-3">
+          <div className="rounded-md border px-3 py-2">
+            <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Logo height
+            </dt>
+            <dd className="mt-1 text-sm">{style.logoHeight}</dd>
+          </div>
+          <div className="rounded-md border px-3 py-2">
+            <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Gap
+            </dt>
+            <dd className="mt-1 text-sm">{style.gap}</dd>
+          </div>
+          <div className="rounded-md border px-3 py-2">
+            <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Alignment
+            </dt>
+            <dd className="mt-1 text-sm">{style.alignment}</dd>
+          </div>
+        </dl>
       </EditorSection>
 
       <EditorSection

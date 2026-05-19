@@ -6,7 +6,7 @@
 **Category:** Widgets + Logo Cloud + Shared Contract + Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-313
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -125,3 +125,13 @@ No API routes are added.
   without widening into product-only target/CTA controls.
 - `TASK-274-02` can focus on image preview/media authoring instead of redoing
   shared link validation.
+
+## Completion Notes
+
+- 2026-05-19: Advanced duplicate `logoHeight`, `gap`, and `alignment` controls
+  were replaced with diagnostics-only summaries, and Visual `Link URL` inputs
+  now show shared safe-link feedback for invalid values.
+- Validation:
+  - `bun run test:vitest -- tests/vitest/ui/logo-cloud-editor-wave.test.tsx tests/vitest/widgets/logoCloud.test.tsx`
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`

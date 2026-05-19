@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 251 tasks
+- **To Do:** 247 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1724 tasks
+- **Done:** 1728 tasks
 
 ---
 
@@ -39,10 +39,6 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-313 | Grid Columns Shared Structural Truthfulness Follow-up | High | Large | Residual shared Grid Columns truthfulness after TASK-256 closure: variant truthfulness, span feedback, CSS-variable picker representation, and inactive cardize controls |
-| TASK-313 | Logo Cloud Shared Contract Residual Reopen | High | Large | Reopen Logo Cloud shared residuals still missing after `TASK-256` closure so `TASK-274` can proceed honestly |
-| TASK-313-01 | Logo Cloud Shared Editor Truthfulness Residuals | High | Large | Remove duplicated Advanced ownership and land shared Link URL feedback left behind by `TASK-256` |
-| TASK-313-02 | Logo Cloud Shared Runtime Semantics Residuals | High | Large | Finish shared heading semantics and safe `logoHeight: "none"` output for Logo Cloud |
-| TASK-313-03 | Logo Cloud Shared Residual Closure | Medium | Medium | Refresh Logo Cloud shared residual report/docs/changelog/board and final validation evidence |
 | TASK-292 | Toggle Block Widget Playwright Product Followups | High | Very Large | Toggle Block-only follow-up family for `REPORT_TOGGLE_BLOCK_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-292-01 | Toggle Block Variant Visual Hierarchy, Contrast, and Pane Styling | High | Large | Add Toggle Block-owned cards distinction, active contrast, and bounded pane style controls after TASK-256 shared style semantics |
 | TASK-292-02 | Toggle Block Motion and Pane Transition Contract | Medium | Medium | Add bounded fade/slide/no-motion options without weakening TASK-256 interactive runtime semantics |
@@ -480,6 +476,10 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-256-06-04 | Team Profile Links and Accessibility | High | Medium | Done: current shared Team accessibility baseline is synchronized and richer team product scope remains routed to TASK-289 |
 | TASK-256-07 | Cross-Report Shared Contract Classification | High | Medium | Done: late report groups are routed to executable TASK-256 shared slices or existing widget-specific follow-up families instead of widening the umbrella |
 | TASK-256-08 | Playwright Report Completion and Closure | Medium | Medium | Done: report status sections and closure evidence are synchronized after the post-close Team/Accordion/Toggle/Testimonial fixes, while Form Embed remains explicit `needs-refresh` scope under TASK-269 rather than fixed shared implementation |
+| TASK-313 | Logo Cloud Shared Contract Residual Reopen | High | Large | Done: reopened Logo Cloud shared prerequisites were closed before `TASK-274`, covering shared Link URL feedback, shared heading semantics, and safe `logoHeight: "none"` output |
+| TASK-313-03 | Logo Cloud Shared Residual Closure | Medium | Medium | Done: report/docs/changelog/board closure captured the Logo Cloud shared reopen before widget-local product work continues |
+| TASK-313-02 | Logo Cloud Shared Runtime Semantics Residuals | High | Large | Done: Logo Cloud now uses the shared `<h2>` section-heading shell, fallback region naming, and bounded `logoHeight: "none"` runtime output |
+| TASK-313-01 | Logo Cloud Shared Editor Truthfulness Residuals | High | Large | Done: Advanced is diagnostics-only for shared tokens, and Visual `Link URL` inputs now show truthful shared safe-link feedback |
 | TASK-269 | Form Embed Widget Playwright Product Followups | High | Very Large | Done: Form Embed renderer, runtime script, safe captcha bridge, editor-mode diagnostics, docs, report status matrix, and targeted validation are synchronized |
 | TASK-269-01 | Form Selection, Editor Modes, and Admin Diagnostics | High | Large | Done: Wizard/Visual/Advanced are split and selected-form diagnostics now cover status, field count/types, multi-step, resolver errors, and no-form CTA states |
 | TASK-269-02 | Field Type Rendering and Field Accessibility | High | Large | Done: current supported field types render with stable ids, helper linkage, required semantics, and unsupported-type diagnostics for out-of-model payloads |

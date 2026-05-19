@@ -335,12 +335,21 @@ test("people and form widgets preserve none style tokens", () => {
 test("brand and text widgets preserve none typography tokens", () => {
   const logoCloud = normalizeLogoCloudData({
     ...logoCloudDefaults,
+    logos: [
+      {
+        id: "logo-1",
+        name: "Acme",
+        image: "https://cdn.example.com/acme.svg",
+        href: "#",
+      },
+    ],
     style: { ...logoCloudDefaults.style, logoHeight: "none", gap: "none" },
   });
   expect(logoCloud.style).toMatchObject({ logoHeight: "none", gap: "none" });
   const logoCloudHtml = renderToString(<LogoCloudBlock data={logoCloud} variant="grid" />);
   expect(logoCloudHtml).toContain('data-logo-cloud-height="none"');
   expect(logoCloudHtml).toContain('data-logo-cloud-gap="none"');
+  expect(logoCloudHtml).toContain("max-h-16");
 
   const richText = normalizeRichTextSectionData({
     style: {

@@ -6,7 +6,7 @@
 **Category:** Widgets + Logo Cloud + Shared Contract + Runtime Render
 **Estimated Effort:** Large
 **Dependencies:** TASK-313
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -125,3 +125,13 @@ No API routes are added.
   omitted.
 - `logoHeight: "none"` remains part of the schema while runtime rendering stays
   bounded and safe for large assets.
+
+## Completion Notes
+
+- 2026-05-19: Logo Cloud now renders section titles through the shared `<h2>`
+  baseline with `aria-labelledby`, keeps the fallback section label when the
+  title is omitted, and caps `logoHeight: "none"` images with `max-h-16`.
+- Validation:
+  - `bun run test:vitest -- tests/vitest/widgets/logoCloud.test.tsx tests/vitest/widgets/renderer.test.tsx tests/vitest/widgets/styleNoneTokens.test.tsx`
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`

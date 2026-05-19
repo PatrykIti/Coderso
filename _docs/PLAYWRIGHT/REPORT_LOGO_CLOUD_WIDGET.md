@@ -20,6 +20,21 @@ checkout has moved since then:
 - `TASK-274` continues to own only Logo Cloud product/UX work that is local to
   this widget after those shared prerequisites are honest.
 
+### Shared residual closure note — 2026-05-19
+
+- `UX-07` is fixed under `TASK-313-01`: Advanced is now diagnostics-only for
+  shared `logoHeight`, `gap`, and `alignment`, while Visual remains the sole
+  editable owner for those controls.
+- The shared `BF-10` Link URL feedback slice is fixed under `TASK-313-01`:
+  Visual now warns on unsafe `Link URL` values. Widget-local image
+  preview/unavailable feedback remains `TASK-274-02`.
+- `BUG-02` / `BF-09` are fixed under `TASK-313-02`: the shared section shell
+  now renders the title as `<h2>` and uses `aria-labelledby`, with fallback
+  `aria-label="Partner logos"` when the title is omitted.
+- `BUG-05` is fixed under `TASK-313-02`: `logoHeight: "none"` still preserves
+  the token in normalized data but no longer leaves runtime image height
+  unbounded.
+
 ---
 
 ## 1. Przegląd widgetu
