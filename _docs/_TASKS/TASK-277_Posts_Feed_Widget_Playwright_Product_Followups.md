@@ -5,8 +5,8 @@
 **Priority:** High
 **Category:** Widgets + Posts Feed + Admin UI + Runtime Render + Playwright QA
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-252, TASK-256, TASK-256-07, TASK-256-08
-**Status:** To Do
+**Dependencies:** TASK-252, TASK-256, TASK-256-07, TASK-256-08, TASK-302
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -18,8 +18,11 @@ Create the widget-specific Posts Feed follow-up family for
 This family owns only behavior that is local to `posts-feed`: source-mode
 truthfulness, post-route/detail-link resolution, thumbnail/tag mapping, manual
 post selection, admin canvas preview, editorial chrome, and Posts Feed-specific
-query expansion. Shared widget-contract repairs stay in TASK-256, and global
-admin auth/session repair stays outside this family.
+query expansion built on the current shared `ContentListBlock` contract.
+Completed shared widget-contract repairs already landed through TASK-256 and
+TASK-302. Any newly confirmed shared renderer/editor/auth drift must be routed
+to a named shared follow-up task instead of being patched ad hoc in
+`posts-feed`.
 
 ## Source Report Boundary
 
@@ -31,6 +34,8 @@ Live owners inspected while drafting:
 
 - `core/widgets/core/postsFeed.tsx`
 - `core/services/content/postsFeedResolver.ts`
+- `core/services/content/postsFeedRuntime.ts`
+- `core/services/content/contentMediaResolver.ts`
 - `core/admin/ui/widgets/editors/PostsFeedEditors.tsx`
 - `core/widgets/core/contentList.tsx`
 - `tests/unit/widgets/postsFeedWidget.test.tsx`
@@ -50,14 +55,12 @@ work rather than Posts Feed-only product work.
 
 | Report finding | Evidence | Owner route | Reason |
 |---|---|---|---|
-| BUG-08 / A1 date rendered as plain ISO text without `<time>` | `REPORT_POSTS_FEED_WIDGET.md:169-174,257,275` | TASK-256 dynamic report classification / shared Content List renderer follow-up | The rendered date comes from `ContentListBlock`, which is shared by `content-list` and `posts-feed`; fixing it in TASK-277 would change a shared renderer contract. |
-| A3 generic "Read more" links lack screen-reader context | `REPORT_POSTS_FEED_WIDGET.md:259` | TASK-256 dynamic report classification / shared Content List renderer follow-up | The CTA anchor is emitted by `ContentListBlock`, not the Posts Feed owner. |
-| UX-07 columns remain active for list/compact variants | `REPORT_POSTS_FEED_WIDGET.md:209-212,352` | TASK-256 truthful-control contract | This is the same shared variant/control truthfulness class already routed through TASK-256 for other widgets. |
-| UX-08 Clear without undo | `REPORT_POSTS_FEED_WIDGET.md:214-216` | TASK-256-02 / existing clear-control contract | Undo/toast behavior for `Clear` is a shared editor pattern, not a Posts Feed-only behavior. |
-| BF-09 image aspect-ratio controls | `REPORT_POSTS_FEED_WIDGET.md:245-246` | TASK-256 dynamic report classification / shared Content List renderer follow-up | Posts Feed delegates card image rendering to `ContentListBlock`, whose image aspect behavior is shared by `content-list` and `posts-feed`. |
-| A4 tag links as navigational anchors | `REPORT_POSTS_FEED_WIDGET.md:260` | TASK-256 dynamic report classification / shared Content List renderer follow-up | TASK-277 may supply bounded tag data, but rendering those tags as navigational links changes shared Content List metadata semantics. |
-| BUG-06 CSRF/session expiry while editing | `REPORT_POSTS_FEED_WIDGET.md:155-160,289` | Future admin auth/session resilience task | Token refresh, expired-session modals, and unsaved-change protection are global admin/page-editor concerns. |
-| BUG-09 root cause: authenticated `GET /api/posts` returns 401 after session drift | `REPORT_POSTS_FEED_WIDGET.md:176-180,298,346` | Future admin auth/session resilience task for token refresh; TASK-277-03 owns only local picker error/retry UX | TASK-277 must not implement a one-off auth refresh path inside a widget editor. |
+| BUG-08 / A1 date rendered as plain ISO text without `<time>` | `REPORT_POSTS_FEED_WIDGET.md:169-174,257,275` | TASK-320 shared Content List date/CTA accessibility residuals | The rendered date comes from `ContentListBlock`, which is shared by `content-list` and `posts-feed`; fixing it in TASK-277 would change a shared renderer contract. |
+| A3 generic "Read more" links lack screen-reader context | `REPORT_POSTS_FEED_WIDGET.md:259` | TASK-320 shared Content List date/CTA accessibility residuals | The CTA anchor is emitted by `ContentListBlock`, not the Posts Feed owner. |
+| UX-07 columns remain active for list/compact variants | `REPORT_POSTS_FEED_WIDGET.md:209-212,352` | Fixed by completed TASK-302 shared renderer truthfulness work | Current HEAD already hides the columns selector outside the `cards` variant; TASK-277 only needs to preserve that behavior in follow-up leaves/tests. |
+| UX-08 Clear without undo | `REPORT_POSTS_FEED_WIDGET.md:214-216` | TASK-321 shared clear-action undo and feedback contract | Undo/toast behavior for `Clear` is a shared editor pattern, not a Posts Feed-only behavior. |
+| BUG-06 CSRF/session expiry while editing | `REPORT_POSTS_FEED_WIDGET.md:155-160,289` | TASK-322 admin auth/session resilience for long-lived editors | Token refresh, expired-session modals, and unsaved-change protection are global admin/page-editor concerns. |
+| BUG-09 root cause: authenticated `GET /api/posts` returns 401 after session drift | `REPORT_POSTS_FEED_WIDGET.md:176-180,298,346` | TASK-322 admin auth/session resilience for long-lived editors; TASK-277-03 owns only local picker error/retry UX | TASK-277 must not implement a one-off auth refresh path inside a widget editor. |
 
 TASK-277 leaves may depend on TASK-256 results, but they must not duplicate
 shared renderer, Clear, generic control, or auth/session repairs inside
@@ -73,7 +76,7 @@ Posts Feed files.
 | BUG-02 `style.textColor` exists but is not exposed in the editor | TASK-277-06 | Posts Feed editor/style control gap. |
 | BUG-04 / BF-01 hardcoded `showImage: false` | TASK-277-02 | Add Posts Feed-owned thumbnail field and editor toggle before mapping to Content List. |
 | BUG-05 / A2 resolver does not map `imageSrc` / `imageAlt` | TASK-277-02 | Map safe post thumbnail data into the runtime item contract. |
-| BF-05 / A4 tag data is hardcoded empty | TASK-277-02 | Map bounded post tags for existing Content List metadata display; shared navigational tag-link rendering stays outside TASK-277. |
+| BF-05 / A4 tag data is hardcoded empty | TASK-277-02 | Map bounded post tags for the existing shared meta-line/badge renderer; TASK-277 does not invent tag-link behavior beyond the current shared contract. |
 | BUG-09 local picker failure UX | TASK-277-03 | Improve picker error state, retry, and re-auth guidance while leaving global token refresh outside scope. |
 | UX-04 manual picker search | TASK-277-03 | Add local filtering over the fetched post catalog. |
 | UX-05 manual picker reorder | TASK-277-03 | Preserve manual order through keyboard controls and optional drag-and-drop. |
@@ -85,7 +88,8 @@ Posts Feed files.
 | BF-10 card entry animations | TASK-277-05 | Add bounded visual polish only through safe enum/tokens. |
 | UX-02 visual variant previews | TASK-277-06 | Replace bare dropdown with small variant affordances while keeping variant data stable. |
 | UX-03 Wizard step flow | TASK-277-06 | Make Wizard progressive without changing the shared Posts Feed data model. |
-| BF-02 pagination/load more | TASK-277-07 | Add bounded client/runtime pagination or explicit deferred design if release gate rejects it. |
+| BF-09 image aspect ratio controls | TASK-277-06 | Bridge Posts Feed into the existing shared `ContentListData.style.imageAspect` contract instead of inventing a second renderer seam. |
+| BF-02 pagination/load more | TASK-277-07 | Add bounded client/runtime pagination for Posts Feed. If an analogous shared `content-list` residual is confirmed while implementing this leaf, route it to a named shared follow-up task instead of patching `content-list` ad hoc inside TASK-277. |
 | BF-04 author filter | TASK-277-07 | Add author source filtering through existing post summary data. |
 | BF-07 date range filter | TASK-277-07 | Add date-range source filtering with ISO validation. |
 | BF-08 featured-first sort | TASK-277-07 | Add a Posts Feed-only sort mode or source option with deterministic ordering. |
@@ -104,8 +108,9 @@ Posts Feed files.
 
 ## Implementation Order
 
-1. Finish or rebase over the TASK-256 shared fixes first. TASK-277 leaves must
-   build on those contracts instead of duplicating them.
+1. Build on the already-landed TASK-256 and TASK-302 shared fixes that are
+   present at current `HEAD`. Do not reopen shared renderer/editor/auth scope in
+   `posts-feed`; route any newly confirmed shared drift to a named shared task.
 2. Complete TASK-277-01 first because source/route truthfulness affects every
    runtime and editor preview leaf.
 3. Complete TASK-277-02 before preview and visual polish so preview cards can
@@ -168,6 +173,10 @@ Implementation leaves:
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso`
+- `bun run lint`
+- `bun run test:bun`
+- `bun run test:vitest`
 - `bun run test:vitest -- tests/vitest/ui/posts-feed-editor-wave.test.tsx`
 - `bun test tests/unit/widgets/postsFeedWidget.test.tsx`
 - `bun run test:vitest -- tests/vitest/site/publicRenderer.test.tsx` when public
@@ -199,11 +208,11 @@ Implementation leaves:
 
 ## Acceptance Criteria
 
-- Every Posts Feed report finding is either owned by TASK-256, covered by a
-  TASK-277 physical leaf, routed to an explicit non-widget platform follow-up,
+- Every Posts Feed report finding is either fixed at current `HEAD`, covered by
+  a TASK-277 physical leaf, routed to a named shared/platform follow-up task,
   or explicitly deferred by TASK-277-08 with a reason.
-- TASK-277 task docs do not duplicate TASK-256 shared-contract implementation
-  scope or global auth/session remediation.
+- TASK-277 task docs do not duplicate completed TASK-256/TASK-302 shared
+  implementation scope or global auth/session remediation.
 - Each implementation leaf names concrete files, data flow, error handling,
   regression tests, documentation updates, and validation commands.
 - Runtime changes preserve backward compatibility for existing `posts-feed`

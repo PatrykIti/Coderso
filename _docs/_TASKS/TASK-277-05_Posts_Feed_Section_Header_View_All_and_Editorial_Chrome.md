@@ -6,17 +6,19 @@
 **Category:** Widgets + Posts Feed + Public Render + Editorial UX
 **Estimated Effort:** Large
 **Dependencies:** TASK-277, TASK-277-01, TASK-277-02, TASK-277-04
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
 ## Overview
 
 Add Posts Feed-specific editorial chrome: optional section heading, optional
-"View all posts" link, and bounded visual motion.
+"View all posts" link through the shared pagination contract, and bounded visual
+motion.
 
-This leaf must stay local to Posts Feed. Do not add generic Content List section
-chrome unless TASK-256 or a separate shared renderer task owns that contract.
+This leaf must stay local to Posts Feed. Reuse the existing shared
+`ContentListData.title`, `description`, and `pagination.viewAll*` contract
+instead of inventing a second section/View All model.
 
 ## Source Findings
 
@@ -28,8 +30,11 @@ chrome unless TASK-256 or a separate shared renderer task owns that contract.
   `_docs/PLAYWRIGHT/REPORT_POSTS_FEED_WIDGET.md:248-249`.
 - Current Posts Feed renderer delegates directly to `ContentListBlock`:
   `core/widgets/core/postsFeed.tsx:385-405`.
-- Current schema has no section/content chrome:
+- Current Posts Feed schema has no section/content chrome:
   `core/widgets/core/postsFeed.tsx:24-58,95-188`.
+- Shared `ContentListData` already owns section title/description and View All
+  pagination fields:
+  `core/widgets/core/contentList.tsx:38-84`.
 
 ## Sub-Tasks
 
@@ -39,9 +44,9 @@ chrome unless TASK-256 or a separate shared renderer task owns that contract.
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/postsFeed.tsx` | Add optional section heading/subheading, View All link config, and bounded animation enum. Wrap or compose `ContentListBlock` without duplicating shared card rendering. |
-| `core/services/content/postsFeedResolver.ts` | Provide listing route/list-path context only if the View All link uses existing `site.contentRoutes`. |
-| `core/admin/ui/widgets/editors/PostsFeedEditors.tsx` | Add beginner-safe section/header and View All controls. |
+| `core/widgets/core/postsFeed.tsx` | Add optional `title`/`description`, reuse the shared `pagination.viewAll*` model, and add a bounded animation enum without duplicating shared card rendering. |
+| `core/services/content/postsFeedRuntime.ts` | Provide `resolved.listPath` from the enabled posts list route so the shared View All fallback can stay truthful. |
+| `core/admin/ui/widgets/editors/PostsFeedEditors.tsx` | Add beginner-safe section/header and View All controls that map to the existing shared pagination contract. |
 | `tests/unit/widgets/postsFeedWidget.test.tsx` | Cover section chrome rendering, safe View All href, omitted state, and legacy payload normalization. |
 | `tests/vitest/ui/posts-feed-editor-wave.test.tsx` | Cover controls and toggles. |
 | `_docs/_WIDGETS/POSTS_FEED.md` | Document section chrome and View All behavior. |
@@ -50,29 +55,30 @@ chrome unless TASK-256 or a separate shared renderer task owns that contract.
 ## Implementation Pseudocode
 
 ```ts
-type PostsFeedSection = {
-  eyebrow?: string;
-  heading?: string;
-  description?: string;
-  viewAll?: {
-    enabled?: boolean;
-    label?: string;
-    href?: string;
-    usePostsListRoute?: boolean;
+type PostsFeedChrome = Pick<ContentListData, "title" | "description" | "pagination"> & {
+  style?: {
+    motion?: "none" | "fade" | "slide-up";
   };
 };
 
-function resolveViewAllHref(config: PostsFeedData, routes: ContentRouteSetting[]) {
-  const explicit = sanitizeHref(config.section?.viewAll?.href);
-  if (explicit) return explicit;
-  const postsRoute = routes.find((route) => route.enabled && isPostsRouteType(route.type));
-  return postsRoute?.listPath;
+function mapPostsFeedToContentListData(data: PostsFeedData): ContentListData {
+  return normalizeContentListData({
+    title: resolveOptionalString(data.title),
+    description: resolveOptionalString(data.description),
+    pagination: {
+      mode: data.pagination?.mode ?? "none",
+      viewAllHref: data.pagination?.viewAllHref ?? "",
+      viewAllLabel: data.pagination?.viewAllLabel ?? "View all posts",
+    },
+    // ...existing Posts Feed mapping
+  });
 }
 ```
 
 Error handling:
 
-- If no View All href can be resolved, do not render an empty or `#` link.
+- If no View All href can be resolved from either `pagination.viewAllHref` or
+  the shared `resolved.listPath` fallback, do not render an empty or `#` link.
 - Keep motion as a bounded enum such as `none`, `fade`, `slide-up`; do not accept
   arbitrary class names.
 - Preserve no-heading legacy output for existing payloads.
@@ -111,7 +117,7 @@ No API routes are added.
 
 - Posts Feed can render an optional section heading/description without affecting
   existing payloads.
-- View All links resolve from explicit safe hrefs or existing posts list routes;
-  unresolved links are omitted.
+- View All links reuse the shared pagination contract, resolve from explicit
+  safe hrefs or existing posts list routes, and omit unresolved links.
 - Motion settings are bounded and optional.
 - Tests cover render, editor, schema, and omitted/legacy states.

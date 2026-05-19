@@ -349,7 +349,7 @@ Admin canvas nie uruchamia SSR resolvera — edytor renderuje widget z `resolved
 | `posts-feed-empty-state.png` | Empty state sekcja + Runtime payload JSON (Advanced) |
 | `posts-feed-advanced-runtime.png` | Advanced — Runtime payload JSON |
 | `posts-feed-advanced-top.png` | Advanced — pełny widok od góry |
-| `posts-feed-variant-list.png` | Variant=List — canvas badge zmienia się (Columns aktywne — UX-07) |
+| `posts-feed-variant-list.png` | Variant=List — historyczny capture sprzed TASK-302; current HEAD pokazuje komunikat zamiast aktywnego wyboru Columns |
 | `posts-feed-published.png` | Status PUBLISHED w toolbar |
 | `posts-feed-widget-added.png` | Widget w canvas z Wizard edytorem |
 | `posts-feed-frontend.png` | Frontend — 3 karty postów (brak obrazów — BUG-04) |
@@ -367,5 +367,80 @@ Admin canvas nie uruchamia SSR resolvera — edytor renderuje widget z `resolved
 
 - Current TASK-256 role for Posts Feed is classification only. Widget-owned
   follow-up scope continues through the `TASK-277` family.
-- Shared rows that match existing TASK-256 truthfulness, link, or accessibility
-  mechanisms remain referenced by `TASK-256-07` and `TASK-256-08`.
+- Shared truthfulness already fixed at current HEAD is no longer open widget
+  scope: `UX-07` columns truthfulness landed through TASK-302 and the
+  `posts-feed-variant-list.png` evidence is historical only.
+- Remaining shared `ContentListBlock` accessibility residuals now need named
+  follow-up ownership rather than the closed TASK-256 classifier:
+  date semantics / `<time>` and contextual CTA text route to TASK-320.
+- Shared editor clear-undo behavior is not widget-local Posts Feed scope; it
+  routes to TASK-321 instead of the already-closed TASK-256 color-control
+  closure.
+- Global auth/session expiry remains out of family scope and routes to
+  TASK-322; TASK-277-03 owns only the local picker retry/error UX around that
+  platform failure.
+- `BF-09` is no longer a missing shared renderer capability. The shared
+  `ContentListBlock` already owns bounded image-aspect behavior, and the
+  remaining Posts Feed gap is only the local bridge into that contract.
+- `A4` should be read as missing Posts Feed tag data, not as a requirement to
+  invent tag-link navigation beyond the current shared meta-line/badge contract.
+
+---
+
+## Status po TASK-277 (2026-05-19)
+
+Sekcje 4-9 powyżej pozostają historycznym snapshotem z dnia `2026-05-16`.
+Aktualny status każdego findings po implementacji i closure passie:
+
+| Finding | Status @ current HEAD | Owner / evidence |
+|---|---|---|
+| BUG-01 | `fixed-task-277` | `TASK-277-01`; manual mode hides effective Sort and shows `Order is determined by your selection.` |
+| BUG-02 | `fixed-task-277` | `TASK-277-06`; `textColor` is now exposed as a clearable style control. |
+| BUG-03 | `fixed-task-277` | `TASK-277-01`; category placeholder now matches the single-keyword resolver contract (`e.g. news`). |
+| BUG-04 | `fixed-task-277` | `TASK-277-02`; `fields.showImage` is schema/default/editor/runtime owned end-to-end. |
+| BUG-05 | `fixed-task-277` | `TASK-277-02`; runtime items now resolve `imageSrc` / `imageAlt` through the shared media lookup seam. |
+| BUG-06 | `platform-follow-up` | Routed to `TASK-322`; TASK-277 does not own global admin session / CSRF refresh. |
+| BUG-07 | `fixed-task-277` | `TASK-277-01`; Posts Feed omits CTA hrefs when no enabled posts detail route exists instead of falling back to `/post/:slug`. |
+| BUG-08 | `shared-follow-up` | Routed to `TASK-320`; semantic date formatting is shared `ContentListBlock` scope. |
+| BUG-09 | `platform-follow-up` | Root cause stays on `TASK-322`; local picker retry/error/auth guidance is fixed by `TASK-277-03`. |
+| UX-01 | `fixed-task-277` | `TASK-277-04`; admin preview now hydrates transient resolved posts through the existing preview-state/dataPatch channel. |
+| UX-02 | `fixed-task-277` | `TASK-277-06`; variant choice uses visual cards instead of a bare dropdown. |
+| UX-03 | `fixed-task-277` | `TASK-277-06`; Wizard is now progressive (`Source -> Display -> Layout`). |
+| UX-04 | `fixed-task-277` | `TASK-277-03`; manual picker has local search over the fetched post catalog. |
+| UX-05 | `fixed-task-277` | `TASK-277-03`; selected posts can be reordered with keyboard-accessible Up/Down controls. |
+| UX-06 | `fixed-task-277` | `TASK-277-04`; editor shows a readable runtime/preview status card and sync timestamp. |
+| UX-07 | `fixed-current-head` | Shared `Columns` truthfulness already landed through `TASK-302`; this report row is historical only. |
+| UX-08 | `shared-follow-up` | Routed to `TASK-321`; Clear undo/toast behavior remains a shared editor contract, not a widget-local fork. |
+| BF-01 | `fixed-task-277` | `TASK-277-02`; Posts Feed can render thumbnail cards from real post media. |
+| BF-02 | `fixed-task-277` | `TASK-277-07`; Posts Feed now supports bounded `paged`, cumulative `load-more`, and stable `view-all` behavior. The analogous shared `content-list` legacy residual discovered during implementation routes to `TASK-323`. |
+| BF-03 | `fixed-task-277` | `TASK-277-05`; optional View All action now resolves from explicit href or the posts list route fallback. |
+| BF-04 | `fixed-task-277` | `TASK-277-07`; author filtering now uses existing post summary author ids. |
+| BF-05 | `fixed-task-277` | `TASK-277-02`; bounded tag arrays are mapped into runtime cards. |
+| BF-06 | `fixed-task-277` | `TASK-277-05`; optional section title/description are now widget-owned fields. |
+| BF-07 | `fixed-task-277` | `TASK-277-07`; source date-range filters are normalized and applied before pagination. |
+| BF-08 | `fixed-task-277` | `TASK-277-07`; `featuredFirst` is now a first-class source option for non-manual modes. |
+| BF-09 | `fixed-task-277` | `TASK-277-06`; Posts Feed exposes the shared `imageAspect` contract. |
+| BF-10 | `fixed-task-277` | `TASK-277-05`; bounded motion presets (`none`, `fade`, `slide-up`) are now available. |
+| A1 | `shared-follow-up` | Routed to `TASK-320`; semantic `<time>` output belongs to the shared Content List renderer. |
+| A2 | `fixed-task-277` | `TASK-277-02`; media alt text now resolves into runtime cards. |
+| A3 | `shared-follow-up` | Routed to `TASK-320`; contextual CTA text remains shared renderer scope. |
+| A4 | `fixed-task-277` | `TASK-277-02`; tags are mapped and rendered through the existing shared metadata path; navigational tag-link behavior remains intentionally out of scope. |
+| A5 | `fixed-task-277` | `TASK-277-03`; manual picker checkboxes now use post-title labels. |
+| A6 | `fixed-task-277` | `TASK-277-03`; loading/error picker feedback is announced through `aria-live`. |
+
+### Closure evidence
+
+- Widget doc: `_docs/_WIDGETS/POSTS_FEED.md` now matches the shipped schema,
+  editor, runtime, preview, and pagination contract.
+- Preview proof:
+  `tests/vitest/ui/page-editor-posts-feed-preview.test.tsx` covers the
+  real `PageEditor` preview bridge (`editorContext.previewState` plus
+  `previewStatesByBlockId`) and proves preview-only resolved data stays
+  transient.
+- Runtime/editor proof:
+  `tests/unit/widgets/postsFeedWidget.test.tsx`,
+  `tests/integration/runtime/posts-feed-runtime-pagination.test.ts`,
+  `tests/unit/content/contentMediaResolver.test.ts`,
+  `tests/unit/content/contentListResolver.test.ts`,
+  and `tests/vitest/ui/posts-feed-editor-wave.test.tsx` cover the final
+  widget-local resolver/editor contract.

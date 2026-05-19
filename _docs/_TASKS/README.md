@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 258 tasks
+- **To Do:** 253 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1754 tasks
+- **Done:** 1763 tasks
 
 ---
 
@@ -38,6 +38,10 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-323 | Content List Load More and View All Pagination Truthfulness Residuals | High | Large | Shared follow-up for legacy `content-list` load-more cumulative slicing and stale `view-all` page-param suppression rediscovered during TASK-277 |
+| TASK-322 | Admin Session and CSRF Expiry Resilience for Long-Lived Editors | High | Very Large | Shared platform follow-up for expired-session, token-refresh, and unsaved-change recovery gaps surfaced by the TASK-277 Posts Feed closeout |
+| TASK-321 | Shared Clear Action Undo and Feedback Contract | Medium | Large | Shared editor follow-up for recoverable Clear actions, undo feedback, and consistent destructive-surface messaging across widget editors |
+| TASK-320 | Content List Shared Date and CTA Accessibility Residuals | High | Large | Shared `ContentListBlock` follow-up for semantic date output and contextual CTA link text used by both `content-list` and `posts-feed` |
 | TASK-319 | Newsletter Per-Breakpoint Variant Overrides | Low | Large | Evaluate or explicitly reject true per-breakpoint Newsletter variant overrides after TASK-276 made current mobile behavior truthful |
 | TASK-318 | Section Surface Overflow and Sticky Child Containment Contract | High | Large | Shared Section/layout owner for sticky child widgets blocked by `overflow-hidden`, including the routed Navigation frontend sticky row |
 | TASK-317 | Widget Editor Live Preview Surface and Preview-State Contract | High | Large | Shared builder/editor owner for widget live-preview rows that need current-block preview without widget-local shell hacks |
@@ -164,15 +168,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-278-06 | Pricing Plans Section Layout Typography and Notes | Medium | Large | Add bounded max-width, typography presets, and plain-text pricing notes |
 | TASK-278-07 | Pricing Plans Two-Plan Variant and Pack Docs | Medium | Medium | Add a dedicated two-plan variant with registry/editor/runtime/tests/docs coverage after TASK-256 count sync |
 | TASK-278-08 | Pricing Plans Report, Docs, Changelog, and Closure | Medium | Medium | Refresh Pricing Plans report/docs/changelog/board and final validation evidence |
-| TASK-277 | Posts Feed Widget Playwright Product Followups | High | Very Large | Posts Feed-only follow-up family for `REPORT_POSTS_FEED_WIDGET.md`, excluding TASK-256 shared-contract and global auth/session scope |
-| TASK-277-01 | Posts Feed Source Mode, Route, and Filter Truthfulness | High | Large | Repair manual-sort truthfulness, category filter copy/parsing, and post detail-route fallback behavior |
-| TASK-277-02 | Posts Feed Media, Tags, and Card Metadata | High | Large | Add show-image, media-resolved thumbnail/alt mapping, and bounded tag data for posts-feed cards |
-| TASK-277-03 | Posts Feed Manual Picker Search, Reorder, and Accessibility | High | Large | Add picker search, selected-order controls, accessible labels/live state, and local retry/error UX |
-| TASK-277-04 | Posts Feed Admin Preview and Runtime Status | High | Large | Hydrate admin canvas preview with bounded post data and expose readable sync/runtime status |
-| TASK-277-05 | Posts Feed Section Header, View All, and Editorial Chrome | Medium | Large | Add optional section heading, safe View All link, and bounded posts-feed visual motion |
-| TASK-277-06 | Posts Feed Editor Flow, Variant Previews, and Style Controls | Medium | Large | Add text-color control, variant preview affordances, and progressive Wizard flow |
-| TASK-277-07 | Posts Feed Pagination, Author, Date, and Featured-First Filters | Medium | Very Large | Add or explicitly split bounded pagination/load-more, author/date filters, and featured-first sorting |
-| TASK-277-08 | Posts Feed Report, Docs, Changelog, and Closure | Medium | Medium | Refresh Posts Feed report/docs/changelog/board and final validation evidence |
 | TASK-274 | Logo Cloud Widget Playwright Product Followups | High | Very Large | Logo Cloud-only follow-up family for `REPORT_LOGO_CLOUD_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-274-01 | Logo Cloud Header Background and Typography | High | Large | Add Logo Cloud eyebrow, section background, and bounded header typography controls after shared heading/ARIA fixes |
 | TASK-274-02 | Logo Cloud Logo Asset Authoring and Previews | High | Large | Add Wizard logo image/alt/link authoring, Visual thumbnails, and Media Library picking without duplicating TASK-256 link contracts |
@@ -337,6 +332,15 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-309-02 | Footer Address and Contact Utility Surface | Low | Medium | Done: Footer now supports bounded read-only address/contact presentation with safe tel/mailto rendering |
 | TASK-309-01 | Footer Newsletter Composition and Submission Contract | Medium | Large | Done: Footer newsletter is composition-only and reuses the existing hardened Newsletter/Forms contract |
 | TASK-308 | Footer Column Reorder and Slot Cohesion | Medium | Large | Done: Footer column reorder now remaps visible columns and slot payloads atomically through the live block patch path |
+| TASK-277 | Posts Feed Widget Playwright Product Followups | High | Very Large | Done: Posts Feed source truthfulness, media/tag/runtime owners, manual picker UX, admin preview bridge, section chrome, pagination filters, docs closure, and dedicated shared follow-up routing are synchronized |
+| TASK-277-01 | Posts Feed Source Mode, Route, and Filter Truthfulness | High | Large | Done: manual Sort truthfulness, single-keyword category copy, and no-route CTA suppression are synchronized with the extracted runtime owner |
+| TASK-277-02 | Posts Feed Media, Tags, and Card Metadata | High | Large | Done: show-image, shared media resolution, expanded post image candidates, bounded tags, and preview/runtime coverage are aligned |
+| TASK-277-03 | Posts Feed Manual Picker Search, Reorder, and Accessibility | High | Large | Done: manual picker search, ordering controls, retry/auth guidance, and `aria-live` feedback are covered |
+| TASK-277-04 | Posts Feed Admin Preview and Runtime Status | High | Large | Done: real PageEditor preview-state plumbing, transient resolved data patches, and readable sync status are covered |
+| TASK-277-05 | Posts Feed Section Header, View All, and Editorial Chrome | Medium | Large | Done: shared title/description/View All fields and bounded motion presets are synchronized with Posts Feed runtime output |
+| TASK-277-06 | Posts Feed Editor Flow, Variant Previews, and Style Controls | Medium | Large | Done: progressive Wizard flow, visual variant cards, text-color clear control, and shared image-aspect exposure are landed |
+| TASK-277-07 | Posts Feed Pagination, Author, Date, and Featured-First Filters | Medium | Very Large | Done: author/date filters, real-calendar normalization, cumulative load-more, stable view-all semantics, and SSR query handoff proof are covered |
+| TASK-277-08 | Posts Feed Report, Docs, Changelog, and Closure | Medium | Medium | Done: report matrix, widget docs, board sync, changelog, and scoped validation evidence are recorded with user-approved closeout scope |
 | TASK-304 | Entry Teaser Listing Manual Picker | Medium | Medium | Done: listing mode now supports deterministic manual row selection without breaking legacy manual/latest/featured entry behavior |
 | TASK-301 | Forms Public Runtime Nonce Cache Freshness | High | Large | Done: site HTML cache now skips nonce-bearing public pages/detail pages across Form Embed, Contact, and Appointment Form |
 | TASK-300 | Compare Timeline Motion Presets and Reduced Motion Policy | Low | Medium | Done: Compare Timeline now exposes bounded motion presets with motion-safe and reduced-motion-aware runtime output |

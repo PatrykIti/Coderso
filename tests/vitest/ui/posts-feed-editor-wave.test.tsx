@@ -13,13 +13,19 @@ const postsFeedState = vi.hoisted(() => ({
       title: "Launch note",
       slug: "launch-note",
       status: "published",
-      data: {},
+      data: {
+        featuredImage: "media-1",
+      },
       tags: ["featured"],
       scheduledAt: null,
       createdAt: "2026-03-08T10:00:00.000Z",
       updatedAt: "2026-03-08T10:00:00.000Z",
       publishedAt: "2026-03-08T10:00:00.000Z",
-      author: null,
+      author: {
+        id: "author-1",
+        name: "Editor One",
+        email: "editor1@example.com",
+      },
     },
     {
       id: "post-2",
@@ -32,7 +38,11 @@ const postsFeedState = vi.hoisted(() => ({
       createdAt: "2026-03-08T10:00:00.000Z",
       updatedAt: "2026-03-08T10:00:00.000Z",
       publishedAt: null,
-      author: null,
+      author: {
+        id: "author-2",
+        name: "Editor Two",
+        email: "editor2@example.com",
+      },
     },
   ],
   postsError: null as unknown,
@@ -40,6 +50,46 @@ const postsFeedState = vi.hoisted(() => ({
   reset() {
     this.postsError = null;
     this.listPostsImpl = null;
+  },
+}));
+
+const previewResourcesState = vi.hoisted(() => ({
+  settings: {
+    adminBaseUrl: null,
+    publicBaseUrl: "https://public.example.com",
+    adminPath: "/admin",
+    adminRedirectEnabled: false,
+    homepageId: null,
+    notFoundPageId: null,
+    previewEnabled: true,
+    cacheTtlSeconds: 30,
+    contentRoutes: [
+      {
+        type: "posts",
+        listPath: "/news",
+        detailPath: "/news/:slug",
+        enabled: true,
+      },
+    ],
+  },
+  media: [
+    {
+      id: "media-1",
+      key: "launch-note.jpg",
+      url: "/media/launch-note.jpg",
+      type: "image" as const,
+      mimeType: "image/jpeg",
+      size: 1024,
+      alt: "Launch note cover",
+      title: "Launch note cover",
+      createdAt: "2026-03-08T10:00:00.000Z",
+    },
+  ],
+  settingsError: null as unknown,
+  mediaError: null as unknown,
+  reset() {
+    this.settingsError = null;
+    this.mediaError = null;
   },
 }));
 
@@ -192,6 +242,20 @@ vi.mock("@/services/postsClient", () => ({
   }),
 }));
 
+vi.mock("@/services/siteSettingsClient", () => ({
+  getSiteSettings: vi.fn(async () => {
+    if (previewResourcesState.settingsError) throw previewResourcesState.settingsError;
+    return previewResourcesState.settings;
+  }),
+}));
+
+vi.mock("@/services/mediaClient", () => ({
+  listMediaCached: vi.fn(async () => {
+    if (previewResourcesState.mediaError) throw previewResourcesState.mediaError;
+    return previewResourcesState.media;
+  }),
+}));
+
 const createDeferred = <T,>() => {
   let resolve!: (value: T | PromiseLike<T>) => void;
   let reject!: (reason?: unknown) => void;
@@ -272,6 +336,11 @@ const findSelectByOptions = (container: ParentNode, values: string[]) =>
     return values.every((value) => optionValues.includes(value));
   });
 
+const findButtonByText = (container: ParentNode, text: string) =>
+  Array.from(container.querySelectorAll("button")).find(
+    (element) => element.textContent?.trim() === text
+  );
+
 const clickElement = (element: Element | null | undefined) => {
   if (!element) return;
   React.act(() => {
@@ -282,10 +351,11 @@ const clickElement = (element: Element | null | undefined) => {
 afterEach(() => {
   vi.restoreAllMocks();
   postsFeedState.reset();
+  previewResourcesState.reset();
 });
 
-test("PostsFeed editors cover source modes, manual posts, display toggles, layout, CTA, and runtime snapshot", async () => {
-  const { PostsFeedAdvancedEditor, PostsFeedVisualEditor, PostsFeedWizardEditor } =
+test("PostsFeed editors cover manual source truthfulness, section chrome, style controls, and runtime snapshot", async () => {
+  const { PostsFeedAdvancedEditor } =
     await import("../../../core/admin/ui/widgets/editors/PostsFeedEditors");
 
   const onChangeSpy = vi.fn();
@@ -295,44 +365,18 @@ test("PostsFeed editors cover source modes, manual posts, display toggles, layou
     const [value, setValue] = useState<PostsFeedData>({} as PostsFeedData);
     const [variant, setVariant] = useState("cards");
     return (
-      <>
-        <PostsFeedWizardEditor
-          value={value}
-          onChange={(next) => {
-            onChangeSpy(next);
-            setValue(next);
-          }}
-          variant={variant}
-          onVariantChange={(next) => {
-            onVariantChangeSpy(next);
-            setVariant(next);
-          }}
-        />
-        <PostsFeedVisualEditor
-          value={value}
-          onChange={(next) => {
-            onChangeSpy(next);
-            setValue(next);
-          }}
-          variant={variant}
-          onVariantChange={(next) => {
-            onVariantChangeSpy(next);
-            setVariant(next);
-          }}
-        />
-        <PostsFeedAdvancedEditor
-          value={value}
-          onChange={(next) => {
-            onChangeSpy(next);
-            setValue(next);
-          }}
-          variant={variant}
-          onVariantChange={(next) => {
-            onVariantChangeSpy(next);
-            setVariant(next);
-          }}
-        />
-      </>
+      <PostsFeedAdvancedEditor
+        value={value}
+        onChange={(next) => {
+          onChangeSpy(next);
+          setValue(next);
+        }}
+        variant={variant}
+        onVariantChange={(next) => {
+          onVariantChangeSpy(next);
+          setVariant(next);
+        }}
+      />
     );
   };
 
@@ -342,7 +386,8 @@ test("PostsFeed editors cover source modes, manual posts, display toggles, layou
     await flush();
 
     expect(view.container.textContent).toContain("Source setup");
-    expect(view.container.textContent).toContain("Layout and style");
+    expect(view.container.textContent).toContain("Section header");
+    expect(view.container.textContent).toContain("Runtime status");
     expect(view.container.textContent).toContain("Runtime payload");
 
     React.act(() => {
@@ -357,14 +402,12 @@ test("PostsFeed editors cover source modes, manual posts, display toggles, layou
     clickElement(manualCheckboxes[0]);
 
     React.act(() => {
-      setInputValue(
-        findInputByPlaceholder(view.container, "e.g. news, updates, automotive"),
-        "news"
-      );
-    });
-
-    React.act(() => {
       setInputValue(findInputByPlaceholder(view.container, "Read more"), "Read article");
+      setInputValue(findInputByPlaceholder(view.container, "Latest articles"), "Latest releases");
+      setTextareaValue(
+        findTextareaByPlaceholder(view.container, "Optional section description."),
+        "Fresh product updates."
+      );
       setInputValue(findInputByPlaceholder(view.container, "No posts found"), "Nothing published");
       setTextareaValue(
         findTextareaByPlaceholder(
@@ -379,28 +422,18 @@ test("PostsFeed editors cover source modes, manual posts, display toggles, layou
         findSelectByOptions(view.container, ["outlined", "elevated", "minimal"]),
         "elevated"
       );
-      setSelectValue(findSelectByOptions(view.container, ["cards", "list", "compact"]), "compact");
       setSelectValue(
-        findSelectByOptions(view.container, [
-          "published-desc",
-          "published-asc",
-          "updated-desc",
-          "updated-asc",
-          "title-asc",
-          "title-desc",
-        ]),
-        "title-asc"
+        findSelectByOptions(view.container, ["compact", "standard", "wide", "square"]),
+        "wide"
       );
+      setSelectValue(findSelectByOptions(view.container, ["none", "fade", "slide-up"]), "fade");
     });
 
-    expect(view.container.textContent).toContain("Columns only affect the cards variant.");
-    expect(findSelectByOptions(view.container, ["1", "2", "3"])).toBeUndefined();
+    clickElement(findButtonByText(view.container, "Compact"));
+    await flush();
 
-    const switches = Array.from(view.container.querySelectorAll("input[type='checkbox']")).slice(1);
-    clickElement(switches[0]);
-    clickElement(switches[1]);
-    clickElement(switches[2]);
-    clickElement(switches[3]);
+    expect(view.container.textContent).toContain("Order is determined by your selection.");
+    expect(view.container.textContent).toContain("Columns only affect the cards variant.");
 
     const matching = [...onChangeSpy.mock.calls]
       .reverse()
@@ -417,12 +450,16 @@ test("PostsFeed editors cover source modes, manual posts, display toggles, layou
         source: expect.objectContaining({
           mode: "manual",
           manualPostIds: expect.arrayContaining(["post-1"]),
-          sort: "title-asc",
+          sort: "published-desc",
         }),
+        title: "Latest releases",
+        description: "Fresh product updates.",
         style: expect.objectContaining({
           columns: "2",
           gap: "lg",
           cardStyle: "elevated",
+          imageAspect: "wide",
+          motion: "fade",
           ctaLabel: "Read article",
         }),
         emptyState: expect.objectContaining({
@@ -432,7 +469,7 @@ test("PostsFeed editors cover source modes, manual posts, display toggles, layou
       })
     );
     expect(onVariantChangeSpy).toHaveBeenCalledWith("compact");
-    expect(view.container.textContent).toContain("Selected: Launch note");
+    expect(view.container.textContent).toContain('"pageSize": 6');
   } finally {
     view.cleanup();
   }
@@ -444,7 +481,8 @@ test("PostsFeed editors surface post loading errors", async () => {
 
   postsFeedState.postsError = {
     name: "ApiClientError",
-    message: "Posts failed",
+    status: 401,
+    message: "Not authenticated",
   };
 
   const Harness = () => {
@@ -468,14 +506,17 @@ test("PostsFeed editors surface post loading errors", async () => {
       );
     });
     await flush();
-    expect(view.container.textContent).toContain("Posts failed");
+    expect(view.container.textContent).toContain(
+      "Post catalog is unavailable until you sign in again."
+    );
+    expect(view.container.textContent).toContain("Retry");
   } finally {
     view.cleanup();
   }
 });
 
 test("PostsFeed editors cover category filtering, manual deselection, empty catalog, and generic load errors", async () => {
-  const { PostsFeedAdvancedEditor, PostsFeedVisualEditor, PostsFeedWizardEditor } =
+  const { PostsFeedWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/PostsFeedEditors");
 
   const originalPosts = postsFeedState.posts;
@@ -498,13 +539,7 @@ test("PostsFeed editors cover category filtering, manual deselection, empty cata
       setValue(next);
     };
 
-    return (
-      <>
-        <PostsFeedWizardEditor value={value} onChange={handleChange} variant="cards" />
-        <PostsFeedVisualEditor value={value} onChange={handleChange} variant="cards" />
-        <PostsFeedAdvancedEditor value={value} onChange={handleChange} variant="cards" />
-      </>
-    );
+    return <PostsFeedWizardEditor value={value} onChange={handleChange} variant="cards" />;
   };
 
   const emptyView = mount(<Harness />);
@@ -519,12 +554,10 @@ test("PostsFeed editors cover category filtering, manual deselection, empty cata
         "category"
       );
     });
+    await flush();
 
     React.act(() => {
-      setInputValue(
-        findInputByPlaceholder(emptyView.container, "e.g. news, updates, automotive"),
-        "events"
-      );
+      setInputValue(findInputByPlaceholder(emptyView.container, "e.g. news"), "events");
     });
     expect(latestValue.source).toEqual(
       expect.objectContaining({
@@ -567,9 +600,17 @@ test("PostsFeed editors cover category filtering, manual deselection, empty cata
   try {
     await flush();
 
-    const selectedPostCheckbox = Array.from(manualView.container.querySelectorAll("label"))
-      .find((label) => label.textContent?.includes("Launch note"))
-      ?.querySelector("input");
+    React.act(() => {
+      setInputValue(findInputByPlaceholder(manualView.container, "Search posts"), "road");
+    });
+    expect(manualView.container.textContent).toContain("Roadmap");
+
+    React.act(() => {
+      setInputValue(findInputByPlaceholder(manualView.container, "Search posts"), "");
+    });
+    await flush();
+
+    const selectedPostCheckbox = manualView.container.querySelector("input[type='checkbox']");
     clickElement(selectedPostCheckbox);
     await flush();
 
@@ -579,7 +620,7 @@ test("PostsFeed editors cover category filtering, manual deselection, empty cata
         manualPostIds: [],
       })
     );
-    expect(manualView.container.textContent).not.toContain("Selected:");
+    expect(manualView.container.textContent).not.toContain("Launch note/launch-noteUpDown");
   } finally {
     manualView.cleanup();
   }
@@ -669,9 +710,7 @@ test("PostsFeed editors fall back for invalid numeric/select values and sparse d
   try {
     await flush();
 
-    expect(findSelectByOptions(view.container, ["cards", "list", "compact"])).toBeInstanceOf(
-      HTMLSelectElement
-    );
+    expect(findButtonByText(view.container, "Cards")).toBeInstanceOf(HTMLButtonElement);
 
     React.act(() => {
       setInputValue(
@@ -700,6 +739,14 @@ test("PostsFeed editors fall back for invalid numeric/select values and sparse d
         findSelectByOptions(view.container, ["outlined", "elevated", "minimal"]),
         "invalid-style"
       );
+      setSelectValue(
+        findSelectByOptions(view.container, ["compact", "standard", "wide", "square"]),
+        "invalid-aspect"
+      );
+      setSelectValue(
+        findSelectByOptions(view.container, ["none", "fade", "slide-up"]),
+        "invalid-motion"
+      );
     });
 
     expect(latestValue.source).toEqual(
@@ -713,8 +760,148 @@ test("PostsFeed editors fall back for invalid numeric/select values and sparse d
         columns: "3",
         gap: "md",
         cardStyle: "outlined",
+        imageAspect: "standard",
+        motion: "none",
       })
     );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PostsFeed editors derive author filters from the post catalog and warn on invalid legacy dates", async () => {
+  const { PostsFeedAdvancedEditor } =
+    await import("../../../core/admin/ui/widgets/editors/PostsFeedEditors");
+
+  let latestValue: PostsFeedData = {
+    source: {
+      mode: "latest",
+      dateRange: {
+        from: "bad-date",
+        to: "2026-03-15",
+      },
+    },
+  };
+
+  const view = mount(
+    <PostsFeedAdvancedEditor
+      value={latestValue}
+      onChange={(next) => {
+        latestValue = next;
+      }}
+      variant="cards"
+    />
+  );
+
+  try {
+    await flush();
+
+    expect(view.container.textContent).toContain(
+      "Date from was invalid and has been cleared from the active filter."
+    );
+
+    React.act(() => {
+      setSelectValue(
+        findSelectByOptions(view.container, ["__posts-feed-no-author__", "author-1", "author-2"]),
+        "author-2"
+      );
+    });
+
+    expect(latestValue.source?.authorId).toBe("author-2");
+    expect(view.container.textContent).toContain("Editor One");
+    expect(view.container.textContent).toContain("Editor Two");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PostsFeed visual editor resolves preview through transient context state", async () => {
+  const { PostsFeedVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/PostsFeedEditors");
+
+  const setPreviewState = vi.fn();
+  const view = mount(
+    <PostsFeedVisualEditor
+      value={{ source: { mode: "latest", limit: 2, sort: "published-desc" } }}
+      onChange={() => undefined}
+      variant="cards"
+      context={{
+        surface: "page-builder",
+        editorMode: "visual",
+        blockId: "posts-feed-1",
+        setPreviewState,
+      }}
+    />
+  );
+
+  try {
+    await flush();
+    expect(setPreviewState).toHaveBeenCalledWith({ status: "loading" });
+    expect(setPreviewState).toHaveBeenLastCalledWith({
+      status: "ready",
+      dataPatch: expect.objectContaining({
+        resolved: expect.objectContaining({
+          total: 2,
+          sourceMode: "latest",
+          listPath: "/news",
+          items: expect.arrayContaining([
+            expect.objectContaining({
+              href: "/news/launch-note",
+              imageSrc: "/media/launch-note.jpg",
+            }),
+          ]),
+        }),
+      }),
+    });
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PostsFeed visual editor keeps preview ready when routes or media degrade", async () => {
+  const { PostsFeedVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/PostsFeedEditors");
+
+  previewResourcesState.mediaError = {
+    name: "ApiClientError",
+    status: 503,
+    message: "Media unavailable",
+  };
+
+  const setPreviewState = vi.fn();
+  const view = mount(
+    <PostsFeedVisualEditor
+      value={{ source: { mode: "latest", limit: 2, sort: "published-desc" } }}
+      onChange={() => undefined}
+      variant="cards"
+      context={{
+        surface: "page-builder",
+        editorMode: "visual",
+        blockId: "posts-feed-1",
+        setPreviewState,
+      }}
+    />
+  );
+
+  try {
+    await flush();
+
+    expect(setPreviewState).toHaveBeenLastCalledWith({
+      status: "ready",
+      message: "Preview images could not be loaded: Media unavailable",
+      dataPatch: expect.objectContaining({
+        resolved: expect.objectContaining({
+          total: 2,
+          listPath: "/news",
+          items: expect.arrayContaining([
+            expect.objectContaining({
+              href: "/news/launch-note",
+              imageSrc: undefined,
+            }),
+          ]),
+        }),
+      }),
+    });
   } finally {
     view.cleanup();
   }

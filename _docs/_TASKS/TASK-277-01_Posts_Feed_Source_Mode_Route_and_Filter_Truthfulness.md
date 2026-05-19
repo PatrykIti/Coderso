@@ -6,7 +6,7 @@
 **Category:** Widgets + Posts Feed + Runtime Resolver + Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-277, TASK-256-07, TASK-256-08
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -25,12 +25,13 @@ resolver does not execute, or where the resolver creates broken post links.
   `_docs/PLAYWRIGHT/REPORT_POSTS_FEED_WIDGET.md:135-140`.
 - BUG-07 fallback detail links use `/post/:slug` and can 404:
   `_docs/PLAYWRIGHT/REPORT_POSTS_FEED_WIDGET.md:162-167,274,358`.
-- Current resolver manual mode bypasses sorting:
-  `core/services/content/postsFeedResolver.ts:209-210`.
-- Current fallback route is hardcoded:
-  `core/services/content/postsFeedResolver.ts:91-96`.
+- Current Posts Feed runtime owner keeps manual mode order unsorted:
+  `core/services/content/postsFeedRuntime.ts:291-301`.
+- Current detail-route/list-path ownership now lives in the extracted runtime
+  mapper:
+  `core/services/content/postsFeedRuntime.ts:195-217,393-442`.
 - Current category field placeholder lives in the editor:
-  `core/admin/ui/widgets/editors/PostsFeedEditors.tsx:232-247`.
+  `core/admin/ui/widgets/editors/PostsFeedEditors.tsx:853-925`.
 
 ## Sub-Tasks
 
@@ -40,8 +41,8 @@ resolver does not execute, or where the resolver creates broken post links.
 
 | File | Required change |
 |---|---|
-| `core/services/content/postsFeedResolver.ts` | Make category filtering and detail-route fallback deterministic and tested. Preserve manual order while documenting that sort is ignored for manual mode, and omit CTA hrefs when no enabled posts detail route exists. |
-| `core/admin/ui/widgets/editors/PostsFeedEditors.tsx` | Hide or disable Sort in manual mode with the hint `Order is determined by your selection.`; align category placeholder with resolver behavior. |
+| `core/services/content/postsFeedRuntime.ts` | Make category filtering and detail-route fallback deterministic and tested. Preserve manual order while documenting that sort is ignored for manual mode, and omit CTA hrefs when no enabled posts detail route exists. |
+| `core/admin/ui/widgets/editors/PostsFeedEditors.tsx` | Hide or disable Sort in manual mode with the hint `Order is determined by your selection.`; narrow category copy to the chosen single-term contract. |
 | `core/widgets/core/postsFeed.tsx` | Update schema/defaults only if the selected category strategy adds fields. |
 | `tests/unit/widgets/postsFeedWidget.test.tsx` | Cover manual-sort suppression, category term behavior, and detail href fallback/configured route behavior. |
 | `tests/vitest/ui/posts-feed-editor-wave.test.tsx` | Cover manual source UI hint and category placeholder/field behavior. |
@@ -51,20 +52,16 @@ resolver does not execute, or where the resolver creates broken post links.
 ## Implementation Pseudocode
 
 ```ts
-function resolveCategoryTerms(input: string): string[] {
-  return input
-    .split(",")
-    .map((item) => normalizeText(item))
-    .filter(Boolean)
-    .slice(0, 8);
+function normalizeCategoryKeyword(input: string) {
+  return normalizeText(input);
 }
 
 function filterByCategory(posts: PostSummary[], category: string) {
-  const terms = resolveCategoryTerms(category);
-  if (terms.length === 0) return posts;
+  const keyword = normalizeCategoryKeyword(category);
+  if (!keyword) return posts;
   return posts.filter((post) => {
     const tags = normalizeTags(post.tags);
-    return terms.some((term) => tags.some((tag) => tag.includes(term)));
+    return tags.some((tag) => tag.includes(keyword));
   });
 }
 
@@ -80,10 +77,10 @@ function resolvePostsFeedHref(post: PostSummary, routes: ContentRouteSetting[]) 
 }
 ```
 
-If the implementation chooses single-category semantics instead of multi-term
-parsing, change the placeholder to a single example such as `e.g. news` and add
-tests proving comma input is not advertised. Do not leave the report mismatch
-ambiguous.
+Choose the narrower single-term category contract for this leaf. Change the
+placeholder to a single example such as `e.g. news`, keep the existing
+single-string schema, and add tests proving the editor does not advertise
+comma-separated multi-term behavior.
 
 Error handling:
 
@@ -125,7 +122,7 @@ No API routes are added by this leaf.
 ## Acceptance Criteria
 
 - Manual mode no longer presents Sort as an active effective control.
-- Category UI copy matches actual resolver behavior.
+- Category UI copy and tests match the chosen single-term resolver behavior.
 - Posts Feed detail links resolve through enabled `site.contentRoutes`; when no
   route exists, CTA hrefs are omitted instead of falling back to `/post/:slug`.
 - Tests cover configured route, fallback/no-route behavior, manual mode, and the

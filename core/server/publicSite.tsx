@@ -257,6 +257,8 @@ const hydrateRuntimeBlock = async (
     const resolved = await resolvePostsFeedRuntimeData(normalizedData, {
       preview: options.preview,
       contentRoutes: options.contentRoutes,
+      runtimeSearchParams: options.runtimeSearchParams,
+      blockId: block.id,
     });
     nextBlock = {
       ...block,

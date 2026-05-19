@@ -6,7 +6,7 @@
 **Category:** Widgets + Posts Feed + Admin UI + Accessibility
 **Estimated Effort:** Large
 **Dependencies:** TASK-277, TASK-277-01
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 

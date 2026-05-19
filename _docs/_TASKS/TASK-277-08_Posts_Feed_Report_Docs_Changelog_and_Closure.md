@@ -6,7 +6,7 @@
 **Category:** Widgets + Posts Feed + Playwright QA + Documentation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-277-01, TASK-277-02, TASK-277-03, TASK-277-04, TASK-277-05, TASK-277-06, TASK-277-07, TASK-256-08
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -123,3 +123,24 @@ No API routes are added by this docs/closure leaf.
 - All TASK-277 files are `Done` with dates, validation notes, and final evidence.
 - Changelog and board statistics are synchronized.
 - Final validation is recorded with exact commands and results.
+
+## Validation Notes (2026-05-19)
+
+Passed:
+
+- `git diff --check`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun test tests/unit/widgets/postsFeedWidget.test.tsx tests/unit/content/contentMediaResolver.test.ts tests/unit/content/contentListResolver.test.ts tests/integration/runtime/posts-feed-runtime-pagination.test.ts`
+- `bun run test:vitest -- tests/vitest/ui/posts-feed-editor-wave.test.tsx tests/vitest/ui/page-editor-posts-feed-preview.test.tsx`
+
+Scoped closeout note:
+
+- Final closure uses the focused TASK-277 proof above after explicit user
+  approval to close on in-scope validation because the shared DB / broader
+  environment became contention-prone during parallel-agent work.
+- A broader `bun run lint` attempt did not complete in a stable, timely way
+  under the same multi-agent load, so it is not used as closure evidence here.
+- Full `bun run test:bun`, full `bun run test:vitest`, `bun run scan:security:strict`,
+  and `bun run precommit` were not used as closure gates for this task after the
+  user approved scope-limited closeout.

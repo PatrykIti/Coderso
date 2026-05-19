@@ -456,7 +456,9 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
   const pageEditorWidgetContext = useMemo<WidgetEditorContext | undefined>(() => {
     if (!selectedBlock) return undefined;
     const supportsPreviewState =
-      selectedBlock.type === "entry-teaser" || selectedBlock.type === "newsletter";
+      selectedBlock.type === "entry-teaser" ||
+      selectedBlock.type === "newsletter" ||
+      selectedBlock.type === "posts-feed";
 
     return {
       surface: "page-builder",
@@ -483,7 +485,9 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
   const activeWidgetPreviewStates = useMemo(() => {
     if (
       !selectedBlock ||
-      (selectedBlock.type !== "entry-teaser" && selectedBlock.type !== "newsletter")
+      (selectedBlock.type !== "entry-teaser" &&
+        selectedBlock.type !== "newsletter" &&
+        selectedBlock.type !== "posts-feed")
     ) {
       return {} as Record<string, WidgetPreviewState | undefined>;
     }

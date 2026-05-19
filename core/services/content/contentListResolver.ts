@@ -1,4 +1,3 @@
-import { getMediaById } from "../media/mediaService";
 import type { ContentRouteSetting } from "../settings/settingsService";
 import { listEntries } from "./entryService";
 import { POST_CONTENT_TYPE_SLUG } from "./postsService";
@@ -29,6 +28,13 @@ import {
   isPostContentTypeSlug,
   resolvePostRuntimeExcerpt,
 } from "../posts/runtime/postBlockRuntimeMapper";
+import { getMediaById } from "../media/mediaService";
+import {
+  readMediaCandidate,
+  resolveContentItemImage,
+  type ContentMediaCandidate,
+  type ContentMediaLookup,
+} from "./contentMediaResolver";
 
 type ListEntriesRow = Awaited<ReturnType<typeof listEntries>>[number];
 export type ContentListResolverEntry = ListEntriesRow;
@@ -76,21 +82,12 @@ const defaultListingRuntimeDeps: ContentListListingRuntimeDeps = {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-const isLikelyUrl = (value: string) =>
-  value.startsWith("http://") || value.startsWith("https://") || value.startsWith("/");
-
 const sanitizeHref = (value: string) =>
   value.startsWith("/") || value.startsWith("http://") || value.startsWith("https://")
     ? value
     : "#";
 
 const normalizeText = (value: string | undefined) => (value ?? "").trim().toLowerCase();
-
-const trimToOptional = (value: string | undefined) => {
-  if (!value) return undefined;
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : undefined;
-};
 
 const resolveLegacyContentListPageKey = (blockId?: string) => {
   const normalizedBlockId = (blockId ?? "content-list").trim() || "content-list";
@@ -187,55 +184,6 @@ const resolveExcerpt = (entry: ListEntriesRow) => {
   return undefined;
 };
 
-type MediaCandidate = {
-  url?: string;
-  mediaId?: string;
-  alt?: string;
-};
-
-const readMediaCandidate = (value: unknown): MediaCandidate | null => {
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    if (!trimmed) return null;
-    return isLikelyUrl(trimmed) ? { url: trimmed } : { mediaId: trimmed };
-  }
-  if (Array.isArray(value)) {
-    for (const candidate of value) {
-      const resolved = readMediaCandidate(candidate);
-      if (resolved) return resolved;
-    }
-    return null;
-  }
-  if (!isRecord(value)) return null;
-
-  const urlCandidate =
-    typeof value.url === "string"
-      ? trimToOptional(value.url)
-      : typeof value.src === "string"
-        ? trimToOptional(value.src)
-        : undefined;
-  const mediaId =
-    typeof value.id === "string"
-      ? trimToOptional(value.id)
-      : typeof value.assetId === "string"
-        ? trimToOptional(value.assetId)
-        : undefined;
-  const alt =
-    typeof value.alt === "string"
-      ? trimToOptional(value.alt)
-      : typeof value.title === "string"
-        ? trimToOptional(value.title)
-        : undefined;
-
-  if (urlCandidate && isLikelyUrl(urlCandidate)) {
-    return { url: urlCandidate, mediaId, alt };
-  }
-  if (mediaId) {
-    return { mediaId, alt };
-  }
-  return null;
-};
-
 const imageFieldCandidates = [
   "image",
   "imageUrl",
@@ -245,7 +193,7 @@ const imageFieldCandidates = [
   "thumbnail",
 ] as const;
 
-const resolveImageCandidateFromEntry = (entry: ListEntriesRow): MediaCandidate | null => {
+const resolveImageCandidateFromEntry = (entry: ListEntriesRow): ContentMediaCandidate | null => {
   const data = isRecord(entry.data) ? entry.data : {};
   for (const key of imageFieldCandidates) {
     const resolved = readMediaCandidate(data[key]);
@@ -582,59 +530,25 @@ const normalizeListingQueryForRuntime = (query: ListingQuery, preview: boolean):
   };
 };
 
-async function resolveItemImage(
-  candidate: MediaCandidate | null,
-  cache: Map<string, { url: string; alt?: string } | null>
-) {
-  if (!candidate)
-    return { src: undefined as string | undefined, alt: undefined as string | undefined };
-  if (candidate.url) {
-    return { src: candidate.url, alt: candidate.alt };
-  }
-  const mediaId = candidate.mediaId;
-  if (!mediaId) return { src: undefined, alt: candidate.alt };
-
-  if (cache.has(mediaId)) {
-    const cached = cache.get(mediaId);
-    return {
-      src: cached?.url,
-      alt: candidate.alt ?? cached?.alt,
-    };
-  }
-
-  try {
-    const media = await getMediaById(mediaId);
-    if (!media?.url) {
-      cache.set(mediaId, null);
-      return { src: undefined, alt: candidate.alt };
-    }
-    cache.set(mediaId, {
-      url: media.url,
-      alt: media.alt ?? media.title ?? undefined,
-    });
-    return {
-      src: media.url,
-      alt: candidate.alt ?? media.alt ?? media.title ?? undefined,
-    };
-  } catch {
-    cache.set(mediaId, null);
-    return { src: undefined, alt: candidate.alt };
-  }
-}
-
 export async function mapEntriesToContentListItems(
   entries: ListEntriesRow[],
   options: {
     detailPathPattern: string;
     showImage: boolean;
-  }
+  },
+  deps: {
+    getMediaById?: (id: string) => Promise<ContentMediaLookup>;
+  } = {}
 ): Promise<ContentListRuntimeItem[]> {
   const mediaCache = new Map<string, { url: string; alt?: string } | null>();
+  const runtimeGetMediaById = deps.getMediaById ?? getMediaById;
 
   return Promise.all(
     entries.map(async (entry) => {
       const imageCandidate = options.showImage ? resolveImageCandidateFromEntry(entry) : null;
-      const resolvedImage = await resolveItemImage(imageCandidate, mediaCache);
+      const resolvedImage = await resolveContentItemImage(imageCandidate, mediaCache, {
+        getMediaById: runtimeGetMediaById,
+      });
       return {
         id: entry.id,
         title: entry.title,
@@ -727,7 +641,9 @@ export async function mapListingRowsToContentListItems(
       const imageCandidate = options.showImage
         ? resolveImageCandidateFromListingRow(row, bindingIndex)
         : null;
-      const resolvedImage = await resolveItemImage(imageCandidate, mediaCache);
+      const resolvedImage = await resolveContentItemImage(imageCandidate, mediaCache, {
+        getMediaById,
+      });
 
       return {
         id: id ?? `listing-item-${index + 1}`,

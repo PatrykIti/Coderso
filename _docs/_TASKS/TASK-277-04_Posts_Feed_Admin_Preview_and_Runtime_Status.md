@@ -6,7 +6,7 @@
 **Category:** Widgets + Posts Feed + Admin Preview + Runtime Data
 **Estimated Effort:** Large
 **Dependencies:** TASK-277, TASK-277-01, TASK-277-02, TASK-277-03
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 

@@ -1,0 +1,124 @@
+# TASK-322: Admin Session and CSRF Expiry Resilience for Long-Lived Editors
+
+# FileName: TASK-322_Admin_Session_and_CSRF_Expiry_Resilience_for_Long_Lived_Editors.md
+
+**Priority:** High
+**Category:** Admin UI + Auth + API Reliability
+**Estimated Effort:** Very Large
+**Dependencies:** TASK-277
+**Status:** To Do
+
+---
+
+## Overview
+
+Repair the shared admin session-expiry and CSRF-expiry experience for long-lived
+editing flows.
+
+The Posts Feed report exposed the problem through `GET /api/posts` and save /
+publish retries, but the root issue is broader than one widget. This task must
+own shared refresh/re-auth/unsaved-state behavior for page and post editors
+instead of adding widget-local workarounds.
+
+## Source Findings
+
+- Posts Feed report `BUG-06` / `BUG-09` show expired session and picker 401
+  failures during editor work:
+  `_docs/PLAYWRIGHT/REPORT_POSTS_FEED_WIDGET.md:155-160,176-180,289,298,346`.
+- The shared admin API client currently refreshes only CSRF-specific 403 flows:
+  `core/admin/services/apiClient.ts:30-167`.
+- Current widget editors receive raw `ApiClientError` text with no shared
+  expired-session recovery surface:
+  `core/admin/ui/widgets/editors/PostsFeedEditors.tsx:142-177,300-301`.
+- Long-lived editor shells already own save/publish flows and dirty-state
+  protection:
+  `core/admin/ui/pages/PageEditor.tsx`,
+  `tests/vitest/ui/page-editor-shell-wave.test.tsx`.
+
+## Sub-Tasks
+
+- None. This is an execution task.
+
+## Files to Change
+
+| File | Required change |
+|---|---|
+| `core/admin/services/apiClient.ts` | Define the shared expired-session / auth-failure detection and bounded retry-or-reset behavior for admin API requests. |
+| `core/admin/services/authClient.ts` | Reuse existing auth/session routes if a lightweight session probe or refresh handshake is required. |
+| `core/admin/ui/pages/PageEditor.tsx` | Surface actionable expired-session feedback that preserves dirty-state awareness instead of failing silently. |
+| `core/admin/ui/widgets/editors/PostsFeedEditors.tsx` | Consume the shared expired-session contract for local picker messaging instead of inventing a one-off workaround. |
+| `tests/vitest/ui/page-editor-shell-wave.test.tsx` | Cover expired-session save/publish behavior and bounded user feedback in the page editor shell. |
+| `tests/vitest/ui/posts-feed-editor-wave.test.tsx` | Cover shared expired-session picker messaging once the shared contract lands. |
+| `_docs/SECURITY_SPEC.md` | Update only if the auth/session/CSRF recovery policy changes materially. |
+| `_docs/PLAYWRIGHT/REPORT_POSTS_FEED_WIDGET.md` | Mark `BUG-06` and the root-cause portion of `BUG-09` fixed by TASK-322 once implemented. |
+
+## Implementation Pseudocode
+
+```ts
+function isExpiredAdminSession(error: ApiClientError) {
+  return error.status === 401 || error.code === "session_expired";
+}
+
+async function apiRequestWithAdminSessionHandling<T>(...) {
+  try {
+    return await apiRequest<T>(...);
+  } catch (error) {
+    if (isExpiredAdminSession(error)) {
+      notifyExpiredSession();
+      throw error;
+    }
+    throw error;
+  }
+}
+```
+
+Error handling:
+
+- Do not silently discard unsaved changes when the session expires.
+- Shared feedback must differentiate between recoverable CSRF refresh, expired
+  auth session, and generic network failure.
+- Widget-level consumers may add local retry buttons, but only on top of the
+  shared session-expiry contract.
+
+## Security Contract
+
+This task changes existing internal admin auth/session behavior only.
+
+- Endpoint visibility: existing internal admin auth/session endpoints only.
+- Auth model: authenticated admin session.
+- RBAC: unchanged.
+- CSRF: preserve existing CSRF protection; do not weaken token requirements.
+- Rate-limit bucket: unchanged unless a new session probe endpoint reuses an
+  existing internal bucket.
+- Reject-unknown validation: unchanged unless auth/session payloads are expanded.
+- Anti-abuse: no ambient auto-login loops, no privileged state in browser
+  storage, and no widget-local auth bypasses.
+
+## Testing Requirements
+
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run gates:coderso`
+- `bun run lint`
+- `bun run test:bun`
+- `bun run test:vitest`
+- `bun run test:vitest -- tests/vitest/ui/page-editor-shell-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/posts-feed-editor-wave.test.tsx`
+- `bun run scan:security:strict`
+- `bun run precommit`
+
+## Documentation Updates Required
+
+- `_docs/SECURITY_SPEC.md` only if the shared recovery policy changes materially
+- `_docs/PLAYWRIGHT/REPORT_POSTS_FEED_WIDGET.md`
+- `_docs/_TASKS/TASK-322_Admin_Session_and_CSRF_Expiry_Resilience_for_Long_Lived_Editors.md`
+
+## Acceptance Criteria
+
+- Expired admin sessions are surfaced through a shared contract instead of raw
+  widget-local errors.
+- Long-lived editors preserve dirty-state awareness when auth/session expiry
+  interrupts save or publish flows.
+- CSRF refresh remains bounded and distinct from full auth-session expiry.
+- Posts Feed picker UX can rely on the shared platform behavior instead of a
+  one-off auth workaround.

@@ -77,6 +77,28 @@ test("mapEntriesToContentListItems keeps explicit excerpt priority", async () =>
   expect(item?.excerpt).toBe("Explicit excerpt wins.");
 });
 
+test("mapEntriesToContentListItems still resolves media ids after helper extraction", async () => {
+  const [item] = await mapEntriesToContentListItems(
+    [
+      createEntry({
+        featuredImage: "media-1",
+      }),
+    ],
+    { detailPathPattern: "/blog/:slug", showImage: true },
+    {
+      getMediaById: async (id) => ({
+        id,
+        url: "/media/card.jpg",
+        alt: "Card alt",
+        title: "Card title",
+      }),
+    }
+  );
+
+  expect(item?.imageSrc).toBe("/media/card.jpg");
+  expect(item?.imageAlt).toBe("Card alt");
+});
+
 test("resolveContentListRuntimeNavigationMeta preserves query state for shared listing pages", () => {
   const pageKey = buildListingRuntimeParamName("query-1", listingRuntimeTokens.page);
   const meta = resolveContentListRuntimeNavigationMeta({
