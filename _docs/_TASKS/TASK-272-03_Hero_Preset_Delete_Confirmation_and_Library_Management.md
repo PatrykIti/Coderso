@@ -6,7 +6,7 @@
 **Category:** Widgets + Hero + Admin UI + User Settings
 **Estimated Effort:** Large
 **Dependencies:** TASK-272
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -133,6 +133,15 @@ use.
 - `_docs/PLAYWRIGHT/REPORT_HERO_WIDGET.md`
 - `_docs/_TASKS/TASK-272-03_Hero_Preset_Delete_Confirmation_and_Library_Management.md`
 - `_docs/_TASKS/README.md` on status changes
+
+## Final Evidence
+
+- Closed on 2026-05-19 with confirmed preset deletion, search/sort,
+  import/export, visible normalization warnings, and single-CTA preset
+  round-trips that no longer backfill a default secondary CTA.
+- Focused proof lives in `tests/vitest/ui/hero-editor-wave.test.tsx`,
+  `tests/unit/settings/userSettingsService.test.ts`,
+  `tests/vitest/admin/userSettingsClient.test.ts`, and TASK-272-09.
 
 ## Acceptance Criteria
 

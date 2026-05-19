@@ -6,7 +6,7 @@
 **Category:** Widgets + Hero + Visual Design + Accessibility
 **Estimated Effort:** Large
 **Dependencies:** TASK-272-05, TASK-299, TASK-305, TASK-310-02
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -118,6 +118,14 @@ No API routes are added.
 - `_docs/PLAYWRIGHT/REPORT_HERO_WIDGET.md`
 - `_docs/_TASKS/TASK-272-06_Hero_Color_Palettes_and_Contrast_Guidance.md`
 - `_docs/_TASKS/README.md` on status changes
+
+## Final Evidence
+
+- Closed on 2026-05-19 with Hero palette presets plus shared contrast
+  advisories that intentionally fall back to `unknown` for gradients, images,
+  transparent backgrounds, and unresolved tokens.
+- Focused proof lives in `tests/vitest/ui/hero-editor-wave.test.tsx`,
+  `tests/vitest/widgets/heroEditors.test.tsx`, and TASK-272-09.
 
 ## Acceptance Criteria
 

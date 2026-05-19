@@ -26,6 +26,7 @@ Project Change Log.
 | No. | Date | Title | Type |
 |-----|------|-------|------|
 | 868 | 2026-05-19 | TASK-271 Grid Columns widget follow-ups | CMS Widgets/Admin UI/Runtime/QA |
+| 869 | 2026-05-19 | TASK-272 Hero widget follow-ups | CMS Widgets/Admin UI/Runtime/QA |
 | 867 | 2026-05-19 | TASK-311 forms field model wave | CMS Forms/Runtime/Admin UI |
 | 866 | 2026-05-19 | TASK-310 shared color adoption wave | CMS Widgets/Admin UI |
 | 865 | 2026-05-19 | TASK-308 and TASK-309 footer owner wave | CMS Footer/Admin UI/Runtime |

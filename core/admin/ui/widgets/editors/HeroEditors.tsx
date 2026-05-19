@@ -30,18 +30,26 @@ import {
 } from "@/services/userSettingsClient";
 import { MediaPicker } from "@/ui/media/MediaPicker";
 
-import type { HeroBadgePlacement, HeroBadgeTone, HeroData } from "../../../../widgets/core/hero";
-import { normalizeHeroHref } from "../../../../widgets/core/hero";
+import type {
+  HeroBadgePlacement,
+  HeroBadgeTone,
+  HeroBackgroundMedia,
+  HeroData,
+  HeroMedia,
+} from "../../../../widgets/core/hero";
+import { normalizeHeroData, normalizeHeroHref } from "../../../../widgets/core/hero";
 import type { WidgetEditorProps } from "../../../../widgets/types";
 import {
+  ColorContrastNotice,
   ClearableFieldHeader,
   hasClearableFieldValue,
+  resolveColorContrastAdvisory,
   resolveColorPickerValue,
   SharedColorFieldInputs,
 } from "./ClearableFields";
 import { WidgetControlRow, WidgetEditorSection } from "./WidgetEditorControls";
 
-type HeroVariantId = "centered" | "split" | "media-left";
+type HeroVariantId = "centered" | "split" | "media-left" | "media-center";
 
 const variantOptions: Array<{
   id: HeroVariantId;
@@ -63,7 +71,17 @@ const variantOptions: Array<{
     label: "Media Left",
     description: "Media left, text right.",
   },
+  {
+    id: "media-center",
+    label: "Media Center",
+    description: "Centered copy with inline showcase media below.",
+  },
 ];
+
+const heroCtaPlaceholderExamples = {
+  primary: "/signup",
+  secondary: "/examples",
+} as const;
 
 const goalOptions = [
   { id: "lead", label: "Lead generation" },
@@ -128,8 +146,14 @@ type HeroBodySize = NonNullable<HeroStyle["bodySize"]>;
 type HeroButtonSize = NonNullable<HeroStyle["primaryButtonSize"]>;
 type HeroBorderWidth = NonNullable<HeroStyle["borderWidth"]>;
 type HeroRadius = NonNullable<HeroStyle["borderRadius"]>;
+type HeroShadow = NonNullable<HeroStyle["cardShadow"]>;
+type HeroFont = NonNullable<HeroStyle["fontFamily"]>;
+type HeroWeight = NonNullable<HeroStyle["headlineWeight"]>;
+type HeroMotion = NonNullable<HeroStyle["motion"]>;
+type HeroHeight = NonNullable<NonNullable<HeroData["layout"]>["height"]>;
+type HeroBleed = NonNullable<NonNullable<HeroData["layout"]>["bleed"]>;
 type HeroBackground = NonNullable<HeroData["background"]>;
-type HeroBackgroundMedia = NonNullable<HeroBackground["media"]>;
+type HeroSocialProof = NonNullable<HeroData["socialProof"]>;
 
 const badgeToneOptions: Array<{ id: HeroBadgeTone; label: string }> = [
   { id: "neutral", label: "Neutral" },
@@ -159,6 +183,12 @@ const bodySizeOptions = ["none", "sm", "base", "lg", "xl"] as const;
 const buttonSizeOptions = ["none", "sm", "md", "lg"] as const;
 const borderWidthOptions = ["0", "1", "2", "3"] as const;
 const radiusOptions = ["none", "lg", "xl", "2xl", "3xl"] as const;
+const heightOptions = ["auto", "large", "screen"] as const;
+const bleedOptions = ["contained", "full-bleed"] as const;
+const shadowOptions = ["none", "soft", "medium", "strong"] as const;
+const fontFamilyOptions = ["inherit", "sans", "serif", "mono"] as const;
+const textWeightOptions = ["normal", "medium", "semibold", "bold"] as const;
+const motionOptions = ["none", "fade-in", "slide-up"] as const;
 const formatTokenOptionLabel = (option: string) => (option === "none" ? "None" : option);
 const heroPresetLimit = 24;
 const linearGradientPattern =
@@ -166,15 +196,115 @@ const linearGradientPattern =
 const defaultGradientStart = "#0f172a";
 const defaultGradientEnd = "#475569";
 const defaultGradientAngle = 135;
+const heroSocialProofAvatarLimit = 5;
+const imageUrlPattern = /\.(?:avif|gif|jpe?g|png|svg|webp)(?:[?#].*)?$/i;
+const videoUrlPattern = /\.(?:m4v|mov|mp4|ogg|webm)(?:[?#].*)?$/i;
+const heroPalettePresets = [
+  {
+    id: "light",
+    label: "Light",
+    background: { color: "#ffffff" },
+    style: {
+      textColor: "#111827",
+      subheadColor: "#1f2937",
+      bodyColor: "#374151",
+      borderColor: "#d1d5db",
+      primaryButtonBg: "#2563eb",
+      primaryButtonText: "#ffffff",
+      secondaryButtonBg: "#ffffff",
+      secondaryButtonText: "#111827",
+      secondaryButtonBorder: "#d1d5db",
+    },
+  },
+  {
+    id: "dark",
+    label: "Dark",
+    background: { color: "#0f172a" },
+    style: {
+      textColor: "#f8fafc",
+      subheadColor: "#e2e8f0",
+      bodyColor: "#cbd5e1",
+      borderColor: "#1e293b",
+      primaryButtonBg: "#38bdf8",
+      primaryButtonText: "#082f49",
+      secondaryButtonBg: "#0f172a",
+      secondaryButtonText: "#f8fafc",
+      secondaryButtonBorder: "#334155",
+    },
+  },
+  {
+    id: "brand",
+    label: "Brand",
+    background: { color: "#eff6ff" },
+    style: {
+      textColor: "#1e3a8a",
+      subheadColor: "#1d4ed8",
+      bodyColor: "#1e40af",
+      borderColor: "#93c5fd",
+      primaryButtonBg: "#1d4ed8",
+      primaryButtonText: "#eff6ff",
+      secondaryButtonBg: "#dbeafe",
+      secondaryButtonText: "#1e3a8a",
+      secondaryButtonBorder: "#60a5fa",
+    },
+  },
+] as const;
+
+type HeroMediaEditorValue = Partial<HeroMedia> & Partial<HeroBackgroundMedia>;
+
+const isCompatibleExternalMediaUrl = (value: string | undefined, mediaType: HeroMediaType) => {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    return false;
+  }
+  const normalized = value.trim();
+  if (mediaType === "image") {
+    return imageUrlPattern.test(normalized);
+  }
+  if (mediaType === "video") {
+    return videoUrlPattern.test(normalized);
+  }
+  return false;
+};
+
+const resolveMediaTypeTransition = (
+  current: HeroMediaEditorValue,
+  nextType: HeroMediaType
+): HeroMediaEditorValue => {
+  if (nextType === "none") {
+    return {
+      type: "none",
+      source: "external",
+    };
+  }
+
+  const source = current.source ?? "external";
+  const keepExternalSource =
+    source === "external" && isCompatibleExternalMediaUrl(current.src, nextType);
+
+  return {
+    type: nextType,
+    source,
+    assetId: keepExternalSource ? current.assetId : undefined,
+    src: keepExternalSource ? current.src : undefined,
+    alt: nextType === "image" ? current.alt : undefined,
+    posterSource: nextType === "video" ? (current.posterSource ?? "library") : undefined,
+    posterAssetId: nextType === "video" && keepExternalSource ? current.posterAssetId : undefined,
+    posterSrc: nextType === "video" && keepExternalSource ? current.posterSrc : undefined,
+    title: nextType === "video" && keepExternalSource ? current.title : undefined,
+    description: nextType === "video" && keepExternalSource ? current.description : undefined,
+    ratio: current.ratio,
+    overlay: current.overlay,
+  };
+};
 
 function HeroMediaSourceFields({
   media,
   mediaType,
   onChange,
 }: {
-  media: Partial<NonNullable<HeroData["media"]>>;
+  media: HeroMediaEditorValue;
   mediaType: HeroMediaType;
-  onChange: (patch: Partial<NonNullable<HeroData["media"]>>) => void;
+  onChange: (patch: HeroMediaEditorValue) => void;
 }) {
   const [lookupError, setLookupError] = useState<string | null>(null);
   const requestIdRef = useRef(0);
@@ -211,10 +341,19 @@ function HeroMediaSourceFields({
           assetId,
           source: "library",
           src: match.url,
-          alt:
-            media.alt && media.alt.trim().length > 0
-              ? media.alt
-              : (match.alt ?? match.title ?? match.originalName ?? ""),
+          ...(mediaType === "image"
+            ? {
+                alt:
+                  media.alt && media.alt.trim().length > 0
+                    ? media.alt
+                    : (match.alt ?? match.title ?? match.originalName ?? ""),
+              }
+            : {
+                title:
+                  media.title && media.title.trim().length > 0
+                    ? media.title
+                    : (match.title ?? match.originalName ?? ""),
+              }),
         });
       } else {
         setLookupError("Selected media could not be resolved.");
@@ -276,6 +415,111 @@ function HeroMediaSourceFields({
   );
 }
 
+function HeroPosterFields({
+  media,
+  onChange,
+  onClear,
+}: {
+  media: HeroMediaEditorValue;
+  onChange: (patch: HeroMediaEditorValue) => void;
+  onClear: () => void;
+}) {
+  const [lookupError, setLookupError] = useState<string | null>(null);
+  const requestIdRef = useRef(0);
+  const posterSource: HeroMediaSource = media.posterSource ?? "library";
+
+  const handleSourceChange = (next: HeroMediaSource) => {
+    requestIdRef.current += 1;
+    setLookupError(null);
+    onChange({
+      posterSource: next,
+      posterAssetId: undefined,
+      posterSrc: undefined,
+    });
+  };
+
+  const handlePosterAssetChange = async (value: unknown) => {
+    const assetId = typeof value === "string" ? value : null;
+    requestIdRef.current += 1;
+    const requestId = requestIdRef.current;
+    if (!assetId) {
+      onChange({ posterAssetId: undefined, posterSrc: undefined });
+      return;
+    }
+
+    onChange({ posterAssetId: assetId, posterSource: "library" });
+    setLookupError(null);
+    try {
+      const items = await listMediaCached({ force: true });
+      if (requestId !== requestIdRef.current) return;
+      const match = items.find((item) => item.id === assetId);
+      if (match) {
+        onChange({
+          posterAssetId: assetId,
+          posterSource: "library",
+          posterSrc: match.url,
+        });
+      } else {
+        setLookupError("Selected poster image could not be resolved.");
+      }
+    } catch (err) {
+      if (requestId !== requestIdRef.current) return;
+      if (isApiClientError(err)) {
+        setLookupError(err.message);
+      } else {
+        setLookupError("Failed to resolve poster image URL.");
+      }
+    }
+  };
+
+  return (
+    <div className="space-y-3 rounded-md border border-border/70 p-3">
+      <ClearableFieldHeader label="Video poster image" value={media.posterSrc} onClear={onClear} />
+      <div className="space-y-2">
+        <p className="text-sm font-medium">Poster source</p>
+        <Select
+          value={posterSource}
+          onValueChange={(next) => handleSourceChange(next as HeroMediaSource)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select source" />
+          </SelectTrigger>
+          <SelectContent>
+            {mediaSourceOptions.map((option) => (
+              <SelectItem key={option.id} value={option.id}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      {posterSource === "library" ? (
+        <div className="space-y-2">
+          <MediaPicker
+            value={media.posterAssetId ?? null}
+            onChange={(value) => void handlePosterAssetChange(value)}
+            multiple={false}
+            accept={["image/*"]}
+          />
+          {lookupError ? <p className="text-xs text-destructive">{lookupError}</p> : null}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Poster image URL</p>
+          <Input
+            value={media.posterSrc ?? ""}
+            onChange={(event) => onChange({ posterSrc: event.target.value })}
+            placeholder="https://"
+          />
+          {!isValidMediaUrl(media.posterSrc) ? (
+            <p className="text-xs text-destructive">Use a relative path or full URL.</p>
+          ) : null}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function HeroVariantSelect({
   value,
   onChange,
@@ -327,6 +571,18 @@ export function HeroWizardEditor({
         ...value.media,
         ...patch,
       },
+    });
+  const handleMediaTypeChange = (nextType: HeroMediaType) =>
+    update({
+      media: resolveMediaTypeTransition(
+        {
+          type: value.media?.type ?? "none",
+          source: value.media?.source ?? "external",
+          posterSource: value.media?.posterSource ?? "library",
+          ...value.media,
+        },
+        nextType
+      ) as HeroData["media"],
     });
 
   return (
@@ -408,7 +664,7 @@ export function HeroWizardEditor({
           <Input
             value={primary.href}
             onChange={(event) => update({ primaryCta: { ...primary, href: event.target.value } })}
-            placeholder="/start"
+            placeholder={heroCtaPlaceholderExamples.primary}
           />
         </div>
         {ctaMode === "dual" ? (
@@ -434,7 +690,7 @@ export function HeroWizardEditor({
                     secondaryCta: { ...secondary, href: event.target.value },
                   })
                 }
-                placeholder="/learn"
+                placeholder={heroCtaPlaceholderExamples.secondary}
               />
             </div>
           </>
@@ -444,7 +700,7 @@ export function HeroWizardEditor({
         <p className="text-sm font-medium">Media</p>
         <Select
           value={mediaType}
-          onValueChange={(next) => updateMedia({ type: next as HeroMediaType })}
+          onValueChange={(next) => handleMediaTypeChange(next as HeroMediaType)}
         >
           <SelectTrigger>
             <SelectValue placeholder="Select media" />
@@ -468,8 +724,8 @@ export function HeroWizardEditor({
       ) : null}
       {variant === "centered" && mediaType === "video" ? (
         <p className="text-xs text-muted-foreground">
-          Centered layout does not show inline video. Use Media Right or Media Left to display video
-          content.
+          Centered layout does not show inline video. Use Media Right, Media Left, or Media Center
+          to display video content.
         </p>
       ) : null}
     </div>
@@ -507,7 +763,7 @@ const sanitizeHeroPresetList = (value: unknown): HeroPresetSetting[] => {
     const preset: HeroPresetSetting = {
       name,
       variant: candidate.variant,
-      data: candidate.data as Record<string, unknown>,
+      data: cloneHeroData(normalizeHeroData(candidate.data as HeroData)) as Record<string, unknown>,
       updatedAt:
         typeof candidate.updatedAt === "string" && candidate.updatedAt.trim()
           ? candidate.updatedAt
@@ -518,6 +774,188 @@ const sanitizeHeroPresetList = (value: unknown): HeroPresetSetting[] => {
   return Array.from(byName.values()).slice(0, heroPresetLimit);
 };
 
+type HeroPresetImportResult =
+  | { ok: true; presets: HeroPresetSetting[]; warnings: string[] }
+  | { ok: false; error: string };
+
+const buildHeroPresetExportPayload = (presets: HeroPresetSetting[]) =>
+  JSON.stringify(
+    {
+      schemaVersion: 1,
+      exportedAt: new Date().toISOString(),
+      presets,
+    },
+    null,
+    2
+  );
+
+const collectPresetNormalizationPaths = (
+  source: unknown,
+  normalized: unknown,
+  path = ""
+): string[] => {
+  if (Array.isArray(source)) {
+    if (!Array.isArray(normalized)) {
+      return [path || "value"];
+    }
+    const next: string[] = [];
+    for (let index = 0; index < source.length; index += 1) {
+      next.push(
+        ...collectPresetNormalizationPaths(source[index], normalized[index], `${path}[${index}]`)
+      );
+    }
+    return next;
+  }
+
+  if (source && typeof source === "object") {
+    if (!normalized || typeof normalized !== "object" || Array.isArray(normalized)) {
+      return [path || "value"];
+    }
+    const next: string[] = [];
+    for (const [key, value] of Object.entries(source)) {
+      const childPath = path ? `${path}.${key}` : key;
+      if (!(key in (normalized as Record<string, unknown>))) {
+        next.push(childPath);
+        continue;
+      }
+      next.push(
+        ...collectPresetNormalizationPaths(
+          value,
+          (normalized as Record<string, unknown>)[key],
+          childPath
+        )
+      );
+    }
+    return next;
+  }
+
+  return source === normalized ? [] : [path || "value"];
+};
+
+const parseHeroPresetImportText = (
+  value: string,
+  existingPresets: HeroPresetSetting[]
+): HeroPresetImportResult => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return { ok: false, error: "Preset import cannot be empty." };
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(trimmed);
+  } catch {
+    return { ok: false, error: "Preset import must be valid JSON." };
+  }
+
+  const rawPresets = Array.isArray(parsed)
+    ? parsed
+    : parsed &&
+        typeof parsed === "object" &&
+        Array.isArray((parsed as { presets?: unknown[] }).presets)
+      ? (parsed as { presets: unknown[] }).presets
+      : null;
+
+  if (!Array.isArray(rawPresets)) {
+    return { ok: false, error: "Preset import must contain a presets array." };
+  }
+
+  if (rawPresets.length === 0) {
+    return { ok: false, error: "Preset import must include at least one preset." };
+  }
+
+  const seenExisting = new Set(existingPresets.map((preset) => preset.name.toLowerCase()));
+  const seenImported = new Set<string>();
+  const imported: HeroPresetSetting[] = [];
+  const warnings: string[] = [];
+
+  for (const entry of rawPresets) {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      return { ok: false, error: "Every imported preset must be an object." };
+    }
+    const candidate = entry as Partial<HeroPresetSetting>;
+    if (typeof candidate.name !== "string" || candidate.name.trim().length === 0) {
+      return { ok: false, error: "Every imported preset needs a name." };
+    }
+    if (typeof candidate.variant !== "string" || !isHeroVariant(candidate.variant)) {
+      return { ok: false, error: `Preset "${candidate.name.trim()}" has an invalid Hero variant.` };
+    }
+    if (!candidate.data || typeof candidate.data !== "object" || Array.isArray(candidate.data)) {
+      return { ok: false, error: `Preset "${candidate.name.trim()}" has invalid data.` };
+    }
+
+    const normalizedName = candidate.name.trim();
+    const dedupeKey = normalizedName.toLowerCase();
+    if (seenImported.has(dedupeKey) || seenExisting.has(dedupeKey)) {
+      return {
+        ok: false,
+        error: `Preset name "${normalizedName}" already exists. Remove duplicates before importing.`,
+      };
+    }
+
+    seenImported.add(dedupeKey);
+    const normalizedData = cloneHeroData(normalizeHeroData(candidate.data as HeroData)) as Record<
+      string,
+      unknown
+    >;
+    const normalizedPaths = collectPresetNormalizationPaths(candidate.data, normalizedData);
+    if (normalizedPaths.length > 0) {
+      warnings.push(
+        `Preset "${normalizedName}" normalized fields: ${normalizedPaths
+          .slice(0, 4)
+          .join(", ")}${normalizedPaths.length > 4 ? ", ..." : ""}.`
+      );
+    }
+    imported.push({
+      name: normalizedName,
+      variant: candidate.variant,
+      data: normalizedData,
+      updatedAt:
+        typeof candidate.updatedAt === "string" && candidate.updatedAt.trim()
+          ? candidate.updatedAt
+          : new Date().toISOString(),
+    });
+  }
+
+  if (existingPresets.length + imported.length > heroPresetLimit) {
+    return {
+      ok: false,
+      error: `Import would exceed the ${heroPresetLimit} preset limit.`,
+    };
+  }
+
+  return { ok: true, presets: [...existingPresets, ...imported], warnings };
+};
+
+const sortHeroPresets = (presets: HeroPresetSetting[], mode: "updated-desc" | "name-asc") => {
+  const next = [...presets];
+  if (mode === "name-asc") {
+    next.sort((left, right) => left.name.localeCompare(right.name));
+    return next;
+  }
+  next.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+  return next;
+};
+
+const applyHeroPalette = (
+  value: HeroData,
+  paletteId: (typeof heroPalettePresets)[number]["id"]
+): HeroData => {
+  const preset = heroPalettePresets.find((entry) => entry.id === paletteId);
+  if (!preset) return value;
+  return {
+    ...value,
+    background: {
+      ...value.background,
+      ...preset.background,
+    },
+    style: {
+      ...value.style,
+      ...preset.style,
+    },
+  };
+};
+
 const resolveBackgroundMedia = (background: HeroData["background"]): HeroBackgroundMedia => {
   const media = background?.media;
   const legacyImage = background?.image;
@@ -526,8 +964,44 @@ const resolveBackgroundMedia = (background: HeroData["background"]): HeroBackgro
     source: media?.source ?? "external",
     assetId: media?.assetId,
     src: media?.src ?? legacyImage,
+    posterSource: media?.posterSource ?? "library",
+    posterAssetId: media?.posterAssetId,
+    posterSrc: media?.posterSrc,
+    title: media?.title,
+    description: media?.description,
     overlay: media?.overlay,
   };
+};
+
+const resolveHeroSolidBackgroundForContrast = (
+  background: HeroData["background"] | undefined
+): string | undefined => {
+  const media = resolveBackgroundMedia(background);
+  if (hasClearableFieldValue(background?.gradient) || media.type !== "none") {
+    return undefined;
+  }
+  return typeof background?.color === "string" && background.color.trim().length > 0
+    ? background.color
+    : undefined;
+};
+
+const resolveHeroContrastSurfaceBackground = ({
+  authoredBackground,
+  defaultBackground,
+  heroBackground,
+}: {
+  authoredBackground?: string;
+  defaultBackground?: string;
+  heroBackground?: string;
+}) => {
+  const normalized = typeof authoredBackground === "string" ? authoredBackground.trim() : undefined;
+  if (normalized && normalized !== "transparent") {
+    return normalized;
+  }
+  if (normalized === "transparent") {
+    return heroBackground;
+  }
+  return defaultBackground ?? heroBackground;
 };
 
 function EditorSection({
@@ -723,14 +1197,53 @@ export function HeroVisualEditor({
     tone: value.badge?.tone ?? "neutral",
     placement: value.badge?.placement ?? "above-headline",
   };
+  const socialProof = {
+    enabled: value.socialProof?.enabled ?? false,
+    rating: value.socialProof?.rating ?? "",
+    reviewCount: value.socialProof?.reviewCount ?? "",
+    label: value.socialProof?.label ?? "",
+    avatars: value.socialProof?.avatars ?? [],
+  };
   const [presets, setPresets] = useState<HeroPresetSetting[]>([]);
   const [presetsLoading, setPresetsLoading] = useState(true);
   const [presetsError, setPresetsError] = useState<string | null>(null);
+  const [presetNotice, setPresetNotice] = useState<string | null>(null);
   const [isPresetDialogOpen, setIsPresetDialogOpen] = useState(false);
+  const [isPresetImportDialogOpen, setIsPresetImportDialogOpen] = useState(false);
+  const [isPresetExportDialogOpen, setIsPresetExportDialogOpen] = useState(false);
   const [presetName, setPresetName] = useState("");
+  const [presetSearch, setPresetSearch] = useState("");
+  const [presetSort, setPresetSort] = useState<"updated-desc" | "name-asc">("updated-desc");
+  const [presetImportValue, setPresetImportValue] = useState("");
+  const [pendingDeletePreset, setPendingDeletePreset] = useState<HeroPresetSetting | null>(null);
   const [isPresetSaving, setIsPresetSaving] = useState(false);
 
   const selectedVariant = isHeroVariant(variant) ? variant : "centered";
+  const heroSolidBackground = resolveHeroSolidBackgroundForContrast(value.background);
+  const hasStyleObject = value.style !== undefined;
+  const headlineContrast = resolveColorContrastAdvisory({
+    foreground: style.textColor,
+    background: heroSolidBackground,
+  });
+  const bodyContrast = resolveColorContrastAdvisory({
+    foreground: style.bodyColor,
+    background: heroSolidBackground,
+  });
+  const primaryButtonContrast = resolveColorContrastAdvisory({
+    foreground: style.primaryButtonText,
+    background: resolveHeroContrastSurfaceBackground({
+      authoredBackground: style.primaryButtonBg,
+      defaultBackground: hasStyleObject ? undefined : "var(--color-primary)",
+      heroBackground: heroSolidBackground,
+    }),
+  });
+  const secondaryButtonContrast = resolveColorContrastAdvisory({
+    foreground: style.secondaryButtonText,
+    background: resolveHeroContrastSurfaceBackground({
+      authoredBackground: style.secondaryButtonBg,
+      heroBackground: heroSolidBackground,
+    }),
+  });
   const updateLayout = (patch: Partial<HeroData["layout"]>) =>
     update({ layout: { ...value.layout, ...patch } });
   const updateBackground = (patch: Partial<HeroData["background"]>) =>
@@ -754,6 +1267,7 @@ export function HeroVisualEditor({
     const currentMedia = {
       type: value.media?.type ?? "none",
       source: value.media?.source ?? "external",
+      posterSource: value.media?.posterSource ?? "library",
       ...value.media,
     };
     const nextMedia: Partial<NonNullable<HeroData["media"]>> = { ...currentMedia };
@@ -768,6 +1282,11 @@ export function HeroVisualEditor({
               assetId: nextMedia.assetId,
               src: nextMedia.src,
               alt: nextMedia.alt,
+              posterSource: nextMedia.posterSource,
+              posterAssetId: nextMedia.posterAssetId,
+              posterSrc: nextMedia.posterSrc,
+              title: nextMedia.title,
+              description: nextMedia.description,
               ratio: nextMedia.ratio,
               overlay: nextMedia.overlay,
             },
@@ -794,6 +1313,17 @@ export function HeroVisualEditor({
         ...patch,
       },
     });
+  const updateSocialProof = (patch: Partial<HeroSocialProof>) =>
+    update({
+      socialProof: {
+        enabled: value.socialProof?.enabled ?? false,
+        rating: value.socialProof?.rating ?? "",
+        reviewCount: value.socialProof?.reviewCount ?? "",
+        label: value.socialProof?.label ?? "",
+        avatars: value.socialProof?.avatars ?? [],
+        ...patch,
+      },
+    });
   const updateSecondary = (patch: Partial<HeroData["secondaryCta"]>) =>
     update({
       secondaryCta: {
@@ -812,6 +1342,18 @@ export function HeroVisualEditor({
         ...patch,
       },
     });
+  const handleMediaTypeChange = (nextType: HeroMediaType) =>
+    update({
+      media: resolveMediaTypeTransition(
+        {
+          type: value.media?.type ?? "none",
+          source: value.media?.source ?? "external",
+          posterSource: value.media?.posterSource ?? "library",
+          ...value.media,
+        },
+        nextType
+      ) as HeroData["media"],
+    });
   const updateBackgroundMedia = (
     patch: Partial<NonNullable<HeroData["media"]> & HeroBackgroundMedia>
   ) => {
@@ -828,6 +1370,11 @@ export function HeroVisualEditor({
             source: next.source ?? "external",
             assetId: next.assetId,
             src: next.src,
+            posterSource: next.posterSource,
+            posterAssetId: next.posterAssetId,
+            posterSrc: next.posterSrc,
+            title: next.title,
+            description: next.description,
             overlay: next.overlay,
           };
     updateBackground({
@@ -835,6 +1382,8 @@ export function HeroVisualEditor({
       image: normalized.type === "image" ? normalized.src : undefined,
     });
   };
+  const handleBackgroundMediaTypeChange = (nextType: HeroMediaType) =>
+    updateBackgroundMedia(resolveMediaTypeTransition(backgroundMedia, nextType));
   const clearBackgroundMediaField = (key: keyof HeroBackgroundMedia) => {
     const nextBackground = value.background ?? {};
     const nextMedia = { ...(nextBackground.media ?? backgroundMedia) };
@@ -844,6 +1393,34 @@ export function HeroVisualEditor({
       image: key === "src" ? undefined : nextBackground.image,
     });
   };
+  const updateSocialProofAvatar = (
+    index: number,
+    patch: Partial<NonNullable<HeroSocialProof["avatars"]>[number]>
+  ) => {
+    const nextAvatars = Array.from({ length: heroSocialProofAvatarLimit }, (_, avatarIndex) => ({
+      src: socialProof.avatars[avatarIndex]?.src ?? "",
+      alt: socialProof.avatars[avatarIndex]?.alt ?? "",
+    }));
+    nextAvatars[index] = {
+      ...nextAvatars[index],
+      ...patch,
+    };
+    while (
+      nextAvatars.length > 0 &&
+      !nextAvatars[nextAvatars.length - 1]?.src.trim() &&
+      !nextAvatars[nextAvatars.length - 1]?.alt.trim()
+    ) {
+      nextAvatars.pop();
+    }
+    updateSocialProof({ avatars: nextAvatars });
+  };
+  const visiblePresets = sortHeroPresets(
+    presets.filter((preset) =>
+      preset.name.toLowerCase().includes(presetSearch.trim().toLowerCase())
+    ),
+    presetSort
+  );
+  const presetExportPayload = buildHeroPresetExportPayload(presets);
 
   useEffect(() => {
     let active = true;
@@ -851,6 +1428,7 @@ export function HeroVisualEditor({
       .then((response) => {
         if (!active) return;
         setPresets(sanitizeHeroPresetList(response.value));
+        setPresetsError(null);
       })
       .catch(() => {
         if (!active) return;
@@ -871,6 +1449,7 @@ export function HeroVisualEditor({
       await setUserSetting("widgets.hero.presets", next);
       setPresets(next);
       setPresetsError(null);
+      setPresetNotice(null);
       return true;
     } catch {
       setPresetsError("Failed to save presets.");
@@ -882,6 +1461,7 @@ export function HeroVisualEditor({
 
   const handleCreatePreset = async () => {
     const normalizedName = presetName.trim();
+    setPresetNotice(null);
     if (!normalizedName) {
       setPresetsError("Preset name is required.");
       return;
@@ -897,7 +1477,7 @@ export function HeroVisualEditor({
     const nextPreset: HeroPresetSetting = {
       name: normalizedName,
       variant: selectedVariant,
-      data: cloneHeroData(value) as Record<string, unknown>,
+      data: cloneHeroData(normalizeHeroData(value)) as Record<string, unknown>,
       updatedAt: new Date().toISOString(),
     };
     const saved = await persistPresets([...presets, nextPreset]);
@@ -908,7 +1488,7 @@ export function HeroVisualEditor({
 
   const handleApplyPreset = (preset: HeroPresetSetting) => {
     onVariantChange?.(preset.variant);
-    onChange({ ...value, ...(cloneHeroData(preset.data as HeroData) as HeroData) });
+    onChange(cloneHeroData(preset.data as HeroData) as HeroData);
   };
 
   const handleUpdatePreset = async (presetNameToUpdate: string) => {
@@ -917,7 +1497,7 @@ export function HeroVisualEditor({
         ? {
             ...entry,
             variant: selectedVariant,
-            data: cloneHeroData(value) as Record<string, unknown>,
+            data: cloneHeroData(normalizeHeroData(value)) as Record<string, unknown>,
             updatedAt: new Date().toISOString(),
           }
         : entry
@@ -929,7 +1509,26 @@ export function HeroVisualEditor({
     const next = presets.filter(
       (entry) => entry.name.toLowerCase() !== presetNameToDelete.toLowerCase()
     );
-    await persistPresets(next);
+    const saved = await persistPresets(next);
+    if (!saved) return;
+    setPendingDeletePreset(null);
+  };
+
+  const handleImportPresets = async () => {
+    setPresetNotice(null);
+    const result = parseHeroPresetImportText(presetImportValue, presets);
+    if (!result.ok) {
+      setPresetsError(result.error);
+      return;
+    }
+    const saved = await persistPresets(result.presets);
+    if (!saved) return;
+    setPresetImportValue("");
+    setIsPresetImportDialogOpen(false);
+    const importSummary = `Imported ${result.presets.length - presets.length} presets.`;
+    setPresetNotice(
+      result.warnings.length > 0 ? `${importSummary} ${result.warnings.join(" ")}` : importSummary
+    );
   };
 
   return (
@@ -962,17 +1561,58 @@ export function HeroVisualEditor({
             </button>
           ))}
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full"
-          onClick={() => {
-            setPresetName(`${selectedVariant} preset`);
-            setIsPresetDialogOpen(true);
-          }}
-        >
-          Add variant preset
-        </Button>
+        <div className="grid gap-2 md:grid-cols-3">
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={() => {
+              setPresetName(`${selectedVariant} preset`);
+              setIsPresetDialogOpen(true);
+            }}
+          >
+            Add variant preset
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={() => setIsPresetExportDialogOpen(true)}
+            disabled={presetsLoading || presets.length === 0}
+          >
+            Export presets
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={() => setIsPresetImportDialogOpen(true)}
+            disabled={presetsLoading}
+          >
+            Import presets
+          </Button>
+        </div>
+        {!presetsLoading ? (
+          <div className="grid gap-2 md:grid-cols-[1fr_14rem]">
+            <Input
+              value={presetSearch}
+              onChange={(event) => setPresetSearch(event.target.value)}
+              placeholder="Search presets"
+            />
+            <Select
+              value={presetSort}
+              onValueChange={(next) => setPresetSort(next as "updated-desc" | "name-asc")}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Sort presets" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="updated-desc">Recently updated</SelectItem>
+                <SelectItem value="name-asc">Name A-Z</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        ) : null}
         {presetsLoading ? (
           <p className="text-xs text-muted-foreground">Loading presets...</p>
         ) : presets.length === 0 ? (
@@ -981,7 +1621,7 @@ export function HeroVisualEditor({
           </p>
         ) : (
           <div className="space-y-2">
-            {presets.map((preset) => (
+            {visiblePresets.map((preset) => (
               <div
                 key={preset.name}
                 className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border/70 p-2"
@@ -1017,7 +1657,7 @@ export function HeroVisualEditor({
                     variant="ghost"
                     className="text-destructive hover:text-destructive"
                     disabled={isPresetSaving}
-                    onClick={() => void handleDeletePreset(preset.name)}
+                    onClick={() => setPendingDeletePreset(preset)}
                   >
                     Delete
                   </Button>
@@ -1026,6 +1666,7 @@ export function HeroVisualEditor({
             ))}
           </div>
         )}
+        {presetNotice ? <p className="text-xs text-muted-foreground">{presetNotice}</p> : null}
         {presetsError ? <p className="text-xs text-destructive">{presetsError}</p> : null}
       </EditorSection>
 
@@ -1220,7 +1861,7 @@ export function HeroVisualEditor({
             <Input
               value={primary.href}
               onChange={(event) => updatePrimary({ href: event.target.value })}
-              placeholder="/start"
+              placeholder={heroCtaPlaceholderExamples.primary}
             />
             {!isValidHref(primary.href) ? (
               <p className="text-xs text-destructive">Use a relative path or full URL.</p>
@@ -1259,7 +1900,7 @@ export function HeroVisualEditor({
                 <Input
                   value={secondary.href}
                   onChange={(event) => updateSecondary({ href: event.target.value })}
-                  placeholder="/learn"
+                  placeholder={heroCtaPlaceholderExamples.secondary}
                 />
                 {!isValidHref(secondary.href) ? (
                   <p className="text-xs text-destructive">Use a relative path or full URL.</p>
@@ -1290,33 +1931,161 @@ export function HeroVisualEditor({
         </div>
       </EditorSection>
 
-      {selectedVariant !== "centered" ? (
-        <EditorSection
-          id="hero.media"
-          title="Media"
-          description="Inline media visible only in split and media-left variants."
-        >
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Media type</p>
-            <Select
-              value={mediaType}
-              onValueChange={(next) => updateMedia({ type: next as HeroMediaType })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select media" />
-              </SelectTrigger>
-              <SelectContent>
-                {mediaOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          {mediaType !== "none" ? (
-            <>
-              <HeroMediaSourceFields media={media} mediaType={mediaType} onChange={updateMedia} />
+      <EditorSection
+        id="hero.rich-copy-social-proof"
+        title="Rich copy and social proof"
+        description="Add optional sanitized HTML emphasis and a compact trust row without raw scripts."
+      >
+        <WidgetControlRow id="hero.richHeadline" label="Rich headline HTML">
+          {(fieldProps) => (
+            <Textarea
+              id={fieldProps.id}
+              value={value.richHeadline ?? ""}
+              onChange={(event) => update({ richHeadline: event.target.value })}
+              placeholder="<strong>Build</strong> with confidence"
+              rows={4}
+              aria-labelledby={fieldProps["aria-labelledby"]}
+              aria-describedby={fieldProps["aria-describedby"]}
+            />
+          )}
+        </WidgetControlRow>
+        <WidgetControlRow id="hero.richBody" label="Rich body HTML">
+          {(fieldProps) => (
+            <Textarea
+              id={fieldProps.id}
+              value={value.richBody ?? ""}
+              onChange={(event) => update({ richBody: event.target.value })}
+              placeholder="<p>Use <strong>bold</strong>, <em>emphasis</em>, and safe links.</p>"
+              rows={5}
+              aria-labelledby={fieldProps["aria-labelledby"]}
+              aria-describedby={fieldProps["aria-describedby"]}
+            />
+          )}
+        </WidgetControlRow>
+        <p className="text-xs text-muted-foreground">
+          Leave rich HTML blank to keep the plain headline/body fields above. Allowed tags are
+          sanitized through the shared widget rich-text policy before runtime output.
+        </p>
+        <WidgetControlRow id="hero.socialProof.enabled" label="Show social proof">
+          {(fieldProps) => (
+            <Switch
+              checked={socialProof.enabled}
+              onCheckedChange={(checked) => updateSocialProof({ enabled: checked })}
+              aria-labelledby={fieldProps["aria-labelledby"]}
+              aria-describedby={fieldProps["aria-describedby"]}
+            />
+          )}
+        </WidgetControlRow>
+        {socialProof.enabled ? (
+          <>
+            <WidgetControlRow id="hero.socialProof.rating" label="Rating">
+              {(fieldProps) => (
+                <Input
+                  id={fieldProps.id}
+                  value={socialProof.rating}
+                  onChange={(event) => updateSocialProof({ rating: event.target.value })}
+                  placeholder="4.9/5"
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                />
+              )}
+            </WidgetControlRow>
+            <WidgetControlRow id="hero.socialProof.reviewCount" label="Review count">
+              {(fieldProps) => (
+                <Input
+                  id={fieldProps.id}
+                  value={socialProof.reviewCount}
+                  onChange={(event) => updateSocialProof({ reviewCount: event.target.value })}
+                  placeholder="2,000+ reviews"
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                />
+              )}
+            </WidgetControlRow>
+            <WidgetControlRow id="hero.socialProof.label" label="Social proof label">
+              {(fieldProps) => (
+                <Input
+                  id={fieldProps.id}
+                  value={socialProof.label}
+                  onChange={(event) => updateSocialProof({ label: event.target.value })}
+                  placeholder="Trusted by product and ops teams."
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                />
+              )}
+            </WidgetControlRow>
+            <div className="space-y-3 rounded-md border border-border/70 p-3">
+              <p className="text-sm font-medium">Social proof avatars</p>
+              <p className="text-xs text-muted-foreground">
+                Leave unused rows empty. Avatar URLs follow the same relative-or-full-URL media
+                policy as other Hero media fields.
+              </p>
+              {Array.from({ length: heroSocialProofAvatarLimit }, (_, index) => {
+                const avatar = socialProof.avatars[index] ?? { src: "", alt: "" };
+                return (
+                  <div key={`hero-avatar-${index}`} className="grid gap-3 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">Avatar {index + 1} URL</p>
+                      <Input
+                        value={avatar.src}
+                        onChange={(event) =>
+                          updateSocialProofAvatar(index, { src: event.target.value })
+                        }
+                        placeholder={`https://cdn.example.com/avatar-${index + 1}.jpg`}
+                      />
+                      {!isValidMediaUrl(avatar.src) ? (
+                        <p className="text-xs text-destructive">Use a relative path or full URL.</p>
+                      ) : null}
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">Avatar {index + 1} alt text</p>
+                      <Input
+                        value={avatar.alt ?? ""}
+                        onChange={(event) =>
+                          updateSocialProofAvatar(index, { alt: event.target.value })
+                        }
+                        placeholder="Reviewer avatar"
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        ) : null}
+      </EditorSection>
+
+      <EditorSection
+        id="hero.media"
+        title="Media"
+        description={
+          selectedVariant === "centered"
+            ? "Centered uses image media as the Hero background. Other variants render media inline."
+            : "Inline media is visible in split, media-left, and media-center variants."
+        }
+      >
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Media type</p>
+          <Select
+            value={mediaType}
+            onValueChange={(next) => handleMediaTypeChange(next as HeroMediaType)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select media" />
+            </SelectTrigger>
+            <SelectContent>
+              {mediaOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        {mediaType !== "none" ? (
+          <>
+            <HeroMediaSourceFields media={media} mediaType={mediaType} onChange={updateMedia} />
+            {mediaType === "image" ? (
               <div className="space-y-2">
                 <p className="text-sm font-medium">Media alt text</p>
                 <Input
@@ -1325,6 +2094,39 @@ export function HeroVisualEditor({
                   placeholder="Describe the media"
                 />
               </div>
+            ) : null}
+            {mediaType === "video" ? (
+              <>
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Video title</p>
+                  <Input
+                    value={media.title ?? ""}
+                    onChange={(event) => updateMedia({ title: event.target.value })}
+                    placeholder="Product demo video"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Video description</p>
+                  <Textarea
+                    value={media.description ?? ""}
+                    onChange={(event) => updateMedia({ description: event.target.value })}
+                    placeholder="Optional context for screen readers"
+                  />
+                </div>
+                <HeroPosterFields
+                  media={media}
+                  onChange={updateMedia}
+                  onClear={() =>
+                    updateMedia({
+                      posterSource: undefined,
+                      posterAssetId: undefined,
+                      posterSrc: undefined,
+                    })
+                  }
+                />
+              </>
+            ) : null}
+            {selectedVariant !== "centered" ? (
               <div className="space-y-2">
                 <p className="text-sm font-medium">Media ratio</p>
                 <Select
@@ -1343,6 +2145,8 @@ export function HeroVisualEditor({
                   </SelectContent>
                 </Select>
               </div>
+            ) : null}
+            {selectedVariant !== "centered" || mediaType === "image" ? (
               <div className="space-y-2">
                 <ClearableFieldHeader
                   label="Media overlay"
@@ -1355,10 +2159,21 @@ export function HeroVisualEditor({
                   placeholder="rgba(0,0,0,0.2)"
                 />
               </div>
-            </>
-          ) : null}
-        </EditorSection>
-      ) : null}
+            ) : null}
+          </>
+        ) : null}
+        {selectedVariant === "centered" && mediaType === "image" ? (
+          <p className="text-xs text-muted-foreground">
+            Centered layout renders the selected image as hero background.
+          </p>
+        ) : null}
+        {selectedVariant === "centered" && mediaType === "video" ? (
+          <p className="text-xs text-muted-foreground">
+            Centered layout does not render inline video. Switch to Media Right, Media Left, or
+            Media Center to display video content.
+          </p>
+        ) : null}
+      </EditorSection>
 
       <EditorSection
         id="hero.typography"
@@ -1442,10 +2257,167 @@ export function HeroVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="hero.appearance"
+        title="Appearance"
+        description="Add bounded shadow, font, and motion presets without custom CSS."
+      >
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Card shadow</p>
+            <Select
+              value={style.cardShadow ?? "none"}
+              onValueChange={(next) => updateStyle({ cardShadow: next as HeroShadow })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select shadow" />
+              </SelectTrigger>
+              <SelectContent>
+                {shadowOptions.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {formatTokenOptionLabel(option)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {selectedVariant !== "centered" ? (
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Media shadow</p>
+              <Select
+                value={style.mediaShadow ?? "none"}
+                onValueChange={(next) => updateStyle({ mediaShadow: next as HeroShadow })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select shadow" />
+                </SelectTrigger>
+                <SelectContent>
+                  {shadowOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {formatTokenOptionLabel(option)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null}
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Button shadow</p>
+            <Select
+              value={style.buttonShadow ?? "none"}
+              onValueChange={(next) => updateStyle({ buttonShadow: next as HeroShadow })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select shadow" />
+              </SelectTrigger>
+              <SelectContent>
+                {shadowOptions.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {formatTokenOptionLabel(option)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Font family</p>
+            <Select
+              value={style.fontFamily ?? "inherit"}
+              onValueChange={(next) => updateStyle({ fontFamily: next as HeroFont })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select font family" />
+              </SelectTrigger>
+              <SelectContent>
+                {fontFamilyOptions.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option === "inherit" ? "Inherit" : option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Headline weight</p>
+            <Select
+              value={style.headlineWeight ?? "semibold"}
+              onValueChange={(next) => updateStyle({ headlineWeight: next as HeroWeight })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select weight" />
+              </SelectTrigger>
+              <SelectContent>
+                {textWeightOptions.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Body weight</p>
+            <Select
+              value={style.bodyWeight ?? "medium"}
+              onValueChange={(next) => updateStyle({ bodyWeight: next as HeroWeight })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select weight" />
+              </SelectTrigger>
+              <SelectContent>
+                {textWeightOptions.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Entrance motion</p>
+            <Select
+              value={style.motion ?? "none"}
+              onValueChange={(next) => updateStyle({ motion: next as HeroMotion })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select motion" />
+              </SelectTrigger>
+              <SelectContent>
+                {motionOptions.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option === "fade-in" ? "Fade in" : option === "slide-up" ? "Slide up" : "None"}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </EditorSection>
+
+      <EditorSection
         id="hero.colors-borders"
         title="Colors and Borders"
         description="Fine-tune text, button, and frame styling."
       >
+        <div className="space-y-2 rounded-md border border-border/70 p-3">
+          <p className="text-sm font-medium">Hero palettes</p>
+          <div className="flex flex-wrap gap-2">
+            {heroPalettePresets.map((preset) => (
+              <Button
+                key={preset.id}
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => onChange(applyHeroPalette(value, preset.id))}
+              >
+                {preset.label}
+              </Button>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Applying a palette writes explicit Hero colors. You can still override any field
+            manually afterwards.
+          </p>
+        </div>
         <div className="grid gap-3 md:grid-cols-2">
           <HeroColorField
             id="hero.style.textColor"
@@ -1519,13 +2491,15 @@ export function HeroVisualEditor({
             onChange={(next) => updateStyle({ secondaryButtonBorder: next })}
             placeholder="var(--color-border)"
           />
-          <HeroColorField
-            id="hero.style.mediaBorderColor"
-            label="Media frame border color"
-            value={style.mediaBorderColor}
-            onChange={(next) => updateStyle({ mediaBorderColor: next })}
-            placeholder="var(--color-border)"
-          />
+          {selectedVariant !== "centered" ? (
+            <HeroColorField
+              id="hero.style.mediaBorderColor"
+              label="Media frame border color"
+              value={style.mediaBorderColor}
+              onChange={(next) => updateStyle({ mediaBorderColor: next })}
+              placeholder="var(--color-border)"
+            />
+          ) : null}
         </div>
         <div className="grid gap-3 md:grid-cols-3">
           <div className="space-y-2">
@@ -1564,42 +2538,53 @@ export function HeroVisualEditor({
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Media border width</p>
-            <Select
-              value={style.mediaBorderWidth ?? "1"}
-              onValueChange={(next) => updateStyle({ mediaBorderWidth: next as HeroBorderWidth })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select width" />
-              </SelectTrigger>
-              <SelectContent>
-                {borderWidthOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {formatTokenOptionLabel(option)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Media radius</p>
-            <Select
-              value={style.mediaRadius ?? "2xl"}
-              onValueChange={(next) => updateStyle({ mediaRadius: next as HeroRadius })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select radius" />
-              </SelectTrigger>
-              <SelectContent>
-                {radiusOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {formatTokenOptionLabel(option)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {selectedVariant !== "centered" ? (
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Media border width</p>
+              <Select
+                value={style.mediaBorderWidth ?? "1"}
+                onValueChange={(next) => updateStyle({ mediaBorderWidth: next as HeroBorderWidth })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select width" />
+                </SelectTrigger>
+                <SelectContent>
+                  {borderWidthOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {formatTokenOptionLabel(option)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null}
+          {selectedVariant !== "centered" ? (
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Media radius</p>
+              <Select
+                value={style.mediaRadius ?? "2xl"}
+                onValueChange={(next) => updateStyle({ mediaRadius: next as HeroRadius })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select radius" />
+                </SelectTrigger>
+                <SelectContent>
+                  {radiusOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {formatTokenOptionLabel(option)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null}
+        </div>
+        <div className="space-y-1 rounded-md border border-border/70 p-3">
+          <p className="text-sm font-medium">Contrast guidance</p>
+          <ColorContrastNotice advisory={headlineContrast} label="Headline" />
+          <ColorContrastNotice advisory={bodyContrast} label="Body" />
+          <ColorContrastNotice advisory={primaryButtonContrast} label="Primary CTA" />
+          <ColorContrastNotice advisory={secondaryButtonContrast} label="Secondary CTA" />
         </div>
       </EditorSection>
 
@@ -1628,7 +2613,7 @@ export function HeroVisualEditor({
           <p className="text-sm font-medium">Background media type</p>
           <Select
             value={backgroundMediaType}
-            onValueChange={(next) => updateBackgroundMedia({ type: next as HeroMediaType })}
+            onValueChange={(next) => handleBackgroundMediaTypeChange(next as HeroMediaType)}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select media type" />
@@ -1649,6 +2634,37 @@ export function HeroVisualEditor({
               mediaType={backgroundMediaType}
               onChange={updateBackgroundMedia}
             />
+            {backgroundMediaType === "video" ? (
+              <>
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Background video title</p>
+                  <Input
+                    value={backgroundMedia.title ?? ""}
+                    onChange={(event) => updateBackgroundMedia({ title: event.target.value })}
+                    placeholder="Ambient background video"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Background video description</p>
+                  <Textarea
+                    value={backgroundMedia.description ?? ""}
+                    onChange={(event) => updateBackgroundMedia({ description: event.target.value })}
+                    placeholder="Optional context for screen readers"
+                  />
+                </div>
+                <HeroPosterFields
+                  media={backgroundMedia}
+                  onChange={updateBackgroundMedia}
+                  onClear={() =>
+                    updateBackgroundMedia({
+                      posterSource: undefined,
+                      posterAssetId: undefined,
+                      posterSrc: undefined,
+                    })
+                  }
+                />
+              </>
+            ) : null}
             <div className="space-y-2">
               <ClearableFieldHeader
                 label="Background media overlay"
@@ -1706,6 +2722,92 @@ export function HeroVisualEditor({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={isPresetExportDialogOpen} onOpenChange={setIsPresetExportDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Export Hero presets</DialogTitle>
+            <DialogDescription>
+              Copy the JSON below to move Hero presets between environments or teammates.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea readOnly value={presetExportPayload} className="min-h-64 font-mono text-xs" />
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setIsPresetExportDialogOpen(false)}
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isPresetImportDialogOpen} onOpenChange={setIsPresetImportDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Import Hero presets</DialogTitle>
+            <DialogDescription>
+              Paste a preset export payload or a raw presets array. Duplicate names fail the whole
+              import.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={presetImportValue}
+            onChange={(event) => setPresetImportValue(event.target.value)}
+            placeholder="Paste preset JSON"
+            className="min-h-64 font-mono text-xs"
+          />
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setIsPresetImportDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => void handleImportPresets()}
+              disabled={isPresetSaving}
+            >
+              Import presets
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(pendingDeletePreset)}
+        onOpenChange={(open) => {
+          if (!open) setPendingDeletePreset(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Hero preset?</DialogTitle>
+            <DialogDescription>
+              Delete &quot;{pendingDeletePreset?.name}&quot;? This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => setPendingDeletePreset(null)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={isPresetSaving || !pendingDeletePreset}
+              onClick={() =>
+                pendingDeletePreset && void handleDeletePreset(pendingDeletePreset.name)
+              }
+            >
+              Delete preset
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -1740,6 +2842,11 @@ export function HeroAdvancedEditor({ value, onChange }: WidgetEditorProps<HeroDa
             source: next.source ?? "external",
             assetId: next.assetId,
             src: next.src,
+            posterSource: next.posterSource,
+            posterAssetId: next.posterAssetId,
+            posterSrc: next.posterSrc,
+            title: next.title,
+            description: next.description,
             overlay: next.overlay,
           };
     updateBackground({
@@ -1747,6 +2854,8 @@ export function HeroAdvancedEditor({ value, onChange }: WidgetEditorProps<HeroDa
       image: normalized.type === "image" ? normalized.src : undefined,
     });
   };
+  const handleBackgroundMediaTypeChange = (nextType: HeroMediaType) =>
+    updateBackgroundMedia(resolveMediaTypeTransition(backgroundMedia, nextType));
   const clearBackgroundMediaField = (key: keyof HeroBackgroundMedia) => {
     const nextBackground = value.background ?? {};
     const nextMedia = { ...(nextBackground.media ?? backgroundMedia) };
@@ -1764,8 +2873,12 @@ export function HeroAdvancedEditor({ value, onChange }: WidgetEditorProps<HeroDa
       <EditorSection
         id="hero.advanced.layout"
         title="Hero Layout"
-        description="Control alignment, max width, and internal spacing."
+        description="Control alignment, width, height, full-bleed, and internal Hero spacing."
       >
+        <p className="text-xs text-muted-foreground">
+          These controls change the Hero card itself. Generic page or builder container padding
+          stays outside this widget.
+        </p>
         <div className="space-y-2">
           <p className="text-sm font-medium">Alignment</p>
           <Select
@@ -1824,7 +2937,45 @@ export function HeroAdvancedEditor({ value, onChange }: WidgetEditorProps<HeroDa
         </div>
         <div className="grid gap-3 md:grid-cols-2">
           <div className="space-y-2">
-            <p className="text-sm font-medium">Padding top</p>
+            <p className="text-sm font-medium">Height</p>
+            <Select
+              value={value.layout?.height ?? "auto"}
+              onValueChange={(next) => updateLayout({ height: next as HeroHeight })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select height" />
+              </SelectTrigger>
+              <SelectContent>
+                {heightOptions.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {formatTokenOptionLabel(option)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Bleed</p>
+            <Select
+              value={value.layout?.bleed ?? "contained"}
+              onValueChange={(next) => updateLayout({ bleed: next as HeroBleed })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select bleed" />
+              </SelectTrigger>
+              <SelectContent>
+                {bleedOptions.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option === "full-bleed" ? "Full bleed" : "Contained"}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Hero content padding top</p>
             <Select
               value={value.spacing?.paddingTop ?? "xl"}
               onValueChange={(next) => updateSpacing({ paddingTop: next as HeroSpacing })}
@@ -1842,7 +2993,7 @@ export function HeroAdvancedEditor({ value, onChange }: WidgetEditorProps<HeroDa
             </Select>
           </div>
           <div className="space-y-2">
-            <p className="text-sm font-medium">Padding bottom</p>
+            <p className="text-sm font-medium">Hero content padding bottom</p>
             <Select
               value={value.spacing?.paddingBottom ?? "xl"}
               onValueChange={(next) => updateSpacing({ paddingBottom: next as HeroSpacing })}
@@ -1887,7 +3038,7 @@ export function HeroAdvancedEditor({ value, onChange }: WidgetEditorProps<HeroDa
           <p className="text-sm font-medium">Background media type</p>
           <Select
             value={backgroundMediaType}
-            onValueChange={(next) => updateBackgroundMedia({ type: next as HeroMediaType })}
+            onValueChange={(next) => handleBackgroundMediaTypeChange(next as HeroMediaType)}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select media type" />
@@ -1908,6 +3059,37 @@ export function HeroAdvancedEditor({ value, onChange }: WidgetEditorProps<HeroDa
               mediaType={backgroundMediaType}
               onChange={updateBackgroundMedia}
             />
+            {backgroundMediaType === "video" ? (
+              <>
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Background video title</p>
+                  <Input
+                    value={backgroundMedia.title ?? ""}
+                    onChange={(event) => updateBackgroundMedia({ title: event.target.value })}
+                    placeholder="Ambient background video"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Background video description</p>
+                  <Textarea
+                    value={backgroundMedia.description ?? ""}
+                    onChange={(event) => updateBackgroundMedia({ description: event.target.value })}
+                    placeholder="Optional context for screen readers"
+                  />
+                </div>
+                <HeroPosterFields
+                  media={backgroundMedia}
+                  onChange={updateBackgroundMedia}
+                  onClear={() =>
+                    updateBackgroundMedia({
+                      posterSource: undefined,
+                      posterAssetId: undefined,
+                      posterSrc: undefined,
+                    })
+                  }
+                />
+              </>
+            ) : null}
             <div className="space-y-2">
               <ClearableFieldHeader
                 label="Background media overlay"

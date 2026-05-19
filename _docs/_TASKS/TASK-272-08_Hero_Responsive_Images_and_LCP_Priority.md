@@ -6,7 +6,7 @@
 **Category:** Widgets + Hero + Media + Performance + Runtime Render
 **Estimated Effort:** Large
 **Dependencies:** TASK-256-04, TASK-272-02, TASK-272-04
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -118,6 +118,13 @@ deferred until a separate media-owner task adds real generated variants.
 - `_docs/PLAYWRIGHT/REPORT_HERO_WIDGET.md`
 - `_docs/_TASKS/TASK-272-08_Hero_Responsive_Images_and_LCP_Priority.md`
 - `_docs/_TASKS/README.md` on status changes
+
+## Final Evidence
+
+- Closed on 2026-05-19 with deterministic Hero image loading, fetch-priority,
+  and `sizes` behavior, plus an explicit defer note for future true
+  `srcset`/`picture` media-variant support.
+- Focused proof lives in `tests/vitest/widgets/hero.test.tsx` and TASK-272-09.
 
 ## Acceptance Criteria
 

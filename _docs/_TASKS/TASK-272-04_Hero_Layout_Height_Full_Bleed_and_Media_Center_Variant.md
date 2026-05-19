@@ -6,7 +6,7 @@
 **Category:** Widgets + Hero + Layout + Runtime Render
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-256-01, TASK-272-01, TASK-272-02
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -91,12 +91,17 @@ Error handling:
 
 ## Security Contract
 
-No API routes are added.
+No new API routes are added. The existing internal authenticated
+`/user-settings` endpoint remains in use for Hero preset variant persistence.
 
-- Endpoint visibility: none.
-- Auth/RBAC/CSRF/rate-limit: unchanged admin editing and public rendering.
+- Endpoint visibility: existing internal authenticated `user-settings`
+  endpoint for preset persistence, plus unchanged admin editing and public
+  rendering.
+- Auth/RBAC/CSRF/rate-limit: unchanged authenticated user settings access plus
+  unchanged admin editing/public rendering contracts.
 - Reject-unknown validation: new variant/layout fields must be strict enums and
-  keep `additionalProperties: false`.
+  keep `additionalProperties: false`; preset variant validation must stay in
+  sync across `userSettingsService`, the client type, and any route-level proof.
 - Anti-abuse: no arbitrary class names, raw CSS, or scriptable layout input.
 
 ## Testing Requirements
@@ -119,6 +124,16 @@ No API routes are added.
 - `_docs/PLAYWRIGHT/REPORT_HERO_WIDGET.md`
 - `_docs/_TASKS/TASK-272-04_Hero_Layout_Height_Full_Bleed_and_Media_Center_Variant.md`
 - `_docs/_TASKS/README.md` on status changes
+
+## Final Evidence
+
+- Closed on 2026-05-19 with `media-center`, Hero-specific height/bleed tokens,
+  clearer spacing copy, and preset/service compatibility for the widened
+  variant set.
+- Focused proof lives in `tests/vitest/widgets/hero.test.tsx`,
+  `tests/vitest/ui/hero-editor-wave.test.tsx`,
+  `tests/unit/settings/userSettingsService.test.ts`,
+  `tests/vitest/admin/userSettingsClient.test.ts`, and TASK-272-09.
 
 ## Acceptance Criteria
 

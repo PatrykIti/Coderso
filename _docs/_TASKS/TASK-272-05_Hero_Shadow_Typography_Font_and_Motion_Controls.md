@@ -6,7 +6,7 @@
 **Category:** Widgets + Hero + Visual Design + Runtime Render
 **Estimated Effort:** Large
 **Dependencies:** TASK-272-04, TASK-305, TASK-310-02
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -41,10 +41,12 @@ picker logic.
 |---|---|
 | `core/widgets/core/hero.tsx` | Extend `style` with bounded `cardShadow`, `mediaShadow`, `buttonShadow`, `headlineWeight`, `bodyWeight`, `fontFamily`, and `motion` or equivalent fields. Map each field through fixed class/style maps. |
 | `core/admin/ui/widgets/editors/HeroEditors.tsx` | Add Visual controls grouped under Colors/Borders or a new Hero-only Appearance section. Keep one option per line where labels would otherwise crowd the inspector. |
+| `core/services/settings/userSettingsService.ts` | Keep the existing `widgets.hero.presets` normalizer in sync so stored Hero presets preserve the new bounded shadow, font, weight, and motion fields. |
 | `tests/vitest/widgets/hero.test.tsx` | Assert every new token maps to expected runtime output and invalid values normalize to defaults or are rejected by schema. |
 | `tests/vitest/widgets/heroEditors.test.tsx` | Assert editor controls are present with stable `data-widget-control` ownership. |
 | `tests/vitest/ui/hero-editor-wave.test.tsx` | Cover changing shadow, typography weight/family, and motion tokens without disrupting existing content/media fields. |
 | `tests/vitest/widgets/styleNoneTokens.test.tsx` | Update if any new Hero style field supports `none`. |
+| `tests/unit/settings/userSettingsService.test.ts` | Assert persisted Hero presets keep the new bounded style tokens after service-side normalization. |
 | `tests/unit/widgets/validator.test.ts` | Run and update when schema fields change. |
 | `_docs/_WIDGETS/HERO.md` | Document the bounded token lists. |
 | `_docs/PLAYWRIGHT/REPORT_HERO_WIDGET.md` | Mark BF-02/BF-06/BF-12 fixed or record evidence. |
@@ -83,14 +85,21 @@ Error handling:
 - Shadows must not force a border/background if the user intentionally cleared
   those fields through TASK-256/TASK-244 semantics.
 - Do not add custom CSS text fields.
+- Because Hero presets store normalized `HeroData`, the user-settings seam must
+  round-trip these new bounded style tokens instead of dropping them on save.
 
 ## Security Contract
 
-No API routes are added.
+No new API routes are added. The existing internal authenticated
+`/user-settings` endpoint continues to persist normalized Hero preset data.
 
-- Endpoint visibility: none.
-- Auth/RBAC/CSRF/rate-limit: unchanged admin editing and public rendering.
-- Reject-unknown validation: new style fields are strict enums.
+- Endpoint visibility: existing internal authenticated `user-settings`
+  endpoint for preset persistence, plus unchanged admin editing and public
+  rendering.
+- Auth/RBAC/CSRF/rate-limit: unchanged authenticated user settings access plus
+  unchanged admin editing/public rendering contracts.
+- Reject-unknown validation: new style fields are strict enums and must remain
+  normalized through `userSettingsService` for preset round-trips.
 - Anti-abuse: no arbitrary class names, raw CSS, external font URLs, scripts, or
   user-controlled animation names.
 
@@ -100,6 +109,7 @@ No API routes are added.
 - `bun run test:vitest -- tests/vitest/widgets/heroEditors.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/hero-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx`
+- `bun test tests/unit/settings/userSettingsService.test.ts`
 - `bun test tests/unit/widgets/validator.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
@@ -110,6 +120,15 @@ No API routes are added.
 - `_docs/PLAYWRIGHT/REPORT_HERO_WIDGET.md`
 - `_docs/_TASKS/TASK-272-05_Hero_Shadow_Typography_Font_and_Motion_Controls.md`
 - `_docs/_TASKS/README.md` on status changes
+
+## Final Evidence
+
+- Closed on 2026-05-19 with bounded shadow, font-family, weight, and
+  reduced-motion-safe motion controls in runtime, editors, and preset
+  normalization.
+- Focused proof lives in `tests/vitest/widgets/hero.test.tsx`,
+  `tests/vitest/ui/hero-editor-wave.test.tsx`,
+  `tests/unit/settings/userSettingsService.test.ts`, and TASK-272-09.
 
 ## Acceptance Criteria
 

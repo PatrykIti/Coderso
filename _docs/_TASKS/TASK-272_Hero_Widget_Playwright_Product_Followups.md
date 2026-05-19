@@ -6,7 +6,7 @@
 **Category:** Widgets + Hero + Admin UI + Runtime Render + Playwright QA
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-252, TASK-256, TASK-256-01, TASK-256-04, TASK-256-06-03, TASK-256-08, TASK-299, TASK-305, TASK-310-02
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -79,15 +79,15 @@ safe-link behavior, clear/default state, and cross-widget accessibility.
 
 ## Sub-Tasks
 
-- [ ] TASK-272-01: Hero Centered Media Control and CTA Placeholder Polish
-- [ ] TASK-272-02: Hero Video Poster and Media Metadata
-- [ ] TASK-272-03: Hero Preset Delete Confirmation and Library Management
-- [ ] TASK-272-04: Hero Layout Height Full Bleed and Media Center Variant
-- [ ] TASK-272-05: Hero Shadow, Typography, Font, and Motion Controls
-- [ ] TASK-272-06: Hero Color Palettes and Contrast Guidance
-- [ ] TASK-272-07: Hero Rich Copy and Social Proof Composition
-- [ ] TASK-272-08: Hero Responsive Images and LCP Priority
-- [ ] TASK-272-09: Hero Report, Docs, Changelog, and Closure
+- [x] TASK-272-01: Hero Centered Media Control and CTA Placeholder Polish
+- [x] TASK-272-02: Hero Video Poster and Media Metadata
+- [x] TASK-272-03: Hero Preset Delete Confirmation and Library Management
+- [x] TASK-272-04: Hero Layout Height Full Bleed and Media Center Variant
+- [x] TASK-272-05: Hero Shadow, Typography, Font, and Motion Controls
+- [x] TASK-272-06: Hero Color Palettes and Contrast Guidance
+- [x] TASK-272-07: Hero Rich Copy and Social Proof Composition
+- [x] TASK-272-08: Hero Responsive Images and LCP Priority
+- [x] TASK-272-09: Hero Report, Docs, Changelog, and Closure
 
 ## Implementation Order
 
@@ -183,6 +183,12 @@ Implementation leaves:
 - Add a changelog entry under `_docs/_CHANGELOG/` and update
   `_docs/_CHANGELOG/README.md` when the family is completed.
 - Keep `_docs/_TASKS/README.md` in sync on every status transition.
+
+## Final Evidence
+
+- TASK-272 code, tests, report, widget docs, task docs, and changelog were
+  synchronized on 2026-05-19.
+- Final validation and closure evidence are recorded in TASK-272-09.
 
 ## Acceptance Criteria
 

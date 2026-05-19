@@ -13,6 +13,7 @@ Top-of-page section with main value proposition, CTA, and optional media.
 - `centered`: single-column copy + CTA stack
 - `split` (`media-right`): text left, media right
 - `media-left`: media left, text right
+- `media-center`: centered copy with inline showcase media below
 
 ## Slots
 
@@ -29,12 +30,14 @@ Top-of-page section with main value proposition, CTA, and optional media.
 
 Primary day-to-day editing surface with section-based IA:
 1. Variant and Presets
-2. Content
+2. Badge and headline
 3. CTA
-4. Media
-5. Typography
-6. Colors and Borders
-7. Background
+4. Rich copy and social proof
+5. Media
+6. Typography
+7. Appearance
+8. Colors and Borders
+9. Background
 
 Variant presets are persisted per user in `user_settings` key:
 `widgets.hero.presets`.
@@ -42,7 +45,7 @@ Variant presets are persisted per user in `user_settings` key:
 ### Advanced
 
 Technical controls only (no duplicated content/style editing):
-- hero layout tokens: align, maxWidth, contentWidth
+- hero layout tokens: align, maxWidth, contentWidth, height, bleed
 - internal spacing: paddingTop, paddingBottom
 - background raw values
 - responsive toggle: `hideMediaOnMobile`
@@ -50,8 +53,47 @@ Technical controls only (no duplicated content/style editing):
 ## Media Behavior
 
 - `centered + image`: selected media is rendered as hero background.
-- `centered + video`: no inline video output; use `split` or `media-left`.
-- `split/media-left`: media frame renders image/video inline.
+- `centered + video`: no inline video output; use `split`, `media-left`, or
+  `media-center`.
+- `split`, `media-left`, and `media-center`: media frame renders image/video
+  inline.
+- Visual mode keeps Media authoring available in `centered` so authors can
+  still change or clear background media while hiding inline-frame-only border
+  controls.
+- Video media supports `posterSrc`, `title`, and `description` for both inline
+  and background video output.
+- Current image loading policy is deterministic and Hero-specific:
+  `centered`, `split`, and `media-center` use eager/high-priority image hints;
+  `media-left` stays lazy/auto. True `srcset`/`picture` variants remain deferred
+  until a separate media-owner task exposes generated image variants.
+
+## Rich Copy And Social Proof
+
+- `richHeadline` and `richBody` accept bounded sanitized HTML through the shared
+  widget rich-text sanitizer exported from `richTextSection`.
+- Plain `headline` / `body` remain the fallback when rich-copy fields are empty.
+- `socialProof` is optional and bounded: `rating`, `reviewCount`, `label`, and
+  up to five avatar rows with `src` and optional `alt`.
+
+## Appearance And Contrast
+
+- Hero appearance tokens are bounded to fixed maps:
+  `cardShadow`, `mediaShadow`, `buttonShadow`, `fontFamily`,
+  `headlineWeight`, `bodyWeight`, and `motion`.
+- Motion presets are reduced-motion safe and currently support `none`,
+  `fade-in`, and `slide-up`.
+- Contrast guidance reuses the shared editor advisory helper and only gives a
+  concrete warning/pass result for solid color combinations. Gradient, image,
+  transparent, and token-based surfaces intentionally fall back to `unknown`.
+
+## Presets
+
+- Presets are user-scoped (`widgets.hero.presets`) and capped at 24 entries.
+- Visual mode supports create, apply, update, delete-with-confirmation,
+  search, sort, JSON export, and JSON import.
+- Import rejects malformed JSON, duplicate names, invalid variants, and
+  over-limit payloads. When nested Hero data is normalized during import, the
+  editor surfaces a visible warning instead of silently succeeding.
 
 ## Clear Controls
 
@@ -71,6 +113,8 @@ Technical controls only (no duplicated content/style editing):
   "headline": "string",
   "subhead": "string",
   "body": "string",
+  "richHeadline": "string",
+  "richBody": "string",
   "primaryCta": { "label": "string", "href": "string" },
   "secondaryCta": { "label": "string", "href": "string" },
   "media": {
@@ -79,10 +123,28 @@ Technical controls only (no duplicated content/style editing):
     "assetId": "string",
     "src": "string",
     "alt": "string",
+    "posterSource": "library",
+    "posterAssetId": "string",
+    "posterSrc": "string",
+    "title": "string",
+    "description": "string",
     "ratio": "16:9",
     "overlay": "rgba(0,0,0,0.2)"
   },
-  "layout": { "align": "center", "maxWidth": "xl", "contentWidth": "lg" },
+  "socialProof": {
+    "enabled": true,
+    "rating": "4.9/5",
+    "reviewCount": "2,000+ reviews",
+    "label": "Trusted by product teams.",
+    "avatars": [{ "src": "/avatars/reviewer.jpg", "alt": "Reviewer avatar" }]
+  },
+  "layout": {
+    "align": "center",
+    "maxWidth": "xl",
+    "contentWidth": "lg",
+    "height": "auto",
+    "bleed": "contained"
+  },
   "spacing": { "paddingTop": "xl", "paddingBottom": "xl" },
   "style": {
     "headlineSize": "3xl",
@@ -92,11 +154,30 @@ Technical controls only (no duplicated content/style editing):
     "borderColor": "#d1d5db",
     "borderWidth": "1",
     "borderRadius": "3xl",
+    "cardShadow": "none",
     "primaryButtonBg": "#2563eb",
     "primaryButtonText": "#ffffff",
-    "secondaryButtonBorder": "#d1d5db"
+    "secondaryButtonBorder": "#d1d5db",
+    "mediaShadow": "none",
+    "buttonShadow": "none",
+    "fontFamily": "inherit",
+    "headlineWeight": "semibold",
+    "bodyWeight": "normal",
+    "motion": "none"
   },
-  "background": { "color": "#f8fafc", "gradient": "linear-gradient(135deg, #eef2ff, #ffffff)", "image": "" },
+  "background": {
+    "color": "#f8fafc",
+    "gradient": "linear-gradient(135deg, #eef2ff, #ffffff)",
+    "image": "",
+    "media": {
+      "type": "video",
+      "source": "external",
+      "src": "https://cdn.example.com/hero.mp4",
+      "posterSrc": "/hero-poster.jpg",
+      "title": "Ambient background video",
+      "description": "Decorative looping background video"
+    }
+  },
   "responsive": { "hideMediaOnMobile": false }
 }
 ```

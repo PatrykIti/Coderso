@@ -6,7 +6,7 @@
 **Category:** Widgets + Hero + Content Authoring + Runtime Render
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-256-04, TASK-272-04
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -39,10 +39,12 @@ implementation.
 | `core/widgets/core/hero.tsx` | Add safe rich-copy fields and optional `socialProof` data. Normalize rich text through a bounded sanitizer and render it without unsafe script/event attributes. |
 | `core/admin/ui/widgets/editors/HeroEditors.tsx` | Add rich copy controls and social proof controls in Visual mode. Keep Wizard plain and beginner-safe unless a minimal toggle is explicitly needed. |
 | `core/widgets/core/richTextSection.tsx` | Reuse the exported widget-side `sanitizeRichTextHtml` helper as the concrete safe rich-text owner for Hero inline copy. |
+| `core/services/settings/userSettingsService.ts` | Keep the existing `widgets.hero.presets` normalizer in sync so stored Hero presets preserve sanitized rich-copy fields and bounded social proof data. |
 | `tests/vitest/widgets/hero.test.tsx` | Assert sanitized rich copy renders allowed inline marks/links and strips unsafe tags/attributes. Assert social proof row rendering and fallback behavior. |
 | `tests/vitest/widgets/heroEditors.test.tsx` | Assert rich-copy/social-proof editor controls render with stable metadata. |
 | `tests/vitest/ui/hero-editor-wave.test.tsx` | Cover toggling rich copy/social proof, editing fields, and preserving CTA/media data. |
 | `tests/vitest/widgets/widgetSafeHref.test.ts` | Run or update if rich copy links use the shared safe-href helper. |
+| `tests/unit/settings/userSettingsService.test.ts` | Assert persisted Hero presets keep sanitized rich-copy and social-proof data after service-side normalization. |
 | `tests/unit/widgets/validator.test.ts` | Run and update when schema fields change. |
 | `_docs/_WIDGETS/HERO.md` | Document allowed rich-copy marks and social proof model. |
 | `_docs/PLAYWRIGHT/REPORT_HERO_WIDGET.md` | Mark BF-04/BF-14 fixed or record evidence. |
@@ -89,15 +91,23 @@ Error handling:
   missing images must not break layout.
 - Limit counts/avatars to a small maximum, for example five avatars and two
   metrics, to keep the Hero compact.
+- Because Hero presets persist normalized `HeroData`, sanitized rich-copy and
+  bounded social-proof fields must also round-trip through the service-side
+  preset normalizer.
 
 ## Security Contract
 
-No API routes are added.
+No new API routes are added. The existing internal authenticated
+`/user-settings` endpoint continues to persist normalized Hero preset data.
 
-- Endpoint visibility: none.
-- Auth/RBAC/CSRF/rate-limit: unchanged admin editing and public rendering.
+- Endpoint visibility: existing internal authenticated `user-settings`
+  endpoint for preset persistence, plus unchanged admin editing and public
+  rendering.
+- Auth/RBAC/CSRF/rate-limit: unchanged authenticated user settings access plus
+  unchanged admin editing/public rendering contracts.
 - Reject-unknown validation: new fields must stay strict and normalize legacy
-  plain-text payloads.
+  plain-text payloads, including preset round-trips through
+  `userSettingsService`.
 - Anti-abuse: rich text is sanitized; links use safe href rules; avatar/media
   URLs use existing media URL policy; no raw scripts, event handlers, iframes,
   or arbitrary style/class inputs are allowed.
@@ -108,6 +118,7 @@ No API routes are added.
 - `bun run test:vitest -- tests/vitest/widgets/heroEditors.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/hero-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/widgetSafeHref.test.ts`
+- `bun test tests/unit/settings/userSettingsService.test.ts`
 - `bun test tests/unit/widgets/validator.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
@@ -118,6 +129,14 @@ No API routes are added.
 - `_docs/PLAYWRIGHT/REPORT_HERO_WIDGET.md`
 - `_docs/_TASKS/TASK-272-07_Hero_Rich_Copy_and_Social_Proof_Composition.md`
 - `_docs/_TASKS/README.md` on status changes
+
+## Final Evidence
+
+- Closed on 2026-05-19 with safe rich-copy and bounded social-proof composition
+  in runtime, editor flows, and preset normalization.
+- Focused proof lives in `tests/vitest/widgets/hero.test.tsx`,
+  `tests/vitest/ui/hero-editor-wave.test.tsx`,
+  `tests/unit/settings/userSettingsService.test.ts`, and TASK-272-09.
 
 ## Acceptance Criteria
 

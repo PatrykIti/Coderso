@@ -3,18 +3,32 @@ import { WidgetRenderer } from "../renderers/widgetRenderer";
 import type { DeviceTarget, WidgetBlock, WidgetDefinition, WidgetEditorProps } from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 import { normalizeWidgetSafeHref } from "./widgetSafeHref";
+import { sanitizeRichTextHtml } from "./richTextSection";
 
 export type HeroCta = {
   label: string;
   href: string;
 };
 
+export type HeroMediaSource = "library" | "external";
+export type HeroFontFamily = "inherit" | "sans" | "serif" | "mono";
+export type HeroTextWeight = "normal" | "medium" | "semibold" | "bold";
+export type HeroShadowToken = "none" | "soft" | "medium" | "strong";
+export type HeroMotionPreset = "none" | "fade-in" | "slide-up";
+export type HeroLayoutHeight = "auto" | "large" | "screen";
+export type HeroLayoutBleed = "contained" | "full-bleed";
+
 export type HeroMedia = {
   type: "none" | "image" | "video";
-  source?: "library" | "external";
+  source?: HeroMediaSource;
   assetId?: string;
   src?: string;
   alt?: string;
+  posterSource?: HeroMediaSource;
+  posterAssetId?: string;
+  posterSrc?: string;
+  title?: string;
+  description?: string;
   ratio?: string;
   overlay?: string;
 };
@@ -31,18 +45,49 @@ export type HeroBadge = {
   placement?: HeroBadgePlacement;
 };
 
+export type HeroSocialProofAvatar = {
+  src: string;
+  alt?: string;
+};
+
+export type HeroSocialProof = {
+  enabled?: boolean;
+  rating?: string;
+  reviewCount?: string;
+  label?: string;
+  avatars?: HeroSocialProofAvatar[];
+};
+
+export type HeroBackgroundMedia = {
+  type?: "none" | "image" | "video";
+  source?: HeroMediaSource;
+  assetId?: string;
+  src?: string;
+  posterSource?: HeroMediaSource;
+  posterAssetId?: string;
+  posterSrc?: string;
+  title?: string;
+  description?: string;
+  overlay?: string;
+};
+
 export type HeroData = {
   headline: string;
   subhead?: string;
   body?: string;
+  richHeadline?: string;
+  richBody?: string;
   badge?: HeroBadge;
   primaryCta?: HeroCta;
   secondaryCta?: HeroCta;
   media?: HeroMedia;
+  socialProof?: HeroSocialProof;
   layout?: {
     align?: "left" | "center" | "right";
     maxWidth?: "none" | "sm" | "md" | "lg" | "xl" | "2xl";
     contentWidth?: "none" | "sm" | "md" | "lg" | "xl";
+    height?: HeroLayoutHeight;
+    bleed?: HeroLayoutBleed;
   };
   spacing?: {
     paddingTop?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
@@ -71,18 +116,19 @@ export type HeroData = {
     secondaryButtonText?: string;
     secondaryButtonBorder?: string;
     secondaryButtonSize?: "none" | "sm" | "md" | "lg";
+    cardShadow?: HeroShadowToken;
+    mediaShadow?: HeroShadowToken;
+    buttonShadow?: HeroShadowToken;
+    fontFamily?: HeroFontFamily;
+    headlineWeight?: HeroTextWeight;
+    bodyWeight?: HeroTextWeight;
+    motion?: HeroMotionPreset;
   };
   background?: {
     color?: string;
     gradient?: string;
     image?: string;
-    media?: {
-      type?: "none" | "image" | "video";
-      source?: "library" | "external";
-      assetId?: string;
-      src?: string;
-      overlay?: string;
-    };
+    media?: HeroBackgroundMedia;
   };
   responsive?: {
     hideMediaOnMobile?: boolean;
@@ -97,6 +143,8 @@ export const heroSchema = {
     headline: { type: "string" },
     subhead: { type: "string" },
     body: { type: "string" },
+    richHeadline: { type: "string" },
+    richBody: { type: "string" },
     badge: {
       type: "object",
       additionalProperties: false,
@@ -137,8 +185,36 @@ export const heroSchema = {
         source: { enum: ["library", "external"] },
         assetId: { type: "string" },
         alt: { type: "string" },
+        posterSource: { enum: ["library", "external"] },
+        posterAssetId: { type: "string" },
+        posterSrc: { type: "string" },
+        title: { type: "string" },
+        description: { type: "string" },
         ratio: { type: "string" },
         overlay: { type: "string" },
+      },
+    },
+    socialProof: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        enabled: { type: "boolean" },
+        rating: { type: "string" },
+        reviewCount: { type: "string" },
+        label: { type: "string" },
+        avatars: {
+          type: "array",
+          maxItems: 5,
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["src"],
+            properties: {
+              src: { type: "string" },
+              alt: { type: "string" },
+            },
+          },
+        },
       },
     },
     layout: {
@@ -148,6 +224,8 @@ export const heroSchema = {
         align: { enum: ["left", "center", "right"] },
         maxWidth: { enum: ["none", "sm", "md", "lg", "xl", "2xl"] },
         contentWidth: { enum: ["none", "sm", "md", "lg", "xl"] },
+        height: { enum: ["auto", "large", "screen"] },
+        bleed: { enum: ["contained", "full-bleed"] },
       },
     },
     spacing: {
@@ -188,6 +266,13 @@ export const heroSchema = {
         secondaryButtonText: { type: "string" },
         secondaryButtonBorder: { type: "string" },
         secondaryButtonSize: { enum: ["none", "sm", "md", "lg"] },
+        cardShadow: { enum: ["none", "soft", "medium", "strong"] },
+        mediaShadow: { enum: ["none", "soft", "medium", "strong"] },
+        buttonShadow: { enum: ["none", "soft", "medium", "strong"] },
+        fontFamily: { enum: ["inherit", "sans", "serif", "mono"] },
+        headlineWeight: { enum: ["normal", "medium", "semibold", "bold"] },
+        bodyWeight: { enum: ["normal", "medium", "semibold", "bold"] },
+        motion: { enum: ["none", "fade-in", "slide-up"] },
       },
     },
     background: {
@@ -205,6 +290,11 @@ export const heroSchema = {
             source: { enum: ["library", "external"] },
             assetId: { type: "string" },
             src: { type: "string" },
+            posterSource: { enum: ["library", "external"] },
+            posterAssetId: { type: "string" },
+            posterSrc: { type: "string" },
+            title: { type: "string" },
+            description: { type: "string" },
             overlay: { type: "string" },
           },
         },
@@ -228,7 +318,13 @@ export const heroDefaults: HeroData = {
   primaryCta: { label: "Get started", href: "#" },
   secondaryCta: { label: "Learn more", href: "#" },
   media: { type: "none", source: "external" },
-  layout: { align: "center", maxWidth: "xl", contentWidth: "lg" },
+  layout: {
+    align: "center",
+    maxWidth: "xl",
+    contentWidth: "lg",
+    height: "auto",
+    bleed: "contained",
+  },
   spacing: { paddingTop: "xl", paddingBottom: "xl" },
   background: { color: "transparent" },
   responsive: { hideMediaOnMobile: false },
@@ -314,6 +410,41 @@ const radiusClassMap = {
   "3xl": "rounded-3xl",
 } as const;
 
+const shadowClassMap: Record<HeroShadowToken, string> = {
+  none: "",
+  soft: "shadow-sm",
+  medium: "shadow-md",
+  strong: "shadow-xl",
+};
+
+const fontFamilyClassMap: Record<HeroFontFamily, string> = {
+  inherit: "",
+  sans: "font-sans",
+  serif: "font-serif",
+  mono: "font-mono",
+};
+
+const textWeightClassMap: Record<HeroTextWeight, string> = {
+  normal: "font-normal",
+  medium: "font-medium",
+  semibold: "font-semibold",
+  bold: "font-bold",
+};
+
+const motionClassMap: Record<HeroMotionPreset, string | undefined> = {
+  none: undefined,
+  "fade-in":
+    "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-500 motion-reduce:animate-none",
+  "slide-up":
+    "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-500 motion-reduce:animate-none",
+};
+
+const heightClassMap: Record<HeroLayoutHeight, string> = {
+  auto: "",
+  large: "min-h-[80vh]",
+  screen: "min-h-screen",
+};
+
 const heroBadgeToneClassMap: Record<HeroBadgeTone, string> = {
   neutral: "border-border/80 bg-background/80 text-[var(--color-text)]",
   primary: "border-transparent bg-[var(--color-primary)]/15 text-[var(--color-primary)]",
@@ -326,6 +457,279 @@ const joinClasses = (...classes: Array<string | false | undefined>) =>
 
 const resolveSpacingKey = (value: string | undefined, fallback: keyof typeof spacingValueMap) =>
   value && value in spacingValueMap ? (value as keyof typeof spacingValueMap) : fallback;
+
+const resolveHeroAlign = (value: string | undefined): NonNullable<HeroData["layout"]>["align"] => {
+  if (value === "left" || value === "right") return value;
+  return "center";
+};
+
+const resolveHeroMaxWidth = (
+  value: string | undefined
+): NonNullable<HeroData["layout"]>["maxWidth"] => {
+  if (value === "none" || value === "sm" || value === "md" || value === "lg" || value === "2xl") {
+    return value;
+  }
+  return "xl";
+};
+
+const resolveHeroContentWidth = (
+  value: string | undefined
+): NonNullable<HeroData["layout"]>["contentWidth"] => {
+  if (value === "none" || value === "sm" || value === "md" || value === "xl") return value;
+  return "lg";
+};
+
+const resolveHeroMediaRatio = (value: string | undefined) => {
+  if (value === "4:3" || value === "1:1" || value === "3:4") return value;
+  return "16:9";
+};
+
+const resolveHeroHeadlineSize = (value: string | undefined) => {
+  if (value === "none" || value === "2xl" || value === "4xl" || value === "5xl") return value;
+  return "3xl";
+};
+
+const resolveHeroSubheadSize = (value: string | undefined) => {
+  if (value === "none" || value === "base" || value === "lg" || value === "2xl") return value;
+  return "xl";
+};
+
+const resolveHeroBodySize = (value: string | undefined) => {
+  if (value === "none" || value === "sm" || value === "lg" || value === "xl") return value;
+  return "base";
+};
+
+const resolveHeroButtonSize = (value: string | undefined) => {
+  if (value === "none" || value === "sm" || value === "lg") return value;
+  return "md";
+};
+
+const resolveHeroBorderWidth = (value: string | undefined) => {
+  if (value === "0" || value === "2" || value === "3") return value;
+  return "1";
+};
+
+const resolveHeroRadius = (value: string | undefined, fallback: "lg" | "xl" | "2xl" | "3xl") => {
+  if (value === "none" || value === "lg" || value === "xl" || value === "2xl" || value === "3xl") {
+    return value;
+  }
+  return fallback;
+};
+
+const resolveHeroFontFamily = (value: string | undefined): HeroFontFamily => {
+  if (value === "sans" || value === "serif" || value === "mono") return value;
+  return "inherit";
+};
+
+const resolveHeroTextWeight = (value: string | undefined): HeroTextWeight => {
+  if (value === "normal" || value === "medium" || value === "semibold" || value === "bold") {
+    return value;
+  }
+  return "semibold";
+};
+
+const resolveHeroBodyWeight = (value: string | undefined): HeroTextWeight => {
+  if (value === "normal" || value === "medium" || value === "semibold" || value === "bold") {
+    return value;
+  }
+  return "normal";
+};
+
+const resolveHeroShadowToken = (value: string | undefined): HeroShadowToken => {
+  if (value === "none" || value === "soft" || value === "medium" || value === "strong") {
+    return value;
+  }
+  return "none";
+};
+
+const resolveHeroMotionPreset = (value: string | undefined): HeroMotionPreset => {
+  if (value === "fade-in" || value === "slide-up") return value;
+  return "none";
+};
+
+const resolveHeroLayoutHeight = (value: string | undefined): HeroLayoutHeight => {
+  if (value === "large" || value === "screen") return value;
+  return "auto";
+};
+
+const resolveHeroLayoutBleed = (value: string | undefined): HeroLayoutBleed => {
+  if (value === "full-bleed") return value;
+  return "contained";
+};
+
+const heroVariants = new Set(["centered", "split", "media-left", "media-center"]);
+
+const normalizeHeroMediaSource = (value: string | undefined): HeroMediaSource =>
+  value === "library" ? "library" : "external";
+
+const trimOptionalString = (value: string | undefined) =>
+  typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
+
+function normalizeHeroMedia(value: HeroMedia | undefined): HeroMedia {
+  const type = value?.type === "image" || value?.type === "video" ? value.type : "none";
+  return {
+    type,
+    source: normalizeHeroMediaSource(value?.source),
+    assetId: trimOptionalString(value?.assetId),
+    src: trimOptionalString(value?.src),
+    alt: type === "image" ? trimOptionalString(value?.alt) : undefined,
+    posterSource: type === "video" ? normalizeHeroMediaSource(value?.posterSource) : undefined,
+    posterAssetId: type === "video" ? trimOptionalString(value?.posterAssetId) : undefined,
+    posterSrc: type === "video" ? trimOptionalString(value?.posterSrc) : undefined,
+    title: type === "video" ? trimOptionalString(value?.title) : undefined,
+    description: type === "video" ? trimOptionalString(value?.description) : undefined,
+    ratio: type !== "none" ? resolveHeroMediaRatio(trimOptionalString(value?.ratio)) : undefined,
+    overlay: trimOptionalString(value?.overlay),
+  };
+}
+
+function normalizeHeroBackgroundMedia(
+  value: HeroBackgroundMedia | undefined,
+  legacyImage?: string
+): HeroBackgroundMedia {
+  const type =
+    value?.type === "image" || value?.type === "video"
+      ? value.type
+      : legacyImage
+        ? "image"
+        : "none";
+  return {
+    type,
+    source: normalizeHeroMediaSource(value?.source),
+    assetId: trimOptionalString(value?.assetId),
+    src: trimOptionalString(value?.src) ?? trimOptionalString(legacyImage),
+    posterSource: type === "video" ? normalizeHeroMediaSource(value?.posterSource) : undefined,
+    posterAssetId: type === "video" ? trimOptionalString(value?.posterAssetId) : undefined,
+    posterSrc: type === "video" ? trimOptionalString(value?.posterSrc) : undefined,
+    title: type === "video" ? trimOptionalString(value?.title) : undefined,
+    description: type === "video" ? trimOptionalString(value?.description) : undefined,
+    overlay: trimOptionalString(value?.overlay),
+  };
+}
+
+function normalizeHeroSocialProof(value: HeroSocialProof | undefined): HeroSocialProof | undefined {
+  if (!value) return undefined;
+  const avatars = (value.avatars ?? [])
+    .filter((avatar) => avatar && typeof avatar.src === "string" && avatar.src.trim().length > 0)
+    .slice(0, 5)
+    .map((avatar) => ({
+      src: avatar.src.trim(),
+      alt: trimOptionalString(avatar.alt),
+    }));
+  const normalized: HeroSocialProof = {
+    enabled: value.enabled !== false,
+    rating: trimOptionalString(value.rating),
+    reviewCount: trimOptionalString(value.reviewCount),
+    label: trimOptionalString(value.label),
+    avatars: avatars.length > 0 ? avatars : undefined,
+  };
+  if (!normalized.enabled) {
+    return { enabled: false };
+  }
+  if (
+    !normalized.rating &&
+    !normalized.reviewCount &&
+    !normalized.label &&
+    !normalized.avatars?.length
+  ) {
+    return undefined;
+  }
+  return normalized;
+}
+
+function normalizeHeroLayout(
+  value: HeroData["layout"] | undefined
+): NonNullable<HeroData["layout"]> {
+  return {
+    align: resolveHeroAlign(value?.align),
+    maxWidth: resolveHeroMaxWidth(value?.maxWidth),
+    contentWidth: resolveHeroContentWidth(value?.contentWidth),
+    height: resolveHeroLayoutHeight(value?.height),
+    bleed: resolveHeroLayoutBleed(value?.bleed),
+  };
+}
+
+function normalizeHeroSpacing(
+  value: HeroData["spacing"] | undefined
+): NonNullable<HeroData["spacing"]> {
+  const defaultSpacing = heroDefaults.spacing ?? { paddingTop: "xl", paddingBottom: "xl" };
+  return {
+    paddingTop: resolveSpacingKey(value?.paddingTop, defaultSpacing.paddingTop ?? "xl"),
+    paddingBottom: resolveSpacingKey(value?.paddingBottom, defaultSpacing.paddingBottom ?? "xl"),
+  };
+}
+
+function normalizeHeroStyle(value: HeroData["style"] | undefined): HeroData["style"] | undefined {
+  if (!value) return undefined;
+  return {
+    headlineSize: resolveHeroHeadlineSize(value.headlineSize),
+    subheadSize: resolveHeroSubheadSize(value.subheadSize),
+    bodySize: resolveHeroBodySize(value.bodySize),
+    textColor: trimOptionalString(value.textColor),
+    subheadColor: trimOptionalString(value.subheadColor),
+    bodyColor: trimOptionalString(value.bodyColor),
+    borderColor: trimOptionalString(value.borderColor),
+    borderWidth: resolveHeroBorderWidth(value.borderWidth),
+    borderRadius: resolveHeroRadius(value.borderRadius, "3xl"),
+    mediaRadius: resolveHeroRadius(value.mediaRadius, "2xl"),
+    mediaBorderColor: trimOptionalString(value.mediaBorderColor),
+    mediaBorderWidth: resolveHeroBorderWidth(value.mediaBorderWidth),
+    primaryButtonBg: trimOptionalString(value.primaryButtonBg),
+    primaryButtonText: trimOptionalString(value.primaryButtonText),
+    primaryButtonBorder: trimOptionalString(value.primaryButtonBorder),
+    primaryButtonSize: resolveHeroButtonSize(value.primaryButtonSize),
+    secondaryButtonBg: trimOptionalString(value.secondaryButtonBg),
+    secondaryButtonText: trimOptionalString(value.secondaryButtonText),
+    secondaryButtonBorder: trimOptionalString(value.secondaryButtonBorder),
+    secondaryButtonSize: resolveHeroButtonSize(value.secondaryButtonSize),
+    cardShadow: resolveHeroShadowToken(value.cardShadow),
+    mediaShadow: resolveHeroShadowToken(value.mediaShadow),
+    buttonShadow: resolveHeroShadowToken(value.buttonShadow),
+    fontFamily: resolveHeroFontFamily(value.fontFamily),
+    headlineWeight: resolveHeroTextWeight(value.headlineWeight),
+    bodyWeight: resolveHeroBodyWeight(value.bodyWeight),
+    motion: resolveHeroMotionPreset(value.motion),
+  };
+}
+
+function normalizeHeroBackground(
+  value: HeroData["background"] | undefined
+): NonNullable<HeroData["background"]> {
+  return {
+    color: trimOptionalString(value?.color),
+    gradient: trimOptionalString(value?.gradient),
+    image: trimOptionalString(value?.image),
+    media: normalizeHeroBackgroundMedia(value?.media, value?.image),
+  };
+}
+
+type HeroImagePolicy = {
+  loading: "eager" | "lazy";
+  fetchPriority: "high" | "auto";
+  sizes: string;
+};
+
+function resolveHeroImagePolicy(variant: string): HeroImagePolicy {
+  if (variant === "centered" || variant === "media-center") {
+    return {
+      loading: "eager",
+      fetchPriority: "high",
+      sizes: "100vw",
+    };
+  }
+  if (variant === "split") {
+    return {
+      loading: "eager",
+      fetchPriority: "high",
+      sizes: "(min-width: 768px) 50vw, 100vw",
+    };
+  }
+  return {
+    loading: "lazy",
+    fetchPriority: "auto",
+    sizes: "(min-width: 768px) 50vw, 100vw",
+  };
+}
 
 export const normalizeHeroHref = (value: unknown) =>
   normalizeWidgetSafeHref(value, {
@@ -365,41 +769,23 @@ function normalizeHeroCta(value: HeroCta | undefined): HeroCta | undefined {
 
 export function normalizeHeroData(data: HeroData): HeroData {
   return {
-    ...heroDefaults,
-    ...data,
     headline:
       typeof data.headline === "string" && data.headline.trim().length > 0
         ? data.headline
         : heroDefaults.headline,
     subhead: typeof data.subhead === "string" ? data.subhead : undefined,
     body: typeof data.body === "string" ? data.body : undefined,
+    richHeadline: sanitizeRichTextHtml(data.richHeadline),
+    richBody: sanitizeRichTextHtml(data.richBody),
     badge: normalizeHeroBadge(data.badge),
     primaryCta: normalizeHeroCta(data.primaryCta),
     secondaryCta: normalizeHeroCta(data.secondaryCta),
-    media: {
-      type: data.media?.type ?? heroDefaults.media?.type ?? "none",
-      source: data.media?.source ?? heroDefaults.media?.source ?? "external",
-      assetId: data.media?.assetId,
-      src: data.media?.src,
-      alt: data.media?.alt,
-      ratio: data.media?.ratio,
-      overlay: data.media?.overlay,
-    },
-    layout: {
-      ...heroDefaults.layout,
-      ...data.layout,
-    },
-    spacing: {
-      ...heroDefaults.spacing,
-      ...data.spacing,
-    },
-    style: data.style ? { ...data.style } : undefined,
-    background: data.background
-      ? {
-          ...data.background,
-          media: data.background.media ? { ...data.background.media } : undefined,
-        }
-      : heroDefaults.background,
+    media: normalizeHeroMedia(data.media),
+    socialProof: normalizeHeroSocialProof(data.socialProof),
+    layout: normalizeHeroLayout(data.layout),
+    spacing: normalizeHeroSpacing(data.spacing),
+    style: normalizeHeroStyle(data.style),
+    background: normalizeHeroBackground(data.background),
     responsive: {
       ...heroDefaults.responsive,
       ...data.responsive,
@@ -439,32 +825,29 @@ export function HeroBlock({
   const paddingTop = resolveSpacingKey(spacing.paddingTop, defaultPaddingTop);
   const paddingBottom = resolveSpacingKey(spacing.paddingBottom, defaultPaddingBottom);
   const background = normalized.background ?? {};
-  const backgroundMedia = {
-    type: background.media?.type ?? (background.image ? "image" : "none"),
-    source: background.media?.source ?? "external",
-    assetId: background.media?.assetId,
-    src: background.media?.src ?? background.image,
-    overlay: background.media?.overlay,
-  };
+  const resolvedVariant = heroVariants.has(variant) ? variant : "centered";
+  const backgroundMedia = normalizeHeroBackgroundMedia(background.media, background.image);
   const centeredImageBackground =
-    variant === "centered" && media.type === "image" ? media.src : undefined;
+    resolvedVariant === "centered" && media.type === "image" ? media.src : undefined;
   const resolvedBackgroundVideo =
     backgroundMedia.type === "video" ? backgroundMedia.src : undefined;
-  const resolvedBackgroundImage =
-    backgroundMedia.type === "image"
-      ? (backgroundMedia.src ?? centeredImageBackground)
-      : (background.image ?? centeredImageBackground);
+  const explicitBackgroundImage =
+    backgroundMedia.type === "image" ? backgroundMedia.src : trimOptionalString(background.image);
+  const resolvedBackgroundImage = explicitBackgroundImage;
+  const centeredBackgroundImage = !explicitBackgroundImage ? centeredImageBackground : undefined;
   const resolvedBackgroundGradient = resolveClearableStyleValue(background.gradient);
   const resolvedBackgroundOverlay = resolveClearableStyleValue(
     backgroundMedia.overlay ??
-      (variant === "centered" && media.type === "image" ? media.overlay : undefined)
+      (resolvedVariant === "centered" && media.type === "image" ? media.overlay : undefined)
   );
+  const centeredBackgroundGradient =
+    centeredBackgroundImage && !resolvedBackgroundVideo ? resolvedBackgroundGradient : undefined;
   const layeredBackground =
     !resolvedBackgroundVideo && resolvedBackgroundImage
       ? [resolvedBackgroundOverlay, resolvedBackgroundGradient, `url(${resolvedBackgroundImage})`]
           .filter(Boolean)
           .join(", ")
-      : !resolvedBackgroundVideo
+      : !resolvedBackgroundVideo && !centeredBackgroundImage
         ? resolvedBackgroundGradient || undefined
         : undefined;
 
@@ -496,6 +879,15 @@ export function HeroBlock({
   const bodySize = style.bodySize ?? "base";
   const primaryButtonSize = style.primaryButtonSize ?? "md";
   const secondaryButtonSize = style.secondaryButtonSize ?? "md";
+  const cardShadow = resolveHeroShadowToken(style.cardShadow);
+  const mediaShadow = resolveHeroShadowToken(style.mediaShadow);
+  const buttonShadow = resolveHeroShadowToken(style.buttonShadow);
+  const fontFamily = resolveHeroFontFamily(style.fontFamily);
+  const headlineWeight = resolveHeroTextWeight(style.headlineWeight);
+  const bodyWeight = resolveHeroBodyWeight(style.bodyWeight);
+  const motionPreset = resolveHeroMotionPreset(style.motion);
+  const layoutHeight = resolveHeroLayoutHeight(layout.height);
+  const layoutBleed = resolveHeroLayoutBleed(layout.bleed);
   const headlineColor = style.textColor ?? "var(--color-text)";
   const subheadColor = style.subheadColor ?? "var(--color-text)";
   const bodyColor = style.bodyColor ?? "var(--color-text)";
@@ -525,12 +917,17 @@ export function HeroBlock({
       borderWidth: "1px",
     }) ?? {};
 
-  const isSplit = variant !== "centered";
-  const isMediaLeft = variant === "media-left";
+  const centeredImagePolicy = centeredBackgroundImage ? resolveHeroImagePolicy("centered") : null;
+  const inlineImagePolicy =
+    media.type === "image" && media.src ? resolveHeroImagePolicy(resolvedVariant) : null;
+  const isSplit = resolvedVariant === "split" || resolvedVariant === "media-left";
+  const isMediaLeft = resolvedVariant === "media-left";
+  const isMediaCenter = resolvedVariant === "media-center";
   const hideMediaOnMobile = normalized.responsive?.hideMediaOnMobile;
   const contentSlots = slots?.content ?? [];
   const badge = normalized.badge?.enabled ? normalized.badge : undefined;
   const badgeTone = badge?.tone ?? "neutral";
+  const socialProof = normalized.socialProof?.enabled ? normalized.socialProof : undefined;
   const badgeNode = badge ? (
     badge.href ? (
       <a
@@ -558,26 +955,70 @@ export function HeroBlock({
     )
   ) : null;
 
+  const effectiveAlign = isMediaCenter ? "center" : align;
   const textAlignClass =
-    align === "center" ? "text-center" : align === "right" ? "text-right" : "text-left";
+    effectiveAlign === "center"
+      ? "text-center"
+      : effectiveAlign === "right"
+        ? "text-right"
+        : "text-left";
   const contentPlacementClass =
-    align === "center" ? "mx-auto" : align === "right" ? "ml-auto" : "mr-auto";
+    effectiveAlign === "center" ? "mx-auto" : effectiveAlign === "right" ? "ml-auto" : "mr-auto";
 
   const layoutClass = isSplit
     ? joinClasses(
         "flex flex-col gap-8 md:items-center",
         isMediaLeft ? "md:flex-row-reverse" : "md:flex-row"
       )
-    : "flex flex-col gap-4";
+    : isMediaCenter
+      ? "flex flex-col items-center gap-8"
+      : "flex flex-col gap-4";
+
+  const rootStyle: CSSProperties =
+    layoutBleed === "full-bleed"
+      ? {
+          ...cardStyle,
+          width: "100vw",
+          marginLeft: "calc(50% - 50vw)",
+          marginRight: "calc(50% - 50vw)",
+        }
+      : cardStyle;
 
   return (
     <div
       className={joinClasses(
         "relative w-full overflow-hidden border px-6",
-        radiusClassMap[style.borderRadius ?? "3xl"] ?? "rounded-3xl"
+        radiusClassMap[style.borderRadius ?? "3xl"] ?? "rounded-3xl",
+        shadowClassMap[cardShadow],
+        fontFamilyClassMap[fontFamily],
+        motionClassMap[motionPreset],
+        heightClassMap[layoutHeight]
       )}
-      style={cardStyle}
+      style={rootStyle}
     >
+      {centeredBackgroundImage && centeredImagePolicy ? (
+        <img
+          src={centeredBackgroundImage}
+          alt={media.alt ?? ""}
+          loading={centeredImagePolicy.loading}
+          fetchPriority={centeredImagePolicy.fetchPriority}
+          sizes={centeredImagePolicy.sizes}
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+      ) : null}
+      {centeredBackgroundGradient ? (
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{ background: centeredBackgroundGradient }}
+        />
+      ) : null}
+      {centeredBackgroundImage && resolvedBackgroundOverlay ? (
+        <div
+          data-hero-background-overlay="true"
+          className="pointer-events-none absolute inset-0"
+          style={{ background: resolvedBackgroundOverlay }}
+        />
+      ) : null}
       {resolvedBackgroundVideo ? (
         <video
           autoPlay
@@ -585,6 +1026,9 @@ export function HeroBlock({
           muted
           playsInline
           src={resolvedBackgroundVideo}
+          poster={backgroundMedia.posterSrc}
+          title={backgroundMedia.title || undefined}
+          aria-description={backgroundMedia.description || undefined}
           className="absolute inset-0 h-full w-full object-cover"
         />
       ) : null}
@@ -608,49 +1052,103 @@ export function HeroBlock({
               "space-y-4",
               textAlignClass,
               isSplit ? "w-full md:flex-1" : contentWidthClassMap[contentWidth],
-              !isSplit && contentPlacementClass
+              !isSplit && contentPlacementClass,
+              isMediaCenter && "mx-auto text-center"
             )}
           >
             {badge && badge.placement !== "inline-headline" ? badgeNode : null}
             <h1
               className={joinClasses(
-                "font-semibold",
+                textWeightClassMap[headlineWeight],
                 badge?.placement === "inline-headline" && "flex flex-wrap items-center gap-3",
                 headlineSizeClassMap[headlineSize] ?? "text-3xl"
               )}
               style={{ color: headlineColor }}
             >
               {badge?.placement === "inline-headline" ? badgeNode : null}
-              <span>{normalized.headline}</span>
+              {normalized.richHeadline ? (
+                <span dangerouslySetInnerHTML={{ __html: normalized.richHeadline }} />
+              ) : (
+                <span>{normalized.headline}</span>
+              )}
             </h1>
             {normalized.subhead ? (
               <p
-                className={joinClasses(subheadSizeClassMap[subheadSize] ?? "text-xl")}
+                className={joinClasses(
+                  subheadSizeClassMap[subheadSize] ?? "text-xl",
+                  textWeightClassMap[bodyWeight]
+                )}
                 style={{ color: subheadColor }}
               >
                 {normalized.subhead}
               </p>
             ) : null}
-            {normalized.body ? (
+            {normalized.richBody ? (
+              <div
+                className={joinClasses(
+                  bodySizeClassMap[bodySize] ?? "text-base",
+                  textWeightClassMap[bodyWeight]
+                )}
+                style={{ color: bodyColor }}
+                dangerouslySetInnerHTML={{ __html: normalized.richBody }}
+              />
+            ) : normalized.body ? (
               <p
-                className={joinClasses(bodySizeClassMap[bodySize] ?? "text-base")}
+                className={joinClasses(
+                  bodySizeClassMap[bodySize] ?? "text-base",
+                  textWeightClassMap[bodyWeight]
+                )}
                 style={{ color: bodyColor }}
               >
                 {normalized.body}
               </p>
             ) : null}
+            {socialProof ? (
+              <div
+                data-widget-part="hero.social-proof"
+                className={joinClasses(
+                  "flex flex-wrap items-center gap-3 text-sm",
+                  effectiveAlign === "center"
+                    ? "justify-center"
+                    : effectiveAlign === "right"
+                      ? "justify-end"
+                      : "justify-start"
+                )}
+                style={{ color: bodyColor }}
+              >
+                {socialProof.avatars?.length ? (
+                  <div className="flex -space-x-2">
+                    {socialProof.avatars.map((avatar, index) => (
+                      <img
+                        key={`${avatar.src}-${index}`}
+                        src={avatar.src}
+                        alt={avatar.alt ?? ""}
+                        loading="lazy"
+                        className="h-8 w-8 rounded-full border border-background object-cover"
+                      />
+                    ))}
+                  </div>
+                ) : null}
+                {socialProof.rating ? (
+                  <span className="font-semibold">{socialProof.rating}</span>
+                ) : null}
+                {socialProof.reviewCount ? <span>{socialProof.reviewCount}</span> : null}
+                {socialProof.label ? <span>{socialProof.label}</span> : null}
+              </div>
+            ) : null}
             <div
               className={joinClasses(
                 "flex w-full flex-wrap items-center gap-3",
-                align === "center" && "justify-center",
-                align === "right" && "justify-end"
+                effectiveAlign === "center" && "justify-center",
+                effectiveAlign === "right" && "justify-end"
               )}
             >
               {normalized.primaryCta ? (
                 <a
                   className={joinClasses(
                     "rounded-md font-semibold",
-                    buttonSizeClassMap[primaryButtonSize] ?? "px-4 py-2 text-sm"
+                    buttonSizeClassMap[primaryButtonSize] ?? "px-4 py-2 text-sm",
+                    shadowClassMap[buttonShadow]
                   )}
                   style={primaryButtonStyle}
                   href={normalized.primaryCta.href}
@@ -662,7 +1160,8 @@ export function HeroBlock({
                 <a
                   className={joinClasses(
                     "rounded-md font-semibold",
-                    buttonSizeClassMap[secondaryButtonSize] ?? "px-4 py-2 text-sm"
+                    buttonSizeClassMap[secondaryButtonSize] ?? "px-4 py-2 text-sm",
+                    shadowClassMap[buttonShadow]
                   )}
                   style={secondaryButtonStyle}
                   href={normalized.secondaryCta.href}
@@ -683,15 +1182,21 @@ export function HeroBlock({
               </div>
             ) : null}
           </div>
-          {isSplit ? (
+          {isSplit || isMediaCenter ? (
             <div
-              className={joinClasses("w-full", "md:flex-1", hideMediaOnMobile && "hidden md:block")}
+              className={joinClasses(
+                "w-full",
+                isSplit && "md:flex-1",
+                isMediaCenter && "mx-auto max-w-4xl",
+                hideMediaOnMobile && "hidden md:block"
+              )}
             >
               <div
                 className={joinClasses(
                   "relative overflow-hidden border bg-muted/20",
                   radiusClassMap[style.mediaRadius ?? "2xl"] ?? "rounded-2xl",
-                  ratioClassMap[media?.ratio ?? "16:9"] ?? "aspect-video"
+                  ratioClassMap[media?.ratio ?? "16:9"] ?? "aspect-video",
+                  shadowClassMap[mediaShadow]
                 )}
                 style={mediaFrameStyle}
               >
@@ -699,17 +1204,31 @@ export function HeroBlock({
                   <img
                     src={media.src}
                     alt={media.alt ?? ""}
+                    loading={inlineImagePolicy?.loading}
+                    fetchPriority={inlineImagePolicy?.fetchPriority}
+                    sizes={inlineImagePolicy?.sizes}
                     className="h-full w-full object-cover"
                   />
                 ) : media?.type === "video" && media.src ? (
-                  <video controls src={media?.src} className="h-full w-full object-cover" />
+                  <video
+                    controls
+                    src={media.src}
+                    poster={media.posterSrc}
+                    title={media.title || undefined}
+                    aria-description={media.description || undefined}
+                    className="h-full w-full object-cover"
+                  />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center text-xs font-medium text-muted-foreground">
                     {media?.type === "none" ? "Select media type" : "Add media URL"}
                   </div>
                 )}
                 {media?.overlay ? (
-                  <div className="absolute inset-0" style={{ background: media.overlay }} />
+                  <div
+                    data-hero-inline-media-overlay="true"
+                    className="pointer-events-none absolute inset-0"
+                    style={{ background: media.overlay }}
+                  />
                 ) : null}
               </div>
             </div>
@@ -735,6 +1254,7 @@ export function createHeroWidget(editors: {
       { id: "centered", label: "Centered" },
       { id: "split", label: "Media Right" },
       { id: "media-left", label: "Media Left" },
+      { id: "media-center", label: "Media Center" },
     ],
     schema: heroSchema,
     defaults: heroDefaults,

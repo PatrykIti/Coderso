@@ -342,6 +342,64 @@ Różnica nie jest wyjaśniona. Użytkownik może nie wiedzieć, który padding 
   routed to the page-shell follow-up path owned by `TASK-256-08`, not silently
   closed under the Hero widget.
 
+## Status po TASK-272 (2026-05-19)
+
+### Closure matrix
+
+| Finding | Final state | Owner | Current evidence |
+|---|---|---|---|
+| BUG-01 | fixed | TASK-272-01 | Centered Visual mode keeps media authoring available while hiding inline-only frame controls; covered by `tests/vitest/widgets/heroEditors.test.tsx` and `tests/vitest/ui/hero-editor-wave.test.tsx`. |
+| BUG-02 | fixed (shared) | TASK-256-02 / TASK-256-06-03 | Gradient activation/default-state semantics stay on the shared color/clear seam, not the Hero-only family. |
+| BUG-03 | page-shell follow-up | TASK-256-08 | History auth failure is still classified outside Hero widget scope. |
+| BUG-04 | fixed | TASK-272-02 | Inline/background video now support poster image plus video metadata; covered by `tests/vitest/widgets/hero.test.tsx` and `tests/vitest/ui/hero-editor-wave.test.tsx`. |
+| BUG-05 | page-shell follow-up | TASK-256-08 | Toolbar icon naming remains a page-shell owner. |
+| BUG-06 | fixed (shared) | TASK-256-04 / TASK-256-06-03 | Required image-alt baseline remains shared widget-contract scope. |
+| BUG-07 | fixed | TASK-272-02 | Video editor paths now expose `title` / `description` / poster fields instead of image-alt-only semantics. |
+| UX-01 | fixed (shared) | TASK-256-02 | Dual color-input semantics stay on the shared color-control owner. |
+| UX-02 | fixed (shared) | TASK-256-02 | Default-vs-authored clear-state truthfulness stays on the shared color/clear owner. |
+| UX-03 | fixed | TASK-272-03 | Preset deletion is now confirmed and can be cancelled; import/export/search/sort landed in the Hero preset manager. |
+| UX-04 | fixed | TASK-272-04 | Advanced layout copy now distinguishes Hero content spacing from generic builder spacing. |
+| UX-05 | page-shell follow-up | TASK-256-08 | Viewport switching remains a page-preview shell concern, not Hero widget scope. |
+| UX-06 | page-shell follow-up | TASK-256-08 | Discard/restore remains a page-shell history/dirty-state owner. |
+| UX-07 | fixed (shared) | TASK-256-02 / TASK-256-06-03 | Gradient active-state clarity remains on the shared color/clear owner. |
+| UX-08 | fixed | TASK-272-01 | CTA URL placeholders are now the explicit `/signup` and `/examples` examples in Wizard and Visual mode. |
+| BF-01 | fixed | TASK-272-02 | Hero video now supports poster image, title, and description fields end-to-end. |
+| BF-02 | fixed | TASK-272-05 | Hero now exposes bounded card/media/button shadow tokens. |
+| BF-03 | fixed | TASK-272-04 | Hero now supports bounded `height` and `bleed` layout tokens, including full-screen and full-bleed modes. |
+| BF-04 | fixed | TASK-272-07 | Safe rich headline/body authoring now uses the shared widget rich-text sanitizer. |
+| BF-05 | fixed | TASK-272-06 | Hero now ships predefined Light/Dark/Brand palette application in Visual mode. |
+| BF-06 | fixed | TASK-272-05 | Hero now exposes bounded font family and headline/body weight controls. |
+| BF-07 | deferred with partial closure | TASK-272-08 + future media-owner task | Hero now adds deterministic `loading`, `fetchPriority`, and `sizes` behavior, but true `srcset` / `picture` support remains deferred until generated media variants exist. |
+| BF-08 | fixed | TASK-272-06 | Hero now reuses shared contrast guidance and reports `unknown` for gradients/images/transparent/token-based surfaces. |
+| BF-09 | fixed | TASK-272-03 | Presets now support bounded JSON export/import. |
+| BF-10 | fixed | TASK-272-03 | Presets now support local search and sort within the 24-preset cap. |
+| BF-11 | fixed | TASK-272-08 | Hero image policy now applies `fetchPriority="high"` for LCP-priority variants. |
+| BF-12 | fixed | TASK-272-05 | Hero now exposes reduced-motion-safe `fade-in` and `slide-up` presets. |
+| BF-13 | fixed | TASK-272-04 | Hero now supports the `media-center` variant end-to-end. |
+| BF-14 | fixed | TASK-272-07 | Hero now supports an optional bounded social-proof row. |
+| A1 | page-shell follow-up | TASK-256-08 | Toolbar accessible-name work remains outside Hero widget scope. |
+| A2 | fixed | TASK-272-06 | Hero color guidance now surfaces shared contrast advisories for Hero-owned surfaces. |
+| A3 | fixed (shared) | TASK-256-04 / TASK-256-06-03 | Image-alt baseline stays owned by the shared widget contract. |
+| A4 | fixed (shared) | TASK-256-06-03 | Safe external-link `rel` handling remains on the shared link owner. |
+| A5 | fixed | TASK-272-08 | Hero now uses a deterministic lazy/eager policy instead of missing image-loading hints. |
+| A6 | fixed | TASK-272-08 | Hero LCP-priority image variants now receive high fetch priority. |
+
+### Validation snapshot
+
+- `bun run lint`: passed.
+- Targeted Bun coverage for the Hero/user-settings contract passed on:
+  `tests/unit/settings/userSettingsService.test.ts`,
+  `tests/unit/widgets/validator.test.ts`,
+  `tests/unit/widgets/registry.test.ts`,
+  `tests/integration/routes/userSettings.test.ts`.
+- `bun run test:vitest`: passed.
+- `bun run scan:security:strict`: passed.
+- `bun run test:bun`: still fails in unrelated pre-existing suites outside Hero
+  scope, including `tests/unit/assistant/actionExecutorService.db.test.ts`,
+  `tests/unit/forms/formActionsService.test.ts`, and
+  `tests/unit/kits/installService.test.ts`. Those failures were recorded
+  separately and were not introduced by the TASK-272 Hero wave.
+
 ---
 
 *Raport wygenerowany na podstawie analizy kodu i testów Playwright — 2026-05-16.*

@@ -6,7 +6,7 @@
 **Category:** Widgets + Hero + Playwright QA + Documentation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-272-01, TASK-272-02, TASK-272-03, TASK-272-04, TASK-272-05, TASK-272-06, TASK-272-07, TASK-272-08, TASK-256-08, TASK-299, TASK-305, TASK-310-02
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -76,7 +76,11 @@ const findingMap = [
   { id: "BF-04", status: "fixed-task-272", evidence: "TASK-272-07 validation" },
   { id: "BF-05", status: "fixed-task-272", evidence: "TASK-272-06 validation" },
   { id: "BF-06", status: "fixed-task-272", evidence: "TASK-272-05 validation" },
-  { id: "BF-07", status: "fixed-task-272", evidence: "TASK-272-08 validation" },
+  {
+    id: "BF-07",
+    status: "deferred",
+    evidence: "TASK-272-08 validation plus report note: loading/sizes policy landed, true srcset variants remain a media-owner follow-up",
+  },
   { id: "BF-08", status: "fixed-task-272", evidence: "TASK-272-06 adoption of TASK-299 validation" },
   { id: "BF-09", status: "fixed-task-272", evidence: "TASK-272-03 validation" },
   { id: "BF-10", status: "fixed-task-272", evidence: "TASK-272-03 validation" },
@@ -154,6 +158,23 @@ No API routes are added by this docs/closure leaf.
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/{N}-YYYY-MM-DD-task-272-hero-widget-followups.md`
 - `_docs/_CHANGELOG/README.md`
+
+## Final Validation (2026-05-19)
+
+- `git diff --check`: passed.
+- `bun run lint`: passed.
+- `bun run test:bun`: failed in unrelated pre-existing suites outside Hero
+  scope, including `tests/unit/assistant/actionExecutorService.db.test.ts`,
+  `tests/unit/forms/formActionsService.test.ts`, and
+  `tests/unit/kits/installService.test.ts`.
+- Targeted Bun proof for the TASK-272 Hero/user-settings contract passed on:
+  `tests/unit/settings/userSettingsService.test.ts`,
+  `tests/unit/widgets/validator.test.ts`,
+  `tests/unit/widgets/registry.test.ts`, and
+  `tests/integration/routes/userSettings.test.ts`.
+- `bun run test:vitest`: passed.
+- `bun run scan:security:strict`: passed.
+- `bun run precommit`: passed.
 
 ## Acceptance Criteria
 

@@ -452,9 +452,9 @@ test("HeroWizardEditor applies presets, updates direct content fields, toggles C
         "Support the main outcome with a concise sentence."
       );
       setInputValue(findInputByPlaceholder(view.container, "Get started"), "Start onboarding");
-      setInputValue(findInputByPlaceholder(view.container, "/start"), "/join");
+      setInputValue(findInputByPlaceholder(view.container, "/signup"), "/join");
       setInputValue(findInputByPlaceholder(view.container, "Learn more"), "Review pricing");
-      setInputValue(findInputByPlaceholder(view.container, "/learn"), "/pricing");
+      setInputValue(findInputByPlaceholder(view.container, "/examples"), "/pricing");
     });
 
     React.act(() => {
@@ -469,7 +469,7 @@ test("HeroWizardEditor applies presets, updates direct content fields, toggles C
 
     React.act(() => {
       setInputValue(findInputByPlaceholder(view.container, "Learn more"), "Review pricing");
-      setInputValue(findInputByPlaceholder(view.container, "/learn"), "/pricing");
+      setInputValue(findInputByPlaceholder(view.container, "/examples"), "/pricing");
     });
     expect(
       [...onChangeSpy.mock.calls]
@@ -517,7 +517,7 @@ test("HeroWizardEditor applies presets, updates direct content fields, toggles C
       setSelectValue(findSelectByOptions(view.container, ["none", "image", "video"]), "video");
     });
     expect(view.container.textContent).toContain(
-      "Centered layout does not show inline video. Use Media Right or Media Left to display video content."
+      "Centered layout does not show inline video. Use Media Right, Media Left, or Media Center to display video content."
     );
 
     React.act(() => {
@@ -537,8 +537,8 @@ test("HeroWizardEditor applies presets, updates direct content fields, toggles C
       media: {
         type: "video",
         source: "library",
-        assetId: "asset-hero",
-        src: "/media/hero.jpg",
+        assetId: undefined,
+        src: undefined,
       },
     });
   } finally {
@@ -679,8 +679,11 @@ test("HeroVisualEditor loads sanitized presets, applies them, validates create f
 
   const Harness = () => {
     const [value, setValue] = useState<HeroData>({
-      headline: "",
-      primaryCta: { label: "", href: "" },
+      headline: "Current hero",
+      primaryCta: { label: "Current CTA", href: "/current" },
+      secondaryCta: { label: "Legacy secondary", href: "/legacy" },
+      background: { color: "#111827" },
+      style: { cardShadow: "strong" },
     });
     const [variant, setVariant] = useState("split");
     return (
@@ -710,16 +713,29 @@ test("HeroVisualEditor loads sanitized presets, applies them, validates create f
 
     clickElement(findButtonsByText(view.container, "Apply")[0]);
     expect(onVariantChangeSpy).toHaveBeenCalledWith("media-left");
-    expect(
-      [...onChangeSpy.mock.calls]
-        .reverse()
-        .find(([arg]) => arg?.headline === "Preset headline")?.[0]
-    ).toEqual(
+    const appliedPreset = [...onChangeSpy.mock.calls]
+      .reverse()
+      .find(([arg]) => arg?.headline === "Preset headline")?.[0];
+    expect(appliedPreset).toEqual(
       expect.objectContaining({
         headline: "Preset headline",
         primaryCta: { label: "Open library", href: "/library" },
+        layout: {
+          align: "center",
+          maxWidth: "xl",
+          contentWidth: "lg",
+          height: "auto",
+          bleed: "contained",
+        },
+        background: expect.objectContaining({
+          media: expect.objectContaining({
+            type: "none",
+            source: "external",
+          }),
+        }),
       })
     );
+    expect(appliedPreset?.secondaryCta).toBeUndefined();
 
     React.act(() => {
       setInputValue(
@@ -771,7 +787,12 @@ test("HeroVisualEditor loads sanitized presets, applies them, validates create f
       ])
     );
 
-    clickElement(findButtonsByText(view.container, "Update")[0]);
+    const launchUpdateButton = Array.from(view.container.querySelectorAll("button")).find(
+      (node) =>
+        node.textContent === "Update" &&
+        node.parentElement?.parentElement?.textContent?.includes("Launch")
+    );
+    clickElement(launchUpdateButton);
     await flush();
     expect(heroState.lastSavedValue).toEqual(
       expect.arrayContaining([
@@ -785,9 +806,389 @@ test("HeroVisualEditor loads sanitized presets, applies them, validates create f
       ])
     );
 
-    clickElement(findButtonsByText(view.container, "Delete")[0]);
+    const launchDeleteButton = Array.from(view.container.querySelectorAll("button")).find(
+      (node) =>
+        node.textContent === "Delete" &&
+        node.parentElement?.parentElement?.textContent?.includes("Launch")
+    );
+    clickElement(launchDeleteButton);
+    clickElement(findButtonsByText(view.container, "Delete preset")[0]);
     await flush();
-    expect(view.container.textContent).not.toContain("Launch");
+    expect(
+      Array.from(view.container.querySelectorAll("button")).find(
+        (node) =>
+          node.textContent === "Update" &&
+          node.parentElement?.parentElement?.textContent?.includes("Launch")
+      )
+    ).toBeUndefined();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("HeroVisualEditor updates rich copy and social proof fields", async () => {
+  const { HeroVisualEditor } = await import("../../../core/admin/ui/widgets/editors/HeroEditors");
+
+  const onChangeSpy = vi.fn();
+  let latestValue: HeroData = {
+    headline: "Hero",
+    primaryCta: { label: "Get started", href: "/signup" },
+  };
+
+  const Harness = () => {
+    const [value, setValue] = useState(latestValue);
+    return (
+      <HeroVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          onChangeSpy(next);
+          setValue(next);
+        }}
+        variant="centered"
+        onVariantChange={() => undefined}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    await flush();
+
+    React.act(() => {
+      setTextareaValue(
+        view.container.querySelector('[data-widget-control="hero.richHeadline"] textarea'),
+        "<strong>Build</strong> faster"
+      );
+      setTextareaValue(
+        view.container.querySelector('[data-widget-control="hero.richBody"] textarea'),
+        "<p>Safe <em>rich</em> body copy.</p>"
+      );
+    });
+
+    clickElement(
+      view.container.querySelector(
+        '[data-widget-control="hero.socialProof.enabled"] input[type="checkbox"]'
+      )
+    );
+
+    React.act(() => {
+      setInputValue(findInputByPlaceholder(view.container, "4.9/5"), "4.8/5");
+      setInputValue(findInputByPlaceholder(view.container, "2,000+ reviews"), "1,200+ reviews");
+      setInputValue(
+        findInputByPlaceholder(view.container, "Trusted by product and ops teams."),
+        "Trusted by customer-facing teams."
+      );
+      setInputValue(
+        findInputByPlaceholder(view.container, "https://cdn.example.com/avatar-1.jpg"),
+        "/avatars/a1.jpg"
+      );
+      setInputValue(findInputByPlaceholder(view.container, "Reviewer avatar"), "Reviewer one");
+    });
+
+    expect(latestValue).toEqual(
+      expect.objectContaining({
+        richHeadline: "<strong>Build</strong> faster",
+        richBody: "<p>Safe <em>rich</em> body copy.</p>",
+        socialProof: expect.objectContaining({
+          enabled: true,
+          rating: "4.8/5",
+          reviewCount: "1,200+ reviews",
+          label: "Trusted by customer-facing teams.",
+          avatars: [{ src: "/avatars/a1.jpg", alt: "Reviewer one" }],
+        }),
+      })
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("HeroVisualEditor keeps centered media editable and clears incompatible media sources on type changes", async () => {
+  const { HeroVisualEditor, HeroAdvancedEditor } =
+    await import("../../../core/admin/ui/widgets/editors/HeroEditors");
+
+  let latestVisualValue: HeroData = {
+    headline: "Hero",
+    media: {
+      type: "image",
+      source: "library",
+      assetId: "asset-hero",
+      src: "/media/hero.jpg",
+      alt: "Hero background",
+      overlay: "rgba(0,0,0,0.2)",
+    },
+  };
+
+  const VisualHarness = () => {
+    const [value, setValue] = useState(latestVisualValue);
+    return (
+      <HeroVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestVisualValue = next;
+          setValue(next);
+        }}
+        variant="centered"
+        onVariantChange={() => undefined}
+      />
+    );
+  };
+
+  const visualView = mount(<VisualHarness />);
+
+  try {
+    await flush();
+
+    expect(findSectionByTitle(visualView.container, "Media")).toBeTruthy();
+    expect(visualView.container.textContent).toContain(
+      "Centered layout renders the selected image as hero background."
+    );
+
+    React.act(() => {
+      setSelectValue(
+        findSelectByOptions(visualView.container, ["none", "image", "video"]),
+        "video"
+      );
+    });
+
+    expect(visualView.container.textContent).toContain(
+      "Centered layout does not render inline video."
+    );
+    expect(latestVisualValue.media).toEqual(
+      expect.objectContaining({
+        type: "video",
+        source: "library",
+        assetId: undefined,
+        src: undefined,
+        alt: undefined,
+      })
+    );
+  } finally {
+    visualView.cleanup();
+  }
+
+  let latestAdvancedValue: HeroData = {
+    headline: "Hero",
+    background: {
+      media: {
+        type: "image",
+        source: "library",
+        assetId: "asset-background",
+        src: "/media/background.jpg",
+      },
+    },
+  };
+
+  const AdvancedHarness = () => {
+    const [value, setValue] = useState(latestAdvancedValue);
+    return (
+      <HeroAdvancedEditor
+        value={value}
+        variant="centered"
+        onChange={(next) => {
+          latestAdvancedValue = next;
+          setValue(next);
+        }}
+      />
+    );
+  };
+
+  const advancedView = mount(<AdvancedHarness />);
+
+  try {
+    await flush();
+
+    React.act(() => {
+      setSelectValue(
+        findSelectsByOptions(advancedView.container, ["none", "image", "video"])[0],
+        "video"
+      );
+    });
+
+    expect(latestAdvancedValue.background).toEqual(
+      expect.objectContaining({
+        image: undefined,
+        media: expect.objectContaining({
+          type: "video",
+          source: "library",
+          assetId: undefined,
+          src: undefined,
+        }),
+      })
+    );
+  } finally {
+    advancedView.cleanup();
+  }
+});
+
+test("HeroVisualEditor applies palettes without erasing content and keeps gradient contrast guidance unknown", async () => {
+  const { HeroVisualEditor } = await import("../../../core/admin/ui/widgets/editors/HeroEditors");
+
+  let latestValue: HeroData = {
+    headline: "Hero headline",
+    primaryCta: { label: "Get started", href: "/signup" },
+    background: {
+      gradient: "linear-gradient(135deg, #020617, #0f172a)",
+    },
+    style: {
+      textColor: "#ffffff",
+      bodyColor: "#e2e8f0",
+      secondaryButtonText: "#ffffff",
+    },
+  };
+
+  const Harness = () => {
+    const [value, setValue] = useState(latestValue);
+    return (
+      <HeroVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="centered"
+        onVariantChange={() => undefined}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    await flush();
+
+    expect(view.container.textContent).toContain(
+      "Contrast depends on inherited theme or transparent colors."
+    );
+
+    const colorsSection = findSectionByTitle(view.container, "Colors and Borders");
+    clickElement(findButtonContainingText(colorsSection ?? view.container, "Dark"));
+
+    expect(latestValue).toEqual(
+      expect.objectContaining({
+        headline: "Hero headline",
+        primaryCta: { label: "Get started", href: "/signup" },
+        background: expect.objectContaining({
+          color: "#0f172a",
+          gradient: "linear-gradient(135deg, #020617, #0f172a)",
+        }),
+        style: expect.objectContaining({
+          textColor: "#f8fafc",
+          subheadColor: "#e2e8f0",
+          bodyColor: "#cbd5e1",
+          primaryButtonBg: "#38bdf8",
+          secondaryButtonBorder: "#334155",
+        }),
+      })
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("HeroVisualEditor rejects duplicate preset imports and normalizes media-center imports", async () => {
+  const { HeroVisualEditor } = await import("../../../core/admin/ui/widgets/editors/HeroEditors");
+
+  heroState.presetValue = [
+    {
+      name: "Launch",
+      variant: "split",
+      data: {
+        headline: "Launch hero",
+      },
+      updatedAt: "2026-03-09T08:00:00.000Z",
+    },
+  ];
+  heroState.lastSavedValue = null;
+
+  const view = mount(
+    <HeroVisualEditor
+      value={{ headline: "Hero", primaryCta: { label: "Get started", href: "/signup" } }}
+      onChange={() => undefined}
+      variant="centered"
+      onVariantChange={() => undefined}
+    />
+  );
+
+  try {
+    await flush();
+
+    clickElement(findButtonsByText(view.container, "Import presets")[0]);
+    React.act(() => {
+      setTextareaValue(
+        findTextareaByPlaceholder(view.container, "Paste preset JSON"),
+        JSON.stringify({
+          presets: [
+            {
+              name: "Launch",
+              variant: "media-center",
+              data: { headline: "Duplicate" },
+            },
+          ],
+        })
+      );
+    });
+    clickElement(findButtonsByText(view.container, "Import presets")[1]);
+    expect(view.container.textContent).toContain('Preset name "Launch" already exists.');
+    expect(heroState.lastSavedValue).toBeNull();
+
+    React.act(() => {
+      setTextareaValue(
+        findTextareaByPlaceholder(view.container, "Paste preset JSON"),
+        JSON.stringify({
+          presets: [
+            {
+              name: "Imported media center",
+              variant: "media-center",
+              data: {
+                headline: "Imported hero",
+                layout: { height: "screen" },
+                style: {
+                  cardShadow: "invalid-token",
+                  headlineSize: "giant",
+                  bodyWeight: "bold",
+                },
+                extra: "drop-me",
+              },
+            },
+          ],
+        })
+      );
+    });
+    clickElement(findButtonsByText(view.container, "Import presets")[1]);
+    await flush();
+
+    expect(view.container.textContent).toContain(
+      'Preset "Imported media center" normalized fields:'
+    );
+
+    const savedPresets = heroState.lastSavedValue as Array<{
+      variant: string;
+      data: Record<string, unknown>;
+    }>;
+    const importedPreset = savedPresets.find((entry) => entry.variant === "media-center");
+
+    expect(importedPreset).toBeDefined();
+    expect(importedPreset?.data).toEqual(
+      expect.objectContaining({
+        headline: "Imported hero",
+        layout: expect.objectContaining({
+          align: "center",
+          maxWidth: "xl",
+          contentWidth: "lg",
+          height: "screen",
+          bleed: "contained",
+        }),
+        style: expect.objectContaining({
+          cardShadow: "none",
+          headlineSize: "3xl",
+          bodyWeight: "bold",
+        }),
+      })
+    );
+    expect(importedPreset?.data.extra).toBeUndefined();
   } finally {
     view.cleanup();
   }
@@ -860,9 +1261,9 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
       setSelectValue(findSelectByOptions(view.container, ["single", "dual"]), "dual");
     });
     React.act(() => {
-      setInputValue(findInputByPlaceholder(view.container, "/start"), "javascript:alert(1)");
+      setInputValue(findInputByPlaceholder(view.container, "/signup"), "javascript:alert(1)");
       setInputValue(findInputByPlaceholder(view.container, "Learn more"), "Read case study");
-      setInputValue(findInputByPlaceholder(view.container, "/learn"), "ftp://secondary.invalid");
+      setInputValue(findInputByPlaceholder(view.container, "/examples"), "ftp://secondary.invalid");
     });
     expect(
       view.container.textContent?.match(/Use a relative path or full URL\./g)?.length
@@ -897,7 +1298,11 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
     await flush();
 
     React.act(() => {
-      setInputValue(findInputByPlaceholder(view.container, "Describe the media"), "Intro clip");
+      setInputValue(findInputByPlaceholder(view.container, "Product demo video"), "Intro clip");
+      setTextareaValue(
+        findTextareaByPlaceholder(view.container, "Optional context for screen readers"),
+        "Launch walkthrough"
+      );
       setInputValue(findInputByPlaceholder(view.container, "rgba(0,0,0,0.2)"), "rgba(0,0,0,0.4)");
       setSelectValue(findSelectByOptions(view.container, ["16:9", "4:3", "1:1", "3:4"]), "1:1");
     });
@@ -1008,7 +1413,7 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
     });
 
     expect(
-      [...onChangeSpy.mock.calls].reverse().find(([arg]) => arg?.media?.alt === "Intro clip")?.[0]
+      [...onChangeSpy.mock.calls].reverse().find(([arg]) => arg?.media?.title === "Intro clip")?.[0]
     ).toEqual(
       expect.objectContaining({
         headline: "Ship hero updates faster",
@@ -1023,7 +1428,8 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
           source: "library",
           assetId: "asset-video",
           src: "https://cdn.example.com/demo.mp4",
-          alt: "Intro clip",
+          title: "Intro clip",
+          description: "Launch walkthrough",
           ratio: "1:1",
           overlay: "rgba(0,0,0,0.4)",
         }),
@@ -1057,7 +1463,6 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
           image: undefined,
           media: expect.objectContaining({
             type: "none",
-            source: "library",
           }),
         }),
       })
@@ -1164,6 +1569,28 @@ test("HeroVisualEditor handles preset fallback, variant button changes, load fai
     expect(limitView.container.textContent).toContain("Only 24 presets are allowed.");
   } finally {
     limitView.cleanup();
+  }
+});
+
+test("HeroVisualEditor hides inline media frame controls for centered variants", async () => {
+  const { HeroVisualEditor } = await import("../../../core/admin/ui/widgets/editors/HeroEditors");
+
+  const view = mount(
+    <HeroVisualEditor
+      value={{ headline: "Hero" }}
+      onChange={() => undefined}
+      variant="centered"
+      onVariantChange={() => undefined}
+    />
+  );
+
+  try {
+    await flush();
+    expect(view.container.textContent).not.toContain("Media frame border color");
+    expect(view.container.textContent).not.toContain("Media border width");
+    expect(view.container.textContent).not.toContain("Media radius");
+  } finally {
+    view.cleanup();
   }
 });
 

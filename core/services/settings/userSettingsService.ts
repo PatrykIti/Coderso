@@ -2,14 +2,15 @@ import { and, eq, inArray } from "drizzle-orm";
 
 import { db } from "../../db/client";
 import { userSettings } from "../../db/schema";
+import { normalizeHeroData, type HeroData } from "../../widgets/core/hero";
 
-const heroVariants = new Set(["centered", "split", "media-left"]);
+const heroVariants = new Set(["centered", "split", "media-left", "media-center"]);
 const heroPresetLimit = 24;
 const heroPresetNameLimit = 80;
 
 type HeroPresetSettingValue = {
   name: string;
-  variant: "centered" | "split" | "media-left";
+  variant: "centered" | "split" | "media-left" | "media-center";
   data: Record<string, unknown>;
   updatedAt: string;
 };
@@ -45,14 +46,8 @@ export type UserSettingValueMap = {
 
 export type UserSettingKey = keyof UserSettingValueMap;
 
-const postEditorDensityModes = new Set<PostEditorDensity>([
-  "comfortable",
-  "compact",
-]);
-const postEditorInspectorTabs = new Set<PostEditorDefaultInspectorTab>([
-  "post",
-  "block",
-]);
+const postEditorDensityModes = new Set<PostEditorDensity>(["comfortable", "compact"]);
+const postEditorInspectorTabs = new Set<PostEditorDefaultInspectorTab>(["post", "block"]);
 
 const DEFAULT_POST_EDITOR_PREFERENCES: PostEditorPreferencesSettingValue = {
   version: 2,
@@ -161,17 +156,10 @@ export function validateUserSettingValue<K extends UserSettingKey>(
       if (!name || name.length > heroPresetNameLimit) {
         throw new Error("user_settings_value_invalid");
       }
-      if (
-        typeof candidate.variant !== "string" ||
-        !heroVariants.has(candidate.variant)
-      ) {
+      if (typeof candidate.variant !== "string" || !heroVariants.has(candidate.variant)) {
         throw new Error("user_settings_value_invalid");
       }
-      if (
-        !candidate.data ||
-        typeof candidate.data !== "object" ||
-        Array.isArray(candidate.data)
-      ) {
+      if (!candidate.data || typeof candidate.data !== "object" || Array.isArray(candidate.data)) {
         throw new Error("user_settings_value_invalid");
       }
       const updatedAt =
@@ -181,14 +169,11 @@ export function validateUserSettingValue<K extends UserSettingKey>(
       byName.set(name.toLowerCase(), {
         name,
         variant: candidate.variant as HeroPresetSettingValue["variant"],
-        data: candidate.data,
+        data: normalizeHeroData(candidate.data as HeroData) as Record<string, unknown>,
         updatedAt,
       });
     }
-    return Array.from(byName.values()).slice(
-      0,
-      heroPresetLimit
-    ) as UserSettingValueMap[K];
+    return Array.from(byName.values()).slice(0, heroPresetLimit) as UserSettingValueMap[K];
   }
   if (key === "posts.editor.preferences") {
     if (!isRecord(value)) {
@@ -211,9 +196,7 @@ export function validateUserSettingValue<K extends UserSettingKey>(
         : DEFAULT_POST_EDITOR_PREFERENCES.editorDensity;
     const defaultInspectorTab =
       typeof value.defaultInspectorTab === "string" &&
-      postEditorInspectorTabs.has(
-        value.defaultInspectorTab as PostEditorDefaultInspectorTab
-      )
+      postEditorInspectorTabs.has(value.defaultInspectorTab as PostEditorDefaultInspectorTab)
         ? (value.defaultInspectorTab as PostEditorDefaultInspectorTab)
         : DEFAULT_POST_EDITOR_PREFERENCES.defaultInspectorTab;
 
@@ -320,11 +303,7 @@ export async function getUserSetting(userId: string, key: string) {
   }
 }
 
-export async function setUserSetting(
-  userId: string,
-  key: string,
-  value: unknown
-) {
+export async function setUserSetting(userId: string, key: string, value: unknown) {
   assertUserSettingKey(key);
   const typedValue = validateUserSettingValue(key, value);
   const now = new Date();

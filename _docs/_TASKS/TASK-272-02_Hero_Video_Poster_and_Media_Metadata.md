@@ -6,7 +6,7 @@
 **Category:** Widgets + Hero + Media + Runtime Render + Accessibility
 **Estimated Effort:** Large
 **Dependencies:** TASK-256-04, TASK-256-06-03, TASK-272-01
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -43,9 +43,11 @@ alt controls and video metadata controls.
 |---|---|
 | `core/widgets/core/hero.tsx` | Extend `HeroMedia` and `background.media` with `posterAssetId`, `posterSrc`, `title`, and `description` or a smaller equivalent metadata shape. Update `heroSchema`, `normalizeHeroData`, inline `<video>`, and background `<video>` rendering. |
 | `core/admin/ui/widgets/editors/HeroEditors.tsx` | Replace `Media alt text` with image-only alt controls and video-only title/description/poster controls. Reuse `MediaPicker` with `accept={["image/*"]}` for posters. |
+| `core/services/settings/userSettingsService.ts` | Keep the existing internal `widgets.hero.presets` normalizer in sync so stored Hero presets round-trip new video poster/title/description fields through `normalizeHeroData`. |
 | `tests/vitest/widgets/hero.test.tsx` | Assert video poster/title/description are accepted by schema/normalizer and render on inline and background videos. |
 | `tests/vitest/widgets/heroEditors.test.tsx` | Assert video editor markup exposes video metadata and image editor markup still exposes image alt. |
 | `tests/vitest/ui/hero-editor-wave.test.tsx` | Cover video type switching, poster picking, poster clear, and no stale image-alt field in video mode. |
+| `tests/unit/settings/userSettingsService.test.ts` | Assert persisted Hero presets keep the new video poster/title/description fields after service-side normalization. |
 | `tests/unit/widgets/validator.test.ts` | Run and update only if the registry/schema assertions need explicit Hero field coverage. |
 | `_docs/_WIDGETS/HERO.md` | Document Hero image alt vs video metadata. |
 | `_docs/PLAYWRIGHT/REPORT_HERO_WIDGET.md` | Mark BUG-04/BUG-07/BF-01 fixed or record evidence. |
@@ -102,15 +104,23 @@ Error handling:
 - Legacy Hero payloads without video metadata must still validate and render.
 - Do not reuse image `alt` as the video title automatically unless the user
   explicitly keeps it through a documented compatibility adapter.
+- Because Hero presets persist normalized `HeroData` through the existing
+  `widgets.hero.presets` user-setting seam, new video fields must also
+  round-trip through the service-side normalizer instead of staying editor-only.
 
 ## Security Contract
 
-No API routes are added.
+No new API routes are added. The existing internal authenticated
+`/user-settings` endpoint continues to persist normalized Hero preset data.
 
-- Endpoint visibility: none.
-- Auth/RBAC/CSRF/rate-limit: unchanged admin editing and public rendering.
+- Endpoint visibility: existing internal authenticated `user-settings`
+  endpoint for preset persistence, plus unchanged admin editing and public
+  rendering.
+- Auth/RBAC/CSRF/rate-limit: unchanged authenticated user settings access plus
+  existing admin editing/public rendering contracts.
 - Reject-unknown validation: Hero media/background-media schemas must remain
-  `additionalProperties: false`; new fields require validator coverage.
+  `additionalProperties: false`; new fields require validator coverage and
+  preset-normalizer proof through `userSettingsService`.
 - Anti-abuse: poster/video URLs use the same safe media source model as existing
   Hero media. Metadata is plain text, not raw HTML.
 
@@ -119,6 +129,7 @@ No API routes are added.
 - `bun run test:vitest -- tests/vitest/widgets/hero.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/heroEditors.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/hero-editor-wave.test.tsx`
+- `bun test tests/unit/settings/userSettingsService.test.ts`
 - `bun test tests/unit/widgets/validator.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
@@ -129,6 +140,15 @@ No API routes are added.
 - `_docs/PLAYWRIGHT/REPORT_HERO_WIDGET.md`
 - `_docs/_TASKS/TASK-272-02_Hero_Video_Poster_and_Media_Metadata.md`
 - `_docs/_TASKS/README.md` on status changes
+
+## Final Evidence
+
+- Closed on 2026-05-19 with poster/title/description support for inline and
+  background video plus compatible image/video type-switch handling in Wizard,
+  Visual, runtime, and preset normalization.
+- Focused proof lives in `tests/vitest/widgets/hero.test.tsx`,
+  `tests/vitest/ui/hero-editor-wave.test.tsx`,
+  `tests/unit/settings/userSettingsService.test.ts`, and TASK-272-09.
 
 ## Acceptance Criteria
 

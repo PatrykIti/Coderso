@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 266 tasks
+- **To Do:** 256 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1703 tasks
+- **Done:** 1713 tasks
 
 ---
 
@@ -205,16 +205,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-273-06 | Layout Variants, Collapsible Facets, and Width Controls | High | Very Large | Add horizontal/sidebar/drawer layouts, collapsible facets, and bounded width controls |
 | TASK-273-07 | Wizard, Diagnostics, and Mode Onboarding | Medium | Medium | Add safe Wizard facet onboarding, Visual diagnostics, and clearer Advanced contract linkage |
 | TASK-273-08 | Report, Docs, Changelog, and Closure | Medium | Medium | Refresh Listing Filters report/docs/changelog/board and final validation evidence |
-| TASK-272 | Hero Widget Playwright Product Followups | High | Very Large | Hero-only follow-up family for `REPORT_HERO_WIDGET.md`, excluding TASK-256 shared-contract and page-shell scope |
-| TASK-272-01 | Hero Centered Media Control and CTA Placeholder Polish | High | Medium | Hide centered-only irrelevant inline media frame controls and align Hero CTA URL placeholder copy |
-| TASK-272-02 | Hero Video Poster and Media Metadata | High | Large | Add Hero video poster, title/description, and video-specific editor/runtime semantics |
-| TASK-272-03 | Hero Preset Delete Confirmation and Library Management | High | Large | Add preset delete confirmation plus bounded Hero preset search, import, and export |
-| TASK-272-04 | Hero Layout Height Full Bleed and Media Center Variant | High | Very Large | Add bounded full-height/full-bleed layout controls, clearer spacing labels, and a media-center variant |
-| TASK-272-05 | Hero Shadow, Typography, Font, and Motion Controls | Medium | Large | Add bounded Hero shadows, font family/weight, and reduced-motion-safe animation tokens |
-| TASK-272-06 | Hero Color Palettes and Contrast Guidance | High | Large | Add Hero-owned palette presets and contrast guidance after TASK-256 shared color-field state |
-| TASK-272-07 | Hero Rich Copy and Social Proof Composition | Medium | Very Large | Add safe rich-copy support and a bounded social proof row for conversion Hero sections |
-| TASK-272-08 | Hero Responsive Images and LCP Priority | Medium | Large | Define Hero responsive image, lazy/eager loading, and fetch-priority policy without inventing media variants |
-| TASK-272-09 | Hero Report Docs Changelog and Closure | Medium | Medium | Refresh Hero report/docs/changelog/board and final validation evidence |
 | TASK-267 | Feature Grid Widget Playwright Product Followups | High | Very Large | Feature Grid-only follow-up family for `REPORT_FEATURE_GRID_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-267-01 | Feature Grid Variant Preview and Responsive Cards-4 Layout | High | Medium | Add variant preview affordances, repair cards-4 responsive product behavior, and keep columns truthfulness in TASK-256 |
 | TASK-267-02 | Feature Grid Card Reorder, Remove, and Item Management | High | Medium | Add drag reorder plus recoverable remove flow while preserving keyboard move fallback |
@@ -365,6 +355,16 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-270-02 | Gallery Mosaic Reorder, Count, and Removal UX | High | Large | Done: Visual supports drag reorder with keyboard fallback, confirms destructive count/remove changes, and warns when `feature-left` is left with one item |
 | TASK-270-01 | Gallery Mosaic Item Previews and Media Picker | High | Large | Done: Visual item cards now show local preview state and a per-item MediaPicker with non-destructive asset lookup failures |
 | TASK-307 | Feature Grid Shared Contract Residuals | High | Medium | Done: invalid image/CTA feedback, safe image fallback, emoji ARIA, and Advanced diagnostics-only cleanup are now closed as shared follow-up work discovered during TASK-267 |
+| TASK-272 | Hero Widget Playwright Product Followups | High | Very Large | Done: Hero runtime/editor/report/docs closure is synchronized, responsive-image variants remain explicitly deferred, and unrelated full Bun test noise was isolated from Hero proof |
+| TASK-272-01 | Hero Centered Media Control and CTA Placeholder Polish | High | Medium | Done: centered keeps media authoring while hiding centered-only inline frame styling, and CTA placeholders are aligned in Wizard/Visual mode |
+| TASK-272-02 | Hero Video Poster and Media Metadata | High | Large | Done: Hero video now supports poster/title/description plus safe image↔video source resets across editor/runtime/presets |
+| TASK-272-03 | Hero Preset Delete Confirmation and Library Management | High | Large | Done: Hero presets now support confirm-delete, search/sort, JSON import/export, visible normalization warnings, and correct single-CTA round-trips |
+| TASK-272-04 | Hero Layout Height Full Bleed and Media Center Variant | High | Very Large | Done: Hero now supports bounded height/bleed controls and the `media-center` variant end-to-end |
+| TASK-272-05 | Hero Shadow, Typography, Font, and Motion Controls | Medium | Large | Done: Hero now exposes bounded shadow, font-family, weight, and reduced-motion-safe motion tokens |
+| TASK-272-06 | Hero Color Palettes and Contrast Guidance | High | Large | Done: Hero now ships palette presets and shared contrast advisories with explicit `unknown` handling for non-solid surfaces |
+| TASK-272-07 | Hero Rich Copy and Social Proof Composition | Medium | Very Large | Done: Hero now supports sanitized rich copy and a bounded social-proof row without widening shared safety scope |
+| TASK-272-08 | Hero Responsive Images and LCP Priority | Medium | Large | Done: Hero now uses deterministic loading/fetch-priority/sizes policy while true `srcset` variants remain explicitly deferred |
+| TASK-272-09 | Hero Report Docs Changelog and Closure | Medium | Medium | Done: Hero report/docs/board/changelog are synchronized with validation evidence and the explicit BF-07 deferral note |
 | TASK-268 | Footer Widget Playwright Product Followups | High | Very Large | Done: footer runtime/editor/docs/report closure is synchronized, while deferred utility and column-reorder backlog now have explicit follow-up tasks |
 | TASK-268-01 | Footer Social Icons and External Link Safety | High | Large | Done: footer social links now use icon buttons, accessible naming, modern platform options, and external-link hardening |
 | TASK-268-02 | Footer Legal, Brand, and Landmark Semantics | High | Large | Done: footer legal labels are configurable, brand/logo/tagline landed, and landmark/heading semantics are explicit |
