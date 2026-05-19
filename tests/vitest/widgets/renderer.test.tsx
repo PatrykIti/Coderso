@@ -1207,6 +1207,8 @@ test("renderer outputs logo cloud variant and style markers", () => {
             logoHeight: "lg",
             gap: "lg",
             alignment: "start",
+            headerAlign: "end",
+            headerSize: "lg",
             grayscale: true,
             hoverColor: false,
           },
@@ -1220,6 +1222,8 @@ test("renderer outputs logo cloud variant and style markers", () => {
   expect(html).toContain('data-logo-cloud-count="3"');
   expect(html).toContain('data-logo-cloud-alignment="start"');
   expect(html).toContain('data-logo-cloud-grayscale="true"');
+  expect(html).toContain('data-logo-cloud-header-align="end"');
+  expect(html).toContain('data-logo-cloud-header-size="lg"');
   expect(html).toContain("<h2");
   expect(html).toContain("aria-labelledby=");
   expect(html).toContain("North Labs");

@@ -8,16 +8,20 @@ export type LogoCloudVariantId = "grid" | "strip" | "dense";
 export type LogoCloudHeight = "none" | "sm" | "md" | "lg" | "xl";
 export type LogoCloudGap = "none" | "sm" | "md" | "lg";
 export type LogoCloudAlignment = "start" | "center" | "end";
+export type LogoCloudHeaderAlign = "start" | "center" | "end";
+export type LogoCloudHeaderSize = "sm" | "md" | "lg";
 
 export type LogoCloudLogo = {
   id?: string;
   name?: string;
+  alt?: string;
   image?: string;
   href?: string;
 };
 
 export type LogoCloudData = {
   header?: {
+    eyebrow?: string;
     title?: string;
     description?: string;
   };
@@ -28,8 +32,11 @@ export type LogoCloudData = {
     hoverColor?: boolean;
     gap?: LogoCloudGap;
     alignment?: LogoCloudAlignment;
+    sectionBackground?: string;
     tileBackground?: string;
     tileBorderColor?: string;
+    headerAlign?: LogoCloudHeaderAlign;
+    headerSize?: LogoCloudHeaderSize;
   };
 };
 
@@ -57,6 +64,18 @@ const alignmentClassMap: Record<LogoCloudAlignment, string> = {
   end: "justify-end",
 };
 
+const headerAlignClassMap: Record<LogoCloudHeaderAlign, string> = {
+  start: "items-start text-left",
+  center: "items-center text-center",
+  end: "items-end text-right",
+};
+
+const headerSizeClassMap: Record<LogoCloudHeaderSize, string> = {
+  sm: "text-xl",
+  md: "text-2xl",
+  lg: "text-3xl",
+};
+
 const logoCloudLogoMin = 1;
 export const logoCloudLogoMax = 24;
 
@@ -69,6 +88,7 @@ export const logoCloudSchema = {
       type: "object",
       additionalProperties: false,
       properties: {
+        eyebrow: { type: "string" },
         title: { type: "string" },
         description: { type: "string" },
       },
@@ -83,6 +103,7 @@ export const logoCloudSchema = {
         properties: {
           id: { type: "string" },
           name: { type: "string" },
+          alt: { type: "string" },
           image: { type: "string" },
           href: { type: "string" },
         },
@@ -97,8 +118,11 @@ export const logoCloudSchema = {
         hoverColor: { type: "boolean" },
         gap: { enum: ["none", "sm", "md", "lg"] },
         alignment: { enum: ["start", "center", "end"] },
+        sectionBackground: { type: "string" },
         tileBackground: { type: "string" },
         tileBorderColor: { type: "string" },
+        headerAlign: { enum: ["start", "center", "end"] },
+        headerSize: { enum: ["sm", "md", "lg"] },
       },
     },
   },
@@ -106,6 +130,7 @@ export const logoCloudSchema = {
 
 export const logoCloudDefaults: LogoCloudData = {
   header: {
+    eyebrow: "",
     title: "Trusted by teams worldwide",
     description: "Showcase partner and client logos to build instant credibility.",
   },
@@ -123,6 +148,8 @@ export const logoCloudDefaults: LogoCloudData = {
     hoverColor: true,
     gap: "md",
     alignment: "center",
+    headerAlign: "center",
+    headerSize: "md",
     tileBackground: "var(--color-bg)",
     tileBorderColor: "color-mix(in srgb, var(--color-border) 60%, transparent)",
   },
@@ -149,6 +176,16 @@ const resolveLogoCloudGap = (value: string | undefined): LogoCloudGap => {
 const resolveLogoCloudAlignment = (value: string | undefined): LogoCloudAlignment => {
   if (value === "start" || value === "end") return value;
   return "center";
+};
+
+const resolveLogoCloudHeaderAlign = (value: string | undefined): LogoCloudHeaderAlign => {
+  if (value === "start" || value === "end") return value;
+  return "center";
+};
+
+const resolveLogoCloudHeaderSize = (value: string | undefined): LogoCloudHeaderSize => {
+  if (value === "sm" || value === "lg") return value;
+  return "md";
 };
 
 export const resolveLogoCloudVariant = (variant: string): LogoCloudVariantId => {
@@ -211,6 +248,7 @@ export function normalizeLogoCloudLogos(
     normalized.push({
       id,
       name,
+      alt: resolveOptionalString(base.alt),
       image: resolveOptionalString(base.image),
       href: resolveOptionalString(base.href),
     });
@@ -221,6 +259,7 @@ export function normalizeLogoCloudLogos(
 
 export function normalizeLogoCloudData(data: LogoCloudData): LogoCloudData {
   const headerDefaults = logoCloudDefaults.header ?? {
+    eyebrow: "",
     title: "",
     description: "",
   };
@@ -230,14 +269,18 @@ export function normalizeLogoCloudData(data: LogoCloudData): LogoCloudData {
     hoverColor: true,
     gap: "md",
     alignment: "center",
+    headerAlign: "center",
+    headerSize: "md",
   };
   const hasStyleObject = data.style !== undefined;
   const clearableStyle = hasStyleObject
     ? compactObject({
+        sectionBackground: resolveClearableStyleValue(data.style?.sectionBackground),
         tileBackground: resolveClearableStyleValue(data.style?.tileBackground),
         tileBorderColor: resolveClearableStyleValue(data.style?.tileBorderColor),
       })
     : compactObject({
+        sectionBackground: resolveClearableStyleValue(styleDefaults.sectionBackground),
         tileBackground: resolveClearableStyleValue(styleDefaults.tileBackground),
         tileBorderColor: resolveClearableStyleValue(styleDefaults.tileBorderColor),
       });
@@ -245,6 +288,7 @@ export function normalizeLogoCloudData(data: LogoCloudData): LogoCloudData {
   return {
     ...data,
     header: {
+      eyebrow: resolveString(data.header?.eyebrow, headerDefaults.eyebrow ?? ""),
       title: resolveString(data.header?.title, headerDefaults.title ?? ""),
       description: resolveString(data.header?.description, headerDefaults.description ?? ""),
     },
@@ -261,6 +305,8 @@ export function normalizeLogoCloudData(data: LogoCloudData): LogoCloudData {
           : Boolean(styleDefaults.hoverColor),
       gap: resolveLogoCloudGap(data.style?.gap),
       alignment: resolveLogoCloudAlignment(data.style?.alignment),
+      headerAlign: resolveLogoCloudHeaderAlign(data.style?.headerAlign),
+      headerSize: resolveLogoCloudHeaderSize(data.style?.headerSize),
       ...(clearableStyle ?? {}),
     },
   };
@@ -294,14 +340,10 @@ function LogoCloudItem({
     grayscale ? "grayscale" : undefined,
     hoverColor ? "transition duration-200 group-hover:grayscale-0" : undefined
   );
+  const accessibleLabel = logo.alt?.trim() || logo.name || `Logo ${index + 1}`;
 
   const content = hasImage ? (
-    <img
-      src={logo.image}
-      alt={logo.name ?? `Logo ${index + 1}`}
-      className={imageClassName}
-      loading="lazy"
-    />
+    <img src={logo.image} alt={accessibleLabel} className={imageClassName} loading="lazy" />
   ) : (
     <span className="text-sm font-semibold text-[var(--color-text)]/75">{logo.name}</span>
   );
@@ -313,7 +355,7 @@ function LogoCloudItem({
     return (
       <a
         {...linkAttrs}
-        aria-label={logo.name ?? `Logo ${index + 1}`}
+        aria-label={accessibleLabel}
         className={wrapperClassName}
         style={tileStyle}
         data-logo-cloud-item={String(index + 1)}
@@ -345,17 +387,25 @@ export function LogoCloudBlock({ data, variant }: { data: LogoCloudData; variant
   const logoHeight = resolveLogoCloudHeight(style.logoHeight);
   const gap = resolveLogoCloudGap(style.gap);
   const alignment = resolveLogoCloudAlignment(style.alignment);
+  const headerAlign = resolveLogoCloudHeaderAlign(style.headerAlign);
+  const headerSize = resolveLogoCloudHeaderSize(style.headerSize);
   const grayscale = Boolean(style.grayscale);
   const hoverColor = grayscale && Boolean(style.hoverColor);
   const logos = normalizeLogoCloudLogos(normalized.logos);
+  const sectionStyle = compactStyle({
+    backgroundColor: resolveClearableStyleValue(style.sectionBackground),
+  });
   const tileStyle = compactStyle({
     backgroundColor: resolveClearableStyleValue(style.tileBackground),
     borderColor: resolveClearableStyleValue(style.tileBorderColor),
   });
+  const sectionEyebrow = (normalized.header?.eyebrow ?? "").trim();
   const sectionTitle = (normalized.header?.title ?? "").trim();
 
   const showHeader =
-    sectionTitle.length > 0 || (normalized.header?.description ?? "").trim().length > 0;
+    sectionEyebrow.length > 0 ||
+    sectionTitle.length > 0 ||
+    (normalized.header?.description ?? "").trim().length > 0;
 
   const listClassName =
     resolvedVariant === "strip"
@@ -385,6 +435,7 @@ export function LogoCloudBlock({ data, variant }: { data: LogoCloudData; variant
       aria-label={sectionTitle.length > 0 ? undefined : "Partner logos"}
       aria-labelledby={sectionTitle.length > 0 ? headingId : undefined}
       className="mx-auto w-full max-w-6xl px-4 py-8"
+      style={sectionStyle}
       data-logo-cloud-variant={resolvedVariant}
       data-logo-cloud-gap={gap}
       data-logo-cloud-height={logoHeight}
@@ -392,11 +443,29 @@ export function LogoCloudBlock({ data, variant }: { data: LogoCloudData; variant
       data-logo-cloud-alignment={alignment}
       data-logo-cloud-grayscale={String(grayscale)}
       data-logo-cloud-hover-color={String(hoverColor)}
+      data-logo-cloud-header-align={headerAlign}
+      data-logo-cloud-header-size={headerSize}
     >
       {showHeader ? (
-        <header className="mx-auto mb-6 max-w-3xl space-y-2 text-center">
+        <header
+          className={joinClasses(
+            "mx-auto mb-6 flex max-w-3xl flex-col space-y-2",
+            headerAlignClassMap[headerAlign]
+          )}
+        >
+          {sectionEyebrow.length > 0 ? (
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--color-text)]/60">
+              {sectionEyebrow}
+            </p>
+          ) : null}
           {sectionTitle.length > 0 ? (
-            <h2 id={headingId} className="text-2xl font-semibold text-[var(--color-text)]">
+            <h2
+              id={headingId}
+              className={joinClasses(
+                "font-semibold text-[var(--color-text)]",
+                headerSizeClassMap[headerSize]
+              )}
+            >
               {sectionTitle}
             </h2>
           ) : null}

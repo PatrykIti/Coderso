@@ -35,6 +35,45 @@ checkout has moved since then:
   the token in normalized data but no longer leaves runtime image height
   unbounded.
 
+### Product closure note — 2026-05-19 (`TASK-274-01`)
+
+- `BF-01` is fixed: Logo Cloud `Header copy` now includes an optional
+  `Eyebrow` field owned by `logoCloud.tsx` and `LogoCloudEditors.tsx`.
+- `BF-02` is fixed to the accepted `TASK-274-01` scope: `Display style` now
+  includes a clearable `Section background` surface-color field and runtime
+  section surface rendering. Background-image expansion remains out of scope
+  unless a later Logo Cloud leaf explicitly reopens it.
+- `BF-07` is fixed: `Display style` now includes bounded `Header alignment`
+  and `Header size` controls, and runtime output exposes the resulting header
+  shell state through deterministic markers.
+
+### Product closure note — 2026-05-19 (`TASK-274-02`)
+
+- `UX-03` is fixed: Wizard starter-logo rows now expose `Image URL`, `Alt
+  text`, `Link URL`, and Media Library picking without forcing a Visual-mode
+  round trip.
+- `UX-04` is fixed: Wizard and Visual logo rows now show bounded preview cards,
+  and invalid or broken image sources fall back to an explicit unavailable
+  preview state instead of silent guesswork.
+- `UX-05` is fixed: per-logo `alt` is now schema-owned and runtime `img`
+  output uses explicit alt text when present with `name` fallback for legacy
+  payloads.
+- `UX-06` is fixed: Logo Cloud now reuses the shared `MediaPicker` and
+  `listMediaCached({ force: false })` media-owner seam for single-image
+  selection.
+- The `BF-10` image-feedback slice is fixed: invalid image URLs now warn in the
+  editor and do not render a preview. Shared `Link URL` safe-href feedback
+  remains owned by the already-landed `TASK-313-01` contract.
+
+### Historical baseline note — 2026-05-19
+
+- Sections 1-9 below preserve the original 2026-05-16 Playwright baseline and
+  intentionally do not describe the current code after `TASK-313` and
+  `TASK-274-01`.
+- Treat the routing/shared/product closure notes above plus the active
+  `TASK-274` leaves as the current owner map until `TASK-274-06` refreshes the
+  report body finding-by-finding.
+
 ---
 
 ## 1. Przegląd widgetu
@@ -50,7 +89,7 @@ Logo Cloud widget służy do prezentacji logotypów partnerów i klientów w cel
 
 ---
 
-## 2. Analiza kodu — struktura konfiguracji
+## 2. Analiza kodu — struktura konfiguracji (2026-05-16 baseline snapshot)
 
 ### 2.1 Model danych
 
@@ -76,7 +115,7 @@ Logo Cloud widget służy do prezentacji logotypów partnerów i klientów w cel
 
 ---
 
-## 3. Wyniki testów Playwright — co działa poprawnie ✓
+## 3. Wyniki testów Playwright — co działa poprawnie ✓ (2026-05-16 baseline snapshot)
 
 ### 3.1 Wizard
 
@@ -140,7 +179,7 @@ Logo Cloud widget służy do prezentacji logotypów partnerów i klientów w cel
 
 ---
 
-## 4. Znalezione błędy i problemy UX
+## 4. Znalezione błędy i problemy UX (2026-05-16 baseline snapshot)
 
 ### 4.1 Błędy funkcjonalne (Bugs)
 
@@ -281,7 +320,7 @@ Logo Cloud widget służy do prezentacji logotypów partnerów i klientów w cel
 
 ---
 
-## 5. Problemy dostępności (Accessibility)
+## 5. Problemy dostępności (Accessibility) (2026-05-16 baseline snapshot)
 
 | # | Problem | Standard | Priorytet | Status |
 |---|---------|----------|-----------|--------|
@@ -295,7 +334,7 @@ Logo Cloud widget służy do prezentacji logotypów partnerów i klientów w cel
 
 ---
 
-## 6. Porównanie Admin vs Frontend
+## 6. Porównanie Admin vs Frontend (2026-05-16 baseline snapshot)
 
 | Aspekt | Admin Canvas | Frontend | Zgodność |
 |--------|-------------|----------|----------|
@@ -315,7 +354,7 @@ Logo Cloud widget służy do prezentacji logotypów partnerów i klientów w cel
 
 ---
 
-## 7. Podsumowanie — macierz priorytetów
+## 7. Podsumowanie — macierz priorytetów (2026-05-16 baseline snapshot)
 
 ### Błędy do naprawy natychmiast
 
@@ -353,7 +392,7 @@ Logo Cloud widget służy do prezentacji logotypów partnerów i klientów w cel
 
 ---
 
-## 8. Statystyki
+## 8. Statystyki (2026-05-16 baseline snapshot)
 
 | Kategoria | Liczba |
 |-----------|--------|
@@ -365,7 +404,7 @@ Logo Cloud widget służy do prezentacji logotypów partnerów i klientów w cel
 
 ---
 
-## 9. Screenshoty
+## 9. Screenshoty (2026-05-16 baseline snapshot)
 
 > Uwaga: nazwy plików PNG w tej sekcji są wyłącznie lokalnymi etykietami przechwyceń Playwright. Same pliki PNG są ignorowane przez Git i nie są wymaganym evidence w repo.
 

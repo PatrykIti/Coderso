@@ -20,7 +20,8 @@ Trust-focused section that displays partner/client logos with optional links.
 - Logo cloud layout variant
 - Section title
 - Logo count
-- Basic names for all visible logos in the selected wizard count
+- Compact starter-logo rows with Name, Image URL, Alt text, Link URL, bounded
+  preview, and Media Library picking for the visible wizard count
 
 The wizard count selector and rendered logo-name inputs must stay synchronized.
 
@@ -35,8 +36,14 @@ Notes:
 - Logo Cloud owns variant selection in Visual (`visualOwnsVariantSelection = true`).
 - Generic Visual variant selector is suppressed.
 - `Link URL` inputs surface shared safe-link feedback for invalid values while
-  widget-local image preview/media picking stays in the later `TASK-274`
-  product family.
+  widget-local image preview/media picking stay owned by the `TASK-274` product
+  family.
+- `Header copy` now includes an optional `Eyebrow` field.
+- `Display style` now includes `Section background`, `Header alignment`, and
+  `Header size` controls.
+- Visual repeated-logo cards now expose bounded previews, Media Library image
+  picking, explicit `Alt text`, and an editor-local unavailable-preview state
+  for invalid/broken image URLs.
 
 ### Advanced (technical-only)
 - Technical layout diagnostics
@@ -57,19 +64,25 @@ plus normalize/reset and raw payload diagnostics.
   - `data-logo-cloud-alignment`
   - `data-logo-cloud-grayscale`
   - `data-logo-cloud-hover-color`
+  - `data-logo-cloud-header-align`
+  - `data-logo-cloud-header-size`
 - When a section title is present, the shared section shell renders it as
   `<h2>` and names the region through `aria-labelledby`. When the title is
   empty, the section falls back to `aria-label="Partner logos"`.
 - Logo cards render as links only when `href` is provided.
+- Logo images render explicit `logos[].alt` when present and fall back to
+  `logos[].name` for legacy payloads.
 - Missing image URL falls back to text logo label.
 - `logoHeight: "none"` keeps the visible token in normalized data, but runtime
   image output is still capped with `max-h-16` so tall assets stay bounded.
 
 ## Clear Controls
 
-- `style.tileBackground` and `style.tileBorderColor` are clearable; clear
-  removes the tile style fields and logo tiles render without forced background
-  or border-color inline styles.
+- `style.sectionBackground`, `style.tileBackground`, and
+  `style.tileBorderColor` are clearable; clear removes the inline surface field
+  instead of forcing transparent/fallback styles.
+- Section background renders as an inline surface color only when the field is
+  explicitly set; the current defaults leave the section transparent.
 - Logo height, gap, grayscale, hover-color, and alignment keep their existing
   token/boolean semantics. `logoHeight: "none"` remains a shared “no fixed
   token” choice rather than an unbounded image-height escape hatch.
@@ -79,6 +92,7 @@ plus normalize/reset and raw payload diagnostics.
 ```json
 {
   "header": {
+    "eyebrow": "",
     "title": "Trusted by teams worldwide",
     "description": "Showcase partner and client logos to build instant credibility."
   },
@@ -86,6 +100,7 @@ plus normalize/reset and raw payload diagnostics.
     {
       "id": "logo-1",
       "name": "Acme",
+      "alt": "Acme partner logo",
       "image": "https://cdn.example.com/acme.svg",
       "href": "https://acme.example.com"
     }
@@ -96,6 +111,8 @@ plus normalize/reset and raw payload diagnostics.
     "hoverColor": true,
     "gap": "md",
     "alignment": "center",
+    "headerAlign": "center",
+    "headerSize": "md",
     "tileBackground": "var(--color-bg)",
     "tileBorderColor": "color-mix(in srgb, var(--color-border) 60%, transparent)"
   }

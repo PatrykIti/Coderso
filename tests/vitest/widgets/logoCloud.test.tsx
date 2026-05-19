@@ -1,6 +1,6 @@
 import React from "react";
 import type { ComponentType } from "react";
-import { expect, test } from "vitest";
+import { expect, test, vi } from "vitest";
 import { renderToString } from "react-dom/server";
 
 import {
@@ -23,6 +23,12 @@ import { normalizeWidgetBlock } from "../../../core/widgets/validator";
 import type { WidgetEditorProps } from "../../../core/widgets/types";
 
 const StubEditor: ComponentType<WidgetEditorProps<LogoCloudData>> = () => null;
+
+vi.mock("@/ui/media/MediaPicker", () => ({
+  MediaPicker: ({ value }: { value: unknown }) => (
+    <div data-media-picker="true">{typeof value === "string" ? value : "none"}</div>
+  ),
+}));
 
 test("logo cloud renders defaults", () => {
   const html = renderToString(<LogoCloudBlock data={logoCloudDefaults} variant="grid" />);
@@ -52,15 +58,20 @@ test("logo cloud normalization keeps deterministic ids and bounds", () => {
 
   const normalized = normalizeLogoCloudData({ logos: [] });
   expect(normalized.logos).toHaveLength(6);
+  expect(normalized.header?.eyebrow).toBe("");
   expect(normalized.style?.logoHeight).toBe("md");
+  expect(normalized.style?.sectionBackground).toBeUndefined();
+  expect(normalized.style?.headerAlign).toBe("center");
+  expect(normalized.style?.headerSize).toBe("md");
 });
 
-test("logo cloud cleared tile styles omit forced tile backgrounds", () => {
+test("logo cloud cleared section and tile styles omit forced inline surfaces", () => {
   const html = renderToString(
     <LogoCloudBlock
       data={normalizeLogoCloudData({
         ...logoCloudDefaults,
         style: {
+          sectionBackground: "",
           logoHeight: "md",
           grayscale: true,
           hoverColor: true,
@@ -72,6 +83,7 @@ test("logo cloud cleared tile styles omit forced tile backgrounds", () => {
     />
   );
 
+  expect(html).not.toContain('style="background-color:');
   expect(html).not.toContain("bg-[var(--color-bg)]");
   expect(html).not.toContain("background-color:transparent");
 });
@@ -107,6 +119,65 @@ test("logo cloud keeps fallback section label and bounds none logo height safely
   expect(html).not.toContain("<h3");
 });
 
+test("logo cloud renders eyebrow, section background, and header typography controls", () => {
+  const html = renderToString(
+    <LogoCloudBlock
+      data={normalizeLogoCloudData({
+        header: {
+          eyebrow: "Our partners",
+          title: "Trusted by product teams",
+          description: "Reference logos for launch credibility.",
+        },
+        logos: logoCloudDefaults.logos.map((logo, index) =>
+          index === 0
+            ? {
+                ...logo,
+                alt: "Acme partner logo",
+                image: "https://cdn.example.com/acme.svg",
+              }
+            : logo
+        ),
+        style: {
+          ...logoCloudDefaults.style,
+          sectionBackground: "#f8fafc",
+          headerAlign: "start",
+          headerSize: "lg",
+        },
+      })}
+      variant="grid"
+    />
+  );
+
+  expect(html).toContain("Our partners");
+  expect(html).toContain('style="background-color:#f8fafc"');
+  expect(html).toContain('data-logo-cloud-header-align="start"');
+  expect(html).toContain('data-logo-cloud-header-size="lg"');
+  expect(html).toContain('alt="Acme partner logo"');
+  expect(html).toContain("text-left");
+  expect(html).toContain("text-3xl");
+});
+
+test("logo cloud falls back to logo name when image alt text is not provided", () => {
+  const html = renderToString(
+    <LogoCloudBlock
+      data={normalizeLogoCloudData({
+        logos: [
+          {
+            id: "logo-a",
+            name: "Acme legacy",
+            image: "https://cdn.example.com/acme.svg",
+            href: "#",
+          },
+        ],
+      })}
+      variant="grid"
+    />
+  );
+
+  expect(html).toContain('alt="Acme legacy"');
+  expect(html).not.toContain('alt="undefined"');
+});
+
 test("logo cloud validator accepts expanded model", () => {
   clearWidgets();
   const widget = createLogoCloudWidget({
@@ -123,6 +194,7 @@ test("logo cloud validator accepts expanded model", () => {
       variant: "dense",
       data: {
         header: {
+          eyebrow: "Partners",
           title: "Trusted by partners",
           description: "Build confidence with recognisable logos.",
         },
@@ -130,6 +202,7 @@ test("logo cloud validator accepts expanded model", () => {
           {
             id: "logo-a",
             name: "Acme",
+            alt: "Acme partner logo",
             image: "https://cdn.example.com/acme.svg",
             href: "https://acme.example.com",
           },
@@ -146,6 +219,9 @@ test("logo cloud validator accepts expanded model", () => {
           hoverColor: true,
           gap: "lg",
           alignment: "center",
+          sectionBackground: "#f8fafc",
+          headerAlign: "start",
+          headerSize: "lg",
         },
       },
     })
@@ -186,7 +262,10 @@ test("logo cloud wizard renders onboarding fields", () => {
 
   expect(html).toContain("Logo cloud layout");
   expect(html).toContain("Section title");
-  expect(html).toContain("Basic logo names");
+  expect(html).toContain("Starter logos");
+  expect(html).toContain("Image URL");
+  expect(html).toContain("Alt text");
+  expect(html).toContain("Media library");
 });
 
 test("logo cloud visual renders section-based IA", () => {

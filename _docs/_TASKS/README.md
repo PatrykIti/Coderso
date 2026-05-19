@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 247 tasks
-- **In Progress:** 4 tasks
-- **Done:** 1728 tasks
+- **To Do:** 245 tasks
+- **In Progress:** 5 tasks
+- **Done:** 1730 tasks
 
 ---
 
@@ -189,9 +189,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-275-05-03 | Navigation Visual Style Tokens | Medium | Large | Add bounded hover/active colors, underline, letter spacing, shadow, backdrop blur, dropdown direction, and motion tokens |
 | TASK-275-05-04 | Navigation Brand CTA and Logo Controls | Medium | Medium | Add logo-size, CTA-radius/separator, and bounded secondary-CTA policy without broad platform expansion |
 | TASK-275-06 | Navigation Report Docs Changelog and Closure | Medium | Medium | Refresh Navigation report/docs/changelog/board and final validation evidence after implementation leaves land |
-| TASK-274 | Logo Cloud Widget Playwright Product Followups | High | Very Large | Logo Cloud-only follow-up family for `REPORT_LOGO_CLOUD_WIDGET.md`, excluding TASK-256 shared-contract scope |
-| TASK-274-01 | Logo Cloud Header Background and Typography | High | Large | Add Logo Cloud eyebrow, section background, and bounded header typography controls after shared heading/ARIA fixes |
-| TASK-274-02 | Logo Cloud Logo Asset Authoring and Previews | High | Large | Add Wizard logo image/alt/link authoring, Visual thumbnails, and Media Library picking without duplicating TASK-256 link contracts |
 | TASK-274-03 | Logo Cloud Item Management and Reorder | High | Large | Add inline Undo remove behavior and drag reorder while keeping Move button fallback |
 | TASK-274-04 | Logo Cloud Dense Strip and Marquee Layouts | Medium | Large | Add dense overflow repair, strip single-row scroll, and optional marquee with reduced-motion safety |
 | TASK-274-05 | Logo Cloud Tile Link and CTA Controls | Medium | Large | Add bounded tile shape, open-new-tab product control, and optional CTA through shared safe href helpers |
@@ -291,6 +288,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-274 | Logo Cloud Widget Playwright Product Followups | High | Very Large | In progress: shared TASK-313 prerequisites are closed, and the product wave is now moving through Logo Cloud-owned follow-up leaves in dependency order |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
@@ -480,6 +478,8 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-313-03 | Logo Cloud Shared Residual Closure | Medium | Medium | Done: report/docs/changelog/board closure captured the Logo Cloud shared reopen before widget-local product work continues |
 | TASK-313-02 | Logo Cloud Shared Runtime Semantics Residuals | High | Large | Done: Logo Cloud now uses the shared `<h2>` section-heading shell, fallback region naming, and bounded `logoHeight: "none"` runtime output |
 | TASK-313-01 | Logo Cloud Shared Editor Truthfulness Residuals | High | Large | Done: Advanced is diagnostics-only for shared tokens, and Visual `Link URL` inputs now show truthful shared safe-link feedback |
+| TASK-274-01 | Logo Cloud Header Background and Typography | High | Large | Done: Logo Cloud now exposes widget-owned eyebrow, section background, and bounded header alignment/size across schema, editor, runtime, and focused tests |
+| TASK-274-02 | Logo Cloud Logo Asset Authoring and Previews | High | Large | Done: Wizard and Visual now own logo image/alt/link authoring, Media Library picking, bounded previews, async media failure handling, and runtime alt fallback proof |
 | TASK-269 | Form Embed Widget Playwright Product Followups | High | Very Large | Done: Form Embed renderer, runtime script, safe captcha bridge, editor-mode diagnostics, docs, report status matrix, and targeted validation are synchronized |
 | TASK-269-01 | Form Selection, Editor Modes, and Admin Diagnostics | High | Large | Done: Wizard/Visual/Advanced are split and selected-form diagnostics now cover status, field count/types, multi-step, resolver errors, and no-form CTA states |
 | TASK-269-02 | Field Type Rendering and Field Accessibility | High | Large | Done: current supported field types render with stable ids, helper linkage, required semantics, and unsupported-type diagnostics for out-of-model payloads |

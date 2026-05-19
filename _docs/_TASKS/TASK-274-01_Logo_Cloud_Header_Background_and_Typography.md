@@ -6,7 +6,7 @@
 **Category:** Widgets + Logo Cloud + Admin UI + Runtime Render
 **Estimated Effort:** Large
 **Dependencies:** TASK-274, TASK-256-02, TASK-313-02
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -24,8 +24,8 @@ Source report findings:
 Explicitly out of scope:
 
 - Changing the heading element or adding `headingLevel`; TASK-256-06-02 owns
-  the Logo Cloud slice of the shared heading hierarchy repair, and the live
-  residual reopen now routes through `TASK-313-02`.
+  the Logo Cloud slice of the shared heading hierarchy repair, and the settled
+  shared runtime closeout now lands through `TASK-313-02`.
 - Adding section `aria-label` / `aria-labelledby`; the shared accessibility
   baseline stays outside this leaf and is consumed from the current shared
   owner.
@@ -159,7 +159,19 @@ No API routes are added.
   section background.
 - Runtime renders the eyebrow and background without hardcoding unsafe styles or
   blank nodes.
-- Header element/ARIA details remain delegated to TASK-256 and are not
-  reimplemented here. `TASK-313-02` must finish the shared heading residual
-  first.
+- Header element/ARIA details remain delegated to TASK-256 and the already
+  landed `TASK-313-02` shared heading residual fix; they are not reimplemented
+  here.
 - Schema/defaults/normalizer/tests preserve existing Logo Cloud payloads.
+
+## Completion Notes
+
+- 2026-05-19: Logo Cloud now exposes `eyebrow`, `sectionBackground`,
+  `headerAlign`, and `headerSize` through the schema owner, runtime renderer,
+  and Visual editor without reopening the shared heading/landmark contract.
+- Validation:
+  - `bun run lint`
+  - `bun run test:bun`
+  - `bun run test:vitest`
+  - `bun run scan:security:strict`
+  - `bun run precommit`

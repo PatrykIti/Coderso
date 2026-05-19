@@ -18,7 +18,8 @@ code, widget docs, changelog, and task board state.
 
 This leaf is not allowed to mark TASK-274 complete from proxy evidence alone.
 It must verify every source-report finding against concrete code, tests, docs,
-or an explicit TASK-256/deferred owner.
+or an explicit shared owner (`TASK-256`, `TASK-313`, or a later named follow-up)
+with current evidence.
 
 ## Files to Change
 
@@ -39,12 +40,13 @@ Source report coverage:
 
 - BUG-01 through BUG-05 are either fixed by `TASK-256`, fixed by `TASK-313`,
   verified current-state OK, or explicitly linked to a remaining shared owner.
-- UX-01 through UX-09 are either fixed by TASK-256, fixed by TASK-274,
-  current-state verified, or deferred with a named owner.
+- UX-01 through UX-09 are either fixed by shared TASK-256 / TASK-313 work,
+  fixed by TASK-274, current-state verified, or deferred with a named owner.
 - BF-01 through BF-11 are either fixed by TASK-274, not applicable, already OK,
   or deferred with a named owner.
-- A1 through A7 are either fixed by TASK-256, already OK, fixed by TASK-274
-  where product-owned, or explicitly deferred with a named owner.
+- A1 through A7 are either fixed by shared TASK-256 / TASK-313 work, already
+  OK, fixed by TASK-274 where product-owned, or explicitly deferred with a
+  named owner.
 
 Code and docs consistency:
 
@@ -58,7 +60,7 @@ Code and docs consistency:
 - `_docs/_WIDGETS/LOGO_CLOUD.md` matches current code and does not describe
   future fields as already shipped.
 - `_docs/PLAYWRIGHT/REPORT_LOGO_CLOUD_WIDGET.md` distinguishes fixed, shared
-  TASK-256, deferred, and not-applicable findings.
+  TASK-256, shared TASK-313, deferred, and not-applicable findings.
 
 ## Implementation Pseudocode
 
@@ -87,8 +89,11 @@ function assertCoverage(rows: CoverageRow[]) {
 
 Manual closure flow:
 
-1. Re-read the source report and TASK-256-06-02 before changing closure docs.
-2. Build a finding-by-finding coverage table in the report or closure notes.
+1. Re-read the source report, TASK-256-06-02, and TASK-313-03 before changing
+   closure docs.
+2. Build a finding-by-finding coverage table in the report or closure notes,
+   naming TASK-256 vs TASK-313 precisely for every shared finding instead of
+   collapsing them into one generic shared bucket.
 3. Run the targeted Logo Cloud suites and required repo gates.
 4. Update task statuses only after code/docs/tests are aligned.
 5. Add changelog entry and update changelog index.
@@ -97,7 +102,7 @@ Manual closure flow:
 
 Closure error handling:
 
-- If any report row lacks code, test, docs, TASK-256, deferred, or
+- If any report row lacks code, test, docs, shared-owner, deferred, or
   not-applicable evidence, keep TASK-274 open and add or repair the owner leaf
   before moving statuses.
 - If shared safe-link, heading, ARIA, hoverColor, `logoHeight: "none"`, or
@@ -123,7 +128,8 @@ No API routes are added by this closure leaf.
 - Reject-unknown validation: closure must confirm validator coverage exists for
   every new schema field from TASK-274.
 - Anti-abuse: closure must confirm safe href/media behavior is covered through
-  TASK-256 or local tests before marking link/media findings fixed.
+  the current shared owner (`TASK-256` or `TASK-313`) or local tests before
+  marking link/media findings fixed.
 
 ## Testing Requirements
 

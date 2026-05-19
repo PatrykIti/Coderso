@@ -1,4 +1,4 @@
-import { type ReactNode } from "react";
+import { useEffect, useRef, useState, type MutableRefObject, type ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,8 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { listMediaCached } from "@/services/mediaClient";
+import { MediaPicker } from "@/ui/media/MediaPicker";
 
 import {
   logoCloudDefaults,
@@ -23,6 +25,8 @@ import {
   type LogoCloudAlignment,
   type LogoCloudData,
   type LogoCloudGap,
+  type LogoCloudHeaderAlign,
+  type LogoCloudHeaderSize,
   type LogoCloudHeight,
   type LogoCloudLogo,
   type LogoCloudVariantId,
@@ -75,13 +79,71 @@ const alignmentOptions: Array<{ id: LogoCloudAlignment; label: string }> = [
   { id: "end", label: "End" },
 ];
 
+const headerAlignOptions: Array<{ id: LogoCloudHeaderAlign; label: string }> = [
+  { id: "start", label: "Start" },
+  { id: "center", label: "Center" },
+  { id: "end", label: "End" },
+];
+
+const headerSizeOptions: Array<{ id: LogoCloudHeaderSize; label: string }> = [
+  { id: "sm", label: "Small" },
+  { id: "md", label: "Medium" },
+  { id: "lg", label: "Large" },
+];
+
 const logoCountOptions = Array.from({ length: logoCloudLogoMax }, (_, index) => String(index + 1));
 
 type HeaderData = NonNullable<LogoCloudData["header"]>;
 type StyleData = NonNullable<LogoCloudData["style"]>;
+type CommitLogoMutation = (
+  updater: (current: LogoCloudData) => LogoCloudData,
+  options?: { structural?: boolean }
+) => void;
+type LogoMediaPickerChange =
+  | { kind: "select"; assetId: string }
+  | { kind: "clear" }
+  | { kind: "invalid" };
 
 function normalizeValue(value: LogoCloudData): LogoCloudData {
   return normalizeLogoCloudData(value);
+}
+
+const isValidLogoCloudImageUrl = (value: string | undefined) =>
+  !value?.trim() ||
+  normalizeWidgetSafeHref(value, {
+    allowRelative: true,
+    allowHttp: true,
+  }) !== undefined;
+
+function resolveLogoMediaPickerChange(value: unknown): LogoMediaPickerChange {
+  if (value === null) return { kind: "clear" };
+  if (typeof value === "string" && value.trim().length > 0) {
+    return { kind: "select", assetId: value.trim() };
+  }
+  return { kind: "invalid" };
+}
+
+function resolveLogoRowKey(index: number, logo: LogoCloudLogo) {
+  return logo.id?.trim() || `index:${index}`;
+}
+
+function resolveLogoPreviewLabel(logo: LogoCloudLogo, index: number) {
+  return logo.alt?.trim() || logo.name?.trim() || `Logo ${index + 1}`;
+}
+
+async function resolveLogoMediaAsset(assetId: string) {
+  const items = await listMediaCached({ force: false });
+  const media = items.find((item) => item.id === assetId);
+  if (!media?.url) throw new Error("logo_cloud_media_not_found");
+  if (!(media.type === "image" || media.mimeType.trim().toLowerCase().startsWith("image/"))) {
+    throw new Error("logo_cloud_media_unsupported");
+  }
+
+  return {
+    image: media.url,
+    alt: media.alt?.trim() || media.title?.trim() || media.originalName?.trim(),
+    name: media.title?.trim() || media.originalName?.trim(),
+  };
 }
 
 function EditorSection({
@@ -189,89 +251,66 @@ function clearStyle(
   });
 }
 
-function updateLogo(
-  value: LogoCloudData,
-  onChange: (next: LogoCloudData) => void,
-  index: number,
-  patch: Partial<LogoCloudLogo>
-) {
-  updateValue(value, onChange, (current) => {
-    const logos = normalizeLogoCloudLogos(current.logos);
-    if (!logos[index]) return current;
+function patchLogoCloudLogo(current: LogoCloudData, index: number, patch: Partial<LogoCloudLogo>) {
+  const logos = normalizeLogoCloudLogos(current.logos);
+  if (!logos[index]) return current;
 
-    const nextLogos = [...logos];
-    nextLogos[index] = {
-      ...nextLogos[index],
-      ...patch,
-    };
+  const nextLogos = [...logos];
+  nextLogos[index] = {
+    ...nextLogos[index],
+    ...patch,
+  };
 
-    return {
-      ...current,
-      logos: nextLogos,
-    };
-  });
+  return {
+    ...current,
+    logos: nextLogos,
+  };
 }
 
-function setLogoCount(
-  value: LogoCloudData,
-  onChange: (next: LogoCloudData) => void,
-  count: number
-) {
-  updateValue(value, onChange, (current) => ({
+function setLogoCountInData(current: LogoCloudData, count: number) {
+  return {
     ...current,
     logos: normalizeLogoCloudLogos(current.logos, count),
-  }));
+  };
 }
 
-function addLogo(value: LogoCloudData, onChange: (next: LogoCloudData) => void) {
-  updateValue(value, onChange, (current) => {
-    const logos = normalizeLogoCloudLogos(current.logos);
-    if (logos.length >= logoCloudLogoMax) return current;
+function addLogoToData(current: LogoCloudData) {
+  const logos = normalizeLogoCloudLogos(current.logos);
+  if (logos.length >= logoCloudLogoMax) return current;
 
-    return {
-      ...current,
-      logos: normalizeLogoCloudLogos(
-        [...logos, { name: `Logo ${logos.length + 1}`, href: "#" }],
-        logos.length + 1
-      ),
-    };
-  });
+  return {
+    ...current,
+    logos: normalizeLogoCloudLogos(
+      [...logos, { name: `Logo ${logos.length + 1}`, href: "#" }],
+      logos.length + 1
+    ),
+  };
 }
 
-function removeLogo(value: LogoCloudData, onChange: (next: LogoCloudData) => void, index: number) {
-  updateValue(value, onChange, (current) => {
-    const logos = normalizeLogoCloudLogos(current.logos);
-    if (logos.length <= 1) return current;
+function removeLogoFromData(current: LogoCloudData, index: number) {
+  const logos = normalizeLogoCloudLogos(current.logos);
+  if (logos.length <= 1) return current;
 
-    const nextLogos = logos.filter((_, currentIndex) => currentIndex !== index);
-
-    return {
-      ...current,
-      logos: normalizeLogoCloudLogos(nextLogos, nextLogos.length),
-    };
-  });
+  const nextLogos = logos.filter((_, currentIndex) => currentIndex !== index);
+  return {
+    ...current,
+    logos: normalizeLogoCloudLogos(nextLogos, nextLogos.length),
+  };
 }
 
-function moveLogo(
-  value: LogoCloudData,
-  onChange: (next: LogoCloudData) => void,
-  fromIndex: number,
-  toIndex: number
-) {
-  updateValue(value, onChange, (current) => {
-    const logos = normalizeLogoCloudLogos(current.logos);
-    if (toIndex < 0 || toIndex >= logos.length) return current;
+function moveLogoInData(current: LogoCloudData, fromIndex: number, toIndex: number) {
+  const logos = normalizeLogoCloudLogos(current.logos);
+  if (toIndex < 0 || toIndex >= logos.length) return current;
 
-    const nextLogos = [...logos];
-    const [item] = nextLogos.splice(fromIndex, 1);
-    if (!item) return current;
-    nextLogos.splice(toIndex, 0, item);
+  const nextLogos = [...logos];
+  const [item] = nextLogos.splice(fromIndex, 1);
+  if (!item) return current;
+  nextLogos.splice(toIndex, 0, item);
 
-    return {
-      ...current,
-      logos: nextLogos,
-    };
-  });
+  return {
+    ...current,
+    logos: nextLogos,
+  };
 }
 
 function DiagnosticsSnapshot({ value }: { value: LogoCloudData }) {
@@ -293,6 +332,343 @@ function getLogoCloudLinkFeedback(value: string | undefined) {
   return "Use a relative path, hash, or full URL. Unsafe links are not rendered publicly.";
 }
 
+function getLogoCloudImageFeedback(value: string | undefined) {
+  if (!value?.trim()) return null;
+  if (isValidLogoCloudImageUrl(value)) return null;
+  return "Use a relative path or http/https image URL. Invalid values do not render a logo preview.";
+}
+
+function useLogoMediaSelection({
+  latestValueRef,
+  commitLogoMutation,
+}: {
+  latestValueRef: MutableRefObject<LogoCloudData>;
+  commitLogoMutation: CommitLogoMutation;
+}) {
+  const requestIdsByLogoRef = useRef<Record<string, number>>({});
+  const structureVersionRef = useRef(0);
+  const [selectedAssetIdsByLogoKey, setSelectedAssetIdsByLogoKey] = useState<
+    Record<string, string>
+  >({});
+  const [mediaPickerErrorsByLogoKey, setMediaPickerErrorsByLogoKey] = useState<
+    Record<string, string>
+  >({});
+
+  const setLogoMediaError = (logoKey: string, message?: string) => {
+    setMediaPickerErrorsByLogoKey((current) => {
+      if (!message) {
+        const { [logoKey]: _removed, ...next } = current;
+        return next;
+      }
+      return {
+        ...current,
+        [logoKey]: message,
+      };
+    });
+  };
+
+  const clearTransientAssetSelection = (index: number, logo: LogoCloudLogo) => {
+    const rowKey = resolveLogoRowKey(index, logo);
+    setSelectedAssetIdsByLogoKey((current) => {
+      const { [rowKey]: _removed, ...next } = current;
+      return next;
+    });
+    setLogoMediaError(rowKey);
+  };
+
+  const resolveRequestKey = (index: number, logo: LogoCloudLogo) =>
+    `${structureVersionRef.current}:${resolveLogoRowKey(index, logo)}`;
+
+  const invalidateLogoMediaRequest = (index: number, logo: LogoCloudLogo) => {
+    const requestKey = resolveRequestKey(index, logo);
+    requestIdsByLogoRef.current[requestKey] = (requestIdsByLogoRef.current[requestKey] ?? 0) + 1;
+  };
+
+  const invalidateAllLogoMediaRequests = () => {
+    structureVersionRef.current += 1;
+    requestIdsByLogoRef.current = {};
+    setSelectedAssetIdsByLogoKey({});
+    setMediaPickerErrorsByLogoKey({});
+  };
+
+  const findLogoIndexByRequestKey = (requestKey: string) => {
+    const logos = normalizeLogoCloudLogos(latestValueRef.current.logos);
+    const rowKey = requestKey.slice(requestKey.indexOf(":") + 1);
+    if (!rowKey.startsWith("index:")) {
+      return logos.findIndex((item) => item.id === rowKey);
+    }
+    const fallbackIndex = Number(rowKey.slice("index:".length));
+    return Number.isInteger(fallbackIndex) ? fallbackIndex : -1;
+  };
+
+  const commitLogoPatch = (index: number, patch: Partial<LogoCloudLogo>) => {
+    commitLogoMutation((current) => patchLogoCloudLogo(current, index, patch));
+  };
+
+  const getLogoPickerValue = (index: number, logo: LogoCloudLogo) =>
+    selectedAssetIdsByLogoKey[resolveLogoRowKey(index, logo)] ?? null;
+
+  const getLogoMediaError = (index: number, logo: LogoCloudLogo) =>
+    mediaPickerErrorsByLogoKey[resolveLogoRowKey(index, logo)] ?? null;
+
+  const handleManualImageChange = (index: number, logo: LogoCloudLogo, nextImage: string) => {
+    invalidateLogoMediaRequest(index, logo);
+    clearTransientAssetSelection(index, logo);
+    commitLogoPatch(index, { image: nextImage });
+  };
+
+  const clearLogoImage = (index: number, logo: LogoCloudLogo) => {
+    invalidateLogoMediaRequest(index, logo);
+    clearTransientAssetSelection(index, logo);
+    commitLogoPatch(index, { image: "" });
+  };
+
+  const handleLogoAssetChange = async (
+    index: number,
+    logo: LogoCloudLogo,
+    change: LogoMediaPickerChange
+  ) => {
+    const rowKey = resolveLogoRowKey(index, logo);
+
+    if (change.kind === "clear") {
+      clearLogoImage(index, logo);
+      return;
+    }
+    if (change.kind === "invalid") {
+      invalidateLogoMediaRequest(index, logo);
+      return;
+    }
+
+    const assetId = change.assetId;
+    const requestKey = resolveRequestKey(index, logo);
+    const requestId = (requestIdsByLogoRef.current[requestKey] ?? 0) + 1;
+    requestIdsByLogoRef.current[requestKey] = requestId;
+    setSelectedAssetIdsByLogoKey((current) => ({ ...current, [rowKey]: assetId }));
+    setLogoMediaError(rowKey);
+
+    try {
+      const next = await resolveLogoMediaAsset(assetId);
+      if (requestIdsByLogoRef.current[requestKey] !== requestId) return;
+      const latestIndex = findLogoIndexByRequestKey(requestKey);
+      if (latestIndex < 0) return;
+      const latestLogo = normalizeLogoCloudLogos(latestValueRef.current.logos)[latestIndex];
+      if (!latestLogo) return;
+      commitLogoPatch(latestIndex, {
+        image: next.image,
+        alt: latestLogo.alt?.trim() ? latestLogo.alt : next.alt,
+        name: latestLogo.name?.trim() ? latestLogo.name : next.name,
+      });
+    } catch (error) {
+      clearTransientAssetSelection(index, logo);
+      setLogoMediaError(
+        rowKey,
+        error instanceof Error && error.message === "logo_cloud_media_unsupported"
+          ? `Logo ${index + 1}: selected media must be an image asset.`
+          : `Logo ${index + 1}: failed to resolve selected media.`
+      );
+    }
+  };
+
+  return {
+    commitLogoPatch,
+    getLogoMediaError,
+    getLogoPickerValue,
+    handleLogoAssetChange,
+    handleManualImageChange,
+    clearLogoImage,
+    invalidateAllLogoMediaRequests,
+  };
+}
+
+function useLogoCloudEditCoordinator({
+  value,
+  onChange,
+}: {
+  value: LogoCloudData;
+  onChange: (next: LogoCloudData) => void;
+}) {
+  const latestValueRef = useRef(value);
+  const mediaSelectionRef = useRef<ReturnType<typeof useLogoMediaSelection> | null>(null);
+
+  useEffect(() => {
+    latestValueRef.current = value;
+  }, [value]);
+
+  const commitLogoMutation: CommitLogoMutation = (updater, options) => {
+    if (options?.structural) {
+      mediaSelectionRef.current?.invalidateAllLogoMediaRequests();
+    }
+    const current = normalizeValue(latestValueRef.current);
+    const next = updater(current);
+    onChange(normalizeValue(next));
+  };
+
+  const mediaSelection = useLogoMediaSelection({
+    latestValueRef,
+    commitLogoMutation,
+  });
+
+  useEffect(() => {
+    mediaSelectionRef.current = mediaSelection;
+  }, [mediaSelection]);
+
+  return {
+    commitLogoMutation,
+    mediaSelection,
+  };
+}
+
+function LogoCloudImagePreview({ logo, index }: { logo: LogoCloudLogo; index: number }) {
+  const src = logo.image?.trim() ?? "";
+  const label = resolveLogoPreviewLabel(logo, index);
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+
+  if (!src) {
+    return (
+      <div
+        className="flex items-center gap-3 rounded-lg border border-dashed bg-muted/10 p-3"
+        data-logo-cloud-preview-status="empty"
+      >
+        <div className="flex h-12 w-12 items-center justify-center rounded-md border border-dashed bg-background text-xs text-muted-foreground">
+          Logo
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-medium">Placeholder preview</p>
+          <p className="text-xs text-muted-foreground">No image selected yet.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isValidLogoCloudImageUrl(src) || failedSrc === src) {
+    return (
+      <div
+        className="flex items-center gap-3 rounded-lg border border-dashed bg-muted/10 p-3"
+        data-logo-cloud-preview-status="error"
+      >
+        <div className="flex h-12 w-12 items-center justify-center rounded-md border border-dashed bg-background text-xs text-muted-foreground">
+          !
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-medium">Preview unavailable</p>
+          <p className="truncate text-xs text-muted-foreground">{label}</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="flex items-center gap-3 rounded-lg border bg-muted/10 p-3"
+      data-logo-cloud-preview-status="image"
+    >
+      <img
+        src={src}
+        alt={label}
+        className="h-12 w-12 rounded object-contain"
+        loading="lazy"
+        onError={() => setFailedSrc(src)}
+        onLoad={() => setFailedSrc((current) => (current === src ? null : current))}
+      />
+      <div className="min-w-0">
+        <p className="text-sm font-medium">Image preview</p>
+        <p className="truncate text-xs text-muted-foreground">{label}</p>
+      </div>
+    </div>
+  );
+}
+
+function LogoImageControl({
+  logo,
+  index,
+  mediaSelection,
+}: {
+  logo: LogoCloudLogo;
+  index: number;
+  mediaSelection: ReturnType<typeof useLogoMediaSelection>;
+}) {
+  const imageFeedback = getLogoCloudImageFeedback(logo.image ?? undefined);
+  const linkFeedback = getLogoCloudLinkFeedback(logo.href ?? undefined);
+  const mediaError = mediaSelection.getLogoMediaError(index, logo);
+
+  return (
+    <div className="space-y-3">
+      <div className="space-y-2">
+        <p className="text-sm font-medium">Name</p>
+        <Input
+          value={logo.name ?? ""}
+          onChange={(event) => mediaSelection.commitLogoPatch(index, { name: event.target.value })}
+          placeholder={`Logo ${index + 1}`}
+        />
+      </div>
+
+      <LogoCloudImagePreview logo={logo} index={index} />
+
+      <div className="space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-sm font-medium">Media library</p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => mediaSelection.clearLogoImage(index, logo)}
+            disabled={!(logo.image ?? "").trim()}
+          >
+            Clear image
+          </Button>
+        </div>
+        <MediaPicker
+          value={mediaSelection.getLogoPickerValue(index, logo)}
+          onChange={(next) =>
+            void mediaSelection.handleLogoAssetChange(
+              index,
+              logo,
+              resolveLogoMediaPickerChange(next)
+            )
+          }
+          multiple={false}
+          accept={["image/*"]}
+        />
+        <p className="text-xs text-muted-foreground">
+          Selecting an asset updates the current image URL for this logo.
+        </p>
+        {mediaError ? <p className="text-xs text-destructive">{mediaError}</p> : null}
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-sm font-medium">Image URL</p>
+        <Input
+          value={logo.image ?? ""}
+          onChange={(event) =>
+            mediaSelection.handleManualImageChange(index, logo, event.target.value)
+          }
+          placeholder="https://cdn.example.com/logo.svg"
+        />
+        {imageFeedback ? <p className="text-xs text-amber-700">{imageFeedback}</p> : null}
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-sm font-medium">Alt text</p>
+        <Input
+          value={logo.alt ?? ""}
+          onChange={(event) => mediaSelection.commitLogoPatch(index, { alt: event.target.value })}
+          placeholder="Accessible logo name"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-sm font-medium">Link URL</p>
+        <Input
+          value={logo.href ?? ""}
+          onChange={(event) => mediaSelection.commitLogoPatch(index, { href: event.target.value })}
+          placeholder="#"
+        />
+        {linkFeedback ? <p className="text-xs text-amber-700">{linkFeedback}</p> : null}
+      </div>
+    </div>
+  );
+}
+
 export function LogoCloudWizardEditor({
   value,
   onChange,
@@ -302,6 +678,10 @@ export function LogoCloudWizardEditor({
   const normalized = normalizeValue(value);
   const header = normalized.header ?? logoCloudDefaults.header!;
   const logos = normalizeLogoCloudLogos(normalized.logos);
+  const { commitLogoMutation, mediaSelection } = useLogoCloudEditCoordinator({
+    value,
+    onChange,
+  });
 
   return (
     <div className="space-y-4">
@@ -337,7 +717,11 @@ export function LogoCloudWizardEditor({
         <p className="text-sm font-medium">Logo count</p>
         <Select
           value={String(logos.length)}
-          onValueChange={(next) => setLogoCount(value, onChange, Number(next))}
+          onValueChange={(next) =>
+            commitLogoMutation((current) => setLogoCountInData(current, Number(next)), {
+              structural: true,
+            })
+          }
         >
           <SelectTrigger>
             <SelectValue placeholder="Select count" />
@@ -352,17 +736,31 @@ export function LogoCloudWizardEditor({
         </Select>
       </div>
 
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Basic logo names</p>
+      <EditorSection
+        title="Starter logos"
+        description="Seed names, image sources, alt text, and basic links without leaving the wizard."
+      >
         {logos.map((logo, index) => (
-          <Input
-            key={logo.id}
-            value={logo.name}
-            onChange={(event) => updateLogo(value, onChange, index, { name: event.target.value })}
-            placeholder={`Logo ${index + 1}`}
-          />
+          <div
+            key={logo.id ?? `wizard-logo-${index + 1}`}
+            className="space-y-3 rounded-lg border p-3"
+          >
+            <p className="text-sm font-semibold">Logo {index + 1}</p>
+            <LogoImageControl logo={logo} index={index} mediaSelection={mediaSelection} />
+          </div>
         ))}
-      </div>
+
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() =>
+            commitLogoMutation((current) => addLogoToData(current), { structural: true })
+          }
+          disabled={logos.length >= logoCloudLogoMax}
+        >
+          Add logo
+        </Button>
+      </EditorSection>
     </div>
   );
 }
@@ -377,6 +775,10 @@ export function LogoCloudVisualEditor({
   const header = normalized.header ?? logoCloudDefaults.header!;
   const style = normalized.style ?? logoCloudDefaults.style!;
   const logos = normalizeLogoCloudLogos(normalized.logos);
+  const { commitLogoMutation, mediaSelection } = useLogoCloudEditCoordinator({
+    value,
+    onChange,
+  });
 
   return (
     <div className="space-y-4">
@@ -390,7 +792,11 @@ export function LogoCloudVisualEditor({
           <p className="text-sm font-medium">Logo count</p>
           <Select
             value={String(logos.length)}
-            onValueChange={(next) => setLogoCount(value, onChange, Number(next))}
+            onValueChange={(next) =>
+              commitLogoMutation((current) => setLogoCountInData(current, Number(next)), {
+                structural: true,
+              })
+            }
           >
             <SelectTrigger>
               <SelectValue placeholder="Select count" />
@@ -411,6 +817,14 @@ export function LogoCloudVisualEditor({
         description="Edit section title and optional helper description."
       >
         <div className="space-y-2">
+          <p className="text-sm font-medium">Eyebrow</p>
+          <Input
+            value={header.eyebrow ?? ""}
+            onChange={(event) => updateHeader(value, onChange, { eyebrow: event.target.value })}
+            placeholder="Our partners"
+          />
+        </div>
+        <div className="space-y-2">
           <p className="text-sm font-medium">Title</p>
           <Input
             value={header.title}
@@ -430,7 +844,7 @@ export function LogoCloudVisualEditor({
 
       <EditorSection
         title="Logos list and links"
-        description="Manage logo names, image URLs, and optional target links."
+        description="Manage logo names, image sources, alt text, and optional target links."
       >
         {logos.map((logo, index) => (
           <div key={logo.id} className="space-y-3 rounded-lg border p-3">
@@ -441,7 +855,11 @@ export function LogoCloudVisualEditor({
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => moveLogo(value, onChange, index, index - 1)}
+                  onClick={() =>
+                    commitLogoMutation((current) => moveLogoInData(current, index, index - 1), {
+                      structural: true,
+                    })
+                  }
                   disabled={index === 0}
                 >
                   Move up
@@ -450,7 +868,11 @@ export function LogoCloudVisualEditor({
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => moveLogo(value, onChange, index, index + 1)}
+                  onClick={() =>
+                    commitLogoMutation((current) => moveLogoInData(current, index, index + 1), {
+                      structural: true,
+                    })
+                  }
                   disabled={index === logos.length - 1}
                 >
                   Move down
@@ -459,56 +881,27 @@ export function LogoCloudVisualEditor({
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => removeLogo(value, onChange, index)}
+                  onClick={() =>
+                    commitLogoMutation((current) => removeLogoFromData(current, index), {
+                      structural: true,
+                    })
+                  }
                   disabled={logos.length <= 1}
                 >
                   Remove
                 </Button>
               </div>
             </div>
-
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Name</p>
-              <Input
-                value={logo.name}
-                onChange={(event) =>
-                  updateLogo(value, onChange, index, { name: event.target.value })
-                }
-                placeholder={`Logo ${index + 1}`}
-              />
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Image URL</p>
-              <Input
-                value={logo.image ?? ""}
-                onChange={(event) =>
-                  updateLogo(value, onChange, index, { image: event.target.value })
-                }
-                placeholder="https://cdn.example.com/logo.svg"
-              />
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Link URL</p>
-              <Input
-                value={logo.href ?? ""}
-                onChange={(event) =>
-                  updateLogo(value, onChange, index, { href: event.target.value })
-                }
-                placeholder="#"
-              />
-              {getLogoCloudLinkFeedback(logo.href ?? undefined) ? (
-                <p className="text-xs text-amber-700">
-                  {getLogoCloudLinkFeedback(logo.href ?? undefined)}
-                </p>
-              ) : null}
-            </div>
+            <LogoImageControl logo={logo} index={index} mediaSelection={mediaSelection} />
           </div>
         ))}
 
         <Button
           type="button"
           variant="outline"
-          onClick={() => addLogo(value, onChange)}
+          onClick={() =>
+            commitLogoMutation((current) => addLogoToData(current), { structural: true })
+          }
           disabled={logos.length >= logoCloudLogoMax}
         >
           Add logo
@@ -580,6 +973,48 @@ export function LogoCloudVisualEditor({
           </Select>
         </div>
 
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Header alignment</p>
+          <Select
+            value={style.headerAlign}
+            onValueChange={(next) =>
+              updateStyle(value, onChange, { headerAlign: next as LogoCloudHeaderAlign })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select alignment" />
+            </SelectTrigger>
+            <SelectContent>
+              {headerAlignOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Header size</p>
+          <Select
+            value={style.headerSize}
+            onValueChange={(next) =>
+              updateStyle(value, onChange, { headerSize: next as LogoCloudHeaderSize })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select size" />
+            </SelectTrigger>
+            <SelectContent>
+              {headerSizeOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         <div className="flex items-center justify-between rounded-md border px-3 py-2">
           <div>
             <p className="text-sm font-medium">Grayscale logos</p>
@@ -612,6 +1047,14 @@ export function LogoCloudVisualEditor({
             }
           />
         </div>
+
+        <ClearableInputField
+          label="Section background"
+          value={style.sectionBackground}
+          onChange={(next) => updateStyle(value, onChange, { sectionBackground: next })}
+          onClear={() => clearStyle(value, onChange, "sectionBackground")}
+          placeholder="var(--color-surface)"
+        />
 
         <ClearableInputField
           label="Tile background"

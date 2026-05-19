@@ -33,9 +33,9 @@ Precondition:
 - `TASK-256-06-02` already provides the shared `resolveWidgetLinkAttrs()`
   helper at current `HEAD`; this leaf must consume that helper directly instead
   of recreating safe-href logic locally.
-- `TASK-313-01` still owns the shared Logo Cloud link-input feedback residual.
-  `TASK-274-05` may reuse that feedback once landed, but runtime target/CTA
-  work is not blocked on a missing helper anymore.
+- `TASK-313-01` already landed the shared Logo Cloud link-input feedback
+  contract. `TASK-274-05` may reuse that feedback directly, but runtime
+  target/CTA work is not blocked on a missing helper anymore.
 
 ## Files to Change
 
@@ -65,11 +65,11 @@ type LogoCloudCta = {
   target?: LogoCloudLinkTarget;
 };
 
-type SharedWidgetLinkAttrs = false | {
+type SharedWidgetLinkAttrs = {
   href: string;
   target?: "_blank";
   rel?: string;
-};
+} | undefined;
 
 type SharedWidgetLinkAttrsResolver = (
   href: string | undefined,
@@ -102,7 +102,11 @@ function LogoCloudItem({ logo, openLinksInNewTab, resolveWidgetLinkAttrs }: Logo
 
 function LogoCloudCta({ cta, resolveWidgetLinkAttrs }: LogoCloudCtaProps) {
   if (!cta.enabled || !cta.label?.trim()) return null;
-  const attrs = resolveLogoLinkAttrs(resolveWidgetLinkAttrs, cta.href, cta.target ?? "same-tab");
+  const attrs = resolveLogoLinkAttrs(
+    resolveWidgetLinkAttrs,
+    cta.href,
+    cta.target === "new-tab"
+  );
   if (!attrs) return null;
   return <a {...attrs} data-logo-cloud-cta="true">{cta.label}</a>;
 }
@@ -114,13 +118,12 @@ Editor data flow:
 2. Add one global `Open logo links in new tab` switch in `Display style`; do
    not widen Logo Cloud into per-logo target complexity when the current owner
    model only stores `logos[].href`.
-3. Add CTA controls with enable toggle, label, href, and target. Reuse shared
-   safe-href feedback when `TASK-313-01` exposes it.
+3. Add CTA controls with enable toggle, label, href, and target. Reuse the
+   landed shared safe-href feedback from `TASK-313-01`.
 4. Render CTA only when enabled, label is present, and safe href resolves.
 5. Before implementation, bind the pseudocode above to the exact exported
-   `resolveWidgetLinkAttrs()` helper signature. If the shared helper changes
-   under `TASK-313`, update this task before coding rather than adapting
-   locally.
+   `resolveWidgetLinkAttrs()` helper signature. If the shared helper signature
+   changes later, update this task before coding rather than adapting locally.
 
 Error handling:
 
