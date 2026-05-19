@@ -66,6 +66,8 @@ export type ResolvedFormField = {
     options?: string[];
     defaultValue?: string | boolean;
     pattern?: string;
+    min?: number;
+    max?: number;
     step?: number;
     logic?: FormFieldLogic;
     style?: FormFieldStyle;
@@ -529,6 +531,10 @@ const supportedFieldTypes = new Set([
   "email",
   "phone",
   "date",
+  "time",
+  "number",
+  "range",
+  "rating",
   "textarea",
   "checkbox",
   "select",
@@ -803,6 +809,44 @@ function renderFieldControl(
     );
   }
 
+  if (field.type === "rating") {
+    const max = Math.max(1, Number(field.settings?.max ?? 5));
+    return (
+      <div className={wrapperClassName}>
+        {renderLabel()}
+        <div className="space-y-2">
+          {Array.from({ length: max }, (_, index) => String(index + 1)).map((option) => (
+            <label
+              key={`${field.id}-${option}`}
+              className="flex items-center gap-2 text-sm text-[var(--color-text)]"
+            >
+              <input
+                type="radio"
+                name={field.name}
+                value={option}
+                required={required}
+                aria-required={required ? "true" : undefined}
+                aria-labelledby={labelHidden ? undefined : ids.labelId}
+                aria-label={labelHidden ? field.label : undefined}
+                aria-describedby={ids.helperId}
+                data-required-original={required ? "1" : "0"}
+                defaultChecked={field.settings?.defaultValue === option}
+                className={joinClasses("h-4 w-4", borderClassName, radiusClassName)}
+                style={{ borderColor }}
+              />
+              <span>{option}</span>
+            </label>
+          ))}
+          {helper ? (
+            <p id={ids.helperId} className="text-xs" style={{ color: helperColor }}>
+              {helper}
+            </p>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
   const inputType =
     field.type === "email"
       ? "email"
@@ -810,7 +854,11 @@ function renderFieldControl(
         ? "tel"
         : field.type === "date"
           ? "date"
-          : "text";
+          : field.type === "time"
+            ? "time"
+            : field.type === "number" || field.type === "range"
+              ? field.type
+              : "text";
 
   return (
     <div className={wrapperClassName}>
@@ -828,6 +876,9 @@ function renderFieldControl(
         placeholder={placeholder}
         defaultValue={field.settings?.defaultValue as string | undefined}
         pattern={field.settings?.pattern}
+        min={typeof field.settings?.min === "number" ? String(field.settings.min) : undefined}
+        max={typeof field.settings?.max === "number" ? String(field.settings.max) : undefined}
+        step={typeof field.settings?.step === "number" ? String(field.settings.step) : undefined}
         className={joinClasses(
           "w-full border bg-transparent",
           inputClassName,

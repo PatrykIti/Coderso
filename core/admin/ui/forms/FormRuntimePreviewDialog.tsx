@@ -28,6 +28,8 @@ type RuntimePreviewField = {
     options?: string[];
     defaultValue?: string | boolean;
     pattern?: string;
+    min?: number;
+    max?: number;
     step?: number;
     logic?: FormFieldLogic;
     style?: FormFieldStyle;
@@ -359,6 +361,35 @@ export function FormRuntimePreviewDialog({
                             ) : null}
                           </div>
                         </div>
+                      ) : field.type === "rating" ? (
+                        <div className={labelPositionClass}>
+                          {labelNode}
+                          <div className="space-y-2">
+                            {Array.from(
+                              { length: Math.max(1, Number(field.settings.max ?? 5)) },
+                              (_, index) => String(index + 1)
+                            ).map((option) => (
+                              <label
+                                key={`${field.id}-${option}`}
+                                className="flex items-center gap-2 text-sm text-foreground"
+                              >
+                                <input
+                                  type="radio"
+                                  name={field.name}
+                                  value={option}
+                                  checked={value === option}
+                                  onChange={() => updateValue(field.name, option)}
+                                />
+                                <span>{option}</span>
+                              </label>
+                            ))}
+                            {field.settings.helper ? (
+                              <p className="text-xs text-muted-foreground">
+                                {field.settings.helper}
+                              </p>
+                            ) : null}
+                          </div>
+                        </div>
                       ) : (
                         <div className={labelPositionClass}>
                           {labelNode}
@@ -370,13 +401,32 @@ export function FormRuntimePreviewDialog({
                                   ? "email"
                                   : field.type === "date"
                                     ? "date"
-                                    : field.type === "phone"
-                                      ? "tel"
-                                      : "text"
+                                    : field.type === "time"
+                                      ? "time"
+                                      : field.type === "number" || field.type === "range"
+                                        ? field.type
+                                        : field.type === "phone"
+                                          ? "tel"
+                                          : "text"
                               }
                               value={typeof value === "string" ? value : ""}
                               placeholder={field.settings.placeholder ?? ""}
                               onChange={(event) => updateValue(field.name, event.target.value)}
+                              min={
+                                typeof field.settings.min === "number"
+                                  ? String(field.settings.min)
+                                  : undefined
+                              }
+                              max={
+                                typeof field.settings.max === "number"
+                                  ? String(field.settings.max)
+                                  : undefined
+                              }
+                              step={
+                                typeof field.settings.step === "number"
+                                  ? String(field.settings.step)
+                                  : undefined
+                              }
                             />
                             {field.settings.helper ? (
                               <p className="text-xs text-muted-foreground">

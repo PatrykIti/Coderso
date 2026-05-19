@@ -16,7 +16,7 @@ type FieldPreviewProps = {
   options?: string[];
   selected?: boolean;
   multiline?: boolean;
-  kind?: "text" | "select" | "checkbox" | "radio";
+  kind?: "text" | "select" | "checkbox" | "radio" | "range";
   labelHidden?: boolean;
   onSelect?: (id: string) => void;
   onRemove?: (id: string) => void;
@@ -106,6 +106,11 @@ function FieldPreview({
                 </div>
               ))}
           </div>
+        ) : kind === "range" ? (
+          <div className="space-y-2 text-sm text-muted-foreground">
+            <input type="range" value={value ?? "0"} readOnly className="w-full" />
+            <span>{value ?? "0"}</span>
+          </div>
         ) : (
           <Input
             placeholder={placeholder}
@@ -185,9 +190,11 @@ export function FormCanvas({
         ? "checkbox"
         : field.type === "radio"
           ? "radio"
-          : field.type === "select"
-            ? "select"
-            : "text";
+          : field.type === "range" || field.type === "rating"
+            ? "range"
+            : field.type === "select"
+              ? "select"
+              : "text";
     const multiline = field.type === "textarea";
     const value =
       typeof field.settings.defaultValue === "string" ? field.settings.defaultValue : undefined;

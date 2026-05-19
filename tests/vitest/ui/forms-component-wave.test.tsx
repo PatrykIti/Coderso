@@ -788,6 +788,18 @@ test("FormRuntimePreviewDialog handles unsaved, multi-step, submit success, and 
             step: 2,
           },
         },
+        {
+          id: "field-4",
+          type: "rating",
+          label: "Priority",
+          name: "priority",
+          required: false,
+          settings: {
+            max: 7,
+            defaultValue: "3",
+            step: 2,
+          },
+        },
       ]}
       hasUnsavedChanges={false}
       onOpenLogs={onOpenLogs}
@@ -814,6 +826,7 @@ test("FormRuntimePreviewDialog handles unsaved, multi-step, submit success, and 
     expect(onOpenLogs).toHaveBeenCalledOnce();
     expect(view.container.textContent).toContain("Need invoice");
     expect(view.container.textContent).toContain("Preferred contact");
+    expect(view.container.textContent).toContain("Priority");
 
     await React.act(async () => {
       const radio = Array.from(view.container.querySelectorAll("input")).find(
@@ -823,6 +836,13 @@ test("FormRuntimePreviewDialog handles unsaved, multi-step, submit success, and 
           input.getAttribute("value") === "Phone"
       ) as HTMLInputElement | undefined;
       radio?.click();
+      const rating = Array.from(view.container.querySelectorAll("input")).find(
+        (input) =>
+          input instanceof HTMLInputElement &&
+          input.type === "radio" &&
+          input.getAttribute("value") === "6"
+      ) as HTMLInputElement | undefined;
+      rating?.click();
       buttons()
         .find((button) => button.textContent?.includes("Submit preview"))
         ?.click();
@@ -832,6 +852,7 @@ test("FormRuntimePreviewDialog handles unsaved, multi-step, submit success, and 
       full_name: "Jane Doe",
       need_invoice: true,
       contact_method: "Phone",
+      priority: "6",
     });
     expect(view.container.textContent).toContain("Submission completed");
     expect(view.container.textContent).toContain("Runtime redirect configured");

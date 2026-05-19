@@ -3,9 +3,12 @@ import {
   AtSign,
   Calendar,
   CircleDot,
+  Gauge,
   CheckSquare,
   Eye,
   ListChecks,
+  ListOrdered,
+  Timer,
   Save,
   Type,
 } from "lucide-react";
@@ -108,6 +111,34 @@ const fieldLibraryItems: FieldLibraryItem[] = [
     icon: Calendar,
     type: "date",
     helper: "Pick a date from the calendar.",
+  },
+  {
+    id: "number",
+    label: "Number Field",
+    icon: ListOrdered,
+    type: "number",
+    helper: "Accept only numeric input.",
+  },
+  {
+    id: "time",
+    label: "Time Field",
+    icon: Timer,
+    type: "time",
+    helper: "Collect a time value in HH:MM format.",
+  },
+  {
+    id: "range",
+    label: "Range Slider",
+    icon: Gauge,
+    type: "range",
+    helper: "Capture a bounded numeric value with a slider.",
+  },
+  {
+    id: "rating",
+    label: "Rating Field",
+    icon: Gauge,
+    type: "rating",
+    helper: "Collect a 1-to-N rating with bounded scale.",
   },
 ];
 

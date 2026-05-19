@@ -13,6 +13,10 @@ export type FormFieldType =
   | "email"
   | "select"
   | "radio"
+  | "number"
+  | "time"
+  | "range"
+  | "rating"
   | "checkbox"
   | "textarea"
   | "phone"
@@ -24,6 +28,8 @@ export type FormFieldSettings = {
   options?: string[];
   defaultValue?: string | boolean;
   pattern?: string;
+  min?: number;
+  max?: number;
   step?: number;
   logic?: FormFieldLogic;
   style?: FormFieldStyle;
@@ -54,6 +60,10 @@ const fieldTypes = new Set<FormFieldType>([
   "email",
   "select",
   "radio",
+  "number",
+  "time",
+  "range",
+  "rating",
   "checkbox",
   "textarea",
   "phone",
@@ -89,6 +99,20 @@ const normalizeOptions = (value: unknown): string[] => {
   const options = value.map((entry) => normalizeString(entry)).filter(Boolean) as string[];
   return Array.from(new Set(options));
 };
+
+const normalizeOptionalFiniteNumber = (value: unknown) => {
+  if (value === undefined || value === null || value === "") return undefined;
+  const parsed =
+    typeof value === "number"
+      ? value
+      : typeof value === "string"
+        ? Number(value.trim())
+        : Number.NaN;
+  if (!Number.isFinite(parsed)) throw new Error("form_field_invalid");
+  return parsed;
+};
+
+const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 const normalizeSettings = (
   type: FormFieldType,
@@ -140,6 +164,35 @@ const normalizeSettings = (
 
   if (settings.step !== undefined) {
     normalized.step = normalizeFormStep(settings.step);
+  }
+
+  if (type === "number" || type === "range" || type === "rating") {
+    const min = normalizeOptionalFiniteNumber(settings.min);
+    const max = normalizeOptionalFiniteNumber(settings.max);
+    if (min !== undefined) normalized.min = min;
+    if (max !== undefined) normalized.max = max;
+    if (min !== undefined && max !== undefined && max < min) {
+      throw new Error("form_field_invalid");
+    }
+  }
+
+  if (type === "time") {
+    const defaultValue =
+      typeof normalized.defaultValue === "string" ? normalized.defaultValue : undefined;
+    if (defaultValue && !timePattern.test(defaultValue)) {
+      throw new Error("form_field_invalid");
+    }
+  }
+
+  if (type === "rating") {
+    const max = normalized.max ?? 5;
+    if (!Number.isInteger(max) || max < 3 || max > 10) {
+      throw new Error("form_field_invalid");
+    }
+    normalized.max = max;
+    if (normalized.min !== undefined) {
+      delete normalized.min;
+    }
   }
 
   if (type === "select" || type === "radio") {
@@ -264,6 +317,51 @@ export function validateSubmissionPayload(payload: unknown, fields: NormalizedFo
           if (!field.settings.options.includes(text)) {
             throw new Error("form_payload_invalid");
           }
+        }
+        normalized[field.name] = text;
+        break;
+      }
+      case "number":
+      case "range":
+      case "rating": {
+        const text = normalizeString(value);
+        if (!text) {
+          if (field.required) throw new Error("form_payload_required");
+          break;
+        }
+        const parsed = Number(text);
+        if (!Number.isFinite(parsed)) throw new Error("form_payload_invalid");
+        if (field.settings.min !== undefined && parsed < field.settings.min) {
+          throw new Error("form_payload_invalid");
+        }
+        if (field.settings.max !== undefined && parsed > field.settings.max) {
+          throw new Error("form_payload_invalid");
+        }
+        if (
+          field.settings.step !== undefined &&
+          field.settings.step > 0 &&
+          field.type !== "rating"
+        ) {
+          const origin = field.settings.min ?? 0;
+          const delta = (parsed - origin) / field.settings.step;
+          if (Math.abs(delta - Math.round(delta)) > 1e-9) {
+            throw new Error("form_payload_invalid");
+          }
+        }
+        if (field.type === "rating" && !Number.isInteger(parsed)) {
+          throw new Error("form_payload_invalid");
+        }
+        normalized[field.name] = text;
+        break;
+      }
+      case "time": {
+        const text = normalizeString(value);
+        if (!text) {
+          if (field.required) throw new Error("form_payload_required");
+          break;
+        }
+        if (!timePattern.test(text)) {
+          throw new Error("form_payload_invalid");
         }
         normalized[field.name] = text;
         break;

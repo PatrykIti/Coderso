@@ -46,6 +46,7 @@ test("FieldLibrary renders items and forwards add callbacks", () => {
       items={[
         { id: "text", label: "Text", icon: Icon as never, type: "text" },
         { id: "radio", label: "Radio", icon: Icon as never, type: "radio" },
+        { id: "number", label: "Number", icon: Icon as never, type: "number" },
         { id: "checkbox", label: "Checkbox", icon: Icon as never, type: "checkbox" },
       ]}
       onAddField={onAddField}
@@ -55,6 +56,7 @@ test("FieldLibrary renders items and forwards add callbacks", () => {
   try {
     expect(view.container.textContent).toContain("Fields Library");
     expect(view.container.textContent).toContain("Advanced Fields");
+    expect(view.container.textContent).toContain("Number");
 
     React.act(() => {
       Array.from(view.container.querySelectorAll("button"))

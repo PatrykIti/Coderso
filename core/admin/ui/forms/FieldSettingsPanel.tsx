@@ -37,6 +37,8 @@ export type FieldSettings = {
     options?: string[];
     defaultValue?: boolean | string;
     pattern?: string;
+    min?: number;
+    max?: number;
     step?: number;
     logic?: FormFieldLogic;
     style?: FormFieldStyle;
@@ -51,10 +53,20 @@ type FieldSettingsPanelProps = {
   onDuplicate?: (fieldId: string) => void;
 };
 
-const supportsPlaceholder = new Set(["text", "email", "textarea", "phone", "date"]);
+const supportsPlaceholder = new Set([
+  "text",
+  "email",
+  "textarea",
+  "phone",
+  "date",
+  "number",
+  "time",
+]);
 const supportsOptions = new Set(["select", "radio"]);
 const supportsDefault = new Set(["checkbox"]);
 const supportsChoiceDefault = new Set(["select", "radio"]);
+const supportsNumericBounds = new Set(["number", "range", "rating"]);
+const supportsStep = new Set(["number", "range"]);
 
 const createLogicPatch = (
   current: FormFieldLogic | undefined,
@@ -274,6 +286,69 @@ export function FieldSettingsPanel({
                       Add options before selecting a default value.
                     </p>
                   )}
+                </div>
+              </>
+            ) : null}
+            {supportsNumericBounds.has(field.type) ? (
+              <>
+                <Separator />
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                      Minimum
+                    </label>
+                    <Input
+                      type="number"
+                      value={field.settings.min ?? ""}
+                      onChange={(event) =>
+                        onSettingsChange(field.id, {
+                          min:
+                            event.target.value.trim().length === 0
+                              ? undefined
+                              : Number(event.target.value),
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                      Maximum
+                    </label>
+                    <Input
+                      type="number"
+                      value={field.settings.max ?? ""}
+                      onChange={(event) =>
+                        onSettingsChange(field.id, {
+                          max:
+                            event.target.value.trim().length === 0
+                              ? undefined
+                              : Number(event.target.value),
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+              </>
+            ) : null}
+            {supportsStep.has(field.type) ? (
+              <>
+                <Separator />
+                <div className="space-y-2">
+                  <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                    Step value
+                  </label>
+                  <Input
+                    type="number"
+                    value={field.settings.step ?? ""}
+                    onChange={(event) =>
+                      onSettingsChange(field.id, {
+                        step:
+                          event.target.value.trim().length === 0
+                            ? undefined
+                            : Number(event.target.value),
+                      })
+                    }
+                  />
                 </div>
               </>
             ) : null}

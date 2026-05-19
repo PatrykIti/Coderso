@@ -203,9 +203,8 @@ test("form embed renders accessible field wiring and unsupported-field diagnosti
 
   expect(html).toContain('aria-required="true"');
   expect(html).toContain("aria-describedby=");
-  expect(html).toContain('data-form-field-unsupported="number"');
-  expect(html).toContain("Unsupported form field type:");
-  expect(html).toContain(">number<");
+  expect(html).toContain('type="number"');
+  expect(html).not.toContain('data-form-field-unsupported="number"');
 });
 
 test("form embed renders alert regions and captcha bridge attrs when runtime metadata is available", () => {
@@ -274,6 +273,60 @@ test("form embed renders supported radio fields instead of the unsupported diagn
   expect(html).toContain('value="Email"');
   expect(html).toContain('value="Phone"');
   expect(html).not.toContain("Unsupported form field type:");
+});
+
+test("form embed renders typed controls for number, time, range, and rating", () => {
+  const html = renderToString(
+    <FormEmbedBlock
+      data={{
+        formId: "form-1",
+        resolved: {
+          formName: "Typed form",
+          fields: [
+            {
+              id: "field-number",
+              type: "number",
+              label: "Team size",
+              name: "team_size",
+              required: true,
+              settings: { min: 1, max: 20, step: 1 },
+            },
+            {
+              id: "field-time",
+              type: "time",
+              label: "Preferred time",
+              name: "preferred_time",
+              required: false,
+            },
+            {
+              id: "field-range",
+              type: "range",
+              label: "Budget score",
+              name: "budget_score",
+              required: false,
+              settings: { min: 0, max: 10, step: 2, defaultValue: "4" },
+            },
+            {
+              id: "field-rating",
+              type: "rating",
+              label: "Priority",
+              name: "priority",
+              required: false,
+              settings: { max: 7, defaultValue: "3" },
+            },
+          ],
+        },
+      }}
+      variant="standard"
+    />
+  );
+
+  expect(html).toContain('type="number"');
+  expect(html).toContain('type="time"');
+  expect(html).toContain('type="range"');
+  expect(html).toContain('value="3"');
+  expect(html).not.toContain('data-form-field-unsupported="number"');
+  expect(html).not.toContain('data-form-field-unsupported="rating"');
 });
 
 test("form embed applies field style and logic runtime attributes", () => {

@@ -168,6 +168,16 @@ test("FormCanvas handles single-layout selection, checkbox fallback copy, and re
             style: { width: "full", labelPosition: "above" },
           },
         },
+        {
+          id: "field-range",
+          label: "Priority",
+          type: "range",
+          required: false,
+          settings: {
+            defaultValue: "4",
+            style: { width: "half", labelPosition: "above" },
+          },
+        },
       ]}
       onSelectField={onSelectField}
       onSelectForm={onSelectForm}
@@ -182,6 +192,8 @@ test("FormCanvas handles single-layout selection, checkbox fallback copy, and re
     expect(view.container.textContent).toContain("Contact method");
     expect(view.container.textContent).toContain("Email");
     expect(view.container.textContent).toContain("Phone");
+    expect(view.container.textContent).toContain("Priority");
+    expect(view.container.textContent).toContain("4");
     expect(view.container.textContent).not.toContain("Consent</label>");
     expect(view.container.innerHTML).toContain("md:col-span-1");
     expect(view.container.innerHTML).toContain("md:col-span-2");

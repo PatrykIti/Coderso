@@ -154,3 +154,85 @@ test("radio fields normalize options and accept only allowlisted values", () => 
     )
   ).toThrow("form_payload_invalid");
 });
+
+test("typed fields validate number, time, range, and rating constraints", () => {
+  const fields = normalizeFormFields([
+    {
+      type: "number",
+      label: "Team size",
+      name: "team_size",
+      settings: {
+        min: 1,
+        max: 20,
+        step: 1,
+      },
+    },
+    {
+      type: "time",
+      label: "Preferred time",
+      name: "preferred_time",
+      settings: {
+        defaultValue: "09:30",
+      },
+    },
+    {
+      type: "range",
+      label: "Budget score",
+      name: "budget_score",
+      settings: {
+        min: 0,
+        max: 10,
+        step: 2,
+      },
+    },
+    {
+      type: "rating",
+      label: "Priority",
+      name: "priority",
+      settings: {
+        max: 7,
+      },
+    },
+  ]);
+
+  expect(
+    validateSubmissionPayload(
+      {
+        team_size: "8",
+        preferred_time: "10:15",
+        budget_score: "6",
+        priority: "5",
+      },
+      fields
+    )
+  ).toEqual({
+    team_size: "8",
+    preferred_time: "10:15",
+    budget_score: "6",
+    priority: "5",
+  });
+
+  expect(() =>
+    validateSubmissionPayload(
+      {
+        team_size: "2.5",
+        preferred_time: "10:15",
+        budget_score: "6",
+        priority: "5",
+      },
+      fields
+    )
+  ).toThrow("form_payload_invalid");
+
+  expect(() =>
+    validateSubmissionPayload(
+      {
+        team_size: "8",
+        preferred_time: "25:90",
+        budget_score: "6",
+        priority: "5",
+      },
+      fields
+    )
+  ).toThrow("form_payload_invalid");
+});
