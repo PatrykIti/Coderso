@@ -494,5 +494,84 @@ Tytuł to statyczny tekst, nie `<a href>`. Użytkownik nie może kliknąć na pr
 
 - Current TASK-256 role for Product Compare is classification only.
   Commerce/product-specific behavior continues through the `TASK-279` family.
-- Shared rows that match existing TASK-256 safe-output or accessibility
-  mechanisms remain referenced by `TASK-256-07` and `TASK-256-08`.
+- Shared widget-contract work for Product Compare was split and closed through
+  `TASK-256` / `TASK-313`; the executable Product Compare-only BF/UX/A scope is
+  now routed through `TASK-279` leaves or explicit no-action rows.
+
+---
+
+## Status po TASK-279 (2026-05-19)
+
+### Fixed in TASK-279-01
+
+- `BF-04`: Product Compare now supports bounded `source.productIds` curation and
+  preserves manual order through the runtime query path.
+- `BF-15`: Product Compare now clamps the widget-side limit to `12` in schema,
+  normalizer, editor input, and query builder.
+- `UX-07`: Product Compare now consumes the shared `TASK-313`
+  `CommerceSourceFields` limit/copy contract instead of forking local source
+  controls.
+
+### Fixed in TASK-279-02
+
+- `BF-01`: Price and stock rows are no longer hardcoded always-visible; row
+  visibility is now schema-owned.
+- `BF-05`: Product Compare can render an excerpt row from runtime-safe product
+  data.
+- `BF-09`: The attribute-column header is now author-configurable.
+- `BF-11`: Money formatting now uses a bounded locale contract.
+- `BF-13`: Stock-state labels, including backorder, are author-configurable.
+- `BF-14`: Quantity display now uses bounded formatting modes instead of raw
+  `String(stockQuantity)`.
+- `UX-01`: Visual editing now exposes labels for Quantity and Slug, alongside
+  the rest of the compare rows.
+
+### Fixed in TASK-279-03
+
+- `BF-02`: Product Compare headers can render backend-resolved product images.
+- `BF-07`: Product titles can link to the public product route through a safe
+  backend-owned href.
+- `BF-10`: Product Compare now supports a bounded read-only CTA (`View product`)
+  without introducing cart or checkout writes.
+- `A6`: Product images render with meaningful alt text.
+
+### Fixed in TASK-279-04
+
+- `BF-06`: Product Compare can highlight one featured product.
+- `BF-08`: Product Compare now ships `matrix`, `compact`, and `cards`
+  variants.
+- `BF-12`: Table variants now support a bounded sticky header option.
+
+### Fixed in TASK-279-05
+
+- `BF-03`: Product Compare now supports section title/description/caption copy.
+- `A1`, `A2`, `A3`, `A4`: Matrix/compact rendering now ships caption, scoped
+  column headers, and a named section.
+- `A7`: Runtime warnings now use `role="alert"`.
+- `A8`: Empty-state output now uses semantic status/live-region behavior.
+- `A9`: The horizontal scroll container is now keyboard-focusable.
+
+### Fixed in TASK-279-06
+
+- `UX-03`: Runtime diagnostics are now read-only; authors cannot spoof
+  `resolved.error` through an editable field.
+- `UX-04`: Advanced diagnostics now pair human-readable query context with an
+  optional raw JSON disclosure.
+- `UX-05`: Wizard and Visual now show resolved-product preview status.
+- `UX-08`: Product Compare now refreshes admin preview data through an internal
+  backend-owned widget preview route and transient canvas preview state.
+
+### Fixed in TASK-279-07
+
+- `UX-02`: Advanced surface controls no longer live in Wizard.
+- `UX-06`: Dense compare guidance now escalates when the selected/limited
+  product count exceeds the readability threshold.
+
+### No-Action / Preserved
+
+- `A5`: `data-widget="product-compare"` remains intentionally preserved.
+- Runtime inventory notes about missing `status` and `sku` fields were not
+  promoted to user-facing Product Compare findings in this report wave. The
+  landed widget keeps comparison rows bounded to price/stock/quantity/slug/
+  excerpt unless a future report creates a dedicated task for status/SKU
+  presentation.

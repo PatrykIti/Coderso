@@ -1,16 +1,8 @@
-export const commerceProductStatuses = [
-  "draft",
-  "published",
-  "archived",
-] as const;
+export const commerceProductStatuses = ["draft", "published", "archived"] as const;
 
 export type CommerceProductStatus = (typeof commerceProductStatuses)[number];
 
-export const commerceStockStates = [
-  "in_stock",
-  "out_of_stock",
-  "backorder",
-] as const;
+export const commerceStockStates = ["in_stock", "out_of_stock", "backorder"] as const;
 
 export type CommerceStockState = (typeof commerceStockStates)[number];
 
@@ -95,12 +87,7 @@ export type CommerceFilterOperator = (typeof commerceFilterOperators)[number];
 export type CommerceQueryFilter = {
   field: string;
   op: CommerceFilterOperator;
-  value?:
-    | string
-    | number
-    | boolean
-    | null
-    | Array<string | number | boolean | null>;
+  value?: string | number | boolean | null | Array<string | number | boolean | null>;
 };
 
 export type CommerceQuerySort = {
@@ -119,5 +106,6 @@ export type CommerceQuery = {
   pagination: CommerceQueryPagination;
   status?: CommerceProductStatus[];
   collectionIds?: string[];
+  productIds?: string[];
   search?: string | null;
 };

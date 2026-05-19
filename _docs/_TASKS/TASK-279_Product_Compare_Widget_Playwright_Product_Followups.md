@@ -6,7 +6,7 @@
 **Category:** Widgets + Commerce + Admin UI + Runtime Render + Accessibility + Playwright QA
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-252-07-05, TASK-256, TASK-256-01, TASK-256-02, TASK-256-04, TASK-256-07, TASK-256-08
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -42,6 +42,21 @@ attribute rows, and highlighted products, but it is not proof that those fields
 exist in current code. TASK-279 must verify the live owners before claiming any
 Product Compare behavior as already implemented.
 
+Current worktree state is no longer a clean pre-implementation baseline:
+
+- shared `CommerceSourceFields` limit/copy prerequisites were split into
+  `TASK-313` and partially landed in the shared owner;
+- `TASK-279-01` already started the widget-local `productIds`/limit path across
+  Product Compare, admin client/schema, and commerce query execution;
+- `TASK-279-07` already started consuming the shared source-field options for
+  Product Compare-specific guidance.
+
+Remaining family work must start from the still-open gaps in that partially
+landed state: exact selected-set semantics and stability, preview parity,
+attribute/header/media/layout/accessibility implementation, and final docs
+closure. Do not re-plan the already-landed shared-source scaffolding as if it
+were untouched.
+
 ## TASK-256 Exclusion Matrix
 
 The following report findings are intentionally excluded from TASK-279 when
@@ -63,8 +78,8 @@ Product Compare-only implementation.
 
 | Report finding | TASK-279 owner | Notes |
 |---|---|---|
-| BF-04 selected products by ID | TASK-279-01 | Product Compare-owned manual selection and query bridging. |
-| BF-15 schema/UI/normalizer limit mismatch | TASK-279-01 | Keep compare max deterministic without changing Product Gallery/Table behavior; shared source-field prerequisites are tracked in `TASK-324`. |
+| BF-04 selected products by ID | TASK-279-01 | Current worktree already adds `source.productIds`; remaining leaf scope is exact selected-set semantics, stability across later source edits, and admin-route proof. |
+| BF-15 schema/UI/normalizer limit mismatch | TASK-279-01 | Shared limit/copy scaffolding now rides `TASK-324`; remaining TASK-279 work is proving Product Compare exact-set behavior without reintroducing local source-field forks. |
 | BF-01 price and stock visibility | TASK-279-02 | Attribute-row model starts from the current local `metrics` array. |
 | BF-05 product excerpt/description row | TASK-279-02 | Requires runtime row payload extension and safe text rendering. |
 | BF-09 custom Attribute header | TASK-279-02 | Add schema/default/label/editor coverage. |
@@ -87,7 +102,7 @@ Product Compare-only implementation.
 | UX-08 admin refresh/re-resolve | TASK-279-06 | Use backend-owned commerce resolver, and cover the full admin preview bridge from builder preview state to renderer parity; no client provider fetches. |
 | UX-02 Wizard surfaces are too advanced | TASK-279-07 | Product Compare-local IA after re-checking the current shared mode policy and landed helpers. |
 | UX-06 limit warning for dense compare tables | TASK-279-07 | Add dynamic warning when limit exceeds readable compare range. |
-| UX-07 source filter placeholder/help copy | TASK-279-07 | Product Compare-specific guidance lands after shared source-field copy/bounds support in `TASK-324`. |
+| UX-07 source filter placeholder/help copy | TASK-279-07 | Shared source-field copy/bounds support now lives in `TASK-324`; remaining leaf scope is Product Compare IA and dense-guidance cleanup after consuming that shared contract correctly. |
 | Report fixed/deferred notes, widget docs, changelog, board closure | TASK-279-08 | Final evidence pass. |
 
 ## No-Action Report Findings
@@ -96,29 +111,30 @@ Product Compare-only implementation.
 |---|---|---|
 | A5 `data-widget="product-compare"` | No TASK-279 task | The report marks the current data attribute as OK. Preserve the marker unless renderer tests intentionally update it. |
 | Current empty state basic rendering | No standalone task | Empty-state copy already renders; TASK-279-05/06 only adjusts semantics and admin preview truthfulness around it. |
+| Runtime inventory notes for missing `status` and `sku` fields | No TASK-279 task | Report section 2.3 records them as raw inventory observations, but this wave did not promote status/SKU to user-facing Product Compare findings. Keep the compare surface bounded to the rows routed above unless a future report creates a dedicated task. |
 
 ## Sub-Tasks
 
-- [ ] TASK-279-01: Product Compare Source Selection and Limit Contract
-- [ ] TASK-279-02: Product Compare Attribute Rows Labels and Formatting
-- [ ] TASK-279-03: Product Compare Column Media Links and CTAs
-- [ ] TASK-279-04: Product Compare Featured Column and Responsive Layouts
-- [ ] TASK-279-05: Product Compare Section Header and Table Accessibility
-- [ ] TASK-279-06: Product Compare Admin Preview Resolve and Diagnostics
-- [ ] TASK-279-07: Product Compare Editor IA and Source Guidance
-- [ ] TASK-279-08: Product Compare Report Docs Changelog and Closure
+- [x] TASK-279-01: Product Compare Source Selection and Limit Contract
+- [x] TASK-279-02: Product Compare Attribute Rows Labels and Formatting
+- [x] TASK-279-03: Product Compare Column Media Links and CTAs
+- [x] TASK-279-04: Product Compare Featured Column and Responsive Layouts
+- [x] TASK-279-05: Product Compare Section Header and Table Accessibility
+- [x] TASK-279-06: Product Compare Admin Preview Resolve and Diagnostics
+- [x] TASK-279-07: Product Compare Editor IA and Source Guidance
+- [x] TASK-279-08: Product Compare Report Docs Changelog and Closure
 
 ## Implementation Order
 
-1. Re-check the current TASK-256 classification and any already-landed shared
+1. Re-check the current TASK-256 classification and already-landed shared
    helpers before implementation leaves touch editor mode policy, clear
-   controls, shared source fields, or shared runtime accessibility. If the
-   smallest correct fix is still cross-widget, split it into a dedicated shared
-   task instead of patching Product Compare locally.
-   Shared `CommerceSourceFields` prerequisites discovered here are tracked in
-   `TASK-324`.
-2. Complete TASK-279-01 first so selected product ordering and compare limits
-   are stable before renderer and preview leaves depend on resolved rows.
+   controls, shared source fields, or shared runtime accessibility. The shared
+   `CommerceSourceFields` prerequisite discovered during this family now lives
+   in `TASK-324`; consume that owner contract instead of re-forking the shared
+   controls locally.
+2. Finish the remaining TASK-279-01 work first so selected product ordering,
+   conflicting-filter behavior, and compare limits are stable before renderer
+   and preview leaves depend on resolved rows.
 3. Complete TASK-279-02 after source selection because attribute rows and
    labels may use selected-product runtime payload extensions.
 4. Complete TASK-279-03 after row payload decisions settle so media, product

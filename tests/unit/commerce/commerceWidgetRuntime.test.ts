@@ -101,29 +101,60 @@ test("hydrateProductGalleryRuntimeData resolves cards and total", async () => {
 });
 
 test("hydrateProductCompareRuntimeData maps compare payload rows", async () => {
+  const calls: Array<Record<string, unknown>> = [];
   const resolved = await hydrateProductCompareRuntimeData(
-    productCompareDefaults,
+    {
+      ...productCompareDefaults,
+      source: {
+        ...productCompareDefaults.source,
+        limit: 1,
+        productIds: ["product-3", "product-1", "product-3"],
+      },
+    },
     {
       preview: true,
     },
     {
-      resolveRuntimeProducts: async () => ({
-        total: 1,
-        limit: 3,
-        offset: 0,
-        query: {
-          filters: [],
-          sort: [],
-          pagination: { limit: 3, offset: 0 },
-        },
-        rows: sampleRows,
-        cards: [],
-      }) as unknown as RuntimeProductsResult,
+      resolveRuntimeProducts: async (input: RuntimeProductsInput = {}) => {
+        calls.push((input.query ?? {}) as Record<string, unknown>);
+        return {
+          total: 1,
+          limit: 3,
+          offset: 0,
+          query: {
+            filters: [],
+            sort: [],
+            pagination: { limit: 3, offset: 0 },
+          },
+          rows: sampleRows,
+          cards: [],
+        } as unknown as RuntimeProductsResult;
+      },
+      buildComparePayload: async (rows) => ({
+        generatedAt: "2026-05-19T12:00:00.000Z",
+        rows: rows.map((row) => ({
+          id: row.id,
+          title: row.title,
+          slug: row.slug,
+          excerpt: row.excerpt ?? null,
+          productHref: `/products/${row.slug}`,
+          imageUrl: null,
+          imageAlt: row.title,
+          priceAmount: row.pricing.amount,
+          currency: row.pricing.currency,
+          compareAtAmount: row.pricing.compareAtAmount,
+          stockState: row.stock.state,
+          stockQuantity: row.stock.quantity,
+        })),
+      }),
     }
   );
 
+  expect(calls[0]?.productIds).toEqual(["product-3", "product-1"]);
+  expect((calls[0]?.pagination as { limit: number }).limit).toBe(2);
   expect(resolved.resolved?.rows?.[0]?.priceAmount).toBe(120000);
   expect(resolved.resolved?.rows?.[0]?.stockState).toBe("in_stock");
+  expect(resolved.resolved?.rows?.[0]?.productHref).toBe("/products/starter-home");
   expect(resolved.resolved?.total).toBe(1);
 });
 

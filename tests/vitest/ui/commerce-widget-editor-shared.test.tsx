@@ -210,6 +210,30 @@ test("utility helpers normalize csv and source defaults", () => {
     sortField: "title",
     sortDir: "asc",
   });
+
+  expect(
+    normalizeSourceForEditor(
+      {
+        limit: 99,
+        search: "  camera  ",
+      } as unknown as NormalizedCommerceWidgetSource,
+      {
+        limit: 6,
+        sortField: "title",
+        sortDir: "asc",
+      },
+      {
+        limitMax: 12,
+      }
+    )
+  ).toEqual({
+    limit: 12,
+    search: "camera",
+    collectionIds: [],
+    status: [],
+    sortField: "title",
+    sortDir: "asc",
+  });
 });
 
 test("primitive editor fields render content and emit normalized changes", () => {
@@ -334,6 +358,62 @@ test("source fields update limit, filters, sorting, and status toggles", () => {
       sortField: "publishedAt",
       sortDir: "desc",
       collectionIds: ["featured", "sale", "clearance"],
+    })
+  );
+
+  cleanup();
+});
+
+test("source fields honor widget-specific limit and copy options without changing defaults", () => {
+  const history: NormalizedCommerceWidgetSource[] = [];
+
+  const Harness = () => {
+    const [value, setValue] = useState<NormalizedCommerceWidgetSource>({
+      limit: 3,
+      search: "",
+      collectionIds: [],
+      status: [],
+      sortField: "title",
+      sortDir: "asc",
+    });
+
+    return (
+      <CommerceSourceFields
+        source={value}
+        onChange={(next) => {
+          history.push(next);
+          setValue(next);
+        }}
+        options={{
+          limitMax: 12,
+          copy: {
+            searchPlaceholder: "product title or slug",
+            searchHelpText: "Search narrows Product Compare candidates.",
+            collectionFallbackLabel: "Collection IDs (fallback)",
+            collectionHelpText: "Use saved collection IDs when the picker is empty.",
+            statusHelpText: "Use Published for public-ready comparisons.",
+          },
+        }}
+      />
+    );
+  };
+
+  const { container, cleanup } = mount(<Harness />);
+
+  expect((findInputByLabel(container, "Limit") as HTMLInputElement | undefined)?.max).toBe("12");
+  expect((findInputByLabel(container, "Search") as HTMLInputElement | undefined)?.placeholder).toBe(
+    "product title or slug"
+  );
+  expect(container.textContent).toContain("Search narrows Product Compare candidates.");
+  expect(container.textContent).toContain("Collection IDs (fallback)");
+  expect(container.textContent).toContain("Use saved collection IDs when the picker is empty.");
+  expect(container.textContent).toContain("Use Published for public-ready comparisons.");
+
+  setInputValue(findInputByLabel(container, "Limit"), "99");
+
+  expect(history.at(-1)).toEqual(
+    expect.objectContaining({
+      limit: 12,
     })
   );
 

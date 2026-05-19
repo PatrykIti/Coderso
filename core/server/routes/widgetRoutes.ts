@@ -1,6 +1,7 @@
 import type { RouteContext } from "../router";
 import { listWidgetCatalog } from "../../services/widgets/widgetCatalogService";
 import { registerEntryTeaserPreviewRoutes } from "./entryTeaserPreviewRoutes";
+import { registerProductComparePreviewRoutes } from "./productComparePreviewRoutes";
 
 export type WidgetRouteHandler = (ctx: RouteContext) => Promise<unknown> | unknown;
 
@@ -23,6 +24,11 @@ export function registerWidgetRoutes(router: Router, deps: WidgetRouteDeps) {
   });
 
   registerEntryTeaserPreviewRoutes(router, {
+    requirePermission,
+    validate,
+  });
+
+  registerProductComparePreviewRoutes(router, {
     requirePermission,
     validate,
   });

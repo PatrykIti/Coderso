@@ -69,6 +69,28 @@ test("commerceQuerySchema rejects unsupported sort field", () => {
   ).toThrow("Invalid payload");
 });
 
+test("commerceQuerySchema accepts bounded productIds", () => {
+  expect(() =>
+    validate(commerceQuerySchema, {
+      filters: [],
+      sort: [{ field: "updatedAt", dir: "desc" }],
+      pagination: { limit: 20, offset: 0 },
+      productIds: ["product-1", "product-2"],
+    })
+  ).not.toThrow();
+});
+
+test("commerceQuerySchema rejects non-array productIds", () => {
+  expect(() =>
+    validate(commerceQuerySchema, {
+      filters: [],
+      sort: [{ field: "updatedAt", dir: "desc" }],
+      pagination: { limit: 20, offset: 0 },
+      productIds: "product-1",
+    })
+  ).toThrow("Invalid payload");
+});
+
 test("commerceCollectionCreateSchema requires name", () => {
   expect(() =>
     validate(commerceCollectionCreateSchema, {

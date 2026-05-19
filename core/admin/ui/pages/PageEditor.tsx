@@ -318,6 +318,12 @@ const blockContainsType = (block: Block, type: string): boolean => {
 const blocksContainType = (blocks: Block[], type: string) =>
   blocks.some((block) => blockContainsType(block, type));
 
+const supportsTransientWidgetPreview = (type: string | undefined) =>
+  type === "entry-teaser" ||
+  type === "newsletter" ||
+  type === "posts-feed" ||
+  type === "product-compare";
+
 const hydrateBookingCalendarPreviewBlocks = (
   blocks: Block[],
   resolved: BookingCalendarPreviewResolved | null
@@ -455,18 +461,15 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
   const bookingFlows = useMemo(() => collectBookingFlowSummaries(blocks), [blocks]);
   const pageEditorWidgetContext = useMemo<WidgetEditorContext | undefined>(() => {
     if (!selectedBlock) return undefined;
-    const supportsPreviewState =
-      selectedBlock.type === "entry-teaser" ||
-      selectedBlock.type === "newsletter" ||
-      selectedBlock.type === "posts-feed";
+    const previewEnabled = supportsTransientWidgetPreview(selectedBlock.type);
 
     return {
       surface: "page-builder",
       blockId: selectedBlock.id,
       editorMode: selectedBlock.editor?.mode ?? "wizard",
       bookingFlows,
-      previewState: supportsPreviewState ? (widgetPreviewStates[selectedBlock.id] ?? null) : null,
-      setPreviewState: supportsPreviewState
+      previewState: previewEnabled ? (widgetPreviewStates[selectedBlock.id] ?? null) : null,
+      setPreviewState: previewEnabled
         ? (state) =>
             setWidgetPreviewStates((current) => ({
               ...current,
@@ -483,12 +486,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     };
   }, [bookingCalendarPreviewResolved, bookingFlows, selectedBlock, widgetPreviewStates]);
   const activeWidgetPreviewStates = useMemo(() => {
-    if (
-      !selectedBlock ||
-      (selectedBlock.type !== "entry-teaser" &&
-        selectedBlock.type !== "newsletter" &&
-        selectedBlock.type !== "posts-feed")
-    ) {
+    if (!selectedBlock || !supportsTransientWidgetPreview(selectedBlock.type)) {
       return {} as Record<string, WidgetPreviewState | undefined>;
     }
     const previewState = widgetPreviewStates[selectedBlock.id];

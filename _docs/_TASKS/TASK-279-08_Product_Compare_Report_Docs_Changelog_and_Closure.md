@@ -6,7 +6,7 @@
 **Category:** Widgets + Docs + Playwright QA + Release Hygiene
 **Estimated Effort:** Medium
 **Dependencies:** TASK-279-01, TASK-279-02, TASK-279-03, TASK-279-04, TASK-279-05, TASK-279-06, TASK-279-07
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 

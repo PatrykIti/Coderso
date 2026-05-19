@@ -118,6 +118,9 @@ const backgroundMediaSourceLabelMap: Record<PageBackgroundMediaSource, string> =
   external: "External URL",
 };
 
+const supportsTransientWidgetPreview = (type: string | undefined) =>
+  type === "entry-teaser" || type === "product-compare";
+
 const spacingTokenToListSpaceClassMap: Record<SpacingToken, string> = {
   none: "space-y-0",
   xs: "space-y-2",
@@ -334,7 +337,7 @@ export function WidgetTemplateEditorPage() {
     return getWidgetRegistry().find((widget) => widget.type === selectedBlock.type);
   }, [selectedBlock]);
   const activeWidgetPreviewStates = useMemo(() => {
-    if (!selectedBlock || selectedBlock.type !== "entry-teaser") {
+    if (!selectedBlock || !supportsTransientWidgetPreview(selectedBlock.type)) {
       return {} as Record<string, WidgetPreviewState | undefined>;
     }
     const previewState = widgetPreviewStates[selectedBlock.id];
@@ -348,20 +351,20 @@ export function WidgetTemplateEditorPage() {
   const bookingFlows = useMemo(() => collectBookingFlowSummaries(blocks), [blocks]);
   const widgetTemplateEditorContext = useMemo<WidgetEditorContext | undefined>(() => {
     if (!selectedBlock) return undefined;
+    const previewEnabled = supportsTransientWidgetPreview(selectedBlock.type);
     return {
       surface: "page-builder",
       blockId: selectedBlock.id,
       editorMode: selectedBlock.editor?.mode ?? "wizard",
       bookingFlows,
-      previewState: selectedBlockPreviewState,
-      setPreviewState:
-        selectedBlock.type === "entry-teaser"
-          ? (state) =>
-              setWidgetPreviewStates((current) => ({
-                ...current,
-                [selectedBlock.id]: state ?? undefined,
-              }))
-          : undefined,
+      previewState: previewEnabled ? selectedBlockPreviewState : null,
+      setPreviewState: previewEnabled
+        ? (state) =>
+            setWidgetPreviewStates((current) => ({
+              ...current,
+              [selectedBlock.id]: state ?? undefined,
+            }))
+        : undefined,
     };
   }, [bookingFlows, selectedBlock, selectedBlockPreviewState]);
 

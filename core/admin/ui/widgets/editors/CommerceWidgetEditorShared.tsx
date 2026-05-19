@@ -25,6 +25,19 @@ import {
 } from "../../../../widgets/core/commerceWidgetShared";
 import { WidgetEditorSection } from "./WidgetEditorControls";
 
+export type CommerceSourceFieldCopy = {
+  searchPlaceholder?: string;
+  searchHelpText?: string;
+  collectionFallbackLabel?: string;
+  collectionHelpText?: string;
+  statusHelpText?: string;
+};
+
+export type CommerceSourceFieldOptions = {
+  limitMax?: number;
+  copy?: CommerceSourceFieldCopy;
+};
+
 export function CommerceEditorSection({
   id,
   title,
@@ -165,15 +178,26 @@ export const fromCollectionCsv = (value: string) =>
     )
   );
 
+const resolveSourceLimitMax = (value: number | undefined) => {
+  if (typeof value !== "number" || !Number.isFinite(value)) return 48;
+  return Math.min(48, Math.max(1, Math.floor(value)));
+};
+
 export function normalizeSourceForEditor(
   source: CommerceWidgetSource | null | undefined,
   defaults: {
     limit: number;
     sortField?: NormalizedCommerceWidgetSource["sortField"];
     sortDir?: NormalizedCommerceWidgetSource["sortDir"];
-  }
+  },
+  options: CommerceSourceFieldOptions = {}
 ) {
-  return normalizeCommerceWidgetSource(source, defaults);
+  const normalized = normalizeCommerceWidgetSource(source, defaults);
+  const limitMax = resolveSourceLimitMax(options.limitMax);
+  return {
+    ...normalized,
+    limit: Math.min(limitMax, normalized.limit),
+  };
 }
 
 function CommerceSelectField({
@@ -209,13 +233,17 @@ function CommerceSelectField({
 export function CommerceSourceFields({
   source,
   onChange,
+  options = {},
 }: {
   source: NormalizedCommerceWidgetSource;
   onChange: (next: NormalizedCommerceWidgetSource) => void;
+  options?: CommerceSourceFieldOptions;
 }) {
   const [collections, setCollections] = useState<CommerceCollectionRecord[]>([]);
   const [collectionsLoading, setCollectionsLoading] = useState(true);
   const [collectionsError, setCollectionsError] = useState<string | null>(null);
+  const limitMax = resolveSourceLimitMax(options.limitMax);
+  const copy = options.copy ?? {};
 
   useEffect(() => {
     let active = true;
@@ -245,16 +273,19 @@ export function CommerceSourceFields({
         label="Limit"
         value={source.limit}
         min={1}
-        max={48}
+        max={limitMax}
         onChange={(next) => onChange({ ...source, limit: next })}
       />
 
       <CommerceTextField
         label="Search"
         value={source.search}
-        placeholder="title or slug"
+        placeholder={copy.searchPlaceholder ?? "title or slug"}
         onChange={(next) => onChange({ ...source, search: next })}
       />
+      {copy.searchHelpText ? (
+        <p className="text-xs text-muted-foreground">{copy.searchHelpText}</p>
+      ) : null}
 
       <div className="space-y-2">
         <p className="text-sm font-medium text-foreground">Collections</p>
@@ -300,7 +331,7 @@ export function CommerceSourceFields({
           </div>
         ) : null}
         <CommerceTextField
-          label="Collection IDs fallback"
+          label={copy.collectionFallbackLabel ?? "Collection IDs fallback"}
           value={toCollectionCsv(source.collectionIds)}
           onChange={(next) =>
             onChange({
@@ -309,6 +340,9 @@ export function CommerceSourceFields({
             })
           }
         />
+        {copy.collectionHelpText ? (
+          <p className="text-xs text-muted-foreground">{copy.collectionHelpText}</p>
+        ) : null}
       </div>
 
       <CommerceSelectField
@@ -375,7 +409,8 @@ export function CommerceSourceFields({
           })}
         </div>
         <p className="text-xs text-muted-foreground">
-          Empty means runtime default: public pages show published, preview can show all.
+          {copy.statusHelpText ??
+            "Empty means runtime default: public pages show published, preview can show all."}
         </p>
       </div>
     </>

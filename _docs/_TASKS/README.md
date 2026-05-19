@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 244 tasks
-- **In Progress:** 5 tasks
-- **Done:** 1772 tasks
+- **To Do:** 235 tasks
+- **In Progress:** 4 tasks
+- **Done:** 1782 tasks
 
 ---
 
@@ -109,15 +109,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-286-03 | Stack Wizard Gap Scale and Layout Guidance | Medium | Medium | Improve Wizard layout controls, all-breakpoint gap copy, and gap scale context after TASK-256 token cleanup |
 | TASK-286-04 | Stack Variant Miniatures and Empty Slot Guidance | Low | Medium | Add variant miniatures and admin-safe empty-slot guidance without leaking public admin CTAs |
 | TASK-286-05 | Stack Report Docs Changelog and Closure | Medium | Medium | Refresh Stack report/docs/changelog/board and final validation evidence |
-| TASK-279 | Product Compare Widget Playwright Product Followups | High | Very Large | Product Compare-only follow-up family for `REPORT_PRODUCT_COMPARE_WIDGET.md`, excluding TASK-256 shared-contract scope |
-| TASK-279-01 | Product Compare Source Selection and Limit Contract | High | Large | Add deterministic selected-product comparison and align Product Compare limit max across schema, editor, normalizer, and runtime query |
-| TASK-279-02 | Product Compare Attribute Rows Labels and Formatting | High | Large | Add schema-owned attribute rows, all labels, row visibility, locale/stock/quantity formatting, and legacy-compatible row normalization |
-| TASK-279-03 | Product Compare Column Media Links and CTAs | High | Large | Add product header images, safe product title links, and bounded per-product CTA behavior without public-write scope |
-| TASK-279-04 | Product Compare Featured Column and Responsive Layouts | Medium | Large | Add featured product highlighting, responsive layout variants, and sticky compare context after base source/row/media contracts land |
-| TASK-279-05 | Product Compare Section Header and Table Accessibility | High | Large | Add section title/description, table caption/scopes, named section, alert semantics, empty-state semantics, and keyboard-scroll focus |
-| TASK-279-06 | Product Compare Admin Preview Resolve and Diagnostics | High | Very Large | Make runtime diagnostics read-only and add truthful resolved-count/refresh behavior through backend-owned preview resolution |
-| TASK-279-07 | Product Compare Editor IA and Source Guidance | Medium | Medium | Apply shared editor-mode policy locally, move advanced surfaces out of Wizard, and add dense-limit/source filter guidance |
-| TASK-279-08 | Product Compare Report Docs Changelog and Closure | Medium | Medium | Refresh Product Compare report/docs/changelog/board and final validation evidence |
 | TASK-285 | Split Layout Widget Playwright Product Followups | High | Very Large | Split Layout-only follow-up family for `REPORT_SPLIT_LAYOUT_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-285-01 | Split Layout Mobile Ratio and Reverse Behavior | High | Large | Add Split Layout-owned mobile ratio/reverse behavior clarity after TASK-256 shared variant sync |
 | TASK-285-02 | Split Layout Variant Card Preview and Ratio Disclosure | Medium | Medium | Add ratio miniatures and effective breakpoint disclosure without duplicating TASK-256 atomic variant updates |
@@ -316,7 +307,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-324 | Shared Commerce Source Fields Widget Bounds and Copy Contract | High | Large | In progress: shared `CommerceSourceFields` / `normalizeSourceForEditor` options were split out of TASK-279 so Product Compare can add truthful bounds and guidance without local forks |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
@@ -327,6 +317,16 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-324 | Shared Commerce Source Fields Widget Bounds and Copy Contract | High | Large | Done: shared `CommerceSourceFields` / `normalizeSourceForEditor` now support widget-specific bounds and helper copy without local Product Compare forks |
+| TASK-279 | Product Compare Widget Playwright Product Followups | High | Very Large | Done: Product Compare now ships curated product selection, preview parity, row/media/layout/accessibility follow-ups, and synchronized report/docs closure |
+| TASK-279-08 | Product Compare Report Docs Changelog and Closure | Medium | Medium | Done: Product Compare report/docs/changelog/board now reflect the landed widget/runtime/admin behavior and validation evidence |
+| TASK-279-07 | Product Compare Editor IA and Source Guidance | Medium | Medium | Done: Wizard no longer owns advanced surfaces, dense guidance is reactive, and Product Compare consumes the shared source-field contract |
+| TASK-279-06 | Product Compare Admin Preview Resolve and Diagnostics | High | Very Large | Done: Product Compare now refreshes admin preview data through a backend-owned widget preview route and read-only runtime diagnostics |
+| TASK-279-05 | Product Compare Section Header and Table Accessibility | High | Large | Done: Product Compare now renders section copy, caption/scoped headers, named sections, alert semantics, and keyboard-focusable scroll |
+| TASK-279-04 | Product Compare Featured Column and Responsive Layouts | Medium | Large | Done: Product Compare now supports featured-product highlighting, sticky headers, and compact/cards variants |
+| TASK-279-03 | Product Compare Column Media Links and CTAs | High | Large | Done: Product Compare headers can render backend-resolved media, safe product links, and bounded read-only CTAs |
+| TASK-279-02 | Product Compare Attribute Rows Labels and Formatting | High | Large | Done: Product Compare now owns row visibility, labels, excerpt support, locale-aware money formatting, and bounded quantity/stock copy |
+| TASK-279-01 | Product Compare Source Selection and Limit Contract | High | Large | Done: Product Compare now supports exact curated `productIds`, truthful limit bounds, source-edit stability, and admin-route proof |
 | TASK-278 | Pricing Plans Widget Playwright Product Followups | High | Very Large | Done: Pricing Plans now closes its Playwright-local product backlog with richer plan hierarchy, truthful static billing value semantics, bounded comparison/layout controls, a `two-plans` variant, and synchronized report/docs/changelog evidence |
 | TASK-278-08 | Pricing Plans Report, Docs, Changelog, and Closure | Medium | Medium | Done: report findings, widget docs, board rows, changelog, and validation notes are synchronized to the live TASK-278 closure state |
 | TASK-278-07 | Pricing Plans Two-Plan Variant and Pack Docs | Medium | Medium | Done: Pricing Plans exposes a dedicated `two-plans` variant end-to-end and the widget docs now describe the final variant/layout contract |

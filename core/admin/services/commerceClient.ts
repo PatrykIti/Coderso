@@ -83,6 +83,7 @@ export type CommerceQueryPayload = {
   };
   status?: CommerceProductStatus[];
   collectionIds?: string[];
+  productIds?: string[];
   search?: string | null;
 };
 

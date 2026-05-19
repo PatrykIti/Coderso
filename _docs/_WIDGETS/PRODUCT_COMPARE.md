@@ -1,47 +1,65 @@
-# Product Compare Widget (v1)
+# Product Compare Widget (v2)
 
 ## Purpose
 
-Render a bounded commerce comparison matrix for resolved products.
+Render a bounded commerce comparison surface for curated or query-resolved
+products, with section copy, layout variants, safe product merchandising, and
+read-only runtime diagnostics.
 
 ## Widget ID
 
 `product-compare`
 
-## Variants (v1)
+## Variants
 
-- `matrix`
+- `matrix` - attribute rows with products as columns
+- `compact` - denser comparison table for tighter layouts
+- `cards` - stacked product cards with comparison details
 
 ## Editor Modes
 
 ### Wizard
 - source/query basics
-- visible compare fields
+- selected product IDs
+- backend preview status and refresh
+- dense compare guidance
 
 ### Visual
-- source and filters
-- field visibility
-- labels
+- section title/description/caption
+- attribute row visibility
+- labels and stock-state copy
+- product header image/link/CTA controls
+- money/quantity formatting
+- featured product and sticky header
 - empty state
 - surfaces
 
 ### Advanced
-- resolved runtime payload
-- query diagnostics
+- read-only runtime preview status
+- read-only runtime warning copy
+- normalized query summary and raw JSON disclosure
 
 ## Runtime Behavior Notes
 
 - Runtime emits deterministic markers:
   - `data-widget="product-compare"`
   - `data-product-compare-count`
-- Empty-state copy is rendered when no rows resolve.
-- Prices, compare-at values, and stock fields are normalized through the shared
-  commerce compare contract.
+- When `source.productIds` is present, Product Compare resolves the exact
+  curated product set in manual order and ignores search/collection/status
+  filters.
+- Public rendering and admin preview both use backend-owned commerce resolution.
+- Admin canvas refresh uses the internal widget preview route and keeps preview
+  data transient; it does not persist resolved product payload into author data.
+- Matrix/compact variants render table caption, scoped column headers, alert
+  semantics, and keyboard-focusable horizontal scroll.
 
 ## Clear Controls
 
-- `style.tableBackground`, `style.headerBackground`, and `style.emptyBackground`
-  are clearable.
+- `style.tableBackground`
+- `style.tableBorderColor`
+- `style.headerBackground`
+- `style.emptyBackground`
+- `style.emptyBorderColor`
 
 ## Data Model (summary)
 
@@ -51,21 +69,51 @@ Render a bounded commerce comparison matrix for resolved products.
     "limit": 3,
     "search": "",
     "collectionIds": [],
+    "productIds": [],
     "status": [],
     "sortField": "title",
     "sortDir": "asc"
   },
-  "fields": {
-    "showCompareAt": true,
-    "showStockQuantity": true,
-    "showSlug": false
-  },
+  "rows": [
+    { "key": "price", "visible": true },
+    { "key": "compareAt", "visible": true },
+    { "key": "stock", "visible": true },
+    { "key": "quantity", "visible": true },
+    { "key": "slug", "visible": false },
+    { "key": "excerpt", "visible": false }
+  ],
   "labels": {
+    "attributeHeader": "Attribute",
     "price": "Price",
     "compareAt": "Compare at",
     "stock": "Stock",
     "quantity": "Quantity",
-    "slug": "Slug"
+    "slug": "Slug",
+    "excerpt": "Excerpt",
+    "inStock": "In stock",
+    "outOfStock": "Out of stock",
+    "backorder": "Backorder"
+  },
+  "format": {
+    "moneyLocale": "en-US",
+    "quantityDisplay": "exact",
+    "quantityCompactLimit": 99
+  },
+  "header": {
+    "showImages": false,
+    "linkTitles": false,
+    "ctaMode": "none",
+    "ctaLabel": "View product"
+  },
+  "section": {
+    "title": "",
+    "description": "",
+    "caption": "Product comparison",
+    "hideCaption": true
+  },
+  "layout": {
+    "featuredProductId": "",
+    "stickyHeader": false
   },
   "emptyState": {
     "title": "No products to compare",

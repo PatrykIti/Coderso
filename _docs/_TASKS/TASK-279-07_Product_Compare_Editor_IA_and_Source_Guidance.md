@@ -5,8 +5,8 @@
 **Priority:** Medium
 **Category:** Widgets + Admin UI + Editor IA
 **Estimated Effort:** Medium
-**Dependencies:** TASK-256-01, TASK-256-02, TASK-279-01, TASK-279-06, TASK-324, TASK-279
-**Status:** To Do
+**Dependencies:** TASK-256-01, TASK-256-02, TASK-279-01, TASK-279-05, TASK-279-06, TASK-324, TASK-279
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -22,6 +22,13 @@ Source report coverage:
 - UX-06: limit guidance does not warn when the table becomes too dense.
 - UX-07: source filters have limited placeholder/help copy.
 
+Current worktree already consumes the split `TASK-324` shared source-field
+options for Product Compare-specific limit bounds and helper copy. Remaining
+leaf scope is the Product Compare-local IA cleanup that still sits on top of
+that prerequisite: move `Surfaces` out of Wizard, make dense-limit guidance
+reactive, and fold `SectionCopy` into Visual only after `TASK-279-05` lands the
+underlying section-title/description/caption fields.
+
 ## Scope Boundary
 
 In scope:
@@ -33,6 +40,8 @@ In scope:
   without requiring API knowledge.
 - Backward-compatible shared `CommerceSourceFields` copy/prop changes only when
   the live source field owner still owns the relevant UX.
+- Use the already-landed `TASK-313` shared source-field options instead of
+  reopening limit/help work locally in this leaf.
 
 Out of scope:
 
@@ -91,7 +100,7 @@ function ProductCompareVisualEditor(props: WidgetEditorProps<ProductCompareData>
   return (
     <>
       <AttributeRows />
-      <SectionCopy />
+      <SectionCopy /> // depends on TASK-279-05 section fields
       <SurfaceFields />
     </>
   );

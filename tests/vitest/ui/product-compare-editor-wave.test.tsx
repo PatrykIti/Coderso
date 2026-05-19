@@ -5,8 +5,36 @@ import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
 import type { ProductCompareData } from "../../../core/widgets/core/productCompare";
+import type { WidgetEditorContext } from "../../../core/widgets/types";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
+const productComparePreviewState = {
+  calls: [] as ProductCompareData[],
+  response: {
+    rows: [
+      {
+        id: "product-1",
+        title: "Starter Home",
+        slug: "starter-home",
+        excerpt: "Compact modern home.",
+        productHref: "/products/starter-home",
+        imageUrl: "/media/starter-home.jpg",
+        imageAlt: "Starter Home hero",
+        priceAmount: 120000,
+        currency: "USD",
+        compareAtAmount: null,
+        stockState: "in_stock" as const,
+        stockQuantity: 3,
+      },
+    ],
+    total: 1,
+    resolvedAt: "2026-05-19T12:00:00.000Z",
+  },
+  reset() {
+    this.calls = [];
+  },
+};
 
 vi.mock("@/components/ui/input", () => ({
   Input: ({
@@ -14,15 +42,27 @@ vi.mock("@/components/ui/input", () => ({
     onChange,
     type,
     placeholder,
+    min,
+    max,
     ...props
   }: {
     value?: string | number;
     onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
     type?: string;
     placeholder?: string;
+    min?: number;
+    max?: number;
     [key: string]: unknown;
   }) => (
-    <input value={value} onChange={onChange} type={type} placeholder={placeholder} {...props} />
+    <input
+      value={value}
+      onChange={onChange}
+      type={type}
+      placeholder={placeholder}
+      min={min}
+      max={max}
+      {...props}
+    />
   ),
 }));
 
@@ -66,6 +106,13 @@ vi.mock("@/services/commerceClient", () => ({
   listCommerceCollectionsCached: vi.fn(async () => []),
 }));
 
+vi.mock("@/services/productComparePreviewClient", () => ({
+  previewProductCompare: vi.fn(async (input: ProductCompareData) => {
+    productComparePreviewState.calls.push(input);
+    return productComparePreviewState.response;
+  }),
+}));
+
 const mount = (node: React.ReactNode) => {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -86,12 +133,29 @@ const mount = (node: React.ReactNode) => {
   };
 };
 
+const flush = async () => {
+  await React.act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+};
+
 const normalizeText = (value: string | null | undefined) =>
   (value ?? "").replace(/\s+/g, " ").trim().toLowerCase();
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
+  React.act(() => {
+    descriptor?.set?.call(element, value);
+    element.dispatchEvent(new Event("input", { bubbles: true }));
+    element.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+};
+
+const setTextareaValue = (element: Element | null | undefined, value: string) => {
+  if (!(element instanceof HTMLTextAreaElement)) return;
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
   React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -132,33 +196,43 @@ const findInputByLabel = (container: ParentNode, text: string) =>
 const findSelectByLabel = (container: ParentNode, text: string) =>
   findLabeledField(container, text, "select");
 
+const findTextareaByLabel = (container: ParentNode, text: string) =>
+  findLabeledField(container, text, "textarea");
+
 afterEach(() => {
+  productComparePreviewState.reset();
   vi.restoreAllMocks();
 });
 
-test("ProductCompare editors cover source controls, field toggles, label normalization, empty state, and runtime preview", async () => {
+test("ProductCompare wizard editor no longer owns advanced surfaces", async () => {
+  const { ProductCompareWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/ProductCompareEditors");
+
+  const view = mount(
+    <ProductCompareWizardEditor
+      value={{}}
+      onChange={() => undefined}
+      variant="matrix"
+      onVariantChange={() => undefined}
+    />
+  );
+
+  try {
+    expect(normalizeText(view.container.textContent)).toContain(normalizeText("Comparison source"));
+    expect(normalizeText(view.container.textContent)).not.toContain(
+      normalizeText("Table background")
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("ProductCompare editors preserve selected product ids and expose all visual controls", async () => {
   const { ProductCompareAdvancedEditor, ProductCompareVisualEditor, ProductCompareWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/ProductCompareEditors");
 
   const onChangeSpy = vi.fn();
-  let latestValue: ProductCompareData = {
-    resolved: {
-      rows: [
-        {
-          id: "product-1",
-          title: "Starter Home",
-          slug: "starter-home",
-          priceAmount: 120000,
-          currency: "USD",
-          compareAtAmount: 130000,
-          stockState: "in_stock",
-          stockQuantity: 3,
-        },
-      ],
-      total: 2,
-      resolvedAt: "2026-03-08T10:00:00.000Z",
-    },
-  };
+  let latestValue: ProductCompareData = {};
 
   const Harness = () => {
     const [value, setValue] = useState<ProductCompareData>(latestValue);
@@ -196,190 +270,166 @@ test("ProductCompare editors cover source controls, field toggles, label normali
   const view = mount(<Harness />);
 
   try {
-    expect(normalizeText(view.container.textContent)).toContain(normalizeText("Current limit: 3."));
-    expect(normalizeText(view.container.textContent)).toContain(
-      normalizeText("Resolved rows: 1 · Total: 2")
+    expect((findInputByLabel(view.container, "Limit") as HTMLInputElement | undefined)?.max).toBe(
+      "12"
     );
+    expect(
+      (findInputByLabel(view.container, "Search") as HTMLInputElement | undefined)?.placeholder
+    ).toBe("product title or slug");
 
-    setInputValue(findInputByLabel(view.container, "Limit"), "5");
+    setTextareaValue(
+      findTextareaByLabel(view.container, "Selected product IDs"),
+      "product-3\nproduct-1, product-3"
+    );
+    setInputValue(findInputByLabel(view.container, "Limit"), "8");
     setInputValue(findInputByLabel(view.container, "Search"), " starter suite ");
     setInputValue(
-      findInputByLabel(view.container, "Collection IDs fallback"),
+      findInputByLabel(view.container, "Collection IDs (fallback)"),
       "summer, winter, summer"
     );
     setSelectValue(findSelectByLabel(view.container, "Sort field"), "pricing.amount");
     setSelectValue(findSelectByLabel(view.container, "Sort direction"), "desc");
 
-    toggleCheckbox(findInputByLabel(view.container, "published"));
-    toggleCheckbox(findInputByLabel(view.container, "archived"));
-    toggleCheckbox(findInputByLabel(view.container, "published"));
-
-    toggleCheckbox(findInputByLabel(view.container, "Show compare-at price"));
-    toggleCheckbox(findInputByLabel(view.container, "Show stock quantity"));
+    toggleCheckbox(findInputByLabel(view.container, "Show price"));
     toggleCheckbox(findInputByLabel(view.container, "Show slug"));
+    toggleCheckbox(findInputByLabel(view.container, "Show excerpt"));
 
-    setInputValue(findInputByLabel(view.container, "Price"), "");
-    setInputValue(findInputByLabel(view.container, "Compare at"), "Was");
-    setInputValue(findInputByLabel(view.container, "Stock"), "Inventory");
-    setInputValue(findInputByLabel(view.container, "Title"), "Nothing to compare");
-    setInputValue(
-      findInputByLabel(view.container, "Description"),
-      "Adjust filters and publish products."
+    setInputValue(findInputByLabel(view.container, "Attribute column"), "Feature");
+    setInputValue(findInputByLabel(view.container, "Quantity"), "Inventory");
+    setInputValue(findInputByLabel(view.container, "Slug"), "Path");
+    setInputValue(findInputByLabel(view.container, "Excerpt"), "Summary");
+    setInputValue(findInputByLabel(view.container, "Backorder label"), "Ships soon");
+    setSelectValue(findSelectByLabel(view.container, "CTA mode"), "view_product");
+    setInputValue(findInputByLabel(view.container, "CTA label"), "Learn more");
+    setSelectValue(findSelectByLabel(view.container, "Money locale"), "pl-PL");
+    setSelectValue(findSelectByLabel(view.container, "Quantity display"), "compact");
+    setInputValue(findInputByLabel(view.container, "Compact quantity limit"), "25");
+    setInputValue(findInputByLabel(view.container, "Featured product ID"), "product-1");
+    toggleCheckbox(findInputByLabel(view.container, "Sticky table header"));
+    setInputValue(findInputByLabel(view.container, "Title"), "Compare our homes");
+    setInputValue(findInputByLabel(view.container, "Description"), "Quick side-by-side overview.");
+    setInputValue(findInputByLabel(view.container, "Table caption"), "Home comparison table");
+    toggleCheckbox(findInputByLabel(view.container, "Hide caption visually"));
+
+    expect(latestValue.source?.productIds).toEqual(["product-3", "product-1"]);
+    expect(latestValue.source?.limit).toBe(8);
+    expect(latestValue.source?.search).toBe("starter suite");
+    expect(latestValue.source?.collectionIds).toEqual(["summer", "winter"]);
+    expect(latestValue.rows?.find((row) => row.key === "price")?.visible).toBe(false);
+    expect(latestValue.rows?.find((row) => row.key === "slug")?.visible).toBe(true);
+    expect(latestValue.rows?.find((row) => row.key === "excerpt")?.visible).toBe(true);
+    expect(latestValue.labels?.attributeHeader).toBe("Feature");
+    expect(latestValue.labels?.quantity).toBe("Inventory");
+    expect(latestValue.labels?.slug).toBe("Path");
+    expect(latestValue.labels?.excerpt).toBe("Summary");
+    expect(latestValue.labels?.backorder).toBe("Ships soon");
+    expect(latestValue.header?.ctaMode).toBe("view_product");
+    expect(latestValue.header?.ctaLabel).toBe("Learn more");
+    expect(latestValue.format?.moneyLocale).toBe("pl-PL");
+    expect(latestValue.format?.quantityDisplay).toBe("compact");
+    expect(latestValue.format?.quantityCompactLimit).toBe(25);
+    expect(latestValue.layout?.featuredProductId).toBe("product-1");
+    expect(latestValue.layout?.stickyHeader).toBe(true);
+    expect(latestValue.section?.title).toBe("Compare our homes");
+    expect(latestValue.section?.description).toBe("Quick side-by-side overview.");
+    expect(latestValue.section?.caption).toBe("Home comparison table");
+    expect(latestValue.section?.hideCaption).toBe(false);
+    expect(normalizeText(view.container.textContent)).toContain(
+      normalizeText(
+        "Product links and CTAs use the enabled products detail route from Site Settings."
+      )
     );
-    setInputValue(findInputByLabel(view.container, "Runtime error flag"), "resolver-timeout");
-
-    expect(onChangeSpy).toHaveBeenCalled();
-    expect(latestValue.source).toEqual({
-      limit: 5,
-      search: "starter suite",
-      collectionIds: ["summer", "winter"],
-      status: ["archived"],
-      sortField: "pricing.amount",
-      sortDir: "desc",
-    });
-    expect(latestValue.fields).toEqual({
-      showCompareAt: false,
-      showStockQuantity: false,
-      showSlug: true,
-    });
-    expect(latestValue.labels).toMatchObject({
-      price: "Price",
-      compareAt: "Was",
-      stock: "Inventory",
-    });
-    expect(latestValue.emptyState).toEqual({
-      title: "Nothing to compare",
-      description: "Adjust filters and publish products.",
-    });
-    expect(latestValue.resolved).toMatchObject({
-      total: 2,
-      resolvedAt: "2026-03-08T10:00:00.000Z",
-      error: "resolver-timeout",
-    });
-    expect(latestValue.resolved?.rows).toHaveLength(1);
-
-    expect(
-      (findInputByLabel(view.container, "Price") as HTMLInputElement | null | undefined)?.value
-    ).toBe("Price");
-    expect(normalizeText(view.container.textContent)).toContain(normalizeText("Current limit: 5."));
-
-    const preview = view.container.querySelector("pre");
-    expect(preview?.textContent).toContain('"limit": 5');
-    expect(preview?.textContent).toContain('"field": "pricing.amount"');
-    expect(preview?.textContent).toContain('"dir": "desc"');
-    expect(preview?.textContent).toContain('"search": "starter suite"');
-    expect(preview?.textContent).toContain('"collectionIds": [');
-    expect(preview?.textContent).toContain('"summer"');
-    expect(preview?.textContent).toContain('"winter"');
-    expect(preview?.textContent).toContain('"status": [');
-    expect(preview?.textContent).toContain('"archived"');
-    expect(preview?.textContent).not.toContain('"published"');
-    expect(
-      (findInputByLabel(view.container, "Runtime error flag") as HTMLInputElement | undefined)
-        ?.value
-    ).toBe("resolver-timeout");
+    expect(normalizeText(view.container.textContent)).toContain(
+      normalizeText("can be hard to read on mobile")
+    );
   } finally {
     view.cleanup();
   }
 });
 
-test("ProductCompare editors fall back to hardcoded wizard limit and empty runtime counts when normalized data is sparse", async () => {
-  vi.resetModules();
-  vi.doMock("../../../core/widgets/core/productCompare", async () => {
-    const actual = await vi.importActual<
-      typeof import("../../../core/widgets/core/productCompare")
-    >("../../../core/widgets/core/productCompare");
-
-    return {
-      ...actual,
-      productCompareDefaults: {
-        ...actual.productCompareDefaults,
-        source: undefined,
-      },
-    };
-  });
-
-  const { ProductCompareAdvancedEditor, ProductCompareWizardEditor } =
+test("ProductCompare preview sync pushes transient preview state from the active editor mode", async () => {
+  const { ProductCompareVisualEditor } =
     await import("../../../core/admin/ui/widgets/editors/ProductCompareEditors");
+  const setPreviewState = vi.fn();
+
+  const context: WidgetEditorContext = {
+    surface: "page-builder",
+    editorMode: "visual",
+    setPreviewState,
+    previewState: null,
+  };
 
   const view = mount(
-    <>
-      <ProductCompareWizardEditor
-        value={{}}
-        onChange={() => undefined}
-        variant="matrix"
-        onVariantChange={() => undefined}
-      />
-      <ProductCompareAdvancedEditor
-        value={{}}
-        onChange={() => undefined}
-        variant="matrix"
-        onVariantChange={() => undefined}
-      />
-    </>
+    <ProductCompareVisualEditor
+      value={{
+        source: {
+          limit: 3,
+          productIds: ["product-1"],
+        },
+      }}
+      onChange={() => undefined}
+      variant="matrix"
+      onVariantChange={() => undefined}
+      context={context}
+    />
   );
 
   try {
-    expect(normalizeText(view.container.textContent)).toContain(normalizeText("Current limit: 3."));
-    expect(normalizeText(view.container.textContent)).toContain(
-      normalizeText("Resolved rows: 0 · Total: 0")
-    );
-    expect(
-      (
-        findInputByLabel(view.container, "Runtime error flag") as
-          | HTMLInputElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("");
+    await flush();
+    expect(productComparePreviewState.calls).toHaveLength(1);
+    expect(setPreviewState).toHaveBeenCalledWith({ status: "loading" });
+    expect(setPreviewState).toHaveBeenLastCalledWith({
+      status: "ready",
+      dataPatch: {
+        resolved: productComparePreviewState.response,
+      },
+    });
   } finally {
     view.cleanup();
-    vi.doUnmock("../../../core/widgets/core/productCompare");
-    vi.resetModules();
   }
 });
 
-test("ProductCompare advanced editor falls back when normalized resolved summary is sparse", async () => {
-  vi.resetModules();
-  vi.doMock("../../../core/widgets/core/productCompare", async () => {
-    const actual = await vi.importActual<
-      typeof import("../../../core/widgets/core/productCompare")
-    >("../../../core/widgets/core/productCompare");
-
-    return {
-      ...actual,
-      normalizeProductCompareData: (value: ProductCompareData) => ({
-        ...actual.normalizeProductCompareData(value),
-        resolved: {
-          resolvedAt: "",
-          error: "",
-        } as ProductCompareData["resolved"],
-      }),
-    };
-  });
-
+test("ProductCompare advanced editor keeps runtime diagnostics read-only and exposes refresh", async () => {
   const { ProductCompareAdvancedEditor } =
     await import("../../../core/admin/ui/widgets/editors/ProductCompareEditors");
 
+  const context: WidgetEditorContext = {
+    surface: "page-builder",
+    editorMode: "advanced",
+    setPreviewState: () => undefined,
+    previewState: {
+      status: "ready",
+      dataPatch: {
+        resolved: {
+          rows: productComparePreviewState.response.rows,
+          total: 1,
+          resolvedAt: "2026-05-19T12:00:00.000Z",
+          error: "commerce_runtime_warning",
+        },
+      },
+    },
+  };
+
   const view = mount(
-    <ProductCompareAdvancedEditor value={{}} onChange={() => undefined} variant="matrix" />
+    <ProductCompareAdvancedEditor
+      value={{}}
+      onChange={() => undefined}
+      variant="matrix"
+      onVariantChange={() => undefined}
+      context={context}
+    />
   );
 
   try {
+    expect(findInputByLabel(view.container, "Runtime error flag")).toBeUndefined();
+    expect(normalizeText(view.container.textContent)).toContain(normalizeText("Refresh preview"));
     expect(normalizeText(view.container.textContent)).toContain(
-      normalizeText("Resolved rows: 0 · Total: 0")
+      normalizeText("Runtime warning: commerce_runtime_warning")
     );
-    expect(
-      (
-        findInputByLabel(view.container, "Runtime error flag") as
-          | HTMLInputElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("");
+    expect(normalizeText(view.container.textContent)).toContain(
+      normalizeText("Show raw query JSON")
+    );
   } finally {
     view.cleanup();
-    vi.doUnmock("../../../core/widgets/core/productCompare");
-    vi.resetModules();
   }
 });

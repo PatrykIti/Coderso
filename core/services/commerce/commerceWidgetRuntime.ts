@@ -25,6 +25,7 @@ export type CommerceRuntimeCache = Map<
 
 type CommerceWidgetRuntimeDeps = {
   resolveRuntimeProducts: typeof resolveCommerceRuntimeProducts;
+  buildComparePayload: typeof buildCommerceComparePayload;
 };
 
 type CommerceWidgetRuntimeOptions = {
@@ -34,13 +35,12 @@ type CommerceWidgetRuntimeOptions = {
 
 const defaultDeps: CommerceWidgetRuntimeDeps = {
   resolveRuntimeProducts: resolveCommerceRuntimeProducts,
+  buildComparePayload: buildCommerceComparePayload,
 };
 
 const readRuntimeErrorCode = (error: unknown) => {
   if (!(error instanceof Error)) return "commerce_runtime_error";
-  return error.message.startsWith("commerce_query_")
-    ? error.message
-    : "commerce_runtime_error";
+  return error.message.startsWith("commerce_query_") ? error.message : "commerce_runtime_error";
 };
 
 const resolveWithCache = async (
@@ -123,7 +123,7 @@ export async function hydrateProductCompareRuntimeData(
       buildProductCompareQueryInput(normalized),
       runtimeDeps
     );
-    const payload = buildCommerceComparePayload(runtime.rows);
+    const payload = await runtimeDeps.buildComparePayload(runtime.rows);
 
     return {
       ...normalized,

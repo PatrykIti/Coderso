@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 882 | 2026-05-20 | TASK-279 product compare widget follow-ups | CMS Widgets/Admin UI/Runtime/QA |
 | 881 | 2026-05-20 | TASK-278 pricing plans widget follow-ups | CMS Widgets/Admin UI/Runtime/QA |
 | 880 | 2026-05-20 | TASK-277 posts feed widget follow-ups | CMS Widgets/Admin UI/Runtime/QA |
 | 879 | 2026-05-19 | TASK-276 newsletter widget Playwright followups | CMS Widgets/Forms/Admin UI/Runtime/QA |

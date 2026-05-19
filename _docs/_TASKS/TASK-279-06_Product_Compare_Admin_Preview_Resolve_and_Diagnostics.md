@@ -6,7 +6,7 @@
 **Category:** Widgets + Commerce + Admin UI + Runtime Preview + Diagnostics
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-279-01, TASK-279-02, TASK-256-01, TASK-279
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -35,14 +35,17 @@ In scope:
 - A truthful admin preview bridge between the builder preview path and the same
   normalized commerce-resolution contract used by frontend SSR.
 - Safe stale/error/loading states in admin preview.
+- Reuse the existing transient widget preview-state seam already proven by
+  Entry Teaser instead of inventing a second shared preview abstraction.
 
 Out of scope:
 
 - Client-side commerce provider fetches.
 - Persisting preview-only resolved rows as author data unless the existing
   widget save contract explicitly owns that persistence.
-- Generic admin preview infrastructure unless TASK-256 or another shared task
-  creates it first.
+- A new generic admin preview framework; this leaf should reuse the current
+  widget preview-state path and only extract shared work if that seam proves
+  insufficient during implementation.
 
 ## Sub-Tasks
 
@@ -170,9 +173,11 @@ This leaf may add an internal admin preview read endpoint if existing owners do
 not already provide one.
 
 - Endpoint visibility: internal admin-only preview/read route; no public write.
-- Auth model: authenticated admin session with page/template preview access.
-- RBAC: require the same permission used to edit or preview the containing
-  page/template/widget.
+- Auth model: authenticated admin session plus the existing `commerce:read`
+  guard, because the route resolves only preview-safe product display data.
+- RBAC: builder/page/template access stays owned by the current editor surface;
+  the preview route itself reuses the commerce read seam rather than inventing a
+  second page-specific permission check without page context.
 - CSRF: if the route is POST because it accepts a widget payload, enforce the
   existing admin CSRF contract.
 - Rate-limit bucket: admin preview/commerce read bucket with bounded source

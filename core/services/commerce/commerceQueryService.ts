@@ -15,7 +15,10 @@ import { listCommerceProducts } from "./commerceService";
 type FieldKind = "string" | "number" | "date" | "array";
 type CommercePrimitive = string | number | boolean | null;
 
-type NormalizedFilterValue = CommercePrimitive | CommercePrimitive[] | [CommercePrimitive, CommercePrimitive];
+type NormalizedFilterValue =
+  | CommercePrimitive
+  | CommercePrimitive[]
+  | [CommercePrimitive, CommercePrimitive];
 
 export type CommerceQueryInput = Partial<CommerceQuery> & {
   filters?: CommerceQueryFilter[];
@@ -28,6 +31,7 @@ export type CommerceExecutionPlan = {
   pagination: CommerceQuery["pagination"];
   status: CommerceProductStatus[];
   collectionIds: string[];
+  productIds: string[];
   search: string | null;
 };
 
@@ -78,18 +82,11 @@ const allowedFilterFields = new Set(Object.keys(filterFieldKinds));
 const allowedSortFields = new Set<CommerceSortField>(commerceSortFields);
 const allowedOperators = new Set<CommerceFilterOperator>(commerceFilterOperators);
 const reservedFieldSegments = new Set(["__proto__", "prototype", "constructor"]);
-const comparableOperators = new Set<CommerceFilterOperator>([
-  "gt",
-  "gte",
-  "lt",
-  "lte",
-  "between",
-]);
+const comparableOperators = new Set<CommerceFilterOperator>(["gt", "gte", "lt", "lte", "between"]);
 const listOperators = new Set<CommerceFilterOperator>(["in", "nin"]);
 const noValueOperators = new Set<CommerceFilterOperator>(["exists"]);
 
-const hasOwn = (value: object, key: string) =>
-  Object.prototype.hasOwnProperty.call(value, key);
+const hasOwn = (value: object, key: string) => Object.prototype.hasOwnProperty.call(value, key);
 
 const normalizePrimitive = (value: unknown): CommercePrimitive => {
   if (
@@ -161,6 +158,19 @@ const normalizeCollectionIds = (input: unknown): string[] => {
   if (input === undefined || input === null) return [];
   if (!Array.isArray(input)) throw new Error("commerce_query_invalid_collection_ids");
   if (input.length > 20) throw new Error("commerce_query_invalid_collection_ids");
+  return Array.from(
+    new Set(
+      input
+        .map((value) => (typeof value === "string" ? value.trim() : ""))
+        .filter((value) => value.length > 0)
+    )
+  );
+};
+
+const normalizeProductIds = (input: unknown): string[] => {
+  if (input === undefined || input === null) return [];
+  if (!Array.isArray(input)) throw new Error("commerce_query_invalid_product_ids");
+  if (input.length > 20) throw new Error("commerce_query_invalid_product_ids");
   return Array.from(
     new Set(
       input
@@ -259,7 +269,10 @@ const valuesEqual = (left: unknown, right: unknown, kind: FieldKind) => {
   return a === b;
 };
 
-const normalizeFilterValue = (filter: CommerceQueryFilter, kind: FieldKind): NormalizedFilterValue | undefined => {
+const normalizeFilterValue = (
+  filter: CommerceQueryFilter,
+  kind: FieldKind
+): NormalizedFilterValue | undefined => {
   if (noValueOperators.has(filter.op)) {
     if (filter.value === undefined) return true;
     if (typeof filter.value === "boolean") return filter.value;
@@ -405,11 +418,7 @@ const matchFilter = (product: CommerceProduct, filter: CommerceQueryFilter) => {
   return false;
 };
 
-const compareForSort = (
-  left: CommerceProduct,
-  right: CommerceProduct,
-  sort: CommerceQuerySort
-) => {
+const compareForSort = (left: CommerceProduct, right: CommerceProduct, sort: CommerceQuerySort) => {
   const kind = sortFieldKinds[sort.field];
   const leftValue = toComparable(readFieldValue(left, sort.field), kind);
   const rightValue = toComparable(readFieldValue(right, sort.field), kind);
@@ -438,6 +447,7 @@ const normalizeQueryPayload = (input: CommerceQueryInput = {}): CommerceExecutio
   const pagination = normalizePagination(input.pagination);
   const status = normalizeStatusFilter(input.status);
   const collectionIds = normalizeCollectionIds(input.collectionIds);
+  const productIds = normalizeProductIds(input.productIds);
   const search = normalizeSearch(input.search);
 
   return {
@@ -446,6 +456,7 @@ const normalizeQueryPayload = (input: CommerceQueryInput = {}): CommerceExecutio
     pagination,
     status,
     collectionIds,
+    productIds,
     search,
   };
 };
@@ -478,19 +489,30 @@ export async function executeCommerceQuery(
     return plan.filters.every((filter) => matchFilter(product, filter));
   });
 
-  const sorted = [...filtered].sort((left, right) => {
-    for (const sort of plan.sort) {
-      const result = compareForSort(left, right, sort);
-      if (result !== 0) return result;
+  const ordered = (() => {
+    if (plan.productIds.length === 0) {
+      return [...filtered].sort((left, right) => {
+        for (const sort of plan.sort) {
+          const result = compareForSort(left, right, sort);
+          if (result !== 0) return result;
+        }
+        return left.id.localeCompare(right.id);
+      });
     }
-    return left.id.localeCompare(right.id);
-  });
+
+    const byId = new Map(filtered.map((product) => [product.id, product] as const));
+    return plan.productIds.flatMap((productId) => {
+      const product = byId.get(productId);
+      return product ? [product] : [];
+    });
+  })();
+  const resolvedProductIds = plan.productIds.length > 0 ? ordered.map((product) => product.id) : [];
 
   const { limit, offset } = plan.pagination;
-  const paged = sorted.slice(offset, offset + limit);
+  const paged = ordered.slice(offset, offset + limit);
 
   return {
-    total: filtered.length,
+    total: ordered.length,
     limit,
     offset,
     query: {
@@ -499,6 +521,7 @@ export async function executeCommerceQuery(
       pagination: plan.pagination,
       ...(plan.status.length > 0 ? { status: plan.status } : {}),
       ...(plan.collectionIds.length > 0 ? { collectionIds: plan.collectionIds } : {}),
+      ...(resolvedProductIds.length > 0 ? { productIds: resolvedProductIds } : {}),
       ...(plan.search ? { search: plan.search } : {}),
     },
     rows: paged,

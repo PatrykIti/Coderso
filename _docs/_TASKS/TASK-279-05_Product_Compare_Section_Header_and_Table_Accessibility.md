@@ -6,7 +6,7 @@
 **Category:** Widgets + Runtime Render + Accessibility + Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-256-04, TASK-279-02, TASK-279-03, TASK-279
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 

@@ -1475,6 +1475,8 @@ Runtime behavior (v1):
 Permissions: `widgets:read`, `widgets:write`
 
 - `GET /widgets` (catalog: core + templates)
+- `POST /widgets/entry-teaser/preview` (internal admin preview hydration, permission: `content:read`)
+- `POST /widgets/product-compare/preview` (internal admin preview hydration, permission: `commerce:read`)
 - `GET /widgets/templates` (alias: `GET /widget-templates`)
 - `GET /widgets/templates/:id` (alias: `GET /widget-templates/:id`)
 - `POST /widgets/templates` (alias: `POST /widget-templates`)
@@ -1498,6 +1500,11 @@ Core catalog includes utility widgets for engagement layouts:
 - `tabs`
 - `accordion`
 - `toggle-block`
+
+Internal widget preview routes:
+- use the same admin session + CSRF contract as the editor surface that calls them
+- accept widget-owned payloads only (`additionalProperties: false`)
+- return transient preview data for the current builder canvas and do not persist resolved runtime payload into widget JSON
 
 Template create/update payload (summary):
 

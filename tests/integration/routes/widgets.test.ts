@@ -25,6 +25,10 @@ test("registerWidgetRoutes wires endpoints", () => {
   const paths = routes.map((route) => `${route.method} ${route.path}`);
 
   expect(paths).toEqual(
-    expect.arrayContaining(["GET /widgets", "POST /widgets/entry-teaser/preview"])
+    expect.arrayContaining([
+      "GET /widgets",
+      "POST /widgets/entry-teaser/preview",
+      "POST /widgets/product-compare/preview",
+    ])
   );
 });

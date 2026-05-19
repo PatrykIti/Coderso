@@ -6,7 +6,7 @@
 **Category:** Widgets + Commerce + Runtime Render + Responsive UX
 **Estimated Effort:** Large
 **Dependencies:** TASK-279-01, TASK-279-02, TASK-279-03, TASK-279
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 

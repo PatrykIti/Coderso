@@ -6,7 +6,7 @@
 **Category:** Widgets + Commerce + Runtime Query + Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-252-07-05, TASK-256-07, TASK-324, TASK-279
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -22,6 +22,18 @@ Source report coverage:
   allow 48.
 - Playwright section 7.2: limit spinbutton accepts 13 and advertises `max=48`.
 
+Current worktree already landed these prerequisite slices:
+
+- widget-local `source.productIds` and Product Compare query-builder support;
+- shared `CommerceSourceFields` bounds/copy options through `TASK-324`;
+- admin client/query-schema typing for `productIds`;
+- initial commerce-query ordering coverage.
+
+Remaining leaf scope starts from the still-open exact-set gaps: selected IDs
+must survive later source edits, bypass conflicting search/collection/status
+filters, and be proven at the admin route boundary rather than only through
+client/schema/service unit tests.
+
 ## Scope Boundary
 
 In scope:
@@ -34,6 +46,9 @@ In scope:
   Product Gallery or Product Table behavior.
 - Apply any shared `CommerceSourceFields` limit-control change only through a
   backward-compatible shared owner contract with explicit cross-widget proof.
+- Treat the already-landed `TASK-313` shared-source options as the prerequisite
+  owner for editor limit/help behavior; remaining widget work here is the exact
+  selected-set contract, not another local source-control fork.
 
 Out of scope:
 
@@ -153,12 +168,11 @@ Error handling:
   not patch it locally inside `ProductCompareEditors.tsx`; either introduce a
   backward-compatible shared limit contract with cross-widget coverage or split
   the shared work into a dedicated task first.
-- Do not emit `productIds` or a separate `manualOrderIds` key from
-  `buildProductCompareQueryInput` until `CommerceQuery`,
+- Since the current worktree already extends `CommerceQuery`,
   `CommerceQueryInput`, `commerceQuerySchema`, `executeCommerceQuery`, and the
-  `/commerce/products/query` route all accept the field. The selected order is
-  the `productIds` array order; do not introduce a second ordering field unless
-  the route schema and query service prove why it is necessary.
+  `/commerce/products/query` route typing for `productIds`, the remaining proof
+  here must cover the conflicting-filter exact-set case and the full route
+  boundary, not only local widget normalization.
 - If the implementation extends the shared commerce query type, add tests that
   prove Product Gallery and Product Table still use their current query shape.
 
@@ -169,6 +183,8 @@ Regression shape:
   keep their current limit behavior.
 - Runtime query tests prove selected IDs are filtered before pagination and
   preserve manual order.
+- Runtime query tests prove selected IDs still resolve the exact curated set
+  when stale search/collection/status filters remain in the source payload.
 - Validation and route tests prove `/commerce/products/query` rejects unknown
   fields but accepts bounded `productIds` only after the route contract is
   intentionally extended.
@@ -232,3 +248,5 @@ This leaf does not introduce public writes.
   local behavior.
 - Missing or invalid selected IDs fail safely with deterministic empty/partial
   output and no provider details in browser-visible payloads.
+- Selected IDs remain stable after subsequent source edits and do not silently
+  fall back to conflicting status/search/collection filters.

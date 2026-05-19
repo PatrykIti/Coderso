@@ -346,9 +346,11 @@ test("previewCommerceProductsQuery posts query payload", async () => {
       filters: [],
       sort: [{ field: "updatedAt", dir: "desc" }],
       pagination: { limit: 10, offset: 0 },
+      productIds: ["product-3", "product-1"],
     });
     expect(calls[0]?.input).toBe("/admin/api/commerce/products/query");
     expect(calls[0]?.init?.method).toBe("POST");
+    expect(String(calls[0]?.init?.body)).toContain('"productIds":["product-3","product-1"]');
   } finally {
     globalThis.fetch = originalFetch;
     clearCommerceCache();
