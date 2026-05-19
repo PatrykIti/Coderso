@@ -97,14 +97,14 @@ Posts Feed files.
 
 ## Sub-Tasks
 
-- [ ] TASK-277-01: Posts Feed Source Mode, Route, and Filter Truthfulness
-- [ ] TASK-277-02: Posts Feed Media, Tags, and Card Metadata
-- [ ] TASK-277-03: Posts Feed Manual Picker Search, Reorder, and Accessibility
-- [ ] TASK-277-04: Posts Feed Admin Preview and Runtime Status
-- [ ] TASK-277-05: Posts Feed Section Header, View All, and Editorial Chrome
-- [ ] TASK-277-06: Posts Feed Editor Flow, Variant Previews, and Style Controls
-- [ ] TASK-277-07: Posts Feed Pagination, Author, Date, and Featured-First Filters
-- [ ] TASK-277-08: Posts Feed Report, Docs, Changelog, and Closure
+- [x] TASK-277-01: Posts Feed Source Mode, Route, and Filter Truthfulness
+- [x] TASK-277-02: Posts Feed Media, Tags, and Card Metadata
+- [x] TASK-277-03: Posts Feed Manual Picker Search, Reorder, and Accessibility
+- [x] TASK-277-04: Posts Feed Admin Preview and Runtime Status
+- [x] TASK-277-05: Posts Feed Section Header, View All, and Editorial Chrome
+- [x] TASK-277-06: Posts Feed Editor Flow, Variant Previews, and Style Controls
+- [x] TASK-277-07: Posts Feed Pagination, Author, Date, and Featured-First Filters
+- [x] TASK-277-08: Posts Feed Report, Docs, Changelog, and Closure
 
 ## Implementation Order
 
