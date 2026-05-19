@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Hero + Admin UI
 **Estimated Effort:** Medium
-**Dependencies:** TASK-256-01, TASK-256-02, TASK-272
+**Dependencies:** TASK-256-01, TASK-272, TASK-310-02
 **Status:** To Do
 
 ---
@@ -16,8 +16,9 @@ Hide Hero inline-media border controls when the selected Hero variant is
 `centered`, and align CTA URL helper placeholders with the current Hero defaults
 and Wizard presets.
 
-This leaf is intentionally narrow. It does not own shared color-field default
-state, gradient activation, safe-link policy, or page-toolbar behavior.
+This leaf is intentionally narrow. It does not own shared color-field
+default-state or shared color-control behavior, gradient activation, safe-link
+policy, or page-toolbar behavior.
 
 ## Source Findings
 
@@ -58,8 +59,13 @@ const showsInlineMediaFrameControls = selectedVariant !== "centered";
 CTA placeholder policy:
 
 ```ts
-const primaryCtaUrlPlaceholder = primary.href || heroDefaults.primaryCta?.href || "/signup";
-const secondaryCtaUrlPlaceholder = secondary.href || heroDefaults.secondaryCta?.href || "/learn";
+const heroCtaPlaceholderExamples = {
+  primary: "/signup",
+  secondary: "/examples",
+} as const;
+
+const primaryCtaUrlPlaceholder = heroCtaPlaceholderExamples.primary;
+const secondaryCtaUrlPlaceholder = heroCtaPlaceholderExamples.secondary;
 ```
 
 Error handling:
@@ -67,6 +73,9 @@ Error handling:
 - Do not delete existing `style.mediaBorder*` values when switching to
   `centered`; hide only the irrelevant controls so switching back preserves
   authored split/media-left styling.
+- Do not derive placeholder copy from `heroDefaults.primaryCta?.href` /
+  `heroDefaults.secondaryCta?.href`, because the live defaults are `#` and do
+  not help authors understand expected CTA paths.
 - Do not introduce new safe-link validation. Keep `normalizeHeroHref` as the
   owner.
 - Do not treat placeholder text as saved data.
@@ -101,4 +110,5 @@ No API routes are added.
   existing authored values.
 - CTA URL placeholders are consistent between Wizard and Visual mode and do not
   imply a different saved URL.
-- TASK-256 shared color/default and safe-link scope is not duplicated.
+- Shared color/default-state, shared color-control, and safe-link scope are not
+  duplicated here.

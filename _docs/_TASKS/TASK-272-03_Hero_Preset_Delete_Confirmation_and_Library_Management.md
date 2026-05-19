@@ -38,6 +38,9 @@ future product decision explicitly asks for shared/team preset storage.
 | `core/admin/ui/widgets/editors/HeroEditors.tsx` | Add a delete confirmation dialog for preset deletion. Add local search/sort for up to 24 presets. Add JSON export/import buttons with a validating parser that can report malformed, duplicate, and over-limit imports instead of silently dropping entries. |
 | `core/admin/services/userSettingsClient.ts` | Update `HeroPresetSetting` only if the import/export metadata needs typed fields such as `version` or `exportedAt`. Do not create a new API route. |
 | `core/services/settings/userSettingsService.ts` | Update server-side Hero preset validation only if new preset metadata is persisted. |
+| `tests/unit/settings/userSettingsService.test.ts` | Add or update validation coverage when import/export metadata changes the persisted Hero preset payload. |
+| `tests/vitest/admin/userSettingsClient.test.ts` | Add or update client cache/typing coverage when import/export metadata changes the client contract. |
+| `tests/integration/routes/userSettings.test.ts` | Add route-level proof when persisted preset metadata changes the `/user-settings` contract. |
 | `tests/vitest/ui/hero-editor-wave.test.tsx` | Cover confirm/cancel delete, search/filter, export payload generation where testable, import success, import duplicate handling, and import validation errors. |
 | `tests/vitest/widgets/heroEditors.test.tsx` | Add SSR-level smoke if new preset controls must be present without client effects. |
 | `_docs/_WIDGETS/HERO.md` | Document Hero preset limits and import/export behavior. |
@@ -87,8 +90,9 @@ Error handling:
 
 - Import rejects empty files, malformed JSON, non-Hero variants, missing names,
   unsafe duplicates, and over-limit results with a visible error.
-- Duplicate names should either be skipped with a warning or renamed with a
-  deterministic suffix; choose one policy and test it.
+- Duplicate names are a hard failure: if the imported payload contains a
+  case-insensitive duplicate or collides with an existing preset name, show a
+  visible error and persist nothing from that import attempt.
 - Export must not include user identifiers, tokens, or environment-specific
   secrets.
 - Delete confirmation must disable while `setUserSetting` is pending.
@@ -114,6 +118,12 @@ use.
 - `bun run test:vitest -- tests/vitest/ui/hero-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/heroEditors.test.tsx` if SSR
   controls change.
+- `bun test tests/unit/settings/userSettingsService.test.ts` when persisted
+  preset metadata or validation changes.
+- `bun run test:vitest -- tests/vitest/admin/userSettingsClient.test.ts` when
+  persisted preset metadata changes the client contract.
+- `bun test tests/integration/routes/userSettings.test.ts` when persisted
+  preset metadata changes the `/user-settings` route contract.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 
@@ -129,5 +139,5 @@ use.
 - Deleting a Hero preset requires confirmation and can be cancelled.
 - Preset search/sort helps users manage the 24-preset cap.
 - Import/export works through bounded JSON and reuses Hero preset validation.
-- Invalid imports do not partially persist data.
+- Invalid or duplicate imports do not partially persist data.
 - No new shared preset API or route is introduced by this leaf.

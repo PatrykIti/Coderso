@@ -40,6 +40,9 @@ Shared page viewport controls stay outside this widget leaf.
 | `core/widgets/core/hero.tsx` | Add strict `layout.height` and `layout.bleed` or equivalent bounded fields. Add `media-center` to variants, schema/default normalizer, runtime layout class map, and `createHeroWidget`. |
 | `core/admin/ui/widgets/editors/HeroEditors.tsx` | Add `media-center` variant card and Hero layout controls with explanatory labels. Rename Advanced spacing labels to Hero content spacing without duplicating generic builder layout controls. |
 | `core/admin/services/userSettingsClient.ts` and `core/services/settings/userSettingsService.ts` | Add `media-center` to Hero preset variant validation if presets can store it. |
+| `tests/unit/settings/userSettingsService.test.ts` | Cover the widened allowed Hero preset variants when `media-center` is added to persisted settings. |
+| `tests/vitest/admin/userSettingsClient.test.ts` | Cover the widened client-side Hero preset variant typing/cache contract when `media-center` is allowed. |
+| `tests/integration/routes/userSettings.test.ts` | Cover `/user-settings` validation and persistence for `media-center` Hero presets. |
 | `tests/vitest/widgets/hero.test.tsx` | Assert `media-center`, height, and bleed render stable classes/styles and legacy variants still work. |
 | `tests/vitest/widgets/heroEditors.test.tsx` | Assert variant cards include `media-center` and Advanced labels distinguish Hero content spacing. |
 | `tests/vitest/ui/hero-editor-wave.test.tsx` | Cover selecting `media-center`, height/full-bleed controls, and no data loss when switching variants. |
@@ -103,6 +106,9 @@ No API routes are added.
 - `bun run test:vitest -- tests/vitest/ui/hero-editor-wave.test.tsx`
 - `bun test tests/unit/widgets/validator.test.ts`
 - `bun test tests/unit/widgets/registry.test.ts`
+- `bun test tests/unit/settings/userSettingsService.test.ts`
+- `bun run test:vitest -- tests/vitest/admin/userSettingsClient.test.ts`
+- `bun test tests/integration/routes/userSettings.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 
@@ -120,5 +126,7 @@ No API routes are added.
 - Hero supports a bounded full-bleed option without raw class input.
 - `media-center` is registered, editable, preset-compatible, and covered by
   runtime/editor tests.
+- `media-center` Hero presets round-trip through the existing user-settings
+  client, service, and route validation lanes.
 - Advanced spacing copy clearly names Hero content spacing and does not claim to
   own generic page/builder padding controls.

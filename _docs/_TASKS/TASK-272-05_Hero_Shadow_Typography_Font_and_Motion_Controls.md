@@ -5,7 +5,7 @@
 **Priority:** Medium
 **Category:** Widgets + Hero + Visual Design + Runtime Render
 **Estimated Effort:** Large
-**Dependencies:** TASK-256-02, TASK-272-04
+**Dependencies:** TASK-272-04, TASK-305, TASK-310-02
 **Status:** To Do
 
 ---
@@ -17,6 +17,9 @@ motion effects.
 
 This leaf must use strict enum/token maps. It must not accept arbitrary CSS
 classes, raw animation names, or unbounded font-family strings.
+Any color-adjacent UI in this leaf must continue consuming the landed shared
+color-field helpers from TASK-305 / TASK-310-02 instead of reopening local Hero
+picker logic.
 
 ## Source Findings
 
@@ -65,8 +68,10 @@ const heroFontFamilyClassMap = {
 
 const heroMotionClassMap = {
   none: "",
-  "fade-in": "motion-safe:animate-in motion-safe:fade-in",
-  "slide-up": "motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4",
+  "fade-in":
+    "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-500 motion-reduce:animate-none",
+  "slide-up":
+    "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-500 motion-reduce:animate-none",
 } as const;
 ```
 

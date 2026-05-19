@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Hero + Admin UI + Runtime Render + Playwright QA
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-252, TASK-256, TASK-256-01, TASK-256-02, TASK-256-04, TASK-256-06-03, TASK-256-08
+**Dependencies:** TASK-252, TASK-256, TASK-256-01, TASK-256-04, TASK-256-06-03, TASK-256-08, TASK-299, TASK-305, TASK-310-02
 **Status:** To Do
 
 ---
@@ -46,8 +46,8 @@ shared widget-contract or page-editor shell work.
 
 | Report finding | Evidence | Owner task | Reason |
 |---|---|---|---|
-| BUG-02 / UX-07 gradient active-vs-default state | `REPORT_HERO_WIDGET.md:131-135,197-199,271-283` | TASK-256-02, TASK-256-06-03 | Shared clear/default/overridden control semantics. TASK-272 may depend on the final control state but must not duplicate it. |
-| UX-01 / UX-02 dual color inputs and overridden-state clarity | `REPORT_HERO_WIDGET.md:166-175,284` | TASK-256-02 | Shared color-field contract across widget editors. |
+| BUG-02 / UX-07 gradient active-vs-default state | `REPORT_HERO_WIDGET.md:131-135,197-199,271-283` | TASK-256-02, TASK-310-02 | Shared clear/default/overridden semantics plus the landed Hero editor adoption of the shared color-field seam. TASK-272 may depend on the final control state but must not duplicate it. |
+| UX-01 / UX-02 dual color inputs and overridden-state clarity | `REPORT_HERO_WIDGET.md:166-175,284` | TASK-305, TASK-310-02 | Shared color-field contract across widget editors; Hero must consume the landed shared swatch-plus-text seam instead of reopening it locally. |
 | BUG-06 / A3 required image alt baseline | `REPORT_HERO_WIDGET.md:152-155,258` | TASK-256-04, TASK-256-06-03 | Shared accessibility validation baseline. TASK-272 can add Hero-specific video metadata and UX, but the cross-widget required-alt rule stays in TASK-256. |
 | A4 external CTA/badge `rel` safety | `REPORT_HERO_WIDGET.md:259` | TASK-256-06-03 | Shared safe-link renderer behavior. |
 | BUG-03 page history auth failure | `REPORT_HERO_WIDGET.md:137-140,273,330` | TASK-256-08 page-shell follow-up | Page editor/history owner, not Hero widget. |
@@ -72,7 +72,7 @@ safe-link behavior, clear/default state, and cross-widget accessibility.
 | BF-09 / BF-10 preset export/import/search/organization | TASK-272-03 | Hero preset manager usability. |
 | UX-04 padding explanation, BF-03 full-height/full-bleed, BF-13 media-center variant | TASK-272-04 | Hero layout product expansion. |
 | BF-02 shadows, BF-06 font family/weight, BF-12 motion controls | TASK-272-05 | Hero visual styling expansion with bounded enums only. |
-| BF-05 palette presets and BF-08 / A2 Hero contrast guidance | TASK-272-06 | Hero-owned palette/contrast UX after shared color-field state lands. |
+| BF-05 palette presets and BF-08 / A2 Hero contrast guidance | TASK-272-06 | Hero-owned palette application plus Hero adoption of the landed shared contrast advisory from TASK-299 after the shared color-field seam from TASK-305/TASK-310-02. |
 | BF-04 rich text for headline/body and BF-14 social proof row | TASK-272-07 | Hero composition/content expansion using safe rich-text patterns. |
 | BF-07 responsive images, A5 image loading policy, BF-11/A6 LCP fetch priority | TASK-272-08 | Hero-specific media performance policy. |
 | Report fixed/deferred notes, widget docs, changelog, board closure | TASK-272-09 | Final evidence and synchronization. |
@@ -91,8 +91,11 @@ safe-link behavior, clear/default state, and cross-widget accessibility.
 
 ## Implementation Order
 
-1. Finish or rebase over TASK-256 shared color, alt, safe-link, and page-shell
-   classification first. TASK-272 leaves must not patch those shared contracts.
+1. Finish or rebase over the landed shared contracts first: TASK-305 and
+   TASK-310-02 for Hero color-control behavior, TASK-299 for shared contrast
+   guidance, TASK-256-04 / TASK-256-06-03 for shared alt and safe-link policy,
+   and TASK-256-08 for page-shell classification. TASK-272 leaves must not
+   reopen those shared contracts locally.
 2. Complete TASK-272-01 first because centered/split media visibility affects
    later media and style leaves.
 3. Complete TASK-272-02 before responsive media work so the media schema handles
@@ -164,6 +167,7 @@ Implementation leaves:
 - `bun test tests/unit/widgets/registry.test.ts` if variant registration or
   widget registry wiring changes.
 - `bun run scan:security:strict`
+- `bun run gates:coderso`
 - `bun run precommit`
 
 ## Documentation Updates Required
