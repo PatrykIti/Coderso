@@ -3,7 +3,7 @@
 > **Status:** Zamknięty po implementacji i rerunie owner test lanes
 > **Data zamknięcia:** 2026-05-18
 > **Owner task:** `TASK-269`
-> **Shared follow-ups:** `TASK-310`, `TASK-311`
+> **Shared follow-ups:** `TASK-301`, `TASK-310`, `TASK-311-01`, `TASK-311-02`, `TASK-311-03`
 
 ---
 
@@ -19,18 +19,19 @@ Raport został zamknięty po wdrożeniu zmian w:
   resolved-data
 
 `TASK-256` pozostaje poza implementacją widget-local; shared rows U3/U4 zostały
-utrzymane jako shared scope przez `TASK-310`, a przyszłe rozszerzenie modelu
-pól Forms zostało nazwane fizycznie w `TASK-311`.
+utrzymane jako shared scope przez `TASK-310`, shared stale-nonce cache
+freshness została nazwana fizycznie w `TASK-301`, a przyszłe rozszerzenie
+modelu pól Forms zostało rozbite fizycznie na `TASK-311-01..03`.
 
 ## 2. Finalna macierz findings
 
 | ID | Status | Owner | Dowód / uwaga końcowa |
 |---|---|---|---|
 | C1 | fixed | TASK-269-03 | Przywrócono truthful contract: current source-of-truth docs opisują tylko `standard`, zamiast obiecywać nieistniejące `card` / `inline`. |
-| C2 | deferred | TASK-311 | Obecny model Forms nadal nie wspiera `radio`; Form Embed renderuje unsupported diagnostic dla legacy/runtime payloadów zamiast cichego fallbacku. |
+| C2 | deferred | TASK-311-01 | Obecny model Forms nadal nie wspiera `radio`; Form Embed renderuje unsupported diagnostic dla legacy/runtime payloadów zamiast cichego fallbacku. |
 | C3 | fixed | TASK-269-01 | Wizard / Visual / Advanced nie są już aliasami jednego widoku; każdy ma osobny zakres odpowiedzialności. |
 | C4 | fixed | TASK-269-01 | Editor pokazuje runtime resolver error oraz selected-form diagnostics bez otwierania preview. |
-| W1 | deferred | TASK-311 | `number`, `time`, `hidden`, `file`, `range`, `rating` pozostają future Forms field-model scope; current widget renderuje unsupported diagnostic. |
+| W1 | deferred | TASK-311-02 / TASK-311-03 | `number`, `time`, `range`, `rating` pozostają future typed-control scope pod `TASK-311-02`, a `hidden` / `file` pod trusted-field scope `TASK-311-03`; current widget renderuje unsupported diagnostic. |
 | W2 | fixed | TASK-269-05 | Success behavior jest jawnie sterowalne (`hide`, `reset`, `keep`) i pokryte DOM runtime tests. |
 | W3 | fixed | TASK-269-05 | Submit przechodzi w busy/loading state z przywróceniem stanu po zakończeniu. |
 | W4 | fixed | TASK-269-03 | Layout ma niezależne section padding controls zamiast twardego `px-4`. |
@@ -66,7 +67,7 @@ pól Forms zostało nazwane fizycznie w `TASK-311`.
 | A7 | fixed | TASK-269-02 | Helper text jest połączony przez `aria-describedby`. |
 | A8 | fixed | TASK-269-05 | Success/error nodes są live regions. |
 | A9 | fixed | TASK-269-05 | Submit button ustawia i czyści `aria-busy`. |
-| A10 | not-applicable-current-contract | TASK-269-02 / TASK-311 | Obecny Forms model nie wystawia grouped checkbox/radio controls; grouped semantics wrócą dopiero z field-model expansion. |
+| A10 | not-applicable-current-contract | TASK-269-02 / TASK-311-01 | Obecny Forms model nie wystawia grouped checkbox/radio controls; grouped semantics wrócą dopiero z field-model expansion. |
 
 ## 3. Dowód owner test lanes
 
@@ -104,8 +105,14 @@ Admin editor i public runtime są zsynchronizowane na poziomie current contract:
 
 ## 5. Named deferred scope
 
+- `TASK-301`: shared public runtime nonce-cache freshness across Form Embed,
+  Contact, and Appointment Form
 - `TASK-310`: shared color-field helper/adoption work outside widget-local Form
   Embed ownership
-- `TASK-311`: future Forms field-model expansion for unsupported field types
+- `TASK-311-01`: future Forms choice-field expansion for `radio` / grouped
+  choice semantics
+- `TASK-311-02`: future Forms typed-field expansion for `number`, `time`,
+  `range`, and `rating`
+- `TASK-311-03`: future Forms trusted-field expansion for `hidden` and `file`
 
 No other anonymous “future” buckets remain in this report.

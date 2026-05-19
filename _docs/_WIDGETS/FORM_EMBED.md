@@ -56,8 +56,11 @@ Current Form Embed runtime support matches the live Forms field model:
 
 Unsupported legacy/runtime payload types render a visible non-submitting
 diagnostic instead of silently coercing to a different control. Future field
-model expansion for `radio`, `number`, `time`, `hidden`, `file`, `range`, and
-`rating` is routed through `TASK-311`.
+model expansion for:
+
+- `radio` and grouped choice semantics is routed through `TASK-311-01`
+- `number`, `time`, `range`, and `rating` is routed through `TASK-311-02`
+- `hidden` and `file` is routed through `TASK-311-03`
 
 ## Accessibility Contract
 
@@ -86,6 +89,8 @@ model expansion for `radio`, `number`, `time`, `hidden`, `file`, `range`, and
   - reset form after success
   - keep form visible after success
 - Redirects follow `runtime.redirectUrl` from the submit response.
+- Shared public HTML cache freshness for nonce-bearing Form Embed runtime is
+  tracked outside the widget-local surface in `TASK-301`.
 
 ## Security Notes
 

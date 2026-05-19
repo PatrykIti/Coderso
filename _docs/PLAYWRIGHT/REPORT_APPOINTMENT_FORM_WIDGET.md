@@ -457,3 +457,4 @@ Form element nie ma `aria-label` ani `aria-describedby`. Screen readery nie iden
 - `UX-02` -> `TASK-294`
 - `BF-05` -> `TASK-295`
 - `UX-04` -> `TASK-256-02`
+- shared public runtime nonce-cache freshness -> `TASK-301`

@@ -174,5 +174,7 @@ The widget renders stable DOM markers for QA/runtime assertions:
 ## Shared Contract Notes
 
 - `ContentListBlock` is also used by `posts-feed`, so shared renderer truthfulness lives alongside the widget-owned Content List surface.
-- Background, border, and text color controls follow the shared clear/picker contract.
+- Background, border, and text color controls currently expose the intended
+  clear/picker UX; the later helper-level convergence onto the shared
+  implementation itself remains tracked in `TASK-310-02`.
 - Tag badges and section context are Content List-local, not shared Posts Feed behavior.

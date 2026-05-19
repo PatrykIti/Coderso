@@ -124,5 +124,6 @@ shared control state is routed to `TASK-256-02`.
 
 - `UX-02` flow-key pairing feedback now routes through `TASK-294`.
 - `BF-05` custom fields now route through `TASK-295`.
+- Shared public runtime nonce-cache freshness now routes through `TASK-301`.
 - `UX-04` clearable style inheritance-state indicators route through
   `TASK-256-02`.
