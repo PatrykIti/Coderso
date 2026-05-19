@@ -6,7 +6,7 @@
 **Category:** Widgets + Grid Columns + Responsive Runtime
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-256-05-01, TASK-271-01, TASK-271-02
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -39,11 +39,11 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Add a bounded mobile reverse option to the Grid Columns layout model.
-- [ ] Add per-column breakpoint visibility fields and editor controls.
-- [ ] Add explicit `xl` and `2xl` wide-breakpoint span support.
-- [ ] Add schema, runtime, editor, and validator coverage for responsive fields.
-- [ ] Update Grid Columns docs/report evidence.
+- [x] Add a bounded mobile reverse option to the Grid Columns layout model.
+- [x] Add per-column breakpoint visibility fields and editor controls.
+- [x] Add explicit `xl` and `2xl` wide-breakpoint span support.
+- [x] Add schema, runtime, editor, and validator coverage for responsive fields.
+- [x] Update Grid Columns docs/report evidence.
 
 ## Files to Change
 
@@ -148,3 +148,11 @@ No API routes are added.
   tests.
 - Wide breakpoint support includes explicit optional `xl` and `2xl` span
   fields and remains backward compatible.
+
+## Completion Notes
+
+- 2026-05-19: Grid Columns now owns `reverseOnMobile`,
+  `hideOnMobile/hideOnTablet/hideOnDesktop`, and optional `xlSpan` /
+  `twoXlSpan` fields end-to-end in schema, normalizer, runtime, and editor.
+- 2026-05-19: the editor surfaces explicit warnings when every column is hidden
+  for a breakpoint instead of silently allowing a blank responsive state.

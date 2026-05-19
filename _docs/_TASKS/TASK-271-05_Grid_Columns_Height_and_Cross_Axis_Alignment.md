@@ -6,7 +6,7 @@
 **Category:** Widgets + Grid Columns + Layout
 **Estimated Effort:** Large
 **Dependencies:** TASK-256-05-01, TASK-271-03, TASK-271-04
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -35,12 +35,12 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Add schema-owned min-height tokens with backward-compatible defaults.
-- [ ] Add mobile-safe compact height behavior when needed.
-- [ ] Add per-column alignment override fields and editor controls.
-- [ ] Replace or wrap the hardcoded column min-height in runtime output.
-- [ ] Add runtime, editor, and validator tests for height/alignment fields.
-- [ ] Update Grid Columns docs/report evidence.
+- [x] Add schema-owned min-height tokens with backward-compatible defaults.
+- [x] Add mobile-safe compact height behavior when needed.
+- [x] Add per-column alignment override fields and editor controls.
+- [x] Replace or wrap the hardcoded column min-height in runtime output.
+- [x] Add runtime, editor, and validator tests for height/alignment fields.
+- [x] Update Grid Columns docs/report evidence.
 
 ## Files to Change
 
@@ -147,3 +147,11 @@ No API routes are added.
 - Runtime tests prove global alignment remains on the wrapper while per-column
   alignment is emitted only on the column grid item/shell owner selected by the
   implementation.
+
+## Completion Notes
+
+- 2026-05-19: the historical `min-h-[6rem]` output is now schema-owned through
+  bounded min-height tokens, while optional mobile overrides let authors reduce
+  empty space without changing desktop output.
+- 2026-05-19: per-column `alignSelf` now layers over the existing wrapper
+  `layout.align` contract instead of replacing the global cross-axis owner.

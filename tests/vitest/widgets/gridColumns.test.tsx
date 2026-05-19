@@ -14,6 +14,7 @@ import {
   gridColumnsDefaults,
   GridColumnsBlock,
   normalizeGridColumnsData,
+  reorderGridColumnsColumnsAndSlots,
   resolveGridColumnsVariant,
   type GridColumnsData,
 } from "../../../core/widgets/core/gridColumns";
@@ -72,14 +73,46 @@ test("grid columns keep technical labels out of public runtime", () => {
 test("grid columns normalization keeps deterministic ids and bounds", () => {
   const normalized = normalizeGridColumnsData({
     columns: [
-      { id: "1", label: "Lead", desktopSpan: "8", tabletSpan: "6", mobileSpan: "12" },
-      { id: "1", label: "", desktopSpan: "13" as GridColumnsColumn["desktopSpan"] },
+      {
+        id: "1",
+        label: "Lead",
+        desktopSpan: "8",
+        tabletSpan: "6",
+        mobileSpan: "12",
+        xlSpan: "9",
+        minHeight: "lg",
+        mobileMinHeight: "sm",
+        alignSelf: "center",
+        style: {
+          surface: "on",
+          background: "#112233",
+          borderColor: "var(--color-border)",
+          overflow: "hidden",
+        },
+      },
+      {
+        id: "1",
+        label: "",
+        desktopSpan: "13" as GridColumnsColumn["desktopSpan"],
+        twoXlSpan: "13" as GridColumnsColumn["twoXlSpan"],
+        hideOnMobile: true,
+        hideOnTablet: true,
+        hideOnDesktop: true,
+        minHeight: "mega" as GridColumnsColumn["minHeight"],
+        style: {
+          surface: "off" as never,
+          background: "url(https://evil.test)" as never,
+          borderWidth: "9" as never,
+          overflow: "clip" as never,
+        },
+      },
       { id: "3", label: "Support", desktopSpan: "4", tabletSpan: "6", mobileSpan: "12" },
     ],
     layout: {
-      gapX: "7" as GridColumnsLayout["gapX"],
+      gapX: "11" as GridColumnsLayout["gapX"],
       gapY: "7" as GridColumnsLayout["gapY"],
       align: "unsupported" as GridColumnsLayout["align"],
+      reverseOnMobile: true,
     },
     style: {
       columnBorderWidth: "9" as GridColumnsStyle["columnBorderWidth"],
@@ -93,8 +126,28 @@ test("grid columns normalization keeps deterministic ids and bounds", () => {
   expect(normalized.columns?.[1]?.id).toBe("2");
   expect(normalized.columns?.[1]?.label).toBe("Column 2");
   expect(normalized.columns?.[1]?.desktopSpan).toBe("6");
+  expect(normalized.columns?.[0]?.xlSpan).toBe("9");
+  expect(normalized.columns?.[0]?.minHeight).toBe("lg");
+  expect(normalized.columns?.[0]?.mobileMinHeight).toBe("sm");
+  expect(normalized.columns?.[0]?.alignSelf).toBe("center");
+  expect(normalized.columns?.[0]?.style).toEqual(
+    expect.objectContaining({
+      surface: "on",
+      background: "#112233",
+      borderColor: "var(--color-border)",
+      overflow: "hidden",
+    })
+  );
+  expect(normalized.columns?.[1]?.twoXlSpan).toBeUndefined();
+  expect(normalized.columns?.[1]?.hideOnMobile).toBe(false);
+  expect(normalized.columns?.[1]?.hideOnTablet).toBe(false);
+  expect(normalized.columns?.[1]?.hideOnDesktop).toBe(false);
+  expect(normalized.columns?.[1]?.minHeight).toBeUndefined();
+  expect(normalized.columns?.[1]?.style).toBeUndefined();
   expect(normalized.layout?.gapX).toBe("6");
+  expect(normalized.layout?.gapY).toBe("7");
   expect(normalized.layout?.align).toBe("start");
+  expect(normalized.layout?.reverseOnMobile).toBe(true);
   expect(normalized.style?.columnBorderWidth).toBe("1");
   expect(resolveGridColumnsVariant("unknown")).toBe("equal");
 });
@@ -128,12 +181,28 @@ test("grid columns validator accepts expanded model", () => {
             desktopSpan: "4",
             tabletSpan: "6",
             mobileSpan: "12",
+            xlSpan: "3",
+            twoXlSpan: "2",
+            hideOnMobile: true,
+            minHeight: "lg",
+            mobileMinHeight: "sm",
+            alignSelf: "end",
+            style: {
+              surface: "on",
+              background: "#ffffff",
+              borderColor: "var(--color-border)",
+              borderWidth: "2",
+              radius: "2xl",
+              padding: "6",
+              overflow: "hidden",
+            },
           },
         ],
         layout: {
           gapX: "4",
           gapY: "6",
           align: "start",
+          reverseOnMobile: true,
         },
         style: {
           cardizeColumns: true,
@@ -147,6 +216,165 @@ test("grid columns validator accepts expanded model", () => {
     })
   ).not.toThrow();
   expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBe(true);
+});
+
+test("grid columns validator rejects unsafe per-column override payloads", () => {
+  clearWidgets();
+  registerWidget(
+    createGridColumnsWidget({
+      wizard: StubGridColumnsEditor,
+      visual: StubGridColumnsEditor,
+      advanced: StubGridColumnsEditor,
+    })
+  );
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "grid-unsafe-style",
+      type: "grid-columns",
+      variant: "equal",
+      data: {
+        columns: [
+          {
+            id: "1",
+            label: "Lead",
+            desktopSpan: "6",
+            tabletSpan: "6",
+            mobileSpan: "12",
+            style: {
+              background: "url(https://evil.test)",
+            },
+          },
+          {
+            id: "2",
+            label: "Side",
+            desktopSpan: "6",
+            tabletSpan: "6",
+            mobileSpan: "12",
+          },
+        ],
+      },
+    } as never)
+  ).toThrow("widget_schema_invalid");
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "grid-extra-style-key",
+      type: "grid-columns",
+      variant: "equal",
+      data: {
+        columns: [
+          {
+            id: "1",
+            label: "Lead",
+            desktopSpan: "6",
+            tabletSpan: "6",
+            mobileSpan: "12",
+            style: {
+              surface: "on",
+              extra: "nope",
+            },
+          },
+          {
+            id: "2",
+            label: "Side",
+            desktopSpan: "6",
+            tabletSpan: "6",
+            mobileSpan: "12",
+          },
+        ],
+      },
+    } as never)
+  ).toThrow("widget_schema_invalid");
+});
+
+test("grid columns render responsive reverse, visibility, and wide-breakpoint classes", () => {
+  const html = renderToString(
+    <GridColumnsBlock
+      variant="equal"
+      data={{
+        columns: [
+          {
+            id: "1",
+            label: "Lead",
+            desktopSpan: "8",
+            tabletSpan: "6",
+            mobileSpan: "12",
+            xlSpan: "9",
+            twoXlSpan: "8",
+            hideOnMobile: true,
+          },
+          {
+            id: "2",
+            label: "Side",
+            desktopSpan: "4",
+            tabletSpan: "6",
+            mobileSpan: "12",
+            hideOnTablet: true,
+            hideOnDesktop: true,
+          },
+        ],
+        layout: {
+          reverseOnMobile: true,
+        },
+      }}
+    />
+  );
+
+  expect(html).toContain('data-grid-columns-reverse-mobile="true"');
+  expect(html).toContain("order-2 md:order-none");
+  expect(html).toContain("order-1 md:order-none");
+  expect(html).toContain("hidden md:block");
+  expect(html).toContain("md:hidden");
+  expect(html).toContain("xl:col-span-9");
+  expect(html).toContain("2xl:col-span-8");
+});
+
+test("grid columns render per-column surface, overflow, height, and alignment overrides", () => {
+  const html = renderToString(
+    <GridColumnsBlock
+      variant="equal"
+      data={{
+        columns: [
+          {
+            id: "1",
+            label: "Lead",
+            desktopSpan: "8",
+            tabletSpan: "6",
+            mobileSpan: "12",
+            minHeight: "lg",
+            mobileMinHeight: "none",
+            alignSelf: "end",
+            style: {
+              surface: "on",
+              background: "#112233",
+              borderColor: "#445566",
+              borderWidth: "2",
+              radius: "2xl",
+              padding: "6",
+              overflow: "hidden",
+            },
+          },
+          {
+            id: "2",
+            label: "Side",
+            desktopSpan: "4",
+            tabletSpan: "6",
+            mobileSpan: "12",
+          },
+        ],
+      }}
+    />
+  );
+
+  expect(html).toContain("self-end");
+  expect(html).toContain("min-h-0 md:min-h-[8rem]");
+  expect(html).toContain("overflow-hidden");
+  expect(html).toContain("rounded-2xl");
+  expect(html).toContain("p-6");
+  expect(html).toContain("background-color:#112233");
+  expect(html).toContain("border-color:#445566");
+  expect(html).toContain("border-width:2px");
 });
 
 test("grid columns cleared column surface omits background output", () => {
@@ -246,6 +474,103 @@ test("grid columns renders repeatable slot content", () => {
   expect(html).toContain('data-grid-column="column:2"');
 });
 
+test("grid columns reorder helper keeps column data and slots aligned", () => {
+  const firstChildren = [{ id: "child-1", type: "hero", data: { headline: "One" } }];
+  const secondChildren = [{ id: "child-2", type: "hero", data: { headline: "Two" } }];
+  const legacyChildren = [{ id: "child-legacy", type: "hero", data: { headline: "Legacy" } }];
+  const result = reorderGridColumnsColumnsAndSlots({
+    data: {
+      columns: [
+        { id: "1", label: "Lead", desktopSpan: "8", tabletSpan: "6", mobileSpan: "12" },
+        { id: "2", label: "Side", desktopSpan: "4", tabletSpan: "6", mobileSpan: "12" },
+      ],
+    },
+    slots: {
+      "column:1": firstChildren,
+      "column:2": secondChildren,
+      "column:legacy": legacyChildren,
+      default: [],
+    },
+    orderedInstanceIds: ["2", "1"],
+  });
+
+  expect(result.data.columns?.map((column) => column.id)).toEqual(["2", "1"]);
+  expect(Object.keys(result.slots ?? {})).toEqual([
+    "column:2",
+    "column:1",
+    "column:legacy",
+    "default",
+  ]);
+  expect(result.slots?.["column:2"]).toBe(secondChildren);
+  expect(result.slots?.["column:1"]).toBe(firstChildren);
+  expect(result.slots?.["column:legacy"]).toBe(legacyChildren);
+});
+
+test("grid columns widget exposes repeatable slot sync hooks", () => {
+  clearWidgets();
+  const widget = createGridColumnsWidget({
+    wizard: StubGridColumnsEditor,
+    visual: StubGridColumnsEditor,
+    advanced: StubGridColumnsEditor,
+  });
+  const adapter = widget.repeatableSlotSync?.find((entry) => entry.definitionId === "column");
+
+  expect(adapter).toBeDefined();
+  const appended = adapter?.appendItem?.(
+    {
+      columns: [
+        { id: "1", label: "Lead", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
+        { id: "2", label: "Side", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
+      ],
+    },
+    { id: "3", label: "Extra", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" }
+  ) as GridColumnsData;
+  const reordered = adapter?.reorderItemsByInstanceIds?.(appended, [
+    "3",
+    "1",
+    "2",
+  ]) as GridColumnsData;
+
+  expect(appended.columns?.map((column) => column.id)).toEqual(["1", "2", "3"]);
+  expect(reordered.columns?.map((column) => column.id)).toEqual(["3", "1", "2"]);
+  expect(reordered.columns?.[0]).toEqual(
+    expect.objectContaining({
+      id: "3",
+      label: "Extra",
+    })
+  );
+});
+
+test("grid columns append adapter reconciles drift instead of duplicating phantom configs", () => {
+  clearWidgets();
+  const widget = createGridColumnsWidget({
+    wizard: StubGridColumnsEditor,
+    visual: StubGridColumnsEditor,
+    advanced: StubGridColumnsEditor,
+  });
+  const adapter = widget.repeatableSlotSync?.find((entry) => entry.definitionId === "column");
+
+  const appended = adapter?.appendItem?.(
+    {
+      columns: [
+        { id: "1", label: "One", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
+        { id: "2", label: "Two", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
+        { id: "3", label: "Three", desktopSpan: "4", tabletSpan: "6", mobileSpan: "12" },
+        { id: "4", label: "Phantom", desktopSpan: "4", tabletSpan: "6", mobileSpan: "12" },
+      ],
+    },
+    { id: "3", label: "Three", desktopSpan: "4", tabletSpan: "6", mobileSpan: "12" }
+  ) as GridColumnsData;
+
+  expect(appended.columns?.map((column) => column.id)).toEqual(["1", "2", "3"]);
+  expect(appended.columns?.[2]).toEqual(
+    expect.objectContaining({
+      id: "3",
+      label: "Three",
+    })
+  );
+});
+
 test("grid columns editors render expected sections", () => {
   const wizardHtml = renderToString(
     <GridColumnsWizardEditor
@@ -256,7 +581,8 @@ test("grid columns editors render expected sections", () => {
     />
   );
   expect(wizardHtml).toContain("Grid style");
-  expect(wizardHtml).toContain("Column configs");
+  expect(wizardHtml).toContain("Column count");
+  expect(wizardHtml).toContain('data-grid-columns-preset="two-equal"');
 
   const visualHtml = renderToString(
     <GridColumnsVisualEditor
@@ -269,6 +595,8 @@ test("grid columns editors render expected sections", () => {
   expect(visualHtml).toContain("Variant and layout structure");
   expect(visualHtml).toContain("Column sizing and labels");
   expect(visualHtml).toContain("Gap and column surface");
+  expect(visualHtml).toContain("Per-column surfaces and behavior");
+  expect(visualHtml).toContain('data-grid-columns-variant-preview="equal"');
 
   const advancedHtml = renderToString(
     <GridColumnsAdvancedEditor
@@ -279,5 +607,6 @@ test("grid columns editors render expected sections", () => {
     />
   );
   expect(advancedHtml).toContain("Technical layout tokens");
+  expect(advancedHtml).toContain("Per-column override tokens");
   expect(advancedHtml).toContain("Raw payload snapshot");
 });

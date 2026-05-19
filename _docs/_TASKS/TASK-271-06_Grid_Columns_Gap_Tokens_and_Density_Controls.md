@@ -6,7 +6,7 @@
 **Category:** Widgets + Grid Columns + Design Tokens
 **Estimated Effort:** Medium
 **Dependencies:** TASK-256-02, TASK-256-05-01, TASK-271-01
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -38,12 +38,12 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Expand approved bounded Grid Columns gap tokens.
-- [ ] Keep `gapX` and `gapY` independent in schema, editor, and runtime output.
-- [ ] Replace vague gap labels with readable scale labels.
-- [ ] Add optional density presets only as writes to existing `gapX/gapY`.
-- [ ] Add runtime, editor, validator, and token-adjacent tests.
-- [ ] Update Grid Columns docs/report evidence.
+- [x] Expand approved bounded Grid Columns gap tokens.
+- [x] Keep `gapX` and `gapY` independent in schema, editor, and runtime output.
+- [x] Replace vague gap labels with readable scale labels.
+- [x] Add optional density presets only as writes to existing `gapX/gapY`.
+- [x] Add runtime, editor, validator, and token-adjacent tests.
+- [x] Update Grid Columns docs/report evidence.
 
 ## Files to Change
 
@@ -153,3 +153,10 @@ No API routes are added.
   runtime classes.
 - `none` remains the only zero-gap token.
 - Editor labels explain the spacing scale without changing persisted values.
+
+## Completion Notes
+
+- 2026-05-19: Grid Columns now supports the expanded bounded gap token set and
+  keeps the existing separate `gapX` / `gapY` model intact.
+- 2026-05-19: editor labels now expose spacing scale copy (`Gap 6 - 24px`)
+  instead of opaque token-only wording.

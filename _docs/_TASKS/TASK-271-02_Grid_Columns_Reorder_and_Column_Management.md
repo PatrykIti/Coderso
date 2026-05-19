@@ -6,7 +6,7 @@
 **Category:** Widgets + Grid Columns + Admin UI + Runtime Render
 **Estimated Effort:** Large
 **Dependencies:** TASK-256-05-01, TASK-271-01
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -43,11 +43,11 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Reuse the shared Structure move controls or add a widget-local reorder affordance that still flows through `onBlockPatch`.
-- [ ] Preserve nested slot content while reordering column data.
-- [ ] Add drag-and-drop only if it fits existing admin UI patterns.
-- [ ] Add focused editor/data tests for reorder and boundary disabled states.
-- [ ] Update Grid Columns docs/report evidence.
+- [x] Reuse the shared Structure move controls or add a widget-local reorder affordance that still flows through `onBlockPatch`.
+- [x] Preserve nested slot content while reordering column data.
+- [x] Add drag-and-drop only if it fits existing admin UI patterns.
+- [x] Add focused editor/data tests for reorder and boundary disabled states.
+- [x] Update Grid Columns docs/report evidence.
 
 ## Files to Change
 
@@ -159,3 +159,11 @@ No API routes are added.
 - Legacy or unmatched `column:*` slots survive reorder without being silently
   deleted, and the existing shared mismatch warning remains the user-facing
   explanation when structure still drifts.
+
+## Completion Notes
+
+- 2026-05-19: Grid Columns now reorders column metadata and repeatable slot
+  payloads atomically through the live block patch seam, with exact slot-order
+  proof in the page-builder test lane.
+- 2026-05-19: the adapter append path now reconciles drifted configs instead of
+  duplicating phantom rows when Structure adds a repeatable column slot.

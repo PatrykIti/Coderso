@@ -6,7 +6,7 @@
 **Category:** Widgets + Grid Columns + Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-252, TASK-256-05-01, TASK-271
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -40,18 +40,18 @@ belong here:
 
 Out of scope:
 
-- Slot/config auto-sync, asymmetric span truthfulness, and span-sum validation;
-  TASK-256-05-01 owns those shared contract repairs.
+- Slot/config auto-sync is shared Structure-owner scope, while asymmetric span
+  truthfulness and span-sum validation route to TASK-313.
 - New custom CSS class fields; TASK-271-07 must reject or defer that report item
   unless a future safe-class policy exists.
 
 ## Sub-Tasks
 
-- [ ] Add dynamic Wizard label inputs for every configured Grid Columns column.
-- [ ] Rename column-count copy and keep TASK-256 slot-sync guidance accurate.
-- [ ] Add compact variant miniatures to the Visual variant cards.
-- [ ] Add bounded same-count layout preset application through the existing data model.
-- [ ] Update focused editor tests and Grid Columns docs/report evidence.
+- [x] Add dynamic Wizard label inputs for every configured Grid Columns column.
+- [x] Rename column-count copy and keep TASK-256 slot-sync guidance accurate.
+- [x] Add compact variant miniatures to the Visual variant cards.
+- [x] Add bounded same-count layout preset application through the existing data model.
+- [x] Update focused editor tests and Grid Columns docs/report evidence.
 
 ## Files to Change
 
@@ -169,3 +169,12 @@ No API routes are added.
   normalizer and preserve existing labels where possible.
 - This leaf never creates a column count/slot count mismatch from a data-only
   preset action.
+
+## Completion Notes
+
+- 2026-05-19: Wizard now renders label inputs for every configured column, the
+  count copy is user-facing, and Visual variant cards include compact
+  miniatures plus same-count layout presets.
+- 2026-05-19: when live repeatable slots already exist, local count edits are
+  locked to the shared Structure owner instead of creating new Grid Columns
+  drift from the editor path.

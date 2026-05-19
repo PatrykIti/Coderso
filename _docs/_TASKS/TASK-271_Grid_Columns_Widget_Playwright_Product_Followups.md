@@ -6,7 +6,7 @@
 **Category:** Widgets + Grid Columns + Admin UI + Runtime Render + Playwright QA
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-252, TASK-256, TASK-256-05-01, TASK-256-08
-**Status:** In Progress (2026-05-19)
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -101,13 +101,13 @@ inside its own implementation leaves.
 
 ## Sub-Tasks
 
-- [ ] TASK-271-01: Grid Columns Wizard, Presets, and Editor Guidance
-- [ ] TASK-271-02: Grid Columns Reorder and Column Management
-- [ ] TASK-271-03: Grid Columns Responsive Order, Visibility, and Wide Breakpoints
-- [ ] TASK-271-04: Grid Columns Per-Column Surface and Overflow
-- [ ] TASK-271-05: Grid Columns Height and Cross-Axis Alignment
-- [ ] TASK-271-06: Grid Columns Gap Tokens and Density Controls
-- [ ] TASK-271-07: Grid Columns Report, Docs, Changelog, and Closure
+- [x] TASK-271-01: Grid Columns Wizard, Presets, and Editor Guidance
+- [x] TASK-271-02: Grid Columns Reorder and Column Management
+- [x] TASK-271-03: Grid Columns Responsive Order, Visibility, and Wide Breakpoints
+- [x] TASK-271-04: Grid Columns Per-Column Surface and Overflow
+- [x] TASK-271-05: Grid Columns Height and Cross-Axis Alignment
+- [x] TASK-271-06: Grid Columns Gap Tokens and Density Controls
+- [x] TASK-271-07: Grid Columns Report, Docs, Changelog, and Closure
 
 ## Implementation Order
 
@@ -211,3 +211,18 @@ Implementation leaves:
   payloads unless the leaf documents and tests a migration/normalizer path.
 - Final closure records report evidence, task status updates, changelog, and the
   exact validation output.
+
+## Completion Notes
+
+- 2026-05-19: local implementation leaves `TASK-271-01` through `TASK-271-06`
+  shipped in this worktree, including the reopened repeatable-slot adapter and
+  local count-control hardening found during the agent audit.
+- 2026-05-19: `_docs/_WIDGETS/GRID_COLUMNS.md`,
+  `_docs/PLAYWRIGHT/REPORT_GRID_COLUMNS_WIDGET.md`,
+  `_docs/_TASKS/TASK-271*.md`, `_docs/_TASKS/README.md`, and the changelog are
+  synchronized to the final TASK-271/TASK-313 owner map.
+- 2026-05-19: all TASK-271-local drift passes were closed. The broad
+  `bun run test:bun` command was executed as required, but it still reports an
+  unrelated assistant DB failure in an unmodified owner outside the Grid
+  Columns scope; that blocker is recorded in `TASK-271-07` rather than treated
+  as a remaining TASK-271 defect.

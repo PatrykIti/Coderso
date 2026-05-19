@@ -6,7 +6,7 @@
 **Category:** Widgets + Grid Columns + Documentation + QA
 **Estimated Effort:** Medium
 **Dependencies:** TASK-271-01, TASK-271-02, TASK-271-03, TASK-271-04, TASK-271-05, TASK-271-06
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -32,12 +32,12 @@ implemented in TASK-271.
 
 ## Sub-Tasks
 
-- [ ] Build a finding-by-finding closure matrix for the Grid Columns report.
-- [ ] Update Grid Columns widget docs and any pack matrix entry if readiness changes.
-- [ ] Move TASK-271 task files and `_docs/_TASKS/README.md` through final statuses.
-- [ ] Add the TASK-271 changelog entry and changelog index row.
-- [ ] Record exact validation output and any blocked Playwright replay note.
-- [ ] Explicitly reject or defer W8 custom classes unless a safe class policy exists.
+- [x] Build a finding-by-finding closure matrix for the Grid Columns report.
+- [x] Update Grid Columns widget docs and any pack matrix entry if readiness changes.
+- [x] Move TASK-271 task files and `_docs/_TASKS/README.md` through final statuses.
+- [x] Add the TASK-271 changelog entry and changelog index row.
+- [x] Record exact validation output and any blocked Playwright replay note.
+- [x] Explicitly reject or defer W8 custom classes unless a safe class policy exists.
 
 ## Required Report Classification
 
@@ -147,3 +147,46 @@ No API routes are added.
 - Changelog, board stats, task statuses, and docs agree.
 - Final validation includes exact commands and results.
 - W8 is not silently implemented as raw arbitrary classes.
+
+## Progress Notes
+
+- 2026-05-19: the Playwright report is now rewritten as a closure matrix and
+  `_docs/_WIDGETS/GRID_COLUMNS.md` matches the shipped owner contract.
+- 2026-05-19: focused Grid Columns lanes, full lint, full Vitest, strict
+  security scan, precommit, and `bun run gates:coderso` are green.
+- 2026-05-19: the remaining blocker for final family `Done` status and changelog
+  closure is an unrelated deterministic failure in
+  `tests/unit/assistant/actionExecutorService.db.test.ts` during the broad
+  `bun run test:bun` lane.
+
+## Validation
+
+- `git diff --check`
+  - passed
+- `bun run lint`
+  - passed
+- `bun run test:vitest`
+  - passed (`593` files, `2784` tests)
+- `bun run test:vitest -- tests/vitest/widgets/gridColumns.test.tsx tests/vitest/ui/grid-columns-editor-wave.test.tsx tests/vitest/pageBuilder/blockSettings-wave.test.tsx`
+  - passed (`3` files, `31` tests)
+- `bun run scan:security:strict`
+  - passed (`0` blocking findings)
+- `bun run precommit`
+  - passed
+- `bun run gates:coderso`
+  - passed (`functional`, `ux`, `performance`, `security`, `reliability`)
+- `bun run test:bun`
+  - failed for an unrelated broad-lane assistant DB test:
+    `tests/unit/assistant/actionExecutorService.db.test.ts`
+  - failing assertion:
+    `content route actions persist detailPageId preserve, clear, and replace semantics`
+  - focused rerun of that single file reproduced the same failure outside the
+    Grid Columns owner/test surface
+
+## Completion Notes
+
+- 2026-05-19: report closure matrix, widget docs, task family docs, board rows,
+  and changelog are synchronized.
+- 2026-05-19: TASK-271 is closed for task scope. The only red validation signal
+  left after the required full-command pass is the unrelated broad Bun
+  assistant DB test documented above.

@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 273 tasks
-- **In Progress:** 5 tasks
-- **Done:** 1695 tasks
+- **To Do:** 266 tasks
+- **In Progress:** 4 tasks
+- **Done:** 1703 tasks
 
 ---
 
@@ -215,13 +215,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-272-07 | Hero Rich Copy and Social Proof Composition | Medium | Very Large | Add safe rich-copy support and a bounded social proof row for conversion Hero sections |
 | TASK-272-08 | Hero Responsive Images and LCP Priority | Medium | Large | Define Hero responsive image, lazy/eager loading, and fetch-priority policy without inventing media variants |
 | TASK-272-09 | Hero Report Docs Changelog and Closure | Medium | Medium | Refresh Hero report/docs/changelog/board and final validation evidence |
-| TASK-271-01 | Grid Columns Wizard, Presets, and Editor Guidance | High | Large | Expand all-column Wizard editing, variant previews, column-count copy, and same-count layout presets |
-| TASK-271-02 | Grid Columns Reorder and Column Management | High | Large | Use the existing Structure move seam to keep Grid Columns metadata and slot order aligned during reorder |
-| TASK-271-03 | Grid Columns Responsive Order, Visibility, and Wide Breakpoints | High | Very Large | Add mobile reverse, per-column visibility, and explicit `xl`/`2xl` span support |
-| TASK-271-04 | Grid Columns Per-Column Surface and Overflow | Medium | Large | Add bounded per-column card surface overrides and overflow controls without raw class strings |
-| TASK-271-05 | Grid Columns Height and Cross-Axis Alignment | Medium | Large | Replace hardcoded min-height with tokens and add per-column alignment overrides |
-| TASK-271-06 | Grid Columns Gap Tokens and Density Controls | Medium | Medium | Expand bounded gap tokens, keep independent gapX/gapY, and improve spacing labels |
-| TASK-271-07 | Grid Columns Report, Docs, Changelog, and Closure | Medium | Medium | Refresh Grid Columns report/docs/changelog/board and final validation evidence |
 | TASK-267 | Feature Grid Widget Playwright Product Followups | High | Very Large | Feature Grid-only follow-up family for `REPORT_FEATURE_GRID_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-267-01 | Feature Grid Variant Preview and Responsive Cards-4 Layout | High | Medium | Add variant preview affordances, repair cards-4 responsive product behavior, and keep columns truthfulness in TASK-256 |
 | TASK-267-02 | Feature Grid Card Reorder, Remove, and Item Management | High | Medium | Add drag reorder plus recoverable remove flow while preserving keyboard move fallback |
@@ -317,7 +310,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-271 | Grid Columns Widget Playwright Product Followups | High | Very Large | In progress: TASK-271 is being re-audited against live post-TASK-256/TASK-293 seams, with widget-local scope narrowed to product follow-ups and residual shared structural drift rerouted to TASK-313 |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
@@ -356,6 +348,14 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-312-03 | Gallery Mosaic Shared Residual Closure | Medium | Medium | Done: report/docs/changelog/board closure captured the shared reopen, while the later TASK-270 product rollout is now independently closed in the live checkout |
 | TASK-312-02 | Gallery Mosaic Shared Runtime Semantics Residuals | High | Large | Done: Gallery Mosaic runtime now uses explicit resolver branches, semantic figure/figcaption output, and current video controls without widening into TASK-270 product fields |
 | TASK-312-01 | Gallery Mosaic Shared Editor Truthfulness Residuals | High | Large | Done: Advanced is diagnostic-only, Wizard current-contract media selection now accepts image/video assets, and Visual exposes explicit current-media ownership copy |
+| TASK-271 | Grid Columns Widget Playwright Product Followups | High | Very Large | Done: Grid Columns follow-up scope is shipped end-to-end in the task worktree, with shared residual truthfulness intentionally routed to TASK-313 and the unrelated broad Bun assistant DB failure recorded separately in closure notes |
+| TASK-271-07 | Grid Columns Report, Docs, Changelog, and Closure | Medium | Medium | Done: report, widget docs, board, changelog, and exact validation evidence are synchronized, including the unrelated broad `bun run test:bun` blocker outside Grid Columns scope |
+| TASK-271-06 | Grid Columns Gap Tokens and Density Controls | Medium | Medium | Done: Grid Columns now supports the expanded bounded gap token set and readable scale labels while keeping separate `gapX` / `gapY` ownership |
+| TASK-271-05 | Grid Columns Height and Cross-Axis Alignment | Medium | Large | Done: Grid Columns now owns bounded min-height/mobile-min-height tokens and per-column `alignSelf` overrides without breaking the wrapper alignment default |
+| TASK-271-04 | Grid Columns Per-Column Surface and Overflow | Medium | Large | Done: Grid Columns now owns bounded per-column surface overrides, overflow control, and strict override validation without raw class strings |
+| TASK-271-03 | Grid Columns Responsive Order, Visibility, and Wide Breakpoints | High | Very Large | Done: Grid Columns now owns reverse-on-mobile, per-column visibility, and optional `xl` / `2xl` spans end-to-end |
+| TASK-271-02 | Grid Columns Reorder and Column Management | High | Large | Done: Grid Columns reorder now keeps column metadata and repeatable slot payloads aligned through the live block patch seam |
+| TASK-271-01 | Grid Columns Wizard, Presets, and Editor Guidance | High | Large | Done: Wizard now covers all column labels, bounded same-count presets, clearer count copy, and variant miniatures |
 | TASK-270 | Gallery Mosaic Widget Playwright Product Followups | High | Very Large | Done: all Gallery Mosaic report findings are now mapped to shared fixes, TASK-270 leaves, session/setup resolution, or an explicit defer reason, and the final report/docs/changelog closure is synchronized |
 | TASK-270-07 | Gallery Mosaic Report Docs Changelog and Closure | Medium | Medium | Done: the final closure pass mapped every report finding, synchronized widget/task/changelog docs, and hardened hover-caption keyboard access |
 | TASK-270-06 | Gallery Mosaic Config Import Export and Wizard Guidance | Low | Medium | Done: Wizard now points to the final authoring flow, and Advanced owns bounded JSON import/export with machine-readable validation errors |

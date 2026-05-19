@@ -6,7 +6,7 @@
 **Category:** Widgets + Grid Columns + Styling
 **Estimated Effort:** Large
 **Dependencies:** TASK-256-05-01, TASK-271-03
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -41,12 +41,12 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Add strict per-column surface override schema fields.
-- [ ] Merge per-column overrides with global cardized defaults at runtime.
-- [ ] Add Visual and Advanced controls that follow TASK-256 clear semantics.
-- [ ] Add bounded per-column overflow behavior.
-- [ ] Add runtime, editor, and validator tests for overrides and rejected fields.
-- [ ] Update Grid Columns docs/report evidence.
+- [x] Add strict per-column surface override schema fields.
+- [x] Merge per-column overrides with global cardized defaults at runtime.
+- [x] Add Visual and Advanced controls that follow TASK-256 clear semantics.
+- [x] Add bounded per-column overflow behavior.
+- [x] Add runtime, editor, and validator tests for overrides and rejected fields.
+- [x] Update Grid Columns docs/report evidence.
 
 ## Files to Change
 
@@ -187,3 +187,11 @@ No API routes are added.
   URLs, script-like fragments, and invalid hex lengths such as `#12345`.
 - A regression test proves `masonry-lite` still renders cardized surfaces when
   column-level surface overrides are present.
+
+## Completion Notes
+
+- 2026-05-19: per-column surface overrides now support bounded background,
+  border, radius, padding, and overflow fields without widening into arbitrary
+  class or style-string scope.
+- 2026-05-19: schema and validator coverage now reject unsafe override payloads
+  such as `url(...)` and unknown nested style keys.

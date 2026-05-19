@@ -6,6 +6,7 @@ import { afterEach, expect, test, vi } from "vitest";
 
 import { BlockSettings } from "../../../core/admin/ui/pages/builder/BlockSettings";
 import { createBlock } from "../../../core/admin/ui/pages/builder/blockUtils";
+import { createGridColumnsWidget } from "../../../core/widgets/core/gridColumns";
 import type { Block, WidgetDefinition } from "../../../core/admin/ui/pages/builder/types";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -517,6 +518,80 @@ test("BlockSettings keeps repeatable slot metadata in sync across add remove and
         },
       })
     );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("BlockSettings reorders grid columns data through repeatable slot sync", () => {
+  const gridWidget = createGridColumnsWidget({
+    wizard: Dummy,
+    visual: Dummy,
+    advanced: Dummy,
+  }) as unknown as WidgetDefinition<Record<string, unknown>>;
+  const nestedOne = { ...createBlock("hero"), id: "grid-nested-1" };
+  const nestedTwo = { ...createBlock("newsletter"), id: "grid-nested-2" };
+  const initialBlock: Block = {
+    id: "grid-columns-1",
+    type: "grid-columns",
+    variant: "equal",
+    editor: { mode: "visual", wizardCompleted: true },
+    data: {
+      columns: [
+        { id: "1", label: "Lead", desktopSpan: "8", tabletSpan: "6", mobileSpan: "12" },
+        { id: "2", label: "Side", desktopSpan: "4", tabletSpan: "6", mobileSpan: "12" },
+      ],
+    },
+    slots: {
+      "column:1": [nestedOne],
+      "column:2": [nestedTwo],
+    },
+  };
+  const onChangeSpy = vi.fn();
+
+  const Harness = () => {
+    const [block, setBlock] = useState<Block>(initialBlock);
+    return (
+      <BlockSettings
+        block={block}
+        widget={gridWidget}
+        onChange={(next) => {
+          onChangeSpy(next);
+          setBlock(next);
+        }}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    clickByText(view.container, "Move down Column 1 slot");
+    const reordered = onChangeSpy.mock.lastCall?.[0] as Block;
+
+    expect(reordered.data).toEqual(
+      expect.objectContaining({
+        columns: [
+          expect.objectContaining({
+            id: "2",
+            label: "Side",
+            desktopSpan: "4",
+            tabletSpan: "6",
+            mobileSpan: "12",
+          }),
+          expect.objectContaining({
+            id: "1",
+            label: "Lead",
+            desktopSpan: "8",
+            tabletSpan: "6",
+            mobileSpan: "12",
+          }),
+        ],
+      })
+    );
+    expect(Object.keys(reordered.slots ?? {})).toEqual(["column:2", "column:1"]);
+    expect(reordered.slots?.["column:2"]).toEqual([nestedTwo]);
+    expect(reordered.slots?.["column:1"]).toEqual([nestedOne]);
   } finally {
     view.cleanup();
   }

@@ -2,7 +2,11 @@ import type { ComponentType, CSSProperties, ReactNode } from "react";
 
 import { renderEditorPlaceholder } from "../renderContext";
 import { WidgetRenderer } from "../renderers/widgetRenderer";
-import { parseRepeatableSlotId, resolveWidgetSlotTargets } from "../slots";
+import {
+  parseRepeatableSlotId,
+  reorderRepeatableSlotMap,
+  resolveWidgetSlotTargets,
+} from "../slots";
 import type {
   DeviceTarget,
   WidgetBlock,
@@ -10,7 +14,7 @@ import type {
   WidgetEditorProps,
   WidgetRenderContext,
 } from "../types";
-import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
+import { compactObject, compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export const gridColumnsSpanTokens = [
   "1",
@@ -26,10 +30,29 @@ export const gridColumnsSpanTokens = [
   "11",
   "12",
 ] as const;
-export const gridColumnsGapTokens = ["none", "2", "3", "4", "6", "8"] as const;
+export const gridColumnsGapTokens = [
+  "none",
+  "1",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+  "8",
+  "10",
+  "12",
+] as const;
 export const gridColumnsBorderWidthTokens = ["0", "1", "2", "3"] as const;
 export const gridColumnsRadiusTokens = ["none", "lg", "xl", "2xl"] as const;
 export const gridColumnsPaddingTokens = ["none", "2", "3", "4", "5", "6"] as const;
+export const gridColumnsMinHeightTokens = ["none", "sm", "md", "lg", "xl"] as const;
+export const gridColumnsOverflowTokens = ["visible", "hidden"] as const;
+export const gridColumnsSelfAlignTokens = ["inherit", "start", "center", "end", "stretch"] as const;
+
+const gridColumnsColorValueSchemaPattern =
+  "^(?:#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|var\\(--color-[a-z0-9-]+\\))$";
+const gridColumnsColorValuePattern = new RegExp(gridColumnsColorValueSchemaPattern);
 
 export type GridColumnsVariantId = "equal" | "asymmetric" | "masonry-lite";
 export type GridColumnsSpan = (typeof gridColumnsSpanTokens)[number];
@@ -37,7 +60,20 @@ export type GridColumnsGap = (typeof gridColumnsGapTokens)[number];
 export type GridColumnsBorderWidth = (typeof gridColumnsBorderWidthTokens)[number];
 export type GridColumnsRadius = (typeof gridColumnsRadiusTokens)[number];
 export type GridColumnsPadding = (typeof gridColumnsPaddingTokens)[number];
+export type GridColumnsMinHeight = (typeof gridColumnsMinHeightTokens)[number];
+export type GridColumnsOverflow = (typeof gridColumnsOverflowTokens)[number];
+export type GridColumnsSelfAlign = (typeof gridColumnsSelfAlignTokens)[number];
 export type GridColumnsAlign = "start" | "center" | "end" | "stretch";
+export type GridColumnsColorValue = string;
+export type GridColumnsColumnStyle = {
+  surface?: "inherit" | "on";
+  background?: GridColumnsColorValue;
+  borderColor?: GridColumnsColorValue;
+  borderWidth?: GridColumnsBorderWidth;
+  radius?: GridColumnsRadius;
+  padding?: GridColumnsPadding;
+  overflow?: GridColumnsOverflow;
+};
 
 export type GridColumnsColumn = {
   id?: string;
@@ -45,6 +81,15 @@ export type GridColumnsColumn = {
   desktopSpan?: GridColumnsSpan;
   tabletSpan?: GridColumnsSpan;
   mobileSpan?: GridColumnsSpan;
+  xlSpan?: GridColumnsSpan;
+  twoXlSpan?: GridColumnsSpan;
+  hideOnMobile?: boolean;
+  hideOnTablet?: boolean;
+  hideOnDesktop?: boolean;
+  minHeight?: GridColumnsMinHeight;
+  mobileMinHeight?: GridColumnsMinHeight;
+  alignSelf?: GridColumnsSelfAlign;
+  style?: GridColumnsColumnStyle;
 };
 
 export type GridColumnsData = {
@@ -53,6 +98,7 @@ export type GridColumnsData = {
     gapX?: GridColumnsGap;
     gapY?: GridColumnsGap;
     align?: GridColumnsAlign;
+    reverseOnMobile?: boolean;
   };
   style?: {
     cardizeColumns?: boolean;
@@ -92,6 +138,33 @@ export const gridColumnsSchema = {
           desktopSpan: { enum: [...gridColumnsSpanTokens] },
           tabletSpan: { enum: [...gridColumnsSpanTokens] },
           mobileSpan: { enum: [...gridColumnsSpanTokens] },
+          xlSpan: { enum: [...gridColumnsSpanTokens] },
+          twoXlSpan: { enum: [...gridColumnsSpanTokens] },
+          hideOnMobile: { type: "boolean" },
+          hideOnTablet: { type: "boolean" },
+          hideOnDesktop: { type: "boolean" },
+          minHeight: { enum: [...gridColumnsMinHeightTokens] },
+          mobileMinHeight: { enum: [...gridColumnsMinHeightTokens] },
+          alignSelf: { enum: [...gridColumnsSelfAlignTokens] },
+          style: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              surface: { enum: ["inherit", "on"] },
+              background: {
+                type: "string",
+                pattern: gridColumnsColorValueSchemaPattern,
+              },
+              borderColor: {
+                type: "string",
+                pattern: gridColumnsColorValueSchemaPattern,
+              },
+              borderWidth: { enum: [...gridColumnsBorderWidthTokens] },
+              radius: { enum: [...gridColumnsRadiusTokens] },
+              padding: { enum: [...gridColumnsPaddingTokens] },
+              overflow: { enum: [...gridColumnsOverflowTokens] },
+            },
+          },
         },
       },
     },
@@ -102,6 +175,7 @@ export const gridColumnsSchema = {
         gapX: { enum: [...gridColumnsGapTokens] },
         gapY: { enum: [...gridColumnsGapTokens] },
         align: { enum: ["start", "center", "end", "stretch"] },
+        reverseOnMobile: { type: "boolean" },
       },
     },
     style: {
@@ -128,6 +202,7 @@ export const gridColumnsDefaults: GridColumnsData = {
     gapX: "6",
     gapY: "6",
     align: "start",
+    reverseOnMobile: false,
   },
   style: {
     cardizeColumns: false,
@@ -187,22 +262,62 @@ const desktopSpanClassMap: Record<GridColumnsSpan, string> = {
   "12": "lg:col-span-12",
 };
 
+const xlSpanClassMap: Record<GridColumnsSpan, string> = {
+  "1": "xl:col-span-1",
+  "2": "xl:col-span-2",
+  "3": "xl:col-span-3",
+  "4": "xl:col-span-4",
+  "5": "xl:col-span-5",
+  "6": "xl:col-span-6",
+  "7": "xl:col-span-7",
+  "8": "xl:col-span-8",
+  "9": "xl:col-span-9",
+  "10": "xl:col-span-10",
+  "11": "xl:col-span-11",
+  "12": "xl:col-span-12",
+};
+
+const twoXlSpanClassMap: Record<GridColumnsSpan, string> = {
+  "1": "2xl:col-span-1",
+  "2": "2xl:col-span-2",
+  "3": "2xl:col-span-3",
+  "4": "2xl:col-span-4",
+  "5": "2xl:col-span-5",
+  "6": "2xl:col-span-6",
+  "7": "2xl:col-span-7",
+  "8": "2xl:col-span-8",
+  "9": "2xl:col-span-9",
+  "10": "2xl:col-span-10",
+  "11": "2xl:col-span-11",
+  "12": "2xl:col-span-12",
+};
+
 const gapXClassMap: Record<GridColumnsGap, string> = {
   none: "gap-x-0",
+  "1": "gap-x-1",
   "2": "gap-x-2",
   "3": "gap-x-3",
   "4": "gap-x-4",
+  "5": "gap-x-5",
   "6": "gap-x-6",
+  "7": "gap-x-7",
   "8": "gap-x-8",
+  "10": "gap-x-10",
+  "12": "gap-x-12",
 };
 
 const gapYClassMap: Record<GridColumnsGap, string> = {
   none: "gap-y-0",
+  "1": "gap-y-1",
   "2": "gap-y-2",
   "3": "gap-y-3",
   "4": "gap-y-4",
+  "5": "gap-y-5",
   "6": "gap-y-6",
+  "7": "gap-y-7",
   "8": "gap-y-8",
+  "10": "gap-y-10",
+  "12": "gap-y-12",
 };
 
 const alignClassMap: Record<GridColumnsAlign, string> = {
@@ -210,6 +325,15 @@ const alignClassMap: Record<GridColumnsAlign, string> = {
   center: "items-center",
   end: "items-end",
   stretch: "items-stretch",
+};
+
+const mobileReverseOrderClassMap: Record<number, string> = {
+  1: "order-1 md:order-none",
+  2: "order-2 md:order-none",
+  3: "order-3 md:order-none",
+  4: "order-4 md:order-none",
+  5: "order-5 md:order-none",
+  6: "order-6 md:order-none",
 };
 
 const borderWidthValueMap: Record<GridColumnsBorderWidth, string> = {
@@ -235,6 +359,29 @@ const paddingClassMap: Record<GridColumnsPadding, string> = {
   "6": "p-6",
 };
 
+const minHeightClassMap: Record<GridColumnsMinHeight, string> = {
+  none: "min-h-0",
+  sm: "min-h-[4rem]",
+  md: "min-h-[6rem]",
+  lg: "min-h-[8rem]",
+  xl: "min-h-[10rem]",
+};
+
+const tabletMinHeightClassMap: Record<GridColumnsMinHeight, string> = {
+  none: "md:min-h-0",
+  sm: "md:min-h-[4rem]",
+  md: "md:min-h-[6rem]",
+  lg: "md:min-h-[8rem]",
+  xl: "md:min-h-[10rem]",
+};
+
+const selfAlignClassMap: Record<Exclude<GridColumnsSelfAlign, "inherit">, string> = {
+  start: "self-start",
+  center: "self-center",
+  end: "self-end",
+  stretch: "self-stretch",
+};
+
 const resolveGapToken = (value: string | undefined, fallback: GridColumnsGap): GridColumnsGap =>
   gridColumnsGapTokens.includes(value as GridColumnsGap) ? (value as GridColumnsGap) : fallback;
 
@@ -243,15 +390,57 @@ const resolveAlignToken = (value: string | undefined): GridColumnsAlign => {
   return "start";
 };
 
+const normalizeColumnVisibility = (
+  column: Pick<GridColumnsColumn, "hideOnMobile" | "hideOnTablet" | "hideOnDesktop">
+) => {
+  const hideOnMobile = typeof column.hideOnMobile === "boolean" ? column.hideOnMobile : false;
+  const hideOnTablet = typeof column.hideOnTablet === "boolean" ? column.hideOnTablet : false;
+  const hideOnDesktop = typeof column.hideOnDesktop === "boolean" ? column.hideOnDesktop : false;
+
+  if (hideOnMobile && hideOnTablet && hideOnDesktop) {
+    return {
+      hideOnMobile: false,
+      hideOnTablet: false,
+      hideOnDesktop: false,
+    };
+  }
+
+  return {
+    hideOnMobile,
+    hideOnTablet,
+    hideOnDesktop,
+  };
+};
+
+const resolveColumnVisibilityClasses = (
+  column: Pick<ResolvedGridColumn, "hideOnMobile" | "hideOnTablet" | "hideOnDesktop">
+) => {
+  if (column.hideOnMobile && column.hideOnTablet) return "hidden lg:block";
+  if (column.hideOnMobile && column.hideOnDesktop) return "hidden md:block lg:hidden";
+  if (column.hideOnTablet && column.hideOnDesktop) return "md:hidden";
+  if (column.hideOnMobile) return "hidden md:block";
+  if (column.hideOnTablet) return "md:hidden lg:block";
+  if (column.hideOnDesktop) return "lg:hidden";
+  return undefined;
+};
+
 const resolveBorderWidthToken = (value: string | undefined): GridColumnsBorderWidth => {
   if (value === "0" || value === "2" || value === "3") return value;
   return "1";
 };
 
+const resolveOptionalBorderWidthToken = (
+  value: string | undefined
+): GridColumnsBorderWidth | undefined =>
+  value === "0" || value === "1" || value === "2" || value === "3" ? value : undefined;
+
 const resolveRadiusToken = (value: string | undefined): GridColumnsRadius => {
   if (value === "none" || value === "lg" || value === "2xl") return value;
   return "xl";
 };
+
+const resolveOptionalRadiusToken = (value: string | undefined): GridColumnsRadius | undefined =>
+  value === "none" || value === "lg" || value === "xl" || value === "2xl" ? value : undefined;
 
 const resolvePaddingToken = (value: string | undefined): GridColumnsPadding => {
   if (value === "none" || value === "2" || value === "3" || value === "5" || value === "6")
@@ -259,13 +448,55 @@ const resolvePaddingToken = (value: string | undefined): GridColumnsPadding => {
   return "4";
 };
 
+const resolveOptionalPaddingToken = (value: string | undefined): GridColumnsPadding | undefined =>
+  value === "none" ||
+  value === "2" ||
+  value === "3" ||
+  value === "4" ||
+  value === "5" ||
+  value === "6"
+    ? value
+    : undefined;
+
 const resolveSpanToken = (value: string | undefined, fallback: GridColumnsSpan): GridColumnsSpan =>
   gridColumnsSpanTokens.includes(value as GridColumnsSpan) ? (value as GridColumnsSpan) : fallback;
+
+const resolveOptionalMinHeightToken = (
+  value: string | undefined
+): GridColumnsMinHeight | undefined =>
+  gridColumnsMinHeightTokens.includes(value as GridColumnsMinHeight)
+    ? (value as GridColumnsMinHeight)
+    : undefined;
+
+const resolveOptionalOverflowToken = (
+  value: string | undefined
+): GridColumnsOverflow | undefined =>
+  value === "visible" || value === "hidden" ? value : undefined;
+
+const resolveOptionalSelfAlignToken = (
+  value: string | undefined
+): GridColumnsSelfAlign | undefined =>
+  value === "start" || value === "center" || value === "end" || value === "stretch"
+    ? value
+    : undefined;
 
 const clampColumnsCount = (value: number) => {
   if (!Number.isFinite(value)) return gridColumnsColumnMin;
   return Math.max(gridColumnsColumnMin, Math.min(gridColumnsColumnMax, Math.floor(value)));
 };
+
+export function buildDefaultGridColumnsColumn(
+  instanceId: string,
+  index: number
+): GridColumnsColumn {
+  return {
+    id: instanceId,
+    label: `Column ${index + 1}`,
+    desktopSpan: "6",
+    tabletSpan: "6",
+    mobileSpan: "12",
+  };
+}
 
 const resolveColumnId = (value: string | undefined, index: number, used: Set<string>) => {
   const base = value?.trim() || String(index + 1);
@@ -282,6 +513,26 @@ const resolveColumnId = (value: string | undefined, index: number, used: Set<str
   used.add(resolved);
   return resolved;
 };
+
+export function normalizeGridColumnsColorValue(value: unknown): GridColumnsColorValue | undefined {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return gridColumnsColorValuePattern.test(trimmed) ? trimmed : undefined;
+}
+
+function normalizeGridColumnsColumnStyle(
+  style: GridColumnsColumnStyle | undefined
+): GridColumnsColumnStyle | undefined {
+  return compactObject({
+    surface: style?.surface === "on" ? "on" : undefined,
+    background: normalizeGridColumnsColorValue(style?.background),
+    borderColor: normalizeGridColumnsColorValue(style?.borderColor),
+    borderWidth: resolveOptionalBorderWidthToken(style?.borderWidth),
+    radius: resolveOptionalRadiusToken(style?.radius),
+    padding: resolveOptionalPaddingToken(style?.padding),
+    overflow: resolveOptionalOverflowToken(style?.overflow) === "hidden" ? "hidden" : undefined,
+  });
+}
 
 const fallbackSpanForVariant = (
   variant: GridColumnsVariantId,
@@ -338,13 +589,28 @@ export function normalizeGridColumnsData(data: GridColumnsData): GridColumnsData
   for (let index = 0; index < targetCount; index += 1) {
     const base = source[index] ?? {};
     const id = resolveColumnId(base.id, index, usedIds);
-    const label = base.label?.trim() || `Column ${index + 1}`;
+    const label = base.label?.trim() || buildDefaultGridColumnsColumn(id, index).label;
+    const minHeight = resolveOptionalMinHeightToken(base.minHeight);
+    const mobileMinHeight = resolveOptionalMinHeightToken(base.mobileMinHeight);
+    const effectiveMinHeight = minHeight ?? "md";
     normalized.push({
-      id,
+      ...buildDefaultGridColumnsColumn(id, index),
       label,
       desktopSpan: resolveSpanToken(base.desktopSpan, "6"),
       tabletSpan: resolveSpanToken(base.tabletSpan, "6"),
       mobileSpan: resolveSpanToken(base.mobileSpan, "12"),
+      xlSpan: gridColumnsSpanTokens.includes(base.xlSpan as GridColumnsSpan)
+        ? (base.xlSpan as GridColumnsSpan)
+        : undefined,
+      twoXlSpan: gridColumnsSpanTokens.includes(base.twoXlSpan as GridColumnsSpan)
+        ? (base.twoXlSpan as GridColumnsSpan)
+        : undefined,
+      ...normalizeColumnVisibility(base),
+      minHeight: minHeight === "md" ? undefined : minHeight,
+      mobileMinHeight:
+        mobileMinHeight && mobileMinHeight !== effectiveMinHeight ? mobileMinHeight : undefined,
+      alignSelf: resolveOptionalSelfAlignToken(base.alignSelf),
+      style: normalizeGridColumnsColumnStyle(base.style),
     });
   }
 
@@ -354,6 +620,8 @@ export function normalizeGridColumnsData(data: GridColumnsData): GridColumnsData
       gapX: resolveGapToken(data.layout?.gapX, "6"),
       gapY: resolveGapToken(data.layout?.gapY, "6"),
       align: resolveAlignToken(data.layout?.align),
+      reverseOnMobile:
+        typeof data.layout?.reverseOnMobile === "boolean" ? data.layout.reverseOnMobile : false,
     },
     style: {
       cardizeColumns:
@@ -371,6 +639,87 @@ export function normalizeGridColumnsData(data: GridColumnsData): GridColumnsData
   };
 }
 
+export function reorderGridColumnsDataByInstanceIds(
+  data: GridColumnsData,
+  orderedInstanceIds: string[]
+): GridColumnsData {
+  const current = normalizeGridColumnsData(data);
+  const columns = current.columns ?? [];
+  const byId = new Map(columns.map((column) => [column.id ?? "", column] as const));
+  const used = new Set<string>();
+  const reordered: GridColumnsColumn[] = [];
+
+  for (const instanceId of orderedInstanceIds) {
+    if (used.has(instanceId)) continue;
+    const column = byId.get(instanceId);
+    if (!column) continue;
+    reordered.push(column);
+    used.add(instanceId);
+  }
+
+  for (const column of columns) {
+    const columnId = column.id ?? "";
+    if (!used.has(columnId)) {
+      reordered.push(column);
+    }
+  }
+
+  return normalizeGridColumnsData({
+    ...current,
+    columns: reordered,
+  });
+}
+
+function appendGridColumnsDataItem(
+  data: GridColumnsData,
+  nextItem: GridColumnsColumn
+): GridColumnsData {
+  const current = normalizeGridColumnsData(data);
+  const currentColumns = current.columns ?? [];
+  const uniqueColumns =
+    reorderGridColumnsDataByInstanceIds(
+      current,
+      currentColumns.map((column) => column.id ?? "")
+    ).columns ?? [];
+  const nextId = String(nextItem.id ?? "");
+  const existingIndex = uniqueColumns.findIndex((column) => column.id === nextId);
+  const reconciledColumns =
+    existingIndex >= 0 ? uniqueColumns.slice(0, existingIndex + 1) : [...uniqueColumns, nextItem];
+
+  return reorderGridColumnsDataByInstanceIds(
+    {
+      ...current,
+      columns: reconciledColumns,
+    },
+    reconciledColumns.map((column) => column.id ?? "")
+  );
+}
+
+export function reorderGridColumnsColumnsAndSlots({
+  data,
+  slots,
+  orderedInstanceIds,
+}: {
+  data: GridColumnsData;
+  slots?: Record<string, WidgetBlock[]>;
+  orderedInstanceIds: string[];
+}): {
+  data: GridColumnsData;
+  slots?: Record<string, WidgetBlock[]>;
+} {
+  if (!slots) {
+    return {
+      data: reorderGridColumnsDataByInstanceIds(data, orderedInstanceIds),
+      slots,
+    };
+  }
+
+  return {
+    data: reorderGridColumnsDataByInstanceIds(data, orderedInstanceIds),
+    slots: reorderRepeatableSlotMap(slots, gridColumnsSlot.id, orderedInstanceIds),
+  };
+}
+
 type ResolvedGridColumn = {
   slotId: string;
   instanceId: string;
@@ -378,6 +727,15 @@ type ResolvedGridColumn = {
   desktopSpan: GridColumnsSpan;
   tabletSpan: GridColumnsSpan;
   mobileSpan: GridColumnsSpan;
+  xlSpan?: GridColumnsSpan;
+  twoXlSpan?: GridColumnsSpan;
+  hideOnMobile: boolean;
+  hideOnTablet: boolean;
+  hideOnDesktop: boolean;
+  minHeight?: GridColumnsMinHeight;
+  mobileMinHeight?: GridColumnsMinHeight;
+  alignSelf?: GridColumnsSelfAlign;
+  style?: GridColumnsColumnStyle;
   blocks: WidgetBlock[];
 };
 
@@ -411,6 +769,17 @@ const resolveGridColumnsForSlots = ({
         source?.desktopSpan,
         fallbackSpanForVariant(variant, "desktop", index, columnsCount)
       ),
+      xlSpan: gridColumnsSpanTokens.includes(source?.xlSpan as GridColumnsSpan)
+        ? (source?.xlSpan as GridColumnsSpan)
+        : undefined,
+      twoXlSpan: gridColumnsSpanTokens.includes(source?.twoXlSpan as GridColumnsSpan)
+        ? (source?.twoXlSpan as GridColumnsSpan)
+        : undefined,
+      ...normalizeColumnVisibility(source ?? {}),
+      minHeight: resolveOptionalMinHeightToken(source?.minHeight),
+      mobileMinHeight: resolveOptionalMinHeightToken(source?.mobileMinHeight),
+      alignSelf: resolveOptionalSelfAlignToken(source?.alignSelf),
+      style: normalizeGridColumnsColumnStyle(source?.style),
       tabletSpan: resolveSpanToken(
         source?.tabletSpan,
         fallbackSpanForVariant(variant, "tablet", index, columnsCount)
@@ -423,6 +792,57 @@ const resolveGridColumnsForSlots = ({
     };
   });
 };
+
+function hasGridColumnsColumnSurfaceOverrides(style: GridColumnsColumnStyle | undefined): boolean {
+  if (!style) return false;
+  return Boolean(
+    style.surface === "on" ||
+    style.background ||
+    style.borderColor ||
+    style.borderWidth ||
+    style.radius ||
+    style.padding ||
+    style.overflow === "hidden"
+  );
+}
+
+function resolveGridColumnsColumnSurface(
+  globalStyle: NonNullable<GridColumnsData["style"]>,
+  column: ResolvedGridColumn,
+  resolvedVariant: GridColumnsVariantId
+) {
+  const override = column.style;
+  const forcedCardized = resolvedVariant === "masonry-lite";
+  const cardized =
+    forcedCardized ||
+    Boolean(globalStyle.cardizeColumns) ||
+    hasGridColumnsColumnSurfaceOverrides(override);
+  return {
+    cardized,
+    overflow: override?.overflow ?? "visible",
+    backgroundColor: resolveClearableStyleValue(
+      override?.background ?? globalStyle.columnBackground
+    ),
+    borderColor: resolveClearableStyleValue(override?.borderColor ?? globalStyle.columnBorderColor),
+    borderWidth: override?.borderWidth ?? globalStyle.columnBorderWidth ?? "1",
+    radius: override?.radius ?? globalStyle.columnRadius ?? "xl",
+    padding: override?.padding ?? globalStyle.columnPadding ?? "4",
+  };
+}
+
+function resolveGridColumnsColumnMinHeightClasses(column: ResolvedGridColumn) {
+  const minHeight = column.minHeight ?? "md";
+  const mobileMinHeight = column.mobileMinHeight;
+  if (!mobileMinHeight || mobileMinHeight === minHeight) {
+    return minHeightClassMap[minHeight];
+  }
+  return joinClasses(minHeightClassMap[mobileMinHeight], tabletMinHeightClassMap[minHeight]);
+}
+
+function resolveGridColumnsColumnAlignSelfClass(column: ResolvedGridColumn) {
+  if (!column.alignSelf || column.alignSelf === "inherit") return undefined;
+  return selfAlignClassMap[column.alignSelf];
+}
 
 export function GridColumnsBlock({
   data,
@@ -449,16 +869,7 @@ export function GridColumnsBlock({
   });
   const layout = normalized.layout ?? gridColumnsDefaults.layout!;
   const style = normalized.style ?? gridColumnsDefaults.style!;
-  const cardized = style.cardizeColumns || resolvedVariant === "masonry-lite";
-
-  const columnStyle: CSSProperties | undefined = cardized
-    ? compactStyle({
-        backgroundColor: resolveClearableStyleValue(style.columnBackground),
-        borderColor: resolveClearableStyleValue(style.columnBorderColor),
-        borderStyle: "solid",
-        borderWidth: borderWidthValueMap[style.columnBorderWidth ?? "1"] ?? "1px",
-      })
-    : undefined;
+  const reverseOnMobile = Boolean(layout.reverseOnMobile);
 
   return (
     <div
@@ -468,6 +879,7 @@ export function GridColumnsBlock({
       data-grid-columns-align={layout.align ?? "start"}
       data-grid-columns-gap-x={layout.gapX ?? "6"}
       data-grid-columns-gap-y={layout.gapY ?? "6"}
+      data-grid-columns-reverse-mobile={reverseOnMobile ? "true" : "false"}
     >
       <div
         className={joinClasses(
@@ -477,54 +889,84 @@ export function GridColumnsBlock({
           alignClassMap[layout.align ?? "start"] ?? "items-start"
         )}
       >
-        {columns.map((column) => (
-          <div
-            key={column.slotId}
-            className={joinClasses(
-              "min-w-0",
-              spanClassMap[column.mobileSpan],
-              tabletSpanClassMap[column.tabletSpan],
-              desktopSpanClassMap[column.desktopSpan]
-            )}
-            data-grid-column={column.slotId}
-            data-grid-column-instance={column.instanceId}
-          >
-            <div
-              className={joinClasses(
-                "h-full min-h-[6rem]",
-                cardized ? "border" : "",
-                cardized ? (paddingClassMap[style.columnPadding ?? "4"] ?? "p-4") : "",
-                cardized ? (radiusClassMap[style.columnRadius ?? "xl"] ?? "rounded-xl") : ""
-              )}
-              style={columnStyle}
-            >
-              {renderContext?.mode === "editor-preview" ||
-              renderContext?.mode === "admin-preview" ? (
-                <div className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-text)]/65">
-                  {column.label}
-                </div>
-              ) : null}
-              {column.blocks.length > 0 ? (
-                <div className="space-y-4">
-                  {column.blocks.map((block) =>
-                    renderBlock ? (
-                      <div key={block.id}>{renderBlock(block, renderContext)}</div>
-                    ) : (
-                      <WidgetRenderer
-                        key={block.id}
-                        block={block}
-                        previewDevice={previewDevice}
-                        renderContext={renderContext}
-                      />
-                    )
+        {columns.map((column, index) =>
+          (() => {
+            const columnSurface = resolveGridColumnsColumnSurface(style, column, resolvedVariant);
+            const columnStyle: CSSProperties | undefined = columnSurface.cardized
+              ? compactStyle({
+                  backgroundColor: columnSurface.backgroundColor,
+                  borderColor: columnSurface.borderColor,
+                  borderStyle: "solid",
+                  borderWidth: borderWidthValueMap[columnSurface.borderWidth] ?? "1px",
+                })
+              : undefined;
+
+            return (
+              <div
+                key={column.slotId}
+                className={joinClasses(
+                  "min-w-0",
+                  reverseOnMobile
+                    ? mobileReverseOrderClassMap[
+                        Math.max(
+                          1,
+                          Math.min(columns.length - index, 6)
+                        ) as keyof typeof mobileReverseOrderClassMap
+                      ]
+                    : undefined,
+                  resolveColumnVisibilityClasses(column),
+                  resolveGridColumnsColumnAlignSelfClass(column),
+                  spanClassMap[column.mobileSpan],
+                  tabletSpanClassMap[column.tabletSpan],
+                  desktopSpanClassMap[column.desktopSpan],
+                  column.xlSpan ? xlSpanClassMap[column.xlSpan] : undefined,
+                  column.twoXlSpan ? twoXlSpanClassMap[column.twoXlSpan] : undefined
+                )}
+                data-grid-column={column.slotId}
+                data-grid-column-instance={column.instanceId}
+              >
+                <div
+                  className={joinClasses(
+                    "h-full",
+                    resolveGridColumnsColumnMinHeightClasses(column),
+                    columnSurface.cardized ? "border" : "",
+                    columnSurface.cardized ? (paddingClassMap[columnSurface.padding] ?? "p-4") : "",
+                    columnSurface.cardized
+                      ? (radiusClassMap[columnSurface.radius] ?? "rounded-xl")
+                      : "",
+                    columnSurface.overflow === "hidden" ? "overflow-hidden" : undefined
+                  )}
+                  style={columnStyle}
+                >
+                  {renderContext?.mode === "editor-preview" ||
+                  renderContext?.mode === "admin-preview" ? (
+                    <div className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-text)]/65">
+                      {column.label}
+                    </div>
+                  ) : null}
+                  {column.blocks.length > 0 ? (
+                    <div className="space-y-4">
+                      {column.blocks.map((block) =>
+                        renderBlock ? (
+                          <div key={block.id}>{renderBlock(block, renderContext)}</div>
+                        ) : (
+                          <WidgetRenderer
+                            key={block.id}
+                            block={block}
+                            previewDevice={previewDevice}
+                            renderContext={renderContext}
+                          />
+                        )
+                      )}
+                    </div>
+                  ) : (
+                    renderEditorPlaceholder("Empty column.", renderContext)
                   )}
                 </div>
-              ) : (
-                renderEditorPlaceholder("Empty column.", renderContext)
-              )}
-            </div>
-          </div>
-        ))}
+              </div>
+            );
+          })()
+        )}
       </div>
     </div>
   );
@@ -564,6 +1006,24 @@ export function createGridColumnsWidget(editors: {
     editorCapabilities: {
       visualOwnsVariantSelection: true,
     },
+    repeatableSlotSync: [
+      {
+        definitionId: gridColumnsSlot.id,
+        buildDefaultItem: (instanceId, nextIndex) =>
+          buildDefaultGridColumnsColumn(instanceId, nextIndex),
+        appendItem: (data, nextItem) =>
+          appendGridColumnsDataItem(data as GridColumnsData, nextItem as GridColumnsColumn),
+        removeItemByInstanceId: (data, instanceId) =>
+          normalizeGridColumnsData({
+            ...(data as GridColumnsData),
+            columns: (normalizeGridColumnsData(data as GridColumnsData).columns ?? []).filter(
+              (column) => column.id !== instanceId
+            ),
+          }),
+        reorderItemsByInstanceIds: (data, orderedInstanceIds) =>
+          reorderGridColumnsDataByInstanceIds(data as GridColumnsData, orderedInstanceIds),
+      },
+    ],
     render: GridColumnsBlock,
   };
 }
