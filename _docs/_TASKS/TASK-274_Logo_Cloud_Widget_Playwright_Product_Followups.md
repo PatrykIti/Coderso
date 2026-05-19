@@ -6,7 +6,7 @@
 **Category:** Widgets + Logo Cloud + Admin UI + Runtime Render + Playwright QA
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-252, TASK-256, TASK-256-02, TASK-256-06-02, TASK-256-08, TASK-313
-**Status:** In Progress (2026-05-19)
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -135,7 +135,7 @@ their evidence visible during closure.
 - [x] TASK-274-03: Logo Cloud Item Management and Reorder
 - [x] TASK-274-04: Logo Cloud Dense Strip and Marquee Layouts
 - [x] TASK-274-05: Logo Cloud Tile Link and CTA Controls
-- [ ] TASK-274-06: Logo Cloud Report Docs and Closure
+- [x] TASK-274-06: Logo Cloud Report Docs and Closure
 
 ## Implementation Order
 
@@ -250,3 +250,21 @@ Implementation leaves:
   payloads unless the leaf documents and tests a migration/normalizer path.
 - Final closure records report evidence, task status updates, changelog, and the
   exact validation output.
+
+## Completion Notes
+
+- 2026-05-19: `TASK-274` is complete. The Logo Cloud product family now covers
+  widget-owned header shell, asset authoring, repeated-item management, strip
+  overflow/marquee layouts, tile/new-tab/CTA controls, and final report/docs
+  closure without re-owning the shared `TASK-256` / `TASK-313` contract fixes.
+- Final family-scoped validation:
+  - `bun run lint`
+  - `bun run test:vitest -- tests/vitest/widgets/widgetSafeHref.test.ts tests/vitest/widgets/logoCloud.test.tsx tests/vitest/widgets/renderer.test.tsx tests/vitest/widgets/logoCloudStyles.test.ts tests/vitest/widgets/styleNoneTokens.test.tsx tests/vitest/ui/logo-cloud-editor-wave.test.tsx`
+  - `bun run scan:security:strict`
+- Broader branch-local blockers recorded under `TASK-274-06`:
+  - `bun run test:bun` still fails on the isolated detail-page/runtime tests
+    that reproduce on the clean `task/274` branch baseline but not on clean
+    `feature/corrections`.
+  - Full repo `bun run test:vitest` still has one unrelated timeout in
+    `tests/vitest/ui/feature-grid-editor-wave.test.tsx`, while the file passes
+    when isolated.

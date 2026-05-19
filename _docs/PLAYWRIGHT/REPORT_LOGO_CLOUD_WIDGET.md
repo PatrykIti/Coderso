@@ -99,6 +99,20 @@ checkout has moved since then:
 - `BF-11` is fixed: Logo Cloud now supports an optional CTA below the logo list
   and renders it only when enabled, labeled, and resolved to a safe href.
 
+### Family closure note — 2026-05-19 (`TASK-274-06`)
+
+- The Logo Cloud product family is now complete:
+  - widget-owned `BF-01`, `BF-02`, and `BF-07` are closed under `TASK-274-01`;
+  - widget-owned `UX-03`, `UX-04`, `UX-05`, `UX-06`, and the image-preview
+    slice of `BF-10` are closed under `TASK-274-02`;
+  - widget-owned `UX-02` and `UX-08` are closed under `TASK-274-03`;
+  - widget-owned `BF-03`, `BF-04`, and `BF-05` are closed under `TASK-274-04`;
+  - widget-owned `UX-09`, `BF-08`, and `BF-11` are closed under `TASK-274-05`.
+- Shared findings continue to stay attributed to the already-landed
+  `TASK-256-06-02`, `TASK-313-01`, and `TASK-313-02` owners instead of being
+  overclaimed here.
+- `BF-06` remains not applicable and `A7` remains current-state OK.
+
 
 
 ### Historical baseline note — 2026-05-19

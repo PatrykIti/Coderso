@@ -6,7 +6,7 @@
 **Category:** Widgets + Logo Cloud + QA + Documentation + Changelog
 **Estimated Effort:** Medium
 **Dependencies:** TASK-274-01, TASK-274-02, TASK-274-03, TASK-274-04, TASK-274-05, TASK-256-08, TASK-313-03
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -175,3 +175,69 @@ Docs-only closure updates after implementation:
 - Task files, board statistics, widget docs, report, and changelog are in sync.
 - Final validation commands and any blockers are recorded before status moves to
   `Done`.
+
+## Completion Notes
+
+- 2026-05-19: `TASK-274` is closed. Logo Cloud product-owned findings are now
+  covered by `TASK-274-01` through `TASK-274-05`, while shared contract and
+  semantics findings remain correctly attributed to the already-landed
+  `TASK-256-06-02`, `TASK-313-01`, and `TASK-313-02` owners.
+
+### Final Coverage Matrix
+
+| Finding | Final owner/status | Evidence summary |
+|---|---|---|
+| BUG-01 | Shared fixed, `TASK-256-06-02` | Shared safe link attrs now route through `resolveWidgetLinkAttrs()`. |
+| BUG-02 | Shared fixed, `TASK-313-02` | Shared section shell now renders `<h2>` with `aria-labelledby`. |
+| BUG-03 | Shared fixed, `TASK-256-06-02` | Section naming contract is shared and already landed. |
+| BUG-04 | Shared fixed, `TASK-256-06-02` | `hoverColor` truthfulness is now shared and no longer lies when grayscale is off. |
+| BUG-05 | Shared fixed, `TASK-313-02` | `logoHeight: "none"` stays visible in data while runtime remains bounded. |
+| UX-01 | Shared fixed, `TASK-256-06-02` | Visual disables the hover-color control when grayscale is off. |
+| UX-02 | Fixed, `TASK-274-03` | Remove now surfaces inline Undo and restores the exact removed row. |
+| UX-03 | Fixed, `TASK-274-02` | Wizard starter-logo rows now own image, alt, href, and media selection. |
+| UX-04 | Fixed, `TASK-274-02` | Logo rows now render bounded preview and unavailable-preview states. |
+| UX-05 | Fixed, `TASK-274-02` | Per-logo `alt` is schema-owned and used in runtime output. |
+| UX-06 | Fixed, `TASK-274-02` | MediaPicker/listMediaCached now drive Logo Cloud asset selection. |
+| UX-07 | Shared fixed, `TASK-313-01` | Advanced is diagnostics-only for shared Logo Cloud controls. |
+| UX-08 | Fixed, `TASK-274-03` | Visual supports drag-handle reorder plus Move button fallback. |
+| UX-09 | Fixed, `TASK-274-05` | One global new-tab toggle now routes through the shared safe helper. |
+| BF-01 | Fixed, `TASK-274-01` | Header copy owns the widget-local eyebrow field. |
+| BF-02 | Fixed, `TASK-274-01` | Section background is now a clearable widget-local surface control. |
+| BF-03 | Fixed, `TASK-274-04` | Dense now eases to `md:grid-cols-4` and returns to six columns at `xl`. |
+| BF-04 | Fixed, `TASK-274-04` | Strip can switch from wrapped rows to single-row overflow. |
+| BF-05 | Fixed, `TASK-274-04` | Strip marquee now exists with pause and reduced-motion safeguards. |
+| BF-06 | Not applicable | Container/padding/margin controls were already present in Advanced. |
+| BF-07 | Fixed, `TASK-274-01` | Header alignment and size are now bounded widget-local controls. |
+| BF-08 | Fixed, `TASK-274-05` | Tile radius and border width are now schema-owned and bounded. |
+| BF-09 | Shared fixed, `TASK-313-02` | Heading level is now handled by the shared section shell contract. |
+| BF-10 | Split fixed | Shared Link URL feedback is `TASK-313-01`; image URL preview feedback is `TASK-274-02`. |
+| BF-11 | Fixed, `TASK-274-05` | Optional CTA below the logo list now renders through the shared safe helper. |
+| A1 | Shared fixed, `TASK-256-06-02` | Region naming is now handled by the shared landmark shell. |
+| A2 | Shared fixed, `TASK-313-02` | Shared heading semantics now use `<h2>` instead of hardcoded `<h3>`. |
+| A3 | Shared fixed, `TASK-256-06-02` | External logo links now inherit shared noopener/noreferrer attrs. |
+| A4 | Fixed, `TASK-274-05` | Shared new-tab behavior is now reachable from one widget-owned toggle. |
+| A5 | Fixed, `TASK-274-02` | Runtime now prefers explicit `alt` and falls back to `name`. |
+| A6 | Shared fixed, `TASK-256-06-02` | `hoverColor` no longer creates misleading no-op behavior. |
+| A7 | Current-state OK | Logo images still render with `loading="lazy"`. |
+
+### Validation
+
+- `bun run lint`
+- `bun run test:vitest -- tests/vitest/widgets/widgetSafeHref.test.ts tests/vitest/widgets/logoCloud.test.tsx tests/vitest/widgets/renderer.test.tsx tests/vitest/widgets/logoCloudStyles.test.ts tests/vitest/widgets/styleNoneTokens.test.tsx tests/vitest/ui/logo-cloud-editor-wave.test.tsx`
+- `bun run scan:security:strict`
+
+### Isolated broader-lane blockers
+
+- `bun run test:bun` on this task branch still hit two branch-local red tests outside
+  Logo Cloud owners:
+  - `tests/integration/runtime/detail-page-composer-runtime.test.tsx`
+  - `tests/integration/server/assistantHouseProjectsCatalogPublicSite.test.ts`
+- Those two tests passed when rerun on the clean `feature/corrections` checkout
+  and failed when isolated on the clean `48a720605` `task/274` branch baseline,
+  so they were treated as pre-existing branch-local noise rather than a
+  `logo-cloud` regression.
+- A full repo `bun run test:vitest` pass also hit one unrelated timeout in
+  `tests/vitest/ui/feature-grid-editor-wave.test.tsx`; that file passed when
+  rerun alone.
+- The owner explicitly accepted scope-based closure when the changed-surface
+  tests passed, so `TASK-274` was closed on the family-scoped validation above.
