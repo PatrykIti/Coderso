@@ -286,6 +286,11 @@ const findSelectByOptions = (container: Element, values: string[]) =>
     return values.every((value) => optionValues.includes(value));
   });
 
+const findButtonByText = (container: Element, label: string) =>
+  Array.from(container.querySelectorAll("button")).find(
+    (element) => element.textContent?.trim() === label
+  );
+
 afterEach(() => {
   vi.restoreAllMocks();
   widgetEditorState.reset();
@@ -457,7 +462,7 @@ test("PostsFeed editors cover source modes, manual posts, display toggles, and l
     const toggles = Array.from(
       view.container.querySelectorAll("input[type='checkbox']")
     ) as HTMLInputElement[];
-    const variantSelect = findSelectByOptions(view.container, ["cards", "list", "compact"]);
+    const compactVariantButton = findButtonByText(view.container, "Compact");
 
     React.act(() => {
       setSelectValue(selects[0], "manual");
@@ -468,7 +473,7 @@ test("PostsFeed editors cover source modes, manual posts, display toggles, and l
       toggles[2]?.click();
       toggles[3]?.click();
       toggles[4]?.click();
-      setSelectValue(variantSelect, "compact");
+      compactVariantButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       setSelectValue(selects[3], "2");
       setSelectValue(selects[4], "lg");
       setSelectValue(selects[5], "elevated");
