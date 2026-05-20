@@ -122,8 +122,7 @@ const backgroundMediaSourceLabelMap: Record<PageBackgroundMediaSource, string> =
   external: "External URL",
 };
 
-const supportsTransientWidgetPreview = (type: string | undefined) =>
-  type === "entry-teaser" || type === "product-compare";
+const supportsTransientWidgetPreview = (type: string | undefined) => type === "entry-teaser";
 
 const spacingTokenToListSpaceClassMap: Record<SpacingToken, string> = {
   none: "space-y-0",

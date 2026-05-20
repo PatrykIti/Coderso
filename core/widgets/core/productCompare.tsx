@@ -1049,6 +1049,9 @@ export function createProductCompareWidget(editors: {
       visual: editors.visual,
       advanced: editors.advanced,
     },
+    editorCapabilities: {
+      supportsPreviewState: true,
+    },
     render: ProductCompareBlock,
   };
 }

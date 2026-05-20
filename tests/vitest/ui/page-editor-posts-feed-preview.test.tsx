@@ -55,19 +55,43 @@ const pageEditorState = vi.hoisted(() => {
 });
 
 const previewBridgeState = vi.hoisted(() => ({
-  readyPayload: {
-    resolved: {
-      items: [
-        {
-          id: "post-1",
-          title: "Launch note",
-          href: "/news/launch-note",
-        },
-      ],
-      total: 1,
-      sourceMode: "latest",
-      listPath: "/news",
-      resolvedAt: "2026-03-08T10:05:00.000Z",
+  readyPayloadByType: {
+    "posts-feed": {
+      resolved: {
+        items: [
+          {
+            id: "post-1",
+            title: "Launch note",
+            href: "/news/launch-note",
+          },
+        ],
+        total: 1,
+        sourceMode: "latest",
+        listPath: "/news",
+        resolvedAt: "2026-03-08T10:05:00.000Z",
+      },
+    },
+    "product-compare": {
+      resolved: {
+        rows: [
+          {
+            id: "product-1",
+            title: "Starter Home",
+            slug: "starter-home",
+            excerpt: "Compact modern home.",
+            productHref: "/products/starter-home",
+            imageUrl: "/media/starter-home.jpg",
+            imageAlt: "Starter Home hero",
+            priceAmount: 120000,
+            currency: "USD",
+            compareAtAmount: null,
+            stockState: "in_stock",
+            stockQuantity: 3,
+          },
+        ],
+        total: 1,
+        resolvedAt: "2026-05-19T12:00:00.000Z",
+      },
     },
   },
   blockListPreviewMap: {} as Record<string, { status: string } | undefined>,
@@ -209,7 +233,10 @@ vi.mock("../../../core/admin/ui/pages/builder/BlockSettings", () => ({
   }) => {
     React.useEffect(() => {
       if (
-        block?.type !== "posts-feed" ||
+        !block?.type ||
+        !previewBridgeState.readyPayloadByType[
+          block.type as keyof typeof previewBridgeState.readyPayloadByType
+        ] ||
         !editorContext?.setPreviewState ||
         editorContext.previewState?.status === "ready"
       ) {
@@ -217,7 +244,10 @@ vi.mock("../../../core/admin/ui/pages/builder/BlockSettings", () => ({
       }
       editorContext.setPreviewState({
         status: "ready",
-        dataPatch: previewBridgeState.readyPayload,
+        dataPatch:
+          previewBridgeState.readyPayloadByType[
+            block.type as keyof typeof previewBridgeState.readyPayloadByType
+          ],
       });
     }, [
       block?.id,
@@ -239,6 +269,15 @@ vi.mock("../../../core/admin/ui/pages/builder/widgetRegistry", () => ({
       title: "Posts Feed",
       description: "Posts feed block",
       category: "content",
+    },
+    {
+      type: "product-compare",
+      title: "Product Compare",
+      description: "Product compare block",
+      category: "content",
+      editorCapabilities: {
+        supportsPreviewState: true,
+      },
     },
   ],
 }));
@@ -307,6 +346,19 @@ const flush = async () => {
   });
 };
 
+const clickButtonByLabel = async (container: HTMLElement, label: string) => {
+  const button = Array.from(container.querySelectorAll("button")).find((candidate) =>
+    candidate.textContent?.includes(label)
+  );
+
+  expect(button).toBeTruthy();
+
+  await React.act(async () => {
+    button?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await Promise.resolve();
+  });
+};
+
 beforeEach(() => {
   pageEditorState.reset();
   previewBridgeState.reset();
@@ -327,6 +379,86 @@ test("PageEditor routes posts-feed preview state through editor context and prev
     expect(view.container.textContent).toContain("settings:posts-feed-1:ready");
     expect(view.container.textContent).toContain("block:posts-feed-1:ready");
     expect(previewBridgeState.blockListPreviewMap["posts-feed-1"]?.status).toBe("ready");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor routes product-compare preview state through widget capability without shell allowlist", async () => {
+  pageEditorState.cachedPage = createPage({
+    currentData: {
+      blocks: [
+        {
+          id: "product-compare-1",
+          type: "product-compare",
+          variant: "matrix",
+          data: {
+            source: {
+              limit: 1,
+            },
+          },
+        },
+      ],
+    },
+  });
+  pageEditorState.currentPage = createPage({
+    currentData: {
+      blocks: [
+        {
+          id: "product-compare-1",
+          type: "product-compare",
+          variant: "matrix",
+          data: {
+            source: {
+              limit: 1,
+            },
+          },
+        },
+      ],
+    },
+  });
+
+  const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+
+  try {
+    await flush();
+
+    expect(view.container.textContent).toContain("settings:product-compare-1:ready");
+    expect(view.container.textContent).toContain("block:product-compare-1:ready");
+    expect(previewBridgeState.blockListPreviewMap["product-compare-1"]?.status).toBe("ready");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor does not persist posts-feed preview-only resolved data on save or publish", async () => {
+  const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+
+  try {
+    await flush();
+
+    expect(view.container.textContent).toContain("settings:posts-feed-1:ready");
+
+    await clickButtonByLabel(view.container, "Save draft");
+    await flush();
+
+    const savedData = pageEditorState.updatePage.mock.calls[0]?.[1]?.data as
+      | { blocks?: Array<{ id: string; data?: Record<string, unknown> }> }
+      | undefined;
+    const savedPostsFeedBlock = savedData?.blocks?.find((block) => block.id === "posts-feed-1");
+    expect(savedPostsFeedBlock?.data).not.toHaveProperty("resolved");
+
+    await clickButtonByLabel(view.container, "Publish");
+    await flush();
+
+    const publishCall = pageEditorState.publishPage.mock.calls[0] as unknown as
+      | [string, { blocks?: Array<{ id: string; data?: Record<string, unknown> }> }]
+      | undefined;
+    const publishedData = publishCall?.[1];
+    const publishedPostsFeedBlock = publishedData?.blocks?.find(
+      (block) => block.id === "posts-feed-1"
+    );
+    expect(publishedPostsFeedBlock?.data).not.toHaveProperty("resolved");
   } finally {
     view.cleanup();
   }

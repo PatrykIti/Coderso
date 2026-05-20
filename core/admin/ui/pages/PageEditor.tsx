@@ -323,10 +323,7 @@ const blocksContainType = (blocks: Block[], type: string) =>
   blocks.some((block) => blockContainsType(block, type));
 
 const supportsTransientWidgetPreview = (type: string | undefined) =>
-  type === "entry-teaser" ||
-  type === "newsletter" ||
-  type === "posts-feed" ||
-  type === "product-compare";
+  type === "entry-teaser" || type === "newsletter" || type === "posts-feed";
 
 const hydrateBookingCalendarPreviewBlocks = (
   blocks: Block[],
