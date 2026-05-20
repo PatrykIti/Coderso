@@ -495,7 +495,7 @@ Tytuł to statyczny tekst, nie `<a href>`. Użytkownik nie może kliknąć na pr
 - Current TASK-256 role for Product Compare is classification only.
   Commerce/product-specific behavior continues through the `TASK-279` family.
 - Shared widget-contract work for Product Compare was split and closed through
-  `TASK-256` / `TASK-313`; the executable Product Compare-only BF/UX/A scope is
+  `TASK-256` / `TASK-324`; the executable Product Compare-only BF/UX/A scope is
   now routed through `TASK-279` leaves or explicit no-action rows.
 
 ---
@@ -508,7 +508,7 @@ Tytuł to statyczny tekst, nie `<a href>`. Użytkownik nie może kliknąć na pr
   preserves manual order through the runtime query path.
 - `BF-15`: Product Compare now clamps the widget-side limit to `12` in schema,
   normalizer, editor input, and query builder.
-- `UX-07`: Product Compare now consumes the shared `TASK-313`
+- `UX-07`: Product Compare now consumes the shared `TASK-324`
   `CommerceSourceFields` limit/copy contract instead of forking local source
   controls.
 

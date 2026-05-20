@@ -29,5 +29,5 @@
 ### Documentation and evidence
 
 - Synchronized the Pricing Plans Playwright report, widget docs, task board, and
-  closure notes with the final TASK-278 owner split after TASK-313 shared
-  residual closure.
+  closure notes with the final TASK-278 owner split after the shared
+  TASK-256-02 / TASK-256-06-03 pricing baseline was re-verified.

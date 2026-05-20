@@ -5,7 +5,7 @@
 **Priority:** Medium
 **Category:** Widgets + Pricing Plans + Runtime Render + Admin UI + Widget Packs
 **Estimated Effort:** Medium
-**Dependencies:** TASK-256-01, TASK-256-06-03, TASK-278, TASK-313
+**Dependencies:** TASK-256-01, TASK-256-06-03, TASK-278
 **Status:** Done (2026-05-19)
 
 ---
@@ -18,7 +18,7 @@ matrix updates if readiness changes.
 
 This leaf must not use a new variant to hide shared fixed-count logic. It
 builds on the shared variant/count preservation contract already restored by
-`TASK-313` on this branch.
+`TASK-256-06-03` on this branch.
 
 ## Source Findings
 
@@ -40,7 +40,7 @@ builds on the shared variant/count preservation contract already restored by
 | File | Required change |
 |---|---|
 | `core/widgets/core/pricingPlans.tsx` | Add `two-plans` variant, plan-count map entry, variant registration, renderer layout, and backward-compatible normalizer behavior. |
-| `core/admin/ui/widgets/editors/PricingPlansEditors.tsx` | Add the variant to selector cards/dropdown and any variant-specific editor note after `TASK-313` restores shared fixed-count truthfulness. |
+| `core/admin/ui/widgets/editors/PricingPlansEditors.tsx` | Add the variant to selector cards/dropdown and any variant-specific editor note after `TASK-256-06-03` restores shared fixed-count truthfulness. |
 | `tests/vitest/widgets/pricingPlans.test.tsx` | Cover `two-plans` render markers, count, and layout class. |
 | `tests/vitest/ui/pricing-plans-editor-wave.test.tsx` | Cover selecting `two-plans` and editor count truthfulness after TASK-256. |
 | `tests/vitest/widgets/renderer.test.tsx` | Cover shared renderer registration if needed. |

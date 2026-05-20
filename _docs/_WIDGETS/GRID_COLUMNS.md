@@ -162,6 +162,6 @@ Notes:
 
 - shared span-truthfulness, current-sum validation, inactive cardize controls,
   and CSS-variable picker truthfulness remain shared follow-up scope under
-  `TASK-313`
+  `TASK-325`
 - raw custom CSS classes per column are intentionally rejected until a safe
   class registry/policy exists

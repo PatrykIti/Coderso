@@ -45,7 +45,7 @@ Product Compare behavior as already implemented.
 Current worktree state is no longer a clean pre-implementation baseline:
 
 - shared `CommerceSourceFields` limit/copy prerequisites were split into
-  `TASK-313` and partially landed in the shared owner;
+  `TASK-324` and partially landed in the shared owner;
 - `TASK-279-01` already started the widget-local `productIds`/limit path across
   Product Compare, admin client/schema, and commerce query execution;
 - `TASK-279-07` already started consuming the shared source-field options for

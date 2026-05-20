@@ -43,8 +43,8 @@ implemented in TASK-271.
 
 | Report item | Required closure result |
 |---|---|
-| TASK-256 exclusions from TASK-271 umbrella | Mark fixed by TASK-256, deferred to TASK-256, rerouted to TASK-313, or still open under TASK-256. Do not claim TASK-271 fixed them. |
-| TASK-313 shared structural exclusions C2/C4/C5/U3/U4/P3/asymmetric truthfulness | Mark routed to TASK-313 or fixed there later. Do not claim TASK-271 fixed them. |
+| TASK-256 exclusions from TASK-271 umbrella | Mark fixed by TASK-256, deferred to TASK-256, rerouted to TASK-325, or still open under TASK-256. Do not claim TASK-271 fixed them. |
+| TASK-325 shared structural exclusions C2/C4/C5/U3/U4/P3/asymmetric truthfulness | Mark routed to TASK-325 or fixed there later. Do not claim TASK-271 fixed them. |
 | C3, U2, U5, U8 | Fixed/deferred by TASK-271-01 with screenshots or textual DOM/editor evidence. |
 | W7 | Fixed/deferred by TASK-271-02 with editor reorder evidence. |
 | W3, W4, W6 | Fixed/deferred by TASK-271-03 with runtime class/DOM evidence. |
@@ -144,8 +144,8 @@ No API routes are added.
 ## Acceptance Criteria
 
 - Every source report finding has exactly one final classification: TASK-256,
-  TASK-313, fixed by TASK-271, current-state verified, deferred, or rejected.
-- TASK-271 does not claim to fix TASK-256-owned or TASK-313-owned shared-contract drift.
+  TASK-325, fixed by TASK-271, current-state verified, deferred, or rejected.
+- TASK-271 does not claim to fix TASK-256-owned or TASK-325-owned shared-contract drift.
 - Changelog, board stats, task statuses, and docs agree.
 - Final validation includes exact commands and results.
 - W8 is not silently implemented as raw arbitrary classes.

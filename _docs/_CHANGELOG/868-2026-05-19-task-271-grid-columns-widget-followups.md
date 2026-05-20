@@ -2,7 +2,7 @@
 
 Date: 2026-05-19
 Version: Unreleased
-Tasks: TASK-271, TASK-271-01, TASK-271-02, TASK-271-03, TASK-271-04, TASK-271-05, TASK-271-06, TASK-271-07, TASK-313
+Tasks: TASK-271, TASK-271-01, TASK-271-02, TASK-271-03, TASK-271-04, TASK-271-05, TASK-271-06, TASK-271-07, TASK-325
 
 ## Summary
 
@@ -38,7 +38,7 @@ Tasks: TASK-271, TASK-271-01, TASK-271-02, TASK-271-03, TASK-271-04, TASK-271-05
 ### Documentation
 
 - Rewrote the Grid Columns Playwright report into a closure matrix that maps
-  every finding to TASK-256, TASK-271, TASK-313, a current-state note, or an
+  every finding to TASK-256, TASK-271, TASK-325, a current-state note, or an
   explicit rejection.
 - Synchronized `_docs/_WIDGETS/GRID_COLUMNS.md`, the `TASK-271` family docs,
   the task board, and this changelog to the final owner map.

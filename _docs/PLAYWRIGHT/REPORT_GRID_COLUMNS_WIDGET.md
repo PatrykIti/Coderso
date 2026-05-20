@@ -17,7 +17,7 @@ otwartych" problemów widgetu. Został więc przepisany do closure matrix:
 - wskazuje, które findingi były shared-contract drift i zostały zamknięte poza
   TASK-271,
 - które findingi zostały dostarczone lokalnie w TASK-271,
-- które świadomie pozostają poza TASK-271 (`TASK-313`, brak safe-class policy,
+- które świadomie pozostają poza TASK-271 (`TASK-325`, brak safe-class policy,
   albo current-state note).
 
 ## 2. Snapshot źródłowy z 2026-05-16
@@ -38,10 +38,10 @@ Playwright wykrył trzy klasy problemów:
 | ID | Snapshot z 2026-05-16 | Finalny status | Owner | Evidence |
 |---|---|---|---|---|
 | C1 | slot/config desync i manualny sync | `current-state/shared`: live editor nie tworzy już lokalnie nowego driftu, bo count controls i local add/remove actions blokują się przy istniejących slotach i odsyłają do Structure; pełne auto-remap pozostaje poza TASK-271 | TASK-256/TASK-293 seam, plus TASK-271 local guard | `GridColumnsEditors.tsx`, `gridColumns.tsx`, `blockSettings-wave.test.tsx`, `grid-columns-editor-wave.test.tsx`, `gridColumns.test.tsx` |
-| C2 | color picker nie pokazuje CSS variables truthfully | `deferred` | TASK-313 | `TASK-271` exclusion matrix, shared color-control truthfulness still open |
+| C2 | color picker nie pokazuje CSS variables truthfully | `deferred` | TASK-325 | `TASK-271` exclusion matrix, shared color-control truthfulness still open |
 | C3 | Wizard edytuje tylko kolumny 1 i 2 | `fixed` | TASK-271-01 | Wizard renderuje label inputs dla wszystkich aktywnych kolumn; `grid-columns-editor-wave.test.tsx` |
-| C4 | brak wizualnego preview spanów | `deferred` | TASK-313 | shared span-truthfulness intentionally kept out of TASK-271 |
-| C5 | brak walidacji sumy spanów | `deferred` | TASK-313 | shared span-truthfulness intentionally kept out of TASK-271 |
+| C4 | brak wizualnego preview spanów | `deferred` | TASK-325 | shared span-truthfulness intentionally kept out of TASK-271 |
+| C5 | brak walidacji sumy spanów | `deferred` | TASK-325 | shared span-truthfulness intentionally kept out of TASK-271 |
 | W1 | brak per-column surface overrides | `fixed` | TASK-271-04 | per-column `style.surface/background/borderColor/borderWidth/radius/padding`; `gridColumns.tsx`, `gridColumns.test.tsx` |
 | W2 | brak kontroli min-height | `fixed` | TASK-271-05 | `minHeight` i `mobileMinHeight` tokens; runtime class proof in tests |
 | W3 | brak reverse on mobile | `fixed` | TASK-271-03 | `layout.reverseOnMobile`, runtime markers/classes, editor toggle |
@@ -54,15 +54,15 @@ Playwright wykrył trzy klasy problemów:
 | W10 | ograniczone gap tokens | `fixed` | TASK-271-06 | gap set expanded to `none/1/2/3/4/5/6/7/8/10/12` |
 | U1 | gap labels bez px context | `fixed` | TASK-271-06 | labels now include scale copy (`Gap 6 - 24px`) |
 | U2 | variant cards bez miniaturek | `fixed` | TASK-271-01 | visual selector includes compact previews for all variants |
-| U3 | Advanced nie ukrywa inactive cardize controls | `deferred` | TASK-313 | inactive-control truthfulness intentionally remains shared follow-up |
-| U4 | brak wskaźnika bieżącej sumy spanów | `deferred` | TASK-313 | shared span-truthfulness intentionally remains outside TASK-271 |
+| U3 | Advanced nie ukrywa inactive cardize controls | `deferred` | TASK-325 | inactive-control truthfulness intentionally remains shared follow-up |
+| U4 | brak wskaźnika bieżącej sumy spanów | `deferred` | TASK-325 | shared span-truthfulness intentionally remains outside TASK-271 |
 | U5 | mylące `Column configs` copy | `fixed` | TASK-271-01 | control, warning, and add/remove action copy now use user-facing column wording |
 | U6 | masonry-lite wymusza cardize bez truthful UI | `fixed` | TASK-256-05-01 + TASK-271 | toggle is locked on with explanatory copy in both Visual and Advanced editors |
 | U7 | label kolumny widoczny publicznie | `fixed outside TASK-271` | TASK-256-03 / TASK-256-05-01 | labels render only on editor/admin preview surfaces |
 | U8 | brak layout presetów | `fixed` | TASK-271-01 | same-count preset buttons for 2-6 column layouts |
 | P1 | publiczny `Column N` helper | `fixed outside TASK-271` | TASK-256-03 / TASK-256-05-01 | `gridColumns.test.tsx` public runtime no longer renders helper labels |
 | P2 | publiczny `Empty column.` placeholder | `fixed outside TASK-271` | TASK-256-03 / TASK-256-05-01 | placeholder remains editor-only |
-| P3 | overflow fallout przy błędnej sumie spanów | `deferred` | TASK-313 | shared span-truthfulness / overflow fallout intentionally not re-patched locally |
+| P3 | overflow fallout przy błędnej sumie spanów | `deferred` | TASK-325 | shared span-truthfulness / overflow fallout intentionally not re-patched locally |
 | P4 | mobile empty space przez hardcoded min-height | `fixed` | TASK-271-05 | bounded mobile min-height override lets authors reduce empty space |
 
 ## 4. TASK-271 shipped scope
@@ -112,7 +112,7 @@ Playwright wykrył trzy klasy problemów:
 
 ## 5. Explicitly deferred / rejected
 
-- `TASK-313`: CSS-variable picker truthfulness, inactive cardize controls,
+- `TASK-325`: CSS-variable picker truthfulness, inactive cardize controls,
   current span-sum indicators, span validation, and runtime overflow fallout
   from invalid span sums.
 - `W8`: raw custom CSS classes per column remain rejected until a safe shared
@@ -140,6 +140,6 @@ full Vitest, strict security scan, and precommit results.
   were valid on 2026-05-16 and later became shared-fix evidence rather than
   open widget-local scope.
 - This closure matrix intentionally does not claim TASK-271 fixed
-  TASK-256-owned or TASK-313-owned shared-contract drift.
+  TASK-256-owned or TASK-325-owned shared-contract drift.
 
 *Raport closure zaktualizowany po finalnym TASK-271 implementation pass.*

@@ -40,7 +40,7 @@ In scope:
   without requiring API knowledge.
 - Backward-compatible shared `CommerceSourceFields` copy/prop changes only when
   the live source field owner still owns the relevant UX.
-- Use the already-landed `TASK-313` shared source-field options instead of
+- Use the already-landed `TASK-324` shared source-field options instead of
   reopening limit/help work locally in this leaf.
 
 Out of scope:

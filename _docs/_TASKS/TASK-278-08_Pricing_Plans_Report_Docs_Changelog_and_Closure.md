@@ -5,7 +5,7 @@
 **Priority:** Medium
 **Category:** Widgets + Pricing Plans + Documentation + QA
 **Estimated Effort:** Medium
-**Dependencies:** TASK-278, TASK-278-01, TASK-278-02, TASK-278-03, TASK-278-04, TASK-278-05, TASK-278-06, TASK-278-07, TASK-256-08, TASK-313
+**Dependencies:** TASK-278, TASK-278-01, TASK-278-02, TASK-278-03, TASK-278-04, TASK-278-05, TASK-278-06, TASK-278-07, TASK-256-08
 **Status:** Done (2026-05-19)
 
 ---
@@ -17,8 +17,9 @@ implementation leaves are complete or explicitly deferred.
 
 This leaf owns the final report evidence, widget docs, task-board state,
 changelog entry, and validation matrix for TASK-278. It must not mark
-shared-task findings fixed unless the relevant `TASK-256` or `TASK-313`
-implementation and evidence have landed in the current checkout.
+shared-task findings fixed unless the relevant `TASK-256-02`,
+`TASK-256-06-03`, or broader `TASK-256` implementation and evidence have
+landed in the current checkout.
 
 ## Source Findings
 
@@ -29,8 +30,10 @@ implementation and evidence have landed in the current checkout.
   handoff.
 - `_docs/_TASKS/TASK-278_Pricing_Plans_Widget_Playwright_Product_Followups.md` -
   TASK-256 exclusion and TASK-278 scope matrices.
-- `_docs/_TASKS/TASK-313_Pricing_Plans_Shared_Contract_Residual_Reopen.md` -
-  reopened shared Pricing Plans prerequisite scope.
+- `_docs/_TASKS/TASK-256-02_Clear_None_Token_and_Design_Token_Controls.md` -
+  shared clear/token prerequisite scope for Pricing Plans.
+- `_docs/_TASKS/TASK-256-06-03_Hero_Timeline_Pricing_FAQ_and_Testimonials_Accessibility.md` -
+  shared fixed-count, truthful-static billing, and accessibility prerequisite scope for Pricing Plans.
 - `_docs/_TASKS/README.md` - board/statistics owner.
 - `_docs/_CHANGELOG/README.md` - changelog numbering/index owner.
 
@@ -42,7 +45,7 @@ implementation and evidence have landed in the current checkout.
 
 | File | Required change |
 |---|---|
-| `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md` | Add final textual status for each TASK-278-owned finding: fixed, deferred, or mapped to the correct already-landed shared owner (`TASK-256` / `TASK-313`). Do not commit PNG files. |
+| `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md` | Add final textual status for each TASK-278-owned finding: fixed, deferred, or mapped to the correct already-landed shared owner (`TASK-256-02`, `TASK-256-06-03`, or another concrete `TASK-256` leaf). Do not commit PNG files. |
 | `_docs/_WIDGETS/PRICING_PLANS.md` | Synchronize final schema/editor/runtime behavior. |
 | `_docs/WIDGETS.md` | Update only if global widget inventory or contract text changed. |
 | `_docs/WIDGET_PACK_MATRIX.md` | Update only if pack readiness/completeness changed. |
@@ -59,7 +62,7 @@ implementation and evidence have landed in the current checkout.
 | Report item | Status | Evidence |
 |---|---|---|
 | BUG-06 | Fixed by TASK-278-01 | tests + commit |
-| BUG-03 | Shared closure landed in TASK-313 | shared reopen commit + tests |
+| BUG-03 | Shared closure landed in TASK-256-06-03 | shared commit + tests |
 | BF-06 | Fixed by TASK-278-04 or deferred there | tests + commit or owner/reason |
 | A1/A4 | No action | report marked existing labels OK |
 ```
@@ -68,8 +71,8 @@ Data flow:
 
 - Read the final TASK-278 scope matrix and each implementation leaf status.
 - Update the source report with one textual status row per finding:
-  TASK-256 landed shared evidence, TASK-313 reopened-and-landed shared evidence,
-  TASK-278 fixed evidence, TASK-278 deferral, or no action.
+  TASK-256 landed shared evidence, TASK-278 fixed evidence, TASK-278 deferral,
+  or no action.
 - Synchronize widget docs, changelog entry, and task-board rows after report
   evidence is complete.
 - Record the exact validation commands and commit SHAs in the closure leaf.
@@ -134,7 +137,7 @@ Docs-only closure validation:
 ## Acceptance Criteria
 
 - Every report finding is mapped to fixed evidence, a TASK-256 landed-shared
-  note, a `TASK-313` reopened-and-landed shared note, or a documented TASK-278 deferral
+  note, or a documented TASK-278 deferral
   with owner and reason.
 - TASK-278 task statuses, board rows/statistics, docs, report, and changelog are
   synchronized.

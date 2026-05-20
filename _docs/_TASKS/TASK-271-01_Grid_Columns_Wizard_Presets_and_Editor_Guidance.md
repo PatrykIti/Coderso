@@ -23,7 +23,7 @@ Residual shared structural truthfulness discovered during this audit does not
 belong here:
 
 - existing-variant truthfulness (`asymmetric` with explicit spans) routes to
-  TASK-313;
+  TASK-325;
 - count-changing slot-remap contracts remain out of scope until a shared owner
   exists for safe column-count and slot-count remapping.
 
@@ -41,7 +41,7 @@ belong here:
 Out of scope:
 
 - Slot/config auto-sync is shared Structure-owner scope, while asymmetric span
-  truthfulness and span-sum validation route to TASK-313.
+  truthfulness and span-sum validation route to TASK-325.
 - New custom CSS class fields; TASK-271-07 must reject or defer that report item
   unless a future safe-class policy exists.
 

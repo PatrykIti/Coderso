@@ -46,7 +46,7 @@ In scope:
   Product Gallery or Product Table behavior.
 - Apply any shared `CommerceSourceFields` limit-control change only through a
   backward-compatible shared owner contract with explicit cross-widget proof.
-- Treat the already-landed `TASK-313` shared-source options as the prerequisite
+- Treat the already-landed `TASK-324` shared-source options as the prerequisite
   owner for editor limit/help behavior; remaining widget work here is the exact
   selected-set contract, not another local source-control fork.
 

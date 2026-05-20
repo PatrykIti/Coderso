@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Pricing Plans + Runtime Render + Admin UI
 **Estimated Effort:** Large
-**Dependencies:** TASK-256-04, TASK-256-06-03, TASK-278, TASK-313
+**Dependencies:** TASK-256-04, TASK-256-06-03, TASK-278
 **Status:** Done (2026-05-19)
 
 ---
@@ -16,9 +16,9 @@ Improve the `comparison-rows` Pricing Plans product table with plan hierarchy in
 the header, header CTA/badge treatment, and sticky header behavior for long
 feature-derived comparisons.
 
-This leaf builds on the shared table accessibility baseline that `TASK-313`
-already restored on this branch, including caption, `scope`, plan labels, and
-CTA context. `TASK-278-05` owns only the Pricing Plans comparison product
+This leaf builds on the shared table accessibility baseline that
+`TASK-256-06-03` already restored on this branch, including caption, `scope`,
+plan labels, and CTA context. `TASK-278-05` owns only the Pricing Plans comparison product
 experience on top of the current feature-derived rows; it does not widen into
 explicit comparison-row or mobile collapse redesign.
 
@@ -89,7 +89,7 @@ Error handling:
   default and document the exact container requirement.
 - Legacy feature-derived comparison rows remain the only row model in this leaf.
 - Header CTA must reuse the same safe link normalization as plan card CTA.
-- `TASK-313` already closed the table caption/scope/ARIA baseline; this leaf
+- `TASK-256-06-03` already closed the table caption/scope/ARIA baseline; this leaf
   must not regress or re-claim that shared work while closing the Pricing Plans
   product hierarchy.
 

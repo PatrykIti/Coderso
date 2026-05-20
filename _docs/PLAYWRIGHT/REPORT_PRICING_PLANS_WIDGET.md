@@ -164,7 +164,7 @@ const resolvePricingSpacing = (value: string | undefined): PricingPlansSpacing =
 Wartość `"md"` nie jest sprawdzana explicite — trafia do `return "md"` jako fallback. To działa, ALE sprawia że przekazanie np. `"xl"` lub dowolnej nieprawidłowej wartości zwraca `"md"` bez żadnego sygnału błędu. Analogicznie `resolvePricingRadius` pomija `"lg"`.
 **Lokalizacja:** `pricingPlans.tsx:232-239`
 
-**Status (2026-05-19):** Naprawione w `TASK-313`. Resolver spacing/radius ma
+**Status (2026-05-19):** Naprawione w `TASK-256-06-03`. Resolver spacing/radius ma
 teraz jawne gałęzie dla `md` / `lg`; finding pozostaje tu tylko jako historyczny
 ślad audytu.
 
@@ -174,7 +174,7 @@ teraz jawne gałęzie dla `md` / `lg`; finding pozostaje tu tylko jako historycz
 **Opis:** `pricingVariantPlanCountMap` jest sztywny: `three-plans=3`, `four-plans=4`, `comparison-rows=3`. Zmiana wariantu z `four-plans` (4 plany z wypełnioną treścią) na `three-plans` lub `comparison-rows` powoduje **automatyczne ucięcie czwartego planu** przez `normalizePricingPlans(normalizedData.plans, visibleCount)` w `PricingPlansBlock`. Użytkownik nie dostaje żadnego ostrzeżenia że jego dane zostaną utracone.
 **Lokalizacja:** `pricingPlans.tsx:664-671`
 
-**Status (2026-05-19):** Naprawione w `TASK-313`. Hidden plany są zachowywane, a
+**Status (2026-05-19):** Naprawione w `TASK-256-06-03`. Hidden plany są zachowywane, a
 editor pokazuje truthful fixed-count guidance zamiast destrukcyjnego flow.
 
 #### BUG-04 — Plan count selector w Visual Editor nie jest zsynchronizowany z wariantem
@@ -183,7 +183,7 @@ editor pokazuje truthful fixed-count guidance zamiast destrukcyjnego flow.
 **Opis:** Visual Editor pokazuje "Plans count" selector (wartości 2–6) niezależnie od wybranego wariantu. Gdy wariant to `three-plans`, użytkownik może ustawić count=5, ale render zawsze pokaże 3 (wymusza `pricingVariantPlanCountMap`). Powoduje to **desynchronizację między edytorem a podglądem** — użytkownik edytuje plany które nie są widoczne.
 **Lokalizacja:** `PricingPlansEditors.tsx:596-616`
 
-**Status (2026-05-19):** Naprawione w `TASK-313`. Selector count został
+**Status (2026-05-19):** Naprawione w `TASK-256-06-03`. Selector count został
 zastąpiony przez read-only fixed-count notice z informacją o zachowanych hidden
 planach.
 
@@ -193,7 +193,7 @@ planach.
 **Opis:** `ColorField` dla "Highlight ring" nie ma przekazanego `onClear` (w przeciwieństwie do `cardSurface` i `cardBorder`). Użytkownik nie może zresetować koloru pierścienia do wartości domyślnej `var(--color-primary)`.
 **Lokalizacja:** `PricingPlansEditors.tsx:965-971`
 
-**Status (2026-05-19):** Naprawione w `TASK-313`. `highlightRing` korzysta już z
+**Status (2026-05-19):** Naprawione w `TASK-256-02`. `highlightRing` korzysta już z
 tej samej shared clear-control ścieżki co `cardSurface` i `cardBorder`.
 
 #### BUG-06 — Badge planu jest zawsze renderowany w kolorze `highlightRing`
@@ -307,13 +307,13 @@ z aktualnym kontraktem.
 |---|---------|----------|-----------|-------------------|
 | A1 | Billing toggle buttons bez `type="button"` (ale jest) — OK | — | — | Bez akcji |
 | A2 | Badge plan zawsze w kolorze `highlightRing` — może nie spełniać WCAG 4.5:1 | WCAG 1.4.3 | Wysoki | Naprawione w `TASK-278-01`; niewyróżnione plany nie dziedziczą już obowiązkowo tonu highlight |
-| A3 | Comparison table bez `<caption>` | WCAG 1.3.1 | Wysoki | Naprawione w `TASK-313` |
+| A3 | Comparison table bez `<caption>` | WCAG 1.3.1 | Wysoki | Naprawione w `TASK-256-06-03` |
 | A4 | Feature check/cross cells mają `aria-label` ("Included"/"Not included") — OK | WCAG 1.1.1 | ✓ OK | Bez akcji |
-| A5 | Plan `<article>` bez `aria-labelledby` wskazującego na nazwę planu | WCAG 1.3.1 | Średni | Naprawione w `TASK-313` |
-| A6 | CTA link bez `aria-label` — "Start now" bez kontekstu planu | WCAG 2.4.6 | Średni | Naprawione w `TASK-313` |
+| A5 | Plan `<article>` bez `aria-labelledby` wskazującego na nazwę planu | WCAG 1.3.1 | Średni | Naprawione w `TASK-256-06-03` |
+| A6 | CTA link bez `aria-label` — "Start now" bez kontekstu planu | WCAG 2.4.6 | Średni | Naprawione w `TASK-256-06-03` |
 | A7 | Billing toggle buttons: brak `aria-controls` wskazującego na sekcję cen | WCAG 4.1.3 | Średni | Zamknięte wraz z truthful static billing status |
-| A8 | Header tabeli comparison bez `scope="col"` na `<th>` | WCAG 1.3.1 | Wysoki | Naprawione w `TASK-313` |
-| A9 | Brak `role="region"` + `aria-label` na sekcji `<section>` pricing | WCAG 1.3.6 | Niski | Naprawione w `TASK-313` |
+| A8 | Header tabeli comparison bez `scope="col"` na `<th>` | WCAG 1.3.1 | Wysoki | Naprawione w `TASK-256-06-03` |
+| A9 | Brak `role="region"` + `aria-label` na sekcji `<section>` pricing | WCAG 1.3.6 | Niski | Naprawione w `TASK-256-06-03` |
 
 ---
 
@@ -452,15 +452,16 @@ Tabela porównawcza renderuje się poprawnie: features per plan, checkmarks (✓
 
 ---
 
-## 8. Status po TASK-278 i TASK-313
+## 8. Status po TASK-256 i TASK-278
 
 ### Shared findings already closed outside TASK-278
 
 | Finding | Owner | Status |
 |---------|-------|--------|
-| BUG-02, BUG-03, BUG-04, BUG-05 | `TASK-313` | Zamknięte na tym branchu jako shared Pricing Plans residuals |
+| BUG-02, BUG-03, BUG-04 | `TASK-256-06-03` | Zamknięte wcześniej jako shared Pricing Plans truthful-static and fixed-count baseline |
+| BUG-05 | `TASK-256-02` | Zamknięte wcześniej jako shared clear-control baseline |
 | BUG-08, BF-01 | `TASK-256-04`, `TASK-256-06-03` | Zamknięte jako truthful static billing-cycle contract |
-| A3, A5, A6, A8, A9 | `TASK-313` | Zamknięte na shared accessibility baseline |
+| A3, A5, A6, A8, A9 | `TASK-256-06-03` | Zamknięte wcześniej na shared accessibility baseline |
 | A7 | shared truthful-static billing status | Zamknięte bez przywracania interaktywności |
 
 ### Pricing-local findings closed in TASK-278
@@ -534,7 +535,7 @@ Tabela porównawcza renderuje się poprawnie: features per plan, checkmarks (✓
   When pricing stays static, runtime renders a non-interactive status display
   instead of inert toggle buttons.
 - `TASK-256-04`: the truthful static billing-cycle contract remains landed.
-- `TASK-313` closure note (2026-05-19): fixed-count plan preservation,
+- shared `TASK-256` pricing note (2026-05-17): fixed-count plan preservation,
   desynced plan-count editor controls, `highlightRing` clear behavior, and the
   shared section/card/table accessibility baseline were reopened and landed on
   this branch. `TASK-278` now keeps only Pricing-local product scope.

@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Pricing Plans + Admin UI
 **Estimated Effort:** Large
-**Dependencies:** TASK-256-01, TASK-256-06-03, TASK-278, TASK-313
+**Dependencies:** TASK-256-01, TASK-256-06-03, TASK-278
 **Status:** Done (2026-05-19)
 
 ---
@@ -19,9 +19,9 @@ not look active, duplicate Advanced token controls must be resolved under the
 shared mode policy, Advanced reset/fix controls must use product-readable copy,
 and newly added feature rows should be ready for immediate editing.
 
-This leaf must not implement the reopened shared fixed-count plan-count/variant
-synchronization work from `TASK-313`. It assumes that shared contract has
-landed and keeps this scope to Pricing Plans authoring affordances.
+This leaf must not re-implement the shared fixed-count plan-count/variant
+synchronization work that already landed in `TASK-256-06-03`. It keeps this
+scope to Pricing Plans authoring affordances.
 
 ## Source Findings
 

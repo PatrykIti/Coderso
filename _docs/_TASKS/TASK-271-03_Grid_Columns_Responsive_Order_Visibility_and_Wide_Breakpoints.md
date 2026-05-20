@@ -18,7 +18,7 @@ per-column visibility, and wide-screen span behavior.
 This leaf owns report findings W3, W4, and W6.
 
 Residual span-truthfulness and overflow fallout discovered during this audit are
-shared structural follow-up scope in TASK-313. This leaf does not add a second
+shared structural follow-up scope in TASK-325. This leaf does not add a second
 overflow guard while that shared work remains open.
 
 ## Scope
@@ -55,7 +55,7 @@ Out of scope:
 | `tests/vitest/ui/grid-columns-editor-wave.test.tsx` | Cover responsive controls and editor state updates. |
 | `tests/vitest/widgets/gridColumns.test.tsx` | Add schema acceptance/rejection for any new persisted fields. |
 | `_docs/_WIDGETS/GRID_COLUMNS.md` | Document responsive options and breakpoint behavior. |
-| `_docs/PLAYWRIGHT/REPORT_GRID_COLUMNS_WIDGET.md` | Mark W3/W4/W6 fixed/deferred with textual evidence, and route P3 to TASK-313. |
+| `_docs/PLAYWRIGHT/REPORT_GRID_COLUMNS_WIDGET.md` | Mark W3/W4/W6 fixed/deferred with textual evidence, and route P3 to TASK-325. |
 
 ## Implementation Pseudocode
 
@@ -139,7 +139,7 @@ No API routes are added.
 - Update `_docs/_WIDGETS/GRID_COLUMNS.md` with responsive ordering, visibility,
   and wide-breakpoint behavior.
 - Update `_docs/PLAYWRIGHT/REPORT_GRID_COLUMNS_WIDGET.md` for W3, W4, W6, and
-  route P3 through TASK-313.
+  route P3 through TASK-325.
 - Update TASK-271-07 closure matrix.
 
 ## Acceptance Criteria
