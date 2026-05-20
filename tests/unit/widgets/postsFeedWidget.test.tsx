@@ -626,6 +626,59 @@ test("posts feed validator accepts normalized payload and visual owns variant", 
   expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBe(true);
 });
 
+test("posts feed validator rejects unknown nested keys", () => {
+  clearWidgets();
+  registerWidget(
+    createPostsFeedWidget({
+      wizard: StubEditor,
+      visual: StubEditor,
+      advanced: StubEditor,
+    })
+  );
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "posts-feed-invalid-source",
+      type: "posts-feed",
+      variant: "cards",
+      data: {
+        ...postsFeedDefaults,
+        source: {
+          ...postsFeedDefaults.source,
+          extra: "nope",
+        },
+      } as never,
+    })
+  ).toThrow("widget_schema_invalid");
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "posts-feed-invalid-runtime",
+      type: "posts-feed",
+      variant: "cards",
+      data: {
+        ...postsFeedDefaults,
+        pagination: {
+          ...postsFeedDefaults.pagination,
+          extra: "nope",
+        },
+        style: {
+          ...(postsFeedDefaults.style ?? {}),
+          extra: "#000000",
+        },
+        resolved: {
+          items: [],
+          total: 1,
+          sourceMode: "latest",
+          listPath: "/updates",
+          resolvedAt: "2026-02-22T10:05:00.000Z",
+          extra: "nope",
+        },
+      } as never,
+    })
+  ).toThrow("widget_schema_invalid");
+});
+
 test("posts feed editors render source and runtime sections", () => {
   const wizardHtml = renderToString(
     <PostsFeedWizardEditor

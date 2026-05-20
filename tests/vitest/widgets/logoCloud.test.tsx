@@ -357,6 +357,62 @@ test("logo cloud validator accepts expanded model", () => {
   expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBe(true);
 });
 
+test("logo cloud validator rejects unknown nested keys", () => {
+  clearWidgets();
+  registerWidget(
+    createLogoCloudWidget({
+      wizard: StubEditor,
+      visual: StubEditor,
+      advanced: StubEditor,
+    })
+  );
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "logo-cloud-invalid-header",
+      type: "logo-cloud",
+      variant: "grid",
+      data: {
+        ...logoCloudDefaults,
+        header: {
+          ...logoCloudDefaults.header,
+          extra: "nope",
+        },
+      } as never,
+    })
+  ).toThrow("widget_schema_invalid");
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "logo-cloud-invalid-logo",
+      type: "logo-cloud",
+      variant: "grid",
+      data: {
+        ...logoCloudDefaults,
+        cta: {
+          enabled: true,
+          label: "Talk to sales",
+          href: "/sales",
+          target: "same-tab",
+          extra: "nope",
+        },
+        logos: [
+          {
+            id: "logo-a",
+            name: "Acme",
+            image: "https://cdn.example.com/acme.svg",
+            extra: "nope",
+          },
+        ],
+        style: {
+          ...logoCloudDefaults.style,
+          extra: "nope",
+        },
+      } as never,
+    })
+  ).toThrow("widget_schema_invalid");
+});
+
 test("logo cloud validator rejects invalid variant", () => {
   clearWidgets();
   registerWidget(

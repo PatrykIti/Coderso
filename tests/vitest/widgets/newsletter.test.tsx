@@ -485,6 +485,63 @@ test("newsletter validator accepts bounded fields, runtime binding, and style ex
   expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBe(true);
 });
 
+test("newsletter validator rejects unknown nested keys", () => {
+  clearWidgets();
+  registerWidget(
+    createNewsletterWidget({
+      wizard: StubEditor,
+      visual: StubEditor,
+      advanced: StubEditor,
+    })
+  );
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "newsletter-invalid-form",
+      type: "newsletter",
+      variant: "inline",
+      data: {
+        ...newsletterDefaults,
+        form: {
+          ...newsletterDefaults.form,
+          extra: "nope",
+        },
+      } as never,
+    })
+  ).toThrow("widget_schema_invalid");
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "newsletter-invalid-runtime",
+      type: "newsletter",
+      variant: "inline",
+      data: {
+        ...newsletterDefaults,
+        submission: {
+          ...newsletterDefaults.submission,
+          extra: "nope",
+        },
+        optIn: {
+          ...newsletterDefaults.optIn,
+          extra: "nope",
+        },
+        style: {
+          ...newsletterDefaults.style,
+          extra: "#000000",
+        },
+        resolved: {
+          formId: "form-public",
+          formName: "Newsletter form",
+          status: "published",
+          submissionAccess: "public",
+          fields: [],
+          extra: "nope",
+        },
+      } as never,
+    })
+  ).toThrow("widget_schema_invalid");
+});
+
 test("newsletter visual editor renders the expanded IA", () => {
   const html = renderToString(
     <NewsletterVisualEditor

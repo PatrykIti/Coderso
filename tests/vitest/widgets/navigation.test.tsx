@@ -199,6 +199,54 @@ test("navigation schema accepts submenu children and image logo metadata", () =>
   ).not.toThrow();
 });
 
+test("navigation schema rejects unknown nested keys", () => {
+  clearWidgets();
+  registerWidget(
+    createNavigationWidget({
+      wizard: StubEditor,
+      visual: StubEditor,
+      advanced: StubEditor,
+    })
+  );
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "nav-invalid-behavior",
+      type: "navigation",
+      variant: "split",
+      data: {
+        ...navigationDefaults,
+        behavior: {
+          ...navigationDefaults.behavior,
+          extra: true,
+        },
+      } as never,
+    })
+  ).toThrow("widget_schema_invalid");
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "nav-invalid-item",
+      type: "navigation",
+      variant: "split",
+      data: {
+        ...navigationDefaults,
+        style: {
+          ...navigationDefaults.style,
+          extra: "#000000",
+        },
+        items: [
+          {
+            label: "Home",
+            href: "/",
+            extra: "nope",
+          },
+        ],
+      } as never,
+    })
+  ).toThrow("widget_schema_invalid");
+});
+
 test("navigation schema accepts pages links source", () => {
   clearWidgets();
   registerWidget(
