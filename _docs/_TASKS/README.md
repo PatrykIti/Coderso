@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 241 tasks
+- **To Do:** 240 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1735 tasks
 
@@ -189,9 +189,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-275-05-03 | Navigation Visual Style Tokens | Medium | Large | Add bounded hover/active colors, underline, letter spacing, shadow, backdrop blur, dropdown direction, and motion tokens |
 | TASK-275-05-04 | Navigation Brand CTA and Logo Controls | Medium | Medium | Add logo-size, CTA-radius/separator, and bounded secondary-CTA policy without broad platform expansion |
 | TASK-275-06 | Navigation Report Docs Changelog and Closure | Medium | Medium | Refresh Navigation report/docs/changelog/board and final validation evidence after implementation leaves land |
-<<<<<<< HEAD
-| TASK-274-06 | Logo Cloud Report Docs and Closure | Medium | Medium | Refresh Logo Cloud report evidence, widget docs, changelog, board, and final validation |
-=======
 | TASK-273 | Listing Filters Widget Playwright Product Followups | High | Very Large | Listing Filters-only follow-up family for `REPORT_LISTING_FILTERS_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-273-01 | Admin Canvas, Facet Draft State, and Query Loading | High | Large | Repair canvas query fallback, visible editable facet drafts, duplicate-id feedback, and transient query-load handling |
 | TASK-273-02 | Facet Field, Operator, Options, and Preview Editors | High | Large | Add query-aware field suggestions, kind-scoped operators, structured option/sort rows, inline validation, and facet previews |
@@ -219,7 +216,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-271-05 | Grid Columns Height and Cross-Axis Alignment | Medium | Large | Replace hardcoded min-height with tokens and add per-column alignment overrides |
 | TASK-271-06 | Grid Columns Gap Tokens and Density Controls | Medium | Medium | Expand bounded gap tokens, keep independent gapX/gapY, and improve spacing labels |
 | TASK-271-07 | Grid Columns Report, Docs, Changelog, and Closure | Medium | Medium | Refresh Grid Columns report/docs/changelog/board and final validation evidence |
->>>>>>> b1de3f2a (docs(widget): close logo cloud follow-up family)
 | TASK-267 | Feature Grid Widget Playwright Product Followups | High | Very Large | Feature Grid-only follow-up family for `REPORT_FEATURE_GRID_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-267-01 | Feature Grid Variant Preview and Responsive Cards-4 Layout | High | Medium | Add variant preview affordances, repair cards-4 responsive product behavior, and keep columns truthfulness in TASK-256 |
 | TASK-267-02 | Feature Grid Card Reorder, Remove, and Item Management | High | Medium | Add drag reorder plus recoverable remove flow while preserving keyboard move fallback |
@@ -500,17 +496,17 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-256-06-04 | Team Profile Links and Accessibility | High | Medium | Done: current shared Team accessibility baseline is synchronized and richer team product scope remains routed to TASK-289 |
 | TASK-256-07 | Cross-Report Shared Contract Classification | High | Medium | Done: late report groups are routed to executable TASK-256 shared slices or existing widget-specific follow-up families instead of widening the umbrella |
 | TASK-256-08 | Playwright Report Completion and Closure | Medium | Medium | Done: report status sections and closure evidence are synchronized after the post-close Team/Accordion/Toggle/Testimonial fixes, while Form Embed remains explicit `needs-refresh` scope under TASK-269 rather than fixed shared implementation |
-| TASK-313 | Logo Cloud Shared Contract Residual Reopen | High | Large | Done: reopened Logo Cloud shared prerequisites were closed before `TASK-274`, covering shared Link URL feedback, shared heading semantics, and safe `logoHeight: "none"` output |
-| TASK-313-03 | Logo Cloud Shared Residual Closure | Medium | Medium | Done: report/docs/changelog/board closure captured the Logo Cloud shared reopen before widget-local product work continues |
-| TASK-313-02 | Logo Cloud Shared Runtime Semantics Residuals | High | Large | Done: Logo Cloud now uses the shared `<h2>` section-heading shell, fallback region naming, and bounded `logoHeight: "none"` runtime output |
-| TASK-313-01 | Logo Cloud Shared Editor Truthfulness Residuals | High | Large | Done: Advanced is diagnostics-only for shared tokens, and Visual `Link URL` inputs now show truthful shared safe-link feedback |
+| TASK-314 | Logo Cloud Shared Contract Residual Reopen | High | Large | Done: reopened Logo Cloud shared prerequisites were closed before `TASK-274`, covering shared Link URL feedback, shared heading semantics, and safe `logoHeight: "none"` output |
+| TASK-314-03 | Logo Cloud Shared Residual Closure | Medium | Medium | Done: report/docs/changelog/board closure captured the Logo Cloud shared reopen before widget-local product work continues |
+| TASK-314-02 | Logo Cloud Shared Runtime Semantics Residuals | High | Large | Done: Logo Cloud now uses the shared `<h2>` section-heading shell, fallback region naming, and bounded `logoHeight: "none"` runtime output |
+| TASK-314-01 | Logo Cloud Shared Editor Truthfulness Residuals | High | Large | Done: Advanced is diagnostics-only for shared tokens, and Visual `Link URL` inputs now show truthful shared safe-link feedback |
 | TASK-274-01 | Logo Cloud Header Background and Typography | High | Large | Done: Logo Cloud now exposes widget-owned eyebrow, section background, and bounded header alignment/size across schema, editor, runtime, and focused tests |
 | TASK-274-02 | Logo Cloud Logo Asset Authoring and Previews | High | Large | Done: Wizard and Visual now own logo image/alt/link authoring, Media Library picking, bounded previews, async media failure handling, and runtime alt fallback proof |
 | TASK-274-03 | Logo Cloud Item Management and Reorder | High | Large | Done: Visual now supports drag-handle reorder, inline Undo after remove, stale-drop guards, and retained Move up / Move down fallback controls |
 | TASK-274-04 | Logo Cloud Dense Strip and Marquee Layouts | Medium | Large | Done: Dense now eases smaller breakpoints, Strip supports single-row overflow, and marquee runs through shared admin/runtime style owners with reduced-motion-safe pause behavior |
 | TASK-274-05 | Logo Cloud Tile Link and CTA Controls | Medium | Large | Done: Logo Cloud now owns bounded tile radius/border-width controls, a global new-tab link toggle, and a safe optional CTA below the logo list |
 | TASK-274-06 | Logo Cloud Report Docs and Closure | Medium | Medium | Done: report/docs/changelog/board now record the final owner matrix and family-scoped validation evidence for all Logo Cloud follow-up findings |
-| TASK-274 | Logo Cloud Widget Playwright Product Followups | High | Very Large | Done: shared TASK-313 prerequisites plus product-owned leaves `274-01`..`274-05` and final closure now fully resolve the Logo Cloud Playwright follow-up family |
+| TASK-274 | Logo Cloud Widget Playwright Product Followups | High | Very Large | Done: shared TASK-314 prerequisites plus product-owned leaves `274-01`..`274-05` and final closure now fully resolve the Logo Cloud Playwright follow-up family |
 | TASK-269 | Form Embed Widget Playwright Product Followups | High | Very Large | Done: Form Embed renderer, runtime script, safe captcha bridge, editor-mode diagnostics, docs, report status matrix, and targeted validation are synchronized |
 | TASK-269-01 | Form Selection, Editor Modes, and Admin Diagnostics | High | Large | Done: Wizard/Visual/Advanced are split and selected-form diagnostics now cover status, field count/types, multi-step, resolver errors, and no-form CTA states |
 | TASK-269-02 | Field Type Rendering and Field Accessibility | High | Large | Done: current supported field types render with stable ids, helper linkage, required semantics, and unsupported-type diagnostics for out-of-model payloads |

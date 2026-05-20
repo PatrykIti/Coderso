@@ -1,11 +1,11 @@
-# TASK-313-02: Logo Cloud Shared Runtime Semantics Residuals
+# TASK-314-02: Logo Cloud Shared Runtime Semantics Residuals
 
-# FileName: TASK-313-02_Logo_Cloud_Shared_Runtime_Semantics_Residuals.md
+# FileName: TASK-314-02_Logo_Cloud_Shared_Runtime_Semantics_Residuals.md
 
 **Priority:** High
 **Category:** Widgets + Logo Cloud + Shared Contract + Runtime Render
 **Estimated Effort:** Large
-**Dependencies:** TASK-313
+**Dependencies:** TASK-314
 **Status:** Done (2026-05-19)
 
 ---
@@ -114,7 +114,7 @@ No API routes are added.
 
 - `_docs/_WIDGETS/LOGO_CLOUD.md`
 - `_docs/PLAYWRIGHT/REPORT_LOGO_CLOUD_WIDGET.md`
-- `_docs/_TASKS/TASK-313-02_Logo_Cloud_Shared_Runtime_Semantics_Residuals.md`
+- `_docs/_TASKS/TASK-314-02_Logo_Cloud_Shared_Runtime_Semantics_Residuals.md`
 - `_docs/_TASKS/README.md` on status changes
 
 ## Acceptance Criteria

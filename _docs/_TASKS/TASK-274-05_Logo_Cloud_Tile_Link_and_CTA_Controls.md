@@ -5,7 +5,7 @@
 **Priority:** Medium
 **Category:** Widgets + Logo Cloud + Runtime Render + Admin UI + Link UX
 **Estimated Effort:** Large
-**Dependencies:** TASK-274, TASK-256-02, TASK-256-06-02, TASK-274-04, TASK-313-01
+**Dependencies:** TASK-274, TASK-256-02, TASK-256-06-02, TASK-274-04, TASK-314-01
 **Status:** Done (2026-05-19)
 
 ---
@@ -33,7 +33,7 @@ Precondition:
 - `TASK-256-06-02` already provides the shared `resolveWidgetLinkAttrs()`
   helper at current `HEAD`; this leaf must consume that helper directly instead
   of recreating safe-href logic locally.
-- `TASK-313-01` already landed the shared Logo Cloud link-input feedback
+- `TASK-314-01` already landed the shared Logo Cloud link-input feedback
   contract. `TASK-274-05` may reuse that feedback directly, but runtime
   target/CTA work is not blocked on a missing helper anymore.
 
@@ -119,7 +119,7 @@ Editor data flow:
    not widen Logo Cloud into per-logo target complexity when the current owner
    model only stores `logos[].href`.
 3. Add CTA controls with enable toggle, label, href, and target. Reuse the
-   landed shared safe-href feedback from `TASK-313-01`.
+   landed shared safe-href feedback from `TASK-314-01`.
 4. Render CTA only when enabled, label is present, and safe href resolves.
 5. Before implementation, bind the pseudocode above to the exact exported
    `resolveWidgetLinkAttrs()` helper signature. If the shared helper signature

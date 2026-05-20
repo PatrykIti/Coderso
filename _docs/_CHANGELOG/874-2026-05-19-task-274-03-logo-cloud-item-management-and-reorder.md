@@ -1,4 +1,4 @@
-# 871. TASK-274-03 Logo Cloud item management and reorder
+# 874. TASK-274-03 Logo Cloud item management and reorder
 
 Date: 2026-05-19
 Version: Unreleased

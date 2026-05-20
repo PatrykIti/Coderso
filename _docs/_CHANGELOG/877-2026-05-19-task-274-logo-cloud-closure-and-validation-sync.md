@@ -1,4 +1,4 @@
-# 874. TASK-274 Logo Cloud closure and validation sync
+# 877. TASK-274 Logo Cloud closure and validation sync
 
 Date: 2026-05-19
 Version: Unreleased
@@ -12,7 +12,7 @@ Tasks: TASK-274, TASK-274-06
   widget-owned header, asset authoring, repeated-item management, layout,
   new-tab, tile-shape, and CTA slices.
 - Kept shared contract findings correctly attributed to the already-landed
-  `TASK-256-06-02`, `TASK-313-01`, and `TASK-313-02` owners instead of
+  `TASK-256-06-02`, `TASK-314-01`, and `TASK-314-02` owners instead of
   restaging them in widget-local code.
 
 ### QA and Documentation

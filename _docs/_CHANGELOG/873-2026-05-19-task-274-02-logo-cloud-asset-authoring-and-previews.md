@@ -1,4 +1,4 @@
-# 870. TASK-274-02 Logo Cloud asset authoring and previews
+# 873. TASK-274-02 Logo Cloud asset authoring and previews
 
 Date: 2026-05-19
 Version: Unreleased

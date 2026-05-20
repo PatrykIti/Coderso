@@ -15,23 +15,23 @@ checkout has moved since then:
 - shared safe-href output for external logo links, fallback section naming, and
   `hoverColor` truthfulness already landed under `TASK-256-06-02`;
 - the remaining shared residuals still missing on current `HEAD` are now
-  reopened under `TASK-313`: Advanced duplicate controls, shared Link URL
+  reopened under `TASK-314`: Advanced duplicate controls, shared Link URL
   feedback, shared heading semantics, and safe `logoHeight: "none"` output;
 - `TASK-274` continues to own only Logo Cloud product/UX work that is local to
   this widget after those shared prerequisites are honest.
 
 ### Shared residual closure note — 2026-05-19
 
-- `UX-07` is fixed under `TASK-313-01`: Advanced is now diagnostics-only for
+- `UX-07` is fixed under `TASK-314-01`: Advanced is now diagnostics-only for
   shared `logoHeight`, `gap`, and `alignment`, while Visual remains the sole
   editable owner for those controls.
-- The shared `BF-10` Link URL feedback slice is fixed under `TASK-313-01`:
+- The shared `BF-10` Link URL feedback slice is fixed under `TASK-314-01`:
   Visual now warns on unsafe `Link URL` values. Widget-local image
   preview/unavailable feedback remains `TASK-274-02`.
-- `BUG-02` / `BF-09` are fixed under `TASK-313-02`: the shared section shell
+- `BUG-02` / `BF-09` are fixed under `TASK-314-02`: the shared section shell
   now renders the title as `<h2>` and uses `aria-labelledby`, with fallback
   `aria-label="Partner logos"` when the title is omitted.
-- `BUG-05` is fixed under `TASK-313-02`: `logoHeight: "none"` still preserves
+- `BUG-05` is fixed under `TASK-314-02`: `logoHeight: "none"` still preserves
   the token in normalized data but no longer leaves runtime image height
   unbounded.
 
@@ -63,7 +63,7 @@ checkout has moved since then:
   selection.
 - The `BF-10` image-feedback slice is fixed: invalid image URLs now warn in the
   editor and do not render a preview. Shared `Link URL` safe-href feedback
-  remains owned by the already-landed `TASK-313-01` contract.
+  remains owned by the already-landed `TASK-314-01` contract.
 
 ### Product closure note — 2026-05-19 (`TASK-274-03`)
 
@@ -109,7 +109,7 @@ checkout has moved since then:
   - widget-owned `BF-03`, `BF-04`, and `BF-05` are closed under `TASK-274-04`;
   - widget-owned `UX-09`, `BF-08`, and `BF-11` are closed under `TASK-274-05`.
 - Shared findings continue to stay attributed to the already-landed
-  `TASK-256-06-02`, `TASK-313-01`, and `TASK-313-02` owners instead of being
+  `TASK-256-06-02`, `TASK-314-01`, and `TASK-314-02` owners instead of being
   overclaimed here.
 - `BF-06` remains not applicable and `A7` remains current-state OK.
 
@@ -118,7 +118,7 @@ checkout has moved since then:
 ### Historical baseline note — 2026-05-19
 
 - Sections 1-9 below preserve the original 2026-05-16 Playwright baseline and
-  intentionally do not describe the current code after `TASK-313` and
+  intentionally do not describe the current code after `TASK-314` and
   `TASK-274-01`.
 - Treat the routing/shared/product closure notes above plus the active
   `TASK-274` leaves as the current owner map until `TASK-274-06` refreshes the

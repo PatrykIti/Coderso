@@ -1,8 +1,8 @@
-# 868. TASK-313 Logo Cloud shared residuals
+# 871. TASK-314 Logo Cloud shared residuals
 
 Date: 2026-05-19
 Version: Unreleased
-Tasks: TASK-313, TASK-313-01, TASK-313-02, TASK-313-03
+Tasks: TASK-314, TASK-314-01, TASK-314-02, TASK-314-03
 
 ## Key Changes
 
@@ -23,8 +23,8 @@ Tasks: TASK-313, TASK-313-01, TASK-313-02, TASK-313-03
 
 - Refreshed `_docs/PLAYWRIGHT/REPORT_LOGO_CLOUD_WIDGET.md` and
   `_docs/_WIDGETS/LOGO_CLOUD.md` so reopened shared residuals are now marked as
-  `TASK-313` fixes and the remaining Logo Cloud product backlog stays routed to
+  `TASK-314` fixes and the remaining Logo Cloud product backlog stays routed to
   `TASK-274`.
-- Synchronized `_docs/_TASKS/TASK-313*.md`, `_docs/_TASKS/README.md`, and this
+- Synchronized `_docs/_TASKS/TASK-314*.md`, `_docs/_TASKS/README.md`, and this
   changelog index so the reopened shared family is fully closed before
   continuing Logo Cloud product work.

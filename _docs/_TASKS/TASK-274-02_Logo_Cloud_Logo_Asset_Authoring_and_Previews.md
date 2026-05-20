@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Logo Cloud + Media Library + Admin UI
 **Estimated Effort:** Large
-**Dependencies:** TASK-274, TASK-256-06-02, TASK-313-01
+**Dependencies:** TASK-274, TASK-256-06-02, TASK-314-01
 **Status:** Done (2026-05-19)
 
 ---
@@ -27,7 +27,7 @@ Source report findings:
 Explicitly out of scope:
 
 - Defining generic link URL validation or safe href behavior; TASK-256 owns
-  the base safe-href helper, while `TASK-313-01` already supplies the Logo
+  the base safe-href helper, while `TASK-314-01` already supplies the Logo
   Cloud shared link-feedback contract. This leaf may wire the Logo Cloud
   `href` authoring surface and reuse that landed validation output.
 - Persisting private media metadata, signed URLs, or provider credentials.
@@ -40,7 +40,7 @@ Explicitly out of scope:
 | `core/admin/ui/widgets/editors/LogoCloudEditors.tsx` | Add Wizard image/link/alt inputs or picker entry points, Visual thumbnails, MediaPicker integration, and image preview feedback for logo images. |
 | `core/admin/ui/media/MediaPicker.tsx` | Reuse only; do not fork or add Logo Cloud-specific picker behavior unless the shared picker lacks required typed output. |
 | `core/admin/services/mediaClient.ts` | Reuse `listMediaCached` as the media cache seam and mock it in editor tests; do not duplicate media fetching in the Logo Cloud editor. |
-| `tests/vitest/ui/logo-cloud-editor-wave.test.tsx` | Cover Wizard image/link/alt updates, Visual thumbnail rendering, MediaPicker selection flow, image unavailable/error feedback, and reuse of the landed `TASK-313-01` shared link-feedback contract. |
+| `tests/vitest/ui/logo-cloud-editor-wave.test.tsx` | Cover Wizard image/link/alt updates, Visual thumbnail rendering, MediaPicker selection flow, image unavailable/error feedback, and reuse of the landed `TASK-314-01` shared link-feedback contract. |
 | `tests/vitest/widgets/logoCloud.test.tsx` | Cover backward-compatible normalization if schema changes. |
 | `tests/unit/widgets/validator.test.ts` | Cover accepted/rejected logo item fields only if intentionally expanding the generic Bun validator suite. |
 | `_docs/_WIDGETS/LOGO_CLOUD.md` | Document image source behavior and editor ownership. |
@@ -513,7 +513,7 @@ No API routes are added.
 - 2026-05-19: Logo Cloud now exposes widget-owned starter/logo asset authoring
   across Wizard and Visual, including Media Library picking, bounded previews,
   explicit per-logo `alt`, shared safe-link feedback reuse, and image-preview
-  failure handling without reopening shared TASK-313 ownership.
+  failure handling without reopening shared TASK-314 ownership.
 - Validation:
   - `bun run lint`
   - `bun run test:bun`

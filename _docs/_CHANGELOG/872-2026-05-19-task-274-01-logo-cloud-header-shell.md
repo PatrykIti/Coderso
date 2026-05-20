@@ -1,4 +1,4 @@
-# 869. TASK-274-01 Logo Cloud header shell controls
+# 872. TASK-274-01 Logo Cloud header shell controls
 
 Date: 2026-05-19
 Version: Unreleased
@@ -15,7 +15,7 @@ Tasks: TASK-274, TASK-274-01
   the new header-shell fields stay backward compatible while producing
   deterministic runtime markers.
 - Added the matching Visual editor controls without reopening the shared
-  heading/landmark ownership that was already repaired under `TASK-313`.
+  heading/landmark ownership that was already repaired under `TASK-314`.
 
 ### QA and Documentation
 

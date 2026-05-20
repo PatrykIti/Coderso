@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Logo Cloud + Admin UI + Runtime Render
 **Estimated Effort:** Large
-**Dependencies:** TASK-274, TASK-256-02, TASK-313-02
+**Dependencies:** TASK-274, TASK-256-02, TASK-314-02
 **Status:** Done (2026-05-19)
 
 ---
@@ -25,7 +25,7 @@ Explicitly out of scope:
 
 - Changing the heading element or adding `headingLevel`; TASK-256-06-02 owns
   the Logo Cloud slice of the shared heading hierarchy repair, and the settled
-  shared runtime closeout now lands through `TASK-313-02`.
+  shared runtime closeout now lands through `TASK-314-02`.
 - Adding section `aria-label` / `aria-labelledby`; the shared accessibility
   baseline stays outside this leaf and is consumed from the current shared
   owner.
@@ -160,7 +160,7 @@ No API routes are added.
 - Runtime renders the eyebrow and background without hardcoding unsafe styles or
   blank nodes.
 - Header element/ARIA details remain delegated to TASK-256 and the already
-  landed `TASK-313-02` shared heading residual fix; they are not reimplemented
+  landed `TASK-314-02` shared heading residual fix; they are not reimplemented
   here.
 - Schema/defaults/normalizer/tests preserve existing Logo Cloud payloads.
 

@@ -25,16 +25,16 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 877 | 2026-05-19 | TASK-274 Logo Cloud closure and validation sync | CMS Widgets/Admin UI/Runtime/QA |
+| 876 | 2026-05-19 | TASK-274-05 Logo Cloud tile links and CTA | CMS Widgets/Admin UI/Runtime/QA |
+| 875 | 2026-05-19 | TASK-274-04 Logo Cloud layouts and marquee | CMS Widgets/Admin UI/Runtime/QA |
+| 874 | 2026-05-19 | TASK-274-03 Logo Cloud item management and reorder | CMS Widgets/Admin UI/QA |
+| 873 | 2026-05-19 | TASK-274-02 Logo Cloud asset authoring and previews | CMS Widgets/Admin UI/Runtime/QA |
+| 872 | 2026-05-19 | TASK-274-01 Logo Cloud header shell controls | CMS Widgets/Admin UI/Runtime/QA |
+| 871 | 2026-05-19 | TASK-314 Logo Cloud shared residuals | CMS Widgets/Admin UI/Runtime/QA |
 | 870 | 2026-05-20 | TASK-273 listing-filters and shared runtime wave | CMS Widgets/Admin UI/Runtime/QA |
-| 874 | 2026-05-19 | TASK-274 Logo Cloud closure and validation sync | CMS Widgets/Admin UI/Runtime/QA |
-| 873 | 2026-05-19 | TASK-274-05 Logo Cloud tile links and CTA | CMS Widgets/Admin UI/Runtime/QA |
-| 872 | 2026-05-19 | TASK-274-04 Logo Cloud layouts and marquee | CMS Widgets/Admin UI/Runtime/QA |
-| 871 | 2026-05-19 | TASK-274-03 Logo Cloud item management and reorder | CMS Widgets/Admin UI/QA |
-| 870 | 2026-05-19 | TASK-274-02 Logo Cloud asset authoring and previews | CMS Widgets/Admin UI/Runtime/QA |
 | 869 | 2026-05-19 | TASK-272 Hero widget follow-ups | CMS Widgets/Admin UI/Runtime/QA |
-| 869 | 2026-05-19 | TASK-274-01 Logo Cloud header shell controls | CMS Widgets/Admin UI/Runtime/QA |
 | 868 | 2026-05-19 | TASK-271 Grid Columns widget follow-ups | CMS Widgets/Admin UI/Runtime/QA |
-| 868 | 2026-05-19 | TASK-313 Logo Cloud shared residuals | CMS Widgets/Admin UI/Runtime/QA |
 | 867 | 2026-05-19 | TASK-311 forms field model wave | CMS Forms/Runtime/Admin UI |
 | 866 | 2026-05-19 | TASK-310 shared color adoption wave | CMS Widgets/Admin UI |
 | 865 | 2026-05-19 | TASK-308 and TASK-309 footer owner wave | CMS Footer/Admin UI/Runtime |

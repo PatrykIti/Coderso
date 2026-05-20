@@ -1,11 +1,11 @@
-# TASK-313-03: Logo Cloud Shared Residual Closure
+# TASK-314-03: Logo Cloud Shared Residual Closure
 
-# FileName: TASK-313-03_Logo_Cloud_Shared_Residual_Closure.md
+# FileName: TASK-314-03_Logo_Cloud_Shared_Residual_Closure.md
 
 **Priority:** Medium
 **Category:** Widgets + Logo Cloud + QA + Documentation + Changelog
 **Estimated Effort:** Medium
-**Dependencies:** TASK-313-01, TASK-313-02
+**Dependencies:** TASK-314-01, TASK-314-02
 **Status:** Done (2026-05-19)
 
 ---
@@ -16,7 +16,7 @@ Close the reopened Logo Cloud shared-contract residual family with a
 finding-by-finding evidence pass against the live checkout, source report,
 widget docs, changelog, and board state.
 
-This leaf is not allowed to mark `TASK-313` complete from proxy evidence alone.
+This leaf is not allowed to mark `TASK-314` complete from proxy evidence alone.
 It must verify every reopened shared row against concrete code, tests, docs, or
 an explicit current-state note.
 
@@ -26,8 +26,8 @@ an explicit current-state note.
 |---|---|
 | `_docs/PLAYWRIGHT/REPORT_LOGO_CLOUD_WIDGET.md` | Add fixed/current-state/deferred evidence for the reopened shared rows. |
 | `_docs/_WIDGETS/LOGO_CLOUD.md` | Ensure shared mode ownership and runtime baseline match code. |
-| `_docs/_TASKS/TASK-313*.md` | Update statuses and final validation notes. |
-| `_docs/_TASKS/README.md` | Move `TASK-313*` rows to the correct board state and update statistics. |
+| `_docs/_TASKS/TASK-314*.md` | Update statuses and final validation notes. |
+| `_docs/_TASKS/README.md` | Move `TASK-314*` rows to the correct board state and update statistics. |
 | `_docs/_CHANGELOG/*.md` | Add a numbered changelog entry for the completed family. |
 | `_docs/_CHANGELOG/README.md` | Register the new changelog entry. |
 
@@ -35,20 +35,20 @@ an explicit current-state note.
 
 Source report coverage:
 
-- `UX-07` is fixed or explicitly current-state-verified under `TASK-313-01`.
+- `UX-07` is fixed or explicitly current-state-verified under `TASK-314-01`.
 - `BF-10` shared link-input feedback is fixed or explicitly current-state
-  verified under `TASK-313-01`.
+  verified under `TASK-314-01`.
 - `BUG-02`, `BF-09`, and `BUG-05` are fixed or explicitly current-state
-  verified under `TASK-313-02`.
+  verified under `TASK-314-02`.
 - Shared rows that already landed under `TASK-256-06-02` remain distinguished
-  from the reopened `TASK-313` scope.
+  from the reopened `TASK-314` scope.
 
 Code and docs consistency:
 
 - `core/widgets/core/logoCloud.tsx` owns the shared runtime semantics repaired
-  by `TASK-313-02`.
+  by `TASK-314-02`.
 - `core/admin/ui/widgets/editors/LogoCloudEditors.tsx` reflects the settled
-  shared editor-mode ownership from `TASK-313-01`.
+  shared editor-mode ownership from `TASK-314-01`.
 - `tests/vitest/widgets/logoCloud.test.tsx`,
   `tests/vitest/widgets/renderer.test.tsx`,
   `tests/vitest/widgets/styleNoneTokens.test.tsx`, and
@@ -84,7 +84,7 @@ function assertSharedCoverage(rows: SharedCoverageRow[]) {
 
 ## Sub-Tasks
 
-- None. This is the closure and evidence leaf for the `TASK-313` family.
+- None. This is the closure and evidence leaf for the `TASK-314` family.
 
 ## Security Contract
 
@@ -121,7 +121,7 @@ No API routes are added by this closure leaf.
 
 ## Acceptance Criteria
 
-- `TASK-313` does not overclaim `TASK-274` product findings as shared fixes.
+- `TASK-314` does not overclaim `TASK-274` product findings as shared fixes.
 - Every reopened shared row has concrete evidence or an explicit current-state
   note.
 - Task files, board statistics, widget docs, report, and changelog are in sync.

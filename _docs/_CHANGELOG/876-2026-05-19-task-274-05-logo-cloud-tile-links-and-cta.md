@@ -1,4 +1,4 @@
-# 873. TASK-274-05 Logo Cloud tile links and CTA
+# 876. TASK-274-05 Logo Cloud tile links and CTA
 
 Date: 2026-05-19
 Version: Unreleased

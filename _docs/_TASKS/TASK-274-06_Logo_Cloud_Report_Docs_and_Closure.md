@@ -5,7 +5,7 @@
 **Priority:** Medium
 **Category:** Widgets + Logo Cloud + QA + Documentation + Changelog
 **Estimated Effort:** Medium
-**Dependencies:** TASK-274-01, TASK-274-02, TASK-274-03, TASK-274-04, TASK-274-05, TASK-256-08, TASK-313-03
+**Dependencies:** TASK-274-01, TASK-274-02, TASK-274-03, TASK-274-04, TASK-274-05, TASK-256-08, TASK-314-03
 **Status:** Done (2026-05-19)
 
 ---
@@ -18,7 +18,7 @@ code, widget docs, changelog, and task board state.
 
 This leaf is not allowed to mark TASK-274 complete from proxy evidence alone.
 It must verify every source-report finding against concrete code, tests, docs,
-or an explicit shared owner (`TASK-256`, `TASK-313`, or a later named follow-up)
+or an explicit shared owner (`TASK-256`, `TASK-314`, or a later named follow-up)
 with current evidence.
 
 ## Files to Change
@@ -38,13 +38,13 @@ with current evidence.
 
 Source report coverage:
 
-- BUG-01 through BUG-05 are either fixed by `TASK-256`, fixed by `TASK-313`,
+- BUG-01 through BUG-05 are either fixed by `TASK-256`, fixed by `TASK-314`,
   verified current-state OK, or explicitly linked to a remaining shared owner.
-- UX-01 through UX-09 are either fixed by shared TASK-256 / TASK-313 work,
+- UX-01 through UX-09 are either fixed by shared TASK-256 / TASK-314 work,
   fixed by TASK-274, current-state verified, or deferred with a named owner.
 - BF-01 through BF-11 are either fixed by TASK-274, not applicable, already OK,
   or deferred with a named owner.
-- A1 through A7 are either fixed by shared TASK-256 / TASK-313 work, already
+- A1 through A7 are either fixed by shared TASK-256 / TASK-314 work, already
   OK, fixed by TASK-274 where product-owned, or explicitly deferred with a
   named owner.
 
@@ -60,7 +60,7 @@ Code and docs consistency:
 - `_docs/_WIDGETS/LOGO_CLOUD.md` matches current code and does not describe
   future fields as already shipped.
 - `_docs/PLAYWRIGHT/REPORT_LOGO_CLOUD_WIDGET.md` distinguishes fixed, shared
-  TASK-256, shared TASK-313, deferred, and not-applicable findings.
+  TASK-256, shared TASK-314, deferred, and not-applicable findings.
 
 ## Implementation Pseudocode
 
@@ -89,10 +89,10 @@ function assertCoverage(rows: CoverageRow[]) {
 
 Manual closure flow:
 
-1. Re-read the source report, TASK-256-06-02, and TASK-313-03 before changing
+1. Re-read the source report, TASK-256-06-02, and TASK-314-03 before changing
    closure docs.
 2. Build a finding-by-finding coverage table in the report or closure notes,
-   naming TASK-256 vs TASK-313 precisely for every shared finding instead of
+   naming TASK-256 vs TASK-314 precisely for every shared finding instead of
    collapsing them into one generic shared bucket.
 3. Run the targeted Logo Cloud suites and required repo gates.
 4. Update task statuses only after code/docs/tests are aligned.
@@ -107,7 +107,7 @@ Closure error handling:
   before moving statuses.
 - If shared safe-link, heading, ARIA, hoverColor, `logoHeight: "none"`, or
   Advanced-mode work has not landed, mark the affected rows with the exact
-  remaining shared owner (`TASK-256-*` or `TASK-313-*`) instead of claiming a
+  remaining shared owner (`TASK-256-*` or `TASK-314-*`) instead of claiming a
   `TASK-274` fix.
 - If validation cannot run because of database, network, or environment
   blockers, record the command, blocker, and retry requirement, and leave status
@@ -128,7 +128,7 @@ No API routes are added by this closure leaf.
 - Reject-unknown validation: closure must confirm validator coverage exists for
   every new schema field from TASK-274.
 - Anti-abuse: closure must confirm safe href/media behavior is covered through
-  the current shared owner (`TASK-256` or `TASK-313`) or local tests before
+  the current shared owner (`TASK-256` or `TASK-314`) or local tests before
   marking link/media findings fixed.
 
 ## Testing Requirements
@@ -169,7 +169,7 @@ Docs-only closure updates after implementation:
 
 ## Acceptance Criteria
 
-- TASK-274 does not overclaim `TASK-256` or `TASK-313` shared findings as local
+- TASK-274 does not overclaim `TASK-256` or `TASK-314` shared findings as local
   fixes.
 - Every report finding has concrete evidence or a named remaining owner.
 - Task files, board statistics, widget docs, report, and changelog are in sync.
@@ -181,24 +181,24 @@ Docs-only closure updates after implementation:
 - 2026-05-19: `TASK-274` is closed. Logo Cloud product-owned findings are now
   covered by `TASK-274-01` through `TASK-274-05`, while shared contract and
   semantics findings remain correctly attributed to the already-landed
-  `TASK-256-06-02`, `TASK-313-01`, and `TASK-313-02` owners.
+  `TASK-256-06-02`, `TASK-314-01`, and `TASK-314-02` owners.
 
 ### Final Coverage Matrix
 
 | Finding | Final owner/status | Evidence summary |
 |---|---|---|
 | BUG-01 | Shared fixed, `TASK-256-06-02` | Shared safe link attrs now route through `resolveWidgetLinkAttrs()`. |
-| BUG-02 | Shared fixed, `TASK-313-02` | Shared section shell now renders `<h2>` with `aria-labelledby`. |
+| BUG-02 | Shared fixed, `TASK-314-02` | Shared section shell now renders `<h2>` with `aria-labelledby`. |
 | BUG-03 | Shared fixed, `TASK-256-06-02` | Section naming contract is shared and already landed. |
 | BUG-04 | Shared fixed, `TASK-256-06-02` | `hoverColor` truthfulness is now shared and no longer lies when grayscale is off. |
-| BUG-05 | Shared fixed, `TASK-313-02` | `logoHeight: "none"` stays visible in data while runtime remains bounded. |
+| BUG-05 | Shared fixed, `TASK-314-02` | `logoHeight: "none"` stays visible in data while runtime remains bounded. |
 | UX-01 | Shared fixed, `TASK-256-06-02` | Visual disables the hover-color control when grayscale is off. |
 | UX-02 | Fixed, `TASK-274-03` | Remove now surfaces inline Undo and restores the exact removed row. |
 | UX-03 | Fixed, `TASK-274-02` | Wizard starter-logo rows now own image, alt, href, and media selection. |
 | UX-04 | Fixed, `TASK-274-02` | Logo rows now render bounded preview and unavailable-preview states. |
 | UX-05 | Fixed, `TASK-274-02` | Per-logo `alt` is schema-owned and used in runtime output. |
 | UX-06 | Fixed, `TASK-274-02` | MediaPicker/listMediaCached now drive Logo Cloud asset selection. |
-| UX-07 | Shared fixed, `TASK-313-01` | Advanced is diagnostics-only for shared Logo Cloud controls. |
+| UX-07 | Shared fixed, `TASK-314-01` | Advanced is diagnostics-only for shared Logo Cloud controls. |
 | UX-08 | Fixed, `TASK-274-03` | Visual supports drag-handle reorder plus Move button fallback. |
 | UX-09 | Fixed, `TASK-274-05` | One global new-tab toggle now routes through the shared safe helper. |
 | BF-01 | Fixed, `TASK-274-01` | Header copy owns the widget-local eyebrow field. |
@@ -209,11 +209,11 @@ Docs-only closure updates after implementation:
 | BF-06 | Not applicable | Container/padding/margin controls were already present in Advanced. |
 | BF-07 | Fixed, `TASK-274-01` | Header alignment and size are now bounded widget-local controls. |
 | BF-08 | Fixed, `TASK-274-05` | Tile radius and border width are now schema-owned and bounded. |
-| BF-09 | Shared fixed, `TASK-313-02` | Heading level is now handled by the shared section shell contract. |
-| BF-10 | Split fixed | Shared Link URL feedback is `TASK-313-01`; image URL preview feedback is `TASK-274-02`. |
+| BF-09 | Shared fixed, `TASK-314-02` | Heading level is now handled by the shared section shell contract. |
+| BF-10 | Split fixed | Shared Link URL feedback is `TASK-314-01`; image URL preview feedback is `TASK-274-02`. |
 | BF-11 | Fixed, `TASK-274-05` | Optional CTA below the logo list now renders through the shared safe helper. |
 | A1 | Shared fixed, `TASK-256-06-02` | Region naming is now handled by the shared landmark shell. |
-| A2 | Shared fixed, `TASK-313-02` | Shared heading semantics now use `<h2>` instead of hardcoded `<h3>`. |
+| A2 | Shared fixed, `TASK-314-02` | Shared heading semantics now use `<h2>` instead of hardcoded `<h3>`. |
 | A3 | Shared fixed, `TASK-256-06-02` | External logo links now inherit shared noopener/noreferrer attrs. |
 | A4 | Fixed, `TASK-274-05` | Shared new-tab behavior is now reachable from one widget-owned toggle. |
 | A5 | Fixed, `TASK-274-02` | Runtime now prefers explicit `alt` and falls back to `name`. |

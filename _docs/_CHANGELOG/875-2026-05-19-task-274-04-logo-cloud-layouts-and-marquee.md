@@ -1,4 +1,4 @@
-# 872. TASK-274-04 Logo Cloud layouts and marquee
+# 875. TASK-274-04 Logo Cloud layouts and marquee
 
 Date: 2026-05-19
 Version: Unreleased
