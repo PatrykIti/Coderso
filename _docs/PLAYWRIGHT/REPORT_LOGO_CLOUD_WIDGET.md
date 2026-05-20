@@ -493,4 +493,6 @@ Logo Cloud widget służy do prezentacji logotypów partnerów i klientów w cel
 
 ---
 
-*Raport wygenerowany na podstawie analizy kodu i testów Playwright — 2026-05-16.*
+*Raport bazuje na oryginalnej analizie kodu i sesji Playwright z 2026-05-16;
+closure notes above were refreshed for the 2026-05-19 task closeout and the
+2026-05-21 audit pass.*

@@ -226,6 +226,13 @@ Docs-only closure updates after implementation:
 - `bun run test:vitest -- tests/vitest/widgets/widgetSafeHref.test.ts tests/vitest/widgets/logoCloud.test.tsx tests/vitest/widgets/renderer.test.tsx tests/vitest/widgets/logoCloudStyles.test.ts tests/vitest/widgets/styleNoneTokens.test.tsx tests/vitest/ui/logo-cloud-editor-wave.test.tsx`
 - `bun run scan:security:strict`
 
+### Validation addendum — 2026-05-21 audit
+
+- `bun --cwd core lint` — passed
+- `bun --cwd core lint:types` — passed
+- `bun run gates:coderso` — passed
+- `bun run precommit` — passed repeatedly while staging the 2026-05-21 audit commits
+
 ### Isolated broader-lane blockers
 
 - `bun run test:bun` on this task branch still hit two branch-local red tests outside
