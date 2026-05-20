@@ -6,7 +6,7 @@
 **Category:** Widgets + Listing Filters + Runtime Render + Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-273-01, TASK-273-03
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -47,7 +47,7 @@ control that needs local labels.
 |---|---|
 | `core/widgets/core/listingFilters.tsx` | Add active summary/chips/clear-all markup, distinguish missing metrics from zero counts, and adjust auto-apply submit/copy behavior. |
 | `core/widgets/core/listingRuntimeScript.ts` | Bind clear-all action to Listing Filters-specific markers, remove `lq.<queryId>.*` params, and refresh linked listing blocks without changing Search Box listing-mode forms accidentally. |
-| `core/admin/ui/widgets/editors/ListingFiltersEditors.tsx` | Add labels/toggles for active summary, clear-all label, count visibility/unknown-state copy only if product wants them configurable. |
+| `core/admin/ui/widgets/editors/ListingFiltersEditors.tsx` | Touch only if the implementation needs fixed explanatory copy for the new runtime behavior. Do not add optional product settings for active-summary, clear-all, or auto-apply visibility in this leaf. |
 | `tests/vitest/widgets/listingFilters.test.tsx` | Cover active chips, clear-all marker, missing versus zero counts, and auto-apply/manual button behavior. |
 | `tests/vitest/ui/listing-filters-editor-wave.test.tsx` | Cover any new editor controls. |
 | `_docs/_WIDGETS/LISTING_FILTERS.md` | Document active state, clear-all, and count behavior. |
@@ -56,12 +56,6 @@ control that needs local labels.
 ## Implementation Pseudocode
 
 ```tsx
-type ListingFiltersBehavior = {
-  showActiveSummary?: boolean;
-  clearAllLabel?: string;
-  showApplyButtonWhenAutoApply?: boolean;
-};
-
 function buildActiveFilterItems(metrics: ListingFacetMetric[], searchQuery: string) {
   const items = [];
   if (searchQuery) items.push({ token: listingRuntimeTokens.search, label: "Search", value: searchQuery });
@@ -85,14 +79,14 @@ function renderOptionCount(option: ListingFacetMetricOption, hasResolvedMetric: 
 Data flow:
 
 - Active items derive from `resolved.metrics` and `resolved.searchQuery`, not
-  from new persisted state.
+  from new persisted state or new widget-level behavior flags.
 - Missing metrics render no count or an explicit `Not loaded`-style state;
   server-provided `0` remains a truthful zero.
 - Clear-all uses a stable `data-listing-filter-clear-all` hook and the existing
   runtime refresh path.
-- Manual mode keeps the submit action visible. Auto-apply mode either hides the
-  submit button or clearly labels it as an optional refresh, based on the final
-  product decision.
+- Manual mode keeps the submit action visible. Auto-apply mode hides the manual
+  submit button and replaces it with non-interactive helper copy so the widget
+  no longer presents contradictory apply semantics.
 
 Error handling:
 
@@ -111,8 +105,9 @@ No API routes are added.
 - RBAC: unchanged.
 - CSRF: unchanged because no write route is introduced.
 - Rate-limit bucket: unchanged.
-- Reject-unknown validation: new behavior labels/options must be schema-owned
-  and bounded.
+- Reject-unknown validation: this leaf should not add new persisted behavior
+  flags unless scope is explicitly widened; any unavoidable new copy fields must
+  stay schema-owned and bounded.
 - Anti-abuse: active chips render escaped React text from normalized labels and
   values only; no raw HTML or script.
 

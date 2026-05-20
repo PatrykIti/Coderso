@@ -5,8 +5,8 @@
 **Priority:** High
 **Category:** Widgets + Listing Filters + Admin UI + Runtime Render
 **Estimated Effort:** Large
-**Dependencies:** TASK-256-01, TASK-273
-**Status:** To Do
+**Dependencies:** TASK-256-01, TASK-273, TASK-316
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -14,8 +14,8 @@
 
 Repair the critical Listing Filters editor flow so selecting a listing query
 shows a real admin canvas preview, adding a facet creates a visible editable
-draft row, and the query picker recovers from the transient first-open
-authentication error without changing global auth behavior.
+draft row, and the widget surfaces clear picker-local setup guidance around the
+shared listing-query owner.
 
 This leaf must not rewrite the shared editor mode contract. It owns the
 Listing Filters-local data flow between `ListingFiltersEditors.tsx`,
@@ -26,7 +26,8 @@ Listing Filters-local data flow between `ListingFiltersEditors.tsx`,
 
 - `_docs/PLAYWRIGHT/REPORT_LISTING_FILTERS_WIDGET.md:151-159` - first-open query
   loading can show `Not authenticated`, and the query picker lacks clear setup
-  guidance.
+  guidance. Shared retry/session-settling ownership routes to TASK-316; this
+  leaf keeps only Listing Filters-local guidance/canvas behavior.
 - `_docs/PLAYWRIGHT/REPORT_LISTING_FILTERS_WIDGET.md:166-172` - `Add facet`
   creates a checkbox draft with an empty field, then normalization drops it.
 - `_docs/PLAYWRIGHT/REPORT_LISTING_FILTERS_WIDGET.md:189-202` - admin canvas
@@ -51,8 +52,8 @@ Listing Filters-local data flow between `ListingFiltersEditors.tsx`,
 | `core/services/search/filterContract.ts` | Keep persistence/runtime facet normalization strict; add a separate editor-safe draft normalization helper only if the editor cannot own draft state locally. |
 | `core/admin/ui/widgets/editors/ListingFiltersEditors.tsx` | Stop passing in-progress facet rows through strict persistence normalization on every keystroke; add inline duplicate/invalid ID and missing-field feedback; keep kind changes visible. |
 | `tests/vitest/widgets/listingFilters.test.tsx` | Add admin-canvas fallback regression and strict persisted facet normalization coverage. |
-| `tests/vitest/ui/listing-filters-editor-wave.test.tsx` | Assert `Add facet`, sort-to-checkbox changes, duplicate IDs, missing field feedback, and query-loading retry states. |
-| `_docs/PLAYWRIGHT/REPORT_LISTING_FILTERS_WIDGET.md` | Mark the fixed admin canvas/facet-draft/query-loading findings or record deferral evidence. |
+| `tests/vitest/ui/listing-filters-editor-wave.test.tsx` | Assert `Add facet`, sort-to-checkbox changes, duplicate IDs, missing field feedback, and local setup guidance around the shared picker state. |
+| `_docs/PLAYWRIGHT/REPORT_LISTING_FILTERS_WIDGET.md` | Mark the fixed admin canvas/facet-draft findings and local picker-guidance evidence; shared query-loading recovery routes to TASK-316. |
 | `_docs/_WIDGETS/LISTING_FILTERS.md` | Document the editor draft versus persisted runtime facet validation boundary. |
 
 ## Implementation Pseudocode
@@ -97,11 +98,6 @@ function normalizeListingFacetDrafts(rawFacets: unknown, persistedFacets: Listin
   }));
 }
 
-function useListingQueriesWithRetry() {
-  // Initial force load stays local to the widget editor. Retry once after a short
-  // delay only for auth-shaped ApiClientError responses, then surface the final
-  // error with a retry action.
-}
 ```
 
 Data flow:
@@ -121,8 +117,10 @@ Data flow:
 
 Error handling:
 
-- The query picker may retry a transient 401 once, then show the final error and
-  a manual retry action.
+- Local setup guidance reflects the shared picker loading/error state without
+  changing auth/session semantics. Shared retry/manual refresh behavior is owned
+  by TASK-316, and broader Wizard/Visual diagnostics copy is owned by
+  TASK-273-07.
 - Do not swallow permanent authorization failures or change route auth behavior.
 - Persisted invalid non-sort facets still fail closed or are omitted according
   to the existing runtime contract until a schema migration explicitly changes
@@ -151,6 +149,7 @@ No API routes are added.
 - `bun run test:vitest -- tests/vitest/ui/listing-filters-editor-wave.test.tsx`
 - `bun test tests/unit/widgets/validator.test.ts` if schema/defaults/normalizer
   fields change.
+- `bun run gates:coderso`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 
@@ -171,5 +170,6 @@ No API routes are added.
   row visible and shows actionable missing-field validation.
 - Duplicate or token-colliding facet IDs are visible editor errors rather than
   silent dropped rows.
-- The query picker either loads queries after transient session settling or
-  shows a retryable error without weakening auth.
+- Listing Filters shows clear picker-local setup guidance next to the shared
+  listing query picker, while transient session-settling retry behavior is
+  owned by TASK-316 and mode-level diagnostics remain TASK-273-07.

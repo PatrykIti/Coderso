@@ -12,6 +12,10 @@ import {
   galleryMosaicDefaults,
   type GalleryMosaicData,
 } from "../../../core/widgets/core/galleryMosaic";
+import {
+  createListingFiltersWidget,
+  listingFiltersDefaults,
+} from "../../../core/widgets/core/listingFilters";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { clearWidgetValidators, normalizeWidgetBlock } from "../../../core/widgets/validator";
 import type { WidgetDefinition, WidgetBlock } from "../../../core/widgets/types";
@@ -203,6 +207,98 @@ test("normalizeWidgetBlock accepts Contact runtime hydration data but rejects un
             },
           ],
         },
+      } as never,
+    })
+  ).toThrow("widget_schema_invalid");
+});
+
+test("normalizeWidgetBlock accepts listing filters presentation metadata and rejects invalid enums", () => {
+  registerWidget(
+    createListingFiltersWidget({
+      wizard: Dummy,
+      visual: Dummy,
+      advanced: Dummy,
+    })
+  );
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "listing-filters-presentation",
+      type: "listing-filters",
+      variant: "default",
+      data: {
+        ...listingFiltersDefaults,
+        listingQueryId: "listing-query-1",
+        layout: {
+          maxWidth: "full",
+          stickySidebar: true,
+          collapsibleFacets: true,
+          defaultCollapsed: true,
+        },
+        facets: [
+          {
+            id: "price",
+            kind: "range",
+            label: "Price",
+            field: "price",
+            op: "between",
+            presentation: {
+              rangeInputMode: "inputs-slider",
+              rangeStep: 5,
+            },
+          },
+          {
+            id: "published-at",
+            kind: "date-range",
+            label: "Published at",
+            field: "publishedAt",
+            op: "between",
+            presentation: {
+              dateInputMode: "native-date",
+            },
+          },
+          {
+            id: "category",
+            kind: "taxonomy",
+            label: "Category",
+            field: "category",
+            op: "in",
+            presentation: {
+              controlMode: "searchable",
+            },
+            options: [
+              { value: "houses", label: "Houses" },
+              { value: "modern", label: "Modern", parentValue: "houses" },
+            ],
+          },
+        ],
+      },
+    })
+  ).not.toThrow();
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "listing-filters-presentation-bad",
+      type: "listing-filters",
+      variant: "default",
+      data: {
+        ...listingFiltersDefaults,
+        listingQueryId: "listing-query-1",
+        layout: {
+          maxWidth: "bad-width",
+        },
+        facets: [
+          {
+            id: "price",
+            kind: "range",
+            label: "Price",
+            field: "price",
+            op: "between",
+            presentation: {
+              rangeInputMode: "bad-mode",
+            },
+          },
+        ],
       } as never,
     })
   ).toThrow("widget_schema_invalid");

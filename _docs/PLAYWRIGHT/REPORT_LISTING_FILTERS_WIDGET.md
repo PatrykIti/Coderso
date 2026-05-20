@@ -1,12 +1,44 @@
 # REPORT: Listing Filters Widget
 
-> Status: **UKOŃCZONY** | Data: 2026-05-16 | Autor: Claude Code
+> Status: **AUDYT UKOŃCZONY, follow-up closed** | Data: 2026-05-16 | Autor: Claude Code
 
 ---
 
 ## 1. Podsumowanie
 
 Widget `listing-filters` służy do renderowania panelu filtrów runtime dla listing queries. Wyświetla facety (checkbox, radio, range, date-range, taxonomy, sort) w formularzu synchronizowanym przez URL, który odświeża powiązane bloki listingowe bez przeładowania strony. Widget jest ściśle sprzężony z systemem listing queries — bez podłączonego zapytania wyświetla jedynie placeholder.
+
+### 1.1 Status taska TASK-273 po audycie z 2026-05-19
+
+Poniższy raport pozostaje historycznym audytem Playwright, ale obecny branch
+`task/273-listing-filters-widget-playwright-followups` ma już kilka napraw,
+więc część pierwotnych wniosków jest dziś nieaktualna lub przeniesiona do
+shared ownerów:
+
+- Naprawione lokalnie w aktualnym slice:
+  - canvas fallback `resolved.listingQueryId` -> configured `listingQueryId`,
+  - shared `useListingQueries()` adoption for Listing Filters and Search Box,
+  - bounded transient auth retry + manual retry path for listing-query pickers,
+  - field suggestions, kind-scoped operators, structured option/sort rows,
+    inline validation, and facet preview in the editor,
+  - diagnostics outside Advanced plus clearer contract linkage,
+  - practical range/date controls, taxonomy parent hierarchy, and searchable
+    option mode in the widget/editor contract,
+  - active filter summary, `Clear all`, truthful unloaded count behavior, and
+    local loading/error DOM anchors for the Listing Filters surface,
+  - bounded layout variants (`horizontal`, `sidebar`, `drawer`), width controls,
+    sticky sidebar option, and native per-facet collapsible behavior.
+- Skorygowane owner boundaries:
+  - B-02 pagination ownership belongs to linked `content-list` / TASK-262-03,
+    not to a second pagination surface inside `listing-filters`,
+  - B-11/T-09 page-reset concern is stale against the live runtime client and
+    now routes only to shared runtime follow-ups in TASK-315.
+- Nadal otwarte w TASK-273 family:
+  - none. TASK-273 local widget scope and its extracted shared owner follow-ups
+    are now landed in the current branch.
+- Nadal otwarte poza lokalnym ownerem widgetu:
+  - any broader listing-form UX convergence with `search-box` should be split to
+    a separate shared follow-up instead of being silently redefined here.
 
 ---
 
@@ -20,6 +52,12 @@ Widget `listing-filters` służy do renderowania panelu filtrów runtime dla lis
 | `core/admin/ui/widgets/editors/ListingFiltersEditors.tsx` | Edytory: Wizard, Visual, Advanced |
 | `core/services/search/filterContract.ts` | Typy faset, operatory, tokeny runtime, `normalizeListingFacetConfigs` |
 | `core/widgets/core/listingRuntimeScript.ts` | Klient JS (IIFE) odpowiadający za sync URL ↔ form i AJAX refresh |
+| `core/services/search/listingRuntimeService.ts` | Resolver runtime dla metryk facetów i wspólnego stanu listing query |
+| `core/server/publicSite.tsx` | Wstrzykuje `resolved` runtime dla `listing-filters` podczas publicznego renderu |
+| `core/admin/ui/listings/hooks/useListingQueries.ts` | Wspólny owner hooka dla listy listing queries w adminie |
+| `core/widgets/core/searchBox.tsx` | Drugi widget używający tego samego runtime clienta i form contractu |
+| `core/widgets/core/contentList.tsx` | Powiązany surface wyników, już renderujący paginację dla `__page` |
+| `core/widgets/core/entryTeaser.tsx` | Powiązany surface wyników uczestniczący w replacement path po `data-listing-query-id` |
 | `core/admin/ui/listings/ListingFiltersPage.tsx` | Strona admin do testowania tokenów runtime (nie edytor widgetu) |
 | `tests/vitest/widgets/listingFilters.test.tsx` | Testy jednostkowe komponentu |
 
@@ -327,11 +365,11 @@ Frontend (localhost:3000)
 
 5. **B-05/B-06 — Range/Date-range jako text input**: Użytkownik musi wpisać `min,max` lub `YYYY-MM-DD,YYYY-MM-DD` w pole tekstowe. Brak slidera i date picker blokuje zastosowanie dla normalnych redaktorów.
 
-6. **B-02 — Brak paginacji**: Token `__page` istnieje w kontrakcje ale nie ma żadnej kontrolki paginacji w widgecie. Listing filters bez paginacji jest niepełny.
+6. **B-02 — Local pagination ownership is stale in this widget report**: Token `__page` istnieje w kontrakcie, ale kontrolki Previous/Next należą już do powiązanego `content-list` i nie wolno otwierać drugiego ownera paginacji w `listing-filters`. Dalsza praca dla TASK-273 to tylko evidencja i zgodność z shared ownerem.
 
 7. **B-03 — Brak wskaźnika aktywnych filtrów**: Brak licznika aktywnych filtrów, tagów wyborów, przycisku "Clear all". Użytkownik nie wie jakie filtry są aktywne bez czytania URL.
 
-8. **B-11 — Brak reset `__page` przy zmianie filtrów**: Skrypt nie zeruje `__page` przy submit filtrów. Krytyczne dla paginowanych list.
+8. **B-11 — Stale against the live runtime client**: Aktualny skrypt już czyści namespace `lq.<queryId>.*` przed zbudowaniem nowych wartości, więc nie-page submit nie przenosi starego `__page`. Otwarte pozostają shared loading/error/stale-response follow-upy w TASK-315, nie lokalny reset strony w TASK-273.
 
 9. **B-01 — Tylko jeden wariant (`default`)**: Brak `horizontal` (filtry w wierszu), `sidebar` (sticky panel), `drawer` (mobilny). Wszystkie typowe wzorce UX dla listingów są nieobsługiwane.
 
@@ -400,3 +438,66 @@ _Raport ukończony po pełnym cyklu testów: analiza kodu + testy Admin UI + tes
   Widget-owned follow-up scope continues through the `TASK-273` family.
 - Shared rows that match existing TASK-256 truthful-control or accessibility
   mechanisms remain referenced by `TASK-256-07` and `TASK-256-08`.
+
+## Current-State Corrections Before TASK-273 Execution (2026-05-19)
+
+- `B-02` must not open a second pagination owner inside `listing-filters`.
+  Linked listing results already own Previous/Next pagination UI through
+  `content-list` and the closed `TASK-262-03` runtime contract.
+- `B-11` and `T-09` are stale against the live checkout. The shared runtime
+  client already clears the `lq.<queryId>.*` namespace before rebuilding the
+  current control values, so non-page filter/search/sort submissions already
+  drop `__page`.
+- Shared runtime blast radius is wider than the original static file list:
+  `listingRuntimeScript.ts` refreshes Search Box submitters and also replaces
+  linked `content-list` / `entry-teaser` blocks by shared
+  `data-listing-query-id`, while shared listing-query picker loading belongs to
+  `core/admin/ui/listings/hooks/useListingQueries.ts`.
+- Earlier accessibility evidence around `T-05` and the later `aria-label`
+  browser audit conflated separate issues. Keep `aria-describedby` count wiring
+  distinct from input/select/button labeling when TASK-273/TASK-256 closure
+  records final evidence.
+
+## Current TASK-273 Evidence (2026-05-19)
+
+### Fixed local leaves
+
+| Finding | Owner | Current evidence |
+|---|---|---|
+| Canvas placeholder after selecting a query | TASK-273-01 | `ListingFiltersBlock` now falls back from blank `resolved.listingQueryId` to configured `listingQueryId`, with render coverage in `tests/vitest/widgets/listingFilters.test.tsx`. |
+| Draft facet rows disappearing, duplicate ID silence, and picker-local setup guidance | TASK-273-01 | `ListingFiltersEditors.tsx` now preserves draft rows, surfaces duplicate/missing-field feedback, and keeps picker-local setup copy; covered in `tests/vitest/ui/listing-filters-editor-wave.test.tsx`. |
+| Field suggestions, kind-scoped operators, structured option rows, and facet preview | TASK-273-02 | Listing Filters editors now use shared listing-query suggestions, structured option/sort rows, and rendered previews; covered in `tests/vitest/ui/listing-filters-editor-wave.test.tsx`. |
+| Range/date practical controls, taxonomy hierarchy, and searchable option mode | TASK-273-03 | `listingFilters.tsx`, `filterContract.ts`, and `listingRuntimeScript.ts` now support dual range inputs with optional sliders, native date-range fields, taxonomy parent hierarchy, and searchable option mode; covered in `tests/vitest/widgets/listingFilters.test.tsx`, `tests/vitest/widgets/listingRuntimeScript.test.ts`, `tests/vitest/ui/listing-filters-editor-wave.test.tsx`, and `tests/unit/widgets/validator.test.ts`. |
+| Active summary, clear-all, truthful unloaded counts, and non-contradictory auto-apply UX | TASK-273-04 | Runtime now renders active chips, `Clear all`, hides manual submit in auto-apply mode, and suppresses fake zero counts when metrics are unresolved; covered in `tests/vitest/widgets/listingFilters.test.tsx` and `tests/vitest/widgets/listingRuntimeScript.test.ts`. |
+| Local loading/error anchors and current-state pagination evidence | TASK-273-05 | Listing Filters now emits deterministic `data-listing-runtime-loading` / `data-listing-runtime-error` anchors and keeps `__page` ownership out of the widget; shared fetch lifecycle remains externalized to TASK-315. |
+| Horizontal/sidebar/drawer variants, bounded width, collapsible facets, and sticky sidebar option | TASK-273-06 | `listingFilters.tsx` and `ListingFiltersEditors.tsx` now expose four bounded variants, max-width settings, native collapsible facets, and optional sticky sidebar behavior; covered in `tests/vitest/widgets/listingFilters.test.tsx` and `tests/vitest/ui/listing-filters-editor-wave.test.tsx`. |
+| Wizard facet onboarding, diagnostics outside Advanced, and clearer contract linkage | TASK-273-07 | Wizard and Visual already expose facet onboarding plus runtime diagnostics, while Advanced keeps contract linkage and snapshot visibility; covered in `tests/vitest/widgets/listingFilters.test.tsx` and `tests/vitest/ui/listing-filters-editor-wave.test.tsx`. |
+
+### Extracted/shared owner references
+
+| Report seam | Owner | Closure note |
+|---|---|---|
+| B-02 pagination UI ownership | TASK-262-03 | Listing Filters does not render a second pagination surface; linked results continue to own `__page` navigation through `content-list`. |
+| B-08/B-09 shared refresh busy/error lifecycle | TASK-315 | Listing Filters now exposes local anchors, but shared fetch lifecycle, stale-response protection, and no-redirect recovery remain in the shared runtime task. |
+| B-11 / T-09 page reset | Current live contract + TASK-315 | The live runtime client already clears the `lq.<queryId>.*` namespace before rebuilding current values; no local fix remains in TASK-273. |
+| First-open `Not authenticated` picker load | TASK-316 | Shared `useListingQueries()` owner now handles bounded retry/manual retry; Listing Filters consumes that contract without widget-local fetch hooks. |
+| Raw script policy, uncontrolled/shared ARIA baselines, generic clear/color semantics, and mode atomicity | TASK-256 family | These remain shared-contract evidence and are not claimed as TASK-273-local fixes. |
+
+### Validation used for closure
+
+- Targeted green evidence:
+  - `bun run test:vitest -- tests/vitest/widgets/listingFilters.test.tsx tests/vitest/ui/listing-filters-editor-wave.test.tsx tests/vitest/widgets/listingRuntimeScript.test.ts`
+  - `bun test tests/unit/widgets/validator.test.ts`
+- Final repo gates:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun run lint`
+  - `bun run test:vitest`
+  - `bun run test:bun`
+  - `bun run scan:security:strict`
+
+### Replay note
+
+- A fresh Playwright/browser replay was not rerun during the final closure pass.
+  Current closure relies on live owner inspection, targeted DOM/runtime tests,
+  full repo gates, and explicit extracted-owner routing for shared seams.

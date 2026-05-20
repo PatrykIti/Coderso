@@ -6,7 +6,7 @@
 **Category:** Widgets + Listing Filters + Runtime Render + Admin UI
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-273-01, TASK-273-02
-**Status:** To Do
+**Status:** Done (2026-05-19)
 
 ---
 

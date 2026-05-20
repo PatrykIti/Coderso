@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -10,8 +11,6 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { isApiClientError } from "@/services/apiClient";
-import { listListingQueriesCached, type ListingQueryRecord } from "@/services/listingsClient";
 
 import {
   normalizeSearchBoxData,
@@ -20,6 +19,7 @@ import {
   type SearchBoxData,
 } from "../../../../widgets/core/searchBox";
 import type { WidgetEditorProps } from "../../../../widgets/types";
+import { useListingQueries } from "../../listings/hooks/useListingQueries";
 import { ClearableInputField } from "./ClearableFields";
 import { WidgetEditorSection } from "./WidgetEditorControls";
 
@@ -83,38 +83,6 @@ function clearStyle(
   });
 }
 
-function useListingQueries() {
-  const [items, setItems] = useState<ListingQueryRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    listListingQueriesCached({ force: true })
-      .then((next) => {
-        if (!active) return;
-        setItems(next);
-      })
-      .catch((err) => {
-        if (!active) return;
-        if (isApiClientError(err)) {
-          setError(err.message);
-        } else {
-          setError("Failed to load listing queries.");
-        }
-      })
-      .finally(() => {
-        if (!active) return;
-        setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  return { items, loading, error };
-}
-
 function SearchMode({
   value,
   onChange,
@@ -123,9 +91,9 @@ function SearchMode({
   onChange: (next: SearchBoxData) => void;
 }) {
   const normalized = normalizeSearchBoxData(value);
-  const { items, loading, error } = useListingQueries();
+  const { items, isLoading, error, refresh } = useListingQueries({ retryAuthOnce: true });
   const mode = normalized.mode ?? "listing";
-  const listingLoadState = loading
+  const listingLoadState = isLoading
     ? "loading"
     : error
       ? "error"
@@ -194,7 +162,19 @@ function SearchMode({
             <p className="text-xs text-muted-foreground">No listing queries are available yet.</p>
           ) : null}
           {listingLoadState === "error" && error ? (
-            <p className="text-xs text-destructive">{error}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-xs text-destructive">{error}</p>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  void refresh({ force: true, retryAuthOnce: true });
+                }}
+              >
+                Retry
+              </Button>
+            </div>
           ) : null}
         </div>
       ) : mode === "global" ? (

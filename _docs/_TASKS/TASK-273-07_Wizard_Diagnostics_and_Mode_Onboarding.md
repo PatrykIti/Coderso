@@ -5,8 +5,8 @@
 **Priority:** Medium
 **Category:** Widgets + Listing Filters + Admin UI
 **Estimated Effort:** Medium
-**Dependencies:** TASK-256-01, TASK-273-01, TASK-273-02, TASK-273-06
-**Status:** To Do
+**Dependencies:** TASK-256-01, TASK-273-01, TASK-273-02, TASK-316
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -20,13 +20,16 @@ resolved payload information.
 
 This leaf owns Listing Filters mode content. Shared mode switching, generic
 metadata requirements, and Advanced duplicate-control policy remain TASK-256.
+Picker-inline setup guidance next to the listing-query selector stays in
+TASK-273-01; this leaf owns the higher-level mode onboarding and diagnostics
+around that picker state.
 
 ## Source Findings
 
 - `_docs/PLAYWRIGHT/REPORT_LISTING_FILTERS_WIDGET.md:114` - Wizard lacks
   `FacetsEditor`.
-- `_docs/PLAYWRIGHT/REPORT_LISTING_FILTERS_WIDGET.md:116-117` - missing query
-  setup guidance and diagnostics outside Advanced.
+- `_docs/PLAYWRIGHT/REPORT_LISTING_FILTERS_WIDGET.md:116-117` - missing
+  diagnostics and mode-level setup guidance outside Advanced.
 - `_docs/PLAYWRIGHT/REPORT_LISTING_FILTERS_WIDGET.md:178-182` - Advanced
   runtime payload is always empty in editor context and contract text lacks doc
   linkage.
@@ -82,11 +85,14 @@ Data flow:
   not run SSR or fetch public runtime data from the editor.
 - Advanced keeps raw payload visibility but links to
   `_docs/_WIDGETS/LISTING_FILTERS.md` and names the `lq.<queryId>.*` contract.
+- Shared query-picker loading/retry state comes from TASK-316; this leaf only
+  decides how Wizard/Visual/Advanced explain that state.
 
 Error handling:
 
-- When `listingQueryId` is empty, Wizard and Visual show blocking setup guidance
-  near the query picker.
+- When `listingQueryId` is empty, Wizard and Visual show mode-level onboarding
+  that complements, but does not duplicate, the picker-inline setup guidance
+  from TASK-273-01.
 - When `resolved` is empty in editor context, diagnostics explain that public SSR
   fills it on runtime pages instead of implying a broken payload.
 - Do not persist diagnostic-only state.
@@ -110,6 +116,7 @@ No API routes are added.
 - `bun run test:vitest -- tests/vitest/ui/listing-filters-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/listingFilters.test.tsx` if
   diagnostics helpers move into widget owner code.
+- `bun run gates:coderso`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 

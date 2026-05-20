@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 256 tasks
+- **To Do:** 247 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1713 tasks
+- **Done:** 1724 tasks
 
 ---
 
@@ -196,15 +196,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-274-04 | Logo Cloud Dense Strip and Marquee Layouts | Medium | Large | Add dense overflow repair, strip single-row scroll, and optional marquee with reduced-motion safety |
 | TASK-274-05 | Logo Cloud Tile Link and CTA Controls | Medium | Large | Add bounded tile shape, open-new-tab product control, and optional CTA through shared safe href helpers |
 | TASK-274-06 | Logo Cloud Report Docs and Closure | Medium | Medium | Refresh Logo Cloud report evidence, widget docs, changelog, board, and final validation |
-| TASK-273 | Listing Filters Widget Playwright Product Followups | High | Very Large | Listing Filters-only follow-up family for `REPORT_LISTING_FILTERS_WIDGET.md`, excluding TASK-256 shared-contract scope |
-| TASK-273-01 | Admin Canvas, Facet Draft State, and Query Loading | High | Large | Repair canvas query fallback, visible editable facet drafts, duplicate-id feedback, and transient query-load handling |
-| TASK-273-02 | Facet Field, Operator, Options, and Preview Editors | High | Large | Add query-aware field suggestions, kind-scoped operators, structured option/sort rows, inline validation, and facet previews |
-| TASK-273-03 | Range, Date, Taxonomy, and Searchable Option Controls | High | Very Large | Add practical range/date/taxonomy/searchable-option controls while preserving the existing URL token contract |
-| TASK-273-04 | Active Filters, Clear All, Counts, and Auto Apply State | High | Large | Add active filter summary, clear-all, truthful missing-count state, and less confusing auto-apply behavior |
-| TASK-273-05 | Pagination, Page Reset, Loading, and Error State | High | Large | Add page controls, reset page on filter changes, AJAX busy state, stale-response guard, and inline runtime errors |
-| TASK-273-06 | Layout Variants, Collapsible Facets, and Width Controls | High | Very Large | Add horizontal/sidebar/drawer layouts, collapsible facets, and bounded width controls |
-| TASK-273-07 | Wizard, Diagnostics, and Mode Onboarding | Medium | Medium | Add safe Wizard facet onboarding, Visual diagnostics, and clearer Advanced contract linkage |
-| TASK-273-08 | Report, Docs, Changelog, and Closure | Medium | Medium | Refresh Listing Filters report/docs/changelog/board and final validation evidence |
 | TASK-267 | Feature Grid Widget Playwright Product Followups | High | Very Large | Feature Grid-only follow-up family for `REPORT_FEATURE_GRID_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-267-01 | Feature Grid Variant Preview and Responsive Cards-4 Layout | High | Medium | Add variant preview affordances, repair cards-4 responsive product behavior, and keep columns truthfulness in TASK-256 |
 | TASK-267-02 | Feature Grid Card Reorder, Remove, and Item Management | High | Medium | Add drag reorder plus recoverable remove flow while preserving keyboard move fallback |
@@ -314,6 +305,17 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-311-03 | Forms Hidden and File Field Public-Write Contract | High | Large | Done: hidden fields now submit trusted fixed values end-to-end, and file fields remain explicit unsupported scope until a safe upload/storage seam exists |
 | TASK-311-02 | Forms Numeric, Temporal, Range, and Rating Field Expansion | Medium | Large | Done: typed controls now exist in validation, builder/admin preview, runtime preview, and Form Embed |
 | TASK-311-01 | Forms Choice Field Expansion for Radio and Grouped Options | High | Large | Done: radio fields now exist end-to-end in Forms owners and Form Embed; grouped choice semantics remain explicit non-current-contract scope |
+| TASK-316 | Shared Listing Query Picker Hook and Session-Settling Retry | High | Medium | Done: listing-query pickers now share the `useListingQueries()` owner with bounded auth-shaped retry and manual refresh coverage across Listing Filters and Search Box |
+| TASK-315 | Shared Listing Runtime Refresh and Block Replacement Contract | High | Large | Done: shared listing runtime refresh now uses scoped busy/error hooks, stale-response protection, cross-block replacement, and explicit post-replacement rebinding proof without immediate redirect fallback |
+| TASK-273 | Listing Filters Widget Playwright Product Followups | High | Very Large | Done: the Listing Filters family is closed with picker/draft recovery, practical facet controls, active-summary UX, bounded layout variants, and landed shared-owner runtime/picker follow-ups |
+| TASK-273-08 | Report, Docs, Changelog, and Closure | Medium | Medium | Done: report evidence, widget docs, task board, changelog, and final validation are synchronized for TASK-273 |
+| TASK-273-07 | Wizard, Diagnostics, and Mode Onboarding | Medium | Medium | Done: Wizard facet onboarding, cross-mode diagnostics, and Advanced contract linkage are aligned with the live editor flow |
+| TASK-273-06 | Layout Variants, Collapsible Facets, and Width Controls | High | Very Large | Done: Listing Filters now ships bounded `horizontal`/`sidebar`/`drawer` variants, width controls, sticky sidebar option, and native collapsible facet behavior |
+| TASK-273-05 | Pagination, Page Reset, Loading, and Error State | High | Large | Done: local loading/error anchors landed, shared pagination ownership stayed externalized, and current-state report corrections document the live `__page` contract |
+| TASK-273-04 | Active Filters, Clear All, Counts, and Auto Apply State | High | Large | Done: runtime active summary, `Clear all`, truthful unloaded-count handling, and non-contradictory auto-apply UX now exist end-to-end |
+| TASK-273-03 | Range, Date, Taxonomy, and Searchable Option Controls | High | Very Large | Done: Listing Filters now supports practical range/date controls, taxonomy parent hierarchy, and searchable option mode through schema, editor, runtime, and tests |
+| TASK-273-02 | Facet Field, Operator, Options, and Preview Editors | High | Large | Done: facet authoring now uses query-aware field suggestions, kind-scoped operators, structured rows, validation, and preview |
+| TASK-273-01 | Admin Canvas, Facet Draft State, and Query Loading | High | Large | Done: canvas fallback, durable draft facets, duplicate-id feedback, and picker-local setup guidance are closed |
 | TASK-310 | Shared Color Picker CSS Variable and Border Clear Regression | High | Large | Done: remaining widget editors now consume the landed shared color seams instead of local swatch/text clones |
 | TASK-310-04 | Shared Color Picker Team and Testimonials Editor Adoption | Medium | Medium | Done: Team and Testimonials now consume shared color controls with focused editor-wave coverage |
 | TASK-310-03 | Shared Color Picker Shell and Forms-Adjacent Editor Adoption | Medium | Large | Done: Contact, Footer, Navigation, Newsletter, and Pricing Plans now consume shared color controls |

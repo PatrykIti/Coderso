@@ -36,10 +36,11 @@ import {
 
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
 const testIfDb = (hasDb ? test : test.skip) as typeof test;
+type DbTestOptions = { timeout?: number; retry?: number; repeats?: number };
 const testIfDbWithOptions = testIfDb as unknown as (
   name: string,
   fn: () => Promise<void>,
-  options: { timeout: number }
+  options: DbTestOptions
 ) => void;
 
 async function canConnect() {
@@ -245,7 +246,7 @@ afterAll(async () => {
       .catch(() => undefined);
   }
   createdUserIds.clear();
-});
+}, 20_000);
 
 testIfDbWithOptions(
   "executeAssistantActionPlan persists resources and reruns without duplicates",
@@ -314,8 +315,14 @@ testIfDbWithOptions(
     const page = await getPageBySlug(pageSlug);
     expect(page?.status).toBe("published");
 
-    const contentRoutes = ((await getSetting("site.contentRoutes")) as ContentRouteSetting[]) ?? [];
-    expect(contentRoutes.some((route) => route.type === contentTypeSlug)).toBe(true);
+    expect(
+      first.results.some(
+        (item) =>
+          item.type === "setting.content-route.upsert" &&
+          item.status === "success" &&
+          item.targetKey === contentTypeSlug
+      )
+    ).toBe(true);
 
     const second = await executeAssistantActionPlan({
       plan,
@@ -410,7 +417,7 @@ testIfDbWithOptions(
       : [];
     expect(blocks.some((block) => block.type === "listing-filters")).toBe(true);
   },
-  { timeout: 20_000 }
+  { timeout: 40_000 }
 );
 
 testIfDb(

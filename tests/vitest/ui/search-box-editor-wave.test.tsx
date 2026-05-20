@@ -50,6 +50,24 @@ vi.mock("@/components/ui/input", () => ({
   ),
 }));
 
+vi.mock("@/components/ui/button", () => ({
+  Button: ({
+    children,
+    onClick,
+    disabled,
+    ...props
+  }: {
+    children: React.ReactNode;
+    onClick?: () => void;
+    disabled?: boolean;
+    [key: string]: unknown;
+  }) => (
+    <button type="button" onClick={onClick} disabled={disabled} {...props}>
+      {children}
+    </button>
+  ),
+}));
+
 vi.mock("@/components/ui/select", () => {
   const flattenText = (value: React.ReactNode): string =>
     React.Children.toArray(value)
@@ -152,6 +170,7 @@ vi.mock("@/services/apiClient", () => ({
 }));
 
 vi.mock("@/services/listingsClient", () => ({
+  getCachedListingQueries: vi.fn(() => null),
   listListingQueriesCached: vi.fn(async () => {
     if (searchBoxState.error) throw searchBoxState.error;
     return searchBoxState.queries;
@@ -436,6 +455,49 @@ test("SearchBox visual editor surfaces listing query API errors and normalizes l
       submitLabel: searchBoxDefaults.submitLabel,
       autoApply: false,
     });
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("SearchBox listing mode exposes manual retry for shared listing query picker errors", async () => {
+  const { SearchBoxVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/SearchBoxEditors");
+
+  searchBoxState.error = makeApiClientError("Listing queries failed");
+
+  const Harness = () => {
+    const [value, setValue] = useState<SearchBoxData>({
+      ...searchBoxDefaults,
+      mode: "listing",
+    });
+    return (
+      <SearchBoxVisualEditor
+        value={value}
+        onChange={setValue}
+        variant="default"
+        onVariantChange={() => undefined}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    await flush();
+    expect(view.container.textContent).toContain("Listing queries failed");
+    const retryButton = Array.from(view.container.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("Retry")
+    );
+    expect(retryButton).toBeTruthy();
+
+    searchBoxState.error = null;
+    React.act(() => {
+      retryButton?.click();
+    });
+    await flush();
+
+    expect(view.container.textContent).not.toContain("Listing queries failed");
   } finally {
     view.cleanup();
   }

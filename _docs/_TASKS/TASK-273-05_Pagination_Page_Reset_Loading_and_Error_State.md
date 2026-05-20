@@ -5,36 +5,47 @@
 **Priority:** High
 **Category:** Widgets + Listing Filters + Runtime Script + Runtime Render
 **Estimated Effort:** Large
-**Dependencies:** TASK-273-01, TASK-273-04
-**Status:** To Do
+**Dependencies:** TASK-262-03, TASK-273-04, TASK-315
+**Status:** Done (2026-05-19)
 
 ---
 
 ## Overview
 
-Complete the Listing Filters runtime refresh loop: expose a pagination control
-for the existing `__page` token, reset page state when filters/search/sort
-change, show loading during AJAX refresh, and render an inline error instead of
-falling straight back to a full page reload.
+Keep Listing Filters aligned with the live shared listing-runtime contract by
+making the local widget surface explicit: preserve the existing linked-results
+pagination owner, add deterministic local loading/error anchors for the shared
+runtime client, and record the stale report assumptions around page reset so
+the widget does not reopen shared `__page` ownership.
 
-This leaf owns only Listing Filters runtime UX and URL behavior. It must reuse
-the existing listing runtime request path with the `x-nextless-runtime: listing`
-header.
+This leaf does not create a second pagination owner inside `listing-filters`.
+Linked results already own `__page` navigation through Content List/TASK-262-03.
+Shared refresh, busy/error, rebinding, and stale-response work route to
+TASK-315; this leaf always lands Listing Filters-local markers, copy, and
+report evidence so the shared runtime owner has deterministic DOM anchors to
+target.
 
 ## Source Findings
 
 - `_docs/PLAYWRIGHT/REPORT_LISTING_FILTERS_WIDGET.md:71-74` - `__page` already
   exists in the runtime token namespace.
-- `_docs/PLAYWRIGHT/REPORT_LISTING_FILTERS_WIDGET.md:92` - no pagination
-  control is rendered.
+- `_docs/PLAYWRIGHT/REPORT_LISTING_FILTERS_WIDGET.md:92` - report claims no
+  pagination control is rendered, but the live linked-results owner already
+  exists in Content List/TASK-262-03 rather than inside Listing Filters.
 - `_docs/PLAYWRIGHT/REPORT_LISTING_FILTERS_WIDGET.md:98-101` - no loading state,
-  no inline network error, and no page reset when filters change.
-- `_docs/PLAYWRIGHT/REPORT_LISTING_FILTERS_WIDGET.md:133` - `syncListingFormToUrl`
-  does not clear `__page` on filtering.
-- `_docs/PLAYWRIGHT/REPORT_LISTING_FILTERS_WIDGET.md:330,334` - pagination and
-  page reset are priority repairs.
+  and no inline network error are still open shared refresh concerns; the
+  page-reset part is stale against the current live script.
+- `_docs/PLAYWRIGHT/REPORT_LISTING_FILTERS_WIDGET.md:133` - page-reset claim is
+  stale: the live runtime client already clears the `lq.<queryId>.*` namespace
+  before rebuilding current control values.
+- `core/widgets/core/contentList.tsx:795-819` - linked listing results already
+  own Previous/Next pagination UI.
+- `core/services/content/contentListResolver.ts:847-878` - linked listing
+  results already compute `page`, `pageSize`, `totalPages`,
+  `previousPageHref`, and `nextPageHref` from the shared listing runtime state.
 - `core/widgets/core/listingRuntimeScript.ts:55-81` - sync clears all query
-  tokens and rebuilds current controls without page-reset intent.
+  tokens and rebuilds current controls, which already drops `__page` on
+  non-page submissions.
 - `core/widgets/core/listingRuntimeScript.ts:102-122` - fetch failures call
   `window.location.assign()`.
 
@@ -46,90 +57,53 @@ header.
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/listingFilters.tsx` | Extend `resolved` schema/data with current page, page size, total items, total pages, pagination render contract, and loading/error containers or markers. |
-| `core/services/search/filterEngine.ts` | Preserve the existing `__page` token owner for parsing, clamping, and offset application; extend only through shared helpers when needed. |
-| `core/services/search/listingRuntimeService.ts` | Preserve runtime result `total`/pagination metadata, clamp page/page-size inputs, and return metadata needed by the widget. |
-| `core/server/publicSite.tsx` | Pass pagination metadata from the listing runtime service into `ListingFiltersData.resolved` during public runtime rendering. |
-| `core/widgets/core/listingRuntimeScript.ts` | Add page-reset rules, pagination binding, busy state, stale-response guard, and inline error rendering; scope Listing Filters-only behavior to local markers or prove Search Box no-regression. |
-| `core/services/search/filterContract.ts` | Reuse `listingRuntimeTokens.page`; add helpers only if needed for consistent page token names. |
-| `tests/vitest/widgets/listingFilters.test.tsx` | Cover pagination markup and runtime markers. |
-| `tests/vitest/widgets/listingRuntimeScript.test.ts` | Create this new suite when first touching shared runtime-script behavior; cover page reset, pagination clicks, busy/error state, stale response guard, unrelated-param preservation, and Search Box listing-mode no-regression cases. |
-| `tests/vitest/search/filterEngine.test.ts` | Cover `__page` parsing, clamping, and offset application in the filter engine lane. |
-| `tests/vitest/search/listingRuntimeService.test.ts` | Cover pagination metadata returned with runtime totals and page/page-size inputs. |
-| `tests/vitest/ui/listing-filters-query-parser.test.ts` | Touch only if admin query-string extraction changes; it is not the runtime page-token owner. |
-| `_docs/_WIDGETS/LISTING_FILTERS.md` | Document pagination and refresh behavior. |
-| `_docs/PLAYWRIGHT/REPORT_LISTING_FILTERS_WIDGET.md` | Mark B-02, B-08, B-09, B-11, and T-09 fixed or record deferral evidence. |
+| `core/widgets/core/listingFilters.tsx` | Add deterministic Listing Filters-local loading/error marker slots and helper copy that TASK-315 can target without turning Listing Filters into a second refresh owner. |
+| `tests/vitest/widgets/listingFilters.test.tsx` | Cover local loading/error markers and prove Listing Filters does not become a second pagination owner. |
+| `tests/vitest/widgets/listingRuntimeScript.test.ts` | Consume TASK-315 shared runtime evidence once the shared runtime owner binds the Listing Filters-local markers landed here. |
+| `tests/unit/content/contentListResolver.test.ts` | Touch only if TASK-273 would otherwise change the linked-results pagination owner. It should not. |
+| `tests/unit/widgets/contentList.test.tsx` | Touch only if Listing Filters-local changes would otherwise duplicate or regress the linked results pagination surface. |
+| `_docs/_WIDGETS/LISTING_FILTERS.md` | Document linked-results pagination ownership and local loading/error behavior. |
+| `_docs/PLAYWRIGHT/REPORT_LISTING_FILTERS_WIDGET.md` | Record B-02/B-11/T-09 as current-state corrections or shared-owner evidence, and capture B-08/B-09 through TASK-315 plus local Listing Filters markers/copy. |
 
 ## Implementation Pseudocode
 
 ```tsx
-type ListingFiltersPagination = {
-  enabled?: boolean;
-  currentPage?: number;
-  pageSize?: number;
-  totalItems?: number;
-  totalPages?: number;
-  previousLabel?: string;
-  nextLabel?: string;
-};
+function ListingFiltersBlock({ data, blockId }: Props) {
+  const normalized = normalizeListingFiltersData(data);
+  const listingQueryId = resolveListingFiltersRuntimeQueryId(normalized);
 
-type ListingFiltersResolved = {
-  listingQueryId?: string;
-  metrics?: ListingFacetMetric[];
-  searchQuery?: string;
-  rejectedTokens?: string[];
-  pagination?: ListingFiltersPagination;
-  error?: string;
-};
-
-function syncListingFormToUrl(form, url, reason) {
-  const queryId = readQueryId(form);
-  const prefix = "lq." + queryId + ".";
-  const previousPage = url.searchParams.get(toParamName(queryId, "__page"));
-  clearQueryPrefix(url.searchParams, prefix);
-  writeControlValues(form, url);
-  if (reason === "paginate" && previousPage) {
-    url.searchParams.set(toParamName(queryId, "__page"), previousPage);
-  }
-}
-
-async function runListingRefresh(queryId, targetUrl, pushHistory) {
-  const requestId = startBusyState(queryId);
-  try {
-    const response = await fetch(targetUrl.toString(), { headers: { "x-nextless-runtime": "listing" } });
-    if (!response.ok) return showListingRuntimeError(queryId, response.status);
-    const html = await response.text();
-    if (!isLatestRequest(queryId, requestId)) return;
-    replaceListingBlocksFromHtml(queryId, html);
-    pushHistoryState(targetUrl, pushHistory);
-  } catch (error) {
-    showListingRuntimeError(queryId, "network");
-  } finally {
-    finishBusyState(queryId, requestId);
-  }
+  return (
+    <section data-listing-query-id={listingQueryId} data-listing-widget="listing-filters">
+      <form data-listing-runtime-form data-listing-query-id={listingQueryId}>
+        <div data-listing-runtime-status>
+          <p data-listing-runtime-loading hidden>
+            Updating linked results…
+          </p>
+          <p data-listing-runtime-error hidden>
+            Could not refresh linked results. Try again.
+          </p>
+        </div>
+      </form>
+    </section>
+  );
 }
 ```
 
 Data flow:
 
-- Pagination writes only `lq.<queryId>.__page`.
-- `filterEngine.ts` remains the runtime owner for reading `__page`, clamping
-  invalid values, and applying the page-derived offset to the listing query.
-- Public SSR passes `currentPage`, `pageSize`, `totalItems`, and `totalPages`
-  from `listingRuntimeService` through `publicSite` into
-  `ListingFiltersData.resolved.pagination`.
-- Filter/search/sort changes remove `__page` so the listing starts again from
-  page 1.
-- Busy and error states are scoped by `data-listing-query-id`, not global page
-  state.
-- Refresh still replaces matching `[data-listing-block-id]` fragments.
+- The shared runtime client already clears `lq.<queryId>.*` before rebuilding
+  current control values, so `__page` is removed on non-page submissions today.
+- Linked results keep owning pagination UI and navigation metadata through
+  Content List/TASK-262-03.
+- Shared busy/error/stale-response logic lands in TASK-315; this leaf always
+  contributes deterministic Listing Filters-local markers/copy while leaving the
+  actual fetch lifecycle in the shared owner.
 
 Error handling:
 
-- HTTP/network errors show a local retry/error message and keep the current DOM.
-- A manual fallback link may be exposed, but the script should not immediately
-  redirect before the user sees the failure.
-- Stale responses from earlier requests must not overwrite newer filter state.
+- Shared HTTP/network refresh errors route to TASK-315. Listing Filters may show
+  local shared error copy, but it must not fork a second refresh owner.
+- Do not add widget-local Previous/Next behavior or a second `__page` parser.
 
 ## Security Contract
 
@@ -149,10 +123,11 @@ No API routes are added.
 
 - `bun run test:vitest -- tests/vitest/widgets/listingFilters.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/listingRuntimeScript.test.ts`
-- `bun run test:vitest -- tests/vitest/search/filterEngine.test.ts`
-- `bun run test:vitest -- tests/vitest/search/listingRuntimeService.test.ts`
-- `bun run test:vitest -- tests/vitest/ui/listing-filters-query-parser.test.ts`
-  only when admin query-string extraction changes.
+- `bun test tests/unit/content/contentListResolver.test.ts` only if the linked
+  results pagination owner changes. It should not.
+- `bun test tests/unit/widgets/contentList.test.tsx` only if linked results
+  pagination markup changes. It should not.
+- `bun run gates:coderso`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 
@@ -165,11 +140,11 @@ No API routes are added.
 
 ## Acceptance Criteria
 
-- Users can navigate listing pages through the widget without manually editing
-  `__page`.
-- Pagination controls are backed by server-provided page/total metadata through
-  the public runtime render path.
-- Changing any non-page filter/search/sort control resets the page token.
-- Runtime refresh visibly enters and exits a busy state.
-- HTTP/network failures surface inline with retry/fallback behavior and do not
-  immediately hide context through a full page redirect.
+- Listing Filters does not become a second pagination owner; linked results keep
+  rendering `__page` navigation through TASK-262-03.
+- Current-state evidence records that non-page filter/search/sort submissions
+  already drop `__page` through the live shared runtime client.
+- Listing Filters renders deterministic local loading/error anchors that TASK-315
+  can bind without introducing a second widget-local refresh contract.
+- Listing Filters can expose local loading/error affordances, but shared
+  busy/error/stale-response logic remains TASK-315-owned.

@@ -141,6 +141,14 @@ const mergeFacet = (left: ListingFacetConfig, right: ListingFacetConfig): Listin
     );
   }
 
+  if (!isDeepStrictEqual(left.presentation ?? null, right.presentation ?? null)) {
+    throw new BlueprintListingConfigMergeError(
+      "listing_config_conflict",
+      `Facet "${left.id}" has incompatible presentation settings across composed fragments.`,
+      { itemId: left.id }
+    );
+  }
+
   return {
     ...left,
     ...(left.field ? { field: left.field } : {}),
@@ -150,6 +158,9 @@ const mergeFacet = (left: ListingFacetConfig, right: ListingFacetConfig): Listin
       : {}),
     ...(left.sortOptions || right.sortOptions
       ? { sortOptions: mergeSortOptions(left.sortOptions, right.sortOptions) }
+      : {}),
+    ...(left.presentation || right.presentation
+      ? { presentation: left.presentation ?? right.presentation }
       : {}),
   };
 };

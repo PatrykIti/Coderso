@@ -6,7 +6,7 @@
 **Category:** Widgets + Listing Filters + Playwright QA + Documentation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-256-08, TASK-273-01, TASK-273-02, TASK-273-03, TASK-273-04, TASK-273-05, TASK-273-06, TASK-273-07
-**Status:** To Do
+**Status:** Done (2026-05-20)
 
 ---
 
@@ -67,9 +67,16 @@ Closure flow:
    Listing Filters owner files, and tests.
 2. Build a finding-to-owner checklist from the umbrella matrices.
 3. Confirm `TASK-256-08` is closed or has current evidence for all
-   TASK-256-owned Listing Filters exclusions referenced by TASK-273.
+   TASK-256-owned Listing Filters exclusions referenced by TASK-273, and verify
+   the extracted/shared owners that TASK-273 now depends on:
+   TASK-262-03 for linked-results pagination, TASK-315 for shared listing
+   runtime refresh behavior, and TASK-316 for shared listing-query picker
+   loading/retry.
 4. Run targeted validation for every implemented leaf.
-5. Run required repo gates before closure.
+5. Run required repo gates before closure:
+   `bun run lint`, `bun run test:bun`, `bun run test:vitest`,
+   `bun run scan:security:strict`, plus `bun run gates:coderso` if the family
+   touches release-gated behavior beyond the targeted suites.
 6. Update report/docs/task-board/changelog together.
 7. Verify no PNG screenshots or unrelated files are staged.
 
@@ -98,6 +105,9 @@ This closure leaf does not add API routes.
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run lint`
+- `bun run test:bun`
+- `bun run test:vitest`
 - `bun run test:vitest -- tests/vitest/widgets/listingFilters.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/listingRuntimeScript.test.ts`
   after the implementation leaves create the new shared runtime-script suite.
@@ -122,7 +132,9 @@ This closure leaf does not add API routes.
 
 ## Acceptance Criteria
 
-- Every row in the TASK-273 scope matrix has fixed/deferred textual evidence.
+- Every row in the TASK-273 scope matrix has fixed/deferred textual evidence or
+  an explicit reference to the extracted shared owners (`TASK-262-03`,
+  `TASK-315`, `TASK-316`) when TASK-273 does not own that implementation seam.
 - TASK-256-owned findings remain referenced to TASK-256 and are not claimed as
   TASK-273 fixes.
 - Listing Filters docs match the implemented schema, editor modes, runtime

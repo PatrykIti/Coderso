@@ -7,6 +7,7 @@ import {
   listWidgetsForSurfaceContext,
   registerWidget,
 } from "../../../core/widgets/registry";
+import { createListingFiltersWidget } from "../../../core/widgets/core/listingFilters";
 import type { WidgetDefinition } from "../../../core/widgets/types";
 
 const Dummy = () => null;
@@ -187,6 +188,23 @@ test("registerWidget normalizes widget-owned binding targets", () => {
   expect(listWidgets()[0]?.bindingTargets).toEqual([
     { propPath: "label", label: "Label", modes: ["read"] },
     { propPath: "value", label: "Value", modes: ["read", "write"] },
+  ]);
+});
+
+test("registerWidget keeps listing-filters variant registration for layout-specific shells", () => {
+  registerWidget(
+    createListingFiltersWidget({
+      wizard: Dummy,
+      visual: Dummy,
+      advanced: Dummy,
+    })
+  );
+
+  expect(listWidgets()[0]?.variants.map((variant) => variant.id)).toEqual([
+    "default",
+    "horizontal",
+    "sidebar",
+    "drawer",
   ]);
 });
 

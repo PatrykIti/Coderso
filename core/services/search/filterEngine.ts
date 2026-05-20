@@ -117,10 +117,7 @@ const parseExistsValue = (inputs: string[]) => {
   return undefined;
 };
 
-const parseFilterValue = (
-  operator: ListingFilterOperator,
-  inputs: string[]
-): unknown => {
+const parseFilterValue = (operator: ListingFilterOperator, inputs: string[]): unknown => {
   if (noValueOperators.has(operator)) {
     return parseExistsValue(inputs);
   }
@@ -139,7 +136,10 @@ const parseSortDraft = (value: string, token: string): ListingRuntimeSortDraft |
   const separatorIndex = normalized.lastIndexOf(":");
   if (separatorIndex <= 0 || separatorIndex === normalized.length - 1) return null;
   const field = normalized.slice(0, separatorIndex).trim();
-  const dir = normalized.slice(separatorIndex + 1).trim().toLowerCase();
+  const dir = normalized
+    .slice(separatorIndex + 1)
+    .trim()
+    .toLowerCase();
   if (!field) return null;
   if (dir !== "asc" && dir !== "desc") return null;
   return {
@@ -173,10 +173,7 @@ const resolveSearchField = (query: ListingQuery) => {
   return null;
 };
 
-const validateCandidateFilter = (
-  query: ListingQuery,
-  candidate: ListingFilter
-): boolean => {
+const validateCandidateFilter = (query: ListingQuery, candidate: ListingFilter): boolean => {
   try {
     buildListingExecutionPlan({
       ...query,
@@ -447,8 +444,7 @@ export function computeListingFacetMetrics(
         label: option.label,
         count: rows.length,
         active:
-          selected === option.value ||
-          selected === buildFacetSortToken(option.field, option.dir),
+          selected === option.value || selected === buildFacetSortToken(option.field, option.dir),
       }));
       metrics.push({
         id: facet.id,
@@ -486,7 +482,14 @@ export function computeListingFacetMetrics(
       return;
     }
 
-    const selectedValues = new Set((draft.rawTokens[token] ?? []).flatMap((entry) => entry.split(",").map((part) => part.trim()).filter(Boolean)));
+    const selectedValues = new Set(
+      (draft.rawTokens[token] ?? []).flatMap((entry) =>
+        entry
+          .split(",")
+          .map((part) => part.trim())
+          .filter(Boolean)
+      )
+    );
     const facetOptions = facet.options ?? [];
     const options = facetOptions.map((option) => {
       const count = rows.reduce((acc, row) => {
@@ -501,6 +504,7 @@ export function computeListingFacetMetrics(
         label: option.label,
         count,
         active: selectedValues.has(option.value),
+        ...(option.parentValue ? { parentValue: option.parentValue } : {}),
       };
     });
 

@@ -25,8 +25,10 @@ const listingFiltersState = vi.hoisted(() => ({
     },
   ],
   queryError: null as unknown,
+  queryFailuresBeforeSuccess: 0,
   reset() {
     this.queryError = null;
+    this.queryFailuresBeforeSuccess = 0;
   },
 }));
 
@@ -191,7 +193,14 @@ vi.mock("@/services/apiClient", () => ({
 }));
 
 vi.mock("@/services/listingsClient", () => ({
+  getCachedListingQueries: vi.fn(() => null),
   listListingQueriesCached: vi.fn(async () => {
+    if (listingFiltersState.queryFailuresBeforeSuccess > 0) {
+      listingFiltersState.queryFailuresBeforeSuccess -= 1;
+      const error = new Error("Not authenticated");
+      error.name = "ApiClientError";
+      throw error;
+    }
     if (listingFiltersState.queryError) throw listingFiltersState.queryError;
     return listingFiltersState.queries;
   }),
@@ -360,6 +369,7 @@ test("ListingFilters editors cover listing query selection, runtime behavior, fa
 
     expect(view.container.textContent).toContain("Listing query");
     expect(view.container.textContent).toContain("Facet controls");
+    expect(view.container.textContent).toContain("Diagnostics");
     expect(view.container.textContent).toContain("Runtime payload");
 
     React.act(() => {
@@ -380,61 +390,25 @@ test("ListingFilters editors cover listing query selection, runtime behavior, fa
       setInputValue(findInputByPlaceholder(view.container, "Apply filters"), "Run filters");
     });
 
+    const facetsSection = findSectionByTitle(view.container, "Facet controls") as HTMLElement;
     const switches = Array.from(view.container.querySelectorAll("input[type='checkbox']"));
     clickElement(switches[0]);
     clickElement(switches[1]);
 
-    clickByText(view.container, "Add facet");
+    clickByText(facetsSection, "Add facet");
     React.act(() => {
-      setInputValue(findInputByPlaceholder(view.container, "facet-id"), "status");
-      setInputValue(findInputByPlaceholder(view.container, "Facet label"), "Status");
-      setInputValue(findInputByPlaceholder(view.container, "Field path (example: tags)"), "status");
-      setTextareaValue(
-        findTextareaByPlaceholder(view.container, "value|label\nnews|News"),
-        "published|Published\ndraft|Draft"
+      setInputValue(findInputsByPlaceholder(facetsSection, "facet-id")[1], "status");
+      setInputValue(findInputsByPlaceholder(facetsSection, "Facet label")[1], "Status");
+      setInputValue(
+        findInputsByPlaceholder(facetsSection, "Field path (example: tags)")[0],
+        "status"
       );
     });
 
-    clickByText(view.container, "Add facet");
-    const facetIdInputs = findInputsByPlaceholder(view.container, "facet-id");
-    const facetLabelInputs = findInputsByPlaceholder(view.container, "Facet label");
-    const facetFieldInputs = findInputsByPlaceholder(view.container, "Field path (example: tags)");
-    const kindSelects = findSelectsByOptions(view.container, [
-      "checkbox",
-      "radio",
-      "taxonomy",
-      "range",
-      "date-range",
-      "sort",
-    ]);
-
+    clickByText(facetsSection, "Add option");
     React.act(() => {
-      setInputValue(facetIdInputs[1], "price");
-      setInputValue(facetLabelInputs[1], "Price");
-      setSelectValue(kindSelects[1], "range");
-      setInputValue(facetFieldInputs[1], "price");
-    });
-
-    clickByText(view.container, "Add facet");
-    const updatedFacetIdInputs = findInputsByPlaceholder(view.container, "facet-id");
-    const updatedFacetLabelInputs = findInputsByPlaceholder(view.container, "Facet label");
-    const updatedKindSelects = findSelectsByOptions(view.container, [
-      "checkbox",
-      "radio",
-      "taxonomy",
-      "range",
-      "date-range",
-      "sort",
-    ]);
-
-    React.act(() => {
-      setInputValue(updatedFacetIdInputs[2], "sort");
-      setInputValue(updatedFacetLabelInputs[2], "Sort");
-      setSelectValue(updatedKindSelects[2], "sort");
-      setTextareaValue(
-        findTextareasByPlaceholder(view.container, "updatedAt:desc|Newest first|updatedAt|desc")[0],
-        "updatedAt-desc|Newest first|updatedAt|desc\ntitle-asc|Title A-Z|title|asc"
-      );
+      setInputValue(findInputsByPlaceholder(facetsSection, "Option value")[0], "published");
+      setInputValue(findInputsByPlaceholder(facetsSection, "Option label")[0], "Published");
     });
 
     const lastPayload = onChangeSpy.mock.lastCall?.[0];
@@ -451,6 +425,8 @@ test("ListingFilters editors cover listing query selection, runtime behavior, fa
       })
     );
     expect(view.container.textContent).toContain('"resolved"');
+    expect(view.container.textContent).toContain("_docs/_WIDGETS/LISTING_FILTERS.md");
+    expect(view.container.textContent).toContain("Preview");
   } finally {
     view.cleanup();
   }
@@ -486,7 +462,7 @@ test("ListingFilters editors surface listing query loading errors", async () => 
   }
 });
 
-test("ListingFilters visual editor covers loading state, query reset, facet option parsing, kind fallbacks, and removal", async () => {
+test("ListingFilters visual editor covers loading state, query reset, field suggestions, kind-scoped operators, structured rows, preview, and removal", async () => {
   const { ListingFiltersVisualEditor } =
     await import("../../../core/admin/ui/widgets/editors/ListingFiltersEditors");
 
@@ -544,7 +520,9 @@ test("ListingFilters visual editor covers loading state, query reset, facet opti
     React.act(() => {
       setSelectValue(querySelect, "query-1");
     });
+    await flush();
     expect(latestValue.listingQueryId).toBe("query-1");
+    expect(facetsSection?.textContent).toContain("Suggested fields: id, title, updatedAt");
 
     React.act(() => {
       setSelectValue(querySelect, "__no_listing_query__");
@@ -583,40 +561,33 @@ test("ListingFilters visual editor covers loading state, query reset, facet opti
     });
     expect(latestValue.facets?.[1]?.field).toBe("status.raw");
 
-    let operatorSelects = findSelectsByOptions(facetsSection!, [
-      "eq",
-      "neq",
-      "in",
-      "nin",
-      "contains",
-      "startsWith",
-      "gt",
-      "gte",
-      "lt",
-      "lte",
-      "between",
-      "exists",
-    ]);
+    let operatorSelects = findSelectsByOptions(facetsSection!, ["eq", "neq"]);
+    expect(
+      Array.from((operatorSelects[0] as HTMLSelectElement).options).map((option) => option.value)
+    ).toEqual(["eq", "neq"]);
     React.act(() => {
-      setSelectValue(operatorSelects[0], "contains");
+      setSelectValue(operatorSelects[0], "neq");
     });
-    expect(latestValue.facets?.[1]?.op).toBe("contains");
+    expect(latestValue.facets?.[1]?.op).toBe("neq");
 
     React.act(() => {
       setSelectValue(operatorSelects[0], "__unsupported__");
     });
-    expect(latestValue.facets?.[1]?.op).toBe("contains");
+    expect(latestValue.facets?.[1]?.op).toBe("neq");
 
+    clickByText(facetsSection as HTMLElement, "Add option");
     React.act(() => {
-      setTextareaValue(
-        findTextareasByPlaceholder(facetsSection as HTMLElement, "value|label\nnews|News")[0],
-        "published|Published\narchived\n |Ignored"
+      setInputValue(
+        findInputsByPlaceholder(facetsSection as HTMLElement, "Option value")[0],
+        "published"
+      );
+      setInputValue(
+        findInputsByPlaceholder(facetsSection as HTMLElement, "Option label")[0],
+        "Published"
       );
     });
-    expect(latestValue.facets?.[1]?.options).toEqual([
-      { value: "published", label: "Published" },
-      { value: "archived", label: "archived" },
-    ]);
+    expect(latestValue.facets?.[1]?.options).toEqual([{ value: "published", label: "Published" }]);
+    expect(facetsSection?.textContent).toContain("Preview");
 
     kindSelects = findSelectsByOptions(facetsSection!, [
       "checkbox",
@@ -649,11 +620,48 @@ test("ListingFilters visual editor covers loading state, query reset, facet opti
       findInputByValue(facetsSection!, "Sort config uses per-option field + dir.")
     ).toBeTruthy();
     expect(findInputByValue(facetsSection!, "Sort does not use filter operators.")).toBeTruthy();
-
-    const removeButtons = Array.from(facetsSection!.querySelectorAll("button")).filter((button) =>
-      button.textContent?.includes("Remove")
+    const secondFacet = facetsSection?.querySelector(
+      '[data-widget-control="listing-filters.facet.1"]'
+    ) as HTMLElement | null;
+    expect(secondFacet).toBeTruthy();
+    const addSortOptionButton = secondFacet?.querySelector(
+      '[data-widget-control="listing-filters.facet.1.sort-option.add"]'
     );
-    clickElement(removeButtons[removeButtons.length - 1]);
+    clickElement(addSortOptionButton);
+
+    React.act(() => {
+      const sortValueInputs = findInputsByPlaceholder(secondFacet as HTMLElement, "Sort value");
+      setInputValue(sortValueInputs[sortValueInputs.length - 1], "title-asc");
+    });
+    React.act(() => {
+      const sortLabelInputs = findInputsByPlaceholder(secondFacet as HTMLElement, "Sort label");
+      setInputValue(sortLabelInputs[sortLabelInputs.length - 1], "Title A-Z");
+    });
+    React.act(() => {
+      const sortFieldInputs = findInputsByPlaceholder(secondFacet as HTMLElement, "Sort field");
+      setInputValue(sortFieldInputs[sortFieldInputs.length - 1], "title");
+    });
+    React.act(() => {
+      const directionCandidates = findSelectsByOptions(secondFacet as HTMLElement, [
+        "__no_sort_direction__",
+        "asc",
+        "desc",
+      ]);
+      setSelectValue(directionCandidates[directionCandidates.length - 1], "asc");
+    });
+    expect(latestValue.facets?.[1]?.sortOptions).toEqual([
+      {
+        value: "title-asc",
+        label: "Title A-Z",
+        field: "title",
+        dir: "asc",
+      },
+    ]);
+
+    const removeButton = secondFacet?.querySelector(
+      '[data-widget-control="listing-filters.facet.1.remove"]'
+    );
+    clickElement(removeButton);
     expect(findInputsByPlaceholder(facetsSection as HTMLElement, "facet-id")).toHaveLength(1);
     expect(onChangeSpy).toHaveBeenCalled();
   } finally {
@@ -677,6 +685,406 @@ test("ListingFilters editors show fallback text for non-API query loading failur
   try {
     await flush();
     expect(view.container.textContent).toContain("Failed to load listing queries.");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("ListingFilters editors retry one transient auth-shaped query loading failure", async () => {
+  const { ListingFiltersWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/ListingFiltersEditors");
+
+  listingFiltersState.queryFailuresBeforeSuccess = 1;
+
+  const Harness = () => {
+    const [value, setValue] = useState<ListingFiltersData>({} as ListingFiltersData);
+    return <ListingFiltersWizardEditor value={value} onChange={setValue} variant="default" />;
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    await flush();
+    await React.act(async () => {
+      await new Promise((resolve) => globalThis.setTimeout(resolve, 0));
+    });
+    await flush();
+    expect(view.container.textContent).not.toContain("Not authenticated");
+    expect(view.container.textContent).toContain("Select a listing query");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("ListingFilters visual editor keeps draft facets visible and surfaces local validation feedback", async () => {
+  const { ListingFiltersVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/ListingFiltersEditors");
+
+  let latestValue: ListingFiltersData = {
+    facets: [
+      {
+        id: "sort",
+        kind: "sort",
+        label: "Sort",
+        sortOptions: [
+          {
+            value: "updatedAt:desc",
+            label: "Newest first",
+            field: "updatedAt",
+            dir: "desc",
+          },
+        ],
+      },
+    ],
+  };
+
+  const Harness = () => {
+    const [value, setValue] = useState<ListingFiltersData>(latestValue);
+
+    const handleChange = (next: ListingFiltersData) => {
+      latestValue = next;
+      setValue(next);
+    };
+
+    return <ListingFiltersVisualEditor value={value} onChange={handleChange} variant="default" />;
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    await flush();
+    expect(view.container.textContent).toContain(
+      "Select a listing query to enable canvas preview and facet mapping."
+    );
+
+    const facetsSection = findSectionByTitle(view.container, "Facet controls") as HTMLElement;
+    clickByText(facetsSection, "Add facet");
+    expect(findInputsByPlaceholder(facetsSection, "facet-id")).toHaveLength(2);
+    expect(facetsSection.textContent).toContain("Field path is required for this facet kind.");
+
+    const kindSelects = findSelectsByOptions(facetsSection, [
+      "checkbox",
+      "radio",
+      "taxonomy",
+      "range",
+      "date-range",
+      "sort",
+    ]);
+
+    React.act(() => {
+      setInputValue(findInputsByPlaceholder(facetsSection, "facet-id")[1], "Status Filter");
+      setSelectValue(kindSelects[1], "radio");
+    });
+
+    expect(latestValue.facets).toHaveLength(2);
+    expect(findInputsByPlaceholder(facetsSection, "facet-id")).toHaveLength(2);
+    expect(facetsSection.textContent).toContain("Saved as: status-filter");
+    expect(facetsSection.textContent).toContain("Facet ID will be saved as status-filter.");
+
+    React.act(() => {
+      setInputValue(
+        findInputsByPlaceholder(facetsSection, "Field path (example: tags)")[0],
+        "status"
+      );
+    });
+
+    expect(facetsSection.textContent).not.toContain("Field path is required for this facet kind.");
+    expect(latestValue.facets?.[1]).toEqual(
+      expect.objectContaining({
+        id: "status-filter",
+        field: "status",
+      })
+    );
+
+    clickByText(facetsSection, "Add facet");
+    const updatedFieldInputs = findInputsByPlaceholder(facetsSection, "Field path (example: tags)");
+
+    React.act(() => {
+      setInputValue(findInputsByPlaceholder(facetsSection, "facet-id")[2], "status-filter");
+      setInputValue(updatedFieldInputs[1], "status");
+    });
+
+    expect(facetsSection.textContent).toContain(
+      "Duplicate facet ID after normalization: status-filter."
+    );
+    expect(facetsSection.textContent).toContain("Facet ID will be saved as status-filter.");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("ListingFilters editors preserve incomplete facet drafts when other settings change", async () => {
+  const { ListingFiltersVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/ListingFiltersEditors");
+
+  let latestValue: ListingFiltersData = {
+    facets: [
+      {
+        id: "sort",
+        kind: "sort",
+        label: "Sort",
+        sortOptions: [
+          {
+            value: "updatedAt:desc",
+            label: "Newest first",
+            field: "updatedAt",
+            dir: "desc",
+          },
+        ],
+      },
+    ],
+  };
+
+  const Harness = () => {
+    const [value, setValue] = useState<ListingFiltersData>(latestValue);
+
+    const handleChange = (next: ListingFiltersData) => {
+      latestValue = next;
+      setValue(next);
+    };
+
+    return <ListingFiltersVisualEditor value={value} onChange={handleChange} variant="default" />;
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    await flush();
+
+    const facetsSection = findSectionByTitle(view.container, "Facet controls") as HTMLElement;
+    clickByText(facetsSection, "Add facet");
+    expect(findInputsByPlaceholder(facetsSection, "facet-id")).toHaveLength(2);
+
+    React.act(() => {
+      setInputValue(findInputByPlaceholder(view.container, "Filter results"), "Filters");
+    });
+
+    expect(findInputsByPlaceholder(facetsSection, "facet-id")).toHaveLength(2);
+    expect(latestValue.facets).toHaveLength(2);
+    expect(view.container.textContent).toContain("Field path is required for this facet kind.");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("ListingFilters visual editor covers taxonomy hierarchy and range/date presentation controls", async () => {
+  const { ListingFiltersVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/ListingFiltersEditors");
+
+  let latestValue: ListingFiltersData = {
+    listingQueryId: "query-1",
+    facets: [
+      {
+        id: "category",
+        kind: "taxonomy",
+        label: "Category",
+        field: "category",
+        op: "in",
+        options: [{ value: "houses", label: "Houses" }],
+      },
+      {
+        id: "price",
+        kind: "range",
+        label: "Price",
+        field: "price",
+        op: "between",
+      },
+      {
+        id: "published-at",
+        kind: "date-range",
+        label: "Published at",
+        field: "publishedAt",
+        op: "between",
+      },
+    ],
+  };
+
+  const Harness = () => {
+    const [value, setValue] = useState<ListingFiltersData>(latestValue);
+    return (
+      <ListingFiltersVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="default"
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    await flush();
+
+    const facetsSection = findSectionByTitle(view.container, "Facet controls") as HTMLElement;
+    const taxonomyFacet = facetsSection.querySelector(
+      '[data-widget-control="listing-filters.facet.0"]'
+    ) as HTMLElement | null;
+    const rangeFacet = facetsSection.querySelector(
+      '[data-widget-control="listing-filters.facet.1"]'
+    ) as HTMLElement | null;
+    const dateFacet = facetsSection.querySelector(
+      '[data-widget-control="listing-filters.facet.2"]'
+    ) as HTMLElement | null;
+
+    expect(taxonomyFacet).toBeTruthy();
+    expect(rangeFacet).toBeTruthy();
+    expect(dateFacet).toBeTruthy();
+
+    React.act(() => {
+      const controlModeSelect = findSelectsByOptions(taxonomyFacet as HTMLElement, [
+        "inline",
+        "searchable",
+      ])[0];
+      setSelectValue(controlModeSelect, "searchable");
+    });
+    expect(latestValue.facets?.[0]).toMatchObject({
+      presentation: { controlMode: "searchable" },
+    });
+
+    clickElement(
+      taxonomyFacet?.querySelector('[data-widget-control="listing-filters.facet.0.option.add"]')
+    );
+    React.act(() => {
+      setInputValue(
+        findInputsByPlaceholder(taxonomyFacet as HTMLElement, "Option value").at(-1),
+        "modern"
+      );
+      setInputValue(
+        findInputsByPlaceholder(taxonomyFacet as HTMLElement, "Option label").at(-1),
+        "Modern"
+      );
+      setInputValue(
+        findInputsByPlaceholder(taxonomyFacet as HTMLElement, "Parent value (optional)").at(-1),
+        "houses"
+      );
+    });
+    expect(latestValue.facets?.[0]).toMatchObject({
+      options: [
+        { value: "houses", label: "Houses" },
+        { value: "modern", label: "Modern", parentValue: "houses" },
+      ],
+    });
+
+    React.act(() => {
+      const rangeModeSelect = findSelectsByOptions(rangeFacet as HTMLElement, [
+        "inputs",
+        "inputs-slider",
+      ])[0];
+      setSelectValue(rangeModeSelect, "inputs");
+      setInputValue(
+        findInputByPlaceholder(rangeFacet as HTMLElement, "Range step (optional)"),
+        "10"
+      );
+    });
+    expect(latestValue.facets?.[1]).toMatchObject({
+      presentation: {
+        rangeInputMode: "inputs",
+        rangeStep: 10,
+      },
+    });
+
+    React.act(() => {
+      const dateModeSelect = findSelectsByOptions(dateFacet as HTMLElement, [
+        "native-date",
+        "text-fallback",
+      ])[0];
+      setSelectValue(dateModeSelect, "text-fallback");
+    });
+    expect(latestValue.facets?.[2]).toMatchObject({
+      presentation: {
+        dateInputMode: "text-fallback",
+      },
+    });
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("ListingFilters visual editor covers variant, width, and collapsible layout controls", async () => {
+  const { ListingFiltersVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/ListingFiltersEditors");
+
+  let latestValue: ListingFiltersData = {
+    listingQueryId: "query-1",
+    facets: [
+      {
+        id: "status",
+        kind: "checkbox",
+        label: "Status",
+        field: "status",
+        op: "in",
+        options: [{ value: "published", label: "Published" }],
+      },
+    ],
+  };
+  let latestVariant = "default";
+
+  const Harness = () => {
+    const [value, setValue] = useState<ListingFiltersData>(latestValue);
+    const [variant, setVariant] = useState(latestVariant);
+    return (
+      <ListingFiltersVisualEditor
+        value={value}
+        variant={variant}
+        onVariantChange={(next) => {
+          latestVariant = next;
+          setVariant(next);
+        }}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    await flush();
+    expect(view.container.textContent).toContain("Variant and layout");
+
+    const layoutSection = findSectionByTitle(view.container, "Variant and layout") as HTMLElement;
+    clickByText(layoutSection, "Sidebar");
+    expect(latestVariant).toBe("sidebar");
+
+    React.act(() => {
+      const widthSelect = findSelectsByOptions(layoutSection, [
+        "narrow",
+        "content",
+        "wide",
+        "full",
+      ])[0];
+      setSelectValue(widthSelect, "narrow");
+    });
+    expect(latestValue.layout?.maxWidth).toBe("narrow");
+
+    const switches = Array.from(layoutSection.querySelectorAll('input[type="checkbox"]'));
+    expect(switches).toHaveLength(2);
+    clickElement(switches[0]);
+    expect(latestValue.layout?.collapsibleFacets).toBe(true);
+
+    const refreshedLayoutSection = findSectionByTitle(
+      view.container,
+      "Variant and layout"
+    ) as HTMLElement;
+    const refreshedSwitches = Array.from(
+      refreshedLayoutSection.querySelectorAll('input[type="checkbox"]')
+    );
+    expect(refreshedSwitches.length).toBeGreaterThanOrEqual(3);
+    clickElement(refreshedSwitches[1]);
+    expect(latestValue.layout?.defaultCollapsed).toBe(true);
+    clickElement(refreshedSwitches[2]);
+    expect(latestValue.layout?.stickySidebar).toBe(true);
+
+    clickByText(refreshedLayoutSection, "Drawer");
+    expect(latestVariant).toBe("drawer");
+    expect(view.container.textContent).toContain(
+      "Drawer uses a native disclosure shell so filters stay usable without extra runtime JS."
+    );
   } finally {
     view.cleanup();
   }

@@ -5,8 +5,8 @@
 **Priority:** High
 **Category:** Widgets + Listing Filters + Admin UI + Runtime Render
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-256-01, TASK-273-03, TASK-273-05
-**Status:** To Do
+**Dependencies:** TASK-256-01, TASK-256-04, TASK-273-03, TASK-273-05
+**Status:** Done (2026-05-19)
 
 ---
 
@@ -19,6 +19,9 @@ drawer-style mobile filters, collapsible facet groups, and configurable width.
 This leaf must remain Listing Filters-specific. Do not use it to change the
 global widget variant selector, generic page-builder responsive controls, or
 shared mode-switch behavior.
+If drawer/collapsible interaction requires shared refresh/rebinding/runtime
+state changes, split that portion to TASK-315 and consume only the shared
+result here.
 
 ## Source Findings
 
@@ -46,7 +49,7 @@ shared mode-switch behavior.
 |---|---|
 | `core/widgets/core/listingFilters.tsx` | Add variant/layout/width/collapsible schema, defaults, normalizer, class maps, and renderer output. |
 | `core/admin/ui/widgets/editors/ListingFiltersEditors.tsx` | Add visual layout selection, width controls, collapsible settings, and drawer/mobile guidance. |
-| `core/widgets/core/listingRuntimeScript.ts` | Bind drawer/collapsible controls idempotently through Listing Filters-specific markers if the renderer needs runtime interactivity, without changing Search Box listing-mode forms. |
+| `core/widgets/core/listingRuntimeScript.ts` | Bind drawer/collapsible controls only through Listing Filters-specific markers if the renderer needs local runtime interactivity. Do not rewrite shared refresh, fetch lifecycle, rebinding, or block-replacement behavior here; route that to TASK-315. |
 | `tests/vitest/widgets/listingFilters.test.tsx` | Cover variant rendering, width normalization, collapsible markup, and backward-compatible defaults. |
 | `tests/vitest/ui/listing-filters-editor-wave.test.tsx` | Cover layout/width/collapsible editor controls. |
 | `tests/unit/widgets/registry.test.ts` | Cover variant registry changes if new variants are registered. |
@@ -90,6 +93,9 @@ Data flow:
 - Drawer/collapsible state is runtime UI state, not persisted per visitor.
 - Existing payloads without layout settings render exactly like the current
   default layout.
+- If interactive drawer/collapsible state needs shared runtime binding or ARIA
+  helpers beyond local markers, this leaf consumes TASK-256-04/TASK-315 instead
+  of defining widget-local shared mechanics.
 
 Error handling:
 
@@ -122,6 +128,7 @@ No API routes are added.
   after creating that new suite when drawer/collapsible JS is introduced;
   include Search Box listing-mode no-regression coverage if shared script
   behavior changes.
+- `bun run gates:coderso`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 
@@ -140,3 +147,5 @@ No API routes are added.
 - Width is configured through bounded product options, not raw class strings.
 - Layout variants preserve current URL sync, clear-all, loading, and pagination
   behavior.
+- Any interactive drawer/collapsible wiring stays within the shared
+  TASK-256-04/TASK-315 runtime boundaries instead of redefining them locally.
