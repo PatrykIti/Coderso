@@ -1,6 +1,6 @@
-# TASK-313: Widget Editor Live Preview Surface and Preview-State Contract
+# TASK-317: Widget Editor Live Preview Surface and Preview-State Contract
 
-# FileName: TASK-313_Widget_Editor_Live_Preview_Surface_and_Preview_State_Contract.md
+# FileName: TASK-317_Widget_Editor_Live_Preview_Surface_and_Preview_State_Contract.md
 
 **Priority:** High
 **Category:** Shared Admin UI + Page Builder + Widget Preview
@@ -152,7 +152,7 @@ This shared task adds no API routes.
 
 ## Documentation Updates Required
 
-- `_docs/_TASKS/TASK-313_Widget_Editor_Live_Preview_Surface_and_Preview_State_Contract.md`
+- `_docs/_TASKS/TASK-317_Widget_Editor_Live_Preview_Surface_and_Preview_State_Contract.md`
 - `_docs/_TASKS/README.md`
 - `_docs/PREVIEW_SPEC.md` only if the shared editor-preview contract changes
 

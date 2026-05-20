@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 878 | 2026-05-19 | TASK-275 navigation widget followups | CMS Widgets/Admin UI/Runtime/QA |
 | 877 | 2026-05-19 | TASK-274 Logo Cloud closure and validation sync | CMS Widgets/Admin UI/Runtime/QA |
 | 876 | 2026-05-19 | TASK-274-05 Logo Cloud tile links and CTA | CMS Widgets/Admin UI/Runtime/QA |
 | 875 | 2026-05-19 | TASK-274-04 Logo Cloud layouts and marquee | CMS Widgets/Admin UI/Runtime/QA |

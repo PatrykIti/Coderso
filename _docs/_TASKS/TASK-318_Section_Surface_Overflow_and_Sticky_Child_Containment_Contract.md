@@ -1,6 +1,6 @@
-# TASK-314: Section Surface Overflow and Sticky Child Containment Contract
+# TASK-318: Section Surface Overflow and Sticky Child Containment Contract
 
-# FileName: TASK-314_Section_Surface_Overflow_and_Sticky_Child_Containment_Contract.md
+# FileName: TASK-318_Section_Surface_Overflow_and_Sticky_Child_Containment_Contract.md
 
 **Priority:** High
 **Category:** Shared Layout + Runtime Render + CSS Semantics
@@ -131,7 +131,7 @@ This shared task adds no API routes.
 
 ## Documentation Updates Required
 
-- `_docs/_TASKS/TASK-314_Section_Surface_Overflow_and_Sticky_Child_Containment_Contract.md`
+- `_docs/_TASKS/TASK-318_Section_Surface_Overflow_and_Sticky_Child_Containment_Contract.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_WIDGETS/SECTION.md` only if the shared Section surface contract changes
 

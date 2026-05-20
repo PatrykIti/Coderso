@@ -57,8 +57,8 @@ against the source-of-truth docs before the contract change.
 
 | Report finding | Evidence | Owner task or boundary | Reason |
 |---|---|---|---|
-| Missing live preview in all editor modes | `REPORT_NAVIGATION_WIDGET.md:181` | TASK-313 | The row is shared editor-preview surface scope. TASK-275 may reference it, but must not claim closure until TASK-313 lands or explicitly keeps the row routed. |
-| Sticky nav blocked on published frontend by Section `overflow-hidden` | `REPORT_NAVIGATION_WIDGET.md:378-393,405` | TASK-314 | The report identifies `Section`/layout wrapper ownership. TASK-275 may record evidence, but must not patch Section inside a Navigation task or close the sticky frontend row without the exact shared owner task. |
+| Missing live preview in all editor modes | `REPORT_NAVIGATION_WIDGET.md:181` | TASK-317 | The row is shared editor-preview surface scope. TASK-275 may reference it, but must not claim closure until TASK-317 lands or explicitly keeps the row routed. |
+| Sticky nav blocked on published frontend by Section `overflow-hidden` | `REPORT_NAVIGATION_WIDGET.md:378-393,405` | TASK-318 | The report identifies `Section`/layout wrapper ownership. TASK-275 may record evidence, but must not patch Section inside a Navigation task or close the sticky frontend row without the exact shared owner task. |
 | Generic contrast validation for configurable colors | `REPORT_NAVIGATION_WIDGET.md:215` | TASK-299 shared validation owner | Contrast warnings should be shared across configurable color widgets. |
 | Generic safe-href sanitizer semantics | TASK-256 shared link/media hardening | TASK-256 | TASK-275 may consume existing safe-href helpers and align Navigation editor validation, but must not fork a new sanitizer. |
 | Global Advanced/Visual mode ownership rules | TASK-256 editor-mode scope | TASK-256-01 | Navigation-specific copy can improve in TASK-275 leaves, but broad mode ownership belongs to TASK-256. |
@@ -125,7 +125,7 @@ against the source-of-truth docs before the contract change.
    TASK-275-05-03 visual tokens/dropdown direction/motion, and TASK-275-05-04
    brand CTA/logo controls.
 7. Complete TASK-275-06 last with report evidence, exact shared owner IDs for
-   live-preview (`TASK-313`) and sticky routed rows (`TASK-314`), docs, changelog, board sync,
+   live-preview (`TASK-317`) and sticky routed rows (`TASK-318`), docs, changelog, board sync,
    and final validation.
 
 ## Git Scope Safeguards
@@ -223,8 +223,8 @@ Implementation leaves:
   TASK-275 physical leaf, explicitly excluded to TASK-256/shared ownership, or
   deferred by TASK-275-06 with a reason.
 - Live-preview and sticky frontend rows are not marked closed by TASK-275 unless
-  TASK-275-06 references the exact shared physical owner tasks (`TASK-313` and
-  `TASK-314`); otherwise their status remains `routed`.
+  TASK-275-06 references the exact shared physical owner tasks (`TASK-317` and
+  `TASK-318`); otherwise their status remains `routed`.
 - TASK-275 docs do not duplicate TASK-256 shared-contract implementation scope.
 - Each implementation leaf names concrete files, data flow, error handling,
   regression tests, documentation updates, and validation commands.

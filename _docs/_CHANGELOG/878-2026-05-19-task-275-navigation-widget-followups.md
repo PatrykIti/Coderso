@@ -1,4 +1,4 @@
-# 868. TASK-275 navigation widget followups
+# 878. TASK-275 navigation widget followups
 
 - Date: 2026-05-19
 - Version: Unreleased
@@ -17,7 +17,7 @@
 
 ### QA And Docs
 - refreshed the Navigation widget source-of-truth doc, final Playwright report classification, task board state, and changelog evidence for the closed TASK-275 family
-- kept shared builder live-preview and Section sticky containment findings routed to `TASK-313` and `TASK-314` instead of masking them with widget-local patches
+- kept shared builder live-preview and Section sticky containment findings routed to `TASK-317` and `TASK-318` instead of masking them with widget-local patches
 
 ## Validation
 

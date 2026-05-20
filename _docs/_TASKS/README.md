@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 159 tasks
+- **To Do:** 265 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1735 tasks
+- **Done:** 1746 tasks
 
 ---
 
@@ -38,6 +38,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-318 | Section Surface Overflow and Sticky Child Containment Contract | High | Large | Shared Section/layout owner for sticky child widgets blocked by `overflow-hidden`, including the routed Navigation frontend sticky row |
+| TASK-317 | Widget Editor Live Preview Surface and Preview-State Contract | High | Large | Shared builder/editor owner for widget live-preview rows that need current-block preview without widget-local shell hacks |
 | TASK-313 | Grid Columns Shared Structural Truthfulness Follow-up | High | Large | Residual shared Grid Columns truthfulness after TASK-256 closure: variant truthfulness, span feedback, CSS-variable picker representation, and inactive cardize controls |
 | TASK-292 | Toggle Block Widget Playwright Product Followups | High | Very Large | Toggle Block-only follow-up family for `REPORT_TOGGLE_BLOCK_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-292-01 | Toggle Block Variant Visual Hierarchy, Contrast, and Pane Styling | High | Large | Add Toggle Block-owned cards distinction, active contrast, and bounded pane style controls after TASK-256 shared style semantics |
@@ -415,13 +417,13 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-264-04 | Divider Editor Preview Reset and Wizard UX | Medium | Medium | Done: Wizard/Visual/Advanced now render live preview, Wizard owns compact color/width/spacing controls, and reset actions stay data-only |
 | TASK-264-05 | Divider Runtime DOM Marker Hygiene | Medium | Small | Done: public Divider DOM now emits bounded marker kinds instead of raw color/width/margin strings |
 | TASK-264-06 | Divider Report Docs and Closure | Medium | Medium | Done: Divider report, widget doc, changelog, board, and validation evidence now reflect the final shipped contract |
-| TASK-275 | Navigation Widget Playwright Product Followups | High | Very Large | Done: Navigation logo links, mobile modes, dropdown/runtime accessibility, truthful menu previews, bounded style/brand controls, and closure docs landed while live preview and sticky frontend blockers remain routed to TASK-313/TASK-314 |
+| TASK-275 | Navigation Widget Playwright Product Followups | High | Very Large | Done: Navigation logo links, mobile modes, dropdown/runtime accessibility, truthful menu previews, bounded style/brand controls, and closure docs landed while live preview and sticky frontend blockers remain routed to TASK-317/TASK-318 |
 | TASK-275-01 | Navigation Logo and Safe Link Parity | High | Medium | Done: the logo now renders as a safe link, Wizard/Visual logo fields are labelled, and editor hash URL feedback matches runtime normalization |
 | TASK-275-02 | Navigation Mobile Drawer and Minimal Mode | High | Large | Done: drawer owns toggle icon/state/focus/CTA behavior, while minimal now renders a true reduced mobile header without the drawer panel |
 | TASK-275-03 | Navigation Dropdown and Rich Link Metadata | High | Large | Done: submenu disclosure buttons, root nav labelling, plain-text icon/badge/description output, and touch/keyboard dropdown state are synchronized |
 | TASK-275-04 | Navigation Link Management UX | Medium | Large | Done: move controls, limit feedback, child-link grouping, Wizard overflow summary, and truthful synced menu previews landed in the Visual/Wizard editors |
 | TASK-275-05 | Navigation Optional Style and Product Controls | Medium | Very Large | Done: the optional Navigation backlog shipped through the physical child leaves for collapse, active links/targets, visual tokens, and brand/CTA controls |
-| TASK-275-05-01 | Navigation Collapse Runtime Contract | Medium | Medium | Done: `collapseOnScroll` now toggles root-scoped collapsed state without claiming the shared Section sticky blocker routed to TASK-314 |
+| TASK-275-05-01 | Navigation Collapse Runtime Contract | Medium | Medium | Done: `collapseOnScroll` now toggles root-scoped collapsed state without claiming the shared Section sticky blocker routed to TASK-318 |
 | TASK-275-05-02 | Navigation Active Links and Safe Targets | Medium | Medium | Done: manual links support bounded self/new-tab targets and client-side active-link modes while keeping one semantic current link per root and leaving menu/pages sources same-tab |
 | TASK-275-05-03 | Navigation Visual Style Tokens | Medium | Large | Done: hover/active colors, underline, letter spacing, shadow, blur, dropdown direction, motion, and live color feedback are synchronized |
 | TASK-275-05-04 | Navigation Brand CTA and Logo Controls | Medium | Medium | Done: logo size, CTA radius/separator, Wizard CTA copy, and the explicit Right Actions secondary-action policy are documented and tested |
