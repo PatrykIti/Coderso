@@ -75,14 +75,75 @@ Out of scope:
 | `_docs/_WIDGETS/GRID_COLUMNS.md` | Document the final shared structural contracts once shipped. |
 | `_docs/_TASKS/README.md` | Keep board status/counts synchronized. |
 
-## Implementation Notes
+## Implementation Pseudocode
 
-- Reuse the existing shared color-input seam; do not fork a widget-only picker.
-- If variant truthfulness mutates saved span data, keep the update atomic and
-  fully regression-tested.
-- Span-total feedback must stay deterministic and machine-testable; avoid
-  browser-only heuristics.
-- Do not claim TASK-271 closed any of these findings while TASK-325 is still open.
+Decision path:
+
+1. Keep persisted span data authoritative. Do not rewrite saved spans merely
+   because the current variant dropdown says `asymmetric`.
+2. Make the editor truthful for that case:
+   - if saved spans are equal and the user selects `asymmetric`, apply the
+     preset atomically across the current columns;
+   - if saved spans are already custom and do not match the preset, surface an
+     explicit “custom spans override asymmetric preset” status instead of
+     pretending the variant alone changes layout.
+3. Calculate current desktop/tablet/mobile span totals from the live select
+   values and expose deterministic warning text whenever a total differs from
+   `12`.
+4. Keep the P3 runtime decision narrow:
+   - first land truthful editor feedback and tests;
+   - only add a runtime guard if invalid totals still create misleading public
+     overflow after the editor feedback is in place.
+5. Reuse the existing shared color-input seam so CSS variable values remain
+   visible as text when the swatch cannot represent them exactly.
+
+Helper shape:
+
+```ts
+type GridSpanTotals = {
+  desktop: number;
+  tablet: number;
+  mobile: number;
+};
+
+function calculateGridSpanTotals(columns: ColumnData[]): GridSpanTotals {
+  return {
+    desktop: sumSpans(columns, "desktopSpan"),
+    tablet: sumSpans(columns, "tabletSpan"),
+    mobile: sumSpans(columns, "mobileSpan"),
+  };
+}
+
+function resolveAsymmetricVariantState(columns: ColumnData[]) {
+  if (matchesAsymmetricPreset(columns)) return { mode: "preset" as const };
+  if (hasCustomSpanDistribution(columns)) {
+    return {
+      mode: "custom" as const,
+      message: "Custom spans override the asymmetric preset until you reapply it.",
+    };
+  }
+  return { mode: "equal" as const };
+}
+```
+
+Data flow:
+
+- `GridColumnsEditors.tsx` derives variant state and span totals from the
+  current normalized columns before rendering the shared structural guidance.
+- Reapplying `asymmetric` uses the existing block patch / data update path so
+  the column array changes atomically.
+- `gridColumns.tsx` only changes if the final P3 decision requires a bounded
+  runtime guard after the editor feedback is proven insufficient.
+
+Regression-test shape:
+
+- Widget runtime tests cover whichever final P3 decision is taken and confirm
+  that custom spans still render deterministically.
+- Editor-wave tests cover:
+  - CSS-variable text preservation;
+  - current desktop/tablet/mobile total feedback;
+  - asymmetric “preset vs custom” truthfulness copy;
+  - inactive cardize-control gating when cardized styling is off.
 
 ## Security Contract
 

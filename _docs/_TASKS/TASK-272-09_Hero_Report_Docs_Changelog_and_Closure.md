@@ -176,6 +176,14 @@ No API routes are added by this docs/closure leaf.
 - `bun run scan:security:strict`: passed.
 - `bun run precommit`: passed.
 
+## Validation Addendum (2026-05-21 audit)
+
+- `bun --cwd core lint`: passed
+- `bun --cwd core lint:types`: passed
+- `bun run test:vitest -- tests/vitest/widgets/hero.test.tsx tests/vitest/ui/hero-editor-wave.test.tsx`: passed (`2` files, `35` tests)
+- `bun run gates:coderso`: passed
+- `bun run precommit`: passed repeatedly while staging the audit follow-up commits on 2026-05-21
+
 ## Acceptance Criteria
 
 - The Hero report has no unmapped finding.

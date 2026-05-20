@@ -19,8 +19,9 @@ This family owns only product and UX improvements that are local to
 `grid-columns`. Shared widget-contract repairs stay in TASK-256, especially
 the TASK-256-05-01 structural leaf that already owns Grid Columns contract drift.
 Do not use TASK-271 to duplicate slot/config synchronization, public placeholder
-gating, CSS-variable picker semantics, asymmetric/masonry truthfulness, or
-span-sum validation that TASK-256 already captured.
+gating, or the reopened shared structural truthfulness that now lives in
+`TASK-325`, including CSS-variable picker semantics, asymmetric truthfulness,
+and span-sum validation.
 
 ## Current Shared Baseline (2026-05-19 Audit)
 

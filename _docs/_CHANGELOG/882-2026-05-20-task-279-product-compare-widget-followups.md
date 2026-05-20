@@ -22,11 +22,11 @@ Tasks: TASK-279, TASK-279-01, TASK-279-02, TASK-279-03, TASK-279-04, TASK-279-05
 
 ## Validation
 
-- Focused Bun commerce/query/runtime/route tests passed.
-- Focused Vitest widget/editor/admin preview suites passed.
-- `bun --cwd core lint`
-- `bun --cwd core lint:types`
-- `bun run test:bun`
-- `bun run test:vitest`
-- `bun run scan:security:strict`
-- `bun run precommit`
+- Historical closeout kept the validation summary high-level.
+- 2026-05-21 audit rerun:
+  - `bun --cwd core lint` - passed
+  - `bun --cwd core lint:types` - passed
+  - `bun run test:vitest -- tests/vitest/widgets/listingFilters.test.tsx tests/vitest/widgets/listingRuntimeScript.test.ts tests/vitest/ui/listing-filters-editor-wave.test.tsx tests/vitest/ui/listing-filters-query-parser.test.ts tests/vitest/widgets/navigation.test.tsx tests/vitest/widgets/navigationRuntimeScript.test.ts tests/vitest/ui/navigation-editor-wave.test.tsx tests/vitest/widgets/newsletter.test.tsx tests/vitest/ui/newsletter-editor-wave.test.tsx tests/vitest/widgets/pricingPlans.test.tsx tests/vitest/ui/pricing-plans-editor-wave.test.tsx tests/vitest/widgets/productCompare.test.tsx tests/vitest/ui/product-compare-editor-wave.test.tsx tests/vitest/ui/product-compare-admin-preview.test.tsx` - passed (`14` files, `116` tests)
+  - `bun test tests/unit/navigation/navigationRuntimeResolver.test.ts tests/unit/widgets/validator.test.ts tests/unit/widgets/registry.test.ts tests/unit/commerce/commerceWidgetRuntime.test.ts` - passed (`43` tests)
+  - `bun run gates:coderso` - passed
+  - `bun run precommit` - passed repeatedly while staging the audit follow-up commits

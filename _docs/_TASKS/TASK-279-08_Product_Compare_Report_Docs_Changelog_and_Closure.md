@@ -6,7 +6,7 @@
 **Category:** Widgets + Docs + Playwright QA + Release Hygiene
 **Estimated Effort:** Medium
 **Dependencies:** TASK-279-01, TASK-279-02, TASK-279-03, TASK-279-04, TASK-279-05, TASK-279-06, TASK-279-07
-**Status:** Done (2026-05-19)
+**Status:** Done (2026-05-20)
 
 ---
 
@@ -137,3 +137,13 @@ This leaf does not add routes or runtime behavior.
 - Task board statistics and statuses match the physical task files.
 - Changelog and source-of-truth docs match the behavior that actually landed.
 - Final validation output is recorded before marking TASK-279 Done.
+
+## Validation Notes (2026-05-21 audit)
+
+- Historical closure evidence remains in `_docs/_CHANGELOG/882-2026-05-20-task-279-product-compare-widget-followups.md`.
+- `bun --cwd core lint`: passed again during the 2026-05-21 audit rerun
+- `bun --cwd core lint:types`: passed again during the 2026-05-21 audit rerun
+- `bun run test:vitest -- tests/vitest/widgets/listingFilters.test.tsx tests/vitest/widgets/listingRuntimeScript.test.ts tests/vitest/ui/listing-filters-editor-wave.test.tsx tests/vitest/ui/listing-filters-query-parser.test.ts tests/vitest/widgets/navigation.test.tsx tests/vitest/widgets/navigationRuntimeScript.test.ts tests/vitest/ui/navigation-editor-wave.test.tsx tests/vitest/widgets/newsletter.test.tsx tests/vitest/ui/newsletter-editor-wave.test.tsx tests/vitest/widgets/pricingPlans.test.tsx tests/vitest/ui/pricing-plans-editor-wave.test.tsx tests/vitest/widgets/productCompare.test.tsx tests/vitest/ui/product-compare-editor-wave.test.tsx tests/vitest/ui/product-compare-admin-preview.test.tsx`: passed; this batch includes the targeted Product Compare widget/editor/admin-preview suites
+- `bun test tests/unit/navigation/navigationRuntimeResolver.test.ts tests/unit/widgets/validator.test.ts tests/unit/widgets/registry.test.ts tests/unit/commerce/commerceWidgetRuntime.test.ts`: passed; this batch includes the targeted commerce runtime and validator coverage used by TASK-279
+- `bun run gates:coderso`: passed
+- `bun run precommit`: passed repeatedly while staging the 2026-05-21 audit commits

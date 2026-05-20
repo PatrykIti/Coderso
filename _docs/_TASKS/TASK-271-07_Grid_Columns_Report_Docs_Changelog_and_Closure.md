@@ -184,6 +184,12 @@ No API routes are added.
     and `assistantHouseProjectsCatalogPublicSite`
   - the earlier assistant DB failure from the previous note did not reproduce in
     this run
+- `bun --cwd core lint`
+  - passed again during the 2026-05-21 audit rerun
+- `bun --cwd core lint:types`
+  - passed again during the 2026-05-21 audit rerun
+- `bun run gates:coderso`
+  - passed during the 2026-05-21 audit rerun
 
 ## Completion Notes
 

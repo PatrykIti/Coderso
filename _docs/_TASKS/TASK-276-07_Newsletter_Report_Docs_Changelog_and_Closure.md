@@ -184,3 +184,13 @@ No API routes are added by this closure leaf.
 - Deferred findings name the physical follow-up task explicitly; BF-15 closes
   only by pointing to `TASK-319`.
 - No Playwright PNG artifacts or unrelated task/report edits are committed.
+
+## Validation Notes (2026-05-21 audit)
+
+- Historical closeout evidence remains in `_docs/PLAYWRIGHT/REPORT_NEWSLETTER_WIDGET.md`
+  and `_docs/_CHANGELOG/879-2026-05-19-task-276-newsletter-widget-playwright-followups.md`.
+- `bun --cwd core lint`: passed again during the 2026-05-21 audit rerun
+- `bun --cwd core lint:types`: passed again during the 2026-05-21 audit rerun
+- `bun run test:vitest -- tests/vitest/widgets/listingFilters.test.tsx tests/vitest/widgets/listingRuntimeScript.test.ts tests/vitest/ui/listing-filters-editor-wave.test.tsx tests/vitest/ui/listing-filters-query-parser.test.ts tests/vitest/widgets/navigation.test.tsx tests/vitest/widgets/navigationRuntimeScript.test.ts tests/vitest/ui/navigation-editor-wave.test.tsx tests/vitest/widgets/newsletter.test.tsx tests/vitest/ui/newsletter-editor-wave.test.tsx tests/vitest/widgets/pricingPlans.test.tsx tests/vitest/ui/pricing-plans-editor-wave.test.tsx tests/vitest/widgets/productCompare.test.tsx tests/vitest/ui/product-compare-editor-wave.test.tsx tests/vitest/ui/product-compare-admin-preview.test.tsx`: passed; this batch includes the targeted Newsletter widget/editor suites
+- `bun run gates:coderso`: passed
+- `bun run precommit`: passed repeatedly while staging the 2026-05-21 audit commits

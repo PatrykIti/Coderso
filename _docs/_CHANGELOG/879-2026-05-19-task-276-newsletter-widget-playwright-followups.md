@@ -26,3 +26,13 @@ Tasks: TASK-276, TASK-276-01, TASK-276-02, TASK-276-03, TASK-276-04, TASK-276-05
   refreshed `_docs/_WIDGETS/NEWSLETTER.md`, converted the Newsletter Playwright
   report into a final fixed/deferred matrix, moved the TASK-276 family to
   `Done`, and created `TASK-319` for true per-breakpoint variant overrides.
+
+## Validation
+
+- Historical closure evidence remains in `_docs/PLAYWRIGHT/REPORT_NEWSLETTER_WIDGET.md`.
+- 2026-05-21 audit rerun:
+  - `bun --cwd core lint` - passed
+  - `bun --cwd core lint:types` - passed
+  - `bun run test:vitest -- tests/vitest/widgets/listingFilters.test.tsx tests/vitest/widgets/listingRuntimeScript.test.ts tests/vitest/ui/listing-filters-editor-wave.test.tsx tests/vitest/ui/listing-filters-query-parser.test.ts tests/vitest/widgets/navigation.test.tsx tests/vitest/widgets/navigationRuntimeScript.test.ts tests/vitest/ui/navigation-editor-wave.test.tsx tests/vitest/widgets/newsletter.test.tsx tests/vitest/ui/newsletter-editor-wave.test.tsx tests/vitest/widgets/pricingPlans.test.tsx tests/vitest/ui/pricing-plans-editor-wave.test.tsx tests/vitest/widgets/productCompare.test.tsx tests/vitest/ui/product-compare-editor-wave.test.tsx tests/vitest/ui/product-compare-admin-preview.test.tsx` - passed (`14` files, `116` tests)
+  - `bun run gates:coderso` - passed
+  - `bun run precommit` - passed repeatedly while staging the audit follow-up commits

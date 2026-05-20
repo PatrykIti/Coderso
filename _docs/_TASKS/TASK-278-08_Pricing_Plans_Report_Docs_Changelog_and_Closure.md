@@ -6,7 +6,7 @@
 **Category:** Widgets + Pricing Plans + Documentation + QA
 **Estimated Effort:** Medium
 **Dependencies:** TASK-278, TASK-278-01, TASK-278-02, TASK-278-03, TASK-278-04, TASK-278-05, TASK-278-06, TASK-278-07, TASK-256-08
-**Status:** Done (2026-05-19)
+**Status:** Done (2026-05-20)
 
 ---
 
@@ -144,3 +144,14 @@ Docs-only closure validation:
 - Validation output proves the changed Pricing Plans contracts, not just generic
   repository health.
 - No screenshots or generated binary Playwright artifacts are committed.
+
+## Validation Notes (2026-05-21 audit)
+
+- Historical scoped-closeout evidence remains in `_docs/PLAYWRIGHT/REPORT_PRICING_PLANS_WIDGET.md`
+  and `_docs/_CHANGELOG/881-2026-05-20-task-278-pricing-plans-widget-followups.md`.
+- `bun --cwd core lint`: passed again during the 2026-05-21 audit rerun
+- `bun --cwd core lint:types`: passed again during the 2026-05-21 audit rerun
+- `bun run test:vitest -- tests/vitest/widgets/listingFilters.test.tsx tests/vitest/widgets/listingRuntimeScript.test.ts tests/vitest/ui/listing-filters-editor-wave.test.tsx tests/vitest/ui/listing-filters-query-parser.test.ts tests/vitest/widgets/navigation.test.tsx tests/vitest/widgets/navigationRuntimeScript.test.ts tests/vitest/ui/navigation-editor-wave.test.tsx tests/vitest/widgets/newsletter.test.tsx tests/vitest/ui/newsletter-editor-wave.test.tsx tests/vitest/widgets/pricingPlans.test.tsx tests/vitest/ui/pricing-plans-editor-wave.test.tsx tests/vitest/widgets/productCompare.test.tsx tests/vitest/ui/product-compare-editor-wave.test.tsx tests/vitest/ui/product-compare-admin-preview.test.tsx`: passed; this batch includes the targeted Pricing Plans widget/editor suites
+- `bun test tests/unit/navigation/navigationRuntimeResolver.test.ts tests/unit/widgets/validator.test.ts tests/unit/widgets/registry.test.ts tests/unit/commerce/commerceWidgetRuntime.test.ts`: passed; this batch includes the targeted validator/registry coverage used by TASK-278
+- `bun run gates:coderso`: passed
+- `bun run precommit`: passed repeatedly while staging the 2026-05-21 audit commits
