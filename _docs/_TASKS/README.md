@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 226 tasks
+- **To Do:** 155 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1792 tasks
 
@@ -141,77 +141,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-282-07 | Rich Text Report Docs Changelog and Closure | Medium | Medium | Refresh Rich Text Section report/docs/changelog/board and final validation evidence |
 | TASK-282-08 | Rich Text Attachments and Safe Embed Policy | High | Large | Complete KOD-13 beyond images with bounded attachment cards and safe video/embed decisions |
 | TASK-282-09 | Rich Text Text Color Clear Adoption | Medium | Medium | Give KOD-10 a physical Rich Text Section owner for `textColor` clear behavior after shared helper support |
-| TASK-278 | Pricing Plans Widget Playwright Product Followups | High | Very Large | Pricing Plans-only follow-up family for `REPORT_PRICING_PLANS_WIDGET.md`, excluding TASK-256 shared-contract scope |
-| TASK-278-01 | Pricing Plans Card Visual Hierarchy and CTA Styles | High | Large | Add plan description, plan-level surface, badge tone, highlighted banner, and CTA style controls after TASK-256 shared safety |
-| TASK-278-02 | Pricing Plans Content Wizard and Destructive Edit UX | High | Large | Expand Wizard content authoring, Advanced reset copy, highlight indicators, disabled billing label UX, remove confirmation/undo, and feature autofocus |
-| TASK-278-03 | Pricing Plans Billing Value Copy and Price Semantics | High | Large | Add explicit savings copy, free/custom display, and structured price semantics after TASK-256 billing interactivity |
-| TASK-278-04 | Pricing Plans Feature Marker and Feature Metadata | Medium | Large | Replace placeholder icon marker with bounded feature metadata and safe icon/status presets |
-| TASK-278-05 | Pricing Plans Comparison Rows Product Table | High | Large | Add comparison header hierarchy, optional header CTA/badges, and sticky header behavior after TASK-256 table ARIA |
-| TASK-278-06 | Pricing Plans Section Layout Typography and Notes | Medium | Large | Add bounded max-width, typography presets, and plain-text pricing notes |
-| TASK-278-07 | Pricing Plans Two-Plan Variant and Pack Docs | Medium | Medium | Add a dedicated two-plan variant with registry/editor/runtime/tests/docs coverage after TASK-256 count sync |
-| TASK-278-08 | Pricing Plans Report, Docs, Changelog, and Closure | Medium | Medium | Refresh Pricing Plans report/docs/changelog/board and final validation evidence |
-| TASK-276 | Newsletter Widget Playwright Product Followups | High | Very Large | Newsletter-only follow-up family for `REPORT_NEWSLETTER_WIDGET.md`, excluding TASK-256 shared-contract scope |
-| TASK-276-01 | Newsletter Form Semantics, Consent, and Accessibility | High | Large | Add email field metadata, consent-in-form semantics, accessible labels, autocomplete, and safe no-target submit behavior |
-| TASK-276-02 | Newsletter Submission States and Public Write Hardening | High | Very Large | Add hidden-by-default success/error/loading states and backend-owned anti-abuse for Coderso-owned submissions |
-| TASK-276-03 | Newsletter Integration Validation and Transport Diagnostics | High | Large | Add safe action URL/method validation and Advanced active-transport diagnostics |
-| TASK-276-04 | Newsletter Editor Mode Ownership and Variant Guidance | High | Medium | Align Newsletter editor mode ownership, Minimal description guidance, consent help, mobile copy, and success preview |
-| TASK-276-05 | Newsletter Field Expansion and Double Opt-In Model | Medium | Large | Add bounded extra fields and double opt-in semantics after the base form/transport contract is stable |
-| TASK-276-06 | Newsletter Visual Style, Width, and Contrast Controls | Medium | Large | Add Newsletter-local width/color/contrast controls, background picker clarity, breakpoint decisions, and explicit spacing resolver cleanup |
-| TASK-276-07 | Newsletter Report, Docs, Changelog, and Closure | Medium | Medium | Refresh Newsletter report/docs/changelog/board and final validation evidence |
-| TASK-277 | Posts Feed Widget Playwright Product Followups | High | Very Large | Posts Feed-only follow-up family for `REPORT_POSTS_FEED_WIDGET.md`, excluding TASK-256 shared-contract and global auth/session scope |
-| TASK-277-01 | Posts Feed Source Mode, Route, and Filter Truthfulness | High | Large | Repair manual-sort truthfulness, category filter copy/parsing, and post detail-route fallback behavior |
-| TASK-277-02 | Posts Feed Media, Tags, and Card Metadata | High | Large | Add show-image, media-resolved thumbnail/alt mapping, and bounded tag data for posts-feed cards |
-| TASK-277-03 | Posts Feed Manual Picker Search, Reorder, and Accessibility | High | Large | Add picker search, selected-order controls, accessible labels/live state, and local retry/error UX |
-| TASK-277-04 | Posts Feed Admin Preview and Runtime Status | High | Large | Hydrate admin canvas preview with bounded post data and expose readable sync/runtime status |
-| TASK-277-05 | Posts Feed Section Header, View All, and Editorial Chrome | Medium | Large | Add optional section heading, safe View All link, and bounded posts-feed visual motion |
-| TASK-277-06 | Posts Feed Editor Flow, Variant Previews, and Style Controls | Medium | Large | Add text-color control, variant preview affordances, and progressive Wizard flow |
-| TASK-277-07 | Posts Feed Pagination, Author, Date, and Featured-First Filters | Medium | Very Large | Add or explicitly split bounded pagination/load-more, author/date filters, and featured-first sorting |
-| TASK-277-08 | Posts Feed Report, Docs, Changelog, and Closure | Medium | Medium | Refresh Posts Feed report/docs/changelog/board and final validation evidence |
-| TASK-275 | Navigation Widget Playwright Product Followups | High | Very Large | Navigation-only follow-up family for `REPORT_NAVIGATION_WIDGET.md`, excluding TASK-256 shared-contract and Section/page-shell scope |
-| TASK-275-01 | Navigation Logo and Safe Link Parity | High | Medium | Render logo as a safe link, align hash URL validation with runtime rules, and label logo-link fields |
-| TASK-275-02 | Navigation Mobile Drawer and Minimal Mode | High | Large | Make minimal/drawer behavior explicit, remove mobile CTA duplication, add toggle state, icons, labels, animation, and focus policy |
-| TASK-275-03 | Navigation Dropdown and Rich Link Metadata | High | Large | Add touch/keyboard dropdown behavior plus schema-backed icon, badge, and description rendering/editing |
-| TASK-275-04 | Navigation Link Management UX | Medium | Large | Add reorder controls, limit feedback, sub-link hierarchy, and read-only synced menu preview |
-| TASK-275-05 | Navigation Optional Style and Product Controls | Medium | Very Large | Parent for lower-priority Navigation-owned style/product follow-ups; implementation lives in physical child leaves |
-| TASK-275-05-01 | Navigation Collapse Runtime Contract | Medium | Medium | Make `collapseOnScroll` a real root-scoped Navigation runtime behavior without patching Section/page-shell sticky blockers |
-| TASK-275-05-02 | Navigation Active Links and Safe Targets | Medium | Medium | Add active-link highlighting and safe target/rel controls through existing safe-href ownership |
-| TASK-275-05-03 | Navigation Visual Style Tokens | Medium | Large | Add bounded hover/active colors, underline, letter spacing, shadow, backdrop blur, dropdown direction, and motion tokens |
-| TASK-275-05-04 | Navigation Brand CTA and Logo Controls | Medium | Medium | Add logo-size, CTA-radius/separator, and bounded secondary-CTA policy without broad platform expansion |
-| TASK-275-06 | Navigation Report Docs Changelog and Closure | Medium | Medium | Refresh Navigation report/docs/changelog/board and final validation evidence after implementation leaves land |
-| TASK-274 | Logo Cloud Widget Playwright Product Followups | High | Very Large | Logo Cloud-only follow-up family for `REPORT_LOGO_CLOUD_WIDGET.md`, excluding TASK-256 shared-contract scope |
-| TASK-274-01 | Logo Cloud Header Background and Typography | High | Large | Add Logo Cloud eyebrow, section background, and bounded header typography controls after shared heading/ARIA fixes |
-| TASK-274-02 | Logo Cloud Logo Asset Authoring and Previews | High | Large | Add Wizard logo image/alt/link authoring, Visual thumbnails, and Media Library picking without duplicating TASK-256 link contracts |
-| TASK-274-03 | Logo Cloud Item Management and Reorder | High | Large | Add inline Undo remove behavior and drag reorder while keeping Move button fallback |
-| TASK-274-04 | Logo Cloud Dense Strip and Marquee Layouts | Medium | Large | Add dense overflow repair, strip single-row scroll, and optional marquee with reduced-motion safety |
-| TASK-274-05 | Logo Cloud Tile Link and CTA Controls | Medium | Large | Add bounded tile shape, open-new-tab product control, and optional CTA through shared safe href helpers |
-| TASK-274-06 | Logo Cloud Report Docs and Closure | Medium | Medium | Refresh Logo Cloud report evidence, widget docs, changelog, board, and final validation |
-| TASK-273 | Listing Filters Widget Playwright Product Followups | High | Very Large | Listing Filters-only follow-up family for `REPORT_LISTING_FILTERS_WIDGET.md`, excluding TASK-256 shared-contract scope |
-| TASK-273-01 | Admin Canvas, Facet Draft State, and Query Loading | High | Large | Repair canvas query fallback, visible editable facet drafts, duplicate-id feedback, and transient query-load handling |
-| TASK-273-02 | Facet Field, Operator, Options, and Preview Editors | High | Large | Add query-aware field suggestions, kind-scoped operators, structured option/sort rows, inline validation, and facet previews |
-| TASK-273-03 | Range, Date, Taxonomy, and Searchable Option Controls | High | Very Large | Add practical range/date/taxonomy/searchable-option controls while preserving the existing URL token contract |
-| TASK-273-04 | Active Filters, Clear All, Counts, and Auto Apply State | High | Large | Add active filter summary, clear-all, truthful missing-count state, and less confusing auto-apply behavior |
-| TASK-273-05 | Pagination, Page Reset, Loading, and Error State | High | Large | Add page controls, reset page on filter changes, AJAX busy state, stale-response guard, and inline runtime errors |
-| TASK-273-06 | Layout Variants, Collapsible Facets, and Width Controls | High | Very Large | Add horizontal/sidebar/drawer layouts, collapsible facets, and bounded width controls |
-| TASK-273-07 | Wizard, Diagnostics, and Mode Onboarding | Medium | Medium | Add safe Wizard facet onboarding, Visual diagnostics, and clearer Advanced contract linkage |
-| TASK-273-08 | Report, Docs, Changelog, and Closure | Medium | Medium | Refresh Listing Filters report/docs/changelog/board and final validation evidence |
-| TASK-272 | Hero Widget Playwright Product Followups | High | Very Large | Hero-only follow-up family for `REPORT_HERO_WIDGET.md`, excluding TASK-256 shared-contract and page-shell scope |
-| TASK-272-01 | Hero Centered Media Control and CTA Placeholder Polish | High | Medium | Hide centered-only irrelevant inline media frame controls and align Hero CTA URL placeholder copy |
-| TASK-272-02 | Hero Video Poster and Media Metadata | High | Large | Add Hero video poster, title/description, and video-specific editor/runtime semantics |
-| TASK-272-03 | Hero Preset Delete Confirmation and Library Management | High | Large | Add preset delete confirmation plus bounded Hero preset search, import, and export |
-| TASK-272-04 | Hero Layout Height Full Bleed and Media Center Variant | High | Very Large | Add bounded full-height/full-bleed layout controls, clearer spacing labels, and a media-center variant |
-| TASK-272-05 | Hero Shadow, Typography, Font, and Motion Controls | Medium | Large | Add bounded Hero shadows, font family/weight, and reduced-motion-safe animation tokens |
-| TASK-272-06 | Hero Color Palettes and Contrast Guidance | High | Large | Add Hero-owned palette presets and contrast guidance after TASK-256 shared color-field state |
-| TASK-272-07 | Hero Rich Copy and Social Proof Composition | Medium | Very Large | Add safe rich-copy support and a bounded social proof row for conversion Hero sections |
-| TASK-272-08 | Hero Responsive Images and LCP Priority | Medium | Large | Define Hero responsive image, lazy/eager loading, and fetch-priority policy without inventing media variants |
-| TASK-272-09 | Hero Report Docs Changelog and Closure | Medium | Medium | Refresh Hero report/docs/changelog/board and final validation evidence |
-| TASK-271 | Grid Columns Widget Playwright Product Followups | High | Very Large | Grid Columns-only follow-up family for `REPORT_GRID_COLUMNS_WIDGET.md`, excluding TASK-256 shared-contract scope |
-| TASK-271-01 | Grid Columns Wizard, Presets, and Editor Guidance | High | Large | Expand all-column Wizard editing, variant previews, column-count copy, and layout presets |
-| TASK-271-02 | Grid Columns Reorder and Column Management | High | Large | Add reorder controls that preserve nested column slot content after TASK-256 slot/config sync |
-| TASK-271-03 | Grid Columns Responsive Order, Visibility, and Wide Breakpoints | High | Very Large | Add mobile reverse, per-column visibility, wide breakpoint spans, and any residual overflow guardrails |
-| TASK-271-04 | Grid Columns Per-Column Surface and Overflow | Medium | Large | Add bounded per-column card surface overrides and overflow controls without raw class strings |
-| TASK-271-05 | Grid Columns Height and Cross-Axis Alignment | Medium | Large | Replace hardcoded min-height with tokens and add per-column alignment overrides |
-| TASK-271-06 | Grid Columns Gap Tokens and Density Controls | Medium | Medium | Expand bounded gap tokens, keep independent gapX/gapY, and improve spacing labels |
-| TASK-271-07 | Grid Columns Report, Docs, Changelog, and Closure | Medium | Medium | Refresh Grid Columns report/docs/changelog/board and final validation evidence |
 | TASK-267 | Feature Grid Widget Playwright Product Followups | High | Very Large | Feature Grid-only follow-up family for `REPORT_FEATURE_GRID_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-267-01 | Feature Grid Variant Preview and Responsive Cards-4 Layout | High | Medium | Add variant preview affordances, repair cards-4 responsive product behavior, and keep columns truthfulness in TASK-256 |
 | TASK-267-02 | Feature Grid Card Reorder, Remove, and Item Management | High | Medium | Add drag reorder plus recoverable remove flow while preserving keyboard move fallback |

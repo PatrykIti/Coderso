@@ -167,7 +167,7 @@ Primary CTA jest renderowane tylko dla:
 - `collapseOnScroll` is now a real root-scoped runtime behavior:
   `data-navigation-collapsed` and a local collapsed class toggle while scrolling
 - shared Section/page-shell sticky containment is not owned here; sticky can
-  still be blocked by routed shared owner `TASK-314`
+  still be blocked by routed shared owner `TASK-318`
 
 ## Authoring Limits
 

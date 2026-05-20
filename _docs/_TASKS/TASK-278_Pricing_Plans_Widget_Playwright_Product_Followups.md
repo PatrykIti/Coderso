@@ -109,14 +109,14 @@ to Pricing Plans product fields, copy, and layout behavior.
 
 ## Sub-Tasks
 
-- [ ] TASK-278-01: Pricing Plans Card Visual Hierarchy and CTA Styles
-- [ ] TASK-278-02: Pricing Plans Content Wizard and Destructive Edit UX
-- [ ] TASK-278-03: Pricing Plans Billing Value Copy and Price Semantics
-- [ ] TASK-278-04: Pricing Plans Feature Marker and Feature Metadata
-- [ ] TASK-278-05: Pricing Plans Comparison Rows Product Table
-- [ ] TASK-278-06: Pricing Plans Section Layout Typography and Notes
-- [ ] TASK-278-07: Pricing Plans Two-Plan Variant and Pack Docs
-- [ ] TASK-278-08: Pricing Plans Report, Docs, Changelog, and Closure
+- [x] TASK-278-01: Pricing Plans Card Visual Hierarchy and CTA Styles
+- [x] TASK-278-02: Pricing Plans Content Wizard and Destructive Edit UX
+- [x] TASK-278-03: Pricing Plans Billing Value Copy and Price Semantics
+- [x] TASK-278-04: Pricing Plans Feature Marker and Feature Metadata
+- [x] TASK-278-05: Pricing Plans Comparison Rows Product Table
+- [x] TASK-278-06: Pricing Plans Section Layout Typography and Notes
+- [x] TASK-278-07: Pricing Plans Two-Plan Variant and Pack Docs
+- [x] TASK-278-08: Pricing Plans Report, Docs, Changelog, and Closure
 
 ## Implementation Order
 

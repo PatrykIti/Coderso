@@ -23,9 +23,10 @@ Tasks: TASK-280, TASK-280-01, TASK-280-02, TASK-280-03, TASK-280-04, TASK-280-05
   dedicated admin preview route, bounded Advanced-mode refresh behavior, and
   explicit loading/empty/stale/ready/error status cues for inline canvas
   verification.
-- Kept preview ownership explicit in widget definitions so Page Editor and
-  Widget Template Editor no longer rely on hardcoded preview-capable widget
-  lists for Product Gallery and Entry Teaser.
+- Kept Product Gallery preview ownership explicit in the widget definition so
+  shared preview-capability helpers can enable it without adding another
+  Product Gallery-specific shell gate. Entry Teaser still retains its existing
+  hardcoded shell allowlist on this branch.
 - Added focused coverage for Product Gallery runtime output, editor waves,
   admin preview state, preview route/client behavior, shared preview-capability
   helpers, validator acceptance, and the cross-widget commerce runtime seam.

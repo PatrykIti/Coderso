@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Commerce + Admin UI + Runtime Render + Playwright QA
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-252-07-04, TASK-256, TASK-256-01, TASK-256-02, TASK-256-04, TASK-256-07, TASK-256-08
+**Dependencies:** TASK-252-07-04, TASK-256, TASK-256-01, TASK-256-02, TASK-256-04, TASK-256-07, TASK-256-08, TASK-313
 **Status:** Done (2026-05-19)
 
 ---
@@ -100,14 +100,14 @@ Gallery-specific leaf.
 
 ## Sub-Tasks
 
-- [ ] TASK-280-01: Product Gallery Media Link and CTA Cards
-- [ ] TASK-280-02: Product Gallery Compact Variant Surface and Price Display
-- [ ] TASK-280-03: Product Gallery Admin Preview Runtime Status and Loading
-- [ ] TASK-280-04: Product Gallery Editor Mode Empty State and Technical Hints
-- [ ] TASK-280-05: Product Gallery Source Collections and Filter Controls
-- [ ] TASK-280-06: Product Gallery Section Header Metadata and Accessibility
-- [ ] TASK-280-07: Product Gallery Pagination Manual Curation and Query Extensions
-- [ ] TASK-280-08: Product Gallery Report Docs Changelog and Closure
+- [x] TASK-280-01: Product Gallery Media Link and CTA Cards
+- [x] TASK-280-02: Product Gallery Compact Variant Surface and Price Display
+- [x] TASK-280-03: Product Gallery Admin Preview Runtime Status and Loading
+- [x] TASK-280-04: Product Gallery Editor Mode Empty State and Technical Hints
+- [x] TASK-280-05: Product Gallery Source Collections and Filter Controls
+- [x] TASK-280-06: Product Gallery Section Header Metadata and Accessibility
+- [x] TASK-280-07: Product Gallery Pagination Manual Curation and Query Extensions
+- [x] TASK-280-08: Product Gallery Report Docs Changelog and Closure
 
 ## Implementation Order
 

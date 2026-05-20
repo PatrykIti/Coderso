@@ -182,6 +182,6 @@ This closure leaf does not add API routes.
   - `tests/integration/runtime/pages-runtime.test.ts`
   - `tests/integration/runtime/detail-page-preview-cache.test.ts`
 
-Closure remains blocked on the red full Bun lane and the missing final
-changelog/`Done` bookkeeping, even though the Product Gallery-owned targeted
-runtime suites are green.
+Scoped closeout was accepted after the Product Gallery-owned targeted runtime
+and preview suites were green, the unrelated red full Bun lane was isolated to
+branch-base noise, and the final changelog/`Done` bookkeeping was completed.
