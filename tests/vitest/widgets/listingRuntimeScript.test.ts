@@ -328,6 +328,74 @@ test("listing runtime clear-all preserves unrelated params and removes only the 
   expect(requestUrl.searchParams.get("lq.query-3.status.in")).toBeNull();
 });
 
+test("listing runtime submit removes stale __page when filters change", async () => {
+  const fetchMock = vi.fn(async () => {
+    return new Response(document.body.innerHTML, {
+      status: 200,
+      headers: { "Content-Type": "text/html" },
+    });
+  });
+  globalThis.fetch = fetchMock as typeof globalThis.fetch;
+  window.history.replaceState(
+    {},
+    "",
+    "http://localhost:3000/?lq.query-3.__page=4&lq.query-3.__q=loft&lq.other.__page=2"
+  );
+
+  const form = installListingFiltersRuntime(
+    normalizeListingFiltersData({
+      listingQueryId: "query-3",
+      autoApply: false,
+      facets: [
+        {
+          id: "status",
+          kind: "checkbox",
+          label: "Status",
+          field: "status",
+          op: "in",
+          options: [{ value: "published", label: "Published" }],
+        },
+      ],
+      resolved: {
+        listingQueryId: "query-3",
+        searchQuery: "loft",
+        metrics: [
+          {
+            id: "status",
+            kind: "checkbox",
+            label: "Status",
+            token: "status.in",
+            options: [{ value: "published", label: "Published", count: 2, active: false }],
+            range: null,
+          },
+        ],
+      },
+    })
+  );
+
+  const checkbox = form.querySelector('input[type="checkbox"]') as HTMLInputElement | null;
+  expect(checkbox).toBeTruthy();
+  if (!checkbox) {
+    throw new Error("Expected listing filter checkbox.");
+  }
+  checkbox.checked = true;
+  submitForm(form);
+  await flush();
+
+  const firstCall = fetchMock.mock.calls[0] as unknown as
+    | [RequestInfo | URL, RequestInit?]
+    | undefined;
+  expect(firstCall).toBeDefined();
+  if (!firstCall) {
+    throw new Error("Expected listing runtime submit fetch call.");
+  }
+  const requestUrl = new URL(String(firstCall[0]));
+  expect(requestUrl.searchParams.get("lq.query-3.__page")).toBeNull();
+  expect(requestUrl.searchParams.get("lq.query-3.__q")).toBe("loft");
+  expect(requestUrl.searchParams.get("lq.query-3.status.in")).toBe("published");
+  expect(requestUrl.searchParams.get("lq.other.__page")).toBe("2");
+});
+
 test("search box listing mode keeps the shared listing runtime submit contract after listing-filters changes", async () => {
   const fetchMock = vi.fn(async () => {
     return new Response(document.body.innerHTML, {
