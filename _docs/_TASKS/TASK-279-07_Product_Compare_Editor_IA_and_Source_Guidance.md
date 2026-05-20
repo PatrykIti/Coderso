@@ -5,7 +5,7 @@
 **Priority:** Medium
 **Category:** Widgets + Admin UI + Editor IA
 **Estimated Effort:** Medium
-**Dependencies:** TASK-256-01, TASK-256-02, TASK-279-01, TASK-279-06, TASK-279
+**Dependencies:** TASK-256-01, TASK-256-02, TASK-279-01, TASK-279-06, TASK-324, TASK-279
 **Status:** To Do
 
 ---

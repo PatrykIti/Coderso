@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Commerce + Runtime Query + Admin UI
 **Estimated Effort:** Large
-**Dependencies:** TASK-252-07-05, TASK-256-07, TASK-279
+**Dependencies:** TASK-252-07-05, TASK-256-07, TASK-324, TASK-279
 **Status:** To Do
 
 ---
