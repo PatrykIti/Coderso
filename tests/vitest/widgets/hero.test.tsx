@@ -175,6 +175,36 @@ test("hero media-center keeps centered content actions even when legacy align is
   expect(html).toContain("flex w-full flex-wrap items-center gap-3 justify-center");
 });
 
+test("hero applies bounded full-bleed height and mobile media visibility runtime output", () => {
+  const html = renderToString(
+    <HeroBlock
+      data={{
+        ...heroDefaults,
+        layout: {
+          ...heroDefaults.layout,
+          height: "large",
+          bleed: "full-bleed",
+        },
+        responsive: {
+          hideMediaOnMobile: true,
+        },
+        media: {
+          type: "image",
+          src: "/hero.jpg",
+          alt: "Hero showcase",
+        },
+      }}
+      variant="split"
+    />
+  );
+
+  expect(html).toContain("min-h-[80vh]");
+  expect(html).toContain("width:100vw");
+  expect(html).toContain("margin-left:calc(50% - 50vw)");
+  expect(html).toContain("margin-right:calc(50% - 50vw)");
+  expect(html).toContain("hidden md:block");
+});
+
 test("hero centered uses selected image as background", () => {
   const html = renderToString(
     <HeroBlock

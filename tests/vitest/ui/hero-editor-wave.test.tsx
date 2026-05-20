@@ -1088,6 +1088,72 @@ test("HeroVisualEditor applies palettes without erasing content and keeps gradie
   }
 });
 
+test("HeroVisualEditor filters, sorts, and exports presets", async () => {
+  const { HeroVisualEditor } = await import("../../../core/admin/ui/widgets/editors/HeroEditors");
+
+  heroState.presetValue = [
+    {
+      name: "Zeta",
+      variant: "split",
+      data: {
+        headline: "Zeta preset",
+      },
+      updatedAt: "2026-03-09T08:00:00.000Z",
+    },
+    {
+      name: "Alpha",
+      variant: "media-left",
+      data: {
+        headline: "Alpha preset",
+      },
+      updatedAt: "2026-03-08T08:00:00.000Z",
+    },
+  ];
+
+  const view = mount(
+    <HeroVisualEditor
+      value={{ headline: "Current hero" }}
+      onChange={() => undefined}
+      variant="split"
+      onVariantChange={() => undefined}
+    />
+  );
+
+  try {
+    await flush();
+
+    const initialText = view.container.textContent ?? "";
+    expect(initialText.indexOf("Zeta")).toBeGreaterThan(-1);
+    expect(initialText.indexOf("Alpha")).toBeGreaterThan(initialText.indexOf("Zeta"));
+
+    React.act(() => {
+      setSelectValue(findSelectByOptions(view.container, ["updated-desc", "name-asc"]), "name-asc");
+    });
+    const sortedText = view.container.textContent ?? "";
+    expect(sortedText.indexOf("Alpha")).toBeGreaterThan(-1);
+    expect(sortedText.indexOf("Zeta")).toBeGreaterThan(sortedText.indexOf("Alpha"));
+
+    React.act(() => {
+      setInputValue(findInputByPlaceholder(view.container, "Search presets"), "alp");
+    });
+    expect(view.container.textContent).toContain("Alpha");
+    expect(view.container.textContent).not.toContain("Zeta");
+
+    clickElement(findButtonsByText(view.container, "Export presets")[0]);
+    await flush();
+    const exportTextarea = view.container.querySelector(
+      "textarea[readonly]"
+    ) as HTMLTextAreaElement | null;
+    const exportValue = exportTextarea?.textContent;
+    expect(exportTextarea?.value).toContain('"presets"');
+    expect(exportTextarea?.value).toContain('"Alpha"');
+    expect(exportTextarea?.value).toContain('"Zeta"');
+    expect(exportValue ?? exportTextarea?.value ?? "").toContain("Alpha");
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("HeroVisualEditor rejects duplicate preset imports and normalizes media-center imports", async () => {
   const { HeroVisualEditor } = await import("../../../core/admin/ui/widgets/editors/HeroEditors");
 
