@@ -510,3 +510,35 @@ TOC linki używają `href="#slug"` gdzie slug jest generowany przez `slugifyHead
 - Shared rows that match existing TASK-256 clear, accessibility, or
   mode-ownership mechanisms remain referenced by `TASK-256-07` and
   `TASK-256-08`.
+
+## Status po TASK-282 (2026-05-21)
+
+Poniżej znajduje się finalny closure snapshot po wdrożeniu rodziny `TASK-282`
+w izolowanym worktree oraz po zsynchronizowaniu runtime, edytora, testów i
+dokumentacji Rich Text Section.
+
+| Owner | Findings | Final status | Evidence summary |
+|-------|----------|--------------|------------------|
+| `TASK-282-01` | `KOD-01`, `KOD-02` | Fixed | Wizard nie nadpisuje już `outputMode`, a Visual/Advanced pokazują aktywne źródło renderu (`html` vs `blocks`) razem z powodem decyzji. |
+| `TASK-282-02` | `KOD-11`, `KOD-12`, `KOD-14` | Fixed | `body.html` używa teraz bezpiecznego `PostRichTextAdapter` zamiast surowej textarea, a sanitizer pokazuje diagnostykę dla usuniętych tagów, atrybutów i przepisywanych linków, w tym `<img>` i `<h1>`. |
+| `TASK-282-03` | `KOD-03`, `KOD-04`, `KOD-15`, `KOD-16` | Fixed | Structured blocks wspierają rich text, poziomy nagłówków `h2/h3/h4`, confirm + undo dla destruktywnych akcji oraz navigator/paging dla większych zestawów bloków. |
+| `TASK-282-04` | `KOD-08`, `KOD-09`, `A11Y-01`, section label note | Fixed | Wariant `article` respektuje `maxWidth`, title heading level jest konfigurowalny, sekcja ma deterministyczne etykietowanie ARIA, a linki TOC dostały widoczny focus state. |
+| `TASK-282-05` | `KOD-13` (image/media picker slice) | Fixed | Widget ma teraz bounded image blocks z MediaPickerem, alt/caption/link controls i bezpiecznym runtime renderem zamiast oczekiwania na raw `<img>` w HTML body. |
+| `TASK-282-08` | `KOD-13` (attachment/embed slice) | Fixed | Structured blocks wspierają attachment cards oraz safe embed link cards; raw iframe/video payloads pozostają celowo poza kontraktem. |
+| `TASK-282-09` | `KOD-10` | Fixed | `textColor` ma lokalny clear action zgodny z Rich Text Section runtime fallback do `var(--color-text)`. |
+| `TASK-282-06` | `KOD-05`, `KOD-WIZ`, `KOD-DUP` | Fixed | Dropcap guidance jest teraz jawne, Wizard używa compact variant cards, a Advanced nie duplikuje już tych samych token controls co Visual. |
+| `TASK-282-06` | `KOD-07` | Accepted limitation | Visual pozostaje jedynym właścicielem zmiany wariantu. Advanced opisuje source/output contract i nie powiela product-facing variant control. |
+| `TASK-282-07` | `KOD-06` | Not a bug | TOC dla `blocks` działał poprawnie już wcześniej; closure dokumentuje ten fakt i dodaje testy dla scoped heading ids oraz runtime markers. |
+
+Focused validation tied to these Rich Text Section changes was green on
+2026-05-21:
+
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun x vitest run --config vitest.config.ts tests/vitest/widgets/richTextSection.test.tsx`
+- `bun x vitest run --config vitest.config.ts tests/vitest/ui/rich-text-section-editor-wave.test.tsx`
+- `bun test tests/unit/widgets/validator.test.ts`
+
+No fresh Playwright CLI rerun was committed from this worktree. Closure evidence
+for the report rows above comes from the focused SSR/editor/validator suites and
+the synchronized source paths named in `TASK-282`.

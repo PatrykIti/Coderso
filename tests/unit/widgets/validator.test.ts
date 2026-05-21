@@ -26,6 +26,11 @@ import {
   createPricingPlansWidget,
   pricingPlansDefaults,
 } from "../../../core/widgets/core/pricingPlans";
+import {
+  createRichTextSectionWidget,
+  richTextSectionDefaults,
+  type RichTextSectionData,
+} from "../../../core/widgets/core/richTextSection";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { clearWidgetValidators, normalizeWidgetBlock } from "../../../core/widgets/validator";
 import type { WidgetDefinition, WidgetBlock } from "../../../core/widgets/types";
@@ -309,6 +314,120 @@ test("normalizeWidgetBlock accepts feature grid imageAlt authoring", () => {
   expect((normalized.data as FeatureGridData).style?.hoverEffect).toBe("lift");
   expect((normalized.data as FeatureGridData).items[0]?.descriptionMode).toBe("rich");
   expect((normalized.data as FeatureGridData).items[0]?.ctaTarget).toBe("new-tab");
+});
+
+test("normalizeWidgetBlock accepts rich text section structured media blocks and rejects unknown block keys", () => {
+  registerWidget(
+    createRichTextSectionWidget({
+      wizard: Dummy as never,
+      visual: Dummy as never,
+      advanced: Dummy as never,
+    })
+  );
+
+  const normalized = normalizeWidgetBlock({
+    id: "rich-text-1",
+    type: "rich-text-section",
+    variant: "article",
+    data: {
+      ...richTextSectionDefaults,
+      titleBlock: {
+        eyebrow: "Guides",
+        title: "Technical guide",
+        headingLevel: 1,
+      },
+      body: {
+        html: "",
+        blocks: [
+          {
+            id: "text-1",
+            kind: "text",
+            heading: "Intro",
+            headingLevel: 2,
+            contentHtml: "<p>Useful context</p>",
+          },
+          {
+            id: "image-1",
+            kind: "image",
+            mediaId: "media-image-1",
+            src: "/media/guide-diagram.png",
+            alt: "Guide diagram",
+            decorative: false,
+            caption: "Reference architecture",
+            href: "https://example.com/guide",
+            width: "wide",
+            align: "center",
+          },
+          {
+            id: "attachment-1",
+            kind: "attachment",
+            mediaId: "media-file-1",
+            src: "/media/spec-sheet.pdf",
+            label: "Download spec sheet",
+            description: "Current PDF contract",
+            mimeType: "application/pdf",
+            sizeLabel: "1.2 MB",
+          },
+          {
+            id: "embed-1",
+            kind: "embed",
+            provider: "external-link",
+            url: "https://example.com/demo",
+            title: "Live demo",
+            aspectRatio: "16:9",
+            renderMode: "link-card",
+          },
+        ],
+      },
+      options: {
+        dropcap: false,
+        toc: true,
+        maxWidth: "xl",
+        outputMode: "blocks",
+      },
+      style: {
+        fontScale: "lg",
+        lineHeight: "relaxed",
+        textColor: "",
+        background: "",
+        spacing: "lg",
+      },
+    } satisfies RichTextSectionData,
+  });
+
+  expect(normalized.variant).toBe("article");
+  expect((normalized.data as RichTextSectionData).titleBlock?.headingLevel).toBe(1);
+  expect((normalized.data as RichTextSectionData).body?.blocks).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ kind: "image", width: "wide", align: "center" }),
+      expect.objectContaining({ kind: "attachment", mimeType: "application/pdf" }),
+      expect.objectContaining({ kind: "embed", renderMode: "link-card" }),
+    ])
+  );
+  expect((normalized.data as RichTextSectionData).options?.outputMode).toBe("blocks");
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "rich-text-invalid",
+      type: "rich-text-section",
+      variant: "article",
+      data: {
+        ...richTextSectionDefaults,
+        body: {
+          html: "",
+          blocks: [
+            {
+              id: "attachment-invalid",
+              kind: "attachment",
+              src: "/media/spec-sheet.pdf",
+              label: "Download spec sheet",
+              unexpected: "nope",
+            },
+          ],
+        },
+      } as never,
+    })
+  ).toThrow("widget_schema_invalid");
 });
 
 test("normalizeWidgetBlock accepts pricing plans structured pricing and rejects unknown feature metadata", () => {

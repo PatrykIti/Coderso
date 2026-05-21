@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 184 tasks
+- **To Do:** 174 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1813 tasks
+- **Done:** 1823 tasks
 
 ---
 
@@ -123,16 +123,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-284-03 | Spacer Named Rhythm Presets | Medium | Medium | Add named vertical rhythm presets that map to safe height values without global style-manager scope |
 | TASK-284-04 | Spacer Horizontal Orientation Contract | Low | Large | Decide and implement or explicitly defer horizontal Spacer behavior without flex-filler or page-builder rewrite scope |
 | TASK-284-05 | Spacer Report Docs Changelog and Closure | Medium | Medium | Refresh Spacer report/docs/changelog/board and final validation evidence |
-| TASK-282 | Rich Text Section Widget Playwright Product Followups | High | Very Large | Rich Text Section-only follow-up family for `REPORT_RICH_TEXT_SECTION_WIDGET.md`, excluding TASK-256 shared-contract scope |
-| TASK-282-01 | Rich Text Output Mode and Wizard Ownership | High | Large | Make HTML/blocks source ownership truthful, prevent silent Wizard outputMode resets, and add mode-aware editor feedback |
-| TASK-282-02 | Rich Text WYSIWYG HTML Body and Sanitizer Feedback | High | Very Large | Replace raw HTML-first beginner editing with safe rich-text authoring and explicit sanitizer feedback for dropped tags |
-| TASK-282-03 | Rich Text Structured Blocks Rich Content and Scale UX | High | Large | Add rich block content, safe heading hierarchy, recoverable destructive actions, and scalable 20-block editing |
-| TASK-282-04 | Rich Text Article Width Title and TOC Accessibility | High | Large | Repair article max-width, heading-level semantics, section labeling, and visible TOC focus states |
-| TASK-282-05 | Rich Text Inline Media and Safe Content Model | High | Very Large | Add bounded inline image support using existing media ownership without claiming attachment/embed closure |
-| TASK-282-06 | Rich Text Editor Mode IA and Reader Guidance | Medium | Medium | Align Wizard/Visual/Advanced mode IA, variant controls, dropcap guidance, and technical token duplication |
-| TASK-282-07 | Rich Text Report Docs Changelog and Closure | Medium | Medium | Refresh Rich Text Section report/docs/changelog/board and final validation evidence |
-| TASK-282-08 | Rich Text Attachments and Safe Embed Policy | High | Large | Complete KOD-13 beyond images with bounded attachment cards and safe video/embed decisions |
-| TASK-282-09 | Rich Text Text Color Clear Adoption | Medium | Medium | Give KOD-10 a physical Rich Text Section owner for `textColor` clear behavior after shared helper support |
 | TASK-267 | Feature Grid Widget Playwright Product Followups | High | Very Large | Feature Grid-only follow-up family for `REPORT_FEATURE_GRID_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-267-01 | Feature Grid Variant Preview and Responsive Cards-4 Layout | High | Medium | Add variant preview affordances, repair cards-4 responsive product behavior, and keep columns truthfulness in TASK-256 |
 | TASK-267-02 | Feature Grid Card Reorder, Remove, and Item Management | High | Medium | Add drag reorder plus recoverable remove flow while preserving keyboard move fallback |
@@ -238,6 +228,16 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-282 | Rich Text Section Widget Playwright Product Followups | High | Very Large | Done (2026-05-21): Rich Text Section now ships truthful output-mode ownership, safe rich-text body editing, structured text/media/embed blocks, scoped runtime accessibility fixes, and synchronized closure docs. |
+| TASK-282-07 | Rich Text Report Docs Changelog and Closure | Medium | Medium | Done (2026-05-21): report/docs/changelog/task board closure now matches the shipped Rich Text Section runtime/editor contract and focused validation evidence. |
+| TASK-282-09 | Rich Text Text Color Clear Adoption | Medium | Medium | Done (2026-05-21): Rich Text Section now exposes a real `textColor` clear action that returns the widget to inherited text color behavior. |
+| TASK-282-08 | Rich Text Attachments and Safe Embed Policy | High | Large | Done (2026-05-21): structured blocks now support bounded attachment cards plus safe embed link cards without allowing raw iframe payloads. |
+| TASK-282-06 | Rich Text Editor Mode IA and Reader Guidance | Medium | Medium | Done (2026-05-21): Wizard/Visual/Advanced responsibilities, dropcap guidance, and technical-mode duplication are now explicit and lighter-weight. |
+| TASK-282-05 | Rich Text Inline Media and Safe Content Model | High | Very Large | Done (2026-05-21): structured content blocks now support safe image/media picking, bounded captions/links, and widget-local media diagnostics. |
+| TASK-282-04 | Rich Text Article Width Title and TOC Accessibility | High | Large | Done (2026-05-21): article width now follows `maxWidth`, title heading level is configurable, sections are labelled, and TOC links have visible focus treatment. |
+| TASK-282-03 | Rich Text Structured Blocks Rich Content and Scale UX | High | Large | Done (2026-05-21): blocks now support rich text, heading levels, confirm-and-undo destructive actions, and a navigator that scales to the 20-block cap. |
+| TASK-282-02 | Rich Text WYSIWYG HTML Body and Sanitizer Feedback | High | Very Large | Done (2026-05-21): body authoring now uses the shared rich-text adapter and surfaces sanitizer diagnostics for removed tags, attributes, and rewritten links. |
+| TASK-282-01 | Rich Text Output Mode and Wizard Ownership | High | Large | Done (2026-05-21): Wizard no longer rewrites `outputMode`, and Visual/Advanced now state exactly which source will render and why. |
 | TASK-325 | Grid Columns Shared Structural Truthfulness Follow-up | High | Large | Done (2026-05-21): Grid Columns shared truthfulness is closed with asymmetric preset state, current span totals, CSS-token color coverage, cardize gating, and an explicit no-runtime-guard decision |
 | TASK-325-06 | Grid Columns Report Docs Changelog and Closure | Medium | Medium | Done (2026-05-21): report/docs/board/changelog now reflect the shipped shared Grid Columns closure and final runtime decision |
 | TASK-325-05 | Grid Columns Overflow Guard Decision | Medium | Medium | Done (2026-05-21): `gridColumnsOverflowDecision` now records an explicit `no-runtime-guard` rejection after the editor truthfulness pass landed |

@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Content UX
 **Estimated Effort:** Medium
 **Dependencies:** TASK-282, TASK-282-01, TASK-282-02, TASK-282-03, TASK-282-04
-**Status:** To Do
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -43,15 +43,15 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Replace or augment Wizard's variant dropdown with the same VariantCards
+- [x] Replace or augment Wizard's variant dropdown with the same VariantCards
   language used by Visual, while keeping Wizard compact.
-- [ ] Add dropcap preview or status copy that is derived from the active rendered
+- [x] Add dropcap preview or status copy that is derived from the active rendered
   source and reports when no paragraph will receive dropcap.
-- [ ] Decide whether Advanced should show read-only variant/output diagnostics
+- [x] Decide whether Advanced should show read-only variant/output diagnostics
   or an editable variant control; keep one owner for actual variant mutation.
-- [ ] Reduce typography duplication by moving user-facing styling to Visual and
+- [x] Reduce typography duplication by moving user-facing styling to Visual and
   making Advanced explicitly diagnostic/technical.
-- [ ] Keep the final behavior friendly for beginner editors and avoid exposing
+- [x] Keep the final behavior friendly for beginner editors and avoid exposing
   raw schema concepts unless needed in Advanced.
 
 ## Files to Change

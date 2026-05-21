@@ -6,7 +6,7 @@
 **Category:** Widgets + Content + Media + Runtime Render + Security
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-282, TASK-282-02, TASK-282-03, TASK-282-04
-**Status:** To Do
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -55,27 +55,27 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Persist explicit structured image-block references in `body.blocks`, not
+- [x] Persist explicit structured image-block references in `body.blocks`, not
   raw `<img>` HTML and not private/signed URLs. The implementation path for the
   current synchronous widget renderer is `mediaId` plus a sanitized stable
   public `src` copied from the selected Media Library record, plus
   editor-authored presentation metadata.
-- [ ] Add schema/default/normalizer coverage for `mediaId`, required-for-render
+- [x] Add schema/default/normalizer coverage for `mediaId`, required-for-render
   public `src`, alt, decorative flag, caption, safe link href, width, alignment,
   and bounded object position if supported. Legacy public `src`-only payloads
   continue to render through the same public URL validator.
-- [ ] Keep media resolution out of the public render path. Current
+- [x] Keep media resolution out of the public render path. Current
   `WidgetDefinition.render` / `WidgetRenderer` is synchronous and does not pass
   a media resolver, so this leaf must not add render-time admin API lookups or
   async `mediaId` resolution. If the existing media picker/client cannot provide
   a stable public URL for the selected media record, split a separate public
   media projection task before marking this leaf `Done`.
-- [ ] Add a safe media renderer that escapes captions, normalizes hrefs, and
+- [x] Add a safe media renderer that escapes captions, normalizes hrefs, and
   omits unsafe or unresolved media.
-- [ ] Add Visual editor media picker controls and preview thumbnails.
-- [ ] Add sanitizer diagnostics that explain when pasted `<img>` is stripped and
+- [x] Add Visual editor media picker controls and preview thumbnails.
+- [x] Add sanitizer diagnostics that explain when pasted `<img>` is stripped and
   direct users to the media picker.
-- [ ] Preserve existing HTML-only content and block-only content.
+- [x] Preserve existing HTML-only content and block-only content.
 
 ## Files to Change
 

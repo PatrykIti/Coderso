@@ -6,7 +6,7 @@
 **Category:** Widgets + Content + Admin UI + Runtime Render + Accessibility + Playwright QA
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-213-06-03, TASK-252-06-10, TASK-256-07
-**Status:** To Do
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -94,15 +94,15 @@ Rich Text Section-only work.
 
 ## Sub-Tasks
 
-- [ ] TASK-282-01: Rich Text Output Mode and Wizard Ownership
-- [ ] TASK-282-02: Rich Text WYSIWYG HTML Body and Sanitizer Feedback
-- [ ] TASK-282-03: Rich Text Structured Blocks Rich Content and Scale UX
-- [ ] TASK-282-04: Rich Text Article Width Title and TOC Accessibility
-- [ ] TASK-282-05: Rich Text Inline Media and Safe Content Model
-- [ ] TASK-282-06: Rich Text Editor Mode IA and Reader Guidance
-- [ ] TASK-282-07: Rich Text Report Docs Changelog and Closure
-- [ ] TASK-282-08: Rich Text Attachments and Safe Embed Policy
-- [ ] TASK-282-09: Rich Text Text Color Clear Adoption
+- [x] TASK-282-01: Rich Text Output Mode and Wizard Ownership
+- [x] TASK-282-02: Rich Text WYSIWYG HTML Body and Sanitizer Feedback
+- [x] TASK-282-03: Rich Text Structured Blocks Rich Content and Scale UX
+- [x] TASK-282-04: Rich Text Article Width Title and TOC Accessibility
+- [x] TASK-282-05: Rich Text Inline Media and Safe Content Model
+- [x] TASK-282-06: Rich Text Editor Mode IA and Reader Guidance
+- [x] TASK-282-07: Rich Text Report Docs Changelog and Closure
+- [x] TASK-282-08: Rich Text Attachments and Safe Embed Policy
+- [x] TASK-282-09: Rich Text Text Color Clear Adoption
 
 ## Implementation Order
 

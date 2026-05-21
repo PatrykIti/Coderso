@@ -6,7 +6,7 @@
 **Category:** Widgets + Content + Media + Runtime Render + Security
 **Estimated Effort:** Large
 **Dependencies:** TASK-282, TASK-282-02, TASK-282-03, TASK-282-05
-**Status:** To Do
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -48,20 +48,20 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Add schema/default/normalizer coverage for attachment blocks with
+- [x] Add schema/default/normalizer coverage for attachment blocks with
   `mediaId`, public `src`, label, description, MIME/type hint, size label, and
   safe target behavior.
-- [ ] Add schema/default/normalizer coverage for safe embed blocks with
+- [x] Add schema/default/normalizer coverage for safe embed blocks with
   provider, canonical URL, title, aspect ratio, and render mode.
-- [ ] Implement `normalizeRichTextAttachmentBlock(input)` so attachments without
+- [x] Implement `normalizeRichTextAttachmentBlock(input)` so attachments without
   a public `src` are omitted and explained in the editor.
-- [ ] Implement `normalizeRichTextEmbedBlock(input)` so only allowed providers
+- [x] Implement `normalizeRichTextEmbedBlock(input)` so only allowed providers
   and URL patterns survive; unsafe iframe HTML is never persisted.
-- [ ] Render attachments as accessible links/cards with escaped labels and safe
+- [x] Render attachments as accessible links/cards with escaped labels and safe
   href normalization.
-- [ ] Render embeds as provider-validated safe link cards in this leaf. Do not
+- [x] Render embeds as provider-validated safe link cards in this leaf. Do not
   introduce iframe rendering here.
-- [ ] Add editor controls for selecting an attachment and entering a safe embed
+- [x] Add editor controls for selecting an attachment and entering a safe embed
   URL, plus diagnostics for unsupported provider/iframe input.
 
 ## Files to Change

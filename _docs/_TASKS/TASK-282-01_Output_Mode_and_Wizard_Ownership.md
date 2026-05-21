@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Runtime Render
 **Estimated Effort:** Large
 **Dependencies:** TASK-282, TASK-256-01
-**Status:** To Do
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -41,22 +41,22 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Add a helper such as `resolveRichTextRenderedSource(data)` that returns
+- [x] Add a helper such as `resolveRichTextRenderedSource(data)` that returns
   `"html"` or `"blocks"` after normalization, using the same rules as
   `RichTextSectionBlock`.
-- [ ] Export a small typed result with `mode`, `renderedSource`, `htmlIsActive`,
+- [x] Export a small typed result with `mode`, `renderedSource`, `htmlIsActive`,
   `blocksAreActive`, and `reason` so editors and tests do not duplicate runtime
   branch logic.
-- [ ] Replace Wizard's unconditional `outputMode: "blocks"` update with an
+- [x] Replace Wizard's unconditional `outputMode: "blocks"` update with an
   explicit transition policy:
   - preserve `html` and `blocks-fallback` while editing blocks; or
   - show a deliberate "Use blocks for output" action before switching to
     `"blocks"`.
-- [ ] Add Visual editor status near HTML body and fallback blocks, including
+- [x] Add Visual editor status near HTML body and fallback blocks, including
   which source is active and what will happen under `blocks-fallback`.
-- [ ] Ensure Advanced output mode changes update the Visual status without data
+- [x] Ensure Advanced output mode changes update the Visual status without data
   loss.
-- [ ] Preserve legacy payloads and existing normalized defaults.
+- [x] Preserve legacy payloads and existing normalized defaults.
 
 ## Files to Change
 

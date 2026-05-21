@@ -6,7 +6,7 @@
 **Category:** Widgets + Content + Admin UI + Runtime Render
 **Estimated Effort:** Large
 **Dependencies:** TASK-282, TASK-282-01, TASK-282-02
-**Status:** To Do
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -40,16 +40,16 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Extend `RichTextSectionBlock` only as needed for safe rich content and
+- [x] Extend `RichTextSectionBlock` only as needed for safe rich content and
   heading hierarchy, preserving legacy `{ id, heading, content }`.
-- [ ] Add a single block-to-HTML renderer helper that handles heading level,
+- [x] Add a single block-to-HTML renderer helper that handles heading level,
   rich content, legacy plain text, escaping, and sanitizer reuse.
-- [ ] Replace destructive `Blocks count` truncation with a confirm/undo flow or
+- [x] Replace destructive `Blocks count` truncation with a confirm/undo flow or
   non-destructive "mark extra blocks inactive" decision.
-- [ ] Add a recoverable remove action for individual blocks.
-- [ ] Add collapsed rows, current-block focus, or pagination for large block
+- [x] Add a recoverable remove action for individual blocks.
+- [x] Add collapsed rows, current-block focus, or pagination for large block
   counts, while preserving keyboard move up/down actions.
-- [ ] Ensure TOC output from block mode remains deterministic and documented.
+- [x] Ensure TOC output from block mode remains deterministic and documented.
 
 ## Files to Change
 

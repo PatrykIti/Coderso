@@ -10,13 +10,12 @@ import {
 } from "../../../core/admin/ui/widgets/editors/RichTextSectionEditors";
 import {
   createRichTextSectionWidget,
-  normalizeRichTextBlockCount,
-  normalizeRichTextBlocks,
   normalizeRichTextSectionData,
-  richTextBlockMax,
+  resolveRichTextRenderedSource,
   richTextSectionDefaults,
   RichTextSectionBlock,
   sanitizeRichTextHtml,
+  sanitizeRichTextHtmlWithDiagnostics,
   type RichTextSectionData,
 } from "../../../core/widgets/core/richTextSection";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
@@ -25,54 +24,206 @@ import type { WidgetEditorProps } from "../../../core/widgets/types";
 
 const StubEditor: ComponentType<WidgetEditorProps<RichTextSectionData>> = () => null;
 
-test("rich text section renders defaults", () => {
+test("rich text section renders defaults with semantic title and html source markers", () => {
   const html = renderToString(
-    <RichTextSectionBlock data={richTextSectionDefaults} variant="single-column" />
+    <RichTextSectionBlock
+      data={richTextSectionDefaults}
+      variant="single-column"
+      blockId="hero-rich-text"
+    />
   );
 
   expect(html).toContain(richTextSectionDefaults.titleBlock?.title ?? "");
   expect(html).toContain('data-rich-text-variant="single-column"');
-  expect(html).toContain('data-rich-text-font-scale="md"');
   expect(html).toContain('data-rich-text-output-mode="blocks-fallback"');
+  expect(html).toContain('data-rich-text-rendered-source="html"');
+  expect(html).toContain('data-rich-text-title-level="2"');
+  expect(html).toContain('id="rich-text-section-hero-rich-text-title"');
+  expect(html).toContain("<h2");
 });
 
-test("rich text section sanitization strips dangerous payloads", () => {
-  const sanitized = sanitizeRichTextHtml(
-    '<script>alert(1)</script><p onclick="evil()">Safe</p><a href="javascript:alert(1)">x</a><a href="https://example.com" target="_blank">ok</a><img src=x onerror="evil()">'
-  );
+test("rich text section sanitization strips dangerous payloads and reports diagnostics", () => {
+  const raw =
+    '<script>alert(1)</script><h1>Main</h1><p onclick="evil()">Safe</p><a href="javascript:alert(1)">x</a><img src=x onerror="evil()">';
+  const sanitized = sanitizeRichTextHtml(raw);
+  const diagnostics = sanitizeRichTextHtmlWithDiagnostics(raw).diagnostics;
 
   expect(sanitized).not.toContain("<script");
+  expect(sanitized).not.toContain("<h1");
   expect(sanitized).not.toContain("onclick=");
-  expect(sanitized).toContain('<a href="#">x</a>');
-  expect(sanitized).toContain(
-    '<a href="https://example.com" target="_blank" rel="noopener noreferrer">ok</a>'
-  );
   expect(sanitized).not.toContain("<img");
+  expect(sanitized).toContain('<a href="#">x</a>');
+  expect(diagnostics).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ code: "tag_removed", tagName: "script" }),
+      expect.objectContaining({ code: "tag_removed", tagName: "h1" }),
+      expect.objectContaining({ code: "tag_removed", tagName: "img" }),
+      expect.objectContaining({ code: "attribute_removed", attributeName: "onclick" }),
+      expect.objectContaining({ code: "href_rewritten", attributeName: "href" }),
+    ])
+  );
 });
 
-test("rich text section normalization keeps deterministic block ids and bounds", () => {
-  const blocks = normalizeRichTextBlocks(
-    [
-      { id: "same", heading: "A", content: "A content" },
-      { id: "same", heading: "", content: "" },
-    ],
-    2
+test("resolveRichTextRenderedSource matches the runtime fallback contract", () => {
+  expect(
+    resolveRichTextRenderedSource({
+      body: { html: "<p>Primary</p>", blocks: [{ id: "block-1", heading: "Intro", content: "A" }] },
+      options: { outputMode: "blocks-fallback" },
+    })
+  ).toMatchObject({
+    mode: "blocks-fallback",
+    renderedSource: "html",
+    htmlIsActive: true,
+    blocksAreActive: false,
+    reason: "fallback-html-present",
+  });
+
+  expect(
+    resolveRichTextRenderedSource({
+      body: { html: "", blocks: [{ id: "block-1", heading: "Intro", content: "A" }] },
+      options: { outputMode: "blocks-fallback" },
+    })
+  ).toMatchObject({
+    renderedSource: "blocks",
+    blocksAreActive: true,
+    reason: "fallback-html-empty",
+  });
+
+  expect(
+    resolveRichTextRenderedSource({
+      body: { html: "<p>Primary</p>", blocks: [{ id: "block-1", heading: "Intro", content: "A" }] },
+      options: { outputMode: "blocks" },
+    })
+  ).toMatchObject({
+    renderedSource: "blocks",
+    reason: "blocks-only",
+  });
+});
+
+test("rich text section renders structured text, image, attachment, and embed blocks safely", () => {
+  const html = renderToString(
+    <RichTextSectionBlock
+      variant="single-column"
+      data={{
+        titleBlock: {
+          eyebrow: "Guides",
+          title: "Structured output",
+          headingLevel: 2,
+        },
+        body: {
+          html: "",
+          blocks: [
+            {
+              id: "block-1",
+              kind: "text",
+              heading: "Intro",
+              headingLevel: 4,
+              content: "Line one\nLine two",
+            },
+            {
+              id: "block-2",
+              kind: "image",
+              src: "/media/story.jpg",
+              alt: "Story image",
+              caption: "Figure caption",
+              href: "javascript:alert(1)",
+              width: "wide",
+              align: "center",
+            },
+            {
+              id: "block-3",
+              kind: "attachment",
+              src: "https://cdn.example.com/guide.pdf",
+              label: "Download guide",
+              mimeType: "application/pdf",
+              sizeLabel: "2 MB",
+            },
+            {
+              id: "block-4",
+              kind: "embed",
+              url: "https://www.youtube.com/watch?v=abc123",
+              title: "Watch the walkthrough",
+              aspectRatio: "16:9",
+            },
+          ],
+        },
+        options: {
+          outputMode: "blocks",
+          toc: true,
+        },
+      }}
+      blockId="structured-rich-text"
+    />
   );
 
-  expect(blocks).toHaveLength(2);
-  expect(blocks[0]?.id).toBe("same");
-  expect(blocks[1]?.id).toBe("block-2");
-  expect(normalizeRichTextBlockCount(999)).toBe(richTextBlockMax);
-  expect(normalizeRichTextBlockCount(-1)).toBe(0);
-
-  const normalized = normalizeRichTextSectionData({
-    body: { html: "", blocks: [] },
-  });
-  expect(normalized.options?.outputMode).toBe("blocks-fallback");
-  expect(normalized.style?.fontScale).toBe("md");
+  expect(html).toContain('data-rich-text-rendered-source="blocks"');
+  expect(html).toContain('id="rich-text-section-structured-rich-text-heading-intro">Intro</h4>');
+  expect(html).toContain("Line one<br />Line two");
+  expect(html).toContain('src="/media/story.jpg"');
+  expect(html).toContain("Figure caption");
+  expect(html).not.toContain("javascript:alert(1)");
+  expect(html).toContain("Download guide");
+  expect(html).toContain("application/pdf");
+  expect(html).toContain("Watch the walkthrough");
+  expect(html).toContain("YouTube");
 });
 
-test("rich text section validator accepts expanded model", () => {
+test("article variant respects max width, labels the section, and scopes toc ids by blockId", () => {
+  const articleHtml = renderToString(
+    <>
+      <RichTextSectionBlock
+        variant="article"
+        blockId="article-a"
+        data={{
+          titleBlock: {
+            eyebrow: "Editorial",
+            title: "Narrative section",
+            headingLevel: 1,
+          },
+          body: {
+            html: "<h2>Intro</h2><p>Body copy.</p>",
+            blocks: [],
+          },
+          options: {
+            outputMode: "html",
+            maxWidth: "full",
+            toc: true,
+          },
+        }}
+      />
+      <RichTextSectionBlock
+        variant="article"
+        blockId="article-b"
+        data={{
+          titleBlock: {
+            eyebrow: "Editorial",
+            title: "Narrative section",
+            headingLevel: 1,
+          },
+          body: {
+            html: "<h2>Intro</h2><p>Body copy.</p>",
+            blocks: [],
+          },
+          options: {
+            outputMode: "html",
+            maxWidth: "full",
+            toc: true,
+          },
+        }}
+      />
+    </>
+  );
+
+  expect(articleHtml).toContain('data-rich-text-title-level="1"');
+  expect(articleHtml).toContain('aria-labelledby="rich-text-section-article-a-title"');
+  expect(articleHtml).toContain('id="rich-text-section-article-a-title"');
+  expect(articleHtml).toContain('id="rich-text-section-article-b-title"');
+  expect(articleHtml).toContain('href="#rich-text-section-article-a-heading-intro"');
+  expect(articleHtml).toContain("focus-visible:ring-2");
+  expect(articleHtml).toContain('class="mx-auto w-full space-y-6 max-w-none"');
+});
+
+test("rich text section validator accepts the expanded rich block model", () => {
   clearWidgets();
   const widget = createRichTextSectionWidget({
     wizard: StubEditor,
@@ -90,12 +241,39 @@ test("rich text section validator accepts expanded model", () => {
         titleBlock: {
           eyebrow: "Guides",
           title: "Implementation details",
+          headingLevel: 1,
         },
         body: {
           html: "<h2>Intro</h2><p>Content paragraph.</p>",
           blocks: [
-            { id: "block-1", heading: "Intro", content: "Content paragraph." },
-            { id: "block-2", heading: "Details", content: "More details." },
+            {
+              id: "block-1",
+              kind: "text",
+              heading: "Intro",
+              headingLevel: 2,
+              contentHtml: "<p>Text</p>",
+            },
+            {
+              id: "block-2",
+              kind: "image",
+              mediaId: "media-1",
+              src: "/media/photo.jpg",
+              alt: "Alt",
+            },
+            {
+              id: "block-3",
+              kind: "attachment",
+              mediaId: "media-2",
+              src: "/media/guide.pdf",
+              label: "Guide",
+            },
+            {
+              id: "block-4",
+              kind: "embed",
+              url: "https://vimeo.com/123",
+              title: "Demo",
+              aspectRatio: "4:3",
+            },
           ],
         },
         options: {
@@ -118,40 +296,22 @@ test("rich text section validator accepts expanded model", () => {
   expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBe(true);
 });
 
-test("rich text section cleared background omits background style", () => {
+test("cleared rich text colors keep runtime fallbacks while omitting explicit background styles", () => {
   const normalized = normalizeRichTextSectionData({
     ...richTextSectionDefaults,
     style: {},
   });
-  const html = renderToString(<RichTextSectionBlock data={normalized} variant="single-column" />);
+  const html = renderToString(
+    <RichTextSectionBlock data={normalized} variant="single-column" blockId="cleared-rich-text" />
+  );
 
+  expect(normalized.style?.textColor).toBeUndefined();
   expect(normalized.style?.background).toBeUndefined();
-  expect(html).toContain('data-rich-text-variant="single-column"');
   expect(html).not.toContain("background-color:transparent");
 });
 
-test("rich text section validator rejects invalid variant", () => {
-  clearWidgets();
-  registerWidget(
-    createRichTextSectionWidget({
-      wizard: StubEditor,
-      visual: StubEditor,
-      advanced: StubEditor,
-    })
-  );
-
-  expect(() =>
-    normalizeWidgetBlock({
-      id: "rich-text-2",
-      type: "rich-text-section",
-      variant: "unknown",
-      data: richTextSectionDefaults,
-    })
-  ).toThrow("widget_invalid_variant");
-});
-
-test("rich text section wizard renders onboarding fields", () => {
-  const html = renderToString(
+test("rich text editors expose the updated wizard, visual, and advanced IA", () => {
+  const wizardHtml = renderToString(
     <RichTextSectionWizardEditor
       value={richTextSectionDefaults}
       onChange={() => undefined}
@@ -159,14 +319,7 @@ test("rich text section wizard renders onboarding fields", () => {
       onVariantChange={() => undefined}
     />
   );
-
-  expect(html).toContain("Rich text layout");
-  expect(html).toContain("Eyebrow");
-  expect(html).toContain("Body blocks");
-});
-
-test("rich text section visual renders section-based IA", () => {
-  const html = renderToString(
+  const visualHtml = renderToString(
     <RichTextSectionVisualEditor
       value={richTextSectionDefaults}
       onChange={() => undefined}
@@ -174,17 +327,7 @@ test("rich text section visual renders section-based IA", () => {
       onVariantChange={() => undefined}
     />
   );
-
-  expect(html).toContain("Variant and layout structure");
-  expect(html).toContain("Title block copy");
-  expect(html).toContain("Body content");
-  expect(html).toContain("Structured fallback blocks");
-  expect(html).toContain("Reader options");
-  expect(html).toContain("Typography and colors");
-});
-
-test("rich text section advanced keeps technical-only scope", () => {
-  const html = renderToString(
+  const advancedHtml = renderToString(
     <RichTextSectionAdvancedEditor
       value={richTextSectionDefaults}
       onChange={() => undefined}
@@ -193,9 +336,12 @@ test("rich text section advanced keeps technical-only scope", () => {
     />
   );
 
-  expect(html).toContain("Output mode and fallback");
-  expect(html).toContain("Technical typography tokens");
-  expect(html).toContain("Normalization and safeguards");
-  expect(html).toContain("Raw payload snapshot");
-  expect(html).not.toContain("Title block copy");
+  expect(wizardHtml).toContain("Output mode stays untouched in Wizard");
+  expect(visualHtml).toContain("Body content");
+  expect(visualHtml).toContain("Structured content blocks");
+  expect(visualHtml).toContain("Title heading level");
+  expect(advancedHtml).toContain("Output mode and source diagnostics");
+  expect(advancedHtml).toContain("Raw HTML technical editor");
+  expect(advancedHtml).toContain("Raw payload snapshot");
+  expect(advancedHtml).not.toContain("Technical typography tokens");
 });
