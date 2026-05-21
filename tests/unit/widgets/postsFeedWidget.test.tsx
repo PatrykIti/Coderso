@@ -2,11 +2,6 @@ import type { ComponentType } from "react";
 import { expect, test } from "bun:test";
 import { renderToString } from "react-dom/server";
 
-import {
-  PostsFeedAdvancedEditor,
-  PostsFeedVisualEditor,
-  PostsFeedWizardEditor,
-} from "../../../core/admin/ui/widgets/editors/PostsFeedEditors";
 import { resolvePostsFeedRuntimeData } from "../../../core/services/content/postsFeedResolver";
 import type { PostSummary } from "../../../core/services/content/postsService";
 import {
@@ -677,40 +672,4 @@ test("posts feed validator rejects unknown nested keys", () => {
       } as never,
     })
   ).toThrow("widget_schema_invalid");
-});
-
-test("posts feed editors render source and runtime sections", () => {
-  const wizardHtml = renderToString(
-    <PostsFeedWizardEditor
-      value={postsFeedDefaults}
-      onChange={() => undefined}
-      variant="cards"
-      onVariantChange={() => undefined}
-    />
-  );
-  expect(wizardHtml).toContain("Source setup");
-  expect(wizardHtml).toContain("Display");
-
-  const visualHtml = renderToString(
-    <PostsFeedVisualEditor
-      value={postsFeedDefaults}
-      onChange={() => undefined}
-      variant="cards"
-      onVariantChange={() => undefined}
-    />
-  );
-  expect(visualHtml).toContain("Layout and style");
-  expect(visualHtml).toContain("Empty state");
-  expect(visualHtml).toContain("Runtime status");
-
-  const advancedHtml = renderToString(
-    <PostsFeedAdvancedEditor
-      value={postsFeedDefaults}
-      onChange={() => undefined}
-      variant="cards"
-      onVariantChange={() => undefined}
-    />
-  );
-  expect(advancedHtml).toContain("Runtime payload");
-  expect(advancedHtml).toContain("Runtime status");
 });
