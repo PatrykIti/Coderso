@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 886 | 2026-05-21 | TASK-318 section sticky containment contract | CMS Layout/Runtime/QA |
 | 885 | 2026-05-21 | TASK-323 content list legacy pagination truthfulness | CMS Widgets/Runtime/QA |
 | 884 | 2026-05-21 | TASK-320 content list shared accessibility residuals | CMS Widgets/Accessibility/Runtime/QA |
 | 883 | 2026-05-19 | TASK-280 Product Gallery follow-ups and TASK-313 money parity | CMS Widgets/Admin UI/Runtime/QA |

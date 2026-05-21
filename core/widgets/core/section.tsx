@@ -345,10 +345,13 @@ export function SectionBlock({
       : paddingInlineClassMap[layout.paddingInline ?? "md"]
   );
 
-  const surfaceClass = joinClasses(
-    "relative w-full overflow-hidden",
+  const surfaceFrameClass = joinClasses(
+    "relative w-full",
     paddingBlockClassMap[layout.paddingBlock ?? "md"],
-    resolvedVariant === "contained" ? "shadow-sm" : undefined,
+    resolvedVariant === "contained" ? "shadow-sm" : undefined
+  );
+  const clippedSurfaceClass = joinClasses(
+    "pointer-events-none absolute inset-0 overflow-hidden",
     radiusClassMap[style.radius ?? "none"]
   );
 
@@ -387,16 +390,18 @@ export function SectionBlock({
       data-section-regions={String(slotTargets.length)}
       data-section-element={semantics.element ?? "section"}
     >
-      <div className={surfaceClass} style={surfaceStyle}>
-        {overlayVisible ? (
-          <div
-            className="pointer-events-none absolute inset-0 z-[0]"
-            style={{
-              backgroundColor: style.overlayColor ?? "#000000",
-              opacity: overlayOpacity / 100,
-            }}
-          />
-        ) : null}
+      <div className={surfaceFrameClass}>
+        <div className={clippedSurfaceClass} style={surfaceStyle} aria-hidden="true">
+          {overlayVisible ? (
+            <div
+              className="absolute inset-0 z-[0]"
+              style={{
+                backgroundColor: style.overlayColor ?? "#000000",
+                opacity: overlayOpacity / 100,
+              }}
+            />
+          ) : null}
+        </div>
 
         <div className="relative z-[1] flex flex-col gap-4">
           {hasHeading ? (

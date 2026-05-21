@@ -6,7 +6,7 @@
 **Category:** Shared Layout + Runtime Render + CSS Semantics
 **Estimated Effort:** Large
 **Dependencies:** TASK-256-05-01, TASK-275
-**Status:** To Do
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -148,6 +148,9 @@ This shared task adds no API routes.
 - `_docs/_TASKS/TASK-318_Section_Surface_Overflow_and_Sticky_Child_Containment_Contract.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_WIDGETS/SECTION.md` only if the shared Section surface contract changes
+- `_docs/_WIDGETS/NAVIGATION.md` when the routed sticky-containment note changes
+- `_docs/_CHANGELOG/886-2026-05-21-task-318-section-sticky-containment-contract.md`
+- `_docs/_CHANGELOG/README.md`
 
 ## Acceptance Criteria
 
@@ -159,3 +162,24 @@ This shared task adds no API routes.
   intact after the wrapper change.
 - Widget families such as Navigation can route sticky-overflow findings to this
   exact task ID instead of vague shared-owner wording.
+
+## Validation Notes (2026-05-21)
+
+- `bun run test:vitest -- tests/vitest/widgets/section.test.tsx` - passed
+  (`9` tests)
+- `bun run test:vitest -- tests/vitest/widgets/navigation.test.tsx` - passed
+  (`17` tests)
+- `bun --cwd core lint` - passed
+- `bun --cwd core lint:types` - passed
+- `bun run gates:coderso` - passed
+- `bun run scan:security:strict` - attempted but failed outside TASK-318 scope
+  because the local Semgrep trust store had no CA anchors and `bun audit` could
+  not reach the advisory endpoint; Trivy and Gitleaks sub-scanners were clean
+  in the same run
+- `bun run precommit` - passed
+
+## Completion Notes
+
+- 2026-05-21: `SectionBlock` now keeps decorative clipping in an inset surface
+  layer while letting slotted child widgets render in unclipped content flow,
+  closing the shared sticky blocker routed from Navigation.

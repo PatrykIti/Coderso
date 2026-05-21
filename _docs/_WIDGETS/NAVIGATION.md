@@ -166,8 +166,9 @@ Primary CTA jest renderowane tylko dla:
 - `sticky` still only enables sticky positioning on the Navigation root
 - `collapseOnScroll` is now a real root-scoped runtime behavior:
   `data-navigation-collapsed` and a local collapsed class toggle while scrolling
-- shared Section/page-shell sticky containment is not owned here; sticky can
-  still be blocked by routed shared owner `TASK-318`
+- shared Section sticky containment is no longer blocked by the old
+  `SectionBlock` overflow wrapper after `TASK-318`; any future page-shell-only
+  sticky blockers should be routed separately instead of back into Navigation
 
 ## Authoring Limits
 

@@ -54,6 +54,10 @@ Notes:
 
 - Renders semantic element selected in data (`section` or `div`).
 - Supports optional overlay on top of background color/gradient.
+- Background, border, radius, and overlay clipping now live in a decorative
+  inset layer instead of the same wrapper that owns slotted child content.
+- Slotted child widgets are no longer clipped by the old live surface wrapper,
+  so Section itself does not block child `position: sticky` behavior.
 - Uses deterministic runtime markers:
   - `data-section-variant`
   - `data-section-regions`

@@ -17,6 +17,11 @@ import {
   SectionBlock,
   type SectionData,
 } from "../../../core/widgets/core/section";
+import {
+  createNavigationWidget,
+  navigationDefaults,
+  type NavigationData,
+} from "../../../core/widgets/core/navigation";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { WidgetRenderer } from "../../../core/widgets/renderers/widgetRenderer";
 import { normalizeWidgetBlock } from "../../../core/widgets/validator";
@@ -24,6 +29,7 @@ import type { WidgetEditorProps } from "../../../core/widgets/types";
 
 const StubSectionEditor: ComponentType<WidgetEditorProps<SectionData>> = () => null;
 const StubHeroEditor: ComponentType<WidgetEditorProps<HeroData>> = () => null;
+const StubNavigationEditor: ComponentType<WidgetEditorProps<NavigationData>> = () => null;
 
 test("section renders defaults", () => {
   const html = renderToString(<SectionBlock data={sectionDefaults} variant="default" />);
@@ -33,6 +39,8 @@ test("section renders defaults", () => {
   expect(html).toContain('data-section-max-width="6xl"');
   expect(html).toContain('data-section-regions="1"');
   expect(html).not.toContain("Empty region.");
+  expect(html).toContain("absolute inset-0 overflow-hidden");
+  expect(html).not.toContain("relative w-full overflow-hidden");
 });
 
 test("section heading uses a safe default level", () => {
@@ -199,6 +207,65 @@ test("section renders repeatable region slot content", () => {
   expect(html).toContain("Nested child");
   expect(html).toContain('data-section-region="region:1"');
   expect(html).toContain('data-section-region="region:2"');
+});
+
+test("section keeps sticky navigation content outside the old clipping wrapper", () => {
+  clearWidgets();
+  registerWidget(
+    createSectionWidget({
+      wizard: StubSectionEditor,
+      visual: StubSectionEditor,
+      advanced: StubSectionEditor,
+    })
+  );
+  registerWidget(
+    createNavigationWidget({
+      wizard: StubNavigationEditor,
+      visual: StubNavigationEditor,
+      advanced: StubNavigationEditor,
+    })
+  );
+
+  const html = renderToString(
+    <WidgetRenderer
+      block={{
+        id: "section-navigation",
+        type: "section",
+        variant: "contained",
+        data: {
+          ...sectionDefaults,
+          heading: { title: "Sticky section" },
+          style: {
+            ...sectionDefaults.style,
+            backgroundColor: "#ffffff",
+            borderWidth: "1",
+            radius: "xl",
+            overlayOpacity: 12,
+          },
+        },
+        slots: {
+          "region:1": [
+            {
+              id: "navigation-child",
+              type: "navigation",
+              variant: "simple",
+              data: {
+                ...navigationDefaults,
+                behavior: {
+                  ...navigationDefaults.behavior,
+                  sticky: true,
+                },
+              },
+            },
+          ],
+        },
+      }}
+    />
+  );
+
+  expect(html).toContain("sticky top-0 z-40");
+  expect(html).toContain("absolute inset-0 overflow-hidden");
+  expect(html).not.toContain("relative w-full overflow-hidden");
 });
 
 test("section editors render expected sections", () => {
