@@ -4,6 +4,36 @@ import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
+const previewRendererState = vi.hoisted(() => ({
+  calls: [] as Array<{
+    block: Record<string, unknown>;
+    renderContext: Record<string, unknown> | undefined;
+  }>,
+  reset() {
+    previewRendererState.calls = [];
+  },
+}));
+
+vi.mock("../../../core/widgets/renderers/widgetRenderer", () => ({
+  WidgetRenderer: ({
+    block,
+    renderContext,
+  }: {
+    block: Record<string, unknown>;
+    renderContext?: Record<string, unknown>;
+  }) => {
+    previewRendererState.calls.push({ block, renderContext });
+    const data = (block.data as Record<string, unknown> | undefined) ?? {};
+    return (
+      <div data-widget-renderer-preview="true">
+        {`preview:${String(block.id ?? "")}:${String(renderContext?.mode ?? "none")}:${String(
+          data.headline ?? ""
+        )}`}
+      </div>
+    );
+  },
+}));
+
 import { BlockSettings } from "../../../core/admin/ui/pages/builder/BlockSettings";
 import { createBlock } from "../../../core/admin/ui/pages/builder/blockUtils";
 import { createGridColumnsWidget } from "../../../core/widgets/core/gridColumns";
@@ -241,6 +271,7 @@ const clickByText = (container: HTMLElement, text: string) => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  previewRendererState.reset();
 });
 
 test("BlockSettings renders fallback copy when no block or widget is selected", () => {
@@ -623,6 +654,65 @@ test("BlockSettings shows nested-children guidance for child-capable widgets", (
     expect(view.container.textContent).toContain(
       "Use the Insert dialog to add widgets inside this block."
     );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("BlockSettings renders shared live preview through WidgetRenderer with previewState dataPatch", () => {
+  const block: Block = {
+    ...createBlock("navigation"),
+    id: "navigation-1",
+    type: "navigation",
+    data: {
+      headline: "Saved headline",
+    },
+    editor: { mode: "visual", wizardCompleted: true },
+  };
+  const widget = createWidget({
+    type: "navigation",
+    title: "Navigation",
+  });
+
+  const view = mount(
+    <BlockSettings
+      block={block}
+      widget={widget}
+      onChange={() => undefined}
+      editorContext={{
+        surface: "page-builder",
+        previewState: {
+          status: "ready",
+          dataPatch: {
+            headline: "Preview headline",
+          },
+        },
+      }}
+    />
+  );
+
+  try {
+    expect(view.container.textContent).toContain("Preview ready");
+    expect(view.container.textContent).toContain(
+      "Reflects the current Visual state through the shared widget renderer."
+    );
+    expect(view.container.textContent).toContain(
+      "preview:navigation-1:editor-preview:Preview headline"
+    );
+    expect(previewRendererState.calls.at(-1)?.renderContext).toEqual({
+      mode: "editor-preview",
+      previewState: {
+        status: "ready",
+        dataPatch: {
+          headline: "Preview headline",
+        },
+      },
+    });
+    expect(
+      ((previewRendererState.calls.at(-1)?.block.data as Record<string, unknown> | undefined)
+        ?.headline as string) ?? ""
+    ).toBe("Preview headline");
+    expect((block.data as Record<string, unknown>).headline).toBe("Saved headline");
   } finally {
     view.cleanup();
   }

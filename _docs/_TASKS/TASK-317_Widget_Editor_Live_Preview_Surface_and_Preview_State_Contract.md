@@ -6,7 +6,7 @@
 **Category:** Shared Admin UI + Page Builder + Widget Preview
 **Estimated Effort:** Large
 **Dependencies:** TASK-256-01, TASK-256-03, TASK-275
-**Status:** To Do
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -170,6 +170,9 @@ This shared task adds no API routes.
 - `_docs/_TASKS/TASK-317_Widget_Editor_Live_Preview_Surface_and_Preview_State_Contract.md`
 - `_docs/_TASKS/README.md`
 - `_docs/PREVIEW_SPEC.md` only if the shared editor-preview contract changes
+- `_docs/PLAYWRIGHT/REPORT_NAVIGATION_WIDGET.md`
+- `_docs/_CHANGELOG/888-2026-05-21-task-317-widget-editor-live-preview-surface.md`
+- `_docs/_CHANGELOG/README.md`
 
 ## Acceptance Criteria
 
@@ -180,3 +183,22 @@ This shared task adds no API routes.
   itself.
 - Widget families can route live-preview report rows to this exact task ID
   instead of vague shared-owner wording.
+
+## Validation Notes (2026-05-21)
+
+- `bun run test:vitest -- tests/vitest/pageBuilder/blockSettings.test.tsx tests/vitest/pageBuilder/blockSettings-wave.test.tsx` - passed (`2` files, `9` tests)
+- `bun --cwd core lint` - passed
+- `bun --cwd core lint:types` - passed
+- `bun run gates:coderso` - passed
+- `bun run scan:security:strict` - attempted but failed outside TASK-317 scope
+  because the local Semgrep trust store had no CA anchors and `bun audit` could
+  not reach the advisory endpoint; Trivy and Gitleaks sub-scanners were clean
+  in the same run
+- `bun run precommit` - passed
+
+## Completion Notes
+
+- 2026-05-21: `BlockSettings` now renders a shared live preview row for the
+  selected widget through the real `WidgetRenderer` contract with
+  `renderContext.mode = "editor-preview"` and optional transient
+  `previewState.dataPatch` data.

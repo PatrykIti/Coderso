@@ -7,6 +7,7 @@ import {
   parseRepeatableSlotId,
   resolveWidgetSlotTargets,
 } from "../../../../widgets/slots";
+import { WidgetRenderer } from "../../../../widgets/renderers/widgetRenderer";
 
 import type {
   Block,
@@ -34,6 +35,63 @@ export type BlockSettingsProps = {
   onBlockPatch?: WidgetBlockPatcher;
   editorContext?: WidgetEditorContext;
 };
+
+function WidgetEditorLivePreview({
+  block,
+  mode,
+  previewState,
+}: {
+  block: Block;
+  mode: EditorMode;
+  previewState?: WidgetEditorContext["previewState"];
+}) {
+  const previewBlock =
+    previewState?.dataPatch && block.data && typeof block.data === "object"
+      ? {
+          ...block,
+          data: {
+            ...(block.data as Record<string, unknown>),
+            ...previewState.dataPatch,
+          },
+        }
+      : block;
+
+  const statusLabel =
+    previewState?.status === "loading"
+      ? "Refreshing preview"
+      : previewState?.status === "error"
+        ? "Preview error"
+        : previewState?.status === "ready"
+          ? "Preview ready"
+          : "Live preview";
+
+  const modeLabel = mode.charAt(0).toUpperCase() + mode.slice(1);
+
+  return (
+    <section
+      className="mt-4 rounded-lg border bg-muted/5 p-3"
+      data-widget-editor-live-preview="true"
+    >
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div className="space-y-1">
+          <p className="text-sm font-medium">{statusLabel}</p>
+          <p className="text-xs text-muted-foreground">
+            Reflects the current {modeLabel} state through the shared widget renderer.
+          </p>
+          {previewState?.message ? (
+            <p className="text-xs text-muted-foreground">{previewState.message}</p>
+          ) : null}
+        </div>
+      </div>
+      <div className="rounded-md border bg-background p-3">
+        <WidgetRenderer
+          block={previewBlock}
+          renderContext={{ mode: "editor-preview", previewState: previewState ?? null }}
+        />
+      </div>
+    </section>
+  );
+}
 
 export function BlockSettings({
   block,
@@ -80,6 +138,7 @@ export function BlockSettings({
         slotTargets,
       }
     : undefined;
+  const showLivePreview = resolvedEditorContext?.surface === "page-builder";
 
   const handleAddRepeatableSlotInstance = (definitionId: string) => {
     const definition = slotDefinitions.find((slot) => slot.id === definitionId);
@@ -296,6 +355,13 @@ export function BlockSettings({
           />
         </TabsContent>
       </Tabs>
+      {showLivePreview ? (
+        <WidgetEditorLivePreview
+          block={block}
+          mode={editorState.mode}
+          previewState={resolvedEditorContext?.previewState}
+        />
+      ) : null}
     </>
   );
 }

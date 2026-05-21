@@ -9,6 +9,10 @@ public rendering.
 - Wbudowany w edytor.
 - Edytowalny.
 - Stylowany tokenami Admin UI.
+- Selected widget settings now also render a shared read-only live preview row
+  through the real `WidgetRenderer` contract in `editor-preview` mode. The row
+  can consume transient `previewState.dataPatch` data without mutating saved
+  widget JSON by itself.
 
 2. Runtime preview
 - Read-only.

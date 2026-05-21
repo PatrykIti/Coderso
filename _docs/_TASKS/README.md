@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 195 tasks
+- **To Do:** 194 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1796 tasks
+- **Done:** 1797 tasks
 
 ---
 
@@ -47,7 +47,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-319-01 | Newsletter Responsive Variant Audit and Product Decision | Medium | Medium | Audit current Newsletter mobile/desktop behavior and record the explicit product decision for BF-15 before any schema change lands |
 | TASK-319-02 | Newsletter Bounded Mobile Variant Implementation | Low | Large | Implement the bounded Newsletter mobile override only if TASK-319-01 approves it |
 | TASK-319-03 | Newsletter Responsive Variant Docs and Closure | Medium | Medium | Close report/docs/changelog/board against the final TASK-319 decision and shipped behavior |
-| TASK-317 | Widget Editor Live Preview Surface and Preview-State Contract | High | Large | Shared builder/editor owner for widget live-preview rows that need current-block preview without widget-local shell hacks |
 | TASK-325 | Grid Columns Shared Structural Truthfulness Follow-up | High | Large | Residual shared Grid Columns truthfulness after TASK-256 closure: variant truthfulness, span feedback, CSS-variable picker representation, and inactive cardize controls |
 | TASK-292 | Toggle Block Widget Playwright Product Followups | High | Very Large | Toggle Block-only follow-up family for `REPORT_TOGGLE_BLOCK_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-292-01 | Toggle Block Variant Visual Hierarchy, Contrast, and Pane Styling | High | Large | Add Toggle Block-owned cards distinction, active contrast, and bounded pane style controls after TASK-256 shared style semantics |
@@ -249,6 +248,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-317 | Widget Editor Live Preview Surface and Preview-State Contract | High | Large | Done (2026-05-21): BlockSettings now renders a shared live preview row through WidgetRenderer with transient previewState data patches |
 | TASK-321 | Shared Clear Action Undo and Feedback Contract | Medium | Large | Done (2026-05-21): shared clearable inputs now emit recoverable undo feedback through the common clear helper contract |
 | TASK-318 | Section Surface Overflow and Sticky Child Containment Contract | High | Large | Done (2026-05-21): Section now keeps clipping in a decorative inset layer so slotted sticky children are no longer blocked by the live surface wrapper |
 | TASK-323 | Content List Load More and View All Pagination Truthfulness Residuals | High | Large | Done (2026-05-21): legacy `content-list` now treats `load-more` cumulatively and ignores stale block page params for `view-all` |
