@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 192 tasks
+- **To Do:** 196 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1792 tasks
 
@@ -40,6 +40,10 @@ Task board for project work. Keep task files and this board in sync.
 |----|-------|----------|--------|-------|
 | TASK-323 | Content List Load More and View All Pagination Truthfulness Residuals | High | Large | Shared follow-up for legacy `content-list` load-more cumulative slicing and stale `view-all` page-param suppression rediscovered during TASK-277 |
 | TASK-322 | Admin Session and CSRF Expiry Resilience for Long-Lived Editors | High | Very Large | Shared platform follow-up for expired-session, token-refresh, and unsaved-change recovery gaps surfaced by the TASK-277 Posts Feed closeout |
+| TASK-322-01 | Admin API Client Session Classification and Bounded CSRF Retry | High | Large | Shared client owner for distinguishing recoverable CSRF expiry from full session expiry in admin API requests |
+| TASK-322-02 | Page Editor Session Expiry Feedback and Dirty-State Preservation | High | Large | Page editor shell follow-up for expired-session save/publish feedback that keeps unsaved work explicit and recoverable |
+| TASK-322-03 | Posts Feed and Shared Picker Consumer Session-Expiry Adoption | High | Large | Consumer adoption task so Posts Feed and similar editor pickers reuse the shared expired-session contract instead of raw `ApiClientError` output |
+| TASK-322-04 | Session Expiry Docs, Changelog, and Closure | Medium | Medium | Final report/docs/board/changelog closure after the shared client and consumer leaves land |
 | TASK-321 | Shared Clear Action Undo and Feedback Contract | Medium | Large | Shared editor follow-up for recoverable Clear actions, undo feedback, and consistent destructive-surface messaging across widget editors |
 | TASK-320 | Content List Shared Date and CTA Accessibility Residuals | High | Large | Shared `ContentListBlock` follow-up for semantic date output and contextual CTA link text used by both `content-list` and `posts-feed` |
 | TASK-319 | Newsletter Per-Breakpoint Variant Overrides | Low | Large | Evaluate or explicitly reject true per-breakpoint Newsletter variant overrides after TASK-276 made current mobile behavior truthful |

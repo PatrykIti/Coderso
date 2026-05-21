@@ -144,6 +144,8 @@ No API routes are added.
 
 - `_docs/_TASKS/TASK-316_Shared_Listing_Query_Picker_Hook_and_Session_Settling_Retry.md`
 - `_docs/_TASKS/README.md`
+- `_docs/_CHANGELOG/870-2026-05-20-task-273-listing-filters-and-shared-runtime-wave.md`
+- `_docs/_CHANGELOG/README.md`
 
 ## Acceptance Criteria
 

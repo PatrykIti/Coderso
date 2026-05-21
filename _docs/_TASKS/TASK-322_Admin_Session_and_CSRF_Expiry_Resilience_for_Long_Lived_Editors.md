@@ -37,7 +37,23 @@ instead of adding widget-local workarounds.
 
 ## Sub-Tasks
 
-- None. This is an execution task.
+- [ ] TASK-322-01: Admin API Client Session Classification and Bounded CSRF Retry
+- [ ] TASK-322-02: Page Editor Session Expiry Feedback and Dirty-State Preservation
+- [ ] TASK-322-03: Posts Feed and Shared Picker Consumer Session-Expiry Adoption
+- [ ] TASK-322-04: Session Expiry Docs, Changelog, and Closure
+
+## Implementation Order
+
+1. Land `TASK-322-01` first so the repo has one shared client-side
+   classification for CSRF-refresh vs full session expiry before editor shells
+   consume it.
+2. Land `TASK-322-02` next so the primary long-lived page editor shell surfaces
+   actionable expired-session feedback without losing dirty-state context.
+3. Land `TASK-322-03` after the shared client and page-editor shell are stable
+   so Posts Feed and related picker consumers reuse the same contract instead of
+   inventing widget-local handling.
+4. Land `TASK-322-04` last to reconcile report evidence, docs, board state, and
+   changelog with the actual shared implementation.
 
 ## Files to Change
 
@@ -138,6 +154,8 @@ This task changes existing internal admin auth/session behavior only.
 - `_docs/SECURITY_SPEC.md` only if the shared recovery policy changes materially
 - `_docs/PLAYWRIGHT/REPORT_POSTS_FEED_WIDGET.md`
 - `_docs/_TASKS/TASK-322_Admin_Session_and_CSRF_Expiry_Resilience_for_Long_Lived_Editors.md`
+- `_docs/_TASKS/TASK-322-*.md`
+- `_docs/_TASKS/README.md`
 
 ## Acceptance Criteria
 

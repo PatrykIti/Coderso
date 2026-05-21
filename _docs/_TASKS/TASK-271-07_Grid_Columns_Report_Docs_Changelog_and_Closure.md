@@ -120,6 +120,9 @@ No API routes are added.
 - `bun --cwd core lint:types`
 - `bun run test:vitest -- tests/vitest/widgets/gridColumns.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/grid-columns-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/pageBuilder/blockSettings-wave.test.tsx`
+  when the closure evidence depends on page-builder preview/inspector proof for
+  W7 or other block-settings-owned Grid Columns interactions.
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer
   integration changed.
 - `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` if

@@ -49,6 +49,14 @@ Keep widget-local product scope out of this task:
 
 - None. This is an execution-ready shared follow-up.
 
+Current lane note:
+
+- `tests/unit/widgets/contentList.test.tsx` and
+  `tests/unit/widgets/entryTeaser.test.tsx` remain the current shipped Bun
+  compatibility suites for linked-results rendering. They are Bun-free by
+  implementation shape, so any future lane migration must be recorded
+  explicitly rather than silently changing this shared closure evidence.
+
 ## Files to Change
 
 | File | Required change |
@@ -175,9 +183,11 @@ No API routes are added.
 - `bun run test:vitest -- tests/vitest/widgets/listingFilters.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/searchBox.test.tsx`
 - `bun test tests/unit/widgets/contentList.test.tsx` when shared linked-results
-  markup changes.
+  markup changes. This is a temporary legacy Bun suite until a dedicated Vitest
+  lane migration is recorded physically.
 - `bun test tests/unit/widgets/entryTeaser.test.tsx` when shared linked-results
-  markup changes.
+  markup changes. This is a temporary legacy Bun suite until a dedicated Vitest
+  lane migration is recorded physically.
 - `bun run lint`
 - `bun run test:bun`
 - `bun run test:vitest`
@@ -191,6 +201,8 @@ No API routes are added.
   `SEARCH_BOX`, `CONTENT_LIST`, `ENTRY_TEASER`)
 - `_docs/_TASKS/TASK-315_Shared_Listing_Runtime_Refresh_and_Block_Replacement_Contract.md`
 - `_docs/_TASKS/README.md`
+- `_docs/_CHANGELOG/870-2026-05-20-task-273-listing-filters-and-shared-runtime-wave.md`
+- `_docs/_CHANGELOG/README.md`
 
 ## Acceptance Criteria
 
