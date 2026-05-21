@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 189 tasks
+- **To Do:** 195 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1802 tasks
 
@@ -43,6 +43,12 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-319-02 | Newsletter Bounded Mobile Variant Implementation | Low | Large | Implement the bounded Newsletter mobile override only if TASK-319-01 approves it |
 | TASK-319-03 | Newsletter Responsive Variant Docs and Closure | Medium | Medium | Close report/docs/changelog/board against the final TASK-319 decision and shipped behavior |
 | TASK-325 | Grid Columns Shared Structural Truthfulness Follow-up | High | Large | Residual shared Grid Columns truthfulness after TASK-256 closure: variant truthfulness, span feedback, CSS-variable picker representation, and inactive cardize controls |
+| TASK-325-01 | Grid Columns Asymmetric Variant Truthfulness | High | Medium | Make the existing `asymmetric` controls truthful for already-saved span data without rewriting custom layouts silently |
+| TASK-325-02 | Grid Columns Span Total Feedback and Invalid Layout Guidance | High | Medium | Add current desktop/tablet/mobile total feedback and explicit invalid-layout guidance before any runtime guard decision |
+| TASK-325-03 | Grid Columns CSS Variable Picker Truthfulness | Medium | Medium | Preserve CSS-variable values visibly in Grid Columns color controls instead of pretending the swatch is exact |
+| TASK-325-04 | Grid Columns Cardize Control Gating | Medium | Medium | Hide or disable inactive cardize-only controls when cardized styling is off, with truthful masonry lock copy |
+| TASK-325-05 | Grid Columns Overflow Guard Decision | Medium | Medium | Decide whether invalid totals still need a bounded runtime guard after the editor-truthfulness leaves land |
+| TASK-325-06 | Grid Columns Report Docs Changelog and Closure | Medium | Medium | Close report/docs/changelog/board after the shared Grid Columns residuals have a final explicit outcome |
 | TASK-292 | Toggle Block Widget Playwright Product Followups | High | Very Large | Toggle Block-only follow-up family for `REPORT_TOGGLE_BLOCK_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-292-01 | Toggle Block Variant Visual Hierarchy, Contrast, and Pane Styling | High | Large | Add Toggle Block-owned cards distinction, active contrast, and bounded pane style controls after TASK-256 shared style semantics |
 | TASK-292-02 | Toggle Block Motion and Pane Transition Contract | Medium | Medium | Add bounded fade/slide/no-motion options without weakening TASK-256 interactive runtime semantics |

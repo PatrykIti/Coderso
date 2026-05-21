@@ -18,6 +18,9 @@ TASK-256 family was marked done.
 This task exists because the 2026-05-19 TASK-271 audit confirmed several report
 findings are still structural truthfulness issues in the live checkout, so they
 must not be patched ad hoc inside the Grid Columns product-expansion family.
+This parent is an umbrella only. Execution must land through the physical
+`TASK-325-*` leaves below so the shared Grid Columns residuals can ship in
+dependency order and close with explicit report/docs ownership.
 
 ## Scope
 
@@ -56,46 +59,48 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Make `asymmetric` truthful for existing span data.
-- [ ] Repair shared CSS-variable picker truthfulness for Grid Columns controls.
-- [ ] Add span-total feedback and invalid-layout guidance for current controls.
-- [ ] Hide or disable inactive cardize-only Advanced controls when cardize is off.
-- [ ] Decide and document the final P3 overflow position once span feedback lands.
-- [ ] Update report/docs/changelog/board ownership when the shared slice closes.
+- [ ] TASK-325-01: Grid Columns Asymmetric Variant Truthfulness
+- [ ] TASK-325-02: Grid Columns Span Total Feedback and Invalid Layout Guidance
+- [ ] TASK-325-03: Grid Columns CSS Variable Picker Truthfulness
+- [ ] TASK-325-04: Grid Columns Cardize Control Gating
+- [ ] TASK-325-05: Grid Columns Overflow Guard Decision
+- [ ] TASK-325-06: Grid Columns Report Docs Changelog and Closure
 
 ## Files to Change
 
 | File | Required change |
 |---|---|
+| `_docs/_TASKS/TASK-325*.md` | Keep the parent and physical leaves synchronized as the shared residuals move through dependency order. |
+| `_docs/_TASKS/README.md` | Track `TASK-325` plus every physical `TASK-325-*` row and keep board statistics synchronized. |
 | `core/widgets/core/gridColumns.tsx` | Add any variant-truthfulness/runtime helper needed for existing span data and the final overflow decision. |
 | `core/admin/ui/widgets/editors/GridColumnsEditors.tsx` | Add shared structural truthfulness feedback for variant, span totals, CSS-variable picker state, and inactive cardize controls. |
 | `tests/vitest/widgets/gridColumns.test.tsx` | Cover runtime truthfulness for asymmetric/current span behavior and any residual overflow decision. |
 | `tests/vitest/ui/grid-columns-editor-wave.test.tsx` | Cover picker truthfulness, span-total feedback, and cardize-control gating. |
 | `_docs/PLAYWRIGHT/REPORT_GRID_COLUMNS_WIDGET.md` | Move the affected findings out of TASK-271 and record final shared evidence. |
 | `_docs/_WIDGETS/GRID_COLUMNS.md` | Document the final shared structural contracts once shipped. |
-| `_docs/_TASKS/README.md` | Keep board status/counts synchronized. |
+| `_docs/_CHANGELOG/` and `_docs/_CHANGELOG/README.md` | Add closure evidence only when the final `TASK-325-06` leaf lands. |
+
+## Implementation Order
+
+1. Land `TASK-325-01` before any conditional runtime decision so the
+   `asymmetric` controls become truthful first.
+2. Land `TASK-325-02` next so current span totals and invalid-layout guidance
+   exist before deciding whether runtime overflow guardrails are still needed.
+3. Land `TASK-325-03` and `TASK-325-04` to close the remaining editor truth
+   gaps around CSS-variable representation and inactive cardize controls.
+4. Land `TASK-325-05` only after the editor feedback leaves above are in place.
+   It owns the conditional runtime-guard decision and any narrow runtime follow-up.
+5. Land `TASK-325-06` last for report/docs/changelog/board closure.
 
 ## Implementation Pseudocode
 
-Decision path:
+Parent orchestration only:
 
-1. Keep persisted span data authoritative. Do not rewrite saved spans merely
-   because the current variant dropdown says `asymmetric`.
-2. Make the editor truthful for that case:
-   - if saved spans are equal and the user selects `asymmetric`, apply the
-     preset atomically across the current columns;
-   - if saved spans are already custom and do not match the preset, surface an
-     explicit “custom spans override asymmetric preset” status instead of
-     pretending the variant alone changes layout.
-3. Calculate current desktop/tablet/mobile span totals from the live select
-   values and expose deterministic warning text whenever a total differs from
-   `12`.
-4. Keep the P3 runtime decision narrow:
-   - first land truthful editor feedback and tests;
-   - only add a runtime guard if invalid totals still create misleading public
-     overflow after the editor feedback is in place.
-5. Reuse the existing shared color-input seam so CSS variable values remain
-   visible as text when the swatch cannot represent them exactly.
+1. Route each residual drift to one physical `TASK-325-*` owner.
+2. Keep runtime changes behind the latest possible leaf (`TASK-325-05`) so
+   editor truthfulness lands first.
+3. Use `TASK-325-06` to reconcile the final report/docs/changelog state only
+   after the implementation leaves and validations are done.
 
 Helper shape:
 
@@ -128,22 +133,34 @@ function resolveAsymmetricVariantState(columns: ColumnData[]) {
 
 Data flow:
 
-- `GridColumnsEditors.tsx` derives variant state and span totals from the
-  current normalized columns before rendering the shared structural guidance.
-- Reapplying `asymmetric` uses the existing block patch / data update path so
-  the column array changes atomically.
-- `gridColumns.tsx` only changes if the final P3 decision requires a bounded
-  runtime guard after the editor feedback is proven insufficient.
+- The parent task owns only scope routing, dependency order, and closure policy.
+- Each physical `TASK-325-*` leaf owns its own concrete helper shape, error
+  handling, validation evidence, and docs updates.
+- `gridColumns.tsx` changes only in leaves that need runtime behavior
+  (`TASK-325-01` and conditionally `TASK-325-05`).
+- `GridColumnsEditors.tsx` changes in the editor-truthfulness leaves
+  (`TASK-325-01` through `TASK-325-04`).
+
+Error handling:
+
+- Do not mix the conditional overflow-runtime decision into earlier editor-only
+  leaves; keep that decision isolated to `TASK-325-05`.
+- If a proposed fix requires widening schema or adding a new persisted field,
+  stop and split or update the exact owning leaf instead of hiding the scope in
+  this parent.
+- If shared color-input behavior or cardize gating turns out to affect other
+  widgets, record that explicitly in the owning leaf and prove why the change
+  remains safe for Grid Columns before closure.
 
 Regression-test shape:
 
-- Widget runtime tests cover whichever final P3 decision is taken and confirm
-  that custom spans still render deterministically.
-- Editor-wave tests cover:
-  - CSS-variable text preservation;
-  - current desktop/tablet/mobile total feedback;
-  - asymmetric “preset vs custom” truthfulness copy;
-  - inactive cardize-control gating when cardized styling is off.
+- `TASK-325-01` and `TASK-325-02` own the current span/runtime truthfulness
+  tests.
+- `TASK-325-03` and `TASK-325-04` own the editor-wave truthfulness tests for
+  CSS-variable representation and inactive cardize controls.
+- `TASK-325-05` owns the final runtime-guard proof only if the runtime decision
+  is approved.
+- `TASK-325-06` owns final validation-note and report/docs evidence only.
 
 ## Security Contract
 
@@ -158,21 +175,20 @@ No API routes are added.
 
 ## Testing Requirements
 
-- `bun --cwd core lint`
-- `bun --cwd core lint:types`
-- `bun run test:vitest -- tests/vitest/widgets/gridColumns.test.tsx`
-- `bun run test:vitest -- tests/vitest/ui/grid-columns-editor-wave.test.tsx`
-- `bun test tests/unit/widgets/validator.test.ts` if schema/defaults change
-- `bun run gates:coderso`
-- `bun run scan:security:strict`
-- `bun run precommit`
+- Docs-only planning changes in this parent:
+  - `git diff --check`
+  - `bun run precommit`
+- Each physical `TASK-325-*` leaf owns the concrete runtime/editor test commands
+  it needs.
 
 ## Documentation Updates Required
 
+- Update `_docs/_TASKS/TASK-325*.md`.
 - Update `_docs/PLAYWRIGHT/REPORT_GRID_COLUMNS_WIDGET.md`.
 - Update `_docs/_WIDGETS/GRID_COLUMNS.md`.
 - Update `_docs/_TASKS/README.md`.
-- Add a changelog entry and update `_docs/_CHANGELOG/README.md` when TASK-325 closes.
+- Add a changelog entry and update `_docs/_CHANGELOG/README.md` when
+  `TASK-325-06` closes the family.
 
 ## Acceptance Criteria
 
@@ -180,4 +196,5 @@ No API routes are added.
   cardize-control states for existing Grid Columns controls.
 - TASK-271 can continue as a widget-local product family without inheriting
   closed-but-unresolved shared structural findings.
-- Report/task/doc ownership for the affected findings is unambiguous.
+- Report/task/doc ownership for the affected findings is unambiguous, with each
+  implementation area routed through a physical `TASK-325-*` leaf.
