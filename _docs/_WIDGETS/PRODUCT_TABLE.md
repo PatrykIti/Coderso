@@ -3,8 +3,8 @@
 ## Purpose
 
 Render a resolved commerce table with shared column metadata, guarded column
-visibility, editable labels, empty-state styling, and admin preview parity for
-the current source query.
+visibility, editable labels, bounded status and stock presentation, empty-state
+styling, and admin preview parity for the current source query.
 
 ## Widget ID
 
@@ -25,6 +25,7 @@ the current source query.
 - admin preview status summary
 - columns
 - column labels
+- stock presentation
 - empty state
 - surfaces
 
@@ -44,6 +45,17 @@ the current source query.
 - `showPrice` can be disabled only while Compare at remains visible. If both
   pricing columns are turned off, Price is restored automatically.
 
+## Status and Stock Presentation
+
+- Status cells render fixed badges for Published, Draft, and Archived instead
+  of raw enum text.
+- Draft and archived rows get bounded row-state treatment through fixed tone
+  classes; published rows stay neutral.
+- Product titles keep the `(draft)` / `(archived)` suffix only when the Status
+  column is hidden.
+- Visual mode exposes `showStockQuantity` only while the Stock column is
+  visible, so quantity copy cannot be configured out of context.
+
 ## Runtime Behavior Notes
 
 - Public rendering hydrates Product Table rows through
@@ -56,6 +68,7 @@ the current source query.
 - Runtime emits deterministic markers:
   - `data-widget="product-table"`
   - `data-product-table-count`
+  - `data-product-status`
 - Empty-state copy is rendered when no items resolve.
 - Product status and stock values are normalized through the shared commerce
   card contract.
@@ -86,6 +99,7 @@ the current source query.
     "showPrice": true,
     "showStatus": true,
     "showStock": true,
+    "showStockQuantity": false,
     "showCompareAt": false,
     "showCollectionCount": false
   },

@@ -6,7 +6,7 @@
 **Category:** Widgets + Commerce + Runtime Render + Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-281, TASK-281-02, TASK-256-02
-**Status:** To Do
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -39,12 +39,12 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Add bounded status badge rendering for published, draft, and archived
+- [x] Add bounded status badge rendering for published, draft, and archived
   products.
-- [ ] Remove title status suffix duplication when the status column is visible.
-- [ ] Add optional stock quantity display using normalized stock data.
-- [ ] Add bounded row-state treatment for draft/archived rows.
-- [ ] Add renderer/editor tests for status, stock, and row-state behavior.
+- [x] Remove title status suffix duplication when the status column is visible.
+- [x] Add optional stock quantity display using normalized stock data.
+- [x] Add bounded row-state treatment for draft/archived rows.
+- [x] Add renderer/editor tests for status, stock, and row-state behavior.
 
 ## Files to Change
 
@@ -110,10 +110,11 @@ No API routes are added.
 
 ## Documentation Updates Required
 
-- Update `_docs/_WIDGETS/PRODUCT_TABLE.md` with status and stock presentation
-  behavior.
-- Update `_docs/PLAYWRIGHT/REPORT_PRODUCT_TABLE_WIDGET.md` BUG-02/BUG-03
-  evidence after implementation.
+- Update `_docs/_WIDGETS/PRODUCT_TABLE.md` with status badge, stock quantity,
+  and row-state presentation behavior.
+- Update `_docs/PLAYWRIGHT/REPORT_PRODUCT_TABLE_WIDGET.md` with `BUG-02`,
+  `BUG-03`, `BF-03`, and `BF-04` evidence after implementation.
+- Keep `_docs/_TASKS/README.md` synchronized with the leaf status transition.
 
 ## Changelog Policy
 
@@ -127,3 +128,24 @@ No API routes are added.
   visible.
 - Stock quantity can be shown without weakening the existing stock-state label.
 - Draft/archived row treatment is bounded, readable, and covered by SSR tests.
+
+
+## Validation Evidence
+
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run test:vitest -- tests/vitest/widgets/productTable.test.tsx tests/vitest/ui/product-table-editor-wave.test.tsx`
+- `bun test tests/unit/widgets/validator.test.ts`
+- `git diff --check`
+
+## Closure Notes
+
+- Product Table now renders fixed Published/Draft/Archived badges instead of raw
+  status enums, and draft/archived rows use bounded tone treatment through one
+  local status map.
+- Title suffixes now stay only when the Status column is hidden, which removes
+  the duplicated `(draft)` / `(archived)` copy from rows that already show a
+  dedicated status badge.
+- Visual mode now exposes a truthful `showStockQuantity` toggle only while the
+  Stock column is visible, and the renderer appends normalized quantities
+  without weakening the existing stock-state label.

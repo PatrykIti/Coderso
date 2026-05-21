@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 896 | 2026-05-21 | TASK-281-03 product table status stock and row state | CMS Widgets/Admin UI/Runtime/QA |
 | 895 | 2026-05-21 | TASK-281-02 product table column labels and visibility | CMS Widgets/Admin UI/Runtime/QA |
 | 894 | 2026-05-21 | TASK-281-01 product table admin preview parity | CMS Widgets/Admin UI/Runtime/QA |
 | 892 | 2026-05-21 | TASK-325 Grid Columns shared structural truthfulness | CMS Widgets/Admin UI/Runtime/QA |

@@ -38,6 +38,7 @@ export type ProductTableFields = {
   showPrice?: boolean;
   showStatus?: boolean;
   showStock?: boolean;
+  showStockQuantity?: boolean;
   showCompareAt?: boolean;
   showCollectionCount?: boolean;
 };
@@ -91,6 +92,7 @@ const productTableFieldDefaults: Required<ProductTableFields> = {
   showPrice: true,
   showStatus: true,
   showStock: true,
+  showStockQuantity: false,
   showCompareAt: false,
   showCollectionCount: false,
 };
@@ -109,6 +111,27 @@ const productTableEmptyStateDefaults = {
   title: "No products available",
   description: "Publish products or adjust source query.",
 };
+
+const productTableStatusLabelMap: Record<CommerceWidgetRuntimeCard["status"], string> = {
+  published: "Published",
+  draft: "Draft",
+  archived: "Archived",
+};
+
+const productTableStatusBadgeToneClassMap: Record<CommerceWidgetRuntimeCard["status"], string> = {
+  published: "border-emerald-200 bg-emerald-50 text-emerald-800",
+  draft: "border-amber-200 bg-amber-50 text-amber-800",
+  archived: "border-slate-200 bg-slate-100 text-slate-700",
+};
+
+const productTableRowToneClassMap: Record<CommerceWidgetRuntimeCard["status"], string> = {
+  published: "",
+  draft: "bg-amber-50/35",
+  archived: "bg-slate-100/70",
+};
+
+const productTableStatusBadgeBaseClass =
+  "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium leading-5";
 
 export const productTableVisibilityGuardCopy: Record<ProductTableGuardGroup, string> = {
   identity:
@@ -286,6 +309,7 @@ export const normalizeProductTableFields = (
     showPrice: value?.showPrice !== false,
     showStatus: value?.showStatus !== false,
     showStock: value?.showStock !== false,
+    showStockQuantity: value?.showStockQuantity === true,
     showCompareAt: value?.showCompareAt === true,
     showCollectionCount: value?.showCollectionCount === true,
   };
@@ -360,6 +384,7 @@ export const productTableSchema = {
         showPrice: { type: "boolean" },
         showStatus: { type: "boolean" },
         showStock: { type: "boolean" },
+        showStockQuantity: { type: "boolean" },
         showCompareAt: { type: "boolean" },
         showCollectionCount: { type: "boolean" },
       },
@@ -498,6 +523,26 @@ const titleWithStatus = (title: string, status: CommerceWidgetRuntimeCard["statu
   return `${title} (archived)`;
 };
 
+const productTitleValue = (
+  item: CommerceWidgetRuntimeCard,
+  options: {
+    showStatusColumn: boolean;
+  }
+) => (options.showStatusColumn ? item.title : titleWithStatus(item.title, item.status));
+
+const formatProductTableStockValue = (
+  stock: CommerceWidgetRuntimeCard["stock"],
+  options: {
+    showStockQuantity: boolean;
+  }
+) => {
+  const label = commerceStockLabelMap[stock.state];
+  if (!options.showStockQuantity || typeof stock.quantity !== "number") {
+    return label;
+  }
+  return `${label} (${stock.quantity})`;
+};
+
 const previewMessage = (renderContext: WidgetRenderContext | undefined) => {
   const message = optionalText(renderContext?.previewState?.message);
   if (!message) return undefined;
@@ -506,13 +551,17 @@ const previewMessage = (renderContext: WidgetRenderContext | undefined) => {
 
 const renderProductTableCell = (
   column: ProductTableColumnDefinition,
-  item: CommerceWidgetRuntimeCard
+  item: CommerceWidgetRuntimeCard,
+  options: {
+    showStatusColumn: boolean;
+    showStockQuantity: boolean;
+  }
 ) => {
   switch (column.key) {
     case "title":
       return (
         <td className="px-3 py-2 font-medium text-[var(--color-text)]/85">
-          {titleWithStatus(item.title, item.status)}
+          {productTitleValue(item, options)}
         </td>
       );
     case "slug":
@@ -532,11 +581,20 @@ const renderProductTableCell = (
         </td>
       );
     case "status":
-      return <td className="px-3 py-2 text-[var(--color-text)]/65">{item.status}</td>;
+      return (
+        <td className="px-3 py-2 text-[var(--color-text)]/80">
+          <span
+            className={`${productTableStatusBadgeBaseClass} ${productTableStatusBadgeToneClassMap[item.status]}`}
+            aria-label={`Status: ${productTableStatusLabelMap[item.status]}`}
+          >
+            {productTableStatusLabelMap[item.status]}
+          </span>
+        </td>
+      );
     case "stock":
       return (
         <td className="px-3 py-2 text-[var(--color-text)]/65">
-          {commerceStockLabelMap[item.stock.state]}
+          {formatProductTableStockValue(item.stock, options)}
         </td>
       );
     case "collections":
@@ -558,6 +616,7 @@ export function ProductTableBlock({
   const items = normalized.resolved?.items ?? [];
   const fields = normalizeProductTableFields(normalized.fields);
   const visibleColumns = resolveVisibleProductTableColumns(fields);
+  const showStatusColumn = visibleColumns.some((column) => column.key === "status");
   const hasError = Boolean(normalized.resolved?.error);
   const previewState = renderContext?.previewState ?? null;
   const previewLoading = previewState?.status === "loading";
@@ -641,11 +700,15 @@ export function ProductTableBlock({
               {items.map((item) => (
                 <tr
                   key={item.id}
-                  className="border-b border-[var(--color-border)]/70 last:border-b-0"
+                  className={`border-b border-[var(--color-border)]/70 last:border-b-0 ${productTableRowToneClassMap[item.status]}`}
+                  data-product-status={item.status}
                 >
                   {visibleColumns.map((column) => (
                     <React.Fragment key={column.key}>
-                      {renderProductTableCell(column, item)}
+                      {renderProductTableCell(column, item, {
+                        showStatusColumn,
+                        showStockQuantity: fields.showStockQuantity,
+                      })}
                     </React.Fragment>
                   ))}
                 </tr>

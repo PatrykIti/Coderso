@@ -490,3 +490,22 @@ Tylko elementy nie zależne od danych runtime są zgodne:
 - `bun test tests/unit/widgets/validator.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+
+## Status po TASK-281-03 (2026-05-21)
+
+### Fixed in TASK-281-03
+
+- `BUG-02`: Status now renders as fixed Published/Draft/Archived badges, and
+  Product titles stop duplicating `(draft)` / `(archived)` when the Status
+  column is visible.
+- `BUG-03` / `BF-03`: Product Table now supports optional stock quantity copy
+  inside the Stock column through the new `showStockQuantity` field.
+- `BF-04`: Draft and archived rows now use bounded row-state treatment through
+  fixed local tone classes instead of neutral identical rows.
+
+### Validation evidence
+
+- `bun run test:vitest -- tests/vitest/widgets/productTable.test.tsx tests/vitest/ui/product-table-editor-wave.test.tsx`
+- `bun test tests/unit/widgets/validator.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`

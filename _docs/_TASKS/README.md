@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 182 tasks
+- **To Do:** 181 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1815 tasks
+- **Done:** 1816 tasks
 
 ---
 
@@ -54,7 +54,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-291-06 | Timeline Motion Presets and Reduced-Motion Policy | Low | Medium | Decide CSS-safe Timeline motion presets or keep W8 static with exact shared-runtime follow-up if needed |
 | TASK-291-07 | Timeline Report Docs Changelog and Closure | Medium | Medium | Refresh Timeline report/docs/changelog/board and final validation evidence |
 | TASK-281 | Product Table Widget Playwright Product Followups | High | Very Large | Product Table-only follow-up family for `REPORT_PRODUCT_TABLE_WIDGET.md`, excluding TASK-256 shared-contract scope |
-| TASK-281-03 | Product Table Status Stock and Row State Presentation | High | Large | Add status badges, stock quantity display, and bounded row-state treatment |
 | TASK-281-04 | Product Table Product Links and Action Column | High | Large | Add safe product navigation and optional action column without public admin actions |
 | TASK-281-05 | Product Table Accessibility and Runtime Semantics | High | Medium | Add Product Table captions/scopes, alert/live semantics, and section/table labels |
 | TASK-281-06 | Product Table Media Excerpt and Section Header Context | High | Large | Add optional thumbnails, excerpts, and section header fields from runtime-safe product data |
@@ -236,6 +235,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-281-03 | Product Table Status Stock and Row State Presentation | High | Large | Done (2026-05-21): Product Table now renders fixed status badges, bounded draft/archived row tones, removes duplicated title suffixes when Status is visible, and optionally appends stock quantity through a gated control |
 | TASK-281-02 | Product Table Column Labels and Visibility Model | High | Large | Done (2026-05-21): Product Table now drives renderer and Visual editor columns from one shared registry, exposes all seven label inputs, and guards Product/Price visibility against unusable empty column pairs |
 | TASK-281-01 | Product Table Admin Preview Resolver Parity | High | Large | Done (2026-05-21): Product Table admin preview now hydrates through an internal widget preview route, keeps runtime diagnostics read-only, and ignores stale async responses without persisting preview-only rows |
 | TASK-325 | Grid Columns Shared Structural Truthfulness Follow-up | High | Large | Done (2026-05-21): Grid Columns shared truthfulness is closed with asymmetric preset state, current span totals, CSS-token color coverage, cardize gating, and an explicit no-runtime-guard decision |

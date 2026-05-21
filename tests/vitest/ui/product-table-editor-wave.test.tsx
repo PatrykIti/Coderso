@@ -295,6 +295,9 @@ test("ProductTable editors normalize source, full column registry, labels, and r
     expect(findInputByLabel(view.container, "Runtime error flag")).toBeUndefined();
     expect(findInputByLabel(view.container, "Show product")).toBeInstanceOf(HTMLInputElement);
     expect(findInputByLabel(view.container, "Show price")).toBeInstanceOf(HTMLInputElement);
+    expect(findInputByLabel(view.container, "Show stock quantity")).toBeInstanceOf(
+      HTMLInputElement
+    );
     expect(findInputByLabel(view.container, "Slug")).toBeInstanceOf(HTMLInputElement);
     expect(findInputByLabel(view.container, "Compare at")).toBeInstanceOf(HTMLInputElement);
     expect(findInputByLabel(view.container, "Stock")).toBeInstanceOf(HTMLInputElement);
@@ -322,8 +325,10 @@ test("ProductTable editors normalize source, full column registry, labels, and r
     toggleCheckbox(findInputByLabel(view.container, "Show product"));
     toggleCheckbox(findInputByLabel(view.container, "Show compare-at price"));
     toggleCheckbox(findInputByLabel(view.container, "Show price"));
+    toggleCheckbox(findInputByLabel(view.container, "Show stock quantity"));
     toggleCheckbox(findInputByLabel(view.container, "Show status"));
     toggleCheckbox(findInputByLabel(view.container, "Show stock"));
+    expect(findInputByLabel(view.container, "Show stock quantity")).toBeUndefined();
     toggleCheckbox(findInputByLabel(view.container, "Show collection count"));
 
     setInputValue(findInputByLabel(view.container, "Product"), "Catalog item");
@@ -353,6 +358,7 @@ test("ProductTable editors normalize source, full column registry, labels, and r
       showPrice: false,
       showStatus: false,
       showStock: false,
+      showStockQuantity: true,
       showCompareAt: true,
       showCollectionCount: true,
     });
@@ -401,6 +407,52 @@ test("ProductTable editors normalize source, full column registry, labels, and r
     expect(preview?.textContent).toContain('"summer"');
     expect(preview?.textContent).toContain('"winter"');
     expect(preview?.textContent).toContain('"archived"');
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("ProductTable stock quantity control is gated by stock column visibility", async () => {
+  const { ProductTableVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/ProductTableEditors");
+
+  let latestValue: ProductTableData = {};
+
+  const Harness = () => {
+    const [value, setValue] = useState<ProductTableData>(latestValue);
+
+    return (
+      <ProductTableVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="default"
+        onVariantChange={() => undefined}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    expect(findInputByLabel(view.container, "Show stock quantity")).toBeInstanceOf(
+      HTMLInputElement
+    );
+
+    toggleCheckbox(findInputByLabel(view.container, "Show stock quantity"));
+    expect(latestValue.fields).toMatchObject({
+      showStock: true,
+      showStockQuantity: true,
+    });
+
+    toggleCheckbox(findInputByLabel(view.container, "Show stock"));
+    expect(findInputByLabel(view.container, "Show stock quantity")).toBeUndefined();
+    expect(latestValue.fields).toMatchObject({
+      showStock: false,
+      showStockQuantity: true,
+    });
   } finally {
     view.cleanup();
   }

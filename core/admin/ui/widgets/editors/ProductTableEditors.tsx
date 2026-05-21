@@ -412,6 +412,21 @@ export function ProductTableVisualEditor({
         ))}
       </CommerceEditorSection>
 
+      {normalized.fields?.showStock ? (
+        <CommerceEditorSection
+          title="Stock presentation"
+          description="Append normalized quantity to the stock label when the runtime card includes it."
+        >
+          <CommerceToggleField
+            label="Show stock quantity"
+            checked={normalized.fields?.showStockQuantity === true}
+            onChange={(next) =>
+              updateFieldVisibility(normalized, onChange, "showStockQuantity", next)
+            }
+          />
+        </CommerceEditorSection>
+      ) : null}
+
       <CommerceEditorSection title="Empty state" description="Shown when no products are resolved.">
         <CommerceTextField
           label="Title"

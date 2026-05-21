@@ -55,6 +55,7 @@ test("product table renders rows with shared column labels and visibility", () =
           showPrice: false,
           showStatus: false,
           showStock: true,
+          showStockQuantity: true,
           showCompareAt: true,
           showCollectionCount: true,
         },
@@ -103,12 +104,129 @@ test("product table renders rows with shared column labels and visibility", () =
   expect(html).toContain("Collections total");
   expect(html).toContain("starter-home");
   expect(html).toContain("$1,300.00");
-  expect(html).toContain("In stock");
+  expect(html).toContain("In stock (3)");
   expect(html).not.toContain("Catalog item");
   expect(html).not.toContain("Current price");
   expect(html).not.toContain("Starter Home");
   expect(html).not.toContain("$1,200.00");
   expect(html).not.toContain("Availability");
+});
+
+test("product table renders status badges and bounded row-state treatment", () => {
+  const html = renderToString(
+    <ProductTableBlock
+      variant="default"
+      data={normalizeProductTableData({
+        ...productTableDefaults,
+        fields: {
+          showTitle: true,
+          showSlug: false,
+          showPrice: true,
+          showStatus: true,
+          showStock: false,
+          showCompareAt: false,
+          showCollectionCount: false,
+        },
+        resolved: {
+          items: [
+            {
+              id: "product-published",
+              title: "Published Home",
+              slug: "published-home",
+              excerpt: null,
+              status: "published",
+              pricing: { amount: 120000, currency: "USD", compareAtAmount: null },
+              stock: { state: "in_stock", quantity: 5, inStock: true },
+              primaryMediaId: null,
+              mediaIds: [],
+              collectionIds: [],
+            },
+            {
+              id: "product-draft",
+              title: "Draft Home",
+              slug: "draft-home",
+              excerpt: null,
+              status: "draft",
+              pricing: { amount: 130000, currency: "USD", compareAtAmount: null },
+              stock: { state: "backorder", quantity: 2, inStock: false },
+              primaryMediaId: null,
+              mediaIds: [],
+              collectionIds: [],
+            },
+            {
+              id: "product-archived",
+              title: "Archived Home",
+              slug: "archived-home",
+              excerpt: null,
+              status: "archived",
+              pricing: { amount: 140000, currency: "USD", compareAtAmount: null },
+              stock: { state: "out_of_stock", quantity: 0, inStock: false },
+              primaryMediaId: null,
+              mediaIds: [],
+              collectionIds: [],
+            },
+          ],
+          total: 3,
+          resolvedAt: "2026-02-19T12:00:00.000Z",
+        },
+      })}
+    />
+  );
+
+  expect(html).toContain('data-product-status="published"');
+  expect(html).toContain('data-product-status="draft"');
+  expect(html).toContain('data-product-status="archived"');
+  expect(html).toContain("Published");
+  expect(html).toContain("Draft");
+  expect(html).toContain("Archived");
+  expect(html).toContain("border-emerald-200");
+  expect(html).toContain("border-amber-200");
+  expect(html).toContain("border-slate-200");
+  expect(html).toContain("bg-amber-50/35");
+  expect(html).toContain("bg-slate-100/70");
+  expect(html).not.toContain("Draft Home (draft)");
+  expect(html).not.toContain("Archived Home (archived)");
+});
+
+test("product table keeps title status suffix when the status column is hidden", () => {
+  const html = renderToString(
+    <ProductTableBlock
+      variant="default"
+      data={normalizeProductTableData({
+        ...productTableDefaults,
+        fields: {
+          showTitle: true,
+          showSlug: false,
+          showPrice: true,
+          showStatus: false,
+          showStock: false,
+          showCompareAt: false,
+          showCollectionCount: false,
+        },
+        resolved: {
+          items: [
+            {
+              id: "product-archived",
+              title: "Archived Home",
+              slug: "archived-home",
+              excerpt: null,
+              status: "archived",
+              pricing: { amount: 140000, currency: "USD", compareAtAmount: null },
+              stock: { state: "out_of_stock", quantity: 0, inStock: false },
+              primaryMediaId: null,
+              mediaIds: [],
+              collectionIds: [],
+            },
+          ],
+          total: 1,
+          resolvedAt: "2026-02-19T12:00:00.000Z",
+        },
+      })}
+    />
+  );
+
+  expect(html).toContain("Archived Home (archived)");
+  expect(html).not.toContain("Published</span>");
 });
 
 test("product table keeps legacy title and price visibility guardrails", () => {
@@ -198,6 +316,7 @@ test("product table validator accepts resolved payload with title and price visi
           showPrice: false,
           showStatus: true,
           showStock: true,
+          showStockQuantity: true,
           showCompareAt: true,
           showCollectionCount: false,
         },
@@ -347,6 +466,8 @@ test("product table editors render expected panels and registry-backed controls"
   expect(visual).toContain("Show product");
   expect(visual).toContain("Show price");
   expect(visual).toContain("Show compare-at price");
+  expect(visual).toContain("Show stock quantity");
+  expect(visual).toContain("Stock presentation");
   expect(visual).toContain("Slug");
   expect(visual).toContain("Compare at");
   expect(visual).toContain("Collections");
