@@ -453,7 +453,7 @@ test("Divider editors cover visual label input, color picker changes, custom spa
     setInputValue(findInputByPlaceholder(spacingSection as ParentNode, "e.g. 32px"), "bad-value");
     expect(latestValue.marginTop).toBe("6");
     expect(normalizeText((spacingSection as ParentNode).textContent)).toContain(
-      "invalid custom value"
+      "invalid custom px value"
     );
     setInputValue(findInputByPlaceholder(spacingSection as ParentNode, "e.g. 32px"), "40px");
 

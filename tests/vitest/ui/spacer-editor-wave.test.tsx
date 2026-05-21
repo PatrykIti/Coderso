@@ -126,7 +126,7 @@ vi.mock("@/lib/utils", () => ({
 
 const variantSelectValues = ["responsive", "fixed"];
 const heightSelectValues = [...spacerHeightTokens.filter((token) => token !== "0"), "custom"];
-const customHeightPlaceholder = "48 or 48px";
+const customHeightPlaceholder = "48, 10vh, or clamp(...)";
 
 const mount = (node: React.ReactNode) => {
   const container = document.createElement("div");
@@ -374,10 +374,10 @@ test("Spacer wizard editor covers legacy variant fallback, token/custom height c
       "applies at 1024px and wider"
     );
     expect(normalizeText(readAriaDescriptions(desktopCustomInput))).toContain(
-      "custom values accept 48 or 48px"
+      "custom values accept 48 (saved as 48px), 48px, 10vh, 5dvh, 5svh, 12vw, or clamp(2rem, 5vw, 8rem)."
     );
     expect(normalizeText(view.container.textContent)).toContain(
-      "custom values accept 48 or 48px. bare numbers are saved as pixels."
+      "custom values accept 48 (saved as 48px), 48px, 10vh, 5dvh, 5svh, 12vw, or clamp(2rem, 5vw, 8rem)."
     );
     expect(guideToggle.checked).toBe(true);
 
@@ -390,7 +390,7 @@ test("Spacer wizard editor covers legacy variant fallback, token/custom height c
 
     setSelectValue(findSelectsByOptions(view.container, heightSelectValues)[0], "custom");
     expect(findSelectsByOptions(view.container, heightSelectValues)[0]?.value).toBe("custom");
-    expect(normalizeText(view.container.textContent)).toContain("enter a custom px value");
+    expect(normalizeText(view.container.textContent)).toContain("enter a custom length");
 
     setSelectValue(findSelectsByOptions(view.container, heightSelectValues)[0], "20");
     expect(view.getValue()).toEqual({
@@ -403,7 +403,10 @@ test("Spacer wizard editor covers legacy variant fallback, token/custom height c
     });
 
     setSelectValue(findSelectsByOptions(view.container, heightSelectValues)[0], "custom");
-    setInputValue(findInputByPlaceholder(view.container, customHeightPlaceholder), "bad-value");
+    setInputValue(
+      findInputByPlaceholder(view.container, customHeightPlaceholder),
+      "calc(100vh - 2rem)"
+    );
     expect(view.getValue()).toEqual({
       height: {
         desktop: "20",
@@ -412,7 +415,7 @@ test("Spacer wizard editor covers legacy variant fallback, token/custom height c
       },
       showGuideInEditor: true,
     });
-    expect(normalizeText(view.container.textContent)).toContain("invalid custom value");
+    expect(normalizeText(view.container.textContent)).toContain("invalid custom length");
 
     setInputValue(findInputByPlaceholder(view.container, customHeightPlaceholder), "48");
     expect(view.getValue()).toEqual({
@@ -426,10 +429,33 @@ test("Spacer wizard editor covers legacy variant fallback, token/custom height c
     expect(findSelectsByOptions(view.container, heightSelectValues)[0]?.value).toBe("custom");
     expect(findInputByPlaceholder(view.container, customHeightPlaceholder).value).toBe("48px");
 
+    setInputValue(findInputByPlaceholder(view.container, customHeightPlaceholder), "10VH");
+    expect(view.getValue()).toEqual({
+      height: {
+        desktop: "10vh",
+        tablet: "24",
+        mobile: "40px",
+      },
+      showGuideInEditor: true,
+    });
+
+    setInputValue(
+      findInputByPlaceholder(view.container, customHeightPlaceholder),
+      "clamp( 2REM , 5VW , 8rem )"
+    );
+    expect(view.getValue()).toEqual({
+      height: {
+        desktop: "clamp(2rem, 5vw, 8rem)",
+        tablet: "24",
+        mobile: "40px",
+      },
+      showGuideInEditor: true,
+    });
+
     setCheckboxValue(findCheckbox(view.container), false);
     expect(view.getValue()).toEqual({
       height: {
-        desktop: "48px",
+        desktop: "clamp(2rem, 5vw, 8rem)",
         tablet: "24",
         mobile: "40px",
       },
@@ -486,16 +512,17 @@ test("Spacer visual editor covers fixed-mode fallback, responsive per-breakpoint
     expect(normalizeText(getHeightsSection().textContent)).toContain(
       "applies below 768px before the tablet breakpoint."
     );
+    expect(normalizeText(getHeightsSection().textContent)).toContain("clamp(2rem, 5vw, 8rem)");
 
     const heightSelects = findSelectsByOptions(getHeightsSection(), heightSelectValues);
     expect(heightSelects).toHaveLength(3);
     setSelectValue(heightSelects[1], "24");
-    setInputValue(findInputsByPlaceholder(getHeightsSection(), customHeightPlaceholder)[2], "44");
+    setInputValue(findInputsByPlaceholder(getHeightsSection(), customHeightPlaceholder)[2], "12VW");
     expect(view.getValue()).toEqual({
       height: {
         desktop: "10",
         tablet: "24",
-        mobile: "44px",
+        mobile: "12vw",
       },
       showGuideInEditor: false,
     });
@@ -506,7 +533,7 @@ test("Spacer visual editor covers fixed-mode fallback, responsive per-breakpoint
       height: {
         desktop: "10",
         tablet: "24",
-        mobile: "44px",
+        mobile: "12vw",
       },
       showGuideInEditor: true,
     });
@@ -546,10 +573,13 @@ test("Spacer advanced editor matches the active variant while preserving hidden 
       showGuideInEditor: true,
     });
 
-    setInputValue(findInputsByPlaceholder(getTechnicalSection(), customHeightPlaceholder)[0], "52");
+    setInputValue(
+      findInputsByPlaceholder(getTechnicalSection(), customHeightPlaceholder)[0],
+      "clamp(2rem, 5vw, 8rem)"
+    );
     expect(view.getValue()).toEqual({
       height: {
-        desktop: "52px",
+        desktop: "clamp(2rem, 5vw, 8rem)",
         tablet: "24",
         mobile: "8",
       },
@@ -557,7 +587,7 @@ test("Spacer advanced editor matches the active variant while preserving hidden 
     });
     expect(getDiagnosticsSnapshot(view.container)).toEqual({
       height: {
-        desktop: "52px",
+        desktop: "clamp(2rem, 5vw, 8rem)",
         tablet: "24",
         mobile: "8",
       },

@@ -10,6 +10,7 @@ import {
 } from "../../../core/admin/ui/widgets/editors/SpacerEditors";
 import {
   createSpacerWidget,
+  normalizeSpacerCustomHeightInput,
   normalizeSpacerData,
   resolveSpacerVariant,
   SpacerBlock,
@@ -65,6 +66,144 @@ test("spacer normalization keeps deterministic defaults", () => {
   expect(normalizedFixed.height?.mobile).toBe("8");
   expect(normalizedFixed.showGuideInEditor).toBe(false);
   expect(resolveSpacerVariant("unknown")).toBe("responsive");
+});
+
+test("spacer accepts bounded viewport and clamp lengths", () => {
+  expect(normalizeSpacerCustomHeightInput("10VH")).toBe("10vh");
+  expect(normalizeSpacerCustomHeightInput("50dvh")).toBe("50dvh");
+  expect(normalizeSpacerCustomHeightInput("5SVH")).toBe("5svh");
+  expect(normalizeSpacerCustomHeightInput("12vw")).toBe("12vw");
+  expect(normalizeSpacerCustomHeightInput("clamp( 2REM , 5VW , 8rem )")).toBe(
+    "clamp(2rem, 5vw, 8rem)"
+  );
+
+  const normalized = normalizeSpacerData(
+    {
+      height: {
+        desktop: "10VH",
+        tablet: "clamp( 2REM , 5VW , 8rem )",
+        mobile: "48",
+      },
+    },
+    "responsive"
+  );
+
+  expect(normalized.height).toEqual({
+    desktop: "10vh",
+    tablet: "clamp(2rem, 5vw, 8rem)",
+    mobile: "48px",
+  });
+
+  const html = renderToString(
+    <SpacerBlock
+      data={{
+        height: {
+          desktop: "10vh",
+          tablet: "clamp(2rem, 5vw, 8rem)",
+          mobile: "12vw",
+        },
+        showGuideInEditor: true,
+      }}
+      variant="responsive"
+      previewDevice="desktop"
+    />
+  );
+
+  expect(html).toContain('data-spacer-desktop="10vh"');
+  expect(html).toContain('data-spacer-tablet="clamp(2rem, 5vw, 8rem)"');
+  expect(html).toContain('data-spacer-mobile="12vw"');
+  expect(html).toContain("--spacer-desktop-height:10vh");
+  expect(html).toContain("--spacer-tablet-height:clamp(2rem, 5vw, 8rem)");
+  expect(html).toContain("--spacer-mobile-height:12vw");
+});
+
+test("spacer rejects unsafe custom lengths and falls back to defaults", () => {
+  expect(normalizeSpacerCustomHeightInput("2rem")).toBeUndefined();
+  expect(normalizeSpacerCustomHeightInput("10lvh")).toBeUndefined();
+  expect(normalizeSpacerCustomHeightInput("calc(100vh - 2rem)")).toBeUndefined();
+  expect(normalizeSpacerCustomHeightInput("var(--spacer)")).toBeUndefined();
+  expect(normalizeSpacerCustomHeightInput("-10vh")).toBeUndefined();
+  expect(normalizeSpacerCustomHeightInput("clamp(2rem, 5rem, 8rem)")).toBeUndefined();
+  expect(normalizeSpacerCustomHeightInput("clamp(2rem, calc(5vw + 1rem), 8rem)")).toBeUndefined();
+  expect(normalizeSpacerCustomHeightInput("clamp(2rem, 5vw, 8rem); color:red")).toBeUndefined();
+
+  const normalized = normalizeSpacerData(
+    {
+      height: {
+        desktop: "calc(100vh - 2rem)",
+        tablet: "clamp(2rem, 5rem, 8rem)",
+        mobile: "url(https://example.com)",
+      },
+    },
+    "responsive"
+  );
+
+  expect(normalized.height).toEqual({
+    desktop: "16",
+    tablet: "12",
+    mobile: "8",
+  });
+
+  const html = renderToString(
+    <SpacerBlock
+      data={{
+        height: {
+          desktop: "calc(100vh - 2rem)",
+          tablet: "clamp(2rem, 5rem, 8rem)",
+          mobile: "url(https://example.com)",
+        },
+      }}
+      variant="responsive"
+      previewDevice="desktop"
+    />
+  );
+
+  expect(html).toContain('data-spacer-desktop="16"');
+  expect(html).toContain('data-spacer-tablet="12"');
+  expect(html).toContain('data-spacer-mobile="8"');
+  expect(html).not.toContain("calc(100vh - 2rem)");
+  expect(html).not.toContain("clamp(2rem, 5rem, 8rem)");
+  expect(html).not.toContain("url(https://example.com)");
+});
+
+test("spacer fixed variant preserves hidden custom heights while rendering desktop height", () => {
+  const normalized = normalizeSpacerData(
+    {
+      height: {
+        desktop: "24px",
+        tablet: "50dvh",
+        mobile: "clamp(24px, 4dvh, 96px)",
+      },
+    },
+    "fixed"
+  );
+
+  expect(normalized.height).toEqual({
+    desktop: "24px",
+    tablet: "50dvh",
+    mobile: "clamp(24px, 4dvh, 96px)",
+  });
+
+  const html = renderToString(
+    <SpacerBlock
+      data={{
+        height: {
+          desktop: "24px",
+          tablet: "50dvh",
+          mobile: "clamp(24px, 4dvh, 96px)",
+        },
+      }}
+      variant="fixed"
+      previewDevice="tablet"
+    />
+  );
+
+  expect(html).toContain('data-spacer-desktop="24px"');
+  expect(html).toContain('data-spacer-tablet="24px"');
+  expect(html).toContain('data-spacer-mobile="24px"');
+  expect(html).toContain('data-spacer-preview-height="24px"');
+  expect(html).not.toContain('data-spacer-tablet="50dvh"');
+  expect(html).not.toContain('data-spacer-mobile="clamp(24px, 4dvh, 96px)"');
 });
 
 test("spacer shows guide in editor preview without requiring previewDevice", () => {

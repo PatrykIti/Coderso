@@ -86,18 +86,47 @@ const joinClasses = (...classes: Array<string | false | undefined>) =>
 
 const pxPattern = /^\d+(?:\.\d+)?px$/i;
 const numberPattern = /^\d+(?:\.\d+)?$/;
+const viewportLengthPattern = /^\d+(?:\.\d+)?(?:vh|dvh|svh|vw)$/i;
+const clampLengthPattern = /^clamp\(\s*([^,]+)\s*,\s*([^,]+)\s*,\s*([^)]+)\s*\)$/i;
+const clampBoundaryLengthPattern = /^\d+(?:\.\d+)?(?:px|rem)$/i;
+const clampPreferredLengthPattern = /^\d+(?:\.\d+)?(?:vh|dvh|svh|vw)$/i;
 
 const isSpacerToken = (value: string): value is SpacerHeightToken =>
   spacerHeightTokens.includes(value as SpacerHeightToken);
 
-const resolveHeightTokenOrPx = (value: string | undefined, fallback: string): string => {
+const normalizeClampLengthSegment = (value: string, pattern: RegExp): string | undefined => {
+  const trimmed = value.trim();
+  if (!pattern.test(trimmed)) return undefined;
+  return trimmed.toLowerCase();
+};
+
+const normalizeSpacerClampLength = (value: string): string | undefined => {
+  const match = clampLengthPattern.exec(value.trim());
+  if (!match) return undefined;
+
+  const minimum = normalizeClampLengthSegment(match[1], clampBoundaryLengthPattern);
+  const preferred = normalizeClampLengthSegment(match[2], clampPreferredLengthPattern);
+  const maximum = normalizeClampLengthSegment(match[3], clampBoundaryLengthPattern);
+
+  if (!minimum || !preferred || !maximum) return undefined;
+  return `clamp(${minimum}, ${preferred}, ${maximum})`;
+};
+
+export function normalizeSpacerCustomHeightInput(rawValue: string): string | undefined {
+  const trimmed = rawValue.trim();
+  if (trimmed.length === 0) return undefined;
+  if (pxPattern.test(trimmed)) return trimmed.toLowerCase();
+  if (numberPattern.test(trimmed)) return `${trimmed}px`;
+  if (viewportLengthPattern.test(trimmed)) return trimmed.toLowerCase();
+  return normalizeSpacerClampLength(trimmed);
+}
+
+const resolveHeightTokenOrLength = (value: string | undefined, fallback: string): string => {
   if (typeof value !== "string") return fallback;
   const trimmed = value.trim();
   if (trimmed.length === 0) return fallback;
   if (isSpacerToken(trimmed)) return trimmed;
-  if (pxPattern.test(trimmed)) return trimmed.toLowerCase();
-  if (numberPattern.test(trimmed)) return `${trimmed}px`;
-  return fallback;
+  return normalizeSpacerCustomHeightInput(trimmed) ?? fallback;
 };
 
 export const resolveSpacerCssHeight = (value: string): string =>
@@ -112,13 +141,13 @@ export function normalizeSpacerData(data: SpacerData, variant: string = "respons
   const fallbackDesktop = spacerDefaults.height?.desktop ?? "16";
   const fallbackTablet = spacerDefaults.height?.tablet ?? "12";
   const fallbackMobile = spacerDefaults.height?.mobile ?? "8";
-  const desktop = resolveHeightTokenOrPx(data.height?.desktop, fallbackDesktop);
+  const desktop = resolveHeightTokenOrLength(data.height?.desktop, fallbackDesktop);
 
   return {
     height: {
       desktop,
-      tablet: resolveHeightTokenOrPx(data.height?.tablet, fallbackTablet),
-      mobile: resolveHeightTokenOrPx(data.height?.mobile, fallbackMobile),
+      tablet: resolveHeightTokenOrLength(data.height?.tablet, fallbackTablet),
+      mobile: resolveHeightTokenOrLength(data.height?.mobile, fallbackMobile),
     },
     showGuideInEditor:
       typeof data.showGuideInEditor === "boolean"

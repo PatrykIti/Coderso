@@ -36,13 +36,14 @@ Notes:
 - Height controls explain the active Tailwind breakpoint ranges for desktop, tablet, and mobile.
 
 ### Advanced
-- direct token/px height editing with the same breakpoint help as Visual
+- direct token, viewport, bounded `clamp()`, or px height editing with the same breakpoint help as Visual
 - normalized payload snapshot
 
 ## Runtime Behavior Notes
 
 - Renders an empty structural block with responsive height values.
-- Supports token-based heights (`0..32`) and custom pixel values. Bare numbers such as `48` normalize to `48px`, and explicit `48px` remains valid.
+- Supports token-based heights (`0..32`) plus bounded custom lengths: bare numbers such as `48` normalize to `48px`, explicit `48px` remains valid, viewport values accept `vh`, `dvh`, `svh`, and `vw`, and fluid values accept canonical `clamp(min, preferred, max)` with `px|rem` boundaries and a viewport-unit preferred segment.
+- Rejects unsafe custom strings such as standalone `rem`, `calc(...)`, CSS variables, URLs, semicolons, malformed `clamp()`, and unsupported units like `lvh` by falling back to deterministic defaults before runtime output.
 - Shows optional guide label only in preview contexts.
 - Exposes deterministic runtime markers:
   - `data-spacer`
@@ -71,3 +72,4 @@ Notes:
 - `fixed` reuses the desktop height for tablet and mobile at runtime.
 - Desktop height applies at `lg` (`1024px+`), tablet height applies from `md` until desktop takes over, and mobile height applies below the tablet breakpoint.
 - Custom height inputs use explicit helper text and ARIA descriptions instead of relying on placeholder-only context.
+- The accepted custom-height examples are `48`, `48px`, `10vh`, `5dvh`, `5svh`, `12vw`, and `clamp(2rem, 5vw, 8rem)`.

@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 
 import {
+  normalizeSpacerCustomHeightInput,
   normalizeSpacerData,
   resolveSpacerCssHeight,
   resolveSpacerVariant,
@@ -49,7 +50,9 @@ const heightTokenOptions = buildVisibleOffTokenOptions(
   }))
 );
 
-const spacerCustomHeightHelp = "Custom values accept 48 or 48px. Bare numbers are saved as pixels.";
+const spacerCustomHeightPlaceholder = "48, 10vh, or clamp(...)";
+const spacerCustomHeightHelp =
+  "Custom values accept 48 (saved as 48px), 48px, 10vh, 5dvh, 5svh, 12vw, or clamp(2rem, 5vw, 8rem).";
 
 const spacerHeightBreakpointHelp = {
   desktop: "Applies at 1024px and wider (Tailwind lg:).",
@@ -183,7 +186,10 @@ function HeightField({
       }
       resolveCss={resolveSpacerCssHeight}
       selectPlaceholder="Quick token"
-      inputPlaceholder="48 or 48px"
+      inputPlaceholder={spacerCustomHeightPlaceholder}
+      customOptionLabel="Custom length"
+      customValueLabel="custom length"
+      normalizeCustomValue={normalizeSpacerCustomHeightInput}
       customInputLabel={`${label} custom height`}
       customInputHelp={spacerCustomHeightHelp}
     />
@@ -317,7 +323,7 @@ export function SpacerVisualEditor({
 
       <EditorSection
         title="Responsive heights"
-        description="Control spacer height per breakpoint with token or px values."
+        description="Control spacer height per breakpoint with token, viewport, clamp, or px values."
       >
         <ResponsiveHeights value={value} variant={variant} onChange={onChange} />
       </EditorSection>
@@ -354,7 +360,7 @@ export function SpacerAdvancedEditor({ value, onChange, variant }: WidgetEditorP
     <div className="space-y-4">
       <EditorSection
         title="Technical height tokens"
-        description="Direct token/px editing for desktop, tablet and mobile heights."
+        description="Direct token, viewport, clamp, or px editing for desktop, tablet and mobile heights."
       >
         <ResponsiveHeights value={value} variant={variant} onChange={onChange} />
       </EditorSection>

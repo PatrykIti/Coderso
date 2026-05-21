@@ -382,4 +382,18 @@ Leaf evidence from this turn:
 | BF-07 | `fixed` | `TASK-284-01` | Spacer custom-height copy now explicitly says `48` normalizes to `48px`, while keeping `48px` valid. |
 | A2 | `fixed` | `TASK-284-01` | Spacer custom-height inputs now use explicit `aria-label` plus `aria-describedby` helper wiring instead of placeholder-only context. |
 
-*Raport wygenerowany na podstawie analizy kodu i testów Playwright — 2026-05-16; shared closure refreshed — 2026-05-17; TASK-284-01 refreshed — 2026-05-21.*
+## Status po TASK-284-02 (2026-05-21)
+
+Leaf evidence from this turn:
+- `bun run test:vitest -- tests/vitest/widgets/spacer.test.tsx tests/vitest/ui/spacer-editor-wave.test.tsx tests/vitest/ui/divider-editor-wave.test.tsx tests/vitest/ui/widget-template-editor.test.tsx`
+- `bun test tests/unit/widgets/validator.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run lint`
+
+| Row | Final status | Owner | Evidence |
+|---|---|---|---|
+| BF-02 | `fixed` | `TASK-284-02` | Spacer now accepts bounded viewport custom heights (`vh`, `dvh`, `svh`, `vw`) and stores them in canonical lowercase form before runtime render. |
+| BF-03 | `fixed` | `TASK-284-02` | Spacer now accepts safe canonical `clamp(min, preferred, max)` values, where `min`/`max` are `px|rem` and the `preferred` slot is a viewport unit, while malformed CSS falls back before public DOM output. |
+
+*Raport wygenerowany na podstawie analizy kodu i testów Playwright — 2026-05-16; shared closure refreshed — 2026-05-17; TASK-284-01 refreshed — 2026-05-21; TASK-284-02 refreshed — 2026-05-21.*

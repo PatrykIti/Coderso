@@ -5,8 +5,8 @@
 **Priority:** Medium
 **Category:** Widgets + Layout + Runtime Render + Admin UI
 **Estimated Effort:** Large
-**Dependencies:** TASK-256-02, TASK-256-05-03, TASK-284
-**Status:** To Do
+**Dependencies:** TASK-284, TASK-303, TASK-284-01
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -20,21 +20,23 @@ This leaf covers:
 - BF-02: viewport units such as `vh`, `dvh`, `svh`, and `vw`;
 - BF-03: safe `clamp()` fluid spacing.
 
-The goal is not arbitrary CSS passthrough. The implementation must define a
-small, testable grammar for allowed length values and keep existing token and
-pixel payloads backward compatible.
+The starting state for this leaf is the post-`TASK-303` explicit custom-edit
+mode and the post-`TASK-284-01` helper/a11y copy. The goal is still not
+arbitrary CSS passthrough. The implementation must define a small, testable
+grammar for allowed length values and keep existing token and pixel payloads
+backward compatible.
 
 ## Scope Boundary
 
 In scope:
 
 - safe length parser/normalizer updates in the Spacer contract;
-- editor help or controls that expose viewport/fluid values without raw CSS
-  surprises;
+- additive, opt-in editor helper changes so Spacer can reuse the shared
+  `TokenOrPixelField` without changing Divider's default px-only behavior;
+- editor help that exposes viewport/fluid values without raw CSS surprises;
 - deterministic CSS custom-property output for public runtime;
-- normalizer and runtime tests for accepted values and unsafe-value fallback.
-  Validator tests are required only if this leaf intentionally narrows the
-  schema beyond the current strict object/string-field shape.
+- normalizer, runtime, and editor tests for accepted viewport/fluid values and
+  unsafe-value fallback.
 
 Out of scope:
 
@@ -45,14 +47,15 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Define the accepted Spacer custom length grammar.
-- [ ] Extend `resolveHeightTokenOrPx()` or an equivalent exported helper so it
-  accepts existing tokens, bare numbers, `px`, bounded viewport units, and a
-  constrained `clamp(min, preferred, max)` form.
-- [ ] Keep invalid values falling back to deterministic defaults without
+- [x] Define the accepted Spacer custom length grammar.
+- [x] Extend the Spacer-owned custom length normalizer so it accepts existing
+  tokens, bare numbers, `px`, bounded viewport units, and a constrained
+  `clamp(min, preferred, max)` form.
+- [x] Keep invalid values falling back to deterministic defaults without
   throwing in render paths.
-- [ ] Update editor copy or controls so authors know which units are accepted.
-- [ ] Add runtime/normalizer and editor tests for accepted viewport/fluid values
+- [x] Update editor copy and shared-helper hooks so authors know which units are
+  accepted without widening Divider semantics.
+- [x] Add runtime/normalizer and editor tests for accepted viewport/fluid values
   and unsafe CSS strings falling back before they reach CSS custom properties.
 
 ## Files to Change
@@ -60,52 +63,70 @@ Out of scope:
 | File | Required change |
 |---|---|
 | `core/widgets/core/spacer.tsx` | Add safe viewport/fluid parsing and normalization while preserving existing token/px behavior and public data markers. |
-| `core/admin/ui/widgets/editors/SpacerEditors.tsx` | Add unit help or bounded controls for viewport/fluid values after TASK-256 token UI is stable. |
-| `tests/vitest/widgets/spacer.test.tsx` | Add normalization and SSR assertions for `10vh`, `50dvh`, `5svh`, `12vw`, safe `clamp()`, and rejected CSS payloads. |
-| `tests/vitest/ui/spacer-editor-wave.test.tsx` | Add editor assertions for unit help and value entry. |
-| `tests/unit/widgets/validator.test.ts` | Run or update only if this leaf changes schema semantics beyond strict string fields. The default safety boundary is `normalizeSpacerData()` plus render output tests. |
-| `_docs/_WIDGETS/SPACER.md` | Document the final length grammar and examples. |
+| `core/admin/ui/widgets/editors/TokenOrPixelField.tsx` | Keep Divider defaults intact while exposing opt-in normalization/copy hooks that Spacer can consume. |
+| `core/admin/ui/widgets/editors/SpacerEditors.tsx` | Replace px-only Spacer copy with truthful viewport/clamp guidance and reuse the Spacer-owned normalizer. |
+| `tests/vitest/widgets/spacer.test.tsx` | Add normalization and SSR assertions for viewport units, canonical `clamp()`, unsafe fallback, and fixed-mode hidden-value preservation. |
+| `tests/vitest/ui/spacer-editor-wave.test.tsx` | Add editor assertions for the new help text, viewport/clamp entry, and invalid custom-length feedback. |
+| `tests/vitest/ui/divider-editor-wave.test.tsx` | Keep the shared-helper regression lane aligned with the default px-only validation copy that Divider still uses. |
+| `_docs/_WIDGETS/SPACER.md` | Document the final accepted length grammar and rejected unsafe patterns. |
 
 ## Implementation Pseudocode
 
 ```ts
 const viewportLengthPattern = /^\d+(?:\.\d+)?(?:vh|dvh|svh|vw)$/i;
-const clampLengthPattern =
-  /^clamp\(\s*(\d+(?:\.\d+)?(?:px|rem|vh|dvh|svh|vw))\s*,\s*(\d+(?:\.\d+)?(?:px|rem|vh|dvh|svh|vw))\s*,\s*(\d+(?:\.\d+)?(?:px|rem|vh|dvh|svh|vw))\s*\)$/i;
+const clampBoundaryLengthPattern = /^\d+(?:\.\d+)?(?:px|rem)$/i;
+const clampPreferredLengthPattern = /^\d+(?:\.\d+)?(?:vh|dvh|svh|vw)$/i;
+const clampLengthPattern = /^clamp\(\s*([^,]+)\s*,\s*([^,]+)\s*,\s*([^)]+)\s*\)$/i;
 
-function normalizeSpacerLength(value: string | undefined, fallback: string): string {
-  const trimmed = value?.trim() ?? "";
+function normalizeClampSegment(value: string, pattern: RegExp): string | undefined {
+  const trimmed = value.trim();
+  if (!pattern.test(trimmed)) return undefined;
+  return trimmed.toLowerCase();
+}
+
+function normalizeSpacerCustomHeightInput(raw: string): string | undefined {
+  const trimmed = raw.trim();
   if (isSpacerToken(trimmed)) return trimmed;
   if (numberPattern.test(trimmed)) return `${trimmed}px`;
   if (pxPattern.test(trimmed)) return trimmed.toLowerCase();
   if (viewportLengthPattern.test(trimmed)) return trimmed.toLowerCase();
-  if (clampLengthPattern.test(trimmed)) return normalizeClampSpacing(trimmed);
-  return fallback;
+
+  const match = clampLengthPattern.exec(trimmed);
+  if (!match) return undefined;
+
+  const minimum = normalizeClampSegment(match[1], clampBoundaryLengthPattern);
+  const preferred = normalizeClampSegment(match[2], clampPreferredLengthPattern);
+  const maximum = normalizeClampSegment(match[3], clampBoundaryLengthPattern);
+  if (!minimum || !preferred || !maximum) return undefined;
+
+  return `clamp(${minimum}, ${preferred}, ${maximum})`;
 }
 ```
 
 Data flow:
 
-1. `normalizeSpacerData()` calls the safe length resolver for desktop, tablet,
-   and mobile values.
-2. `SpacerBlock` writes the normalized value to `data-spacer-*` markers and CSS
+1. `normalizeSpacerData()` calls the Spacer-owned normalizer for desktop,
+   tablet, and mobile values.
+2. `TokenOrPixelField` stays px-only by default; Spacer opts into the wider
+   grammar through explicit `normalizeCustomValue` and copy props.
+3. `SpacerBlock` writes normalized values to `data-spacer-*` markers and CSS
    custom properties.
-3. `resolveSpacerCssHeight()` maps known tokens to rem values and returns already
-   validated custom values unchanged.
-4. Unsafe custom strings are rejected at the Spacer normalizer/render contract
-   by falling back to breakpoint defaults. Do not rely on AJV to reject them
-   unless this leaf deliberately replaces the current string-field schema with a
-   narrower schema and updates validator tests at the same time.
+4. `resolveSpacerCssHeight()` maps known tokens to rem values and returns
+   already-validated custom values unchanged.
+5. Unsafe custom strings are rejected at the Spacer normalizer/render contract
+   by falling back to the breakpoint default. The schema still only owns object
+   shape plus string-field validation.
 
 Error handling:
 
 - Reject `calc()`, `url()`, semicolons, CSS variables, negative lengths,
-  unbounded units, including unscoped units such as `lvh`, and malformed
-  `clamp()` by falling back to the relevant
-  default.
+  unsupported units such as `lvh`, standalone `rem`, and malformed `clamp()` by
+  falling back to the relevant default.
+- Reject `clamp()` when `min`/`max` are not `px|rem`, or when the `preferred`
+  slot is not one of `vh|dvh|svh|vw`.
 - Do not throw during render for legacy malformed payloads.
-- Preserve existing `none` and pixel behavior until TASK-256 changes the shared
-  token contract.
+- Preserve existing `none` and pixel behavior while keeping Divider's shared
+  helper contract px-only by default.
 
 ## Security Contract
 
@@ -113,31 +134,22 @@ No API routes are added.
 
 - Endpoint visibility/auth/RBAC/CSRF/rate limit: unchanged.
 - Reject-unknown validation: schema remains strict for object shape and known
-  string fields. Unsafe CSS value safety is enforced by Spacer normalization by
-  default; if a more specific length schema is added, update validator tests and
-  document the schema-level rejection decision.
-- Anti-abuse: accepted length values must be grammar-limited and cannot contain
-  raw CSS declarations, URLs, scripts, comments, semicolons, CSS variables, or
+  string fields. Unsafe CSS value safety is enforced by Spacer normalization.
+- Anti-abuse: accepted length values are grammar-limited and cannot contain raw
+  CSS declarations, URLs, scripts, comments, semicolons, CSS variables, or
   unbounded class names.
 - Secret handling: no secrets in Spacer data, DOM markers, diagnostics, or
   reports.
 
 ## Testing Requirements
 
-- `bun run test:vitest -- tests/vitest/widgets/spacer.test.tsx`
-- `bun run test:vitest -- tests/vitest/ui/spacer-editor-wave.test.tsx`
-- `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer
-  markers or wrapper output change.
-- `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` when
-  token adjacency changes.
-- `bun test tests/unit/widgets/validator.test.ts` only when schema/defaults
-  change. Unsafe CSS fallback alone belongs in Spacer normalizer/runtime tests.
+- `bun run test:vitest -- tests/vitest/widgets/spacer.test.tsx tests/vitest/ui/spacer-editor-wave.test.tsx tests/vitest/ui/divider-editor-wave.test.tsx tests/vitest/ui/widget-template-editor.test.tsx`
+- `bun test tests/unit/widgets/validator.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - If this leaf is committed or moved to `Done` separately from TASK-284-05, also
-  run root `bun run lint`, targeted Vitest/Bun lanes above,
-  `bun run scan:security:strict`, and `bun run precommit`; otherwise keep this
-  leaf open until TASK-284-05 runs the final family gate.
+  run root `bun run lint`, `bun run gates:coderso`,
+  `bun run scan:security:strict`, and `bun run precommit`.
 
 ## Documentation Updates Required
 
@@ -159,4 +171,19 @@ No API routes are added.
 - Existing token, bare number, and `px` payloads remain backward compatible.
 - Unsafe CSS strings normalize to defaults and never reach runtime CSS custom
   properties.
+- Divider keeps the default px-only shared-helper behavior while Spacer opts
+  into the wider grammar explicitly.
 - Editor copy accurately describes the accepted custom length grammar.
+
+## Completion Notes (2026-05-21)
+
+- Spacer now accepts `vh`, `dvh`, `svh`, and `vw` custom heights plus canonical
+  `clamp(min, preferred, max)` values, while continuing to normalize bare
+  numbers like `48` to `48px`.
+- The final `clamp()` contract is intentionally narrow: `min` and `max` must be
+  `px` or `rem`, and the `preferred` segment must be a viewport unit.
+- Unsafe inputs such as standalone `rem`, malformed `clamp()`, `calc()`, CSS
+  variables, URLs, semicolons, and unsupported units now fall back before they
+  reach runtime CSS variables or public `data-spacer-*` markers.
+- Spacer consumes additive `TokenOrPixelField` hooks for truthful copy and
+  validation while Divider continues to use the default px-only branch.

@@ -59,7 +59,9 @@ function normalizeCustomPixelValue(rawValue: string) {
 function buildValidation(
   draft: string | null,
   savedResolvedValue: string,
-  resolveCss: (value: string) => string
+  resolveCss: (value: string) => string,
+  normalizeCustomValue: (rawValue: string) => string | undefined,
+  customValueLabel: string
 ): TokenFieldValidation {
   if (draft === null) {
     return {
@@ -72,11 +74,11 @@ function buildValidation(
   if (trimmed.length === 0) {
     return {
       status: "custom-empty",
-      message: `Enter a custom px value. Saved value stays ${savedResolvedValue}.`,
+      message: `Enter a ${customValueLabel}. Saved value stays ${savedResolvedValue}.`,
     };
   }
 
-  const normalized = normalizeCustomPixelValue(trimmed);
+  const normalized = normalizeCustomValue(trimmed);
   if (normalized) {
     return {
       status: "custom-valid",
@@ -86,7 +88,7 @@ function buildValidation(
 
   return {
     status: "custom-invalid",
-    message: `Invalid custom value. Saved value stays ${savedResolvedValue}.`,
+    message: `Invalid ${customValueLabel}. Saved value stays ${savedResolvedValue}.`,
   };
 }
 
@@ -100,6 +102,8 @@ export function TokenOrPixelField({
   selectPlaceholder,
   inputPlaceholder,
   customOptionLabel = "Custom px",
+  customValueLabel = "custom px value",
+  normalizeCustomValue = normalizeCustomPixelValue,
   fieldDescription,
   customInputLabel,
   customInputHelp,
@@ -113,6 +117,8 @@ export function TokenOrPixelField({
   selectPlaceholder: string;
   inputPlaceholder: string;
   customOptionLabel?: string;
+  customValueLabel?: string;
+  normalizeCustomValue?: (rawValue: string) => string | undefined;
   fieldDescription?: string;
   customInputLabel?: string;
   customInputHelp?: string;
@@ -129,7 +135,13 @@ export function TokenOrPixelField({
   }, [value, valueIsToken]);
 
   const savedResolvedValue = resolveCss(value);
-  const validation = buildValidation(customDraft, savedResolvedValue, resolveCss);
+  const validation = buildValidation(
+    customDraft,
+    savedResolvedValue,
+    resolveCss,
+    normalizeCustomValue,
+    customValueLabel
+  );
   const fieldDescriptionId = fieldDescription ? `${fieldId}-description` : undefined;
   const customInputHelpId = customInputHelp ? `${fieldId}-custom-help` : undefined;
   const validationId = `${fieldId}-validation`;
@@ -178,7 +190,7 @@ export function TokenOrPixelField({
         onChange={(event) => {
           const nextDraft = event.target.value;
           setCustomDraft(nextDraft);
-          const normalized = normalizeCustomPixelValue(nextDraft);
+          const normalized = normalizeCustomValue(nextDraft);
           if (normalized) onChange(normalized);
         }}
         aria-label={customInputLabel ?? `${label} custom value`}

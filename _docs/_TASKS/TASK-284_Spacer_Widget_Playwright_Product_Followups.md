@@ -97,14 +97,14 @@ documentation, and copy that is not part of the shared contract.
 | Area | Current owners | Current tests | New or changed tests |
 |---|---|---|---|
 | Schema, defaults, normalizer, length parsing, renderer | `core/widgets/core/spacer.tsx` | `tests/vitest/widgets/spacer.test.tsx`, `tests/vitest/widgets/styleNoneTokens.test.tsx` | Add normalization and SSR assertions for viewport units, fluid values, presets, orientation, and any DOM marker changes. |
-| Wizard/Visual/Advanced editors | `core/admin/ui/widgets/editors/SpacerEditors.tsx` | `tests/vitest/ui/spacer-editor-wave.test.tsx`, `tests/vitest/ui/widget-template-editor.test.tsx` | Add mode-specific assertions for fixed-mode guidance, breakpoint help, accessible height fields, new unit/preset controls, and orientation UX. |
+| Wizard/Visual/Advanced editors | `core/admin/ui/widgets/editors/SpacerEditors.tsx`, `core/admin/ui/widgets/editors/TokenOrPixelField.tsx` (opt-in hooks only) | `tests/vitest/ui/spacer-editor-wave.test.tsx`, `tests/vitest/ui/divider-editor-wave.test.tsx`, `tests/vitest/ui/widget-template-editor.test.tsx` | Add mode-specific assertions for fixed-mode guidance, breakpoint help, accessible height fields, new unit/preset controls, shared-helper regressions, and orientation UX. |
 | Widget validator/registry/render integration | `core/widgets/validator.ts`, `core/widgets/renderers/widgetRenderer.tsx`, registry via `createSpacerWidget()` | `tests/unit/widgets/validator.test.ts`, `tests/vitest/widgets/renderer.test.tsx` | Run validator tests whenever schema/defaults change; run renderer tests when public markers or render shape change. |
 | Widget docs and source report | `_docs/_WIDGETS/SPACER.md`, `_docs/PLAYWRIGHT/REPORT_SPACER_WIDGET.md` | docs diff checks | Update contract docs and fixed/deferred/routed evidence after implementation leaves land. |
 
 ## Sub-Tasks
 
 - [x] TASK-284-01: Spacer Editor Guidance and Input Accessibility
-- [ ] TASK-284-02: Spacer Viewport and Fluid Length Units
+- [x] TASK-284-02: Spacer Viewport and Fluid Length Units
 - [ ] TASK-284-03: Spacer Named Rhythm Presets
 - [ ] TASK-284-04: Spacer Horizontal Orientation Contract
 - [ ] TASK-284-05: Spacer Report Docs Changelog and Closure
