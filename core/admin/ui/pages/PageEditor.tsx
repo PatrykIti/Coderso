@@ -130,6 +130,7 @@ const pageEditorSessionExpiredMessage = (
     | "loadRevisions"
     | "restoreRevision"
     | "discardRevision"
+    | "generatePreview"
 ) => {
   switch (action) {
     case "publish":
@@ -144,6 +145,8 @@ const pageEditorSessionExpiredMessage = (
       return "Your admin session expired. Sign in again before restoring this revision.";
     case "discardRevision":
       return "Your admin session expired. Sign in again before discarding this autosave.";
+    case "generatePreview":
+      return "Your admin session expired. Sign in again before generating preview.";
     case "settingsSave":
       return "Your admin session expired. Sign in again before updating page settings.";
     case "autosaveSettings":
@@ -179,7 +182,8 @@ const resolvePageEditorInlineError = (
     | "loadTemplateOptions"
     | "loadRevisions"
     | "restoreRevision"
-    | "discardRevision",
+    | "discardRevision"
+    | "generatePreview",
   error: unknown,
   fallbackMessage: string
 ) => {
@@ -830,11 +834,9 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       const payload = await getPageTemplateOptions();
       setTemplateOptions(payload);
     } catch (err) {
-      if (isApiClientError(err)) {
-        setTemplateOptionsError(err.message);
-      } else {
-        setTemplateOptionsError("Failed to load template options.");
-      }
+      setTemplateOptionsError(
+        resolvePageEditorInlineError("loadTemplateOptions", err, "Failed to load template options.")
+      );
     } finally {
       setTemplateOptionsLoading(false);
     }
@@ -1141,11 +1143,9 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       setPreviewUrl(previewUrl);
       setPreviewProbe(probe ?? null);
     } catch (err) {
-      if (isApiClientError(err)) {
-        setPreviewError(err.message);
-      } else {
-        setPreviewError("Failed to generate preview.");
-      }
+      setPreviewError(
+        resolvePageEditorInlineError("generatePreview", err, "Failed to generate preview.")
+      );
       setPreviewUrl(null);
       setPreviewProbe(null);
     } finally {

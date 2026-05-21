@@ -173,7 +173,7 @@ This task changes existing internal admin auth/session behavior only.
   tests)
 - `bun run test:vitest -- tests/vitest/ui/page-editor-shell-wave.test.tsx` -
   passed (`16` tests) after the audit follow-up extended shared expired-session
-  coverage to page load/refresh and revision flows
+  coverage to page load/refresh, preview, template-option, and revision flows
 - `bun run test:vitest -- tests/vitest/ui/posts-feed-editor-wave.test.tsx` -
   passed (`9` tests)
 - `bun --cwd core lint` - passed
@@ -191,5 +191,5 @@ This task changes existing internal admin auth/session behavior only.
   classification, page-editor save/publish handling, and Posts Feed
   picker/preview consumers now use one bounded session-expiry contract.
 - 2026-05-21 audit follow-up: `PageEditor` now reuses the same shared
-  session-expiry guidance for page load/refresh and revision read/mutation
-  paths instead of surfacing raw API client text there.
+  session-expiry guidance for page load/refresh, preview, template-option, and
+  revision read/mutation paths instead of surfacing raw API client text there.

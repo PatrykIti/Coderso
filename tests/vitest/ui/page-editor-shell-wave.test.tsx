@@ -1430,6 +1430,33 @@ test("PageEditor reuses shared expired-session guidance for load and revision fl
   try {
     await flush();
 
+    pageEditorState.previewPage.mockRejectedValueOnce(
+      apiError("Authentication required", {
+        code: "auth_required",
+        status: 401,
+        sharedFailureKind: "session_expired",
+      })
+    );
+    clickButton(view.container, "Preview");
+    await flush();
+    expect(view.container.textContent).toContain(
+      "preview-error:Your admin session expired. Sign in again before generating preview."
+    );
+
+    pageEditorState.getPageTemplateOptions.mockRejectedValueOnce(
+      apiError("Authentication required", {
+        code: "auth_required",
+        status: 401,
+        sharedFailureKind: "session_expired",
+      })
+    );
+    clickButton(view.container, "Page settings");
+    await flush();
+    await flush();
+    expect(view.container.textContent).toContain(
+      "template-options-error:Your admin session expired. Sign in again before loading page settings."
+    );
+
     pageEditorState.getPageCached.mockRejectedValueOnce(
       apiError("Authentication required", {
         code: "auth_required",
