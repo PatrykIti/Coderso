@@ -548,6 +548,159 @@ test("GridColumns variant controls ignore changes when variant handlers are abse
   }
 });
 
+test("GridColumns wizard selection applies the asymmetric desktop preset atomically", async () => {
+  const view = await renderEditor({
+    editor: "wizard",
+    initialVariant: "equal",
+    initialValue: {
+      columns: [
+        { id: "1", label: "Lead", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
+        { id: "2", label: "Side", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
+      ],
+    },
+  });
+
+  try {
+    const variantSelect = findSelectByOptions(view.container, [
+      "equal",
+      "asymmetric",
+      "masonry-lite",
+    ]);
+
+    setSelectValue(variantSelect, "asymmetric");
+
+    expect(view.getVariant()).toBe("asymmetric");
+    expect(view.getValue().columns?.map((column) => column.desktopSpan)).toEqual(["8", "4"]);
+    expect(view.getValue().columns?.map((column) => column.tabletSpan)).toEqual(["6", "6"]);
+    expect(view.getValue().columns?.map((column) => column.mobileSpan)).toEqual(["12", "12"]);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("GridColumns visual editor explains saved asymmetric drift and allows preset reapply", async () => {
+  const view = await renderEditor({
+    editor: "visual",
+    initialVariant: "asymmetric",
+    initialValue: {
+      columns: [
+        { id: "1", label: "Lead", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
+        { id: "2", label: "Side", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
+      ],
+    },
+  });
+
+  try {
+    const variantSection = getSectionByTitle(view.container, "Variant and layout structure");
+
+    expect(normalizeText(variantSection.textContent)).toContain("matching desktop spans");
+
+    clickButton(findButtonsByText(variantSection, "Reapply asymmetric desktop preset")[0]);
+
+    expect(view.getValue().columns?.map((column) => column.desktopSpan)).toEqual(["8", "4"]);
+    expect(normalizeText(variantSection.textContent)).toContain(
+      "asymmetric desktop preset is active"
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("GridColumns visual editor shows current span totals and no-auto-balance guidance", async () => {
+  const view = await renderEditor({
+    editor: "visual",
+    initialVariant: "equal",
+    initialValue: {
+      columns: [
+        { id: "1", label: "Lead", desktopSpan: "7", tabletSpan: "6", mobileSpan: "12" },
+        { id: "2", label: "Side", desktopSpan: "7", tabletSpan: "6", mobileSpan: "12" },
+      ],
+    },
+  });
+
+  try {
+    const columnSection = getSectionByTitle(view.container, "Column sizing and labels");
+    const text = normalizeText(columnSection.textContent);
+
+    expect(text).toContain("desktop total: 14 / 12 - continues onto additional rows.");
+    expect(text).toContain("tablet total: 12 / 12 - fills one 12-column row.");
+    expect(text).toContain("mobile total: 24 / 12 - continues onto additional rows.");
+    expect(text).toContain("runtime does not auto-balance them");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("GridColumns visual editor keeps CSS variable colors visible with fallback swatches", async () => {
+  const view = await renderEditor({
+    editor: "visual",
+    initialVariant: "masonry-lite",
+    initialValue: {
+      columns: [
+        { id: "1", label: "Lead", desktopSpan: "8", tabletSpan: "6", mobileSpan: "12" },
+        { id: "2", label: "Side", desktopSpan: "4", tabletSpan: "6", mobileSpan: "12" },
+      ],
+      style: {
+        cardizeColumns: false,
+        columnBackground: "var(--color-surface)",
+        columnBorderColor: "var(--color-border)",
+      },
+    },
+  });
+
+  try {
+    const surfaceSection = getSectionByTitle(view.container, "Gap and column surface");
+    const backgroundTokenInput = findInputByPlaceholder(surfaceSection, "var(--color-surface)");
+    const borderTokenInput = findInputByPlaceholder(surfaceSection, "var(--color-border)");
+    const colorInputs = Array.from(surfaceSection.querySelectorAll('input[type="color"]')).filter(
+      (element): element is HTMLInputElement => element instanceof HTMLInputElement
+    );
+
+    expect(backgroundTokenInput.value).toBe("var(--color-surface)");
+    expect(borderTokenInput.value).toBe("var(--color-border)");
+    expect(colorInputs[0]?.value).toBe("#f8fafc");
+    expect(colorInputs[1]?.value).toBe("#e2e8f0");
+    expect(normalizeText(surfaceSection.textContent)).toContain("custom token active");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("GridColumns advanced editor disables cardize-only controls until cardized columns are enabled", async () => {
+  const view = await renderEditor({
+    editor: "advanced",
+    initialVariant: "equal",
+    initialValue: {
+      columns: [
+        { id: "1", label: "Lead", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
+        { id: "2", label: "Side", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
+      ],
+      style: {
+        cardizeColumns: false,
+      },
+    },
+  });
+
+  try {
+    const technicalSection = getSectionByTitle(view.container, "Technical layout tokens");
+    const cardizeToggle = findCheckboxByLabel(technicalSection, "Cardized columns");
+    const borderWidthSelect = findSelectByLabel(technicalSection, "Border width");
+    const paddingSelect = findSelectByLabel(technicalSection, "Column padding");
+
+    expect(borderWidthSelect.disabled).toBe(true);
+    expect(paddingSelect.disabled).toBe(true);
+    expect(normalizeText(technicalSection.textContent)).toContain("turn on cardized columns");
+
+    setCheckboxValue(cardizeToggle, true);
+
+    expect(view.getValue().style?.cardizeColumns).toBe(true);
+    expect(findSelectByLabel(technicalSection, "Border width").disabled).toBe(false);
+    expect(findSelectByLabel(technicalSection, "Column padding").disabled).toBe(false);
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("GridColumns visual editor covers variant cards, column sizing controls, and conditional card surface fields", async () => {
   const view = await renderEditor({
     editor: "visual",

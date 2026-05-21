@@ -6,7 +6,7 @@
 **Category:** Shared Widgets + Grid Columns + Admin UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-325-01
-**Status:** To Do
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -26,7 +26,7 @@ position; that stays in `TASK-325-05`.
 
 | File | Required change |
 |---|---|
-| `core/admin/ui/widgets/editors/GridColumnsEditors.tsx` | Derive current per-breakpoint totals and show deterministic warning text when a total differs from `12`. |
+| `core/admin/ui/widgets/editors/GridColumnsEditors.tsx` | Derive current per-breakpoint totals and show deterministic row-fit guidance when a total differs from `12`. |
 | `tests/vitest/ui/grid-columns-editor-wave.test.tsx` | Cover current total feedback and invalid-layout guidance across desktop/tablet/mobile controls. |
 
 ## Implementation Pseudocode
@@ -51,7 +51,7 @@ function calculateGridSpanTotals(columns: ColumnData[]): GridSpanTotals {
 
 1. Normalize the current columns first.
 2. Derive desktop/tablet/mobile totals from the live editor values.
-3. Render explicit warnings whenever a total differs from `12`.
+3. Render the live totals and explicit row-fit guidance whenever a total differs from `12`.
 4. Keep the warnings deterministic so later runtime-decision work can rely on
    the same totals.
 
@@ -94,6 +94,10 @@ No API routes are added.
 ## Acceptance Criteria
 
 - Current span totals are visible for desktop, tablet, and mobile.
-- Invalid totals are explained explicitly instead of remaining implicit.
+- Totals that do not fit a single row now explain wrap or unused-width behavior explicitly.
 - The runtime-guard decision remains deferred to `TASK-325-05`.
 
+## Completion Notes (2026-05-21)
+
+- Visual now exposes current desktop/tablet/mobile totals for the active spans.
+- Non-`12` totals now explain whether the breakpoint wraps to additional rows or leaves unused width instead of implying hidden auto-correction.

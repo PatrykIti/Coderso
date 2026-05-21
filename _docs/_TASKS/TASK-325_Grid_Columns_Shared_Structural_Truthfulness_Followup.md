@@ -6,7 +6,7 @@
 **Category:** Widgets + Grid Columns + Shared Contract + Admin UI + Runtime Render
 **Estimated Effort:** Large
 **Dependencies:** TASK-256, TASK-256-05-01, TASK-293
-**Status:** To Do
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -59,12 +59,12 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] TASK-325-01: Grid Columns Asymmetric Variant Truthfulness
-- [ ] TASK-325-02: Grid Columns Span Total Feedback and Invalid Layout Guidance
-- [ ] TASK-325-03: Grid Columns CSS Variable Picker Truthfulness
-- [ ] TASK-325-04: Grid Columns Cardize Control Gating
-- [ ] TASK-325-05: Grid Columns Overflow Guard Decision
-- [ ] TASK-325-06: Grid Columns Report Docs Changelog and Closure
+- [x] TASK-325-01: Grid Columns Asymmetric Variant Truthfulness
+- [x] TASK-325-02: Grid Columns Span Total Feedback and Invalid Layout Guidance
+- [x] TASK-325-03: Grid Columns CSS Variable Picker Truthfulness
+- [x] TASK-325-04: Grid Columns Cardize Control Gating
+- [x] TASK-325-05: Grid Columns Overflow Guard Decision
+- [x] TASK-325-06: Grid Columns Report Docs Changelog and Closure
 
 ## Files to Change
 
@@ -198,3 +198,21 @@ No API routes are added.
   closed-but-unresolved shared structural findings.
 - Report/task/doc ownership for the affected findings is unambiguous, with each
   implementation area routed through a physical `TASK-325-*` leaf.
+
+## Outcome
+
+- `asymmetric` selection is now truthful: choosing the variant reapplies the current desktop preset, while saved equal/custom desktop spans surface explicit state and a reapply action.
+- Grid Columns now shows current desktop/tablet/mobile span totals and explains whether each breakpoint fills one row, wraps onto additional rows, or leaves unused width.
+- CSS-variable color values were already preserved correctly by the landed shared clearable-field contract; TASK-325 adds Grid Columns-specific regression coverage instead of widening that shared owner again.
+- Cardize-only controls now hide or disable truthfully when cardized styling is off, and `masonry-lite` keeps the cardized contract locked on with explicit copy.
+- `TASK-325-05` closed with an explicit runtime rejection: `gridColumnsOverflowDecision = "no-runtime-guard"`. Runtime keeps saved spans as authored and does not auto-balance them.
+
+## Validation Notes (2026-05-21)
+
+- `bun run test:vitest -- tests/vitest/widgets/gridColumns.test.tsx` - passed (`22` tests)
+- `bun run test:vitest -- tests/vitest/ui/grid-columns-editor-wave.test.tsx` - passed (`18` tests)
+- Family-wide lint/types/gates/precommit/diff/security results are recorded in `TASK-325-06`.
+
+## Completion Notes
+
+- 2026-05-21: the TASK-325 family is closed. The shared Grid Columns residuals from the report no longer sit in deferred/shared limbo, and the final no-runtime-guard decision is explicit in code, docs, and tests.

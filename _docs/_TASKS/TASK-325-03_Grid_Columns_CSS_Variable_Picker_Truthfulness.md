@@ -6,7 +6,7 @@
 **Category:** Shared Widgets + Grid Columns + Admin UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-325
-**Status:** To Do
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -96,3 +96,7 @@ No API routes are added.
 - The picker never implies a precise swatch value for token-backed colors.
 - Any shared clearable-field change stays narrow and tested.
 
+## Completion Notes (2026-05-21)
+
+- The already-landed shared clearable color controls were sufficient for Grid Columns: token text stays visible, swatches fall back truthfully, and no shared seam rewrite was needed.
+- TASK-325-03 closes with widget-local regression coverage proving the existing contract on Grid Columns surfaces.

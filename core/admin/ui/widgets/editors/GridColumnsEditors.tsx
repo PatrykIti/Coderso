@@ -14,6 +14,9 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 
 import {
+  applyGridColumnsAsymmetricPreset,
+  buildBalancedGridColumnsDesktopSpans,
+  calculateGridColumnsSpanTotals,
   gridColumnsColumnMax,
   gridColumnsColumnMin,
   gridColumnsDefaults,
@@ -21,6 +24,7 @@ import {
   gridColumnsSpanTokens,
   normalizeGridColumnsData,
   reorderGridColumnsColumnsAndSlots,
+  resolveGridColumnsAsymmetricVariantState,
   resolveGridColumnsVariant,
   type GridColumnsAlign,
   type GridColumnsBorderWidth,
@@ -167,15 +171,8 @@ type GridColumnsPreset = {
 const clampColumnsCount = (value: number) =>
   Math.max(gridColumnsColumnMin, Math.min(gridColumnsColumnMax, Math.floor(value)));
 
-const buildBalancedDesktopSpans = (count: number): GridColumnsSpan[] => {
-  const clamped = clampColumnsCount(count);
-  const base = Math.floor(12 / clamped);
-  const remainder = 12 - base * clamped;
-  return Array.from(
-    { length: clamped },
-    (_, index) => String(base + (index < remainder ? 1 : 0)) as GridColumnsSpan
-  );
-};
+const buildBalancedDesktopSpans = (count: number): GridColumnsSpan[] =>
+  buildBalancedGridColumnsDesktopSpans(count);
 
 const buildPresetColumns = (desktopSpans: GridColumnsSpan[]) =>
   desktopSpans.map((desktopSpan) => ({
@@ -1292,6 +1289,171 @@ function LayoutPresetButtons({
   );
 }
 
+type GridColumnsCardizeControlsState = {
+  active: boolean;
+  toggleLocked: boolean;
+  helperCopy?: string;
+};
+
+type GridColumnsSpanTotalRowState = {
+  id: "desktop" | "tablet" | "mobile";
+  label: string;
+  total: number;
+  status: "single-row" | "underfilled" | "wraps";
+  message: string;
+};
+
+function resolveGridColumnsCardizeControlsState(
+  variant: GridColumnsVariantId,
+  cardizeColumns: boolean
+): GridColumnsCardizeControlsState {
+  if (variant === "masonry-lite") {
+    return {
+      active: true,
+      toggleLocked: true,
+      helperCopy:
+        "Masonry Lite always renders cardized column wrappers, so this toggle is locked on for truthful preview behavior.",
+    };
+  }
+
+  if (!cardizeColumns) {
+    return {
+      active: false,
+      toggleLocked: false,
+      helperCopy:
+        "Turn on Cardized columns to edit shared wrapper background, border, radius, and padding tokens.",
+    };
+  }
+
+  return {
+    active: true,
+    toggleLocked: false,
+  };
+}
+
+function handleGridColumnsVariantSelection({
+  nextVariant,
+  value,
+  onChange,
+  onVariantChange,
+}: {
+  nextVariant: string;
+  value: GridColumnsData;
+  onChange: (next: GridColumnsData) => void;
+  onVariantChange?: (next: string) => void;
+}) {
+  if (!onVariantChange) return;
+
+  const resolvedVariant = resolveGridColumnsVariant(nextVariant);
+  if (resolvedVariant === "asymmetric") {
+    onChange(applyGridColumnsAsymmetricPreset(value));
+  }
+  onVariantChange(resolvedVariant);
+}
+
+function AsymmetricVariantNotice({
+  value,
+  onChange,
+  variant,
+}: {
+  value: GridColumnsData;
+  onChange: (next: GridColumnsData) => void;
+  variant: string;
+}) {
+  if (resolveGridColumnsVariant(variant) !== "asymmetric") return null;
+
+  const state = resolveGridColumnsAsymmetricVariantState(normalizeValue(value).columns);
+  if (state.mode === "preset") {
+    return (
+      <p className="text-xs text-muted-foreground">
+        Asymmetric desktop preset is active for the current columns.
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+      <p>{state.message}</p>
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        onClick={() => onChange(applyGridColumnsAsymmetricPreset(value))}
+      >
+        Reapply asymmetric desktop preset
+      </Button>
+    </div>
+  );
+}
+
+function resolveGridColumnsSpanTotalRowState(
+  id: GridColumnsSpanTotalRowState["id"],
+  label: string,
+  total: number
+): GridColumnsSpanTotalRowState {
+  if (total === 12) {
+    return {
+      id,
+      label,
+      total,
+      status: "single-row",
+      message: "fills one 12-column row.",
+    };
+  }
+
+  if (total < 12) {
+    return {
+      id,
+      label,
+      total,
+      status: "underfilled",
+      message: "leaves unused width in the row.",
+    };
+  }
+
+  return {
+    id,
+    label,
+    total,
+    status: "wraps",
+    message: "continues onto additional rows.",
+  };
+}
+
+function GridColumnsSpanTotalsNotice({ value }: { value: GridColumnsData }) {
+  const totals = calculateGridColumnsSpanTotals(normalizeValue(value).columns);
+  const rows = [
+    resolveGridColumnsSpanTotalRowState("desktop", "Desktop", totals.desktop),
+    resolveGridColumnsSpanTotalRowState("tablet", "Tablet", totals.tablet),
+    resolveGridColumnsSpanTotalRowState("mobile", "Mobile", totals.mobile),
+  ] satisfies GridColumnsSpanTotalRowState[];
+  const hasNonSingleRowTotals = rows.some((row) => row.status !== "single-row");
+
+  return (
+    <div className="space-y-2 rounded-md border bg-muted/20 p-3 text-xs">
+      <p className="font-medium text-foreground">Current span totals</p>
+      {rows.map((row) => (
+        <p
+          key={row.id}
+          className={row.status === "single-row" ? "text-muted-foreground" : "text-amber-700"}
+        >
+          {row.label} total: {row.total} / 12 - {row.message}
+        </p>
+      ))}
+      {hasNonSingleRowTotals ? (
+        <p className="text-amber-700">
+          Grid Columns keeps saved spans as authored. Totals above 12 continue onto additional rows,
+          and totals below 12 leave unused width. Runtime does not auto-balance them.
+        </p>
+      ) : (
+        <p className="text-muted-foreground">
+          All current breakpoint totals fill a single 12-column row.
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function GridColumnsWizardEditor({
   value,
   onChange,
@@ -1319,7 +1481,14 @@ export function GridColumnsWizardEditor({
         <p className="text-sm font-medium">Grid style</p>
         <Select
           value={resolveGridColumnsVariant(variant)}
-          onValueChange={(next) => onVariantChange?.(next)}
+          onValueChange={(next) =>
+            handleGridColumnsVariantSelection({
+              nextVariant: next,
+              value,
+              onChange,
+              onVariantChange,
+            })
+          }
         >
           <SelectTrigger>
             <SelectValue placeholder="Select variant" />
@@ -1333,6 +1502,8 @@ export function GridColumnsWizardEditor({
           </SelectContent>
         </Select>
       </div>
+
+      <AsymmetricVariantNotice value={value} onChange={onChange} variant={variant} />
 
       <ColumnsCountControl value={value} onChange={onChange} context={context} />
 
@@ -1410,8 +1581,10 @@ export function GridColumnsVisualEditor({
   const normalized = normalizeValue(value);
   const style = normalized.style ?? gridColumnsDefaults.style!;
   const resolvedVariant = resolveGridColumnsVariant(variant);
-  const effectiveCardizeColumns =
-    resolvedVariant === "masonry-lite" || Boolean(style.cardizeColumns);
+  const cardizeControlsState = resolveGridColumnsCardizeControlsState(
+    resolvedVariant,
+    Boolean(style.cardizeColumns)
+  );
   const hasLiveColumnSlots = Boolean(
     context?.slotTargets?.some((target) => target.definitionId === "column")
   );
@@ -1422,7 +1595,19 @@ export function GridColumnsVisualEditor({
         title="Variant and layout structure"
         description="Choose grid behavior, alignment, and column-count guidance."
       >
-        <VariantCards value={resolvedVariant} onChange={onVariantChange} />
+        <VariantCards
+          value={resolvedVariant}
+          onChange={(next) =>
+            handleGridColumnsVariantSelection({
+              nextVariant: next,
+              value,
+              onChange,
+              onVariantChange,
+            })
+          }
+        />
+
+        <AsymmetricVariantNotice value={value} onChange={onChange} variant={variant} />
 
         <ColumnsCountControl value={value} onChange={onChange} context={context} />
 
@@ -1476,6 +1661,7 @@ export function GridColumnsVisualEditor({
           context={context}
           onBlockPatch={onBlockPatch}
         />
+        <GridColumnsSpanTotalsNotice value={value} />
         <div className="flex flex-wrap gap-2">
           <Button
             type="button"
@@ -1577,22 +1763,19 @@ export function GridColumnsVisualEditor({
               </p>
             </div>
             <Switch
-              checked={effectiveCardizeColumns}
-              disabled={resolvedVariant === "masonry-lite"}
+              checked={cardizeControlsState.active}
+              disabled={cardizeControlsState.toggleLocked}
               onCheckedChange={(checked) =>
                 updateStyle(value, onChange, { cardizeColumns: checked })
               }
             />
           </div>
         </div>
-        {resolvedVariant === "masonry-lite" ? (
-          <p className="text-xs text-muted-foreground">
-            Masonry Lite always renders cardized column wrappers, so this toggle is locked on for
-            truthful preview behavior.
-          </p>
+        {cardizeControlsState.helperCopy ? (
+          <p className="text-xs text-muted-foreground">{cardizeControlsState.helperCopy}</p>
         ) : null}
 
-        {effectiveCardizeColumns ? (
+        {cardizeControlsState.active ? (
           <>
             <ColorField
               label="Column background"
@@ -1711,8 +1894,10 @@ export function GridColumnsAdvancedEditor({
   const normalized = normalizeValue(value);
   const style = normalized.style ?? gridColumnsDefaults.style!;
   const resolvedVariant = resolveGridColumnsVariant(variant);
-  const effectiveCardizeColumns =
-    resolvedVariant === "masonry-lite" || Boolean(style.cardizeColumns);
+  const cardizeControlsState = resolveGridColumnsCardizeControlsState(
+    resolvedVariant,
+    Boolean(style.cardizeColumns)
+  );
 
   return (
     <div className="space-y-4">
@@ -1789,19 +1974,16 @@ export function GridColumnsAdvancedEditor({
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium">Cardized columns</p>
             <Switch
-              checked={effectiveCardizeColumns}
-              disabled={resolvedVariant === "masonry-lite"}
+              checked={cardizeControlsState.active}
+              disabled={cardizeControlsState.toggleLocked}
               onCheckedChange={(checked) =>
                 updateStyle(value, onChange, { cardizeColumns: checked })
               }
             />
           </div>
         </div>
-        {resolvedVariant === "masonry-lite" ? (
-          <p className="text-xs text-muted-foreground">
-            Masonry Lite always renders cardized column wrappers, so this toggle is locked on for
-            truthful preview behavior.
-          </p>
+        {cardizeControlsState.helperCopy ? (
+          <p className="text-xs text-muted-foreground">{cardizeControlsState.helperCopy}</p>
         ) : null}
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -1809,6 +1991,7 @@ export function GridColumnsAdvancedEditor({
             <p className="text-sm font-medium">Border width</p>
             <Select
               value={style.columnBorderWidth ?? "1"}
+              disabled={!cardizeControlsState.active}
               onValueChange={(next) =>
                 updateStyle(value, onChange, { columnBorderWidth: next as GridColumnsBorderWidth })
               }
@@ -1830,6 +2013,7 @@ export function GridColumnsAdvancedEditor({
             <p className="text-sm font-medium">Column padding</p>
             <Select
               value={style.columnPadding ?? "4"}
+              disabled={!cardizeControlsState.active}
               onValueChange={(next) =>
                 updateStyle(value, onChange, { columnPadding: next as GridColumnsPadding })
               }

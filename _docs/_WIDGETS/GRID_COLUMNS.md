@@ -14,8 +14,8 @@ schema-first contract.
 ## Variants
 
 - `equal`: balanced columns with equal visual weight
-- `asymmetric`: first column gets fallback emphasis when spans are not explicitly
-  authored
+- `asymmetric`: selecting the variant reapplies the current desktop preset, while later
+  manual desktop span edits stay authoritative until the preset is reapplied
 - `masonry-lite`: column wrappers are always cardized for dense mixed-height
   layouts
 
@@ -55,6 +55,9 @@ Notes:
   repeatable-slot reorder seam.
 - `masonry-lite` locks the global cardize toggle on with explicit explanatory
   copy for truthful preview behavior.
+- Visual shows current desktop/tablet/mobile span totals and explains whether
+  each breakpoint fills one row, wraps onto additional rows, or leaves unused
+  width.
 
 ### Advanced
 
@@ -63,7 +66,9 @@ Notes:
 - per-column override tokens for surface, overflow, height, and alignment
 - normalized payload snapshot
 - `masonry-lite` keeps the global cardize toggle locked on here as well so the
-  advanced editor does not drift from Visual/runtime truthfulness.
+  advanced editor does not drift from Visual/runtime truthfulness
+- border-width and column-padding controls stay disabled until cardized
+  styling is active, with explicit helper copy when they are inactive
 
 ## Runtime Behavior
 
@@ -88,6 +93,9 @@ Notes:
 - preserves backward compatibility for legacy payloads by treating omitted
   `minHeight` as the historical `min-h-[6rem]` output and omitted per-column
   overrides as inheritance from global widget style
+- does not auto-balance saved span totals at runtime; totals above `12` wrap
+  onto additional rows and totals below `12` leave unused width, with the
+  editor exposing that state explicitly
 
 ## Bounded Token Sets
 
@@ -157,11 +165,11 @@ Notes:
   fragments, and unknown nested style keys are rejected by schema validation
 - `gapX` and `gapY` remain separate persisted fields; TASK-271 only expanded the
   bounded token list and clarified editor labels
+- global and per-column color text inputs preserve approved `var(--color-*)`
+  tokens verbatim, while swatch inputs fall back to preview colors without
+  rewriting saved token values
 
-## Explicit Non-Scope / Deferred Owners
+## Explicit Non-Scope
 
-- shared span-truthfulness, current-sum validation, inactive cardize controls,
-  and CSS-variable picker truthfulness remain shared follow-up scope under
-  `TASK-325`
 - raw custom CSS classes per column are intentionally rejected until a safe
   class registry/policy exists

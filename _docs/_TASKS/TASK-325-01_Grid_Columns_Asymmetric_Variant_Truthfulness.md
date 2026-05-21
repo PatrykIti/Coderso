@@ -6,7 +6,7 @@
 **Category:** Shared Widgets + Grid Columns + Admin UI + Runtime Render
 **Estimated Effort:** Medium
 **Dependencies:** TASK-325
-**Status:** To Do
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -106,3 +106,7 @@ No API routes are added.
 - Reapplying the preset updates the current columns atomically.
 - Custom spans stay authoritative and are explained truthfully in the editor.
 
+## Completion Notes (2026-05-21)
+
+- Selecting `asymmetric` in Wizard and Visual now reapplies the current desktop preset atomically.
+- Saved `asymmetric` blocks with equal or custom desktop spans now show truthful status copy and a bounded reapply action instead of silently drifting.

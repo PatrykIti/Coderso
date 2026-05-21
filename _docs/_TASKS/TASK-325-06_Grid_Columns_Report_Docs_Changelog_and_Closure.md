@@ -6,7 +6,7 @@
 **Category:** Documentation + QA + Closure
 **Estimated Effort:** Medium
 **Dependencies:** TASK-325-05
-**Status:** To Do
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -100,3 +100,18 @@ No API routes are added by this closure leaf.
   itself.
 - Board/docs/changelog match the final shipped result.
 
+## Validation Notes (2026-05-21)
+
+- `bun run test:vitest -- tests/vitest/widgets/gridColumns.test.tsx` - passed (`22` tests)
+- `bun run test:vitest -- tests/vitest/ui/grid-columns-editor-wave.test.tsx` - passed (`18` tests)
+- `bun --cwd core lint` - passed
+- `bun --cwd core lint:types` - passed
+- `bun run gates:coderso` - passed
+- `git diff --check` - passed
+- `bun run precommit` - passed
+- `bun run scan:security:strict` - could not complete in the local environment because `semgrep`, `trivy`, and `gitleaks` were not installed in `PATH`; `bun audit` ran successfully inside the same command
+
+## Completion Notes (2026-05-21)
+
+- Report, widget docs, task board, and changelog are synchronized with the shipped TASK-325 outcome.
+- The family-wide validation commands are complete and recorded above together with the local strict-scan tooling limitation.

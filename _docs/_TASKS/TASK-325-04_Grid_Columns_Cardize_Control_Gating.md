@@ -6,7 +6,7 @@
 **Category:** Shared Widgets + Grid Columns + Admin UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-325
-**Status:** To Do
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -86,3 +86,7 @@ No API routes are added.
 - Cardize-only controls no longer appear active when they cannot affect runtime.
 - `masonry-lite` remains locked on with truthful explanatory copy.
 
+## Completion Notes (2026-05-21)
+
+- Visual hides cardize-only global surface controls while cardized styling is off and explains how to enable them.
+- Advanced disables the cardize-only selects until cardized styling is active, while `masonry-lite` keeps the lock reason explicit in both surfaces.

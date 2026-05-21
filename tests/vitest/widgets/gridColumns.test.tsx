@@ -10,11 +10,15 @@ import {
 } from "../../../core/admin/ui/widgets/editors/GridColumnsEditors";
 import { createHeroWidget, heroDefaults, type HeroData } from "../../../core/widgets/core/hero";
 import {
+  applyGridColumnsAsymmetricPreset,
+  calculateGridColumnsSpanTotals,
   createGridColumnsWidget,
   gridColumnsDefaults,
+  gridColumnsOverflowDecision,
   GridColumnsBlock,
   normalizeGridColumnsData,
   reorderGridColumnsColumnsAndSlots,
+  resolveGridColumnsAsymmetricVariantState,
   resolveGridColumnsVariant,
   type GridColumnsData,
 } from "../../../core/widgets/core/gridColumns";
@@ -194,6 +198,67 @@ test("grid columns normalization keeps deterministic ids and bounds", () => {
   expect(normalized.layout?.reverseOnMobile).toBe(true);
   expect(normalized.style?.columnBorderWidth).toBe("1");
   expect(resolveGridColumnsVariant("unknown")).toBe("equal");
+});
+
+test("grid columns asymmetric helper reapplies desktop preset without rewriting tablet or mobile spans", () => {
+  const next = applyGridColumnsAsymmetricPreset({
+    columns: [
+      { id: "1", label: "Lead", desktopSpan: "6", tabletSpan: "5", mobileSpan: "11" },
+      { id: "2", label: "Side", desktopSpan: "6", tabletSpan: "7", mobileSpan: "9" },
+      { id: "3", label: "Meta", desktopSpan: "6", tabletSpan: "4", mobileSpan: "8" },
+    ],
+  });
+
+  expect(next.columns?.map((column) => column.desktopSpan)).toEqual(["6", "3", "3"]);
+  expect(next.columns?.map((column) => column.tabletSpan)).toEqual(["5", "7", "4"]);
+  expect(next.columns?.map((column) => column.mobileSpan)).toEqual(["11", "9", "8"]);
+});
+
+test("grid columns asymmetric state distinguishes preset, equal, and custom desktop spans", () => {
+  expect(
+    resolveGridColumnsAsymmetricVariantState([
+      { id: "1", desktopSpan: "8" },
+      { id: "2", desktopSpan: "4" },
+    ])
+  ).toEqual({ mode: "preset" });
+
+  expect(
+    resolveGridColumnsAsymmetricVariantState([
+      { id: "1", desktopSpan: "6" },
+      { id: "2", desktopSpan: "6" },
+    ])
+  ).toMatchObject({
+    mode: "equal",
+    message: expect.stringContaining("matching desktop spans"),
+  });
+
+  expect(
+    resolveGridColumnsAsymmetricVariantState([
+      { id: "1", desktopSpan: "7" },
+      { id: "2", desktopSpan: "5" },
+    ])
+  ).toMatchObject({
+    mode: "custom",
+    message: expect.stringContaining("Custom desktop spans"),
+  });
+});
+
+test("grid columns span totals helper reports current desktop, tablet, and mobile sums", () => {
+  expect(
+    calculateGridColumnsSpanTotals([
+      { id: "1", desktopSpan: "7", tabletSpan: "6", mobileSpan: "12" },
+      { id: "2", desktopSpan: "5", tabletSpan: "6", mobileSpan: "12" },
+      { id: "3", desktopSpan: "2", tabletSpan: "4", mobileSpan: "6" },
+    ])
+  ).toEqual({
+    desktop: 14,
+    tablet: 16,
+    mobile: 30,
+  });
+});
+
+test("grid columns records the explicit no-runtime-guard overflow decision", () => {
+  expect(gridColumnsOverflowDecision).toBe("no-runtime-guard");
 });
 
 test("grid columns validator accepts expanded model", () => {

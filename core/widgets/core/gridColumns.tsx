@@ -112,6 +112,19 @@ export type GridColumnsData = {
   };
 };
 
+export type GridColumnsSpanTotals = {
+  desktop: number;
+  tablet: number;
+  mobile: number;
+};
+
+export type GridColumnsAsymmetricVariantState =
+  | { mode: "preset" }
+  | { mode: "custom"; message: string }
+  | { mode: "equal"; message: string };
+
+export type GridColumnsOverflowDecision = "no-runtime-guard";
+
 export const gridColumnsColumnMin = 2;
 export const gridColumnsColumnMax = 6;
 
@@ -215,6 +228,8 @@ export const gridColumnsDefaults: GridColumnsData = {
     columnPadding: "4",
   },
 };
+
+export const gridColumnsOverflowDecision: GridColumnsOverflowDecision = "no-runtime-guard";
 
 const joinClasses = (...classes: Array<string | false | undefined>) =>
   classes.filter(Boolean).join(" ");
@@ -500,6 +515,90 @@ export function buildDefaultGridColumnsColumn(
   };
 }
 
+const parseGridColumnsSpan = (value: GridColumnsSpan) => Number.parseInt(value, 10);
+
+export function buildBalancedGridColumnsDesktopSpans(count: number): GridColumnsSpan[] {
+  const clamped = Math.max(1, Math.min(gridColumnsColumnMax, Math.floor(count)));
+  const base = Math.floor(12 / clamped);
+  const remainder = 12 - base * clamped;
+  return Array.from(
+    { length: clamped },
+    (_, index) => String(base + (index < remainder ? 1 : 0)) as GridColumnsSpan
+  );
+}
+
+export function buildAsymmetricGridColumnsDesktopSpans(count: number): GridColumnsSpan[] {
+  const clamped = Math.max(1, Math.min(gridColumnsColumnMax, Math.floor(count)));
+  if (clamped <= 1) return ["12"];
+  if (clamped === 2) return ["8", "4"];
+  if (clamped === 3) return ["6", "3", "3"];
+  return Array.from({ length: clamped }, (_, index) => (index === 0 ? "6" : "3"));
+}
+
+export function calculateGridColumnsSpanTotals(
+  columns: GridColumnsColumn[] | undefined
+): GridColumnsSpanTotals {
+  const source = Array.isArray(columns) ? columns : [];
+  return source.reduce<GridColumnsSpanTotals>(
+    (totals, column) => ({
+      desktop: totals.desktop + parseGridColumnsSpan(resolveSpanToken(column.desktopSpan, "6")),
+      tablet: totals.tablet + parseGridColumnsSpan(resolveSpanToken(column.tabletSpan, "6")),
+      mobile: totals.mobile + parseGridColumnsSpan(resolveSpanToken(column.mobileSpan, "12")),
+    }),
+    {
+      desktop: 0,
+      tablet: 0,
+      mobile: 0,
+    }
+  );
+}
+
+export function resolveGridColumnsAsymmetricVariantState(
+  columns: GridColumnsColumn[] | undefined
+): GridColumnsAsymmetricVariantState {
+  const source = Array.isArray(columns) ? columns : [];
+  if (source.length === 0) {
+    return {
+      mode: "equal",
+      message:
+        "This saved layout still uses matching desktop spans. Reapply Asymmetric to widen the lead column.",
+    };
+  }
+
+  const currentDesktopSpans = source.map((column) => resolveSpanToken(column.desktopSpan, "6"));
+  const presetSpans = buildAsymmetricGridColumnsDesktopSpans(source.length);
+  if (currentDesktopSpans.every((span, index) => span === presetSpans[index])) {
+    return { mode: "preset" };
+  }
+
+  if (new Set(currentDesktopSpans).size === 1) {
+    return {
+      mode: "equal",
+      message:
+        "This saved layout still uses matching desktop spans. Reapply Asymmetric to widen the lead column.",
+    };
+  }
+
+  return {
+    mode: "custom",
+    message: "Custom desktop spans override the asymmetric preset until you reapply it.",
+  };
+}
+
+export function applyGridColumnsAsymmetricPreset(data: GridColumnsData): GridColumnsData {
+  const current = normalizeGridColumnsData(data);
+  const columns = current.columns ?? [];
+  if (columns.length === 0) return current;
+  const presetSpans = buildAsymmetricGridColumnsDesktopSpans(columns.length);
+  return normalizeGridColumnsData({
+    ...current,
+    columns: columns.map((column, index) => ({
+      ...column,
+      desktopSpan: presetSpans[index] ?? column.desktopSpan,
+    })),
+  });
+}
+
 const resolveColumnId = (value: string | undefined, index: number, used: Set<string>) => {
   const base = value?.trim() || String(index + 1);
   if (!used.has(base)) {
@@ -551,10 +650,7 @@ const fallbackSpanForVariant = (
       if (count >= 3) return "6";
       return index === 0 ? "7" : "5";
     }
-    if (count === 1) return "12";
-    if (count === 2) return index === 0 ? "8" : "4";
-    if (count === 3) return index === 0 ? "6" : "3";
-    return index === 0 ? "6" : "3";
+    return buildAsymmetricGridColumnsDesktopSpans(count)[index] ?? "3";
   }
 
   if (variant === "masonry-lite") {

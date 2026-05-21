@@ -6,7 +6,7 @@
 **Category:** Shared Widgets + Grid Columns + Runtime Render + QA
 **Estimated Effort:** Medium
 **Dependencies:** TASK-325-01, TASK-325-02, TASK-325-03, TASK-325-04
-**Status:** To Do
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -94,3 +94,12 @@ No API routes are added.
 - Any runtime guard that lands is bounded and tested.
 - If no runtime guard lands, the rejection is documented with evidence.
 
+## Decision Outcome (2026-05-21)
+
+- The final decision is explicit rejection: no bounded runtime overflow guard was added.
+- `gridColumnsOverflowDecision` is now `"no-runtime-guard"`.
+- Runtime keeps saved spans as authored, while the editor now exposes current totals and row-fit consequences so wrap/unused-width behavior is no longer implicit.
+
+## Completion Notes
+
+- TASK-325-05 closes by documenting the runtime rejection in code, tests, report evidence, and widget docs instead of leaving P3 as an implicit follow-up.
