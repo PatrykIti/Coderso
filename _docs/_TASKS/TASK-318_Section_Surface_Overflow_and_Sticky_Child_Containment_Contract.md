@@ -36,13 +36,13 @@ their own task slices.
 
 ## Sub-Tasks
 
-- [ ] Split clipping/background layers from the live content flow so child
+- [x] Split clipping/background layers from the live content flow so child
   widgets can rely on CSS sticky where the product contract expects it.
-- [ ] Preserve Section background, overlay, border, and radius behavior while
+- [x] Preserve Section background, overlay, border, and radius behavior while
   removing the sticky blocker from slotted child content.
-- [ ] Verify the change against a sticky-child consumer such as Navigation
+- [x] Verify the change against a sticky-child consumer such as Navigation
   without moving Navigation-specific runtime logic into Section.
-- [ ] Keep any remaining page-shell-only overflow blockers explicit if evidence
+- [x] Keep any remaining page-shell-only overflow blockers explicit if evidence
   shows an additional owner outside `SectionBlock`.
 
 ## Files to Change

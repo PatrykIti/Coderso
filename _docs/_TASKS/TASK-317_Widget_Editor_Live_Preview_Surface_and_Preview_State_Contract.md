@@ -41,17 +41,17 @@ preview shells when the missing behavior is a builder/editor-platform concern.
 
 ## Sub-Tasks
 
-- [ ] Define one shared editor-preview surface for selected widget blocks that
+- [x] Define one shared editor-preview surface for selected widget blocks that
   works in Wizard, Visual, and Advanced without mutating saved widget JSON.
-- [ ] Reuse the current block data plus optional `previewState.dataPatch`
+- [x] Reuse the current block data plus optional `previewState.dataPatch`
   instead of creating a second widget-config model inside editor panels.
-- [ ] Keep the preview render path on the real `WidgetRenderer` contract with
+- [x] Keep the preview render path on the real `WidgetRenderer` contract with
   `renderContext={{ mode: "editor-preview" }}` so widget runtime/editor parity
   stays truthful.
-- [ ] Keep widget-specific async preview data optional: widgets with their own
+- [x] Keep widget-specific async preview data optional: widgets with their own
   preview resolvers may enrich `previewState`, but this shared task must not
   invent a generic server-preview fetcher.
-- [ ] Add focused shared tests for the preview surface plus one consuming widget
+- [x] Add focused shared tests for the preview surface plus one consuming widget
   proof after a widget family opts in.
 
 ## Files to Change
@@ -64,7 +64,7 @@ preview shells when the missing behavior is a builder/editor-platform concern.
 | `core/admin/ui/pages/builder/AdvancedPanel.tsx` | Keep preview placement and mode copy truthful when Advanced uses the shared live-preview surface. |
 | `core/widgets/types.ts` | Reuse or narrowly extend shared editor preview context types only if the surface needs an explicit typed seam. |
 | `core/widgets/renderers/widgetRenderer.tsx` | Preserve `editor-preview` render-context propagation so the shared surface renders the same widget/runtime contract as the builder canvas. |
-| `tests/vitest/ui/widget-editor-live-preview-surface.test.tsx` | Add a new shared integration-style test for the real `BlockSettings -> WidgetRenderer` preview surface using current block state plus `previewState.dataPatch`. |
+| `tests/vitest/pageBuilder/blockSettings-wave.test.tsx` | Add shared integration-style proof for the real `BlockSettings -> WidgetRenderer` preview surface using current block state plus `previewState.dataPatch`. |
 | `tests/vitest/ui/navigation-editor-wave.test.tsx` | Add a consuming-widget proof once Navigation uses the shared preview surface. |
 | `_docs/PREVIEW_SPEC.md` | Update only if the shared admin preview/editor-preview contract changes. |
 
@@ -152,7 +152,7 @@ This shared task adds no API routes.
 
 ## Testing Requirements
 
-- `bun run test:vitest -- tests/vitest/ui/widget-editor-live-preview-surface.test.tsx`
+- `bun run test:vitest -- tests/vitest/pageBuilder/blockSettings.test.tsx tests/vitest/pageBuilder/blockSettings-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/navigation-editor-wave.test.tsx` when
   Navigation adopts the shared surface
 - `bun --cwd core lint`
