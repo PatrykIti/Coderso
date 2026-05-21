@@ -150,6 +150,10 @@ This closure leaf does not add API routes.
 - `bun run test:vitest -- tests/vitest/widgets/listingFilters.test.tsx tests/vitest/widgets/listingRuntimeScript.test.ts tests/vitest/ui/listing-filters-editor-wave.test.tsx tests/vitest/ui/listing-filters-query-parser.test.ts tests/vitest/widgets/navigation.test.tsx tests/vitest/widgets/navigationRuntimeScript.test.ts tests/vitest/ui/navigation-editor-wave.test.tsx tests/vitest/widgets/newsletter.test.tsx tests/vitest/ui/newsletter-editor-wave.test.tsx tests/vitest/widgets/pricingPlans.test.tsx tests/vitest/ui/pricing-plans-editor-wave.test.tsx tests/vitest/widgets/productCompare.test.tsx tests/vitest/ui/product-compare-editor-wave.test.tsx tests/vitest/ui/product-compare-admin-preview.test.tsx`: passed (`14` files, `116` tests)
 - `bun run test:vitest -- tests/vitest/widgets/searchBox.test.tsx tests/vitest/ui/search-box-editor-wave.test.tsx`: passed (`2` files, `14` tests)
 - `bun test tests/unit/navigation/navigationRuntimeResolver.test.ts tests/unit/widgets/validator.test.ts tests/unit/widgets/registry.test.ts tests/unit/commerce/commerceWidgetRuntime.test.ts`: passed (`43` tests)
+- `bun run test:bun`: passed during the audit follow-up (`830` tests across
+  `210` files; `604` passed, `226` skipped in DB-gated or live-only lanes)
+- `bun run test:vitest`: passed during the audit follow-up (`602` files,
+  `2902` tests)
 - `bun run gates:coderso`: passed
 - `bun run scan:security:strict`: attempted during the 2026-05-21 audit wave but failed outside TASK-273 scope because the local Semgrep trust store had no CA anchors and `bun audit` could not reach the advisory endpoint; Trivy and Gitleaks sub-scanners were clean in the same run
 - `bun run precommit`: passed repeatedly while staging the 2026-05-21 audit commits
