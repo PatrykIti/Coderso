@@ -156,9 +156,14 @@ No API routes are added.
   not reach the advisory endpoint; Trivy and Gitleaks sub-scanners were clean
   in the same run
 - `bun run precommit` - passed
+- 2026-05-21 audit rerun: `bun run test:vitest -- tests/vitest/ui/clearable-fields.test.tsx tests/vitest/ui/posts-feed-editor-wave.test.tsx` passed after restoring shared feedback for bare `ClearableFieldHeader` surfaces and adding explicit Posts Feed undo proof
 
 ## Completion Notes
 
 - 2026-05-21: `ClearableInputField` now emits shared toast feedback with an
   `Undo` action that restores the exact prior value through the common clear
   helper path.
+- 2026-05-21 audit follow-up: bare `ClearableFieldHeader` clears now emit the
+  same shared feedback channel instead of failing silently, and common
+  value/onChange wrappers restore the prior value through the shared helper when
+  they can do so exactly.

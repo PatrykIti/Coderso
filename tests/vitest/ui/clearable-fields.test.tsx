@@ -15,6 +15,7 @@ vi.mock("sonner", () => ({
 import {
   ColorTokenHint,
   ColorContrastNotice,
+  ClearableFieldHeader,
   ClearableInputField,
   SharedColorFieldInputs,
   hasClearableFieldValue,
@@ -158,6 +159,29 @@ test("clearable input disables empty clear and delegates configured clear behavi
     expect(onChange).toHaveBeenCalledWith("transparent");
   } finally {
     filled.cleanup();
+  }
+});
+
+test("clearable field header emits shared feedback even without an undo handler", () => {
+  const onClear = vi.fn();
+  const view = mount(
+    <ClearableFieldHeader
+      label="Background gradient"
+      value="linear-gradient(45deg, #111111, #222222)"
+      onClear={onClear}
+    />
+  );
+
+  try {
+    const button = view.container.querySelector("button");
+    expect(button?.disabled).toBe(false);
+    React.act(() => {
+      button?.click();
+    });
+    expect(onClear).toHaveBeenCalledTimes(1);
+    expect(toastInfo).toHaveBeenCalledWith("Background gradient cleared.");
+  } finally {
+    view.cleanup();
   }
 });
 

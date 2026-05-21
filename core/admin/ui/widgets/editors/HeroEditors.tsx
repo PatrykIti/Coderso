@@ -474,7 +474,18 @@ function HeroPosterFields({
 
   return (
     <div className="space-y-3 rounded-md border border-border/70 p-3">
-      <ClearableFieldHeader label="Video poster image" value={media.posterSrc} onClear={onClear} />
+      <ClearableFieldHeader
+        label="Video poster image"
+        value={media.posterSrc}
+        onClear={onClear}
+        onRestore={() =>
+          onChange({
+            posterSource: media.posterSource,
+            posterAssetId: media.posterAssetId,
+            posterSrc: media.posterSrc,
+          })
+        }
+      />
       <div className="space-y-2">
         <p className="text-sm font-medium">Poster source</p>
         <Select
@@ -2152,6 +2163,7 @@ export function HeroVisualEditor({
                   label="Media overlay"
                   value={media.overlay}
                   onClear={() => clearMediaField("overlay")}
+                  onRestoreValue={(next) => updateMedia({ overlay: next })}
                 />
                 <Input
                   value={media.overlay ?? ""}
@@ -2670,6 +2682,7 @@ export function HeroVisualEditor({
                 label="Background media overlay"
                 value={backgroundMedia.overlay}
                 onClear={() => clearBackgroundMediaField("overlay")}
+                onRestoreValue={(next) => updateBackgroundMedia({ overlay: next })}
               />
               <Input
                 value={backgroundMedia.overlay ?? ""}
@@ -3095,6 +3108,7 @@ export function HeroAdvancedEditor({ value, onChange }: WidgetEditorProps<HeroDa
                 label="Background media overlay"
                 value={backgroundMedia.overlay}
                 onClear={() => clearBackgroundMediaField("overlay")}
+                onRestoreValue={(next) => updateBackgroundMedia({ overlay: next })}
               />
               <Input
                 value={backgroundMedia.overlay ?? ""}

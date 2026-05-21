@@ -6,6 +6,8 @@ import { afterEach, expect, test, vi } from "vitest";
 
 import type { PostsFeedData } from "../../../core/widgets/core/postsFeed";
 
+const toastInfo = vi.hoisted(() => vi.fn());
+
 const postsFeedState = vi.hoisted(() => ({
   posts: [
     {
@@ -263,6 +265,12 @@ vi.mock("@/services/mediaClient", () => ({
   }),
 }));
 
+vi.mock("sonner", () => ({
+  toast: {
+    info: toastInfo,
+  },
+}));
+
 const createDeferred = <T,>() => {
   let resolve!: (value: T | PromiseLike<T>) => void;
   let reject!: (reason?: unknown) => void;
@@ -357,6 +365,7 @@ const clickElement = (element: Element | null | undefined) => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  toastInfo.mockReset();
   postsFeedState.reset();
   previewResourcesState.reset();
 });
@@ -910,6 +919,55 @@ test("PostsFeed visual editor keeps preview ready when routes or media degrade",
         }),
       }),
     });
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PostsFeed visual editor reuses the shared clear undo contract for card background", async () => {
+  const { PostsFeedVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/PostsFeedEditors");
+
+  const Harness = () => {
+    const [value, setValue] = useState<PostsFeedData>({
+      style: {
+        backgroundColor: "var(--color-surface)",
+      },
+    });
+
+    return <PostsFeedVisualEditor value={value} onChange={setValue} variant="cards" />;
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    await flush();
+    const input = findInputByPlaceholder(view.container, "var(--color-bg)");
+    const clearButton = input?.parentElement?.parentElement?.querySelector("button");
+
+    expect(input).toBeInstanceOf(HTMLInputElement);
+    expect((input as HTMLInputElement | undefined)?.value).toBe("var(--color-surface)");
+
+    React.act(() => {
+      clearButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await flush();
+
+    expect((input as HTMLInputElement | undefined)?.value).toBe("");
+    expect(toastInfo).toHaveBeenCalledWith("Card background cleared.", {
+      action: {
+        label: "Undo",
+        onClick: expect.any(Function),
+      },
+    });
+
+    const [, options] = toastInfo.mock.calls.at(-1) ?? [];
+    React.act(() => {
+      options?.action?.onClick?.();
+    });
+    await flush();
+
+    expect((input as HTMLInputElement | undefined)?.value).toBe("var(--color-surface)");
   } finally {
     view.cleanup();
   }

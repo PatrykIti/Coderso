@@ -373,6 +373,7 @@ function TabsBehaviorSection({
             label="Surface color"
             value={normalized.style?.surfaceColor}
             onClear={() => clearStyleField(value, onChange, "surfaceColor")}
+            onRestoreValue={(next) => updateStyle(value, onChange, { surfaceColor: next })}
           />
           <Input
             value={normalized.style?.surfaceColor ?? tabsDefaults.style?.surfaceColor ?? ""}
@@ -393,6 +394,11 @@ function TabsBehaviorSection({
             label="Active background"
             value={normalized.style?.activeBackgroundColor}
             onClear={() => clearStyleField(value, onChange, "activeBackgroundColor")}
+            onRestoreValue={(next) =>
+              updateStyle(value, onChange, {
+                activeBackgroundColor: next,
+              })
+            }
           />
           <Input
             value={
@@ -425,6 +431,11 @@ function TabsBehaviorSection({
             label="Panel background"
             value={normalized.style?.panelBackgroundColor}
             onClear={() => clearStyleField(value, onChange, "panelBackgroundColor")}
+            onRestoreValue={(next) =>
+              updateStyle(value, onChange, {
+                panelBackgroundColor: next,
+              })
+            }
           />
           <Input
             value={

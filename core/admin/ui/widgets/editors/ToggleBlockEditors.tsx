@@ -215,6 +215,11 @@ function LabelsSection({
               helper: "",
             })
           }
+          onRestoreValue={(next) =>
+            updateLabels(value, onChange, {
+              helper: next,
+            })
+          }
         />
         <Input
           value={normalized.labels?.helper ?? ""}
@@ -273,6 +278,7 @@ function BehaviorSection({
             label="Surface color"
             value={normalized.style?.surfaceColor}
             onClear={() => clearStyleField(value, onChange, "surfaceColor")}
+            onRestoreValue={(next) => updateStyle(value, onChange, { surfaceColor: next })}
           />
           <Input
             value={normalized.style?.surfaceColor ?? toggleBlockDefaults.style?.surfaceColor ?? ""}
@@ -289,6 +295,7 @@ function BehaviorSection({
             label="Border color"
             value={normalized.style?.borderColor}
             onClear={() => clearStyleField(value, onChange, "borderColor")}
+            onRestoreValue={(next) => updateStyle(value, onChange, { borderColor: next })}
           />
           <Input
             value={normalized.style?.borderColor ?? toggleBlockDefaults.style?.borderColor ?? ""}
@@ -305,6 +312,7 @@ function BehaviorSection({
             label="Accent color"
             value={normalized.style?.accentColor}
             onClear={() => clearStyleField(value, onChange, "accentColor")}
+            onRestoreValue={(next) => updateStyle(value, onChange, { accentColor: next })}
           />
           <Input
             value={normalized.style?.accentColor ?? toggleBlockDefaults.style?.accentColor ?? ""}

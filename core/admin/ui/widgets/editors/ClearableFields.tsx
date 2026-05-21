@@ -146,22 +146,28 @@ export function ClearableFieldHeader({
   value,
   onClear,
   onRestore,
+  onRestoreValue,
   clearFeedbackLabel,
 }: {
   label: string;
   value: unknown;
   onClear?: () => void;
   onRestore?: () => void;
+  onRestoreValue?: (next: string) => void;
   clearFeedbackLabel?: string;
 }) {
   const emitClearFeedback = () => {
-    if (!onRestore && clearFeedbackLabel === undefined) return;
+    const derivedRestore =
+      onRestore ??
+      (typeof value === "string" && onRestoreValue && hasClearableFieldValue(value)
+        ? () => onRestoreValue(value)
+        : undefined);
     const feedbackLabel = (clearFeedbackLabel ?? label).trim() || label;
-    if (onRestore) {
+    if (derivedRestore) {
       toast.info(`${feedbackLabel} cleared.`, {
         action: {
           label: "Undo",
-          onClick: onRestore,
+          onClick: derivedRestore,
         },
       });
       return;

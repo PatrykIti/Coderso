@@ -940,6 +940,7 @@ export function TeamAdvancedEditor({ value, onChange }: WidgetEditorProps<TeamDa
             label="Card surface token"
             value={style.cardSurface}
             onClear={() => clearStyleField(value, onChange, "cardSurface")}
+            onRestoreValue={(next) => updateStyle(value, onChange, { cardSurface: next })}
           />
           <Input
             value={style.cardSurface ?? ""}
@@ -952,6 +953,7 @@ export function TeamAdvancedEditor({ value, onChange }: WidgetEditorProps<TeamDa
             label="Card border token"
             value={style.cardBorder}
             onClear={() => clearStyleField(value, onChange, "cardBorder")}
+            onRestoreValue={(next) => updateStyle(value, onChange, { cardBorder: next })}
           />
           <Input
             value={style.cardBorder ?? ""}

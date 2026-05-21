@@ -230,7 +230,12 @@ function ColorField({
 }) {
   return (
     <div className="space-y-2">
-      <ClearableFieldHeader label={label} value={value} onClear={onClear} />
+      <ClearableFieldHeader
+        label={label}
+        value={value}
+        onClear={onClear}
+        onRestoreValue={onChange}
+      />
       <SharedColorFieldInputs
         value={value}
         onChange={onChange}

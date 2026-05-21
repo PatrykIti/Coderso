@@ -298,7 +298,12 @@ function ColorField({
 }) {
   return (
     <div className="space-y-2">
-      <ClearableFieldHeader label={label} value={value} onClear={onClear} />
+      <ClearableFieldHeader
+        label={label}
+        value={value}
+        onClear={onClear}
+        onRestoreValue={onChange}
+      />
       <div className="grid grid-cols-[2.5rem_1fr] gap-2">
         <Input
           type="color"

@@ -115,7 +115,12 @@ function ClearableStyleInput({
 }) {
   return (
     <div className="space-y-1.5">
-      <ClearableFieldHeader label={label} value={value} onClear={onClear} />
+      <ClearableFieldHeader
+        label={label}
+        value={value}
+        onClear={onClear}
+        onRestoreValue={onChange}
+      />
       <Input
         value={value ?? ""}
         onChange={(event) => onChange(event.target.value)}

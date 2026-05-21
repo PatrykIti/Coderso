@@ -235,7 +235,12 @@ function GradientField({
 
   return (
     <div className="space-y-2">
-      <ClearableFieldHeader label="Background gradient" value={value} onClear={onClear} />
+      <ClearableFieldHeader
+        label="Background gradient"
+        value={value}
+        onClear={onClear}
+        onRestoreValue={onChange}
+      />
       <div className="space-y-2 rounded-md border p-3">
         <div
           className="h-10 rounded-md border border-border/70"
