@@ -220,6 +220,33 @@ test("grid columns asymmetric helper reapplies desktop preset without rewriting 
   expect(next.columns?.map((column) => column.mobileSpan)).toEqual(["11", "9", "8"]);
 });
 
+
+test("grid columns asymmetric helper materializes the current live slot order when reapplying", () => {
+  const next = applyGridColumnsAsymmetricPreset(
+    {
+      columns: [
+        { id: "1", label: "Lead", desktopSpan: "6", tabletSpan: "5", mobileSpan: "11" },
+        { id: "2", label: "Side", desktopSpan: "6", tabletSpan: "7", mobileSpan: "9" },
+        { id: "4", label: "Phantom", desktopSpan: "2", tabletSpan: "4", mobileSpan: "8" },
+      ],
+    },
+    ["1", "2", "3"]
+  );
+
+  expect(
+    next.columns?.map((column) => ({
+      id: column.id,
+      desktopSpan: column.desktopSpan,
+      tabletSpan: column.tabletSpan,
+      mobileSpan: column.mobileSpan,
+    }))
+  ).toEqual([
+    { id: "1", desktopSpan: "6", tabletSpan: "5", mobileSpan: "11" },
+    { id: "2", desktopSpan: "3", tabletSpan: "7", mobileSpan: "9" },
+    { id: "3", desktopSpan: "3", tabletSpan: "6", mobileSpan: "12" },
+  ]);
+});
+
 test("grid columns asymmetric desktop presets stay within 12 columns for larger counts", () => {
   expect(buildAsymmetricGridColumnsDesktopSpans(4)).toEqual(["4", "3", "3", "2"]);
   expect(buildAsymmetricGridColumnsDesktopSpans(5)).toEqual(["4", "2", "2", "2", "2"]);
@@ -290,6 +317,28 @@ test("grid columns span totals helper excludes columns hidden at each breakpoint
     desktop: 13,
     tablet: 16,
     mobile: 21,
+  });
+});
+
+
+test("grid columns span totals helper normalizes conflicting all-hidden visibility back to visible", () => {
+  expect(
+    calculateGridColumnsSpanTotals([
+      {
+        id: "1",
+        desktopSpan: "6",
+        tabletSpan: "4",
+        mobileSpan: "3",
+        hideOnMobile: true,
+        hideOnTablet: true,
+        hideOnDesktop: true,
+      },
+      { id: "2", desktopSpan: "6", tabletSpan: "8", mobileSpan: "9" },
+    ])
+  ).toEqual({
+    desktop: 12,
+    tablet: 12,
+    mobile: 12,
   });
 });
 

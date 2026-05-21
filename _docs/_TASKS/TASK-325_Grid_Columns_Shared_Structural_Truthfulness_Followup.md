@@ -201,8 +201,8 @@ No API routes are added.
 
 ## Outcome
 
-- `asymmetric` selection is now truthful: choosing the variant reapplies the current desktop preset, while saved equal/custom desktop spans surface explicit state and a reapply action.
-- Grid Columns now shows current desktop/tablet/mobile span totals from the effective visible live layout and explains whether each breakpoint fills one row, wraps onto additional rows, or leaves unused width.
+- `asymmetric` selection is now truthful: choosing the variant reapplies the current live-slot desktop preset, while drifted saved desktop spans surface explicit state and a reapply action that follows live slot order instead of raw `columns[]` order.
+- Grid Columns now shows current desktop/tablet/mobile span totals from the effective visible live layout, keeps row-level controls aligned to the current live slot order, and explains whether each breakpoint fills one row, wraps onto additional rows, or leaves unused width.
 - CSS-variable color values were already preserved correctly by the landed shared clearable-field contract; TASK-325 adds Grid Columns-specific regression coverage instead of widening that shared owner again.
 - Cardize-only controls now hide or disable truthfully when cardized styling is off, and `masonry-lite` keeps the cardized contract locked on with explicit copy.
 - `TASK-325-05` closed with an explicit runtime rejection: `gridColumnsOverflowDecision = "no-runtime-guard"`. Runtime keeps saved spans as authored and does not auto-balance them.
@@ -211,7 +211,7 @@ No API routes are added.
 
 - `bun run test:vitest -- tests/vitest/widgets/gridColumns.test.tsx` - passed (`28` tests)
 - `bun run test:vitest -- tests/vitest/ui/grid-columns-editor-wave.test.tsx` - passed (`20` tests)
-- `bun test tests/unit/widgets/validator.test.ts` - passed (`38` tests across `2` files) after the follow-up tightened the global wrapper color schema
+- `bun test tests/unit/widgets/validator.test.ts` - passed (`19` tests in `1` file, `38` expect() calls); the generic validator lane stayed green while Grid Columns-specific schema proof remains in `gridColumns.test.tsx`
 - Family-wide lint/types/gates/precommit/diff/security results are recorded in `TASK-325-06`.
 
 ## Completion Notes

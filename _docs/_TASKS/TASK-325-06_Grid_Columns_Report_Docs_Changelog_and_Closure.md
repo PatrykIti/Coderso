@@ -104,7 +104,7 @@ No API routes are added by this closure leaf.
 
 - `bun run test:vitest -- tests/vitest/widgets/gridColumns.test.tsx` - passed (`28` tests)
 - `bun run test:vitest -- tests/vitest/ui/grid-columns-editor-wave.test.tsx` - passed (`20` tests)
-- `bun test tests/unit/widgets/validator.test.ts` - passed (`38` tests across `2` files)
+- `bun test tests/unit/widgets/validator.test.ts` - passed (`19` tests in `1` file, `38` expect() calls)
 - `bun --cwd core lint` - passed
 - `bun --cwd core lint:types` - passed
 - `bun run gates:coderso` - passed

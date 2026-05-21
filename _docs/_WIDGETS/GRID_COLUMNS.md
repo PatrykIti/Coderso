@@ -169,6 +169,7 @@ Notes:
   tokens verbatim, while swatch inputs fall back to preview colors without
   rewriting saved token values
 - effective span totals follow the live slot count and each breakpoint's visibility toggles rather than the raw saved `columns[]` list alone
+- when live repeatable `column` slots exist, editor rows, layout presets, and asymmetric recovery follow the current live slot order and ignore saved phantom columns until the structure is reconciled
 
 ## Explicit Non-Scope
 

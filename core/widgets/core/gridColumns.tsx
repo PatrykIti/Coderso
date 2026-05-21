@@ -547,26 +547,30 @@ export function calculateGridColumnsSpanTotals(
   columns: GridColumnsColumn[] | undefined
 ): GridColumnsSpanTotals {
   const source = Array.isArray(columns) ? columns : [];
-  return source.reduce<GridColumnsSpanTotals>(
-    (totals, column) => ({
+  return source.reduce<GridColumnsSpanTotals>((totals, column) => {
+    const visibility = normalizeColumnVisibility(column);
+    return {
       desktop:
         totals.desktop +
-        (column.hideOnDesktop
+        (visibility.hideOnDesktop
           ? 0
           : parseGridColumnsSpan(resolveSpanToken(column.desktopSpan, "6"))),
       tablet:
         totals.tablet +
-        (column.hideOnTablet ? 0 : parseGridColumnsSpan(resolveSpanToken(column.tabletSpan, "6"))),
+        (visibility.hideOnTablet
+          ? 0
+          : parseGridColumnsSpan(resolveSpanToken(column.tabletSpan, "6"))),
       mobile:
         totals.mobile +
-        (column.hideOnMobile ? 0 : parseGridColumnsSpan(resolveSpanToken(column.mobileSpan, "12"))),
-    }),
-    {
-      desktop: 0,
-      tablet: 0,
-      mobile: 0,
-    }
-  );
+        (visibility.hideOnMobile
+          ? 0
+          : parseGridColumnsSpan(resolveSpanToken(column.mobileSpan, "12"))),
+    };
+  }, {
+    desktop: 0,
+    tablet: 0,
+    mobile: 0,
+  });
 }
 
 export function resolveGridColumnsAsymmetricVariantState(
@@ -601,9 +605,19 @@ export function resolveGridColumnsAsymmetricVariantState(
   };
 }
 
-export function applyGridColumnsAsymmetricPreset(data: GridColumnsData): GridColumnsData {
+export function applyGridColumnsAsymmetricPreset(
+  data: GridColumnsData,
+  orderedInstanceIds?: string[]
+): GridColumnsData {
   const current = normalizeGridColumnsData(data);
-  const columns = current.columns ?? [];
+  const columns =
+    orderedInstanceIds && orderedInstanceIds.length > 0
+      ? resolveGridColumnsEffectiveColumns({
+          data: current,
+          variant: "asymmetric",
+          orderedInstanceIds,
+        })
+      : (current.columns ?? []);
   if (columns.length === 0) return current;
   const presetSpans = buildAsymmetricGridColumnsDesktopSpans(columns.length);
   return normalizeGridColumnsData({

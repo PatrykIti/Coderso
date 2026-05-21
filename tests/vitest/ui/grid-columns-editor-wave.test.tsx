@@ -648,7 +648,7 @@ test("GridColumns visual editor shows current span totals and no-auto-balance gu
   }
 });
 
-test("GridColumns visual editor totals respect breakpoint visibility and live slot fallbacks", async () => {
+test("GridColumns visual editor follows the current live slot order in drifted asymmetric layouts", async () => {
   const view = await renderEditor({
     editor: "visual",
     initialVariant: "asymmetric",
@@ -663,6 +663,7 @@ test("GridColumns visual editor totals respect breakpoint visibility and live sl
           hideOnTablet: true,
         },
         { id: "2", label: "Side", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
+        { id: "4", label: "Phantom", desktopSpan: "2", tabletSpan: "4", mobileSpan: "8" },
       ],
     },
     context: {
@@ -699,11 +700,208 @@ test("GridColumns visual editor totals respect breakpoint visibility and live sl
     const text = normalizeText(columnSection.textContent);
 
     expect(normalizeText(variantSection.textContent)).toContain(
-      "custom desktop spans override the asymmetric preset"
+      "saved column metadata is out of sync"
     );
+    expect(text).toContain("editor rows follow the current live slot order");
+    expect(text).toContain("slot: column:3");
+    expect(text).not.toContain("slot: column:4");
+    expect(text).toContain("25 / 50 / 25");
     expect(text).toContain("desktop total: 15 / 12 - continues onto additional rows.");
     expect(text).toContain("tablet total: 12 / 12 - fills one 12-column row.");
     expect(text).toContain("mobile total: 36 / 12 - continues onto additional rows.");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("GridColumns visual editor reapply materializes the current live asymmetric preset", async () => {
+  const view = await renderEditor({
+    editor: "visual",
+    initialVariant: "asymmetric",
+    initialValue: {
+      columns: [
+        {
+          id: "1",
+          label: "Lead",
+          desktopSpan: "6",
+          tabletSpan: "6",
+          mobileSpan: "12",
+          hideOnTablet: true,
+        },
+        { id: "2", label: "Side", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
+        { id: "4", label: "Phantom", desktopSpan: "2", tabletSpan: "4", mobileSpan: "8" },
+      ],
+    },
+    context: {
+      surface: "page-builder",
+      slotTargets: [
+        {
+          definitionId: "column",
+          slotId: "column:1",
+          label: "Column 1",
+          kind: "repeatable",
+          instanceId: "1",
+        },
+        {
+          definitionId: "column",
+          slotId: "column:2",
+          label: "Column 2",
+          kind: "repeatable",
+          instanceId: "2",
+        },
+        {
+          definitionId: "column",
+          slotId: "column:3",
+          label: "Column 3",
+          kind: "repeatable",
+          instanceId: "3",
+        },
+      ],
+    },
+  });
+
+  try {
+    const variantSection = getSectionByTitle(view.container, "Variant and layout structure");
+
+    clickButton(findButtonsByText(variantSection, "Reapply asymmetric desktop preset")[0]);
+
+    expect(
+      view.getValue().columns?.map((column) => ({
+        id: column.id,
+        desktopSpan: column.desktopSpan,
+        tabletSpan: column.tabletSpan,
+        mobileSpan: column.mobileSpan,
+      }))
+    ).toEqual([
+      { id: "1", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
+      { id: "2", desktopSpan: "3", tabletSpan: "6", mobileSpan: "12" },
+      { id: "3", desktopSpan: "3", tabletSpan: "6", mobileSpan: "12" },
+    ]);
+    expect(normalizeText(variantSection.textContent)).toContain(
+      "asymmetric desktop preset is active for the current columns"
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("GridColumns visual editor layout presets materialize the current live slot order when drift exists", async () => {
+  const view = await renderEditor({
+    editor: "visual",
+    initialVariant: "equal",
+    initialValue: {
+      columns: [
+        { id: "1", label: "Lead", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
+        { id: "2", label: "Side", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
+        { id: "4", label: "Phantom", desktopSpan: "2", tabletSpan: "4", mobileSpan: "8" },
+      ],
+    },
+    context: {
+      surface: "page-builder",
+      slotTargets: [
+        {
+          definitionId: "column",
+          slotId: "column:1",
+          label: "Column 1",
+          kind: "repeatable",
+          instanceId: "1",
+        },
+        {
+          definitionId: "column",
+          slotId: "column:2",
+          label: "Column 2",
+          kind: "repeatable",
+          instanceId: "2",
+        },
+        {
+          definitionId: "column",
+          slotId: "column:3",
+          label: "Column 3",
+          kind: "repeatable",
+          instanceId: "3",
+        },
+      ],
+    },
+  });
+
+  try {
+    const columnSection = getSectionByTitle(view.container, "Column sizing and labels");
+
+    clickButton(findButtonsByText(columnSection, "25 / 50 / 25")[0]);
+
+    expect(
+      view.getValue().columns?.map((column) => ({
+        id: column.id,
+        desktopSpan: column.desktopSpan,
+      }))
+    ).toEqual([
+      { id: "1", desktopSpan: "3" },
+      { id: "2", desktopSpan: "6" },
+      { id: "3", desktopSpan: "3" },
+    ]);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("GridColumns visual editor visibility warnings respect fallback live rows", async () => {
+  const view = await renderEditor({
+    editor: "visual",
+    initialVariant: "equal",
+    initialValue: {
+      columns: [
+        {
+          id: "1",
+          label: "Lead",
+          desktopSpan: "6",
+          tabletSpan: "6",
+          mobileSpan: "12",
+          hideOnMobile: true,
+        },
+        {
+          id: "2",
+          label: "Side",
+          desktopSpan: "6",
+          tabletSpan: "6",
+          mobileSpan: "12",
+          hideOnMobile: true,
+        },
+      ],
+    },
+    context: {
+      surface: "page-builder",
+      slotTargets: [
+        {
+          definitionId: "column",
+          slotId: "column:1",
+          label: "Column 1",
+          kind: "repeatable",
+          instanceId: "1",
+        },
+        {
+          definitionId: "column",
+          slotId: "column:2",
+          label: "Column 2",
+          kind: "repeatable",
+          instanceId: "2",
+        },
+        {
+          definitionId: "column",
+          slotId: "column:3",
+          label: "Column 3",
+          kind: "repeatable",
+          instanceId: "3",
+        },
+      ],
+    },
+  });
+
+  try {
+    const columnSection = getSectionByTitle(view.container, "Column sizing and labels");
+    const text = normalizeText(columnSection.textContent);
+
+    expect(text).toContain("slot: column:3");
+    expect(text).not.toContain("all columns are hidden on mobile");
   } finally {
     view.cleanup();
   }

@@ -128,7 +128,7 @@ Focused TASK-325 closure coverage completed during this closure pass:
 - `bun run test:vitest -- tests/vitest/ui/grid-columns-editor-wave.test.tsx`
   - `1` file passed, `20` tests passed on 2026-05-21 after the review loop added effective-layout totals and per-column token-preservation coverage.
 - `bun test tests/unit/widgets/validator.test.ts`
-  - `2` files passed, `38` tests passed on 2026-05-21 because the follow-up tightened the global wrapper color schema to the same bounded token-or-hex contract as per-column overrides.
+  - `1` file passed, `19` tests passed on 2026-05-21 (`38` expect() calls). The generic validator lane stayed green after the follow-up, while the Grid Columns-specific global wrapper color hardening is proven in `gridColumns.test.tsx`.
 
 Full TASK-325 closure validation is recorded in `TASK-325-06` together with `bun --cwd core lint`, `bun --cwd core lint:types`, `bun run gates:coderso`, `git diff --check`, `bun run precommit`, and the local `scan:security:strict` tool availability limitation.
 
