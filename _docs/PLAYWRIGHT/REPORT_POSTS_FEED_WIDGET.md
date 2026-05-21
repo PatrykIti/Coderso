@@ -377,8 +377,8 @@ Admin canvas nie uruchamia SSR resolvera — edytor renderuje widget z `resolved
   routes to TASK-321 instead of the already-closed TASK-256 color-control
   closure.
 - Global auth/session expiry remains out of family scope and routes to
-  TASK-322; TASK-277-03 owns only the local picker retry/error UX around that
-  platform failure.
+  TASK-322 family is now closed; TASK-277-03 still owns only the local picker
+  retry/error UX around that platform failure.
 - `BF-09` is no longer a missing shared renderer capability. The shared
   `ContentListBlock` already owns bounded image-aspect behavior, and the
   remaining Posts Feed gap is only the local bridge into that contract.
@@ -399,10 +399,10 @@ Aktualny status każdego findings po implementacji i closure passie:
 | BUG-03 | `fixed-task-277` | `TASK-277-01`; category placeholder now matches the single-keyword resolver contract (`e.g. news`). |
 | BUG-04 | `fixed-task-277` | `TASK-277-02`; `fields.showImage` is schema/default/editor/runtime owned end-to-end. |
 | BUG-05 | `fixed-task-277` | `TASK-277-02`; runtime items now resolve `imageSrc` / `imageAlt` through the shared media lookup seam. |
-| BUG-06 | `platform-follow-up` | Routed to `TASK-322`; TASK-277 does not own global admin session / CSRF refresh. |
+| BUG-06 | `fixed-task-322` | `TASK-322-02`; PageEditor now preserves dirty-state awareness and shows shared expired-session guidance instead of generic auth failure text. |
 | BUG-07 | `fixed-task-277` | `TASK-277-01`; Posts Feed omits CTA hrefs when no enabled posts detail route exists instead of falling back to `/post/:slug`. |
 | BUG-08 | `fixed-task-320` | `TASK-320`; shared `ContentListBlock` now renders readable date copy via semantic `<time dateTime="...">` output. |
-| BUG-09 | `platform-follow-up` | Root cause stays on `TASK-322`; local picker retry/error/auth guidance is fixed by `TASK-277-03`. |
+| BUG-09 | `fixed-task-322` | `TASK-322-01` and `TASK-322-03`; shared admin client now classifies session expiry and Posts Feed picker/preview consumers render shared expired-session guidance instead of raw auth messaging. |
 | UX-01 | `fixed-task-277` | `TASK-277-04`; admin preview now hydrates transient resolved posts through the existing preview-state/dataPatch channel. |
 | UX-02 | `fixed-task-277` | `TASK-277-06`; variant choice uses visual cards instead of a bare dropdown. |
 | UX-03 | `fixed-task-277` | `TASK-277-06`; Wizard is now progressive (`Source -> Display -> Layout`). |

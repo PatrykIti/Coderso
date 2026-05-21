@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Consumer Adoption
 **Estimated Effort:** Large
 **Dependencies:** TASK-322-01, TASK-322-02
-**Status:** To Do
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -94,6 +94,8 @@ This leaf changes existing internal admin editor behavior only.
 - `_docs/PLAYWRIGHT/REPORT_POSTS_FEED_WIDGET.md`
 - `_docs/_TASKS/TASK-322-03_Posts_Feed_and_Shared_Picker_Consumer_Session_Expiry_Adoption.md`
 - `_docs/_TASKS/README.md` on status changes
+- `_docs/_CHANGELOG/890-2026-05-21-task-322-session-expiry-resilience.md`
+- `_docs/_CHANGELOG/README.md`
 
 ## Acceptance Criteria
 
@@ -101,3 +103,18 @@ This leaf changes existing internal admin editor behavior only.
   auth failure text.
 - Consumer adoption does not fork API-client recovery logic.
 - Widget-local tests and report evidence point to the exact shared owner leaf.
+
+## Validation Notes (2026-05-21)
+
+- `bun run test:vitest -- tests/vitest/ui/posts-feed-editor-wave.test.tsx` -
+  passed (`9` tests)
+- `bun --cwd core lint` - passed
+- `bun --cwd core lint:types` - passed
+- `bun run gates:coderso` - passed
+- `bun run precommit` - passed
+
+## Completion Notes
+
+- 2026-05-21: Posts Feed picker and preview-resource consumers now use the
+  shared expired-session contract and show bounded sign-in guidance instead of
+  raw `ApiClientError` text.

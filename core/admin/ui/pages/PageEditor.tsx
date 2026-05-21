@@ -4,7 +4,7 @@ import { Eye, History, Save, Settings2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
-import { isApiClientError } from "@/services/apiClient";
+import { isApiClientError, isSessionExpiredApiError } from "@/services/apiClient";
 import {
   getCachedBookingResources,
   getCachedBookingServices,
@@ -117,6 +117,53 @@ const resolvePageId = (pathname: string) => {
   const pageIndex = parts.findIndex((segment) => segment === "pages");
   if (pageIndex === -1) return null;
   return parts[pageIndex + 1] ?? null;
+};
+
+const pageEditorSessionExpiredMessage = (
+  action: "saveDraft" | "publish" | "settingsSave" | "autosaveSettings"
+) => {
+  switch (action) {
+    case "publish":
+      return "Your admin session expired. Sign in again before publishing.";
+    case "settingsSave":
+      return "Your admin session expired. Sign in again before updating page settings.";
+    case "autosaveSettings":
+      return "Your admin session expired. Sign in again before autosaving page settings.";
+    case "saveDraft":
+    default:
+      return "Your admin session expired. Sign in again before saving.";
+  }
+};
+
+const asSessionExpiredToastError = (error: unknown, message: string) => ({
+  ...(typeof error === "object" && error !== null ? error : {}),
+  name: "ApiClientError",
+  code: "session_expired",
+  status: 401,
+  message,
+});
+
+const resolvePageEditorMutationError = (action: "saveDraft" | "publish", error: unknown) => {
+  if (isSessionExpiredApiError(error)) {
+    const message = pageEditorSessionExpiredMessage(action);
+    pageEditorActionToasts.error(action, asSessionExpiredToastError(error, message));
+    return message;
+  }
+  return pageEditorActionToasts.error(action, error);
+};
+
+const resolvePageEditorInlineError = (
+  action: "settingsSave" | "autosaveSettings",
+  error: unknown,
+  fallbackMessage: string
+) => {
+  if (isSessionExpiredApiError(error)) {
+    return pageEditorSessionExpiredMessage(action);
+  }
+  if (isApiClientError(error)) {
+    return error.message;
+  }
+  return fallbackMessage;
 };
 
 const readBlockDataText = (block: Block, key: string) => {
@@ -1015,7 +1062,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       setRemoteUpdatePending(false);
       pageEditorActionToasts.success("saveDraft");
     } catch (err) {
-      const message = pageEditorActionToasts.error("saveDraft", err);
+      const message = resolvePageEditorMutationError("saveDraft", err);
       setError(message);
     } finally {
       pageMutationInFlightRef.current = false;
@@ -1040,7 +1087,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       }
       pageEditorActionToasts.success("publish");
     } catch (err) {
-      const message = pageEditorActionToasts.error("publish", err);
+      const message = resolvePageEditorMutationError("publish", err);
       setError(message);
     } finally {
       pageMutationInFlightRef.current = false;
@@ -1118,11 +1165,9 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       await refreshRevisions();
       return true;
     } catch (err) {
-      if (isApiClientError(err)) {
-        setMetaError(err.message);
-      } else {
-        setMetaError("Failed to update page settings.");
-      }
+      setMetaError(
+        resolvePageEditorInlineError("settingsSave", err, "Failed to update page settings.")
+      );
       return false;
     } finally {
       setIsUpdatingMeta(false);
@@ -1149,11 +1194,9 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       });
       await refreshRevisions();
     } catch (err) {
-      if (isApiClientError(err)) {
-        setMetaError(err.message);
-      } else {
-        setMetaError("Failed to autosave page settings.");
-      }
+      setMetaError(
+        resolvePageEditorInlineError("autosaveSettings", err, "Failed to autosave page settings.")
+      );
     } finally {
       setIsAutosavingSettings(false);
     }

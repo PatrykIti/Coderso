@@ -167,6 +167,13 @@ vi.mock("@/components/ui/sheet", () => ({
 vi.mock("@/services/apiClient", () => ({
   isApiClientError: (error: unknown) =>
     typeof error === "object" && error !== null && "kind" in error && error.kind === "api",
+  isSessionExpiredApiError: (error: unknown) =>
+    typeof error === "object" &&
+    error !== null &&
+    "kind" in error &&
+    error.kind === "api" &&
+    "sharedFailureKind" in error &&
+    (error as { sharedFailureKind?: string }).sharedFailureKind === "session_expired",
 }));
 
 vi.mock("@/services/cachePolicy", () => ({
@@ -599,12 +606,20 @@ const findSpanByText = (container: HTMLElement, label: string) =>
     (candidate) => candidate.textContent === label
   );
 
-const apiError = (message: string) => ({
+const apiError = (
+  message: string,
+  overrides: Partial<{
+    code: string;
+    status: number;
+    sharedFailureKind: string;
+  }> = {}
+) => ({
   kind: "api" as const,
   name: "ApiClientError",
-  code: "request_failed",
+  code: overrides.code ?? "request_failed",
   message,
-  status: 400,
+  status: overrides.status ?? 400,
+  ...(overrides.sharedFailureKind ? { sharedFailureKind: overrides.sharedFailureKind } : {}),
 });
 
 beforeEach(() => {
@@ -1307,6 +1322,75 @@ test("PageEditor surfaces API client error messages across page, settings, and r
     clickButton(view.container, "discard-revision");
     await flush();
     expect(view.container.textContent).toContain("revision-error:Discard denied");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor preserves unsaved state and shows shared expired-session guidance", async () => {
+  pageEditorState.reset();
+  const initialPage = createPage({ id: "page-1" });
+  pageEditorState.cachedPage = initialPage;
+  pageEditorState.currentPage = clonePage(initialPage);
+
+  const view = mount(<PageEditor pageId="page-1" initialPage={initialPage} />);
+
+  try {
+    await flush();
+
+    clickButton(view.container, "add-widget");
+    await flush();
+    expect(view.container.textContent).toContain("Unsaved changes");
+
+    pageEditorState.updatePage.mockRejectedValueOnce(
+      apiError("Authentication required", {
+        code: "auth_required",
+        status: 401,
+        sharedFailureKind: "session_expired",
+      })
+    );
+    clickButton(view.container, "Save draft");
+    await flush();
+    expect(view.container.textContent).toContain(
+      "Your admin session expired. Sign in again before saving."
+    );
+    expect(view.container.textContent).toContain("Unsaved changes");
+    expect(pageEditorToastState.error).toHaveBeenCalledWith(
+      "Your admin session expired. Sign in again before saving."
+    );
+
+    pageEditorState.publishPage.mockRejectedValueOnce(
+      apiError("Authentication required", {
+        code: "auth_required",
+        status: 401,
+        sharedFailureKind: "session_expired",
+      })
+    );
+    clickButton(view.container, "Publish");
+    await flush();
+    expect(view.container.textContent).toContain(
+      "Your admin session expired. Sign in again before publishing."
+    );
+    expect(view.container.textContent).toContain("Unsaved changes");
+    expect(pageEditorToastState.error).toHaveBeenCalledWith(
+      "Your admin session expired. Sign in again before publishing."
+    );
+
+    clickButton(view.container, "Page settings");
+    await flush();
+    pageEditorState.updatePage.mockRejectedValueOnce(
+      apiError("Authentication required", {
+        code: "auth_required",
+        status: 401,
+        sharedFailureKind: "session_expired",
+      })
+    );
+    clickButton(view.container, "settings-save");
+    await flush();
+    expect(view.container.textContent).toContain("Page settings error");
+    expect(view.container.textContent).toContain(
+      "Your admin session expired. Sign in again before updating page settings."
+    );
   } finally {
     view.cleanup();
   }

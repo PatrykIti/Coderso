@@ -6,7 +6,7 @@
 **Category:** Documentation + QA + Closure
 **Estimated Effort:** Medium
 **Dependencies:** TASK-322-01, TASK-322-02, TASK-322-03
-**Status:** To Do
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -96,7 +96,7 @@ No new routes are added by this closure leaf.
 - `_docs/SECURITY_SPEC.md` only if the shared recovery policy changed materially
 - `_docs/_TASKS/TASK-322*.md`
 - `_docs/_TASKS/README.md`
-- `_docs/_CHANGELOG/<next>-<date>-task-322-session-expiry-recovery.md`
+- `_docs/_CHANGELOG/890-2026-05-21-task-322-session-expiry-resilience.md`
 - `_docs/_CHANGELOG/README.md`
 
 ## Acceptance Criteria
@@ -105,3 +105,27 @@ No new routes are added by this closure leaf.
 - Report, security docs, task board, and changelog agree with the landed shared
   behavior.
 - Final validation records exact commands and results for the shared family.
+
+## Validation Notes (2026-05-21)
+
+- `bun run test:vitest -- tests/vitest/admin/apiClient.test.ts` - passed (`5`
+  tests)
+- `bun run test:vitest -- tests/vitest/ui/page-editor-shell-wave.test.tsx` -
+  passed (`15` tests)
+- `bun run test:vitest -- tests/vitest/ui/posts-feed-editor-wave.test.tsx` -
+  passed (`9` tests)
+- `bun --cwd core lint` - passed
+- `bun --cwd core lint:types` - passed
+- `bun run gates:coderso` - passed
+- `bun run scan:security:strict` - attempted but failed outside TASK-322 scope
+  because the local Semgrep trust store had no CA anchors and `bun audit` could
+  not reach the advisory endpoint; Trivy and Gitleaks sub-scanners were clean
+  in the same run
+- `bun run precommit` - passed
+
+## Completion Notes
+
+- 2026-05-21: the shared admin client, page-editor shell, and Posts Feed
+  consumer adoption leaves now all point to one landed expired-session contract,
+  and the Posts Feed report no longer routes BUG-06 / BUG-09 to an open
+  platform follow-up.

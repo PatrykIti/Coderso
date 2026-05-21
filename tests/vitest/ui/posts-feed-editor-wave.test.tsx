@@ -230,6 +230,13 @@ vi.mock("@/services/apiClient", () => ({
     error !== null &&
     "name" in error &&
     (error as { name?: string }).name === "ApiClientError",
+  isSessionExpiredApiError: (error: unknown) =>
+    typeof error === "object" &&
+    error !== null &&
+    "name" in error &&
+    (error as { name?: string }).name === "ApiClientError" &&
+    "sharedFailureKind" in error &&
+    (error as { sharedFailureKind?: string }).sharedFailureKind === "session_expired",
 }));
 
 vi.mock("@/services/postsClient", () => ({
@@ -483,6 +490,7 @@ test("PostsFeed editors surface post loading errors", async () => {
     name: "ApiClientError",
     status: 401,
     message: "Not authenticated",
+    sharedFailureKind: "session_expired",
   };
 
   const Harness = () => {
@@ -507,7 +515,7 @@ test("PostsFeed editors surface post loading errors", async () => {
     });
     await flush();
     expect(view.container.textContent).toContain(
-      "Post catalog is unavailable until you sign in again."
+      "Your admin session expired. Sign in again to refresh Posts Feed data."
     );
     expect(view.container.textContent).toContain("Retry");
   } finally {
@@ -899,6 +907,50 @@ test("PostsFeed visual editor keeps preview ready when routes or media degrade",
               imageSrc: undefined,
             }),
           ]),
+        }),
+      }),
+    });
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PostsFeed visual editor uses shared expired-session preview guidance", async () => {
+  const { PostsFeedVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/PostsFeedEditors");
+
+  previewResourcesState.settingsError = {
+    name: "ApiClientError",
+    status: 401,
+    code: "auth_required",
+    sharedFailureKind: "session_expired",
+    message: "Authentication required",
+  };
+
+  const setPreviewState = vi.fn();
+  const view = mount(
+    <PostsFeedVisualEditor
+      value={{ source: { mode: "latest", limit: 2, sort: "published-desc" } }}
+      onChange={() => undefined}
+      variant="cards"
+      context={{
+        surface: "page-builder",
+        editorMode: "visual",
+        blockId: "posts-feed-1",
+        setPreviewState,
+      }}
+    />
+  );
+
+  try {
+    await flush();
+
+    expect(setPreviewState).toHaveBeenLastCalledWith({
+      status: "ready",
+      message: "Your admin session expired. Sign in again to refresh Posts Feed preview links.",
+      dataPatch: expect.objectContaining({
+        resolved: expect.objectContaining({
+          total: 2,
         }),
       }),
     });

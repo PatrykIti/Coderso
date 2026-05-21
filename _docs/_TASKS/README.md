@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 193 tasks
+- **To Do:** 189 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1798 tasks
+- **Done:** 1802 tasks
 
 ---
 
@@ -38,10 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-322 | Admin Session and CSRF Expiry Resilience for Long-Lived Editors | High | Very Large | Shared platform follow-up for expired-session, token-refresh, and unsaved-change recovery gaps surfaced by the TASK-277 Posts Feed closeout |
-| TASK-322-02 | Page Editor Session Expiry Feedback and Dirty-State Preservation | High | Large | Page editor shell follow-up for expired-session save/publish feedback that keeps unsaved work explicit and recoverable |
-| TASK-322-03 | Posts Feed and Shared Picker Consumer Session-Expiry Adoption | High | Large | Consumer adoption task so Posts Feed and similar editor pickers reuse the shared expired-session contract instead of raw `ApiClientError` output |
-| TASK-322-04 | Session Expiry Docs, Changelog, and Closure | Medium | Medium | Final report/docs/board/changelog closure after the shared client and consumer leaves land |
 | TASK-319 | Newsletter Per-Breakpoint Variant Overrides | Low | Large | Evaluate or explicitly reject true per-breakpoint Newsletter variant overrides after TASK-276 made current mobile behavior truthful |
 | TASK-319-01 | Newsletter Responsive Variant Audit and Product Decision | Medium | Medium | Audit current Newsletter mobile/desktop behavior and record the explicit product decision for BF-15 before any schema change lands |
 | TASK-319-02 | Newsletter Bounded Mobile Variant Implementation | Low | Large | Implement the bounded Newsletter mobile override only if TASK-319-01 approves it |
@@ -247,6 +243,10 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-322 | Admin Session and CSRF Expiry Resilience for Long-Lived Editors | High | Very Large | Done (2026-05-21): shared admin session expiry is now classified in the API client and adopted by PageEditor plus Posts Feed picker/preview consumers |
+| TASK-322-04 | Session Expiry Docs, Changelog, and Closure | Medium | Medium | Done (2026-05-21): report/docs/board/changelog now reflect the landed shared session-expiry family |
+| TASK-322-03 | Posts Feed and Shared Picker Consumer Session-Expiry Adoption | High | Large | Done (2026-05-21): Posts Feed picker and preview-resource consumers now render shared expired-session guidance instead of raw auth errors |
+| TASK-322-02 | Page Editor Session Expiry Feedback and Dirty-State Preservation | High | Large | Done (2026-05-21): PageEditor now preserves unsaved work and surfaces actionable shared expired-session guidance for save/publish/settings flows |
 | TASK-322-01 | Admin API Client Session Classification and Bounded CSRF Retry | High | Large | Done (2026-05-21): shared admin API requests now distinguish csrf-refreshable failures from session-expired auth failures through one client owner |
 | TASK-317 | Widget Editor Live Preview Surface and Preview-State Contract | High | Large | Done (2026-05-21): BlockSettings now renders a shared live preview row through WidgetRenderer with transient previewState data patches |
 | TASK-321 | Shared Clear Action Undo and Feedback Contract | Medium | Large | Done (2026-05-21): shared clearable inputs now emit recoverable undo feedback through the common clear helper contract |

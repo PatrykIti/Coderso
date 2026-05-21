@@ -6,7 +6,7 @@
 **Category:** Admin UI + Auth + API Reliability
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-277
-**Status:** To Do
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -38,9 +38,9 @@ instead of adding widget-local workarounds.
 ## Sub-Tasks
 
 - [x] TASK-322-01: Admin API Client Session Classification and Bounded CSRF Retry
-- [ ] TASK-322-02: Page Editor Session Expiry Feedback and Dirty-State Preservation
-- [ ] TASK-322-03: Posts Feed and Shared Picker Consumer Session-Expiry Adoption
-- [ ] TASK-322-04: Session Expiry Docs, Changelog, and Closure
+- [x] TASK-322-02: Page Editor Session Expiry Feedback and Dirty-State Preservation
+- [x] TASK-322-03: Posts Feed and Shared Picker Consumer Session-Expiry Adoption
+- [x] TASK-322-04: Session Expiry Docs, Changelog, and Closure
 
 ## Implementation Order
 
@@ -166,3 +166,26 @@ This task changes existing internal admin auth/session behavior only.
 - CSRF refresh remains bounded and distinct from full auth-session expiry.
 - Posts Feed picker UX can rely on the shared platform behavior instead of a
   one-off auth workaround.
+
+## Validation Notes (2026-05-21)
+
+- `bun run test:vitest -- tests/vitest/admin/apiClient.test.ts` - passed (`5`
+  tests)
+- `bun run test:vitest -- tests/vitest/ui/page-editor-shell-wave.test.tsx` -
+  passed (`15` tests)
+- `bun run test:vitest -- tests/vitest/ui/posts-feed-editor-wave.test.tsx` -
+  passed (`9` tests)
+- `bun --cwd core lint` - passed
+- `bun --cwd core lint:types` - passed
+- `bun run gates:coderso` - passed
+- `bun run scan:security:strict` - attempted but failed outside TASK-322 scope
+  because the local Semgrep trust store had no CA anchors and `bun audit` could
+  not reach the advisory endpoint; Trivy and Gitleaks sub-scanners were clean
+  in the same run
+- `bun run precommit` - passed
+
+## Completion Notes
+
+- 2026-05-21: the TASK-322 family is closed. Shared admin request
+  classification, page-editor save/publish handling, and Posts Feed
+  picker/preview consumers now use one bounded session-expiry contract.

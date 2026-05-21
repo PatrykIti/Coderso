@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { isApiClientError } from "@/services/apiClient";
+import { isApiClientError, isSessionExpiredApiError } from "@/services/apiClient";
 import { listMediaCached, type MediaRecord } from "@/services/mediaClient";
 import { listPostsCached, type PostSummary } from "@/services/postsClient";
 import { getSiteSettings, type SiteContentRoute } from "@/services/siteSettingsClient";
@@ -211,6 +211,12 @@ function clearStyle(
 }
 
 function resolvePostsCatalogError(error: unknown) {
+  if (isSessionExpiredApiError(error)) {
+    return {
+      message: "Your admin session expired. Sign in again to refresh Posts Feed data.",
+      needsAuth: true,
+    };
+  }
   if (isApiClientError(error)) {
     if (error.status === 401 || error.status === 403) {
       return {
@@ -336,6 +342,11 @@ function buildAuthorOptions(posts: PostSummary[]) {
 }
 
 function resolvePreviewResourceWarning(kind: "routes" | "media", error: unknown) {
+  if (isSessionExpiredApiError(error)) {
+    return kind === "routes"
+      ? "Your admin session expired. Sign in again to refresh Posts Feed preview links."
+      : "Your admin session expired. Sign in again to refresh Posts Feed preview images.";
+  }
   if (isApiClientError(error)) {
     if (error.status === 401 || error.status === 403) {
       return kind === "routes"

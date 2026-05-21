@@ -6,7 +6,7 @@
 **Category:** Admin UI + Page Builder + Reliability
 **Estimated Effort:** Large
 **Dependencies:** TASK-322-01
-**Status:** To Do
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -98,6 +98,8 @@ This leaf changes existing internal admin editor behavior only.
 - `_docs/SECURITY_SPEC.md` only if the page-editor recovery policy changes materially
 - `_docs/_TASKS/TASK-322-02_Page_Editor_Session_Expiry_Feedback_and_Dirty_State_Preservation.md`
 - `_docs/_TASKS/README.md` on status changes
+- `_docs/_CHANGELOG/890-2026-05-21-task-322-session-expiry-resilience.md`
+- `_docs/_CHANGELOG/README.md`
 
 ## Acceptance Criteria
 
@@ -106,3 +108,18 @@ This leaf changes existing internal admin editor behavior only.
 - Expired-session feedback is actionable and distinct from generic failures.
 - The page-editor shell consumes the shared client contract instead of local
   auth heuristics.
+
+## Validation Notes (2026-05-21)
+
+- `bun run test:vitest -- tests/vitest/ui/page-editor-shell-wave.test.tsx` -
+  passed (`15` tests)
+- `bun --cwd core lint` - passed
+- `bun --cwd core lint:types` - passed
+- `bun run gates:coderso` - passed
+- `bun run precommit` - passed
+
+## Completion Notes
+
+- 2026-05-21: PageEditor now keeps unsaved draft state visible and surfaces
+  shared expired-session guidance for save, publish, and page-settings save
+  flows instead of raw generic auth errors.

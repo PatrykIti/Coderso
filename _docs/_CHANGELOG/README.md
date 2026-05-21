@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 890 | 2026-05-21 | TASK-322 session expiry resilience | CMS Admin UI/Auth/Reliability |
 | 889 | 2026-05-21 | TASK-322-01 admin API session classification | CMS Admin API/Auth |
 | 888 | 2026-05-21 | TASK-317 widget editor live preview surface | CMS Admin UI/Builder/Preview |
 | 887 | 2026-05-21 | TASK-321 shared clear undo feedback contract | CMS Admin UI/Widgets/QA |
