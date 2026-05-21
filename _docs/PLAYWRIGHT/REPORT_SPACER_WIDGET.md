@@ -408,4 +408,20 @@ Leaf evidence from this turn:
 |---|---|---|---|
 | BF-04 | `fixed` | `TASK-284-03` | Spacer now exposes transient `Card gap`, `Section gap`, and `Hero gap` presets in Wizard and Visual. Responsive mode applies full triplets, while fixed mode updates desktop only and preserves hidden tablet/mobile values until the user switches back to responsive editing. |
 
-*Raport wygenerowany na podstawie analizy kodu i testów Playwright — 2026-05-16; shared closure refreshed — 2026-05-17; TASK-284-01 refreshed — 2026-05-21; TASK-284-02 refreshed — 2026-05-21; TASK-284-03 refreshed — 2026-05-21.*
+## Status po TASK-284-04 (2026-05-21)
+
+Leaf evidence from this turn:
+- `bun run test:vitest -- tests/vitest/widgets/spacer.test.tsx tests/vitest/ui/spacer-editor-wave.test.tsx`
+- `git diff --check`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run lint`
+- `bun run gates:coderso`
+- `bun run scan:security:strict` (fails locally because `semgrep`, `trivy`, and `gitleaks` are not installed in `$PATH`; `bun audit` still ran inside the same command)
+- `bun run precommit`
+
+| Row | Final status | Owner | Evidence |
+|---|---|---|---|
+| BF-05 | `deferred` | `TASK-284-04 -> TASK-326` | Spacer remains vertical-only. The current shared `WidgetRenderer` shell still wraps nested widgets as full-width blocks, so a local `orientation`/`width` field would be misleading instead of acting like a truthful row-flow gap. Future implementation is reassigned to shared `TASK-326`. |
+
+*Raport wygenerowany na podstawie analizy kodu i testów Playwright — 2026-05-16; shared closure refreshed — 2026-05-17; TASK-284-01 refreshed — 2026-05-21; TASK-284-02 refreshed — 2026-05-21; TASK-284-03 refreshed — 2026-05-21; TASK-284-04 refreshed — 2026-05-21.*

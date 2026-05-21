@@ -44,6 +44,10 @@ Notes:
 ## Runtime Behavior Notes
 
 - Renders an empty structural block with responsive height values.
+- Spacer remains intentionally vertical-only. Horizontal width spacing is
+  deferred until a future shared row-flow/container-aware rendering owner
+  exists, because the current builder still wraps Spacer in the default
+  full-width widget shell.
 - Named presets are editor-only shortcuts that write concrete `height` values; Spacer does not persist a separate `preset` field or emit preset-specific DOM markers.
 - Supports token-based heights (`0..32`) plus bounded custom lengths: bare numbers such as `48` normalize to `48px`, explicit `48px` remains valid, viewport values accept `vh`, `dvh`, `svh`, and `vw`, and fluid values accept canonical `clamp(min, preferred, max)` with `px|rem` boundaries and a viewport-unit preferred segment.
 - Rejects unsafe custom strings such as standalone `rem`, `calc(...)`, CSS variables, URLs, semicolons, malformed `clamp()`, and unsupported units like `lvh` by falling back to deterministic defaults before runtime output.
@@ -73,6 +77,9 @@ Notes:
 ## Authoring Notes
 
 - `fixed` reuses the desktop height for tablet and mobile at runtime.
+- Horizontal Spacer behavior is not available in v1. Authors should use the
+  existing row/column layout widgets for structural horizontal spacing until a
+  future shared nested row-flow rendering contract lands.
 - Available named presets are `Card gap` (`8/6/4`), `Section gap` (`16/12/8`), and `Hero gap` (`24/20/16`).
 - In `responsive`, applying a preset writes the full desktop/tablet/mobile triplet. In `fixed`, presets update desktop only and preserve the saved tablet/mobile heights until the user switches back to `responsive`.
 - Manual height edits clear the derived active-preset state without changing the runtime schema or adding a persisted preset field.
