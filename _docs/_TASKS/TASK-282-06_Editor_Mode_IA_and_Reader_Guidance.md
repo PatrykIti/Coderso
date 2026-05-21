@@ -5,7 +5,7 @@
 **Priority:** Medium
 **Category:** Widgets + Admin UI + Content UX
 **Estimated Effort:** Medium
-**Dependencies:** TASK-282, TASK-282-01, TASK-282-02, TASK-282-03, TASK-282-04, TASK-282-05, TASK-282-08, TASK-282-09
+**Dependencies:** TASK-282, TASK-282-01, TASK-282-02, TASK-282-03, TASK-282-04
 **Status:** To Do
 
 ---
@@ -13,7 +13,9 @@
 ## Overview
 
 Polish Rich Text Section editor mode ownership and reader guidance after the
-core output, authoring, block, media/embed, and runtime semantics are repaired.
+core output, authoring, block, and runtime semantics are repaired. Media/embed
+and text-color-clear follow-ups may land before or after this leaf when they do
+not change the mode-ownership contract.
 
 This leaf covers KOD-05, KOD-07, KOD-WIZ, and KOD-DUP from
 `_docs/PLAYWRIGHT/REPORT_RICH_TEXT_SECTION_WIDGET.md`.
@@ -96,6 +98,15 @@ Advanced diagnostics:
   variant={resolveRichTextSectionVariant(variant)}
   blockCount={blocks.length}
 />
+```
+
+Regression test shape:
+
+```ts
+test("wizard and visual use the same variant-selection language while keeping wizard compact", ...);
+test("dropcap guidance reports when the active rendered source has no paragraph to style", ...);
+test("advanced mode shows read-only output or variant diagnostics instead of duplicating visual controls", ...);
+test("typography ownership stays in visual while advanced remains technical or diagnostic", ...);
 ```
 
 ## Error Handling

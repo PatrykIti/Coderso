@@ -20,14 +20,19 @@ TASK-282-05 owns inline images. This leaf owns attachment cards and the safe
 replacement for raw video/iframe embeds. It must not introduce arbitrary iframe
 HTML, scripts, third-party widgets, or admin-only media URLs into public output.
 
+The canonical implementation path for embeds in this leaf is provider-validated
+link cards, not iframe rendering. A privacy-safe iframe policy would require a
+separate explicit security/media contract task before Rich Text Section adopts
+it.
+
 ## Scope Boundary
 
 In scope:
 
 - Media Library-backed attachment cards for documents or downloadable assets,
   using `mediaId` plus a stable public `src` snapshot copied by the editor.
-- A bounded embed model for trusted provider URLs, such as YouTube/Vimeo link
-  cards or privacy-safe iframes if an existing project policy allows them.
+- A bounded embed model for trusted provider URLs rendered as link cards in this
+  leaf.
 - Clear editor guidance when pasted iframes/video HTML is stripped and how to
   use the safe attachment/embed controls instead.
 - Runtime rendering that is synchronous, sanitized, and deterministic.
@@ -35,7 +40,8 @@ In scope:
 Out of scope:
 
 - Arbitrary raw `<iframe>`, `<script>`, `<embed>`, `<object>`, form, or widget
-  HTML passthrough.
+  HTML passthrough, plus Rich Text Section iframe rendering without a separate
+  explicit policy task.
 - Upload or media storage API changes. Split a separate media task if the
   existing Media Library cannot provide stable public URLs for attachments.
 - Global rich-text embed policy for posts or other widgets.
@@ -53,8 +59,8 @@ Out of scope:
   and URL patterns survive; unsafe iframe HTML is never persisted.
 - [ ] Render attachments as accessible links/cards with escaped labels and safe
   href normalization.
-- [ ] Render embeds as safe link cards by default, or as provider allowlisted
-  iframes only when the project has an explicit iframe policy and tests.
+- [ ] Render embeds as provider-validated safe link cards in this leaf. Do not
+  introduce iframe rendering here.
 - [ ] Add editor controls for selecting an attachment and entering a safe embed
   URL, plus diagnostics for unsupported provider/iframe input.
 
@@ -108,7 +114,7 @@ type RichTextSectionEmbedBlock = {
   url: string;
   title?: string;
   aspectRatio?: "16:9" | "4:3" | "1:1";
-  renderMode: "link-card" | "safe-iframe";
+  renderMode: "link-card";
 };
 
 function normalizeRichTextEmbedBlock(input: unknown) {
@@ -120,7 +126,7 @@ function normalizeRichTextEmbedBlock(input: unknown) {
     url: normalizedUrl.url,
     title: clampText(readString(input, "title"), 120),
     aspectRatio: resolveRichTextEmbedAspectRatio(readString(input, "aspectRatio")),
-    renderMode: normalizedUrl.allowIframe ? "safe-iframe" : "link-card",
+    renderMode: "link-card",
   };
 }
 ```
@@ -129,11 +135,17 @@ Renderer:
 
 ```tsx
 function RichTextEmbed({ embed }: { embed: RichTextSectionEmbedBlock }) {
-  if (embed.renderMode !== "safe-iframe") {
-    return <a href={embed.url}>{embed.title || embed.url}</a>;
-  }
-  return <iframe src={embed.url} title={embed.title || "Embedded media"} loading="lazy" />;
+  return <a href={embed.url}>{embed.title || embed.url}</a>;
 }
+```
+
+Regression test shape:
+
+```ts
+test("selected file media creates an attachment block with stable public src snapshot", ...);
+test("unsupported provider or raw iframe HTML is rejected and surfaced as editor guidance", ...);
+test("embed blocks render provider-validated link cards instead of iframe HTML", ...);
+test("attachment blocks omit unsafe or missing public src values from public output", ...);
 ```
 
 ## Error Handling
@@ -183,9 +195,13 @@ No new API routes are added.
 
 - Update `_docs/_WIDGETS/RICH_TEXT_SECTION.md` with attachment and safe embed
   fields plus unsupported raw iframe/embed policy.
+- Update `_docs/MEDIA_SPEC.md` with attachment `mediaId` plus public `src`
+  snapshot rules and the Rich Text Section link-card-only embed policy.
 - Update `_docs/PLAYWRIGHT/REPORT_RICH_TEXT_SECTION_WIDGET.md` KOD-13 with
   separate image, attachment, and embed evidence.
 - Update `_docs/WIDGET_PACK_MATRIX.md` only if readiness/completeness changes.
+- Do not update `_docs/SECURITY_SPEC.md` in this leaf unless a separate follow-up
+  task introduces an allowlisted iframe policy.
 
 ## Changelog Policy
 
@@ -198,6 +214,7 @@ No new API routes are added.
 - Editors can add safe attachments without typing raw HTML.
 - Editors get a safe path for video/embed URLs or a clear unsupported-provider
   diagnostic.
-- Public output never renders arbitrary iframe/script/embed HTML.
+- Public output never renders arbitrary iframe/script/embed HTML, and this leaf
+  resolves embeds through link cards rather than iframe rendering.
 - Attachment/embed schema, normalizer, renderer, editor, tests, docs, and report
   evidence move together.

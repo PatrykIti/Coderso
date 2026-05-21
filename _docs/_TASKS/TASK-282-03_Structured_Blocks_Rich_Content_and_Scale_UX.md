@@ -104,6 +104,15 @@ const visibleBlocks = blocks.slice(pageStart, pageStart + blockPageSize);
 const expandedId = selectedBlockId ?? visibleBlocks[0]?.id;
 ```
 
+Regression test shape:
+
+```ts
+test("legacy plain-text block content still renders as escaped paragraphs with line breaks", ...);
+test("rich block content sanitizes and renders safe formatting plus bounded heading levels", ...);
+test("count reduction requires confirmation and undo restores the exact previous block array", ...);
+test("large block sets collapse or page instead of rendering all 20 editors expanded at once", ...);
+```
+
 ## Error Handling
 
 - Unknown heading levels normalize to the default chosen for legacy content.

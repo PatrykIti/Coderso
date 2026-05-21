@@ -107,6 +107,15 @@ const source = resolveRichTextRenderedSource(normalized);
 <RichTextSourceStatus source={source} section="blocks" />
 ```
 
+Regression test shape:
+
+```ts
+test("resolveRichTextRenderedSource prefers HTML when blocks-fallback has non-empty HTML", ...);
+test("resolveRichTextRenderedSource falls back to blocks when HTML is empty", ...);
+test("wizard block edits preserve the existing outputMode", ...);
+test("visual editor labels HTML vs blocks as active or inactive from shared helper output", ...);
+```
+
 ## Error Handling
 
 - Invalid output modes continue to normalize to `blocks-fallback`.

@@ -115,6 +115,15 @@ TOC focus:
 className="text-[var(--color-text)]/80 transition hover:text-[var(--color-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-ring)]"
 ```
 
+Regression test shape:
+
+```ts
+test("article variant inner wrapper uses the normalized max-width class instead of a hardcoded width", ...);
+test("title heading level normalizes to the bounded widget policy and labels the section", ...);
+test("duplicate rich-text-section widgets with the same title use unique ids derived from blockId", ...);
+test("toc links keep hover behavior and add visible keyboard focus classes", ...);
+```
+
 ## Error Handling
 
 - Invalid heading levels normalize to the documented default.

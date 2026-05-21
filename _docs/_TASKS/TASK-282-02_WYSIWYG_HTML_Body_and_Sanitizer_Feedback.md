@@ -142,6 +142,15 @@ Advanced raw HTML:
 <Button onClick={() => updateBodyHtmlFromEditor(rawHtmlDraft)}>Sanitize and apply</Button>
 ```
 
+Regression test shape:
+
+```ts
+test("visual rich editor stores widget-sanitized HTML instead of raw textarea input", ...);
+test("sanitizeRichTextHtmlWithDiagnostics reports stripped img and h1 tags", ...);
+test("sanitizeRichTextHtmlWithDiagnostics reports rewritten unsafe hrefs and removed attributes", ...);
+test("advanced raw HTML sanitize-and-apply flow updates body.html and diagnostics together", ...);
+```
+
 ## Error Handling
 
 - Invalid or oversized HTML normalizes to a safe bounded string and reports a

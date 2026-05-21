@@ -15,6 +15,11 @@
 Close the Rich Text Section Playwright follow-up family with exact fixed,
 deferred, and TASK-256-excluded evidence.
 
+Closure for this family must allow explicit report statuses beyond `fixed` and
+`deferred`: `fixed-shared`, `not-a-bug`, `accepted limitation`, and
+`documented only` are valid end states when backed by source evidence and a
+clear reason.
+
 This leaf owns final synchronization after TASK-282 implementation leaves land:
 the source report, widget docs, board rows, changelog, and validation matrix.
 
@@ -23,7 +28,8 @@ the source report, widget docs, board rows, changelog, and validation matrix.
 In scope:
 
 - Refreshing `_docs/PLAYWRIGHT/REPORT_RICH_TEXT_SECTION_WIDGET.md` with final
-  fixed/deferred/TASK-256 classification.
+  fixed, fixed-shared, not-a-bug, accepted-limitation, documented-only,
+  deferred, and TASK-256 classification.
 - Updating `_docs/_WIDGETS/RICH_TEXT_SECTION.md` and any source-of-truth docs
   touched by actual implementation.
 - Adding the final TASK-282 changelog entry and `_docs/_CHANGELOG/README.md`
@@ -42,7 +48,9 @@ Out of scope:
 ## Sub-Tasks
 
 - [ ] Build a finding-by-finding closure table for every KOD/A11Y/observation row
-  in `REPORT_RICH_TEXT_SECTION_WIDGET.md`.
+  in `REPORT_RICH_TEXT_SECTION_WIDGET.md`, using an explicit status set such as
+  `fixed`, `fixed-shared`, `not-a-bug`, `accepted limitation`,
+  `documented only`, or `deferred`.
 - [ ] Close KOD-10 through TASK-282-09 or leave TASK-282-09 open with explicit
   remaining validation. Do not mark KOD-10 as closed by TASK-256 unless
   TASK-256 closure names the exact Rich Text Section physical owner path and
@@ -84,6 +92,7 @@ Closure matrix:
 | Finding | Final status | Evidence | Owner |
 |---|---|---|---|
 | KOD-01 | Fixed | TASK-282-01 commit + Vitest evidence | TASK-282 |
+| KOD-06 | Not-a-bug | Documented deterministic TOC behavior + report evidence | TASK-282-07 |
 | KOD-10 | Fixed/deferred by physical owner | TASK-282-09 commit + editor Vitest evidence, or explicit open TASK-282-09 blocker | TASK-282-09 |
 | KOD-13 images | Fixed/deferred by physical owner | TASK-282-05 commit + media render/editor evidence | TASK-282-05 |
 | KOD-13 attachments/embeds | Fixed/deferred by physical owner | TASK-282-08 commit + attachment/embed render/editor evidence | TASK-282-08 |
@@ -162,5 +171,8 @@ No API routes are added by this closure leaf.
 - Every source-report finding has a final status with evidence.
 - TASK-256-owned rows are not claimed as TASK-282 fixes.
 - Source-of-truth widget docs match the final code.
+- Every closed report row uses an explicit status vocabulary that can represent
+  real `not-a-bug`, `accepted limitation`, and `documented only` outcomes
+  instead of forcing them into `fixed` or `deferred`.
 - Task board statistics, task files, changelog, and validation evidence are
   synchronized.

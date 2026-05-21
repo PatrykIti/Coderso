@@ -120,7 +120,10 @@ Rich Text Section-only work.
 7. Complete TASK-282-09 after TASK-256-02 shared clear helper behavior is
    available, or earlier only if the local editor can adopt an existing helper
    without implementing generic clear semantics.
-8. Complete TASK-282-06 after the major editor surfaces are stable.
+8. Complete TASK-282-06 after TASK-282-04 so editor-mode guidance can rely on
+   final source, block, and heading semantics. TASK-282-06 does not need to
+   wait for attachment/embed or text-color-clear closure when those surfaces do
+   not change the mode-ownership contract.
 9. Complete TASK-282-07 last with report evidence, widget docs, changelog, board,
    and validation results.
 
@@ -199,8 +202,9 @@ This umbrella does not add API routes.
 ## Acceptance Criteria
 
 - Every finding in `_docs/PLAYWRIGHT/REPORT_RICH_TEXT_SECTION_WIDGET.md` is
-  fixed, explicitly excluded as TASK-256 shared scope, or deferred to a named
-  future task with a reason.
+  fixed, explicitly excluded as TASK-256 shared scope, classified as
+  `not-a-bug`, `accepted limitation`, or `documented only` with evidence, or
+  deferred to a named future task with a reason.
 - TASK-282 leaves do not duplicate implementation already owned by TASK-256.
 - Rich Text Section schema, defaults, normalizer, render, editor, tests, docs,
   and report evidence move together for every new user-facing option.
