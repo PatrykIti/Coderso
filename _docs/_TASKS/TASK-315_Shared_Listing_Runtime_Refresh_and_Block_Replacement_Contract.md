@@ -214,3 +214,13 @@ No API routes are added.
   runtime task lands.
 - Cross-widget coverage proves shared query-id replacement and rebinding still
   work after the refresh contract changes.
+
+## Validation Addendum (2026-05-21 audit)
+
+- `bun --cwd core lint`: passed
+- `bun --cwd core lint:types`: passed
+- `bun run lint`: passed
+- `bun run test:vitest -- tests/vitest/widgets/listingRuntimeScript.test.ts tests/vitest/widgets/listingFilters.test.tsx tests/vitest/widgets/searchBox.test.tsx tests/vitest/ui/listing-filters-editor-wave.test.tsx tests/vitest/ui/search-box-editor-wave.test.tsx`: passed
+- `bun run gates:coderso`: passed
+- `bun run scan:security:strict`: attempted but failed outside TASK-315 scope because the local Semgrep trust store had no CA anchors and `bun audit` could not reach the advisory endpoint; Trivy and Gitleaks sub-scanners were clean in the same run
+- `bun run precommit`: passed repeatedly while staging the 2026-05-21 audit commits

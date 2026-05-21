@@ -155,3 +155,14 @@ No API routes are added.
   a manual retry path through the shared hook.
 - Shared hook consumers keep permanent auth/permission failures visible and do
   not weaken the existing admin auth contract.
+
+## Validation Addendum (2026-05-21 audit)
+
+- `bun --cwd core lint`: passed
+- `bun --cwd core lint:types`: passed
+- `bun run lint`: passed
+- `bun run test:vitest -- tests/vitest/ui/listing-filters-editor-wave.test.tsx tests/vitest/ui/search-box-editor-wave.test.tsx`: passed
+- `bun run test:vitest -- tests/vitest/widgets/searchBox.test.tsx`: passed
+- `bun run gates:coderso`: passed
+- `bun run scan:security:strict`: attempted but failed outside TASK-316 scope because the local Semgrep trust store had no CA anchors and `bun audit` could not reach the advisory endpoint; Trivy and Gitleaks sub-scanners were clean in the same run
+- `bun run precommit`: passed repeatedly while staging the 2026-05-21 audit commits
