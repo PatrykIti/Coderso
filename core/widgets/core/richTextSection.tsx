@@ -1,6 +1,7 @@
-import type { CSSProperties, ComponentType } from "react";
+import { createElement, type CSSProperties, type ComponentType, type ReactNode } from "react";
 
 import {
+  decodeHtmlEntities,
   dangerousHtmlContentTagSet,
   escapeHtml,
   htmlToPlainText,
@@ -549,6 +550,106 @@ export function sanitizeRichTextHtmlWithDiagnostics(rawHtml: string | undefined)
 
 export function sanitizeRichTextHtml(rawHtml: string | undefined): string {
   return sanitizeRichTextHtmlWithDiagnostics(rawHtml).html;
+}
+
+type RichTextPreviewNode =
+  | string
+  | {
+      tag: string;
+      attrs: Record<string, string>;
+      children: RichTextPreviewNode[];
+    };
+
+const richTextPreviewAttributeNames = new Set(["href", "title", "target", "rel"]);
+
+const appendRichTextPreviewNode = (
+  stack: Array<{ tag: string; attrs?: Record<string, string>; children: RichTextPreviewNode[] }>,
+  node: RichTextPreviewNode
+) => {
+  stack[stack.length - 1]?.children.push(node);
+};
+
+const parseRichTextPreviewAttributes = (rawAttrs: string) => {
+  const attrs: Record<string, string> = {};
+  const parsed = parseHtmlAttributes(rawAttrs);
+
+  for (const name of richTextPreviewAttributeNames) {
+    const value = parsed.get(name);
+    if (!value) continue;
+    attrs[name] = decodeHtmlEntities(value);
+  }
+
+  return attrs;
+};
+
+const parseSanitizedRichTextPreviewHtml = (html: string) => {
+  const root = { tag: "root", children: [] as RichTextPreviewNode[] };
+  const stack: Array<{
+    tag: string;
+    attrs?: Record<string, string>;
+    children: RichTextPreviewNode[];
+  }> = [root];
+
+  for (const token of tokenizeHtml(html)) {
+    if (token.kind === "text") {
+      if (token.value) appendRichTextPreviewNode(stack, decodeHtmlEntities(token.value));
+      continue;
+    }
+
+    if (token.kind !== "tag" || !allowedTagSet.has(token.name)) continue;
+
+    if (token.closing) {
+      for (let stackIndex = stack.length - 1; stackIndex > 0; stackIndex -= 1) {
+        const current = stack[stackIndex];
+        if (current?.tag !== token.name) continue;
+        stack.splice(stackIndex);
+        appendRichTextPreviewNode(stack, {
+          tag: current.tag,
+          attrs: current.attrs ?? {},
+          children: current.children,
+        });
+        break;
+      }
+      continue;
+    }
+
+    const attrs = parseRichTextPreviewAttributes(token.rawAttrs);
+    if (selfClosingTagSet.has(token.name) || token.selfClosing) {
+      appendRichTextPreviewNode(stack, { tag: token.name, attrs, children: [] });
+      continue;
+    }
+
+    stack.push({ tag: token.name, attrs, children: [] });
+  }
+
+  for (let stackIndex = stack.length - 1; stackIndex > 0; stackIndex -= 1) {
+    const current = stack[stackIndex];
+    if (!current) continue;
+    stack.splice(stackIndex);
+    appendRichTextPreviewNode(stack, {
+      tag: current.tag,
+      attrs: current.attrs ?? {},
+      children: current.children,
+    });
+  }
+
+  return root.children;
+};
+
+const renderRichTextPreviewNode = (node: RichTextPreviewNode, key: string): ReactNode => {
+  if (typeof node === "string") return node;
+  return createElement(
+    node.tag,
+    { key, ...node.attrs },
+    ...node.children.map((child, index) => renderRichTextPreviewNode(child, `${key}-${index}`))
+  );
+};
+
+export function renderRichTextSectionHtmlPreview(value: string | undefined): ReactNode[] {
+  const sanitized = sanitizeRichTextHtml(value);
+  return parseSanitizedRichTextPreviewHtml(sanitized).map((node, index) =>
+    renderRichTextPreviewNode(node, `rich-text-preview-${index}`)
+  );
 }
 
 const normalizeRichTextPublicMediaSrc = (value: unknown) => {

@@ -218,8 +218,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-282 | Rich Text Section Widget Playwright Product Followups | High | Very Large | In progress (2026-05-21): implementation/test passes are landed, but final closure still needs fresh Playwright/admin/frontend evidence plus a complete strict security scan in a provisioned environment. |
-| TASK-282-07 | Rich Text Report Docs Changelog and Closure | Medium | Medium | In progress (2026-05-21): closure docs are reopened until the missing Playwright/admin/frontend refresh and full strict security scan can be recorded. |
+| TASK-282 | Rich Text Section Widget Playwright Product Followups | High | Very Large | In progress (2026-05-21): implementation/test passes, release gates, and strict security scan are green, but final closure still needs browser evidence from an explicitly approved or isolated DB-backed environment. |
+| TASK-282-07 | Rich Text Report Docs Changelog and Closure | Medium | Medium | In progress (2026-05-21): closure docs stay open until the remaining Playwright/admin/frontend refresh can run against an explicitly approved or isolated DB-backed environment. |
 | TASK-282-09 | Rich Text Text Color Clear Adoption | Medium | Medium | In progress (2026-05-21): widget-local clear behavior is implemented; final family closure is waiting on the remaining environment-level evidence. |
 | TASK-282-08 | Rich Text Attachments and Safe Embed Policy | High | Large | In progress (2026-05-21): attachment cards and safe embed link cards are implemented; final family closure is waiting on the remaining environment-level evidence. |
 | TASK-282-06 | Rich Text Editor Mode IA and Reader Guidance | Medium | Medium | In progress (2026-05-21): mode ownership, dropcap guidance, and Advanced simplification are implemented; final family closure is waiting on the remaining environment-level evidence. |

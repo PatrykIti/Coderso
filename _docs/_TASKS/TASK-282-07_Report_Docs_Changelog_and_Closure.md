@@ -27,15 +27,18 @@ the source report, widget docs, board rows, changelog, and validation matrix.
 ## Current Blocker
 
 Final TASK-282 closure is still blocked in this worktree environment. The
-implementation and focused test coverage are in place, but:
+implementation, focused test coverage, broader release gates, and
+`bun run scan:security:strict` are now in place, but:
 
-- `playwright-cli` is not available in `PATH`, so no fresh constrained
-  admin/frontend refresh session could be recorded from this worktree.
-- `bun run scan:security:strict` cannot complete here because `semgrep`,
-  `trivy`, and `gitleaks` are not installed in `PATH`.
+- local Playwright tooling plus Chromium and host dependencies can be
+  provisioned here, yet the configured `DATABASE_URL` points at a remote
+  Render Postgres instance rather than an isolated local database;
+- recording the remaining admin/frontend closure evidence would require
+  booting the app and logging into that shared environment, which is outside
+  the allowed mutation boundary without explicit approval.
 
-Keep the family `In Progress` until that evidence is captured in a provisioned
-environment and the strict scan finishes end-to-end.
+Keep the family `In Progress` until the browser refresh is captured against an
+explicitly approved or isolated database-backed environment.
 
 ## Scope Boundary
 

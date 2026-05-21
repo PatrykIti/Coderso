@@ -541,15 +541,22 @@ Focused validation tied to these Rich Text Section changes was green on
 - `bun x vitest run --config vitest.config.ts tests/vitest/widgets/richTextSection.test.tsx`
 - `bun x vitest run --config vitest.config.ts tests/vitest/ui/rich-text-section-editor-wave.test.tsx`
 - `bun test tests/unit/widgets/validator.test.ts`
+- `git diff --check`
+- `bun run lint`
+- `bun run gates:coderso`
+- `bun run scan:security:strict`
+- `bun run precommit`
 
 Current closure blocker in this worktree:
 
-- `playwright-cli` is not available in `PATH`, so no fresh constrained
-  admin/frontend refresh session could be captured here.
-- `semgrep`, `trivy`, and `gitleaks` are not available in `PATH`, so
-  `bun run scan:security:strict` still stops at the environment boundary after
-  running `bun audit`.
+- local Playwright tooling plus Chromium and host dependencies can be
+  provisioned here, but the configured `DATABASE_URL` points at a remote Render
+  Postgres instance instead of an isolated local database;
+- recording the remaining admin/frontend refresh would require booting the app
+  and logging into that shared environment, which is outside the allowed
+  mutation boundary without explicit approval.
 
-Until those tools are available in a provisioned environment, keep the TASK-282
-family out of final `Fixed`/`Done` closure even though the scoped code/test
-evidence below is green.
+Until that browser evidence is captured in an explicitly approved or isolated
+database-backed environment, keep the TASK-282 family out of final
+`Fixed`/`Done` closure even though the scoped code/test and strict security
+validation are now green.

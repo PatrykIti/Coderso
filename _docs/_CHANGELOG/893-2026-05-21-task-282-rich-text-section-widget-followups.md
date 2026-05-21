@@ -53,10 +53,16 @@ Tasks: TASK-282, TASK-282-01, TASK-282-02, TASK-282-03, TASK-282-04, TASK-282-05
   - `git diff --check`
   - `bun run lint`
   - `bun run gates:coderso`
+  - `bun run scan:security:strict`
   - `bun run precommit`
-- `bun run scan:security:strict` did not complete because `semgrep`, `trivy`,
-  and `gitleaks` are not installed in this environment. The script still ran
-  `bun audit`, and the failure is a missing-scanner tooling blocker rather than
-  a Rich Text Section-specific code failure.
+- Provisioned local scanner tooling in `/tmp` plus a Semgrep-safe Rich Text
+  Section Advanced preview renderer so the strict security scan can complete
+  cleanly without weakening the sanitizer contract.
+- Provisioned local Playwright CLI, Chromium, and Linux browser dependencies,
+  but did not record the final admin/frontend replay because the configured
+  `DATABASE_URL` targets a remote Render Postgres instance and browser login or
+  page setup would mutate a shared environment without explicit approval.
 
-Final TASK-282 closure remains open until a provisioned environment can supply `playwright-cli`, `semgrep`, `trivy`, and `gitleaks` for the remaining closure-only evidence and strict security scan completion.
+Final TASK-282 closure remains open until the remaining browser evidence is
+captured against an explicitly approved or isolated database-backed
+environment.

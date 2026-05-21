@@ -21,6 +21,7 @@ import { PostRichTextAdapter } from "@/ui/posts/editor/richtext/PostRichTextAdap
 import {
   normalizeRichTextBlocks,
   normalizeRichTextSectionData,
+  renderRichTextSectionHtmlPreview,
   resolveRichTextDropcapStatus,
   resolveRichTextRenderedSource,
   resolveRichTextSectionVariant,
@@ -1870,7 +1871,7 @@ function RichTextSectionAdvancedEditorContent({
           <p className="text-sm font-medium">Sanitized preview</p>
           <div className="rounded-md border bg-background p-3 text-sm text-muted-foreground">
             {rawHtmlPreview.html.length > 0 ? (
-              <div dangerouslySetInnerHTML={{ __html: rawHtmlPreview.html }} />
+              <div>{renderRichTextSectionHtmlPreview(rawHtmlPreview.html)}</div>
             ) : (
               <p>No rendered HTML after sanitization.</p>
             )}

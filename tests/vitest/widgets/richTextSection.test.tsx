@@ -11,6 +11,7 @@ import {
 import {
   createRichTextSectionWidget,
   normalizeRichTextSectionData,
+  renderRichTextSectionHtmlPreview,
   resolveRichTextRenderedSource,
   richTextSectionDefaults,
   RichTextSectionBlock,
@@ -62,6 +63,22 @@ test("rich text section sanitization strips dangerous payloads and reports diagn
       expect.objectContaining({ code: "href_rewritten", attributeName: "href" }),
     ])
   );
+});
+
+test("rich text section preview renderer reuses the widget sanitizer without raw html injection", () => {
+  const html = renderToString(
+    <div>
+      {renderRichTextSectionHtmlPreview(
+        '<p>Lead &amp; copy</p><hr><a href="javascript:alert(1)">Unsafe</a><img src="/drop.png">'
+      )}
+    </div>
+  );
+
+  expect(html).toContain("<p>Lead &amp; copy</p>");
+  expect(html).toContain("<hr");
+  expect(html).toContain('<a href="#">Unsafe</a>');
+  expect(html).not.toContain("<img");
+  expect(html).not.toContain("javascript:alert(1)");
 });
 
 test("resolveRichTextRenderedSource matches the runtime fallback contract", () => {
