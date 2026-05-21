@@ -120,11 +120,30 @@ const resolvePageId = (pathname: string) => {
 };
 
 const pageEditorSessionExpiredMessage = (
-  action: "saveDraft" | "publish" | "settingsSave" | "autosaveSettings"
+  action:
+    | "saveDraft"
+    | "publish"
+    | "settingsSave"
+    | "autosaveSettings"
+    | "loadPage"
+    | "loadTemplateOptions"
+    | "loadRevisions"
+    | "restoreRevision"
+    | "discardRevision"
 ) => {
   switch (action) {
     case "publish":
       return "Your admin session expired. Sign in again before publishing.";
+    case "loadPage":
+      return "Your admin session expired. Sign in again before loading this page.";
+    case "loadTemplateOptions":
+      return "Your admin session expired. Sign in again before loading page settings.";
+    case "loadRevisions":
+      return "Your admin session expired. Sign in again before loading page history.";
+    case "restoreRevision":
+      return "Your admin session expired. Sign in again before restoring this revision.";
+    case "discardRevision":
+      return "Your admin session expired. Sign in again before discarding this autosave.";
     case "settingsSave":
       return "Your admin session expired. Sign in again before updating page settings.";
     case "autosaveSettings":
@@ -153,7 +172,14 @@ const resolvePageEditorMutationError = (action: "saveDraft" | "publish", error: 
 };
 
 const resolvePageEditorInlineError = (
-  action: "settingsSave" | "autosaveSettings",
+  action:
+    | "settingsSave"
+    | "autosaveSettings"
+    | "loadPage"
+    | "loadTemplateOptions"
+    | "loadRevisions"
+    | "restoreRevision"
+    | "discardRevision",
   error: unknown,
   fallbackMessage: string
 ) => {
@@ -682,11 +708,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
         }
         applyPage(result, { preserveSelection: true });
       } catch (err) {
-        if (isApiClientError(err)) {
-          setError(err.message);
-        } else {
-          setError("Failed to load page.");
-        }
+        setError(resolvePageEditorInlineError("loadPage", err, "Failed to load page."));
       } finally {
         if (shouldSetLoading) setIsLoading(false);
       }
@@ -709,11 +731,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       })
       .catch((err) => {
         if (!active) return;
-        if (isApiClientError(err)) {
-          setError(err.message);
-        } else {
-          setError("Failed to load page.");
-        }
+        setError(resolvePageEditorInlineError("loadPage", err, "Failed to load page."));
       })
       .finally(() => {
         if (active && !initialCachedPage) setIsLoading(false);
@@ -832,11 +850,13 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       })
       .catch((err) => {
         if (!active) return;
-        if (isApiClientError(err)) {
-          setTemplateOptionsError(err.message);
-        } else {
-          setTemplateOptionsError("Failed to load template options.");
-        }
+        setTemplateOptionsError(
+          resolvePageEditorInlineError(
+            "loadTemplateOptions",
+            err,
+            "Failed to load template options."
+          )
+        );
       })
       .finally(() => {
         if (active) setTemplateOptionsLoading(false);
@@ -854,11 +874,9 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       const items = await listPageRevisions(pageId);
       setRevisions(items);
     } catch (err) {
-      if (isApiClientError(err)) {
-        setRevisionsError(err.message);
-      } else {
-        setRevisionsError("Failed to load page history.");
-      }
+      setRevisionsError(
+        resolvePageEditorInlineError("loadRevisions", err, "Failed to load page history.")
+      );
     } finally {
       setRevisionsLoading(false);
     }
@@ -890,11 +908,9 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       })
       .catch((err) => {
         if (!active) return;
-        if (isApiClientError(err)) {
-          setRevisionsError(err.message);
-        } else {
-          setRevisionsError("Failed to load page history.");
-        }
+        setRevisionsError(
+          resolvePageEditorInlineError("loadRevisions", err, "Failed to load page history.")
+        );
       })
       .finally(() => {
         if (active) setRevisionsLoading(false);
@@ -1213,11 +1229,9 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       }
       await refreshRevisions();
     } catch (err) {
-      if (isApiClientError(err)) {
-        setRevisionsError(err.message);
-      } else {
-        setRevisionsError("Failed to restore revision.");
-      }
+      setRevisionsError(
+        resolvePageEditorInlineError("restoreRevision", err, "Failed to restore revision.")
+      );
     } finally {
       setRestoringRevisionId(null);
     }
@@ -1231,11 +1245,9 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       await discardPageRevision(pageId, revisionId);
       await refreshRevisions();
     } catch (err) {
-      if (isApiClientError(err)) {
-        setRevisionsError(err.message);
-      } else {
-        setRevisionsError("Failed to discard autosave.");
-      }
+      setRevisionsError(
+        resolvePageEditorInlineError("discardRevision", err, "Failed to discard autosave.")
+      );
     } finally {
       setDiscardingRevisionId(null);
     }

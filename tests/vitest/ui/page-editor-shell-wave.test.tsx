@@ -1396,6 +1396,99 @@ test("PageEditor preserves unsaved state and shows shared expired-session guidan
   }
 });
 
+test("PageEditor reuses shared expired-session guidance for load and revision flows", async () => {
+  pageEditorState.reset();
+  window.history.replaceState({}, "", "/admin/advanced/pages/page-2");
+  pageEditorState.currentPage = createPage({ id: "page-2", title: "Fallback page" });
+  pageEditorState.getPageCached.mockRejectedValueOnce(
+    apiError("Authentication required", {
+      code: "auth_required",
+      status: 401,
+      sharedFailureKind: "session_expired",
+    })
+  );
+
+  const loadingView = mount(<PageEditor />);
+
+  try {
+    await flush();
+    expect(loadingView.container.textContent).toContain("Page error");
+    expect(loadingView.container.textContent).toContain(
+      "Your admin session expired. Sign in again before loading this page."
+    );
+  } finally {
+    loadingView.cleanup();
+  }
+
+  pageEditorState.reset();
+  const initialPage = createPage({ id: "page-1" });
+  pageEditorState.cachedPage = initialPage;
+  pageEditorState.currentPage = clonePage(initialPage);
+
+  const view = mount(<PageEditor pageId="page-1" initialPage={initialPage} />);
+
+  try {
+    await flush();
+
+    pageEditorState.getPageCached.mockRejectedValueOnce(
+      apiError("Authentication required", {
+        code: "auth_required",
+        status: 401,
+        sharedFailureKind: "session_expired",
+      })
+    );
+    React.act(() => {
+      pageEditorState.triggerCacheEvent("page-detail:page-1");
+    });
+    await flush();
+    expect(view.container.textContent).toContain(
+      "Your admin session expired. Sign in again before loading this page."
+    );
+
+    pageEditorState.listPageRevisions.mockImplementationOnce(async () => {
+      throw apiError("Authentication required", {
+        code: "auth_required",
+        status: 401,
+        sharedFailureKind: "session_expired",
+      });
+    });
+    clickButton(view.container, "History");
+    await flush();
+    await flush();
+    expect(view.container.textContent).toContain(
+      "revision-error:Your admin session expired. Sign in again before loading page history."
+    );
+
+    pageEditorState.restorePageRevision.mockRejectedValueOnce(
+      apiError("Authentication required", {
+        code: "auth_required",
+        status: 401,
+        sharedFailureKind: "session_expired",
+      })
+    );
+    clickButton(view.container, "restore-revision");
+    await flush();
+    expect(view.container.textContent).toContain(
+      "revision-error:Your admin session expired. Sign in again before restoring this revision."
+    );
+
+    pageEditorState.discardPageRevision.mockRejectedValueOnce(
+      apiError("Authentication required", {
+        code: "auth_required",
+        status: 401,
+        sharedFailureKind: "session_expired",
+      })
+    );
+    clickButton(view.container, "discard-revision");
+    await flush();
+    expect(view.container.textContent).toContain(
+      "revision-error:Your admin session expired. Sign in again before discarding this autosave."
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("PageEditor duplicates and deletes selected blocks with selection fallback", async () => {
   pageEditorState.reset();
   const initialPage = createPage({

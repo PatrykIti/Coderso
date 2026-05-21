@@ -172,7 +172,8 @@ This task changes existing internal admin auth/session behavior only.
 - `bun run test:vitest -- tests/vitest/admin/apiClient.test.ts` - passed (`5`
   tests)
 - `bun run test:vitest -- tests/vitest/ui/page-editor-shell-wave.test.tsx` -
-  passed (`15` tests)
+  passed (`16` tests) after the audit follow-up extended shared expired-session
+  coverage to page load/refresh and revision flows
 - `bun run test:vitest -- tests/vitest/ui/posts-feed-editor-wave.test.tsx` -
   passed (`9` tests)
 - `bun --cwd core lint` - passed
@@ -189,3 +190,6 @@ This task changes existing internal admin auth/session behavior only.
 - 2026-05-21: the TASK-322 family is closed. Shared admin request
   classification, page-editor save/publish handling, and Posts Feed
   picker/preview consumers now use one bounded session-expiry contract.
+- 2026-05-21 audit follow-up: `PageEditor` now reuses the same shared
+  session-expiry guidance for page load/refresh and revision read/mutation
+  paths instead of surfacing raw API client text there.
