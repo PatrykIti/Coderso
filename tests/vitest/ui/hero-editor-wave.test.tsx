@@ -1260,6 +1260,33 @@ test("HeroVisualEditor rejects duplicate preset imports and normalizes media-cen
   }
 });
 
+test("HeroVisualEditor uses the runtime body weight default in Typography controls", async () => {
+  const { HeroVisualEditor } = await import("../../../core/admin/ui/widgets/editors/HeroEditors");
+
+  const view = mount(
+    <HeroVisualEditor
+      value={{ headline: "Hero" }}
+      onChange={() => undefined}
+      variant="centered"
+      onVariantChange={() => undefined}
+    />
+  );
+
+  try {
+    await flush();
+
+    const label = Array.from(view.container.querySelectorAll("p")).find(
+      (element) => normalizeText(element.textContent) === "body weight"
+    );
+    const bodyWeightSelect = label?.parentElement?.querySelector("select");
+
+    expect(bodyWeightSelect).toBeInstanceOf(HTMLSelectElement);
+    expect((bodyWeightSelect as HTMLSelectElement).value).toBe("normal");
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("HeroVisualEditor covers content, CTA, media, typography, color, border, gradient, and background branches", async () => {
   const { HeroVisualEditor } = await import("../../../core/admin/ui/widgets/editors/HeroEditors");
 

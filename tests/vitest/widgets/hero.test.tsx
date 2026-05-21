@@ -518,6 +518,18 @@ test("hero normalizer bounds new tokens and trims social proof media", () => {
   });
 });
 
+test("hero normalizer keeps the default body weight when the style omits it", () => {
+  const normalized = normalizeHeroData({
+    ...heroDefaults,
+    style: {
+      ...heroDefaults.style,
+      bodyWeight: undefined,
+    },
+  } as HeroData);
+
+  expect(normalized.style?.bodyWeight).toBe("normal");
+});
+
 test("hero renders sanitized rich copy and social proof", () => {
   const html = renderToString(
     <HeroBlock

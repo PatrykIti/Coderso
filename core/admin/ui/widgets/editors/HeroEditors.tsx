@@ -2357,7 +2357,7 @@ export function HeroVisualEditor({
           <div className="space-y-2">
             <p className="text-sm font-medium">Body weight</p>
             <Select
-              value={style.bodyWeight ?? "medium"}
+              value={style.bodyWeight ?? "normal"}
               onValueChange={(next) => updateStyle({ bodyWeight: next as HeroWeight })}
             >
               <SelectTrigger>
