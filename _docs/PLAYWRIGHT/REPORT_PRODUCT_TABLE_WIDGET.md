@@ -367,7 +367,7 @@ Tło tabeli: rgb(240, 244, 255) ← z custom koloru
 | ID | Priorytet | Opis |
 |----|-----------|------|
 | BF-01 | Wysoki | Brak thumbnails / kolumny obraz |
-| BF-02 | Wysoki | Brak klikalnych wierszy / linków |
+| BF-02 | Wysoki | Brak kolumny excerpt |
 | BF-03 | Wysoki | Brak ilości sztuk (stock.quantity) w kolumnie Stock |
 | BF-07 | Wysoki | Brak nagłówka sekcji (eyebrow/title/description nad tabelą) |
 | BF-04 | Średni | Brak kolorowania wierszy wg statusu |
@@ -466,5 +466,27 @@ Tylko elementy nie zależne od danych runtime są zgodne:
 
 - `bun run test:vitest -- tests/vitest/admin/productTablePreviewClient.test.ts tests/vitest/widgets/productTable.test.tsx tests/vitest/ui/product-table-editor-wave.test.tsx`
 - `bun test tests/integration/routes/productTablePreview.test.ts tests/integration/routes/widgets.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+
+## Status po TASK-281-02 (2026-05-21)
+
+### Fixed in TASK-281-02
+
+- `BUG-01`: Visual mode now exposes shared label inputs for `title`, `slug`,
+  `price`, `compareAt`, `status`, `stock`, and `collections`, so the
+  Collections count column no longer depends on schema-only defaults.
+- `BUG-04`: `showTitle` and `showPrice` are now persisted schema fields with
+  guardrails. Product stays on when Slug is also hidden, and Price stays on
+  when Compare at is also hidden.
+- `BF-13`: Collections count keeps editor-owned header context through the same
+  shared column registry used by the renderer, labels, and visibility toggles.
+- Product Table headers and cells now resolve through one `productTableColumns`
+  registry instead of separate renderer/editor column lists.
+
+### Validation evidence
+
+- `bun run test:vitest -- tests/vitest/widgets/productTable.test.tsx tests/vitest/ui/product-table-editor-wave.test.tsx`
+- `bun test tests/unit/widgets/validator.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`

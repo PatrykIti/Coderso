@@ -2,8 +2,9 @@
 
 ## Purpose
 
-Render a resolved commerce table with bounded column visibility, labels,
-empty-state styling, and admin preview parity for the current source query.
+Render a resolved commerce table with shared column metadata, guarded column
+visibility, editable labels, empty-state styling, and admin preview parity for
+the current source query.
 
 ## Widget ID
 
@@ -31,6 +32,17 @@ empty-state styling, and admin preview parity for the current source query.
 - read-only runtime/admin preview diagnostics
 - query diagnostics
 - manual preview refresh
+
+## Column Model
+
+- Shared column order: Product, Slug, Price, Compare at, Status, Stock,
+  Collections.
+- Visual mode exposes toggles and header labels for all seven columns through
+  the shared `productTableColumns` registry.
+- `showTitle` can be disabled only while Slug remains visible. If both identity
+  columns are turned off, Product is restored automatically.
+- `showPrice` can be disabled only while Compare at remains visible. If both
+  pricing columns are turned off, Price is restored automatically.
 
 ## Runtime Behavior Notes
 
@@ -69,7 +81,9 @@ empty-state styling, and admin preview parity for the current source query.
     "sortDir": "desc"
   },
   "fields": {
+    "showTitle": true,
     "showSlug": true,
+    "showPrice": true,
     "showStatus": true,
     "showStock": true,
     "showCompareAt": false,
@@ -77,12 +91,12 @@ empty-state styling, and admin preview parity for the current source query.
   },
   "labels": {
     "title": "Product",
+    "slug": "Slug",
     "price": "Price",
     "compareAt": "Compare at",
     "status": "Status",
     "stock": "Stock",
-    "collections": "Collections",
-    "slug": "Slug"
+    "collections": "Collections"
   },
   "emptyState": {
     "title": "No products available",

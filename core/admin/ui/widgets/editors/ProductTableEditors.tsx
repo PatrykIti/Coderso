@@ -5,6 +5,7 @@ import { previewProductTable } from "@/services/productTablePreviewClient";
 import {
   buildProductTableQueryInput,
   normalizeProductTableData,
+  productTableColumns,
   productTableDefaults,
   type ProductTableData,
 } from "../../../../widgets/core/productTable";
@@ -53,6 +54,36 @@ const clearStyle = (
   const { [key]: _removed, ...nextStyle } = current.style ?? {};
   update(value, onChange, {
     style: Object.keys(nextStyle).length > 0 ? nextStyle : {},
+  });
+};
+
+const updateFieldVisibility = (
+  value: ProductTableData,
+  onChange: (next: ProductTableData) => void,
+  key: keyof NonNullable<ProductTableData["fields"]>,
+  next: boolean
+) => {
+  const current = normalizeProductTableData(value);
+  update(value, onChange, {
+    fields: {
+      ...current.fields,
+      [key]: next,
+    },
+  });
+};
+
+const updateLabel = (
+  value: ProductTableData,
+  onChange: (next: ProductTableData) => void,
+  key: keyof NonNullable<ProductTableData["labels"]>,
+  next: string
+) => {
+  const current = normalizeProductTableData(value);
+  update(value, onChange, {
+    labels: {
+      ...current.labels,
+      [key]: next,
+    },
   });
 };
 
@@ -350,106 +381,35 @@ export function ProductTableVisualEditor({
         disabled={preview.isLoading}
       />
 
-      <CommerceEditorSection title="Columns" description="Choose columns visible in the table.">
-        <CommerceToggleField
-          label="Show slug"
-          checked={normalized.fields?.showSlug !== false}
-          onChange={(next) =>
-            update(normalized, onChange, {
-              fields: {
-                ...normalized.fields,
-                showSlug: next,
-              },
-            })
-          }
-        />
-        <CommerceToggleField
-          label="Show status"
-          checked={normalized.fields?.showStatus !== false}
-          onChange={(next) =>
-            update(normalized, onChange, {
-              fields: {
-                ...normalized.fields,
-                showStatus: next,
-              },
-            })
-          }
-        />
-        <CommerceToggleField
-          label="Show stock"
-          checked={normalized.fields?.showStock !== false}
-          onChange={(next) =>
-            update(normalized, onChange, {
-              fields: {
-                ...normalized.fields,
-                showStock: next,
-              },
-            })
-          }
-        />
-        <CommerceToggleField
-          label="Show compare-at price"
-          checked={normalized.fields?.showCompareAt === true}
-          onChange={(next) =>
-            update(normalized, onChange, {
-              fields: {
-                ...normalized.fields,
-                showCompareAt: next,
-              },
-            })
-          }
-        />
-        <CommerceToggleField
-          label="Show collection count"
-          checked={normalized.fields?.showCollectionCount === true}
-          onChange={(next) =>
-            update(normalized, onChange, {
-              fields: {
-                ...normalized.fields,
-                showCollectionCount: next,
-              },
-            })
-          }
-        />
+      <CommerceEditorSection
+        title="Columns"
+        description="Choose columns visible in the table. Product and Price stay visible when their paired context column is also hidden."
+      >
+        {productTableColumns.map((column) => (
+          <CommerceToggleField
+            key={column.key}
+            label={column.toggleLabel}
+            description={column.guardDescription}
+            checked={normalized.fields?.[column.visibilityKey] ?? false}
+            onChange={(next) =>
+              updateFieldVisibility(normalized, onChange, column.visibilityKey, next)
+            }
+          />
+        ))}
       </CommerceEditorSection>
 
-      <CommerceEditorSection title="Column labels" description="Customize table header labels.">
-        <CommerceTextField
-          label="Product"
-          value={normalized.labels?.title}
-          onChange={(next) =>
-            update(normalized, onChange, {
-              labels: {
-                ...normalized.labels,
-                title: next,
-              },
-            })
-          }
-        />
-        <CommerceTextField
-          label="Price"
-          value={normalized.labels?.price}
-          onChange={(next) =>
-            update(normalized, onChange, {
-              labels: {
-                ...normalized.labels,
-                price: next,
-              },
-            })
-          }
-        />
-        <CommerceTextField
-          label="Status"
-          value={normalized.labels?.status}
-          onChange={(next) =>
-            update(normalized, onChange, {
-              labels: {
-                ...normalized.labels,
-                status: next,
-              },
-            })
-          }
-        />
+      <CommerceEditorSection
+        title="Column labels"
+        description="Customize every Product Table header label from the shared column registry."
+      >
+        {productTableColumns.map((column) => (
+          <CommerceTextField
+            key={column.key}
+            label={column.labelControlLabel}
+            value={normalized.labels?.[column.labelKey]}
+            onChange={(next) => updateLabel(normalized, onChange, column.labelKey, next)}
+          />
+        ))}
       </CommerceEditorSection>
 
       <CommerceEditorSection title="Empty state" description="Shown when no products are resolved.">

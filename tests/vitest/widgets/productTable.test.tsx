@@ -12,7 +12,10 @@ import {
   ProductTableBlock,
   createProductTableWidget,
   normalizeProductTableData,
+  normalizeProductTableFields,
+  normalizeProductTableLabels,
   productTableDefaults,
+  resolveVisibleProductTableColumns,
   type ProductTableData,
 } from "../../../core/widgets/core/productTable";
 import type { WidgetEditorProps } from "../../../core/widgets/types";
@@ -40,18 +43,29 @@ test("product table renders empty state", () => {
   expect(html).toContain('data-widget="product-table"');
 });
 
-test("product table renders rows with configured columns", () => {
+test("product table renders rows with shared column labels and visibility", () => {
   const html = renderToString(
     <ProductTableBlock
       variant="default"
       data={normalizeProductTableData({
         ...productTableDefaults,
         fields: {
+          showTitle: false,
           showSlug: true,
-          showStatus: true,
+          showPrice: false,
+          showStatus: false,
           showStock: true,
           showCompareAt: true,
           showCollectionCount: true,
+        },
+        labels: {
+          title: "Catalog item",
+          slug: "Handle",
+          price: "Current price",
+          compareAt: "Was price",
+          status: "Availability",
+          stock: "Inventory",
+          collections: "Collections total",
         },
         resolved: {
           items: [
@@ -73,7 +87,7 @@ test("product table renders rows with configured columns", () => {
               },
               primaryMediaId: null,
               mediaIds: [],
-              collectionIds: ["collection-1"],
+              collectionIds: ["collection-1", "collection-2"],
             },
           ],
           total: 1,
@@ -83,12 +97,139 @@ test("product table renders rows with configured columns", () => {
     />
   );
 
-  expect(html).toContain("Starter Home");
+  expect(html).toContain("Handle");
+  expect(html).toContain("Was price");
+  expect(html).toContain("Inventory");
+  expect(html).toContain("Collections total");
   expect(html).toContain("starter-home");
-  expect(html).toContain("$1,200.00");
   expect(html).toContain("$1,300.00");
   expect(html).toContain("In stock");
-  expect(html).toContain("Collections");
+  expect(html).not.toContain("Catalog item");
+  expect(html).not.toContain("Current price");
+  expect(html).not.toContain("Starter Home");
+  expect(html).not.toContain("$1,200.00");
+  expect(html).not.toContain("Availability");
+});
+
+test("product table keeps legacy title and price visibility guardrails", () => {
+  const guardedFields = normalizeProductTableFields({
+    showTitle: false,
+    showSlug: false,
+    showPrice: false,
+    showCompareAt: false,
+    showStatus: true,
+    showStock: true,
+    showCollectionCount: false,
+  });
+
+  expect(guardedFields).toMatchObject({
+    showTitle: true,
+    showSlug: false,
+    showPrice: true,
+    showCompareAt: false,
+  });
+  expect(resolveVisibleProductTableColumns(guardedFields).map((column) => column.key)).toEqual([
+    "title",
+    "price",
+    "status",
+    "stock",
+  ]);
+});
+
+test("product table normalizes source, labels, and guarded fields", () => {
+  const normalized = normalizeProductTableData({
+    source: {
+      limit: 999,
+      search: "  homes  ",
+    },
+    fields: {
+      showTitle: false,
+      showSlug: false,
+      showPrice: false,
+      showCompareAt: false,
+    },
+    labels: {
+      title: " ",
+      slug: " ",
+      compareAt: "  MSRP  ",
+      stock: " ",
+      collections: " ",
+    },
+  });
+
+  expect(normalized.source?.limit).toBe(48);
+  expect(normalized.source?.search).toBe("homes");
+  expect(normalized.fields).toMatchObject({
+    showTitle: true,
+    showSlug: false,
+    showPrice: true,
+    showCompareAt: false,
+  });
+  expect(normalized.labels).toMatchObject({
+    title: "Product",
+    slug: "Slug",
+    compareAt: "MSRP",
+    stock: "Stock",
+    collections: "Collections",
+  });
+  expect(normalizeProductTableLabels({ price: " " }).price).toBe("Price");
+});
+
+test("product table validator accepts resolved payload with title and price visibility flags", () => {
+  clearWidgets();
+  registerWidget(
+    createProductTableWidget({
+      wizard: StubEditor,
+      visual: StubEditor,
+      advanced: StubEditor,
+    })
+  );
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "product-table-1",
+      type: "product-table",
+      variant: "default",
+      data: {
+        ...productTableDefaults,
+        fields: {
+          showTitle: false,
+          showSlug: true,
+          showPrice: false,
+          showStatus: true,
+          showStock: true,
+          showCompareAt: true,
+          showCollectionCount: false,
+        },
+        resolved: {
+          items: [
+            {
+              id: "product-1",
+              title: "Starter Home",
+              slug: "starter-home",
+              excerpt: null,
+              status: "published",
+              pricing: {
+                amount: 120000,
+                currency: "USD",
+                compareAtAmount: null,
+              },
+              stock: {
+                state: "in_stock",
+                quantity: 3,
+                inStock: true,
+              },
+              primaryMediaId: null,
+              mediaIds: [],
+              collectionIds: [],
+            },
+          ],
+          total: 1,
+          resolvedAt: "2026-02-19T12:00:00.000Z",
+        },
+      },
+    })
+  ).not.toThrow();
 });
 
 test("product table cleared surfaces omit empty, table, and header backgrounds", () => {
@@ -114,7 +255,9 @@ test("product table cleared surfaces omit empty, table, and header backgrounds",
         ...productTableDefaults,
         style: {},
         fields: {
+          showTitle: true,
           showSlug: true,
+          showPrice: true,
           showStatus: true,
           showStock: true,
           showCompareAt: true,
@@ -146,70 +289,6 @@ test("product table cleared surfaces omit empty, table, and header backgrounds",
   expect(emptyHtml).not.toContain("background-color:transparent");
   expect(tableHtml).not.toContain("bg-[var(--color-bg)]");
   expect(tableHtml).not.toContain("background-color:transparent");
-});
-
-test("product table normalizes source and labels", () => {
-  const normalized = normalizeProductTableData({
-    source: {
-      limit: 999,
-      search: "  homes  ",
-    },
-    labels: {
-      title: " ",
-    },
-  });
-
-  expect(normalized.source?.limit).toBe(48);
-  expect(normalized.source?.search).toBe("homes");
-  expect(normalized.labels?.title).toBe("Product");
-});
-
-test("product table validator accepts resolved payload", () => {
-  clearWidgets();
-  registerWidget(
-    createProductTableWidget({
-      wizard: StubEditor,
-      visual: StubEditor,
-      advanced: StubEditor,
-    })
-  );
-
-  expect(() =>
-    normalizeWidgetBlock({
-      id: "product-table-1",
-      type: "product-table",
-      variant: "default",
-      data: {
-        ...productTableDefaults,
-        resolved: {
-          items: [
-            {
-              id: "product-1",
-              title: "Starter Home",
-              slug: "starter-home",
-              excerpt: null,
-              status: "published",
-              pricing: {
-                amount: 120000,
-                currency: "USD",
-                compareAtAmount: null,
-              },
-              stock: {
-                state: "in_stock",
-                quantity: 3,
-                inStock: true,
-              },
-              primaryMediaId: null,
-              mediaIds: [],
-              collectionIds: [],
-            },
-          ],
-          total: 1,
-          resolvedAt: "2026-02-19T12:00:00.000Z",
-        },
-      },
-    })
-  ).not.toThrow();
 });
 
 test("product table renderer surfaces preview warnings and widget preview support", () => {
@@ -245,7 +324,7 @@ test("product table renderer surfaces preview warnings and widget preview suppor
   expect(widget.editorCapabilities?.supportsPreviewState).toBe(true);
 });
 
-test("product table editors render expected panels", () => {
+test("product table editors render expected panels and registry-backed controls", () => {
   const wizard = renderToString(
     <ProductTableWizardEditor
       value={productTableDefaults}
@@ -265,6 +344,12 @@ test("product table editors render expected panels", () => {
     />
   );
   expect(visual).toContain("Columns");
+  expect(visual).toContain("Show product");
+  expect(visual).toContain("Show price");
+  expect(visual).toContain("Show compare-at price");
+  expect(visual).toContain("Slug");
+  expect(visual).toContain("Compare at");
+  expect(visual).toContain("Collections");
   expect(visual).toContain("Column labels");
 
   const advanced = renderToString(

@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Commerce + Admin UI + Runtime Render + Playwright QA
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-252, TASK-256, TASK-256-01, TASK-256-02, TASK-256-04, TASK-256-07, TASK-256-08
+**Dependencies:** TASK-252, TASK-256, TASK-256-01, TASK-256-02, TASK-256-04, TASK-256-06, TASK-256-07, TASK-256-08
 **Status:** To Do
 
 ---
@@ -70,8 +70,9 @@ the Product Table slice.
 | Report finding | TASK-281 owner | Notes |
 |---|---|---|
 | BUG-00 admin preview never hydrates commerce data | TASK-281-01 | Product Table admin canvas/runtime preview parity through the existing commerce query contract. |
-| BUG-01 missing Slug, Stock, CompareAt, Collections label controls | TASK-281-02 | Complete editor controls for schema-owned labels. |
+| BUG-01 missing Slug, Stock, CompareAt, Collections label controls | TASK-281-02 | Complete editor controls for every schema-owned label through the shared column registry. |
 | BUG-04 title and price are always visible | TASK-281-02 | Add bounded visibility policy for mandatory columns without allowing an empty unusable table. |
+| BF-13 collections count header context is schema-only | TASK-281-02 | Collections count now keeps its editor-owned header label through the shared column registry. |
 | BUG-02 status renders raw text and duplicates title suffix | TASK-281-03 | Product Table status badge, title/status copy, and row-state treatment. |
 | BUG-03 and BF-03 stock quantity is ignored | TASK-281-03 | Optional stock quantity display inside the stock column. |
 | BF-04 status row coloring | TASK-281-03 | Bounded row-state presentation, no arbitrary classes. |
@@ -96,7 +97,7 @@ the Product Table slice.
 ## Sub-Tasks
 
 - [x] TASK-281-01: Product Table Admin Preview Resolver Parity
-- [ ] TASK-281-02: Product Table Column Labels and Visibility Model
+- [x] TASK-281-02: Product Table Column Labels and Visibility Model
 - [ ] TASK-281-03: Product Table Status Stock and Row State Presentation
 - [ ] TASK-281-04: Product Table Product Links and Action Column
 - [ ] TASK-281-05: Product Table Accessibility and Runtime Semantics

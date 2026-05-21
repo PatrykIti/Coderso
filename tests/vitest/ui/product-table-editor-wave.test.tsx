@@ -216,7 +216,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test("ProductTable editors normalize source, columns, labels, and read-only preview diagnostics", async () => {
+test("ProductTable editors normalize source, full column registry, labels, and read-only preview diagnostics", async () => {
   const { ProductTableAdvancedEditor, ProductTableVisualEditor, ProductTableWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/ProductTableEditors");
 
@@ -293,6 +293,12 @@ test("ProductTable editors normalize source, columns, labels, and read-only prev
       normalizeText("Resolved items: 1 · Total: 0")
     );
     expect(findInputByLabel(view.container, "Runtime error flag")).toBeUndefined();
+    expect(findInputByLabel(view.container, "Show product")).toBeInstanceOf(HTMLInputElement);
+    expect(findInputByLabel(view.container, "Show price")).toBeInstanceOf(HTMLInputElement);
+    expect(findInputByLabel(view.container, "Slug")).toBeInstanceOf(HTMLInputElement);
+    expect(findInputByLabel(view.container, "Compare at")).toBeInstanceOf(HTMLInputElement);
+    expect(findInputByLabel(view.container, "Stock")).toBeInstanceOf(HTMLInputElement);
+    expect(findInputByLabel(view.container, "Collections")).toBeInstanceOf(HTMLInputElement);
     expect(
       (findInputByLabel(view.container, "Limit") as HTMLInputElement | null | undefined)?.value
     ).toBe("12");
@@ -313,15 +319,20 @@ test("ProductTable editors normalize source, columns, labels, and read-only prev
     toggleCheckbox(findInputByLabel(view.container, "archived"));
     toggleCheckbox(findInputByLabel(view.container, "published"));
 
-    toggleCheckbox(findInputByLabel(view.container, "Show slug"));
+    toggleCheckbox(findInputByLabel(view.container, "Show product"));
+    toggleCheckbox(findInputByLabel(view.container, "Show compare-at price"));
+    toggleCheckbox(findInputByLabel(view.container, "Show price"));
     toggleCheckbox(findInputByLabel(view.container, "Show status"));
     toggleCheckbox(findInputByLabel(view.container, "Show stock"));
-    toggleCheckbox(findInputByLabel(view.container, "Show compare-at price"));
     toggleCheckbox(findInputByLabel(view.container, "Show collection count"));
 
     setInputValue(findInputByLabel(view.container, "Product"), "Catalog item");
+    setInputValue(findInputByLabel(view.container, "Slug"), "Handle");
     setInputValue(findInputByLabel(view.container, "Price"), "");
+    setInputValue(findInputByLabel(view.container, "Compare at"), "Was price");
     setInputValue(findInputByLabel(view.container, "Status"), "Availability");
+    setInputValue(findInputByLabel(view.container, "Stock"), "Inventory");
+    setInputValue(findInputByLabel(view.container, "Collections"), "Groups");
     setInputValue(findInputByLabel(view.container, "Title"), "Nothing to list");
     setInputValue(
       findInputByLabel(view.container, "Description"),
@@ -337,7 +348,9 @@ test("ProductTable editors normalize source, columns, labels, and read-only prev
       sortDir: "asc",
     });
     expect(latestValue.fields).toEqual({
-      showSlug: false,
+      showTitle: false,
+      showSlug: true,
+      showPrice: false,
       showStatus: false,
       showStock: false,
       showCompareAt: true,
@@ -345,8 +358,12 @@ test("ProductTable editors normalize source, columns, labels, and read-only prev
     });
     expect(latestValue.labels).toMatchObject({
       title: "Catalog item",
+      slug: "Handle",
       price: "Price",
+      compareAt: "Was price",
       status: "Availability",
+      stock: "Inventory",
+      collections: "Groups",
     });
     expect(latestValue.emptyState).toEqual({
       title: "Nothing to list",
@@ -384,6 +401,67 @@ test("ProductTable editors normalize source, columns, labels, and read-only prev
     expect(preview?.textContent).toContain('"summer"');
     expect(preview?.textContent).toContain('"winter"');
     expect(preview?.textContent).toContain('"archived"');
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("ProductTable visual editor restores guarded identity and pricing columns", async () => {
+  const { ProductTableVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/ProductTableEditors");
+
+  let latestValue: ProductTableData = {};
+
+  const Harness = () => {
+    const [value, setValue] = useState<ProductTableData>(latestValue);
+
+    return (
+      <ProductTableVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="default"
+        onVariantChange={() => undefined}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    expect(normalizeText(view.container.textContent)).toContain(
+      normalizeText("At least one identity column stays visible")
+    );
+    expect(normalizeText(view.container.textContent)).toContain(
+      normalizeText("At least one pricing column stays visible")
+    );
+
+    toggleCheckbox(findInputByLabel(view.container, "Show product"));
+    expect(latestValue.fields).toMatchObject({
+      showTitle: false,
+      showSlug: true,
+    });
+
+    toggleCheckbox(findInputByLabel(view.container, "Show slug"));
+    expect(latestValue.fields).toMatchObject({
+      showTitle: true,
+      showSlug: false,
+    });
+
+    toggleCheckbox(findInputByLabel(view.container, "Show compare-at price"));
+    toggleCheckbox(findInputByLabel(view.container, "Show price"));
+    expect(latestValue.fields).toMatchObject({
+      showPrice: false,
+      showCompareAt: true,
+    });
+
+    toggleCheckbox(findInputByLabel(view.container, "Show compare-at price"));
+    expect(latestValue.fields).toMatchObject({
+      showPrice: true,
+      showCompareAt: false,
+    });
   } finally {
     view.cleanup();
   }

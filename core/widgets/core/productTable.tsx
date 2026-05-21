@@ -1,4 +1,4 @@
-import type { ComponentType, CSSProperties } from "react";
+import React, { type ComponentType, type CSSProperties } from "react";
 
 import type { WidgetDefinition, WidgetEditorProps, WidgetRenderContext } from "../types";
 import {
@@ -13,25 +13,59 @@ import {
 import { compactObject, compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export type ProductTableVariantId = "default";
+export type ProductTableColumnKey =
+  | "title"
+  | "slug"
+  | "price"
+  | "compareAt"
+  | "status"
+  | "stock"
+  | "collections";
+export type ProductTableColumnVisibilityKey =
+  | "showTitle"
+  | "showSlug"
+  | "showPrice"
+  | "showCompareAt"
+  | "showStatus"
+  | "showStock"
+  | "showCollectionCount";
+export type ProductTableLabelKey = ProductTableColumnKey;
+export type ProductTableGuardGroup = "identity" | "pricing";
+
+export type ProductTableFields = {
+  showTitle?: boolean;
+  showSlug?: boolean;
+  showPrice?: boolean;
+  showStatus?: boolean;
+  showStock?: boolean;
+  showCompareAt?: boolean;
+  showCollectionCount?: boolean;
+};
+
+export type ProductTableLabels = {
+  title?: string;
+  price?: string;
+  compareAt?: string;
+  status?: string;
+  stock?: string;
+  collections?: string;
+  slug?: string;
+};
+
+export type ProductTableColumnDefinition = {
+  key: ProductTableColumnKey;
+  labelKey: ProductTableLabelKey;
+  visibilityKey: ProductTableColumnVisibilityKey;
+  toggleLabel: string;
+  labelControlLabel: string;
+  guardGroup?: ProductTableGuardGroup;
+  guardDescription?: string;
+};
 
 export type ProductTableData = {
   source?: CommerceWidgetSource;
-  fields?: {
-    showSlug?: boolean;
-    showStatus?: boolean;
-    showStock?: boolean;
-    showCompareAt?: boolean;
-    showCollectionCount?: boolean;
-  };
-  labels?: {
-    title?: string;
-    price?: string;
-    compareAt?: string;
-    status?: string;
-    stock?: string;
-    collections?: string;
-    slug?: string;
-  };
+  fields?: ProductTableFields;
+  labels?: ProductTableLabels;
   emptyState?: {
     title?: string;
     description?: string;
@@ -51,6 +85,96 @@ export type ProductTableData = {
   };
 };
 
+const productTableFieldDefaults: Required<ProductTableFields> = {
+  showTitle: true,
+  showSlug: true,
+  showPrice: true,
+  showStatus: true,
+  showStock: true,
+  showCompareAt: false,
+  showCollectionCount: false,
+};
+
+const productTableLabelFallbacks: Required<ProductTableLabels> = {
+  title: "Product",
+  price: "Price",
+  compareAt: "Compare at",
+  status: "Status",
+  stock: "Stock",
+  collections: "Collections",
+  slug: "Slug",
+};
+
+const productTableEmptyStateDefaults = {
+  title: "No products available",
+  description: "Publish products or adjust source query.",
+};
+
+export const productTableVisibilityGuardCopy: Record<ProductTableGuardGroup, string> = {
+  identity:
+    "At least one identity column stays visible. Product turns back on when Slug is also hidden.",
+  pricing:
+    "At least one pricing column stays visible. Price turns back on when Compare at is also hidden.",
+};
+
+export const productTableColumns: ProductTableColumnDefinition[] = [
+  {
+    key: "title",
+    labelKey: "title",
+    visibilityKey: "showTitle",
+    toggleLabel: "Show product",
+    labelControlLabel: "Product",
+    guardGroup: "identity",
+    guardDescription: productTableVisibilityGuardCopy.identity,
+  },
+  {
+    key: "slug",
+    labelKey: "slug",
+    visibilityKey: "showSlug",
+    toggleLabel: "Show slug",
+    labelControlLabel: "Slug",
+    guardGroup: "identity",
+  },
+  {
+    key: "price",
+    labelKey: "price",
+    visibilityKey: "showPrice",
+    toggleLabel: "Show price",
+    labelControlLabel: "Price",
+    guardGroup: "pricing",
+    guardDescription: productTableVisibilityGuardCopy.pricing,
+  },
+  {
+    key: "compareAt",
+    labelKey: "compareAt",
+    visibilityKey: "showCompareAt",
+    toggleLabel: "Show compare-at price",
+    labelControlLabel: "Compare at",
+    guardGroup: "pricing",
+  },
+  {
+    key: "status",
+    labelKey: "status",
+    visibilityKey: "showStatus",
+    toggleLabel: "Show status",
+    labelControlLabel: "Status",
+  },
+  {
+    key: "stock",
+    labelKey: "stock",
+    visibilityKey: "showStock",
+    toggleLabel: "Show stock",
+    labelControlLabel: "Stock",
+  },
+  {
+    key: "collections",
+    labelKey: "collections",
+    visibilityKey: "showCollectionCount",
+    toggleLabel: "Show collection count",
+    labelControlLabel: "Collections",
+  },
+];
+
 export const productTableDefaults: ProductTableData = {
   source: {
     limit: 12,
@@ -60,26 +184,9 @@ export const productTableDefaults: ProductTableData = {
     sortField: "updatedAt",
     sortDir: "desc",
   },
-  fields: {
-    showSlug: true,
-    showStatus: true,
-    showStock: true,
-    showCompareAt: false,
-    showCollectionCount: false,
-  },
-  labels: {
-    title: "Product",
-    price: "Price",
-    compareAt: "Compare at",
-    status: "Status",
-    stock: "Stock",
-    collections: "Collections",
-    slug: "Slug",
-  },
-  emptyState: {
-    title: "No products available",
-    description: "Publish products or adjust source query.",
-  },
+  fields: productTableFieldDefaults,
+  labels: productTableLabelFallbacks,
+  emptyState: productTableEmptyStateDefaults,
   style: {
     tableBackground: "var(--color-bg)",
     tableBorderColor: "var(--color-border)",
@@ -170,6 +277,45 @@ const normalizeRuntimeItems = (value: unknown): CommerceWidgetRuntimeCard[] => {
     .filter((item): item is CommerceWidgetRuntimeCard => item !== null);
 };
 
+export const normalizeProductTableFields = (
+  value: ProductTableData["fields"] | undefined
+): Required<ProductTableFields> => {
+  const fields: Required<ProductTableFields> = {
+    showTitle: value?.showTitle !== false,
+    showSlug: value?.showSlug !== false,
+    showPrice: value?.showPrice !== false,
+    showStatus: value?.showStatus !== false,
+    showStock: value?.showStock !== false,
+    showCompareAt: value?.showCompareAt === true,
+    showCollectionCount: value?.showCollectionCount === true,
+  };
+
+  if (!fields.showTitle && !fields.showSlug) {
+    fields.showTitle = true;
+  }
+
+  if (!fields.showPrice && !fields.showCompareAt) {
+    fields.showPrice = true;
+  }
+
+  return fields;
+};
+
+export const normalizeProductTableLabels = (
+  value: ProductTableData["labels"] | undefined
+): Required<ProductTableLabels> => ({
+  title: text(value?.title, productTableLabelFallbacks.title),
+  price: text(value?.price, productTableLabelFallbacks.price),
+  compareAt: text(value?.compareAt, productTableLabelFallbacks.compareAt),
+  status: text(value?.status, productTableLabelFallbacks.status),
+  stock: text(value?.stock, productTableLabelFallbacks.stock),
+  collections: text(value?.collections, productTableLabelFallbacks.collections),
+  slug: text(value?.slug, productTableLabelFallbacks.slug),
+});
+
+export const resolveVisibleProductTableColumns = (fields: Required<ProductTableFields>) =>
+  productTableColumns.filter((column) => fields[column.visibilityKey]);
+
 export const productTableSchema = {
   type: "object",
   additionalProperties: false,
@@ -209,7 +355,9 @@ export const productTableSchema = {
       type: "object",
       additionalProperties: false,
       properties: {
+        showTitle: { type: "boolean" },
         showSlug: { type: "boolean" },
+        showPrice: { type: "boolean" },
         showStatus: { type: "boolean" },
         showStock: { type: "boolean" },
         showCompareAt: { type: "boolean" },
@@ -301,6 +449,8 @@ export const normalizeProductTableData = (value: ProductTableData): ProductTable
     sortField: "updatedAt",
     sortDir: "desc",
   });
+  const fields = normalizeProductTableFields(value.fields);
+  const labels = normalizeProductTableLabels(value.labels);
   const resolvedMeta = normalizeResolvedMeta(value.resolved);
   const hasStyleObject = value.style !== undefined;
   const style = hasStyleObject
@@ -315,37 +465,11 @@ export const normalizeProductTableData = (value: ProductTableData): ProductTable
 
   return {
     source,
-    fields: {
-      showSlug: value.fields?.showSlug !== false,
-      showStatus: value.fields?.showStatus !== false,
-      showStock: value.fields?.showStock !== false,
-      showCompareAt: value.fields?.showCompareAt === true,
-      showCollectionCount: value.fields?.showCollectionCount === true,
-    },
-    labels: {
-      title: text(value.labels?.title, productTableDefaults.labels?.title ?? "Product"),
-      price: text(value.labels?.price, productTableDefaults.labels?.price ?? "Price"),
-      compareAt: text(
-        value.labels?.compareAt,
-        productTableDefaults.labels?.compareAt ?? "Compare at"
-      ),
-      status: text(value.labels?.status, productTableDefaults.labels?.status ?? "Status"),
-      stock: text(value.labels?.stock, productTableDefaults.labels?.stock ?? "Stock"),
-      collections: text(
-        value.labels?.collections,
-        productTableDefaults.labels?.collections ?? "Collections"
-      ),
-      slug: text(value.labels?.slug, productTableDefaults.labels?.slug ?? "Slug"),
-    },
+    fields,
+    labels,
     emptyState: {
-      title: text(
-        value.emptyState?.title,
-        productTableDefaults.emptyState?.title ?? "No products available"
-      ),
-      description: text(
-        value.emptyState?.description,
-        productTableDefaults.emptyState?.description ?? "Publish products or adjust source query."
-      ),
+      title: text(value.emptyState?.title, productTableEmptyStateDefaults.title),
+      description: text(value.emptyState?.description, productTableEmptyStateDefaults.description),
     },
     ...(hasStyleObject ? { style } : {}),
     resolved: {
@@ -380,6 +504,48 @@ const previewMessage = (renderContext: WidgetRenderContext | undefined) => {
   return message.slice(0, maxPreviewStatusMessageLength);
 };
 
+const renderProductTableCell = (
+  column: ProductTableColumnDefinition,
+  item: CommerceWidgetRuntimeCard
+) => {
+  switch (column.key) {
+    case "title":
+      return (
+        <td className="px-3 py-2 font-medium text-[var(--color-text)]/85">
+          {titleWithStatus(item.title, item.status)}
+        </td>
+      );
+    case "slug":
+      return <td className="px-3 py-2 text-[var(--color-text)]/65">/{item.slug}</td>;
+    case "price":
+      return (
+        <td className="px-3 py-2 text-[var(--color-text)]/80">
+          {formatCommerceMoney(item.pricing.amount, item.pricing.currency)}
+        </td>
+      );
+    case "compareAt":
+      return (
+        <td className="px-3 py-2 text-[var(--color-text)]/65">
+          {typeof item.pricing.compareAtAmount === "number"
+            ? formatCommerceMoney(item.pricing.compareAtAmount, item.pricing.currency)
+            : "-"}
+        </td>
+      );
+    case "status":
+      return <td className="px-3 py-2 text-[var(--color-text)]/65">{item.status}</td>;
+    case "stock":
+      return (
+        <td className="px-3 py-2 text-[var(--color-text)]/65">
+          {commerceStockLabelMap[item.stock.state]}
+        </td>
+      );
+    case "collections":
+      return <td className="px-3 py-2 text-[var(--color-text)]/65">{item.collectionIds.length}</td>;
+    default:
+      return null;
+  }
+};
+
 export function ProductTableBlock({
   data,
   renderContext,
@@ -390,6 +556,8 @@ export function ProductTableBlock({
 }) {
   const normalized = normalizeProductTableData(data);
   const items = normalized.resolved?.items ?? [];
+  const fields = normalizeProductTableFields(normalized.fields);
+  const visibleColumns = resolveVisibleProductTableColumns(fields);
   const hasError = Boolean(normalized.resolved?.error);
   const previewState = renderContext?.previewState ?? null;
   const previewLoading = previewState?.status === "loading";
@@ -459,37 +627,14 @@ export function ProductTableBlock({
                 className={`border-b border-[var(--color-border)] ${legacyHeaderClass}`}
                 style={headerStyle}
               >
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-[var(--color-text)]/65">
-                  {normalized.labels?.title}
-                </th>
-                {normalized.fields?.showSlug ? (
-                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-[var(--color-text)]/65">
-                    {normalized.labels?.slug}
+                {visibleColumns.map((column) => (
+                  <th
+                    key={column.key}
+                    className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-[var(--color-text)]/65"
+                  >
+                    {normalized.labels?.[column.labelKey]}
                   </th>
-                ) : null}
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-[var(--color-text)]/65">
-                  {normalized.labels?.price}
-                </th>
-                {normalized.fields?.showCompareAt ? (
-                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-[var(--color-text)]/65">
-                    {normalized.labels?.compareAt}
-                  </th>
-                ) : null}
-                {normalized.fields?.showStatus ? (
-                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-[var(--color-text)]/65">
-                    {normalized.labels?.status}
-                  </th>
-                ) : null}
-                {normalized.fields?.showStock ? (
-                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-[var(--color-text)]/65">
-                    {normalized.labels?.stock}
-                  </th>
-                ) : null}
-                {normalized.fields?.showCollectionCount ? (
-                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-[var(--color-text)]/65">
-                    {normalized.labels?.collections}
-                  </th>
-                ) : null}
+                ))}
               </tr>
             </thead>
             <tbody>
@@ -498,35 +643,11 @@ export function ProductTableBlock({
                   key={item.id}
                   className="border-b border-[var(--color-border)]/70 last:border-b-0"
                 >
-                  <td className="px-3 py-2 font-medium text-[var(--color-text)]/85">
-                    {titleWithStatus(item.title, item.status)}
-                  </td>
-                  {normalized.fields?.showSlug ? (
-                    <td className="px-3 py-2 text-[var(--color-text)]/65">/{item.slug}</td>
-                  ) : null}
-                  <td className="px-3 py-2 text-[var(--color-text)]/80">
-                    {formatCommerceMoney(item.pricing.amount, item.pricing.currency)}
-                  </td>
-                  {normalized.fields?.showCompareAt ? (
-                    <td className="px-3 py-2 text-[var(--color-text)]/65">
-                      {typeof item.pricing.compareAtAmount === "number"
-                        ? formatCommerceMoney(item.pricing.compareAtAmount, item.pricing.currency)
-                        : "-"}
-                    </td>
-                  ) : null}
-                  {normalized.fields?.showStatus ? (
-                    <td className="px-3 py-2 text-[var(--color-text)]/65">{item.status}</td>
-                  ) : null}
-                  {normalized.fields?.showStock ? (
-                    <td className="px-3 py-2 text-[var(--color-text)]/65">
-                      {commerceStockLabelMap[item.stock.state]}
-                    </td>
-                  ) : null}
-                  {normalized.fields?.showCollectionCount ? (
-                    <td className="px-3 py-2 text-[var(--color-text)]/65">
-                      {item.collectionIds.length}
-                    </td>
-                  ) : null}
+                  {visibleColumns.map((column) => (
+                    <React.Fragment key={column.key}>
+                      {renderProductTableCell(column, item)}
+                    </React.Fragment>
+                  ))}
                 </tr>
               ))}
             </tbody>
