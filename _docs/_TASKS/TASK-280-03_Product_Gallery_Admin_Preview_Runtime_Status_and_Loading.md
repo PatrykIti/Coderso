@@ -103,7 +103,9 @@ Editor flow:
 
 - The editor initializes from persisted `resolved` data when present.
 - Refresh triggers the Product Gallery widget preview route, which delegates to
-  `hydrateProductGalleryRuntimeData(data, { preview: true })` on the server.
+  `hydrateProductGalleryRuntimeData(data, { preview: false })` on the server so
+  admin preview matches published-runtime defaults unless the widget source
+  already carries explicit status filters.
 - Loading state never overwrites dirty editor data.
 - Successful preview data is displayed in canvas/editor state but is not
   persisted unless the existing page save flow intentionally saves normalized
@@ -185,6 +187,7 @@ stay server-owned and match runtime hydration.
 ## Documentation Updates Required
 
 - `_docs/_WIDGETS/PRODUCT_GALLERY.md`
+- `_docs/CMS_API.md`
 - `_docs/PLAYWRIGHT/REPORT_PRODUCT_GALLERY_WIDGET.md`
 - `_docs/_TASKS/TASK-280-03_Product_Gallery_Admin_Preview_Runtime_Status_and_Loading.md`
 - `_docs/_TASKS/README.md` on status changes

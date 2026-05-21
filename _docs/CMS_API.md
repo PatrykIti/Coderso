@@ -1477,6 +1477,7 @@ Permissions: `widgets:read`, `widgets:write`
 - `GET /widgets` (catalog: core + templates)
 - `POST /widgets/entry-teaser/preview` (internal admin preview hydration, permission: `content:read`)
 - `POST /widgets/product-compare/preview` (internal admin preview hydration, permission: `commerce:read`)
+- `POST /widgets/product-gallery/preview` (internal admin preview hydration, permission: `widgets:read`)
 - `GET /widgets/templates` (alias: `GET /widget-templates`)
 - `GET /widgets/templates/:id` (alias: `GET /widget-templates/:id`)
 - `POST /widgets/templates` (alias: `POST /widget-templates`)

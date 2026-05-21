@@ -161,6 +161,23 @@ test("hydrateProductGalleryRuntimeData preserves manual curation order and caps 
   expect(resolved.resolved?.total).toBe(2);
 });
 
+test("hydrateProductGalleryRuntimeData returns stable error code for invalid query", async () => {
+  const resolved = await hydrateProductGalleryRuntimeData(
+    productGalleryDefaults,
+    {
+      preview: false,
+    },
+    {
+      resolveRuntimeProducts: async () => {
+        throw new Error("commerce_query_invalid_filters");
+      },
+    }
+  );
+
+  expect(resolved.resolved?.items).toEqual([]);
+  expect(resolved.resolved?.error).toBe("commerce_query_invalid_filters");
+});
+
 test("hydrateProductCompareRuntimeData maps compare payload rows", async () => {
   const calls: Array<Record<string, unknown>> = [];
   const resolved = await hydrateProductCompareRuntimeData(
