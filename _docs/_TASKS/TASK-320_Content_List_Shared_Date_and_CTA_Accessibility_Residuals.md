@@ -42,6 +42,15 @@ This task must stay shared. Do not patch these behaviors only in
 
 - None. This is an execution task.
 
+Current lane note:
+
+- `core/widgets/core/contentList.tsx` is Bun-free, but the current shipped
+  widget-compatibility suite for this shared surface remains
+  `tests/unit/widgets/contentList.test.tsx`. Keep that Bun suite plus
+  `tests/vitest/site/publicRenderer.test.tsx` until a dedicated Vitest widget
+  lane is created physically. Do not silently change closure evidence without
+  recording the lane migration in task/docs.
+
 ## Files to Change
 
 | File | Required change |
@@ -139,6 +148,8 @@ No API routes are added.
 - `bun run test:bun`
 - `bun run test:vitest`
 - `bun test tests/unit/widgets/contentList.test.tsx`
+  This is the current shipped Bun compatibility suite for the shared renderer
+  until a dedicated Vitest widget lane is created physically.
 - `bun run test:vitest -- tests/vitest/site/publicRenderer.test.tsx`
 - `bun run scan:security:strict`
 - `bun run precommit`

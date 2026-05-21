@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 196 tasks
+- **To Do:** 199 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1792 tasks
 
@@ -47,6 +47,9 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-321 | Shared Clear Action Undo and Feedback Contract | Medium | Large | Shared editor follow-up for recoverable Clear actions, undo feedback, and consistent destructive-surface messaging across widget editors |
 | TASK-320 | Content List Shared Date and CTA Accessibility Residuals | High | Large | Shared `ContentListBlock` follow-up for semantic date output and contextual CTA link text used by both `content-list` and `posts-feed` |
 | TASK-319 | Newsletter Per-Breakpoint Variant Overrides | Low | Large | Evaluate or explicitly reject true per-breakpoint Newsletter variant overrides after TASK-276 made current mobile behavior truthful |
+| TASK-319-01 | Newsletter Responsive Variant Audit and Product Decision | Medium | Medium | Audit current Newsletter mobile/desktop behavior and record the explicit product decision for BF-15 before any schema change lands |
+| TASK-319-02 | Newsletter Bounded Mobile Variant Implementation | Low | Large | Implement the bounded Newsletter mobile override only if TASK-319-01 approves it |
+| TASK-319-03 | Newsletter Responsive Variant Docs and Closure | Medium | Medium | Close report/docs/changelog/board against the final TASK-319 decision and shipped behavior |
 | TASK-318 | Section Surface Overflow and Sticky Child Containment Contract | High | Large | Shared Section/layout owner for sticky child widgets blocked by `overflow-hidden`, including the routed Navigation frontend sticky row |
 | TASK-317 | Widget Editor Live Preview Surface and Preview-State Contract | High | Large | Shared builder/editor owner for widget live-preview rows that need current-block preview without widget-local shell hacks |
 | TASK-325 | Grid Columns Shared Structural Truthfulness Follow-up | High | Large | Residual shared Grid Columns truthfulness after TASK-256 closure: variant truthfulness, span feedback, CSS-variable picker representation, and inactive cardize controls |
