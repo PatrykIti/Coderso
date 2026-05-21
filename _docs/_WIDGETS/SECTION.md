@@ -36,6 +36,7 @@ Sections:
 4. Width and spacing
 5. Surface and borders
 6. Regions
+7. Background media and layers
 
 Notes:
 - Section owns variant selection in Visual (`visualOwnsVariantSelection = true`).
@@ -47,6 +48,9 @@ Notes:
   layout tokens instead of raw CSS fields.
 - Grid columns stay inactive until `layout.regionFlow = "grid"`, and `regionGap`
   can remain unset to keep the legacy variant spacing contract.
+- Background media is decorative only: Visual exposes bounded image/video source,
+  fit, position, blend, opacity, and layer-order controls plus video poster
+  metadata without widening Section into interactive media.
 
 ### Advanced
 - semantics tokens (`anchorId`, `ariaLabel`)
@@ -57,10 +61,16 @@ Notes:
 
 - Renders semantic element selected in data (`section` or `div`).
 - Supports optional overlay on top of background color/gradient.
+- Supports decorative background image/video layers with bounded fit, position,
+  opacity, blend, and overlay ordering; unsupported or unsafe media URLs fail
+  closed at render time.
 - Background, border, radius, and overlay clipping now live in a decorative
   inset layer instead of the same wrapper that owns slotted child content.
 - Slotted child widgets are no longer clipped by the old live surface wrapper,
   so Section itself does not block child `position: sticky` behavior.
+- Decorative videos always render as muted, looping, `autoPlay`, `playsInline`,
+  and `aria-hidden`, while heading/region content stays above media/overlay
+  layers.
 - Uses deterministic runtime markers:
   - `data-section-variant`
   - `data-section-container-width`
@@ -70,8 +80,11 @@ Notes:
   - `data-section-region-columns`
   - `data-section-heading-gap`
   - `data-section-region-gap`
+  - `data-section-background-media`
+  - `data-section-layer-order`
   - `data-section-regions`
   - `data-section-element`
+  - `data-section-background-overlay` per rendered overlay layer
   - `data-section-region` per region slot instance
 
 ## Clear Controls
@@ -115,7 +128,16 @@ Notes:
     "borderWidth": "0",
     "radius": "none",
     "overlayColor": "#000000",
-    "overlayOpacity": 0
+    "overlayOpacity": 0,
+    "backgroundMedia": {
+      "type": "none",
+      "source": "external",
+      "fit": "cover",
+      "position": "center",
+      "opacity": 100,
+      "blendMode": "normal",
+      "layerOrder": "media-under-overlay"
+    }
   }
 }
 ```
@@ -129,3 +151,16 @@ Notes:
 - `layout.regionGap`: optional `none`, `sm`, `md`, `lg`, `xl`; if omitted, the
   renderer keeps the legacy variant spacing (`default=lg`, `contained=md`,
   `bleed=xl`)
+
+## Background Media Tokens
+
+- `style.backgroundMedia.type`: `none`, `image`, `video`
+- `style.backgroundMedia.source`: `library`, `external`; library selections
+  persist `assetId` plus the resolved `src` from `listMediaCached({ force: true })`
+- `style.backgroundMedia.fit`: `cover`, `contain`
+- `style.backgroundMedia.position`: `center`, `top`, `bottom`, `left`, `right`
+- `style.backgroundMedia.blendMode`: `normal`, `multiply`, `screen`, `overlay`
+- `style.backgroundMedia.layerOrder`: `media-under-overlay`,
+  `overlay-under-media`
+- Video-only metadata includes optional `posterSource`, `posterAssetId`,
+  `posterSrc`, `title`, and `description` for decorative muted loops

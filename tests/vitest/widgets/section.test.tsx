@@ -42,6 +42,8 @@ test("section renders defaults", () => {
   expect(html).toContain('data-section-region-columns="1"');
   expect(html).toContain('data-section-heading-gap="md"');
   expect(html).toContain('data-section-region-gap="match-variant"');
+  expect(html).toContain('data-section-background-media="none"');
+  expect(html).toContain('data-section-layer-order="media-under-overlay"');
   expect(html).toContain('data-section-regions="1"');
   expect(html).not.toContain("Empty region.");
   expect(html).toContain("absolute inset-0 overflow-hidden");
@@ -93,6 +95,22 @@ test("section normalization keeps deterministic style and layout bounds", () => 
       overlayOpacity: 120,
       borderWidth: "2",
       radius: "xl",
+      backgroundMedia: {
+        type: "video",
+        source: "library",
+        assetId: "asset-video",
+        src: "javascript:alert(1)",
+        posterSource: "external",
+        posterAssetId: "poster-asset",
+        posterSrc: "/media/section-poster.jpg",
+        title: " Ambient demo ",
+        description: " Decorative loop ",
+        fit: "stretch" as never,
+        position: "corner" as never,
+        opacity: 180,
+        blendMode: "hard-light" as never,
+        layerOrder: "content-first" as never,
+      },
     },
   });
 
@@ -107,6 +125,22 @@ test("section normalization keeps deterministic style and layout bounds", () => 
   expect(normalized.style?.overlayOpacity).toBe(100);
   expect(normalized.style?.borderWidth).toBe("2");
   expect(normalized.style?.radius).toBe("xl");
+  expect(normalized.style?.backgroundMedia).toMatchObject({
+    type: "video",
+    source: "library",
+    assetId: "asset-video",
+    src: "javascript:alert(1)",
+    posterSource: "external",
+    posterAssetId: undefined,
+    posterSrc: "/media/section-poster.jpg",
+    title: "Ambient demo",
+    description: "Decorative loop",
+    fit: "cover",
+    position: "center",
+    opacity: 100,
+    blendMode: "normal",
+    layerOrder: "media-under-overlay",
+  });
   expect(resolveSectionVariant("unknown")).toBe("default");
 });
 
@@ -182,6 +216,17 @@ test("section validator accepts expanded model", () => {
           radius: "2xl",
           overlayColor: "#000000",
           overlayOpacity: 16,
+          backgroundMedia: {
+            type: "image",
+            source: "library",
+            assetId: "asset-image",
+            src: "/media/section-background.jpg",
+            fit: "contain",
+            position: "top",
+            opacity: 75,
+            blendMode: "overlay",
+            layerOrder: "overlay-under-media",
+          },
         },
       },
     })
@@ -261,6 +306,90 @@ test("section renders row flow without forcing grid classes", () => {
   expect(html).toContain("md:flex-row md:flex-wrap");
   expect(html).toContain("md:min-w-[16rem] md:flex-1");
   expect(html).not.toContain("md:grid-cols-2 xl:grid-cols-4");
+});
+
+test("section renders decorative background image layers with bounded blend and ordering", () => {
+  const html = renderToString(
+    <SectionBlock
+      data={{
+        ...sectionDefaults,
+        style: {
+          ...(sectionDefaults.style ?? {}),
+          backgroundMedia: {
+            type: "image",
+            source: "library",
+            assetId: "asset-image",
+            src: "/media/section-background.jpg",
+            fit: "contain",
+            position: "top",
+            opacity: 40,
+            blendMode: "overlay",
+            layerOrder: "overlay-under-media",
+          },
+        },
+      }}
+      variant="default"
+    />
+  );
+
+  expect(html).toContain('data-section-background-media="image"');
+  expect(html).toContain('data-section-layer-order="overlay-under-media"');
+  expect(html).toContain("background-image:url(/media/section-background.jpg)");
+  expect(html).toContain("background-size:contain");
+  expect(html).toContain("background-position:top center");
+  expect(html).toContain("mix-blend-mode:overlay");
+  expect(html).toContain("opacity:0.4");
+});
+
+test("section renders muted decorative background videos and fails closed on unsafe URLs", () => {
+  const safeHtml = renderToString(
+    <SectionBlock
+      data={{
+        ...sectionDefaults,
+        style: {
+          ...(sectionDefaults.style ?? {}),
+          backgroundMedia: {
+            type: "video",
+            source: "external",
+            src: "https://cdn.example.com/section-demo.mp4",
+            posterSource: "external",
+            posterSrc: "/media/section-poster.jpg",
+            opacity: 55,
+            blendMode: "screen",
+          },
+        },
+      }}
+      variant="contained"
+    />
+  );
+
+  expect(safeHtml).toContain('data-section-background-media="video"');
+  expect(safeHtml).toContain("<video");
+  expect(safeHtml).toContain('aria-hidden="true"');
+  expect(safeHtml).toContain("playsInline");
+  expect(safeHtml).toContain('poster="/media/section-poster.jpg"');
+  expect(safeHtml).toContain("mix-blend-mode:screen");
+  expect(safeHtml).toContain("opacity:0.55");
+
+  const unsafeHtml = renderToString(
+    <SectionBlock
+      data={{
+        ...sectionDefaults,
+        style: {
+          ...(sectionDefaults.style ?? {}),
+          backgroundMedia: {
+            type: "video",
+            source: "external",
+            src: "javascript:alert(1)",
+          },
+        },
+      }}
+      variant="contained"
+    />
+  );
+
+  expect(unsafeHtml).toContain('data-section-background-media="none"');
+  expect(unsafeHtml).not.toContain("<video");
 });
 
 test("section renders repeatable region slot content", () => {

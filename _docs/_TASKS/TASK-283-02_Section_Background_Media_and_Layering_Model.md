@@ -6,7 +6,7 @@
 **Category:** Widgets + Section + Media + Runtime Render + Admin UI
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-256-02, TASK-256-05-01, TASK-283, TASK-283-01
-**Status:** To Do
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -56,23 +56,23 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Define a bounded `SectionBackgroundMedia` shape under `SectionData.style`
+- [x] Define a bounded `SectionBackgroundMedia` shape under `SectionData.style`
   without breaking legacy style payloads.
-- [ ] Add normalizer helpers that accept legacy blocks with no media, reuse the
+- [x] Add normalizer helpers that accept legacy blocks with no media, reuse the
   Hero image/video external URL compatibility rules, and strip unsafe media
   payloads through schema validation.
-- [ ] Render image backgrounds as decorative CSS/background layers and video
+- [x] Render image backgrounds as decorative CSS/background layers and video
   backgrounds as absolutely positioned muted looping media with `aria-hidden`.
-- [ ] Reuse `core/admin/ui/media/MediaPicker.tsx` for asset selection with
+- [x] Reuse `core/admin/ui/media/MediaPicker.tsx` for asset selection with
   image/video accept filters, and keep the selected value compatible with
   existing media client/cache behavior.
-- [ ] Resolve selected `assetId` through `listMediaCached({ force: true })`
+- [x] Resolve selected `assetId` through `listMediaCached({ force: true })`
   with stale-request protection and inline error state, matching the Hero media
   editor flow instead of persisting picker-only state.
-- [ ] Add Visual controls for media source, fit, position, opacity, blend, and
+- [x] Add Visual controls for media source, fit, position, opacity, blend, and
   layer priority, including the Hero-compatible video poster metadata when
   `type="video"`.
-- [ ] Keep overlay color/opacity controls compatible with existing data and with
+- [x] Keep overlay color/opacity controls compatible with existing data and with
   TASK-256 duplicate-control cleanup.
 
 ## Files to Change

@@ -11,6 +11,7 @@ import type {
   WidgetRenderContext,
 } from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
+import { normalizeWidgetSafeHref } from "./widgetSafeHref";
 
 export type SectionVariantId = "default" | "contained" | "bleed";
 export type SectionElement = "section" | "div";
@@ -24,6 +25,29 @@ export type SectionMinHeight = "none" | "compact" | "hero" | "screen";
 export type SectionRegionFlow = "stack" | "row" | "grid";
 export type SectionRegionColumns = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8";
 export type SectionGap = "none" | "sm" | "md" | "lg" | "xl";
+export type SectionBackgroundMediaType = "none" | "image" | "video";
+export type SectionBackgroundMediaSource = "library" | "external";
+export type SectionBackgroundMediaFit = "cover" | "contain";
+export type SectionBackgroundMediaPosition = "center" | "top" | "bottom" | "left" | "right";
+export type SectionBackgroundMediaBlendMode = "normal" | "multiply" | "screen" | "overlay";
+export type SectionLayerOrder = "media-under-overlay" | "overlay-under-media";
+
+export type SectionBackgroundMedia = {
+  type?: SectionBackgroundMediaType;
+  source?: SectionBackgroundMediaSource;
+  assetId?: string;
+  src?: string;
+  posterSource?: SectionBackgroundMediaSource;
+  posterAssetId?: string;
+  posterSrc?: string;
+  title?: string;
+  description?: string;
+  fit?: SectionBackgroundMediaFit;
+  position?: SectionBackgroundMediaPosition;
+  opacity?: number;
+  blendMode?: SectionBackgroundMediaBlendMode;
+  layerOrder?: SectionLayerOrder;
+};
 
 export type SectionData = {
   heading?: {
@@ -57,6 +81,7 @@ export type SectionData = {
     radius?: SectionRadius;
     overlayColor?: string;
     overlayOpacity?: number;
+    backgroundMedia?: SectionBackgroundMedia;
   };
 };
 
@@ -118,6 +143,26 @@ export const sectionSchema = {
         radius: { enum: ["none", "lg", "xl", "2xl"] },
         overlayColor: { type: "string" },
         overlayOpacity: { type: "number" },
+        backgroundMedia: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            type: { enum: ["none", "image", "video"] },
+            source: { enum: ["library", "external"] },
+            assetId: { type: "string" },
+            src: { type: "string" },
+            posterSource: { enum: ["library", "external"] },
+            posterAssetId: { type: "string" },
+            posterSrc: { type: "string" },
+            title: { type: "string" },
+            description: { type: "string" },
+            fit: { enum: ["cover", "contain"] },
+            position: { enum: ["center", "top", "bottom", "left", "right"] },
+            opacity: { type: "number" },
+            blendMode: { enum: ["normal", "multiply", "screen", "overlay"] },
+            layerOrder: { enum: ["media-under-overlay", "overlay-under-media"] },
+          },
+        },
       },
     },
   },
@@ -154,6 +199,15 @@ export const sectionDefaults: SectionData = {
     radius: "none",
     overlayColor: "#000000",
     overlayOpacity: 0,
+    backgroundMedia: {
+      type: "none",
+      source: "external",
+      fit: "cover",
+      position: "center",
+      opacity: 100,
+      blendMode: "normal",
+      layerOrder: "media-under-overlay",
+    },
   },
 };
 
@@ -243,8 +297,135 @@ const regionItemClassMap: Record<SectionRegionFlow, string> = {
   grid: "min-w-0",
 };
 
+const backgroundMediaFitClassMap: Record<SectionBackgroundMediaFit, string> = {
+  cover: "object-cover",
+  contain: "object-contain",
+};
+
+const backgroundMediaPositionStyleMap: Record<SectionBackgroundMediaPosition, string> = {
+  center: "center center",
+  top: "top center",
+  bottom: "bottom center",
+  left: "center left",
+  right: "center right",
+};
+
+const sectionBackgroundHrefOptions = {
+  allowRelative: true,
+  allowHttp: true,
+} as const;
+
+const sectionImageUrlPattern = /\.(?:avif|gif|jpe?g|png|svg|webp)(?:[?#].*)?$/i;
+const sectionVideoUrlPattern = /\.(?:m4v|mov|mp4|ogg|webm)(?:[?#].*)?$/i;
+
 const joinClasses = (...classes: Array<string | undefined | false>) =>
   classes.filter(Boolean).join(" ");
+
+const trimOptionalString = (value: string | undefined) =>
+  typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
+
+const normalizeSectionMediaHref = (value: string | undefined) =>
+  normalizeWidgetSafeHref(value, sectionBackgroundHrefOptions);
+
+export const isValidSectionMediaUrl = (value: string | undefined) =>
+  !value || normalizeSectionMediaHref(value) !== undefined;
+
+export const isCompatibleSectionMediaUrl = (
+  value: string | undefined,
+  mediaType: SectionBackgroundMediaType
+) => {
+  if (mediaType === "none") return false;
+  const normalized = normalizeSectionMediaHref(value);
+  if (!normalized) return false;
+  return mediaType === "image"
+    ? sectionImageUrlPattern.test(normalized)
+    : sectionVideoUrlPattern.test(normalized);
+};
+
+const resolveRenderableSectionMediaSrc = (
+  value: string | undefined,
+  mediaType: Exclude<SectionBackgroundMediaType, "none">
+) => {
+  const normalized = normalizeSectionMediaHref(value);
+  if (!normalized) return undefined;
+  return mediaType === "image"
+    ? sectionImageUrlPattern.test(normalized)
+      ? normalized
+      : undefined
+    : sectionVideoUrlPattern.test(normalized)
+      ? normalized
+      : undefined;
+};
+
+const resolveSectionBackgroundMediaType = (
+  value: string | undefined
+): SectionBackgroundMediaType => {
+  if (value === "image" || value === "video") return value;
+  return "none";
+};
+
+const resolveSectionBackgroundMediaSource = (
+  value: string | undefined
+): SectionBackgroundMediaSource => (value === "library" ? "library" : "external");
+
+const resolveSectionBackgroundMediaFit = (value: string | undefined): SectionBackgroundMediaFit =>
+  value === "contain" ? "contain" : "cover";
+
+const resolveSectionBackgroundMediaPosition = (
+  value: string | undefined
+): SectionBackgroundMediaPosition => {
+  if (value === "top" || value === "bottom" || value === "left" || value === "right") {
+    return value;
+  }
+  return "center";
+};
+
+const resolveSectionBackgroundMediaBlendMode = (
+  value: string | undefined
+): SectionBackgroundMediaBlendMode => {
+  if (value === "multiply" || value === "screen" || value === "overlay") return value;
+  return "normal";
+};
+
+const resolveSectionLayerOrder = (value: string | undefined): SectionLayerOrder =>
+  value === "overlay-under-media" ? "overlay-under-media" : "media-under-overlay";
+
+const clampMediaOpacity = (value: number | undefined) => {
+  if (!Number.isFinite(value)) return 100;
+  return Math.max(0, Math.min(100, Math.round(value ?? 100)));
+};
+
+const normalizeSectionBackgroundMedia = (
+  value: SectionBackgroundMedia | undefined
+): SectionBackgroundMedia => {
+  const type = resolveSectionBackgroundMediaType(value?.type);
+  const source = resolveSectionBackgroundMediaSource(value?.source);
+  const posterSource =
+    type === "video"
+      ? resolveSectionBackgroundMediaSource(value?.posterSource ?? source)
+      : undefined;
+
+  return {
+    type,
+    source,
+    assetId:
+      type !== "none" && source === "library" ? trimOptionalString(value?.assetId) : undefined,
+    src: type !== "none" ? trimOptionalString(value?.src) : undefined,
+    posterSource,
+    posterAssetId:
+      type === "video" && posterSource === "library"
+        ? trimOptionalString(value?.posterAssetId)
+        : undefined,
+    posterSrc: type === "video" ? trimOptionalString(value?.posterSrc) : undefined,
+    title: type === "video" ? trimOptionalString(value?.title) : undefined,
+    description: type === "video" ? trimOptionalString(value?.description) : undefined,
+    fit: resolveSectionBackgroundMediaFit(value?.fit),
+    position: resolveSectionBackgroundMediaPosition(value?.position),
+    opacity: clampMediaOpacity(value?.opacity),
+    blendMode: resolveSectionBackgroundMediaBlendMode(value?.blendMode),
+    layerOrder: resolveSectionLayerOrder(value?.layerOrder),
+  };
+};
 
 const resolveSectionBorderWidth = (value: string | undefined): SectionBorderWidth => {
   if (value === "0" || value === "2" || value === "3") return value;
@@ -411,6 +592,7 @@ export function normalizeSectionData(data: SectionData): SectionData {
       radius: resolveSectionRadius(data.style?.radius),
       overlayColor: data.style?.overlayColor ?? styleDefaults.overlayColor,
       overlayOpacity: clampOpacity(data.style?.overlayOpacity),
+      backgroundMedia: normalizeSectionBackgroundMedia(data.style?.backgroundMedia),
     },
   };
 }
@@ -442,6 +624,16 @@ export function SectionBlock({
   const style = normalized.style ?? sectionDefaults.style!;
 
   const resolvedRegionGap = layout.regionGap ?? regionGapVariantFallbackMap[resolvedVariant];
+  const backgroundMedia = style.backgroundMedia ??
+    sectionDefaults.style?.backgroundMedia ?? {
+      type: "none",
+      source: "external",
+      fit: "cover",
+      position: "center",
+      opacity: 100,
+      blendMode: "normal",
+      layerOrder: "media-under-overlay",
+    };
   const wrapperClass = joinClasses(
     containerWidthClassMap[layout.containerWidth ?? "content"],
     maxWidthClassMap[layout.maxWidth ?? "6xl"],
@@ -461,7 +653,7 @@ export function SectionBlock({
     radiusClassMap[style.radius ?? "none"]
   );
   const contentClass = joinClasses(
-    "relative z-[1] flex flex-col",
+    "relative z-[2] flex flex-col",
     gapClassMap[layout.headingGap ?? "md"]
   );
   const regionLayoutClass = joinClasses(
@@ -479,6 +671,33 @@ export function SectionBlock({
     (heading.description ?? "").trim().length > 0;
   const overlayOpacity = clampOpacity(style.overlayOpacity);
   const overlayVisible = overlayOpacity > 0;
+  const mediaOpacity = clampMediaOpacity(backgroundMedia.opacity);
+  const backgroundLayerOrder = backgroundMedia.layerOrder ?? "media-under-overlay";
+  const mediaLayerClass = joinClasses(
+    "pointer-events-none absolute inset-0",
+    backgroundLayerOrder === "overlay-under-media" ? "z-[1]" : "z-[0]"
+  );
+  const overlayLayerClass = joinClasses(
+    "absolute inset-0",
+    backgroundLayerOrder === "overlay-under-media" ? "z-[0]" : "z-[1]"
+  );
+  const backgroundImageSrc =
+    backgroundMedia.type === "image"
+      ? resolveRenderableSectionMediaSrc(backgroundMedia.src, "image")
+      : undefined;
+  const backgroundVideoSrc =
+    backgroundMedia.type === "video"
+      ? resolveRenderableSectionMediaSrc(backgroundMedia.src, "video")
+      : undefined;
+  const backgroundVideoPoster =
+    backgroundMedia.type === "video"
+      ? resolveRenderableSectionMediaSrc(backgroundMedia.posterSrc, "image")
+      : undefined;
+  const renderedBackgroundMediaType = backgroundVideoSrc
+    ? "video"
+    : backgroundImageSrc
+      ? "image"
+      : "none";
 
   const surfaceStyle: CSSProperties =
     compactStyle({
@@ -489,6 +708,30 @@ export function SectionBlock({
       borderColor: style.borderColor ?? "var(--color-border)",
       borderStyle: "solid",
       borderWidth: borderWidthValueMap[style.borderWidth ?? "0"] ?? "0px",
+    }) ?? {};
+  const backgroundImageStyle: CSSProperties =
+    compactStyle({
+      backgroundImage: backgroundImageSrc ? `url(${backgroundImageSrc})` : undefined,
+      backgroundSize: backgroundImageSrc ? (backgroundMedia.fit ?? "cover") : undefined,
+      backgroundPosition: backgroundImageSrc
+        ? backgroundMediaPositionStyleMap[backgroundMedia.position ?? "center"]
+        : undefined,
+      opacity: backgroundImageSrc ? mediaOpacity / 100 : undefined,
+      mixBlendMode:
+        backgroundImageSrc && backgroundMedia.blendMode !== "normal"
+          ? backgroundMedia.blendMode
+          : undefined,
+    }) ?? {};
+  const backgroundVideoStyle: CSSProperties =
+    compactStyle({
+      objectPosition: backgroundVideoSrc
+        ? backgroundMediaPositionStyleMap[backgroundMedia.position ?? "center"]
+        : undefined,
+      opacity: backgroundVideoSrc ? mediaOpacity / 100 : undefined,
+      mixBlendMode:
+        backgroundVideoSrc && backgroundMedia.blendMode !== "normal"
+          ? backgroundMedia.blendMode
+          : undefined,
     }) ?? {};
 
   const Element = semantics.element === "div" ? "div" : "section";
@@ -508,14 +751,43 @@ export function SectionBlock({
       data-section-region-columns={layout.regionColumns ?? "1"}
       data-section-heading-gap={layout.headingGap ?? "md"}
       data-section-region-gap={layout.regionGap ?? "match-variant"}
+      data-section-background-media={renderedBackgroundMediaType}
+      data-section-layer-order={backgroundLayerOrder}
       data-section-regions={String(slotTargets.length)}
       data-section-element={semantics.element ?? "section"}
     >
       <div className={surfaceFrameClass}>
         <div className={clippedSurfaceClass} style={surfaceStyle} aria-hidden="true">
+          {backgroundImageSrc ? (
+            <div
+              data-section-background-media="image"
+              className={mediaLayerClass}
+              style={backgroundImageStyle}
+            />
+          ) : null}
+          {backgroundVideoSrc ? (
+            <video
+              data-section-background-media="video"
+              aria-hidden="true"
+              autoPlay
+              loop
+              muted
+              playsInline
+              poster={backgroundVideoPoster}
+              className={joinClasses(
+                mediaLayerClass,
+                "h-full w-full",
+                backgroundMediaFitClassMap[backgroundMedia.fit ?? "cover"]
+              )}
+              style={backgroundVideoStyle}
+            >
+              <source src={backgroundVideoSrc} />
+            </video>
+          ) : null}
           {overlayVisible ? (
             <div
-              className="absolute inset-0 z-[0]"
+              data-section-background-overlay="true"
+              className={overlayLayerClass}
               style={{
                 backgroundColor: style.overlayColor ?? "#000000",
                 opacity: overlayOpacity / 100,

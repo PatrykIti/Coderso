@@ -1,3 +1,5 @@
+import { useRef, useState } from "react";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,11 +12,22 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { isApiClientError } from "@/services/apiClient";
+import { listMediaCached } from "@/services/mediaClient";
+import { MediaPicker } from "@/ui/media/MediaPicker";
 
 import {
+  isCompatibleSectionMediaUrl,
+  isValidSectionMediaUrl,
   sanitizeSectionAnchorId,
+  type SectionBackgroundMediaBlendMode,
+  type SectionBackgroundMediaFit,
+  type SectionBackgroundMediaPosition,
+  type SectionBackgroundMediaSource,
+  type SectionBackgroundMediaType,
   type SectionContainerWidth,
   type SectionGap,
+  type SectionLayerOrder,
   normalizeSectionData,
   resolveSectionVariant,
   sectionDefaults,
@@ -135,6 +148,60 @@ const gapOptions: Array<{ id: SectionGap; label: string }> = [
   { id: "xl", label: "Extra spacious" },
 ];
 
+const backgroundMediaTypeOptions: Array<{
+  id: SectionBackgroundMediaType;
+  label: string;
+}> = [
+  { id: "none", label: "None" },
+  { id: "image", label: "Image" },
+  { id: "video", label: "Video" },
+];
+
+const backgroundMediaSourceOptions: Array<{
+  id: SectionBackgroundMediaSource;
+  label: string;
+}> = [
+  { id: "library", label: "Media library" },
+  { id: "external", label: "External URL" },
+];
+
+const backgroundMediaFitOptions: Array<{
+  id: SectionBackgroundMediaFit;
+  label: string;
+}> = [
+  { id: "cover", label: "Cover" },
+  { id: "contain", label: "Contain" },
+];
+
+const backgroundMediaPositionOptions: Array<{
+  id: SectionBackgroundMediaPosition;
+  label: string;
+}> = [
+  { id: "center", label: "Center" },
+  { id: "top", label: "Top" },
+  { id: "bottom", label: "Bottom" },
+  { id: "left", label: "Left" },
+  { id: "right", label: "Right" },
+];
+
+const backgroundMediaBlendModeOptions: Array<{
+  id: SectionBackgroundMediaBlendMode;
+  label: string;
+}> = [
+  { id: "normal", label: "Normal" },
+  { id: "multiply", label: "Multiply" },
+  { id: "screen", label: "Screen" },
+  { id: "overlay", label: "Overlay" },
+];
+
+const backgroundMediaLayerOrderOptions: Array<{
+  id: SectionLayerOrder;
+  label: string;
+}> = [
+  { id: "media-under-overlay", label: "Media under overlay" },
+  { id: "overlay-under-media", label: "Overlay under media" },
+];
+
 const sectionRegionGapAutoValue = "__match_variant__";
 
 const regionGapOptions: Array<{
@@ -146,6 +213,17 @@ type HeadingData = NonNullable<SectionData["heading"]>;
 type LayoutData = NonNullable<SectionData["layout"]>;
 type SemanticsData = NonNullable<SectionData["semantics"]>;
 type StyleData = NonNullable<SectionData["style"]>;
+type BackgroundMediaData = NonNullable<StyleData["backgroundMedia"]>;
+
+const sectionBackgroundMediaDefaults: BackgroundMediaData = {
+  type: "none",
+  source: "external",
+  fit: "cover",
+  position: "center",
+  opacity: 100,
+  blendMode: "normal",
+  layerOrder: "media-under-overlay",
+};
 
 const clampOpacity = (value: number | undefined) => {
   if (!Number.isFinite(value)) return 0;
@@ -155,6 +233,31 @@ const clampOpacity = (value: number | undefined) => {
 const clampAngle = (value: number | undefined) => {
   if (!Number.isFinite(value)) return 180;
   return Math.max(0, Math.min(360, Math.round(value ?? 180)));
+};
+
+const clampMediaOpacity = (value: number | undefined) => {
+  if (!Number.isFinite(value)) return 100;
+  return Math.max(0, Math.min(100, Math.round(value ?? 100)));
+};
+
+const resolveBackgroundMedia = (style: SectionData["style"] | undefined): BackgroundMediaData => {
+  const media = style?.backgroundMedia;
+  return {
+    type: media?.type ?? sectionBackgroundMediaDefaults.type,
+    source: media?.source ?? sectionBackgroundMediaDefaults.source,
+    assetId: media?.assetId,
+    src: media?.src,
+    posterSource: media?.posterSource ?? media?.source ?? "library",
+    posterAssetId: media?.posterAssetId,
+    posterSrc: media?.posterSrc,
+    title: media?.title,
+    description: media?.description,
+    fit: media?.fit ?? sectionBackgroundMediaDefaults.fit,
+    position: media?.position ?? sectionBackgroundMediaDefaults.position,
+    opacity: clampMediaOpacity(media?.opacity),
+    blendMode: media?.blendMode ?? sectionBackgroundMediaDefaults.blendMode,
+    layerOrder: media?.layerOrder ?? sectionBackgroundMediaDefaults.layerOrder,
+  };
 };
 
 function normalizeValue(value: SectionData): SectionData {
@@ -311,6 +414,23 @@ function updateStyle(
   }));
 }
 
+function updateBackgroundMedia(
+  value: SectionData,
+  onChange: (next: SectionData) => void,
+  patch: Partial<BackgroundMediaData>
+) {
+  updateValue(value, onChange, (current) => ({
+    ...current,
+    style: {
+      ...current.style,
+      backgroundMedia: {
+        ...resolveBackgroundMedia(current.style),
+        ...patch,
+      },
+    },
+  }));
+}
+
 function clearStyleField(
   value: SectionData,
   onChange: (next: SectionData) => void,
@@ -323,6 +443,272 @@ function clearStyleField(
       style,
     };
   });
+}
+
+const resolveBackgroundMediaTypeTransition = (
+  current: BackgroundMediaData,
+  nextType: SectionBackgroundMediaType
+): Partial<BackgroundMediaData> => {
+  if (nextType === "none") {
+    return {
+      type: "none",
+      source: current.source ?? "external",
+      assetId: undefined,
+      src: undefined,
+      posterSource: undefined,
+      posterAssetId: undefined,
+      posterSrc: undefined,
+      title: undefined,
+      description: undefined,
+      fit: current.fit ?? sectionBackgroundMediaDefaults.fit,
+      position: current.position ?? sectionBackgroundMediaDefaults.position,
+      opacity: current.opacity ?? sectionBackgroundMediaDefaults.opacity,
+      blendMode: current.blendMode ?? sectionBackgroundMediaDefaults.blendMode,
+      layerOrder: current.layerOrder ?? sectionBackgroundMediaDefaults.layerOrder,
+    };
+  }
+
+  const source = current.source ?? "external";
+  const keepLibrarySelection = current.type === nextType && source === "library";
+  const keepExternalSelection =
+    source === "external" && isCompatibleSectionMediaUrl(current.src, nextType);
+  const keepVideoMetadata = nextType === "video" && current.type === "video";
+
+  return {
+    type: nextType,
+    source,
+    assetId: keepLibrarySelection ? current.assetId : undefined,
+    src: keepLibrarySelection || keepExternalSelection ? current.src : undefined,
+    posterSource: nextType === "video" ? (current.posterSource ?? "library") : undefined,
+    posterAssetId: nextType === "video" && keepVideoMetadata ? current.posterAssetId : undefined,
+    posterSrc: nextType === "video" && keepVideoMetadata ? current.posterSrc : undefined,
+    title: nextType === "video" && keepVideoMetadata ? current.title : undefined,
+    description: nextType === "video" && keepVideoMetadata ? current.description : undefined,
+    fit: current.fit ?? sectionBackgroundMediaDefaults.fit,
+    position: current.position ?? sectionBackgroundMediaDefaults.position,
+    opacity: current.opacity ?? sectionBackgroundMediaDefaults.opacity,
+    blendMode: current.blendMode ?? sectionBackgroundMediaDefaults.blendMode,
+    layerOrder: current.layerOrder ?? sectionBackgroundMediaDefaults.layerOrder,
+  };
+};
+
+function SectionBackgroundMediaSourceFields({
+  media,
+  mediaType,
+  onChange,
+}: {
+  media: BackgroundMediaData;
+  mediaType: Exclude<SectionBackgroundMediaType, "none">;
+  onChange: (patch: Partial<BackgroundMediaData>) => void;
+}) {
+  const [lookupError, setLookupError] = useState<string | null>(null);
+  const requestIdRef = useRef(0);
+  const source: SectionBackgroundMediaSource = media.source ?? "external";
+  const accept = mediaType === "image" ? ["image/*"] : ["video/*"];
+
+  const handleSourceChange = (next: SectionBackgroundMediaSource) => {
+    requestIdRef.current += 1;
+    setLookupError(null);
+    if (next === "library") {
+      onChange({ source: next, assetId: undefined, src: undefined });
+    } else {
+      onChange({ source: next, assetId: undefined, src: "" });
+    }
+  };
+
+  const handleAssetChange = async (value: unknown) => {
+    const assetId = typeof value === "string" ? value : null;
+    requestIdRef.current += 1;
+    const requestId = requestIdRef.current;
+    if (!assetId) {
+      onChange({ assetId: undefined, src: undefined });
+      return;
+    }
+
+    onChange({ assetId, source: "library" });
+    setLookupError(null);
+    try {
+      const items = await listMediaCached({ force: true });
+      if (requestId !== requestIdRef.current) return;
+      const match = items.find((item) => item.id === assetId);
+      if (match) {
+        onChange({
+          assetId,
+          source: "library",
+          src: match.url,
+          ...(mediaType === "video" && (!media.title || media.title.trim().length === 0)
+            ? { title: match.title ?? match.originalName ?? "" }
+            : {}),
+        });
+      } else {
+        setLookupError("Selected media could not be resolved.");
+      }
+    } catch (error) {
+      if (requestId !== requestIdRef.current) return;
+      setLookupError(isApiClientError(error) ? error.message : "Failed to resolve media URL.");
+    }
+  };
+
+  return (
+    <div className="space-y-3 rounded-md border border-border/70 p-3">
+      <div className="space-y-2">
+        <p className="text-sm font-medium">Background media source</p>
+        <Select
+          value={source}
+          onValueChange={(next) => handleSourceChange(next as SectionBackgroundMediaSource)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select source" />
+          </SelectTrigger>
+          <SelectContent>
+            {backgroundMediaSourceOptions.map((option) => (
+              <SelectItem key={option.id} value={option.id}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {source === "library" ? (
+        <div className="space-y-2">
+          <MediaPicker
+            value={media.assetId ?? null}
+            onChange={(value) => void handleAssetChange(value)}
+            multiple={false}
+            accept={accept}
+          />
+          {lookupError ? <p className="text-xs text-destructive">{lookupError}</p> : null}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Background media URL</p>
+          <Input
+            value={media.src ?? ""}
+            onChange={(event) => onChange({ src: event.target.value })}
+            placeholder={
+              mediaType === "image"
+                ? "https://example.com/background.jpg"
+                : "https://example.com/background.mp4"
+            }
+          />
+          {!isValidSectionMediaUrl(media.src) ? (
+            <p className="text-xs text-destructive">Use a relative path or full URL.</p>
+          ) : null}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SectionBackgroundPosterFields({
+  media,
+  onChange,
+  onClear,
+}: {
+  media: BackgroundMediaData;
+  onChange: (patch: Partial<BackgroundMediaData>) => void;
+  onClear: () => void;
+}) {
+  const [lookupError, setLookupError] = useState<string | null>(null);
+  const requestIdRef = useRef(0);
+  const posterSource: SectionBackgroundMediaSource =
+    media.posterSource ?? media.source ?? "library";
+
+  const handlePosterSourceChange = (next: SectionBackgroundMediaSource) => {
+    requestIdRef.current += 1;
+    setLookupError(null);
+    if (next === "library") {
+      onChange({ posterSource: next, posterAssetId: undefined, posterSrc: undefined });
+    } else {
+      onChange({ posterSource: next, posterAssetId: undefined, posterSrc: "" });
+    }
+  };
+
+  const handlePosterAssetChange = async (value: unknown) => {
+    const assetId = typeof value === "string" ? value : null;
+    requestIdRef.current += 1;
+    const requestId = requestIdRef.current;
+    if (!assetId) {
+      onChange({ posterAssetId: undefined, posterSrc: undefined });
+      return;
+    }
+
+    onChange({ posterAssetId: assetId, posterSource: "library" });
+    setLookupError(null);
+    try {
+      const items = await listMediaCached({ force: true });
+      if (requestId !== requestIdRef.current) return;
+      const match = items.find((item) => item.id === assetId);
+      if (match) {
+        onChange({
+          posterAssetId: assetId,
+          posterSource: "library",
+          posterSrc: match.url,
+        });
+      } else {
+        setLookupError("Selected poster image could not be resolved.");
+      }
+    } catch (error) {
+      if (requestId !== requestIdRef.current) return;
+      setLookupError(
+        isApiClientError(error) ? error.message : "Failed to resolve poster image URL."
+      );
+    }
+  };
+
+  return (
+    <div className="space-y-3 rounded-md border border-border/70 p-3">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-medium">Video poster image</p>
+        <Button type="button" variant="ghost" size="sm" onClick={onClear}>
+          Clear
+        </Button>
+      </div>
+      <div className="space-y-2">
+        <p className="text-sm font-medium">Poster source</p>
+        <Select
+          value={posterSource}
+          onValueChange={(next) => handlePosterSourceChange(next as SectionBackgroundMediaSource)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select source" />
+          </SelectTrigger>
+          <SelectContent>
+            {backgroundMediaSourceOptions.map((option) => (
+              <SelectItem key={option.id} value={option.id}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {posterSource === "library" ? (
+        <div className="space-y-2">
+          <MediaPicker
+            value={media.posterAssetId ?? null}
+            onChange={(value) => void handlePosterAssetChange(value)}
+            multiple={false}
+            accept={["image/*"]}
+          />
+          {lookupError ? <p className="text-xs text-destructive">{lookupError}</p> : null}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Poster image URL</p>
+          <Input
+            value={media.posterSrc ?? ""}
+            onChange={(event) => onChange({ posterSrc: event.target.value })}
+            placeholder="https://example.com/poster.jpg"
+          />
+          {!isValidSectionMediaUrl(media.posterSrc) ? (
+            <p className="text-xs text-destructive">Use a relative path or full URL.</p>
+          ) : null}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function DiagnosticsSnapshot({ value }: { value: SectionData }) {
@@ -426,6 +812,14 @@ export function SectionVisualEditor({
   const regionColumnsValue =
     normalized.layout?.regionColumns ?? sectionDefaults.layout?.regionColumns ?? "1";
   const regionGapValue = normalized.layout?.regionGap ?? sectionRegionGapAutoValue;
+  const backgroundMedia = resolveBackgroundMedia(normalized.style);
+  const backgroundMediaType = backgroundMedia.type ?? "none";
+  const handleBackgroundMediaTypeChange = (nextType: SectionBackgroundMediaType) =>
+    updateBackgroundMedia(
+      value,
+      onChange,
+      resolveBackgroundMediaTypeTransition(backgroundMedia, nextType)
+    );
 
   return (
     <div className="space-y-4">
@@ -965,6 +1359,242 @@ export function SectionVisualEditor({
             />
           )}
         </WidgetControlRow>
+      </WidgetEditorSection>
+      <WidgetEditorSection
+        title="Background media and layers"
+        description="Add decorative image or video layers while keeping Section content above the surface."
+        id="section.background-media-layers"
+      >
+        <WidgetControlRow id="section.style.backgroundMedia.type" label="Background media type">
+          {(fieldProps) => (
+            <Select
+              value={backgroundMediaType}
+              onValueChange={(next) =>
+                handleBackgroundMediaTypeChange(next as SectionBackgroundMediaType)
+              }
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Select media type" />
+              </SelectTrigger>
+              <SelectContent>
+                {backgroundMediaTypeOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
+
+        {backgroundMediaType !== "none" ? (
+          <>
+            <SectionBackgroundMediaSourceFields
+              media={backgroundMedia}
+              mediaType={backgroundMediaType}
+              onChange={(patch) => updateBackgroundMedia(value, onChange, patch)}
+            />
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <WidgetControlRow id="section.style.backgroundMedia.fit" label="Media fit">
+                {(fieldProps) => (
+                  <Select
+                    value={backgroundMedia.fit ?? "cover"}
+                    onValueChange={(next) =>
+                      updateBackgroundMedia(value, onChange, {
+                        fit: next as SectionBackgroundMediaFit,
+                      })
+                    }
+                  >
+                    <SelectTrigger
+                      id={fieldProps.id}
+                      aria-labelledby={fieldProps["aria-labelledby"]}
+                      aria-describedby={fieldProps["aria-describedby"]}
+                    >
+                      <SelectValue placeholder="Select fit" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {backgroundMediaFitOptions.map((option) => (
+                        <SelectItem key={option.id} value={option.id}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </WidgetControlRow>
+
+              <WidgetControlRow id="section.style.backgroundMedia.position" label="Media position">
+                {(fieldProps) => (
+                  <Select
+                    value={backgroundMedia.position ?? "center"}
+                    onValueChange={(next) =>
+                      updateBackgroundMedia(value, onChange, {
+                        position: next as SectionBackgroundMediaPosition,
+                      })
+                    }
+                  >
+                    <SelectTrigger
+                      id={fieldProps.id}
+                      aria-labelledby={fieldProps["aria-labelledby"]}
+                      aria-describedby={fieldProps["aria-describedby"]}
+                    >
+                      <SelectValue placeholder="Select position" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {backgroundMediaPositionOptions.map((option) => (
+                        <SelectItem key={option.id} value={option.id}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </WidgetControlRow>
+
+              <WidgetControlRow id="section.style.backgroundMedia.blendMode" label="Blend mode">
+                {(fieldProps) => (
+                  <Select
+                    value={backgroundMedia.blendMode ?? "normal"}
+                    onValueChange={(next) =>
+                      updateBackgroundMedia(value, onChange, {
+                        blendMode: next as SectionBackgroundMediaBlendMode,
+                      })
+                    }
+                  >
+                    <SelectTrigger
+                      id={fieldProps.id}
+                      aria-labelledby={fieldProps["aria-labelledby"]}
+                      aria-describedby={fieldProps["aria-describedby"]}
+                    >
+                      <SelectValue placeholder="Select blend mode" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {backgroundMediaBlendModeOptions.map((option) => (
+                        <SelectItem key={option.id} value={option.id}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </WidgetControlRow>
+
+              <WidgetControlRow id="section.style.backgroundMedia.layerOrder" label="Layer order">
+                {(fieldProps) => (
+                  <Select
+                    value={backgroundMedia.layerOrder ?? "media-under-overlay"}
+                    onValueChange={(next) =>
+                      updateBackgroundMedia(value, onChange, {
+                        layerOrder: next as SectionLayerOrder,
+                      })
+                    }
+                  >
+                    <SelectTrigger
+                      id={fieldProps.id}
+                      aria-labelledby={fieldProps["aria-labelledby"]}
+                      aria-describedby={fieldProps["aria-describedby"]}
+                    >
+                      <SelectValue placeholder="Select layer order" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {backgroundMediaLayerOrderOptions.map((option) => (
+                        <SelectItem key={option.id} value={option.id}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </WidgetControlRow>
+
+              <WidgetControlRow
+                id="section.style.backgroundMedia.opacity"
+                label="Media opacity (%)"
+              >
+                {(fieldProps) => (
+                  <Input
+                    id={fieldProps.id}
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={String(clampMediaOpacity(backgroundMedia.opacity))}
+                    onChange={(event) =>
+                      updateBackgroundMedia(value, onChange, {
+                        opacity: clampMediaOpacity(Number(event.target.value)),
+                      })
+                    }
+                    aria-labelledby={fieldProps["aria-labelledby"]}
+                    aria-describedby={fieldProps["aria-describedby"]}
+                  />
+                )}
+              </WidgetControlRow>
+            </div>
+
+            {backgroundMediaType === "video" ? (
+              <>
+                <WidgetControlRow
+                  id="section.style.backgroundMedia.title"
+                  label="Background video title"
+                >
+                  {(fieldProps) => (
+                    <Input
+                      id={fieldProps.id}
+                      value={backgroundMedia.title ?? ""}
+                      onChange={(event) =>
+                        updateBackgroundMedia(value, onChange, { title: event.target.value })
+                      }
+                      placeholder="Ambient background video"
+                      aria-labelledby={fieldProps["aria-labelledby"]}
+                      aria-describedby={fieldProps["aria-describedby"]}
+                    />
+                  )}
+                </WidgetControlRow>
+
+                <WidgetControlRow
+                  id="section.style.backgroundMedia.description"
+                  label="Background video description"
+                >
+                  {(fieldProps) => (
+                    <Textarea
+                      id={fieldProps.id}
+                      value={backgroundMedia.description ?? ""}
+                      onChange={(event) =>
+                        updateBackgroundMedia(value, onChange, {
+                          description: event.target.value,
+                        })
+                      }
+                      placeholder="Optional notes for this decorative video"
+                      aria-labelledby={fieldProps["aria-labelledby"]}
+                      aria-describedby={fieldProps["aria-describedby"]}
+                    />
+                  )}
+                </WidgetControlRow>
+
+                <SectionBackgroundPosterFields
+                  media={backgroundMedia}
+                  onChange={(patch) => updateBackgroundMedia(value, onChange, patch)}
+                  onClear={() =>
+                    updateBackgroundMedia(value, onChange, {
+                      posterSource: undefined,
+                      posterAssetId: undefined,
+                      posterSrc: undefined,
+                    })
+                  }
+                />
+              </>
+            ) : null}
+          </>
+        ) : null}
+
+        <p className="text-xs text-muted-foreground">
+          Background media is decorative only. Section headings and region content stay above media
+          and overlay layers.
+        </p>
       </WidgetEditorSection>
     </div>
   );

@@ -53,7 +53,7 @@ Section widget jest bazowym kontenerem układu strony. Odpowiada za: semantyczny
 | # | Problem | Obszar |
 |---|---------|--------|
 | C1 | Zamknięte (2026-05-21, TASK-283-01): Section ma bounded `minHeight` (`none` / `compact` / `hero` / `screen`) zamiast braku kontroli wysokości | Layout |
-| C2 | Brak obsługi tła jako obrazu/wideo — wyłącznie kolor i gradient | Styl |
+| C2 | Zamknięte (2026-05-21, TASK-283-02): Section ma bounded dekoracyjne tło image/video z bezpiecznym fail-closed dla nieobsługiwanych URL-i | Styl |
 | C3 | Brak kontroli koloru i rozmiaru tekstu nagłówka sekcji — obecne bezpieczne defaulty tekstowe są nadal stałe (`text-xs`, `text-2xl`, `text-sm`) | Typografia |
 | C4 | Brak konfigurowalnego poziomu semantycznego nagłówka (h1–h6) — historyczny hardcoded `<h3>` został już usunięty, ale użytkownik nadal nie może wybrać poziomu | Dostępność / SEO |
 | C5 | Zamknięte (2026-05-21, TASK-283-01): regiony mają bounded `stack` / `row` / `grid` flow z clampowanymi kolumnami grid do limitu 8 | Layout |
@@ -72,7 +72,7 @@ Section widget jest bazowym kontenerem układu strony. Odpowiada za: semantyczny
 | W8 | Zamknięte (2026-05-21, TASK-283-01): `layout.regionGap` pozwala ustawić jawny token, a brak pola zachowuje legacy spacing wariantu | Layout |
 | W9 | Gradient nie ma przycisku Clear — nie można łatwo usunąć gradientu po ustawieniu (brak onClear dla gradientFrom/gradientTo) | UX edytora |
 | W10 | Zamknięte (2026-05-17, TASK-256-05-01): `anchorId` jest sanitizowany przed persistence/render i nie jest już aktywnym ownerem TASK-283 | Walidacja |
-| W11 | Brak kontroli z-index dla warstw (overlay, treść) | Styl |
+| W11 | Zamknięte (2026-05-21, TASK-283-02): Section ma bounded `media-under-overlay` / `overlay-under-media` ordering dla warstw dekoracyjnych | Styl |
 
 ### 3.3 Błędy logiczne i normalizacja (wykryte w kodzie)
 
@@ -340,10 +340,9 @@ Zmieniono wariant na `contained`, opublikowano i sprawdzono frontend:
 | Priorytet | Problem | Nakład | Wpływ |
 |-----------|---------|--------|-------|
 | **P0** | TASK-326 — domknąć shared truthfulness drift: fallback `borderWidth` / `radius`, dublowanie `gradientAngle` / `overlayOpacity`, oraz obecne semantyki `content` / `wide` / `bleed` | Niski–Średni | Poprawność normalizacji / Truthfulness UI |
-| **P1** | TASK-283-02 — dodać bounded background image/video plus bezpieczny model warstw Section | Wysoki | Styl / Runtime |
 | **P1** | TASK-283-03 — dodać konfigurowalny poziom nagłówka (h1–h6), heading text/alignment controls i brakujące pole `Label` w Wizard | Niski–Średni | SEO / Dostępność / UX |
 | **P1** | TASK-283-04 — dodać presety sekcji, przyjaźniejsze nazwy max-width i truthfulness copy dla wariantów | Średni | Workflow / UX |
-| **P2** | TASK-283-05 — dodać shadow/motion/preview controls oraz lepszy UX dla angle/opacity po domknięciu shared truthfulness i background-media modelu | Średni | Styl / UX |
+| **P2** | TASK-283-05 — dodać shadow/motion/preview controls oraz lepszy UX dla angle/opacity po domknięciu shared truthfulness drift | Średni | Styl / UX |
 | **P2** | TASK-283-06 — dodać responsywne padding tokens i ewentualne bounded density presets | Wysoki | Responsywność |
 | **P2** | TASK-283-07 — dodać custom region labels bez naruszania `region:<id>` slot storage | Średni | UX struktury |
 | **P3** | TASK-283-08 — zsynchronizować końcowe report/docs/changelog/board po domknięciu wszystkich owner leaves | Niski | Evidence hygiene |
@@ -361,6 +360,7 @@ Zmieniono wariant na `contained`, opublikowano i sprawdzono frontend:
 - Raw JSON snapshot w Advanced pokazuje poprawny, znormalizowany stan
 - Element section/div — poprawna zmiana semantyki
 - Padding block / inline / max-width — poprawnie aplikowane jako klasy Tailwind
+- Background media: dekoracyjne image/video tła, poster dla video, bounded blend/layer ordering, i fail-closed dla nieobsługiwanych źródeł są zamknięte przez TASK-283-02
 
 ### Co wymaga poprawy ❌
 
@@ -368,7 +368,6 @@ Zmieniono wariant na `contained`, opublikowano i sprawdzono frontend:
 - **Shared truthfulness**: obecne Section owner nadal ma błędne fallback defaults i zdublowane liczby surface w Visual/Advanced; to zostało wycięte do TASK-326 zamiast lokalnej łaty w TASK-283.
 - **Gradient fields**: brak Clear button — shared clear-control drift pozostaje poza TASK-283 w ownerach TASK-256.
 - **Heading controls**: baseline hardcoded `<h3>` jest już zamknięty, ale użytkownik nadal nie może wybrać poziomu `h1`–`h6`, alignmentu ani wprowadzić `Label` w Wizard (`TASK-283-03`).
-- **Background media**: Section nadal nie wspiera dekoracyjnego image/video tła ani bounded layer ordering (`TASK-283-02`).
 - **Section presets / responsive spacing / custom region labels**: te widget-local owners pozostają otwarte w `TASK-283-04`, `TASK-283-06`, i `TASK-283-07`.
 - **Container width „Content" vs „Wide"**: identyczne CSS — shared truthfulness drift ownerem jest `TASK-326`, nie lokalny leaf TASK-283.
 

@@ -6,6 +6,38 @@ import { afterEach, expect, test, vi } from "vitest";
 
 import type { SectionData } from "../../../core/widgets/core/section";
 
+const sectionMediaState = vi.hoisted(() => {
+  const createMediaItems = () => [
+    {
+      id: "asset-image",
+      url: "/media/section-background.jpg",
+      title: "Section background",
+      originalName: "section-background.jpg",
+    },
+    {
+      id: "asset-video",
+      url: "https://cdn.example.com/section-demo.mp4",
+      title: "Section demo video",
+      originalName: "section-demo.mp4",
+    },
+    {
+      id: "asset-poster",
+      url: "/media/section-poster.jpg",
+      title: "Section poster",
+      originalName: "section-poster.jpg",
+    },
+  ];
+
+  return {
+    mediaItems: createMediaItems(),
+    mediaError: null as unknown,
+    reset() {
+      this.mediaItems = createMediaItems();
+      this.mediaError = null;
+    },
+  };
+});
+
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 vi.mock("@/components/ui/badge", () => ({
@@ -129,6 +161,52 @@ vi.mock("@/lib/utils", () => ({
   cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
 }));
 
+vi.mock("@/services/apiClient", () => ({
+  isApiClientError: (error: unknown) =>
+    typeof error === "object" &&
+    error !== null &&
+    "name" in error &&
+    (error as { name?: string }).name === "ApiClientError",
+}));
+
+vi.mock("@/services/mediaClient", () => ({
+  listMediaCached: vi.fn(async () => {
+    if (sectionMediaState.mediaError) throw sectionMediaState.mediaError;
+    return sectionMediaState.mediaItems;
+  }),
+}));
+
+vi.mock("@/ui/media/MediaPicker", () => ({
+  MediaPicker: ({
+    value,
+    onChange,
+    accept,
+  }: {
+    value: string | null;
+    onChange: (value: unknown) => void;
+    accept?: string[];
+  }) => (
+    <div data-media-picker={(accept ?? []).join(",") || "all"}>
+      <button
+        type="button"
+        onClick={() => onChange((accept ?? []).includes("video/*") ? "asset-video" : "asset-image")}
+      >
+        {(accept ?? []).includes("video/*") ? "pick-video-asset" : "pick-image-asset"}
+      </button>
+      <button type="button" onClick={() => onChange("asset-poster")}>
+        pick-poster-asset
+      </button>
+      <button type="button" onClick={() => onChange("missing-asset")}>
+        pick-missing-asset
+      </button>
+      <button type="button" onClick={() => onChange(null)}>
+        clear-media-selection
+      </button>
+      <span>{value ?? "none"}</span>
+    </div>
+  ),
+}));
+
 const mount = (node: React.ReactNode) => {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -197,6 +275,15 @@ const setSelectValue = (element: Element | null | undefined, value: string) => {
   React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+};
+
+const flush = async () => {
+  await React.act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
   });
 };
 
@@ -271,6 +358,7 @@ const findSectionByTitle = (container: ParentNode, title: string) =>
 
 afterEach(() => {
   document.body.innerHTML = "";
+  sectionMediaState.reset();
   vi.restoreAllMocks();
 });
 
@@ -656,6 +744,128 @@ test("Section visual editor keeps grid columns disabled until grid flow is selec
     });
     expect(regionColumnsSelect.disabled).toBe(true);
     expect(regionColumnsSelect.value).toBe("1");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Section visual editor resolves decorative background image assets and bounded layer controls", async () => {
+  const view = await renderEditors({
+    initialValue: {},
+    initialVariant: "default",
+  });
+
+  try {
+    const backgroundSection = findSectionByTitle(view.container, "Background media and layers");
+    if (!(backgroundSection instanceof HTMLElement)) {
+      throw new Error("Missing background media section");
+    }
+
+    setSelectValue(findSelectByOptions(backgroundSection, ["none", "image", "video"]), "image");
+    setSelectValue(findSelectByOptions(backgroundSection, ["library", "external"]), "library");
+    clickByText(backgroundSection, "pick-image-asset");
+    await flush();
+
+    setSelectValue(findSelectByOptions(backgroundSection, ["cover", "contain"]), "contain");
+    setSelectValue(
+      findSelectByOptions(backgroundSection, ["center", "top", "bottom", "left", "right"]),
+      "top"
+    );
+    setSelectValue(
+      findSelectByOptions(backgroundSection, ["normal", "multiply", "screen", "overlay"]),
+      "overlay"
+    );
+    setSelectValue(
+      findSelectByOptions(backgroundSection, ["media-under-overlay", "overlay-under-media"]),
+      "overlay-under-media"
+    );
+    setInputValue(findNumberInputs(backgroundSection)[0], "45");
+
+    expect(view.getLatestValue().style?.backgroundMedia).toMatchObject({
+      type: "image",
+      source: "library",
+      assetId: "asset-image",
+      src: "/media/section-background.jpg",
+      fit: "contain",
+      position: "top",
+      opacity: 45,
+      blendMode: "overlay",
+      layerOrder: "overlay-under-media",
+    });
+
+    const snapshot = view.container.querySelector("pre");
+    expect(snapshot?.textContent).toContain('"backgroundMedia"');
+    expect(snapshot?.textContent).toContain('"assetId": "asset-image"');
+    expect(snapshot?.textContent).toContain('"blendMode": "overlay"');
+    expect(snapshot?.textContent).toContain('"layerOrder": "overlay-under-media"');
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Section visual editor resolves decorative background video and poster assets", async () => {
+  const view = await renderEditors({
+    initialValue: {},
+    initialVariant: "default",
+  });
+
+  try {
+    const backgroundSection = findSectionByTitle(view.container, "Background media and layers");
+    if (!(backgroundSection instanceof HTMLElement)) {
+      throw new Error("Missing background media section");
+    }
+
+    setSelectValue(findSelectByOptions(backgroundSection, ["none", "image", "video"]), "video");
+    setSelectValue(findSelectByOptions(backgroundSection, ["library", "external"]), "library");
+    clickByText(backgroundSection, "pick-video-asset");
+    await flush();
+
+    setInputValue(
+      findInputByPlaceholder(backgroundSection, "Ambient background video"),
+      "Ambient loop"
+    );
+    setTextareaValue(
+      findTextareaByPlaceholder(backgroundSection, "Optional notes for this decorative video"),
+      "Muted decorative video loop."
+    );
+    const backgroundSourceSelects = findSelectsByOptions(backgroundSection, [
+      "library",
+      "external",
+    ]);
+    const posterSourceSelect = backgroundSourceSelects[1];
+    if (!(posterSourceSelect instanceof HTMLSelectElement)) {
+      throw new Error("Missing poster source select");
+    }
+    setSelectValue(posterSourceSelect, "library");
+    await flush();
+
+    const posterPicker = Array.from(backgroundSection.querySelectorAll("[data-media-picker]")).find(
+      (node) => node.getAttribute("data-media-picker") === "image/*"
+    );
+    if (!(posterPicker instanceof HTMLElement)) {
+      throw new Error("Missing poster media picker");
+    }
+    clickByText(posterPicker, "pick-poster-asset");
+    await flush();
+    setInputValue(findNumberInputs(backgroundSection)[0], "55");
+
+    expect(view.getLatestValue().style?.backgroundMedia).toMatchObject({
+      type: "video",
+      source: "library",
+      assetId: "asset-video",
+      src: "https://cdn.example.com/section-demo.mp4",
+      title: "Ambient loop",
+      description: "Muted decorative video loop.",
+      posterSource: "library",
+      posterAssetId: "asset-poster",
+      posterSrc: "/media/section-poster.jpg",
+      opacity: 55,
+    });
+
+    const snapshot = view.container.querySelector("pre");
+    expect(snapshot?.textContent).toContain('"assetId": "asset-video"');
+    expect(snapshot?.textContent).toContain('"posterAssetId": "asset-poster"');
+    expect(snapshot?.textContent).toContain('"title": "Ambient loop"');
   } finally {
     view.cleanup();
   }

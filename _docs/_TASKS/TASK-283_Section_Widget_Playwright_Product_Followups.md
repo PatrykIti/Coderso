@@ -110,7 +110,7 @@ this family.
 ## Sub-Tasks
 
 - [x] TASK-283-01: Section Layout Height and Region Flow Controls
-- [ ] TASK-283-02: Section Background Media and Layering Model
+- [x] TASK-283-02: Section Background Media and Layering Model
 - [ ] TASK-283-03: Section Heading Typography Alignment and Wizard UX
 - [ ] TASK-283-04: Section Presets Variant Guidance and Width Copy
 - [ ] TASK-283-05: Section Surface Shadow Motion and Preview Controls
