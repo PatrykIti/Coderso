@@ -13,6 +13,16 @@ import {
   type GalleryMosaicData,
 } from "../../../core/widgets/core/galleryMosaic";
 import {
+  createNavigationWidget,
+  navigationDefaults,
+  type NavigationData,
+} from "../../../core/widgets/core/navigation";
+import {
+  createNewsletterWidget,
+  newsletterDefaults,
+  type NewsletterData,
+} from "../../../core/widgets/core/newsletter";
+import {
   createPricingPlansWidget,
   pricingPlansDefaults,
 } from "../../../core/widgets/core/pricingPlans";
@@ -589,6 +599,146 @@ test("normalizeWidgetBlock rejects invalid gallery mosaic density and motion enu
           motionPreset: "bounce",
         },
       } as unknown as GalleryMosaicData,
+    })
+  ).toThrow("widget_schema_invalid");
+});
+
+test("normalizeWidgetBlock accepts navigation active-link mode and manual link targets", () => {
+  registerWidget(
+    createNavigationWidget({
+      wizard: Dummy as never,
+      visual: Dummy as never,
+      advanced: Dummy as never,
+    })
+  );
+
+  const normalized = normalizeWidgetBlock({
+    id: "navigation-1",
+    type: "navigation",
+    variant: "with-cta",
+    data: {
+      ...navigationDefaults,
+      items: [
+        {
+          label: "Docs",
+          href: "/docs",
+          target: "blank",
+          children: [{ label: "API", href: "/docs/api", target: "blank" }],
+        },
+      ],
+      behavior: {
+        ...navigationDefaults.behavior,
+        activeLinkMode: "exact",
+      },
+    } satisfies NavigationData,
+  });
+
+  const data = normalized.data as NavigationData;
+  expect(data.behavior?.activeLinkMode).toBe("exact");
+  expect(data.items[0]?.target).toBe("blank");
+  expect(data.items[0]?.children?.[0]?.target).toBe("blank");
+});
+
+test("normalizeWidgetBlock rejects invalid navigation active-link mode and target enums", () => {
+  registerWidget(
+    createNavigationWidget({
+      wizard: Dummy as never,
+      visual: Dummy as never,
+      advanced: Dummy as never,
+    })
+  );
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "navigation-invalid",
+      type: "navigation",
+      variant: "with-cta",
+      data: {
+        ...navigationDefaults,
+        items: [{ label: "Docs", href: "/docs", target: "new-tab" }],
+        behavior: {
+          ...navigationDefaults.behavior,
+          activeLinkMode: "prefix",
+        },
+      } as never,
+    })
+  ).toThrow("widget_schema_invalid");
+});
+
+test("normalizeWidgetBlock accepts newsletter first-name and double opt-in metadata", () => {
+  registerWidget(
+    createNewsletterWidget({
+      wizard: Dummy as never,
+      visual: Dummy as never,
+      advanced: Dummy as never,
+    })
+  );
+
+  const normalized = normalizeWidgetBlock({
+    id: "newsletter-1",
+    type: "newsletter",
+    variant: "stacked",
+    data: {
+      ...newsletterDefaults,
+      form: {
+        ...newsletterDefaults.form,
+        firstName: {
+          ...newsletterDefaults.form?.firstName,
+          enabled: true,
+          label: "First name",
+          placeholder: "Jamie",
+          fieldName: "customer_first_name",
+          required: true,
+        },
+      },
+      optIn: {
+        ...newsletterDefaults.optIn,
+        mode: "double",
+        confirmationCopy: "Check your inbox to confirm.",
+      },
+    } satisfies NewsletterData,
+  });
+
+  const data = normalized.data as NewsletterData;
+  expect(data.form?.firstName).toEqual(
+    expect.objectContaining({
+      enabled: true,
+      fieldName: "customer_first_name",
+    })
+  );
+  expect(data.optIn?.mode).toBe("double");
+  expect(data.optIn?.enforcement).toBe("provider-owned");
+});
+
+test("normalizeWidgetBlock rejects invalid newsletter field and opt-in config", () => {
+  registerWidget(
+    createNewsletterWidget({
+      wizard: Dummy as never,
+      visual: Dummy as never,
+      advanced: Dummy as never,
+    })
+  );
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "newsletter-invalid",
+      type: "newsletter",
+      variant: "inline",
+      data: {
+        ...newsletterDefaults,
+        form: {
+          ...newsletterDefaults.form,
+          firstName: {
+            ...newsletterDefaults.form?.firstName,
+            enabled: true,
+            helperText: "extra",
+          },
+        },
+        optIn: {
+          ...newsletterDefaults.optIn,
+          enforcement: "coderso-owned",
+        },
+      } as never,
     })
   ).toThrow("widget_schema_invalid");
 });
