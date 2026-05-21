@@ -279,7 +279,9 @@ const normalizeRuntimeItems = (value: unknown): CommerceWidgetRuntimeCard[] => {
               ? payload.stock.state
               : "out_of_stock",
           quantity:
-            typeof payload.stock?.quantity === "number" && Number.isFinite(payload.stock.quantity)
+            typeof payload.stock?.quantity === "number" &&
+            Number.isFinite(payload.stock.quantity) &&
+            payload.stock.quantity >= 0
               ? Math.floor(payload.stock.quantity)
               : null,
           inStock: payload.stock?.inStock === true,
@@ -537,7 +539,7 @@ const formatProductTableStockValue = (
   }
 ) => {
   const label = commerceStockLabelMap[stock.state];
-  if (!options.showStockQuantity || typeof stock.quantity !== "number") {
+  if (!options.showStockQuantity || typeof stock.quantity !== "number" || stock.quantity < 0) {
     return label;
   }
   return `${label} (${stock.quantity})`;

@@ -54,7 +54,8 @@ styling, and admin preview parity for the current source query.
 - Product titles keep the `(draft)` / `(archived)` suffix only when the Status
   column is hidden.
 - Visual mode exposes `showStockQuantity` only while the Stock column is
-  visible, so quantity copy cannot be configured out of context.
+  visible, and the flag is cleared when Stock is turned off so hidden quantity
+  state does not linger in widget JSON.
 
 ## Runtime Behavior Notes
 

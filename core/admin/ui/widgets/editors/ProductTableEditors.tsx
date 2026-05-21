@@ -64,11 +64,17 @@ const updateFieldVisibility = (
   next: boolean
 ) => {
   const current = normalizeProductTableData(value);
+  const nextFields: NonNullable<ProductTableData["fields"]> = {
+    ...current.fields,
+    [key]: next,
+  };
+
+  if (key === "showStock" && next === false) {
+    nextFields.showStockQuantity = false;
+  }
+
   update(value, onChange, {
-    fields: {
-      ...current.fields,
-      [key]: next,
-    },
+    fields: nextFields,
   });
 };
 

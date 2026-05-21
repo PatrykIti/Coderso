@@ -20,6 +20,8 @@
 
 Widget wyświetla produkty z katalogu commerce w układzie tabeli HTML z konfigurowalnymi kolumnami, etykietami, filtrowaniem źródła danych i stylami powierzchni. Hydratacja danych następuje w runtime przez `hydrateProductTableRuntimeData()`.
 
+> **Uwaga (2026-05-21):** Sekcje 3-9 zachowują historyczną bazę z sesji Playwright z 2026-05-16. Późniejsze zamknięcia lokalnych findingów są oznaczone inline oraz w sekcjach `Status po TASK-*`.
+
 ---
 
 ## 2. Analiza kodu — struktura konfiguracji
@@ -29,7 +31,7 @@ Widget wyświetla produkty z katalogu commerce w układzie tabeli HTML z konfigu
 | Sekcja | Pola | Uwagi |
 |--------|------|-------|
 | **source** | `limit` (1–48), `search`, `collectionIds[]`, `status[]`, `sortField`, `sortDir` | Limit max 48, brak offsetu/paginacji |
-| **fields** | `showSlug`, `showStatus`, `showStock`, `showCompareAt`, `showCollectionCount` | 5 togglei — brak togglea dla tytułu i ceny |
+| **fields** | `showTitle`, `showSlug`, `showPrice`, `showStatus`, `showStock`, `showStockQuantity`, `showCompareAt`, `showCollectionCount` | 7 togglei kolumn + opcjonalna prezentacja ilości stocku z guardrailami dla Product/Price |
 | **labels** | `title`, `price`, `compareAt`, `status`, `stock`, `collections`, `slug` | 7 etykiet w schemacie |
 | **emptyState** | `title`, `description` | Komunikat gdy brak produktów |
 | **style** | `tableBackground`, `tableBorderColor`, `headerBackground`, `emptyBackground`, `emptyBorderColor` | 5 powierzchni, brak kontroli typografii |
@@ -39,25 +41,25 @@ Widget wyświetla produkty z katalogu commerce w układzie tabeli HTML z konfigu
 
 | Kolumna | Zawsze widoczna | Toggle | Label edytowalny w edytorze |
 |---------|-----------------|--------|-----------------------------|
-| Product (title) | ✓ | ✗ brak | ✓ (Visual) |
-| Slug | ✗ | ✓ showSlug (domyślnie ON) | ✗ BRAK w edytorze |
-| Price | ✓ | ✗ brak | ✓ (Visual) |
-| Compare At | ✗ | ✓ showCompareAt (domyślnie OFF) | ✗ BRAK w edytorze |
-| Status | ✗ | ✓ showStatus (domyślnie ON) | ✓ (Visual) |
-| Stock | ✗ | ✓ showStock (domyślnie ON) | ✗ BRAK w edytorze |
-| Collections count | ✗ | ✓ showCollectionCount (domyślnie OFF) | ✗ BRAK w edytorze |
+| Product (title) | ✓ | ✓ `showTitle` (domyślnie ON) | ✓ (Visual) |
+| Slug | ✗ | ✓ `showSlug` (domyślnie ON) | ✓ (Visual) |
+| Price | ✓ | ✓ `showPrice` (domyślnie ON) | ✓ (Visual) |
+| Compare At | ✗ | ✓ `showCompareAt` (domyślnie OFF) | ✓ (Visual) |
+| Status | ✗ | ✓ `showStatus` (domyślnie ON) | ✓ (Visual) |
+| Stock | ✗ | ✓ `showStock` (domyślnie ON) | ✓ (Visual) |
+| Collections count | ✗ | ✓ `showCollectionCount` (domyślnie OFF) | ✓ (Visual) |
 
 ### 2.3 Tryby edytora
 
-- **Wizard** — źródło danych (CommerceSourceFields), style powierzchni (5 clearable inputów)
-- **Visual** — 3 sekcje: Columns (5 togglei), Column labels (tylko 3/7), Empty state, Surfaces
-- **Advanced** — runtime payload (items count, total), runtime error flag, query preview JSON
+- **Wizard** — źródło danych (`CommerceSourceFields`), style powierzchni (5 clearable inputów)
+- **Visual** — Columns (7 togglei z guardrailami identity/pricing), Column labels (7/7), Stock presentation, Empty state, Surfaces
+- **Advanced** — read-only preview status card, resolved payload counts, backend-owned runtime warning, query preview JSON
 
 ### 2.4 Pola runtime card (dostępne danych, częściowo nieużywane)
 
 `CommerceWidgetRuntimeCard` zawiera: `id`, `title`, `slug`, `excerpt`, `status`, `pricing.amount`, `pricing.currency`, `pricing.compareAtAmount`, `stock.state`, `stock.quantity`, `stock.inStock`, `primaryMediaId`, `mediaIds[]`, `collectionIds[]`
 
-Z tych pól **nigdy nie są renderowane**: `excerpt`, `stock.quantity`, `stock.inStock`, `primaryMediaId`, `mediaIds[]` — dostępne w danych ale bez żadnej reprezentacji w UI.
+Z tych pól po `TASK-281-03` nadal **nie są renderowane bezpośrednio**: `excerpt`, `stock.inStock`, `primaryMediaId`, `mediaIds[]`. `stock.quantity` może być opcjonalnie dołączone do kolumny Stock przez `showStockQuantity`, ale nie renderuje się jako osobna kolumna.
 
 ---
 
@@ -183,8 +185,8 @@ Tło tabeli: rgb(240, 244, 255) ← z custom koloru
 | `aria-label` na `<table>` | ✗ BRAK | |
 | Linki w wierszach tabeli | ✗ BRAK | Slug jako plain text `/<slug>`, nie `<a>` |
 | Efekt hover na wierszach | ✗ BRAK | Klasy: `border-b border-[var(--color-border)]/70 last:border-b-0` — brak `hover:bg-*` |
-| Status jako badge | ✗ BRAK | Wartości "draft"/"published" jako plain text |
-| Quantity (stock.quantity) wyświetlana | ✗ BRAK | Tylko "In stock"/"Out of stock", bez liczby |
+| Status jako badge | ✗ BRAK | Historyczne ustalenie z 2026-05-16; fixed in `TASK-281-03`. |
+| Quantity (stock.quantity) wyświetlana | ✗ BRAK | Historyczne ustalenie z 2026-05-16; fixed in `TASK-281-03`. |
 | `role="alert"` na błędzie commerce | ✗ BRAK | — |
 | Mobilne overflow-x-auto | ✓ Działa | Tabela scrolluje poziomo na 375px |
 
@@ -208,26 +210,31 @@ Tło tabeli: rgb(240, 244, 255) ← z custom koloru
 **Potwierdzone Playwright:** `data-product-table-count="0"` w admin przez cały czas testów; `data-product-table-count="2"` na froncie po publish.
 **Skutek:** Workflow edytora jest fundamentalnie zepsuty — edytor musi publikować i sprawdzać frontend żeby zobaczyć efekty konfiguracji kolumn.
 **Rekomendacja:** Dodać "preview mode" resolver w admin który odpytuje commerce API z tymi samymi parametrami co runtime.
+**Status (2026-05-21):** Fixed in `TASK-281-01`.
 
 #### BUG-01 — Etykiety kolumn Slug, Stock, CompareAt, Collections niedostępne w edytorze
 **Priorytet:** Wysoki
 **Opis:** Sekcja "Column labels" w Visual editorze pozwala edytować tylko 3 z 7 etykiet: `title`, `price`, `status`. Etykiety `slug`, `stock`, `compareAt`, `collections` są w schemacie i w `productTableDefaults`, ale **nie mają kontrolek w edytorze**. Użytkownik może włączyć te kolumny togglem, ale nie może zmienić ich nagłówka.
 **Lokalizacja:** `ProductTableEditors.tsx:197-234` (sekcja "Column labels")
+**Status (2026-05-21):** Fixed in `TASK-281-02`.
 
 #### BUG-02 — Status wyświetlany jako surowy tekst (brak badge/koloru)
 **Priorytet:** Średni
 **Opis:** Kolumna Status renderuje wartości `"draft"`, `"published"`, `"archived"` jako plain text. Brak wizualnego rozróżnienia (kolory, badge). Tytuł produktu poza tym dostaje suffix `(draft)` / `(archived)` poprzez `titleWithStatus()` — duplikowanie informacji gdy kolumna Status jest włączona.
 **Lokalizacja:** `productTable.tsx:369-373`, `productTable.tsx:484`
+**Status (2026-05-21):** Fixed in `TASK-281-03`.
 
 #### BUG-03 — Ilość sztuk (stock.quantity) nigdy nie wyświetlana
 **Priorytet:** Średni
 **Opis:** `CommerceWidgetRuntimeCard` zawiera `stock.quantity` (liczba całkowita lub null) oraz `stock.inStock` (boolean), ale renderer ignoruje oba pola — wyświetla tylko etykietę stanu ("In stock", "Out of stock", "Backorder"). Użytkownik nie ma możliwości włączenia wyświetlania ilości.
 **Lokalizacja:** `productTable.tsx:486-490`, `commerceWidgetShared.ts:187-193`
+**Status (2026-05-21):** Fixed in `TASK-281-03`.
 
 #### BUG-04 — Kolumna Title i Price niewyłączalne
 **Priorytet:** Niski
 **Opis:** Pola `showTitle` i `showPrice` nie istnieją — kolumny Product i Price są zawsze widoczne. Pozostałe 5 kolumn ma togglei. Asymetria: użytkownik może ukryć Slug, ale nie Price — mimo że oba mają te same wymagania edycyjne.
 **Lokalizacja:** `productTable.tsx:421-443` (hardcoded thead bez conditionala)
+**Status (2026-05-21):** Fixed in `TASK-281-02`.
 
 ---
 
@@ -268,6 +275,7 @@ Tło tabeli: rgb(240, 244, 255) ← z custom koloru
 #### UX-09 — Advanced editor — "runtime error flag" jest edytowalny przez użytkownika
 **Opis:** Pole "Runtime error flag" w Advanced editorze umożliwia ręczne wpisanie wartości błędu. To jest pole runtime, nie konfiguracyjne — edycja przez użytkownika może wprowadzić błędny stan (fałszywe ostrzeżenie w rendered widgecie).
 **Lokalizacja:** `ProductTableEditors.tsx:284-296`
+**Status (2026-05-21):** Fixed in `TASK-281-01`.
 **Rekomendacja:** Zamienić na read-only display, usunąć `onChange` dla pola error.
 
 ---
@@ -282,9 +290,11 @@ Tło tabeli: rgb(240, 244, 255) ← z custom koloru
 
 ### BF-03 — Brak kolumny ilości (stock.quantity)
 **Opis:** Pole `stock.quantity` jest w modelu danych ale nigdy renderowane. Zamiast "In stock" mogłoby pokazywać "In stock (42)".
+**Status (2026-05-21):** Fixed in `TASK-281-03`.
 
 ### BF-04 — Brak kolorowania wierszy wg statusu
 **Opis:** Wiersze dla draft/archived produktów nie mają żadnego wizualnego wyróżnienia (kolor, opacity). Standardowy UX tabel dla list z mieszanymi statusami.
+**Status (2026-05-21):** Fixed in `TASK-281-03`.
 
 ### BF-05 — Brak zebra striping (alternujące kolory wierszy)
 **Opis:** Wszystkie wiersze mają jednolite tło. Brak opcji `striped` alternujących wierszy dla czytelności przy długich listach.
@@ -312,6 +322,7 @@ Tło tabeli: rgb(240, 244, 255) ← z custom koloru
 
 ### BF-13 — Brak etykiety dla kolumny "Collections count"
 **Opis:** Kolumna `showCollectionCount` wyświetla liczbę kolekcji (integer), ale brak kontekstu — komórka pokazuje samo "3" bez jednostki. Etykieta nagłówka ("Collections") jest edytowalna w schemacie, ale nie w edytorze (BUG-01).
+**Status (2026-05-21):** Fixed in `TASK-281-02`.
 
 ### BF-14 — Brak obsługi walut multi-currency w display
 **Opis:** Formatowanie przez `Intl.NumberFormat("en-US", ...)` — zawsze lokalizacja en-US. Dla walut innych niż USD wyświetlana jest waluta z currency code (np. PLN 100.00), ale format liczby zawsze anglojęzyczny.
@@ -341,12 +352,12 @@ Tło tabeli: rgb(240, 244, 255) ← z custom koloru
 
 | ID | Opis | Priorytet | Potwierdzone |
 |----|------|-----------|-------------|
-| BUG-00 | Admin preview nigdy nie hydruje danych commerce — edytor widzi tylko empty state | Krytyczny | ✓ Playwright |
-| BUG-01 | Brak edycji etykiet dla Slug, Stock, CompareAt, Collections | Wysoki | ✓ Playwright |
+| BUG-00 | Admin preview nigdy nie hydruje danych commerce — edytor widzi tylko empty state (Fixed in TASK-281-01) | Krytyczny | ✓ Playwright |
+| BUG-01 | Brak edycji etykiet dla Slug, Stock, CompareAt, Collections (Fixed in TASK-281-02) | Wysoki | ✓ Playwright |
 | A1 | Brak `<caption>` w tabeli | Wysoki (WCAG 1.3.1) | ✓ Playwright |
 | A2 | Brak `scope="col"` na `<th>` | Wysoki (WCAG 1.3.1) | ✓ Playwright |
-| BUG-02 | Status jako plain text — brak badge/koloru + duplikacja w tytule | Średni | ✓ Playwright |
-| BUG-03 | stock.quantity nigdy niewyświetlany mimo że jest w danych | Średni | ✓ Kod |
+| BUG-02 | Status jako plain text — brak badge/koloru + duplikacja w tytule (Fixed in TASK-281-03) | Średni | ✓ Playwright |
+| BUG-03 | stock.quantity nigdy niewyświetlany mimo że jest w danych (Fixed in TASK-281-03) | Średni | ✓ Kod |
 
 ### Pilne braki UX
 
@@ -359,8 +370,8 @@ Tło tabeli: rgb(240, 244, 255) ← z custom koloru
 | UX-04 | Brak sortowania interaktywnego kliknięciem nagłówka | Średni |
 | UX-06 | Brak search inline na froncie | Średni |
 | UX-10 | Brak hover na wierszach tabeli | Średni |
-| UX-09 | Runtime error flag edytowalny przez użytkownika | Niski |
-| BUG-04 | Title i Price niewyłączalne — asymetria togglei | Niski |
+| UX-09 | Runtime error flag edytowalny przez użytkownika (Fixed in TASK-281-01) | Niski |
+| BUG-04 | Title i Price niewyłączalne — asymetria togglei (Fixed in TASK-281-02) | Niski |
 
 ### Braki funkcjonalne (najważniejsze)
 
@@ -368,9 +379,9 @@ Tło tabeli: rgb(240, 244, 255) ← z custom koloru
 |----|-----------|------|
 | BF-01 | Wysoki | Brak thumbnails / kolumny obraz |
 | BF-02 | Wysoki | Brak kolumny excerpt |
-| BF-03 | Wysoki | Brak ilości sztuk (stock.quantity) w kolumnie Stock |
+| BF-03 | Wysoki | Brak ilości sztuk (stock.quantity) w kolumnie Stock (Fixed in TASK-281-03) |
 | BF-07 | Wysoki | Brak nagłówka sekcji (eyebrow/title/description nad tabelą) |
-| BF-04 | Średni | Brak kolorowania wierszy wg statusu |
+| BF-04 | Średni | Brak kolorowania wierszy wg statusu (Fixed in TASK-281-03) |
 | BF-05 | Średni | Brak zebra striping |
 | BF-06 | Średni | Brak kontroli gęstości wierszy (row density) |
 | BF-10 | Średni | Brak row hover efektu |
@@ -382,7 +393,9 @@ Tło tabeli: rgb(240, 244, 255) ← z custom koloru
 
 ## 9. Zgodność Admin Preview ↔ Frontend
 
-> **Wniosek: Admin preview i frontend są NIEZGODNE w kluczowym aspekcie.**
+**Status (2026-05-21):** Fixed in `TASK-281-01`; poniższa sekcja zachowuje historyczną rozbieżność z audytu z 2026-05-16 jako dowód źródłowy.
+
+> **Wniosek z audytu 2026-05-16: Admin preview i frontend były NIEZGODNE w kluczowym aspekcie.**
 
 Widget Product Table ma fundamentalną rozbieżność między admin preview a frontendem:
 - **Admin preview:** zawsze pokazuje empty state (`data-product-table-count="0"`) — hydratacja danych commerce nie jest wywoływana w canvas
@@ -490,6 +503,10 @@ Tylko elementy nie zależne od danych runtime są zgodne:
 - `bun test tests/unit/widgets/validator.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso`
+- `git diff --check`
+- `bun run precommit`
+- `bun run scan:security:strict`
 
 ## Status po TASK-281-03 (2026-05-21)
 
@@ -509,3 +526,7 @@ Tylko elementy nie zależne od danych runtime są zgodne:
 - `bun test tests/unit/widgets/validator.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso`
+- `git diff --check`
+- `bun run precommit`
+- `bun run scan:security:strict`

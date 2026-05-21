@@ -10,7 +10,7 @@ Tasks: TASK-281, TASK-281-03
 
 - Product Table now renders fixed Published, Draft, and Archived badges instead of raw status enums.
 - Draft and archived rows now use bounded row-state treatment, and Product titles stop duplicating `(draft)` / `(archived)` when a dedicated Status column is already visible.
-- Stock copy now supports an optional `showStockQuantity` field, exposed through a gated Visual editor control that only appears while the Stock column is enabled.
+- Stock copy now supports an optional `showStockQuantity` field, exposed through a gated Visual editor control that only appears while the Stock column is enabled and clears when Stock is turned off.
 
 ### Validation and docs sync
 
@@ -23,4 +23,7 @@ Tasks: TASK-281, TASK-281-03
 - `bun --cwd core lint:types`
 - `bun run test:vitest -- tests/vitest/widgets/productTable.test.tsx tests/vitest/ui/product-table-editor-wave.test.tsx`
 - `bun test tests/unit/widgets/validator.test.ts`
+- `bun run gates:coderso`
 - `git diff --check`
+- `bun run precommit`
+- `bun run scan:security:strict`

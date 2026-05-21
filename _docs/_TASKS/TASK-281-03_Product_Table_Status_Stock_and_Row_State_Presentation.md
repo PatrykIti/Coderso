@@ -86,7 +86,7 @@ Error handling:
 
 - Unknown stock states continue to normalize through existing shared commerce
   card logic.
-- Negative/NaN quantities remain normalized away before render.
+- Negative, null, and NaN quantities remain normalized away before render.
 - Row-state styling uses fixed maps and never serializes arbitrary classes.
 
 ## Security Contract
@@ -136,7 +136,10 @@ No API routes are added.
 - `bun --cwd core lint:types`
 - `bun run test:vitest -- tests/vitest/widgets/productTable.test.tsx tests/vitest/ui/product-table-editor-wave.test.tsx`
 - `bun test tests/unit/widgets/validator.test.ts`
+- `bun run gates:coderso`
 - `git diff --check`
+- `bun run precommit`
+- `bun run scan:security:strict`
 
 ## Closure Notes
 
@@ -147,5 +150,6 @@ No API routes are added.
   the duplicated `(draft)` / `(archived)` copy from rows that already show a
   dedicated status badge.
 - Visual mode now exposes a truthful `showStockQuantity` toggle only while the
-  Stock column is visible, and the renderer appends normalized quantities
-  without weakening the existing stock-state label.
+  Stock column is visible, clears the flag when Stock is turned off, and the
+  renderer appends normalized quantities without weakening the existing
+  stock-state label.

@@ -188,6 +188,45 @@ test("product table renders status badges and bounded row-state treatment", () =
   expect(html).not.toContain("Archived Home (archived)");
 });
 
+test("product table suppresses invalid negative stock quantities from display", () => {
+  const normalized = normalizeProductTableData({
+    ...productTableDefaults,
+    fields: {
+      showTitle: false,
+      showSlug: false,
+      showPrice: false,
+      showStatus: false,
+      showStock: true,
+      showStockQuantity: true,
+      showCompareAt: false,
+      showCollectionCount: false,
+    },
+    resolved: {
+      items: [
+        {
+          id: "product-negative-stock",
+          title: "Negative Stock Home",
+          slug: "negative-stock-home",
+          excerpt: null,
+          status: "published",
+          pricing: { amount: 140000, currency: "USD", compareAtAmount: null },
+          stock: { state: "backorder", quantity: -2, inStock: false },
+          primaryMediaId: null,
+          mediaIds: [],
+          collectionIds: [],
+        },
+      ],
+      total: 1,
+      resolvedAt: "2026-02-19T12:00:00.000Z",
+    },
+  });
+  const html = renderToString(<ProductTableBlock variant="default" data={normalized} />);
+
+  expect(normalized.resolved?.items?.[0]?.stock.quantity).toBeNull();
+  expect(html).toContain("Backorder");
+  expect(html).not.toContain("Backorder (-2)");
+});
+
 test("product table keeps title status suffix when the status column is hidden", () => {
   const html = renderToString(
     <ProductTableBlock
@@ -226,7 +265,7 @@ test("product table keeps title status suffix when the status column is hidden",
   );
 
   expect(html).toContain("Archived Home (archived)");
-  expect(html).not.toContain("Published</span>");
+  expect(html).not.toContain("Status: Archived");
 });
 
 test("product table keeps legacy title and price visibility guardrails", () => {

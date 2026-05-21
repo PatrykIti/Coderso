@@ -358,7 +358,7 @@ test("ProductTable editors normalize source, full column registry, labels, and r
       showPrice: false,
       showStatus: false,
       showStock: false,
-      showStockQuantity: true,
+      showStockQuantity: false,
       showCompareAt: true,
       showCollectionCount: true,
     });
@@ -451,7 +451,7 @@ test("ProductTable stock quantity control is gated by stock column visibility", 
     expect(findInputByLabel(view.container, "Show stock quantity")).toBeUndefined();
     expect(latestValue.fields).toMatchObject({
       showStock: false,
-      showStockQuantity: true,
+      showStockQuantity: false,
     });
   } finally {
     view.cleanup();
