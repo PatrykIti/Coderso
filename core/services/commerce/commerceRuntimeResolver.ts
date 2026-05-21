@@ -58,8 +58,11 @@ const defaultDeps: RuntimeResolverDeps = {
   executeQuery: executeCommerceQuery,
 };
 
-type ComparePayloadDeps = {
+type ProductHrefMapDeps = {
   getContentRoutes: () => Promise<ContentRouteSetting[]>;
+};
+
+type ComparePayloadDeps = ProductHrefMapDeps & {
   readMedia: typeof getMediaById;
   now: () => string;
 };
@@ -67,8 +70,12 @@ type ComparePayloadDeps = {
 const loadContentRoutes = async () =>
   normalizeContentRoutes(await getSetting("site.contentRoutes"));
 
-const defaultComparePayloadDeps: ComparePayloadDeps = {
+const defaultProductHrefMapDeps: ProductHrefMapDeps = {
   getContentRoutes: loadContentRoutes,
+};
+
+const defaultComparePayloadDeps: ComparePayloadDeps = {
+  ...defaultProductHrefMapDeps,
   readMedia: getMediaById,
   now: () => new Date().toISOString(),
 };
@@ -99,6 +106,22 @@ export const resolveCommerceProductHref = (
   const href = buildDetailHref(detailPath, product.slug, product.id);
   return href.startsWith("/") ? href : null;
 };
+
+export async function buildCommerceProductHrefMap(
+  products: CommerceProduct[],
+  deps: Partial<ProductHrefMapDeps> = {}
+) {
+  const hrefDeps: ProductHrefMapDeps = {
+    ...defaultProductHrefMapDeps,
+    ...deps,
+  };
+  const contentRoutes = await hrefDeps.getContentRoutes();
+  return new Map(
+    products.map(
+      (product) => [product.id, resolveCommerceProductHref(contentRoutes, product)] as const
+    )
+  );
+}
 
 export const toCommerceRuntimeCard = (product: CommerceProduct): CommerceRuntimeCard => ({
   id: product.id,

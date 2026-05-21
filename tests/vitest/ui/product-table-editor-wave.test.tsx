@@ -242,6 +242,7 @@ test("ProductTable editors normalize source, full column registry, labels, and r
           primaryMediaId: " ",
           mediaIds: ["hero", " ", "gallery"],
           collectionIds: ["summer", " ", "sale"],
+          productHref: null,
         },
       ],
       total: -2,
@@ -298,6 +299,7 @@ test("ProductTable editors normalize source, full column registry, labels, and r
     expect(findInputByLabel(view.container, "Show stock quantity")).toBeInstanceOf(
       HTMLInputElement
     );
+    expect(findSelectByLabel(view.container, "Linked column")).toBeInstanceOf(HTMLSelectElement);
     expect(findInputByLabel(view.container, "Slug")).toBeInstanceOf(HTMLInputElement);
     expect(findInputByLabel(view.container, "Compare at")).toBeInstanceOf(HTMLInputElement);
     expect(findInputByLabel(view.container, "Stock")).toBeInstanceOf(HTMLInputElement);
@@ -330,6 +332,10 @@ test("ProductTable editors normalize source, full column registry, labels, and r
     toggleCheckbox(findInputByLabel(view.container, "Show stock"));
     expect(findInputByLabel(view.container, "Show stock quantity")).toBeUndefined();
     toggleCheckbox(findInputByLabel(view.container, "Show collection count"));
+    setSelectValue(findSelectByLabel(view.container, "Linked column"), "slug");
+    toggleCheckbox(findInputByLabel(view.container, "Show action column"));
+    setInputValue(findInputByLabel(view.container, "Action label"), "Learn more");
+    toggleCheckbox(findInputByLabel(view.container, "Open product links in new tab"));
 
     setInputValue(findInputByLabel(view.container, "Product"), "Catalog item");
     setInputValue(findInputByLabel(view.container, "Slug"), "Handle");
@@ -370,6 +376,12 @@ test("ProductTable editors normalize source, full column registry, labels, and r
       status: "Availability",
       stock: "Inventory",
       collections: "Groups",
+    });
+    expect(latestValue.links).toEqual({
+      linkedColumn: "slug",
+      showAction: true,
+      actionLabel: "Learn more",
+      openInNewTab: true,
     });
     expect(latestValue.emptyState).toEqual({
       title: "Nothing to list",
@@ -452,6 +464,47 @@ test("ProductTable stock quantity control is gated by stock column visibility", 
     expect(latestValue.fields).toMatchObject({
       showStock: false,
       showStockQuantity: false,
+    });
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("ProductTable link controls normalize linked column and action state", async () => {
+  const { ProductTableVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/ProductTableEditors");
+
+  let latestValue: ProductTableData = {};
+
+  const Harness = () => {
+    const [value, setValue] = useState<ProductTableData>(latestValue);
+
+    return (
+      <ProductTableVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="default"
+        onVariantChange={() => undefined}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    setSelectValue(findSelectByLabel(view.container, "Linked column"), "title");
+    toggleCheckbox(findInputByLabel(view.container, "Show action column"));
+    setInputValue(findInputByLabel(view.container, "Action label"), "View product");
+    toggleCheckbox(findInputByLabel(view.container, "Open product links in new tab"));
+
+    expect(latestValue.links).toEqual({
+      linkedColumn: "title",
+      showAction: true,
+      actionLabel: "View product",
+      openInNewTab: true,
     });
   } finally {
     view.cleanup();
@@ -573,6 +626,7 @@ test("ProductTable preview hook resolves admin preview state", async () => {
           primaryMediaId: null,
           mediaIds: [],
           collectionIds: [],
+          productHref: "/products/preview-home",
         },
       ],
       total: 1,
@@ -675,6 +729,7 @@ test("ProductTable preview hook ignores stale async responses and retains the la
           primaryMediaId: null,
           mediaIds: [],
           collectionIds: [],
+          productHref: "/products/stale-preview",
         },
       ],
       total: 1,
@@ -697,6 +752,7 @@ test("ProductTable preview hook ignores stale async responses and retains the la
           primaryMediaId: null,
           mediaIds: [],
           collectionIds: [],
+          productHref: "/products/fresh-preview",
         },
       ],
       total: 1,

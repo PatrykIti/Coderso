@@ -89,6 +89,7 @@ test("product table renders rows with shared column labels and visibility", () =
               primaryMediaId: null,
               mediaIds: [],
               collectionIds: ["collection-1", "collection-2"],
+              productHref: null,
             },
           ],
           total: 1,
@@ -140,6 +141,7 @@ test("product table renders status badges and bounded row-state treatment", () =
               primaryMediaId: null,
               mediaIds: [],
               collectionIds: [],
+              productHref: "/products/starter-home",
             },
             {
               id: "product-draft",
@@ -152,6 +154,7 @@ test("product table renders status badges and bounded row-state treatment", () =
               primaryMediaId: null,
               mediaIds: [],
               collectionIds: [],
+              productHref: null,
             },
             {
               id: "product-archived",
@@ -164,6 +167,7 @@ test("product table renders status badges and bounded row-state treatment", () =
               primaryMediaId: null,
               mediaIds: [],
               collectionIds: [],
+              productHref: null,
             },
           ],
           total: 3,
@@ -214,6 +218,7 @@ test("product table suppresses invalid negative stock quantities from display", 
           primaryMediaId: null,
           mediaIds: [],
           collectionIds: [],
+          productHref: null,
         },
       ],
       total: 1,
@@ -225,6 +230,87 @@ test("product table suppresses invalid negative stock quantities from display", 
   expect(normalized.resolved?.items?.[0]?.stock.quantity).toBeNull();
   expect(html).toContain("Backorder");
   expect(html).not.toContain("Backorder (-2)");
+});
+
+test("product table renders safe linked cells and action column", () => {
+  const html = renderToString(
+    <ProductTableBlock
+      variant="default"
+      data={normalizeProductTableData({
+        ...productTableDefaults,
+        links: {
+          linkedColumn: "title",
+          showAction: true,
+          actionLabel: "Learn more",
+          openInNewTab: true,
+        },
+        resolved: {
+          items: [
+            {
+              id: "product-1",
+              title: "Starter Home",
+              slug: "starter-home",
+              excerpt: null,
+              status: "published",
+              pricing: { amount: 120000, currency: "USD", compareAtAmount: null },
+              stock: { state: "in_stock", quantity: 3, inStock: true },
+              primaryMediaId: null,
+              mediaIds: [],
+              collectionIds: [],
+              productHref: "/products/starter-home",
+            },
+          ],
+          total: 1,
+          resolvedAt: "2026-02-19T12:00:00.000Z",
+        },
+      })}
+    />
+  );
+
+  expect(html.match(/href="\/products\/starter-home"/g)?.length).toBe(2);
+  expect(html).toContain('target="_blank"');
+  expect(html).toContain('rel="noopener noreferrer"');
+  expect(html).toContain("Learn more");
+  expect(html).toContain("Action");
+  expect(html).toContain("focus-visible:ring-primary/40");
+  expect(html).toContain("hover:bg-slate-50/60");
+});
+
+test("product table falls back to plain text when product href is unsafe or missing", () => {
+  const normalized = normalizeProductTableData({
+    ...productTableDefaults,
+    links: {
+      linkedColumn: "slug",
+      showAction: true,
+      actionLabel: "View",
+    },
+    resolved: {
+      items: [
+        {
+          id: "product-1",
+          title: "Starter Home",
+          slug: "starter-home",
+          excerpt: null,
+          status: "published",
+          pricing: { amount: 120000, currency: "USD", compareAtAmount: null },
+          stock: { state: "in_stock", quantity: 3, inStock: true },
+          primaryMediaId: null,
+          mediaIds: [],
+          collectionIds: [],
+          productHref: "https://evil.example/product",
+        },
+      ],
+      total: 1,
+      resolvedAt: "2026-02-19T12:00:00.000Z",
+    },
+  });
+  const html = renderToString(<ProductTableBlock variant="default" data={normalized} />);
+
+  expect(normalized.resolved?.items?.[0]?.productHref).toBeNull();
+  expect(html).toContain("/starter-home");
+  expect(html).toContain("Action");
+  expect(html).not.toContain("https://evil.example/product");
+  expect(html).not.toContain('href="https://evil.example/product"');
 });
 
 test("product table keeps title status suffix when the status column is hidden", () => {
@@ -255,6 +341,7 @@ test("product table keeps title status suffix when the status column is hidden",
               primaryMediaId: null,
               mediaIds: [],
               collectionIds: [],
+              productHref: null,
             },
           ],
           total: 1,
@@ -359,6 +446,12 @@ test("product table validator accepts resolved payload with title and price visi
           showCompareAt: true,
           showCollectionCount: false,
         },
+        links: {
+          linkedColumn: "title",
+          showAction: true,
+          actionLabel: "Open",
+          openInNewTab: true,
+        },
         resolved: {
           items: [
             {
@@ -380,6 +473,7 @@ test("product table validator accepts resolved payload with title and price visi
               primaryMediaId: null,
               mediaIds: [],
               collectionIds: [],
+              productHref: null,
             },
           ],
           total: 1,
@@ -434,6 +528,7 @@ test("product table cleared surfaces omit empty, table, and header backgrounds",
               primaryMediaId: null,
               mediaIds: [],
               collectionIds: [],
+              productHref: null,
             },
           ],
           total: 1,
@@ -507,6 +602,9 @@ test("product table editors render expected panels and registry-backed controls"
   expect(visual).toContain("Show compare-at price");
   expect(visual).toContain("Show stock quantity");
   expect(visual).toContain("Stock presentation");
+  expect(visual).toContain("Links and actions");
+  expect(visual).toContain("Linked column");
+  expect(visual).toContain("Show action column");
   expect(visual).toContain("Slug");
   expect(visual).toContain("Compare at");
   expect(visual).toContain("Collections");

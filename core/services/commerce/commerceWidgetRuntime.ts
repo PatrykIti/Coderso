@@ -18,6 +18,7 @@ import { getMediaById } from "../media/mediaService";
 import { listCommerceProducts } from "./commerceService";
 import {
   buildCommerceComparePayload,
+  buildCommerceProductHrefMap,
   resolveCommerceRuntimeProducts,
   toCommerceRuntimeCard,
 } from "./commerceRuntimeResolver";
@@ -30,6 +31,7 @@ export type CommerceRuntimeCache = Map<
 type CommerceWidgetRuntimeDeps = {
   resolveRuntimeProducts: typeof resolveCommerceRuntimeProducts;
   buildComparePayload: typeof buildCommerceComparePayload;
+  buildProductHrefMap: typeof buildCommerceProductHrefMap;
   getMediaById: typeof getMediaById;
   listProducts: typeof listCommerceProducts;
 };
@@ -42,6 +44,7 @@ type CommerceWidgetRuntimeOptions = {
 const defaultDeps: CommerceWidgetRuntimeDeps = {
   resolveRuntimeProducts: resolveCommerceRuntimeProducts,
   buildComparePayload: buildCommerceComparePayload,
+  buildProductHrefMap: buildCommerceProductHrefMap,
   getMediaById,
   listProducts: listCommerceProducts,
 };
@@ -263,11 +266,16 @@ export async function hydrateProductTableRuntimeData(
       buildProductTableQueryInput(normalized),
       runtimeDeps
     );
+    const productHrefMap = await runtimeDeps.buildProductHrefMap(runtime.rows);
+    const items = runtime.cards.map((card) => ({
+      ...card,
+      productHref: productHrefMap.get(card.id) ?? null,
+    }));
 
     return {
       ...normalized,
       resolved: {
-        items: runtime.cards,
+        items,
         total: runtime.total,
         resolvedAt: new Date().toISOString(),
       },

@@ -93,6 +93,8 @@ test("hydrateProductGalleryRuntimeData resolves cards and total", async () => {
           ],
         } as unknown as RuntimeProductsResult;
       },
+      buildProductHrefMap: async (rows) =>
+        new Map(rows.map((row) => [row.id, `/products/${row.slug}`] as const)),
       getMediaById: async (id: string) => ({
         id,
         key: "media-1.jpg",
@@ -176,6 +178,69 @@ test("hydrateProductGalleryRuntimeData returns stable error code for invalid que
 
   expect(resolved.resolved?.items).toEqual([]);
   expect(resolved.resolved?.error).toBe("commerce_query_invalid_filters");
+});
+
+test("hydrateProductTableRuntimeData attaches safe product hrefs to resolved rows", async () => {
+  const calls: Array<Record<string, unknown>> = [];
+  const resolved = await hydrateProductTableRuntimeData(
+    {
+      ...productTableDefaults,
+      source: {
+        ...productTableDefaults.source,
+        limit: 2,
+        search: "starter",
+      },
+    },
+    {
+      preview: false,
+    },
+    {
+      resolveRuntimeProducts: async (input: RuntimeProductsInput = {}) => {
+        calls.push((input.query ?? {}) as Record<string, unknown>);
+        return {
+          total: 1,
+          limit: 2,
+          offset: 0,
+          query: {
+            filters: [],
+            sort: [],
+            pagination: { limit: 2, offset: 0 },
+          },
+          rows: sampleRows,
+          cards: [
+            {
+              id: "product-1",
+              title: "Starter Home",
+              slug: "starter-home",
+              excerpt: "Compact modern home.",
+              status: "published" as const,
+              pricing: {
+                amount: 120000,
+                currency: "USD",
+                compareAtAmount: 130000,
+              },
+              stock: {
+                state: "in_stock",
+                quantity: 3,
+                inStock: true,
+              },
+              primaryMediaId: "media-1",
+              mediaIds: ["media-1"],
+              collectionIds: ["collection-1"],
+            },
+          ],
+        } as unknown as RuntimeProductsResult;
+      },
+      buildProductHrefMap: async (rows) =>
+        new Map(rows.map((row) => [row.id, `/products/${row.slug}`] as const)),
+    }
+  );
+
+  expect(calls).toHaveLength(1);
+  expect((calls[0].pagination as { limit: number }).limit).toBe(2);
+  expect(resolved.resolved?.items?.[0]?.productHref).toBe("/products/starter-home");
+  expect(resolved.resolved?.items?.[0]?.title).toBe("Starter Home");
+  expect(resolved.resolved?.total).toBe(1);
 });
 
 test("hydrateProductCompareRuntimeData maps compare payload rows", async () => {

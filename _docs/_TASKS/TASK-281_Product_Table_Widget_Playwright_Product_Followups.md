@@ -99,7 +99,7 @@ the Product Table slice.
 - [x] TASK-281-01: Product Table Admin Preview Resolver Parity
 - [x] TASK-281-02: Product Table Column Labels and Visibility Model
 - [x] TASK-281-03: Product Table Status Stock and Row State Presentation
-- [ ] TASK-281-04: Product Table Product Links and Action Column
+- [x] TASK-281-04: Product Table Product Links and Action Column
 - [ ] TASK-281-05: Product Table Accessibility and Runtime Semantics
 - [ ] TASK-281-06: Product Table Media Excerpt and Section Header Context
 - [ ] TASK-281-07: Product Table Pagination Search Filter and Sorting UX

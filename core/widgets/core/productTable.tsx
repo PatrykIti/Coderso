@@ -11,6 +11,7 @@ import {
   type CommerceWidgetSource,
 } from "./commerceWidgetShared";
 import { compactObject, compactStyle, resolveClearableStyleValue } from "./clearableStyle";
+import { normalizeWidgetSafeHref, resolveWidgetLinkAttrs } from "./widgetSafeHref";
 
 export type ProductTableVariantId = "default";
 export type ProductTableColumnKey =
@@ -31,6 +32,19 @@ export type ProductTableColumnVisibilityKey =
   | "showCollectionCount";
 export type ProductTableLabelKey = ProductTableColumnKey;
 export type ProductTableGuardGroup = "identity" | "pricing";
+export const productTableLinkColumnValues = ["none", "title", "slug"] as const;
+export type ProductTableLinkColumn = (typeof productTableLinkColumnValues)[number];
+
+export type ProductTableLinks = {
+  linkedColumn?: ProductTableLinkColumn;
+  showAction?: boolean;
+  actionLabel?: string;
+  openInNewTab?: boolean;
+};
+
+export type ProductTableRuntimeItem = CommerceWidgetRuntimeCard & {
+  productHref: string | null;
+};
 
 export type ProductTableFields = {
   showTitle?: boolean;
@@ -67,6 +81,7 @@ export type ProductTableData = {
   source?: CommerceWidgetSource;
   fields?: ProductTableFields;
   labels?: ProductTableLabels;
+  links?: ProductTableLinks;
   emptyState?: {
     title?: string;
     description?: string;
@@ -79,7 +94,7 @@ export type ProductTableData = {
     emptyBorderColor?: string;
   };
   resolved?: {
-    items?: CommerceWidgetRuntimeCard[];
+    items?: ProductTableRuntimeItem[];
     total?: number;
     resolvedAt?: string;
     error?: string;
@@ -110,6 +125,13 @@ const productTableLabelFallbacks: Required<ProductTableLabels> = {
 const productTableEmptyStateDefaults = {
   title: "No products available",
   description: "Publish products or adjust source query.",
+};
+
+const productTableLinkDefaults: Required<ProductTableLinks> = {
+  linkedColumn: "none",
+  showAction: false,
+  actionLabel: "View",
+  openInNewTab: false,
 };
 
 const productTableStatusLabelMap: Record<CommerceWidgetRuntimeCard["status"], string> = {
@@ -209,6 +231,7 @@ export const productTableDefaults: ProductTableData = {
   },
   fields: productTableFieldDefaults,
   labels: productTableLabelFallbacks,
+  links: productTableLinkDefaults,
   emptyState: productTableEmptyStateDefaults,
   style: {
     tableBackground: "var(--color-bg)",
@@ -238,7 +261,7 @@ const optionalText = (value: unknown) => {
   return trimmed.length > 0 ? trimmed : undefined;
 };
 
-const normalizeRuntimeItems = (value: unknown): CommerceWidgetRuntimeCard[] => {
+const normalizeRuntimeItems = (value: unknown): ProductTableRuntimeItem[] => {
   if (!Array.isArray(value)) return [];
 
   return value
@@ -297,9 +320,13 @@ const normalizeRuntimeItems = (value: unknown): CommerceWidgetRuntimeCard[] => {
               .map((entry) => optionalText(entry))
               .filter((entry): entry is string => Boolean(entry))
           : [],
-      } satisfies CommerceWidgetRuntimeCard;
+        productHref:
+          normalizeWidgetSafeHref(optionalText((payload as ProductTableRuntimeItem).productHref), {
+            allowRelative: true,
+          }) ?? null,
+      } satisfies ProductTableRuntimeItem;
     })
-    .filter((item): item is CommerceWidgetRuntimeCard => item !== null);
+    .filter((item): item is ProductTableRuntimeItem => item !== null);
 };
 
 export const normalizeProductTableFields = (
@@ -337,6 +364,17 @@ export const normalizeProductTableLabels = (
   stock: text(value?.stock, productTableLabelFallbacks.stock),
   collections: text(value?.collections, productTableLabelFallbacks.collections),
   slug: text(value?.slug, productTableLabelFallbacks.slug),
+});
+
+export const normalizeProductTableLinks = (
+  value: ProductTableData["links"] | undefined
+): Required<ProductTableLinks> => ({
+  linkedColumn: productTableLinkColumnValues.includes(value?.linkedColumn as ProductTableLinkColumn)
+    ? (value?.linkedColumn as ProductTableLinkColumn)
+    : productTableLinkDefaults.linkedColumn,
+  showAction: value?.showAction === true,
+  actionLabel: text(value?.actionLabel, productTableLinkDefaults.actionLabel),
+  openInNewTab: value?.openInNewTab === true,
 });
 
 export const resolveVisibleProductTableColumns = (fields: Required<ProductTableFields>) =>
@@ -404,6 +442,16 @@ export const productTableSchema = {
         slug: { type: "string" },
       },
     },
+    links: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        linkedColumn: { enum: [...productTableLinkColumnValues] },
+        showAction: { type: "boolean" },
+        actionLabel: { type: "string" },
+        openInNewTab: { type: "boolean" },
+      },
+    },
     emptyState: {
       type: "object",
       additionalProperties: false,
@@ -459,6 +507,7 @@ export const productTableSchema = {
               primaryMediaId: { type: ["string", "null"] },
               mediaIds: { type: "array", items: { type: "string" } },
               collectionIds: { type: "array", items: { type: "string" } },
+              productHref: { type: ["string", "null"] },
             },
           },
         },
@@ -478,6 +527,7 @@ export const normalizeProductTableData = (value: ProductTableData): ProductTable
   });
   const fields = normalizeProductTableFields(value.fields);
   const labels = normalizeProductTableLabels(value.labels);
+  const links = normalizeProductTableLinks(value.links);
   const resolvedMeta = normalizeResolvedMeta(value.resolved);
   const hasStyleObject = value.style !== undefined;
   const style = hasStyleObject
@@ -494,6 +544,7 @@ export const normalizeProductTableData = (value: ProductTableData): ProductTable
     source,
     fields,
     labels,
+    links,
     emptyState: {
       title: text(value.emptyState?.title, productTableEmptyStateDefaults.title),
       description: text(value.emptyState?.description, productTableEmptyStateDefaults.description),
@@ -526,7 +577,7 @@ const titleWithStatus = (title: string, status: CommerceWidgetRuntimeCard["statu
 };
 
 const productTitleValue = (
-  item: CommerceWidgetRuntimeCard,
+  item: ProductTableRuntimeItem,
   options: {
     showStatusColumn: boolean;
   }
@@ -545,6 +596,36 @@ const formatProductTableStockValue = (
   return `${label} (${stock.quantity})`;
 };
 
+const productTableCellLinkClassName =
+  "inline-flex rounded-sm font-medium text-[var(--color-text)] transition hover:underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
+const productTableActionLinkClassName =
+  "inline-flex items-center rounded-md border border-[var(--color-border)] px-3 py-1.5 text-xs font-medium text-[var(--color-text)] transition hover:bg-[var(--color-bg)]/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
+
+const resolveProductTableLinkAttrs = (
+  item: ProductTableRuntimeItem,
+  links: Required<ProductTableLinks>
+) =>
+  resolveWidgetLinkAttrs(item.productHref, {
+    allowRelative: true,
+    openInNewTab: links.openInNewTab,
+  });
+
+const renderProductTableActionCell = (
+  item: ProductTableRuntimeItem,
+  links: Required<ProductTableLinks>,
+  linkAttrs: ReturnType<typeof resolveWidgetLinkAttrs>
+) => (
+  <td className="px-3 py-2 text-right">
+    {links.showAction && linkAttrs ? (
+      <a {...linkAttrs} className={productTableActionLinkClassName}>
+        {links.actionLabel}
+      </a>
+    ) : (
+      <span className="text-[var(--color-text)]/40">-</span>
+    )}
+  </td>
+);
+
 const previewMessage = (renderContext: WidgetRenderContext | undefined) => {
   const message = optionalText(renderContext?.previewState?.message);
   if (!message) return undefined;
@@ -553,21 +634,43 @@ const previewMessage = (renderContext: WidgetRenderContext | undefined) => {
 
 const renderProductTableCell = (
   column: ProductTableColumnDefinition,
-  item: CommerceWidgetRuntimeCard,
+  item: ProductTableRuntimeItem,
   options: {
     showStatusColumn: boolean;
     showStockQuantity: boolean;
+    links: Required<ProductTableLinks>;
+    linkAttrs: ReturnType<typeof resolveWidgetLinkAttrs>;
   }
 ) => {
   switch (column.key) {
-    case "title":
+    case "title": {
+      const value = productTitleValue(item, options);
       return (
         <td className="px-3 py-2 font-medium text-[var(--color-text)]/85">
-          {productTitleValue(item, options)}
+          {options.links.linkedColumn === "title" && options.linkAttrs ? (
+            <a {...options.linkAttrs} className={productTableCellLinkClassName}>
+              {value}
+            </a>
+          ) : (
+            value
+          )}
         </td>
       );
-    case "slug":
-      return <td className="px-3 py-2 text-[var(--color-text)]/65">/{item.slug}</td>;
+    }
+    case "slug": {
+      const value = `/${item.slug}`;
+      return (
+        <td className="px-3 py-2 text-[var(--color-text)]/65">
+          {options.links.linkedColumn === "slug" && options.linkAttrs ? (
+            <a {...options.linkAttrs} className={productTableCellLinkClassName}>
+              {value}
+            </a>
+          ) : (
+            value
+          )}
+        </td>
+      );
+    }
     case "price":
       return (
         <td className="px-3 py-2 text-[var(--color-text)]/80">
@@ -617,8 +720,10 @@ export function ProductTableBlock({
   const normalized = normalizeProductTableData(data);
   const items = normalized.resolved?.items ?? [];
   const fields = normalizeProductTableFields(normalized.fields);
+  const links = normalizeProductTableLinks(normalized.links);
   const visibleColumns = resolveVisibleProductTableColumns(fields);
   const showStatusColumn = visibleColumns.some((column) => column.key === "status");
+  const showActionColumn = links.showAction;
   const hasError = Boolean(normalized.resolved?.error);
   const previewState = renderContext?.previewState ?? null;
   const previewLoading = previewState?.status === "loading";
@@ -696,25 +801,39 @@ export function ProductTableBlock({
                     {normalized.labels?.[column.labelKey]}
                   </th>
                 ))}
+                {showActionColumn ? (
+                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-[var(--color-text)]/65">
+                    Action
+                  </th>
+                ) : null}
               </tr>
             </thead>
             <tbody>
-              {items.map((item) => (
-                <tr
-                  key={item.id}
-                  className={`border-b border-[var(--color-border)]/70 last:border-b-0 ${productTableRowToneClassMap[item.status]}`}
-                  data-product-status={item.status}
-                >
-                  {visibleColumns.map((column) => (
-                    <React.Fragment key={column.key}>
-                      {renderProductTableCell(column, item, {
-                        showStatusColumn,
-                        showStockQuantity: fields.showStockQuantity,
-                      })}
-                    </React.Fragment>
-                  ))}
-                </tr>
-              ))}
+              {items.map((item) => {
+                const linkAttrs = resolveProductTableLinkAttrs(item, links);
+                const rowInteractive =
+                  Boolean(linkAttrs) && (links.linkedColumn !== "none" || links.showAction);
+
+                return (
+                  <tr
+                    key={item.id}
+                    className={`border-b border-[var(--color-border)]/70 last:border-b-0 transition-colors ${productTableRowToneClassMap[item.status]} ${rowInteractive ? "hover:bg-slate-50/60" : ""}`}
+                    data-product-status={item.status}
+                  >
+                    {visibleColumns.map((column) => (
+                      <React.Fragment key={column.key}>
+                        {renderProductTableCell(column, item, {
+                          showStatusColumn,
+                          showStockQuantity: fields.showStockQuantity,
+                          links,
+                          linkAttrs,
+                        })}
+                      </React.Fragment>
+                    ))}
+                    {showActionColumn ? renderProductTableActionCell(item, links, linkAttrs) : null}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

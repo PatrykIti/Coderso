@@ -1,5 +1,12 @@
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { previewProductTable } from "@/services/productTablePreviewClient";
 
 import {
@@ -8,6 +15,7 @@ import {
   productTableColumns,
   productTableDefaults,
   type ProductTableData,
+  type ProductTableLinkColumn,
 } from "../../../../widgets/core/productTable";
 import type { WidgetEditorProps, WidgetPreviewState } from "../../../../widgets/types";
 import {
@@ -93,6 +101,29 @@ const updateLabel = (
   });
 };
 
+const updateLinks = (
+  value: ProductTableData,
+  onChange: (next: ProductTableData) => void,
+  patch: Partial<NonNullable<ProductTableData["links"]>>
+) => {
+  const current = normalizeProductTableData(value);
+  update(value, onChange, {
+    links: {
+      ...current.links,
+      ...patch,
+    },
+  });
+};
+
+const productTableLinkColumnOptions: Array<{
+  value: ProductTableLinkColumn;
+  label: string;
+}> = [
+  { value: "none", label: "No linked column" },
+  { value: "title", label: "Product column" },
+  { value: "slug", label: "Slug column" },
+];
+
 const resolvePreviewErrorMessage = (error: unknown) => {
   if (error instanceof Error && error.message.trim().length > 0) {
     return error.message;
@@ -121,6 +152,36 @@ const formatResolvedTimestamp = (value: string | undefined) => {
   if (Number.isNaN(timestamp)) return normalized;
   return `Resolved at ${new Date(timestamp).toLocaleString("en-US")}`;
 };
+
+function ProductTableSelectField({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: Array<{ value: string; label: string }>;
+  onChange: (next: string) => void;
+}) {
+  return (
+    <label className="space-y-1 text-sm">
+      <span className="font-medium text-foreground">{label}</span>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger>
+          <SelectValue placeholder={label} />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </label>
+  );
+}
 
 function useProductTablePreview({
   active,
@@ -432,6 +493,41 @@ export function ProductTableVisualEditor({
           />
         </CommerceEditorSection>
       ) : null}
+
+      <CommerceEditorSection
+        title="Links and actions"
+        description="Product links and actions use the enabled products detail route from Site Settings. When no route is available, runtime keeps the table text-only."
+      >
+        <ProductTableSelectField
+          label="Linked column"
+          value={normalized.links?.linkedColumn ?? "none"}
+          options={productTableLinkColumnOptions}
+          onChange={(next) =>
+            updateLinks(normalized, onChange, {
+              linkedColumn: next as ProductTableLinkColumn,
+            })
+          }
+        />
+        <CommerceToggleField
+          label="Show action column"
+          checked={normalized.links?.showAction === true}
+          onChange={(next) => updateLinks(normalized, onChange, { showAction: next })}
+        />
+        {normalized.links?.showAction ? (
+          <CommerceTextField
+            label="Action label"
+            value={normalized.links?.actionLabel}
+            onChange={(next) => updateLinks(normalized, onChange, { actionLabel: next })}
+          />
+        ) : null}
+        {normalized.links?.linkedColumn !== "none" || normalized.links?.showAction ? (
+          <CommerceToggleField
+            label="Open product links in new tab"
+            checked={normalized.links?.openInNewTab === true}
+            onChange={(next) => updateLinks(normalized, onChange, { openInNewTab: next })}
+          />
+        ) : null}
+      </CommerceEditorSection>
 
       <CommerceEditorSection title="Empty state" description="Shown when no products are resolved.">
         <CommerceTextField

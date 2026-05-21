@@ -250,6 +250,7 @@ Tło tabeli: rgb(240, 244, 255) ← z custom koloru
 
 #### UX-03 — Brak klikalnych wierszy / linków do produktów
 **Opis:** Tabela jest read-only — wiersze nie są klikalne, nie ma linku do strony produktu. Pole `slug` wyświetla `/{slug}` jako tekst, ale nie jest hiperłączem. Tabela służy jako widok listy ale bez możliwości nawigacji.
+**Status (2026-05-21):** Fixed in `TASK-281-04`.
 **Rekomendacja:** Dodać opcję "row click target" (link do `/{slug}`) lub opcjonalny link w kolumnie tytułu.
 
 #### UX-04 — Brak sortowania interaktywnego (klik w nagłówek)
@@ -316,6 +317,7 @@ Tło tabeli: rgb(240, 244, 255) ← z custom koloru
 
 ### BF-11 — Brak kolumny akcji (Actions column)
 **Opis:** Brak opcjonalnej kolumny z przyciskami akcji per wiersz (np. "View", "Edit"). Tabela tylko do odczytu.
+**Status (2026-05-21):** Fixed in `TASK-281-04`.
 
 ### BF-12 — Brak sticky header
 **Opis:** Przy 48 produktach i scrollowaniu pionowym nagłówek tabeli znika. Brak opcji `sticky header`.
@@ -364,7 +366,7 @@ Tło tabeli: rgb(240, 244, 255) ← z custom koloru
 | ID | Opis | Priorytet |
 |----|------|-----------|
 | UX-02 | Brak paginacji — max 48 produktów | Wysoki |
-| UX-03 | Brak klikalnych wierszy / linków do produktów | Wysoki |
+| UX-03 | Brak klikalnych wierszy / linków do produktów (Fixed in TASK-281-04) | Wysoki |
 | UX-05 | Brak thumbnails — produkt bez zdjęcia | Wysoki |
 | UX-01 | Tylko jeden wariant (default) | Średni |
 | UX-04 | Brak sortowania interaktywnego kliknięciem nagłówka | Średni |
@@ -385,7 +387,7 @@ Tło tabeli: rgb(240, 244, 255) ← z custom koloru
 | BF-05 | Średni | Brak zebra striping |
 | BF-06 | Średni | Brak kontroli gęstości wierszy (row density) |
 | BF-10 | Średni | Brak row hover efektu |
-| BF-11 | Średni | Brak kolumny akcji (Actions column) |
+| BF-11 | Średni | Brak kolumny akcji (Actions column) (Fixed in TASK-281-04) |
 | BF-12 | Średni | Brak sticky header przy 48 produktach |
 | BF-15 | Średni | Brak wyszukiwarki po stronie klienta |
 
@@ -526,6 +528,33 @@ Tylko elementy nie zależne od danych runtime są zgodne:
 - `bun test tests/unit/widgets/validator.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso`
+- `git diff --check`
+- `bun run precommit`
+- `bun run scan:security:strict`
+
+## Status po TASK-281-04 (2026-05-21)
+
+### Fixed in TASK-281-04
+
+- `UX-03`: Product Table now derives safe relative product detail hrefs from
+  the shared commerce content-route contract and can link either the Product or
+  Slug column without exposing arbitrary URLs.
+- `BF-11`: Visual mode now exposes an optional Action column with a bounded
+  label, shared target/rel handling, and plain-text fallback when a row has no
+  safe public href.
+- Interactive rows now get a bounded hover cue only when a real product link
+  is active; the broader row-hover styling wave still remains with
+  `TASK-281-08`.
+
+### Validation evidence
+
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run test:vitest -- tests/vitest/widgets/productTable.test.tsx tests/vitest/ui/product-table-editor-wave.test.tsx`
+- `bun test tests/unit/commerce/commerceRuntimeResolver.test.ts`
+- `bun test tests/unit/commerce/commerceWidgetRuntime.test.ts`
+- `bun test tests/unit/widgets/validator.test.ts`
 - `bun run gates:coderso`
 - `git diff --check`
 - `bun run precommit`

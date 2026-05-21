@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 
 import {
   buildCommerceComparePayload,
+  buildCommerceProductHrefMap,
   buildCommerceWishlistPayload,
   resolveCommerceRuntimeProducts,
   toCommerceRuntimeCard,
@@ -74,6 +75,21 @@ test("compare/wishlist payload builders normalize runtime payloads", async () =>
   expect(compare.rows[0]?.imageAlt).toBe("Oak Residence hero");
   expect(wishlist.total).toBe(1);
   expect(wishlist.items[0]?.primaryMediaId).toBe("m-1");
+});
+
+test("buildCommerceProductHrefMap resolves safe relative product hrefs", async () => {
+  const hrefMap = await buildCommerceProductHrefMap([baseProduct], {
+    getContentRoutes: async () => [
+      {
+        type: "products",
+        enabled: true,
+        listPath: "/products",
+        detailPath: "/products/:slug",
+      },
+    ],
+  });
+
+  expect(hrefMap.get("product-1")).toBe("/products/oak-residence");
 });
 
 test("compare payload omits product links when no enabled products detail route exists", async () => {
