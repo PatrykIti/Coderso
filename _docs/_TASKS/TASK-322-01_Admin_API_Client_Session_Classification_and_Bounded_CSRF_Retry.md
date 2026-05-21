@@ -6,7 +6,7 @@
 **Category:** Admin UI + Auth + Shared Client
 **Estimated Effort:** Large
 **Dependencies:** TASK-322
-**Status:** To Do
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -105,6 +105,8 @@ This leaf changes existing internal admin auth/session behavior only.
 - `_docs/SECURITY_SPEC.md` only if the shared recovery policy changes materially
 - `_docs/_TASKS/TASK-322-01_Admin_API_Client_Session_Classification_and_Bounded_CSRF_Retry.md`
 - `_docs/_TASKS/README.md` on status changes
+- `_docs/_CHANGELOG/889-2026-05-21-task-322-01-admin-api-session-classification.md`
+- `_docs/_CHANGELOG/README.md`
 
 ## Acceptance Criteria
 
@@ -113,3 +115,17 @@ This leaf changes existing internal admin auth/session behavior only.
 - CSRF refresh remains bounded and never loops indefinitely.
 - Downstream editor shells receive stable machine-readable expired-session
   failures they can render without widget-local heuristics.
+
+## Validation Notes (2026-05-21)
+
+- `bun run test:vitest -- tests/vitest/admin/apiClient.test.ts` - passed (`5`
+  tests)
+- `bun --cwd core lint` - passed
+- `bun --cwd core lint:types` - passed
+- `bun run precommit` - passed
+
+## Completion Notes
+
+- 2026-05-21: shared `apiClient` now classifies `csrf_refresh`,
+  `session_expired`, and `generic_error` paths separately and annotates
+  `ApiClientError` instances with machine-readable `sharedFailureKind`.

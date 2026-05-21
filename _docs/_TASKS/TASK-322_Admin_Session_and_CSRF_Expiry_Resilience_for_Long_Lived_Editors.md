@@ -37,7 +37,7 @@ instead of adding widget-local workarounds.
 
 ## Sub-Tasks
 
-- [ ] TASK-322-01: Admin API Client Session Classification and Bounded CSRF Retry
+- [x] TASK-322-01: Admin API Client Session Classification and Bounded CSRF Retry
 - [ ] TASK-322-02: Page Editor Session Expiry Feedback and Dirty-State Preservation
 - [ ] TASK-322-03: Posts Feed and Shared Picker Consumer Session-Expiry Adoption
 - [ ] TASK-322-04: Session Expiry Docs, Changelog, and Closure

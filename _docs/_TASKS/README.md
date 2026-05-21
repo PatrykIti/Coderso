@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 194 tasks
+- **To Do:** 193 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1797 tasks
+- **Done:** 1798 tasks
 
 ---
 
@@ -39,7 +39,6 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-322 | Admin Session and CSRF Expiry Resilience for Long-Lived Editors | High | Very Large | Shared platform follow-up for expired-session, token-refresh, and unsaved-change recovery gaps surfaced by the TASK-277 Posts Feed closeout |
-| TASK-322-01 | Admin API Client Session Classification and Bounded CSRF Retry | High | Large | Shared client owner for distinguishing recoverable CSRF expiry from full session expiry in admin API requests |
 | TASK-322-02 | Page Editor Session Expiry Feedback and Dirty-State Preservation | High | Large | Page editor shell follow-up for expired-session save/publish feedback that keeps unsaved work explicit and recoverable |
 | TASK-322-03 | Posts Feed and Shared Picker Consumer Session-Expiry Adoption | High | Large | Consumer adoption task so Posts Feed and similar editor pickers reuse the shared expired-session contract instead of raw `ApiClientError` output |
 | TASK-322-04 | Session Expiry Docs, Changelog, and Closure | Medium | Medium | Final report/docs/board/changelog closure after the shared client and consumer leaves land |
@@ -248,6 +247,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-322-01 | Admin API Client Session Classification and Bounded CSRF Retry | High | Large | Done (2026-05-21): shared admin API requests now distinguish csrf-refreshable failures from session-expired auth failures through one client owner |
 | TASK-317 | Widget Editor Live Preview Surface and Preview-State Contract | High | Large | Done (2026-05-21): BlockSettings now renders a shared live preview row through WidgetRenderer with transient previewState data patches |
 | TASK-321 | Shared Clear Action Undo and Feedback Contract | Medium | Large | Done (2026-05-21): shared clearable inputs now emit recoverable undo feedback through the common clear helper contract |
 | TASK-318 | Section Surface Overflow and Sticky Child Containment Contract | High | Large | Done (2026-05-21): Section now keeps clipping in a decorative inset layer so slotted sticky children are no longer blocked by the live surface wrapper |
