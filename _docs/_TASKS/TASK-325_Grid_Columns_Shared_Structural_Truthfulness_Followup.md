@@ -50,7 +50,7 @@ Out of scope:
 
 ## Source Evidence
 
-- `_docs/PLAYWRIGHT/REPORT_GRID_COLUMNS_WIDGET.md:64-67,90-91,105,121,132,173,218,224-227,246`
+- `_docs/PLAYWRIGHT/REPORT_GRID_COLUMNS_WIDGET.md`
 - `_docs/_TASKS/TASK-256-05-01_Section_and_Grid_Columns_Structural_Findings.md`
 - `core/widgets/core/gridColumns.tsx`
 - `core/admin/ui/widgets/editors/GridColumnsEditors.tsx`
@@ -202,15 +202,16 @@ No API routes are added.
 ## Outcome
 
 - `asymmetric` selection is now truthful: choosing the variant reapplies the current desktop preset, while saved equal/custom desktop spans surface explicit state and a reapply action.
-- Grid Columns now shows current desktop/tablet/mobile span totals and explains whether each breakpoint fills one row, wraps onto additional rows, or leaves unused width.
+- Grid Columns now shows current desktop/tablet/mobile span totals from the effective visible live layout and explains whether each breakpoint fills one row, wraps onto additional rows, or leaves unused width.
 - CSS-variable color values were already preserved correctly by the landed shared clearable-field contract; TASK-325 adds Grid Columns-specific regression coverage instead of widening that shared owner again.
 - Cardize-only controls now hide or disable truthfully when cardized styling is off, and `masonry-lite` keeps the cardized contract locked on with explicit copy.
 - `TASK-325-05` closed with an explicit runtime rejection: `gridColumnsOverflowDecision = "no-runtime-guard"`. Runtime keeps saved spans as authored and does not auto-balance them.
 
 ## Validation Notes (2026-05-21)
 
-- `bun run test:vitest -- tests/vitest/widgets/gridColumns.test.tsx` - passed (`22` tests)
-- `bun run test:vitest -- tests/vitest/ui/grid-columns-editor-wave.test.tsx` - passed (`18` tests)
+- `bun run test:vitest -- tests/vitest/widgets/gridColumns.test.tsx` - passed (`28` tests)
+- `bun run test:vitest -- tests/vitest/ui/grid-columns-editor-wave.test.tsx` - passed (`20` tests)
+- `bun test tests/unit/widgets/validator.test.ts` - passed (`38` tests across `2` files) after the follow-up tightened the global wrapper color schema
 - Family-wide lint/types/gates/precommit/diff/security results are recorded in `TASK-325-06`.
 
 ## Completion Notes

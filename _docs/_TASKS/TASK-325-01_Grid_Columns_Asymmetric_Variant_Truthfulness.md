@@ -109,4 +109,4 @@ No API routes are added.
 ## Completion Notes (2026-05-21)
 
 - Selecting `asymmetric` in Wizard and Visual now reapplies the current desktop preset atomically.
-- Saved `asymmetric` blocks with equal or custom desktop spans now show truthful status copy and a bounded reapply action instead of silently drifting.
+- Saved `asymmetric` blocks with equal or custom desktop spans now show truthful status copy and a bounded reapply action instead of silently drifting, and the effective state now follows live slot count rather than raw `columns[]` alone.

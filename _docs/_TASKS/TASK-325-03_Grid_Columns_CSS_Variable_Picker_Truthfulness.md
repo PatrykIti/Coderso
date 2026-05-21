@@ -99,4 +99,4 @@ No API routes are added.
 ## Completion Notes (2026-05-21)
 
 - The already-landed shared clearable color controls were sufficient for Grid Columns: token text stays visible, swatches fall back truthfully, and no shared seam rewrite was needed.
-- TASK-325-03 closes with widget-local regression coverage proving the existing contract on Grid Columns surfaces.
+- TASK-325-03 closes with widget-local regression coverage proving the existing contract on both the global Grid Columns surface controls and per-column override controls.

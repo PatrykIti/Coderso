@@ -55,9 +55,9 @@ Notes:
   repeatable-slot reorder seam.
 - `masonry-lite` locks the global cardize toggle on with explicit explanatory
   copy for truthful preview behavior.
-- Visual shows current desktop/tablet/mobile span totals and explains whether
-  each breakpoint fills one row, wraps onto additional rows, or leaves unused
-  width.
+- Visual shows current desktop/tablet/mobile span totals from the effective
+  visible live layout and explains whether each breakpoint fills one row,
+  wraps onto additional rows, or leaves unused width.
 
 ### Advanced
 
@@ -159,8 +159,8 @@ Notes:
 ## Validation Notes
 
 - `columns[]` stays strict and bounded (`additionalProperties: false`)
-- per-column override colors accept only approved `var(--color-*)` tokens or
-  hex colors (`#rgb`, `#rgba`, `#rrggbb`, `#rrggbbaa`)
+- global and per-column surface colors accept only approved `var(--color-*)`
+  tokens or hex colors (`#rgb`, `#rgba`, `#rrggbb`, `#rrggbbaa`)
 - arbitrary class strings, arbitrary CSS maps, `url(...)`, script-like
   fragments, and unknown nested style keys are rejected by schema validation
 - `gapX` and `gapY` remain separate persisted fields; TASK-271 only expanded the
@@ -168,6 +168,7 @@ Notes:
 - global and per-column color text inputs preserve approved `var(--color-*)`
   tokens verbatim, while swatch inputs fall back to preview colors without
   rewriting saved token values
+- effective span totals follow the live slot count and each breakpoint's visibility toggles rather than the raw saved `columns[]` list alone
 
 ## Explicit Non-Scope
 

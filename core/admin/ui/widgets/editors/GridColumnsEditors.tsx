@@ -25,6 +25,7 @@ import {
   normalizeGridColumnsData,
   reorderGridColumnsColumnsAndSlots,
   resolveGridColumnsAsymmetricVariantState,
+  resolveGridColumnsEffectiveColumns,
   resolveGridColumnsVariant,
   type GridColumnsAlign,
   type GridColumnsBorderWidth,
@@ -1331,6 +1332,34 @@ function resolveGridColumnsCardizeControlsState(
   };
 }
 
+function resolveGridColumnsOrderedInstanceIds(
+  context?: WidgetEditorProps<GridColumnsData>["context"]
+): string[] | undefined {
+  const orderedInstanceIds =
+    context?.slotTargets
+      ?.filter((target) => target.definitionId === "column")
+      .map((target) => target.instanceId?.trim())
+      .filter((instanceId): instanceId is string => Boolean(instanceId)) ?? [];
+
+  return orderedInstanceIds.length > 0 ? orderedInstanceIds : undefined;
+}
+
+function resolveGridColumnsEffectiveEditorColumns({
+  value,
+  variant,
+  context,
+}: {
+  value: GridColumnsData;
+  variant: string;
+  context?: WidgetEditorProps<GridColumnsData>["context"];
+}) {
+  return resolveGridColumnsEffectiveColumns({
+    data: value,
+    variant: resolveGridColumnsVariant(variant),
+    orderedInstanceIds: resolveGridColumnsOrderedInstanceIds(context),
+  });
+}
+
 function handleGridColumnsVariantSelection({
   nextVariant,
   value,
@@ -1355,14 +1384,18 @@ function AsymmetricVariantNotice({
   value,
   onChange,
   variant,
+  context,
 }: {
   value: GridColumnsData;
   onChange: (next: GridColumnsData) => void;
   variant: string;
+  context?: WidgetEditorProps<GridColumnsData>["context"];
 }) {
   if (resolveGridColumnsVariant(variant) !== "asymmetric") return null;
 
-  const state = resolveGridColumnsAsymmetricVariantState(normalizeValue(value).columns);
+  const state = resolveGridColumnsAsymmetricVariantState(
+    resolveGridColumnsEffectiveEditorColumns({ value, variant, context })
+  );
   if (state.mode === "preset") {
     return (
       <p className="text-xs text-muted-foreground">
@@ -1420,8 +1453,18 @@ function resolveGridColumnsSpanTotalRowState(
   };
 }
 
-function GridColumnsSpanTotalsNotice({ value }: { value: GridColumnsData }) {
-  const totals = calculateGridColumnsSpanTotals(normalizeValue(value).columns);
+function GridColumnsSpanTotalsNotice({
+  value,
+  variant,
+  context,
+}: {
+  value: GridColumnsData;
+  variant: string;
+  context?: WidgetEditorProps<GridColumnsData>["context"];
+}) {
+  const totals = calculateGridColumnsSpanTotals(
+    resolveGridColumnsEffectiveEditorColumns({ value, variant, context })
+  );
   const rows = [
     resolveGridColumnsSpanTotalRowState("desktop", "Desktop", totals.desktop),
     resolveGridColumnsSpanTotalRowState("tablet", "Tablet", totals.tablet),
@@ -1503,7 +1546,12 @@ export function GridColumnsWizardEditor({
         </Select>
       </div>
 
-      <AsymmetricVariantNotice value={value} onChange={onChange} variant={variant} />
+      <AsymmetricVariantNotice
+        value={value}
+        onChange={onChange}
+        variant={variant}
+        context={context}
+      />
 
       <ColumnsCountControl value={value} onChange={onChange} context={context} />
 
@@ -1607,7 +1655,12 @@ export function GridColumnsVisualEditor({
           }
         />
 
-        <AsymmetricVariantNotice value={value} onChange={onChange} variant={variant} />
+        <AsymmetricVariantNotice
+          value={value}
+          onChange={onChange}
+          variant={variant}
+          context={context}
+        />
 
         <ColumnsCountControl value={value} onChange={onChange} context={context} />
 
@@ -1661,7 +1714,7 @@ export function GridColumnsVisualEditor({
           context={context}
           onBlockPatch={onBlockPatch}
         />
-        <GridColumnsSpanTotalsNotice value={value} />
+        <GridColumnsSpanTotalsNotice value={value} variant={variant} context={context} />
         <div className="flex flex-wrap gap-2">
           <Button
             type="button"

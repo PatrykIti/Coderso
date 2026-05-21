@@ -104,8 +104,8 @@ export type GridColumnsData = {
   };
   style?: {
     cardizeColumns?: boolean;
-    columnBackground?: string;
-    columnBorderColor?: string;
+    columnBackground?: GridColumnsColorValue;
+    columnBorderColor?: GridColumnsColorValue;
     columnBorderWidth?: GridColumnsBorderWidth;
     columnRadius?: GridColumnsRadius;
     columnPadding?: GridColumnsPadding;
@@ -198,8 +198,8 @@ export const gridColumnsSchema = {
       additionalProperties: false,
       properties: {
         cardizeColumns: { type: "boolean" },
-        columnBackground: { type: "string" },
-        columnBorderColor: { type: "string" },
+        columnBackground: { type: "string", pattern: gridColumnsColorValueSchemaPattern },
+        columnBorderColor: { type: "string", pattern: gridColumnsColorValueSchemaPattern },
         columnBorderWidth: { enum: [...gridColumnsBorderWidthTokens] },
         columnRadius: { enum: [...gridColumnsRadiusTokens] },
         columnPadding: { enum: [...gridColumnsPaddingTokens] },
@@ -517,14 +517,19 @@ export function buildDefaultGridColumnsColumn(
 
 const parseGridColumnsSpan = (value: GridColumnsSpan) => Number.parseInt(value, 10);
 
-export function buildBalancedGridColumnsDesktopSpans(count: number): GridColumnsSpan[] {
-  const clamped = Math.max(1, Math.min(gridColumnsColumnMax, Math.floor(count)));
-  const base = Math.floor(12 / clamped);
-  const remainder = 12 - base * clamped;
+function buildDistributedGridColumnsSpans(total: number, count: number): GridColumnsSpan[] {
+  const clampedCount = Math.max(1, Math.min(gridColumnsColumnMax, Math.floor(count)));
+  const clampedTotal = Math.max(clampedCount, Math.floor(total));
+  const base = Math.floor(clampedTotal / clampedCount);
+  const remainder = clampedTotal - base * clampedCount;
   return Array.from(
-    { length: clamped },
+    { length: clampedCount },
     (_, index) => String(base + (index < remainder ? 1 : 0)) as GridColumnsSpan
   );
+}
+
+export function buildBalancedGridColumnsDesktopSpans(count: number): GridColumnsSpan[] {
+  return buildDistributedGridColumnsSpans(12, count);
 }
 
 export function buildAsymmetricGridColumnsDesktopSpans(count: number): GridColumnsSpan[] {
@@ -532,7 +537,10 @@ export function buildAsymmetricGridColumnsDesktopSpans(count: number): GridColum
   if (clamped <= 1) return ["12"];
   if (clamped === 2) return ["8", "4"];
   if (clamped === 3) return ["6", "3", "3"];
-  return Array.from({ length: clamped }, (_, index) => (index === 0 ? "6" : "3"));
+
+  const leadSpan = Math.min(6, Math.max(3, Math.ceil(12 / clamped) + 1));
+  const trailingSpans = buildDistributedGridColumnsSpans(12 - leadSpan, clamped - 1);
+  return [String(leadSpan) as GridColumnsSpan, ...trailingSpans];
 }
 
 export function calculateGridColumnsSpanTotals(
@@ -541,9 +549,17 @@ export function calculateGridColumnsSpanTotals(
   const source = Array.isArray(columns) ? columns : [];
   return source.reduce<GridColumnsSpanTotals>(
     (totals, column) => ({
-      desktop: totals.desktop + parseGridColumnsSpan(resolveSpanToken(column.desktopSpan, "6")),
-      tablet: totals.tablet + parseGridColumnsSpan(resolveSpanToken(column.tabletSpan, "6")),
-      mobile: totals.mobile + parseGridColumnsSpan(resolveSpanToken(column.mobileSpan, "12")),
+      desktop:
+        totals.desktop +
+        (column.hideOnDesktop
+          ? 0
+          : parseGridColumnsSpan(resolveSpanToken(column.desktopSpan, "6"))),
+      tablet:
+        totals.tablet +
+        (column.hideOnTablet ? 0 : parseGridColumnsSpan(resolveSpanToken(column.tabletSpan, "6"))),
+      mobile:
+        totals.mobile +
+        (column.hideOnMobile ? 0 : parseGridColumnsSpan(resolveSpanToken(column.mobileSpan, "12"))),
     }),
     {
       desktop: 0,
@@ -599,6 +615,60 @@ export function applyGridColumnsAsymmetricPreset(data: GridColumnsData): GridCol
   });
 }
 
+export function resolveGridColumnsEffectiveColumns({
+  data,
+  variant,
+  orderedInstanceIds,
+}: {
+  data: GridColumnsData;
+  variant: GridColumnsVariantId;
+  orderedInstanceIds?: string[];
+}): GridColumnsColumn[] {
+  const normalized = normalizeGridColumnsData(data);
+  const columns = normalized.columns ?? [];
+  const byId = new Map(columns.map((column) => [column.id ?? "", column] as const));
+  const effectiveInstanceIds =
+    orderedInstanceIds && orderedInstanceIds.length > 0
+      ? orderedInstanceIds
+      : columns.map((column, index) => column.id?.trim() || String(index + 1));
+
+  return effectiveInstanceIds.map((instanceId, index) => {
+    const source = byId.get(instanceId);
+    const columnsCount = effectiveInstanceIds.length;
+    const base = buildDefaultGridColumnsColumn(instanceId, index);
+
+    return {
+      ...base,
+      ...source,
+      id: instanceId,
+      label: source?.label?.trim() || base.label,
+      desktopSpan: resolveSpanToken(
+        source?.desktopSpan,
+        fallbackSpanForVariant(variant, "desktop", index, columnsCount)
+      ),
+      tabletSpan: resolveSpanToken(
+        source?.tabletSpan,
+        fallbackSpanForVariant(variant, "tablet", index, columnsCount)
+      ),
+      mobileSpan: resolveSpanToken(
+        source?.mobileSpan,
+        fallbackSpanForVariant(variant, "mobile", index, columnsCount)
+      ),
+      xlSpan: gridColumnsSpanTokens.includes(source?.xlSpan as GridColumnsSpan)
+        ? (source?.xlSpan as GridColumnsSpan)
+        : undefined,
+      twoXlSpan: gridColumnsSpanTokens.includes(source?.twoXlSpan as GridColumnsSpan)
+        ? (source?.twoXlSpan as GridColumnsSpan)
+        : undefined,
+      ...normalizeColumnVisibility(source ?? {}),
+      minHeight: resolveOptionalMinHeightToken(source?.minHeight),
+      mobileMinHeight: resolveOptionalMinHeightToken(source?.mobileMinHeight),
+      alignSelf: resolveOptionalSelfAlignToken(source?.alignSelf),
+      style: normalizeGridColumnsColumnStyle(source?.style),
+    };
+  });
+}
+
 const resolveColumnId = (value: string | undefined, index: number, used: Set<string>) => {
   const base = value?.trim() || String(index + 1);
   if (!used.has(base)) {
@@ -619,6 +689,11 @@ export function normalizeGridColumnsColorValue(value: unknown): GridColumnsColor
   if (typeof value !== "string") return undefined;
   const trimmed = value.trim();
   return gridColumnsColorValuePattern.test(trimmed) ? trimmed : undefined;
+}
+
+function resolveOptionalGridColumnsColorValue(value: unknown): GridColumnsColorValue | undefined {
+  if (value === "") return undefined;
+  return normalizeGridColumnsColorValue(value);
 }
 
 function normalizeGridColumnsColumnStyle(
@@ -725,10 +800,10 @@ export function normalizeGridColumnsData(data: GridColumnsData): GridColumnsData
       cardizeColumns:
         typeof data.style?.cardizeColumns === "boolean" ? data.style.cardizeColumns : false,
       columnBackground: hasStyleObject
-        ? resolveClearableStyleValue(data.style?.columnBackground)
+        ? resolveOptionalGridColumnsColorValue(data.style?.columnBackground)
         : "var(--color-surface)",
       columnBorderColor: hasStyleObject
-        ? resolveClearableStyleValue(data.style?.columnBorderColor)
+        ? resolveOptionalGridColumnsColorValue(data.style?.columnBorderColor)
         : "var(--color-border)",
       columnBorderWidth: resolveBorderWidthToken(data.style?.columnBorderWidth),
       columnRadius: resolveRadiusToken(data.style?.columnRadius),
@@ -780,9 +855,8 @@ function appendGridColumnsDataItem(
       currentColumns.map((column) => column.id ?? "")
     ).columns ?? [];
   const nextId = String(nextItem.id ?? "");
-  const existingIndex = uniqueColumns.findIndex((column) => column.id === nextId);
-  const reconciledColumns =
-    existingIndex >= 0 ? uniqueColumns.slice(0, existingIndex + 1) : [...uniqueColumns, nextItem];
+  const hasExistingColumn = uniqueColumns.some((column) => column.id === nextId);
+  const reconciledColumns = hasExistingColumn ? uniqueColumns : [...uniqueColumns, nextItem];
 
   return reorderGridColumnsDataByInstanceIds(
     {
@@ -861,46 +935,43 @@ const resolveGridColumnsForSlots = ({
 }): ResolvedGridColumn[] => {
   const normalized = normalizeGridColumnsData(data);
   const columns = Array.isArray(normalized.columns) ? normalized.columns : [];
-  const byId = new Map(columns.map((column) => [column.id ?? "", column]));
   const hasLiveColumnSlots = getRepeatableSlotIds(gridColumnsSlot, slotMap).length > 0;
   const slotTargets = hasLiveColumnSlots
     ? resolveWidgetSlotTargets([gridColumnsSlot], slotMap).filter(
         (target) => target.definitionId === gridColumnsSlot.id
       )
     : buildConfiguredGridColumnsTargets(columns);
+  const effectiveColumns = resolveGridColumnsEffectiveColumns({
+    data,
+    variant,
+    orderedInstanceIds: slotTargets.map((target, index) => {
+      const parsed = parseRepeatableSlotId(target.slotId);
+      return parsed?.instanceId ?? String(index + 1);
+    }),
+  });
 
   return slotTargets.map((target, index) => {
     const parsed = parseRepeatableSlotId(target.slotId);
     const instanceId = parsed?.instanceId ?? String(index + 1);
-    const source = byId.get(instanceId) ?? columns[index];
-    const columnsCount = slotTargets.length;
+    const source = effectiveColumns[index] ?? buildDefaultGridColumnsColumn(instanceId, index);
     return {
       slotId: target.slotId,
       instanceId,
-      label: source?.label?.trim() || `Column ${index + 1}`,
-      desktopSpan: resolveSpanToken(
-        source?.desktopSpan,
-        fallbackSpanForVariant(variant, "desktop", index, columnsCount)
-      ),
-      xlSpan: gridColumnsSpanTokens.includes(source?.xlSpan as GridColumnsSpan)
-        ? (source?.xlSpan as GridColumnsSpan)
+      label: source.label?.trim() || `Column ${index + 1}`,
+      desktopSpan: resolveSpanToken(source.desktopSpan, "6"),
+      xlSpan: gridColumnsSpanTokens.includes(source.xlSpan as GridColumnsSpan)
+        ? (source.xlSpan as GridColumnsSpan)
         : undefined,
-      twoXlSpan: gridColumnsSpanTokens.includes(source?.twoXlSpan as GridColumnsSpan)
-        ? (source?.twoXlSpan as GridColumnsSpan)
+      twoXlSpan: gridColumnsSpanTokens.includes(source.twoXlSpan as GridColumnsSpan)
+        ? (source.twoXlSpan as GridColumnsSpan)
         : undefined,
-      ...normalizeColumnVisibility(source ?? {}),
-      minHeight: resolveOptionalMinHeightToken(source?.minHeight),
-      mobileMinHeight: resolveOptionalMinHeightToken(source?.mobileMinHeight),
-      alignSelf: resolveOptionalSelfAlignToken(source?.alignSelf),
-      style: normalizeGridColumnsColumnStyle(source?.style),
-      tabletSpan: resolveSpanToken(
-        source?.tabletSpan,
-        fallbackSpanForVariant(variant, "tablet", index, columnsCount)
-      ),
-      mobileSpan: resolveSpanToken(
-        source?.mobileSpan,
-        fallbackSpanForVariant(variant, "mobile", index, columnsCount)
-      ),
+      ...normalizeColumnVisibility(source),
+      minHeight: resolveOptionalMinHeightToken(source.minHeight),
+      mobileMinHeight: resolveOptionalMinHeightToken(source.mobileMinHeight),
+      alignSelf: resolveOptionalSelfAlignToken(source.alignSelf),
+      style: normalizeGridColumnsColumnStyle(source.style),
+      tabletSpan: resolveSpanToken(source.tabletSpan, "6"),
+      mobileSpan: resolveSpanToken(source.mobileSpan, "12"),
       blocks: Array.isArray(slotMap[target.slotId]) ? slotMap[target.slotId]! : [],
     };
   });

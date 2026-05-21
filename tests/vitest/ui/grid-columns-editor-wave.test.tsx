@@ -556,6 +556,8 @@ test("GridColumns wizard selection applies the asymmetric desktop preset atomica
       columns: [
         { id: "1", label: "Lead", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
         { id: "2", label: "Side", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
+        { id: "3", label: "Meta", desktopSpan: "4", tabletSpan: "6", mobileSpan: "12" },
+        { id: "4", label: "Stats", desktopSpan: "4", tabletSpan: "6", mobileSpan: "12" },
       ],
     },
   });
@@ -570,9 +572,24 @@ test("GridColumns wizard selection applies the asymmetric desktop preset atomica
     setSelectValue(variantSelect, "asymmetric");
 
     expect(view.getVariant()).toBe("asymmetric");
-    expect(view.getValue().columns?.map((column) => column.desktopSpan)).toEqual(["8", "4"]);
-    expect(view.getValue().columns?.map((column) => column.tabletSpan)).toEqual(["6", "6"]);
-    expect(view.getValue().columns?.map((column) => column.mobileSpan)).toEqual(["12", "12"]);
+    expect(view.getValue().columns?.map((column) => column.desktopSpan)).toEqual([
+      "4",
+      "3",
+      "3",
+      "2",
+    ]);
+    expect(view.getValue().columns?.map((column) => column.tabletSpan)).toEqual([
+      "6",
+      "6",
+      "6",
+      "6",
+    ]);
+    expect(view.getValue().columns?.map((column) => column.mobileSpan)).toEqual([
+      "12",
+      "12",
+      "12",
+      "12",
+    ]);
   } finally {
     view.cleanup();
   }
@@ -631,6 +648,67 @@ test("GridColumns visual editor shows current span totals and no-auto-balance gu
   }
 });
 
+test("GridColumns visual editor totals respect breakpoint visibility and live slot fallbacks", async () => {
+  const view = await renderEditor({
+    editor: "visual",
+    initialVariant: "asymmetric",
+    initialValue: {
+      columns: [
+        {
+          id: "1",
+          label: "Lead",
+          desktopSpan: "6",
+          tabletSpan: "6",
+          mobileSpan: "12",
+          hideOnTablet: true,
+        },
+        { id: "2", label: "Side", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
+      ],
+    },
+    context: {
+      surface: "page-builder",
+      slotTargets: [
+        {
+          definitionId: "column",
+          slotId: "column:1",
+          label: "Column 1",
+          kind: "repeatable",
+          instanceId: "1",
+        },
+        {
+          definitionId: "column",
+          slotId: "column:2",
+          label: "Column 2",
+          kind: "repeatable",
+          instanceId: "2",
+        },
+        {
+          definitionId: "column",
+          slotId: "column:3",
+          label: "Column 3",
+          kind: "repeatable",
+          instanceId: "3",
+        },
+      ],
+    },
+  });
+
+  try {
+    const variantSection = getSectionByTitle(view.container, "Variant and layout structure");
+    const columnSection = getSectionByTitle(view.container, "Column sizing and labels");
+    const text = normalizeText(columnSection.textContent);
+
+    expect(normalizeText(variantSection.textContent)).toContain(
+      "custom desktop spans override the asymmetric preset"
+    );
+    expect(text).toContain("desktop total: 15 / 12 - continues onto additional rows.");
+    expect(text).toContain("tablet total: 12 / 12 - fills one 12-column row.");
+    expect(text).toContain("mobile total: 36 / 12 - continues onto additional rows.");
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("GridColumns visual editor keeps CSS variable colors visible with fallback swatches", async () => {
   const view = await renderEditor({
     editor: "visual",
@@ -661,6 +739,47 @@ test("GridColumns visual editor keeps CSS variable colors visible with fallback 
     expect(colorInputs[0]?.value).toBe("#f8fafc");
     expect(colorInputs[1]?.value).toBe("#e2e8f0");
     expect(normalizeText(surfaceSection.textContent)).toContain("custom token active");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("GridColumns visual editor keeps CSS variable per-column overrides visible with fallback swatches", async () => {
+  const view = await renderEditor({
+    editor: "visual",
+    initialVariant: "equal",
+    initialValue: {
+      columns: [
+        {
+          id: "1",
+          label: "Lead",
+          desktopSpan: "6",
+          tabletSpan: "6",
+          mobileSpan: "12",
+          style: {
+            surface: "on",
+            background: "var(--color-surface)",
+            borderColor: "var(--color-border)",
+          },
+        },
+        { id: "2", label: "Side", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
+      ],
+    },
+  });
+
+  try {
+    const behaviorSection = getSectionByTitle(view.container, "Per-column surfaces and behavior");
+    const backgroundTokenInput = findInputByPlaceholder(behaviorSection, "var(--color-surface)", 0);
+    const borderTokenInput = findInputByPlaceholder(behaviorSection, "var(--color-border)", 0);
+    const colorInputs = Array.from(behaviorSection.querySelectorAll('input[type="color"]')).filter(
+      (element): element is HTMLInputElement => element instanceof HTMLInputElement
+    );
+
+    expect(backgroundTokenInput.value).toBe("var(--color-surface)");
+    expect(borderTokenInput.value).toBe("var(--color-border)");
+    expect(colorInputs[0]?.value).toBe("#f8fafc");
+    expect(colorInputs[1]?.value).toBe("#e2e8f0");
+    expect(normalizeText(behaviorSection.textContent)).toContain("custom token active");
   } finally {
     view.cleanup();
   }

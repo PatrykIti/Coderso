@@ -99,5 +99,5 @@ No API routes are added.
 
 ## Completion Notes (2026-05-21)
 
-- Visual now exposes current desktop/tablet/mobile totals for the active spans.
+- Visual now exposes current desktop/tablet/mobile totals for the effective visible live layout, not just the raw saved `columns[]` spans.
 - Non-`12` totals now explain whether the breakpoint wraps to additional rows or leaves unused width instead of implying hidden auto-correction.

@@ -11,8 +11,10 @@ import {
 import { createHeroWidget, heroDefaults, type HeroData } from "../../../core/widgets/core/hero";
 import {
   applyGridColumnsAsymmetricPreset,
+  buildAsymmetricGridColumnsDesktopSpans,
   calculateGridColumnsSpanTotals,
   createGridColumnsWidget,
+  resolveGridColumnsEffectiveColumns,
   gridColumnsDefaults,
   gridColumnsOverflowDecision,
   GridColumnsBlock,
@@ -163,6 +165,8 @@ test("grid columns normalization keeps deterministic ids and bounds", () => {
       reverseOnMobile: true,
     },
     style: {
+      columnBackground: "token-surface" as GridColumnsStyle["columnBackground"],
+      columnBorderColor: "rgb(0 0 0)" as GridColumnsStyle["columnBorderColor"],
       columnBorderWidth: "9" as GridColumnsStyle["columnBorderWidth"],
       columnRadius: "bad" as GridColumnsStyle["columnRadius"],
       columnPadding: "42" as GridColumnsStyle["columnPadding"],
@@ -196,6 +200,8 @@ test("grid columns normalization keeps deterministic ids and bounds", () => {
   expect(normalized.layout?.gapY).toBe("7");
   expect(normalized.layout?.align).toBe("start");
   expect(normalized.layout?.reverseOnMobile).toBe(true);
+  expect(normalized.style?.columnBackground).toBeUndefined();
+  expect(normalized.style?.columnBorderColor).toBeUndefined();
   expect(normalized.style?.columnBorderWidth).toBe("1");
   expect(resolveGridColumnsVariant("unknown")).toBe("equal");
 });
@@ -212,6 +218,21 @@ test("grid columns asymmetric helper reapplies desktop preset without rewriting 
   expect(next.columns?.map((column) => column.desktopSpan)).toEqual(["6", "3", "3"]);
   expect(next.columns?.map((column) => column.tabletSpan)).toEqual(["5", "7", "4"]);
   expect(next.columns?.map((column) => column.mobileSpan)).toEqual(["11", "9", "8"]);
+});
+
+test("grid columns asymmetric desktop presets stay within 12 columns for larger counts", () => {
+  expect(buildAsymmetricGridColumnsDesktopSpans(4)).toEqual(["4", "3", "3", "2"]);
+  expect(buildAsymmetricGridColumnsDesktopSpans(5)).toEqual(["4", "2", "2", "2", "2"]);
+  expect(buildAsymmetricGridColumnsDesktopSpans(6)).toEqual(["3", "2", "2", "2", "2", "1"]);
+
+  expect(
+    [4, 5, 6].map((count) =>
+      buildAsymmetricGridColumnsDesktopSpans(count).reduce(
+        (total, span) => total + Number.parseInt(span, 10),
+        0
+      )
+    )
+  ).toEqual([12, 12, 12]);
 });
 
 test("grid columns asymmetric state distinguishes preset, equal, and custom desktop spans", () => {
@@ -255,6 +276,69 @@ test("grid columns span totals helper reports current desktop, tablet, and mobil
     tablet: 16,
     mobile: 30,
   });
+});
+
+test("grid columns span totals helper excludes columns hidden at each breakpoint", () => {
+  expect(
+    calculateGridColumnsSpanTotals([
+      { id: "1", desktopSpan: "7", tabletSpan: "6", mobileSpan: "12" },
+      { id: "2", desktopSpan: "5", tabletSpan: "6", mobileSpan: "12", hideOnMobile: true },
+      { id: "3", desktopSpan: "2", tabletSpan: "4", mobileSpan: "6", hideOnDesktop: true },
+      { id: "4", desktopSpan: "1", tabletSpan: "2", mobileSpan: "3", hideOnTablet: true },
+    ])
+  ).toEqual({
+    desktop: 13,
+    tablet: 16,
+    mobile: 21,
+  });
+});
+
+test("grid columns effective columns follow live slot count and variant fallbacks", () => {
+  expect(
+    resolveGridColumnsEffectiveColumns({
+      data: {
+        columns: [
+          { id: "1", label: "Lead", desktopSpan: "8", tabletSpan: "6", mobileSpan: "12" },
+          { id: "2", label: "Side", desktopSpan: "4", tabletSpan: "6", mobileSpan: "12" },
+        ],
+      },
+      variant: "asymmetric",
+      orderedInstanceIds: ["1", "2", "3"],
+    }).map((column) => ({
+      id: column.id,
+      desktopSpan: column.desktopSpan,
+      tabletSpan: column.tabletSpan,
+      mobileSpan: column.mobileSpan,
+    }))
+  ).toEqual([
+    { id: "1", desktopSpan: "8", tabletSpan: "6", mobileSpan: "12" },
+    { id: "2", desktopSpan: "4", tabletSpan: "6", mobileSpan: "12" },
+    { id: "3", desktopSpan: "3", tabletSpan: "6", mobileSpan: "12" },
+  ]);
+});
+
+test("grid columns effective columns do not borrow another saved column for unmatched live ids", () => {
+  expect(
+    resolveGridColumnsEffectiveColumns({
+      data: {
+        columns: [
+          { id: "1", label: "Lead", desktopSpan: "8", tabletSpan: "6", mobileSpan: "12" },
+          { id: "2", label: "Borrow me", desktopSpan: "4", tabletSpan: "5", mobileSpan: "7" },
+          { id: "3", label: "Side", desktopSpan: "4", tabletSpan: "6", mobileSpan: "12" },
+        ],
+      },
+      variant: "equal",
+      orderedInstanceIds: ["1", "4", "3"],
+    })[1]
+  ).toEqual(
+    expect.objectContaining({
+      id: "4",
+      label: "Column 2",
+      desktopSpan: "4",
+      tabletSpan: "6",
+      mobileSpan: "12",
+    })
+  );
 });
 
 test("grid columns records the explicit no-runtime-guard overflow decision", () => {
@@ -325,6 +409,34 @@ test("grid columns validator accepts expanded model", () => {
     })
   ).not.toThrow();
   expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBe(true);
+});
+
+test("grid columns validator rejects unsafe global column surface colors", () => {
+  clearWidgets();
+  registerWidget(
+    createGridColumnsWidget({
+      wizard: StubGridColumnsEditor,
+      visual: StubGridColumnsEditor,
+      advanced: StubGridColumnsEditor,
+    })
+  );
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "grid-unsafe-global-style",
+      type: "grid-columns",
+      variant: "equal",
+      data: {
+        columns: [
+          { id: "1", label: "Lead", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
+          { id: "2", label: "Side", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
+        ],
+        style: {
+          columnBackground: "url(https://evil.test)",
+        },
+      },
+    } as never)
+  ).toThrow("widget_schema_invalid");
 });
 
 test("grid columns validator rejects unsafe per-column override payloads", () => {
@@ -685,7 +797,37 @@ test("grid columns widget exposes repeatable slot sync hooks", () => {
   );
 });
 
-test("grid columns append adapter reconciles drift instead of duplicating phantom configs", () => {
+test("grid columns append adapter keeps later live metadata when a holey instance id is re-added", () => {
+  clearWidgets();
+  const widget = createGridColumnsWidget({
+    wizard: StubGridColumnsEditor,
+    visual: StubGridColumnsEditor,
+    advanced: StubGridColumnsEditor,
+  });
+  const adapter = widget.repeatableSlotSync?.find((entry) => entry.definitionId === "column");
+
+  const appended = adapter?.appendItem?.(
+    {
+      columns: [
+        { id: "1", label: "One", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
+        { id: "2", label: "Two", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
+        { id: "3", label: "Three", desktopSpan: "4", tabletSpan: "6", mobileSpan: "12" },
+      ],
+    },
+    { id: "2", label: "Two", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" }
+  ) as GridColumnsData;
+
+  expect(appended.columns?.map((column) => column.id)).toEqual(["1", "2", "3"]);
+  expect(appended.columns?.[2]).toEqual(
+    expect.objectContaining({
+      id: "3",
+      label: "Three",
+      desktopSpan: "4",
+    })
+  );
+});
+
+test("grid columns append adapter reuses known instance ids without duplicating or truncating later metadata", () => {
   clearWidgets();
   const widget = createGridColumnsWidget({
     wizard: StubGridColumnsEditor,
@@ -706,7 +848,8 @@ test("grid columns append adapter reconciles drift instead of duplicating phanto
     { id: "3", label: "Three", desktopSpan: "4", tabletSpan: "6", mobileSpan: "12" }
   ) as GridColumnsData;
 
-  expect(appended.columns?.map((column) => column.id)).toEqual(["1", "2", "3"]);
+  expect(appended.columns?.map((column) => column.id)).toEqual(["1", "2", "3", "4"]);
+  expect(appended.columns?.filter((column) => column.id === "3")).toHaveLength(1);
   expect(appended.columns?.[2]).toEqual(
     expect.objectContaining({
       id: "3",

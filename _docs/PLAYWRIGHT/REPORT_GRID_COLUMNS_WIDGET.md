@@ -41,7 +41,7 @@ Playwright wykrył trzy klasy problemów:
 | C2 | color picker nie pokazuje CSS variables truthfully | `fixed outside TASK-271` | TASK-325-03 | Grid Columns keeps token text visible, swatches fall back truthfully, and the shared clearable-field contract already proves the generic seam |
 | C3 | Wizard edytuje tylko kolumny 1 i 2 | `fixed` | TASK-271-01 | Wizard renderuje label inputs dla wszystkich aktywnych kolumn; `grid-columns-editor-wave.test.tsx` |
 | C4 | brak wizualnego preview spanów | `fixed outside TASK-271` | TASK-325-01 / TASK-325-02 | `asymmetric` now exposes preset-vs-saved desktop state, and the editor shows current per-breakpoint totals with explicit row-fit guidance |
-| C5 | brak walidacji sumy spanów | `fixed outside TASK-271` | TASK-325-02 | current totals now state when spans fill one row, wrap, or leave unused width; runtime auto-balance remains explicitly rejected in TASK-325-05 |
+| C5 | brak walidacji sumy spanów | `closed with explicit guidance` | TASK-325-02 / TASK-325-05 | editor totals now follow the effective visible layout, explain row-fit consequences, and record the explicit `no-runtime-guard` rejection instead of claiming runtime enforcement |
 | W1 | brak per-column surface overrides | `fixed` | TASK-271-04 | per-column `style.surface/background/borderColor/borderWidth/radius/padding`; `gridColumns.tsx`, `gridColumns.test.tsx` |
 | W2 | brak kontroli min-height | `fixed` | TASK-271-05 | `minHeight` i `mobileMinHeight` tokens; runtime class proof in tests |
 | W3 | brak reverse on mobile | `fixed` | TASK-271-03 | `layout.reverseOnMobile`, runtime markers/classes, editor toggle |
@@ -121,15 +121,16 @@ Playwright wykrył trzy klasy problemów:
 
 ## 6. Validation evidence
 
-Focused TASK-271 coverage completed during this closure pass:
+Focused TASK-325 closure coverage completed during this closure pass:
 
-- `bun run test:vitest -- tests/vitest/widgets/gridColumns.test.tsx tests/vitest/ui/grid-columns-editor-wave.test.tsx tests/vitest/pageBuilder/blockSettings-wave.test.tsx`
-  - `3` files passed, `37` tests passed on 2026-05-19 after the post-closeout
-    audit repaired no-slot runtime rendering, uncoupled overflow, and editor
-    truthfulness drift.
+- `bun run test:vitest -- tests/vitest/widgets/gridColumns.test.tsx`
+  - `1` file passed, `28` tests passed on 2026-05-21 after the review loop closed the larger-count asymmetric preset drift, live-slot reconciliation drift, and visibility-aware totals coverage.
+- `bun run test:vitest -- tests/vitest/ui/grid-columns-editor-wave.test.tsx`
+  - `1` file passed, `20` tests passed on 2026-05-21 after the review loop added effective-layout totals and per-column token-preservation coverage.
+- `bun test tests/unit/widgets/validator.test.ts`
+  - `2` files passed, `38` tests passed on 2026-05-21 because the follow-up tightened the global wrapper color schema to the same bounded token-or-hex contract as per-column overrides.
 
-Full family validation is recorded in TASK-271-07 together with lint, full Bun,
-full Vitest, strict security scan, and precommit results.
+Full TASK-325 closure validation is recorded in `TASK-325-06` together with `bun --cwd core lint`, `bun --cwd core lint:types`, `bun run gates:coderso`, `git diff --check`, `bun run precommit`, and the local `scan:security:strict` tool availability limitation.
 
 ## 7. Notes
 
