@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import {
   sanitizeSectionAnchorId,
   type SectionContainerWidth,
+  type SectionGap,
   normalizeSectionData,
   resolveSectionVariant,
   sectionDefaults,
@@ -21,9 +22,12 @@ import {
   type SectionData,
   type SectionElement,
   type SectionMaxWidth,
+  type SectionMinHeight,
   type SectionPaddingBlock,
   type SectionPaddingInline,
   type SectionRadius,
+  type SectionRegionColumns,
+  type SectionRegionFlow,
   type SectionVariantId,
 } from "../../../../widgets/core/section";
 import type { WidgetEditorProps } from "../../../../widgets/types";
@@ -98,6 +102,45 @@ const paddingInlineOptions: Array<{ id: SectionPaddingInline; label: string }> =
   { id: "md", label: "Default" },
   { id: "lg", label: "Spacious" },
 ];
+
+const minHeightOptions: Array<{ id: SectionMinHeight; label: string }> = [
+  { id: "none", label: "No minimum" },
+  { id: "compact", label: "Compact band" },
+  { id: "hero", label: "Hero" },
+  { id: "screen", label: "Screen" },
+];
+
+const regionFlowOptions: Array<{ id: SectionRegionFlow; label: string }> = [
+  { id: "stack", label: "Stack" },
+  { id: "row", label: "Row" },
+  { id: "grid", label: "Grid" },
+];
+
+const regionColumnOptions: Array<{ id: SectionRegionColumns; label: string }> = [
+  { id: "1", label: "1 column" },
+  { id: "2", label: "2 columns" },
+  { id: "3", label: "3 columns" },
+  { id: "4", label: "4 columns" },
+  { id: "5", label: "5 columns" },
+  { id: "6", label: "6 columns" },
+  { id: "7", label: "7 columns" },
+  { id: "8", label: "8 columns" },
+];
+
+const gapOptions: Array<{ id: SectionGap; label: string }> = [
+  { id: "none", label: "None" },
+  { id: "sm", label: "Compact" },
+  { id: "md", label: "Default" },
+  { id: "lg", label: "Spacious" },
+  { id: "xl", label: "Extra spacious" },
+];
+
+const sectionRegionGapAutoValue = "__match_variant__";
+
+const regionGapOptions: Array<{
+  id: SectionGap | typeof sectionRegionGapAutoValue;
+  label: string;
+}> = [{ id: sectionRegionGapAutoValue, label: "Match variant" }, ...gapOptions];
 
 type HeadingData = NonNullable<SectionData["heading"]>;
 type LayoutData = NonNullable<SectionData["layout"]>;
@@ -378,6 +421,11 @@ export function SectionVisualEditor({
   onVariantChange,
 }: WidgetEditorProps<SectionData>) {
   const normalized = normalizeValue(value);
+  const regionFlow = normalized.layout?.regionFlow ?? sectionDefaults.layout?.regionFlow ?? "stack";
+  const regionColumnsEnabled = regionFlow === "grid";
+  const regionColumnsValue =
+    normalized.layout?.regionColumns ?? sectionDefaults.layout?.regionColumns ?? "1";
+  const regionGapValue = normalized.layout?.regionGap ?? sectionRegionGapAutoValue;
 
   return (
     <div className="space-y-4">
@@ -504,7 +552,7 @@ export function SectionVisualEditor({
 
       <WidgetEditorSection
         title="Width and spacing"
-        description="Choose bounded width and padding presets instead of raw CSS values."
+        description="Choose bounded width, height, flow, and spacing tokens instead of raw CSS values."
         id="section.width-spacing"
       >
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -555,6 +603,93 @@ export function SectionVisualEditor({
                 </SelectTrigger>
                 <SelectContent>
                   {maxWidthOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
+
+          <WidgetControlRow id="section.layout.minHeight" label="Minimum height">
+            {(fieldProps) => (
+              <Select
+                value={normalized.layout?.minHeight ?? sectionDefaults.layout?.minHeight ?? "none"}
+                onValueChange={(next) =>
+                  updateLayout(value, onChange, { minHeight: next as SectionMinHeight })
+                }
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Select minimum height" />
+                </SelectTrigger>
+                <SelectContent>
+                  {minHeightOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
+
+          <WidgetControlRow id="section.layout.regionFlow" label="Region flow">
+            {(fieldProps) => (
+              <Select
+                value={regionFlow}
+                onValueChange={(next) =>
+                  updateLayout(value, onChange, {
+                    regionFlow: next as SectionRegionFlow,
+                    regionColumns:
+                      next === "grid"
+                        ? ((normalized.layout?.regionColumns ??
+                            sectionDefaults.layout?.regionColumns ??
+                            "1") as SectionRegionColumns)
+                        : "1",
+                  })
+                }
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Select region flow" />
+                </SelectTrigger>
+                <SelectContent>
+                  {regionFlowOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
+
+          <WidgetControlRow id="section.layout.regionColumns" label="Grid columns">
+            {(fieldProps) => (
+              <Select
+                value={regionColumnsValue}
+                disabled={!regionColumnsEnabled}
+                onValueChange={(next) =>
+                  updateLayout(value, onChange, { regionColumns: next as SectionRegionColumns })
+                }
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Select grid columns" />
+                </SelectTrigger>
+                <SelectContent>
+                  {regionColumnOptions.map((option) => (
                     <SelectItem key={option.id} value={option.id}>
                       {option.label}
                     </SelectItem>
@@ -619,10 +754,70 @@ export function SectionVisualEditor({
               </Select>
             )}
           </WidgetControlRow>
+
+          <WidgetControlRow id="section.layout.headingGap" label="Heading gap">
+            {(fieldProps) => (
+              <Select
+                value={normalized.layout?.headingGap ?? sectionDefaults.layout?.headingGap ?? "md"}
+                onValueChange={(next) =>
+                  updateLayout(value, onChange, { headingGap: next as SectionGap })
+                }
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Select heading gap" />
+                </SelectTrigger>
+                <SelectContent>
+                  {gapOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
+
+          <WidgetControlRow id="section.layout.regionGap" label="Region gap">
+            {(fieldProps) => (
+              <Select
+                value={regionGapValue}
+                onValueChange={(next) =>
+                  updateLayout(value, onChange, {
+                    regionGap:
+                      next === sectionRegionGapAutoValue ? undefined : (next as SectionGap),
+                  })
+                }
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Select region gap" />
+                </SelectTrigger>
+                <SelectContent>
+                  {regionGapOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
         </div>
         <p className="text-xs text-muted-foreground">
           `Wide` keeps the same base wrapper as `Content`; increase max width below when you want a
           visibly wider section without switching to full bleed.
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Grid columns stay inactive until Region flow is set to Grid. Leaving Region gap on Match
+          variant keeps the legacy spacing for each Section variant until you choose an explicit
+          token.
         </p>
       </WidgetEditorSection>
 

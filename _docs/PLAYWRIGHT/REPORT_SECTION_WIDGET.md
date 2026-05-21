@@ -52,11 +52,11 @@ Section widget jest bazowym kontenerem układu strony. Odpowiada za: semantyczny
 
 | # | Problem | Obszar |
 |---|---------|--------|
-| C1 | Brak kontroli wysokości sekcji (min-height) — nie można zrobić sekcji fullscreen (100vh) | Layout |
+| C1 | Zamknięte (2026-05-21, TASK-283-01): Section ma bounded `minHeight` (`none` / `compact` / `hero` / `screen`) zamiast braku kontroli wysokości | Layout |
 | C2 | Brak obsługi tła jako obrazu/wideo — wyłącznie kolor i gradient | Styl |
 | C3 | Brak kontroli koloru i rozmiaru tekstu nagłówka sekcji — hardcoded `h3 text-2xl`, `text-xs`, `text-sm` | Typografia |
 | C4 | Brak poziomu semantycznego nagłówka (h1–h6) — zawsze `<h3>`, ryzyko błędów SEO i dostępności | Dostępność / SEO |
-| C5 | Brak układu poziomego regionów — regiony zawsze w kolumnie (flex-col); brak opcji grid/row | Layout |
+| C5 | Zamknięte (2026-05-21, TASK-283-01): regiony mają bounded `stack` / `row` / `grid` flow z clampowanymi kolumnami grid do limitu 8 | Layout |
 
 ### 3.2 Ważne (ograniczają zakres konfiguracji)
 
@@ -68,8 +68,8 @@ Section widget jest bazowym kontenerem układu strony. Odpowiada za: semantyczny
 | W4 | Brak niestandardowych nazw regionów — wszystkie jako generyczne „Region" | UX struktury |
 | W5 | Brak kontroli alignmentu nagłówka (zawsze left-aligned) | Typografia |
 | W6 | Brak responsywnych wariantów paddingu (inny padding na mobile/desktop) | Responsywność |
-| W7 | Brak kontroli odstępu między nagłówkiem a regionami (hardcoded `gap-4`) | Layout |
-| W8 | Brak kontroli odstępu między regionami (hardcoded: default=gap-6, contained=gap-4, bleed=gap-8) | Layout |
+| W7 | Zamknięte (2026-05-21, TASK-283-01): odstęp nagłówek → regiony jest kontrolowany przez `layout.headingGap` zamiast hardcoded `gap-4` | Layout |
+| W8 | Zamknięte (2026-05-21, TASK-283-01): `layout.regionGap` pozwala ustawić jawny token, a brak pola zachowuje legacy spacing wariantu | Layout |
 | W9 | Gradient nie ma przycisku Clear — nie można łatwo usunąć gradientu po ustawieniu (brak onClear dla gradientFrom/gradientTo) | UX edytora |
 | W10 | Brak walidatora anchorId — można wpisać spacje i znaki specjalne (niepoprawne HTML id) | Walidacja |
 | W11 | Brak kontroli z-index dla warstw (overlay, treść) | Styl |

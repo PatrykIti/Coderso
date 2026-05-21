@@ -518,8 +518,30 @@ test("Section editors cover variant changes, semantics, surface tokens, and adva
       findSelectByOptions(spacingSection, ["none", "4xl", "5xl", "6xl", "7xl"]),
       "7xl"
     );
+    setSelectValue(
+      findSelectByOptions(spacingSection, ["none", "compact", "hero", "screen"]),
+      "hero"
+    );
+    setSelectValue(findSelectByOptions(spacingSection, ["stack", "row", "grid"]), "grid");
+    const regionColumnsSelect = findSelectByOptions(spacingSection, [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+    ]);
+    expect(regionColumnsSelect.disabled).toBe(false);
+    setSelectValue(regionColumnsSelect, "4");
     setSelectValue(findSelectByOptions(spacingSection, ["sm", "md", "lg", "xl"]), "xl");
     setSelectValue(findSelectByOptions(spacingSection, ["none", "sm", "md", "lg"]), "lg");
+    setSelectValue(findSelectByOptions(spacingSection, ["none", "sm", "md", "lg", "xl"]), "lg");
+    setSelectValue(
+      findSelectByOptions(spacingSection, ["__match_variant__", "none", "sm", "md", "lg", "xl"]),
+      "xl"
+    );
     setInputValue(findColorInputForPlaceholder(surfaceSection, "transparent"), "#ecfeff");
     setInputValue(findInputByPlaceholder(surfaceSection, "#ffffff"), "#1d4ed8");
     setInputValue(findInputByPlaceholder(surfaceSection, "#f1f5f9"), "#222222");
@@ -541,8 +563,13 @@ test("Section editors cover variant changes, semantics, surface tokens, and adva
     expect(view.getLatestValue().layout).toMatchObject({
       containerWidth: "wide",
       maxWidth: "7xl",
+      minHeight: "hero",
+      regionFlow: "grid",
+      regionColumns: "4",
       paddingBlock: "xl",
       paddingInline: "lg",
+      headingGap: "lg",
+      regionGap: "xl",
     });
     expect(view.getLatestValue().semantics).toMatchObject({
       element: "div",
@@ -565,6 +592,70 @@ test("Section editors cover variant changes, semantics, surface tokens, and adva
     expect(snapshot?.textContent).toContain('"anchorId": "overview"');
     expect(snapshot?.textContent).toContain('"gradientAngle": 270');
     expect(snapshot?.textContent).toContain('"overlayOpacity": 35');
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Section visual editor keeps grid columns disabled until grid flow is selected and restores match-variant spacing", async () => {
+  const view = await renderEditors({
+    initialValue: {},
+    initialVariant: "default",
+  });
+
+  try {
+    const spacingSection = findSectionByTitle(view.container, "Width and spacing");
+    if (!(spacingSection instanceof HTMLElement)) {
+      throw new Error("Missing width and spacing section");
+    }
+
+    const regionFlowSelect = findSelectByOptions(spacingSection, ["stack", "row", "grid"]);
+    const regionColumnsSelect = findSelectByOptions(spacingSection, [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+    ]);
+    const regionGapSelect = findSelectByOptions(spacingSection, [
+      "__match_variant__",
+      "none",
+      "sm",
+      "md",
+      "lg",
+      "xl",
+    ]);
+
+    expect(spacingSection.textContent).toContain(
+      "Grid columns stay inactive until Region flow is set to Grid."
+    );
+    expect(regionColumnsSelect.disabled).toBe(true);
+    expect(regionColumnsSelect.value).toBe("1");
+    expect(regionGapSelect.value).toBe("__match_variant__");
+
+    setSelectValue(regionFlowSelect, "grid");
+    expect(view.getLatestValue().layout?.regionFlow).toBe("grid");
+    expect(regionColumnsSelect.disabled).toBe(false);
+
+    setSelectValue(regionColumnsSelect, "5");
+    expect(view.getLatestValue().layout?.regionColumns).toBe("5");
+
+    setSelectValue(regionGapSelect, "lg");
+    expect(view.getLatestValue().layout?.regionGap).toBe("lg");
+
+    setSelectValue(regionGapSelect, "__match_variant__");
+    expect(view.getLatestValue().layout?.regionGap).toBeUndefined();
+
+    setSelectValue(regionFlowSelect, "row");
+    expect(view.getLatestValue().layout).toMatchObject({
+      regionFlow: "row",
+      regionColumns: "1",
+    });
+    expect(regionColumnsSelect.disabled).toBe(true);
+    expect(regionColumnsSelect.value).toBe("1");
   } finally {
     view.cleanup();
   }
@@ -854,6 +945,10 @@ test("Section editors fall back to sparse normalized token fields and contract d
     if (!(semanticsSection instanceof HTMLElement)) {
       throw new Error("Missing semantics section");
     }
+    const spacingSection = findSectionByTitle(view.container, "Width and spacing");
+    if (!(spacingSection instanceof HTMLElement)) {
+      throw new Error("Missing width and spacing section");
+    }
 
     expect(findInputByPlaceholder(view.container, "Section label")?.value).toBe("");
     expect(findInputsByPlaceholder(view.container, "Section title")[1]?.value).toBe("");
@@ -863,6 +958,27 @@ test("Section editors fall back to sparse normalized token fields and contract d
     expect(findSelectByOptions(semanticsSection, ["section", "div"]).value).toBe("div");
     expect(findInputByPlaceholder(semanticsSection, "pricing-section")?.value).toBe("");
     expect(findInputByPlaceholder(semanticsSection, "Pricing section")?.value).toBe("");
+    expect(findSelectByOptions(spacingSection, ["none", "compact", "hero", "screen"]).value).toBe(
+      "none"
+    );
+    expect(findSelectByOptions(spacingSection, ["stack", "row", "grid"]).value).toBe("stack");
+    const sparseColumnsSelect = findSelectByOptions(spacingSection, [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+    ]);
+    expect(sparseColumnsSelect.value).toBe("1");
+    expect(sparseColumnsSelect.disabled).toBe(true);
+    expect(findSelectByOptions(spacingSection, ["none", "sm", "md", "lg", "xl"]).value).toBe("md");
+    expect(
+      findSelectByOptions(spacingSection, ["__match_variant__", "none", "sm", "md", "lg", "xl"])
+        .value
+    ).toBe("__match_variant__");
 
     const surfaceSection = findSectionByTitle(view.container, "Surface and borders");
     if (!(surfaceSection instanceof HTMLElement)) {
@@ -965,6 +1081,32 @@ test("Section editors use hardcoded select fallbacks when sparse defaults omit s
       throw new Error("Missing semantics section");
     }
     expect(findSelectByOptions(semanticsSection, ["section", "div"]).value).toBe("section");
+
+    const spacingSection = findSectionByTitle(view.container, "Width and spacing");
+    if (!(spacingSection instanceof HTMLElement)) {
+      throw new Error("Missing width and spacing section");
+    }
+    expect(findSelectByOptions(spacingSection, ["none", "compact", "hero", "screen"]).value).toBe(
+      "none"
+    );
+    expect(findSelectByOptions(spacingSection, ["stack", "row", "grid"]).value).toBe("stack");
+    const hardcodedColumnsSelect = findSelectByOptions(spacingSection, [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+    ]);
+    expect(hardcodedColumnsSelect.value).toBe("1");
+    expect(hardcodedColumnsSelect.disabled).toBe(true);
+    expect(findSelectByOptions(spacingSection, ["none", "sm", "md", "lg", "xl"]).value).toBe("md");
+    expect(
+      findSelectByOptions(spacingSection, ["__match_variant__", "none", "sm", "md", "lg", "xl"])
+        .value
+    ).toBe("__match_variant__");
 
     const surfaceSection = findSectionByTitle(view.container, "Surface and borders");
     if (!(surfaceSection instanceof HTMLElement)) {

@@ -42,8 +42,10 @@ Notes:
   `Regions` Visual section rather than by a banner above the mode tabs.
 - Shared inspector rows emit stable `data-widget-editor-section` and
   `data-widget-control` metadata for automation and accessible labels.
-- Width and padding are bounded by schema-owned layout tokens instead of raw
-  CSS fields.
+- Width, min-height, region flow, and spacing are bounded by schema-owned
+  layout tokens instead of raw CSS fields.
+- Grid columns stay inactive until `layout.regionFlow = "grid"`, and `regionGap`
+  can remain unset to keep the legacy variant spacing contract.
 
 ### Advanced
 - semantics tokens (`anchorId`, `ariaLabel`)
@@ -60,6 +62,13 @@ Notes:
   so Section itself does not block child `position: sticky` behavior.
 - Uses deterministic runtime markers:
   - `data-section-variant`
+  - `data-section-container-width`
+  - `data-section-max-width`
+  - `data-section-min-height`
+  - `data-section-region-flow`
+  - `data-section-region-columns`
+  - `data-section-heading-gap`
+  - `data-section-region-gap`
   - `data-section-regions`
   - `data-section-element`
   - `data-section-region` per region slot instance
@@ -85,7 +94,11 @@ Notes:
     "containerWidth": "content",
     "maxWidth": "6xl",
     "paddingBlock": "md",
-    "paddingInline": "md"
+    "paddingInline": "md",
+    "minHeight": "none",
+    "regionFlow": "stack",
+    "regionColumns": "1",
+    "headingGap": "md"
   },
   "semantics": {
     "element": "section",
@@ -93,7 +106,7 @@ Notes:
     "ariaLabel": ""
   },
   "style": {
-    "backgroundColor": "#f8fafc",
+    "backgroundColor": "transparent",
     "gradientFrom": "",
     "gradientTo": "",
     "gradientAngle": 180,
@@ -105,3 +118,13 @@ Notes:
   }
 }
 ```
+
+## Layout Tokens
+
+- `layout.minHeight`: `none`, `compact`, `hero`, `screen`
+- `layout.regionFlow`: `stack`, `row`, `grid`
+- `layout.regionColumns`: `1` to `8`, applied only when `regionFlow = "grid"`
+- `layout.headingGap`: `none`, `sm`, `md`, `lg`, `xl`
+- `layout.regionGap`: optional `none`, `sm`, `md`, `lg`, `xl`; if omitted, the
+  renderer keeps the legacy variant spacing (`default=lg`, `contained=md`,
+  `bleed=xl`)

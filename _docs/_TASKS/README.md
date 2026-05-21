@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 183 tasks
+- **To Do:** 182 tasks
 - **In Progress:** 5 tasks
-- **Done:** 1813 tasks
+- **Done:** 1814 tasks
 
 ---
 
@@ -108,7 +108,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-285-04 | Split Layout Advanced Diagnostics and Mode Ownership | Medium | Medium | Make Advanced useful through Split Layout responsive diagnostics after shared mode rules land |
 | TASK-285-05 | Split Layout Gap Labels and Spacing Context | Low | Medium | Add Split Layout gap scale labels/help after TASK-256 resolves none/zero token semantics |
 | TASK-285-06 | Split Layout Report Docs and Closure | Medium | Medium | Refresh Split Layout report/docs/changelog/board and final validation evidence |
-| TASK-283-01 | Section Layout Height and Region Flow Controls | High | Very Large | Add bounded min-height/fullscreen, region row/grid flow, heading gap, and region gap controls after TASK-256 structural repairs |
 | TASK-283-02 | Section Background Media and Layering Model | High | Very Large | Add safe decorative background media and bounded overlay/content layer controls without generic media or token-picker scope |
 | TASK-283-03 | Section Heading Typography Alignment and Wizard UX | High | Large | Add Section-owned heading level, typography/alignment, and Wizard label on top of the safe default heading baseline |
 | TASK-283-04 | Section Presets Variant Guidance and Width Copy | Medium | Large | Add local Section presets, friendlier width labels, variant UI consistency, and gradient/background guidance |
@@ -227,7 +226,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-283 | Section Widget Playwright Product Followups | High | Very Large | In progress: task-family drift audit is being corrected on the dedicated worktree so C4 ownership, media scope, responsive spacing boundaries, and end-to-end Section rollout stay aligned before implementation leaves land |
+| TASK-283 | Section Widget Playwright Product Followups | High | Very Large | In progress: planning drift is corrected and TASK-283-01 is closed on the dedicated worktree; background media, heading controls, presets, responsive spacing, and closure leaves remain |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
@@ -238,6 +237,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-283-01 | Section Layout Height and Region Flow Controls | High | Very Large | Done (2026-05-21): Section now owns bounded min-height, row/grid region flow, responsive-safe grid columns, and explicit heading/region gap controls while legacy variant spacing stays stable until changed |
 | TASK-325 | Grid Columns Shared Structural Truthfulness Follow-up | High | Large | Done (2026-05-21): Grid Columns shared truthfulness is closed with asymmetric preset state, current span totals, CSS-token color coverage, cardize gating, and an explicit no-runtime-guard decision |
 | TASK-325-06 | Grid Columns Report Docs Changelog and Closure | Medium | Medium | Done (2026-05-21): report/docs/board/changelog now reflect the shipped shared Grid Columns closure and final runtime decision |
 | TASK-325-05 | Grid Columns Overflow Guard Decision | Medium | Medium | Done (2026-05-21): `gridColumnsOverflowDecision` now records an explicit `no-runtime-guard` rejection after the editor truthfulness pass landed |

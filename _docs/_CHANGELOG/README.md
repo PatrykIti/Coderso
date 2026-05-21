@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 893 | 2026-05-21 | TASK-283-01 section layout height and region flow controls | CMS Widgets/Admin UI/Runtime/QA |
 | 892 | 2026-05-21 | TASK-325 Grid Columns shared structural truthfulness | CMS Widgets/Admin UI/Runtime/QA |
 | 891 | 2026-05-21 | TASK-319 newsletter responsive variant decision | CMS Widgets/Admin UI/Runtime/QA |
 | 890 | 2026-05-21 | TASK-322 session expiry resilience | CMS Admin UI/Auth/Reliability |

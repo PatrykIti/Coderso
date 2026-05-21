@@ -20,6 +20,10 @@ export type SectionContainerWidth = "content" | "wide" | "full";
 export type SectionMaxWidth = "none" | "4xl" | "5xl" | "6xl" | "7xl";
 export type SectionPaddingBlock = "sm" | "md" | "lg" | "xl";
 export type SectionPaddingInline = "none" | "sm" | "md" | "lg";
+export type SectionMinHeight = "none" | "compact" | "hero" | "screen";
+export type SectionRegionFlow = "stack" | "row" | "grid";
+export type SectionRegionColumns = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8";
+export type SectionGap = "none" | "sm" | "md" | "lg" | "xl";
 
 export type SectionData = {
   heading?: {
@@ -32,6 +36,11 @@ export type SectionData = {
     maxWidth?: SectionMaxWidth;
     paddingBlock?: SectionPaddingBlock;
     paddingInline?: SectionPaddingInline;
+    minHeight?: SectionMinHeight;
+    regionFlow?: SectionRegionFlow;
+    regionColumns?: SectionRegionColumns;
+    headingGap?: SectionGap;
+    regionGap?: SectionGap;
   };
   semantics?: {
     element?: SectionElement;
@@ -89,6 +98,11 @@ export const sectionSchema = {
         maxWidth: { enum: ["none", "4xl", "5xl", "6xl", "7xl"] },
         paddingBlock: { enum: ["sm", "md", "lg", "xl"] },
         paddingInline: { enum: ["none", "sm", "md", "lg"] },
+        minHeight: { enum: ["none", "compact", "hero", "screen"] },
+        regionFlow: { enum: ["stack", "row", "grid"] },
+        regionColumns: { enum: ["1", "2", "3", "4", "5", "6", "7", "8"] },
+        headingGap: { enum: ["none", "sm", "md", "lg", "xl"] },
+        regionGap: { enum: ["none", "sm", "md", "lg", "xl"] },
       },
     },
     style: {
@@ -125,6 +139,10 @@ export const sectionDefaults: SectionData = {
     maxWidth: "6xl",
     paddingBlock: "md",
     paddingInline: "md",
+    minHeight: "none",
+    regionFlow: "stack",
+    regionColumns: "1",
+    headingGap: "md",
   },
   style: {
     backgroundColor: "transparent",
@@ -181,6 +199,50 @@ const paddingInlineClassMap: Record<SectionPaddingInline, string> = {
   lg: "px-8",
 };
 
+const minHeightClassMap: Record<SectionMinHeight, string> = {
+  none: "",
+  compact: "min-h-64",
+  hero: "min-h-[70vh]",
+  screen: "min-h-screen",
+};
+
+const regionFlowClassMap: Record<SectionRegionFlow, string> = {
+  stack: "flex flex-col",
+  row: "flex flex-col md:flex-row md:flex-wrap",
+  grid: "grid grid-cols-1",
+};
+
+const regionColumnClassMap: Record<SectionRegionColumns, string> = {
+  "1": "",
+  "2": "md:grid-cols-2",
+  "3": "md:grid-cols-2 xl:grid-cols-3",
+  "4": "md:grid-cols-2 xl:grid-cols-4",
+  "5": "md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5",
+  "6": "md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6",
+  "7": "md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7",
+  "8": "md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-8",
+};
+
+const gapClassMap: Record<SectionGap, string> = {
+  none: "gap-0",
+  sm: "gap-2",
+  md: "gap-4",
+  lg: "gap-6",
+  xl: "gap-8",
+};
+
+const regionGapVariantFallbackMap: Record<SectionVariantId, SectionGap> = {
+  default: "lg",
+  contained: "md",
+  bleed: "xl",
+};
+
+const regionItemClassMap: Record<SectionRegionFlow, string> = {
+  stack: "min-w-0",
+  row: "min-w-0 md:min-w-[16rem] md:flex-1",
+  grid: "min-w-0",
+};
+
 const joinClasses = (...classes: Array<string | undefined | false>) =>
   classes.filter(Boolean).join(" ");
 
@@ -212,6 +274,37 @@ const resolveSectionPaddingBlock = (value: string | undefined): SectionPaddingBl
 const resolveSectionPaddingInline = (value: string | undefined): SectionPaddingInline => {
   if (value === "none" || value === "sm" || value === "lg") return value;
   return "md";
+};
+
+const resolveSectionMinHeight = (value: string | undefined): SectionMinHeight => {
+  if (value === "compact" || value === "hero" || value === "screen") return value;
+  return "none";
+};
+
+const resolveSectionRegionFlow = (value: string | undefined): SectionRegionFlow => {
+  if (value === "row" || value === "grid") return value;
+  return "stack";
+};
+
+const resolveSectionRegionColumns = (value: string | number | undefined): SectionRegionColumns => {
+  const numericValue = Number.parseInt(String(value ?? ""), 10);
+  if (!Number.isFinite(numericValue)) return "1";
+  return String(Math.max(1, Math.min(8, numericValue))) as SectionRegionColumns;
+};
+
+const resolveSectionGap = (value: string | undefined): SectionGap => {
+  if (value === "none" || value === "sm" || value === "md" || value === "lg" || value === "xl") {
+    return value;
+  }
+  return "md";
+};
+
+const resolveOptionalSectionGap = (value: string | undefined): SectionGap | undefined => {
+  if (value === undefined) return undefined;
+  if (value === "none" || value === "sm" || value === "md" || value === "lg" || value === "xl") {
+    return value;
+  }
+  return undefined;
 };
 
 const clampOpacity = (value: number | undefined) => {
@@ -255,6 +348,10 @@ export function normalizeSectionData(data: SectionData): SectionData {
     maxWidth: "6xl",
     paddingBlock: "md",
     paddingInline: "md",
+    minHeight: "none",
+    regionFlow: "stack",
+    regionColumns: "1",
+    headingGap: "md",
   };
   const styleDefaults = sectionDefaults.style ?? {
     backgroundColor: "transparent",
@@ -269,6 +366,7 @@ export function normalizeSectionData(data: SectionData): SectionData {
   };
 
   const hasStyleObject = data.style !== undefined;
+  const regionFlow = resolveSectionRegionFlow(data.layout?.regionFlow ?? layoutDefaults.regionFlow);
 
   return {
     heading: {
@@ -287,6 +385,14 @@ export function normalizeSectionData(data: SectionData): SectionData {
       paddingInline: resolveSectionPaddingInline(
         data.layout?.paddingInline ?? layoutDefaults.paddingInline
       ),
+      minHeight: resolveSectionMinHeight(data.layout?.minHeight ?? layoutDefaults.minHeight),
+      regionFlow,
+      regionColumns:
+        regionFlow === "grid"
+          ? resolveSectionRegionColumns(data.layout?.regionColumns ?? layoutDefaults.regionColumns)
+          : "1",
+      headingGap: resolveSectionGap(data.layout?.headingGap ?? layoutDefaults.headingGap),
+      regionGap: resolveOptionalSectionGap(data.layout?.regionGap ?? layoutDefaults.regionGap),
     },
     semantics: {
       element: data.semantics?.element === "div" ? "div" : "section",
@@ -335,8 +441,7 @@ export function SectionBlock({
   const semantics = normalized.semantics ?? sectionDefaults.semantics!;
   const style = normalized.style ?? sectionDefaults.style!;
 
-  const regionGapClass =
-    resolvedVariant === "contained" ? "gap-4" : resolvedVariant === "bleed" ? "gap-8" : "gap-6";
+  const resolvedRegionGap = layout.regionGap ?? regionGapVariantFallbackMap[resolvedVariant];
   const wrapperClass = joinClasses(
     containerWidthClassMap[layout.containerWidth ?? "content"],
     maxWidthClassMap[layout.maxWidth ?? "6xl"],
@@ -347,6 +452,7 @@ export function SectionBlock({
 
   const surfaceFrameClass = joinClasses(
     "relative w-full",
+    minHeightClassMap[layout.minHeight ?? "none"],
     paddingBlockClassMap[layout.paddingBlock ?? "md"],
     resolvedVariant === "contained" ? "shadow-sm" : undefined
   );
@@ -354,6 +460,16 @@ export function SectionBlock({
     "pointer-events-none absolute inset-0 overflow-hidden",
     radiusClassMap[style.radius ?? "none"]
   );
+  const contentClass = joinClasses(
+    "relative z-[1] flex flex-col",
+    gapClassMap[layout.headingGap ?? "md"]
+  );
+  const regionLayoutClass = joinClasses(
+    regionFlowClassMap[layout.regionFlow ?? "stack"],
+    layout.regionFlow === "grid" ? regionColumnClassMap[layout.regionColumns ?? "1"] : undefined,
+    gapClassMap[resolvedRegionGap]
+  );
+  const regionItemClass = regionItemClassMap[layout.regionFlow ?? "stack"];
 
   const hasGradient =
     (style.gradientFrom ?? "").trim().length > 0 && (style.gradientTo ?? "").trim().length > 0;
@@ -387,6 +503,11 @@ export function SectionBlock({
       data-section-variant={resolvedVariant}
       data-section-container-width={layout.containerWidth ?? "content"}
       data-section-max-width={layout.maxWidth ?? "6xl"}
+      data-section-min-height={layout.minHeight ?? "none"}
+      data-section-region-flow={layout.regionFlow ?? "stack"}
+      data-section-region-columns={layout.regionColumns ?? "1"}
+      data-section-heading-gap={layout.headingGap ?? "md"}
+      data-section-region-gap={layout.regionGap ?? "match-variant"}
       data-section-regions={String(slotTargets.length)}
       data-section-element={semantics.element ?? "section"}
     >
@@ -403,7 +524,7 @@ export function SectionBlock({
           ) : null}
         </div>
 
-        <div className="relative z-[1] flex flex-col gap-4">
+        <div className={contentClass}>
           {hasHeading ? (
             <header className="space-y-2">
               {(heading.label ?? "").trim().length > 0 ? (
@@ -420,14 +541,18 @@ export function SectionBlock({
             </header>
           ) : null}
 
-          <div className={joinClasses("flex flex-col", regionGapClass)}>
+          <div className={regionLayoutClass}>
             {slotTargets.map((target) => {
               const slotBlocks = Array.isArray(slotMap[target.slotId])
                 ? slotMap[target.slotId]!
                 : [];
 
               return (
-                <div key={target.slotId} className="space-y-4" data-section-region={target.slotId}>
+                <div
+                  key={target.slotId}
+                  className={joinClasses(regionItemClass, "space-y-4")}
+                  data-section-region={target.slotId}
+                >
                   {slotBlocks.length > 0
                     ? slotBlocks.map((block) =>
                         renderBlock ? (
