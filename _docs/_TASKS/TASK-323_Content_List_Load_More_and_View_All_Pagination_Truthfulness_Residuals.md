@@ -138,6 +138,7 @@ No API routes are added.
 ## Validation Notes (2026-05-21)
 
 - `bun test tests/unit/content/contentListResolver.test.ts` - passed (`7` tests)
+- `bun test tests/integration/runtime/pages-runtime.test.ts` - the file now contains the shared public SSR proof for `cl.<block>.page` load-more and view-all semantics, but the local run was skipped because the DB-backed runtime lane was unavailable in this audit session
 - `bun --cwd core lint` - passed
 - `bun --cwd core lint:types` - passed
 - `bun run precommit` - passed
@@ -152,3 +153,6 @@ No API routes are added.
 - 2026-05-21: shared legacy `content-list` pagination now treats `load-more`
   cumulatively and forces `view-all` to ignore stale block page params, closing
   the residual that remained after `TASK-262`.
+- 2026-05-21 audit follow-up: the shared runtime contract now also has an
+  explicit public SSR proof in `pages-runtime.test.ts`, so the closure no
+  longer relies on resolver-unit coverage alone.

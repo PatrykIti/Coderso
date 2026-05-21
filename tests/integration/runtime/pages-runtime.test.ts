@@ -728,3 +728,145 @@ testIfDb(
     expect(await pageResponse.text()).toContain(fixture.publishedHeadline);
   }
 );
+
+testIfDbWithOptions(
+  "content list public runtime honors block-scoped pagination params for load-more and view-all",
+  async () => {
+    resetRateLimitBuckets();
+    await setTestSetting("site.cacheTtlSeconds", 0);
+
+    const actor = await createActor();
+    const token = randomUUID().slice(0, 8);
+    const contentType = await createContentType({
+      name: `Runtime Articles ${token}`,
+      slug: `runtime-articles-${token}`,
+      schema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          title: { type: "string" },
+        },
+      },
+    });
+    trackContentType(contentType.id);
+
+    const contentRows = await db
+      .insert(contentEntries)
+      .values([
+        {
+          typeId: contentType.id,
+          title: `Runtime article A ${token}`,
+          slug: `runtime-article-a-${token}`,
+          status: "published",
+          data: { title: "Runtime article A" },
+          publishedAt: new Date("2026-05-19T12:00:00.000Z"),
+          updatedAt: new Date("2026-05-19T12:00:00.000Z"),
+        },
+        {
+          typeId: contentType.id,
+          title: `Runtime article B ${token}`,
+          slug: `runtime-article-b-${token}`,
+          status: "published",
+          data: { title: "Runtime article B" },
+          publishedAt: new Date("2026-05-18T12:00:00.000Z"),
+          updatedAt: new Date("2026-05-18T12:00:00.000Z"),
+        },
+        {
+          typeId: contentType.id,
+          title: `Runtime article C ${token}`,
+          slug: `runtime-article-c-${token}`,
+          status: "published",
+          data: { title: "Runtime article C" },
+          publishedAt: new Date("2026-05-17T12:00:00.000Z"),
+          updatedAt: new Date("2026-05-17T12:00:00.000Z"),
+        },
+      ])
+      .returning();
+    contentRows.forEach((row) => trackContentEntry(row.id));
+
+    const routeBase = `/runtime-articles-${token}`;
+    await setTestSetting("site.contentRoutes", [
+      {
+        type: contentType.slug,
+        listPath: routeBase,
+        detailPath: `${routeBase}/:slug`,
+        enabled: true,
+      } satisfies ContentRouteSetting,
+    ]);
+
+    const pageSlug = `/content-list-runtime-${token}`;
+    const contentListPageData = (mode: "load-more" | "view-all") => ({
+      blocks: [
+        {
+          id: "content-list-1",
+          type: "content-list",
+          variant: "cards",
+          data: {
+            source: {
+              contentTypeId: contentType.id,
+              statusScope: "published",
+              limit: 3,
+              sort: "published-desc",
+            },
+            pagination: {
+              mode,
+              pageSize: 1,
+            },
+            fields: {
+              showExcerpt: false,
+              showMeta: false,
+              showCta: true,
+            },
+            emptyState: {
+              title: "No articles found",
+              description: "Publish your first article.",
+            },
+            style: {
+              columns: "2",
+              gap: "md",
+              cardStyle: "outlined",
+              ctaLabel: "Read article",
+              backgroundColor: "var(--color-bg)",
+              borderColor: "var(--color-border)",
+              textColor: "var(--color-text)",
+            },
+          },
+        },
+      ],
+      settings: {
+        template: "landing",
+        showInNav: false,
+      },
+    });
+
+    const page = await createPage({
+      title: `Content List Runtime ${token}`,
+      slug: pageSlug,
+      authorId: actor.id,
+      data: contentListPageData("load-more"),
+    });
+    trackPage(page.id);
+    await publishPage(page.id, actor.id, contentListPageData("load-more"));
+
+    const loadMoreResponse = await requestPublicPath(`${pageSlug}?cl.content-list-1.page=2`);
+    expect(loadMoreResponse.status).toBe(200);
+    const loadMoreHtml = await loadMoreResponse.text();
+    expect(loadMoreHtml).toContain('data-content-list-items="2"');
+    expect(loadMoreHtml).toContain(`Runtime article A ${token}`);
+    expect(loadMoreHtml).toContain(`Runtime article B ${token}`);
+    expect(loadMoreHtml).toContain('href="?cl.content-list-1.page=3"');
+    expect(loadMoreHtml).toContain("Load more");
+
+    await publishPage(page.id, actor.id, contentListPageData("view-all"));
+
+    const viewAllResponse = await requestPublicPath(`${pageSlug}?cl.content-list-1.page=2`);
+    expect(viewAllResponse.status).toBe(200);
+    const viewAllHtml = await viewAllResponse.text();
+    expect(viewAllHtml).toContain('data-content-list-items="1"');
+    expect(viewAllHtml).toContain(`Runtime article A ${token}`);
+    expect(viewAllHtml).not.toContain(`Runtime article B ${token}`);
+    expect(viewAllHtml).not.toContain("Load more");
+    expect(viewAllHtml).not.toContain('href="?cl.content-list-1.page=3"');
+  },
+  { timeout: dbRuntimeTimeout }
+);
