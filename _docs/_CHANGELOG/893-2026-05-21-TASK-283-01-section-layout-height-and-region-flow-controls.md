@@ -27,3 +27,4 @@ Tasks: TASK-283-01
 - `bun --cwd core lint:types`
 - `bun run gates:coderso`
 - `bun run scan:security:strict` (blocked by missing local `semgrep`, `trivy`, and `gitleaks` executables; `bun audit` ran)
+- `bun run precommit`

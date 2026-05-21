@@ -26,7 +26,7 @@ Section widget jest bazowym kontenerem układu strony. Odpowiada za: semantyczny
 | Sekcja | Pola |
 |--------|------|
 | **Heading** | `label`, `title`, `description` |
-| **Layout** | `containerWidth` (content/wide/full), `maxWidth` (none/4xl–7xl), `paddingBlock` (sm/md/lg/xl), `paddingInline` (none/sm/md/lg) |
+| **Layout** | `containerWidth` (content/wide/full), `maxWidth` (none/4xl–7xl), `paddingBlock` (sm/md/lg/xl), `paddingInline` (none/sm/md/lg), `minHeight` (none/compact/hero/screen), `regionFlow` (stack/row/grid), `regionColumns` (1–8 when grid), `headingGap`, optional `regionGap` |
 | **Semantics** | `element` (section/div), `anchorId`, `ariaLabel` |
 | **Style** | `backgroundColor`, `gradientFrom`, `gradientTo`, `gradientAngle`, `borderColor`, `borderWidth` (0–3px), `radius` (none/lg/xl/2xl), `overlayColor`, `overlayOpacity` |
 
@@ -34,15 +34,15 @@ Section widget jest bazowym kontenerem układu strony. Odpowiada za: semantyczny
 
 - **Wizard** — szybki start: wariant (dropdown), tytuł, opis, kolor tła
 - **Visual** — pełna kontrola: wariant (karty), heading, semantics, szerokość/padding, surface/borders
-- **Advanced** — tokeny techniczne: anchorId, ariaLabel, gradient angle, overlay opacity, raw JSON snapshot
+- **Advanced** — tokeny techniczne: anchorId, ariaLabel, raw JSON snapshot; `gradientAngle` i `overlayOpacity` nadal są zdublowane z Visual i pozostają shared drift ownerem `TASK-326`
 
 ### 2.3 Renderowanie
 
 - Zewnętrzny element: `<section>` lub `<div>` (sterowany przez `semantics.element`)
 - Regiony: `<div data-section-region="...">` z listą widgetów
-- Puste regiony: placeholder „Empty region."
+- Puste regiony: placeholder „Empty region.” renderuje się już tylko w editor/admin preview po shared TASK-256 gating; nie jest bieżącym frontend defectem.
 - Overlay: absolute div z opacity i backgroundColor
-- Heading: `<header>` z `<p>` (label), `<h3>` (title), `<p>` (description)
+- Heading: `<header>` z `<p>` (label), bezpiecznym domyślnym `<h2>` (title), `<p>` (description); konfigurowalny poziom `h1`–`h6` nadal pozostaje otwarty.
 
 ---
 
@@ -54,8 +54,8 @@ Section widget jest bazowym kontenerem układu strony. Odpowiada za: semantyczny
 |---|---------|--------|
 | C1 | Zamknięte (2026-05-21, TASK-283-01): Section ma bounded `minHeight` (`none` / `compact` / `hero` / `screen`) zamiast braku kontroli wysokości | Layout |
 | C2 | Brak obsługi tła jako obrazu/wideo — wyłącznie kolor i gradient | Styl |
-| C3 | Brak kontroli koloru i rozmiaru tekstu nagłówka sekcji — hardcoded `h3 text-2xl`, `text-xs`, `text-sm` | Typografia |
-| C4 | Brak poziomu semantycznego nagłówka (h1–h6) — zawsze `<h3>`, ryzyko błędów SEO i dostępności | Dostępność / SEO |
+| C3 | Brak kontroli koloru i rozmiaru tekstu nagłówka sekcji — obecne bezpieczne defaulty tekstowe są nadal stałe (`text-xs`, `text-2xl`, `text-sm`) | Typografia |
+| C4 | Brak konfigurowalnego poziomu semantycznego nagłówka (h1–h6) — historyczny hardcoded `<h3>` został już usunięty, ale użytkownik nadal nie może wybrać poziomu | Dostępność / SEO |
 | C5 | Zamknięte (2026-05-21, TASK-283-01): regiony mają bounded `stack` / `row` / `grid` flow z clampowanymi kolumnami grid do limitu 8 | Layout |
 
 ### 3.2 Ważne (ograniczają zakres konfiguracji)
@@ -71,7 +71,7 @@ Section widget jest bazowym kontenerem układu strony. Odpowiada za: semantyczny
 | W7 | Zamknięte (2026-05-21, TASK-283-01): odstęp nagłówek → regiony jest kontrolowany przez `layout.headingGap` zamiast hardcoded `gap-4` | Layout |
 | W8 | Zamknięte (2026-05-21, TASK-283-01): `layout.regionGap` pozwala ustawić jawny token, a brak pola zachowuje legacy spacing wariantu | Layout |
 | W9 | Gradient nie ma przycisku Clear — nie można łatwo usunąć gradientu po ustawieniu (brak onClear dla gradientFrom/gradientTo) | UX edytora |
-| W10 | Brak walidatora anchorId — można wpisać spacje i znaki specjalne (niepoprawne HTML id) | Walidacja |
+| W10 | Zamknięte (2026-05-17, TASK-256-05-01): `anchorId` jest sanitizowany przed persistence/render i nie jest już aktywnym ownerem TASK-283 | Walidacja |
 | W11 | Brak kontroli z-index dla warstw (overlay, treść) | Styl |
 
 ### 3.3 Błędy logiczne i normalizacja (wykryte w kodzie)
@@ -95,7 +95,7 @@ Section widget jest bazowym kontenerem układu strony. Odpowiada za: semantyczny
 | U5 | Brak podglądu gradientu / overlay przed zastosowaniem | Edytor |
 | U6 | Wariant wybrany w Wizard (dropdown) vs Visual (karty) — różny UI dla tego samego ustawienia | Spójność |
 | U7 | Brak walidacji URL/formatu kolorów w polach tekstowych | Walidacja |
-| U8 | Brak komunikatu kiedy region jest pusty na froncie — ditto admin, tylko w admin jest „Empty region." | Frontend UX |
+| U8 | Zamknięte (2026-05-17, TASK-256-03 + TASK-256-05-01): placeholder „Empty region.” jest już ograniczony do editor/admin preview i nie jest aktywnym frontend defectem | Frontend UX |
 
 ---
 
@@ -117,7 +117,7 @@ Section widget jest bazowym kontenerem układu strony. Odpowiada za: semantyczny
 | Test | Wynik | Uwagi |
 |------|-------|-------|
 | Wariant — dropdown (Default / Contained / Bleed) | ✅ Działa | Poprawnie synchronizuje się z Visual |
-| Pole „Section title" | ✅ Działa | Renderuje jako `<h3>` w canvas |
+| Pole „Section title" | ✅ Działa | W sesji 2026-05-16 renderowało się jako `<h3>`; bieżący baseline po TASK-256-05-01 używa bezpiecznego `<h2>` |
 | Pole „Description" | ✅ Działa | Renderuje jako `<p class="text-sm">` |
 | Pole „Background color" (+ Clear) | ✅ Działa | Clear poprawnie kasuje wartość |
 | Brak pola „Label" | ❌ Asymetria | Label dostępne tylko w Visual — Wizard jest niekompletny |
@@ -128,9 +128,9 @@ Section widget jest bazowym kontenerem układu strony. Odpowiada za: semantyczny
 | Test | Wynik | Uwagi |
 |------|-------|-------|
 | Variant cards (Default / Contained / Bleed) | ✅ Działa | Natychmiastowy efekt w canvas |
-| Label / Title / Description | ✅ Działa | Renderuje jako p/h3/p w canvas |
+| Label / Title / Description | ✅ Działa | W aktualnym baseline renderuje jako p/h2/p; sesja 2026-05-16 miała jeszcze historyczne p/h3/p przed TASK-256-05-01 |
 | Element (section / div) | ✅ Działa | Zmienia outer HTML element |
-| Anchor ID | ⚠️ Problem | Brak walidacji — akceptuje spacje i `!@#` — generuje nieprawidłowe `id` w HTML |
+| Anchor ID | Historyczne | W sesji 2026-05-16 brakowało walidacji; bieżący baseline po TASK-256-05-01 sanitizuje `anchorId` przed persistence/render |
 | Aria label | ✅ Działa | Poprawnie dodawane jako `aria-label` |
 | Container width (Content / Wide / Full) | ⚠️ Problem | „Content" i „Wide" dają IDENTYCZNE klasy CSS (`mx-auto w-full`) — brak wizualnej różnicy |
 | Max width (4xl–7xl) | ✅ Działa | Poprawnie aplikuje max-width |
@@ -154,8 +154,8 @@ Section widget jest bazowym kontenerem układu strony. Odpowiada za: semantyczny
 |------|-------|-------|
 | Anchor ID | ✅ Działa | Pole zsynchronizowane z Visual |
 | Aria label | ✅ Działa | |
-| Gradient angle (duplikat z Visual) | ❌ Bug | To samo pole co w Visual — zbędna duplikacja |
-| Overlay opacity (duplikat z Visual) | ❌ Bug | To samo pole co w Visual — zbędna duplikacja |
+| Gradient angle (duplikat z Visual) | ❌ Shared drift | To samo pole co w Visual — zbędna duplikacja, owner `TASK-326` |
+| Overlay opacity (duplikat z Visual) | ❌ Shared drift | To samo pole co w Visual — zbędna duplikacja, owner `TASK-326` |
 | Raw payload snapshot | ✅ Działa | JSON poprawnie odzwierciedla aktualny stan |
 | Layout (Container, Padding top/bottom, Margin top/bottom) | ✅ Działa | Globalny system layoutu strony — oddzielny od Section's własnego layoutu |
 | Visibility (Desktop/Tablet/Mobile toggle) | ✅ Działa | Globalne przełączniki widoczności — nie ma w `SectionData` |
@@ -176,7 +176,7 @@ Section widget jest bazowym kontenerem układu strony. Odpowiada za: semantyczny
 #### 4.2.5 Weryfikacja DOM
 
 ```
-Struktura HTML (Default variant):
+Struktura HTML (historyczna sesja 2026-05-16 — Default variant):
 <section data-section-variant="default"
          data-section-container-width="full"
          data-section-max-width="6xl"
@@ -208,9 +208,9 @@ Struktura HTML (Default variant):
 ```
 
 **Potwierdzenia z DOM:**
-- Heading title zawsze `<h3>` (hardcoded) ← Potwierdzone Issue C4
-- Regiony zawsze `flex flex-col` (bez opcji layout) ← Potwierdzone Issue C5
-- Anchor ID `"my section anchor with spaces and !@#"` akceptowany bez walidacji ← Potwierdzone Issue W10
+- Heading title było hardcoded `<h3>` w sesji 2026-05-16; baseline został zamknięty w TASK-256-05-01, a otwarte pozostaje dopiero konfigurowalne `h1`–`h6` z TASK-283-03.
+- Regiony były zawsze `flex flex-col` w sesji 2026-05-16; issue C5 jest zamknięte od 2026-05-21 przez TASK-283-01.
+- Anchor ID z nieprawidłowymi znakami był akceptowany w sesji 2026-05-16; issue W10 jest zamknięte od 2026-05-17 przez TASK-256-05-01.
 - `content` i `wide` containerWidth — identyczne klasy CSS ← Potwierdzone Issue B3
 
 ---
@@ -237,13 +237,13 @@ Struktura HTML (Default variant):
 | Element HTML outer — `section` vs `div` | ✅ | `<section>` — zgodnie z ustawieniem `semantics.element = section` |
 | Gradient renderuje się na froncie | ✅ | `background-image: linear-gradient(180deg, #3b82f6, #8b5cf6)` obecny w `style` |
 | Border 2px renderuje się na froncie | ✅ | `border-width: 2px; border-style: solid` |
-| Nagłówek sekcji widoczny | ✅ | `<h3>Test Section Title</h3>` obecny |
+| Nagłówek sekcji widoczny | ✅ | W sesji 2026-05-16 był to `<h3>`; aktualny baseline po TASK-256-05-01 używa bezpiecznego `<h2>` |
 | Opis sekcji widoczny | ✅ | `<p class="text-sm">This is a test description...</p>` obecny |
 
 #### 5.2.2 Weryfikacja DOM — szczegóły struktury
 
 ```
-Struktura HTML (Frontend — Default variant):
+Struktura HTML (historyczna sesja 2026-05-16 — Frontend Default variant):
 <section class="mx-auto w-full max-w-6xl px-6"
          data-section-variant="default"
          data-section-container-width="content"
@@ -285,9 +285,9 @@ Zmieniono wariant na `contained`, opublikowano i sprawdzono frontend:
 
 | Problem | Wynik | Szczegóły |
 |---------|-------|-----------|
-| „Empty region." widoczny na froncie | ❌ **Potwierdzone** | `display: block`, tekst „Empty region." widoczny dla użytkownika końcowego |
-| Heading zawsze `<h3>` (hardcoded) | ❌ **Potwierdzone** | `<h3 class="text-2xl font-semibold text-[var(--color-text)]">` — brak możliwości zmiany poziomu semantycznego |
-| Regiony zawsze `flex flex-col` | ❌ **Potwierdzone** | `flex flex-col gap-4` na wrapperze regionów, `flex flex-col gap-6` na kontenerze |
+| „Empty region.” widoczny na froncie | Historyczne | Potwierdzone w sesji 2026-05-16; zamknięte od 2026-05-17 przez TASK-256-03 + TASK-256-05-01 |
+| Hardcoded `<h3>` dla headingu | Historyczne | Potwierdzone w sesji 2026-05-16; baseline zamknięty w TASK-256-05-01, a otwarty owner dotyczy już tylko konfigurowalnego poziomu z TASK-283-03 |
+| Regiony zawsze `flex flex-col` | Historyczne | Potwierdzone w sesji 2026-05-16; zamknięte od 2026-05-21 przez TASK-283-01 |
 
 #### 5.2.5 Responsywność — mobile (375px)
 
@@ -297,7 +297,7 @@ Zmieniono wariant na `contained`, opublikowano i sprawdzono frontend:
 | Brak poziomego overflow | ✅ | `scrollWidth ≤ innerWidth` |
 | Padding boczny zachowany | ✅ | `padding-left: 24px / padding-right: 24px` (px-6) |
 | Gradient widoczny | ✅ | Renderuje się poprawnie na mobile |
-| „Empty region." widoczny | ❌ | Widoczny tak samo jak na desktop |
+| „Empty region.” widoczny | Historyczne | Potwierdzone na mobile w sesji 2026-05-16; zamknięte od 2026-05-17 przez shared TASK-256 placeholder gating |
 
 ---
 
@@ -313,8 +313,8 @@ Zmieniono wariant na `contained`, opublikowano i sprawdzono frontend:
 | Outer element tag | `<section>` | `<section>` | ✅ Identyczny |
 | Outer element klasy CSS | `mx-auto w-full max-w-6xl px-6` | `mx-auto w-full max-w-6xl px-6` | ✅ Identyczne |
 | Inline styles (gradient, border) | `linear-gradient(180deg, #3b82f6, #8b5cf6)`, `border-width: 2px` | Identyczne | ✅ |
-| Heading tag | `<h3 class="text-2xl font-semibold">` | `<h3 class="text-2xl font-semibold">` | ✅ Identyczny |
-| Regiony układ | `flex flex-col gap-4` + `flex flex-col gap-6` | Identyczne | ✅ |
+| Heading tag | Historyczne `<h3 class="text-2xl font-semibold">`; obecny baseline po TASK-256-05-01 używa bezpiecznego `<h2>` | Taki sam obecny baseline | ✅ Identyczny |
+| Regiony układ | Historyczna sesja 2026-05-16 miała `flex flex-col gap-4` + `flex flex-col gap-6`; obecny baseline po TASK-283-01 pozwala już na `stack` / `row` / `grid` | Identyczny owner/runtime | ✅ |
 | data-atrybuty HTML | `data-section-variant`, `data-section-regions`, itd. | Identyczne | ✅ |
 | Contained variant shadow | `shadow-sm` na inner div | `shadow-sm` na inner div | ✅ Identyczny |
 
@@ -322,14 +322,14 @@ Zmieniono wariant na `contained`, opublikowano i sprawdzono frontend:
 
 | Problem | Admin Canvas | Frontend | Priorytet | Status |
 |---------|-------------|---------|-----------|--------|
-| „Empty region." widoczny | ✅ Widoczny (oczekiwane w admin) | ❌ **Widoczny dla użytkownika końcowego** | **P0** | Potwierdzone |
+| „Empty region.” widoczny | ✅ Widoczny (oczekiwane w admin) | Historyczne potwierdzenie sesji 2026-05-16 | Shared TASK-256 | Zamknięte 2026-05-17 |
 | CSS zmienne — `--color-text` | Puste (admin nie ustawia) | `#0f172a` (dark navy, site theme) | Oczekiwane | Potwierdzone |
 | CSS zmienne — `--color-bg` | Puste | `#ffffff` (white, site theme) | Oczekiwane | Potwierdzone |
 | CSS zmienne — `--color-border` | `#1d170f` (dark admin border) | `#e2e8f0` (light gray, site theme) | Oczekiwane | Potwierdzone |
 | Admin theme zmienne | `--admin-base-bg: #000000`, `--admin-base-text: #f0e8d5` | Brak `--admin-*` zmiennych | Oczekiwane | Potwierdzone |
 
 **Wnioski do sekcji 6.2:**
-- **„Empty region."** — potwierdzony P0 problem: placeholder renderuje się na froncie bez żadnego warunkowego ukrycia. Użytkownik końcowy widzi techniczny tekst, który powinien być widoczny tylko w edytorze.
+- **„Empty region.”** — historyczny P0 z sesji 2026-05-16; zamknięty od 2026-05-17 przez TASK-256-03 + TASK-256-05-01 i nie jest już aktywnym ownerem TASK-283.
 - **Kolory CSS zmiennych** — `var(--color-border)` na froncie = `#e2e8f0` (jasny), w admin canvas = `#1d170f` (ciemny). Sekcja z `borderColor: var(--color-border)` będzie wyglądała inaczej w obu środowiskach — to zachowanie oczekiwane, ale potencjalnie dezorientujące podczas edycji.
 - **Brak `mx-auto` dla `containerWidth: "full"` na bleed** — potwierdzone w kodzie (sekcja 4.2.4), niesprawdzone wizualnie na froncie (brak opublikowanej strony z bleed+full variant). Logika kodu jest taka sama po obu stronach, więc zachowanie powinno być identyczne.
 
@@ -339,25 +339,14 @@ Zmieniono wariant na `contained`, opublikowano i sprawdzono frontend:
 
 | Priorytet | Problem | Nakład | Wpływ |
 |-----------|---------|--------|-------|
-| **P0** | B4 — usunąć zduplikowane `gradientAngle` + `overlayOpacity` z Advanced editora | Niski | Czytelność UI |
-| **P0** | B1/B2 — naprawić fallback w `resolveSectionBorderWidth` i `resolveSectionRadius` | Niski | Poprawność normalizacji |
-| **P0** | W10 — walidacja Anchor ID (brak spacji, tylko `[a-zA-Z0-9-_]`) | Niski | Poprawność HTML |
-| **P0** | Sekcja 6.2 — ukryć „Empty region." na froncie (conditional render) | Niski | UX użytkownika końcowego |
-| **P1** | C4 — poziom nagłówka (h1-h6) jako konfigurowalny — zamiast hardcoded `h3` | Niski–Średni | SEO / Dostępność |
-| **P1** | B3 — rozróżnienie lub usunięcie opcji „Wide" (duplikat „Content" w CSS) | Niski | Spójność UI |
-| **P1** | W9 — przycisk Clear dla `gradientFrom`/`gradientTo` | Niski | UX edytora |
-| **P1** | U1 — dodać pole „Label" do edytora Wizard | Niski | Kompletność Wizard |
-| **P1** | Bleed variant — auto-ustawienie `containerWidth: full` przy wyborze wariantu bleed | Niski–Średni | UX / zgodność opisu |
-| **P1** | C1 — min-height / fullscreen sekcja (100vh) | Średni | Layout |
-| **P1** | C5 — układ poziomy regionów (grid/row option) | Wysoki | Layout |
-| **P2** | C3 — kolory i rozmiar tekstu nagłówka sekcji | Średni | Styl |
-| **P2** | U3 — przyjazne nazwy maxWidth z wartościami px | Niski | UX edytora |
-| **P2** | U2 — suwak dla opacity/angle zamiast number input | Niski | UX edytora |
-| **P2** | C2 — obraz/wideo jako tło sekcji | Wysoki | Styl |
-| **P2** | W1 — presety sekcji | Średni | Workflow |
-| **P3** | W6 — responsywny padding (mobile vs desktop) | Wysoki | Responsywność |
-| **P3** | W2 — cienie (box-shadow) dla sekcji | Niski | Styl |
-| **P3** | W4 — niestandardowe nazwy regionów | Średni | UX struktury |
+| **P0** | TASK-326 — domknąć shared truthfulness drift: fallback `borderWidth` / `radius`, dublowanie `gradientAngle` / `overlayOpacity`, oraz obecne semantyki `content` / `wide` / `bleed` | Niski–Średni | Poprawność normalizacji / Truthfulness UI |
+| **P1** | TASK-283-02 — dodać bounded background image/video plus bezpieczny model warstw Section | Wysoki | Styl / Runtime |
+| **P1** | TASK-283-03 — dodać konfigurowalny poziom nagłówka (h1–h6), heading text/alignment controls i brakujące pole `Label` w Wizard | Niski–Średni | SEO / Dostępność / UX |
+| **P1** | TASK-283-04 — dodać presety sekcji, przyjaźniejsze nazwy max-width i truthfulness copy dla wariantów | Średni | Workflow / UX |
+| **P2** | TASK-283-05 — dodać shadow/motion/preview controls oraz lepszy UX dla angle/opacity po domknięciu shared truthfulness i background-media modelu | Średni | Styl / UX |
+| **P2** | TASK-283-06 — dodać responsywne padding tokens i ewentualne bounded density presets | Wysoki | Responsywność |
+| **P2** | TASK-283-07 — dodać custom region labels bez naruszania `region:<id>` slot storage | Średni | UX struktury |
+| **P3** | TASK-283-08 — zsynchronizować końcowe report/docs/changelog/board po domknięciu wszystkich owner leaves | Niski | Evidence hygiene |
 
 ---
 
@@ -375,20 +364,19 @@ Zmieniono wariant na `contained`, opublikowano i sprawdzono frontend:
 
 ### Co wymaga poprawy ❌
 
-- **Bleed variant**: opisany jako full-width ale wymaga 2 dodatkowych ustawień (containerWidth + maxWidth) — dezorientuje
-- **Anchor ID**: brak walidacji formatu — nieprawidłowe id w HTML
-- **Gradient fields**: brak Clear button — trudne do wyczyszczenia
-- **Advanced editor**: duplikuje pola z Visual — zbędny szum
-- **Heading level**: zawsze h3 na froncie (potwierdzono Playwright) — problem SEO/dostępności
-- **Regiony**: zawsze flex-col na froncie (potwierdzono Playwright) — brak opcji layoutu poziomego
-- **„Empty region."**: widoczny na froncie dla użytkownika końcowego — **potwierdzono Playwright** (`display: block`)
-- **Container width „Content" vs „Wide"**: identyczne CSS — brak realnej różnicy
+- **Bleed variant**: obecny opis sugeruje full-width, ale rzeczywisty edge-to-edge wymaga dodatkowo `containerWidth: full` i `maxWidth: none`; shared owner `TASK-326` ma urealnić ten contract.
+- **Shared truthfulness**: obecne Section owner nadal ma błędne fallback defaults i zdublowane liczby surface w Visual/Advanced; to zostało wycięte do TASK-326 zamiast lokalnej łaty w TASK-283.
+- **Gradient fields**: brak Clear button — shared clear-control drift pozostaje poza TASK-283 w ownerach TASK-256.
+- **Heading controls**: baseline hardcoded `<h3>` jest już zamknięty, ale użytkownik nadal nie może wybrać poziomu `h1`–`h6`, alignmentu ani wprowadzić `Label` w Wizard (`TASK-283-03`).
+- **Background media**: Section nadal nie wspiera dekoracyjnego image/video tła ani bounded layer ordering (`TASK-283-02`).
+- **Section presets / responsive spacing / custom region labels**: te widget-local owners pozostają otwarte w `TASK-283-04`, `TASK-283-06`, i `TASK-283-07`.
+- **Container width „Content" vs „Wide"**: identyczne CSS — shared truthfulness drift ownerem jest `TASK-326`, nie lokalny leaf TASK-283.
 
 ### Uwagi do sesji testowej
 
 - Sesja Playwright #3 (Admin UI) była ograniczona błędem 401 spowodowanym limitem sesji per user w CMS — limit zwiększony do 30.
 - Sesja Playwright #3b (Frontend) — zakończona w pełni: strona `Section Widget Test` opublikowana, przetestowana na desktop i mobile (375px).
-- Kluczowy wynik: **wszystkie 3 potencjalne problemy frontendowe z poprzedniej sesji zostały potwierdzone** (Empty region. widoczny, h3 hardcoded, flex-col).
+- Kluczowy wynik historycznej sesji 2026-05-16: potwierdziła ona trzy ważne baseline defects (`Empty region.`, hardcoded `<h3>`, `flex-col`), ale dwa pierwsze zostały już zamknięte w TASK-256, a layout flow został zamknięty w TASK-283-01.
 
 ---
 
@@ -399,6 +387,9 @@ Zmieniono wariant na `contained`, opublikowano i sprawdzono frontend:
   the shared render-context path and stay visible only in editor/admin preview.
 - `TASK-256-05-01`: anchor IDs are now sanitized before persistence/render, and
   the default section heading level moved off the hardcoded `<h3>` path.
+- `TASK-283-01`: Section now owns bounded `minHeight`, `regionFlow`,
+  `regionColumns`, `headingGap`, and optional `regionGap`, so report findings
+  C1, C5, W7, and W8 are no longer active.
 - Shared evidence from this turn:
   `bun run test:vitest -- tests/vitest/widgets/section.test.tsx
   tests/vitest/pageBuilder/visualPanel.test.tsx` passed on 2026-05-17.

@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 182 tasks
+- **To Do:** 183 tasks
 - **In Progress:** 5 tasks
 - **Done:** 1814 tasks
 
@@ -38,6 +38,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-326 | Section Shared Structural Truthfulness Follow-up | High | Large | Reopened shared Section truthfulness drift for fallback defaults, duplicated Visual/Advanced controls, and `content`/`wide`/`bleed` semantics discovered during TASK-283 audit; keep it out of widget-local follow-up leaves |
 | TASK-292 | Toggle Block Widget Playwright Product Followups | High | Very Large | Toggle Block-only follow-up family for `REPORT_TOGGLE_BLOCK_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-292-01 | Toggle Block Variant Visual Hierarchy, Contrast, and Pane Styling | High | Large | Add Toggle Block-owned cards distinction, active contrast, and bounded pane style controls after TASK-256 shared style semantics |
 | TASK-292-02 | Toggle Block Motion and Pane Transition Contract | Medium | Medium | Add bounded fade/slide/no-motion options without weakening TASK-256 interactive runtime semantics |
@@ -226,7 +227,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-283 | Section Widget Playwright Product Followups | High | Very Large | In progress: planning drift is corrected and TASK-283-01 is closed on the dedicated worktree; background media, heading controls, presets, responsive spacing, and closure leaves remain |
+| TASK-283 | Section Widget Playwright Product Followups | High | Very Large | In progress: TASK-283-01 is closed; widget-local work continues with background media, heading controls, presets, shadows/motion, responsive spacing, custom region labels, and closure, while reopened shared Section truthfulness drift is split to TASK-326 |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |

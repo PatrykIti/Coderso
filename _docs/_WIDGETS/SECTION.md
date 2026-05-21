@@ -13,7 +13,8 @@ repeatable internal regions.
 
 - `default`: balanced wrapper width and region spacing
 - `contained`: tighter framed section panel
-- `bleed`: full-width section presentation
+- `bleed`: expanded section presentation; true edge-to-edge still requires
+  `layout.containerWidth = "full"` and `layout.maxWidth = "none"`
 
 ## Slots
 

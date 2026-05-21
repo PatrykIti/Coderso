@@ -55,9 +55,9 @@ baseline repair.
 | Gradient start/end lack Clear buttons | `REPORT_SECTION_WIDGET.md:73,140,348,380` | TASK-256-02, TASK-256-05-01 | Shared clear-control and token behavior. |
 | CSS variable color picker overwrites token values | `REPORT_SECTION_WIDGET.md:85,142` | TASK-256-02, TASK-256-05-01 | Shared token-aware picker contract. |
 | `resolveSectionBorderWidth` and `resolveSectionRadius` fallback drift | `REPORT_SECTION_WIDGET.md:81-82,343` | TASK-256-05-01 | Structural normalizer/default repair for current fields. |
-| Duplicate `gradientAngle` and `overlayOpacity` in Advanced | `REPORT_SECTION_WIDGET.md:84,157-158,342,381` | TASK-256-05-01 | Current editor ownership cleanup, not new product expansion. |
-| `content` and `wide` render identical CSS | `REPORT_SECTION_WIDGET.md:83,135,214,347,385` | TASK-256-05-01 | Existing control truthfulness must be repaired before new width presets. |
-| Bleed variant copy/truthfulness baseline | `REPORT_SECTION_WIDGET.md:171-174,334,350,378` | TASK-256-05-01 | Existing variant promise must be made truthful before TASK-283 adds guided presets. |
+| Duplicate `gradientAngle` and `overlayOpacity` in Advanced | `REPORT_SECTION_WIDGET.md:84,157-158,342,381` | TASK-326 | Reopened shared mode-ownership drift. Keep it out of widget-local TASK-283 leaves. |
+| `content` and `wide` render identical CSS | `REPORT_SECTION_WIDGET.md:83,135,214,347,385` | TASK-326 | Reopened shared truthfulness drift for the current control semantics before TASK-283 adds widget-local presets or copy. |
+| Bleed variant copy/truthfulness baseline | `REPORT_SECTION_WIDGET.md:171-174,334,350,378` | TASK-326 | Reopened shared truthfulness drift for the current control promise before TASK-283 adds guided presets. |
 | Hardcoded heading hierarchy baseline | `REPORT_SECTION_WIDGET.md:58,197,211,289,346,382` | TASK-256-05-01 | Baseline semantic repair is already closed in the shared structural leaf. TASK-283 owns only bounded heading-level product controls on top of the safe default `h2` path. |
 
 If a TASK-283 implementation leaf discovers that a desired Section feature
@@ -97,6 +97,7 @@ this family.
 | Report finding | Decision | Reason |
 |---|---|---|
 | Existing section/div element switch | No TASK-283 task | The report confirms it works. Keep covered by existing Section tests unless future leaves change semantics. |
+| Reopened current-control truthfulness drift (`borderWidth`/`radius` fallbacks, duplicated Visual/Advanced surface numbers, and `content`/`wide`/`bleed` semantics) | Shared TASK-326 | This is no longer treated as already-fixed TASK-256 work and must not be buried inside widget-local TASK-283 leaves. |
 | Region add/remove min/max behavior | No TASK-283 task | The report confirms min 1, max 8, and disabled add state work. |
 | Raw payload snapshot | No TASK-283 task | The report confirms normalized JSON output works. |
 | Admin/global Layout and Visibility panels in Advanced | No TASK-283 task | They are global editor wrapper controls, not Section data fields. |
