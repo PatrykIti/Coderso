@@ -172,7 +172,8 @@ must preserve these boundaries:
   internal admin-only.
 - Auth/RBAC/CSRF: unchanged page/template/widget write permissions and CSRF
   protection for admin writes; preview resolve must require an authenticated
-  admin session and the same page/template preview access model.
+  admin session and the shared `commerce:read` seam used by Product Compare
+  preview-safe product hydration.
 - Rate-limit bucket: if admin preview refresh adds a route, use an internal
   admin read/preview bucket and keep limits bounded by source limit/productIds.
 - Reject-unknown validation: every new Product Compare field must be declared

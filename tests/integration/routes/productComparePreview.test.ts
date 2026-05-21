@@ -138,5 +138,10 @@ test("product compare preview route maps known commerce query errors", async () 
         },
       },
     })
-  ).rejects.toBeInstanceOf(ApiError);
+  ).rejects.toMatchObject({
+    name: "ApiError",
+    code: "commerce_query_invalid_filters",
+    message: "Invalid Product Compare preview payload",
+    status: 400,
+  });
 });
