@@ -6,7 +6,7 @@
 **Category:** Widgets + Shared Content List + Runtime Resolver
 **Estimated Effort:** Large
 **Dependencies:** TASK-262, TASK-277
-**Status:** To Do
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -125,9 +125,30 @@ No API routes are added.
 - `_docs/_WIDGETS/CONTENT_LIST.md`
 - `_docs/PLAYWRIGHT/REPORT_CONTENT_LIST_WIDGET.md`
 - `_docs/_TASKS/TASK-323_Content_List_Load_More_and_View_All_Pagination_Truthfulness_Residuals.md`
+- `_docs/_TASKS/README.md`
+- `_docs/_CHANGELOG/885-2026-05-21-task-323-content-list-legacy-pagination-truthfulness.md`
+- `_docs/_CHANGELOG/README.md`
 
 ## Acceptance Criteria
 
 - Shared legacy Content List `load-more` grows cumulatively across page hops.
 - Shared legacy Content List `view-all` ignores stale `cl.<block>.page` params.
 - Public SSR and unit coverage prove the corrected shared semantics.
+
+## Validation Notes (2026-05-21)
+
+- `bun test tests/unit/content/contentListResolver.test.ts` - passed (`7` tests)
+- `bun --cwd core lint` - passed
+- `bun --cwd core lint:types` - passed
+- `bun run precommit` - passed
+- `bun run gates:coderso` - latest same-turn run passed after the resolver change
+- `bun run scan:security:strict` - latest same-turn attempt still failed
+  outside TASK-323 scope because the local Semgrep trust store had no CA
+  anchors and `bun audit` could not reach the advisory endpoint; Trivy and
+  Gitleaks sub-scanners were clean in the same run
+
+## Completion Notes
+
+- 2026-05-21: shared legacy `content-list` pagination now treats `load-more`
+  cumulatively and forces `view-all` to ignore stale block page params, closing
+  the residual that remained after `TASK-262`.

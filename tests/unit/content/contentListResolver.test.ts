@@ -231,3 +231,169 @@ test("resolveContentListRuntimeData omits undefined listing runtime keys", async
   expect(Object.prototype.hasOwnProperty.call(runtime ?? {}, "nextPageHref")).toBe(false);
   expect(Object.prototype.hasOwnProperty.call(result, "rawRows")).toBe(false);
 });
+
+test("resolveContentListRuntimeData grows legacy load-more cumulatively across page hops", async () => {
+  const dataset = [
+    {
+      ...createEntry({}),
+      id: "entry-1",
+      slug: "entry-1",
+      title: "Entry 1",
+      publishedAt: new Date("2026-02-23T10:00:00.000Z"),
+      updatedAt: new Date("2026-02-23T10:00:00.000Z"),
+    },
+    {
+      ...createEntry({}),
+      id: "entry-2",
+      slug: "entry-2",
+      title: "Entry 2",
+      publishedAt: new Date("2026-02-22T10:00:00.000Z"),
+      updatedAt: new Date("2026-02-22T10:00:00.000Z"),
+    },
+    {
+      ...createEntry({}),
+      id: "entry-3",
+      slug: "entry-3",
+      title: "Entry 3",
+      publishedAt: new Date("2026-02-21T10:00:00.000Z"),
+      updatedAt: new Date("2026-02-21T10:00:00.000Z"),
+    },
+  ];
+
+  const result = await resolveContentListRuntimeData(
+    {
+      source: {
+        contentTypeId: "type-1",
+        statusScope: "published",
+        limit: 3,
+        sort: "published-desc",
+      },
+      pagination: {
+        mode: "load-more",
+        pageSize: 1,
+      },
+    },
+    {
+      preview: true,
+      contentRoutes: [
+        {
+          type: "articles",
+          listPath: "/articles",
+          detailPath: "/articles/:slug",
+          enabled: true,
+        },
+      ],
+      runtimeSearchParams: new URLSearchParams("cl.content-list-1.page=2"),
+      blockId: "content-list-1",
+    },
+    {
+      getContentTypeById: async () => ({
+        id: "type-1",
+        slug: "articles",
+        name: "Articles",
+        status: "published",
+        schema: {
+          type: "object",
+          additionalProperties: false,
+          properties: {},
+        },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }),
+      listEntriesByTypeId: async () => dataset,
+    }
+  );
+
+  expect(result.items.map((item) => item.id)).toEqual(["entry-1", "entry-2"]);
+  expect(result.runtime).toEqual(
+    expect.objectContaining({
+      page: 2,
+      pageSize: 1,
+      totalPages: 3,
+      nextPageHref: "?cl.content-list-1.page=3",
+    })
+  );
+});
+
+test("resolveContentListRuntimeData ignores stale page params for legacy view-all", async () => {
+  const dataset = [
+    {
+      ...createEntry({}),
+      id: "entry-1",
+      slug: "entry-1",
+      title: "Entry 1",
+      publishedAt: new Date("2026-02-23T10:00:00.000Z"),
+      updatedAt: new Date("2026-02-23T10:00:00.000Z"),
+    },
+    {
+      ...createEntry({}),
+      id: "entry-2",
+      slug: "entry-2",
+      title: "Entry 2",
+      publishedAt: new Date("2026-02-22T10:00:00.000Z"),
+      updatedAt: new Date("2026-02-22T10:00:00.000Z"),
+    },
+    {
+      ...createEntry({}),
+      id: "entry-3",
+      slug: "entry-3",
+      title: "Entry 3",
+      publishedAt: new Date("2026-02-21T10:00:00.000Z"),
+      updatedAt: new Date("2026-02-21T10:00:00.000Z"),
+    },
+  ];
+
+  const result = await resolveContentListRuntimeData(
+    {
+      source: {
+        contentTypeId: "type-1",
+        statusScope: "published",
+        limit: 3,
+        sort: "published-desc",
+      },
+      pagination: {
+        mode: "view-all",
+        pageSize: 1,
+      },
+    },
+    {
+      preview: true,
+      contentRoutes: [
+        {
+          type: "articles",
+          listPath: "/articles",
+          detailPath: "/articles/:slug",
+          enabled: true,
+        },
+      ],
+      runtimeSearchParams: new URLSearchParams("cl.content-list-1.page=4"),
+      blockId: "content-list-1",
+    },
+    {
+      getContentTypeById: async () => ({
+        id: "type-1",
+        slug: "articles",
+        name: "Articles",
+        status: "published",
+        schema: {
+          type: "object",
+          additionalProperties: false,
+          properties: {},
+        },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }),
+      listEntriesByTypeId: async () => dataset,
+    }
+  );
+
+  expect(result.items.map((item) => item.id)).toEqual(["entry-1"]);
+  expect(result.runtime).toEqual(
+    expect.objectContaining({
+      page: 1,
+      pageSize: 1,
+      totalPages: 3,
+      nextPageHref: "?cl.content-list-1.page=2",
+    })
+  );
+});

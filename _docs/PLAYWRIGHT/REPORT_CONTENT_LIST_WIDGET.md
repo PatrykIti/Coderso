@@ -324,7 +324,7 @@ _Raport ukończony po pełnym cyklu testów: analiza kodu + testy Admin UI + tes
 |---|---|---|---|
 | B-01 | fixed | `TASK-262-03` | widget-owned pagination contract landed in `contentList.tsx`, `contentListResolver.ts`, and Visual controls; targeted unit + Vitest navigation assertions are green |
 | B-02 | fixed | `TASK-262-02` | Content List now renders optional section title/description with accessible section labeling |
-| B-03 | fixed | `TASK-262-03` | `view-all` / `load-more` / paged navigation contract landed with safe href handling and runtime page metadata |
+| B-03 | fixed | `TASK-262-03` + `TASK-323` | initial navigation contract landed in `TASK-262-03`; the later legacy residual was closed by `TASK-323`, so `load-more` is cumulative and `view-all` ignores stale block page params |
 | B-04 | fixed | `TASK-302` | misleading `Columns` control is removed for non-card variants in both Content List and Posts Feed editor surfaces |
 | B-05 | fixed | `TASK-302` | image presentation is no longer hardcoded to a single `h-40` path; bounded `imageAspect` landed |
 | B-06 | fixed | `TASK-262-04` | tags can render as bounded badges instead of being forced into the meta line |

@@ -152,6 +152,10 @@ Technical-only surface:
 - Preview output (`preview=true`) can respect broader status scope for legacy content.
 - Detail links use `site.contentRoutes` with safe fallback patterns.
 - View-all links use the configured safe href or the resolved list path when available.
+- Legacy `load-more` grows cumulatively from the first slice through the
+  requested page instead of replacing the list with page-local results.
+- Legacy `view-all` ignores stale `cl.<blockId>.page` params and always starts
+  from the first bounded slice.
 - CTA output is truthful: if `showCta=true` and an item has no href, a disabled label is rendered instead of silently disappearing.
 - Tags can render in the meta line, as bounded badges, or stay hidden.
 - Empty-state copy is source-aware:

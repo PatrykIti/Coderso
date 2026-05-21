@@ -69,6 +69,7 @@ type ContentListListingRuntimeDeps = {
   executeListing: typeof executeListingQuery;
   getContentTypeById: typeof getContentType;
   getContentTypeBySlug: typeof getContentTypeBySlug;
+  listEntriesByTypeId: typeof listEntries;
 };
 
 const defaultListingRuntimeDeps: ContentListListingRuntimeDeps = {
@@ -77,6 +78,7 @@ const defaultListingRuntimeDeps: ContentListListingRuntimeDeps = {
   executeListing: executeListingQuery,
   getContentTypeById: getContentType,
   getContentTypeBySlug,
+  listEntriesByTypeId: listEntries,
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -827,7 +829,12 @@ export async function resolveContentListRuntimeData(
     };
   }
 
-  const contentType = await getContentType(contentTypeId);
+  const runtimeDeps: ContentListListingRuntimeDeps = {
+    ...defaultListingRuntimeDeps,
+    ...deps,
+  };
+
+  const contentType = await runtimeDeps.getContentTypeById(contentTypeId);
   if (!contentType) {
     return {
       items: [],
@@ -839,7 +846,7 @@ export async function resolveContentListRuntimeData(
     };
   }
 
-  const entries = await listEntries(contentTypeId);
+  const entries = await runtimeDeps.listEntriesByTypeId(contentTypeId);
   const filtered = applyContentListRuntimeFilters(entries, normalized, {
     preview: options.preview,
   });
@@ -849,12 +856,16 @@ export async function resolveContentListRuntimeData(
   const paginationMode: ContentListPaginationMode = pagination.mode ?? "none";
   const pageKey = resolveLegacyContentListPageKey(options.blockId);
   const currentPage =
-    paginationMode === "none"
+    paginationMode === "none" || paginationMode === "view-all"
       ? 1
       : resolveContentListRequestedPage(options.runtimeSearchParams, pageKey);
   const effectivePageSize = paginationMode === "none" ? limit : pageSize;
-  const offset = (currentPage - 1) * effectivePageSize;
-  const sliced = sorted.slice(offset, offset + effectivePageSize);
+  const sliceStart = paginationMode === "paged" ? (currentPage - 1) * effectivePageSize : 0;
+  const sliceEnd =
+    paginationMode === "load-more"
+      ? currentPage * effectivePageSize
+      : sliceStart + effectivePageSize;
+  const sliced = sorted.slice(sliceStart, sliceEnd);
   const detailPathPattern = resolveDetailPathPattern(options.contentRoutes, contentType.slug);
   const listPath =
     options.contentRoutes.find((entry) => entry.type === contentType.slug && entry.enabled)

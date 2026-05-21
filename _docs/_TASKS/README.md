@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 198 tasks
+- **To Do:** 197 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1793 tasks
+- **Done:** 1794 tasks
 
 ---
 
@@ -38,7 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-323 | Content List Load More and View All Pagination Truthfulness Residuals | High | Large | Shared follow-up for legacy `content-list` load-more cumulative slicing and stale `view-all` page-param suppression rediscovered during TASK-277 |
 | TASK-322 | Admin Session and CSRF Expiry Resilience for Long-Lived Editors | High | Very Large | Shared platform follow-up for expired-session, token-refresh, and unsaved-change recovery gaps surfaced by the TASK-277 Posts Feed closeout |
 | TASK-322-01 | Admin API Client Session Classification and Bounded CSRF Retry | High | Large | Shared client owner for distinguishing recoverable CSRF expiry from full session expiry in admin API requests |
 | TASK-322-02 | Page Editor Session Expiry Feedback and Dirty-State Preservation | High | Large | Page editor shell follow-up for expired-session save/publish feedback that keeps unsaved work explicit and recoverable |
@@ -252,6 +251,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-323 | Content List Load More and View All Pagination Truthfulness Residuals | High | Large | Done (2026-05-21): legacy `content-list` now treats `load-more` cumulatively and ignores stale block page params for `view-all` |
 | TASK-320 | Content List Shared Date and CTA Accessibility Residuals | High | Large | Done (2026-05-21): shared `ContentListBlock` now emits semantic date markup and contextual CTA accessible names for both `content-list` and `posts-feed` |
 | TASK-313 | Shared Commerce Widget Money Minor-Unit Parity | High | Medium | Done (2026-05-19): shared `formatCommerceMoney()` now follows the commerce admin minor-unit contract and Product Gallery / Product Compare / Product Table expectations were updated together. |
 | TASK-280 | Product Gallery Widget Playwright Product Followups | High | Very Large | Done (2026-05-19): Product Gallery now ships media, safe links, bounded preview refresh, manual curation, view-all navigation, and closure docs aligned with the shared TASK-313 split. |
