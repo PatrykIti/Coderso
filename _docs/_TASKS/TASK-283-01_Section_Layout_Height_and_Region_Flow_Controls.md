@@ -25,8 +25,7 @@ remain TASK-256-05-01.
 In scope:
 
 - `layout.minHeight` with bounded presets such as `none`, `screen`, `hero`,
-  `compact`, and `custom-var` only if the existing design-token system has a
-  safe token owner;
+  and `compact`;
 - `layout.regionFlow` with bounded values such as `stack`, `row`, and `grid`;
 - `layout.regionColumns` only when `regionFlow="grid"`, clamped to the current
   slot max of 8 and responsive-safe defaults;

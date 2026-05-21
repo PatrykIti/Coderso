@@ -6,7 +6,7 @@
 **Category:** Widgets + Section + Layout + Admin UI + Runtime Render + Playwright QA
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-252, TASK-256, TASK-256-02, TASK-256-03, TASK-256-05-01, TASK-256-08
-**Status:** To Do
+**Status:** In Progress (2026-05-21)
 
 ---
 
@@ -17,7 +17,8 @@ Create the Section-only follow-up family for
 
 This family owns product, editor, and runtime improvements that apply only to
 the `section` layout widget. Shared widget-contract repairs stay in TASK-256,
-especially the structural repair leaf `TASK-256-05-01`.
+especially the structural repair leaf `TASK-256-05-01`, which is already
+landed in the current branch and is a prerequisite rather than open scope here.
 
 Do not use TASK-283 to duplicate shared fixes for clear/none token semantics,
 editor-only placeholder leakage, baseline anchor safety, duplicated Advanced
@@ -57,8 +58,7 @@ baseline repair.
 | Duplicate `gradientAngle` and `overlayOpacity` in Advanced | `REPORT_SECTION_WIDGET.md:84,157-158,342,381` | TASK-256-05-01 | Current editor ownership cleanup, not new product expansion. |
 | `content` and `wide` render identical CSS | `REPORT_SECTION_WIDGET.md:83,135,214,347,385` | TASK-256-05-01 | Existing control truthfulness must be repaired before new width presets. |
 | Bleed variant copy/truthfulness baseline | `REPORT_SECTION_WIDGET.md:171-174,334,350,378` | TASK-256-05-01 | Existing variant promise must be made truthful before TASK-283 adds guided presets. |
-| Hardcoded heading hierarchy baseline | `REPORT_SECTION_WIDGET.md:58,197,211,289,346,382` | TASK-256-05-01 | Baseline semantic repair is already classified in the shared structural leaf. TASK-283 may add richer heading product controls after that baseline lands. |
-| Current color/text field format validation | `REPORT_SECTION_WIDGET.md:97` | TASK-256-02, TASK-256-05-01 | Shared color/token validation and current text-field validation belong with baseline control safety. |
+| Hardcoded heading hierarchy baseline | `REPORT_SECTION_WIDGET.md:58,197,211,289,346,382` | TASK-256-05-01 | Baseline semantic repair is already closed in the shared structural leaf. TASK-283 owns only bounded heading-level product controls on top of the safe default `h2` path. |
 
 If a TASK-283 implementation leaf discovers that a desired Section feature
 requires a shared helper, generic editor control, or cross-widget runtime
@@ -76,7 +76,8 @@ this family.
 | C2 image/video background support | TASK-283-02 | Section-owned media background model using existing safe media patterns. |
 | Future background media source/URL validation from U7 | TASK-283-02 | Applies only if TASK-283-02 adds library or external media sources; current Section data has no URL field. |
 | W11 layer z-index controls | TASK-283-02 | Bounded overlay/content layering only for Section surface layers. |
-| C3 heading text color and size controls | TASK-283-03 | Product typography controls after TASK-256 resolves heading semantic baseline. |
+| C3 heading text color and size controls | TASK-283-03 | Product typography controls on top of the already-landed safe default heading baseline. |
+| C4 heading level control | TASK-283-03 | Add bounded `h1`-`h6` product control without re-opening the already-fixed hardcoded baseline defect. |
 | W5 heading alignment | TASK-283-03 | Section heading layout/typography. |
 | U1 Wizard missing label | TASK-283-03 | Section Wizard completeness. |
 | W1 section presets | TASK-283-04 | Section-only preset workflow. |
@@ -100,6 +101,7 @@ this family.
 | Raw payload snapshot | No TASK-283 task | The report confirms normalized JSON output works. |
 | Admin/global Layout and Visibility panels in Advanced | No TASK-283 task | They are global editor wrapper controls, not Section data fields. |
 | Expected admin/frontend theme variable differences | No TASK-283 task | `REPORT_SECTION_WIDGET.md:326-333` confirms CSS variables resolve differently in admin and public themes as expected; the picker overwrite issue remains TASK-256. |
+| Current freeform color/token text input validation from U7 | No TASK-283 task | Section text inputs intentionally accept design tokens and CSS variables through the shared clearable-field contract. Do not add stricter format validation that would reject valid token strings; only future media URL validation belongs to TASK-283-02 when new source fields exist. |
 | Current URL validation part of U7 | No TASK-283 task until TASK-283-02 | Current `SectionData` has no URL field. TASK-283-02 must add media source validation if it introduces media URLs or asset references. |
 | Confirmed basic render, section/div switch, max-width, padding, border, overlay, gradient, and mobile no-overflow behavior | No TASK-283 task | The report marks these as working; keep existing tests unless a future TASK-283 leaf changes the related contract. |
 | Prior 401 session-limit note | No TASK-283 task | `REPORT_SECTION_WIDGET.md:227,389` records a Playwright environment/session-limit setup issue that was resolved by raising the active-session limit; the current Section widget session completed and no widget implementation task is required. |
@@ -117,15 +119,17 @@ this family.
 
 ## Implementation Order
 
-1. Rebase over TASK-256-05-01 first. TASK-283 leaves must build on the final
-   placeholder, anchor, fallback, Advanced-ownership, heading-baseline, and
-   width-truthfulness repairs instead of duplicating them.
+1. Build on the already-landed TASK-256-05-01 baseline. TASK-283 leaves must
+   consume the final placeholder, anchor, fallback, Advanced-ownership,
+   heading-baseline, and width-truthfulness repairs instead of duplicating
+   them.
 2. Complete TASK-283-01 first because height, region flow, and gap tokens define
    the layout model used by responsive and structure leaves.
 3. Complete TASK-283-02 after the layout surface is stable, using existing media
    safety patterns and avoiding raw CSS or arbitrary z-index payloads.
-4. Complete TASK-283-03 after TASK-256 resolves the heading semantic baseline so
-   typography controls do not mask an accessibility defect.
+4. Complete TASK-283-03 after TASK-283-01/02 settle the core layout/surface
+   model, then extend the already-landed safe default heading baseline with
+   product-owned level and typography controls.
 5. Complete TASK-283-04 after width truthfulness and heading basics are stable,
    then add safer presets and variant guidance.
 6. Complete TASK-283-05 after surface/background fields settle so preview,

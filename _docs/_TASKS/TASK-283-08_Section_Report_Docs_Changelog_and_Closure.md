@@ -56,7 +56,7 @@ landed.
 | C1 | Fixed by TASK-283-01 | tests + commit |
 | W10 | TASK-256 | shared structural evidence |
 | Existing section/div switch | No action | report marked current behavior OK |
-| C2 video background | Deferred by TASK-283-02 | owner/reason if safe primitive unavailable |
+| C2 background media | Fixed by TASK-283-02 | tests + report note |
 ```
 
 Data flow:

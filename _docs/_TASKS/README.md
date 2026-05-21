@@ -28,8 +28,8 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 184 tasks
-- **In Progress:** 4 tasks
+- **To Do:** 183 tasks
+- **In Progress:** 5 tasks
 - **Done:** 1813 tasks
 
 ---
@@ -108,13 +108,12 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-285-04 | Split Layout Advanced Diagnostics and Mode Ownership | Medium | Medium | Make Advanced useful through Split Layout responsive diagnostics after shared mode rules land |
 | TASK-285-05 | Split Layout Gap Labels and Spacing Context | Low | Medium | Add Split Layout gap scale labels/help after TASK-256 resolves none/zero token semantics |
 | TASK-285-06 | Split Layout Report Docs and Closure | Medium | Medium | Refresh Split Layout report/docs/changelog/board and final validation evidence |
-| TASK-283 | Section Widget Playwright Product Followups | High | Very Large | Section-only follow-up family for `REPORT_SECTION_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-283-01 | Section Layout Height and Region Flow Controls | High | Very Large | Add bounded min-height/fullscreen, region row/grid flow, heading gap, and region gap controls after TASK-256 structural repairs |
 | TASK-283-02 | Section Background Media and Layering Model | High | Very Large | Add safe decorative background media and bounded overlay/content layer controls without generic media or token-picker scope |
-| TASK-283-03 | Section Heading Typography Alignment and Wizard UX | High | Large | Add Section-owned heading typography/alignment and Wizard label after TASK-256 heading baseline repair |
+| TASK-283-03 | Section Heading Typography Alignment and Wizard UX | High | Large | Add Section-owned heading level, typography/alignment, and Wizard label on top of the safe default heading baseline |
 | TASK-283-04 | Section Presets Variant Guidance and Width Copy | Medium | Large | Add local Section presets, friendlier width labels, variant UI consistency, and gradient/background guidance |
 | TASK-283-05 | Section Surface Shadow Motion and Preview Controls | Medium | Large | Add bounded shadows, reduced-motion-safe effects, sliders, and gradient/overlay preview after TASK-256 control cleanup |
-| TASK-283-06 | Section Responsive Spacing and Mobile Density | Medium | Large | Add mobile/desktop spacing overrides and density presets through bounded Section layout tokens |
+| TASK-283-06 | Section Responsive Spacing and Mobile Density | Medium | Large | Add mobile/desktop spacing overrides and optional padding-only density presets through bounded Section layout tokens |
 | TASK-283-07 | Section Custom Region Labels and Structure UX | Medium | Large | Add editor-only custom region labels while preserving `region:<id>` slot storage and public placeholder boundaries |
 | TASK-283-08 | Section Report Docs Changelog and Closure | Medium | Medium | Refresh Section report/docs/changelog/board and final validation evidence |
 | TASK-284 | Spacer Widget Playwright Product Followups | High | Very Large | Spacer-only follow-up family for `REPORT_SPACER_WIDGET.md`, excluding TASK-256 shared-contract scope |
@@ -228,6 +227,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-283 | Section Widget Playwright Product Followups | High | Very Large | In progress: task-family drift audit is being corrected on the dedicated worktree so C4 ownership, media scope, responsive spacing boundaries, and end-to-end Section rollout stay aligned before implementation leaves land |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |

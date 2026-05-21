@@ -24,8 +24,9 @@ In scope:
 
 - bounded `style.shadow` tokens beyond the current `contained` hardcoded
   `shadow-sm`;
-- bounded `style.motion` or `style.reveal` tokens that respect reduced-motion
-  preferences and do not require unsafe inline scripts;
+- bounded `style.motion` tokens such as `none`, `fade`, and `slide-up` that
+  respect reduced-motion preferences and do not require scroll observers or
+  unsafe inline scripts;
 - slider/stepper style controls for `gradientAngle` and `overlayOpacity` once
   TASK-256 removes duplicate Advanced ownership;
 - a small editor preview swatch for gradient/overlay composition;
@@ -34,8 +35,7 @@ In scope:
 Out of scope:
 
 - cross-widget animation framework;
-- scroll observers with global lifecycle complexity unless an existing shared
-  runtime-safe pattern already exists;
+- scroll observers, parallax, or viewport-triggered runtime effects;
 - TASK-256 gradient Clear and token-aware color picker fixes.
 
 ## Source Findings
@@ -55,8 +55,8 @@ Out of scope:
 - [ ] Extend `SectionData.style` with bounded shadow and motion/effect tokens.
 - [ ] Add resolver helpers that default to current output for legacy payloads.
 - [ ] Render shadows through class maps and motion through bounded classes or
-  inert data markers owned by `section.tsx`; defer scroll-observer effects to
-  TASK-283-08 unless an existing safe runtime owner is identified first.
+  inert data markers owned by `section.tsx`; keep W3 explicitly CSS-only and do
+  not introduce observer-backed behavior in this leaf.
 - [ ] Replace or augment number inputs for gradient angle and overlay opacity
   with slider/stepper controls in the owning editor section.
 - [ ] Add a preview swatch that derives from normalized Section data rather than
@@ -116,8 +116,9 @@ Error handling:
 - Unknown shadow/motion values normalize to current defaults.
 - Motion must use `motion-safe:*` classes or become `none` when reduced-motion
   support cannot be proven in tests.
-- Scroll-triggered effects are deferred unless this leaf identifies and tests an
-  existing shared observer/runtime owner.
+- Scroll-triggered effects are intentionally out of scope here; if the closure
+  report mentions them, record an explicit no-action/rejection rather than
+  widening the runtime contract during implementation.
 - Preview controls must not persist preview-only keys.
 
 ## Security Contract
@@ -153,6 +154,7 @@ No API routes are added.
 ## Acceptance Criteria
 
 - Section shadows and motion effects are bounded and backward compatible.
+- Motion remains CSS-only, reduced-motion safe, and free of viewport observers.
 - Angle/opacity controls are easier to operate without duplicating Advanced
   ownership.
 - Gradient/overlay preview is derived from normalized data and writes no extra
