@@ -29,8 +29,8 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 - **To Do:** 174 tasks
-- **In Progress:** 4 tasks
-- **Done:** 1823 tasks
+- **In Progress:** 14 tasks
+- **Done:** 1813 tasks
 
 ---
 
@@ -218,6 +218,16 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-282 | Rich Text Section Widget Playwright Product Followups | High | Very Large | In progress (2026-05-21): implementation/test passes are landed, but final closure still needs fresh Playwright/admin/frontend evidence plus a complete strict security scan in a provisioned environment. |
+| TASK-282-07 | Rich Text Report Docs Changelog and Closure | Medium | Medium | In progress (2026-05-21): closure docs are reopened until the missing Playwright/admin/frontend refresh and full strict security scan can be recorded. |
+| TASK-282-09 | Rich Text Text Color Clear Adoption | Medium | Medium | In progress (2026-05-21): widget-local clear behavior is implemented; final family closure is waiting on the remaining environment-level evidence. |
+| TASK-282-08 | Rich Text Attachments and Safe Embed Policy | High | Large | In progress (2026-05-21): attachment cards and safe embed link cards are implemented; final family closure is waiting on the remaining environment-level evidence. |
+| TASK-282-06 | Rich Text Editor Mode IA and Reader Guidance | Medium | Medium | In progress (2026-05-21): mode ownership, dropcap guidance, and Advanced simplification are implemented; final family closure is waiting on the remaining environment-level evidence. |
+| TASK-282-05 | Rich Text Inline Media and Safe Content Model | High | Very Large | In progress (2026-05-21): safe image/media authoring and fail-closed coverage are implemented; final family closure is waiting on the remaining environment-level evidence. |
+| TASK-282-04 | Rich Text Article Width Title and TOC Accessibility | High | Large | In progress (2026-05-21): article width, title heading level, section labeling, and TOC focus treatment are implemented; final family closure is waiting on the remaining environment-level evidence. |
+| TASK-282-03 | Rich Text Structured Blocks Rich Content and Scale UX | High | Large | In progress (2026-05-21): rich blocks, confirm/undo flows, and paging coverage are implemented; final family closure is waiting on the remaining environment-level evidence. |
+| TASK-282-02 | Rich Text WYSIWYG HTML Body and Sanitizer Feedback | High | Very Large | In progress (2026-05-21): shared rich-text body authoring and sanitizer diagnostics are implemented; final family closure is waiting on the remaining environment-level evidence. |
+| TASK-282-01 | Rich Text Output Mode and Wizard Ownership | High | Large | In progress (2026-05-21): truthful output-source ownership is implemented; final family closure is waiting on the remaining environment-level evidence. |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
@@ -228,16 +238,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-282 | Rich Text Section Widget Playwright Product Followups | High | Very Large | Done (2026-05-21): Rich Text Section now ships truthful output-mode ownership, safe rich-text body editing, structured text/media/embed blocks, scoped runtime accessibility fixes, and synchronized closure docs. |
-| TASK-282-07 | Rich Text Report Docs Changelog and Closure | Medium | Medium | Done (2026-05-21): report/docs/changelog/task board closure now matches the shipped Rich Text Section runtime/editor contract and focused validation evidence. |
-| TASK-282-09 | Rich Text Text Color Clear Adoption | Medium | Medium | Done (2026-05-21): Rich Text Section now exposes a real `textColor` clear action that returns the widget to inherited text color behavior. |
-| TASK-282-08 | Rich Text Attachments and Safe Embed Policy | High | Large | Done (2026-05-21): structured blocks now support bounded attachment cards plus safe embed link cards without allowing raw iframe payloads. |
-| TASK-282-06 | Rich Text Editor Mode IA and Reader Guidance | Medium | Medium | Done (2026-05-21): Wizard/Visual/Advanced responsibilities, dropcap guidance, and technical-mode duplication are now explicit and lighter-weight. |
-| TASK-282-05 | Rich Text Inline Media and Safe Content Model | High | Very Large | Done (2026-05-21): structured content blocks now support safe image/media picking, bounded captions/links, and widget-local media diagnostics. |
-| TASK-282-04 | Rich Text Article Width Title and TOC Accessibility | High | Large | Done (2026-05-21): article width now follows `maxWidth`, title heading level is configurable, sections are labelled, and TOC links have visible focus treatment. |
-| TASK-282-03 | Rich Text Structured Blocks Rich Content and Scale UX | High | Large | Done (2026-05-21): blocks now support rich text, heading levels, confirm-and-undo destructive actions, and a navigator that scales to the 20-block cap. |
-| TASK-282-02 | Rich Text WYSIWYG HTML Body and Sanitizer Feedback | High | Very Large | Done (2026-05-21): body authoring now uses the shared rich-text adapter and surfaces sanitizer diagnostics for removed tags, attributes, and rewritten links. |
-| TASK-282-01 | Rich Text Output Mode and Wizard Ownership | High | Large | Done (2026-05-21): Wizard no longer rewrites `outputMode`, and Visual/Advanced now state exactly which source will render and why. |
 | TASK-325 | Grid Columns Shared Structural Truthfulness Follow-up | High | Large | Done (2026-05-21): Grid Columns shared truthfulness is closed with asymmetric preset state, current span totals, CSS-token color coverage, cardize gating, and an explicit no-runtime-guard decision |
 | TASK-325-06 | Grid Columns Report Docs Changelog and Closure | Medium | Medium | Done (2026-05-21): report/docs/board/changelog now reflect the shipped shared Grid Columns closure and final runtime decision |
 | TASK-325-05 | Grid Columns Overflow Guard Decision | Medium | Medium | Done (2026-05-21): `gridColumnsOverflowDecision` now records an explicit `no-runtime-guard` rejection after the editor truthfulness pass landed |

@@ -168,6 +168,71 @@ test("rich text section renders structured text, image, attachment, and embed bl
   expect(html).toContain("YouTube");
 });
 
+test("rich text section omits unresolved media/embed blocks, preserves legacy image src payloads, and falls back to aria-label when untitled", () => {
+  const html = renderToString(
+    <RichTextSectionBlock
+      variant="single-column"
+      blockId="legacy-rich-text"
+      data={{
+        titleBlock: {
+          eyebrow: "",
+          title: "",
+          headingLevel: 2,
+        },
+        body: {
+          html: "",
+          blocks: [
+            {
+              id: "block-1",
+              kind: "image",
+              src: "/media/legacy.jpg",
+              alt: "Legacy image",
+            },
+            {
+              id: "block-2",
+              kind: "image",
+              src: "javascript:alert(1)",
+              alt: "Unsafe image",
+            },
+            {
+              id: "block-3",
+              kind: "attachment",
+              src: "javascript:alert(1)",
+              label: "Unsafe attachment",
+            },
+            {
+              id: "block-4",
+              kind: "attachment",
+              src: "/media/guide.pdf",
+              label: "Guide PDF",
+            },
+            {
+              id: "block-5",
+              kind: "embed",
+              url: "/video",
+              title: "Unsupported embed",
+            },
+          ],
+        },
+        options: {
+          outputMode: "blocks",
+        },
+      }}
+    />
+  );
+
+  expect(html).toContain('aria-label="Rich text content"');
+  expect(html).not.toContain("aria-labelledby");
+  expect(html).toContain('src="/media/legacy.jpg"');
+  expect(html).toContain("Legacy image");
+  expect(html).toContain("Guide PDF");
+  expect(html).not.toContain("Unsafe image");
+  expect(html).not.toContain("Unsafe attachment");
+  expect(html).not.toContain("Unsupported embed");
+  expect(html).not.toContain("javascript:alert(1)");
+  expect(html).not.toContain('href="/video"');
+});
+
 test("article variant respects max width, labels the section, and scopes toc ids by blockId", () => {
   const articleHtml = renderToString(
     <>

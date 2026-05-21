@@ -6,7 +6,7 @@
 **Category:** Widgets + Docs + Playwright QA + Release Hygiene
 **Estimated Effort:** Medium
 **Dependencies:** TASK-282-01, TASK-282-02, TASK-282-03, TASK-282-04, TASK-282-05, TASK-282-08, TASK-282-09, TASK-282-06
-**Status:** Done (2026-05-21)
+**Status:** In Progress (2026-05-21)
 
 ---
 
@@ -22,6 +22,20 @@ clear reason.
 
 This leaf owns final synchronization after TASK-282 implementation leaves land:
 the source report, widget docs, board rows, changelog, and validation matrix.
+
+
+## Current Blocker
+
+Final TASK-282 closure is still blocked in this worktree environment. The
+implementation and focused test coverage are in place, but:
+
+- `playwright-cli` is not available in `PATH`, so no fresh constrained
+  admin/frontend refresh session could be recorded from this worktree.
+- `bun run scan:security:strict` cannot complete here because `semgrep`,
+  `trivy`, and `gitleaks` are not installed in `PATH`.
+
+Keep the family `In Progress` until that evidence is captured in a provisioned
+environment and the strict scan finishes end-to-end.
 
 ## Scope Boundary
 
@@ -58,7 +72,7 @@ Out of scope:
 - [x] Close KOD-13 only when both the image/media-picker slice (TASK-282-05) and
   attachment/safe embed slice (TASK-282-08) have final fixed/deferred evidence.
 - [x] Record any deferred items with a named future task or explicit reason.
-- [x] Run or record a constrained Playwright/admin/frontend refresh for visual
+- [ ] Run or record a constrained Playwright/admin/frontend refresh for visual
   and runtime rows that cannot be proven by unit/Vitest alone: output-source UI,
   article max-width, TOC focus, section labeling, inline media, attachments,
   safe embeds, and text-color clear. Capture textual run/session evidence in
@@ -68,7 +82,7 @@ Out of scope:
 - [x] Update `_docs/WIDGETS.md` or `_docs/WIDGET_PACK_MATRIX.md` only if actual
   implementation changed those source-of-truth contracts.
 - [x] Add a changelog entry and update `_docs/_CHANGELOG/README.md`.
-- [x] Move TASK-282 umbrella/leaves and board rows to `Done` with dates only
+- [ ] Move TASK-282 umbrella/leaves and board rows to `Done` with dates only
   after validation is complete.
 
 ## Files to Change

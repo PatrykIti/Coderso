@@ -1,4 +1,4 @@
-# 893 - TASK-282 Rich Text Section widget followups
+# 893 - TASK-282 Rich Text Section implementation pass
 
 Date: 2026-05-21
 Version: Unreleased
@@ -33,9 +33,9 @@ Tasks: TASK-282, TASK-282-01, TASK-282-02, TASK-282-03, TASK-282-04, TASK-282-05
 
 ### Docs and QA
 
-- Updated the Rich Text Section widget doc, Playwright report closure notes,
-  TASK-282 family files, and task board so the shipped runtime/editor contract is
-  documented in one place with explicit accepted-limitation and not-a-bug notes.
+- Updated the Rich Text Section widget doc, TASK-282 family files, report notes,
+  and task board so the shipped runtime/editor contract plus the remaining
+  environment blockers are documented in one place.
 - Added focused coverage for runtime rendering, sanitizer diagnostics, output
   source resolution, block media/attachment/embed rendering, editor mode
   behavior, destructive-action recovery, async media selection, and strict
@@ -58,3 +58,5 @@ Tasks: TASK-282, TASK-282-01, TASK-282-02, TASK-282-03, TASK-282-04, TASK-282-05
   and `gitleaks` are not installed in this environment. The script still ran
   `bun audit`, and the failure is a missing-scanner tooling blocker rather than
   a Rich Text Section-specific code failure.
+
+Final TASK-282 closure remains open until a provisioned environment can supply `playwright-cli`, `semgrep`, `trivy`, and `gitleaks` for the remaining closure-only evidence and strict security scan completion.

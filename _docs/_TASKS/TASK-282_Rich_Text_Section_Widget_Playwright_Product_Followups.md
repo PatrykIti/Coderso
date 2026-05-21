@@ -6,7 +6,7 @@
 **Category:** Widgets + Content + Admin UI + Runtime Render + Accessibility + Playwright QA
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-213-06-03, TASK-252-06-10, TASK-256-07
-**Status:** Done (2026-05-21)
+**Status:** In Progress (2026-05-21)
 
 ---
 
@@ -33,6 +33,20 @@ blocks, TOC generation, dropcap, variant rendering, and typography controls.
 The report shows remaining Rich Text Section-only gaps around authoring UX,
 source ownership, rich block content, article layout truthfulness, content
 semantics, inline media, and closure evidence.
+
+
+## Current Blocker
+
+Final TASK-282 closure is still blocked in this worktree environment. The
+implementation and focused test coverage are in place, but:
+
+- `playwright-cli` is not available in `PATH`, so no fresh constrained
+  admin/frontend refresh session could be recorded from this worktree.
+- `bun run scan:security:strict` cannot complete here because `semgrep`,
+  `trivy`, and `gitleaks` are not installed in `PATH`.
+
+Keep the family `In Progress` until that evidence is captured in a provisioned
+environment and the strict scan finishes end-to-end.
 
 ## Scope Boundary Against TASK-256
 

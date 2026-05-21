@@ -533,8 +533,11 @@ test("RichTextSection visual editor shows source ownership, sanitizes body edits
       findInputByPlaceholder(titleSection ?? view.container, "Long-form content section"),
       "Deeper narrative"
     );
+    const titleSelects = Array.from(titleSection?.querySelectorAll("select") ?? []);
+    setSelectValue(titleSelects[0], "1");
     expect(latestValue.titleBlock?.eyebrow).toBe("Perspective");
     expect(latestValue.titleBlock?.title).toBe("Deeper narrative");
+    expect(latestValue.titleBlock?.headingLevel).toBe(1);
 
     setTextareaValue(
       findTextareaByPlaceholder(view.container, "Write the primary story body here..."),
@@ -544,14 +547,35 @@ test("RichTextSection visual editor shows source ownership, sanitizes body edits
     expect(latestValue.body?.html).not.toContain("<img");
     expect(view.container.textContent).toContain("Sanitizer guidance");
 
+    const readerSection = findSectionByTitle(view.container, "Reader options");
+    expect(readerSection?.textContent).toContain("Dropcap is off until you enable it.");
+    const readerSwitches = Array.from(
+      readerSection?.querySelectorAll('input[type="checkbox"]') ?? []
+    );
+    setCheckboxValue(readerSwitches[0], true);
+    expect(latestValue.options?.dropcap).toBe(true);
+    expect(view.container.textContent).toContain(
+      "Dropcap will style the first paragraph from the html source."
+    );
+
     const blockSection = findSectionByTitle(view.container, "Structured content blocks");
     const blockCountSelect = blockSection?.querySelector("select");
+    setSelectValue(blockCountSelect, "1");
+    expect(view.container.textContent).toContain("Reduce structured block count");
+    clickByText(view.container, "Cancel confirm");
+    expect(latestValue.body?.blocks).toHaveLength(2);
+
     setSelectValue(blockCountSelect, "1");
     expect(view.container.textContent).toContain("Reduce structured block count");
     clickByText(view.container, "Reduce");
     expect(latestValue.body?.blocks).toHaveLength(1);
     expect(view.container.textContent).toContain("Undo is available");
     clickByText(view.container, "Undo");
+    expect(latestValue.body?.blocks).toHaveLength(2);
+
+    clickByText(blockSection ?? view.container, "Remove");
+    expect(view.container.textContent).toContain("Remove structured block");
+    clickByText(view.container, "Cancel confirm");
     expect(latestValue.body?.blocks).toHaveLength(2);
 
     clickByText(blockSection ?? view.container, "Remove");
@@ -648,6 +672,89 @@ test("RichTextSection visual editor manages image, attachment, and embed blocks 
   }
 });
 
+test("RichTextSection visual editor pages long block lists and explains unavailable image media", async () => {
+  const mediaClient = await import("../../../core/admin/services/mediaClient");
+  vi.mocked(mediaClient.listMediaCached).mockResolvedValueOnce([
+    {
+      id: "media-image-1",
+      key: "rich-text/missing.jpg",
+      url: "",
+      originalName: "missing.jpg",
+      type: "image",
+      mimeType: "image/jpeg",
+      size: 1024,
+      width: 1280,
+      height: 720,
+      alt: null,
+      title: "Missing public image",
+      caption: null,
+      createdAt: "2026-05-03T00:00:00.000Z",
+      createdBy: null,
+    },
+  ]);
+
+  const { RichTextSectionVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/RichTextSectionEditors");
+
+  let latestValue: RichTextSectionData = {
+    body: {
+      html: "",
+      blocks: Array.from({ length: 6 }, (_, index) => ({
+        id: `block-${index + 1}`,
+        kind: "text" as const,
+        heading: `Item ${index + 1}`,
+        contentHtml: `<p>${index + 1}</p>`,
+      })),
+    },
+    options: {
+      outputMode: "blocks",
+    },
+  };
+
+  const Harness = () => {
+    const [value, setValue] = useState<RichTextSectionData>(latestValue);
+
+    return (
+      <RichTextSectionVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="single-column"
+        onVariantChange={() => undefined}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    expect(view.container.textContent).toContain("Next");
+    expect(view.container.textContent).toContain("position 1 of 6");
+
+    clickByText(view.container, "Next");
+    expect(view.container.textContent).toContain("position 6 of 6");
+
+    clickByText(view.container, "Previous");
+    expect(view.container.textContent).toContain("position 1 of 6");
+
+    clickByText(view.container, "Add image block");
+    expect(latestValue.body?.blocks).toHaveLength(7);
+    clickByText(view.container, "pick-image");
+    await flushAsyncUpdates();
+
+    expect(view.container.textContent).toContain(
+      "Selected image is unavailable or missing a public render URL."
+    );
+    expect(view.container.textContent).toContain(
+      "Pick a public image to render this block. Raw image HTML stays unsupported."
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("RichTextSection advanced editor sanitizes raw HTML, updates output mode, and resets defaults", async () => {
   const { RichTextSectionAdvancedEditor } =
     await import("../../../core/admin/ui/widgets/editors/RichTextSectionEditors");
@@ -686,6 +793,9 @@ test("RichTextSection advanced editor sanitizes raw HTML, updates output mode, a
     expect(view.container.textContent).not.toContain("Technical typography tokens");
 
     const outputSection = findSectionByTitle(view.container, "Output mode and source diagnostics");
+    expect(outputSection?.textContent).toContain("Rendered source");
+    expect(outputSection?.textContent).toContain("Reason:");
+
     const outputModeSelect = outputSection?.querySelector("select");
     setSelectValue(outputModeSelect, "blocks");
     expect(latestValue.options?.outputMode).toBe("blocks");
@@ -698,6 +808,9 @@ test("RichTextSection advanced editor sanitizes raw HTML, updates output mode, a
       '<h1>Bad</h1><iframe src="https://evil.example"></iframe><p>Safe</p>'
     );
     expect(view.container.textContent).toContain("Sanitizer guidance");
+    expect(view.container.textContent).toContain(
+      "Raw embeds and iframes are removed. Use a safe embed or attachment block instead."
+    );
     clickByText(view.container, "Sanitize and apply");
     expect(latestValue.body?.html).not.toContain("<h1");
     expect(latestValue.body?.html).not.toContain("<iframe");

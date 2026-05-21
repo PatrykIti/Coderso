@@ -6,7 +6,7 @@
 **Category:** Widgets + Content + Media + Runtime Render + Security
 **Estimated Effort:** Large
 **Dependencies:** TASK-282, TASK-282-02, TASK-282-03, TASK-282-05
-**Status:** Done (2026-05-21)
+**Status:** In Progress (2026-05-21)
 
 ---
 

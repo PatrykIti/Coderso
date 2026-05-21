@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Design Tokens
 **Estimated Effort:** Medium
 **Dependencies:** TASK-282, TASK-256-02
-**Status:** Done (2026-05-21)
+**Status:** In Progress (2026-05-21)
 
 ---
 
