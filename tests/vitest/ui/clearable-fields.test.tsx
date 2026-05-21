@@ -4,6 +4,14 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
+const toastInfo = vi.hoisted(() => vi.fn());
+
+vi.mock("sonner", () => ({
+  toast: {
+    info: toastInfo,
+  },
+}));
+
 import {
   ColorTokenHint,
   ColorContrastNotice,
@@ -75,6 +83,7 @@ const mount = (node: React.ReactNode) => {
 afterEach(() => {
   document.body.innerHTML = "";
   vi.restoreAllMocks();
+  toastInfo.mockReset();
 });
 
 test("clearable field helper detects real values without treating empty text as set", () => {
@@ -111,6 +120,7 @@ test("clearable input disables empty clear and delegates configured clear behavi
       button?.click();
     });
     expect(onClear).not.toHaveBeenCalled();
+    expect(toastInfo).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
   }
@@ -133,6 +143,19 @@ test("clearable input disables empty clear and delegates configured clear behavi
     });
     expect(onClear).toHaveBeenCalledTimes(1);
     expect(onChange).not.toHaveBeenCalledWith("transparent");
+    expect(toastInfo).toHaveBeenCalledWith("Surface cleared.", {
+      action: {
+        label: "Undo",
+        onClick: expect.any(Function),
+      },
+    });
+
+    const [, options] = toastInfo.mock.calls[0] ?? [];
+    expect(options?.action?.label).toBe("Undo");
+    React.act(() => {
+      options?.action?.onClick?.();
+    });
+    expect(onChange).toHaveBeenCalledWith("transparent");
   } finally {
     filled.cleanup();
   }

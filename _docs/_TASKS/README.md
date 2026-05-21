@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 196 tasks
+- **To Do:** 195 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1795 tasks
+- **Done:** 1796 tasks
 
 ---
 
@@ -43,7 +43,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-322-02 | Page Editor Session Expiry Feedback and Dirty-State Preservation | High | Large | Page editor shell follow-up for expired-session save/publish feedback that keeps unsaved work explicit and recoverable |
 | TASK-322-03 | Posts Feed and Shared Picker Consumer Session-Expiry Adoption | High | Large | Consumer adoption task so Posts Feed and similar editor pickers reuse the shared expired-session contract instead of raw `ApiClientError` output |
 | TASK-322-04 | Session Expiry Docs, Changelog, and Closure | Medium | Medium | Final report/docs/board/changelog closure after the shared client and consumer leaves land |
-| TASK-321 | Shared Clear Action Undo and Feedback Contract | Medium | Large | Shared editor follow-up for recoverable Clear actions, undo feedback, and consistent destructive-surface messaging across widget editors |
 | TASK-319 | Newsletter Per-Breakpoint Variant Overrides | Low | Large | Evaluate or explicitly reject true per-breakpoint Newsletter variant overrides after TASK-276 made current mobile behavior truthful |
 | TASK-319-01 | Newsletter Responsive Variant Audit and Product Decision | Medium | Medium | Audit current Newsletter mobile/desktop behavior and record the explicit product decision for BF-15 before any schema change lands |
 | TASK-319-02 | Newsletter Bounded Mobile Variant Implementation | Low | Large | Implement the bounded Newsletter mobile override only if TASK-319-01 approves it |
@@ -250,6 +249,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-321 | Shared Clear Action Undo and Feedback Contract | Medium | Large | Done (2026-05-21): shared clearable inputs now emit recoverable undo feedback through the common clear helper contract |
 | TASK-318 | Section Surface Overflow and Sticky Child Containment Contract | High | Large | Done (2026-05-21): Section now keeps clipping in a decorative inset layer so slotted sticky children are no longer blocked by the live surface wrapper |
 | TASK-323 | Content List Load More and View All Pagination Truthfulness Residuals | High | Large | Done (2026-05-21): legacy `content-list` now treats `load-more` cumulatively and ignores stale block page params for `view-all` |
 | TASK-320 | Content List Shared Date and CTA Accessibility Residuals | High | Large | Done (2026-05-21): shared `ContentListBlock` now emits semantic date markup and contextual CTA accessible names for both `content-list` and `posts-feed` |

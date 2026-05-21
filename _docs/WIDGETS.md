@@ -226,6 +226,10 @@ Widget editors must remove keys for clear actions and must not serialize
 normalize clearable surface values through the shared clearable-style helpers and
 compact omitted style keys before output.
 
+Shared clearable inputs may also emit bounded undo feedback when the helper can
+restore the exact prior value. That undo path is editor-only feedback and must
+not persist extra sentinel state into widget JSON.
+
 ---
 
 ## Kontrakty widgetu (v1)

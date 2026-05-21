@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 887 | 2026-05-21 | TASK-321 shared clear undo feedback contract | CMS Admin UI/Widgets/QA |
 | 886 | 2026-05-21 | TASK-318 section sticky containment contract | CMS Layout/Runtime/QA |
 | 885 | 2026-05-21 | TASK-323 content list legacy pagination truthfulness | CMS Widgets/Runtime/QA |
 | 884 | 2026-05-21 | TASK-320 content list shared accessibility residuals | CMS Widgets/Accessibility/Runtime/QA |

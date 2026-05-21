@@ -410,7 +410,7 @@ Aktualny status każdego findings po implementacji i closure passie:
 | UX-05 | `fixed-task-277` | `TASK-277-03`; selected posts can be reordered with keyboard-accessible Up/Down controls. |
 | UX-06 | `fixed-task-277` | `TASK-277-04`; editor shows a readable runtime/preview status card and sync timestamp. |
 | UX-07 | `fixed-current-head` | Shared `Columns` truthfulness already landed through `TASK-302`; this report row is historical only. |
-| UX-08 | `shared-follow-up` | Routed to `TASK-321`; Clear undo/toast behavior remains a shared editor contract, not a widget-local fork. |
+| UX-08 | `fixed-task-321` | `TASK-321`; shared clearable inputs now emit bounded undo feedback through the common clear helper instead of widget-local forks. |
 | BF-01 | `fixed-task-277` | `TASK-277-02`; Posts Feed can render thumbnail cards from real post media. |
 | BF-02 | `fixed-task-277` | `TASK-277-07`; Posts Feed now supports bounded `paged`, cumulative `load-more`, and stable `view-all` behavior. The analogous shared `content-list` legacy residual discovered during implementation is now closed by `TASK-323`. |
 | BF-03 | `fixed-task-277` | `TASK-277-05`; optional View All action now resolves from explicit href or the posts list route fallback. |

@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 
 export function hasClearableFieldValue(value: unknown) {
   if (typeof value === "string") return value.trim().length > 0;
@@ -144,11 +145,30 @@ export function ClearableFieldHeader({
   label,
   value,
   onClear,
+  onRestore,
+  clearFeedbackLabel,
 }: {
   label: string;
   value: unknown;
   onClear?: () => void;
+  onRestore?: () => void;
+  clearFeedbackLabel?: string;
 }) {
+  const emitClearFeedback = () => {
+    if (!onRestore && clearFeedbackLabel === undefined) return;
+    const feedbackLabel = (clearFeedbackLabel ?? label).trim() || label;
+    if (onRestore) {
+      toast.info(`${feedbackLabel} cleared.`, {
+        action: {
+          label: "Undo",
+          onClick: onRestore,
+        },
+      });
+      return;
+    }
+    toast.info(`${feedbackLabel} cleared.`);
+  };
+
   return (
     <div className="flex items-center justify-between gap-2">
       <p className="text-sm font-medium">{label}</p>
@@ -157,7 +177,10 @@ export function ClearableFieldHeader({
           type="button"
           variant="ghost"
           size="sm"
-          onClick={onClear}
+          onClick={() => {
+            onClear?.();
+            emitClearFeedback();
+          }}
           disabled={!hasClearableFieldValue(value)}
         >
           Clear
@@ -184,7 +207,17 @@ export function ClearableInputField({
 }) {
   return (
     <div className="space-y-1.5">
-      <ClearableFieldHeader label={label} value={value} onClear={onClear} />
+      <ClearableFieldHeader
+        label={label}
+        value={value}
+        onClear={onClear}
+        onRestore={
+          hasClearableFieldValue(value)
+            ? () => onChange(typeof value === "string" ? value : "")
+            : undefined
+        }
+        clearFeedbackLabel={label}
+      />
       <Input
         type={type}
         value={value ?? ""}

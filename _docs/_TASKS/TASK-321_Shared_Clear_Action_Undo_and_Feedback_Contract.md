@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Shared Editor Patterns
 **Estimated Effort:** Large
 **Dependencies:** TASK-256-02, TASK-310, TASK-277
-**Status:** To Do
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -129,6 +129,9 @@ No API routes are added.
 - `_docs/WIDGETS.md` only if the global editor clear contract changes
 - `_docs/PLAYWRIGHT/REPORT_POSTS_FEED_WIDGET.md`
 - `_docs/_TASKS/TASK-321_Shared_Clear_Action_Undo_and_Feedback_Contract.md`
+- `_docs/_TASKS/README.md`
+- `_docs/_CHANGELOG/887-2026-05-21-task-321-shared-clear-undo-feedback-contract.md`
+- `_docs/_CHANGELOG/README.md`
 
 ## Acceptance Criteria
 
@@ -137,3 +140,25 @@ No API routes are added.
 - Undo restores the exact prior field value.
 - Existing empty-state and disabled-clear behavior remains intact.
 - Widget-specific editors no longer need to invent one-off clear undo behavior.
+
+## Validation Notes (2026-05-21)
+
+- `bun run test:vitest -- tests/vitest/ui/clearable-fields.test.tsx` - passed
+  (`6` tests)
+- `bun run test:vitest -- tests/vitest/ui/posts-feed-editor-wave.test.tsx` - passed
+  (`8` tests)
+- `bun --cwd core lint` - passed
+- `bun --cwd core lint:types` - passed
+- `bun run lint` - passed
+- `bun run gates:coderso` - passed
+- `bun run scan:security:strict` - attempted but failed outside TASK-321 scope
+  because the local Semgrep trust store had no CA anchors and `bun audit` could
+  not reach the advisory endpoint; Trivy and Gitleaks sub-scanners were clean
+  in the same run
+- `bun run precommit` - passed
+
+## Completion Notes
+
+- 2026-05-21: `ClearableInputField` now emits shared toast feedback with an
+  `Undo` action that restores the exact prior value through the common clear
+  helper path.
