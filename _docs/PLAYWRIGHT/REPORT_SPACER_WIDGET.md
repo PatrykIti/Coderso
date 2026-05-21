@@ -396,4 +396,16 @@ Leaf evidence from this turn:
 | BF-02 | `fixed` | `TASK-284-02` | Spacer now accepts bounded viewport custom heights (`vh`, `dvh`, `svh`, `vw`) and stores them in canonical lowercase form before runtime render. |
 | BF-03 | `fixed` | `TASK-284-02` | Spacer now accepts safe canonical `clamp(min, preferred, max)` values, where `min`/`max` are `px|rem` and the `preferred` slot is a viewport unit, while malformed CSS falls back before public DOM output. |
 
-*Raport wygenerowany na podstawie analizy kodu i testów Playwright — 2026-05-16; shared closure refreshed — 2026-05-17; TASK-284-01 refreshed — 2026-05-21; TASK-284-02 refreshed — 2026-05-21.*
+## Status po TASK-284-03 (2026-05-21)
+
+Leaf evidence from this turn:
+- `bun run test:vitest -- tests/vitest/widgets/spacer.test.tsx tests/vitest/ui/spacer-editor-wave.test.tsx tests/vitest/ui/widget-template-editor.test.tsx`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run lint`
+
+| Row | Final status | Owner | Evidence |
+|---|---|---|---|
+| BF-04 | `fixed` | `TASK-284-03` | Spacer now exposes transient `Card gap`, `Section gap`, and `Hero gap` presets in Wizard and Visual. Responsive mode applies full triplets, while fixed mode updates desktop only and preserves hidden tablet/mobile values until the user switches back to responsive editing. |
+
+*Raport wygenerowany na podstawie analizy kodu i testów Playwright — 2026-05-16; shared closure refreshed — 2026-05-17; TASK-284-01 refreshed — 2026-05-21; TASK-284-02 refreshed — 2026-05-21; TASK-284-03 refreshed — 2026-05-21.*

@@ -376,6 +376,10 @@ test("Spacer wizard editor covers legacy variant fallback, token/custom height c
     expect(normalizeText(readAriaDescriptions(desktopCustomInput))).toContain(
       "custom values accept 48 (saved as 48px), 48px, 10vh, 5dvh, 5svh, 12vw, or clamp(2rem, 5vw, 8rem)."
     );
+    expect(normalizeText(view.container.textContent)).toContain("rhythm presets");
+    expect(normalizeText(view.container.textContent)).toContain(
+      "manual heights are active. presets stay available as shortcuts."
+    );
     expect(normalizeText(view.container.textContent)).toContain(
       "custom values accept 48 (saved as 48px), 48px, 10vh, 5dvh, 5svh, 12vw, or clamp(2rem, 5vw, 8rem)."
     );
@@ -537,6 +541,79 @@ test("Spacer visual editor covers fixed-mode fallback, responsive per-breakpoint
       },
       showGuideInEditor: true,
     });
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Spacer presets preserve hidden fixed-mode values and stay transient after manual overrides", async () => {
+  const view = await renderEditor({
+    editor: "visual",
+    initialVariant: "fixed",
+    initialValue: {
+      height: {
+        desktop: "40px",
+        tablet: "24",
+        mobile: "12",
+      },
+      showGuideInEditor: true,
+    },
+  });
+
+  try {
+    const getVariantSection = () =>
+      getSectionByTitle(view.container, "Variant and responsive behavior");
+    const getHeightsSection = () => getSectionByTitle(view.container, "Responsive heights");
+
+    expect(normalizeText(getHeightsSection().textContent)).toContain(
+      "manual heights are active. presets stay available as shortcuts."
+    );
+    expect(normalizeText(getHeightsSection().textContent)).toContain(
+      "fixed mode preserves the saved tablet and mobile heights. presets update the desktop height only while fixed is active, so switch to responsive to apply a full preset triplet."
+    );
+
+    clickButton(findButtonByText(getHeightsSection(), "Hero gap"));
+    expect(view.getValue()).toEqual({
+      height: {
+        desktop: "24",
+        tablet: "24",
+        mobile: "12",
+      },
+      showGuideInEditor: true,
+    });
+    expect(normalizeText(getHeightsSection().textContent)).toContain(
+      "manual heights are active. presets stay available as shortcuts."
+    );
+
+    clickButton(findButtonByText(getVariantSection(), "Responsive"));
+    expect(view.getVariant()).toBe("responsive");
+    expect(
+      findSelectsByOptions(getHeightsSection(), heightSelectValues).map((select) => select.value)
+    ).toEqual(["24", "24", "12"]);
+
+    clickButton(findButtonByText(getHeightsSection(), "Hero gap"));
+    expect(view.getValue()).toEqual({
+      height: {
+        desktop: "24",
+        tablet: "20",
+        mobile: "16",
+      },
+      showGuideInEditor: true,
+    });
+    expect(normalizeText(getHeightsSection().textContent)).toContain("current preset: hero gap.");
+
+    setSelectValue(findSelectsByOptions(getHeightsSection(), heightSelectValues)[2], "12");
+    expect(view.getValue()).toEqual({
+      height: {
+        desktop: "24",
+        tablet: "20",
+        mobile: "12",
+      },
+      showGuideInEditor: true,
+    });
+    expect(normalizeText(getHeightsSection().textContent)).toContain(
+      "manual heights are active. presets stay available as shortcuts."
+    );
   } finally {
     view.cleanup();
   }

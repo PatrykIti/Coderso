@@ -12,6 +12,8 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 
 import {
+  applySpacerPreset,
+  deriveSpacerPresetId,
   normalizeSpacerCustomHeightInput,
   normalizeSpacerData,
   resolveSpacerCssHeight,
@@ -19,6 +21,7 @@ import {
   spacerDefaults,
   spacerHeightCssValueMap,
   spacerHeightTokens,
+  spacerPresetDefinitions,
   type SpacerData,
   type SpacerVariantId,
 } from "../../../../widgets/core/spacer";
@@ -102,6 +105,23 @@ function updateMeta(
   }));
 }
 
+function applyPreset(
+  value: SpacerData,
+  variant: string,
+  onChange: (next: SpacerData) => void,
+  presetId: (typeof spacerPresetDefinitions)[number]["id"]
+) {
+  const preset = spacerPresetDefinitions.find((option) => option.id === presetId);
+  if (!preset) return;
+
+  if (resolveSpacerVariant(variant) === "fixed") {
+    updateHeight(value, variant, onChange, { desktop: preset.height.desktop });
+    return;
+  }
+
+  updateValue(value, variant, onChange, (current) => applySpacerPreset(current, presetId));
+}
+
 function EditorSection({
   id,
   title,
@@ -160,6 +180,71 @@ function DiagnosticsSnapshot({ value }: { value: SpacerData }) {
     <pre className="max-h-64 overflow-auto rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
       {JSON.stringify(value, null, 2)}
     </pre>
+  );
+}
+
+function SpacerPresetChooser({
+  value,
+  variant,
+  onChange,
+}: {
+  value: SpacerData;
+  variant: string;
+  onChange: (next: SpacerData) => void;
+}) {
+  const normalized = normalizeValue(value, variant);
+  const currentPresetId = deriveSpacerPresetId(normalized.height);
+  const currentPreset =
+    spacerPresetDefinitions.find((preset) => preset.id === currentPresetId) ?? null;
+  const resolvedVariant = resolveSpacerVariant(variant);
+
+  return (
+    <div className="space-y-3">
+      <div className="space-y-1">
+        <p className="text-xs text-muted-foreground">
+          {currentPreset
+            ? `Current preset: ${currentPreset.label}.`
+            : "Manual heights are active. Presets stay available as shortcuts."}
+        </p>
+        {resolvedVariant === "fixed" ? (
+          <p className="text-xs text-muted-foreground">
+            Fixed mode preserves the saved tablet and mobile heights. Presets update the desktop
+            height only while fixed is active, so switch to responsive to apply a full preset
+            triplet.
+          </p>
+        ) : null}
+      </div>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+        {spacerPresetDefinitions.map((preset) => (
+          <button
+            key={preset.id}
+            type="button"
+            onClick={() => applyPreset(value, variant, onChange, preset.id)}
+            className={cn(
+              "w-full rounded-lg border p-3 text-left transition",
+              currentPresetId === preset.id
+                ? "border-primary bg-primary/5"
+                : "border-border bg-background hover:border-primary/50"
+            )}
+          >
+            <div className="flex w-full items-start justify-between gap-2">
+              <p className="min-w-0 text-sm font-semibold leading-tight">{preset.label}</p>
+              <Badge
+                className="shrink-0"
+                variant={currentPresetId === preset.id ? "default" : "outline"}
+              >
+                {currentPresetId === preset.id ? "Selected" : "Apply"}
+              </Badge>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">{preset.description}</p>
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              Desktop {preset.height.desktop} / Tablet {preset.height.tablet} / Mobile{" "}
+              {preset.height.mobile}
+            </p>
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -272,6 +357,16 @@ export function SpacerWizardEditor({
         </Select>
       </div>
 
+      <div className="rounded-md border p-3 space-y-3">
+        <div>
+          <p className="text-sm font-medium">Rhythm presets</p>
+          <p className="text-xs text-muted-foreground">
+            Apply a named vertical rhythm preset. Manual height editing stays available below.
+          </p>
+        </div>
+        <SpacerPresetChooser value={value} variant={variant} onChange={onChange} />
+      </div>
+
       <HeightField
         label="Desktop height"
         breakpoint="desktop"
@@ -325,7 +420,10 @@ export function SpacerVisualEditor({
         title="Responsive heights"
         description="Control spacer height per breakpoint with token, viewport, clamp, or px values."
       >
-        <ResponsiveHeights value={value} variant={variant} onChange={onChange} />
+        <div className="space-y-4">
+          <SpacerPresetChooser value={value} variant={variant} onChange={onChange} />
+          <ResponsiveHeights value={value} variant={variant} onChange={onChange} />
+        </div>
       </EditorSection>
 
       <EditorSection

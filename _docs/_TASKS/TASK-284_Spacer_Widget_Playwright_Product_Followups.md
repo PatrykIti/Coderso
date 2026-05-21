@@ -105,7 +105,7 @@ documentation, and copy that is not part of the shared contract.
 
 - [x] TASK-284-01: Spacer Editor Guidance and Input Accessibility
 - [x] TASK-284-02: Spacer Viewport and Fluid Length Units
-- [ ] TASK-284-03: Spacer Named Rhythm Presets
+- [x] TASK-284-03: Spacer Named Rhythm Presets
 - [ ] TASK-284-04: Spacer Horizontal Orientation Contract
 - [ ] TASK-284-05: Spacer Report Docs Changelog and Closure
 

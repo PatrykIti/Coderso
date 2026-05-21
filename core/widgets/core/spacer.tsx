@@ -27,6 +27,11 @@ export const spacerHeightTokens = [
 
 export type SpacerVariantId = "fixed" | "responsive";
 export type SpacerHeightToken = (typeof spacerHeightTokens)[number];
+export type SpacerHeightValues = {
+  desktop: string;
+  tablet: string;
+  mobile: string;
+};
 
 export type SpacerData = {
   height?: {
@@ -81,6 +86,46 @@ export const spacerHeightCssValueMap: Record<SpacerHeightToken, string> = {
   "32": "8rem",
 };
 
+export const spacerPresetHeightMap = {
+  "card-gap": { desktop: "8", tablet: "6", mobile: "4" },
+  "section-gap": { desktop: "16", tablet: "12", mobile: "8" },
+  "hero-gap": { desktop: "24", tablet: "20", mobile: "16" },
+} as const satisfies Record<string, SpacerHeightValues>;
+
+export type SpacerPresetId = keyof typeof spacerPresetHeightMap;
+
+export const spacerPresetDefinitions = [
+  {
+    id: "card-gap",
+    label: "Card gap",
+    description: "Compact rhythm for cards and stacked content.",
+    height: spacerPresetHeightMap["card-gap"],
+  },
+  {
+    id: "section-gap",
+    label: "Section gap",
+    description: "Balanced section rhythm for default content blocks.",
+    height: spacerPresetHeightMap["section-gap"],
+  },
+  {
+    id: "hero-gap",
+    label: "Hero gap",
+    description: "Larger breathing room for hero and cover transitions.",
+    height: spacerPresetHeightMap["hero-gap"],
+  },
+] as const satisfies ReadonlyArray<{
+  id: SpacerPresetId;
+  label: string;
+  description: string;
+  height: SpacerHeightValues;
+}>;
+
+const defaultSpacerHeightValues: SpacerHeightValues = {
+  desktop: spacerDefaults.height?.desktop ?? "16",
+  tablet: spacerDefaults.height?.tablet ?? "12",
+  mobile: spacerDefaults.height?.mobile ?? "8",
+};
+
 const joinClasses = (...classes: Array<string | false | undefined>) =>
   classes.filter(Boolean).join(" ");
 
@@ -129,6 +174,41 @@ const resolveHeightTokenOrLength = (value: string | undefined, fallback: string)
   return normalizeSpacerCustomHeightInput(trimmed) ?? fallback;
 };
 
+function resolveSpacerHeightValues(height: SpacerData["height"] | undefined): SpacerHeightValues {
+  return {
+    desktop: resolveHeightTokenOrLength(height?.desktop, defaultSpacerHeightValues.desktop),
+    tablet: resolveHeightTokenOrLength(height?.tablet, defaultSpacerHeightValues.tablet),
+    mobile: resolveHeightTokenOrLength(height?.mobile, defaultSpacerHeightValues.mobile),
+  };
+}
+
+export function applySpacerPreset(data: SpacerData, presetId: SpacerPresetId): SpacerData {
+  return {
+    ...data,
+    height: {
+      ...spacerPresetHeightMap[presetId],
+    },
+  };
+}
+
+export function deriveSpacerPresetId(
+  height: SpacerData["height"] | undefined
+): SpacerPresetId | null {
+  const normalizedHeight = resolveSpacerHeightValues(height);
+
+  for (const preset of spacerPresetDefinitions) {
+    if (
+      preset.height.desktop === normalizedHeight.desktop &&
+      preset.height.tablet === normalizedHeight.tablet &&
+      preset.height.mobile === normalizedHeight.mobile
+    ) {
+      return preset.id;
+    }
+  }
+
+  return null;
+}
+
 export const resolveSpacerCssHeight = (value: string): string =>
   isSpacerToken(value) ? spacerHeightCssValueMap[value] : value;
 
@@ -138,17 +218,10 @@ export function resolveSpacerVariant(variant: string): SpacerVariantId {
 }
 
 export function normalizeSpacerData(data: SpacerData, variant: string = "responsive"): SpacerData {
-  const fallbackDesktop = spacerDefaults.height?.desktop ?? "16";
-  const fallbackTablet = spacerDefaults.height?.tablet ?? "12";
-  const fallbackMobile = spacerDefaults.height?.mobile ?? "8";
-  const desktop = resolveHeightTokenOrLength(data.height?.desktop, fallbackDesktop);
+  const height = resolveSpacerHeightValues(data.height);
 
   return {
-    height: {
-      desktop,
-      tablet: resolveHeightTokenOrLength(data.height?.tablet, fallbackTablet),
-      mobile: resolveHeightTokenOrLength(data.height?.mobile, fallbackMobile),
-    },
+    height,
     showGuideInEditor:
       typeof data.showGuideInEditor === "boolean"
         ? data.showGuideInEditor

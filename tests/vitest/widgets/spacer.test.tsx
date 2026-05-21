@@ -9,12 +9,15 @@ import {
   SpacerWizardEditor,
 } from "../../../core/admin/ui/widgets/editors/SpacerEditors";
 import {
+  applySpacerPreset,
   createSpacerWidget,
+  deriveSpacerPresetId,
   normalizeSpacerCustomHeightInput,
   normalizeSpacerData,
   resolveSpacerVariant,
   SpacerBlock,
   spacerDefaults,
+  spacerPresetDefinitions,
   type SpacerData,
 } from "../../../core/widgets/core/spacer";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
@@ -66,6 +69,51 @@ test("spacer normalization keeps deterministic defaults", () => {
   expect(normalizedFixed.height?.mobile).toBe("8");
   expect(normalizedFixed.showGuideInEditor).toBe(false);
   expect(resolveSpacerVariant("unknown")).toBe("responsive");
+});
+
+test("spacer presets stay transient and derive exact matches from current heights", () => {
+  expect(spacerPresetDefinitions.map((preset) => preset.id)).toEqual([
+    "card-gap",
+    "section-gap",
+    "hero-gap",
+  ]);
+  expect(deriveSpacerPresetId(spacerDefaults.height)).toBe("section-gap");
+
+  const applied = applySpacerPreset(
+    {
+      height: {
+        desktop: "48px",
+        tablet: "12",
+        mobile: "8",
+      },
+      showGuideInEditor: false,
+    },
+    "hero-gap"
+  );
+
+  expect(applied).toEqual({
+    height: {
+      desktop: "24",
+      tablet: "20",
+      mobile: "16",
+    },
+    showGuideInEditor: false,
+  });
+  expect(deriveSpacerPresetId(applied.height)).toBe("hero-gap");
+  expect(
+    deriveSpacerPresetId({
+      desktop: "24",
+      tablet: "20",
+      mobile: "12",
+    })
+  ).toBeNull();
+  expect(
+    deriveSpacerPresetId({
+      desktop: "10vh",
+      tablet: "12",
+      mobile: "8",
+    })
+  ).toBeNull();
 });
 
 test("spacer accepts bounded viewport and clamp lengths", () => {
