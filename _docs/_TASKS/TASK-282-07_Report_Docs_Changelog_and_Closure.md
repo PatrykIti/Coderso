@@ -6,7 +6,7 @@
 **Category:** Widgets + Docs + Playwright QA + Release Hygiene
 **Estimated Effort:** Medium
 **Dependencies:** TASK-282-01, TASK-282-02, TASK-282-03, TASK-282-04, TASK-282-05, TASK-282-08, TASK-282-09, TASK-282-06
-**Status:** In Progress (2026-05-21)
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -24,21 +24,22 @@ This leaf owns final synchronization after TASK-282 implementation leaves land:
 the source report, widget docs, board rows, changelog, and validation matrix.
 
 
-## Current Blocker
+## Final Closure Evidence
 
-Final TASK-282 closure is still blocked in this worktree environment. The
-implementation, focused test coverage, broader release gates, and
-`bun run scan:security:strict` are now in place, but:
+TASK-282-07 closed after a constrained local replay on 2026-05-21 against the
+isolated `coderso_task282` database.
 
-- local Playwright tooling plus Chromium and host dependencies can be
-  provisioned here, yet the configured `DATABASE_URL` points at a remote
-  Render Postgres instance rather than an isolated local database;
-- recording the remaining admin/frontend closure evidence would require
-  booting the app and logging into that shared environment, which is outside
-  the allowed mutation boundary without explicit approval.
-
-Keep the family `In Progress` until the browser refresh is captured against an
-explicitly approved or isolated database-backed environment.
+- Playwright/Chromium/browser deps were provisioned locally.
+- The local first-run gate was completed through the supported
+  `PATCH /admin/api/settings` path instead of mutating a shared remote
+  environment.
+- Headless replay captured:
+  - admin `Text color` clear -> undo restoration back to `#112233`,
+  - Advanced diagnostics copy `Active source: html`,
+  - article runtime width truthfulness and `H1` title semantics,
+  - deterministic `aria-labelledby`,
+  - TOC focus classes plus focused anchor target,
+  - structured image/attachment/embed rendering with no iframe output.
 
 ## Scope Boundary
 
@@ -75,7 +76,7 @@ Out of scope:
 - [x] Close KOD-13 only when both the image/media-picker slice (TASK-282-05) and
   attachment/safe embed slice (TASK-282-08) have final fixed/deferred evidence.
 - [x] Record any deferred items with a named future task or explicit reason.
-- [ ] Run or record a constrained Playwright/admin/frontend refresh for visual
+- [x] Run or record a constrained Playwright/admin/frontend refresh for visual
   and runtime rows that cannot be proven by unit/Vitest alone: output-source UI,
   article max-width, TOC focus, section labeling, inline media, attachments,
   safe embeds, and text-color clear. Capture textual run/session evidence in
@@ -85,7 +86,7 @@ Out of scope:
 - [x] Update `_docs/WIDGETS.md` or `_docs/WIDGET_PACK_MATRIX.md` only if actual
   implementation changed those source-of-truth contracts.
 - [x] Add a changelog entry and update `_docs/_CHANGELOG/README.md`.
-- [ ] Move TASK-282 umbrella/leaves and board rows to `Done` with dates only
+- [x] Move TASK-282 umbrella/leaves and board rows to `Done` with dates only
   after validation is complete.
 
 ## Files to Change

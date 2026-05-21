@@ -34,8 +34,8 @@ Tasks: TASK-282, TASK-282-01, TASK-282-02, TASK-282-03, TASK-282-04, TASK-282-05
 ### Docs and QA
 
 - Updated the Rich Text Section widget doc, TASK-282 family files, report notes,
-  and task board so the shipped runtime/editor contract plus the remaining
-  environment blockers are documented in one place.
+  and task board so the shipped runtime/editor contract plus the final closure
+  evidence are documented in one place.
 - Added focused coverage for runtime rendering, sanitizer diagnostics, output
   source resolution, block media/attachment/embed rendering, editor mode
   behavior, destructive-action recovery, async media selection, and strict
@@ -58,11 +58,15 @@ Tasks: TASK-282, TASK-282-01, TASK-282-02, TASK-282-03, TASK-282-04, TASK-282-05
 - Provisioned local scanner tooling in `/tmp` plus a Semgrep-safe Rich Text
   Section Advanced preview renderer so the strict security scan can complete
   cleanly without weakening the sanitizer contract.
-- Provisioned local Playwright CLI, Chromium, and Linux browser dependencies,
-  but did not record the final admin/frontend replay because the configured
-  `DATABASE_URL` targets a remote Render Postgres instance and browser login or
-  page setup would mutate a shared environment without explicit approval.
-
-Final TASK-282 closure remains open until the remaining browser evidence is
-captured against an explicitly approved or isolated database-backed
-environment.
+- Provisioned local Playwright CLI, Chromium, Linux browser dependencies, and a
+  local Postgres-backed replay environment; completed first-run setup through
+  the supported admin settings API and captured the final headless
+  admin/frontend evidence on 2026-05-21 against the isolated local page
+  `RichTextSectionTest`.
+- The final replay verified:
+  - admin `Text color` clear plus `Undo` restoration back to `#112233`,
+  - Advanced diagnostics with `Active source: html`,
+  - public `article` width truthfulness (`max-w-none`, computed `maxWidth: none`),
+  - `H1` title semantics plus deterministic `aria-labelledby`,
+  - TOC focus classes and focused anchor target,
+  - structured image/attachment/embed output with `iframeCount = 0`.

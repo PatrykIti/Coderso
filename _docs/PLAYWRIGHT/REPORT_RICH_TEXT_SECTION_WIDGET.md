@@ -513,23 +513,29 @@ _Sekcje 9-11 poniżej pozostają oryginalnym baseline z audytu 2026-05-16. Aktua
   mode-ownership mechanisms remain referenced by `TASK-256-07` and
   `TASK-256-08`.
 
-## Status po TASK-282 implementacji (2026-05-21)
+## Status po TASK-282 zamknięciu (2026-05-21)
 
-Poniżej znajduje się snapshot implementacyjny po wdrożeniu rodziny `TASK-282`
-w izolowanym worktree. Kod, testy scoped i dokumentacja zostały zsynchronizowane,
-ale finalne zamknięcie rodziny pozostaje otwarte do czasu zebrania brakujących
-dowodów środowiskowych.
+Rodzina `TASK-282` została domknięta w izolowanym worktree po lokalnym replayu
+admin/frontend przeciwko lokalnej bazie `coderso_task282`. Replay użył:
+
+- lokalnego Postgresa na `127.0.0.1:5432`,
+- migracji wykonanych przez `drizzle-kit migrate`,
+- seedingu lokalnego admina oraz lokalnego patcha `setup.completed` przez
+  wspierany `PATCH /admin/api/settings`,
+- opublikowanej strony testowej `RichTextSectionTest`
+  (`e9130804-a94a-4d14-8880-5b3ef1981458`, slug `/richtextsectiontest`),
+- headless Playwright evidence captured at `2026-05-21T23:25:13.035Z`.
 
 | Owner | Findings | Current status | Evidence summary |
 |-------|----------|--------------|------------------|
-| `TASK-282-01` | `KOD-01`, `KOD-02` | Implemented, final closure pending | Wizard nie nadpisuje już `outputMode`, a Visual/Advanced pokazują aktywne źródło renderu (`html` vs `blocks`) razem z powodem decyzji. |
-| `TASK-282-02` | `KOD-11`, `KOD-12`, `KOD-14` | Implemented, final closure pending | `body.html` używa teraz bezpiecznego `PostRichTextAdapter` zamiast surowej textarea, a sanitizer pokazuje diagnostykę dla usuniętych tagów, atrybutów i przepisywanych linków, w tym `<img>` i `<h1>`. |
-| `TASK-282-03` | `KOD-03`, `KOD-04`, `KOD-15`, `KOD-16` | Implemented, final closure pending | Structured blocks wspierają rich text, poziomy nagłówków `h2/h3/h4`, confirm + undo dla destruktywnych akcji oraz navigator/paging dla większych zestawów bloków. |
-| `TASK-282-04` | `KOD-08`, `KOD-09`, `A11Y-01`, section label note | Implemented, final closure pending | Wariant `article` respektuje `maxWidth`, title heading level jest konfigurowalny, sekcja ma deterministyczne etykietowanie ARIA, a linki TOC dostały widoczny focus state. |
-| `TASK-282-05` | `KOD-13` (image/media picker slice) | Implemented, final closure pending | Widget ma teraz bounded image blocks z MediaPickerem, alt/caption/link controls i bezpiecznym runtime renderem zamiast oczekiwania na raw `<img>` w HTML body. |
-| `TASK-282-08` | `KOD-13` (attachment/embed slice) | Implemented, final closure pending | Structured blocks wspierają attachment cards oraz safe embed link cards; raw iframe/video payloads pozostają celowo poza kontraktem. |
-| `TASK-282-09` | `KOD-10` | Implemented, final closure pending | `textColor` ma lokalny clear action zgodny z Rich Text Section runtime fallback do `var(--color-text)`. |
-| `TASK-282-06` | `KOD-05`, `KOD-WIZ`, `KOD-DUP` | Implemented, final closure pending | Dropcap guidance jest teraz jawne, Wizard używa compact variant cards, a Advanced nie duplikuje już tych samych token controls co Visual. |
+| `TASK-282-01` | `KOD-01`, `KOD-02` | Fixed | Admin replay pokazał sekcję `Rendered source` z tekstem `Variant: article · Active source: html · Block count: 1`, a scoped editor/runtime tests potwierdzają, że Wizard nie resetuje już `outputMode`. |
+| `TASK-282-02` | `KOD-11`, `KOD-12`, `KOD-14` | Fixed | `body.html` używa bezpiecznego `PostRichTextAdapter`, a scoped Vitest coverage potwierdza diagnostykę sanitizera dla usuwanych tagów i przepisywanych linków, w tym `<img>` i `<h1>`. |
+| `TASK-282-03` | `KOD-03`, `KOD-04`, `KOD-15`, `KOD-16` | Fixed | Structured blocks wspierają rich text, poziomy `h2/h3/h4`, confirm + undo, navigator/paging, a lokalny frontend replay potwierdził render text/image/attachment/embed dla opublikowanej strony testowej. |
+| `TASK-282-04` | `KOD-08`, `KOD-09`, `A11Y-01`, section label note | Fixed | Frontend replay potwierdził `data-rich-text-max-width="full"`, `article.className = "mx-auto w-full space-y-6 max-w-none"`, `computedMaxWidth = "none"`, `H1` dla `Long-form content section`, zgodność `aria-labelledby`, oraz TOC linki z klasami `focus-visible:ring-2`. |
+| `TASK-282-05` | `KOD-13` (image/media picker slice) | Fixed | Frontend replay potwierdził image block z `alt="Story image"`, `src="https://example.com/story.jpg"` i bezpiecznym linkiem `https://example.com/story`; raw `<img>` w HTML body pozostaje poza kontraktem. |
+| `TASK-282-08` | `KOD-13` (attachment/embed slice) | Fixed | Frontend replay potwierdził attachment card (`Download guide` -> `https://example.com/guide.pdf`) oraz safe embed link card (`Watch the walkthrough` -> YouTube URL) przy `iframeCount = 0`. |
+| `TASK-282-09` | `KOD-10` | Fixed | Admin replay potwierdził lokalny clear action dla `Text color`: wartość startowa `#112233`, clear do pustego pola, a następnie `Undo` przywracający `#112233`. |
+| `TASK-282-06` | `KOD-05`, `KOD-WIZ`, `KOD-DUP` | Fixed | Dropcap guidance jest jawne, Wizard używa compact variant cards, a Advanced nie duplikuje już tych samych token controls co Visual; scoped editor tests pokrywają ten contract. |
 | `TASK-282-06` | `KOD-07` | Accepted limitation | Visual pozostaje jedynym właścicielem zmiany wariantu. Advanced opisuje source/output contract i nie powiela product-facing variant control. |
 | `TASK-282-07` | `KOD-06` | Not a bug | TOC dla `blocks` działał poprawnie już wcześniej; closure dokumentuje ten fakt i dodaje testy dla scoped heading ids oraz runtime markers. |
 
@@ -547,16 +553,15 @@ Focused validation tied to these Rich Text Section changes was green on
 - `bun run scan:security:strict`
 - `bun run precommit`
 
-Current closure blocker in this worktree:
+Final browser evidence captured locally on 2026-05-21:
 
-- local Playwright tooling plus Chromium and host dependencies can be
-  provisioned here, but the configured `DATABASE_URL` points at a remote Render
-  Postgres instance instead of an isolated local database;
-- recording the remaining admin/frontend refresh would require booting the app
-  and logging into that shared environment, which is outside the allowed
-  mutation boundary without explicit approval.
-
-Until that browser evidence is captured in an explicitly approved or isolated
-database-backed environment, keep the TASK-282 family out of final
-`Fixed`/`Done` closure even though the scoped code/test and strict security
-validation are now green.
+- Admin editor (`http://localhost:5173/admin/pages/e9130804-a94a-4d14-8880-5b3ef1981458`)
+  confirmed the `Text color` clear/undo path and the Advanced diagnostics copy
+  `Active source: html`.
+- Public runtime (`http://localhost:3000/richtextsectiontest`) confirmed:
+  article width truthfulness, `H1` title semantics, deterministic
+  `aria-labelledby`, TOC focus classes plus active anchor focus, and the
+  structured image/attachment/embed render contract.
+- The replay used an isolated local DB and a supported first-run completion via
+  `PATCH /admin/api/settings`; no shared remote environment was used for final
+  closure.

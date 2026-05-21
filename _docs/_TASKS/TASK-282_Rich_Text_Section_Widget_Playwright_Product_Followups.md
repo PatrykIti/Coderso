@@ -6,7 +6,7 @@
 **Category:** Widgets + Content + Admin UI + Runtime Render + Accessibility + Playwright QA
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-213-06-03, TASK-252-06-10, TASK-256-07
-**Status:** In Progress (2026-05-21)
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -35,21 +35,21 @@ source ownership, rich block content, article layout truthfulness, content
 semantics, inline media, and closure evidence.
 
 
-## Current Blocker
+## Final Closure Evidence
 
-Final TASK-282 closure is still blocked in this worktree environment. The
-implementation, focused test coverage, broader release gates, and
-`bun run scan:security:strict` are now in place, but:
+TASK-282 closed in this isolated worktree after a local admin/frontend replay
+against a local Postgres database (`coderso_task282`) on 2026-05-21.
 
-- local Playwright tooling and browser dependencies can be provisioned here,
-  yet the configured `DATABASE_URL` points at a remote Render Postgres
-  instance rather than an isolated local database;
-- recording the remaining admin/frontend closure evidence would require
-  booting the app and logging into that shared environment, which is outside
-  the allowed mutation boundary without explicit approval.
-
-Keep the family `In Progress` until the browser refresh is captured against an
-explicitly approved or isolated database-backed environment.
+- local migrations were applied through `drizzle-kit migrate`;
+- the local first-run gate was completed through the supported
+  `PATCH /admin/api/settings` path (`site.publicBaseUrl`, TTLs,
+  `setup.completed`);
+- the published test page `RichTextSectionTest`
+  (`e9130804-a94a-4d14-8880-5b3ef1981458`, `/richtextsectiontest`) backed the
+  runtime replay;
+- headless Playwright evidence captured admin clear/undo plus output-source
+  diagnostics and frontend article/TOC/media/embed semantics without touching a
+  shared remote environment.
 
 ## Scope Boundary Against TASK-256
 
