@@ -26,8 +26,13 @@ import {
   type SectionBackgroundMediaSource,
   type SectionBackgroundMediaType,
   type SectionContainerWidth,
+  type SectionDescriptionSize,
   type SectionGap,
+  type SectionHeadingAlign,
+  type SectionHeadingLevel,
+  type SectionLabelSize,
   type SectionLayerOrder,
+  type SectionTitleSize,
   normalizeSectionData,
   resolveSectionVariant,
   sectionDefaults,
@@ -148,6 +153,39 @@ const gapOptions: Array<{ id: SectionGap; label: string }> = [
   { id: "xl", label: "Extra spacious" },
 ];
 
+const headingLevelOptions: Array<{ id: SectionHeadingLevel; label: string }> = [
+  { id: "h1", label: "H1" },
+  { id: "h2", label: "H2" },
+  { id: "h3", label: "H3" },
+  { id: "h4", label: "H4" },
+  { id: "h5", label: "H5" },
+  { id: "h6", label: "H6" },
+];
+
+const headingAlignOptions: Array<{ id: SectionHeadingAlign; label: string }> = [
+  { id: "left", label: "Left" },
+  { id: "center", label: "Center" },
+  { id: "right", label: "Right" },
+];
+
+const labelSizeOptions: Array<{ id: SectionLabelSize; label: string }> = [
+  { id: "xs", label: "Compact" },
+  { id: "sm", label: "Default" },
+  { id: "md", label: "Large" },
+];
+
+const titleSizeOptions: Array<{ id: SectionTitleSize; label: string }> = [
+  { id: "xl", label: "XL" },
+  { id: "2xl", label: "2XL" },
+  { id: "3xl", label: "3XL" },
+];
+
+const descriptionSizeOptions: Array<{ id: SectionDescriptionSize; label: string }> = [
+  { id: "sm", label: "Compact" },
+  { id: "base", label: "Default" },
+  { id: "lg", label: "Large" },
+];
+
 const backgroundMediaTypeOptions: Array<{
   id: SectionBackgroundMediaType;
   label: string;
@@ -214,6 +252,17 @@ type LayoutData = NonNullable<SectionData["layout"]>;
 type SemanticsData = NonNullable<SectionData["semantics"]>;
 type StyleData = NonNullable<SectionData["style"]>;
 type BackgroundMediaData = NonNullable<StyleData["backgroundMedia"]>;
+
+const sectionHeadingDefaults: HeadingData = {
+  label: "",
+  title: "",
+  description: "",
+  level: "h2",
+  align: "left",
+  labelSize: "xs",
+  titleSize: "2xl",
+  descriptionSize: "sm",
+};
 
 const sectionBackgroundMediaDefaults: BackgroundMediaData = {
   type: "none",
@@ -726,6 +775,7 @@ export function SectionWizardEditor({
   onVariantChange,
 }: WidgetEditorProps<SectionData>) {
   const normalized = normalizeValue(value);
+  const heading = normalized.heading ?? sectionHeadingDefaults;
 
   return (
     <div className="space-y-4">
@@ -758,11 +808,24 @@ export function SectionWizardEditor({
           )}
         </WidgetControlRow>
 
+        <WidgetControlRow id="section.wizard.label" label="Label">
+          {(fieldProps) => (
+            <Input
+              id={fieldProps.id}
+              value={heading.label ?? ""}
+              onChange={(event) => updateHeading(value, onChange, { label: event.target.value })}
+              placeholder="Section label (optional)"
+              aria-labelledby={fieldProps["aria-labelledby"]}
+              aria-describedby={fieldProps["aria-describedby"]}
+            />
+          )}
+        </WidgetControlRow>
+
         <WidgetControlRow id="section.wizard.title" label="Section title">
           {(fieldProps) => (
             <Input
               id={fieldProps.id}
-              value={normalized.heading?.title ?? ""}
+              value={heading.title ?? ""}
               onChange={(event) => updateHeading(value, onChange, { title: event.target.value })}
               placeholder="Section title"
               aria-labelledby={fieldProps["aria-labelledby"]}
@@ -775,7 +838,7 @@ export function SectionWizardEditor({
           {(fieldProps) => (
             <Textarea
               id={fieldProps.id}
-              value={normalized.heading?.description ?? ""}
+              value={heading.description ?? ""}
               onChange={(event) =>
                 updateHeading(value, onChange, { description: event.target.value })
               }
@@ -807,6 +870,7 @@ export function SectionVisualEditor({
   onVariantChange,
 }: WidgetEditorProps<SectionData>) {
   const normalized = normalizeValue(value);
+  const heading = normalized.heading ?? sectionHeadingDefaults;
   const regionFlow = normalized.layout?.regionFlow ?? sectionDefaults.layout?.regionFlow ?? "stack";
   const regionColumnsEnabled = regionFlow === "grid";
   const regionColumnsValue =
@@ -833,14 +897,14 @@ export function SectionVisualEditor({
 
       <WidgetEditorSection
         title="Heading and intro"
-        description="Control heading label, title, and helper description."
+        description="Control heading copy, level, alignment, sizes, and text colors."
         id="section.heading-intro"
       >
         <WidgetControlRow id="section.heading.label" label="Label">
           {(fieldProps) => (
             <Input
               id={fieldProps.id}
-              value={normalized.heading?.label ?? ""}
+              value={heading.label ?? ""}
               onChange={(event) => updateHeading(value, onChange, { label: event.target.value })}
               placeholder="Section label"
               aria-labelledby={fieldProps["aria-labelledby"]}
@@ -853,7 +917,7 @@ export function SectionVisualEditor({
           {(fieldProps) => (
             <Input
               id={fieldProps.id}
-              value={normalized.heading?.title ?? ""}
+              value={heading.title ?? ""}
               onChange={(event) => updateHeading(value, onChange, { title: event.target.value })}
               placeholder="Section title"
               aria-labelledby={fieldProps["aria-labelledby"]}
@@ -866,7 +930,7 @@ export function SectionVisualEditor({
           {(fieldProps) => (
             <Textarea
               id={fieldProps.id}
-              value={normalized.heading?.description ?? ""}
+              value={heading.description ?? ""}
               onChange={(event) =>
                 updateHeading(value, onChange, { description: event.target.value })
               }
@@ -876,6 +940,162 @@ export function SectionVisualEditor({
             />
           )}
         </WidgetControlRow>
+
+        <WidgetControlRow id="section.heading.level" label="Heading level">
+          {(fieldProps) => (
+            <Select
+              value={heading.level ?? "h2"}
+              onValueChange={(next) => updateHeading(value, onChange, { level: next as SectionHeadingLevel })}
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Select heading level" />
+              </SelectTrigger>
+              <SelectContent>
+                {headingLevelOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
+
+        <WidgetControlRow id="section.heading.align" label="Heading alignment">
+          {(fieldProps) => (
+            <Select
+              value={heading.align ?? "left"}
+              onValueChange={(next) => updateHeading(value, onChange, { align: next as SectionHeadingAlign })}
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Select heading alignment" />
+              </SelectTrigger>
+              <SelectContent>
+                {headingAlignOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
+
+        <WidgetControlRow id="section.heading.labelSize" label="Label size">
+          {(fieldProps) => (
+            <Select
+              value={heading.labelSize ?? "xs"}
+              onValueChange={(next) => updateHeading(value, onChange, { labelSize: next as SectionLabelSize })}
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Select label size" />
+              </SelectTrigger>
+              <SelectContent>
+                {labelSizeOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
+
+        <WidgetControlRow id="section.heading.titleSize" label="Title size">
+          {(fieldProps) => (
+            <Select
+              value={heading.titleSize ?? "2xl"}
+              onValueChange={(next) => updateHeading(value, onChange, { titleSize: next as SectionTitleSize })}
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Select title size" />
+              </SelectTrigger>
+              <SelectContent>
+                {titleSizeOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
+
+        <WidgetControlRow id="section.heading.descriptionSize" label="Description size">
+          {(fieldProps) => (
+            <Select
+              value={heading.descriptionSize ?? "sm"}
+              onValueChange={(next) =>
+                updateHeading(value, onChange, { descriptionSize: next as SectionDescriptionSize })
+              }
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Select description size" />
+              </SelectTrigger>
+              <SelectContent>
+                {descriptionSizeOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
+
+        <ColorField
+          id="section.heading.labelColor"
+          label="Label color"
+          value={heading.labelColor}
+          onChange={(next) => updateHeading(value, onChange, { labelColor: next })}
+          onClear={() => updateHeading(value, onChange, { labelColor: undefined })}
+          placeholder="var(--color-text)"
+          pickerFallback="#475569"
+        />
+
+        <ColorField
+          id="section.heading.titleColor"
+          label="Title color"
+          value={heading.titleColor}
+          onChange={(next) => updateHeading(value, onChange, { titleColor: next })}
+          onClear={() => updateHeading(value, onChange, { titleColor: undefined })}
+          placeholder="var(--color-text)"
+          pickerFallback="#111827"
+        />
+
+        <ColorField
+          id="section.heading.descriptionColor"
+          label="Description color"
+          value={heading.descriptionColor}
+          onChange={(next) => updateHeading(value, onChange, { descriptionColor: next })}
+          onClear={() => updateHeading(value, onChange, { descriptionColor: undefined })}
+          placeholder="var(--color-text)"
+          pickerFallback="#475569"
+        />
+
+        <p className="text-xs text-muted-foreground">
+          Section titles default to `h2`. Choose `h1` only when this band owns the primary page heading.
+        </p>
       </WidgetEditorSection>
 
       <WidgetEditorSection

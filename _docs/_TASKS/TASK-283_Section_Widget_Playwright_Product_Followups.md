@@ -111,7 +111,7 @@ this family.
 
 - [x] TASK-283-01: Section Layout Height and Region Flow Controls
 - [x] TASK-283-02: Section Background Media and Layering Model
-- [ ] TASK-283-03: Section Heading Typography Alignment and Wizard UX
+- [x] TASK-283-03: Section Heading Typography Alignment and Wizard UX
 - [ ] TASK-283-04: Section Presets Variant Guidance and Width Copy
 - [ ] TASK-283-05: Section Surface Shadow Motion and Preview Controls
 - [ ] TASK-283-06: Section Responsive Spacing and Mobile Density

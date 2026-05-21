@@ -6,7 +6,7 @@
 **Category:** Widgets + Section + Typography + Admin UI + Runtime Render
 **Estimated Effort:** Large
 **Dependencies:** TASK-256-02, TASK-256-05-01, TASK-283
-**Status:** To Do
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -50,18 +50,18 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Extend `SectionData.heading` with bounded typography/alignment fields
+- [x] Extend `SectionData.heading` with bounded typography/alignment fields
   and a bounded heading-level field without changing persisted
   label/title/description strings.
-- [ ] Add resolver helpers and class maps for heading alignment, label size,
+- [x] Add resolver helpers and class maps for heading alignment, label size,
   title size, description size, and heading level.
-- [ ] Add safe inline color output only through existing clearable/token
+- [x] Add safe inline color output only through existing clearable/token
   helpers after TASK-256 establishes the final color-field behavior.
-- [ ] Add a Wizard `Label` control and keep Wizard/Visual updates atomic through
+- [x] Add a Wizard `Label` control and keep Wizard/Visual updates atomic through
   `normalizeSectionData`.
-- [ ] Add editor guidance that explains the default `h2` path and when authors
+- [x] Add editor guidance that explains the default `h2` path and when authors
   should intentionally choose a different bounded heading level.
-- [ ] Add tests for legacy defaults, typography tokens, Wizard label update, and
+- [x] Add tests for legacy defaults, typography tokens, Wizard label update, and
   heading output.
 
 ## Files to Change

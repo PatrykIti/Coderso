@@ -25,15 +25,15 @@ Section widget jest bazowym kontenerem układu strony. Odpowiada za: semantyczny
 
 | Sekcja | Pola |
 |--------|------|
-| **Heading** | `label`, `title`, `description` |
+| **Heading** | `label`, `title`, `description`, `level` (`h1`-`h6`), `align`, size tokens, optional clearable text colors |
 | **Layout** | `containerWidth` (content/wide/full), `maxWidth` (none/4xl–7xl), `paddingBlock` (sm/md/lg/xl), `paddingInline` (none/sm/md/lg), `minHeight` (none/compact/hero/screen), `regionFlow` (stack/row/grid), `regionColumns` (1–8 when grid), `headingGap`, optional `regionGap` |
 | **Semantics** | `element` (section/div), `anchorId`, `ariaLabel` |
-| **Style** | `backgroundColor`, `gradientFrom`, `gradientTo`, `gradientAngle`, `borderColor`, `borderWidth` (0–3px), `radius` (none/lg/xl/2xl), `overlayColor`, `overlayOpacity` |
+| **Style** | `backgroundColor`, `gradientFrom`, `gradientTo`, `gradientAngle`, `borderColor`, `borderWidth` (0–3px), `radius` (none/lg/xl/2xl), `overlayColor`, `overlayOpacity`, `backgroundMedia` |
 
 ### 2.2 Tryby edytora
 
-- **Wizard** — szybki start: wariant (dropdown), tytuł, opis, kolor tła
-- **Visual** — pełna kontrola: wariant (karty), heading, semantics, szerokość/padding, surface/borders
+- **Wizard** — szybki start: wariant (dropdown), label, tytuł, opis, kolor tła
+- **Visual** — pełna kontrola: wariant (karty), heading copy/level/alignment/size/color, semantics, szerokość/padding, surface/borders
 - **Advanced** — tokeny techniczne: anchorId, ariaLabel, raw JSON snapshot; `gradientAngle` i `overlayOpacity` nadal są zdublowane z Visual i pozostają shared drift ownerem `TASK-326`
 
 ### 2.3 Renderowanie
@@ -42,7 +42,7 @@ Section widget jest bazowym kontenerem układu strony. Odpowiada za: semantyczny
 - Regiony: `<div data-section-region="...">` z listą widgetów
 - Puste regiony: placeholder „Empty region.” renderuje się już tylko w editor/admin preview po shared TASK-256 gating; nie jest bieżącym frontend defectem.
 - Overlay: absolute div z opacity i backgroundColor
-- Heading: `<header>` z `<p>` (label), bezpiecznym domyślnym `<h2>` (title), `<p>` (description); konfigurowalny poziom `h1`–`h6` nadal pozostaje otwarty.
+- Heading: `<header>` z `<p>` (label), bezpiecznym domyślnym `<h2>` (title), `<p>` (description) oraz bounded `h1`–`h6`, alignmentem, rozmiarami i opcjonalnymi clearable color fields zamkniętymi w TASK-283-03.
 
 ---
 
@@ -54,8 +54,8 @@ Section widget jest bazowym kontenerem układu strony. Odpowiada za: semantyczny
 |---|---------|--------|
 | C1 | Zamknięte (2026-05-21, TASK-283-01): Section ma bounded `minHeight` (`none` / `compact` / `hero` / `screen`) zamiast braku kontroli wysokości | Layout |
 | C2 | Zamknięte (2026-05-21, TASK-283-02): Section ma bounded dekoracyjne tło image/video z bezpiecznym fail-closed dla nieobsługiwanych URL-i | Styl |
-| C3 | Brak kontroli koloru i rozmiaru tekstu nagłówka sekcji — obecne bezpieczne defaulty tekstowe są nadal stałe (`text-xs`, `text-2xl`, `text-sm`) | Typografia |
-| C4 | Brak konfigurowalnego poziomu semantycznego nagłówka (h1–h6) — historyczny hardcoded `<h3>` został już usunięty, ale użytkownik nadal nie może wybrać poziomu | Dostępność / SEO |
+| C3 | Zamknięte (2026-05-21, TASK-283-03): Section ma bounded kolory i rozmiary tekstu nagłówka dla label/title/description | Typografia |
+| C4 | Zamknięte (2026-05-21, TASK-283-03): Section ma bounded poziom semantyczny nagłówka `h1`–`h6` z domyślnym bezpiecznym `h2` | Dostępność / SEO |
 | C5 | Zamknięte (2026-05-21, TASK-283-01): regiony mają bounded `stack` / `row` / `grid` flow z clampowanymi kolumnami grid do limitu 8 | Layout |
 
 ### 3.2 Ważne (ograniczają zakres konfiguracji)
@@ -66,7 +66,7 @@ Section widget jest bazowym kontenerem układu strony. Odpowiada za: semantyczny
 | W2 | Brak cieni (box-shadow) dla powierzchni sekcji | Styl |
 | W3 | Brak animacji/przejść (scroll effects, fade-in) | Efekty |
 | W4 | Brak niestandardowych nazw regionów — wszystkie jako generyczne „Region" | UX struktury |
-| W5 | Brak kontroli alignmentu nagłówka (zawsze left-aligned) | Typografia |
+| W5 | Zamknięte (2026-05-21, TASK-283-03): Section ma bounded `left` / `center` / `right` alignment dla nagłówka | Typografia |
 | W6 | Brak responsywnych wariantów paddingu (inny padding na mobile/desktop) | Responsywność |
 | W7 | Zamknięte (2026-05-21, TASK-283-01): odstęp nagłówek → regiony jest kontrolowany przez `layout.headingGap` zamiast hardcoded `gap-4` | Layout |
 | W8 | Zamknięte (2026-05-21, TASK-283-01): `layout.regionGap` pozwala ustawić jawny token, a brak pola zachowuje legacy spacing wariantu | Layout |
@@ -78,17 +78,17 @@ Section widget jest bazowym kontenerem układu strony. Odpowiada za: semantyczny
 
 | # | Problem | Lokalizacja |
 |---|---------|-------------|
-| B1 | `resolveSectionBorderWidth`: wartość niestandardowa daje `"1"` (fallback), ale default to `"0"` — niespójność | `section.tsx:181` |
-| B2 | `resolveSectionRadius`: wartość niestandardowa daje `"2xl"` zamiast `"none"` (brak spójności z defaults) | `section.tsx:185` |
-| B3 | `containerWidth: "content"` i `"wide"` generują identyczne klasy CSS (`mx-auto w-full`) — różnica tylko w intencji, brak wizualnego efektu | `section.tsx:149` |
-| B4 | `gradientAngle` i `overlayOpacity` są zduplikowane w Visual i Advanced edytorze — podwójne pola dla tej samej wartości | `SectionEditors.tsx:669,826` |
-| B5 | `borderColor` akceptuje CSS zmienne (np. `var(--color-border)`) ale color picker nadpisuje je hexem — utrata zmiennych | `SectionEditors.tsx:689` |
+| B1 | `resolveSectionBorderWidth`: wartość niestandardowa daje `"1"` (fallback), ale default to `"0"` — niespójność | `section.tsx:515` |
+| B2 | `resolveSectionRadius`: wartość niestandardowa daje `"2xl"` zamiast `"none"` (brak spójności z defaults) | `section.tsx:520` |
+| B3 | `containerWidth: "content"` i `"wide"` generują identyczne klasy CSS (`mx-auto w-full`) — różnica tylko w intencji, brak wizualnego efektu | `section.tsx:254` |
+| B4 | `gradientAngle` i `overlayOpacity` są zduplikowane w Visual i Advanced edytorze — podwójne pola dla tej samej wartości | `SectionEditors.tsx:1473,1564,1868,1887` |
+| B5 | `borderColor` akceptuje CSS zmienne (np. `var(--color-border)`) ale color picker nadpisuje je hexem — utrata zmiennych | `SectionEditors.tsx:1493` |
 
 ### 3.4 Ulepszenia UX edytora
 
 | # | Problem | Obszar |
 |---|---------|--------|
-| U1 | Wizard ma „Section title" + „Description" ale brak pola „Label" (dostępne tylko w Visual) — asymetria | Wizard editor |
+| U1 | Zamknięte (2026-05-21, TASK-283-03): Wizard ma teraz także pole `Label`, więc heading model jest kompletny bez przechodzenia do Visual | Wizard editor |
 | U2 | Gradient angle i overlay opacity są tylko polami numerycznymi — brak suwaka / wizualnego selectora kąta | Edytor |
 | U3 | `maxWidth` podaje tylko techniczne nazwy Tailwind (4xl, 5xl, 6xl, 7xl) zamiast wartości px (896px, 1024px...) | Edytor |
 | U4 | Brak informacji o tym, że gradient nadpisuje kolor tła — potencjalne zdezorientowanie użytkownika | Edytor |
@@ -340,7 +340,6 @@ Zmieniono wariant na `contained`, opublikowano i sprawdzono frontend:
 | Priorytet | Problem | Nakład | Wpływ |
 |-----------|---------|--------|-------|
 | **P0** | TASK-326 — domknąć shared truthfulness drift: fallback `borderWidth` / `radius`, dublowanie `gradientAngle` / `overlayOpacity`, oraz obecne semantyki `content` / `wide` / `bleed` | Niski–Średni | Poprawność normalizacji / Truthfulness UI |
-| **P1** | TASK-283-03 — dodać konfigurowalny poziom nagłówka (h1–h6), heading text/alignment controls i brakujące pole `Label` w Wizard | Niski–Średni | SEO / Dostępność / UX |
 | **P1** | TASK-283-04 — dodać presety sekcji, przyjaźniejsze nazwy max-width i truthfulness copy dla wariantów | Średni | Workflow / UX |
 | **P2** | TASK-283-05 — dodać shadow/motion/preview controls oraz lepszy UX dla angle/opacity po domknięciu shared truthfulness drift | Średni | Styl / UX |
 | **P2** | TASK-283-06 — dodać responsywne padding tokens i ewentualne bounded density presets | Wysoki | Responsywność |
@@ -361,13 +360,13 @@ Zmieniono wariant na `contained`, opublikowano i sprawdzono frontend:
 - Element section/div — poprawna zmiana semantyki
 - Padding block / inline / max-width — poprawnie aplikowane jako klasy Tailwind
 - Background media: dekoracyjne image/video tła, poster dla video, bounded blend/layer ordering, i fail-closed dla nieobsługiwanych źródeł są zamknięte przez TASK-283-02
+- Heading controls: Wizard `Label`, bounded `h1`–`h6`, alignment, size tokens, i clearable heading colors są zamknięte przez TASK-283-03
 
 ### Co wymaga poprawy ❌
 
 - **Bleed variant**: obecny opis sugeruje full-width, ale rzeczywisty edge-to-edge wymaga dodatkowo `containerWidth: full` i `maxWidth: none`; shared owner `TASK-326` ma urealnić ten contract.
 - **Shared truthfulness**: obecne Section owner nadal ma błędne fallback defaults i zdublowane liczby surface w Visual/Advanced; to zostało wycięte do TASK-326 zamiast lokalnej łaty w TASK-283.
 - **Gradient fields**: brak Clear button — shared clear-control drift pozostaje poza TASK-283 w ownerach TASK-256.
-- **Heading controls**: baseline hardcoded `<h3>` jest już zamknięty, ale użytkownik nadal nie może wybrać poziomu `h1`–`h6`, alignmentu ani wprowadzić `Label` w Wizard (`TASK-283-03`).
 - **Section presets / responsive spacing / custom region labels**: te widget-local owners pozostają otwarte w `TASK-283-04`, `TASK-283-06`, i `TASK-283-07`.
 - **Container width „Content" vs „Wide"**: identyczne CSS — shared truthfulness drift ownerem jest `TASK-326`, nie lokalny leaf TASK-283.
 

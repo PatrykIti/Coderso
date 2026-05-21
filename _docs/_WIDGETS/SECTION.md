@@ -25,7 +25,7 @@ repeatable internal regions.
 
 ### Wizard
 - quick variant selection
-- title/description onboarding
+- label/title/description onboarding
 - basic background color
 
 ### Visual
@@ -48,6 +48,9 @@ Notes:
   layout tokens instead of raw CSS fields.
 - Grid columns stay inactive until `layout.regionFlow = "grid"`, and `regionGap`
   can remain unset to keep the legacy variant spacing contract.
+- Heading controls now include bounded `h1`-`h6`, left/center/right alignment,
+  label/title/description size tokens, and clearable heading text colors with
+  guidance that the default section title remains `h2`.
 - Background media is decorative only: Visual exposes bounded image/video source,
   fit, position, blend, opacity, and layer-order controls plus video poster
   metadata without widening Section into interactive media.
@@ -61,6 +64,9 @@ Notes:
 
 - Renders semantic element selected in data (`section` or `div`).
 - Supports optional overlay on top of background color/gradient.
+- Section headings default to a safe `h2` path and can opt into bounded `h1`-`h6`,
+  left/center/right alignment, size tokens, and optional clearable text colors
+  without widening into rich text or raw HTML.
 - Supports decorative background image/video layers with bounded fit, position,
   opacity, blend, and overlay ordering; unsupported or unsafe media URLs fail
   closed at render time.
@@ -102,7 +108,12 @@ Notes:
   "heading": {
     "label": "",
     "title": "",
-    "description": ""
+    "description": "",
+    "level": "h2",
+    "align": "left",
+    "labelSize": "xs",
+    "titleSize": "2xl",
+    "descriptionSize": "sm"
   },
   "layout": {
     "containerWidth": "content",
@@ -141,6 +152,16 @@ Notes:
   }
 }
 ```
+
+## Heading Tokens
+
+- `heading.level`: bounded `h1` to `h6`; legacy and default output stays on `h2`
+- `heading.align`: `left`, `center`, `right`
+- `heading.labelSize`: `xs`, `sm`, `md`
+- `heading.titleSize`: `xl`, `2xl`, `3xl`
+- `heading.descriptionSize`: `sm`, `base`, `lg`
+- `heading.labelColor`, `heading.titleColor`, `heading.descriptionColor`: optional
+  clearable text colors that reuse the shared token-aware clearable field contract
 
 ## Layout Tokens
 

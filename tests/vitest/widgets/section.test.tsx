@@ -67,6 +67,39 @@ test("section heading uses a safe default level", () => {
   expect(html).not.toContain("<h3");
 });
 
+test("section renders bounded heading typography, alignment, and colors", () => {
+  const html = renderToString(
+    <SectionBlock
+      data={{
+        ...sectionDefaults,
+        heading: {
+          label: "Overview",
+          title: "Pricing section",
+          description: "Supporting copy for the section.",
+          level: "h4",
+          align: "center",
+          labelSize: "md",
+          titleSize: "3xl",
+          descriptionSize: "lg",
+          labelColor: "#475569",
+          titleColor: "var(--color-primary)",
+          descriptionColor: "#334155",
+        },
+      }}
+      variant="default"
+    />
+  );
+
+  expect(html).toContain("<h4");
+  expect(html).toContain("text-center");
+  expect(html).toContain("text-base font-semibold uppercase tracking-[0.2em]");
+  expect(html).toContain("text-3xl font-semibold");
+  expect(html).toContain("text-lg");
+  expect(html).toContain('style="color:#475569"');
+  expect(html).toContain('style="color:var(--color-primary)"');
+  expect(html).toContain('style="color:#334155"');
+});
+
 test("section renders empty-region placeholders only in editor preview", () => {
   const publicHtml = renderToString(<SectionBlock data={sectionDefaults} variant="default" />);
   const previewHtml = renderToString(
@@ -83,6 +116,16 @@ test("section renders empty-region placeholders only in editor preview", () => {
 
 test("section normalization keeps deterministic style and layout bounds", () => {
   const normalized = normalizeSectionData({
+    heading: {
+      level: "banner" as never,
+      align: "middle" as never,
+      labelSize: "tiny" as never,
+      titleSize: "giant" as never,
+      descriptionSize: "body" as never,
+      labelColor: "   ",
+      titleColor: " var(--color-primary) ",
+      descriptionColor: " #334155 ",
+    },
     layout: {
       minHeight: "giant" as never,
       regionFlow: "broken" as never,
@@ -114,6 +157,16 @@ test("section normalization keeps deterministic style and layout bounds", () => 
     },
   });
 
+  expect(normalized.heading).toMatchObject({
+    level: "h2",
+    align: "left",
+    labelSize: "xs",
+    titleSize: "2xl",
+    descriptionSize: "sm",
+    labelColor: undefined,
+    titleColor: "var(--color-primary)",
+    descriptionColor: "#334155",
+  });
   expect(normalized.layout).toMatchObject({
     minHeight: "none",
     regionFlow: "stack",
@@ -189,6 +242,14 @@ test("section validator accepts expanded model", () => {
           label: "Landing",
           title: "Conversion section",
           description: "Reusable region container",
+          level: "h3",
+          align: "center",
+          labelSize: "sm",
+          titleSize: "3xl",
+          descriptionSize: "lg",
+          labelColor: "#475569",
+          titleColor: "var(--color-primary)",
+          descriptionColor: "#334155",
         },
         semantics: {
           element: "section",

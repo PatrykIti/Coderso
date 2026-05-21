@@ -557,6 +557,10 @@ test("Section editors cover variant changes, semantics, surface tokens, and adva
     setSelectValue(variantSelect, "contained");
     expect(view.getLatestVariant()).toBe("contained");
 
+    setInputValue(
+      findInputByPlaceholder(view.container, "Section label (optional)"),
+      "Platform label"
+    );
     setInputValue(findInputByPlaceholder(view.container, "Section title"), "Platform section");
     setTextareaValue(
       findTextareaByPlaceholder(view.container, "Short context for the section"),
@@ -566,6 +570,7 @@ test("Section editors cover variant changes, semantics, surface tokens, and adva
     setInputValue(wizardColor, "#f8fafc");
 
     expect(view.getLatestValue().heading).toMatchObject({
+      label: "Platform label",
       title: "Platform section",
       description: "Reusable wrapper for grouped content.",
     });
@@ -582,6 +587,21 @@ test("Section editors cover variant changes, semantics, surface tokens, and adva
     setInputValue(findInputByPlaceholder(view.container, "Section label"), "Overview");
     setInputValue(findInputByPlaceholder(view.container, "pricing-section"), "overview");
     setInputValue(findInputByPlaceholder(view.container, "Pricing section"), "Overview section");
+
+    const headingSection = findSectionByTitle(view.container, "Heading and intro");
+    if (!(headingSection instanceof HTMLElement)) {
+      throw new Error("Missing heading section");
+    }
+    expect(headingSection.textContent).toContain("Section titles default to `h2`.");
+    setSelectValue(findSelectByOptions(headingSection, ["h1", "h2", "h3", "h4", "h5", "h6"]), "h4");
+    setSelectValue(findSelectByOptions(headingSection, ["left", "center", "right"]), "center");
+    setSelectValue(findSelectByOptions(headingSection, ["xs", "sm", "md"]), "md");
+    setSelectValue(findSelectByOptions(headingSection, ["xl", "2xl", "3xl"]), "3xl");
+    setSelectValue(findSelectByOptions(headingSection, ["sm", "base", "lg"]), "lg");
+    const headingColorInputs = findInputsByPlaceholder(headingSection, "var(--color-text)");
+    setInputValue(headingColorInputs[0], "#475569");
+    setInputValue(headingColorInputs[1], "var(--color-primary)");
+    setInputValue(headingColorInputs[2], "#334155");
 
     const semanticsSection = findSectionByTitle(view.container, "Semantics and anchor");
     if (!(semanticsSection instanceof HTMLElement)) {
@@ -647,6 +667,14 @@ test("Section editors cover variant changes, semantics, surface tokens, and adva
       label: "Overview",
       title: "Overview section",
       description: "Supporting copy from visual editor.",
+      level: "h4",
+      align: "center",
+      labelSize: "md",
+      titleSize: "3xl",
+      descriptionSize: "lg",
+      labelColor: "#475569",
+      titleColor: "var(--color-primary)",
+      descriptionColor: "#334155",
     });
     expect(view.getLatestValue().layout).toMatchObject({
       containerWidth: "wide",
@@ -677,6 +705,7 @@ test("Section editors cover variant changes, semantics, surface tokens, and adva
     });
 
     const snapshot = view.container.querySelector("pre");
+    expect(snapshot?.textContent).toContain('"level": "h4"');
     expect(snapshot?.textContent).toContain('"anchorId": "overview"');
     expect(snapshot?.textContent).toContain('"gradientAngle": 270');
     expect(snapshot?.textContent).toContain('"overlayOpacity": 35');
@@ -1160,6 +1189,7 @@ test("Section editors fall back to sparse normalized token fields and contract d
       throw new Error("Missing width and spacing section");
     }
 
+    expect(findInputByPlaceholder(view.container, "Section label (optional)")?.value).toBe("");
     expect(findInputByPlaceholder(view.container, "Section label")?.value).toBe("");
     expect(findInputsByPlaceholder(view.container, "Section title")[1]?.value).toBe("");
     expect(

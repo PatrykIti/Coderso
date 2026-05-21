@@ -25,6 +25,11 @@ export type SectionMinHeight = "none" | "compact" | "hero" | "screen";
 export type SectionRegionFlow = "stack" | "row" | "grid";
 export type SectionRegionColumns = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8";
 export type SectionGap = "none" | "sm" | "md" | "lg" | "xl";
+export type SectionHeadingAlign = "left" | "center" | "right";
+export type SectionHeadingLevel = "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
+export type SectionLabelSize = "xs" | "sm" | "md";
+export type SectionTitleSize = "xl" | "2xl" | "3xl";
+export type SectionDescriptionSize = "sm" | "base" | "lg";
 export type SectionBackgroundMediaType = "none" | "image" | "video";
 export type SectionBackgroundMediaSource = "library" | "external";
 export type SectionBackgroundMediaFit = "cover" | "contain";
@@ -54,6 +59,14 @@ export type SectionData = {
     label?: string;
     title?: string;
     description?: string;
+    level?: SectionHeadingLevel;
+    align?: SectionHeadingAlign;
+    labelSize?: SectionLabelSize;
+    titleSize?: SectionTitleSize;
+    descriptionSize?: SectionDescriptionSize;
+    labelColor?: string;
+    titleColor?: string;
+    descriptionColor?: string;
   };
   layout?: {
     containerWidth?: SectionContainerWidth;
@@ -104,6 +117,14 @@ export const sectionSchema = {
         label: { type: "string" },
         title: { type: "string" },
         description: { type: "string" },
+        level: { enum: ["h1", "h2", "h3", "h4", "h5", "h6"] },
+        align: { enum: ["left", "center", "right"] },
+        labelSize: { enum: ["xs", "sm", "md"] },
+        titleSize: { enum: ["xl", "2xl", "3xl"] },
+        descriptionSize: { enum: ["sm", "base", "lg"] },
+        labelColor: { type: "string" },
+        titleColor: { type: "string" },
+        descriptionColor: { type: "string" },
       },
     },
     semantics: {
@@ -173,6 +194,11 @@ export const sectionDefaults: SectionData = {
     label: "",
     title: "",
     description: "",
+    level: "h2",
+    align: "left",
+    labelSize: "xs",
+    titleSize: "2xl",
+    descriptionSize: "sm",
   },
   semantics: {
     element: "section",
@@ -285,6 +311,30 @@ const gapClassMap: Record<SectionGap, string> = {
   xl: "gap-8",
 };
 
+const headingAlignClassMap: Record<SectionHeadingAlign, string> = {
+  left: "text-left",
+  center: "text-center",
+  right: "text-right",
+};
+
+const labelSizeClassMap: Record<SectionLabelSize, string> = {
+  xs: "text-xs",
+  sm: "text-sm",
+  md: "text-base",
+};
+
+const titleSizeClassMap: Record<SectionTitleSize, string> = {
+  xl: "text-xl",
+  "2xl": "text-2xl",
+  "3xl": "text-3xl",
+};
+
+const descriptionSizeClassMap: Record<SectionDescriptionSize, string> = {
+  sm: "text-sm",
+  base: "text-base",
+  lg: "text-lg",
+};
+
 const regionGapVariantFallbackMap: Record<SectionVariantId, SectionGap> = {
   default: "lg",
   contained: "md",
@@ -355,6 +405,41 @@ const resolveRenderableSectionMediaSrc = (
     : sectionVideoUrlPattern.test(normalized)
       ? normalized
       : undefined;
+};
+
+const resolveSectionHeadingLevel = (value: string | undefined): SectionHeadingLevel => {
+  if (
+    value === "h1" ||
+    value === "h3" ||
+    value === "h4" ||
+    value === "h5" ||
+    value === "h6"
+  ) {
+    return value;
+  }
+  return "h2";
+};
+
+const resolveSectionHeadingAlign = (value: string | undefined): SectionHeadingAlign => {
+  if (value === "center" || value === "right") return value;
+  return "left";
+};
+
+const resolveSectionLabelSize = (value: string | undefined): SectionLabelSize => {
+  if (value === "sm" || value === "md") return value;
+  return "xs";
+};
+
+const resolveSectionTitleSize = (value: string | undefined): SectionTitleSize => {
+  if (value === "xl" || value === "3xl") return value;
+  return "2xl";
+};
+
+const resolveSectionDescriptionSize = (
+  value: string | undefined
+): SectionDescriptionSize => {
+  if (value === "base" || value === "lg") return value;
+  return "sm";
 };
 
 const resolveSectionBackgroundMediaType = (
@@ -554,6 +639,16 @@ export function normalizeSectionData(data: SectionData): SectionData {
       label: data.heading?.label ?? headingDefaults.label,
       title: data.heading?.title ?? headingDefaults.title,
       description: data.heading?.description ?? headingDefaults.description,
+      level: resolveSectionHeadingLevel(data.heading?.level ?? headingDefaults.level),
+      align: resolveSectionHeadingAlign(data.heading?.align ?? headingDefaults.align),
+      labelSize: resolveSectionLabelSize(data.heading?.labelSize ?? headingDefaults.labelSize),
+      titleSize: resolveSectionTitleSize(data.heading?.titleSize ?? headingDefaults.titleSize),
+      descriptionSize: resolveSectionDescriptionSize(
+        data.heading?.descriptionSize ?? headingDefaults.descriptionSize
+      ),
+      labelColor: resolveClearableStyleValue(data.heading?.labelColor),
+      titleColor: resolveClearableStyleValue(data.heading?.titleColor),
+      descriptionColor: resolveClearableStyleValue(data.heading?.descriptionColor),
     },
     layout: {
       containerWidth: resolveSectionContainerWidth(
@@ -620,6 +715,9 @@ export function SectionBlock({
   );
   const heading = normalized.heading ?? sectionDefaults.heading!;
   const layout = normalized.layout ?? sectionDefaults.layout!;
+  const headingLabelColor = resolveClearableStyleValue(heading.labelColor);
+  const headingTitleColor = resolveClearableStyleValue(heading.titleColor);
+  const headingDescriptionColor = resolveClearableStyleValue(heading.descriptionColor);
   const semantics = normalized.semantics ?? sectionDefaults.semantics!;
   const style = normalized.style ?? sectionDefaults.style!;
 
@@ -798,17 +896,44 @@ export function SectionBlock({
 
         <div className={contentClass}>
           {hasHeading ? (
-            <header className="space-y-2">
+            <header className={joinClasses("space-y-2", headingAlignClassMap[heading.align ?? "left"])}>
               {(heading.label ?? "").trim().length > 0 ? (
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text)]/70">
+                <p
+                  className={joinClasses(
+                    labelSizeClassMap[heading.labelSize ?? "xs"],
+                    "font-semibold uppercase tracking-[0.2em]",
+                    headingLabelColor ? undefined : "text-[var(--color-text)]/70"
+                  )}
+                  style={compactStyle({ color: headingLabelColor })}
+                >
                   {heading.label}
                 </p>
               ) : null}
-              {(heading.title ?? "").trim().length > 0 ? (
-                <h2 className="text-2xl font-semibold text-[var(--color-text)]">{heading.title}</h2>
-              ) : null}
+              {(heading.title ?? "").trim().length > 0 ? (() => {
+                const HeadingTag = heading.level ?? "h2";
+                return (
+                  <HeadingTag
+                    className={joinClasses(
+                      titleSizeClassMap[heading.titleSize ?? "2xl"],
+                      "font-semibold",
+                      headingTitleColor ? undefined : "text-[var(--color-text)]"
+                    )}
+                    style={compactStyle({ color: headingTitleColor })}
+                  >
+                    {heading.title}
+                  </HeadingTag>
+                );
+              })() : null}
               {(heading.description ?? "").trim().length > 0 ? (
-                <p className="text-sm text-[var(--color-text)]/75">{heading.description}</p>
+                <p
+                  className={joinClasses(
+                    descriptionSizeClassMap[heading.descriptionSize ?? "sm"],
+                    headingDescriptionColor ? undefined : "text-[var(--color-text)]/75"
+                  )}
+                  style={compactStyle({ color: headingDescriptionColor })}
+                >
+                  {heading.description}
+                </p>
               ) : null}
             </header>
           ) : null}
