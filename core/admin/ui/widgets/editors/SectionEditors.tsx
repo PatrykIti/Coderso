@@ -60,7 +60,7 @@ const variantOptions: Array<{
   {
     id: "default",
     label: "Default",
-    description: "Balanced section wrapper for most page groups.",
+    description: "Balanced section wrapper for most grouped content.",
   },
   {
     id: "contained",
@@ -70,7 +70,8 @@ const variantOptions: Array<{
   {
     id: "bleed",
     label: "Bleed",
-    description: "Full-width section for edge-to-edge layouts.",
+    description:
+      "Expanded section band. Pair with Full-width wrapper + No max width for true edge-to-edge.",
   },
 ];
 
@@ -94,17 +95,17 @@ const radiusOptions: Array<{ id: SectionRadius; label: string }> = [
 ];
 
 const containerWidthOptions: Array<{ id: SectionContainerWidth; label: string }> = [
-  { id: "content", label: "Content width" },
-  { id: "wide", label: "Wide" },
-  { id: "full", label: "Full width" },
+  { id: "content", label: "Content wrapper" },
+  { id: "wide", label: "Wide wrapper" },
+  { id: "full", label: "Full-width wrapper" },
 ];
 
 const maxWidthOptions: Array<{ id: SectionMaxWidth; label: string }> = [
-  { id: "none", label: "No max width" },
-  { id: "4xl", label: "4XL" },
-  { id: "5xl", label: "5XL" },
-  { id: "6xl", label: "6XL" },
-  { id: "7xl", label: "7XL" },
+  { id: "none", label: "No max width (follow container)" },
+  { id: "4xl", label: "4XL (56rem / 896px)" },
+  { id: "5xl", label: "5XL (64rem / 1024px)" },
+  { id: "6xl", label: "6XL (72rem / 1152px)" },
+  { id: "7xl", label: "7XL (80rem / 1280px)" },
 ];
 
 const paddingBlockOptions: Array<{ id: SectionPaddingBlock; label: string }> = [
@@ -252,6 +253,23 @@ type LayoutData = NonNullable<SectionData["layout"]>;
 type SemanticsData = NonNullable<SectionData["semantics"]>;
 type StyleData = NonNullable<SectionData["style"]>;
 type BackgroundMediaData = NonNullable<StyleData["backgroundMedia"]>;
+type SectionPresetId =
+  | "standard-content"
+  | "framed-panel"
+  | "edge-to-edge"
+  | "hero-band"
+  | "two-column-region-group";
+type SectionPresetOption = {
+  id: SectionPresetId;
+  label: string;
+  description: string;
+  variant: SectionVariantId;
+  patch: {
+    heading?: Partial<HeadingData>;
+    layout?: Partial<LayoutData>;
+    style?: Partial<StyleData>;
+  };
+};
 
 const sectionHeadingDefaults: HeadingData = {
   label: "",
@@ -273,6 +291,114 @@ const sectionBackgroundMediaDefaults: BackgroundMediaData = {
   blendMode: "normal",
   layerOrder: "media-under-overlay",
 };
+
+const sectionPresetOptions: SectionPresetOption[] = [
+  {
+    id: "standard-content",
+    label: "Standard content",
+    description: "Balanced wrapper for most page groups with legacy-safe spacing.",
+    variant: "default",
+    patch: {
+      heading: { align: "left" },
+      layout: {
+        containerWidth: "content",
+        maxWidth: "6xl",
+        paddingBlock: "md",
+        paddingInline: "md",
+        minHeight: "none",
+        regionFlow: "stack",
+        regionColumns: "1",
+        headingGap: "md",
+        regionGap: undefined,
+      },
+      style: { borderWidth: "0", radius: "none" },
+    },
+  },
+  {
+    id: "framed-panel",
+    label: "Framed panel",
+    description: "Contained panel with a comfortable measure and light framing.",
+    variant: "contained",
+    patch: {
+      heading: { align: "left" },
+      layout: {
+        containerWidth: "content",
+        maxWidth: "5xl",
+        paddingBlock: "lg",
+        paddingInline: "lg",
+        minHeight: "none",
+        regionFlow: "stack",
+        regionColumns: "1",
+        headingGap: "lg",
+        regionGap: undefined,
+      },
+      style: { borderWidth: "1", radius: "xl" },
+    },
+  },
+  {
+    id: "edge-to-edge",
+    label: "Edge-to-edge",
+    description: "Bleed surface with the full-width wrapper and no max width already applied.",
+    variant: "bleed",
+    patch: {
+      heading: { align: "left" },
+      layout: {
+        containerWidth: "full",
+        maxWidth: "none",
+        paddingBlock: "lg",
+        paddingInline: "lg",
+        minHeight: "none",
+        regionFlow: "stack",
+        regionColumns: "1",
+        headingGap: "lg",
+        regionGap: undefined,
+      },
+      style: { borderWidth: "0", radius: "none" },
+    },
+  },
+  {
+    id: "hero-band",
+    label: "Hero band",
+    description: "Tall lead section with centered heading and generous spacing.",
+    variant: "bleed",
+    patch: {
+      heading: { align: "center" },
+      layout: {
+        containerWidth: "full",
+        maxWidth: "none",
+        paddingBlock: "xl",
+        paddingInline: "lg",
+        minHeight: "hero",
+        regionFlow: "stack",
+        regionColumns: "1",
+        headingGap: "xl",
+        regionGap: undefined,
+      },
+      style: { borderWidth: "0", radius: "none" },
+    },
+  },
+  {
+    id: "two-column-region-group",
+    label: "Two-column region group",
+    description: "Default surface with a safe two-column grid for grouped content.",
+    variant: "default",
+    patch: {
+      heading: { align: "left" },
+      layout: {
+        containerWidth: "content",
+        maxWidth: "7xl",
+        paddingBlock: "lg",
+        paddingInline: "md",
+        minHeight: "none",
+        regionFlow: "grid",
+        regionColumns: "2",
+        headingGap: "lg",
+        regionGap: "lg",
+      },
+      style: { borderWidth: "0", radius: "none" },
+    },
+  },
+];
 
 const clampOpacity = (value: number | undefined) => {
   if (!Number.isFinite(value)) return 0;
@@ -343,6 +469,35 @@ function VariantCards({
           <p className="mt-1 text-xs text-muted-foreground">{option.description}</p>
         </button>
       ))}
+    </div>
+  );
+}
+
+function SectionPresetCards({ onApply }: { onApply?: (preset: SectionPresetOption) => void }) {
+  return (
+    <div className="space-y-2">
+      <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
+        {sectionPresetOptions.map((preset) => (
+          <button
+            key={preset.id}
+            type="button"
+            onClick={() => onApply?.(preset)}
+            className="rounded-lg border border-border bg-background p-3 text-left transition hover:border-primary/50 hover:bg-muted/20"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <p className="min-w-0 text-sm font-semibold leading-tight">{preset.label}</p>
+              <Badge className="shrink-0" variant="outline">
+                Apply
+              </Badge>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">{preset.description}</p>
+          </button>
+        ))}
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Presets keep your current heading copy and region slot content while resetting only
+        supported Section tokens.
+      </p>
     </div>
   );
 }
@@ -461,6 +616,61 @@ function updateStyle(
       ...patch,
     },
   }));
+}
+
+function applySectionVariantPatch(
+  nextVariant: SectionVariantId,
+  onVariantChange?: (next: string) => void,
+  onBlockPatch?: WidgetEditorProps<SectionData>["onBlockPatch"]
+) {
+  if (onBlockPatch) {
+    onBlockPatch((current) => ({
+      ...current,
+      variant: nextVariant,
+    }));
+    return;
+  }
+
+  onVariantChange?.(nextVariant);
+}
+
+function buildSectionPresetData(value: SectionData, preset: SectionPresetOption): SectionData {
+  const current = normalizeValue(value);
+  return normalizeValue({
+    ...current,
+    heading: {
+      ...current.heading,
+      ...preset.patch.heading,
+    },
+    layout: {
+      ...current.layout,
+      ...preset.patch.layout,
+    },
+    style: {
+      ...current.style,
+      ...preset.patch.style,
+    },
+  });
+}
+
+function applySectionPreset(
+  nextVariant: SectionVariantId,
+  nextData: SectionData,
+  onChange: (next: SectionData) => void,
+  onVariantChange?: (next: string) => void,
+  onBlockPatch?: WidgetEditorProps<SectionData>["onBlockPatch"]
+) {
+  if (onBlockPatch) {
+    onBlockPatch((current) => ({
+      ...current,
+      variant: nextVariant,
+      data: nextData,
+    }));
+    return;
+  }
+
+  onChange(nextData);
+  onVariantChange?.(nextVariant);
 }
 
 function updateBackgroundMedia(
@@ -773,38 +983,35 @@ export function SectionWizardEditor({
   onChange,
   variant,
   onVariantChange,
+  onBlockPatch,
 }: WidgetEditorProps<SectionData>) {
   const normalized = normalizeValue(value);
   const heading = normalized.heading ?? sectionHeadingDefaults;
+  const applyPreset = (preset: SectionPresetOption) =>
+    applySectionPreset(
+      preset.variant,
+      buildSectionPresetData(value, preset),
+      onChange,
+      onVariantChange,
+      onBlockPatch
+    );
+  const handleVariantChange = (next: string) =>
+    applySectionVariantPatch(next as SectionVariantId, onVariantChange, onBlockPatch);
 
   return (
     <div className="space-y-4">
       <WidgetEditorSection
         id="section.wizard"
         title="Section setup"
-        description="Pick a safe starting layout and heading for this section."
+        description="Pick a safe preset, section wrapper, and heading for this section."
       >
+        <WidgetControlRow id="section.wizard.preset" label="Quick preset">
+          {() => <SectionPresetCards onApply={applyPreset} />}
+        </WidgetControlRow>
+
         <WidgetControlRow id="section.wizard.variant" label="Section layout">
-          {(fieldProps) => (
-            <Select
-              value={resolveSectionVariant(variant)}
-              onValueChange={(next) => onVariantChange?.(next)}
-            >
-              <SelectTrigger
-                id={fieldProps.id}
-                aria-labelledby={fieldProps["aria-labelledby"]}
-                aria-describedby={fieldProps["aria-describedby"]}
-              >
-                <SelectValue placeholder="Select variant" />
-              </SelectTrigger>
-              <SelectContent>
-                {variantOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {() => (
+            <VariantCards value={resolveSectionVariant(variant)} onChange={handleVariantChange} />
           )}
         </WidgetControlRow>
 
@@ -868,6 +1075,7 @@ export function SectionVisualEditor({
   onChange,
   variant,
   onVariantChange,
+  onBlockPatch,
 }: WidgetEditorProps<SectionData>) {
   const normalized = normalizeValue(value);
   const heading = normalized.heading ?? sectionHeadingDefaults;
@@ -884,15 +1092,34 @@ export function SectionVisualEditor({
       onChange,
       resolveBackgroundMediaTypeTransition(backgroundMedia, nextType)
     );
+  const applyPreset = (preset: SectionPresetOption) =>
+    applySectionPreset(
+      preset.variant,
+      buildSectionPresetData(value, preset),
+      onChange,
+      onVariantChange,
+      onBlockPatch
+    );
+  const handleVariantChange = (next: string) =>
+    applySectionVariantPatch(next as SectionVariantId, onVariantChange, onBlockPatch);
 
   return (
     <div className="space-y-4">
       <WidgetEditorSection
         title="Variant and structure"
-        description="Choose the section wrapper style and width behavior."
+        description="Choose a preset or adjust the section wrapper style and width behavior."
         id="section.variant-structure"
       >
-        <VariantCards value={resolveSectionVariant(variant)} onChange={onVariantChange} />
+        <div className="space-y-3">
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Quick presets</p>
+            <SectionPresetCards onApply={applyPreset} />
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Section layout</p>
+            <VariantCards value={resolveSectionVariant(variant)} onChange={handleVariantChange} />
+          </div>
+        </div>
       </WidgetEditorSection>
 
       <WidgetEditorSection
@@ -945,7 +1172,9 @@ export function SectionVisualEditor({
           {(fieldProps) => (
             <Select
               value={heading.level ?? "h2"}
-              onValueChange={(next) => updateHeading(value, onChange, { level: next as SectionHeadingLevel })}
+              onValueChange={(next) =>
+                updateHeading(value, onChange, { level: next as SectionHeadingLevel })
+              }
             >
               <SelectTrigger
                 id={fieldProps.id}
@@ -969,7 +1198,9 @@ export function SectionVisualEditor({
           {(fieldProps) => (
             <Select
               value={heading.align ?? "left"}
-              onValueChange={(next) => updateHeading(value, onChange, { align: next as SectionHeadingAlign })}
+              onValueChange={(next) =>
+                updateHeading(value, onChange, { align: next as SectionHeadingAlign })
+              }
             >
               <SelectTrigger
                 id={fieldProps.id}
@@ -993,7 +1224,9 @@ export function SectionVisualEditor({
           {(fieldProps) => (
             <Select
               value={heading.labelSize ?? "xs"}
-              onValueChange={(next) => updateHeading(value, onChange, { labelSize: next as SectionLabelSize })}
+              onValueChange={(next) =>
+                updateHeading(value, onChange, { labelSize: next as SectionLabelSize })
+              }
             >
               <SelectTrigger
                 id={fieldProps.id}
@@ -1017,7 +1250,9 @@ export function SectionVisualEditor({
           {(fieldProps) => (
             <Select
               value={heading.titleSize ?? "2xl"}
-              onValueChange={(next) => updateHeading(value, onChange, { titleSize: next as SectionTitleSize })}
+              onValueChange={(next) =>
+                updateHeading(value, onChange, { titleSize: next as SectionTitleSize })
+              }
             >
               <SelectTrigger
                 id={fieldProps.id}
@@ -1094,7 +1329,8 @@ export function SectionVisualEditor({
         />
 
         <p className="text-xs text-muted-foreground">
-          Section titles default to `h2`. Choose `h1` only when this band owns the primary page heading.
+          Section titles default to `h2`. Choose `h1` only when this band owns the primary page
+          heading.
         </p>
       </WidgetEditorSection>
 
@@ -1426,7 +1662,8 @@ export function SectionVisualEditor({
         </div>
         <p className="text-xs text-muted-foreground">
           `Wide` keeps the same base wrapper as `Content`; increase max width below when you want a
-          visibly wider section without switching to full bleed.
+          visibly wider section without switching to full bleed. For true edge-to-edge, pair `Bleed`
+          with `Full-width wrapper` and `No max width`.
         </p>
         <p className="text-xs text-muted-foreground">
           Grid columns stay inactive until Region flow is set to Grid. Leaving Region gap on Match
@@ -1488,6 +1725,11 @@ export function SectionVisualEditor({
             />
           )}
         </WidgetControlRow>
+
+        <p className="text-xs text-muted-foreground">
+          When both gradient stops are set, the gradient becomes the visible surface. Background
+          color still acts as the fallback if you clear the gradient later.
+        </p>
 
         <ColorField
           id="section.style.borderColor"

@@ -571,9 +571,11 @@ test("section editors render expected sections", () => {
       onVariantChange={() => undefined}
     />
   );
+  expect(wizardHtml).toContain("Quick preset");
   expect(wizardHtml).toContain("Section layout");
   expect(wizardHtml).toContain("Section title");
   expect(wizardHtml).toContain("Section setup");
+  expect(wizardHtml).toContain('data-widget-control="section.wizard.preset"');
   expect(wizardHtml).toContain('data-widget-control="section.wizard.variant"');
 
   const visualHtml = renderToString(
@@ -585,6 +587,7 @@ test("section editors render expected sections", () => {
     />
   );
   expect(visualHtml).toContain("Variant and structure");
+  expect(visualHtml).toContain("Quick presets");
   expect(visualHtml).toContain("Semantics and anchor");
   expect(visualHtml).toContain("Width and spacing");
   expect(visualHtml).toContain("Surface and borders");

@@ -52,7 +52,6 @@ baseline repair.
 |---|---|---|---|
 | Public `Empty region.` placeholder leakage and U8 public empty-region behavior | `REPORT_SECTION_WIDGET.md:43,98,288,300,325,332,384` | TASK-256-03, TASK-256-05-01 | Shared editor-vs-public placeholder contract. If product later wants a user-facing empty-region message, that must be a separate Section product task after the placeholder leak is fixed. |
 | Invalid `anchorId` accepted and emitted | `REPORT_SECTION_WIDGET.md:74,133,213,379` | TASK-256-05-01 | Baseline safe DOM ID validation. |
-| Gradient start/end lack Clear buttons | `REPORT_SECTION_WIDGET.md:73,140,348,380` | TASK-256-02, TASK-256-05-01 | Shared clear-control and token behavior. |
 | CSS variable color picker overwrites token values | `REPORT_SECTION_WIDGET.md:85,142` | TASK-256-02, TASK-256-05-01 | Shared token-aware picker contract. |
 | `resolveSectionBorderWidth` and `resolveSectionRadius` fallback drift | `REPORT_SECTION_WIDGET.md:81-82,343` | TASK-256-05-01 | Structural normalizer/default repair for current fields. |
 | Duplicate `gradientAngle` and `overlayOpacity` in Advanced | `REPORT_SECTION_WIDGET.md:84,157-158,342,381` | TASK-326 | Reopened shared mode-ownership drift. Keep it out of widget-local TASK-283 leaves. |
@@ -104,6 +103,7 @@ this family.
 | Expected admin/frontend theme variable differences | No TASK-283 task | `REPORT_SECTION_WIDGET.md:326-333` confirms CSS variables resolve differently in admin and public themes as expected; the picker overwrite issue remains TASK-256. |
 | Current freeform color/token text input validation from U7 | No TASK-283 task | Section text inputs intentionally accept design tokens and CSS variables through the shared clearable-field contract. Do not add stricter format validation that would reject valid token strings; only future media URL validation belongs to TASK-283-02 when new source fields exist. |
 | Current URL validation part of U7 | No TASK-283 task until TASK-283-02 | Current `SectionData` has no URL field. TASK-283-02 must add media source validation if it introduces media URLs or asset references. |
+| Stale gradient Clear report row (W9) | No standalone TASK-283 leaf after report sync | Current Section editors already expose shared Clear actions for `gradientFrom` and `gradientTo`; TASK-283-04 adds focused evidence and corrects the stale report wording instead of restaging a shared fix. |
 | Confirmed basic render, section/div switch, max-width, padding, border, overlay, gradient, and mobile no-overflow behavior | No TASK-283 task | The report marks these as working; keep existing tests unless a future TASK-283 leaf changes the related contract. |
 | Prior 401 session-limit note | No TASK-283 task | `REPORT_SECTION_WIDGET.md:227,389` records a Playwright environment/session-limit setup issue that was resolved by raising the active-session limit; the current Section widget session completed and no widget implementation task is required. |
 
@@ -112,7 +112,7 @@ this family.
 - [x] TASK-283-01: Section Layout Height and Region Flow Controls
 - [x] TASK-283-02: Section Background Media and Layering Model
 - [x] TASK-283-03: Section Heading Typography Alignment and Wizard UX
-- [ ] TASK-283-04: Section Presets Variant Guidance and Width Copy
+- [x] TASK-283-04: Section Presets Variant Guidance and Width Copy
 - [ ] TASK-283-05: Section Surface Shadow Motion and Preview Controls
 - [ ] TASK-283-06: Section Responsive Spacing and Mobile Density
 - [ ] TASK-283-07: Section Custom Region Labels and Structure UX

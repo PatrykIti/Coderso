@@ -32,8 +32,8 @@ Section widget jest bazowym kontenerem układu strony. Odpowiada za: semantyczny
 
 ### 2.2 Tryby edytora
 
-- **Wizard** — szybki start: wariant (dropdown), label, tytuł, opis, kolor tła
-- **Visual** — pełna kontrola: wariant (karty), heading copy/level/alignment/size/color, semantics, szerokość/padding, surface/borders
+- **Wizard** — szybki start: quick presets, ten sam card UI wariantów co Visual, label, tytuł, opis, kolor tła
+- **Visual** — pełna kontrola: quick presets, wariant (karty), heading copy/level/alignment/size/color, semantics, szerokość/padding, surface/borders
 - **Advanced** — tokeny techniczne: anchorId, ariaLabel, raw JSON snapshot; `gradientAngle` i `overlayOpacity` nadal są zdublowane z Visual i pozostają shared drift ownerem `TASK-326`
 
 ### 2.3 Renderowanie
@@ -62,7 +62,7 @@ Section widget jest bazowym kontenerem układu strony. Odpowiada za: semantyczny
 
 | # | Problem | Obszar |
 |---|---------|--------|
-| W1 | Brak presetów dla sekcji — każda konfiguracja od zera | Workflow |
+| W1 | Zamknięte (2026-05-21, TASK-283-04): Section ma lokalne presety `Standard content`, `Framed panel`, `Edge-to-edge`, `Hero band`, i `Two-column region group`, które zachowują heading copy i region slot content | Workflow |
 | W2 | Brak cieni (box-shadow) dla powierzchni sekcji | Styl |
 | W3 | Brak animacji/przejść (scroll effects, fade-in) | Efekty |
 | W4 | Brak niestandardowych nazw regionów — wszystkie jako generyczne „Region" | UX struktury |
@@ -70,7 +70,7 @@ Section widget jest bazowym kontenerem układu strony. Odpowiada za: semantyczny
 | W6 | Brak responsywnych wariantów paddingu (inny padding na mobile/desktop) | Responsywność |
 | W7 | Zamknięte (2026-05-21, TASK-283-01): odstęp nagłówek → regiony jest kontrolowany przez `layout.headingGap` zamiast hardcoded `gap-4` | Layout |
 | W8 | Zamknięte (2026-05-21, TASK-283-01): `layout.regionGap` pozwala ustawić jawny token, a brak pola zachowuje legacy spacing wariantu | Layout |
-| W9 | Gradient nie ma przycisku Clear — nie można łatwo usunąć gradientu po ustawieniu (brak onClear dla gradientFrom/gradientTo) | UX edytora |
+| W9 | Zamknięte w aktualnym baseline (potwierdzone 2026-05-21): pola `gradientFrom` i `gradientTo` mają już przycisk Clear, a TASK-283-04 dopisał fokusowy test, więc wcześniejszy raport był stale drift | UX edytora |
 | W10 | Zamknięte (2026-05-17, TASK-256-05-01): `anchorId` jest sanitizowany przed persistence/render i nie jest już aktywnym ownerem TASK-283 | Walidacja |
 | W11 | Zamknięte (2026-05-21, TASK-283-02): Section ma bounded `media-under-overlay` / `overlay-under-media` ordering dla warstw dekoracyjnych | Styl |
 
@@ -90,10 +90,10 @@ Section widget jest bazowym kontenerem układu strony. Odpowiada za: semantyczny
 |---|---------|--------|
 | U1 | Zamknięte (2026-05-21, TASK-283-03): Wizard ma teraz także pole `Label`, więc heading model jest kompletny bez przechodzenia do Visual | Wizard editor |
 | U2 | Gradient angle i overlay opacity są tylko polami numerycznymi — brak suwaka / wizualnego selectora kąta | Edytor |
-| U3 | `maxWidth` podaje tylko techniczne nazwy Tailwind (4xl, 5xl, 6xl, 7xl) zamiast wartości px (896px, 1024px...) | Edytor |
-| U4 | Brak informacji o tym, że gradient nadpisuje kolor tła — potencjalne zdezorientowanie użytkownika | Edytor |
+| U3 | Zamknięte (2026-05-21, TASK-283-04): `maxWidth` pokazuje przyjaźniejsze etykiety (`4XL (56rem / 896px)` ... `7XL (80rem / 1280px)`) bez zmiany zapisanych tokenów | Edytor |
+| U4 | Zamknięte (2026-05-21, TASK-283-04): Visual wyjaśnia, że dwa gradient stop-y stają się widoczną powierzchnią, a kolor tła pozostaje fallbackiem po wyczyszczeniu gradientu | Edytor |
 | U5 | Brak podglądu gradientu / overlay przed zastosowaniem | Edytor |
-| U6 | Wariant wybrany w Wizard (dropdown) vs Visual (karty) — różny UI dla tego samego ustawienia | Spójność |
+| U6 | Zamknięte (2026-05-21, TASK-283-04): Wizard i Visual używają już tego samego card UI dla wariantów, a Wizard dodatkowo pokazuje quick presets | Spójność |
 | U7 | Brak walidacji URL/formatu kolorów w polach tekstowych | Walidacja |
 | U8 | Zamknięte (2026-05-17, TASK-256-03 + TASK-256-05-01): placeholder „Empty region.” jest już ograniczony do editor/admin preview i nie jest aktywnym frontend defectem | Frontend UX |
 
@@ -116,28 +116,30 @@ Section widget jest bazowym kontenerem układu strony. Odpowiada za: semantyczny
 
 | Test | Wynik | Uwagi |
 |------|-------|-------|
-| Wariant — dropdown (Default / Contained / Bleed) | ✅ Działa | Poprawnie synchronizuje się z Visual |
+| Quick presets (`Standard content`, `Framed panel`, `Edge-to-edge`, `Hero band`, `Two-column region group`) | ✅ Działa | Zachowują heading copy i region slot content, a preset `Hero band` oraz `Two-column region group` potwierdzają wielopolowe patche Section-owned tokenów |
+| Wariant — karty (Default / Contained / Bleed) | ✅ Działa | Wizard i Visual używają już tego samego card UI |
 | Pole „Section title" | ✅ Działa | W sesji 2026-05-16 renderowało się jako `<h3>`; bieżący baseline po TASK-256-05-01 używa bezpiecznego `<h2>` |
 | Pole „Description" | ✅ Działa | Renderuje jako `<p class="text-sm">` |
 | Pole „Background color" (+ Clear) | ✅ Działa | Clear poprawnie kasuje wartość |
-| Brak pola „Label" | ❌ Asymetria | Label dostępne tylko w Visual — Wizard jest niekompletny |
+| Pole „Label" | ✅ Działa | Zamknięte przez TASK-283-03; Wizard jest kompletny względem heading copy |
 | Przycisk „Continue to layout and styling" | ✅ Działa | Przełącza na zakładkę Visual |
 
 #### 4.2.2 Edytor — Visual
 
 | Test | Wynik | Uwagi |
 |------|-------|-------|
-| Variant cards (Default / Contained / Bleed) | ✅ Działa | Natychmiastowy efekt w canvas |
+| Variant cards (Default / Contained / Bleed) | ✅ Działa | Natychmiastowy efekt w canvas; ten sam card UI co w Wizard |
+| Quick presets | ✅ Działa | Te same preset cards co w Wizard; preset `Two-column region group` ustawia grid 2-col, a `Hero band` centruje heading bez utraty copy |
 | Label / Title / Description | ✅ Działa | W aktualnym baseline renderuje jako p/h2/p; sesja 2026-05-16 miała jeszcze historyczne p/h3/p przed TASK-256-05-01 |
 | Element (section / div) | ✅ Działa | Zmienia outer HTML element |
 | Anchor ID | Historyczne | W sesji 2026-05-16 brakowało walidacji; bieżący baseline po TASK-256-05-01 sanitizuje `anchorId` przed persistence/render |
 | Aria label | ✅ Działa | Poprawnie dodawane jako `aria-label` |
 | Container width (Content / Wide / Full) | ⚠️ Problem | „Content" i „Wide" dają IDENTYCZNE klasy CSS (`mx-auto w-full`) — brak wizualnej różnicy |
-| Max width (4xl–7xl) | ✅ Działa | Poprawnie aplikuje max-width |
+| Max width (4xl–7xl) | ✅ Działa | Friendly labels pokazują rem/px, ale zapisane tokeny pozostają `4xl`–`7xl` |
 | Vertical padding (sm/md/lg/xl) | ✅ Działa | |
 | Side padding (none/sm/md/lg) | ✅ Działa | |
 | Background color (+ Clear) | ✅ Działa | |
-| Gradient start / end | ⚠️ Problem | **Brak przycisku Clear** — po ustawieniu nie można łatwo wyczyścić gradientu |
+| Gradient start / end | ✅ Działa | Pola mają Clear; guidance wyjaśnia, że aktywny gradient staje się widoczną powierzchnią nad background color |
 | Gradient angle (number input) | ✅ Działa | Domyślnie 180deg (top→bottom) |
 | Border color | ⚠️ Problem | Color picker nadpisuje CSS zmienną `var(--color-border)` hexem `#e2e8f0` |
 | Border width (0/1/2/3px) | ✅ Działa | Poprawnie aplikowane |
@@ -171,7 +173,7 @@ Section widget jest bazowym kontenerem układu strony. Odpowiada za: semantyczny
 | `bleed` + `full container` | `w-full [maxWidth]` | brak | `gap-8` | Uwaga: bez `mx-auto` i bez `paddingInline` |
 | `bleed` + `content container` | `mx-auto w-full [maxWidth] [paddingInline]` | brak | `gap-8` | Mylące: variant "bleed" bez zmian w containerWidth nie daje efektu bleed |
 
-**Problem Bleed:** Wariant `bleed` opisany jako „Full-width section for edge-to-edge layouts" wymaga DODATKOWO ustawienia `containerWidth: full` i `maxWidth: none`, żeby faktycznie być edge-to-edge. Sama zmiana wariantu na „bleed" nie powoduje pełnej szerokości — to jest mylące dla użytkownika.
+**Problem Bleed:** Rzeczywisty edge-to-edge nadal wymaga DODATKOWO ustawienia `containerWidth: full` i `maxWidth: none`. TASK-283-04 urealnił copy edytora do `Expanded section band. Pair with Full-width wrapper + No max width for true edge-to-edge.`, ale bazowa semantyka `content` / `wide` / `bleed` pozostaje shared ownerem `TASK-326`.
 
 #### 4.2.5 Weryfikacja DOM
 
@@ -340,13 +342,10 @@ Zmieniono wariant na `contained`, opublikowano i sprawdzono frontend:
 | Priorytet | Problem | Nakład | Wpływ |
 |-----------|---------|--------|-------|
 | **P0** | TASK-326 — domknąć shared truthfulness drift: fallback `borderWidth` / `radius`, dublowanie `gradientAngle` / `overlayOpacity`, oraz obecne semantyki `content` / `wide` / `bleed` | Niski–Średni | Poprawność normalizacji / Truthfulness UI |
-| **P1** | TASK-283-04 — dodać presety sekcji, przyjaźniejsze nazwy max-width i truthfulness copy dla wariantów | Średni | Workflow / UX |
-| **P2** | TASK-283-05 — dodać shadow/motion/preview controls oraz lepszy UX dla angle/opacity po domknięciu shared truthfulness drift | Średni | Styl / UX |
+| **P1** | TASK-283-05 — dodać shadow/motion/preview controls oraz lepszy UX dla angle/opacity po domknięciu shared truthfulness drift | Średni | Styl / UX |
 | **P2** | TASK-283-06 — dodać responsywne padding tokens i ewentualne bounded density presets | Wysoki | Responsywność |
 | **P2** | TASK-283-07 — dodać custom region labels bez naruszania `region:<id>` slot storage | Średni | UX struktury |
 | **P3** | TASK-283-08 — zsynchronizować końcowe report/docs/changelog/board po domknięciu wszystkich owner leaves | Niski | Evidence hygiene |
-
----
 
 ## 8. Podsumowanie sesji testowej
 
@@ -359,15 +358,17 @@ Zmieniono wariant na `contained`, opublikowano i sprawdzono frontend:
 - Raw JSON snapshot w Advanced pokazuje poprawny, znormalizowany stan
 - Element section/div — poprawna zmiana semantyki
 - Padding block / inline / max-width — poprawnie aplikowane jako klasy Tailwind
+- Quick presets i spójne Wizard/Visual variant cards są zamknięte przez TASK-283-04; preset workflows zachowują heading copy i region slot content
+- Friendly max-width labels oraz gradient/background guidance są obecne w bieżącym edytorze po TASK-283-04
 - Background media: dekoracyjne image/video tła, poster dla video, bounded blend/layer ordering, i fail-closed dla nieobsługiwanych źródeł są zamknięte przez TASK-283-02
 - Heading controls: Wizard `Label`, bounded `h1`–`h6`, alignment, size tokens, i clearable heading colors są zamknięte przez TASK-283-03
 
 ### Co wymaga poprawy ❌
 
-- **Bleed variant**: obecny opis sugeruje full-width, ale rzeczywisty edge-to-edge wymaga dodatkowo `containerWidth: full` i `maxWidth: none`; shared owner `TASK-326` ma urealnić ten contract.
+- **Bleed variant**: rzeczywisty edge-to-edge nadal wymaga dodatkowo `containerWidth: full` i `maxWidth: none`; shared owner `TASK-326` ma domknąć bazową semantykę kontrolek.
 - **Shared truthfulness**: obecne Section owner nadal ma błędne fallback defaults i zdublowane liczby surface w Visual/Advanced; to zostało wycięte do TASK-326 zamiast lokalnej łaty w TASK-283.
-- **Gradient fields**: brak Clear button — shared clear-control drift pozostaje poza TASK-283 w ownerach TASK-256.
-- **Section presets / responsive spacing / custom region labels**: te widget-local owners pozostają otwarte w `TASK-283-04`, `TASK-283-06`, i `TASK-283-07`.
+- **Section surface shadow / motion / preview**: te widget-local owners pozostają otwarte w `TASK-283-05`.
+- **Responsive spacing / custom region labels**: te widget-local owners pozostają otwarte w `TASK-283-06` i `TASK-283-07`.
 - **Container width „Content" vs „Wide"**: identyczne CSS — shared truthfulness drift ownerem jest `TASK-326`, nie lokalny leaf TASK-283.
 
 ### Uwagi do sesji testowej
@@ -388,6 +389,10 @@ Zmieniono wariant na `contained`, opublikowano i sprawdzono frontend:
 - `TASK-283-01`: Section now owns bounded `minHeight`, `regionFlow`,
   `regionColumns`, `headingGap`, and optional `regionGap`, so report findings
   C1, C5, W7, and W8 are no longer active.
+- `TASK-283-04`: Section editors now ship local presets, friendly width
+  labels, consistent Wizard/Visual variant cards, and explicit
+  gradient/background guidance; the focused editor suite also proves current
+  gradient Clear buttons are present, closing stale report row W9.
 - Shared evidence from this turn:
   `bun run test:vitest -- tests/vitest/widgets/section.test.tsx
   tests/vitest/pageBuilder/visualPanel.test.tsx` passed on 2026-05-17.

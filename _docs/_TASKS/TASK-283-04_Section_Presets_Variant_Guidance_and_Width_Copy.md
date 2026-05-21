@@ -6,7 +6,7 @@
 **Category:** Widgets + Section + Admin UI + Workflow
 **Estimated Effort:** Large
 **Dependencies:** TASK-256-02, TASK-256-05-01, TASK-283, TASK-283-01, TASK-283-03
-**Status:** To Do
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -55,19 +55,19 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Define a local `sectionPresetOptions` map in the Section editor owner or a
+- [x] Define a local `sectionPresetOptions` map in the Section editor owner or a
   small pure helper near the Section widget contract if tests need direct
   coverage.
-- [ ] Make preset application update only Section-owned `heading`, `layout`,
+- [x] Make preset application update only Section-owned `heading`, `layout`,
   `style`, and `variant` fields that are already supported by completed
   prerequisite leaves.
-- [ ] Replace technical max-width labels with friendly labels while preserving
+- [x] Replace technical max-width labels with friendly labels while preserving
   the persisted token IDs.
-- [ ] Align Wizard and Visual variant selection interaction enough that the same
+- [x] Align Wizard and Visual variant selection interaction enough that the same
   choices communicate the same behavior.
-- [ ] Add gradient/background guidance that is editor copy only unless TASK-256
+- [x] Add gradient/background guidance that is editor copy only unless TASK-256
   has landed final clear/default behavior.
-- [ ] Add tests for preset payload updates, label rendering, and variant UI
+- [x] Add tests for preset payload updates, label rendering, and variant UI
   consistency.
 
 ## Files to Change
@@ -77,7 +77,7 @@ Out of scope:
 | `core/admin/ui/widgets/editors/SectionEditors.tsx` | Add presets, friendlier labels, consistent variant UI, and gradient guidance. |
 | `core/widgets/core/section.tsx` | Add shared pure preset data only if runtime/default tests need owner-level access; otherwise leave runtime untouched. |
 | `tests/vitest/ui/section-editor-wave.test.tsx` | Add editor tests for preset application, width labels, gradient guidance, and Wizard/Visual variant consistency. |
-| `tests/vitest/widgets/section.test.tsx` | Add only if presets move into pure widget-owner helpers. |
+| `tests/vitest/widgets/section.test.tsx` | Cover editor-rendered preset and Wizard/Visual control markup expectations that stay in the Section owner. |
 
 ## Implementation Pseudocode
 

@@ -24,7 +24,7 @@ repeatable internal regions.
 ## Editor Modes (current after TASK-050-15-02)
 
 ### Wizard
-- quick variant selection
+- quick preset cards and matching variant cards
 - label/title/description onboarding
 - basic background color
 
@@ -46,8 +46,14 @@ Notes:
   `data-widget-control` metadata for automation and accessible labels.
 - Width, min-height, region flow, and spacing are bounded by schema-owned
   layout tokens instead of raw CSS fields.
+- Width controls use friendly labels such as `7XL (80rem / 1280px)`, and the
+  editor guidance explains that `Wide` currently shares the same base wrapper as
+  `Content` while true edge-to-edge still needs `Bleed` + `Full-width wrapper` +
+  `No max width`.
 - Grid columns stay inactive until `layout.regionFlow = "grid"`, and `regionGap`
   can remain unset to keep the legacy variant spacing contract.
+- Visual guidance explains that two gradient stops become the visible surface
+  while background color remains the fallback after the gradient is cleared.
 - Heading controls now include bounded `h1`-`h6`, left/center/right alignment,
   label/title/description size tokens, and clearable heading text colors with
   guidance that the default section title remains `h2`.
@@ -59,6 +65,15 @@ Notes:
 - semantics tokens (`anchorId`, `ariaLabel`)
 - surface numeric tokens (`gradientAngle`, `overlayOpacity`)
 - normalized payload snapshot for diagnostics
+
+## Local Presets
+
+- `Standard content`: legacy-safe grouped content baseline
+- `Framed panel`: contained panel with light framing
+- `Edge-to-edge`: applies `bleed` plus `layout.containerWidth = "full"` and `layout.maxWidth = "none"`
+- `Hero band`: centered heading with `layout.minHeight = "hero"` and generous spacing
+- `Two-column region group`: safe default two-column grid with `layout.maxWidth = "7xl"`
+- Presets preserve current heading copy and region slot content while resetting only supported Section-owned `heading`, `layout`, `style`, and `variant` tokens.
 
 ## Runtime Behavior Notes
 
@@ -97,8 +112,11 @@ Notes:
 
 - `style.backgroundColor` is clearable; clear removes the key and the renderer
   omits a forced `backgroundColor` style.
-- Empty gradient endpoints and `overlayOpacity: 0` remain the existing
-  no-output behavior and are not replaced with a `None` token.
+- `style.gradientFrom` and `style.gradientTo` are also clearable; when both are
+  absent, the gradient output drops and background color remains the visible
+  fallback.
+- `overlayOpacity: 0` remains the existing no-output behavior and is not
+  replaced with a `None` token.
 - Deliberate `transparent` authored by a user remains a normal color value.
 
 ## Data Model (summary)

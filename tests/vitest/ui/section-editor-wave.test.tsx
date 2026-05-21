@@ -5,6 +5,7 @@ import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
 import type { SectionData } from "../../../core/widgets/core/section";
+import type { WidgetBlock, WidgetBlockPatcher } from "../../../core/widgets/types";
 
 const sectionMediaState = vi.hoisted(() => {
   const createMediaItems = () => [
@@ -366,16 +367,19 @@ const renderEditors = async ({
   initialValue,
   initialVariant = "legacy",
   withVariantChange = true,
+  withBlockPatch = false,
 }: {
   initialValue: SectionData;
   initialVariant?: string;
   withVariantChange?: boolean;
+  withBlockPatch?: boolean;
 }) => {
   const { SectionAdvancedEditor, SectionVisualEditor, SectionWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/SectionEditors");
 
   const onChangeSpy = vi.fn();
   const onVariantChangeSpy = vi.fn();
+  const onBlockPatchSpy = vi.fn();
   let latestValue = initialValue;
   let latestVariant = initialVariant;
 
@@ -397,6 +401,26 @@ const renderEditors = async ({
         }
       : undefined;
 
+    const handleBlockPatch: WidgetBlockPatcher | undefined = withBlockPatch
+      ? (patch) => {
+          const currentBlock: WidgetBlock = {
+            id: "section-test-block",
+            type: "section",
+            variant,
+            data: value,
+          };
+          const nextBlock =
+            typeof patch === "function" ? patch(currentBlock) : { ...currentBlock, ...patch };
+          const nextVariant = nextBlock.variant ?? "default";
+          const nextValue = nextBlock.data as SectionData;
+          latestVariant = nextVariant;
+          latestValue = nextValue;
+          onBlockPatchSpy(nextBlock);
+          setVariant(nextVariant);
+          setValue(nextValue);
+        }
+      : undefined;
+
     return (
       <>
         <SectionWizardEditor
@@ -404,18 +428,21 @@ const renderEditors = async ({
           onChange={handleChange}
           variant={variant}
           onVariantChange={handleVariantChange}
+          onBlockPatch={handleBlockPatch}
         />
         <SectionVisualEditor
           value={value}
           onChange={handleChange}
           variant={variant}
           onVariantChange={handleVariantChange}
+          onBlockPatch={handleBlockPatch}
         />
         <SectionAdvancedEditor
           value={value}
           onChange={handleChange}
           variant={variant}
           onVariantChange={handleVariantChange}
+          onBlockPatch={handleBlockPatch}
         />
       </>
     );
@@ -423,6 +450,7 @@ const renderEditors = async ({
 
   return {
     ...mount(<Harness />),
+    onBlockPatchSpy,
     onChangeSpy,
     onVariantChangeSpy,
     getLatestValue: () => latestValue,
@@ -474,11 +502,18 @@ test("Section editors normalize malformed defaults, preserve token strings, and 
   });
 
   try {
-    const variantSelect = findSelectByOptions(view.container, ["default", "contained", "bleed"]);
-    expect(variantSelect.value).toBe("default");
-
-    clickByText(view.container, "Contained");
-    setSelectValue(variantSelect, "contained");
+    const wizardSection = findSectionByTitle(view.container, "Section setup");
+    if (!(wizardSection instanceof HTMLElement)) {
+      throw new Error("Missing section setup");
+    }
+    expect(wizardSection.textContent).toContain("Quick preset");
+    const wizardVariantControl = wizardSection.querySelector(
+      '[data-widget-control="section.wizard.variant"]'
+    );
+    if (!(wizardVariantControl instanceof HTMLElement)) {
+      throw new Error("Missing wizard variant control");
+    }
+    clickByText(wizardVariantControl, "Contained");
     expect(view.getLatestVariant()).toBe("legacy");
     expect(view.onVariantChangeSpy).not.toHaveBeenCalled();
     expect(view.onChangeSpy).not.toHaveBeenCalled();
@@ -552,9 +587,17 @@ test("Section editors cover variant changes, semantics, surface tokens, and adva
   });
 
   try {
-    const variantSelect = findSelectByOptions(view.container, ["default", "contained", "bleed"]);
-    expect(variantSelect.value).toBe("default");
-    setSelectValue(variantSelect, "contained");
+    const wizardSection = findSectionByTitle(view.container, "Section setup");
+    if (!(wizardSection instanceof HTMLElement)) {
+      throw new Error("Missing section setup");
+    }
+    const wizardVariantControl = wizardSection.querySelector(
+      '[data-widget-control="section.wizard.variant"]'
+    );
+    if (!(wizardVariantControl instanceof HTMLElement)) {
+      throw new Error("Missing wizard variant control");
+    }
+    clickByText(wizardVariantControl, "Contained");
     expect(view.getLatestVariant()).toBe("contained");
 
     setInputValue(
@@ -576,7 +619,11 @@ test("Section editors cover variant changes, semantics, surface tokens, and adva
     });
     expect(view.getLatestValue().style?.backgroundColor).toBe("#f8fafc");
 
-    clickByText(view.container, "Bleed");
+    const variantSection = findSectionByTitle(view.container, "Variant and structure");
+    if (!(variantSection instanceof HTMLElement)) {
+      throw new Error("Missing variant and structure section");
+    }
+    clickByText(variantSection, "Bleed");
     expect(view.getLatestVariant()).toBe("bleed");
 
     setInputValue(findInputsByPlaceholder(view.container, "Section title")[1], "Overview section");
@@ -709,6 +756,135 @@ test("Section editors cover variant changes, semantics, surface tokens, and adva
     expect(snapshot?.textContent).toContain('"anchorId": "overview"');
     expect(snapshot?.textContent).toContain('"gradientAngle": 270');
     expect(snapshot?.textContent).toContain('"overlayOpacity": 35');
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Section presets and variant cards use atomic block patches when available", async () => {
+  const view = await renderEditors({
+    initialValue: {
+      heading: {
+        title: "Atomic section",
+      },
+    },
+    initialVariant: "default",
+    withVariantChange: false,
+    withBlockPatch: true,
+  });
+
+  try {
+    const wizardSection = findSectionByTitle(view.container, "Section setup");
+    if (!(wizardSection instanceof HTMLElement)) {
+      throw new Error("Missing section setup");
+    }
+    clickByText(wizardSection, "Hero band");
+    expect(view.onBlockPatchSpy).toHaveBeenCalled();
+    expect(view.onChangeSpy).not.toHaveBeenCalled();
+    expect(view.getLatestVariant()).toBe("bleed");
+    expect(view.getLatestValue().layout).toMatchObject({
+      containerWidth: "full",
+      maxWidth: "none",
+      minHeight: "hero",
+    });
+
+    const variantSection = findSectionByTitle(view.container, "Variant and structure");
+    if (!(variantSection instanceof HTMLElement)) {
+      throw new Error("Missing variant and structure section");
+    }
+    clickByText(variantSection, "Contained");
+    expect(view.getLatestVariant()).toBe("contained");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Section editor presets preserve heading copy and expose friendly width and gradient guidance", async () => {
+  const view = await renderEditors({
+    initialValue: {
+      heading: {
+        label: "Overview",
+        title: "Pricing plans",
+        description: "Supportive copy stays intact.",
+      },
+    },
+    initialVariant: "default",
+  });
+
+  try {
+    const wizardSection = findSectionByTitle(view.container, "Section setup");
+    if (!(wizardSection instanceof HTMLElement)) {
+      throw new Error("Missing section setup");
+    }
+    expect(wizardSection.textContent).toContain("Quick preset");
+    clickByText(wizardSection, "Hero band");
+    expect(view.getLatestVariant()).toBe("bleed");
+    expect(view.getLatestValue().heading).toMatchObject({
+      label: "Overview",
+      title: "Pricing plans",
+      description: "Supportive copy stays intact.",
+      align: "center",
+    });
+    expect(view.getLatestValue().layout).toMatchObject({
+      containerWidth: "full",
+      maxWidth: "none",
+      minHeight: "hero",
+      paddingBlock: "xl",
+      paddingInline: "lg",
+      headingGap: "xl",
+    });
+
+    const variantSection = findSectionByTitle(view.container, "Variant and structure");
+    if (!(variantSection instanceof HTMLElement)) {
+      throw new Error("Missing variant and structure section");
+    }
+    expect(variantSection.textContent).toContain("Quick presets");
+    clickByText(variantSection, "Two-column region group");
+    expect(view.getLatestVariant()).toBe("default");
+    expect(view.getLatestValue().heading).toMatchObject({
+      label: "Overview",
+      title: "Pricing plans",
+      description: "Supportive copy stays intact.",
+      align: "left",
+    });
+    expect(view.getLatestValue().layout).toMatchObject({
+      containerWidth: "content",
+      maxWidth: "7xl",
+      regionFlow: "grid",
+      regionColumns: "2",
+      headingGap: "lg",
+      regionGap: "lg",
+    });
+
+    const spacingSection = findSectionByTitle(view.container, "Width and spacing");
+    if (!(spacingSection instanceof HTMLElement)) {
+      throw new Error("Missing width and spacing section");
+    }
+    expect(spacingSection.textContent).toContain("`Wide` keeps the same base wrapper as `Content`");
+    expect(spacingSection.textContent).toContain("Full-width wrapper");
+    const maxWidthSelect = findSelectByOptions(spacingSection, [
+      "none",
+      "4xl",
+      "5xl",
+      "6xl",
+      "7xl",
+    ]);
+    expect(Array.from(maxWidthSelect.options).map((option) => option.textContent)).toContain(
+      "7XL (80rem / 1280px)"
+    );
+
+    const surfaceSection = findSectionByTitle(view.container, "Surface and borders");
+    if (!(surfaceSection instanceof HTMLElement)) {
+      throw new Error("Missing surface section");
+    }
+    expect(surfaceSection.textContent).toContain("gradient becomes the visible surface");
+    expect(
+      surfaceSection.querySelector('[data-widget-control="section.style.gradientFrom"]')
+        ?.textContent
+    ).toContain("Clear");
+    expect(
+      surfaceSection.querySelector('[data-widget-control="section.style.gradientTo"]')?.textContent
+    ).toContain("Clear");
   } finally {
     view.cleanup();
   }
