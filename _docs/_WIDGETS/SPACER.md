@@ -51,7 +51,8 @@ Notes:
 - Named presets are editor-only shortcuts that write concrete `height` values; Spacer does not persist a separate `preset` field or emit preset-specific DOM markers.
 - Supports token-based heights (`0..32`) plus bounded custom lengths: bare numbers such as `48` normalize to `48px`, explicit `48px` remains valid, viewport values accept `vh`, `dvh`, `svh`, and `vw`, and fluid values accept canonical `clamp(min, preferred, max)` with `px|rem` boundaries and a viewport-unit preferred segment.
 - Rejects unsafe custom strings such as standalone `rem`, `calc(...)`, CSS variables, URLs, semicolons, malformed `clamp()`, and unsupported units like `lvh` by falling back to deterministic defaults before runtime output.
-- Shows optional guide label only in preview contexts.
+- Shows optional guide label only in preview and editor-preview contexts.
+- The guide remains decorative inside the `aria-hidden` Spacer shell and does not expose a separate ARIA role or label.
 - Exposes deterministic runtime markers:
   - `data-spacer`
   - `data-spacer-variant`
@@ -80,6 +81,9 @@ Notes:
 - Horizontal Spacer behavior is not available in v1. Authors should use the
   existing row/column layout widgets for structural horizontal spacing until a
   future shared nested row-flow rendering contract lands.
+- If `showGuideInEditor` is turned off, Spacer intentionally returns to a
+  minimal invisible block in editor-preview surfaces; there is no separate
+  always-on outline.
 - Available named presets are `Card gap` (`8/6/4`), `Section gap` (`16/12/8`), and `Hero gap` (`24/20/16`).
 - In `responsive`, applying a preset writes the full desktop/tablet/mobile triplet. In `fixed`, presets update desktop only and preserve the saved tablet/mobile heights until the user switches back to `responsive`.
 - Manual height edits clear the derived active-preset state without changing the runtime schema or adding a persisted preset field.

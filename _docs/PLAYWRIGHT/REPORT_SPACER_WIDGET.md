@@ -424,4 +424,38 @@ Leaf evidence from this turn:
 |---|---|---|---|
 | BF-05 | `deferred` | `TASK-284-04 -> TASK-326` | Spacer remains vertical-only. The current shared `WidgetRenderer` shell still wraps nested widgets as full-width blocks, so a local `orientation`/`width` field would be misleading instead of acting like a truthful row-flow gap. Future implementation is reassigned to shared `TASK-326`. |
 
-*Raport wygenerowany na podstawie analizy kodu i testów Playwright — 2026-05-16; shared closure refreshed — 2026-05-17; TASK-284-01 refreshed — 2026-05-21; TASK-284-02 refreshed — 2026-05-21; TASK-284-03 refreshed — 2026-05-21; TASK-284-04 refreshed — 2026-05-21.*
+## Finalny status po TASK-284-05 (2026-05-21)
+
+Family closure validation from this turn:
+- `git diff --check`
+- `bun run test:vitest -- tests/vitest/widgets/spacer.test.tsx tests/vitest/ui/spacer-editor-wave.test.tsx tests/vitest/widgets/styleNoneTokens.test.tsx tests/vitest/widgets/renderer.test.tsx`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run lint`
+- `bun run gates:coderso`
+- `bun run scan:security:strict` (fails locally because `semgrep`, `trivy`, and `gitleaks` are not installed in `$PATH`; `bun audit` still ran inside the same command)
+- `bun run precommit`
+
+| Row | Final status | Owner | Evidence |
+|---|---|---|---|
+| BUG-01 | `fixed-task-303` | `TASK-303` | Shared token controls now collapse the duplicate `0` off-state behind canonical `None`. |
+| BUG-02 | `fixed-task-256` | `TASK-256-05-03` | Fixed-mode normalization now preserves hidden tablet/mobile values so responsive breakpoints survive mode round-trips. |
+| BUG-03 | `fixed-task-256` | `TASK-256-05-03` | Advanced height controls now follow the active fixed/responsive variant instead of hardcoding responsive mode. |
+| BUG-04 | `fixed-task-256` | `TASK-256-05-03` | The guide now renders on editor-preview surfaces through the shared render-context path, so the control is truthful in the builder. |
+| UX-01 | `fixed-task-284` | `TASK-284-01` | Wizard now explains that fixed mode reuses the desktop height for tablet and mobile. |
+| UX-02 | `fixed-task-303` | `TASK-303` | Selecting `Custom px` now enters explicit custom-edit mode instead of silently doing nothing. |
+| UX-03 | `fixed-task-303` | `TASK-303` | Token/custom controls now keep resolved or invalid-state guidance visible even when the custom field is empty. |
+| UX-04 | `no-action` | No TASK-284 implementation | Spacer intentionally stays visually minimal when `showGuideInEditor` is off; the shipped contract does not add a second always-on outline. |
+| UX-05 | `fixed-task-256` | `TASK-256-05-03` | Advanced now reflects the active variant, so fixed mode no longer shows misleading editable tablet/mobile controls. |
+| BF-01 | `fixed-task-256` | `TASK-256-05-03` | Guide visibility is no longer limited to the preview dialog; editor-preview surfaces now render the same affordance. |
+| BF-02 | `fixed-task-284` | `TASK-284-02` | Spacer now accepts bounded viewport custom heights (`vh`, `dvh`, `svh`, `vw`). |
+| BF-03 | `fixed-task-284` | `TASK-284-02` | Spacer now accepts safe canonical fluid `clamp(min, preferred, max)` values. |
+| BF-04 | `fixed-task-284` | `TASK-284-03` | Spacer now exposes transient `Card gap`, `Section gap`, and `Hero gap` presets in Wizard and Visual. |
+| BF-05 | `deferred` | `TASK-284-04 -> TASK-326` | Honest horizontal Spacer support still needs a shared nested row-flow rendering owner, so this row stays deferred. |
+| BF-06 | `fixed-task-284` | `TASK-284-01` | Desktop, tablet, and mobile height controls now explain the active Tailwind breakpoint ranges. |
+| BF-07 | `fixed-task-284` | `TASK-284-01` | Spacer copy now explicitly documents bare-number input such as `48` -> `48px`. |
+| A1 | `no-action` | No TASK-284 implementation | Spacer remains a decorative layout primitive under `aria-hidden="true"`, which is the intended accessibility contract. |
+| A2 | `fixed-task-284` | `TASK-284-01` | Spacer custom-height inputs now expose explicit accessible names and helper descriptions. |
+| A3 | `no-action` | No TASK-284 implementation | The guide stays inside the decorative `aria-hidden` Spacer shell, so no separate role or label is exposed to assistive tech. |
+
+*Raport wygenerowany na podstawie analizy kodu i testów Playwright — 2026-05-16; shared closure refreshed — 2026-05-17; TASK-284-01 refreshed — 2026-05-21; TASK-284-02 refreshed — 2026-05-21; TASK-284-03 refreshed — 2026-05-21; TASK-284-04 refreshed — 2026-05-21; TASK-284-05 refreshed — 2026-05-21.*
