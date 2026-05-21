@@ -95,7 +95,7 @@ the Product Table slice.
 
 ## Sub-Tasks
 
-- [ ] TASK-281-01: Product Table Admin Preview Resolver Parity
+- [x] TASK-281-01: Product Table Admin Preview Resolver Parity
 - [ ] TASK-281-02: Product Table Column Labels and Visibility Model
 - [ ] TASK-281-03: Product Table Status Stock and Row State Presentation
 - [ ] TASK-281-04: Product Table Product Links and Action Column

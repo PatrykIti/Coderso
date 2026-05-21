@@ -3,6 +3,7 @@ import { listWidgetCatalog } from "../../services/widgets/widgetCatalogService";
 import { registerEntryTeaserPreviewRoutes } from "./entryTeaserPreviewRoutes";
 import { registerProductComparePreviewRoutes } from "./productComparePreviewRoutes";
 import { registerProductGalleryPreviewRoutes } from "./productGalleryPreviewRoutes";
+import { registerProductTablePreviewRoutes } from "./productTablePreviewRoutes";
 
 export type WidgetRouteHandler = (ctx: RouteContext) => Promise<unknown> | unknown;
 
@@ -35,6 +36,11 @@ export function registerWidgetRoutes(router: Router, deps: WidgetRouteDeps) {
   });
 
   registerProductGalleryPreviewRoutes(router, {
+    requirePermission,
+    validate,
+  });
+
+  registerProductTablePreviewRoutes(router, {
     requirePermission,
     validate,
   });

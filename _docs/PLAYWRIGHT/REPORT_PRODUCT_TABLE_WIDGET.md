@@ -444,3 +444,27 @@ Tylko elementy nie zależne od danych runtime są zgodne:
   Commerce/product-specific behavior continues through the `TASK-281` family.
 - Shared rows that match existing TASK-256 safe-output or accessibility
   mechanisms remain referenced by `TASK-256-07` and `TASK-256-08`.
+
+
+---
+
+## Status po TASK-281-01 (2026-05-21)
+
+### Fixed in TASK-281-01
+
+- `BUG-00`: Product Table admin preview now hydrates rows through the internal
+  `/admin/api/widgets/product-table/preview` route and the shared
+  `WidgetPreviewState` canvas patch seam, so editors can validate live table
+  output before publishing.
+- `UX-09`: Advanced mode runtime diagnostics are now read-only; authors can no
+  longer spoof `resolved.error` through an editable field.
+- Admin preview refresh now ignores stale async responses, aborts superseded
+  requests, and preserves the last safe preview payload when a newer request
+  fails.
+
+### Validation evidence
+
+- `bun run test:vitest -- tests/vitest/admin/productTablePreviewClient.test.ts tests/vitest/widgets/productTable.test.tsx tests/vitest/ui/product-table-editor-wave.test.tsx`
+- `bun test tests/integration/routes/productTablePreview.test.ts tests/integration/routes/widgets.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`

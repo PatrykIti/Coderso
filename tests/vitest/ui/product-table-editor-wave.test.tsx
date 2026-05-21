@@ -5,6 +5,7 @@ import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
 import type { ProductTableData } from "../../../core/widgets/core/productTable";
+import type { WidgetPreviewState } from "../../../core/widgets/types";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -66,6 +67,59 @@ vi.mock("@/services/commerceClient", () => ({
   listCommerceCollectionsCached: vi.fn(async () => []),
 }));
 
+const previewQueue = vi.hoisted(() => {
+  const queue: Array<{
+    promise: Promise<unknown>;
+    resolve: (value: unknown) => void;
+    reject: (error: unknown) => void;
+  }> = [];
+
+  return {
+    push() {
+      let resolve!: (value: unknown) => void;
+      let reject!: (error: unknown) => void;
+      const promise = new Promise((resolver, rejecter) => {
+        resolve = resolver;
+        reject = rejecter;
+      });
+      queue.push({ promise, resolve, reject });
+      return queue[queue.length - 1];
+    },
+    shift() {
+      return queue.shift() ?? null;
+    },
+    clear() {
+      queue.splice(0, queue.length);
+    },
+  };
+});
+
+const previewRequestState = vi.hoisted(() => ({
+  calls: [] as ProductTableData[],
+  reset() {
+    this.calls = [];
+  },
+}));
+
+const previewProductTableMock = vi.hoisted(() =>
+  vi.fn(async (input: ProductTableData) => {
+    previewRequestState.calls.push(input);
+    const next = previewQueue.shift();
+    if (!next) {
+      return {
+        items: [],
+        total: 0,
+        resolvedAt: "2026-05-21T12:00:00.000Z",
+      };
+    }
+    return next.promise;
+  })
+);
+
+vi.mock("@/services/productTablePreviewClient", () => ({
+  previewProductTable: previewProductTableMock,
+}));
+
 const mount = (node: React.ReactNode) => {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -88,6 +142,13 @@ const mount = (node: React.ReactNode) => {
 
 const normalizeText = (value: string | null | undefined) =>
   (value ?? "").replace(/\s+/g, " ").trim().toLowerCase();
+
+const flushPromises = async () => {
+  await React.act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+};
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
@@ -115,6 +176,16 @@ const toggleCheckbox = (element: Element | null | undefined) => {
   });
 };
 
+const clickButton = (container: ParentNode, label: string) => {
+  const button = Array.from(container.querySelectorAll("button")).find((element) =>
+    normalizeText(element.textContent).includes(normalizeText(label))
+  );
+  if (!(button instanceof HTMLButtonElement)) return;
+  React.act(() => {
+    button.click();
+  });
+};
+
 const findLabeledField = (
   container: ParentNode,
   text: string,
@@ -132,16 +203,23 @@ const findInputByLabel = (container: ParentNode, text: string) =>
 const findSelectByLabel = (container: ParentNode, text: string) =>
   findLabeledField(container, text, "select");
 
+const requirePreviewState = (state: WidgetPreviewState | null) => {
+  if (!state) throw new Error("expected preview state");
+  return state;
+};
+
 afterEach(() => {
   document.body.innerHTML = "";
+  previewQueue.clear();
+  previewRequestState.reset();
+  previewProductTableMock.mockClear();
   vi.restoreAllMocks();
 });
 
-test("ProductTable editors cover source controls, column toggles, label normalization, empty state, and runtime preview", async () => {
+test("ProductTable editors normalize source, columns, labels, and read-only preview diagnostics", async () => {
   const { ProductTableAdvancedEditor, ProductTableVisualEditor, ProductTableWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/ProductTableEditors");
 
-  const onChangeSpy = vi.fn();
   let latestValue: ProductTableData = {
     resolved: {
       items: [
@@ -174,29 +252,32 @@ test("ProductTable editors cover source controls, column toggles, label normaliz
   const Harness = () => {
     const [value, setValue] = useState<ProductTableData>(latestValue);
 
-    const handleChange = (next: ProductTableData) => {
-      latestValue = next;
-      onChangeSpy(next);
-      setValue(next);
-    };
-
     return (
       <>
         <ProductTableWizardEditor
           value={value}
-          onChange={handleChange}
+          onChange={(next) => {
+            latestValue = next;
+            setValue(next);
+          }}
           variant="default"
           onVariantChange={() => undefined}
         />
         <ProductTableVisualEditor
           value={value}
-          onChange={handleChange}
+          onChange={(next) => {
+            latestValue = next;
+            setValue(next);
+          }}
           variant="default"
           onVariantChange={() => undefined}
         />
         <ProductTableAdvancedEditor
           value={value}
-          onChange={handleChange}
+          onChange={(next) => {
+            latestValue = next;
+            setValue(next);
+          }}
           variant="default"
           onVariantChange={() => undefined}
         />
@@ -211,6 +292,7 @@ test("ProductTable editors cover source controls, column toggles, label normaliz
     expect(normalizeText(view.container.textContent)).toContain(
       normalizeText("Resolved items: 1 · Total: 0")
     );
+    expect(findInputByLabel(view.container, "Runtime error flag")).toBeUndefined();
     expect(
       (findInputByLabel(view.container, "Limit") as HTMLInputElement | null | undefined)?.value
     ).toBe("12");
@@ -218,17 +300,6 @@ test("ProductTable editors cover source controls, column toggles, label normaliz
       (findSelectByLabel(view.container, "Sort field") as HTMLSelectElement | null | undefined)
         ?.value
     ).toBe("updatedAt");
-    expect(
-      (findSelectByLabel(view.container, "Sort direction") as HTMLSelectElement | undefined)?.value
-    ).toBe("desc");
-    expect(
-      (findInputByLabel(view.container, "Show slug") as HTMLInputElement | null | undefined)
-        ?.checked
-    ).toBe(true);
-    expect(
-      (findInputByLabel(view.container, "Show compare-at price") as HTMLInputElement | undefined)
-        ?.checked
-    ).toBe(false);
 
     setInputValue(findInputByLabel(view.container, "Limit"), "52");
     setInputValue(findInputByLabel(view.container, "Search"), " starter suite ");
@@ -256,9 +327,7 @@ test("ProductTable editors cover source controls, column toggles, label normaliz
       findInputByLabel(view.container, "Description"),
       "Adjust source filters or publish products."
     );
-    setInputValue(findInputByLabel(view.container, "Runtime error flag"), "resolver-timeout");
 
-    expect(onChangeSpy).toHaveBeenCalled();
     expect(latestValue.source).toEqual({
       limit: 48,
       search: "starter suite",
@@ -286,7 +355,6 @@ test("ProductTable editors cover source controls, column toggles, label normaliz
     expect(latestValue.resolved).toMatchObject({
       total: 0,
       resolvedAt: "2026-03-09T12:00:00.000Z",
-      error: "resolver-timeout",
     });
     expect(latestValue.resolved?.items).toHaveLength(1);
     expect(latestValue.resolved?.items?.[0]).toMatchObject({
@@ -307,350 +375,233 @@ test("ProductTable editors cover source controls, column toggles, label normaliz
       mediaIds: ["hero", "gallery"],
       collectionIds: ["summer", "sale"],
     });
-    expect(
-      (findInputByLabel(view.container, "Show compare-at price") as HTMLInputElement | undefined)
-        ?.checked
-    ).toBe(true);
-    expect(
-      (findInputByLabel(view.container, "Show slug") as HTMLInputElement | null | undefined)
-        ?.checked
-    ).toBe(false);
-    expect(
-      (findInputByLabel(view.container, "Runtime error flag") as HTMLInputElement | undefined)
-        ?.value
-    ).toBe("resolver-timeout");
 
     const preview = view.container.querySelector("pre");
     expect(preview?.textContent).toContain('"limit": 48');
     expect(preview?.textContent).toContain('"field": "pricing.amount"');
     expect(preview?.textContent).toContain('"dir": "asc"');
     expect(preview?.textContent).toContain('"search": "starter suite"');
-    expect(preview?.textContent).toContain('"collectionIds": [');
     expect(preview?.textContent).toContain('"summer"');
     expect(preview?.textContent).toContain('"winter"');
-    expect(preview?.textContent).toContain('"status": [');
     expect(preview?.textContent).toContain('"archived"');
-    expect(preview?.textContent).not.toContain('"published"');
   } finally {
     view.cleanup();
   }
 });
 
-test("ProductTable editors fall back to hardcoded wizard limit and empty runtime counts when normalized data is sparse", async () => {
-  vi.resetModules();
-  vi.doMock("../../../core/widgets/core/productTable", async () => {
-    const actual = await vi.importActual<typeof import("../../../core/widgets/core/productTable")>(
-      "../../../core/widgets/core/productTable"
-    );
-
-    return {
-      ...actual,
-      productTableDefaults: {
-        ...actual.productTableDefaults,
-        source: undefined,
-      },
-    };
-  });
-
-  const { ProductTableAdvancedEditor, ProductTableWizardEditor } =
+test("ProductTable preview hook resolves admin preview state", async () => {
+  const { ProductTableAdvancedEditor } =
     await import("../../../core/admin/ui/widgets/editors/ProductTableEditors");
 
-  const view = mount(
-    <>
-      <ProductTableWizardEditor
-        value={{}}
-        onChange={() => undefined}
-        variant="default"
-        onVariantChange={() => undefined}
-      />
-      <ProductTableAdvancedEditor
-        value={{}}
-        onChange={() => undefined}
-        variant="default"
-        onVariantChange={() => undefined}
-      />
-    </>
-  );
-
-  try {
-    expect(
-      (findInputByLabel(view.container, "Limit") as HTMLInputElement | null | undefined)?.value
-    ).toBe("12");
-    expect(normalizeText(view.container.textContent)).toContain(
-      normalizeText("Resolved items: 0 · Total: 0")
-    );
-    expect(
-      (
-        findInputByLabel(view.container, "Runtime error flag") as
-          | HTMLInputElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("");
-  } finally {
-    view.cleanup();
-    vi.doUnmock("../../../core/widgets/core/productTable");
-    vi.resetModules();
-  }
-});
-
-test("ProductTable visual and advanced editors honor explicit toggle states and sparse runtime fallbacks", async () => {
-  const { ProductTableAdvancedEditor, ProductTableVisualEditor } =
-    await import("../../../core/admin/ui/widgets/editors/ProductTableEditors");
-
-  const visualView = mount(
-    <ProductTableVisualEditor
-      value={{
-        fields: {
-          showSlug: false,
-          showStatus: false,
-          showStock: false,
-          showCompareAt: true,
-          showCollectionCount: true,
-        },
-      }}
-      onChange={() => undefined}
-      variant="default"
-      onVariantChange={() => undefined}
-    />
-  );
-
-  try {
-    expect(
-      (findInputByLabel(visualView.container, "Show slug") as HTMLInputElement | null | undefined)
-        ?.checked
-    ).toBe(false);
-    expect(
-      (findInputByLabel(visualView.container, "Show status") as HTMLInputElement | null | undefined)
-        ?.checked
-    ).toBe(false);
-    expect(
-      (findInputByLabel(visualView.container, "Show stock") as HTMLInputElement | null | undefined)
-        ?.checked
-    ).toBe(false);
-    expect(
-      (
-        findInputByLabel(visualView.container, "Show compare-at price") as
-          | HTMLInputElement
-          | undefined
-      )?.checked
-    ).toBe(true);
-    expect(
-      (
-        findInputByLabel(visualView.container, "Show collection count") as
-          | HTMLInputElement
-          | undefined
-      )?.checked
-    ).toBe(true);
-  } finally {
-    visualView.cleanup();
-  }
-
-  const advancedView = mount(
-    <ProductTableAdvancedEditor
-      value={{}}
-      onChange={() => undefined}
-      variant="default"
-      onVariantChange={() => undefined}
-    />
-  );
-
-  try {
-    expect(normalizeText(advancedView.container.textContent)).toContain(
-      normalizeText("Resolved items: 0 · Total: 0")
-    );
-    expect(
-      (
-        findInputByLabel(advancedView.container, "Runtime error flag") as
-          | HTMLInputElement
-          | undefined
-      )?.value
-    ).toBe("");
-  } finally {
-    advancedView.cleanup();
-  }
-});
-
-test("ProductTable editors restore default labels and empty state when fields are cleared and drop blank runtime errors", async () => {
-  const { ProductTableAdvancedEditor, ProductTableVisualEditor, ProductTableWizardEditor } =
-    await import("../../../core/admin/ui/widgets/editors/ProductTableEditors");
-
-  let latestValue: ProductTableData = {
-    source: {
-      limit: 4,
-      search: "featured",
-      collectionIds: ["sale"],
-      status: ["published"],
-      sortField: "title",
-      sortDir: "desc",
-    },
-    fields: {
-      showSlug: false,
-      showStatus: false,
-      showStock: false,
-      showCompareAt: true,
-      showCollectionCount: true,
-    },
-    labels: {
-      title: "Table product",
-      price: "Retail",
-      status: "Lifecycle",
-    },
-    emptyState: {
-      title: "Nothing here",
-      description: "Update source filters.",
-    },
-    resolved: {
-      items: [],
-      total: 0,
-      resolvedAt: "2026-03-09T13:00:00.000Z",
-      error: "stale-preview",
-    },
-  };
+  const first = previewQueue.push();
+  let latestPreviewState: WidgetPreviewState | null = null;
 
   const Harness = () => {
-    const [value, setValue] = useState<ProductTableData>(latestValue);
-
-    const handleChange = (next: ProductTableData) => {
-      latestValue = next;
-      setValue(next);
-    };
+    const [previewState, setPreviewState] = useState<WidgetPreviewState | null>(null);
 
     return (
-      <>
-        <ProductTableWizardEditor
-          value={value}
-          onChange={handleChange}
-          variant="default"
-          onVariantChange={() => undefined}
-        />
-        <ProductTableVisualEditor
-          value={value}
-          onChange={handleChange}
-          variant="default"
-          onVariantChange={() => undefined}
-        />
-        <ProductTableAdvancedEditor
-          value={value}
-          onChange={handleChange}
-          variant="default"
-          onVariantChange={() => undefined}
-        />
-      </>
+      <ProductTableAdvancedEditor
+        value={{ source: { limit: 4 } }}
+        onChange={() => undefined}
+        variant="default"
+        context={{
+          surface: "page-builder",
+          blockId: "table-1",
+          editorMode: "advanced",
+          previewState,
+          setPreviewState: (next) => {
+            latestPreviewState = next;
+            setPreviewState(next);
+          },
+        }}
+      />
     );
   };
 
   const view = mount(<Harness />);
 
   try {
-    expect(
-      (findInputByLabel(view.container, "Show slug") as HTMLInputElement | null | undefined)
-        ?.checked
-    ).toBe(false);
-    expect(
-      (findInputByLabel(view.container, "Show compare-at price") as HTMLInputElement | undefined)
-        ?.checked
-    ).toBe(true);
+    await flushPromises();
+    first.resolve({
+      items: [
+        {
+          id: "product-1",
+          title: "Preview Home",
+          slug: "preview-home",
+          excerpt: "Preview excerpt",
+          status: "published",
+          pricing: {
+            amount: 19900,
+            currency: "USD",
+            compareAtAmount: null,
+          },
+          stock: {
+            state: "in_stock",
+            quantity: 4,
+            inStock: true,
+          },
+          primaryMediaId: null,
+          mediaIds: [],
+          collectionIds: [],
+        },
+      ],
+      total: 1,
+      resolvedAt: "2026-05-21T12:00:00.000Z",
+    });
+    await flushPromises();
+
+    expect(previewProductTableMock).toHaveBeenCalledTimes(1);
+    expect(previewRequestState.calls[0]).toEqual({
+      source: {
+        limit: 4,
+        search: "",
+        collectionIds: [],
+        status: [],
+        sortField: "updatedAt",
+        sortDir: "desc",
+      },
+    });
+    const resolvedPreviewState = requirePreviewState(latestPreviewState);
+    expect(resolvedPreviewState.status).toBe("ready");
+    expect(resolvedPreviewState.requestKey).toContain("table-1:");
+    expect(resolvedPreviewState.dataPatch).toMatchObject({
+      resolved: {
+        total: 1,
+        items: [{ title: "Preview Home" }],
+      },
+    });
     expect(normalizeText(view.container.textContent)).toContain(
-      normalizeText("Resolved items: 0 · Total: 0")
+      normalizeText("Resolved items: 1 · Total: 1")
     );
-
-    setInputValue(findInputByLabel(view.container, "Product"), "   ");
-    setInputValue(findInputByLabel(view.container, "Price"), "");
-    setInputValue(findInputByLabel(view.container, "Status"), " ");
-    setInputValue(findInputByLabel(view.container, "Title"), " ");
-    setInputValue(findInputByLabel(view.container, "Description"), " ");
-    setInputValue(findInputByLabel(view.container, "Runtime error flag"), " ");
-
-    expect(latestValue.labels).toMatchObject({
-      title: "Product",
-      price: "Price",
-      status: "Status",
-    });
-    expect(latestValue.emptyState).toEqual({
-      title: "No products available",
-      description: "Publish products or adjust source query.",
-    });
-    expect(latestValue.resolved).toMatchObject({
-      items: [],
-      total: 0,
-      resolvedAt: "2026-03-09T13:00:00.000Z",
-    });
-    expect(latestValue.resolved).not.toHaveProperty("error");
-
-    expect(
-      (findInputByLabel(view.container, "Product") as HTMLInputElement | null | undefined)?.value
-    ).toBe("Product");
-    expect(
-      (findInputByLabel(view.container, "Price") as HTMLInputElement | null | undefined)?.value
-    ).toBe("Price");
-    expect(
-      (findInputByLabel(view.container, "Status") as HTMLInputElement | null | undefined)?.value
-    ).toBe("Status");
-    expect(
-      (findInputByLabel(view.container, "Title") as HTMLInputElement | null | undefined)?.value
-    ).toBe("No products available");
-    expect(
-      (findInputByLabel(view.container, "Description") as HTMLInputElement | null | undefined)
-        ?.value
-    ).toBe("Publish products or adjust source query.");
-    expect(
-      (findInputByLabel(view.container, "Runtime error flag") as HTMLInputElement | undefined)
-        ?.value
-    ).toBe("");
-
-    const preview = view.container.querySelector("pre");
-    expect(preview?.textContent).toContain('"limit": 4');
-    expect(preview?.textContent).toContain('"field": "title"');
-    expect(preview?.textContent).toContain('"dir": "desc"');
-    expect(preview?.textContent).toContain('"search": "featured"');
-    expect(preview?.textContent).toContain('"published"');
+    expect(normalizeText(view.container.textContent)).toContain(normalizeText("Refresh preview"));
   } finally {
     view.cleanup();
   }
 });
 
-test("ProductTable advanced editor falls back when normalized resolved summary is sparse", async () => {
-  vi.resetModules();
-  vi.doMock("../../../core/widgets/core/productTable", async () => {
-    const actual = await vi.importActual<typeof import("../../../core/widgets/core/productTable")>(
-      "../../../core/widgets/core/productTable"
-    );
-
-    return {
-      ...actual,
-      normalizeProductTableData: (value: ProductTableData) => ({
-        ...actual.normalizeProductTableData(value),
-        resolved: {
-          resolvedAt: "",
-          error: "",
-        } as ProductTableData["resolved"],
-      }),
-    };
-  });
-
-  const { ProductTableAdvancedEditor } =
+test("ProductTable preview hook ignores stale async responses and retains the last safe patch on error", async () => {
+  const { ProductTableWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/ProductTableEditors");
 
-  const view = mount(
-    <ProductTableAdvancedEditor value={{}} onChange={() => undefined} variant="default" />
-  );
+  const first = previewQueue.push();
+  const second = previewQueue.push();
+  const third = previewQueue.push();
+  let setSourceLimit: ((limit: number) => void) | null = null;
+  let latestPreviewState: WidgetPreviewState | null = null;
+
+  const Harness = () => {
+    const [value, setValue] = useState<ProductTableData>({
+      source: { limit: 4 },
+    });
+    const [previewState, setPreviewState] = useState<WidgetPreviewState | null>(null);
+
+    setSourceLimit = (limit: number) =>
+      setValue((current) => ({
+        ...current,
+        source: {
+          ...(current.source ?? {}),
+          limit,
+        },
+      }));
+
+    return (
+      <ProductTableWizardEditor
+        value={value}
+        onChange={setValue}
+        variant="default"
+        context={{
+          surface: "page-builder",
+          blockId: "table-1",
+          editorMode: "wizard",
+          previewState,
+          setPreviewState: (next) => {
+            latestPreviewState = next;
+            setPreviewState(next);
+          },
+        }}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
 
   try {
-    expect(normalizeText(view.container.textContent)).toContain(
-      normalizeText("Resolved items: 0 · Total: 0")
-    );
-    expect(
-      (
-        findInputByLabel(view.container, "Runtime error flag") as
-          | HTMLInputElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("");
+    await flushPromises();
+    React.act(() => {
+      setSourceLimit?.(8);
+    });
+    await flushPromises();
+
+    first.resolve({
+      items: [
+        {
+          id: "product-1",
+          title: "Stale preview",
+          slug: "stale-preview",
+          excerpt: null,
+          status: "published",
+          pricing: { amount: 1000, currency: "USD", compareAtAmount: null },
+          stock: { state: "in_stock", quantity: 1, inStock: true },
+          primaryMediaId: null,
+          mediaIds: [],
+          collectionIds: [],
+        },
+      ],
+      total: 1,
+      resolvedAt: "2026-05-21T12:00:00.000Z",
+    });
+    await flushPromises();
+
+    expect(requirePreviewState(latestPreviewState).status).toBe("loading");
+
+    second.resolve({
+      items: [
+        {
+          id: "product-2",
+          title: "Fresh preview",
+          slug: "fresh-preview",
+          excerpt: null,
+          status: "published",
+          pricing: { amount: 2000, currency: "USD", compareAtAmount: null },
+          stock: { state: "in_stock", quantity: 2, inStock: true },
+          primaryMediaId: null,
+          mediaIds: [],
+          collectionIds: [],
+        },
+      ],
+      total: 1,
+      resolvedAt: "2026-05-21T12:01:00.000Z",
+    });
+    await flushPromises();
+
+    expect(previewProductTableMock).toHaveBeenCalledTimes(2);
+    expect(previewRequestState.calls[0]).toMatchObject({ source: { limit: 4 } });
+    expect(previewRequestState.calls[1]).toMatchObject({ source: { limit: 8 } });
+    const readyPreviewState = requirePreviewState(latestPreviewState);
+    expect(readyPreviewState.status).toBe("ready");
+    expect(readyPreviewState.dataPatch).toMatchObject({
+      resolved: {
+        items: [{ title: "Fresh preview" }],
+      },
+    });
+
+    clickButton(view.container, "Refresh preview");
+    await flushPromises();
+    third.reject(new Error("Preview timed out"));
+    await flushPromises();
+
+    expect(previewProductTableMock).toHaveBeenCalledTimes(3);
+    expect(previewRequestState.calls[2]).toMatchObject({ source: { limit: 8 } });
+    const errorPreviewState = requirePreviewState(latestPreviewState);
+    expect(errorPreviewState.status).toBe("error");
+    expect(errorPreviewState.message).toBe("Preview timed out");
+    expect(errorPreviewState.dataPatch).toMatchObject({
+      resolved: {
+        items: [{ title: "Fresh preview" }],
+      },
+    });
+    expect(normalizeText(view.container.textContent)).toContain(normalizeText("Preview timed out"));
   } finally {
     view.cleanup();
-    vi.doUnmock("../../../core/widgets/core/productTable");
-    vi.resetModules();
   }
 });

@@ -1,7 +1,7 @@
 import React from "react";
 import type { ComponentType } from "react";
-import { expect, test } from "vitest";
 import { renderToString } from "react-dom/server";
+import { expect, test } from "vitest";
 
 import {
   ProductTableAdvancedEditor,
@@ -210,6 +210,39 @@ test("product table validator accepts resolved payload", () => {
       },
     })
   ).not.toThrow();
+});
+
+test("product table renderer surfaces preview warnings and widget preview support", () => {
+  const loadingHtml = renderToString(
+    <ProductTableBlock
+      variant="default"
+      data={normalizeProductTableData(productTableDefaults)}
+      renderContext={{
+        mode: "editor-preview",
+        previewState: { status: "loading" },
+      }}
+    />
+  );
+  const errorHtml = renderToString(
+    <ProductTableBlock
+      variant="default"
+      data={normalizeProductTableData(productTableDefaults)}
+      renderContext={{
+        mode: "editor-preview",
+        previewState: { status: "error", message: "Preview timed out" },
+      }}
+    />
+  );
+  const widget = createProductTableWidget({
+    wizard: StubEditor,
+    visual: StubEditor,
+    advanced: StubEditor,
+  });
+
+  expect(loadingHtml).toContain("Refreshing Product Table preview");
+  expect(errorHtml).toContain("Product Table preview warning:");
+  expect(errorHtml).toContain("Preview timed out");
+  expect(widget.editorCapabilities?.supportsPreviewState).toBe(true);
 });
 
 test("product table editors render expected panels", () => {

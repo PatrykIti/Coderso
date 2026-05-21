@@ -2,8 +2,8 @@
 
 ## Purpose
 
-Render a resolved commerce table with bounded column visibility, labels, and
-empty-state styling.
+Render a resolved commerce table with bounded column visibility, labels,
+empty-state styling, and admin preview parity for the current source query.
 
 ## Widget ID
 
@@ -17,21 +17,30 @@ empty-state styling.
 
 ### Wizard
 - source/query basics
-- visible columns
+- admin preview status summary
+- surfaces
 
 ### Visual
-- source and filters
+- admin preview status summary
 - columns
 - column labels
 - empty state
 - surfaces
 
 ### Advanced
-- resolved runtime payload
+- read-only runtime/admin preview diagnostics
 - query diagnostics
+- manual preview refresh
 
 ## Runtime Behavior Notes
 
+- Public rendering hydrates Product Table rows through
+  `hydrateProductTableRuntimeData()`.
+- Admin preview hydrates the same widget through the shared
+  `WidgetPreviewState` seam and the internal
+  `/admin/api/widgets/product-table/preview` route.
+- Preview requests reuse `buildProductTableQueryInput()`, ignore stale async
+  responses, and keep the last safe preview patch when a newer request fails.
 - Runtime emits deterministic markers:
   - `data-widget="product-table"`
   - `data-product-table-count`
@@ -41,8 +50,11 @@ empty-state styling.
 
 ## Clear Controls
 
-- `style.tableBackground`, `style.headerBackground`, and `style.emptyBackground`
-  are clearable.
+- `style.tableBackground`
+- `style.tableBorderColor`
+- `style.headerBackground`
+- `style.emptyBackground`
+- `style.emptyBorderColor`
 
 ## Data Model (summary)
 

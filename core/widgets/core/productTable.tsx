@@ -1,6 +1,6 @@
 import type { ComponentType, CSSProperties } from "react";
 
-import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import type { WidgetDefinition, WidgetEditorProps, WidgetRenderContext } from "../types";
 import {
   buildCommerceWidgetQueryInput,
   commerceStockLabelMap,
@@ -93,6 +93,8 @@ export const productTableDefaults: ProductTableData = {
     resolvedAt: "",
   },
 };
+
+const maxPreviewStatusMessageLength = 160;
 
 const text = (value: unknown, fallback: string) => {
   if (typeof value !== "string") return fallback;
@@ -372,10 +374,28 @@ const titleWithStatus = (title: string, status: CommerceWidgetRuntimeCard["statu
   return `${title} (archived)`;
 };
 
-export function ProductTableBlock({ data }: { data: ProductTableData; variant: string }) {
+const previewMessage = (renderContext: WidgetRenderContext | undefined) => {
+  const message = optionalText(renderContext?.previewState?.message);
+  if (!message) return undefined;
+  return message.slice(0, maxPreviewStatusMessageLength);
+};
+
+export function ProductTableBlock({
+  data,
+  renderContext,
+}: {
+  data: ProductTableData;
+  variant: string;
+  renderContext?: WidgetRenderContext;
+}) {
   const normalized = normalizeProductTableData(data);
   const items = normalized.resolved?.items ?? [];
   const hasError = Boolean(normalized.resolved?.error);
+  const previewState = renderContext?.previewState ?? null;
+  const previewLoading = previewState?.status === "loading";
+  const previewError = previewState?.status === "error" ? previewMessage(renderContext) : undefined;
+  const isEditorPreview =
+    renderContext?.mode === "editor-preview" || renderContext?.mode === "admin-preview";
   const tableStyle: CSSProperties | undefined = compactStyle({
     backgroundColor: resolveClearableStyleValue(normalized.style?.tableBackground),
     borderColor: resolveClearableStyleValue(normalized.style?.tableBorderColor),
@@ -399,6 +419,18 @@ export function ProductTableBlock({ data }: { data: ProductTableData; variant: s
       data-widget="product-table"
       data-product-table-count={String(items.length)}
     >
+      {previewLoading ? (
+        <div className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900">
+          Refreshing Product Table preview...
+        </div>
+      ) : null}
+
+      {previewError ? (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+          Product Table preview warning: {previewError}
+        </div>
+      ) : null}
+
       {hasError ? (
         <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
           Commerce runtime warning: {normalized.resolved?.error}
@@ -409,6 +441,8 @@ export function ProductTableBlock({ data }: { data: ProductTableData; variant: s
         <div
           className={`rounded-xl border border-dashed px-4 py-6 text-center ${legacyEmptyClass}`}
           style={emptyStyle}
+          role={isEditorPreview ? "status" : undefined}
+          aria-live={isEditorPreview ? "polite" : undefined}
         >
           <p className="text-sm font-medium text-[var(--color-text)]">
             {normalized.emptyState?.title}
@@ -526,6 +560,9 @@ export function createProductTableWidget(editors: {
       wizard: editors.wizard,
       visual: editors.visual,
       advanced: editors.advanced,
+    },
+    editorCapabilities: {
+      supportsPreviewState: true,
     },
     render: ProductTableBlock,
   };

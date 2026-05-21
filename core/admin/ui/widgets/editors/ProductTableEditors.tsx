@@ -1,10 +1,14 @@
+import { useEffect, useEffectEvent, useRef, useState } from "react";
+
+import { previewProductTable } from "@/services/productTablePreviewClient";
+
 import {
   buildProductTableQueryInput,
   normalizeProductTableData,
   productTableDefaults,
   type ProductTableData,
 } from "../../../../widgets/core/productTable";
-import type { WidgetEditorProps } from "../../../../widgets/types";
+import type { WidgetEditorProps, WidgetPreviewState } from "../../../../widgets/types";
 import {
   CommerceEditorSection,
   CommerceSourceFields,
@@ -51,6 +55,186 @@ const clearStyle = (
     style: Object.keys(nextStyle).length > 0 ? nextStyle : {},
   });
 };
+
+const resolvePreviewErrorMessage = (error: unknown) => {
+  if (error instanceof Error && error.message.trim().length > 0) {
+    return error.message;
+  }
+  return "Resolved Product Table preview could not be loaded.";
+};
+
+const resolvePreviewResolvedData = (
+  normalized: ProductTableData,
+  previewState: WidgetPreviewState | null | undefined
+) => {
+  const previewResolved = previewState?.dataPatch?.resolved;
+  if (previewResolved && typeof previewResolved === "object") {
+    return previewResolved as NonNullable<ProductTableData["resolved"]>;
+  }
+  return normalized.resolved ?? { items: [], total: 0, resolvedAt: "" };
+};
+
+const buildProductTablePreviewKey = (value: ProductTableData) =>
+  JSON.stringify(buildProductTableQueryInput(normalizeProductTableData(value)));
+
+const formatResolvedTimestamp = (value: string | undefined) => {
+  const normalized = typeof value === "string" ? value.trim() : "";
+  if (!normalized) return "No resolved preview snapshot is available yet.";
+  const timestamp = Date.parse(normalized);
+  if (Number.isNaN(timestamp)) return normalized;
+  return `Resolved at ${new Date(timestamp).toLocaleString("en-US")}`;
+};
+
+function useProductTablePreview({
+  active,
+  value,
+  previewState,
+  setPreviewState,
+  blockId,
+}: {
+  active: boolean;
+  value: ProductTableData;
+  previewState: WidgetPreviewState | null | undefined;
+  setPreviewState?: (state: WidgetPreviewState | null) => void;
+  blockId?: string;
+}) {
+  const [refreshToken, setRefreshToken] = useState(0);
+  const canPreview = typeof setPreviewState === "function";
+  const previewKey = `${blockId ?? "product-table"}:${buildProductTablePreviewKey(value)}`;
+  const lastResolvedPatchRef = useRef<Record<string, unknown> | undefined>(previewState?.dataPatch);
+  const previewDataPatchRef = useRef<Record<string, unknown> | undefined>(previewState?.dataPatch);
+  const previewInputRef = useRef<ProductTableData>({
+    source: normalizeProductTableData(value).source,
+  });
+  const activeRequestKeyRef = useRef<string | undefined>(previewState?.requestKey);
+
+  const setPreviewStateEvent = useEffectEvent((state: WidgetPreviewState | null) => {
+    setPreviewState?.(state);
+  });
+
+  useEffect(() => {
+    previewInputRef.current = {
+      source: normalizeProductTableData(value).source,
+    };
+  }, [value]);
+
+  useEffect(() => {
+    if (previewState?.dataPatch) {
+      lastResolvedPatchRef.current = previewState.dataPatch;
+    }
+    previewDataPatchRef.current = previewState?.dataPatch;
+    activeRequestKeyRef.current = previewState?.requestKey;
+  }, [previewState?.dataPatch, previewState?.requestKey]);
+
+  useEffect(() => {
+    if (!active || !canPreview) return;
+    if (
+      refreshToken === 0 &&
+      activeRequestKeyRef.current === previewKey &&
+      previewDataPatchRef.current
+    ) {
+      return;
+    }
+
+    const controller = new AbortController();
+    const previousPatch = lastResolvedPatchRef.current;
+    activeRequestKeyRef.current = previewKey;
+    setPreviewStateEvent({
+      status: "loading",
+      requestKey: previewKey,
+      ...(previousPatch ? { dataPatch: previousPatch } : {}),
+    });
+
+    previewProductTable(previewInputRef.current, { signal: controller.signal })
+      .then((resolved) => {
+        if (controller.signal.aborted || activeRequestKeyRef.current !== previewKey) return;
+        const dataPatch = {
+          resolved,
+        } satisfies Record<string, unknown>;
+        lastResolvedPatchRef.current = dataPatch;
+        previewDataPatchRef.current = dataPatch;
+        setPreviewStateEvent({
+          status: "ready",
+          requestKey: previewKey,
+          dataPatch,
+        });
+      })
+      .catch((error) => {
+        if (controller.signal.aborted || activeRequestKeyRef.current !== previewKey) return;
+        setPreviewStateEvent({
+          status: "error",
+          requestKey: previewKey,
+          message: resolvePreviewErrorMessage(error),
+          ...(previousPatch ? { dataPatch: previousPatch } : {}),
+        });
+      });
+
+    return () => {
+      controller.abort();
+    };
+  }, [active, canPreview, previewKey, refreshToken]);
+
+  return {
+    refresh: () => setRefreshToken((current) => current + 1),
+    isLoading: previewState?.status === "loading",
+  };
+}
+
+function PreviewStatusCard({
+  value,
+  context,
+  onRefresh,
+  disabled,
+}: {
+  value: ProductTableData;
+  context: WidgetEditorProps<ProductTableData>["context"];
+  onRefresh?: () => void;
+  disabled?: boolean;
+}) {
+  const normalized = normalizeProductTableData(value);
+  const resolved = resolvePreviewResolvedData(normalized, context?.previewState);
+  const guidanceTone =
+    context?.previewState?.status === "error"
+      ? "border-amber-300 bg-amber-50 text-amber-900"
+      : context?.previewState?.status === "loading"
+        ? "border-sky-300 bg-sky-50 text-sky-900"
+        : "border-border/70 bg-background text-muted-foreground";
+
+  return (
+    <div className={`space-y-2 rounded-md border p-3 text-xs ${guidanceTone}`}>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="space-y-1">
+          <p>
+            Resolved items: {resolved.items?.length ?? 0} · Total: {resolved.total ?? 0}
+          </p>
+          <p>
+            Query limit: {normalized.source?.limit ?? 0} · Sort:{" "}
+            {normalized.source?.sortField ?? "updatedAt"} {normalized.source?.sortDir ?? "desc"}
+          </p>
+          <p>
+            {context?.previewState?.status === "loading"
+              ? "Preview refresh is running against the backend-owned commerce resolver."
+              : context?.previewState?.status === "error"
+                ? (context.previewState.message ??
+                  "Preview refresh failed. Showing the last safe preview data when available.")
+                : formatResolvedTimestamp(resolved.resolvedAt)}
+          </p>
+          {resolved.error ? <p>Runtime warning: {resolved.error}</p> : null}
+        </div>
+        {typeof onRefresh === "function" ? (
+          <button
+            type="button"
+            className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+            onClick={onRefresh}
+            disabled={disabled}
+          >
+            Refresh preview
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
 
 function SurfaceFields({
   value,
@@ -102,12 +286,23 @@ function SurfaceFields({
   );
 }
 
-export function ProductTableWizardEditor({ value, onChange }: WidgetEditorProps<ProductTableData>) {
+export function ProductTableWizardEditor({
+  value,
+  onChange,
+  context,
+}: WidgetEditorProps<ProductTableData>) {
   const normalized = normalizeProductTableData(value);
   const source = normalizeSourceForEditor(normalized.source, {
     limit: productTableDefaults.source?.limit ?? 12,
     sortField: "updatedAt",
     sortDir: "desc",
+  });
+  const preview = useProductTablePreview({
+    active: context?.editorMode === "wizard",
+    value: normalized,
+    previewState: context?.previewState,
+    setPreviewState: context?.setPreviewState,
+    blockId: context?.blockId,
   });
 
   return (
@@ -121,16 +316,40 @@ export function ProductTableWizardEditor({ value, onChange }: WidgetEditorProps<
           onChange={(nextSource) => update(normalized, onChange, { source: nextSource })}
         />
       </CommerceEditorSection>
+      <PreviewStatusCard
+        value={normalized}
+        context={context}
+        onRefresh={context?.setPreviewState ? preview.refresh : undefined}
+        disabled={preview.isLoading}
+      />
       <SurfaceFields value={normalized} onChange={onChange} />
     </div>
   );
 }
 
-export function ProductTableVisualEditor({ value, onChange }: WidgetEditorProps<ProductTableData>) {
+export function ProductTableVisualEditor({
+  value,
+  onChange,
+  context,
+}: WidgetEditorProps<ProductTableData>) {
   const normalized = normalizeProductTableData(value);
+  const preview = useProductTablePreview({
+    active: context?.editorMode === "visual",
+    value: normalized,
+    previewState: context?.previewState,
+    setPreviewState: context?.setPreviewState,
+    blockId: context?.blockId,
+  });
 
   return (
     <div className="space-y-4">
+      <PreviewStatusCard
+        value={normalized}
+        context={context}
+        onRefresh={context?.setPreviewState ? preview.refresh : undefined}
+        disabled={preview.isLoading}
+      />
+
       <CommerceEditorSection title="Columns" description="Choose columns visible in the table.">
         <CommerceToggleField
           label="Show slug"
@@ -266,32 +485,29 @@ export function ProductTableVisualEditor({ value, onChange }: WidgetEditorProps<
 
 export function ProductTableAdvancedEditor({
   value,
-  onChange,
+  context,
 }: WidgetEditorProps<ProductTableData>) {
   const normalized = normalizeProductTableData(value);
   const previewQuery = buildProductTableQueryInput(normalized);
+  const preview = useProductTablePreview({
+    active: context?.editorMode === "advanced",
+    value: normalized,
+    previewState: context?.previewState,
+    setPreviewState: context?.setPreviewState,
+    blockId: context?.blockId,
+  });
 
   return (
     <div className="space-y-4">
       <CommerceEditorSection
         title="Runtime payload"
-        description="Resolved items are injected by runtime resolver."
+        description="Read-only admin preview from the commerce runtime resolver."
       >
-        <div className="rounded-md border border-border/70 bg-background p-2 text-xs text-muted-foreground">
-          Resolved items: {normalized.resolved?.items?.length ?? 0} · Total:{" "}
-          {normalized.resolved?.total ?? 0}
-        </div>
-        <CommerceTextField
-          label="Runtime error flag"
-          value={normalized.resolved?.error ?? ""}
-          onChange={(next) =>
-            update(normalized, onChange, {
-              resolved: {
-                ...normalized.resolved,
-                error: next,
-              },
-            })
-          }
+        <PreviewStatusCard
+          value={normalized}
+          context={context}
+          onRefresh={context?.setPreviewState ? preview.refresh : undefined}
+          disabled={preview.isLoading}
         />
       </CommerceEditorSection>
 
