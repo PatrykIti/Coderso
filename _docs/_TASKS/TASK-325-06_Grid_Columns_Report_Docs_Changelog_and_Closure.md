@@ -115,4 +115,4 @@ No API routes are added by this closure leaf.
 ## Completion Notes (2026-05-21)
 
 - Report, widget docs, TASK-325 board rows, and changelog are synchronized with the shipped TASK-325 outcome.
-- The family-wide validation commands are complete and recorded above together with the local strict-scan tooling limitation.
+- The family-wide validation results are recorded above together with the local strict-scan tooling limitation.
