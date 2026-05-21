@@ -164,3 +164,16 @@ No API routes are added by this closure leaf.
 - Validation:
   - `git diff --check`
   - `bun run precommit`
+
+## Validation Addendum (2026-05-21 audit)
+
+- `bun --cwd core lint`: passed
+- `bun --cwd core lint:types`: passed
+- `bun run test:vitest -- tests/vitest/ui/logo-cloud-editor-wave.test.tsx tests/vitest/widgets/logoCloud.test.tsx tests/vitest/widgets/renderer.test.tsx tests/vitest/widgets/styleNoneTokens.test.tsx`: passed (`4` files, `66` tests)
+- `bun run gates:coderso`: passed
+- `bun run scan:security:strict`: attempted but failed outside TASK-314 scope
+  because the local Semgrep trust store had no CA anchors and `bun audit` could
+  not reach the advisory endpoint; Trivy and Gitleaks sub-scanners were clean
+  in the same run
+- `bun run precommit`: passed repeatedly while staging the 2026-05-21 audit
+  follow-up commits
