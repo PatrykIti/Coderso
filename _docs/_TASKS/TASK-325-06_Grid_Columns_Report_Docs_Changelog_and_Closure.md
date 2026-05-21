@@ -103,7 +103,7 @@ No API routes are added by this closure leaf.
 ## Validation Notes (2026-05-21)
 
 - `bun run test:vitest -- tests/vitest/widgets/gridColumns.test.tsx` - passed (`30` tests)
-- `bun run test:vitest -- tests/vitest/ui/grid-columns-editor-wave.test.tsx` - passed (`23` tests)
+- `bun run test:vitest -- tests/vitest/ui/grid-columns-editor-wave.test.tsx` - passed (`26` tests)
 - `bun test tests/unit/widgets/validator.test.ts` - passed (`19` tests in `1` file, `38` expect() calls)
 - `bun --cwd core lint` - passed
 - `bun --cwd core lint:types` - passed
@@ -114,5 +114,5 @@ No API routes are added by this closure leaf.
 
 ## Completion Notes (2026-05-21)
 
-- Report, widget docs, task board, and changelog are synchronized with the shipped TASK-325 outcome.
+- Report, widget docs, TASK-325 board rows, and changelog are synchronized with the shipped TASK-325 outcome.
 - The family-wide validation commands are complete and recorded above together with the local strict-scan tooling limitation.

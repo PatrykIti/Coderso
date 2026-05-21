@@ -595,6 +595,68 @@ test("GridColumns wizard selection applies the asymmetric desktop preset atomica
   }
 });
 
+test("GridColumns visual variant cards apply the asymmetric preset in the current live slot order", async () => {
+  const view = await renderEditor({
+    editor: "visual",
+    initialVariant: "equal",
+    initialValue: {
+      columns: [
+        { id: "1", label: "Lead", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
+        { id: "2", label: "Side", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
+        { id: "3", label: "Meta", desktopSpan: "4", tabletSpan: "6", mobileSpan: "12" },
+      ],
+    },
+    context: {
+      surface: "page-builder",
+      slotTargets: [
+        {
+          definitionId: "column",
+          slotId: "column:2",
+          label: "Column 1",
+          kind: "repeatable",
+          instanceId: "2",
+        },
+        {
+          definitionId: "column",
+          slotId: "column:1",
+          label: "Column 2",
+          kind: "repeatable",
+          instanceId: "1",
+        },
+        {
+          definitionId: "column",
+          slotId: "column:3",
+          label: "Column 3",
+          kind: "repeatable",
+          instanceId: "3",
+        },
+      ],
+    },
+  });
+
+  try {
+    const variantSection = getSectionByTitle(view.container, "Variant and layout structure");
+
+    clickButton(findButtonsByText(variantSection, "Asymmetric")[0]);
+
+    expect(view.getVariant()).toBe("asymmetric");
+    expect(
+      view.getValue().columns?.map((column) => ({
+        id: column.id,
+        desktopSpan: column.desktopSpan,
+        tabletSpan: column.tabletSpan,
+        mobileSpan: column.mobileSpan,
+      }))
+    ).toEqual([
+      { id: "2", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
+      { id: "1", desktopSpan: "3", tabletSpan: "6", mobileSpan: "12" },
+      { id: "3", desktopSpan: "3", tabletSpan: "6", mobileSpan: "12" },
+    ]);
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("GridColumns visual editor explains saved asymmetric drift and allows preset reapply", async () => {
   const view = await renderEditor({
     editor: "visual",
@@ -886,6 +948,65 @@ test("GridColumns visual editor layout presets materialize the current live slot
     ).toEqual([
       { id: "1", desktopSpan: "3" },
       { id: "2", desktopSpan: "6" },
+      { id: "3", desktopSpan: "3" },
+    ]);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("GridColumns visual editor layout presets respect the current live slot order after a reorder", async () => {
+  const view = await renderEditor({
+    editor: "visual",
+    initialVariant: "equal",
+    initialValue: {
+      columns: [
+        { id: "1", label: "Lead", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
+        { id: "2", label: "Side", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
+        { id: "3", label: "Meta", desktopSpan: "4", tabletSpan: "6", mobileSpan: "12" },
+      ],
+    },
+    context: {
+      surface: "page-builder",
+      slotTargets: [
+        {
+          definitionId: "column",
+          slotId: "column:2",
+          label: "Column 1",
+          kind: "repeatable",
+          instanceId: "2",
+        },
+        {
+          definitionId: "column",
+          slotId: "column:1",
+          label: "Column 2",
+          kind: "repeatable",
+          instanceId: "1",
+        },
+        {
+          definitionId: "column",
+          slotId: "column:3",
+          label: "Column 3",
+          kind: "repeatable",
+          instanceId: "3",
+        },
+      ],
+    },
+  });
+
+  try {
+    const columnSection = getSectionByTitle(view.container, "Column sizing and labels");
+
+    clickButton(findButtonsByText(columnSection, "25 / 50 / 25")[0]);
+
+    expect(
+      view.getValue().columns?.map((column) => ({
+        id: column.id,
+        desktopSpan: column.desktopSpan,
+      }))
+    ).toEqual([
+      { id: "2", desktopSpan: "3" },
+      { id: "1", desktopSpan: "6" },
       { id: "3", desktopSpan: "3" },
     ]);
   } finally {
@@ -1221,7 +1342,7 @@ test("GridColumns visual editor covers variant cards, column sizing controls, an
   }
 });
 
-test("GridColumns visual editor ignores anonymous slot targets that cannot address live columns", async () => {
+test("GridColumns visual editor derives live column slots from repeatable slot ids", async () => {
   const view = await renderEditor({
     editor: "visual",
     initialVariant: "equal",
@@ -1246,10 +1367,9 @@ test("GridColumns visual editor ignores anonymous slot targets that cannot addre
     const columnCountSelect = findSelectByLabel(variantSection, "Column count");
     const text = normalizeText(variantSection.textContent);
 
-    expect(columnCountSelect.disabled).toBe(false);
-    expect(text).toContain("no live slot structure is attached yet");
-    expect(text).not.toContain("current slot instances:");
-    expect(text).not.toContain("out of sync");
+    expect(columnCountSelect.disabled).toBe(true);
+    expect(text).toContain("current slot instances: 2");
+    expect(text).toContain("out of sync");
   } finally {
     view.cleanup();
   }

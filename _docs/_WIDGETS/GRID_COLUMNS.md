@@ -170,6 +170,7 @@ Notes:
   rewriting saved token values
 - effective span totals follow the live slot count and each breakpoint's visibility toggles rather than the raw saved `columns[]` list alone
 - when live repeatable `column` slots exist, editor rows, layout presets, and asymmetric recovery follow the current live slot order and ignore saved phantom columns until the structure is reconciled
+- repeatable slot targets may resolve live column instance ids from either explicit `instanceId` values or parsable `column:<instanceId>` slot ids before the editor decides whether local structure controls should lock
 
 ## Explicit Non-Scope
 

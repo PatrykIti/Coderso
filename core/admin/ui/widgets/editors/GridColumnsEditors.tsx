@@ -40,6 +40,7 @@ import {
   type GridColumnsSpan,
   type GridColumnsVariantId,
 } from "../../../../widgets/core/gridColumns";
+import { parseRepeatableSlotId } from "../../../../widgets/slots";
 import type { WidgetEditorProps } from "../../../../widgets/types";
 import { ClearableFieldHeader, SharedColorFieldInputs } from "./ClearableFields";
 import { WidgetEditorSection } from "./WidgetEditorControls";
@@ -669,7 +670,7 @@ function applyGridColumnsPreset(
 ) {
   updateValue(value, onChange, (current) => {
     const slotDriftState = resolveGridColumnsSlotDriftState(current, context);
-    const columns: ColumnData[] = slotDriftState.hasLiveSlotDrift
+    const columns: ColumnData[] = slotDriftState.orderedInstanceIds?.length
       ? resolveGridColumnsEditableColumns({
           value: current,
           variant,
@@ -704,9 +705,18 @@ function resolveGridColumnsSlotTargets(
   context?: WidgetEditorProps<GridColumnsData>["context"]
 ) {
   return (
-    context?.slotTargets?.filter(
-      (target) => target.definitionId === "column" && Boolean(target.instanceId?.trim())
-    ) ?? []
+    context?.slotTargets?.flatMap((target) => {
+      if (target.definitionId !== "column") return [];
+      const resolvedInstanceId =
+        target.instanceId?.trim() || parseRepeatableSlotId(target.slotId)?.instanceId;
+      if (!resolvedInstanceId) return [];
+      return [
+        {
+          ...target,
+          instanceId: resolvedInstanceId,
+        },
+      ];
+    }) ?? []
   );
 }
 
@@ -1639,9 +1649,7 @@ function resolveGridColumnsCardizeControlsState(
 function resolveGridColumnsOrderedInstanceIds(
   context?: WidgetEditorProps<GridColumnsData>["context"]
 ): string[] | undefined {
-  const orderedInstanceIds = resolveGridColumnsSlotTargets(context).map(
-    (target) => target.instanceId?.trim() ?? ""
-  );
+  const orderedInstanceIds = resolveGridColumnsSlotTargets(context).map((target) => target.instanceId);
 
   return orderedInstanceIds.length > 0 ? orderedInstanceIds : undefined;
 }
@@ -2001,6 +2009,7 @@ export function GridColumnsVisualEditor({
               value,
               onChange,
               onVariantChange,
+              context,
             })
           }
         />
