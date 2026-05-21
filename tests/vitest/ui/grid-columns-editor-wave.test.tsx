@@ -714,6 +714,55 @@ test("GridColumns visual editor follows the current live slot order in drifted a
   }
 });
 
+test("GridColumns visual editor asymmetric drift copy stays precise when only live columns are missing", async () => {
+  const view = await renderEditor({
+    editor: "visual",
+    initialVariant: "asymmetric",
+    initialValue: {
+      columns: [
+        { id: "1", label: "Lead", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
+        { id: "2", label: "Side", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
+      ],
+    },
+    context: {
+      surface: "page-builder",
+      slotTargets: [
+        {
+          definitionId: "column",
+          slotId: "column:1",
+          label: "Column 1",
+          kind: "repeatable",
+          instanceId: "1",
+        },
+        {
+          definitionId: "column",
+          slotId: "column:2",
+          label: "Column 2",
+          kind: "repeatable",
+          instanceId: "2",
+        },
+        {
+          definitionId: "column",
+          slotId: "column:3",
+          label: "Column 3",
+          kind: "repeatable",
+          instanceId: "3",
+        },
+      ],
+    },
+  });
+
+  try {
+    const variantSection = getSectionByTitle(view.container, "Variant and layout structure");
+    const text = normalizeText(variantSection.textContent);
+
+    expect(text).toContain("saved column metadata is missing some live columns");
+    expect(text).not.toContain("removes saved columns that no longer have live slots");
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("GridColumns visual editor reapply materializes the current live asymmetric preset", async () => {
   const view = await renderEditor({
     editor: "visual",
@@ -1172,7 +1221,7 @@ test("GridColumns visual editor covers variant cards, column sizing controls, an
   }
 });
 
-test("GridColumns visual editor surfaces slot/config mismatch warnings when structure drift exists", async () => {
+test("GridColumns visual editor ignores anonymous slot targets that cannot address live columns", async () => {
   const view = await renderEditor({
     editor: "visual",
     initialVariant: "equal",
@@ -1194,8 +1243,13 @@ test("GridColumns visual editor surfaces slot/config mismatch warnings when stru
 
   try {
     const variantSection = getSectionByTitle(view.container, "Variant and layout structure");
-    expect(normalizeText(variantSection.textContent)).toContain("current slot instances: 2");
-    expect(normalizeText(variantSection.textContent)).toContain("out of sync");
+    const columnCountSelect = findSelectByLabel(variantSection, "Column count");
+    const text = normalizeText(variantSection.textContent);
+
+    expect(columnCountSelect.disabled).toBe(false);
+    expect(text).toContain("no live slot structure is attached yet");
+    expect(text).not.toContain("current slot instances:");
+    expect(text).not.toContain("out of sync");
   } finally {
     view.cleanup();
   }

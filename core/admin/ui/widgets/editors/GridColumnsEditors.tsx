@@ -703,7 +703,11 @@ function DiagnosticsSnapshot({ value }: { value: GridColumnsData }) {
 function resolveGridColumnsSlotTargets(
   context?: WidgetEditorProps<GridColumnsData>["context"]
 ) {
-  return context?.slotTargets?.filter((target) => target.definitionId === "column") ?? [];
+  return (
+    context?.slotTargets?.filter(
+      (target) => target.definitionId === "column" && Boolean(target.instanceId?.trim())
+    ) ?? []
+  );
 }
 
 function getResolvedSlotTargetCount(
@@ -1508,11 +1512,9 @@ function ColumnsCountControl({
 }) {
   const normalized = normalizeValue(value);
   const count = normalized.columns?.length ?? gridColumnsColumnMin;
-  const hasLiveColumnSlots = Boolean(
-    context?.slotTargets?.some((target) => target.definitionId === "column")
-  );
+  const hasLiveColumnSlots = Boolean(resolveGridColumnsOrderedInstanceIds(context)?.length);
   const slotTargetCount = getResolvedSlotTargetCount(context);
-  const hasSlotDrift = slotTargetCount !== count;
+  const hasSlotDrift = hasLiveColumnSlots && slotTargetCount !== count;
   const countOptions = Array.from(
     { length: gridColumnsColumnMax - gridColumnsColumnMin + 1 },
     (_, index) => String(index + gridColumnsColumnMin)
@@ -1637,10 +1639,9 @@ function resolveGridColumnsCardizeControlsState(
 function resolveGridColumnsOrderedInstanceIds(
   context?: WidgetEditorProps<GridColumnsData>["context"]
 ): string[] | undefined {
-  const orderedInstanceIds =
-    resolveGridColumnsSlotTargets(context)
-      .map((target) => target.instanceId?.trim())
-      .filter((instanceId): instanceId is string => Boolean(instanceId)) ?? [];
+  const orderedInstanceIds = resolveGridColumnsSlotTargets(context).map(
+    (target) => target.instanceId?.trim() ?? ""
+  );
 
   return orderedInstanceIds.length > 0 ? orderedInstanceIds : undefined;
 }
@@ -1661,8 +1662,14 @@ function resolveGridColumnsAsymmetricSlotDriftMessage(
   slotDriftState: GridColumnsSlotDriftState
 ): string {
   const liveCount = slotDriftState.orderedInstanceIds?.length ?? 0;
-  if (slotDriftState.missingLiveInstanceIds.length > 0) {
+  if (
+    slotDriftState.missingLiveInstanceIds.length > 0 &&
+    slotDriftState.phantomSavedInstanceIds.length > 0
+  ) {
     return `Current live slot structure has ${liveCount} columns, but saved column metadata is out of sync. Reapply materializes the asymmetric desktop preset for the current live columns and removes saved columns that no longer have live slots.`;
+  }
+  if (slotDriftState.missingLiveInstanceIds.length > 0) {
+    return `Current live slot structure has ${liveCount} columns, but saved column metadata is missing some live columns. Reapply materializes the asymmetric desktop preset for the current live columns.`;
   }
   return `Saved column metadata still includes columns outside the current ${liveCount}-column live slot structure. Reapply materializes the asymmetric desktop preset for the current live columns and removes non-live saved columns.`;
 }
@@ -1978,9 +1985,7 @@ export function GridColumnsVisualEditor({
     resolvedVariant,
     Boolean(style.cardizeColumns)
   );
-  const hasLiveColumnSlots = Boolean(
-    context?.slotTargets?.some((target) => target.definitionId === "column")
-  );
+  const hasLiveColumnSlots = Boolean(resolveGridColumnsOrderedInstanceIds(context)?.length);
 
   return (
     <div className="space-y-4">

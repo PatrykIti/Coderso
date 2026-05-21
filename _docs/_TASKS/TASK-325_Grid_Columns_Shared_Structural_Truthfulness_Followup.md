@@ -209,8 +209,8 @@ No API routes are added.
 
 ## Validation Notes (2026-05-21)
 
-- `bun run test:vitest -- tests/vitest/widgets/gridColumns.test.tsx` - passed (`28` tests)
-- `bun run test:vitest -- tests/vitest/ui/grid-columns-editor-wave.test.tsx` - passed (`20` tests)
+- `bun run test:vitest -- tests/vitest/widgets/gridColumns.test.tsx` - passed (`30` tests)
+- `bun run test:vitest -- tests/vitest/ui/grid-columns-editor-wave.test.tsx` - passed (`23` tests)
 - `bun test tests/unit/widgets/validator.test.ts` - passed (`19` tests in `1` file, `38` expect() calls); the generic validator lane stayed green while Grid Columns-specific schema proof remains in `gridColumns.test.tsx`
 - Family-wide lint/types/gates/precommit/diff/security results are recorded in `TASK-325-06`.
 

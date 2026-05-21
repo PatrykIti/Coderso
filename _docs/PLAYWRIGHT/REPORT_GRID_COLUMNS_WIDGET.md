@@ -124,9 +124,9 @@ Playwright wykrył trzy klasy problemów:
 Focused TASK-325 closure coverage completed during this closure pass:
 
 - `bun run test:vitest -- tests/vitest/widgets/gridColumns.test.tsx`
-  - `1` file passed, `28` tests passed on 2026-05-21 after the review loop closed the larger-count asymmetric preset drift, live-slot reconciliation drift, and visibility-aware totals coverage.
+  - `1` file passed, `30` tests passed on 2026-05-21 after the review loop closed the larger-count asymmetric preset drift, live-slot reconciliation drift, and conflicting-visibility normalization coverage.
 - `bun run test:vitest -- tests/vitest/ui/grid-columns-editor-wave.test.tsx`
-  - `1` file passed, `20` tests passed on 2026-05-21 after the review loop added effective-layout totals and per-column token-preservation coverage.
+  - `1` file passed, `23` tests passed on 2026-05-21 after the review loop added live-slot-aware row/preset recovery coverage, visibility-warning truthfulness, and per-column token-preservation coverage.
 - `bun test tests/unit/widgets/validator.test.ts`
   - `1` file passed, `19` tests passed on 2026-05-21 (`38` expect() calls). The generic validator lane stayed green after the follow-up, while the Grid Columns-specific global wrapper color hardening is proven in `gridColumns.test.tsx`.
 
