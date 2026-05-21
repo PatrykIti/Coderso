@@ -186,7 +186,7 @@ This shared task adds no API routes.
 
 ## Validation Notes (2026-05-21)
 
-- `bun run test:vitest -- tests/vitest/pageBuilder/blockSettings.test.tsx tests/vitest/pageBuilder/blockSettings-wave.test.tsx` - passed (`2` files, `9` tests)
+- `bun run test:vitest -- tests/vitest/pageBuilder/blockSettings.test.tsx tests/vitest/pageBuilder/blockSettings-wave.test.tsx` - passed (`2` files, `11` tests) after the audit follow-up restored the unfinished Wizard preview path and added bounded preview-error recovery coverage
 - `bun --cwd core lint` - passed
 - `bun --cwd core lint:types` - passed
 - `bun run gates:coderso` - passed
@@ -202,3 +202,7 @@ This shared task adds no API routes.
   selected widget through the real `WidgetRenderer` contract with
   `renderContext.mode = "editor-preview"` and optional transient
   `previewState.dataPatch` data.
+- 2026-05-21 audit follow-up: the same shared preview row now remains available
+  on the unfinished Wizard path for page-builder widgets, and preview render
+  throws degrade into a bounded local fallback instead of breaking the settings
+  panel.

@@ -24,6 +24,9 @@ vi.mock("../../../core/widgets/renderers/widgetRenderer", () => ({
   }) => {
     previewRendererState.calls.push({ block, renderContext });
     const data = (block.data as Record<string, unknown> | undefined) ?? {};
+    if (data.throwPreview) {
+      throw new Error("preview render failed");
+    }
     return (
       <div data-widget-renderer-preview="true">
         {`preview:${String(block.id ?? "")}:${String(renderContext?.mode ?? "none")}:${String(
@@ -312,6 +315,48 @@ test("BlockSettings uses the wizard panel until completion", () => {
         id: "hero-1",
         editor: { mode: "visual", wizardCompleted: true },
       })
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("BlockSettings renders shared live preview in unfinished wizard mode", () => {
+  const block: Block = {
+    ...createBlock("hero"),
+    id: "hero-1",
+    data: {
+      headline: "Draft wizard headline",
+    },
+    editor: { mode: "wizard", wizardCompleted: false },
+  };
+  const widget = createWidget();
+
+  const view = mount(
+    <BlockSettings
+      block={block}
+      widget={widget}
+      onChange={() => undefined}
+      editorContext={{
+        surface: "page-builder",
+        previewState: {
+          status: "ready",
+          dataPatch: {
+            headline: "Preview wizard headline",
+          },
+        },
+      }}
+    />
+  );
+
+  try {
+    expect(view.container.textContent).toContain("wizard:hero-1");
+    expect(view.container.textContent).toContain("Preview ready");
+    expect(view.container.textContent).toContain(
+      "Reflects the current Wizard state through the shared widget renderer."
+    );
+    expect(view.container.textContent).toContain(
+      "preview:hero-1:editor-preview:Preview wizard headline"
     );
   } finally {
     view.cleanup();
@@ -713,6 +758,48 @@ test("BlockSettings renders shared live preview through WidgetRenderer with prev
         ?.headline as string) ?? ""
     ).toBe("Preview headline");
     expect((block.data as Record<string, unknown>).headline).toBe("Saved headline");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("BlockSettings keeps the panel usable when the shared live preview render throws", () => {
+  const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+  const block: Block = {
+    ...createBlock("navigation"),
+    id: "navigation-error",
+    type: "navigation",
+    data: {
+      throwPreview: true,
+    },
+    editor: { mode: "visual", wizardCompleted: true },
+  };
+  const widget = createWidget({
+    type: "navigation",
+    title: "Navigation",
+  });
+
+  const view = mount(
+    <BlockSettings
+      block={block}
+      widget={widget}
+      onChange={() => undefined}
+      editorContext={{
+        surface: "page-builder",
+        previewState: {
+          status: "ready",
+        },
+      }}
+    />
+  );
+
+  try {
+    expect(view.container.textContent).toContain("visual:navigation-error");
+    expect(view.container.textContent).toContain("Preview unavailable");
+    expect(view.container.textContent).toContain(
+      "The shared widget preview hit a render error. Keep editing and update the widget state to retry."
+    );
+    expect(consoleErrorSpy).toHaveBeenCalled();
   } finally {
     view.cleanup();
   }

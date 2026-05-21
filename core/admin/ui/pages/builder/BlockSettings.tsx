@@ -1,3 +1,5 @@
+import { Component, type ErrorInfo, type ReactNode } from "react";
+
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { InfoTip } from "@/ui/shared/InfoTip";
@@ -36,6 +38,44 @@ export type BlockSettingsProps = {
   editorContext?: WidgetEditorContext;
 };
 
+type WidgetPreviewErrorBoundaryProps = {
+  children: ReactNode;
+  fallback: ReactNode;
+  resetKey: string;
+};
+
+type WidgetPreviewErrorBoundaryState = {
+  hasError: boolean;
+};
+
+class WidgetPreviewErrorBoundary extends Component<
+  WidgetPreviewErrorBoundaryProps,
+  WidgetPreviewErrorBoundaryState
+> {
+  override state: WidgetPreviewErrorBoundaryState = {
+    hasError: false,
+  };
+
+  static getDerivedStateFromError(): WidgetPreviewErrorBoundaryState {
+    return { hasError: true };
+  }
+
+  override componentDidCatch(_error: Error, _info: ErrorInfo) {}
+
+  override componentDidUpdate(prevProps: WidgetPreviewErrorBoundaryProps) {
+    if (this.state.hasError && prevProps.resetKey !== this.props.resetKey) {
+      this.setState({ hasError: false });
+    }
+  }
+
+  override render() {
+    if (this.state.hasError) {
+      return this.props.fallback;
+    }
+    return this.props.children;
+  }
+}
+
 function WidgetEditorLivePreview({
   block,
   mode,
@@ -66,6 +106,13 @@ function WidgetEditorLivePreview({
           : "Live preview";
 
   const modeLabel = mode.charAt(0).toUpperCase() + mode.slice(1);
+  const previewResetKey = JSON.stringify({
+    blockId: block.id,
+    mode,
+    status: previewState?.status ?? null,
+    message: previewState?.message ?? null,
+    data: previewBlock.data ?? null,
+  });
 
   return (
     <section
@@ -84,10 +131,26 @@ function WidgetEditorLivePreview({
         </div>
       </div>
       <div className="rounded-md border bg-background p-3">
-        <WidgetRenderer
-          block={previewBlock}
-          renderContext={{ mode: "editor-preview", previewState: previewState ?? null }}
-        />
+        <WidgetPreviewErrorBoundary
+          resetKey={previewResetKey}
+          fallback={
+            <div
+              className="rounded-md border border-dashed bg-muted/10 p-4 text-sm text-muted-foreground"
+              data-widget-editor-live-preview-error="true"
+            >
+              <p className="font-medium text-foreground">Preview unavailable</p>
+              <p className="mt-1">
+                The shared widget preview hit a render error. Keep editing and update the widget
+                state to retry.
+              </p>
+            </div>
+          }
+        >
+          <WidgetRenderer
+            block={previewBlock}
+            renderContext={{ mode: "editor-preview", previewState: previewState ?? null }}
+          />
+        </WidgetPreviewErrorBoundary>
       </div>
     </section>
   );
@@ -275,14 +338,23 @@ export function BlockSettings({
 
   if (!editorState.wizardCompleted) {
     return (
-      <WizardPanel
-        widget={widget}
-        block={block}
-        onChange={onChange}
-        onBlockPatch={patchBlock}
-        onComplete={() => onChange(applyWizardSelection(block))}
-        editorContext={resolvedEditorContext}
-      />
+      <>
+        <WizardPanel
+          widget={widget}
+          block={block}
+          onChange={onChange}
+          onBlockPatch={patchBlock}
+          onComplete={() => onChange(applyWizardSelection(block))}
+          editorContext={resolvedEditorContext}
+        />
+        {showLivePreview ? (
+          <WidgetEditorLivePreview
+            block={block}
+            mode={editorState.mode}
+            previewState={resolvedEditorContext?.previewState}
+          />
+        ) : null}
+      </>
     );
   }
 
