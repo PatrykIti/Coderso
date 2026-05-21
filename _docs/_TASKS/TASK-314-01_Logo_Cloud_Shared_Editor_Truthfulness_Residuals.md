@@ -77,6 +77,17 @@ function LogoCloudAdvancedEditor() {
 }
 ```
 
+## Data Flow
+
+1. `LogoCloudEditors` continues to normalize the existing Logo Cloud payload
+   without adding new product fields.
+2. Visual remains the only live owner for current shared style controls such as
+   `logoHeight`, `gap`, and `alignment`.
+3. Each existing `Link URL` input resolves bounded feedback through the shared
+   safe-href helper and surfaces that feedback inline per row.
+4. Advanced renders diagnostics or summaries from the same normalized state
+   instead of mutating a second copy of the current shared fields.
+
 Error handling:
 
 - Shared link feedback must reflect the current runtime safe-href policy without
@@ -85,6 +96,21 @@ Error handling:
   owns; if a diagnostic is still useful, keep it read-only or summary-only.
 - Empty or whitespace-only link values remain allowed and must not render a
   warning.
+
+Regression-test shape:
+
+```tsx
+test("advanced stays diagnostics-only for shared Logo Cloud fields", async () => {
+  render(<LogoCloudEditors value={fixtureWithExistingSharedFields} />);
+  expect(screen.queryByLabelText("Logo height")).not.toBeInTheDocument();
+  expect(screen.getByText("Technical layout diagnostics")).toBeInTheDocument();
+});
+
+test("link inputs show shared safe-href feedback only for unsafe values", async () => {
+  render(<LogoCloudEditors value={fixtureWithInvalidHref} />);
+  expect(screen.getByText(/unsafe links are not rendered publicly/i)).toBeInTheDocument();
+});
+```
 
 ## Security Contract
 

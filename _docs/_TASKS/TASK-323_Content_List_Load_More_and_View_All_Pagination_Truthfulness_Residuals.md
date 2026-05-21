@@ -63,6 +63,17 @@ const sliceEnd =
 const sliced = sorted.slice(sliceStart, sliceEnd);
 ```
 
+## Data Flow
+
+1. Content List runtime continues to parse the bounded page request from the
+   shared query param contract.
+2. Legacy `paged` mode keeps page-local slicing, while `load-more` switches to
+   cumulative slice growth from the first page through the requested page.
+3. Legacy `view-all` resolves from the first bounded slice regardless of stale
+   `cl.<block>.page` params.
+4. Resolver metadata and public renderer output stay aligned so visible links
+   and actual runtime subsets remain truthful.
+
 Error handling:
 
 - Keep page params clamped and allowlisted.
@@ -70,6 +81,20 @@ Error handling:
   `cl.<block>.page` query.
 - `load-more` must grow cumulatively through a real bounded runtime path, not a
   label-only link to a replacement page.
+
+Regression-test shape:
+
+```ts
+test("legacy load-more grows cumulatively across page hops", () => {
+  const result = resolveContentList({ paginationMode: "load-more", requestedPage: 3 });
+  expect(result.items).toHaveLength(18);
+});
+
+test("legacy view-all ignores stale page params and starts from the first slice", () => {
+  const result = resolveContentList({ paginationMode: "view-all", requestedPage: 4 });
+  expect(result.page).toBe(1);
+});
+```
 
 ## Security Contract
 

@@ -81,6 +81,39 @@ function resolveNewsletterMobileVariant(
 }
 ```
 
+## Data Flow
+
+1. Re-read the shipped Newsletter runtime/editor behavior from `TASK-276`
+   before deciding whether a new responsive field is warranted.
+2. If the decision is `no`, keep the current scalar `variant` contract and
+   route the outcome into truthful editor/report/docs guidance only.
+3. If the decision is `yes`, normalize one bounded override field such as
+   `layout.mobileVariant` through Newsletter-owned schema/defaults/editor flow.
+4. Runtime resolves the effective mobile variant from the saved scalar variant
+   plus the bounded override instead of adding arbitrary breakpoint maps.
+
+Error handling:
+
+- Keep the decision explicit. Do not silently ship breakpoint logic without
+  documenting it, and do not silently reject the request without updating docs
+  and report evidence.
+- Any new responsive field must stay bounded and reject unknown values through
+  Newsletter-owned schema validation.
+- If the product decision is `no`, editor copy must explain the effective mobile
+  behavior truthfully instead of pretending a per-breakpoint override exists.
+
+Regression-test shape:
+
+```ts
+test("newsletter keeps scalar variant behavior when no mobile override is configured", () => {
+  expect(resolveNewsletterMobileVariant("inline", undefined)).toBe("inline");
+});
+
+test("newsletter supports only the approved bounded mobile override when the schema allows it", () => {
+  expect(resolveNewsletterMobileVariant("inline", { mobileVariant: "stacked" })).toBe("stacked");
+});
+```
+
 ## Security Contract
 
 No API routes are added.

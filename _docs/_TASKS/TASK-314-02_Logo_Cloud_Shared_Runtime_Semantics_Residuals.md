@@ -73,6 +73,17 @@ function LogoCloudBlock({ data, variant }: { data: LogoCloudData; variant: strin
 }
 ```
 
+## Data Flow
+
+1. Existing Logo Cloud data remains schema-compatible and flows through the
+   current normalizer unchanged.
+2. Runtime section-shell rendering resolves one honest accessible name from the
+   existing optional title plus a bounded fallback label.
+3. `logoHeight: "none"` stays visible in normalized data and diagnostics, but
+   the renderer maps it to a bounded safe class at output time.
+4. Renderer and style-token suites continue to verify the same shared runtime
+   owner instead of widget-local forks.
+
 Error handling:
 
 - The shared heading fix must not add a new widget-owned `headingLevel` field;
@@ -82,6 +93,20 @@ Error handling:
 - `logoHeight: "none"` must remain visible in normalized data and diagnostics,
   but runtime output must no longer allow arbitrarily tall images to escape the
   tile.
+
+Regression-test shape:
+
+```tsx
+test("logo cloud uses the shared section heading baseline and fallback label", () => {
+  const { container } = render(<LogoCloudBlock data={fixtureWithTitle} variant="grid" />);
+  expect(container.querySelector("h2#logo-cloud-title")).not.toBeNull();
+});
+
+test("logoHeight none stays schema-visible while runtime output remains bounded", () => {
+  const { container } = render(<LogoCloudBlock data={fixtureWithNoneHeight} variant="grid" />);
+  expect(container.querySelector("img.max-h-16")).not.toBeNull();
+});
+```
 
 ## Security Contract
 

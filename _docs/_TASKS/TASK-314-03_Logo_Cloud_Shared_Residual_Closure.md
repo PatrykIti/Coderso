@@ -61,7 +61,7 @@ Code and docs consistency:
 
 ```ts
 type SharedCoverageStatus =
-  | "task-313-fixed"
+  | "task-314-fixed"
   | "task-256-fixed"
   | "current-state-ok"
   | "deferred";
@@ -80,6 +80,35 @@ function assertSharedCoverage(rows: SharedCoverageRow[]) {
     );
   }
 }
+```
+
+Error handling:
+
+- Closure must fail if any reopened shared row is marked fixed without concrete
+  evidence in code, tests, docs, or a bounded current-state note.
+- Do not relabel `TASK-274` product-owned findings as `TASK-314` shared fixes
+  just to complete the matrix.
+- If validation or docs disagree with code, keep the family open and repair the
+  real owner before updating board/changelog status.
+
+## Data Flow
+
+1. `TASK-314-01` and `TASK-314-02` land the shared editor/runtime repairs.
+2. This closure leaf re-reads the live report, widget doc, task files, tests,
+   and changelog entries against those landed owners.
+3. Every reopened row is recorded as `task-314-fixed`, `task-256-fixed`,
+   `current-state-ok`, or `deferred` with explicit evidence.
+4. Only after the evidence matrix is complete do the board row and changelog
+   entry move to final closed state.
+
+Regression-test shape:
+
+```ts
+test("reopened shared rows cannot close without evidence", () => {
+  expect(() =>
+    assertSharedCoverage([{ finding: "BUG-02", status: "task-314-fixed", evidence: [] }])
+  ).toThrow(/missing logo cloud shared residual coverage/i);
+});
 ```
 
 ## Sub-Tasks
@@ -117,7 +146,7 @@ No API routes are added by this closure leaf.
 - `_docs/_WIDGETS/LOGO_CLOUD.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
-- A numbered `_docs/_CHANGELOG/*task-313-logo-cloud-shared-residuals*.md` entry.
+- A numbered `_docs/_CHANGELOG/*task-314-logo-cloud-shared-residuals*.md` entry.
 
 ## Acceptance Criteria
 

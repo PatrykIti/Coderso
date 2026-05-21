@@ -84,6 +84,17 @@ function resolveCtaAriaLabel(item: ContentListRuntimeItem, visibleLabel: string)
 }
 ```
 
+## Data Flow
+
+1. Shared `ContentListBlock` keeps receiving the same runtime item payload from
+   Content List and Posts Feed owners.
+2. Runtime date formatting resolves semantic date parts once per item and emits
+   `<time>` only when the source value is valid.
+3. CTA accessible naming derives from the same visible label plus the runtime
+   item title, without changing visible copy or safe-href ownership.
+4. Unit and public-renderer suites verify the shared renderer contract for both
+   widget consumers.
+
 Error handling:
 
 - Invalid or missing runtime dates must omit the `<time>` element instead of
@@ -91,6 +102,21 @@ Error handling:
 - CTA accessibility text must remain deterministic; if the title is missing,
   fall back to the visible CTA label.
 - Do not change route ownership, safe href behavior, or public-write semantics.
+
+Regression-test shape:
+
+```tsx
+test("content list renders semantic time markup only for valid runtime dates", () => {
+  const { container } = renderContentListCard({ publishedAt: "2026-05-20T10:00:00.000Z" });
+  expect(container.querySelector("time[datetime]")).not.toBeNull();
+});
+
+test("content list cta aria label includes the entry title without changing visible copy", () => {
+  renderContentListCard({ title: "Quarterly update" });
+  expect(screen.getByRole("link", { name: "Read more: Quarterly update" })).toBeInTheDocument();
+  expect(screen.getByText("Read more")).toBeInTheDocument();
+});
+```
 
 ## Security Contract
 

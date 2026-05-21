@@ -136,6 +136,23 @@ Error handling:
 - If a widget does not expose a local status/error marker, the shared runtime
   client must fail open without throwing.
 
+Regression-test shape:
+
+```ts
+test("shared listing refresh keeps only the latest response per query id", async () => {
+  const runtime = createListingRuntimeHarness();
+  await runtime.runOverlappingRefreshes();
+  expect(runtime.appliedResponseIds).toEqual(["latest"]);
+});
+
+test("recoverable refresh failures show local shared error state without redirect", async () => {
+  const runtime = createListingRuntimeHarness({ responseStatus: 500 });
+  await runtime.refresh();
+  expect(runtime.windowLocationAssign).not.toHaveBeenCalled();
+  expect(runtime.queryErrorState("query-1")).toBe("refresh_failed");
+});
+```
+
 ## Security Contract
 
 No API routes are added.

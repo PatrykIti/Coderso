@@ -95,6 +95,23 @@ Error handling:
 - Expose a manual refresh path through the shared hook so editors can retry
   intentionally without reloading the entire page.
 
+Regression-test shape:
+
+```ts
+test("shared listing query hook retries one transient auth-shaped failure once", async () => {
+  const hook = renderUseListingQueriesWithSequence([authSettlingError, successResponse]);
+  await hook.result.current.refresh({ retryAuthOnce: true });
+  expect(hook.fetchCount()).toBe(2);
+});
+
+test("permanent auth failures stay visible after the bounded retry path", async () => {
+  const hook = renderUseListingQueriesWithSequence([authDeniedError, authDeniedError]);
+  await expect(hook.result.current.refresh({ retryAuthOnce: true })).rejects.toMatchObject({
+    status: 401,
+  });
+});
+```
+
 ## Security Contract
 
 No API routes are added.

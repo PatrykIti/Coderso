@@ -103,6 +103,20 @@ Error handling:
 4. Consumer widget tests prove the shared wrapper contract without moving
    widget-local behavior into Section.
 
+Regression-test shape:
+
+```tsx
+test("section clips decorative background layers without clipping slotted content flow", () => {
+  const { container } = render(<SectionBlock data={fixtureWithStickyChild} />);
+  expect(container.querySelector(".overflow-hidden [data-slot-child]")).toBeNull();
+});
+
+test("navigation can render its sticky row inside section without the old blocked wrapper", () => {
+  const { container } = renderSectionWithNavigationStickyFixture();
+  expect(container.querySelector("[data-navigation-sticky-row]")).not.toBeNull();
+});
+```
+
 ## Security Contract
 
 This shared task adds no API routes.

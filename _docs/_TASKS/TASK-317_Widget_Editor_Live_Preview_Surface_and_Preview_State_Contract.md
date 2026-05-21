@@ -124,6 +124,21 @@ Error handling:
    widget-specific preview-state payloads; the shared surface contract remains
    owned here.
 
+Regression-test shape:
+
+```tsx
+test("shared live preview merges previewState dataPatch without mutating saved block data", () => {
+  const { previewBlock, persistedBlock } = renderWidgetEditorLivePreviewHarness();
+  expect(previewBlock.data.title).toBe("Preview title");
+  expect(persistedBlock.data.title).toBe("Saved title");
+});
+
+test("shared live preview renders through WidgetRenderer in editor-preview mode", () => {
+  render(<WidgetEditorLivePreview block={fixtureBlock} previewState={fixturePreviewState} />);
+  expect(screen.getByTestId("widget-renderer-editor-preview")).toBeInTheDocument();
+});
+```
+
 ## Security Contract
 
 This shared task adds no API routes.

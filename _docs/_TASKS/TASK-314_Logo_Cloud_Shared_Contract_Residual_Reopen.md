@@ -143,7 +143,7 @@ This reopening family does not add API routes.
 - `_docs/_WIDGETS/LOGO_CLOUD.md`
 - `_docs/_TASKS/TASK-314*.md`
 - `_docs/_TASKS/README.md`
-- `_docs/_CHANGELOG/{N}-2026-05-19-task-313-logo-cloud-shared-residuals.md`
+- `_docs/_CHANGELOG/{N}-2026-05-19-task-314-logo-cloud-shared-residuals.md`
 - `_docs/_CHANGELOG/README.md`
 
 ## Acceptance Criteria

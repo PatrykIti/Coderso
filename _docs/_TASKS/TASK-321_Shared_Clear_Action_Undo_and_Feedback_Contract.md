@@ -66,6 +66,17 @@ function useRecoverableClear() {
 }
 ```
 
+## Data Flow
+
+1. Shared clearable field helpers remain the single owner of clear affordances
+   used across widget editors.
+2. When a caller opts into recoverable clear, the helper snapshots the prior
+   value, performs the clear, and emits bounded shared feedback.
+3. Undo routes through the same shared helper and restores the exact prior value
+   to the calling editor state instead of synthesizing a default.
+4. Widget-local editors may wrap the shared contract with copy or layout, but
+   they must not fork the clear/undo semantics.
+
 Error handling:
 
 - Clearing an already-empty field must remain a no-op.
@@ -73,6 +84,23 @@ Error handling:
 - If a widget opts out of undo for a specific destructive surface, that decision
   must be explicit and documented in the calling editor instead of silently
   bypassing the shared contract.
+
+Regression-test shape:
+
+```tsx
+test("shared clear feedback offers undo that restores the exact prior value", async () => {
+  const field = renderRecoverableClearField({ initialValue: "Hero title" });
+  await field.clear();
+  await field.undo();
+  expect(field.value()).toBe("Hero title");
+});
+
+test("clearing an already empty field stays a no-op", async () => {
+  const field = renderRecoverableClearField({ initialValue: "" });
+  await field.clear();
+  expect(field.toastCalls()).toHaveLength(0);
+});
+```
 
 ## Security Contract
 

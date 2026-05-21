@@ -72,6 +72,16 @@ async function apiRequestWithAdminSessionHandling<T>(...) {
 }
 ```
 
+## Data Flow
+
+1. Admin API requests continue to flow through the shared `apiClient`.
+2. The shared client distinguishes bounded CSRF-refresh retries from full
+   session-expiry/auth-failure responses.
+3. Long-lived editor shells consume that shared state and surface actionable
+   expired-session feedback while preserving dirty-state awareness.
+4. Widget-local consumers such as Posts Feed reuse the same shared failure model
+   for picker/save messaging instead of inventing their own auth workaround.
+
 Error handling:
 
 - Do not silently discard unsaved changes when the session expires.
@@ -79,6 +89,22 @@ Error handling:
   auth session, and generic network failure.
 - Widget-level consumers may add local retry buttons, but only on top of the
   shared session-expiry contract.
+
+Regression-test shape:
+
+```ts
+test("expired admin sessions surface shared session-expired feedback without clearing dirty state", async () => {
+  const shell = renderPageEditorWithExpiredSessionSave();
+  await shell.save();
+  expect(shell.isDirty()).toBe(true);
+  expect(shell.findMessage(/session expired/i)).toBeTruthy();
+});
+
+test("csrf refresh remains bounded and distinct from full auth expiry", async () => {
+  const client = createApiClientHarness([csrfExpiredError, successResponse]);
+  await expect(client.requestWithRecovery()).resolves.toMatchObject({ ok: true });
+});
+```
 
 ## Security Contract
 
