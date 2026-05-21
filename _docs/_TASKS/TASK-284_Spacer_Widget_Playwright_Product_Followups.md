@@ -5,8 +5,8 @@
 **Priority:** High
 **Category:** Widgets + Layout + Admin UI + Runtime Render + Playwright QA
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-252, TASK-256, TASK-256-01, TASK-256-02, TASK-256-05-03, TASK-256-08
-**Status:** To Do
+**Dependencies:** TASK-252, TASK-256, TASK-256-01, TASK-256-02, TASK-256-05-03, TASK-256-08, TASK-303
+**Status:** In Progress (2026-05-21)
 
 ---
 
@@ -15,11 +15,11 @@
 Create the Spacer-specific follow-up family for
 `_docs/PLAYWRIGHT/REPORT_SPACER_WIDGET.md`.
 
-TASK-256 owns shared widget-contract drift from the Playwright reports. This
-family deliberately excludes shared token-control, editor-mode, variant-update,
-and guide-truthfulness repairs already routed through TASK-256. TASK-284 owns
-only product and polish work that remains local to the standalone `spacer`
-layout primitive:
+TASK-256 and TASK-303 own the shared widget-contract drift already closed for
+Spacer. This family deliberately excludes shared token-control, editor-mode,
+variant-update, and guide-truthfulness repairs already routed through those
+owners. TASK-284 owns only product and polish work that remains local to the
+standalone `spacer` layout primitive:
 
 - `core/widgets/core/spacer.tsx`
 - `core/admin/ui/widgets/editors/SpacerEditors.tsx`
@@ -63,18 +63,18 @@ Spacer/Divider shared structural leaf.
 
 | Report finding | Evidence | Owner task | Reason |
 |---|---|---|---|
-| BUG-01 duplicate `none` and `0` height choices | `REPORT_SPACER_WIDGET.md:148-153`, `REPORT_SPACER_WIDGET.md:280` | TASK-256-02, TASK-256-05-03 | Shared clear/none/token semantics must be fixed once for utility controls. |
+| BUG-01 duplicate `none` and `0` height choices | `REPORT_SPACER_WIDGET.md:148-153`, `REPORT_SPACER_WIDGET.md:280` | TASK-303 | Shared Divider/Spacer token-control closure already collapsed the legacy duplicate behind canonical `None`. |
 | BUG-02 Fixed -> Responsive loses tablet/mobile values | `REPORT_SPACER_WIDGET.md:155-160`, `REPORT_SPACER_WIDGET.md:263` | TASK-256-01, TASK-256-05-03 | Shared variant-update and inactive-data preservation contract. |
 | BUG-03 / UX-05 Advanced hardcodes responsive controls while fixed is active | `REPORT_SPACER_WIDGET.md:162-171`, `REPORT_SPACER_WIDGET.md:206-211`, `REPORT_SPACER_WIDGET.md:264,274` | TASK-256-01, TASK-256-05-03 | Shared editor-mode truthfulness and Advanced ownership contract. |
 | BUG-04 / BF-01 guide copy or visibility does not match the main canvas | `REPORT_SPACER_WIDGET.md:173-183`, `REPORT_SPACER_WIDGET.md:217-219`, `REPORT_SPACER_WIDGET.md:265,281` | TASK-256-05-03 | Existing TASK-256 Spacer/Divider leaf already decides whether to render the guide in editor context or relabel it as preview-only. |
-| UX-02 `Custom px` select option is a no-op | `REPORT_SPACER_WIDGET.md:193-196`, `REPORT_SPACER_WIDGET.md:272` | TASK-256-02, TASK-256-05-03 | Shared token/custom-input control behavior. |
-| UX-03 token-active custom input copy | `REPORT_SPACER_WIDGET.md:198-200`, `REPORT_SPACER_WIDGET.md:284` | TASK-256-02, TASK-256-05-03 | Shared token/custom-input state clarity unless TASK-256 leaves a Spacer-only docs/copy follow-up. |
+| UX-02 `Custom px` select option is a no-op | `REPORT_SPACER_WIDGET.md:193-196`, `REPORT_SPACER_WIDGET.md:272` | TASK-303 | Shared Divider/Spacer token-control closure already made `Custom px` enter explicit custom-edit mode. |
+| UX-03 token-active custom input copy | `REPORT_SPACER_WIDGET.md:198-200`, `REPORT_SPACER_WIDGET.md:284` | TASK-303 | Shared Divider/Spacer token-control closure already surfaces token/custom state messaging without Spacer-local parsing drift. |
 | UX-04 invisible canvas spacer when guide is off | `REPORT_SPACER_WIDGET.md:202-204`, `REPORT_SPACER_WIDGET.md:273` | TASK-256-05-03 | Same guide/canvas truthfulness route as BUG-04/BF-01. |
 
-TASK-284 may consume the final TASK-256 behavior, but it must not restage these
-repairs inside its own leaves. If a TASK-284 leaf touches the same owners, the
-diff must remain limited to Spacer-specific product fields, documentation, and
-copy that is not part of the shared contract.
+TASK-284 may consume the final TASK-256/TASK-303 behavior, but it must not
+restage these repairs inside its own leaves. If a TASK-284 leaf touches the
+same owners, the diff must remain limited to Spacer-specific product fields,
+documentation, and copy that is not part of the shared contract.
 
 ## TASK-284 Scope Matrix
 
@@ -103,7 +103,7 @@ copy that is not part of the shared contract.
 
 ## Sub-Tasks
 
-- [ ] TASK-284-01: Spacer Editor Guidance and Input Accessibility
+- [x] TASK-284-01: Spacer Editor Guidance and Input Accessibility
 - [ ] TASK-284-02: Spacer Viewport and Fluid Length Units
 - [ ] TASK-284-03: Spacer Named Rhythm Presets
 - [ ] TASK-284-04: Spacer Horizontal Orientation Contract
@@ -111,10 +111,10 @@ copy that is not part of the shared contract.
 
 ## Implementation Order
 
-1. Rebase over TASK-256 shared fixes first when a selected leaf touches token,
-   variant, Advanced-mode, or guide/canvas-adjacent owners.
-2. Complete TASK-284-01 first if it can be limited to copy/accessibility around
-   final TASK-256 controls; otherwise keep it blocked on TASK-256-05-03.
+1. Consume the already-landed TASK-256/TASK-303 shared fixes first when a
+   selected leaf touches token, variant, Advanced-mode, or guide/canvas-adjacent owners.
+2. Complete TASK-284-01 first; the current branch already includes the shared
+   prerequisites from TASK-256-05-03 and TASK-303.
 3. Complete TASK-284-02 before presets so presets can reuse the final safe
    length resolver instead of duplicating viewport/fluid parsing.
 4. Complete TASK-284-03 after length semantics are stable.

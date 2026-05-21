@@ -365,4 +365,21 @@ The remaining Spacer product backlog stays with `TASK-284` or the already-landed
 shared TASK-256 slices; `TASK-303` only closed the residual Divider/Spacer
 token-control drift that stayed live after TASK-256 closure.
 
-*Raport wygenerowany na podstawie analizy kodu i testów Playwright — 2026-05-16; shared closure refreshed — 2026-05-17.*
+
+## Status po TASK-284-01 (2026-05-21)
+
+Leaf evidence from this turn:
+- `bun run test:vitest -- tests/vitest/ui/spacer-editor-wave.test.tsx tests/vitest/widgets/spacer.test.tsx`
+- `bun test tests/unit/widgets/validator.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run lint`
+
+| Row | Final status | Owner | Evidence |
+|---|---|---|---|
+| UX-01 | `fixed` | `TASK-284-01` | Wizard now shows a fixed-mode note directly under the desktop height control before the guide toggle. |
+| BF-06 | `fixed` | `TASK-284-01` | Desktop, tablet, and mobile height controls now explain the active Tailwind breakpoint range in Visual/Advanced and the desktop breakpoint in Wizard. |
+| BF-07 | `fixed` | `TASK-284-01` | Spacer custom-height copy now explicitly says `48` normalizes to `48px`, while keeping `48px` valid. |
+| A2 | `fixed` | `TASK-284-01` | Spacer custom-height inputs now use explicit `aria-label` plus `aria-describedby` helper wiring instead of placeholder-only context. |
+
+*Raport wygenerowany na podstawie analizy kodu i testów Playwright — 2026-05-16; shared closure refreshed — 2026-05-17; TASK-284-01 refreshed — 2026-05-21.*

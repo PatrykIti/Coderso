@@ -22,7 +22,7 @@ None.
 
 ### Wizard
 - spacer mode (fixed/responsive)
-- desktop height
+- desktop height with explicit fixed-mode guidance when `fixed` is active
 - editor guide toggle
 
 ### Visual
@@ -33,15 +33,16 @@ Sections:
 
 Notes:
 - Spacer owns variant selection in Visual (`visualOwnsVariantSelection = true`).
+- Height controls explain the active Tailwind breakpoint ranges for desktop, tablet, and mobile.
 
 ### Advanced
-- direct token/px height editing
+- direct token/px height editing with the same breakpoint help as Visual
 - normalized payload snapshot
 
 ## Runtime Behavior Notes
 
 - Renders an empty structural block with responsive height values.
-- Supports token-based heights (`0..32`) and custom pixel values (for example `48px`).
+- Supports token-based heights (`0..32`) and custom pixel values. Bare numbers such as `48` normalize to `48px`, and explicit `48px` remains valid.
 - Shows optional guide label only in preview contexts.
 - Exposes deterministic runtime markers:
   - `data-spacer`
@@ -64,3 +65,9 @@ Notes:
   "showGuideInEditor": true
 }
 ```
+
+## Authoring Notes
+
+- `fixed` reuses the desktop height for tablet and mobile at runtime.
+- Desktop height applies at `lg` (`1024px+`), tablet height applies from `md` until desktop takes over, and mobile height applies below the tablet breakpoint.
+- Custom height inputs use explicit helper text and ARIA descriptions instead of relying on placeholder-only context.

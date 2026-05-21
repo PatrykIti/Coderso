@@ -17,8 +17,8 @@ leaves land.
 
 This leaf owns final evidence and docs synchronization for
 `_docs/PLAYWRIGHT/REPORT_SPACER_WIDGET.md`. It must verify that every Spacer
-report row is either fixed by TASK-256, fixed by TASK-284, marked no-action, or
-explicitly deferred with a reason.
+report row is either fixed by TASK-256, fixed by TASK-303, fixed by TASK-284,
+marked no-action, or explicitly deferred with a reason.
 
 ## Scope Boundary
 
@@ -74,6 +74,7 @@ Report classification:
 ```ts
 type SpacerReportStatus =
   | "fixed-task-256"
+  | "fixed-task-303"
   | "fixed-task-284"
   | "no-action"
   | "deferred";
@@ -81,7 +82,7 @@ type SpacerReportStatus =
 type SpacerReportRow = {
   id: "BUG-01" | "BUG-02" | "BUG-03" | "BUG-04" | "UX-01" | string;
   status: SpacerReportStatus;
-  ownerTask: "TASK-256" | "TASK-284-01" | "TASK-284-02" | "TASK-284-03" | "TASK-284-04" | string;
+  ownerTask: "TASK-256" | "TASK-303" | "TASK-284-01" | "TASK-284-02" | "TASK-284-03" | "TASK-284-04" | string;
   evidence: string;
 };
 ```
@@ -89,7 +90,7 @@ type SpacerReportRow = {
 Closure flow:
 
 ```md
-1. Verify TASK-256 final notes for rows excluded from TASK-284.
+1. Verify TASK-256 and TASK-303 final notes for rows excluded from TASK-284.
 2. Verify each TASK-284 implementation leaf has tests and docs evidence.
 3. Update the report with textual evidence and keep PNGs ignored.
 4. Move task statuses only after docs/changelog/validation are complete.
@@ -97,8 +98,8 @@ Closure flow:
 
 Error handling:
 
-- If TASK-256 has not landed a required shared fix, keep the corresponding
-  TASK-284 row open or deferred; do not mark it fixed by proxy.
+- If TASK-256 or TASK-303 has not landed a required shared fix, keep the
+  corresponding TASK-284 row open or deferred; do not mark it fixed by proxy.
 - If a report row still lacks evidence, leave TASK-284-05 open and create or
   update a physical follow-up leaf.
 - If `_docs/_TASKS/README.md` has concurrent changes, preserve all other task
@@ -151,7 +152,7 @@ No API routes are added.
 ## Acceptance Criteria
 
 - Every row in `REPORT_SPACER_WIDGET.md` has a final status and evidence.
-- TASK-284 does not claim TASK-256 shared-contract fixes as its own.
+- TASK-284 does not claim TASK-256 or TASK-303 shared-contract fixes as its own.
 - Spacer docs, task statuses, board statistics, and changelog are synchronized.
 - Final validation commands are recorded with pass/fail status and any skipped
   lane has a concrete blocker.

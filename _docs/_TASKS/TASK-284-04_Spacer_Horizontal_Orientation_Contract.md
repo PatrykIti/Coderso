@@ -5,7 +5,7 @@
 **Priority:** Low
 **Category:** Widgets + Layout + Runtime Render + Admin UI
 **Estimated Effort:** Large
-**Dependencies:** TASK-284-02, TASK-284-03, TASK-284
+**Dependencies:** TASK-284-02, TASK-284
 **Status:** To Do
 
 ---

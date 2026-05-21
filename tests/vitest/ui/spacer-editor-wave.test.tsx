@@ -126,6 +126,7 @@ vi.mock("@/lib/utils", () => ({
 
 const variantSelectValues = ["responsive", "fixed"];
 const heightSelectValues = [...spacerHeightTokens.filter((token) => token !== "0"), "custom"];
+const customHeightPlaceholder = "48 or 48px";
 
 const mount = (node: React.ReactNode) => {
   const container = document.createElement("div");
@@ -198,6 +199,17 @@ const findInputsByPlaceholder = (container: ParentNode, placeholder: string) =>
       element instanceof HTMLInputElement && element.getAttribute("placeholder") === placeholder
   );
 
+const findInputByAriaLabel = (container: ParentNode, ariaLabel: string, index = 0) => {
+  const input = Array.from(container.querySelectorAll("input")).filter(
+    (element): element is HTMLInputElement =>
+      element instanceof HTMLInputElement && element.getAttribute("aria-label") === ariaLabel
+  )[index];
+  if (!(input instanceof HTMLInputElement)) {
+    throw new Error(`Missing input with aria-label "${ariaLabel}" (${index})`);
+  }
+  return input;
+};
+
 const findSelectByOptions = (container: ParentNode, values: string[]) => {
   const select = Array.from(container.querySelectorAll("select")).find((element) => {
     if (!(element instanceof HTMLSelectElement)) return false;
@@ -237,6 +249,13 @@ const findCheckbox = (container: ParentNode, index = 0) => {
   }
   return checkbox;
 };
+
+const readAriaDescriptions = (element: HTMLInputElement) =>
+  (element.getAttribute("aria-describedby") ?? "")
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((id) => element.ownerDocument.getElementById(id)?.textContent ?? "")
+    .join(" ");
 
 const normalizeText = (value: string | null | undefined) =>
   (value ?? "").replace(/\s+/g, " ").trim().toLowerCase();
@@ -344,16 +363,30 @@ test("Spacer wizard editor covers legacy variant fallback, token/custom height c
     expect(variantSelect.value).toBe("responsive");
 
     const initialHeightSelect = findSelectsByOptions(view.container, heightSelectValues)[0];
-    const initialHeightInput = findInputByPlaceholder(view.container, "e.g. 48px");
+    const initialHeightInput = findInputByPlaceholder(view.container, customHeightPlaceholder);
+    const desktopCustomInput = findInputByAriaLabel(view.container, "Desktop height custom height");
     const guideToggle = findCheckbox(view.container);
 
     expect(initialHeightSelect?.value).toBe("16");
     expect(initialHeightInput.value).toBe("");
+    expect(desktopCustomInput).toBe(initialHeightInput);
+    expect(normalizeText(readAriaDescriptions(desktopCustomInput))).toContain(
+      "applies at 1024px and wider"
+    );
+    expect(normalizeText(readAriaDescriptions(desktopCustomInput))).toContain(
+      "custom values accept 48 or 48px"
+    );
+    expect(normalizeText(view.container.textContent)).toContain(
+      "custom values accept 48 or 48px. bare numbers are saved as pixels."
+    );
     expect(guideToggle.checked).toBe(true);
 
     setSelectValue(variantSelect, "fixed");
     expect(view.getVariant()).toBe("fixed");
     expect(view.onVariantChangeSpy).toHaveBeenLastCalledWith("fixed");
+    expect(normalizeText(view.container.textContent)).toContain(
+      "fixed mode reuses the desktop height for tablet and mobile."
+    );
 
     setSelectValue(findSelectsByOptions(view.container, heightSelectValues)[0], "custom");
     expect(findSelectsByOptions(view.container, heightSelectValues)[0]?.value).toBe("custom");
@@ -370,7 +403,7 @@ test("Spacer wizard editor covers legacy variant fallback, token/custom height c
     });
 
     setSelectValue(findSelectsByOptions(view.container, heightSelectValues)[0], "custom");
-    setInputValue(findInputByPlaceholder(view.container, "e.g. 48px"), "bad-value");
+    setInputValue(findInputByPlaceholder(view.container, customHeightPlaceholder), "bad-value");
     expect(view.getValue()).toEqual({
       height: {
         desktop: "20",
@@ -381,7 +414,7 @@ test("Spacer wizard editor covers legacy variant fallback, token/custom height c
     });
     expect(normalizeText(view.container.textContent)).toContain("invalid custom value");
 
-    setInputValue(findInputByPlaceholder(view.container, "e.g. 48px"), "48");
+    setInputValue(findInputByPlaceholder(view.container, customHeightPlaceholder), "48");
     expect(view.getValue()).toEqual({
       height: {
         desktop: "48px",
@@ -391,7 +424,7 @@ test("Spacer wizard editor covers legacy variant fallback, token/custom height c
       showGuideInEditor: true,
     });
     expect(findSelectsByOptions(view.container, heightSelectValues)[0]?.value).toBe("custom");
-    expect(findInputByPlaceholder(view.container, "e.g. 48px").value).toBe("48px");
+    expect(findInputByPlaceholder(view.container, customHeightPlaceholder).value).toBe("48px");
 
     setCheckboxValue(findCheckbox(view.container), false);
     expect(view.getValue()).toEqual({
@@ -446,11 +479,18 @@ test("Spacer visual editor covers fixed-mode fallback, responsive per-breakpoint
     ).toContain("selected");
     expect(normalizeText(getHeightsSection().textContent)).toContain("tablet height");
     expect(normalizeText(getHeightsSection().textContent)).toContain("mobile height");
+    expect(normalizeText(getHeightsSection().textContent)).toContain("applies at 1024px and wider");
+    expect(normalizeText(getHeightsSection().textContent)).toContain(
+      "applies from 768px up until desktop takes over at 1024px"
+    );
+    expect(normalizeText(getHeightsSection().textContent)).toContain(
+      "applies below 768px before the tablet breakpoint."
+    );
 
     const heightSelects = findSelectsByOptions(getHeightsSection(), heightSelectValues);
     expect(heightSelects).toHaveLength(3);
     setSelectValue(heightSelects[1], "24");
-    setInputValue(findInputsByPlaceholder(getHeightsSection(), "e.g. 48px")[2], "44");
+    setInputValue(findInputsByPlaceholder(getHeightsSection(), customHeightPlaceholder)[2], "44");
     expect(view.getValue()).toEqual({
       height: {
         desktop: "10",
@@ -506,7 +546,7 @@ test("Spacer advanced editor matches the active variant while preserving hidden 
       showGuideInEditor: true,
     });
 
-    setInputValue(findInputsByPlaceholder(getTechnicalSection(), "e.g. 48px")[0], "52");
+    setInputValue(findInputsByPlaceholder(getTechnicalSection(), customHeightPlaceholder)[0], "52");
     expect(view.getValue()).toEqual({
       height: {
         desktop: "52px",
@@ -605,7 +645,7 @@ test("Spacer editors fall back to default height controls when normalized data o
       )
     ).toEqual(["16", "12", "8"]);
     expect(
-      findInputsByPlaceholder(missingHeightTechnicalSection, "e.g. 48px").map(
+      findInputsByPlaceholder(missingHeightTechnicalSection, customHeightPlaceholder).map(
         (input) => input.value
       )
     ).toEqual(["", "", ""]);
@@ -623,7 +663,9 @@ test("Spacer editors fall back to default height controls when normalized data o
       )
     ).toEqual(["16", "12", "8"]);
     expect(
-      findInputsByPlaceholder(emptyHeightTechnicalSection, "e.g. 48px").map((input) => input.value)
+      findInputsByPlaceholder(emptyHeightTechnicalSection, customHeightPlaceholder).map(
+        (input) => input.value
+      )
     ).toEqual(["", "", ""]);
     expect(getDiagnosticsSnapshot(advancedEmptyHeightView.container)).toEqual({
       height: {},
@@ -636,7 +678,9 @@ test("Spacer editors fall back to default height controls when normalized data o
     expect(
       findSelectsByOptions(wizardMissingHeightView.container, heightSelectValues)[0]?.value
     ).toBe("16");
-    expect(findInputByPlaceholder(wizardMissingHeightView.container, "e.g. 48px").value).toBe("");
+    expect(
+      findInputByPlaceholder(wizardMissingHeightView.container, customHeightPlaceholder).value
+    ).toBe("");
     expect(findCheckbox(wizardMissingHeightView.container).checked).toBe(false);
 
     expect(findSelectByOptions(wizardEmptyHeightView.container, variantSelectValues).value).toBe(
@@ -645,7 +689,9 @@ test("Spacer editors fall back to default height controls when normalized data o
     expect(
       findSelectsByOptions(wizardEmptyHeightView.container, heightSelectValues)[0]?.value
     ).toBe("16");
-    expect(findInputByPlaceholder(wizardEmptyHeightView.container, "e.g. 48px").value).toBe("");
+    expect(
+      findInputByPlaceholder(wizardEmptyHeightView.container, customHeightPlaceholder).value
+    ).toBe("");
     expect(findCheckbox(wizardEmptyHeightView.container).checked).toBe(false);
   } finally {
     advancedMissingHeightView.cleanup();

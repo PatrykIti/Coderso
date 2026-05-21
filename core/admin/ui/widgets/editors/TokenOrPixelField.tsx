@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import { Input } from "@/components/ui/input";
 import {
@@ -100,6 +100,9 @@ export function TokenOrPixelField({
   selectPlaceholder,
   inputPlaceholder,
   customOptionLabel = "Custom px",
+  fieldDescription,
+  customInputLabel,
+  customInputHelp,
 }: {
   label: string;
   value: string;
@@ -110,8 +113,12 @@ export function TokenOrPixelField({
   selectPlaceholder: string;
   inputPlaceholder: string;
   customOptionLabel?: string;
+  fieldDescription?: string;
+  customInputLabel?: string;
+  customInputHelp?: string;
 }) {
   const valueIsToken = isToken(value);
+  const fieldId = useId();
   const lastCommittedValueRef = useRef(value);
   const [customDraft, setCustomDraft] = useState<string | null>(valueIsToken ? null : value);
 
@@ -123,6 +130,11 @@ export function TokenOrPixelField({
 
   const savedResolvedValue = resolveCss(value);
   const validation = buildValidation(customDraft, savedResolvedValue, resolveCss);
+  const fieldDescriptionId = fieldDescription ? `${fieldId}-description` : undefined;
+  const customInputHelpId = customInputHelp ? `${fieldId}-custom-help` : undefined;
+  const validationId = `${fieldId}-validation`;
+  const customInputDescribedBy =
+    [fieldDescriptionId, customInputHelpId, validationId].filter(Boolean).join(" ") || undefined;
   const selectValue =
     customDraft !== null
       ? customOptionValue
@@ -133,6 +145,11 @@ export function TokenOrPixelField({
   return (
     <div className="space-y-2 rounded-md border p-3">
       <p className="text-sm font-medium">{label}</p>
+      {fieldDescription ? (
+        <p id={fieldDescriptionId} className="text-xs text-muted-foreground">
+          {fieldDescription}
+        </p>
+      ) : null}
       <Select
         value={selectValue}
         onValueChange={(next) => {
@@ -164,9 +181,17 @@ export function TokenOrPixelField({
           const normalized = normalizeCustomPixelValue(nextDraft);
           if (normalized) onChange(normalized);
         }}
+        aria-label={customInputLabel ?? `${label} custom value`}
+        aria-describedby={customInputDescribedBy}
         placeholder={inputPlaceholder}
       />
+      {customInputHelp ? (
+        <p id={customInputHelpId} className="text-xs text-muted-foreground">
+          {customInputHelp}
+        </p>
+      ) : null}
       <p
+        id={validationId}
         role={validation.status === "custom-invalid" ? "alert" : undefined}
         className="text-xs text-muted-foreground"
       >

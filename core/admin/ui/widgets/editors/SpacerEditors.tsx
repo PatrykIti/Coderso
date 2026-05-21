@@ -49,6 +49,14 @@ const heightTokenOptions = buildVisibleOffTokenOptions(
   }))
 );
 
+const spacerCustomHeightHelp = "Custom values accept 48 or 48px. Bare numbers are saved as pixels.";
+
+const spacerHeightBreakpointHelp = {
+  desktop: "Applies at 1024px and wider (Tailwind lg:).",
+  tablet: "Applies from 768px up until desktop takes over at 1024px (Tailwind md:).",
+  mobile: "Applies below 768px before the tablet breakpoint.",
+} as const;
+
 function normalizeValue(value: SpacerData, variant: string): SpacerData {
   return normalizeSpacerData(value, variant);
 }
@@ -154,16 +162,19 @@ function DiagnosticsSnapshot({ value }: { value: SpacerData }) {
 
 function HeightField({
   label,
+  breakpoint,
   value,
   onChange,
 }: {
   label: string;
+  breakpoint: keyof typeof spacerHeightBreakpointHelp;
   value: string;
   onChange: (next: string) => void;
 }) {
   return (
     <TokenOrPixelField
       label={label}
+      fieldDescription={spacerHeightBreakpointHelp[breakpoint]}
       value={value}
       onChange={onChange}
       tokenOptions={heightTokenOptions}
@@ -172,7 +183,9 @@ function HeightField({
       }
       resolveCss={resolveSpacerCssHeight}
       selectPlaceholder="Quick token"
-      inputPlaceholder="e.g. 48px"
+      inputPlaceholder="48 or 48px"
+      customInputLabel={`${label} custom height`}
+      customInputHelp={spacerCustomHeightHelp}
     />
   );
 }
@@ -194,6 +207,7 @@ function ResponsiveHeights({
     <div className="space-y-3">
       <HeightField
         label="Desktop height"
+        breakpoint="desktop"
         value={height.desktop ?? "16"}
         onChange={(next) => updateHeight(value, variant, onChange, { desktop: next })}
       />
@@ -201,11 +215,13 @@ function ResponsiveHeights({
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <HeightField
             label="Tablet height"
+            breakpoint="tablet"
             value={height.tablet ?? "12"}
             onChange={(next) => updateHeight(value, variant, onChange, { tablet: next })}
           />
           <HeightField
             label="Mobile height"
+            breakpoint="mobile"
             value={height.mobile ?? "8"}
             onChange={(next) => updateHeight(value, variant, onChange, { mobile: next })}
           />
@@ -227,6 +243,7 @@ export function SpacerWizardEditor({
 }: WidgetEditorProps<SpacerData>) {
   const normalized = normalizeValue(value, variant);
   const height = normalized.height ?? spacerDefaults.height!;
+  const resolvedVariant = resolveSpacerVariant(variant);
 
   return (
     <div className="space-y-4">
@@ -251,9 +268,15 @@ export function SpacerWizardEditor({
 
       <HeightField
         label="Desktop height"
+        breakpoint="desktop"
         value={height.desktop ?? "16"}
         onChange={(next) => updateHeight(value, variant, onChange, { desktop: next })}
       />
+      {resolvedVariant === "fixed" ? (
+        <p className="text-xs text-muted-foreground">
+          Fixed mode reuses the desktop height for tablet and mobile.
+        </p>
+      ) : null}
 
       <div className="rounded-md border p-3">
         <div className="flex items-center justify-between">

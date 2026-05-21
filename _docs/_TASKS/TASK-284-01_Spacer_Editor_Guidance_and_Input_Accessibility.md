@@ -5,8 +5,8 @@
 **Priority:** High
 **Category:** Widgets + Layout + Admin UI + Accessibility
 **Estimated Effort:** Medium
-**Dependencies:** TASK-256-02, TASK-256-05-03, TASK-284
-**Status:** To Do
+**Dependencies:** TASK-284, TASK-303
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -36,22 +36,22 @@ Out of scope:
 - Advanced fixed/responsive truthfulness;
 - guide/canvas visibility or guide relabeling.
 
-Those rows are owned by TASK-256-02 and TASK-256-05-03. This leaf must consume
-the final shared behavior and then add only Spacer-specific labels, helper text,
-and editor copy.
+Those rows are owned by TASK-303 and TASK-256-05-03. This leaf consumes the
+already-landed shared behavior and adds only Spacer-specific labels, helper
+text, and editor copy.
 
 ## Sub-Tasks
 
-- [ ] Add a fixed-mode hint under the Wizard desktop height field when the
+- [x] Add a fixed-mode hint under the Wizard desktop height field when the
   current variant is `fixed`.
-- [ ] Add breakpoint helper text for Desktop, Tablet, and Mobile height fields
+- [x] Add breakpoint helper text for Desktop, Tablet, and Mobile height fields
   using the current Tailwind breakpoints already reflected by Spacer runtime
   classes.
-- [ ] Update custom height input copy to say that `48` normalizes to `48px` and
+- [x] Update custom height input copy to say that `48` normalizes to `48px` and
   `48px` is also valid.
-- [ ] Add accessible names or `aria-describedby` help for each custom height
+- [x] Add accessible names or `aria-describedby` help for each custom height
   input.
-- [ ] Keep the editor copy short enough for narrow inspector panels; cover the
+- [x] Keep the editor copy short enough for narrow inspector panels; cover the
   final strings and `aria-describedby` wiring in Vitest, and reserve actual
   wrapping/layout evidence for a Playwright or manual visual pass.
 
@@ -59,6 +59,7 @@ and editor copy.
 
 | File | Required change |
 |---|---|
+| `core/admin/ui/widgets/editors/TokenOrPixelField.tsx` | Add optional helper-copy and ARIA wiring hooks that Spacer can consume without changing Divider behavior or shared token semantics. |
 | `core/admin/ui/widgets/editors/SpacerEditors.tsx` | Add Spacer-specific helper text and accessible label/description wiring around `HeightField`, without changing shared token semantics. |
 | `tests/vitest/ui/spacer-editor-wave.test.tsx` | Add assertions for fixed-mode Wizard hint, breakpoint help text, exact concise helper strings, and custom input accessible names/descriptions. |
 | `tests/vitest/widgets/spacer.test.tsx` | Add SSR editor smoke coverage only if the copy is rendered in server-side editor snapshots. |
@@ -154,3 +155,9 @@ No API routes are added.
 - Custom height inputs have accessible names/descriptions instead of relying on
   placeholder-only context.
 - No TASK-256 token-control or guide/canvas behavior is reimplemented locally.
+
+## Completion Notes (2026-05-21)
+
+- Wizard now explains fixed-mode reuse directly under the desktop height control.
+- Desktop, tablet, and mobile height fields now expose breakpoint help plus explicit `48` / `48px` custom-value guidance.
+- Spacer custom height inputs now use explicit `aria-label` and `aria-describedby` wiring through additive `TokenOrPixelField` hooks, with Vitest coverage for the new copy and accessibility descriptions.
