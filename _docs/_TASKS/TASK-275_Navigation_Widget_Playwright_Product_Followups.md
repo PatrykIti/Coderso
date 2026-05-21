@@ -222,9 +222,10 @@ Implementation leaves:
 - Every finding in `REPORT_NAVIGATION_WIDGET.md` is either implemented by a
   TASK-275 physical leaf, explicitly excluded to TASK-256/shared ownership, or
   deferred by TASK-275-06 with a reason.
-- Live-preview and sticky frontend rows are not marked closed by TASK-275 unless
-  TASK-275-06 references the exact shared physical owner tasks (`TASK-317` and
-  `TASK-318`); otherwise their status remains `routed`.
+- Live-preview and sticky frontend rows are not marked closed by TASK-275
+  itself; TASK-275-06 must reference the exact shared physical owner tasks
+  (`TASK-317` and `TASK-318`) while those rows are pending, and the final docs
+  must reflect the landed shared-owner resolution once those tasks are done.
 - TASK-275 docs do not duplicate TASK-256 shared-contract implementation scope.
 - Each implementation leaf names concrete files, data flow, error handling,
   regression tests, documentation updates, and validation commands.
