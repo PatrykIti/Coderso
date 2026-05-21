@@ -283,6 +283,9 @@ test("renderPublicPageHtml renders content list resolved payload deterministical
 
   expect(html).toContain("First post");
   expect(html).toContain("Read post");
+  expect(html).toContain('dateTime="2026-02-08T10:00:00.000Z"');
+  expect(html).toContain("Feb 8, 2026");
+  expect(html).toContain('aria-label="Read post: First post"');
   expect(html).toContain('data-content-list-variant="cards"');
   expect(html).toContain('data-content-list-items="1"');
   expect(html).toContain('data-content-list-state="ready"');
@@ -664,6 +667,9 @@ test("renderPublicPageHtml renders posts feed resolved payload deterministically
 
   expect(html).toContain("Latest update");
   expect(html).toContain("Read post");
+  expect(html).toContain('dateTime="2026-02-22T08:00:00.000Z"');
+  expect(html).toContain("Feb 22, 2026");
+  expect(html).toContain('aria-label="Read post: Latest update"');
   expect(html).toContain('data-content-list-source="post"');
   expect(html).toContain('data-content-list-items="1"');
   expect(html).toContain('data-content-list-state="ready"');

@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 199 tasks
+- **To Do:** 198 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1792 tasks
+- **Done:** 1793 tasks
 
 ---
 
@@ -45,7 +45,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-322-03 | Posts Feed and Shared Picker Consumer Session-Expiry Adoption | High | Large | Consumer adoption task so Posts Feed and similar editor pickers reuse the shared expired-session contract instead of raw `ApiClientError` output |
 | TASK-322-04 | Session Expiry Docs, Changelog, and Closure | Medium | Medium | Final report/docs/board/changelog closure after the shared client and consumer leaves land |
 | TASK-321 | Shared Clear Action Undo and Feedback Contract | Medium | Large | Shared editor follow-up for recoverable Clear actions, undo feedback, and consistent destructive-surface messaging across widget editors |
-| TASK-320 | Content List Shared Date and CTA Accessibility Residuals | High | Large | Shared `ContentListBlock` follow-up for semantic date output and contextual CTA link text used by both `content-list` and `posts-feed` |
 | TASK-319 | Newsletter Per-Breakpoint Variant Overrides | Low | Large | Evaluate or explicitly reject true per-breakpoint Newsletter variant overrides after TASK-276 made current mobile behavior truthful |
 | TASK-319-01 | Newsletter Responsive Variant Audit and Product Decision | Medium | Medium | Audit current Newsletter mobile/desktop behavior and record the explicit product decision for BF-15 before any schema change lands |
 | TASK-319-02 | Newsletter Bounded Mobile Variant Implementation | Low | Large | Implement the bounded Newsletter mobile override only if TASK-319-01 approves it |
@@ -253,6 +252,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-320 | Content List Shared Date and CTA Accessibility Residuals | High | Large | Done (2026-05-21): shared `ContentListBlock` now emits semantic date markup and contextual CTA accessible names for both `content-list` and `posts-feed` |
 | TASK-313 | Shared Commerce Widget Money Minor-Unit Parity | High | Medium | Done (2026-05-19): shared `formatCommerceMoney()` now follows the commerce admin minor-unit contract and Product Gallery / Product Compare / Product Table expectations were updated together. |
 | TASK-280 | Product Gallery Widget Playwright Product Followups | High | Very Large | Done (2026-05-19): Product Gallery now ships media, safe links, bounded preview refresh, manual curation, view-all navigation, and closure docs aligned with the shared TASK-313 split. |
 | TASK-280-01 | Product Gallery Media Link and CTA Cards | High | Large | Done (2026-05-19): cards now render backend-resolved media, safe links, bounded CTA styles, and accessible alt fallback. |

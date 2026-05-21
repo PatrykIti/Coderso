@@ -6,7 +6,7 @@
 **Category:** Widgets + Accessibility + Shared Renderer
 **Estimated Effort:** Large
 **Dependencies:** TASK-302, TASK-262, TASK-277
-**Status:** To Do
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -161,6 +161,9 @@ No API routes are added.
 - `_docs/PLAYWRIGHT/REPORT_CONTENT_LIST_WIDGET.md`
 - `_docs/PLAYWRIGHT/REPORT_POSTS_FEED_WIDGET.md`
 - `_docs/_TASKS/TASK-320_Content_List_Shared_Date_and_CTA_Accessibility_Residuals.md`
+- `_docs/_TASKS/README.md`
+- `_docs/_CHANGELOG/884-2026-05-21-task-320-content-list-shared-accessibility-residuals.md`
+- `_docs/_CHANGELOG/README.md`
 
 ## Acceptance Criteria
 
@@ -170,3 +173,22 @@ No API routes are added.
   CTA label copy.
 - Invalid dates remain safely omitted rather than emitting broken semantics.
 - Both shared renderer tests and public renderer tests cover the final behavior.
+
+## Validation Notes (2026-05-21)
+
+- `bun test tests/unit/widgets/contentList.test.tsx` - passed (`19` tests)
+- `bun run test:vitest -- tests/vitest/site/publicRenderer.test.tsx` - passed
+  (`15` tests)
+- `bun --cwd core lint` - passed
+- `bun --cwd core lint:types` - passed
+- `bun run gates:coderso` - passed
+- `bun run scan:security:strict` - failed outside TASK-320 scope because the
+  local Semgrep trust store had no CA anchors and `bun audit` could not reach
+  the advisory endpoint; Trivy and Gitleaks sub-scanners were clean in the same run
+- `bun run precommit` - passed
+
+## Completion Notes
+
+- 2026-05-21: shared `ContentListBlock` now renders readable semantic date
+  metadata and contextual CTA accessible names for both `content-list` and
+  `posts-feed` consumers without changing visible copy.

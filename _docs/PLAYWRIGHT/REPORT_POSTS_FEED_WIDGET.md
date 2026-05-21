@@ -401,7 +401,7 @@ Aktualny status każdego findings po implementacji i closure passie:
 | BUG-05 | `fixed-task-277` | `TASK-277-02`; runtime items now resolve `imageSrc` / `imageAlt` through the shared media lookup seam. |
 | BUG-06 | `platform-follow-up` | Routed to `TASK-322`; TASK-277 does not own global admin session / CSRF refresh. |
 | BUG-07 | `fixed-task-277` | `TASK-277-01`; Posts Feed omits CTA hrefs when no enabled posts detail route exists instead of falling back to `/post/:slug`. |
-| BUG-08 | `shared-follow-up` | Routed to `TASK-320`; semantic date formatting is shared `ContentListBlock` scope. |
+| BUG-08 | `fixed-task-320` | `TASK-320`; shared `ContentListBlock` now renders readable date copy via semantic `<time dateTime="...">` output. |
 | BUG-09 | `platform-follow-up` | Root cause stays on `TASK-322`; local picker retry/error/auth guidance is fixed by `TASK-277-03`. |
 | UX-01 | `fixed-task-277` | `TASK-277-04`; admin preview now hydrates transient resolved posts through the existing preview-state/dataPatch channel. |
 | UX-02 | `fixed-task-277` | `TASK-277-06`; variant choice uses visual cards instead of a bare dropdown. |
@@ -421,9 +421,9 @@ Aktualny status każdego findings po implementacji i closure passie:
 | BF-08 | `fixed-task-277` | `TASK-277-07`; `featuredFirst` is now a first-class source option for non-manual modes. |
 | BF-09 | `fixed-task-277` | `TASK-277-06`; Posts Feed exposes the shared `imageAspect` contract. |
 | BF-10 | `fixed-task-277` | `TASK-277-05`; bounded motion presets (`none`, `fade`, `slide-up`) are now available. |
-| A1 | `shared-follow-up` | Routed to `TASK-320`; semantic `<time>` output belongs to the shared Content List renderer. |
+| A1 | `fixed-task-320` | `TASK-320`; shared `ContentListBlock` now emits semantic `<time dateTime="...">` output for valid runtime dates. |
 | A2 | `fixed-task-277` | `TASK-277-02`; media alt text now resolves into runtime cards. |
-| A3 | `shared-follow-up` | Routed to `TASK-320`; contextual CTA text remains shared renderer scope. |
+| A3 | `fixed-task-320` | `TASK-320`; shared CTA links now expose contextual accessible naming from the CTA label plus the post title. |
 | A4 | `fixed-task-277` | `TASK-277-02`; tags are mapped and rendered through the existing shared metadata path; navigational tag-link behavior remains intentionally out of scope. |
 | A5 | `fixed-task-277` | `TASK-277-03`; manual picker checkboxes now use post-title labels. |
 | A6 | `fixed-task-277` | `TASK-277-03`; loading/error picker feedback is announced through `aria-live`. |

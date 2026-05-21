@@ -51,13 +51,14 @@ intentionally deferred.
 type PostsFeedFindingStatus =
   | "fixed-task-256"
   | "fixed-task-277"
+  | "fixed-task-320"
   | "platform-follow-up"
   | "deferred";
 
 const findingMap = [
   { id: "BUG-01", status: "fixed-task-277", evidence: "TASK-277-01 validation" },
   { id: "BUG-06", status: "platform-follow-up", reason: "global auth/session refresh" },
-  { id: "A1", status: "fixed-task-256", evidence: "shared Content List renderer validation" },
+  { id: "A1", status: "fixed-task-320", evidence: "shared Content List renderer validation" },
 ];
 
 function assertEveryPostsFeedFindingMapped(findings: Finding[]) {
@@ -141,6 +142,12 @@ Scoped closeout note:
   environment became contention-prone during parallel-agent work.
 - A broader `bun run lint` attempt did not complete in a stable, timely way
   under the same multi-agent load, so it is not used as closure evidence here.
-- Full `bun run test:bun`, full `bun run test:vitest`, `bun run scan:security:strict`,
-  and `bun run precommit` were not used as closure gates for this task after the
-  user approved scope-limited closeout.
+- The original 2026-05-20 scope-limited closeout did not use full
+  `bun run test:bun` or full `bun run test:vitest` as closure gates after the
+  user approved an in-scope finish during shared environment contention.
+- 2026-05-21 audit reruns later added `bun run precommit` evidence while
+  follow-up shared task fixes were being staged.
+- A 2026-05-21 `bun run scan:security:strict` attempt was recorded, but the
+  strict wrapper still failed outside TASK-277 scope because local Semgrep trust
+  anchors and `bun audit` advisory connectivity were unavailable; Trivy and
+  Gitleaks sub-scanners remained clean in that run.

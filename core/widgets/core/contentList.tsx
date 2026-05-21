@@ -613,11 +613,32 @@ export function normalizeContentListData(data: ContentListData): ContentListData
   };
 }
 
-const formatRuntimeDate = (value: string | undefined) => {
+type ContentListDateParts = {
+  dateTime: string;
+  label: string;
+};
+
+type ContentListMetaParts = {
+  date?: ContentListDateParts;
+  authorName?: string;
+  tags: string[];
+};
+
+const runtimeDateFormatter = new Intl.DateTimeFormat("en-US", {
+  timeZone: "UTC",
+  year: "numeric",
+  month: "short",
+  day: "numeric",
+});
+
+const formatRuntimeDateParts = (value: string | undefined): ContentListDateParts | undefined => {
   if (!value) return undefined;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return undefined;
-  return date.toISOString().slice(0, 10);
+  return {
+    dateTime: date.toISOString(),
+    label: runtimeDateFormatter.format(date),
+  };
 };
 
 const resolveContentListEmptyDescription = (
@@ -632,17 +653,36 @@ const resolveContentListEmptyDescription = (
   return trimmed ?? defaultContentListEmptyDescription;
 };
 
-const buildMetaLine = (item: ContentListRuntimeItem, includeTags: boolean) => {
-  const chunks: string[] = [];
-  const dateLabel = formatRuntimeDate(item.publishedAt);
-  if (dateLabel) chunks.push(dateLabel);
-  if (item.authorName && item.authorName.trim().length > 0) {
-    chunks.push(item.authorName.trim());
-  }
-  if (includeTags && Array.isArray(item.tags) && item.tags.length > 0) {
-    chunks.push(item.tags.slice(0, 2).join(", "));
-  }
-  return chunks.join(" • ");
+const buildMetaParts = (
+  item: ContentListRuntimeItem,
+  includeTags: boolean
+): ContentListMetaParts => {
+  const authorName = resolveTrimmedOptionalString(item.authorName);
+  const tags =
+    includeTags && Array.isArray(item.tags)
+      ? item.tags
+          .map((tag) => tag.trim())
+          .filter(Boolean)
+          .slice(0, 2)
+      : [];
+
+  return {
+    date: formatRuntimeDateParts(item.publishedAt),
+    authorName,
+    tags,
+  };
+};
+
+const hasMetaParts = (parts: ContentListMetaParts) =>
+  Boolean(parts.date || parts.authorName || parts.tags.length > 0);
+
+const resolveContentListCtaAccessibleLabel = (
+  item: ContentListRuntimeItem,
+  visibleLabel: string
+) => {
+  const resolvedLabel = resolveTrimmedOptionalString(visibleLabel) ?? "Read more";
+  const title = resolveTrimmedOptionalString(item.title);
+  return title ? `${resolvedLabel}: ${title}` : resolvedLabel;
 };
 
 function ContentListItemCard({
@@ -680,18 +720,21 @@ function ContentListItemCard({
   const tagMode = style.tagMode ?? "meta-line";
   const tagLimit = resolveContentListTagLimit(style.tagLimit);
   const tags = tagMode === "hidden" ? [] : (item.tags ?? []).slice(0, tagLimit);
-  const metaLine = buildMetaLine(item, tagMode === "meta-line");
+  const metaParts = buildMetaParts(item, tagMode === "meta-line");
+  const metaTail = [...(metaParts.authorName ? [metaParts.authorName] : []), ...metaParts.tags];
   const title = item.title ?? "Untitled";
   const href = item.href && item.href.trim().length > 0 ? item.href : undefined;
   const excerpt = (item.excerpt ?? "").trim();
   const imageAspectClassName = imageAspectClassMap[style.imageAspect ?? "standard"];
   const showImage = Boolean(fields.showImage) && Boolean(item.imageSrc);
   const showExcerpt = fields.showExcerpt && excerpt.length > 0;
-  const showMeta = fields.showMeta && metaLine.length > 0;
+  const showMeta = fields.showMeta && hasMetaParts(metaParts);
   const showTagBadges = tagMode === "badges" && tags.length > 0;
   const showCta = Boolean(fields.showCta);
   const showCtaLink = showCta && Boolean(href);
   const showCtaFallback = showCta && !href;
+  const ctaLabel = style.ctaLabel ?? "Read more";
+  const ctaAccessibleLabel = resolveContentListCtaAccessibleLabel(item, ctaLabel);
 
   return (
     <article
@@ -732,7 +775,19 @@ function ContentListItemCard({
             ))}
           </div>
         ) : null}
-        {showMeta ? <p className="text-xs opacity-75">{metaLine}</p> : null}
+        {showMeta ? (
+          <p className="text-xs opacity-75">
+            {metaParts.date ? (
+              <time dateTime={metaParts.date.dateTime}>{metaParts.date.label}</time>
+            ) : null}
+            {metaTail.map((segment, index) => (
+              <span key={`${segment}-${index}`}>
+                {metaParts.date || index > 0 ? <span aria-hidden="true"> • </span> : null}
+                <span>{segment}</span>
+              </span>
+            ))}
+          </p>
+        ) : null}
         {showExcerpt ? (
           <p className={variant === "compact" ? "text-sm opacity-90" : "text-sm opacity-90"}>
             {excerpt}
@@ -740,15 +795,23 @@ function ContentListItemCard({
         ) : null}
         {showCtaLink ? (
           <div>
-            <a href={href} className="text-sm font-medium underline-offset-4 hover:underline">
-              {style.ctaLabel ?? "Read more"}
+            <a
+              href={href}
+              className="text-sm font-medium underline-offset-4 hover:underline"
+              aria-label={ctaAccessibleLabel}
+            >
+              {ctaLabel}
             </a>
           </div>
         ) : null}
         {showCtaFallback ? (
           <div>
-            <span className="text-sm font-medium opacity-70" aria-disabled="true">
-              {style.ctaLabel ?? "Read more"}
+            <span
+              className="text-sm font-medium opacity-70"
+              aria-disabled="true"
+              aria-label={ctaAccessibleLabel}
+            >
+              {ctaLabel}
             </span>
           </div>
         ) : null}

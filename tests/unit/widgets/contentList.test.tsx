@@ -156,6 +156,9 @@ test("content list renders resolved items and runtime markers", () => {
 
   expect(html).toContain("Release notes");
   expect(html).toContain("Open post");
+  expect(html).toContain('dateTime="2026-02-08T09:00:00.000Z"');
+  expect(html).toContain("Feb 8, 2026");
+  expect(html).toContain('aria-label="Open post: Release notes"');
   expect(html).toContain('data-content-list-variant="compact"');
   expect(html).toContain('data-content-list-items="1"');
   expect(html).toContain('data-content-list-state="ready"');
@@ -200,8 +203,47 @@ test("content list renders image aspect classes and CTA fallback label when href
 
   expect(html).toContain("aspect-[16/9]");
   expect(html).toContain('aria-disabled="true"');
+  expect(html).toContain('aria-label="Open post: Release notes"');
   expect(html).toContain("Open post");
   expect(html).not.toContain('href="/blog/release-notes"');
+});
+
+test("content list omits semantic time markup when runtime date is invalid", () => {
+  const html = renderToString(
+    <ContentListBlock
+      variant="cards"
+      data={normalizeContentListData({
+        ...contentListDefaults,
+        source: {
+          contentTypeId: "blog-type-id",
+          statusScope: "published",
+          limit: 3,
+          sort: "published-desc",
+        },
+        resolved: {
+          items: [
+            {
+              id: "entry-1",
+              title: "Release notes",
+              href: "/blog/release-notes",
+              excerpt: "Latest platform updates.",
+              authorName: "Editor",
+              publishedAt: "not-a-date",
+              status: "published",
+            },
+          ],
+          total: 1,
+          sourceTypeId: "blog-type-id",
+          sourceTypeSlug: "blog",
+          resolvedAt: "2026-02-08T09:10:00.000Z",
+        },
+      })}
+    />
+  );
+
+  expect(html).toContain("Editor");
+  expect(html).not.toContain("<time");
+  expect(html).not.toContain('dateTime="');
 });
 
 test("content list renders paged navigation and view-all actions", () => {
