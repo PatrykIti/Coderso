@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Runtime Render + Responsive Layout
 **Estimated Effort:** Large
 **Dependencies:** TASK-276, TASK-276-04, TASK-276-06
-**Status:** To Do
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -40,11 +40,21 @@ This task does not own:
 - Raw arbitrary CSS, custom media queries, or unbounded responsive maps.
 - Reopening TASK-276 shared clear/color/runtime seams.
 
+## Decision Outcome
+
+- 2026-05-21: TASK-319 rejected a new breakpoint-owned Newsletter variant
+  field as unnecessary.
+- `inline` and `minimal` already stack on mobile and only switch to a row from
+  `sm`, which covers the cited desktop-inline/mobile-stacked use case without a
+  new schema field.
+- `TASK-319-02` therefore closed without landing a new responsive override,
+  while `TASK-319-03` owns the final report/docs/changelog closure.
+
 ## Sub-Tasks
 
-- [ ] TASK-319-01: Newsletter Responsive Variant Audit and Product Decision
-- [ ] TASK-319-02: Newsletter Bounded Mobile Variant Implementation
-- [ ] TASK-319-03: Newsletter Responsive Variant Docs and Closure
+- [x] TASK-319-01: Newsletter Responsive Variant Audit and Product Decision
+- [x] TASK-319-02: Newsletter Bounded Mobile Variant Implementation
+- [x] TASK-319-03: Newsletter Responsive Variant Docs and Closure
 
 ## Implementation Order
 
@@ -154,3 +164,25 @@ No API routes are added.
 - The final decision is reflected in the Newsletter widget doc and report.
 - The decision and any implementation/closure work route through physical
   `TASK-319-*` leaves instead of one mixed decision-plus-implementation task.
+
+
+## Validation Notes (2026-05-21)
+
+- `bun run test:vitest -- tests/vitest/widgets/newsletter.test.tsx` - passed
+  (`13` tests)
+- `bun run test:vitest -- tests/vitest/ui/newsletter-editor-wave.test.tsx` -
+  passed (`6` tests)
+- `bun --cwd core lint` - passed
+- `bun --cwd core lint:types` - passed
+- `bun run gates:coderso` - passed
+- `git diff --check` - passed
+- `bun run precommit` - passed
+- `bun run scan:security:strict` - could not complete in the local environment
+  because `semgrep`, `trivy`, and `gitleaks` were not installed in `PATH`;
+  `bun audit` ran successfully inside the same command
+
+## Completion Notes
+
+- 2026-05-21: the TASK-319 family is closed. Newsletter keeps the scalar
+  `variant` field, and BF-15 is now recorded as current-state sufficient rather
+  than an open responsive-schema follow-up.

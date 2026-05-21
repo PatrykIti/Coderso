@@ -405,6 +405,24 @@ test("newsletter editor preview shows a bound Forms contract without enabling ru
   );
 });
 
+test("newsletter keeps a scalar variant contract and already stacks inline layouts on mobile", () => {
+  const inlineHtml = renderToString(<NewsletterBlock data={newsletterDefaults} variant="inline" />);
+  const minimalHtml = renderToString(
+    <NewsletterBlock data={newsletterDefaults} variant="minimal" />
+  );
+  const stackedHtml = renderToString(
+    <NewsletterBlock data={newsletterDefaults} variant="stacked" />
+  );
+
+  expect(inlineHtml).toContain('data-newsletter-variant="inline"');
+  expect(inlineHtml).toContain("flex w-full flex-col gap-3 sm:flex-row sm:items-end");
+  expect(minimalHtml).toContain('data-newsletter-variant="minimal"');
+  expect(minimalHtml).toContain("flex w-full flex-col gap-2 sm:flex-row sm:items-end");
+  expect(stackedHtml).toContain('data-newsletter-variant="stacked"');
+  expect(stackedHtml).toContain("flex w-full flex-col gap-3");
+  expect(stackedHtml).not.toContain("sm:flex-row");
+});
+
 test("newsletter validator accepts bounded fields, runtime binding, and style extensions", () => {
   clearWidgets();
   const widget = createNewsletterWidget({
@@ -536,6 +554,20 @@ test("newsletter validator rejects unknown nested keys", () => {
           submissionAccess: "public",
           fields: [],
           extra: "nope",
+        },
+      } as never,
+    })
+  ).toThrow("widget_schema_invalid");
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "newsletter-invalid-responsive-override",
+      type: "newsletter",
+      variant: "inline",
+      data: {
+        ...newsletterDefaults,
+        responsive: {
+          mobileVariant: "stacked",
         },
       } as never,
     })

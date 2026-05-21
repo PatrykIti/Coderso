@@ -274,7 +274,7 @@ Newsletter widget to formularz zapisu do newslettera z konfigurowalnymi polami t
 **Opis:** Brak możliwości dodania `data-analytics-*` atrybutów lub konfiguracji event tracking przy submit. Brak integracji z Google Analytics / GTM dla śledzenia konwersji.
 
 #### BF-15 — Brak konfiguracji wariantów per breakpoint
-**Opis:** Nie ma możliwości wybrania innego wariantu dla mobile niż desktop (np. stacked na mobile, inline na desktop).
+**Opis po TASK-319:** Zgloszony przyklad jest juz pokryty przez obecny kontrakt: warianty `inline` i `minimal` ukladaja formularz pionowo na mobile i przechodza do ukladu wiersza od breakpointu `sm`. TASK-319 zamknal ten punkt jako current-state sufficient bez dodawania osobnego pola per breakpoint.
 
 ---
 
@@ -420,7 +420,7 @@ Newsletter widget to formularz zapisu do newslettera z konfigurowalnymi polami t
 | BF-12 | fixed | TASK-276-02 | Forms-runtime submit now renders bounded error state through shared runtime markers. |
 | BF-13 | not reproducible | TASK-276-03 | HTML form actions do not use `rel`; external action safety is handled through the URL allowlist plus runtime-owner boundaries. |
 | BF-14 | fixed | TASK-276-02 | Forms-runtime submit now dispatches an allowlisted success `CustomEvent` using the configured analytics name; static external submits keep analytics provider-owned. |
-| BF-15 | future physical task | TASK-319 | TASK-276 made current mobile behavior truthful, but true per-breakpoint variant overrides remain a separate explicit follow-up. |
+| BF-15 | current-state sufficient | TASK-319 | The cited desktop-inline/mobile-stacked behavior is already covered by the shipped scalar variants, so no breakpoint-owned override field was added. |
 
 #### Dostępność
 
@@ -439,12 +439,22 @@ Newsletter widget to formularz zapisu do newslettera z konfigurowalnymi polami t
   type fixes.
 - `bun run test:vitest -- tests/vitest/widgets/newsletter.test.tsx tests/vitest/ui/newsletter-editor-wave.test.tsx tests/vitest/widgets/renderer.test.tsx tests/vitest/widgets/formRuntimeScript.test.ts` - PASS, `4` files / `53` tests.
 - `set -a && source .env && set +a && bun test tests/unit/widgets/validator.test.ts tests/security/codersoSecurityGate.test.ts` - PASS.
-- `bun run scan:security:strict` - PASS; Semgrep, bun audit, Trivy, and both
-  Gitleaks scans completed cleanly.
+- `bun run scan:security:strict` - PASS in the TASK-276 worktree; Semgrep,
+  bun audit, Trivy, and both Gitleaks scans completed cleanly there.
 - `bun run test:bun` and `bun run test:vitest` were both executed for repo
   baseline coverage, but the branch currently carries unrelated DB/runtime
   timeouts outside Newsletter scope (assistant/forms/detail-page/media/listings
   lanes).
+- `bun run test:vitest -- tests/vitest/widgets/newsletter.test.tsx` - PASS
+  (`13` tests) after TASK-319 added scalar/mobile layout proof and explicit
+  rejection of unknown responsive override payloads.
+- `bun run test:vitest -- tests/vitest/ui/newsletter-editor-wave.test.tsx` -
+  PASS (`6` tests) after TASK-319 confirmed the editor copy still documents the
+  effective mobile behavior truthfully.
+- `bun run gates:coderso` - PASS during TASK-319 closure validation.
+- `bun run scan:security:strict` - current local rerun could not complete
+  because `semgrep`, `trivy`, and `gitleaks` were not installed in `PATH`;
+  `bun audit` still completed successfully.
 - Inside the full `bun run test:bun` execution, the Newsletter-specific runtime
   smoke `public page runtime bypasses HTML cache when hydrated blocks include
   submission nonces` passed before later unrelated branch failures terminated

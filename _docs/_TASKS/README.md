@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 195 tasks
+- **To Do:** 191 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1802 tasks
+- **Done:** 1806 tasks
 
 ---
 
@@ -38,10 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-319 | Newsletter Per-Breakpoint Variant Overrides | Low | Large | Evaluate or explicitly reject true per-breakpoint Newsletter variant overrides after TASK-276 made current mobile behavior truthful |
-| TASK-319-01 | Newsletter Responsive Variant Audit and Product Decision | Medium | Medium | Audit current Newsletter mobile/desktop behavior and record the explicit product decision for BF-15 before any schema change lands |
-| TASK-319-02 | Newsletter Bounded Mobile Variant Implementation | Low | Large | Implement the bounded Newsletter mobile override only if TASK-319-01 approves it |
-| TASK-319-03 | Newsletter Responsive Variant Docs and Closure | Medium | Medium | Close report/docs/changelog/board against the final TASK-319 decision and shipped behavior |
 | TASK-325 | Grid Columns Shared Structural Truthfulness Follow-up | High | Large | Residual shared Grid Columns truthfulness after TASK-256 closure: variant truthfulness, span feedback, CSS-variable picker representation, and inactive cardize controls |
 | TASK-325-01 | Grid Columns Asymmetric Variant Truthfulness | High | Medium | Make the existing `asymmetric` controls truthful for already-saved span data without rewriting custom layouts silently |
 | TASK-325-02 | Grid Columns Span Total Feedback and Invalid Layout Guidance | High | Medium | Add current desktop/tablet/mobile total feedback and explicit invalid-layout guidance before any runtime guard decision |
@@ -249,6 +245,10 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-319 | Newsletter Per-Breakpoint Variant Overrides | Low | Large | Done (2026-05-21): BF-15 is closed as current-state sufficient; Newsletter keeps a scalar variant contract without a breakpoint-owned override field |
+| TASK-319-03 | Newsletter Responsive Variant Docs and Closure | Medium | Medium | Done (2026-05-21): report/docs/board/changelog now reflect the explicit current-state-sufficient BF-15 outcome |
+| TASK-319-02 | Newsletter Bounded Mobile Variant Implementation | Low | Large | Done (2026-05-21): closed not applicable after TASK-319-01 confirmed the shipped scalar variants already cover the cited mobile behavior |
+| TASK-319-01 | Newsletter Responsive Variant Audit and Product Decision | Medium | Medium | Done (2026-05-21): audit confirmed `inline` and `minimal` already stack on mobile and only switch to a row from `sm` |
 | TASK-322 | Admin Session and CSRF Expiry Resilience for Long-Lived Editors | High | Very Large | Done (2026-05-21): shared admin session expiry is now classified in the API client and adopted by PageEditor plus Posts Feed picker/preview consumers |
 | TASK-322-04 | Session Expiry Docs, Changelog, and Closure | Medium | Medium | Done (2026-05-21): report/docs/board/changelog now reflect the landed shared session-expiry family |
 | TASK-322-03 | Posts Feed and Shared Picker Consumer Session-Expiry Adoption | High | Large | Done (2026-05-21): Posts Feed picker and preview-resource consumers now render shared expired-session guidance instead of raw auth errors |

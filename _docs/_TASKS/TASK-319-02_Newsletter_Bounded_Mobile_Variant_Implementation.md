@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Runtime Render
 **Estimated Effort:** Large
 **Dependencies:** TASK-319-01
-**Status:** To Do
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -17,6 +17,14 @@ explicitly approves it.
 
 This leaf owns code changes only after the product decision is made. It must
 not introduce arbitrary breakpoint maps or shared breakpoint infrastructure.
+
+## Outcome
+
+- 2026-05-21: `TASK-319-01` rejected the bounded mobile override as not
+  needed.
+- The shipped scalar variants already satisfy the cited mobile behavior, so
+  this implementation leaf closed without production schema/editor/runtime
+  changes.
 
 ## Sub-Tasks
 
@@ -102,3 +110,27 @@ No API routes are added.
 - Editor and runtime behavior stay truthful and tested.
 - The implementation stays Newsletter-local and does not widen into shared
   breakpoint infrastructure.
+
+
+## Validation Notes (2026-05-21)
+
+- No production implementation path changed because `TASK-319-01` rejected the
+  bounded mobile override as unnecessary.
+- `bun run test:vitest -- tests/vitest/widgets/newsletter.test.tsx` - passed
+  (`13` tests), including proof that the current scalar variants already stack
+  on mobile and that unknown responsive override payloads are rejected
+- `bun run test:vitest -- tests/vitest/ui/newsletter-editor-wave.test.tsx` -
+  passed (`6` tests)
+- `bun --cwd core lint` - passed
+- `bun --cwd core lint:types` - passed
+- `git diff --check` - passed
+- `bun run precommit` - passed
+- `bun run scan:security:strict` - could not complete in the local environment
+  because `semgrep`, `trivy`, and `gitleaks` were not installed in `PATH`;
+  `bun audit` ran successfully inside the same command
+
+## Completion Notes
+
+- 2026-05-21: this implementation leaf closed as not applicable after the
+  audit confirmed that the shipped scalar variants already cover the requested
+  mobile behavior.

@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 891 | 2026-05-21 | TASK-319 newsletter responsive variant decision | CMS Widgets/Admin UI/Runtime/QA |
 | 890 | 2026-05-21 | TASK-322 session expiry resilience | CMS Admin UI/Auth/Reliability |
 | 889 | 2026-05-21 | TASK-322-01 admin API session classification | CMS Admin API/Auth |
 | 888 | 2026-05-21 | TASK-317 widget editor live preview surface | CMS Admin UI/Builder/Preview |

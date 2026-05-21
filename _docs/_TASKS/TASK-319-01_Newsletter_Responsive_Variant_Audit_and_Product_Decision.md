@@ -6,7 +6,7 @@
 **Category:** Widgets + Product Decision + QA
 **Estimated Effort:** Medium
 **Dependencies:** TASK-319, TASK-276, TASK-276-04, TASK-276-06
-**Status:** To Do
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -17,6 +17,16 @@ bounded per-breakpoint override is still warranted.
 
 This leaf owns the product decision only. It must not silently implement schema
 or editor changes during the same step.
+
+## Decision Outcome
+
+- 2026-05-21: reject a new per-breakpoint Newsletter variant override as
+  unnecessary.
+- The shipped `inline` and `minimal` variants already render stacked mobile
+  layouts and only switch to a row from the `sm` breakpoint upward.
+- That existing scalar contract already covers the BF-15 example (`inline` on
+  desktop, stacked on mobile), so code work routes to closure rather than a new
+  schema field.
 
 ## Sub-Tasks
 
@@ -90,3 +100,21 @@ No API routes are added.
 - BF-15 has one explicit product decision backed by current evidence.
 - The decision routes implementation to `TASK-319-02` or closes through
   `TASK-319-03`; it does not remain implicit in the parent task.
+
+
+## Validation Notes (2026-05-21)
+
+- `bun run test:vitest -- tests/vitest/widgets/newsletter.test.tsx` - passed
+  (`13` tests), including scalar/mobile layout proof and rejection of an
+  unknown responsive override field
+- `bun run test:vitest -- tests/vitest/ui/newsletter-editor-wave.test.tsx` -
+  passed (`6` tests), including truthful mobile-guidance assertions
+- `bun --cwd core lint` - passed
+- `bun --cwd core lint:types` - passed
+- `git diff --check` - passed
+
+## Completion Notes
+
+- 2026-05-21: the audit concluded that the shipped scalar variants already
+  cover the cited desktop-inline/mobile-stacked request, so follow-up work
+  routes directly to TASK-319-03 closure instead of TASK-319-02 implementation.

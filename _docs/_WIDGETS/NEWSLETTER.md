@@ -196,8 +196,12 @@ The renderer emits bounded data markers including:
 }
 ```
 
-## Deferred Follow-Up
+## Responsive Variant Decision
 
-- `TASK-319` owns the future decision on true per-breakpoint Newsletter variant
-  overrides (`BF-15`). TASK-276 intentionally stopped at truthful mobile
-  guidance instead of widening the schema during the stabilization wave.
+- `TASK-319` closed `BF-15` as current-state sufficient instead of adding a new
+  breakpoint-owned variant field.
+- `inline` and `minimal` already render as stacked mobile layouts and only
+  switch to a row from the `sm` breakpoint upward; `stacked` remains vertical on
+  every viewport.
+- Newsletter therefore keeps a scalar `variant` contract. No
+  `mobileVariant`/per-breakpoint override field is part of the schema.

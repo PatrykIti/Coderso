@@ -6,7 +6,7 @@
 **Category:** Documentation + QA + Closure
 **Estimated Effort:** Medium
 **Dependencies:** TASK-319-01
-**Status:** To Do
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -17,6 +17,15 @@ any approved implementation land.
 
 This leaf owns final report/docs/task/changelog reconciliation. If
 `TASK-319-01` rejects the feature, this leaf records that explicit rejection.
+
+## Final Outcome
+
+- 2026-05-21: BF-15 is closed as current-state sufficient.
+- Newsletter keeps the scalar `variant` contract because the shipped
+  `inline`/`minimal` layouts already stack on mobile and switch to a row only
+  from `sm` upward.
+- Report, widget docs, task files, board state, and changelog now all point to
+  that explicit decision.
 
 ## Sub-Tasks
 
@@ -30,7 +39,7 @@ This leaf owns final report/docs/task/changelog reconciliation. If
 | `_docs/_WIDGETS/NEWSLETTER.md` | Reflect the final product decision and shipped behavior. |
 | `_docs/_TASKS/TASK-319*.md` | Update statuses, validation notes, and routing. |
 | `_docs/_TASKS/README.md` | Move `TASK-319*` rows through final board state and update statistics. |
-| `_docs/_CHANGELOG/<next>-<date>-task-319-newsletter-responsive-variant-decision.md` | Add a changelog entry when the family closes. |
+| `_docs/_CHANGELOG/891-2026-05-21-task-319-newsletter-responsive-variant-decision.md` | Add a changelog entry when the family closes. |
 | `_docs/_CHANGELOG/README.md` | Register the changelog entry. |
 
 ## Implementation Pseudocode
@@ -87,7 +96,7 @@ No API routes are added by this closure leaf.
 - `_docs/_WIDGETS/NEWSLETTER.md`
 - `_docs/_TASKS/TASK-319*.md`
 - `_docs/_TASKS/README.md`
-- `_docs/_CHANGELOG/<next>-<date>-task-319-newsletter-responsive-variant-decision.md`
+- `_docs/_CHANGELOG/891-2026-05-21-task-319-newsletter-responsive-variant-decision.md`
 - `_docs/_CHANGELOG/README.md`
 
 ## Acceptance Criteria
@@ -96,3 +105,25 @@ No API routes are added by this closure leaf.
 - Parent `TASK-319` no longer mixes decision, implementation, and closure work
   in one leaf.
 - Board/docs/changelog match the shipped result.
+
+
+## Validation Notes (2026-05-21)
+
+- `bun run test:vitest -- tests/vitest/widgets/newsletter.test.tsx` - passed
+  (`13` tests)
+- `bun run test:vitest -- tests/vitest/ui/newsletter-editor-wave.test.tsx` -
+  passed (`6` tests)
+- `bun --cwd core lint` - passed
+- `bun --cwd core lint:types` - passed
+- `bun run gates:coderso` - passed
+- `git diff --check` - passed
+- `bun run precommit` - passed
+- `bun run scan:security:strict` - could not complete in the local environment
+  because `semgrep`, `trivy`, and `gitleaks` were not installed in `PATH`;
+  `bun audit` ran successfully inside the same command
+
+## Completion Notes
+
+- 2026-05-21: the Newsletter report, widget contract doc, task-board rows, and
+  changelog now all reflect the explicit current-state-sufficient BF-15
+  decision.

@@ -581,6 +581,13 @@ test("Newsletter visual editor covers forms-runtime binding, semantics, preview,
 
   try {
     const variantSection = getSectionByTitle(container, "Variant and form structure");
+    expect(normalizeText(variantSection.textContent)).toContain(
+      "input and button share a row when possible. mobile layout still stacks"
+    );
+    expect(normalizeText(variantSection.textContent)).toContain(
+      "compact signup with hidden description. mobile layout still stacks"
+    );
+    expect(normalizeText(variantSection.textContent)).not.toContain("mobile variant");
     clickButton(getButtonsByText(variantSection, "Minimal")[0]);
     expect(getLatestVariant()).toBe("minimal");
 
