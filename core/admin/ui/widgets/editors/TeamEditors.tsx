@@ -259,13 +259,13 @@ function clearStyleField(
   onChange: (next: TeamData) => void,
   key: keyof StyleData
 ) {
-  updateValue(value, onChange, (current) => {
-    const { [key]: _removed, ...style } = current.style ?? {};
-    return {
-      ...current,
-      style,
-    };
-  });
+  updateValue(value, onChange, (current) => ({
+    ...current,
+    style: {
+      ...(current.style ?? {}),
+      [key]: "",
+    },
+  }));
 }
 
 function findMemberIndexById(members: TeamMember[], memberId: string) {
@@ -772,10 +772,10 @@ export function TeamVisualEditor({
     nextValue: unknown
   ) => {
     const mediaId = typeof nextValue === "string" ? nextValue : null;
-    setSelectedPhotoMediaIds((current) => ({ ...current, [memberId]: mediaId }));
     clearPhotoPickerError(memberId);
 
     if (!mediaId) {
+      clearSelectedPhotoMedia(memberId);
       updateMember(value, onChange, memberIndex, { photo: undefined });
       return;
     }
@@ -784,8 +784,10 @@ export function TeamVisualEditor({
       const mediaItems = await listMediaCached({ force: false });
       const media = mediaItems.find((item) => item.id === mediaId);
       if (!media?.url) throw new Error("missing_media_url");
+      setSelectedPhotoMediaIds((current) => ({ ...current, [memberId]: mediaId }));
       updateMember(value, onChange, memberIndex, { photo: media.url });
     } catch {
+      clearSelectedPhotoMedia(memberId);
       setPhotoPickerErrors((current) => ({
         ...current,
         [memberId]: "Failed to resolve selected media.",

@@ -55,7 +55,6 @@ Project Change Log.
 | 896 | 2026-05-21 | TASK-281-03 product table status stock and row state | CMS Widgets/Admin UI/Runtime/QA |
 | 895 | 2026-05-21 | TASK-281-02 product table column labels and visibility | CMS Widgets/Admin UI/Runtime/QA |
 | 894 | 2026-05-21 | TASK-281-01 product table admin preview parity | CMS Widgets/Admin UI/Runtime/QA |
-| 893 | 2026-05-21 | TASK-285 Split Layout widget followups | CMS Widgets/Admin UI/Runtime/QA |
 | 893 | 2026-05-21 | TASK-282 Rich Text Section implementation pass | CMS Widgets/Admin UI/Runtime/Accessibility/QA |
 | 892 | 2026-05-21 | TASK-325 Grid Columns shared structural truthfulness | CMS Widgets/Admin UI/Runtime/QA |
 | 891 | 2026-05-21 | TASK-319 newsletter responsive variant decision | CMS Widgets/Admin UI/Runtime/QA |

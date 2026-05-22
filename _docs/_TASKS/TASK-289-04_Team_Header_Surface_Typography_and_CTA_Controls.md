@@ -30,16 +30,16 @@ heading hierarchy, section ARIA, safe href, or clear/none token helpers.
 
 ## Sub-Tasks
 
-- [ ] Add schema/default/normalizer fields for Team header eyebrow and bounded
+- [x] Add schema/default/normalizer fields for Team header eyebrow and bounded
   presentation controls.
-- [ ] Add section background controls using existing clearable style/token
+- [x] Add section background controls using existing clearable style/token
   patterns from TASK-256 rather than raw class names.
-- [ ] Add header alignment and title-size presets that work with the final
+- [x] Add header alignment and title-size presets that work with the final
   TASK-256 heading-level contract.
-- [ ] Add a bounded card border-width token instead of arbitrary CSS.
-- [ ] Add an optional CTA model below the Team section using safe href behavior
+- [x] Add a bounded card border-width token instead of arbitrary CSS.
+- [x] Add an optional CTA model below the Team section using safe href behavior
   from TASK-256.
-- [ ] Add editor-only contrast feedback for Team section/card color
+- [x] Add editor-only contrast feedback for Team section/card color
   combinations without blocking saves unless the repo already has a blocking
   contrast pattern.
 

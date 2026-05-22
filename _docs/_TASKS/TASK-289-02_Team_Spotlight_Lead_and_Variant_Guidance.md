@@ -32,15 +32,15 @@ which member is highlighted instead of relying only on array index `0`.
 
 ## Sub-Tasks
 
-- [ ] Add a schema-owned `spotlightLeadId` or equivalent bounded field with
+- [x] Add a schema-owned `spotlightLeadId` or equivalent bounded field with
   legacy fallback to the first member.
-- [ ] Add a Visual editor action such as `Set as spotlight lead` inside each
+- [x] Add a Visual editor action such as `Set as spotlight lead` inside each
   member panel.
-- [ ] Show the active spotlight lead state in the editor without relying only on
+- [x] Show the active spotlight lead state in the editor without relying only on
   member position.
-- [ ] Preserve reorder behavior so moving members does not silently change the
+- [x] Preserve reorder behavior so moving members does not silently change the
   selected lead when stable IDs exist.
-- [ ] Keep public runtime output backward compatible for payloads without a
+- [x] Keep public runtime output backward compatible for payloads without a
   lead ID.
 
 ## Files to Change

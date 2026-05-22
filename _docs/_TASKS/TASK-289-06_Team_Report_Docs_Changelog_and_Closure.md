@@ -5,7 +5,7 @@
 **Priority:** Medium
 **Category:** Widgets + Team + Documentation + QA
 **Estimated Effort:** Medium
-**Dependencies:** TASK-289, TASK-289-01, TASK-289-02, TASK-289-03, TASK-289-04, TASK-289-05, TASK-256-08
+**Dependencies:** TASK-289, TASK-289-01, TASK-289-02, TASK-289-03, TASK-289-04, TASK-289-05, TASK-256-08, TASK-332
 **Status:** Done (2026-05-22)
 
 ---
@@ -106,6 +106,7 @@ Before marking TASK-289 `Done`, run and record:
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run lint`
 - `bun run test:vitest -- tests/vitest/widgets/team.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/team-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer
@@ -141,14 +142,26 @@ Docs-only closure validation:
 - `TASK-289` planning/doc readiness landed as commit `bbd72115` in the
   isolated Team worktree before widget-local implementation and closure work
   began.
+- The first full widget-local implementation and closure pass landed as commit
+  `3c276382` (`feat(team): close task-289 widget followups`) before the current
+  drift-audit rerun reopened additional Team-local regressions plus the shared
+  `TASK-332` accessibility follow-up.
 - Shared `TASK-256-06-04` remains the truthful owner for section labels,
   heading baseline, safe-link output, spotlight count/columns truthfulness,
   destructive count-reduction confirmation, and lazy avatar loading; this
   closure only layers Team-owned product and editor behavior on top of that
   baseline.
-- The only remaining local security-scan limitation is tool availability:
-  `semgrep`, `trivy`, and `gitleaks` are not installed in `$PATH`, while the
-  strict scan still executed `bun audit` successfully.
+- `TASK-332` was extracted during the closure audit as the truthful shared owner
+  for the still-open Team member-card/avatar identity accessibility residuals
+  that the first TASK-289 report matrix had overstated.
+- `TASK-333` was extracted as the shared owner for the remaining historical
+  changelog-index numbering and row-to-file truthfulness drift discovered while
+  auditing `_docs/_CHANGELOG/README.md`.
+- The remaining local security-scan limitation is split across missing and
+  incompatible scanner tooling: `semgrep` and `trivy` are absent from `$PATH`,
+  while the installed `gitleaks` binary does not support the `git` / `dir`
+  subcommands expected by the repo script. `bun audit` still executes
+  successfully inside the strict scan.
 
 ## Validation Notes
 
@@ -161,8 +174,14 @@ Docs-only closure validation:
 - `bun --cwd core lint:types`
 - `set -a && source .env && set +a && bun run gates:coderso`
 - `bun run scan:security:strict` currently exits non-zero only because local
-  `semgrep`, `trivy`, and `gitleaks` executables are unavailable; `bun audit`
-  ran inside the command.
+  scanner tooling is incomplete even though `bun audit` ran inside the
+  command. The current exact local failures are:
+  - `failed to start semgrep-sast: Executable not found in $PATH: "semgrep"`
+  - `failed to start trivy-vuln: Executable not found in $PATH: "trivy"`
+  - `failed to start trivy-config: Executable not found in $PATH: "trivy"`
+  - `failed to start trivy-secret: Executable not found in $PATH: "trivy"`
+  - `Error: unknown command "git" for "gitleaks"`
+  - `Error: unknown command "dir" for "gitleaks"`
 - `bun run precommit`
 - `git diff --check`
 

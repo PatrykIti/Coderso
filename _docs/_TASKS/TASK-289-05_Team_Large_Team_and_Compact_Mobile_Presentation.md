@@ -33,15 +33,14 @@ evidence, and tests.
 
 ## Sub-Tasks
 
-- [ ] Decide whether Team v1 should keep the 12-member hard limit or add a
-  bounded presentation pattern for more profiles.
-- [ ] If expanding, add a schema-owned display limit and static-runtime public
-  `show more` interaction with reduced-motion/accessibility safeguards.
-- [ ] If not expanding, update docs/report closure with the product reason and
-  preserve validator coverage for the max-12 contract.
-- [ ] Add compact-list mobile bio visibility controls only if the current
-  responsive layout remains too dense after TASK-289-04 presentation controls.
-- [ ] Preserve admin canvas and public frontend parity for any display-density
+- [x] Keep the `teamMemberMax = 12` contract and add explicit editor/docs/report
+  guidance that larger organizations should use multiple Team sections or a
+  different listing surface.
+- [x] Add a schema-owned `compactMobileBio` token for the `compact-list`
+  variant with deterministic `show` / `hide` behavior on mobile widths.
+- [x] Hide compact-list bios visually on small screens without removing the
+  content from assistive technology, then restore the full bio on `sm+`.
+- [x] Preserve admin canvas and public frontend parity for any display-density
   decisions.
 
 ## Files to Change

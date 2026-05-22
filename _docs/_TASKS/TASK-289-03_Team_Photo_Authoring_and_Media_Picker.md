@@ -31,15 +31,15 @@ in the editor.
 
 ## Sub-Tasks
 
-- [ ] Add a Team member photo picker using the existing admin media/asset picker
+- [x] Add a Team member photo picker using the existing admin media/asset picker
   pattern available in the checked-out branch.
-- [ ] Add a compact photo preview inside each member panel, including fallback
+- [x] Add a compact photo preview inside each member panel, including fallback
   initials when no usable image is configured.
-- [ ] Add a clear-photo action that removes the optional photo field without
+- [x] Add a clear-photo action that removes the optional photo field without
   serializing an empty string.
-- [ ] Preserve direct URL entry for authors who paste external image URLs after
+- [x] Preserve direct URL entry for authors who paste external image URLs after
   TASK-256 validation lands.
-- [ ] Add editor copy that distinguishes `invalid URL`, `empty photo`, and
+- [x] Add editor copy that distinguishes `invalid URL`, `empty photo`, and
   `picked media asset` states without exposing backend-only media details.
 
 ## Files to Change

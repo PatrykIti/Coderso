@@ -583,9 +583,61 @@ test("Team visual editor covers spotlight lead, media picker, CTA feedback, and 
     clickElement(clearButtons[0]);
     clickElement(clearButtons[1]);
     clickElement(clearButtons[2]);
-    expect(latestValue.style?.sectionBackground).toBeUndefined();
-    expect(latestValue.style?.cardSurface).toBeUndefined();
-    expect(latestValue.style?.cardBorder).toBeUndefined();
+    expect(latestValue.style?.sectionBackground).toBe("");
+    expect(latestValue.style?.cardSurface).toBe("");
+    expect(latestValue.style?.cardBorder).toBe("");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Team visual editor clears stale picked-media state when media resolution fails", async () => {
+  const { TeamVisualEditor } = await import("../../../core/admin/ui/widgets/editors/TeamEditors");
+  vi.mocked(listMediaCached).mockRejectedValueOnce(new Error("network_error"));
+
+  let latestValue: TeamData = {
+    header: teamDefaults.header,
+    members: [
+      {
+        id: "member-1",
+        name: "Ada",
+        role: "CTO",
+        bio: "Builds release systems.",
+        photo: "https://cdn.example.com/direct-ada.jpg",
+        socialLinks: [],
+      },
+    ],
+    style: {},
+  };
+
+  const Harness = () => {
+    const [value, setValue] = useState<TeamData>(latestValue);
+    const [variant, setVariant] = useState("cards");
+
+    return (
+      <TeamVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant={variant}
+        onVariantChange={(next) => setVariant(next)}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    clickButtonByText(view.container, "Browse media");
+    await flushAsyncUpdates();
+
+    expect(listMediaCached).toHaveBeenCalled();
+    expect(latestValue.members[0]?.photo).toBe("https://cdn.example.com/direct-ada.jpg");
+    expect(view.container.textContent).toContain("Failed to resolve selected media.");
+    expect(view.container.textContent).toContain("Using a direct photo URL for this member.");
+    expect(view.container.textContent).not.toContain("Selected: media-1");
   } finally {
     view.cleanup();
   }

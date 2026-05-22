@@ -440,7 +440,7 @@ export function normalizeTeamData(data: TeamData): TeamData {
     compactMobileBio: "show",
   };
   const normalizedMembers = normalizeTeamMembers(data.members);
-  const hasStyleObject = data.style !== undefined;
+  const styleSource = data.style ?? {};
 
   return {
     ...data,
@@ -457,14 +457,14 @@ export function normalizeTeamData(data: TeamData): TeamData {
     style: {
       columns: resolveTeamColumns(data.style?.columns),
       gap: resolveTeamGap(data.style?.gap),
-      sectionBackground: hasStyleObject
-        ? resolveClearableStyleValue(data.style?.sectionBackground)
+      sectionBackground: hasOwn(styleSource, "sectionBackground")
+        ? (resolveClearableStyleValue(data.style?.sectionBackground) ?? "")
         : styleDefaults.sectionBackground,
-      cardSurface: hasStyleObject
-        ? resolveClearableStyleValue(data.style?.cardSurface)
+      cardSurface: hasOwn(styleSource, "cardSurface")
+        ? (resolveClearableStyleValue(data.style?.cardSurface) ?? "")
         : styleDefaults.cardSurface,
-      cardBorder: hasStyleObject
-        ? resolveClearableStyleValue(data.style?.cardBorder)
+      cardBorder: hasOwn(styleSource, "cardBorder")
+        ? (resolveClearableStyleValue(data.style?.cardBorder) ?? "")
         : styleDefaults.cardBorder,
       cardBorderWidth: resolveTeamBorderWidth(
         data.style?.cardBorderWidth ?? styleDefaults.cardBorderWidth
@@ -739,7 +739,7 @@ export function TeamBlock({ data, variant }: { data: TeamData; variant: string }
               <MemberCard
                 key={member.id ?? `team-spotlight-rest-${index + 1}`}
                 member={member}
-                index={index + 1}
+                index={members.findIndex((candidate) => candidate.id === member.id)}
                 radius={radius}
                 cardStyle={cardStyle}
                 compact={false}

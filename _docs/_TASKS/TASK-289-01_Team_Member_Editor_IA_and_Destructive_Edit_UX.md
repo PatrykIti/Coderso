@@ -39,14 +39,14 @@ top-level member add action for long lists.
 
 ## Sub-Tasks
 
-- [ ] Move or mirror social link controls into each member card/panel while
+- [x] Move or mirror social link controls into each member card/panel while
   preserving the existing normalized `members[].socialLinks[]` payload shape.
-- [ ] Add a recoverable or confirmed remove flow for `removeMember`.
-- [ ] Add a recoverable or confirmed remove flow for `removeMemberSocialLink`.
-- [ ] Add a top add-member action near the member-section heading and keep the
+- [x] Add a recoverable or confirmed remove flow for `removeMember`.
+- [x] Add a recoverable or confirmed remove flow for `removeMemberSocialLink`.
+- [x] Add a top add-member action near the member-section heading and keep the
   bottom action as a secondary affordance or remove it if the top action is
   enough.
-- [ ] Preserve TASK-256 final behavior for empty social URLs and count-reduction
+- [x] Preserve TASK-256 final behavior for empty social URLs and count-reduction
   warnings.
 
 ## Files to Change

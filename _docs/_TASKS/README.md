@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 126 tasks
+- **To Do:** 128 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1887 tasks
 
@@ -38,6 +38,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-333 | Shared Changelog Index Numbering Truthfulness Repair | Low | Medium | Reopened shared docs drift: TASK-289 closure audit found duplicate changelog index numbers and stale row-to-file mapping outside widget-local scope |
+| TASK-332 | Shared Team Member Identity Accessibility Truthfulness Reopen | Medium | Medium | Reopened shared Team accessibility drift: TASK-289 closure audit found member-card naming and richer avatar identity semantics still overstated in current Team runtime/report evidence |
 | TASK-331 | Shared Stats KPI Split-Highlight Secondary Grid Truthfulness | High | Medium | Reopened shared Stats KPI renderer drift: `split-highlight` still hardcodes `sm:grid-cols-2` for secondary metrics on the current branch, leaving odd-count imbalance after closed `TASK-256-06-01` |
 | TASK-330 | Tabs Shared Accessibility Residuals After TASK-256 | High | Medium | Shared follow-up extracted during TASK-288 audit: current branch still lacks the final Tabs tablist accessible-name and tabpanel keyboard-reachability adoption promised by the closed TASK-256 contract |
 | TASK-329 | Shared Widget Runtime Script Transport and Dedupe | High | Medium | Shared follow-up extracted during TASK-288 implementation: interactive widgets still duplicate static inline runtime payloads per widget instance until a render-scoped transport helper lands |

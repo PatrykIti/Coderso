@@ -55,7 +55,7 @@ work.
 | BUG-04 / A1 section accessibility label | `REPORT_TEAM_WIDGET.md:188-191,332` | TASK-256-06-04 | Shared section/header accessibility baseline. |
 | BUG-05 / BF-03 / A2 heading level | `REPORT_TEAM_WIDGET.md:193-196,281-283,333` | TASK-256-06-04 | Shared heading semantics baseline. TASK-289 may later add Team-specific typography controls, but not the baseline fix. |
 | BUG-06 / BF-06 / A4 social safe-link output | `REPORT_TEAM_WIDGET.md:198-201,294-296,335,371` | TASK-256-06-04 | Safe public href/rel/target behavior is shared runtime safety. |
-| BUG-07 / A3 / A6 / A8 member card/avatar a11y | `REPORT_TEAM_WIDGET.md:203-206,334,337,339` | TASK-256-06-04 | Baseline accessible member identity belongs to the shared Team contract leaf. |
+| BUG-07 / A3 / A6 / A8 member card/avatar a11y | `REPORT_TEAM_WIDGET.md:203-206,334,337,339` | TASK-332 | TASK-289 closure audit reopened the remaining shared Team member-identity accessibility truthfulness drift after the section label, lazy image, and invalid-photo baseline had already landed. |
 | BUG-08 duplicate runtime normalization | `REPORT_TEAM_WIDGET.md:208-211` | TASK-256-06-04 | Runtime cleanup without product-surface expansion. |
 | UX-05 Wizard role fields | `REPORT_TEAM_WIDGET.md:234-236` | TASK-256-06-04 | Existing Wizard/profile setup drift is already scoped in the shared Team contract leaf. |
 | UX-06 spotlight count normalization | `REPORT_TEAM_WIDGET.md:238-240` | TASK-256-06-04 | Existing Wizard variant/count truthfulness is already scoped there. |
@@ -96,7 +96,7 @@ fields, editor IA, and widget-specific presentation.
 |---|---|---|
 | Existing admin canvas and public frontend parity | No TASK-289 task | Report confirms parity. Future leaves must preserve it through regression tests. |
 | Minimum one member and max five social links per member | No TASK-289 task | Current bounds are intentional and already represented in schema/defaults/tests. |
-| BF-12 wording preference for `alt="Photo of ..."` | TASK-256 only | It is an accessibility baseline detail, not a separate product feature. |
+| BF-12 wording preference for `alt="Photo of ..."` | Shared TASK-332 | Closure audit reopened the richer Team avatar identity wording as the truthful shared owner instead of extending TASK-289 product scope. |
 
 ## Sub-Tasks
 

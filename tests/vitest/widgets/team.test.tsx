@@ -76,6 +76,16 @@ test("team normalization keeps deterministic ids, bounds, and allows cleared bio
   expect(normalized.members).toHaveLength(3);
   expect(normalized.style?.columns).toBe("3");
   expect(normalized.style?.compactMobileBio).toBe("show");
+
+  const partialStyle = normalizeTeamData({
+    members: [],
+    style: {
+      compactMobileBio: "hide",
+    },
+  });
+  expect(partialStyle.style?.cardSurface).toBe(teamDefaults.style?.cardSurface);
+  expect(partialStyle.style?.cardBorder).toBe(teamDefaults.style?.cardBorder);
+  expect(partialStyle.style?.compactMobileBio).toBe("hide");
 });
 
 test("team validator accepts expanded model", () => {
@@ -204,6 +214,11 @@ test("team renderer covers spotlight lead, CTA, and style controls", () => {
   expect(html).toContain("background-color:#f8fafc");
   expect(html.indexOf("Marek")).toBeLessThan(html.indexOf("Anna"));
   expect(html.match(/data-team-spotlight-lead="true"/g)).toHaveLength(1);
+  expect(Array.from(html.matchAll(/data-team-member="(\d+)"/g), (match) => match[1])).toEqual([
+    "2",
+    "1",
+    "3",
+  ]);
 });
 
 test("team compact-list can hide bios visually on mobile", () => {
