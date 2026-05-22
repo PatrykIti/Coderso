@@ -9,6 +9,8 @@
 
 ---
 
+> **Uwaga historyczna:** Sekcje 1-8 poniżej pozostają oryginalnym baseline z audytu 2026-05-16, przed wdrożeniem rodziny `TASK-282`. Aktualny kontrakt widgetu po TASK-282 jest opisany w sekcji `Status po TASK-282 zamknięciu (2026-05-21)` oraz w `_docs/_WIDGETS/RICH_TEXT_SECTION.md`.
+
 ## 1. Przegląd widgetu
 
 **Typ:** Composite  
@@ -23,6 +25,8 @@ Rich Text Section to widget do prezentacji długich treści edytorskich (long-fo
 ---
 
 ## 2. Analiza kodu — struktura konfiguracji
+
+_Uwaga: sekcja 2 poniżej pozostaje snapshotem baseline z audytu 2026-05-16. Aktualny kontrakt po TASK-282 rozszerza `titleBlock.headingLevel`, structured blocks `text/image/attachment/embed`, Wizard bez resetu `outputMode`, authoring przez `PostRichTextAdapter`, widget-owned media/embed controls oraz prawdziwe `maxWidth` dla wariantu `article`._
 
 ### 2.1 Model danych
 
@@ -414,13 +418,13 @@ Przy `outputMode: "blocks-fallback"`:
 
 ### 8.3 TOC anchor scroll na froncie
 
-TOC linki używają `href="#slug"` gdzie slug jest generowany przez `slugifyHeading()` ze slugów nagłówków. Kliknięcie linku → URL zmienia się → scroll do nagłówka z `id`. Działa poprawnie i przewidywalnie.
+Po TASK-282 TOC linki używają `href="#rich-text-section-<instance>-heading-<slug>"`, gdzie `id` jest scope'owane przez instancję widgetu (`scopedId(...)`) i znormalizowany slug nagłówka. Dzięki temu wiele Rich Text Section na jednej stronie nie koliduje anchorami. Kliknięcie linku → URL zmienia się → scroll do właściwego nagłówka z deterministycznym `id`.
 
 ---
 
 ## 9. Podsumowanie — macierz priorytetów
 
-_Sekcje 9-11 poniżej pozostają oryginalnym baseline z audytu 2026-05-16. Aktualny stan implementacji/closure jest śledzony dopiero w sekcji „Status po TASK-282 implementacji”._
+_Sekcje 9-11 poniżej również pozostają oryginalnym baseline z audytu 2026-05-16. Aktualny stan implementacji/closure jest śledzony dopiero w sekcji „Status po TASK-282 zamknięciu (2026-05-21)”._
 
 ### Krytyczne — naprawić natychmiast
 

@@ -15,8 +15,8 @@
 Upgrade Rich Text Section structured fallback blocks so they can carry safe rich
 content and can be managed without accidental data loss or unusable long lists.
 
-This leaf covers KOD-03, KOD-04, KOD-15, KOD-16, and the KOD-06 note that blocks
-currently render every heading as `<h3>` before TOC generation.
+This leaf covers KOD-03, KOD-04, KOD-15, and KOD-16. KOD-06 stays classified
+in TASK-282-07 as a not-a-bug closure note after these block semantics land.
 
 ## Scope Boundary
 
@@ -154,7 +154,7 @@ No API routes are added.
 - Update `_docs/_WIDGETS/RICH_TEXT_SECTION.md` with structured block rich
   content, heading hierarchy, and destructive-action behavior.
 - Update `_docs/PLAYWRIGHT/REPORT_RICH_TEXT_SECTION_WIDGET.md` rows KOD-03,
-  KOD-04, KOD-06, KOD-15, and KOD-16 after validation.
+  KOD-04, KOD-15, and KOD-16 after validation.
 
 ## Changelog Policy
 

@@ -90,7 +90,8 @@ Rich Text Section-only work.
 |---|---|
 | KOD-01, KOD-02; report lines 95-101, 265, 273, 409-413 | TASK-282-01 |
 | KOD-11, KOD-12, KOD-14; report lines 197-225, 309, 427, 447-458 | TASK-282-02 |
-| KOD-03, KOD-04, KOD-06, KOD-15, KOD-16; report lines 105-145, 229-241, 274-279, 391-395, 443-448, 456 | TASK-282-03 |
+| KOD-03, KOD-04, KOD-15, KOD-16; report lines 105-145, 229-241, 274-279, 391-395, 443-448, 456 | TASK-282-03 |
+| KOD-06 | TASK-282-07 (not-a-bug classification + closure evidence) |
 | KOD-08, KOD-09, A11Y-01, section label; report lines 157-181, 321-328, 365-376, 435, 445, 449 | TASK-282-04 |
 | KOD-13 image/media-picker slice; report lines 213-217, 436 | TASK-282-05 |
 | KOD-13 attachments and safe video/embed policy; report lines 213-217, 436 | TASK-282-08 |

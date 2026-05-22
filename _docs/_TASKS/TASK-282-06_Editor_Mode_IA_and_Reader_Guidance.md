@@ -31,8 +31,8 @@ In scope:
 - Dropcap preview/help that explains when no paragraph exists.
 - Clearer ownership for typography controls so Visual remains user-facing and
   Advanced remains technical diagnostics/normalization.
-- Documentation of KOD-06 as not-a-bug while preserving any block heading
-  hierarchy changes from TASK-282-03.
+- Do not reclassify KOD-06 here; preserve any block heading hierarchy changes
+  from TASK-282-03 while final disposition stays in TASK-282-07.
 
 Out of scope:
 
@@ -144,7 +144,7 @@ No API routes are added.
 
 - Update `_docs/_WIDGETS/RICH_TEXT_SECTION.md` with final editor mode ownership.
 - Update `_docs/PLAYWRIGHT/REPORT_RICH_TEXT_SECTION_WIDGET.md` rows KOD-05,
-  KOD-07, KOD-WIZ, KOD-DUP, and KOD-06 notes after validation.
+  KOD-07, KOD-WIZ, and KOD-DUP after validation.
 
 ## Changelog Policy
 
