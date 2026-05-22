@@ -80,17 +80,20 @@ Closure checklist:
 
 ```md
 - REPORT rows C1/W1/...: fixed by TASK-288 leaf and commit SHA
-- REPORT rows C2/R4/...: routed to TASK-256 historical evidence or TASK-330 shared follow-up with current status
+- REPORT rows C2/R4: routed to TASK-256 historical evidence with current status
+- REPORT rows W4/W5/R2/R3/R6: routed to TASK-330 shared follow-up with current status
 - Docs updated: _docs/_WIDGETS/TABS.md
 - Validation: exact commands and result
 ```
 
 Error handling:
 
-- If a shared TASK-256 or TASK-330 row is still open, leave it open/routed
+- If a shared TASK-256 historical row or TASK-330 row is still open, leave it open/routed
   instead of claiming TASK-288 closure.
-- If a validation lane cannot run, record the blocker and keep the task open
-  unless the user explicitly accepts closure with that blocker.
+- If a validation lane cannot run, record the blocker concretely and keep that
+  lane non-green instead of claiming success. Reopen the task only when the
+  blocker reflects missing product work or an unverified contract rather than
+  local scanner/tooling availability.
 - If `_docs/_TASKS/README.md` has adjacent agent changes, preserve all newer
   unrelated task rows and recompute counts from the final visible tables.
 

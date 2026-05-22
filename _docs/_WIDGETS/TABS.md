@@ -69,9 +69,14 @@ Notes:
 - Disabled tabs are removed from activation order. If every item is disabled,
   normalization re-enables the first item so the widget always has one valid
   active panel.
+- Saved `defaultItemId` values may still point at a disabled tab so the editor
+  can show the author’s chosen default, while runtime `activeId` falls back to
+  the first enabled tab until that default is changed.
+- Motion variants (`fade`, `slide`) emit `motion-safe:*` classes only and fall
+  back to no animation under reduced-motion preferences.
 - Triggers render with `role="tab"`; panels render with `role="tabpanel"`.
 - Shared residuals remain tracked separately:
-  - `TASK-328`: shared Tabs accessibility/ID residuals after TASK-256
+  - `TASK-330`: shared Tabs tablist/tabpanel accessibility residuals after TASK-256
   - `TASK-329`: shared widget runtime-script transport and dedupe
 
 ## Clear Controls
@@ -141,3 +146,4 @@ Legacy note:
 - `tests/vitest/widgets/tabs.test.tsx`
 - `tests/vitest/ui/tabs-editor-wave.test.tsx`
 - `tests/vitest/ui-integration/tabs-preview-activation.test.tsx`
+- `tests/unit/widgets/validator.test.ts`

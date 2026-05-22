@@ -31,6 +31,26 @@ const baseData = normalizeTabsData(
   3
 );
 
+const numericIdData = normalizeTabsData(
+  {
+    items: [
+      { id: "2", label: "Overview", panelIntro: "First slot intro." },
+      { id: "1", label: "Details", panelIntro: "Second slot intro." },
+    ],
+    options: {
+      defaultItemId: "2",
+      activeId: "2",
+      orientation: "horizontal",
+    },
+  },
+  2
+);
+
+const numericSlots = {
+  "panel:1": [{ id: "slot-one-block", type: "stub", data: {} }],
+  "panel:2": [{ id: "slot-two-block", type: "stub", data: {} }],
+};
+
 const mount = (node: React.ReactNode) => {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -124,6 +144,40 @@ test("tabs admin preview activates the saved custom-id default and skips disable
   }
 });
 
+test("tabs previewDevice mode preserves numeric custom ids and slot order", () => {
+  const view = mount(
+    <TabsBlock
+      data={numericIdData}
+      variant="pills"
+      slots={numericSlots}
+      previewDevice="desktop"
+      renderBlock={(block) => <div>{block.id}</div>}
+    />
+  );
+
+  try {
+    const root = view.container.querySelector('[data-coderso-tabs="1"]');
+    const overview = findTab(view.container, "2");
+    const details = findTab(view.container, "1");
+
+    expect(root?.getAttribute("data-coderso-tabs-active-id")).toBe("2");
+    expect(findPanel(view.container, "2").textContent).toContain("First slot intro.");
+    expect(findPanel(view.container, "2").textContent).toContain("slot-one-block");
+    expect(findPanel(view.container, "1").textContent).toContain("Second slot intro.");
+    expect(findPanel(view.container, "1").textContent).toContain("slot-two-block");
+
+    clickElement(details);
+    expect(root?.getAttribute("data-coderso-tabs-active-id")).toBe("1");
+    expect(findPanel(view.container, "1").hidden).toBe(false);
+
+    keydownElement(details, "Home");
+    expect(root?.getAttribute("data-coderso-tabs-active-id")).toBe("2");
+    expect(overview.getAttribute("aria-selected")).toBe("true");
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("tabs public runtime activation preserves custom ids and skips disabled tabs", () => {
   document.body.innerHTML = renderToString(
     <TabsBlock data={baseData} variant="pills" slots={slots} />
@@ -158,4 +212,55 @@ test("tabs public runtime activation preserves custom ids and skips disabled tab
 
   clickElement(faq);
   expect(root?.getAttribute("data-coderso-tabs-active-id")).toBe("overview");
+});
+
+test("tabs public runtime keeps multiple widget roots isolated", () => {
+  const alternateData = normalizeTabsData(
+    {
+      ...baseData,
+      options: {
+        ...baseData.options,
+        defaultItemId: "overview",
+        activeId: "overview",
+      },
+    },
+    3
+  );
+
+  document.body.innerHTML = renderToString(
+    <>
+      <TabsBlock data={baseData} variant="pills" slots={slots} blockId="tabs-a" />
+      <TabsBlock data={alternateData} variant="pills" slots={slots} blockId="tabs-b" />
+    </>
+  );
+
+  document.querySelectorAll("script").forEach((script) => {
+    if (!script.textContent) {
+      throw new Error("Missing tabs runtime script");
+    }
+    // eslint-disable-next-line no-eval
+    eval(script.textContent);
+  });
+
+  const roots = Array.from(document.querySelectorAll('[data-coderso-tabs="1"]'));
+  const [firstRoot, secondRoot] = roots;
+
+  if (!(firstRoot instanceof HTMLElement) || !(secondRoot instanceof HTMLElement)) {
+    throw new Error("Expected two tabs roots");
+  }
+
+  expect(firstRoot.getAttribute("data-coderso-tabs-active-id")).toBe("details");
+  expect(secondRoot.getAttribute("data-coderso-tabs-active-id")).toBe("overview");
+
+  clickElement(
+    firstRoot.querySelector('[data-coderso-tabs-trigger][data-coderso-tabs-id="overview"]')
+  );
+  expect(firstRoot.getAttribute("data-coderso-tabs-active-id")).toBe("overview");
+  expect(secondRoot.getAttribute("data-coderso-tabs-active-id")).toBe("overview");
+
+  clickElement(
+    secondRoot.querySelector('[data-coderso-tabs-trigger][data-coderso-tabs-id="details"]')
+  );
+  expect(firstRoot.getAttribute("data-coderso-tabs-active-id")).toBe("overview");
+  expect(secondRoot.getAttribute("data-coderso-tabs-active-id")).toBe("details");
 });

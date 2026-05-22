@@ -330,6 +330,7 @@ test("Tabs wizard editor covers layout defaults, item-count growth, default-tab 
     const orientationSelect = findSelectByOptions(layoutSection, ["horizontal", "vertical"]);
     const alignmentSelect = findSelectByOptions(layoutSection, ["start", "center", "end"]);
 
+    expect(layoutSection.querySelector('[data-tabs-layout-controls="compact"]')).not.toBeNull();
     expect(orientationSelect.value).toBe("horizontal");
     expect(alignmentSelect.value).toBe("start");
 
@@ -437,6 +438,9 @@ test("Tabs visual editor covers metadata, disabled-tab fallback, layout controls
     expect(normalizeText(findButtonsByText(variantSection, "Pills")[0]?.textContent)).toContain(
       "selected"
     );
+    expect(variantSection.querySelector('[data-tabs-variant-preview="pills"]')).not.toBeNull();
+    expect(variantSection.querySelector('[data-tabs-variant-preview="underline"]')).not.toBeNull();
+    expect(variantSection.querySelector('[data-tabs-variant-preview="minimal"]')).not.toBeNull();
 
     clickButton(findButtonsByText(variantSection, "Minimal")[0]);
     expect(view.getVariant()).toBe("minimal");
@@ -469,7 +473,7 @@ test("Tabs visual editor covers metadata, disabled-tab fallback, layout controls
     setCheckboxValue(findCheckboxes(structureSection)[1], true);
 
     const defaultSelect = findSelectByOptions(structureSection, ["intro", "details"]);
-    expect(defaultSelect.value).toBe("intro");
+    expect(defaultSelect.value).toBe("details");
     expect(getOption(defaultSelect, "details").disabled).toBe(true);
 
     const layoutSection = getSectionByTitle(view.container, "Layout");
@@ -546,7 +550,7 @@ test("Tabs visual editor covers metadata, disabled-tab fallback, layout controls
           }),
         ]),
         options: expect.objectContaining({
-          defaultItemId: "intro",
+          defaultItemId: "details",
           activeId: "intro",
           alignment: "center",
           orientation: "vertical",
@@ -567,6 +571,34 @@ test("Tabs visual editor covers metadata, disabled-tab fallback, layout controls
           panelBackgroundColor: "#ffffff",
         }),
       })
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Tabs colors section surfaces contrast advisories when trigger colors lose readability", async () => {
+  const view = await renderEditor({
+    editor: "visual",
+    initialValue: {
+      ...tabsDefaults,
+      style: {
+        ...tabsDefaults.style,
+        surfaceColor: "#111111",
+        inactiveTextColor: "#111111",
+        activeBackgroundColor: "#222222",
+        activeTextColor: "#222222",
+      },
+    },
+  });
+
+  try {
+    const colorsSection = getSectionByTitle(view.container, "Colors");
+    expect(colorsSection.textContent).toContain(
+      "Active tab: Configured colors may be hard to read together."
+    );
+    expect(colorsSection.textContent).toContain(
+      "Inactive tab: Configured colors may be hard to read together."
     );
   } finally {
     view.cleanup();

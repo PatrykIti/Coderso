@@ -35,6 +35,7 @@ test("tabs renders defaults with runtime marker", () => {
   expect(html).toContain('aria-labelledby="tabs-1-trigger-1"');
   expect(html).not.toContain("Add widgets to this tab panel.");
   expect(html).toContain("codersoTabsBound");
+  expect(html).toContain('type="text/javascript"');
 });
 
 test("tabs normalization migrates legacy descriptions, keeps disabled tabs out of activation, and resolves extended options", () => {
@@ -101,6 +102,29 @@ test("tabs normalization migrates legacy descriptions, keeps disabled tabs out o
   );
 });
 
+test("tabs normalization preserves a saved disabled default while activating the first enabled tab", () => {
+  const normalized = normalizeTabsData(
+    {
+      items: [
+        { id: "overview", label: "Overview" },
+        { id: "details", label: "Details", disabled: true },
+      ],
+      options: {
+        defaultItemId: "details",
+        activeId: "details",
+      },
+    },
+    2
+  );
+
+  expect(normalized.options).toEqual(
+    expect.objectContaining({
+      defaultItemId: "details",
+      activeId: "overview",
+    })
+  );
+});
+
 test("tabs validator accepts schema", () => {
   clearWidgets();
   const widget = createTabsWidget({
@@ -148,6 +172,40 @@ test("tabs validator accepts schema", () => {
   ).not.toThrow();
 });
 
+test("tabs preserve slot order when numeric custom ids overlap repeatable slot ids", () => {
+  const html = renderToString(
+    <TabsBlock
+      data={normalizeTabsData(
+        {
+          items: [
+            { id: "2", label: "Overview", panelIntro: "First slot intro." },
+            { id: "1", label: "Details", panelIntro: "Second slot intro." },
+          ],
+          options: {
+            defaultItemId: "2",
+            activeId: "2",
+          },
+        },
+        2
+      )}
+      variant="pills"
+      slots={{
+        "panel:1": [{ id: "slot-one-block", type: "stub", data: {} }],
+        "panel:2": [{ id: "slot-two-block", type: "stub", data: {} }],
+      }}
+      renderBlock={(block) => <div>{block.id}</div>}
+    />
+  );
+
+  expect(html).toContain('data-coderso-tabs-active-id="2"');
+  expect(html).toMatch(
+    /role="tabpanel"[^>]*data-coderso-tabs-id="2"[\s\S]*?First slot intro\.[\s\S]*?slot-one-block/
+  );
+  expect(html).toMatch(
+    /role="tabpanel"[^>]*data-coderso-tabs-id="1"[\s\S]*?Second slot intro\.[\s\S]*?slot-two-block/
+  );
+});
+
 test("tabs render metadata, disabled tabs, and extended style options", () => {
   const html = renderToString(
     <TabsBlock
@@ -192,6 +250,35 @@ test("tabs render metadata, disabled tabs, and extended style options", () => {
   expect(html).toContain("Start here");
   expect(html).toContain("⭐");
   expect(html).toContain("Deep dive.");
+  expect(html).toContain("overflow-x-auto");
+  expect(html).toContain("motion-safe:animate-in");
+  expect(html).toContain("motion-reduce:animate-none");
+});
+
+test("tabs render vertical alignment classes for vertical layouts", () => {
+  const html = renderToString(
+    <TabsBlock
+      data={normalizeTabsData(
+        {
+          ...tabsDefaults,
+          options: {
+            ...tabsDefaults.options,
+            alignment: "end",
+            orientation: "vertical",
+          },
+        },
+        tabsDefaults.items?.length ?? 0
+      )}
+      variant="minimal"
+      slots={{
+        "panel:1": [],
+        "panel:2": [],
+      }}
+    />
+  );
+
+  expect(html).toContain('aria-orientation="vertical"');
+  expect(html).toContain("items-end");
 });
 
 test("tabs cleared surfaces omit tab and panel background styles", () => {

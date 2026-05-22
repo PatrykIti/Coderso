@@ -490,57 +490,62 @@ function TabsLayoutSection({
       }
     >
       <div className="space-y-3">
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Orientation</p>
-          <Select
-            value={normalized.options?.orientation ?? "horizontal"}
-            onValueChange={(next) =>
-              updateOptions(value, onChange, { orientation: next as TabsOrientation })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Choose orientation" />
-            </SelectTrigger>
-            <SelectContent>
-              {orientationOptions.map((option) => (
-                <SelectItem key={`tabs-orientation-${option.value}`} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <div
+          data-tabs-layout-controls={wizardMode ? "compact" : "stacked"}
+          className={wizardMode ? "grid gap-3 md:grid-cols-2" : "space-y-3"}
+        >
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Orientation</p>
+            <Select
+              value={normalized.options?.orientation ?? "horizontal"}
+              onValueChange={(next) =>
+                updateOptions(value, onChange, { orientation: next as TabsOrientation })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Choose orientation" />
+              </SelectTrigger>
+              <SelectContent>
+                {orientationOptions.map((option) => (
+                  <SelectItem key={`tabs-orientation-${option.value}`} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Tab alignment</p>
-          <Select
-            value={normalized.options?.alignment ?? "start"}
-            onValueChange={(next) =>
-              updateOptions(value, onChange, {
-                alignment: next as NonNullable<NonNullable<TabsData["options"]>["alignment"]>,
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Choose alignment" />
-            </SelectTrigger>
-            <SelectContent>
-              {alignmentOptions.map((option) => (
-                <SelectItem key={`tabs-align-${option.value}`} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {!wizardMode ? (
-            <p className="text-xs text-muted-foreground">
-              Vertical tabs align across the row with Start, Center, and End.
-            </p>
-          ) : null}
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Tab alignment</p>
+            <Select
+              value={normalized.options?.alignment ?? "start"}
+              onValueChange={(next) =>
+                updateOptions(value, onChange, {
+                  alignment: next as NonNullable<NonNullable<TabsData["options"]>["alignment"]>,
+                })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Choose alignment" />
+              </SelectTrigger>
+              <SelectContent>
+                {alignmentOptions.map((option) => (
+                  <SelectItem key={`tabs-align-${option.value}`} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {!wizardMode ? (
+              <p className="text-xs text-muted-foreground">
+                Vertical tabs align across the row with Start, Center, and End.
+              </p>
+            ) : null}
+          </div>
         </div>
 
         {!wizardMode ? (
-          <>
+          <div className="space-y-3">
             <div className="space-y-2">
               <p className="text-sm font-medium">Tab overflow</p>
               <Select
@@ -624,7 +629,7 @@ function TabsLayoutSection({
                 </SelectContent>
               </Select>
             </div>
-          </>
+          </div>
         ) : null}
       </div>
     </EditorSection>

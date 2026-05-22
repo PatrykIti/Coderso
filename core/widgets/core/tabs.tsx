@@ -173,6 +173,11 @@ type NormalizedTabsItem = {
   disabled: boolean;
 };
 
+type NormalizedTabsItemsState = {
+  items: NormalizedTabsItem[];
+  hadAllDisabled: boolean;
+};
+
 const joinClasses = (...classes: Array<string | false | undefined>) =>
   classes.filter(Boolean).join(" ");
 
@@ -289,12 +294,8 @@ const normalizeItemId = (value: unknown, fallbackIndex: number, used: Set<string
   return resolved;
 };
 
-const ensureAtLeastOneEnabled = (items: NormalizedTabsItem[]) => {
-  if (items.some((item) => item.disabled !== true)) {
-    return items;
-  }
-
-  return items.map((item, index) =>
+const ensureAtLeastOneEnabled = (items: NormalizedTabsItem[]) =>
+  items.map((item, index) =>
     index === 0
       ? {
           ...item,
@@ -302,7 +303,6 @@ const ensureAtLeastOneEnabled = (items: NormalizedTabsItem[]) => {
         }
       : item
   );
-};
 
 const resolveActiveTabId = (items: NormalizedTabsItem[], requestedId: string | undefined) => {
   const enabledItems = items.filter((item) => item.disabled !== true);
@@ -312,10 +312,10 @@ const resolveActiveTabId = (items: NormalizedTabsItem[], requestedId: string | u
   return enabledItems[0]?.id ?? items[0]?.id ?? "1";
 };
 
-export function normalizeTabsItems(
+const normalizeTabsItemsState = (
   items: TabsItem[] | undefined,
   desiredCount?: number
-): NormalizedTabsItem[] {
+): NormalizedTabsItemsState => {
   const source = Array.isArray(items) ? items : [];
   const count =
     typeof desiredCount === "number"
@@ -345,19 +345,38 @@ export function normalizeTabsItems(
     });
   }
 
-  return ensureAtLeastOneEnabled(normalized);
+  const hadAllDisabled =
+    normalized.length > 0 && normalized.every((item) => item.disabled === true);
+  return {
+    items: hadAllDisabled ? ensureAtLeastOneEnabled(normalized) : normalized,
+    hadAllDisabled,
+  };
+};
+
+export function normalizeTabsItems(
+  items: TabsItem[] | undefined,
+  desiredCount?: number
+): NormalizedTabsItem[] {
+  return normalizeTabsItemsState(items, desiredCount).items;
 }
 
 export function normalizeTabsData(data: TabsData, desiredCount?: number): TabsData {
-  const items = normalizeTabsItems(data.items, desiredCount);
-  const requestedDefaultId = toTrimmedString(data.options?.defaultItemId ?? data.options?.activeId);
-  const resolvedActiveId = resolveActiveTabId(items, requestedDefaultId ?? undefined);
+  const normalizedItemsState = normalizeTabsItemsState(data.items, desiredCount);
+  const items = normalizedItemsState.items;
+  const requestedDefaultId = toTrimmedString(data.options?.defaultItemId);
+  const requestedActiveId = toTrimmedString(data.options?.activeId ?? data.options?.defaultItemId);
+  const resolvedActiveId = resolveActiveTabId(items, requestedActiveId ?? undefined);
+  const resolvedDefaultId = normalizedItemsState.hadAllDisabled
+    ? resolvedActiveId
+    : requestedDefaultId && items.some((item) => item.id === requestedDefaultId)
+      ? requestedDefaultId
+      : resolvedActiveId;
   const hasStyleObject = data.style !== undefined;
 
   return {
     items,
     options: {
-      defaultItemId: resolvedActiveId,
+      defaultItemId: resolvedDefaultId,
       activeId: resolvedActiveId,
       alignment: resolveAlignment(data.options?.alignment),
       orientation: resolveOrientation(data.options?.orientation),
@@ -416,12 +435,11 @@ const resolvePanels = (
   );
   const normalized = normalizeTabsData(data, slotTargets.length);
   const items = normalizeTabsItems(normalized.items, slotTargets.length);
-  const byId = new Map(items.map((item) => [item.id, item]));
 
   return slotTargets.map((target, index) => {
     const parsed = parseRepeatableSlotId(target.slotId);
     const instanceId = parsed?.instanceId ?? String(index + 1);
-    const source = byId.get(instanceId) ?? items[index];
+    const source = items[index];
     return {
       slotId: target.slotId,
       instanceId,
@@ -585,13 +603,18 @@ const isPreviewMode = (
 
 const resolvePanelSelectionId = (panels: ResolvedTabPanel[], requestedId: string | undefined) => {
   if (requestedId) {
-    const requestedPanel = panels.find(
-      (panel) =>
-        panel.disabled !== true &&
-        (panel.selectionId === requestedId || panel.instanceId === requestedId)
+    const requestedBySelectionId = panels.find(
+      (panel) => panel.disabled !== true && panel.selectionId === requestedId
     );
-    if (requestedPanel) {
-      return requestedPanel.selectionId;
+    if (requestedBySelectionId) {
+      return requestedBySelectionId.selectionId;
+    }
+
+    const requestedByInstanceId = panels.find(
+      (panel) => panel.disabled !== true && panel.instanceId === requestedId
+    );
+    if (requestedByInstanceId) {
+      return requestedByInstanceId.selectionId;
     }
   }
 
@@ -602,9 +625,9 @@ const resolvePanelSelectionId = (panels: ResolvedTabPanel[], requestedId: string
 
 const resolveInitialActiveId = (panels: ResolvedTabPanel[], data: TabsData) => {
   const requestedId =
-    typeof data.options?.defaultItemId === "string"
-      ? data.options.defaultItemId
-      : data.options?.activeId;
+    typeof data.options?.activeId === "string"
+      ? data.options.activeId
+      : data.options?.defaultItemId;
   return resolvePanelSelectionId(panels, requestedId);
 };
 

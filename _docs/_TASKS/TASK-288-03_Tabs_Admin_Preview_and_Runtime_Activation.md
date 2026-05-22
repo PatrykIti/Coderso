@@ -26,9 +26,9 @@ This leaf owns only the Tabs-specific activation path after TASK-256 finalizes
 instance-safe selectors and ARIA relationships.
 
 It must not introduce a generic script registry, global page-builder runtime
-bridge, or shared interactive-widget policy. If implementation requires one of
-those shared mechanisms, split that work back to TASK-256-04 and consume it
-here.
+bridge, or shared interactive-widget policy. If implementation requires shared
+runtime-script transport or dedupe infrastructure, split that work to `TASK-329`
+instead of inventing a Tabs-local workaround and consume the shared helper here.
 
 ## Sub-Tasks
 

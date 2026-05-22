@@ -30,6 +30,7 @@ import {
   createProductTableWidget,
   productTableDefaults,
 } from "../../../core/widgets/core/productTable";
+import { createTabsWidget, tabsDefaults } from "../../../core/widgets/core/tabs";
 import {
   createRichTextSectionWidget,
   richTextSectionDefaults,
@@ -566,6 +567,135 @@ test("normalizeWidgetBlock accepts Product Table compact variant, normalizes dep
           resolvedAt: "2026-05-22T12:00:00.000Z",
         },
       } as never,
+    })
+  ).toThrow("widget_schema_invalid");
+});
+
+test("normalizeWidgetBlock accepts Tabs extended schema and preserves disabled saved defaults", () => {
+  registerWidget(
+    createTabsWidget({
+      wizard: Dummy,
+      visual: Dummy,
+      advanced: Dummy,
+    })
+  );
+
+  const normalizedTabsBlock = normalizeWidgetBlock({
+    id: "tabs-validator-valid",
+    type: "tabs",
+    variant: "underline",
+    data: {
+      items: [
+        {
+          id: "overview",
+          label: "Overview",
+          panelIntro: "Primary overview.",
+          triggerDescription: "Start here",
+          icon: "⭐",
+        },
+        {
+          id: "details",
+          label: "Details",
+          disabled: true,
+        },
+      ],
+      options: {
+        defaultItemId: "details",
+        activeId: "details",
+        alignment: "center",
+        orientation: "vertical",
+        triggerOverflow: "scroll",
+        containerPadding: "lg",
+        triggerGap: "sm",
+        panelGap: "lg",
+        triggerTextSize: "base",
+        triggerFontWeight: "semibold",
+        motion: "slide",
+      },
+      style: {
+        ...tabsDefaults.style,
+        inactiveTextColor: "#334155",
+      },
+    },
+    slots: {
+      "panel:1": [],
+      "panel:2": [],
+    },
+  });
+  const normalizedTabsData = normalizedTabsBlock.data as {
+    options?: { defaultItemId?: string; activeId?: string };
+    items?: Array<{ triggerDescription?: string; icon?: string }>;
+  };
+
+  expect(normalizedTabsData.options?.defaultItemId).toBe("details");
+  expect(normalizedTabsData.options?.activeId).toBe("details");
+  expect(normalizedTabsData.items?.[0]?.triggerDescription).toBe("Start here");
+  expect(normalizedTabsData.items?.[0]?.icon).toBe("⭐");
+});
+
+test("normalizeWidgetBlock rejects invalid Tabs enums and unknown extended schema keys", () => {
+  registerWidget(
+    createTabsWidget({
+      wizard: Dummy,
+      visual: Dummy,
+      advanced: Dummy,
+    })
+  );
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "tabs-validator-invalid-enum",
+      type: "tabs",
+      data: {
+        ...tabsDefaults,
+        options: {
+          ...tabsDefaults.options,
+          triggerOverflow: "bad",
+        },
+      } as never,
+      slots: {
+        "panel:1": [],
+        "panel:2": [],
+      },
+    })
+  ).toThrow("widget_schema_invalid");
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "tabs-validator-unknown-item-key",
+      type: "tabs",
+      data: {
+        ...tabsDefaults,
+        items: [
+          {
+            ...(tabsDefaults.items?.[0] ?? { id: "1", label: "Tab 1" }),
+            extra: true,
+          },
+          tabsDefaults.items?.[1] ?? { id: "2", label: "Tab 2" },
+        ],
+      } as never,
+      slots: {
+        "panel:1": [],
+        "panel:2": [],
+      },
+    })
+  ).toThrow("widget_schema_invalid");
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "tabs-validator-unknown-style-key",
+      type: "tabs",
+      data: {
+        ...tabsDefaults,
+        style: {
+          ...tabsDefaults.style,
+          extra: "nope",
+        },
+      } as never,
+      slots: {
+        "panel:1": [],
+        "panel:2": [],
+      },
     })
   ).toThrow("widget_schema_invalid");
 });

@@ -427,29 +427,31 @@ className={joinClasses(
 
 | Obszar audytu | Status końcowy | Uwagi |
 |---|---|---|
-| C1 | Fixed | Visual/Advanced dostały osobną sekcję Colors z `inactiveTextColor`, clearable surfaces i bounded contrast advisory. |
-| C2, W4, W5, R2, R3, R4, R6 | Shared follow-up | Pozostają poza TASK-288 i są śledzone w `TASK-330`. |
-| C3 | Fixed | Admin preview przełącza panele przez React-local activation path; public runtime zachowuje osobny inline script tylko poza preview. |
+| C1 | Fixed | Visual/Advanced dostały osobną sekcję Colors z `inactiveTextColor`, clearable surfaces i bounded contrast advisory z regresją dla warning copy. |
+| C2, R4 | Historical shared evidence | Instance-safe `coderso` IDs oraz root-scoped runtime wiring pozostały zamkniętym shared dowodem z `TASK-256-04` + `TASK-256-05-04`, więc TASK-288 ich nie przejmuje. |
+| W4, W5, R2, R3, R6 | Shared follow-up | Pozostają poza TASK-288 i są śledzone w `TASK-330` jako shared accessibility residuals. |
+| C3 | Fixed | Admin preview przełącza panele przez React-local activation path; public runtime zachowuje osobny inline script tylko poza preview i pozostaje root-scoped przy wielu instancjach. |
 | W1 | Fixed | `TabsItem` obsługuje `icon` / emoji w triggerze. |
-| W2, U4, U5, U9 | Fixed | Wizard ma własną sekcję Layout, default badge, slot guidance i confirm przy redukcji liczby tabów. |
-| W3, R1, U2 | Fixed | Vertical alignment używa `items-*`, a etykiety alignment/orientation są user-facing. |
+| W2, U4, U5, U9 | Fixed | Wizard ma własną sekcję Layout, compact row dla orientation/alignment, default badge, slot guidance i confirm przy redukcji liczby tabów. |
+| W3, W12, R1, U2 | Fixed | Vertical alignment używa `items-*`, etykiety alignment/orientation są user-facing, a outer width pozostaje truthfully w shared ownerze `layout.container` zamiast duplikować lokalny max-width. |
 | W6 | Shared follow-up | Tabs zachowuje local inline script guard, ale shared payload transport/dedupe został wyodrębniony do `TASK-329` zamiast dorabiania Tabs-only obejścia. |
 | W7, U3 | Fixed | Legacy `description` normalizuje się do `panelIntro`; osobne `triggerDescription` opisuje trigger zamiast panelu. |
 | W8, W9, U6, U8 | Fixed | Tabs ma bounded overflow, spacing, trigger typography i rozdzielone sekcje Layout / Trigger style / Colors. |
-| W10 | Fixed | `disabled` jest częścią schematu, editora i runtime; aktywacja zawsze wybiera pierwszy enabled tab. |
-| W11, U1 | Fixed | Variant cards mają visual previews, a runtime obsługuje `none` / `fade` / `slide` z `prefers-reduced-motion`. |
+| W10 | Fixed | `disabled` jest częścią schematu, editora i runtime; runtime aktywuje pierwszy enabled tab, ale zapisany `defaultItemId` nie znika, dopóki autor go nie zmieni. |
+| W11, U1 | Fixed | Variant cards mają visual previews, a runtime obsługuje `none` / `fade` / `slide` przez `motion-safe` classes z fallbackiem dla reduced motion. |
 | R5 | Fixed | Public inline script renderuje się z jawnie ustawionym `type="text/javascript"`. |
 
 ### 9.1 Walidacja końcowa
 
-- `tests/vitest/widgets/tabs.test.tsx` — green
-- `tests/vitest/ui/tabs-editor-wave.test.tsx` — green
-- `tests/vitest/ui-integration/tabs-preview-activation.test.tsx` — green
+- `bun test tests/unit/widgets/validator.test.ts` — green
+- `bun x vitest tests/vitest/widgets/tabs.test.tsx tests/vitest/ui/tabs-editor-wave.test.tsx tests/vitest/ui-integration/tabs-preview-activation.test.tsx` — green
 - `bun run lint` — green
+- `bun run gates:coderso` — green
+- `bun run precommit` — green
 - `git diff --check` — green
 - `bun run scan:security:strict` — local blocker: `semgrep` i `trivy` nie istnieją w `PATH`, a dostępny `gitleaks` binary nie wspiera repo-kontraktu `git` / `dir`.
 
 ### 9.2 Residual scope po zamknięciu TASK-288
 
-- `TASK-330` — shared Tabs accessibility / ID residuals po TASK-256
+- `TASK-330` — shared Tabs tablist/tabpanel accessibility residuals po TASK-256
 - `TASK-329` — shared widget runtime-script transport and dedupe
