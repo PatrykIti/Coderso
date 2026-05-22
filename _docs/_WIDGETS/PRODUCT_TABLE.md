@@ -5,8 +5,9 @@
 Render a resolved commerce table with an optional section header, shared
 column metadata, guarded column visibility, bounded status and stock
 presentation, public-safe product thumbnails, optional excerpt context, safe
-product links, an optional action column, empty-state styling, and admin
-preview parity for the current source query.
+product links, an optional action column, SSR page-query public controls for
+search/filter/sort/pagination, empty-state styling, and admin preview parity
+for the current source query.
 
 ## Widget ID
 
@@ -28,6 +29,7 @@ preview parity for the current source query.
 - section header
 - columns
 - column labels
+- public controls
 - stock presentation
 - links and actions
 - empty state
@@ -89,6 +91,26 @@ preview parity for the current source query.
   is active; this is not the broader row-hover styling wave owned by
   `TASK-281-08`.
 
+## Public Controls and Query Contract
+
+- `controls.showSearchInput`, `showCollectionFilter`, `showStatusFilter`,
+  `sorting`, `pagination`, and `pageSize` are Product Table-owned schema fields
+  with bounded defaults and clamps.
+- Public runtime uses block-scoped page-query keys derived from `blockId`:
+  `pt.<blockId>.q`, `.collection`, `.status`, `.sort`, `.dir`, and `.page`.
+- `sorting: indicator` surfaces the active sort affordance without changing the
+  query, while `sorting: interactive` keeps the current `<th scope="col">`
+  semantics and adds safe query-preserving sort links with `aria-sort`.
+- `pagination: paged` emits Previous/Next links and page metadata;
+  `pagination: load-more` emits a bounded `Load more` link; `pageSize` is
+  clamped to `1..24`.
+- Public `status` params may only narrow the public-safe baseline and never
+  widen frontend access to draft/archived rows. Invalid Product Table query
+  params are ignored and surfaced through `resolved.runtime.rejectedTokens`.
+- `resolved.runtime` is runtime-only metadata for active query state, retained
+  non-widget params, available collection/status options, and clear/previous/
+  next hrefs.
+
 ## Accessibility Notes
 
 - Product Table now renders an sr-only caption and keeps `scope="col"` on every rendered header, including the optional Action column.
@@ -109,6 +131,7 @@ preview parity for the current source query.
 - Runtime emits deterministic markers:
   - `data-widget="product-table"`
   - `data-product-table-count`
+  - `data-product-table-page`
   - `data-product-status`
 - `resolved.items[].productHref` is derived from the shared commerce
   content-route contract and normalized to safe relative URLs before render.
@@ -156,6 +179,14 @@ preview parity for the current source query.
     "showCompareAt": false,
     "showCollectionCount": false
   },
+  "controls": {
+    "showSearchInput": false,
+    "showCollectionFilter": false,
+    "showStatusFilter": false,
+    "sorting": "none",
+    "pagination": "none",
+    "pageSize": 12
+  },
   "labels": {
     "image": "Image",
     "title": "Product",
@@ -179,3 +210,5 @@ preview parity for the current source query.
   }
 }
 ```
+
+Runtime-only `resolved.runtime` metadata carries the current public query state, available filter options, page meta, retained params, rejected tokens, and safe clear/previous/next hrefs.

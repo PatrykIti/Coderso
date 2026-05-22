@@ -366,6 +366,8 @@ const hydrateRuntimeBlock = async (
       {
         preview: options.preview,
         cache: commerceCache,
+        runtimeSearchParams: options.runtimeSearchParams,
+        blockId: block.id,
       }
     );
     nextBlock = {

@@ -182,6 +182,100 @@ test("product table renders section header, media and excerpt columns, and safe 
   expect(html).not.toContain('src=""');
 });
 
+test("product table renders public controls, sortable headers, and paged navigation", () => {
+  const html = renderToString(
+    <ProductTableBlock
+      variant="default"
+      blockId="catalog-1"
+      data={normalizeProductTableData({
+        ...productTableDefaults,
+        controls: {
+          showSearchInput: true,
+          showCollectionFilter: true,
+          showStatusFilter: true,
+          sorting: "interactive",
+          pagination: "paged",
+          pageSize: 2,
+        },
+        resolved: {
+          items: [
+            {
+              id: "product-3",
+              title: "Gamma Home",
+              slug: "gamma-home",
+              excerpt: null,
+              status: "published",
+              pricing: { amount: 120000, currency: "USD", compareAtAmount: null },
+              stock: { state: "in_stock", quantity: 3, inStock: true },
+              primaryMediaId: null,
+              mediaIds: [],
+              collectionIds: ["collection-1"],
+              productHref: null,
+            },
+            {
+              id: "product-4",
+              title: "Omega Home",
+              slug: "omega-home",
+              excerpt: null,
+              status: "published",
+              pricing: { amount: 130000, currency: "USD", compareAtAmount: null },
+              stock: { state: "in_stock", quantity: 2, inStock: true },
+              primaryMediaId: null,
+              mediaIds: [],
+              collectionIds: ["collection-1"],
+              productHref: null,
+            },
+          ],
+          total: 5,
+          resolvedAt: "2026-05-22T12:00:00.000Z",
+          runtime: {
+            searchQuery: "starter",
+            status: [],
+            collectionIds: ["collection-1"],
+            availableStatuses: ["published"],
+            availableCollections: [
+              { id: "collection-1", label: "Summer", slug: "summer" },
+              { id: "collection-2", label: "Urban", slug: "urban" },
+            ],
+            sortField: "title",
+            sortDir: "asc",
+            page: 2,
+            pageSize: 2,
+            totalPages: 3,
+            previousPageHref:
+              "?foo=bar&pt.catalog-1.q=starter&pt.catalog-1.collection=collection-1&pt.catalog-1.sort=title&pt.catalog-1.dir=asc",
+            nextPageHref:
+              "?foo=bar&pt.catalog-1.q=starter&pt.catalog-1.collection=collection-1&pt.catalog-1.sort=title&pt.catalog-1.dir=asc&pt.catalog-1.page=3",
+            clearHref: "?foo=bar",
+            retainedParams: [{ name: "foo", value: "bar" }],
+            rejectedTokens: ["status"],
+          },
+        },
+      })}
+    />
+  );
+
+  expect(html).toContain('data-product-table-page="2"');
+  expect(html).toContain("Showing 3-4 of 5 products");
+  expect(html).toContain("Sort: <!-- -->Title ascending");
+  expect(html).toContain('href="?foo=bar"');
+  expect(html).toContain('name="foo" value="bar"');
+  expect(html).toContain('name="pt.catalog-1.q"');
+  expect(html).toContain('value="starter"');
+  expect(html).toContain('name="pt.catalog-1.collection" checked="" value="collection-1"');
+  expect(html).toContain("<!-- -->summer");
+  expect(html).toContain("Ignored invalid table parameters.");
+  expect(html).toContain('aria-sort="ascending"');
+  expect(html).toContain('aria-label="Sort by Product descending"');
+  expect(html).toContain("Page <!-- -->2<!-- --> of <!-- -->3");
+  expect(html).toContain(
+    'href="?foo=bar&amp;pt.catalog-1.q=starter&amp;pt.catalog-1.collection=collection-1&amp;pt.catalog-1.sort=title&amp;pt.catalog-1.dir=asc"'
+  );
+  expect(html).toContain(
+    'href="?foo=bar&amp;pt.catalog-1.q=starter&amp;pt.catalog-1.collection=collection-1&amp;pt.catalog-1.sort=title&amp;pt.catalog-1.dir=asc&amp;pt.catalog-1.page=3"'
+  );
+});
+
 test("product table renders rows with shared column labels and visibility", () => {
   const html = renderToString(
     <ProductTableBlock
@@ -618,6 +712,73 @@ test("product table normalizes source, header, media, labels, and guarded fields
     },
   });
   expect(normalizeProductTableLabels({ price: " " }).price).toBe("Price");
+});
+
+test("product table normalizes public controls and runtime metadata", () => {
+  const normalized = normalizeProductTableData({
+    controls: {
+      showSearchInput: true,
+      showCollectionFilter: true,
+      showStatusFilter: true,
+      sorting: "interactive",
+      pagination: "paged",
+      pageSize: 999,
+    },
+    resolved: {
+      items: [],
+      total: 0,
+      resolvedAt: "2026-05-22T12:00:00.000Z",
+      runtime: {
+        searchQuery: "  starter  ",
+        status: ["published", "published", "draft", "invalid" as never],
+        collectionIds: [" collection-1 ", " ", "collection-1", "collection-2"],
+        availableStatuses: ["published", "archived", "invalid" as never],
+        availableCollections: [
+          { id: " collection-1 ", label: " Summer ", slug: " summer " },
+          { id: "", label: "Ignored" } as never,
+        ],
+        sortField: "invalid" as never,
+        sortDir: "invalid" as never,
+        page: 0,
+        pageSize: 0,
+        totalPages: 0,
+        previousPageHref: "/catalog?page=1",
+        nextPageHref: "javascript:alert(1)" as never,
+        clearHref: "/catalog",
+        retainedParams: [
+          { name: " foo ", value: " bar " },
+          { name: "", value: "ignored" } as never,
+        ],
+        rejectedTokens: [" status ", "", null as never],
+      },
+    },
+  });
+
+  expect(normalized.controls).toEqual({
+    showSearchInput: true,
+    showCollectionFilter: true,
+    showStatusFilter: true,
+    sorting: "interactive",
+    pagination: "paged",
+    pageSize: 24,
+  });
+  expect(normalized.resolved?.runtime).toMatchObject({
+    searchQuery: "starter",
+    status: ["published", "draft"],
+    collectionIds: ["collection-1", "collection-2"],
+    availableStatuses: ["published", "archived"],
+    availableCollections: [{ id: "collection-1", label: "Summer", slug: "summer" }],
+    sortField: "updatedAt",
+    sortDir: "desc",
+    page: 1,
+    pageSize: 24,
+    totalPages: 1,
+    previousPageHref: "/catalog?page=1",
+    nextPageHref: undefined,
+    clearHref: "/catalog",
+    retainedParams: [{ name: "foo", value: "bar" }],
+    rejectedTokens: ["status"],
+  });
 });
 
 test("product table validator accepts resolved payload with title and price visibility flags", () => {

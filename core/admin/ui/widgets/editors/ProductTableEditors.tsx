@@ -11,15 +11,20 @@ import { previewProductTable } from "@/services/productTablePreviewClient";
 
 import {
   buildProductTableQueryInput,
+  normalizeProductTableControls,
   normalizeProductTableData,
   productTableColumns,
   productTableDefaults,
+  resolveProductTableAuthoredPageSize,
   type ProductTableData,
   type ProductTableLinkColumn,
+  type ProductTablePaginationMode,
+  type ProductTableSortingMode,
 } from "../../../../widgets/core/productTable";
 import type { WidgetEditorProps, WidgetPreviewState } from "../../../../widgets/types";
 import {
   CommerceEditorSection,
+  CommerceNumberField,
   CommerceSourceFields,
   CommerceTextField,
   CommerceTextareaField,
@@ -130,6 +135,20 @@ const updateLinks = (
   });
 };
 
+const updateControls = (
+  value: ProductTableData,
+  onChange: (next: ProductTableData) => void,
+  patch: Partial<NonNullable<ProductTableData["controls"]>>
+) => {
+  const current = normalizeProductTableData(value);
+  update(value, onChange, {
+    controls: {
+      ...normalizeProductTableControls(current.controls),
+      ...patch,
+    },
+  });
+};
+
 const productTableLinkColumnOptions: Array<{
   value: ProductTableLinkColumn;
   label: string;
@@ -137,6 +156,24 @@ const productTableLinkColumnOptions: Array<{
   { value: "none", label: "No linked column" },
   { value: "title", label: "Product column" },
   { value: "slug", label: "Slug column" },
+];
+
+const productTableSortingModeOptions: Array<{
+  value: ProductTableSortingMode;
+  label: string;
+}> = [
+  { value: "none", label: "No sorting UI" },
+  { value: "indicator", label: "Indicator only" },
+  { value: "interactive", label: "Interactive headers" },
+];
+
+const productTablePaginationModeOptions: Array<{
+  value: ProductTablePaginationMode;
+  label: string;
+}> = [
+  { value: "none", label: "No pagination" },
+  { value: "paged", label: "Previous and next" },
+  { value: "load-more", label: "Load more link" },
 ];
 
 const resolvePreviewErrorMessage = (error: unknown) => {
@@ -157,8 +194,13 @@ const resolvePreviewResolvedData = (
   return normalized.resolved ?? { items: [], total: 0, resolvedAt: "" };
 };
 
-const buildProductTablePreviewKey = (value: ProductTableData) =>
-  JSON.stringify(buildProductTableQueryInput(normalizeProductTableData(value)));
+const buildProductTablePreviewKey = (value: ProductTableData) => {
+  const normalized = normalizeProductTableData(value);
+  return JSON.stringify({
+    query: buildProductTableQueryInput(normalized),
+    controls: normalizeProductTableControls(normalized.controls),
+  });
+};
 
 const formatResolvedTimestamp = (value: string | undefined) => {
   const normalized = typeof value === "string" ? value.trim() : "";
@@ -218,6 +260,7 @@ function useProductTablePreview({
   const previewDataPatchRef = useRef<Record<string, unknown> | undefined>(previewState?.dataPatch);
   const previewInputRef = useRef<ProductTableData>({
     source: normalizeProductTableData(value).source,
+    controls: normalizeProductTableControls(normalizeProductTableData(value).controls),
   });
   const activeRequestKeyRef = useRef<string | undefined>(previewState?.requestKey);
 
@@ -226,8 +269,10 @@ function useProductTablePreview({
   });
 
   useEffect(() => {
+    const normalized = normalizeProductTableData(value);
     previewInputRef.current = {
-      source: normalizeProductTableData(value).source,
+      source: normalized.source,
+      controls: normalizeProductTableControls(normalized.controls),
     };
   }, [value]);
 
@@ -306,6 +351,7 @@ function PreviewStatusCard({
 }) {
   const normalized = normalizeProductTableData(value);
   const resolved = resolvePreviewResolvedData(normalized, context?.previewState);
+  const authoredPageSize = resolveProductTableAuthoredPageSize(normalized);
   const guidanceTone =
     context?.previewState?.status === "error"
       ? "border-amber-300 bg-amber-50 text-amber-900"
@@ -321,8 +367,12 @@ function PreviewStatusCard({
             Resolved items: {resolved.items?.length ?? 0} · Total: {resolved.total ?? 0}
           </p>
           <p>
-            Query limit: {normalized.source?.limit ?? 0} · Sort:{" "}
-            {normalized.source?.sortField ?? "updatedAt"} {normalized.source?.sortDir ?? "desc"}
+            Query limit: {authoredPageSize} · Sort: {normalized.source?.sortField ?? "updatedAt"}{" "}
+            {normalized.source?.sortDir ?? "desc"}
+          </p>
+          <p>
+            Public sort UI: {normalized.controls?.sorting ?? "none"} · Pagination:{" "}
+            {normalized.controls?.pagination ?? "none"}
           </p>
           <p>
             {context?.previewState?.status === "loading"
@@ -346,6 +396,69 @@ function PreviewStatusCard({
         ) : null}
       </div>
     </div>
+  );
+}
+
+function PublicControlsFields({
+  value,
+  onChange,
+}: {
+  value: ProductTableData;
+  onChange: (next: ProductTableData) => void;
+}) {
+  const normalized = normalizeProductTableData(value);
+  const controls = normalizeProductTableControls(normalized.controls);
+  const paginationMode = controls.pagination;
+
+  return (
+    <CommerceEditorSection
+      title="Public controls"
+      description="Expose bounded Product Table search, filters, sortable headers, and SSR pagination on published pages."
+    >
+      <CommerceToggleField
+        label="Show search input"
+        description="Front-end search is intended for authored sources without a fixed Source search term."
+        checked={controls.showSearchInput}
+        onChange={(next) => updateControls(normalized, onChange, { showSearchInput: next })}
+      />
+      <CommerceToggleField
+        label="Show collection filter"
+        description="Uses the authored Source collection scope. Add at least two Source collections above to surface visitor checkboxes."
+        checked={controls.showCollectionFilter}
+        onChange={(next) => updateControls(normalized, onChange, { showCollectionFilter: next })}
+      />
+      <CommerceToggleField
+        label="Show status filter"
+        description="Preview can show authored status options, but published pages stay public-safe and usually collapse to published only."
+        checked={controls.showStatusFilter}
+        onChange={(next) => updateControls(normalized, onChange, { showStatusFilter: next })}
+      />
+      <ProductTableSelectField
+        label="Sorting UI"
+        value={controls.sorting}
+        options={productTableSortingModeOptions}
+        onChange={(next) =>
+          updateControls(normalized, onChange, { sorting: next as ProductTableSortingMode })
+        }
+      />
+      <ProductTableSelectField
+        label="Pagination mode"
+        value={paginationMode}
+        options={productTablePaginationModeOptions}
+        onChange={(next) =>
+          updateControls(normalized, onChange, { pagination: next as ProductTablePaginationMode })
+        }
+      />
+      {paginationMode !== "none" ? (
+        <CommerceNumberField
+          label="Page size"
+          value={controls.pageSize}
+          min={1}
+          max={24}
+          onChange={(next) => updateControls(normalized, onChange, { pageSize: next })}
+        />
+      ) : null}
+    </CommerceEditorSection>
   );
 }
 
@@ -515,6 +628,8 @@ export function ProductTableVisualEditor({
           />
         ))}
       </CommerceEditorSection>
+
+      <PublicControlsFields value={normalized} onChange={onChange} />
 
       {normalized.fields?.showStock ? (
         <CommerceEditorSection

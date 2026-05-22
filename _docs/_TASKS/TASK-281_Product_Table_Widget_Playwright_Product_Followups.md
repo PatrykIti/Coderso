@@ -6,7 +6,7 @@
 **Category:** Widgets + Commerce + Admin UI + Runtime Render + Playwright QA
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-252, TASK-256, TASK-256-01, TASK-256-02, TASK-256-04, TASK-256-06, TASK-256-07, TASK-256-08
-**Status:** In Progress (2026-05-21)
+**Status:** In Progress (2026-05-22)
 
 ---
 
@@ -80,7 +80,7 @@ the Product Table slice.
 | A1, A2, A4, A5, A6 Product Table table semantics | TASK-281-05 | Table caption, `scope`, section/table labels, and local runtime alert/live semantics without redundant wrapper table roles. |
 | UX-05, BF-01, BF-02, A7 product media and excerpt columns | TASK-281-06 | Use existing runtime card data; media URL resolution and lazy thumbnail behavior must stay backend-owned/runtime-safe. |
 | BF-07 section heading | TASK-281-06 | Product Table-owned contextual header above the table. |
-| UX-02, UX-04, UX-06, UX-08, BF-15 front-end controls | TASK-281-07 | Pagination/load-more, search, filters, and sortable headers with explicit route/security policy. |
+| UX-02, UX-04, UX-06, UX-08, BF-15 front-end controls | TASK-281-07 | Pagination/load-more, search, filters, and sortable headers through the existing SSR page-query pattern. `BF-15` is the report alias for the `UX-06` frontend search gap, not a second closure item. |
 | UX-01, UX-10, BF-05, BF-06, BF-08, BF-09, BF-10, BF-12 layout/table styling | TASK-281-08 | Variants, density, zebra/hover, max-width, sticky header, typography. `UX-10` is the report summary alias for the row-hover finding documented as `BF-10`. |
 | UX-07, UX-09, BF-14 export/currency/diagnostics | TASK-281-09 | CSV/clipboard, locale-aware money formatting, read-only runtime diagnostics. |
 | Report fixed/deferred notes, widget docs, changelog, board closure | TASK-281-10 | Final documentation and validation evidence. |
@@ -102,7 +102,7 @@ the Product Table slice.
 - [x] TASK-281-04: Product Table Product Links and Action Column
 - [x] TASK-281-05: Product Table Accessibility and Runtime Semantics
 - [x] TASK-281-06: Product Table Media Excerpt and Section Header Context
-- [ ] TASK-281-07: Product Table Pagination Search Filter and Sorting UX
+- [x] TASK-281-07: Product Table Pagination Search Filter and Sorting UX
 - [ ] TASK-281-08: Product Table Variants Density Layout and Sticky Header
 - [ ] TASK-281-09: Product Table Export Currency and Advanced Diagnostics
 - [ ] TASK-281-10: Product Table Report, Docs, Changelog, and Closure

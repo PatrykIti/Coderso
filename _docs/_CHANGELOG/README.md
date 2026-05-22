@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 900 | 2026-05-22 | TASK-281-07 product table public controls | CMS Widgets/Admin UI/Runtime/QA |
 | 899 | 2026-05-22 | TASK-281-06 product table media excerpt section header | CMS Widgets/Admin UI/Runtime/QA |
 | 898 | 2026-05-21 | TASK-281-05 product table accessibility semantics | CMS Widgets/Accessibility/Runtime/QA |
 | 897 | 2026-05-21 | TASK-281-04 product table links and action column | CMS Widgets/Admin UI/Runtime/QA |

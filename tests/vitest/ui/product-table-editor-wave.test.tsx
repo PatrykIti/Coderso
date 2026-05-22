@@ -325,6 +325,13 @@ test("ProductTable editors normalize source, section header, full column registr
     expect(findInputByLabel(view.container, "Show stock quantity")).toBeInstanceOf(
       HTMLInputElement
     );
+    expect(findInputByLabel(view.container, "Show search input")).toBeInstanceOf(HTMLInputElement);
+    expect(findInputByLabel(view.container, "Show collection filter")).toBeInstanceOf(
+      HTMLInputElement
+    );
+    expect(findInputByLabel(view.container, "Show status filter")).toBeInstanceOf(HTMLInputElement);
+    expect(findSelectByLabel(view.container, "Sorting UI")).toBeInstanceOf(HTMLSelectElement);
+    expect(findSelectByLabel(view.container, "Pagination mode")).toBeInstanceOf(HTMLSelectElement);
     expect(findSelectByLabel(view.container, "Linked column")).toBeInstanceOf(HTMLSelectElement);
     expect(findInputByLabel(view.container, "Image")).toBeInstanceOf(HTMLInputElement);
     expect(findInputByLabel(view.container, "Slug")).toBeInstanceOf(HTMLInputElement);
@@ -368,6 +375,12 @@ test("ProductTable editors normalize source, section header, full column registr
     toggleCheckbox(findInputByLabel(view.container, "Show stock"));
     expect(findInputByLabel(view.container, "Show stock quantity")).toBeUndefined();
     toggleCheckbox(findInputByLabel(view.container, "Show collection count"));
+    toggleCheckbox(findInputByLabel(view.container, "Show search input"));
+    toggleCheckbox(findInputByLabel(view.container, "Show collection filter"));
+    toggleCheckbox(findInputByLabel(view.container, "Show status filter"));
+    setSelectValue(findSelectByLabel(view.container, "Sorting UI"), "interactive");
+    setSelectValue(findSelectByLabel(view.container, "Pagination mode"), "paged");
+    setInputValue(findInputByLabel(view.container, "Page size"), "7");
     setSelectValue(findSelectByLabel(view.container, "Linked column"), "slug");
     toggleCheckbox(findInputByLabel(view.container, "Show action column"));
     setInputValue(findInputByLabel(view.container, "Action label"), "Learn more");
@@ -424,6 +437,14 @@ test("ProductTable editors normalize source, section header, full column registr
       stock: "Inventory",
       collections: "Groups",
     });
+    expect(latestValue.controls).toEqual({
+      showSearchInput: true,
+      showCollectionFilter: true,
+      showStatusFilter: true,
+      sorting: "interactive",
+      pagination: "paged",
+      pageSize: 7,
+    });
     expect(latestValue.links).toEqual({
       linkedColumn: "slug",
       showAction: true,
@@ -465,7 +486,7 @@ test("ProductTable editors normalize source, section header, full column registr
     });
 
     const preview = view.container.querySelector("pre");
-    expect(preview?.textContent).toContain('"limit": 48');
+    expect(preview?.textContent).toContain('"limit": 7');
     expect(preview?.textContent).toContain('"field": "pricing.amount"');
     expect(preview?.textContent).toContain('"dir": "asc"');
     expect(preview?.textContent).toContain('"search": "starter suite"');
@@ -696,6 +717,14 @@ test("ProductTable preview hook resolves admin preview state", async () => {
         status: [],
         sortField: "updatedAt",
         sortDir: "desc",
+      },
+      controls: {
+        showSearchInput: false,
+        showCollectionFilter: false,
+        showStatusFilter: false,
+        sorting: "none",
+        pagination: "none",
+        pageSize: 12,
       },
     });
     const resolvedPreviewState = requirePreviewState(latestPreviewState);

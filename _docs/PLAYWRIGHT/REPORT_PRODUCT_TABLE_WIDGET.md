@@ -249,6 +249,7 @@ Tło tabeli: rgb(240, 244, 255) ← z custom koloru
 
 #### UX-02 — Brak paginacji / "Show more"
 **Opis:** Limit to maksymalnie 48 produktów (hardcoded w schemacie). Brak paginacji, "load more" ani endless scroll. Dla katalogów z >48 produktami widget jest nieadekwatny jako główny widok katalogu.
+**Status (2026-05-22):** Fixed in `TASK-281-07`.
 **Rekomendacja:** Dodać opcję paginacji lub "Load more" z konfigurowalnymi page size.
 
 #### UX-03 — Brak klikalnych wierszy / linków do produktów
@@ -258,6 +259,7 @@ Tło tabeli: rgb(240, 244, 255) ← z custom koloru
 
 #### UX-04 — Brak sortowania interaktywnego (klik w nagłówek)
 **Opis:** Sortowanie konfiguruje się w edytorze przez `sortField` i `sortDir`. Na froncie użytkownik nie może kliknąć nagłówka kolumny żeby posortować — brak interaktywności. Standardowe oczekiwanie UX dla tabel danych.
+**Status (2026-05-22):** Fixed in `TASK-281-07`.
 **Rekomendacja:** Sortowanie interaktywne lub przynajmniej wizualny wskaźnik (ikona ▲/▼) aktywnego sortowania.
 
 #### UX-05 — Brak miniatury obrazu produktu
@@ -267,6 +269,7 @@ Tło tabeli: rgb(240, 244, 255) ← z custom koloru
 
 #### UX-06 — Brak wyszukiwarki inline na froncie
 **Opis:** Pole `search` w source konfiguruje stałą frazę wyszukiwania. Na froncie użytkownik nie może filtrować tabeli — brak pola search w widgecie. Dla tabel z 48 produktami jest to duże ograniczenie UX.
+**Status (2026-05-22):** Fixed in `TASK-281-07`.
 **Rekomendacja:** Dodać opcjonalny toggle `showSearchInput` dla frontendu.
 
 #### UX-07 — Brak opcji eksportu (CSV / clipboard)
@@ -275,6 +278,7 @@ Tło tabeli: rgb(240, 244, 255) ← z custom koloru
 
 #### UX-08 — Brak filtrów widocznych dla użytkownika frontendu
 **Opis:** Filtry (kolekcje, status, limit) są konfigurowane przez admina w edytorze — na froncie użytkownik nie może samodzielnie filtrować. Brak togglei filtrów dla użytkownika końcowego.
+**Status (2026-05-22):** Fixed in `TASK-281-07`.
 **Rekomendacja:** Opcjonalne `showFilters` — dropdowny po stronie klienta.
 
 #### UX-09 — Advanced editor — "runtime error flag" jest edytowalny przez użytkownika
@@ -338,6 +342,7 @@ Tło tabeli: rgb(240, 244, 255) ← z custom koloru
 
 ### BF-15 — Brak wyszukiwarki po stronie klienta
 **Opis:** Patrz UX-06. Brak inline search inputu widocznego dla odwiedzającego stronę.
+**Status (2026-05-22):** Fixed in `TASK-281-07` as the same frontend search gap already tracked by `UX-06`.
 
 ---
 
@@ -372,12 +377,13 @@ Tło tabeli: rgb(240, 244, 255) ← z custom koloru
 
 | ID | Opis | Priorytet |
 |----|------|-----------|
-| UX-02 | Brak paginacji — max 48 produktów | Wysoki |
+| UX-02 | Brak paginacji — max 48 produktów (Fixed in TASK-281-07) | Wysoki |
 | UX-03 | Brak klikalnych wierszy / linków do produktów (Fixed in TASK-281-04) | Wysoki |
 | UX-05 | Brak thumbnails — produkt bez zdjęcia (Fixed in TASK-281-06) | Wysoki |
 | UX-01 | Tylko jeden wariant (default) | Średni |
-| UX-04 | Brak sortowania interaktywnego kliknięciem nagłówka | Średni |
-| UX-06 | Brak search inline na froncie | Średni |
+| UX-04 | Brak sortowania interaktywnego kliknięciem nagłówka (Fixed in TASK-281-07) | Średni |
+| UX-06 | Brak search inline na froncie (Fixed in TASK-281-07) | Średni |
+| UX-08 | Brak filtrów widocznych dla użytkownika frontendu (Fixed in TASK-281-07) | Średni |
 | UX-10 | Brak hover na wierszach tabeli | Średni |
 | UX-09 | Runtime error flag edytowalny przez użytkownika (Fixed in TASK-281-01) | Niski |
 | BUG-04 | Title i Price niewyłączalne — asymetria togglei (Fixed in TASK-281-02) | Niski |
@@ -396,7 +402,7 @@ Tło tabeli: rgb(240, 244, 255) ← z custom koloru
 | BF-10 | Średni | Brak row hover efektu |
 | BF-11 | Średni | Brak kolumny akcji (Actions column) (Fixed in TASK-281-04) |
 | BF-12 | Średni | Brak sticky header przy 48 produktach |
-| BF-15 | Średni | Brak wyszukiwarki po stronie klienta |
+| BF-15 | Średni | Brak wyszukiwarki po stronie klienta (Fixed in TASK-281-07 as the same gap as UX-06) |
 
 ---
 
@@ -604,4 +610,26 @@ Tylko elementy nie zależne od danych runtime są zgodne:
 - `bun test tests/unit/commerce/commerceWidgetRuntime.test.ts`
 - `bun test tests/unit/widgets/validator.test.ts`
 - `set -a && source .env && set +a && bun run gates:coderso`
+- `bun run scan:security:strict` (`semgrep`, `trivy`, and `gitleaks` missing locally; embedded `bun audit` still ran)`
+
+## Status po TASK-281-07 (2026-05-22)
+
+### Fixed in TASK-281-07
+
+- `UX-02`: Product Table now exposes `controls.pagination` with `paged` and `load-more` modes, block-scoped previous/next/load-more hrefs, page metadata, and a bounded public `pageSize` clamp of `1..24`.
+- `UX-04`: `controls.sorting` now supports both passive sort indicators and interactive header links while preserving current `<th scope="col">` semantics and `aria-sort` coverage.
+- `UX-06` / `BF-15`: Product Table now offers an optional inline public search input through SSR page query params owned by the widget (`pt.<blockId>.q`) instead of a second public JSON refresh path.
+- `UX-08`: Product Table now offers optional public collection filters, preserves unrelated page query params in Product Table-owned hrefs, and reports rejected/ignored widget params without mutating persisted widget JSON. Public status params stay published-safe and can never widen frontend access to draft/archived rows.
+- Existing `TASK-281-01` through `TASK-281-06` seams remain preserved: admin preview still hydrates only backend-owned query data, shared column guardrails stay intact, safe links/media/header/state work together, and the new runtime state is validated through widget, runtime, validator, and `handlePublicRequest()` coverage.
+
+### Validation evidence
+
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run test:vitest -- tests/vitest/widgets/productTable.test.tsx tests/vitest/ui/product-table-editor-wave.test.tsx`
+- `bun test tests/unit/commerce/commerceWidgetRuntime.test.ts`
+- `bun test tests/unit/widgets/validator.test.ts`
+- `bun test tests/integration/runtime/product-table-runtime-pagination.test.ts`
+- `set -a && source .env && set +a && bun run gates:coderso`
+- `bun run precommit`
 - `bun run scan:security:strict` (`semgrep`, `trivy`, and `gitleaks` missing locally; embedded `bun audit` still ran)`

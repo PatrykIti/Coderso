@@ -3,17 +3,23 @@ import React, { type ComponentType, type CSSProperties } from "react";
 import type { WidgetDefinition, WidgetEditorProps, WidgetRenderContext } from "../types";
 import {
   buildCommerceWidgetQueryInput,
+  commerceSortFieldLabelMap,
   commerceStockLabelMap,
+  commerceWidgetStatusValues,
   formatCommerceMoney,
   normalizeCommerceWidgetSource,
   normalizeResolvedMeta,
   type CommerceWidgetRuntimeCard,
+  type CommerceWidgetSortDirection,
+  type CommerceWidgetSortField,
   type CommerceWidgetSource,
+  type CommerceWidgetStatus,
 } from "./commerceWidgetShared";
 import { compactObject, compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 import { normalizeWidgetSafeHref, resolveWidgetLinkAttrs } from "./widgetSafeHref";
 
 export type ProductTableVariantId = "default";
+
 export type ProductTableResolvedMedia = {
   url: string;
   alt?: string | null;
@@ -45,12 +51,47 @@ export type ProductTableLabelKey = ProductTableColumnKey;
 export type ProductTableGuardGroup = "identity" | "pricing";
 export const productTableLinkColumnValues = ["none", "title", "slug"] as const;
 export type ProductTableLinkColumn = (typeof productTableLinkColumnValues)[number];
+export const productTableSortingModeValues = ["none", "indicator", "interactive"] as const;
+export type ProductTableSortingMode = (typeof productTableSortingModeValues)[number];
+export const productTablePaginationModeValues = ["none", "paged", "load-more"] as const;
+export type ProductTablePaginationMode = (typeof productTablePaginationModeValues)[number];
+export const productTablePublicPageSizeMin = 1;
+export const productTablePublicPageSizeMax = 24;
 
 export type ProductTableLinks = {
   linkedColumn?: ProductTableLinkColumn;
   showAction?: boolean;
   actionLabel?: string;
   openInNewTab?: boolean;
+};
+
+export type ProductTableRuntimeCollectionOption = {
+  id: string;
+  label: string;
+  slug?: string;
+};
+
+export type ProductTableRuntimeRetainedParam = {
+  name: string;
+  value: string;
+};
+
+export type ProductTableResolvedRuntime = {
+  searchQuery?: string;
+  status?: CommerceWidgetStatus[];
+  collectionIds?: string[];
+  availableStatuses?: CommerceWidgetStatus[];
+  availableCollections?: ProductTableRuntimeCollectionOption[];
+  sortField?: CommerceWidgetSortField;
+  sortDir?: CommerceWidgetSortDirection;
+  page?: number;
+  pageSize?: number;
+  totalPages?: number;
+  previousPageHref?: string;
+  nextPageHref?: string;
+  clearHref?: string;
+  retainedParams?: ProductTableRuntimeRetainedParam[];
+  rejectedTokens?: string[];
 };
 
 export type ProductTableRuntimeItem = CommerceWidgetRuntimeCard & {
@@ -75,6 +116,15 @@ export type ProductTableFields = {
   showStockQuantity?: boolean;
   showCompareAt?: boolean;
   showCollectionCount?: boolean;
+};
+
+export type ProductTableControls = {
+  showSearchInput?: boolean;
+  showCollectionFilter?: boolean;
+  showStatusFilter?: boolean;
+  sorting?: ProductTableSortingMode;
+  pagination?: ProductTablePaginationMode;
+  pageSize?: number;
 };
 
 export type ProductTableLabels = {
@@ -103,6 +153,7 @@ export type ProductTableData = {
   source?: CommerceWidgetSource;
   header?: ProductTableHeader;
   fields?: ProductTableFields;
+  controls?: ProductTableControls;
   labels?: ProductTableLabels;
   links?: ProductTableLinks;
   emptyState?: {
@@ -120,6 +171,7 @@ export type ProductTableData = {
     items?: ProductTableRuntimeItem[];
     total?: number;
     resolvedAt?: string;
+    runtime?: ProductTableResolvedRuntime;
     error?: string;
   };
 };
@@ -135,6 +187,15 @@ const productTableFieldDefaults: Required<ProductTableFields> = {
   showStockQuantity: false,
   showCompareAt: false,
   showCollectionCount: false,
+};
+
+const productTableControlDefaults: Required<ProductTableControls> = {
+  showSearchInput: false,
+  showCollectionFilter: false,
+  showStatusFilter: false,
+  sorting: "none",
+  pagination: "none",
+  pageSize: 12,
 };
 
 const productTableLabelFallbacks: Required<ProductTableLabels> = {
@@ -181,6 +242,16 @@ const productTableRowToneClassMap: Record<CommerceWidgetRuntimeCard["status"], s
 
 const productTableStatusBadgeBaseClass =
   "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium leading-5";
+
+const productTableColumnSortFieldMap: Partial<
+  Record<ProductTableColumnKey, CommerceWidgetSortField>
+> = {
+  title: "title",
+  slug: "slug",
+  price: "pricing.amount",
+  status: "status",
+  stock: "stock.state",
+};
 
 export const productTableVisibilityGuardCopy: Record<ProductTableGuardGroup, string> = {
   identity:
@@ -272,6 +343,7 @@ export const productTableDefaults: ProductTableData = {
   },
   header: {},
   fields: productTableFieldDefaults,
+  controls: productTableControlDefaults,
   labels: productTableLabelFallbacks,
   links: productTableLinkDefaults,
   emptyState: productTableEmptyStateDefaults,
@@ -286,6 +358,23 @@ export const productTableDefaults: ProductTableData = {
     items: [],
     total: 0,
     resolvedAt: "",
+    runtime: {
+      searchQuery: "",
+      status: [],
+      collectionIds: [],
+      availableStatuses: [],
+      availableCollections: [],
+      sortField: "updatedAt",
+      sortDir: "desc",
+      page: 1,
+      pageSize: 12,
+      totalPages: 1,
+      previousPageHref: "",
+      nextPageHref: "",
+      clearHref: "?",
+      retainedParams: [],
+      rejectedTokens: [],
+    },
   },
 };
 
@@ -309,6 +398,247 @@ const positiveInteger = (value: unknown) => {
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return null;
   return Math.floor(value);
 };
+
+const normalizeProductTableRuntimeHref = (value: unknown) => {
+  const trimmed = optionalText(value);
+  if (!trimmed) return undefined;
+  if (trimmed.startsWith("?")) return trimmed;
+  return (
+    normalizeWidgetSafeHref(trimmed, {
+      allowRelative: true,
+      allowHttp: true,
+    }) ?? undefined
+  );
+};
+
+const normalizeProductTableStatusList = (value: unknown) => {
+  if (!Array.isArray(value)) return [] as CommerceWidgetStatus[];
+  return Array.from(
+    new Set(
+      value
+        .map((entry) => optionalText(entry))
+        .filter((entry): entry is CommerceWidgetStatus =>
+          commerceWidgetStatusValues.includes(entry as CommerceWidgetStatus)
+        )
+    )
+  );
+};
+
+const normalizeProductTableCollectionList = (value: unknown) => {
+  if (!Array.isArray(value)) return [] as string[];
+  return Array.from(
+    new Set(
+      value.map((entry) => optionalText(entry)).filter((entry): entry is string => Boolean(entry))
+    )
+  );
+};
+
+const normalizeProductTableRuntimeRetainedParams = (
+  value: unknown
+): ProductTableRuntimeRetainedParam[] => {
+  if (!Array.isArray(value)) return [];
+  const params: ProductTableRuntimeRetainedParam[] = [];
+
+  for (const entry of value) {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) continue;
+    const payload = entry as ProductTableRuntimeRetainedParam;
+    const name = optionalText(payload.name);
+    const paramValue = optionalText(payload.value);
+    if (!name || paramValue === undefined) continue;
+    params.push({ name, value: paramValue });
+  }
+
+  return params;
+};
+
+const normalizeProductTableRuntimeCollections = (
+  value: unknown
+): ProductTableRuntimeCollectionOption[] => {
+  if (!Array.isArray(value)) return [];
+  const items: ProductTableRuntimeCollectionOption[] = [];
+
+  for (const entry of value) {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) continue;
+    const payload = entry as ProductTableRuntimeCollectionOption;
+    const id = optionalText(payload.id);
+    const label = optionalText(payload.label);
+    if (!id || !label) continue;
+    items.push(
+      compactObject({
+        id,
+        label,
+        slug: optionalText(payload.slug),
+      }) as ProductTableRuntimeCollectionOption
+    );
+  }
+
+  return items;
+};
+
+export function normalizeProductTableControls(
+  value: ProductTableData["controls"] | undefined
+): Required<ProductTableControls> {
+  return {
+    showSearchInput: value?.showSearchInput === true,
+    showCollectionFilter: value?.showCollectionFilter === true,
+    showStatusFilter: value?.showStatusFilter === true,
+    sorting: productTableSortingModeValues.includes(value?.sorting as ProductTableSortingMode)
+      ? (value?.sorting as ProductTableSortingMode)
+      : productTableControlDefaults.sorting,
+    pagination: productTablePaginationModeValues.includes(
+      value?.pagination as ProductTablePaginationMode
+    )
+      ? (value?.pagination as ProductTablePaginationMode)
+      : productTableControlDefaults.pagination,
+    pageSize: (() => {
+      const fallback = productTableControlDefaults.pageSize;
+      if (typeof value?.pageSize !== "number" || !Number.isFinite(value.pageSize)) return fallback;
+      return Math.min(
+        productTablePublicPageSizeMax,
+        Math.max(productTablePublicPageSizeMin, Math.floor(value.pageSize))
+      );
+    })(),
+  };
+}
+
+export function resolveProductTableAuthoredPageSize(
+  value: Pick<ProductTableData, "controls" | "source">
+) {
+  const controls = normalizeProductTableControls(value.controls);
+  if (controls.pagination === "none") {
+    return normalizeCommerceWidgetSource(value.source, {
+      limit: productTableDefaults.source?.limit ?? 12,
+      sortField: "updatedAt",
+      sortDir: "desc",
+    }).limit;
+  }
+  return controls.pageSize;
+}
+
+function normalizeProductTableResolvedRuntime(
+  value: ProductTableResolvedRuntime | undefined,
+  defaults: {
+    source: CommerceWidgetSource | undefined;
+    controls: Required<ProductTableControls>;
+  }
+): ProductTableResolvedRuntime {
+  const normalizedSource = normalizeCommerceWidgetSource(defaults.source, {
+    limit: productTableDefaults.source?.limit ?? 12,
+    sortField: "updatedAt",
+    sortDir: "desc",
+  });
+
+  return {
+    searchQuery: optionalText(value?.searchQuery) ?? "",
+    status: normalizeProductTableStatusList(value?.status),
+    collectionIds: normalizeProductTableCollectionList(value?.collectionIds),
+    availableStatuses: normalizeProductTableStatusList(value?.availableStatuses),
+    availableCollections: normalizeProductTableRuntimeCollections(value?.availableCollections),
+    sortField:
+      optionalText(value?.sortField) &&
+      commerceSortFieldLabelMap[optionalText(value?.sortField) as CommerceWidgetSortField]
+        ? (optionalText(value?.sortField) as CommerceWidgetSortField)
+        : normalizedSource.sortField,
+    sortDir:
+      value?.sortDir === "asc" || value?.sortDir === "desc"
+        ? value.sortDir
+        : normalizedSource.sortDir,
+    page: positiveInteger(value?.page) ?? 1,
+    pageSize:
+      positiveInteger(value?.pageSize) ??
+      resolveProductTableAuthoredPageSize({
+        source: normalizedSource,
+        controls: defaults.controls,
+      }),
+    totalPages: positiveInteger(value?.totalPages) ?? 1,
+    previousPageHref: normalizeProductTableRuntimeHref(value?.previousPageHref),
+    nextPageHref: normalizeProductTableRuntimeHref(value?.nextPageHref),
+    clearHref: normalizeProductTableRuntimeHref(value?.clearHref) ?? "?",
+    retainedParams: normalizeProductTableRuntimeRetainedParams(value?.retainedParams),
+    rejectedTokens: Array.isArray(value?.rejectedTokens)
+      ? value?.rejectedTokens
+          .map((entry) => optionalText(entry))
+          .filter((entry): entry is string => Boolean(entry))
+      : [],
+  };
+}
+
+export type ProductTableRuntimeParamKeys = {
+  page: string;
+  search: string;
+  collection: string;
+  status: string;
+  sort: string;
+  dir: string;
+};
+
+export function buildProductTableRuntimeParamKeys(blockId?: string): ProductTableRuntimeParamKeys {
+  const normalizedBlockId = (blockId ?? "product-table").trim() || "product-table";
+  const prefix = `pt.${normalizedBlockId}`;
+  return {
+    page: `${prefix}.page`,
+    search: `${prefix}.q`,
+    collection: `${prefix}.collection`,
+    status: `${prefix}.status`,
+    sort: `${prefix}.sort`,
+    dir: `${prefix}.dir`,
+  };
+}
+
+export function buildProductTableRuntimeHref(options: {
+  blockId?: string;
+  retainedParams?: ProductTableRuntimeRetainedParam[];
+  state: {
+    searchQuery?: string;
+    collectionIds?: string[];
+    status?: CommerceWidgetStatus[];
+    sortField?: CommerceWidgetSortField;
+    sortDir?: CommerceWidgetSortDirection;
+    page?: number;
+  };
+}) {
+  const keys = buildProductTableRuntimeParamKeys(options.blockId);
+  const params = new URLSearchParams();
+
+  for (const entry of options.retainedParams ?? []) {
+    params.append(entry.name, entry.value);
+  }
+
+  const searchQuery = optionalText(options.state.searchQuery);
+  if (searchQuery) {
+    params.set(keys.search, searchQuery);
+  }
+
+  for (const collectionId of options.state.collectionIds ?? []) {
+    const normalized = optionalText(collectionId);
+    if (!normalized) continue;
+    params.append(keys.collection, normalized);
+  }
+
+  for (const status of options.state.status ?? []) {
+    if (!commerceWidgetStatusValues.includes(status)) continue;
+    params.append(keys.status, status);
+  }
+
+  if (options.state.sortField) {
+    params.set(keys.sort, options.state.sortField);
+  }
+  if (options.state.sortDir) {
+    params.set(keys.dir, options.state.sortDir);
+  }
+
+  const page = positiveInteger(options.state.page);
+  if (page && page > 1) {
+    params.set(keys.page, String(page));
+  }
+
+  const query = params.toString();
+  return query.length > 0 ? `?${query}` : "?";
+}
+
+export function resolveProductTableSortableField(columnKey: ProductTableColumnKey) {
+  return productTableColumnSortFieldMap[columnKey];
+}
 
 const normalizeResolvedMedia = (
   value: unknown,
@@ -520,6 +850,22 @@ export const productTableSchema = {
         showCollectionCount: { type: "boolean" },
       },
     },
+    controls: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        showSearchInput: { type: "boolean" },
+        showCollectionFilter: { type: "boolean" },
+        showStatusFilter: { type: "boolean" },
+        sorting: { enum: [...productTableSortingModeValues] },
+        pagination: { enum: [...productTablePaginationModeValues] },
+        pageSize: {
+          type: "number",
+          minimum: productTablePublicPageSizeMin,
+          maximum: productTablePublicPageSizeMax,
+        },
+      },
+    },
     labels: {
       type: "object",
       additionalProperties: false,
@@ -616,6 +962,71 @@ export const productTableSchema = {
         },
         total: { type: "number" },
         resolvedAt: { type: "string" },
+        runtime: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            searchQuery: { type: "string" },
+            status: {
+              type: "array",
+              items: { enum: ["draft", "published", "archived"] },
+            },
+            collectionIds: {
+              type: "array",
+              items: { type: "string" },
+            },
+            availableStatuses: {
+              type: "array",
+              items: { enum: ["draft", "published", "archived"] },
+            },
+            availableCollections: {
+              type: "array",
+              items: {
+                type: "object",
+                additionalProperties: false,
+                properties: {
+                  id: { type: "string" },
+                  label: { type: "string" },
+                  slug: { type: "string" },
+                },
+              },
+            },
+            sortField: {
+              enum: [
+                "title",
+                "slug",
+                "status",
+                "pricing.amount",
+                "stock.state",
+                "createdAt",
+                "updatedAt",
+                "publishedAt",
+              ],
+            },
+            sortDir: { enum: ["asc", "desc"] },
+            page: { type: "number" },
+            pageSize: { type: "number" },
+            totalPages: { type: "number" },
+            previousPageHref: { type: "string" },
+            nextPageHref: { type: "string" },
+            clearHref: { type: "string" },
+            retainedParams: {
+              type: "array",
+              items: {
+                type: "object",
+                additionalProperties: false,
+                properties: {
+                  name: { type: "string" },
+                  value: { type: "string" },
+                },
+              },
+            },
+            rejectedTokens: {
+              type: "array",
+              items: { type: "string" },
+            },
+          },
+        },
         error: { type: "string" },
       },
     },
@@ -630,6 +1041,7 @@ export const normalizeProductTableData = (value: ProductTableData): ProductTable
   });
   const header = normalizeProductTableHeader(value.header);
   const fields = normalizeProductTableFields(value.fields);
+  const controls = normalizeProductTableControls(value.controls);
   const labels = normalizeProductTableLabels(value.labels);
   const links = normalizeProductTableLinks(value.links);
   const resolvedMeta = normalizeResolvedMeta(value.resolved);
@@ -648,6 +1060,7 @@ export const normalizeProductTableData = (value: ProductTableData): ProductTable
     source,
     ...(header ? { header } : {}),
     fields,
+    controls,
     labels,
     links,
     emptyState: {
@@ -659,6 +1072,10 @@ export const normalizeProductTableData = (value: ProductTableData): ProductTable
       items: normalizeRuntimeItems(value.resolved?.items),
       total: resolvedMeta.total,
       resolvedAt: resolvedMeta.resolvedAt,
+      runtime: normalizeProductTableResolvedRuntime(value.resolved?.runtime, {
+        source,
+        controls,
+      }),
       ...(resolvedMeta.error ? { error: resolvedMeta.error } : {}),
     },
   };
@@ -667,11 +1084,17 @@ export const normalizeProductTableData = (value: ProductTableData): ProductTable
 export const buildProductTableQueryInput = (value: ProductTableData) => {
   const normalized = normalizeProductTableData(value);
   return buildCommerceWidgetQueryInput(
-    normalizeCommerceWidgetSource(normalized.source, {
-      limit: productTableDefaults.source?.limit ?? 12,
-      sortField: "updatedAt",
-      sortDir: "desc",
-    })
+    normalizeCommerceWidgetSource(
+      {
+        ...normalized.source,
+        limit: resolveProductTableAuthoredPageSize(normalized),
+      },
+      {
+        limit: productTableDefaults.source?.limit ?? 12,
+        sortField: "updatedAt",
+        sortDir: "desc",
+      }
+    )
   );
 };
 
@@ -754,6 +1177,10 @@ const productTableCellLinkClassName =
   "inline-flex rounded-sm font-medium text-[var(--color-text)] transition hover:underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
 const productTableActionLinkClassName =
   "inline-flex items-center rounded-md border border-[var(--color-border)] px-3 py-1.5 text-xs font-medium text-[var(--color-text)] transition hover:bg-[var(--color-bg)]/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
+const productTableSortLinkClassName =
+  "inline-flex items-center gap-2 rounded-sm text-left transition hover:text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
+const productTableSortIndicatorClassName =
+  "text-[10px] font-semibold uppercase tracking-wide text-[var(--color-text)]/55";
 
 const resolveProductTableLinkAttrs = (
   item: ProductTableRuntimeItem,
@@ -877,17 +1304,352 @@ const renderProductTableCell = (
   }
 };
 
+const normalizePaginationHref = (value: string | undefined) => {
+  if (!value) return undefined;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.startsWith("?")) return trimmed;
+  return (
+    normalizeWidgetSafeHref(trimmed, {
+      allowRelative: true,
+      allowHttp: true,
+    }) ?? undefined
+  );
+};
+
+const resolveProductTableSortLabel = (
+  field: CommerceWidgetSortField,
+  dir: CommerceWidgetSortDirection
+) => {
+  const fieldLabel = commerceSortFieldLabelMap[field] ?? field;
+  return `${fieldLabel} ${dir === "asc" ? "ascending" : "descending"}`;
+};
+
+const resolveProductTableSortBadge = ({
+  active,
+  dir,
+  interactive,
+}: {
+  active: boolean;
+  dir: CommerceWidgetSortDirection;
+  interactive: boolean;
+}) => {
+  if (active) return dir === "asc" ? "Asc" : "Desc";
+  return interactive ? "Sort" : "";
+};
+
+const resolveProductTableRangeCopy = ({
+  total,
+  count,
+  page,
+  pageSize,
+  pagination,
+}: {
+  total: number;
+  count: number;
+  page: number;
+  pageSize: number;
+  pagination: ProductTablePaginationMode;
+}) => {
+  if (total <= 0 || count <= 0) return "Showing 0 products";
+  if (pagination === "paged") {
+    const start = (Math.max(1, page) - 1) * pageSize + 1;
+    const end = Math.min(total, start + count - 1);
+    return `Showing ${start}-${end} of ${total} products`;
+  }
+  if (pagination === "load-more") {
+    return `Showing ${count} of ${total} products`;
+  }
+  return `Showing ${count} product${count === 1 ? "" : "s"}`;
+};
+
+const resolveProductTableActiveSortHref = ({
+  blockId,
+  runtime,
+  nextField,
+  nextDir,
+}: {
+  blockId?: string;
+  runtime: ProductTableResolvedRuntime | undefined;
+  nextField: CommerceWidgetSortField;
+  nextDir: CommerceWidgetSortDirection;
+}) =>
+  buildProductTableRuntimeHref({
+    blockId,
+    retainedParams: runtime?.retainedParams ?? [],
+    state: {
+      searchQuery: runtime?.searchQuery,
+      collectionIds: runtime?.collectionIds,
+      status: runtime?.status,
+      sortField: nextField,
+      sortDir: nextDir,
+      page: 1,
+    },
+  });
+
+const resolveProductTableActiveCollectionIds = (
+  runtime: ProductTableResolvedRuntime | undefined
+) => {
+  const selected = runtime?.collectionIds ?? [];
+  if (selected.length > 0) return new Set(selected);
+  return new Set((runtime?.availableCollections ?? []).map((item) => item.id));
+};
+
+const resolveProductTableActiveStatuses = (runtime: ProductTableResolvedRuntime | undefined) => {
+  const selected = runtime?.status ?? [];
+  if (selected.length > 0) return new Set(selected);
+  return new Set(runtime?.availableStatuses ?? []);
+};
+
+const hasActiveProductTableRuntimeState = (
+  data: ProductTableData,
+  runtime: ProductTableResolvedRuntime | undefined
+) => {
+  const normalized = normalizeProductTableData(data);
+  const source = normalizeCommerceWidgetSource(normalized.source, {
+    limit: productTableDefaults.source?.limit ?? 12,
+    sortField: "updatedAt",
+    sortDir: "desc",
+  });
+  return (
+    (runtime?.searchQuery?.length ?? 0) > 0 ||
+    (runtime?.collectionIds?.length ?? 0) > 0 ||
+    (runtime?.status?.length ?? 0) > 0 ||
+    (runtime?.page ?? 1) > 1 ||
+    runtime?.sortField !== source.sortField ||
+    runtime?.sortDir !== source.sortDir
+  );
+};
+
+function ProductTablePublicControls({
+  data,
+  blockId,
+}: {
+  data: ProductTableData;
+  blockId?: string;
+}) {
+  const normalized = normalizeProductTableData(data);
+  const controls = normalizeProductTableControls(normalized.controls);
+  const runtime = normalized.resolved?.runtime;
+  const availableCollections = runtime?.availableCollections ?? [];
+  const availableStatuses = runtime?.availableStatuses ?? [];
+  const showCollectionFilter = controls.showCollectionFilter && availableCollections.length > 1;
+  const showStatusFilter = controls.showStatusFilter && availableStatuses.length > 1;
+  const showSearchInput = controls.showSearchInput;
+  const hasFormControls = showSearchInput || showCollectionFilter || showStatusFilter;
+  const sortingEnabled = controls.sorting !== "none";
+  const paginationEnabled = controls.pagination !== "none";
+  const hasRejectedTokens = (runtime?.rejectedTokens?.length ?? 0) > 0;
+  const showShell = hasFormControls || sortingEnabled || paginationEnabled || hasRejectedTokens;
+  if (!showShell) return null;
+
+  const keys = buildProductTableRuntimeParamKeys(blockId);
+  const searchValue = runtime?.searchQuery || normalized.source?.search || "";
+  const activeCollectionIds = resolveProductTableActiveCollectionIds(runtime);
+  const activeStatuses = resolveProductTableActiveStatuses(runtime);
+  const rangeCopy = resolveProductTableRangeCopy({
+    total: normalized.resolved?.total ?? 0,
+    count: normalized.resolved?.items?.length ?? 0,
+    page: runtime?.page ?? 1,
+    pageSize: runtime?.pageSize ?? resolveProductTableAuthoredPageSize(normalized),
+    pagination: controls.pagination,
+  });
+  const currentSortCopy =
+    sortingEnabled && runtime?.sortField && runtime?.sortDir
+      ? resolveProductTableSortLabel(runtime.sortField, runtime.sortDir)
+      : null;
+  const showReset = hasActiveProductTableRuntimeState(normalized, runtime) || hasRejectedTokens;
+
+  return (
+    <div className="rounded-xl border border-[var(--color-border)]/70 bg-[var(--color-bg)]/35 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-1 text-sm text-[var(--color-text)]/75">
+          <p className="font-medium text-[var(--color-text)]">{rangeCopy}</p>
+          {currentSortCopy ? <p>Sort: {currentSortCopy}</p> : null}
+        </div>
+        {showReset ? (
+          <a
+            href={runtime?.clearHref ?? "?"}
+            className="text-xs font-medium underline-offset-4 hover:underline"
+          >
+            Reset table
+          </a>
+        ) : null}
+      </div>
+
+      {hasFormControls ? (
+        <form method="get" className="mt-4 space-y-4">
+          {(runtime?.retainedParams ?? []).map((param, index) => (
+            <input
+              key={`${param.name}:${param.value}:${index}`}
+              type="hidden"
+              name={param.name}
+              value={param.value}
+            />
+          ))}
+          {sortingEnabled && runtime?.sortField ? (
+            <input type="hidden" name={keys.sort} value={runtime.sortField} />
+          ) : null}
+          {sortingEnabled && runtime?.sortDir ? (
+            <input type="hidden" name={keys.dir} value={runtime.sortDir} />
+          ) : null}
+
+          {showSearchInput ? (
+            <label className="grid gap-2 text-sm">
+              <span className="font-medium text-[var(--color-text)]">Search products</span>
+              <input
+                name={keys.search}
+                defaultValue={searchValue}
+                placeholder="title or slug"
+                className="h-9 rounded-md border border-[var(--color-border)] bg-transparent px-3 text-sm"
+              />
+            </label>
+          ) : null}
+
+          {showCollectionFilter ? (
+            <fieldset className="space-y-2">
+              <legend className="text-sm font-medium text-[var(--color-text)]">Collections</legend>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {availableCollections.map((collection) => (
+                  <label
+                    key={collection.id}
+                    className="flex items-start gap-2 rounded-md border border-[var(--color-border)]/70 px-3 py-2 text-sm"
+                  >
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 h-4 w-4"
+                      name={keys.collection}
+                      value={collection.id}
+                      defaultChecked={activeCollectionIds.has(collection.id)}
+                    />
+                    <span className="space-y-0.5">
+                      <span className="block font-medium text-[var(--color-text)]">
+                        {collection.label}
+                      </span>
+                      {collection.slug ? (
+                        <span className="block text-xs text-[var(--color-text)]/60">
+                          /{collection.slug}
+                        </span>
+                      ) : null}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          ) : null}
+
+          {showStatusFilter ? (
+            <fieldset className="space-y-2">
+              <legend className="text-sm font-medium text-[var(--color-text)]">Status</legend>
+              <div className="grid gap-2 sm:grid-cols-3">
+                {availableStatuses.map((status) => (
+                  <label
+                    key={status}
+                    className="flex items-center gap-2 rounded-md border border-[var(--color-border)]/70 px-3 py-2 text-sm capitalize"
+                  >
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4"
+                      name={keys.status}
+                      value={status}
+                      defaultChecked={activeStatuses.has(status)}
+                    />
+                    <span>{status.replaceAll("_", " ")}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          ) : null}
+
+          <div className="flex items-center gap-3">
+            <button
+              type="submit"
+              className="inline-flex h-9 items-center justify-center rounded-md border border-[var(--color-border)] px-4 text-sm font-medium text-[var(--color-text)] transition hover:bg-[var(--color-bg)]/70"
+            >
+              Apply
+            </button>
+            {hasRejectedTokens ? (
+              <p className="text-xs text-[var(--color-text)]/60">
+                Ignored invalid table parameters.
+              </p>
+            ) : null}
+          </div>
+        </form>
+      ) : hasRejectedTokens ? (
+        <p className="mt-4 text-xs text-[var(--color-text)]/60">
+          Ignored invalid table parameters.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function ProductTablePaginationActions({
+  controls,
+  runtime,
+}: {
+  controls: Required<ProductTableControls>;
+  runtime: ProductTableResolvedRuntime | undefined;
+}) {
+  const previousPageHref = normalizePaginationHref(runtime?.previousPageHref);
+  const nextPageHref = normalizePaginationHref(runtime?.nextPageHref);
+  const currentPage = runtime?.page ?? 1;
+  const totalPages = runtime?.totalPages ?? 1;
+
+  if (controls.pagination === "paged" && (previousPageHref || nextPageHref)) {
+    return (
+      <nav
+        className="mt-6 flex items-center justify-between gap-3 text-sm"
+        aria-label="Product table pagination"
+      >
+        {previousPageHref ? (
+          <a href={previousPageHref} className="font-medium underline-offset-4 hover:underline">
+            Previous
+          </a>
+        ) : (
+          <span className="font-medium opacity-60">Previous</span>
+        )}
+        <span className="text-[var(--color-text)]/75">
+          Page {currentPage} of {totalPages}
+        </span>
+        {nextPageHref ? (
+          <a href={nextPageHref} className="font-medium underline-offset-4 hover:underline">
+            Next
+          </a>
+        ) : (
+          <span className="font-medium opacity-60">Next</span>
+        )}
+      </nav>
+    );
+  }
+
+  if (controls.pagination === "load-more" && nextPageHref) {
+    return (
+      <div className="mt-6">
+        <a href={nextPageHref} className="text-sm font-medium underline-offset-4 hover:underline">
+          Load more
+        </a>
+      </div>
+    );
+  }
+
+  return null;
+}
+
 export function ProductTableBlock({
   data,
   renderContext,
+  blockId,
 }: {
   data: ProductTableData;
   variant: string;
+  blockId?: string;
   renderContext?: WidgetRenderContext;
 }) {
   const normalized = normalizeProductTableData(data);
   const items = normalized.resolved?.items ?? [];
   const fields = normalizeProductTableFields(normalized.fields);
+  const controls = normalizeProductTableControls(normalized.controls);
   const links = normalizeProductTableLinks(normalized.links);
   const visibleColumns = resolveVisibleProductTableColumns(fields);
   const showStatusColumn = visibleColumns.some((column) => column.key === "status");
@@ -916,12 +1678,14 @@ export function ProductTableBlock({
     normalized.style === undefined ? "border-[var(--color-border)] bg-[var(--color-bg)]/70" : "";
   const tableCaptionText = normalized.header?.title ?? productTableDefaultCaptionText;
   const tableCaptionId = React.useId();
+  const runtime = normalized.resolved?.runtime;
 
   return (
     <section
       className="space-y-4"
       data-widget="product-table"
       data-product-table-count={String(items.length)}
+      data-product-table-page={String(runtime?.page ?? 1)}
       aria-label={tableCaptionText}
     >
       {previewLoading ? (
@@ -954,6 +1718,8 @@ export function ProductTableBlock({
 
       {renderProductTableHeader(normalized.header)}
 
+      <ProductTablePublicControls data={normalized} blockId={blockId} />
+
       {items.length === 0 ? (
         <div
           className={`rounded-xl border border-dashed px-4 py-6 text-center ${legacyEmptyClass}`}
@@ -969,68 +1735,131 @@ export function ProductTableBlock({
           </p>
         </div>
       ) : (
-        <div
-          className={`overflow-x-auto rounded-xl border ${legacyTableClass}`}
-          style={tableStyle}
-          tabIndex={0}
-          aria-label={tableCaptionText}
-        >
-          <table className="min-w-full text-sm" aria-labelledby={tableCaptionId}>
-            <caption id={tableCaptionId} className="sr-only">
-              {tableCaptionText}
-            </caption>
-            <thead>
-              <tr
-                className={`border-b border-[var(--color-border)] ${legacyHeaderClass}`}
-                style={headerStyle}
-              >
-                {visibleColumns.map((column) => (
-                  <th
-                    key={column.key}
-                    scope="col"
-                    className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-[var(--color-text)]/65"
-                  >
-                    {normalized.labels?.[column.labelKey]}
-                  </th>
-                ))}
-                {showActionColumn ? (
-                  <th
-                    scope="col"
-                    className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-[var(--color-text)]/65"
-                  >
-                    Action
-                  </th>
-                ) : null}
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item) => {
-                const linkAttrs = resolveProductTableLinkAttrs(item, links);
-                const rowInteractive =
-                  Boolean(linkAttrs) && (links.linkedColumn !== "none" || links.showAction);
+        <div>
+          <div
+            className={`overflow-x-auto rounded-xl border ${legacyTableClass}`}
+            style={tableStyle}
+            tabIndex={0}
+            aria-label={tableCaptionText}
+          >
+            <table className="min-w-full text-sm" aria-labelledby={tableCaptionId}>
+              <caption id={tableCaptionId} className="sr-only">
+                {tableCaptionText}
+              </caption>
+              <thead>
+                <tr
+                  className={`border-b border-[var(--color-border)] ${legacyHeaderClass}`}
+                  style={headerStyle}
+                >
+                  {visibleColumns.map((column) => {
+                    const sortField = resolveProductTableSortableField(column.key);
+                    const sortActive = sortField !== undefined && runtime?.sortField === sortField;
+                    const interactiveSort =
+                      controls.sorting === "interactive" && sortField !== undefined;
+                    const nextSortDir: CommerceWidgetSortDirection =
+                      sortActive && runtime?.sortDir === "asc" ? "desc" : "asc";
+                    const sortBadge = sortField
+                      ? resolveProductTableSortBadge({
+                          active: sortActive,
+                          dir: runtime?.sortDir ?? "desc",
+                          interactive: interactiveSort,
+                        })
+                      : "";
+                    const ariaSort = sortActive
+                      ? runtime?.sortDir === "asc"
+                        ? "ascending"
+                        : "descending"
+                      : undefined;
+                    const sortHref = interactiveSort
+                      ? resolveProductTableActiveSortHref({
+                          blockId,
+                          runtime,
+                          nextField: sortField,
+                          nextDir: nextSortDir,
+                        })
+                      : undefined;
 
-                return (
-                  <tr
-                    key={item.id}
-                    className={`border-b border-[var(--color-border)]/70 last:border-b-0 transition-colors ${productTableRowToneClassMap[item.status]} ${rowInteractive ? "hover:bg-slate-50/60" : ""}`}
-                    data-product-status={item.status}
-                  >
-                    {visibleColumns.map((column) => (
-                      <React.Fragment key={column.key}>
-                        {renderProductTableCell(column, item, {
-                          showStatusColumn,
-                          showStockQuantity: fields.showStockQuantity,
-                          links,
-                          linkAttrs,
-                        })}
-                      </React.Fragment>
-                    ))}
-                    {showActionColumn ? renderProductTableActionCell(item, links, linkAttrs) : null}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                    return (
+                      <th
+                        key={column.key}
+                        scope="col"
+                        aria-sort={ariaSort}
+                        className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-[var(--color-text)]/65"
+                      >
+                        {interactiveSort && sortHref ? (
+                          <a
+                            href={sortHref}
+                            className={productTableSortLinkClassName}
+                            aria-label={`Sort by ${normalized.labels?.[column.labelKey]} ${nextSortDir === "asc" ? "ascending" : "descending"}`}
+                          >
+                            <span>{normalized.labels?.[column.labelKey]}</span>
+                            {sortBadge ? (
+                              <span
+                                className={productTableSortIndicatorClassName}
+                                aria-hidden="true"
+                              >
+                                {sortBadge}
+                              </span>
+                            ) : null}
+                          </a>
+                        ) : (
+                          <span className="inline-flex items-center gap-2">
+                            <span>{normalized.labels?.[column.labelKey]}</span>
+                            {controls.sorting === "indicator" && sortField && sortBadge ? (
+                              <span
+                                className={productTableSortIndicatorClassName}
+                                aria-hidden="true"
+                              >
+                                {sortBadge}
+                              </span>
+                            ) : null}
+                          </span>
+                        )}
+                      </th>
+                    );
+                  })}
+                  {showActionColumn ? (
+                    <th
+                      scope="col"
+                      className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-[var(--color-text)]/65"
+                    >
+                      Action
+                    </th>
+                  ) : null}
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((item) => {
+                  const linkAttrs = resolveProductTableLinkAttrs(item, links);
+                  const rowInteractive =
+                    Boolean(linkAttrs) && (links.linkedColumn !== "none" || links.showAction);
+
+                  return (
+                    <tr
+                      key={item.id}
+                      className={`border-b border-[var(--color-border)]/70 last:border-b-0 transition-colors ${productTableRowToneClassMap[item.status]} ${rowInteractive ? "hover:bg-slate-50/60" : ""}`}
+                      data-product-status={item.status}
+                    >
+                      {visibleColumns.map((column) => (
+                        <React.Fragment key={column.key}>
+                          {renderProductTableCell(column, item, {
+                            showStatusColumn,
+                            showStockQuantity: fields.showStockQuantity,
+                            links,
+                            linkAttrs,
+                          })}
+                        </React.Fragment>
+                      ))}
+                      {showActionColumn
+                        ? renderProductTableActionCell(item, links, linkAttrs)
+                        : null}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <ProductTablePaginationActions controls={controls} runtime={runtime} />
         </div>
       )}
     </section>

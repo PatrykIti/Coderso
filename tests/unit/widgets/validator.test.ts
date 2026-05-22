@@ -26,6 +26,10 @@ import {
   createPricingPlansWidget,
   pricingPlansDefaults,
 } from "../../../core/widgets/core/pricingPlans";
+import {
+  createProductTableWidget,
+  productTableDefaults,
+} from "../../../core/widgets/core/productTable";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { clearWidgetValidators, normalizeWidgetBlock } from "../../../core/widgets/validator";
 import type { WidgetDefinition, WidgetBlock } from "../../../core/widgets/types";
@@ -216,6 +220,77 @@ test("normalizeWidgetBlock accepts Contact runtime hydration data but rejects un
               extra: "nope",
             },
           ],
+        },
+      } as never,
+    })
+  ).toThrow("widget_schema_invalid");
+});
+
+test("normalizeWidgetBlock accepts Product Table public controls but rejects unknown runtime keys", () => {
+  registerWidget(
+    createProductTableWidget({
+      wizard: Dummy,
+      visual: Dummy,
+      advanced: Dummy,
+    })
+  );
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "product-table-runtime",
+      type: "product-table",
+      variant: "default",
+      data: {
+        ...productTableDefaults,
+        controls: {
+          showSearchInput: true,
+          showCollectionFilter: true,
+          showStatusFilter: true,
+          sorting: "interactive",
+          pagination: "paged",
+          pageSize: 8,
+        },
+        resolved: {
+          items: [],
+          total: 0,
+          resolvedAt: "2026-05-22T12:00:00.000Z",
+          runtime: {
+            searchQuery: "starter",
+            status: ["published"],
+            collectionIds: ["collection-1"],
+            availableStatuses: ["published"],
+            availableCollections: [{ id: "collection-1", label: "Summer", slug: "summer" }],
+            sortField: "title",
+            sortDir: "asc",
+            page: 2,
+            pageSize: 8,
+            totalPages: 3,
+            previousPageHref: "?foo=bar",
+            nextPageHref: "?foo=bar&pt.product-table-1.page=3",
+            clearHref: "?foo=bar",
+            retainedParams: [{ name: "foo", value: "bar" }],
+            rejectedTokens: ["status"],
+          },
+        },
+      },
+    })
+  ).not.toThrow();
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "product-table-runtime-bad",
+      type: "product-table",
+      variant: "default",
+      data: {
+        ...productTableDefaults,
+        resolved: {
+          items: [],
+          total: 0,
+          resolvedAt: "2026-05-22T12:00:00.000Z",
+          runtime: {
+            searchQuery: "starter",
+            extra: "nope",
+          },
         },
       } as never,
     })
