@@ -6,7 +6,7 @@
 **Category:** Widgets + Content + Admin UI + Runtime Render
 **Estimated Effort:** Large
 **Dependencies:** TASK-282, TASK-282-01, TASK-282-02
-**Status:** To Do
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -15,8 +15,8 @@
 Upgrade Rich Text Section structured fallback blocks so they can carry safe rich
 content and can be managed without accidental data loss or unusable long lists.
 
-This leaf covers KOD-03, KOD-04, KOD-15, KOD-16, and the KOD-06 note that blocks
-currently render every heading as `<h3>` before TOC generation.
+This leaf covers KOD-03, KOD-04, KOD-15, and KOD-16. KOD-06 stays classified
+in TASK-282-07 as a not-a-bug closure note after these block semantics land.
 
 ## Scope Boundary
 
@@ -40,16 +40,16 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Extend `RichTextSectionBlock` only as needed for safe rich content and
+- [x] Extend `RichTextSectionBlock` only as needed for safe rich content and
   heading hierarchy, preserving legacy `{ id, heading, content }`.
-- [ ] Add a single block-to-HTML renderer helper that handles heading level,
+- [x] Add a single block-to-HTML renderer helper that handles heading level,
   rich content, legacy plain text, escaping, and sanitizer reuse.
-- [ ] Replace destructive `Blocks count` truncation with a confirm/undo flow or
+- [x] Replace destructive `Blocks count` truncation with a confirm/undo flow or
   non-destructive "mark extra blocks inactive" decision.
-- [ ] Add a recoverable remove action for individual blocks.
-- [ ] Add collapsed rows, current-block focus, or pagination for large block
+- [x] Add a recoverable remove action for individual blocks.
+- [x] Add collapsed rows, current-block focus, or pagination for large block
   counts, while preserving keyboard move up/down actions.
-- [ ] Ensure TOC output from block mode remains deterministic and documented.
+- [x] Ensure TOC output from block mode remains deterministic and documented.
 
 ## Files to Change
 
@@ -104,6 +104,15 @@ const visibleBlocks = blocks.slice(pageStart, pageStart + blockPageSize);
 const expandedId = selectedBlockId ?? visibleBlocks[0]?.id;
 ```
 
+Regression test shape:
+
+```ts
+test("legacy plain-text block content still renders as escaped paragraphs with line breaks", ...);
+test("rich block content sanitizes and renders safe formatting plus bounded heading levels", ...);
+test("count reduction requires confirmation and undo restores the exact previous block array", ...);
+test("large block sets collapse or page instead of rendering all 20 editors expanded at once", ...);
+```
+
 ## Error Handling
 
 - Unknown heading levels normalize to the default chosen for legacy content.
@@ -145,7 +154,7 @@ No API routes are added.
 - Update `_docs/_WIDGETS/RICH_TEXT_SECTION.md` with structured block rich
   content, heading hierarchy, and destructive-action behavior.
 - Update `_docs/PLAYWRIGHT/REPORT_RICH_TEXT_SECTION_WIDGET.md` rows KOD-03,
-  KOD-04, KOD-06, KOD-15, and KOD-16 after validation.
+  KOD-04, KOD-15, and KOD-16 after validation.
 
 ## Changelog Policy
 

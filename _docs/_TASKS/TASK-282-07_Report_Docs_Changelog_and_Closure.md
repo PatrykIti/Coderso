@@ -6,7 +6,7 @@
 **Category:** Widgets + Docs + Playwright QA + Release Hygiene
 **Estimated Effort:** Medium
 **Dependencies:** TASK-282-01, TASK-282-02, TASK-282-03, TASK-282-04, TASK-282-05, TASK-282-08, TASK-282-09, TASK-282-06
-**Status:** To Do
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -15,15 +15,39 @@
 Close the Rich Text Section Playwright follow-up family with exact fixed,
 deferred, and TASK-256-excluded evidence.
 
+Closure for this family must allow explicit report statuses beyond `fixed` and
+`deferred`: `fixed-shared`, `not-a-bug`, `accepted limitation`, and
+`documented only` are valid end states when backed by source evidence and a
+clear reason.
+
 This leaf owns final synchronization after TASK-282 implementation leaves land:
 the source report, widget docs, board rows, changelog, and validation matrix.
+
+
+## Final Closure Evidence
+
+TASK-282-07 closed after a constrained local replay on 2026-05-21 against the
+isolated `coderso_task282` database.
+
+- Playwright/Chromium/browser deps were provisioned locally.
+- The local first-run gate was completed through the supported
+  `PATCH /admin/api/settings` path instead of mutating a shared remote
+  environment.
+- Headless replay captured:
+  - admin `Text color` clear -> undo restoration back to `#112233`,
+  - Advanced diagnostics copy `Active source: html`,
+  - article runtime width truthfulness and `H1` title semantics,
+  - deterministic `aria-labelledby`,
+  - TOC focus classes plus focused anchor target,
+  - structured image/attachment/embed rendering with no iframe output.
 
 ## Scope Boundary
 
 In scope:
 
 - Refreshing `_docs/PLAYWRIGHT/REPORT_RICH_TEXT_SECTION_WIDGET.md` with final
-  fixed/deferred/TASK-256 classification.
+  fixed, fixed-shared, not-a-bug, accepted-limitation, documented-only,
+  deferred, and TASK-256 classification.
 - Updating `_docs/_WIDGETS/RICH_TEXT_SECTION.md` and any source-of-truth docs
   touched by actual implementation.
 - Adding the final TASK-282 changelog entry and `_docs/_CHANGELOG/README.md`
@@ -41,26 +65,28 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Build a finding-by-finding closure table for every KOD/A11Y/observation row
-  in `REPORT_RICH_TEXT_SECTION_WIDGET.md`.
-- [ ] Close KOD-10 through TASK-282-09 or leave TASK-282-09 open with explicit
+- [x] Build a finding-by-finding closure table for every KOD/A11Y/observation row
+  in `REPORT_RICH_TEXT_SECTION_WIDGET.md`, using an explicit status set such as
+  `fixed`, `fixed-shared`, `not-a-bug`, `accepted limitation`,
+  `documented only`, or `deferred`.
+- [x] Close KOD-10 through TASK-282-09 or leave TASK-282-09 open with explicit
   remaining validation. Do not mark KOD-10 as closed by TASK-256 unless
   TASK-256 closure names the exact Rich Text Section physical owner path and
   tests.
-- [ ] Close KOD-13 only when both the image/media-picker slice (TASK-282-05) and
+- [x] Close KOD-13 only when both the image/media-picker slice (TASK-282-05) and
   attachment/safe embed slice (TASK-282-08) have final fixed/deferred evidence.
-- [ ] Record any deferred items with a named future task or explicit reason.
-- [ ] Run or record a constrained Playwright/admin/frontend refresh for visual
+- [x] Record any deferred items with a named future task or explicit reason.
+- [x] Run or record a constrained Playwright/admin/frontend refresh for visual
   and runtime rows that cannot be proven by unit/Vitest alone: output-source UI,
   article max-width, TOC focus, section labeling, inline media, attachments,
   safe embeds, and text-color clear. Capture textual run/session evidence in
   the report; do not commit temporary screenshot PNGs.
-- [ ] Update `_docs/_WIDGETS/RICH_TEXT_SECTION.md` with the final schema,
+- [x] Update `_docs/_WIDGETS/RICH_TEXT_SECTION.md` with the final schema,
   editor, runtime, security, media, and accessibility contract.
-- [ ] Update `_docs/WIDGETS.md` or `_docs/WIDGET_PACK_MATRIX.md` only if actual
+- [x] Update `_docs/WIDGETS.md` or `_docs/WIDGET_PACK_MATRIX.md` only if actual
   implementation changed those source-of-truth contracts.
-- [ ] Add a changelog entry and update `_docs/_CHANGELOG/README.md`.
-- [ ] Move TASK-282 umbrella/leaves and board rows to `Done` with dates only
+- [x] Add a changelog entry and update `_docs/_CHANGELOG/README.md`.
+- [x] Move TASK-282 umbrella/leaves and board rows to `Done` with dates only
   after validation is complete.
 
 ## Files to Change
@@ -84,6 +110,7 @@ Closure matrix:
 | Finding | Final status | Evidence | Owner |
 |---|---|---|---|
 | KOD-01 | Fixed | TASK-282-01 commit + Vitest evidence | TASK-282 |
+| KOD-06 | Not-a-bug | Documented deterministic TOC behavior + report evidence | TASK-282-07 |
 | KOD-10 | Fixed/deferred by physical owner | TASK-282-09 commit + editor Vitest evidence, or explicit open TASK-282-09 blocker | TASK-282-09 |
 | KOD-13 images | Fixed/deferred by physical owner | TASK-282-05 commit + media render/editor evidence | TASK-282-05 |
 | KOD-13 attachments/embeds | Fixed/deferred by physical owner | TASK-282-08 commit + attachment/embed render/editor evidence | TASK-282-08 |
@@ -162,5 +189,8 @@ No API routes are added by this closure leaf.
 - Every source-report finding has a final status with evidence.
 - TASK-256-owned rows are not claimed as TASK-282 fixes.
 - Source-of-truth widget docs match the final code.
+- Every closed report row uses an explicit status vocabulary that can represent
+  real `not-a-bug`, `accepted limitation`, and `documented only` outcomes
+  instead of forcing them into `fixed` or `deferred`.
 - Task board statistics, task files, changelog, and validation evidence are
   synchronized.

@@ -5,15 +5,17 @@
 **Priority:** Medium
 **Category:** Widgets + Admin UI + Content UX
 **Estimated Effort:** Medium
-**Dependencies:** TASK-282, TASK-282-01, TASK-282-02, TASK-282-03, TASK-282-04, TASK-282-05, TASK-282-08, TASK-282-09
-**Status:** To Do
+**Dependencies:** TASK-282, TASK-282-01, TASK-282-02, TASK-282-03, TASK-282-04
+**Status:** Done (2026-05-21)
 
 ---
 
 ## Overview
 
 Polish Rich Text Section editor mode ownership and reader guidance after the
-core output, authoring, block, media/embed, and runtime semantics are repaired.
+core output, authoring, block, and runtime semantics are repaired. Media/embed
+and text-color-clear follow-ups may land before or after this leaf when they do
+not change the mode-ownership contract.
 
 This leaf covers KOD-05, KOD-07, KOD-WIZ, and KOD-DUP from
 `_docs/PLAYWRIGHT/REPORT_RICH_TEXT_SECTION_WIDGET.md`.
@@ -29,8 +31,8 @@ In scope:
 - Dropcap preview/help that explains when no paragraph exists.
 - Clearer ownership for typography controls so Visual remains user-facing and
   Advanced remains technical diagnostics/normalization.
-- Documentation of KOD-06 as not-a-bug while preserving any block heading
-  hierarchy changes from TASK-282-03.
+- Do not reclassify KOD-06 here; preserve any block heading hierarchy changes
+  from TASK-282-03 while final disposition stays in TASK-282-07.
 
 Out of scope:
 
@@ -41,15 +43,15 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Replace or augment Wizard's variant dropdown with the same VariantCards
+- [x] Replace or augment Wizard's variant dropdown with the same VariantCards
   language used by Visual, while keeping Wizard compact.
-- [ ] Add dropcap preview or status copy that is derived from the active rendered
+- [x] Add dropcap preview or status copy that is derived from the active rendered
   source and reports when no paragraph will receive dropcap.
-- [ ] Decide whether Advanced should show read-only variant/output diagnostics
+- [x] Decide whether Advanced should show read-only variant/output diagnostics
   or an editable variant control; keep one owner for actual variant mutation.
-- [ ] Reduce typography duplication by moving user-facing styling to Visual and
+- [x] Reduce typography duplication by moving user-facing styling to Visual and
   making Advanced explicitly diagnostic/technical.
-- [ ] Keep the final behavior friendly for beginner editors and avoid exposing
+- [x] Keep the final behavior friendly for beginner editors and avoid exposing
   raw schema concepts unless needed in Advanced.
 
 ## Files to Change
@@ -98,6 +100,15 @@ Advanced diagnostics:
 />
 ```
 
+Regression test shape:
+
+```ts
+test("wizard and visual use the same variant-selection language while keeping wizard compact", ...);
+test("dropcap guidance reports when the active rendered source has no paragraph to style", ...);
+test("advanced mode shows read-only output or variant diagnostics instead of duplicating visual controls", ...);
+test("typography ownership stays in visual while advanced remains technical or diagnostic", ...);
+```
+
 ## Error Handling
 
 - Dropcap guidance must never parse or render unsanitized HTML directly in the
@@ -133,7 +144,7 @@ No API routes are added.
 
 - Update `_docs/_WIDGETS/RICH_TEXT_SECTION.md` with final editor mode ownership.
 - Update `_docs/PLAYWRIGHT/REPORT_RICH_TEXT_SECTION_WIDGET.md` rows KOD-05,
-  KOD-07, KOD-WIZ, KOD-DUP, and KOD-06 notes after validation.
+  KOD-07, KOD-WIZ, and KOD-DUP after validation.
 
 ## Changelog Policy
 

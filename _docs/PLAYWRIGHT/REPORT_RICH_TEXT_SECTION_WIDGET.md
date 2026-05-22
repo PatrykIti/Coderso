@@ -9,6 +9,8 @@
 
 ---
 
+> **Uwaga historyczna:** Sekcje 1-8 poniżej pozostają oryginalnym baseline z audytu 2026-05-16, przed wdrożeniem rodziny `TASK-282`. Aktualny kontrakt widgetu po TASK-282 jest opisany w sekcji `Status po TASK-282 zamknięciu (2026-05-21)` oraz w `_docs/_WIDGETS/RICH_TEXT_SECTION.md`.
+
 ## 1. Przegląd widgetu
 
 **Typ:** Composite  
@@ -23,6 +25,8 @@ Rich Text Section to widget do prezentacji długich treści edytorskich (long-fo
 ---
 
 ## 2. Analiza kodu — struktura konfiguracji
+
+_Uwaga: sekcja 2 poniżej pozostaje snapshotem baseline z audytu 2026-05-16. Aktualny kontrakt po TASK-282 rozszerza `titleBlock.headingLevel`, structured blocks `text/image/attachment/embed`, Wizard bez resetu `outputMode`, authoring przez `PostRichTextAdapter`, widget-owned media/embed controls oraz prawdziwe `maxWidth` dla wariantu `article`._
 
 ### 2.1 Model danych
 
@@ -414,11 +418,13 @@ Przy `outputMode: "blocks-fallback"`:
 
 ### 8.3 TOC anchor scroll na froncie
 
-TOC linki używają `href="#slug"` gdzie slug jest generowany przez `slugifyHeading()` ze slugów nagłówków. Kliknięcie linku → URL zmienia się → scroll do nagłówka z `id`. Działa poprawnie i przewidywalnie.
+Po TASK-282 TOC linki używają `href="#rich-text-section-<instance>-heading-<slug>"`, gdzie `id` jest scope'owane przez instancję widgetu (`scopedId(...)`) i znormalizowany slug nagłówka. Dzięki temu wiele Rich Text Section na jednej stronie nie koliduje anchorami. Kliknięcie linku → URL zmienia się → scroll do właściwego nagłówka z deterministycznym `id`.
 
 ---
 
 ## 9. Podsumowanie — macierz priorytetów
+
+_Sekcje 9-11 poniżej również pozostają oryginalnym baseline z audytu 2026-05-16. Aktualny stan implementacji/closure jest śledzony dopiero w sekcji „Status po TASK-282 zamknięciu (2026-05-21)”._
 
 ### Krytyczne — naprawić natychmiast
 
@@ -510,3 +516,56 @@ TOC linki używają `href="#slug"` gdzie slug jest generowany przez `slugifyHead
 - Shared rows that match existing TASK-256 clear, accessibility, or
   mode-ownership mechanisms remain referenced by `TASK-256-07` and
   `TASK-256-08`.
+
+## Status po TASK-282 zamknięciu (2026-05-21)
+
+Rodzina `TASK-282` została domknięta w izolowanym worktree po lokalnym replayu
+admin/frontend przeciwko lokalnej bazie `coderso_task282`. Replay użył:
+
+- lokalnego Postgresa na `127.0.0.1:5432`,
+- migracji wykonanych przez `drizzle-kit migrate`,
+- seedingu lokalnego admina oraz lokalnego patcha `setup.completed` przez
+  wspierany `PATCH /admin/api/settings`,
+- opublikowanej strony testowej `RichTextSectionTest`
+  (`e9130804-a94a-4d14-8880-5b3ef1981458`, slug `/richtextsectiontest`),
+- headless Playwright evidence captured at `2026-05-21T23:25:13.035Z`.
+
+| Owner | Findings | Current status | Evidence summary |
+|-------|----------|--------------|------------------|
+| `TASK-282-01` | `KOD-01`, `KOD-02` | Fixed | Admin replay pokazał sekcję `Rendered source` z tekstem `Variant: article · Active source: html · Block count: 1`, a scoped editor/runtime tests potwierdzają, że Wizard nie resetuje już `outputMode`. |
+| `TASK-282-02` | `KOD-11`, `KOD-12`, `KOD-14` | Fixed | `body.html` używa bezpiecznego `PostRichTextAdapter`, a scoped Vitest coverage potwierdza diagnostykę sanitizera dla usuwanych tagów i przepisywanych linków, w tym `<img>` i `<h1>`. |
+| `TASK-282-03` | `KOD-03`, `KOD-04`, `KOD-15`, `KOD-16` | Fixed | Structured blocks wspierają rich text, poziomy `h2/h3/h4`, confirm + undo, navigator/paging, a lokalny frontend replay potwierdził render text/image/attachment/embed dla opublikowanej strony testowej. |
+| `TASK-282-04` | `KOD-08`, `KOD-09`, `A11Y-01`, section label note | Fixed | Frontend replay potwierdził `data-rich-text-max-width="full"`, `article.className = "mx-auto w-full space-y-6 max-w-none"`, `computedMaxWidth = "none"`, `H1` dla `Long-form content section`, zgodność `aria-labelledby`, oraz TOC linki z klasami `focus-visible:ring-2`. |
+| `TASK-282-05` | `KOD-13` (image/media picker slice) | Fixed | Frontend replay potwierdził image block z `alt="Story image"`, `src="https://example.com/story.jpg"` i bezpiecznym linkiem `https://example.com/story`; raw `<img>` w HTML body pozostaje poza kontraktem. |
+| `TASK-282-08` | `KOD-13` (attachment/embed slice) | Fixed | Frontend replay potwierdził attachment card (`Download guide` -> `https://example.com/guide.pdf`) oraz safe embed link card (`Watch the walkthrough` -> YouTube URL) przy `iframeCount = 0`. |
+| `TASK-282-09` | `KOD-10` | Fixed | Admin replay potwierdził lokalny clear action dla `Text color`: wartość startowa `#112233`, clear do pustego pola, a następnie `Undo` przywracający `#112233`. |
+| `TASK-282-06` | `KOD-05`, `KOD-WIZ`, `KOD-DUP` | Fixed | Dropcap guidance jest jawne, Wizard używa compact variant cards, a Advanced nie duplikuje już tych samych token controls co Visual; scoped editor tests pokrywają ten contract. |
+| `TASK-282-06` | `KOD-07` | Accepted limitation | Visual pozostaje jedynym właścicielem zmiany wariantu. Advanced opisuje source/output contract i nie powiela product-facing variant control. |
+| `TASK-282-07` | `KOD-06` | Not a bug | TOC dla `blocks` działał poprawnie już wcześniej; closure dokumentuje ten fakt i dodaje testy dla scoped heading ids oraz runtime markers. |
+
+Focused validation tied to these Rich Text Section changes was green on
+2026-05-21:
+
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun x vitest run --config vitest.config.ts tests/vitest/widgets/richTextSection.test.tsx`
+- `bun x vitest run --config vitest.config.ts tests/vitest/ui/rich-text-section-editor-wave.test.tsx`
+- `bun test tests/unit/widgets/validator.test.ts`
+- `git diff --check`
+- `bun run lint`
+- `bun run gates:coderso`
+- `bun run scan:security:strict`
+- `bun run precommit`
+
+Final browser evidence captured locally on 2026-05-21:
+
+- Admin editor (`http://localhost:5173/admin/pages/e9130804-a94a-4d14-8880-5b3ef1981458`)
+  confirmed the `Text color` clear/undo path and the Advanced diagnostics copy
+  `Active source: html`.
+- Public runtime (`http://localhost:3000/richtextsectiontest`) confirmed:
+  article width truthfulness, `H1` title semantics, deterministic
+  `aria-labelledby`, TOC focus classes plus active anchor focus, and the
+  structured image/attachment/embed render contract.
+- The replay used an isolated local DB and a supported first-run completion via
+  `PATCH /admin/api/settings`; no shared remote environment was used for final
+  closure.

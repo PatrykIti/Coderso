@@ -6,7 +6,7 @@
 **Category:** Widgets + Content + Admin UI + Runtime Render + Accessibility + Playwright QA
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-213-06-03, TASK-252-06-10, TASK-256-07
-**Status:** To Do
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -33,6 +33,23 @@ blocks, TOC generation, dropcap, variant rendering, and typography controls.
 The report shows remaining Rich Text Section-only gaps around authoring UX,
 source ownership, rich block content, article layout truthfulness, content
 semantics, inline media, and closure evidence.
+
+
+## Final Closure Evidence
+
+TASK-282 closed in this isolated worktree after a local admin/frontend replay
+against a local Postgres database (`coderso_task282`) on 2026-05-21.
+
+- local migrations were applied through `drizzle-kit migrate`;
+- the local first-run gate was completed through the supported
+  `PATCH /admin/api/settings` path (`site.publicBaseUrl`, TTLs,
+  `setup.completed`);
+- the published test page `RichTextSectionTest`
+  (`e9130804-a94a-4d14-8880-5b3ef1981458`, `/richtextsectiontest`) backed the
+  runtime replay;
+- headless Playwright evidence captured admin clear/undo plus output-source
+  diagnostics and frontend article/TOC/media/embed semantics without touching a
+  shared remote environment.
 
 ## Scope Boundary Against TASK-256
 
@@ -73,7 +90,8 @@ Rich Text Section-only work.
 |---|---|
 | KOD-01, KOD-02; report lines 95-101, 265, 273, 409-413 | TASK-282-01 |
 | KOD-11, KOD-12, KOD-14; report lines 197-225, 309, 427, 447-458 | TASK-282-02 |
-| KOD-03, KOD-04, KOD-06, KOD-15, KOD-16; report lines 105-145, 229-241, 274-279, 391-395, 443-448, 456 | TASK-282-03 |
+| KOD-03, KOD-04, KOD-15, KOD-16; report lines 105-145, 229-241, 274-279, 391-395, 443-448, 456 | TASK-282-03 |
+| KOD-06 | TASK-282-07 (not-a-bug classification + closure evidence) |
 | KOD-08, KOD-09, A11Y-01, section label; report lines 157-181, 321-328, 365-376, 435, 445, 449 | TASK-282-04 |
 | KOD-13 image/media-picker slice; report lines 213-217, 436 | TASK-282-05 |
 | KOD-13 attachments and safe video/embed policy; report lines 213-217, 436 | TASK-282-08 |
@@ -94,15 +112,15 @@ Rich Text Section-only work.
 
 ## Sub-Tasks
 
-- [ ] TASK-282-01: Rich Text Output Mode and Wizard Ownership
-- [ ] TASK-282-02: Rich Text WYSIWYG HTML Body and Sanitizer Feedback
-- [ ] TASK-282-03: Rich Text Structured Blocks Rich Content and Scale UX
-- [ ] TASK-282-04: Rich Text Article Width Title and TOC Accessibility
-- [ ] TASK-282-05: Rich Text Inline Media and Safe Content Model
-- [ ] TASK-282-06: Rich Text Editor Mode IA and Reader Guidance
-- [ ] TASK-282-07: Rich Text Report Docs Changelog and Closure
-- [ ] TASK-282-08: Rich Text Attachments and Safe Embed Policy
-- [ ] TASK-282-09: Rich Text Text Color Clear Adoption
+- [x] TASK-282-01: Rich Text Output Mode and Wizard Ownership
+- [x] TASK-282-02: Rich Text WYSIWYG HTML Body and Sanitizer Feedback
+- [x] TASK-282-03: Rich Text Structured Blocks Rich Content and Scale UX
+- [x] TASK-282-04: Rich Text Article Width Title and TOC Accessibility
+- [x] TASK-282-05: Rich Text Inline Media and Safe Content Model
+- [x] TASK-282-06: Rich Text Editor Mode IA and Reader Guidance
+- [x] TASK-282-07: Rich Text Report Docs Changelog and Closure
+- [x] TASK-282-08: Rich Text Attachments and Safe Embed Policy
+- [x] TASK-282-09: Rich Text Text Color Clear Adoption
 
 ## Implementation Order
 
@@ -120,7 +138,10 @@ Rich Text Section-only work.
 7. Complete TASK-282-09 after TASK-256-02 shared clear helper behavior is
    available, or earlier only if the local editor can adopt an existing helper
    without implementing generic clear semantics.
-8. Complete TASK-282-06 after the major editor surfaces are stable.
+8. Complete TASK-282-06 after TASK-282-04 so editor-mode guidance can rely on
+   final source, block, and heading semantics. TASK-282-06 does not need to
+   wait for attachment/embed or text-color-clear closure when those surfaces do
+   not change the mode-ownership contract.
 9. Complete TASK-282-07 last with report evidence, widget docs, changelog, board,
    and validation results.
 
@@ -199,8 +220,9 @@ This umbrella does not add API routes.
 ## Acceptance Criteria
 
 - Every finding in `_docs/PLAYWRIGHT/REPORT_RICH_TEXT_SECTION_WIDGET.md` is
-  fixed, explicitly excluded as TASK-256 shared scope, or deferred to a named
-  future task with a reason.
+  fixed, explicitly excluded as TASK-256 shared scope, classified as
+  `not-a-bug`, `accepted limitation`, or `documented only` with evidence, or
+  deferred to a named future task with a reason.
 - TASK-282 leaves do not duplicate implementation already owned by TASK-256.
 - Rich Text Section schema, defaults, normalizer, render, editor, tests, docs,
   and report evidence move together for every new user-facing option.

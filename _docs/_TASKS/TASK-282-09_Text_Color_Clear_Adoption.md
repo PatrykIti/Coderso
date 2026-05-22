@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Design Tokens
 **Estimated Effort:** Medium
 **Dependencies:** TASK-282, TASK-256-02
-**Status:** To Do
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -42,16 +42,16 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Verify whether TASK-256-02 landed a shared helper that supports configured
+- [x] Verify whether TASK-256-02 landed a shared helper that supports configured
   vs fallback clear state.
-- [ ] If the helper exists, adopt it in the Rich Text Section Visual `Text
+- [x] If the helper exists, adopt it in the Rich Text Section Visual `Text
   color` field and keep `Background color` behavior unchanged.
-- [ ] If no helper exists, add only the minimal local `textColor` clear path that
+- [x] If no helper exists, add only the minimal local `textColor` clear path that
   uses the existing editor update helper and does not create a new generic
   shared abstraction.
-- [ ] Add focused tests for clear button presence, clear action, CSS-variable
+- [x] Add focused tests for clear button presence, clear action, CSS-variable
   fallback preservation, and no unrelated option mutation.
-- [ ] Update report/docs evidence for KOD-10.
+- [x] Update report/docs evidence for KOD-10.
 
 ## Files to Change
 

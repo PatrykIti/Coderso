@@ -6,7 +6,7 @@
 **Category:** Widgets + Content + Admin UI + Runtime Render + Security
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-282, TASK-282-01
-**Status:** To Do
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -43,12 +43,12 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Add a Rich Text Section body authoring adapter that stores sanitized HTML
+- [x] Add a Rich Text Section body authoring adapter that stores sanitized HTML
   in `body.html` and does not persist post-editor-only metadata.
-- [ ] Support the current sanitizer allowlist: `p`, `br`, `strong`, `em`, `u`,
+- [x] Support the current sanitizer allowlist: `p`, `br`, `strong`, `em`, `u`,
   `s`, `a`, `ul`, `ol`, `li`, `blockquote`, `code`, `pre`, `h2`, `h3`, `h4`,
   `hr`, and `span`.
-- [ ] Add `sanitizeRichTextHtmlWithDiagnostics(rawHtml)` or equivalent by
+- [x] Add `sanitizeRichTextHtmlWithDiagnostics(rawHtml)` or equivalent by
   reusing the existing Bun-free tokenizer/sanitizer helpers from
   `core/services/posts/editor/postRichTextHtmlUtils.ts`. The current
   `sanitizeHtmlWithPolicy()` contract has no drop callbacks, so diagnostics
@@ -57,11 +57,11 @@ Out of scope:
   by runtime rendering. Do not extend shared post sanitizer/helper behavior in
   this leaf; if implementation needs a reusable shared diagnostic API, split a
   named shared-helper task first and keep this leaf blocked on that task.
-- [ ] Surface friendly diagnostics for stripped `<img>`, stripped `<h1>`, unsafe
+- [x] Surface friendly diagnostics for stripped `<img>`, stripped `<h1>`, unsafe
   hrefs, event handlers, scripts, iframes, and unsupported attributes.
-- [ ] Keep Advanced raw HTML editing technical-only with sanitize-now behavior,
+- [x] Keep Advanced raw HTML editing technical-only with sanitize-now behavior,
   diagnostics, and raw snapshot.
-- [ ] Preserve existing default HTML and legacy saved HTML.
+- [x] Preserve existing default HTML and legacy saved HTML.
 
 ## Files to Change
 
@@ -140,6 +140,15 @@ Advanced raw HTML:
 ```tsx
 <Textarea value={rawHtmlDraft} onChange={setRawHtmlDraft} />
 <Button onClick={() => updateBodyHtmlFromEditor(rawHtmlDraft)}>Sanitize and apply</Button>
+```
+
+Regression test shape:
+
+```ts
+test("visual rich editor stores widget-sanitized HTML instead of raw textarea input", ...);
+test("sanitizeRichTextHtmlWithDiagnostics reports stripped img and h1 tags", ...);
+test("sanitizeRichTextHtmlWithDiagnostics reports rewritten unsafe hrefs and removed attributes", ...);
+test("advanced raw HTML sanitize-and-apply flow updates body.html and diagnostics together", ...);
 ```
 
 ## Error Handling

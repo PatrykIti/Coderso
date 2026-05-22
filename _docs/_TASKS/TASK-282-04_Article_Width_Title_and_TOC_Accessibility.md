@@ -6,7 +6,7 @@
 **Category:** Widgets + Runtime Render + Accessibility + SEO
 **Estimated Effort:** Large
 **Dependencies:** TASK-282, TASK-282-01, TASK-282-02, TASK-282-03
-**Status:** To Do
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -38,21 +38,21 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Replace the hardcoded article inner `max-w-3xl` class with the normalized
+- [x] Replace the hardcoded article inner `max-w-3xl` class with the normalized
   `maxWidthClassMap` policy or a deliberate article-specific width mapping.
-- [ ] Add deterministic heading-level ownership for `titleBlock.title`, such as
+- [x] Add deterministic heading-level ownership for `titleBlock.title`, such as
   `titleBlock.headingLevel?: 1 | 2 | 3`, while defaulting legacy payloads to the
   current safe level or a documented improved default.
-- [ ] Generate a stable section heading id when title text exists and connect it
+- [x] Generate a stable section heading id when title text exists and connect it
   to the section with `aria-labelledby`.
-- [ ] Add `aria-label` fallback when no title exists but the section still
+- [x] Add `aria-label` fallback when no title exists but the section still
   renders content.
-- [ ] Update `RichTextSectionBlock` to accept the renderer `blockId` prop from
+- [x] Update `RichTextSectionBlock` to accept the renderer `blockId` prop from
   the shared widget render contract and use it as the section/title id seed.
   Add duplicate-widget SSR coverage proving two Rich Text Section widgets with
   the same title do not emit duplicate `aria-labelledby` ids.
-- [ ] Add `focus-visible` classes to TOC links without changing hover behavior.
-- [ ] Add tests for admin preview/public SSR parity markers.
+- [x] Add `focus-visible` classes to TOC links without changing hover behavior.
+- [x] Add tests for admin preview/public SSR parity markers.
 
 ## Files to Change
 
@@ -113,6 +113,15 @@ TOC focus:
 
 ```tsx
 className="text-[var(--color-text)]/80 transition hover:text-[var(--color-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-ring)]"
+```
+
+Regression test shape:
+
+```ts
+test("article variant inner wrapper uses the normalized max-width class instead of a hardcoded width", ...);
+test("title heading level normalizes to the bounded widget policy and labels the section", ...);
+test("duplicate rich-text-section widgets with the same title use unique ids derived from blockId", ...);
+test("toc links keep hover behavior and add visible keyboard focus classes", ...);
 ```
 
 ## Error Handling

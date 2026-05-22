@@ -1,14 +1,19 @@
-import type { CSSProperties, ComponentType } from "react";
+import { createElement, type CSSProperties, type ComponentType, type ReactNode } from "react";
 
 import {
+  decodeHtmlEntities,
   dangerousHtmlContentTagSet,
   escapeHtml,
   htmlToPlainText,
   parseHtmlAttributes,
   sanitizeHtmlWithPolicy,
+  stripNullBytes,
+  tokenizeHtml,
 } from "../../services/posts/editor/postRichTextHtmlUtils";
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
+import { createWidgetInstanceId, scopedId } from "./widgetInstanceIds";
+import { normalizeWidgetSafeHref, resolveWidgetLinkAttrs } from "./widgetSafeHref";
 
 export type RichTextSectionVariantId = "single-column" | "two-column" | "article";
 export type RichTextSectionFontScale = "none" | "sm" | "md" | "lg";
@@ -16,17 +21,96 @@ export type RichTextSectionLineHeight = "none" | "tight" | "normal" | "relaxed";
 export type RichTextSectionSpacing = "none" | "sm" | "md" | "lg";
 export type RichTextSectionMaxWidth = "md" | "lg" | "xl" | "full";
 export type RichTextSectionOutputMode = "html" | "blocks-fallback" | "blocks";
+export type RichTextSectionTitleHeadingLevel = 1 | 2 | 3;
+export type RichTextSectionBlockHeadingLevel = 2 | 3 | 4;
+export type RichTextSectionBlockKind = "text" | "image" | "attachment" | "embed";
+export type RichTextSectionMediaWidth = "content" | "wide" | "full";
+export type RichTextSectionMediaAlign = "left" | "center" | "right";
+export type RichTextSectionEmbedProvider = "youtube" | "vimeo" | "external-link";
+export type RichTextSectionEmbedAspectRatio = "16:9" | "4:3" | "1:1";
 
-export type RichTextSectionBlock = {
+export type RichTextSectionTextBlock = {
   id?: string;
+  kind?: "text";
   heading?: string;
+  headingLevel?: RichTextSectionBlockHeadingLevel;
   content?: string;
+  contentHtml?: string;
+};
+
+export type RichTextSectionImageBlock = {
+  id?: string;
+  kind: "image";
+  mediaId?: string;
+  src?: string;
+  alt?: string;
+  decorative?: boolean;
+  caption?: string;
+  href?: string;
+  width?: RichTextSectionMediaWidth;
+  align?: RichTextSectionMediaAlign;
+};
+
+export type RichTextSectionAttachmentBlock = {
+  id?: string;
+  kind: "attachment";
+  mediaId?: string;
+  src?: string;
+  label?: string;
+  description?: string;
+  mimeType?: string;
+  sizeLabel?: string;
+};
+
+export type RichTextSectionEmbedBlock = {
+  id?: string;
+  kind: "embed";
+  provider?: RichTextSectionEmbedProvider;
+  url?: string;
+  title?: string;
+  aspectRatio?: RichTextSectionEmbedAspectRatio;
+  renderMode?: "link-card";
+};
+
+export type RichTextSectionBlock =
+  | RichTextSectionTextBlock
+  | RichTextSectionImageBlock
+  | RichTextSectionAttachmentBlock
+  | RichTextSectionEmbedBlock;
+
+export type RichTextRenderedSource = "html" | "blocks";
+export type RichTextRenderedSourceReason =
+  | "html-only"
+  | "blocks-only"
+  | "fallback-html-present"
+  | "fallback-html-empty";
+
+export type RichTextRenderedSourceState = {
+  mode: RichTextSectionOutputMode;
+  renderedSource: RichTextRenderedSource;
+  htmlIsActive: boolean;
+  blocksAreActive: boolean;
+  hasHtml: boolean;
+  hasBlocks: boolean;
+  reason: RichTextRenderedSourceReason;
+};
+
+export type RichTextSanitizerDiagnosticCode =
+  | "tag_removed"
+  | "attribute_removed"
+  | "href_rewritten";
+
+export type RichTextSanitizerDiagnostic = {
+  code: RichTextSanitizerDiagnosticCode;
+  tagName?: string;
+  attributeName?: string;
 };
 
 export type RichTextSectionData = {
   titleBlock?: {
     eyebrow?: string;
     title?: string;
+    headingLevel?: RichTextSectionTitleHeadingLevel;
   };
   body?: {
     html?: string;
@@ -86,6 +170,15 @@ const maxWidthClassMap: Record<RichTextSectionMaxWidth, string> = {
 
 const richTextBlockMin = 0;
 export const richTextBlockMax = 20;
+const richTextHtmlMaxLength = 24000;
+const richTextHeadingMaxLength = 180;
+const richTextTextMaxLength = 12000;
+const richTextCaptionMaxLength = 240;
+const richTextLabelMaxLength = 120;
+const richTextDescriptionMaxLength = 180;
+const richTextMimeTypeMaxLength = 80;
+const richTextSizeLabelMaxLength = 40;
+const richTextDiagnosticsMax = 8;
 
 const allowedTagSet = new Set([
   "p",
@@ -120,6 +213,7 @@ export const richTextSectionSchema = {
       properties: {
         eyebrow: { type: "string" },
         title: { type: "string" },
+        headingLevel: { enum: [1, 2, 3] },
       },
     },
     body: {
@@ -136,8 +230,28 @@ export const richTextSectionSchema = {
             additionalProperties: false,
             properties: {
               id: { type: "string" },
+              kind: { enum: ["text", "image", "attachment", "embed"] },
               heading: { type: "string" },
+              headingLevel: { enum: [2, 3, 4] },
               content: { type: "string" },
+              contentHtml: { type: "string" },
+              mediaId: { type: "string" },
+              src: { type: "string" },
+              alt: { type: "string" },
+              decorative: { type: "boolean" },
+              caption: { type: "string" },
+              href: { type: "string" },
+              width: { enum: ["content", "wide", "full"] },
+              align: { enum: ["left", "center", "right"] },
+              label: { type: "string" },
+              description: { type: "string" },
+              mimeType: { type: "string" },
+              sizeLabel: { type: "string" },
+              provider: { enum: ["youtube", "vimeo", "external-link"] },
+              url: { type: "string" },
+              title: { type: "string" },
+              aspectRatio: { enum: ["16:9", "4:3", "1:1"] },
+              renderMode: { enum: ["link-card"] },
             },
           },
         },
@@ -171,6 +285,7 @@ export const richTextSectionDefaults: RichTextSectionData = {
   titleBlock: {
     eyebrow: "Editorial",
     title: "Long-form content section",
+    headingLevel: 2,
   },
   body: {
     html:
@@ -182,14 +297,19 @@ export const richTextSectionDefaults: RichTextSectionData = {
     blocks: [
       {
         id: "block-1",
+        kind: "text",
         heading: "Clear structure for readable content",
-        content:
-          "Use this section for longer explanations, product narratives, or in-depth guides.",
+        headingLevel: 2,
+        contentHtml:
+          "<p>Use this section for longer explanations, product narratives, or in-depth guides.</p>",
       },
       {
         id: "block-2",
+        kind: "text",
         heading: "What works best",
-        content: "Meaningful headings\nActionable details\nSimple formatting",
+        headingLevel: 3,
+        contentHtml:
+          "<ul><li>Meaningful headings</li><li>Actionable details</li><li>Simple formatting</li></ul>",
       },
     ],
   },
@@ -213,8 +333,25 @@ const createBlockId = (index: number) => `block-${index + 1}`;
 const resolveString = (value: string | undefined, fallback: string) =>
   typeof value === "string" ? value : fallback;
 
-const resolveOptionalString = (value: string | undefined) =>
-  typeof value === "string" ? value : undefined;
+const clampOptionalText = (value: string | undefined, maxLength: number) => {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return undefined;
+  return trimmed.slice(0, maxLength);
+};
+
+const clampOptionalHtml = (value: string | undefined, maxLength: number) => {
+  if (typeof value !== "string") return undefined;
+  const bounded = value.slice(0, maxLength);
+  return bounded.trim().length > 0 ? bounded : undefined;
+};
+
+const clampStoredHtml = (value: string | undefined, maxLength: number) => {
+  if (typeof value !== "string") return undefined;
+  return value.slice(0, maxLength);
+};
+
+const clampOptionalId = (value: string | undefined) => clampOptionalText(value, 160);
 
 const resolveRichTextFontScale = (value: string | undefined): RichTextSectionFontScale => {
   if (value === "none" || value === "sm" || value === "lg") return value;
@@ -241,6 +378,37 @@ const resolveRichTextOutputMode = (value: string | undefined): RichTextSectionOu
   return "blocks-fallback";
 };
 
+const resolveRichTextTitleHeadingLevel = (
+  value: number | undefined
+): RichTextSectionTitleHeadingLevel => {
+  if (value === 1 || value === 3) return value;
+  return 2;
+};
+
+const resolveRichTextBlockHeadingLevel = (
+  value: number | undefined
+): RichTextSectionBlockHeadingLevel => {
+  if (value === 2 || value === 4) return value;
+  return 3;
+};
+
+const resolveRichTextMediaWidth = (value: string | undefined): RichTextSectionMediaWidth => {
+  if (value === "wide" || value === "full") return value;
+  return "content";
+};
+
+const resolveRichTextMediaAlign = (value: string | undefined): RichTextSectionMediaAlign => {
+  if (value === "left" || value === "right") return value;
+  return "center";
+};
+
+const resolveRichTextEmbedAspectRatio = (
+  value: string | undefined
+): RichTextSectionEmbedAspectRatio => {
+  if (value === "4:3" || value === "1:1") return value;
+  return "16:9";
+};
+
 export const resolveRichTextSectionVariant = (variant: string): RichTextSectionVariantId => {
   if (variant === "two-column" || variant === "article") return variant;
   return "single-column";
@@ -265,9 +433,7 @@ const sanitizeAnchorHref = (value: string | undefined) => {
   return "#";
 };
 
-const parseAttributes = (rawAttrs: string) => {
-  return parseHtmlAttributes(rawAttrs);
-};
+const parseAttributes = (rawAttrs: string) => parseHtmlAttributes(rawAttrs);
 
 const sanitizeTagAttributes = (tagName: string, rawAttrs: string) => {
   if (tagName !== "a") return "";
@@ -289,21 +455,331 @@ const sanitizeTagAttributes = (tagName: string, rawAttrs: string) => {
   return attrs;
 };
 
-export function sanitizeRichTextHtml(rawHtml: string | undefined): string {
-  if (typeof rawHtml !== "string" || rawHtml.trim().length === 0) return "";
+const collectRawAttributeNames = (rawAttrs: string) => {
+  const names = new Set<string>();
+  const regex = /([a-zA-Z0-9:-]+)(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'=<>`]+))?/g;
 
-  return sanitizeHtmlWithPolicy(rawHtml, {
-    allowedTags: allowedTagSet,
-    selfClosingTags: selfClosingTagSet,
-    dropContentTags: dangerousHtmlContentTagSet,
-    sanitizeAttributes: sanitizeTagAttributes,
-  });
+  for (const match of rawAttrs.matchAll(regex)) {
+    const name = (match[1] ?? "").toLowerCase();
+    if (name) names.add(name);
+  }
+
+  return [...names];
+};
+
+const dedupeRichTextDiagnostics = (diagnostics: RichTextSanitizerDiagnostic[]) => {
+  const unique: RichTextSanitizerDiagnostic[] = [];
+  const seen = new Set<string>();
+
+  for (const diagnostic of diagnostics) {
+    const key = `${diagnostic.code}:${diagnostic.tagName ?? ""}:${diagnostic.attributeName ?? ""}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(diagnostic);
+    if (unique.length >= richTextDiagnosticsMax) break;
+  }
+
+  return unique;
+};
+
+export function sanitizeRichTextHtmlWithDiagnostics(rawHtml: string | undefined): {
+  html: string;
+  diagnostics: RichTextSanitizerDiagnostic[];
+} {
+  if (typeof rawHtml !== "string" || rawHtml.trim().length === 0) {
+    return { html: "", diagnostics: [] };
+  }
+
+  const diagnostics: RichTextSanitizerDiagnostic[] = [];
+
+  for (const token of tokenizeHtml(stripNullBytes(rawHtml.slice(0, richTextHtmlMaxLength)))) {
+    if (token.kind !== "tag" || token.closing) continue;
+
+    if (dangerousHtmlContentTagSet.has(token.name) || !allowedTagSet.has(token.name)) {
+      diagnostics.push({ code: "tag_removed", tagName: token.name });
+      continue;
+    }
+
+    const rawAttributeNames = collectRawAttributeNames(token.rawAttrs);
+    if (rawAttributeNames.length === 0) continue;
+
+    const originalAttributes = parseHtmlAttributes(token.rawAttrs);
+    const sanitizedAttributes = parseHtmlAttributes(
+      sanitizeTagAttributes(token.name, token.rawAttrs)
+    );
+
+    for (const attributeName of rawAttributeNames) {
+      if (attributeName.startsWith("on")) {
+        diagnostics.push({
+          code: "attribute_removed",
+          tagName: token.name,
+          attributeName,
+        });
+        continue;
+      }
+
+      if (attributeName === "href") {
+        const originalHref = originalAttributes.get("href");
+        const sanitizedHref = sanitizedAttributes.get("href");
+        if (originalHref && sanitizedHref && originalHref !== sanitizedHref) {
+          diagnostics.push({ code: "href_rewritten", tagName: token.name, attributeName });
+          continue;
+        }
+      }
+
+      if (!sanitizedAttributes.has(attributeName)) {
+        diagnostics.push({
+          code: "attribute_removed",
+          tagName: token.name,
+          attributeName,
+        });
+      }
+    }
+  }
+
+  return {
+    html: sanitizeHtmlWithPolicy(rawHtml.slice(0, richTextHtmlMaxLength), {
+      allowedTags: allowedTagSet,
+      selfClosingTags: selfClosingTagSet,
+      dropContentTags: dangerousHtmlContentTagSet,
+      sanitizeAttributes: sanitizeTagAttributes,
+    }),
+    diagnostics: dedupeRichTextDiagnostics(diagnostics),
+  };
 }
+
+export function sanitizeRichTextHtml(rawHtml: string | undefined): string {
+  return sanitizeRichTextHtmlWithDiagnostics(rawHtml).html;
+}
+
+type RichTextPreviewNode =
+  | string
+  | {
+      tag: string;
+      attrs: Record<string, string>;
+      children: RichTextPreviewNode[];
+    };
+
+const richTextPreviewAttributeNames = new Set(["href", "title", "target", "rel"]);
+
+const appendRichTextPreviewNode = (
+  stack: Array<{ tag: string; attrs?: Record<string, string>; children: RichTextPreviewNode[] }>,
+  node: RichTextPreviewNode
+) => {
+  stack[stack.length - 1]?.children.push(node);
+};
+
+const parseRichTextPreviewAttributes = (rawAttrs: string) => {
+  const attrs: Record<string, string> = {};
+  const parsed = parseHtmlAttributes(rawAttrs);
+
+  for (const name of richTextPreviewAttributeNames) {
+    const value = parsed.get(name);
+    if (!value) continue;
+    attrs[name] = decodeHtmlEntities(value);
+  }
+
+  return attrs;
+};
+
+const parseSanitizedRichTextPreviewHtml = (html: string) => {
+  const root = { tag: "root", children: [] as RichTextPreviewNode[] };
+  const stack: Array<{
+    tag: string;
+    attrs?: Record<string, string>;
+    children: RichTextPreviewNode[];
+  }> = [root];
+
+  for (const token of tokenizeHtml(html)) {
+    if (token.kind === "text") {
+      if (token.value) appendRichTextPreviewNode(stack, decodeHtmlEntities(token.value));
+      continue;
+    }
+
+    if (token.kind !== "tag" || !allowedTagSet.has(token.name)) continue;
+
+    if (token.closing) {
+      for (let stackIndex = stack.length - 1; stackIndex > 0; stackIndex -= 1) {
+        const current = stack[stackIndex];
+        if (current?.tag !== token.name) continue;
+        stack.splice(stackIndex);
+        appendRichTextPreviewNode(stack, {
+          tag: current.tag,
+          attrs: current.attrs ?? {},
+          children: current.children,
+        });
+        break;
+      }
+      continue;
+    }
+
+    const attrs = parseRichTextPreviewAttributes(token.rawAttrs);
+    if (selfClosingTagSet.has(token.name) || token.selfClosing) {
+      appendRichTextPreviewNode(stack, { tag: token.name, attrs, children: [] });
+      continue;
+    }
+
+    stack.push({ tag: token.name, attrs, children: [] });
+  }
+
+  for (let stackIndex = stack.length - 1; stackIndex > 0; stackIndex -= 1) {
+    const current = stack[stackIndex];
+    if (!current) continue;
+    stack.splice(stackIndex);
+    appendRichTextPreviewNode(stack, {
+      tag: current.tag,
+      attrs: current.attrs ?? {},
+      children: current.children,
+    });
+  }
+
+  return root.children;
+};
+
+const renderRichTextPreviewNode = (node: RichTextPreviewNode, key: string): ReactNode => {
+  if (typeof node === "string") return node;
+  return createElement(
+    node.tag,
+    { key, ...node.attrs },
+    ...node.children.map((child, index) => renderRichTextPreviewNode(child, `${key}-${index}`))
+  );
+};
+
+export function renderRichTextSectionHtmlPreview(value: string | undefined): ReactNode[] {
+  const sanitized = sanitizeRichTextHtml(value);
+  return parseSanitizedRichTextPreviewHtml(sanitized).map((node, index) =>
+    renderRichTextPreviewNode(node, `rich-text-preview-${index}`)
+  );
+}
+
+const normalizeRichTextPublicMediaSrc = (value: unknown) => {
+  const href = normalizeWidgetSafeHref(value, { allowRelative: true, allowHttp: true });
+  if (!href || href.startsWith("#")) return undefined;
+  return href;
+};
+
+const normalizeRichTextMediaHref = (value: unknown) =>
+  normalizeWidgetSafeHref(value, { allowRelative: true, allowHttp: true });
+
+const normalizeAllowedRichTextEmbedUrl = (
+  value: unknown
+): { provider: RichTextSectionEmbedProvider; url: string } | null => {
+  const href = normalizeWidgetSafeHref(value, { allowHttp: true });
+  if (!href) return null;
+
+  try {
+    const parsed = new URL(href);
+    const hostname = parsed.hostname.toLowerCase();
+    if (
+      hostname === "youtu.be" ||
+      hostname === "youtube.com" ||
+      hostname.endsWith(".youtube.com")
+    ) {
+      return { provider: "youtube", url: href };
+    }
+    if (hostname === "vimeo.com" || hostname.endsWith(".vimeo.com")) {
+      return { provider: "vimeo", url: href };
+    }
+    return { provider: "external-link", url: href };
+  } catch {
+    return null;
+  }
+};
 
 export const normalizeRichTextBlockCount = (value: number) => {
   if (!Number.isFinite(value)) return richTextSectionDefaults.body?.blocks?.length ?? 0;
   return Math.min(richTextBlockMax, Math.max(richTextBlockMin, Math.floor(value)));
 };
+
+function normalizeRichTextTextBlock(
+  base: RichTextSectionBlock,
+  id: string
+): RichTextSectionTextBlock {
+  return {
+    id,
+    kind: "text",
+    heading: clampOptionalText(
+      "heading" in base ? base.heading : undefined,
+      richTextHeadingMaxLength
+    ),
+    headingLevel: resolveRichTextBlockHeadingLevel(
+      "headingLevel" in base ? base.headingLevel : undefined
+    ),
+    content: clampOptionalHtml("content" in base ? base.content : undefined, richTextTextMaxLength),
+    contentHtml: clampOptionalHtml(
+      "contentHtml" in base ? base.contentHtml : undefined,
+      richTextHtmlMaxLength
+    ),
+  };
+}
+
+function normalizeRichTextImageBlock(
+  base: RichTextSectionBlock,
+  id: string
+): RichTextSectionImageBlock {
+  return {
+    id,
+    kind: "image",
+    mediaId: clampOptionalId("mediaId" in base ? base.mediaId : undefined),
+    src: normalizeRichTextPublicMediaSrc("src" in base ? base.src : undefined),
+    alt: clampOptionalText("alt" in base ? base.alt : undefined, richTextLabelMaxLength),
+    decorative: "decorative" in base ? Boolean(base.decorative) : false,
+    caption: clampOptionalText(
+      "caption" in base ? base.caption : undefined,
+      richTextCaptionMaxLength
+    ),
+    href: normalizeRichTextMediaHref("href" in base ? base.href : undefined),
+    width: resolveRichTextMediaWidth("width" in base ? base.width : undefined),
+    align: resolveRichTextMediaAlign("align" in base ? base.align : undefined),
+  };
+}
+
+function normalizeRichTextAttachmentBlock(
+  base: RichTextSectionBlock,
+  id: string
+): RichTextSectionAttachmentBlock {
+  return {
+    id,
+    kind: "attachment",
+    mediaId: clampOptionalId("mediaId" in base ? base.mediaId : undefined),
+    src: normalizeRichTextPublicMediaSrc("src" in base ? base.src : undefined),
+    label: clampOptionalText("label" in base ? base.label : undefined, richTextLabelMaxLength),
+    description: clampOptionalText(
+      "description" in base ? base.description : undefined,
+      richTextDescriptionMaxLength
+    ),
+    mimeType: clampOptionalText(
+      "mimeType" in base ? base.mimeType : undefined,
+      richTextMimeTypeMaxLength
+    ),
+    sizeLabel: clampOptionalText(
+      "sizeLabel" in base ? base.sizeLabel : undefined,
+      richTextSizeLabelMaxLength
+    ),
+  };
+}
+
+function normalizeRichTextEmbedBlock(
+  base: RichTextSectionBlock,
+  id: string
+): RichTextSectionEmbedBlock {
+  const normalizedUrl = normalizeAllowedRichTextEmbedUrl("url" in base ? base.url : undefined);
+
+  return {
+    id,
+    kind: "embed",
+    provider:
+      normalizedUrl?.provider ??
+      ("provider" in base ? base.provider : undefined) ??
+      "external-link",
+    url: normalizedUrl?.url,
+    title: clampOptionalText("title" in base ? base.title : undefined, richTextLabelMaxLength),
+    aspectRatio: resolveRichTextEmbedAspectRatio(
+      "aspectRatio" in base ? base.aspectRatio : undefined
+    ),
+    renderMode: "link-card",
+  };
+}
 
 export function normalizeRichTextBlocks(
   blocks: RichTextSectionBlock[] | undefined,
@@ -334,36 +810,152 @@ export function normalizeRichTextBlocks(
     }
     usedIds.add(id);
 
-    normalized.push({
-      id,
-      heading: resolveOptionalString(base.heading),
-      content: resolveOptionalString(base.content),
-    });
+    const kind =
+      base.kind === "image" || base.kind === "attachment" || base.kind === "embed"
+        ? base.kind
+        : "text";
+
+    normalized.push(
+      kind === "image"
+        ? normalizeRichTextImageBlock(base, id)
+        : kind === "attachment"
+          ? normalizeRichTextAttachmentBlock(base, id)
+          : kind === "embed"
+            ? normalizeRichTextEmbedBlock(base, id)
+            : normalizeRichTextTextBlock(base, id)
+    );
   }
 
   return normalized;
 }
 
+const resolveRichTextImageClassName = (block: RichTextSectionImageBlock) => {
+  const widthClass =
+    block.width === "full"
+      ? "w-full"
+      : block.width === "wide"
+        ? "max-w-4xl w-full"
+        : "max-w-2xl w-full";
+  const alignClass =
+    block.align === "left" ? "mr-auto ml-0" : block.align === "right" ? "ml-auto mr-0" : "mx-auto";
+  return joinClasses(
+    "overflow-hidden rounded-xl border border-[var(--color-border)]/60 bg-[var(--color-bg)]/60",
+    widthClass,
+    alignClass
+  );
+};
+
+const renderRichTextImageBlockAsHtml = (block: RichTextSectionImageBlock) => {
+  const src = normalizeRichTextPublicMediaSrc(block.src);
+  if (!src) return "";
+
+  const imageHtml = `<img src="${escapeHtml(src)}" alt="${escapeHtml(block.decorative ? "" : (block.alt ?? ""))}" loading="lazy" class="h-auto w-full object-cover" />`;
+  const linkAttrs = resolveWidgetLinkAttrs(block.href, {
+    allowRelative: true,
+    allowHttp: true,
+    openExternalInNewTab: true,
+  });
+  const wrappedImage = linkAttrs
+    ? `<a href="${escapeHtml(linkAttrs.href)}"${linkAttrs.target ? ` target="${linkAttrs.target}"` : ""}${linkAttrs.rel ? ` rel="${escapeHtml(linkAttrs.rel)}"` : ""}>${imageHtml}</a>`
+    : imageHtml;
+  const caption = block.caption?.trim();
+
+  return [
+    `<figure class="${resolveRichTextImageClassName(block)}">`,
+    wrappedImage,
+    caption
+      ? `<figcaption class="border-t border-[var(--color-border)]/60 px-4 py-3 text-sm text-[var(--color-text)]/75">${escapeHtml(caption)}</figcaption>`
+      : "",
+    "</figure>",
+  ].join("");
+};
+
+const renderRichTextAttachmentBlockAsHtml = (block: RichTextSectionAttachmentBlock) => {
+  const src = normalizeRichTextPublicMediaSrc(block.src);
+  if (!src) return "";
+
+  const linkAttrs = resolveWidgetLinkAttrs(src, {
+    allowRelative: true,
+    allowHttp: true,
+    openExternalInNewTab: true,
+  });
+  if (!linkAttrs) return "";
+
+  const label = block.label?.trim() || "Download attachment";
+  const metaParts = [block.mimeType?.trim(), block.sizeLabel?.trim()].filter(Boolean);
+
+  return [
+    '<div class="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)]/60 p-4">',
+    `<a href="${escapeHtml(linkAttrs.href)}"${linkAttrs.target ? ` target="${linkAttrs.target}"` : ""}${linkAttrs.rel ? ` rel="${escapeHtml(linkAttrs.rel)}"` : ""} class="inline-flex items-center gap-2 text-base font-semibold text-[var(--color-text)] underline-offset-4 hover:underline">`,
+    escapeHtml(label),
+    "</a>",
+    block.description?.trim()
+      ? `<p class="mt-2 text-sm text-[var(--color-text)]/75">${escapeHtml(block.description.trim())}</p>`
+      : "",
+    metaParts.length > 0
+      ? `<p class="mt-2 text-xs uppercase tracking-[0.14em] text-[var(--color-text)]/55">${escapeHtml(metaParts.join(" • "))}</p>`
+      : "",
+    "</div>",
+  ].join("");
+};
+
+const renderRichTextEmbedBlockAsHtml = (block: RichTextSectionEmbedBlock) => {
+  const normalizedUrl = normalizeAllowedRichTextEmbedUrl(block.url);
+  if (!normalizedUrl) return "";
+
+  const linkAttrs = resolveWidgetLinkAttrs(normalizedUrl.url, {
+    allowHttp: true,
+    openExternalInNewTab: true,
+  });
+  if (!linkAttrs) return "";
+
+  const providerLabel =
+    normalizedUrl.provider === "youtube"
+      ? "YouTube"
+      : normalizedUrl.provider === "vimeo"
+        ? "Vimeo"
+        : "External link";
+  const title = block.title?.trim() || providerLabel;
+
+  return [
+    '<div class="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)]/60 p-4">',
+    `<p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--color-text)]/55">${escapeHtml(providerLabel)}</p>`,
+    `<a href="${escapeHtml(linkAttrs.href)}"${linkAttrs.target ? ` target="${linkAttrs.target}"` : ""}${linkAttrs.rel ? ` rel="${escapeHtml(linkAttrs.rel)}"` : ""} class="mt-2 inline-flex items-center gap-2 text-base font-semibold text-[var(--color-text)] underline-offset-4 hover:underline">${escapeHtml(title)}</a>`,
+    `<p class="mt-2 text-sm text-[var(--color-text)]/75">${escapeHtml(normalizedUrl.url)}</p>`,
+    "</div>",
+  ].join("");
+};
+
+const renderRichTextTextBlockAsHtml = (block: RichTextSectionTextBlock) => {
+  const heading = block.heading?.trim();
+  const headingLevel = resolveRichTextBlockHeadingLevel(block.headingLevel);
+  const contentHtml = sanitizeRichTextHtml(block.contentHtml);
+  const legacyContent = block.content?.trim();
+  const body =
+    contentHtml.length > 0
+      ? contentHtml
+      : legacyContent
+        ? `<p>${escapeHtml(legacyContent).replace(/\n/g, "<br />")}</p>`
+        : "";
+
+  return [heading ? `<h${headingLevel}>${escapeHtml(heading)}</h${headingLevel}>` : "", body].join(
+    ""
+  );
+};
+
 const renderBlocksAsHtml = (blocks: RichTextSectionBlock[] | undefined) => {
   const normalizedBlocks = normalizeRichTextBlocks(blocks);
   return normalizedBlocks
     .map((block) => {
-      const heading =
-        typeof block.heading === "string" && block.heading.trim().length > 0
-          ? `<h3>${escapeHtml(block.heading.trim())}</h3>`
-          : "";
-
-      const content =
-        typeof block.content === "string" && block.content.trim().length > 0
-          ? `<p>${escapeHtml(block.content.trim()).replace(/\n/g, "<br />")}</p>`
-          : "";
-
-      return `${heading}${content}`;
+      if (block.kind === "image") return renderRichTextImageBlockAsHtml(block);
+      if (block.kind === "attachment") return renderRichTextAttachmentBlockAsHtml(block);
+      if (block.kind === "embed") return renderRichTextEmbedBlockAsHtml(block);
+      return renderRichTextTextBlockAsHtml(block);
     })
     .join("");
 };
 
-const injectHeadingAnchors = (html: string) => {
+const injectHeadingAnchors = (html: string, rootInstanceId: string) => {
   const items: TocItem[] = [];
   const usedIds = new Set<string>();
   let headingIndex = 0;
@@ -378,10 +970,11 @@ const injectHeadingAnchors = (html: string) => {
         return `<h${level}>${rawContent}</h${level}>`;
       }
 
-      let id = slugifyHeading(label, headingIndex);
+      const slug = slugifyHeading(label, headingIndex);
+      let id = scopedId(rootInstanceId, `heading-${slug}`);
       while (usedIds.has(id)) {
         headingIndex += 1;
-        id = `${slugifyHeading(label, headingIndex)}-${headingIndex + 1}`;
+        id = scopedId(rootInstanceId, `heading-${slug}-${headingIndex + 1}`);
       }
       usedIds.add(id);
       headingIndex += 1;
@@ -397,6 +990,7 @@ export function normalizeRichTextSectionData(data: RichTextSectionData): RichTex
   const titleDefaults = richTextSectionDefaults.titleBlock ?? {
     eyebrow: "",
     title: "",
+    headingLevel: 2,
   };
   const optionsDefaults = richTextSectionDefaults.options ?? {
     dropcap: false,
@@ -418,10 +1012,11 @@ export function normalizeRichTextSectionData(data: RichTextSectionData): RichTex
     titleBlock: {
       eyebrow: resolveString(data.titleBlock?.eyebrow, titleDefaults.eyebrow ?? ""),
       title: resolveString(data.titleBlock?.title, titleDefaults.title ?? ""),
+      headingLevel: resolveRichTextTitleHeadingLevel(data.titleBlock?.headingLevel),
     },
     body: {
       html: resolveString(
-        data.body?.html,
+        clampStoredHtml(data.body?.html, richTextHtmlMaxLength),
         richTextSectionDefaults.body?.html ??
           "<p>Use this section for longer editorial content.</p>"
       ),
@@ -439,15 +1034,78 @@ export function normalizeRichTextSectionData(data: RichTextSectionData): RichTex
     style: {
       fontScale: resolveRichTextFontScale(data.style?.fontScale),
       lineHeight: resolveRichTextLineHeight(data.style?.lineHeight),
-      textColor: resolveString(
-        data.style?.textColor,
-        styleDefaults.textColor ?? "var(--color-text)"
-      ),
+      textColor: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.textColor)
+        : styleDefaults.textColor,
       background: hasStyleObject
         ? resolveClearableStyleValue(data.style?.background)
         : styleDefaults.background,
       spacing: resolveRichTextSpacing(data.style?.spacing),
     },
+  };
+}
+
+export function resolveRichTextRenderedSource(
+  data: RichTextSectionData
+): RichTextRenderedSourceState {
+  const normalized = normalizeRichTextSectionData(data);
+  const mode = normalized.options?.outputMode ?? "blocks-fallback";
+  const hasHtml = (normalized.body?.html ?? "").trim().length > 0;
+  const hasBlocks = normalizeRichTextBlocks(normalized.body?.blocks).length > 0;
+
+  if (mode === "html") {
+    return {
+      mode,
+      renderedSource: "html",
+      htmlIsActive: true,
+      blocksAreActive: false,
+      hasHtml,
+      hasBlocks,
+      reason: "html-only",
+    };
+  }
+
+  if (mode === "blocks") {
+    return {
+      mode,
+      renderedSource: "blocks",
+      htmlIsActive: false,
+      blocksAreActive: true,
+      hasHtml,
+      hasBlocks,
+      reason: "blocks-only",
+    };
+  }
+
+  return {
+    mode,
+    renderedSource: hasHtml ? "html" : "blocks",
+    htmlIsActive: hasHtml,
+    blocksAreActive: !hasHtml,
+    hasHtml,
+    hasBlocks,
+    reason: hasHtml ? "fallback-html-present" : "fallback-html-empty",
+  };
+}
+
+export function resolveRichTextRenderedHtml(data: RichTextSectionData): string {
+  const normalized = normalizeRichTextSectionData(data);
+  const source = resolveRichTextRenderedSource(normalized);
+  if (source.renderedSource === "html") {
+    return sanitizeRichTextHtml(normalized.body?.html ?? "");
+  }
+  return renderBlocksAsHtml(normalized.body?.blocks);
+}
+
+export function resolveRichTextDropcapStatus(data: RichTextSectionData) {
+  const normalized = normalizeRichTextSectionData(data);
+  const source = resolveRichTextRenderedSource(normalized);
+  const html = resolveRichTextRenderedHtml(normalized);
+  return {
+    enabled: Boolean(normalized.options?.dropcap),
+    applies: /<p(?:\s|>)/i.test(html),
+    source: source.renderedSource,
+    reason: source.reason,
   };
 }
 
@@ -467,7 +1125,7 @@ function RichTextToc({ items }: { items: TocItem[] }) {
           <li key={item.id} className={item.level > 2 ? "pl-3" : ""}>
             <a
               href={`#${item.id}`}
-              className="text-[var(--color-text)]/80 transition hover:text-[var(--color-text)]"
+              className="text-[var(--color-text)]/80 transition hover:text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-text)]/35 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)]"
             >
               {item.label}
             </a>
@@ -481,27 +1139,24 @@ function RichTextToc({ items }: { items: TocItem[] }) {
 export function RichTextSectionBlock({
   data,
   variant,
+  blockId,
 }: {
   data: RichTextSectionData;
   variant: string;
+  blockId?: string;
 }) {
   const resolvedVariant = resolveRichTextSectionVariant(variant);
   const normalized = normalizeRichTextSectionData(data);
   const style = normalized.style ?? richTextSectionDefaults.style!;
   const options = normalized.options ?? richTextSectionDefaults.options!;
-
-  const blocksHtml = renderBlocksAsHtml(normalized.body?.blocks);
-  const rawHtml =
-    options.outputMode === "html"
-      ? (normalized.body?.html ?? "")
-      : options.outputMode === "blocks"
-        ? blocksHtml
-        : (normalized.body?.html ?? "").trim().length > 0
-          ? (normalized.body?.html ?? "")
-          : blocksHtml;
-
-  const sanitizedHtml = sanitizeRichTextHtml(rawHtml);
-  const { htmlWithAnchors, tocItems } = injectHeadingAnchors(sanitizedHtml);
+  const source = resolveRichTextRenderedSource(normalized);
+  const renderedHtml = resolveRichTextRenderedHtml(normalized);
+  const rootInstanceId = createWidgetInstanceId(
+    "rich-text-section",
+    blockId,
+    (normalized.titleBlock?.title ?? "").trim() || resolvedVariant
+  );
+  const { htmlWithAnchors, tocItems } = injectHeadingAnchors(renderedHtml, rootInstanceId);
 
   const bodyClassName = joinClasses(
     fontScaleClassMap[style.fontScale ?? "md"],
@@ -513,7 +1168,7 @@ export function RichTextSectionBlock({
   );
 
   const bodyStyle: CSSProperties = {
-    color: style.textColor ?? "var(--color-text)",
+    color: resolveClearableStyleValue(style.textColor) ?? "var(--color-text)",
   };
 
   const sectionStyle: CSSProperties =
@@ -521,9 +1176,14 @@ export function RichTextSectionBlock({
       backgroundColor: resolveClearableStyleValue(style.background),
     }) ?? {};
 
+  const titleText = (normalized.titleBlock?.title ?? "").trim();
   const showTitleBlock =
-    (normalized.titleBlock?.eyebrow ?? "").trim().length > 0 ||
-    (normalized.titleBlock?.title ?? "").trim().length > 0;
+    (normalized.titleBlock?.eyebrow ?? "").trim().length > 0 || titleText.length > 0;
+  const titleId = titleText.length > 0 ? scopedId(rootInstanceId, "title") : undefined;
+  const HeadingTag = `h${resolveRichTextTitleHeadingLevel(normalized.titleBlock?.headingLevel)}` as
+    | "h1"
+    | "h2"
+    | "h3";
 
   const content = (
     <div
@@ -537,6 +1197,8 @@ export function RichTextSectionBlock({
     <section
       className="w-full px-4 py-10"
       style={sectionStyle}
+      aria-labelledby={titleId}
+      aria-label={titleId ? undefined : "Rich text content"}
       data-rich-text-variant={resolvedVariant}
       data-rich-text-font-scale={style.fontScale ?? "md"}
       data-rich-text-line-height={style.lineHeight ?? "normal"}
@@ -545,38 +1207,59 @@ export function RichTextSectionBlock({
       data-rich-text-toc={String(Boolean(options.toc))}
       data-rich-text-max-width={options.maxWidth ?? "lg"}
       data-rich-text-output-mode={options.outputMode ?? "blocks-fallback"}
+      data-rich-text-rendered-source={source.renderedSource}
+      data-rich-text-title-level={String(
+        resolveRichTextTitleHeadingLevel(normalized.titleBlock?.headingLevel)
+      )}
       data-rich-text-toc-count={String(tocItems.length)}
     >
-      <div className={joinClasses("mx-auto w-full", maxWidthClassMap[options.maxWidth ?? "lg"])}>
+      <div className="mx-auto w-full">
         {showTitleBlock ? (
-          <header className="mb-6 space-y-2">
+          <header
+            className={joinClasses("mb-6 space-y-2", maxWidthClassMap[options.maxWidth ?? "lg"])}
+          >
             {(normalized.titleBlock?.eyebrow ?? "").trim().length > 0 ? (
               <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text)]/65">
                 {normalized.titleBlock?.eyebrow}
               </p>
             ) : null}
-            {(normalized.titleBlock?.title ?? "").trim().length > 0 ? (
-              <h3 className="text-3xl font-semibold text-[var(--color-text)]">
-                {normalized.titleBlock?.title}
-              </h3>
+            {titleText.length > 0 ? (
+              <HeadingTag id={titleId} className="text-3xl font-semibold text-[var(--color-text)]">
+                {titleText}
+              </HeadingTag>
             ) : null}
           </header>
         ) : null}
 
         {resolvedVariant === "two-column" ? (
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div
+            className={joinClasses(
+              "mx-auto grid w-full grid-cols-1 gap-6 lg:grid-cols-3",
+              maxWidthClassMap[options.maxWidth ?? "lg"]
+            )}
+          >
             <div className="space-y-4 lg:col-span-1">
               {Boolean(options.toc) ? <RichTextToc items={tocItems} /> : null}
             </div>
             <div className="lg:col-span-2">{content}</div>
           </div>
         ) : resolvedVariant === "article" ? (
-          <article className="mx-auto w-full max-w-3xl space-y-6">
+          <article
+            className={joinClasses(
+              "mx-auto w-full space-y-6",
+              maxWidthClassMap[options.maxWidth ?? "lg"]
+            )}
+          >
             {Boolean(options.toc) ? <RichTextToc items={tocItems} /> : null}
             {content}
           </article>
         ) : (
-          <div className="space-y-6">
+          <div
+            className={joinClasses(
+              "mx-auto w-full space-y-6",
+              maxWidthClassMap[options.maxWidth ?? "lg"]
+            )}
+          >
             {Boolean(options.toc) ? <RichTextToc items={tocItems} /> : null}
             {content}
           </div>
@@ -594,7 +1277,8 @@ export function createRichTextSectionWidget(editors: {
   return {
     type: "rich-text-section",
     title: "Rich Text Section",
-    description: "Long-form copy block with safe HTML rendering and typography controls.",
+    description:
+      "Long-form copy block with safe HTML rendering, rich fallback blocks, and editorial layout controls.",
     category: "content",
     variants: [
       {
